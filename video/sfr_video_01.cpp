@@ -624,7 +624,7 @@ Scaleform::GFx::CharacterHandle* FUN_1400042d0(Scaleform::GFx::CharacterHandle* 
 // @0x1400043b0
 Scaleform::GFx::AS2::FnCall* FUN_1400043b0(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 {
-    call->~FnCall();
+    call->FnCall::~FnCall();
     if (flags & 1) operator delete(call);
     return call;
 }
@@ -788,7 +788,7 @@ void FUN_140005870(void** value) { if (*value) FUN_14257dcb0(*value); }
 // @0x1400058c0
 Scaleform::RefCountWeakSupportImpl* FUN_1400058c0(Scaleform::RefCountWeakSupportImpl* value, unsigned flags)
 {
-    value->~RefCountWeakSupportImpl();
+    value->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
     if (flags & 1) Scaleform::Memory::Free(value);
     return value;
 }
@@ -1110,7 +1110,7 @@ void* FUN_140003df0(void* object, unsigned flags)
 // @0x140004fb0
 void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 {
-    object->~RefCountWeakSupportImpl();
+    object->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1129,7 +1129,7 @@ void FUN_140005300(Scaleform::UPInt* pair)
 // @0x140005430
 void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 {
-    object->~RefCountWeakSupportImpl();
+    object->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1620,7 +1620,7 @@ unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
 // @0x140007b70
 void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 {
-    call->~FnCall();
+    call->FnCall::~FnCall();
     if (flags & 1) ::operator delete(call);
     return call;
 }
@@ -1629,7 +1629,7 @@ void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 // @0x140007c80
 void* FUN_140007c80(Scaleform::GFx::AS2::GASPrototypeBase* prototype, unsigned flags)
 {
-    prototype->~GASPrototypeBase();
+    prototype->GASPrototypeBase::~GASPrototypeBase();
     if (flags & 1) ::operator delete(prototype);
     return prototype;
 }
@@ -1913,7 +1913,7 @@ MS2_REPLACE(0x14000BBF0, FUN_14000bbf0, 48, 0x2BDC02A7);
 // @0x14000cbd0
 void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsigned flags)
 {
-    provider->~VideoProviderNetStream();
+    provider->VideoProviderNetStream::~VideoProviderNetStream();
     if (flags & 1) Scaleform::Memory::Free(provider);
     return provider;
 }
@@ -2011,8 +2011,8 @@ void FUN_14000c320(void* owner)
 void FUN_14000aec0(void* object)
 {
     auto* bytes = static_cast<unsigned char*>(object);
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0xd8)->~GASPrototypeBase();
-    reinterpret_cast<Scaleform::GFx::AS2::NetStream*>(object)->~NetStream();
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0xd8)->GASPrototypeBase::~GASPrototypeBase();
+    reinterpret_cast<Scaleform::GFx::AS2::NetStream*>(object)->NetStream::~NetStream();
 }
 
 // MS2-FUNCTIONAL: releases the derived prototype and NetStream state.
@@ -2157,10 +2157,10 @@ void* FUN_14000d630(void** proxy, unsigned flags)
 void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(object);
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->~GASPrototypeBase();
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
     void** slot = reinterpret_cast<void**>(bytes + 0x68);
     if (*slot) FUN_14257dcb0(*slot);
-    object->~Object();
+    object->Object::~Object();
 }
 
 // MS2-FUNCTIONAL: resolves constructor and prototype properties from the embedded video prototype.

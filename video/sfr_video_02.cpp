@@ -2994,8 +2994,8 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(object);
-    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->~GASPrototypeBase();
-    object->~Object();
+    reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->GASPrototypeBase::~GASPrototypeBase();
+    object->Object::~Object();
 }
 
 // MS2-FUNCTIONAL: applies the prototype destructor and conditionally frees the object storage.
