@@ -369,7 +369,7 @@ class ShapeObject
 {
 public:
     ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
-    virtual ~ShapeObject(); // 0x1424ddb00
+    virtual ~ShapeObject(); // 0x1424deeb0
     UByte Data[0xd0];
 };
 

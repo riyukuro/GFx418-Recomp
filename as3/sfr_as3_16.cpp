@@ -142,6 +142,15 @@ extern "C" void* DAT_143b15f60;
 // from the exe's offsets. The four MouseState rollover arrays use ArrayLH's data/size/capacity prefix.
 void FUN_1424dcd40(void* self);
 namespace Scaleform { void DestroyMovieRootDisplayObjects(void* set); }
+// The vftables the inlined MovieRoot/ASMovieRootBase and Tracer destructors store.
+namespace Scaleform { namespace GFx { namespace AS3 {
+extern const void* DAT_14317d8d8[];     // MovieRoot
+extern const void* DAT_14317da88[];     // MovieRoot at +0x28
+extern const void* DAT_14317daa0[];     // MovieRoot at +0x38
+extern const void* DAT_14317b648[];     // the empty interface base (ASMovieRootBase +0x28, Tracer)
+extern const void* DAT_14317afe8[];     // ASMovieRootBase at +0x38
+extern const void* DAT_14317b938[];     // Tracer
+}}}
 
 // MS2-FUNCTIONAL 0x1424de650: releases the modeled smart-pointer members, string builtins, action queue, mouse stacks,
 // and ASMovieRootBase; the opaque LoadedMovieDefs table is still cleared only by its own owner path.
@@ -149,6 +158,9 @@ namespace Scaleform { void DestroyMovieRootDisplayObjects(void* set); }
 extern "C" void FUN_1424de650(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
+    *reinterpret_cast<const void***>(bytes + 0x00) = Scaleform::GFx::AS3::DAT_14317d8d8;
+    *reinterpret_cast<const void***>(bytes + 0x28) = Scaleform::GFx::AS3::DAT_14317da88;
+    *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317daa0;
     FUN_1424dcd40(bytes + 0x6e8);
 
     auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);
@@ -182,6 +194,8 @@ extern "C" void FUN_1424de650(void* self)
     *reinterpret_cast<bool*>(bytes + 0x50) = false;
 
     FUN_1424de460(bytes + 0x40);
+    *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317afe8;
+    *reinterpret_cast<const void***>(bytes + 0x28) = Scaleform::GFx::AS3::DAT_14317b648;
     reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->Scaleform::GFx::ASMovieRootBase::~ASMovieRootBase();
 }
 
@@ -205,13 +219,6 @@ extern "C" void FUN_1424dfa30(void* self)
 }
 
 // The class deleting destructors contain the same member cleanup and only free storage when flag 1 is set.
-// MS2-FUNCTIONAL 0x1424deeb0: reuses the exe-derived ShapeObject member/base teardown with the free flag clear.
-// @0x1424deeb0
-extern "C" void FUN_1424deeb0(void* self)
-{
-    Scaleform::GFx::AS3::DeleteAs3_1424e3890(self, 0);
-}
-
 // MS2-FUNCTIONAL 0x1424defe0: reuses the exe-derived Stage member/base teardown with the free flag clear.
 // @0x1424defe0
 extern "C" void FUN_1424defe0(void* self)
@@ -278,6 +285,7 @@ extern "C" void FUN_1424df070(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);   // the exe frees through Memory::pGlobalHeap
+    *reinterpret_cast<const void***>(bytes) = Scaleform::GFx::AS3::DAT_14317b938;
     auto* sentinel = reinterpret_cast<unsigned char*>(bytes + 0x110);
     auto* node = *reinterpret_cast<unsigned char**>(bytes + 0x118);
     while (node && node != sentinel)
@@ -315,12 +323,13 @@ extern "C" void FUN_1424df070(void* self)
     using RecalcArray = Scaleform::ArrayDH_POD<Scaleform::GFx::AS3::Tracer::Recalculate, Scaleform::GFx::AS3::StatMV_VM>;
     using StateArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::TR::State*, Scaleform::GFx::AS3::StatMV_VM>;
     using CatchArray = Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::InstanceTraits::fl::Catch>, Scaleform::GFx::AS3::StatMV_VM>;
-    reinterpret_cast<PosArray*>(bytes + 0x70)->~PosArray();
-    reinterpret_cast<PosArray*>(bytes + 0x90)->~PosArray();
-    reinterpret_cast<RecalcArray*>(bytes + 0xb0)->~RecalcArray();
-    reinterpret_cast<PosArray*>(bytes + 0xd0)->~PosArray();
-    reinterpret_cast<StateArray*>(bytes + 0xf0)->~StateArray();
     reinterpret_cast<CatchArray*>(bytes + 0x120)->~CatchArray();
+    reinterpret_cast<StateArray*>(bytes + 0xf0)->~StateArray();
+    reinterpret_cast<PosArray*>(bytes + 0xd0)->~PosArray();
+    reinterpret_cast<RecalcArray*>(bytes + 0xb0)->~RecalcArray();
+    reinterpret_cast<PosArray*>(bytes + 0x90)->~PosArray();
+    reinterpret_cast<PosArray*>(bytes + 0x70)->~PosArray();
+    *reinterpret_cast<const void***>(bytes) = Scaleform::GFx::AS3::DAT_14317b648;
 }
 
 namespace {
@@ -2430,14 +2439,44 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f20 0x1424e1f20
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1f80 0x1424e1f80
 // MS2-PIN: Sfr16ScalarDeletingDtor_1424e1fe0 0x1424e1fe0
-// MS2-FUNCTIONAL 0x1424ddb00: release ShapeObject's own drawing and definition references, then its bases.
+namespace Scaleform { namespace GFx { namespace AS3 {
+extern void* const ShapeObject_vftable[];
+extern void* const ShapeObject_vftable_18[];
+extern void* const ShapeObject_vftable_90[];
+extern void* const AvmBitmap_vftable[];
+extern void* const AvmBitmap_vftable_18[];
+extern void* const AvmBitmap_vftable_90[];
+}}}
+
+// AvmBitmap (a ShapeObject sibling): clear the AvmObjOffset byte, reinstall its three vftables, release the image
+// and definition resources, then the AvmDisplayObj and DisplayObject bases.
+// MS2-FUNCTIONAL 0x1424ddb00: AvmBitmap is not recovered; the teardown is written against raw member offsets.
 // @0x1424ddb00
+extern "C" void FUN_1424ddb00(void* self)
+{
+    auto* bytes = static_cast<unsigned char*>(self);
+    bytes[0x6d] = 0;
+    *reinterpret_cast<void* const**>(bytes + 0x00) = Scaleform::GFx::AS3::AvmBitmap_vftable;
+    *reinterpret_cast<void* const**>(bytes + 0x18) = Scaleform::GFx::AS3::AvmBitmap_vftable_18;
+    *reinterpret_cast<void* const**>(bytes + 0x90) = Scaleform::GFx::AS3::AvmBitmap_vftable_90;
+    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Resource>*>(bytes + 0xc8)->~Ptr();
+    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Resource>*>(bytes + 0xc0)->~Ptr();
+    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(bytes + 0x90)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
+    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->Scaleform::GFx::DisplayObject::~DisplayObject();
+}
+
+// MS2-FUNCTIONAL 0x1424deeb0: release ShapeObject's own drawing and definition references, then its bases.
+// @0x1424deeb0
 namespace Scaleform { namespace GFx { namespace AS3 {
 ShapeObject::~ShapeObject()
 {
     auto* bytes = reinterpret_cast<unsigned char*>(this);
-    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::ShapeBaseCharacterDef>*>(bytes + 0xc0)->~Ptr();
+    bytes[0x6d] = 0;
+    *reinterpret_cast<void* const**>(bytes + 0x00) = ShapeObject_vftable;
+    *reinterpret_cast<void* const**>(bytes + 0x18) = ShapeObject_vftable_18;
+    *reinterpret_cast<void* const**>(bytes + 0x90) = ShapeObject_vftable_90;
     reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::DrawingContext>*>(bytes + 0xc8)->~Ptr();
+    reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::ShapeBaseCharacterDef>*>(bytes + 0xc0)->~Ptr();
     reinterpret_cast<AvmDisplayObj*>(bytes + 0x90)->AvmDisplayObj::~AvmDisplayObj();
     reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->DisplayObject::~DisplayObject();
 }
@@ -2447,10 +2486,14 @@ ShapeObject::~ShapeObject()
 // @0x1424ddcb0
 extern "C" void FUN_1424ddcb0(void* self)
 {
+    auto* bytes = static_cast<unsigned char*>(self);
+    *reinterpret_cast<void* const**>(bytes + 0x00) = Scaleform::GFx::AS3::AvmMovieClip_vftable;
+    *reinterpret_cast<void* const**>(bytes + 0x30) = Scaleform::GFx::AS3::AvmMovieClip_vftable_30;
+    *reinterpret_cast<void* const**>(bytes + 0x40) = Scaleform::GFx::AS3::AvmMovieClip_vftable_40;
+    *reinterpret_cast<void* const**>(bytes + 0x48) = Scaleform::GFx::AS3::AvmMovieClip_vftable_48;
     reinterpret_cast<Scaleform::GFx::AS3::AvmSprite*>(self)->Scaleform::GFx::AS3::AvmSprite::~AvmSprite();
 }
 
-// MS2-PIN: ?_GShapeObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424ddb00
 // MS2-PIN: FUN_1424ddcb0 0x1424ddcb0
 // MS2-PIN: ??_7ASMovieRootBase@GFx@Scaleform@@6B@ 0x14317bde0
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
