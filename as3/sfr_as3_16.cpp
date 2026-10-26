@@ -494,6 +494,9 @@ VM::~VM()
     FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
     FUN_1424dfaf0(reinterpret_cast<unsigned char*>(this) + 0x140);
     FUN_1424dfbf0(reinterpret_cast<unsigned char*>(this) + 0x48);
+    // The exe's GlobalObjects is ArrayLH<GlobalObject*>: its data is freed without releasing the (unowned) elements.
+    // as3_vm.h still declares SPtr elements (shared with the as3_17/18 lanes), so empty it here; the member dtor then only frees Data.
+    reinterpret_cast<Scaleform::UPInt*>(&GlobalObjects)[1] = 0; // Size (+0x1b0)
 }
 }}} // namespace Scaleform::GFx::AS3
 
