@@ -71,55 +71,71 @@ static inline void rv(char* c, int a, int b, int fl) // FunctionRef-style pair r
     *(void**)(c + b) = 0;
 }
 
+// The vftables the inlined destructors store.
+extern const void* DAT_143215370[]; // RefCountBaseGC<323>
+extern const void* DAT_143215ab0[];
+extern const void* DAT_143215ad0[];
+extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
+extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
+
+
 // @0x142927640
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142927640(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215370;
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x20);
+    }
     return p;
 }
 
 // @0x1429276e0
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_1429276e0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215ab0;
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 8);
     return p;
 }
 
 // @0x142927710
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142927710(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215ad0;
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 8);
     return p;
 }
 
+// The derived class (vftable 0x143215ac0) adds nothing to destroy; the base dtor stores 0x143215ab0.
 // @0x142928fb0
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142928fb0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215ab0;
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 0x20);
     return p;
 }
 
+// GFxAS2LoadQueueEntryMT_LoadCSS::~GFxAS2LoadQueueEntryMT_LoadCSS: pLoadStates, pTask, then ~LoadQueueEntryMT.
 // @0x142925850
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void DtorAs2_142925850(void* p)
 {
+    *(const void**)p = DAT_1432177b0;
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
     FUN_142639d10(p);
 }
 
+// GFxAS2LoadQueueEntryMT_LoadXML::~GFxAS2LoadQueueEntryMT_LoadXML: pLoadStates, pTask, then ~LoadQueueEntryMT.
 // @0x1429258e0
-// MS2-FUNCTIONAL: destructor written out against raw member offsets; the class is not recovered
 void DtorAs2_1429258e0(void* p)
 {
+    *(const void**)p = DAT_143217780;
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
     FUN_142639d10(p);
