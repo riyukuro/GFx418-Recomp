@@ -1904,7 +1904,7 @@ cri_u8 FUN_1400678d0(cri_any cri_p0, cri_any cri_p1, ...)
           }
           i_v1 = GetThreadPriority(*(HANDLE *)(loc_10 + 2));
           loc_10[0x1b] = i_v1;
-          *(cri_u8 *)((char *)loc_10 + 0x1c) = 0xffffffffffffffff;
+          *(cri_u8 *)((char *)loc_10 + 0x70) = 0xffffffffffffffff;
           *loc_10 = 1;
         }
       }
@@ -2031,8 +2031,8 @@ int FUN_140067cd0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   }
   else if (arg1[1] == 0) {
     FUN_1400683d0(*(cri_u8 *)(arg1 + 6));
-    *(cri_u8 *)((char *)arg1 + 0x14) = arg2;
-    *(cri_u8 *)((char *)arg1 + 0x16) = arg3;
+    *(cri_u8 *)((char *)arg1 + 0x50) = arg2;
+    *(cri_u8 *)((char *)arg1 + 0x58) = arg3;
     arg1[1] = 1;
     arg1[0x18] = arg1[0x18] + 1;
     if (arg1[0x18] == 0x7fffffff) {
@@ -2228,7 +2228,7 @@ void FUN_1400680a0(cri_any cri_p0, cri_any cri_p1, ...)
   else if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
   }
-  else if (*(ulonglong *)((char *)arg1 + 0x1c) != (ulonglong)arg2) {
+  else if (*(ulonglong *)((char *)arg1 + 0x70) != (ulonglong)arg2) {
     hProcess = GetCurrentProcess();
     BVar1 = GetProcessAffinityMask(hProcess,&loc_20,&loc_18);
     loc_10 = (longlong)BVar1;
@@ -2239,7 +2239,7 @@ void FUN_1400680a0(cri_any cri_p0, cri_any cri_p1, ...)
     if ((dwThreadAffinityMask != 0) &&
        (DVar2 = SetThreadAffinityMask(*(HANDLE *)(arg1 + 2),dwThreadAffinityMask),
        (DVar2 & 0xffffffff) != 0)) {
-      *(ulonglong *)((char *)arg1 + 0x1c) = dwThreadAffinityMask;
+      *(ulonglong *)((char *)arg1 + 0x70) = dwThreadAffinityMask;
     }
   }
   return;
@@ -2399,9 +2399,9 @@ void FUN_140068490(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
     arg3 = arg3 + -0x10;
   }
   **(cri_u1 **)(arg2 + 10) = *(cri_u1 *)(arg1[0x80] + arg3);
-  **(cri_u1 **)((char *)arg2 + 0xe) = *(cri_u1 *)(arg1[0xc0] + arg3);
-  **(cri_u1 **)((char *)arg2 + 0x12) = *(cri_u1 *)(arg1[0x100] + arg3);
-  **(cri_u1 **)((char *)arg2 + 0x16) = *(cri_u1 *)(arg1[0x140] + arg3);
+  **(cri_u1 **)((char *)arg2 + 0x38) = *(cri_u1 *)(arg1[0xc0] + arg3);
+  **(cri_u1 **)((char *)arg2 + 0x48) = *(cri_u1 *)(arg1[0x100] + arg3);
+  **(cri_u1 **)((char *)arg2 + 0x58) = *(cri_u1 *)(arg1[0x140] + arg3);
   return;
 }
 
@@ -3292,7 +3292,7 @@ int FUN_140069ac4(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3
   float f_v48;
   float f_v49;
   
-  b_v6 = *(byte *)((char *)arg1 + 0x28);
+  b_v6 = *(byte *)((char *)arg1 + 0xa0);
   f_v9 = arg1[8];
   f_v10 = arg1[9];
   f_v11 = arg1[10];
@@ -3319,7 +3319,7 @@ int FUN_140069ac4(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3
   f_v32 = arg1[7];
   if (arg6 == b_v6) {
     s_v7 = *(short *)((longlong)arg1 + 0xa6);
-    s_v8 = *(short *)((char *)arg1 + 0x29);
+    s_v8 = *(short *)((char *)arg1 + 0xa4);
     u_v38 = *(ushort *)((longlong)arg1 + 0xa2);
     arg4 = arg4 / (((uint)b_v6 + (uint)b_v6 * 8) * 2);
     u_v39 = arg8 >> 5;
@@ -3490,7 +3490,7 @@ void FUN_140069ef4(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   s_v3 = (short)(int)(f_v8 * f_v8 * -4096.0);
   *(short *)((longlong)arg1 + 0xaa) = s_v3;
   s_v1 = (short)(int)(f_v8 * 2.0 * 4096.0);
-  *(short *)((char *)arg1 + 0x2a) = s_v1;
+  *(short *)((char *)arg1 + 0xa8) = s_v1;
   arg1[0xc] = 0.0;
   arg1[0x10] = 0.0;
   arg1[0x14] = 0.0;
@@ -35684,7 +35684,7 @@ void FUN_140090730(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
             au_v18.b[2] = (char)(u_v2 >> 8);
             au_v18.b[1] = 0;
             au_v18.b[0] = (byte)u_v2;
-            *(longlong *)((char *)pu_v182 + 0x10) = CRI_PART(au_v18,0,8);
+            *(longlong *)((char *)pu_v182 + 0x40) = CRI_PART(au_v18,0,8);
             pu_v182[0x18] = 0;
             pu_v182[0x19] = 0;
             pu_v182 = pu_v183;
@@ -38063,7 +38063,7 @@ uint FUN_140095b40(cri_any cri_p0, cri_any cri_p1, ...)
   if (0x10 < i_v16) {
     u_v14 = u_v14 | u_v12 >> (0x30U - (char)i_v16 & 0x1f);
   }
-  b_v1 = *(byte *)((ulonglong)(u_v14 >> 9) + *(longlong *)((char *)arg2 + 0x10));
+  b_v1 = *(byte *)((ulonglong)(u_v14 >> 9) + *(longlong *)((char *)arg2 + 0x40));
   u_v17 = b_v1 & 0xf;
   u_v18 = (ulonglong)u_v17;
   b_v1 = b_v1 >> 4;
@@ -38093,7 +38093,7 @@ uint FUN_140095b40(cri_any cri_p0, cri_any cri_p1, ...)
     local_res8 = CONCAT13(u_v2,(cri_u8)local_res8);
   }
   pb_v5 = (byte *)(ulonglong)local_res8;
-  pi_v4 = *(int **)((char *)arg2 + 0xe);
+  pi_v4 = *(int **)((char *)arg2 + 0x38);
   *pi_v4 = *pi_v4 + u_v11;
   **(cri_u2 **)(arg2 + 8) = (short)*pi_v4;
   arg2[4] = 0;
@@ -41309,7 +41309,7 @@ uint FUN_14009a3d0(cri_any cri_p0, cri_any cri_p1, ...)
   if (i_v15 != 0) {
     u_v14 = u_v12 >> (0x20U - (char)i_v15 & 0x1f) | u_v19;
   }
-  b_v1 = *(byte *)((ulonglong)(u_v14 >> 0x16) + *(longlong *)((char *)arg2 + 0x10));
+  b_v1 = *(byte *)((ulonglong)(u_v14 >> 0x16) + *(longlong *)((char *)arg2 + 0x40));
   u_v16 = b_v1 & 0xf;
   b_v1 = b_v1 >> 4;
   u_v10 = (uint)b_v1;
@@ -41334,7 +41334,7 @@ uint FUN_14009a3d0(cri_any cri_p0, cri_any cri_p1, ...)
     local_res8 = CONCAT13(u_v2,(cri_u8)local_res8);
   }
   pb_v5 = (byte *)(ulonglong)local_res8;
-  pi_v4 = *(int **)((char *)arg2 + 0xe);
+  pi_v4 = *(int **)((char *)arg2 + 0x38);
   *pi_v4 = *pi_v4 + u_v10;
   **(cri_u2 **)(arg2 + 8) = (short)*pi_v4;
   arg2[4] = 0;
@@ -48062,7 +48062,7 @@ uint FUN_1400a3920(cri_any cri_p0, cri_any cri_p1, ...)
   if (0x10 < i_v12) {
     u_v16 = u_v16 | u_v14 >> (0x30U - (char)i_v12 & 0x1f);
   }
-  b_v1 = *(byte *)((ulonglong)(u_v16 >> 9) + *(longlong *)((char *)arg2 + 0x10));
+  b_v1 = *(byte *)((ulonglong)(u_v16 >> 9) + *(longlong *)((char *)arg2 + 0x40));
   u_v18 = b_v1 & 0xf;
   u_v19 = (ulonglong)u_v18;
   b_v1 = b_v1 >> 4;
@@ -48092,7 +48092,7 @@ uint FUN_1400a3920(cri_any cri_p0, cri_any cri_p1, ...)
     local_res8 = CONCAT13(u_v2,(cri_u8)local_res8);
   }
   pb_v6 = (byte *)(ulonglong)local_res8;
-  pi_v5 = *(int **)((char *)arg2 + 0xe);
+  pi_v5 = *(int **)((char *)arg2 + 0x38);
   *pi_v5 = *pi_v5 + u_v13;
   **(float **)(arg2 + 8) = (float)*pi_v5 * 0.125;
   arg2[4] = 0;
@@ -51394,7 +51394,7 @@ uint FUN_1400a8ad0(cri_any cri_p0, cri_any cri_p1, ...)
   if (i_v13 != 0) {
     u_v16 = u_v14 >> (0x20U - (char)i_v13 & 0x1f) | u_v17;
   }
-  b_v1 = *(byte *)((ulonglong)(u_v16 >> 0x16) + *(longlong *)((char *)arg2 + 0x10));
+  b_v1 = *(byte *)((ulonglong)(u_v16 >> 0x16) + *(longlong *)((char *)arg2 + 0x40));
   u_v18 = b_v1 & 0xf;
   b_v1 = b_v1 >> 4;
   u_v11 = (uint)b_v1;
@@ -51419,7 +51419,7 @@ uint FUN_1400a8ad0(cri_any cri_p0, cri_any cri_p1, ...)
     local_res8 = CONCAT13(u_v2,(cri_u8)local_res8);
   }
   pb_v6 = (byte *)(ulonglong)local_res8;
-  pi_v5 = *(int **)((char *)arg2 + 0xe);
+  pi_v5 = *(int **)((char *)arg2 + 0x38);
   *pi_v5 = *pi_v5 + u_v11;
   **(float **)(arg2 + 8) = (float)*pi_v5 * 0.125;
   arg2[4] = 0;
