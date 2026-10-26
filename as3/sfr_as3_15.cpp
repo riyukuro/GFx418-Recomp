@@ -1995,15 +1995,16 @@ extern void* const ShapeObject_vftable_90[];
 // @0x1424d98a0
 ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
 {
+    UByte* const self = reinterpret_cast<UByte*>(this);   // Data is at +8 behind the vptr of the opaque class
     FUN_1425f07e0(this, pasRoot, pparent, id);
-    new (Data + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
-    *reinterpret_cast<void* const**>(Data + 0x00) = ShapeObject_vftable;
-    *reinterpret_cast<void* const**>(Data + 0x18) = ShapeObject_vftable_18;
-    *reinterpret_cast<void* const**>(Data + 0x90) = ShapeObject_vftable_90;
+    new (self + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
+    *reinterpret_cast<void* const**>(self + 0x00) = ShapeObject_vftable;
+    *reinterpret_cast<void* const**>(self + 0x18) = ShapeObject_vftable_18;
+    *reinterpret_cast<void* const**>(self + 0x90) = ShapeObject_vftable_90;
     if (pdef)
         reinterpret_cast<Resource*>(pdef)->AddRef();
-    *reinterpret_cast<CharacterDef**>(Data + 0xc0) = pdef;
-    *reinterpret_cast<void**>(Data + 0xc8) = NULL;
+    *reinterpret_cast<CharacterDef**>(self + 0xc0) = pdef;
+    *reinterpret_cast<void**>(self + 0xc8) = NULL;
 }
 
 extern void* const AvmBitmap_vftable[];
