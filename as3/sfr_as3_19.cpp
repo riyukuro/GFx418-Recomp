@@ -3448,7 +3448,7 @@ void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc)
 }
 
 // The top of the operand stack is converted to an int index and popped; the new top's object is queried at that index and
-// the top replaced by the resulting int.
+// the top replaced by the resulting uint.
 // MS2-FUNCTIONAL 0x14253abd0: behavior-equivalent recovery; codegen differs from exe
 // @0x14253abd0
 void Sfr31ExecIndexedQuery(UPInt vm)
@@ -3471,7 +3471,7 @@ void Sfr31ExecIndexedQuery(UPInt vm)
         const UPInt o = Sfr31Rd(cur, 0x10);
         typedef const UInt32* (*Fn)(UPInt, void*, UInt32);
         const UInt32* r = reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0x88))(o, okBuf, idx);
-        Value res(static_cast<SInt32>(*r));
+        Value res(static_cast<UInt32>(*r));
         reinterpret_cast<Value*>(cur)->Assign(res);
     }
 }
