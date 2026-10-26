@@ -33,7 +33,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 void FUN_142925cf0(void*);
 void FUN_142925750(void*);
 void FUN_142925dd0(void*);
-void FUN_142939780(void*);
 void FUN_14257db40(void*);
 void FUN_14257db50(void*);
 void FUN_14257dcb0(void*);
@@ -43,7 +42,7 @@ void FUN_1425f0900(void*);
 
 static inline void rs(void* n) // ASString release
 {
-    int* c = (int*)((char*)n + 0x18);
+    unsigned* c = (unsigned*)((char*)n + 0x18);
     if (--*c == 0) FUN_1425c14e0(n);
 }
 static inline void rg(void* n) // Ptr<RefCountBaseGC> release
@@ -54,278 +53,397 @@ static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 static inline void rc(void* h) // Ptr<CharacterHandle> release
 {
     int* c = (int*)h;
-    if (h && --*c < 1) { FUN_1425f0900(h); Memory::Free(h); }
+    if (h && --*c <= 0) { FUN_1425f0900(h); Memory::Free(h); }
 }
 static inline void ra(unsigned long long tagged) // atomic shared string-data release
 {
     int* c = (int*)((tagged & ~3ull) + 8);
-    if (_InterlockedDecrement((volatile long*)c) == 0) Memory::Free((void*)(tagged & ~3ull));
+    if (_InterlockedExchangeAdd((volatile long*)c, -1) == 1) Memory::Free((void*)(tagged & ~3ull));
 }
-static inline void rv(char* c, int a, int b, int fl) // FunctionRef-style pair release
-{
-    unsigned char f = (unsigned char)c[fl];
-    if (!(f & 2) && *(void**)(c + a)) { rg(*(void**)(c + a)); f = (unsigned char)c[fl]; }
-    *(void**)(c + a) = 0;
-    if (!(f & 1) && *(void**)(c + b)) rg(*(void**)(c + b));
-    *(void**)(c + b) = 0;
-}
+// The base vftables the inlined destructors store.
+extern const void* DAT_14317c9d8[];
+extern const void* DAT_143188d98[];
+extern const void* DAT_143215370[];
+extern const void* DAT_1432153b8[];
+extern const void* DAT_1432155c0[];
+extern const void* DAT_143215648[];
+extern const void* DAT_143216730[];
+extern const void* DAT_143216778[];
+extern const void* DAT_143216820[];
+extern const void* DAT_1432172f0[];
+extern const void* DAT_143217718[];
+extern const void* DAT_143217d38[];
+extern const void* DAT_143217d80[];
+extern const void* DAT_143217e28[];
+extern const void* DAT_143218490[];
+extern const void* DAT_1432184d8[];
+extern const void* DAT_143218990[];
+extern const void* DAT_1432189d8[];
+extern const void* DAT_143218a80[];
+extern const void* DAT_14321aa10[];
+extern const void* DAT_14321aa58[];
+extern const void* DAT_14321ab00[];
+extern const void* DAT_14321dd78[];
+extern const void* DAT_143222848[];
 
 // @0x142928f30
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142928f30(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432153b8;
     if (*(void**)((char*)p+0x10)) Memory::Free(*(void**)((char*)p+0x10));
     FUN_14257db40(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x28);
+    }
     return p;
 }
 
 // @0x142929ec0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142929ec0(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292a400
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292a400(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c2c0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292c2c0(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x142929f40
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_142929f40(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143217d38;
+    *(const void**)((char*)p+0x20) = DAT_143217d80;
+    *(const void**)((char*)p+0x70) = DAT_143217e28;
     FUN_142925750((char*)p+0x70);
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb0);
+    }
     return p;
 }
 
 // @0x14292a480
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292a480(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143218990;
+    *(const void**)((char*)p+0x20) = DAT_1432189d8;
+    *(const void**)((char*)p+0x70) = DAT_143218a80;
     FUN_142925750((char*)p+0x70);
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb0);
+    }
     return p;
 }
 
 // @0x14292c340
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292c340(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143216730;
+    *(const void**)((char*)p+0x20) = DAT_143216778;
+    *(const void**)((char*)p+0x78) = DAT_143216820;
     FUN_142925750((char*)p+0x78);
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb8);
+    }
     return p;
 }
 
 // @0x14292d120
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292d120(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321aa10;
+    *(const void**)((char*)p+0x20) = DAT_14321aa58;
+    *(const void**)((char*)p+0x70) = DAT_14321ab00;
     FUN_142925750((char*)p+0x70);
     rs(*(void**)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb0);
+    }
     return p;
 }
 
 // @0x14292d0b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292d0b0(void* p, unsigned flags)
 {
     rs(*(void**)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292a050
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292a050(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143222848;
     if (*(void**)((char*)p+0x18)) Memory::Free(*(void**)((char*)p+0x18));
+    *(const void**)p = DAT_1432172f0;
     FUN_14257db40(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x28);
+    }
     return p;
 }
 
 // @0x14292af30
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292af30(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x20)) Memory::Free(*(void**)((char*)p+0x20));
     FUN_14257db50(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x40);
+    }
     return p;
 }
 
 // @0x14292d4b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292d4b0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143218490;
+    *(const void**)((char*)p+0x20) = DAT_1432184d8;
     Memory::Free(*(void**)((char*)p+0x70));
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x14292c5a0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292c5a0(void* p, unsigned flags)
 {
     ra(*(unsigned long long*)((char*)p+0x70));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
+// MS2-FUNCTIONAL 0x14292afe0: register allocation only (the exe keeps p in rdi and the -1 addend in ebx)
 // @0x14292afe0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292afe0(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     ra(*(unsigned long long*)((char*)p+0x28));
     ra(*(unsigned long long*)((char*)p+0x20));
     if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
+    *(const void**)p = DAT_143188d98;
     FUN_14257db40(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x40);
+    }
     return p;
 }
 
+// MS2-FUNCTIONAL 0x14292b390: register allocation only (the exe keeps p in rdi and the -1 addend in ebx)
 // @0x14292b390
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292b390(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     ra(*(unsigned long long*)((char*)p+0x28));
     ra(*(unsigned long long*)((char*)p+0x20));
     if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
+    *(const void**)p = DAT_143188d98;
     FUN_14257db40(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x40);
+    }
     return p;
 }
 
+// MS2-FUNCTIONAL 0x14292b0c0: scheduling only (the exe tests the +0xa0 and +0x78 value types before forming their addresses)
 // @0x14292b0c0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292b0c0(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0xc0)) FUN_14257dcb0(*(void**)((char*)p+0xc0));
-    if (*(unsigned char*)((char*)p+0xa0) > 4) FUN_142939780((char*)p+0xa0);
+    ((Value*)((char*)p+0xa0))->~Value();
     if (*(void**)((char*)p+0x98)) FUN_14257dcb0(*(void**)((char*)p+0x98));
-    if (*(unsigned char*)((char*)p+0x78) > 4) FUN_142939780((char*)p+0x78);
-    if (*(unsigned char*)((char*)p+0x58) > 4) FUN_142939780((char*)p+0x58);
-    if (*(unsigned char*)((char*)p+0x38) > 4) FUN_142939780((char*)p+0x38);
+    ((Value*)((char*)p+0x78))->~Value();
+    ((Value*)((char*)p+0x58))->~Value();
+    ((Value*)((char*)p+0x38))->~Value();
     rc(*(void**)((char*)p+0x30));
-    ra(*(unsigned long long*)((char*)p+0x18));
+    unsigned long long name = *(unsigned long long*)((char*)p+0x18);
+    *(const void**)p = DAT_14317c9d8;
+    ra(name);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xc8);
+    }
     return p;
 }
 
 // @0x14292beb0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292beb0(void* p, unsigned flags)
 {
-    rv((char*)p,0x90,0x98,0xa0);
+    ((FunctionRefBase*)((char*)p+0x90))->DropRefs();
     rg(*(void**)((char*)p+0x78));
+    *(const void**)((char*)p+0x70) = DAT_143217718;
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb0);
+    }
     return p;
 }
 
 // @0x14292d330
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292d330(void* p, unsigned flags)
 {
-    rv((char*)p,0x80,0x88,0x90);
+    ((FunctionRefBase*)((char*)p+0x80))->DropRefs();
     rg(*(void**)((char*)p+0x70));
     rg(*(void**)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x98);
+    }
     return p;
 }
 
 // @0x14292dae0
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292dae0(void* p, unsigned flags)
 {
-    rv((char*)p,0x38,0x40,0x48);
-    rv((char*)p,0x20,0x28,0x30);
+    ((FunctionRefBase*)((char*)p+0x38))->DropRefs();
+    ((FunctionRefBase*)((char*)p+0x20))->DropRefs();
+    *(const void**)p = DAT_143215370;
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x50);
+    }
     return p;
 }
 
 // @0x14292ad40
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292ad40(void* p, unsigned flags)
 {
-    rv((char*)p,0x0,0x8,0x10);
+    ((FunctionRefBase*)p)->DropRefs();
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
 // @0x14292c750
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292c750(void* p, unsigned flags)
 {
     FUN_142925dd0(p);
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
 // @0x14292ce00
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 void* DeleteAs2_14292ce00(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321dd78;
     rg(*(void**)((char*)p+0x8));
     if (flags & 1)
-        Memory::Free(p);
+        ::operator delete(p, 0x10);
     return p;
 }
 
