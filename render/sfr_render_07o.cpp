@@ -120,16 +120,10 @@ void TextMeshProvider::AddToInUseList()
     pCache->GetTextInUse().PushBack(this);
 }
 
-// The optional matrix-block elements are packed in bit order before the final matrix.
+// The final matrix sits after the optional elements; their sizes come from the format's offset table.
 static inline UByte* matrixElementStart(const HMatrix& matrix)
 {
-    MatrixPoolImpl::DataHeader* header = matrix.pHandle->pHeader;
-    const unsigned format = header->Format & MatrixPoolImpl::HMatrixConstants::Has_TableMask;
-    const unsigned offset = ((format & MatrixPoolImpl::HMatrixConstants::Has_Cxform) != 0) +
-                            ((format & MatrixPoolImpl::HMatrixConstants::Has_T0) != 0) +
-                            ((format & MatrixPoolImpl::HMatrixConstants::Has_T1) != 0) +
-                            ((format & MatrixPoolImpl::HMatrixConstants::Has_UserData) != 0);
-    return header->GetDataStart() + offset * MatrixPoolImpl::Pool_DataUnitSize;
+    return (UByte*)matrix.pHandle->pHeader->GetData(MatrixPoolImpl::HMatrixConstants::Element_Matrix);
 }
 
 static inline const Matrix2F& matrix2DDirect(const HMatrix& matrix)
