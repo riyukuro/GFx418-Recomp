@@ -268,8 +268,10 @@ void FUN_140014730(void* object, void*, double value)
 void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
 {
     char* bytes = reinterpret_cast<char*>(object);
+    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
+    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
     if (void* provider = *reinterpret_cast<void**>(bytes + 0x100))
-        reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(provider) + 2)(provider);
+        reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
     int* refs = *reinterpret_cast<int**>(bytes + 0xf8);
     if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
     object->InteractiveObject::~InteractiveObject();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
@@ -1648,7 +1650,7 @@ void FUN_140010490(void* object)
     char* bytes = static_cast<char*>(object);
     if (*reinterpret_cast<void**>(bytes + 0x18)) FUN_14257dcb0(*reinterpret_cast<void**>(bytes + 0x18));
     void* fill = *reinterpret_cast<void**>(bytes + 0x10);
-    if (fill) reinterpret_cast<void (*)(void*)>(*reinterpret_cast<void***>(fill) + 2)(fill);
+    if (fill) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(fill))[2])(fill);
     FUN_14257db40(object);
 }
 
@@ -2916,6 +2918,8 @@ Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
+// The exe re-stores the own vftables (+0, +0x20, +0x70) here and in FUN_14000ec40 first; nothing virtual runs on the
+// object before ~Object's own store, so those stores are dead.
 // MS2-FUNCTIONAL: destroys the GASPrototypeBase subobject, releases its retained object, then destroys Object.
 // @0x14000ebe0
 void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
@@ -2998,6 +3002,7 @@ void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
     object->Object::~Object();
 }
 
+// The exe re-stores the own vftables (+0, +0x20, +0x68) first: dead stores, as in FUN_14000ebe0.
 // MS2-FUNCTIONAL: applies the prototype destructor and conditionally frees the object storage.
 // @0x1400125e0
 Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, unsigned flags)
