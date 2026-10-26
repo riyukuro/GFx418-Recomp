@@ -2244,7 +2244,7 @@ namespace Instances { namespace fl_geom
     {
         SF_UNUSED(result);
         if (v == NULL)
-            return GetVM().ThrowTypeError(VM::Error(VM::eNullPointerError, GetVM()));
+            return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
         for (int i = 0; i < 16; i++)
         {
             Value e;
