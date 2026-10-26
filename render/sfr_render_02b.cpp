@@ -481,3 +481,7 @@ template Matrix2F& Matrix2F::SetParlToRect(const float* parl, float x1, float y1
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7GradientData@Render@Scaleform@@6B@ 0x14318cbb8
 // MS2-PIN: ??_7GradientImage@Render@Scaleform@@6B@ 0x14318cbc0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BAB@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBase@VGradientData@Render@Scaleform@@$0BAB@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
