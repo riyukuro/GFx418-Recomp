@@ -8229,14 +8229,18 @@ void FUN_1425198b0(UPInt self)
 void FUN_142519d10(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
                    FocusMovedType fmt)
 {
-    reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
+    // self is already the AvmInteractiveObj base: the exe thunk is a plain jmp, the qualified call through the derived
+    // pointer would add 0x30
+    reinterpret_cast<AvmInteractiveObj*>(self - 0x30)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
 }
 // MS2-FUNCTIONAL: free-function form of the inherited slot
 // @0x142519ec0
 void FUN_142519ec0(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
                    FocusMovedType fmt)
 {
-    reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
+    // self is already the AvmInteractiveObj base: the exe thunk is a plain jmp, the qualified call through the derived
+    // pointer would add 0x30
+    reinterpret_cast<AvmInteractiveObj*>(self - 0x30)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
 }
 
 // MovieRoot slots on its EventChains (+0x150) and MovieImpl (+0x10).
