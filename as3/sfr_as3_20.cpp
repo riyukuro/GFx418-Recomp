@@ -104,6 +104,8 @@ public:
     virtual void InitEventCallback();
     // @0x142543e60
     virtual void ErrorEventCallback() {}
+    // @0x142545040
+    virtual void LoadEventCallback() {}
 
     MovieRoot*                              pMovieRoot;     // +0x10
     SPtr<Instances::fl_display::Loader>     pLoader;        // +0x18
@@ -2503,7 +2505,7 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_7Vector_object@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182a88
 // MS2-PIN: ??_7Vector_uint@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182170
 // The remaining compiler-emitted tables are abstract/interface-only layers with no independent executable table:
-// NotifyLoadInitC has three pure callback slots; the two RefCountBase layers occur only as ASIMEManager subobjects.
+// NotifyLoadInitC has four pure callback slots; the two RefCountBase layers occur only as ASIMEManager subobjects.
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d950
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@1@@Z 0x14254df40
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@1@@Z 0x14254e530

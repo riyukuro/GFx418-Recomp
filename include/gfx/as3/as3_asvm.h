@@ -41,10 +41,12 @@ namespace Instances { namespace fl_display { class Loader; } namespace fl_net { 
 class NotifyLoadInitC : public RefCountImpl
 {
 public:
-    // (appended, sfr19) the Loader's open / init / error events (4.1.18 has no load-complete slot)
+    // (appended, sfr19) the Loader's open / init / error / load events (sfr22: the exe table 0x14317fc00 has four
+    // pure slots after the dtor)
     virtual void OpenEventCallback() = 0;   // 1
     virtual void InitEventCallback() = 0;   // 2
     virtual void ErrorEventCallback() = 0;  // 3
+    virtual void LoadEventCallback() = 0;   // 4
 };
 
 // (sfr24) ASMovieRootBase at +0x00 (vftable 0x14317d8d8, 54 slots), FlashUI at +0x28 (vftable 0x14317da88) and
