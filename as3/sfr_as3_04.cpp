@@ -1814,7 +1814,16 @@ extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6e8[1];   // Classes::fl::Error prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e690[2];   // Classes::fl::Namespace prototype methods
-extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d610[2];   // Classes::fl::Array prototype methods (type-checked)
+// The exe's table is at 0x14313d600 (0x14313d610 is &[0].Name, which the exe's lea addresses); the data unit split
+// it at 0x14313d610 and dropped [0].Method/ResultType, so [i].Name read a zero field. Classes::fl::Array prototype
+// methods (type-checked), kept local.
+struct Sd_14313d9e0; extern Sd_14313d9e0 DAT_14313d9e0;
+// The result type is the exe's String type info; its address cannot sit in static data (ADDR64 on an exe global),
+// so the table is filled at run time.
+__declspec(noinline) static const Scaleform::GFx::AS3::TypeInfo* ArrayProtoResultType()
+{
+    return (const Scaleform::GFx::AS3::TypeInfo*)&DAT_14313d9e0;
+}
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e840[2];   // Classes::fl::String prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d850[6];   // Classes::fl::Number prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6a0[1];   // Classes::fl::QName prototype methods
@@ -1917,10 +1926,14 @@ namespace Classes { namespace fl
         const Classes::Function& cf =
             static_cast<const Classes::Function&>(FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
         InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
+        const Scaleform::GFx::AS3::ThunkInfo s_ArrayProtoThunks[2] = {
+            {&Instances::fl::Array::toLocaleStringProto, ArrayProtoResultType(), "toLocaleString", 0},
+            {&Instances::fl::Array::toStringProto, ArrayProtoResultType(), "toString", 0},
+        };
         for (unsigned i = 0; i < 2; ++i)
         {
-            Value f(cf.MakeCheckTypeInstance(*this, DAT_14313d610[i], itr));
-            obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(DAT_14313d610[i].Name), f,
+            Value f(cf.MakeCheckTypeInstance(*this, s_ArrayProtoThunks[i], itr));
+            obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(s_ArrayProtoThunks[i].Name), f,
                                         SlotInfo::aDontEnum);
         }
         FUN_1424e6f90(this, obj);
