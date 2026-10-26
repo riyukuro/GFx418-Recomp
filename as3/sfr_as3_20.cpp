@@ -112,7 +112,8 @@ public:
     Ptr<IMEManager>                         pIMEManager;    // +0x20
 };
 
-// @0x1425430b0 (compiler-emitted scalar-deleting destructor)
+// The exe has no out-of-line copy: 0x1425430b0 is the scalar deleting destructor (pinned at the end of the file),
+// which inlines this body, ~RefCountImplCore and the Memory::Free.
 NotifyLoadInitCandidateList::~NotifyLoadInitCandidateList()
 {
 }
@@ -2623,3 +2624,4 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CAB@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7?$RefCountBase@VASIMEManager@GFx@Scaleform@@$0CAB@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7NotifyLoadInitC@AS3@GFx@Scaleform@@6B@ 0x14317fc00
+// MS2-PIN: ??_GNotifyLoadInitCandidateList@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425430b0
