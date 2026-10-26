@@ -1429,14 +1429,14 @@ VideoReader::~VideoReader()
 // @0x14002de60
 void FUN_14002de60(VideoReader* reader)
 {
-    reader->~VideoReader();
+    reader->VideoReader::~VideoReader();  // non-virtual: a virtual call re-enters this deleting dtor
 }
 
 // MS2-FUNCTIONAL: destroy the VideoReader and optionally return its allocation to the global heap.
 // @0x14002d9e0
 void* FUN_14002d9e0(VideoReader* reader, CriUint32 flags)
 {
-    reader->~VideoReader();
+    reader->VideoReader::~VideoReader();  // non-virtual: a virtual call re-enters this deleting dtor
     if (flags & 1)
         FUN_14002d3f0(reader);
     return reader;
@@ -1446,7 +1446,7 @@ void* FUN_14002d9e0(VideoReader* reader, CriUint32 flags)
 // @0x14002dec0
 void* FUN_14002dec0(VideoReader* reader, CriUint32 flags)
 {
-    reader->~VideoReader();
+    reader->VideoReader::~VideoReader();  // non-virtual: a virtual call re-enters this deleting dtor
     if (flags & 1)
         FUN_14002d3f0(reader);
     return reader;
@@ -6709,7 +6709,7 @@ CriMvEasyFileReaderMem::~CriMvEasyFileReaderMem()
 // @0x140038c40
 void* FUN_140038c40(CriMvEasyFileReaderMem* reader, CriUint32 flags)
 {
-    reader->~CriMvEasyFileReaderMem();
+    reader->CriMvEasyFileReaderMem::~CriMvEasyFileReaderMem();  // non-virtual
     if ((flags & 1) != 0)
         CriAllocator::operator delete(reader, (size_t)0x40);
     return reader;
