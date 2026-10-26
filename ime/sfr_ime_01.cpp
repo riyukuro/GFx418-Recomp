@@ -2860,11 +2860,13 @@ HRESULT FUN_1423da940(void*, IUnknown* source, void* value, unsigned selector, v
     return hr;
 }
 
+// The destructor call is qualified: self->~MemoryContextImpl() is a virtual call through slot 0, back into this
+// deleting destructor.
 // MS2-FUNCTIONAL: uses our AS3 memory context declaration to release its heap limit handler, owned references, and allocated storage.
 // @0x1423dbd20
 void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags)
 {
-    self->~MemoryContextImpl();
+    self->MemoryContextImpl::~MemoryContextImpl();
     if (flags & 1) {
         if (!(flags & 4)) Scaleform::Memory::Free(self);
         else FUN_14015b310(self, 0x68);
@@ -4969,3 +4971,6 @@ void* FUN_1423db898(void* self, unsigned flags)
 
 
 }}}
+// MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
+// MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
+// MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313ba60
