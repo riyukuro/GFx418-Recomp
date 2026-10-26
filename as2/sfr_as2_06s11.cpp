@@ -5,6 +5,8 @@
 // MS2-UNIT: sfr_as2_06s11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14295e2b0-0x14296153f .text$mn
+// MS2-RANGE: 0x14292bd60-0x14292bdb7 .text$mn
+// MS2-RANGE: 0x142993fd0-0x142993fed .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_objectproto.h"
@@ -135,6 +137,7 @@ struct HideMembersVisitor : public ObjectInterface::MemberVisitor
 
     HideMembersVisitor(Object* pobj, ASStringContext* psc) : pObj(pobj), pSC(psc) {}
 
+    // @0x142993fd0
     virtual void Visit(const ASString& name, const Value&, UByte flags)
     {
         pObj->SetMemberFlags(pSC, name, UByte(flags | PropFlags::PropFlag_DontEnum));
