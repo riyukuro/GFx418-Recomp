@@ -158,7 +158,7 @@ ExeDecl<void(void*, void*)> FUN_1424edca0;
 ExeDecl<void(void*, void*, void*, void*)> FUN_142467b50;
 ExeDecl<void(void*, void*, int)> FUN_1424687d0;
 ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)> FUN_1424fef00;
-ExeDecl<void(void*, void*, std::uint64_t)> FUN_1424d2150;
+ExeDecl<void(void*, void*, double)> FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
 ExeDecl<void(void*)> FUN_140026ed0;
 ExeDecl<void()> FUN_140026db0;
 extern ExeDecl<void*> DAT_14317bf80;
@@ -1707,7 +1707,7 @@ void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t field
     auto* soundClass = classValue.GetObject();
     const auto kind = classValue.GetKind();
     if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kString || kind > Scaleform::GFx::AS3::Value::kObject || soundClass)) {
-        FUN_1424d2150(soundClass, &transform, *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(self) + fieldOffset));
+        FUN_1424d2150(soundClass, &transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
         auto atom = reinterpret_cast<std::uintptr_t>(soundClass);
         ReleaseVideoAtom(output);
         RetainVideoAtom(atom);
