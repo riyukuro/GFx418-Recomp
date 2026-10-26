@@ -1824,6 +1824,7 @@ __declspec(noinline) static const Scaleform::GFx::AS3::TypeInfo* ArrayProtoResul
 {
     return (const Scaleform::GFx::AS3::TypeInfo*)&DAT_14313d9e0;
 }
+static Scaleform::GFx::AS3::ThunkInfo s_ArrayProtoThunks[2];
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e840[2];   // Classes::fl::String prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d850[6];   // Classes::fl::Number prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313d6a0[1];   // Classes::fl::QName prototype methods
@@ -1926,10 +1927,9 @@ namespace Classes { namespace fl
         const Classes::Function& cf =
             static_cast<const Classes::Function&>(FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
         InstanceTraits::Traits& itr = GetClassTraits().GetInstanceTraits();
-        const Scaleform::GFx::AS3::ThunkInfo s_ArrayProtoThunks[2] = {
-            {&Instances::fl::Array::toLocaleStringProto, ArrayProtoResultType(), "toLocaleString", 0},
-            {&Instances::fl::Array::toStringProto, ArrayProtoResultType(), "toString", 0},
-        };
+        // The check-type instances keep a pointer to their ThunkInfo, so the table must outlive this call.
+        s_ArrayProtoThunks[0] = {&Instances::fl::Array::toLocaleStringProto, ArrayProtoResultType(), "toLocaleString", 0};
+        s_ArrayProtoThunks[1] = {&Instances::fl::Array::toStringProto, ArrayProtoResultType(), "toString", 0};
         for (unsigned i = 0; i < 2; ++i)
         {
             Value f(cf.MakeCheckTypeInstance(*this, s_ArrayProtoThunks[i], itr));
