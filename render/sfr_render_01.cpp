@@ -1271,7 +1271,7 @@ template Matrix2x4<float>& Matrix2x4<float>::Invert();
 // @0x142579ac0
 void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
 {
-    object->~ImageUpdate();
+    object->ImageUpdate::~ImageUpdate();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -1286,7 +1286,7 @@ void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
 // @0x142579b60
 void* FUN_142579b60(RawImage* object, unsigned flags)
 {
-    object->~RawImage();
+    object->RawImage::~RawImage();
     if (flags & 1)
     {
         if (flags & 4)
@@ -1301,7 +1301,7 @@ void* FUN_142579b60(RawImage* object, unsigned flags)
 // @0x142579cc0
 void* FUN_142579cc0(SubImage* object, unsigned flags)
 {
-    object->~SubImage();
+    object->SubImage::~SubImage();
     if (flags & 1)
     {
         if (flags & 4)
@@ -1316,7 +1316,7 @@ void* FUN_142579cc0(SubImage* object, unsigned flags)
 // @0x142579d80
 void* FUN_142579d80(TextureImage* object, unsigned flags)
 {
-    object->~TextureImage();
+    object->TextureImage::~TextureImage();
     if (flags & 1)
     {
         if (flags & 4)
@@ -1331,7 +1331,7 @@ void* FUN_142579d80(TextureImage* object, unsigned flags)
 // @0x142579e30
 void* FUN_142579e30(TextureManager* object, unsigned flags)
 {
-    object->~TextureManager();
+    object->TextureManager::~TextureManager();
     if (flags & 1)
     {
         if (!(flags & 4))
