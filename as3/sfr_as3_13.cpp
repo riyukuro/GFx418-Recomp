@@ -1004,7 +1004,7 @@ namespace Instances { namespace fl_text
     void Font::InitInstance(bool extCall)
     {
         if (!extCall)
-            AttachLibraryFont();
+            Font::AttachLibraryFont();   // the exe jumps to it directly
     }
 
     // @0x1424b08d0

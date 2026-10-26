@@ -99,8 +99,9 @@ namespace Instances { namespace fl_text {
         // @0x1424aced0
         virtual void InitInstance(bool extCall = false);
         // Binds the instance to the library font exported under its class name; returns false on every path.
+        // (sfr22) virtual: the exe table 0x143169d18 has it at slot 21
         // @0x1424abe80
-        bool AttachLibraryFont();
+        virtual bool AttachLibraryFont();
 
         // @0x1424b08d0
         void fontNameGet(Value& result);
