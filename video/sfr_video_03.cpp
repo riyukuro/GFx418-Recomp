@@ -438,7 +438,8 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
     if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     int extra = -1;
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
-        if (argc > 1) ConvertAS3ValueToInt32(const_cast<std::uint8_t*>(args + 0x20), &extra, &extra, -1, object);
+        int checkResult = 0;   // the CheckResult return slot (exe rsp+0x70), separate from the output
+        if (argc > 1) ConvertAS3ValueToInt32(const_cast<std::uint8_t*>(args + 0x20), &checkResult, &extra, -1, object);
         if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
             auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
             reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t, int)>(VideoThunkF)(
