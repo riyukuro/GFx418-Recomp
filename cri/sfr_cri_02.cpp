@@ -726,6 +726,8 @@ VideoDecoderThrd::VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority pri
 {
 }
 
+// The implicit ~VideoDecoderSmp skips the exe's store of its vftable 0x1431b9170 before the two player arrays are freed:
+// nothing virtual runs between it and ~RefCountNTSImplCore, so the store is dead.
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002b2e0
 VideoDecoderThrd::~VideoDecoderThrd()
@@ -6699,6 +6701,7 @@ CriSint64 CriMvEasyFileReaderMem::GetFileSize(void)
     return FileSize;
 }
 
+// Clang drops the own vftable store (0x1431b9588) of this empty body; the inlined base dtor overwrites it anyway.
 // MS2-FUNCTIONAL: the derived memory reader has no resources beyond its base reader state.
 // @0x140038c80
 CriMvEasyFileReaderMem::~CriMvEasyFileReaderMem()
