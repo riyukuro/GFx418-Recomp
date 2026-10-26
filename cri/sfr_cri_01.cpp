@@ -39,14 +39,30 @@ void  FUN_142638170(const void* self, Scaleform::String* ppath, const void* loc)
 bool  FUN_14256f730(const void* movie, Scaleform::String* ppath);                // MovieImpl::GetMainMoviePath
 void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
 
-// MS2-FUNCTIONAL ??_GCriMvSoundInterface@@UEAAPEAXI@Z: this interface is compiled by CRI's VS2008 build; VS2017's
-// scalar-deleting destructor has the extra sized-delete branch when flag 4 is set.
-// @0x1400283a0
 CriMvSoundInterface::~CriMvSoundInterface() {}
-
-// MS2-FUNCTIONAL ??_GCriMvSystemTimerInterface@@UEAAPEAXI@Z: CRI's VS2008 deleting destructor has no sized-delete path.
-// @0x1400283e0
 CriMvSystemTimerInterface::~CriMvSystemTimerInterface() {}
+
+// The exe's copies are the scalar deleting destructors of the two interfaces (CRI's VS2008 build: no sized-delete
+// flag-4 path). Neither has a constructor here, so their ??_G is never emitted; both are written out.
+// MS2-FUNCTIONAL 0x1400283a0: ??_GCriMvSoundInterface written out (own vftable store, then the CRT operator delete)
+// @0x1400283a0
+void* DeleteCriMvSoundInterface(CriMvSoundInterface* p, unsigned flags)
+{
+    *reinterpret_cast<const void* const**>(p) = DAT_1431b8db0;
+    if (flags & 1)
+        ::operator delete(p);
+    return p;
+}
+
+// MS2-FUNCTIONAL 0x1400283e0: ??_GCriMvSystemTimerInterface written out (own vftable store, then the CRT operator delete)
+// @0x1400283e0
+void* DeleteCriMvSystemTimerInterface(CriMvSystemTimerInterface* p, unsigned flags)
+{
+    *reinterpret_cast<const void* const**>(p) = DAT_1431b8e08;
+    if (flags & 1)
+        ::operator delete(p);
+    return p;
+}
 
 namespace Scaleform { namespace GFx {
 
@@ -770,6 +786,8 @@ SwfVideoSyncObject::SwfVideoSyncObject(Sprite* target)
     *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(this) + 0x18) = frame;
 }
 
+// The novtable SyncObject base skips the exe's store of 0x1431b4f78 here and in FUN_140025e50: a dead store, since
+// ~RefCountNTSImplCore (0x14257db50) overwrites it straight away.
 // MS2-FUNCTIONAL: releases the target refcount core before the common SyncObject base teardown.
 // @0x140025ce0
 SwfVideoSyncObject::~SwfVideoSyncObject()
