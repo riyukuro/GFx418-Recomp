@@ -56,102 +56,113 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 
+// The 0x18-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292a170
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292a170(void* p, unsigned flags)
+void* DeleteAs2_14292a170(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
+// The 0x18-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292a1a0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292a1a0(void* p, unsigned flags)
+void* DeleteAs2_14292a1a0(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
+// The 0x18-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292a9b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292a9b0(void* p, unsigned flags)
+void* DeleteAs2_14292a9b0(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
+// The 0x10-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292aba0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292aba0(void* p, unsigned flags)
+void* DeleteAs2_14292aba0(MovieDef::ResourceVisitor* p, unsigned flags)
 {
+    p->MovieDef::ResourceVisitor::~ResourceVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x10);
     return p;
 }
 
+// The 0x80-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292afb0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292afb0(void* p, unsigned flags)
+void* DeleteAs2_14292afb0(StaticTextSnapshotData::GlyphVisitor* p, unsigned flags)
 {
+    p->StaticTextSnapshotData::GlyphVisitor::~GlyphVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x80);
     return p;
 }
 
+// The 0x18-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292b6e0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292b6e0(void* p, unsigned flags)
+void* DeleteAs2_14292b6e0(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
+// The 0x8-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292b770
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292b770(void* p, unsigned flags)
+void* DeleteAs2_14292b770(AsBroadcaster::InvokeCallback* p, unsigned flags)
 {
+    p->AsBroadcaster::InvokeCallback::~InvokeCallback();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x8);
     return p;
 }
 
+// The 0x28-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292bae0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292bae0(void* p, unsigned flags)
+void* DeleteAs2_14292bae0(AsBroadcaster::InvokeCallback* p, unsigned flags)
 {
+    p->AsBroadcaster::InvokeCallback::~InvokeCallback();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x28);
     return p;
 }
 
+// The 0x8-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292be50
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292be50(void* p, unsigned flags)
+void* DeleteAs2_14292be50(DisplayList::MemberVisitor* p, unsigned flags)
 {
+    p->DisplayList::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x8);
     return p;
 }
 
+// The 0x8-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292be80
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292be80(void* p, unsigned flags)
+void* DeleteAs2_14292be80(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x8);
     return p;
 }
 
+// The 0x8-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292bfc0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292bfc0(void* p, unsigned flags)
+void* DeleteAs2_14292bfc0(MouseListener* p, unsigned flags)
 {
+    p->MouseListener::~MouseListener();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x8);
     return p;
 }
 
@@ -164,22 +175,30 @@ void* DeleteAs2_14292cae0(void* p, unsigned flags)
     return p;
 }
 
+// The 0x18-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292dc10
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292dc10(void* p, unsigned flags)
+void* DeleteAs2_14292dc10(DisplayList::MemberVisitor* p, unsigned flags)
 {
+    p->DisplayList::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x18);
     return p;
 }
 
+// The 0x20-byte derived class's destructor leaves only the base's vptr store.
 // @0x14292dc40
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
-void* DeleteAs2_14292dc40(void* p, unsigned flags)
+void* DeleteAs2_14292dc40(ObjectInterface::MemberVisitor* p, unsigned flags)
 {
+    p->ObjectInterface::MemberVisitor::~MemberVisitor();
     if (flags & 1)
-        ::operator delete(p);
+        ::operator delete(p, 0x20);
     return p;
 }
 
 }}} // namespace Scaleform::GFx::AS2
+// MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
+// MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
+// MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7MemberVisitor@DisplayList@GFx@Scaleform@@6B@ 0x143215358
+// MS2-PIN: ??_7MouseListener@AS2@GFx@Scaleform@@6B@ 0x143217718
