@@ -77,7 +77,7 @@ enum
 enum { Flag2_RegisteredFontsChanged = 0x2 };
 
 // The shadowStyle / shadowColor state of an AS2 field. 0x40 bytes.
-struct TextField::ShadowParams : public NewOverrideBase<StatMV_Text_Mem>
+struct TextField::ShadowParams : public NewOverrideBase<0x143>   // StatMV_ActionScript_Mem
 {
     UInt32                   ShadowColor;    // +0x00
     ASString                 ShadowStyleStr; // +0x08
