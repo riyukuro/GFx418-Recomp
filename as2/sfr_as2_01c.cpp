@@ -189,12 +189,12 @@ String* FUN_1423c95f0(void*, String* out)
     return out;
 }
 
-// MS2-FUNCTIONAL: the user's abbreviated language name (LOCALE_SABBREVLANGNAME).
+// MS2-FUNCTIONAL: the system default locale's abbreviated language name (LOCALE_SABBREVLANGNAME).
 // @0x1423c9610
 String* FUN_1423c9610(void*, String* out)
 {
     char name[16];
-    if (GetLocaleInfoA(LOCALE_USER_DEFAULT, LOCALE_SABBREVLANGNAME, name, 4))
+    if (GetLocaleInfoA(LOCALE_SYSTEM_DEFAULT, LOCALE_SABBREVLANGNAME, name, 4))
     {
         new (out) String(name);
         return out;
@@ -303,7 +303,7 @@ unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
         if (At<void*>(self, 0x70))
             VCall<void>(At<void*>(self, 0x70), 0x78);
     }
-    if (ev->Message == WM_IME_NOTIFY && ev->WParam == IMN_SETCANDIDATEPOS)
+    if (ev->Message == WM_IME_NOTIFY && ev->WParam == IMN_SETCONVERSIONMODE)
         VCall<void>(At<void*>(self, 0x78), 0x50, -1);
 
     if (!VCall<bool>(At<void*>(self, 0x70), 0x30, movie))
@@ -339,7 +339,7 @@ unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
     UPInt cmd = ev->WParam;
     if (cmd - IMN_CHANGECANDIDATE > 2 && cmd != 0xe)
     {
-        if (cmd == IMN_SETCANDIDATEPOS)
+        if (cmd == IMN_SETCONVERSIONMODE)
             VCall<void>(At<void*>(self, 0x78), 0x50, -1);
         else if (cmd == IMN_SETOPENSTATUS)
         {
@@ -352,7 +352,7 @@ unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
                 VCall<void>(At<void*>(self, 0x78), 0x50, -1);
             ImmReleaseContext(ev->hWnd, context);
         }
-        else if (cmd == IMN_OPENCANDIDATE)
+        else if (cmd == IMN_OPENSTATUSWINDOW)
         {
             VCall<void>(At<void*>(self, 0x70), 0xd8, 0);
             VCall<void>(At<void*>(self, 0x70), 0xd8, 1);
