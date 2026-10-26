@@ -174,7 +174,7 @@ const void* FUN_1425f1d00(void* dispObj);   // DisplayObjectBase::GetCxform
 void FUN_1425f4060(void* dispObj, const void* cx);   // DisplayObjectBase::SetCxform
 void FUN_1425bc060(void* textField);   // TextField::SetDirtyFlag
 void FUN_1425be970(void* textField, void* ret, const void* displayInfo);   // TextField::TransformToTextRectSpace
-void FUN_1425f0dd0(void* m, float sx, float sy, float rot);   // ASCharacter_MatrixScaleAndRotate2x2
+namespace Scaleform { namespace GFx { void ASCharacter_MatrixScaleAndRotate2x2(Render::Matrix2F& m, float sx, float sy, float radians); } }   // sfr_gfx_06, 0x1425f0dd0
 double FUN_1425e3ee0();   // the "no value" double (NaN)
 void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
 int FUN_1424eea80(Scaleform::UPInt tracer, Scaleform::UPInt traits);   // Tracer::CanBeNull
@@ -8463,7 +8463,7 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
             else
                 ys = ny;
         }
-        FUN_1425f0dd0(m, static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
+        GFx::ASCharacter_MatrixScaleAndRotate2x2(*reinterpret_cast<Render::Matrix2F*>(m), static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
     }
     if (Sfr31NotNaN((f & 1) ? Sfr31DblAt(d, 0) : nan))
     {
