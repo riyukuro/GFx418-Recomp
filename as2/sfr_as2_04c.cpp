@@ -104,530 +104,868 @@ void FUN_142925cf0(void* pthis);
 void FUN_142925e70(void* pthis);
 void FUN_142925fb0(void* pthis);
 
+// The base vftables the inlined destructors store.
+extern const void* DAT_1432155c0[];
+extern const void* DAT_143215648[];
+extern const void* DAT_143215f60[];
+extern const void* DAT_143215fa8[];
+extern const void* DAT_143216050[];
+extern const void* DAT_143216b68[];
+extern const void* DAT_143216bd8[];
+extern const void* DAT_143216c80[];
+extern const void* DAT_143216fc8[];
+extern const void* DAT_143217010[];
+extern const void* DAT_1432170b8[];
+extern const void* DAT_1432173f8[];
+extern const void* DAT_143217440[];
+extern const void* DAT_1432174e8[];
+extern const void* DAT_143218da0[];
+extern const void* DAT_143218de8[];
+extern const void* DAT_143218e90[];
+extern const void* DAT_1432195c0[];
+extern const void* DAT_143219608[];
+extern const void* DAT_1432196b0[];
+extern const void* DAT_1432199d0[];
+extern const void* DAT_143219a18[];
+extern const void* DAT_143219ac0[];
+extern const void* DAT_14321a1f0[];
+extern const void* DAT_14321a238[];
+extern const void* DAT_14321a2e0[];
+extern const void* DAT_14321a600[];
+extern const void* DAT_14321a648[];
+extern const void* DAT_14321a6f0[];
+extern const void* DAT_14321ba50[];
+extern const void* DAT_14321ba98[];
+extern const void* DAT_14321bb40[];
+extern const void* DAT_14321c6d8[];
+extern const void* DAT_14321c720[];
+extern const void* DAT_14321c7c8[];
+extern const void* DAT_14321cb08[];
+extern const void* DAT_14321cb50[];
+extern const void* DAT_14321cbf8[];
+extern const void* DAT_14321d368[];
+extern const void* DAT_14321d3b0[];
+extern const void* DAT_14321d458[];
+extern const void* DAT_14321d778[];
+extern const void* DAT_14321d7c0[];
+extern const void* DAT_14321d868[];
+extern const void* DAT_14321db88[];
+extern const void* DAT_14321dbd0[];
+extern const void* DAT_14321dc78[];
+extern const void* DAT_14321e2c8[];
+extern const void* DAT_14321e310[];
+extern const void* DAT_14321e3b8[];
+extern const void* DAT_14321e400[];
+extern const void* DAT_14321e4a8[];
+
 // @0x14292b820
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292b820(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292b880
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292b880(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321c6d8;
+    *(const void**)((char*)p+0x20) = DAT_14321c720;
+    *(const void**)((char*)p+0x68) = DAT_14321c7c8;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292b910
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292b910(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x14292b970
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292b970(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143216fc8;
+    *(const void**)((char*)p+0x20) = DAT_143217010;
+    *(const void**)((char*)p+0x78) = DAT_1432170b8;
     FUN_142925750((void*)((char*)p+0x78));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb8);
+    }
     return p;
 }
 
 // @0x14292bb10
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bb10(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292bb70
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bb70(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292bbe0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bbe0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321ba50;
+    *(const void**)((char*)p+0x20) = DAT_14321ba98;
+    *(const void**)((char*)p+0x68) = DAT_14321bb40;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292bc70
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bc70(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292bcd0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bcd0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143218da0;
+    *(const void**)((char*)p+0x20) = DAT_143218de8;
+    *(const void**)((char*)p+0x68) = DAT_143218e90;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292bff0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292bff0(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292c050
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c050(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321cb08;
+    *(const void**)((char*)p+0x20) = DAT_14321cb50;
+    *(const void**)((char*)p+0x68) = DAT_14321cbf8;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292c0e0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c0e0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c150
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c150(void* p, unsigned flags)
 {
     FUN_142924ab0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c1c0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c1c0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c230
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c230(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143216b68;
+    *(const void**)((char*)p+0x20) = DAT_143216bd8;
+    *(const void**)((char*)p+0x70) = DAT_143216c80;
     FUN_142925750((void*)((char*)p+0x70));
     FUN_142924ab0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb0);
+    }
     return p;
 }
 
 // @0x14292c530
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c530(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c620
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c620(void* p, unsigned flags)
 {
     FUN_142925030(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb8);
+    }
     return p;
 }
 
 // @0x14292c680
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c680(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292c6e0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c6e0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c790
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c790(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215f60;
+    *(const void**)((char*)p+0x20) = DAT_143215fa8;
+    *(const void**)((char*)p+0x68) = DAT_143216050;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292c820
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c820(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c890
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c890(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292c8f0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c8f0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321a1f0;
+    *(const void**)((char*)p+0x20) = DAT_14321a238;
+    *(const void**)((char*)p+0x68) = DAT_14321a2e0;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292c980
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c980(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292c9f0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292c9f0(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292ca50
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292ca50(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432195c0;
+    *(const void**)((char*)p+0x20) = DAT_143219608;
+    *(const void**)((char*)p+0x68) = DAT_1432196b0;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292cb30
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cb30(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292cb90
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cb90(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292cc00
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cc00(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321d368;
+    *(const void**)((char*)p+0x20) = DAT_14321d3b0;
+    *(const void**)((char*)p+0x68) = DAT_14321d458;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292cc90
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cc90(void* p, unsigned flags)
 {
     FUN_142925e70(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x14292ccf0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292ccf0(void* p, unsigned flags)
 {
     FUN_1429248c0((void*)((char*)p+0x70));
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x14292cd70
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cd70(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321db88;
+    *(const void**)((char*)p+0x20) = DAT_14321dbd0;
+    *(const void**)((char*)p+0x78) = DAT_14321dc78;
     FUN_142925750((void*)((char*)p+0x78));
     FUN_142925e70(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb8);
+    }
     return p;
 }
 
 // @0x14292ce60
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292ce60(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x78);
+    }
     return p;
 }
 
 // @0x14292ced0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292ced0(void* p, unsigned flags)
 {
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x68);
+    }
     return p;
 }
 
 // @0x14292cf30
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cf30(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321a600;
+    *(const void**)((char*)p+0x20) = DAT_14321a648;
+    *(const void**)((char*)p+0x68) = DAT_14321a6f0;
     FUN_142925750((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xa8);
+    }
     return p;
 }
 
 // @0x14292d040
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d040(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d1c0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d1c0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d230
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d230(void* p, unsigned flags)
 {
     FUN_142609070((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x98);
+    }
     return p;
 }
 
 // @0x14292d2a0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d2a0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432173f8;
+    *(const void**)((char*)p+0x20) = DAT_143217440;
+    *(const void**)((char*)p+0x98) = DAT_1432174e8;
     FUN_142925750((void*)((char*)p+0x98));
     FUN_142609070((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xd8);
+    }
     return p;
 }
 
 // @0x14292d440
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d440(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d550
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d550(void* p, unsigned flags)
 {
     FUN_1429250a0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xb8);
+    }
     return p;
 }
 
 // @0x14292d5b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d5b0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d620
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d620(void* p, unsigned flags)
 {
     FUN_142606690((void*)((char*)p+0xb0));
     FUN_1424aa0f0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xd0);
+    }
     return p;
 }
 
 // @0x14292d6a0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d6a0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321d778;
+    *(const void**)((char*)p+0x20) = DAT_14321d7c0;
+    *(const void**)((char*)p+0xd0) = DAT_14321d868;
     FUN_142925750((void*)((char*)p+0xd0));
     FUN_142606690((void*)((char*)p+0xb0));
     FUN_1424aa0f0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x110);
+    }
     return p;
 }
 
 // @0x14292d740
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d740(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d7b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d7b0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321e2c8;
+    *(const void**)((char*)p+0x20) = DAT_14321e310;
     FUN_1424aa050((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x90);
+    }
     return p;
 }
 
 // @0x14292d830
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d830(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_14321e3b8;
+    *(const void**)((char*)p+0x20) = DAT_14321e400;
+    *(const void**)((char*)p+0x90) = DAT_14321e4a8;
     FUN_142925750((void*)((char*)p+0x90));
+    *(const void**)p = DAT_14321e2c8;
+    *(const void**)((char*)p+0x20) = DAT_14321e310;
     FUN_1424aa050((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xd0);
+    }
     return p;
 }
 
 // @0x14292d8e0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d8e0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432155c0;
+    *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x70);
+    }
     return p;
 }
 
 // @0x14292d950
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d950(void* p, unsigned flags)
 {
     FUN_142925fb0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x90);
+    }
     return p;
 }
 
 // @0x14292d9b0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292d9b0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432199d0;
+    *(const void**)((char*)p+0x20) = DAT_143219a18;
+    *(const void**)((char*)p+0x90) = DAT_143219ac0;
     FUN_142925750((void*)((char*)p+0x90));
     FUN_142925fb0(p);
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0xd0);
+    }
     return p;
 }
 
