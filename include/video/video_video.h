@@ -20,9 +20,9 @@
 #include "../sound/sound_renderer.h"
 
 namespace Scaleform {
-namespace GFx { namespace Video { class VideoDecoder; class VideoReader; } }
+namespace GFx { namespace Video { class VideoDecoder; class VideoReader; class VideoSoundSystem; class VideoSound; struct SyncObjectTag; } }
 
-// The exe has no vftable for the RefCountBaseNTS layer of VideoDecoder / VideoReader nor for the abstract VideoDecoder itself
+// The exe has no vftable for the RefCountBaseNTS layer of VideoDecoder / VideoReader nor for the abstract VideoDecoder itself, VideoSoundSystem, VideoSound
 // (the derived constructors store only their final vftable): novtable keeps them out of the object file.
 template<>
 class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoDecoder, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
@@ -31,6 +31,29 @@ public:
     enum { StatType = Stat_Default_Mem };
     RefCountBaseNTS() {}
 };
+template<>
+class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoSoundSystem, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() {}
+};
+template<>
+class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoSound, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() {}
+};
+#ifdef MS2_VIDEO_SYNCOBJECT_NOVTABLE
+template<>
+class __declspec(novtable) RefCountBaseNTS<GFx::Video::SyncObjectTag, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBaseNTS() {}
+};
+#endif
 template<>
 class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoReader, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
 {
@@ -174,7 +197,13 @@ public:
     };
 
     // Lets the player follow an external clock (the SWF timeline when SetSwfSync is on).
+#ifdef MS2_VIDEO_SYNCOBJECT_NOVTABLE
+    // sfr_cri_01 only builds the SWF adapter: the exe's constructor there inlines SyncObject and stores only the adapter's
+    // vftable (sfr_video_01 builds a bare SyncObject and keeps both base vftables, so this is opt-in per unit).
+    class __declspec(novtable) SyncObject : public RefCountBaseNTS<SyncObjectTag, Stat_Default_Mem>
+#else
     class SyncObject : public RefCountBaseNTS<SyncObject, Stat_Default_Mem>
+#endif
     {
     public:
         virtual void SetStartFrame(unsigned frame)

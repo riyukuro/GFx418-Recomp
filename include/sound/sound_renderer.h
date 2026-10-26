@@ -15,6 +15,28 @@ namespace Scaleform { namespace Sound {
 
 class SoundRenderer;
 class SoundDataBase;
+class SoundChannel;
+struct AuxStreamerTag;
+
+}
+// The exe has no vftable for the RefCountBase layer of SoundChannel / SoundRenderer::AuxStreamer (the final classes' constructors
+// store only their own vftable): novtable keeps them out of the object file. AuxStreamer is nested and cannot be forward declared,
+// so it names its base through AuxStreamerTag (the class argument is never used).
+template<>
+class __declspec(novtable) RefCountBase<Sound::SoundChannel, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBase() {}
+};
+template<>
+class __declspec(novtable) RefCountBase<Sound::AuxStreamerTag, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountImpl, Stat_Default_Mem>
+{
+public:
+    enum { StatType = Stat_Default_Mem };
+    RefCountBase() {}
+};
+namespace Sound {
 
 // A sound sample counts its references itself (atomic, inline), unlike the RefCountBase classes.
 class SoundSample : public NewOverrideBase<Stat_Default_Mem>
@@ -42,7 +64,7 @@ public:
 };
 
 // A playing sound.
-class SoundChannel : public RefCountBase<SoundChannel, Stat_Default_Mem>
+class __declspec(novtable) SoundChannel : public RefCountBase<SoundChannel, Stat_Default_Mem>
 {
 public:
     struct Transform
@@ -86,7 +108,7 @@ public:
     };
 
     // Pull interface for PCM data coming from another source (video audio tracks).
-    class AuxStreamer : public RefCountBase<AuxStreamer, Stat_Default_Mem>
+    class AuxStreamer : public RefCountBase<AuxStreamerTag, Stat_Default_Mem>
     {
     public:
         enum PCMFormat

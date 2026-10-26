@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x14001c000-0x14002a0e0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+#define MS2_VIDEO_SYNCOBJECT_NOVTABLE
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
@@ -736,6 +737,12 @@ class SwfVideoSyncObject : public VideoPlayer::SyncObject
 public:
     explicit SwfVideoSyncObject(Sprite* target);
     virtual ~SwfVideoSyncObject();
+    // This unit's exe copies of SyncObject's inline slots (0x140025ca0..0x140025cd0) are separate functions from sfr_video_01's,
+    // so they are written out here rather than reusing the shared SyncObject:: symbols.
+    virtual void SetStartFrame(unsigned frame) { *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(this) + 0x18) = frame; } // @0x140025ca0
+    virtual void Start() {}                                                                                                             // @0x140025cb0
+    virtual void Stop() {}                                                                                                              // @0x140025cc0
+    virtual void Pause(bool sw) { (void)sw; }                                                                                           // @0x140025cd0
     virtual void GetTime(UInt64* count, UInt64* unit);
 
     void* pTarget;
@@ -6673,6 +6680,11 @@ void* FUN_140029a50(void* object, CriUint64 flags) { return CriRefCountDeletingD
 // @0x140029ab0
 void* FUN_140029ab0(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
 
+// Base vftables the exe does have (the same addresses sfr_video_01 pins for its copies of these classes)
+// MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountWeakSupportImpl@Scaleform@@$01@Scaleform@@6B@ 0x143183cf8
+// MS2-PIN: ??_7?$RefCountBaseWeakSupport@VVideoProvider@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4f30
+// MS2-PIN: ??_7SwfVideoSyncObject@AS3@GFx@Scaleform@@6B@ 0x1431b8a60
 // MS2-PIN: ??_7Video@0GFx@Scaleform@@6B@ 0x1431b8050
 // MS2-PIN: ??_7AuxStreamer@SoundRenderer@Sound@Scaleform@@6B@ 0x1431b80b8
 // MS2-PIN: ??_7VideoSoundSystem_SoundRenderer@Video@GFx@Scaleform@@6B@ 0x1431b80e0

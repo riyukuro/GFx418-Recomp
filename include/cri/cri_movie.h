@@ -426,7 +426,7 @@ public:
 };
 
 // PCM output the player feeds (implemented by the Scaleform video sound).
-class CriMvSoundInterface
+class __declspec(novtable) CriMvSoundInterface
 {
 public:
     // The easy layer's order: 0 selects the float callback (the player core's own enum has SINT16 = 0).
@@ -450,7 +450,7 @@ public:
 };
 
 // Clock the player syncs to when there is no audio.
-class CriMvSystemTimerInterface
+class __declspec(novtable) CriMvSystemTimerInterface
 {
 public:
     virtual void Start(void) = 0;                                                           // 0
