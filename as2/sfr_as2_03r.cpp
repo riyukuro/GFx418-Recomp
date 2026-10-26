@@ -25,6 +25,8 @@ IntervalTimer::IntervalTimer(InteractiveObject* ptarget, const ASString& method)
 {
 }
 
+// The implicit RefCountBase<ASIntervalTimerIntf> dtor skips the exe's store of 0x14317c9f8: a dead store, since
+// ~RefCountImplCore (0x14257db40) overwrites it straight away.
 // MS2-FUNCTIONAL: the members go in the exe's order, but cl also stores the vftable on entry (10 bytes the exe does not have)
 // @0x1429259d0
 IntervalTimer::~IntervalTimer()
