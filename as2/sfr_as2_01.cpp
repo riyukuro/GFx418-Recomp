@@ -7,7 +7,7 @@
 // MS2-RANGE: 0x1423e0090-0x1423e0260 .text$mn
 // MS2-RANGE: 0x1424447c0-0x142444a00 .text$mn
 // MS2-RANGE: 0x142444a00-0x142444bc0 .text$mn
-// MS2-RANGE: 0x142444be0-0x142444c00 .text$mn
+// MS2-RANGE: 0x142444be0-0x142444c35 .text$mn
 // MS2-RANGE: 0x142446cb0-0x142446d90 .text$mn
 // MS2-RANGE: 0x1424eb700-0x1424eb7b0 .text$mn
 // MS2-RANGE: 0x1424ed770-0x1424ed7b0 .text$mn
@@ -3910,6 +3910,15 @@ bool Sprite::IsMovieClip() const
     return false;
 }
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_display
+
+// The out-of-line NumberUtil::IsNaN that the unity build's AS2 call sites call.
+namespace Scaleform { namespace GFx { namespace AS2 {
+// @0x142444c00
+bool NumberUtil_IsNaN(Double v)
+{
+    return NumberUtil::IsNaN(v);
+}
+}}} // namespace Scaleform::GFx::AS2
 
 // ---- collector root buffer: out-of-line page buffer copies ----
 namespace Scaleform {
