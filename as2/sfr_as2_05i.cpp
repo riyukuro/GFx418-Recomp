@@ -25,8 +25,9 @@ void AvmSprite::FillTabableArray(InteractiveObject::FillTabableParams* params)
     if (Unrecovered_1f8 == 0 && params->TabChildrenInProto == 0 && pProto)
     {
         Value value;
-        if (pProto->GetMember(&Env, Env.CreateConstString("tabChildren"), &value) && !value.IsUndefined() &&
-            !value.IsNull())
+        // raw lookup (vtable +0x58); a null value still counts (ToBool gives false)
+        if (pProto->GetMemberRaw(&Env.StringContext, Env.CreateConstString("tabChildren"), &value) &&
+            !value.IsUndefined())
             params->TabChildrenInProto = value.ToBool(&Env) ? 1 : 2;
     }
     if (Unrecovered_1f8 == 2 || params->TabChildrenInProto == 2)
