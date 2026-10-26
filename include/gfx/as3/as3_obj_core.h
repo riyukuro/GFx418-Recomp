@@ -1227,6 +1227,10 @@ namespace Classes { namespace fl
         // (appended, sfr19) "[class <name>]".
         // 0x14242b300
         void toStringProto(ASString& result);
+
+        // (appended, sfr22) the table's twenty-seventh slot; the Object class has no slot values to set up.
+        // 0x142423d80
+        virtual void SetupSlotValues(AS3::Object& for_obj) const;
     };
 
     class Array : public Class

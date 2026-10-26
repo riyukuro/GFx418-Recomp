@@ -2012,6 +2012,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 void ClassTraits::ClassClass::MakeObject(Value&, AS3::Traits*)
 {
 }
+
+// The Object class has no slot values of its own.
+// @0x142423d80
+void Classes::fl::Object::SetupSlotValues(AS3::Object&) const
+{
+}
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
