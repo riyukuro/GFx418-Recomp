@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x142943480-0x1429437e0 .text$mn
 // MS2-RANGE: 0x1429437e0-0x142943c6b .text$mn
 // MS2-RANGE: 0x142945b20-0x142945c55 .text$mn
+// MS2-RANGE: 0x14292a6b0-0x14292a6f2 .text$mn
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
