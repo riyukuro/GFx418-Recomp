@@ -29,22 +29,25 @@ SuperObject::SuperObject(Object* pproto, ObjectInterface* prealThis, const Funct
     pProto = pproto;
 }
 
+// SuperObject's out-of-line ForEachChild_GC<Functor> instantiations (this in rcx).
+void FUN_142911340(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // ReleaseFunctor
+void FUN_14290e280(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // MarkInCycleFunctor
+void FUN_1429141f0(const SuperObject* pthis, ASRefCountBaseType::Collector* prcc); // ScanInUseFunctor
+
 // The collector's walk, per operation (the exe tail-calls the three instantiations).
-// MS2-FUNCTIONAL: the exe tail-calls out-of-line ForEachChild_GC instantiations (0x1429141f0/0x14290e280/0x142911340);
-// here they are inlined
 // @0x142941250
 void SuperObject::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
 {
     switch (operation)
     {
     case ASRefCountBaseType::Operation_Release:
-        ForEachChild_GC<ASRefCountBaseType::ReleaseFunctor>(prcc);
+        FUN_142911340(this, prcc);
         break;
     case ASRefCountBaseType::Operation_MarkInCycle:
-        ForEachChild_GC<ASRefCountBaseType::MarkInCycleFunctor>(prcc);
+        FUN_14290e280(this, prcc);
         break;
     case ASRefCountBaseType::Operation_ScanInUse:
-        ForEachChild_GC<ASRefCountBaseType::ScanInUseFunctor>(prcc);
+        FUN_1429141f0(this, prcc);
         break;
     default:;
     }
