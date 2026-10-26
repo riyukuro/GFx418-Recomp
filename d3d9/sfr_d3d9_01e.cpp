@@ -1868,8 +1868,14 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
     {
         psi->SetTexture(cur, D3D9::Uniform::SU_tex, fill->GetTexture(0), fill->GetFillMode(0));
         if (type == PrimFill_2Texture || type == PrimFill_2Texture_EAlpha)
+        {
+            // texture 1 starts after every stage of texture 0: its planes times its mip stages (the exe reads +0x3e bit 1
+            // and the byte at +0x3c, as the batch path does)
+            Render::Texture* t0 = fill->GetTexture(0);
+            unsigned stages = (t0->Use & 2) ? 1 : t0->MipLevels;
             psi->SetTexture(cur, D3D9::Uniform::SU_tex, fill->GetTexture(1), fill->GetFillMode(1),
-                            ImageData::GetFormatPlaneCount((ImageFormat)fill->GetTexture(0)->GetFormat()));
+                            ImageData::GetFormatPlaneCount((ImageFormat)t0->GetFormat()) * stages);
+        }
     }
 
     // (fill 13: this build's user shader fill)
