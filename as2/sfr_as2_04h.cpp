@@ -82,11 +82,13 @@ extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
 extern const void* DAT_143215a98[];
 extern const void* DAT_143215af8[];
+extern const void* DAT_14316afc0[];
+extern const void* DAT_1432153a0[];
 
-// MS2-FUNCTIONAL 0x142928c70: the exe also stores the class's own vftable (0x1432153a0) at +0, which no full-exe unit defines yet; the object's vptr already holds it
 // @0x142928c70
 void* DeleteAs2_142928c70(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432153a0;
     FUN_142592200(p, 0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
     FUN_1429343f0((char*)p+0x10);
@@ -101,10 +103,10 @@ void* DeleteAs2_142928c70(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x142928dc0: the exe also stores the class's own vftable (0x1432153a0) at +0, which no full-exe unit defines yet; the object's vptr already holds it
 // @0x142928dc0
 void* DeleteAs2_142928dc0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_1432153a0;
     FUN_142592200(p, 0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
     FUN_1429343f0((char*)p+0x10);
@@ -225,11 +227,11 @@ void* DeleteAs2_1429296e0(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292a0e0: the exe also stores the class's own vftable (0x14316afc0) at +0, which no full-exe unit defines yet; the object's vptr already holds it
 // @0x14292a0e0
 void* DeleteAs2_14292a0e0(void* p, unsigned flags)
 {
     rg(*(void**)((char*)p+0x40));
+    *(const void**)p = DAT_14316afc0;
     FUN_1424a9ed0((char*)p+0x8);
     if (flags & 1)
     {

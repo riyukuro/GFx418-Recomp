@@ -112,6 +112,7 @@ void FUN_142925cf0(void* pthis);
 extern const void* DAT_1432155c0[];
 extern const void* DAT_143215648[];
 extern const void* DAT_143215f60[];
+extern const void* DAT_14317afe8[];
 extern const void* DAT_143215fa8[];
 extern const void* DAT_143216050[];
 extern const void* DAT_143217750[];
@@ -916,10 +917,10 @@ void* DeleteAs2_14292b710(void* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x14292b7a0: the exe also stores the +0x70 interface's vftable (0x14317afe8), which no full-exe unit defines yet; the store is dead (the object is freed)
 // @0x14292b7a0
 void* DeleteAs2_14292b7a0(void* p, unsigned flags)
 {
+    *(const void**)((char*)p+0x70) = DAT_14317afe8;
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
     FUN_142925cf0(p);
