@@ -140,45 +140,23 @@ extern "C" void* DAT_143b15f60;
 
 // MovieRoot is only partially modeled, so keep its destructor out of the class vtable and recover the owned fields
 // from the exe's offsets. The four MouseState rollover arrays use ArrayLH's data/size/capacity prefix.
+void FUN_1424dcd40(void* self);
+namespace Scaleform { void DestroyMovieRootDisplayObjects(void* set); }
+
 // MS2-FUNCTIONAL 0x1424de650: releases the modeled smart-pointer members, string builtins, action queue, mouse stacks,
 // and ASMovieRootBase; the opaque LoadedMovieDefs table is still cleared only by its own owner path.
 // @0x1424de650
 extern "C" void FUN_1424de650(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* movie = reinterpret_cast<Scaleform::GFx::AS3::MovieRoot*>(self);
-    movie->ActionQueue.~ActionQueueType();
-    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x58)->~Value();
-
-    auto** pAvm = reinterpret_cast<Scaleform::GFx::AS3::ASVM**>(bytes + 0x48);
-    if (*pAvm)
-    {
-        if (*reinterpret_cast<bool*>(bytes + 0x50))
-        {
-            *reinterpret_cast<bool*>(bytes + 0x50) = false;
-            delete *pAvm;
-        }
-        *pAvm = nullptr;
-    }
-
-    if (auto* aliases = *reinterpret_cast<void**>(bytes + 0x80))
-        FUN_14257dcd0(aliases);
-    *reinterpret_cast<void**>(bytes + 0x80) = nullptr;
-    if (auto* chains = *reinterpret_cast<void**>(bytes + 0x150))
-        FUN_14257dcd0(chains);
-    *reinterpret_cast<void**>(bytes + 0x150) = nullptr;
-    if (auto* stage = *reinterpret_cast<void**>(bytes + 0x158))
-        FUN_14257dcd0(stage);
-    *reinterpret_cast<void**>(bytes + 0x158) = nullptr;
-
-    auto* strings = reinterpret_cast<Scaleform::GFx::AS3::StringManager*>(bytes + 0x160);
-    if (strings->pStringManager)
-        strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
+    FUN_1424dcd40(bytes + 0x6e8);
 
     auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);
-    for (unsigned i = 0; i < 4; ++i)
+    for (unsigned i = 4; i-- != 0;)
     {
         auto* state = bytes + 0x360 + i * sizeof(Scaleform::GFx::AS3::MovieRoot::MouseState);
+        if (auto* over = *reinterpret_cast<void**>(state + 0x18))
+            FUN_14257dcd0(over);
         auto** rollover = *reinterpret_cast<void***>(state);
         const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + 8);
         for (Scaleform::UPInt j = count; rollover && j != 0; --j)
@@ -186,12 +164,25 @@ extern "C" void FUN_1424de650(void* self)
                 FUN_14257dcd0(rollover[j - 1]);
         if (rollover)
             heap->Free(rollover);
-        if (auto* over = *reinterpret_cast<void**>(state + 0x18))
-            FUN_14257dcd0(over);
     }
 
-    FUN_1424de460(bytes + 8);
-    reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->~ASMovieRootBase();
+    auto* strings = reinterpret_cast<Scaleform::GFx::AS3::StringManager*>(bytes + 0x160);
+    if (strings->pStringManager)
+        strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
+    if (auto* stage = *reinterpret_cast<void**>(bytes + 0x158))
+        FUN_14257dcd0(stage);
+    Scaleform::DestroyMovieRootDisplayObjects(bytes + 0x150);
+    reinterpret_cast<Scaleform::GFx::AS3::MovieRoot::ActionQueueType*>(bytes + 0x88)->~ActionQueueType();
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x58)->~Value();
+
+    auto** pAvm = reinterpret_cast<Scaleform::GFx::AS3::ASVM**>(bytes + 0x48);
+    if (*pAvm && *reinterpret_cast<bool*>(bytes + 0x50))
+        delete *pAvm;
+    *pAvm = nullptr;
+    *reinterpret_cast<bool*>(bytes + 0x50) = false;
+
+    FUN_1424de460(bytes + 0x40);
+    reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->Scaleform::GFx::ASMovieRootBase::~ASMovieRootBase();
 }
 
 extern "C" void FUN_142530d50(Scaleform::UPInt self);
@@ -507,7 +498,7 @@ VM::~VM()
 }}} // namespace Scaleform::GFx::AS3
 
 extern "C" void FUN_1423de770(void*, void*);
-extern "C" void FUN_14257dcb0();
+extern "C" void FUN_14257dcb0(void* object);
 
 // MS2-FUNCTIONAL 0x1424de240: preserves the MovieRoot load-state reset, range bookkeeping, and exceptional cleanup path.
 // @0x1424de240
@@ -527,7 +518,7 @@ void FUN_1424de240(long long* state)
     if ((root[0x78] & 0x10) != 0)
         root[0xb0] = 1;
     if (cleanup[0] != 0)
-        FUN_14257dcb0();
+        FUN_14257dcb0(reinterpret_cast<void*>(cleanup[0]));
 }
 
 // MS2-FUNCTIONAL 0x1424de460: applies the same root range reset to the nested MovieRoot and releases the owning reference.
@@ -547,10 +538,10 @@ void FUN_1424de460(long long* owner)
         if ((root[0x78] & 0x10) != 0)
             root[0xb0] = 1;
         if (cleanup[0] != 0)
-            FUN_14257dcb0();
+            FUN_14257dcb0(reinterpret_cast<void*>(cleanup[0]));
     }
     if (*owner != 0)
-        FUN_14257dcb0();
+        FUN_14257dcb0(reinterpret_cast<void*>(*owner));
 }
 
 // MS2-FUNCTIONAL 0x1424e0940: copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
@@ -2174,6 +2165,10 @@ static SfrCx18ClassTraitsCopyAssignment SfrCx18ForceClassTraitsCopyAssignment =
 // MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
+void DestroyMovieRootDisplayObjects(void* set)
+{
+    static_cast<SfrCx18DisplayObjectSet*>(set)->~HashSetBase();
+}
 // MS2-FUNCTIONAL: releases the occupied dynamic-property nodes and frees their table; template expansion changes unwind codegen.
 // @0x1424dce80
 template SfrCx18DynAttrsSet::~HashSetBase();
