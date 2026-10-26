@@ -4631,12 +4631,17 @@ Pickable<Instances::fl::GlobalObjectScript> InstanceTraits::fl::GlobalObjectScri
 // the traits of a catch scope: one slot named by the exception variable, typed by the exception type
 // MS2-FUNCTIONAL: written from the exe on raw offsets (exception info: type +0xc, var name +0x10)
 // @0x14241b920
-Pickable<InstanceTraits::fl::Catch> FUN_14241b920(AS3::Object* self, VMAbcFile& file, const char* exc_info)
+void FUN_14241b920(Scaleform::UPInt selfAddr, void* retp, Scaleform::UPInt fileAddr, Scaleform::UPInt excAddr)
 {
+    AS3::Object* self = reinterpret_cast<AS3::Object*>(selfAddr);
+    InstanceTraits::fl::Catch** ret = static_cast<InstanceTraits::fl::Catch**>(retp);
+    VMAbcFile& file = *reinterpret_cast<VMAbcFile*>(fileAddr);
+    const char* exc_info = reinterpret_cast<const char*>(excAddr);
     VM& vm = self->GetVM();
     InstanceTraits::fl::Catch* itr = SF_HEAP_AUTO_NEW(self) InstanceTraits::fl::Catch(vm, DAT_14313dd00);
+    *ret = itr;
     if (!itr)
-        return Pickable<InstanceTraits::fl::Catch>(NULL);
+        return;
     const char* abc = *(const char* const*)((const char*)&file + 0x28);
     const int var_ind = *(const int*)(exc_info + 0x10);
     ASString name = file.GetInternedString(var_ind == 0 ? 0 : *(const int*)(abc + 0x78) - var_ind);
@@ -4648,7 +4653,6 @@ Pickable<InstanceTraits::fl::Catch> FUN_14241b920(AS3::Object* self, VMAbcFile& 
     itr->AddSlot(name, Pickable<const Instances::Namespace>(&vm.GetPublicNamespace(), Scaleform::PickValue), bt,
                  Scaleform::GFx::AS3::AbsoluteIndex(0));
     itr->CalculateMemSize(0x38);
-    return Pickable<InstanceTraits::fl::Catch>(itr);
 }
 
 // E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
