@@ -137,6 +137,7 @@ static BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID com
 }
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
+extern "C" void FUN_1424ddcb0(void* self);   // the in-place AvmDisplayObj destructor (sfr_as3_16)
 extern "C" void FUN_14257db50(void*);
 extern "C" void FUN_1425b4e80(void*, const wchar_t*, ...);
 extern "C" void FUN_1425b4ea0(void*);
@@ -144,6 +145,8 @@ extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
 extern "C" const void* DAT_14313a228[];
+extern "C" const void* DAT_14313a1d8[];
+extern "C" const void* DAT_14313b9c8[];
 extern "C" const void* DAT_14313a238[];
 extern "C" const void* DAT_14313a450[];
 extern "C" const void* DAT_14313a5f8[];
@@ -1035,30 +1038,32 @@ void* FUN_1423d9430(void* object, void* owner)
     return object;
 }
 
-// MS2-FUNCTIONAL: deleting wrappers release the allocation when requested; the anonymous purecall-only interface is not declared in our headers.
+// The anonymous purecall-only interface's deleting destructor: plain new, so the CRT's sized delete (0x142749444).
 // @0x1423ce2c0
 void* FUN_1423ce2c0(void* object, unsigned long long flags)
 {
+    *(const void**)object = DAT_14313a1d8;
     if (flags & 1)
-        Memory::Free(object);
+        ::operator delete(object, 8);
     return object;
 }
 
-// MS2-FUNCTIONAL: deleting wrappers release the allocation when requested; the two equivalent anonymous purecall-only interfaces are not declared in our headers.
+// The two anonymous purecall-only interfaces' deleting destructors: plain new, so the CRT's sized delete (0x142749444).
 // @0x1423dbc50
 void* FUN_1423dbc50(void* object, unsigned long long flags)
 {
+    *(const void**)object = DAT_14313b9c8;
     if (flags & 1)
-        Memory::Free(object);
+        ::operator delete(object, 0x38);
     return object;
 }
 
-// MS2-FUNCTIONAL: omits only the abstract purecall vptr store; allocation release follows the executable flag path.
 // @0x1423dbc80
 void* FUN_1423dbc80(void* object, unsigned long long flags)
 {
+    *(const void**)object = DAT_14313b9c8;
     if (flags & 1)
-        Memory::Free(object);
+        ::operator delete(object, 0x10);
     return object;
 }
 
@@ -3154,14 +3159,14 @@ selected_entry:
     return index;
 }
 
-// MS2-FUNCTIONAL: the executable's AvmMovieClip destructor is empty; this wrapper preserves its 0x68 sized-delete path.
+// The object lives inside its owner's allocation: the class operator delete is empty, so only the global-delete
+// path (flags 5) reaches the exe's empty global delete; a plain delete frees nothing.
 // @0x1423dbb60
 void* FUN_1423dbb60(void* object, unsigned flags)
 {
-    if (flags & 1) {
-        if (flags & 4) FUN_14015b310(object, 0x68);
-        else Scaleform::Memory::Free(object);
-    }
+    FUN_1424ddcb0(object);
+    if ((flags & 5) == 5)
+        FUN_14015b310(object, 0x68);
     return object;
 }
 
