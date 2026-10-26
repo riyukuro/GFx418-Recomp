@@ -2867,9 +2867,10 @@ namespace Instances { namespace fl
             if (nss[i]->GetUri() == uri)
                 return nss[i].GetPtr();
         }
-        // the exe tests the uri against the "xml" prefix here, not against NS_XML
+        // the exe falls back to the prefix lookup (Parent's vtable +0x188, FindNamespaceByPrefix) and tests the uri
+        // against the "xml" prefix, not against NS_XML
         if (Parent.GetPtr() != lp)
-            return Parent->FindNamespaceByURI(uri, lp);
+            return Parent->FindNamespaceByPrefix(uri, lp);
         if (strcmp(uri.ToCStr(), "xml") == 0)
             return GetVM().XMLNamespace.GetPtr();
         return NULL;
