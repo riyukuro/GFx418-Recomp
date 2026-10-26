@@ -133,33 +133,32 @@ void* FUN_1424aa810(void* self, unsigned flags)
     return self;
 }
 
+// The destructor call is qualified: p->~ResourceVisitor() would be a virtual call through slot 0, i.e. back into
+// this deleting destructor.
 // @0x1424aac50
-// MS2-FUNCTIONAL: restores the ResourceVisitor vftable and frees the 0x10-byte visitor when requested.
 void* FUN_1424aac50(void* self, unsigned flags)
 {
-    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->~ResourceVisitor();
+    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->ResourceVisitor::~ResourceVisitor();
     if (flags & 1)
-        Scaleform::Memory::GetGlobalHeap()->Free(self);
+        ::operator delete(self, 0x10);
     return self;
 }
 
 // @0x1424aac80
-// MS2-FUNCTIONAL: restores the GlyphVisitor vftable and frees the 0x70-byte visitor when requested.
 void* FUN_1424aac80(void* self, unsigned flags)
 {
-    ((Scaleform::GFx::StaticTextSnapshotData::GlyphVisitor*)self)->~GlyphVisitor();
+    ((Scaleform::GFx::StaticTextSnapshotData::GlyphVisitor*)self)->GlyphVisitor::~GlyphVisitor();
     if (flags & 1)
-        Scaleform::Memory::GetGlobalHeap()->Free(self);
+        ::operator delete(self, 0x70);
     return self;
 }
 
 // @0x1424aada0
-// MS2-FUNCTIONAL: restores the ResourceVisitor vftable and frees the visitor when requested.
 void* FUN_1424aada0(void* self, unsigned flags)
 {
-    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->~ResourceVisitor();
+    ((Scaleform::GFx::MovieDef::ResourceVisitor*)self)->ResourceVisitor::~ResourceVisitor();
     if (flags & 1)
-        Scaleform::Memory::GetGlobalHeap()->Free(self);
+        ::operator delete(self, 0x8);
     return self;
 }
 
@@ -3431,3 +3430,5 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ??_7?$RefCountBaseNTS@VSharedObjectVisitor@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143162f10
 // MS2-PIN: ??_7SharedObjectVisitor@GFx@Scaleform@@6B@ 0x143162f18
 // MS2-PIN: ??_7ASSharedObjectLoader@AS3@GFx@Scaleform@@6B@ 0x1431633e8
+// MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
+// MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
