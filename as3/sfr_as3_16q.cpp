@@ -30,10 +30,17 @@ Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj()
     }
 }
 
-// MS2-FUNCTIONAL 0x1424ddce0: releases the sprite's AVM-owned children and then tears down its display object bases.
+// The init-action bit set goes back to the global heap, then the display object bases are torn down.
 // @0x1424ddce0
-Scaleform::GFx::AS3::AvmSprite::~AvmSprite() = default;
+Scaleform::GFx::AS3::AvmSprite::~AvmSprite()
+{
+    Memory::Free(InitActionsExecuted);
+}
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
 // MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
 // MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ce80
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cf78
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14317d030
+// MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14317d0f0
