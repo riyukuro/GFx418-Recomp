@@ -1086,6 +1086,7 @@ static inline void ExecRequireObject(VM& vm, const Value& v)
 // VM::Convert check used by astype/coerce handlers (returns whether value can be converted to the traits).
 
 // The class operand popped: a value not convertible to its type becomes null.
+// MS2-FUNCTIONAL 0x142533300: same class test and error paths; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x142533300
 void Sfr27ExecAsType(VM* vm)
 {
@@ -1109,6 +1110,7 @@ void Sfr27ExecAsType(VM* vm)
 }
 
 // call: function, receiver and argc arguments popped; the result is dropped.
+// MS2-FUNCTIONAL 0x142533680: same receiver/function pops and ExecuteInternalUnsafe call; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x142533680
 void Sfr27ExecCallVoid(VM* vm, UInt32 argc)
 {
@@ -1125,6 +1127,7 @@ void Sfr27ExecCallVoid(VM* vm, UInt32 argc)
 }
 
 // callmethod: receiver and argc arguments popped; the method comes from the receiver's method table.
+// MS2-FUNCTIONAL 0x142533980: same method-table lookup and two ExecuteInternalUnsafe calls; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x142533980
 void Sfr27ExecCallMethod(VM* vm, UInt32 methodIndex, UInt32 argc)
 {
@@ -1220,6 +1223,7 @@ static inline const SlotInfo& ExecSlotOf(Object* obj, SPInt slot, bool relativeT
 }
 
 // getglobalslot: pushes undefined, then loads the global object's slot into it.
+// MS2-FUNCTIONAL 0x142539490: same push of undefined and slot read; the exe inlines the Value copy (AddRef) and the global-object lookup where ours calls out-of-line helpers (callee count 5 vs 3).
 // @0x142539490
 void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
 {
@@ -1230,6 +1234,7 @@ void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
 }
 
 // getslot: the object on top of the stack is replaced by the value of its slot.
+// MS2-FUNCTIONAL 0x142538f50: same slot read through the shared getter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x142538f50
 void Sfr27ExecGetSlot(VM* vm, SPInt slot)
 {
@@ -1244,6 +1249,7 @@ void Sfr27ExecGetSlot(VM* vm, SPInt slot)
 }
 
 // setglobalslot: the value on top of the stack is stored into the global object's slot and popped.
+// MS2-FUNCTIONAL 0x14253fc90: same slot write into the global object; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253fc90
 void Sfr27ExecSetGlobalSlot(VM* vm, UInt32 slot)
 {
@@ -1257,6 +1263,7 @@ void Sfr27ExecSetGlobalSlot(VM* vm, UInt32 slot)
 }
 
 // getslot for objects whose slots follow the traits' first own slot.
+// MS2-FUNCTIONAL 0x14253a2d0: same slot read through the shared getter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253a2d0
 void Sfr27ExecGetOwnSlot(VM* vm, UInt32 slot)
 {
@@ -1271,6 +1278,7 @@ void Sfr27ExecGetOwnSlot(VM* vm, UInt32 slot)
 }
 
 // setslot: value and object popped, the object's slot receives the value.
+// MS2-FUNCTIONAL 0x14253faa0: same slot write through the shared setter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253faa0
 void Sfr27ExecSetSlot(VM* vm, SPInt slot)
 {
@@ -1535,6 +1543,7 @@ int Sfr27ExecThrow(VM* vm, UInt64* pc, CallFrame* frame)
 }
 
 // typeof: the value on top of the stack is replaced by the name of its type.
+// MS2-FUNCTIONAL 0x142540910: same kind switch and string-manager index; register allocation and Value temporaries differ from the exe (frame differs, same helper calls).
 // @0x142540910
 void Sfr27ExecTypeOf(VM* vm)
 {
@@ -1697,6 +1706,7 @@ void Multiname::SetRTNameUnsafe(const Value& v)
 
 
 // setslot for objects whose slots follow the traits' first own slot.
+// MS2-FUNCTIONAL 0x1425402a0: same slot write through the shared setter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x1425402a0
 void Sfr27ExecSetOwnSlot(VM* vm, UInt32 slot)
 {
@@ -1714,6 +1724,7 @@ void Sfr27ExecSetOwnSlot(VM* vm, UInt32 slot)
 }
 
 // initslot: setslot with read-only checks off (the VM is counted as inside an initializer).
+// MS2-FUNCTIONAL 0x14253b420: same slot write with the initializer counter bumped; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253b420
 void Sfr27ExecInitSlot(VM* vm, SPInt slot)
 {
