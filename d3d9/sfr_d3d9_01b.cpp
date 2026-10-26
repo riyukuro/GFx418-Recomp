@@ -1051,6 +1051,13 @@ Render::DepthStencilSurface* TextureManager::CreateDepthStencilSurface(IDirect3D
 // MS2-PIN: ??_7DepthStencilSurface@D3D9@Render@Scaleform@@6B@ 0x14319d600
 // MS2-PIN: ??_7TextureManager@D3D9@Render@Scaleform@@6B?$RefCountBase@VTextureManager@Render@Scaleform@@$0EL@@3@@ 0x14319d618
 // MS2-PIN: ??_7TextureManager@D3D9@Render@Scaleform@@6BImageUpdateSync@23@@ 0x14319d6c0
+// MS2-PIN: ?GetTextureManager@DepthStencilSurface@Render@Scaleform@@UEBAPEAVTextureManager@23@XZ 0x14272b610
+// MS2-PIN: ?GetTextureManager@Texture@Render@Scaleform@@QEBAPEAVTextureManager@23@XZ 0x14272b620
+// MS2-PIN: ??_7Texture@Render@Scaleform@@6B@ 0x14319d4e0
+// MS2-PIN: ??_7ImageUpdateSync@Render@Scaleform@@6B@ 0x143183950
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0EL@@Scaleform@@6B@ 0x143183940
+// MS2-PIN: ??_7?$RefCountBase@VTexture@Render@Scaleform@@$0EL@@Scaleform@@6B@ 0x143183940
+// MS2-PIN: ??_7?$RefCountBase@VDepthStencilSurface@Render@Scaleform@@$0EL@@Scaleform@@6B@ 0x143183940
 
 // ---- full-exe unresolved: the 8-bit <-> 16-bit two-channel scanline converters of the format table (no .pdata;
 // data tables take them as ?FUN_<va>@@YAXXZ). n is the pixel count.
