@@ -1072,8 +1072,8 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
     if (!(Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking))
         return;
 
-    info->Width         = StmPrm.video_prm[0].disp_width;
-    info->Height        = StmPrm.video_prm[0].disp_height;
+    info->Width         = StmPrm.video_prm[0].max_width;
+    info->Height        = StmPrm.video_prm[0].max_height;
     info->FrameRate     = StmPrm.video_prm[0].framerate;
     info->AudioDataRate = StmPrm.num_audio > 0 ? StmPrm.audio_prm[0].sampling_rate : 0;
     info->TotalFrames   = StmPrm.video_prm[0].total_frames;
@@ -6189,10 +6189,10 @@ void FUN_1400369e0(void* player)
     struct SubtitleEndState
     {
         CriUint8 Reserved[0xe58];
-        CriSint32 Count;
-        CriSint32 Reserved2;
-        CriSint32 VideoDone;
-        CriSint32 AlphaDone;
+        CriSint32 Count;     // +0xe58
+        CriSint32 Reserved2[2];
+        CriSint32 VideoDone; // +0xe64
+        CriSint32 AlphaDone; // +0xe68
     };
     CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
     SubtitleEndState* state = (SubtitleEndState*)player;
