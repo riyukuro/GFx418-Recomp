@@ -30,13 +30,19 @@
 // recovered here from the code that uses them; the neighboring AS3 text visitor classes live in sfr_as3_13.
 struct CX18ArrayLHEntry { void* Resource; unsigned char Rest[0x18]; };
 struct CX18ArrayLH { CX18ArrayLHEntry* Data; Scaleform::UPInt Size; Scaleform::UPInt Capacity; };
-struct CX18SharedObjectEntry
+// Hash<String, String> cached-hash node (0x20 bytes) and the table header the entries follow.
+struct CX18StringPairEntry
 {
-    unsigned char Prefix[0x10];
-    Scaleform::UPInt Next;
-    unsigned char Pad[8];
-    Scaleform::GFx::ASString Key;
-    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject> Value;
+    Scaleform::SPInt NextInChain;
+    Scaleform::UPInt HashValue;
+    Scaleform::String First;
+    Scaleform::String Second;
+};
+struct CX18StringPairTable
+{
+    Scaleform::UPInt EntryCount;
+    Scaleform::UPInt SizeMask;
+    CX18StringPairEntry Entries[1];
 };
 struct CX18TextFormatCleanup
 {
@@ -65,25 +71,25 @@ void FUN_1424a9ed0(void* pdata)
 }
 
 // @0x1424a9f40
-// MS2-FUNCTIONAL: releases both owned fields of every live hash slot, marks it empty, and frees the slot array.
+// MS2-FUNCTIONAL: releases both strings of every live Hash<String, String> slot (SizeMask + 1 slots of 0x20 bytes after
+// the table header), marks it empty, and frees the table.
 void FUN_1424a9f40(void* ptable)
 {
-    struct CX18HashTable { CX18SharedObjectEntry* Data; Scaleform::UPInt Capacity; };
-    CX18HashTable* table = (CX18HashTable*)ptable;
-    if (!table->Data)
+    CX18StringPairTable** table = (CX18StringPairTable**)ptable;
+    if (!*table)
         return;
-    Scaleform::UPInt count = table->Capacity + 1;
+    Scaleform::UPInt count = (*table)->SizeMask + 1;
     for (Scaleform::UPInt i = 0; i < count; ++i)
     {
-        CX18SharedObjectEntry* slot = table->Data + i;
-        if (slot->Next == (Scaleform::UPInt)-2)
+        CX18StringPairEntry* slot = &(*table)->Entries[i];
+        if (slot->NextInChain == -2)
             continue;
-        slot->Value.~SPtr();
-        slot->Key.~ASString();
-        slot->Next = (Scaleform::UPInt)-2;
+        slot->Second.~String();
+        slot->First.~String();
+        slot->NextInChain = -2;
     }
-    Scaleform::Memory::GetGlobalHeap()->Free(table->Data);
-    table->Data = 0;
+    Scaleform::Memory::GetGlobalHeap()->Free(*table);
+    *table = 0;
 }
 
 // @0x1424aa0f0
