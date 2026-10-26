@@ -17,10 +17,10 @@ extern "C" int DAT_143baa5d0;
 extern "C" int DAT_143baa9d0;
 extern "C" int DAT_143baadd0;
 extern "C" int DAT_143bab1d0;
-extern "C" int DAT_143d74a80;
-extern "C" int DAT_143db4ac0;
-extern "C" short DAT_143dc4b00;
-extern "C" short DAT_143e44b00;
+extern "C" unsigned char DAT_143d74a80;
+extern "C" unsigned char DAT_143db4ac0;
+extern "C" unsigned char DAT_143dc4b00;
+extern "C" unsigned char DAT_143e44b00;
 
 
 void FUN_140047b30(cri_u64 *a1,longlong *a2,byte *a3);
