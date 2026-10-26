@@ -93,6 +93,8 @@ protected:
     virtual const char* GetAS3ObjectType() const;               // 0x142505e40
     virtual String GetAS3ObjectName() const;                    // 0x142505dd0
     virtual void Finalize_GC();                                 // 0x1425008d0
+    // (appended, sfr22) the table's seventh slot: this file always wants Finalize_GC. 0x142510e10
+    virtual bool HasFinalize_GC() const { return true; }
 
 private:
     // (appended, sfr19) makes the class traits of the file's classes, then its scripts (run when to_execute).
