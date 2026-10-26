@@ -2438,8 +2438,8 @@ ShapeObject::~ShapeObject()
     auto* bytes = reinterpret_cast<unsigned char*>(this);
     reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::ShapeBaseCharacterDef>*>(bytes + 0xc0)->~Ptr();
     reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::DrawingContext>*>(bytes + 0xc8)->~Ptr();
-    reinterpret_cast<AvmDisplayObj*>(bytes + 0x90)->~AvmDisplayObj();
-    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->~DisplayObject();
+    reinterpret_cast<AvmDisplayObj*>(bytes + 0x90)->AvmDisplayObj::~AvmDisplayObj();
+    reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->DisplayObject::~DisplayObject();
 }
 }}}
 

@@ -15,12 +15,25 @@ void Sfr31ShutdownRegistered(Scaleform::UPInt self)
     Scaleform::GFx::AS3::Sfr31ShutdownRegistered(self);
 }
 
-// MS2-FUNCTIONAL 0x1424ddb80: performs the AVM display object's reference cleanup before restoring its base state.
+// The class name copy goes back to the global heap, then the counted AS3 object is released (SPtr: a pointer the
+// collector marked with bit 0 only loses the mark).
 // @0x1424ddb80
-Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj() = default;
+Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj()
+{
+    Memory::Free(const_cast<char*>(pClassName));
+    if (UPInt p = reinterpret_cast<UPInt>(pAS3CollectiblePtr))
+    {
+        if (p & 1)
+            pAS3CollectiblePtr = reinterpret_cast<Instances::fl_display::DisplayObject*>(p - 1);
+        else
+            reinterpret_cast<RefCountBaseGC<StatMV_ActionScript_Mem>*>(p)->Release();
+    }
+}
 
 // MS2-FUNCTIONAL 0x1424ddce0: releases the sprite's AVM-owned children and then tears down its display object bases.
 // @0x1424ddce0
 Scaleform::GFx::AS3::AvmSprite::~AvmSprite() = default;
 
 // MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
