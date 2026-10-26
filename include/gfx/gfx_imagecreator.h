@@ -87,6 +87,15 @@ public:
     virtual Render::Image* LoadImageFile(const ImageCreateInfo& info, const String& url);                  // +0x10
     virtual Render::Image* LoadExportedImage(const ImageCreateExportInfo& info, const String& url);        // +0x18
     virtual Render::Image* CreateImage(const ImageCreateInfo& info, Render::ImageSource* source);          // +0x20
+
+    // (appended, sfr22) the exe table has a sixth slot, 0x1422eee80: an inline returning null for either stage
+    // (its COMDAT landed in the game's gfximageloader TU, so it is unoptimized there)
+    enum LoadStage
+    {
+        Stage_Load,
+        Stage_Bind
+    };
+    virtual RefCountImpl* GetBindKey(LoadStage) { return 0; }                                                // +0x28
 };
 
 #if defined(_WIN64)

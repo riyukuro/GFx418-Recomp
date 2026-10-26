@@ -169,6 +169,14 @@ public:
     virtual Image* LoadImageFile(const ImageCreateInfo& info, const String& url);
     virtual Image* LoadExportedImage(const ImageCreateExportInfo& info, const String& url);
     virtual Image* CreateImage(const ImageCreateInfo& info, ImageSource* source);
+
+    // The sixth slot (0x1422eee80, a COMDAT that landed in the game's gfximageloader TU): no bind key for either stage.
+    enum LoadStage
+    {
+        Stage_Load,
+        Stage_Bind
+    };
+    virtual RefCountImpl* GetBindKey(LoadStage) { return 0; }
 };
 
 // The image file readers a loader may use.
