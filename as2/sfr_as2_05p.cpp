@@ -67,59 +67,39 @@ bool AvmButton::GetMember(Environment* penv, const ASString& name, Value* pval)
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // LocalFrame's ExecuteForEachChild_GC and Finalize_GC overrides. as2_action.h does not declare them (adding them would
-// rebuild every AS2 unit), so they stand in here as statics of a collector-side helper, which reaches the protected
-// child functors: the frame's variables, the previous frame, callee and caller.
-struct LocalFrameGC : public ASRefCountBaseType
-{
-    template<class Functor>
-    static void ForEachChild(const LocalFrame* pframe, Collector* prcc)
-    {
-        ASStringHash_GC<Value>::ConstIterator it = pframe->Variables.Begin();
-        while (it != pframe->Variables.End())
-        {
-            const Value& value = it->Second;
-            value.template ForEachChild_GC<Functor>(prcc);
-            ++it;
-        }
-        if (pframe->PrevFrame)
-            Functor::Call(prcc, pframe->PrevFrame);
-        pframe->Callee.template ForEachChild_GC<Functor>(prcc);
-        pframe->Caller.template ForEachChild_GC<Functor>(prcc);
-    }
+// rebuild every AS2 unit), so they stand in here as free functions.
+// LocalFrame's out-of-line ForEachChild_GC<Functor> instantiations (sfr_as2_02; this in rcx).
+void FUN_142910cf0(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // ReleaseFunctor
+void FUN_14290dbd0(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // MarkInCycleFunctor
+void FUN_142913b00(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc); // ScanInUseFunctor
 
-    static void ExecuteForEachChild(const LocalFrame* pframe, Collector* prcc, OperationGC operation)
-    {
-        switch (operation)
-        {
-        case Operation_Release:
-            ForEachChild<ReleaseFunctor>(pframe, prcc);
-            break;
-        case Operation_MarkInCycle:
-            ForEachChild<MarkInCycleFunctor>(pframe, prcc);
-            break;
-        case Operation_ScanInUse:
-            ForEachChild<ScanInUseFunctor>(pframe, prcc);
-            break;
-        default:;
-        }
-    }
-};
-
-// MS2-FUNCTIONAL: the exe tail-calls LocalFrame::ForEachChild_GC<Functor> (sfr_as2_02), here the walk is inlined.
 // @0x142941190
 void FUN_142941190(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc,
                    ASRefCountBaseType::OperationGC operation)
 {
-    LocalFrameGC::ExecuteForEachChild(pframe, prcc, operation);
+    switch (operation)
+    {
+    case ASRefCountBaseType::Operation_Release:
+        FUN_142910cf0(pframe, prcc);
+        break;
+    case ASRefCountBaseType::Operation_MarkInCycle:
+        FUN_14290dbd0(pframe, prcc);
+        break;
+    case ASRefCountBaseType::Operation_ScanInUse:
+        FUN_142913b00(pframe, prcc);
+        break;
+    default:;
+    }
 }
 
-// Finalize_GC: the variables go before collection (the exe jumps to the hash's destructor, shared by ICF).
-// MS2-FUNCTIONAL: free function standing in for the private override.
+// The variables' hash destructor (0x142924960, shared by ICF).
+void FUN_142924960(ASStringHash_GC<Value>* phash);
+
+// Finalize_GC: the variables go before collection (the exe jumps to the hash's destructor).
 // @0x142942db0
 void FUN_142942db0(LocalFrame* pframe)
 {
-    typedef ASStringHash_GC<Value> VariableHash;
-    pframe->Variables.~VariableHash();
+    FUN_142924960(&pframe->Variables);
 }
 
 // The base character finds no member; the sprite, button and text field characters override it.
