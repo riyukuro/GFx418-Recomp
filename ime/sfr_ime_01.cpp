@@ -1982,9 +1982,8 @@ void FUN_1423d7610(void* self)
         if (hr >= 0) {
             auto** resultVtable = *reinterpret_cast<void***>(result);
             const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-            if (status == static_cast<int>(0x80004000u))
-                reinterpret_cast<void(*)(void*)>(*reinterpret_cast<void***>(*reinterpret_cast<void**>(bytes + 0x1a0)) + 2)(
-                    *reinterpret_cast<void**>(bytes + 0x1a0));
+            if (status == static_cast<int>(0x80040200u))
+                (*reinterpret_cast<void(***)(void*)>(bytes + 0x1a0))[2](bytes + 0x1a0);  // the embedded interface at +0x1a0
             reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
         }
     }
