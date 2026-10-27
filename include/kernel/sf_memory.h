@@ -43,6 +43,17 @@ public:
     class LimitHandler;
     class HeapTracer;
     struct HeapDesc;
+    struct RootHeapDesc;
+
+    // the root heap's parameters (RootHeapDesc)
+    enum RootHeapParameters
+    {
+        RootHeap_MinAlign    = 16,
+        RootHeap_Granularity = 16 * 1024,
+        RootHeap_Reserve     = 16 * 1024,
+        RootHeap_Threshold   = 256 * 1024,
+        RootHeap_Limit       = 0
+    };
 
     virtual ~MemoryHeap() {}                                                    // 0
 
@@ -234,6 +245,15 @@ struct MemoryHeap::HeapDesc
              UPInt threshold = ~UPInt(0), UPInt limit = 0, UPInt heapId = 0, UPInt arena = 0)
         : Flags(flags), MinAlign(minAlign), Granularity(granularity), Reserve(reserve), Threshold(threshold),
           Limit(limit), HeapId(heapId), Arena(arena)
+    {}
+};
+
+// exe /Od copy 0x1418039e0 (gfxservice)
+struct MemoryHeap::RootHeapDesc : public MemoryHeap::HeapDesc
+{
+    RootHeapDesc()
+        : HeapDesc(0, RootHeap_MinAlign, RootHeap_Granularity, RootHeap_Reserve, RootHeap_Threshold, RootHeap_Limit,
+                   HeapId_Global)
     {}
 };
 
