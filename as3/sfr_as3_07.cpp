@@ -4092,7 +4092,8 @@ namespace Instances { namespace fl_display
         result->Unk59 = Unk59;
         Render::DrawableImageContext* pcontext =
             (Render::DrawableImageContext*)FUN_14256f220(static_cast<ASVM&>(GetVM()).GetMovieImpl());
-        Render::DrawableImage* pcopy = new(Memory::Alloc(200)) Render::DrawableImage(Transparent, pImage, pcontext);
+        void* pmem = Memory::Alloc(200);
+        Render::DrawableImage* pcopy = pmem ? new(pmem) Render::DrawableImage(Transparent, pImage, pcontext) : 0;
         result->pImage = *reinterpret_cast<Render::ImageBase*>(pcopy);
     }
 
