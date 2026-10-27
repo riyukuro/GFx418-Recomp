@@ -5014,27 +5014,27 @@ ASString Sfr33SlotDataTypeName(const SlotInfo* psi, VM& vm)
 // VMAbcFile::GetDetailValue: the constant (an optional parameter's or slot's default) a value detail names;
 // index 0 (or an unknown kind) is undefined. Kinds: 1 Utf8, 3 Int, 4 UInt, 5/8/0x16..0x1a namespaces,
 // 6 Double, 10 False, 11 True, 12 Null.
-// MS2-FUNCTIONAL 0x142509240: a free function over the VMAbcFile (the member is not declared in the header).
+// MS2-FUNCTIONAL 0x142509240: a VMAbcFile member (rcx = the file, rdx = the hidden result, r8 = d).
 // @0x142509240
-Value Sfr33GetDetailValue(VMAbcFile& file, const Abc::ValueDetail& d)
+Value VMAbcFile::GetDetailValue(const Abc::ValueDetail& d)
 {
     const SInt32 ind = d.ValueIndex;
     if (ind > 0)
     {
-        const Abc::ConstPool& cp = file.GetAbcFile().Const_Pool;
+        const Abc::ConstPool& cp = GetAbcFile().Const_Pool;
         switch (static_cast<int>(d.Kind))
         {
         case 1:
         {
             const StringDataPtr str = cp.GetString(ind);
-            return Value(file.GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize()));
+            return Value(GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize()));
         }
         case 3:
             return Value(cp.ConstInt[ind]);
         case 4:
             return Value(cp.ConstUInt[ind]);
         case 5: case 8: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
-            return Value(&file.GetInternedNamespace(ind));
+            return Value(&GetInternedNamespace(ind));
         case 6:
             return Value(cp.GetDouble(ind));
         case 10:

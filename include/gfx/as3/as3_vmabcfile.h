@@ -72,6 +72,8 @@ public:
     Instances::Namespace& GetInternedNamespace(const Abc::Multiname& mn);
     // The namespace set at constant pool index ind, made on first use (0x14250aff0).
     NamespaceSet& GetInternedNamespaceSet(UPInt ind);
+    // (appended, mg28) the constant value detail d names (an optional parameter's or slot's default). 0x142509240
+    Value GetDetailValue(const Abc::ValueDetail& d);
     // (appended, sfr19) keeps the class traits made for this file's classes (Vector.<T> of them) alive.
     void RegisterLoadedClass(const SPtr<ClassTraits::Traits>& tr) { LoadedClasses.PushBack(tr); }
     // (appended, sfr34) the exception handlers of method body mbi_ind.
