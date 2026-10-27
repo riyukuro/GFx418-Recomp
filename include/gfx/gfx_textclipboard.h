@@ -113,10 +113,13 @@ public:
 // (sfr24) FUN_1425a83d0 allocates 0x30 and calls ??0TextKeyMap.
 static_assert(sizeof(TextKeyMap) == 0x30, "TextKeyMap size");
 
+// Only where StateBag is declared (gfx_moviedef.h came first): the GFx units include this header without it.
+#ifdef MS2_SF_GFX_MOVIEDEF_H
 inline Ptr<TextClipboard> StateBag::GetTextClipboard() const
 {
     return *(TextClipboard*)GetStateAddRef(State::State_TextClipboard);
 }
+#endif
 
 }} // namespace Scaleform::GFx
 
