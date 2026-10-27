@@ -5655,10 +5655,9 @@ void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maxi
         return;
     }
 
-    CriMovieInputChunk prefix = {};
     CriMovieInputChunk suffix = {};
-    criSj_SplitChunk(current, maximum, &prefix, &suffix);
-    FUN_1400467a8(source, 0, &prefix);
+    criSj_SplitChunk(current, maximum, current, &suffix);
+    FUN_1400467a8(source, 0, &suffix);
     FUN_1400467b0(source, 1, current);
     current->Data = NULL;
     current->Size = 0;
