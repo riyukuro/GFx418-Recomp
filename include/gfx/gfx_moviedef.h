@@ -88,6 +88,8 @@ public:
     {
         return *(TestStream*)GetStateAddRef(State::State_TestStream);
     }
+    // Defined in gfx_textclipboard.h (gfxmovieeventhandler keeps it as a COMDAT).
+    inline Ptr<TextClipboard> GetTextClipboard() const;
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

@@ -35,17 +35,38 @@ struct Key
         Insert     = 45,
         Delete     = 46,
         Help       = 47,
-        A          = 65,
+        Num0       = 48, // Num0..Num9 = '0'..'9'
+        A          = 65, // A..Z = 'A'..'Z'
         C          = 67,
         V          = 86,
         X          = 88,
         Z          = 90,
+        KP_0       = 96, // KP_0..KP_9 = VK_NUMPAD0..9
+        F1         = 112, // F1..F15 = VK_F1..
         NumLock    = 144,
         ScrollLock = 145,
+        // The OEM keys, as the game's virtual-key map stores them (GFxMovieEventHandler 0x143a290e0).
+        Semicolon    = 186,
+        Equal        = 187,
+        Comma        = 188,
+        Minus        = 189,
+        Period       = 190,
+        Slash        = 191,
+        Bar          = 192,
+        BracketLeft  = 219,
+        Backslash    = 220,
+        BracketRight = 221,
+        Quote        = 222,
+        OEM_AX       = 225,
+        OEM_102      = 226,
+        ICO_HELP     = 227,
+        ICO_00       = 228,
+        None         = VoidSymbol,
 
         KeyCount   = 229 // codes 0..228 (the state checks code > 228)
     };
 };
+typedef Key::Code KeyCode;
 
 // Modifier keys held with a key event, one byte of flags. Bit 7 marks an explicitly initialized value.
 class KeyModifiers
@@ -81,20 +102,13 @@ public:
     bool IsExtendedKey() const       { return (States & Key_ExtendedKey) != 0; }
     bool IsSpecialKeyPressed() const { return (States & (Key_ShiftPressed | Key_CtrlPressed | Key_AltPressed)) != 0; }
 
-    void SetFlag(UInt8 flag, bool on)
-    {
-        if (on)
-            States |= flag;
-        else
-            States &= ~flag;
-    }
-    void SetShiftPressed(bool v = true)  { SetFlag(Key_ShiftPressed, v); }
-    void SetCtrlPressed(bool v = true)   { SetFlag(Key_CtrlPressed, v); }
-    void SetAltPressed(bool v = true)    { SetFlag(Key_AltPressed, v); }
-    void SetCapsToggled(bool v = true)   { SetFlag(Key_CapsToggled, v); }
-    void SetNumToggled(bool v = true)    { SetFlag(Key_NumToggled, v); }
-    void SetScrollToggled(bool v = true) { SetFlag(Key_ScrollToggled, v); }
-    void SetExtendedKey(bool v = true)   { SetFlag(Key_ExtendedKey, v); }
+    void SetShiftPressed(bool v = true)  { v ? (States |= Key_ShiftPressed) : (States &= ~Key_ShiftPressed); }
+    void SetCtrlPressed(bool v = true)   { v ? (States |= Key_CtrlPressed) : (States &= ~Key_CtrlPressed); }
+    void SetAltPressed(bool v = true)    { v ? (States |= Key_AltPressed) : (States &= ~Key_AltPressed); }
+    void SetCapsToggled(bool v = true)   { v ? (States |= Key_CapsToggled) : (States &= ~Key_CapsToggled); }
+    void SetNumToggled(bool v = true)    { v ? (States |= Key_NumToggled) : (States &= ~Key_NumToggled); }
+    void SetScrollToggled(bool v = true) { v ? (States |= Key_ScrollToggled) : (States &= ~Key_ScrollToggled); }
+    void SetExtendedKey(bool v = true)   { v ? (States |= Key_ExtendedKey) : (States &= ~Key_ExtendedKey); }
 
     bool IsInitialized() const { return (States & Initialized_Bit) != 0; }
 };

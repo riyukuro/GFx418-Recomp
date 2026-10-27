@@ -69,7 +69,14 @@ public:
     MouseEvent() : Event(), x(0), y(0), ScrollDelta(0), Button(0), MouseIndex(0) {}
     MouseEvent(EventType eventType, unsigned button, float xpos, float ypos, float scrollVal = 0,
                unsigned mouseIndex = 0)
-        : Event(eventType), x(xpos), y(ypos), ScrollDelta(scrollVal), Button(button), MouseIndex(mouseIndex) {}
+        : Event(eventType)
+    {
+        Button = button;
+        x = xpos;
+        y = ypos;
+        ScrollDelta = scrollVal;
+        MouseIndex = mouseIndex;
+    }
 };
 
 // A key going down or up; a key down with a printable character also types it. 0x18 bytes.
@@ -81,11 +88,10 @@ public:
     UInt32   WcharCode;     // +0x10
     UInt8    KeyboardIndex; // +0x14
 
-    KeyEvent(EventType eventType = Unknown, unsigned code = 0, UByte asciiCode = 0, UInt32 wcharCode = 0,
+    KeyEvent(EventType eventType = Unknown, Key::Code code = Key::VoidSymbol, UByte asciiCode = 0, UInt32 wcharCode = 0,
              KeyModifiers mods = KeyModifiers(), UInt8 keyboardIndex = 0)
-        : Event(eventType), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex)
+        : Event(eventType, mods), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex)
     {
-        Modifiers = mods;
     }
 };
 
@@ -114,9 +120,30 @@ public:
 class IMEEvent : public Event
 {
 public:
+    enum IMEEventType
+    {
+        IME_Default,
+        IME_PreProcessKeyboard,
+    };
+
     unsigned IMEEvtType; // +0x08
 
     IMEEvent(unsigned imeEvtType = 0) : Event(IME), IMEEvtType(imeEvtType) {}
+    IMEEvent(IMEEventType imeEvtType) : Event(IME), IMEEvtType(imeEvtType) {}   // the game's COMDAT takes the enum
+};
+
+// A Win32 IME window message (GFxMovieEventHandler vfunc_15 / vfunc_37). 0x30 bytes.
+class IMEWin32Event : public IMEEvent
+{
+public:
+    unsigned Message; // +0x0c
+    UPInt    WParam;  // +0x10
+    UPInt    LParam;  // +0x18
+    UPInt    Wnd;     // +0x20
+    int      Options; // +0x28
+
+    IMEWin32Event(IMEEventType imeEvtType, UPInt wnd, unsigned message, UPInt wParam, UPInt lParam, int options = 0)
+        : IMEEvent(imeEvtType), Message(message), WParam(wParam), LParam(lParam), Wnd(wnd), Options(options) {}
 };
 
 // Show / hide / shape requests for the cursor of one mouse. 0x10 bytes.
