@@ -3153,8 +3153,10 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     TraitsClassClass = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::ClassClass(*this));
     TraitsObject = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Object(*this));
     TraitsNamespace = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Namespace(*this));
+    // the five constructors called through their addresses run only on a non-null allocation (new-expression)
+    void* pmem = MS2_VMAlloc(MHeap, 0xe8);
     TraitsFunction = MS2_PrepareClassTraits(*this, static_cast<ClassTraits::Traits*>(
-        FUN_1423eca40(MS2_VMAlloc(MHeap, 0xe8), *this, fl::FunctionCI)));
+        pmem ? FUN_1423eca40(pmem, *this, fl::FunctionCI) : 0));
     TraitsBoolean = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Boolean(*this));
     TraitsNumber = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Number(*this));
     TraitsInt = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::int_(*this));
@@ -3172,14 +3174,18 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
         reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Anonimous(*this)));
     TraitsVoid = Pickable<ClassTraits::Traits>(
         reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Void(*this)));
+    pmem = MS2_VMAlloc(MHeap, 0x100);
     NoFunctionTraits = Pickable<InstanceTraits::Traits>(
-        static_cast<InstanceTraits::Traits*>(FUN_1423ecf50(MS2_VMAlloc(MHeap, 0x100), *this, DAT_14313dc60)));
+        static_cast<InstanceTraits::Traits*>(pmem ? FUN_1423ecf50(pmem, *this, DAT_14313dc60) : 0));
+    pmem = MS2_VMAlloc(MHeap, 0xd0);
     ActivationTraits = Pickable<InstanceTraits::Traits>(
-        static_cast<InstanceTraits::Traits*>(FUN_1423eb860(MS2_VMAlloc(MHeap, 0xd0), *this)));
+        static_cast<InstanceTraits::Traits*>(pmem ? FUN_1423eb860(pmem, *this) : 0));
+    pmem = MS2_VMAlloc(MHeap, 0xe8);
     TraitaGlobalObject = Pickable<InstanceTraits::fl::GlobalObject>(
-        static_cast<InstanceTraits::fl::GlobalObject*>(FUN_1423ed1c0(MS2_VMAlloc(MHeap, 0xe8), *this)));
+        static_cast<InstanceTraits::fl::GlobalObject*>(pmem ? FUN_1423ed1c0(pmem, *this) : 0));
+    pmem = MS2_VMAlloc(MHeap, 0xd8);
     GlobalObject = Pickable<Instances::fl::GlobalObjectCPP>(static_cast<Instances::fl::GlobalObjectCPP*>(
-        FUN_1423ed260(MS2_VMAlloc(MHeap, 0xd8), *this, TraitaGlobalObject.GetPtr())));
+        pmem ? FUN_1423ed260(pmem, *this, TraitaGlobalObject.GetPtr()) : 0));
     GlobalObjectValue = Value(reinterpret_cast<Object*>(GlobalObject.GetPtr()));
 
     XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(MHeap) XMLSupportImpl(*this));
