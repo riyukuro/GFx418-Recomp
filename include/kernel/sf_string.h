@@ -35,7 +35,10 @@ public:
         volatile SInt32 RefCount;  // +8
         char            Data[1];   // +0xc
 
-        UPInt GetSize() const { return Size & ~((UPInt)1 << (sizeof(UPInt) * 8 - 1)); }
+        // the mask comes from a static member, as the exe's /Od copies have it (gfximageloader: GetSize 0x1422eeed0
+        // calls GetLengthFlagBit 0x1422eeeb0)
+        static UPInt GetLengthFlagBit() { return (UPInt)1 << (sizeof(UPInt) * 8 - 1); }
+        UPInt GetSize() const { return Size & ~GetLengthFlagBit(); }
         void  AddRef()        { _InterlockedExchangeAdd((volatile long*)&RefCount, 1); }
         void  Release()
         {

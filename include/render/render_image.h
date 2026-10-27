@@ -74,7 +74,10 @@ enum ImageFormat
 enum ImageFormatSupport
 {
     ImageFormats_Standard = 0x0000,
-    ImageFormats_DXT      = 0x0001
+    ImageFormats_DXT      = 0x0001,
+    // (appended for GFxImageLoader) the compressed formats it checks for
+    ImageFormats_PVR      = 0x0008,
+    ImageFormats_ETC      = 0x0020
 };
 
 typedef Size<UInt32> ImageSize;

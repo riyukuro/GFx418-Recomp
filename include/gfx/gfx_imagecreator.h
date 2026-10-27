@@ -20,6 +20,7 @@ namespace Render { class TextureManager; class ImageSource; }
 namespace GFx {
 
 class ImageFileHandlerRegistry;
+class FileOpener;
 struct ExporterInfo;
 
 // What the requester passes along with an image request.
@@ -59,6 +60,10 @@ public:
 
     // (appended for GFxAtlasCache, gfxui/gfxatlascache.cpp) out of line at 0x1422eeea0: returns +0x28
     ImageFileHandlerRegistry* GetImageFileHandlerRegistry() const { return pIFHRegistry; }
+
+    // (appended for GFxImageLoader, gfxui/gfximageloader.cpp) returns +0x20; the opener is a GFx::FileOpener, whose
+    // State base is at offset 0
+    FileOpener* GetFileOpener() const { return (FileOpener*)pFileOpener; }
 };
 
 // An image the exporter extracted from the movie.
@@ -81,7 +86,7 @@ public:
 class ImageCreator : public State
 {
 protected:
-    Ptr<RefCountImpl> pTextureManager; // +0x18 Ptr<Render::TextureManager>
+    Ptr<Render::TextureManager> pTextureManager; // +0x18
 
 public:
     ImageCreator(Render::TextureManager* textureManager = 0);
@@ -99,6 +104,9 @@ public:
         Stage_Bind
     };
     virtual RefCountImpl* GetBindKey(LoadStage) { return 0; }                                                // +0x28
+
+    // (appended for GFxImageLoader) its /Od copy goes through Ptr<TextureManager>::operator T*
+    Render::TextureManager* GetTextureManager() const { return pTextureManager; }
 };
 
 #if defined(_WIN64)
