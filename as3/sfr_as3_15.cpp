@@ -3210,7 +3210,9 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     const UPInt n = Loader.GetSize();
     for (UPInt i = 0; i < n; ++i)
     {
-        SPtr<VMAbcFile> file = Pickable<VMAbcFile>(SF_HEAP_NEW(MHeap) VMAbcFile(*this, Loader.GetFile(i)));
+        // The exe fetches the loader's file (slot 3) before allocating the VMAbcFile.
+        const Ptr<Abc::File>& abc = Loader.GetFile(i);
+        SPtr<VMAbcFile> file = Pickable<VMAbcFile>(SF_HEAP_NEW(MHeap) VMAbcFile(*this, abc));
         if (file->RegisterUserDefinedClassTraits() && file->RegisterScrips(i == n - 1))
             SPtr<VMAbcFile> loaded = file;
     }
