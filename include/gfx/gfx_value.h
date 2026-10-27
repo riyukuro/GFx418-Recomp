@@ -384,6 +384,7 @@ protected:
 class ExternalInterface : public State
 {
 public:
+    ExternalInterface() : State(State_ExternalInterface) {}   // exe 0x1422bebf0
     virtual ~ExternalInterface() {}
     virtual void Callback(Movie* pmovieView, const char* methodName, const Value* args, unsigned argCount) = 0;
 };

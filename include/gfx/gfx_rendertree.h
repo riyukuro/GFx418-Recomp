@@ -171,6 +171,8 @@ private:
 };
 static_assert(sizeof(Context) == 0x110, "Context size");
 
+class RenderNotify;   // (appended for the game's GFxMovie) defined below
+
 // (appended for the player, sfr_gfx_01i) a render-thread reference to an entry that stays safe after the context
 // dies: one counted pointer to the handle data shared with the context (render_context.h has the full class).
 class RTHandle
@@ -189,6 +191,10 @@ public:
 
     void operator=(const RTHandle& other) { pData = other.pData; }
     void Clear() { pData.Clear(); }
+
+    // (appended for the game's GFxMovie) the render thread takes the entry's latest captured snapshot.
+    bool   NextCapture(RenderNotify* notify);   // 0x1425805a0
+    Entry* GetRenderEntry() const;              // 0x142580250
 };
 
 template<class C>
@@ -200,6 +206,9 @@ public:
     DisplayHandle(const RTHandle& other) : RTHandle(other) {}
 
     void operator=(const DisplayHandle& other) { RTHandle::operator=(other); }
+
+    // (appended for the game's GFxMovie)
+    C* GetRenderEntry() const { return static_cast<C*>(RTHandle::GetRenderEntry()); }
 };
 
 } // namespace ContextImpl
@@ -423,6 +432,29 @@ public:
 
     void SetViewport(const Viewport& vp);          // 0x14261d890
     void SetBackgroundColor(const Color& color);   // 0x142575a20 (inline in render_treenode.h)
+};
+
+// (appended for the game's GFxMovie) the render-thread side of the contexts a renderer draws; only the call the game
+// makes is declared (render_context.h has the full class).
+namespace ContextImpl {
+class RenderNotify
+{
+public:
+    void EndFrameContextNotify();   // 0x14257ff00
+};
+} // namespace ContextImpl
+
+// (appended for the game's GFxMovie) the 2D renderer over a HAL, 0x18 bytes (render_renderer2d.h has the full class;
+// the GFx UI creates it as placeholder/gfxrenderer2d.h's Unk_GFxUIRenderer2D).
+class Renderer2D : public RefCountBase<Renderer2D, StatRender_Mem>
+{
+public:
+    ContextImpl::RenderNotify* GetContextNotify() const;   // 0x142582270
+    void Display(TreeRoot* pnode);                         // 0x142582230
+    void Display(const ContextImpl::DisplayHandle<TreeRoot>& hroot) { Display(hroot.GetRenderEntry()); }
+
+private:
+    void* pImpl;   // +0x10 Renderer2DImpl*
 };
 
 }} // namespace Scaleform::Render

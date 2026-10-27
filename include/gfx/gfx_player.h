@@ -9,6 +9,7 @@
 #define MS2_SF_GFX_PLAYER_H
 
 #include "gfx_moviedef.h"
+#include "gfx_value.h"
 #include "../render/render_viewport.h"
 #include "../render/render_constants.h"
 
@@ -52,6 +53,13 @@ public:
         : Render::Viewport(bufw, bufh, left, top, w, h, flags)
     {
         AspectRatio = 1.f; Scale = 1.f;
+    }
+    // (appended for the game's GFxMovie) with a scissor rectangle, the pixel scale and the aspect ratio
+    Viewport(int bufw, int bufh, int left, int top, int w, int h, int scleft, int sctop, int scw, int sch,
+             float scale, float ratio, unsigned flags = 0)
+        : Render::Viewport(bufw, bufh, left, top, w, h, scleft, sctop, scw, sch, flags)
+    {
+        Scale = scale; AspectRatio = ratio;
     }
 };
 
@@ -179,7 +187,8 @@ public:
     // Releases the movie; the last reference also lets go of the AVM root (exe 0x142573e70).
     void     Release();
     int      GetAVMVersion() const;
-    float    GetFrameRate() const;
+    // the game's /Od COMDAT 0x1422bf550 (gfxmovie)
+    float    GetFrameRate() const { return GetMovieDef()->GetFrameRate(); }
     // the game's /Od COMDAT 0x14127d200: a local Viewport, then the virtual SetViewport
     void     SetViewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0)
     {
@@ -220,6 +229,16 @@ public:
     bool     Invoke(const char* ppathToMethod, Value* presult, const char* pargFmt, ...);
     bool     InvokeArgs(const char* ppathToMethod, Value* presult, const char* pargFmt, va_list args);
 };
+
+// (appended for the game's GFxMovie) the handle of the movie's render tree root, what GetDisplayHandle returns and the
+// Renderer2D draws (gfx_rendertree.h has the class).
+typedef Render::ContextImpl::DisplayHandle<Render::TreeRoot> MovieDisplayHandle;
+
+// (appended for the game's GFxMovie) StateBag's typed setter; the ExternalInterface state is slot 6.
+inline void StateBag::SetExternalInterface(ExternalInterface* p)
+{
+    SetState(State::State_ExternalInterface, p);
+}
 
 }} // namespace Scaleform::GFx
 

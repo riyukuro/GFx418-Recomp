@@ -229,24 +229,6 @@ class FSCommandHandler : public State
 {
 };
 
-// The script diagnostics switches (state 3); the movie copies them into its Flags each advance.
-class ActionControl : public State
-{
-public:
-    enum ActionControlFlags
-    {
-        Action_Verbose           = 0x01,
-        Action_ErrorSuppress     = 0x02,
-        Action_LogRootFilenames  = 0x04,
-        Action_LogChildFilenames = 0x08,
-        Action_LongFilenames     = 0x10
-    };
-    unsigned GetActionFlags() const { return ActionFlags; }
-
-protected:
-    unsigned ActionFlags;   // +0x18
-};
-
 // Releases and clears a state pointer the movie holds only while it advances.
 template<class C>
 class AdvanceStateGuard

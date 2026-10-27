@@ -113,6 +113,30 @@ public:
     virtual ~ExternalLibPtr() {}
 };
 
+// (appended for the game's GFxMovie; was local to sfr_gfx_01i) the script diagnostics switches: MovieDefImpl::CreateInstance
+// stores them on the new movie, which copies them into its Flags each advance. exe: ctor 0x1422beba0, vftable 0x14310aa38
+// (the dtor only).
+class ActionControl : public State
+{
+public:
+    enum ActionControlFlags
+    {
+        Action_Verbose           = 0x01,
+        Action_ErrorSuppress     = 0x02,
+        Action_LogRootFilenames  = 0x04,
+        Action_LogChildFilenames = 0x08,
+        Action_LogAllFilenames   = Action_LogRootFilenames | Action_LogChildFilenames,
+        Action_LongFilenames     = 0x10
+    };
+
+    ActionControl(unsigned actionFlags) : State(State_ActionControl), ActionFlags(actionFlags) {}
+
+    unsigned GetActionFlags() const { return ActionFlags; }
+
+protected:
+    unsigned ActionFlags;   // +0x18
+};
+
 }} // namespace Scaleform::GFx
 
 #endif

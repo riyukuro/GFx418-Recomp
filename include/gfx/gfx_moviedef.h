@@ -40,6 +40,7 @@ class MemoryContext;
 struct MemoryParams;
 namespace Video { class VideoBase; }
 class ActionControl;
+class ExternalInterface;   // (appended for the game's GFxMovie)
 struct ExporterInfo;
 class FontResource;
 class FontLib;
@@ -99,6 +100,8 @@ public:
     inline void SetTranslator(Translator* ptr);
     // (appended for the game's GFxVideo) defined in video/video_statebag.h.
     inline void SetVideo(Video::VideoBase* ptr);
+    // (appended for the game's GFxMovie, exe 0x1422bf5a0) defined in gfx_player.h.
+    inline void SetExternalInterface(ExternalInterface* p);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it
@@ -325,6 +328,16 @@ struct MemoryParams
     unsigned    MaxCollectionRoots;         // +0x44
     unsigned    FramesBetweenCollections;   // +0x48
     unsigned    InitialDynamicLimit;        // +0x4c
+
+    // (appended for the game's GFxMovie, exe 0x1422bec30) a quarter of the heap for the user level limit, the
+    // collector's defaults (~0); InitialDynamicLimit is left alone
+    MemoryParams(UPInt memoryArena = 0)
+    {
+        Desc.Arena               = memoryArena;
+        HeapLimitMultiplier      = 0.25f;
+        MaxCollectionRoots       = ~0u;
+        FramesBetweenCollections = ~0u;
+    }
 };
 
 // Allocation stat of the movie data internals.

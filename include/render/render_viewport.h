@@ -127,6 +127,30 @@ public:
         return r;
     }
 
+    // (appended for the game's GFxMovie, exe 0x1422bf5d0) clip the view to a scissor rectangle
+    void SetScissorRect(int scleft, int sctop, int scw, int sch)
+    {
+        ScissorLeft   = scleft;
+        ScissorTop    = sctop;
+        ScissorWidth  = scw;
+        ScissorHeight = sch;
+        Flags |= View_UseScissorRect;
+    }
+
+    // (appended for the game's GFxMovie) a view rectangle inside a buffer with a scissor rectangle
+    Viewport(int bufw, int bufh, int left, int top, int w, int h, int scleft, int sctop, int scw, int sch,
+             unsigned flags = 0)
+    {
+        BufferWidth  = bufw;
+        BufferHeight = bufh;
+        Left         = left;
+        Top          = top;
+        Width        = w;
+        Height       = h;
+        Flags        = flags | View_UseScissorRect;
+        SetScissorRect(scleft, sctop, scw, sch);
+    }
+
 private:
     static float scaleX(int, int width, float x) { return width * (x + 1) / 2.f; }
     static float scaleY(int, int height, float y) { return height * (-y + 1) / 2.f; }
