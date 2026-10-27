@@ -34,6 +34,17 @@ class Translator : public State
 {
 };
 
+// new FontHandle emits the scalar deleting dtor here; the exe has no out-of-line ~FontHandle (sfr_gfx_03e,
+// sfr_gfx_05d), so inline the same cleanup for the unit-only DLL link.
+inline FontHandle::~FontHandle()
+{
+    if (pFontManager)
+        static_cast<FontManager*>(pFontManager)->RemoveFontHandle(this);
+    if (pFont)
+        pFont->Release();
+    pFont = 0;
+}
+
 // DisplayObjectBase::StateChanged_* bits.
 enum
 {
