@@ -4470,6 +4470,8 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             CriMvRequestNode* request = config->Tail;
             request->Next->Previous = request->Previous;
             request->Previous->Next = request->Next;
+            // the exe runs the operation outside the lock (0x14002dbdd) and retakes it to free the node
+            FUN_14258bb70(config->Lock);
             switch (request->Operation)
             {
             case 0:
@@ -4503,8 +4505,9 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 break;
             }
             case 1:
+                // FUN_14002e140(queue, 1, reader, NULL, buffer, size): the exe reads node +0x28 / +0x30 (0x14002dc49)
                 static_cast<Scaleform::GFx::Video::VideoReader*>(request->Request)->ReadFile(
-                    static_cast<Scaleform::UByte*>(request->ArgumentA), reinterpret_cast<Scaleform::SInt64>(request->ArgumentB));
+                    static_cast<Scaleform::UByte*>(request->ArgumentB), reinterpret_cast<Scaleform::SInt64>(request->ArgumentC));
                 break;
             case 2:
             {
@@ -4524,11 +4527,16 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             default:
                 break;
             }
+            FUN_14258aca0(config->Lock);
             RequestPoolHead* pool = (RequestPoolHead*)config;
             request->Next = pool->FreeList;
             pool->FreeList = request;
+            FUN_14258bb70(config->Lock);
+            FUN_14258aca0(config->Lock);
         }
         FUN_14258bb70(config->Lock);
+
+        FUN_14258aca0(config->Lock);
         if (config->Reader)
         {
             void** vtable = *(void***)config->Reader;
