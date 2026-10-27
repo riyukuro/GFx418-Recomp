@@ -47,13 +47,10 @@ public:
     float AspectRatio;    // +0x30
 
     Viewport() { AspectRatio = 1.f; Scale = 1.f; }
-    // (appended, sfr_gfx_01i) a view rectangle inside a buffer, no scissor (MovieImpl::SetLevelMovie)
+    // a view rectangle inside a buffer, no scissor (MovieImpl::SetLevelMovie; the game's /Od COMDAT 0x14127c400)
     Viewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0)
+        : Render::Viewport(bufw, bufh, left, top, w, h, flags)
     {
-        BufferWidth = bufw; BufferHeight = bufh;
-        Left = left; Top = top; Width = w; Height = h;
-        Flags = flags;
-        ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
         AspectRatio = 1.f; Scale = 1.f;
     }
 };
@@ -183,7 +180,12 @@ public:
     void     Release();
     int      GetAVMVersion() const;
     float    GetFrameRate() const;
-    void     SetViewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0);
+    // the game's /Od COMDAT 0x14127d200: a local Viewport, then the virtual SetViewport
+    void     SetViewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0)
+    {
+        Viewport desc(bufw, bufh, left, top, w, h, flags);
+        SetViewport(desc);
+    }
 
     void     CreateString(Value* pvalue, const char* pstring);
     void     CreateStringW(Value* pvalue, const wchar_t* pstring);

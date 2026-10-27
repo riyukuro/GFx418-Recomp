@@ -1329,7 +1329,7 @@ static __forceinline void SetToggleKeys(KeyboardState* pks, const KeyModifiers& 
 static inline KeyModifiers EventModifiers(const Event& event)
 {
     KeyModifiers mods;
-    mods.States = event.Modifiers;
+    mods.States = event.Modifiers.States;
     return mods;
 }
 
@@ -1357,8 +1357,8 @@ unsigned MovieImpl::HandleEvent(const Event& event)
     {
         const KeyEvent& kevent = static_cast<const KeyEvent&>(event);
         KeyboardState* pks = GetKeyboardState(kevent.KeyboardIndex);
-        if (pks && event.Modifiers != 0)
-            SetToggleKeys(pks, reinterpret_cast<const KeyModifiers&>(event.Modifiers));
+        if (pks && event.Modifiers.States != 0)
+            SetToggleKeys(pks, event.Modifiers);
     }
 
     switch (event.Type)

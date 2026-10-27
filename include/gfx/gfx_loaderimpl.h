@@ -19,6 +19,8 @@
 #include "../kernel/sf_file.h"
 #include "../../kernel/sf_list.h"
 
+extern "C" int GFx_Compile_with_SF_BUILD_DEBUG;
+
 namespace Scaleform {
 class File;
 class MemoryHeap;
@@ -63,7 +65,8 @@ public:
 class FileOpenerBase : public State
 {
 public:
-    FileOpenerBase() : State(State_FileOpener) {}
+    // the store is the SDK build-config link check (a shipping lib defines the symbol; exe 0x143b16008)
+    FileOpenerBase() : State(State_FileOpener) { GFx_Compile_with_SF_BUILD_DEBUG = 0; }
 
     virtual File*  OpenFile(const char* purl, int flags = FileConstants::Open_Read | FileConstants::Open_Buffered,
                             int mode = FileConstants::Mode_ReadWrite) = 0;          // +8

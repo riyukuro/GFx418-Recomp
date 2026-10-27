@@ -49,9 +49,11 @@ public:
     };
 
     EventType Type;      // +0x00
-    UByte     Modifiers; // +0x04 KeyModifiers
+    KeyModifiers Modifiers; // +0x04
 
-    Event(EventType eventType = Unknown) : Modifiers(0) { Type = eventType; }
+    // /Od callers keep these as COMDATs (gfxmovieugc 0x14127df60): Modifiers is default-constructed, then both are stored.
+    Event(EventType eventType = Unknown) { Type = eventType; }
+    Event(EventType eventType, KeyModifiers mods) { Type = eventType; Modifiers = mods; }
 };
 
 // A mouse move, press, release or wheel turn in viewport pixels (HandleEvent maps it onto the stage). 0x1c bytes.
@@ -83,7 +85,7 @@ public:
              KeyModifiers mods = KeyModifiers(), UInt8 keyboardIndex = 0)
         : Event(eventType), KeyCode(code), AsciiCode(asciiCode), WcharCode(wcharCode), KeyboardIndex(keyboardIndex)
     {
-        Modifiers = mods.States;
+        Modifiers = mods;
     }
 };
 
@@ -105,6 +107,7 @@ public:
     KeyModifiers KeysStates[4]; // +0x08 one per keyboard, unset ones are skipped
 
     SetFocusEvent(EventType eventType = SetFocus) : Event(eventType) {}
+    SetFocusEvent(KeyModifiers mods) : Event(SetFocus, mods) {}   // 0x14127dfb0
 };
 
 // An IME window message handed to the IME manager (the platform event classes derive from it).

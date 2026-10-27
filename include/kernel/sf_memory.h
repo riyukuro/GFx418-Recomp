@@ -155,25 +155,25 @@ typedef MemAddressStub* MemAddressPtr;
 // debug hook (empty in shipping builds).
 #define SF_MEMORY_REDEFINE_NEW_IMPL(class_name, check_delete, StatType)                                              \
     void* operator new(Scaleform::UPInt sz)                                                                          \
-    { return Scaleform::Memory::Alloc(sz); }                                                                         \
+    { void* p = Scaleform::Memory::Alloc(sz); return p; }                                                            \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemoryHeap* heap)                                             \
-    { return Scaleform::Memory::AllocInHeap(heap, sz); }                                                             \
+    { void* p = Scaleform::Memory::AllocInHeap(heap, sz); return p; }                                                \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemoryHeap* heap, int)                                        \
-    { return Scaleform::Memory::AllocInHeap(heap, sz); }                                                             \
+    { void* p = Scaleform::Memory::AllocInHeap(heap, sz); return p; }                                                \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemAddressPtr adr)                                            \
-    { return Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(StatType, 0, 0)); }                      \
+    { void* p = Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(StatType, 0, 0)); return p; }         \
     void* operator new(Scaleform::UPInt sz, const char* file, int line)                                              \
-    { return Scaleform::Memory::Alloc(sz, Scaleform::AllocInfo(StatType, file, line)); }                             \
+    { void* p = Scaleform::Memory::Alloc(sz, Scaleform::AllocInfo(StatType, file, line)); return p; }                \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemoryHeap* heap, const char* file, int line)                 \
-    { return Scaleform::Memory::AllocInHeap(heap, sz, Scaleform::AllocInfo(StatType, file, line)); }                 \
+    { void* p = Scaleform::Memory::AllocInHeap(heap, sz, Scaleform::AllocInfo(StatType, file, line)); return p; }    \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemAddressPtr adr, const char* file, int line)                \
-    { return Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(StatType, file, line)); }                \
+    { void* p = Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(StatType, file, line)); return p; }   \
     void* operator new(Scaleform::UPInt sz, int id, const char* file, int line)                                      \
-    { return Scaleform::Memory::Alloc(sz, Scaleform::AllocInfo(id, file, line)); }                                   \
+    { void* p = Scaleform::Memory::Alloc(sz, Scaleform::AllocInfo(id, file, line)); return p; }                      \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemoryHeap* heap, int id, const char* file, int line)         \
-    { return Scaleform::Memory::AllocInHeap(heap, sz, Scaleform::AllocInfo(id, file, line)); }                       \
+    { void* p = Scaleform::Memory::AllocInHeap(heap, sz, Scaleform::AllocInfo(id, file, line)); return p; }          \
     void* operator new(Scaleform::UPInt sz, Scaleform::MemAddressPtr adr, int id, const char* file, int line)        \
-    { return Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(id, file, line)); }                      \
+    { void* p = Scaleform::Memory::AllocAutoHeap(adr, sz, Scaleform::AllocInfo(id, file, line)); return p; }         \
     void operator delete(void* p)                                                 { check_delete(class_name, p); SF_FREE(p); } \
     void operator delete(void* p, const char*, int)                               { check_delete(class_name, p); SF_FREE(p); } \
     void operator delete(void* p, int, const char*, int)                          { check_delete(class_name, p); SF_FREE(p); } \

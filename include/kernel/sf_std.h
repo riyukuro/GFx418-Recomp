@@ -71,6 +71,11 @@ int SF_CDECL SFtowupper(wchar_t ch);
 // (appended for GFx FontManager, sfr_gfx_07g)
 inline UPInt SF_CDECL SFstrlen(const char* str) { return strlen(str); }
 
+// (appended for GFx::Value::operator==, fq1) the game's /Od units keep SFstrcmp as an out-of-line COMDAT; SFwcscmp is
+// the kernel's own (exe 0x1425a4c70, sfr_kernel_02).
+inline int SF_CDECL SFstrcmp(const char* a, const char* b) { return strcmp(a, b); }
+int SF_CDECL SFwcscmp(const wchar_t* a, const wchar_t* b);
+
 } // namespace Scaleform
 
 #endif

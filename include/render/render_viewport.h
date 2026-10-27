@@ -49,6 +49,20 @@ public:
         Flags        = 0;
     }
 
+    // a view rectangle inside a buffer, no scissor (the game's /Od COMDAT 0x14127c490: the flags after the rectangle,
+    // then the scissor zeroed from the height down)
+    Viewport(int bufw, int bufh, int left, int top, int w, int h, unsigned flags = 0)
+    {
+        BufferWidth  = bufw;
+        BufferHeight = bufh;
+        Left         = left;
+        Top          = top;
+        Width        = w;
+        Height       = h;
+        Flags        = flags;
+        ScissorLeft = ScissorTop = ScissorWidth = ScissorHeight = 0;
+    }
+
     // (appended for sfr_render_04g) a view rectangle inside a buffer of the given size, no scissor
     Viewport(const Size<UInt32>& bufferSize, const Rect<int>& view, unsigned flags = 0)
     {

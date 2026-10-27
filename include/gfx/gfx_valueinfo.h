@@ -11,6 +11,8 @@
 
 namespace Scaleform { namespace GFx {
 
+typedef double Double;  // (fq1) as gfx_asutils.h; game units reach this header without it
+
 // Receives each member VisitMembers enumerates (Visit is slot 2).
 class Value::ObjectInterface::ObjVisitor
 {
@@ -68,6 +70,70 @@ public:
     UInt16                VarsSet;            // +0xd4
 
     bool IsFlagSet(unsigned flags) const { return (VarsSet & flags) != 0; }
+
+    // (appended, fq1) the setters and getters the game calls. Each setter marks its field set, and the game keeps
+    // /Od copies of them that call SetFlags.
+    DisplayInfo() : VarsSet(0) {}
+    DisplayInfo(Double x, Double y) : VarsSet(0) { SetFlags(V_x | V_y); X = x; Y = y; }
+    DisplayInfo(Double rotation) : VarsSet(0)    { SetFlags(V_rotation); Rotation = rotation; }
+    DisplayInfo(bool visible) : VarsSet(0)       { SetFlags(V_visible); Visible = visible; }
+
+    void Clear() { VarsSet = 0; }
+    void SetX(Double x)               { SetFlags(V_x); X = x; }
+    void SetY(Double y)               { SetFlags(V_y); Y = y; }
+    void SetRotation(Double degrees)  { SetFlags(V_rotation); Rotation = degrees; }
+    void SetXScale(Double xscale)     { SetFlags(V_xscale); XScale = xscale; }
+    void SetYScale(Double yscale)     { SetFlags(V_yscale); YScale = yscale; }
+    void SetAlpha(Double alpha)       { SetFlags(V_alpha); Alpha = alpha; }
+    void SetVisible(bool visible)     { SetFlags(V_visible); Visible = visible; }
+    void SetZ(Double z)               { SetFlags(V_z); Z = z; }
+    void SetXRotation(Double degrees) { SetFlags(V_xrotation); XRotation = degrees; }
+    void SetYRotation(Double degrees) { SetFlags(V_yrotation); YRotation = degrees; }
+    void SetZScale(Double zscale)     { SetFlags(V_zscale); ZScale = zscale; }
+    void SetFOV(Double fov)           { SetFlags(V_FOV); FOV = fov; }
+    void SetEdgeAAMode(Render::EdgeAAMode mode) { SetFlags(V_edgeaaMode); EdgeAAMode = mode; }
+    void SetPosition(Double x, Double y)        { SetFlags(V_x | V_y); X = x; Y = y; }
+    void SetScale(Double xscale, Double yscale) { SetFlags(V_xscale | V_yscale); XScale = xscale; YScale = yscale; }
+    void SetProjectionMatrix3D(const Render::Matrix4F* pmat)
+    {
+        if (pmat)
+        {
+            SetFlags(V_projMatrix3D);
+            ProjectionMatrix3D = *pmat;
+        }
+        else
+            ClearFlags(V_projMatrix3D);
+    }
+    void SetViewMatrix3D(const Render::Matrix3F* pmat)
+    {
+        if (pmat)
+        {
+            SetFlags(V_viewMatrix3D);
+            ViewMatrix3D = *pmat;
+        }
+        else
+            ClearFlags(V_viewMatrix3D);
+    }
+
+    Double GetX() const          { return X; }
+    Double GetY() const          { return Y; }
+    Double GetRotation() const   { return Rotation; }
+    Double GetXScale() const     { return XScale; }
+    Double GetYScale() const     { return YScale; }
+    Double GetAlpha() const      { return Alpha; }
+    bool   GetVisible() const    { return Visible; }
+    Double GetZ() const          { return Z; }
+    Double GetXRotation() const  { return XRotation; }
+    Double GetYRotation() const  { return YRotation; }
+    Double GetZScale() const     { return ZScale; }
+    Double GetFOV() const        { return FOV; }
+    const Render::Matrix4F* GetProjectionMatrix3D() const { return IsFlagSet(V_projMatrix3D) ? &ProjectionMatrix3D : NULL; }
+    const Render::Matrix3F* GetViewMatrix3D() const       { return IsFlagSet(V_viewMatrix3D) ? &ViewMatrix3D : NULL; }
+    Render::EdgeAAMode GetEdgeAAMode() const              { return EdgeAAMode; }
+
+private:
+    void SetFlags(unsigned flags)   { VarsSet |= flags; }
+    void ClearFlags(unsigned flags) { VarsSet &= ~flags; }
 };
 static_assert(offsetof(Value::DisplayInfo, Visible) == 0x30, "DisplayInfo::Visible");
 static_assert(offsetof(Value::DisplayInfo, ViewMatrix3D) == 0x60, "DisplayInfo::ViewMatrix3D");
