@@ -3252,11 +3252,12 @@ void* FUN_1400105b0(void* object)
     }
     if (!oldNode) return nullptr;
 
-    using CreateNode = Scaleform::Render::ContextImpl::Entry* (*)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
+    // slot 1 returns the new node as a Ptr through the hidden result slot; the exe reads the node from it (0x14001094d)
+    using CreateNode = Scaleform::Render::ContextImpl::Entry** (*)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
     auto create = reinterpret_cast<CreateNode>((*reinterpret_cast<void***>(object))[1]);
     Scaleform::Render::ContextImpl::Entry* temporary = nullptr;
     const auto contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
-    auto* replacement = create(object, &temporary,
+    auto* replacement = *create(object, &temporary,
         reinterpret_cast<void*>(*reinterpret_cast<uintptr_t*>(contextBase + 0x10) + 0x34f0));
     if (replacement) {
         replacement->AddRef();
