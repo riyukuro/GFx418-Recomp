@@ -63,7 +63,7 @@ public:
     bool LoadingSucceeded() const { return pImageRes.GetPtr() != 0; }
 };
 
-// Reads the image file with the registry's reader for its format, wraps it in an ImageResource and turns the
+// Reads the image file's source with the registry's reader for its format, wraps it in an ImageResource and turns the
 // movie data into a one-frame image movie; the binding is marked finished (or failed).
 // MS2-FUNCTIONAL: the registry is read through its Render base at +0x18 and refcounted by hand
 // @0x1425aa720
@@ -71,7 +71,7 @@ void MovieImageLoadTask::Execute()
 {
     MemoryHeap*       pheap = pLoadStates->pWeakResourceLib->GetImageHeap();
     Log*              plog  = pLoadStates->GetLog();
-    Render::Image*    pimage = 0;
+    Render::ImageSource* pimage = 0;
     Render::ImageFileFormat format;
     const char*       path = pImageFile->GetFilePath();
 
@@ -113,7 +113,7 @@ void MovieImageLoadTask::Execute()
             {
                 Render::ImageCreateArgs args;
                 args.pHeap = pheap;
-                pimage = preader->Read(pImageFile, args);
+                pimage = preader->ReadImageSource(pImageFile, args); // slot 5, not Read: the exe keeps the source
             }
             FUN_14257dcb0(pregistry);
         }

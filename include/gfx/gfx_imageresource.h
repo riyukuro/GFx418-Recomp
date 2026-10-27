@@ -50,6 +50,12 @@ public:
         Key     = key;
         UseType = use;
     }
+    // (sfr_gfx_02y) an image file's source, decoded when bound (exe 0x1425aa865)
+    ImageResource(Render::ImageSource* pimageSrc, ResourceUse use = Use_Bitmap) : pImage(0)
+    {
+        SetImageSource(pimageSrc);
+        UseType = use;
+    }
     ~ImageResource(); // exe 0x14243d330, out of line (sfr_as3_06): both deleting dtors call it
 
     const Render::ImageBase* GetImage() const { return pImage; }
