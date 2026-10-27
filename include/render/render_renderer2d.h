@@ -93,46 +93,12 @@ public:
 // the HAL's mesh cache (CacheBase at +0, MeshCacheConfig at +8), recovered in render_meshcache.h
 class MeshCache;
 
-// (appended for sfr_render_07o) the glyph cache's settings (0x38 bytes)
-struct GlyphCacheParams
-{
-    unsigned TextureWidth;          // +0x00
-    unsigned TextureHeight;
-    unsigned NumTextures;
-    unsigned MaxSlotHeight;
-    unsigned SlotPadding;           // +0x10
-    unsigned TexUpdWidth;
-    unsigned TexUpdHeight;
-    float    MaxRasterScale;        // +0x1c
-    unsigned MaxVectorCacheSize;    // +0x20
-    float    FauxItalicAngle;
-    float    FauxBoldRatio;
-    float    OutlineRatio;
-    float    ShadowQuality;         // +0x30
-    bool     UseAutoFit;            // +0x34
-    bool     UseVectorOnFullCache;  // +0x35
-    bool     FenceWaitOnFullCache;  // +0x36
+}} // namespace Scaleform::Render
 
-    // square textures of texSize; the glyph cache's ctor has it inlined, the client's copy is 0x1422f5320
-    GlyphCacheParams(unsigned texSize = 1024, unsigned numTextures = 1, unsigned maxSlotHeight = 48,
-                     unsigned slotPadding = 2)
-        : TextureWidth(texSize), TextureHeight(texSize), NumTextures(numTextures), MaxSlotHeight(maxSlotHeight),
-          SlotPadding(slotPadding), TexUpdWidth(256), TexUpdHeight(512), MaxRasterScale(1.0f),
-          MaxVectorCacheSize(500), FauxItalicAngle(0.25f), FauxBoldRatio(0.045f), OutlineRatio(0.01f),
-          ShadowQuality(1.0f), UseAutoFit(true), UseVectorOnFullCache(false), FenceWaitOnFullCache(true)
-    {
-    }
-};
+// the glyph cache's settings and GlyphCacheConfig (shared with the gfx tree)
+#include "ms2/scaleform/include/render/render_glyphcacheconfig.h"
 
-// the glyph cache's settings interface (Render_GlyphCacheConfig)
-class GlyphCacheConfig
-{
-public:
-    virtual ~GlyphCacheConfig() {}
-    virtual bool                    SetParams(const GlyphCacheParams& params) = 0;
-    virtual const GlyphCacheParams& GetParams() const = 0;
-    virtual void                    ClearCache() = 0;
-};
+namespace Scaleform { namespace Render {
 
 // the glyph cache (Render_GlyphCache, unit sfr_render_06d) is recovered in render_glyphcache.h; its GlyphCacheConfig
 // sits at +0x18
