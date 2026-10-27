@@ -4495,8 +4495,10 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 else
                 {
                     using GetSize = CriSint32 (__fastcall*)(void*);
+                    // the exe takes the length first, then marks the open complete, then stores the size
+                    CriSint32 length = ((GetSize)resourceVtable[6])(resource);
                     state->State2c = 2;
-                    state->ResultSize = (CriSint64)((GetSize)resourceVtable[6])(resource);
+                    state->ResultSize = length;
                 }
                 break;
             }
