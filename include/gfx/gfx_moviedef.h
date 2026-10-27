@@ -97,6 +97,8 @@ public:
     inline void SetFontLib(FontLib* pfl);
     inline void SetFontMap(FontMap* ptr);
     inline void SetTranslator(Translator* ptr);
+    // (appended for the game's GFxVideo) defined in video/video_statebag.h.
+    inline void SetVideo(Video::VideoBase* ptr);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

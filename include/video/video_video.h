@@ -18,12 +18,21 @@
 #include "../kernel/sf_threads.h"
 #include "../gfx/gfx_state.h"
 #include "../sound/sound_renderer.h"
+#include "../render/render_image.h"
 
 namespace Scaleform {
 namespace GFx { namespace Video { class VideoDecoder; class VideoReader; class VideoSoundSystem; class VideoSound; struct SyncObjectTag; } }
 
 // The exe has no vftable for the RefCountBaseNTS layer of VideoDecoder / VideoReader nor for the abstract VideoDecoder itself, VideoSoundSystem, VideoSound
 // (the derived constructors store only their final vftable): novtable keeps them out of the object file.
+// The sound bases use Stat_Video_Mem: the game's /Od copies in ?\ms2videosoundsystemdx8.cpp are
+// RefCountBaseNTS<VideoSoundSystem,6> (vftable 0x14311b198, ctor 0x1422ffcc0). Those units define MS2_VIDEO_GAME_TU
+// (placeholder/sfvideo.h), which keeps the vftables of the two sound bases.
+#ifdef MS2_VIDEO_GAME_TU
+#define MS2_VIDEO_SOUND_NOVTABLE
+#else
+#define MS2_VIDEO_SOUND_NOVTABLE __declspec(novtable)
+#endif
 template<>
 class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoDecoder, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
 {
@@ -32,17 +41,17 @@ public:
     RefCountBaseNTS() {}
 };
 template<>
-class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoSoundSystem, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+class MS2_VIDEO_SOUND_NOVTABLE RefCountBaseNTS<GFx::Video::VideoSoundSystem, Stat_Video_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Video_Mem>
 {
 public:
-    enum { StatType = Stat_Default_Mem };
+    enum { StatType = Stat_Video_Mem };
     RefCountBaseNTS() {}
 };
 template<>
-class __declspec(novtable) RefCountBaseNTS<GFx::Video::VideoSound, Stat_Default_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Default_Mem>
+class MS2_VIDEO_SOUND_NOVTABLE RefCountBaseNTS<GFx::Video::VideoSound, Stat_Video_Mem> : public RefCountBaseStatImpl<RefCountNTSImpl, Stat_Video_Mem>
 {
 public:
-    enum { StatType = Stat_Default_Mem };
+    enum { StatType = Stat_Video_Mem };
     RefCountBaseNTS() {}
 };
 // SyncObject (nested, so it is keyed by a tag): ~SyncObject 0x140005610 stores only SyncObject's table, then calls the
@@ -93,6 +102,11 @@ struct VideoVMSupport
 {
     AS2VideoSupport* pAS2VSupport;
     AS3VideoSupport* pAS3VSupport;
+
+protected:
+    // (appended) built only through the derived selections (VideoVMSupportAll); the game's copy is a COMDAT of
+    // ?\gfxvideo.cpp.
+    VideoVMSupport(AS2VideoSupport* pas2, AS3VideoSupport* pas3) : pAS2VSupport(pas2), pAS3VSupport(pas3) {}
 };
 
 // The AS3 side of the video module: creates the AS3 Video display objects (vftable: dtor, CreateASCharacter at +0x8,
@@ -118,6 +132,12 @@ public:
     virtual void               AttachAudio(AS2::Object* pnetStream, Sprite* pchar) = 0;
     // (appended, sfr_video_04) creates the glue object in the global heap (exe 0x1400019f0).
     static AS2VideoSupport*    CreateInstance();
+};
+
+// (appended) Both VMs: the selection the game's GFxVideo creates its VideoPC with.
+struct VideoVMSupportAll : public VideoVMSupport
+{
+    VideoVMSupportAll() : VideoVMSupport(AS2VideoSupport::CreateInstance(), AS3VideoSupport::CreateInstance()) {}
 };
 
 // Abstract video state stored in the StateBag (State_Video).
@@ -261,7 +281,7 @@ public:
 class VideoSound;
 
 // Creates the VideoSound objects that play a movie's audio tracks.
-class VideoSoundSystem : public RefCountBaseNTS<VideoSoundSystem, Stat_Default_Mem>
+class VideoSoundSystem : public RefCountBaseNTS<VideoSoundSystem, Stat_Video_Mem>
 {
 public:
     VideoSoundSystem(MemoryHeap* pheap) : pHeap(pheap) {}
@@ -277,7 +297,7 @@ private:
 };
 
 // Output for one audio track of a movie: pulls PCM data from the decoder through PCMStream.
-class VideoSound : public RefCountBaseNTS<VideoSound, Stat_Default_Mem>
+class VideoSound : public RefCountBaseNTS<VideoSound, Stat_Video_Mem>
 {
 public:
     enum PCMFormat
@@ -289,7 +309,8 @@ public:
     {
         Sound_Stopped,
         Sound_Playing,
-        Sound_Paused
+        Sound_Paused,
+        Sound_Error     // (appended)
     };
     enum { MaxChannels = 8 };
 
@@ -314,6 +335,25 @@ public:
     virtual void                 GetTime(UInt64* count, UInt64* unit) const = 0;       // 8
     virtual Sound::SoundChannel* GetSoundChannel() = 0;                                // 9
     virtual void                 SetSpatialInfo(const Array<Sound::SoundChannel::Vector> spatinfo[]) = 0; // 10
+};
+
+// (appended) A VideoSound with a volume that plays on a sound channel (vftable 0x1431b4be0: VideoSound's ten slots,
+// then SetVolume / GetVolume). The constructor (0x140002e80) and dtor (0x140002ab0) are library code; the game's
+// DirectSound stream (?\ms2videosoundsystemdx8.cpp) derives from it and keeps the empty SetSpatialInfo as a COMDAT.
+class VideoSoundStream : public VideoSound
+{
+public:
+    VideoSoundStream();
+    virtual ~VideoSoundStream();
+
+    virtual Sound::SoundChannel* GetSoundChannel();                                            // 9 (0x140002b00)
+    virtual void                 SetSpatialInfo(const Array<Sound::SoundChannel::Vector> spatinfo[]) {} // 10
+    // Normalized volume (0.0f - 1.0f).
+    virtual void                 SetVolume(float volume) = 0;                                  // 11
+    virtual float                GetVolume() = 0;                                              // 12
+
+protected:
+    Ptr<Sound::SoundChannel>     pChannel;                                                     // +0x10
 };
 
 // Drives the decoding of the players (thread or same-thread implementation).
@@ -364,8 +404,7 @@ public:
     virtual bool             IsIORequired() const;
     virtual void             EnableIO(bool enable);
     virtual void             ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo);
-    virtual Render::TextureManager* GetTextureManager() const
-                                                     { return (Render::TextureManager*)pTextureManager.GetPtr(); }
+    virtual Render::TextureManager* GetTextureManager() const { return pTextureManager; }
     virtual MemoryHeap*      GetHeap() const { return pHeap; }
 
     virtual void             ApplySystemSettings(VideoPlayer*) {}         // 12
@@ -374,6 +413,9 @@ public:
 
     void                     SetSoundSystem(Sound::SoundRenderer* psoundRenderer);
     void                     SetSoundSystem(VideoSoundSystem* psoundSystem) { pSoundSystem = psoundSystem; }
+    // (appended for the game's GFxVideo, ?\gfxvideo.cpp)
+    void                     SetTextureManager(Render::TextureManager* ptexman) { pTextureManager = ptexman; }
+    VideoDecoder*            GetDecoder() { return pDecoder; }
 
     static void              Initialize();
     static void              Finalize();
@@ -388,7 +430,7 @@ protected:
     friend class VideoPlayerImpl;   // Init reads the decoder, reader config and sound system
 
     Ptr<MemoryHeap>              pHeap;                 // +0x18
-    Ptr<RefCountImpl>            pTextureManager;       // +0x20 Render::TextureManager (render headers not shared yet)
+    Ptr<Render::TextureManager>  pTextureManager;       // +0x20
     Ptr<VideoDecoder>            pDecoder;              // +0x28
     Ptr<VideoReaderConfig>       pReaderConfig;         // +0x30
     Ptr<VideoSoundSystem>        pSoundSystem;          // +0x38
