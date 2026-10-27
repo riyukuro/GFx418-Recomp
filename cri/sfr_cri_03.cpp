@@ -2205,11 +2205,17 @@ void FUN_140044de0(void* decoder, void* first, void* second)
     criDecoderCallVoid(decoder, 0xe0, first, second);
 }
 
-// MS2-FUNCTIONAL: retrieve the decoder core interface from the wrapper's final callback slot.
+// MS2-FUNCTIONAL: retrieve the decoder core interface through the interface table's final slot.
 // @0x140044e40
 void* FUN_140044e40(void* decoder)
 {
-    return criDecoderCall<void*>(decoder, 0xe8, NULL);
+    // unlike its neighbours this slot sits in the interface table itself and takes no object (0x140044e6e)
+    if (!decoder)
+        return NULL;
+    void* target = *(void**)((CriUint8*)decoder + 0xe8);
+    if (!target)
+        return NULL;
+    return ((void* (*)(void))target)();
 }
 
 // MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
