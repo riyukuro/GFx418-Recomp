@@ -5016,7 +5016,9 @@ void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* 
         return;
 
     CriUint32 headerLength = header.Data[9];
-    CriUint32 carriedLength = (CriUint32)(((CriUint32)header.Data[10] << 8) | header.Data[11]);
+    CriUint16 carriedLength16 = 0;
+    memcpy(&carriedLength16, header.Data + 10, sizeof(carriedLength16));
+    CriUint32 carriedLength = carriedLength16;
     CriUint32 previousLength = previous ? previous->Size : carriedLength;
     CriSint32 dataLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)previousLength;
     CriSint32 transformLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)carriedLength;
@@ -5669,7 +5671,7 @@ void FUN_140033610(void* player)
 {
     void* queue = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
     struct ChunkView { void* Data; CriUint32 Size; } chunk = {};
-    CriUint8 parsedHeader[0x20];
+    CriUint8 parsedHeader[0x24];
     CriSint32 contentSize = 0;
     for (;;)
     {

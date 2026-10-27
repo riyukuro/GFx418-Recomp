@@ -1282,14 +1282,24 @@ CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriU
     CriUint8 headerSize = data[9];
     if (size <= 0x0f || headerSize == 0 || headerSize > size)
         return 0;
+    // The chunk id, size, offset word and the four trailing dwords are big-endian in the stream;
+    // the exe stores them byte-swapped so callers read native integers.
     CriUint8* out = header->Data;
-    memcpy(out, data, 8);
+    CriUint32 value = criUtfReadBE32(data);
+    memcpy(out, &value, 4);
+    value = criUtfReadBE32(data + 4);
+    memcpy(out + 4, &value, 4);
     out[8] = data[8]; out[9] = data[9];
-    out[10] = data[10]; out[11] = data[11];
+    CriUint16 offset = (CriUint16)(((CriUint32)data[10] << 8) | data[11]);
+    memcpy(out + 10, &offset, 2);
     out[12] = data[12]; out[13] = data[13]; out[14] = data[14];
     out[15] = data[15] & 3;
     out[16] = data[15] >> 4;
-    memcpy(out + 20, data + 0x10, 16);
+    for (CriUint32 i = 0; i < 4; ++i)
+    {
+        value = criUtfReadBE32(data + 0x10 + i * 4);
+        memcpy(out + 0x14 + i * 4, &value, 4);
+    }
     return headerSize;
 }
 
