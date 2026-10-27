@@ -4449,7 +4449,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
         CriUint32 State30;
         CriUint32 State34;
         CriUint8 Reserved38[0x10];
-        CriSint32 ResultSize;
+        CriSint64 ResultSize;   // VideoReader::FileSize: the exe sign-extends the length into the whole qword
     };
     bool keepRunning = true;
     do
@@ -4496,7 +4496,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 {
                     using GetSize = CriSint32 (__fastcall*)(void*);
                     state->State2c = 2;
-                    state->ResultSize = ((GetSize)resourceVtable[6])(resource);
+                    state->ResultSize = (CriSint64)((GetSize)resourceVtable[6])(resource);
                 }
                 break;
             }
