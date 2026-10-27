@@ -890,7 +890,7 @@ bool EditorKit::OnChar(UInt32 wcharCode)
     if (!wcharCode || IsMouseCaptured())
         return false;
 
-    if (pRestrict && !CheckRestrict(wchar_t(wcharCode)))
+    if (pRestrict && !CheckRestrict(wcharCode))
     {
         int up  = SFtowupper(wchar_t(wcharCode));
         int low = SFtowlower(wchar_t(wcharCode));
@@ -898,7 +898,7 @@ bool EditorKit::OnChar(UInt32 wcharCode)
             wcharCode = UInt32(up);
         else
             wcharCode = UInt32(low);
-        if (!CheckRestrict(wchar_t(wcharCode)))
+        if (!CheckRestrict(wcharCode))
             return false;
     }
 
@@ -1097,7 +1097,7 @@ UPInt EditorKit::PasteFromClipboard(UPInt startPos, UPInt endPos, bool useRichCl
         for (UPInt i = 0, pos = 0; i < l; ++i, ++pos)
         {
             UInt32 wcharCode = s.GetCharAt(i);
-            if (CheckRestrict(wchar_t(wcharCode)))
+            if (CheckRestrict(wcharCode))
                 continue;
             int up  = SFtowupper(wchar_t(wcharCode));
             int low = SFtowlower(wchar_t(wcharCode));
@@ -1105,7 +1105,7 @@ UPInt EditorKit::PasteFromClipboard(UPInt startPos, UPInt endPos, bool useRichCl
                 wcharCode = UInt32(up);
             else
                 wcharCode = UInt32(low);
-            if (!CheckRestrict(wchar_t(wcharCode)))
+            if (!CheckRestrict(wcharCode))
             {
                 DocView::DeleteCharCommand cmd(pos);
                 pDocView->EditCommand(DocView::Cmd_DeleteChar, &cmd);

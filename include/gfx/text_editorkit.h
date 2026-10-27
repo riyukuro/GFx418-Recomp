@@ -271,8 +271,9 @@ public:
     bool          SetRestrict(const String& restrStr);
     const String* GetRestrict() const;
     void          ClearRestrict();
-    // True when wcharCode passes the restrict filter (or there is none).
-    bool CheckRestrict(wchar_t wcharCode) const
+    // True when wcharCode passes the restrict filter (or there is none). The code is not narrowed to wchar_t: the exe
+    // sign-extends the full 32-bit value into the range lookup (movsxd at 0x142618128, 0x142619444).
+    bool CheckRestrict(UInt32 wcharCode) const
     {
         if (pRestrict)
             return !pRestrict->RestrictRanges.GetIteratorAt(int(wcharCode)).IsFinished();
