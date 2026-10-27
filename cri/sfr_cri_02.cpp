@@ -148,6 +148,16 @@ void     FUN_1400428e0(void* audioManager, void* player);
 void     FUN_140031570(void* player);
 void     FUN_140034730(void* player);
 void     FUN_140033810(void* player);
+CriBool  FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex);
+void     FUN_140041df0(void* manager, void* callback, void* userData);
+void     FUN_140042700(void* trackSet, void* player);
+CriBool  FUN_140042cf0(void* trackSet, void* operation);
+void     FUN_140044cc0(void* decoder, void* callback, void* userData);
+void     FUN_140044c60(void* decoder, CriUint32 position, CriUint32 mode);
+CriUint64 FUN_1400445d0(CriUint64* pair);
+void*    FUN_140043c50(void** decoder);
+void     FUN_140044210(CriUint64* pair, void* first, void* second);
+void     FUN_1400441b0(CriUint64* pair, CriUint32 first, CriUint32 second);
 void     FUN_1400344f0(void* player);
 CriBool  FUN_140031410(void* player);
 void     FUN_1400317b0(void* player);
@@ -4942,9 +4952,8 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
-// @0x140033d70
-// MS2-FUNCTIONAL: resume demux output and wait for decoded pools to drain before ending playback.
+// MS2-FUNCTIONAL: start demuxing for the prepared movie, push the stream headers to the
+// decoders, and move the player to READY once enough frames are decoded.
 // @0x140033810
 void FUN_140033810(void* player)
 {
@@ -4952,12 +4961,12 @@ void FUN_140033810(void* player)
     auto get32 = [state](size_t offset) { CriUint32 value; memcpy(&value, state + offset, sizeof(value)); return value; };
     auto getPtr = [state](size_t offset) { void* value; memcpy(&value, state + offset, sizeof(value)); return value; };
     auto put32 = [state](size_t offset, CriUint32 value) { memcpy(state + offset, &value, sizeof(value)); };
-    if (get32(0xad4) != 1)
-        return;
-
     void* demux = getPtr(0xd68);
     void* videoDecoder = getPtr(0xe08);
     void* alphaDecoder = getPtr(0xe40);
+    if (get32(0xad4) != 1)
+        return;
+
     void* output = get32(0xd60) == 0 ? getPtr(0xd88) : getPtr(0xda0);
     if (FUN_140044f8c(demux) == 0)
     {
@@ -4966,40 +4975,67 @@ void FUN_140033810(void* player)
             void* memoryInput = getPtr(0xda0);
             FUN_140046798(memoryInput);
             FUN_1400467b0(memoryInput, 1, state + 0xda8);
-            void* chunk = NULL;
+            CriMovieInputChunk chunk;
             FUN_1400467a0(memoryInput, 1, (CriSint32)get32(0xdb8), &chunk);
             FUN_1400467b0(memoryInput, 0, &chunk);
         }
         FUN_140044fa8(demux, output);
         FUN_140046798(getPtr(0xd80));
-        FUN_140044fd8(demux, 1);
-        FUN_140044f9c(demux);
+        FUN_1400345e0(player, getPtr(0xd80), 0x43524944, 0xffffffff);
+        FUN_140041df0(getPtr(0xe10), (void*)FUN_140033d70, player);
+        FUN_140044cc0(videoDecoder, (void*)FUN_1400340f0, player);
         if (videoDecoder)
         {
+            void* inputSj = (void*)FUN_1400445d0((CriUint64*)videoDecoder);
+            if (inputSj == NULL)
+                FUN_140037910(player, "E05063022M : Can't get input SJ of Video decoder.", 0);
+            FUN_1400345e0(player, inputSj, get32(0xe00), get32(0xe04));
             FUN_140044710(videoDecoder);
+            FUN_140044c60(videoDecoder, get32(0xe5c), get32(0xe58) - get32(0xe5c));
             put32(0xe30, 0);
-            if (alphaDecoder && get32(0x884) == 1)
+            if (alphaDecoder)
+            {
+                if (get32(0x884) == 1)
+                    FUN_140044210((CriUint64*)getPtr(0xe40), (void*)FUN_1400341d0, player);
+                void* alphaInputSj = FUN_140043c50((void**)alphaDecoder);
+                if (alphaInputSj == NULL)
+                    FUN_140037910(player, "E08082103M : Can't get input SJ of Alpha decoder.", 0);
+                FUN_1400345e0(player, alphaInputSj, get32(0xe38), get32(0xe3c));
                 FUN_140043d90(alphaDecoder);
+                FUN_1400441b0((CriUint64*)alphaDecoder, get32(0xe60), get32(0xe58) - get32(0xe60));
+            }
         }
+        if (getPtr(0xe10))
+            FUN_140042700(getPtr(0xe10), player);
+        if (getPtr(0xe28))
+            FUN_1400345e0(player, getPtr(0xe28), 0x40534254, 0);
+        FUN_140044fd8(demux, 1);
+        FUN_140044f9c(demux);
+        if (get32(0x10) == 1)
+            FUN_140044fdc(demux);
     }
 
     if (videoDecoder)
     {
-        CriSint32 status = FUN_1400447d0(videoDecoder);
-        if (status == 0 || status == 1)
+        CriSint32 status = FUN_140044630(videoDecoder);
+        if (status == 1 || status == 0)
             return;
-        CriUint32 required = get32(0xed8) == 0xffffffff ? get32(0xb04) : get32(0xed8);
-        if (FUN_140044820(videoDecoder) < required)
+        CriUint32 required = get32(0xed8) != 0xffffffff ? get32(0xed8) : get32(0xb04);
+        if (FUN_140044820(videoDecoder) < required && FUN_1400447d0(videoDecoder) > 0)
             return;
         if ((CriSint32)get32(0xe58) > 0 && get32(0xe64) != 1)
             return;
-        if (alphaDecoder)
+        if (getPtr(0xe40))
         {
-            CriSint32 alphaStatus = FUN_140043e60(alphaDecoder);
-            if (alphaStatus == 0 || alphaStatus == 1 || FUN_140043eb0(alphaDecoder) < required)
+            CriSint32 alphaStatus = FUN_140043cb0(getPtr(0xe40));
+            if (alphaStatus == 1 || alphaStatus == 0)
+                return;
+            if (FUN_140043eb0(getPtr(0xe40)) < required && FUN_140043e60(getPtr(0xe40)) > 0)
                 return;
         }
     }
+    if (FUN_140042cf0(getPtr(0xe10), player) == 1)
+        put32(0x4, 4);
 }
 
 // MS2-FUNCTIONAL: apply the rolling CRI USM mask and its eight-block prefix transform to a chunk.
@@ -5149,6 +5185,8 @@ CriBool FUN_140033030(void* player)
     return 1;
 }
 
+// MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
+// @0x140033d70
 CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
 {
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
