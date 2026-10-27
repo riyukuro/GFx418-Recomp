@@ -12,7 +12,7 @@ class System : public Scaleform::System
 {
 public:
     static void SF_CDECL Init(const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* psysAlloc);
-    static void SF_CDECL Init(SysAllocBase* psysAlloc) { Init(MemoryHeap::RootHeapDesc(), psysAlloc); }
+    SF_EXPORT static void SF_CDECL Init(SysAllocBase* psysAlloc) { Init(MemoryHeap::RootHeapDesc(), psysAlloc); }
     static void SF_CDECL Destroy();
 };
 

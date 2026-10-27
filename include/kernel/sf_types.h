@@ -31,6 +31,14 @@ typedef ptrdiff_t           SPInt;
 #define SF_MAX_UPINT        ((UPInt)~(UPInt)0)
 #define SF_NOINLINE         __declspec(noinline)
 #define SF_FORCEINLINE      __forceinline
+// as kernel/sf_types.h: dllexport only in the game's bootstrap TU (unit_141803210, MS2_SF_EXPORT_TU)
+#ifndef SF_EXPORT
+#ifdef MS2_SF_EXPORT_TU
+#define SF_EXPORT __declspec(dllexport)
+#else
+#define SF_EXPORT
+#endif
+#endif
 
 // (appended for the static text, sfr_gfx_05d) the names the render text headers (ms2/scaleform/kernel tree) use
 namespace Scaleform {

@@ -70,8 +70,8 @@ class SysAllocStatic : public SysAllocPaged
 {
 public:
     enum { MaxSegments = 4 };
-    SysAllocStatic(void* mem1 = 0, UPInt size1 = 0, void* mem2 = 0, UPInt size2 = 0,
-                   void* mem3 = 0, UPInt size3 = 0, void* mem4 = 0, UPInt size4 = 0);
+    SF_EXPORT SysAllocStatic(void* mem1 = 0, UPInt size1 = 0, void* mem2 = 0, UPInt size2 = 0,
+                             void* mem3 = 0, UPInt size3 = 0, void* mem4 = 0, UPInt size4 = 0);
     SysAllocStatic(UPInt minSize);
     void AddMemSegment(void* mem, UPInt size);
 

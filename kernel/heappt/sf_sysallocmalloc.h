@@ -11,7 +11,7 @@ class SysAllocPagedMalloc : public SysAllocBase_SingletonSupport<SysAllocPagedMa
 public:
     enum { MinGranularity = 64 * 1024 };
 
-    SysAllocPagedMalloc(UPInt granularity = MinGranularity);
+    SF_EXPORT SysAllocPagedMalloc(UPInt granularity = MinGranularity);
 
     virtual void  GetInfo(Info* i) const;
     virtual void* Alloc(UPInt size, UPInt align);

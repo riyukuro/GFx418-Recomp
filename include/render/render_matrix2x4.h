@@ -67,7 +67,7 @@ public:
     T  Sy() const  { return M[1][1]; }
     T  Ty() const  { return M[1][3]; }
 
-    void SetIdentity()
+    SF_EXPORT void SetIdentity()
     {
         M[0][0] = 1; M[0][1] = 0; M[0][2] = 0; M[0][3] = 0;
         M[1][0] = 0; M[1][1] = 1; M[1][2] = 0; M[1][3] = 0;
@@ -205,8 +205,8 @@ public:
         *y   = M[1][0] * tx + M[1][1] * ty + M[1][3];
     }
     // lengths of the images of the unit axes
-    T GetXScale() const { return sqrtf(Sx() * Sx() + Shy() * Shy()); }
-    T GetYScale() const { return sqrtf(Shx() * Shx() + Sy() * Sy()); }
+    SF_EXPORT T GetXScale() const { return _sqrt(M[0][0] * M[0][0] + M[1][0] * M[1][0]); }
+    SF_EXPORT T GetYScale() const { return _sqrt(M[1][1] * M[1][1] + M[0][1] * M[0][1]); }
 
     // (appended for the display objects, sfr_gfx_06)
     static Matrix2x4 Rotation(T radians)
@@ -298,6 +298,10 @@ public:
         EncloseTransform(&d, r);
         return d;
     }
+
+private:
+    // the scale getters' square root (an /Od COMDAT of its own in the game code, unit_141803210 0x141808560)
+    static T _sqrt(T v) { return sqrtf(v); }
 };
 
 template<class T>

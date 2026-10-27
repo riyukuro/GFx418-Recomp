@@ -23,7 +23,7 @@ class Semaphore;
 class AcquireInterface
 {
 public:
-    virtual ~AcquireInterface() { }
+    SF_EXPORT virtual ~AcquireInterface() { }
     virtual bool CanAcquire();
     virtual bool TryAcquire();
     virtual bool TryAcquireCommit();
@@ -36,7 +36,7 @@ public:
 class DefaultAcquireInterface : public AcquireInterface
 {
 public:
-    virtual ~DefaultAcquireInterface() { }
+    SF_EXPORT virtual ~DefaultAcquireInterface() { }
     static DefaultAcquireInterface* GetDefaultAcquireInterface();
 };
 
@@ -113,7 +113,7 @@ class Mutex : public Waitable, public AcquireInterface
     friend class MutexImpl;
     MutexImpl* pImpl;
 public:
-    Mutex(bool recursive = 1, bool multiWait = 0);
+    SF_EXPORT Mutex(bool recursive = 1, bool multiWait = 0);
     ~Mutex();
 
     void DoLock();
@@ -157,7 +157,7 @@ class Event : public Waitable, public AcquireInterface
     mutable Mutex StateMutex;
     WaitCondition StateWaitCondition;
 public:
-    Event(bool setInitially = 0, bool multiWait = 0);
+    SF_EXPORT Event(bool setInitially = 0, bool multiWait = 0);
     ~Event();
 
     bool Wait(unsigned delay = SF_WAIT_INFINITE);
@@ -181,7 +181,7 @@ protected:
     mutable Mutex ValueMutex;
     WaitCondition ValueWaitCondition;
 public:
-    Semaphore(int maxValue = 1, bool multiWait = 0);
+    SF_EXPORT Semaphore(int maxValue = 1, bool multiWait = 0);
     ~Semaphore();
 
     int GetMaxValue() const;
@@ -256,7 +256,8 @@ public:
         ThreadPriority priority;
     };
 
-    Thread(UPInt stackSize = 128 * 1024, int processor = -1);
+    // 4.1.18 default stack: 1 MB (the exe's ??_FThread closure 0x1418067c0 passes 0x100000)
+    SF_EXPORT Thread(UPInt stackSize = 1024 * 1024, int processor = -1);
     Thread(ThreadFn threadFunction, void* userHandle = 0, UPInt stackSize = 128 * 1024, int processor = -1,
            ThreadState initialState = NotRunning);
     explicit Thread(const CreateParams& params);

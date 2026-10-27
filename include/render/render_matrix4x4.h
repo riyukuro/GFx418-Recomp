@@ -60,7 +60,7 @@ public:
     Matrix3x4(const Matrix3x4& a, const Matrix3x4& b) { MultiplyMatrix(a, b); }
 
     void Clear() { memset(M, 0, sizeof(M)); }
-    void SetIdentity()
+    SF_EXPORT void SetIdentity()
     {
         Clear();
         M[0][0] = 1;
@@ -316,7 +316,7 @@ public:
     void Set(const Matrix4x4& m) { Set(&m.M[0][0], 16); }
 
     void Clear() { memset(M, 0, sizeof(M)); }
-    void SetIdentity()
+    SF_EXPORT void SetIdentity()
     {
         Clear();
         M[0][0] = 1;

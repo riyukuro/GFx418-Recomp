@@ -29,7 +29,13 @@
 #define SF_BYTE_ORDER    SF_LITTLE_ENDIAN
 
 #define SF_IMPORT
+// The exe's game bootstrap TU (unit_141803210) saw these headers as a DLL build: its SF_EXPORT inline members and
+// default-constructor closures are dllexport (the exe's export ordinals 1-20). Everywhere else SF_EXPORT is empty.
+#ifdef MS2_SF_EXPORT_TU
+#define SF_EXPORT __declspec(dllexport)
+#else
 #define SF_EXPORT
+#endif
 #define SF_EXPORTC  extern "C"
 #define SF_BUILD
 #define SF_FASTCALL __fastcall

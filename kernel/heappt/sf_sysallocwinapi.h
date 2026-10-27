@@ -21,7 +21,7 @@ class SysAllocWinAPI : public SysAllocBase_SingletonSupport<SysAllocWinAPI, SysA
     enum { SegSize = 128 * 1024 * 1024 };
 
 public:
-    SysAllocWinAPI(UPInt granularity = 64 * 1024, UPInt segSize = SegSize);
+    SF_EXPORT SysAllocWinAPI(UPInt granularity = 64 * 1024, UPInt segSize = SegSize);
     virtual ~SysAllocWinAPI();
 
     virtual void  GetInfo(Info* i) const;
