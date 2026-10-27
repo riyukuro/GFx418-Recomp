@@ -1847,7 +1847,8 @@ void* FUN_140041910(void** decoderObject, void** mediaInterface)
 {
     if (decoderObject[2])
         return decoderObject[2];
-    void* mediaObject = *mediaInterface;
+    // the second argument is the media object itself; the exe calls through its own vtable (0x140041941 rbp = [rdx])
+    void* mediaObject = mediaInterface;
     void** decoderVtable = *(void***)decoderObject;
     void** mediaVtable = *(void***)mediaObject;
     CriUint32 codec = ((CriUint32 (*)(void*))decoderVtable[15])(decoderObject);
@@ -1856,8 +1857,8 @@ void* FUN_140041910(void** decoderObject, void** mediaInterface)
     CriUint32 channels = ((CriUint32 (*)(void*))decoderVtable[7])(decoderObject);
     CriUint32 format = ((CriUint32 (*)(void*))decoderVtable[4])(decoderObject);
     void* instance = ((void* (*)(void*, CriUint32, CriUint32, CriUint64, CriUint32,
-                                  void*, CriUint32))mediaVtable[1])(
-        mediaObject, format, channels, output, codec, decoderObject, 0);
+                                  void*, void*))mediaVtable[1])(
+        mediaObject, format, channels, output, codec, decoderObject, NULL);
     FUN_14257da20(decoderObject, instance);
     return instance;
 }
