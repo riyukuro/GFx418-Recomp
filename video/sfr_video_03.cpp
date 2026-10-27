@@ -142,7 +142,7 @@ ExeDecl<void*(void*, void*)> FUN_1400199e0;
 ExeDecl<void*(void*, void*)> FUN_14001ad20;
 ExeDecl<void(void*)> FUN_1425a4030;
 ExeDecl<void()> FUN_14257e080;
-ExeDecl<void(void*, void*)> FUN_1425cd370;
+ExeDecl<void(void*, void*, void*)> FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
 ExeDecl<int(void*, void*)> FUN_1428d8f14;
 ExeDecl<int(void*, void*)> FUN_1428d8efc;
 ExeDecl<void(void*)> FUN_1427443c0;
@@ -1190,13 +1190,14 @@ void FUN_14001bf90(void* object)
 {
     if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20)) FUN_14257e080();
 }
-// MS2-FUNCTIONAL: adds the resource identifier to the movie load task while no failure is present.
+// MS2-FUNCTIONAL: adds the resource (id, resource) to the movie load task while no failure is present. The exe passes its
+// incoming r8 (the Resource*) through untouched.
 // @0x14001bfd0
-void FUN_14001bfd0(void* object, const std::uint32_t* id)
+void FUN_14001bfd0(void* object, const std::uint32_t* id, void* pResource)
 {
     if (*reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(object) + 0x3b8) == 0) {
         std::uint32_t value = *id;
-        FUN_1425cd370(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x38), &value);
+        FUN_1425cd370(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x38), &value, pResource);
     }
 }
 
