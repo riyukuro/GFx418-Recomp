@@ -211,6 +211,10 @@ public:
     Rect& Intersect(const Rect& r) { return Intersect(r.x1, r.y1, r.x2, r.y2); }
 };
 
+// the int rect's default ctor goes through SetRect, as the exe's /Od copies do (nigfxoverlayclick: 0x142303860 calls
+// 0x142303920); the library's float rects keep the plain one
+template<> inline Rect<int>::Rect() { SetRect(0, 0, 0, 0); }
+
 typedef Point<float>  PointF;
 typedef Size<float>   SizeF;
 typedef Rect<float>   RectF;
