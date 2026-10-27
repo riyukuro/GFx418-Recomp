@@ -105,7 +105,7 @@ void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInf
     p->LogError("Tag 'DefineBinaryData' (87) is not supported, potentially 'TLF text' fields are used. Switch to 'Classic Text'.");
     ResourceId id(p->ReadU16());
     p->ReadU32();
-    ButtonDef* definition = SF_HEAP_AUTO_NEW(p->GetLoadHeap()) ButtonDef();
+    ButtonDef* definition = SF_HEAP_NEW(p->GetLoadHeap()) ButtonDef();
     p->AddResource(id, definition);
     if (definition)
         definition->Release();
@@ -122,7 +122,7 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
         return;
     }
 
-    Ptr<FontData> font = *SF_HEAP_AUTO_NEW(p->GetLoadHeap()) FontData();
+    Ptr<FontData> font = *SF_HEAP_NEW(p->GetLoadHeap()) FontData();
     FUN_142655fe0(font.GetPtr(), p, &tagInfo);
     ResourceHandle handle = p->AddFontDataResource(id, font.GetPtr());
     (void)handle;
@@ -212,7 +212,7 @@ void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
     if (tagInfo.TagLength > 0)
     {
         Ptr<Render::JPEG::TablesHeader> tables =
-            *SF_HEAP_AUTO_NEW(p->GetLoadHeap()) Render::JPEG::TablesHeader(p->GetLoadHeap(), tagInfo.TagLength);
+            *SF_HEAP_NEW(p->GetLoadHeap()) Render::JPEG::TablesHeader(p->GetLoadHeap(), tagInfo.TagLength);
         p->GetStream()->ReadToBuffer(tables->Data, tagInfo.TagLength);
         *reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360) = tables;
     }
