@@ -3896,6 +3896,7 @@ CheckResult XMLSupportImpl::EqualsXMLList(bool& result, Instances::fl::XMLList& 
 // <extendsClass> per ancestor, the <implementsInterface> names, and a <constant>/<variable>/<method>/<accessor> per
 // slot (a class value nests them in <factory>). Slots sharing a value index keep the one of the most derived type.
 // The interfaces are listed from the parent's chain on, as the exe does; a failed append stops the listing.
+// The type names are the traits' GetName() (slot 7), not GetQualifiedName, as the exe does.
 // MS2-FUNCTIONAL 0x1424f4a90: our own reading of the exe; hash orders and string temporaries not reproduced
 // @0x1424f4a90
 void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, const Value& value) const
@@ -3917,16 +3918,16 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
     const bool isObjKind = kind >= Value::kObject && kind <= Value::kThunkFunction;
     if (kind == Value::kUndefined || (isObjKind && value.GetObject() == NULL))
     {
-        xml->AddAttr(pns, sm.CreateConstString("name"), isObjKind ? sm.CreateConstString("null") : tr.GetQualifiedName());
+        xml->AddAttr(pns, sm.CreateConstString("name"), isObjKind ? sm.CreateConstString("null") : tr.GetName());
         xml->AddAttr(pns, sm.CreateConstString("isDynamic"), strFalse);
         xml->AddAttr(pns, sm.CreateConstString("isFinal"), strTrue);
         xml->AddAttr(pns, sm.CreateConstString("isStatic"), strFalse);
         return;
     }
 
-    xml->AddAttr(pns, sm.CreateConstString("name"), tr.GetQualifiedName());
+    xml->AddAttr(pns, sm.CreateConstString("name"), tr.GetName());
     if (parent)
-        xml->AddAttr(pns, sm.CreateConstString("base"), parent->GetQualifiedName());
+        xml->AddAttr(pns, sm.CreateConstString("base"), parent->GetName());
     xml->AddAttr(pns, sm.CreateConstString("isDynamic"), isClass || tr.IsDynamic() ? strTrue : strFalse);
     xml->AddAttr(pns, sm.CreateConstString("isFinal"), isClass || tr.IsFinal() ? strTrue : strFalse);
     xml->AddAttr(pns, sm.CreateConstString("isStatic"), isClass || tr.IsClassTraits() ? strTrue : strFalse);
@@ -3939,7 +3940,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
             SPtr<XMLElement> el = itr.MakeInstanceElement(itr, pns, strExtends, NULL);
             if (!xml->AppendChild(Value(el.GetPtr())))
                 return;
-            el->AddAttr(pns, strType, t->GetQualifiedName());
+            el->AddAttr(pns, strType, t->GetName());
         }
     }
 
@@ -4002,7 +4003,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
         SPtr<XMLElement> factory = itr.MakeInstanceElement(itr, pns, sm.CreateConstString("factory"), NULL);
         if (!xml->AppendChild(Value(factory.GetPtr())))
             return;
-        factory->AddAttr(pns, strType, tr.GetQualifiedName());
+        factory->AddAttr(pns, strType, tr.GetName());
         cur = factory;
     }
 
@@ -4039,7 +4040,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
                 return;
             el->AddAttr(pns, strName, slotName);
             if (const ClassTraits::Traits* dt = Sfr33SlotDataType(&si, &vm))
-                el->AddAttr(pns, strType, dt->GetQualifiedName());
+                el->AddAttr(pns, strType, dt->GetName());
             if (uri.GetSize() != 0)
                 el->AddAttr(pns, strUri, uri);
             continue;
@@ -4066,7 +4067,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
         {
             if (p == NULL)
             {
-                typeName = vt->GetQualifiedName();
+                typeName = vt->GetName();
                 break;
             }
             if (p->SupportsInterface(objIT))
@@ -4078,7 +4079,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
             continue;
         const Value& entry = v.GetTraits().GetVT().VTMethods[v.GetVTableInd()];
         const Traits& declTr = entry.GetTraits();
-        el->AddAttr(pns, strDeclaredBy, declTr.GetQualifiedName());
+        el->AddAttr(pns, strDeclaredBy, declTr.GetName());
         if (si.CppBinding)
             continue;
         VMAbcFile& file = *declTr.GetFilePtr();
