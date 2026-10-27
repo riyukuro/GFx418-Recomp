@@ -539,7 +539,7 @@ void FUN_14005afd0(cri_any = cri_any(), cri_any = cri_any(), ...);
 cri_u4 FUN_14005b040(cri_any = cri_any(), ...);
 void FUN_14005b090(cri_any = cri_any(), ...);
 void FUN_14005b0b0(cri_any = cri_any(), ...);
-cri_u8 FUN_14005b0d0(cri_any = cri_any(), ...);
+ulonglong FUN_14005b0d0(cri_any = cri_any(), ...);
 void FUN_14005b0f0(cri_any = cri_any(), ...);
 void FUN_14005b110(cri_any = cri_any(), ...);
 void FUN_14005b130(cri_any = cri_any(), ...);
@@ -591,7 +591,7 @@ cri_u8 FUN_140062830(cri_any = cri_any(), ...);
 cri_u8 FUN_140062860(cri_any = cri_any(), ...);
 int FUN_140062890(cri_any = cri_any(), ...);
 void FUN_1400628d0(cri_any = cri_any(), ...);
-void FUN_140062900(cri_any = cri_any(), ...);
+ulonglong FUN_140062900(cri_any = cri_any(), ...);
 void FUN_140062910(cri_any = cri_any(), ...);
 void FUN_140062920(cri_any = cri_any(), ...);
 void FUN_140062950(cri_any = cri_any(), ...);
@@ -7396,25 +7396,21 @@ void FUN_14005b0b0(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0d0
-cri_u8 FUN_14005b0d0(cri_any cri_unused, ...)
+// The exe tail-jumps to the hook (jmp rax) with rcx untouched: the hook gets the argument and its rax is the result.
+ulonglong FUN_14005b0d0(cri_any cri_p0, ...)
 {
-  cri_u8 u_v1;
-  
   if (DAT_143e64b58 != (cri_code *)0x0) {
-                    /* WARNING: Could not recover jumptable at 0x00014005b0dc. Too many branches */
-                    /* WARNING: Treating indirect jump as call */
-    u_v1 = (*DAT_143e64b58)();
-    return u_v1;
+    return ((ulonglong (*)(ulonglong))DAT_143e64b58)((ulonglong)(longlong)cri_p0);
   }
   return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0f0
-void FUN_14005b0f0(cri_any cri_unused, ...)
+void FUN_14005b0f0(cri_any cri_p0, ...)
 {
   if (DAT_143e64b50 != (cri_code *)0x0) {
-    (*DAT_143e64b50)();
+    ((void (*)(ulonglong))DAT_143e64b50)((ulonglong)(longlong)cri_p0);
   }
   return;
 }
@@ -11948,11 +11944,10 @@ void thunk_FUN_14005b0b0(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062900
-void FUN_140062900(cri_any cri_p0, ...)
+ulonglong FUN_140062900(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
-  FUN_14005b0d0(*(cri_u8 *)((char *)arg1 + 0x18f8));
-  return;
+  return FUN_14005b0d0(*(ulonglong *)((char *)arg1 + 0x18f8));
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -11960,7 +11955,7 @@ void FUN_140062900(cri_any cri_p0, ...)
 void FUN_140062910(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
-  FUN_14005b0f0(*(cri_u8 *)((char *)arg1 + 0x1848));
+  FUN_14005b0f0(*(ulonglong *)((char *)arg1 + 0x1848));
   return;
 }
 
