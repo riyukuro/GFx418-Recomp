@@ -6630,7 +6630,7 @@ void Sfr31TraceGetSlot(State* st, UInt32 slot)
             }
             else
             {
-                const UInt32 idx = slot - 1 + static_cast<UInt32>(TrRd(tr, 0x50));
+                const SPInt idx = static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(TrRd(tr, 0x50));  // 64-bit (lea/add at 0x14253a021)
                 const SlotInfo* si = &reinterpret_cast<Traits*>(tr)->GetSlotInfo(AbsoluteIndex(idx));
                 ClassTraits::Traits* ct = FUN_1425085b0(si, reinterpret_cast<VM*>(TrRd(tr, 0x78)));
                 if (ct == NULL)
