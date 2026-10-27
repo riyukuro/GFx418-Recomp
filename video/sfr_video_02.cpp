@@ -308,7 +308,6 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
     if (*image)
     {
-        (*image)->pVideoProvider = 0;
         *image = (Scaleform::GFx::Video::VideoImage*)0;
         FUN_1400105b0(pvideo);
     }
@@ -328,13 +327,9 @@ void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
     {
         int width = 0, height = 0;
         Scaleform::GFx::Video::VideoImage* next = strong->GetTexture(&width, &height);
+        // the exe only swaps the reference (0x140010b24); image +0x40 is the owning player CreateTexture stored
         if (next)
-        {
-            if (*image)
-                (*image)->pVideoProvider = 0;
             *image = next;
-            (*image)->pVideoProvider = strong.GetPtr();
-        }
     }
     FUN_1400105b0(pvideo);
 }
@@ -355,7 +350,6 @@ void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
         *provider = pprovider;
         if (*image)
         {
-            (*image)->pVideoProvider = 0;
             *image = (Scaleform::GFx::Video::VideoImage*)0;
             FUN_1400105b0(pvideo);
         }
@@ -3332,7 +3326,8 @@ void* FUN_140011610(void* object, void** result, void* context)
             const auto oldFillCount = *fillCount;
             FUN_1425eec50(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
             auto* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
-            auto* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + oldFillCount * 0x10);
+            // the new last entry: the exe indexes with the count after the resize (0x1400118cb)
+            auto* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + *fillCount * 0x10);
             *fill = 0;
             FUN_14257dc30(transform);
             *reinterpret_cast<void**>(fill + 2) = transform;
