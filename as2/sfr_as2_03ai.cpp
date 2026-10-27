@@ -34,7 +34,7 @@ void AvmSwfEvent_AttachTo(AvmSwfEventView* pevent, InteractiveObject* pchar)
     UInt32        id   = pevent->Event.Id;
     ActionBuffer::ExecuteType type =
         (id == 1 || id == 4 || id == 0x200 || id == 0x40000) ? ActionBuffer::Exec_SpecialEvent : ActionBuffer::Exec_Event;
-    Value handler(FunctionRef(*::new (penv->GetSC()->GetHeap()) AsFunctionObject(penv, pbuf, 0, pdata->GetLength(), 0, type)));
+    Value handler(FunctionRef(*new (penv->GetSC()->GetHeap()) AsFunctionObject(penv, pbuf, 0, pdata->GetLength(), 0, type)));
     unsigned bits = 0;
     for (UInt32 m = id; m; m &= m - 1)
         ++bits;
