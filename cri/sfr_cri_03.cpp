@@ -46,7 +46,7 @@ extern "C" const void* PTR_FUN_1431b4f78;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
 void FUN_140041190(void);
-void FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
+void* FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
@@ -794,7 +794,7 @@ void FUN_14003b2a4(void* heap, void* memory)
 
 // MS2-FUNCTIONAL: adapt the four CRI heap modes and callbacks before constructing a UTF runtime table.
 // @0x14003b2ac
-void FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUint32 size)
+void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUint32 size)
 {
     struct HeapCallbacks { void* Allocate; void* Free; void* Heap; } callbacks;
     CriSint32 type = 0;
@@ -805,7 +805,7 @@ void FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUi
     callbacks.Allocate = (void*)FUN_14003b20c;
     callbacks.Free = (void*)FUN_14003b2a4;
     callbacks.Heap = heap;
-    FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
+    return FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
 }
 
 // MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
@@ -1270,9 +1270,9 @@ CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUin
 
 // MS2-FUNCTIONAL: create a UTF runtime table using the CRI heap callback convention.
 // @0x14003b348
-void criUtfRtv_Create(void* heap, void* table, CriUint32 size)
+void* criUtfRtv_Create(void* heap, void* table, CriUint32 size)
 {
-    FUN_14003b2ac(heap, 1, table, size);
+    return FUN_14003b2ac(heap, 1, table, size);
 }
 
 // MS2-FUNCTIONAL: decode the executable's 0x24-byte USF standard header fields.
@@ -6337,7 +6337,7 @@ extern "C" const CriSint16* DAT_143d749f8;
 extern "C" const CriSint16* DAT_143d749d0;
 void FUN_140069020(const void*, CriUint32, void*, void*);
 CriSint32 FUN_140051d90(void*);
-void FUN_1400663f0(void);
+void FUN_1400663f0(void* decoder);   // reads [decoder+0x1794], writes [decoder+0x18dc]
 
 namespace
 {
@@ -6676,7 +6676,7 @@ CriSint32 FUN_142ccb710(void* decoder, void* queue)
         {
             CriMpvField<CriMpvSkipRunFunc>(decoder, 0x16f8)(decoder, step);
             MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
-            FUN_1400663f0();
+            FUN_1400663f0(decoder);
         }
         CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
         if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
@@ -6737,7 +6737,7 @@ CriSint32 FUN_142ccbe90(void* decoder, void* queue)
             CriMpvField<CriMpvSkipRunFunc>(decoder, 0x16f8)(decoder, step);
             MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x174c));
             MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
-            FUN_1400663f0();
+            FUN_1400663f0(decoder);
         }
         CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
         if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
