@@ -24,7 +24,6 @@ enum StatMovieValues
 class  MemoryHeap;
 class  SysAllocPaged;
 class  StatBag;
-struct HeapDesc;
 struct RootStats;
 namespace Heap { class MemVisitor; class SegVisitor; }
 
@@ -43,6 +42,7 @@ class MemoryHeap
 public:
     class LimitHandler;
     class HeapTracer;
+    struct HeapDesc;
 
     virtual ~MemoryHeap() {}                                                    // 0
 
@@ -50,6 +50,10 @@ public:
     virtual void        DestroyArena(UPInt arena) = 0;                          // 2
     virtual bool        ArenaIsEmpty(UPInt arena) = 0;                          // 3
     virtual MemoryHeap* CreateHeap(const char* name, const HeapDesc& desc) = 0; // 4
+    // builds the desc (exe /Od copy 0x1422f62a0, gfxsoundfmod)
+    MemoryHeap* CreateHeap(const char* name, unsigned flags = 0, UPInt minAlign = 16, UPInt granularity = 16 * 1024,
+                           UPInt reserve = 16 * 1024, UPInt threshold = ~UPInt(0), UPInt limit = 0, UPInt heapId = 0,
+                           UPInt arena = 0);
     virtual void        SetLimitHandler(LimitHandler* handler) = 0;             // 5
     virtual void        SetLimit(UPInt newLimit) = 0;                           // 6
     virtual void        AddRef() = 0;                                           // 7
@@ -207,7 +211,7 @@ public:
 };
 
 // Parameters of MemoryHeap::CreateHeap (0x40 bytes).
-struct HeapDesc
+struct MemoryHeap::HeapDesc
 {
     enum HeapFlags
     {
@@ -232,6 +236,15 @@ struct HeapDesc
           Limit(limit), HeapId(heapId), Arena(arena)
     {}
 };
+
+typedef MemoryHeap::HeapDesc HeapDesc;
+
+inline MemoryHeap* MemoryHeap::CreateHeap(const char* name, unsigned flags, UPInt minAlign, UPInt granularity,
+                                          UPInt reserve, UPInt threshold, UPInt limit, UPInt heapId, UPInt arena)
+{
+    HeapDesc desc(flags, minAlign, granularity, reserve, threshold, limit, heapId, arena);
+    return CreateHeap(name, desc);
+}
 
 } // namespace Scaleform
 
