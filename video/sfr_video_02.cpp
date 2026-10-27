@@ -2610,7 +2610,8 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
     *reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(object) + 0x60) = 0;
     extern void FUN_140026720(void*, void*, void*);
     auto* surface = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x50);
-    FUN_140026720(surface, text.GetStringNode(), vm);
+    // OpenUrl takes the url chars: the exe passes the node's pData (mov rdi,[node] at 0x1400144e1), not the node
+    FUN_140026720(surface, const_cast<char*>(text.GetStringNode()->pData), vm);
     FUN_140025750(surface,
         static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x88) * 100.0),
         static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x90) * 100.0));
