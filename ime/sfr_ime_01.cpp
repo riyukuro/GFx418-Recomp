@@ -2938,7 +2938,7 @@ unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned lon
     const unsigned current = *reinterpret_cast<const unsigned*>(DAT_143a2a3e0 + 8);
     const char* text = reinterpret_cast<const char*>((*stringInfo & ~3ull) + 0xc);
     if (current != 0x02000000) {
-        for (unsigned index = 0; index < 64; ++index) {
+        for (unsigned index = 0;; ++index) {
             const auto* locale = reinterpret_cast<const unsigned char*>(DAT_143a2a3e0) + index * 0x10;
             const unsigned localeId = *reinterpret_cast<const unsigned*>(locale + 8);
             if (localeId == 0x02000000) break;
@@ -2956,7 +2956,7 @@ unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned lon
                     manager, reinterpret_cast<const char*>((selected & ~3ull) + 0xc));
                 const unsigned long long packed = *stringInfo;
                 auto* refs = reinterpret_cast<volatile long*>((packed & ~3ull) + 8);
-                if (_InterlockedDecrement(refs) == 1) {
+                if (_InterlockedDecrement(refs) == 0) {
                     void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
                     reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
                         reinterpret_cast<void*>(packed & ~3ull));
@@ -2966,7 +2966,7 @@ unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned lon
         }
     }
     auto* refs = reinterpret_cast<volatile long*>((*stringInfo & ~3ull) + 8);
-    if (_InterlockedDecrement(refs) == 1) {
+    if (_InterlockedDecrement(refs) == 0) {
         void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
             reinterpret_cast<void*>(*stringInfo & ~3ull));
