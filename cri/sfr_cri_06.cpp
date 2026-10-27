@@ -589,7 +589,7 @@ void FUN_1400627f0(cri_any = cri_any(), ...);
 cri_u4 FUN_140062820(cri_any = cri_any(), ...);
 cri_u8 FUN_140062830(cri_any = cri_any(), ...);
 cri_u8 FUN_140062860(cri_any = cri_any(), ...);
-void FUN_140062890(cri_any = cri_any(), ...);
+int FUN_140062890(cri_any = cri_any(), ...);
 void FUN_1400628d0(cri_any = cri_any(), ...);
 void FUN_140062900(cri_any = cri_any(), ...);
 void FUN_140062910(cri_any = cri_any(), ...);
@@ -11915,12 +11915,12 @@ cri_u8 FUN_140062860(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062890
-void FUN_140062890(cri_any cri_unused, ...)
+int FUN_140062890(cri_any cri_unused, ...)
 {
   if (DAT_143a4a0d0 == -1) {
     DAT_143a4a0d0 = 1;
   }
-  return;
+  return DAT_143a4a0d0;  // the exe returns the flag in eax (FUN_14004bf40 in sfr_cri_04 tests it)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
