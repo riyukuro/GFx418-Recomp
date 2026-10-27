@@ -3720,12 +3720,11 @@ void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
     words[0xb] = 0;
     *reinterpret_cast<unsigned*>(words + 0xc) = 0;
 
-    auto* buffer = static_cast<wchar_t*>(Scaleform::Memory::Alloc(0x200));
-    if (buffer) {
-        std::memset(buffer, 0, 0x200);
-        words[8] = reinterpret_cast<unsigned long long>(buffer);
-        words[9] = words[10] = 0x100;
-    }
+    // the text buffer is resized to 0x100 wchar_ts: empty, so it reserves 0x140 (the exe's grow step) from the
+    // owner's heap and terminates the first entry
+    FUN_1423d1380(words + 8, words + 8, 0x140);
+    words[9] = 0x100;
+    *reinterpret_cast<wchar_t*>(words[8]) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x64) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0xdc) = 1;
 
