@@ -115,6 +115,11 @@ static_assert(sizeof(ImageCreateExportInfo) == 0x58, "ImageCreateExportInfo size
 static_assert(sizeof(ImageCreator) == 0x20, "ImageCreator size");
 #endif
 
+// StateBag's typed setter, where StateBag is declared (gfx_moviedef.h came first).
+#ifdef MS2_SF_GFX_MOVIEDEF_H
+inline void StateBag::SetImageCreator(ImageCreator* ptr) { SetState(State::State_ImageCreator, ptr); }
+#endif
+
 }} // namespace Scaleform::GFx
 
 #endif

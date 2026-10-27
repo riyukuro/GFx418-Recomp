@@ -274,4 +274,15 @@ static_assert(sizeof(InteractiveObject) == 0xd8, "InteractiveObject size");
 
 }} // namespace Scaleform::GFx
 
+// MovieImpl::GetFocusedCharacter, emitted by whichever of gfx_movieimpl.h / gfx_interactiveobject.h comes second.
+#if defined(MS2_SF_GFX_MOVIEIMPL_H) && defined(MS2_SF_GFX_INTERACTIVEOBJECT_H) && !defined(MS2_SF_GFX_MOVIEIMPL_FOCUSEDCHAR)
+#define MS2_SF_GFX_MOVIEIMPL_FOCUSEDCHAR
+namespace Scaleform { namespace GFx {
+inline Ptr<InteractiveObject> MovieImpl::GetFocusedCharacter(unsigned controllerIdx)
+{
+    return Ptr<InteractiveObject>(GetFocusGroup(controllerIdx).LastFocused);
+}
+}} // namespace Scaleform::GFx
+#endif
+
 #endif

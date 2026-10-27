@@ -41,6 +41,13 @@ struct MemoryParams;
 namespace Video { class VideoBase; }
 class ActionControl;
 class ExternalInterface;   // (appended for the game's GFxMovie)
+class IMEManagerBase;      // (appended for the game's GFxManager)
+class TaskManager;
+class ASSupport;
+class ImageFileHandlerRegistry;
+class FontProvider;
+class AudioBase;
+namespace XML { class SupportBase; }
 struct ExporterInfo;
 class FontResource;
 class FontLib;
@@ -102,6 +109,18 @@ public:
     inline void SetVideo(Video::VideoBase* ptr);
     // (appended for the game's GFxMovie, exe 0x1422bf5a0) defined in gfx_player.h.
     inline void SetExternalInterface(ExternalInterface* p);
+    // (appended for the game's GFxManager, gfxui/gfxmanager.cpp; /Od COMDATs there) the loader setup. Each is defined
+    // with its state class: gfx_imemanager.h, gfx_taskmanager.h, as3/as3_support.h, gfx_imagefilehandlerregistry.h,
+    // gfx_fontprovider.h, xml/xml_support.h and gfx_audio.h.
+    inline void                SetIMEManager(IMEManagerBase* ptr);
+    inline Ptr<IMEManagerBase> GetIMEManager() const;
+    inline void                SetTaskManager(TaskManager* ptr);
+    inline Ptr<TaskManager>    GetTaskManager() const;
+    inline void                SetAS3Support(ASSupport* ptr);
+    inline void                SetImageFileHandlerRegistry(ImageFileHandlerRegistry* ptr);
+    inline void                SetFontProvider(FontProvider* ptr);
+    inline void                SetXMLSupport(XML::SupportBase* ptr);
+    inline void                SetAudio(AudioBase* ptr);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

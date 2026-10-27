@@ -36,7 +36,10 @@ inline char* SF_CDECL SFstrcat(char* dest, UPInt destsize, const char* src)
     strcat_s(dest, destsize, src);
     return dest;
 }
+#ifndef MS2_SF_SFSTRCMP_DEFINED   // also in sf_string.h and include/kernel/sf_std.h
+#define MS2_SF_SFSTRCMP_DEFINED
 inline int SF_CDECL SFstrcmp(const char* a, const char* b) { return strcmp(a, b); }
+#endif
 inline const char* SF_CDECL SFstrchr(const char* s, char c) { return strchr(s, c); }
 inline char* SF_CDECL SFstrchr(char* s, char c) { return strchr(s, c); }
 inline const char* SFstrrchr(const char* s, char c)

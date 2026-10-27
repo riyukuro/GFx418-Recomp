@@ -5,6 +5,7 @@
 #define MS2_SF_GFX_IMEMANAGER_H
 
 #include "gfx_state.h"
+#include "gfx_moviedef.h"   // (appended) StateBag, for its IME manager accessors
 #include "../kernel/sf_string.h"
 #include "../kernel/sf_hash.h"
 #include "gfx_asimemanager.h"
@@ -119,6 +120,11 @@ public:
     void GetMetrics(Render::RectF* pviewRect, Render::RectF* pcursorRect, int cursorOffset); // 0x1425b46b0
     // The candidate list's load error, true when there is one.
     bool GetCandidateListErrorMsg(String* pdest);                        // 0x1425b4530
+    // (appended for the game's GFxManager) whether the VM side has a text field focused; the candidate list movie;
+    // the loader SetIMEManager hands the manager to.
+    bool IsTextFieldFocused() const { return pASIMEManager->IsTextFieldFocused(); }
+    void SetIMEMoviePath(const char* pcandidateSwfPath) { CandidateSwfPath = pcandidateSwfPath; }
+    void SetLoader(Loader* ploader) { pLoader = ploader; }
 
 public:
     // (sfr24) the VM side of the IME for the active movie.
@@ -134,6 +140,17 @@ public:
     bool                bCheckIMEExists;            // +0x58 check that the candidate list file exists before loading it
     Log*                pLog;                       // +0x60
 };
+
+// (appended for the game's GFxManager) the manager also learns which loader it was set on.
+inline void StateBag::SetIMEManager(IMEManagerBase* ptr)
+{
+    SetState(State::State_IMEManager, ptr);
+    ptr->SetLoader((Loader*)this);
+}
+inline Ptr<IMEManagerBase> StateBag::GetIMEManager() const
+{
+    return *(IMEManagerBase*)GetStateAddRef(State::State_IMEManager);
+}
 
 }} // namespace Scaleform::GFx
 

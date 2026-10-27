@@ -4,6 +4,7 @@
 #define MS2_SF_GFX_XML_SUPPORT_H
 
 #include "../gfx_state.h"
+#include "../gfx_moviedef.h"   // (appended) StateBag::SetXMLSupport
 
 namespace Scaleform { namespace GFx { namespace XML {
 
@@ -32,6 +33,10 @@ public:
 class Support : public SupportBase
 {
 public:
+    // (appended for the game's GFxManager, which installs one over an expat parser; /Od COMDATs there)
+    Support(Ptr<Parser> pparser) : pParser(pparser) {}
+    ~Support() {}
+
     virtual bool ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHandler* pdb);
     virtual bool ParseString(const char* pdata, UPInt len, ParserHandler* pdb);
 
@@ -39,5 +44,12 @@ public:
 };
 
 }}} // namespace Scaleform::GFx::XML
+
+namespace Scaleform { namespace GFx {
+
+// (appended for the game's GFxManager)
+inline void StateBag::SetXMLSupport(XML::SupportBase* ptr) { SetState(State::State_XMLSupport, ptr); }
+
+}} // namespace Scaleform::GFx
 
 #endif

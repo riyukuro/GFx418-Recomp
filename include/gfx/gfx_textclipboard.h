@@ -119,6 +119,7 @@ inline Ptr<TextClipboard> StateBag::GetTextClipboard() const
 {
     return *(TextClipboard*)GetStateAddRef(State::State_TextClipboard);
 }
+inline void StateBag::SetTextClipboard(TextClipboard* ptr) { SetState(State::State_TextClipboard, ptr); }
 #endif
 
 }} // namespace Scaleform::GFx

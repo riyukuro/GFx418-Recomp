@@ -7,6 +7,7 @@
 #define MS2_SF_GFX_ASSUPPORT_H
 
 #include "gfx_state.h"
+#include "gfx_moviedef.h"   // (appended) StateBag::SetAS3Support
 #include "gfx_stream.h"
 #include "gfx_characterdef.h"
 #include "gfx_asimemanager.h"
@@ -57,6 +58,9 @@ public:
     virtual void ReadButtonActions(LoadProcess* p, ButtonDef* pbuttonDef, TagType tagType)           = 0;
     virtual void ReadButton2ActionConditions(LoadProcess* p, ButtonDef* pbuttonDef, TagType tagType) = 0;
 };
+
+// (appended for the game's GFxManager)
+inline void StateBag::SetAS3Support(ASSupport* ptr) { SetState(State::State_AS3Support, ptr); }
 
 }} // namespace Scaleform::GFx
 

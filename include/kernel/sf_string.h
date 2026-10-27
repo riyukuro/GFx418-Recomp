@@ -10,6 +10,11 @@
 namespace Scaleform {
 
 class StringBuffer;
+// The kernel's inline compare, as in either sf_std.h (both share one guard, so this header does not include one).
+#ifndef MS2_SF_SFSTRCMP_DEFINED
+#define MS2_SF_SFSTRCMP_DEFINED
+inline int SF_CDECL SFstrcmp(const char* a, const char* b) { return strcmp(a, b); }
+#endif
 
 // Shared, reference counted UTF-8 text. pData points at a DataDesc whose two low address bits carry the heap type;
 // the top bit of DataDesc::Size flags "length == byte size". The out-of-line members live in the kernel string unit
@@ -86,7 +91,8 @@ public:
     void AssignString(const char* utf8, UPInt size);
     void AssignString(const InitStruct& src, UPInt size);
 
-    bool operator==(const String& str) const { return strcmp(ToCStr(), str.ToCStr()) == 0; }
+    // The data through SFstrcmp, as the exe (GFxManager copy 0x1422b4570).
+    bool operator==(const String& str) const { return SFstrcmp(GetData()->Data, str.GetData()->Data) == 0; }
 
     static int SF_STDCALL CompareNoCase(const char* a, const char* b);
     // (appended, sfr24) only the first len characters (exe 0x142586720).
@@ -119,6 +125,9 @@ public:
 
     bool operator==(const char* str) const { return strcmp(ToCStr(), str) == 0; }
     bool operator!=(const char* str) const { return !operator==(str); }
+    // (appended, GFxManager's CRBMap<String, ...> key order) the exe compares the data through SFstrcmp.
+    bool operator<(const char* str) const   { return SFstrcmp(GetData()->Data, str) < 0; }
+    bool operator<(const String& str) const { return *this < str.GetData()->Data; }
 
     // exe: operator+(const char*) 0x142585c90, AppendString 0x142586130, ToLower 0x142587bf0.
     String operator+(const char* str) const;

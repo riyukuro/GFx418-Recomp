@@ -440,6 +440,16 @@ public:
     {
         return FocusGroups[FocusGroupIndexes[controllerIdx]].FocusRectShown;
     }
+    // (appended for the game's GFxManager, gfxui/gfxmanager.cpp) the controller's focus group (protected in the exe:
+    // IEAA) and what it has focused.
+protected:
+    FocusGroupDescr& GetFocusGroup(unsigned controllerIdx)
+    {
+        return FocusGroups[FocusGroupIndexes[controllerIdx]];
+    }
+public:
+    // Defined once both MovieImpl and InteractiveObject are complete (the end of this header or gfx_interactiveobject.h).
+    inline Ptr<InteractiveObject> GetFocusedCharacter(unsigned controllerIdx);
 
     // Removes the setInterval/setTimeout timer with the given id (exe 0x14256e0d0).
     void ClearIntervalTimer(int id);
@@ -971,5 +981,16 @@ public:
 };
 
 }} // namespace Scaleform::GFx
+
+// MovieImpl::GetFocusedCharacter, emitted by whichever of gfx_movieimpl.h / gfx_interactiveobject.h comes second.
+#if defined(MS2_SF_GFX_MOVIEIMPL_H) && defined(MS2_SF_GFX_INTERACTIVEOBJECT_H) && !defined(MS2_SF_GFX_MOVIEIMPL_FOCUSEDCHAR)
+#define MS2_SF_GFX_MOVIEIMPL_FOCUSEDCHAR
+namespace Scaleform { namespace GFx {
+inline Ptr<InteractiveObject> MovieImpl::GetFocusedCharacter(unsigned controllerIdx)
+{
+    return Ptr<InteractiveObject>(GetFocusGroup(controllerIdx).LastFocused);
+}
+}} // namespace Scaleform::GFx
+#endif
 
 #endif

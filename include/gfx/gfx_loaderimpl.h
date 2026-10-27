@@ -157,8 +157,9 @@ public:
         Ptr<FileOpenerBase>  pFileOpener;  // +8
         Ptr<ZlibSupportBase> pZLibSupport; // +0x10
 
-        LoaderConfig(unsigned loadFlags = 0, const Ptr<FileOpenerBase>& pfileOpener = 0,
-                     const Ptr<ZlibSupportBase>& pzlib = 0)
+        // Defaults build the stock opener and zlib states (GFxManager's m_loader(1), exe 0x1422b2e20).
+        LoaderConfig(unsigned loadFlags = 0, const Ptr<FileOpenerBase>& pfileOpener = *new FileOpener,
+                     const Ptr<ZlibSupportBase>& pzlib = *new ZlibSupport)
             : DefLoadFlags(loadFlags), pFileOpener(pfileOpener), pZLibSupport(pzlib)
         {
         }
@@ -492,6 +493,9 @@ inline Ptr<FileOpenerBase> StateBag::GetFileOpener() const
 inline void StateBag::SetFileOpener(FileOpenerBase* ptr)   { SetState(State::State_FileOpener, ptr); }
 inline void StateBag::SetParseControl(ParseControl* ptr)   { SetState(State::State_ParseControl, ptr); }
 inline void StateBag::SetZlibSupport(ZlibSupportBase* ptr) { SetState(State::State_ZlibSupport, ptr); }
+// (appended for the game's GFxManager)
+inline void StateBag::SetTaskManager(TaskManager* ptr)     { SetState(State::State_TaskManager, ptr); }
+inline Ptr<TaskManager> StateBag::GetTaskManager() const   { return *(TaskManager*)GetStateAddRef(State::State_TaskManager); }
 
 class ImagePacker;
 struct TempBindData;

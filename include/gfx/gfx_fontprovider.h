@@ -4,6 +4,7 @@
 #define MS2_SF_INC_GFX_FONTPROVIDER_H
 
 #include "gfx_state.h"
+#include "gfx_moviedef.h"   // (appended) StateBag::SetFontProvider
 #include "../render/render_fontprovider.h"
 
 namespace Scaleform { namespace GFx {
@@ -52,6 +53,9 @@ private:
         return static_cast<Render::FontProviderWinAPI*>(pFontProvider.GetPtr());
     }
 };
+
+// (appended for the game's GFxManager)
+inline void StateBag::SetFontProvider(FontProvider* ptr) { SetState(State::State_FontProvider, ptr); }
 
 }} // namespace Scaleform::GFx
 

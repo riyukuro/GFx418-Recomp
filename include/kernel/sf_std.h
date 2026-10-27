@@ -73,7 +73,10 @@ inline UPInt SF_CDECL SFstrlen(const char* str) { return strlen(str); }
 
 // (appended for GFx::Value::operator==, fq1) the game's /Od units keep SFstrcmp as an out-of-line COMDAT; SFwcscmp is
 // the kernel's own (exe 0x1425a4c70, sfr_kernel_02).
+#ifndef MS2_SF_SFSTRCMP_DEFINED   // also in sf_string.h and the other sf_std.h
+#define MS2_SF_SFSTRCMP_DEFINED
 inline int SF_CDECL SFstrcmp(const char* a, const char* b) { return strcmp(a, b); }
+#endif
 int SF_CDECL SFwcscmp(const wchar_t* a, const wchar_t* b);
 // (appended for GFxClipboard::OnTextStore, fq1) copies src with its terminator into dest (destsize characters).
 wchar_t* SF_CDECL SFwcscpy(wchar_t* dest, UPInt destsize, const wchar_t* src);

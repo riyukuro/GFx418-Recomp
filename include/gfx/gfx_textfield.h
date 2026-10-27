@@ -285,6 +285,10 @@ public:
 
     // (appended for the AS2 TextField natives, sfr_as2_02)
     Render::Text::DocView* GetDocument() const { return pDocument; }
+    // (appended for the game's GFxManager) the text length against the field's maxChars.
+    unsigned GetMaxLength() const  { return (unsigned)pDocument->GetMaxLength(); }
+    UPInt    GetTextLength() const { return pDocument->GetLength(); }
+    bool     HasMaxLength() const  { return pDocument->HasMaxLength(); }
     // The next advance reformats the whole text.
     void SetCompleteReformatReq() { Flags |= Flags_NeedUpdateLayout; }
     bool HasStyleSheet() const;   // exe 0x1425b9730
