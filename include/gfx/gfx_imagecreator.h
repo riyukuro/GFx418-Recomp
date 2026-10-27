@@ -56,6 +56,9 @@ public:
         pLog         = plog;
         pIFHRegistry = pregistry;
     }
+
+    // (appended for GFxAtlasCache, gfxui/gfxatlascache.cpp) out of line at 0x1422eeea0: returns +0x28
+    ImageFileHandlerRegistry* GetImageFileHandlerRegistry() const { return pIFHRegistry; }
 };
 
 // An image the exporter extracted from the movie.
