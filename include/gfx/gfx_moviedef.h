@@ -43,6 +43,8 @@ class ActionControl;
 struct ExporterInfo;
 class FontResource;
 class FontLib;
+class FontMap;    // (appended, sfr_gfx_11)
+class Translator; // (appended, sfr_gfx_11)
 
 // Something that hands out states by type; MovieDef, Loader and the movie instances are state bags.
 class StateBag : public FileTypeConstants
@@ -90,6 +92,11 @@ public:
     }
     // Defined in gfx_textclipboard.h (gfxmovieeventhandler keeps it as a COMDAT).
     inline Ptr<TextClipboard> GetTextClipboard() const;
+    // (appended for the font config reader, sfr_gfx_11; exe 0x1422fe2c0 / 0x1422fe2f0 / 0x1422fe360) defined in
+    // gfx_fontlib.h and gfx_translator.h.
+    inline void SetFontLib(FontLib* pfl);
+    inline void SetFontMap(FontMap* ptr);
+    inline void SetTranslator(Translator* ptr);
 };
 
 // Loaded movie as seen by the user: Resource at +0, StateBag at +0x18. The exe has no vftable of its own for it

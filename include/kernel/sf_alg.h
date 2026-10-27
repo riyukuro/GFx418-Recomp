@@ -34,11 +34,14 @@ SF_NOINLINE inline UByte UpperBit(UPInt v)
         return (v & 0xFF0000000000) ? UpperBitTable[(v >> 40) & 0xFF] + 40
                                     : UpperBitTable[(v >> 32) & 0xFF] + 32;
     }
-    if (v & 0xFFFF0000)
-        return (v & 0xFF000000) ? UpperBitTable[(v >> 24)] + 24
-                                : UpperBitTable[(v >> 16) & 0xFF] + 16;
-    return (v & 0xFF00) ? UpperBitTable[(v >> 8) & 0xFF] + 8
-                        : UpperBitTable[v & 0xFF];
+    else // (an else, as the exe's /Od copies show: a jump closes the upper half)
+    {
+        if (v & 0xFFFF0000)
+            return (v & 0xFF000000) ? UpperBitTable[(v >> 24)] + 24
+                                    : UpperBitTable[(v >> 16) & 0xFF] + 16;
+        return (v & 0xFF00) ? UpperBitTable[(v >> 8) & 0xFF] + 8
+                            : UpperBitTable[v & 0xFF];
+    }
 }
 
 template<class T>
@@ -297,6 +300,14 @@ void QuickSortSliced(ArrayT& arr, UPInt start, UPInt end, Less less)
             hi = ptop[1];
         }
     }
+}
+
+// (appended for the font config reader, sfr_gfx_11; exe SwapOrder 0x1422fe410, LEToSystem 0x1422fd400,
+// BEToSystem 0x1422fc7e0) 16-bit byte order helpers.
+namespace ByteUtil {
+inline UInt16 SwapOrder(UInt16 v)  { return UInt16(v >> 8) | UInt16(v << 8); }
+inline UInt16 LEToSystem(UInt16 v) { return v; }
+inline UInt16 BEToSystem(UInt16 v) { return SwapOrder(v); }
 }
 
 }} // namespace Scaleform::Alg

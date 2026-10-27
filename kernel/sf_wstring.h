@@ -36,7 +36,7 @@ private:
     ReserveHeader Reserved;     // +0x10
 
 public:
-    WStringBuffer() : pText(0), Length(0) { }
+    WStringBuffer() : pText(0), Length(0), Reserved(0, 0) { }
     WStringBuffer(const ReserveHeader& reserve) : pText(reserve.pBuffer), Length(0), Reserved(reserve)
     {
         if (pText)
@@ -48,6 +48,9 @@ public:
     const wchar_t* ToWStr() const    { return pText ? pText : L""; }
     UPInt          GetLength() const { return Length; }
     wchar_t*       GetBuffer() const { return pText; }
+    // (appended for the font config reader, sfr_gfx_11; exe 0x1422fc480)
+    wchar_t  operator[](UPInt index) const { return pText[index]; }
+    wchar_t& operator[](UPInt index)       { return pText[index]; }
 
     WStringBuffer& operator=(const WStringBuffer& other);
     WStringBuffer& operator=(const String& str);

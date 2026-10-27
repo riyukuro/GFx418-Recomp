@@ -11,6 +11,9 @@
 #include "sf_allocator.h"
 #include "sf_alg.h"
 
+// Allocation site handed to the allocators (the exe's build path of this header; see sf_array.h).
+#define MS2_SF_HASH_SITE "e:\\build\\kr\\22_04\\gamebryo\\integrations\\scaleform\\gfx sdk 4.0\\src\\kernel\\sf_hash.h"
+
 namespace Scaleform {
 
 template<class C>
@@ -455,7 +458,7 @@ private:
         if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != idx))
             return -1;
 
-        for (;;)
+        while (1) // (not for (;;): the exe's /Od copies test the constant, 0x1422fb628)
         {
             if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
                 return idx;
@@ -541,7 +544,7 @@ private:
         }
 
         SelfType fresh;
-        fresh.pTable = (TableType*)Allocator::Alloc(pheapAddr, sizeof(TableType) + sizeof(Entry) * n, 0, 0);
+        fresh.pTable = (TableType*)Allocator::Alloc(pheapAddr, sizeof(TableType) + sizeof(Entry) * n, MS2_SF_HASH_SITE, 850);
         fresh.pTable->EntryCount = 0;
         fresh.pTable->SizeMask   = n - 1;
 
@@ -713,8 +716,9 @@ public:
 
     HashsetCachedNodeEntry() : NextInChain(-2) {}
     HashsetCachedNodeEntry(const HashsetCachedNodeEntry& o) : NextInChain(o.NextInChain), HashValue(o.HashValue), Value(o.Value) {}
-    template<class K>
-    HashsetCachedNodeEntry(const K& key, SPInt next) : NextInChain(next), Value(key) {}
+    // a node or its NodeRef, two plain overloads as in the exe (0x1422fbad0 / 0x1422fbb10)
+    HashsetCachedNodeEntry(const C& key, SPInt next) : NextInChain(next), Value(key) {}
+    HashsetCachedNodeEntry(const typename C::NodeRef& keyRef, SPInt next) : NextInChain(next), Value(keyRef) {}
 
     bool IsEmpty() const      { return NextInChain == -2; }
     bool IsEndOfChain() const { return NextInChain == -1; }

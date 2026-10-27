@@ -160,6 +160,24 @@ public:
 
     // (appended for the font manager, sfr_gfx_07g) concatenation (exe 0x142585b80)
     String operator+(const String& src) const;
+
+    // (appended for the font config reader, sfr_gfx_11) the text pointer as a cast (explicit here so that the
+    // include tree keeps its overloads unambiguous), case-insensitive compares and the case-sensitive hash.
+    explicit operator const char*() const { return GetData()->Data; }
+    int CompareNoCase(const char* pstr) const { return CompareNoCase(GetData()->Data, pstr); }
+    int CompareNoCase(const String& str) const { return CompareNoCase(GetData()->Data, str.ToCStr()); }
+
+    struct HashFunctor
+    {
+        UPInt operator()(const String& data) const
+        {
+            UPInt size = data.GetSize();
+            return String::BernsteinHashFunction((const char*)data, size);
+        }
+    };
+
+    // (appended, sfr_gfx_11) the UTF-8 encoding of a wide string (exe 0x1425858e0)
+    void operator=(const wchar_t* wstr);
 };
 
 // String whose buffer lives in the heap that owns the StringLH itself (exe: CopyConstructHelper 0x1425868d0).

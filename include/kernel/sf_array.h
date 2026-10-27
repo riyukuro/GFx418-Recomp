@@ -8,6 +8,10 @@
 
 #include "sf_allocator.h"
 
+// Allocation site handed to the allocators: the exe's build path of this header and the line. The /Od game units pass
+// it on; the /Ob2 library units inline the allocator, which ignores it.
+#define MS2_SF_ARRAY_SITE "e:\\build\\kr\\22_04\\gamebryo\\integrations\\scaleform\\gfx sdk 4.0\\src\\kernel\\sf_array.h"
+
 namespace Scaleform {
 
 struct ArrayDefaultPolicy
@@ -94,12 +98,12 @@ struct ArrayDataBase
         {
             if (Allocator::IsMovable())
             {
-                Data = (T*)Allocator::Realloc(Data, sizeof(T) * newCapacity, 0, 0);
+                Data = (T*)Allocator::Realloc(Data, sizeof(T) * newCapacity, MS2_SF_ARRAY_SITE, 137);
             }
             else
             {
                 // Element-wise move into a fresh block.
-                T* newData = (T*)Allocator::Alloc(pheapAddr, sizeof(T) * newCapacity, 0, 0);
+                T* newData = (T*)Allocator::Alloc(pheapAddr, sizeof(T) * newCapacity, MS2_SF_ARRAY_SITE, 142);
                 UPInt i, s = (Size < newCapacity) ? Size : newCapacity;
                 for (i = 0; i < s; ++i)
                 {
@@ -114,7 +118,7 @@ struct ArrayDataBase
         }
         else
         {
-            Data = (T*)Allocator::Alloc(pheapAddr, sizeof(T) * newCapacity, 0, 0);
+            Data = (T*)Allocator::Alloc(pheapAddr, sizeof(T) * newCapacity, MS2_SF_ARRAY_SITE, 161);
         }
         Policy.SetCapacity(newCapacity);
     }

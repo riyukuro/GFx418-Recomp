@@ -80,26 +80,50 @@ public:
         FileIndex = 0;
         Valid     = (pfileName && pbuffer && buffSize > 0) ? true : false;
     }
-    ~MemoryFile();
-
-    const char* GetFilePath();
-    bool        IsValid();
-    bool        IsWritable();
-    int         Tell();
-    SInt64      LTell();
-    int         GetLength();
-    SInt64      LGetLength();
-    int         GetErrorCode();
-    int         Write(const UByte* pbuffer, int numBytes);
-    int         Read(UByte* pbuffer, int numBytes);
-    int         SkipBytes(int numBytes);
-    int         BytesAvailable();
-    bool        Flush();
-    int         Seek(int offset, int origin = Seek_Set);
-    SInt64      LSeek(SInt64 offset, int origin = Seek_Set);
-    bool        ChangeSize(int newSize);
-    int         CopyFromStream(File* pstream, int byteSize);
-    bool        Close();
+    // Implicit dtor and inline members: the exe's /Od COMDAT copies live in the game code (ms2memfile, 0x141629240..).
+    const char* GetFilePath()  { return FilePath.ToCStr(); }
+    bool        IsValid()      { return Valid; }
+    bool        IsWritable()   { return false; }
+    bool        Flush()        { return true; }
+    int         GetErrorCode() { return 0; }
+    int         Tell()         { return FileIndex; }
+    SInt64      LTell()        { return (SInt64)FileIndex; }
+    int         GetLength()    { return FileSize; }
+    SInt64      LGetLength()   { return (SInt64)FileSize; }
+    bool        Close()        { Valid = false; return false; }
+    int         CopyFromStream(File* pstream, int byteSize) { (void)pstream; (void)byteSize; return 0; }
+    int         Write(const UByte* pbuffer, int numBytes)   { (void)pbuffer; (void)numBytes; return 0; }
+    int Read(UByte* pbuffer, int numBytes)
+    {
+        if (FileIndex + numBytes > FileSize)
+            numBytes = FileSize - FileIndex;
+        if (numBytes > 0)
+        {
+            memcpy(pbuffer, &FileData[FileIndex], numBytes);
+            FileIndex += numBytes;
+        }
+        return numBytes;
+    }
+    int SkipBytes(int numBytes)
+    {
+        if (FileIndex + numBytes > FileSize)
+            numBytes = FileSize - FileIndex;
+        FileIndex += numBytes;
+        return numBytes;
+    }
+    int BytesAvailable() { return FileSize - FileIndex; }
+    int Seek(int offset, int origin = Seek_Set)
+    {
+        switch (origin)
+        {
+        case Seek_Set: FileIndex = offset; break;
+        case Seek_Cur: FileIndex += offset; break;
+        case Seek_End: FileIndex = FileSize - offset; break;
+        }
+        return FileIndex;
+    }
+    SInt64 LSeek(SInt64 offset, int origin = Seek_Set) { return (SInt64)Seek((int)offset, origin); }
+    bool   ChangeSize(int newSize) { FileSize = newSize; return true; }
 
 private:
     String       FilePath;  // +0x10
@@ -129,11 +153,11 @@ public:
     bool        IsWritable();
     int         Tell();
     SInt64      LTell();
-    int         GetLength();
+    int         GetLength() { return pFile->GetLength(); } // inline in the exe (0x1422fcef0)
     SInt64      LGetLength();
     int         GetErrorCode();
     int         Write(const UByte* pbuffer, int numBytes);
-    int         Read(UByte* pbuffer, int numBytes);
+    int         Read(UByte* pbuffer, int numBytes) { return pFile->Read(pbuffer, numBytes); } // inline (0x1422fd5d0)
     int         SkipBytes(int numBytes);
     int         BytesAvailable();
     bool        Flush();

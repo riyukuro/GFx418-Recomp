@@ -183,6 +183,11 @@ inline Ptr<FontLib> StateBag::GetFontLib() const
     return *(FontLib*)GetStateAddRef(State::State_FontLib);
 }
 
+inline void StateBag::SetFontLib(FontLib* pfl)
+{
+    SetState(State::State_FontLib, pfl);
+}
+
 }} // namespace Scaleform::GFx
 
 // (sfr24) sizes proven by the exe allocation before each ctor (work/sfr24/tmp/szscan.py).
