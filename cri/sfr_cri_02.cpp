@@ -5757,7 +5757,8 @@ CriBool FUN_140034960(void* player)
         CriUint32 ReadMode;
         CriUint8 ReservedD64[4];
         void* Demux;
-        CriUint8 ReservedD70[0x10];
+        CriUint8 ReservedD70[8];
+        void* InputStream;
         void* OutputStream;
         CriUint8 ReservedD88[0x140];
         CriUint32 InputCount0;
@@ -5781,7 +5782,7 @@ CriBool FUN_140034960(void* player)
     state->HeaderSize = 0;
     memset(state->AnalyzedHeader, 0, sizeof(state->AnalyzedHeader));
     state->ReadMode = 0;
-    FUN_140044fa8(state->Demux, NULL);
+    FUN_140044fa8(state->Demux, state->InputStream);
     FUN_140044fb0(state->Demux, 0, state->OutputStream, 0, (CriUint32)-1);
     FUN_140044fd8(state->Demux, 0);
     FUN_140044f9c(state->Demux);
