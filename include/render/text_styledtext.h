@@ -287,6 +287,9 @@ public:
         ~HTMLImageTagInfo();
     };
     typedef ArrayDH<HTMLImageTagInfo> HTMLImageTagInfoArray;
+    // The HTML parser (@0x14267b1c0) is a free function in the hook DLL and builds paragraphs directly.
+    friend bool FUN_14267b1c0(StyledText*, const wchar_t*, UPInt, HTMLImageTagInfoArray*, bool, bool,
+                              const StyleManagerBase*, const TextFormat*, const ParagraphFormat*);
 
     typedef ArrayLH<ParagraphPtrWrapper>      ParagraphArrayType;
     typedef ParagraphArrayType::Iterator      ParagraphsIterator;
