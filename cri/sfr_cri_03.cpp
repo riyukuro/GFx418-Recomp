@@ -4381,6 +4381,7 @@ void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
     {
         CriUint8 Reserved00[0x10];
         LPCRITICAL_SECTION Lock;
+        CriUint8 Reserved18[8];
         CriSint32 Counter20;
         CriSint32 Counter24;
         CriUint32 WriteCursor;
@@ -4402,7 +4403,7 @@ void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
             FUN_140039f50(state->Lock);
         CriUint32 capacity = state->Capacity;
         CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->WriteCursor) % capacity;
-        if (cursor == (CriUint32)((CriUint64)(chunk->Data - state->Base) % (CriUint64)capacity))
+        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
         {
             state->WriteCursor = cursor;
             state->Counter24 += chunk->Size;
@@ -4421,7 +4422,7 @@ void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
             FUN_140039f50(state->Lock);
         CriUint32 capacity = state->Capacity;
         CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->ReadCursor) % capacity;
-        if (cursor == (CriUint32)((CriUint64)(chunk->Data - state->Base) % (CriUint64)capacity))
+        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
         {
             state->ReadCursor = cursor;
             state->Counter20 += chunk->Size;
