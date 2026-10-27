@@ -1559,7 +1559,7 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray
         }
 
         PrimitiveFillType fillType = fr.pFill->GetType();
-        unsigned          shader   = ShaderManager::StaticShaderForFill(fillType, fillFlags, batchType);
+        unsigned          shader   = SManager.StaticShaderForFill(fillType, fillFlags, batchType);
         ShaderData.SetStaticShader((VertexShaderDesc::ShaderType)shader, (FragShaderDesc::ShaderType)shader,
                                    fr.pFormats[formatIndex]);
         ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
@@ -1856,7 +1856,7 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
             shader += 8;
     }
     else
-        shader = D3D9::ShaderManager::StaticShaderForFill(type, *fillFlags, batchType);
+        shader = sm->StaticShaderForFill(type, *fillFlags, batchType);
 
     psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shader, (D3D9::FragShaderDesc::ShaderType)shader, format);
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
@@ -2158,7 +2158,7 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
 // MS2-PIN: ?GetFilterPasses@?$StaticShaderManager@UFragShaderDesc@D3D9@Render@Scaleform@@UVertexShaderDesc@234@UUniform@234@VShaderInterface@234@VTexture@234@@Render@Scaleform@@QEBAIPEBVFilter@23@IPEAI@Z 0x142731f10
 // MS2-PIN: ?GetVertexFormat@?$StaticShaderManager@UFragShaderDesc@D3D9@Render@Scaleform@@UVertexShaderDesc@234@UUniform@234@VShaderInterface@234@VTexture@234@@Render@Scaleform@@QEAAPEBUVertexFormat@23@PEAUVertexElement@23@III@Z 0x142732130
 // MS2-PIN: ?MapVertexFormat@?$StaticShaderManager@UFragShaderDesc@D3D9@Render@Scaleform@@UVertexShaderDesc@234@UUniform@234@VShaderInterface@234@VTexture@234@@Render@Scaleform@@QEAAXW4PrimitiveFillType@23@PEBUVertexFormat@23@PEAPEBU523@22I@Z 0x142732210
-// MS2-PIN: ?StaticShaderForFill@?$StaticShaderManager@UFragShaderDesc@D3D9@Render@Scaleform@@UVertexShaderDesc@234@UUniform@234@VShaderInterface@234@VTexture@234@@Render@Scaleform@@SAIW4PrimitiveFillType@23@AEAII@Z 0x142736880
+// MS2-PIN: ?StaticShaderForFill@?$StaticShaderManager@UFragShaderDesc@D3D9@Render@Scaleform@@UVertexShaderDesc@234@UUniform@234@VShaderInterface@234@VTexture@234@@Render@Scaleform@@QEBAIW4PrimitiveFillType@23@AEAII@Z 0x142736880
 // MS2-PIN: ?SetColor@?$ShaderInterfaceBase@UUniform@D3D9@Render@Scaleform@@UShaderPair@234@@Render@Scaleform@@QEAAXAEBUShaderPair@D3D9@23@IVColor@23@II@Z 0x142734160
 // MS2-PIN: ?SetUniform@?$ShaderInterfaceBase@UUniform@D3D9@Render@Scaleform@@UShaderPair@234@@Render@Scaleform@@QEAAXAEBUShaderPair@D3D9@23@IPEBMIII@Z 0x142736560
 // MS2-PIN: ?SetUserUniforms@?$ShaderInterfaceBase@UUniform@D3D9@Render@Scaleform@@UShaderPair@234@@Render@Scaleform@@QEAAXAEBUShaderPair@D3D9@23@AEBVHMatrix@MatrixPoolImpl@23@H@Z 0x142736610

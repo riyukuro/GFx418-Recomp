@@ -56,7 +56,7 @@ public:
 
     // the fragment shader type of a fill; fillFlags picks the variants (bit 0 multiply cxform, bit 2 eaddalpha, bit 3
     // instanced cxform) and is updated for the fills that need them
-    static unsigned StaticShaderForFill(PrimitiveFillType fill, unsigned& fillFlags, unsigned batchType)   // 0x142736880
+    unsigned StaticShaderForFill(PrimitiveFillType fill, unsigned& fillFlags, unsigned batchType) const   // 0x142736880 (a member: rcx = this, unused)
     {
         unsigned shader;
         switch (fill)
