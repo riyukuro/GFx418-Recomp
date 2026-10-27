@@ -584,12 +584,17 @@ bool FUN_14000e760(void* p) { return FUN_14000e6b0(reinterpret_cast<AvmCharacter
 
 // The four AS2 Video-character traits live on the secondary AvmVideoCharacter base (+0x08).
 // This preserves the exe's field offsets and sends all other names through the script object.
-// MS2-FUNCTIONAL: standard-member ordering is approximated; Video-specific properties and fallback are recovered.
+// MS2-FUNCTIONAL: standard members first (slot 0x118 on the AvmCharacter), then the Video properties, then the script object.
 // @0x14000e8f0
 bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const Value& value,
                    const PropFlags& flags)
 {
     char* fields = static_cast<char*>(pvbase);
+    AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
+    // the exe tries the standard members (_x, _alpha, ...) first: slot 0x118 on this-8 (0x14000e93d)
+    if ((name.GetHashFlags() & ASConstString::Flag_StandardMember)
+        && pavm->SetStandardMember(pavm->GetStandardMemberConstant(name), value, false))
+        return true;
     if (!std::strcmp(name.ToCStr(), "deblocking"))
     {
         *reinterpret_cast<int*>(fields + 0x38) = static_cast<int>(value.ToNumber(penv));
@@ -600,16 +605,20 @@ bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const 
         *reinterpret_cast<bool*>(fields + 0x3c) = value.ToBool(penv);
         return true;
     }
-    AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
     Object* pvideo = pavm->GetASObject();
     return pvideo ? pvideo->SetMember(penv, name, value, flags) : false;
 }
 
-// MS2-FUNCTIONAL: width, height, deblocking and smoothing are returned directly; other names use the script object.
+// MS2-FUNCTIONAL: standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
 // @0x14000e9f0
 bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value* pvalue)
 {
     char* fields = static_cast<char*>(pvbase);
+    AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
+    // the exe tries the standard members first: slot 0x120 on this-8 (0x14000ea3d)
+    if ((name.GetHashFlags() & ASConstString::Flag_StandardMember)
+        && pavm->GetStandardMember(pavm->GetStandardMemberConstant(name), pvalue, false))
+        return true;
     const char* key = name.ToCStr();
     if (!std::strcmp(key, "width"))
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x30));
@@ -621,7 +630,6 @@ bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value*
         pvalue->SetBool(*reinterpret_cast<bool*>(fields + 0x3c));
     else
     {
-        AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
         Object* pvideo = pavm->GetASObject();
         return pvideo ? pvideo->GetMember(penv, name, pvalue) : false;
     }
@@ -2366,19 +2374,21 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
     object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
 }
 
-// MS2-FUNCTIONAL: returns the current function object when valid, otherwise allocates a plain Object.
+// MS2-FUNCTIONAL: the NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
+// (exe: type 0x21, slot 0x80 IsBuiltinPrototype, AddRef on this-0x20), otherwise allocates a plain Object.
 // @0x140012340
 void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
 {
     auto* object = static_cast<Scaleform::GFx::AS2::Object*>(nullptr);
     auto* thisObject = call.ThisPtr;
-    if (thisObject && thisObject->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_Function)
+    if (thisObject && thisObject->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_NetConnection
+        && !thisObject->IsBuiltinPrototype())
     {
-        auto* function = static_cast<Scaleform::GFx::AS2::FunctionObject*>(thisObject);
-        if (!function->IsNull())
-            object = static_cast<Scaleform::GFx::AS2::Object*>(function);
+        object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(thisObject) - 0x20);
+        auto* refs = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
+        *refs = (*refs + 1) & 0x8fffffffu;
     }
-    if (!object)
+    else
     {
         void* storage = call.Env->GetHeap()->Alloc(0x68);
         if (storage)
@@ -2391,8 +2401,7 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
-            if ((*count & 0x03ffffffu) == 0)
-                FUN_1425925f0(object);
+            FUN_1425925f0(object);
         }
     }
 }
