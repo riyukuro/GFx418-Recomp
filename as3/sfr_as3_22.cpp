@@ -1911,10 +1911,10 @@ insert_string:
     auto* row = reinterpret_cast<unsigned char*>(table) + bucket * 0x20;
     auto* entry = reinterpret_cast<std::uint64_t*>(row + 0x10);
     const std::uint64_t occupant = entry[0];
-    auto* sourceString = reinterpret_cast<const String*>(value[1]);
+    auto* sourceString = reinterpret_cast<const String*>(value + 1);
     if (static_cast<std::int64_t>(occupant) == -2) {
         entry[0] = UINT64_MAX;
-        entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+        entry[2] = value[0];
         new (row + 0x28) String(*sourceString);
     } else {
         std::uint64_t empty = bucket;
@@ -1930,7 +1930,7 @@ insert_string:
             target[2] = entry[2];
             new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
             entry[0] = empty;
-            entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+            entry[2] = value[0];
             *reinterpret_cast<String*>(row + 0x28) = *sourceString;
         } else {
             auto* previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
@@ -1944,7 +1944,7 @@ insert_string:
             new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
             previous[0] = empty;
             entry[0] = UINT64_MAX;
-            entry[2] = *reinterpret_cast<const std::uint64_t*>(value[0]);
+            entry[2] = value[0];
             new (row + 0x28) String(*sourceString);
         }
     }
@@ -2132,13 +2132,8 @@ extern "C" void FUN_142689cb0(void* destination, void* allocator, void* sourceSe
         auto* row = sourceTable + 2 + i * 4;
         if (static_cast<std::int64_t>(row[0]) == -2)
             continue;
-        const std::uint64_t key = row[2];
-        struct StringPair { const void* key; const Scaleform::String* value; } pair{
-            &key, reinterpret_cast<const Scaleform::String*>(row + 3)
-        };
-        AddStringHashEntry(destination, allocator,
-            reinterpret_cast<const std::uint64_t*>(&pair),
-            HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+        AddStringHashEntry(destination, allocator, row + 2,
+            HashImageKey(reinterpret_cast<const unsigned char*>(row + 2)));
     }
 }
 
@@ -2177,12 +2172,9 @@ extern "C" void FUN_14268b3e0(void* destination, void* source)
         auto* row = sourceTable + 0x10 + i * 0x20;
         if (*reinterpret_cast<std::int64_t*>(row) == -2)
             continue;
-        const std::uint64_t key = *reinterpret_cast<std::uint64_t*>(row + 0x10);
-        struct StringPair { const void* key; const Scaleform::String* value; } pair{
-            &key, reinterpret_cast<const Scaleform::String*>(row + 0x18)
-        };
-        Scaleform::AddStringHashEntry(dst + 0x28, dst + 0x28,
-            reinterpret_cast<const std::uint64_t*>(&pair), Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+        const auto* entry = reinterpret_cast<const std::uint64_t*>(row + 0x10);
+        Scaleform::AddStringHashEntry(dst + 0x28, dst + 0x28, entry,
+            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(entry)));
     }
 }
 
@@ -3721,14 +3713,12 @@ extern "C" void FUN_14268d2b0(void* object, void* stream, unsigned version)
     unsigned stringCount = 0;
     ReadAs3StreamBytes(stream, &stringCount, 4);
     for (unsigned i = 0; i < stringCount; ++i) {
-        std::uint64_t key = 0;
-        ReadAs3StreamBytes(stream, &key, 8);
-        Scaleform::String value;
-        Scaleform::ReadNarrowString(stream, &value);
-        struct StringPair { const void* key; const Scaleform::String* value; } pair{ &key, &value };
+        struct { std::uint64_t key; Scaleform::String value; } entry{ 0 };
+        ReadAs3StreamBytes(stream, &entry.key, 8);
+        Scaleform::ReadNarrowString(stream, &entry.value);
         Scaleform::AddStringHashEntry(bytes + 0x28, bytes + 0x28,
-            reinterpret_cast<const std::uint64_t*>(&pair),
-            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)));
+            reinterpret_cast<const std::uint64_t*>(&entry),
+            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&entry.key)));
     }
 }
 
