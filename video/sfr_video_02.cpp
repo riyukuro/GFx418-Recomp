@@ -3281,6 +3281,12 @@ void* FUN_1400105b0(void* object)
 // @0x140011610
 void* FUN_140011610(void* object, void** result, void* context)
 {
+    // the exe asks the interface (object + [0x6d]*4, slot 0x60) for the extent before allocating (0x140011638)
+    const auto ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
+    auto* iface = static_cast<unsigned char*>(object) + ifaceIndex * 4;
+    auto** ifaceVtable = *reinterpret_cast<void***>(iface);
+    using GetVideoExtent = void* (*)(void*);
+    auto* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(iface));
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     alignas(16) unsigned allocInfo[4] = { 2, 0, 0, 0 };
     using Allocate = void* (*)(void*, void*, size_t, const void*);
@@ -3288,10 +3294,6 @@ void* FUN_140011610(void* object, void** result, void* context)
     auto* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
     if (!shape) { *result = nullptr; return result; }
     FUN_142678490(shape);
-    const auto ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
-    auto** ifaceVtable = *reinterpret_cast<void***>(static_cast<unsigned char*>(object) + ifaceIndex * 4);
-    using GetVideoExtent = void* (*)(void*);
-    auto* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(object));
     auto* path = *reinterpret_cast<void**>(shape + 0x88);
     auto* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
     if (!provider) {
