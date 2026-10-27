@@ -933,16 +933,15 @@ longlong FUN_14004e460(longlong a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e580
-void FUN_14004e580(void)
+longlong FUN_14004e580(void)
 {
   longlong l_v1;
   
   l_v1 = FUN_14004df90();
   if (l_v1 == 0) {
-    return;
+    return 0;
   }
-  FUN_14004e460(l_v1);
-  return;
+  return FUN_14004e460(l_v1);
 }
 
 // The SJMEM error callback (FUN_14004eb90 stores it as LAB_14004e5a0; Ghidra made no function here).
