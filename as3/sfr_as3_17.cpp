@@ -4900,6 +4900,11 @@ WeakProxy** Sfr33CreateWeakProxy(const GASRefCountBase* obj, WeakProxy** out)
     if (!gc->WProxyHash.Get(obj, &proxy))
     {
         proxy = SF_HEAP_AUTO_NEW(obj) WeakProxy;
+        if (!proxy)
+        {
+            *out = NULL;
+            return out;
+        }
         proxy->RefCount = 1;
         proxy->pObject = obj;
         // RefCount (+0x10) is protected: set Flag_HasWeakRef through the raw word
