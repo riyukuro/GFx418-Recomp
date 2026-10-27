@@ -16,7 +16,14 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/render/render_matrix4x4.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+namespace Scaleform { namespace GFx {
+
+namespace AS3 {
+// The executable keeps InteractiveObject::ModifyOptimizedPlayList out of line at 0x142517e70 (sfr_as3_18).
+void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
+}
+
+namespace AS2 {
 
 namespace {
 
@@ -80,7 +87,7 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
                 if (noAdvance != pDispObj->IsNoAdvanceLocalFlagSet())
                 {
                     pDispObj->SetNoAdvanceLocalFlag(noAdvance);
-                    pDispObj->ModifyOptimizedPlayList();
+                    AS3::Sfr34_ModifyOptimizedPlayList(pDispObj);
                     InteractiveObject* pparent = pDispObj->GetParent();
                     if (pparent && !pparent->IsNoAdvanceLocalFlagSet())
                         pDispObj->PropagateNoAdvanceLocalFlag();
