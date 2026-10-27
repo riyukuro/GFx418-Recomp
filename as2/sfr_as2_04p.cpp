@@ -118,7 +118,7 @@ private:
     virtual bool DeleteMember(void* pdata, const char* name, bool isdobj);
 };
 
-// Deletes the member of the AS object (or of the character's AS object) in pdata.
+// Deletes the member of the AS object (or of the character) in pdata.
 // @0x1429384f0
 bool AS2ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool isdobj)
 {
@@ -133,7 +133,8 @@ bool AS2ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool i
         if (!pdobj)
             return false;
         InteractiveObject* pch  = static_cast<InteractiveObject*>(pdobj);
-        pobj = static_cast<AS2::AvmCharacter*>(pch->GetAvmIntObj())->GetASObject();
+        // the character's own interface (its AvmCharacter), not its AS object
+        pobj = static_cast<AS2::AvmCharacter*>(pch->GetAvmIntObj());
     }
     if (!pobj)
         return false;

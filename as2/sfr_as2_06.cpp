@@ -2617,8 +2617,7 @@ bool CSSHolder_HasStyleSheet(const void* pholder)
     return *reinterpret_cast<void* const*>(static_cast<const UByte*>(pholder) + 0x40) != 0;
 }
 
-// MS2-FUNCTIONAL the exe builds the key node and calls the AS2 ObjectInterface slot directly; this resolves the
-// same character handle and uses the recovered string context and member lookup.
+// MS2-FUNCTIONAL: the environment is read through GetLevel0Environment
 // @0x14295d5e0
 bool AS2ValueObjectInterface::HasMember(void* pdata, const char* name, bool isCharacter) const
 {
@@ -2631,13 +2630,13 @@ bool AS2ValueObjectInterface::HasMember(void* pdata, const char* name, bool isCh
         if (!displayObject)
             return false;
         InteractiveObject* interactive = static_cast<InteractiveObject*>(displayObject);
-        AS2::AvmCharacter* avm = static_cast<AS2::AvmCharacter*>(interactive->GetAvmIntObj());
-        object = avm->GetASObject();
+        object = static_cast<AS2::AvmCharacter*>(interactive->GetAvmIntObj());
     }
     if (!object)
         return false;
-    ASString key = env->StringContext.CreateConstString(name);
-    return object->HasMember(&env->StringContext, key, false);
+    // GetMember, not HasMember: the character's members (child clips, properties) only resolve through it
+    AS2::Value member;
+    return object->GetMember(env, env->StringContext.CreateConstString(name), &member);
 }
 
 // The host's reference to a string node, a wide string, an AS object or a character handle.

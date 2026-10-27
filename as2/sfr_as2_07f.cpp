@@ -196,8 +196,7 @@ void AS2ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* visitor, boo
         pobj                 = 0;
         DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
         if (pdobj)
-            pobj = static_cast<AS2::AvmCharacter*>(static_cast<InteractiveObject*>(pdobj)->GetAvmIntObj())
-                       ->GetASObject();
+            pobj = static_cast<AS2::AvmCharacter*>(static_cast<InteractiveObject*>(pdobj)->GetAvmIntObj());
     }
     AS2ValueObjectInterface_MemberVisitor shim(proot, penv, visitor);
     pobj->VisitMembers(&penv->StringContext, &shim,

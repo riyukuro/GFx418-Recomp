@@ -71,7 +71,11 @@ bool AS2ValueObjectInterface::GetMember(void* pdata, const char* name, Value* pv
     AS2::Environment*     penv  = VoiEnv(proot);
     AS2::ObjectInterface* pobj  = VoiObject(pdata, pMovieRoot, isdobj);
     if (!pobj)
+    {
+        if (pval)
+            pval->SetUndefined();
         return false;
+    }
     AS2::Value asval;
     if (!pobj->GetMember(penv, penv->CreateString(name), &asval))
     {
