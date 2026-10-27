@@ -315,7 +315,9 @@ struct CriMvHeapWorkState
 
 struct CriMvReadBufferState
 {
-    CriUint8 Reserved0[0xd60];
+    CriUint8 Reserved0[0xae0];
+    CriUint32 AverageReadSize;                                    // 0xae0, divided by 8 at 0x140037134
+    CriUint8 Reserved0b[0x27c];
     CriSint32 Mode;
     CriUint8 Reserved1[0x14];
     void* ReadyBuffer;
@@ -333,11 +335,13 @@ struct CriMvReadBufferState
     CriSint32 BufferMode;
     CriUint32 BufferSize;
     void* Buffer;
-    CriUint8 Reserved8[0x60];
-    CriUint32 AverageReadSize;
-    CriUint8 Reserved9[0x3f0];
-    CriFloat32 ReadRate;
+    CriUint8 Reserved8[0x54];
+    CriFloat32 ReadRate;                                          // 0xed4, the reload threshold in seconds
 };
+static_assert(offsetof(CriMvReadBufferState, Mode) == 0xd60, "CRI read buffer mode offset");
+static_assert(offsetof(CriMvReadBufferState, ReadBufferSize) == 0xdf8, "CRI read buffer size offset");
+static_assert(offsetof(CriMvReadBufferState, Buffer) == 0xe78, "CRI read buffer offset");
+static_assert(offsetof(CriMvReadBufferState, ReadRate) == 0xed4, "CRI reload threshold offset");
 
 struct CriMvDecoderHandleFields
 {
