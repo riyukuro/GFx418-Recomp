@@ -1717,12 +1717,12 @@ cri_u4 FUN_140067630(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri
   cri_u8 arg3 = cri_p2;
   cri_u8 arg4 = cri_p3;
   cri_u4 u_v1;
-  cri_u8 local_res18;
-  cri_u8 local_res20;
-  
-  local_res18 = arg3;
-  local_res20 = arg4;
-  u_v1 = FUN_14029dd60(arg1,arg2,&local_res18);
+  // The exe hands its home slots on as the va_list; copy the named and stack arguments into one ordered array.
+  cri_u8 local_res18[10] = {arg3, arg4};
+  va_list ap; va_start(ap,cri_p3);
+  for (int i = 2; i < 10; ++i) local_res18[i] = va_arg(ap,cri_u8);
+  va_end(ap);
+  u_v1 = FUN_14029dd60(arg1,arg2,local_res18);
   return u_v1;
 }
 
@@ -56161,15 +56161,13 @@ void FUN_1400afde0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   cri_u8 arg2 = cri_p1;
   cri_u8 arg3 = cri_p2;
   cri_u8 arg4 = cri_p3;
-  cri_u8 local_res10;
-  cri_u8 local_res18;
-  cri_u8 local_res20;
-  
-  local_res10 = arg2;
-  local_res18 = arg3;
-  local_res20 = arg4;
+  // The exe hands its home slots on as the va_list; copy the named and stack arguments into one ordered array.
+  cri_u8 local_res10[11] = {arg2, arg3, arg4};
+  va_list ap; va_start(ap,cri_p3);
+  for (int i = 3; i < 11; ++i) local_res10[i] = va_arg(ap,cri_u8);
+  va_end(ap);
   memset(&DAT_143d74840,0,0x100);
-  FUN_140067680((char *)&DAT_143d74840,0x100,(char *)arg1,(va_list)&local_res10);
+  FUN_140067680((char *)&DAT_143d74840,0x100,(char *)arg1,(va_list)local_res10);
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
