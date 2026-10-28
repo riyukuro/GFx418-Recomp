@@ -2620,10 +2620,11 @@ void FUN_140068990(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   longlong l_v1;
-  int local_res8;
-  int local_resc;
+  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int &local_res8 = local_res[0];
+  int &local_resc = local_res[1];
   
-  FUN_1400688f0(arg1,arg1 + 0x16b0,&local_res8);
+  FUN_1400688f0(arg1,arg1 + 0x16b0,local_res);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
   l_v1 = *(longlong *)((char *)arg1 + 0x16c0) + (longlong)local_resc;
@@ -2792,10 +2793,11 @@ void FUN_140068db0(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   longlong l_v1;
-  int local_res8;
-  int local_resc;
+  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int &local_res8 = local_res[0];
+  int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),&local_res8,arg1 + 0x1638,
+  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,arg1 + 0x1638,
                 arg1 + 0x174c);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
@@ -2815,10 +2817,11 @@ void FUN_140068e70(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   longlong l_v1;
-  int local_res8;
-  int local_resc;
+  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int &local_res8 = local_res[0];
+  int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),&local_res8,arg1 + 0x1658,
+  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,arg1 + 0x1658,
                 arg1 + 6000);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
@@ -2838,12 +2841,13 @@ void FUN_140068f30(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   longlong l_v1;
-  int local_res8;
-  int local_resc;
+  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int &local_res8 = local_res[0];
+  int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),&local_res8,arg1 + 0x1638,
+  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,arg1 + 0x1638,
                 arg1 + 0x174c);
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1460),&local_res8,arg1 + 0x1658,
+  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1460),local_res,arg1 + 0x1658,
                 arg1 + 6000);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
