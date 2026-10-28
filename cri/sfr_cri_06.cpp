@@ -80,10 +80,10 @@ extern "C" int DAT_143a488c0;
 extern "C" int DAT_143a4a0c8;
 extern "C" int DAT_143a4a0cc;
 extern "C" int DAT_143a4a0d0;
-extern "C" int DAT_143a4a5e8;
+extern "C" unsigned long long DAT_143a4a5e8;
 extern "C" int DAT_143badb84;
 extern "C" int DAT_143badb88;
-extern "C" int DAT_143badbbc;
+extern "C" unsigned char DAT_143badbb8;
 extern "C" int DAT_143badbdc;
 extern "C" int DAT_143badc00;
 extern "C" int DAT_143badf80;
@@ -13778,7 +13778,7 @@ void thunk_FUN_140050520(cri_any cri_unused, ...)
     u_v5 = 0;
     DAT_143badb84 = DAT_143badbdc;
     if (0 < DAT_143badbdc) {
-      pu_v4 = CRI_ADDR(DAT_143badbbc);
+      pu_v4 = (cri_u4 *)(&DAT_143badbb8 + 4);
       u_v7 = u_v5;
       while( true ) {
         l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x20 + 2,0x7c);

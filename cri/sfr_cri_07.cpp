@@ -268,7 +268,7 @@ extern "C" unsigned char DAT_1431bc3f8;
 extern "C" unsigned char DAT_1431bc410;
 extern "C" unsigned char DAT_1431bc440;
 extern "C" unsigned char DAT_143a4a120;
-extern "C" int DAT_143a4a5e8;
+extern "C" unsigned long long DAT_143a4a5e8;
 extern "C" double DAT_143d4abf0;
 extern "C" unsigned char DAT_143d4adf0;
 extern "C" unsigned char DAT_143d4edf0;

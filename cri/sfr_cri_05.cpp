@@ -19,13 +19,13 @@ extern "C" cri_u64 DAT_143babdd0;
 extern "C" cri_u64 DAT_143babdd8;
 extern "C" cri_u64 DAT_143babde0;
 extern "C" cri_u64 DAT_143badb08;
-extern "C" cri_u64 DAT_143badb10;
+extern "C" int DAT_143badb10;
 extern "C" cri_u64 DAT_143badb18;
 extern "C" cri_u64 DAT_143badb38;
 extern "C" cri_u64 DAT_143badb40;
 extern "C" cri_u64 DAT_143badb48;
 extern "C" cri_u64 DAT_143badb50;
-extern "C" cri_u64 DAT_143badbdc;
+extern "C" int DAT_143badbdc;
 extern "C" cri_u64 DAT_143badc00;
 extern "C" cri_u64 DAT_143c490e0;
 extern "C" cri_u64 DAT_143c490f0;
@@ -97,12 +97,9 @@ extern "C" unsigned char DAT_143badab0;
 extern "C" int DAT_143badb24;
 extern "C" int DAT_143badb30;
 extern "C" unsigned char DAT_143badb60;
-extern "C" unsigned char DAT_143badb64;
-extern "C" unsigned char DAT_143badb68;
 extern "C" int DAT_143badb84;
 extern "C" int DAT_143badb88;
 extern "C" unsigned char DAT_143badbb8;
-extern "C" unsigned char DAT_143badbbc;
 extern "C" int DAT_143badf80;
 extern "C" int DAT_143c490e8;
 extern "C" int DAT_143c49100;
@@ -2319,8 +2316,8 @@ void FUN_1400500b0(uint a1,longlong a2)
       pu_v2 = pu_v1 + 3;
       u_v3 = u_v3 - 1;
       *pu_v1 = *(cri_u32 *)(a2 + -(longlong)&DAT_143badb60 + (longlong)pu_v1);
-      pu_v1[1] = *(cri_u32 *)(a2 + -(longlong)&DAT_143badb68 + (longlong)pu_v2);
-      pu_v1[2] = *(cri_u32 *)(a2 + -(longlong)&DAT_143badb64 + (longlong)pu_v2);
+      pu_v1[1] = *(cri_u32 *)(a2 + -(longlong)(&DAT_143badb60 + 8) + (longlong)pu_v2);
+      pu_v1[2] = *(cri_u32 *)(a2 + -(longlong)(&DAT_143badb60 + 4) + (longlong)pu_v2);
       pu_v1 = pu_v2;
     } while (u_v3 != 0);
   }
@@ -2351,9 +2348,9 @@ void FUN_140050100(void)
           i_v2 = *(int *)((longlong)&DAT_143badbb8 + u_v3);
         }
         FUN_140068070(l_v1,i_v2);
-        i_v2 = *(int *)((longlong)&DAT_143badb64 + u_v3);
+        i_v2 = *(int *)((longlong)&DAT_143badb60 + 4 + u_v3);
         if (i_v2 == 0x5a5a5a5a) {
-          i_v2 = *(int *)((longlong)&DAT_143badbbc + u_v3);
+          i_v2 = *(int *)((longlong)&DAT_143badbb8 + 4 + u_v3);
         }
         FUN_140067fc0(l_v1,i_v2);
         i_v2 = (cri_nr<decltype(i_v2)>::t)DAT_143c490e8;
@@ -2583,7 +2580,7 @@ void FUN_140050520(void)
     u_v5 = 0;
     DAT_143badb84 = (cri_nr<decltype(DAT_143badb84)>::t)DAT_143badbdc;
     if (0 < DAT_143badbdc) {
-      pu_v4 = (cri_nr<decltype(pu_v4)>::t)&DAT_143badbbc;
+      pu_v4 = (cri_nr<decltype(pu_v4)>::t)(&DAT_143badbb8 + 4);
       u_v7 = u_v5;
       while( true ) {
         l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x20 + 2,0x7c);
