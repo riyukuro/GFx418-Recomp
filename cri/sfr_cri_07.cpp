@@ -2987,11 +2987,13 @@ cri_u8 FUN_140069270(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v2;
   cri_u1 *pu_v3;
   cri_u4 u_v4;
-  cri_u1 loc_1f8 [80];
-  cri_u1 loc_1a8 [64];
-  cri_u1 loc_168 [168];
-  cri_u4 loc_c0;
-  cri_u1 loc_b8 [184];
+  // One packed frame like the exe: the 0xb0-byte frame info at loc_168 ends with the loc_c0 field.
+  __declspec(align(16)) cri_u1 frame_[504];
+  cri_u1 *loc_1f8 = frame_;
+  cri_u1 *loc_1a8 = frame_ + 80;
+  cri_u1 *loc_168 = frame_ + 144;
+  cri_u4 &loc_c0 = *(cri_u4 *)(frame_ + 312);
+  cri_u1 *loc_b8 = frame_ + 320;
   
   FUN_140035090(arg3);
   i_v1 = FUN_140035560(arg1);
