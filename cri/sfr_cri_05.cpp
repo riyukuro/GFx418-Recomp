@@ -2571,10 +2571,11 @@ void FUN_140050520(void)
   DAT_143c49100 = DAT_143c49100 + 1;
   if ((DAT_143c49100 == 1) && (i_v1 = FUN_1400501f0(), 1 < i_v1)) {
     DAT_143c490f8 = (cri_u64)FUN_1400682e0(&DAT_143badb88,0x30);
-    DAT_143c490f0 = (cri_nr<decltype(DAT_143c490f0)>::t)&DAT_143badf80;
-    memset(&DAT_143badf80,0,0x9b100);
-    DAT_143c490e0 = (cri_nr<decltype(DAT_143c490e0)>::t)&DAT_143badc00;
-    memset(&DAT_143badc00,0,0x300);
+    // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
+    DAT_143c490f0 = ((cri_u64)&DAT_143badf80 + 0x5f) & ~(cri_u64)0x7f;
+    memset((void *)DAT_143c490f0,0,0x9b100);
+    DAT_143c490e0 = ((cri_u64)&DAT_143badc00 + 0x5f) & ~(cri_u64)0x7f;
+    memset((void *)DAT_143c490e0,0,0x300);
     DAT_143badbdc = 3;
     FUN_1400677f0();
     u_v5 = 0;
@@ -2583,7 +2584,7 @@ void FUN_140050520(void)
       pu_v4 = (cri_nr<decltype(pu_v4)>::t)(&DAT_143badbb8 + 4);
       u_v7 = u_v5;
       while( true ) {
-        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x20 + 2,0x7c);
+        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x100 + 0x10,0x7c);  // per-thread work area at entry + 0x10
         *(longlong *)(u_v5 + (longlong)DAT_143c490e0) = l_v3;
         if (l_v3 == 0) break;
         pu_v4[-1] = 0xffffffff;
