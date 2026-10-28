@@ -281,6 +281,7 @@ void     FUN_140044f9c(void* demux);
 void     FUN_140046798(void* streamJoint);
 void     FUN_1400420b0(void* manager, void* heap);
 void     FUN_140043be0(void* decoder);
+void     FUN_140044560(CriUint64* adapter);
 void     FUN_140028074(void* heap);
 void     FUN_142584540(void* event, CriSint32 timeout);
 void     FUN_14258b260(void* event);
@@ -6394,6 +6395,7 @@ void FUN_140030cb0(void* player)
 {
     CriUint8* bytes = (CriUint8*)player;
     void** fields = (void**)player;
+    void* heap = fields[0xdf0 / sizeof(void*)];
     if (fields[0xe28 / sizeof(void*)])
     {
         FUN_140046784(fields[0xe28 / sizeof(void*)]);
@@ -6401,7 +6403,7 @@ void FUN_140030cb0(void* player)
     }
     if (fields[0xe10 / sizeof(void*)])
     {
-        FUN_1400420b0(fields[0xe10 / sizeof(void*)], fields[0xee0 / sizeof(void*)]);
+        FUN_1400420b0(fields[0xe10 / sizeof(void*)], heap);
         fields[0xe10 / sizeof(void*)] = 0;
     }
     if (fields[0xe40 / sizeof(void*)])
@@ -6411,7 +6413,7 @@ void FUN_140030cb0(void* player)
     }
     if (fields[0xe08 / sizeof(void*)])
     {
-        FUN_140043be0(fields[0xe08 / sizeof(void*)]);
+        FUN_140044560((CriUint64*)fields[0xe08 / sizeof(void*)]);
         fields[0xe08 / sizeof(void*)] = 0;
     }
     if (fields[0xd88 / sizeof(void*)])
