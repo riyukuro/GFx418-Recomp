@@ -1382,7 +1382,7 @@ void FUN_140066f80(cri_any cri_p0, ...)
     i_v1 = 1;
   }
   FUN_140066e90(arg1,i_v1);
-  FUN_140066f30();
+  FUN_140066f30(arg1,i_v1);  // the exe tail-jumps with rcx/edx intact (FUN_140066e90 only clobbers rax)
   return;
 }
 
