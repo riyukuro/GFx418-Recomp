@@ -6,6 +6,7 @@
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
+#include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_button.h"
 
@@ -18,6 +19,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class AvmButton : public AvmCharacter, public AvmButtonBase
 {
 public:
+    Ptr<ButtonObject> ASButtonObj; // +0x38, created on demand by GetButtonASObject (sfr_as2_05d)
+
     AvmButton(Button* pbutton);
 
     // AvmDisplayObjBase
