@@ -752,7 +752,8 @@ namespace AS3 {
 
 using namespace Video;
 
-// The SWF clock adapter stores a strong reference to its target sprite after the SyncObject base.
+// The SWF clock adapter holds a weak reference to its target sprite after the SyncObject base: +0x10 is the target's
+// WeakPtrProxy (CreateWeakProxy, 0x14257dc50), released with the proxy's own count, not RefCountNTSImpl::Release.
 class SwfVideoSyncObject : public VideoPlayer::SyncObject
 {
 public:
@@ -760,41 +761,37 @@ public:
     virtual ~SwfVideoSyncObject();
     // This unit's exe copies of SyncObject's inline slots (0x140025ca0..0x140025cd0) are separate functions from sfr_video_01's,
     // so they are written out here rather than reusing the shared SyncObject:: symbols.
-    virtual void SetStartFrame(unsigned frame) { *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(this) + 0x18) = frame; } // @0x140025ca0
+    virtual void SetStartFrame(unsigned frame) { StartFrame = frame; } // @0x140025ca0
     virtual void Start() {}                                                                                                             // @0x140025cb0
     virtual void Stop() {}                                                                                                              // @0x140025cc0
     virtual void Pause(bool sw) { (void)sw; }                                                                                           // @0x140025cd0
     virtual void GetTime(UInt64* count, UInt64* unit);
 
-    void* pTarget;
-    float FrameDuration;
+    WeakPtr<RefCountWeakSupportImpl> pTarget; // +0x10
+    UInt32 StartFrame;                        // +0x18
+    float  FrameDuration;                     // +0x1c
 };
 
-// MS2-FUNCTIONAL: adapts the SWF target's frame clock; the target is held through the engine refcount core.
+// MS2-FUNCTIONAL: adapts the SWF target's frame clock: the start frame and the movie's frame duration (+0x274).
+// The exe calls the target's vfunc without a null check (only the weak-proxy fetch is guarded); the one caller
+// (SetSwfSync, 0x140025ec0) passes the movie's live sprite.
 // @0x140025c30
 SwfVideoSyncObject::SwfVideoSyncObject(Sprite* target)
-    : VideoPlayer::SyncObject(), pTarget(target ? FUN_14257dc50(target) : NULL), FrameDuration(0.0f)
+    : VideoPlayer::SyncObject(), pTarget(reinterpret_cast<RefCountWeakSupportImpl*>(target))
 {
-    UInt32 frame = 0;
-    if (target)
-    {
-        void** vtable = *reinterpret_cast<void***>(target);
-        frame = reinterpret_cast<UInt32 (__fastcall*)(Sprite*)>(vtable[0x328 / sizeof(void*)])(target);
-        void* timeline = reinterpret_cast<void**>(target)[4];
-        FrameDuration = *reinterpret_cast<float*>(reinterpret_cast<UByte*>(timeline) + 0x10 + 0x274);
-    }
-    *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(this) + 0x18) = frame;
+    void** vtable = *reinterpret_cast<void***>(target);
+    StartFrame = reinterpret_cast<UInt32 (__fastcall*)(Sprite*)>(vtable[0x328 / sizeof(void*)])(target);
+    UByte* timeline = reinterpret_cast<UByte**>(target)[4];
+    UByte* def = *reinterpret_cast<UByte**>(timeline + 0x10);
+    FrameDuration = *reinterpret_cast<float*>(def + 0x274);
 }
 
 // The novtable SyncObject base skips the exe's store of 0x1431b4f78 here and in FUN_140025e50: a dead store, since
 // ~RefCountNTSImplCore (0x14257db50) overwrites it straight away.
-// MS2-FUNCTIONAL: releases the target refcount core before the common SyncObject base teardown.
+// MS2-FUNCTIONAL: releases the target's weak proxy (pTarget's dtor) before the common SyncObject base teardown.
 // @0x140025ce0
 SwfVideoSyncObject::~SwfVideoSyncObject()
 {
-    if (pTarget)
-        FUN_14257dcd0(pTarget);
-    pTarget = NULL;
 }
 
 // @0x140025e50
@@ -810,42 +807,21 @@ SwfVideoSyncObject* FUN_140025e50(SwfVideoSyncObject* self, UInt32 flags)
 // @0x140025d30
 void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
 {
-    void* core = pTarget;
-    if (!core)
+    // The proxy is dropped once the sprite has died; a sprite at zero refs reads as gone.
+    Ptr<RefCountWeakSupportImpl> target = pTarget;
+    if (target)
     {
-        *count = 0;
-        *unit = 1000;
-        return;
+        void** vtable = *reinterpret_cast<void***>(target.GetPtr());
+        UInt32 current = reinterpret_cast<UInt32 (__fastcall*)(void*)>(vtable[0x328 / sizeof(void*)])(target.GetPtr());
+        if (current > StartFrame)
+        {
+            *unit = 1000000;
+            *count = (UInt64)((float)(current - StartFrame) * FrameDuration * (float)*unit);
+            return;
+        }
     }
-
-    void* target = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(core) + 8);
-    if (!target)
-    {
-        FUN_14257dcd0(core);
-        pTarget = NULL;
-        *count = 0;
-        *unit = 1000;
-        return;
-    }
-
-    volatile LONG* refs = reinterpret_cast<volatile LONG*>(reinterpret_cast<UByte*>(core) + 4);
-    InterlockedIncrement(refs);
-    InterlockedIncrement(refs);
-    FUN_14257dcd0(core);
-    void** vtable = *reinterpret_cast<void***>(target);
-    UInt32 current = reinterpret_cast<UInt32 (__fastcall*)(void*)>(vtable[0x328 / sizeof(void*)])(target);
-    UInt32 start = *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(this) + 0x18);
-    if (current > start)
-    {
-        *unit = 1000000;
-        *count = (UInt64)((double)(current - start) * FrameDuration * 1000000.0);
-    }
-    else
-    {
-        *count = 0;
-        *unit = 1000;
-    }
-    FUN_14257dcd0(core);
+    *count = 0;
+    *unit = 1000;
 }
 MS2_REPLACE_METHOD(0x140025D30, SwfVideoSyncObject, GetTime, 276, 0xC89B171E);
 
