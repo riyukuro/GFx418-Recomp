@@ -3043,24 +3043,27 @@ cri_u8 FUN_140069480(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri
   int i_v2;
   longlong l_v3;
   cri_u8 u_v4;
-  cri_u8 loc_178;
-  int loc_170;
-  int loc_16c;
-  cri_u4 loc_168;
-  cri_u8 loc_160;
-  uint loc_158;
-  uint loc_154;
-  cri_u4 loc_150;
-  cri_u8 loc_148;
-  uint loc_140;
-  uint loc_13c;
-  cri_u4 loc_138;
+  // Three {ptr, w, h, stride} plane records at rsp+0x30 in the exe; FUN_140044950 gets their address.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_178 = *(cri_u8 *)(frame_ + 0);
+  int &loc_170 = *(int *)(frame_ + 8);
+  int &loc_16c = *(int *)(frame_ + 12);
+  cri_u4 &loc_168 = *(cri_u4 *)(frame_ + 16);
+  cri_u8 &loc_160 = *(cri_u8 *)(frame_ + 24);
+  uint &loc_158 = *(uint *)(frame_ + 32);
+  uint &loc_154 = *(uint *)(frame_ + 36);
+  cri_u4 &loc_150 = *(cri_u4 *)(frame_ + 40);
+  cri_u8 &loc_148 = *(cri_u8 *)(frame_ + 48);
+  uint &loc_140 = *(uint *)(frame_ + 56);
+  uint &loc_13c = *(uint *)(frame_ + 60);
+  cri_u4 &loc_138 = *(cri_u4 *)(frame_ + 64);
   cri_u8 loc_128 [10];
   cri_u8 loc_d8 [22];
-  cri_u8 loc_28;
-  int loc_20;
-  int loc_1c;
-  cri_u4 loc_18;
+  __declspec(align(16)) cri_u8 frame_28[0x18];
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_28 + 0);
+  int &loc_20 = *(int *)(frame_28 + 8);
+  int &loc_1c = *(int *)(frame_28 + 12);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_28 + 16);
   uint loc_10;
   
   loc_10 = (uint)(*(longlong *)((char *)arg1 + 0xe40) != 0);
@@ -26799,12 +26802,14 @@ void FUN_14008a180(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   ulonglong u_v2;
   int local_res8 [2];
   int local_res18 [2];
-  int loc_28;
-  int loc_24;
-  int loc_20;
-  int loc_1c;
-  int loc_18;
-  int loc_14;
+  // FUN_140089e90 fills one 6-int struct at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x18];
+  int &loc_28 = *(int *)(frame_ + 0);
+  int &loc_24 = *(int *)(frame_ + 4);
+  int &loc_20 = *(int *)(frame_ + 8);
+  int &loc_1c = *(int *)(frame_ + 12);
+  int &loc_18 = *(int *)(frame_ + 16);
+  int &loc_14 = *(int *)(frame_ + 20);
   
   *arg3 = 0;
   arg3[1] = 0;
@@ -26915,10 +26920,12 @@ void FUN_14008a430(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong *pl_v6;
   longlong *pl_v7;
   longlong *pl_v8;
-  longlong loc_b8;
-  longlong loc_b0;
-  int loc_a8;
-  longlong loc_a0 [19];
+  // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
+  __declspec(align(16)) cri_u8 frame_[0xb0];
+  longlong &loc_b8 = *(longlong *)(frame_ + 0);
+  longlong &loc_b0 = *(longlong *)(frame_ + 8);
+  int &loc_a8 = *(int *)(frame_ + 16);
+  longlong (&loc_a0)[19] = *(longlong (*)[19])(frame_ + 24);
   
   u_v1 = *(uint *)((char *)arg1 + 0x71c);
   pl_v8 = &loc_b8;
@@ -26999,10 +27006,12 @@ void FUN_14008a5b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong *pl_v5;
   longlong *pl_v6;
   longlong *pl_v7;
-  longlong loc_b8;
-  longlong loc_b0;
-  int loc_a8;
-  longlong loc_a0 [19];
+  // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
+  __declspec(align(16)) cri_u8 frame_[0xb0];
+  longlong &loc_b8 = *(longlong *)(frame_ + 0);
+  longlong &loc_b0 = *(longlong *)(frame_ + 8);
+  int &loc_a8 = *(int *)(frame_ + 16);
+  longlong (&loc_a0)[19] = *(longlong (*)[19])(frame_ + 24);
   
   u_v1 = *(uint *)((char *)arg1 + 0x71c);
   pl_v6 = &loc_b8;
@@ -27258,10 +27267,12 @@ void FUN_14008ab60(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u4 u_v9;
   cri_u4 u_v10;
   int i_v11;
-  cri_u4 loc_58;
-  cri_u4 loc_54;
-  cri_u4 loc_50;
-  cri_u4 loc_4c;
+  // FUN_14008a830 fills int[4] at rsp+0x70 in the exe (loc_58..loc_4c).
+  __declspec(align(16)) cri_u8 frame_[0x10];
+  cri_u4 &loc_58 = *(cri_u4 *)(frame_ + 0);
+  cri_u4 &loc_54 = *(cri_u4 *)(frame_ + 4);
+  cri_u4 &loc_50 = *(cri_u4 *)(frame_ + 8);
+  cri_u4 &loc_4c = *(cri_u4 *)(frame_ + 12);
   cri_u4 loc_48;
   int iStack_44;
   cri_u4 loc_40;
@@ -56577,13 +56588,16 @@ cri_u4 FUN_1400b06c0(cri_any cri_p0, cri_any cri_p1, ...)
 ulonglong FUN_1400b07d0(cri_any cri_p0, ...)
 {
   int *arg1 = cri_p0;
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   int i_v1;
   ulonglong u_v2;
   
   if (DAT_143d68390 != (cri_code *)0x0) {
                     /* WARNING: Could not recover jumptable at 0x0001400b07ea. Too many branches */
                     /* WARNING: Treating indirect jump as call */
-    u_v2 = (*DAT_143d68390)();
+    u_v2 = (*DAT_143d68390)(arg1,a2,a3,a4);
     return u_v2;
   }
   FUN_1400afd70();

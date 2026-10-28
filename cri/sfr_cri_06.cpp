@@ -3936,10 +3936,12 @@ void FUN_140058b10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong *pl_v2;
   cri_code *pc_v3;
   longlong l_v4;
-  void *loc_38;
-  int loc_30;
-  void *loc_28;
-  int loc_20;
+  // Two {ptr, len} out-structs at rsp+0x20 / rsp+0x30 in the exe; slots 0x30 and 0x40 take their address.
+  __declspec(align(16)) cri_u8 frame_[0x20];
+  void *&loc_38 = *(void **)(frame_ + 0);
+  int &loc_30 = *(int *)(frame_ + 8);
+  void *&loc_28 = *(void **)(frame_ + 16);
+  int &loc_20 = *(int *)(frame_ + 24);
   
   i_v1 = *(int *)((char *)arg1 + 0xc94);
   l_v4 = (longlong)i_v1;
@@ -4038,8 +4040,10 @@ uint FUN_140058e00(cri_any cri_p0, cri_any cri_p1, ...)
   longlong *arg2 = cri_p1;
   int i_v1;
   longlong l_v2;
-  int loc_28;
-  cri_u4 uStack_24;
+  // Slot 0x30 fills a {ptr, len @+8} struct at rsp+0x20 in the exe; loc_28/uStack_24 are its pointer halves.
+  __declspec(align(16)) cri_u8 frame_[0x10];
+  int &loc_28 = *(int *)(frame_ + 0);
+  cri_u4 &uStack_24 = *(cri_u4 *)(frame_ + 4);
   cri_u1 loc_18 [16];
   
   *(cri_u4 *)((char *)arg1 + 0xd0c) = 0;
@@ -7376,20 +7380,26 @@ cri_u4 FUN_14005b040(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b090
-void FUN_14005b090(cri_any cri_unused, ...)
+void FUN_14005b090(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b80 != (cri_code *)0x0) {
-    (*DAT_143e64b80)();
+    (*DAT_143e64b80)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0b0
-void FUN_14005b0b0(cri_any cri_unused, ...)
+void FUN_14005b0b0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b78 != (cri_code *)0x0) {
-    (*DAT_143e64b78)();
+    (*DAT_143e64b78)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
@@ -7417,104 +7427,134 @@ void FUN_14005b0f0(cri_any cri_p0, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b110
-void FUN_14005b110(cri_any cri_unused, ...)
+void FUN_14005b110(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b28 != (cri_code *)0x0) {
-    (*DAT_143e64b28)();
+    (*DAT_143e64b28)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b130
-void FUN_14005b130(cri_any cri_unused, ...)
+void FUN_14005b130(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b90 != (cri_code *)0x0) {
-    (*DAT_143e64b90)();
+    (*DAT_143e64b90)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b150
-void FUN_14005b150(cri_any cri_unused, ...)
+void FUN_14005b150(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b08 != (cri_code *)0x0) {
-    (*DAT_143e64b08)();
+    (*DAT_143e64b08)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b170
-void FUN_14005b170(cri_any cri_unused, ...)
+void FUN_14005b170(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b68 != (cri_code *)0x0) {
-    (*DAT_143e64b68)();
+    (*DAT_143e64b68)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b190
-void FUN_14005b190(cri_any cri_unused, ...)
+void FUN_14005b190(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b10 != (cri_code *)0x0) {
-    (*DAT_143e64b10)();
+    (*DAT_143e64b10)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b1b0
-void FUN_14005b1b0(cri_any cri_unused, ...)
+void FUN_14005b1b0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b00 != (cri_code *)0x0) {
-    (*DAT_143e64b00)();
+    (*DAT_143e64b00)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b1d0
-void FUN_14005b1d0(cri_any cri_unused, ...)
+void FUN_14005b1d0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b98 != (cri_code *)0x0) {
-    (*DAT_143e64b98)();
+    (*DAT_143e64b98)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b200
-void FUN_14005b200(cri_any cri_unused, ...)
+void FUN_14005b200(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b70 != (cri_code *)0x0) {
-    (*DAT_143e64b70)();
+    (*DAT_143e64b70)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b220
-void FUN_14005b220(cri_any cri_unused, ...)
+void FUN_14005b220(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b40 != (cri_code *)0x0) {
-    (*DAT_143e64b40)();
+    (*DAT_143e64b40)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b240
-cri_u8 FUN_14005b240(cri_any cri_unused, ...)
+cri_u8 FUN_14005b240(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   cri_u8 u_v1;
   
   if (DAT_143e64b48 != (cri_code *)0x0) {
                     /* WARNING: Could not recover jumptable at 0x00014005b24c. Too many branches */
                     /* WARNING: Treating indirect jump as call */
-    u_v1 = (*DAT_143e64b48)();
+    u_v1 = (*DAT_143e64b48)((longlong)cri_p0,a2,a3,a4);
     return u_v1;
   }
   return 0;
@@ -7522,50 +7562,65 @@ cri_u8 FUN_14005b240(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b260
-void FUN_14005b260(cri_any cri_unused, ...)
+void FUN_14005b260(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64ba0 != (cri_code *)0x0) {
-    (*DAT_143e64ba0)();
+    (*DAT_143e64ba0)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b280
-void FUN_14005b280(cri_any cri_unused, ...)
+void FUN_14005b280(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b18 != (cri_code *)0x0) {
-    (*DAT_143e64b18)();
+    (*DAT_143e64b18)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2a0
-void FUN_14005b2a0(cri_any cri_unused, ...)
+void FUN_14005b2a0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64ba8 != (cri_code *)0x0) {
-    (*DAT_143e64ba8)();
+    (*DAT_143e64ba8)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2c0
-void FUN_14005b2c0(cri_any cri_unused, ...)
+void FUN_14005b2c0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b38 != (cri_code *)0x0) {
-    (*DAT_143e64b38)();
+    (*DAT_143e64b38)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2e0
-void FUN_14005b2e0(cri_any cri_unused, ...)
+void FUN_14005b2e0(cri_any cri_p0, ...)
 {
+  va_list ap; va_start(ap,cri_p0);
+  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
+  va_end(ap);
   if (DAT_143e64b30 != (cri_code *)0x0) {
-    (*DAT_143e64b30)();
+    (*DAT_143e64b30)((longlong)cri_p0,a2,a3,a4);
   }
   return;
 }
@@ -11626,16 +11681,18 @@ void FUN_1400622f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong arg3 = cri_p2;
   cri_u8 u_v1;
   int i_v2;
-  cri_u8 loc_58;
-  uint loc_50;
-  uint loc_4c;
-  uint loc_48;
-  cri_u8 loc_38;
-  cri_u8 loc_30;
-  cri_u8 loc_28;
-  cri_u4 loc_20;
-  cri_u4 loc_1c;
-  cri_u4 loc_18;
+  // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
+  uint &loc_50 = *(uint *)(frame_ + 8);
+  uint &loc_4c = *(uint *)(frame_ + 12);
+  uint &loc_48 = *(uint *)(frame_ + 16);
+  cri_u8 &loc_38 = *(cri_u8 *)(frame_ + 32);
+  cri_u8 &loc_30 = *(cri_u8 *)(frame_ + 40);
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_ + 48);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_1c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_ + 64);
   
   loc_38 = *(cri_u8 *)(arg1 + 8);
   u_v1 = *(cri_u8 *)(arg3 + 8);
@@ -11676,16 +11733,18 @@ void FUN_1400623f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong arg3 = cri_p2;
   cri_u8 u_v1;
   int i_v2;
-  cri_u8 loc_58;
-  uint loc_50;
-  uint loc_4c;
-  uint loc_48;
-  cri_u8 loc_38;
-  cri_u8 loc_30;
-  cri_u8 loc_28;
-  cri_u4 loc_20;
-  cri_u4 loc_1c;
-  cri_u4 loc_18;
+  // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
+  uint &loc_50 = *(uint *)(frame_ + 8);
+  uint &loc_4c = *(uint *)(frame_ + 12);
+  uint &loc_48 = *(uint *)(frame_ + 16);
+  cri_u8 &loc_38 = *(cri_u8 *)(frame_ + 32);
+  cri_u8 &loc_30 = *(cri_u8 *)(frame_ + 40);
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_ + 48);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_1c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_ + 64);
   
   loc_38 = *(cri_u8 *)(arg1 + 8);
   u_v1 = *(cri_u8 *)(arg3 + 8);
@@ -11721,16 +11780,18 @@ void FUN_1400624c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong arg3 = cri_p2;
   cri_u8 u_v1;
   int i_v2;
-  cri_u8 loc_58;
-  uint loc_50;
-  uint loc_4c;
-  uint loc_48;
-  cri_u8 loc_38;
-  cri_u8 loc_30;
-  cri_u8 loc_28;
-  cri_u4 loc_20;
-  cri_u4 loc_1c;
-  cri_u4 loc_18;
+  // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
+  uint &loc_50 = *(uint *)(frame_ + 8);
+  uint &loc_4c = *(uint *)(frame_ + 12);
+  uint &loc_48 = *(uint *)(frame_ + 16);
+  cri_u8 &loc_38 = *(cri_u8 *)(frame_ + 32);
+  cri_u8 &loc_30 = *(cri_u8 *)(frame_ + 40);
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_ + 48);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_1c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_ + 64);
   
   loc_38 = *(cri_u8 *)(arg1 + 8);
   u_v1 = *(cri_u8 *)(arg3 + 8);
@@ -11771,16 +11832,18 @@ void FUN_1400625c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong arg3 = cri_p2;
   cri_u8 u_v1;
   int i_v2;
-  cri_u8 loc_58;
-  uint loc_50;
-  uint loc_4c;
-  uint loc_48;
-  cri_u8 loc_38;
-  cri_u8 loc_30;
-  cri_u8 loc_28;
-  cri_u4 loc_20;
-  cri_u4 loc_1c;
-  cri_u4 loc_18;
+  // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
+  uint &loc_50 = *(uint *)(frame_ + 8);
+  uint &loc_4c = *(uint *)(frame_ + 12);
+  uint &loc_48 = *(uint *)(frame_ + 16);
+  cri_u8 &loc_38 = *(cri_u8 *)(frame_ + 32);
+  cri_u8 &loc_30 = *(cri_u8 *)(frame_ + 40);
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_ + 48);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_1c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_ + 64);
   
   loc_38 = *(cri_u8 *)(arg1 + 8);
   u_v1 = *(cri_u8 *)(arg3 + 8);
@@ -11817,16 +11880,18 @@ void FUN_140062690(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v1;
   cri_u8 u_v2;
   int i_v3;
-  cri_u8 loc_58;
-  uint loc_50;
-  uint loc_4c;
-  uint loc_48;
-  cri_u8 loc_38;
-  cri_u8 loc_30;
-  cri_u8 loc_28;
-  cri_u4 loc_20;
-  cri_u4 loc_1c;
-  cri_u4 loc_18;
+  // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x48];
+  cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
+  uint &loc_50 = *(uint *)(frame_ + 8);
+  uint &loc_4c = *(uint *)(frame_ + 12);
+  uint &loc_48 = *(uint *)(frame_ + 16);
+  cri_u8 &loc_38 = *(cri_u8 *)(frame_ + 32);
+  cri_u8 &loc_30 = *(cri_u8 *)(frame_ + 40);
+  cri_u8 &loc_28 = *(cri_u8 *)(frame_ + 48);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_1c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_18 = *(cri_u4 *)(frame_ + 64);
   
   loc_38 = *(cri_u8 *)(arg1 + 8);
   u_v1 = *arg3;
@@ -14056,12 +14121,14 @@ void FUN_140065660(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   ulonglong u_v2;
   int local_res8 [2];
   int local_res18 [2];
-  int loc_28;
-  int loc_24;
-  int loc_20;
-  int loc_1c;
-  int loc_18;
-  int loc_14;
+  // FUN_140065060 fills one 6-int struct at rsp+0x20 in the exe.
+  __declspec(align(16)) cri_u8 frame_[0x18];
+  int &loc_28 = *(int *)(frame_ + 0);
+  int &loc_24 = *(int *)(frame_ + 4);
+  int &loc_20 = *(int *)(frame_ + 8);
+  int &loc_1c = *(int *)(frame_ + 12);
+  int &loc_18 = *(int *)(frame_ + 16);
+  int &loc_14 = *(int *)(frame_ + 20);
   
   *arg3 = 0;
   arg3[1] = 0;
