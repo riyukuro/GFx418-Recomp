@@ -12092,7 +12092,7 @@ void FUN_140062ab0(cri_any cri_p0, ...)
   
   i_v1 = FUN_14005b040();
   if ((i_v1 != 0) && (*(longlong *)((char *)arg1 + 0x1848) != 0)) {
-    FUN_14005b2e0();
+    FUN_14005b2e0(*(longlong *)((char *)arg1 + 0x1848));  // the exe passes the 0x1848 field (0x140062ac2)
   }
   return;
 }
@@ -13864,7 +13864,7 @@ void FUN_140065030(cri_any cri_p0, ...)
 {
   longlong arg1 = cri_p0;
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
-    FUN_140050310();
+    FUN_140050310(*(longlong *)((char *)arg1 + 0x18f8));  // the exe passes the 0x18f8 field (0x140065039)
     *(cri_u8 *)((char *)arg1 + 0x18f8) = 0;
   }
   return;
