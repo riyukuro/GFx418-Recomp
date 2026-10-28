@@ -3782,28 +3782,35 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The last reference is gone: finalize and delete, or park the object in the collector for a cycle check.
 // @0x1423dfa20
-// MS2-FUNCTIONAL same transitions; the exe tests InRootList before InList and allocates the flag registers differently
+// An object still linked into the collector's work list (a collection is running) is only marked DelayedRelease,
+// finalizer or not: Collect frees it itself.
+// MS2-FUNCTIONAL register allocation differs
 template<int Stat>
 void RefCountBaseGC<Stat>::ReleaseInternal() const
 {
     if (IsRefCntZero())
     {
         if (HasFinalize())
-        {
             const_cast<RefCountBaseGC*>(this)->Finalize_GC();
-            if (IsInList())
-            {
-                RefCount |= Flag_DelayedRelease;
-                return;
-            }
+        if (IsInList())
+        {
+            RefCount |= Flag_DelayedRelease;
+            return;
         }
         RefCount &= ~(Mask_State << Shift_State);
         if (IsInRootList())
         {
-            pRCC->RemoveFromRoots(this);
-            RefCount &= ~Flag_InRootList;
+            if (!IsInList())
+            {
+                pRCC->RemoveFromRoots(this);
+                RefCount &= ~Flag_InRootList;
+                if (!IsInList())
+                    RootIndex = ~0u;
+            }
+            else
+                RemoveFromList();
         }
-        if (IsInList())
+        else if (IsInList())
             RemoveFromList();
         delete const_cast<RefCountBaseGC*>(this);
     }
