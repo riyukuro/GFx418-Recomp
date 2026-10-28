@@ -14006,6 +14006,17 @@ void * FUN_1400653b0(cri_any cri_p0, cri_any cri_p1, ...)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// @0x1400653f0
+void FUN_1400653f0(cri_any cri_p0, ...)
+{
+  longlong arg1 = cri_p0;
+  if (arg1 != 0) {
+    *(int *)((char *)arg1 + 0x18f0) = 1;
+  }
+  return;
+}
+
+// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065410
 void FUN_140065410(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
 {
