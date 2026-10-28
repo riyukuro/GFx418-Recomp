@@ -192,7 +192,7 @@ void Unk_As3_16zDestroyInterfaces(AS3ValueObjectInterface* pvoi, GFx::Value::Obj
                                   UserDefinedFunction* pudf)
 {
     pvoi->AS3ValueObjectInterface::~AS3ValueObjectInterface();
-    new (pvoi) AS3ValueObjectInterface(NULL);
+    ::new (pvoi) AS3ValueObjectInterface(NULL);
     poi->GFx::Value::ObjectInterface::~ObjectInterface();
     pui->FlashUI::~FlashUI();
     pudf->UserDefinedFunction::~UserDefinedFunction();

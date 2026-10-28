@@ -28,8 +28,9 @@ class Value
 public:
     class DisplayInfo;
 
-    // How a managed value reaches its VM object.
-    class ObjectInterface
+    // How a managed value reaches its VM object. Allocated in the movie heap (MovieRoot::CreateObjectInterface) and
+    // freed by its deleting destructor through Memory::Free, as the exe's (0x1424e2150): NewOverrideBase<StatMV_Other_Mem>.
+    class ObjectInterface : public NewOverrideBase<0x147>
     {
     public:
         ObjectInterface(MovieImpl* pmovieRoot) : pMovieRoot(pmovieRoot) {}
