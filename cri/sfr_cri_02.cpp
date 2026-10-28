@@ -1694,9 +1694,10 @@ CriSint32 CriMvEasyPlayer::compareFrameTimeFluctuation(CriMvEasyPlayer* easyPlay
     if (*phase == 1)
     {
         CriFloat32 corrected = systemTime - period - frameTime;
-        if (corrected >= 0.0f && corrected < period)
+        if (corrected >= 0.0f)
         {
-            *phase = 2;
+            if (period > corrected)
+                *phase = 2;
             return 1;
         }
         return 0;
@@ -1871,7 +1872,8 @@ CriBool FUN_1400355b0(void* player, void* output)
 
     FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
     FUN_140044a30(decoders->VideoDecoder, &frame);
-    ((CriMvPlyObj*)player)->num_audio_out = ((CriMvFrameInfo*)output)->frame_id;
+    // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
+    ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&frame + 0xa8);
     return 1;
 }
 
@@ -1890,7 +1892,8 @@ CriBool FUN_140035710(void* player, void* yuvBuffers, void* output)
         return 0;
 
     FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
-    ((CriMvPlyObj*)player)->num_audio_out = ((CriMvFrameInfo*)output)->frame_id;
+    // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
+    ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&frame + 0xa8);
     FUN_1400358d0(yuvBuffers, &frame);
     return 1;
 }
