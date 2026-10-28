@@ -138,8 +138,8 @@ extern "C" unsigned char DAT_143ffbd00;
 extern "C" unsigned char DAT_143ffbd08;
 extern "C" unsigned char DAT_143ffbd10;
 extern "C" unsigned char DAT_143ffbd18;
-extern "C" int _DAT_143bad6a0;
-extern "C" int _DAT_143badb00;
+extern "C" longlong _DAT_143bad6a0;
+extern "C" longlong _DAT_143badb00;
 extern "C" int DAT_143c492a0;
 extern "C" cri_u8 LAB_142ccc850;
 
