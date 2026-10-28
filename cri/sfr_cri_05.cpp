@@ -239,7 +239,7 @@ cri_u64 FUN_1400515c0(longlong a1,longlong *a2);
 cri_u32 FUN_140051c10(longlong a1,longlong a2,int a3);
 cri_u32 FUN_140051d90(longlong *a1);
 cri_u32 FUN_140051ec0(longlong *a1,uint *a2);
-cri_u32 FUN_140052010(longlong *a1,int a2);
+cri_u32 FUN_140052010(longlong *a1,int a2,int a3);
 ulonglong FUN_140052050(cri_u64 a1,cri_u32 a2,int a3);
 cri_u64 FUN_1400520c0(longlong a1,longlong *a2);
 cri_u64 FUN_140052720(longlong a1,longlong *a2);
@@ -402,8 +402,7 @@ static __forceinline cri_u64 FUN_1400515c0(Any a0,Any a1) { return FUN_1400515c0
 static __forceinline cri_u32 FUN_140051c10(Any a0,Any a1,Any a2) { return FUN_140051c10((longlong)a0.v,(longlong)a1.v,(int)a2.v); }
 static __forceinline cri_u32 FUN_140051d90(Any a0) { return FUN_140051d90((longlong *)a0.v); }
 static __forceinline cri_u32 FUN_140051ec0(Any a0,Any a1) { return FUN_140051ec0((longlong *)a0.v,(uint *)a1.v); }
-static __forceinline cri_u32 FUN_140052010(Any a0,Any a1) { return FUN_140052010((longlong *)a0.v,(int)a1.v); }
-static __forceinline cri_u32 FUN_140052010(Any a0,Any a1,Any a2) { return FUN_140052010((longlong *)a0.v,(int)a1.v); }
+static __forceinline cri_u32 FUN_140052010(Any a0,Any a1,Any a2) { return FUN_140052010((longlong *)a0.v,(int)a1.v,(int)a2.v); }
 static __forceinline ulonglong FUN_140052050(Any a0,Any a1,Any a2) { return FUN_140052050((cri_u64)a0.v,(cri_u32)a1.v,(int)a2.v); }
 static __forceinline cri_u64 FUN_1400520c0(Any a0,Any a1) { return FUN_1400520c0((longlong)a0.v,(longlong *)a1.v); }
 static __forceinline cri_u64 FUN_140052720(Any a0,Any a1) { return FUN_140052720((longlong)a0.v,(longlong *)a1.v); }
@@ -3627,13 +3626,13 @@ cri_u32 FUN_140051ec0(longlong *a1,uint *a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052010
-cri_u32 FUN_140052010(longlong *a1,int a2)
+cri_u32 FUN_140052010(longlong *a1,int a2,int a3)
 {
   __declspec(align(16)) cri_u8 frame_[16];
   cri_u8 (&loc_18)[8] = *(cri_u8 (*)[8])(frame_ + 0);
   cri_u32 &loc_10 = *(cri_u32 *)(frame_ + 8);
   
-  (**(code **)(*a1 + 0x30))();
+  (**(code **)(*a1 + 0x30))(a1,a2,a3,loc_18);  // the exe passes rcx/edx/r8d through, r9 = &loc_18
   (**(code **)(*a1 + 0x40))(a1,a2 == 0,loc_18);
   return loc_10;
 }
@@ -3646,7 +3645,7 @@ ulonglong FUN_140052050(cri_u64 a1,cri_u32 a2,int a3)
   int i_v2;
   ulonglong u_v3;
   
-  u_v3 = FUN_140052010(a1,a2);
+  u_v3 = FUN_140052010(a1,a2,a3);
   i_v1 = (int)u_v3;
   if (i_v1 < a3) {
     i_v2 = FUN_140052010(a1,a2,a3 - i_v1);
