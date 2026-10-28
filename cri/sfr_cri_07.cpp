@@ -1386,39 +1386,36 @@ void FUN_140066f80(cri_any cri_p0, ...)
   return;
 }
 
+// The exe's scan table (0x1431bbd80) and intra matrix (0x1431bbdc0) are 64 bytes each; data_cri splits them at the
+// addresses Ghidra saw referenced and links the pieces apart, so gather the bytes rather than index across them.
+static cri_u1 cri07_scan(int i)
+{
+  if (i < 0x3c) return ((const cri_u1 *)CRI_ADDR(DAT_1431bbd80))[i];
+  if (i < 0x3e) return ((const cri_u1 *)CRI_ADDR(UNK_1431bbdbc))[i - 0x3c];
+  if (i < 0x3f) return *(const cri_u1 *)CRI_ADDR(UNK_1431bbdbe);
+  return *(const cri_u1 *)CRI_ADDR(UNK_1431bbdbf);
+}
+
+static cri_u1 cri07_intra(int i)
+{
+  if (i == 0) return ((const cri_u1 *)CRI_ADDR(UNK_1431bbdbf))[1];
+  return ((const cri_u1 *)CRI_ADDR(DAT_1431bbdc1))[i - 1];
+}
+
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140066fe0
+// arg2[i] = arg1[scan[i]] (the matrix in scan order); arg3[arg1[i]] = the default intra matrix
 void FUN_140066fe0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
 {
   longlong arg1 = cri_p0;
   cri_u1 *arg2 = cri_p1;
   longlong arg3 = cri_p2;
-  cri_u1 *pu_v1;
-  cri_u1 *pu_v2;
-  char *pc_v3;
-  longlong local_res20;
+  int i;
   
-  local_res20 = 0x10;
-  pu_v1 = arg2;
-  pc_v3 = (char *)(arg1 + 2);
-  do {
-    pu_v2 = pu_v1 + 4;
-    local_res20 = local_res20 + -1;
-    *pu_v1 = *(cri_u1 *)((char)pu_v1[(longlong)&DAT_1431bbd80 - (longlong)arg2] + arg1);
-    *(cri_u1 *)((char)pu_v2[(arg1 - (longlong)arg2) + -4] + arg3) =
-         pu_v2[(longlong)&UNK_1431bbdbc - (longlong)arg2];
-    pu_v1[1] = *(cri_u1 *)
-                 ((char)pu_v2[(longlong)&UNK_1431bbd7d - (longlong)arg2] + arg1);
-    *(cri_u1 *)(pc_v3[-1] + arg3) = pu_v1[(longlong)&DAT_1431bbdc1 - (longlong)arg2];
-    pu_v1[2] = *(cri_u1 *)
-                 ((char)pu_v2[(longlong)&UNK_1431bbd7e - (longlong)arg2] + arg1);
-    *(cri_u1 *)(*pc_v3 + arg3) = pu_v2[(longlong)&UNK_1431bbdbe - (longlong)arg2];
-    pu_v1[3] = *(cri_u1 *)
-                 ((char)pu_v2[(longlong)&UNK_1431bbd7f - (longlong)arg2] + arg1);
-    *(cri_u1 *)(pc_v3[1] + arg3) = pu_v2[(longlong)&UNK_1431bbdbf - (longlong)arg2];
-    pu_v1 = pu_v2;
-    pc_v3 = pc_v3 + 4;
-  } while (local_res20 != 0);
+  for (i = 0; i < 0x40; i = i + 1) {
+    arg2[i] = *(cri_u1 *)(arg1 + (char)cri07_scan(i));
+    *(cri_u1 *)(arg3 + *(char *)(arg1 + i)) = cri07_intra(i);
+  }
   return;
 }
 
@@ -37785,19 +37782,17 @@ void FUN_140095480(cri_any cri_unused, ...)
   int i_v5;
   double *pd_v6;
   double d_v7;
-  cri_u4 u_v8;
-  cri_u4 u_v9;
+  double d_v8;
   
   _DAT_143d67f80 = (void*)FUN_140095430();
   i_v1 = 0;
   pd_v6 = (double *)&DAT_143d67f90;
   pd_v3 = (double *)&DAT_143d68190;
   do {
-    u_v8 = 0x667f3bcd;
-    u_v9 = 0x3fd6a09e;
+    // the DCT row scale: sqrt(1/8) (0x3fd6a09e667f3bcd) for row 0, 1/2 (0x3fe0000000000000) for the others
+    d_v8 = 0.3535533905932738;
     if (i_v1 != 0) {
-      u_v8 = 0;
-      u_v9 = 0x3fe00000;
+      d_v8 = 0.5;
     }
     i_v5 = 0;
     pd_v2 = pd_v6;
@@ -37806,7 +37801,7 @@ void FUN_140095480(cri_any cri_unused, ...)
       d_v7 = cos(((double)i_v5 + 0.5) * (double)i_v1 * 0.39269908169872414);
       i_v5 = i_v5 + 1;
       pd_v3 = pd_v4 + 1;
-      d_v7 = d_v7 * (double)CONCAT44(u_v9,u_v8);
+      d_v7 = d_v7 * d_v8;
       *pd_v4 = d_v7;
       *pd_v2 = d_v7;
       pd_v2 = pd_v2 + 8;

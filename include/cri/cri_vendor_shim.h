@@ -31,7 +31,10 @@ struct cri_addr
     template <typename T> bool operator==(T* o) const { return p == (void*)o; }
     template <typename T> bool operator!=(T* o) const { return p != (void*)o; }
 };
-#define CRI_ADDR(x) (cri_addr{(void*)&(x)})
+// The data globals are declared with Ghidra's scalar types (extern "C" int DAT_x) while the tables behind them are
+// larger; laundering the address through a volatile keeps /Ox from bounding the fill loops by the declared size.
+static inline void* cri_launder(void* p) { void* volatile q = p; return q; }
+#define CRI_ADDR(x) (cri_addr{cri_launder((void*)&(x))})
 #define CRI_PART(vec, offset, size) (CriVecPart<size>{(vec).b + (offset)})
 #define CRI_IPART(var, offset, size) (CriVecPart<size>{(unsigned char*)&(var) + (offset)})
 
