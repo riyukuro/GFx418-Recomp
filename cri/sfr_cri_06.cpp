@@ -3937,7 +3937,7 @@ void FUN_140058b10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_code *pc_v3;
   longlong l_v4;
   // Two {ptr, len} out-structs at rsp+0x20 / rsp+0x30 in the exe; slots 0x30 and 0x40 take their address.
-  __declspec(align(16)) cri_u8 frame_[0x20];
+  __declspec(align(16)) cri_u1 frame_[0x20];
   void *&loc_38 = *(void **)(frame_ + 0);
   int &loc_30 = *(int *)(frame_ + 8);
   void *&loc_28 = *(void **)(frame_ + 16);
@@ -4041,7 +4041,7 @@ uint FUN_140058e00(cri_any cri_p0, cri_any cri_p1, ...)
   int i_v1;
   longlong l_v2;
   // Slot 0x30 fills a {ptr, len @+8} struct at rsp+0x20 in the exe; loc_28/uStack_24 are its pointer halves.
-  __declspec(align(16)) cri_u8 frame_[0x10];
+  __declspec(align(16)) cri_u1 frame_[0x10];
   int &loc_28 = *(int *)(frame_ + 0);
   cri_u4 &uStack_24 = *(cri_u4 *)(frame_ + 4);
   cri_u1 loc_18 [16];
@@ -11682,7 +11682,7 @@ void FUN_1400622f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v1;
   int i_v2;
   // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
   uint &loc_50 = *(uint *)(frame_ + 8);
   uint &loc_4c = *(uint *)(frame_ + 12);
@@ -11734,7 +11734,7 @@ void FUN_1400623f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v1;
   int i_v2;
   // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
   uint &loc_50 = *(uint *)(frame_ + 8);
   uint &loc_4c = *(uint *)(frame_ + 12);
@@ -11781,7 +11781,7 @@ void FUN_1400624c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v1;
   int i_v2;
   // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
   uint &loc_50 = *(uint *)(frame_ + 8);
   uint &loc_4c = *(uint *)(frame_ + 12);
@@ -11833,7 +11833,7 @@ void FUN_1400625c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v1;
   int i_v2;
   // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
   uint &loc_50 = *(uint *)(frame_ + 8);
   uint &loc_4c = *(uint *)(frame_ + 12);
@@ -11881,7 +11881,7 @@ void FUN_140062690(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u8 u_v2;
   int i_v3;
   // Two plane descriptors passed by address: dst {3 ptrs, 3 ints} at rsp+0x40, src {ptr, 3 ints} at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_58 = *(cri_u8 *)(frame_ + 0);
   uint &loc_50 = *(uint *)(frame_ + 8);
   uint &loc_4c = *(uint *)(frame_ + 12);
@@ -14047,7 +14047,7 @@ cri_u8 FUN_140065450(cri_any cri_p0, cri_any cri_p1, ...)
   uint u_v5;
   int i_v6;
   // one frame (exe rsp+0x20..0x72): &loc_68 and loc_58 are out-structs, &loc_40 is the FUN_140050820 context
-  __declspec(align(16)) cri_u8 frame_[0x58];
+  __declspec(align(16)) cri_u1 frame_[0x58];
   longlong &loc_68 = *(longlong *)(frame_ + 0);
   int &loc_60 = *(int *)(frame_ + 8);
   cri_u1 (&loc_58)[8] = *(cri_u1 (*)[8])(frame_ + 16);
@@ -14134,7 +14134,7 @@ void FUN_140065660(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   int local_res8 [2];
   int local_res18 [2];
   // FUN_140065060 fills one 6-int struct at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x18];
+  __declspec(align(16)) cri_u1 frame_[0x18];
   int &loc_28 = *(int *)(frame_ + 0);
   int &loc_24 = *(int *)(frame_ + 4);
   int &loc_20 = *(int *)(frame_ + 8);

@@ -3044,7 +3044,7 @@ cri_u8 FUN_140069480(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri
   longlong l_v3;
   cri_u8 u_v4;
   // Three {ptr, w, h, stride} plane records at rsp+0x30 in the exe; FUN_140044950 gets their address.
-  __declspec(align(16)) cri_u8 frame_[0x48];
+  __declspec(align(16)) cri_u1 frame_[0x48];
   cri_u8 &loc_178 = *(cri_u8 *)(frame_ + 0);
   int &loc_170 = *(int *)(frame_ + 8);
   int &loc_16c = *(int *)(frame_ + 12);
@@ -3059,7 +3059,7 @@ cri_u8 FUN_140069480(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri
   cri_u4 &loc_138 = *(cri_u4 *)(frame_ + 64);
   cri_u8 loc_128 [10];
   cri_u8 loc_d8 [22];
-  __declspec(align(16)) cri_u8 frame_28[0x18];
+  __declspec(align(16)) cri_u1 frame_28[0x18];
   cri_u8 &loc_28 = *(cri_u8 *)(frame_28 + 0);
   int &loc_20 = *(int *)(frame_28 + 8);
   int &loc_1c = *(int *)(frame_28 + 12);
@@ -26728,7 +26728,7 @@ void FUN_140089fe0(cri_any cri_p0, cri_any cri_p1, ...)
   uint u_v4;
   uint local_res8 [2];
   // one frame: &loc_38 is the FUN_140050820 context struct (callback table at +8, results at +0x1c..+0x28)
-  __declspec(align(16)) cri_u8 frame_[0x30];
+  __declspec(align(16)) cri_u1 frame_[0x30];
   longlong &loc_38 = *(longlong *)(frame_ + 0);
   cri_u1 **&loc_30 = *(cri_u1 ** *)(frame_ + 8);
   cri_u4 &loc_28 = *(cri_u4 *)(frame_ + 16);
@@ -26803,7 +26803,7 @@ void FUN_14008a180(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   int local_res8 [2];
   int local_res18 [2];
   // FUN_140089e90 fills one 6-int struct at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u8 frame_[0x18];
+  __declspec(align(16)) cri_u1 frame_[0x18];
   int &loc_28 = *(int *)(frame_ + 0);
   int &loc_24 = *(int *)(frame_ + 4);
   int &loc_20 = *(int *)(frame_ + 8);
@@ -26921,7 +26921,7 @@ void FUN_14008a430(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong *pl_v7;
   longlong *pl_v8;
   // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  __declspec(align(16)) cri_u8 frame_[0xb0];
+  __declspec(align(16)) cri_u1 frame_[0xb0];
   longlong &loc_b8 = *(longlong *)(frame_ + 0);
   longlong &loc_b0 = *(longlong *)(frame_ + 8);
   int &loc_a8 = *(int *)(frame_ + 16);
@@ -27007,7 +27007,7 @@ void FUN_14008a5b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   longlong *pl_v6;
   longlong *pl_v7;
   // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  __declspec(align(16)) cri_u8 frame_[0xb0];
+  __declspec(align(16)) cri_u1 frame_[0xb0];
   longlong &loc_b8 = *(longlong *)(frame_ + 0);
   longlong &loc_b0 = *(longlong *)(frame_ + 8);
   int &loc_a8 = *(int *)(frame_ + 16);
@@ -27268,7 +27268,7 @@ void FUN_14008ab60(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   cri_u4 u_v10;
   int i_v11;
   // FUN_14008a830 fills int[4] at rsp+0x70 in the exe (loc_58..loc_4c).
-  __declspec(align(16)) cri_u8 frame_[0x10];
+  __declspec(align(16)) cri_u1 frame_[0x10];
   cri_u4 &loc_58 = *(cri_u4 *)(frame_ + 0);
   cri_u4 &loc_54 = *(cri_u4 *)(frame_ + 4);
   cri_u4 &loc_50 = *(cri_u4 *)(frame_ + 8);
