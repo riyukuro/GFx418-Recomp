@@ -2543,7 +2543,7 @@ void FUN_140050480(longlong a1,int a2,cri_u64 a3)
       pi_v3 = (&CriAt<int>(a1, 0x2bc));
       do {
         if (i_v1 + 1 < pi_v3[-1]) {
-          (**(code **)(CriAt<longlong>(a1, 0x8) + 0x18))(a3,i_v1);
+          (**(code **)(CriAt<longlong>(a1, 0x8) + 0x18))(a3,i_v1,pi_v3[-1]);  // the exe passes r8d = pi_v3[-1], the bound it just compared
         }
         if (i_v1 < *pi_v3) {
           i_v1 = *pi_v3;
