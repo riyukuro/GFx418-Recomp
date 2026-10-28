@@ -13769,10 +13769,11 @@ void thunk_FUN_140050520(cri_any cri_unused, ...)
   DAT_143c49100 = DAT_143c49100 + 1;
   if ((DAT_143c49100 == 1) && (i_v1 = FUN_1400501f0(), 1 < i_v1)) {
     DAT_143c490f8 = (void*)FUN_1400682e0(&DAT_143badb88,0x30);  // edx = 0x30 in the exe
-    DAT_143c490f0 = CRI_ADDR(DAT_143badf80);
-    memset(&DAT_143badf80,0,0x9b100);
-    DAT_143c490e0 = CRI_ADDR(DAT_143badc00);
-    memset(&DAT_143badc00,0,0x300);
+    // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
+    DAT_143c490f0 = ((longlong)&DAT_143badf80 + 0x5f) & ~(longlong)0x7f;
+    memset((void *)DAT_143c490f0,0,0x9b100);
+    DAT_143c490e0 = ((longlong)&DAT_143badc00 + 0x5f) & ~(longlong)0x7f;
+    memset((void *)DAT_143c490e0,0,0x300);
     DAT_143badbdc = 3;
     FUN_1400677f0();
     u_v5 = 0;
@@ -13781,7 +13782,7 @@ void thunk_FUN_140050520(cri_any cri_unused, ...)
       pu_v4 = (cri_u4 *)(&DAT_143badbb8 + 4);
       u_v7 = u_v5;
       while( true ) {
-        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x20 + 2,0x7c);
+        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x100 + 0x10,0x7c);  // per-thread work area at entry + 0x10
         *(longlong *)(u_v5 + (longlong)DAT_143c490e0) = l_v3;
         if (l_v3 == 0) break;
         pu_v4[-1] = 0xffffffff;
