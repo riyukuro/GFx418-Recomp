@@ -1612,7 +1612,6 @@ CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frame
 // @0x140039180
 CriBool FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint32* output)
 {
-    (void)updateTime;
     *output = 0;
     if (easyPlayer->pause_flag == 1 || easyPlayer->unk724 == 1)
         return 0;
@@ -1624,10 +1623,12 @@ CriBool FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint
     void* frameToken = FUN_140035c80(easyPlayer->mvply, &frame);
     CriBool hasFrame = frameToken != NULL;
     CriBool onTime = FUN_140039330(easyPlayer, &frame);
-    if (!hasFrame || !onTime)
-        return 0;
-    easyPlayer->frame_info = frame;
-    return 1;
+    CriBool result = hasFrame == 1 && onTime == 1;
+    if (updateTime == 1)
+        FUN_1400393f0(easyPlayer, onTime, hasFrame, 0, frame.time, frame.tunit);
+    if (result == 1)
+        easyPlayer->frame_info = frame;
+    return result;
 }
 
 // MS2-FUNCTIONAL: fetch video and optional alpha frame metadata and retain the alpha snapshot on the easy player.

@@ -2027,12 +2027,12 @@ CriMvEasyPlayer::Status CriMvEasyPlayer::GetStatus(CriError& err)
         stat = MVEASY_STATUS_READY;
         break;
     case 5:
+    case 6:
         stat = MVEASY_STATUS_PLAYING;
         break;
-    case 6:
+    case 7:
         stat = MVEASY_STATUS_PLAYEND;
         break;
-    case 7:
     case 8:
     case 9:
     case 10:

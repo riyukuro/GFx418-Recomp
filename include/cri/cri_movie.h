@@ -552,8 +552,10 @@ struct CriMvImageBufferInfo                 // 0x18
     CriUint32 num_lines;
 };
 
-// A decoded frame as the player core describes it.
-struct CriMvFrameInfo                       // 0xc8
+// A decoded frame as the player core describes it: the 3.07.01 layout (0xb0; the exe copies it with rep movsb 0xb0 at
+// 0x140039310 and FUN_140035260 fills it field by field). Newer SDKs add framerate_n/d after framerate and three trailing
+// counters (0xc8), which moves time/tunit to 0x30/0x38.
+struct CriMvFrameInfo                       // 0xb0
 {
     CriUint8*            imageptr;          // 0x00
     CriSint32            frame_id;          // 0x08
@@ -563,20 +565,21 @@ struct CriMvFrameInfo                       // 0xc8
     CriUint32            disp_width;        // 0x18
     CriUint32            disp_height;       // 0x1c
     CriUint32            framerate;         // 0x20 frames per 1000 s
-    CriUint32            framerate_n;       // 0x24
-    CriUint32            framerate_d;       // 0x28
-    CriUint64            time;              // 0x30
-    CriUint64            tunit;             // 0x38
-    CriUint32            cnt_concatenated_movie; // 0x40
-    CriSint32            frame_id_per_data; // 0x44
-    CriBool              csc_flag;          // 0x48
-    CriSint32            alpha_type;        // 0x4c
-    CriSint32            num_images;        // 0x50
-    CriMvImageBufferInfo image_info[4];     // 0x58
-    CriUint32            color_conversion_type; // 0xb8
-    CriUint32            total_frames_per_data; // 0xbc
-    CriUint32            cnt_skipped_frames;    // 0xc0
+    CriUint64            time;              // 0x28
+    CriUint64            tunit;             // 0x30
+    CriUint32            cnt_concatenated_movie; // 0x38
+    CriSint32            frame_id_per_data; // 0x3c
+    CriBool              csc_flag;          // 0x40
+    CriSint32            alpha_type;        // 0x44
+    CriSint32            num_images;        // 0x48
+    CriMvImageBufferInfo image_info[4];     // 0x50
 };
+static_assert(offsetof(CriMvFrameInfo, framerate) == 0x20, "CriMvFrameInfo framerate offset");
+static_assert(offsetof(CriMvFrameInfo, time) == 0x28, "CriMvFrameInfo time offset");
+static_assert(offsetof(CriMvFrameInfo, tunit) == 0x30, "CriMvFrameInfo tunit offset");
+static_assert(offsetof(CriMvFrameInfo, num_images) == 0x48, "CriMvFrameInfo num_images offset");
+static_assert(offsetof(CriMvFrameInfo, image_info) == 0x50, "CriMvFrameInfo image_info offset");
+static_assert(sizeof(CriMvFrameInfo) == 0xb0, "CriMvFrameInfo size (CRI Movie 3.07.01)");
 
 // A piece of the player core's input buffer (GetInputChunk / PutInputChunk).
 struct CriChunk
@@ -890,7 +893,7 @@ public:
     CriMvStreamingParameters   stmprm;                          // 0x01c
     CriUint32                  unk2a4;
     CriMvFrameInfo             frame_info;                      // 0x2a8 last frame handed out
-    CriUint8                   unk370[0x390 - 0x370];
+    CriUint8                   alpha_frame_info[0x38];          // 0x358 its alpha frame (CriMvEasyPlayerFrameFields)
     CriMvFileReaderInterface*  freader;                         // 0x390
     CriMvSoundInterface*       sound;                           // 0x398
     CriMvSystemTimerInterface* stimer;                          // 0x3a0
@@ -989,5 +992,9 @@ public:
     CriBool                    error_flag;                      // 0x720
     CriUint32                  unk724;                          // 0x724
 };
+static_assert(offsetof(CriMvEasyPlayer, frame_info) == 0x2a8, "easy player frame info offset");
+static_assert(offsetof(CriMvEasyPlayer, alpha_frame_info) == 0x358, "easy player alpha frame offset");
+static_assert(offsetof(CriMvEasyPlayer, freader) == 0x390, "easy player file reader offset");
+static_assert(offsetof(CriMvEasyPlayer, unk724) == 0x724, "easy player unk724 offset");
 
 #endif

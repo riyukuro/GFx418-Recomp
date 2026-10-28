@@ -5558,7 +5558,7 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
         CriMvEasyPlayer* Player;
         CriUint8 Reserved10[0x2b0];
         CriMvFrameInfo Frame;
-        CriUint8 Reserved388[8];
+        CriUint8 Reserved370[0x20];
         CriUint8 AlphaKeep;
         CriUint8 Reserved391[0x18];
         CriUint8 Delivered;
