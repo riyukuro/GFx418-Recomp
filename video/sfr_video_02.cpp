@@ -318,18 +318,25 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
 void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
     char* object = reinterpret_cast<char*>(pvideo);
+    // the AVM interface (object + [0x6d]*4) slot 12 returns the video extent; FUN_140011610 scales the fill by it
+    auto* iface = object + static_cast<unsigned char>(object[0x6d]) * 4;
+    auto* extent = static_cast<int*>(reinterpret_cast<void* (*)(void*)>((*reinterpret_cast<void***>(iface))[12])(iface));
     Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
         reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
     Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
     Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> strong = *provider;
-    if (strong)
+    if (strong && strong->IsActive())
     {
-        int width = 0, height = 0;
-        Scaleform::GFx::Video::VideoImage* next = strong->GetTexture(&width, &height);
+        int width, height;
+        Scaleform::Ptr<Scaleform::GFx::Video::VideoImage> next = strong->GetTexture(&width, &height);
         // the exe only swaps the reference (0x140010b24); image +0x40 is the owning player CreateTexture stored
         if (next)
+        {
             *image = next;
+            extent[2] = width;
+            extent[3] = height;
+        }
     }
     FUN_1400105b0(pvideo);
 }
