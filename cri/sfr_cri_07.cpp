@@ -26724,15 +26724,17 @@ void FUN_140089fe0(cri_any cri_p0, cri_any cri_p1, ...)
   int i_v3;
   uint u_v4;
   uint local_res8 [2];
-  longlong loc_38;
-  cri_u1 **loc_30;
-  cri_u4 loc_28;
-  int loc_24;
-  cri_u4 loc_20;
-  int loc_1c;
-  int loc_18;
-  int loc_14;
-  cri_u2 loc_10;
+  // one frame: &loc_38 is the FUN_140050820 context struct (callback table at +8, results at +0x1c..+0x28)
+  __declspec(align(16)) cri_u8 frame_[0x30];
+  longlong &loc_38 = *(longlong *)(frame_ + 0);
+  cri_u1 **&loc_30 = *(cri_u1 ** *)(frame_ + 8);
+  cri_u4 &loc_28 = *(cri_u4 *)(frame_ + 16);
+  int &loc_24 = *(int *)(frame_ + 20);
+  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 24);
+  int &loc_1c = *(int *)(frame_ + 28);
+  int &loc_18 = *(int *)(frame_ + 32);
+  int &loc_14 = *(int *)(frame_ + 36);
+  cri_u2 &loc_10 = *(cri_u2 *)(frame_ + 40);
   
   FUN_14008c7b0(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x1c58) != 0) {

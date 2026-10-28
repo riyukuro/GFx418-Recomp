@@ -2730,12 +2730,12 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   i_v14 = (cri_nr<decltype(i_v14)>::t)DAT_143badb84;
   u_v12 = 0;
   CriAt<cri_u32>(a4, 0x20) = 0;
-  CriAt<cri_u32>(a4, 0x120) = 0;
-  CriAt<cri_u32>(a4, 0xe0) = 0;
+  CriAt<cri_u32>(a4, 0x24) = 0;
+  CriAt<cri_u32>(a4, 0x1c) = 0;
   if ((CriAt<int>(a1, 0x10) == 0) || (CriAt<int>(a1, 0x10) == 0x5a5a5a5a)) {
     return 0;
   }
-  CriAt<cri_u32>(a4, 0xe0) = 1;
+  CriAt<cri_u32>(a4, 0x1c) = 1;
   local_res18 = a3;
   FUN_140050100();
   CriAt<cri_u64>(a1, 0x8) = a4[1];
@@ -2824,14 +2824,14 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   }
   i_v14 = (**(code **)(*pl_v5 + 0x48))(pl_v5,1);
   FUN_140052050(a2,1,i_v2 - i_v14);
-  FUN_140050480(a1,CriAt<cri_u32>(a4, 0xa0),*a4);
+  FUN_140050480(a1,CriAt<cri_u32>(a4, 0x14),*a4);
   if (0 < CriAt<int>(a1, 0x108)) {
     pi_v8 = (&CriAt<int>(a1, 0x2b4));
     do {
       u_v11 = (int)u_v12 + 1;
       u_v12 = (ulonglong)u_v11;
       CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + pi_v8[-1];
-      CriAt<int>(a4, 0x120) = CriAt<int>(a4, 0x120) + *pi_v8;
+      CriAt<int>(a4, 0x24) = CriAt<int>(a4, 0x24) + *pi_v8;
       pi_v8 = pi_v8 + 0x20;
     } while ((int)u_v11 < CriAt<int>(a1, 0x108));
   }

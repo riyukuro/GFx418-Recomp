@@ -13969,20 +13969,22 @@ cri_u8 FUN_140065450(cri_any cri_p0, cri_any cri_p1, ...)
   ulonglong u_v4;
   uint u_v5;
   int i_v6;
-  longlong loc_68;
-  int loc_60;
-  cri_u1 loc_58 [8];
-  int loc_50;
-  int loc_44;
-  longlong loc_40;
-  cri_u1 **loc_38;
-  cri_u4 loc_30;
-  cri_u4 loc_2c;
-  cri_u4 loc_28;
-  int loc_24;
-  int loc_20;
-  int loc_1c;
-  cri_u2 loc_18;
+  // one frame (exe rsp+0x20..0x72): &loc_68 and loc_58 are out-structs, &loc_40 is the FUN_140050820 context
+  __declspec(align(16)) cri_u8 frame_[0x58];
+  longlong &loc_68 = *(longlong *)(frame_ + 0);
+  int &loc_60 = *(int *)(frame_ + 8);
+  cri_u1 (&loc_58)[8] = *(cri_u1 (*)[8])(frame_ + 16);
+  int &loc_50 = *(int *)(frame_ + 24);
+  int &loc_44 = *(int *)(frame_ + 36);
+  longlong &loc_40 = *(longlong *)(frame_ + 40);
+  cri_u1 **&loc_38 = *(cri_u1 ** *)(frame_ + 48);
+  cri_u4 &loc_30 = *(cri_u4 *)(frame_ + 56);
+  cri_u4 &loc_2c = *(cri_u4 *)(frame_ + 60);
+  cri_u4 &loc_28 = *(cri_u4 *)(frame_ + 64);
+  int &loc_24 = *(int *)(frame_ + 68);
+  int &loc_20 = *(int *)(frame_ + 72);
+  int &loc_1c = *(int *)(frame_ + 76);
+  cri_u2 &loc_18 = *(cri_u2 *)(frame_ + 80);
   
   FUN_140066370(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x18f8) != 0) {
