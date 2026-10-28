@@ -3579,13 +3579,14 @@ void FUN_1400453c4(void* object)
         void* OutputQueue;
     };
     OutputState* state = (OutputState*)object;
-    state->Reading = 0;
     state->Writing = 0;
-    while (FUN_1400467b8(state->InputQueue) != 0)
+    state->Reading = 0;
+    // drain the filled lane (1) back to the free lane (0), returning each chunk
+    while (FUN_1400467b8(state->InputQueue, 1) != 0)
     {
         CriUint8 chunk[0x10];
         FUN_1400467a0(state->InputQueue, 1, -1, chunk);
-        FUN_1400467b0(state->InputQueue, 0, NULL);
+        FUN_1400467b0(state->InputQueue, 0, chunk);
     }
     memset(state->Entries, 0, ((size_t)state->Count + 1) * sizeof(QueueEntry));
     state->Active = 0;
@@ -4132,12 +4133,13 @@ void FUN_14003ef00(void* object)
         void* CurrentData;
     };
     Reader* reader = (Reader*)object;
-    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue) / reader->BlockSize;
+    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 3) / reader->BlockSize;
     if (samples > 0)
     {
         CriUint64 chunk[2] = {};
         FUN_1400467a0(reader->Queue, 3, -1, chunk);
-        if (!chunk[0] || reader->CurrentData == (void*)chunk[0])
+        // keep the chunk whose token (its first field) is the one being played
+        if (!chunk[0] || reader->CurrentData == *(void**)chunk[0])
             FUN_1400467a8(reader->Queue, 3, chunk);
         else
             FUN_1400467b0(reader->Queue, 0, chunk);
@@ -4231,13 +4233,15 @@ void FUN_14003e180(void* object, const void* frame)
         CriUint32 QueueLane;
     };
     Reader* reader = (Reader*)object;
-    CriUint32 queued = (CriUint32)FUN_1400467b8(reader->Queue) / reader->BlockSize;
+    // count the in-use lane (2), the one GetFrame parks taken frames in
+    CriUint32 queued = (CriUint32)FUN_1400467b8(reader->Queue, 2) / reader->BlockSize;
     CriBool released = 0;
     for (CriUint32 index = 0; index < queued; ++index)
     {
         CriUint64 chunk[2] = {};
         FUN_1400467a0(reader->Queue, 2, -1, chunk);
-        if (chunk[0] && ((DecodedChunk*)chunk[0])->Frame == frame)
+        // match the frame's token (its first field), not the address of the caller's frame info
+        if (chunk[0] && ((DecodedChunk*)chunk[0])->Frame == *(const void* const*)frame)
         {
             FUN_1400467b0(reader->Queue, ((DecodedChunk*)chunk[0])->QueueLane, chunk);
             released = 1;
