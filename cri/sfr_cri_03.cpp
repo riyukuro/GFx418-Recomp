@@ -6804,7 +6804,7 @@ CriSint32 FUN_142ccbe90(void* decoder, void* queue)
     return slice.Finish();
 }
 
-void* FUN_14004eea0(void*, CriUint32, CriUint32, void*, CriUint32);
+void* FUN_14004eea0(void*, CriUint32);
 CriSint32 FUN_140050bd0(void*, void*, void*);
 void FUN_1400511d0(void*, void*, CriUint32);
 void FUN_1400511f0(void*, CriUint32, void*);
@@ -6825,7 +6825,7 @@ CriSint32 FUN_140040850(void* player, void* stream, void* second, CriSint32* con
     void* object;
     if (second == NULL)
     {
-        object = FUN_14004eea0(input->Data, (CriUint32)input->Size, 0, consumed, 0);
+        object = FUN_14004eea0(input->Data, (CriUint32)input->Size);
         temporary = object;
         if (!object)
             return -1;

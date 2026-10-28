@@ -102,7 +102,7 @@ void* FUN_140030be0(CriSint32 codecId);
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 void*    FUN_140045144(CriSint32 count, void* work, CriSint32 workSize);
 void*    FUN_1400459ec(const void* config, void* work, CriSint32 workSize);
-CriSint32 FUN_140042150(void* player, void* source, void* work, CriUint32 size, CriSint32 flags);
+CriSint32 FUN_140042150(const void* decoder, const CriUint32* config);
 void     FUN_140037850(void* player);
 void     FUN_140037880(void* player);
 struct CriMovieInputChunk;
@@ -304,7 +304,7 @@ void     FUN_142584950(void* destination, const void* source);
 CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
 void     FUN_14002aa30(CriUint64* array, CriUint64 length);
-void     FUN_14000bd60(void* array, void* source, CriUint64 length);
+void     FUN_14000bd60(void* array, CriUint64 length);
 void     FUN_14001d720(void* manager, void* reader);
 void     FUN_1425845e0(void* event, CriSint32 timeout);
 namespace Scaleform { namespace GFx { namespace Video { void FUN_14002e2a0(void* object); }}}
@@ -2168,11 +2168,11 @@ CriBool FUN_140030f10(void* player, void* source, CriUint32 stream)
     return 1;
 }
 
-// MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
+// MS2-FUNCTIONAL: the CRI Movie sub-audio helper sizes the player's audio track work area (exe passes only the two args).
 // @0x140030ed0
-CriSint32 criMvPly_CalcSubAudioWorkSize(void* player, void* source, void* work, CriUint32 size)
+CriSint32 criMvPly_CalcSubAudioWorkSize(void* player, void* source)
 {
-    return FUN_140042150(player, source, work, size, 0);
+    return FUN_140042150(player, (const CriUint32*)source);
 }
 
 // MS2-FUNCTIONAL: retain CRI's critical-section bracket around work-buffer preparation.
@@ -3081,8 +3081,7 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
     if (params->track_play_audio >= 0)
     {
         const CriUint8* audio = (const CriUint8*)params + 0x54 + (size_t)params->track_play_audio * 0x10;
-        using AudioSize = CriSint32 (*)(void*, const void*);
-        total += ((AudioSize)FUN_140042150)(player, audio);
+        total += FUN_140042150(player, (const CriUint32*)audio);
     }
     flags[0] = flags[1] = 1;
     return total + FUN_140046420(0, 0x40, flags);
@@ -3816,7 +3815,7 @@ CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source)
 // @0x14002c550
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
 {
-    FUN_14000bd60(destination, destination, source[1]);
+    FUN_14000bd60(destination, source[1]);
     CriUint8* out = (CriUint8*)destination[0];
     const CriUint8* in = (const CriUint8*)source[0];
     for (CriUint64 i = 0; i < destination[1]; ++i)
