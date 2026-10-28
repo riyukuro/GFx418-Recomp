@@ -1477,7 +1477,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     CriUint32 paddedWidth = (width + 0x0f) & ~0x0f;
     CriUint32 paddedHeight = (height + 0x1f) & ~0x1f;
     CriUint32 frameBytes = (((paddedWidth + 0x7f) & ~0x7f) * paddedHeight) +
-                           (((paddedWidth / 2 + 0x7f) & ~0x7f) * (paddedHeight / 2));
+                           (((paddedWidth / 2 + 0x7f) & ~0x7f) * (paddedHeight / 2)) * 2;
     memcpy(handle + 0x40, &frameBytes, sizeof(frameBytes));
     CriUint32 frameRecordBytes = 200;
     memcpy(handle + 0x50, &frameRecordBytes, sizeof(frameRecordBytes));
@@ -1556,7 +1556,7 @@ CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFr
     CriUint32 luma = ((paddedWidth + 0x7f) & ~0x7f) * paddedHeight;
     CriUint32 chromaWidth = ((paddedWidth / 2 + 0x7f) & ~0x7f);
     CriUint32 chromaHeight = paddedHeight / 2;
-    CriUint32 frameBytes = luma + chromaWidth * chromaHeight;
+    CriUint32 frameBytes = luma + chromaWidth * chromaHeight * 2;
     const CriUint32 settings[2] = { 1, 1 };
     CriSint32 total = 0x25c;
     total += FUN_140046420(0, 0x20, settings);
