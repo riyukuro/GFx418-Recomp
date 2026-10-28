@@ -5137,15 +5137,17 @@ void* FUN_14003da40(void* player, void* output)
     CriVideoFrameSource* source = (CriVideoFrameSource*)player;
     if (FUN_140040de0(player) == 0)
         return NULL;
-    CriFrameRecord* record;
-    FUN_1400467a0(source->Queue, 1, 0xffffffff, &record);
+    // Joint queue items are 16-byte {record, size} chunks; an 8-byte local overflows into the saved registers.
+    struct { CriFrameRecord* Record; CriUint64 Size; } item;
+    FUN_1400467a0(source->Queue, 1, 0xffffffff, &item);
+    CriFrameRecord* record = item.Record;
     if (!record)
         return NULL;
     CriDecodedFrame* frame = (CriDecodedFrame*)output;
     memcpy(frame, &record->Frame, sizeof(record->Frame));
     FUN_140040c00(player, frame);
     CriDescribeTiledFrame(frame);
-    FUN_1400467a8(source->Queue, 1, &record);
+    FUN_1400467a8(source->Queue, 1, &item);
     return frame->Base;
 }
 
@@ -5158,8 +5160,9 @@ void* FUN_14003dd50(void* player, void* output)
         return NULL;
     if (DAT_143b27c78 == 1 && FUN_1400467b8(source->Queue, 2) != 0)
         return NULL;
-    CriFrameRecord* record;
-    FUN_1400467a0(source->Queue, 1, 0xffffffff, &record);
+    struct { CriFrameRecord* Record; CriUint64 Size; } item;
+    FUN_1400467a0(source->Queue, 1, 0xffffffff, &item);
+    CriFrameRecord* record = item.Record;
     if (!record)
         return NULL;
     CriFrameRecord* taken = record;
@@ -5168,7 +5171,7 @@ void* FUN_14003dd50(void* player, void* output)
     FUN_140040c00(player, frame);
     CriDescribeTiledFrame(frame);
     source->Position += 1;
-    FUN_1400467b0(source->Queue, 2, &record);
+    FUN_1400467b0(source->Queue, 2, &item);
     if (source->Window == (void*)taken->Key)
         taken->Mode = source->ChannelCount < 3 ? 0 : 3;
     else
