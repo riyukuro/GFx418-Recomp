@@ -9325,10 +9325,10 @@ LAB_14005dbf5:
     *(cri_u1 **)((char *)arg1 + 0xc88) = pu_v14;
     *(cri_u4 *)((char *)arg1 + 0xc94) = 6;
     if ((*(byte *)((char *)arg1 + 0x5e8) & 4) == 0) {
-      i_v7 = (**(cri_code **)((char *)arg1 + 0x1bd8))();
+      i_v7 = (**(cri_code **)((char *)arg1 + 0x1bd8))(arg1);  // the exe passes rcx = arg1 through (FUN_14005b810 leaves it intact)
     }
     else {
-      i_v7 = (**(cri_code **)((char *)arg1 + 0x1bd0))();
+      i_v7 = (**(cri_code **)((char *)arg1 + 0x1bd0))(arg1);
     }
     if (i_v7 == 0) {
       return 0;
@@ -13952,7 +13952,7 @@ void FUN_140065410(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
     *(int *)((char *)arg1 + 0x1794) = arg3;
     *(int *)((char *)arg1 + 0x1798) = arg3 / *(int *)((char *)arg1 + 0x15a0);
     *(int *)((char *)arg1 + 0x179c) = arg3 % *(int *)((char *)arg1 + 0x15a0);
-    (**(cri_code **)((char *)arg1 + 0x18d0))();
+    (**(cri_code **)((char *)arg1 + 0x18d0))(arg1,arg3 % *(int *)((char *)arg1 + 0x15a0),arg3);  // the exe leaves rcx = arg1, edx = the idiv remainder, r8d = arg3
   }
   return;
 }

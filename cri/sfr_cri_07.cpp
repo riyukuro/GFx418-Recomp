@@ -27408,7 +27408,7 @@ LAB_14008af18:
       if (*(int *)((char *)arg1 + 0xb90) == 0) {
         if (i_v4 < 2) {
           if (i_v4 == i_v6) {
-            (**(cri_code **)((char *)arg1 + 0xd50))();
+            (**(cri_code **)((char *)arg1 + 0xd50))(arg1,arg1 + 0xc18,0,arg1 + 0xc48,0,0,0,0x10,0x10,arg2,arg3,loc_40,loc_3c,i_v4);  // exe 0x14008af56: same frame as the sibling call, 0/0x10 in slots 7/9
             return;
           }
           (**(cri_code **)((char *)arg1 + 0xd50))
