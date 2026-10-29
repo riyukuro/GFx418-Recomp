@@ -34892,9 +34892,9 @@ void FUN_140090730(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
             au_v194.b[1] = (char)u_v4;
             *(longlong *)pu_v182 = CRI_PART(au_v194,0,8);
             *(ulonglong *)(pu_v182 + 8) =
-                 CONCAT17((char)((ulonglong)u_v5 >> 0x28),
-                          (uint7)CONCAT15((char)((ulonglong)u_v4 >> 0x28),
-                                          (uint5)CONCAT13((char)((ulonglong)u_v5 >> 0x20),
+                 CONCAT17((byte)((ulonglong)u_v5 >> 0x28),
+                          (uint7)CONCAT15((byte)((ulonglong)u_v4 >> 0x28),
+                                          (uint5)CONCAT13((byte)((ulonglong)u_v5 >> 0x20),
                                                           (uint3)(byte)((ulonglong)u_v4 >> 0x20) <<
                                                           8)));
             CRI_PART(au_v12,8,6) = 0;
