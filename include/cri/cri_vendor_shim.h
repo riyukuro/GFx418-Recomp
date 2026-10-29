@@ -67,14 +67,16 @@ CRI_BIN(packsswb, _mm_packs_epi16)
 CRI_BIN(packssdw, _mm_packs_epi32)
 CRI_BIN(pmaddwd, _mm_madd_epi16)
 CRI_BIN(pmulhw, _mm_mulhi_epi16)
-template <typename S> static inline CriVec cri_shufw(const V16& d, const S& src, int order, int base)
+// PSHUFLW / PSHUFHW never read the destination: the unshuffled half is the source's. Ghidra's pseudo-op still passes the
+// destination register (often an uninitialized in_XMMn), so `d` is ignored.
+template <typename S> static inline CriVec cri_shufw(const S& src, int order, int base)
 {
-    V16 r = d; V16 sv = cri_st16(cri_ld(src));
+    V16 sv = cri_st16(cri_ld(src)); V16 r = sv;
     for (int i = 0; i < 4; ++i) memcpy(r.b + (base + i) * 2, sv.b + (base + ((order >> (2 * i)) & 3)) * 2, 2);
     return CriVec(r);
 }
-template <typename A, typename S> static inline CriVec pshuflw(const A& d, const S& src, int order) { return cri_shufw(cri_st16(cri_ld(d)), src, order, 0); }
-template <typename A, typename S> static inline CriVec pshufhw(const A& d, const S& src, int order) { return cri_shufw(cri_st16(cri_ld(d)), src, order, 4); }
+template <typename A, typename S> static inline CriVec pshuflw(const A&, const S& src, int order) { return cri_shufw(src, order, 0); }
+template <typename A, typename S> static inline CriVec pshufhw(const A&, const S& src, int order) { return cri_shufw(src, order, 4); }
 
 static inline void cri_get128(const V16& v, unsigned __int64& lo, unsigned __int64& hi) { memcpy(&lo, v.b, 8); memcpy(&hi, v.b + 8, 8); }
 static inline V16 cri_set128(unsigned __int64 lo, unsigned __int64 hi) { V16 r; memcpy(r.b, &lo, 8); memcpy(r.b + 8, &hi, 8); return r; }
