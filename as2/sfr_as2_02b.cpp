@@ -210,7 +210,7 @@ static inline StringHashLH<Ptr<Render::Text::ImageDesc> >* MS2_TextImageDescHash
 // The field as a TextField through its character (TextField is opaque here).
 static inline TextField* MS2_ThisTextField(const FnCall& fn)
 {
-    return reinterpret_cast<TextField*>(fn.ThisPtr);
+    return reinterpret_cast<TextField*>(fn.ThisPtr->ToCharacter());
 }
 
 // updateImageSubstitution(id [, image]): swaps the image of a substitution (or removes it for null / undefined).
@@ -218,7 +218,7 @@ static inline TextField* MS2_ThisTextField(const FnCall& fn)
 // @0x14290b4c0
 void AvmTextField::UpdateImageSubstitution(const FnCall& fn)
 {
-    fn.Result->SetUndefined();
+    fn.Result->SetBool(false);
     if (!fn.ThisPtr || fn.ThisPtr->GetObjectType() != Object::Object_TextField)
         return;
     TextField* ptf = MS2_ThisTextField(fn);
