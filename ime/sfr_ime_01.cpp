@@ -603,12 +603,14 @@ void FUN_1423da150(void* self, void* output, const String* key)
         *reinterpret_cast<void**>(value) = nullptr;
     }
     if (isId) {
-        *reinterpret_cast<unsigned long long*>(value + 16) = static_cast<unsigned long long>(
-            static_cast<double>(*reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x10)));
+        *reinterpret_cast<double*>(value + 16) =
+            static_cast<double>(*reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x10));
         *reinterpret_cast<unsigned*>(value + 8) = 5;
         return;
     }
-    *reinterpret_cast<unsigned long long*>(value + 16) = (packed & ~3ull) + 0xc;
+    // The exe returns the state's own string node at +0x18 (0x1423da18e), not the key.
+    const auto text = *reinterpret_cast<const unsigned long long*>(static_cast<unsigned char*>(self) + 0x18);
+    *reinterpret_cast<unsigned long long*>(value + 16) = (text & ~3ull) + 0xc;
     *reinterpret_cast<unsigned*>(value + 8) = 6;
 }
 
@@ -2880,19 +2882,22 @@ void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
     Scaleform::GFx::Value result;
     auto* argBytes = reinterpret_cast<unsigned char*>(&argument);
     *reinterpret_cast<unsigned*>(argBytes + 8) = Scaleform::GFx::Value::VT_Number;
-    *reinterpret_cast<double*>(argBytes + 0x10) = static_cast<double>(item);
-    void* movie = *reinterpret_cast<void**>(self + 0x868);
-    void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
-    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
-    if (bridge) {
-        auto** vtable = *reinterpret_cast<void***>(bridge);
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
-            vtable[0x78 / sizeof(void*)])(bridge, command, &result, &argument, 1);
-        strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
-        strcat_s(command, 0x400, ".SetList");
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
-            vtable[0x78 / sizeof(void*)])(bridge, command, &result, nullptr, 0);
-    }
+    *reinterpret_cast<double*>(argBytes + 0x10) = static_cast<double>(static_cast<long long>(item));
+    using Invoke = void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned);
+    // The exe rereads the bridge for each call and rebuilds ".SetList" even without one (0x1423d992f).
+    auto bridgeOf = [self]() {
+        void* movie = *reinterpret_cast<void**>(self + 0x868);
+        void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+        return *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+    };
+    if (void* bridge = bridgeOf())
+        reinterpret_cast<Invoke>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+            bridge, command, &result, &argument, 1);
+    strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
+    strcat_s(command, 0x400, ".SetList");
+    if (void* bridge = bridgeOf())
+        reinterpret_cast<Invoke>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+            bridge, command, &result, nullptr, 0);
 }
 
 // MS2-FUNCTIONAL: bridges the executable's IME COM property query through its two provider objects and VARIANT result.
@@ -3608,9 +3613,8 @@ void FUN_1423d5910(void* raw, const char* requested)
             CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068), &provider);
         if (hr == CO_E_NOTINITIALIZED) {
             auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
-            if (log) reinterpret_cast<void(*)(void*, const char*)>(
-                (*reinterpret_cast<void***>(log))[0])(log,
-                    "\n Failure in COM, perhaps you called CoCreateInstance in another thread... ");
+            if (log) FUN_1423cd060(log, Scaleform::String(
+                "\n Failure in COM, perhaps you called CoCreateInstance in another thread... ").ToCStr());
             return;
         }
         if (FAILED(hr) || !provider) return;
@@ -3621,11 +3625,9 @@ void FUN_1423d5910(void* raw, const char* requested)
     }
     auto* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x60);
     if (log) {
-        auto** vtable = *reinterpret_cast<void***>(log);
-        auto write = reinterpret_cast<void(*)(void*, const char*)>(vtable[0]);
-        write(log, "\nCould not find requested IME in supported IME list!");
-        write(log, "\n--> You requested: ");
-        write(log, requested);
+        // The exe logs through FUN_1423cd060 (log vtable slot 1), the second line as one String.
+        FUN_1423cd060(log, "\nCould not find requested IME in supported IME list!");
+        FUN_1423cd060(log, (Scaleform::String("\n--> You requested: ") + requested).ToCStr());
     }
 }
 
@@ -3941,42 +3943,62 @@ void FUN_1423d9b40(void* raw)
     auto* self = static_cast<unsigned char*>(raw);
     const char* prefix = reinterpret_cast<const char*>(self + 0x10);
     if (!*prefix) return;
-    char command[0x400]{};
-    void* movie = *reinterpret_cast<void**>(self + 0x868);
-    void* movieManager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
-    void* values = movieManager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movieManager) + 0x18) : nullptr;
-    if (values) {
-        Scaleform::GFx::Value result;
-        strcpy_s(command, sizeof(command), prefix);
-        strcat_s(command, sizeof(command), ".ClearList");
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, command, &result, nullptr, 0);
-    }
+    // The exe builds every command in the member buffer at +0x410 and rereads the bridge per call.
+    char* command = reinterpret_cast<char*>(self + 0x410);
+    using Invoke = void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned);
+    auto bridgeOf = [self]() {
+        void* movie = *reinterpret_cast<void**>(self + 0x868);
+        void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+        return *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+    };
+    auto invoke = [](void* bridge, const char* name, Scaleform::GFx::Value* out,
+                     const Scaleform::GFx::Value* args, unsigned count) {
+        reinterpret_cast<Invoke>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+            bridge, name, out, args, count);
+    };
 
-    const unsigned long long rowCount = *reinterpret_cast<unsigned long long*>(self + 0x850);
-    auto* rows = *reinterpret_cast<void***>(self + 0x848);
-    auto* descriptors = reinterpret_cast<unsigned char*>(self + 0x828);
-    auto* arguments = reinterpret_cast<unsigned char*>(self + 0x810);
-    const unsigned long long argumentCount = *reinterpret_cast<unsigned long long*>(self + 0x818);
-    for (unsigned long long row = 0; rows && row < rowCount; ++row) {
+    Scaleform::GFx::Value result;
+    strcpy_s(command, 0x400, prefix);
+    strcat_s(command, 0x400, ".ClearList");
+    if (void* bridge = bridgeOf()) invoke(bridge, command, &result, nullptr, 0);
+    command[0] = 0;
+
+    // SelectDataItem goes out before the rows are added (0x1423d9bea), SetList after them.
+    strcpy_s(command, 0x400, prefix);
+    strcat_s(command, 0x400, ".SelectDataItem");
+    Scaleform::GFx::Value argument;
+    auto* argBytes = reinterpret_cast<unsigned char*>(&argument);
+    *reinterpret_cast<unsigned*>(argBytes + 8) = Scaleform::GFx::Value::VT_Number;
+    *reinterpret_cast<double*>(argBytes + 0x10) =
+        static_cast<double>(*reinterpret_cast<long long*>(self + 0x860));
+    if (void* bridge = bridgeOf()) invoke(bridge, command, &result, &argument, 1);
+
+    for (unsigned row = 0; row < *reinterpret_cast<unsigned long long*>(self + 0x850); ++row) {
+        auto* rows = *reinterpret_cast<void***>(self + 0x848);
+        if (rows[row]) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(rows[row]) + 8);
         void* callback = rows[row];
-        if (!callback) continue;
-        auto** callbackVtable = *reinterpret_cast<void***>(callback);
-        for (unsigned long long i = 0; i < argumentCount; ++i)
-            reinterpret_cast<void(*)(void*, void*, void*)>(callbackVtable[1])(
-                callback, descriptors + i * 0x20, arguments + i * sizeof(void*));
-        if (values) {
-            Scaleform::GFx::Value result;
-            strcpy_s(command, sizeof(command), prefix);
-            strcat_s(command, sizeof(command), ".Add");
-            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                    values, command, &result, descriptors, *reinterpret_cast<unsigned*>(self + 0x830));
+        if (*prefix && callback) {
+            strcpy_s(command, 0x400, prefix);
+            strcat_s(command, 0x400, ".Add");
+            auto** callbackVtable = *reinterpret_cast<void***>(callback);
+            for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i)
+                reinterpret_cast<void(*)(void*, void*, void*)>(callbackVtable[1])(callback,
+                    *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
+                    *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
+            Scaleform::GFx::Value added;
+            if (void* bridge = bridgeOf())
+                invoke(bridge, command, &added,
+                    *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828),
+                    *reinterpret_cast<unsigned*>(self + 0x830));
+            command[0] = 0;
         }
-        FUN_14257dcd0(callback);
+        if (callback) FUN_14257dcd0(callback);
     }
 
-    FUN_1423d97f0(self, *reinterpret_cast<unsigned long long*>(self + 0x860), 1);
+    strcpy_s(command, 0x400, prefix);
+    strcat_s(command, 0x400, ".SetList");
+    if (void* bridge = bridgeOf()) invoke(bridge, command, &result, nullptr, 0);
+    command[0] = 0;
 }
 
 // MS2-FUNCTIONAL: retrieves the IMM candidate list, converts its UTF-16 entries from the page start to the end of the
