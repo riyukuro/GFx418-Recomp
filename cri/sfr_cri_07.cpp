@@ -3484,18 +3484,18 @@ void FUN_140069ef4(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   float f_v8;
   float f_v9;
   
-  f_v7 = sqrtf(2.0);
-  f_v8 = cosf(((float)arg2 * 6.2831855) / (float)arg3);
+  f_v7 = sqrtf(2.0f);
+  f_v8 = cosf(((float)arg2 * 6.2831855f) / (float)arg3);
   f_v7 = f_v7 - f_v8;
-  f_v8 = sqrtf(2.0);
-  f_v8 = f_v8 - 1.0;
+  f_v8 = sqrtf(2.0f);
+  f_v8 = f_v8 - 1.0f;
   f_v9 = sqrtf((f_v7 - f_v8) * (f_v8 + f_v7));
   arg1[8] = 1.0;
   arg1[0xd] = 1.0;
   f_v8 = (f_v7 - f_v9) / f_v8;
-  s_v3 = (short)(int)(f_v8 * f_v8 * -4096.0);
+  s_v3 = (short)(int)(f_v8 * f_v8 * -4096.0f);
   *(short *)((longlong)arg1 + 0xaa) = s_v3;
-  s_v1 = (short)(int)(f_v8 * 2.0 * 4096.0);
+  s_v1 = (short)(int)(f_v8 * 2.0f * 4096.0f);
   *(short *)((char *)arg1 + 0xa8) = s_v1;
   arg1[0xc] = 0.0;
   arg1[0x10] = 0.0;
@@ -3503,10 +3503,10 @@ void FUN_140069ef4(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   arg1[0x11] = 0.0;
   arg1[0x15] = 0.0;
   l_v5 = 2;
-  f_v7 = (float)(int)s_v1 * 0.00024414062;
+  f_v7 = (float)(int)s_v1 * 0.00024414062f;
   *arg1 = f_v7;
   arg1[9] = f_v7;
-  f_v8 = (float)(int)s_v3 * 0.00024414062;
+  f_v8 = (float)(int)s_v3 * 0.00024414062f;
   l_v4 = 0x10;
   arg1[4] = f_v8;
   arg1[1] = f_v7 * f_v7 + f_v8;
