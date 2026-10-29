@@ -896,10 +896,9 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const CriMvAlp
 {
     if (info->PlaneIndex != -1)
     {
-        CriMvPlaneInfo* dst = &((CriMvYuvBufferState*)player)->Plane;
-        dst->Buffer = info->Buffer;
-        dst->Stride = (CriSint32)info->Height * (CriSint32)info->Stride;
-        dst->Height = info->Height;
+        ((CriMvYuvBufferState*)player)->Plane.Buffer = info->Buffer;
+        ((CriMvYuvBufferState*)player)->Plane.Stride = (CriSint32)info->Height * (CriSint32)info->Stride;
+        ((CriMvYuvBufferState*)player)->Plane.Height = info->Height;
     }
 }
 
@@ -963,9 +962,8 @@ CriBool isLockedInputChunk(const void* player)
 // @0x140035050
 void criMvPly_TerminateSupply(void* player)
 {
-    CriMvSupplyState* state = (CriMvSupplyState*)player;
-    state->SupplyEnded = 1;
-    state->Terminated = 1;
+    ((CriMvSupplyState*)player)->Terminated = 1;
+    ((CriMvSupplyState*)player)->SupplyEnded = 1;
     FUN_140044fdc(((CriMvSupplyInputBuffer*)player)->InputBuffer);
 }
 
@@ -1589,41 +1587,45 @@ CriUint32 decideReadBufferExtSize(void* player)
 // @0x140037050
 void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded)
 {
-    CriMvReadBufferState* state = (CriMvReadBufferState*)player;
-    void* buffer;
-    CriUint32 first, second;
-    if (state->Mode == 0)
+    void* buffer = NULL;
+    CriUint32 first = 0;
+    CriUint32 second = 0;
+    if (((CriMvReadBufferState*)player)->Mode == 0)
     {
         if (getInternalStatus(player) == 1)
         {
-            if (state->BufferMode == 0)
+            if (((CriMvReadBufferState*)player)->BufferMode == 0)
             {
-                buffer = state->ReadyBuffer;
-                first = second = state->DataAvailable;
+                buffer = ((CriMvReadBufferState*)player)->ReadyBuffer;
+                first = ((CriMvReadBufferState*)player)->DataAvailable;
+                second = ((CriMvReadBufferState*)player)->DataAvailable;
             }
             else
             {
-                buffer = state->Buffer;
-                first = second = state->BufferSize;
+                buffer = ((CriMvReadBufferState*)player)->Buffer;
+                first = ((CriMvReadBufferState*)player)->BufferSize;
+                second = ((CriMvReadBufferState*)player)->BufferSize;
             }
         }
         else
         {
-            buffer = state->ReadBuffer;
-            first = state->ReadBufferSize;
-            second = (CriUint32)((float)(state->AverageReadSize / 8) * state->ReadRate);
-            if (first < second)
+            buffer = ((CriMvReadBufferState*)player)->ReadBuffer;
+            first = ((CriMvReadBufferState*)player)->ReadBufferSize;
+            second = (CriUint32)((float)(((CriMvReadBufferState*)player)->AverageReadSize / 8)
+                                 * ((CriMvReadBufferState*)player)->ReadRate);
+            if (second > first)
                 second = first;
         }
     }
     else
     {
-        buffer = state->CurrentBuffer;
-        first = second = 0;
+        buffer = ((CriMvReadBufferState*)player)->CurrentBuffer;
+        first = 0;
+        second = 0;
     }
-    if (available)
+    if (available != NULL)
         *available = first;
-    if (bounded)
+    if (bounded != NULL)
         *bounded = second;
     return buffer;
 }
@@ -1632,24 +1634,35 @@ void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded)
 // @0x1400371d0
 CriSint32 criMvPly_PeekInputBufferData(void* player)
 {
-    CriMvReadBufferState* state = (CriMvReadBufferState*)player;
+    CriSint32 result = 0;
     void* buffer;
-    if (state->Mode == 0)
+    if (((CriMvReadBufferState*)player)->Mode == 0)
     {
         if (getInternalStatus(player) == 1)
-            buffer = state->BufferMode == 0 ? state->ReadyBuffer : state->Buffer;
+        {
+            if (((CriMvReadBufferState*)player)->BufferMode == 0)
+                buffer = ((CriMvReadBufferState*)player)->ReadyBuffer;
+            else
+                buffer = ((CriMvReadBufferState*)player)->Buffer;
+        }
         else
-            buffer = state->ReadBuffer;
+        {
+            buffer = ((CriMvReadBufferState*)player)->ReadBuffer;
+        }
     }
     else
     {
-        buffer = state->CurrentBuffer;
+        buffer = ((CriMvReadBufferState*)player)->CurrentBuffer;
     }
-    if (!buffer)
-        return 0;
-    if (state->Mode == 1)
-        return state->CurrentOffset - FUN_1400467b8(state->CurrentBuffer, 0);
-    return FUN_1400467b8(buffer, 1);
+    if (buffer != NULL)
+    {
+        if (((CriMvReadBufferState*)player)->Mode == 1)
+            result = ((CriMvReadBufferState*)player)->CurrentOffset
+                   - FUN_1400467b8(((CriMvReadBufferState*)player)->CurrentBuffer, 0);
+        else
+            result = FUN_1400467b8(buffer, 1);
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: enter the player's lock through the CRI critical-section wrapper.
@@ -1703,20 +1716,17 @@ void FUN_140035480(void* player, void* destination, const void* source)
         CriUint32 Field30;
         CriUint32 Field34;
     };
-    FrameView* out = (FrameView*)destination;
-    const FrameView* in = (const FrameView*)source;
-    const CriMvAlphaMovieDimensions* movie = (const CriMvAlphaMovieDimensions*)player;
-    out->Field00 = in->Field00;
-    out->Field08 = in->Field08;
-    out->Field0C = in->Field0C;
-    out->Field10 = in->Field10;
-    out->Field1C = in->Field14;
-    out->Field20 = in->Field20;
-    out->Field28 = in->Field28;
-    out->Field30 = in->Field30;
-    out->Field34 = movie->DisplayWidth;
-    out->Field14 = movie->Width;
-    out->Field18 = movie->Height;
+    ((FrameView*)destination)->Field00 = ((const FrameView*)source)->Field00;
+    ((FrameView*)destination)->Field08 = ((const FrameView*)source)->Field08;
+    ((FrameView*)destination)->Field0C = ((const FrameView*)source)->Field0C;
+    ((FrameView*)destination)->Field10 = ((const FrameView*)source)->Field10;
+    ((FrameView*)destination)->Field1C = ((const FrameView*)source)->Field14;
+    ((FrameView*)destination)->Field20 = ((const FrameView*)source)->Field20;
+    ((FrameView*)destination)->Field28 = ((const FrameView*)source)->Field28;
+    ((FrameView*)destination)->Field30 = ((const FrameView*)source)->Field30;
+    ((FrameView*)destination)->Field34 = ((const CriMvAlphaMovieDimensions*)player)->DisplayWidth;
+    ((FrameView*)destination)->Field14 = ((const CriMvAlphaMovieDimensions*)player)->Width;
+    ((FrameView*)destination)->Field18 = ((const CriMvAlphaMovieDimensions*)player)->Height;
 }
 #pragma optimize("", on)
 
@@ -1843,9 +1853,8 @@ void criMvPly_IsEndSubAudioPlayback(void* player)
 // @0x140030fd0
 void criMvPly_DetachSubAudio(void* player)
 {
-    CriMvSubAudioHandles* audio = (CriMvSubAudioHandles*)player;
-    FUN_140042600(audio->Manager, audio->Decoder, 1);
-    audio->Decoder = NULL;
+    FUN_140042600(((CriMvSubAudioHandles*)player)->Manager, ((CriMvSubAudioHandles*)player)->Decoder, 1);
+    ((CriMvSubAudioHandles*)player)->Decoder = NULL;
 }
 
 // MS2-FUNCTIONAL: select the next subtitle chunk matching a channel while consuming decoder control records.
@@ -4597,9 +4606,8 @@ CriSint32 FUN_140038fa0(void* easyPlayer, const CriMvFrameInfo* frameInfo, CriEr
 // @0x140039110
 CriSint32 FUN_140039110(void* easyPlayer, CriMvFrameInfo* frameInfo, CriError* error)
 {
-    CriMvEasyPlayerFrameFields* fields = (CriMvEasyPlayerFrameFields*)easyPlayer;
     *error = CRIERR_OK;
-    CriSint32 result = FUN_1400355b0(fields->PlayerHandle, frameInfo);
+    CriSint32 result = FUN_1400355b0(((CriMvEasyPlayerFrameFields*)easyPlayer)->PlayerHandle, frameInfo);
     FUN_1400393f0((CriMvEasyPlayer*)easyPlayer, 0, 0, 1, 0, 0);
     return result;
 }
@@ -5070,12 +5078,18 @@ CriSint64 CriMvEasyFileReaderMem::GetReadSize(void)
 // @0x140038950
 CriSint64 CriMvEasyFileReaderMem::Seek(CriSint64 size, CriMvFileReaderInterface::SeekOrigin origin)
 {
-    if (origin == SEEK_FROM_BEGIN)
+    switch (origin)
+    {
+    case SEEK_FROM_BEGIN:
         Position = size;
-    else if (origin == SEEK_FROM_CURRENT)
+        break;
+    case SEEK_FROM_CURRENT:
         Position += size;
-    else
+        break;
+    default:
         Position = FileSize + size;
+        break;
+    }
     return (CriSint64)origin;
 }
 #pragma optimize("", on)
