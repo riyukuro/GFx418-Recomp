@@ -1392,7 +1392,7 @@ void FUN_14000f5a0(void** object)
 static void ReleaseRenderEntry(void* entry)
 {
     if (!entry) return;
-    long long* count = reinterpret_cast<long long*>(static_cast<char*>(entry) + 0x40);
+    long long* count = reinterpret_cast<long long*>(static_cast<char*>(entry) + 8);
     if (--*count == 0) FUN_142581700(entry);
 }
 
@@ -1402,7 +1402,7 @@ void FUN_14000f5c0(void** object) { ReleaseRenderEntry(*object); }
 // @0x14000f5e0
 void** FUN_14000f5e0(void** dst, void* value)
 {
-    if (value) ++*reinterpret_cast<long long*>(static_cast<char*>(value) + 0x40);
+    if (value) ++*reinterpret_cast<long long*>(static_cast<char*>(value) + 8);
     ReleaseRenderEntry(*dst);
     *dst = value;
     return dst;
