@@ -1146,38 +1146,37 @@ void FUN_14004e940(longlong a1,int a2,longlong *a3)
     FUN_14004e5b0("E2004090245"," : NULL pointer is passed.");
     return;
   }
-  if (CriAt<int>(a1, 0x8) != 0) {
-    if ((0 < (int)a3[1]) && (*a3 != 0)) {
-      if (a2 != 0) {
-        if (a2 == 1) {
-          i_v1 = CriAt<int>(a1, 0x1c) - (int)a3[1];
-          i_v2 = 0;
-          if (0 < i_v1) {
-            i_v2 = i_v1;
-          }
-          CriAt<int>(a1, 0x1c) = i_v2;
-          i_v1 = CriAt<int>(a1, 0x18) + (int)a3[1];
-          if (CriAt<int>(a1, 0x28) < i_v1) {
-            i_v1 = CriAt<int>(a1, 0x28);
-          }
-          CriAt<int>(a1, 0x18) = i_v1;
-          if (i_v2 == (int)*a3 - CriAt<int>(a1, 0x20)) {
-            return;
-          }
-        }
-        else {
-          CriAt<int>(a3, 0x8) = 0;
-          *a3 = 0;
-        }
-      }
-      if (CriAt<code *>(a1, 0x30) != (code *)0x0) {
-        (*CriAt<code *>(a1, 0x30))(CriAt<cri_u64>(a1, 0x38),0xfffffffd);
-      }
-    }
+  if (CriAt<int>(a1, 0x8) == 0) {
+    FUN_14004e5b0("E2004090246"," : Specified handle is invalid.");
     return;
   }
-  FUN_14004e5b0("E2004090246"," : Specified handle is invalid.");
-  return;
+  if ((0 < (int)a3[1]) && (*a3 != 0)) {
+    if (a2 != 0) {
+      i_v2 = 0;
+      if (a2 == 1) {
+        i_v1 = CriAt<int>(a1, 0x1c) - (int)a3[1];
+        if (0 < i_v1) {
+          i_v2 = i_v1;
+        }
+        CriAt<int>(a1, 0x1c) = i_v2;
+        i_v1 = CriAt<int>(a1, 0x18) + (int)a3[1];
+        if (CriAt<int>(a1, 0x28) < i_v1) {
+          i_v1 = CriAt<int>(a1, 0x28);
+        }
+        CriAt<int>(a1, 0x18) = i_v1;
+        if (i_v2 == (int)*a3 - CriAt<int>(a1, 0x20)) {
+          return;
+        }
+      }
+      else {
+        CriAt<int>(a3, 0x8) = i_v2;
+        *a3 = i_v2;
+      }
+    }
+    if (CriAt<code *>(a1, 0x30) != (code *)0x0) {
+      (*CriAt<code *>(a1, 0x30))(CriAt<cri_u64>(a1, 0x38),0xfffffffd);
+    }
+  }
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -1694,8 +1693,8 @@ void FUN_14004f350(longlong a1,int a2,longlong *a3)
                        ),(void *)*a3,(ulonglong)u_v3);
       }
       u_v3 = CriAt<uint>(a3, 0x8);
-      i_v2 = (u_v3 - CriAt<int>(a1, 0x28)) + (int)*a3;
-      if (CriAt<int>(a1, 0x30) < i_v2) {
+      i_v2 = CriAt<int>(a3, 0x8) - CriAt<int>(a1, 0x28) + (int)*a3;
+      if (i_v2 > CriAt<int>(a1, 0x30)) {
         u_v1 = i_v2 - CriAt<int>(a1, 0x30);
         if ((int)u_v3 < (int)u_v1) {
           u_v1 = u_v3;
