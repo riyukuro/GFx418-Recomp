@@ -555,7 +555,7 @@ bool HAL::createDefaultRenderBuffer()
         if (!SetRenderTarget(ptarget, true))
             return false;
     }
-    pRenderBufferManager->Initialize(pTextureManager, Image_R8G8B8A8, screenSize);
+    pRenderBufferManager->Initialize(pTextureManager, Image_B8G8R8A8, screenSize);
     return true;
 }
 
