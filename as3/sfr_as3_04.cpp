@@ -5503,15 +5503,10 @@ namespace Scaleform { namespace GFx { namespace AS3
                     sa->ValueHLowInd = sa->ValueH.Begin()->First;
             }
         }
-        else if (sa->ValueA.GetSize() == 1)
-            sa->ValueA.RemoveAt(0);
         else
-        {
-            Value* data = sa->ValueA.GetDataPtr();
-            data[0].SetUndefined();
-            memmove(data, data + 1, (sa->ValueA.GetSize() - 1) * sizeof(Value));
-            sa->ValueA.Resize(sa->ValueA.GetSize() - 1);
-        }
+            // The exe (0x142423ef0) inlines RemoveAt: release data[0], memmove the rest down, --Size. Resizing after
+            // the memmove would destruct the duplicated tail Value and over-release the last element.
+            sa->ValueA.RemoveAt(0);
         if (!sa->ValueH.IsEmpty())
         {
             sa->MoveHashLeft(sa->ValueHLowInd, 1);
