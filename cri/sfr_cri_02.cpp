@@ -5265,11 +5265,11 @@ CriBool FUN_140033ff0(void* player, const void* leftValue, const void* rightValu
         CriUint8 Reserved0[0x14];
         CriSint32 Field14;
         CriSint32 Field18;
-        CriUint8 Reserved20[4];
+        CriUint8 Reserved1C[8];
         CriSint32 Field24;
         CriUint8 Reserved28[0x24];
-        CriUint32 PlaneCount;
-        PlaneInfo Planes[8];
+        CriUint32 PlaneCount;   // 0x4c
+        PlaneInfo Planes[8];    // 0x50
     };
     struct CompareModeView { CriUint8 Reserved[0xb28]; CriSint32 Mode; };
     const StreamInfo* left = (const StreamInfo*)leftValue;
@@ -5854,7 +5854,7 @@ CriBool FUN_140034960(void* player)
         CriUint8 Reserved0[4];
         CriSint32 Status;
         CriUint32 InternalFlags;
-        CriUint8 Reserved0C[4];
+        CriSint32 OpenLock;
         CriUint32 ResetTimer;
         CriUint8 Reserved14[0x14];
         CriUint8 CurrentHeader[0x5c0];
@@ -5906,7 +5906,7 @@ CriBool FUN_140034960(void* player)
     state->InputCount0 = 0;
     state->InputCount1 = 0;
     state->InputCount2 = 0;
-    state->InternalFlags = 0;
+    state->OpenLock = 0;
     state->Status = 1;
     return 1;
 }
@@ -6080,6 +6080,8 @@ void FUN_140031570(void* player)
 // @0x140031140
 void FUN_140031140(void* player)
 {
+    // +0x0c is the open-phase read lock FUN_1400317b0 sets; +0x08 (InternalFlags) is the stop request.
+    struct OpenLockView { CriUint8 Reserved[0x0c]; CriSint32 Value; };
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
     CriSint32 status = state->Status;
     if (status == 2)
@@ -6088,7 +6090,7 @@ void FUN_140031140(void* player)
         {
             FUN_1400342b0(player);
             FUN_1400453c4(state->Demux);
-            state->InternalFlags = 0;
+            ((OpenLockView*)player)->Value = 0;
             state->Status = 3;
         }
         else
