@@ -220,8 +220,8 @@ void FUN_140041a60(void* object)
     state->SystemStart = FUN_1425e3510();
     state->Reserved40 = 0;
     state->Mode = 0;
-    state->Active = 1;
     state->Start = FUN_1425e3560();
+    state->Active = 1;
 }
 
 // MS2-FUNCTIONAL: translate the reader interface's three states into the movie's public status values.
@@ -2240,8 +2240,10 @@ void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32
 // @0x140045910
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
 {
-    CriSint32 base = config[0] == 1 ? 0xa0 : 0x58;
-    return config[2] * 0x20 + 8 + base;
+    CriSint32 base = 0x58;
+    if (config[0] == 1)
+        base += 0x48;
+    return base + config[2] * 0x20 + 8;
 }
 
 // MS2-FUNCTIONAL: calculate the demux work area from its two unified-joint pools and output records.
@@ -2489,10 +2491,10 @@ void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
     *timestamp = now;
     CriUint8* bytes = (CriUint8*)state;
     CriUint64 base;
-    if (bytes[0x10] == 0)
-        memcpy(&base, bytes + 8, sizeof(base));
-    else
+    if (bytes[0x10] != 0)
         base = FUN_1425e3560();
+    else
+        memcpy(&base, bytes + 8, sizeof(base));
     CriUint64 start;
     memcpy(&start, bytes, sizeof(start));
     *elapsed = (CriSint64)(base - start);
@@ -3315,7 +3317,8 @@ void* FUN_140041c00(void* context)
         CriUint64 Reserved18;
         CriUint8 Active;
         CriUint8 Reserved21[7];
-        CriUint64 Reserved28;
+        CriUint8 Mode;
+        CriUint8 Reserved29[7];
         CriUint64 Current;
         CriUint64 Interval;
         CriUint64 Reserved40;
@@ -3325,7 +3328,7 @@ void* FUN_140041c00(void* context)
     timer->Vtable = &PTR_FUN_1431b9b10;
     timer->Start = FUN_1425e3560();
     timer->Active = 1;
-    timer->Reserved28 = 0;
+    timer->Mode = 0;
     timer->Current = 0;
     timer->Interval = 1000000;
     timer->Reserved40 = 0;
@@ -3786,10 +3789,11 @@ void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span)
 // @0x140041d40
 void* FUN_140041d40(void* manager)
 {
-    const CriUint64 config[8] = { 0, 0x40, 0x20000, 0, ~(CriUint64)0, 0, 0, 0 };
+    struct HeapConfig { CriSint32 Flags; CriUint64 Fields[7]; };
+    HeapConfig config = { 0, { 0x40, 0x20000, 0, ~(CriUint64)0, 0, 0, 0 } };
     void** managerVtable = *(void***)manager;
-    void* heap = ((void* (*)(void*, const CriChar8*, const CriUint64*))managerVtable[4])(
-        manager, "_Cri_Video_Heap", config);
+    void* heap = ((void* (*)(void*, const CriChar8*, const HeapConfig*))managerVtable[4])(
+        manager, "_Cri_Video_Heap", &config);
     void** heapVtable = *(void***)heap;
     void* adapter = ((void* (*)(void*, size_t, size_t))heapVtable[10])(heap, 0x10, 0);
     void** fields = (void**)adapter;
