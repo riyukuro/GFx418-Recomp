@@ -147,7 +147,7 @@ void AvmDisplayObjContainer::FillTabableArray(InteractiveObject::FillTabablePara
                 params->Array->Resize(0);
                 params->TabIndexed = true;
             }
-            if ((pio->IsTabable() || (params->InclFocusEnabled && pio->IsFocusEnabled(GFx_FocusMovedByMouse))) &&
+            if ((pio->IsTabable() || (params->InclFocusEnabled && pio->IsFocusEnabled(GFx_FocusMovedByKeyboard))) &&
                 (!params->TabIndexed || pio->TabIndex > 0))
             {
                 params->Array->PushBack(Ptr<InteractiveObject>(pio));
