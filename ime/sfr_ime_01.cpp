@@ -577,7 +577,7 @@ void FUN_1423cc570(unsigned long long* node)
                 prior[0] = next;
             }
             slot[0] = 0xfffffffffffffffeull;
-            --*reinterpret_cast<unsigned long long*>(*reinterpret_cast<unsigned long long**>(owner));
+            --table[0];
         }
     }
 unlink_done:
@@ -1295,9 +1295,9 @@ void FUN_1423d1420(void* object, int index)
     SendInput(1, &input, sizeof(INPUT));
 }
 
-// MS2-FUNCTIONAL: releases each executable-tagged Value in reverse order using the recovered shared Value destructor.
+// MS2-FUNCTIONAL: destroys GFx::Value entries in reverse order (managed values released through their object interface).
 // @0x1423ce6c0
-void FUN_1423ce6c0(Scaleform::GFx::AS3::Value* values, unsigned long long count)
+void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
 {
     while (count)
         values[--count].~Value();
@@ -1516,7 +1516,7 @@ void FUN_1423db000(unsigned long long* object)
     if (hr >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
         const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-        if (status == static_cast<int>(0x80004000u))
+        if (status == static_cast<int>(0x80040200u))
             reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
         reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
     }
@@ -1536,7 +1536,7 @@ void FUN_1423db060(unsigned long long* object)
     if (hr >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
         const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-        if (status == static_cast<int>(0x80004000u))
+        if (status == static_cast<int>(0x80040200u))
             reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
         reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
     }
@@ -1689,7 +1689,7 @@ void FUN_1423cde00(void* raw)
     for (unsigned long long i = count; i; --i)
         if (entries[i - 1]) FUN_14257dcd0(reinterpret_cast<void*>(entries[i - 1]));
     Memory::Free(entries);
-    FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(object[0x105]), object[0x106]);
+    FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(object[0x105]), object[0x106]);
     if (object[0x105]) Memory::Free(reinterpret_cast<void*>(object[0x105]));
     FUN_1422fbf60(object + 0x102);
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313a1d8);
@@ -1816,7 +1816,7 @@ extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long lon
 {
     auto* array = static_cast<unsigned long long*>(rawArray);
     if (length < array[1]) {
-        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(array[0] + length * 0x20), array[1] - length);
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(array[0] + length * 0x20), array[1] - length);
         if (length < (array[2] >> 1)) FUN_1423d12e0(array, allocator, length);
     } else if (length >= array[2]) {
         FUN_1423d12e0(array, allocator, (length >> 2) + length);
@@ -2119,7 +2119,7 @@ void FUN_1423ca6b0(void* raw, const char* name)
     if (strcmp(name, "displayName") == 0) {
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 1;
         bytes[0xab] = 1;
-    } else if (strcmp(name, "code") == 0) {
+    } else if (strcmp(name, "Tag") == 0) {
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 2;
         bytes[0xac] = 1;
     }
@@ -3429,11 +3429,12 @@ void FUN_1423d8f20(unsigned long long* map, void* source)
             const unsigned long long home = mask & hash;
             auto* entry = reinterpret_cast<unsigned long long*>(table + 0x10 + home * 0x28);
             if (static_cast<long long>(entry[0]) != -2 && entry[1] == home) {
-                unsigned long long previous = home;
+                unsigned long long previous = ~0ull;
+                unsigned long long current = home;
                 for (;;) {
                     if (entry[1] == home && std::strcmp(reinterpret_cast<const char*>(entry[2]), key) == 0) {
                         const unsigned long long next = entry[0];
-                        if (previous == home) {
+                        if (current == home) {
                             if (next != ~0ull) {
                                 auto* successor = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
                                 entry[0] = successor[0];
@@ -3453,7 +3454,8 @@ void FUN_1423d8f20(unsigned long long* map, void* source)
                     }
                     const unsigned long long next = entry[0];
                     if (next == ~0ull) break;
-                    previous = next;
+                    previous = current;
+                    current = next;
                     entry = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
                 }
             }
@@ -4741,23 +4743,27 @@ void FUN_1423cc7c0(void* raw, unsigned conversion)
         cx18_ImmGetConversionStatus(context, reinterpret_cast<DWORD*>(&conversion), &sentence);
     Scaleform::String label;
     const unsigned mode = *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x84);
+    // Each token is appended as String(token) + ",", e.g. "Native,full,half,".
     if (mode == 9 || mode == 0x80000 || mode == 0x2000) {
         label += (conversion & 1) ? "Native" : "Alphanumeric";
-        label += (conversion & 8) ? "_FullShape" : "_HalfShape";
-        if (mode == 9 && (conversion & 0x400)) label += "_FullWidth";
-        else if (mode == 0x80000 && (conversion & 0x400)) label += "_FullShape";
+        label += ",";
+        label += (conversion & 8) ? "full" : "half";
+        label += ",";
+        label += (conversion & 0x400) ? "full" : "half";
+        label += ",";
     } else if (mode == 0x400) {
         if (!cx18_ImmGetOpenStatus(context)) {
             *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 0;
-            label = "DirectInput";
+            label += "DirectInput";
         } else if (!(conversion & 1)) {
-            label = (conversion & 8) ? "Alphanumeric_FullShape" : "Alphanumeric_HalfShape";
+            label += (conversion & 8) ? "Alphanumeric_FullShape" : "Alphanumeric_HalfShape";
         } else {
             *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0xa8) = 1;
-            if ((conversion & 0xa) == 0xa) label = "Katakana_FullShape";
-            else if ((conversion & 0xa) == 8) label = "Hiragana_FullShape";
-            else label = "Katakana_HalfShape";
+            if ((conversion & 0xa) == 0xa) label += "Katakana_FullShape";
+            else if ((conversion & 0xa) == 8) label += "Hiragana_FullShape";
+            else label += "Katakana_HalfShape";
         }
+        label += ",";
     }
     reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(state))[0x88 / sizeof(void*)])(
         state, label.ToCStr());
