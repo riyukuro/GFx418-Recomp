@@ -264,6 +264,7 @@ template void ArrayData<GFx::AS3::Abc::TraitInfo*, AllocatorLH_POD<GFx::AS3::Abc
 template void ArrayData<float, AllocatorLH_POD<float, 2>, ArrayDefaultPolicy>::Resize(UPInt);
 template void MsgFormat::FormatD1<unsigned long>(const unsigned long&);
 template void MsgFormat::FormatD1<const char*>(const char* const&);
+template void MsgFormat::FormatD1<UInt64>(const UInt64&);
 
 // The Context::CreateEntry template allocates TreeContainer::NodeData, runs its encoded
 // constructor, and hands the node data to the context entry table.
@@ -279,7 +280,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
-// MS2-PIN: ??$FormatD1@PEBD@MsgFormat@Scaleform@@QEAAXAEBQEBD@Z 0x142685ff0
+// MS2-PIN: ??$FormatD1@_K@MsgFormat@Scaleform@@QEAAXAEB_K@Z 0x142685ff0
 
 namespace Scaleform {
 extern "C" void FUN_1425463f0(void*, const void*, UPInt);
@@ -1665,9 +1666,10 @@ void FUN_14268a040(void* source)
         Scaleform::MsgFormat format{Scaleform::MsgFormat::Sink(output)};
         format.Parse("{0} ({1}) from {2} ({3}): {4} times\n");
         format.FormatD1(first.ToCStr());
-        format.FormatD1(*reinterpret_cast<const Scaleform::String*>(record));
+        // The two keys are formatted as numbers (0x14268a341/0x14268a35e call FormatD1<UInt64> 0x142685ff0).
+        format.FormatD1(*reinterpret_cast<const Scaleform::UInt64*>(record));
         format.FormatD1(second.ToCStr());
-        format.FormatD1(*reinterpret_cast<const Scaleform::String*>(record + 8));
+        format.FormatD1(*reinterpret_cast<const Scaleform::UInt64*>(record + 8));
         format.FormatD1(*reinterpret_cast<const unsigned long*>(record + 0x10));
         format.FinishFormatD();
     }
