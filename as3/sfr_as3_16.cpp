@@ -2371,9 +2371,48 @@ using Sfr16NamespaceMap = Scaleform::HashSetBase<Sfr16NamespaceMapNode,
     Sfr16NamespaceMapNode::NodeHashF, Sfr16NamespaceMapNode::NodeAltHashF,
     Scaleform::AllocatorLH<Sfr16NamespaceHashKey, 340>,
     Scaleform::HashsetCachedEntry<Sfr16NamespaceMapNode, Sfr16NamespaceMapNode::NodeHashF>>;
-// MS2-FUNCTIONAL 0x1424dcdd0: clears the occupied cached hash entries and releases the namespace map table.
+// Clears VMAbcFile::ActivationTraitsCacheTable: same body as FUN_1424dcc30 (0x20-byte cached entries, SPtr value at
+// +0x18). Not the AbcMultinameHash<SPtr<Namespace>> set destructor (that one is 0x1424dcf10, 0x28-byte entries).
+// MS2-FUNCTIONAL: applies the same tagged SPtr refcount release and clears each occupied entry before freeing the table.
 // @0x1424dcdd0
-template Sfr16NamespaceMap::~HashSetBase();
+void FUN_1424dcdd0(void* self)
+{
+    auto* table = static_cast<Scaleform::UInt64*>(self);
+    if (*table)
+    {
+        Scaleform::UInt64 offset = 0;
+        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
+        do
+        {
+            auto* entry = reinterpret_cast<Scaleform::UInt64*>(*table + offset);
+            if (entry[2] != static_cast<Scaleform::UInt64>(-2))
+            {
+                Scaleform::UInt64 value = entry[5];
+                if (value)
+                {
+                    if ((value & 1) == 0)
+                    {
+                        auto* refs = reinterpret_cast<Scaleform::UInt32*>(value + 0x10);
+                        if ((*refs & 0x3fffff) != 0)
+                        {
+                            --*refs;
+                            FUN_1423dfa20();
+                        }
+                    }
+                    else
+                        entry[5] = value - 1;
+                }
+                entry[2] = static_cast<Scaleform::UInt64>(-2);
+            }
+            offset += 0x20;
+            --count;
+        } while (count);
+        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
+            DAT_143b15f60, reinterpret_cast<void*>(*table));
+        *table = 0;
+    }
+}
 // @0x1424e0f00
 template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::operator()(
     const Sfr16NamespaceHashKey&) const;
@@ -2428,7 +2467,6 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: ??4?$SPtr@$$CBVNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBV0123@@Z 0x1424e0550
 // MS2-PIN: ??_GClass@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2bb0
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcbb0
-// MS2-PIN: ??1?$HashSetBase@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@$0BFE@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dcdd0
 // MS2-PIN: ??_GLoadQueueEntry@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3150
 // MS2-PIN: ??_GLoadQueueEntryMT_LoadMovie@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e31e0
 // MS2-PIN: ??_GObject@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3580
