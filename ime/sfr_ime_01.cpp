@@ -3154,16 +3154,24 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self)
     self[0x35] = reinterpret_cast<unsigned long long>(DAT_14313b5c0);
     *reinterpret_cast<Scaleform::String*>(self + 0xe) = "";
 
-    void* manager = nullptr;
+    // The exe creates the thread manager straight into +0x1d0 (0x1423d5505) and keeps that reference:
+    // the dtor and FUN_1423d7610/FUN_1423d7690 unadvise the sinks through it.
+    void** managerSlot = reinterpret_cast<void**>(self + 0x3a);
     HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
-        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28), &manager);
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28), managerSlot);
     if (FAILED(hr)) return self;
+    void* manager = *managerSlot;
 
     void* provider = nullptr;
     auto** managerVtable = *reinterpret_cast<void***>(manager);
     hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
         manager, DAT_1431c51e8, &provider);
-    if (SUCCEEDED(hr) && provider) {
+    if (FAILED(hr)) {
+        // Released but left in +0x1d0, as in the exe (0x1423d5585 -> 0x1423d5673).
+        reinterpret_cast<ULONG(*)(void*)>(managerVtable[2])(manager);
+        return self;
+    }
+    if (provider) {
         auto** providerVtable = *reinterpret_cast<void***>(provider);
         HRESULT result = reinterpret_cast<HRESULT(*)(void*, const void*, void*, void*)>(providerVtable[3])(
             provider, DAT_14313b400, self + 0x35, self + 0x36);
@@ -3193,7 +3201,6 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self)
         }
         reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(provider))[2])(provider);
     }
-    reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(manager))[2])(manager);
     return self;
 }
 
@@ -3291,32 +3298,33 @@ void FUN_1423cdf60(unsigned long long* self)
 void FUN_1423d99f0(void* raw, void** value)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    void* input = value ? *value : nullptr;
     if (!*reinterpret_cast<unsigned char*>(self + 0x10)) {
-        if (input) FUN_14257dcd0(input);
+        if (*value) FUN_14257dcd0(*value);
         return;
     }
-    if (!input) return;
+    if (!*value) return;
 
-    char command[0x400]{};
-    strcpy_s(command, sizeof(command), reinterpret_cast<const char*>(self + 0x10));
-    strcat_s(command, sizeof(command), ".Add");
-    const unsigned long long count = *reinterpret_cast<unsigned long long*>(self + 0x818);
-    auto** inputVtable = *reinterpret_cast<void***>(input);
-    for (unsigned long long i = 0; i < count; ++i) {
-        reinterpret_cast<void(*)(void*, void*, void*)>(inputVtable[1])(
-            input, self + 0x828 + i * 0x20, self + 0x810 + i * sizeof(void*));
+    // The command goes in the member buffer at +0x410; the descriptor and argument arrays are the
+    // pointers stored at +0x828/+0x810, and .Add gets the descriptors with the count at +0x830 (0x1423d9ac3).
+    char* command = reinterpret_cast<char*>(self + 0x410);
+    strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
+    strcat_s(command, 0x400, ".Add");
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i) {
+        void* input = *value;
+        reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(input))[1])(input,
+            *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
+            *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
     }
     void* movie = *reinterpret_cast<void**>(self + 0x868);
-    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
-    values = values ? *reinterpret_cast<void**>(static_cast<unsigned char*>(values) + 0x18) : nullptr;
-    if (values) {
-        Scaleform::GFx::Value result;
+    void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+    Scaleform::GFx::Value result;
+    if (bridge)
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, command, &result, nullptr, 0);
-    }
-    self[0x410] = 0;
-    FUN_14257dcd0(input);
+            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, command, &result,
+                *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828), *reinterpret_cast<unsigned*>(self + 0x830));
+    command[0] = 0;
+    FUN_14257dcd0(*value);
 }
 
 // MS2-FUNCTIONAL: cancels composition, sends Escape down and up for candidate modes, and removes the candidate list.
@@ -3764,7 +3772,8 @@ unsigned long long FUN_1423d9ee0(void* raw, void*, int event, void*, const char*
     const unsigned long long oldItems = 0;
     if (*value) {
         const char* begin = value;
-        for (const char* cursor = value;; ++cursor) {
+        // The exe never tests the first character as a delimiter (0x1423d9fc0 reads [rsi+1]).
+        for (const char* cursor = value + 1;; ++cursor) {
             if (*cursor != ',' && *cursor != ':' && *cursor != '\0') continue;
             const size_t length = static_cast<size_t>(cursor - begin);
             if (strings[1] >= strings[2])
