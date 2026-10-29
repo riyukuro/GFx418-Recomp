@@ -1099,7 +1099,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
             cx = area.pHandle->GetCxformPtr();
         FUN_142734e10(&SManager, mvp, *cx, filter, temporaries, shaders, passes - 1, passes,
                       MappedXY16iAlphaTexture[0], &ShaderData);
-        applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true);
+        applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true, true);
         pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
         pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
         pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
@@ -1158,10 +1158,10 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
     const ShaderPair& cur = ShaderData.GetCurrentShaders();
     ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
     ShaderData.SetUniform(cur, Uniform::SU_texgen, &texgen.M[0][0], 8);
-    ShaderData.SetTexture(cur, Uniform::SU_tex, ptexture, ImageFillMode());
+    ShaderData.SetTexture(cur, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
     ShaderData.Finish(1);
 
-    applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true);
+    applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true, true);
     pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
     applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, false,
                    (HALState & HS_InRenderTarget) != 0);
