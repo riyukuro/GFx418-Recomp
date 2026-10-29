@@ -982,40 +982,76 @@ CriBool FUN_140035710(void* player, void* yuvBuffers, void* output)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// CRI Base's null-safe Windows critical-section wrapper: reports failure when the call raises an SEH exception.
 // @0x140039dd4
 CriBool criCsWin_InitializeCriticalSection(LPCRITICAL_SECTION section)
 {
-    if (section)
+    CriBool result = 1;
+    if (section == NULL)
+        return 0;
+    __try
+    {
         InitializeCriticalSection(section);
-    return section != NULL;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = 0;
+    }
+    return result;
 }
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// CRI Base's null-safe Windows critical-section wrapper: reports failure when the call raises an SEH exception.
 // @0x140039dfc
 CriBool criCsWin_DeleteCriticalSection(LPCRITICAL_SECTION section)
 {
-    if (section)
+    CriBool result = 1;
+    if (section == NULL)
+        return 0;
+    __try
+    {
         DeleteCriticalSection(section);
-    return section != NULL;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = 0;
+    }
+    return result;
 }
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// CRI Base's null-safe Windows critical-section wrapper: reports failure when the call raises an SEH exception.
 // @0x140039e24
 CriBool FUN_140039e24(LPCRITICAL_SECTION section)
 {
-    if (section)
+    CriBool result = 1;
+    if (section == NULL)
+        return 0;
+    __try
+    {
         EnterCriticalSection(section);
-    return section != NULL;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = 0;
+    }
+    return result;
 }
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
+// CRI Base's null-safe Windows critical-section wrapper: reports failure when the call raises an SEH exception.
 // @0x140039e4c
 CriBool FUN_140039e4c(LPCRITICAL_SECTION section)
 {
-    if (section)
+    CriBool result = 1;
+    if (section == NULL)
+        return 0;
+    __try
+    {
         LeaveCriticalSection(section);
-    return section != NULL;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = 0;
+    }
+    return result;
 }
 
 // CRI Base: true when the calling thread holds the critical section (+0x28 owner thread, +0x2c depth).
