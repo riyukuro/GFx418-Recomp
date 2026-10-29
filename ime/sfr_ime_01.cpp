@@ -4918,17 +4918,60 @@ unsigned long long FUN_1423d64b0(long long raw)
     return FUN_1423d8140(manager);
 }
 
-// MS2-FUNCTIONAL: clears status state and rebuilds its GFx list while enumerating installed language records.
+// MS2-FUNCTIONAL: TSF BeginUIElement on the UI-element sink. Clears the manager's +0xc0 flag and the sink's candidate
+// state at +0x70..+0xa1 and sets *show = FALSE. Unless the manager is in mode 0x1000000/0x2000000 or its vtable +0x30
+// check fails, it bumps the manager's +0xbc counter and, when the manager's String at +0x10 is not empty, calls
+// RemoveList() and then CreateList(10.0, 1.0). It clears the sink's +0x55/+0x56 flags and walks the enumerator from
+// the first method of the thread manager's IID ba468c55 interface, calling each element's first method.
 // @0x1423da440
 unsigned long long FUN_1423da440(long long raw, unsigned long long, unsigned* result)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
+    static const GUID kProfileIid = { 0xba468c55, 0x9956, 0x4fb1, { 0xa5, 0x9d, 0x52, 0xa7, 0xdd, 0x7c, 0xc6, 0xaa } };
     auto* self = reinterpret_cast<unsigned char*>(raw);
-    if (result) *result = 0;
-    if (!self) return 0;
-    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
-    if (owner) owner[0xc0] = 0;
-    std::memset(self + 0x70, 0, 0x38);
-    if (owner) FUN_1423d9b40(owner);
+    auto* manager = *reinterpret_cast<unsigned char**>(self + 8);
+    manager[0xc0] = 0;
+    std::memset(self + 0x70, 0, 0x32);
+    *result = 0;
+    const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
+    if (((mode - 0x1000000) & 0xfeffffff) == 0) return 0;
+    if (!reinterpret_cast<bool(*)(void*, void*)>((*reinterpret_cast<void***>(manager))[0x30 / sizeof(void*)])(
+            manager, *reinterpret_cast<void**>(manager + 8)))
+        return 0;
+    ++*reinterpret_cast<int*>(manager + 0xbc);
+    if (reinterpret_cast<Scaleform::String*>(manager + 0x10)->GetLength()) {
+        Scaleform::GFx::Value args[2];
+        args[0] = Scaleform::GFx::Value(10.0);
+        args[1] = Scaleform::GFx::Value(1.0);
+        Scaleform::GFx::Value invokeResult;
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(manager + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "RemoveList", &invokeResult, nullptr, 0);
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(manager + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "CreateList", &invokeResult, args, 2);
+    }
+    void* owner = *reinterpret_cast<void**>(manager + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    *reinterpret_cast<unsigned short*>(self + 0x55) = 0;
+    IUnknown* threadManager = *reinterpret_cast<IUnknown**>(self + 0x20);
+    IUnknown* profiles = nullptr;
+    if (threadManager->QueryInterface(kProfileIid, reinterpret_cast<void**>(&profiles)) >= 0 && profiles) {
+        IUnknown* items = nullptr;
+        if (reinterpret_cast<HRESULT(*)(IUnknown*, IUnknown**)>((*reinterpret_cast<void***>(profiles))[3])(
+                profiles, &items) == S_OK) {
+            typedef HRESULT (*NextFn)(IUnknown*, ULONG, IUnknown**, ULONG*);
+            IUnknown* item = nullptr;
+            while (reinterpret_cast<NextFn>((*reinterpret_cast<void***>(items))[4])(items, 1, &item, nullptr) == S_OK) {
+                unsigned char scratch[0x70];
+                reinterpret_cast<HRESULT(*)(IUnknown*, void*)>((*reinterpret_cast<void***>(item))[3])(item, scratch);
+                item->Release();
+            }
+            items->Release();
+        }
+        profiles->Release();
+    }
     return 0;
 }
 
