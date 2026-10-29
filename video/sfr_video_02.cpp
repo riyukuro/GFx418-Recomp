@@ -457,12 +457,13 @@ __declspec(noinline) void FUN_14000e640(AvmCharacter* pavm, const InteractiveObj
     pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
 }
 
-// MS2-FUNCTIONAL: forwards the focus callback through the AvmCharacter interface.
+// MS2-FUNCTIONAL: forwards the focus callback to the AvmCharacter base implementation. The exe calls
+// AvmCharacter::OnFocus (0x14296bd60) directly, not through the vtable.
 // @0x14000e650
 __declspec(noinline) void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
                    InteractiveObject* oldOrNewFocus, unsigned controller, FocusMovedType moved)
 {
-    pavm->OnFocus(event, oldOrNewFocus, controller, moved);
+    pavm->AvmCharacter::OnFocus(event, oldOrNewFocus, controller, moved);
 }
 
 // @0x14000e600
