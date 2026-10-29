@@ -28,7 +28,8 @@
 
 // Shared render/AS3 cleanup COMDATs are placed in this SCU by the executable.  Their data structures are
 // recovered here from the code that uses them; the neighboring AS3 text visitor classes live in sfr_as3_13.
-struct CX18ArrayLHEntry { void* Resource; unsigned char Rest[0x18]; };
+// RangeData<CSSHolderBase::UrlZone>: Index, Length, then the zone (SavedFmt, HitCount, OverCount).
+struct CX18ArrayLHEntry { Scaleform::SPInt Index; Scaleform::UPInt Length; Scaleform::RefCountImpl* SavedFmt; unsigned char Rest[8]; };
 struct CX18ArrayLH { CX18ArrayLHEntry* Data; Scaleform::UPInt Size; Scaleform::UPInt Capacity; };
 // Hash<String, String> cached-hash node (0x20 bytes) and the table header the entries follow.
 struct CX18StringPairEntry
@@ -56,15 +57,15 @@ struct CX18TextFormatCleanup
 struct CX18RefCountedPtr { Scaleform::RefCountImpl* Ptr; };
 
 // @0x1424a9ed0
-// MS2-FUNCTIONAL: walks and releases each resource entry, then frees and clears the backing ArrayLH storage.
+// MS2-FUNCTIONAL: releases each URL zone's SavedFmt from the back, then frees the backing ArrayLH storage.
 void FUN_1424a9ed0(void* pdata)
 {
     CX18ArrayLH* array = (CX18ArrayLH*)pdata;
     for (Scaleform::UPInt i = array->Size; i; --i)
     {
-        Scaleform::GFx::ASStringNode* value = (Scaleform::GFx::ASStringNode*)array->Data[i - 1].Resource;
-        if (value)
-            value->Release();
+        Scaleform::RefCountImpl* fmt = array->Data[i - 1].SavedFmt;
+        if (fmt)
+            fmt->Release();
     }
     if (array->Data)
         Scaleform::Memory::GetGlobalHeap()->Free(array->Data);
@@ -112,7 +113,8 @@ void FUN_1424aa0f0(void* pfmt)
 }
 
 // @0x1424aa770
-// MS2-FUNCTIONAL: releases the CSS holder resource and URL array, then performs the requested sized delete.
+// MS2-FUNCTIONAL: releases the CSS holder's StyleSheet SPtr (a collectable object) and URL array, then performs the
+// requested sized delete.
 void* FUN_1424aa770(void* self, unsigned flags)
 {
     Scaleform::UPInt ref = *(Scaleform::UPInt*)((unsigned char*)self + 0x40);
@@ -121,7 +123,7 @@ void* FUN_1424aa770(void* self, unsigned flags)
         if (ref & 1)
             *(Scaleform::UPInt*)((unsigned char*)self + 0x40) = ref - 1;
         else
-            ((Scaleform::RefCountImpl*)ref)->Release();
+            ((const Scaleform::GFx::AS3::GASRefCountBase*)ref)->Release();
     }
     FUN_1424a9ed0((unsigned char*)self + 8);
     if (flags & 1)
