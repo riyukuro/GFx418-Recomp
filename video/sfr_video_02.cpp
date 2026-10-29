@@ -438,18 +438,14 @@ void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 // @0x14000e5d0
 __declspec(noinline) void FUN_14000e5d0(void*) { FUN_14296bba0(); }
 
-// MS2-FUNCTIONAL: builds the observed default color transform and dispatches it through the object's vtable.
+// MS2-FUNCTIONAL: sends EventId(1) through the object's vtable slot 8 (the exe's 0x14-byte EventId: ControllerIndex -1 at +0x11).
 // @0x14000e590
 __declspec(noinline) void FUN_14000e590(void** object)
 {
-    struct DefaultTransform
-    {
-        UInt32 multiplier[3];
-        UByte offsets[5];
-    } transform = {{1, 0, 0}, {0, 0, 0xff, 0, 0}};
-    typedef void (*ApplyFn)(void*, const DefaultTransform*);
+    Scaleform::GFx::EventId payload(1);
+    typedef void (*ApplyFn)(void*, const Scaleform::GFx::EventId*);
     reinterpret_cast<ApplyFn>(*reinterpret_cast<void**>(static_cast<char*>(*object) + 0x40))(
-        object, &transform);
+        object, &payload);
 }
 
 // MS2-FUNCTIONAL: forwards the absolute-path query to the executable's AvmCharacter display object.
