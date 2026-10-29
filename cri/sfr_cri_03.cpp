@@ -1122,40 +1122,46 @@ const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, 
 // @0x14003a85c
 CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? 0 : criUtfRtv_GetDataUint32(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    if (field < 0)
+        return 0;
+    return criUtfRtv_GetDataUint32(table, row, field);
 }
 
 // MS2-FUNCTIONAL: this second CRI callback has the same executable body and forwards the resolved field to uint32.
 // @0x14003a894
 CriUint32 FUN_14003a894(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? 0 : criUtfRtv_GetDataUint32(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    if (field < 0)
+        return 0;
+    return criUtfRtv_GetDataUint32(table, row, field);
 }
 
 // MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a float.
 // @0x14003a8cc
 CriFloat32 criUtfRtv_GetDataFload32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? 0 : criUtfRtv_GetDataFloat32(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    return field < 0 ? 0 : criUtfRtv_GetDataFloat32(table, row, field);
 }
 
 // MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a double.
 // @0x14003a904
 double criUtfRtv_GetDataFloat64Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? 0 : criUtfRtv_GetDataFloat64(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    return field < 0 ? 0 : criUtfRtv_GetDataFloat64(table, row, field);
 }
 
 // MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a string.
 // @0x14003a940
 const CriChar8* criUtfRtv_GetDataStrFn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? NULL : criUtfRtv_GetDataStr(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    if (field < 0)
+        return NULL;
+    return criUtfRtv_GetDataStr(table, row, field);
 }
 
 // MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a byte.
@@ -1434,21 +1440,37 @@ void criVmpv_SetProcessorMask(void* handle, CriUint32 mask)
     FUN_14004e2f0(mpv, 0xd, (CriSint32)mask);
 }
 
+struct CriPostParameter
+{
+    CriSint32 Horizontal;
+    CriSint32 Vertical;
+    CriSint32 Magic;
+};
+
 // MS2-FUNCTIONAL: pack up to three horizontal and vertical DLG parameters for the MPV core.
 // @0x14003ca00
 void FUN_14003ca00(void* context, CriSint32 count, const CriSint32* horizontal,
                    const CriSint32* vertical)
 {
-    (void)context;
-    CriSint32 active = count > 3 ? 3 : count;
-    CriSint32 parameters[10] = {};
-    for (CriSint32 i = 0; i < active; ++i)
+    // The exe reads the context's +0x78 field and never uses it.
+    void* handle = context;
+    void* decoder2;
+    CriSint32 i;
+    if (context != NULL)
+        decoder2 = *(void**)((CriUint8*)handle + 0x78);
+    else
+        decoder2 = NULL;
+    (void)decoder2;
+    if (count > 3)
+        count = 3;
+    CriPostParameter parameters[3];
+    for (i = 0; i < count; ++i)
     {
-        parameters[i * 3] = horizontal[i];
-        parameters[i * 3 + 1] = vertical[i];
-        parameters[i * 3 + 2] = 0x5a5a5a5a;
+        parameters[i].Horizontal = horizontal[i];
+        parameters[i].Vertical = vertical[i];
+        parameters[i].Magic = 0x5a5a5a5a;
     }
-    FUN_1400500b0(active, parameters);
+    FUN_1400500b0(count, parameters);
 }
 
 // MS2-FUNCTIONAL: return the VMPV handle's current status field.
@@ -3031,18 +3053,26 @@ void FUN_140046784(void* object)
 // @0x1400467c0
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
 {
-    void* data;
-    CriUint32 size;
-    memcpy(&data, source, sizeof(data));
-    memcpy(&size, (const CriUint8*)source + 8, sizeof(size));
-    CriUint32 prefixSize = size < maximum ? size : maximum;
-    CriUint32 suffixSize = size - prefixSize;
-    void* suffixData = suffixSize ? (CriUint8*)data + prefixSize : NULL;
+    struct SjChunk
+    {
+        CriUint8* Data;
+        CriUint32 Size;
+        CriUint32 Reserved;
+    };
+    SjChunk* head = (SjChunk*)prefix;
+    SjChunk* tail = (SjChunk*)suffix;
     // The exe copies the whole 16-byte chunk into prefix (+0xc included) and never writes suffix+0xc.
-    memcpy(prefix, source, 16);
-    memcpy((CriUint8*)prefix + 8, &prefixSize, sizeof(prefixSize));
-    memcpy(suffix, &suffixData, sizeof(suffixData));
-    memcpy((CriUint8*)suffix + 8, &suffixSize, sizeof(suffixSize));
+    *head = *(const SjChunk*)source;
+    tail->Size = head->Size;
+    if (head->Size > maximum)
+        head->Size = maximum;
+    tail->Size -= head->Size;
+    if (tail->Size == 0)
+    {
+        tail->Data = NULL;
+        return;
+    }
+    tail->Data = head->Data + head->Size;
 }
 
 // MS2-FUNCTIONAL: place a bounded prefix on the input queue and return the suffix to output.
