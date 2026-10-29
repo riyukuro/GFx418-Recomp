@@ -2109,7 +2109,8 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
         float scolor[4], scolor2[4];
         params.Colors[0].GetRGBAFloat(&scolor[0], &scolor[1], &scolor[2], &scolor[3]);
         params.Colors[1].GetRGBAFloat(&scolor2[0], &scolor2[1], &scolor2[2], &scolor2[3]);
-        float offset[2] = { params.Offset.x * 0.05f, params.Offset.y * 0.05f };
+        // -TwipsToPixels: the shader samples the source against the shadow offset
+        float offset[2] = { params.Offset.x * -0.05f, params.Offset.y * -0.05f };
 
         // the source drawn under the shadow (not for a hidden object without knockout)
         if ((params.Mode & (BlurFilterParams::Mode_Knockout | BlurFilterParams::Mode_HideObject)) !=
