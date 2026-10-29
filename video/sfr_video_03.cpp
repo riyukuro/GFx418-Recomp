@@ -61,6 +61,8 @@ extern ExeDecl<void*> DAT_143b27550;
 #define VideoCallbackBaseB DAT_143b27550
 extern ExeDecl<void*> DAT_143b275e8;
 #define VideoCallbackC DAT_143b275e8
+// Each VideoPropBase* slot is the int this-adjust of a 16-byte member-function pointer. The exe reads only its low
+// dword (movsxd); its static init (e.g. 0x142c99be0) copies stack garbage into the high dword.
 extern ExeDecl<void*> DAT_143b27798; extern ExeDecl<void*> DAT_143b277a0;
 #define VideoPropGetA DAT_143b27798
 #define VideoPropBaseA DAT_143b277a0
@@ -970,7 +972,7 @@ void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* o
 void FUN_14001a9b0(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetA)(reinterpret_cast<std::uintptr_t>(VideoPropBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetA)(*reinterpret_cast<const int*>(&VideoPropBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 // MS2-FUNCTIONAL: converts the input to an integer and writes it through the video property setter thunk.
@@ -980,14 +982,14 @@ void FUN_14001aa20(void*, void* vm, void* context, std::uint64_t value, int coun
     int converted = 0; std::uint32_t number = 0;
     if (count) ConvertAS3ValueToInt32(input, &converted, reinterpret_cast<int*>(&number), static_cast<int>(value), vm);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint32_t)>(VideoPropSetA)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, number);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint32_t)>(VideoPropSetA)(*reinterpret_cast<const int*>(&VideoPropBaseSetA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, number);
 }
 // MS2-FUNCTIONAL: fetches the video playback boolean and writes it to the callback Value.
 // @0x14001aa90
 void FUN_14001aa90(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint8_t value = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint8_t*)>(VideoPropGetB)(reinterpret_cast<std::uintptr_t>(VideoPropBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &value);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint8_t*)>(VideoPropGetB)(*reinterpret_cast<const int*>(&VideoPropBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &value);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
         *output = (*output & 0xffffffe1) | 1;
         *reinterpret_cast<std::uint64_t*>(output + 4) = value;
@@ -1000,14 +1002,14 @@ void FUN_14001ab00(void*, void* vm, void* context, std::uint64_t value, int coun
 {
     auto converted = count ? ConvertAS3ValueToBool(input) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint8_t)>(VideoPropSetB)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, converted);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint8_t)>(VideoPropSetB)(*reinterpret_cast<const int*>(&VideoPropBaseSetB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, converted);
 }
 // MS2-FUNCTIONAL: fetches the video volume integer and writes it to the callback Value.
 // @0x14001ab60
 void FUN_14001ab60(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetC)(reinterpret_cast<std::uintptr_t>(VideoPropBaseC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetC)(*reinterpret_cast<const int*>(&VideoPropBaseC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 // MS2-FUNCTIONAL: fetches the video pan integer and writes it to the callback Value.
@@ -1015,7 +1017,7 @@ void FUN_14001ab60(void*, void* vm, void* context, std::uint32_t* output)
 void FUN_14001abd0(void*, void* vm, void* context, std::uint32_t* output)
 {
     std::uint32_t number = 0;
-    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetD)(reinterpret_cast<std::uintptr_t>(VideoPropBaseD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint32_t*)>(VideoPropGetD)(*reinterpret_cast<const int*>(&VideoPropBaseD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 
@@ -1025,7 +1027,7 @@ void FUN_14001ac80(void*, void* vm, void* context, std::uint64_t property, int c
 {
     std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC)(*reinterpret_cast<const int*>(&VideoPropBaseSetC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
 }
 // MS2-FUNCTIONAL: forwards an object atom to the second corresponding video property setter.
 // @0x14001acd0
@@ -1033,7 +1035,7 @@ void FUN_14001acd0(void*, void* vm, void* context, std::uint64_t property, int c
 {
     std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD)(reinterpret_cast<std::uintptr_t>(VideoPropBaseSetD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD)(*reinterpret_cast<const int*>(&VideoPropBaseSetD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
 }
 // MS2-FUNCTIONAL: releases the retained atom field and invokes the AS3 cleanup hook.
 // @0x14001ae40
