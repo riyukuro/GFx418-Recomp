@@ -2332,7 +2332,10 @@ unsigned long long FUN_1423d1760(void* self, unsigned char open)
         wasAssociated = false;
         cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
         context = cx18_ImmGetContext(hwnd);
-        if (!context) return cx18_ImmReleaseContext(hwnd, nullptr);
+        if (!context) {
+            cx18_ImmReleaseContext(hwnd, nullptr);
+            return 0;
+        }
     }
     const BOOL result = cx18_ImmSetOpenStatus(context, open);
     if (!wasAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
