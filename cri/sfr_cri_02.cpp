@@ -977,6 +977,8 @@ static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, con
             }
             FUN_142586530(&param.Value, p, pcomma - p);
             pcue->Params.PushBack(param);
+            param.Name.Clear();
+            param.Value.Clear();
             p = pcomma + 1;
         }
     }
