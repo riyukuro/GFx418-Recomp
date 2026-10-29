@@ -9,6 +9,9 @@
 // MS2-RANGE: 0x14002e548-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+// VS2008's <new> (use_ansi.h) adds /DEFAULTLIB:libcpmt under /MT. That static C++ library then wins over the hook DLL's
+// msvcprt whenever this obj links first, and the link fails with a RuntimeLibrary mismatch. We only need placement new.
+#define _USE_ANSI_CPP
 #include "../include/cri/cri_movie.h"
 #include <windows.h>
 #include <new>
@@ -527,12 +530,14 @@ void CriAllocator::operator delete(void* memory, CriHeap heap)
     criHeap_Free(heap, memory);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: the CRI VS2008 build has different code generation for this wrapper.
 // @0x14002e628
 int FUN_14002e628(CriSint32 alignment)
 {
     return criHeap_DebugGetWorstExtraSize(alignment) + (int)sizeof(CriHeap);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: the CRI VS2008 build has different code generation for these allocator wrappers.
 // @0x14002e63c
@@ -564,11 +569,13 @@ void CRIAPI criFixedAllocator_Create(void* begin, CriUint32 size, CriFixedAlloca
     allocator->Size = size;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: CRI emits the empty helper as a short c2 return in its VS2008 build.
 // @0x14002e6bc
 void FUN_14002e6bc(CriFixedAllocator*)
 {
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: the CRI VS2008 build uses a different register allocation for this allocator.
 // @0x14002e6c0
@@ -974,6 +981,7 @@ CriBool FUN_140035710(void* player, void* yuvBuffers, void* output)
     return 1;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; preserve its null-safe Windows critical-section wrapper.
 // @0x140039dd4
 CriBool criCsWin_InitializeCriticalSection(LPCRITICAL_SECTION section)
@@ -1010,16 +1018,18 @@ CriBool FUN_140039e4c(LPCRITICAL_SECTION section)
     return section != NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this ownership check is rebuilt with our VS2017 toolset.
+// CRI Base: true when the calling thread holds the critical section (+0x28 owner thread, +0x2c depth).
 // @0x140039e74
 CriBool criCs_IsInCriticalSection(const void* state)
 {
     const CriUint8* bytes = (const CriUint8*)state;
-    CriSint32 depth = *(const CriSint32*)(bytes + 0x2c);
-    if (depth < 1)
+    CriBool result = 0;
+    if (*(const CriSint32*)(bytes + 0x2c) <= result)
         return 0;
-    return GetCurrentThreadId() == *(const DWORD*)(bytes + 0x28);
+    result = GetCurrentThreadId() == *(const DWORD*)(bytes + 0x28);
+    return result;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this stores its caller-supplied metadata allocator.
 // @0x1400301d0
@@ -1884,6 +1894,7 @@ CriUint64 FUN_140038bd0(const CriChar8* text, CriChar8** end, CriSint32 radix)
     return _strtoui64(text, end, radix);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: forward CRI Base's two-argument notification to its shared error dispatch routine.
 // @0x140038ddc
 void criErr_Notify(CriSint32 category, const CriChar8* message)
@@ -1904,6 +1915,7 @@ void FUN_140038e10(void)
 {
     FUN_140038ce4(0, NULL, 0, 0, NULL);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: enter the movie player's shared handle critical section.
 // @0x1400378b0
@@ -1919,6 +1931,7 @@ void FUN_1400378e0(void)
     FUN_140039f8c(DAT_143ffd550);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: publish the executable's CRI Critical Section runtime banner.
 // @0x1400385b8
 void FUN_1400385b8(void)
@@ -1982,6 +1995,7 @@ void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
     FUN_140038ce4(category, DAT_143b27ab0, 0, 0, NULL);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: construct a CRI Movie player and its work queues inside the supplied memory block.
 // @0x14002eb20
@@ -4685,6 +4699,7 @@ void* FUN_140035c80(void* player, void* output)
     return frameToken;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: return the ordinary or suppressed CRI error count selected by the API flag.
 // @0x140038eec
 CriUint32 criErr_GetErrorCount(CriSint32 type)
@@ -4707,6 +4722,7 @@ void criErr_ResetErrorCount(CriSint32 type)
     else
         FUN_140038e24(0, "E09012704B", -2);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: publish the callback and user object used to compare decoded frame times.
 // @0x140039750
