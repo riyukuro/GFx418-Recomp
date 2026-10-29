@@ -1030,7 +1030,7 @@ void GAS_GlobalTrace(const FnCall& fn)
     for (char* p = buf; *p; ++p)
         if (*p == '\r')
             *p = '\n';
-    fn.LogScriptMessage(text.GetSize() >= 2000 ? "%s..." : "%s\n", buf);
+    fn.LogScriptMessage(text.GetSize() >= 2000 ? "%s ...<truncated>\n" : "%s\n", buf);
 }
 
 // BitmapData.loadBitmap(linkageId): a bitmap holding the image resource exported with the id, null without one.
