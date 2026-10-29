@@ -694,7 +694,7 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
         {
             CheckAvm();
             VM& vm = *pAVM;
-            SPtr<VMAbcFile> pfile = SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file);
+            SPtr<VMAbcFile> pfile = Pickable<VMAbcFile>(SF_HEAP_NEW(vm.GetMemoryHeap()) VMAbcFile(vm, file));
             if (pfile->RegisterUserDefinedClassTraits() && pfile->RegisterScrips(false))
                 vmabc = pfile;
             if (vm.HandleException)
