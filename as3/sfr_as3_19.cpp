@@ -3790,7 +3790,7 @@ void Sfr31ExecPushWith(UPInt vmAddr)
     Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
 }
 
-// Native with a required object argument, which must be an Object-kind value; replaces it with the result of its virtual call.
+// applytype: the first argument must be a Class value; replaces it with the Class returned by its ApplyTypeArgs.
 // MS2-FUNCTIONAL 0x142532dc0: raw-offset model; codegen differs from the exe
 // @0x142532dc0
 void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
@@ -3807,8 +3807,9 @@ void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
             const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
             const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
             void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            typedef const Value* (*Fn)(UPInt, UInt32, void*);
-            a0->Assign(*reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0xb8))(o, cnt, args));
+            // Class::ApplyTypeArgs (slot 0xb8) returns a Class&; the exe stores it through Value::Assign(Class*)
+            typedef Class& (*Fn)(UPInt, UInt32, void*);
+            a0->Assign(&reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0xb8))(o, cnt, args));
         }
         else
         {
