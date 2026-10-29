@@ -1283,11 +1283,11 @@ void FUN_140006a40(Scaleform::UPInt* stack)
             DAT_143b15f60, stack, 0x408, 0);
     }
     if (!page) { stack[0] -= 0x20; return; }
-    auto* pages = reinterpret_cast<void**>(stack + 4);
+    // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
     auto size = stack[5] + 1;
     if (size >= stack[6]) FUN_1400050c0(reinterpret_cast<void**>(stack + 4), stack + 4, size + (size >> 2));
     stack[5] = size;
-    pages[size - 1] = page;
+    reinterpret_cast<void**>(stack[4])[size - 1] = page;
     stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
     stack[0] = stack[1];
     stack[3] = stack[2] - 0x20;
@@ -1303,17 +1303,17 @@ void FUN_140006cf0(Scaleform::UPInt* stack)
         if (stack[0]) *reinterpret_cast<unsigned char*>(stack[0]) = 0;
         return;
     }
-    auto** pages = reinterpret_cast<void**>(stack + 4);
-    void* page = pages[stack[5] - 1];
+    // stack[4] is the page array's data pointer; reread after the resize, which may move it
+    void* page = reinterpret_cast<void**>(stack[4])[stack[5] - 1];
     *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400) = stack[7];
     stack[7] = reinterpret_cast<Scaleform::UPInt>(page);
     FUN_140005c20(reinterpret_cast<void**>(stack + 4), stack[5] - 1);
-    page = pages[stack[5] - 1];
+    page = reinterpret_cast<void**>(stack[4])[stack[5] - 1];
     stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
     stack[2] = stack[1] + 0x400;
     stack[0] = stack[1] + 0x3e0;
     stack[3] = stack[5] < 2 ? stack[1] :
-        reinterpret_cast<Scaleform::UPInt>(pages[stack[5] - 2]) + 0x3e0;
+        reinterpret_cast<Scaleform::UPInt>(reinterpret_cast<void**>(stack[4])[stack[5] - 2]) + 0x3e0;
 }
 
 // MS2-FUNCTIONAL: removes retained elements beyond the new size and adjusts pointer capacity.
