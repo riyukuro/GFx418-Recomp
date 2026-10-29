@@ -1769,12 +1769,15 @@ void FUN_1400115c0(void* object)
     FUN_140011410(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88));
 }
 
-// MS2-FUNCTIONAL: constructs an Object and installs the environment's builtin prototype type 0x22.
+// MS2-FUNCTIONAL: constructs a NetConnection Object (vtables 0x1431b65f0/0x1431b6540) and installs the
+// environment's builtin prototype type 0x22.
 // @0x140011c90
 Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
                                             Scaleform::GFx::AS2::Environment* environment)
 {
     object->Scaleform::GFx::AS2::Object::Object(environment);
+    *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     Scaleform::GFx::AS2::ObjectInterface* iface = reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
         reinterpret_cast<char*>(object) + 0x20);
     iface->Set__proto__(environment->GetSC(),
