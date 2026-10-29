@@ -1566,18 +1566,6 @@ bool VertexShader::Init(HAL* phal, const VertexShaderDesc* pd)
             UINT count = 8;
             if (!h || FAILED(table->GetConstantDesc(h, cdesc, &count)))
             {
-                // walk the table's constants (the debug build prints them here)
-                D3DXCONSTANTTABLE_DESC tdesc;
-                if (SUCCEEDED(table->GetDesc(&tdesc)))
-                {
-                    for (unsigned c = 0; c < tdesc.Constants; c++)
-                    {
-                        D3DXCONSTANT_DESC one;
-                        UINT n = 1;
-                        table->GetConstantDesc(table->GetConstant(0, c), &one, &n);
-                    }
-                }
-                table->GetConstant(0, 0);
                 ok = false;
                 break;
             }
@@ -1616,6 +1604,18 @@ bool FragShader::Init(HAL* phal, const FragShaderDesc* pd)
             UINT count = 8;
             if (!h || FAILED(table->GetConstantDesc(h, cdesc, &count)))
             {
+                // walk the table's constants (the debug build prints them here)
+                D3DXCONSTANTTABLE_DESC tdesc;
+                if (SUCCEEDED(table->GetDesc(&tdesc)))
+                {
+                    for (unsigned c = 0; c < tdesc.Constants; c++)
+                    {
+                        D3DXCONSTANT_DESC one;
+                        UINT n = 1;
+                        table->GetConstantDesc(table->GetConstant(0, c), &one, &n);
+                    }
+                }
+                table->GetConstant(0, 0);
                 ok = false;
                 break;
             }
