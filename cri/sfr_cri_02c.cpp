@@ -17,6 +17,7 @@
 #include <new>
 #include <string.h>
 #include <stdlib.h>
+#pragma function(memset)                        // the exe CRI objs call memset; they never inline it
 
 extern "C" {
 extern void* DAT_143b15f60;
@@ -26,6 +27,7 @@ extern CriUint8 DAT_143b27a88[];
 extern void* DAT_143ffd550;
 extern CriSint32 DAT_143ffd500;
 extern CriUint8 DAT_143ffd504[0x48];
+extern const char* DAT_143b27940;
 extern const char* DAT_143b27aa8;
 extern char DAT_143b27ab0[0x100];
 extern const char* DAT_143b27bb0;
@@ -579,17 +581,19 @@ void FUN_14002e6bc(CriFixedAllocator*)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: the CRI VS2008 build uses a different register allocation for this allocator.
+// MS2-FUNCTIONAL: bump-allocate size bytes at the next align boundary.
 // @0x14002e6c0
 void* CRIAPI criFixedAllocator_Allocate(CriFixedAllocator* allocator, CriUint32 size, CriUint32 align)
 {
     size_t current = (size_t)allocator->Current;
-    size_t aligned = (current + align - 1) / align * align;
-    allocator->Current = (CriUint8*)(aligned + size);
+    // The exe sign-extends size and adds align - 1 as a 32-bit value.
+    size_t aligned = (current + (align - 1)) / align * align;
+    allocator->Current = (CriUint8*)(aligned + (CriSint32)size);
     return (void*)aligned;
 }
 // ==== CRI Movie player state and frame-buffer helpers ===============================================================
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
 // @0x140031020
 void FUN_140031020(void* player, CriUint32 value)
@@ -603,6 +607,7 @@ void criMvPly_SetAudioTrack(void* player, CriUint32 track)
 {
     *(CriUint32*)((CriUint8*)player + 0x8c8) = track;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: preserves the executable's invalid-value store after its diagnostic call.
@@ -654,12 +659,14 @@ CriBool FUN_140039cb0(CriMvEasyPlayer* easyPlayer, void* yuvBuffers,
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
 // @0x1400310e0
 CriSint32 getInternalStatus(void* player)
 {
     return *(CriSint32*)((CriUint8*)player + 4);
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: compares the frame and system time as the CRI player does, including unsigned-to-float wrap correction.
@@ -813,15 +820,24 @@ CriSint32 CriMvEasyPlayer::compareFrameTimeFluctuation(CriMvEasyPlayer* easyPlay
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this helper is rebuilt with our VS2017 toolset.
 // @0x1400351c0
 void crimvply_clearAlphaFrameInfoMembers(void* info)
 {
-    memset(info, 0, 0x38);  // the alpha frame info is 0x38 bytes (exe stores end at +0x34)
+    *(CriUint64*)((CriUint8*)info + 0x00) = 0;
     *(CriSint32*)((CriUint8*)info + 0x08) = -1;
+    *(CriSint32*)((CriUint8*)info + 0x0c) = 0;
+    *(CriSint32*)((CriUint8*)info + 0x10) = 0;
+    *(CriSint32*)((CriUint8*)info + 0x14) = 0;
+    *(CriSint32*)((CriUint8*)info + 0x18) = 0;
+    *(CriSint32*)((CriUint8*)info + 0x1c) = 0;
+    *(CriUint64*)((CriUint8*)info + 0x20) = 0;
     *(CriUint64*)((CriUint8*)info + 0x28) = 1;
     *(CriSint32*)((CriUint8*)info + 0x30) = -1;
+    *(CriSint32*)((CriUint8*)info + 0x34) = 0;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this predicate is rebuilt with our VS2017 toolset.
@@ -864,6 +880,7 @@ CriUint32 FUN_1400358d0(void* output, const void* info)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this plane updater is rebuilt with our VS2017 toolset.
 // @0x1400359e0
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const CriMvAlphaDecoderFrameInfo* info)
@@ -919,6 +936,7 @@ void* crimvply_transitErrorState(void* player, void* fallback)
     }
     return fallback;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: CRI Movie was built with VS2008; preserve the input-chunk state check from the executable.
@@ -1077,6 +1095,7 @@ CriBool criCs_IsInCriticalSection(const void* state)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this stores its caller-supplied metadata allocator.
 // @0x1400301d0
 void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate, void* freeFn)
@@ -1099,6 +1118,7 @@ CriSint32 FUN_14002e9e0(void)
     uniConfig[2] = 4;
     return total + criSjUni_CalculateWorkSize((const CriSint32*)uniConfig);
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
@@ -1512,9 +1532,8 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
 CriUint32 criMvPly_AllocateWorkBufferWithWork(void* player, void* memory, CriSint32 size, void* work)
 {
     FUN_140037850(player);
-    CriHeap heap = FUN_140027fec(memory, size);
-    ((CriMvHeapWorkState*)player)->Heap = heap;
-    CriUint32 result = FUN_140030280(player, heap, work);
+    ((CriMvHeapWorkState*)player)->Heap = FUN_140027fec(memory, size);
+    CriUint32 result = FUN_140030280(player, ((CriMvHeapWorkState*)player)->Heap, work);
     FUN_140037880(player);
     return result;
 }
@@ -1644,6 +1663,7 @@ void FUN_140037950(void* owner, const char* message, CriSint32 value)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: convert the decoder's frame metadata into the 0x38-byte output info, taking the dimensions from the
 // movie. This is not a plain copy: the decoder's +0x14 moves to +0x1c, and +0x14/+0x18/+0x34 come from the player.
 // @0x140035480
@@ -1678,6 +1698,7 @@ void FUN_140035480(void* player, void* destination, const void* source)
     out->Field14 = movie->Width;
     out->Field18 = movie->Height;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: ask the alpha decoder to copy one frame into the caller's buffers and publish its metadata.
@@ -1729,27 +1750,36 @@ CriBool FUN_140035a40(void* player, const CriMvFrameInfo* frameInfo)
 // @0x140035bf0
 void FUN_140035bf0(void* player)
 {
-    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
     CriUint64 frameInfo[10];
-    while (FUN_1400449c0(decoder, frameInfo))
-        FUN_140044050(decoder, frameInfo);
+    void* frame = NULL;
+    frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+    while (frame != NULL)
+    {
+        FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+        frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+    }
 }
 
 // MS2-FUNCTIONAL: get the current alpha frame only while the movie is in a frame-producing state.
 // @0x140035800
 CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
 {
+    CriBool result = 0;
     crimvply_clearAlphaFrameInfoMembers(outputInfo);
-    CriMvDecoderHandleFields* handles = (CriMvDecoderHandleFields*)player;
-    if (!handles->AlphaDecoder || !crimvply_isUnderGetFrameCondition(player))
+    if (!((CriMvDecoderHandleFields*)player)->AlphaDecoder)
         return 0;
-    CriUint64 frameInfo[10] = {};
-    if (!FUN_1400449c0(handles->AlphaDecoder, frameInfo))
+    if (!crimvply_isUnderGetFrameCondition(player))
         return 0;
-    FUN_140035480(player, outputInfo, frameInfo);
-    crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
-        (const CriMvAlphaDecoderFrameInfo*)frameInfo);
-    return 1;
+    CriUint64 frameInfo[10];
+    void* frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+    if (frame != NULL)
+    {
+        FUN_140035480(player, outputInfo, frameInfo);
+        crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
+            (const CriMvAlphaDecoderFrameInfo*)frameInfo);
+        result = 1;
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: forward the player's video decoder and all five caller outputs to its frame-pool query.
@@ -2520,22 +2550,23 @@ void FUN_1400379e0(const void* key)
 // @0x14002e6e0
 void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
 {
-    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
-    CriUint16 count = DAT_143b2794c;
-    CriUint16 index = count;
-    for (CriUint16 i = 0; i < count; ++i)
+    // The exe scans the whole table (no break) and keeps a flag for a new entry.
+    CriUint16 index = DAT_143b2794c;
+    CriSint32 added = 1;
+    CriUint16 i;
+    for (i = 0; i < DAT_143b2794c; ++i)
     {
-        if (entries[i].CodecId == registration->CodecId)
+        if (((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].CodecId == registration->CodecId)
         {
             index = i;
-            break;
+            added = 0;
         }
     }
-    entries[index].CodecId = registration->CodecId;
-    entries[index].VideoDecoderInterface = registration->VideoDecoderInterface;
-    entries[index].AlphaDecoderInterface = registration->AlphaDecoderInterface;
-    if (index == count)
-        DAT_143b2794c = count + 1;
+    ((CriMvCodecRegistrationEntry*)DAT_143b27950)[index].CodecId = registration->CodecId;
+    ((CriMvCodecRegistrationEntry*)DAT_143b27950)[index].VideoDecoderInterface = registration->VideoDecoderInterface;
+    ((CriMvCodecRegistrationEntry*)DAT_143b27950)[index].AlphaDecoderInterface = registration->AlphaDecoderInterface;
+    if (added == 1)
+        ++DAT_143b2794c;
 }
 
 // MS2-FUNCTIONAL: parse an MFS memory-file path into its hexadecimal size and address components.
@@ -2806,20 +2837,22 @@ void FUN_14002f610(CriUint32* object)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: initialize CRI Movie on the first reference and maintain its process reference count.
 // @0x14002e7d0
 void FUN_14002e7d0(void)
 {
+    DAT_143b27940 = "\ncriMvPly/PCx64 Ver.3.07.01 Build:Jan 20 2012 18:13:29\n";
     if (DAT_143ffd500 == 0)
     {
+        CriSint32 i;
         memset(&DAT_143ffd500, 0, 0x58);
         FUN_140044e84();
         FUN_140039fc8();
-        CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
-        for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        for (i = 0; i < DAT_143b2794c; ++i)
         {
-            FUN_140044390(entries[i].VideoDecoderInterface);
-            FUN_140043a20(entries[i].AlphaDecoderInterface);
+            FUN_140044390(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].VideoDecoderInterface);
+            FUN_140043a20(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface);
         }
         FUN_140041ea0();
         DAT_143ffd550 = FUN_1400385c8(DAT_143ffd504, 0x48);
@@ -2833,52 +2866,69 @@ void FUN_14002e7d0(void)
 // @0x14002e8c0
 void FUN_14002e8c0(void)
 {
-    if (--DAT_143ffd500 == 0)
+    --DAT_143ffd500;
+    if (DAT_143ffd500 == 0)
     {
+        CriSint32 i;
         FUN_140041ec0();
-        CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
-        for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
+        for (i = 0; i < DAT_143b2794c; ++i)
         {
-            FUN_140043a50(entries[i].AlphaDecoderInterface);
-            FUN_1400443d0(entries[i].VideoDecoderInterface);
-            entries[i] = CriMvCodecRegistrationEntry();
+            FUN_140043a50(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface);
+            FUN_1400443d0(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].VideoDecoderInterface);
+            ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].CodecId = 0;
+            ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].VideoDecoderInterface = NULL;
+            ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface = NULL;
         }
         DAT_143b2794c = 0;
         FUN_14003a010();
         FUN_140044ea8();
-        if (DAT_143ffd550)
+        if (DAT_143ffd550 != NULL)
         {
-            FUN_140039f00(DAT_143ffd550);
+            void* lock = DAT_143ffd550;
+            FUN_140039f00(lock);
             DAT_143ffd550 = NULL;
         }
     }
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: find the registered video decoder interface, mapping codec zero to codec one.
 // @0x140030b50
 void* FUN_140030b50(CriSint32 codecId)
 {
+    void* decoder = NULL;
+    CriSint32 i;
     if (codecId == 0)
         codecId = 1;
-    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
-    for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
-        if (entries[i].CodecId == codecId)
-            return entries[i].VideoDecoderInterface;
-    return NULL;
+    for (i = 0; i < DAT_143b2794c; ++i)
+    {
+        if (((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].CodecId == codecId)
+        {
+            decoder = ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].VideoDecoderInterface;
+            break;
+        }
+    }
+    return decoder;
 }
 
 // MS2-FUNCTIONAL: find the registered alpha decoder interface, mapping codec zero to codec one.
 // @0x140030be0
 void* FUN_140030be0(CriSint32 codecId)
 {
+    void* result = NULL;
+    CriSint32 i;
     if (codecId == 0)
         codecId = 1;
-    CriMvCodecRegistrationEntry* entries = (CriMvCodecRegistrationEntry*)DAT_143b27950;
-    for (CriUint16 i = 0; i < DAT_143b2794c; ++i)
-        if (entries[i].CodecId == codecId)
-            return entries[i].AlphaDecoderInterface;
-    return NULL;
+    for (i = 0; i < DAT_143b2794c; ++i)
+    {
+        if (((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].CodecId == codecId)
+        {
+            result = ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface;
+            break;
+        }
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: service subtitles, header preparation, frame queues and audio for active players.
@@ -2896,12 +2946,14 @@ void FUN_14002fb70(void* player)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: report whether a default USM decryption key has been configured.
 // @0x140037a10
 CriBool FUN_140037a10(void)
 {
-    return DAT_143b27a40 != NULL;
+    return DAT_143b27a40 == NULL ? 0 : 1;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: lock the player handle, apply its pending start transition, then unlock it.
@@ -3362,6 +3414,7 @@ CriBool FUN_140033030(void* player)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
 // @0x140033d70
 CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
@@ -3381,6 +3434,7 @@ CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 ou
     }
     return 1;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: compare video stream information and, when enabled, every plane's size pair.
@@ -4778,26 +4832,38 @@ void* FUN_140035c80(void* player, void* output)
 // @0x140038eec
 CriUint32 criErr_GetErrorCount(CriSint32 type)
 {
-    CriUint32 count = type == 0 ? DAT_143b27bcc : DAT_143b27bd0;
-    if (type == 0 || type == 1)
-        return count;
-    FUN_140038e24(0, "E09012703B", -2);
-    return 0;
+    switch (type)
+    {
+    case 0:
+        return DAT_143b27bcc;
+    case 1:
+        return DAT_143b27bd0;
+    default:
+        FUN_140038e24(0, "E09012703B", -2);
+        return 0;
+    }
 }
 
 // MS2-FUNCTIONAL: reset one of CRI Error's two counters or report the invalid selector.
 // @0x140038f24
 void criErr_ResetErrorCount(CriSint32 type)
 {
-    if (type == 0)
+    switch (type)
+    {
+    case 0:
         DAT_143b27bcc = 0;
-    else if (type == 1)
+        break;
+    case 1:
         DAT_143b27bd0 = 0;
-    else
+        break;
+    default:
         FUN_140038e24(0, "E09012704B", -2);
+        break;
+    }
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: publish the callback and user object used to compare decoded frame times.
 // @0x140039750
 void CriMvEasyPlayer::SetCompareFrameTimeCallback(
@@ -4809,6 +4875,7 @@ void CriMvEasyPlayer::SetCompareFrameTimeCallback(
     *(CompareCallback*)((CriUint8*)this + 0x620) = callback;
     *(void**)((CriUint8*)this + 0x628) = userObject;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: query the easy player's next frame using the standard one-frame offset.
@@ -4908,6 +4975,7 @@ void CriMvEasyFileReaderMem::Open(CriChar8* fname)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: clear the current memory file and report the completed close state.
 // @0x1400387b0
 void CriMvEasyFileReaderMem::Close(void)
@@ -4919,6 +4987,7 @@ void CriMvEasyFileReaderMem::Close(void)
     ReadSize = 0;
     CloseState = ASYNC_STATUS_COMPLETE;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: copy up to the remaining file size and publish the byte count as the read result.
@@ -4936,6 +5005,7 @@ void CriMvEasyFileReaderMem::Read(CriUint8* buffer, CriSint64 req_size)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: return the current memory-file open status.
 // @0x1400388d0
 CriMvFileReaderInterface::AsyncStatus CriMvEasyFileReaderMem::GetOpenStatus(void)
@@ -4963,6 +5033,7 @@ CriSint64 CriMvEasyFileReaderMem::GetReadSize(void)
 {
     return (CriSint64)ReadSize;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: adjust the memory-file position according to the CRI seek origin.
@@ -4979,12 +5050,14 @@ CriSint64 CriMvEasyFileReaderMem::Seek(CriSint64 size, CriMvFileReaderInterface:
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: return the configured memory-file size.
 // @0x1400389d0
 CriSint64 CriMvEasyFileReaderMem::GetFileSize(void)
 {
     return FileSize;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // Clang drops the own vftable store (0x1431b9588) of this empty body; the inlined base dtor overwrites it anyway.
