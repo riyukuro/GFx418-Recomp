@@ -6518,9 +6518,9 @@ CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& val) const
 }
 
 // ---- batch 57
-// Number to decimal string (ECMAScript style): integers print plainly, NaN/Infinity by name, other values with the shortest
-// round-tripping precision; exponents lose leading zeros and small negative exponents expand to 0.000ddd form. Returns the length.
-// MS2-FUNCTIONAL 0x142525f20: behavior-equivalent recovery; precision selection differs from the exe
+// Number to decimal string (ECMAScript style): integers print plainly, NaN/Infinity by name, other values with %.16g
+// (integer digit count up to 21 for 1e16..1e21); exponents lose leading zeros and small negative exponents expand to 0.000ddd form. Returns the length.
+// MS2-FUNCTIONAL 0x142525f20: precision selection follows the exe (%.16g, %.17g-%.21g for 1e16..1e21); codegen and the exponent rewrite differ
 // @0x142525f20
 SPInt Sfr31NumberToChars(char* out, int size, double d)
 {
@@ -6544,13 +6544,25 @@ SPInt Sfr31NumberToChars(char* out, int size, double d)
         SFsprintf(out, static_cast<UPInt>(size), "-Infinity");
         return 9;
     }
-    char tmp[40];
-    for (int prec = 15; prec <= 17; ++prec)
+    char tmp[40] = {};
+    // The exe prints with %.16g, widened to the integer digit count (17..21) for 1e16 <= |d| < 1e21.
+    char fmt[6] = {'%', '.', '1', '6', 'g', '\0'};
+    const double a = fabs(d);
+    if (a >= 1e16 && a < 1e21)
     {
-        SFsprintf(tmp, sizeof(tmp), "%.*g", prec, d);
-        if (SFstrtod(tmp, 0) == d)
-            break;
+        if (a < 1e17)
+            fmt[3] = '7';
+        else if (a < 1e18)
+            fmt[3] = '8';
+        else if (a < 1e19)
+            fmt[3] = '9';
+        else
+        {
+            fmt[2] = '2';
+            fmt[3] = a >= 1e20 ? '1' : '0';
+        }
     }
+    SFsprintf(tmp, sizeof(tmp), fmt, d);
     char* e = tmp;
     while (*e && *e != 'e')
         ++e;
