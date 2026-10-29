@@ -1527,11 +1527,13 @@ int FUN_14001b6b0(void* player, std::uint32_t* output, std::uint32_t requestedBy
     if (reader) {
         auto** vtable = *reinterpret_cast<void***>(reader);
         auto read = reinterpret_cast<std::uint32_t(*)(void*, std::uint32_t, void*, std::uint64_t)>(vtable[2]);
+        // the reader takes an array of per-channel plane pointers: mono passes &output (0x14001b6f2), and the
+        // multi-channel reads are capped at the 0x1000-sample (0x4000-byte) staging buffers (0x14001b749)
         if (channels == 1) {
-            samples = read(reader, 1, output, remaining);
+            samples = read(reader, 1, &output, remaining);
         } else {
             while (remaining) {
-                auto received = read(reader, channels, state + 0x50, remaining);
+                auto received = read(reader, channels, state + 0x50, remaining > 0x1000 ? 0x1000 : remaining);
                 if (!received) break;
                 auto* destination = output;
                 auto** buffers = reinterpret_cast<void**>(state + 0x50);
