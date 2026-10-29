@@ -51,7 +51,7 @@ unsigned AvmButton::GetCursorType() const
         else if (pProto)
             pobj = pProto;
         if (pobj)
-            pobj->GetMember(const_cast<Environment*>(penv), penv->GetBuiltin(ASBuiltin_useHandCursor), &val);
+            pobj->GetMemberRaw(const_cast<Environment*>(penv)->GetSC(), penv->GetBuiltin(ASBuiltin_useHandCursor), &val);
         if (val.ToBool(penv))
             return 1;
     }
