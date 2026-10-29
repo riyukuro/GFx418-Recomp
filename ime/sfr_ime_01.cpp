@@ -4583,7 +4583,8 @@ void FUN_1423d0f60(void* manager, int mode)
             (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result, args, 3);
 }
 
-// MS2-FUNCTIONAL: converts the IMM composition attribute mask into the two formatted GFx composition update calls.
+// MS2-FUNCTIONAL: converts the candidate/reading window property mask into the two formatted AS calls,
+// <path at +0x10>.SetCandidateListProps and <path>.SetReadingWindowProps.
 // @0x1423cf670
 void FUN_1423cf670(void* raw, const unsigned* attributes)
 {
@@ -4592,6 +4593,7 @@ void FUN_1423cf670(void* raw, const unsigned* attributes)
     if (!owner || !attributes) return;
     auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
     void* temporary = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+    if (!temporary) return;
     const unsigned short flags = *reinterpret_cast<const unsigned short*>(attributes + 10);
     int values[10];
     for (int& value : values) value = -1;
@@ -4606,13 +4608,13 @@ void FUN_1423cf670(void* raw, const unsigned* attributes)
     if (flags & 0x100) values[7] = static_cast<int>(attributes[7]);
     if (flags & 0x200) values[9] = static_cast<int>(attributes[9]);
     auto* command = reinterpret_cast<Scaleform::String*>(self + 0x10);
-    if (command->GetSize()) {
-        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), command->ToCStr(), "%d %d %d %d %d %d %d",
-            values[0], values[3], values[1], values[4], values[8], values[2], values[5]);
-        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), command->ToCStr(), "%d %d %d",
-            values[6], values[7], values[9]);
+    if (command->GetLength()) {
+        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), (*command + ".SetCandidateListProps").ToCStr(),
+            "%d %d %d %d %d %d %d", values[0], values[3], values[1], values[4], values[8], values[2], values[5]);
+        FUN_1423ca030(*reinterpret_cast<void**>(self + 8), (*command + ".SetReadingWindowProps").ToCStr(),
+            "%d %d %d", values[6], values[7], values[9]);
     }
-    if (temporary) FUN_14257dcb0(temporary);
+    FUN_14257dcb0(temporary);
 }
 
 struct cx18_CommandEntry
