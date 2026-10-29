@@ -3122,7 +3122,10 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     Scaleform::Render::TreeShape::NodeData* destination,
     const Scaleform::Render::TreeShape::NodeData* source)
 {
-    new (destination) Scaleform::Render::TreeShape::NodeData();
+    // The exe copy-constructs the base snapshot (0x1424d9220), then stores the TreeShape vftable.
+    new (destination) Scaleform::Render::TreeNode::NodeData(
+        *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));
+    destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
     void* provider = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
