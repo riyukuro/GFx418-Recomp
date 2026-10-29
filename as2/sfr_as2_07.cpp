@@ -1084,8 +1084,8 @@ bool StringToNumber(Number* result, const char* str)
     char*  tail = 0;
     size_t len  = strlen(str);
     if (str[0] == '0' && SFtolower(str[1]) == 'x')
-        *result = (Number)strtol(str, &tail, 0);
-    else if (strcspn(str, ".eE") != len)
+        *result = (Number)(int)strtoul(str, &tail, 0);
+    else if (strcspn(str, ".Ee") != len)
         *result = SFstrtod(str, &tail);
     else
     {
@@ -1103,7 +1103,7 @@ bool StringToNumber(Number* result, const char* str)
             len--;
         }
         if (*p == '0' && strspn(p, "01234567") == len)
-            *result = (Number)(strtol(p, &tail, 8) * sign);
+            *result = (Number)((int)strtoul(p, &tail, 8) * sign);
         else
             *result = SFstrtod(p, &tail) * sign;
     }
