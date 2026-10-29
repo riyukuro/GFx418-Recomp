@@ -3811,7 +3811,7 @@ CheckResult Value::Convert2Int32(SInt32& result) const
 
 // The property named mn of the object value stands for: its fixed slots, then (public names only) its dynamic
 // values and the prototypes of its traits; a function falls back to its saved scope.
-// MS2-FUNCTIONAL 0x142501b00: the exe copies the value through a temporary before the assignment, move-assigns the dynamic lookup result and calls IsXMLListObject out of line.
+// MS2-FUNCTIONAL 0x142501b00: the exe copies the value through a temporary before the assignment, move-assigns the dynamic lookup result and calls IsXMLObject out of line.
 // @0x142501b00
 void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr)
 {
@@ -3830,7 +3830,7 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
     }
     if (!mn.ContainsNamespace(vm.GetPublicNamespace()))
         return;
-    if (isObj && tr->IsDynamic() && (attr != 2 || !IsXMLListObject(value)))
+    if (isObj && tr->IsDynamic() && (attr != 2 || !IsXMLObject(value)))
         result = obj->FindDynamicSlot(mn);
     if (Sfr33PropFound(result) || attr == 1)
         return;
