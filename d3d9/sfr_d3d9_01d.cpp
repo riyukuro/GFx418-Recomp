@@ -350,6 +350,37 @@ int FragShaderDesc::GetShaderComboIndex(ShaderType shader)
     case 60236: return (int)309;
     case 44107: return (int)310;
     case 44108: return (int)311;
+    case 75341: return (int)312;
+    case 75469: return (int)313;
+    case 76365: return (int)320;
+    case 76493: return (int)321;
+    case 79437: return (int)316;
+    case 79565: return (int)317;
+    case 80461: return (int)324;
+    case 80589: return (int)325;
+    case 91725: return (int)314;
+    case 91853: return (int)315;
+    case 92749: return (int)322;
+    case 92877: return (int)323;
+    case 95821: return (int)318;
+    case 95949: return (int)319;
+    case 96845: return (int)326;
+    case 96973: return (int)327;
+    case 108111: return (int)328;
+    case 108113: return (int)329;
+    case 108115: return (int)330;
+    case 108117: return (int)331;
+    case 108119: return (int)336;
+    case 108121: return (int)335;
+    case 108125: return (int)334;
+    case 108133: return (int)333;
+    case 108149: return (int)332;
+    case 108182: return (int)337;
+    case 108184: return (int)342;
+    case 108186: return (int)341;
+    case 108190: return (int)340;
+    case 108198: return (int)339;
+    case 108214: return (int)338;
     default: return (int)0;
     }
 }
@@ -672,6 +703,37 @@ int VertexShaderDesc::GetShaderComboIndex(ShaderType shader)
     case 60236: return (int)309;
     case 44107: return (int)310;
     case 44108: return (int)311;
+    case 75341: return (int)312;
+    case 75469: return (int)313;
+    case 76365: return (int)320;
+    case 76493: return (int)321;
+    case 79437: return (int)316;
+    case 79565: return (int)317;
+    case 80461: return (int)324;
+    case 80589: return (int)325;
+    case 91725: return (int)314;
+    case 91853: return (int)315;
+    case 92749: return (int)322;
+    case 92877: return (int)323;
+    case 95821: return (int)318;
+    case 95949: return (int)319;
+    case 96845: return (int)326;
+    case 96973: return (int)327;
+    case 108111: return (int)328;
+    case 108113: return (int)329;
+    case 108115: return (int)330;
+    case 108117: return (int)331;
+    case 108119: return (int)336;
+    case 108121: return (int)335;
+    case 108125: return (int)334;
+    case 108133: return (int)333;
+    case 108149: return (int)332;
+    case 108182: return (int)337;
+    case 108184: return (int)342;
+    case 108186: return (int)341;
+    case 108190: return (int)340;
+    case 108198: return (int)339;
+    case 108214: return (int)338;
     default: return (int)0;
     }
 }
@@ -864,6 +926,37 @@ FragShaderDesc::ShaderIndex FragShaderDesc::GetShaderIndex(ShaderType shader)
     case 60236: return (ShaderIndex)179;
     case 44107: return (ShaderIndex)180;
     case 44108: return (ShaderIndex)181;
+    case 75341: return (ShaderIndex)182;
+    case 75469: return (ShaderIndex)183;
+    case 76365: return (ShaderIndex)190;
+    case 76493: return (ShaderIndex)191;
+    case 79437: return (ShaderIndex)186;
+    case 79565: return (ShaderIndex)187;
+    case 80461: return (ShaderIndex)194;
+    case 80589: return (ShaderIndex)195;
+    case 91725: return (ShaderIndex)184;
+    case 91853: return (ShaderIndex)185;
+    case 92749: return (ShaderIndex)192;
+    case 92877: return (ShaderIndex)193;
+    case 95821: return (ShaderIndex)188;
+    case 95949: return (ShaderIndex)189;
+    case 96845: return (ShaderIndex)196;
+    case 96973: return (ShaderIndex)197;
+    case 108111: return (ShaderIndex)198;
+    case 108113: return (ShaderIndex)199;
+    case 108115: return (ShaderIndex)200;
+    case 108117: return (ShaderIndex)201;
+    case 108119: return (ShaderIndex)206;
+    case 108121: return (ShaderIndex)205;
+    case 108125: return (ShaderIndex)204;
+    case 108133: return (ShaderIndex)203;
+    case 108149: return (ShaderIndex)202;
+    case 108182: return (ShaderIndex)207;
+    case 108184: return (ShaderIndex)212;
+    case 108186: return (ShaderIndex)211;
+    case 108190: return (ShaderIndex)210;
+    case 108198: return (ShaderIndex)209;
+    case 108214: return (ShaderIndex)208;
     default: return (ShaderIndex)0;
     }
 }
@@ -974,6 +1067,10 @@ VertexShaderDesc::ShaderIndex VertexShaderDesc::GetShaderIndex(ShaderType shader
     case 41545: case 41546: case 42057: case 42058: case 42571: case 42572: case 42827: case 42828:
     case 44107: case 44108: case 44619: case 44620: case 44875: case 44876: case 46667: case 46668:
     case 51787: case 51788: case 52043: case 52044: case 59979: case 59980: case 60235: case 60236: return (ShaderIndex)97;
+    case 75341: case 75469: case 79437: case 79565: case 91725: case 91853: case 95821: case 95949:
+    case 108111: case 108113: case 108182: case 108184: case 108186: case 108190: case 108198: case 108214: return (ShaderIndex)98;
+    case 76365: case 76493: case 80461: case 80589: case 92749: case 92877: case 96845: case 96973: return (ShaderIndex)99;
+    case 108115: case 108117: case 108119: case 108121: case 108125: case 108133: case 108149: return (ShaderIndex)1;
     default: return (ShaderIndex)0;
     }
 }
