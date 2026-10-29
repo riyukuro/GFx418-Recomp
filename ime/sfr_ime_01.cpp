@@ -4576,16 +4576,67 @@ static void cx18_DispatchLangBarEvent(unsigned long long* self, unsigned long lo
     }
 }
 
-// MS2-FUNCTIONAL: dispatches candidate, language-bar, and status-window callbacks using the executable's event names.
+// MS2-FUNCTIONAL: dispatches the language-bar and status-window callbacks by event name. GetIMENames joins the
+// provider's names with "@@"; unknown events go to slot 24 and then on to the provider's slot 11.
 // @0x1423cd6b0
 void FUN_1423cd6b0(unsigned long long* self, unsigned long long payload,
                    unsigned long long* commandCell, unsigned long long* argumentCell)
 {
-    const char* command = commandCell && *commandCell
-        ? *reinterpret_cast<const char**>(*commandCell) : nullptr;
-    const char* argument = argumentCell && *argumentCell
-        ? *reinterpret_cast<const char**>(*argumentCell) : nullptr;
-    cx18_DispatchLangBarEvent(self, payload, command, argument);
+    const char* command = *reinterpret_cast<const char**>(*commandCell);
+    const char* argument = *reinterpret_cast<const char**>(*argumentCell);
+    auto** vtable = reinterpret_cast<void**>(self[0]);
+    auto* provider = reinterpret_cast<unsigned char*>(self[0xf]);
+    auto providerCall = [&](unsigned slot) { return (*reinterpret_cast<void***>(provider))[slot]; };
+    auto stringData = [](unsigned long long node) { return reinterpret_cast<const char*>((node & ~3ull) + 0xc); };
+    if (std::strcmp(command, "LangBar_OnInit") == 0) {
+        *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(self[3]) + 0x48) = payload;
+        if (provider) reinterpret_cast<void(*)(void*)>(providerCall(12))(provider);
+    } else if (std::strcmp(command, "StatusWindow_OnInit") == 0) {
+        *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(self[3]) + 0x50) = payload;
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[12])(self, stringData(self[0x16]));
+        reinterpret_cast<void(*)(void*)>(vtable[19])(self);
+        reinterpret_cast<void(*)(void*, int)>(vtable[6])(self, -1);
+    } else if (std::strcmp(command, "LangBar_OnSelectInputLang") == 0) {
+        reinterpret_cast<void(*)(void*)>(vtable[18])(self);
+        if (provider) reinterpret_cast<void(*)(void*, const char*)>(providerCall(9))(provider, argument);
+    } else if (std::strcmp(command, "LangBar_GetIMENames") == 0) {
+        if (!provider) return;
+        const unsigned mode = *reinterpret_cast<unsigned*>(provider + 0x84);
+        unsigned countOffset;
+        bool callWhenEmpty = false;
+        if (mode == 9) countOffset = 0x60;
+        else if (mode == 0x400) { countOffset = 0x18; callWhenEmpty = true; }
+        else if (mode == 0x2000) countOffset = 0x30;
+        else if (mode == 0x80000) countOffset = 0x48;
+        else {
+            if (mode == 0x10000000) reinterpret_cast<void(*)(void*)>(vtable[18])(self);
+            return;
+        }
+        Scaleform::String joined;
+        const int count = *reinterpret_cast<int*>(provider + countOffset);
+        if (count == 0 && !callWhenEmpty) return;
+        auto* names = *reinterpret_cast<Scaleform::String**>(provider + countOffset - 8);
+        for (int i = 0; i < count; ++i) joined += names[i] + "@@";
+        reinterpret_cast<void(*)(void*, const char*)>(vtable[14])(self, joined.ToCStr());
+    } else if (std::strcmp(command, "LangBar_OnSelectIME") == 0) {
+        if (!provider) return;
+        reinterpret_cast<void(*)(void*, const char*)>(providerCall(8))(provider, argument);
+        if (*reinterpret_cast<unsigned*>(provider + 0x84) == 9)
+            reinterpret_cast<void(*)(void*)>(vtable[19])(self);
+        const char* language = stringData(self[0x16]);
+        if (std::strcmp(language, "Japanese") == 0 || std::strcmp(language, "Korean") == 0) {
+            reinterpret_cast<void(*)(void*)>(vtable[19])(self);
+            reinterpret_cast<void(*)(void*, int)>(providerCall(10))(provider, -1);
+        }
+    } else if (std::strcmp(command, "LangBar_GetInstalledLanguages") == 0) {
+        if (provider)
+            reinterpret_cast<void(*)(void*, const char*)>(vtable[13])(
+                self, stringData(*reinterpret_cast<unsigned long long*>(provider + 0x70)));
+    } else {
+        reinterpret_cast<void(*)(void*)>(vtable[24])(self);
+        if (provider)
+            reinterpret_cast<void(*)(void*, const char*, const char*)>(providerCall(11))(provider, command, argument);
+    }
 }
 
 // MS2-FUNCTIONAL: decodes the executable's external callback Value array and dispatches its event and optional string argument.
