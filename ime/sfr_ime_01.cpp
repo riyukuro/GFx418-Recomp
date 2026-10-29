@@ -19,6 +19,7 @@
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/gfx_value.h"
+#include "../include/gfx/gfx_imemanager.h"
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
 
@@ -4282,40 +4283,49 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
     }
 }
 
-// MS2-FUNCTIONAL: removes the old input window and displays the active composition string with its caret geometry.
+// MS2-FUNCTIONAL: removes the old input window, then shows the composition string (a UTF-8 copy of the String at +0xb0)
+// at the cursor rect IMEManagerBase::GetMetrics reports for the composition end (offset -[+0x64]).
 // @0x1423ceb30
 void FUN_1423ceb30(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     void* movie = *reinterpret_cast<void**>(self + 0xa8);
-    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
-    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
-    if (interfaceState) {
+    {
         Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
-                interfaceState, "RemoveInputWindow", &result, nullptr, 0);
+        if (void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18))
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
+                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "RemoveInputWindow", &result, nullptr, 0);
     }
     auto* composition = reinterpret_cast<Scaleform::String*>(self + 0xb0);
-    if (!composition->GetSize() || !interfaceState) return;
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    POINT caret{};
-    GetCaretPos(&caret);
-    ClientToScreen(hwnd, &caret);
-    Scaleform::GFx::Value args[4];
-    auto* values = reinterpret_cast<unsigned char*>(args);
-    *reinterpret_cast<unsigned*>(values + 8) = Scaleform::GFx::Value::VT_String;
-    *reinterpret_cast<const char**>(values + 0x10) = composition->ToCStr();
-    const double coordinates[3] = { static_cast<double>(caret.x), static_cast<double>(caret.y),
-                                    static_cast<double>(GetSystemMetrics(SM_CYSMICON)) };
-    for (unsigned i = 0; i < 3; ++i) {
-        *reinterpret_cast<unsigned*>(values + (i + 1) * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
-        *reinterpret_cast<double*>(values + (i + 1) * 0x20 + 0x10) = coordinates[i];
+    const unsigned length = *reinterpret_cast<unsigned*>(
+        *reinterpret_cast<UPInt*>(composition) & ~static_cast<UPInt>(3));
+    if (!length) return;
+    char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<int>(length + 1)));
+    memset(text, 0, length + 1);
+    memcpy(text, composition->ToCStr(), length + 1);
+    if (!text) {
+        **reinterpret_cast<wchar_t**>(self + 0x40) = 0;
+        return;
     }
-    Scaleform::GFx::Value result;
-    reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
-        (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
-            interfaceState, "DisplayInputWindow", &result, args, 4);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
+    Scaleform::GFx::Value args[4];
+    args[0] = Scaleform::GFx::Value(static_cast<const char*>(text));
+    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
+    args[3] = Scaleform::GFx::Value(0.0);
+    {
+        Scaleform::GFx::Value result;
+        if (void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18))
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
+                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "DisplayInputWindow", &result, args, 4);
+    }
+    Scaleform::Memory::Free(text);
 }
 
 static void cx18_DispatchLangBarEvent(unsigned long long* self, unsigned long long payload,
