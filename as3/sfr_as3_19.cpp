@@ -3154,7 +3154,7 @@ void Sfr31ExecCheckFilter(UPInt vm)
         {
             const UPInt tr = Sfr31Rd(o, 0x20);
             const int ty = *reinterpret_cast<const int*>(tr + 0x70);
-            if ((ty == 0xd || ty == 0xe) && (*reinterpret_cast<const UInt8*>(tr + 0x68) & 0x20))
+            if ((ty == 0xd || ty == 0xe) && (*reinterpret_cast<const UInt8*>(tr + 0x68) & 0x20) == 0)
                 return;
         }
     }
