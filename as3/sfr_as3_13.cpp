@@ -1103,9 +1103,15 @@ namespace Instances { namespace fl_text
     // MS2-FUNCTIONAL: written from the exe's control flow
     void TextLineMetrics::AS3Constructor(unsigned argc, const Value* argv)
     {
-        Value::Number n;
-        for (unsigned i = 0; i < argc && i < 6; ++i)
-            argv[i].Convert2Number(n);
+        if (argc > 0)
+        {
+            argv[0].Convert2Number(ascent);
+            if (argc >= 2) argv[1].Convert2Number(descent);
+            if (argc >= 3) argv[2].Convert2Number(height);
+            if (argc >= 4) argv[3].Convert2Number(leading);
+            if (argc >= 5) argv[4].Convert2Number(width);
+            if (argc >= 6) argv[5].Convert2Number(x);
+        }
     }
 }}
 
