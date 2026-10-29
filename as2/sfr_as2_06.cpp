@@ -2079,15 +2079,23 @@ void StyleSheetObject::NotifyOnLoad(Environment* penv, bool success)
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: converts the optional argument, returns the string primitive, and updates a constructed String object.
+// MS2-FUNCTIONAL 0x14295c710: register allocation and branch layout differ (/O2 codegen); same calls as the exe.
 // @0x14295c710
 void StringCtorFunction::GlobalCtor(const FnCall& fn)
 {
-    const ASString value = fn.NArgs > 0 ? fn.Arg(0).ToString(fn.Env) : fn.Env->GetBuiltin(ASBuiltin_empty_);
-    Value result(value);
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_String && !fn.ThisPtr->IsBuiltinPrototype())
-        static_cast<StringObject*>(fn.ThisPtr)->SetValue(fn.Env, result);
-    *fn.Result = result;
+    {
+        // A constructed String object takes the raw argument (SetValue converts it) and the result is
+        // that raw argument, not its string form.
+        StringObject* pobj = static_cast<StringObject*>(fn.ThisPtr);
+        Value retVal = fn.NArgs > 0 ? Value(fn.Arg(0)) : Value(fn.Env->GetBuiltin(ASBuiltin_empty_));
+        pobj->SetValue(fn.Env, retVal);
+        *fn.Result = retVal;
+    }
+    else if (fn.NArgs == 0)
+        fn.Result->SetString(fn.Env->GetBuiltin(ASBuiltin_empty_));
+    else
+        fn.Result->SetString(fn.Arg(0).ToString(fn.Env));
 }
 
 // MS2-FUNCTIONAL: returns the active StyleSheet receiver or constructs a new sheet for a global call.
