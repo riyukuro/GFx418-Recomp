@@ -154,7 +154,8 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 
 // _root, _global and _levelN before the scope chain's own lookup: 0 = not one of them, 1 = the value is set, 2 = a
 // level name whose level does not exist.
-// MS2-FUNCTIONAL: _root asks the AS root for _level0 (the exe asks the target through its virtual)
+// _root is the target's top parent (its own level, or the _lockroot clip), like the exe's virtual call.
+// MS2-FUNCTIONAL
 // @0x142933bd0
 UByte* FUN_142933bd0(Environment* penv, UByte* pout, const Environment::GetVarParams& params)
 {
@@ -163,7 +164,7 @@ UByte* FUN_142933bd0(Environment* penv, UByte* pout, const Environment::GetVarPa
     ASStringContext* psc   = penv->GetSC();
     InteractiveObject* pch = 0;
     if (psc->GetBuiltin(ASBuiltin__root).CompareBuiltIn_CaseCheck(name, cs))
-        pch = penv->GetAS2Root()->GetLevelMovie(0);
+        pch = penv->GetTarget()->GetTopParent();
     else if (psc->GetBuiltin(63).CompareBuiltIn_CaseCheck(name, cs)) // _global
     {
         params.pResult->SetAsObject(penv->StringContext.pContext->pGlobal);
