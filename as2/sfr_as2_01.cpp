@@ -985,7 +985,9 @@ void MovieClipLoaderProto::GetProgress(const FnCall& fn)
     if (fn.NArgs < 1)
         return;
     fn.Result->SetUndefined();
-    MS2_AS2_CHECK_THIS(fn, MovieClipLoader);
+    // A wrong this returns silently, with no ThisPtrError (0x1428eb08d cmp eax,0x19; jne ret).
+    if (fn.ThisPtr->GetObjectType() != Object::Object_MovieClipLoader)
+        return;
     MovieClipLoader* pthis = (MovieClipLoader*)fn.ThisPtr;
     Ptr<Object>      pobj = Pickable<Object>(SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env));
     ASString         target = fn.Arg(0).ToString(fn.Env);
