@@ -2446,11 +2446,13 @@ unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*,
     return 0;
 }
 
-// MS2-FUNCTIONAL: returns the callback's success code or the executable's error value 20.
+// MS2-FUNCTIONAL: FMOD userseek callback (exinfo +0x90): seeks the stream to pos, error value 20 on failure.
 // @0x142745490
-unsigned long long ValidateAudioStream(void*, void*, void* stream)
+unsigned long long ValidateAudioStream(void*, void* position, void* stream)
 {
-    return FUN_1427483a0(stream, 0) == 0 ? 20 : 0;
+    // The second argument is FMOD's unsigned seek position; the exe passes it through in edx.
+    const int pos = static_cast<int>(reinterpret_cast<std::uintptr_t>(position));
+    return FUN_1427483a0(stream, pos) == 0 ? 20 : 0;
 }
 }
 
