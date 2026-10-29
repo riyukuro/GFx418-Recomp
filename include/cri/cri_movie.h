@@ -1,11 +1,19 @@
 // Recovered CRI Movie (Sofdec 2) PC x64 3.07.01 public interface, as far as the exe's code uses it (sfr lane: the
 // middleware the Scaleform video player sits on). Written from the exe; names follow the exe's mangled symbols.
-// The library itself was built with VS2008 SP1 (Rich header: Utc1500 build 30729), so our VS2017 rebuild of it can
-// only be functional. Shared header of the src/ms2/scaleform units: append, do not reorder.
+// The library itself was built with VS2008 SP1 (Rich header: Utc1500 build 30729); the units that declare
+// `// MS2-TOOLSET: vc9` are built with that compiler too, so this header stays C++03 (static_assert has a VC9
+// fallback below). Shared header of the src/ms2/scaleform units: append, do not reorder.
 #ifndef MS2_CRI_MOVIE_H
 #define MS2_CRI_MOVIE_H
 
 #include <stddef.h>
+
+#if defined(_MSC_VER) && _MSC_VER < 1600 && !defined(__clang__) && !defined(static_assert)
+// VC9 (the `// MS2-TOOLSET: vc9` units) is C++03: a negative-size array typedef per assertion
+#define MS2_CRI_SA_CAT2(a, b) a##b
+#define MS2_CRI_SA_CAT(a, b) MS2_CRI_SA_CAT2(a, b)
+#define static_assert(c, m) typedef char MS2_CRI_SA_CAT(ms2_cri_static_assert_, __LINE__)[(c) ? 1 : -1]
+#endif
 
 typedef signed char        CriSint8;
 typedef unsigned char      CriUint8;
@@ -626,7 +634,7 @@ public:
     CriSint64 GetReadSize(void) override;                                                   // 0x140038930
     CriSint64 Seek(CriSint64 size, SeekOrigin offset) override;                             // 0x140038950
     CriSint64 GetFileSize(void) override;                                                   // 0x1400389d0
-    ~CriMvEasyFileReaderMem() override;                                                     // 0x140038c80
+    ~CriMvEasyFileReaderMem();                                                              // 0x140038c80
     virtual void Destroy(void);                                                             // 10, 0x1400386c0
 protected:
     CriMvEasyFileReaderMem();                                                               // 0x140038c10

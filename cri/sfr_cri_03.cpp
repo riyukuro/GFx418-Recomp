@@ -1,6 +1,8 @@
 // Recovered CRI Movie decoder and timing helpers from MapleStory2.exe, written from the executable's behavior.
-// The CRI Movie 3.07 library was built with VS2008 SP1; this unit is functional under our VS2017 toolset.
+// The CRI Movie 3.07 library was built with VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake):
+// keep it C++03 (no auto, decltype, variadic templates, brace-init or nullptr). clang-cl compiles it as before.
 // MS2-UNIT: sfr_cri_03
+// MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140039ea8-0x140046a1c .text$mn
 // MS2-RANGE: 0x142ccb000-0x142ccd143 .text$mn
@@ -738,7 +740,7 @@ CriUint32 FUN_14003a0f8(CriSint32 index)
 void criUtfRtv_Destroy(CriUint64* table)
 {
     CriUint64* heap = (CriUint64*)table[0];
-    auto freeMem = (void(__fastcall*)(void*, void*))heap[1];
+    void(__fastcall* freeMem)(void*, void*) = (void(__fastcall*)(void*, void*))heap[1];
     void* heapContext = (void*)heap[2];
     if (table[0xc] != 0 && heap)
         freeMem(heapContext, (void*)table[0x16]);
@@ -939,18 +941,18 @@ void* FUN_14003a184(void* heap, CriUint32 size, const char* tag, CriSint32 align
 
 // ==== CRI UTF runtime table field accessors ========================================================================
 
-static CriUint32 criUtfReadBE32(const CriUint8* p)
+static inline CriUint32 criUtfReadBE32(const CriUint8* p)
 {
     return ((CriUint32)p[0] << 24) | ((CriUint32)p[1] << 16) | ((CriUint32)p[2] << 8) | p[3];
 }
 
-static CriUint64 criUtfReadBE64(const CriUint8* p)
+static inline CriUint64 criUtfReadBE64(const CriUint8* p)
 {
     return ((CriUint64)criUtfReadBE32(p) << 32) | criUtfReadBE32(p + 4);
 }
 
-static const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, CriUint32 row,
-                                             CriUint32 field, const CriUtfRtvColumn** column)
+static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, CriUint32 row,
+                                                    CriUint32 field, const CriUtfRtvColumn** column)
 {
     const CriUtfRtvColumn* col = &table->Columns[field];
     *column = col;
@@ -1904,36 +1906,7 @@ void FUN_140041390(void* owner, void* outputSet)
     memset(outputs[3].Data, 0, outputs[3].Size);
 }
 
-template <typename Result, typename... Args>
-static Result criDecoderCall(void* wrapper, size_t offset, Result fallback, Args... args)
-{
-    if (!wrapper)
-        return fallback;
-    void** object = (void**)wrapper;
-    if (!object[1])
-        return fallback;
-    void* target = *(void**)((CriUint8*)object[1] + offset);
-    if (!target)
-        return fallback;
-    typedef Result (*Callback)(void*, Args...);
-    return ((Callback)target)(object[0], args...);
-}
-
-template <typename... Args>
-static void criDecoderCallVoid(void* wrapper, size_t offset, Args... args)
-{
-    if (!wrapper)
-        return;
-    void** object = (void**)wrapper;
-    if (!object[1])
-        return;
-    void* target = *(void**)((CriUint8*)object[1] + offset);
-    if (target)
-    {
-        typedef void (*Callback)(void*, Args...);
-        ((Callback)target)(object[0], args...);
-    }
-}
+#include "../include/cri/cri_decodercall.h"
 
 // MS2-FUNCTIONAL: query the status callback in the alpha decoder interface.
 // @0x140043cb0
@@ -5124,7 +5097,7 @@ static_assert(sizeof(CriDecodedFrame) == 0xb0 && offsetof(CriFrameRecord, Mode) 
               offsetof(CriVideoFrameSource, Position) == 0x190, "layout");
 
 // Describe the tiled YUV420 layout of a decoded frame whose picture memory starts at frame->Base.
-void CriDescribeTiledFrame(CriDecodedFrame* frame)
+inline void CriDescribeTiledFrame(CriDecodedFrame* frame)
 {
     CriUint32 width = frame->Width;
     CriUint32 height = frame->Height;
@@ -5507,8 +5480,8 @@ CriUint32 FUN_140043890(void*, void*, CriUint32, CriUint32);
 namespace
 {
 // Shared body of the 16-bit and 32-bit PCM drains: each channel queue is copied into its own output buffer.
-CriUint32 CriDrainAudioChannels(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode,
-                                CriUint32* info, CriUint32 stride)
+inline CriUint32 CriDrainAudioChannels(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode,
+                                       CriUint32* info, CriUint32 stride)
 {
     struct Decoder { CriUint8 Reserved00[0x30]; void* Queues[8]; };
     struct Player { CriUint8 Reserved00[0xb2c]; CriUint32 Rate; CriUint8 Reserveb30[0x2ec]; CriUint32 FrameSize; };
@@ -5974,7 +5947,7 @@ extern "C" void (**DAT_143fe8250)(void*);
 namespace
 {
 template <typename T>
-T& CriMpvField(void* decoder, size_t offset)
+inline T& CriMpvField(void* decoder, size_t offset)
 {
     return *(T*)((CriUint8*)decoder + offset);
 }
@@ -6670,7 +6643,7 @@ typedef void (*CriMpvMacroblockFunc)(void*);
 typedef void (*CriMpvSkipRunFunc)(void*, CriSint32);
 
 // Decode the horizontal and vertical motion-vector components of one vector set; returns true on a bad code.
-bool CriMpvReadMotion(CriMpvSlice& slice, size_t setOffset)
+inline bool CriMpvReadMotion(CriMpvSlice& slice, size_t setOffset)
 {
     void* decoder = slice.Decoder;
     slice.Bits.Store(decoder);
@@ -6683,7 +6656,7 @@ bool CriMpvReadMotion(CriMpvSlice& slice, size_t setOffset)
 }
 
 // Read the 9-bit coded_block_pattern when bit 2 of the macroblock flags asks for it.
-void CriMpvReadPattern(CriMpvSlice& slice, CriUint32 flags)
+inline void CriMpvReadPattern(CriMpvSlice& slice, CriUint32 flags)
 {
     if (flags & 2)
     {
@@ -6878,7 +6851,7 @@ CriSint32 FUN_140040850(void* player, void* stream, void* second, CriSint32* con
 namespace
 {
 // Lay out a tiled YUV420 frame (three planes) starting at base for a picture of the given size.
-void CriMpvSetTiledFrame(void* frame, CriUint8* base, CriSint32 width, CriSint32 height)
+inline void CriMpvSetTiledFrame(void* frame, CriUint8* base, CriSint32 width, CriSint32 height)
 {
     CriSint32 aligned = ((width + 0xf) / 0x10) * 0x10;
     CriSint32 lumaBlocks = (aligned + 0x7f) / 0x80;
@@ -7187,7 +7160,7 @@ struct cri03_host20 { void* vtbl; void* _08[3]; cri03_stream* stream; };
 void* FUN_140041360(cri03_host20* self, long long a, long long b, long long c)
 {
     cri03_stream* o = self->stream;
-    return o ? o->Call9(a, b, c) : nullptr;
+    return o ? o->Call9(a, b, c) : NULL;
 }
 
 // MS2-FUNCTIONAL: empty interface slot.

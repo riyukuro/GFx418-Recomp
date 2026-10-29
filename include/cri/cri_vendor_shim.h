@@ -34,9 +34,12 @@ struct cri_addr
 // The data globals are declared with Ghidra's scalar types (extern "C" int DAT_x) while the tables behind them are
 // larger; laundering the address through a volatile keeps /Ox from bounding the fill loops by the declared size.
 static inline void* cri_launder(void* p) { void* volatile q = p; return q; }
-#define CRI_ADDR(x) (cri_addr{cri_launder((void*)&(x))})
-#define CRI_PART(vec, offset, size) (CriVecPart<size>{(vec).b + (offset)})
-#define CRI_IPART(var, offset, size) (CriVecPart<size>{(unsigned char*)&(var) + (offset)})
+// maker functions, not brace-init: the units also build with VC9 (C++03)
+static inline cri_addr cri_mkaddr(void* p) { cri_addr a; a.p = p; return a; }
+template <int N> static inline CriVecPart<N> cri_mkpart(unsigned char* p) { CriVecPart<N> r; r.p = p; return r; }
+#define CRI_ADDR(x) (cri_mkaddr(cri_launder((void*)&(x))))
+#define CRI_PART(vec, offset, size) (cri_mkpart<size>((vec).b + (offset)))
+#define CRI_IPART(var, offset, size) (cri_mkpart<size>((unsigned char*)&(var) + (offset)))
 
 #include <math.h>
 #include <intrin.h>
