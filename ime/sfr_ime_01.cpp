@@ -674,9 +674,9 @@ void FUN_1423d5fd0(void* self)
     auto* bytes = static_cast<unsigned char*>(self);
     void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
     const unsigned listCount = *reinterpret_cast<unsigned*>(bytes + 0xd0);
-    auto** lists = *reinterpret_cast<void***>(bytes + 0xb8);
     for (unsigned i = 0; i < listCount; ++i) {
-        auto* node = *reinterpret_cast<void***>(reinterpret_cast<unsigned char*>(lists[i]) + 0x28);
+        // The records are inline (stride 0x30); +0x28 heads each record's profile-copy list.
+        auto* node = *reinterpret_cast<void***>(*reinterpret_cast<unsigned char**>(bytes + 0xb8) + i * 0x30ull + 0x28);
         while (node) {
             void* next = node[1];
             reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node[0]);
@@ -698,29 +698,30 @@ void FUN_1423d5fd0(void* self)
         void* item = *reinterpret_cast<void**>(items + static_cast<unsigned long long>(i) * 0x20);
         if (item) reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, item);
     }
-    auto* remote = *reinterpret_cast<void**>(bytes + 0x1d0);
-    auto releaseRemote = [](void* value) {
-        if (value) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(value))[2])(value);
-    };
-    auto releaseId = [&](unsigned offset, bool handleSpecial) {
-        if (*reinterpret_cast<int*>(bytes + offset) == -1) return;
-        void* queried = nullptr;
+    // +0x1a0 is an embedded COM object (its vtable is at +0x1a0), released through slot 2.
+    IUnknown* sink = reinterpret_cast<IUnknown*>(bytes + 0x1a0);
+    void* remote = *reinterpret_cast<void**>(bytes + 0x1d0);
+    void* queried = nullptr;
+    if (*reinterpret_cast<int*>(bytes + 0x1b8) != -1) {
         if (remote && SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
                 (*reinterpret_cast<void***>(remote))[0])(remote, DAT_1431c51e8, &queried))) {
             const HRESULT hr = reinterpret_cast<HRESULT(*)(void*, unsigned)>(
-                (*reinterpret_cast<void***>(queried))[4])(queried,
-                    *reinterpret_cast<unsigned*>(bytes + offset));
-            if (handleSpecial && static_cast<unsigned>(hr) == 0x80040200u) {
-                void* callback = *reinterpret_cast<void**>(bytes + 0x1a0);
-                reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(callback))[2])(callback);
-            }
-            releaseRemote(queried);
+                (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b8));
+            if (static_cast<unsigned>(hr) == 0x80040200u) sink->Release();
+            static_cast<IUnknown*>(queried)->Release();
         }
-        *reinterpret_cast<int*>(bytes + offset) = -1;
-    };
-    releaseId(0x1b8, true);
-    releaseId(0x1b0, false);
-    releaseRemote(*reinterpret_cast<void**>(bytes + 0x1a0));
+        *reinterpret_cast<int*>(bytes + 0x1b8) = -1;
+    }
+    if (*reinterpret_cast<int*>(bytes + 0x1b0) != -1) {
+        if (remote && SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
+                (*reinterpret_cast<void***>(remote))[0])(remote, DAT_1431c51e8, &queried))) {
+            reinterpret_cast<HRESULT(*)(void*, unsigned)>(
+                (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b0));
+            static_cast<IUnknown*>(queried)->Release();
+        }
+        *reinterpret_cast<int*>(bytes + 0x1b0) = -1;
+    }
+    sink->Release();
 }
 
 // MS2-FUNCTIONAL: follows the executable's selected TextField refcount and input-eligibility checks.
