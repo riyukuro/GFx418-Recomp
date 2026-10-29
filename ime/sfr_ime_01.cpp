@@ -1284,7 +1284,7 @@ void FUN_1423d1420(void* object, int index)
     auto* bytes = static_cast<unsigned char*>(object);
     const unsigned state = *reinterpret_cast<unsigned*>(bytes + 0x98);
     if ((state & 0xf00000) == 0 && (((state - 0x10000) & 0xfffcffff) != 0 || state == 0x40000)) {
-        FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8), 0);
+        FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8), index);
         return;
     }
     INPUT input{};
@@ -3327,7 +3327,10 @@ void FUN_1423cefe0(void* object)
             input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
         }
         inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(2, inputs, sizeof(INPUT));
+        // The exe sends each key separately with cbSize = sizeof(inputs) (0x50), which SendInput rejects, so no
+        // Escape actually reaches the window.
+        SendInput(1, &inputs[0], sizeof(inputs));
+        SendInput(1, &inputs[1], sizeof(inputs));
     }
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
