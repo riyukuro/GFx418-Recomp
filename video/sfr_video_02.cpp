@@ -456,11 +456,11 @@ __declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
     return pavm->AvmCharacter::GetAbsolutePath(path);
 }
 
-// MS2-FUNCTIONAL: these executable entries are FID-conflict copies of the display-object forwarding wrapper.
+// MS2-FUNCTIONAL: the CloneInternalData slot; the exe tail-calls AvmCharacter::CloneInternalData (0x142934870).
 // @0x14000e630
 __declspec(noinline) void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
 {
-    pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
+    pavm->AvmCharacter::CloneInternalData(oldCharacter);
 }
 
 // MS2-FUNCTIONAL: the exe tail-calls AvmCharacter::CopyPhysicalProperties (0x142935cc0) on pavm. The
