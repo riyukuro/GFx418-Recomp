@@ -63,7 +63,10 @@ void SF_STDCALL GFx_DefineVideoStreamLoader(LoadProcess* p, const TagInfo& tagIn
         read(video, p, tagInfo);
     }
     else
-        p->LogError("GFx_DefineVideoStream: Video library is not set.");
+    {
+        p->GetStream()->LogParse("GFx_DefineVideoStream: Video library is not set.\n");
+        p->GetStream()->LogTagBytes();
+    }
 }
 
 // @0x1425c6620
@@ -71,30 +74,50 @@ void SF_STDCALL GFx_FileAttributesLoader(LoadProcess* p)
 {
     const unsigned flags = p->ReadU16();
     p->GetLoadTaskData()->SetFileAttributes(flags);
+    if (flags)
+    {
+        p->LogParse("  fileAttr:");
+        char sep = ' ';
+        if (flags & 0x01)
+        {
+            p->LogParse("%cUseNetwork", sep);
+            sep = ',';
+        }
+        // the exe only switches the separator after UseNetwork
+        if (flags & 0x08)
+            p->LogParse("%cUseActionScript3", sep);
+        if (flags & 0x10)
+            p->LogParse("%cHasMetadata", sep);
+        p->LogParse("\n");
+    }
 }
 
-// MS2-FUNCTIONAL: dispatches the external sound tag through the installed reader; missing-audio diagnostics are simplified.
+// MS2-FUNCTIONAL: dispatches the external sound tag through the installed reader.
 // @0x1425c7ba0
 void SF_STDCALL GFx_DefineExternalSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
     AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadDefineExternalSoundTag(p, tagInfo);
+    if (audio)
+        audio->GetSoundTagsReader()->ReadDefineExternalSoundTag(p, tagInfo);
     else
-        p->LogError("GFx_DefineExternalSoundLoader: Audio library is not set.");
+    {
+        p->GetStream()->LogParse("GFx_DefineExternalSoundLoader: Audio library is not set.\n");
+        p->GetStream()->LogTagBytes();
+    }
 }
 
-// MS2-FUNCTIONAL: dispatches the external stream sound tag through the installed reader; missing-audio diagnostics are simplified.
+// MS2-FUNCTIONAL: dispatches the external stream sound tag through the installed reader.
 // @0x1425c7c20
 void SF_STDCALL GFx_DefineExternalStreamSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
     AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadDefineExternalStreamSoundTag(p, tagInfo);
+    if (audio)
+        audio->GetSoundTagsReader()->ReadDefineExternalStreamSoundTag(p, tagInfo);
     else
-        p->LogError("GFx_DefineExternalStreamSoundLoader: Audio library is not set.");
+    {
+        p->GetStream()->LogParse("GFx_DefineExternalStreamSoundLoader: Audio library is not set.\n");
+        p->GetStream()->LogTagBytes();
+    }
 }
 
 // MS2-FUNCTIONAL: reports the unsupported binary-data tag and preserves its resource id; reserved payload handling is simplified.
@@ -115,7 +138,9 @@ void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInf
 // @0x1425c4db0
 void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    const ResourceId id(p->ReadU16());
+    const UInt16 fontId = p->ReadU16();
+    const ResourceId id(fontId);
+    p->LogParse("  Font: id = %d\n", fontId);
     if (tagInfo.TagType == static_cast<TagType>(0x3ed))
     {
         p->LogError("Trying to load compacted font with SF_NO_COMPACTED_FONT_SUPPORT defined.");
@@ -145,7 +170,7 @@ void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
     FUN_14257dcb0(shape);
 }
 
-// MS2-FUNCTIONAL: copies the metadata payload into LoadTaskData and terminates a bounded logging sample.
+// MS2-FUNCTIONAL: copies the metadata payload into LoadTaskData and parse-logs its first 255 bytes.
 // @0x1425c64f0
 void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo&)
 {
@@ -160,7 +185,8 @@ void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo&)
     for (int i = 0; i < length; ++i)
         data[i] = p->ReadU8();
     p->GetLoadTaskData()->SetMetadata(data, static_cast<unsigned>(length));
-    data[(length < 0xff) ? length : 0xfe] = 0;
+    data[(length < 0xff) ? length : 0xff] = 0;
+    p->LogParse("  metadata: %s\n", data);
     Memory::Free(data);
 }
 
@@ -258,8 +284,10 @@ void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
 // @0x1425c4740
 void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    ResourceId rid(p->ReadU16());
+    const UInt16 charId = p->ReadU16();
+    ResourceId rid(charId);
     Stream* stream = p->GetStream();
+    p->LogParse("  GFx_DefineBitsJpeg2Loader: charid = %d pos = 0x%x\n", charId, stream->Tell());
     Render::ImageSource* source = 0;
     LoadStates* states = p->GetLoadStates();
     Render::ImageFileHandlerRegistry* registry = states
@@ -287,82 +315,72 @@ void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo
 }
 
 // The audio state owns the reader that interprets the five SWF sound tags.
-// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6180
 void SF_STDCALL GFx_DefineSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadDefineSoundTag(p, tagInfo);
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    if (audio)
+        audio->GetSoundTagsReader()->ReadDefineSoundTag(p, tagInfo);
     else
     {
-        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogParse("GFx_DefineSoundLoader: Audio library is not set.\n");
         p->GetStream()->LogTagBytes();
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6200
 void SF_STDCALL GFx_StartSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadStartSoundTag(p, tagInfo);
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    if (audio)
+        audio->GetSoundTagsReader()->ReadStartSoundTag(p, tagInfo);
     else
     {
-        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogParse("GFx_StartSoundLoader: Audio library is not set.\n");
         p->GetStream()->LogTagBytes();
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6280
 void SF_STDCALL GFx_ButtonSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadButtonSoundTag(p, tagInfo);
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    if (audio)
+        audio->GetSoundTagsReader()->ReadButtonSoundTag(p, tagInfo);
     else
     {
-        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogParse("GFx_ButtonSoundLoader: Audio library is not set.\n");
         p->GetStream()->LogTagBytes();
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6300
 void SF_STDCALL GFx_SoundStreamHeadLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadSoundStreamHeadTag(p, tagInfo);
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    if (audio)
+        audio->GetSoundTagsReader()->ReadSoundStreamHeadTag(p, tagInfo);
     else
     {
-        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogParse("GFx_SoundStreamHeadLoader: Audio library is not set.\n");
         p->GetStream()->LogTagBytes();
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and missing-audio diagnostics; logging argument setup differs from the exe.
+// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6380
 void SF_STDCALL GFx_SoundStreamBlockLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    AudioBase* audio = states ? states->pAudioState.GetPtr() : 0;
-    SoundTagsReader* reader = audio ? audio->GetSoundTagsReader() : 0;
-    if (reader)
-        reader->ReadSoundStreamBlockTag(p, tagInfo);
+    AudioBase* audio = p->GetLoadStates()->pAudioState.GetPtr();
+    if (audio)
+        audio->GetSoundTagsReader()->ReadSoundStreamBlockTag(p, tagInfo);
     else
     {
-        p->LogParse("GFx_XLoader: Audio library is not set.");
+        p->GetStream()->LogParse("GFx_SoundStreamBlockLoader: Audio library is not set.\n");
         p->GetStream()->LogTagBytes();
     }
 }
