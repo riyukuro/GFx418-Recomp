@@ -261,6 +261,7 @@ void FUN_140043680(void* object)
     }
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: allocate and initialize the CRI universal stream-joint object with its executable vtable.
 // @0x140046324
 void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
@@ -364,6 +365,7 @@ void FUN_140046598(void* object)
     FUN_140045fdc(object);
     FUN_140027fb4(storage->Heap, storage);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: report whether a stream-joint has completed its terminal audio transition.
 // @0x140043810
@@ -406,6 +408,7 @@ void FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32 chan
     FUN_140043420(((void**)decoders)[index], player, channel);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: split a stream chunk, append the selected range, and return bytes left after the requested size.
 // @0x1400468f4
 CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriUint32 maximum)
@@ -435,6 +438,7 @@ void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ..
     _vsnprintf(buffer, capacity, format, arguments);
     va_end(arguments);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: return the selected decoder's available sample count in player time units.
 // @0x14003d9d0
@@ -485,6 +489,7 @@ void FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 chan
     FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: calculate universal stream-joint work bytes plus the two aligned block headers.
 // @0x140046420
 CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* settings)
@@ -501,6 +506,7 @@ void FUN_1400464a8(CriUint32 first, CriUint32 second)
     const CriUint32 settings[2] = { 0, 1 };
     FUN_140046420(first, second, settings);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: test stream readiness after the active decoder state and buffered input are checked.
 // @0x140040de0
@@ -585,6 +591,7 @@ void FUN_140043610(void* trackSet)
                 FUN_140046798(tracks->Tracks[index]);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: refresh a read-buffer header when its state is active, then drain one queued chunk.
 // @0x1400458b8
 void FUN_1400458b8(void* object)
@@ -607,6 +614,7 @@ void FUN_1400458b8(void* object)
         FUN_1400467a8(reader->Queue, 1, reader->Chunk);
     }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: release the manager's input joint and all child audio decoder track sets.
 // @0x140042800
@@ -622,6 +630,7 @@ void FUN_140042800(void* manager)
         FUN_140043610(audio->Decoders[index]);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: pass two variadic formatter arguments to the executable's Scaleform string formatter.
 // @0x1400469c4
 void FUN_1400469c4(void* string, const CriChar8* format, CriUint64 first, CriUint64 second)
@@ -629,6 +638,7 @@ void FUN_1400469c4(void* string, const CriChar8* format, CriUint64 first, CriUin
     const CriUint64 arguments[2] = { first, second };
     FUN_14029dd60(string, format, arguments);
 }
+#pragma optimize("", on)
 
 void FUN_1400478a0(void);
 void FUN_1400493c0(void);
@@ -642,6 +652,7 @@ void* FUN_1400464f4(const void*, void*, CriUint32);
 
 // ==== CRI critical-section helpers ================================================================================
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; this wrapper reproduces its aligned storage and initialization.
 // @0x140039ea8
 void* criCs_Create(void* work, CriSint32 size)
@@ -749,6 +760,7 @@ void criUtfRtv_Destroy(CriUint64* table)
             FUN_140046d50(table, index);
     freeMem(heapContext, (void*)table[0x15]);
 }
+#pragma optimize("", on)
 
 // @0x14003b840
 void criMvPly_AttachM2V()
@@ -776,6 +788,7 @@ void FUN_14003b6e0()
     FUN_14002e6e0(&registration);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: route UTF allocations through the caller's CRI heap using its allocation mode.
 // @0x14003b20c
 void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 alignment,
@@ -810,6 +823,7 @@ void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriU
     callbacks.Heap = heap;
     return FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
 // executable's shared UTF parser populate the table layout.
@@ -817,6 +831,7 @@ void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriU
 // 0x14003a0ac, has no callers, so the flag stays 0 and the failures return NULL without an error report.
 static CriSint32 s_nUtfRtvReportAllocError = 0;
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // @0x14003a1a0
 void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* data, CriUint32 size)
 {
@@ -889,6 +904,7 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
         FUN_140038e24(0, "E06100312", -3);
     return NULL;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
 // @0x14003bea0
@@ -915,6 +931,7 @@ const void** FUN_14003bf10()
 
 // ==== CRI UTF heap callback helpers ================================================================================
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: this callback forwarder uses the executable's two-word heap interface.
 // @0x14003a0d0
 void* criUtfHeap_Alloc(void* heap, CriUint32 size, const char* tag, CriSint32 align, CriSint32 flags)
@@ -938,6 +955,7 @@ void* FUN_14003a184(void* heap, CriUint32 size, const char* tag, CriSint32 align
     void** slots = (void**)heap;
     return ((void*(__fastcall*)(void*, CriUint32, const char*, CriSint32, CriSint32))slots[0])(slots[2], size, tag, align, 1);
 }
+#pragma optimize("", on)
 
 // ==== CRI UTF runtime table field accessors ========================================================================
 
@@ -961,6 +979,7 @@ static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, C
     return table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: the CRI table library was built with VS2008; preserve its field-name scan and 0xffffffff sentinel.
 // @0x14003a3e0
 CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name)
@@ -1331,6 +1350,7 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
     *contentSize = (CriSint32)(chunkSize - ((CriUint32)data[10] << 8 | data[11]) - headerSize);
     return data + headerSize + 8;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: CRI Movie computes the caller's decoder work size from the requested handle count.
 // @0x14003bf30
@@ -2203,6 +2223,7 @@ void* FUN_140044e40(void* decoder)
     return ((void* (*)(void))target)();
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
 // @0x140044fb0
 void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
@@ -2239,7 +2260,12 @@ CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
 // @0x140045ed0
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config)
 {
-    return (config[0] == 1 ? 0xa0 : 0x58) + config[1] + config[2] + config[3];
+    CriSint32 size = 0x58;
+    if (config[0] == 1)
+    {
+        size += 0x48;
+    }
+    return config[1] + config[2] + config[3] + size;
 }
 
 // MS2-FUNCTIONAL: destroy the ring-buffer lock and clear its lock pointer.
@@ -2453,6 +2479,7 @@ void criSjUni_Reset(void* streamJoint)
     if (lock)
         FUN_140039f8c((LPCRITICAL_SECTION)lock);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
 // @0x140041a10
@@ -2711,6 +2738,7 @@ void FUN_14003b720(CriMvSubAudioTrackState* state, CriSint32 count,
     }
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: search the table's 32-bit record field in row order and return its first matching row.
 // @0x14003b168
 CriUint32 criUtfRtv_SearchRecNoByUint32(const CriUtfRtvView* table, CriUint32 field, CriUint32 value)
@@ -2739,6 +2767,7 @@ CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field
     }
     return 0xffffffff;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: these state initializers clear the decoder's four motion-vector components.
 // @0x142ccb4f0
@@ -2751,9 +2780,9 @@ void MPVDEC_ResetMv(CriMpvDecoderState* state)
 // @0x142ccb500
 void MPVDEC_ResetDc(CriMpvDecoderState* state)
 {
-    state->DcPredictors[0] = 0x400;
     state->DcPredictors[1] = 0x400;
     state->DcPredictors[2] = 0x400;
+    state->DcPredictors[0] = 0x400;
 }
 
 // MS2-FUNCTIONAL: adjust macroblock address and column by 1 minus the supplied run length.
@@ -2782,11 +2811,16 @@ void mpvumc_IncreMbadr(CriMpvDecoderState* state)
     ++state->MacroblockAddress;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: read the initialized flag stored in the CRI demux object.
 // @0x140044f8c
 CriSint32 FUN_140044f8c(void* object)
 {
-    return object ? *((CriUint8*)object + 9) : 0;
+    if (object == NULL)
+    {
+        return 0;
+    }
+    return *((signed char*)object + 9);
 }
 
 // MS2-FUNCTIONAL: reset the demux object's secondary state and mark it initialized.
@@ -2817,6 +2851,7 @@ void FUN_140044fdc(void* object)
 {
     *((CriUint8*)object + 10) = 1;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: forward the opaque argument through the Vdec callback at table offset 0x98.
 // @0x140044050
@@ -2920,6 +2955,7 @@ void FUN_140044680(CriUint64* pair)
         (*(void (**)(CriUint64))((CriUint8*)pair[1] + 0x38))(pair[0]);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: decrement CRI's shared demux counter.
 // @0x140044ea8
 void FUN_140044ea8(void)
@@ -3102,6 +3138,7 @@ char* FUN_14004698c(char* dst, size_t size, const char* src)
     strcat_s(dst, size, src);
     return dst;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: copy the requested number of bytes with the executable's secure CRT helper.
 // @0x1400469f0
@@ -3201,12 +3238,14 @@ void* FUN_1400411e0(CriUint32* size)
     return DAT_143b27c80;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: publish CRI Base's runtime banner string.
 // @0x1400411f8
 void FUN_1400411f8(void)
 {
     DAT_143ba9d08 = "\nCRI Base/PCx64 Ver.2.21.07 Build:Jan 13 2012 19:02:07\n";
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: forward to the attached object's virtual stop operation when present.
 // @0x140041250
@@ -3252,6 +3291,7 @@ void FUN_140041dd0(void* heap)
     ((void (*)(void*, void*))*(void**)((CriUint8*)*(void**)manager + 0x60))(manager, heap);
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: initialize the USF demux runtime banner on first use and increment its reference count.
 // @0x140044e84
 void FUN_140044e84(void)
@@ -3260,6 +3300,7 @@ void FUN_140044e84(void)
         DAT_143ba9d20 = "\nCRI UsfDmx/PCx64 Ver.1.01.03 Build:Jan 13 2012 19:02:04\n";
     ++DAT_143ba9d28;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: initialize the CRI timer context and its default interval/counter fields.
 // @0x140041c00
@@ -3305,6 +3346,7 @@ void* FUN_140041c60(void* manager, CriUint64 flags)
     return manager;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: sum the queued byte counts in one CRI reader ring-buffer lane.
 // @0x140045c08
 CriSint32 FUN_140045c08(void* object, CriSint32 lane)
@@ -3331,6 +3373,7 @@ CriSint32 FUN_140045c08(void* object, CriSint32 lane)
         FUN_140039f8c(section);
     return total;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: dispatch the EasyFileReader free operation and release its heap-owned adapter.
 // @0x140044560
@@ -3547,6 +3590,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     return 1;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
 // @0x1400453c4
 void FUN_1400453c4(void* object)
@@ -3585,6 +3629,7 @@ void FUN_1400453c4(void* object)
     state->Writing = 0;
     state->Reading = 1;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: detect the encoded CSC flag in a CRI movie packet header.
 // @0x140040f80
@@ -3608,6 +3653,7 @@ CriBool FUN_140040f80(const void* packet, CriSint32 size)
     return header->CscFlag == 'C';
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: compute ring-buffer memory requirements for the CRI movie stream joint.
 // @0x140046604
 CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
@@ -3734,6 +3780,7 @@ void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span)
     if (lock)
         FUN_140039f8c((LPCRITICAL_SECTION)lock);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: create the named CRI video heap and attach its allocator to the returned adapter.
 // @0x140041d40
@@ -3845,6 +3892,7 @@ void FUN_1400436d0(void* state)
     DAT_143ba9d10 = 0;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: release the decoder, both stream joints, and the heap-owned reader state.
 // @0x140044f28
 void FUN_140044f28(void* object)
@@ -3869,6 +3917,7 @@ void FUN_140044f28(void* object)
     if (owner->Heap)
         FUN_140027fb4(owner->Heap, owner);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: return a bounded channel's available audio bytes when its decoder is ready.
 // @0x140043890
@@ -3948,6 +3997,7 @@ void FUN_140042700(void* trackSet, void* player)
     }
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: dequeue a chunk large enough for the request or split its head in single-buffer mode.
 // @0x140045c60
 void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output)
@@ -4079,6 +4129,7 @@ void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
             FUN_140039f8c(queue->Lock);
     }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: initialize shared MPV library work buffers once and maintain their reference count.
 // @0x14003c080
@@ -4278,6 +4329,7 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index)
     table[index] = NULL;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: allocate a USF demux state, output table, and its paired stream joints.
 // @0x1400452b4
 void* FUN_1400452b4(void* heap, CriSint32 outputCount)
@@ -4329,6 +4381,7 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
     memset(state->Reserved30, 0, sizeof(state->Reserved30));
     return state;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
 // @0x140040a20
@@ -4366,6 +4419,7 @@ CriBool FUN_140042cf0(void* trackSet, void* operation)
     return 1;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: read the three queue counters for the selected CRI stream joint lane.
 // @0x1400450c0
 void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* second,
@@ -4442,6 +4496,7 @@ void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
     if (state->Lock)
         FUN_140039f8c(state->Lock);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: create the CRI alpha decoder handle object around a decoder-implementation interface.
 // @0x140043af0
@@ -4495,6 +4550,7 @@ void* FUN_140044470(void* implementation, void* heap, void* parameter)
     return object;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: skip leading zero bytes of the first stream queue chunk and split it between two joints.
 // @0x140044fe4
 void FUN_140044fe4(void* stream)
@@ -4530,6 +4586,7 @@ void FUN_140044fe4(void* stream)
     FUN_1400467b0(first, 1, &chunk);
     FUN_1400467b0(second, 1, &chunk);
 }
+#pragma optimize("", on)
 
 extern "C" const void* PTR_FUN_143a485d8;
 extern "C" const void* PTR_FUN_143a48608;
@@ -4538,6 +4595,7 @@ void* FUN_14002e6c0(CriMvWorkAllocator*, CriUint32, CriUint32);
 void FUN_14002e6bc(CriMvWorkAllocator*);
 void FUN_140038ddc(CriSint32, const CriChar8*);
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: lay out a CRI ring-buffer stream joint inside the supplied work area.
 // @0x140045eec
 void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
@@ -4614,6 +4672,7 @@ void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
     FUN_14002e6bc(&allocator);
     return object;
 }
+#pragma optimize("", on)
 
 
 void FUN_1400314a0(void*);
@@ -5627,6 +5686,7 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
     return 1;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: build a stream demuxer object holding two universal stream joints and a per-track table.
 // @0x140045144
 void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
@@ -5686,6 +5746,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     }
     return NULL;
 }
+#pragma optimize("", on)
 
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
@@ -5776,6 +5837,7 @@ void FUN_1400428e0(void* trackSet, void* player)
 
 CriSint32 criSjUni_GetNumChainPool(void* streamJoint);
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: match demuxed USF chunks against the per-track filters and hand them to the matching track queues.
 // @0x140045474
 void FUN_140045474(void* object)
@@ -5939,6 +6001,7 @@ releaseFirst:
     if (demux->Flush == 1)
         demux->State = 2;
 }
+#pragma optimize("", on)
 
 // ---- MPEG video (PSFD section) macroblock reconstruction helpers ----
 extern "C" void (**DAT_143fe8248)(CriUint8*, CriUint8*, CriSint32, CriSint32, CriSint32);
@@ -7177,6 +7240,7 @@ void* FUN_140041d00(cri03_host08* self, CriSint32 a, void*, CriSint32 d)
 }
 
 struct cri03_kinds { void* vtbl; void* _08[3]; CriSint32 k1; CriSint32 k0; };
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: field +0x20 for kind 1, +0x24 for kind 0, else 0.
 // @0x140046000
 CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind)
@@ -7187,6 +7251,7 @@ CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind)
         return self->k0;
     return 0;
 }
+#pragma optimize("", on)
 
 // Boot tags 96/98: these address-named entry points create critical sections.
 // Strong definitions prevent stale CuePoint::Resize alias rows from selecting
