@@ -14300,6 +14300,9 @@ void FUN_1400659f0(cri_any cri_unused, ...)
   return;
 }
 
+// cvtps2dq: float to int under the current MXCSR rounding (round to nearest by default), not a truncating cast.
+static inline int cri06_cvtps(float f) { return _mm_cvtss_si32(_mm_set_ss(f)); }
+
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065a20
 void FUN_140065a20(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
@@ -14559,47 +14562,47 @@ void FUN_140065a20(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
     f_v10 = (pf_v3[5] * f_v29 - f_v10) - f_v19;
     f_v11 = (pf_v3[6] * f_v31 - f_v11) - f_v21;
     f_v12 = (pf_v3[7] * f_v33 - f_v12) - f_v23;
-    CRI_PART(au_v15,0,4) = (int)(f_v30 + f_v47);
-    CRI_PART(au_v15,4,4) = (int)(f_v34 + f_v48);
-    CRI_PART(au_v15,8,4) = (int)(f_v36 + f_v49);
-    CRI_PART(au_v15,12,4) = (int)(f_v38 + f_v50);
-    CRI_PART(au_v16,4,4) = (int)(f_v56 + f_v40);
-    CRI_PART(au_v16,0,4) = (int)(f_v55 + f_v39);
-    CRI_PART(au_v16,8,4) = (int)(f_v57 + f_v41);
-    CRI_PART(au_v16,12,4) = (int)(f_v58 + f_v42);
+    CRI_PART(au_v15,0,4) = cri06_cvtps(f_v30 + f_v47);
+    CRI_PART(au_v15,4,4) = cri06_cvtps(f_v34 + f_v48);
+    CRI_PART(au_v15,8,4) = cri06_cvtps(f_v36 + f_v49);
+    CRI_PART(au_v15,12,4) = cri06_cvtps(f_v38 + f_v50);
+    CRI_PART(au_v16,4,4) = cri06_cvtps(f_v56 + f_v40);
+    CRI_PART(au_v16,0,4) = cri06_cvtps(f_v55 + f_v39);
+    CRI_PART(au_v16,8,4) = cri06_cvtps(f_v57 + f_v41);
+    CRI_PART(au_v16,12,4) = cri06_cvtps(f_v58 + f_v42);
     au_v16 = packssdw(au_v15,au_v16);
     pu_v6[-4] = CRI_PART(au_v16,0,8);
     pu_v6[-2] = CRI_PART(au_v16,8,8);
-    CRI_PART(au_v25,0,4) = (int)(f_v43 - f_v9);
-    CRI_PART(au_v25,4,4) = (int)(f_v44 - f_v10);
-    CRI_PART(au_v25,8,4) = (int)(f_v45 - f_v11);
-    CRI_PART(au_v25,12,4) = (int)(f_v46 - f_v12);
-    CRI_PART(au_v17,0,4) = (int)(f_v13 + f_v14);
-    CRI_PART(au_v17,4,4) = (int)(f_v19 + f_v20);
-    CRI_PART(au_v17,8,4) = (int)(f_v21 + f_v22);
-    CRI_PART(au_v17,12,4) = (int)(f_v23 + f_v24);
-    CRI_PART(au_v26,4,4) = (int)(f_v10 + f_v44);
-    CRI_PART(au_v26,0,4) = (int)(f_v9 + f_v43);
-    CRI_PART(au_v26,8,4) = (int)(f_v11 + f_v45);
-    CRI_PART(au_v26,12,4) = (int)(f_v12 + f_v46);
+    CRI_PART(au_v25,0,4) = cri06_cvtps(f_v43 - f_v9);
+    CRI_PART(au_v25,4,4) = cri06_cvtps(f_v44 - f_v10);
+    CRI_PART(au_v25,8,4) = cri06_cvtps(f_v45 - f_v11);
+    CRI_PART(au_v25,12,4) = cri06_cvtps(f_v46 - f_v12);
+    CRI_PART(au_v17,0,4) = cri06_cvtps(f_v13 + f_v14);
+    CRI_PART(au_v17,4,4) = cri06_cvtps(f_v19 + f_v20);
+    CRI_PART(au_v17,8,4) = cri06_cvtps(f_v21 + f_v22);
+    CRI_PART(au_v17,12,4) = cri06_cvtps(f_v23 + f_v24);
+    CRI_PART(au_v26,4,4) = cri06_cvtps(f_v10 + f_v44);
+    CRI_PART(au_v26,0,4) = cri06_cvtps(f_v9 + f_v43);
+    CRI_PART(au_v26,8,4) = cri06_cvtps(f_v11 + f_v45);
+    CRI_PART(au_v26,12,4) = cri06_cvtps(f_v12 + f_v46);
     au_v16 = packssdw(au_v17,au_v26);
     *pu_v6 = CRI_PART(au_v16,0,8);
-    CRI_PART(au_v1,4,4) = (int)(f_v20 - f_v19);
-    CRI_PART(au_v1,0,4) = (int)(f_v14 - f_v13);
-    CRI_PART(au_v1,8,4) = (int)(f_v22 - f_v21);
-    CRI_PART(au_v1,12,4) = (int)(f_v24 - f_v23);
+    CRI_PART(au_v1,4,4) = cri06_cvtps(f_v20 - f_v19);
+    CRI_PART(au_v1,0,4) = cri06_cvtps(f_v14 - f_v13);
+    CRI_PART(au_v1,8,4) = cri06_cvtps(f_v22 - f_v21);
+    CRI_PART(au_v1,12,4) = cri06_cvtps(f_v24 - f_v23);
     au_v26 = packssdw(au_v25,au_v1);
     pu_v6[2] = CRI_PART(au_v16,8,8);
     pu_v6[4] = CRI_PART(au_v26,0,8);
-    CRI_PART(au_v18,0,4) = (int)(f_v39 - f_v55);
-    CRI_PART(au_v18,4,4) = (int)(f_v40 - f_v56);
-    CRI_PART(au_v18,8,4) = (int)(f_v41 - f_v57);
-    CRI_PART(au_v18,12,4) = (int)(f_v42 - f_v58);
+    CRI_PART(au_v18,0,4) = cri06_cvtps(f_v39 - f_v55);
+    CRI_PART(au_v18,4,4) = cri06_cvtps(f_v40 - f_v56);
+    CRI_PART(au_v18,8,4) = cri06_cvtps(f_v41 - f_v57);
+    CRI_PART(au_v18,12,4) = cri06_cvtps(f_v42 - f_v58);
     pu_v6[6] = CRI_PART(au_v26,8,8);
-    CRI_PART(au_v2,4,4) = (int)(f_v48 - f_v34);
-    CRI_PART(au_v2,0,4) = (int)(f_v47 - f_v30);
-    CRI_PART(au_v2,8,4) = (int)(f_v49 - f_v36);
-    CRI_PART(au_v2,12,4) = (int)(f_v50 - f_v38);
+    CRI_PART(au_v2,4,4) = cri06_cvtps(f_v48 - f_v34);
+    CRI_PART(au_v2,0,4) = cri06_cvtps(f_v47 - f_v30);
+    CRI_PART(au_v2,8,4) = cri06_cvtps(f_v49 - f_v36);
+    CRI_PART(au_v2,12,4) = cri06_cvtps(f_v50 - f_v38);
     au_v16 = packssdw(au_v18,au_v2);
     pu_v6[8] = CRI_PART(au_v16,0,8);
     pf_v4 = pf_v4 + 4;
