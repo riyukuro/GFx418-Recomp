@@ -331,9 +331,9 @@ const NameNumber GASImeCtorFunction::GASNumberConstTable[] = {
     { "CHINESE", 2 },
     { "JAPANESE_HIRAGANA", 4 },
     { "JAPANESE_KATAKANA_FULL", 8 },
-    { "JAPANESE_KATAKANA_HALF", 16 },
-    { "KOREAN", 32 },
-    { "UNKNOWN", 64 },
+    { "JAPANESE_KATAKANA_HALF", 0x16 },   // the exe has 0x16/0x32/0x64 here, not 16/32/64
+    { "KOREAN", 0x32 },
+    { "UNKNOWN", 0x64 },
     { 0, 0 }
 };
 
