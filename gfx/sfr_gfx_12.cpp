@@ -271,7 +271,7 @@ AppendableSoundData::~AppendableSoundData()
     }
 }
 
-// The global statistics object the exe reports freed sample bytes to (its slot 46).
+// The global statistics object the exe reports sample bytes to (slot 45 on alloc, slot 46 on free).
 extern "C" void* FUN_14261e310();
 
 // MS2-FUNCTIONAL: reports the freed byte count to the global statistics object and frees the sample block.
@@ -323,7 +323,8 @@ void AppendableSoundData::UnlockData()
     ChunkLock.Unlock();
 }
 
-// MS2-FUNCTIONAL: sample data held in memory: refcount and format, then the zero filled block from the global heap.
+// MS2-FUNCTIONAL: sample data held in memory: refcount and format, then the zero filled block from the global heap,
+// whose size is reported to the global statistics object.
 // @0x142747c70
 SoundData::SoundData(unsigned format, unsigned rate, unsigned length, unsigned dsize)
     : SoundDataBase(format, rate, length)
@@ -331,6 +332,8 @@ SoundData::SoundData(unsigned format, unsigned rate, unsigned length, unsigned d
     DataSize = dsize;
     pData    = (UByte*)Memory::pGlobalHeap->Alloc(dsize, 0x20, (const AllocInfo*)0);
     memset(pData, 0, DataSize);
+    void* pstat = FUN_14261e310();
+    ((void (*)(void*, unsigned))(*(void***)pstat)[45])(pstat, DataSize);
 }
 
 // MS2-FUNCTIONAL: sample data in a file: the file name is kept as a heap copy.
