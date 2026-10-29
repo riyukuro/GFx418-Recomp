@@ -609,7 +609,7 @@ void criMvPly_SetAudioTrack(void* player, CriUint32 track)
 // @0x140031060
 void FUN_140031060(void* player, CriSint32 value)
 {
-    if (value < 1)
+    if (value <= 0)
         FUN_140037950(player, "E10120701M: the parameter nframe must be greater than 0", 0);
     *(CriSint32*)((CriUint8*)player + 0xed8) = value;
 }

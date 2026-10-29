@@ -1848,9 +1848,8 @@ void FUN_14003d500(void* handle, void* videoBuffer, void* alphaBuffer)
 // @0x14003d940
 void* FUN_14003d940(void* handle)
 {
-    void* frame;
-    memcpy(&frame, (CriUint8*)handle + 0x180, sizeof(frame));
-    return frame;
+    void** fields = (void**)handle;
+    return fields[0x180 / sizeof(void*)];
 }
 
 // MS2-FUNCTIONAL: mark the VMPV handle's frame-ready flag.
