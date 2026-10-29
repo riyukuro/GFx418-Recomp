@@ -685,7 +685,8 @@ bool ImageFileResourceCreator::CreateResource(DataHandle hdata, ResourceBindData
     SF_UNUSED(pheap);
     ImageFileInfo*     prfi           = (ImageFileInfo*)hdata;
     Ptr<ImageFileInfo> pimageFileInfo = *SF_NEW ImageFileInfo(*prfi);
-    if (pimageFileInfo->Format == FileTypeConstants::File_Original && pimageFileInfo->pExporterInfo)
+    // MS2 build: the exe tests File_Unknown (1) here, not File_Original (0x142638948 cmp [rsi+0x10],1)
+    if (pimageFileInfo->Format == FileTypeConstants::File_Unknown && pimageFileInfo->pExporterInfo)
         pimageFileInfo->Format = pimageFileInfo->pExporterInfo->Format;
 
     URLBuilder::LocationInfo loc(URLBuilder::File_ImageImport, prfi->FileName, pls->GetRelativePath());
