@@ -72,6 +72,7 @@ public:
     // AvmCharacter
     virtual unsigned GetStandardMemberBitMask() const { return 0xefffafcf; } // 0x142956050
     virtual bool     GetStandardMember(StandardMember member, Value* pval, bool opcodeFlag) const; // 0x142954ed0
+    virtual bool     SetStandardMember(StandardMember index, const Value& val, bool opcodeFlag); // 0x14298a880 (sfr_as2_06w)
 
     // ObjectInterface
     virtual ObjectType GetObjectType() const { return Object_Button; } // 0x142954150
