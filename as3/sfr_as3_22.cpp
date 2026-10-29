@@ -4184,7 +4184,7 @@ long long TextRecordEquivalent(const void* leftRecord, const void* rightRecord)
             return 1;
     for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) }) {
         const float difference = *reinterpret_cast<const float*>(left + offset) - *reinterpret_cast<const float*>(right + offset);
-        if (difference < -0.00001f || difference > 0.00001f)
+        if (fabsf(difference) > 0.0001)
             return 1;
     }
     return (*reinterpret_cast<void* const*>(left + 0x68) == *reinterpret_cast<void* const*>(right + 0x68) &&
