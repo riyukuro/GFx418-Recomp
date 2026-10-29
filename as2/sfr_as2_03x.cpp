@@ -11,13 +11,14 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// The object takes the text field character's own __proto__, not the global TextField prototype.
 // MS2-FUNCTIONAL: the exe inlines Object::Set__proto__ (a virtual SetMemberRaw); same members
 // @0x1429215f0
 TextFieldObject::TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField)
     : Object(gCtxt->GetGC()), pTextField(ptextField), pIMECompositionStringStyles(0)
 {
-    Environment* penv = AS2::ToAvmCharacter(ptextField)->GetASEnvironment();
-    Set__proto__(penv->GetSC(), gCtxt->GetPrototype(ASBuiltin_TextField));
+    AvmCharacter* pavmCh = AS2::ToAvmCharacter(ptextField);
+    Set__proto__(pavmCh->GetASEnvironment()->GetSC(), pavmCh->Get__proto__());
 }
 
 }}} // namespace Scaleform::GFx::AS2
