@@ -1337,9 +1337,9 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
             CriSint32 Reserved;
         } params = { FUN_14002db40, this, 0x10000, -1, 0, 1, 0 };
         void* heapVtable = *(void**)heap;
-        void* (__fastcall *allocateThread)(void*, size_t) =
-            (void* (__fastcall *)(void*, size_t))(*(void**)((CriUint8*)heapVtable + 0x50));
-        void* memory = allocateThread(heap, 0x60);
+        void* (__fastcall *allocateThread)(void*, size_t, const void*) =
+            (void* (__fastcall *)(void*, size_t, const void*))(*(void**)((CriUint8*)heapVtable + 0x50));
+        void* memory = allocateThread(heap, 0x60, NULL);
         void* thread = memory ? FUN_14258a490(memory, &params) : NULL;
         if (config[31])
             FUN_14257dcb0(config[31]);
@@ -1347,7 +1347,7 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
         if (thread)
         {
             void** vtable = *(void***)thread;
-            CriBool (__fastcall *start)(void*, CriBool) = (CriBool (__fastcall *)(void*, CriBool))vtable[5];
+            bool (__fastcall *start)(void*, int) = (bool (__fastcall *)(void*, int))vtable[5];
             if (start(thread, 1))
             {
                 void (__fastcall *setName)(void*, const char*) = (void (__fastcall *)(void*, const char*))vtable[7];
@@ -1356,9 +1356,9 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
         }
     }
     void* heapVtable = *(void**)heap;
-    void* (__fastcall *allocateReader)(void*, size_t) =
-        (void* (__fastcall *)(void*, size_t))(*(void**)((CriUint8*)heapVtable + 0x50));
-    void* memory = allocateReader(heap, 0x50);
+    void* (__fastcall *allocateReader)(void*, size_t, const void*) =
+        (void* (__fastcall *)(void*, size_t, const void*))(*(void**)((CriUint8*)heapVtable + 0x50));
+    void* memory = allocateReader(heap, 0x50, NULL);
     return memory ? (VideoReader*)FUN_14002ddd0(memory, this) : NULL;
 }
 
