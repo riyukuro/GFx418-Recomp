@@ -1443,7 +1443,7 @@ unsigned long long FUN_1423d9490(void* object, unsigned long long* value)
     auto* data = reinterpret_cast<unsigned long long*>(array[0]);
     unsigned long long item = *value;
     if (item) ++*reinterpret_cast<volatile long*>(item + 8);
-    data[length - 1] = item;
+    data[length] = item;
     if (item) FUN_14257dcd0(reinterpret_cast<void*>(item));
     return 0;
 }
@@ -1804,7 +1804,7 @@ extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long lon
         auto** items = reinterpret_cast<void**>(array[0]);
         for (unsigned long long i = oldLength; i > length; --i)
             if (items[i - 1]) FUN_14257dcd0(items[i - 1]);
-        if ((capacity >> 1) <= length)
+        if (length < (capacity >> 1))
             FUN_1423d95f0(array, allocator, length);
     } else if (length >= capacity) {
         FUN_1423d95f0(array, allocator, (length >> 2) + length);
@@ -1812,16 +1812,18 @@ extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
+void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count);
+
 // MS2-FUNCTIONAL: resizes the executable's Value array, destructing removed entries before changing its capacity.
 // @0x1423d9730
 extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
 {
     auto* array = static_cast<unsigned long long*>(rawArray);
     if (length < array[1]) {
-        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(array[0]), array[1] - length);
-        if (length < (array[2] >> 1)) FUN_1423d95f0(array, allocator, length);
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::AS3::Value*>(array[0] + length * 0x20), array[1] - length);
+        if (length < (array[2] >> 1)) FUN_1423d12e0(array, allocator, length);
     } else if (length >= array[2]) {
-        FUN_1423d95f0(array, allocator, (length >> 2) + length);
+        FUN_1423d12e0(array, allocator, (length >> 2) + length);
     }
     array[1] = length;
 }
@@ -1971,8 +1973,8 @@ void FUN_1423d9520(void* raw)
         void** vtable = *reinterpret_cast<void***>(manager);
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, int, int)>(vtable[0x78 / sizeof(void*)])(
             manager, command, &result, 0, 0);
-        *command = 0;
     }
+    *command = 0;
 }
 
 // Performs the executable's interface query and retrieves the IME reading-state values.
