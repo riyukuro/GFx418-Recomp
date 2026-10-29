@@ -291,7 +291,8 @@ static DepthStencilBuffer* createTargetDepthStencil(RenderBufferManager* manager
     if (pdsb)
     {
         DepthStencilSurface* surface = (DepthStencilSurface*)pdsb->GetSurface();
-        *pdss = surface->pDepthStencilSurface;
+        if (surface)
+            *pdss = surface->pDepthStencilSurface;
     }
     return pdsb;
 }
