@@ -2889,7 +2889,7 @@ void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
 
 // ---- batch 20: raw models of the ArrayDataBase Reserve / ResizeNoConstruct / Resize instances (Data +0, Size +8, Capacity +0x10)
 // Kinds of element teardown run by the shrinking path.
-enum { Sfr31ElNone, Sfr31ElStrNode, Sfr31ElStrNodeTag, Sfr31ElRcFree, Sfr31ElObj, Sfr31ElValue, Sfr31ElFree };
+enum { Sfr31ElNone, Sfr31ElStrNode, Sfr31ElStrNodeTag, Sfr31ElRcFree, Sfr31ElObj, Sfr31ElValue, Sfr31ElFree, Sfr31ElSPtr };
 
 static void Sfr31ArrReserve(UPInt* a, const void* addr, UPInt n, UPInt esz, UInt32 id, MemoryHeap* dh)
 {
@@ -2952,6 +2952,9 @@ static void Sfr31ArrTearDown(UPInt slot, int kind)
     case Sfr31ElFree:
         Memory::Free(reinterpret_cast<void*>(el));
         break;
+    case Sfr31ElSPtr:   // ConstructorMov<SPtr<T>>::DestructArray: a killed (tagged) pointer is untagged, not released
+        reinterpret_cast<SPtr<GASRefCountBase>*>(slot)->~SPtr();
+        break;
     default:
         break;
     }
@@ -3012,17 +3015,17 @@ void Sfr31ResizeNCRc(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, 
 // @0x142524a30
 void Sfr31ResizeNCSPtrStr(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElStrNodeTag); }
 
-// MS2-FUNCTIONAL 0x142524af0: ResizeNoConstruct of a trivially destructible 8-byte array
+// MS2-FUNCTIONAL 0x142524af0: ResizeNoConstruct of an SPtr array (the cut tail is released)
 // @0x142524af0
-void Sfr31ResizeNCPod8a(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElNone); }
+void Sfr31ResizeNCPod8a(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
 
-// MS2-FUNCTIONAL 0x142524b90: ResizeNoConstruct of a trivially destructible 8-byte array
+// MS2-FUNCTIONAL 0x142524b90: ResizeNoConstruct of an SPtr array (the cut tail is released)
 // @0x142524b90
-void Sfr31ResizeNCPod8b(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElNone); }
+void Sfr31ResizeNCPod8b(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
 
-// MS2-FUNCTIONAL 0x142524c30: ResizeNoConstruct of a trivially destructible 8-byte array
+// MS2-FUNCTIONAL 0x142524c30: ResizeNoConstruct of an SPtr array (the cut tail is released)
 // @0x142524c30
-void Sfr31ResizeNCPod8c(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElNone); }
+void Sfr31ResizeNCPod8c(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
 
 // MS2-FUNCTIONAL 0x142524990: ResizeNoConstruct of a Ptr<InteractiveObject> array (heap passed in)
 // @0x142524990
@@ -3072,12 +3075,12 @@ void Sfr31ResizeObjZero(UPInt* a, UPInt n)
         Sfr31Wr(a[0], i * 8, 0);
 }
 
-// MS2-FUNCTIONAL 0x142524680: Resize of a trivially destructible 8-byte array, new slots zeroed
+// MS2-FUNCTIONAL 0x142524680: Resize of an SPtr array (the cut tail is released), new slots zeroed
 // @0x142524680
 void Sfr31ResizePodZero(UPInt* a, UPInt n)
 {
     const UPInt old = a[1];
-    Sfr31ArrResizeNC(a, a, n, 8, 2, 0, Sfr31ElNone);
+    Sfr31ArrResizeNC(a, a, n, 8, 2, 0, Sfr31ElSPtr);
     for (UPInt i = old; i < n; ++i)
         Sfr31Wr(a[0], i * 8, 0);
 }
