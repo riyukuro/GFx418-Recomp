@@ -1289,7 +1289,7 @@ char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* 
 Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm)
 {
     using namespace Scaleform::GFx::AS3;
-    const CallFrameStack& cs = *reinterpret_cast<const CallFrameStack*>(vm.Unk070);
+    const CallFrameStack& cs = *reinterpret_cast<const CallFrameStack*>(&vm.Unk070);
     if (cs.Size > 0)
     {
         const Scaleform::UPInt i  = cs.Size - 1;
@@ -3344,7 +3344,7 @@ int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt offset, void* fr
         if (caught)
         {
             FUN_1424efcd0(&cf);
-            Value*& top = reinterpret_cast<Value**>(vm->OpStack)[1];     // ValueStack::pCurrent
+            Value*& top = reinterpret_cast<Value**>(&vm->OpStack)[1];     // ValueStack::pCurrent
             new (++top) Value(vm->ExceptionObj);
             vm->ExceptionObj.Clean();
             FUN_1424efd80(&cf);

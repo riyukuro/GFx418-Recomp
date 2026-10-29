@@ -68,6 +68,30 @@ public:
     // (sfr33) no AddFile: the exe's empty loader (vftable 0x14317f470, MovieRoot) has these four slots only
 };
 
+// (appended, fq1) VM members whose destructors carry the exe's teardown, so ~VM destroys them after the other members,
+// in reverse declaration order (+0x140, +0x98, +0x70, +0x48, then the GC guard at +0x18). The dtors are defined in
+// sfr_as3_16. The stacks stay opaque words; they convert to their first word for the raw accesses.
+template <unsigned N>
+struct VMStackWords
+{
+    UPInt W[N];
+    operator UPInt*()               { return W; }
+    operator const UPInt*() const   { return W; }
+};
+struct VMOpStackWords : VMStackWords<5>         { ~VMOpStackWords(); };        // ValueStack teardown 0x1424dfbf0
+struct VMCallStackWords : VMStackWords<5>       { ~VMCallStackWords(); };      // ArrayPaged<CallFrame> ClearAndRelease 0x1424dc8e0
+struct VMDefaultFrameWords : VMStackWords<0x15> { ~VMDefaultFrameWords(); };   // CallFrame dtor 0x1424dde10
+struct VMRegisterFileWords : VMStackWords<4>    { ~VMRegisterFileWords(); };   // ValueRegisterFile teardown 0x1424dfaf0
+// The VM's collector; destroying the guard runs the shutdown collection (0x1424de240).
+struct VMGCGuard
+{
+    ASRefCountCollector* pGC;
+    explicit VMGCGuard(ASRefCountCollector* gc) : pGC(gc) {}
+    ~VMGCGuard();
+    operator ASRefCountCollector*() const { return pGC; }
+    ASRefCountCollector* operator->() const { return pGC; }
+};
+
 namespace Instances { namespace fl { class GlobalObjectCPP; class Array; class XML; class XMLList; class QName; } }
 namespace InstanceTraits { namespace fl { class GlobalObject; class Namespace; } }
 
@@ -311,16 +335,16 @@ public:
     bool                                    Initialized;        // +0x008
     bool                                    InDestructor;       // +0x009
     StringManager&                          StringManagerRef;   // +0x010
-    ASRefCountCollector*                    GC;                 // +0x018
+    VMGCGuard                               GC;                 // +0x018
     FlashUI&                                UI;                 // +0x020
     FileLoader&                             Loader;             // +0x028
     UPInt                                   InInitializer;      // +0x030
     MemoryHeap*                             MHeap;              // +0x038
     SPtr<XMLSupport>                        XMLSupport_;        // +0x040
-    UPInt                                   OpStack[5];         // +0x048 value stack (current page at +0x060)
-    UPInt                                   Unk070[5];          // +0x070 zeroed by the constructor
-    UPInt                                   CallStack[0x15];    // +0x098 paged call frame array (ctor 0x1424d6900)
-    UPInt                                   RegisterFile[4];    // +0x140 (current page at +0x150)
+    VMOpStackWords                          OpStack;            // +0x048 value stack (current page at +0x060)
+    VMCallStackWords                        Unk070;             // +0x070 paged CallFrame array (size [1], page table [4])
+    VMDefaultFrameWords                     CallStack;          // +0x098 the paged array's default CallFrame (ctor 0x1424d6900)
+    VMRegisterFileWords                     RegisterFile;       // +0x140 (current page at +0x150)
     ArrayDH<Value>                          ScopeStack;         // +0x160
     bool                                    HandleException;    // +0x180
     Value                                   ExceptionObj;       // +0x188

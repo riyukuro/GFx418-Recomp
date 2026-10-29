@@ -30,7 +30,7 @@ public:
     // (appended, sfr24) a copy of v on top; the caller has reserved the room (0x14241e4f0, from a function object).
     void   PushBack(const Value& v) { ++pCurrent; ::new (pCurrent) Value(v); }
     // (appended, sfr24) the operand stack of vm, which as3_vm.h keeps as raw words (VM +0x48).
-    static ValueStack& Of(VM& vm) { return *reinterpret_cast<ValueStack*>(vm.OpStack); }
+    static ValueStack& Of(VM& vm) { return *reinterpret_cast<ValueStack*>(&vm.OpStack); }
 
 private:
     friend class VM;    // (appended, sfr19) the VM constructor builds its operand stack in place

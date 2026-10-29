@@ -662,7 +662,7 @@ namespace Classes { namespace fl
             if (tr.IsClassTraits())
             {
                 if (!extCall)
-                    FUN_14241de40(reinterpret_cast<ValueStack*>(vm.OpStack), argc);
+                    FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), argc);
                 vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::Construct"));
                 return;
             }
@@ -720,7 +720,7 @@ namespace Classes { namespace fl
                         else
                         {
                             if (!extCall)
-                                FUN_14241de40(reinterpret_cast<ValueStack*>(vm.OpStack), argc);
+                                FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), argc);
                             vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::Construct"));
                         }
                     }
@@ -3740,7 +3740,7 @@ namespace Instances
         GetVM().ExecuteCode();
         VM& vm = GetVM();
         if (!vm.IsException())
-            result.Pick(*reinterpret_cast<ValueStack*>(vm.OpStack));
+            result.Pick(*reinterpret_cast<ValueStack*>(&vm.OpStack));
     }
 } // namespace Instances
 

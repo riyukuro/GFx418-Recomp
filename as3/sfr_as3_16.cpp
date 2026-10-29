@@ -202,6 +202,7 @@ extern "C" void FUN_1424de650(void* self)
 extern "C" void FUN_142530d50(Scaleform::UPInt self);
 extern "C" void FUN_1424dfbf0(void* self);
 void FUN_1424dc8e0(void* self);
+void FUN_1424de240(long long* state);
 extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
 extern "C" void* DAT_143b15f60;
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -496,18 +497,19 @@ extern "C" void FUN_1424dfbf0(void* self)
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// The execution stacks and the GC guard are destroyed after the other members, in reverse declaration order.
+VMOpStackWords::~VMOpStackWords() { FUN_1424dfbf0(W); }
+VMCallStackWords::~VMCallStackWords() { FUN_1424dc8e0(W); }
+VMDefaultFrameWords::~VMDefaultFrameWords() { reinterpret_cast<CallFrame*>(W)->~CallFrame(); }
+VMRegisterFileWords::~VMRegisterFileWords() { FUN_1424dfaf0(W); }
+VMGCGuard::~VMGCGuard() { FUN_1424de240(reinterpret_cast<long long*>(&pGC)); }
+
 // MS2-FUNCTIONAL 0x1424df380: marks the VM as destroying and shuts down registered ABCs before member teardown.
 // @0x1424df380
 VM::~VM()
 {
     InDestructor = true;
     FUN_142530d50(reinterpret_cast<Scaleform::UPInt>(this));
-    // The opaque execution stacks are torn down in the exe's member order: register file, the default call frame at
-    // +0x98, the paged call stack at +0x70, then the operand stack.
-    FUN_1424dfaf0(reinterpret_cast<unsigned char*>(this) + 0x140);
-    reinterpret_cast<CallFrame*>(reinterpret_cast<unsigned char*>(this) + 0x98)->~CallFrame();
-    FUN_1424dc8e0(reinterpret_cast<unsigned char*>(this) + 0x70);
-    FUN_1424dfbf0(reinterpret_cast<unsigned char*>(this) + 0x48);
     // The exe's GlobalObjects is ArrayLH<GlobalObject*>: its data is freed without releasing the (unowned) elements.
     // as3_vm.h still declares SPtr elements (shared with the as3_17/18 lanes), so empty it here; the member dtor then only frees Data.
     reinterpret_cast<Scaleform::UPInt*>(&GlobalObjects)[1] = 0; // Size (+0x1b0)

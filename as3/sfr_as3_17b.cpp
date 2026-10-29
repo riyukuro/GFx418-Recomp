@@ -105,7 +105,7 @@ struct Sfr33Args
     UInt8 buf[0x140];
 };
 
-inline CallFrameStack& Sfr33CallStack(VM& vm) { return *reinterpret_cast<CallFrameStack*>(vm.Unk070); }
+inline CallFrameStack& Sfr33CallStack(VM& vm) { return *reinterpret_cast<CallFrameStack*>(&vm.Unk070); }
 
 inline CallFrame& Sfr33FrameAt(VM& vm, UPInt i)
 {

@@ -3131,7 +3131,7 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
       XMLSupport(*this))), ScopeStack(MHeap), HandleException(false), SystemDomain(NULL)
 {
     new (OpStack) ValueStack();
-    reinterpret_cast<ValueStack*>(OpStack)->Reserve(1);
+    reinterpret_cast<ValueStack*>(&OpStack)->Reserve(1);
     {
         // the paged call stack: no pages yet, and a default frame on the VM's heap
         for (unsigned i = 1; i < 5; ++i)

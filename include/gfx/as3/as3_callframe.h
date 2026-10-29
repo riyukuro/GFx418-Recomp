@@ -105,7 +105,7 @@ SF_INLINE CallFrame::CallFrame(bool discard_result, VMAbcFile& file, SInt32 mbi_
     , StartTicks(start_ticks)
     , Invoker(invoker)
 {
-    ValueStack& os = *reinterpret_cast<ValueStack*>(file.GetVM().OpStack);
+    ValueStack& os = *reinterpret_cast<ValueStack*>(&file.GetVM().OpStack);
     PrevInitialStackPos = os.pCurrent;
     PrevReservedNum = os.ReservedNum;
     PrevFirstStackPos = os.pStack;
@@ -130,7 +130,7 @@ SF_INLINE void VM::AddFrame(const Value& invoker, VMAbcFile& file, SInt32 mbi_in
     if (IsException())
         cf.ACopy = true;
     else
-        reinterpret_cast<CallFrameStack*>(Unk070)->PushBack(cf);
+        reinterpret_cast<CallFrameStack*>(&Unk070)->PushBack(cf);
 }
 
 }}} // Scaleform::GFx::AS3
