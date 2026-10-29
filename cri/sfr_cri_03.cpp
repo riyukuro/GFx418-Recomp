@@ -418,8 +418,9 @@ CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriU
         remaining = (CriSint32)(maximum - view->Size);
     }
     criSj_SplitChunk(chunk, copied, (void*)chunk, suffix);
+    // Slot 4 is PutChunk(joint, id, chunk): the exe passes the prefix (still in r8 after the leaf split).
     void** vtable = *(void***)streamJoint;
-    ((void (*)(void*, CriSint32))vtable[4])(streamJoint, 0);
+    ((void (*)(void*, CriSint32, const void*))vtable[4])(streamJoint, 0, chunk);
     return remaining;
 }
 
