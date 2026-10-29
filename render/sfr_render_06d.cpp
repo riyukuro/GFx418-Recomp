@@ -730,7 +730,7 @@ void GlyphCache::cacheFullWarning()
 {
     if (RasterCacheWarning)
     {
-        LogWarning("Increase raster glyph cache capacity - see GlyphCacheParams.");
+        LogWarning("Warning: Increase raster glyph cache capacity - see GlyphCacheParams");
         RasterCacheWarning = false;
     }
 }
