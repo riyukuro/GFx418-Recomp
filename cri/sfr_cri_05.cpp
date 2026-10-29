@@ -633,24 +633,24 @@ void FUN_14004def0(cri_u32 *a1)
   a1[0x12] = 0;
   a1[0x13] = 0;
   CriAt<cri_u16>(a1, 0x50) = 0xffff;
-  CriAt<cri_u16>(a1, 0x148) = 0xffff;
+  CriAt<cri_u16>(a1, 0x52) = 0xffff;
   CriAt<cri_u8>(a1, 0x54) = 0;
-  CriAt<cri_u8>(a1, 0x154) = 0xff;
-  CriAt<cri_u8>(a1, 0x158) = 0xff;
-  CriAt<cri_u8>(a1, 0x15c) = 0xff;
+  CriAt<cri_u8>(a1, 0x55) = 0xff;
+  CriAt<cri_u8>(a1, 0x56) = 0xff;
+  CriAt<cri_u8>(a1, 0x57) = 0xff;
   CriAt<cri_u8>(a1, 0x58) = 0;
-  CriAt<cri_u8>(a1, 0x168) = 0;
-  CriAt<cri_u8>(a1, 0x16c) = 0;
+  CriAt<cri_u8>(a1, 0x5a) = 0;
+  CriAt<cri_u8>(a1, 0x5b) = 0;
   CriAt<cri_u8>(a1, 0x5c) = 0;
-  CriAt<cri_u8>(a1, 0x178) = 0xff;
-  CriAt<cri_u8>(a1, 0x17c) = 0xff;
+  CriAt<cri_u8>(a1, 0x5e) = 0xff;
+  CriAt<cri_u8>(a1, 0x5f) = 0xff;
   CriAt<cri_u8>(a1, 0x60) = 0xff;
-  CriAt<cri_u8>(a1, 0x184) = 0;
+  CriAt<cri_u8>(a1, 0x61) = 0;
   a1[0x1a] = 0;
-  CriAt<cri_u8>(a1, 0x164) = 1;
-  CriAt<cri_u8>(a1, 0x174) = 0xff;
-  CriAt<cri_u8>(a1, 0x188) = 0xff;
-  CriAt<cri_u8>(a1, 0x18c) = 0xff;
+  CriAt<cri_u8>(a1, 0x59) = 1;
+  CriAt<cri_u8>(a1, 0x5d) = 0xff;
+  CriAt<cri_u8>(a1, 0x62) = 0xff;
+  CriAt<cri_u8>(a1, 0x63) = 0xff;
   CriAt<cri_u8>(a1, 0x64) = 0xff;
   return;
 }
@@ -2219,7 +2219,7 @@ void FUN_14004ff10(cri_u64 *a1)
   *a1 = 0;
   a1[1] = 0;
   CriAt<cri_u32>(a1, 0x10) = 0;
-  CriAt<cri_u32>(a1, 0xa0) = 0;
+  CriAt<cri_u32>(a1, 0x14) = 0;
   CriAt<cri_u32>(a1, 0x18) = 0;
   return;
 }
