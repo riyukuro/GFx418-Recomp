@@ -1977,9 +1977,9 @@ insert_string:
             target[2] = entry[2];
             new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
             previous[0] = empty;
-            entry[0] = UINT64_MAX;
             entry[2] = value[0];
-            new (row + 0x28) String(*sourceString);
+            *reinterpret_cast<String*>(row + 0x28) = *sourceString;
+            entry[0] = UINT64_MAX;
         }
     }
     entry[1] = bucket;
@@ -2710,6 +2710,9 @@ static void ResizeStrongPointerArray(void** array, void* heapOwner, std::size_t 
     } else if (capacity <= requested) {
         ReserveLocalPointerArrayA(array, heapOwner, requested + (requested >> 2));
     }
+    // The exe's callers null the added slots inline (rep stos, 0x14268cde1).
+    if (requested > oldSize)
+        std::memset(static_cast<void**>(array[0]) + oldSize, 0, (requested - oldSize) * sizeof(void*));
     array[1] = reinterpret_cast<void*>(requested);
 }
 
@@ -2951,7 +2954,7 @@ void ReleaseAudioRequestRecord(void* request)
                 *reinterpret_cast<void**>(bytes + 8) = nullptr;
                 *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
             }
-            if (InterlockedDecrement(references) == 1) {
+            if (InterlockedDecrement(references) == 0) {
                 void** object = reinterpret_cast<void**>(bytes - 0x10);
                 reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(object))[0])(object, 1);
             }
@@ -3065,7 +3068,7 @@ void DestroyStrongReferenceArray(void** array)
         const auto encoded = elements[i - 1];
         auto* object = reinterpret_cast<unsigned char*>(encoded & ~3ull);
         auto* refs = reinterpret_cast<volatile long*>(object + 8);
-        if (encoded && InterlockedDecrement(refs) == 1)
+        if (encoded && InterlockedDecrement(refs) == 0)
             reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
     }
     reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, elements);
