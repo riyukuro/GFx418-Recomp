@@ -994,8 +994,9 @@ namespace Instances { namespace fl_text
                 pmovie->GetStateBag()->GetLogState()->LogScriptWarning("Attaching a font with class '%s' failed", name.ToCStr());
             return false;
         }
+        // the exe tests only the RT_Font bit of the type code (bt eax, 9 at 0x1424abfcc)
         if (data.pResource &&
-            (data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Font))
+            (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_Font)))
             pFont = static_cast<FontResource*>(data.pResource.GetPtr())->GetFont();
         return false;
     }
