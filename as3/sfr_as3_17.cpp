@@ -2718,10 +2718,10 @@ static bool Sfr33SlotNsMatches(const Scaleform::GFx::AS3::Instances::Namespace& 
     return sns.GetKind() == Abc::NS_Private ? &sns == &ns : sns.GetUri().GetNode() == ns.GetUri().GetNode();
 }
 
-// The class traits for mn as seen from the scope traits tr. A qualified name takes the declared type of the last
-// matching slot of that name; for a namespace set, each namespace in turn takes the type of a matching typed slot,
-// else the VM's class of that name and namespace (found on the global object and cached). NULL when the name does
-// not convert to a string.
+// The class traits for mn as seen from the scope traits tr. A qualified name takes the declared type of the first
+// matching slot of that name; for a namespace set, each namespace in turn takes the type of its first matching slot
+// when typed, else the VM's class of that name and namespace (found on the global object and cached). NULL when the
+// name does not convert to a string.
 // MS2-FUNCTIONAL 0x142501310: raw namespace-set and VM offsets; name chain walked through Slots::GetSlotInfo
 // @0x142501310
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn)
@@ -2747,7 +2747,10 @@ void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::G
             {
                 const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
                 if (Sfr33SlotNsMatches(*si.pNs, ns))
+                {
                     ct = Sfr33SlotDataType(&si, tvm);
+                    break;
+                }
                 if (static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
                     ind = tr.Parent->GetPrevSlotIndex(ind);
                 else
@@ -2768,8 +2771,12 @@ void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::G
             do
             {
                 const SlotInfo& si = tr.GetSlotInfo(AbsoluteIndex(ind));
-                if (Sfr33SlotNsMatches(*si.pNs, ns) && (ct = Sfr33SlotDataType(&si, &vm)) != NULL)
-                    return ct;
+                if (Sfr33SlotNsMatches(*si.pNs, ns))
+                {
+                    if ((ct = Sfr33SlotDataType(&si, &vm)) != NULL)
+                        return ct;
+                    break;
+                }
                 if (static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
                     ind = tr.Parent->GetPrevSlotIndex(ind);
                 else
