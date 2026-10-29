@@ -1933,10 +1933,12 @@ namespace {
 // @0x140018930
 void FUN_140018930(void* callback, const std::uint32_t* eventData)
 {
-    auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20);
+    // The handler Value lives in the AS3 object at callback+0x10 (exe: mov rdx,[rcx+0x10]; [rdx+0xb8]), not in callback.
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
+    auto* root = *reinterpret_cast<unsigned char**>(owner + 0x20);
     auto* vm = *reinterpret_cast<unsigned char**>(root + 0x78);
-    auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0xb8);
-    if (callbackValue->GetKind() == Scaleform::GFx::AS3::Value::kUndefined) return;
+    auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0xb8);
+    if (callbackValue->IsUndefined() || callbackValue->IsNull()) return;
     std::uint64_t eventAtom = 0, parametersAtom = 0;
     FUN_142516600(vm, &eventAtom);
     auto* eventObject = reinterpret_cast<Scaleform::GFx::AS3::Object*>(eventAtom);
@@ -1980,7 +1982,14 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
         eventObject->AddDynamicSlotValuePair(key, value);
     }
     Scaleform::GFx::AS3::Value selfValue(eventObject);
-    FUN_1424fef00(vm, static_cast<unsigned char*>(callback) + 0xb8, Scaleform::GFx::AS3::Value::GetUndefined(), &selfValue, 1, &selfValue, 0);
+    Scaleform::GFx::AS3::Value result;
+    FUN_1424fef00(vm, callbackValue, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &selfValue, 0);
+    auto* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm);
+    if (vmObject->HandleException) {
+        vmObject->HandleException = false;
+        vmObject->OutputError(vmObject->ExceptionObj);
+        vmObject->ExceptionObj.SetUndefined();
+    }
     ReleaseVideoAtom(&parametersAtom);
     ReleaseVideoAtom(&eventAtom);
 }
