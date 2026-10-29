@@ -3293,13 +3293,15 @@ void FUN_14002fbe0(void* player, CriMvStreamingParameters* output)
     output->format_ver = stream[0x290 / 4];
 }
 
-// MS2-FUNCTIONAL: derive the 32-byte CRI USM byte mask from the supplied key seed.
+// MS2-FUNCTIONAL: derive the 32-byte CRI USM key bytes, their inverted copy and the byte mask from the key seed.
 // @0x140038190
 void FUN_140038190(const void* key)
 {
     uintptr_t seed = (uintptr_t)key;
     CriSint8 signedByte4 = (CriSint8)(seed >> 32);
-    CriUint8 bytes[0x20] = {};
+    CriUint8* bytes = DAT_143b27a48;   // the key bytes, read by the USM decryptor together with the inverted copy
+    CriUint8* inverted = DAT_143b27a68;
+    CriUint8* mask = DAT_143b27a88;
     bytes[0] = (CriUint8)seed;
     bytes[1] = (CriUint8)(seed >> 8);
     bytes[2] = (CriUint8)(seed >> 16);
@@ -3332,9 +3334,11 @@ void FUN_140038190(const void* key)
     bytes[29] = (CriUint8)(bytes[3] + bytes[4]);
     bytes[30] = (CriUint8)(bytes[5] - bytes[22]);
     bytes[31] = (CriUint8)(bytes[29] ^ bytes[19]);
+    for (CriUint32 i = 0; i < 0x20; ++i)
+        inverted[i] = (CriUint8)(bytes[i] ^ 0xff);
     static const CriUint8 alternate[4] = { 0x55, 0x52, 0x55, 0x43 };
     for (CriUint32 i = 0; i < 0x20; ++i)
-        DAT_143b27a88[i] = (i & 1) ? alternate[(i % 8) / 2] : (CriUint8)(bytes[i] ^ 0xff);
+        mask[i] = (i % 2 == 0) ? inverted[i] : alternate[(i % 8) / 2];
 }
 
 // MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
