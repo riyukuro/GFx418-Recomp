@@ -448,11 +448,12 @@ __declspec(noinline) void FUN_14000e590(void** object)
         object, &payload);
 }
 
-// MS2-FUNCTIONAL: forwards the absolute-path query to the executable's AvmCharacter display object.
+// MS2-FUNCTIONAL: the exe tail-calls AvmCharacter::GetAbsolutePath (0x1429494d0) on pavm. Going through
+// pDispObj->GetAbsolutePath would dispatch back here via GetAvmObjImpl() (thunk 0x14000e750) and recurse.
 // @0x14000e570
 __declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
 {
-    return pavm->pDispObj->GetAbsolutePath(path);
+    return pavm->AvmCharacter::GetAbsolutePath(path);
 }
 
 // MS2-FUNCTIONAL: these executable entries are FID-conflict copies of the display-object forwarding wrapper.
