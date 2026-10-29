@@ -2394,33 +2394,73 @@ bool IntervalTimer::IsActive() const
     return Active;
 }
 
-// MS2-FUNCTIONAL: checks raw/path lookup, with scopes, local variables, the target object, and the global object.
+// MS2-FUNCTIONAL: a raw lookup, then a path ("a.b", "/a:b") through FindTarget, the with-stack, the locals, the
+// target, the names this/_root/_global, _levelN and the global object; nothing is logged.
 // @0x142964e50
 bool Environment::IsAvailable(const ASString& name, const WithStackArray* withStack) const
 {
     if (name.GetLength() == 0)
         return false;
 
-    Value value;
-    GetVarParams params(name, &value, withStack);
-    if (FindAndGetVariableRaw(params))
+    ASStringContext* psc = const_cast<ASStringContext*>(&StringContext);
+    ASString         path(GetBuiltin(ASBuiltin_empty_));
+    ASString         var(GetBuiltin(ASBuiltin_empty_));
+    Value            value;
+
+    if (FindAndGetVariableRaw(GetVarParams(name, &value, withStack, 0, 0, 4)))
         return true;
+
+    if (ParsePath(psc, name, &path, &var))
+    {
+        InteractiveObject* target = FindTarget(path, 4);
+        if (!target)
+            return false;
+        return ToAvmCharacter(target)->GetMemberRaw(psc, var, &value);
+    }
 
     if (withStack)
     {
-        for (SPInt i = SPInt(withStack->GetSize()) - 1; i >= 0; --i)
+        for (int i = (int)withStack->GetSize() - 1; i >= 0; i--)
         {
             ObjectInterface* iface = (*withStack)[UPInt(i)].GetObjectInterface();
-            if (iface && iface->HasMember(const_cast<ASStringContext*>(&StringContext), name, false))
+            if (iface && iface->GetMemberRaw(psc, name, &value))
                 return true;
         }
     }
     if (FindLocal(name))
         return true;
-    if (Target && ToAvmCharacter(Target)->HasMember(const_cast<ASStringContext*>(&StringContext), name, false))
+    if (Target && ToAvmCharacter(Target)->GetMemberRaw(psc, name, &value))
         return true;
-    Object* global = StringContext.pContext ? StringContext.pContext->pGlobal : 0;
-    return global && global->HasMember(const_cast<ASStringContext*>(&StringContext), name, false);
+
+    if (IsCaseSensitive())
+    {
+        if (GetBuiltin(ASBuiltin_this) == name || GetBuiltin(ASBuiltin__root) == name ||
+            GetBuiltin(ASBuiltin__global) == name)
+            return true;
+    }
+    else
+    {
+        name.ResolveLowercase();
+        ASStringNode* plower = name.GetNode()->pLower;
+        if (GetBuiltin(ASBuiltin_this).GetNode()->pLower == plower ||
+            GetBuiltin(ASBuiltin__root).GetNode()->pLower == plower ||
+            GetBuiltin(ASBuiltin__global).GetNode()->pLower == plower)
+            return true;
+    }
+
+    if (name.ToCStr()[0] == '_')
+    {
+        const char* ptail = 0;
+        int         level = MovieRoot::ParseLevelName(name.ToCStr(), &ptail, IsCaseSensitive());
+        if (level != -1 && !*ptail)
+        {
+            if (GetAS2Root()->GetLevelMovie(level))
+                return true;
+        }
+    }
+
+    Object* global = StringContext.pContext->pGlobal;
+    return global && global->GetMemberRaw(psc, name, &value);
 }
 
 // MS2-FUNCTIONAL: resolves a constructor from the requested package and delegates object creation to its function.
