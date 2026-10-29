@@ -141,27 +141,26 @@ void SoundInfo::Play(InteractiveObject* pchar)
     {
         Array<Sound::SoundChannel::Transform> transforms;
         transforms.Resize(Style.Envelopes.GetSize());
-        const float secondsPerSample = 1.0f / 44100.0f;
-        const float levelScale = 100.0f / 32768.0f;
         for (UPInt i = 0; i < Style.Envelopes.GetSize(); ++i)
         {
             const SoundEnvelope& envelope = Style.Envelopes[i];
-            transforms[i].Position = envelope.Mark44 * secondsPerSample;
-            transforms[i].LeftVolume = envelope.Level0 * levelScale;
-            transforms[i].RightVolume = envelope.Level1 * levelScale;
+            // Mark44 is in 44 kHz samples: whole milliseconds first, as in the SDK.
+            unsigned pos = envelope.Mark44 / 44;
+            transforms[i].Position = pos / 1000.0f;
+            transforms[i].LeftVolume = (envelope.Level0 * 100 / 32768) / 100.0f;
+            transforms[i].RightVolume = (envelope.Level1 * 100 / 32768) / 100.0f;
         }
         channel->SetTransforms(transforms);
     }
 
-    const float sampleRate = soundInfo->GetRate() ? (float)soundInfo->GetRate() : 1.0f;
-    const float inPoint = Style.HasInPoint ? Style.InPoint / sampleRate : 0.0f;
-    const float outPoint = Style.HasOutPoint ? Style.OutPoint / sampleRate : 0.0f;
+    const float inPoint = Style.HasInPoint ? Style.InPoint * 1.0f / soundInfo->GetRate() : 0.0f;
+    const float outPoint = Style.HasOutPoint ? Style.OutPoint * 1.0f / soundInfo->GetRate() : 0.0f;
     unsigned loopCount = Style.LoopCount;
     if (!loopCount && (Style.HasInPoint || Style.HasOutPoint))
         loopCount = 1;
     if (loopCount)
         channel->Loop((int)loopCount, inPoint, outPoint);
-    channel->SetPosition(0.0f);
+    channel->Pause(false);
     sprite->AddActiveSound(channel, 0, resource.GetPtr());
     channel->Release();
 }
