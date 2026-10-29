@@ -1259,10 +1259,8 @@ namespace Instances { namespace fl_utils
         {
             UInt32 n = length ? length : avail;
             UInt32 end = offset + n;
-            if (bytes->Data.GetSize() < end)
+            if (bytes->Data.GetSize() <= end)
                 bytes->Resize(end);
-            else if (bytes->Length < end)
-                bytes->Length = end;
             if ((UPInt)(Position + n) <= Data.GetSize())
             {
                 memcpy(bytes->Data.GetDataPtr() + offset, Data.GetDataPtr() + Position, n);
