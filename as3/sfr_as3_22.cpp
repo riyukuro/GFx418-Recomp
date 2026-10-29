@@ -18,6 +18,7 @@
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
+#include "ms2/scaleform/include/render/render_color.h"
 #include "hook/ms2hook.h"
 #include <cstdint>
 #include <cstring>
@@ -777,10 +778,13 @@ extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
-// MS2-FUNCTIONAL: implements source-over compositing with the optional second-image coverage mask used by the executable.
+// MS2-FUNCTIONAL: copyPixels with mergeAlpha. The op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
+// destination point; the dest span is clipped against the source (or, with an alpha bitmap, against the mask rect at
+// +0x48/+0x4c) and then against the destination. Source alpha is scaled by the mask alpha and blended over the dest.
 // @0x142676660
 extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
 {
+    using Scaleform::Render::Color;
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -790,53 +794,69 @@ extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageDa
     const auto* op = static_cast<const unsigned char*>(operation);
     const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
     const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
-    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
-    const bool hasMask = *reinterpret_cast<void* const*>(op + 0x40) != nullptr && inputs[1] != nullptr;
-    auto* mask = hasMask ? static_cast<ImageData*>(inputs[1]) : nullptr;
+    const int destX = *reinterpret_cast<const int*>(op + 0x28), destY = *reinterpret_cast<const int*>(op + 0x2c);
+    const int dstW = static_cast<int>(dst.Width), dstH = static_cast<int>(dst.Height);
+    const int srcOffX = destX - left, srcOffY = destY - top;
+    if (static_cast<int>(src.Height) < top || bottom < 0 || right < 0 || static_cast<int>(src.Width) < left) return;
+    int x0 = left >= 0 ? destX : srcOffX, y0 = top >= 0 ? destY : srcOffY;
+    int x1 = (right < static_cast<int>(src.Width) ? right : static_cast<int>(src.Width)) + srcOffX;
+    int y1 = (bottom < static_cast<int>(src.Height) ? bottom : static_cast<int>(src.Height)) + srcOffY;
+    if (y1 < 0 || dstH < y0 || dstW < x0 || x1 < 0) return;
+    const bool hasMask = *reinterpret_cast<void* const*>(op + 0x40) != nullptr;
+    auto* mask = static_cast<ImageData*>(hasMask ? inputs[1] : inputs[0]);
     ImagePlane maskPlane;
-    if (mask) mask->GetPlane(0, &maskPlane);
+    mask->GetPlane(0, &maskPlane);
+    int maskOffX = srcOffX, maskOffY = srcOffY;
+    if (hasMask) {
+        const int maskLeft = *reinterpret_cast<const int*>(op + 0x48), maskTop = *reinterpret_cast<const int*>(op + 0x4c);
+        maskOffX = destX - maskLeft;
+        maskOffY = destY - maskTop;
+        int maskRight = right - left + maskLeft, maskBottom = bottom - top + maskTop;
+        if (static_cast<int>(maskPlane.Height) < maskTop || maskBottom < 0 || maskRight < 0 ||
+            static_cast<int>(maskPlane.Width) < maskLeft) return;
+        if (static_cast<int>(maskPlane.Width) <= maskRight) maskRight = static_cast<int>(maskPlane.Width);
+        if (static_cast<int>(maskPlane.Height) <= maskBottom) maskBottom = static_cast<int>(maskPlane.Height);
+        // The exe takes the span from the mask rect here; the source clip above only decides the early exit.
+        x0 = maskLeft >= 0 ? destX : maskOffX;
+        y0 = maskTop >= 0 ? destY : maskOffY;
+        x1 = maskOffX + maskRight;
+        y1 = maskOffY + maskBottom;
+        if (y1 < 0 || dstH < y0 || dstW < x0 || x1 < 0) return;
+    }
+    if (y0 < 0) y0 = 0;
+    if (x0 < 0) x0 = 0;
+    if (x1 > dstW) x1 = dstW;
+    if (y1 > dstH) y1 = dstH;
     const auto* srcAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
     const auto* dstAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool useSourceAlpha = srcAlphaConfig && *reinterpret_cast<const bool*>(srcAlphaConfig + 0x48);
-    const bool useDestinationAlpha = dstAlphaConfig && *reinterpret_cast<const bool*>(dstAlphaConfig + 0x48);
     const bool preserveDestinationAlpha = *reinterpret_cast<const bool*>(op + 0x50);
-    const int maskLeft = *reinterpret_cast<const int*>(op + 0x48), maskTop = *reinterpret_cast<const int*>(op + 0x4c);
-    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
-        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
-        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
-            unsigned foreground = 0, background = 0;
-            FUN_14257bf70(source, &foreground, srcRow, static_cast<unsigned>(x - left));
-            FUN_14257bf70(destination, &background, dstRow, static_cast<unsigned>(x));
+    for (int y = y0; y < y1; ++y) {
+        Scaleform::UByte* dstLine = dst.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y)) * dst.Pitch;
+        Scaleform::UByte* srcLine = src.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y - srcOffY)) * src.Pitch;
+        Scaleform::UByte* maskLine = maskPlane.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y - maskOffY)) * maskPlane.Pitch;
+        for (int x = x0; x < x1; ++x) {
+            unsigned foreground = 0, coverage = 0, background = 0;
+            FUN_14257bf70(source, &foreground, reinterpret_cast<long long>(srcLine), static_cast<unsigned>(x - srcOffX));
             auto* fg = reinterpret_cast<unsigned char*>(&foreground);
-            auto* bg = reinterpret_cast<unsigned char*>(&background);
-            if (!useSourceAlpha) fg[3] = 0xff;
-            if (!useDestinationAlpha) bg[3] = 0xff;
-            unsigned sourceAlpha = fg[3];
-            if (mask) {
-                if (y - maskTop < 0 || x - maskLeft < 0 || y - maskTop >= static_cast<int>(maskPlane.Height) ||
-                    x - maskLeft >= static_cast<int>(maskPlane.Width)) continue;
-                unsigned coverage = 0;
-                FUN_14257bf70(mask, &coverage, static_cast<long long>(y - maskTop) * maskPlane.Pitch,
-                              static_cast<unsigned>(x - maskLeft));
-                sourceAlpha = sourceAlpha * ((coverage >> 24) + 1) >> 8;
+            if (!*reinterpret_cast<const bool*>(srcAlphaConfig + 0x48)) fg[3] = 0xff;
+            if (hasMask)
+                FUN_14257bf70(mask, &coverage, reinterpret_cast<long long>(maskLine), static_cast<unsigned>(x - maskOffX));
+            else
+                coverage = foreground;
+            FUN_14257bf70(destination, &background, reinterpret_cast<long long>(dstLine), static_cast<unsigned>(x));
+            const unsigned char sourceAlpha =
+                static_cast<unsigned char>(fg[3] * (hasMask ? (coverage >> 24) + 1 : 0x100u) >> 8);
+            unsigned char outAlpha = sourceAlpha;
+            if (preserveDestinationAlpha) {
+                const unsigned char bgAlpha = reinterpret_cast<const unsigned char*>(&background)[3];
+                outAlpha = static_cast<unsigned char>(static_cast<int>(
+                    static_cast<float>(bgAlpha) / 255.0f * static_cast<float>(255 - sourceAlpha) + sourceAlpha));
             }
-            const unsigned outAlpha = preserveDestinationAlpha
-                ? static_cast<unsigned>((static_cast<float>(bg[3]) / 255.0f) * (255 - sourceAlpha) + sourceAlpha)
-                : sourceAlpha;
-            unsigned result = 0;
-            auto* out = reinterpret_cast<unsigned char*>(&result);
-            if (outAlpha) {
-                for (unsigned c = 0; c != 3; ++c) {
-                    const float t = static_cast<float>(sourceAlpha) / outAlpha;
-                    const int value = static_cast<int>(fg[c] * t + bg[c] * (1.0f - t));
-                    out[c] = static_cast<unsigned char>(value < 0 ? 0 : value > 255 ? 255 : value);
-                }
-            }
-            out[3] = useDestinationAlpha ? static_cast<unsigned char>(outAlpha) : 0xff;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
+            if (!*reinterpret_cast<const bool*>(dstAlphaConfig + 0x48)) outAlpha = 0xff;
+            Color result = Color::Blend(Color(background), Color(foreground),
+                                        static_cast<float>(sourceAlpha) / static_cast<float>(outAlpha));
+            result.Channels.Alpha = outAlpha;
+            FUN_14257d390(destination, reinterpret_cast<long long>(dstLine), static_cast<unsigned>(x), result.Raw);
         }
     }
 }
