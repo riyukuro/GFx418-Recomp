@@ -498,7 +498,7 @@ void ActionBuffer::Execute(Environment* env, int startPc, int execBytes, Value* 
                 if (ptarget)
                 {
                     if (ptarget->Depth < 16384)
-                        ctx.LogF.LogScriptMessage("removeMovieClip(\"%s\") failed - depth must be >= 0",
+                        ctx.LogF.LogScriptWarning("removeMovieClip(\"%s\") failed - depth must be >= 0",
                                                   ptarget->GetName().ToCStr());
                     else
                         ptarget->RemoveDisplayObject();
