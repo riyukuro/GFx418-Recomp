@@ -7683,7 +7683,7 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
     FUN_1424de9e0(raBuf);
 }
 // ---- batch 73
-// MovieRoot::SetArray: copies count elements of the given kind (0 float, 1 double, 2 float as number, 3 char* string, 4 wchar_t* string,
+// MovieRoot::SetArray: copies count elements of the given kind (0 int, 1 double, 2 float as number, 3 char* string, 4 wchar_t* string,
 // 5 GFx::Value) into the Array found at the variable path (a new one is created and stored when the variable is no Array).
 // MS2-FUNCTIONAL 0x14252acc0: raw-offset model; codegen differs from the exe
 // @0x14252acc0
@@ -7717,7 +7717,7 @@ bool Sfr31SetArray(UPInt root, int type, UPInt path, UInt32 start, const void* d
         {
         case 0:
             kind[0] = 2;
-            kind[4] = static_cast<UInt32>(static_cast<SInt32>(static_cast<const float*>(data)[i]));
+            kind[4] = static_cast<const UInt32*>(data)[i];
             break;
         case 1:
             kind[0] = 4;
