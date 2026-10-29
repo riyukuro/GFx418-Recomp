@@ -1730,9 +1730,9 @@ CriSint32 CriMvEasyPlayer::compareFrameTimeFluctuation(CriMvEasyPlayer* easyPlay
 // @0x1400351c0
 void crimvply_clearAlphaFrameInfoMembers(void* info)
 {
-    memset(info, 0, 0x40);
+    memset(info, 0, 0x38);  // the alpha frame info is 0x38 bytes (exe stores end at +0x34)
     *(CriSint32*)((CriUint8*)info + 0x08) = -1;
-    *(CriUint32*)((CriUint8*)info + 0x28) = 1;
+    *(CriUint64*)((CriUint8*)info + 0x28) = 1;
     *(CriSint32*)((CriUint8*)info + 0x30) = -1;
 }
 
@@ -2680,7 +2680,7 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
     struct SubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; };
     struct SubtitleMetadataView { CriUint8 Reserved[0x0c]; CriSint32 Channel; };
     CriUint8 parsedHeader[0x24] = {};
-    CriUint8 subtitleInfo[0x10] = {};
+    CriUint8 subtitleInfo[0x38] = {};  // FUN_140036f40 fills 0x38 bytes
     while (FUN_1400467b8(queue, 1) != 0)
     {
         FUN_1400467a0(queue, 1, -1, &record);
