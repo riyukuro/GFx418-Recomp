@@ -2536,13 +2536,15 @@ void Sfr31TracePop2Note(State* st, UInt32 arg)
     a.Get().~Value();
 }
 
+// setInterval/setTimeout: appends the extra call arguments to the IntervalTimer's Params (ArrayLH<Value> at +0x38).
+// The callers (0x14242a1a4, 0x14242af14) pass the new IntervalTimer, not a tracer State.
 // MS2-FUNCTIONAL 0x1425264b0: behavior-equivalent recovery; codegen differs from exe
 // @0x1425264b0
 void Sfr31StatePushValues(State* st, UInt32 n, const Value* vals)
 {
-    StV s(st);
+    ArrayLH<Value>& params = *reinterpret_cast<ArrayLH<Value>*>(reinterpret_cast<UPInt>(st) + 0x38);
     for (UInt32 i = 0; i < n; ++i)
-        s.OpStack().PushBack(vals[i]);
+        params.PushBack(vals[i]);
 }
 
 // MS2-FUNCTIONAL 0x142540a90: behavior-equivalent recovery; codegen differs from exe
