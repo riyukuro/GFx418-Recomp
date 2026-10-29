@@ -610,7 +610,7 @@ void criMvPly_SetAudioTrack(void* player, CriUint32 track)
 void FUN_140031060(void* player, CriSint32 value)
 {
     if (value <= 0)
-        FUN_140037950(player, "E10120701M: the parameter nframe must be greater than 0", 0);
+        FUN_140037950(player, "E10120701M : the parameter 'nframes' must be 1 or more.", 0);
     *(CriSint32*)((CriUint8*)player + 0xed8) = value;
 }
 
@@ -1107,7 +1107,7 @@ void FUN_1400345e0(void* player, void* value, CriUint32 type, CriUint32 flags)
 {
     CriMovieOutputLogView* state = (CriMovieOutputLogView*)player;
     if (state->Count >= state->Capacity)
-        FUN_140037910(player, "E05063025M: Can't entry output stream info.", state->Count);
+        FUN_140037910(player, "E05063025M : Can't entry output sj to demux more than limit.", state->Count);
     FUN_140044fb0(state->Output, state->Count, value, type, flags);
     ++state->Count;
 }
@@ -1197,13 +1197,13 @@ void FUN_1400361a0(void* player, const void* inputData, CriUint32 inputSize)
 {
     if (!player)
     {
-        FUN_140037950(NULL, "E05121603M: CriMvPly handle is NULL.", 0);
+        FUN_140037950(NULL, "E05121603M : CriMvPly handle is NULL.", 0);
         return;
     }
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
     if (state->Status != 0 && state->Status != 7)
     {
-        FUN_140037950(player, "E05121604M: Can't execute start in the current state.", state->Status);
+        FUN_140037950(player, "E05121604M : Can't execute start function when CriMvPly handle status is not STOP/PLAYEND.", state->Status);
         return;
     }
 
@@ -1325,7 +1325,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
     CriSint32 status = getInternalStatus(player);
     if (status != 0 && status != 2)
     {
-        FUN_140037950(player, "E05063010M: Don't call criMvPly_Setup in the current state.", status);
+        FUN_140037950(player, "E05063010M : Don't call criMvPly_AllocateWorkBuffer() at illigal status.", status);
         return 0;
     }
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
@@ -1360,7 +1360,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
         memcpy((CriUint8*)player + 0xd88, &readBuffer, sizeof(readBuffer));
         if (!readBuffer)
         {
-            FUN_140037950(player, "E05063012M: Can't create SJ for read buffer.", 0);
+            FUN_140037950(player, "E05063012M : Can't create SJ for read buffer.", 0);
             FUN_140030c70(player);
             return 0;
         }
@@ -1392,7 +1392,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
         void* decoderInterface = FUN_140030b50((CriSint32)videoCodec);
         if (!decoderInterface)
         {
-            FUN_140037950(player, "E11030201M: Not found any available video decoder.", 0);
+            FUN_140037950(player, "E11030201M : Not found any avilable codec for the video stream. Attach a codec module before the Initialize function.", 0);
             FUN_140030c70(player);
             return 0;
         }
@@ -1422,7 +1422,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
         memcpy((CriUint8*)player + 0xe08, &videoDecoder, sizeof(videoDecoder));
         if (!videoDecoder)
         {
-            FUN_140037950(player, "E05063013M: Can't create Video decoder.", 0);
+            FUN_140037950(player, "E05063013M : Can't create Video decoder.", 0);
             FUN_140030c70(player);
             return 0;
         }
@@ -1444,7 +1444,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
             void* alphaInterface = FUN_140030be0((CriSint32)alphaCodec);
             if (!alphaInterface)
             {
-                FUN_140037950(player, "E11030701M: Not found any available alpha decoder.", 0);
+                FUN_140037950(player, "E11030701M : Not found any avilable codec for the alpha stream. Attach a codec module before the Initialize function", 0);
                 FUN_140030c70(player);
                 return 0;
             }
@@ -1461,7 +1461,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
             memcpy((CriUint8*)player + 0xe40, &alphaDecoder, sizeof(alphaDecoder));
             if (!alphaDecoder)
             {
-                FUN_140037950(player, "E08082100M: Can't create Alpha decoder.", 0);
+                FUN_140037950(player, "E08082100M : Can't create Alpha decoder.", 0);
                 FUN_140030c70(player);
                 return 0;
             }
@@ -1477,7 +1477,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
     memcpy((CriUint8*)player + 0xe10, &manager, sizeof(manager));
     if (!manager)
     {
-        FUN_140037910(player, "E07090703M: Can't create CriMvPlyAmng.", 0);
+        FUN_140037910(player, "E07090703M : Can't create CriMvPlyAmng handle", 0);
         FUN_140030c70(player);
         return 0;
     }
@@ -1498,7 +1498,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
     memcpy((CriUint8*)player + 0xe28, &output, sizeof(output));
     if (!output)
     {
-        FUN_140037950(player, "E06102501M: Can't create SJ for output stream.", 0);
+        FUN_140037950(player, "E06102501M : Can't create Sj for subtitle data.", 0);
         FUN_140030c70(player);
         return 0;
     }
@@ -1695,7 +1695,7 @@ CriBool FUN_140035af0(void* player, void* buffer, CriUint32 format, void* output
     CriUint8 frameInfo[0x50] = {};
     if (!FUN_140043f70(decoders->AlphaDecoder, &request, frameInfo))
     {
-        FUN_140037910(NULL, "E08082104M: Cannot copy the alpha frame buffer.", 0);
+        FUN_140037910(NULL, "E08082104M : Cannot copy the alpha frame buffer to user's buffer.", 0);
         return 0;
     }
     FUN_140035480(player, outputInfo, frameInfo);
@@ -2056,12 +2056,12 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
 {
     if (DAT_143ffd500 < 1)
     {
-        FUN_140037950(NULL, "E10051202M: criMvPly_Create was called without Initialization.", 0);
+        FUN_140037950(NULL, "E10051202M : criMvPly_Create was called without Initialization.", 0);
         return NULL;
     }
     if (!work || workSize < 0)
     {
-        FUN_140037950(NULL, "E10051203M: Passed illegal memory or memory size to criMvPly_Create.", 0);
+        FUN_140037950(NULL, "E10051203M : Passed illegal memory or memory size to criMvPly_Create.", 0);
         return NULL;
     }
     CriFixedAllocator allocator = {};
@@ -2069,7 +2069,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     CriUint32* words = (CriUint32*)criFixedAllocator_Allocate(&allocator, 0xf18, 4);
     if (!words)
     {
-        FUN_140037950(NULL, "E10051204M: Can't allocate handle object memory.", 0xf18);
+        FUN_140037950(NULL, "E10051204M : Can't allocate handle object memory.", 0xf18);
         return NULL;
     }
     memset(words, 0, 0xf18);
@@ -2090,14 +2090,14 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!workFields->CriticalWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051205M: Can't allocate critical section work memory.", 0x48);
+        FUN_140037950(NULL, "E10051205M : Can't allocate cs handle memory.", 0x48);
         return NULL;
     }
     workFields->CriticalSection = FUN_1400385c8(workFields->CriticalWork, 0x48);
     if (!workFields->CriticalSection)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051206M: Can't create CriticalSection for CRI Movie.", 0);
+        FUN_140037950(NULL, "E10051206M : Can't create CriticalSection for CRI Movie.", 0);
         return NULL;
     }
 
@@ -2107,14 +2107,14 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!localBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051207M: Can't allocate internal heap memory.", 0x2800);
+        FUN_140037950(NULL, "E10051207M : Can't allocate internal heap memory.", 0x2800);
         return NULL;
     }
     heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
     if (!heapFields->HeapHandle)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051208M: Can't create internal heap handle.", 0);
+        FUN_140037950(NULL, "E10051208M : Can't create internal heap handle.", 0);
         return NULL;
     }
 
@@ -2124,7 +2124,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!inputWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051209M: Cannot allocate memory for input SJ to analyze header chunk.", inputSize);
+        FUN_140037950(NULL, "E10051209M : Cannot allocate memory for input SJ to analyze header chunk.", inputSize);
         return NULL;
     }
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
@@ -2132,7 +2132,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!queues->InputBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051210M: Cannot create input SJ to analyze header chunk.", 0);
+        FUN_140037950(NULL, "E10051210M : Cannot create input SJ to analyze header chunk.", 0);
         return NULL;
     }
 
@@ -2142,7 +2142,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!demuxWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051201M: Cannot allocate memory for UsfDemux.", demuxSize);
+        FUN_140037950(NULL, "E10051201M : Cannot allocate memory for for UsfDemux.", demuxSize);
         return NULL;
     }
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
@@ -2150,7 +2150,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!state->Demux)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05063007M: Can't create UsfDemux.", 0);
+        FUN_140037950(NULL, "E05063007M : Can't create UsfDemux Handle.", 0);
         return NULL;
     }
 
@@ -2160,14 +2160,14 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!outputWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051211M: Cannot allocate memory for output stream.", outputSize);
+        FUN_140037950(NULL, "E05063008M : Cannot allocate memory for output SJ to analyze header.", outputSize);
         return NULL;
     }
     queues->ReadBuffer = FUN_1400459ec(outputConfig, outputWork, outputSize);
     if (!queues->ReadBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E10051212M: Can't create output stream.", 0);
+        FUN_140037950(NULL, "E05063009M : Can't create output SJ to analyze header.", 0);
         return NULL;
     }
 
@@ -2177,7 +2177,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!memoryWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E11112531M: Cannot allocate memory for memory input SJ.", memorySize);
+        FUN_140037950(NULL, "E11112531M : Cannot allocate memory for input SJ to play from memory.", memorySize);
         return NULL;
     }
     struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
@@ -2185,7 +2185,7 @@ void* FUN_14002eb20(void* work, CriSint32 workSize)
     if (!((MemoryQueueView*)words)->Queue)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E11112532M: Can't create input SJ for memory input.", 0);
+        FUN_140037950(NULL, "E11112532M : Can't create input SJ to play from memory.", 0);
         return NULL;
     }
     ((CriMvReadBufferState*)words)->Mode = 0;
@@ -2227,7 +2227,7 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
         void* videoCodec = FUN_140030b50((CriSint32)codecId);
         if (!videoCodec)
         {
-            FUN_140037950(player, "E11030202M: No available decoder for the requested video codec.", 0);
+            FUN_140037950(player, "E11030202M : No available decoder is attached for the video stream. Attach a decoder module before the Initialize function.", 0);
             return -1;
         }
         total += FUN_140044400(videoCodec, words[0x1c / 4], words[0x20 / 4], words[0x28 / 4]);
@@ -2236,7 +2236,7 @@ CriSint32 FUN_140037400(void* player, const CriMvStreamingParameters* params)
             void* alphaCodec = FUN_140030be0((CriSint32)words[0x280 / 4]);
             if (!alphaCodec)
             {
-                FUN_140037950(player, "E11030702M: Not found any available alpha decoder.", 0);
+                FUN_140037950(player, "E11030702M : Not found any avilable codec for the alpha stream. Attach a codec module before the Initialize function", 0);
                 return -1;
             }
             total += FUN_140043a80(alphaCodec, params->alpha_prm[0].max_width,
@@ -2627,13 +2627,13 @@ void* FUN_14002f1f0(CriHeap heap)
 {
     if (!DAT_143ffd500 || !heap)
     {
-        FUN_140037950(NULL, "E09031803M: criMvPly_Create was called without Initialization.", 0);
+        FUN_140037950(NULL, "E09031803M : criMvPly_Create was called without Initialization.", 0);
         return NULL;
     }
     CriUint32* words = (CriUint32*)FUN_140027ed8(heap, 0xf18, "CriMvPly::HnObj", 4);
     if (!words)
     {
-        FUN_140037950(NULL, "E05063001M: Can't allocate handle object memory.", 0xf18);
+        FUN_140037950(NULL, "E05063001M : Can't allocate handle object memory.", 0xf18);
         return NULL;
     }
     memset(words, 0, 0xf18);
@@ -2657,14 +2657,14 @@ void* FUN_14002f1f0(CriHeap heap)
     if (!workFields->CriticalWork)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E08102001M: Can't allocate cs handle memory.", 0x48);
+        FUN_140037950(NULL, "E08102001M : Can't allocate cs handle memory.", 0x48);
         return NULL;
     }
     workFields->CriticalSection = FUN_1400385c8(workFields->CriticalWork, 0x48);
     if (!workFields->CriticalSection)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05081501M: Can't create CriticalSection for CRI Movie.", 0);
+        FUN_140037950(NULL, "E05081501M : Can't create CriticalSection for CRI Movie.", 0);
         return NULL;
     }
 
@@ -2674,14 +2674,14 @@ void* FUN_14002f1f0(CriHeap heap)
     if (!localBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05063002M: Can't allocate internal heap memory.", 0x2800);
+        FUN_140037950(NULL, "E05063002M : Can't allocate internal heap memory.", 0x2800);
         return NULL;
     }
     heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
     if (!heapFields->HeapHandle)
     {
         FUN_14002f610(words);
-        FUN_140037910(NULL, "E05063005M: Can't create internal heap handle.", 0);
+        FUN_140037910(NULL, "E05063005M : Can't create internal heap handle.", 0);
         return NULL;
     }
     words[0x372] = 0x2800;
@@ -2690,7 +2690,7 @@ void* FUN_14002f1f0(CriHeap heap)
     if (!queues->InputBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05063006M: Can't create input SJ to analyze header chunk.", 0);
+        FUN_140037950(NULL, "E05063006M : Can't create input SJ for header analyze input.", 0);
         return NULL;
     }
     words[0x35c] = 8;
@@ -2699,14 +2699,14 @@ void* FUN_14002f1f0(CriHeap heap)
     if (!state->Demux)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05063007M: Can't create UsfDemux.", 0);
+        FUN_140037950(NULL, "E05063007M : Can't create UsfDemux Handle.", 0);
         return NULL;
     }
     queues->ReadBuffer = FUN_1400464c8(heap, 0, 0x40);
     if (!queues->ReadBuffer)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05063008M: Can't create output stream.", 0);
+        FUN_140037950(NULL, "E05063008M : Can't create output SJ for analyze header output.", 0);
         return NULL;
     }
     words[0x35d] = 0;
@@ -2716,7 +2716,7 @@ void* FUN_14002f1f0(CriHeap heap)
     if (!memoryQueue->Queue)
     {
         FUN_14002f610(words);
-        FUN_140037950(NULL, "E05070601M: Can't create SJ for memory input.", 0);
+        FUN_140037950(NULL, "E05070601M : Can't create SJ for memory playback.", 0);
         return NULL;
     }
     ((CriMvReadBufferState*)words)->Mode = 0;
@@ -2751,7 +2751,7 @@ void FUN_14002f610(CriUint32* object)
         void* Reader;
     };
     if (state->Status != 0 && state->Status != 7)
-        FUN_140037950(object, "E05063009M: Don't call criMvPly_Destroy during playback.", state->Status);
+        FUN_140037950(object, "E05063009M : Don't call criMvPly_Destroy() at illigal status", state->Status);
     FUN_140030c70(object);
     FUN_140031f00(object);
     if (queues->ReadBuffer)
@@ -2824,7 +2824,7 @@ void FUN_14002e7d0(void)
         FUN_140041ea0();
         DAT_143ffd550 = FUN_1400385c8(DAT_143ffd504, 0x48);
         if (!DAT_143ffd550)
-            FUN_140037910(NULL, "E07020200M: Can't create critical section.", 0);
+            FUN_140037910(NULL, "E07020200M : Can't create critical section handle for library work.", 0);
     }
     ++DAT_143ffd500;
 }
@@ -2932,7 +2932,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_140046804(dataQueue, &buffer);
         FUN_1400467a0(readBuffer, 1, -1, &chunk);
         if (buffer.Capacity < chunk.Size)
-            FUN_140037910(player, "E08120301M: Illigal data size of input stream.", buffer.Capacity);
+            FUN_140037910(player, "E08120301M : Illigal data size of analize header against demux data line.", buffer.Capacity);
         memcpy(buffer.Data, chunk.Data, chunk.Size);
         copied += chunk.Size;
         FUN_140046814(dataQueue, &buffer, chunk.Size);
@@ -2943,7 +2943,7 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_140046804(dataQueue, &buffer);
         FUN_1400467a0(source, 1, -1, &chunk);
         if (buffer.Capacity < chunk.Size)
-            FUN_140037910(player, "E08120302M: Illigal data size in input buffer.", buffer.Capacity);
+            FUN_140037910(player, "E08120302M : Illigal data size in read buffer data line of analize header.", buffer.Capacity);
         memcpy(buffer.Data, chunk.Data, chunk.Size);
         copied += chunk.Size;
         FUN_140046814(dataQueue, &buffer, chunk.Size);
@@ -3438,7 +3438,7 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     slot->NextDataOffset = next->NextDataOffset + dataSize;
     CriMvPlyHeaderAnalysisFields* header = (CriMvPlyHeaderAnalysisFields*)player;
     if (!FUN_140033ff0(player, header->AnalyzedHeader, slot))
-        FUN_140037950(player, "E07092101M: Entered movie file contains invalid stream info.", 0);
+        FUN_140037950(player, "E07092101M: Entried movie file can not be concatenated with playing file.", 0);
     slot->Active = 0;
     state->Selector.Current = nextIndex;
     ++((StreamCounterView*)player)->Count;
@@ -3561,7 +3561,7 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
         void* allocation = state->Allocate(state->Context, workSize);
         if (!allocation)
         {
-            FUN_140037950(player, "E10052103M: NULL pointer is passed.", 0);
+            FUN_140037950(player, "E10052103M : NULL pointer is paased from the MetaWorkCallback by app.", 0);
             return 0;
         }
         state->Stream = FUN_140045eec(&config, allocation, workSize);
@@ -3573,7 +3573,7 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
                                   "CriMvPly::MetaInput");
     if (!state->Stream)
     {
-        FUN_140037950(player, "E08120201M: Can't create meta Stream.", 0);
+        FUN_140037950(player, "E08120201M : Can't create meta SJ.", 0);
         return 0;
     }
     return 1;
@@ -3617,7 +3617,7 @@ CriBool FUN_140031da0(void* player, void* heap)
         state->ReleaseTable = state->Table;
         if (!state->Table)
         {
-            FUN_140037950(player, "E10052103M: NULL pointer is passed.", 0);
+            FUN_140037950(player, "E10052103M : NULL pointer is paased from the MetaWorkCallback by app.", 0);
             return 0;
         }
     }
@@ -3627,7 +3627,7 @@ CriBool FUN_140031da0(void* player, void* heap)
                                      "CriMvPly::EventTable", 4);
         if (!state->Table)
         {
-            FUN_140037950(player, "E09011601M: Can't allocate EventTable.", 0);
+            FUN_140037950(player, "E09011601M : Can't allocate EventTable Memory.", 0);
             return 0;
         }
     }
@@ -3822,7 +3822,7 @@ CriSint32 FUN_140032090(void* player)
         {
             if (streamId != 0x43524944)
             {
-                FUN_140037950(player, "E05063020M: Input file is not USF.", (CriSint32)streamId);
+                FUN_140037950(player, "E05063020M : Input file is not USF file.", (CriSint32)streamId);
                 FUN_1400467a8(queue, 1, &record);
                 return completed;
             }
@@ -3886,13 +3886,13 @@ void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maxi
     void* source = FUN_140037050(player, NULL, NULL);
     if (!source)
     {
-        FUN_140037950(player, "E05063026M: Can't execute criMvPly input.", 0);
+        FUN_140037950(player, "E05063026M : Can't exec criMvPly_PutInputChunk() before AllocateWorkBuffer.", 0);
         return;
     }
     CriMovieInputChunk* current = &((ReadCurrentView*)player)->Current;
     if (current->Data != input->Data || current->Size != input->Size)
     {
-        FUN_140037950(player, "E05063027M: Chunk is not same to the current input chunk.",
+        FUN_140037950(player, "E05063027M : Chunk is not same to one by criMvPly_GetInputChunk().",
                       (CriSint32)(uintptr_t)input->Data);
         return;
     }
@@ -4009,14 +4009,14 @@ CriBool FUN_140034960(void* player)
     };
     if (!player)
     {
-        FUN_140037950(NULL, "E05121601M: CriMvPly handle is NULL.", 0);
+        FUN_140037950(NULL, "E05121601M : CriMvPly handle is NULL.", 0);
         return 0;
     }
 
     PlayerResetView* state = (PlayerResetView*)player;
     if (state->Status != 0 && state->Status != 7)
     {
-        FUN_140037950(player, "E05121602M: Can't execute start in the current state.", state->Status);
+        FUN_140037950(player, "E05121602M : Can't execute start function when CriMvPly handle status is not STOP/PLAYEND.", state->Status);
         return 0;
     }
 
@@ -4224,7 +4224,7 @@ void FUN_140031140(void* player)
             state->Status = 3;
         }
         else
-            FUN_140037950(player, "E05063019M: Can't start movie while not ready.", 0);
+            FUN_140037950(player, "E05063019M : Can't start movie without work buffer.", 0);
     }
     else if (status == 4)
         state->Status = 5;
@@ -4760,7 +4760,7 @@ void* FUN_140035c80(void* player, void* output)
     {
         if (FUN_140043cb0(decoders->AlphaDecoder) == 3)
         {
-            FUN_140037950(player, "E08092600M: Alpha channel is lost.", 0);
+            FUN_140037950(player, "E08092600M : Alpha channel is longer than video frame. should be same.", 0);
             return NULL;
         }
         CriUint8 alphaFrame[0x50] = {};

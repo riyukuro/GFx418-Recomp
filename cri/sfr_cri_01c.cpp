@@ -2188,7 +2188,7 @@ CriUint32 CriMvEasyPlayer::GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize
     CriUint32 size = 0;
     if (subtitle_buf == NULL && FUN_1400310b0(mvply) == 5 && stmprm.num_subtitle > 0)
     {
-        setNormalErrorStatus("E09092901M:Internal subtitle buffer is not allocated. "
+        setNormalErrorStatus("E09092901M: Internal subtitle buffer is not allocated. "
                              "Check if CriMvStreamingParameters::max_subtitle_size is adequate size.");
     }
     if (subtitle_buf == NULL)

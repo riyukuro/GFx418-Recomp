@@ -1380,7 +1380,7 @@ CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
 {
     if (DAT_143b27c68 != 0)
     {
-        FUN_140041110(NULL, "E08102801M: SetupMovieHandleWork is already active.", DAT_143b27c68);
+        FUN_140041110(NULL, "E08102801M : SetupMovieHandleWork() was called after handle creation.", DAT_143b27c68);
         return 0;
     }
     if (!work)
@@ -1392,7 +1392,7 @@ CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
     CriUint32 required = (CriUint32)criVmpv_CalcMovieHandleWork((CriSint32)count);
     if (workSize < required)
     {
-        FUN_140041110(NULL, "E08102802M: SetupMovieHandleWork buffer is too small.", workSize);
+        FUN_140041110(NULL, "E08102802M : SetupMovieHandleWork(): worksize is short.", workSize);
         return 0;
     }
     DAT_143b27c6c = count;
@@ -1497,7 +1497,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     CriUint8* handle = (CriUint8*)FUN_140027ed8(heap, 600, "CriVmpv__HnObj", 4);
     if (!handle)
     {
-        FUN_140041110(NULL, "E05070701M: Can't allocate vmpv handle.", 600);
+        FUN_140041110(NULL, "E05070701M : Can't allocate vmpv handle object memory.", 600);
         return NULL;
     }
     memset(handle, 0, 600);
@@ -1511,7 +1511,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     memcpy(handle + 0x180, &outputJoint, sizeof(outputJoint));
     if (!outputJoint)
     {
-        FUN_1400410d0(NULL, "E05070702M: Can't create stream joint.", 0);
+        FUN_1400410d0(NULL, "E05070702M : Can't create SJ for input video.", 0);
         FUN_14003cae0(handle);
         return NULL;
     }
@@ -1539,7 +1539,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     memcpy(handle + 0x48, &records, sizeof(records));
     if (!records)
     {
-        FUN_140041110(NULL, "E05092801M: Can't allocate frame pool info.",
+        FUN_140041110(NULL, "E05092801M : Can't allocate frame pool info array memory.",
                       (CriUint32)recordsBytes);
         FUN_14003cae0(handle);
         return NULL;
@@ -1552,7 +1552,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
         memcpy(records + (size_t)i * frameRecordBytes, &frame, sizeof(frame));
         if (!frame)
         {
-            FUN_140041110(NULL, "E05070902M: Can't allocate frame buffer.", frameBytes);
+            FUN_140041110(NULL, "E05070902M : Can't allocate frame pool memory.", frameBytes);
             FUN_14003cae0(handle);
             return NULL;
         }
@@ -1562,7 +1562,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     memcpy(handle + 0x58, &frameJoint, sizeof(frameJoint));
     if (!frameJoint)
     {
-        FUN_1400410d0(NULL, "E05070903M: Can't create frame pool stream joint.", 0);
+        FUN_1400410d0(NULL, "E05070903M : Can't create frame pool SJ.", 0);
         FUN_14003cae0(handle);
         return NULL;
     }
@@ -3443,7 +3443,7 @@ void FUN_140043550(CriSint32* state, void* input)
     if (decoder->HasState == 0)
         return;
     if (!decoder->InputControl)
-        FUN_140037910(0, "E05063023M: Don't have input SJ.", 0);
+        FUN_140037910(0, "E05063023M : Don't have input SJ for Audio decoder.", 0);
     FUN_140053540(decoder->AudioDecoder);
 }
 
@@ -3522,7 +3522,7 @@ void* FUN_140041f70(void* owner, void* heap, const void* config)
                                                  "CriMvPly__CriMvPlyAmngObj", 4);
     if (!manager)
     {
-        FUN_140037950(owner, "E07090701M: Can't allocate CriMvPly manager.", 0x38);
+        FUN_140037950(owner, "E07090701M : Can't allocate CriMvPlyAmng handle", 0x38);
         return NULL;
     }
     memset(manager, 0, 0x38);
@@ -3536,7 +3536,7 @@ void* FUN_140041f70(void* owner, void* heap, const void* config)
     if (!joint)
     {
         FUN_1400420b0(manager, heap);
-        FUN_140037910(0, "E05063016M: Can't create audio manager stream joint.", 0);
+        FUN_140037910(0, "E05063016M : Can't create SJ for input audio.", 0);
         return NULL;
     }
     return manager;
@@ -3557,7 +3557,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     if (!decoder)
     {
         FUN_140042600(manager, heap, decoderIndex);
-        FUN_140037950(owner, "E07090702M: Can't allocate CRI audio decoder.", 8);
+        FUN_140037950(owner, "E07090702M : Can't allocate CriMvPlyAdec handle.", 8);
         return 0;
     }
     memset(decoder, 0, 0x98);
@@ -3580,7 +3580,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     if (!audioDecoder)
     {
         FUN_140042600(manager, heap, decoderIndex);
-        FUN_140037910(0, "E05063014M: Can't create audio decoder.", 0);
+        FUN_140037910(0, "E05063014M : Can't create Audio decoder.", 0);
         return 0;
     }
     FUN_1400534d0(audioDecoder);
@@ -3605,7 +3605,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
         if (!output)
         {
             FUN_140042600(manager, heap, decoderIndex);
-            FUN_140037910(0, "E05063018M: Can't create audio output stream joint.", 0);
+            FUN_140037910(0, "E05063018M : Can't create SJ for output audio.", 0);
             return 0;
         }
     }
@@ -3980,7 +3980,7 @@ CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 
         return 0;
     if (audio->ChannelCount < channel)
     {
-        FUN_140037950(player, "E05063028M: Requested audio channel is invalid.", channel);
+        FUN_140037950(player, "E05063028M : Requested audio channel number is too many.", channel);
         return 0;
     }
     if (movie->State == 1)
@@ -4184,7 +4184,7 @@ void FUN_14003c080(void)
         DAT_143b27c64 = 0;
         if (DAT_143b27c70 == 0)
         {
-            FUN_1400410d0(0, "E10092150M: MPV libwork is not set.", 0);
+            FUN_1400410d0(0, "E10092150M : MPV libwork is not set.", 0);
             return;
         }
         DAT_143b27c50 = (CriUint64)DAT_143b27c6c << 2;
@@ -4333,7 +4333,7 @@ void FUN_14003e180(void* object, const void* frame)
             FUN_1400467b0(reader->Queue, 2, chunk);
     }
     if (!released)
-        FUN_140041110(0, "E11120202M: Failed criVdec Release.", 0);
+        FUN_140041110(0, "E11120202M : Failed criVdec_ReleaseFramePointer().", 0);
 }
 
 // MS2-FUNCTIONAL: destroy one audio decoder track set and clear its player-manager table entry.
