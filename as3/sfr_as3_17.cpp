@@ -256,6 +256,7 @@ bool Value::Convert2Boolean() const
     case kObject:
     case kClass:
     case kFunction:
+    case kThunkFunction:
         return GetObject() != 0;
     default:
         return false;
