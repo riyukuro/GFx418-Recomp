@@ -2009,12 +2009,12 @@ void FUN_14000e840(void* object)
     FUN_1429253d0(object);
 }
 
-// MS2-FUNCTIONAL: invokes the video character destructor and frees storage when the deleting flag is set.
+// MS2-FUNCTIONAL: invokes the video character destructor. The exe's copy has no free path and ignores the
+// flag (the Avm part lives inside the display object's allocation).
 // @0x14000e8a0
-__declspec(noinline) void* FUN_14000e8a0(void* object, unsigned __int64 flags)
+__declspec(noinline) void* FUN_14000e8a0(void* object, unsigned __int64)
 {
     FUN_14000e840(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
 
