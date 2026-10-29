@@ -4529,10 +4529,11 @@ void FUN_140044fe4(void* stream)
     CriSint32 index = 1;
     if (1 < chunk.Size)
     {
+        CriUint8* scan = chunk.Data;
         do
         {
-            chunk.Data = chunk.Data + 1;
-            if (*chunk.Data != 0)
+            ++scan;
+            if (*scan != 0)
             {
                 criSj_SplitChunk(&chunk, index, &chunk, split);
                 FUN_1400467a8(source, 1, split);
