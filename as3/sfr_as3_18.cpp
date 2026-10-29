@@ -111,7 +111,12 @@ const Value& Value::GetUndefined()
     return undefinedValue;
 }
 
-// MS2-FUNCTIONAL 0x14250aa50: the empty public URI fast path and interned instance result match; factory call placement differs.
+// The interned namespace {kind, uri}, else the public one (prefix unused here).
+Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
+                                    const Value& prefix);
+
+// MS2-FUNCTIONAL 0x14250aa50: the empty public URI fast path matches; the exe tail-calls the lookup-only 0x142415c20,
+// which falls back to the public namespace and never creates one.
 // @0x14250aa50
 Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const
 {
@@ -119,9 +124,7 @@ Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const AS
         return GetPublicNamespace();
     InstanceTraits::fl::Namespace& traits =
         static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
-    Pickable<Instances::Namespace> ns;
-    FUN_14241ba70(&traits, &ns, kind, &uri, &Value::GetUndefined());
-    return *ns;
+    return *FUN_142415c20(&traits, kind, uri, Value::GetUndefined());
 }
 
 // MS2-FUNCTIONAL 0x14250aac0: builds the URI node with the VM string manager and delegates to the shared interner.
