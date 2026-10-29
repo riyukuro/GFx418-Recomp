@@ -2181,12 +2181,13 @@ void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
     const char* text = name->ToCStr();
     const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
     const bool constructor = strcmp(text, "constructor") == 0;
-    if (!hiddenConstructor && !constructor) {
-        subobject->GetMemberRaw(context, *name, result);
-        return;
-    }
+    // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     auto* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
+    if (!hiddenConstructor && !constructor) {
+        object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
+        return;
+    }
     auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<unsigned char*>(subobject) + 0x50);
     prototype->GetMemberRawConstructor(object, context, *name, result, hiddenConstructor);
@@ -2562,12 +2563,13 @@ void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
     const char* text = name->ToCStr();
     const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
     const bool constructor = strcmp(text, "constructor") == 0;
-    if (!hiddenConstructor && !constructor) {
-        subobject->GetMemberRaw(context, *name, result);
-        return;
-    }
+    // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     auto* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
+    if (!hiddenConstructor && !constructor) {
+        completeObject->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
+        return;
+    }
     auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<unsigned char*>(subobject) + 0xb8);
     prototype->GetMemberRawConstructor(completeObject, context, *name, result, hiddenConstructor);
