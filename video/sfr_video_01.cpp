@@ -391,7 +391,7 @@ void FUN_1400033f0(void* player)
 Scaleform::GFx::ASString* FUN_140003000(Scaleform::GFx::ASStringManager* manager,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = manager->CreateString(text, strlen(text));
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(manager->CreateString(text, strlen(text)));
     return result;
 }
 
@@ -400,7 +400,7 @@ Scaleform::GFx::ASString* FUN_140003000(Scaleform::GFx::ASStringManager* manager
 Scaleform::GFx::ASString* FUN_140003020(Scaleform::GFx::ASStringManager* manager,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = manager->CreateConstString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(manager->CreateConstString(text));
     return result;
 }
 
@@ -409,7 +409,7 @@ Scaleform::GFx::ASString* FUN_140003020(Scaleform::GFx::ASStringManager* manager
 Scaleform::GFx::ASString* FUN_1400038f0(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = environment->CreateConstString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateConstString(text));
     return result;
 }
 
@@ -418,7 +418,7 @@ Scaleform::GFx::ASString* FUN_1400038f0(Scaleform::GFx::AS2::Environment* enviro
 Scaleform::GFx::ASString* FUN_140003940(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = environment->CreateString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateString(text));
     return result;
 }
 
@@ -443,7 +443,7 @@ Scaleform::GFx::ASStringNodeHolder* FUN_1400044e0(Scaleform::GFx::AS2::GlobalCon
 Scaleform::GFx::ASString* FUN_140004400(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = environment->CreateString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateString(text));
     return result;
 }
 
@@ -452,7 +452,7 @@ Scaleform::GFx::ASString* FUN_140004400(Scaleform::GFx::AS2::Environment* enviro
 Scaleform::GFx::ASString* FUN_140004440(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    *result = environment->CreateConstString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateConstString(text));
     return result;
 }
 
@@ -462,7 +462,7 @@ Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** con
                                          Scaleform::GFx::ASString* result, const char* text)
 {
     auto* strings = (*context)->GetStringManager();
-    *result = strings->CreateConstString(text);
+    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(strings->CreateConstString(text));
     return result;
 }
 
@@ -2120,10 +2120,11 @@ Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
     auto* strings = context->pContext->GetStringManager();
     const auto& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
         reinterpret_cast<const unsigned char*>(strings) + 0x280);
+    // result is the caller's uninitialized return slot (by-value FunctionRef): construct it, never assign.
     if (object->GetMemberRaw(context, name, &member))
-        *result = member.ToFunction(nullptr);
+        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef(member.ToFunction(nullptr));
     else
-        *result = Scaleform::GFx::AS2::FunctionRef();
+        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef();
     return result;
 }
 MS2_REPLACE(0x140007FF0, FUN_140007ff0, 126, 0x9AAB9CE7);
