@@ -84,7 +84,7 @@ bool AS2ValueObjectInterface::AttachMovie(void* pdata, Value* pmc, const char* s
     if (pos.Depth < 0 || pos.Depth > 0x7efffffd)
     {
         pdobj->LogScriptWarning("%s.attachMovie(\"%s\") failed - depth (%d) must be >= 0",
-                                pdobj->GetCharacterHandle()->NamePath.ToCStr(), symbolName, depth);
+                                pdobj->GetCharacterHandle()->NamePath.ToCStr(), symbolName, pos.Depth);
         return false;
     }
 
