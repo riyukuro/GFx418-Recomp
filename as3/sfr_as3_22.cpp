@@ -15,6 +15,7 @@
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/kernel/sf_memitem.h"
 #include "ms2/scaleform/kernel/sf_log.h"
+#include "ms2/scaleform/kernel/sf_random.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
@@ -4595,13 +4596,14 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
     return object;
 }
 
-// MS2-FUNCTIONAL: fills every destination pixel with seeded grayscale or masked-channel noise; the generator sequence is an approximation of GFx's RNG.
+// MS2-FUNCTIONAL: fills every destination pixel with seeded grayscale or masked-channel noise from a seeded
+// Alg::Random::Generator, column by column as the exe does.
 // @0x142677260
 void FUN_142677260(void* command, void*, void* imageData)
 {
     auto* settings = static_cast<unsigned char*>(command);
-    std::mt19937 random(*reinterpret_cast<unsigned*>(settings + 0x10));
-    std::uniform_int_distribution<unsigned> byteValue(0, 255);
+    Scaleform::Alg::Random::Generator random;
+    random.SeedRandom(*reinterpret_cast<unsigned*>(settings + 0x10));
     auto* planes = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(imageData) + 0x10);
     const unsigned width = *reinterpret_cast<unsigned*>(planes);
     const unsigned height = *reinterpret_cast<unsigned*>(planes + 4);
@@ -4611,20 +4613,21 @@ void FUN_142677260(void* command, void*, void* imageData)
     const bool gray = *reinterpret_cast<unsigned char*>(settings + 0x20) != 0;
     auto* image = *reinterpret_cast<unsigned char**>(settings + 8);
     const bool opaque = image && *reinterpret_cast<unsigned char*>(image + 0x48) == 0;
-    for (unsigned y = 0; y < height; ++y) {
-        for (unsigned x = 0; x < width; ++x) {
+    for (unsigned x = 0; x < width; ++x) {
+        for (unsigned y = 0; y < height; ++y) {
             unsigned pixel = 0;
             unsigned alpha = 255;
             if (gray) {
-                const unsigned value = byteValue(random);
-                pixel = value | (value << 8) | (value << 16);
-                if ((mask & 8) != 0)
-                    alpha = byteValue(random);
+                const float value = random.GetUnitFloat();
+                const float alphaValue = (mask & 8) != 0 ? random.GetUnitFloat() : 1.0f;
+                const unsigned level = static_cast<unsigned char>(static_cast<int>(value * 255.0f));
+                pixel = level | (level << 8) | (level << 16);
+                alpha = static_cast<unsigned char>(static_cast<int>(alphaValue * 255.0f));
             } else {
-                if (mask & 1) pixel |= byteValue(random) << 16;
-                if (mask & 2) pixel |= byteValue(random) << 8;
-                if (mask & 4) pixel |= byteValue(random);
-                if (mask & 8) alpha = byteValue(random);
+                if (mask & 1) pixel |= unsigned(static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f))) << 16;
+                if (mask & 2) pixel |= unsigned(static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f))) << 8;
+                if (mask & 4) pixel |= static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f));
+                if (mask & 8) alpha = static_cast<unsigned char>(static_cast<int>(random.GetUnitFloat() * 255.0f));
             }
             if (opaque) alpha = 255;
             pixel |= alpha << 24;
