@@ -669,7 +669,7 @@ void HAL::SetStereoParams(StereoParams sParams)
     if (sParams.DisplayWidthCm == 0)
         sParams.DisplayWidthCm = (float)(sParams.DisplayDiagInches /
                                          sqrt((double)(1.0f / sParams.DisplayAspectRatio / sParams.DisplayAspectRatio + 1.0f)) *
-                                         2.54);
+                                         2.54f);
     Matrices.S3DParams = sParams;
 }
 
