@@ -1324,7 +1324,7 @@ SF_FORCEINLINE void TrPushNewOpCode(UPInt tracer, int op)
 
 // Tracer::PushNewOpCode: op at the word code's end, its position noted in NewOpcodePos.
 // @0x14251f930
-void FUN_14251f930(void* tr, int op)
+__declspec(noinline) void FUN_14251f930(void* tr, int op)
 {
     Scaleform::GFx::AS3::TR::TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
 }
@@ -1353,6 +1353,20 @@ void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg
 __declspec(noinline) void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt arg)
 {
     Scaleform::GFx::AS3::TR::TrWCode(tracer).PushBack(arg);
+}
+
+// Slots 1 and 2 of the 3-slot vftable 0x14317f848 (the class whose deleting destructors 0x1424e2c90 and 0x1424e3a00
+// store it): forward to the tracer held at +0x10 of the second argument.
+// @0x14251aca0
+void FUN_14251aca0(void*, void* p, int op)
+{
+    FUN_14251f930(*reinterpret_cast<void**>(static_cast<char*>(p) + 0x10), op);
+}
+
+// @0x14251acd0
+void FUN_14251acd0(void*, Scaleform::UPInt p, Scaleform::UPInt arg)
+{
+    FUN_14251fcd0(*reinterpret_cast<Scaleform::UPInt*>(p + 0x10), arg);
 }
 
 // Tracer::PopNewOpCode: the last new opcode and its arguments dropped from the word code.
