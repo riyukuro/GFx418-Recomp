@@ -270,7 +270,8 @@ void SF_STDCALL GFx_DefineBitsJpegLoader(LoadProcess* p, const TagInfo& tagInfo)
             registry->GetReader(Render::ImageFile_JPEG));
         Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
         stream->SyncFileStream();
-        File* file = reinterpret_cast<Ptr<File>*>(reinterpret_cast<UByte*>(stream) + 0x20)->GetPtr();
+        // The reader moves the file position: GetUnderlyingFile marks the stream for a resync.
+        File* file = stream->GetUnderlyingFile();
         Ptr<RefCountImpl>* tableSlot = reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360);
         Render::JPEG::ExtraData* tables = reinterpret_cast<Render::JPEG::ExtraData*>(tableSlot->GetPtr());
         source = reader->CreateImageSource(file, args, tables, tagInfo.TagLength - 2, false);
@@ -306,8 +307,7 @@ void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo
         Render::JPEG::AbstractReader* reader = static_cast<Render::JPEG::AbstractReader*>(
             registry->GetReader(Render::ImageFile_JPEG));
         Render::ImageCreateArgs args(Render::Image_None, 0, p->GetLoadHeap());
-        stream->SyncFileStream();
-        File* file = reinterpret_cast<Ptr<File>*>(reinterpret_cast<UByte*>(stream) + 0x20)->GetPtr();
+        File* file = stream->GetUnderlyingFile();
         source = reader->CreateImageSource(file, args, 0, tagInfo.TagLength - 2, true);
     }
     p->AddImageResource(rid, source);
