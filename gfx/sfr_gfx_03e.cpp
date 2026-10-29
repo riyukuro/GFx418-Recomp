@@ -172,9 +172,9 @@ TextField::TextField(TextFieldDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRo
 
     if (def->IsBorder())
     {
-        pDocument->SetBorderColor(0xffffffffu);
+        pDocument->SetBackgroundColor(0xffffffffu);
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
-        pDocument->SetBackgroundColor(0xff000000u);
+        pDocument->SetBorderColor(0xff000000u);
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
     }
     SetInitialFormatsAsDefault();
