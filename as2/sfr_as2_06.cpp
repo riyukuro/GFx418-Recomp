@@ -2360,23 +2360,31 @@ const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Wa
 
 bool Object::InvokeWatchpoint(Environment* penv, const ASString& prop, const Value& newVal, Value* resultVal)
 {
-    if (!pWatchpoints)
-        return false;
-    const Watchpoint* watch = WatchpointHash_GetCaseCheck(pWatchpoints, prop, penv->GetVersion() > 6);
-    if (!watch)
-        return false;
-
+    // The old value is read even when no watchpoint matches (a getter property runs).
     Value oldVal;
     GetMember(penv, prop, &oldVal);
-    const int firstArg = penv->GetTopIndex() + 1;
-    penv->Push(watch->UserData);
-    penv->Push(newVal);
-    penv->Push(oldVal);
-    penv->Push(Value(prop));
-    const Value callback(watch->Callback);
-    const bool invoked = GAS_Invoke(callback, resultVal, this, penv, 4, firstArg, 0);
-    penv->Drop(4);
-    return invoked;
+
+    Value result;
+    const Watchpoint* watch = WatchpointHash_GetCaseCheck(pWatchpoints, prop, penv->GetVersion() > 6);
+    if (watch && pWatchpoints)
+    {
+        penv->Push(watch->UserData);
+        penv->Push(newVal);
+        penv->Push(oldVal);
+        penv->Push(Value(prop));
+
+        // A clip's AS object calls back with the clip itself as this.
+        Ptr<InteractiveObject> paschar = GetASCharacter();
+        if (paschar)
+            watch->Callback.Invoke(
+                FnCall(&result, AS2::ToAvmCharacter(paschar.GetPtr()), penv, 4, penv->GetTopIndex()));
+        else
+            watch->Callback.Invoke(FnCall(&result, this, penv, 4, penv->GetTopIndex()));
+        penv->Drop(4);
+        *resultVal = result;
+        return true;
+    }
+    return false;
 }
 
 // Whether the timer still runs (Clear() stops it).
