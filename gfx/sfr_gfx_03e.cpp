@@ -1283,7 +1283,7 @@ DisplayObjectBase::TopMostResult TextField::GetTopMostMouseEntity(const PointF& 
 // ---- batch 2c draft (sfr33): insert before the closing namespace of sfr_gfx_03e.cpp ----
 
 // The definition's font and layout as the initial text and paragraph formats: the font by id through the binding,
-// or by class through the exports (used as a font list when it is no exported resource); the font's name, its
+// or by class through the exports (used as the font name when it is no exported resource); the font's name, its
 // style unless the text is HTML, and a handle on it unless device fonts are used.
 // @0x1425b8910
 void TextField::GetInitialFormats(Render::Text::TextFormat* ptextFmt, Render::Text::ParagraphFormat* pparaFmt)
@@ -1300,7 +1300,7 @@ void TextField::GetInitialFormats(Render::Text::TextFormat* ptextFmt, Render::Te
         Ptr<MovieDefImpl> md = GetResourceMovieDef();
         if (!GetMovieImpl()->FindExportedResource(md, &fontData, pDef->FontClass))
         {
-            ptextFmt->SetFontList(pDef->FontClass);
+            ptextFmt->SetFontName(pDef->FontClass);
             lookForResource = false;
         }
     }
