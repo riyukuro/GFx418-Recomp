@@ -2219,67 +2219,106 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
     return true;
 }
 
-// MS2-FUNCTIONAL: implements AS2 nullish, primitive, object identity, character-path, and coercive equality cases.
+// MS2-FUNCTIONAL: SDK AS2_Value.cpp flow (ECMA-262 11.9.3): string/number/integer/boolean coercion, ToPrimitive for objects and functions, characters by path.
 // @0x142965570
 bool Value::IsEqual(Environment* penv, const Value& other) const
 {
-    const type left = GetType();
-    const type right = other.GetType();
-    const bool leftNullish = left == UNDEFINED || left == NULLTYPE || left == UNSET;
-    const bool rightNullish = right == UNDEFINED || right == NULLTYPE || right == UNSET;
-    if (leftNullish || rightNullish)
-        return leftNullish && rightNullish;
+    const bool thisNullType = IsUndefined() || T.Type == NULLTYPE;
+    const bool otherNullType = other.IsUndefined() || other.T.Type == NULLTYPE;
+    if (thisNullType || otherNullType)
+        return thisNullType == otherNullType;
 
-    if (left == right)
+    switch (T.Type)
     {
-        switch (left)
+    case STRING:
+        if (other.IsNumber())
+            return Value(ToNumber(penv)).IsEqual(penv, other);
+        else if (other.T.Type == BOOLEAN)
+            return IsEqual(penv, Value(other.ToNumber(penv)));
+        else if (other.IsFunction() || other.IsObject())
         {
-        case BOOLEAN:
-            return V.BooleanValue == other.V.BooleanValue;
-        case INTEGER:
-            return NV.Int32Value == other.NV.Int32Value;
-        case NUMBER:
-            return NV.NumberValue == other.NV.NumberValue ||
-                   (NumberUtil_IsNaN(NV.NumberValue) && NumberUtil_IsNaN(other.NV.NumberValue));
-        case STRING:
-            return V.pStringNode == other.V.pStringNode;
-        case OBJECT:
-            return V.pObjectValue == other.V.pObjectValue;
-        case CHARACTER:
-            if (V.pCharHandle == other.V.pCharHandle)
-                return true;
-            if (!V.pCharHandle || !other.V.pCharHandle)
+            Value primVal = other.ToPrimitive(penv);
+            if (primVal.T.Type >= NULLTYPE && primVal.T.Type <= STRING)
+                return IsEqual(penv, primVal);
+            else
                 return false;
-            return GetCharacterNamePath(penv).GetNode() == other.GetCharacterNamePath(penv).GetNode();
-        case FUNCTION:
-        case FUNCTIONNAME:
-            return reinterpret_cast<const UPInt*>(this)[1] == reinterpret_cast<const UPInt*>(&other)[1];
-        default:
-            return false;
         }
-    }
+        return ASString(V.pStringNode).GetNode() == other.ToString(penv).GetNode();
 
-    if (left == BOOLEAN)
+    case NUMBER:
     {
-        Value number(ToNumber(penv));
-        return number.IsEqual(penv, other);
+        Number pv;
+        if (other.T.Type == BOOLEAN)
+            pv = other.ToNumber(penv);
+        else if (other.IsFunction() || other.IsObject())
+        {
+            Value primVal = other.ToPrimitive(penv);
+            if (primVal.T.Type >= NULLTYPE && primVal.T.Type <= STRING)
+                return IsEqual(penv, primVal);
+            else
+                return false;
+        }
+        else
+            pv = other.ToNumber(penv);
+        if (NumberUtil_IsNaN(NV.NumberValue) && NumberUtil_IsNaN(pv))
+            return true;
+        else if (NumberUtil_IsNaN(NV.NumberValue) || NumberUtil_IsNaN(pv))
+            return false;
+        return NV.NumberValue == pv;
     }
-    if (right == BOOLEAN)
+    case INTEGER:
     {
-        Value number(other.ToNumber(penv));
-        return IsEqual(penv, number);
+        if (other.T.Type == NUMBER)
+        {
+            Value dv;
+            dv.SetNumber((Number)NV.Int32Value);
+            return dv.IsEqual(penv, other);
+        }
+        SInt32 pv;
+        if (other.T.Type == BOOLEAN)
+            pv = other.ToInt32(penv);
+        else if (other.IsFunction() || other.IsObject())
+        {
+            Value primVal = other.ToPrimitive(penv);
+            if (primVal.T.Type >= NULLTYPE && primVal.T.Type <= STRING)
+                return IsEqual(penv, primVal);
+            else
+                return false;
+        }
+        else
+            pv = other.ToInt32(penv);
+        return NV.Int32Value == pv;
     }
+    case BOOLEAN:
+        return Value(ToNumber(penv)).IsEqual(penv, other);
 
-    if (left == OBJECT && right == OBJECT)
-        return V.pObjectValue == other.V.pObjectValue;
-    if (left == CHARACTER && right == CHARACTER)
+    case OBJECT:
+    case FUNCTION:
+        if (other.IsNumber() || other.T.Type == STRING || other.T.Type == BOOLEAN)
+        {
+            Value primVal = ToPrimitive(penv);
+            if (primVal.T.Type >= NULLTYPE && primVal.T.Type <= STRING)
+                return primVal.IsEqual(penv, other);
+            else
+                return false;
+        }
+        if (T.Type == OBJECT && other.T.Type == OBJECT)
+            return V.pObjectValue == other.V.pObjectValue;
+        else if (T.Type == FUNCTION && other.T.Type == FUNCTION)
+            return reinterpret_cast<const UPInt*>(this)[1] == reinterpret_cast<const UPInt*>(&other)[1];
+        return false;
+
+    case CHARACTER:
+        if (other.T.Type != CHARACTER)
+            return false;
+        if (!V.pCharHandle || !other.V.pCharHandle)
+            return V.pCharHandle == other.V.pCharHandle;
         return GetCharacterNamePath(penv).GetNode() == other.GetCharacterNamePath(penv).GetNode();
-    if ((left == STRING && right == STRING))
-        return V.pStringNode == other.V.pStringNode;
 
-    const Number lhs = ToNumber(penv);
-    const Number rhs = other.ToNumber(penv);
-    return lhs == rhs || (NumberUtil_IsNaN(lhs) && NumberUtil_IsNaN(rhs));
+    default:
+        break;
+    }
+    return T.Type == other.T.Type;
 }
 
 // MS2-FUNCTIONAL: same flow and calls. The text comes from the definition's DefaultText (pDef +0xd8, +0x70), not
