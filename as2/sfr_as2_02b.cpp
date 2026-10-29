@@ -27,6 +27,8 @@
 #include "../include/gfx/gfx_event.h"
 #include "../include/gfx/gfx_textfield.h"
 #include "../include/gfx/gfx_imageresource.h"
+#include "../include/gfx/gfx_imagecreator.h"
+#include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_placeobject.h"
 #include "../include/video/video_statebag.h"
@@ -39,6 +41,10 @@
 #include "../include/render/text_core.h"
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
+
+namespace Scaleform {
+void LogDebugMessage(LogMessageId id, const char* fmt, ...);
+}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -58,9 +64,6 @@ void  FUN_14259c250(void* pst, const Render::Text::TextFormat& fmt);       // St
 void  FUN_14259c170(void* pst, const Render::Text::ParagraphFormat& fmt);  // StyledText::SetDefaultParagraphFormat
 void  FUN_14257dcb0(void* pobj);                                  // RefCountBase release
 Render::Text::Allocator* FUN_14256fdd0(void* pmovieCtx);
-// Resolves an image the text field substitutes (exe: the field's resource binding and its image creator).
-// The substitution's image from a BitmapData (the exe asks the field's resource for its image creator and
-// creates or shares the image; "ImageCreator is null in UpdateImageSubstitution" is logged when there is none).
 void FUN_142614e30(void* psubst, void* pimageDesc);  // ImageSubstitutor::RemoveImageDesc
 void* FUN_142936510(TextField* ptf);                  // TextField::CreateImageSubstitutor
 void  FUN_1425bb680(TextField* ptf, const char* pid); // TextField::RemoveIdImageDescAssoc
@@ -71,12 +74,31 @@ static inline void* MS2_AS2_TextAllocatorOwner(InteractiveObject* ptarget)
     return *(void**)(*(char**)((char*)ptarget + 0x20) + 0x10);
 }
 
-// The substitution's image from a BitmapData.
-// MS2-FUNCTIONAL only the direct path: the exe also asks the movie's image creator to make a shared image when
-// the bitmap is not a plain image ("ImageCreator is null in UpdateImageSubstitution" when it has none).
+// The movie's image creator.
+static inline Ptr<ImageCreator> MS2_AS2_GetImageCreator(MovieDefImpl* pmd)
+{
+    return *static_cast<ImageCreator*>(pmd->GetStateAddRef(State::State_ImageCreator));
+}
+
+// The substitution's image from a BitmapData: a Render::Image is shared as is; an image source is made into an
+// image by the movie's image creator (a warning and no image when the movie has none).
 static void MS2_AS2_SetSubstituteImage(TextField* ptf, Render::Text::ImageDesc* pdesc, BitmapData* pbmp)
 {
-    pdesc->pImage = static_cast<Render::Image*>(pbmp->pImageRes->GetImage());
+    ImageResource*     pimageRes = pbmp->pImageRes;
+    Ptr<MovieDefImpl>  pmd       = ptf->GetResourceMovieDef();
+    Ptr<Render::Image> pimg;
+    if (pimageRes->GetImage()->GetImageType() != Render::ImageBase::Type_ImageBase)
+        pimg = static_cast<Render::Image*>(pimageRes->GetImage());
+    else if (!MS2_AS2_GetImageCreator(pmd))
+        LogDebugMessage(Log_Warning, "ImageCreator is null in UpdateImageSubstitution");
+    else
+    {
+        ImageCreateInfo cinfo(ImageCreateInfo::Create_SourceImage, Memory::GetHeapByAddress(ptf), 1,
+                              Resource::Use_Bitmap);
+        pimg = *MS2_AS2_GetImageCreator(pmd)->CreateImage(cinfo,
+                                                           static_cast<Render::ImageSource*>(pimageRes->GetImage()));
+    }
+    pdesc->pImage = pimg;
     ptf->SetDirtyFlag();
 }
 
@@ -192,7 +214,7 @@ static inline TextField* MS2_ThisTextField(const FnCall& fn)
 }
 
 // updateImageSubstitution(id [, image]): swaps the image of a substitution (or removes it for null / undefined).
-// MS2-FUNCTIONAL the image resolution calls the field's image creator through opaque stand-ins
+// MS2-FUNCTIONAL: register allocation and stack layout differ.
 // @0x14290b4c0
 void AvmTextField::UpdateImageSubstitution(const FnCall& fn)
 {
