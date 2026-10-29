@@ -1642,7 +1642,7 @@ void FUN_14003cdd0(void* handle)
     CriUint8 chunk[16] = {};
     void* inputJoint = NULL;
     memcpy(&inputJoint, bytes + 0x180, sizeof(inputJoint));
-    while (FUN_1400467b8(inputJoint, 1) != 0)
+    while (FUN_1400467b8(inputJoint, 2) != 0)
     {
         FUN_1400467a0(inputJoint, 2, -1, chunk);
         FUN_1400467b0(inputJoint, 0, chunk);
