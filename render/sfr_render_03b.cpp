@@ -1639,7 +1639,9 @@ void ParagraphFormatter::FinalizeLine()
     else
         LineCursor.LineWidth += lastAdvance;
 
-    if (pParaFormat->GetAlignment() == ParagraphFormat::Align_Right || pParaFormat->GetAlignment() == ParagraphFormat::Align_Center)
+    // the exe tests IsAlignmentSet() first in both checks (0x14260ec64 and r9b,1; 0x14260ef28 test byte [rax+0x1a],1)
+    if (pParaFormat->IsAlignmentSet() && pParaFormat->GetAlignment() == ParagraphFormat::Align_Right ||
+        pParaFormat->IsAlignmentSet() && pParaFormat->GetAlignment() == ParagraphFormat::Align_Center)
     {
         LineCursor.LineWidth += LineCursor.RightMargin;
         LineCursor.LineWidthWithoutTrailingSpaces += LineCursor.RightMargin;
@@ -1674,7 +1676,8 @@ void ParagraphFormatter::FinalizeLine()
 
     // justify: spread the free width over the inner spaces (not the last line of a paragraph)
     if (!LineCursor.LineHasNewLine && pDocView->IsWordWrap() &&
-        LineCursor.NumOfSpaces - LineCursor.NumOfTrailingSpaces > 0 && pParaFormat->GetAlignment() == ParagraphFormat::Align_Justify)
+        LineCursor.NumOfSpaces - LineCursor.NumOfTrailingSpaces > 0 && pParaFormat->IsAlignmentSet() &&
+        pParaFormat->GetAlignment() == ParagraphFormat::Align_Justify)
     {
         int deltaW = (int(TextRectWidth - GFX_TEXT_JUSTIFY_CORRECTION) - LineCursor.RightMargin) -
                      (LineCursor.LineWidthWithoutTrailingSpaces + LineCursor.Indent + LineCursor.LeftMargin);
