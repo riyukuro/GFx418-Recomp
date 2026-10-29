@@ -222,7 +222,7 @@ cri_u64 FUN_1400503e0(longlong a1,void *a2,int *a3);
 void FUN_140050480(longlong a1,int a2,cri_u64 a3);
 void FUN_140050770(longlong *a1);
 void FUN_140050bc0(void);
-ulonglong FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
+cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
 void FUN_140050f90(cri_u64 *a1,ulonglong a2);
 void FUN_140050fc0(void);
 void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5);
@@ -244,7 +244,7 @@ cri_u64 FUN_140052720(longlong a1,longlong *a2);
 int FUN_1400527c0(longlong a1,void *a2,int a3);
 int FUN_140052950(longlong a1,uint a2,cri_u64 a3);
 cri_u32 FUN_140052a10(longlong a1,longlong *a2);
-cri_u64 FUN_140052ae0(longlong a1,longlong *a2);
+cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 void FUN_140052ef0(cri_u8 *a1);
 int FUN_140052fa0(void);
 cri_u8 FUN_140053000(cri_u8 *a1);
@@ -386,7 +386,7 @@ static __forceinline longlong FUN_140050320(Any a0,Any a1) { return FUN_14005032
 static __forceinline cri_u64 FUN_140050380(Any a0,Any a1,Any a2) { return FUN_140050380((longlong)a0.v,(cri_u64)a1.v,(cri_u32)a2.v); }
 static __forceinline cri_u64 FUN_1400503e0(Any a0,Any a1,Any a2) { return FUN_1400503e0((longlong)a0.v,(void *)a1.v,(int *)a2.v); }
 static __forceinline void FUN_140050480(Any a0,Any a1,Any a2) { FUN_140050480((longlong)a0.v,(int)a1.v,(cri_u64)a2.v); }
-static __forceinline ulonglong FUN_140050bd0(Any a0,Any a1,Any a2) { return FUN_140050bd0((longlong)a0.v,(cri_u64)a1.v,(void *)a2.v); }
+static __forceinline cri_u32 FUN_140050bd0(Any a0,Any a1,Any a2) { return FUN_140050bd0((longlong)a0.v,(cri_u64)a1.v,(void *)a2.v); }
 static __forceinline void FUN_140050f90(Any a0,Any a1) { FUN_140050f90((cri_u64 *)a0.v,(ulonglong)a1.v); }
 static __forceinline void FUN_1400511a0(Any a0,Any a1,Any a2,Any a3,Any a4) { FUN_1400511a0((longlong)a0.v,(int)a1.v,(cri_u64)a2.v,(cri_u64)a3.v,(cri_u64)a4.v); }
 static __forceinline void FUN_1400511d0(Any a0,Any a1,Any a2) { FUN_1400511d0((longlong)a0.v,(cri_u64)a1.v,(cri_u32)a2.v); }
@@ -409,7 +409,7 @@ static __forceinline int FUN_1400527c0(Any a0,Any a1,Any a2) { return FUN_140052
 static __forceinline int FUN_140052950(Any a0,Any a1,Any a2) { return FUN_140052950((longlong)a0.v,(uint)a1.v,(cri_u64)a2.v); }
 static __forceinline cri_u32 FUN_140052a10(Any a0,Any a1) { return FUN_140052a10((longlong)a0.v,(longlong *)a1.v); }
 static __forceinline cri_u32 FUN_140052a10(Any a0,Any a1,Any a2) { return FUN_140052a10((longlong)a0.v,(longlong *)a1.v); }
-static __forceinline cri_u64 FUN_140052ae0(Any a0,Any a1) { return FUN_140052ae0((longlong)a0.v,(longlong *)a1.v); }
+static __forceinline cri_u32 FUN_140052ae0(Any a0,Any a1) { return FUN_140052ae0((longlong)a0.v,(longlong *)a1.v); }
 static __forceinline void FUN_140052ef0(Any a0) { FUN_140052ef0((cri_u8 *)a0.v); }
 static __forceinline cri_u8 FUN_140053000(Any a0) { return FUN_140053000((cri_u8 *)a0.v); }
 static __forceinline longlong FUN_1400530c0(Any a0,Any a1,Any a2) { return FUN_1400530c0((longlong)a0.v,(int)a1.v,(byte)a2.v); }
@@ -596,10 +596,12 @@ void FUN_14004de20(void)
 // @0x14004de60
 void FUN_14004de60(longlong a1)
 {
+  longlong l_v1;
   CriAt<longlong>(a1, 0x1450) = a1;
   CriAt<cri_u64>(a1, 0x1448) = CriAt<cri_u64>(a1, 0x12f8);
-  CriAt<longlong>(a1, 0x1458) = a1 + 0xc80;
-  CriAt<longlong>(a1, 0x1460) = a1 + 0xe00;
+  l_v1 = a1 + 0xc80;
+  CriAt<longlong>(a1, 0x1458) = l_v1;
+  CriAt<longlong>(a1, 0x1460) = l_v1 + 0x180;
   CriAt<longlong>(a1, 0x17e8) = a1;
   CriAt<longlong>(a1, 0x17c8) = a1 + 0x100;
   CriAt<longlong>(a1, 0x17d0) = a1 + 0x180;
@@ -694,9 +696,9 @@ void FUN_14004e030(int a1,cri_u32 a2)
   longlong l_v1;
   ulonglong u_v2;
   
+  l_v1 = cri_conv(DAT_143badb18);
   if (0 < DAT_143badb10) {
     u_v2 = (ulonglong)((DAT_143badb10 - 1U >> 2) + 1);
-    l_v1 = cri_conv(DAT_143badb18);
     do {
       if (CriAt<int>(l_v1, 0x1538) == 2) {
         *(cri_u32 *)(l_v1 + 0x1540 + (longlong)a1 * 4) = a2;
@@ -836,21 +838,20 @@ cri_u64 FUN_14004e2f0(longlong a1,int a2,cri_u32 a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e360
-cri_u64 FUN_14004e360(longlong a1,int a2,cri_u32 *a3)
+cri_u32 FUN_14004e360(longlong a1,int a2,cri_u32 *a3)
 {
-  int i_v1;
-  cri_u64 u_v2;
+  cri_u32 *p;
   
   if (a1 == 0) {
-    *a3 = *(cri_u32 *)(&DAT_143badab0 + (longlong)a2 * 4);
-    return 0;
+    p = (cri_u32 *)&DAT_143badab0;
   }
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    u_v2 = FUN_14004ff50(0,0xff030210);
-    return u_v2;
+  else {
+    if ((int)FUN_14004e0a0(a1) != 0) {
+      return FUN_14004ff50(0,0xff030210);
+    }
+    p = &CriAt<cri_u32>(a1, 0x1540);
   }
-  *a3 = *(cri_u32 *)(a1 + 0x1540 + (longlong)a2 * 4);
+  *a3 = p[a2];
   return 0;
 }
 
@@ -2234,10 +2235,10 @@ void FUN_14004ff30(cri_u64 *a1,int a2)
 cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2)
 {
   if (a1 == 0) {
-    FUN_14004ff30(&DAT_143badb38,a2);
+    FUN_14004ff30((cri_u64 *)&DAT_143badb38,(int)a2);
     return a2;
   }
-  FUN_14004ff30(a1 + 0x1618,a2);
+  FUN_14004ff30(&CriAt<cri_u64>(a1, 0x1618),(int)a2);
   return a2;
 }
 
@@ -2649,11 +2650,13 @@ longlong FUN_140050730(void)
   i_v1 = FUN_1400501f0();
   if (1 < i_v1) {
     l_v2 = (longlong)FUN_1400502b0();
-    if (l_v2 != 0) {
+    if (l_v2 == 0) {
+      FUN_14004ff50(0,0xff030601);
+    }
+    else {
       CriAt<cri_u32>(l_v2, 0x10) = 0x5a5a5a5a;
       return l_v2;
     }
-    FUN_14004ff50(0,0xff030601);
   }
   return 0;
 }
@@ -2868,7 +2871,7 @@ void FUN_140050bc0(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050bd0
-ulonglong FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
+cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
 {
   ushort u_v1;
   ushort u_v2;
@@ -4073,7 +4076,7 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052ae0
-cri_u64 FUN_140052ae0(longlong a1,longlong *a2)
+cri_u32 FUN_140052ae0(longlong a1,longlong *a2)
 {
   int i_v1;
   uint u_v2;
