@@ -6892,7 +6892,7 @@ bool Sfr31SetDisplayMatrix3D(UPInt self, UPInt valueObj, const float* m)
     const float inv2 = 1.0f / sqrtf(m[2] * m[2] + m[6] * m[6] + m[10] * m[10]);
     float xr, yr;
     const float s = m[4] * inv0;
-    if (s > 0.99813f || s < -0.99813f)
+    if (s > 0.998f || s < -0.998f)
     {
         xr = 0.0f;
         yr = atan2f(m[2] * inv2, m[10] * inv2);
