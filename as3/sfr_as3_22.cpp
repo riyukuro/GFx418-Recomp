@@ -4047,15 +4047,16 @@ void RemoveAudioRequest(void* manager, void* request)
         }
         if (emptyCount == count)
             FUN_142742830(reinterpret_cast<long long*>(set), &key);
-    }
 
-    auto* table = *reinterpret_cast<void**>(managerBytes + 0xa8);
-    if ((!table || *reinterpret_cast<unsigned long long*>(table) == 0) && managerBytes[0xf1] &&
-        *reinterpret_cast<void**>(managerBytes + 0x18)) {
-        managerBytes[0x78] = 1;
-        FUN_14257dcb0(*reinterpret_cast<void**>(managerBytes + 0x18));
-        *reinterpret_cast<void**>(managerBytes + 0x18) = nullptr;
-        reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
+        // Only reached with a found entry (an unknown key skips straight to the unlock, 0x142745525).
+        auto* table = *reinterpret_cast<void**>(managerBytes + 0xa8);
+        if ((!table || *reinterpret_cast<unsigned long long*>(table) == 0) && managerBytes[0xf1] &&
+            *reinterpret_cast<void**>(managerBytes + 0x18)) {
+            managerBytes[0x78] = 1;
+            FUN_14257dcb0(*reinterpret_cast<void**>(managerBytes + 0x18));
+            *reinterpret_cast<void**>(managerBytes + 0x18) = nullptr;
+            reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
+        }
     }
     LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0x80));
 
