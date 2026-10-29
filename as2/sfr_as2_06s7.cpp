@@ -146,7 +146,7 @@ void AvmTextField::ProceedImageSubstitution(const FnCall& fn, int idx, const Val
                                           elem.pImageDesc->ScreenHeight / origHeight);
     psubst->AddImageDesc(elem);
     ptf->GetDocument()->SetReformatReq();
-    GetDispObj()->SetDirtyFlag();
+    ptf->SetDirtyFlag();
 }
 
 }}} // namespace Scaleform::GFx::AS2
