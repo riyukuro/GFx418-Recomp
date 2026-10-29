@@ -1552,7 +1552,7 @@ void TreeCacheRoot::UpdateTreeData()
                 if (hasContributingFilter(pdata))
                     flags = (TransformFlags)(flags | TF_ParentFilter);
                 else
-                    args.Cx.Prepend(pdata->Cx);
+                    args.Cx.Append(pdata->Cx);
 
                 // the nearest ancestor view / projection
                 if (!viewState && pdata->HasViewMatrix3D())
