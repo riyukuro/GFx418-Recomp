@@ -18,7 +18,7 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // The movie's value interface (exe vftable 0x143222128; its members are recovered elsewhere).
 extern const void* DAT_143222128[];
 
-// MS2-FUNCTIONAL: the unmodelled words (+0x28 entry, +0x78 action queue block, +0x638) are zeroed by hand and the
+// MS2-FUNCTIONAL: the unmodelled words (+0x28 entry, +0x78 action queue block) are zeroed by hand (+0x638 is not modelled) and the
 // value interface is built from raw words
 // @0x14291f070
 MovieRoot::MovieRoot(MemoryContextImpl* pmemContext, MovieImpl* pmovie, ASSupport* pasSupport)
@@ -38,6 +38,12 @@ MovieRoot::MovieRoot(MemoryContextImpl* pmemContext, MovieImpl* pmovie, ASSuppor
     pMouseListener     = 0;
     pGlobalContext     = 0;
     ::memset(Unrecovered_78, 0, sizeof(Unrecovered_78));
+    // The action queue starts at modification 1 and session 1 and allocates its entries from the movie's heap.
+    ActionQueueType& queue = GetActionQueue();
+    queue.ModId    = 1;
+    queue.Field_a0 = 1;
+    *reinterpret_cast<unsigned*>(&queue.Field_a8) = 1;
+    queue.pHeap    = pmemContext->Heap;
     pLevelRoots    = 0;
     LevelRootCount = 0;
     pMovieImpl     = pmovie;
