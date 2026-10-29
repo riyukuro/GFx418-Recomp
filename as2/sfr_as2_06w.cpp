@@ -120,7 +120,7 @@ bool AvmCharacter::SetStandardMember(StandardMember index, const Value& val, boo
 {
     if (opcodeFlag && (unsigned)index > M_BuiltInProperty_End)
     {
-        pDispObj->LogScriptWarning("Invalid SetProperty request, property number %d", index);
+        pDispObj->LogScriptError("Invalid SetProperty request, property number %d", index);
         return false;
     }
     if (index == M_InvalidMember || index > M_LastBitMaskMember ||
