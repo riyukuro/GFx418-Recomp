@@ -3430,6 +3430,7 @@ static CriUint32 criheap_CalcAlignSpace(CriHeapBlock* blk, CriSint32 align)
     return rem;
 }
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027148
 static CriHeap criheap_InitializeHandle(CriHeap heap, CriSint32 size)
@@ -3812,6 +3813,7 @@ static CriSint32 criheap_Free(CriHeap heap, CriHeapBlock* blk)
     }
     return size;
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027be4 (external: data_data_game's table takes it as FUN_140027be4)
@@ -3832,6 +3834,7 @@ CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
 
 extern "C" {
 
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027048
 void FUN_140027048(void)
@@ -4113,5 +4116,6 @@ __declspec(noinline) void CRIAPI criHeap_Initialize(void)
         }
     }
 }
+#pragma optimize("", on)
 
 } // extern "C"
