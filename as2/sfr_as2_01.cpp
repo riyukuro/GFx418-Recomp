@@ -1313,61 +1313,61 @@ void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
     ASStringContext*    psc = fn.Env->GetSC();
     IMECandidateListStyle style;
     Value               val;
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("textColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("textColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetTextColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("backgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("backgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("indexBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("indexBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetIndexBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedTextColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedTextColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedTextColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedTextBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedTextBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("selectedIndexBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("selectedIndexBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetSelectedIndexBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("fontSize"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("fontSize"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetFontSize((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowTextColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowTextColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetReadingWindowTextColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowBackgroundColor"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowBackgroundColor"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetReadingWindowBackgroundColor((UInt32)(SInt64)n);
     }
-    if (pobj->GetMemberRaw(psc, psc->CreateConstString("readingWindowFontSize"), &val))
+    if (pobj->GetMember(fn.Env, psc->CreateConstString("readingWindowFontSize"), &val))
     {
         Number n = val.ToNumber(fn.Env);
         if (!NumberUtil::IsNaNOrInfinity(n))
