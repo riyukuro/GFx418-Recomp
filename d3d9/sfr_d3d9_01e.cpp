@@ -1179,7 +1179,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
 // @0x142732ec0
 void HAL::PushFilters(FilterPrimitive* prim)
 {
-    ScopedRenderEvent evt(GetEvent(Event_Filter), __FUNCTION__);
+    GetEvent(Event_Filter).Begin(__FUNCTION__);
     if (!(HALState & HS_InDisplay))
     {
         FUN_1426c1790(this, HS_InDisplay, __FUNCTION__);
