@@ -619,11 +619,14 @@ void FUN_140031060(void* player, CriSint32 value)
     *(CriSint32*)((CriUint8*)player + 0xed8) = value;
 }
 
-// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor is rebuilt with our VS2017 toolset.
+CriSint32 getInternalStatus(void* player);
+
+// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this accessor reads the status through getInternalStatus.
 // @0x1400310b0
 CriSint32 criMvPly_GetStatus(void* player)
 {
-    return *(CriSint32*)((CriUint8*)player + 4);
+    CriSint32 status = getInternalStatus(player);
+    return status;
 }
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this wrapper preserves its status gate and frame-time update.
@@ -906,16 +909,18 @@ void criMvPly_SetSubtitleChannel(void* player, CriUint32 channel)
 void criMvPly_SetPcmFormat(void* player, CriSint32 format)
 {
     *(CriSint32*)((CriUint8*)player + 0xe18) = format;
-    *(CriUint32*)((CriUint8*)player + 0xe1c) = format == 0 ? 2 : 4;
+    if (format == 0)
+        *(CriUint32*)((CriUint8*)player + 0xe1c) = 2;
+    else
+        *(CriUint32*)((CriUint8*)player + 0xe1c) = 4;
 }
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
 // @0x140037740
 void FUN_140037740(void* player, CriUint32 value0, CriUint32 value1)
 {
-    CriMvStateFlags* state = (CriMvStateFlags*)player;
-    state->Value0 = value0;
-    state->Value1 = value1;
+    ((CriMvStateFlags*)player)->Value0 = value0;
+    ((CriMvStateFlags*)player)->Value1 = value1;
 }
 
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this setter is rebuilt with our VS2017 toolset.
@@ -943,7 +948,9 @@ void* crimvply_transitErrorState(void* player, void* fallback)
 // @0x140035000
 CriBool isLockedInputChunk(const void* player)
 {
-    return ((const CriMvInputLockState*)player)->Locked != 0;
+    // The exe takes a pointer to the input-chunk state at +0xd90 and tests its lock flag at +8.
+    const CriUint8* chunk = (const CriUint8*)player + 0xd90;
+    return ((const CriSint32*)chunk)[2] == 0 ? 0 : 1;
 }
 
 // MS2-FUNCTIONAL: CRI Movie was built with VS2008; this transition helper is rebuilt with our VS2017 toolset.
@@ -1559,10 +1566,16 @@ CriBool isAvailableDividedInputChunk(void* player)
 // @0x140037310
 CriUint32 decideReadBufferExtSize(void* player)
 {
-    if (isAvailableDividedInputChunk(player))
-        return 0x2800;
-    CriUint32 size = *(CriUint32*)((CriUint8*)player + 0x0c);
-    return size < 0x2800 ? 0x2800 : size;
+    CriUint32 size;
+    if (isAvailableDividedInputChunk(player) == 1)
+        size = 0x2800;
+    else
+    {
+        size = *(CriUint32*)((CriUint8*)player + 0x0c);
+        if (size < 0x2800)
+            size = 0x2800;
+    }
+    return size;
 }
 
 // MS2-FUNCTIONAL: selects the active CRI read buffer and returns its available and bounded sizes.
@@ -1786,8 +1799,9 @@ CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
 // @0x140036ed0
 void criMvPly_GetFramePoolInfo(void* player, void* a, void* b, void* c, void* d, void* e)
 {
-    if (player)
-        FUN_140044b90(((CriMvDecoderHandleFields*)player)->VideoDecoder, a, b, c, d, e);
+    if (player == NULL)
+        return;
+    FUN_140044b90(((CriMvDecoderHandleFields*)player)->VideoDecoder, a, b, c, d, e);
 }
 
 // MS2-FUNCTIONAL: request the main audio stream's current data size from the movie audio manager.
@@ -2000,15 +2014,17 @@ void FUN_140038e10(void)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: enter the movie player's shared handle critical section.
 // @0x1400378b0
-void FUN_1400378b0(void)
+void FUN_1400378b0(void* player)
 {
+    (void)player;                            // the exe passes the player; only its dead load differs
     FUN_140039f50(DAT_143ffd550);
 }
 
 // MS2-FUNCTIONAL: leave the movie player's shared handle critical section.
 // @0x1400378e0
-void FUN_1400378e0(void)
+void FUN_1400378e0(void* player)
 {
+    (void)player;                            // the exe passes the player; only its dead load differs
     FUN_140039f8c(DAT_143ffd550);
 }
 #pragma optimize("", on)
@@ -2935,14 +2951,13 @@ void* FUN_140030be0(CriSint32 codecId)
 // @0x14002fb70
 void FUN_14002fb70(void* player)
 {
-    CriSint32 status = ((CriMvPlyStateTransitionFields*)player)->Status;
-    if (status != 0 && status != 9 && status != 7 && status != 6)
-    {
-        FUN_140036650(player);
-        FUN_140036710(player);
-        FUN_1400369e0(player);
-        FUN_140034c20(player);
-    }
+    CriSint32 status = getInternalStatus(player);
+    if (status == 0 || status == 9 || status == 7 || status == 6)
+        return;
+    FUN_140036650(player);
+    FUN_140036710(player);
+    FUN_1400369e0(player);
+    FUN_140034c20(player);
 }
 #pragma optimize("", on)
 
@@ -4388,9 +4403,9 @@ CriBool FUN_1400314d0(void* player)
 // @0x1400313d0
 CriBool FUN_1400313d0(void* player)
 {
-    FUN_1400378b0();
+    FUN_1400378b0(player);
     CriBool result = FUN_140031410(player);
-    FUN_1400378e0();
+    FUN_1400378e0(player);
     return result;
 }
 
@@ -4882,7 +4897,9 @@ void CriMvEasyPlayer::SetCompareFrameTimeCallback(
 // @0x140038f60
 CriSint32 CriMvEasyPlayer::IsNextFrameOnTime(CriError& error)
 {
-    return isNextFrameOnTime(1, error);
+    const CriSint32 checkDelay = 1;
+    CriSint32 result = isNextFrameOnTime(checkDelay, error);
+    return result;
 }
 
 // MS2-FUNCTIONAL: release the optional alpha frame and the associated main video frame.
