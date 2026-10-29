@@ -786,7 +786,7 @@ void LoadVarsProto::AddRequestHeader(const FnCall& fn)
     {
         Log* plog = fn.Env->GetTarget()->GetLog();
         if (plog)
-            plog->LogMessageById(Log_ScriptWarning, "LoadVars.addRequestHeader is not implemented.");
+            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.addRequestHeader is not implemented.");
     }
 }
 
@@ -858,7 +858,7 @@ void LoadVarsProto::Send(const FnCall& fn)
     {
         Log* plog = fn.Env->GetTarget()->GetLog();
         if (plog)
-            plog->LogMessageById(Log_ScriptWarning, "LoadVars.send is not implemented.");
+            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.send is not implemented.");
     }
 }
 
@@ -872,7 +872,7 @@ void LoadVarsProto::SendAndLoad(const FnCall& fn)
     {
         Log* plog = fn.Env->GetTarget()->GetLog();
         if (plog)
-            plog->LogMessageById(Log_ScriptWarning, "LoadVars.sendAndLoad is not implemented.");
+            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.sendAndLoad is not implemented.");
     }
 }
 
