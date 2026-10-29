@@ -2304,12 +2304,12 @@ void* FUN_14000d940(Scaleform::GFx::AS2::Object* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: sends the executable's fixed video event payload through the receiver vtable.
+// MS2-FUNCTIONAL: sends EventId(1) through the receiver vtable (the exe's 0x14-byte EventId: ControllerIndex -1 at +0x11).
 // @0x14000e390
 void FUN_14000e390(void* receiver)
 {
-    struct EventPayload { unsigned type, a, b; unsigned char c, d, e, f; } payload = { 1, 0, 0, 0, 0, 0xff, 0 };
-    reinterpret_cast<void (*)(void*, const EventPayload*)>((*reinterpret_cast<void***>(receiver))[8])(
+    Scaleform::GFx::EventId payload(1);
+    reinterpret_cast<void (*)(void*, const Scaleform::GFx::EventId*)>((*reinterpret_cast<void***>(receiver))[8])(
         receiver, &payload);
 }
 
