@@ -643,9 +643,10 @@ void TreeCacheShapeLayer::getShapeMatrixFrom3D(const TreeShape::NodeData* nd, Ma
     unsigned strokeStyle = nd->pMeshProvider->GetLayerStroke(getLayer());
     if (strokeStyle)
     {
+        // the exe clamps to 0.005 (the 4.2 SDK has 0.05)
         float s = mat->GetScale();
-        if (s < 0.05f)
-            s = 0.05f;
+        if (s < 0.005f)
+            s = 0.005f;
         *mat = Matrix2F::Scaling(s);
     }
 }
