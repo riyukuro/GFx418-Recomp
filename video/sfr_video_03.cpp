@@ -1830,9 +1830,12 @@ namespace {
 // @0x1400182f0
 void FUN_1400182f0(void* callback, const std::uint32_t* info)
 {
-    auto* vm = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
-    if (*reinterpret_cast<unsigned char*>(vm + 0x98) == 0) {
-        auto* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(vm + 0x20) + 0x78);
+    // The onMetaData handler Value lives in the AS3 object at callback+0x10, at +0x98 (0x1400182fa); the exe returns
+    // early when it is undefined or null (0x140018304..0x140018329).
+    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
+    auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0x98);
+    if (!callbackValue->IsUndefined() && !callbackValue->IsNull()) {
+        auto* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(owner + 0x20) + 0x78);
         std::uint64_t objectResult = 0;
         FUN_142516600(vmRoot, &objectResult);
         auto* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
@@ -1853,8 +1856,16 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
         addNumber("frameRate", static_cast<float>(info[2]) / scale);
         addInt("subtitleTracksCount", info[0xc]); addInt("audioTracksCount", info[0x10]); addInt("cuePointsCount", info[8]);
         Scaleform::GFx::AS3::Value objectValue(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
-        auto* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0x98);
-        FUN_1424fef00(vmRoot, callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), &objectValue, 1, &objectValue, 0);
+        Scaleform::GFx::AS3::Value result;
+        FUN_1424fef00(vmRoot, callbackValue, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &objectValue, 0);
+        auto* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot);
+        if (vmObject->HandleException) {
+            vmObject->HandleException = false;
+            vmObject->OutputError(vmObject->ExceptionObj);
+            vmObject->ExceptionObj.SetUndefined();
+        }
+        // the exe drops the MakeObject reference after the call (0x1400188f5)
+        ReleaseVideoAtom(&objectResult);
     }
 }
 namespace {
