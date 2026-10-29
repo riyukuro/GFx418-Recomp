@@ -6370,8 +6370,9 @@ void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
                 const UPInt child = Sfr31Rd(Sfr31Rd(br, 0xd8) + i * 0x10, 0);
                 if ((*reinterpret_cast<const UInt16*>(child + 0x6a) >> 10 & 1) != 0)
                 {
+                    // Sprite::GotoFrame(0), then SetPlayState(State_Playing)
                     reinterpret_cast<Fn3>(Sfr31Rd(Sfr31Rd(child, 0), 0x340))(child, 0);
-                    Sfr31VCall0(child, 0x360);
+                    reinterpret_cast<Fn3>(Sfr31Rd(Sfr31Rd(child, 0), 0x360))(child, 0);
                 }
             }
         }
