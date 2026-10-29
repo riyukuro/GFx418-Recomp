@@ -2476,31 +2476,59 @@ Object* Environment::OperatorNew(Object* package, const ASString& className, int
     return OperatorNew(constructor, nargs, argsTopOff);
 }
 
-// MS2-FUNCTIONAL: creates an instance, applies its prototype and constructor, then returns an object-valued result.
+// MS2-FUNCTIONAL: new Object(x) wraps x; otherwise creates the instance through the prototype's __constructor__,
+// always runs the constructor (its return value is ignored) and returns the new object with an added reference.
 // @0x14296dde0
 Object* Environment::OperatorNew(const FunctionRef& constructor, int nargs, int argsTopOff)
 {
-    FunctionObject* function = constructor.GetObjectPtr();
-    if (!function)
-        return 0;
-    Object* rawObject = function->CreateNewObject(this);
-    if (!rawObject)
-        return 0;
-    Ptr<Object> object = *rawObject;
-    Value prototype;
-    if (function->GetMember(this, GetBuiltin(ASBuiltin_prototype), &prototype))
-        object->Set__proto__(&StringContext, prototype.ToObject(this));
-    object->Set__constructor__(&StringContext, constructor);
+    if (argsTopOff < 0)
+        argsTopOff = GetTopIndex();
 
-    Value constructorValue(constructor);
-    Value result;
-    if (nargs > 0)
+    if (nargs == 1 && constructor.GetObjectPtr() == GetConstructor(ASBuiltin_Object).GetObjectPtr())
     {
-        const int firstArg = argsTopOff < 0 ? GetTopIndex() : argsTopOff;
-        GAS_Invoke(constructorValue, &result, object, this, nargs, firstArg, 0);
+        // new Object(x): a primitive becomes its wrapper object, an object is returned as is.
+        Value objVal;
+        const Value& arg = Top(0);
+        if (arg.GetType() >= Value::BOOLEAN && arg.GetType() <= Value::STRING)
+            objVal = PrimitiveToTempObject(0);
+        else if (arg.IsObject() || arg.IsCharacter())
+            objVal = arg;
+        if (!objVal.IsUndefined())
+        {
+            Object* pobj = objVal.ToObject(this);
+            if (pobj)
+                pobj->AddRef();
+            return pobj;
+        }
     }
-    Object* returnedObject = result.ToObject(this);
-    return returnedObject ? returnedObject : object.GetPtr();
+
+    Value prototypeVal;
+    if (!constructor->GetMemberRaw(GetSC(), GetBuiltin(ASBuiltin_prototype), &prototypeVal))
+        prototypeVal.SetAsObject(GetPrototype(ASBuiltin_Object));
+
+    // The prototype's __constructor__ (set by extends) creates the instance.
+    Object* proto = prototypeVal.ToObject(this);
+    FunctionRef ctor = constructor;
+    Value ctorVal;
+    if (proto && proto->GetMemberRaw(GetSC(), GetBuiltin(ASBuiltin___constructor__), &ctorVal) && ctorVal.IsFunction()
+        && !ctorVal.ToFunction(this).IsNull())
+        ctor = ctorVal.ToFunction(this);
+
+    Ptr<Object> pnew = *ctor->CreateNewObject(this);
+    if (!pnew)
+    {
+        LogScriptError("%s::CreateNewObject returned NULL during creation of %s class instance.",
+                       StringContext.pContext->FindClassName(this, ctor.GetObjectPtr()).ToCStr(),
+                       StringContext.pContext->FindClassName(this, constructor.GetObjectPtr()).ToCStr());
+        return 0;
+    }
+    pnew->Set__proto__(GetSC(), prototypeVal.ToObject(this));
+    pnew->Set__constructor__(GetSC(), constructor);
+
+    Value result;
+    ctor.Invoke(FnCall(&result, pnew, this, nargs, argsTopOff));
+    pnew->AddRef();
+    return pnew;
 }
 
 // MS2-FUNCTIONAL: queries the level-zero AS2 environment for the supplied variable or target path.
