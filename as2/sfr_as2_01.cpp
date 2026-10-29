@@ -1197,35 +1197,36 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
         return;
 
     Ptr<ArrayObject> props;
-    int              setFalseDefault = 0;
     const Value&     names = fn.Arg(1);
     if (names.IsString())
     {
         ASString list = names.ToString(fn.Env);
         props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
-        setFalseDefault = -1;
     }
     else if (names.IsObject())
     {
+        // A null object goes on to all members (0x1428f78f4 je -> 0x1428f7919)
         Object* pn = names.ToObject(fn.Env);
-        if (pn && pn->GetObjectType() == ObjectInterface::Object_Array)
+        if (!pn)
+            ;
+        else if (pn->GetObjectType() == ObjectInterface::Object_Array)
             props = static_cast<ArrayObject*>(pn);
-        else if (pn && pn->GetObjectType() == ObjectInterface::Object_String)
+        else if (pn->GetObjectType() == ObjectInterface::Object_String)
         {
             ASString list = names.ToString(fn.Env);
             props = StringProto::StringSplit(fn.Env, list, ",", 0x3fffffff);
         }
         else
             return;
-        setFalseDefault = -1;
     }
     else if (!names.IsNull())
         return;
 
     UByte setTrue = (UByte)(fn.Arg(2).ToInt32(fn.Env) & 7);
+    // SWF 5 with three arguments clears all flags first, null names too (0x1428f782f r15d=-1, 0x1428f7a25 cmove)
     UByte setFalse;
     if (fn.NArgs == 3)
-        setFalse = (UByte)((version == 5 ? setFalseDefault : 0) & 7);
+        setFalse = (UByte)((version == 5 ? ~0 : 0) & 7);
     else
         setFalse = (UByte)(fn.Arg(3).ToUInt32(fn.Env) & 7);
 
@@ -1241,7 +1242,7 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
     }
     else
     {
-        for (int i = 0; i < props->GetSize(); i++)
+        for (int i = 0, n = props->GetSize(); i < n; i++)
         {
             Value* pv = props->GetElementPtr(i);
             if (!pv)
