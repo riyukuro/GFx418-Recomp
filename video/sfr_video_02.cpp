@@ -2451,18 +2451,19 @@ void* FUN_1400140e0(void* object, void* traits)
     *reinterpret_cast<unsigned*>(bytes + 0xb8) = 0;
     *reinterpret_cast<void**>(bytes + 0xc0) = nullptr;
     *reinterpret_cast<unsigned*>(bytes + 0xd8) = 0;
+    *reinterpret_cast<void**>(bytes + 0xe0) = nullptr;
     *reinterpret_cast<double*>(bytes + 0x88) = 1.0;
     bytes[0x60] = 0;
     bytes[0x74] = 0;
     *reinterpret_cast<float*>(bytes + 0x64) = 0.1f;
-    *reinterpret_cast<float*>(bytes + 0x6c) = 0.08f;
+    *reinterpret_cast<float*>(bytes + 0x68) = 0.08f;
     *reinterpret_cast<unsigned*>(bytes + 0x6c) = 2;
     *reinterpret_cast<float*>(bytes + 0x70) = 5.0f;
     *reinterpret_cast<float*>(bytes + 0x78) = 0.0f;
     *reinterpret_cast<unsigned*>(bytes + 0x7c) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x80) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x84) = 0;
-    *reinterpret_cast<unsigned*>(bytes + 0x90) = 0;
+    *reinterpret_cast<void**>(bytes + 0x90) = nullptr;
     return object;
 }
 
