@@ -1535,8 +1535,8 @@ static std::uint64_t HashImageKey(const unsigned char* key)
 {
     return (((static_cast<std::uint64_t>(key[3]) * 0x1003full + key[2]) * 0x1003full + key[1]) * 0x1003full +
             static_cast<std::uint64_t>(key[4]) * 0xfc5d1543ec5f01ull +
-            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c6120ull +
-            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311bbbfll +
+            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c613full +
+            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311b1bfull +
             static_cast<std::uint64_t>(key[6]) * 0x5d02f409d62aee81ull -
             0x514d9afbc3e934fbull + key[0]);
 }
@@ -2450,8 +2450,8 @@ FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound
     if ((format & 0x700) == 0x100) {
         flags = 0x1a001040;
         defaultFrequency = *reinterpret_cast<unsigned*>(requestBytes + 0x14);
-        channels = ((format & 7) == 2) + 1;
-        soundFormat = ((format & 8) != 0) + 1;
+        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
+        soundFormat = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
     } else if ((format & 0x700) == 0x200) {
         flags = 0x1a000240;
         soundFormat = 0xb;
@@ -2486,8 +2486,8 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
     if ((format & 0x700) == 0x100) {
         mode = 0x2003040;
         frequency = *reinterpret_cast<const unsigned*>(path + 0x14);
-        channels = ((format & 7) == 2) + 1;
-        soundFormat = ((format & 8) != 0) + 1;
+        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
+        soundFormat = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
     } else if ((format & 0x700) == 0x200) {
         mode = 0x2002040;
         soundFormat = 0xb;
@@ -2538,7 +2538,7 @@ FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound
     unsigned channels = 0;
     if ((format & 0x700) == 0x100) {
         mode = 0xa0010c0;
-        channels = ((format & 7) == 2) + 1;
+        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
     } else if ((format & 0x700) != 0x200) {
         return static_cast<FMOD_RESULT>(0x19);
     }
@@ -2547,7 +2547,7 @@ FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound
     *reinterpret_cast<unsigned*>(info) = sizeof(info);
     *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
     *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<const unsigned*>(path + 0x14);
-    *reinterpret_cast<unsigned*>(info + 0x14) = (format & 0x700) == 0x200 ? 0xbu : (((format & 8) != 0) + 1);
+    *reinterpret_cast<unsigned*>(info + 0x14) = (format & 0x700) == 0x200 ? 0xbu : (((format & 7) == 2) + 1);
     *reinterpret_cast<unsigned*>(info + 0x18) = 0x1000;
     *reinterpret_cast<unsigned*>(info + 0xb8) = *reinterpret_cast<const unsigned*>(path + 0x1c);
     *reinterpret_cast<unsigned*>(info + 0xbc) = 2;
@@ -3799,10 +3799,12 @@ extern "C" void FUN_14268d5c0(void* object, void* stream, unsigned version)
         for (unsigned i = 0; i < count; ++i)
             ReadAs3StreamBytes(stream, values + i, 8);
     }
-    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) }) {
+    // the 0x128 item, an old file's dropped item, then 0x130 (version 3 on) and 0x138 (version 7 on)
+    auto readItem = [&](std::size_t offset) {
         auto* item = *reinterpret_cast<Scaleform::MemItem**>(bytes + offset);
         if (item) item->Read(*reinterpret_cast<Scaleform::File*>(stream), version);
-    }
+    };
+    readItem(0x128);
     if (version < 0x13) {
         std::uint32_t itemStat = 2;
         void* legacy = reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
@@ -3813,6 +3815,8 @@ extern "C" void FUN_14268d5c0(void* object, void* stream, unsigned version)
             FUN_14257dcb0(legacy);
         }
     }
+    if (version >= 3) readItem(0x130);
+    if (version >= 7) readItem(0x138);
     if (version > 0x10) {
         unsigned extraCount = 0;
         ReadAs3StreamBytes(stream, &extraCount, 4);
@@ -3925,7 +3929,7 @@ void* FindAudioRequestEntry(void** set, const unsigned char* key)
         return nullptr;
     const std::uint64_t hash =
         (((((std::uint64_t(key[3]) * 0x1003f + key[2]) * 0x1003f + key[1]) * 0x1003f + key[4] * 0xfc5d1543ec5f01ull) +
-           key[5] * 0x9b302c28162c612full + key[7] * 0xd7c3e496a311b1bfull +
+           key[5] * 0x9b302c28162c613full + key[7] * 0xd7c3e496a311b1bfull +
            key[6] * 0x5d02f409d62aee81ull - 0x514d9afbc3e934fbull + key[0])) & table[1];
     auto* node = table + 2 + hash * 6;
     if (static_cast<std::int64_t>(*node) != -2 && node[1] == hash) {
