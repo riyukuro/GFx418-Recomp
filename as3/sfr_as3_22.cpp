@@ -1264,8 +1264,9 @@ bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int
         static_cast<int>(left) > static_cast<int>(secondSize[0]) || static_cast<int>(bottom) < 0)
         return false;
 
-    clipped[0] = left;
-    clipped[1] = top;
+    // The start corner is clamped into the second image (cmovle at 0x142675c5f / 0x142675c72).
+    clipped[0] = static_cast<int>(left) > 0 ? left : 0;
+    clipped[1] = static_cast<int>(top) > 0 ? top : 0;
     clipped[2] = right < secondSize[0] ? right : secondSize[0];
     clipped[3] = bottom < secondSize[1] ? bottom : secondSize[1];
     return true;
