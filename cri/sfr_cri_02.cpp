@@ -2512,16 +2512,39 @@ void FUN_140037950(void* owner, const char* message, CriSint32 value)
     FUN_140038ce4(0, message, value, 0, owner);
 }
 
-// MS2-FUNCTIONAL: copy the decoder's 0x38-byte alpha-frame metadata and overlay current movie dimensions.
+// MS2-FUNCTIONAL: convert the decoder's frame metadata into the 0x38-byte output info, taking the dimensions from the
+// movie. This is not a plain copy: the decoder's +0x14 moves to +0x1c, and +0x14/+0x18/+0x34 come from the player.
 // @0x140035480
 void FUN_140035480(void* player, void* destination, const void* source)
 {
-    memcpy(destination, source, 0x38);
-    CriMvAlphaFrameSnapshot* out = (CriMvAlphaFrameSnapshot*)destination;
+    struct FrameView
+    {
+        CriUint64 Field00;
+        CriUint32 Field08;
+        CriUint32 Field0C;
+        CriUint32 Field10;
+        CriUint32 Field14;
+        CriUint32 Field18;
+        CriUint32 Field1C;
+        CriUint64 Field20;
+        CriUint64 Field28;
+        CriUint32 Field30;
+        CriUint32 Field34;
+    };
+    FrameView* out = (FrameView*)destination;
+    const FrameView* in = (const FrameView*)source;
     const CriMvAlphaMovieDimensions* movie = (const CriMvAlphaMovieDimensions*)player;
-    out->Height = movie->Height;
-    out->Width = movie->Width;
-    out->DisplayWidth = movie->DisplayWidth;
+    out->Field00 = in->Field00;
+    out->Field08 = in->Field08;
+    out->Field0C = in->Field0C;
+    out->Field10 = in->Field10;
+    out->Field1C = in->Field14;
+    out->Field20 = in->Field20;
+    out->Field28 = in->Field28;
+    out->Field30 = in->Field30;
+    out->Field34 = movie->DisplayWidth;
+    out->Field14 = movie->Width;
+    out->Field18 = movie->Height;
 }
 
 // MS2-FUNCTIONAL: ask the alpha decoder to copy one frame into the caller's buffers and publish its metadata.
@@ -6596,7 +6619,8 @@ CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo, void
         if (!FUN_140043fe0(decoder, frameInfo))
             return 0;
         FUN_140044050(decoder, frameInfo);
-        if (currentFrame + 1 == targetFrame)
+        // the decoder rewrote frameInfo: compare the frame it now holds, not the one read above
+        if (*(CriSint32*)((CriUint8*)frameInfo + 8) + 1 == targetFrame)
             return FUN_140043f10(decoder, frameInfo) != NULL;
     }
 }
