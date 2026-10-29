@@ -236,20 +236,27 @@ public:
     String displayName;
     unsigned char pad_a0[0x10];
     String conversionMode;
+    unsigned char pad_b8[0x10];
 public:
     explicit GFxIMEManagerWin32(::HWND__* hwnd);
     virtual ~GFxIMEManagerWin32();
+    // GFxManager::InitIME news the manager in the Scaleform heap (IMEManagerBase is a State), so the deleting
+    // destructor 0x1423c8ce0 frees it there too, not through the CRT.
+    static void operator delete(void* p) { Memory::Free(p); }
 };
 
 static_assert(offsetof(GFxIMEManagerWin32, p60) == 0x60, "IME layout");
 static_assert(offsetof(GFxIMEManagerWin32, hwnd) == 0x68, "IME layout");
 static_assert(offsetof(GFxIMEManagerWin32, language) == 0x88, "IME layout");
 static_assert(offsetof(GFxIMEManagerWin32, conversionMode) == 0xb0, "IME layout");
+static_assert(sizeof(GFxIMEManagerWin32) == 0xc8, "IME layout");   // the deleting destructor frees 0xc8 bytes
 
 #ifndef MS2_HOOK_DLL
 // The IMEManagerBase constructor (sfr_gfx_03d) and the manager's own vtable (data_rdata_sf_a): this stand-in class
-// has no IMEManagerBase base, so the constructor builds the base part and installs the exe's 38-slot vtable itself.
+// has no IMEManagerBase base, so the constructor builds the base part and installs the exe's 38-slot vtable itself,
+// and the destructor tears the base part down (~IMEManagerBase).
 extern "C" void FUN_1425b3e90(void* self);
+extern "C" void FUN_1425b3fb0(void* self);
 extern "C" void* DAT_1431383e0[];
 #endif
 
@@ -276,13 +283,16 @@ GFxIMEManagerWin32::~GFxIMEManagerWin32()
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p70))[0](p70, 1);
     if (p78)
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p78))[0](p78, 1);
+#ifndef MS2_HOOK_DLL
+    FUN_1425b3fb0(this);
+#endif
 }
 
 
 }}}
 
 // MS2-PIN: ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z 0x1423c8ce0
-// MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: generated deleting wrapper is 49 bytes shorter; base state destruction is not modeled yet.
+// MS2-FUNCTIONAL ??_GGFxIMEManagerWin32@IME@GFx@Scaleform@@UEAAPEAXI@Z: frees through Memory::Free as the exe does; ~IMEManagerBase runs from the destructor body, before the String members (the exe runs it after them).
 
 namespace Scaleform { namespace GFx { namespace IME {
 
