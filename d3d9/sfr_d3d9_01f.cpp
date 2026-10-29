@@ -31,8 +31,8 @@ bool HAL::BeginScene()
     // a slight negative bias keeps scaled-down text sharp
     float lodBias = -0.75f;
     pDevice->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&lodBias);
-    pDevice->SetSamplerState(0, D3DSAMP_SRGBTEXTURE, 0);
-    pDevice->SetSamplerState(1, D3DSAMP_SRGBTEXTURE, 0);
+    pDevice->SetSamplerState(0, D3DSAMP_ELEMENTINDEX, 0);
+    pDevice->SetSamplerState(1, D3DSAMP_ELEMENTINDEX, 0);
 
     for (unsigned i = 0; i < 8; i++)
         pDevice->SetTextureStageState(i, D3DTSS_TEXCOORDINDEX, i);
