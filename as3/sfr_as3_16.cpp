@@ -797,12 +797,11 @@ void Object::AddDynamicSlotValuePair(const Value& prop_name, const Value& v, Slo
 // ==== destructors ===================================================================================================
 
 namespace Classes {
-    // MS2-FUNCTIONAL: the executable calls the same tail cleanup directly; this definition reaches it through GetTraits().
     // @0x1424df350
     UDBase::~UDBase()
     {
-        GetTraits().DestructTail(*this);
-        Class::~Class();
+        // The traits pointer carries a tag in bit 0; the Class base is destroyed implicitly after this body.
+        reinterpret_cast<const Traits*>(reinterpret_cast<UPInt>(pTraits.GetPtr()) & ~UPInt(1))->DestructTail(*this);
     }
 }
 
