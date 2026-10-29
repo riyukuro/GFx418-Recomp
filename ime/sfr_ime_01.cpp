@@ -2782,11 +2782,52 @@ unsigned long long FUN_1423da730(void* raw, int state)
     return 0;
 }
 
-// MS2-FUNCTIONAL: refreshes the keyboard layout and mode label through the recovered shared language update path.
+// MS2-FUNCTIONAL: reads the active keyboard layout into [+0x198], maps it to the language id at [+0x84] and shows its
+// locale name. For a plain layout (HKL & 0xe0000000 == 0) it sets mode 0x1000000 and shows the "Layout Text" of the
+// registry layout record whose id matches the HKL's high word, else the locale name; for an IME layout it shows the
+// IME's mode text through FUN_1423cc2d0.
 // @0x1423d8870
 void FUN_1423d8870(unsigned long long* manager)
 {
-    FUN_1423d7140(manager);
+    struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+    manager[0x33] = reinterpret_cast<unsigned long long>(GetKeyboardLayout(0));
+    auto** vtable = reinterpret_cast<void**>(manager[0]);
+    const unsigned language = reinterpret_cast<unsigned(*)(void*, short)>(vtable[4])(
+        manager, static_cast<short>(manager[0x33]));
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = language;
+    FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), language);
+    wchar_t locale[0x104];
+    if (!GetLocaleInfoW(static_cast<unsigned short>(manager[0x33]), LOCALE_SLANGUAGE, locale, 0x104)) {
+        reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
+            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
+        void* languageObject = reinterpret_cast<void*>(manager[0xf]);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
+            languageObject, "Unsupported");
+        return;
+    }
+    {
+        String localeText(locale);
+        void* languageObject = reinterpret_cast<void*>(manager[0xf]);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
+            languageObject, localeText.ToCStr());
+    }
+    if (manager[0x33] & 0xe0000000) {
+        FUN_1423cc2d0(manager);
+        return;
+    }
+    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x88) = 0x1000000;
+    const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x160);
+    const auto* records = reinterpret_cast<const LayoutRecord*>(manager[0x2b]);
+    const unsigned layoutId = static_cast<unsigned short>(manager[0x33] >> 16);
+    for (unsigned i = 0; i < count; ++i) {
+        if (records[i].layoutId == layoutId) {
+            String layoutText(records[i].layoutText);
+            FUN_1423ccdc0(manager, &layoutText);
+            return;
+        }
+    }
+    String localeText(locale);
+    FUN_1423ccdc0(manager, &localeText);
 }
 
 // MS2-FUNCTIONAL: resolves the configured language string, activates its executable HKL, and reports activation failure.
@@ -3497,11 +3538,15 @@ void FUN_1423d7e80(void* raw, const char* command, const char* value)
     DWORD conversion = 0;
     DWORD sentence = 0;
     cx18_ImmGetConversionStatus(context, &conversion, &sentence);
-    const bool enable = std::strcmp(value, "true") == 0;
+    // "false" clears the flag, "true" sets it; any other value leaves it alone.
+    const bool isFalse = std::strcmp(value, "false") == 0;
+    const bool isTrue = std::strcmp(value, "true") == 0;
     if (std::strcmp(command, "StatusWindow_OnShape") == 0) {
-        conversion = enable ? (conversion | 8u) : (conversion & ~8u);
+        if (isFalse) conversion &= ~8u;
+        if (isTrue) conversion |= 8u;
     } else if (std::strcmp(command, "StatusWindow_OnInputMode") == 0) {
-        conversion = enable ? (conversion | 1u) : (conversion & ~1u);
+        if (isFalse) conversion &= ~1u;
+        if (isTrue) conversion |= 1u;
         if (std::strcmp(value, "Hiragana") == 0) {
             if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
             conversion = (conversion & ~2u) | 1u;
@@ -3515,12 +3560,14 @@ void FUN_1423d7e80(void* raw, const char* command, const char* value)
             if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
             conversion = (conversion & ~8u) | 3u;
         } else if (std::strcmp(value, "Half-Width Alphanumeric") == 0) {
+            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
             conversion &= ~9u;
         } else if (std::strcmp(value, "DirectInput") == 0 && cx18_ImmGetOpenStatus(context)) {
             cx18_ImmSetOpenStatus(context, FALSE);
         }
     } else if (std::strcmp(command, "StatusWindow_OnSymbol") == 0) {
-        conversion = enable ? (conversion | 0x400u) : (conversion & ~0x400u);
+        if (isFalse) conversion &= ~0x400u;
+        if (isTrue) conversion |= 0x400u;
     }
     cx18_ImmSetConversionStatus(context, conversion, sentence);
     cx18_ImmReleaseContext(hwnd, context);
@@ -3567,7 +3614,7 @@ void FUN_1423d5910(void* raw, const char* requested)
     }
 }
 
-// MS2-FUNCTIONAL: forwards StatusWindow mode updates through the recovered IMM32 handler used by the sibling event entry point.
+// MS2-FUNCTIONAL: the exe body is instruction-for-instruction the same as FUN_1423d7e80 (StatusWindow mode updates through IMM32).
 // @0x1423d61f0
 void FUN_1423d61f0(void* manager, const char* command, const char* value)
 {
@@ -4514,11 +4561,25 @@ void FUN_1423cc7c0(void* raw, unsigned conversion)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
-// MS2-FUNCTIONAL: reuses the recovered candidate-window geometry bridge for the input-window reposition event.
+// MS2-FUNCTIONAL: asks the IME manager for the cursor rect at the given offset and calls
+// RepositionCandWindow(cursor.x1, cursor.y2, cursor.y2 - cursor.y1) on the movie's external interface.
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
 {
-    FUN_1423d5060(manager, mode);
+    auto* self = static_cast<unsigned char*>(manager);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, mode);
+    Scaleform::GFx::Value args[3];
+    args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
+    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1));
+    Scaleform::GFx::Value result;
+    if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
+            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result, args, 3);
 }
 
 // MS2-FUNCTIONAL: converts the IMM composition attribute mask into the two formatted GFx composition update calls.
