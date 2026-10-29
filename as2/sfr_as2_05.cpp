@@ -1053,7 +1053,7 @@ void FunctionProto::GlobalCtor(const FnCall& fn)
     }
     else
     {
-        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env);
+        Ptr<Object> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);   // the exe builds a plain Object (0x14291f810)
         fn.Result->SetAsObject(pfunc.GetPtr());
     }
 }
@@ -1858,7 +1858,7 @@ SF_NOINLINE bool Environment::FindAndGetVariableRaw(const GetVarParams& params) 
     else
     {
         if (!(params.ExcludeFlags & 4))
-            LogScriptError("GetVariable failed: can't resolve the path \"%s\"", params.VarName.ToCStr());
+            LogScriptError(" GetVariable failed: can't resolve the path \"%s\"", params.VarName.ToCStr());
         found = false;
     }
     return found;
