@@ -171,6 +171,7 @@ CriSint32 FUN_14003a3e0(void* object, const char* key);
 CriSint32 FUN_14003a45c(void* object);
 CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
 void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
+void     FUN_14003af50(void* object, CriSint32 row, CriSint32 field, CriUtfRtvCell* cell);
 void     criUtfRtv_Destroy(CriUint64* table);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool  FUN_140043d40(void* decoder);
@@ -3171,9 +3172,9 @@ void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFra
             CriUint64 systemCount = 0;
             CriUint64 systemUnit = 1;
             player->GetTime(systemCount, systemUnit);
-            double currentMs = systemUnit ? (double)systemCount / (double)systemUnit : 0.0;
-            double frameMs = unit ? (double)count / (double)unit : 0.0;
-            CriFloat32 elapsed = (CriFloat32)((currentMs - frameMs) * 1000.0);
+            CriFloat32 currentMs = (CriFloat32)systemCount / (CriFloat32)systemUnit;
+            CriFloat32 frameMs = (CriFloat32)count / (CriFloat32)unit;
+            CriFloat32 elapsed = (currentMs - frameMs) * 1000.0f;
             CriFloat32* timing = (CriFloat32*)player->playback_info;
             if (timing[14] < elapsed)
                 timing[14] = elapsed;
@@ -3290,7 +3291,9 @@ void FUN_14002fbe0(void* player, CriMvStreamingParameters* output)
     output->is_playable = 1;
     if (dest[0x11] == 2 && DAT_143b27948 == 0)
         output->is_playable = 0;
-    output->format_ver = stream[0x290 / 4];
+    // The exe copies eight alpha dwords (0x274-0x290) to +0x264, so the last lands at +0x280; +0x284 keeps the
+    // stream[0x40] flag stored above.
+    dest[0xa0] = stream[0x290 / 4];
 }
 
 // MS2-FUNCTIONAL: derive the 32-byte CRI USM key bytes, their inverted copy and the byte mask from the key seed.
@@ -4384,6 +4387,7 @@ void FUN_14002f610(CriUint32* object)
 {
     if (!object)
         return;
+    object[0] = 0;   // the exe clears the first dword before the status check; Status is left as is
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)object;
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)object;
     struct OwnedHeapFields
@@ -4403,7 +4407,6 @@ void FUN_14002f610(CriUint32* object)
     };
     if (state->Status != 0 && state->Status != 7)
         FUN_140037950(object, "E05063009M: Don't call criMvPly_Destroy during playback.", state->Status);
-    state->Status = 0;
     FUN_140030c70(object);
     FUN_140031f00(object);
     if (queues->ReadBuffer)
@@ -4445,6 +4448,12 @@ void FUN_14002f610(CriUint32* object)
     {
         void* work = heapFields->Work;
         heapFields->Work = NULL;
+        FUN_140027fb4(heapFields->Heap, work);
+    }
+    if (heapFields->Heap && owned->Work)
+    {
+        void* work = owned->Work;
+        owned->Work = NULL;
         FUN_140027fb4(heapFields->Heap, work);
     }
     if (heapFields->Heap)
@@ -4829,7 +4838,6 @@ void FUN_140034730(void* player)
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)player;
     struct HeaderGateView { CriUint8 Reserved[0xd64]; CriSint32 HeaderChecked; };
     struct HeaderSizeView { CriUint8 Reserved[0x8b8]; CriUint32 Size; };
-    FUN_140037850(player);
     void* demux = state->Demux;
     if (FUN_140044f8c(demux) == 4)
         crimvply_transitErrorState(player, (void*)"Status of demux is ERROR.");
@@ -4844,7 +4852,6 @@ void FUN_140034730(void* player)
             if (!record.Chunk || record.Type < 4)
             {
                 FUN_1400467a8(queues->InputBuffer, 1, &record);
-                FUN_140037880(player);
                 return;
             }
             const CriUint8* signature = (const CriUint8*)record.Chunk;
@@ -4853,7 +4860,6 @@ void FUN_140034730(void* player)
             {
                 FUN_1400467a8(queues->InputBuffer, 1, &record);
                 FUN_140037950(player, "E07020701M: Input is not CRI Movie data.", 0);
-                FUN_140037880(player);
                 return;
             }
             FUN_1400467a8(queues->InputBuffer, 1, &record);
@@ -4865,12 +4871,13 @@ void FUN_140034730(void* player)
         {
             FUN_140042880(((CriMvDecoderHandleFields*)player)->AudioManager);
             if (((CriMvDecoderHandleFields*)player)->VideoDecoder)
+            {
                 FUN_140044790(((CriMvDecoderHandleFields*)player)->VideoDecoder);
-            if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
-                FUN_140043e20(((CriMvDecoderHandleFields*)player)->AlphaDecoder);
+                if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+                    FUN_140043e20(((CriMvDecoderHandleFields*)player)->AlphaDecoder);
+            }
         }
     }
-    FUN_140037880(player);
 }
 
 // MS2-FUNCTIONAL: parse sample rate, channel count, sample count, and buffer size from an audio header.
@@ -5143,31 +5150,66 @@ CriBool FUN_140033030(void* player)
             FUN_1400467a8(queue, 1, &chunk);
             return 1;
         }
-        if (recordType == 3 && contents && contentSize > 0)
+        if (recordType == 3)
         {
             CriUint32* metadataRecords = (CriUint32*)((CriUint8*)player + 0xe80);
             ++*metadataRecords;
-            void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
-            CriUint32 count = (CriUint32)FUN_14003a45c(table);
             if (tableId == 0x40414c50)
             {
                 memcpy((CriUint8*)player + 0xe98, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xea0, &contentSize, sizeof(contentSize));
+                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
+                CriUint32 count = (CriUint32)FUN_14003a45c(table);
                 memcpy((CriUint8*)player + 0xea4, &count, sizeof(count));
+                criUtfRtv_Destroy((CriUint64*)table);
             }
             else if (tableId == 0x40435545)
             {
+                // @CUE: fill the event table (allocated by FUN_140031da0) with each cue point's name, time,
+                // type and parameter.
+                struct EventLimitView { CriUint8 Reserved[0x8ac]; CriUint32 Count; CriUint64 TimeUnit; };
+                const EventLimitView* limit = (const EventLimitView*)player;
                 memcpy((CriUint8*)player + 0xea8, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xeb0, &contentSize, sizeof(contentSize));
-                memcpy((CriUint8*)player + 0xeb8, &count, sizeof(count));
+                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
+                movie->cuepoint.num_eventpoint = (CriUint32)FUN_14003a45c(table);
+                if (movie->cuepoint.num_eventpoint < limit->Count)
+                    for (;;) {}
+                CriSint32 nameField = FUN_14003a3e0(table, "name");
+                CriSint32 paramField = FUN_14003a3e0(table, "parameter");
+                CriSint32 timeField = FUN_14003a3e0(table, "time");
+                for (CriUint32 i = 0; i < movie->cuepoint.num_eventpoint; ++i)
+                {
+                    CriUtfRtvCell cell;
+                    FUN_14003af50(table, i, nameField, &cell);
+                    CriMvEventPoint* event = &movie->cuepoint.eventtable[i];
+                    CriChar8* data = NULL;
+                    CriUint32 size = 0;
+                    memcpy(&data, cell.Value, sizeof(data));
+                    memcpy(&size, cell.Value + 8, sizeof(size));
+                    event->size_name = size;
+                    event->cue_name = size ? data : NULL;
+                    event->time = (CriUint64)FUN_14003a648(table, i, timeField);
+                    event->tunit = limit->TimeUnit;
+                    event->type = FUN_14003a894(table, i, "cue_type");
+                    FUN_14003af50(table, i, paramField, &cell);
+                    memcpy(&data, cell.Value, sizeof(data));
+                    memcpy(&size, cell.Value + 8, sizeof(size));
+                    event->size_param = size;
+                    event->param_string = size ? data : NULL;
+                    event->cnt_callback = 0;
+                }
+                criUtfRtv_Destroy((CriUint64*)table);
             }
             else if (tableId == 0x40534656)
             {
                 memcpy((CriUint8*)player + 0xe88, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xe90, &contentSize, sizeof(contentSize));
+                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
+                CriUint32 count = (CriUint32)FUN_14003a45c(table);
                 memcpy((CriUint8*)player + 0xe94, &count, sizeof(count));
+                criUtfRtv_Destroy((CriUint64*)table);
             }
-            criUtfRtv_Destroy((CriUint64*)table);
         }
         else if (recordType == 2)
         {
