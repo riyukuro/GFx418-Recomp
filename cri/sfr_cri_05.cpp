@@ -1,8 +1,9 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): CRI MvCore / Sofdec vendor middleware (YUV->RGB
 // converters, MPEG-2 video decode kernels and the CRI support layer), written from the executable. The CRI library was
-// built with VS2008 SP1 and can only be functional under our toolset; every function here is a behaviour-equivalent
-// transcription of the decompile.
+// built with VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake): keep it C++03 (no auto,
+// decltype, variadic templates, brace-init or nullptr). Every function is a behaviour-equivalent transcription.
 // MS2-UNIT: sfr_cri_05
+// MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14004da40-0x140054170 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -433,7 +434,7 @@ void FUN_14004da40(void)
   double d_v10;
   
   FUN_14004c7c0(&DAT_143a48740,&DAT_143bac640);
-  l_v1 = (cri_nr<decltype(l_v1)>::t)DAT_143babde0;
+  l_v1 = cri_conv(DAT_143babde0);
   l_v5 = DAT_143babdd8 - DAT_143babdd0;
   l_v7 = DAT_143babde0 - DAT_143babdd8;
   l_v6 = DAT_143babde0 - DAT_143babdd0;
@@ -488,7 +489,7 @@ void FUN_14004dc30(longlong a1)
 // @0x14004dc70
 void FUN_14004dc70(void)
 {
-  _DAT_143bad690 = (cri_nr<decltype(_DAT_143bad690)>::t)"\nCRI MvCore/PCx64 Ver.1.00 Build:Jan 13 2012 18:30:47\n";
+  _DAT_143bad690 = cri_conv("\nCRI MvCore/PCx64 Ver.1.00 Build:Jan 13 2012 18:30:47\n");
   return;
 }
 
@@ -561,14 +562,14 @@ void FUN_14004ddc0(void)
   u_v2 = 0;
   memset(&DAT_143bad6b0,0,0x180);
   i_v1 = 0;
-  _Dst = (cri_nr<decltype(_Dst)>::t)&DAT_143bad830;
+  _Dst = cri_conv(&DAT_143bad830);
   do {
     *_Dst = (char)i_v1;
     i_v1 = i_v1 + 1;
     _Dst = _Dst + 1;
   } while (i_v1 < 0x100);
   memset(_Dst,0xff,0x180);
-  DAT_143ffd4e8 = (cri_nr<decltype(DAT_143ffd4e8)>::t)&DAT_143bad830;
+  DAT_143ffd4e8 = cri_conv(&DAT_143bad830);
   return;
 }
 
@@ -663,7 +664,7 @@ longlong FUN_14004df90(void)
   int i_v2;
   
   i_v2 = 0;
-  l_v1 = (cri_nr<decltype(l_v1)>::t)DAT_143badb18;
+  l_v1 = cri_conv(DAT_143badb18);
   if (0 < DAT_143badb10) {
     do {
       if (CriAt<int>(l_v1, 0x1538) == 1) {
@@ -695,7 +696,7 @@ void FUN_14004e030(int a1,cri_u32 a2)
   
   if (0 < DAT_143badb10) {
     u_v2 = (ulonglong)((DAT_143badb10 - 1U >> 2) + 1);
-    l_v1 = (cri_nr<decltype(l_v1)>::t)DAT_143badb18;
+    l_v1 = cri_conv(DAT_143badb18);
     do {
       if (CriAt<int>(l_v1, 0x1538) == 2) {
         *(cri_u32 *)(l_v1 + 0x1540 + (longlong)a1 * 4) = a2;
@@ -736,18 +737,18 @@ void FUN_14004e100(longlong a1)
 {
   longlong l_v1;
   
-  l_v1 = (cri_nr<decltype(l_v1)>::t)DAT_143badb08;
-  CriAt<cri_u64>(a1, 0x1298) = (cri_nr<decltype(CriAt<cri_u64>(a1, 0x1298))>::t)DAT_143d74a60;
+  l_v1 = cri_conv(DAT_143badb08);
+  CriAt<cri_u64>(a1, 0x1298) = cri_conv(DAT_143d74a60);
   CriAt<longlong>(a1, 0x12a0) = DAT_143d74a40 + -0x10;
   CriAt<longlong>(a1, 0x12a8) = DAT_143d74a10 + -0x20;
   CriAt<longlong>(a1, 0x12b0) = DAT_143d74a58 + -0x20;
-  CriAt<cri_u64>(a1, 0x12b8) = (cri_nr<decltype(CriAt<cri_u64>(a1, 0x12b8))>::t)DAT_143d749b8;
-  CriAt<cri_u64>(a1, 0x12c0) = (cri_nr<decltype(CriAt<cri_u64>(a1, 0x12c0))>::t)DAT_143d749c0;
-  CriAt<cri_u64>(a1, 0x12c8) = (cri_nr<decltype(CriAt<cri_u64>(a1, 0x12c8))>::t)DAT_143d74a50;
+  CriAt<cri_u64>(a1, 0x12b8) = cri_conv(DAT_143d749b8);
+  CriAt<cri_u64>(a1, 0x12c0) = cri_conv(DAT_143d749c0);
+  CriAt<cri_u64>(a1, 0x12c8) = cri_conv(DAT_143d74a50);
   CriAt<longlong>(a1, 0x12e8) = l_v1 + 0x12a0;
   CriAt<longlong>(a1, 0x12f0) = l_v1 + 0x12c0;
   CriAt<longlong>(a1, 0x12d8) = l_v1 + 0x1100;
-  CriAt<cri_u64>(a1, 0x12f8) = (cri_nr<decltype(CriAt<cri_u64>(a1, 0x12f8))>::t)DAT_143ffd4e8;
+  CriAt<cri_u64>(a1, 0x12f8) = cri_conv(DAT_143ffd4e8);
   FUN_14004de60(a1);
   return;
 }
@@ -818,7 +819,7 @@ cri_u64 FUN_14004e2f0(longlong a1,int a2,cri_u32 a3)
   
   if (a1 == 0) {
     FUN_14004e030(a2,a3);
-    pu_v3 = (cri_nr<decltype(pu_v3)>::t)&DAT_143badab0;
+    pu_v3 = cri_conv(&DAT_143badab0);
   }
   else {
     i_v1 = FUN_14004e0a0(a1);
@@ -861,7 +862,7 @@ int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
   int i_v2;
   cri_u64 u_v3;
   
-  _DAT_143bad6a8 = (cri_nr<decltype(_DAT_143bad6a8)>::t)"\nCRI MPV/PCx64 Ver.2.080 Build:Jan 13 2012 18:29:27\n";
+  _DAT_143bad6a8 = cri_conv("\nCRI MPV/PCx64 Ver.2.080 Build:Jan 13 2012 18:29:27\n");
   i_v2 = FUN_14004dd30();
   if (i_v2 != 0) {
     if (i_v2 == -0xfc00fb) {
@@ -871,7 +872,7 @@ int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
   }
   u_v3 = FUN_14004ddb0(a2);
   FUN_14004e1c0(a1,u_v3);
-  l_v1 = (cri_nr<decltype(l_v1)>::t)DAT_143badb08;
+  l_v1 = cri_conv(DAT_143badb08);
   FUN_14004ff00();
   FUN_140050fc0();
   FUN_140050bc0();
@@ -970,7 +971,7 @@ void FUN_14004e610(void)
 {
   int i_v1;
   
-  i_v1 = (cri_nr<decltype(i_v1)>::t)DAT_143badb24;
+  i_v1 = cri_conv(DAT_143badb24);
   if (DAT_143badb24 == 0) {
     memset(&DAT_143ffbce0,0,0x1800);
   }
@@ -1277,7 +1278,7 @@ cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
   int i_v4;
   
   i_v4 = 0;
-  pi_v1 = (cri_nr<decltype(pi_v1)>::t)&DAT_143ffbce8;
+  pi_v1 = cri_conv(&DAT_143ffbce8);
   do {
     if (*pi_v1 == 0) break;
     pi_v1 = pi_v1 + 0x10;
@@ -1288,13 +1289,13 @@ cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
   }
   l_v2 = (longlong)i_v4 * 0x40;
   pu_v3 = (cri_u64 *)(&DAT_143ffbce0 + l_v2);
-  *pu_v3 = (cri_nr<decltype(*pu_v3)>::t)&DAT_143a487e0;
+  *pu_v3 = cri_conv(&DAT_143a487e0);
   *(cri_u64 *)(&DAT_143ffbd00 + l_v2) = a1;
-  *(cri_u8 **)(&DAT_143ffbcf0 + l_v2) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143ffbcf0 + l_v2))>::t)&DAT_1431ba2e8;
+  *(cri_u8 **)(&DAT_143ffbcf0 + l_v2) = cri_conv(&DAT_1431ba2e8);
   (&DAT_143ffbce8)[(longlong)i_v4 * 0x10] = 1;
   *(cri_u32 *)(&DAT_143ffbd08 + l_v2) = a2;
   *(cri_u64 **)(&DAT_143ffbd18 + l_v2) = pu_v3;
-  *(cri_u8 **)(&DAT_143ffbd10 + l_v2) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143ffbd10 + l_v2))>::t)&FUN_14004e5a0;
+  *(cri_u8 **)(&DAT_143ffbd10 + l_v2) = cri_conv(&FUN_14004e5a0);
   FUN_14004e770(pu_v3);
   return pu_v3;
 }
@@ -1471,7 +1472,7 @@ void FUN_14004ef80(void)
 {
   int i_v1;
   
-  i_v1 = (cri_nr<decltype(i_v1)>::t)DAT_143badb30;
+  i_v1 = cri_conv(DAT_143badb30);
   if (DAT_143badb30 == 0) {
     memset(&DAT_143fe84e0,0,0x13800);
   }
@@ -1911,7 +1912,7 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3)
 // @0x14004f8a0
 void FUN_14004f8a0(void)
 {
-  _DAT_143badb28 = (cri_nr<decltype(_DAT_143badb28)>::t)"\nSJ/PCx64 Ver.6.48 Build:Jan 13 2012 18:30:46\n";
+  _DAT_143badb28 = cri_conv("\nSJ/PCx64 Ver.6.48 Build:Jan 13 2012 18:30:46\n");
   FUN_140067700();
   FUN_140067790();
   FUN_14004ef80();
@@ -1940,7 +1941,7 @@ cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
   int i_v4;
   
   i_v4 = 0;
-  pi_v3 = (cri_nr<decltype(pi_v3)>::t)&DAT_143fe84e8;
+  pi_v3 = cri_conv(&DAT_143fe84e8);
   do {
     if (*pi_v3 == 0) break;
     pi_v3 = pi_v3 + 0x1a;
@@ -1951,13 +1952,13 @@ cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
   }
   l_v1 = (longlong)i_v4 * 0x68;
   pu_v2 = (cri_u64 *)(&DAT_143fe84e0 + l_v1);
-  *pu_v2 = (cri_nr<decltype(*pu_v2)>::t)&DAT_143a48840;
+  *pu_v2 = cri_conv(&DAT_143a48840);
   *(cri_u64 *)(&DAT_143fe8508 + l_v1) = a1;
-  *(cri_u8 **)(&DAT_143fe84f0 + l_v1) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143fe84f0 + l_v1))>::t)&DAT_1431ba4f8;
+  *(cri_u8 **)(&DAT_143fe84f0 + l_v1) = cri_conv(&DAT_1431ba4f8);
   (&DAT_143fe84e8)[(longlong)i_v4 * 0x1a] = 1;
   *(cri_u32 *)(&DAT_143fe8510 + l_v1) = a2;
   *(cri_u32 *)(&DAT_143fe8514 + l_v1) = a3;
-  *(cri_u8 **)(&DAT_143fe8528 + l_v1) = (cri_nr<decltype(*(cri_u8 **)(&DAT_143fe8528 + l_v1))>::t)&FUN_14004eee0;
+  *(cri_u8 **)(&DAT_143fe8528 + l_v1) = cri_conv(&FUN_14004eee0);
   *(cri_u64 **)(&DAT_143fe8530 + l_v1) = pu_v2;
   *(cri_u64 *)(&DAT_143fe8538 + l_v1) = 0;
   *(cri_u64 *)(&DAT_143fe8540 + l_v1) = 0;
@@ -1981,11 +1982,11 @@ cri_u64 * FUN_14004f9a0(void *a1,uint a2)
   }
   memset(a1,0,(ulonglong)a2);
   pu_v1 = (cri_u64 *)((longlong)a1 + 3U & 0xfffffffffffffffc);
-  *pu_v1 = (cri_nr<decltype(*pu_v1)>::t)&DAT_143a48840;
+  *pu_v1 = cri_conv(&DAT_143a48840);
   CriAt<cri_u32>(pu_v1, 0x8) = 1;
-  pu_v1[2] = (cri_nr<decltype(pu_v1[2])>::t)&DAT_1431ba4f8;
+  pu_v1[2] = cri_conv(&DAT_1431ba4f8);
   pu_v1[10] = (cri_u64)pu_v1;
-  pu_v1[9] = (cri_nr<decltype(pu_v1[9])>::t)&FUN_14004eee0;
+  pu_v1[9] = cri_conv(&FUN_14004eee0);
   pu_v1[0xb] = 0;
   pu_v1[0xc] = 0;
   FUN_14004f150(pu_v1);
@@ -2256,7 +2257,7 @@ cri_u64 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
   cri_u64 u_v3;
   
   if (a1 == 0) {
-    pu_v2 = (cri_nr<decltype(pu_v2)>::t)&DAT_143badb38;
+    pu_v2 = cri_conv(&DAT_143badb38);
   }
   else {
     i_v1 = FUN_14004e0a0(a1);
@@ -2279,10 +2280,10 @@ cri_u64 FUN_140050000(longlong a1,cri_u64 *a2)
   cri_u64 u_v2;
   
   if (a1 == 0) {
-    *a2 = (cri_nr<decltype(*a2)>::t)DAT_143badb38;
-    a2[1] = (cri_nr<decltype(a2[1])>::t)DAT_143badb40;
-    a2[2] = (cri_nr<decltype(a2[2])>::t)DAT_143badb48;
-    a2[3] = (cri_nr<decltype(a2[3])>::t)DAT_143badb50;
+    *a2 = cri_conv(DAT_143badb38);
+    a2[1] = cri_conv(DAT_143badb40);
+    a2[2] = cri_conv(DAT_143badb48);
+    a2[3] = cri_conv(DAT_143badb50);
     return 0;
   }
   i_v1 = FUN_14004e0a0(a1);
@@ -2311,7 +2312,7 @@ void FUN_1400500b0(uint a1,longlong a2)
   DAT_143c490e8 = a1;
   if (0 < (int)a1) {
     u_v3 = (ulonglong)a1;
-    pu_v1 = (cri_nr<decltype(pu_v1)>::t)&DAT_143badb60;
+    pu_v1 = cri_conv(&DAT_143badb60);
     do {
       pu_v2 = pu_v1 + 3;
       u_v3 = u_v3 - 1;
@@ -2338,7 +2339,7 @@ void FUN_140050100(void)
   u_v3 = 0;
   u_v4 = u_v3;
   u_v6 = u_v3;
-  i_v2 = (cri_nr<decltype(i_v2)>::t)DAT_143c490e8;
+  i_v2 = cri_conv(DAT_143c490e8);
   if (0 < DAT_143c490e8) {
     do {
       l_v1 = *(longlong *)(u_v4 + DAT_143c490e0);
@@ -2353,7 +2354,7 @@ void FUN_140050100(void)
           i_v2 = *(int *)((longlong)&DAT_143badbb8 + 4 + u_v3);
         }
         FUN_140067fc0(l_v1,i_v2);
-        i_v2 = (cri_nr<decltype(i_v2)>::t)DAT_143c490e8;
+        i_v2 = cri_conv(DAT_143c490e8);
       }
       u_v5 = (int)u_v6 + 1;
       u_v3 = u_v3 + 0xc;
@@ -2446,7 +2447,7 @@ int * FUN_1400502b0(void)
   int *_Dst;
   
   i_v1 = 0;
-  _Dst = (cri_nr<decltype(_Dst)>::t)DAT_143c490f0;
+  _Dst = cri_conv(DAT_143c490f0);
   do {
     if (*_Dst == 0) {
       if (0x1f < i_v1) {
@@ -2579,9 +2580,9 @@ void FUN_140050520(void)
     DAT_143badbdc = 3;
     FUN_1400677f0();
     u_v5 = 0;
-    DAT_143badb84 = (cri_nr<decltype(DAT_143badb84)>::t)DAT_143badbdc;
+    DAT_143badb84 = cri_conv(DAT_143badbdc);
     if (0 < DAT_143badbdc) {
-      pu_v4 = (cri_nr<decltype(pu_v4)>::t)(&DAT_143badbb8 + 4);
+      pu_v4 = cri_conv((&DAT_143badbb8 + 4));
       u_v7 = u_v5;
       while( true ) {
         l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x100 + 0x10,0x7c);  // per-thread work area at entry + 0x10
@@ -2626,11 +2627,11 @@ void FUN_140050670(void)
     l_v4 = (longlong)(DAT_143badbdc + -1);
     if (-1 < DAT_143badbdc + -1) {
       l_v3 = l_v4 << 8;
-      l_v2 = (cri_nr<decltype(l_v2)>::t)DAT_143c490e0;
+      l_v2 = cri_conv(DAT_143c490e0);
       do {
         if (*(longlong *)(l_v3 + l_v2) != 0) {
           FUN_140067a90(*(longlong *)(l_v3 + l_v2));
-          l_v2 = (cri_nr<decltype(l_v2)>::t)DAT_143c490e0;
+          l_v2 = cri_conv(DAT_143c490e0);
           *(cri_u64 *)(l_v3 + DAT_143c490e0) = 0;
         }
         l_v3 = l_v3 + -0x100;
@@ -2725,7 +2726,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   longlong local_res20;
   longlong loc_88 [9];
   
-  i_v14 = (cri_nr<decltype(i_v14)>::t)DAT_143badb84;
+  i_v14 = cri_conv(DAT_143badb84);
   u_v12 = 0;
   CriAt<cri_u32>(a4, 0x20) = 0;
   CriAt<cri_u32>(a4, 0x24) = 0;
@@ -2766,14 +2767,14 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   }
   CriAt<cri_u32>(a1, 0x108) = CriAt<cri_u32>(a1, 0x10c);
   if (DAT_143badbdc < i_v14) {
-    i_v14 = (cri_nr<decltype(i_v14)>::t)DAT_143badbdc;
+    i_v14 = cri_conv(DAT_143badbdc);
   }
   l_v13 = (longlong)i_v14;
   if (0 < l_v13) {
     i_v14 = 1;
     pl_v10 = loc_88 + 3;
     local_res20 = l_v13;
-    l_v7 = (cri_nr<decltype(l_v7)>::t)DAT_143c490e0;
+    l_v7 = cri_conv(DAT_143c490e0);
     u_v9 = u_v12;
     do {
       if (*(uint *)(l_v7 + 0xc + u_v9) < 0x20) {
@@ -2784,7 +2785,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
         *pl_v10 = l_v7;
         u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),FUN_140050770,
                               loc_88 + (longlong)i_v14 * 2);
-        l_v7 = (cri_nr<decltype(l_v7)>::t)DAT_143c490e0;
+        l_v7 = cri_conv(DAT_143c490e0);
         *(cri_u32 *)(DAT_143c490e0 + 8 + u_v9) = u_v4;
       }
       else {
@@ -3027,7 +3028,7 @@ void FUN_140050f90(cri_u64 *a1,ulonglong a2)
   l_v1 = (longlong)i_v2;
   if (0 < i_v2) {
     for (; l_v1 != 0; l_v1 = l_v1 + -1) {
-      *a1 = (cri_nr<decltype(*a1)>::t)&FUN_140050f80;
+      *a1 = cri_conv(&FUN_140050f80);
       a1 = a1 + 1;
     }
   }
@@ -3048,36 +3049,36 @@ void FUN_140050fc0(void)
   FUN_140050f90(&DAT_143c49350,0x50);
   FUN_140050f90(&DAT_143c49300,0x50);
   FUN_140050f90(&DAT_143c49160,0x50);
-  _DAT_143c493b8 = (cri_nr<decltype(_DAT_143c493b8)>::t)FUN_142ccc860;
-  _DAT_143c493a8 = (cri_nr<decltype(_DAT_143c493a8)>::t)FUN_142cccb30;
-  _DAT_143c491b8 = (cri_nr<decltype(_DAT_143c491b8)>::t)&LAB_142ccc850;
-  _DAT_143c491c0 = (cri_nr<decltype(_DAT_143c491c0)>::t)&LAB_142ccc850;
-  _DAT_143c491c8 = (cri_nr<decltype(_DAT_143c491c8)>::t)&LAB_142ccc850;
-  _DAT_143c491d0 = (cri_nr<decltype(_DAT_143c491d0)>::t)&LAB_142ccc850;
-  _DAT_143c49208 = (cri_nr<decltype(_DAT_143c49208)>::t)&LAB_142ccc850;
-  _DAT_143c49210 = (cri_nr<decltype(_DAT_143c49210)>::t)&LAB_142ccc850;
-  _DAT_143c49218 = (cri_nr<decltype(_DAT_143c49218)>::t)&LAB_142ccc850;
-  _DAT_143c49220 = (cri_nr<decltype(_DAT_143c49220)>::t)&LAB_142ccc850;
-  _DAT_143c49260 = (cri_nr<decltype(_DAT_143c49260)>::t)FUN_142ccca50;
-  _DAT_143c49268 = (cri_nr<decltype(_DAT_143c49268)>::t)FUN_142ccca50;
-  _DAT_143c492c8 = (cri_nr<decltype(_DAT_143c492c8)>::t)FUN_142ccca90;
-  _DAT_143c493b0 = (cri_nr<decltype(_DAT_143c493b0)>::t)FUN_142cccb30;
-  _DAT_143c49408 = (cri_nr<decltype(_DAT_143c49408)>::t)FUN_142cccad0;
-  _DAT_143c49118 = (cri_nr<decltype(_DAT_143c49118)>::t)FUN_140068cc0;
-  _DAT_143c49120 = (cri_nr<decltype(_DAT_143c49120)>::t)FUN_140068cc0;
-  _DAT_143c49128 = (cri_nr<decltype(_DAT_143c49128)>::t)FUN_140068d50;
-  _DAT_143c49448 = (cri_nr<decltype(_DAT_143c49448)>::t)FUN_140068990;
-  _DAT_143c49450 = (cri_nr<decltype(_DAT_143c49450)>::t)FUN_140068990;
-  _DAT_143c49458 = (cri_nr<decltype(_DAT_143c49458)>::t)FUN_140068990;
-  _DAT_143c49460 = (cri_nr<decltype(_DAT_143c49460)>::t)FUN_140068990;
-  _DAT_143c49498 = (cri_nr<decltype(_DAT_143c49498)>::t)FUN_140068990;
-  _DAT_143c494a0 = (cri_nr<decltype(_DAT_143c494a0)>::t)FUN_140068990;
-  _DAT_143c494a8 = (cri_nr<decltype(_DAT_143c494a8)>::t)FUN_140068990;
-  _DAT_143c494b0 = (cri_nr<decltype(_DAT_143c494b0)>::t)FUN_140068990;
-  _DAT_143c49360 = (cri_nr<decltype(_DAT_143c49360)>::t)FUN_140068db0;
-  _DAT_143c49368 = (cri_nr<decltype(_DAT_143c49368)>::t)FUN_140068db0;
-  _DAT_143c49318 = (cri_nr<decltype(_DAT_143c49318)>::t)FUN_140068e70;
-  _DAT_143c49178 = (cri_nr<decltype(_DAT_143c49178)>::t)FUN_140068f30;
+  _DAT_143c493b8 = cri_conv(FUN_142ccc860);
+  _DAT_143c493a8 = cri_conv(FUN_142cccb30);
+  _DAT_143c491b8 = cri_conv(&LAB_142ccc850);
+  _DAT_143c491c0 = cri_conv(&LAB_142ccc850);
+  _DAT_143c491c8 = cri_conv(&LAB_142ccc850);
+  _DAT_143c491d0 = cri_conv(&LAB_142ccc850);
+  _DAT_143c49208 = cri_conv(&LAB_142ccc850);
+  _DAT_143c49210 = cri_conv(&LAB_142ccc850);
+  _DAT_143c49218 = cri_conv(&LAB_142ccc850);
+  _DAT_143c49220 = cri_conv(&LAB_142ccc850);
+  _DAT_143c49260 = cri_conv(FUN_142ccca50);
+  _DAT_143c49268 = cri_conv(FUN_142ccca50);
+  _DAT_143c492c8 = cri_conv(FUN_142ccca90);
+  _DAT_143c493b0 = cri_conv(FUN_142cccb30);
+  _DAT_143c49408 = cri_conv(FUN_142cccad0);
+  _DAT_143c49118 = cri_conv(FUN_140068cc0);
+  _DAT_143c49120 = cri_conv(FUN_140068cc0);
+  _DAT_143c49128 = cri_conv(FUN_140068d50);
+  _DAT_143c49448 = cri_conv(FUN_140068990);
+  _DAT_143c49450 = cri_conv(FUN_140068990);
+  _DAT_143c49458 = cri_conv(FUN_140068990);
+  _DAT_143c49460 = cri_conv(FUN_140068990);
+  _DAT_143c49498 = cri_conv(FUN_140068990);
+  _DAT_143c494a0 = cri_conv(FUN_140068990);
+  _DAT_143c494a8 = cri_conv(FUN_140068990);
+  _DAT_143c494b0 = cri_conv(FUN_140068990);
+  _DAT_143c49360 = cri_conv(FUN_140068db0);
+  _DAT_143c49368 = cri_conv(FUN_140068db0);
+  _DAT_143c49318 = cri_conv(FUN_140068e70);
+  _DAT_143c49178 = cri_conv(FUN_140068f30);
   return;
 }
 
@@ -4443,7 +4444,7 @@ cri_u64 FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5)
 // @0x1400532b0
 void FUN_1400532b0(void)
 {
-  _DAT_143c494e0 = (cri_nr<decltype(_DAT_143c494e0)>::t)"\ncriAdec/PCx64 Ver.1.09 Build:Jan 20 2012 18:13:27\n";
+  _DAT_143c494e0 = cri_conv("\ncriAdec/PCx64 Ver.1.09 Build:Jan 20 2012 18:13:27\n");
   return;
 }
 

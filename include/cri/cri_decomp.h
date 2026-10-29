@@ -62,6 +62,15 @@ template <class T, class P> static inline T& CriAt(P p, __int64 off) { return *(
 template <class T> struct cri_nr { typedef T t; };
 template <class T> struct cri_nr<T&> { typedef T t; };
 
+// `x = cri_conv(E);` is `x = (T)E;` with T = x's type (the C++03 spelling of `(cri_nr<decltype(x)>::t)E`):
+// the templated conversion operator is a C-style cast. E is taken by value, so arrays and functions decay.
+template <class U> struct cri_conv_t
+{
+    U v;
+    template <class T> operator T() const { return (T)v; }
+};
+template <class U> static inline cri_conv_t<U> cri_conv(U v) { cri_conv_t<U> r = {v}; return r; }
+
 #define CONCAT11(a, b) ((unsigned short)(((unsigned short)(unsigned char)(a) << 8) | (unsigned char)(b)))
 #define CONCAT12(a, b) ((unsigned int)(((unsigned int)(unsigned char)(a) << 16) | (unsigned short)(b)))
 #define CONCAT13(a, b) ((unsigned int)(((unsigned int)(unsigned char)(a) << 24) | ((unsigned int)(b) & 0xffffff)))
