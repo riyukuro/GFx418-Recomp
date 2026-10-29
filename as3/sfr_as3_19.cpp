@@ -6435,7 +6435,8 @@ char* Sfr31ValueToStringCheck(char* ret, VM* vm, Value* v, void* strOut)
     return ret;
 }
 
-// Converts a value in place to an XML-escaped string for element content. Null operands raise TypeError 1009/1010.
+// Converts a value in place to an XML-escaped string for element content. Null/undefined operands raise TypeError
+// 1009/1010.
 // MS2-FUNCTIONAL 0x14252fef0: raw-offset model; codegen differs from the exe
 // @0x14252fef0
 CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& val) const
@@ -6447,22 +6448,25 @@ CheckResult XMLSupportImpl::ToXMLString(VM& vm, Value& val) const
     ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(vmAddr, 0x10), 0x1e8));
     if (k == 0 || (k - 0xc < 4 && Sfr31Rd(vp, 0x10) == 0))
     {
-        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(k - 0xc < 4 ? 0x3f2 : 0x3f1), vm));
+        // null (an object kind with no object) is 1009, undefined 1010
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(k - 0xc < 4 ? 0x3f1 : 0x3f2), vm));
         return false;
     }
     if (k < 5)
     {
         return v->ToStringValue(vm.GetStringManager());
     }
-    StringBuffer buf(Memory::pGlobalHeap);
     if (k == 10)
     {
+        // escaped into its own buffer, then falls through to be escaped again as a primitive (as the SDK does)
+        StringBuffer sbuf(Memory::pGlobalHeap);
         ASString cur(reinterpret_cast<ASStringNode*>(Sfr31Rd(vp, 0x10)));
-        Instances::fl::XML::EscapeElementValue(buf, cur);
-        const char* c = buf.ToCStr();
-        ASString res(mgr->CreateStringNode(c ? c : "", buf.GetSize()));
+        Instances::fl::XML::EscapeElementValue(sbuf, cur);
+        const char* c = sbuf.ToCStr();
+        ASString res(mgr->CreateStringNode(c ? c : "", sbuf.GetSize()));
         *v = res;
     }
+    StringBuffer buf(Memory::pGlobalHeap);
     const UInt32 k2 = (*reinterpret_cast<const UInt32*>(vp) & 0x1f) - 0xc;
     const UPInt obj = Sfr31Rd(vp, 0x10);
     if (k2 < 4 && obj != 0 && *reinterpret_cast<const int*>(Sfr31Rd(obj, 0x20) + 0x70) == 0xd && !(*reinterpret_cast<const UInt8*>(Sfr31Rd(obj, 0x20) + 0x68) & 0x20))
