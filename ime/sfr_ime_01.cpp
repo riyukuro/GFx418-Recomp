@@ -4310,92 +4310,90 @@ void FUN_1423d4c20(void* raw, const void* event)
     }
 }
 
-// MS2-FUNCTIONAL: selects a registered language record, updates its state, and refreshes the affected conversion-mode lists.
+// MS2-FUNCTIONAL: selects the language record named by primary (state 1) or alternate (state 2), else the record whose
+// mode is configured for the language, and adds its text to the conversion-mode lists on first selection.
 // @0x1423cada0
 int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* alternate, unsigned short language)
 {
+    auto* bytes = reinterpret_cast<unsigned char*>(manager);
+    auto** vtable = reinterpret_cast<void**>(manager[0]);
+    auto modeOf = reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3]);
     Scaleform::String selected;
-    auto* records = reinterpret_cast<unsigned char*>(manager[0x17]);
-    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
-    const unsigned count = static_cast<unsigned>(manager[0x1a]);
-    const unsigned current = reinterpret_cast<unsigned(*)(void*)>(
-        (*reinterpret_cast<void***>(manager))[3])(manager);
-    int targetMode = 0x02000000;
-    for (unsigned i = 0; records && i < count; ++i) {
-        auto* record = records + i * 0x30;
-        auto* name = reinterpret_cast<Scaleform::String*>(record + 0x10);
-        if (primary && _stricmp(primary, name->ToCStr()) == 0 &&
-            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) == current) {
-            selected = *name;
-            targetMode = static_cast<int>(*reinterpret_cast<unsigned*>(record + 0x20));
-            const bool wasSet = states[i] != 0;
-            states[i] = 1;
-            if (!wasSet) {
-                const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
-                    (*reinterpret_cast<void***>(manager))[3])(manager, targetMode);
-                if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
-                if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
-                if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
-                if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
-            }
-            return static_cast<int>(i);
-        }
-    }
-
-    int chosen = -1;
-    unsigned effectiveMode = 0x02000000;
-    for (unsigned i = 0; records && i < count; ++i) {
-        auto* record = records + i * 0x30;
-        auto* languageName = reinterpret_cast<Scaleform::String*>(record + 0x10);
-        if (!alternate || _stricmp(alternate, languageName->ToCStr()) != 0 ||
-            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) != current) continue;
-        selected = *reinterpret_cast<Scaleform::String*>(record + 0x18);
-        targetMode = *reinterpret_cast<int*>(record + 0x20);
-        effectiveMode = targetMode;
-        const bool wasSet = states[i] != 0;
-        states[i] = 2;
-        chosen = static_cast<int>(i);
-        if (!wasSet) {
-            const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
-                (*reinterpret_cast<void***>(manager))[3])(manager, targetMode);
-            if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
-            if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
-            if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
-            if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
-        }
+    int result = -1;
+    unsigned chosen = 0;
+    bool wasSet = false;
+    bool found = false;
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+        if (!primary) continue;
+        auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
+        if (_stricmp(primary, reinterpret_cast<Scaleform::String*>(record + 0x10)->ToCStr()) != 0) continue;
+        if (*reinterpret_cast<unsigned*>(bytes + 0x84) != modeOf(manager, *reinterpret_cast<unsigned*>(record + 0x20)))
+            continue;
+        selected = *reinterpret_cast<Scaleform::String*>(record + 0x10);
+        chosen = i;
+        found = true;
         break;
     }
-    if (chosen < 0) {
-        auto* config = reinterpret_cast<unsigned char*>(manager[0x2e]);
-        const unsigned configCount = static_cast<unsigned>(manager[0x2f]);
-        for (unsigned i = 0; records && i < count; ++i) {
-            auto* record = records + i * 0x30;
-            const int mode = *reinterpret_cast<int*>(record + 0x20);
-            for (unsigned j = 0; config && j < configCount; ++j) {
-                auto* entry = config + j * 0x20;
-                if (*reinterpret_cast<unsigned short*>(entry + 8) == language &&
-                    *reinterpret_cast<int*>(entry) == mode) {
-                    selected = primary ? primary : (alternate ? alternate : "");
-                    targetMode = mode;
-                    effectiveMode = mode;
-                    states[i] = 1;
-                    chosen = static_cast<int>(i);
+    if (!found) {
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+            if (!alternate) continue;
+            auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
+            if (_stricmp(alternate, reinterpret_cast<Scaleform::String*>(record + 0x10)->ToCStr()) != 0) continue;
+            if (*reinterpret_cast<unsigned*>(bytes + 0x84) != modeOf(manager, *reinterpret_cast<unsigned*>(record + 0x20)))
+                continue;
+            selected = *reinterpret_cast<Scaleform::String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x18);
+            result = static_cast<int>(i);
+            auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+            wasSet = states[i] != 0;
+            states[i] = 2;
+            const unsigned code = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x20);
+            bool conflict = false;
+            for (unsigned j = 0; j < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++j) {
+                if (reinterpret_cast<unsigned*>(manager[0x32])[j] == 1 &&
+                    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + j * 0x30 + 0x20) == code) {
+                    conflict = true;
                     break;
                 }
             }
-            if (chosen >= 0) break;
+            if (!conflict) {
+                if (wasSet) return result;
+                chosen = i;
+                goto addToLists;
+            }
+            break;
         }
+        const int configCount = *reinterpret_cast<int*>(bytes + 0x178);
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0) && !found; ++i) {
+            const unsigned code = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x20);
+            auto* config = reinterpret_cast<unsigned char*>(manager[0x2e]);
+            for (long long j = 0; j < configCount; ++j) {
+                if (*reinterpret_cast<unsigned long long*>(config + j * 0x10 + 8) != language ||
+                    *reinterpret_cast<unsigned*>(config + j * 0x10) != code) continue;
+                selected = primary ? primary : alternate;
+                chosen = i;
+                found = true;
+                break;
+            }
+        }
+        if (!found) return result;
     }
-    if (chosen >= 0 && states[chosen] == 1) {
-        const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned)>(
-            (*reinterpret_cast<void***>(manager))[3])(manager, static_cast<unsigned>(targetMode));
+    {
+        result = static_cast<int>(chosen);
+        auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+        wasSet = states[chosen] != 0;
+        states[chosen] = 1;
+        if (wasSet) return result;
+    }
+addToLists:
+    {
+        const unsigned mode = modeOf(manager,
+            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + chosen * 0x30 + 0x20));
         if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
         if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
         if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
         if (mode & 0xf) FUN_1422fd480(manager + 0xb, &selected);
     }
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = effectiveMode;
-    return chosen;
+    return result;
 }
 
 // MS2-FUNCTIONAL: reports the current caret position and candidate-window height to the GFx external interface.
