@@ -1347,7 +1347,8 @@ void FUN_1423ca350(void* self)
 // @0x1423ca410
 void FUN_1423ca410(void* self, void* movie)
 {
-    FUN_1425b49b0();
+    // IMEManagerBase::SetActiveMovie(self, movie)
+    reinterpret_cast<void(*)(void*, void*)>(&FUN_1425b49b0)(self, movie);
     if (!movie) return;
     unsigned char* p = static_cast<unsigned char*>(self);
     void* obj = *reinterpret_cast<void**>(p + 0x18);
