@@ -18,11 +18,12 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
 
-// The 3D members past the enum of as2_avmcharacter.h, and _version.
-const AvmCharacter::StandardMember M_xrotation = static_cast<AvmCharacter::StandardMember>(110);
-const AvmCharacter::StandardMember M_yrotation = static_cast<AvmCharacter::StandardMember>(111);
-const AvmCharacter::StandardMember M_z         = static_cast<AvmCharacter::StandardMember>(112);
-const AvmCharacter::StandardMember M_zscale    = static_cast<AvmCharacter::StandardMember>(113);
+// The 3D members past the enum of as2_avmcharacter.h, and $version (the ids of the exe's member table at
+// 0x143a519c0: _z, _zscale, _xrotation, _yrotation, _matrix3d, _perspfov, $version).
+const AvmCharacter::StandardMember M_z         = static_cast<AvmCharacter::StandardMember>(110);
+const AvmCharacter::StandardMember M_zscale    = static_cast<AvmCharacter::StandardMember>(111);
+const AvmCharacter::StandardMember M_xrotation = static_cast<AvmCharacter::StandardMember>(112);
+const AvmCharacter::StandardMember M_yrotation = static_cast<AvmCharacter::StandardMember>(113);
 const AvmCharacter::StandardMember M_matrix3d  = static_cast<AvmCharacter::StandardMember>(114);
 const AvmCharacter::StandardMember M_fov       = static_cast<AvmCharacter::StandardMember>(115);
 const AvmCharacter::StandardMember M__version  = static_cast<AvmCharacter::StandardMember>(116);
