@@ -1744,7 +1744,7 @@ void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t field
     reinterpret_cast<Scaleform::GFx::AS3::VM*>(root)->Construct("flash.media.SoundTransform", classValue, 0, nullptr, true);
     auto* soundClass = classValue.GetObject();
     const auto kind = classValue.GetKind();
-    if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kString || kind > Scaleform::GFx::AS3::Value::kObject || soundClass)) {
+    if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kObject || kind > Scaleform::GFx::AS3::Value::kThunkFunction || soundClass)) {
         FUN_1424d2150(soundClass, &transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
         auto atom = reinterpret_cast<std::uintptr_t>(soundClass);
         ReleaseVideoAtom(output);
