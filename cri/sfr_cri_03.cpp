@@ -810,6 +810,10 @@ void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriU
 
 // MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
 // executable's shared UTF parser populate the table layout.
+// The exe reports an allocation failure only when this flag (0x143b27c38) is set. Its only writer, the setter at
+// 0x14003a0ac, has no callers, so the flag stays 0 and the failures return NULL without an error report.
+static CriSint32 s_nUtfRtvReportAllocError = 0;
+
 // @0x14003a1a0
 void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* data, CriUint32 size)
 {
@@ -845,7 +849,8 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
                                                         (CriSint32)allocationMode);
     if (!rawTable)
     {
-        FUN_140038e24(0, "E06100310", -3);
+        if (s_nUtfRtvReportAllocError)
+            FUN_140038e24(0, "E06100310", -3);
         return NULL;
     }
 
@@ -877,7 +882,8 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
     table->Context = rawTable;
     table->SecondaryAllocation = NULL;
     criUtfRtv_Destroy((CriUint64*)table);
-    FUN_140038e24(0, "E06100312", -3);
+    if (s_nUtfRtvReportAllocError)
+        FUN_140038e24(0, "E06100312", -3);
     return NULL;
 }
 
