@@ -842,9 +842,9 @@ UInt32 FUN_1425c8c20(LoadProcess* p)
 // @0x1425c6940
 void FUN_1425c6940() {}
 
-// MS2-FUNCTIONAL: vtable slot without .pdata: warns through the LoadProcess log at this + 0x20.
+// MS2-FUNCTIONAL: vtable slot without .pdata: GFx tag 1004 (DefineGradientMap) loader: warns through the LoadProcess log at this + 0x20 and ignores the tag.
 // @0x1425c7a40
 void FUN_1425c7a40(void* self)
 {
-    ((Scaleform::GFx::LogBase<Scaleform::GFx::LoadProcess>*)((Scaleform::UByte*)self + 0x20))->LogWarning(" with a SWF header");
+    ((Scaleform::GFx::LogBase<Scaleform::GFx::LoadProcess>*)((Scaleform::UByte*)self + 0x20))->LogWarning("Deprecated tag 1004 - DefineGradientMapLoader encountered, ignored");
 }
