@@ -180,7 +180,7 @@ cri_u32 FUN_14004e7b0(longlong a1,int a2);
 void FUN_14004e820(longlong a1,int a2,int a3,longlong *a4);
 void FUN_14004e8c0(longlong a1,int a2,longlong *a3);
 void FUN_14004e940(longlong a1,int a2,longlong *a3);
-bool FUN_14004e9f0(longlong a1,int a2,int a3,int *a4);
+int FUN_14004e9f0(longlong a1,int a2,int a3,int *a4);
 cri_u64 FUN_14004eab0(longlong a1);
 cri_u32 FUN_14004eb00(longlong a1);
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2);
@@ -197,7 +197,7 @@ cri_u32 FUN_14004f1a0(longlong a1,int a2);
 void FUN_14004f220(longlong a1,int a2,int a3,longlong *a4);
 void FUN_14004f350(longlong a1,int a2,longlong *a3);
 void FUN_14004f490(longlong a1,int a2,longlong *a3);
-bool FUN_14004f620(longlong a1,int a2,int a3,int *a4);
+int FUN_14004f620(longlong a1,int a2,int a3,int *a4);
 cri_u64 FUN_14004f700(longlong a1);
 cri_u32 FUN_14004f750(longlong a1);
 cri_u32 FUN_14004f7a0(longlong a1);
@@ -354,7 +354,7 @@ static __forceinline cri_u32 FUN_14004e7b0(Any a0,Any a1) { return FUN_14004e7b0
 static __forceinline void FUN_14004e820(Any a0,Any a1,Any a2,Any a3) { FUN_14004e820((longlong)a0.v,(int)a1.v,(int)a2.v,(longlong *)a3.v); }
 static __forceinline void FUN_14004e8c0(Any a0,Any a1,Any a2) { FUN_14004e8c0((longlong)a0.v,(int)a1.v,(longlong *)a2.v); }
 static __forceinline void FUN_14004e940(Any a0,Any a1,Any a2) { FUN_14004e940((longlong)a0.v,(int)a1.v,(longlong *)a2.v); }
-static __forceinline bool FUN_14004e9f0(Any a0,Any a1,Any a2,Any a3) { return FUN_14004e9f0((longlong)a0.v,(int)a1.v,(int)a2.v,(int *)a3.v); }
+static __forceinline int FUN_14004e9f0(Any a0,Any a1,Any a2,Any a3) { return FUN_14004e9f0((longlong)a0.v,(int)a1.v,(int)a2.v,(int *)a3.v); }
 static __forceinline cri_u64 FUN_14004eab0(Any a0) { return FUN_14004eab0((longlong)a0.v); }
 static __forceinline cri_u32 FUN_14004eb00(Any a0) { return FUN_14004eb00((longlong)a0.v); }
 static __forceinline cri_u64 * FUN_14004eb90(Any a0,Any a1) { return FUN_14004eb90((cri_u64)a0.v,(cri_u32)a1.v); }
@@ -369,7 +369,7 @@ static __forceinline cri_u32 FUN_14004f1a0(Any a0,Any a1) { return FUN_14004f1a0
 static __forceinline void FUN_14004f220(Any a0,Any a1,Any a2,Any a3) { FUN_14004f220((longlong)a0.v,(int)a1.v,(int)a2.v,(longlong *)a3.v); }
 static __forceinline void FUN_14004f350(Any a0,Any a1,Any a2) { FUN_14004f350((longlong)a0.v,(int)a1.v,(longlong *)a2.v); }
 static __forceinline void FUN_14004f490(Any a0,Any a1,Any a2) { FUN_14004f490((longlong)a0.v,(int)a1.v,(longlong *)a2.v); }
-static __forceinline bool FUN_14004f620(Any a0,Any a1,Any a2,Any a3) { return FUN_14004f620((longlong)a0.v,(int)a1.v,(int)a2.v,(int *)a3.v); }
+static __forceinline int FUN_14004f620(Any a0,Any a1,Any a2,Any a3) { return FUN_14004f620((longlong)a0.v,(int)a1.v,(int)a2.v,(int *)a3.v); }
 static __forceinline cri_u64 FUN_14004f700(Any a0) { return FUN_14004f700((longlong)a0.v); }
 static __forceinline cri_u32 FUN_14004f750(Any a0) { return FUN_14004f750((longlong)a0.v); }
 static __forceinline cri_u32 FUN_14004f7a0(Any a0) { return FUN_14004f7a0((longlong)a0.v); }
@@ -1002,14 +1002,7 @@ void FUN_14004e680(cri_u64 *a1)
     FUN_14004e5b0("E2004090232"," : Specified handle is invalid.");
     return;
   }
-  *a1 = 0;
-  a1[1] = 0;
-  a1[2] = 0;
-  a1[3] = 0;
-  a1[4] = 0;
-  a1[5] = 0;
-  a1[6] = 0;
-  a1[7] = 0;
+  memset(a1, 0, 0x40);
   CriAt<cri_u32>(a1, 0x8) = 0;
   return;
 }
@@ -1188,13 +1181,13 @@ void FUN_14004e940(longlong a1,int a2,longlong *a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e9f0
-bool FUN_14004e9f0(longlong a1,int a2,int a3,int *a4)
+int FUN_14004e9f0(longlong a1,int a2,int a3,int *a4)
 {
   int i_v1;
   
   if (a1 == 0) {
     FUN_14004e5b0("E2004090247"," : NULL pointer is passed.");
-    return false;
+    return 0;
   }
   if (CriAt<int>(a1, 0x8) != 0) {
     i_v1 = 0;
@@ -1213,7 +1206,7 @@ bool FUN_14004e9f0(longlong a1,int a2,int a3,int *a4)
     return i_v1 == a3;
   }
   FUN_14004e5b0("E2004090248"," : Specified handle is invalid.");
-  return false;
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -1359,7 +1352,7 @@ cri_u32 FUN_14004ecd0(cri_u64 a1,cri_u32 a2)
 void FUN_14004ed10(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   FUN_140067790();
-  FUN_14004e820(a1,a2,a3,a4);
+  FUN_14004e820((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
   FUN_1400677c0();
   return;
 }
@@ -1369,7 +1362,7 @@ void FUN_14004ed10(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 void FUN_14004ed60(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
-  FUN_14004e8c0(a1,a2,a3);
+  FUN_14004e8c0((longlong)a1,(int)a2,(longlong *)a3);
   FUN_1400677c0();
   return;
 }
@@ -1379,7 +1372,7 @@ void FUN_14004ed60(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 void FUN_14004eda0(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
-  FUN_14004e940(a1,a2,a3);
+  FUN_14004e940((longlong)a1,(int)a2,(longlong *)a3);
   FUN_1400677c0();
   return;
 }
@@ -1391,7 +1384,7 @@ cri_u32 FUN_14004ede0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
   cri_u32 u_v1;
   
   FUN_140067790();
-  u_v1 = FUN_14004e9f0(a1,a2,a3,a4);
+  u_v1 = FUN_14004e9f0((longlong)a1,(int)a2,(int)a3,(int *)a4);
   FUN_1400677c0();
   return u_v1;
 }
@@ -1577,8 +1570,8 @@ void FUN_14004f150(longlong a1)
     FUN_14004ef20("E2004090208"," : Specified handle is invalid.");
     return;
   }
-  CriAt<cri_u32>(a1, 0x1c) = CriAt<cri_u32>(a1, 0x30);
   CriAt<cri_u32>(a1, 0x18) = 0;
+  CriAt<cri_u32>(a1, 0x1c) = CriAt<cri_u32>(a1, 0x30);
   CriAt<cri_u32>(a1, 0x20) = 0;
   CriAt<cri_u32>(a1, 0x24) = 0;
   CriAt<cri_u32>(a1, 0x38) = 0;
@@ -1790,14 +1783,14 @@ void FUN_14004f490(longlong a1,int a2,longlong *a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004f620
-bool FUN_14004f620(longlong a1,int a2,int a3,int *a4)
+int FUN_14004f620(longlong a1,int a2,int a3,int *a4)
 {
   int i_v1;
   int i_v2;
   
   if (a1 == 0) {
     FUN_14004ef20("E2004090217"," : NULL pointer is passed.");
-    return false;
+    return 0;
   }
   if (CriAt<int>(a1, 0x8) != 0) {
     i_v2 = a3;
@@ -1829,7 +1822,7 @@ bool FUN_14004f620(longlong a1,int a2,int a3,int *a4)
     return i_v2 == a3;
   }
   FUN_14004ef20("E2004090218"," : Specified handle is invalid.");
-  return false;
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2077,7 +2070,7 @@ cri_u32 FUN_14004fb80(cri_u64 a1,cri_u32 a2)
 void FUN_14004fbc0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   FUN_140067790();
-  FUN_14004f220(a1,a2,a3,a4);
+  FUN_14004f220((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
   FUN_1400677c0();
   return;
 }
@@ -2087,7 +2080,7 @@ void FUN_14004fbc0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 void FUN_14004fc10(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
-  FUN_14004f350(a1,a2,a3);
+  FUN_14004f350((longlong)a1,(int)a2,(longlong *)a3);
   FUN_1400677c0();
   return;
 }
@@ -2097,7 +2090,7 @@ void FUN_14004fc10(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 void FUN_14004fc50(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
-  FUN_14004f490(a1,a2,a3);
+  FUN_14004f490((longlong)a1,(int)a2,(longlong *)a3);
   FUN_1400677c0();
   return;
 }
@@ -2109,7 +2102,7 @@ cri_u32 FUN_14004fc90(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
   cri_u32 u_v1;
   
   FUN_140067790();
-  u_v1 = FUN_14004f620(a1,a2,a3,a4);
+  u_v1 = FUN_14004f620((longlong)a1,(int)a2,(int)a3,(int *)a4);
   FUN_1400677c0();
   return u_v1;
 }
