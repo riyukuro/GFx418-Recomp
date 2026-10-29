@@ -46,7 +46,7 @@ SF_FORCEINLINE AS2::ObjectInterface* VoiObject(void* pdata, MovieImpl* pmovieRoo
 
 } // namespace
 
-// The text of a text field; other characters give the text / htmlText member.
+// The text (or the HTML text) of a text field; other characters give the text / htmlText member.
 // MS2-FUNCTIONAL: instruction scheduling
 // @0x142956270
 bool AS2ValueObjectInterface::GetText(void* pdata, Value* pval, bool ishtml) const
@@ -58,7 +58,7 @@ bool AS2ValueObjectInterface::GetText(void* pdata, Value* pval, bool ishtml) con
         return GetMember(pdata, ishtml ? "htmlText" : "text", pval, true);
     AS2::MovieRoot*   proot = VoiRoot(pMovieRoot);
     AS2::Environment* penv  = VoiEnv(proot);
-    proot->ASValue2GFxValue(penv, AS2::Value(reinterpret_cast<TextField*>(pch)->GetText()), pval);
+    proot->ASValue2GFxValue(penv, AS2::Value(reinterpret_cast<TextField*>(pch)->GetText(ishtml)), pval);
     return true;
 }
 
