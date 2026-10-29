@@ -351,7 +351,7 @@ bool ArrayBase::Some(const Value& callback, const Value& thisObject, Instances::
     {
         Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
         Value result;
-        GetValue(i, argv[0]);
+        GetValueUnsafe(i, argv[0]);
         VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
         if (VMRef.IsException())
             break;
@@ -375,7 +375,7 @@ bool ArrayBase::Every(const Value& callback, const Value& thisObject, Instances:
     {
         Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
         Value result;
-        GetValue(i, argv[0]);
+        GetValueUnsafe(i, argv[0]);
         VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
         if (VMRef.IsException())
             break;
@@ -396,7 +396,7 @@ void ArrayBase::ForEach(const Value& callback, const Value& thisObject, Instance
     {
         Value argv[3] = {Value::GetUndefined(), Value(i), Value(owner)};
         Value result;
-        GetValue(i, argv[0]);
+        GetValueUnsafe(i, argv[0]);
         VMRef.ExecuteInternalUnsafe(callback, _this, result, 3, argv, false);
         if (VMRef.IsException())
             break;
@@ -1568,8 +1568,8 @@ void FUN_142553170(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scalef
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
 
-// TypeError 1034 for a sort argument that is neither callable nor given.
-#define MS2_VEC_SORT(TYPE, SORT)                                                                            \
+// TypeError 1034 for a sort argument that is neither callable nor given; the message names the element class.
+#define MS2_VEC_SORT(TYPE, SORT, ELEM)                                                                      \
 void TYPE::AS3sort(Value& result, unsigned argc, const Value* argv)                                         \
 {                                                                                                           \
     if (argc >= 1 && !argv[0].IsNullOrUndefined() && argv[0].IsCallable())                                 \
@@ -1580,15 +1580,15 @@ void TYPE::AS3sort(Value& result, unsigned argc, const Value* argv)             
     VM& vm = GetVM();                                                                                       \
     vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,                                              \
         argc ? FUN_14250ffc0(vm, argv[0]).GetName().ToCStr() : "undefined",                                 \
-        GetVM().GetClassTraitsString().GetName().ToCStr()));                                               \
+        GetVM().GetClassTraits##ELEM().GetName().ToCStr()));                                               \
 }
 
 // @0x142558cb0
-MS2_VEC_SORT(Vector_String, FUN_142550840)
+MS2_VEC_SORT(Vector_String, FUN_142550840, String)
 // @0x142558de0
-MS2_VEC_SORT(Vector_double, FUN_142551250)
+MS2_VEC_SORT(Vector_double, FUN_142551250, Number)
 // @0x142558f10
-MS2_VEC_SORT(Vector_int, FUN_142551cb0)
+MS2_VEC_SORT(Vector_int, FUN_142551cb0, SInt)
 // @0x142559040
 // Same as above, but the error names the element class: the Vector.<T> class traits keep T's
 // ClassTraits at +0xc8 (ClassTraits::fl_vec::Vector_object::EnclosedClassTraits).
@@ -1607,7 +1607,7 @@ void Vector_object::AS3sort(Value& result, unsigned argc, const Value* argv)
             ->GetName().ToCStr()));
 }
 // @0x142559180
-MS2_VEC_SORT(Vector_uint, FUN_142553170)
+MS2_VEC_SORT(Vector_uint, FUN_142553170, UInt)
 
 #undef MS2_VEC_SORT
 
