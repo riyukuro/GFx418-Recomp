@@ -952,6 +952,29 @@ extern const void* DAT_14317c9f8[];     // RefCountBase<ASIntervalTimerIntf, 323
 extern const void* DAT_14317b798[];     // FileLoader
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
 extern const void* DAT_14317b7b8[];     // XMLSupport
+extern const void* DAT_14317afe8[];     // empty interface (0x1424e2e70)
+extern const void* DAT_14317b040[];     // RefCountCollector<323>
+extern const void* DAT_14317b750[];     // VMAbcFile
+extern const void* DAT_14317bc40[];     // TreeShape::NodeData
+extern const void* DAT_14317bde0[];     // ASMovieRootBase
+extern const void* DAT_14317c210[];     // ShapeObject
+extern const void* DAT_14317c488[];     // ShapeObject +0x18
+extern const void* DAT_14317c498[];     // ShapeObject +0x90
+extern const void* DAT_14317c560[];     // AvmBitmap
+extern const void* DAT_14317c7d8[];     // AvmBitmap +0x18
+extern const void* DAT_14317c7e8[];     // AvmBitmap +0x90
+extern const void* DAT_14317c9d0[];     // Text::Allocator
+extern const void* DAT_14317d220[];     // Stage
+extern const void* DAT_14317d5f0[];     // Stage +0x18
+extern const void* DAT_14317d8a8[];     // ASVM::AbcFileWithMovieDef
+extern const void* DAT_14317d8c0[];     // AS3::MovieDefRootNode
+extern const void* DAT_14317de60[];     // AvmLoader
+extern const void* DAT_14317e228[];     // AvmLoader +0x18
+extern const void* DAT_14317e330[];     // AvmLoader +0x140
+extern const void* DAT_14317e3e8[];     // AvmLoader +0x150
+extern const void* DAT_14317f778[];     // Classes::UDBase
+extern const void* DAT_14317f848[];     // empty class (0x1424e2c90, 0x1424e3a00)
+extern const void* DAT_14317f9e0[];     // XMLSupportImpl
 static inline void Sfr21GVft(void* p, UPInt off, const void* const* vft)
 {
     *reinterpret_cast<const void* const**>(Sfr21At(p, off)) = vft;
@@ -1042,7 +1065,7 @@ static void Sfr21GNodeData(void* p)
 // RefCountCollector<323> (vftable 0x14317b038)
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e2040
-void* DeleteAs3_1424e2040(void* p, unsigned flags) { Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e2040(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b040); Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
 
 // ShapeDataFloatTempl<ArrayStaticBuffPOD<UByte,..>>
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
@@ -1052,16 +1075,16 @@ void* DeleteAs3_1424e20e0(void* p, unsigned flags) { Sfr21GShapeData(p); Sfr21GF
 // RefCountImpl
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e21a0
-void* DeleteAs3_1424e21a0(void* p, unsigned flags) { FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e21a0(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317c9f8); FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
 
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e2210
-void* DeleteAs3_1424e2210(void* p, unsigned flags) { Sfr21GPtr(p, 0x18); FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e2210(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317bde0); Sfr21GPtr(p, 0x18); FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
 
 // ASRefCountCollector
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e2290
-void* DeleteAs3_1424e2290(void* p, unsigned flags) { Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e2290(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b040); Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
 
 // ASVM
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line destructor through its address
@@ -1073,6 +1096,7 @@ void* DeleteAs3_1424e2330(void* p, unsigned flags) { FUN_1424dd500(p); Sfr21GFre
 // @0x1424e2390
 void* DeleteAs3_1424e2390(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317d8a8);
     Sfr21GPtr(p, 0x190);
     Sfr21GRes(p, 0x188);
     FUN_1425456e0(p);
@@ -1097,6 +1121,7 @@ void* DeleteAs3_1424e2420(void* p, unsigned flags)
 // @0x1424e2520
 void* DeleteAs3_1424e2520(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317c9d0);
     FUN_1424aa0f0(Sfr21At(p, 0x38));
     FUN_1424dd300(Sfr21At(p, 0x18));
     FUN_1424dd3b0(Sfr21At(p, 0x10));
@@ -1115,6 +1140,9 @@ void* DeleteAs3_1424e25b0(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFre
 // @0x1424e2610
 void* DeleteAs3_1424e2610(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317c560);
+    Sfr21GVft(p, 0x18, DAT_14317c7d8);
+    Sfr21GVft(p, 0x90, DAT_14317c7e8);
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GRes(p, 0xc8);
     Sfr21GRes(p, 0xc0);
@@ -1142,6 +1170,10 @@ void* DeleteAs3_1424e27d0(void* p, unsigned) { Sfr21GAvmInteractive(p); return p
 // @0x1424e28e0
 void* DeleteAs3_1424e28e0(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317de60);
+    Sfr21GVft(p, 0x18, DAT_14317e228);
+    Sfr21GVft(p, 0x140, DAT_14317e330);
+    Sfr21GVft(p, 0x150, DAT_14317e3e8);
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GAvmInteractive(Sfr21At(p, 0x110));
     FUN_1425fbcf0(p);
@@ -1180,7 +1212,7 @@ void* DeleteAs3_1424e2c10(void* p, unsigned flags)
 
 // MS2-FUNCTIONAL: scalar deleting destructor of an empty class (vftable 0x14317f848), written out
 // @0x1424e2c90
-void* DeleteAs3_1424e2c90(void* p, unsigned flags) { Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e2c90(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317f848); Sfr21GFree(p, flags); return p; }
 
 // ContextImpl::EntryData
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
@@ -1199,13 +1231,11 @@ void* DeleteAs3_1424e2ce0(void* p, unsigned flags)
 void* DeleteAs3_1424e2d20(void* p, unsigned flags) { FUN_1425456e0(p); Sfr21GFree(p, flags); return p; }
 
 // an empty interface (8 bytes), operator delete
-// MS2-FUNCTIONAL: scalar deleting destructor of an empty interface, written out
 // @0x1424e2d80
-void* DeleteAs3_1424e2d80(void* p, unsigned flags) { if (flags & 1) ::operator delete(p, 8); return p; }
+void* DeleteAs3_1424e2d80(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b798); if (flags & 1) ::operator delete(p, 8); return p; }
 
-// MS2-FUNCTIONAL: scalar deleting destructor of an empty interface, written out
 // @0x1424e2e70
-void* DeleteAs3_1424e2e70(void* p, unsigned flags) { if (flags & 1) ::operator delete(p, 8); return p; }
+void* DeleteAs3_1424e2e70(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317afe8); if (flags & 1) ::operator delete(p, 8); return p; }
 
 // TextImageDesc
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
@@ -1248,6 +1278,7 @@ void* DeleteAs3_1424e3260(void* p, unsigned flags)
 // @0x1424e3290
 void* DeleteAs3_1424e3290(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317d8c0);
     UPInt* data = static_cast<UPInt*>(Sfr21Mem(p, 0x40));
     for (SPInt i = *reinterpret_cast<SPInt*>(Sfr21At(p, 0x48)) - 1; i >= 0; --i)
     {
@@ -1276,7 +1307,7 @@ void* DeleteAs3_1424e3290(void* p, unsigned flags)
 // MovieDefRootNode
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e3380
-void* DeleteAs3_1424e3380(void* p, unsigned flags) { Sfr21GPtr(p, 0x38); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e3380(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317c9e0); Sfr21GPtr(p, 0x38); Sfr21GFree(p, flags); return p; }
 
 // MovieRoot
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~MovieRoot through its address
@@ -1306,10 +1337,10 @@ void* DeleteAs3_1424e34c0(void* p, unsigned flags)
 }
 
 // TreeShape::NodeData
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e3510
 void* DeleteAs3_1424e3510(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317bc40);
     if (char* s = static_cast<char*>(Sfr21Mem(p, 0x90)))
         (*reinterpret_cast<void (***)(void*)>(s + 0x10))[2](s + 0x10);
     Sfr21GNodeData(p);
@@ -1340,6 +1371,9 @@ void* DeleteAs3_1424e37a0(void* p, unsigned flags)
 // @0x1424e3890
 void* DeleteAs3_1424e3890(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317c210);
+    Sfr21GVft(p, 0x18, DAT_14317c488);
+    Sfr21GVft(p, 0x90, DAT_14317c498);
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GPtrNTS(p, 0xc8);
     Sfr21GRes(p, 0xc0);
@@ -1354,6 +1388,8 @@ void* DeleteAs3_1424e3890(void* p, unsigned flags)
 // @0x1424e3950
 void* DeleteAs3_1424e3950(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317d220);
+    Sfr21GVft(p, 0x18, DAT_14317d5f0);
     char* node = static_cast<char*>(Sfr21Mem(p, 0x120));
     if (--*reinterpret_cast<int*>(node + 0x18) == 0)
         FUN_1425c14e0(node);
@@ -1366,7 +1402,7 @@ void* DeleteAs3_1424e3950(void* p, unsigned flags)
 
 // MS2-FUNCTIONAL: scalar deleting destructor of an empty class (vftable 0x14317f848), written out
 // @0x1424e3a00
-void* DeleteAs3_1424e3a00(void* p, unsigned flags) { Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e3a00(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317f848); Sfr21GFree(p, flags); return p; }
 
 // Tracer
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~Tracer through its address
@@ -1395,6 +1431,7 @@ void* DeleteAs3_1424e3c30(void* p, unsigned flags)
 // @0x1424e3d60
 void* DeleteAs3_1424e3d60(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317f778);
     FUN_1424f6de0(reinterpret_cast<void*>(reinterpret_cast<UPInt>(Sfr21Mem(p, 0x20)) & ~UPInt(1)), p);
     FUN_1424de0e0(p);
     Sfr21GFree(p, flags);
@@ -1411,6 +1448,7 @@ void* DeleteAs3_1424e3e50(void* p, unsigned flags) { FUN_1424df380(p); Sfr21GFre
 // @0x1424e3eb0
 void* DeleteAs3_1424e3eb0(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317b750);
     FUN_142522a60(Sfr21Mem(p, 0x20), p);
     FUN_1424dc800(Sfr21At(p, 0xd0));
     FUN_1424dc3d0(Sfr21At(p, 0xb8));
@@ -1449,13 +1487,14 @@ void* DeleteAs3_1424e4040(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFre
 // XMLSupport
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~GASRefCountBase through its address
 // @0x1424e4120
-void* DeleteAs3_1424e4120(void* p, unsigned flags) { FUN_1424de190(p); Sfr21GFree(p, flags); return p; }
+void* DeleteAs3_1424e4120(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b7b8); FUN_1424de190(p); Sfr21GFree(p, flags); return p; }
 
 // XMLSupportImpl
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e4190
 void* DeleteAs3_1424e4190(void* p, unsigned flags)
 {
+    Sfr21GVft(p, 0, DAT_14317f9e0);
     Sfr21GSPtr(p, 0x40);
     Sfr21GSPtr(p, 0x38);
     Sfr21GSPtr(p, 0x30);
