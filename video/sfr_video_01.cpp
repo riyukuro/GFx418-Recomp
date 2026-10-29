@@ -2338,7 +2338,7 @@ void FUN_14000dbc0(void* object)
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x68));
     *reinterpret_cast<void**>(bytes + 0x68) = nullptr;
-    reinterpret_cast<VideoFinalizeAccess*>(object)->Finalize_GC();
+    reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
 // MS2-FUNCTIONAL: Video.clear (the Video prototype table at 0x1431b5800): drops the held VideoCharacter's image.
@@ -2390,7 +2390,7 @@ void FUN_14000a3a0(void* object)
         FUN_14257dcd0(*proxy);
         *proxy = nullptr;
     }
-    reinterpret_cast<VideoFinalizeAccess*>(object)->Finalize_GC();
+    reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
 // MS2-FUNCTIONAL: dispatches the companion video prototype's collector passes.
