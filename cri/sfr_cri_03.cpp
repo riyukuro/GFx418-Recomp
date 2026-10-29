@@ -2419,7 +2419,11 @@ void FUN_140045998(void* streamJoint)
     void* lock;
     memcpy(&lock, (CriUint8*)streamJoint + 0x10, sizeof(lock));
     if (lock)
+    {
         criCs_Destroy((LPCRITICAL_SECTION)lock);
+        lock = NULL;
+        memcpy((CriUint8*)streamJoint + 0x10, &lock, sizeof(lock));
+    }
 }
 
 // MS2-FUNCTIONAL: count recycled chunks while honoring the stream-joint lock.
