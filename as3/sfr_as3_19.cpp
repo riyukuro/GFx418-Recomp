@@ -2849,7 +2849,7 @@ void Sfr31ExecNewArray(UPInt vm, UInt32 n)
     ExecPushCopy(reinterpret_cast<VM*>(vm), v);
 }
 
-// A new instance of the interface traits found by name (a, b), pushed on the operand stack.
+// newcatch: a new Catch scope object for the exception handler (file a, exception info b), pushed on the operand stack.
 // MS2-FUNCTIONAL 0x14253c200: behavior-equivalent recovery; codegen differs from exe
 // @0x14253c200
 void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
@@ -2862,9 +2862,10 @@ void Sfr31ExecPushInterfaceInstance(UPInt vm, UPInt a, UPInt b)
         reinterpret_cast<Init>(Sfr31Rd(Sfr31Rd(owner, 0), 0x68))(owner);
         tbl = Sfr31Rd(owner, 0x80);
     }
-    SPtr<InstanceTraits::Interface> iface;
-    FUN_14241b920(tbl, &iface, a, b);
-    Value v(iface->MakeInstance(*iface));
+    // FUN_14241b920 builds the catch scope's traits; the exe makes a Catch instance of them (0x14241a5b0)
+    SPtr<InstanceTraits::fl::Catch> tr;
+    FUN_14241b920(tbl, &tr, a, b);
+    Value v(tr->MakeInstance(*tr));
     ExecPushCopy(reinterpret_cast<VM*>(vm), v);
 }
 
