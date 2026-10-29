@@ -909,24 +909,24 @@ void FUN_140005f60(void** allocation) { if (*allocation) Scaleform::Memory::Free
 // @0x140005fa0
 void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
 
-// MS2-FUNCTIONAL: releases the two tagged weak-proxy references, then optionally frees the pair.
+// MS2-FUNCTIONAL: releases the two Scaleform::String data references, then optionally frees the pair.
 // @0x140005d30
 void* FUN_140005d30(Scaleform::UPInt* pair, unsigned flags)
 {
-    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
     if (flags & 1) ::operator delete(pair);
     return pair;
 }
 
-// MS2-FUNCTIONAL: releases the two tagged weak-proxy references held by this pair.
+// MS2-FUNCTIONAL: releases the two Scaleform::String data references held by this pair.
 // @0x140005df0
 void FUN_140005df0(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1088,12 +1088,12 @@ void FUN_140003a50(void** interfaceSlot)
         reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*interfaceSlot))[2])(*interfaceSlot);
 }
 
-// MS2-FUNCTIONAL: releases the tagged proxy pair in reverse field order.
+// MS2-FUNCTIONAL: releases the String data pair in reverse field order.
 // @0x140004b00
 void FUN_140004b00(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[2] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[2] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1116,12 +1116,12 @@ void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the two weak-proxy references stored in this small pair.
+// MS2-FUNCTIONAL: releases the two Scaleform::String data references stored in this small pair.
 // @0x140005300
 void FUN_140005300(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1177,15 +1177,15 @@ void FUN_140006bb0(void** allocation) { if (*allocation) Scaleform::Memory::Free
 // @0x140006bd0
 void FUN_140006bd0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
 
-// MS2-FUNCTIONAL: releases each retained object in the pointer array and then the array allocation.
+// MS2-FUNCTIONAL: drops one reference on each weak-pointer proxy in the array (freeing it at zero), then frees the array.
 // @0x140006c70
 void FUN_140006c70(void** array)
 {
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     auto** items = static_cast<void**>(*array);
     for (Scaleform::UPInt i = fields[1]; i != 0; --i) {
-        void* object = items[i - 1];
-        if (object) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+        void* proxy = items[i - 1];
+        if (proxy && --*static_cast<int*>(proxy) == 0) Scaleform::Memory::Free(proxy);
     }
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -1201,14 +1201,14 @@ void* FUN_140006db0(void** destination, const void** source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases both weak-proxy references held by each 16-byte record.
+// MS2-FUNCTIONAL: releases both Scaleform::String data references held by each 16-byte record.
 // @0x1400068d0
 void FUN_1400068d0(void* records, Scaleform::UPInt count)
 {
     auto* pair = reinterpret_cast<Scaleform::UPInt*>(records);
     for (Scaleform::UPInt i = 0; i < count; ++i, pair += 2) {
-        auto* second = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[1] & ~Scaleform::UPInt(3));
-        auto* first = reinterpret_cast<Scaleform::WeakPtrProxy*>(pair[0] & ~Scaleform::UPInt(3));
+        auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+        auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
         if (second) second->Release();
         if (first) first->Release();
     }
@@ -1822,7 +1822,7 @@ void FUN_14000c280(void* owner, unsigned key, void** value)
     ReleaseAs2GCObject(*value);
 }
 
-// MS2-FUNCTIONAL: releases pair arrays and weak proxies, then optionally deletes the owner.
+// MS2-FUNCTIONAL: releases the String pair array and the String member, then optionally deletes the owner.
 // @0x14000b230
 void* FUN_14000b230(void* owner, unsigned flags)
 {
@@ -1831,9 +1831,9 @@ void* FUN_14000b230(void* owner, unsigned flags)
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (proxy) proxy->Release();
+    if (data) data->Release();
     if (flags & 1) ::operator delete(owner);
     return owner;
 }
@@ -1874,7 +1874,7 @@ void FUN_14000b620(unsigned* destination, const unsigned* source)
     if (destination) FUN_14000b350(destination, source);
 }
 
-// MS2-FUNCTIONAL: releases nested weak-pair arrays and proxy handles in each 48-byte record.
+// MS2-FUNCTIONAL: releases the nested String pair arrays and the String member of each 48-byte record.
 // @0x14000b530
 void FUN_14000b530(void* records, Scaleform::UPInt count)
 {
@@ -1884,9 +1884,9 @@ void FUN_14000b530(void* records, Scaleform::UPInt count)
         auto nestedCount = *reinterpret_cast<Scaleform::UPInt*>(record + 8);
         if (*nested) FUN_1400068d0(*nested, nestedCount);
         if (*nested) Scaleform::Memory::Free(*nested);
-        auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+        auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
             (*reinterpret_cast<Scaleform::UPInt*>(record - 0x10)) & ~Scaleform::UPInt(3));
-        if (proxy) proxy->Release();
+        if (data) data->Release();
         record -= 0x30;
     }
 }
@@ -1971,7 +1971,11 @@ void FUN_14000b680(void** table, void* owner)
 void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
 {
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] / 2) FUN_14000b940(array, owner, size); }
+    if (size < fields[1])
+    {
+        FUN_14000b530(static_cast<unsigned char*>(*array) + size * 0x30, fields[1] - size);
+        if (size < fields[2] / 2) FUN_14000b940(array, owner, size);
+    }
     else if (fields[2] <= size) FUN_14000b940(array, owner, size + (size >> 2));
     fields[1] = size;
 }
@@ -2520,7 +2524,7 @@ void FUN_14000a540(Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector
     VideoGcPassAccess::Release::Call(collector, object);
 }
 
-// MS2-FUNCTIONAL: releases pair arrays and weak proxies owned by this record.
+// MS2-FUNCTIONAL: releases the String pair array and the String member owned by this record.
 // @0x14000b300
 void FUN_14000b300(void* owner)
 {
@@ -2529,12 +2533,12 @@ void FUN_14000b300(void* owner)
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (proxy) proxy->Release();
+    if (data) data->Release();
 }
 
-// MS2-FUNCTIONAL: releases the paired proxy array and weak proxy fields in this owner.
+// MS2-FUNCTIONAL: releases the String pair array and the String member of this owner.
 // @0x14000afd0
 void FUN_14000afd0(void* owner)
 {
@@ -2543,9 +2547,9 @@ void FUN_14000afd0(void* owner)
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (proxy) proxy->Release();
+    if (data) data->Release();
 }
 
 // MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names.
@@ -3804,14 +3808,13 @@ AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayO
     return character;
 }
 
-// MS2-FUNCTIONAL: resolves the weak character handle and returns one strong reference to the live clip.
+// MS2-FUNCTIONAL: resolves the weak character handle and returns the live clip without keeping a reference
+// (the exe's temporary strong pointers add and release two references, net zero).
 // @0x14000daa0
 InteractiveObject* VideoObject::GetASCharacter()
 {
     Ptr<InteractiveObject> strong = pCharacter;
-    InteractiveObject* character = strong.GetPtr();
-    if (character) character->AddRef();
-    return character;
+    return strong.GetPtr();
 }
 
 // MS2-FUNCTIONAL: const overload of the weak character handle lookup.
