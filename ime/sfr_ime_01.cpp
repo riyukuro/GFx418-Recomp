@@ -5520,14 +5520,145 @@ unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned
     return 0;
 }
 
-// MS2-FUNCTIONAL: initializes the manager's supported IME state using the installed layout list.
+// MS2-FUNCTIONAL: Vista provider slot 1 (table 0x14313b520): loads the registry layouts, lists each TSF language
+// (FUN_1423d5d80) and registers every enabled or active keyboard profile with its IME record (FUN_1423cada0),
+// chaining a copy of the profile onto the record's +0x28 list; the active profile sets +0x88 and the mode.
 // @0x1423d64b0
 unsigned long long FUN_1423d64b0(long long raw)
 {
     auto* manager = reinterpret_cast<long long*>(raw);
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x88) = 0x01000000;
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = 0x01000000;
-    return FUN_1423d8140(manager);
+    auto* self = reinterpret_cast<unsigned char*>(raw);
+    static const GUID kIIDProfiles =
+        {0x1f02b6c5, 0x7842, 0x4ee6, {0x8a, 0x0b, 0x9a, 0x24, 0x18, 0x3a, 0x95, 0xca}};
+    static const GUID kIIDProfileMgr =
+        {0x71c6e74c, 0x0f28, 0x11d8, {0xa8, 0x2a, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c}};
+    static const GUID kCategoryKeyboard =
+        {0x34745c63, 0xb2f0, 0x4784, {0x8b, 0x67, 0x5e, 0x12, 0xc8, 0x70, 0x1a, 0x31}};
+    // TF_INPUTPROCESSORPROFILE.
+    struct Profile {
+        DWORD profileType; LANGID language; GUID clsid; GUID guidProfile; GUID category;
+        HKL hklSubstitute; DWORD caps; HKL hkl; DWORD flags;
+    };
+    *reinterpret_cast<unsigned*>(self + 0x88) = 0x1000000;
+    *reinterpret_cast<unsigned*>(self + 0x84) = 0x1000000;
+    FUN_1423cb980(manager, 0, 0);
+    auto* states = *reinterpret_cast<unsigned**>(self + 0x190);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0xd0); ++i) states[i] = 0;
+
+    IUnknown* profiles = nullptr;
+    if (FAILED(CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr, CLSCTX_INPROC_SERVER,
+                                kIIDProfiles, reinterpret_cast<void**>(&profiles))) || !profiles) return 1;
+    IUnknown* profileMgr = nullptr;
+    const HRESULT queried = profiles->QueryInterface(kIIDProfileMgr, reinterpret_cast<void**>(&profileMgr));
+    *reinterpret_cast<unsigned*>(self + 0x88) = 0x1000000;
+    if (FAILED(queried) || !profileMgr) return 1;
+    void** profileVtable = *reinterpret_cast<void***>(profiles);
+    void** mgrVtable = *reinterpret_cast<void***>(profileMgr);
+
+    Profile active;
+    reinterpret_cast<HRESULT(*)(void*, const GUID&, Profile*)>(mgrVtable[10])(profileMgr, kCategoryKeyboard, &active);
+    LANGID* languages = nullptr;
+    ULONG languageCount = 0;
+    if (reinterpret_cast<HRESULT(*)(void*, LANGID**, ULONG*)>(profileVtable[15])(
+            profiles, &languages, &languageCount) >= 0) {
+        for (ULONG i = 0; i < languageCount; ++i) {
+            wchar_t localeName[0x104];
+            if (!GetLocaleInfoW(languages[i], LOCALE_SLANGUAGE, localeName, 0x104)) continue;
+            IUnknown* profileEnum = nullptr;
+            reinterpret_cast<HRESULT(*)(void*, LANGID, IUnknown**)>(mgrVtable[6])(
+                profileMgr, languages[i], &profileEnum);
+            Profile profile = {};
+            profile.language = languages[i];
+            FUN_1423d5d80(manager, &profile, localeName);
+            BSTR description = SysAllocString(nullptr);
+            Scaleform::String layoutText;
+            Scaleform::String imeFile;
+            if (profileEnum) {
+                void** enumVtable = *reinterpret_cast<void***>(profileEnum);
+                auto next = reinterpret_cast<HRESULT(*)(void*, ULONG, Profile*, ULONG*)>(enumVtable[4]);
+                while (next(profileEnum, 1, &profile, nullptr) == S_OK) {
+                    SysFreeString(description);
+                    layoutText.Clear();
+                    reinterpret_cast<HRESULT(*)(void*, const GUID&, LANGID, const GUID&, BSTR*)>(profileVtable[12])(
+                        profiles, profile.clsid, profile.language, profile.guidProfile, &description);
+                    // Descriptions holding '%' are unresolved resource strings; skip those profiles.
+                    bool unresolved = false;
+                    if (description) {
+                        const size_t length = Scaleform::SFwcslen(description);
+                        for (size_t c = 0; c < length; ++c) {
+                            if (description[c] == L'%') { unresolved = true; break; }
+                        }
+                    }
+                    if (unresolved) continue;
+                    const DWORD flags = profile.flags;
+                    if (!(flags & 3)) continue;
+                    const unsigned hkl = static_cast<unsigned>(reinterpret_cast<ULONG_PTR>(profile.hkl));
+                    const unsigned substitute = static_cast<unsigned>(reinterpret_cast<ULONG_PTR>(profile.hklSubstitute));
+                    if (!profile.hkl && !profile.hklSubstitute) {
+                        layoutText = description;
+                    } else {
+                        // Match a registry layout: the Korean IME by its low word, others by HKL or substitute.
+                        auto* layouts = static_cast<unsigned char*>(*reinterpret_cast<void**>(self + 0x158));
+                        const unsigned long long layoutCount = *reinterpret_cast<unsigned long long*>(self + 0x160);
+                        bool matched = false;
+                        bool needsDescription = false;
+                        for (unsigned j = 0; j < layoutCount; ++j) {
+                            unsigned char* layout = layouts + j * 0x18;
+                            const unsigned id = *reinterpret_cast<unsigned*>(layout + 0x10);
+                            if (hkl == 0x4120412) {
+                                if ((hkl & 0xffff) != id) continue;
+                                layoutText = *reinterpret_cast<const char**>(layout + 8);
+                                matched = true;
+                                break;
+                            }
+                            if (hkl != id && substitute != id) continue;
+                            layoutText = *reinterpret_cast<const char**>(layout + 8);
+                            imeFile = *reinterpret_cast<const char**>(layout);
+                            matched = true;
+                            needsDescription = true;
+                            break;
+                        }
+                        if (!matched || (needsDescription && imeFile.IsEmpty())) {
+                            if (flags & 1) *reinterpret_cast<unsigned*>(self + 0x88) = 0x3000000;
+                            continue;
+                        }
+                        if (needsDescription && layoutText.IsEmpty() && description) layoutText = description;
+                    }
+                    if (layoutText.IsEmpty()) continue;
+                    const int index = FUN_1423cada0(reinterpret_cast<unsigned long long*>(manager),
+                        layoutText.ToCStr(), imeFile.ToCStr(), profile.language);
+                    void* log = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0x78) + 0x60);
+                    if (log) {
+                        FUN_1423cd060(log, (Scaleform::String("Registering IME: ") + layoutText +
+                            Scaleform::String("\n")).ToCStr());
+                    }
+                    imeFile.Clear();
+                    layoutText.Clear();
+                    if (index == -1) continue;
+                    auto* copy = static_cast<Profile*>(Scaleform::Memory::Alloc(sizeof(Profile)));
+                    *copy = profile;
+                    auto* node = static_cast<void**>(Scaleform::Memory::Alloc(0x10));
+                    auto* record = *reinterpret_cast<unsigned char**>(self + 0xb8) + index * 0x30ll;
+                    node[0] = copy;
+                    node[1] = *reinterpret_cast<void**>(record + 0x28);
+                    *reinterpret_cast<void**>(record + 0x28) = node;
+                    if (flags & 1) *reinterpret_cast<unsigned*>(self + 0x88) = *reinterpret_cast<unsigned*>(record + 0x20);
+                }
+                profileEnum->Release();
+            }
+            SysFreeString(description);
+        }
+        CoTaskMemFree(languages);
+    }
+
+    auto* entries = *reinterpret_cast<unsigned char**>(self + 0x90);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0x80); ++i) {
+        if (*reinterpret_cast<unsigned long long*>(entries + i * 0x20ull + 0x18) == active.language)
+            *reinterpret_cast<unsigned*>(self + 0x84) = *reinterpret_cast<unsigned*>(entries + i * 0x20ull + 0x10);
+    }
+    profiles->Release();
+    profileMgr->Release();
+    return 0;
 }
 
 // MS2-FUNCTIONAL: TSF BeginUIElement on the UI-element sink. Clears the manager's +0xc0 flag and the sink's candidate
