@@ -334,7 +334,7 @@ unsigned FUN_1423c9780(void* self, MovieImpl* movie, const IMEEventView* ev)
         return 2;
     }
     if (msg != WM_IME_NOTIFY)
-        return msg == WM_IME_REQUEST ? 2 : 0;
+        return msg == WM_IME_CHAR ? 2 : 0;
 
     UPInt cmd = ev->WParam;
     if (cmd - IMN_CHANGECANDIDATE > 2 && cmd != 0xe)
