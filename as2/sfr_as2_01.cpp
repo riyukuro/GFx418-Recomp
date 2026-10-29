@@ -1445,7 +1445,8 @@ void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
     IMEStyleData* pstyles = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
     ASString      name = fn.Arg(0).ToString(fn.Env);
     int           cat = GFx_StringToIMEStyleCategory(name);
-    if (pstyles && cat < IMEStyleData::SC_MaxNum && pstyles->HasElement(cat))
+    // a category that was never set still gives its (default) highlight, as in the exe
+    if (pstyles && cat < IMEStyleData::SC_MaxNum)
         FUN_142968610(fn, pstyles->HighlightStyles[cat]);
 }
 
