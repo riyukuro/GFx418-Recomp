@@ -147,14 +147,14 @@ extern "C" int DAT_143d4aab0;
 extern "C" int DAT_143d4ab90;
 extern "C" int DAT_143d4abf8;
 extern "C" int DAT_143d4adf8;
-extern "C" unsigned char DAT_143d74a80;
+extern "C" unsigned int DAT_143d74a80;    // uint32 entries (FUN_14005e720 builds it)
 extern "C" int DAT_143d74a84;
 extern "C" int DAT_143db4a84;
 extern "C" unsigned char DAT_143db4ac0;
 extern "C" int DAT_143db4ac1;
-extern "C" unsigned char DAT_143dc4b00;
+extern "C" unsigned short DAT_143dc4b00;  // u16 entries
 extern "C" int DAT_143dc4b02;
-extern "C" unsigned char DAT_143e44b00;
+extern "C" unsigned short DAT_143e44b00;  // u16 entries
 extern "C" int DAT_143e64b88;
 extern "C" int DAT_143e64bc0;
 extern "C" unsigned char DAT_143e64be0;
