@@ -4308,6 +4308,8 @@ void LogMovieAndRendererFunctions(void* movieRoot, Scaleform::Log* log)
 }
 
 // MS2-FUNCTIONAL: links either an ordinary sound request or callback-backed stream request, then configures the FMOD source and dispatches stream format metadata.
+// The whole body runs under the manager lock (+0xc8), as in the exe: the request is linked into the list before its FMOD
+// sound exists, so leaving the lock early let the update thread see a half-built request.
 // @0x1427449f0
 void* FUN_1427449f0(void* manager, void* requestData)
 {
@@ -4315,19 +4317,18 @@ void* FUN_1427449f0(void* manager, void* requestData)
         return nullptr;
     auto* managerBytes = static_cast<unsigned char*>(manager);
     auto* request = static_cast<unsigned char*>(requestData);
-    const unsigned options = *reinterpret_cast<unsigned*>(request + 0x10);
-    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    auto* lock = reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8);
+    EnterCriticalSection(lock);
 
-    const bool stream = (options & 0x1000) && !(options & 0x2000);
+    const unsigned options = *reinterpret_cast<unsigned*>(request + 0x10);
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    unsigned allocationFlags[2] = { 2, 0 };
-    const std::size_t objectSize = 0x40;
     auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
-        DAT_143b15f60, objectSize, allocationFlags));
+        DAT_143b15f60, 0x40, nullptr));
     if (!object) {
-        LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+        LeaveCriticalSection(lock);
         return nullptr;
     }
+    const bool stream = (options & 0x1000) && !(options & 0x2000);
     auto* node = object + 0x10;
     auto* sentinel = managerBytes + 0xb0;
     void* tail = *reinterpret_cast<void**>(managerBytes + 0xc0);
@@ -4338,20 +4339,65 @@ void* FUN_1427449f0(void* manager, void* requestData)
     *reinterpret_cast<void**>(node + 0x10) = tail;
     *reinterpret_cast<void**>(static_cast<unsigned char*>(tail) + 8) = node;
     *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
+    *reinterpret_cast<unsigned*>(request + 8) += 1;
     *reinterpret_cast<void**>(object + 0x28) = stream ? requestData : manager;
     *reinterpret_cast<void**>(object + 0x30) = nullptr;
-    if (stream) {
-        *reinterpret_cast<void**>(object + 0x38) = manager;
-    } else {
-        *reinterpret_cast<void**>(object + 0x38) = nullptr;
-        *reinterpret_cast<unsigned*>(request + 8) += 1;
-    }
-    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    *reinterpret_cast<void**>(object + 0x38) = stream ? manager : requestData;
 
     auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
     auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
+    void* returned = nullptr;
+    if (stream) {
+        // Callback-fed stream: hand PCM16/float streams to the buffered-request factory (vtable[4]); every other
+        // outcome returns null. The request reference is dropped either way.
+        FMOD_RESULT result = static_cast<FMOD_RESULT>(0);
+        unsigned char info[0xd8] = {};
+        *reinterpret_cast<unsigned*>(info) = sizeof(info);
+        *reinterpret_cast<int*>(info + 4) = 0x0fffffff;
+        unsigned mode = 0x02002040;
+        if ((options & 0x700) == 0x100) {
+            mode = 0x02003040;
+            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
+            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
+            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
+        } else if ((options & 0x700) == 0x200) {
+            *reinterpret_cast<int*>(info + 0x14) = 0xb;
+        } else {
+            result = static_cast<FMOD_RESULT>(0x19);
+        }
+        if (result == 0) {
+            *reinterpret_cast<unsigned*>(info + 0x18) = 0x2000;
+            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned*, void*, void**)>(info + 0x78) = Scaleform::OpenAudioStream;
+            *reinterpret_cast<unsigned long long (**)(void*, void*)>(info + 0x80) = Scaleform::CloseAudioStream;
+            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned, unsigned*, void*)>(info + 0x88) = Scaleform::ReadAudioCallback;
+            *reinterpret_cast<unsigned long long (**)(void*, void*, void*)>(info + 0x90) = Scaleform::ValidateAudioStream;
+            result = system->createStream(*reinterpret_cast<const char**>(request + 0x20), mode,
+                                          reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+        }
+        if (result == 0 && *sound) {
+            int format = 0, channels = 0;
+            float frequency = 0.0f;
+            if (FUN_1428d8eba(*sound, nullptr, &format, &channels, nullptr) == 0
+                && FUN_1428d8eb4(*sound, &frequency, nullptr, nullptr, nullptr) == 0
+                && (format == 2 || format == 5)) {
+                auto** vtable = *reinterpret_cast<void***>(manager);
+                returned = reinterpret_cast<void* (*)(void*, void*, int, unsigned, void*)>(vtable[4])(
+                    manager, object, channels, static_cast<unsigned>(frequency),
+                    reinterpret_cast<void*>(format == 5 ? 1 : 0));
+            }
+        }
+        FUN_14257dcb0(object);
+        LeaveCriticalSection(lock);
+        return returned;
+    }
+
     FMOD_RESULT result = static_cast<FMOD_RESULT>(0);
-    if (!stream) {
+    if (options & 0x2000) {
+        result = system->createSound(*reinterpret_cast<const char**>(request + 0x20), (options & 0x1000) ? 0xc0 : 0x4040,
+                                     nullptr, sound);
+        if (result != 0)
+            *sound = nullptr;
+    } else {
         unsigned mode = 0x1a001040;
         unsigned char info[0xd8] = {};
         *reinterpret_cast<unsigned*>(info) = sizeof(info);
@@ -4365,57 +4411,23 @@ void* FUN_1427449f0(void* manager, void* requestData)
         } else {
             result = static_cast<FMOD_RESULT>(0x19);
         }
-        *reinterpret_cast<unsigned*>(info + 8) = *reinterpret_cast<unsigned*>(request + 0x28);
-        if (result == 0)
+        if (result == 0) {
+            *reinterpret_cast<unsigned*>(info + 4) = *reinterpret_cast<unsigned*>(request + 0x28);
             result = system->createSound(*reinterpret_cast<const char**>(request + 0x20), mode,
                                          reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
-    } else {
-        unsigned char info[0xd8] = {};
-        *reinterpret_cast<unsigned*>(info) = sizeof(info);
-        *reinterpret_cast<int*>(info + 4) = 0x0fffffff;
-        *reinterpret_cast<unsigned*>(info + 0xd0) = 0x2000;
-        unsigned mode = 0x02002040;
-        if ((options & 0x700) == 0x100) {
-            mode = 0x02003040;
-            *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<unsigned*>(request + 0x14);
-            *reinterpret_cast<int*>(info + 0x14) = ((options & 7) == 2) + 1;
-            *reinterpret_cast<int*>(info + 0x0c) = ((options & 8) != 0) + 1;
-        } else if ((options & 0x700) == 0x200) {
-            *reinterpret_cast<int*>(info + 0x14) = 0xb;
-        } else {
-            result = static_cast<FMOD_RESULT>(0x19);
-        }
-        if (result == 0) {
-            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned*, void*, void**)>(info + 0x78) = Scaleform::OpenAudioStream;
-            *reinterpret_cast<unsigned long long (**)(void*, void*)>(info + 0x80) = Scaleform::CloseAudioStream;
-            *reinterpret_cast<unsigned long long (**)(void*, void*, unsigned, unsigned*, void*)>(info + 0x88) = Scaleform::ReadAudioCallback;
-            *reinterpret_cast<unsigned long long (**)(void*, void*, void*)>(info + 0x90) = Scaleform::ValidateAudioStream;
-            result = system->createStream(*reinterpret_cast<const char**>(request + 0x20), mode,
-                                          reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
-        }
-        if (result == 0 && *sound) {
-            int format = 0, channels = 0;
-            float frequency = 0.0f;
-            result = static_cast<FMOD_RESULT>(FUN_1428d8eba(*sound, nullptr, &format, &channels, nullptr));
-            if (result == 0)
-                result = static_cast<FMOD_RESULT>(FUN_1428d8eb4(*sound, &frequency, nullptr, nullptr, nullptr));
-            if (result == 0 && (format == 2 || format == 5)) {
-                auto** vtable = *reinterpret_cast<void***>(manager);
-                return reinterpret_cast<void* (*)(void*, void*, int, unsigned, void*)>(vtable[4])(
-                    manager, object, channels, static_cast<unsigned>(frequency),
-                    reinterpret_cast<void*>(format == 5 ? 1 : 0));
-            }
         }
     }
-
+    // The returned request keeps one reference (the creation one); a failed one is released here.
     if (result == 0) {
         InterlockedIncrement(reinterpret_cast<volatile long*>(object + 8));
-        return object;
+        returned = object;
     }
-    *sound = nullptr;
-    auto** vtable = *reinterpret_cast<void***>(object);
-    reinterpret_cast<void (*)(void*, unsigned)>(vtable[0])(object, 1);
-    return nullptr;
+    if (InterlockedExchangeAdd(reinterpret_cast<volatile long*>(object + 8), -1) == 1) {
+        auto** vtable = *reinterpret_cast<void***>(object);
+        reinterpret_cast<void (*)(void*, unsigned)>(vtable[0])(object, 1);
+    }
+    LeaveCriticalSection(lock);
+    return returned;
 }
 
 // MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
