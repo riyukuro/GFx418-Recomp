@@ -5100,12 +5100,84 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
     if (segments) Scaleform::Memory::Free(segments);
 }
 
-// MS2-FUNCTIONAL: forwards the language change to Windows and refreshes the GFx IME window state.
+// MS2-FUNCTIONAL: language-change handler (manager slot 7): updates the mode and locale label, resolves the layout's
+// record text and conversion flags, and refreshes the IME version for flag-4 layouts.
 // @0x1423cbe90
 void FUN_1423cbe90(long long* manager, unsigned language)
 {
-    ActivateKeyboardLayout(reinterpret_cast<HKL>(static_cast<ULONG_PTR>(language)), 0);
-    if (manager && manager[0xf]) FUN_1423d43b0(reinterpret_cast<unsigned char*>(manager[0xf]));
+    auto* bytes = reinterpret_cast<unsigned char*>(manager);
+    void* provider = reinterpret_cast<void*>(manager[0xf]);
+    if (!provider) return;
+    auto** vtable = reinterpret_cast<void**>(manager[0]);
+    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>(vtable[4])(
+        manager, static_cast<unsigned short>(language));
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
+    FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), mode);
+    wchar_t locale[0x104];
+    if (!GetLocaleInfoW(static_cast<unsigned short>(language), LOCALE_SLANGUAGE, locale, 0x104)) {
+        reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
+            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
+        provider = reinterpret_cast<void*>(manager[0xf]);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[0x60 / sizeof(void*)])(
+            provider, "Unsupported");
+        return;
+    }
+    {
+        String localeText(locale);
+        provider = reinterpret_cast<void*>(manager[0xf]);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[0x78 / sizeof(void*)])(
+            provider, localeText.ToCStr());
+    }
+    auto& flags = *reinterpret_cast<unsigned*>(bytes + 0x88);
+    flags = 0x1000000;
+    if (!(language & 0xe0000000)) {
+        struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+        const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x160);
+        const auto* records = reinterpret_cast<const LayoutRecord*>(manager[0x2b]);
+        for (unsigned i = 0; i < count; ++i) {
+            if (records[i].layoutId == (language >> 16)) {
+                String layoutText(records[i].layoutText);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &layoutText);
+                FUN_1423cb660(manager);
+                return;
+            }
+        }
+        String localeText(locale);
+        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &localeText);
+    } else {
+        const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0xd0);
+        for (unsigned i = 0; i < count; ++i) {
+            auto* entry = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
+            if (*reinterpret_cast<unsigned*>(entry + 0x28) != language) continue;
+            flags = *reinterpret_cast<unsigned*>(entry + 0x20);
+            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2) {
+                String text(*reinterpret_cast<String*>(entry + 0x18));
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+            }
+            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1) {
+                entry = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
+                String text(*reinterpret_cast<String*>(entry + 0x10));
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+            }
+            FUN_1423cb660(manager);
+            *reinterpret_cast<unsigned*>(bytes + 0x188) = 0;
+            if (flags == 4) {
+                const unsigned version = FUN_1423cb260();
+                *reinterpret_cast<unsigned*>(bytes + 0x188) = version;
+                FUN_1423ca660(reinterpret_cast<void*>(manager[0xf]), version);
+            }
+            break;
+        }
+        if (flags == 0x1000000) {
+            String unsupported("Not Supported");
+            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &unsupported);
+        }
+    }
+    const unsigned currentMode = *reinterpret_cast<unsigned*>(bytes + 0x84);
+    if (currentMode == 0x400 || currentMode == 0x2000) return;
+    if (flags == 0x1000000 || (flags & 0xf00000)) return;
+    provider = reinterpret_cast<void*>(manager[0xf]);
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[0x98 / sizeof(void*)])(provider);
 }
 
 // MS2-FUNCTIONAL: updates the active keyboard layout and notifies the recovered IME window handlers.
