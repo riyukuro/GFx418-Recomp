@@ -87,10 +87,10 @@ void FUN_140047b30(cri_u64 *a1,longlong *a2,byte *a3)
   u_v18 = CriAt<uint>(a1, 0x18) * 2 - i_v1 >> 2;
   pu_v26 = pu_v22 + (CriAt<uint>(a2, 0x10) >> 2);
   u_v10 = (int)(i_v1 + (i_v1 >> 0x1f & 7U)) >> 3;
-  u_v11 = CriAt<int>(a2, 0x60) / 2;
+  u_v11 = CriAt<int>(a2, 0xc) / 2;
   u_v14 = (ulonglong)u_v11;
   i_v2 = CriAt<int>(a1, 0x20);
-  i_v3 = CriAt<int>(a1, 0xe0);
+  i_v3 = CriAt<int>(a1, 0x1c);
   u_v20 = (CriAt<uint>(a2, 0x10) >> 2) * 2 - (int)a2[1];
   if (u_v11 != 0) {
     do {
@@ -268,10 +268,10 @@ void FUN_1400486a0(cri_u64 *a1,longlong *a2,longlong a3,byte *a4)
   u_v19 = CriAt<uint>(a1, 0x18) * 2 - i_v1 >> 2;
   pu_v17 = pu_v23 + (CriAt<uint>(a2, 0x10) >> 2);
   u_v10 = (int)(i_v1 + (i_v1 >> 0x1f & 7U)) >> 3;
-  u_v11 = CriAt<int>(a2, 0x60) / 2;
+  u_v11 = CriAt<int>(a2, 0xc) / 2;
   u_v14 = (ulonglong)u_v11;
   i_v2 = CriAt<int>(a1, 0x20);
-  i_v3 = CriAt<int>(a1, 0xe0);
+  i_v3 = CriAt<int>(a1, 0x1c);
   u_v20 = (CriAt<uint>(a2, 0x10) >> 2) * 2 - (int)a2[1];
   if (u_v11 != 0) {
     do {
@@ -845,11 +845,11 @@ void FUN_140049e60(longlong *a1,longlong *a2,longlong a3,int a4,int a5)
   l_v30 = l_v22 + a4;
   l_v31 = l_v32 + (int)a1[3];
   l_v20 = (longlong)((int)a2[1] / 2);
-  u_v17 = CriAt<int>(a2, 0x60) / 2;
+  u_v17 = CriAt<int>(a2, 0xc) / 2;
   u_v19 = (ulonglong)u_v17;
   if (0 < (int)u_v17) {
     l_v16 = a1[4];
-    i_v9 = CriAt<int>(a1, 0xe0);
+    i_v9 = CriAt<int>(a1, 0x1c);
     l_v24 = (longlong)((int)a1[3] * 2);
     do {
       i_v21 = 0;
@@ -1612,11 +1612,11 @@ void FUN_14004a7c0(longlong *a1,longlong *a2,longlong a3,int a4,int a5)
   l_v30 = l_v22 + a4;
   l_v31 = l_v32 + (int)a1[3];
   l_v20 = (longlong)((int)a2[1] / 2);
-  u_v17 = CriAt<int>(a2, 0x60) / 2;
+  u_v17 = CriAt<int>(a2, 0xc) / 2;
   u_v19 = (ulonglong)u_v17;
   if (0 < (int)u_v17) {
     l_v16 = a1[4];
-    i_v9 = CriAt<int>(a1, 0xe0);
+    i_v9 = CriAt<int>(a1, 0x1c);
     l_v24 = (longlong)((int)a1[3] * 2);
     do {
       i_v21 = 0;
@@ -2354,8 +2354,8 @@ void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5)
   u_v22 = CriAt<int>(a1, 0x18) * 2 - u_v2;
   u_v10 = u_v2 & 1;
   u_v17 = u_v10 + u_v2 >> 1;
-  if (1 < CriAt<int>(a2, 0x60)) {
-    u_v25 = (ulonglong)(CriAt<int>(a1, 0xe0) - u_v17);
+  if (1 < CriAt<int>(a2, 0xc)) {
+    u_v25 = (ulonglong)(CriAt<int>(a1, 0x1c) - u_v17);
     u_v11 = (ulonglong)(a5 + u_v2 * -4) & 0xfffffffffffffffc;
     do {
       loc_68 = (ulonglong)(u_v17 - 1);
@@ -2652,9 +2652,9 @@ void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5)
       loc_b0 = loc_b0 + u_v25 + 1;
       loc_a8 = loc_a8 + u_v25 + 1;
       loc_7c = loc_7c + 2;
-    } while (i_v9 < CriAt<int>(a2, 0x60));
+    } while (i_v9 < CriAt<int>(a2, 0xc));
   }
-  if ((CriAt<byte>(a2, 0x60) & 1) != 0) {
+  if ((CriAt<byte>(a2, 0xc) & 1) != 0) {
     if (u_v17 - 1 != 0) {
       u_v11 = (ulonglong)(u_v17 - 1);
       pu_v18 = loc_a0;
