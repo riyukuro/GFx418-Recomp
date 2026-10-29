@@ -3667,11 +3667,55 @@ bool FUN_1423d43b0(void* raw)
     return state != 0x01000000;
 }
 
-// MS2-FUNCTIONAL: shares the executable's IME composition reset and IMM window setup path.
+// MS2-FUNCTIONAL: WM_IME_STARTCOMPOSITION of the Vista IME object (vtbl 0x14313a450 slot 11; the XP twin is
+// 0x1423d43b0, whose +0x5a0/+0x5a4 fields lie past this 0xe8-byte object). Starts the composition, stores the
+// layout and its at-caret flag (+0xdc, forced by the modes), and moves the IMM composition and candidate windows
+// off screen, or for mode 0x1000000 to the cursor rect the owner (vtbl+0x190) maps. True unless mode 0x1000000.
 // @0x1423d05a0
 bool FUN_1423d05a0(void* raw)
 {
-    return FUN_1423d43b0(raw);
+    auto* self = static_cast<unsigned char*>(raw);
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+    self[0xb8] = 1;
+    ime->StartComposition();
+    self[0xb8] = 1;
+    HKL layout = GetKeyboardLayout(0);
+    *reinterpret_cast<HKL*>(self + 0x58) = layout;
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    auto& atCaret = *reinterpret_cast<unsigned*>(self + 0xdc);
+    atCaret = cx18_ImmGetProperty(layout, IGP_PROPERTY) >> 0x12 & 1;
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (mode == 0xd00001 || mode == 5) atCaret = 0;
+    if (mode == 0xa10000 || mode == 0xb10000) atCaret = 1;
+    POINT position = { -1000, -1000 };
+    if (mode == 0x1000000 && owner) {
+        Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> metrics =
+            reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+        Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+        if (metrics) {
+            metrics->GetMetrics(&viewRect, &cursorRect, 0);
+            Scaleform::Render::RectF mapped(0, 0, 0, 0);
+            const auto* screen = reinterpret_cast<const Scaleform::Render::RectF*(*)(
+                void*, Scaleform::Render::RectF*, const Scaleform::Render::RectF*, int)>(
+                    (*reinterpret_cast<void***>(owner))[0x190 / sizeof(void*)])(owner, &mapped, &cursorRect, 0);
+            position.x = static_cast<LONG>(screen->x1);
+            position.y = static_cast<LONG>(screen->y2);
+        }
+    }
+    CANDIDATEFORM candidate;
+    candidate.dwIndex = 0;
+    candidate.dwStyle = CFS_CANDIDATEPOS;
+    candidate.ptCurrentPos = position;
+    COMPOSITIONFORM composition;
+    composition.dwStyle = CFS_FORCE_POSITION;
+    composition.ptCurrentPos = position;
+    cx18_ImmSetCompositionWindow(context, &composition);
+    cx18_ImmSetCandidateWindow(context, &candidate);
+    cx18_ImmReleaseContext(hwnd, context);
+    return mode != 0x1000000;
 }
 
 // MS2-FUNCTIONAL: handles the executable's disable, selection, numeric index, and comma/colon list-change events.
