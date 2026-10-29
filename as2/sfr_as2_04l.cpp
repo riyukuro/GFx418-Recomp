@@ -123,7 +123,8 @@ static inline bool FillObjectValue(MovieImpl* pmovie, GFx::Value::ObjectInterfac
     }
     else
     {
-        Object* pobj = static_cast<Object*>(pdata);
+        // the host data of an object is its ObjectInterface, as AS2ValueObjectInterface::ObjectAddRef reads it
+        Object* pobj = static_cast<ObjectInterface*>(pdata)->ToASObject();
         vt           = pobj->GetObjectType() == Object::Object_Array ? GFx::Value::VT_Array : GFx::Value::VT_Object;
     }
     UPInt* w = reinterpret_cast<UPInt*>(pval);
