@@ -52,7 +52,6 @@ extern void* PTR_LAB_1431b65f0;
 extern void* PTR_LAB_1431b5e70;
 extern void* PTR_LAB_1431b5e18;
 extern void* PTR_FUN_1431b5e20;
-extern void* PTR_s_attachVideo_1431b5800;
 extern void* PTR_LAB_1431b65f0;
 extern void* PTR_LAB_1431b6540;
 extern void* PTR_FUN_1431b64f0;
@@ -64,7 +63,6 @@ extern void* PTR_LAB_1431b63f8;
 extern void* PTR_LAB_1431b6690;
 extern void* PTR_LAB_1431b6638;
 extern void* PTR_FUN_1431b6640;
-extern void* PTR_s_connect_1431b6410;
 extern void* PTR_FUN_1431b7858;
 extern void* DAT_143b274d8;
 extern void* DAT_143b274e0;
@@ -140,6 +138,24 @@ extern void FUN_142518040(void*, float, float);
 extern void FUN_142515a20(void*, float, float);
 extern void FUN_1424f96c0(void*);
 extern void FUN_142961830(void*, void*, void*, void*, const void*);
+extern void FUN_14000d400(const Scaleform::GFx::AS2::FnCall&);   // VideoProto::AttachVideo (sfr_video_01)
+extern void FUN_14000d330(void*);                                  // Video.clear (sfr_video_01)
+
+// NetConnection.connect (exe 0x140011b00) is an empty native method.
+static void Video02NetConnectionConnect(const Scaleform::GFx::AS2::FnCall&) {}
+
+// The exe's native method tables. The data unit only defines the first 8-byte slot of each
+// (PTR_s_connect_1431b6410, PTR_s_attachVideo_1431b5800), and the fullexe does not lay data out at exe VAs,
+// so InitFunctionMembers must get a complete {0, 0}-terminated table.
+static const Scaleform::GFx::AS2::NameFunction Video02ConnectFunctions[] = {   // 0x1431b6410
+    {"connect", Video02NetConnectionConnect},
+    {nullptr, nullptr},
+};
+static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     // 0x1431b5800
+    {"attachVideo", FUN_14000d400},
+    {"clear", reinterpret_cast<Scaleform::GFx::AS2::CFunctionPtr>(&FUN_14000d330)},
+    {nullptr, nullptr},
+};
 namespace Scaleform { namespace GFx { namespace AS2 {
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*); // defined below, in the AS2 block
 }}}
@@ -2319,7 +2335,7 @@ Scaleform::GFx::AS2::Object* FUN_14000eb50(
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
     const unsigned char flags = 1;
     FUN_142961830(reinterpret_cast<char*>(object) + 0x70, object, context,
-                  &PTR_s_attachVideo_1431b5800, &flags);
+                  Video02VideoFunctions, &flags);
     return object;
 }
 
@@ -2486,7 +2502,7 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
     unsigned char flags = 1;
     FUN_142961830(reinterpret_cast<char*>(object) + 0x68, object, context,
-                  PTR_s_connect_1431b6410, &flags);
+                  const_cast<Scaleform::GFx::AS2::NameFunction*>(Video02ConnectFunctions), &flags);
     return object;
 }
 
@@ -2527,7 +2543,7 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
             *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
             const unsigned char flags = 1;
             FUN_142961830(reinterpret_cast<char*>(prototype) + 0x70, prototype, &stringContext,
-                          &PTR_s_attachVideo_1431b5800, &flags);
+                          const_cast<Scaleform::GFx::AS2::NameFunction*>(Video02VideoFunctions), &flags);
         }
         auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
