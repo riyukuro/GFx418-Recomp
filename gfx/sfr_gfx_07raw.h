@@ -189,7 +189,7 @@ struct KeyStringOps
     }
 };
 
-// Payload {String, UInt32}.
+// Payload {StringLH, UInt32}: copies land in the heap that holds the entry (exe CopyConstructHelper 0x1425868d0).
 struct StringKeyOps
 {
     struct Ref
@@ -199,12 +199,12 @@ struct StringKeyOps
     };
     static void Copy(char* d, const char* s)
     {
-        new (d) String(*(const String*)s);
+        new (d) StringLH(*(const String*)s);
         *(UInt32*)(d + 8) = *(const UInt32*)(s + 8);
     }
     static void Construct(char* d, const Ref& r)
     {
-        new (d) String(*r.Key);
+        new (d) StringLH(*r.Key);
         *(UInt32*)(d + 8) = *r.Value;
     }
     static void Assign(char* d, const Ref& r)
