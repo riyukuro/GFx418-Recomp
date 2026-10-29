@@ -2031,7 +2031,7 @@ namespace InstanceTraits
     }
 
     // MS2-FUNCTIONAL: the exe inlines the Object constructor
-    // @0x14241bfd0
+    // @0x14241c060
     void fl::Object::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Object(t));
@@ -2039,7 +2039,7 @@ namespace InstanceTraits
 
     // An interface makes plain objects.
     // MS2-FUNCTIONAL: the exe inlines the Object constructor
-    // @0x14241c060
+    // @0x14241bfd0
     void Interface::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Object(t));

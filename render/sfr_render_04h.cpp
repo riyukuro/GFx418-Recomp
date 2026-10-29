@@ -313,10 +313,10 @@ void DICommand_CopyPixels::ExecuteHWGetImages(DrawableImage** images, Size<float
 }} // namespace Scaleform::Render
 
 // MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_ApplyFilter@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142671f40
-// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_CopyChannel@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142672400
-// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_CopyPixels@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x1426728c0
-// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_ColorTransform@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142672d80
-// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_Compare@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142673240
+// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_CopyChannel@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142672d80
+// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_CopyPixels@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142673240
+// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_ColorTransform@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142672400
+// MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_Compare@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x1426728c0
 // MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_Merge@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142673700
 // MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_PaletteMap@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142673bc0
 // MS2-PIN: ?ExecuteHW@?$DICommand_SourceRectImpl@UDICommand_Scroll@Render@Scaleform@@@Render@Scaleform@@UEBAXAEAUDICommandContext@23@@Z 0x142674080
