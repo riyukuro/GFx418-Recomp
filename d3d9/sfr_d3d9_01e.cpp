@@ -1457,7 +1457,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
             pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
             pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
             drawMaskClearRectangles(prim->GetMaskAreaMatrices(), prim->GetMaskCount());
-            pDevice->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_KEEP);
+            pDevice->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);   // the exe resets STENCILFAIL here and leaves STENCILZFAIL at REPLACE
         }
     }
 
