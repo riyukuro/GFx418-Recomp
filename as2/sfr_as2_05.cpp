@@ -3975,7 +3975,7 @@ static const char* Stage_ScaleModeName(MovieSlots418::ScaleModeType mode)
     }
 }
 
-// The Stage.align string of a view alignment ("" when centered).
+// The Stage.align string of a view alignment ("" when centered); the corners use the Flash spelling (LT, TR, LB, RB).
 static const char* Stage_AlignName(MovieSlots418::AlignType align)
 {
     switch (align)
@@ -3984,10 +3984,10 @@ static const char* Stage_AlignName(MovieSlots418::AlignType align)
     case MovieSlots418::Align_BottomCenter: return "B";
     case MovieSlots418::Align_CenterLeft:   return "L";
     case MovieSlots418::Align_CenterRight:  return "R";
-    case MovieSlots418::Align_TopLeft:      return "TL";
+    case MovieSlots418::Align_TopLeft:      return "LT";
     case MovieSlots418::Align_TopRight:     return "TR";
-    case MovieSlots418::Align_BottomLeft:   return "BL";
-    case MovieSlots418::Align_BottomRight:  return "BR";
+    case MovieSlots418::Align_BottomLeft:   return "LB";
+    case MovieSlots418::Align_BottomRight:  return "RB";
     default:                                return "";
     }
 }
