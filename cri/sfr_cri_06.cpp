@@ -851,7 +851,7 @@ void FUN_1400544b0(cri_any cri_unused, ...)
   char *pc_v2;
   
   i_v1 = 0;
-  pc_v2 = "";
+  pc_v2 = (char *)&DAT_1431baa30 + 0x40;  // the alternate scan; [-0x40] is the zigzag scan
   do {
     (&DAT_143fe8260)[pc_v2[-0x40]] = (char)i_v1;
     (&DAT_143fe82a0)[*pc_v2] = (char)i_v1;
