@@ -4017,7 +4017,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // The names of a list are its indices, "0" up.
-    // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
+    // Past the end the name is the builtin "null" string (0x1424164ee lea rdx,[rsi+0x10]: Builtins[2]).
     // @0x142416430
     void XMLList::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
     {
@@ -4029,7 +4029,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             name.Assign(sm.CreateString(f.ToCStr(), f.GetSize()));
         }
         else
-            name.Assign(sm.GetBuiltin(AS3Builtin_empty_));
+            name.Assign(sm.GetBuiltin(AS3Builtin_null));
     }
 
     // register allocation of the target fields differs
