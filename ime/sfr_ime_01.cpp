@@ -422,10 +422,10 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
     void* movie = reinterpret_cast<void*>(self[0x15]);
     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
     if (values) {
-        void* output = nullptr;
-        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+        Scaleform::GFx::Value output;
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, "RemoveInputWindow", &output, 0, 0);
+                values, "RemoveInputWindow", &output, nullptr, 0);
     }
     cx18_ImmReleaseContext(hwnd, context);
 }
@@ -455,11 +455,11 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
             FUN_1423d9500(reinterpret_cast<void*>(self[6]));
             void* movie = reinterpret_cast<void*>(self[0x15]);
             void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
+            Scaleform::GFx::Value output;
             if (values) {
-                void* output = nullptr;
-                reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                     (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                        values, "RemoveList", &output, 0, 0);
+                        values, "RemoveList", &output, nullptr, 0);
             }
         }
         return DefWindowProcW(reinterpret_cast<HWND>(self[5]), message, 4, value);
@@ -474,7 +474,7 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
         reinterpret_cast<void(*)(void*, unsigned, unsigned)>(vtable[0x70 / sizeof(void*)])(self, message, 0xe);
         return 2;
     }
-    if (type == 3 || type == 5) return result;
+    if (result) return result;
     reinterpret_cast<void(*)(void*, unsigned, unsigned long long, LPARAM)>(
         vtable[0x70 / sizeof(void*)])(self, message, type, value);
     return result;
@@ -2751,10 +2751,10 @@ unsigned long long FUN_1423da730(void* raw, int state)
                     void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
                     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
                     if (values) {
-                        void* output = nullptr;
-                        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                        Scaleform::GFx::Value output;
+                        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                                values, "RemoveList", &output, 0, 0);
+                                values, "RemoveList", &output, nullptr, 0);
                     }
                 }
                 FUN_1423d9500(*reinterpret_cast<void**>(manager + 0x30));
@@ -2765,10 +2765,10 @@ unsigned long long FUN_1423da730(void* raw, int state)
                     void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
                     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
                     if (values) {
-                        void* output = nullptr;
-                        reinterpret_cast<void(*)(void*, const char*, void**, unsigned, unsigned)>(
+                        Scaleform::GFx::Value output;
+                        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                                values, "RemoveInputWindow", &output, 0, 0);
+                                values, "RemoveInputWindow", &output, nullptr, 0);
                     }
                 }
                 *reinterpret_cast<String*>(manager + 0xb0) = "";
