@@ -1918,7 +1918,7 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
     addString(eventObject, "name", *reinterpret_cast<const std::uint64_t*>(eventData + 2));
     {
         Scaleform::GFx::ASString key(manager->CreateStringNode("time"));
-        Scaleform::GFx::AS3::Value value(static_cast<double>(eventData[4]) / VideoDurationScale);
+        Scaleform::GFx::AS3::Value value(static_cast<double>(static_cast<float>(eventData[4]) / VideoDurationScale));
         eventObject->AddDynamicSlotValuePair(key, value);
     }
     {
