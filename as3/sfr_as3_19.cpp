@@ -8481,18 +8481,19 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
         }
         GFx::ASCharacter_MatrixScaleAndRotate2x2(*reinterpret_cast<Render::Matrix2F*>(m), static_cast<float>(xs / xdiv), static_cast<float>(ys / ydiv), static_cast<float>(rad / 180.0 - rot0));
     }
-    if (Sfr31NotNaN((f & 1) ? Sfr31DblAt(d, 0) : nan))
+    // x/y hold the text rect space position on the text path (exe xmm11/xmm10, 0x142526edb).
+    if (Sfr31NotNaN((f & 1) ? x : nan))
     {
-        double v = (f & 1) ? Sfr31DblAt(d, 0) : nan;
+        double v = (f & 1) ? x : nan;
         if (v == HUGE_VAL || v == -HUGE_VAL)
             v = 0.0;
         v = floor(v * 20.0);
         pd[0] = static_cast<int>(v);
         m[3] = static_cast<float>(static_cast<int>(v));
     }
-    if (Sfr31NotNaN(((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan))
+    if (Sfr31NotNaN(((f >> 1) & 1) ? y : nan))
     {
-        double v = ((f >> 1) & 1) ? Sfr31DblAt(d, 8) : nan;
+        double v = ((f >> 1) & 1) ? y : nan;
         if (v == HUGE_VAL || v == -HUGE_VAL)
             v = 0.0;
         v = floor(v * 20.0);
@@ -8510,13 +8511,13 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
     {
         if (f & 1)
         {
-            double v = Sfr31DblAt(d, 0) * 20.0;
+            double v = x * 20.0;
             v = v <= 0.0 ? v - 0.5 : v + 0.5;
             pd[0] = static_cast<int>(v);
         }
         if ((f >> 1) & 1)
         {
-            double v = Sfr31DblAt(d, 8) * 20.0;
+            double v = y * 20.0;
             v = v <= 0.0 ? v - 0.5 : v + 0.5;
             pd[1] = static_cast<int>(v);
         }
