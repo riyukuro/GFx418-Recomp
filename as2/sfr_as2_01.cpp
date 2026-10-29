@@ -609,7 +609,7 @@ void AsBroadcasterProto::BroadcastMessage(const FnCall& fn)
                 Value result;
                 method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
             }
-        } callback(fn.NArgs - 1, fn.Env->GetTopIndex() - 1);
+        } callback(fn.NArgs - 1, fn.Env->GetTopIndex() - 4);
         AsBroadcaster::BroadcastMessageWithCallback(fn.Env, fn.ThisPtr, eventName, &callback);
     }
     fn.Result->SetUndefined();
