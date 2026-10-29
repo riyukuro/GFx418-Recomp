@@ -2794,25 +2794,31 @@ namespace InstanceTraits { namespace fl
 
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: preserves the Array constructor's numeric-length validation and value-copy behavior; compiler codegen differs.
+    // MS2-FUNCTIONAL: Array constructor length validation and Append as in the exe; compiler codegen differs.
     // @0x1423f5550
     void Array::AS3Constructor(unsigned argc, const Value* argv)
     {
         if (argc == 1 && argv[0].IsNumeric())
         {
-            Value::Number number;
-            if (argv[0].Convert2NumberInline(number) && number >= 0 && number <= 0xffffffffu)
+            // The exe (0x1423f5585) rejects a Number with a fractional part before converting, then only checks
+            // for a negative length; the length is truncated to 32 bits with no upper bound check.
+            if (argv[0].IsNumber())
             {
-                Resize(static_cast<UInt32>(number));
-                return;
+                double ip;
+                const double frac = modf(argv[0].AsNumber(), &ip);
+                if (frac != 0)
+                    return GetVM().ThrowRangeError(VM::Error(static_cast<VM::ErrorID>(1005), GetVM(), static_cast<SInt32>(frac)));
             }
-            GetVM().ThrowRangeError(VM::Error(static_cast<VM::ErrorID>(1005), GetVM(), static_cast<SInt32>(number)));
+            Value::Number number;
+            if (!argv[0].Convert2Number(number))
+                return;
+            if (number < 0)
+                return GetVM().ThrowRangeError(VM::Error(static_cast<VM::ErrorID>(1005), GetVM(), static_cast<SInt32>(number)));
+            SA.Resize(static_cast<UInt32>(static_cast<SInt64>(number)));
             return;
         }
 
-        Resize(argc);
-        for (unsigned i = 0; i < argc; ++i)
-            SA.Set(i, argv[i]);
+        SA.Append(argc, argv);
     }
 
     // Array's toString/toLocaleString are not generic: this is assumed to be an Array.
