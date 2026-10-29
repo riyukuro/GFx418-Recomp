@@ -2360,20 +2360,21 @@ void FUN_14000f470(void* object, void* value)
 void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
                    Scaleform::GFx::ASString* name, Scaleform::GFx::AS2::Value* value)
 {
-    const bool constructor = name->CompareBuiltIn_CaseCheck(
-        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor), context->IsCaseSensitive());
+    // `object` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     const bool constructor2 = name->CompareBuiltIn_CaseCheck(
         context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__), context->IsCaseSensitive());
-    if (constructor || constructor2)
+    const bool constructor = name->CompareBuiltIn_CaseCheck(
+        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor), context->IsCaseSensitive());
+    auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+        reinterpret_cast<char*>(object) - 0x20);
+    if (constructor2 || constructor)
     {
         auto* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
             reinterpret_cast<char*>(object) + 0x48);
-        auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
-            reinterpret_cast<char*>(object) - 0x20);
-        prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor);
+        prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor2);
         return;
     }
-    object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
+    owner->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
 }
 
 // MS2-FUNCTIONAL: the NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
