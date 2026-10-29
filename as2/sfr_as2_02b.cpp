@@ -179,7 +179,7 @@ void TextFormatProto::GetTextExtent(const FnCall& fn)
 
     // ascent and descent of the first font of the list, scaled by the font size
     Ptr<Render::Text::FontHandle> pfont = *DocView_GetFontManager(pdoc)->CreateFontHandle(
-        textFmt.GetFontList().ToCStr(), textFmt.IsBold(), textFmt.IsItalic(), false, false);
+        textFmt.GetFontList().ToCStr(), textFmt.IsBold(), textFmt.IsItalic(), true, true);
     Double fontAscent = 0, fontDescent = 0;
     if (pfont)
     {
