@@ -355,6 +355,13 @@ bool AvmSprite::IsFocusEnabled(FocusMovedType fmt) const
     return static_cast<const AvmInteractiveObjBase*>(static_cast<const AvmCharacter*>(this))->ActsAsButton();
 }
 
+// MS2-PIN: ?IsVerboseActionErrors@Environment@AS2@GFx@Scaleform@@UEBA_NXZ 0x142966240
+// @0x142966240
+bool Environment::IsVerboseActionErrors() const
+{
+    return !(GetTarget()->GetMovieImpl()->Flags & MovieImpl::Flag_SuppressActionErrors);
+}
+
 // MS2-FUNCTIONAL: the exe inlines the tabEnabled lookup; same flow and calls.
 // tabEnabled is read raw from the prototype (+0x18); without a defined value a text field is tabable unless it is read-only.
 // @0x1429660c0

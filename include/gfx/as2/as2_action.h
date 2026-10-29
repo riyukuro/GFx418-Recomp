@@ -280,6 +280,8 @@ public:
 
     // The movie logs every action (inlined into the LogAction callers).
     bool IsVerboseAction() const;
+    // Script errors log unless the movie suppresses them (exe 0x142966240, ??_7Environment slot 1).
+    bool IsVerboseActionErrors() const;
     // Local variables of the innermost function frame.
     const Value* FindLocal(const ASString& varname) const;      // exe 0x142944690
     void         AddLocal(const ASString& varname, const Value& val); // exe 0x14292ff50 (it must not exist yet)
