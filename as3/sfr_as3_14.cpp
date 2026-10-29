@@ -450,7 +450,7 @@ namespace Classes { namespace fl_utils
     {
         SF_UNUSED(result);
         VM& vm = GetVM();
-        vm.ThrowRangeError(VM::Error(VM::eInvalidEnumError, vm, "some type", "encAMF0 or encAMF3"));
+        vm.ThrowRangeError(VM::Error(VM::eInvalidEnumError, vm, "something", "encAMF0 or encAMF3"));
     }
 }}
 
@@ -1210,7 +1210,7 @@ namespace Instances { namespace fl_utils
     {
         SF_UNUSED(result);
         VM& vm = GetVM();
-        vm.ThrowRangeError(VM::Error(VM::eInvalidEnumError, vm, "something", "encAMF0 or encAMF3"));
+        vm.ThrowRangeError(VM::Error(VM::eInvalidEnumError, vm, "some type", "encAMF0 or encAMF3"));
     }
 
     // @0x1424bf880
