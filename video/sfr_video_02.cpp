@@ -2959,12 +2959,14 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
     char* bytes = static_cast<char*>(array);
     auto length = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
     FUN_1425eec50(bytes + 0x18, bytes + 0x18, length + 1);
-    char* item = *reinterpret_cast<char**>(bytes + 0x18) - 0x10 + length * 0x10;
+    // the new last entry, at the resized count; the exe returns that count
+    auto size = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
+    char* item = *reinterpret_cast<char**>(bytes + 0x18) + size * 0x10 - 0x10;
     *reinterpret_cast<unsigned*>(item) = *source;
     void* value = *reinterpret_cast<void* const*>(source + 2);
     if (value) FUN_14257dc30(value);
     *reinterpret_cast<void**>(item + 8) = value;
-    return static_cast<unsigned>(length);
+    return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(bytes + 0x20));
 }
 
 // MS2-FUNCTIONAL: appends a copied reference entry in the nested +0x88 collection.
@@ -2974,15 +2976,17 @@ unsigned FUN_140011450(void* object, const unsigned* source)
     char* array = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88)) + 0x18;
     auto length = *reinterpret_cast<unsigned __int64*>(array + 8);
     FUN_1425eec50(array, array, length + 1);
-    char* item = *reinterpret_cast<char**>(array) - 0x10 + length * 0x10;
+    // the new last entry, at the resized count; the exe returns that count
+    auto size = *reinterpret_cast<unsigned __int64*>(array + 8);
+    char* item = *reinterpret_cast<char**>(array) + size * 0x10 - 0x10;
     *reinterpret_cast<unsigned*>(item) = *source;
     void* value = *reinterpret_cast<void* const*>(source + 2);
     if (value) FUN_14257dc30(value);
     *reinterpret_cast<void**>(item + 8) = value;
-    return static_cast<unsigned>(length);
+    return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(array + 8));
 }
 
-// MS2-FUNCTIONAL: grows the aligned callback buffer and advances its active range.
+// MS2-FUNCTIONAL: frees the old aligned callback buffer, allocates the grown one and advances its active range.
 // @0x140010cd0
 void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 {
@@ -2990,9 +2994,9 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
     void* object = buffer[0];
     auto** vtable = *reinterpret_cast<void***>(object);
     if (*reinterpret_cast<void**>(state)) {
-        auto release = reinterpret_cast<void (*)(void*)>(
+        auto release = reinterpret_cast<void (*)(void*, void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x60));
-        release(object);
+        release(object, *reinterpret_cast<void**>(state));
     }
 
     const unsigned __int64 alignment = reinterpret_cast<unsigned __int64*>(buffer)[1];
