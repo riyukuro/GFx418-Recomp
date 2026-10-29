@@ -1331,13 +1331,9 @@ void* FUN_1423db7f0(unsigned long long* object)
 // @0x1423ca350
 void FUN_1423ca350(void* self)
 {
-    void* value = nullptr;
+    struct { void* pObjectInterface; unsigned Type; const char* pString; } value = { nullptr, 6, "Hello World" };
     FUN_142576820(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
-                  "_root.Edit_MLine1.textBox.text", &value, 1);
-    if (value) {
-        void** vtable = *reinterpret_cast<void***>(value);
-        reinterpret_cast<void(*)(void*, void**, const char*)>(vtable[2])(value, &value, "Hello World");
-    }
+                  "_root.Edit_MLine1.textBox.text", reinterpret_cast<void**>(&value), 1);
     FUN_1423ca030(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
                   "Selection.setSelection", "%d %d", 5, 5);
 }
@@ -2161,10 +2157,9 @@ void FUN_1423d7890(void* self, const char* name)
         char* savedName = *reinterpret_cast<char**>(entries + i * 0x20);
         if (savedName && strcmp(savedName, name) == 0) {
             HKL layout = *reinterpret_cast<HKL*>(entries + i * 0x20 + 0x18);
-            if (layout) {
-                *reinterpret_cast<HKL*>(bytes + 0x198) = layout;
-                ActivateKeyboardLayout(layout, 0);
-            }
+            if (!layout) continue;
+            *reinterpret_cast<HKL*>(bytes + 0x198) = layout;
+            ActivateKeyboardLayout(layout, 0);
             return;
         }
     }
@@ -2925,7 +2920,8 @@ HRESULT FUN_1423da940(void*, IUnknown* source, void* value, unsigned selector, v
         auto** propertyVtable = *reinterpret_cast<void***>(property);
         hr = reinterpret_cast<HRESULT(*)(void*, unsigned, void*, VARIANT*)>(propertyVtable[5])(
             property, selector, value, &id);
-        if (SUCCEEDED(hr) && id.vt == VT_I4) {
+        if (hr == S_OK && id.vt != VT_I4) hr = static_cast<HRESULT>(0x80004005u);
+        else if (hr == S_OK) {
             auto** firstVtable = *reinterpret_cast<void***>(first);
             hr = reinterpret_cast<HRESULT(*)(void*, unsigned, void*)>(firstVtable[0x78 / sizeof(void*)])(
                 first, static_cast<unsigned>(id.lVal), output);
@@ -3478,8 +3474,9 @@ void FUN_1423d5b00(unsigned long long* manager, const unsigned long long* value,
     for (unsigned i = 0; i < count; ++i) {
         auto* entry = entries + i * 0x30;
         auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
-        if (!language || _stricmp(name->ToCStr(), language) != 0 ||
-            *reinterpret_cast<unsigned*>(entry + 0x20) != mode) continue;
+        if (!language || _stricmp(name->ToCStr(), language) != 0) continue;
+        if (reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3])(
+                manager, *reinterpret_cast<unsigned*>(entry + 0x20)) != mode) continue;
 
         auto* copied = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x58));
         if (!copied) return;
@@ -5907,11 +5904,11 @@ unsigned FUN_1423cb5b0(void*, unsigned flags)
 // @0x1423cb600
 unsigned FUN_1423cb600(void* self, long long id)
 {
-    const unsigned long long count = *(unsigned long long*)((UByte*)self + 0x80);
+    const unsigned count = *(unsigned*)((UByte*)self + 0x80);
     UByte* records = *(UByte**)((UByte*)self + 0x90);
-    for (unsigned long long i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < count; ++i) {
         UByte* record = records + i * 0x20;
-        if (*(long long*)((UByte*)record + 0x18) == id) return *(unsigned*)((UByte*)record + 0x10);
+        if (*(unsigned*)((UByte*)record + 0x18) == (unsigned)id) return *(unsigned*)((UByte*)record + 0x10);
     }
     return 0x1000000;
 }
