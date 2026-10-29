@@ -2373,7 +2373,10 @@ unsigned long long FUN_1423d15b0(void* self, int mode)
         wasAssociated = false;
         cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
         context = cx18_ImmGetContext(hwnd);
-        if (!context) return cx18_ImmReleaseContext(hwnd, nullptr);
+        if (!context) {
+            cx18_ImmReleaseContext(hwnd, nullptr);
+            return 0;
+        }
     }
     DWORD conversion = 0, sentence = 0;
     cx18_ImmGetConversionStatus(context, &conversion, &sentence);
