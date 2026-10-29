@@ -5270,44 +5270,66 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     ++((StreamCounterView*)player)->Count;
 }
 
+// Column names of the video header, as {current, legacy} pairs (exe 0x143a47150). A header without "mpeg_codec" but
+// with "fps_cyc" is the legacy layout and is read through the second name of each pair.
+static const CriChar8* s_apszVideoHeaderColumns[16][2] = {
+    {"mpeg_codec", "fps_cyc"},         {"framerate_n", "fps_cyc"},       {"framerate_d", "fps_int"},
+    {"total_frames", "pic_num"},       {"width", "pxl_ew"},              {"height", "pxl_eh"},
+    {"ixsize", "pic_max"},             {"pre_padding", "pre_padding"},   {"mat_width", "pxl_dw"},
+    {"mat_height", "pxl_dh"},          {"scrn_width", "scrn_width"},     {"mpeg_dcprec", "mpeg_dcprec"},
+    {"metadata_count", "metadata_count"}, {"metadata_size", "metadata_size"}, {"disp_width", "pxl_dw"},
+    {"disp_height", "pxl_dh"},
+};
+
 // MS2-FUNCTIONAL: parse MPEG and legacy video metadata fields into the stream record.
 // @0x140032650
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    CriSint32 codecPresent = FUN_14003a3e0(document, "mpeg_codec");
-    if (codecPresent < 1)
-        output[9] = FUN_14003a3e0(document, "fps_cyc") < 1 ? 0 : 3;
+    CriUint32 nLayout;
+    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][0]) >= 1)
+    {
+        output[9] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[0][0]);
+        nLayout = 0;
+    }
+    else if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][1]) >= 1)
+    {
+        output[9] = 3;
+        nLayout = 1;
+    }
     else
-        output[9] = FUN_14003a85c(document, 0, "mpeg_codec");
+    {
+        output[9] = 0;
+        nLayout = 0;
+    }
 
-    CriUint32 numerator = FUN_14003a85c(document, 0, "framerate_n");
-    CriUint32 denominator = FUN_14003a85c(document, 0, "framerate_d");
+    CriUint32 numerator = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[1][nLayout]);
+    CriUint32 denominator = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[2][nLayout]);
     output[4] = (CriUint32)(((float)numerator * 1000.0f) / (float)denominator);
-    output[5] = FUN_14003a85c(document, 0, "total_frames");
-    output[0] = FUN_14003a85c(document, 0, "width");
-    output[1] = FUN_14003a85c(document, 0, "height");
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
+    output[5] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[3][nLayout]);
+    output[0] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[4][nLayout]);
+    output[1] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[5][nLayout]);
+    CriUint32 suggestedSize = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[6][nLayout]);
     WorkSizeView* work = (WorkSizeView*)workInfo;
     if (work->Size < suggestedSize)
         work->Size = suggestedSize;
-    output[13] = FUN_14003a3e0(document, "pre_padding") < 1
-        ? 0x40 : FUN_14003a85c(document, 0, "pre_padding");
-    output[6] = FUN_14003a85c(document, 0, "mat_width");
+    output[13] = FUN_14003a3e0(document, s_apszVideoHeaderColumns[7][nLayout]) < 1
+        ? 0x40 : FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[7][nLayout]);
+    output[6] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[8][nLayout]);
     if (output[6] == 0)
         output[6] = output[0];
-    output[7] = FUN_14003a85c(document, 0, "mat_height");
+    output[7] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[9][nLayout]);
     if (output[7] == 0)
         output[7] = output[1];
-    output[8] = FUN_14003a85c(document, 0, "scrn_width");
-    output[10] = FUN_14003a85c(document, 0, "mpeg_dcprec");
-    output[11] = FUN_14003a85c(document, 0, "metadata_count");
-    output[12] = FUN_14003a85c(document, 0, "metadata_size");
-    output[2] = FUN_14003a85c(document, 0, "disp_width");
+    output[8] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[10][nLayout]);
+    output[10] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[11][nLayout]);
+    output[11] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[12][nLayout]);
+    output[12] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[13][nLayout]);
+    output[2] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[14][nLayout]);
     if (output[2] == 0)
         output[2] = output[0];
-    output[3] = FUN_14003a85c(document, 0, "disp_height");
+    output[3] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[15][nLayout]);
     if (output[3] == 0)
         output[3] = output[1];
     criUtfRtv_Destroy((CriUint64*)document);
