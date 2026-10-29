@@ -913,6 +913,10 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     unsigned         filterCount = filters->GetFilterCount();
     const Filter*    filter      = 0;
     unsigned         pass = 0, passes = 0;
+
+    // invalid primitive or render target
+    if (!e.pPrimitive || !e.pRenderTarget)
+        return;
     ImageSize        size = e.pRenderTarget->GetSize();
 
     // 0: the source of a pass, 1: its destination, 2: the unfiltered source the last pass of a shadow reads
