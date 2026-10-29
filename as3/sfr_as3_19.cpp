@@ -1868,10 +1868,18 @@ void STPtr::AddRef() const
         GetRawAddr()->AddRef();
 }
 
+// A pointer the collector killed (bit 0 set; the object is already freed) is only untagged, not released
+// (exe STPtr::SetValue 0x14252a640: and ~6; test cl,1; jne skip).
 void STPtr::Release() const
 {
     if (pObject)
-        GetRawAddr()->Release();
+    {
+        ObjType* addr = GetAddrNoTag();
+        if ((UPInt)addr & 1)
+            pObject = (ObjType*)((UPInt)addr - 1 + GetObjectTag((UPInt)pObject));
+        else
+            addr->Release();
+    }
 }
 
 
