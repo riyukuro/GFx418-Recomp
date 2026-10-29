@@ -961,10 +961,12 @@ void VideoProviderNetStream::SetLoopFlag(bool flag)
 // @0x140025ec0
 void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
 {
-    VideoPlayer::SyncObject* sync = flag ? SF_NEW SwfVideoSyncObject(ptarget) : NULL;
-    pSyncObj = sync;
+    if (flag)
+        pSyncObj = *SF_NEW SwfVideoSyncObject(ptarget);
+    else
+        pSyncObj = NULL;
     if (pVideoPlayer)
-        pVideoPlayer->SetSyncObject(sync);
+        pVideoPlayer->SetSyncObject(pSyncObj);
 }
 
 // URLBuilder::LocationInfo (0x18 bytes).
