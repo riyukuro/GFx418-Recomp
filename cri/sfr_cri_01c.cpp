@@ -624,14 +624,14 @@ CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataBySint16(void* obj, CriUint32 
 // @0x14001ebe0
 CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mveasy)
 {
-    CriUint32 cv_n;
+    CriUint32 cv_n0;
     CriUint32 n;
     CriBool cv_end;
     CriUint32 main_n;
-    CriBool main_end;
-    main_end = 1;
+    CriBool main_endVal;
+    main_endVal = 1;
     cv_end = 1;
-    main_end = FUN_140036140(mveasy->mvply);
+    main_endVal = FUN_140036140(mveasy->mvply);
     main_n = FUN_1400360c0(mveasy->mvply, mveasy->num_audio_channel);
     if (mveasy->attached_center_voice_track == -1)
     {
@@ -640,10 +640,10 @@ CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mvea
     else
     {
         cv_end = FUN_140036170(mveasy->mvply);
-        cv_n = FUN_140036100(mveasy->mvply, 1);
-        if (main_end == 1)
+        cv_n0 = FUN_140036100(mveasy->mvply, 1);
+        if (main_endVal == 1)
         {
-            n = cv_n;
+            n = cv_n0;
         }
         else if (cv_end == 1)
         {
@@ -651,7 +651,7 @@ CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mvea
         }
         else
         {
-            n = (main_n > cv_n) ? cv_n : main_n;
+            n = (main_n > cv_n0) ? cv_n0 : main_n;
         }
     }
     return n;
@@ -1625,24 +1625,24 @@ void CriMvEasyPlayer::SyncMasterTimer(CriError& err)
 void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64 sys_count, CriUint64 sys_unit)
 {
     CriBool extrapolate;
-    CriUint64 extra;
-    CriUint64 snd_unit;
-    CriMvSoundInterface::Status status;
+    CriUint64 extra3;
+    CriUint64 snd_unitVal;
+    CriMvSoundInterface::Status status_;
     CriUint64 snd_count;
-    CriFloat32 elapsed;
+    CriFloat32 elapsedVal;
 
     snd_count = 0;
-    snd_unit = 1;
+    snd_unitVal = 1;
     extrapolate = 0;
-    status = sound->GetStatus();
-    if (status == CriMvSoundInterface::STATUS_STOP)
+    status_ = sound->GetStatus();
+    if (status_ == CriMvSoundInterface::STATUS_STOP)
     {
         user_time_count = time2_count;
         user_time_unit = time2_unit;
         return;
     }
-    sound->GetTime(snd_count, snd_unit);
-    extra = 0;
+    sound->GetTime(snd_count, snd_unitVal);
+    extra3 = 0;
     if (FUN_1400310b0(mvply) == 5 && FUN_140036140(mvply) == 1)
     {
         extrapolate = 1;
@@ -1658,20 +1658,20 @@ void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64
             time1_count = time0_count;
             time1_unit = time0_unit;
         }
-        elapsed = (CriFloat32)(sys_count - time1_count) / (CriFloat32)time1_unit;
-        extra = (CriUint64)(elapsed * (CriFloat32)snd_unit);
+        elapsedVal = (CriFloat32)(sys_count - time1_count) / (CriFloat32)time1_unit;
+        extra3 = (CriUint64)(elapsedVal * (CriFloat32)snd_unitVal);
     }
-    *count = snd_count + extra;
-    *unit = snd_unit;
+    *count = snd_count + extra3;
+    *unit = snd_unitVal;
     time2_count = snd_count;
-    time2_unit = snd_unit;
+    time2_unit = snd_unitVal;
 }
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
 // @0x140021450
 CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
 {
-    CriBool result = 1;
+    CriBool res = 1;
     CriSint32 locked;
     Status status;
 
@@ -1679,12 +1679,12 @@ CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
     status = GetStatus();
     if (status == MVEASY_STATUS_STOP || status == MVEASY_STATUS_PLAYEND)
     {
-        result = 0;
+        res = 0;
     }
     locked = FUN_14003a050(&destroy_lock, 1);
     if (locked == 1)
     {
-        return result;
+        return res;
     }
     FUN_140039f50(cs);
     if (mvply != NULL)
@@ -1694,7 +1694,7 @@ CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
     }
     FUN_140039f8c(cs);
     FUN_14003a050(&destroy_lock, 0);
-    return result;
+    return res;
 }
 
 // @0x140021530
@@ -1708,21 +1708,21 @@ void CriMvEasyPlayer::SetFile(CriChar8* fname, CriError& err)
 // @0x140021580
 void CriMvEasyPlayer::SetData(CriUint8* dataptr, CriUint32 datasize, CriError& err)
 {
-    CriUint32 filesize;
-    void* node;
+    CriUint32 filesize_;
+    void* node0;
     void* hdr;
-    CriUint32 hdr_size;
+    CriUint32 hdr_size0;
 
     err = CRIERR_OK;
     if (*dataptr == 'C' && *(dataptr + 1) == 'R' && *(dataptr + 2) == 'I' && *(dataptr + 3) == 'D')
     {
-        hdr = FUN_14003b674(dataptr, datasize, &hdr_size);
-        node = FUN_14003b348(mvply->utf_heap, hdr, hdr_size);
-        filesize = FUN_14003a85c(node, 0, "filesize");
-        FUN_14003a108(node);
-        if (datasize > filesize)
+        hdr = FUN_14003b674(dataptr, datasize, &hdr_size0);
+        node0 = FUN_14003b348(mvply->utf_heap, hdr, hdr_size0);
+        filesize_ = FUN_14003a85c(node0, 0, "filesize");
+        FUN_14003a108(node0);
+        if (datasize > filesize_)
         {
-            datasize = filesize;
+            datasize = filesize_;
         }
     }
     unk4a0 = 2;
@@ -2070,28 +2070,28 @@ CriBool CriMvEasyPlayer::GetLoopFlag(CriError& err)
 // @0x140022190
 void CriMvEasyPlayer::GetTime(CriUint64& count, CriUint64& unit, CriError& err)
 {
-    Status status;
-    CriFloat32 seek_time;
+    Status statusVal;
+    CriFloat32 seek_timeVal;
     TimerType timer;
     CriUint64 seek_count;
-    CriUint32 framerate;
-    CriFloat32 frame_sec;
+    CriUint32 framerate_;
+    CriFloat32 frame_sec2;
 
     err = CRIERR_OK;
     count = user_time_count;
     unit = user_time_unit;
-    status = GetStatus();
-    if (status == MVEASY_STATUS_PLAYING && seek_frame_id > 0)
+    statusVal = GetStatus();
+    if (statusVal == MVEASY_STATUS_PLAYING && seek_frame_id > 0)
     {
-        framerate = stmprm.video_prm[0].framerate;
-        seek_time = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate;
+        framerate_ = stmprm.video_prm[0].framerate;
+        seek_timeVal = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate_;
         timer = GetMasterTimer();
         if (timer == MVEASY_TIMER_AUDIO)
         {
-            frame_sec = 0.0333667f;
-            seek_time = (seek_time + frame_sec) / frame_sec * frame_sec;
+            frame_sec2 = 0.0333667f;
+            seek_timeVal = (seek_timeVal + frame_sec2) / frame_sec2 * frame_sec2;
         }
-        seek_count = (CriUint64)(seek_time * (CriFloat32)unit);
+        seek_count = (CriUint64)(seek_timeVal * (CriFloat32)unit);
         count = count + seek_count;
     }
 }
