@@ -1337,14 +1337,14 @@ namespace Scaleform {
 // @0x142746180
 void DetachChannelCallback(void** object)
 {
-    void* channel = object[7];
-    if (!channel)
+    if (!object[7])
         return;
     using Cleanup = void (*)(void*);
     auto** vtable = *reinterpret_cast<void***>(object);
     reinterpret_cast<Cleanup>(vtable[3])(object);
-    FUN_1428d8efc(channel, nullptr);
-    FUN_1428d8f14(channel, nullptr);
+    // The exe reloads the channel after the virtual call and between the two FMOD calls.
+    FUN_1428d8efc(object[7], nullptr);
+    FUN_1428d8f14(object[7], nullptr);
     object[7] = nullptr;
 }
 
