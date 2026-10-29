@@ -1957,14 +1957,19 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
     auto* eventObject = reinterpret_cast<Scaleform::GFx::AS3::Object*>(eventAtom);
     auto* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
     auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
-    auto addString = [&](Scaleform::GFx::AS3::Object* object, const char* key, std::uint64_t atom) {
-        Scaleform::GFx::ASString property(manager->CreateStringNode(key));
-        auto* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(atom & ~std::uint64_t(3));
-        Scaleform::GFx::ASString string(node);
-        Scaleform::GFx::AS3::Value value(string);
-        object->AddDynamicSlotValuePair(property, value);
+    // The cue strings are Scaleform::String data pointers (low 2 bits are flags): size at +0 (top bit is a flag),
+    // chars at +0xc. The exe copies each into a new ASString node (0x1425c0a80); they are not ASStringNodes.
+    auto copyString = [&](std::uint64_t atom) {
+        auto* desc = reinterpret_cast<const unsigned char*>(atom & ~std::uint64_t(3));
+        return manager->CreateStringNode(reinterpret_cast<const char*>(desc + 0xc),
+                                         *reinterpret_cast<const std::uint64_t*>(desc) & 0x7fffffffffffffffull);
     };
-    addString(eventObject, "name", *reinterpret_cast<const std::uint64_t*>(eventData + 2));
+    {
+        Scaleform::GFx::ASString string(copyString(*reinterpret_cast<const std::uint64_t*>(eventData + 2)));
+        Scaleform::GFx::ASString property(manager->CreateStringNode("name"));
+        Scaleform::GFx::AS3::Value value(string);
+        eventObject->AddDynamicSlotValuePair(property, value);
+    }
     {
         Scaleform::GFx::ASString key(manager->CreateStringNode("time"));
         Scaleform::GFx::AS3::Value value(static_cast<double>(static_cast<float>(eventData[4]) / VideoDurationScale));
@@ -1983,10 +1988,8 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
         auto* entries = *reinterpret_cast<const std::uint64_t* const*>(eventData + 6);
         for (std::uint64_t i = 0; i < count; ++i) {
             auto* pair = reinterpret_cast<const std::uint64_t*>(reinterpret_cast<const unsigned char*>(entries) + i * 0x10);
-            auto* keyNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(pair[0] & ~std::uint64_t(3));
-            auto* valueNode = reinterpret_cast<Scaleform::GFx::ASStringNode*>(pair[1] & ~std::uint64_t(3));
-            Scaleform::GFx::ASString property(manager->CreateStringNode(keyNode->pData, keyNode->Size));
-            Scaleform::GFx::ASString text(valueNode);
+            Scaleform::GFx::ASString text(copyString(pair[1]));
+            Scaleform::GFx::ASString property(copyString(pair[0]));
             Scaleform::GFx::AS3::Value value(text);
             parameters->AddDynamicSlotValuePair(property, value);
         }
