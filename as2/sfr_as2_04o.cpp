@@ -70,10 +70,10 @@ void Selection::BroadcastOnSetFocus(Environment* penv, InteractiveObject* pold, 
         penv->Push(Value((double)controllerIdx));
         nargs = 3;
     }
-    penv->Push(pold ? Value(pold) : Value(Value::NULLTYPE));
     penv->Push(pnew ? Value(pnew) : Value(Value::NULLTYPE));
+    penv->Push(pold ? Value(pold) : Value(Value::NULLTYPE));
     ASString eventName = penv->CreateConstString("onSetFocus");
-    SetFocusInvokeCallback callback(nargs, penv->GetTopIndex() - nargs + 1);
+    SetFocusInvokeCallback callback(nargs, penv->GetTopIndex());
     AsBroadcaster::BroadcastMessageWithCallback(penv, pobj, eventName, &callback);
     penv->Drop(nargs);
 }
