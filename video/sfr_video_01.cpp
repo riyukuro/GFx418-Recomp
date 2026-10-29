@@ -640,7 +640,7 @@ void** FUN_1400045c0(void** proxy, unsigned flags)
 
 // MS2-FUNCTIONAL: releases a non-null intrusive reference stored in the slot.
 // @0x140004dd0
-void FUN_140004dd0(void** value) { if (*value) FUN_14257dcb0(*value); }
+void FUN_140004dd0(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
 // MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
 // @0x140004e50
@@ -658,7 +658,7 @@ void* FUN_140005000(void** weakSlot)
     if (!proxy) return nullptr;
     void* target = *reinterpret_cast<void**>(proxy + 8);
     if (!target) {
-        FUN_14257dcd0(proxy);
+        static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
         *weakSlot = nullptr;
         return nullptr;
     }
@@ -758,7 +758,7 @@ void FUN_140005480(Scaleform::GFx::CharacterHandle* handle)
 
 // MS2-FUNCTIONAL: releases a retained object pointer when the slot is populated.
 // @0x140005660
-void FUN_140005660(void** value) { if (*value) FUN_14257dcb0(*value); }
+void FUN_140005660(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
 // MS2-FUNCTIONAL: clears the provider's pending notification and requests the active player to stop.
 // @0x140005690
@@ -782,7 +782,7 @@ void FUN_140005830(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 
 // MS2-FUNCTIONAL: releases the owned intrusive reference stored in the slot.
 // @0x140005870
-void FUN_140005870(void** value) { if (*value) FUN_14257dcb0(*value); }
+void FUN_140005870(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
 // MS2-FUNCTIONAL: destroys a weak-support object and conditionally frees its storage.
 // @0x1400058c0
@@ -826,7 +826,7 @@ void** FUN_1400059b0(void** weakSlot, void** result)
     if (!proxy) return result;
     void* target = *reinterpret_cast<void**>(proxy + 8);
     if (!target) {
-        FUN_14257dcd0(proxy);
+        static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
         *weakSlot = nullptr;
     } else if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) {
         ++*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8);
@@ -839,7 +839,7 @@ void** FUN_1400059b0(void** weakSlot, void** result)
 // @0x140005a70
 void** FUN_140005a70(void** weakSlot, unsigned flags)
 {
-    if (*weakSlot) FUN_14257dcd0(*weakSlot);
+    if (*weakSlot) static_cast<Scaleform::WeakPtrProxy*>(*weakSlot)->Release();
     if (flags & 1) operator delete(weakSlot);
     return weakSlot;
 }
@@ -1324,7 +1324,7 @@ void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
     if (size < fields[1]) {
         auto** items = static_cast<void**>(*array);
         for (Scaleform::UPInt i = fields[1]; i > size; --i)
-            if (items[i - 1]) FUN_14257dcb0(items[i - 1]);
+            if (items[i - 1]) static_cast<Scaleform::WeakPtrProxy*>(items[i - 1])->Release();
         if (size < fields[2] / 2) FUN_140006810(array, owner, size);
     } else if (size >= fields[2]) {
         FUN_140006810(array, owner, size + (size >> 2));
@@ -2131,7 +2131,7 @@ MS2_REPLACE(0x140007FF0, FUN_140007ff0, 126, 0x9AAB9CE7);
 
 // MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
 // @0x14000d570
-void FUN_14000d570(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+void FUN_14000d570(void** proxy) { if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release(); }
 
 // The exe stores the interface vftable 0x14317bf80 just before the delete: a dead store.
 // MS2-FUNCTIONAL: optionally deletes a small polymorphic helper object.
@@ -2147,7 +2147,7 @@ void* FUN_14000d5c0(void* object, unsigned flags)
 void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
 {
     auto** slot = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
-    if (*slot) FUN_14257dcb0(*slot);
+    if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
     object->~Object();
 }
 
@@ -2155,7 +2155,7 @@ void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
 // @0x14000d630
 void* FUN_14000d630(void** proxy, unsigned flags)
 {
-    if (*proxy) FUN_14257dcd0(*proxy);
+    if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release();
     if (flags & 1) ::operator delete(proxy);
     return proxy;
 }
@@ -2168,7 +2168,7 @@ void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
     auto* bytes = reinterpret_cast<unsigned char*>(object);
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
     void** slot = reinterpret_cast<void**>(bytes + 0x68);
-    if (*slot) FUN_14257dcb0(*slot);
+    if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
     object->Object::~Object();
 }
 
@@ -2289,7 +2289,7 @@ void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 void* FUN_14000de80(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
     auto** proxy = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
-    if (*proxy) FUN_14257dcd0(*proxy);
+    if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release();
     object->~Object();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
@@ -2408,7 +2408,7 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 void FUN_140006290(void* object)
 {
     auto** proxySlot = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x10);
-    if (*proxySlot) FUN_14257dcd0(*proxySlot);
+    if (*proxySlot) static_cast<Scaleform::WeakPtrProxy*>(*proxySlot)->Release();
     FUN_14257db50(object);
 }
 
@@ -2469,7 +2469,7 @@ void FUN_1400066f0(void** array, const unsigned* record)
 
 // MS2-FUNCTIONAL: releases one retained Scaleform reference in the slot.
 // @0x140006770
-void FUN_140006770(void** slot) { if (*slot) FUN_14257dcb0(*slot); }
+void FUN_140006770(void** slot) { if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release(); }
 
 // MS2-FUNCTIONAL: releases every retained Scaleform reference in the pointer array.
 // @0x1400067a0
@@ -2478,7 +2478,7 @@ void FUN_1400067a0(void** values, Scaleform::UPInt count)
     auto** items = static_cast<void**>(values);
     while (count) {
         void* value = items[--count];
-        if (value) FUN_14257dcb0(value);
+        if (value) static_cast<Scaleform::WeakPtrProxy*>(value)->Release();
     }
 }
 
