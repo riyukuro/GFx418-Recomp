@@ -2726,7 +2726,8 @@ void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
             reinterpret_cast<void**>(&settings));
         if (SUCCEEDED(result) && settings) {
             auto** settingsVtable = *reinterpret_cast<void***>(settings);
-            auto* record = *reinterpret_cast<unsigned char**>(entries + i * 0x30 + 0x28);
+            auto* node = *reinterpret_cast<unsigned char***>(entries + i * 0x30 + 0x28);
+            auto* record = node[0];
             if (record) {
                 reinterpret_cast<void(*)(void*, unsigned, unsigned short, void*, void*, unsigned long long, unsigned)>(
                     settingsVtable[3])(settings, *reinterpret_cast<unsigned*>(record),
