@@ -4483,13 +4483,13 @@ cri_u64 * FUN_140053340(cri_u64 a1,uint a2,cri_u32 a3)
     }
     else {
       memset((void *)_Dst[4],0,(ulonglong)a2 << 3);
-      CriAt<cri_u32>(_Dst, 0x60) = 0;
+      CriAt<cri_u32>(_Dst, 0xc) = 0;
       CriAt<cri_u32>(_Dst, 0x168) = a3;
       if (CriAt<int>(_Dst, 0x168) == 0) {
-        CriAt<cri_u32>(_Dst, 0xb60) = 2;
+        CriAt<cri_u32>(_Dst, 0x16c) = 2;
       }
       else {
-        CriAt<cri_u32>(_Dst, 0xb60) = 4;
+        CriAt<cri_u32>(_Dst, 0x16c) = 4;
       }
       FUN_140054040(_Dst,0,0);
     }
