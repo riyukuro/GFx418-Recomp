@@ -145,7 +145,7 @@ void AvmTextField::ProceedImageSubstitution(const FnCall& fn, int idx, const Val
     elem.pImageDesc->Matrix.AppendScaling(elem.pImageDesc->ScreenWidth / origWidth,
                                           elem.pImageDesc->ScreenHeight / origHeight);
     psubst->AddImageDesc(elem);
-    ptf->GetDocument()->SetReformatReq();
+    ptf->GetDocument()->SetCompleteReformatReq(); // ForceCompleteReformat: the exe ORs 2 into RTFlags (0x14297010e)
     ptf->SetDirtyFlag();
 }
 
