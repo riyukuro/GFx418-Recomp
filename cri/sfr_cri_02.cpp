@@ -5307,7 +5307,7 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
     CriUint16 nextIndex = (CriUint16)((state->Selector.Current + 1) & 1);
     CriMovieStreamSlotView* next = &state->Ring.Slots[nextIndex];
     CriUint32 dataSize = *(CriUint32*)((CriUint8*)next->PrimaryOutput + 0x44);
-    next->NextDataOffset += dataSize;
+    slot->NextDataOffset = next->NextDataOffset + dataSize;
     CriMvPlyHeaderAnalysisFields* header = (CriMvPlyHeaderAnalysisFields*)player;
     if (!FUN_140033ff0(player, header->AnalyzedHeader, slot))
         FUN_140037950(player, "E07092101M: Entered movie file contains invalid stream info.", 0);
@@ -5478,12 +5478,12 @@ CriBool FUN_140031da0(void* player, void* heap)
         struct AllocatorView
         {
             CriUint8 Reserved0[0xee8];
-            void* (*Allocate)(void*);
+            void* (*Allocate)(void*, CriUint32);
             CriUint8 ReservedEF0[8];
             void* Context;
         };
         AllocatorView* allocator = (AllocatorView*)player;
-        state->Table = allocator->Allocate(allocator->Context);
+        state->Table = allocator->Allocate(allocator->Context, state->Count * 0x38 + 4);
         state->ReleaseTable = state->Table;
         if (!state->Table)
         {
@@ -6677,8 +6677,8 @@ CriSint32 CriMvEasyPlayer::UnlockFrameBufferWithAlpha(const CriMvFrameInfo* fram
                                                        CriError& error)
 {
     error = CRIERR_OK;
-    FUN_140035a90(*(void**)this, (const CriUint64*)alphaInfo);
-    FUN_140035a40(*(void**)this, frameInfo);
+    FUN_140035a90(mvply, (const CriUint64*)alphaInfo);
+    FUN_140035a40(mvply, frameInfo);
     return 1;
 }
 
