@@ -3754,9 +3754,31 @@ extern "C" void FUN_14268d2b0(void* object, void* stream, unsigned version)
         struct { std::uint64_t key; Scaleform::String value; } entry{ 0 };
         ReadAs3StreamBytes(stream, &entry.key, 8);
         Scaleform::ReadNarrowString(stream, &entry.value);
-        Scaleform::AddStringHashEntry(bytes + 0x28, bytes + 0x28,
-            reinterpret_cast<const std::uint64_t*>(&entry),
-            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&entry.key)));
+        const std::uint64_t hash = Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&entry.key));
+        // The exe sets an existing key's string in place (0x14268d4d8) and adds only when it is absent.
+        std::uint64_t* found = nullptr;
+        if (auto* table = *reinterpret_cast<std::uint64_t**>(bytes + 0x28)) {
+            const std::uint64_t bucket = hash & table[1];
+            auto* row = table + 2 + bucket * 4;
+            if (static_cast<std::int64_t>(row[0]) != -2 && row[1] == bucket) {
+                for (;;) {
+                    if (row[1] == bucket && row[2] == entry.key) {
+                        found = row;
+                        break;
+                    }
+                    if (static_cast<std::int64_t>(row[0]) == -1)
+                        break;
+                    row = table + 2 + row[0] * 4;
+                }
+            }
+        }
+        if (found) {
+            found[2] = entry.key;
+            *reinterpret_cast<Scaleform::String*>(found + 3) = entry.value;
+        } else {
+            Scaleform::AddStringHashEntry(bytes + 0x28, bytes + 0x28,
+                reinterpret_cast<const std::uint64_t*>(&entry), hash);
+        }
     }
 }
 
