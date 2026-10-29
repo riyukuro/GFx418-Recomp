@@ -233,7 +233,10 @@ bool TextFormatObject::SetMember(Environment* penv, const ASString& name, const 
     else if (!strcmp(pname, "size"))
     {
         if (clear)
+        {
             tf.ClearFontSize();
+            v.SetNull();
+        }
         else
         {
             int n = val.ToInt32(penv);
