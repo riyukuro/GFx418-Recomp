@@ -26,6 +26,7 @@
 // Scaleform::UTF8Util::EncodeString (exe 0x1425a73c0); the shared sf_utf8util.h does not declare it.
 namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeString(char* buff, const wchar_t* chars, SPInt length); } }
 namespace Scaleform { namespace UTF8Util { SPInt SF_STDCALL GetEncodeStringSize(const wchar_t* chars, SPInt length); } }
+namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeStringSafe(char* buff, UPInt buffSize, const wchar_t* chars, SPInt length); } }
 
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 namespace Scaleform { namespace GFx { namespace IME {
@@ -4975,11 +4976,171 @@ unsigned long long FUN_1423da440(long long raw, unsigned long long, unsigned* re
     return 0;
 }
 
-// MS2-FUNCTIONAL: dispatches the status-window language notification through the shared IME message path.
+// MS2-FUNCTIONAL: TSF UpdateUIElement on the IME UI-element sink. It gets the element from ITfUIElementMgr. A reading
+// element copies its reading string to the manager's String at +0xb0 and calls MakeInvisible, plus RemoveList when
+// the sink's +0x55 flag is set. A candidate-list element first calls CreateList(10.0, 0/1) once. It then reads the
+// current page's range (GetPageIndex / GetCurrentPage / GetSelection), selects the item, and refills the manager's
+// candidate list at +0x30 with the page's strings as UTF-8. The COM calls go through the same pointers the exe uses:
+// the GetUIElement result for GetPageIndex(NULL, 0, &n), GetUpdatedFlags and GetString, and the QI'd candidate
+// pointer for the rest.
 // @0x1423db0c0
 unsigned long long FUN_1423db0c0(long long raw, unsigned message)
 {
-    FUN_1423d1d10(reinterpret_cast<void*>(raw), message, 0, 0);
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
+    static const GUID kUIElementMgrIid = { 0xea1ea135, 0x19df, 0x11d7, { 0xa6, 0xd2, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c } };
+    static const GUID kCandidateListIid = { 0xea1ea138, 0x19df, 0x11d7, { 0xa6, 0xd2, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c } };
+    static const GUID kReadingInfoIid = { 0xea1ea139, 0x19df, 0x11d7, { 0xa6, 0xd2, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c } };
+    auto* self = reinterpret_cast<unsigned char*>(raw);
+    const unsigned id = message;
+    IUnknown* uiManager = nullptr;
+    IUnknown* element = nullptr;
+    IUnknown* candidates = nullptr;
+    IUnknown* reading = nullptr;
+    BSTR readingText = nullptr;
+    BSTR description = nullptr;
+    GUID guid;
+    UINT count = 0;
+    auto* manager = *reinterpret_cast<unsigned char**>(self + 8);
+    const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
+    if (((mode - 0x1000000) & 0xfeffffff) == 0) return 0;
+    if (!reinterpret_cast<bool(*)(void*, void*)>((*reinterpret_cast<void***>(manager))[0x30 / sizeof(void*)])(
+            manager, *reinterpret_cast<void**>(manager + 8)))
+        return 0;
+    if ((*reinterpret_cast<IUnknown**>(self + 0x20))->QueryInterface(kUIElementMgrIid,
+            reinterpret_cast<void**>(&uiManager)) < 0)
+        return 0;
+    reinterpret_cast<HRESULT(*)(IUnknown*, DWORD, IUnknown**)>((*reinterpret_cast<void***>(uiManager))[6])(
+        uiManager, id, &element);
+    if (element->QueryInterface(kCandidateListIid, reinterpret_cast<void**>(&candidates)) >= 0) candidates->Release();
+    reinterpret_cast<HRESULT(*)(IUnknown*, GUID*)>((*reinterpret_cast<void***>(element))[4])(element, &guid);
+    reinterpret_cast<HRESULT(*)(IUnknown*, BSTR*)>((*reinterpret_cast<void***>(element))[3])(element, &description);
+    if (element->QueryInterface(kReadingInfoIid, reinterpret_cast<void**>(&reading)) >= 0) {
+        reinterpret_cast<HRESULT(*)(IUnknown*, BSTR*)>((*reinterpret_cast<void***>(reading))[9])(reading, &readingText);
+        *reinterpret_cast<unsigned*>(self + 0x4c) = id;
+        if (readingText) {
+            unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
+            *reinterpret_cast<Scaleform::String*>(owner + 0xb0) = static_cast<const wchar_t*>(readingText);
+            if (owner[0xb8])
+                reinterpret_cast<void(*)(void*, const wchar_t*)>((*reinterpret_cast<void***>(owner))[0xb0 / sizeof(void*)])(
+                    owner, readingText);
+        }
+        unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
+        if (*reinterpret_cast<void**>(owner + 8)) {
+            Scaleform::GFx::Value result;
+            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(owner + 0xa8) + 0x18))
+                reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "MakeInvisible", &result, nullptr, 0);
+        }
+        if (self[0x55] == 1) {
+            owner = *reinterpret_cast<unsigned char**>(self + 8);
+            if (*reinterpret_cast<void**>(owner + 8)) {
+                Scaleform::GFx::Value result;
+                if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(owner + 0xa8) + 0x18))
+                    reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                        bridge, "RemoveList", &result, nullptr, 0);
+            }
+            self[0x56] = 0;
+        }
+        self[0x55] = 1;
+        reading->Release();
+    }
+    if (element->QueryInterface(kCandidateListIid, reinterpret_cast<void**>(&candidates)) >= 0) {
+        *reinterpret_cast<unsigned*>(self + 0x5c) = id;
+        self[0x55] = 0;
+        if (!self[0x56]) {
+            unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
+            const unsigned state = *reinterpret_cast<unsigned*>(owner + 0x98);
+            const int vertical = (state == 0xd00001 || state == 5) ? 0 : 1;
+            Scaleform::GFx::Value args[2];
+            args[0] = Scaleform::GFx::Value(10.0);
+            args[1] = Scaleform::GFx::Value(static_cast<double>(vertical));
+            Scaleform::GFx::Value result;
+            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(owner + 0xa8) + 0x18))
+                reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "CreateList", &result, args, 2);
+            {
+                void* stateOwner = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 8);
+                Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime = reinterpret_cast<Scaleform::GFx::StateBag*>(
+                    static_cast<unsigned char*>(stateOwner) + 0x10)->GetIMEManager();
+                self[0x56] = 1;
+            }
+        }
+        reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[9])(candidates, &count);
+        if (count) {
+            UINT pageCount = 0, currentPage = 0, selection = 0;
+            DWORD flags = 0;
+            UINT* pages = nullptr;
+            BSTR text = nullptr;
+            *reinterpret_cast<unsigned*>(self + 0x48) = id;
+            reinterpret_cast<HRESULT(*)(IUnknown*, UINT*, UINT, UINT*)>((*reinterpret_cast<void***>(element))[0xc])(
+                element, nullptr, 0, &pageCount);
+            reinterpret_cast<HRESULT(*)(IUnknown*, DWORD*)>((*reinterpret_cast<void***>(element))[7])(element, &flags);
+            self[0x54] = ((flags & 0x24) == 0 || (flags & 8)) ? 1 : 0;
+            UINT pageSize = count;
+            if (pageCount) {
+                pages = static_cast<UINT*>(Scaleform::Memory::Alloc((pageCount + 1) * sizeof(UINT)));
+                reinterpret_cast<HRESULT(*)(IUnknown*, UINT*, UINT, UINT*)>((*reinterpret_cast<void***>(candidates))[0xc])(
+                    candidates, pages, pageCount, &pageCount);
+                if (pageCount > 1) pageSize = pages[1] - pages[0];
+            }
+            reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[0xe])(
+                candidates, &currentPage);
+            reinterpret_cast<HRESULT(*)(IUnknown*, UINT*)>((*reinterpret_cast<void***>(candidates))[0xa])(
+                candidates, &selection);
+            // The exe reads pages[currentPage] unguarded; pages is null when GetPageIndex reported no pages.
+            const UINT start = pages ? pages[currentPage] : 0;
+            *reinterpret_cast<UINT*>(self + 0x58) = start;
+            UINT shown;
+            unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
+            if ((*reinterpret_cast<unsigned*>(owner + 0x98) & 0xf0f) == 0) {
+                if (currentPage == pageCount - 1) shown = count - start;
+                else shown = pages ? pages[currentPage + 1] - pages[currentPage] : count;
+            } else {
+                shown = count;
+                if (shown >= pageSize) shown = (currentPage + 1) * pageSize > shown ? shown % pageSize : pageSize;
+            }
+            if (pages) Scaleform::Memory::Free(pages);
+            owner = *reinterpret_cast<unsigned char**>(self + 8);
+            if (static_cast<int>(selection) >= 0)
+                FUN_1423d97f0(*reinterpret_cast<void**>(owner + 0x30), static_cast<unsigned>(selection - start), 1);
+            owner = *reinterpret_cast<unsigned char**>(self + 8);
+            FUN_1423d9500(*reinterpret_cast<void**>(owner + 0x30));
+            UINT missing = 0;
+            for (UINT i = 0; i < shown; ++i) {
+                reinterpret_cast<HRESULT(*)(IUnknown*, UINT, BSTR*)>((*reinterpret_cast<void***>(element))[0xb])(
+                    element, start + i, &text);
+                if (!text) {
+                    ++missing;
+                    continue;
+                }
+                const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(text, -1) + 1;
+                char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(size));
+                Scaleform::UTF8Util::EncodeStringSafe(utf8, size, text, -1);
+                auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+                if (item) {
+                    FUN_1423cdb60(item, utf8);
+                    ++*reinterpret_cast<int*>(item + 1);
+                }
+                unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+                FUN_1423d9490(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30), &retained);
+                Scaleform::Memory::Free(utf8);
+                if (item) FUN_14257dcd0(item);
+            }
+            *reinterpret_cast<UINT*>(self + 0x50) = shown - missing;
+            FUN_1423d9b40(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30));
+            owner = *reinterpret_cast<unsigned char**>(self + 8);
+            owner[0xb9] = 1;
+            owner = *reinterpret_cast<unsigned char**>(self + 8);
+            if (*reinterpret_cast<unsigned*>(owner + 0x98) == 0x500) {
+                reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(owner))[0x110 / sizeof(void*)])(
+                    owner, -*reinterpret_cast<int*>(owner + 0x64));
+                (*reinterpret_cast<unsigned char**>(self + 8))[0xb9] = 0;
+            }
+            candidates->Release();
+        }
+    }
+    if (uiManager) uiManager->Release();
+    if (element) element->Release();
     return 0;
 }
 
