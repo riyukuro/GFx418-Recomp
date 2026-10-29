@@ -23647,6 +23647,7 @@ LAB_140086bd3:
         }
         i_v7 = -i_v7 + -i_v29;
         _Dst[l_v31] = (short)-i_v29;
+        u_v23 = u_v23 + i_v7;
         goto joined_r0x000140088c79;
       case 0xa3:
         if (pc_v15 < pc_v26 + 1) {
