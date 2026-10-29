@@ -292,46 +292,28 @@ CheckResult Value::ToNumberValueInline()
     return CheckResult(true);
 }
 
-// MS2-FUNCTIONAL 0x14252f670: uses the recovered numeric coercion result; locale-sensitive range helpers differ.
+// MS2-FUNCTIONAL 0x14252f670: register allocation and branch layout differ (/O2 codegen); same calls as the exe.
+// ToInt32 in place: Convert2Int32 (objects through their hintNone primitive) then SetSInt32, as in the exe.
 // @0x14252f670
 CheckResult Value::ToInt32Value()
 {
-    Number number;
-    CheckResult converted = Convert2NumberInline(number);
-    if (!converted)
-        return converted;
-
-    double wrapped = 0.0;
-    if (std::isfinite(number))
-    {
-        wrapped = std::fmod(std::trunc(number), 4294967296.0);
-        if (wrapped >= 2147483648.0)
-            wrapped -= 4294967296.0;
-        else if (wrapped < -2147483648.0)
-            wrapped += 4294967296.0;
-    }
-    SetSInt32(static_cast<SInt32>(wrapped));
-    return converted;
+    SInt32 result;
+    if (!Convert2Int32(result))
+        return false;
+    SetSInt32(result);
+    return true;
 }
 
-// MS2-FUNCTIONAL 0x14252fe80: uses the recovered numeric coercion result and AVM 32-bit modulo; the helper call graph differs.
+// MS2-FUNCTIONAL 0x14252fe80: register allocation and branch layout differ (/O2 codegen); same calls as the exe.
+// ToUInt32 in place: Convert2UInt32 then SetUInt32, as in the exe.
 // @0x14252fe80
 CheckResult Value::ToUInt32Value()
 {
-    Number number;
-    CheckResult converted = Convert2NumberInline(number);
-    if (!converted)
-        return converted;
-
-    double wrapped = 0.0;
-    if (std::isfinite(number))
-    {
-        wrapped = std::fmod(std::trunc(number), 4294967296.0);
-        if (wrapped < 0.0)
-            wrapped += 4294967296.0;
-    }
-    SetUInt32(static_cast<UInt32>(wrapped));
-    return converted;
+    UInt32 result;
+    if (!Convert2UInt32(result))
+        return false;
+    SetUInt32(result);
+    return true;
 }
 
 // MS2-FUNCTIONAL 0x14252fe10: converts into an ASString and assigns it back; the exe routes allocation through the supplied StringManager.
