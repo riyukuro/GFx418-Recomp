@@ -6574,7 +6574,9 @@ SPInt Sfr31NumberToChars(char* out, int size, double d)
         int ex = 0;
         for (const char* y = x; *y >= '0' && *y <= '9'; ++y)
             ex = ex * 10 + (*y - '0');
-        if (neg && ex >= 1 && ex <= 6)
+        // The exe expands only a d.ddd mantissa (0x142526250: first digit 1-9, '.' after it); "1e-05" stays "1e-5".
+        const char* lead = mant[0] == '-' ? mant + 1 : mant;
+        if (neg && ex >= 1 && ex <= 6 && *lead >= '1' && *lead <= '9' && lead[1] == '.')
         {
             const char* m = mant;
             if (*m == '-')
