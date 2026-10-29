@@ -126,6 +126,8 @@ public:
 // The sorts take the comparers by value from these (the exe loads them from .data).
 static TabIndexSortFunctor TabIndexSort;
 static AutoTabSortFunctor  AutoTabSort;
+// MS2-PIN: ??$QuickSortSliced@V?$ArrayDH@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@$0BEH@UArrayDefaultPolicy@2@@Scaleform@@VAutoTabSortFunctor@GFx@2@@Alg@Scaleform@@YAXAEAV?$ArrayDH@V?$Ptr@VInteractiveObject@GFx@Scaleform@@@Scaleform@@$0BEH@UArrayDefaultPolicy@2@@1@_K1VAutoTabSortFunctor@GFx@1@@Z 0x1425686b0
+// MS2-FUNCTIONAL 0x1425686b0: QuickSortSliced<..., AutoTabSortFunctor>; in one of the five inlined comparer copies the exe adds the x centres as x1 + x2 where ours loads x2 first (same operands otherwise; swapping the source order breaks the other four)
 
 }} // namespace Scaleform::GFx
 
