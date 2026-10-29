@@ -190,15 +190,16 @@ void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo&)
     Memory::Free(data);
 }
 
-// The first key hashes a compact scalar and the eight words of its payload.
+// The MovieDefImpl key (pDataDef +0x10, pBindStates +0x18) hashes pDataDef and the eight state pointers of its
+// bind states (+0x10..+0x50 except +0x28), each as p ^ (p >> 7) (the exe folds the shifts into one).
 // @0x1425c8fe0
 UPInt FUN_1425c8fe0(const void*, const void* object)
 {
     const unsigned long long* words = reinterpret_cast<const unsigned long long*>(object);
-    const unsigned long long value = words[2];
-    const unsigned long long payload = words[5] ^ words[6] ^ words[7] ^ words[9] ^ words[10] ^ words[11] ^ words[12] ^ words[13];
-    const unsigned long long all = value ^ payload;
-    return static_cast<UPInt>(value ^ (all >> 7) ^ all);
+    const unsigned long long dataDef = words[2];
+    const unsigned long long* bind = reinterpret_cast<const unsigned long long*>(words[3]);
+    const unsigned long long states = bind[2] ^ bind[3] ^ bind[4] ^ bind[6] ^ bind[7] ^ bind[8] ^ bind[9] ^ bind[10];
+    return static_cast<UPInt>(dataDef ^ ((dataDef ^ states) >> 7) ^ states);
 }
 
 // The second key combines a String header hash with three cached key words.
