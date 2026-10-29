@@ -1,10 +1,9 @@
-// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): two Scaleform GFx 4.1.18 strays: the empty
-// RefCountImplCore copy assignment (refcounts are not copied) and the locked chunk-queue read behind the AS3 sound's
-// FMOD PCM read callback (sfr_as3_22, 0x142745470). Our own source, written from the exe.
+// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): a Scaleform GFx 4.1.18 stray: the locked chunk-queue
+// read behind the AS3 sound's FMOD PCM read callback (sfr_as3_22, 0x142745470). Our own source, written from the exe.
+// (0x1426e0080, once taken here for RefCountImplCore::operator=, is the empty RenderQueueProcessor dtor: sfr_render_07j.)
 // Sub-unit of queue unit sfr_kernel_03.
 // MS2-UNIT: sfr_kernel_03p
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426e0080-0x1426e0090 .text$mn
 // MS2-RANGE: 0x142748160-0x142748230 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
@@ -12,13 +11,6 @@
 #include <string.h>
 
 namespace Scaleform {
-
-// RefCountImplCore::operator= (inline in sf_refcount.h), the out-of-line COMDAT copy: refcounts are not copied.
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
-// @0x1426e0080
-void FUN_1426e0080(void*, const void*)
-{
-}
 
 namespace GFx {
 

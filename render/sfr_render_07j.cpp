@@ -4,9 +4,9 @@
 // Queue unit sfr_render_07 is split along its original sources (07j Render_Queue).
 // MS2-UNIT: sfr_render_07j
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1426dffe0-0x1426e0080 .text$mn
-// MS2-RANGE: 0x1426e0090-0x1426e0560 .text$mn
-// (0x1426e0080 between them is the out-of-line RefCountImplCore::operator= COMDAT, SF_MemItem)
+// MS2-RANGE: 0x1426dffe0-0x1426e0560 .text$mn
+// (0x1426dffe0 is the empty Link_RenderStats the HAL ctor calls; 0x1426e0080 is the empty RenderQueueProcessor dtor
+// both HAL dtors call, 0x1426bf918 and 0x14272e8ae.)
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -15,6 +15,12 @@
 namespace Scaleform { namespace Render {
 
 // ----- RenderQueue
+
+// Render_Stats' link anchor: an empty function the HAL ctor calls so the render stat registrations are linked in.
+// @0x1426dffe0
+void Link_RenderStats()
+{
+}
 
 // @0x1426dfff0
 RenderQueue::RenderQueue()
@@ -102,7 +108,7 @@ RenderQueueProcessor::RenderQueueProcessor(RenderQueue& queue, HAL* hal)
     EmitItemBuffer.ClearItem();
 }
 
-// @0x1426dffe0
+// @0x1426e0080
 RenderQueueProcessor::~RenderQueueProcessor()
 {
 }
