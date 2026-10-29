@@ -99,15 +99,16 @@ void AvmSprite::AdvanceFrame(bool nextFrame, float framePos)
         frame = psprite->GetCurrentFrame();
         if (frame != prevFrame)
         {
-            ExecuteFrameTags(frame);
-            psprite->OnEvent(EventId(EventId::Event_EnterFrame));
+            // init action tags come before Event_EnterFrame, which comes before the frame's actions
+            ExecuteInitActionFrameTags(frame);
+            OnEvent(EventId(EventId::Event_EnterFrame));
             psprite->Sprite::ExecuteFrameTags(frame);
         }
         else
-            psprite->OnEvent(EventId(EventId::Event_EnterFrame));
+            OnEvent(EventId(EventId::Event_EnterFrame));
     }
     else
-        psprite->OnEvent(EventId(EventId::Event_EnterFrame));
+        OnEvent(EventId(EventId::Event_EnterFrame));
     if (frame == 0)
         psprite->mDisplayList.UnloadMarkedObjects(psprite);
 }
