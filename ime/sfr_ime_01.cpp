@@ -397,7 +397,8 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
                 child, notification);
         }
     }
-    if (message == 0x202 && *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9)) {
+    if ((message == 0x101 || message == 0x202) &&
+        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9)) {
         reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(self))[0x110 / sizeof(void*)])(
             self, -*reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x64));
         *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9) = 0;
@@ -405,7 +406,7 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
     const unsigned mode = static_cast<unsigned>(self[0x13]);
     const bool inputMode = mode == 0xd00001 || (mode >= 5 && mode <= 6) || mode == 0xa10000 || mode == 0xb10000;
     const bool clearKey = (message == 0x100 && key == 0x25) || (key >= 0x26 && key <= 0x28) || key == 0xd;
-    if (!inputMode || !clearKey || !(message == 0x100 || key >= 0x26)) return;
+    if (!inputMode || !clearKey) return;
     HWND hwnd = reinterpret_cast<HWND>(self[5]);
     HIMC context = cx18_ImmGetContext(hwnd);
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
