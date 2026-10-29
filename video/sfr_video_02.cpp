@@ -1121,7 +1121,8 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     dispatcher->EventDispatcher::~EventDispatcher();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
-// MS2-FUNCTIONAL: reads the supplied sound-transform value and refreshes the stored player coordinates.
+// MS2-FUNCTIONAL: reads the supplied SoundTransform's volume into the first stored volume and passes both, as percent,
+// to SetSoundVolume.
 // @0x1400142e0
 void FUN_1400142e0(void* object, void*, void* soundTransform)
 {
@@ -1130,11 +1131,12 @@ void FUN_1400142e0(void* object, void*, void* soundTransform)
     double* x = reinterpret_cast<double*>(fields + 0x88);
     FUN_1424d2140(soundTransform, x);
     FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
-                  static_cast<int>(x[0] * 20.0),
-                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 20.0));
+                  static_cast<int>(x[0] * 100.0),
+                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 100.0));
 }
 
-// MS2-FUNCTIONAL: reads the second supplied sound-transform value and refreshes the stored player coordinates.
+// MS2-FUNCTIONAL: reads the supplied SoundTransform's volume into the second stored volume and passes both, as percent,
+// to SetSoundVolume.
 // @0x140014770
 void FUN_140014770(void* object, void*, void* soundTransform)
 {
@@ -1143,8 +1145,8 @@ void FUN_140014770(void* object, void*, void* soundTransform)
     double* y = reinterpret_cast<double*>(fields + 0x90);
     FUN_1424d2140(soundTransform, y);
     FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
-                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 20.0),
-                  static_cast<int>(y[0] * 20.0));
+                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 100.0),
+                  static_cast<int>(y[0] * 100.0));
 }
 
 static void* NumberNaNBits()
