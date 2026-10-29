@@ -1272,7 +1272,8 @@ void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
     IMECandidateListStyle style;
     if (!FUN_1425b4570(pime, &style))
         return;
-    Ptr<Object>      pobj = SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
+    // Adopt the new object: the exe takes no extra reference (0x1428fa82f Object ctor, no AddRef)
+    Ptr<Object>      pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
     ASStringContext* psc = fn.Env->GetSC();
     if (style.HasTextColor())
         pobj->SetMemberRaw(psc, psc->CreateConstString("textColor"), Value((Number)style.GetTextColor()), PropFlags());
