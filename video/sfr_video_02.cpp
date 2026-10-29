@@ -463,11 +463,13 @@ __declspec(noinline) void FUN_14000e630(AvmCharacter* pavm, const InteractiveObj
     pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
 }
 
-// MS2-FUNCTIONAL: executable duplicate of the physical-property forwarding entry above.
+// MS2-FUNCTIONAL: the exe tail-calls AvmCharacter::CopyPhysicalProperties (0x142935cc0) on pavm. The
+// display object's InteractiveObject::CopyPhysicalProperties ends in GetAvmIntObj()->CopyPhysicalProperties,
+// i.e. this slot, so forwarding through pDispObj recursed.
 // @0x14000e640
 __declspec(noinline) void FUN_14000e640(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
 {
-    pavm->pDispObj->CopyPhysicalProperties(oldCharacter);
+    pavm->AvmCharacter::CopyPhysicalProperties(oldCharacter);
 }
 
 // MS2-FUNCTIONAL: forwards the focus callback to the AvmCharacter base implementation. The exe calls
