@@ -432,26 +432,27 @@ extern "C" Scaleform::SPInt FUN_1424e1040(void*, const Scaleform::UInt32* words)
     return static_cast<Scaleform::SPInt>(hash + tag);
 }
 
-// ValueRegisterFile teardown: release the live register values, then its reserved and current pages.
+// ValueRegisterFile teardown: free the reserved pages, release the register values, then free the current page.
+// The exe's UInt16 index steps by 0xffff (0x1424dfba0 add si,r14w with r14d = 0xffff), so the loop ends after
+// register 0: only that one is released.
 // MS2-FUNCTIONAL 0x1424dfaf0: uses the Value destructor and the VM heap's free slot; iteration lowering differs.
 // @0x1424dfaf0
 extern "C" void FUN_1424dfaf0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
+    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    while (void* page = *reinterpret_cast<void**>(bytes + 0x18))
+    {
+        *reinterpret_cast<void**>(bytes + 0x18) = *reinterpret_cast<void**>(static_cast<unsigned char*>(page) + 0x10);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
+    }
+
     auto count = *reinterpret_cast<const Scaleform::UInt16*>(bytes);
     auto* values = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
-    for (Scaleform::UPInt i = 0; i < count; ++i)
-        values[i].~Value();
+    if (count != 0)
+        values[0].~Value();
 
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    void* page = *reinterpret_cast<void**>(bytes + 0x18);
-    while (page)
-    {
-        void* next = *reinterpret_cast<void**>(static_cast<unsigned char*>(page) + 0x10);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
-        page = next;
-    }
-    page = *reinterpret_cast<void**>(bytes + 0x10);
+    void* page = *reinterpret_cast<void**>(bytes + 0x10);
     if (page)
         reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
 }
