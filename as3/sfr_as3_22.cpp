@@ -483,13 +483,16 @@ unsigned FUN_142745f50(void* player)
     return readCount;
 }
 
-// MS2-FUNCTIONAL: preserves the executable's null check and FMOD error handling.
+// MS2-FUNCTIONAL: null-checks the channel and returns the isPlaying flag without checking the FMOD result, like the executable.
 // @0x142745c40
 bool QueryChannelPlaying(void* soundSource)
 {
     FMOD::Channel* channel = *reinterpret_cast<FMOD::Channel**>(static_cast<char*>(soundSource) + 0x38);
     bool playing = false;
-    return channel && channel->isPlaying(&playing) == 0 ? playing : false;
+    // The exe ignores the FMOD result and returns whatever isPlaying left in the flag.
+    if (channel)
+        channel->isPlaying(&playing);
+    return playing;
 }
 }
 
