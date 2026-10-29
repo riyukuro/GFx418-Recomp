@@ -596,11 +596,15 @@ extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageDa
             int b = referenceChannels[2] - candidateChannels[2];
             int a = (compareReferenceAlpha ? referenceChannels[3] : -1) -
                     (compareCandidateAlpha ? candidateChannels[3] : -1);
+            // Equal colours with a different alpha give 0xZZFFFFFF (ZZ = alpha difference); otherwise alpha is 0xff.
             if (r == 0 && g == 0 && b == 0 && a != 0)
                 r = g = b = -1;
+            else
+                a = 0xff;
             unsigned result = static_cast<unsigned char>(r) |
                               (static_cast<unsigned>(static_cast<unsigned char>(g)) << 8) |
-                              (static_cast<unsigned>(static_cast<unsigned char>(b)) << 16) | 0xff000000u;
+                              (static_cast<unsigned>(static_cast<unsigned char>(b)) << 16) |
+                              (static_cast<unsigned>(static_cast<unsigned char>(a)) << 24);
             FUN_14257d390(output, outputRow, x, result);
         }
     }
