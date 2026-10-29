@@ -2153,7 +2153,7 @@ void MovieImpl::ProcessFocusKey(Event::EventType event, const InputEventsQueueEn
                     if (keyEntry.Code == Key::Right)
                         band = Render::RectF(fromRect.x2 + 1, fromRect.y1, FLT_MAX, fromRect.y2);
                     else
-                        band = Render::RectF(-FLT_MAX, fromRect.y1, fromRect.x1 - 1, fromRect.y2);
+                        band = Render::RectF(FLT_MIN, fromRect.y1, fromRect.x1 - 1, fromRect.y2);
                     if (candRect.Intersects(band))
                     {
                         Render::RectF overlap = candRect;
@@ -2250,7 +2250,7 @@ void MovieImpl::ProcessFocusKey(Event::EventType event, const InputEventsQueueEn
                     if (keyEntry.Code == Key::Down)
                         band = Render::RectF(fromRect.x1, fromRect.y2 + 1, fromRect.x2, FLT_MAX);
                     else
-                        band = Render::RectF(fromRect.x1, -FLT_MAX, fromRect.x2, fromRect.y1 - 1);
+                        band = Render::RectF(fromRect.x1, FLT_MIN, fromRect.x2, fromRect.y1 - 1);
                     if (candRect.Intersects(band))
                     {
                         Render::RectF overlap = candRect;
