@@ -1612,7 +1612,7 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Array);
     ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
-    ArrayCC<ASString> fields(fn.Env->GetBuiltin(ASBuiltin_Array));
+    ArrayCC<ASString> fields(fn.Env->GetBuiltin(ASBuiltin_empty_));
     ArrayLH<int>      options;
     if (fn.NArgs == 0)
     {
@@ -1621,7 +1621,8 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
     }
     pthis->LengthValueOverriden = false;
 
-    ASString dummy = fn.Env->GetBuiltin(ASBuiltin_Array);
+    // A hole in the field array sorts on "<undefined>" (builtin 48, after <unknown> and <bad type>).
+    ASString dummy = fn.Env->GetBuiltin(static_cast<ASBuiltinType>(48));
     Object* parr = fn.Arg(0).ToObject(fn.Env);
     if (parr && parr->GetObjectType() == Object_Array)
     {
