@@ -4762,15 +4762,18 @@ void FUN_14268bd60(void* source, Scaleform::Log* log)
                 }
             }
         }
-        const char* name = "";
-        if (label) {
-            const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
-            name = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
-        }
+        // The exe skips records without a name (0x14268bf0b: empty String data) and logs the time / 1000 as ms.
+        if (!label)
+            continue;
+        const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
+        const auto* data = reinterpret_cast<const std::uint64_t*>(encoded & ~std::uint64_t(3));
+        if ((*data & 0x7fffffffffffffffull) == 0)
+            continue;
+        const char* name = reinterpret_cast<const char*>(data) + 0x0c;
         const std::uint64_t ticks = *reinterpret_cast<const std::uint64_t*>(record + 0x18);
         const unsigned calls = *reinterpret_cast<const unsigned*>(record + 0x10);
         log->LogMessage("%s: %llu ms (%u times)\n", name,
-                        static_cast<unsigned long long>(ticks / 10000000ull), calls);
+                        static_cast<unsigned long long>(ticks / 1000ull), calls);
     }
     FUN_14257dcb0(snapshot);
 }
@@ -4812,7 +4815,7 @@ void FUN_14268b710(void* source, Scaleform::Log* log)
             name = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
         }
         log->LogMessage("%s: %llu ms (%u times)\n", name,
-                        static_cast<unsigned long long>(*reinterpret_cast<const std::uint64_t*>(record + 0x18) / 10000000ull),
+                        static_cast<unsigned long long>(*reinterpret_cast<const std::uint64_t*>(record + 0x18) / 1000ull),  // exe 0x14268bc25
                         *reinterpret_cast<const unsigned*>(record + 0x10));
     }
 }
