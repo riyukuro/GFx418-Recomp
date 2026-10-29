@@ -2341,14 +2341,18 @@ void FUN_14000dbc0(void* object)
     reinterpret_cast<VideoFinalizeAccess*>(object)->Finalize_GC();
 }
 
-// MS2-FUNCTIONAL: drops the VideoCharacter image when destroying its AS2 wrapper.
+// MS2-FUNCTIONAL: Video.clear (the Video prototype table at 0x1431b5800): drops the held VideoCharacter's image.
 // @0x14000d330
 void FUN_14000d330(void* wrapper)
 {
+    // wrapper is the FnCall; ThisPtr (+0x10) is the Video object's ObjectInterface at +8.
     auto* bytes = static_cast<unsigned char*>(wrapper);
-    void* character = *reinterpret_cast<void**>(bytes + 0x10);
-    if (character) character = static_cast<unsigned char*>(character) - 8;
-    if (character && *reinterpret_cast<void**>(static_cast<unsigned char*>(character) + 0x20))
+    void* object = *reinterpret_cast<void**>(bytes + 0x10);
+    if (object) object = static_cast<unsigned char*>(object) - 8;
+    if (!object) return;
+    // The exe passes the character held at +0x20, not the AS2 object.
+    void* character = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20);
+    if (character)
         FUN_140010a30(static_cast<Scaleform::GFx::Video::VideoCharacter*>(character));
 }
 
