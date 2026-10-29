@@ -519,6 +519,47 @@ void FUN_142742830(long long*, unsigned long long*);
 void FUN_14268b710(void*, Scaleform::Log*);
 void FUN_14268bd60(void*, Scaleform::Log*);
 
+// The copy-style ops share the exe's clip: the op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
+// destination point. The span is clipped against the source and then the destination, in destination space; the
+// source pixel for destination (x, y) is (x - OffX, y - OffY).
+struct BitmapCopySpan
+{
+    int X0, Y0, X1, Y1, OffX, OffY;
+};
+
+static bool ClipBitmapCopy(const unsigned char* op, const Scaleform::Render::ImagePlane& src,
+                           const Scaleform::Render::ImagePlane& dst, BitmapCopySpan& span)
+{
+    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
+    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
+    const int destX = *reinterpret_cast<const int*>(op + 0x28), destY = *reinterpret_cast<const int*>(op + 0x2c);
+    const int srcW = static_cast<int>(src.Width), srcH = static_cast<int>(src.Height);
+    const int dstW = static_cast<int>(dst.Width), dstH = static_cast<int>(dst.Height);
+    span.OffX = destX - left;
+    span.OffY = destY - top;
+    if (srcH < top || bottom < 0 || right < 0 || srcW < left) return false;
+    span.X0 = left >= 0 ? destX : span.OffX;
+    span.Y0 = top >= 0 ? destY : span.OffY;
+    span.X1 = (right < srcW ? right : srcW) + span.OffX;
+    span.Y1 = (bottom < srcH ? bottom : srcH) + span.OffY;
+    if (span.Y1 < 0 || dstH < span.Y0 || dstW < span.X0 || span.X1 < 0) return false;
+    if (span.X0 < 0) span.X0 = 0;
+    if (span.X1 > dstW) span.X1 = dstW;
+    if (span.Y0 < 0) span.Y0 = 0;
+    if (span.Y1 > dstH) span.Y1 = dstH;
+    return true;
+}
+
+static long long BitmapScanline(const Scaleform::Render::ImagePlane& plane, int y)
+{
+    return reinterpret_cast<long long>(plane.pData + static_cast<Scaleform::UPInt>(static_cast<unsigned>(y)) * plane.Pitch);
+}
+
+static bool BitmapHasAlpha(const unsigned char* op, unsigned offset)
+{
+    return *(static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + offset)) + 0x48) != 0;
+}
+
 // MS2-FUNCTIONAL: reproduces the executable's per-pixel difference image, including optional alpha comparison.
 // @0x142676190
 extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
@@ -540,9 +581,9 @@ extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageDa
     const unsigned width = referencePlane.Width < outPlane.Width ? referencePlane.Width : outPlane.Width;
     const unsigned height = referencePlane.Height < outPlane.Height ? referencePlane.Height : outPlane.Height;
     for (unsigned y = 0; y < height; ++y) {
-        const auto referenceRow = static_cast<long long>(y) * referencePlane.Pitch;
-        const auto candidateRow = static_cast<long long>(y) * candidatePlane.Pitch;
-        const auto outputRow = static_cast<long long>(y) * outPlane.Pitch;
+        const auto referenceRow = BitmapScanline(referencePlane, static_cast<int>(y));
+        const auto candidateRow = BitmapScanline(candidatePlane, static_cast<int>(y));
+        const auto outputRow = BitmapScanline(outPlane, static_cast<int>(y));
         for (unsigned x = 0; x < width; ++x) {
             unsigned referencePixel = 0, candidatePixel = 0;
             FUN_14257bf70(reference, &referencePixel, referenceRow, x);
@@ -564,7 +605,8 @@ extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
-// MS2-FUNCTIONAL: applies the executable's masked six-way channel comparison and replacement color over the clipped region.
+// MS2-FUNCTIONAL: threshold. The masked pixel is compared with the masked reference using the op at +0x40 (six
+// unsigned comparisons, anything else selects nothing) and selected pixels take the colour at +0x48.
 // @0x142677ea0
 extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
 {
@@ -574,34 +616,20 @@ extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageDa
     ImagePlane destinationPlane, sourcePlane;
     output->GetPlane(0, &destinationPlane);
     source->GetPlane(0, &sourcePlane);
-
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18);
-    const int top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20);
-    const int bottom = *reinterpret_cast<const int*>(op + 0x24);
-    int x0 = left < 0 ? 0 : left;
-    int y0 = top < 0 ? 0 : top;
-    int x1 = right < static_cast<int>(sourcePlane.Width) ? right : static_cast<int>(sourcePlane.Width);
-    int y1 = bottom < static_cast<int>(sourcePlane.Height) ? bottom : static_cast<int>(sourcePlane.Height);
-    if (x1 > static_cast<int>(destinationPlane.Width)) x1 = static_cast<int>(destinationPlane.Width);
-    if (y1 > static_cast<int>(destinationPlane.Height)) y1 = static_cast<int>(destinationPlane.Height);
-    if (x0 < 0) x0 = 0;
-    if (y0 < 0) y0 = 0;
-    if (x1 <= x0 || y1 <= y0) return;
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, sourcePlane, destinationPlane, span)) return;
 
     const unsigned mode = *reinterpret_cast<const unsigned*>(op + 0x40);
     const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x4c);
     const unsigned reference = *reinterpret_cast<const unsigned*>(op + 0x44) & mask;
     const unsigned replacement = *reinterpret_cast<const unsigned*>(op + 0x48);
-    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const bool preserveAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
-    for (int y = y0; y < y1; ++y) {
-        const long long sourceRow = static_cast<long long>(y - top) * sourcePlane.Pitch;
-        const long long destinationRow = static_cast<long long>(y) * destinationPlane.Pitch;
-        for (int x = x0; x < x1; ++x) {
+    for (int y = span.Y0; y < span.Y1; ++y) {
+        const long long sourceRow = BitmapScanline(sourcePlane, y - span.OffY);
+        const long long destinationRow = BitmapScanline(destinationPlane, y);
+        for (int x = span.X0; x < span.X1; ++x) {
             unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, sourceRow, static_cast<unsigned>(x));
+            FUN_14257bf70(source, &pixel, sourceRow, static_cast<unsigned>(x - span.OffX));
             const unsigned lhs = pixel & mask;
             bool selected = false;
             switch (mode) {
@@ -613,14 +641,16 @@ extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageDa
             case 5: selected = lhs != reference; break;
             default: break;
             }
+            if (!BitmapHasAlpha(op, 0x10)) pixel |= 0xff000000u;
             unsigned result = selected ? replacement : pixel;
-            if (!preserveAlpha) result |= 0xff000000u;
+            if (!BitmapHasAlpha(op, 8)) result |= 0xff000000u;
             FUN_14257d390(output, destinationRow, static_cast<unsigned>(x), result);
         }
     }
 }
 
-// MS2-FUNCTIONAL: implements the executable's component-wise 8-bit weighted blend over its clipped image rectangle.
+// MS2-FUNCTIONAL: merge. Each RGBA channel is (dest * (256 - w) + source * w) >> 8 with the weights at +0x40..+0x4c
+// in red, green, blue, alpha order.
 // @0x142676ef0
 extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageData* image, void** inputs)
 {
@@ -631,42 +661,38 @@ extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageDa
     image->GetPlane(0, &imagePlane);
     overlay->GetPlane(0, &overlayPlane);
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(imagePlane.Width) ? right : static_cast<int>(imagePlane.Width);
-    const int y1 = bottom < static_cast<int>(imagePlane.Height) ? bottom : static_cast<int>(imagePlane.Height);
-    const auto* overlayAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const auto* imageAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool useOverlayAlpha = overlayAlpha && *reinterpret_cast<const bool*>(overlayAlpha + 0x48);
-    const bool useImageAlpha = imageAlpha && *reinterpret_cast<const bool*>(imageAlpha + 0x48);
-    const int weights[4] = { *reinterpret_cast<const int*>(op + 0x40), *reinterpret_cast<const int*>(op + 0x44),
-                             *reinterpret_cast<const int*>(op + 0x48), *reinterpret_cast<const int*>(op + 0x4c) };
-    for (int y = y0; y < y1 && y - top < static_cast<int>(overlayPlane.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * overlayPlane.Pitch;
-        const long long dstRow = static_cast<long long>(y) * imagePlane.Pitch;
-        for (int x = x0; x < x1 && x - left < static_cast<int>(overlayPlane.Width); ++x) {
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, overlayPlane, imagePlane, span)) return;
+    const int* weights = reinterpret_cast<const int*>(op + 0x40);
+    // RGBA channel index -> byte position in the BGRA pixel.
+    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
+    for (int y = span.Y0; y < span.Y1; ++y) {
+        const long long srcRow = BitmapScanline(overlayPlane, y - span.OffY);
+        const long long dstRow = BitmapScanline(imagePlane, y);
+        for (int x = span.X0; x < span.X1; ++x) {
             unsigned src = 0, dst = 0;
-            FUN_14257bf70(overlay, &src, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(overlay, &src, srcRow, static_cast<unsigned>(x - span.OffX));
             FUN_14257bf70(image, &dst, dstRow, static_cast<unsigned>(x));
             auto* sc = reinterpret_cast<unsigned char*>(&src);
             auto* dc = reinterpret_cast<unsigned char*>(&dst);
+            if (!BitmapHasAlpha(op, 0x10)) sc[3] = 0xff;
+            if (!BitmapHasAlpha(op, 8)) dc[3] = 0xff;
             unsigned result = 0;
             auto* rc = reinterpret_cast<unsigned char*>(&result);
-            if (!useOverlayAlpha) sc[3] = 0xff;
-            if (!useImageAlpha) dc[3] = 0xff;
             for (unsigned c = 0; c < 4; ++c) {
+                const unsigned pos = BytePos[c];
                 const int w = weights[c];
-                const int value = (static_cast<int>(dc[c]) * (256 - w) + static_cast<int>(sc[c]) * w) >> 8;
-                rc[c] = static_cast<unsigned char>(value < 0 ? 0 : value > 255 ? 255 : value);
+                rc[pos] = static_cast<unsigned char>(
+                    static_cast<unsigned>(dc[pos] * (256 - w) + sc[pos] * w) >> 8);
             }
-            if (!useImageAlpha) rc[3] = 0xff;
+            if (!BitmapHasAlpha(op, 8)) rc[3] = 0xff;
             FUN_14257d390(image, dstRow, static_cast<unsigned>(x), result);
         }
     }
 }
 
-// MS2-FUNCTIONAL: copies the clipped source rectangle into the destination and forces opaque alpha when either side lacks alpha.
+// MS2-FUNCTIONAL: copyPixels without mergeAlpha. Copies back to front (so an overlapping self-copy works) and forces
+// opaque alpha when either side lacks alpha.
 // @0x142677c70
 extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
 {
@@ -677,28 +703,22 @@ extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageDa
     destination->GetPlane(0, &dst);
     source->GetPlane(0, &src);
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(src.Width) ? right : static_cast<int>(src.Width);
-    const int y1 = bottom < static_cast<int>(src.Height) ? bottom : static_cast<int>(src.Height);
-    const auto* srcConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const auto* dstConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool alpha = srcConfig && dstConfig && *reinterpret_cast<const bool*>(srcConfig + 0x48) &&
-                       *reinterpret_cast<const bool*>(dstConfig + 0x48);
-    for (int y = y0; y < y1 && y < static_cast<int>(dst.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
-        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
-        for (int x = x0; x < x1 && x < static_cast<int>(dst.Width); ++x) {
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, src, dst, span)) return;
+    for (int y = span.Y1 - 1; y >= span.Y0; --y) {
+        const long long srcRow = BitmapScanline(src, y - span.OffY);
+        const long long dstRow = BitmapScanline(dst, y);
+        for (int x = span.X1 - 1; x >= span.X0; --x) {
             unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
-            if (!alpha) pixel |= 0xff000000u;
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
+            if (!BitmapHasAlpha(op, 0x10) || !BitmapHasAlpha(op, 8)) pixel |= 0xff000000u;
             FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
         }
     }
 }
 
-// MS2-FUNCTIONAL: copies one selected RGBA component into another using the executable's component selector table.
+// MS2-FUNCTIONAL: copyChannel. The source and destination channels at +0x40/+0x44 go through the selector table to
+// RGBA indices; an unknown channel copies nothing.
 // @0x142676380
 extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
 {
@@ -709,39 +729,35 @@ extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageDa
     destination->GetPlane(0, &dst);
     source->GetPlane(0, &src);
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
-    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, src, dst, span)) return;
     unsigned from = *reinterpret_cast<const unsigned*>(op + 0x40);
     unsigned to = *reinterpret_cast<const unsigned*>(op + 0x44);
     from = from < 9 ? ChannelIndexMap[from] : 0xff;
     to = to < 9 ? ChannelIndexMap[to] : 0xff;
     if (from >= 4 || to >= 4) return;
-    const auto* srcAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const auto* dstAlpha = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool useSrcAlpha = srcAlpha && *reinterpret_cast<const bool*>(srcAlpha + 0x48);
-    const bool useDstAlpha = dstAlpha && *reinterpret_cast<const bool*>(dstAlpha + 0x48);
-    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
-        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
-        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+    // RGBA channel index -> byte position in the BGRA pixel.
+    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
+    for (int y = span.Y0; y < span.Y1; ++y) {
+        const long long srcRow = BitmapScanline(src, y - span.OffY);
+        const long long dstRow = BitmapScanline(dst, y);
+        for (int x = span.X0; x < span.X1; ++x) {
             unsigned srcPixel = 0, dstPixel = 0;
             FUN_14257bf70(destination, &dstPixel, dstRow, static_cast<unsigned>(x));
-            FUN_14257bf70(source, &srcPixel, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(source, &srcPixel, srcRow, static_cast<unsigned>(x - span.OffX));
             auto* sc = reinterpret_cast<unsigned char*>(&srcPixel);
             auto* dc = reinterpret_cast<unsigned char*>(&dstPixel);
-            if (!useSrcAlpha) sc[3] = 0xff;
-            if (!useDstAlpha) dc[3] = 0xff;
-            dc[to] = sc[from];
-            if (!useDstAlpha) dc[3] = 0xff;
+            if (!BitmapHasAlpha(op, 0x10)) sc[3] = 0xff;
+            dc[BytePos[to]] = sc[BytePos[from]];
+            if (!BitmapHasAlpha(op, 8)) dc[3] = 0xff;
             FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), dstPixel);
         }
     }
 }
 
-// MS2-FUNCTIONAL: applies the executable's four 256-entry component lookup tables under the selected channel mask.
+// MS2-FUNCTIONAL: paletteMap. The table at +0x40 is four 256-entry UInt32 arrays (red, green, blue, alpha); a
+// channel selected in the mask at +0x48 contributes its table entry, the others their own bits, and the four
+// contributions are summed.
 // @0x142677460
 extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
 {
@@ -752,28 +768,25 @@ extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageDa
     destination->GetPlane(0, &dst);
     source->GetPlane(0, &src);
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
-    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, src, dst, span)) return;
     const unsigned mask = *reinterpret_cast<const unsigned*>(op + 0x48);
-    const auto* lut = *reinterpret_cast<const unsigned char* const*>(op + 0x40);
-    const auto* alphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool preserveAlpha = alphaConfig && *reinterpret_cast<const bool*>(alphaConfig + 0x48);
-    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
-        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
-        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+    const auto* lut = *reinterpret_cast<const unsigned* const*>(op + 0x40);
+    for (int y = span.Y0; y < span.Y1; ++y) {
+        const long long srcRow = BitmapScanline(src, y - span.OffY);
+        const long long dstRow = BitmapScanline(dst, y);
+        for (int x = span.X0; x < span.X1; ++x) {
             unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
             auto* c = reinterpret_cast<unsigned char*>(&pixel);
-            if (mask & 1) c[2] = lut[c[2]];
-            if (mask & 2) c[1] = lut[0x400 + c[1]];
-            if (mask & 4) c[0] = lut[0x800 + c[0]];
-            if (mask & 8) c[3] = lut[0xc00 + c[3]];
-            if (!preserveAlpha) c[3] = 0xff;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
+            if (!BitmapHasAlpha(op, 0x10)) c[3] = 0xff;
+            const unsigned red = mask & 1 ? lut[c[2]] : static_cast<unsigned>(c[2]) << 16;
+            const unsigned green = mask & 2 ? lut[0x100 + c[1]] : static_cast<unsigned>(c[1]) << 8;
+            const unsigned blue = mask & 4 ? lut[0x200 + c[0]] : c[0];
+            const unsigned alpha = mask & 8 ? lut[0x300 + c[3]] : static_cast<unsigned>(c[3]) << 24;
+            unsigned result = red + green + blue + alpha;
+            if (!BitmapHasAlpha(op, 8)) result |= 0xff000000u;
+            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
         }
     }
 }
@@ -861,7 +874,9 @@ extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageDa
     }
 }
 
-// MS2-FUNCTIONAL: applies the executable's four-channel affine color matrix and clamps each result to a byte.
+// MS2-FUNCTIONAL: colorTransform. Each channel becomes ((c / 255) * mul + add) * 256 clamped to [0, 255], with the
+// multipliers at +0x40 and offsets at +0x50 in red, green, blue, alpha order. When the destination has no alpha the
+// colour terms are scaled by (alphaMul + alphaAdd) and the alpha is written opaque.
 // @0x142675d30
 extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
 {
@@ -872,41 +887,40 @@ extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageDa
     destination->GetPlane(0, &dst);
     source->GetPlane(0, &src);
     const auto* op = static_cast<const unsigned char*>(operation);
-    const int left = *reinterpret_cast<const int*>(op + 0x18), top = *reinterpret_cast<const int*>(op + 0x1c);
-    const int right = *reinterpret_cast<const int*>(op + 0x20), bottom = *reinterpret_cast<const int*>(op + 0x24);
-    const int x0 = left < 0 ? 0 : left, y0 = top < 0 ? 0 : top;
-    const int x1 = right < static_cast<int>(dst.Width) ? right : static_cast<int>(dst.Width);
-    const int y1 = bottom < static_cast<int>(dst.Height) ? bottom : static_cast<int>(dst.Height);
+    BitmapCopySpan span;
+    if (!ClipBitmapCopy(op, src, dst, span)) return;
     float mul[4], add[4];
     for (unsigned i = 0; i < 4; ++i) mul[i] = *reinterpret_cast<const float*>(op + 0x40 + i * 4);
     for (unsigned i = 0; i < 4; ++i) add[i] = *reinterpret_cast<const float*>(op + 0x50 + i * 4);
-    const auto* srcAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 0x10));
-    const auto* dstAlphaConfig = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8));
-    const bool useSrcAlpha = srcAlphaConfig && *reinterpret_cast<const bool*>(srcAlphaConfig + 0x48);
-    const bool useDstAlpha = dstAlphaConfig && *reinterpret_cast<const bool*>(dstAlphaConfig + 0x48);
-    for (int y = y0; y < y1 && y - top < static_cast<int>(src.Height); ++y) {
-        const long long srcRow = static_cast<long long>(y - top) * src.Pitch;
-        const long long dstRow = static_cast<long long>(y) * dst.Pitch;
-        for (int x = x0; x < x1 && x - left < static_cast<int>(src.Width); ++x) {
+    if (!BitmapHasAlpha(op, 8)) {
+        const float alphaFactor = mul[3] + add[3];
+        for (unsigned i = 0; i < 3; ++i) {
+            mul[i] *= alphaFactor;
+            add[i] *= alphaFactor;
+        }
+        mul[3] = 1.0f;
+        add[3] = 0.0f;
+    }
+    // RGBA channel index -> byte position in the BGRA pixel.
+    static const unsigned BytePos[4] = { 2, 1, 0, 3 };
+    for (int y = span.Y0; y < span.Y1; ++y) {
+        const long long srcRow = BitmapScanline(src, y - span.OffY);
+        const long long dstRow = BitmapScanline(dst, y);
+        for (int x = span.X0; x < span.X1; ++x) {
             unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - left));
+            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
             auto* c = reinterpret_cast<unsigned char*>(&pixel);
-            if (!useSrcAlpha) c[3] = 0xff;
-            const float alphaFactor = useDstAlpha ? 1.0f : add[3] + c[3] * mul[3] / 255.0f;
+            if (!BitmapHasAlpha(op, 0x10)) c[3] = 0xff;
             unsigned result = 0;
             auto* out = reinterpret_cast<unsigned char*>(&result);
-            for (unsigned channel = 0; channel < 3; ++channel) {
-                const unsigned sourceChannel = 2 - channel;
-                float value = (c[sourceChannel] * mul[channel] / 255.0f + add[channel]) * 255.0f;
-                if (!useDstAlpha) value *= alphaFactor;
-                if (value < 0.0f) value = 0.0f;
+            for (unsigned channel = 0; channel < 4; ++channel) {
+                const unsigned pos = BytePos[channel];
+                float value = (static_cast<float>(c[pos]) / 255.0f * mul[channel] + add[channel]) * 256.0f;
                 if (value > 255.0f) value = 255.0f;
-                out[sourceChannel] = static_cast<unsigned char>(value);
+                if (value < 0.0f) value = 0.0f;
+                out[pos] = static_cast<unsigned char>(static_cast<int>(value));
             }
-            float alpha = (c[3] * mul[3] / 255.0f + add[3]) * 255.0f;
-            if (alpha < 0.0f) alpha = 0.0f;
-            if (alpha > 255.0f) alpha = 255.0f;
-            out[3] = useDstAlpha ? static_cast<unsigned char>(alpha) : 0xff;
+            if (!BitmapHasAlpha(op, 8)) out[3] = 0xff;
             FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), result);
         }
     }
@@ -930,7 +944,7 @@ extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageDa
     const bool preserveAlpha = *reinterpret_cast<const bool*>(
         static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + 8)) + 0x48);
     unsigned seed = 0;
-    FUN_14257bf70(image, &seed, static_cast<long long>(seedY) * plane.Pitch, static_cast<unsigned>(seedX));
+    FUN_14257bf70(image, &seed, BitmapScanline(plane, seedY), static_cast<unsigned>(seedX));
     if (!preserveAlpha) { seed |= 0xff000000u; }
     unsigned replacement = fill;
     if (!preserveAlpha) replacement |= 0xff000000u;
@@ -944,10 +958,10 @@ extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageDa
         pending.pop_back();
         if (x < left || y < top || x >= right || y >= bottom) continue;
         unsigned pixel = 0;
-        FUN_14257bf70(image, &pixel, static_cast<long long>(y) * plane.Pitch, static_cast<unsigned>(x));
+        FUN_14257bf70(image, &pixel, BitmapScanline(plane, y), static_cast<unsigned>(x));
         if (!preserveAlpha) pixel |= 0xff000000u;
         if (pixel != seed) continue;
-        FUN_14257d390(image, static_cast<long long>(y) * plane.Pitch, static_cast<unsigned>(x), replacement);
+        FUN_14257d390(image, BitmapScanline(plane, y), static_cast<unsigned>(x), replacement);
         pending.emplace_back(x - 1, y);
         pending.emplace_back(x + 1, y);
         pending.emplace_back(x, y - 1);
