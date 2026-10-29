@@ -1712,8 +1712,8 @@ namespace {
 // @0x1400192e0
 void FUN_1400192e0(void* callback, std::uint64_t* output)
 {
-    auto* vm = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
-    auto* callFrame = *reinterpret_cast<unsigned char**>(vm + 0x20);
+    // the VM comes from the instance itself (0x1400192f4: [[rcx+0x20]+0x78]), not from callback+0x10
+    auto* callFrame = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x20);
     auto* as3vm = *reinterpret_cast<unsigned char**>(callFrame + 0x78);
     std::uint64_t objectResult = 0;
     FUN_142516600(as3vm, &objectResult);
