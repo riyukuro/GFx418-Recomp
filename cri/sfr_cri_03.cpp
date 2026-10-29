@@ -1007,7 +1007,7 @@ CriUint8 criUtfRtv_GetDataUint8(const CriUtfRtvView* table, CriUint32 row, CriUi
     if (!p)
     {
         if (col->HasDefault && col->Type >= 0 && col->Type < 6)
-            return ((const CriUint8*)&col->DefaultValue[0])[col->Type == 0 ? 0 : (col->Type == 2 ? 1 : 3)];
+            return (CriUint8)col->DefaultValue[1];
         return 0;
     }
     if (col->Type < 0 || col->Type >= 6)
@@ -1025,8 +1025,8 @@ CriUint32 criUtfRtv_GetDataUint32(const CriUtfRtvView* table, CriUint32 row, Cri
     {
         if (!col->HasDefault || col->Type < 0 || col->Type >= 6)
             return 0;
-        const CriUint8* d = (const CriUint8*)&col->DefaultValue[0];
-        return col->Type < 2 ? d[0] : (col->Type < 4 ? *(const CriUint16*)d : *(const CriUint32*)d);
+        CriUint64 d = col->DefaultValue[1];
+        return col->Type < 2 ? (CriUint8)d : (col->Type < 4 ? (CriUint16)d : (CriUint32)d);
     }
     if (col->Type < 0 || col->Type >= 6)
         return 0;
@@ -1043,7 +1043,7 @@ CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* table, CriUint32 row, Cri
 {
     const CriUtfRtvColumn* col;
     const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    return p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[0] : 0);
+    return p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[1] : 0);
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; decode the record's big-endian IEEE single precision bits.
@@ -1052,7 +1052,7 @@ CriFloat32 criUtfRtv_GetDataFloat32(const CriUtfRtvView* table, CriUint32 row, C
 {
     const CriUtfRtvColumn* col;
     const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    CriUint32 bits = p ? criUtfReadBE32(p) : (col->HasDefault ? (CriUint32)col->DefaultValue[0] : 0);
+    CriUint32 bits = p ? criUtfReadBE32(p) : (col->HasDefault ? (CriUint32)col->DefaultValue[1] : 0);
     CriFloat32 value;
     memcpy(&value, &bits, sizeof(value));
     return value;
@@ -1064,7 +1064,7 @@ double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUi
 {
     const CriUtfRtvColumn* col;
     const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    CriUint64 bits = p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[0] : 0);
+    CriUint64 bits = p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[1] : 0);
     double value;
     memcpy(&value, &bits, sizeof(value));
     return value;
@@ -1076,7 +1076,9 @@ const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, 
 {
     const CriUtfRtvColumn* col;
     const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    CriUint32 offset = p ? criUtfReadBE32(p) : (col->HasDefault ? (CriUint32)col->DefaultValue[0] : 0);
+    if (!p)
+        return col->HasDefault ? (const CriChar8*)col->DefaultValue[1] : NULL;
+    CriUint32 offset = criUtfReadBE32(p);
     return offset ? (const CriChar8*)(table->StringData + offset) : NULL;
 }
 
@@ -1140,13 +1142,13 @@ void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* ad
         cell->Value[0] = address[0];
         break;
     case 2: case 3:
-        cell->Value[0] = address[0]; cell->Value[1] = address[1];
+        *(CriUint16*)cell->Value = (CriUint16)(((CriUint32)address[0] << 8) | address[1]);
         break;
     case 4: case 5: case 8:
-        memcpy(cell->Value, address, 4);
+        *(CriUint32*)cell->Value = criUtfReadBE32(address);
         break;
     case 6: case 7: case 9:
-        memcpy(cell->Value, address, 8);
+        *(CriUint64*)cell->Value = criUtfReadBE64(address);
         break;
     case 10:
     {
@@ -1157,12 +1159,13 @@ void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* ad
     case 11:
     {
         CriUint32 offset = criUtfReadBE32(address);
-        *(CriUint64*)cell->Value = (CriUint64)(table->BlobData + offset);
+        *(CriUint64*)cell->Value = (CriUint64)(table->BlobData + (CriSint32)offset);
         *(CriUint32*)(cell->Value + 8) = criUtfReadBE32(address + 4);
         break;
     }
     case 12:
-        memcpy(cell->Value, address, 16);
+        *(CriUint64*)cell->Value = criUtfReadBE64(address);
+        *(CriUint64*)(cell->Value + 8) = criUtfReadBE64(address + 8);
         break;
     default:
         break;
@@ -1246,8 +1249,9 @@ CriSint32 criUtfRtv_SumWithAlignment32(const CriUtfRtvView* table, CriUint32 fir
             } while (--count >= 0);
             return sum;
         }
-        CriUint32 value = col->Type == 2 ? (CriUint16)col->DefaultValue[0] : (CriUint32)col->DefaultValue[0];
-        return (CriSint32)((value + rounded) & mask) * count;
+        if (col->Type == 2)
+            return (CriSint32)(CriUint16)((CriUint16)col->DefaultValue[1] + (CriUint16)rounded & (CriUint16)mask) * count;
+        return (CriSint32)(((CriUint32)col->DefaultValue[1] + rounded) & mask) * count;
     }
     return 0;
 }
