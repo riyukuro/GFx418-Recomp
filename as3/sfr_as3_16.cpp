@@ -637,6 +637,27 @@ void* Sfr16ScalarDeletingDtor(void* self, Scaleform::UPInt flags)
     }
     return self;
 }
+
+extern "C" void FUN_14257db50(void* self);   // RefCountNTSImplCore::~RefCountNTSImplCore: stores its vptr through self
+
+// Same as Sfr16ScalarDeletingDtor for the classes whose base is RefCountNTSImplCore.
+void* Sfr16ScalarDeletingDtorNts(void* self, Scaleform::UPInt flags)
+{
+    FUN_14257db50(self);
+    if (flags & 1)
+    {
+        if ((flags & 4) == 0)
+        {
+            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, self);
+        }
+        else
+        {
+            FUN_14015b310(self, 0x10);
+        }
+    }
+    return self;
+}
 }
 
 // The exe contains byte-identical generic scalar-deleting destructor copies with ambiguous owners.
@@ -659,11 +680,11 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1da0(void* self, Scaleform::UPInt 
 // MS2-FUNCTIONAL 0x1424e1e00: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1e00(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1e60
-// MS2-FUNCTIONAL 0x1424e1e60: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1e60(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// MS2-FUNCTIONAL 0x1424e1e60: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1e60(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 // @0x1424e1ec0
-// MS2-FUNCTIONAL 0x1424e1ec0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1ec0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// MS2-FUNCTIONAL 0x1424e1ec0: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1ec0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 // @0x1424e1f20
 // MS2-FUNCTIONAL 0x1424e1f20: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1f20(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
@@ -671,8 +692,8 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1f20(void* self, Scaleform::UPInt 
 // MS2-FUNCTIONAL 0x1424e1f80: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1fe0
-// MS2-FUNCTIONAL 0x1424e1fe0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+// MS2-FUNCTIONAL 0x1424e1fe0: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);
