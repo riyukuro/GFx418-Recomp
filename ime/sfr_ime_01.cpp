@@ -4425,33 +4425,57 @@ void FUN_1423d5060(void* raw, int)
     }
 }
 
-// MS2-FUNCTIONAL: forwards the current composition and repositions the input window using the same executable state fields.
+// MS2-FUNCTIONAL: composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
+// leading space or U+3000 into U+00A0, and either stores the text in the String at +0xb0 (mode 0x60000, which like
+// the exe returns without releasing the context) or sends it with SetCompositionText and writes its length to
+// *outputLength. The candidate modes also set the cursor, store length - cursor at +0x64 and highlight the whole text.
+// It then sets the composition cursor and, unless the mode has a low nibble, calls RepositionInputWindow(x1, y2) of
+// the cursor rect IMEManagerBase::GetMetrics reports.
 // @0x1423ce730
 void FUN_1423ce730(void* raw, unsigned* outputLength)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
-    FUN_1423d2410(self, outputLength);
-    if ((*reinterpret_cast<unsigned*>(self + 0x98) & 0xf) != 0) return;
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    POINT caret{};
-    GetCaretPos(&caret);
-    ClientToScreen(hwnd, &caret);
-    Scaleform::GFx::Value args[2];
-    auto* values = reinterpret_cast<unsigned char*>(args);
-    const double coordinates[2] = { static_cast<double>(caret.x), static_cast<double>(caret.y) };
-    for (unsigned i = 0; i < 2; ++i) {
-        *reinterpret_cast<unsigned*>(values + i * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
-        *reinterpret_cast<double*>(values + i * 0x20 + 0x10) = coordinates[i];
+    HIMC context = cx18_ImmGetContext(hwnd);
+    const LONG size = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
+    auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<SPInt>(size * 2)) + 2));
+    cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, size);
+    const int count = size / 2;
+    text[count] = 0;
+    if (text[0] == L' ' || text[0] == 0x3000) text[0] = 0x00a0;
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (mode == 0x60000) {
+        *reinterpret_cast<Scaleform::String*>(self + 0xb0) = text;
+        Scaleform::Memory::Free(text);
+        return;
     }
-    void* movie = *reinterpret_cast<void**>(self + 0xa8);
-    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
-    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
-    if (interfaceState) {
+    ime->SetCompositionText(text, -1);
+    *outputLength = static_cast<unsigned>(count);
+    if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
+        const LONG cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
+        ime->SetCursorInComposition(static_cast<UPInt>(cursor));
+        *reinterpret_cast<unsigned*>(self + 0x64) = *outputLength - static_cast<unsigned>(cursor);
+        ime->HighlightText(0, *outputLength, Scaleform::GFx::IMEManagerBase::THS_CompositionSegment, false);
+    }
+    if (size)
+        ime->SetCursorInComposition(static_cast<SPInt>(cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0)));
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, 0);
+    if ((mode & 0xf) == 0) {
+        Scaleform::GFx::Value args[2];
+        args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+        args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
         Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
-            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
-                interfaceState, "RepositionInputWindow", &result, args, 2);
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "RepositionInputWindow", &result, args, 2);
     }
+    cx18_ImmReleaseContext(hwnd, context);
+    Scaleform::Memory::Free(text);
 }
 
 // MS2-FUNCTIONAL: removes the old input window, then shows the composition string (a UTF-8 copy of the String at +0xb0)
