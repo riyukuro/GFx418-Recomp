@@ -1036,6 +1036,7 @@ void GAS_GlobalTrace(const FnCall& fn)
 // BitmapData.loadBitmap(linkageId): a bitmap holding the image resource exported with the id, null without one.
 // @0x1428f1e70
 // MS2-FUNCTIONAL same calls; register allocation and the resource-release epilogue are scheduled differently
+// The movie def is read again from the environment's target, and a missing one ends the call without a bitmap.
 void BitmapDataCtorFunction::LoadBitmapA(const FnCall& fn)
 {
     fn.Result->SetNull();
@@ -1049,7 +1050,9 @@ void BitmapDataCtorFunction::LoadBitmapA(const FnCall& fn)
         fn.Env->LogScriptWarning("BitmapData::LoadBitmap: LoadMovieImageCallback failed to load image \"%s\"", id.ToCStr());
         return;
     }
-    Ptr<MovieDefImpl> pdef = ptarget->GetResourceMovieDef();
+    Ptr<MovieDefImpl> pdef = fn.Env->GetTarget()->GetResourceMovieDef();
+    if (!pdef) // the exe returns with a null result here (0x1428f1fa7)
+        return;
     Ptr<BitmapData>   pbitmap = *SF_HEAP_NEW(fn.Env->GetHeap()) BitmapData(fn.Env);
     pbitmap->SetImage(fn.Env, pimg, pdef);
     fn.Result->SetAsObject(pbitmap);
