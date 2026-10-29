@@ -2365,9 +2365,10 @@ void DrawImageViewport(void* command, void* contextOwner, void** image, void* st
     payload.transform[3] = ImageViewportOrigin - scaled * ImageViewportScale;
     reinterpret_cast<void (*)(void*, void*, const DrawPayload*, void*)>(vtable[0x188 / sizeof(void*)])(
         context, *image, &payload, static_cast<unsigned char*>(state) + 0x20);
-    reinterpret_cast<void (*)(void*, unsigned, unsigned)>(vtable[0x118 / sizeof(void*)])(
+    // applyBlendModeImpl(mode, sourceAc = true, forceAc = true)
+    reinterpret_cast<void (*)(void*, unsigned, bool, bool)>(vtable[0x118 / sizeof(void*)])(
         context, static_cast<unsigned>(*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(
-            *reinterpret_cast<void**>(static_cast<unsigned char*>(command) + 8)) + 0x48) != 0) + 0x0f, 1);
+            *reinterpret_cast<void**>(static_cast<unsigned char*>(command) + 8)) + 0x48) != 0) + 0x0f, true, true);
 }
 
 // MS2-FUNCTIONAL: clips a rectangle to the destination image and fills the surviving pixels with the selected alpha-adjusted color.
