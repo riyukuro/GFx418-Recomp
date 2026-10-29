@@ -1357,12 +1357,13 @@ void DetachChannelNode(void* node)
 {
     auto* bytes = static_cast<unsigned char*>(node);
     const int references = *reinterpret_cast<int*>(bytes - 8);
-    void* channel = *reinterpret_cast<void**>(bytes + 0x28);
-    if (references > 0 && channel) {
+    void** channel = reinterpret_cast<void**>(bytes + 0x28);
+    if (references > 0 && *channel) {
         auto** vtable = *reinterpret_cast<void***>(bytes - 0x10);
         reinterpret_cast<void (*)(void*)>(vtable[3])(bytes - 0x10);
-        FUN_1428d8efc(channel, nullptr);
-        FUN_1428d8f14(channel, nullptr);
+        // The exe reloads the channel after the virtual call and between the two FMOD calls.
+        FUN_1428d8efc(*channel, nullptr);
+        FUN_1428d8f14(*channel, nullptr);
         *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
     }
     *reinterpret_cast<void**>(bytes + 0x18) = nullptr;
