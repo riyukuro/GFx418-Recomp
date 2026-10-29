@@ -107,10 +107,9 @@ void SoundInfo::Play(InteractiveObject* pchar)
     if (!sprite)
         return;
 
+    // The exe goes on without a sample: StopPlayback still runs and PlaySample is handed the null.
     Sound::SoundInfoBase* soundInfo = resource->GetSoundInfo();
     Sound::SoundSample* sample = soundInfo ? soundInfo->GetSoundSample(renderer) : 0;
-    if (!sample)
-        return;
 
     if (Style.StopPlayback)
     {
