@@ -332,7 +332,8 @@ std::uint64_t* FUN_140016e30(std::uint64_t* out, std::uint64_t type, std::uint64
             if (--*refs == 0) reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
             out[2] = shared + 0x68;
         } else {
-            ConvertAS3ValueToString(sourceType, out + 2, out + 2);
+            bool converted;   // Convert2String's CheckResult; the exe uses a home slot
+            ConvertAS3ValueToString(sourceType, &converted, out + 2);
         }
     }
     return out;
@@ -1358,11 +1359,18 @@ std::uint64_t* FUN_14001a0e0(std::uint64_t* holder, std::uint64_t replacement)
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
     *holder = replacement; return holder;
 }
-// MS2-FUNCTIONAL: initializes a native callback record with its VM, property and integer payload.
+// MS2-FUNCTIONAL: initializes a native callback record with its VM, property and integer payload (the default, then the
+// first AS3 argument through Value::Convert2Int32 when one is supplied).
 // @0x14001a920
-std::uint64_t* FUN_14001a920(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, int, std::uint64_t, const std::uint32_t* value)
+std::uint64_t* FUN_14001a920(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, int count, std::uint64_t args, const std::uint32_t* value)
 {
-    record[1] = property; record[0] = vm; reinterpret_cast<std::uint32_t*>(record)[4] = *value;
+    record[1] = property; record[0] = vm;
+    auto* payload = reinterpret_cast<int*>(record + 2);
+    *payload = static_cast<int>(*value);
+    if (count) {
+        int converted;   // CheckResult scratch
+        ConvertAS3ValueToInt32(reinterpret_cast<void*>(args), &converted, payload, count, nullptr);
+    }
     return record;
 }
 } // namespace (sfr_video_04 calls FUN_14001af70)
@@ -1541,18 +1549,36 @@ int FUN_14001b6b0(void* player, std::uint32_t* output, std::uint32_t requestedBy
     return static_cast<int>((channels * static_cast<std::uint32_t>(samples) & 0x7ffffff) << 2);
 }
 
+namespace {
+// Value::Convert2String into *slot, except that a null object (tags 0xc..0xf with no object) takes the string manager's
+// builtin "null" node (manager + 0x68), as the exe's callers inline. The CheckResult goes to a scratch byte.
+void ConvertVideoStringArg(const std::uint64_t* value, std::uint64_t* slot)
+{
+    const auto tag = *reinterpret_cast<const std::uint32_t*>(value) & 0x1f;
+    if (tag >= 0x0c && tag < 0x10 && value[2] == 0) {
+        auto* nullNode = *reinterpret_cast<unsigned char**>(*slot + 8) + 0x68;
+        ++*reinterpret_cast<std::uint32_t*>(nullNode + 0x18);
+        auto* old = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*slot);
+        if (--*reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(old) + 0x18) == 0) old->ReleaseNode();
+        *slot = reinterpret_cast<std::uintptr_t>(nullNode);
+    } else {
+        bool converted;
+        ConvertAS3ValueToString(const_cast<std::uint64_t*>(value), &converted, slot);
+    }
+}
+}
 // MS2-FUNCTIONAL: captures two string callback parameters, retaining defaults and converting supplied AS3 values.
 // @0x140017130
 std::uint64_t* FUN_140017130(std::uint64_t* record, std::uint64_t vm, std::uint64_t property, unsigned count, const std::uint64_t* args, const std::uint64_t* defaults)
 {
     record[0] = vm; record[1] = property;
     record[2] = defaults[0];
-    if (record[2]) ++*reinterpret_cast<std::uint32_t*>(record[2] + 0x18);
-    if (count) ConvertAS3ValueToString(const_cast<std::uint64_t*>(args), nullptr, record + 2);
+    ++*reinterpret_cast<std::uint32_t*>(record[2] + 0x18);
+    if (count) ConvertVideoStringArg(args, record + 2);
     record[3] = defaults[1];
-    if (record[3]) ++*reinterpret_cast<std::uint32_t*>(record[3] + 0x18);
-    if (count > 1 && *reinterpret_cast<unsigned char*>(vm + 0x180) == 0)
-        ConvertAS3ValueToString(const_cast<std::uint64_t*>(args + 4), nullptr, record + 3);
+    ++*reinterpret_cast<std::uint32_t*>(record[3] + 0x18);
+    if (*reinterpret_cast<unsigned char*>(vm + 0x180) == 0 && count > 1)
+        ConvertVideoStringArg(args + 4, record + 3);
     return record;
 }
 // MS2-FUNCTIONAL: captures three string callback parameters and converts each supplied AS3 argument.
@@ -1561,9 +1587,9 @@ std::uint64_t* FUN_140017250(std::uint64_t* record, std::uint64_t vm, std::uint6
 {
     FUN_140017130(record, vm, property, count, args, defaults);
     record[4] = defaults[2];
-    if (record[4]) ++*reinterpret_cast<std::uint32_t*>(record[4] + 0x18);
-    if (count > 2 && *reinterpret_cast<unsigned char*>(vm + 0x180) == 0)
-        ConvertAS3ValueToString(const_cast<std::uint64_t*>(args + 8), nullptr, record + 4);
+    ++*reinterpret_cast<std::uint32_t*>(record[4] + 0x18);
+    if (*reinterpret_cast<unsigned char*>(vm + 0x180) == 0 && count > 2)
+        ConvertVideoStringArg(args + 8, record + 4);
     return record;
 }
 
@@ -1612,9 +1638,19 @@ void* FUN_14001ad20(void* traits, void* vm)
 namespace {
 
 namespace {
+// The callers hold each default as an ASString, so both helpers return the node retained.
 Scaleform::GFx::ASStringNode* MakeVideoNullString(Scaleform::GFx::ASStringManager* manager)
 {
-    return manager->CreateConstStringNode("null", 4, 0);
+    auto* node = manager->CreateConstStringNode("null", 4, 0);
+    ++*reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18);
+    return node;
+}
+Scaleform::GFx::ASStringNode* MakeVideoEmptyString(Scaleform::GFx::ASStringManager* manager)
+{
+    // the manager's builtin empty-string node at +0x40
+    auto* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(reinterpret_cast<unsigned char*>(manager) + 0x40);
+    ++*reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18);
+    return node;
 }
 void ReleaseVideoString(Scaleform::GFx::ASStringNode* node)
 {
@@ -1630,19 +1666,18 @@ void FUN_140017520(void*, void* vm, void* frame, std::uint64_t property, unsigne
     auto* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
     auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
     auto* first = MakeVideoNullString(manager); auto* second = MakeVideoNullString(manager);
-    std::uint64_t defaults[2] = {reinterpret_cast<std::uintptr_t>(first), reinterpret_cast<std::uintptr_t>(second)};
-    std::uint64_t record[4]{};
+    std::uint64_t defaults[2] = {reinterpret_cast<std::uintptr_t>(second), reinterpret_cast<std::uintptr_t>(first)};
+    std::uint64_t record[4];
     FUN_140017130(record, reinterpret_cast<std::uintptr_t>(vm), property, count, args, defaults);
     ReleaseVideoString(first); ReleaseVideoString(second);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        std::uint64_t outA = 0, outB = 0;
+        // pointer-to-member call: this = frame[0x10] + the 32-bit adjustment
         auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackA);
-        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB);
-        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
-        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
+        thunk(*reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10) + *reinterpret_cast<const int*>(&VideoStringCallbackBaseA),
+              record[1], &record[2], &record[3]);
     }
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
 }
 namespace {
 
@@ -1653,22 +1688,19 @@ void FUN_140017670(void*, void* vm, void* frame, std::uint64_t property, unsigne
 {
     auto* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
     auto* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
-    auto* first = MakeVideoNullString(manager); auto* second = MakeVideoNullString(manager); auto* third = MakeVideoNullString(manager);
-    std::uint64_t defaults[3] = {reinterpret_cast<std::uintptr_t>(first), reinterpret_cast<std::uintptr_t>(second), reinterpret_cast<std::uintptr_t>(third)};
-    std::uint64_t record[5]{};
+    auto* first = MakeVideoEmptyString(manager); auto* second = MakeVideoEmptyString(manager); auto* third = MakeVideoEmptyString(manager);
+    std::uint64_t defaults[3] = {reinterpret_cast<std::uintptr_t>(third), reinterpret_cast<std::uintptr_t>(second), reinterpret_cast<std::uintptr_t>(first)};
+    std::uint64_t record[5];
     FUN_140017250(record, reinterpret_cast<std::uintptr_t>(vm), property, count, args, defaults);
-    ReleaseVideoString(first); ReleaseVideoString(second); ReleaseVideoString(third);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        std::uint64_t outA = 0, outB = 0, outC = 0;
         auto thunk = reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t*, std::uint64_t*, std::uint64_t*)>(VideoStringCallbackB);
-        thunk(reinterpret_cast<std::uintptr_t>(VideoStringCallbackBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10), record[0], &outA, &outB, &outC);
-        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outA));
-        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outB));
-        ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(outC));
+        thunk(*reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(frame) + 0x10) + *reinterpret_cast<const int*>(&VideoStringCallbackBaseB),
+              record[1], &record[2], &record[3], &record[4]);
     }
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
     ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
+    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
+    ReleaseVideoString(first); ReleaseVideoString(second); ReleaseVideoString(third);
 }
 namespace {
 
