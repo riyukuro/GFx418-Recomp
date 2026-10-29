@@ -174,6 +174,7 @@ struct VideoCharacterDef
     volatile int       RefCount;    // Resource
     void*              pLib;
     UInt32             Id;          // CharacterDef: ResourceId::InvalidId
+    UInt32             pad1C;       // CharacterDef is 8-aligned: Width starts at +0x20
     UInt32             Width;
     UInt32             Height;
     UInt32             NumFrames;
