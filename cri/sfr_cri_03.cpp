@@ -446,7 +446,7 @@ CriUint32 FUN_14003d9d0(void* object)
         void* AddOneUnit;
     };
     ReaderState* reader = (ReaderState*)object;
-    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 0);
+    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 1);
     if (reader->AddOneUnit)
         samples += reader->Unit;
     return samples / reader->Unit;
