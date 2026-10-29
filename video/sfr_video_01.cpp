@@ -2179,9 +2179,12 @@ void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
                    const Scaleform::GFx::ASString* name,
                    Scaleform::GFx::AS2::Value* result)
 {
-    const char* text = name->ToCStr();
-    const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
-    const bool constructor = strcmp(text, "constructor") == 0;
+    // the builtin names compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
+    const bool hiddenConstructor = context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
+                                       .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
+    const bool constructor = !hiddenConstructor &&
+                             context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
+                                 .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     auto* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
@@ -2565,9 +2568,12 @@ void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
                    const Scaleform::GFx::ASString* name,
                    Scaleform::GFx::AS2::Value* result)
 {
-    const char* text = name->ToCStr();
-    const bool hiddenConstructor = strcmp(text, "__constructor__") == 0;
-    const bool constructor = strcmp(text, "constructor") == 0;
+    // the builtin names compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
+    const bool hiddenConstructor = context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
+                                       .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
+    const bool constructor = !hiddenConstructor &&
+                             context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
+                                 .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     auto* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
