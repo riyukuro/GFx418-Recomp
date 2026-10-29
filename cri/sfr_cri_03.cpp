@@ -1833,7 +1833,7 @@ CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
     CriUint32 channels, rate;
     memcpy(&channels, (const CriUint8*)config + 4, sizeof(channels));
     memcpy(&rate, (const CriUint8*)config + 0xc, sizeof(rate));
-    CriSint32 blockSize = 0x9c + 0x9c + FUN_1400532e0((CriSint32)channels);
+    CriSint32 blockSize = 0x9c + FUN_1400532e0((CriSint32)channels);
     CriUint32 decoderWidth;
     memcpy(&decoderWidth, (const CriUint8*)decoder + 0xe1c, sizeof(decoderWidth));
     CriUint32 bufferCount = decoderWidth * 0xc80 / channels;
