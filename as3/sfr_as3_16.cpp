@@ -616,13 +616,13 @@ unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
 }
 
 extern "C" void* DAT_143b15f60;
-extern "C" void FUN_14257db40();
+extern "C" void FUN_14257db40(void* self);   // RefCountImplCore::~RefCountImplCore: stores its vptr through self
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
 
 namespace {
 void* Sfr16ScalarDeletingDtor(void* self, Scaleform::UPInt flags)
 {
-    FUN_14257db40();
+    FUN_14257db40(self);
     if (flags & 1)
     {
         if ((flags & 4) == 0)
