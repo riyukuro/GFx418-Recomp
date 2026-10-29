@@ -1561,22 +1561,27 @@ void ArrayObject::ArraySort(const FnCall& fn)
     if (fn.NArgs >= 1)
     {
         if (fn.Arg(0).IsFunction())
-        {
             sortFunc = fn.Arg(0).ToFunction(fn.Env);
-            if (fn.NArgs >= 2)
-                flags = fn.Arg(1).ToInt32(fn.Env);
-        }
         else
             flags = fn.Arg(0).ToInt32(fn.Env);
     }
+    // The options argument only counts when the compare function resolved (0x1428f5b5f test r12).
+    if (!sortFunc.IsNull() && fn.NArgs >= 2)
+        flags = fn.Arg(1).ToInt32(fn.Env);
 
     Ptr<ArrayObject> pnew = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
+    if (!pnew)
+        return;
     pnew->ShallowCopyFrom(*pthis);
 
-    ArraySortFunctor sf(fn.ThisPtr, flags, sortFunc, fn.Env, pthis->LogPtr);
-    Alg::ArrayAdaptor<Value*> adaptor(pnew->Elements.GetDataPtr(), pnew->Elements.GetSize());
-    if (!Alg::QuickSortSlicedSafe(adaptor, 0, pnew->Elements.GetSize(), sf))
-        fn.Env->LogScriptError("Array.sort - sorting failed, check your sort functor");
+    // The compare function is called with the sorted copy as this (0x1428f58b2 lea r8,[rbx+0x20]).
+    ArraySortFunctor sf(pnew.GetPtr(), flags, sortFunc, fn.Env, pthis->LogPtr);
+    if (pnew->Elements.GetSize() != 0)
+    {
+        Alg::ArrayAdaptor<Value*> adaptor(pnew->Elements.GetDataPtr(), pnew->Elements.GetSize());
+        if (!Alg::QuickSortSlicedSafe(adaptor, 0, pnew->Elements.GetSize(), sf))
+            fn.Env->LogScriptError("Array.sort - sorting failed, check your sort functor");
+    }
 
     bool duplicate = false;
     if (flags & SortFlags_UniqueSort)
