@@ -345,10 +345,16 @@ struct CriMvRequestPoolView
     CriMvRequestNode* FreeList;
 };
 
+struct CriMovieAttachStream
+{
+    CriUint8 Data[0x10];
+};
+
 struct CriMovieAttachView
 {
-    CriUint8 StreamInfo[0xB2C];
-    CriUint8 StreamInfoTail[0x2E4];
+    CriUint8 Reserved[0xB2C];
+    CriMovieAttachStream Streams[0x2E];
+    CriUint8 StreamsTail[4];
     void* Manager;
     CriUint8 ReservedE18[8];
     void* AttachedSource;
@@ -1317,14 +1323,15 @@ void FUN_1400377a0(void* player, void* videoDecoder, void* alphaDecoder)
 // @0x140030f10
 CriBool FUN_140030f10(void* player, void* source, CriUint32 stream)
 {
-    CriMovieAttachView* state = (CriMovieAttachView*)player;
-    state->AttachedSource = source;
-    CriBool attached = FUN_140042270(state->Manager, player, source,
-                                     &state->StreamInfo[stream * 0x10], stream, 1);
+    // The exe passes the stream's 16-byte entry at +0xb2c and reloads the source from the player.
+    ((CriMovieAttachView*)player)->AttachedSource = source;
+    CriBool attached = FUN_140042270(((CriMovieAttachView*)player)->Manager, player,
+                                     ((CriMovieAttachView*)player)->AttachedSource,
+                                     &((CriMovieAttachView*)player)->Streams[stream], stream, 1);
     if (!attached)
         return 0;
     if (FUN_140037a10() == 1)
-        FUN_140041e30(state->Manager, FUN_140038000, player, 1);
+        FUN_140041e30(((CriMovieAttachView*)player)->Manager, FUN_140038000, player, 1);
     return 1;
 }
 
@@ -4615,7 +4622,13 @@ CriBool FUN_1400318f0(void* player)
 // @0x140032040
 CriBool FUN_140032040(void* player)
 {
-    return ((CriMvPlyObj*)player)->decoder_error == 0 && FUN_140033030(player) == 1;
+    // The exe parses the queued header chunks first, then reports a decoder error.
+    CriBool headerDone = FUN_140033030(player);
+    if (((CriMvPlyObj*)player)->decoder_error == 1)
+        return 0;
+    if (headerDone != 1)
+        return 0;
+    return 1;
 }
 #pragma optimize("", on)
 
