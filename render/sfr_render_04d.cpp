@@ -557,7 +557,7 @@ void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlig
                 // wholly left of the view: skip; at or past the right edge: the rest of the line is hidden too
                 if (index != ~0u && adjox + approxSymW <= Geom.VisibleRect.x1)
                     continue;
-                if (int(adjox) >= int(Geom.VisibleRect.x2))
+                if (adjox >= Geom.VisibleRect.x2)
                     break;
             }
             if (glyphIt.IsUnderline())
