@@ -45,14 +45,12 @@ struct CX18StringPairTable
     Scaleform::UPInt SizeMask;
     CX18StringPairEntry Entries[1];
 };
+// Render::Text::TextFormat: RefCount, then two StringDH (FontList +0x08, Url +0x18), pImageDesc +0x28, pFontHandle +0x30.
 struct CX18TextFormatCleanup
 {
     unsigned char Pad0[8];
-    void* String0;
-    unsigned char Pad1[8];
-    void* String1;
-    Scaleform::GFx::ASStringNode* String2;
-    void* RefCounted;
+    Scaleform::StringDH FontList;
+    Scaleform::StringDH Url;
 };
 struct CX18RefCountedPtr { Scaleform::RefCountImpl* Ptr; };
 
@@ -94,22 +92,19 @@ void FUN_1424a9f40(void* ptable)
 }
 
 // @0x1424aa0f0
-// MS2-FUNCTIONAL: releases the four owned TextFormat fields in the order used by the executable.
+// Releases the owned TextFormat fields in the exe's order: pFontHandle, pImageDesc (non-thread-safe refcount), then the
+// Url and FontList StringDH data. They are not ASStringNodes: releasing them as such corrupted the text and the heap.
 void FUN_1424aa0f0(void* pfmt)
 {
     CX18TextFormatCleanup* fmt = (CX18TextFormatCleanup*)pfmt;
     CX18RefCountedPtr* kit = (CX18RefCountedPtr*)((unsigned char*)pfmt + 0x30);
     if (kit->Ptr)
         kit->Ptr->Release();
-    CX18RefCountedPtr* handle = (CX18RefCountedPtr*)((unsigned char*)pfmt + 0x28);
-    if (handle->Ptr)
-        handle->Ptr->Release();
-    Scaleform::GFx::ASStringNode* node = (Scaleform::GFx::ASStringNode*)((Scaleform::UPInt)fmt->String2 & ~(Scaleform::UPInt)3);
-    if (node)
-        node->Release();
-    node = (Scaleform::GFx::ASStringNode*)((Scaleform::UPInt)fmt->String0 & ~(Scaleform::UPInt)3);
-    if (node)
-        node->Release();
+    Scaleform::RefCountNTSImpl* image = *(Scaleform::RefCountNTSImpl**)((unsigned char*)pfmt + 0x28);
+    if (image)
+        image->Release();
+    fmt->Url.~StringDH();
+    fmt->FontList.~StringDH();
 }
 
 // @0x1424aa770
