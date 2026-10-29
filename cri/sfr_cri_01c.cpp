@@ -459,15 +459,15 @@ void CriMvEasyPlayer::initializeCompareFrameParameters(void)
 // @0x14001e720
 void CriMvEasyPlayer::Destroy(CriError& err)
 {
-    CriSint32 locked;
+    CriSint32 locked1;
     void* cs_tmp;
-    CriMvPly ply;
+    CriMvPly ply1;
     void* cs_work_tmp;
-    CriMvEasyFileReaderMem* fr;
+    CriMvEasyFileReaderMem* fr3;
 
     err = CRIERR_OK;
-    locked = FUN_14003a050(&destroy_lock, 1);
-    if (locked == 1)
+    locked1 = FUN_14003a050(&destroy_lock, 1);
+    if (locked1 == 1)
     {
         notifyErrorB(this,
                      "E11021601M: CriMvEasyPlayer::Destroy is called during a call of CriMvEasyPlayer::ExecuteDecode.",
@@ -479,17 +479,17 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     }
     if (freader_mem != NULL)
     {
-        fr = freader_mem;
-        fr->Destroy();
+        fr3 = freader_mem;
+        fr3->Destroy();
         freader_mem = NULL;
     }
     if (cs != NULL)
     {
         FUN_140039f50(cs);
     }
-    ply = mvply;
+    ply1 = mvply;
     mvply = NULL;
-    FUN_14002f610(ply);
+    FUN_14002f610(ply1);
     if (work_heap != NULL)
     {
         criHeap_Destroy(work_heap);
