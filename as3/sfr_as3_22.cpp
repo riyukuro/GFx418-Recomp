@@ -1695,7 +1695,7 @@ insert_entry:
     const std::uint64_t occupant = row[0];
     std::uint64_t storedValue;
     if (static_cast<std::int64_t>(occupant) == -2) {
-        row[1] = UINT64_MAX;
+        row[0] = UINT64_MAX;
         storedValue = *value;
     } else {
         std::uint64_t empty = bucket;
@@ -3982,7 +3982,7 @@ void WriteTextMetadata(const void* record, void* stream, unsigned version)
         WriteStreamBytes(stream, src + offset, 4);
 }
 
-// MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot.
+// MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot (entry + 0x18).
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
 {
@@ -4002,7 +4002,8 @@ void* FindAudioRequestEntry(void** set, const unsigned char* key)
                 return nullptr;
             node = table + 2 + index * 6;
         }
-        return table + 4 + index * 6;
+        if (static_cast<std::int64_t>(index) >= 0)
+            return table + 5 + index * 6;
     }
     return nullptr;
 }
