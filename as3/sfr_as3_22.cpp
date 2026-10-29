@@ -2225,11 +2225,12 @@ void MergeMovieResourceTables(void* destination, void* source)
     const unsigned otherSecond = *reinterpret_cast<unsigned*>(src + 0x18);
     *reinterpret_cast<unsigned*>(dst + 0x18) = secondLimit < otherSecond ? secondLimit : otherSecond;
 
-    auto** dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
-    const std::size_t dstCount = *reinterpret_cast<std::size_t*>(dst + 0x48);
     auto** srcItems = *reinterpret_cast<std::uint64_t***>(src + 0x40);
     const std::size_t srcCount = *reinterpret_cast<std::size_t*>(src + 0x48);
     for (std::size_t i = 0; i < srcCount; ++i) {
+        // Re-read each pass: the append below can reallocate the destination array.
+        auto** dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
+        const std::size_t dstCount = *reinterpret_cast<std::size_t*>(dst + 0x48);
         const std::uint64_t encoded = *reinterpret_cast<std::uint64_t*>(srcItems[i] + 0x10);
         const char* candidate = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
         bool duplicate = false;
