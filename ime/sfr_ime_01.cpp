@@ -5180,15 +5180,120 @@ void FUN_1423cbe90(long long* manager, unsigned language)
     reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[0x98 / sizeof(void*)])(provider);
 }
 
-// MS2-FUNCTIONAL: updates the active keyboard layout and notifies the recovered IME window handlers.
+// MS2-FUNCTIONAL: ITfInputProcessorProfileActivationSink::OnActivated: refreshes the mode and locale label, then
+// resolves the activated TSF profile (or plain keyboard layout) to its record text and conversion flags.
 // @0x1423d6c10
-unsigned long long FUN_1423d6c10(long long raw, int, unsigned short language,
-                                long long*, long long*, long long*, unsigned long long)
+unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short language,
+                                long long* clsid, long long* catid, long long* guidProfile, unsigned long long hkl)
 {
-    HKL layout = ActivateKeyboardLayout(reinterpret_cast<HKL>(static_cast<ULONG_PTR>(language)), 0);
-    if (!layout) return 0;
-    auto* manager = reinterpret_cast<unsigned char*>(raw - 0x1a8);
-    if (*reinterpret_cast<void**>(manager + 0x78)) FUN_1423d43b0(*reinterpret_cast<void**>(manager + 0x78));
+    static const GUID kIIDProfiles =
+        {0x1f02b6c5, 0x7842, 0x4ee6, {0x8a, 0x0b, 0x9a, 0x24, 0x18, 0x3a, 0x95, 0xca}};
+    static const GUID kIIDProfileMgr =
+        {0x71c6e74c, 0x0f28, 0x11d8, {0xa8, 0x2a, 0x00, 0x06, 0x5b, 0x84, 0x43, 0x5c}};
+    struct Profile {
+        unsigned profileType; unsigned short langid; unsigned short pad;
+        unsigned long long clsid[2]; unsigned long long guidProfile[2]; unsigned long long catid[2];
+        unsigned long long hklSubstitute; unsigned caps; unsigned pad2; unsigned long long hkl; unsigned flags;
+    };
+    BSTR description = SysAllocStringByteLen(nullptr, 0);
+    IUnknown* profiles = nullptr;
+    if (FAILED(CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr, CLSCTX_INPROC_SERVER,
+                                kIIDProfiles, reinterpret_cast<void**>(&profiles)))) return 0;
+    IUnknown* profileMgr = nullptr;
+    if (FAILED(profiles->QueryInterface(kIIDProfileMgr, reinterpret_cast<void**>(&profileMgr)))) return 0;
+    Profile profile;
+    const unsigned long long layout = profileType == 1 ? 0 : hkl;
+    reinterpret_cast<HRESULT(*)(void*, int, unsigned short, long long*, long long*, unsigned long long, Profile*)>(
+        (*reinterpret_cast<void***>(profileMgr))[5])(profileMgr, profileType, language, clsid, guidProfile, layout,
+                                                    &profile);
+    if (!profile.guidProfile[0] && !profile.guidProfile[1] && !profile.catid[0] && !profile.catid[1] &&
+        !static_cast<unsigned>(profile.hkl))
+        return 1;
+    if (profileMgr) profileMgr->Release();
+    if (!profiles) return 1;
+    auto* manager = reinterpret_cast<long long*>(raw - 0x1a8);
+    auto* bytes = reinterpret_cast<unsigned char*>(manager);
+    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>(
+        (*reinterpret_cast<void***>(manager))[4])(manager, language);
+    wchar_t locale[0x104]{};
+    GetLocaleInfoW(language, LOCALE_SLANGUAGE, locale, 0x104);
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
+    if (void* provider = reinterpret_cast<void*>(manager[0xf])) {
+        FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(provider), mode);
+        String localeText(locale);
+        provider = reinterpret_cast<void*>(manager[0xf]);
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[0x78 / sizeof(void*)])(
+            provider, localeText.ToCStr());
+    }
+    reinterpret_cast<HRESULT(*)(void*, long long*, unsigned short, long long*, BSTR*)>(
+        (*reinterpret_cast<void***>(profiles))[12])(profiles, clsid, language, guidProfile, &description);
+    if (!SysStringLen(description)) {
+        const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x160);
+        manager[0x33] = static_cast<long long>(layout);
+        {
+            String empty("");
+            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &empty);
+        }
+        if (layout != 0x4120412) {
+            struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+            const auto* records = reinterpret_cast<const LayoutRecord*>(manager[0x2b]);
+            bool imeLayout = false;
+            for (unsigned i = 0; i < count; ++i) {
+                if (records[i].layoutId == static_cast<unsigned>(layout) && std::strlen(records[i].imeFile)) {
+                    imeLayout = true;
+                    break;
+                }
+            }
+            if (!imeLayout) {
+                String localeText(locale);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &localeText);
+                profiles->Release();
+                return 1;
+            }
+        }
+    }
+    auto& flags = *reinterpret_cast<unsigned*>(bytes + 0x88);
+    flags = 0x1000000;
+    const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0xd0);
+    for (unsigned i = 0; i < count; ++i) {
+        auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
+        for (auto* node = *reinterpret_cast<unsigned char**>(entries + i * 0x30 + 0x28); node;
+             node = *reinterpret_cast<unsigned char**>(node + 8)) {
+            Profile candidate;
+            std::memcpy(&candidate, *reinterpret_cast<void**>(node), 0x50);
+            if (candidate.langid != language ||
+                candidate.clsid[0] != static_cast<unsigned long long>(clsid[0]) ||
+                candidate.clsid[1] != static_cast<unsigned long long>(clsid[1]) ||
+                candidate.catid[0] != static_cast<unsigned long long>(catid[0]) ||
+                candidate.catid[1] != static_cast<unsigned long long>(catid[1]) ||
+                candidate.hkl != layout ||
+                candidate.guidProfile[0] != static_cast<unsigned long long>(guidProfile[0]) ||
+                candidate.guidProfile[1] != static_cast<unsigned long long>(guidProfile[1]) ||
+                candidate.hklSubstitute != profile.hklSubstitute)
+                continue;
+            flags = *reinterpret_cast<unsigned*>(entries + i * 0x30 + 0x20);
+            FUN_1423ca640(reinterpret_cast<void*>(manager[0xf]), flags);
+            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2) {
+                String text(*reinterpret_cast<String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x18));
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+            }
+            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1) {
+                String text(*reinterpret_cast<String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x10));
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+            }
+            void* provider = reinterpret_cast<void*>(manager[0xf]);
+            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[0x98 / sizeof(void*)])(provider);
+            if (SysStringLen(description)) SysFreeString(description);
+            profiles->Release();
+            return 1;
+        }
+    }
+    {
+        String unsupported("Not Supported");
+        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &unsupported);
+    }
+    if (SysStringLen(description)) SysFreeString(description);
+    profiles->Release();
     return 1;
 }
 
