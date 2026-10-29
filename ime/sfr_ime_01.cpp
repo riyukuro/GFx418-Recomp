@@ -23,6 +23,9 @@
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
 
+// Scaleform::UTF8Util::EncodeString (exe 0x1425a73c0); the shared sf_utf8util.h does not declare it.
+namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeString(char* buff, const wchar_t* chars, SPInt length); } }
+
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 namespace Scaleform { namespace GFx { namespace IME {
 
@@ -4722,10 +4725,87 @@ unsigned FUN_1423d8140(long long* manager)
     return 0;
 }
 
-// MS2-FUNCTIONAL: refreshes the manager's locale list and resets its active language through the layout enumerator.
+// MS2-FUNCTIONAL: enumerates HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layouts and appends one 0x18-byte record
+// per layout to the array at +0x158: { UTF-8 "IME File", UTF-8 "Layout Text", layout id, whether the id is among the
+// count loaded HKLs }. The subkey id is also parsed into +0x198. Per-subkey errors are logged and skipped; returns
+// true when the root key cannot be opened or queried.
 // @0x1423cb980
-unsigned long long FUN_1423cb980(long long*, long long, unsigned)
+unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned count)
 {
+    auto* self = reinterpret_cast<unsigned char*>(manager);
+    auto* logError = reinterpret_cast<void(*)(void*, DWORD, const char*)>(
+        (*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)]);
+    struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+    ::Scaleform::String unused;
+    DWORD subkeyCount = 0;
+    HKEY root = nullptr;
+    LONG error = RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts", 0,
+                               KEY_READ, &root);
+    if (error) {
+        logError(manager, error, "GFxIME Error:Opening Registry Key failed ");
+        return 1;
+    }
+    FILETIME written;
+    error = RegQueryInfoKeyW(root, nullptr, nullptr, nullptr, &subkeyCount, nullptr, nullptr, nullptr, nullptr,
+                             nullptr, nullptr, &written);
+    if (error) {
+        logError(manager, error, "GFxIME Error:Retrieving subkey information failed ");
+        return 1;
+    }
+    char keyName[0x400];
+    wchar_t layoutText[0x400], imeFile[0x400];
+    char layoutTextUtf8[0x800], imeFileUtf8[0x800];
+    for (DWORD i = 0; i < subkeyCount; ++i) {
+        DWORD nameLength = 0x400, valueSize = 0x400;
+        error = RegEnumKeyExA(root, i, keyName, &nameLength, nullptr, nullptr, nullptr, &written);
+        if (error) {
+            logError(manager, error, "GFxIME Error:Enumerating Registry Subkeys Failed ");
+            continue;
+        }
+        sscanf(keyName, "%x", reinterpret_cast<unsigned*>(self + 0x198));
+        HKEY subkey = nullptr;
+        error = RegOpenKeyExA(root, keyName, 0, KEY_QUERY_VALUE, &subkey);
+        if (error) {
+            logError(manager, error, "GFxIME Error:Opening Registry subkey Failed ");
+            continue;
+        }
+        if (RegQueryValueExW(subkey, L"Layout Text", nullptr, nullptr, reinterpret_cast<BYTE*>(layoutText), &valueSize))
+            memset(layoutText, 0, sizeof(layoutText));
+        valueSize = 0x400;
+        error = RegQueryValueExW(subkey, L"IME File", nullptr, nullptr, reinterpret_cast<BYTE*>(imeFile), &valueSize);
+        if (error) {
+            if ((*reinterpret_cast<unsigned*>(self + 0x198) & 0xe000000) == 0xe000000) {
+                ::Scaleform::String message = ::Scaleform::String("GFxIME Error:Obtaining IME Filename failed for ") + keyName;
+                logError(manager, error, message.ToCStr());
+            }
+            memset(imeFile, 0, sizeof(imeFile));
+        }
+        RegCloseKey(subkey);
+        ::Scaleform::UTF8Util::EncodeString(layoutTextUtf8, layoutText, -1);
+        ::Scaleform::UTF8Util::EncodeString(imeFileUtf8, imeFile, -1);
+        LayoutRecord record;
+        sscanf(keyName, "%x", &record.layoutId);
+        const size_t textSize = strlen(layoutTextUtf8) + 1;
+        record.layoutText = static_cast<char*>(::Scaleform::Memory::Alloc(textSize));
+        if (record.layoutText) strcpy_s(record.layoutText, textSize, layoutTextUtf8);
+        const size_t imeSize = strlen(imeFileUtf8) + 1;
+        record.imeFile = static_cast<char*>(::Scaleform::Memory::Alloc(imeSize));
+        if (record.imeFile) strcpy_s(record.imeFile, imeSize, imeFileUtf8);
+        record.loaded = 0;
+        const unsigned long long current = *reinterpret_cast<unsigned long long*>(self + 0x198);
+        for (unsigned j = 0; j < count; ++j) {
+            if (reinterpret_cast<unsigned long long*>(layouts)[j] == current) {
+                record.loaded = 1;
+                break;
+            }
+        }
+        auto* records = reinterpret_cast<unsigned long long*>(self + 0x158);   // { data, size, capacity }
+        const unsigned long long size = records[1] + 1;
+        if (size >= records[2]) FUN_1423cc680(records, records, size + (size >> 2));
+        records[1] = size;
+        reinterpret_cast<LayoutRecord*>(records[0])[size - 1] = record;
+    }
+    RegCloseKey(root);
     return 0;
 }
 
