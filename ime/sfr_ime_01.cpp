@@ -2620,10 +2620,8 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
 {
     auto* self = static_cast<unsigned char*>(raw);
     int composition = *reinterpret_cast<int*>(self + 0xbc);
-    if (!enabled) {
-        if (composition < 1) return;
+    if (!enabled && composition > 0)
         *reinterpret_cast<unsigned char*>(self + 0xc0) = 1;
-    }
     if (composition != 0) return;
 
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
@@ -2632,7 +2630,7 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
     void* languageSource = *reinterpret_cast<void**>(self + 0xa8);
     reinterpret_cast<void(*)(void*, String*)>((*reinterpret_cast<void***>(languageSource))[0x50 / sizeof(void*)])(
         languageSource, &language);
-    const bool korean = _strnicmp(language.ToCStr(), "Korean", 6) == 0;
+    const bool korean = std::strcmp(language.ToCStr(), "Korean") == 0;
     cx18_ImmAssociateContextEx(hwnd, nullptr, static_cast<DWORD>(enabled) << 4);
     HIMC context = cx18_ImmGetContext(hwnd);
     DWORD conversion = 0;
@@ -2641,6 +2639,8 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
     if (!korean) {
         conversion = enabled ? (conversion | 1u) : (conversion & ~1u);
         sentence = static_cast<DWORD>(enabled) << 3;
+    } else {
+        sentence = 0;
     }
     cx18_ImmSetConversionStatus(context, conversion, sentence);
     cx18_ImmReleaseContext(hwnd, oldContext);
