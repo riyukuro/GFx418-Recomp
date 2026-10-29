@@ -268,7 +268,7 @@ void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
         reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA)(
-            static_cast<unsigned char*>(VideoThunkBaseA) + reinterpret_cast<std::uintptr_t>(root),
+            root + *reinterpret_cast<const int*>(&VideoThunkBaseA),
             member, number);
     }
 }
@@ -286,7 +286,7 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
         reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB)(
-            static_cast<unsigned char*>(VideoThunkBaseB) + reinterpret_cast<std::uintptr_t>(root),
+            root + *reinterpret_cast<const int*>(&VideoThunkBaseB),
             member, number);
     }
 }
@@ -382,7 +382,7 @@ void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkC)(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseC) + root, member, value);
+            *reinterpret_cast<const int*>(&VideoThunkBaseC) + root, member, value);
     }
 }
 namespace {
@@ -399,7 +399,7 @@ void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkD)(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseD) + root, member, value);
+            *reinterpret_cast<const int*>(&VideoThunkBaseD) + root, member, value);
     }
 }
 namespace {
@@ -416,7 +416,7 @@ void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
         auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkE)(
-            reinterpret_cast<std::uintptr_t>(VideoThunkBaseE) + root, member, value);
+            *reinterpret_cast<const int*>(&VideoThunkBaseE) + root, member, value);
     }
 }
 namespace {
@@ -445,7 +445,7 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
         if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
             auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
             reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t, int)>(VideoThunkF)(
-                reinterpret_cast<std::uintptr_t>(VideoThunkBaseF) + root, member, value, extra);
+                *reinterpret_cast<const int*>(&VideoThunkBaseF) + root, member, value, extra);
         }
     }
 }
