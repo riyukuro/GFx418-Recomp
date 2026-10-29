@@ -43,7 +43,8 @@ void AvmSprite::FillTabableArray(InteractiveObject::FillTabableParams* params)
                 params->Array->Resize(0);
                 params->TabIndexed = true;
             }
-            if ((pio->IsTabable() || (params->InclFocusEnabled && pio->IsFocusEnabled(GFx_FocusMovedByMouse))) &&
+            // focusEnabled counts as moved by keyboard (0x142941cd6 mov edx,2)
+            if ((pio->IsTabable() || (params->InclFocusEnabled && pio->IsFocusEnabled(GFx_FocusMovedByKeyboard))) &&
                 (!params->TabIndexed || pio->TabIndex > 0))
             {
                 params->Array->PushBack(Ptr<InteractiveObject>(pio));
