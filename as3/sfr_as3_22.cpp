@@ -1208,16 +1208,16 @@ void AccumulateImageTreeValue(void* node, void* set)
         (*reinterpret_cast<std::uint64_t*>(key) >> 32) == 1) {
         std::uint64_t found[2] = {};
         FindFixedHashKey(set, found, key);
-        if (!found[0] || *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(
-                              reinterpret_cast<void*>(found[0])) + 8) < found[1]) {
+        auto* table = found[0] ? *reinterpret_cast<unsigned char**>(found[0]) : nullptr;
+        if (!table || static_cast<std::int64_t>(found[1]) >
+                          *reinterpret_cast<std::int64_t*>(table + 8)) {
             struct ValueRecord { std::uint64_t key; std::uint64_t index; std::uint32_t count; std::uint32_t pad; std::uint64_t size; };
             ValueRecord value{*reinterpret_cast<std::uint64_t*>(key), 0, 1, 0,
                               *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
                               *reinterpret_cast<std::uint64_t*>(bytes + 0x18)};
             AddImageHashValue(set, key, &value);
         } else {
-            auto* base = reinterpret_cast<unsigned char*>(found[0]);
-            auto* entry = base + 0x38 + found[1] * 0x38;
+            auto* entry = table + 0x38 + found[1] * 0x38;
             ++*reinterpret_cast<std::uint32_t*>(entry);
             *reinterpret_cast<std::uint64_t*>(entry + 8) +=
                 *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
@@ -1601,18 +1601,19 @@ void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
     if (table) {
         const std::uint64_t hash = HashImageKey(key);
         const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
+        std::int64_t index = static_cast<std::int64_t>(bucket);
         auto* entry = reinterpret_cast<std::int64_t*>(table + 0x10 + bucket * 0x38);
         if (entry[0] != -2 && static_cast<std::uint64_t>(entry[1]) == bucket) {
             for (;;) {
                 if (static_cast<std::uint64_t>(entry[1]) == bucket &&
                     static_cast<std::uint64_t>(entry[2]) == *reinterpret_cast<const std::uint64_t*>(key)) {
-                    found = static_cast<std::int64_t>(bucket);
+                    found = index;
                     break;
                 }
-                const std::int64_t next = entry[0];
-                if (next == -1)
+                index = entry[0];
+                if (index == -1)
                     break;
-                entry = reinterpret_cast<std::int64_t*>(table + 0x10 + next * 0x38);
+                entry = reinterpret_cast<std::int64_t*>(table + 0x10 + index * 0x38);
             }
         }
     }
