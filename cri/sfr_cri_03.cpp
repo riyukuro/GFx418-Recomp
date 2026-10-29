@@ -1216,8 +1216,9 @@ CriUint64 FUN_14003afb0(const CriUtfRtvView* table, const CriUint8* field, CriUt
     }
     else
     {
-        memset(column->DefaultValue, 0, sizeof(column->DefaultValue));
+        // The exe writes only the cell's type byte (+0x18) and its first value qword (+0x20).
         ((CriUtfRtvCell*)column->DefaultValue)->Type = 0xff;
+        memset((CriUint8*)column->DefaultValue + 8, 0, 8);
     }
     column->IsRecordField = (flags >> 6) & 1;
     return consumed;
@@ -2988,13 +2989,11 @@ void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void*
     CriUint32 prefixSize = size < maximum ? size : maximum;
     CriUint32 suffixSize = size - prefixSize;
     void* suffixData = suffixSize ? (CriUint8*)data + prefixSize : NULL;
-    memcpy(prefix, &data, sizeof(data));
+    // The exe copies the whole 16-byte chunk into prefix (+0xc included) and never writes suffix+0xc.
+    memcpy(prefix, source, 16);
     memcpy((CriUint8*)prefix + 8, &prefixSize, sizeof(prefixSize));
-    CriUint32 zero = 0;
-    memcpy((CriUint8*)prefix + 12, &zero, sizeof(zero));
     memcpy(suffix, &suffixData, sizeof(suffixData));
     memcpy((CriUint8*)suffix + 8, &suffixSize, sizeof(suffixSize));
-    memcpy((CriUint8*)suffix + 12, &zero, sizeof(zero));
 }
 
 // MS2-FUNCTIONAL: place a bounded prefix on the input queue and return the suffix to output.
@@ -4163,6 +4162,7 @@ void* FUN_14003e2a0(void* source, void* destination)
         CriUint64 Field18;
         CriUint8 Reserved20[0x30];
         CriUint32 Field50;
+        CriUint8 Reserved54[0x5c];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
     } input = {};
     struct DescriptorOutput
     {
@@ -4197,6 +4197,7 @@ void* FUN_14003e5d0(void* source, void* destination)
         CriUint64 Field18;
         CriUint8 Reserved20[0x30];
         CriUint32 Field50;
+        CriUint8 Reserved54[0x5c];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
     } input = {};
     struct DescriptorOutput
     {
