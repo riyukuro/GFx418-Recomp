@@ -1988,8 +1988,9 @@ bool FUN_142731310(D3D9::ShaderManager* sm, unsigned srcCount, Render::Texture**
 bool FUN_142734410(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2F* texgen, Size<int> texsize,
                    const Matrix4F* cxmul, const VertexFormat* format, D3D9::ShaderInterface* psi, unsigned flags)
 {
-    psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)0x1a64f, (D3D9::FragShaderDesc::ShaderType)0x1a64f,
-                         format);
+    if (!psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)0x1a64f, (D3D9::FragShaderDesc::ShaderType)0x1a64f,
+                              format))
+        return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
     for (unsigned i = 0; i < 2; i++)
         psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_cxmul, &cxmul[i].M[0][0], 16, i);
@@ -2009,13 +2010,15 @@ bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
     unsigned shader = copySource ? 0x1a696 : 0x1a655;
     switch (op)
     {
-    case 1: shader += 0x20;
-    case 2: shader += 0x10;
-    case 3: shader += 8;
-    case 4: shader += 4;
-    case 5: shader += 2;
+    case 1: shader += 0x20; break;
+    case 2: shader += 0x10; break;
+    case 3: shader += 8; break;
+    case 4: shader += 4; break;
+    case 5: shader += 2; break;
     }
-    psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shader, (D3D9::FragShaderDesc::ShaderType)shader, format);
+    if (!psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shader, (D3D9::FragShaderDesc::ShaderType)shader,
+                              format))
+        return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
 
     float rgba[4];
@@ -2037,8 +2040,9 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
                    const VertexFormat* format, D3D9::ShaderInterface* psi)
 {
     SF_UNUSED(sm);
-    psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shaders[pass],
-                         (D3D9::FragShaderDesc::ShaderType)shaders[pass], format);
+    if (!psi->SetStaticShader((D3D9::VertexShaderDesc::ShaderType)shaders[pass],
+                              (D3D9::FragShaderDesc::ShaderType)shaders[pass], format))
+        return;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
     const D3D9::ShaderPair& cur = psi->GetCurrentShaders();
     psi->SetUniform(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8);
