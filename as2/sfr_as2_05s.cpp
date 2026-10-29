@@ -15,6 +15,12 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// Inlined in the exe; defined here as in sfr_as2_06n (as2_action.h only declares it).
+inline bool Environment::IsVerboseAction() const
+{
+    return (GetTarget()->GetMovieImpl()->Flags & MovieImpl::Flag_VerboseAction) != 0;
+}
+
 namespace {
 
 // The handler as a function object, for the trace lines.
