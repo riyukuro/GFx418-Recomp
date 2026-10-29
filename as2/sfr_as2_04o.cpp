@@ -147,7 +147,7 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
         penv->Push(Value((double)mouseIdx));
         penv->Push(Value((double)newCursorType));
         Value result;
-        method.Invoke(FnCall(&result, static_cast<ObjectInterface*>(pmouse), penv, 2, penv->GetTopIndex() - 1));
+        method.Invoke(FnCall(&result, static_cast<ObjectInterface*>(pmouse), penv, 2, penv->GetTopIndex()));
         penv->Drop(2);
     }
 }
