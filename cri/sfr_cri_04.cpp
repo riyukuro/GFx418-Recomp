@@ -1,8 +1,9 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): CRI MvCore / Sofdec vendor middleware (YUV->RGB
 // converters, MPEG-2 video decode kernels and the CRI support layer), written from the executable. The CRI library was
-// built with VS2008 SP1 and can only be functional under our toolset; every function here is a behaviour-equivalent
-// transcription of the decompile.
+// built with VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake): keep it C++03 (no auto,
+// decltype, variadic templates, brace-init or nullptr). Every function is a behaviour-equivalent transcription.
 // MS2-UNIT: sfr_cri_04
+// MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140047b30-0x14004c1d0 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -29,11 +30,11 @@ void FUN_140049250(longlong a1,longlong a2,longlong *a3,char *a4);
 void FUN_140049e60(longlong *a1,longlong *a2,longlong a3,int a4,int a5);
 void FUN_14004a7c0(longlong *a1,longlong *a2,longlong a3,int a4,int a5);
 void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5);
-bool FUN_14004bef0(byte *a1,byte *a2);
+int FUN_14004bef0(byte *a1,byte *a2);
 void FUN_14004bf40(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_1400627f0(const char *a1);
-cri_u64 FUN_140062860(cri_any = cri_any(), ...);    // sfr_cri_06
+int FUN_140062860(void);    // sfr_cri_06 (the exe tests eax)
 int FUN_140062890(void);
 
 static __forceinline void FUN_140047b30(Any a0,Any a1,Any a2) { FUN_140047b30((cri_u64 *)a0.v,(longlong *)a1.v,(byte *)a2.v); }
@@ -42,7 +43,7 @@ static __forceinline void FUN_140049250(Any a0,Any a1,Any a2,Any a3) { FUN_14004
 static __forceinline void FUN_140049e60(Any a0,Any a1,Any a2,Any a3,Any a4) { FUN_140049e60((longlong *)a0.v,(longlong *)a1.v,(longlong)a2.v,(int)a3.v,(int)a4.v); }
 static __forceinline void FUN_14004a7c0(Any a0,Any a1,Any a2,Any a3,Any a4) { FUN_14004a7c0((longlong *)a0.v,(longlong *)a1.v,(longlong)a2.v,(int)a3.v,(int)a4.v); }
 static __forceinline void FUN_14004b120(Any a0,Any a1,Any a2,Any a3,Any a4) { FUN_14004b120((cri_u64 *)a0.v,(longlong *)a1.v,(longlong)a2.v,(int)a3.v,(int)a4.v); }
-static __forceinline bool FUN_14004bef0(Any a0,Any a1) { return FUN_14004bef0((byte *)a0.v,(byte *)a1.v); }
+static __forceinline int FUN_14004bef0(Any a0,Any a1) { return FUN_14004bef0((byte *)a0.v,(byte *)a1.v); }
 static __forceinline void FUN_14004bf40(Any a0,Any a1,Any a2) { FUN_14004bf40((cri_u64)a0.v,(longlong)a1.v,(cri_u64)a2.v); }
 static __forceinline void FUN_14004bff0(Any a0,Any a1,Any a2) { FUN_14004bff0((cri_u64)a0.v,(longlong)a1.v,(cri_u64)a2.v); }
 
@@ -436,12 +437,12 @@ void FUN_1400486a0(cri_u64 *a1,longlong *a2,longlong a3,byte *a4)
 void FUN_140049250(longlong a1,longlong a2,longlong *a3,char *a4)
 {
   struct { cri_u64 plane[3]; cri_u32 stride[3]; } dst;
-  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; } src;
+  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; cri_u32 unused[3]; } src;  // 32 bytes in the exe frame
 
-  a4[0] = a4[0] << 3;
-  a4[1] = a4[1] << 3;
-  a4[2] = a4[2] << 3;
-  a4[3] = a4[3] << 3;
+  a4[0] = a4[0] * 8;
+  a4[1] = a4[1] * 8;
+  a4[2] = a4[2] * 8;
+  a4[3] = a4[3] * 8;
   dst.plane[0] = CriAt<cri_u64>(a1, 0x8);
   dst.plane[1] = CriAt<cri_u64>(a1, 0x20);
   dst.plane[2] = CriAt<cri_u64>(a1, 0x38);
@@ -2809,18 +2810,15 @@ void FUN_14004b120(cri_u64 *a1,longlong *a2,longlong a3,int a4,int a5)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004bef0
-bool FUN_14004bef0(byte *a1,byte *a2)
+int FUN_14004bef0(byte *a1,byte *a2)
 {
-  uint u_v1;
-  
-  if (((((*a1 & 0xf) == 0) && ((a1[8] & 0xf) == 0)) && ((a1[0x10] & 0xf) == 0)) &&
-     ((((*a2 & 0xf) == 0 && ((a2[0xc] & 3) == 0)) && ((CriAt<uint>(a2, 0x8) & 0xf) == 0)
-      ))) {
-    u_v1 = (int)CriAt<uint>(a2, 0x10) >> 0x1f;
-    return (int)((CriAt<uint>(a2, 0x10) ^ u_v1) - u_v1) <
-           (int)((CriAt<uint>(a2, 0x8) + 0xf & 0xfffffff0) << 2);
-  }
-  return false;
+  if ((*a1 & 0xf) != 0) return 0;
+  if ((a1[8] & 0xf) != 0) return 0;
+  if ((a1[0x10] & 0xf) != 0) return 0;
+  if ((*a2 & 0xf) != 0) return 0;
+  if ((a2[0xc] & 3) != 0) return 0;
+  if ((CriAt<int>(a2, 0x8) & 0xf) != 0) return 0;
+  return abs(CriAt<int>(a2, 0x10)) < ((CriAt<int>(a2, 0x8) + 15) & ~15) * 4;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2879,11 +2877,9 @@ void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3)
 void FUN_14004c0c0(longlong a1,longlong a2,cri_u64 *a3)
 {
   struct { cri_u64 plane[3]; cri_u32 stride[3]; } dst;
-  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; } src;
-  cri_u64 table;
+  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; cri_u32 unused[3]; } src;  // 32 bytes in the exe frame
 
   dst.plane[0] = CriAt<cri_u64>(a1, 0x8);
-  table = *a3;
   dst.plane[1] = CriAt<cri_u64>(a1, 0x20);
   dst.plane[2] = CriAt<cri_u64>(a1, 0x38);
   dst.stride[0] = CriAt<cri_u32>(a1, 0x18);
@@ -2893,10 +2889,11 @@ void FUN_14004c0c0(longlong a1,longlong a2,cri_u64 *a3)
   src.a = CriAt<cri_u32>(a2, 0x10);
   src.b = CriAt<cri_u32>(a2, 0x14);
   src.c = CriAt<cri_u32>(a2, 0x18);
-  if (table == 0) {
-    table = (cri_u64)(longlong)&DAT_143a488c0;
+  if (*a3 == 0) {
+    FUN_14004bf40((cri_u64)(longlong)&dst,(longlong)&src,(cri_u64)(longlong)&DAT_143a488c0);
+    return;
   }
-  FUN_14004bf40((cri_u64)(longlong)&dst,(longlong)&src,table);
+  FUN_14004bf40((cri_u64)(longlong)&dst,(longlong)&src,*a3);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2904,11 +2901,9 @@ void FUN_14004c0c0(longlong a1,longlong a2,cri_u64 *a3)
 void FUN_14004c140(longlong a1,longlong a2,cri_u64 *a3)
 {
   struct { cri_u64 plane[3]; cri_u32 stride[3]; } dst;
-  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; } src;
-  cri_u64 table;
+  struct { cri_u64 data; cri_u32 a; cri_u32 b; cri_u32 c; cri_u32 unused[3]; } src;  // 32 bytes in the exe frame
 
   dst.plane[0] = CriAt<cri_u64>(a1, 0x8);
-  table = *a3;
   dst.plane[1] = CriAt<cri_u64>(a1, 0x20);
   dst.plane[2] = CriAt<cri_u64>(a1, 0x38);
   dst.stride[0] = CriAt<cri_u32>(a1, 0x18);
@@ -2918,9 +2913,10 @@ void FUN_14004c140(longlong a1,longlong a2,cri_u64 *a3)
   src.a = CriAt<cri_u32>(a2, 0x10);
   src.b = CriAt<cri_u32>(a2, 0x14);
   src.c = CriAt<cri_u32>(a2, 0x18);
-  if (table == 0) {
-    table = (cri_u64)(longlong)&DAT_143a488c0;
+  if (*a3 == 0) {
+    FUN_14004bff0((cri_u64)(longlong)&dst,(longlong)&src,(cri_u64)(longlong)&DAT_143a488c0);
+    return;
   }
-  FUN_14004bff0((cri_u64)(longlong)&dst,(longlong)&src,table);
+  FUN_14004bff0((cri_u64)(longlong)&dst,(longlong)&src,*a3);
 }
 
