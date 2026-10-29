@@ -379,7 +379,7 @@ void StyleSheetProto::Load(const FnCall& fn)
 }
 
 // StyleSheet.prototype.setStyle(name, style): replaces the style with the object's properties as CSS, or removes it
-// when the style is missing or undefined.
+// when the style is missing or null.
 // @0x1428f9cf0
 void StyleSheetProto::SetStyle(const FnCall& fn)
 {
@@ -392,7 +392,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
     if (!pthis || fn.NArgs < 1)
         return;
 
-    if (fn.NArgs < 2 || fn.Arg(1).IsUndefined())
+    if (fn.NArgs < 2 || fn.Arg(1).IsNull()) // the exe tests type NULLTYPE (0x1428f9d60 cmp byte ptr [rax],1)
     {
         ASString name = fn.Arg(0).ToString(fn.Env);
         if (name.GetSize() != 0)
