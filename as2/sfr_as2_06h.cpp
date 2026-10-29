@@ -186,10 +186,10 @@ bool ColorTransformObject::SetMember(Environment* penv, const ASString& name, co
         mColorTransform.M[0][0] = 0;
         mColorTransform.M[0][1] = 0;
         mColorTransform.M[0][2] = 0;
-        UInt64 r = 0, g = 0, b = 0;
+        UInt32 r = 0, g = 0, b = 0;
         if (!NumberUtil::IsNaN(val.ToNumber(penv)))
         {
-            UInt64 rgb = (UInt64)val.ToNumber(penv);
+            UInt32 rgb = (UInt32)val.ToNumber(penv);
             b = rgb & 0xff;
             r = (rgb >> 16) & 0xff;
             g = (rgb >> 8) & 0xff;
