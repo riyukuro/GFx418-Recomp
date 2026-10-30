@@ -78,6 +78,7 @@
 #include "ms2/scaleform/include/gfx/gfx_shapedef.h"
 #include "ms2/scaleform/include/gfx/gfx_asstringhash.h"
 #include "ms2/scaleform/include/render/text_core.h"
+#include "ms2/scaleform/include/gfx/as3/as3_stage.h"
 #include <algorithm>
 #include <vector>
 #undef GetObject   // windows.h
@@ -239,7 +240,6 @@ extern "C" void* DAT_143b15f60;
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
-void* DeleteAs3_1424e3950(void* self, unsigned flags);
 void* DeleteAs3_1424e4190(void* self, unsigned flags);
 }}}
 
@@ -251,13 +251,9 @@ extern "C" void FUN_1424dfa30(void* self)
     Scaleform::GFx::AS3::DeleteAs3_1424e3eb0(self, 0);
 }
 
-// The class deleting destructors contain the same member cleanup and only free storage when flag 1 is set.
-// MS2-FUNCTIONAL 0x1424defe0: reuses the exe-derived Stage member/base teardown with the free flag clear.
+// The stage display object: its members release in reverse order, then DisplayObjContainer's dtor.
 // @0x1424defe0
-extern "C" void FUN_1424defe0(void* self)
-{
-    Scaleform::GFx::AS3::DeleteAs3_1424e3950(self, 0);
-}
+Scaleform::GFx::AS3::Stage::~Stage() {}
 
 // MS2-FUNCTIONAL 0x1424e0290: reuses the XMLSupportImpl member/base teardown with the free flag clear.
 // @0x1424e0290
@@ -1809,12 +1805,16 @@ PropRef& PropRef::operator=(PropRef&& other)
     return *this;
 }
 
+// PropRef::IsAsValue / IsAsObject: the tag bit as a bool
+static inline bool Sfr16PropRefTag(const Value* p, UPInt mask) { return (reinterpret_cast<UPInt>(p) & mask) != 0; }
+
 // @0x1424e0e20
 PropRef::operator bool() const
 {
-    const UPInt tagged = reinterpret_cast<UPInt>(pValue);
-    return (static_cast<UInt32>(This.GetKind()) & 0x1f) != 0 && tagged != 1 &&
-           ((tagged & 2) == 0 || (tagged & ~UPInt(2)) != 0);
+    // SDK 4.2 PropRef::IsFound: the ValueFlag (1) and ObjectFlag (2) tags with a null pointer are "not found"
+    return !(This.IsUndefined() ||
+             (Sfr16PropRefTag(pValue, 1) && (reinterpret_cast<UPInt>(pValue) & ~UPInt(1)) == 0) ||
+             (Sfr16PropRefTag(pValue, 2) && (reinterpret_cast<UPInt>(pValue) & ~UPInt(2)) == 0));
 }
 
 // The two ReadArgs variants own a heap-backed copy of their argument values.
@@ -2564,3 +2564,5 @@ SFR21_DTHUNK(FUN_1424e1ba0, 0x90, DeleteAs3_1424e3890)
 // MS2-PIN: ??_GMovieDefRootNode@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3290
 // MS2-PIN: ??_GMovieDefRootNode@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3380
 // MS2-PIN: ??_GVM@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3e50
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
