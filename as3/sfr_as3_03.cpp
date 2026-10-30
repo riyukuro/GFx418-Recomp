@@ -678,7 +678,7 @@ namespace Classes { namespace fl
 
     // new XML(v): a deep copy of an XML value, the one item of a one-item list, the parse of markup, else a text
     // node holding v as a string (empty for no argument, null or undefined).
-    // MS2-FUNCTIONAL: the exe inlines MakeInstanceText (and the XMLText constructor) at each text node
+    // MS2-FUNCTIONAL: register allocation (the exe swaps rsi/rdi and r13/r14/r15 for argv, _this, argc and this)
     // @0x1424077a0
     void XML::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
     {
@@ -3490,6 +3490,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
+// Inline copy of the XML MakeInstanceComment (out of line in sfr_as3_04); the exe inlines it into CommentExpatCallback.
+namespace InstanceTraits { namespace fl
+{
+    inline Pickable<Instances::fl::XMLComment> XML::MakeInstanceComment(XML& t, const ASString& str, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLComment>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLComment(t, str, parent));
+    }
+}}
+
     // @0x142405ef0
     void XMLParser::CharacterDataExpatCallback(void* userData, const char* s, int len)
     {
@@ -3498,17 +3507,15 @@ namespace Scaleform { namespace GFx { namespace AS3
         p->Text.Append(s, len);
     }
 
-    // MS2-FUNCTIONAL: exe inlines the XMLComment ctor
     // @0x1424064e0
     void XMLParser::CommentExpatCallback(void* userData, const char* data)
     {
         XMLParser* p = static_cast<XMLParser*>(userData);
         InstanceTraits::fl::XML& itr = p->ITr;
-        VM& vm = itr.GetVM();
+        StringManager& sm = itr.GetVM().GetStringManager();
         p->SetNodeKind(kComment);
-        SPtr<Instances::fl::XML> el;
-        el.Pick(SF_HEAP_NEW(vm.GetMemoryHeap()) Instances::fl::XMLComment(itr, vm.GetStringManager().CreateString(data),
-                                                                          p->CurrElement));
+        Pickable<Instances::fl::XMLComment> comment = itr.MakeInstanceComment(itr, sm.CreateString(data), p->CurrElement);
+        SPtr<Instances::fl::XML> el(comment);
         if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
             p->CurrElement->AppendChild(el);
         else
