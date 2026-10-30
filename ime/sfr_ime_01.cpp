@@ -3870,7 +3870,7 @@ void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
     }
     words[6] = reinterpret_cast<unsigned long long>(child);
     FUN_1423d8e80(words + 7, child);
-    reinterpret_cast<unsigned char*>(words)[0x10] = 1;
+    reinterpret_cast<unsigned char*>(words)[0x80] = 1;
     *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(words) + 0x84) = 0x14;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x8c) = 0x00ffffff;
     words[0xb] = 0;
