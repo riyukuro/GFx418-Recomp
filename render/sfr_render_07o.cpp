@@ -1396,7 +1396,7 @@ bool TextMeshProvider::generateRasterMesh(VertexOutput* verOut, const TextMeshLa
     return true;
 }
 
-// MS2-FUNCTIONAL: generateNullVectorMesh inlined (exe calls it), regalloc
+// MS2-FUNCTIONAL 0x1426e74d0: the exe zeroes eax afresh for the Fill tail and the VertexCount test (cl reuses r14); code otherwise identical
 // @0x1426e74d0
 bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verOut, const Matrix2F& mtx,
                                          const float* coord, UInt32 fillColor, UInt32 borderColor,
@@ -1672,7 +1672,7 @@ bool TextMeshProvider::generateUnderlines(Renderer2DImpl* ren, VertexOutput* ver
 }
 
 // @0x1426e6ad0
-bool TextMeshProvider::generateNullVectorMesh(VertexOutput* verOut)
+SF_NOINLINE bool TextMeshProvider::generateNullVectorMesh(VertexOutput* verOut)
 {
     // a single degenerate triangle on one zero vertex
     VertexXY16iCF32 ver[1];
