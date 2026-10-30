@@ -1386,7 +1386,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         const SInt32 month = MonthFromYearDay(y, day);
         ++day;
         if (month > 0)
-            day -= Months[leap ? 1 : 0][month - 1];
+            day -= *(Months[leap ? 1 : 0] + month - 1);
         return day;
     }
 }}}}}
