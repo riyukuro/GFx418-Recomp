@@ -349,7 +349,6 @@ namespace Instances { namespace fl
     // stops when callback is not callable or throws.
 
     // The result is always false: the exe never stores true.
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
     // @0x1423f8f60
     void Array::AS3every(bool& result, const Value& callback, const Value& thisObject)
     {
@@ -396,7 +395,6 @@ namespace Instances { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
     // @0x1423f9d60
     void Array::AS3forEach(const Value& /*result*/, const Value& callback, const Value& thisObject)
     {
@@ -443,8 +441,8 @@ namespace Instances { namespace fl
     void Array::AS3indexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
     {
         if (fromIndex < 0)
-            fromIndex += static_cast<SInt32>(SA.GetSize());
-        for (UPInt i = static_cast<SPInt>(fromIndex); i < SA.GetSize(); ++i)
+            fromIndex = static_cast<SInt32>(SA.GetSize()) + fromIndex;
+        for (UPInt i = fromIndex; i < SA.GetSize(); ++i)
         {
             if (StrictEqual(saAt(SA, i), searchElement))
             {
@@ -464,16 +462,12 @@ namespace Instances { namespace fl
         result = ToStringInternal(sep);
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
     // @0x1423fb4e0
     void Array::AS3lastIndexOf(SInt32& result, const Value& searchElement, SInt32 fromIndex)
     {
         if (fromIndex < 0)
             fromIndex += static_cast<SInt32>(SA.GetSize());
-        SPInt i = static_cast<SPInt>(SA.GetSize()) - 1;
-        if (static_cast<SPInt>(fromIndex) < i)
-            i = fromIndex;
-        for (; i >= 0; --i)
+        for (SPInt i = Alg::Min<SPInt>(fromIndex, static_cast<SPInt>(SA.GetSize()) - 1); i >= 0; --i)
         {
             if (StrictEqual(saAt(SA, i), searchElement))
             {
@@ -1459,6 +1453,18 @@ namespace Instances { namespace fl
         return static_cast<InstanceTraits::fl::XMLList&>(vm.GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
     }
 
+    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) into MakeInstance here.
+    inline XMLList::XMLList(InstanceTraits::Traits& t)
+        : Instance(t), TargetProperty(NULL)
+    {
+    }
+
+    // InstanceTraits::fl::XMLList::MakeInstance(itr), expanded in place as the exe does.
+    static SF_INLINE Pickable<XMLList> newXMLList(InstanceTraits::fl::XMLList& itr)
+    {
+        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr));
+    }
+
     // A new list of the XMLList class whose target is name of obj.
     static SF_INLINE Pickable<XMLList> MakeTargetList(AS3::Object& obj, const ASString& name, Instances::Namespace& ns)
     {
@@ -1588,7 +1594,7 @@ namespace Instances { namespace fl
     __declspec(noinline) void XML::AS3attributes(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = xmlListTraits(GetVM());
-        result = itr.MakeInstance(itr);
+        result = newXMLList(itr);
         GetAttributes(*result);
     }
 
@@ -1673,7 +1679,7 @@ namespace Instances { namespace fl
     __declspec(noinline) void XML::AS3children(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = xmlListTraits(GetVM());
-        result = itr.MakeInstance(itr);
+        result = newXMLList(itr);
         GetChildren(*result, kNone);
     }
 
@@ -1771,13 +1777,12 @@ namespace Instances { namespace fl
     }
 
     // The descendants named argv[0] ("*" without arguments).
-    // MS2-FUNCTIONAL: the exe inlines InstanceTraits::fl::XMLList::MakeInstance and the XMLList constructor
     // @0x1423f8600
     void XML::AS3descendants(Value& result, unsigned argc, const Value* argv)
     {
         VM& vm = GetVM();
         InstanceTraits::fl::XMLList& itr = xmlListTraits(vm);
-        Pickable<XMLList> list = itr.MakeInstance(itr);
+        Pickable<XMLList> list = newXMLList(itr);
         result.Pick(list);
         Multiname mn(GetVM().GetPublicNamespace(),
             argc == 0 ? Value(GetVM().GetStringManager().CreateConstString("*")) : Value(argv[0]));
@@ -1799,13 +1804,12 @@ namespace Instances { namespace fl
     }
 
     // The element children named argv[0] ("*" without arguments).
-    // MS2-FUNCTIONAL: the exe inlines InstanceTraits::fl::XMLList::MakeInstance and the XMLList constructor
     // @0x1423f8aa0
     void XML::AS3elements(Value& result, unsigned argc, const Value* argv)
     {
         VM& vm = GetVM();
         InstanceTraits::fl::XMLList& itr = xmlListTraits(vm);
-        Pickable<XMLList> list = itr.MakeInstance(itr);
+        Pickable<XMLList> list = newXMLList(itr);
         result.Pick(list);
         Multiname mn(GetVM().GetPublicNamespace(),
             argc == 0 ? Value(GetVM().GetStringManager().CreateConstString("*")) : Value(argv[0]));
@@ -2266,12 +2270,11 @@ namespace Instances { namespace fl
     }
 
     // A new list of the processing-instruction children (named argv[0] if given).
-    // MS2-FUNCTIONAL: the exe inlines InstanceTraits::fl::XMLList::MakeInstance and the XMLList constructor
     // @0x1423fcec0
     void XML::AS3processingInstructions(Value& result, unsigned argc, const Value* argv)
     {
         InstanceTraits::fl::XMLList& itr = xmlListTraits(GetVM());
-        Pickable<XMLList> list = itr.MakeInstance(itr);
+        Pickable<XMLList> list = newXMLList(itr);
         result.Pick(list);
         ASString name = GetVM().GetStringManager().CreateEmptyString();
         if (argc > 0)
@@ -2636,3 +2639,4 @@ namespace Classes { namespace fl
 
 // MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
+// MS2-PIN: ??_7XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436d0
