@@ -4155,7 +4155,9 @@ void FUN_1423d2410(void* raw, unsigned* outputLength)
 // page start at +0x70 and the page size at +0x6c, recreates the movie list with RemoveList() and
 // CreateList(pageSize, +0xdc), and refills the manager's list at +0x30 with the entries from the page start to the end
 // of the list as UTF-8. The selection is dwSelection % dwPageSize for the candidate modes, else -1. Like the exe, it
-// does not release the context when the list is empty and releases it twice after a fill.
+// does not release the context when the list is empty and releases it twice after a fill. Reviewed against the exe,
+// same behaviour; the exe builds the CreateList arguments in an inlined Value array (FUN_1423d12e0/FUN_1423ce6c0),
+// shares one result Value between RemoveList and CreateList and keeps an unused Value local.
 // @0x1423d0850
 void FUN_1423d0850(void* raw, DWORD listIndex)
 {
@@ -4186,7 +4188,7 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
     }
     {
         Scaleform::GFx::Value args[2];
-        args[0] = Scaleform::GFx::Value(static_cast<double>(pageSize));
+        args[0] = Scaleform::GFx::Value(static_cast<double>(static_cast<int>(pageSize)));
         args[1] = Scaleform::GFx::Value(static_cast<double>(*reinterpret_cast<int*>(self + 0xdc)));
         Scaleform::GFx::Value result;
         if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
