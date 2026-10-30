@@ -337,12 +337,14 @@ bool Value::IsValidWeakRef() const
 // @0x142514bf0
 bool IsQNameObject(const Value& v)
 {
+    bool result = false;
     if (v.IsObject() && v.GetObject())
     {
         const Traits& tr = v.GetObject()->GetTraits();
-        return tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits();
+        if (tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits())
+            result = true;
     }
-    return false;
+    return result;
 }
 
 // @0x1425157c0
@@ -1237,9 +1239,7 @@ __declspec(noinline) bool Tracer::IsNumericType(const Traits* tr) const
 // @0x142514420
 bool Tracer::IsNotRefCountedType(const Traits* tr) const
 {
-    if (tr != &GetBooleanType() && tr != &GetVoidType() && tr != &GetVM().GetITraitsNull())
-        return IsNumericType(tr);
-    return true;
+    return tr == &GetBooleanType() || tr == &GetVoidType() || tr == &GetVM().GetITraitsNull() || IsNumericType(tr);
 }
 
 // Boolean, void, null, numeric or String
@@ -2029,9 +2029,9 @@ UPInt Sfr27NamespaceInstanceTraits(UPInt a, UPInt b)
 // @0x1425142e0
 bool Sfr27TextFieldTabCheck(UPInt self, UInt32 mode)
 {
-    if (mode != 2)
-        return true;
-    return !FUN_1425b9b10(AccRd(self - 0x18, 0));
+    if (mode == 2)
+        return !FUN_1425b9b10(AccRd(self - 0x18, 0));
+    return true;
 }
 
 // Whether the text field's style sheet resource is set.
@@ -7838,8 +7838,9 @@ void AS3ValueObjectInterface::ObjectRelease(Value* val, void* pobj)
 // @0x142514240
 bool AS3ValueObjectInterface::IsDisplayObjectActive(void* pdata) const
 {
-    return AS3::Sfr34_IsDisplayObject(pdata) &&
-           static_cast<AS3::Instances::fl_display::DisplayObject*>(pdata)->pDispObj.GetPtr() != NULL;
+    if (!AS3::Sfr34_IsDisplayObject(pdata))
+        return false;
+    return static_cast<AS3::Instances::fl_display::DisplayObject*>(pdata)->pDispObj.GetPtr() != NULL;
 }
 
 // The user data the object's holder (+0x30) keeps at +8.

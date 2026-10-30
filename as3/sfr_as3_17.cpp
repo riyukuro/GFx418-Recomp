@@ -280,10 +280,11 @@ String& AvmDisplayObj::GetASClassName(String* className) const
     return *className;
 }
 
-// MS2-FUNCTIONAL: the exe also makes a result-ignored call through vftable slot 4 of the movie root first.
+// The VM is created on first use (CheckAvm) before it is returned (SDK form).
 // @0x142506d30
 ASVM* AvmDisplayObj::GetAVM()
 {
+    GetAS3Root()->CheckAvm();
     return GetAS3Root()->pAVM;
 }
 
@@ -331,13 +332,18 @@ bool AvmDisplayObjContainer::DetachChild(DisplayObjectBase* ch)
     return RemoveChild(ch) != NULL;
 }
 
-// MS2-FUNCTIONAL: same AS3-object lookup and call; the null tests are ordered differently.
+// The SDK's AvmDisplayObj::HasAS3Obj: either pointer set.
+static SF_FORCEINLINE bool Sfr33HasAS3Obj(const AvmDisplayObj* avm)
+{
+    return avm->pAS3RawPtr || avm->pAS3CollectiblePtr;
+}
+
+// The SDK's HasAS3Obj test, then the object's loader info cleared.
 // @0x142504810
 void AvmSprite::ForceShutdown()
 {
-    Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
-    if (as3obj)
-        FUN_142446e70(as3obj, NULL);
+    if (Sfr33HasAS3Obj(this))
+        FUN_142446e70(GetAS3Obj(), NULL);
 }
 
 // The frame runs in the next ExecuteFrame: the sprite moves to the optimized playlist.
@@ -6257,7 +6263,7 @@ const char* AvmSprite::GetDefaultASClassName() const
 void Object::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 {
     DynAttrsType::Iterator it = DynAttrs.Begin();
-    value.Assign(DynAttrsType::Iterator(it.GetContainer(), ind.Get())->Second);
+    value.Assign(DynAttrsType::Iterator(it.GetContainer(), static_cast<UInt32>(ind.Get()))->Second);
 }
 
 // Only traits made from an ABC file have one.
