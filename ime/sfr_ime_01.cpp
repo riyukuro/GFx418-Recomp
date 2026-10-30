@@ -5263,7 +5263,9 @@ void FUN_1423d2710(void* manager, int key, unsigned length, long long attributes
 // composition. GCS_COMPSTR|GCS_CURSORPOS: vtbl+0xb8. GCS_COMPATTR: sets the composition cursor, computes +0x64 from
 // the target clause, highlights each run of equal attributes, repositions the candidate window in mode 0x40000 and
 // updates the reading window (0x1423d2710). Exactly GCS_CURSORPOS|GCS_DELTASTART: shows the reading text at +0x40.
-// MS2-FUNCTIONAL: the exe builds the Invoke arguments in heap Value arrays
+// MS2-FUNCTIONAL: the exe builds the Invoke arguments in heap Value arrays and inlines the reading display. Reviewed
+// branch by branch against the exe (result string, inserted char, attribute runs and their highlight styles, candidate
+// window, reading window): same behaviour.
 // @0x1423d3510
 void FUN_1423d3510(long long* manager, unsigned long long wParam, unsigned long long flags)
 {
@@ -5403,6 +5405,7 @@ void FUN_1423d3510(long long* manager, unsigned long long wParam, unsigned long 
 // its String at +0x98. CS_INSERTCHAR|CS_NOMOVECARET: wParam becomes a one-character composition. GCS_COMPSTR with
 // GCS_CURSORPOS (unless mode 0xd00001): vtbl+0xb8 again. GCS_COMPATTR: sets the composition cursor, computes +0x64
 // from the target clause, redraws the input window (vtbl+0xb0) and highlights each run of equal attributes.
+// Reviewed branch by branch against the exe, same behaviour; the buffer sizes are 32-bit as in the exe.
 // @0x1423cfd50
 void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long long flags)
 {
@@ -5417,7 +5420,7 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
         Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> result = states->GetIMEManager();
         HIMC context = cx18_ImmGetContext(hwnd);
         const LONG size = cx18_ImmGetCompositionStringW(context, GCS_RESULTSTR, nullptr, 0);
-        auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(size) * 2 + 2));
+        auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(size) * 2 + 2)));
         if (static_cast<unsigned>(cx18_ImmGetCompositionStringW(context, GCS_RESULTSTR, text, size) + 2) > 1) {
             text[static_cast<unsigned>(size) >> 1] = 0;
             result->SetWideCursor(false);
@@ -5445,15 +5448,15 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
 
     HIMC context = cx18_ImmGetContext(hwnd);
     const LONG attrSize = cx18_ImmGetCompositionStringW(context, GCS_COMPATTR, nullptr, 0);
-    auto* attrs = static_cast<signed char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(attrSize + 1)));
+    auto* attrs = static_cast<signed char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(attrSize) + 1)));
     cx18_ImmGetCompositionStringW(context, GCS_COMPATTR, attrs, attrSize);
     unsigned length = *reinterpret_cast<unsigned*>(self + 0x60);
     if (static_cast<unsigned>(attrSize) < length) length = static_cast<unsigned>(attrSize);
     // The exe reads the reading string and frees it, then still passes the freed buffer to vtbl+0xb0 (which
     // ignores it).
     const LONG readSize = cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, nullptr, 0);
-    auto* reading = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(readSize * 2 + 2)));
-    memset(reading, 0, static_cast<size_t>(readSize * 2));
+    auto* reading = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(readSize) * 2 + 2)));
+    memset(reading, 0, static_cast<size_t>(static_cast<unsigned>(readSize) * 2));
     cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, reading, readSize);
     reading[static_cast<unsigned>(readSize) >> 1] = 0;
     Scaleform::Memory::Free(reading);
