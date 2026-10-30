@@ -1268,10 +1268,13 @@ void* FUN_14002e450(void* object, void* heap, void* opener)
     if (opener)
         FUN_14257dc30(opener);
     fields[3] = opener;
-    fields[4] = fields[5] = fields[6] = NULL;
+    fields[4] = NULL;
+    fields[5] = NULL;
+    fields[6] = NULL;
     fields[0] = (void*)DAT_1431b9430;
     *((CriUint8*)object + 0x38) = 1;
-    fields[8] = fields[9] = NULL;
+    fields[8] = NULL;
+    fields[9] = NULL;
     words[20] = 0x7f;
     fields[11] = NULL;
     fields[12] = fields + 8;
@@ -1752,7 +1755,9 @@ void* FUN_14002b070(void* object, void* heap, void* opener)
     if (opener)
         FUN_14257dc30(opener);
     fields[3] = opener;
-    fields[4] = fields[5] = fields[6] = NULL;
+    fields[4] = NULL;
+    fields[5] = NULL;
+    fields[6] = NULL;
     *((CriUint8*)object + 0x38) = 1;
     return object;
 }
@@ -2121,7 +2126,9 @@ void FUN_14002afe0(CriUint64* array)
 // @0x14002a980
 CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
 {
-    destination[0] = destination[1] = destination[2] = 0;
+    destination[0] = 0;
+    destination[1] = 0;
+    destination[2] = 0;
     FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
@@ -2130,7 +2137,9 @@ CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
 // @0x14002afb0
 CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
 {
-    destination[0] = destination[1] = destination[2] = 0;
+    destination[0] = 0;
+    destination[1] = 0;
+    destination[2] = 0;
     FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
@@ -2139,7 +2148,9 @@ CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
 // @0x14002b9b0
 CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
 {
-    destination[0] = destination[1] = destination[2] = 0;
+    destination[0] = 0;
+    destination[1] = 0;
+    destination[2] = 0;
     FUN_14002a4a0(destination, (const CriUint64*)source[0], source[1]);
     return destination;
 }
