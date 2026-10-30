@@ -408,9 +408,9 @@ CriBool FUN_140042df0(void* decoders, void* owner, CriSint32 index)
 
 // MS2-FUNCTIONAL: forward a selected audio decoder's channel query.
 // @0x140042f00
-void FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32 channel)
+CriUint32 FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32 channel)
 {
-    FUN_140043420(((void**)decoders)[index], player, channel);
+    return FUN_140043420(((void**)decoders)[index], player, channel);
 }
 #pragma optimize("", on)
 
@@ -482,18 +482,18 @@ CriBool FUN_140042d70(void* decoderList, void* owner)
 
 // MS2-FUNCTIONAL: forward one decoder's interleaved output request.
 // @0x140042e40
-void FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32 channels,
+CriUint32 FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32 channels,
                    void* output, CriUint32 flags, CriUint32* result)
 {
-    FUN_140042f40(((void**)decoders)[index], player, channels, output, flags, result);
+    return FUN_140042f40(((void**)decoders)[index], player, channels, output, flags, result);
 }
 
 // MS2-FUNCTIONAL: forward one decoder's planar output request.
 // @0x140042ea0
-void FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 channels,
+CriUint32 FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 channels,
                    void* output, CriUint32 flags, CriUint32* result)
 {
-    FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
+    return FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
 }
 #pragma optimize("", on)
 

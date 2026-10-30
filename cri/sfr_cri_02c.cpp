@@ -221,10 +221,10 @@ CriUint32 FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
 void     FUN_140034c20(void* player);
-void     FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                       void* output, CriUint32 sampleCount, void* result);
-void     FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                       void* output, CriUint32 sampleCount, void* result);
+CriUint32 FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, void* result);
+CriUint32 FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, void* result);
 void*    FUN_140043f10(void* decoder, void* frameInfo);
 void*    FUN_140043fe0(void* decoder, void* frameInfo);
 void*    FUN_140044870(void* decoder, void* frameInfo);
@@ -266,7 +266,7 @@ CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamIn
 void     FUN_140041e30(void* manager, void (*callback)(void**, void*), void* player, CriBool enable);
 CriBool  FUN_140037a10(void);
 void     FUN_140037910(void* owner, const char* message, CriSint32 value);
-CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
+CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, CriUint32 channels);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
@@ -1823,16 +1823,18 @@ void criMvPly_GetFramePoolInfo(void* player, void* a, void* b, void* c, void* d,
 
 // MS2-FUNCTIONAL: request the main audio stream's current data size from the movie audio manager.
 // @0x1400360c0
-CriUint32 criMvPly_GetDataSizeMainAudio(void* player, void* output)
+CriUint32 criMvPly_GetDataSizeMainAudio(void* player, CriUint32 channels)
 {
-    return FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 0, player, output);
+    CriUint32 size = FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 0, player, channels);
+    return size;
 }
 
 // MS2-FUNCTIONAL: request the secondary audio stream's current data size from the movie audio manager.
 // @0x140036100
-CriUint32 criMvPly_GetDataSizeSubAudio(void* player, void* output)
+CriUint32 criMvPly_GetDataSizeSubAudio(void* player, CriUint32 channels)
 {
-    return FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 1, player, output);
+    CriUint32 size = FUN_140042f00(((CriMvSubAudioHandles*)player)->Manager, 1, player, channels);
+    return size;
 }
 
 // MS2-FUNCTIONAL: query the main audio stream's playback-complete state.
@@ -4767,34 +4769,38 @@ void FUN_140034b20(void* player)
 
 // MS2-FUNCTIONAL: fetch a 16-bit waveform block from the main audio stream.
 // @0x140035f00
-void FUN_140035f00(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+CriUint32 FUN_140035f00(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
-                  format, output, sampleCount, result);
+    CriUint32 count = FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                                    format, output, sampleCount, result);
+    return count;
 }
 
 // MS2-FUNCTIONAL: fetch a 32-bit waveform block from the main audio stream.
 // @0x140035f70
-void FUN_140035f70(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+CriUint32 FUN_140035f70(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
-                  format, output, sampleCount, result);
+    CriUint32 count = FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                                    format, output, sampleCount, result);
+    return count;
 }
 
 // MS2-FUNCTIONAL: fetch a 16-bit waveform block from the secondary audio stream.
 // @0x140035fe0
-void FUN_140035fe0(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+CriUint32 FUN_140035fe0(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
-                  format, output, sampleCount, result);
+    CriUint32 count = FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                                    format, output, sampleCount, result);
+    return count;
 }
 
 // MS2-FUNCTIONAL: fetch a 32-bit waveform block from the secondary audio stream.
 // @0x140036050
-void FUN_140036050(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
+CriUint32 FUN_140036050(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
-                  format, output, sampleCount, result);
+    CriUint32 count = FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                                    format, output, sampleCount, result);
+    return count;
 }
 
 // MS2-FUNCTIONAL: request the next alpha-frame metadata record when the alpha decoder is present.

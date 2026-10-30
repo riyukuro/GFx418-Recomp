@@ -217,10 +217,10 @@ CriUint32 FUN_140036650(void* player);
 void     FUN_140036710(void* player);
 void     FUN_1400369e0(void* player);
 void     FUN_140034c20(void* player);
-void     FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                       void* output, CriUint32 sampleCount, void* result);
-void     FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                       void* output, CriUint32 sampleCount, void* result);
+CriUint32 FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, void* result);
+CriUint32 FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, void* result);
 void*    FUN_140043f10(void* decoder, void* frameInfo);
 void*    FUN_140043fe0(void* decoder, void* frameInfo);
 void*    FUN_140044870(void* decoder, void* frameInfo);
@@ -262,7 +262,7 @@ CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamIn
 void     FUN_140041e30(void* manager, void (*callback)(void**, void*), void* player, CriBool enable);
 CriBool  FUN_140037a10(void);
 void     FUN_140037910(void* owner, const char* message, CriSint32 value);
-CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, void* output);
+CriUint32 FUN_140042f00(void* manager, CriSint32 stream, void* player, CriUint32 channels);
 void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
 void     FUN_140042600(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
