@@ -983,7 +983,7 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
         }
         RawField<String>(rec, 0x10) = text;
         RawField<int>(rec, 0x18) = a;
-        RawField<int>(rec, 0x1c) = b;
+        RawField<int>(rec, 0x2c) = b; // FunctionDesc::ASVersion
         if (useCurrent)
             cur = RawLocked<U, 0x78, 0x68>(self);
         RawField<U>(rec, 0x20) = cur;
