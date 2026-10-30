@@ -1,8 +1,12 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Video (VS2012): Video_Video
 // (0x14001c000-0x14001d7a0), the AS3 VideoProviderNetStream (0x140025090-0x140026db0) and the video player over the CRI
 // easy player (0x140028360-0x14002a0e0). Our own source, written from the exe; the leaked SDK copies were only used to
-// name things. The CRI Movie runs between them (CriMvEasyPlayer, CriMv, CRI Heap; VS2008 SP1) are sfr_cri_01c.
+// name things. The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
+// cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or variadic templates, and no
+// hook/ms2hook.h (its hook registrations are in ../video/sfr_video_hooks.cpp). clang-cl compiles it as before. The CRI
+// Movie runs between them (CriMvEasyPlayer, CriMv, CRI Heap; VS2008 SP1) are sfr_cri_01c.
 // MS2-UNIT: sfr_cri_01
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14001c000-0x14001d7a0 .text$mn
 // MS2-RANGE: 0x140025090-0x140026db0 .text$mn
@@ -14,7 +18,6 @@
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
-#include "hook/ms2hook.h"
 
 void FUN_14257db50(void* object);
 void FUN_14257db40(void* object);
@@ -825,7 +828,6 @@ void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
     *count = 0;
     *unit = 1000;
 }
-MS2_REPLACE_METHOD(0x140025D30, SwfVideoSyncObject, GetTime, 276, 0xC89B171E);
 
 // The sprite whose sound settings a provider's audio follows: the audio target itself, or its parent when the target
 // is not a sprite.
@@ -1077,7 +1079,6 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
     if (pls)
         FUN_14257dcb0(pls);
 }
-MS2_REPLACE_METHOD(0x140026720, VideoProviderNetStream, OpenUrl, 1338, 0x121B5725);
 
 // @0x1400253b0
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
