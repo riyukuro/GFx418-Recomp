@@ -776,15 +776,11 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
 
             void* mem = pHeap->Alloc(0x50);
             VideoPlayerSound* psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, pinterface) : NULL;
-            if (pSound)
-                pSound->Release();
-            pSound = psound;
+            pSound = *psound;
 
             mem = pHeap->Alloc(0x50);
             psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, psubinterface) : NULL;
-            if (pSubSound)
-                pSubSound->Release();
-            pSubSound = psound;
+            pSubSound = *psound;
         }
     }
 
@@ -802,9 +798,7 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
     if (pvideo)
     {
         VideoReader* preader = pvideo->pReaderConfig->CreateReader();
-        if (pReader)
-            pReader->Release();
-        pReader = preader;
+        pReader = *preader;
     }
     else
     {
@@ -812,9 +806,7 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
         VideoReaderConfig* pconfig = mem ? ::new(mem) VideoReaderConfigSmp(pHeap, pfileOpener) : NULL;
         mem = pHeap->Alloc(0x50);
         VideoReader* preader = mem ? ::new(mem) VideoReader(pconfig) : NULL;
-        if (pReader)
-            pReader->Release();
-        pReader = preader;
+        pReader = *preader;
         if (pconfig)
             pconfig->Release();
     }
@@ -823,14 +815,12 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
     VideoPlayer::SyncObject* psyncObj = mem ? (VideoPlayer::SyncObject*)FUN_140041c00(mem) : NULL;
     mem = pHeap->Alloc(0x20);
     CriMvSystemTimer* ptimer = mem ? (CriMvSystemTimer*)FUN_140029e40(mem, psyncObj) : NULL;
-    if (pTimer)
-        pTimer->Release();
-    pTimer = ptimer;
+    pTimer = *ptimer;
 
     pPlayer = CriMvEasyPlayer::Create((CriHeap)pCriHeap,
-                                      pReader ? (CriMvFileReaderInterface*)((UByte*)pReader + 0x10) : NULL,
-                                      pTimer ? static_cast<CriMvSystemTimerInterface*>(pTimer) : NULL,
-                                      pSound ? (CriMvSoundInterface*)((UByte*)pSound + 0x10) : NULL,
+                                      pReader ? (CriMvFileReaderInterface*)((UByte*)pReader.GetPtr() + 0x10) : NULL,
+                                      pTimer ? static_cast<CriMvSystemTimerInterface*>(pTimer.GetPtr()) : NULL,
+                                      pSound ? (CriMvSoundInterface*)((UByte*)pSound.GetPtr() + 0x10) : NULL,
                                       SF_VIDEO_ERR);
     if (pSound && UseAudioTimer)
         pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO, SF_VIDEO_ERR);
@@ -894,18 +884,10 @@ VideoPlayerImpl::~VideoPlayerImpl()
     if (pPlayer)
         pPlayer->Destroy(SF_VIDEO_ERR);
     pPlayer = NULL;
-    if (pTimer)
-        pTimer->Release();
-    pTimer = NULL;
-    if (pSound)
-        pSound->Release();
-    pSound = NULL;
-    if (pSubSound)
-        pSubSound->Release();
-    pSubSound = NULL;
-    if (pReader)
-        pReader->Release();
-    pReader = NULL;
+    pTimer.Clear();
+    pSound.Clear();
+    pSubSound.Clear();
+    pReader.Clear();
     FUN_140041dd0(pCriHeap);
     if (pLog)
         FUN_14257dcb0(pLog);
@@ -941,7 +923,7 @@ void VideoPlayerImpl::CuePointCallback(CriMvEasyPlayer*, CriMvEventPoint* eventi
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002c810
 VideoPlayerImpl::VideoPlayerImpl(MemoryHeap* pheap)
-    : pPlayer(NULL), Stat(NotInitialized), pTimer(NULL), pReader(NULL), pSound(NULL), pSubSound(NULL),
+    : pPlayer(NULL), Stat(NotInitialized), pTimer(), pReader(), pSound(), pSubSound(),
       Width(~0u), Height(~0u), HasAlpha(false), CurrentFrame(0), StartFrame(0), StatusAfterStop(Finished),
       PauseFlag(0), LoopFlag(0), UpdateTextureCalled(false), FrameOnTime(false), PauseLocked(false),
       PausePending(false), SubtitleChannel(-1), DecodeHeaderTimeout(0), UseAudioTimer(true), pDecoder(NULL),
@@ -976,7 +958,7 @@ void VideoPlayerImpl::Open(const char* url)
     pPlayer->DecodeHeader(SF_VIDEO_ERR);
     pDecoder->StartDecoding(this);
     if (pSubSound)
-        pPlayer->AttachSubAudioInterface((CriMvSoundInterface*)((UByte*)pSubSound + 0x10), SF_VIDEO_ERR);
+        pPlayer->AttachSubAudioInterface((CriMvSoundInterface*)((UByte*)pSubSound.GetPtr() + 0x10), SF_VIDEO_ERR);
     OpenTicks = FUN_1425e3590();
 }
 

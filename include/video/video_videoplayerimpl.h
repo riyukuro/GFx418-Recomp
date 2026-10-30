@@ -115,10 +115,10 @@ public:
 
     CriMvEasyPlayer*         pPlayer;               // +0x008
     volatile Status          Stat;                  // +0x010
-    CriMvSystemTimer*        pTimer;                // +0x018 (owned reference)
-    VideoReader*             pReader;               // +0x020 (owned reference)
-    VideoPlayerSound*        pSound;                // +0x028
-    VideoPlayerSound*        pSubSound;             // +0x030
+    Ptr<CriMvSystemTimer>    pTimer;                // +0x018
+    Ptr<VideoReader>         pReader;               // +0x020
+    Ptr<VideoPlayerSound>    pSound;                // +0x028
+    Ptr<VideoPlayerSound>    pSubSound;             // +0x030
     CriMvStreamingParameters StmPrm;                // +0x038
     struct
     {
