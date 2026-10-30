@@ -1439,7 +1439,7 @@ void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
 
 
 // @0x1423d9490
-unsigned long long FUN_1423d9490(void* object, unsigned long long* value)
+__declspec(noinline) unsigned long long FUN_1423d9490(void* object, unsigned long long* value, unsigned long long)
 {
     auto* array = reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(object) + 0x848);
     FUN_1423d9690(array, array, array[1] + 1);
@@ -4045,15 +4045,16 @@ void FUN_1423d9b40(void* raw)
     command[0] = 0;
 }
 
-// MS2-FUNCTIONAL: retrieves the IMM candidate list, converts its UTF-16 entries from the page start to the end of the
-// list, and refreshes the movie's candidate list. The selection is max(dwSelection - dwPageStart, 0) for the candidate
-// modes, else -1.
+// Candidate list refresh: reads IMM candidate list listIndex, stores its count (+0xd8) and page start (+0x70), and
+// replaces the rows of the list object (+0x30) with its UTF-8 entries from the page start to the end, stopping at an
+// offset outside the fetched block. The selection is max(dwSelection - dwPageStart, 0) for the candidate modes, else -1.
+// MS2-FUNCTIONAL: register allocation only (5 bytes short); reviewed against the exe, same behaviour.
 // @0x1423cf900
 void FUN_1423cf900(void* raw, DWORD listIndex)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    Scaleform::GFx::Value unused;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
     if (!bytes) return;
     auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes * sizeof(CANDIDATELIST)));
@@ -4061,34 +4062,32 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     *reinterpret_cast<DWORD*>(self + 0xd8) = candidates->dwCount;
     const DWORD selection = candidates->dwSelection;
     *reinterpret_cast<DWORD*>(self + 0x70) = candidates->dwPageStart;
-    cx18_ImmReleaseContext(hwnd, context);
-    if (candidates->dwCount == 0) {
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    if (*reinterpret_cast<DWORD*>(self + 0xd8) == 0) {
         Scaleform::Memory::Free(candidates);
         return;
     }
 
-    void* list = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d9500(list);
-    for (int i = static_cast<int>(candidates->dwPageStart); i < static_cast<int>(candidates->dwCount); ++i) {
+    FUN_1423d9500(*reinterpret_cast<void**>(self + 0x30));
+    for (int i = *reinterpret_cast<int*>(self + 0x70); i < *reinterpret_cast<int*>(self + 0xd8); ++i) {
         const DWORD offset = candidates->dwOffset[i];
         if (offset > fetched || offset < sizeof(CANDIDATELIST)) break;
         const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(candidates) + offset);
-        const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(wide, -1);
+        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
         char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size) + 1));
         Scaleform::UTF8Util::EncodeStringSafe(text, static_cast<Scaleform::UPInt>(size) + 1, wide, -1);
         text[size] = 0;
-        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
-        if (item) {
-            FUN_1423cdb60(item, text);
-            ++*reinterpret_cast<int*>(item + 1);
-        }
+        void* memory = Scaleform::Memory::Alloc(0x20);
+        auto* item = memory ? static_cast<unsigned long long*>(
+            FUN_1423cdb60(static_cast<unsigned long long*>(memory), text)) : nullptr;
+        if (item) ++*reinterpret_cast<int*>(item + 1);
         unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-        FUN_1423d9490(list, &retained);
+        FUN_1423d9490(*reinterpret_cast<void**>(self + 0x30), &retained, 0);
         Scaleform::Memory::Free(text);
         if (item) FUN_14257dcd0(item);
     }
     Scaleform::Memory::Free(candidates);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
 
     long long selected = -1;
     const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
@@ -4097,8 +4096,8 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
         const int relative = static_cast<int>(selection - *reinterpret_cast<DWORD*>(self + 0x70));
         selected = relative > 0 ? relative : 0;
     }
-    FUN_1423d97f0(list, static_cast<unsigned long long>(selected), 0);
-    FUN_1423d9b40(list);
+    FUN_1423d97f0(*reinterpret_cast<void**>(self + 0x30), static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(*reinterpret_cast<void**>(self + 0x30));
     *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
 }
 
@@ -4209,7 +4208,7 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
             ++*reinterpret_cast<int*>(item + 1);
         }
         unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-        FUN_1423d9490(list, &retained);
+        FUN_1423d9490(list, &retained, 0);
         Scaleform::Memory::Free(text);
         if (item) FUN_14257dcd0(item);
     }
@@ -4254,7 +4253,7 @@ static void cx18_FillCandidateRows(unsigned char* self, const CANDIDATELIST* lis
             ++*reinterpret_cast<int*>(item + 1);
         }
         unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-        FUN_1423d9490(output, &retained);
+        FUN_1423d9490(output, &retained, 0);
         Scaleform::Memory::Free(text);
         if (item) FUN_14257dcd0(item);
     }
@@ -4266,7 +4265,8 @@ static void cx18_FillCandidateRows(unsigned char* self, const CANDIDATELIST* lis
 // (0x410000: up to five from the selection; 0x60000: from the selection; else one page), they replace the rows of
 // the list object at +0x30, the selection is set (relative to the page in the paging modes, else -1) and +0x5bc
 // marks the list shown.
-// MS2-FUNCTIONAL: the exe releases the input context a second time after the rows (kept), and an unused Value local
+// MS2-FUNCTIONAL: the exe inlines the row loop and the row item ctor (FUN_1423cdb60) and keeps an unused Value local.
+// Reviewed against the exe: same visible-row choice per mode, same second context release, same in-page selection.
 // @0x1423d3120
 void FUN_1423d3120(void* raw, DWORD listIndex)
 {
@@ -4333,7 +4333,8 @@ void FUN_1423d3120(void* raw, DWORD listIndex)
 // (RemoveList, then CreateList(page size, at-caret flag +0x5a0)) and the selection is its index within the page.
 // An empty list does nothing.
 // MS2-FUNCTIONAL: the exe builds the CreateList arguments in a heap Value array, releases the input context a
-// second time after the rows (kept), and keeps an unused Value local
+// second time after the rows (kept), inlines the rows, and keeps an unused Value local. Reviewed against the exe:
+// same rows, page and CreateList arguments (the exe converts them int -> float -> double, equal for page sizes).
 // @0x1423d46f0
 void FUN_1423d46f0(void* raw, DWORD listIndex)
 {
@@ -6281,7 +6282,7 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
                     ++*reinterpret_cast<int*>(item + 1);
                 }
                 unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-                FUN_1423d9490(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30), &retained);
+                FUN_1423d9490(*reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 8) + 0x30), &retained, 0);
                 Scaleform::Memory::Free(utf8);
                 if (item) FUN_14257dcd0(item);
             }
