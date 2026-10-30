@@ -310,7 +310,45 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??$FormatD1@_K@MsgFormat@Scaleform@@QEAAXAEB_K@Z 0x142685ff0
 
 enum FMOD_RESULT : int {};
-struct FMOD_CREATESOUNDEXINFO;
+// FMOD 4.44 FMOD_CREATESOUNDEXINFO (fmod.h), enums and callbacks as their underlying types.
+struct FMOD_CREATESOUNDEXINFO
+{
+    int cbsize;
+    unsigned int length;
+    unsigned int fileoffset;
+    int numchannels;
+    int defaultfrequency;
+    int format;
+    unsigned int decodebuffersize;
+    int initialsubsound;
+    int numsubsounds;
+    int* inclusionlist;
+    int inclusionlistnum;
+    void* pcmreadcallback;
+    void* pcmsetposcallback;
+    void* nonblockcallback;
+    const char* dlsname;
+    const char* encryptionkey;
+    int maxpolyphony;
+    void* userdata;
+    int suggestedsoundtype;
+    void* useropen;
+    void* userclose;
+    void* userread;
+    void* userseek;
+    void* userasyncread;
+    void* userasynccancel;
+    int speakermap;
+    void* initialsoundgroup;
+    unsigned int initialseekposition;
+    unsigned int initialseekpostype;
+    int ignoresetfilesystem;
+    int cddaforceaspi;
+    unsigned int audioqueuepolicy;
+    unsigned int minmidigranularity;
+    int nonblockthreadid;
+};
+static_assert(sizeof(FMOD_CREATESOUNDEXINFO) == 0xd8, "FMOD_CREATESOUNDEXINFO size");
 namespace FMOD {
 class Sound
 {
@@ -3277,7 +3315,7 @@ void GFx::AMP::ImageInfo::Write(File& str, UInt32 version) const
 // of the eight key bytes; returns the channel array (entry + 0x18) or null.
 typedef HashLH<UInt64, ArrayLH<void*> > Sfr22RequestHash;
 // @0x142745630
-void* FindAudioRequestEntry(void** set, const unsigned char* key)
+__declspec(noinline) void* FindAudioRequestEntry(void** set, const unsigned char* key)
 {
     return reinterpret_cast<Sfr22RequestHash*>(set)->Get(*reinterpret_cast<const UInt64*>(key));
 }
@@ -3290,50 +3328,51 @@ void RemoveAudioRequest(void* manager, void* request)
         return;
     auto* requestBytes = static_cast<unsigned char*>(request);
     auto* sound = *reinterpret_cast<unsigned char**>(requestBytes + 0x30);
-    if (!sound)
-        return;
-    unsigned long long key = *reinterpret_cast<unsigned long long*>(sound + 0x40);
-    if (!key)
+    if (!sound || !*reinterpret_cast<unsigned long long*>(sound + 0x40))
         return;
 
     auto* managerBytes = static_cast<unsigned char*>(manager);
-    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0x80));
-    auto** set = reinterpret_cast<void**>(managerBytes + 0xa8);
-    auto* entry = static_cast<unsigned long long*>(FindAudioRequestEntry(set,
-        reinterpret_cast<const unsigned char*>(&key)));
-    bool removed = false;
-    if (entry) {
-        auto** channels = reinterpret_cast<void**>(entry[0]);
-        const std::size_t count = entry[1];
-        std::size_t emptyCount = 0;
-        for (std::size_t i = 0; i < count; ++i) {
-            if (channels[i] == request) {
-                channels[i] = nullptr;
-                removed = true;
+    void* released;
+    {
+        Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0x80));
+        auto** set = reinterpret_cast<void**>(managerBytes + 0xa8);
+        unsigned long long key = *reinterpret_cast<unsigned long long*>(sound + 0x40);
+        auto* entry = static_cast<unsigned long long*>(FindAudioRequestEntry(set,
+            reinterpret_cast<const unsigned char*>(&key)));
+        bool removed = false;
+        if (entry) {
+            std::size_t emptyCount = 0;
+            for (std::size_t i = 0; i < entry[1]; ++i) {
+                auto** channels = reinterpret_cast<void**>(entry[0]);
+                if (channels[i] == request) {
+                    channels[i] = nullptr;
+                    removed = true;
+                }
+                if (!reinterpret_cast<void**>(entry[0])[i])
+                    ++emptyCount;
             }
-            if (!channels[i])
-                ++emptyCount;
-        }
-        if (emptyCount == count)
-            FUN_142742830(reinterpret_cast<long long*>(set), &key);
+            if (emptyCount == entry[1]) {
+                unsigned long long removeKey = *reinterpret_cast<unsigned long long*>(sound + 0x40);
+                FUN_142742830(reinterpret_cast<long long*>(set), &removeKey);
+            }
 
-        // Only reached with a found entry (an unknown key skips straight to the unlock, 0x142745525).
-        auto* table = *reinterpret_cast<void**>(managerBytes + 0xa8);
-        if ((!table || *reinterpret_cast<unsigned long long*>(table) == 0) && managerBytes[0xf1] &&
-            *reinterpret_cast<void**>(managerBytes + 0x18)) {
-            managerBytes[0x78] = 1;
-            FUN_14257dcb0(*reinterpret_cast<void**>(managerBytes + 0x18));
-            *reinterpret_cast<void**>(managerBytes + 0x18) = nullptr;
-            reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
+            // Only reached with a found entry (an unknown key skips straight to the unlock, 0x142745525).
+            auto* table = *reinterpret_cast<void**>(managerBytes + 0xa8);
+            if ((!table || *reinterpret_cast<unsigned long long*>(table) == 0) && managerBytes[0xf1] &&
+                *reinterpret_cast<void**>(managerBytes + 0x18)) {
+                managerBytes[0x78] = 1;
+                if (void* worker = *reinterpret_cast<void**>(managerBytes + 0x18))
+                    FUN_14257dcb0(worker);
+                *reinterpret_cast<void**>(managerBytes + 0x18) = nullptr;
+                reinterpret_cast<Scaleform::Event*>(managerBytes + 0x20)->PulseEvent();
+            }
         }
+        released = removed ? request : nullptr;
     }
-    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0x80));
 
-    if (removed) {
-        auto* channel = *reinterpret_cast<FMOD::Channel**>(requestBytes + 0x38);
-        if (channel)
-            channel->stop();
-        FUN_14257dcb0(request);
+    if (released) {
+        reinterpret_cast<FMOD::Channel*>(*reinterpret_cast<void**>(static_cast<unsigned char*>(released) + 0x38))->stop();
+        FUN_14257dcb0(released);
     }
 }
 
@@ -3769,57 +3808,64 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
 void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels, unsigned rate, bool wideSamples)
 {
     auto* managerBytes = static_cast<unsigned char*>(manager);
-    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    unsigned flags[2] = { 2, 0 };
-    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
-        DAT_143b15f60, 0x78, flags));
-    if (!object) {
-        LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0xc8));
+    // SF_NEW BufferedSoundRequest(manager): same ctor chain as CreateAudioRequest, 0x78 bytes.
+    auto* object = static_cast<unsigned char*>(Memory::Alloc(0x78));
+    if (!object)
         return nullptr;
-    }
 
+    *reinterpret_cast<void**>(object) = AS3SoundObjectBaseVtable;
     auto* node = object + 0x10;
     auto* sentinel = managerBytes + 0xb0;
-    void* oldTail = *reinterpret_cast<void**>(managerBytes + 0xc0);
-    *reinterpret_cast<void***>(object) = &AS3BufferedRequestVtable;
-    *reinterpret_cast<unsigned*>(object + 8) = 1;
-    *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
+    *reinterpret_cast<volatile int*>(object + 8) = 1;   // AtomicInt RefCount
+    *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
+    *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
     *reinterpret_cast<void**>(node + 8) = sentinel;
-    *reinterpret_cast<void**>(node + 0x10) = oldTail;
-    *reinterpret_cast<void**>(static_cast<unsigned char*>(oldTail) + 8) = node;
-    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
-    *reinterpret_cast<void**>(object + 0x28) = manager;
-    *reinterpret_cast<void**>(object + 0x30) = nullptr;
+    *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
+    *reinterpret_cast<void**>(sentinel + 0x10) = node;
     *reinterpret_cast<void**>(object + 0x38) = nullptr;
-    *reinterpret_cast<void**>(object + 0x40) = backing;
-    if (backing)
-        FUN_14257dc30(backing);
-
-    const unsigned bits = wideSamples ? 32u : 16u;
-    const unsigned format = wideSamples ? 5u : 2u;
-    const unsigned length = (rate / 1000u) * (bits >> 3) * channels * 0x5dcu;
+    *reinterpret_cast<void***>(object) = &AS3BufferedRequestVtable;
+    *reinterpret_cast<void***>(node) = &AS3BufferedRequestNodeVtable;
+    *reinterpret_cast<void**>(object + 0x28) = manager;
+    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
+    *sound = nullptr;
+    *reinterpret_cast<void**>(object + 0x40) = nullptr;
     *reinterpret_cast<unsigned*>(object + 0x48) = channels;
     *reinterpret_cast<unsigned*>(object + 0x4c) = rate;
-    *reinterpret_cast<unsigned*>(object + 0x50) = bits;
-    *reinterpret_cast<unsigned*>(object + 0x68) = format;
-    *reinterpret_cast<unsigned*>(object + 0x64) = length;
     *reinterpret_cast<void**>(object + 0x58) = nullptr;
     *reinterpret_cast<unsigned*>(object + 0x60) = 0;
     *reinterpret_cast<unsigned long long*>(object + 0x6c) = 0;
 
-    unsigned char info[0xd8] = {};
-    *reinterpret_cast<unsigned*>(info) = sizeof(info);
-    *reinterpret_cast<int*>(info + 4) = static_cast<int>(length);
-    *reinterpret_cast<int*>(info + 0x0c) = static_cast<int>(channels);
-    *reinterpret_cast<unsigned*>(info + 0x10) = rate;
-    *reinterpret_cast<unsigned*>(info + 0x14) = format;
-    auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
-    auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
-    if (system->createSound(nullptr, 0x442, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound) == 0)
-        (*sound)->getLength(reinterpret_cast<unsigned*>(info), 4);
+    // Ptr<> assignment of the backing data: AddRef the new one, Release the old one.
+    if (backing)
+        FUN_14257dc30(backing);
+    if (void* old = *reinterpret_cast<void**>(object + 0x40))
+        FUN_14257dcb0(old);
+    *reinterpret_cast<void**>(object + 0x40) = backing;
 
-    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    const unsigned format = wideSamples ? 5u : 2u;
+    *reinterpret_cast<unsigned*>(object + 0x68) = format;
+    const unsigned bits = wideSamples ? 32u : 16u;
+    *reinterpret_cast<unsigned*>(object + 0x50) = bits;
+    const unsigned sampleRate = *reinterpret_cast<unsigned*>(object + 0x4c);
+    const unsigned channelCount = *reinterpret_cast<unsigned*>(object + 0x48);
+    const unsigned length = (sampleRate / 1000u) * (bits >> 3) * channelCount * 0x5dcu;
+    *reinterpret_cast<unsigned*>(object + 0x64) = length;
+
+    FMOD_CREATESOUNDEXINFO info;
+    std::memset(&info, 0, sizeof(info));
+    info.cbsize = sizeof(info);
+    info.length = length;
+    info.numchannels = channelCount;
+    info.defaultfrequency = sampleRate;
+    info.format = format;
+    auto* system = *reinterpret_cast<FMOD::System**>(*reinterpret_cast<unsigned char**>(object + 0x28) + 0x10);
+    if (system->createSound(nullptr, 0x442, &info, sound) != 0) {
+        *sound = nullptr;
+    } else {
+        unsigned soundLength = 0;
+        (*sound)->getLength(&soundLength, 4);
+    }
     return object;
 }
 
