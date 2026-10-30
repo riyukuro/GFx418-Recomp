@@ -870,15 +870,15 @@ inline Resource* ResourceHandle::GetResource(ResourceBinding* pbinding) const
 
 inline Resource* ResourceHandle::GetResourceAndBinding(ResourceBinding* pbinding, ResourceBinding** presBinding) const
 {
-    if (IsIndex())
+    if (HType == RH_Pointer)
     {
-        ResourceBindData rbd;
-        pbinding->GetResourceData(&rbd, BindIndex);
-        *presBinding = rbd.pBinding;
-        return rbd.pResource;
+        *presBinding = pbinding;
+        return pResource;
     }
-    *presBinding = pbinding;
-    return pResource;
+    ResourceBindData rbd;
+    pbinding->GetResourceData(&rbd, BindIndex);
+    *presBinding = rbd.pBinding;
+    return rbd.pResource;
 }
 
 // The states a binding depends on: a movie bound under different values of these is a different MovieDefImpl.
