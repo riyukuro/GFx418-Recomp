@@ -3200,9 +3200,9 @@ void TR::State::ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType isN
 // TR::State::ConvertRegisterTo: register ind (+0x18) becomes a value of traits tr.
 // MS2-FUNCTIONAL 0x1424f1ed0: the exe inlines the weak-reference release of the temporary Value (ours calls ReleaseWeakRef).
 // @0x1424f1ed0
-void TR::State::ConvertRegisterTo(UInt32 ind, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
+void TR::State::ConvertRegisterTo(SPInt ind, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
-    Registers[ind].Assign(Value(tr, isNull));
+    Registers[static_cast<UInt32>(ind)].Assign(Value(tr, isNull));
 }
 
 

@@ -1252,9 +1252,9 @@ bool Sfr27TracerIsPrimitiveType(UPInt tracer, UPInt traits)
 }
 
 // @0x14250fe80
-__declspec(noinline) UPInt Sfr27StateGetValueTraits(void* state, const Value* v)
+__declspec(noinline) const Traits* State::GetValueTraits(const Value& v) const
 {
-    return TraceValueTraits(*reinterpret_cast<const UPInt*>(state), v);
+    return reinterpret_cast<const Traits*>(TraceValueTraits(reinterpret_cast<UPInt>(pTracer), &v));
 }
 
 // With classes resolved to their instance traits (asInstance), the traits' parent.
@@ -1280,23 +1280,21 @@ int Sfr27TracerGetNextU30(UPInt tracer, UPInt n)
 
 }}}} // namespace Scaleform::GFx::AS3::TR
 
-// ---- TR::State operand stack pops (the State's layout lives in as3_readargs.h; its methods are not declared yet) ----
+// ---- TR::State operand stack pops ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 // @0x14251ccc0
-void Sfr27StatePopOp(void* state, UPInt n)
+void State::PopOp(UPInt n)
 {
-    ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(reinterpret_cast<UPInt>(state) + 0x38);
-    ops.PopBack(n);
+    OpStack.PopBack(n);
 }
 
-// The top operand returned (by value: hidden result pointer after this), then popped.
+// The top operand returned, then popped.
 // @0x14251cd30
-__declspec(noinline) Value* Sfr27StatePopOpValue(void* state, Value* result)
+__declspec(noinline) Value State::PopOpValue()
 {
-    ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(reinterpret_cast<UPInt>(state) + 0x38);
-    new (result) Value(ops[ops.GetSize() - 1]);
-    ops.PopBack(1);
+    Value result(OpStack[OpStack.GetSize() - 1]);
+    OpStack.PopBack(1);
     return result;
 }
 
@@ -1507,10 +1505,7 @@ void FUN_14251f8e0(void* self, int op, Scaleform::UPInt arg)
     w->PutArg(self, arg);
 }
 
-// ---- TR::State opcode refinement (free functions under the names sfr_as3_19 calls; as3_readargs.h declares them as
-// private State members) ----
-void FUN_1424f1e50(Scaleform::UPInt state, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertOpTo
-void FUN_1424f1ed0(Scaleform::UPInt state, Scaleform::SPInt ind, Scaleform::UPInt traits, int nullType);   // TR::State::ConvertRegisterTo
+// ---- TR::State opcode refinement (private State members; sfr_as3_19 calls them through FUN_ decls) ----
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 namespace {
@@ -1528,59 +1523,49 @@ SF_FORCEINLINE void TrReplaceOpCode(UPInt tracer, int op)
     TrWordCode& wcode = TrWCode(tracer);
     wcode[wcode.GetSize() - 1] = static_cast<UInt32>(op);
 }
-inline const Value& TrOpTop(UPInt state)
-{
-    const ArrayDH<Value>& ops = *reinterpret_cast<const ArrayDH<Value>*>(state + 0x38);
-    return ops[ops.GetSize() - 1];
-}
 }
 }}}} // namespace Scaleform::GFx::AS3::TR
 
-// TR::State::RefineOpCodeReg1: the opcode just written becomes op when register idx already has type's traits; else
-// the register is converted to type. The register's index follows as the argument word.
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
+
+// The last opcode written becomes op when register reg_num already has type's traits; else the register is converted
+// to type. The register's index follows as the argument word.
 // @0x142520d80
-void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx)
+void State::RefineOpCodeReg1(InstanceTraits::Traits& type, Abc::Code::OpCode op, int reg_num)
 {
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    const Scaleform::UPInt tracer = TrRd(state, 0);
-    const Value* regs = reinterpret_cast<const Value*>(TrRd(state, 0x18));
-    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &regs[idx]) == traits)
+    const UPInt tracer = reinterpret_cast<UPInt>(pTracer);
+    if (GetValueTraits(Registers[static_cast<UInt32>(reg_num)]) == &type)
         TrReplaceOpCode(tracer, op);
     else
-        FUN_1424f1ed0(state, static_cast<int>(idx), traits, TrNullTypeOf(TrVM(tracer), traits));
-    reinterpret_cast<Tracer*>(TrRd(state, 0))->PushNewOpCodeArg(idx);
+        ConvertRegisterTo(reg_num, type,
+                          static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(tracer), reinterpret_cast<UPInt>(&type))));
+    static_cast<Tracer*>(pTracer)->PushNewOpCodeArg(static_cast<UInt32>(reg_num));
 }
 
-// TR::State::RefineOpCodeStack1: the same for the operand stack top.
+// The same for the operand stack top.
 // @0x142520e60
-void FUN_142520e60(Scaleform::UPInt state, Scaleform::UPInt traits, int op)
+void State::RefineOpCodeStack1(InstanceTraits::Traits& type, Abc::Code::OpCode op)
 {
-    using namespace Scaleform::GFx::AS3::TR;
-    const Scaleform::UPInt tracer = TrRd(state, 0);
-    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &TrOpTop(state)) == traits)
+    const UPInt tracer = reinterpret_cast<UPInt>(pTracer);
+    if (GetValueTraits(OpStack.Back()) == &type)
         TrReplaceOpCode(tracer, op);
     else
-        FUN_1424f1e50(state, traits, TrNullTypeOf(TrVM(tracer), traits));
+        ConvertOpTo(type, static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(tracer), reinterpret_cast<UPInt>(&type))));
 }
 
-// TR::State::RefineOpCodeStack2: the same for the top two operands (the top one is popped; the one left is converted).
+// The same for the top two operands (the top one is popped; the one left is converted).
 // MS2-FUNCTIONAL 0x142520f30: the exe keeps the popped Value's flags word in a register across the calls for its release (push rdi frame); clang reloads it
 // @0x142520f30
-__declspec(safebuffers) void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op)
+__declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& type, Abc::Code::OpCode op)
 {
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    struct { Scaleform::UPInt w0, w1, w2, w3; } buf;   // raw storage: PopOpValue constructs the Value in it
-    Value& popped = *reinterpret_cast<Value*>(&buf);
-    Sfr27StatePopOpValue(reinterpret_cast<void*>(state), &popped);
-    if (Sfr27StateGetValueTraits(reinterpret_cast<void*>(state), &TrOpTop(state)) == traits &&
-        TraceValueTraits(TrRd(state, 0), &popped) == traits)
-        TrReplaceOpCode(TrRd(state, 0), op);
+    Value popped = PopOpValue();
+    if (GetValueTraits(OpStack.Back()) == &type && GetValueTraits(popped) == &type)
+        TrReplaceOpCode(reinterpret_cast<UPInt>(pTracer), op);
     else
-        FUN_1424f1e50(state, traits, TrNullTypeOf(TrVM(TrRd(state, 0)), traits));
-    popped.~Value();
+        ConvertOpTo(type, static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(reinterpret_cast<UPInt>(pTracer)), reinterpret_cast<UPInt>(&type))));
 }
+
+}}}} // namespace Scaleform::GFx::AS3::TR
 
 // ---- Tracer merging of the block entry states (free functions; as3_tracer.h declares them as Tracer members) ----
 void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);   // ArrayDH<Value> growth
@@ -1888,8 +1873,8 @@ __declspec(safebuffers) int FUN_142520380(void* ctx, void* multiname)
 {
     using namespace Scaleform::GFx::AS3;
     using namespace Scaleform::GFx::AS3::TR;
-    struct RawValue { Scaleform::UPInt w0, w1, w2, w3; };   // raw storage: PopOpValue constructs the Value in it
     void** c = reinterpret_cast<void**>(ctx);
+    State& st = *static_cast<State*>(c[1]);
     int& kind = *reinterpret_cast<int*>(multiname);
     Value& name = *reinterpret_cast<Value*>(reinterpret_cast<Scaleform::UPInt>(multiname) + 0x10);
     for (;;)
@@ -1897,35 +1882,15 @@ __declspec(safebuffers) int FUN_142520380(void* ctx, void* multiname)
         switch (kind)
         {
         case 1: case 9:      // RTQName: the namespace
-        {
-            RawValue b;
-            Value& v = *reinterpret_cast<Value*>(&b);
-            Sfr27StatePopOpValue(c[1], &v);
-            v.~Value();
+            st.PopOpValue();
             return 1;
-        }
         case 5: case 13:     // RTQNameL: the name and the namespace
-        {
-            {
-                RawValue b;
-                Value& v = *reinterpret_cast<Value*>(&b);
-                Sfr27StatePopOpValue(c[1], &v);
-                v.~Value();
-            }
-            RawValue b;
-            Value& v = *reinterpret_cast<Value*>(&b);
-            name.Assign(*Sfr27StatePopOpValue(c[1], &v));
-            v.~Value();
+            st.PopOpValue();
+            name.Assign(st.PopOpValue());
             return 2;
-        }
         case 6: case 14:     // MultinameL: the name
-        {
-            RawValue b;
-            Value& v = *reinterpret_cast<Value*>(&b);
-            name.Assign(*Sfr27StatePopOpValue(c[1], &v));
-            v.~Value();
+            name.Assign(st.PopOpValue());
             return 1;
-        }
         case 16:
         {
             Scaleform::UPInt log = *reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<Scaleform::UPInt>(c[0]) + 0x20);
