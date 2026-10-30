@@ -1931,7 +1931,8 @@ static __forceinline void VectorSort(VectorBase<T>& self, Value& result, unsigne
             Value2NumberCollector<T> vc(pairs);
             ForEachElement(self, vc);
 
-            Alg::QuickSortSlicedSafe(pairs, 0, pairs.GetSize(), CompareAsNumberInd((flags & Descending) != 0));
+            // always ascending: the exe passes false here, so NUMERIC drops DESCENDING (the SDK honours it)
+            Alg::QuickSortSlicedSafe(pairs, 0, pairs.GetSize(), CompareAsNumberInd(false));
             if (flags & UniqueSort)
             {
                 for (UInt32 i = 1; i < pairs.GetSize(); ++i)
