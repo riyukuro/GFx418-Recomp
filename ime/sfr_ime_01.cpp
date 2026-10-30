@@ -3108,15 +3108,13 @@ unsigned long long FUN_1423d8d60(long long* map, long long operation, const char
     return 0;
 }
 
-// MS2-FUNCTIONAL: opaque XML hash-node query layout is recovered from field offsets, but its packed key type is unavailable.
 // @0x1423cad20
-unsigned long long FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
+bool FUN_1423cad20(unsigned long long* node, const unsigned long long* query)
 {
-    unsigned hash = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(node) + 0x24);
-    if (hash != static_cast<unsigned>(query[2]))
-        return static_cast<unsigned long long>(hash & 0xffffff00u);
-    return static_cast<unsigned long long>(_stricmp(reinterpret_cast<const char*>(node[0]),
-        reinterpret_cast<const char*>((query[0] & ~3ull) + 0xc)) == 0);
+    if (*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(node) + 0x24) != query[2])
+        return false;
+    return SFstricmp(reinterpret_cast<const char*>(node[0]),
+        reinterpret_cast<const char*>((query[0] & ~3ull) + 0xc)) == 0;
 }
 
 }}}
