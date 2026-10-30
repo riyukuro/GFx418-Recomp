@@ -30,6 +30,7 @@
 #include "../include/gfx/gfx_valueinfo.h"
 #include "../include/gfx/text_editorkit.h"
 #include "../include/render/render_twips.h"
+#include "../include/gfx/gfx_statictextcharacter.h"
 #include "../include/gfx/text_stylesheet.h"
 #include "../include/kernel/sf_utf8util.h"
 
@@ -82,12 +83,15 @@ public:
 // The shadowStyle / shadowColor state of an AS2 field. 0x40 bytes (as in sfr_gfx_03e).
 struct TextField::ShadowParams : public NewOverrideBase<0x143>   // StatMV_ActionScript_Mem
 {
-    UInt32                   ShadowColor;    // +0x00
+    Render::Color            ShadowColor;    // +0x00
     ASString                 ShadowStyleStr; // +0x08
     ArrayLH<Render::PointF>  ShadowOffsets;  // +0x10
     ArrayLH<Render::PointF>  TextOffsets;    // +0x28
 
-    ShadowParams(ASStringManager* psm) : ShadowColor(0xFF000000u), ShadowStyleStr(psm->GetEmptyStringNode()) {}
+    ShadowParams(ASStringManager* psm) : ShadowStyleStr(psm->GetEmptyStringNode())
+    {
+        ShadowColor = Render::Color(0, 0, 0, 255);
+    }
 };
 
 // sfr_gfx_03e has the body (0x1425b5290).
@@ -110,6 +114,21 @@ static inline void NotifyScroll(TextField* pfield)
 {
     if (pfield->HasAvmObject())
         pfield->GetAvmObjImpl()->ToAvmTextFieldBase()->OnScroll();
+}
+
+// TextField::SetDirtyFlag (0x1425bc060) is defined in the lower half (sfr_gfx_03e); the exe inlines it into this half's
+// callers, so they use this copy of its body.
+static inline void SetDirtyFlagOf(TextField* pfield)
+{
+    static_cast<Render::TreeText*>(pfield->GetRenderNode())->NotifyLayoutChanged();
+}
+
+// TextField::NotifyChanged (0x1425b9da0, sfr_gfx_03e), inlined by the exe like SetDirtyFlag.
+static inline void NotifyChangedOf(TextField* pfield)
+{
+    if (pfield->HasAvmObject())
+        pfield->GetAvmObjImpl()->ToAvmTextFieldBase()->NotifyChanged();
+    SetDirtyFlagOf(pfield);
 }
 
 }} // namespace Scaleform::GFx
@@ -146,7 +165,6 @@ namespace Scaleform { namespace GFx {
 
 // ---- TextField
 
-// MS2-FUNCTIONAL 0x1425bb5b0: same release and redraw; the exe inlines SetDirtyFlag
 // @0x1425bb5b0
 void TextField::ReleaseCompositionString()
 {
@@ -154,99 +172,93 @@ void TextField::ReleaseCompositionString()
     if (peditor)
     {
         peditor->ReleaseCompositionString();
-        SetDirtyFlag();
+        SetDirtyFlagOf(this);
     }
 }
 
-// MS2-FUNCTIONAL 0x1425bb680: same lookup; the exe inlines the hash removal
+// MS2-FUNCTIONAL 0x1425bb680: same removal; register allocation in the inlined String compare differs (391 bytes against 390)
 // @0x1425bb680
 void TextField::RemoveIdImageDescAssoc(const char* idStr)
 {
     if (pImageDescAssoc)
-        pImageDescAssoc->RemoveAlt(String(idStr));
+        pImageDescAssoc->Remove(idStr);
 }
 
 // The cursor stays inside the new text; the bound variable and the layout follow the change.
-// MS2-FUNCTIONAL 0x1425bb810: same calls; the exe inlines NotifyChanged
 // @0x1425bb810
 void TextField::ReplaceTextA(const wchar_t* pstr, UPInt beginPos, UPInt endPos, UPInt strLen)
 {
     pDocument->ReplaceText(pstr, beginPos, endPos, strLen);
-    Text::EditorKit* peditor = EditorOf(pDocument);
-    if (peditor)
+    if (EditorOf(pDocument))
     {
+        // the cursor stays unless its position is gone
         UPInt len = pDocument->GetStyledText()->GetLength();
-        if (peditor->GetCursorPos() > len)
-            peditor->SetCursorPos(len, false);
+        if (EditorOf(pDocument)->GetCursorPos() > len)
+            EditorOf(pDocument)->SetCursorPos(len, false);
     }
     if (HasAvmObject())
         GetAvmObjImpl()->ToAvmTextFieldBase()->UpdateVariable();
     Flags |= Flags_NeedUpdateLayout;
-    NotifyChanged();
+    NotifyChangedOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bba30: same test and calls; the exe inlines SetDirtyFlag
 // @0x1425bba30
 void TextField::ResetBlink(bool state, bool blocked)
 {
-    Text::EditorKit* peditor = EditorOf(pDocument);
-    if (peditor && peditor->HasCursor())
+    if (EditorOf(pDocument))
     {
-        peditor->ResetBlink(state, blocked);
-        SetDirtyFlag();
+        if (EditorOf(pDocument)->HasCursor())
+        {
+            EditorOf(pDocument)->ResetBlink(state, blocked);
+            SetDirtyFlagOf(this);
+        }
     }
 }
 
-// MS2-FUNCTIONAL 0x1425bbb90: same alpha byte write; the exe inlines SetBackgroundColor and SetDirtyFlag
 // @0x1425bbb90
 void TextField::SetBackground(bool b)
 {
     Render::Color c(pDocument->GetBackgroundColor());
     c.SetAlpha(b ? 0xFF : 0);
     SetBackgroundColor(c);
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bbbe0: the exe inlines SetDirtyFlag
 // @0x1425bbbe0
 void TextField::SetBackgroundColor(const Render::Color& c)
 {
     pDocument->SetBackgroundColor(c.ToColor32());
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bbc10: the exe inlines SetDirtyFlag
 // @0x1425bbc10
 void TextField::SetBackgroundColor(UInt32 c)
 {
     pDocument->SetBackgroundColor((pDocument->GetBackgroundColor() & 0xFF000000u) | (c & 0xFFFFFFu));
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bbc50: same alpha byte write; the exe inlines SetBorderColor and SetDirtyFlag
 // @0x1425bbc50
 void TextField::SetBorder(bool b)
 {
     Render::Color c(pDocument->GetBorderColor());
     c.SetAlpha(b ? 0xFF : 0);
     SetBorderColor(c);
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bbca0: the exe inlines SetDirtyFlag
 // @0x1425bbca0
 void TextField::SetBorderColor(const Render::Color& c)
 {
     pDocument->SetBorderColor(c.ToColor32());
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bbcd0: the exe inlines SetDirtyFlag
 // @0x1425bbcd0
 void TextField::SetBorderColor(UInt32 c)
 {
     pDocument->SetBorderColor((pDocument->GetBorderColor() & 0xFF000000u) | (c & 0xFFFFFFu));
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
 // The field owns the holder from now on.
@@ -257,7 +269,6 @@ void TextField::SetCSSData(CSSHolderBase* pcssData)
 }
 
 // The candidate list shows its entries in the font at the cursor (bold / italic as there).
-// MS2-FUNCTIONAL 0x1425bbd70: same lookups and handle; the exe releases the temporaries in another order
 // @0x1425bbd70
 void TextField::SetCandidateListFont(DisplayObject* pcandidateList)
 {
@@ -285,7 +296,6 @@ void TextField::SetCandidateListFont(DisplayObject* pcandidateList)
     }
 }
 
-// MS2-FUNCTIONAL 0x1425bbed0: the exe inlines SetDirtyFlag
 // @0x1425bbed0
 void TextField::SetCompositionStringPosition(UPInt pos)
 {
@@ -296,12 +306,11 @@ void TextField::SetCompositionStringPosition(UPInt pos)
         if (pcs)
         {
             pcs->SetPosition(pos);
-            SetDirtyFlag();
+            SetDirtyFlagOf(this);
         }
     }
 }
 
-// MS2-FUNCTIONAL 0x1425bbf50: the exe inlines SetDirtyFlag
 // @0x1425bbf50
 void TextField::SetCompositionStringText(const wchar_t* pstr, UPInt len)
 {
@@ -312,12 +321,11 @@ void TextField::SetCompositionStringText(const wchar_t* pstr, UPInt len)
         if (pcs)
         {
             pcs->SetText(pstr, len);
-            SetDirtyFlag();
+            SetDirtyFlagOf(this);
         }
     }
 }
 
-// MS2-FUNCTIONAL 0x1425bbfe0: the exe inlines SetDirtyFlag
 // @0x1425bbfe0
 void TextField::SetCursorInCompositionString(UPInt pos)
 {
@@ -328,13 +336,12 @@ void TextField::SetCursorInCompositionString(UPInt pos)
         if (pcs)
         {
             pcs->SetCursorPosition(pos);
-            SetDirtyFlag();
+            SetDirtyFlagOf(this);
         }
     }
 }
 
 // The filters become the text's blur / shadow / glow parameters.
-// MS2-FUNCTIONAL 0x1425bc080: same filter walk; the exe inlines SetTextFilters
 // @0x1425bc080
 void TextField::SetFilters(const Render::FilterSet* filters)
 {
@@ -352,7 +359,6 @@ void TextField::SetFilters(const Render::FilterSet* filters)
 }
 
 // The text rectangle keeps its top; the height is in pixels.
-// MS2-FUNCTIONAL 0x1425bc370: the exe inlines SetDirtyFlag
 // @0x1425bc370
 void TextField::SetHeight(Double height)
 {
@@ -360,12 +366,11 @@ void TextField::SetHeight(Double height)
     r.y2 = r.y1 + float(Render::PixelsToTwips(height));
     pDocument->SetViewRect(r);
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
 // The field's own formats (from its definition) under the document's defaults; an empty definition takes the
 // engine's default values under them instead.
-// MS2-FUNCTIONAL 0x1425bc420: same merges; the exe inlines the field's SetDefaultTextFormat/SetDefaultParagraphFormat
 // @0x1425bc420
 void TextField::SetInitialFormatsAsDefault()
 {
@@ -410,12 +415,11 @@ bool TextField::SetRestrict(const ASString& restrStr)
     return EditorOf(pDocument)->SetRestrict(String(restrStr.ToCStr()));
 }
 
-// MS2-FUNCTIONAL 0x1425bced0: the exe inlines SetDirtyFlag
 // @0x1425bced0
 void TextField::SetRotation(Double rotation)
 {
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
     DisplayObjectBase::SetRotation(rotation);
 }
 
@@ -434,7 +438,6 @@ void TextField::SetSelectable(bool f)
 }
 
 // Both ends are clamped into the text.
-// MS2-FUNCTIONAL 0x1425bcfc0: the exe inlines SetDirtyFlag
 // @0x1425bcfc0
 void TextField::SetSelection(SPInt beginIndex, SPInt endIndex)
 {
@@ -448,91 +451,93 @@ void TextField::SetSelection(SPInt beginIndex, SPInt endIndex)
         endIndex   = Alg::Min(len, endIndex);
         beginIndex = Alg::Min(len, beginIndex);
         EditorOf(pDocument)->SetSelection(UPInt(beginIndex), UPInt(endIndex));
-        SetDirtyFlag();
+        SetDirtyFlagOf(this);
     }
 }
 
 // The AS2 shadow parameters keep their own copy of the color.
-// MS2-FUNCTIONAL 0x1425bd080: the exe stores the three color bytes one by one and inlines SetDirtyFlag
 // @0x1425bd080
 void TextField::SetShadowColor(UInt32 c)
 {
     pDocument->SetShadowColor(c);
     if (pShadow)
-        pShadow->ShadowColor = (pShadow->ShadowColor & 0xFF000000u) | pDocument->GetShadowColor();
-    SetDirtyFlag();
+    {
+        // the argument is 0xRRGGBB; the shadow keeps its alpha
+        UInt32 rgb = pDocument->GetShadowColor();
+        pShadow->ShadowColor.SetBlue((UByte)rgb);
+        pShadow->ShadowColor.SetGreen((UByte)(rgb >> 8));
+        pShadow->ShadowColor.SetRed((UByte)(rgb >> 16));
+    }
+    SetDirtyFlagOf(this);
 }
 
 // The AS2 shadowStyle string, "s{x,y}..t{x,y}..": the shadow's and the text's offsets in pixels. A malformed string
 // keeps the previous one (parsed again); the soft (filter) shadow is turned off for the old style one.
-// MS2-FUNCTIONAL 0x1425bd100: same parse; the exe inlines SetDirtyFlag
 // @0x1425bd100
 bool TextField::SetShadowStyle(const char* pstr)
 {
     if (!pShadow)
-    {
-        pShadow = SF_HEAP_AUTO_NEW(this) ShadowParams(GetStringManager());
-        if (!pShadow)
+        if ((pShadow = SF_HEAP_AUTO_NEW(this) ShadowParams(GetStringManager())) == 0)
             return false;
-    }
 
     UInt32 rgb = pDocument->GetShadowColor();
-    pShadow->ShadowColor = (pShadow->ShadowColor & 0xFF000000u) | rgb;
+    pShadow->ShadowColor.SetBlue((UByte)rgb);
+    pShadow->ShadowColor.SetGreen((UByte)(rgb >> 8));
+    pShadow->ShadowColor.SetRed((UByte)(rgb >> 16));
     pDocument->DisableSoftShadow();
 
-    for (bool retry = true; retry; )
-    {
-        retry = false;
-        pShadow->ShadowOffsets.Clear();
-        pShadow->TextOffsets.Clear();
+reset:
+    pShadow->ShadowOffsets.Clear();
+    pShadow->TextOffsets.Clear();
 
-        ArrayLH<Render::PointF>* poffsets = NULL;
-        for (const char* p = pstr; *p && !retry; )
+    // Format is like "s{1,0.5}{-1,0.5}t{0,0}"; a bad string falls back to the stored one.
+    const char* p = pstr;
+    ArrayLH<Render::PointF>* offsets = 0;
+    while (*p)
+    {
+        if (*p == 's' || *p == 'S')
         {
-            const char c = *p;
-            if (c == 's' || c == 'S')
-            {
-                poffsets = &pShadow->ShadowOffsets;
-                ++p;
-            }
-            else if (c == 't' || c == 'T')
-            {
-                poffsets = &pShadow->TextOffsets;
-                ++p;
-            }
-            else if (c == '{' && poffsets)
-            {
-                float coords[2];
-                const char* q = ++p;
-                for (int i = 0; i < 2 && !retry; ++i)
-                {
-                    const char stop = i ? '}' : ',';
-                    while (*q && *q != stop)
-                        ++q;
-                    if (!*q || q - p > 23)
-                    {
-                        retry = true;
-                        break;
-                    }
-                    char num[24];
-                    memcpy(num, p, q - p);
-                    num[q - p] = 0;
-                    coords[i] = float(SFstrtod(num, NULL) * 20.0);
-                    p = ++q;
-                }
-                if (!retry)
-                    poffsets->PushBack(Render::PointF(coords[0], coords[1]));
-            }
-            else
-                retry = true;
+            offsets = &pShadow->ShadowOffsets;
+            p++;
         }
-        if (retry)
+        else if (*p == 't' || *p == 'T')
+        {
+            offsets = &pShadow->TextOffsets;
+            p++;
+        }
+        else if (*p == '{' && offsets)
+        {
+            char pn[24];
+            p++;
+            const char* q = p;
+            while (*q && *q != ',') q++;
+            if (!*q || q - p > 23) { pstr = pShadow->ShadowStyleStr.ToCStr(); goto reset; }
+            memcpy(pn, p, q - p);
+            pn[q - p] = 0;
+            float x = (float)(SFstrtod(pn, NULL) * 20.0);
+            q++;
+            p = q;
+
+            while (*q && *q != '}') q++;
+            if (!*q || q - p > 23) { pstr = pShadow->ShadowStyleStr.ToCStr(); goto reset; }
+            memcpy(pn, p, q - p);
+            pn[q - p] = 0;
+            float y = (float)(SFstrtod(pn, NULL) * 20.0);
+            q++;
+            p = q;
+
+            offsets->PushBack(Render::PointF(x, y));
+        }
+        else
+        {
             pstr = pShadow->ShadowStyleStr.ToCStr();
+            goto reset;
+        }
     }
 
     if (*pstr)
-        pShadow->ShadowStyleStr = ASString(GetStringManager()->CreateStringNode(pstr));
-    SetDirtyFlag();
+        pShadow->ShadowStyleStr = GetStringManager()->CreateString(pstr);
+    SetDirtyFlagOf(this);
     return true;
 }
 
@@ -548,17 +553,12 @@ void TextField::SetStateChangeFlags(UByte flags)
 }
 
 // The text goes in as UTF-8 (on the stack when short enough).
-// MS2-FUNCTIONAL 0x1425bd530: same encode and set; the exe's stack frame for the buffer differs
 // @0x1425bd530
 void TextField::SetText(const wchar_t* ptext, bool html)
 {
-    if (html)
-    {
-        if (!IsHtml())
-            Flags |= Flags_Html;
-    }
-    else if (IsHtml())
-        Flags &= ~Flags_Html;
+    bool currHtml = IsHtml();
+    if (html && !currHtml)        { Flags |= Flags_Html; }
+    else if (!html && currHtml)   { Flags &= ~Flags_Html; }
 
     UPInt len    = SFwcslen(ptext);
     UPInt outLen = len * 3 + 1;
@@ -571,26 +571,25 @@ void TextField::SetText(const wchar_t* ptext, bool html)
 }
 
 // The new color applies to the whole text and to what is typed later.
-// MS2-FUNCTIONAL 0x1425bd630: the exe inlines SetDirtyFlag
 // @0x1425bd630
 void TextField::SetTextColor(UInt32 c)
 {
     Render::Text::TextFormat fmt(Memory::GetHeapByAddress(this));
-    fmt.SetColorARGB(0xFF000000u | (c & 0xFFFFFFu));
+    fmt.SetColor32(c);
     pDocument->SetTextFormat(fmt, 0, SF_MAX_UPINT);
     fmt = *pDocument->GetDefaultTextFormat();
     fmt.SetColor32(c);
     pDocument->SetDefaultTextFormat(fmt);
     Flags |= Flags_NeedUpdateLayout;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
 }
 
-// MS2-FUNCTIONAL 0x1425bd7a0: the exe inlines DocView::SetFilters and SetDirtyFlag
+// MS2-FUNCTIONAL 0x1425bd7a0: same compare and copy; the exe copies ShadowParams.Offset.x through an integer register
 // @0x1425bd7a0
 void TextField::SetTextFilters(const Render::Text::TextFilter& f)
 {
     if (pDocument && pDocument->SetFilters(f))
-        SetDirtyFlag();
+        SetDirtyFlagOf(this);
 }
 
 // The text (UTF-8, HTML when html is set) becomes the field's text unless it is the same and nothing asks for a new
@@ -740,15 +739,14 @@ bool TextField::SetTextValue(const char* ptext, bool html, bool notifyVariable)
     {
         if (HasAvmObject())
             GetAvmObjImpl()->ToAvmTextFieldBase()->NotifyChanged();
-        SetDirtyFlag();
+        SetDirtyFlagOf(this);
     }
 
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
     return true;
 }
 
-// MS2-FUNCTIONAL 0x1425be280: the exe inlines SetDirtyFlag
 // @0x1425be280
 void TextField::SetWideCursor(bool wideCursor)
 {
@@ -759,12 +757,11 @@ void TextField::SetWideCursor(bool wideCursor)
             peditor->SetWideCursor();
         else
             peditor->ClearWideCursor();
-        SetDirtyFlag();
+        SetDirtyFlagOf(this);
     }
 }
 
 // The text rectangle keeps its left side; the width is in pixels.
-// MS2-FUNCTIONAL 0x1425be2d0: the exe inlines SetDirtyFlag
 // @0x1425be2d0
 void TextField::SetWidth(Double width)
 {
@@ -772,11 +769,41 @@ void TextField::SetWidth(Double width)
     r.x2 = r.x1 + float(Render::PixelsToTwips(width));
     pDocument->SetViewRect(r);
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
+}
+
+// Matrix2x4::SetInverse, which the exe inlines into SetX and SetY (our cl keeps the in-class copy out of line).
+static __forceinline void SetInverseOf(Render::Matrix2F& d, const Render::Matrix2F& m)
+{
+    float det = m.M[0][0] * m.M[1][1] - m.M[0][1] * m.M[1][0];
+    if (det == 0)
+    {
+        d.SetIdentity();
+        d.M[0][3] = -m.M[0][3];
+        d.M[1][3] = -m.M[1][3];
+    }
+    else
+    {
+        float inv = 1 / det;
+        d.M[0][0] =  m.M[1][1] * inv;
+        d.M[1][1] =  m.M[0][0] * inv;
+        d.M[0][1] = -m.M[0][1] * inv;
+        d.M[1][0] = -m.M[1][0] * inv;
+        d.M[0][3] = -(d.M[0][0] * m.M[0][3] + d.M[0][1] * m.M[1][3]);
+        d.M[1][3] = -(d.M[1][0] * m.M[0][3] + d.M[1][1] * m.M[1][3]);
+    }
+}
+
+// Matrix2x4::TransformByInverse: a copy of m inverted (SetInverse of a second copy), then p through it.
+static __forceinline Render::PointF TransformByInverseOf(const Render::Matrix2F& m, const Render::PointF& p)
+{
+    Render::Matrix2F inv;
+    SetInverseOf(inv, Render::Matrix2F(m));
+    return inv.Transform(p);
 }
 
 // x is where the text rectangle's left side goes (in the parent): the origin moves by the rectangle's offset.
-// MS2-FUNCTIONAL 0x1425be380: same math; the exe inlines the matrix inverse
+// MS2-FUNCTIONAL 0x1425be380: same math, inverse inlined as in the exe; float scheduling around it differs
 // @0x1425be380
 void TextField::SetX(Double x)
 {
@@ -784,27 +811,28 @@ void TextField::SetX(Double x)
         return;
     if (NumberUtil::IsNEGATIVE_INFINITY(x) || NumberUtil::IsPOSITIVE_INFINITY(x))
         x = 0;
-    Matrix m = GetMatrix();
-    x        = Render::PixelsToTwips(x);
-    Render::PointF p = m.TransformByInverse(Render::PointF(float(x)));
-    p.x -= pDocument->GetViewRect().x1;
+    Matrix m    = GetMatrix();
+    Double newX = Render::PixelsToTwips(x);
+    Render::PointF p((float)newX);
+    p = TransformByInverseOf(m, p);
+    Render::PointF r = pDocument->GetViewRect().TopLeft();
+    p.x -= r.x;
     p = m.Transform(p);
     DisplayObjectBase::SetX(Double(Render::TwipsToPixels(p.x)));
     if (pGeomData)
-        pGeomData->X = Alg::IRound(x);
+        pGeomData->X = Alg::IRound(newX);
 }
 
-// MS2-FUNCTIONAL 0x1425be630: the exe inlines SetDirtyFlag
 // @0x1425be630
 void TextField::SetXScale(Double xscale)
 {
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
     DisplayObjectBase::SetXScale(xscale);
 }
 
 // y is where the text rectangle's top goes (in the parent).
-// MS2-FUNCTIONAL 0x1425be670: same math; the exe inlines the matrix inverse
+// MS2-FUNCTIONAL 0x1425be670: same math, inverse inlined as in the exe; float scheduling around it differs
 // @0x1425be670
 void TextField::SetY(Double y)
 {
@@ -812,22 +840,23 @@ void TextField::SetY(Double y)
         return;
     if (NumberUtil::IsNEGATIVE_INFINITY(y) || NumberUtil::IsPOSITIVE_INFINITY(y))
         y = 0;
-    Matrix m = GetMatrix();
-    y        = Render::PixelsToTwips(y);
-    Render::PointF p = m.TransformByInverse(Render::PointF(0, float(y)));
-    p.y -= pDocument->GetViewRect().y1;
+    Double newY = Render::PixelsToTwips(y);
+    Matrix m    = GetMatrix();
+    Render::PointF p(0, (float)newY);
+    p = TransformByInverseOf(m, p);
+    Render::PointF r = pDocument->GetViewRect().TopLeft();
+    p.y -= r.y;
     p = m.Transform(p);
     DisplayObjectBase::SetY(Double(Render::TwipsToPixels(p.y)));
     if (pGeomData)
-        pGeomData->Y = Alg::IRound(y);
+        pGeomData->Y = Alg::IRound(newY);
 }
 
-// MS2-FUNCTIONAL 0x1425be930: the exe inlines SetDirtyFlag
 // @0x1425be930
 void TextField::SetYScale(Double yscale)
 {
     Flags |= Flags_NeedUpdateGeomData;
-    SetDirtyFlag();
+    SetDirtyFlagOf(this);
     DisplayObjectBase::SetYScale(yscale);
 }
 
@@ -903,19 +932,16 @@ void TextField::UpdateUrlStyles()
 // unit links on its own.
 #define MS2_LISTENER_TF() reinterpret_cast<TextField*>(reinterpret_cast<UPInt>(this) - offsetof(TextField, TextDocListener))
 
-// MS2-FUNCTIONAL 0x1425bef80: the exe inlines SetDirtyFlag
 // @0x1425bef80
 void TextField::TextDocumentListener::View_OnChanged(Render::Text::DocView& view)
 {
-    SF_UNUSED(view);
-    MS2_LISTENER_TF()->SetDirtyFlag();
+    SetDirtyFlagOf(MS2_LISTENER_TF());
 }
 
-// MS2-FUNCTIONAL 0x1425befb0: the exe inlines GetTextField and OnScroll
 // @0x1425befb0
 void TextField::TextDocumentListener::View_OnHScroll(Render::Text::DocView& view, unsigned newScroll)
 {
-    SF_UNUSED2(view, newScroll);
+    SF_UNUSED(newScroll);
     NotifyScroll(MS2_LISTENER_TF());
 }
 
@@ -925,7 +951,6 @@ void TextField::TextDocumentListener::View_OnHScroll(Render::Text::DocView& view
 bool TextField::TextDocumentListener::View_OnLineFormat(Render::Text::DocView& view,
                                                         Render::Text::DocView::LineFormatDesc& desc)
 {
-    SF_UNUSED(view);
     Ptr<Translator> ptrans = *static_cast<Translator*>(
         MS2_LISTENER_TF()->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_Translator));
     if (!ptrans)
@@ -955,19 +980,16 @@ bool TextField::TextDocumentListener::View_OnLineFormat(Render::Text::DocView& v
     return false;
 }
 
-// MS2-FUNCTIONAL 0x1425bf110: the exe inlines GetTextField and OnScroll
 // @0x1425bf110
 void TextField::TextDocumentListener::View_OnMaxScrollChanged(Render::Text::DocView& view)
 {
-    SF_UNUSED(view);
     NotifyScroll(MS2_LISTENER_TF());
 }
 
-// MS2-FUNCTIONAL 0x1425bf160: the exe inlines GetTextField and OnScroll
 // @0x1425bf160
 void TextField::TextDocumentListener::View_OnVScroll(Render::Text::DocView& view, unsigned newScroll)
 {
-    SF_UNUSED2(view, newScroll);
+    SF_UNUSED(newScroll);
     NotifyScroll(MS2_LISTENER_TF());
 }
 
