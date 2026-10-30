@@ -611,6 +611,7 @@ void FUN_14003b880()
 }
 
 // MS2-FUNCTIONAL: register the MPEG video and alpha decoder interfaces with CriMv.
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x14003b6e0
 void FUN_14003b6e0()
 {
@@ -620,6 +621,7 @@ void FUN_14003b6e0()
     registration.AlphaDecoderInterface = (void*)FUN_14003bf10();
     FUN_14002e6e0(&registration);
 }
+#pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 alignment,
@@ -1308,18 +1310,33 @@ CriSint32 FUN_1400532e0(CriSint32 count);
 // @0x140042150
 CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
 {
-    CriUint32 channels, rate;
-    memcpy(&channels, (const CriUint8*)config + 4, sizeof(channels));
-    memcpy(&rate, (const CriUint8*)config + 0xc, sizeof(rate));
-    CriSint32 blockSize = 0x9c + FUN_1400532e0((CriSint32)channels);
-    CriUint32 decoderWidth;
-    memcpy(&decoderWidth, (const CriUint8*)decoder + 0xe1c, sizeof(decoderWidth));
-    CriUint32 bufferCount = decoderWidth * 0xc80 / channels;
-    CriUint32 streamBytes = rate * decoderWidth + bufferCount * decoderWidth;
-    const CriUint32 settings[2] = { 1, 1 };
-    for (CriUint32 i = 0; i < channels; ++i)
-        blockSize += FUN_140046604(streamBytes, decoderWidth * 0x840, 4, settings);
-    return blockSize;
+    struct Decoder { CriUint8 Reserved00[0xe1c]; CriUint32 Width; };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriUint32 workSize;
+    CriUint32 settings[2];
+    CriUint32 i;
+    CriSint32 work;
+    CriUint32 cnt;
+    CriSint32 size;
+    CriSint32 total;
+    CriUint32 bytes;
+    CriSint32 jSize;
+    total = 0;
+    size = 0x9c;
+    total += size;
+    work = FUN_1400532e0((CriSint32)config[1]);
+    total += work;
+    cnt = ((const Decoder*)decoder)->Width * 0xc80 / config[1];
+    bytes = config[3] * ((const Decoder*)decoder)->Width + cnt * ((const Decoder*)decoder)->Width;
+    workSize = ((const Decoder*)decoder)->Width * 0x840;
+    for (i = 0; i < config[1]; ++i)
+    {
+        settings[0] = 1;
+        settings[1] = 1;
+        jSize = FUN_140046604(bytes, workSize, 4, settings);
+        total += jSize;
+    }
+    return total;
 }
 #pragma optimize("", on)
 
@@ -2042,23 +2059,24 @@ void FUN_14003e750(void* handle, CriSint32 frame, CriUint64* timestamp, CriUint6
 }
 
 // MS2-FUNCTIONAL: normalize the movie player's two 64-entry audio-track maps and copy the active entries.
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // @0x14003b720
 void FUN_14003b720(CriMvSubAudioTrackState* state, CriSint32 count,
                    const CriSint32* trackIds, const CriSint32* trackValues)
 {
+    CriSint32 i;
     memset(state->TrackIds, 0, sizeof(state->TrackIds));
     memset(state->TrackValues, 0, sizeof(state->TrackValues));
     if (count > 64)
         count = 64;
     state->TrackCount = count;
-    for (CriSint32 i = 0; i < count; ++i)
+    for (i = 0; i < count; ++i)
     {
-        CriSint32 id = trackIds[i];
-        CriSint32 value = trackValues[i];
-        state->TrackIds[i] = id == -1 ? 0x5a5a5a5a : id;
-        state->TrackValues[i] = value == 0x8000000 ? 0x5a5a5a5a : value;
+        state->TrackIds[i] = trackIds[i] != -1 ? trackIds[i] : 0x5a5a5a5a;
+        state->TrackValues[i] = trackValues[i] != 0x8000000 ? trackValues[i] : 0x5a5a5a5a;
     }
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
@@ -2592,32 +2610,55 @@ void FUN_1400420b0(void* manager, void* heap)
 }
 
 // MS2-FUNCTIONAL: create the CRI audio player manager and its channel input stream joint.
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // @0x140041f70
 void* FUN_140041f70(void* owner, void* heap, const void* config)
 {
-    CriUint8* manager = (CriUint8*)FUN_140027ed8(heap, 0x38,
-                                                 "CriMvPly: CriMvPlyAmngObj", 4);
-    if (!manager)
+    struct AudioManagerObj
+    {
+        CriUint8 Reserved00[0x18];
+        void* InputJoint;
+        CriUint32 Rate;
+        CriUint8 Reserved24[0x14];
+    };
+    struct AudioConfig
+    {
+        CriUint8 Reserved00[0x4c];
+        CriUint32 Channels;
+    };
+    // cl 15 places /Od locals by name hash; these names give the exe's [rsp+N] order.
+    AudioManagerObj* p;
+    CriUint32 period;
+    CriUint32 slots;
+    CriUint32 rate;
+    p = (AudioManagerObj*)FUN_140027ed8(heap, 0x38, "CriMvPly: CriMvPlyAmngObj", 4);
+    if (p == NULL)
     {
         FUN_140037950(owner, "E07090701M : Can't allocate CriMvPlyAmng handle", 0x38);
         return NULL;
     }
-    memset(manager, 0, 0x38);
-    CriSint32 initialState = 2;
-    memcpy(manager + 0x20, &initialState, sizeof(initialState));
-    CriSint32 configuredChannels;
-    memcpy(&configuredChannels, (const CriUint8*)config + 0x4c, sizeof(configuredChannels));
-    CriUint32 queueSlots = configuredChannels == 0 ? 0x40 : (CriUint32)(configuredChannels * 0x40);
-    void* joint = FUN_1400464c8(heap, 0, queueSlots);
-    memcpy(manager + 0x18, &joint, sizeof(joint));
-    if (!joint)
+    memset(p, 0, 0x38);
+    period = 30;
+    rate = 60 / period;
+    if (60 % period != 0)
+        rate = rate + 1;
+    if (rate == 0)
+        rate = 1;
+    p->Rate = rate;
+    if (((const AudioConfig*)config)->Channels > 0)
+        slots = ((const AudioConfig*)config)->Channels * 0x40;
+    else
+        slots = 0x40;
+    p->InputJoint = FUN_1400464c8(heap, 0, slots);
+    if (p->InputJoint == NULL)
     {
-        FUN_1400420b0(manager, heap);
+        FUN_1400420b0(p, heap);
         FUN_140037910(owner, "E05063016M : Can't create SJ for input audio.", 0);
         return NULL;
     }
-    return manager;
+    return p;
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: allocate and wire one CRI audio decoder into the manager's channel table.
 // @0x140042270
@@ -3428,31 +3469,46 @@ CriSint32 FUN_14003ed40(void* player)
 // @0x140040a90
 void FUN_140040a90(void* player)
 {
-    CriVideoQueueFields* state = (CriVideoQueueFields*)player;
-    if (state->Staged == NULL)
-        return;
-    state->FlagsHigh = 0;
-    state->Flags = 0;
-    state->WindowEnd = state->Staged;
-    state->Window = state->WindowEnd;
-    state->WindowNext = state->Window;
-    state->Cursor = state->WindowEnd;
-    state->Staged = NULL;
-    void* descriptor[2];
-    memcpy(descriptor, &state->Pending, sizeof(descriptor));
-    if (descriptor[0] == NULL)
+    // the picture window block at +0x80, and the 16-byte chunk descriptor the queue functions pass around
+    struct PictureWindow
     {
-        FUN_140041110(0, "E06100910M : Failed in crivmpv_FlushReferencePictureInPool()", 0);
-        state->Status = 4;
-        return;
+        void* Window;
+        void* WindowNext;
+        void* WindowEnd;
+        CriUint16 Flags;
+        CriUint16 FlagsHigh;
+        CriUint8 Reserved1c[0x14];
+        void* Staged;
+    };
+    struct ChunkDescriptor { void* Data; CriUint32 Size; };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    PictureWindow* window;
+    ChunkDescriptor chk;
+    ChunkDescriptor picture;
+    window = (PictureWindow*)&((CriVideoQueueFields*)player)->Window;
+    if (window->Staged != NULL)
+    {
+        window->FlagsHigh = 0;
+        window->Flags = 0;
+        window->WindowEnd = window->Staged;
+        window->Window = window->WindowEnd;
+        window->WindowNext = window->Window;
+        ((CriVideoQueueFields*)player)->Cursor = window->WindowEnd;
+        window->Staged = NULL;
+        picture = *(ChunkDescriptor*)&((CriVideoQueueFields*)player)->Pending;
+        if (picture.Data == NULL)
+        {
+            FUN_140041110(0, "E06100910M : Failed in crivmpv_FlushReferencePictureInPool()", 0);
+            ((CriVideoQueueFields*)player)->Status = 4;
+            return;
+        }
+        FUN_140040a20(player, (void**)&picture);
+        ((CriVideoQueueFields*)player)->Pending = NULL;
+        window->WindowEnd = NULL;
+        FUN_1400467a0(((CriVideoQueueFields*)player)->Queue, 3, 0xffffffff, &chk);
+        if (chk.Data)
+            FUN_1400467b0(((CriVideoQueueFields*)player)->Queue, 0, &chk);
     }
-    FUN_140040a20(player, descriptor);
-    state->Pending = NULL;
-    state->WindowEnd = NULL;
-    void* pending[2];
-    FUN_1400467a0(state->Queue, 3, 0xffffffff, pending);
-    if (pending[0])
-        FUN_1400467b0(state->Queue, 0, pending);
 }
 
 // report the per-lane picture queue depths of a VMPV player in whole pictures.
@@ -3518,26 +3574,31 @@ CriUint32 FUN_140043420(void* decoder, void* player, CriUint32 channels)
 // @0x14003ec30
 CriSint32 FUN_14003ec30(void* player)
 {
-    CriVideoQueueFields* state = (CriVideoQueueFields*)player;
-    if (!state || state->Busy == 1)
+    CriVideoQueueFields* self;
+    CriSint32 result;
+    self = (CriVideoQueueFields*)player;
+    result = 0;
+    if (self == NULL)
         return 0;
-    if (criVmpv_GetStatus(player) != 2)
+    if (self->Busy == 1)
         return 0;
-    FUN_14003ef00(player);
-    if (FUN_1400467b8(state->Queue, 0) == 0)
+    if (criVmpv_GetStatus(self) != 2)
         return 0;
-    CriSint32 result = 0;
-    state->Running = 1;
-    if (criVdecCmn_GetNumPictureData(player) != 0)
+    FUN_14003ef00(self);
+    if ((CriUint32)FUN_1400467b8(self->Queue, 0) <= 0)
+        return 0;
+    self->Running = 1;
+    if (criVdecCmn_GetNumPictureData(self) == 0)
     {
-        FUN_14003ed40(player);
-        result = FUN_14003efc0(player);
+        if (self->Mode == 1 && (CriUint32)FUN_1400467b8(self->InputQueue, 1) <= 0 && self->Decoded < self->Threshold)
+            FUN_140040a90(self);
     }
-    else if (state->Mode == 1 && FUN_1400467b8(state->InputQueue, 1) == 0 && state->Decoded < state->Threshold)
+    else
     {
-        FUN_140040a90(player);
+        FUN_14003ed40(self);
+        result = FUN_14003efc0(self);
     }
-    state->Running = 0;
+    self->Running = 0;
     return result;
 }
 #pragma optimize("", on)
@@ -3569,6 +3630,7 @@ void FUN_1400414f0(void* handle)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: reset a VMPV player's counters and return every picture record to its free queue.
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // @0x14003d720
 void FUN_14003d720(void* player)
 {
@@ -3616,37 +3678,41 @@ void FUN_14003d720(void* player)
                   offsetof(Player, Staged) == 0xb0 && offsetof(Player, PictureCount) == 0x188 &&
                   offsetof(Player, Counter1ac) == 0x1ac && offsetof(Player, Counter240) == 0x240, "layout");
     struct Record { void* Data; CriUint32 Size; };
-    Player* state = (Player*)player;
-    state->Counter190 = 0;
-    state->Counter194 = 0;
-    state->Counter198 = 0;
-    state->Counter19c = 0;
-    state->Counter1a0 = 0;
-    state->Counter1a4 = 0;
-    state->Status = 1;
-    state->Mode = 0;
-    state->Busy = 0;
-    state->Running = 0;
-    state->PictureCount = 0;
-    state->Counter240 = 0;
-    FUN_140046798(state->Queue);
-    state->Pending = NULL;
-    state->PendingSize = 0;
-    for (CriUint32 index = 0; index < state->RecordCount; ++index)
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriUint32 index;
+    Player* self;
+    Record entry;
+    self = (Player*)player;
+    self->Counter190 = 0;
+    self->Counter194 = 0;
+    self->Counter198 = 0;
+    self->Counter19c = 0;
+    self->Counter1a0 = 0;
+    self->Counter1a4 = 0;
+    self->Status = 1;
+    self->Mode = 0;
+    self->Busy = 0;
+    self->Running = 0;
+    self->PictureCount = 0;
+    self->Counter240 = 0;
+    FUN_140046798(self->Queue);
+    self->Pending = NULL;
+    self->PendingSize = 0;
+    for (index = 0; index < self->RecordCount; ++index)
     {
-        Record record;
-        record.Data = state->Records + (CriUint64)index * 200;
-        record.Size = state->UnitSize;
-        memset(state->Records + 0x10 + (CriUint64)index * 200, 0, 0xb0);
-        FUN_1400467b0(state->Queue, 0, &record);
+        entry.Data = self->Records + (CriUint64)index * 200;
+        entry.Size = self->UnitSize;
+        memset(self->Records + (CriUint64)index * 200 + 0x10, 0, 0xb0);
+        FUN_1400467b0(self->Queue, 0, &entry);
     }
-    state->WindowEnd = NULL;
-    state->Staged = NULL;
-    state->Reserved0d0 = NULL;
-    state->Cursor = NULL;
-    state->Counter1a8 = 0;
-    state->Counter1ac = 0;
+    self->WindowEnd = NULL;
+    self->Staged = NULL;
+    self->Reserved0d0 = NULL;
+    self->Cursor = NULL;
+    self->Counter1a8 = 0;
+    self->Counter1ac = 0;
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 extern "C" CriUint32 DAT_143b27c3c;
@@ -4178,29 +4244,34 @@ CriUint32 FUN_140042ba0(void* trackSet, void* chunk, CriSint32 id, CriSint32* co
 {
     struct Decoder { CriUint8 Reserved00[8]; CriSint32 Id; };
     struct TrackSet { Decoder* Decoders[2]; CriSint32 Count; CriUint8 Reserved14[4]; void* Queue; CriUint32 Limit; };
-    CriSint32 index = 0;
-    for (;; ++index)
-    {
-        if (((TrackSet*)trackSet)->Count <= index)
-        {
-            FUN_1400467b0(((TrackSet*)trackSet)->Queue, 0, chunk);
-            return 2;
-        }
-        if (id == ((TrackSet*)trackSet)->Decoders[index]->Id)
-            break;
-    }
-    CriUint32 result = 1;
-    FUN_1400467a8(((TrackSet*)trackSet)->Queue, 1, chunk);
-    FUN_1400436d0(((TrackSet*)trackSet)->Decoders[index]);
-    counts[index] += 1;
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriSint32 index;
+    void* queue;
+    CriUint32 result;
+    queue = ((TrackSet*)trackSet)->Queue;
     for (index = 0; index < ((TrackSet*)trackSet)->Count; ++index)
     {
-        if ((CriUint32)counts[index] < ((TrackSet*)trackSet)->Limit)
-            result = 2;
-        if (((TrackSet*)trackSet)->Limit + 1U <= (CriUint32)counts[index])
-            return 1;
+        if (id == ((TrackSet*)trackSet)->Decoders[index]->Id)
+        {
+            result = 1;
+            FUN_1400467a8(queue, 1, chunk);
+            FUN_1400436d0(((TrackSet*)trackSet)->Decoders[index]);
+            counts[index] = counts[index] + 1;
+            for (index = 0; index < ((TrackSet*)trackSet)->Count; ++index)
+            {
+                if ((CriUint32)counts[index] < ((TrackSet*)trackSet)->Limit)
+                    result = 2;
+                if ((CriUint32)counts[index] >= ((TrackSet*)trackSet)->Limit + 1)
+                {
+                    result = 1;
+                    break;
+                }
+            }
+            return result;
+        }
     }
-    return result;
+    FUN_1400467b0(queue, 0, chunk);
+    return 2;
 }
 #pragma optimize("", on)
 
