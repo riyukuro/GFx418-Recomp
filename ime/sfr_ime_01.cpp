@@ -285,6 +285,10 @@ GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
 // @0x1423c8ac0
 GFxIMEManagerWin32::~GFxIMEManagerWin32()
 {
+#ifndef MS2_HOOK_DLL
+    // the exe's 38-slot vtable, as the constructor installs it; the view's own ??_7 has the deleting dtor only
+    *reinterpret_cast<void***>(this) = DAT_1431383e0;
+#endif
     if (p70)
         (*reinterpret_cast<void (***)(void*, unsigned int)>(p70))[0](p70, 1);
     if (p78)
@@ -3274,7 +3278,9 @@ void* FUN_1423dbb60(void* object, unsigned flags)
 // @0x1423cdf60
 void FUN_1423cdf60(unsigned long long* self)
 {
-    self[0] = reinterpret_cast<unsigned long long>(DAT_14313a228 + 6);
+    // the base vtable at 0x14313a258 is the p20 member of the DAT_14313a238 piece; DAT_14313a228 is a separate
+    // 0x18-byte piece in the fullexe, so DAT_14313a228 + 6 landed in another table
+    self[0] = reinterpret_cast<unsigned long long>(DAT_14313a238 + 4);
     FUN_1423d9500(reinterpret_cast<void*>(self[6]));
     if (self[6]) {
         auto* child = reinterpret_cast<void*>(self[6]);

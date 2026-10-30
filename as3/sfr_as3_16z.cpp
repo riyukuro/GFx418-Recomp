@@ -957,7 +957,9 @@ extern const void* DAT_14317b040[];     // RefCountCollector<323>
 extern const void* DAT_14317b750[];     // VMAbcFile
 extern const void* DAT_14317bc40[];     // TreeShape::NodeData
 extern const void* DAT_14317bde0[];     // ASMovieRootBase
-extern const void* DAT_14317c210[];     // ShapeObject
+// ShapeObject (79 slots, data_rdata_sf_b). Not a DAT_14317c210 extern: that name binds to sfr_as3_15's one-slot
+// ??_7ShapeObject view table in the fullexe.
+extern void* const ShapeObject_vftable[];
 extern const void* DAT_14317c488[];     // ShapeObject +0x18
 extern const void* DAT_14317c498[];     // ShapeObject +0x90
 extern const void* DAT_14317c560[];     // AvmBitmap
@@ -1371,7 +1373,7 @@ void* DeleteAs3_1424e37a0(void* p, unsigned flags)
 // @0x1424e3890
 void* DeleteAs3_1424e3890(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, DAT_14317c210);
+    Sfr21GVft(p, 0, ShapeObject_vftable);
     Sfr21GVft(p, 0x18, DAT_14317c488);
     Sfr21GVft(p, 0x90, DAT_14317c498);
     *Sfr21At(p, 0x6d) = 0;
