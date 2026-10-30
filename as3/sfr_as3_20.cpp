@@ -2627,4 +2627,5 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CAB@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7?$RefCountBase@VASIMEManager@GFx@Scaleform@@$0CAB@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7NotifyLoadInitC@AS3@GFx@Scaleform@@6B@ 0x14317fc00
+// MS2-PIN: ??_7?$RefCountBase@VNotifyLoadInitC@AS3@GFx@Scaleform@@$01@Scaleform@@6B@ 0x14317fbf8
 // MS2-PIN: ??_GNotifyLoadInitCandidateList@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425430b0

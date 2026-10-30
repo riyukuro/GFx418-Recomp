@@ -37,8 +37,9 @@ namespace Instances { namespace fl_display { class Loader; } namespace fl_net { 
 
 // The Loader's load-init notification, held by a load entry or an action entry while it is pending (body not
 // recovered; a thread-safe counted object, released through RefCountImpl::Release). (moved here from
-// as3_loadqueue.h, sfr19: the action entries hold one too)
-class NotifyLoadInitC : public RefCountImpl
+// as3_loadqueue.h, sfr19: the action entries hold one too). RefCountBase, not bare RefCountImpl: the exe's ??_G
+// 0x142543050 frees through pGlobalHeap->Free (NewOverrideBase), and the object is made with SF_NEW.
+class NotifyLoadInitC : public RefCountBase<NotifyLoadInitC, Stat_Default_Mem>
 {
 public:
     // (appended, sfr19) the Loader's open / init / error / load events (sfr22: the exe table 0x14317fc00 has four
