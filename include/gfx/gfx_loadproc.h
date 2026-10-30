@@ -90,7 +90,7 @@ public:
     };
 
     // The stream of the tag being read: the SWF stream, or another one while a nested block is parsed.
-    Stream* GetStream() { return pAltStream ? pAltStream : &ProcessStream; }
+    Stream* GetStream() { return !pAltStream ? &ProcessStream : pAltStream; }
 
     unsigned GetLoadingFrame() const { return pLoadData->GetLoadingFrame(); }
     // A streaming sound block belongs to the frame of the timeline being loaded.

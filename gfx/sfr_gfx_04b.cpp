@@ -50,7 +50,6 @@ extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
 extern "C" void FUN_1426597e0(void*, void*);
 extern "C" void FUN_14257dcb0(void*);
 
-// MS2-FUNCTIONAL: dispatches the video tag to the installed video state and reports the missing-state case.
 // @0x1425c6450
 void SF_STDCALL GFx_DefineVideoStreamLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -92,7 +91,6 @@ void SF_STDCALL GFx_FileAttributesLoader(LoadProcess* p)
     }
 }
 
-// MS2-FUNCTIONAL: dispatches the external sound tag through the installed reader.
 // @0x1425c7ba0
 void SF_STDCALL GFx_DefineExternalSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -106,7 +104,6 @@ void SF_STDCALL GFx_DefineExternalSoundLoader(LoadProcess* p, const TagInfo& tag
     }
 }
 
-// MS2-FUNCTIONAL: dispatches the external stream sound tag through the installed reader.
 // @0x1425c7c20
 void SF_STDCALL GFx_DefineExternalStreamSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -316,7 +313,6 @@ void SF_STDCALL GFx_DefineBitsJpeg2Loader(LoadProcess* p, const TagInfo& tagInfo
 }
 
 // The audio state owns the reader that interprets the five SWF sound tags.
-// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6180
 void SF_STDCALL GFx_DefineSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -330,7 +326,6 @@ void SF_STDCALL GFx_DefineSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6200
 void SF_STDCALL GFx_StartSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -344,7 +339,6 @@ void SF_STDCALL GFx_StartSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6280
 void SF_STDCALL GFx_ButtonSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -358,7 +352,6 @@ void SF_STDCALL GFx_ButtonSoundLoader(LoadProcess* p, const TagInfo& tagInfo)
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6300
 void SF_STDCALL GFx_SoundStreamHeadLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -372,7 +365,6 @@ void SF_STDCALL GFx_SoundStreamHeadLoader(LoadProcess* p, const TagInfo& tagInfo
     }
 }
 
-// MS2-FUNCTIONAL: preserves reader dispatch and the missing-audio parse log.
 // @0x1425c6380
 void SF_STDCALL GFx_SoundStreamBlockLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
