@@ -38,7 +38,6 @@ extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
 extern "C" void* DAT_143b15f60;
-extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 // The vftables below are the tables themselves: their users store the table's address (the exe's lea), not its slot 0.
 extern ExeDecl<void*> DAT_1431921e0;
 extern ExeDecl<void*> DAT_1431921b0;
@@ -106,8 +105,6 @@ extern ExeDecl<void*> DAT_1431921c0;
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
-extern "C" void FUN_142689aa0(void*, void*, void*);
-extern "C" void FUN_142689cb0(void*, void*, void*);
 extern "C" void* FUN_142689640(void*, bool);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
@@ -1790,114 +1787,7 @@ void FUN_14268a040(void* source)
 }
 
 
-// MS2-FUNCTIONAL: inserts a pointer value into the allocator-backed open-addressed hash set, relocating collisions and growing at the executable's load threshold.
-// @0x1426869a0
-void AddCachedPointer(void* setObject, void* allocator, const std::uint64_t* value, std::uint64_t hash)
-{
-    auto** set = static_cast<std::uint64_t**>(setObject);
-    auto* table = *set;
-    std::uint64_t capacity;
-    if (!table) {
-        capacity = 8;
-    } else {
-        if (table[0] * 5 <= table[1] * 4 + 4)
-            goto insert_entry;
-        capacity = table[1] * 2 + 2;
-    }
-    FUN_142690a20(setObject, allocator, static_cast<std::int64_t>(capacity));
-insert_entry:
-    table = *set;
-    const std::uint64_t bucket = hash & table[1];
-    ++table[0];
-    auto* row = table + 2 + bucket * 3;
-    const std::uint64_t occupant = row[0];
-    std::uint64_t storedValue;
-    if (static_cast<std::int64_t>(occupant) == -2) {
-        row[0] = UINT64_MAX;
-        storedValue = *value;
-    } else {
-        std::uint64_t empty = bucket;
-        do {
-            empty = (empty + 1) & table[1];
-        } while (static_cast<std::int64_t>(table[2 + empty * 3]) != -2);
-        auto* target = table + 2 + empty * 3;
-        if (row[1] == bucket) {
-            target[0] = occupant;
-            target[1] = row[1];
-            target[2] = row[2];
-            storedValue = *value;
-            row[0] = empty;
-        } else {
-            std::uint64_t previous = row[1];
-            auto* previousRow = table + 2 + previous * 3;
-            while (previousRow[0] != bucket) {
-                previous = previousRow[0];
-                previousRow = table + 2 + previous * 3;
-            }
-            target[0] = occupant;
-            target[1] = row[1];
-            target[2] = row[2];
-            previousRow[0] = empty;
-            row[0] = UINT64_MAX;
-            storedValue = *value;
-        }
-    }
-    row[2] = storedValue;
-    row[1] = bucket;
-}
 
-// MS2-FUNCTIONAL: recreates the open-addressed table at the requested power-of-two size, rehashes occupied values, and frees the old allocation.
-// @0x142690a20
-extern "C" void FUN_142690a20(void* setObject, void* allocator, std::int64_t requestedSize)
-{
-    auto** set = static_cast<std::uint64_t**>(setObject);
-    auto* oldTable = *set;
-    if (requestedSize == 0) {
-        if (oldTable) {
-            const std::uint64_t oldCapacity = oldTable[1] + 1;
-            auto* bytes = reinterpret_cast<unsigned char*>(oldTable);
-            for (std::uint64_t i = 0; i < oldCapacity; ++i) {
-                auto* row = reinterpret_cast<std::uint64_t*>(bytes + 0x10 + i * 0x18);
-                if (static_cast<std::int64_t>(row[0]) != -2)
-                    row[0] = UINT64_MAX - 1;
-            }
-            auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
-            *set = nullptr;
-        }
-        return;
-    }
-
-    std::uint64_t capacity = 8;
-    const std::uint64_t requested = static_cast<std::uint64_t>(requestedSize);
-    while (capacity < requested)
-        capacity <<= 1;
-    int statId = 2;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* newTable = reinterpret_cast<std::uint64_t* (*)(void*, std::size_t, const int*)>(heapVtable[10])(
-        DAT_143b15f60, static_cast<std::size_t>(capacity * 0x18 + 0x10), &statId);
-    newTable[0] = 0;
-    newTable[1] = capacity - 1;
-    auto* newBytes = reinterpret_cast<unsigned char*>(newTable);
-    for (std::uint64_t i = 0; i < capacity; ++i)
-        *reinterpret_cast<std::uint64_t*>(newBytes + 0x10 + i * 0x18) = UINT64_MAX - 1;
-
-    *set = newTable;
-    if (oldTable) {
-        const std::uint64_t oldCapacity = oldTable[1] + 1;
-        auto* oldBytes = reinterpret_cast<unsigned char*>(oldTable);
-        for (std::uint64_t i = 0; i < oldCapacity; ++i) {
-            auto* row = reinterpret_cast<std::uint64_t*>(oldBytes + 0x10 + i * 0x18);
-            if (static_cast<std::int64_t>(row[0]) != -2) {
-                const auto* value = reinterpret_cast<const std::uint64_t*>(oldBytes + 0x20 + i * 0x18);
-                AddCachedPointer(setObject, allocator, value, HashImageKey(reinterpret_cast<const unsigned char*>(value)));
-                row[0] = UINT64_MAX - 1;
-            }
-        }
-        auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
-    }
-}
 // The following stream and movie record helpers remain in the same Scaleform namespace.
 // @0x14268c190
 void GFx::AMP::FuncTreeItem::Read(File& str, UInt32 version)
@@ -1966,106 +1856,7 @@ void GFx::AMP::ServerState::Read(File& str, UInt32 version)
     }
 }
 
-// MS2-FUNCTIONAL: updates or inserts this node's cached key, then repeats the operation for its child nodes.
-// @0x14268a570
-void UpdateImageHashTree(void* node, void* setObject)
-{
-    auto* bytes = static_cast<unsigned char*>(node);
-    auto* key = bytes + 0x10;
-    auto* set = static_cast<unsigned char*>(setObject);
-    auto* table = *reinterpret_cast<unsigned char**>(set);
-    const std::uint64_t hash = HashImageKey(key);
-    if (table) {
-        const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
-        std::uint64_t index = bucket;
-        auto* entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x18);
-        if (static_cast<std::int64_t>(entry[0]) != -2 && entry[1] == bucket) {
-            for (;;) {
-                if (entry[1] == bucket && entry[2] == *reinterpret_cast<std::uint64_t*>(key)) {
-                    *reinterpret_cast<std::uint64_t*>(table + 0x20 + index * 0x18) =
-                        *reinterpret_cast<std::uint64_t*>(key);
-                    break;
-                }
-                index = entry[0];
-                if (index == UINT64_MAX) {
-                    AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
-                    break;
-                }
-                entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + index * 0x18);
-            }
-        } else {
-            AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
-        }
-    } else {
-        AddCachedPointer(setObject, setObject, reinterpret_cast<const std::uint64_t*>(key), hash);
-    }
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < count; ++i)
-        UpdateImageHashTree(children[i], setObject);
-}
 
-// MS2-FUNCTIONAL: inserts a key and copied Scaleform string in the cached hash table, rehoming colliding entries and growing at the recovered threshold.
-// @0x142686650
-void AddStringHashEntry(void* setObject, void* allocator, const std::uint64_t* value, std::uint64_t hash)
-{
-    auto** set = static_cast<std::uint64_t**>(setObject);
-    auto* table = *set;
-    std::uint64_t capacity;
-    if (!table) {
-        capacity = 8;
-    } else {
-        if (table[0] * 5 <= table[1] * 4 + 4)
-            goto insert_string;
-        capacity = table[1] * 2 + 2;
-    }
-    FUN_1426251d0(setObject, allocator, static_cast<std::int64_t>(capacity));
-insert_string:
-    table = *set;
-    const std::uint64_t bucket = hash & table[1];
-    ++table[0];
-    auto* row = reinterpret_cast<unsigned char*>(table) + bucket * 0x20;
-    auto* entry = reinterpret_cast<std::uint64_t*>(row + 0x10);
-    const std::uint64_t occupant = entry[0];
-    auto* sourceString = reinterpret_cast<const String*>(value + 1);
-    if (static_cast<std::int64_t>(occupant) == -2) {
-        entry[0] = UINT64_MAX;
-        entry[2] = value[0];
-        new (row + 0x28) String(*sourceString);
-    } else {
-        std::uint64_t empty = bucket;
-        do {
-            empty = (empty + 1) & table[1];
-        } while (static_cast<std::int64_t>(*reinterpret_cast<std::uint64_t*>(
-            reinterpret_cast<unsigned char*>(table) + empty * 0x20 + 0x10)) != -2);
-        auto* targetBytes = reinterpret_cast<unsigned char*>(table) + empty * 0x20;
-        auto* target = reinterpret_cast<std::uint64_t*>(targetBytes + 0x10);
-        if (entry[1] == bucket) {
-            target[0] = occupant;
-            target[1] = entry[1];
-            target[2] = entry[2];
-            new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
-            entry[0] = empty;
-            entry[2] = value[0];
-            *reinterpret_cast<String*>(row + 0x28) = *sourceString;
-        } else {
-            auto* previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
-                entry[1] * 0x20 + 0x10);
-            while (previous[0] != bucket)
-                previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
-                    previous[0] * 0x20 + 0x10);
-            target[0] = occupant;
-            target[1] = entry[1];
-            target[2] = entry[2];
-            new (targetBytes + 0x28) String(*reinterpret_cast<String*>(row + 0x28));
-            previous[0] = empty;
-            entry[2] = value[0];
-            *reinterpret_cast<String*>(row + 0x28) = *sourceString;
-            entry[0] = UINT64_MAX;
-        }
-    }
-    entry[1] = bucket;
-}
 
 void ResizeStrongPointerArrayB(void**, std::size_t);
 static void ResizeRawArray(void**, void*, std::size_t, std::size_t);
@@ -2177,64 +1968,7 @@ static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64
     home[3] = reinterpret_cast<std::uint64_t>(value);
 }
 
-// MS2-FUNCTIONAL: clears the destination cached pointer set and rehashes every live source key/value pair into it.
-// @0x142689aa0
-extern "C" void FUN_142689aa0(void* destination, void* allocator, void* sourceSet)
-{
-    auto** destinationSet = static_cast<void**>(destination);
-    auto* oldTable = static_cast<std::uint64_t*>(*destinationSet);
-    if (oldTable) {
-        const std::uint64_t mask = oldTable[1];
-        for (std::uint64_t i = 0; i <= mask; ++i) {
-            auto* row = oldTable + 2 + i * 4;
-            if (static_cast<std::int64_t>(row[0]) == -2)
-                continue;
-            if (row[3]) FUN_14257dcb0(reinterpret_cast<void*>(row[3]));
-            row[0] = UINT64_C(0xfffffffffffffffe);
-        }
-        oldTable[0] = 0;
-    }
-    auto* sourceTable = *static_cast<std::uint64_t**>(sourceSet);
-    if (!sourceTable)
-        return;
-    const std::uint64_t mask = sourceTable[1];
-    for (std::uint64_t i = 0; i <= mask; ++i) {
-        auto* row = sourceTable + 2 + i * 4;
-        if (static_cast<std::int64_t>(row[0]) == -2)
-            continue;
-        AddMovieViewHashEntry(destinationSet, allocator, row[2], reinterpret_cast<void*>(row[3]));
-    }
-}
 
-// MS2-FUNCTIONAL: clears the destination resource-id map and copies each live keyed Scaleform string entry.
-// @0x142689cb0
-extern "C" void FUN_142689cb0(void* destination, void* allocator, void* sourceSet)
-{
-    auto** destinationSet = static_cast<void**>(destination);
-    auto* oldTable = static_cast<std::uint64_t*>(*destinationSet);
-    if (oldTable) {
-        const std::uint64_t mask = oldTable[1];
-        for (std::uint64_t i = 0; i <= mask; ++i) {
-            auto* row = oldTable + 2 + i * 4;
-            if (static_cast<std::int64_t>(row[0]) == -2)
-                continue;
-            reinterpret_cast<Scaleform::String*>(row + 3)->~String();
-            row[0] = UINT64_C(0xfffffffffffffffe);
-        }
-        oldTable[0] = 0;
-    }
-    auto* sourceTable = *static_cast<std::uint64_t**>(sourceSet);
-    if (!sourceTable)
-        return;
-    const std::uint64_t mask = sourceTable[1];
-    for (std::uint64_t i = 0; i <= mask; ++i) {
-        auto* row = sourceTable + 2 + i * 4;
-        if (static_cast<std::int64_t>(row[0]) == -2)
-            continue;
-        AddStringHashEntry(destination, allocator, row + 2,
-            HashImageKey(reinterpret_cast<const unsigned char*>(row + 2)));
-    }
-}
 
 // @0x14268b3e0
 void GFx::AMP::MovieSourceLineStats::Merge(const MovieSourceLineStats& other)
@@ -2713,54 +2447,7 @@ void ResizeStrongPointerArrayB(void** array, std::size_t requested)
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: releases live cached values, marks each bucket as a tombstone, then frees the bucket table.
-// @0x142689f10
-void ClearCachedHashSet(void* hashSet)
-{
-    auto** set = static_cast<void**>(hashSet);
-    auto* table = static_cast<unsigned char*>(set[0]);
-    if (!table)
-        return;
-    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
-    for (std::size_t i = 0; i < buckets; ++i) {
-        auto* node = table + 0x10 + i * 0x20;
-        if (*reinterpret_cast<long long*>(node) == -2)
-            continue;
-        void* value = *reinterpret_cast<void**>(node + 0x18);
-        if (value)
-            FUN_14257dcb0(value);
-        *reinterpret_cast<long long*>(node) = -2;
-    }
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
-    set[0] = nullptr;
-}
 
-// MS2-FUNCTIONAL: releases cached styles by their encoded reference-count pointer and frees the table storage.
-// @0x142689fa0
-void ClearStyleHashSet(void* hashSet)
-{
-    auto** set = static_cast<void**>(hashSet);
-    auto* table = static_cast<unsigned char*>(set[0]);
-    if (!table)
-        return;
-    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    for (std::size_t i = 0; i < buckets; ++i) {
-        auto* node = table + 0x10 + i * 0x20;
-        if (*reinterpret_cast<long long*>(node) == -2)
-            continue;
-        const auto encoded = *reinterpret_cast<unsigned long long*>(node + 0x18);
-        if (encoded) {
-            auto* object = reinterpret_cast<unsigned char*>(encoded & ~3ull);
-            if (InterlockedDecrement(reinterpret_cast<volatile long*>(object + 8)) == 0)
-                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
-        }
-        *reinterpret_cast<long long*>(node) = -2;
-    }
-    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
-    set[0] = nullptr;
-}
 }
 
 
@@ -4690,3 +4377,32 @@ extern "C" void FUN_14268e8c0(Ms2StringLHArrayBase* locales, Scaleform::UPInt ne
 template void Scaleform::ArrayData<Scaleform::GFx::AMP::MovieFunctionStats::FuncStats, Scaleform::AllocatorLH<Scaleform::GFx::AMP::MovieFunctionStats::FuncStats, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 // @0x14268e840
 template void Scaleform::ArrayData<Scaleform::GFx::AMP::MovieSourceLineStats::SourceStats, Scaleform::AllocatorLH<Scaleform::GFx::AMP::MovieSourceLineStats::SourceStats, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+
+// @0x14268a570
+void Scaleform::GFx::AMP::FuncTreeItem::GetAllFunctions(HashSet<UInt64>* functionIds) const
+{
+    functionIds->Set(FunctionId);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->GetAllFunctions(functionIds);
+    }
+}
+
+// COMDATs of the FunctionInfo / SourceFileInfo maps (MovieProfile::operator=) and the GetAllFunctions set.
+typedef decltype(Scaleform::GFx::AMP::FunctionDescMap::mHash) Ms2FunctionDescSet;
+typedef decltype(Scaleform::GFx::AMP::SourceFileDescMap::mHash) Ms2SourceFileDescSet;
+typedef Scaleform::HashSet<Scaleform::UInt64>::BaseType Ms2UInt64SetBase;
+// @0x142689aa0
+template void Ms2FunctionDescSet::BaseType::Assign(void* pmemAddr, const Ms2FunctionDescSet::BaseType& src);
+// @0x142689cb0
+template void Ms2SourceFileDescSet::BaseType::Assign(void* pmemAddr, const Ms2SourceFileDescSet::BaseType& src);
+// @0x142689f10
+template void Ms2FunctionDescSet::BaseType::Clear();
+// @0x142689fa0
+template void Ms2SourceFileDescSet::BaseType::Clear();
+// @0x142686650
+template void Ms2SourceFileDescSet::BaseType::add<Scaleform::GFx::AMP::SourceFileDescMap::NodeRef>(void* pheapAddr, const Scaleform::GFx::AMP::SourceFileDescMap::NodeRef& key, Scaleform::UPInt hashValue);
+// @0x1426869a0
+template void Ms2UInt64SetBase::add<Scaleform::UInt64>(void* pheapAddr, const Scaleform::UInt64& key, Scaleform::UPInt hashValue);
+// @0x142690a20
+template void Ms2UInt64SetBase::setRawCapacity(void* pheapAddr, Scaleform::UPInt newSize);
