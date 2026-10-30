@@ -540,18 +540,22 @@ void MeshCache::destroyPendingBuffers()
     while (!PendingDestructionBuffers.IsNull(p))
     {
         Render::MeshBuffer* next = p->pNext;
-        p->RemoveNode();
-
         MeshCacheListSet::ListSlot& pendingFree = CacheList.GetSlot(MCL_PendingFree);
         Render::MeshCacheItem* it = pendingFree.GetFirst();
+        p->RemoveNode();
+
+        bool inUse = false;
         for (; !pendingFree.IsNull(it); it = it->pNext)
         {
             MeshCacheItem* item = (MeshCacheItem*)it;
             if ((item->pVertexBuffer == p || item->pIndexBuffer == p) && item->GPUFence &&
                 item->GPUFence->IsPending(FenceType_Vertex))
+            {
+                inUse = true;
                 break;
+            }
         }
-        if (pendingFree.IsNull(it))
+        if (!inUse)
             delete p;
         else
             stillPending.PushFront(p);
