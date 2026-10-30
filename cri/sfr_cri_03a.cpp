@@ -124,7 +124,7 @@ void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void FUN_14004f8a0(void);
 void FUN_14004eb50(void);
-void FUN_14004e3b0(CriUint64, CriUint64);
+int FUN_14004e3b0(unsigned int size, CriUint64 base);   // sfr_cri_05: int(cri_u32, cri_u64)
 void* FUN_14003da40(void*, void*);
 void* FUN_14003dd50(void*, void*);
 void* FUN_140027ed8(void*, CriSint32, const CriChar8*, ...);
