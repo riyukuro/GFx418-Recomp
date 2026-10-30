@@ -28,6 +28,7 @@ extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
+extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
 extern const void* FUN_14261c640(const void*, int);
 extern void FUN_142581700(void*);
 extern void FUN_142626160(void*);
@@ -440,11 +441,12 @@ __declspec(noinline) bool FUN_14000e580(void*) { return false; }
 void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 {
     void** base = adjustedThis - 1;
+    void* dispatchTable = *adjustedThis;   // the exe loads this vtable before the first call
     typedef void* (*GetContextFn)(void*);
     void* context = reinterpret_cast<GetContextFn>(
         *reinterpret_cast<void**>(static_cast<char*>(*base) + 0xf8))(base);
     typedef void (*DispatchFn)(void*, void*, void*, void*);
-    reinterpret_cast<DispatchFn>(*reinterpret_cast<void**>(static_cast<char*>(*adjustedThis) + 0x20))(
+    reinterpret_cast<DispatchFn>(*reinterpret_cast<void**>(static_cast<char*>(dispatchTable) + 0x20))(
         adjustedThis, context, arg3, arg4);
 }
 
@@ -748,41 +750,39 @@ void FUN_140011120(void** parray, UInt32 value)
 }
 
 // MS2-FUNCTIONAL: appends one byte with the executable's growth thresholds and reserve call.
+// BEHAVIOUR FIX: reserves through ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70) like the exe, not
+// FUN_1425eec50 (the 16-byte-element FillStyleType ResizeNoConstruct, about 25 times the memory). The shrink branch
+// now reserves when the size drops below half the capacity, as the exe does; it was inverted (unreachable after +1).
 // @0x140010f60
 void FUN_140010f60(unsigned __int64* array, const UByte* value)
 {
     unsigned __int64 nextSize = array[1] + 1;
     if (nextSize < array[1])
     {
-        if ((array[2] >> 1) <= nextSize)
-            FUN_1425eec50(array, array, nextSize);
+        if (nextSize < (array[2] >> 1))
+            FUN_142522c70(array, array, nextSize);
     }
     else if (nextSize >= array[2])
-        FUN_1425eec50(array, array, nextSize + (nextSize >> 2));
+        FUN_142522c70(array, array, nextSize + (nextSize >> 2));
     array[1] = nextSize;
-    UByte* data = reinterpret_cast<UByte*>(array[0]);
-    if (data) data[nextSize - 1] = *value;
+    UByte* slot = reinterpret_cast<UByte*>(array[0]) + nextSize - 1;   // placement construction of the new last byte
+    if (slot) *slot = *value;
 }
 
 // MS2-FUNCTIONAL: resizes the executable's byte array and preserves its observed quarter-growth policy.
+// BEHAVIOUR FIX: the exe reserves through ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70). This called
+// FUN_1425eec50, ArrayDataBase<FillStyleType, AllocatorLH>::ResizeNoConstruct, which sizes the buffer for 16-byte
+// elements and adds its own quarter growth, so every byte array grown here took about 25 times the memory.
 // @0x140010390
 void FUN_140010390(unsigned __int64* array, void* reserveSource, unsigned __int64 newSize)
 {
     if (newSize < array[1])
     {
         if (newSize < (array[2] >> 1))
-        {
-            FUN_1425eec50(array, reserveSource, newSize);
-            array[1] = newSize;
-            return;
-        }
+            FUN_142522c70(array, reserveSource, newSize);
     }
-    else if (array[2] <= newSize)
-    {
-        FUN_1425eec50(array, reserveSource, newSize + (newSize >> 2));
-        array[1] = newSize;
-        return;
-    }
+    else if (newSize >= array[2])
+        FUN_142522c70(array, reserveSource, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -1740,7 +1740,7 @@ void* FUN_140010de0(void** destination, void* const* source)
         void** iface = *reinterpret_cast<void***>(static_cast<char*>(value) + 0x10);
         reinterpret_cast<void (*)(void*)>(iface[1])(static_cast<char*>(value) + 0x10);
     }
-    *destination = value;
+    *destination = *source;
     return destination;
 }
 
@@ -1893,10 +1893,21 @@ unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
     static_cast<Scaleform::GFx::AS3::VM*>(vm)->Construct(static_cast<const char*>(receiver),
         *reinterpret_cast<Scaleform::GFx::AS3::Value*>(value), flags,
         static_cast<const Scaleform::GFx::AS3::Value*>(argument), true);   // VM::Construct 0x1424f0750
-    unsigned tag = *value & 0x1f;
-    bool hasValue = !*reinterpret_cast<unsigned char*>(static_cast<char*>(vm) + 0x180) && tag != 0 &&
-        (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(value + 4) != nullptr);
-    *result = hasValue ? 1 : 0;
+    if (!*reinterpret_cast<unsigned char*>(static_cast<char*>(vm) + 0x180))
+    {
+        unsigned tag = *value & 0x1f;
+        if (tag != 0)
+        {
+            bool isNullObject = false;
+            if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void**>(value + 4) == nullptr;
+            if (!isNullObject)
+            {
+                *result = 1;
+                return result;
+            }
+        }
+    }
+    *result = 0;
     return result;
 }
 
@@ -2078,14 +2089,12 @@ void* FUN_140015250(void* array)
 // @0x140014340
 void FUN_140014340(void* object, double* result)
 {
-    void* stream = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
     extern int FUN_140025360(void*);
+    void*& stream = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);   // re-read after the call
+    const unsigned frame = static_cast<unsigned>(FUN_140025360(stream));   // the exe asks for the frame first
     const unsigned duration = *reinterpret_cast<unsigned*>(static_cast<char*>(stream) + 0x58);
-    if (duration)
-        *result = static_cast<double>(static_cast<float>(FUN_140025360(stream)) /
-                                      (static_cast<float>(duration) / 1000.0f));
-    else
-        *result = 0.0;
+    const float seconds = duration ? static_cast<float>(frame) / (static_cast<float>(duration) / 1000.0f) : 0.0f;
+    *result = seconds;
 }
 
 // ---- NetStream natives the AS3 method tables reference (leaf functions, no unwind data) ----------------------------
@@ -3065,10 +3074,13 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
     // the new last entry, at the resized count; the exe returns that count
     auto size = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
     char* item = *reinterpret_cast<char**>(bytes + 0x18) + size * 0x10 - 0x10;
-    *reinterpret_cast<unsigned*>(item) = *source;
-    void* value = *reinterpret_cast<void* const*>(source + 2);
-    if (value) FUN_14257dc30(value);
-    *reinterpret_cast<void**>(item + 8) = value;
+    if (item)   // the exe's placement copy construction of the entry
+    {
+        *reinterpret_cast<unsigned*>(item) = *source;
+        void* value = *reinterpret_cast<void* const*>(source + 2);
+        if (value) FUN_14257dc30(value);
+        *reinterpret_cast<void**>(item + 8) = *reinterpret_cast<void* const*>(source + 2);
+    }
     return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(bytes + 0x20));
 }
 
@@ -3202,20 +3214,21 @@ Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
     destination->Scaleform::Render::TreeNode::NodeData::operator=(
         *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));
     void* incoming = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
-    void* current = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90);
     if (incoming) {
         void* refBase = static_cast<unsigned char*>(incoming) + 0x10;
         auto addRef = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
+    void* current = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90);
     if (current) {
         void* refBase = static_cast<unsigned char*>(current) + 0x10;
         auto release = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
         release(refBase);
     }
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = incoming;
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) =
+        *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) =
         *reinterpret_cast<const float*>(reinterpret_cast<const unsigned char*>(source) + 0x98);
     return destination;
@@ -3228,8 +3241,8 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     const Scaleform::Render::TreeShape::NodeData* source)
 {
     // The exe copy-constructs the base snapshot (0x1424d9220), then stores the TreeShape vftable.
-    new (destination) Scaleform::Render::TreeNode::NodeData(
-        *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));
+    destination->Scaleform::Render::TreeNode::NodeData::NodeData(
+        *static_cast<const Scaleform::Render::TreeNode::NodeData*>(source));   // in place, no null check
     destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
     void* provider = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     if (provider) {
@@ -3238,7 +3251,8 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
+    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) =
+        *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) =
         *reinterpret_cast<const float*>(reinterpret_cast<const unsigned char*>(source) + 0x98);
     return destination;
