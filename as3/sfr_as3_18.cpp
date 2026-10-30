@@ -5358,18 +5358,21 @@ void FUN_14251bc40(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 
 // AvmBitmap::GetTopMostMouseEntity: a visible bitmap with an image is hit when the point (in its parent's space)
 // falls inside the image's rectangle (in twips); the hit is its parent, the interactive object.
-// MS2-FUNCTIONAL free function on the bitmap's display object (AvmBitmap is opaque in the shared header)
+// MS2-FUNCTIONAL free function on the bitmap's display object (AvmBitmap is opaque in the shared header); the exe
+// keeps a /GS cookie for the image rect
 // @0x14250f660
 DisplayObjectBase::TopMostResult FUN_14250f660(DisplayObject* self, const Render::PointF& pt,
                                                DisplayObjectBase::TopMostDescr* pdescr)
 {
-    ImageResource* image = *reinterpret_cast<ImageResource* const*>(reinterpret_cast<const char*>(self) + 0xc0);
-    if (self->GetVisible() && image)
+    if (!self->GetVisible())
+        return DisplayObjectBase::TopMost_FoundNothing;
+    ImageResource* const& pImage = *reinterpret_cast<ImageResource* const*>(reinterpret_cast<const char*>(self) + 0xc0);
+    if (pImage)
     {
-        Render::PointF p;
+        Render::PointF p(Render::PointF::NoInit);
         self->TransformPointToLocal(&p, pt);
-        const Render::ImageRect rect = image->GetImage()->GetRect();
-        const RectF r(0, 0, Render::SizeF(PixelsToTwips((float)rect.Width()), PixelsToTwips((float)rect.Height())));
+        Render::ImageRect rect = pImage->GetImage()->GetRect();
+        RectF r(0, 0, Render::SizeF(PixelsToTwips((float)rect.Width()), PixelsToTwips((float)rect.Height())));
         if (r.Contains(p))
         {
             pdescr->pResult = self->GetParent();
@@ -6003,21 +6006,25 @@ namespace fl { extern const ClassInfo FunctionCI; }
 
 // VMAbcFile::GetFunctionInstanceTraits: the traits of the closures of method method_ind of the script gos, made on
 // first use and cached by the file (+0x98) unless making them threw (the VM's no-function traits then).
-// MS2-FUNCTIONAL free function over a layout view of the file's cache (VMAbcFile keeps it private)
+// MS2-FUNCTIONAL free function over a layout view of the file's cache (VMAbcFile keeps it private); same length,
+// the exe loads the table's size mask before hashing the index
 // @0x14250a250
 InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObjectScript& gos, UInt32 method_ind)
 {
     typedef HashLH<UInt32, SPtr<InstanceTraits::Function>, FixedSizeHash<UInt32>, StatMV_VM_VMAbcFile_Mem> TCache;
     TCache& cache = *reinterpret_cast<TCache*>(reinterpret_cast<UByte*>(file) + 0x98);
-    if (SPtr<InstanceTraits::Function>* p = cache.Get(method_ind))
-        return **p;
-    VM&                        vm  = file->GetVM();
-    InstanceTraits::Function*  itr = SF_HEAP_NEW(vm.GetMemoryHeap())
-        InstanceTraits::Function(*file, fl::FunctionCI, method_ind, &gos);
-    if (vm.IsException())
-        return *vm.NoFunctionTraits;
-    cache.Add(method_ind, Pickable<InstanceTraits::Function>(itr));
-    return *itr;
+    SPtr<InstanceTraits::Function>* p = cache.Get(method_ind);
+    if (p == NULL)
+    {
+        VM&                        vm  = file->GetVM();
+        InstanceTraits::Function*  itr = SF_HEAP_NEW(vm.GetMemoryHeap())
+            InstanceTraits::Function(*file, fl::FunctionCI, method_ind, &gos);
+        if (vm.IsException())
+            return *vm.NoFunctionTraits;
+        cache.Add(method_ind, Pickable<InstanceTraits::Function>(itr));
+        return *itr;
+    }
+    return **p;
 }
 
 
