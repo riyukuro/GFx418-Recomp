@@ -306,25 +306,31 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
 namespace {
 
 
-// MS2-FUNCTIONAL: dispatches one of the six recovered native getters selected by the trait index.
+// MS2-FUNCTIONAL: the exe calls (no tail jump) in case 5, which gives it a frame.
+// visits the object through its ForEachChild slot with the GC op selected by the index (5 = the collector's own op at +0x40).
 // @0x140016c70
-void FUN_140016c70(void* object, void* result, unsigned kind)
+void FUN_140016c70(void* object, void* collector, int op)
 {
-    static const VideoGenericThunk calls[] = {&VideoNative0, &VideoNative1, &VideoNative2,
-                                               &VideoNative3, &VideoNative4, nullptr};
-    if (kind < 5) calls[kind](object, result, nullptr);
-    else if (kind == 5) reinterpret_cast<VideoGenericThunk>(
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(result) + 0x40))(object, result, nullptr);
+#define VIDEO_GC_VISIT(fn) reinterpret_cast<void (*)(void*, void*, void*)>((*reinterpret_cast<void***>(object))[0])(object, collector, (fn))
+    switch (op) {
+    case 0: VIDEO_GC_VISIT(reinterpret_cast<void*>(&VideoNative0)); break;
+    case 1: VIDEO_GC_VISIT(reinterpret_cast<void*>(&VideoNative1)); break;
+    case 2: VIDEO_GC_VISIT(reinterpret_cast<void*>(&VideoNative2)); break;
+    case 4: VIDEO_GC_VISIT(reinterpret_cast<void*>(&VideoNative4)); break;
+    case 3: VIDEO_GC_VISIT(reinterpret_cast<void*>(&VideoNative3)); break;
+    case 5: VIDEO_GC_VISIT(*reinterpret_cast<void**>(static_cast<unsigned char*>(collector) + 0x40)); break;
+    }
+#undef VIDEO_GC_VISIT
 }
 
-// MS2-FUNCTIONAL: invokes the native setter and then marks the trait value as assigned.
+// MS2-FUNCTIONAL: cl15 shape, the second vtable load goes through r11.
+// visits the value with GC op VideoNative3 through vtable slot 0, then calls slot 4 with 1.
 // @0x140016d10
 void FUN_140016d10(void* object, void* value)
 {
-    reinterpret_cast<void(*)(void*, void*, void*)>(*reinterpret_cast<void**>(object))(
+    reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(object))[0])(
         object, value, reinterpret_cast<void*>(&VideoNative3));
-    reinterpret_cast<void(*)(void*, int)>(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20))(
-        object, 1);
+    reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(object))[4])(object, 1);
 }
 
 // MS2-FUNCTIONAL: constructs the recovered three-field AS3 value, retaining its managed payload.
