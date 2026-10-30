@@ -1,8 +1,12 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Video, the AS2 side: the video sound
 // stream helpers, then NetStream (script object, prototype methods, constructor) with its media provider, and the AS2
 // Video object. Our own source, written from the exe; the leaked SDK copies were only used to name things.
-// The Video add-on lib was prebuilt with VS2012 (Rich 0xce build 65501), so with our toolset its code is functional.
+// The Video add-on lib was prebuilt with VS2012 Update 4 (Rich 0xce build 65501), and so is this unit (MS2-TOOLSET:
+// vc11, cmake/ms2-unit-profiles.cmake): no alias `using` (so ExeDecl is a struct), explicit conversion operators or
+// variadic templates, and no hook/ms2hook.h (its hook registrations are in sfr_video_hooks.cpp). clang-cl compiles it
+// as before.
 // MS2-UNIT: sfr_video_01
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140002930-0x14000e470 .text$mn
 #include "../include/video/video_as2netstream.h"
@@ -12,43 +16,42 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_objectproto.h"
 #include "../include/gfx/gfx_loaderimpl.h"
-#include "hook/ms2hook.h"
 
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
-template <class T> using ExeDecl = T;
+template <class T> struct ExeDecl { typedef T type; };
 
-extern ExeDecl<void*> DAT_1431b59f0;
+extern ExeDecl<void*>::type DAT_1431b59f0;
 #define VideoProtoGCVtable DAT_1431b59f0
-extern ExeDecl<void*> DAT_1431b5940;
+extern ExeDecl<void*>::type DAT_1431b5940;
 #define VideoProtoInterfaceVtable DAT_1431b5940
-extern ExeDecl<void*> DAT_1431b5938;
+extern ExeDecl<void*>::type DAT_1431b5938;
 #define VideoProtoBaseVtable DAT_1431b5938
-extern ExeDecl<void*> DAT_1431b4be0;
+extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
-extern ExeDecl<void*> DAT_1431b4b80;
+extern ExeDecl<void*>::type DAT_1431b4b80;
 #define VideoSoundVtable DAT_1431b4b80
-extern ExeDecl<void*> DAT_1431b4ce0;
+extern ExeDecl<void*>::type DAT_1431b4ce0;
 #define VideoSoundChannelSystemVtable DAT_1431b4ce0
-extern ExeDecl<void*> DAT_1431b5cb0;
+extern ExeDecl<void*>::type DAT_1431b5cb0;
 #define AvmVideoCharacterVtable DAT_1431b5cb0
-extern ExeDecl<void*> DAT_1431b5c00;
+extern ExeDecl<void*>::type DAT_1431b5c00;
 #define AvmVideoCharacterInterfaceVtable DAT_1431b5c00
-extern ExeDecl<void*> DAT_1431b5b40;
+extern ExeDecl<void*>::type DAT_1431b5b40;
 #define AvmVideoCharacterBaseVtable DAT_1431b5b40
-extern ExeDecl<void*> DAT_1431b5480;
+extern ExeDecl<void*>::type DAT_1431b5480;
 #define NetStreamProtoVtable DAT_1431b5480
-extern ExeDecl<void*> DAT_1431b54d0;
+extern ExeDecl<void*>::type DAT_1431b54d0;
 #define NetStreamProtoInterfaceVtable DAT_1431b54d0
-extern ExeDecl<void*> DAT_1431b5478;
+extern ExeDecl<void*>::type DAT_1431b5478;
 #define NetStreamProtoBaseVtable DAT_1431b5478
-extern ExeDecl<void*> DAT_1431b53c0;
+extern ExeDecl<void*>::type DAT_1431b53c0;
 #define NetStreamPrototypeVtable DAT_1431b53c0
-extern ExeDecl<void*> DAT_1431b5310;
+extern ExeDecl<void*>::type DAT_1431b5310;
 #define NetStreamPrototypeInterfaceVtable DAT_1431b5310
-extern ExeDecl<void*> DAT_1431b5300;
+extern ExeDecl<void*>::type DAT_1431b5300;
 #define NetStreamPrototypeBaseVtable DAT_1431b5300
-extern ExeDecl<Scaleform::GFx::AS2::NameFunction> DAT_1431b4d80;
+extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80;
 #define NetStreamCloseFunctionTable DAT_1431b4d80
 
 extern void FUN_14257dcb0(void*);
@@ -218,7 +221,6 @@ void FUN_140002ab0(void* stream)
     *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
     FUN_14257db50(stream);
 }
-MS2_REPLACE(0x140002AB0, FUN_140002ab0, 68, 0x22F2F390);
 
 // MS2-FUNCTIONAL: initializes the refcounted stream and allocates its SoundChannelSystem back-reference.
 // @0x140002e80
@@ -242,7 +244,6 @@ void* FUN_140002e80(void* stream)
     *channelSlot = channel;
     return stream;
 }
-MS2_REPLACE(0x140002E80, FUN_140002e80, 140, 0x5B0FC81D);
 
 // MS2-FUNCTIONAL: stores the ready flag and forwards the state update to the active player.
 // @0x140003580
@@ -605,10 +606,8 @@ Scaleform::GFx::URLBuilder::LocationInfo* FUN_140004290(
     Scaleform::GFx::URLBuilder::LocationInfo* location, Scaleform::GFx::URLBuilder::FileUse use,
     const Scaleform::String& filename, const Scaleform::String& parentPath)
 {
-    location->Use = use;
-    new (&location->FileName) Scaleform::String(filename);
-    new (&location->ParentPath) Scaleform::String(parentPath);
-    return location;
+    __assume(location != 0);   // cl 17.00 null-checks a placement new; the exe's (the inline constructor) has none
+    return new (location) Scaleform::GFx::URLBuilder::LocationInfo(use, filename, parentPath);
 }
 
 // MS2-FUNCTIONAL: destroys a character handle and frees its allocation when requested.
@@ -683,7 +682,7 @@ void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
         array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(heapVtable[11])(
             DAT_143b15f60, data, capacity * sizeof(void*));
     } else {
-        alignas(8) unsigned flags[2] = { 2, 0 };
+        __declspec(align(8)) unsigned flags[2] = { 2, 0 };
         array[0] = reinterpret_cast<void* (*)(void*, void*, size_t, const void*)>(heapVtable[14])(
             DAT_143b15f60, heapOwner, capacity * sizeof(void*), flags);
     }
@@ -1751,7 +1750,6 @@ void FUN_14000b080(void** table)
 // MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
 // @0x14000b120
 void FUN_14000b120(void** table) { FUN_14000b080(table); }
-MS2_REPLACE(0x14000B120, FUN_14000b120, 151, 0x2FA9FB59);
 
 // MS2-FUNCTIONAL: allocates a power-of-two table, rehashes live key/value entries, and releases the old table.
 // @0x14000b3b0
@@ -1785,7 +1783,6 @@ void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt req
     }
     *slot = fresh;
 }
-MS2_REPLACE(0x14000B3B0, FUN_14000b3b0, 373, 0x43C35EF0);
 
 // MS2-FUNCTIONAL: inserts a 32-bit key and retained AS2 object into its chained hash bucket.
 // @0x14000b6e0
@@ -1794,7 +1791,6 @@ void FUN_14000b6e0(Scaleform::UPInt* tableRef, void* owner, const unsigned* keyV
 {
     InsertVideoHashEntry(tableRef, owner, keyValue, hash, CopyVideoHashValue);
 }
-MS2_REPLACE(0x14000B6E0, FUN_14000b6e0, 519, 0xCD214316);
 
 // MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record.
 // @0x14000b9e0
@@ -1802,7 +1798,6 @@ void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scalefo
 {
     InsertVideoHashEntry(tableRef, owner, pair, hash, CopyVideoHashPair);
 }
-MS2_REPLACE(0x14000B9E0, FUN_14000b9e0, 519, 0x13C8EE9C);
 
 // MS2-FUNCTIONAL: hashes a 32-bit track key and inserts its value into the keyed table.
 // @0x14000c220
@@ -1908,7 +1903,6 @@ void FUN_14000bbf0(void** array)
     if (*array) FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
-MS2_REPLACE(0x14000BBF0, FUN_14000bbf0, 48, 0x2BDC02A7);
 
 // MS2-FUNCTIONAL: destroys the NetStream provider and optionally frees its allocation.
 // @0x14000cbd0
@@ -1918,7 +1912,6 @@ void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsig
     if (flags & 1) Scaleform::Memory::Free(provider);
     return provider;
 }
-MS2_REPLACE(0x14000CBD0, FUN_14000cbd0, 55, 0xF2F45D2B);
 
 // MS2-FUNCTIONAL: destroys the NetStream constructor function and optionally releases its allocation.
 // @0x14000cee0
@@ -1929,7 +1922,6 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
-MS2_REPLACE(0x14000CEE0, FUN_14000cee0, 55, 0xD65AF946);
 
 // MS2-FUNCTIONAL: resizes storage for 48-byte video-track records with four-slot rounding.
 // @0x14000b940
@@ -2127,7 +2119,6 @@ Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
         ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef();
     return result;
 }
-MS2_REPLACE(0x140007FF0, FUN_140007ff0, 126, 0x9AAB9CE7);
 
 // MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
 // @0x14000d570
@@ -2205,9 +2196,9 @@ struct VideoObjectGcAccess : Scaleform::GFx::AS2::Object
 class VideoGcPassAccess : public Scaleform::GFx::AS2::ASRefCountBaseType
 {
 public:
-    using Release = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
-    using Mark = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
-    using Scan = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor Release;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor Mark;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor Scan;
 };
 
 template<class Functor>
@@ -3771,7 +3762,7 @@ VideoObject::VideoObject(Environment* penv)
 Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
 {
-    using VideoPrototypeLayout = Prototype<VideoObject>;
+    typedef Prototype<VideoObject> VideoPrototypeLayout;
     ::new (static_cast<void*>(object)) VideoPrototypeLayout(context, prototype, constructor);
     auto* bytes = reinterpret_cast<unsigned char*>(object);
     *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;
@@ -3779,7 +3770,6 @@ Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototyp
     *reinterpret_cast<void***>(bytes + 0x70) = &VideoProtoBaseVtable;
     return object;
 }
-MS2_REPLACE(0x14000E1E0, FUN_14000e1e0, 196, 0x4DBA2484);
 
 // MS2-FUNCTIONAL: lazily allocates and caches the script VideoObject for its display character.
 // @0x14000e020
@@ -3875,7 +3865,6 @@ Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototyp
     *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
     return object;
 }
-MS2_REPLACE(0x140009E20, FUN_140009e20, 129, 0x4DD78CE3);
 
 // MS2-FUNCTIONAL: adds the public close method and installs the NetStreamProto virtual tables.
 // @0x14000ae30
@@ -3891,7 +3880,6 @@ Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototyp
     access->InitFunctionMembers(object, context, &NetStreamCloseFunctionTable, PropFlags(1));
     return object;
 }
-MS2_REPLACE(0x14000AE30, FUN_14000ae30, 106, 0xED9D13A6);
 
 // MS2-FUNCTIONAL: creates the NetStream constructor/prototype pair, registers the prototype and publishes the class.
 // @0x14000cf20
@@ -3923,7 +3911,6 @@ FunctionRef FUN_14000cf20(GlobalContext* global)
                                   PropFlags(3));
     return constructor;
 }
-MS2_REPLACE(0x14000CF20, FUN_14000cf20, 797, 0x7DC142D2);
 
 }}} // namespace Scaleform::GFx::AS2
 
