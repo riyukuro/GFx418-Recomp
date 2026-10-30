@@ -122,6 +122,9 @@ public:
     const char* ToCStr() const  { return GetData()->Data; }
     UPInt       GetSize() const { return GetData()->GetSize(); }
     bool        IsEmpty() const { return GetSize() == 0; }
+    // (appended, sfh) SDK SF_String.h
+    const char& operator[](int index) const   { return GetData()->Data[index]; }
+    const char& operator[](UPInt index) const { return GetData()->Data[index]; }
 
     bool operator==(const char* str) const { return strcmp(ToCStr(), str) == 0; }
     bool operator!=(const char* str) const { return !operator==(str); }

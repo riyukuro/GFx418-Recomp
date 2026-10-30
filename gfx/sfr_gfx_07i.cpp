@@ -760,18 +760,30 @@ struct AmpCallstack
     AmpCallInfo& Back() { return Data[Size - 1]; }
 };
 
-// ViewStats::RefreshActiveLine: copies the top call's file and line under ActiveLock (+0x78).
-static inline void RawPublishTopScope(char* self)
+// The ViewStats fields the call-stack code touches.
+struct AmpViewStatsView
 {
-    AmpCallstack& callstack = RawField<AmpCallstack>(self, 0x30);
-    if (!callstack.IsEmpty())
+    char Pad0[0x30];
+    AmpCallstack Callstack;            // +0x30
+    char Pad48[0x20];
+    U ActiveFileId;                    // +0x68
+    UInt32 ActiveLineNumber;           // +0x70
+    CRITICAL_SECTION ActiveLock;       // +0x78
+
+    // ViewStats::RefreshActiveLine: copies the top call's file and line under ActiveLock.
+    void RefreshActiveLine()
     {
-        AmpCallInfo& back = callstack.Back();
-        RawLocker lock(self + 0x78);
-        RawField<U>(self, 0x68) = back.FileId;
-        RawField<UInt32>(self, 0x70) = back.LineNumber;
+        if (!Callstack.IsEmpty())
+        {
+            AmpCallInfo& back = Callstack.Back();
+            RawLocker lock((char*)&ActiveLock);
+            ActiveFileId = back.FileId;
+            ActiveLineNumber = back.LineNumber;
+        }
     }
-}
+};
+
+static inline void RawPublishTopScope(char* self) { ((AmpViewStatsView*)self)->RefreshActiveLine(); }
 
 // Pushes a new scope {id, arg} onto the scope stack.
 static inline void RawPushScope(char* self, U id, U arg)
@@ -793,18 +805,16 @@ static inline void RawPushScope(char* self, U id, U arg)
     FUN_14257dcb0(o);
 }
 
-// MS2-FUNCTIONAL 0x142622c90: same pop; the exe tests Callstack.Size in memory and loads it again for Back() (110 bytes against 112)
 // @0x142622c90
 void FUN_142622c90(char* self, U arg)
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    AmpCallstack& callstack = RawField<AmpCallstack>(self, 0x30);
-    if (!callstack.IsEmpty())
+    RawLocker locker(self + 0xe0);
+    AmpViewStatsView* vs = (AmpViewStatsView*)self;
+    if (!vs->Callstack.IsEmpty())
     {
-        U functionId = RawField<U>(callstack.Back().FunctionInfo, 0x10);
+        U functionId = RawField<U>(vs->Callstack.Back().FunctionInfo, 0x10);
         FUN_142623050(self, (int)(functionId >> 32), (int)functionId, arg);
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
 // Opens a named scope: interns the name (assigning the next id) and pushes it.
@@ -1009,7 +1019,6 @@ void FUN_142623560(char* self, U delta)
     *(U*)((char*)*set + 0x30 + idx * 0x28) += delta;
 }
 
-// MS2-FUNCTIONAL 0x1426237c0: same copy under ActiveLock; Callstack.Size is tested in memory as in 0x142622c90 (90 bytes against 92)
 // @0x1426237c0
 void FUN_1426237c0(char* self) { RawPublishTopScope(self); }
 

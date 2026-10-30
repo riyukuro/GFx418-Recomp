@@ -6,18 +6,18 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142624020-0x142625920 .text$mn
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
-// MS2-FUNCTIONAL 0x142624020: same Array resize (release the dropped counted pointers, shrink/grow the buffer, store the size); register allocation and frame differ
-// MS2-FUNCTIONAL 0x1426240f0: same Array resize (release the dropped counted pointers, shrink/grow the buffer, store the size); register allocation and frame differ
 // MS2-FUNCTIONAL 0x142624840: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x142624af0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x142624d70: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624190: same Set (find, assign or add) of a raw hash instance; helper inlining differs, so the frame differs
-// MS2-FUNCTIONAL 0x142624300: same Set (find, assign or add) of a raw hash instance; helper inlining differs, so the frame differs
+// MS2-FUNCTIONAL 0x142624190: same HashSetBase::Set (one FixedSizeHash, findIndexCore, assign or add); the exe keeps the self and value pointers in rbx/rdi and tail-jumps the found assign (12-14 bytes longer)
+// MS2-FUNCTIONAL 0x142624300: same HashSetBase::Set (one FixedSizeHash, findIndexCore, assign or add); the exe keeps the self and value pointers in rbx/rdi and tail-jumps the found assign (12-14 bytes longer)
 
+#define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
+#include "../include/kernel/sf_hash.h"
 
 #include <new>
 #include <string.h>
@@ -47,146 +47,244 @@ U FUN_14261fd80(void*, const unsigned char*);
 void FUN_1426207e0(U*);
 void FUN_142620840(U*);
 
-// Array of 0x18-byte records whose first word is a counted pointer.
+// One 0x18-byte record whose first word is a counted pointer (ViewStats::CallInfo).
+struct AmpPtrRecord
+{
+    void* pObject;
+    U Pad[2];
+    ~AmpPtrRecord() { if (pObject) FUN_14257dcb0(pObject); }
+};
+
+// A counted pointer element.
+struct AmpPtrElem
+{
+    void* pObject;
+    ~AmpPtrElem() { if (pObject) FUN_14257dcb0(pObject); }
+};
+
+// ArrayDataBase::ResizeNoConstruct over {Data, Size, Capacity}.
+template<class T>
+static __forceinline void RawResizeNoConstruct(U* array, void* pheapAddr, U newSize, void (*reserve)(U*, void*, U))
+{
+    U oldSize = array[1];
+
+    if (newSize < oldSize)
+    {
+        T* p = (T*)array[0] + newSize;
+        UPInt count = oldSize - newSize;
+        p += count - 1;
+        for (UPInt i = 0; i < count; ++i, --p)
+            p->~T();
+        if (newSize < (array[2] >> 1))
+        {
+            reserve(array, pheapAddr, newSize);
+        }
+    }
+    else if (newSize >= array[2])
+    {
+        reserve(array, pheapAddr, newSize + (newSize >> 2));
+    }
+    array[1] = newSize;
+}
+
+// Array<CallInfo>::ResizeNoConstruct.
 // @0x142624020
 void FUN_142624020(U* array, void* owner, U n)
 {
-    U size = array[1];
-    if (n < size)
-    {
-        void** p = (void**)((char*)array[0] + (size * 3 - 3) * 8);
-        for (U k = size - n; k != 0; k--)
-        {
-            if (*p)
-                FUN_14257dcb0(*p);
-            p -= 3;
-        }
-        if (n < (array[2] >> 1))
-            FUN_142623b10(array, owner, n);
-        array[1] = n;
-        return;
-    }
-    if (n < array[2])
-    {
-        array[1] = n;
-        return;
-    }
-    FUN_142623b10(array, owner, (n >> 2) + n);
-    array[1] = n;
+    RawResizeNoConstruct<AmpPtrRecord>(array, owner, n, FUN_142623b10);
 }
 
-// Array of counted pointers.
+// Array<Ptr>::ResizeNoConstruct.
 // @0x1426240f0
 void FUN_1426240f0(U* array, void* owner, U n)
 {
-    U size = array[1];
-    U want;
-    if (n < size)
-    {
-        void** p = (void**)array[0] + (size - 1);
-        for (U k = size - n; k != 0; k--)
-        {
-            if (*p)
-                FUN_14257dcb0(*p);
-            p--;
-        }
-        want = n;
-        if ((array[2] >> 1) <= n)
-        {
-            array[1] = n;
-            return;
-        }
-    }
-    else
-    {
-        if (n < array[2])
-        {
-            array[1] = n;
-            return;
-        }
-        want = (n >> 2) + n;
-    }
-    FUN_142623ee0(array, owner, want);
-    array[1] = n;
+    RawResizeNoConstruct<AmpPtrElem>(array, owner, n, FUN_142623ee0);
 }
 
+// HashSetBase::findIndexCore over an eight-byte key cached-hash set (link +0, hash +8, key +0x10).
+static __forceinline SPInt RawFindIndexCore8(U* table, const U* key, U hashValue, U stride)
+{
+    UPInt index = hashValue;
+    const char* e = RawEntry(table, index, stride);
+
+    // If empty or occupied by a collider, not found.
+    if (*(const SPInt*)e == -2 || *(const U*)(e + 8) != index)
+        return -1;
+
+    while (1)
+    {
+        if (*(const U*)(e + 8) == hashValue && RawField<U>(e, 0x10) == *key)
+        {
+            // Found it.
+            return index;
+        }
+
+        // Keep looking through the chain.
+        index = *(const U*)e;
+        if (index == (UPInt)-1)
+            break; // end of chain
+
+        e = RawEntry(table, index, stride);
+    }
+    return -1;
+}
+
+// HashNode<UInt64, Ptr<...>>: operator=(NodeRef) copies the key, then the Ptr (AddRef new, Release old).
+struct AmpPtrNode
+{
+    U First;
+    void* Second;
+    void operator=(const NodeRef& src)
+    {
+        First = *src.Key;
+        if (*src.Value)
+            FUN_14257dc30(*src.Value);
+        if (Second)
+            FUN_14257dcb0(Second);
+        Second = *src.Value;
+    }
+};
+
+// HashNode<UInt64, String>.
+struct AmpStringNode
+{
+    U First;
+    String Second;
+    void operator=(const KeyStringOps::Ref& src)
+    {
+        First = *src.Key;
+        Second = *src.Value;
+    }
+};
+
+// HashSetBase::Set(pmemAddr, NodeRef) for a Hash<UInt64, Ptr<...>>.
 // @0x142624190
 void FUN_142624190(U** self, const U* key, void* const* value)
 {
-    U hash = RawKey8Hash(*key);
     NodeRef ref = { key, value };
-    SPInt idx = RawFindKey8(*self, *key, 0x20);
-    if (idx >= 0)
+    UPInt hashValue = FixedSizeHash<U>()(*ref.Key);
+    SPInt index = (SPInt)-1;
+
+    if (*self != NULL)
+        index = RawFindIndexCore8(*self, ref.Key, hashValue & (*self)[1], 0x20);
+
+    if (index >= 0)
     {
-        char* e = RawEntry(*self, (U)idx, 0x20);
-        RawField<U>(e, 0x10) = *key;
-        if (*value)
-            FUN_14257dc30(*value);
-        if (RawField<void*>(e, 0x18))
-            FUN_14257dcb0(RawField<void*>(e, 0x18));
-        RawField<void*>(e, 0x18) = *value;
-        return;
+        RawField<AmpPtrNode>(RawEntry(*self, (U)index, 0x20), 0x10) = ref;
     }
-    FUN_14261ee70(self, self, &ref, hash);
+    else
+    {
+        // Entry under key doesn't exist.
+        FUN_14261ee70(self, self, &ref, hashValue);
+    }
 }
 
+// HashSetBase::Set(pmemAddr, NodeRef) for a Hash<UInt64, String>.
 // @0x142624300
 void FUN_142624300(U** self, const U* key, const String* value)
 {
-    U hash = RawKey8Hash(*key);
     KeyStringOps::Ref ref = { key, value };
-    SPInt idx = RawFindKey8(*self, *key, 0x20);
-    if (idx >= 0)
+    UPInt hashValue = FixedSizeHash<U>()(*ref.Key);
+    SPInt index = (SPInt)-1;
+
+    if (*self != NULL)
+        index = RawFindIndexCore8(*self, ref.Key, hashValue & (*self)[1], 0x20);
+
+    if (index >= 0)
     {
-        char* e = RawEntry(*self, (U)idx, 0x20);
-        RawField<U>(e, 0x10) = *key;
-        RawField<String>(e, 0x18) = *value;
-        return;
+        RawField<AmpStringNode>(RawEntry(*self, (U)index, 0x20), 0x10) = ref;
     }
-    FUN_14261f070(self, self, &ref, hash);
+    else
+    {
+        // Entry under key doesn't exist.
+        FUN_14261f070(self, self, &ref, hashValue);
+    }
 }
 
-// Mirrors the top scope's (record, count) pair into the locked statistics fields.
-static inline void RawPublishTop(char* self)
+// ViewStats::CallInfo, one 0x18 entry of the call stack at +0x30.
+struct AmpCallInfo
 {
-    if (RawField<U>(self, 0x38) == 0)
-        return;
-    char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-    RawField<U>(self, 0x68) = *(U*)(slot - 0x10);
-    RawField<int>(self, 0x70) = *(int*)(slot - 8);
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
+    void* FunctionInfo;
+    U FileId;
+    UInt32 LineNumber;
+};
+
+// ArrayLH<CallInfo>: Data, Size, Policy.
+struct AmpCallstack
+{
+    AmpCallInfo* Data;
+    U Size;
+    U Policy;
+    bool IsEmpty() const { return Size == 0; }
+    AmpCallInfo& Back() { return Data[Size - 1]; }
+};
+
+// ViewStats::RefreshActiveLine: copies the top call's file and line under ActiveLock (+0x78).
+static inline void RawRefreshActiveLine(char* self)
+{
+    AmpCallstack& callstack = RawField<AmpCallstack>(self, 0x30);
+    if (!callstack.IsEmpty())
+    {
+        AmpCallInfo& back = callstack.Back();
+        RawLocker lock(self + 0x78);
+        RawField<U>(self, 0x68) = back.FileId;
+        RawField<UInt32>(self, 0x70) = back.LineNumber;
+    }
 }
 
+// The ViewStats fields these setters touch.
+struct AmpViewStatsView
+{
+    char Pad0[0x30];
+    AmpCallstack Callstack;            // +0x30
+    char Pad48[0x20];
+    U ActiveFileId;                    // +0x68
+    UInt32 ActiveLineNumber;           // +0x70
+    CRITICAL_SECTION ActiveLock;       // +0x78
+
+    void RefreshActiveLine()
+    {
+        if (!Callstack.IsEmpty())
+        {
+            AmpCallInfo& back = Callstack.Back();
+            RawLocker lock((char*)&ActiveLock);
+            ActiveFileId = back.FileId;
+            ActiveLineNumber = back.LineNumber;
+        }
+    }
+};
+
+// ViewStats::SetActiveFile.
 // @0x142624450
-void FUN_142624450(char* self, U v)
+void FUN_142624450(char* self, U fileId)
 {
-    if (RawField<U>(self, 0x38) != 0)
+    AmpViewStatsView* vs = (AmpViewStatsView*)self;
+    if (!vs->Callstack.IsEmpty())
     {
-        *(U*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x10) = v;
-        RawPublishTop(self);
+        vs->Callstack.Back().FileId = fileId;
+        vs->RefreshActiveLine();
     }
     else
     {
-        EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        RawField<U>(self, 0x68) = v;
-        LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
+        RawLocker lock((char*)&vs->ActiveLock);
+        vs->ActiveFileId = fileId;
     }
 }
 
+// ViewStats::SetActiveLine.
 // @0x1426244e0
-void FUN_1426244e0(char* self, int v)
+void FUN_1426244e0(char* self, int lineNumber)
 {
-    if (RawField<U>(self, 0x38) != 0)
+    AmpViewStatsView* vs = (AmpViewStatsView*)self;
+    if (!vs->Callstack.IsEmpty())
     {
-        *(int*)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 8) = v;
-        RawPublishTop(self);
+        vs->Callstack.Back().LineNumber = lineNumber;
+        vs->RefreshActiveLine();
     }
     else
     {
-        EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        RawField<int>(self, 0x70) = v;
-        LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
+        RawLocker lock((char*)&vs->ActiveLock);
+        vs->ActiveLineNumber = lineNumber;
     }
 }
 
@@ -216,20 +314,22 @@ void FUN_1426245c0(char* self, void** obj)
     }
 }
 
-// Stores the movie path, reduced to the part after the last path separator.
+// ViewStats::SetName: stores the movie path, reduced to the part after the last path separator.
 // @0x142624660
-void FUN_142624660(char* self, const char* path)
+void FUN_142624660(char* self, const char* name)
 {
-    String* s = RawFieldPtr<String>(self, 0x110);
-    *s = path;
-    UPInt len = s->GetLength();
-    for (UPInt k = 0; k < len; k++)
+    String& viewName = RawField<String>(self, 0x110);
+    viewName = name;
+
+    // Remove the path, if any
+    UPInt nameLength = viewName.GetLength();
+    for (UPInt i = 0; i < nameLength; ++i)
     {
-        char c = s->ToCStr()[len - k - 1];
-        if (c == '/' || c == '\\')
+        UPInt index = nameLength - i - 1;
+        if (viewName[index] == '/' || viewName[index] == '\\')
         {
-            *s = s->Substring(len - k, len);
-            return;
+            viewName = viewName.Substring(index + 1, nameLength);
+            break;
         }
     }
 }
