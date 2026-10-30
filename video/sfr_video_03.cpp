@@ -2013,6 +2013,13 @@ void FUN_140018930(void* callback, const std::uint32_t* eventData)
         Scaleform::GFx::AS3::Value value(type);
         eventObject->AddDynamicSlotValuePair(key, value);
     }
+    {
+        // The exe always adds "parameters" as an empty string; a non-empty cue point then replaces it with an object.
+        Scaleform::GFx::ASString empty(manager->GetEmptyStringNode());
+        Scaleform::GFx::ASString key(manager->CreateStringNode("parameters"));
+        Scaleform::GFx::AS3::Value value(empty);
+        eventObject->AddDynamicSlotValuePair(key, value);
+    }
     const auto count = *reinterpret_cast<const std::uint64_t*>(eventData + 8);
     if (count) {
         FUN_142516600(vm, &parametersAtom);
