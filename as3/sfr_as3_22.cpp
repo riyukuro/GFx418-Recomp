@@ -105,7 +105,6 @@ extern ExeDecl<void*> DAT_1431921c0;
 #define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
-extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
 extern "C" void* FUN_142689640(void*, bool);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
@@ -124,7 +123,6 @@ static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
     for (unsigned i = 0; i < 4; ++i)
         row[3 + i] = payload[i];
 }
-namespace Scaleform { static std::uint64_t HashImageKey(const unsigned char* key); }
 
 
 namespace Scaleform {
@@ -1549,15 +1547,6 @@ int FuncTreeItem::GetNumItems()
 }
 }}
 
-static std::uint64_t HashImageKey(const unsigned char* key)
-{
-    return (((static_cast<std::uint64_t>(key[3]) * 0x1003full + key[2]) * 0x1003full + key[1]) * 0x1003full +
-            static_cast<std::uint64_t>(key[4]) * 0xfc5d1543ec5f01ull +
-            static_cast<std::uint64_t>(key[5]) * 0x9b302c28162c613full +
-            static_cast<std::uint64_t>(key[7]) * 0xd7c3e496a311b1bfull +
-            static_cast<std::uint64_t>(key[6]) * 0x5d02f409d62aee81ull -
-            0x514d9afbc3e934fbull + key[0]);
-}
 
 // @0x142687eb0
 GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator+=(const ProfileFrame& rhs)
@@ -1691,46 +1680,26 @@ GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator+=(const ProfileFrame& r
 }
 
 
-// MS2-FUNCTIONAL: resolves both cached labels and formats every timing record into the executable's temporary String sink.
 // @0x14268a040
-void FUN_14268a040(void* source)
+void GFx::AMP::MovieFunctionStats::DebugPrint() const
 {
-    auto* bytes = static_cast<unsigned char*>(source);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    const auto* records = *reinterpret_cast<const unsigned char**>(bytes + 0x10);
-    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
-    for (std::size_t i = 0; i < count; ++i) {
-        const auto* record = records + i * 0x20;
-        Scaleform::String first, second, output;
-        if (table) {
-            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
-            for (unsigned keyIndex = 0; keyIndex != 2; ++keyIndex) {
-                const auto* key = record + keyIndex * 8;
-                const std::uint64_t value = *reinterpret_cast<const std::uint64_t*>(key);
-                const std::uint64_t bucket = HashImageKey(key) & mask;
-                auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
-                if (static_cast<std::int64_t>(row[0]) == -2 || row[1] != bucket)
-                    continue;
-                for (;;) {
-                    if (row[1] == bucket && row[2] == value) {
-                        (keyIndex ? second : first) = *reinterpret_cast<const Scaleform::String*>(row + 3);
-                        break;
-                    }
-                    if (row[0] == UINT64_MAX)
-                        break;
-                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + row[0] * 0x20);
-                }
-            }
+    for (UPInt i = 0; i < FunctionTimings.GetSize(); ++i)
+    {
+        String entry;
+        String name;
+        FunctionDescMap::ConstIterator descIt;
+        descIt = FunctionInfo.Find(FunctionTimings[i].FunctionId);
+        if (descIt != FunctionInfo.End())
+        {
+            name = descIt->Second->Name;
         }
-        Scaleform::MsgFormat format{Scaleform::MsgFormat::Sink(output)};
-        format.Parse("{0} ({1}) from {2} ({3}): {4} times\n");
-        format.FormatD1(first.ToCStr());
-        // The two keys are formatted as numbers (0x14268a341/0x14268a35e call FormatD1<UInt64> 0x142685ff0).
-        format.FormatD1(*reinterpret_cast<const Scaleform::UInt64*>(record));
-        format.FormatD1(second.ToCStr());
-        format.FormatD1(*reinterpret_cast<const Scaleform::UInt64*>(record + 8));
-        format.FormatD1(*reinterpret_cast<const unsigned long*>(record + 0x10));
-        format.FinishFormatD();
+        String parentName;
+        descIt = FunctionInfo.Find(FunctionTimings[i].CallerId);
+        if (descIt != FunctionInfo.End())
+        {
+            parentName = descIt->Second->Name;
+        }
+        Scaleform::Format(entry, "{0} ({1}) from {2} ({3}): {4} times\n", name.ToCStr(), FunctionTimings[i].FunctionId, parentName.ToCStr(), FunctionTimings[i].CallerId, FunctionTimings[i].TimesCalled);
     }
 }
 
@@ -1854,66 +1823,6 @@ void GFx::AMP::MovieInstructionStats::Merge(const MovieInstructionStats& other)
     }
 }
 
-static void AddMovieViewHashEntry(void** setObject, void* allocator, std::uint64_t key, void* value)
-{
-    auto* table = static_cast<std::uint64_t*>(*setObject);
-    std::uint64_t capacity = 8;
-    if (table) {
-        if (table[0] * 5 > table[1] * 4 + 4)
-            capacity = table[1] * 2 + 2;
-        else
-            capacity = 0;
-    }
-    if (capacity)
-        FUN_1426251d0(setObject, allocator, static_cast<std::int64_t>(capacity));
-    table = static_cast<std::uint64_t*>(*setObject);
-    const std::uint64_t bucket = HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & table[1];
-    auto* home = table + 2 + bucket * 4;
-    if (static_cast<std::int64_t>(home[0]) != -2) {
-        std::uint64_t index = bucket;
-        auto* entry = home;
-        while (entry[1] == bucket) {
-            if (entry[2] == key) {
-                if (value) FUN_14257dc30(value);
-                if (entry[3]) FUN_14257dcb0(reinterpret_cast<void*>(entry[3]));
-                entry[3] = reinterpret_cast<std::uint64_t>(value);
-                return;
-            }
-            if (entry[0] == UINT64_MAX)
-                break;
-            index = entry[0];
-            entry = table + 2 + index * 4;
-        }
-        std::uint64_t empty = bucket;
-        do {
-            empty = (empty + 1) & table[1];
-        } while (static_cast<std::int64_t>(table[2 + empty * 4]) != -2);
-        ++table[0];
-        auto* target = table + 2 + empty * 4;
-        if (home[1] == bucket) {
-            target[0] = home[0]; target[1] = bucket; target[2] = home[2]; target[3] = home[3];
-            home[0] = empty;
-        } else {
-            std::uint64_t previousIndex = home[1];
-            auto* previous = table + 2 + previousIndex * 4;
-            while (previous[0] != bucket) {
-                previousIndex = previous[0];
-                previous = table + 2 + previousIndex * 4;
-            }
-            target[0] = home[0]; target[1] = home[1]; target[2] = home[2]; target[3] = home[3];
-            previous[0] = empty;
-            home[0] = UINT64_MAX;
-        }
-        home = target;
-    } else {
-        ++table[0];
-        home[0] = UINT64_MAX;
-        home[1] = bucket;
-    }
-    if (value) FUN_14257dc30(value);
-    home[2] = key;
-    home[3] = reinterpret_cast<std::uint64_t>(value);
-}
 
 
 

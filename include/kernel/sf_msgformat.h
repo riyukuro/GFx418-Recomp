@@ -292,6 +292,21 @@ inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1
     return f.GetStrSize();
 }
 
+template<typename T1, typename T2, typename T3, typename T4, typename T5>
+inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3,
+                    const T4& v4, const T5& v5)
+{
+    MsgFormat f(result);
+    f.Parse(fmt);
+    f.FormatD1(v1);
+    f.FormatD1(v2);
+    f.FormatD1(v3);
+    f.FormatD1(v4);
+    f.FormatD1(v5);
+    f.FinishFormatD();
+    return f.GetStrSize();
+}
+
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
 inline UPInt Format(const MsgFormat::Sink& result, const char* fmt, const T1& v1, const T2& v2, const T3& v3,
                     const T4& v4, const T5& v5, const T6& v6)
