@@ -50,7 +50,7 @@ void FUN_1423d9b40(void*);
     void FUN_1423cde00(void*);
     void FUN_1423cdf60(unsigned long long*);
     __declspec(noinline) unsigned long long FUN_1423daf30(void*, int);
-    void FUN_1423ccdc0(unsigned long long*, String*);
+    void FUN_1423ccdc0(unsigned long long*, String);
     void FUN_1423cc2d0(unsigned long long*);
     void FUN_1423cc570(unsigned long long*);
 } } }
@@ -660,10 +660,10 @@ void FUN_1423d7140(unsigned long long* manager)
     unsigned mode = static_cast<unsigned>(manager[0x11]);
     if (mode == 0x01000000) {
         String unsupported("Not Supported");
-        FUN_1423ccdc0(manager, &unsupported);
+        FUN_1423ccdc0(manager, unsupported);
         mode = static_cast<unsigned>(manager[0x11]);
     }
-    if (mode == 0x03000000) FUN_1423ccdc0(manager, &localeText);
+    if (mode == 0x03000000) FUN_1423ccdc0(manager, localeText);
     else FUN_1423cc2d0(manager);
 }
 
@@ -2220,22 +2220,23 @@ void FUN_1423ccfc0(void*, long long owner, const char* command, const char* valu
     log->LogMessage("'\n");
 }
 
-// MS2-FUNCTIONAL: forwards the selected text to the active movie and applies the executable's state callback.
+// Shows `text` (taken by value, released on return) in the +0x78 status movie: slot 18 (+0x90) then slot 16 (+0x80)
+// with the C string, re-reading the movie in between. Unless the +0x88 mode is 0x1000000 or has a 0xf00000 bit,
+// it then calls its own slot 10 (+0x50) with the +0xd4 value.
 // @0x1423ccdc0
-void FUN_1423ccdc0(unsigned long long* object, String* text)
+void FUN_1423ccdc0(unsigned long long* object, String text)
 {
-    void* movie = reinterpret_cast<void*>(object[0xf]);
-    if (movie) {
-        void** vtable = *reinterpret_cast<void***>(movie);
-        reinterpret_cast<void(*)(void*)>(vtable[0x90 / sizeof(void*)])(movie);
-        reinterpret_cast<void(*)(void*, const char*)>(vtable[0x80 / sizeof(void*)])(movie, text->ToCStr());
-        const unsigned flags = *reinterpret_cast<unsigned*>(object + 0x11);
-        if (flags != 0x1000000 && (flags & 0xf00000) == 0) {
-            void** selfVtable = *reinterpret_cast<void***>(object);
-            reinterpret_cast<void(*)(void*, unsigned)>(selfVtable[0x50 / sizeof(void*)])(
-                object, *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd4));
-        }
-    }
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    if (!*reinterpret_cast<void**>(bytes + 0x78))
+        return;
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(*reinterpret_cast<void**>(bytes + 0x78)))[0x90 / sizeof(void*)])(
+        *reinterpret_cast<void**>(bytes + 0x78));
+    void* movie = *reinterpret_cast<void**>(bytes + 0x78);
+    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(movie))[0x80 / sizeof(void*)])(movie, text.ToCStr());
+    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x88);
+    if (mode != 0x1000000 && (mode & 0xf00000) == 0)
+        reinterpret_cast<void(*)(void*, unsigned)>((*reinterpret_cast<void***>(object))[0x50 / sizeof(void*)])(
+            object, *reinterpret_cast<unsigned*>(bytes + 0xd4));
 }
 
 // MS2-FUNCTIONAL: submits the default unsupported message and the selected language-specific movie text.
@@ -2243,7 +2244,7 @@ void FUN_1423ccdc0(unsigned long long* object, String* text)
 void FUN_1423cc2d0(unsigned long long* object)
 {
     String text("Not Supported");
-    FUN_1423ccdc0(object, &text);
+    FUN_1423ccdc0(object, text);
     const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd0);
     if (!count) return;
     for (unsigned i = 0; i < count; ++i) {
@@ -2254,11 +2255,11 @@ void FUN_1423cc2d0(unsigned long long* object)
             auto* states = reinterpret_cast<unsigned*>(object[50]);
             if (states[i] == 2) {
                 text = *reinterpret_cast<String*>(record + 0x18);
-                FUN_1423ccdc0(object, &text);
+                FUN_1423ccdc0(object, text);
             }
             if (states[i] != 1) return;
             text = *reinterpret_cast<String*>(record + 0x10);
-            FUN_1423ccdc0(object, &text);
+            FUN_1423ccdc0(object, text);
             return;
         }
     }
@@ -2814,12 +2815,12 @@ void FUN_1423d8870(unsigned long long* manager)
     for (unsigned i = 0; i < count; ++i) {
         if (records[i].layoutId == layoutId) {
             String layoutText(records[i].layoutText);
-            FUN_1423ccdc0(manager, &layoutText);
+            FUN_1423ccdc0(manager, layoutText);
             return;
         }
     }
     String localeText(locale);
-    FUN_1423ccdc0(manager, &localeText);
+    FUN_1423ccdc0(manager, localeText);
 }
 
 // MS2-FUNCTIONAL: resolves the configured language string, activates its executable HKL, and reports activation failure.
@@ -5574,13 +5575,13 @@ void FUN_1423cbe90(long long* manager, unsigned language)
         for (unsigned i = 0; i < count; ++i) {
             if (records[i].layoutId == (language >> 16)) {
                 String layoutText(records[i].layoutText);
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &layoutText);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), layoutText);
                 FUN_1423cb660(manager);
                 return;
             }
         }
         String localeText(locale);
-        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &localeText);
+        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), localeText);
     } else {
         const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0xd0);
         for (unsigned i = 0; i < count; ++i) {
@@ -5589,12 +5590,12 @@ void FUN_1423cbe90(long long* manager, unsigned language)
             flags = *reinterpret_cast<unsigned*>(entry + 0x20);
             if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2) {
                 String text(*reinterpret_cast<String*>(entry + 0x18));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
             }
             if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1) {
                 entry = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
                 String text(*reinterpret_cast<String*>(entry + 0x10));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
             }
             FUN_1423cb660(manager);
             *reinterpret_cast<unsigned*>(bytes + 0x188) = 0;
@@ -5607,7 +5608,7 @@ void FUN_1423cbe90(long long* manager, unsigned language)
         }
         if (flags == 0x1000000) {
             String unsupported("Not Supported");
-            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &unsupported);
+            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), unsupported);
         }
     }
     const unsigned currentMode = *reinterpret_cast<unsigned*>(bytes + 0x84);
@@ -5669,7 +5670,7 @@ unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short 
         manager[0x33] = static_cast<long long>(layout);
         {
             String empty("");
-            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &empty);
+            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), empty);
         }
         if (layout != 0x4120412) {
             struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
@@ -5683,7 +5684,7 @@ unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short 
             }
             if (!imeLayout) {
                 String localeText(locale);
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &localeText);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), localeText);
                 profiles->Release();
                 return 1;
             }
@@ -5712,11 +5713,11 @@ unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short 
             FUN_1423ca640(reinterpret_cast<void*>(manager[0xf]), flags);
             if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2) {
                 String text(*reinterpret_cast<String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x18));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
             }
             if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1) {
                 String text(*reinterpret_cast<String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x10));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &text);
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
             }
             void* provider = reinterpret_cast<void*>(manager[0xf]);
             reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[0x98 / sizeof(void*)])(provider);
@@ -5727,7 +5728,7 @@ unsigned long long FUN_1423d6c10(long long raw, int profileType, unsigned short 
     }
     {
         String unsupported("Not Supported");
-        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), &unsupported);
+        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), unsupported);
     }
     if (SysStringLen(description)) SysFreeString(description);
     profiles->Release();
