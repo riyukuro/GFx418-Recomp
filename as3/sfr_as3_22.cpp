@@ -4549,8 +4549,11 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
         return object;
 
     *sound = nullptr;
-    auto** objectVtable = *reinterpret_cast<void***>(object);
-    reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
+    // Release, not delete: the request is already linked into the manager's list.
+    if (InterlockedDecrement(reinterpret_cast<volatile long*>(object + 8)) == 0) {
+        auto** objectVtable = *reinterpret_cast<void***>(object);
+        reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
+    }
     return nullptr;
 }
 
