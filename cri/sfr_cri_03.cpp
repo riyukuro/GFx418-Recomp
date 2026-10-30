@@ -4772,7 +4772,7 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
         void* OutputQueue;
         CriUint8 Reserved30[0x10];
     };
-    UsfState* state = (UsfState*)FUN_140027ed8(heap, 0x40, "CriUsfDmx");
+    UsfState* state = (UsfState*)FUN_140027ed8(heap, 0x40, "CriUsfDmx", 0);
     if (!state)
         return NULL;
     memset(state, 0, sizeof(*state));
