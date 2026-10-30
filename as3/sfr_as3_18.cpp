@@ -4237,21 +4237,29 @@ void VM::RegisterClassTraits(ClassTraits::Traits& tr)
     ClassTraitsSet.Add(itr.GetName(), itr.GetNamespace(), &tr);
 }
 
+// InstanceTraits::Traits::IsParentTypeOf in the SDK form, inline here.
+static SF_INLINE bool Sfr18IsParentTypeOf(const InstanceTraits::Traits& self, const InstanceTraits::Traits& other)
+{
+    if (&self == &other)
+        return true;
+    const InstanceTraits::Traits* tr = &other;
+    while (tr)
+    {
+        if (tr->SupportsInterface(self))
+            return true;
+        tr = static_cast<const InstanceTraits::Traits*>(tr->GetParent());
+        if (tr == &self)
+            return true;
+    }
+    return false;
+}
+
 // Whether cur or one of its parents is t or supports t as an interface.
-// MS2-FUNCTIONAL no caller or reference is left in the exe, so a free function; the exe puts the found return first
+// No caller or reference is left in the exe, so a free function (cur->IsOfType(*t)).
 // @0x142514560
 bool FUN_142514560(const InstanceTraits::Traits* cur, const InstanceTraits::Traits* t)
 {
-    for (;;)
-    {
-        if (t == cur)
-            return true;
-        if (!cur)
-            return false;
-        if (cur->SupportsInterface(*t))
-            return true;
-        cur = static_cast<const InstanceTraits::Traits*>(cur->GetParent());
-    }
+    return Sfr18IsParentTypeOf(*t, *cur);
 }
 
 const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind);
@@ -5233,8 +5241,17 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // sfr34 batch Z: a slot typed Class, and the class traits the VM keeps.
 
+// TraitInfo::GetTypeName, inline here; the exe tests a zero slot type index twice (int, then SPInt).
+static SF_INLINE const Abc::Multiname& Sfr18GetTypeName(const Abc::TraitInfo& ti, const Abc::File& abc, const Abc::ConstPool& cp)
+{
+    const Abc::TraitInfo::Type type = ti.GetType();
+    if (type == Abc::TraitInfo::tSlot || type == Abc::TraitInfo::tConst)
+        return ti.Ind == 0 ? cp.AnyType : cp.GetMultiname(ti.Ind);
+    return cp.GetMultiname(abc.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
+}
+
 // SlotInfo::IsClassType: whether the slot's declared type is the public, top-level Class.
-// MS2-FUNCTIONAL free function (SlotInfo is a shared class)
+// A free function (SlotInfo is a shared class).
 // @0x142514100
 bool FUN_142514100(const SlotInfo& si)
 {
@@ -5244,15 +5261,10 @@ bool FUN_142514100(const SlotInfo& si)
     const Abc::File&          abc = si.File->GetAbcFile();
     const Abc::ConstPool&     cp  = abc.Const_Pool;
     const Abc::TraitInfo&     ti  = *si.TI;
-    const Abc::TraitInfo::Type type = ti.GetType();
-    const Abc::Multiname*     pmn;
-    if (type == Abc::TraitInfo::tSlot || type == Abc::TraitInfo::tConst)
-        pmn = &cp.GetMultiname(ti.Ind);
-    else
-        pmn = &cp.GetMultiname(abc.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
-    const Abc::Multiname&     mn  = *pmn;
-    const Abc::NamespaceInfo& ns  = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
-    if (cp.GetString(mn.NameIndex) == StringDataPtr("Class", 5) &&
+    const Abc::Multiname&     mn  = Sfr18GetTypeName(ti, abc, cp);
+    const SPInt               nsi = mn.Ind;
+    const Abc::NamespaceInfo& ns  = nsi == 0 ? cp.any_namespace : cp.ConstNamespace[nsi];
+    if (cp.GetString(static_cast<UInt32>(mn.NameIndex)) == StringDataPtr("Class", 5) &&
         (ns.Kind == Abc::NS_Public || ns.Kind == Abc::NS_Explicit) && ns.NameURI.IsEmpty())
         result = true;
     }
