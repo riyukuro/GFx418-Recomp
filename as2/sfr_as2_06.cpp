@@ -1875,8 +1875,7 @@ bool MovieRoot::Invoke(InteractiveObject* pmovie, const char* pmethodName, GFx::
     {
         AvmSprite*             pavmSprite = static_cast<AvmSprite*>(pavmChar);
         Ptr<InteractiveObject> holder     = pavmSprite->GetDispObj();
-        Environment*           pspriteEnv = &pavmSprite->Env;
-        retVal = GAS_Invoke(pmethodName, &resultVal, pavmSprite, pspriteEnv, numArgs, pspriteEnv->GetTopIndex());
+        retVal = GAS_Invoke(pmethodName, &resultVal, pavmSprite, &pavmSprite->Env, numArgs, pavmSprite->Env.GetTopIndex());
     }
     for (unsigned n = numArgs; n; n--)
         penv->Drop1();
