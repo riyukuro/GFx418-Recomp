@@ -1915,51 +1915,97 @@ namespace Instances { namespace fl_media
     }
 }}
 
+namespace Instances { namespace fl_gfx
+{
+    // Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_14): the exe
+    // builds these classes in one TU, so the MakeObject functions below inline them.
+    inline GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+    }
+
+    inline IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
+        : Object(t)
+        , textColor(-1), selectedTextColor(-1), fontSize(-1), backgroundColor(-1), selectedBackgroundColor(-1)
+        , indexBackgroundColor(-1), selectedIndexBackgroundColor(-1), readingWindowTextColor(-1)
+        , readingWindowBackgroundColor(-1), readingWindowFontSize(-1)
+    {
+    }
+
+    inline IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
+        : Event(t)
+        , message(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    inline KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
+        : KeyboardEvent(t)
+        , controllerIdx(0)
+    {
+    }
+
+    inline MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , cursor(GetVM().GetStringManager().CreateEmptyString())
+    {
+        Bubbles = false;
+        Cancelable = true;
+        mouseIdx = 0;
+    }
+
+    inline MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
+        : MouseEvent(t)
+        , mouseIdx(0), buttonIdx(0), nestingIdx(0)
+    {
+    }
+
+    inline TextEventEx::TextEventEx(InstanceTraits::Traits& t)
+        : TextEvent(t)
+        , controllerIdx(0), buttonIdx(0)
+    {
+    }
+}}
+
 namespace InstanceTraits { namespace fl_gfx
 {
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c9700
     void GamePadAnalogEvent::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c9760
     void IMECandidateListStyle::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // MS2-FUNCTIONAL: inlined ctor; the exe loads the VM chain after the vptr store (scheduling only)
     // @0x1424c97e0
     void IMEEventEx::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c9860
     void KeyboardEventEx::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
+    // MS2-FUNCTIONAL: inlined ctor; the exe loads the VM chain after the vptr store (scheduling only)
     // @0x1424c98c0
     void MouseCursorEvent::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c9950
     void MouseEventEx::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c99c0
     void TextEventEx::MakeObject(Value& result, Traits& t)
     {
@@ -4496,3 +4542,10 @@ void SoundTransform::panSet(const Value& result, Value::Number v) { SF_UNUSED(re
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cf78
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmDisplayObjContainer@123@@ 0x14317d030
 // MS2-PIN: ??_7AvmSprite@AS3@GFx@Scaleform@@6BAvmSpriteBase@23@@ 0x14317d0f0
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174fb0
+// MS2-PIN: ??_7IMECandidateListStyle@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175be8
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175830
+// MS2-PIN: ??_7KeyboardEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174c10
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431741e8
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174908
+// MS2-PIN: ??_7TextEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175508

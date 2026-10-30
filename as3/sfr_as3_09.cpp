@@ -1745,6 +1745,139 @@ namespace Instances { namespace fl_events {
 
 
 // ---- instance makers: a new instance of the traits' class ----------------------------------------------------------
+// Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_08). The exe builds the event
+// classes in one TU, so the MakeObject/MakeInstance functions below inline them.
+namespace Instances { namespace fl_events {
+    inline Event::Event(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Type(GetVM().GetStringManager().CreateEmptyString())
+        , CurrentTarget(NULL)
+        , Target(NULL)
+        , Phase(2)
+    {
+        Bubbles = false;
+        Cancelable = false;
+        DefaultPrevented = false;
+        PropagationStopped = false;
+        ImmPropagationStopped = false;
+    }
+
+    inline EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , pVM(&t.GetVM())
+        , pImpl()
+    {
+    }
+
+    inline ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
+        : TextEvent(t)
+    {
+    }
+
+    inline IMEEvent::IMEEvent(InstanceTraits::Traits& t)
+        : TextEvent(t)
+    {
+    }
+
+    inline AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
+        : ErrorEvent(t)
+    {
+    }
+
+    inline IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
+        : ErrorEvent(t)
+        , ErrorText(GetVM().GetStringManager().GetBuiltin(AS3Builtin_empty_))
+    {
+    }
+
+    inline PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
+        : GestureEvent(t)
+    {
+        TapLocalX = TapLocalY = 0;
+        TapStageX = TapStageY = 0;
+        TapLocalInitialized = Unk_a9 = false;
+    }
+
+    inline TimerEvent::TimerEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+    }
+
+    inline TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
+        : GestureEvent(t)
+    {
+        ScaleX = ScaleY = 1.0;
+        OffsetX = OffsetY = LocalOffsetX = LocalOffsetY = 0;
+        Rotation = 0;
+        LocalOffsetInitialized = false;
+    }
+
+    inline ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , BytesLoaded(0)
+        , BytesTotal(0)
+    {
+    }
+
+    inline FocusEvent::FocusEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , ShiftKey(false)
+        , KeyCode(0)
+        , RelatedObj(NULL)
+    {
+    }
+
+    inline KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , KeyLocation(-1)
+    {
+    }
+
+    inline MouseEvent::MouseEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , RelatedObj(NULL)
+    {
+        AltKey = CtrlKey = ShiftKey = false;
+        Delta = 0;
+        LocalX = LocalY = 0;
+        StageX = StageY = 0;
+        LocalInitialized = false;
+        ButtonsMask = 0;
+    }
+
+    inline AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+        Status.SetNull();
+    }
+
+    inline NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , Code(GetVM().GetStringManager().CreateEmptyString())
+        , Level(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    inline TouchEvent::TouchEvent(InstanceTraits::Traits& t)
+        : Event(t)
+        , RelatedObj(NULL)
+    {
+        AltKey = CommandKey = ControlKey = CtrlKey = ShiftKey = false;
+        LocalX = LocalY = SizeX = SizeY = 0;
+        StageX = StageY = 0;
+        Pressure = 1.0;
+        TouchPointID = 0;
+        IsPrimaryTouchPoint = LocalInitialized = false;
+    }
+
+    inline StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
+        : Event(t)
+    {
+        BeforeOrientation.SetNull();
+        AfterOrientation.SetNull();
+    }
+}} // namespace Instances::fl_events
+
 namespace InstanceTraits { namespace fl_events {
     // @0x14246a9e0
     // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
@@ -2973,3 +3106,20 @@ template void decltype(Scaleform::GFx::AS3::Instances::fl_events::EventDispatche
 // MS2-PIN: ??_7ExternalInterface@fl_external@Classes@AS3@GFx@Scaleform@@6B@ 0x143158ab8
 // MS2-PIN: ?Get@?$Hash@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@3@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@3@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@3@V?$HashSet@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@3@@Scaleform@@QEAAPEAPEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@2@AEBVASString@GFx@2@@Z 0x1424698c0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14246f310
+// MS2-PIN: ??_7AppLifecycleEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143158048
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143153e40
+// MS2-PIN: ??_7ErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143153b38
+// MS2-PIN: ??_7Event@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431533b8
+// MS2-PIN: ??_7EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431542f0
+// MS2-PIN: ??_7FocusEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156030
+// MS2-PIN: ??_7IMEEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143157028
+// MS2-PIN: ??_7IOErrorEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156338
+// MS2-PIN: ??_7KeyboardEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143155a10
+// MS2-PIN: ??_7MouseEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143154a88
+// MS2-PIN: ??_7NetStatusEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143156648
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431556d8
+// MS2-PIN: ??_7ProgressEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143155d20
+// MS2-PIN: ??_7StageOrientationEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143158380
+// MS2-PIN: ??_7TimerEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431579d0
+// MS2-PIN: ??_7TouchEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x143154d90
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@Instances@AS3@GFx@Scaleform@@6B@ 0x1431553a8
