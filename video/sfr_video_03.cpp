@@ -1,5 +1,8 @@
-// Recovered Scaleform GFx video player glue from the executable; SDK material is reference only.
+// Recovered Scaleform GFx video player glue from the executable; SDK material is reference only. The Video add-on lib
+// was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11, cmake/ms2-unit-profiles.cmake): no alias
+// `using` (so ExeDecl is a struct), explicit conversion operators or variadic templates. clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_03
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140016b50-0x14001c000 .text$mn
 // MS2-RANGE: 0x142742ed0-0x1427433f0 .text$mn
@@ -13,7 +16,6 @@
 #include "../include/gfx/as3/as3_obj.h"
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
-#include "hook/ms2hook.h"
 #include <cstring>
 #include <cstdint>
 #include <new>
@@ -21,194 +23,194 @@
 
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
-template <class T> using ExeDecl = T;
+template <class T> struct ExeDecl { typedef T type; };
 
-extern ExeDecl<void*> DAT_143b27608;
+extern ExeDecl<void*>::type DAT_143b27608;
 #define VideoThunkA DAT_143b27608
-extern ExeDecl<void*> DAT_143b27610;
+extern ExeDecl<void*>::type DAT_143b27610;
 #define VideoThunkBaseA DAT_143b27610
-extern ExeDecl<void*> DAT_143b27588;
+extern ExeDecl<void*>::type DAT_143b27588;
 #define VideoThunkB DAT_143b27588
-extern ExeDecl<void*> DAT_143b27590;
+extern ExeDecl<void*>::type DAT_143b27590;
 #define VideoThunkBaseB DAT_143b27590
-extern ExeDecl<void*> DAT_143b27708;
+extern ExeDecl<void*>::type DAT_143b27708;
 #define VideoThunkC DAT_143b27708
-extern ExeDecl<void*> DAT_143b27710;
+extern ExeDecl<void*>::type DAT_143b27710;
 #define VideoThunkBaseC DAT_143b27710
-extern ExeDecl<void*> DAT_143b275f8;
+extern ExeDecl<void*>::type DAT_143b275f8;
 #define VideoThunkD DAT_143b275f8
-extern ExeDecl<void*> DAT_143b27600;
+extern ExeDecl<void*>::type DAT_143b27600;
 #define VideoThunkBaseD DAT_143b27600
-extern ExeDecl<void*> DAT_143b27638;
+extern ExeDecl<void*>::type DAT_143b27638;
 #define VideoThunkE DAT_143b27638
-extern ExeDecl<void*> DAT_1431b7ba0;
+extern ExeDecl<void*>::type DAT_1431b7ba0;
 #define VideoDisplayVtable DAT_1431b7ba0
 static const float VideoTwipsScale = 20.0f;         // exe 0x142d692bc
 static const float VideoDurationScale = 1000.0f;    // exe 0x142d15c1c
-extern ExeDecl<void*> DAT_143b27640;
+extern ExeDecl<void*>::type DAT_143b27640;
 #define VideoThunkBaseE DAT_143b27640
-extern ExeDecl<void*> DAT_143b27488;
+extern ExeDecl<void*>::type DAT_143b27488;
 #define VideoThunkF DAT_143b27488
-extern ExeDecl<void*> DAT_143b27490;
+extern ExeDecl<void*>::type DAT_143b27490;
 #define VideoThunkBaseF DAT_143b27490
-extern ExeDecl<void*> DAT_143b27528;
+extern ExeDecl<void*>::type DAT_143b27528;
 #define VideoCallbackA DAT_143b27528
-extern ExeDecl<void*> DAT_143b27530;
+extern ExeDecl<void*>::type DAT_143b27530;
 #define VideoCallbackBaseA DAT_143b27530
-extern ExeDecl<void*> DAT_143b27548;
+extern ExeDecl<void*>::type DAT_143b27548;
 #define VideoCallbackB DAT_143b27548
-extern ExeDecl<void*> DAT_143b27550;
+extern ExeDecl<void*>::type DAT_143b27550;
 #define VideoCallbackBaseB DAT_143b27550
-extern ExeDecl<void*> DAT_143b275e8;
+extern ExeDecl<void*>::type DAT_143b275e8;
 #define VideoCallbackC DAT_143b275e8
 // Each VideoPropBase* slot is the int this-adjust of a 16-byte member-function pointer. The exe reads only its low
 // dword (movsxd); its static init (e.g. 0x142c99be0) copies stack garbage into the high dword.
-extern ExeDecl<void*> DAT_143b27798; extern ExeDecl<void*> DAT_143b277a0;
+extern ExeDecl<void*>::type DAT_143b27798; extern ExeDecl<void*>::type DAT_143b277a0;
 #define VideoPropGetA DAT_143b27798
 #define VideoPropBaseA DAT_143b277a0
-extern ExeDecl<void*> DAT_143b27778; extern ExeDecl<void*> DAT_143b27780;
+extern ExeDecl<void*>::type DAT_143b27778; extern ExeDecl<void*>::type DAT_143b27780;
 #define VideoPropSetA DAT_143b27778
 #define VideoPropBaseSetA DAT_143b27780
-extern ExeDecl<void*> DAT_143b27758; extern ExeDecl<void*> DAT_143b27760;
+extern ExeDecl<void*>::type DAT_143b27758; extern ExeDecl<void*>::type DAT_143b27760;
 #define VideoPropGetB DAT_143b27758
 #define VideoPropBaseB DAT_143b27760
-extern ExeDecl<void*> DAT_143b27728; extern ExeDecl<void*> DAT_143b27730;
+extern ExeDecl<void*>::type DAT_143b27728; extern ExeDecl<void*>::type DAT_143b27730;
 #define VideoPropSetB DAT_143b27728
 #define VideoPropBaseSetB DAT_143b27730
-extern ExeDecl<void*> DAT_143b27738; extern ExeDecl<void*> DAT_143b27740;
+extern ExeDecl<void*>::type DAT_143b27738; extern ExeDecl<void*>::type DAT_143b27740;
 #define VideoPropGetC DAT_143b27738
 #define VideoPropBaseC DAT_143b27740
-extern ExeDecl<void*> DAT_143b27748; extern ExeDecl<void*> DAT_143b27750;
+extern ExeDecl<void*>::type DAT_143b27748; extern ExeDecl<void*>::type DAT_143b27750;
 #define VideoPropGetD DAT_143b27748
 #define VideoPropBaseD DAT_143b27750
-extern ExeDecl<void*> DAT_143b27768; extern ExeDecl<void*> DAT_143b27770;
+extern ExeDecl<void*>::type DAT_143b27768; extern ExeDecl<void*>::type DAT_143b27770;
 #define VideoPropSetC DAT_143b27768
 #define VideoPropBaseSetC DAT_143b27770
-extern ExeDecl<void*> DAT_143b27718; extern ExeDecl<void*> DAT_143b27720;
+extern ExeDecl<void*>::type DAT_143b27718; extern ExeDecl<void*>::type DAT_143b27720;
 #define VideoPropSetD DAT_143b27718
 #define VideoPropBaseSetD DAT_143b27720
-extern ExeDecl<void*> DAT_143b276d8; extern ExeDecl<void*> DAT_143b276e0;
+extern ExeDecl<void*>::type DAT_143b276d8; extern ExeDecl<void*>::type DAT_143b276e0;
 #define VideoStringCallbackA DAT_143b276d8
 #define VideoStringCallbackBaseA DAT_143b276e0
-extern ExeDecl<void*> DAT_143b27598; extern ExeDecl<void*> DAT_143b275a0;
+extern ExeDecl<void*>::type DAT_143b27598; extern ExeDecl<void*>::type DAT_143b275a0;
 #define VideoStringCallbackB DAT_143b27598
 #define VideoStringCallbackBaseB DAT_143b275a0
-extern ExeDecl<void*> DAT_143b277a8;
+extern ExeDecl<void*>::type DAT_143b277a8;
 #define VideoCriWork DAT_143b277a8
-extern ExeDecl<std::uint32_t> DAT_143b277b0;
+extern ExeDecl<std::uint32_t>::type DAT_143b277b0;
 #define VideoCriWorkSize DAT_143b277b0
-extern ExeDecl<int> DAT_143b277b4;
+extern ExeDecl<int>::type DAT_143b277b4;
 #define VideoCriUsers DAT_143b277b4
-extern ExeDecl<void*> DAT_143b275f0;
+extern ExeDecl<void*>::type DAT_143b275f0;
 #define VideoCallbackBaseC DAT_143b275f0
 
-ExeDecl<void(void*, void*, void*)> FUN_1423df980;
+ExeDecl<void(void*, void*, void*)>::type FUN_1423df980;
 #define VideoNative0 FUN_1423df980
-ExeDecl<void(void*, void*, void*)> FUN_1423df850;
+ExeDecl<void(void*, void*, void*)>::type FUN_1423df850;
 #define VideoNative1 FUN_1423df850
-ExeDecl<void(void*, void*, void*)> FUN_1423dfd20;
+ExeDecl<void(void*, void*, void*)>::type FUN_1423dfd20;
 #define VideoNative2 FUN_1423dfd20
-ExeDecl<void(void*, void*, void*)> FUN_1423df410;
+ExeDecl<void(void*, void*, void*)>::type FUN_1423df410;
 #define VideoNative3 FUN_1423df410
-ExeDecl<void(void*, void*, void*)> FUN_1423dfda0;
+ExeDecl<void(void*, void*, void*)>::type FUN_1423dfda0;
 #define VideoNative4 FUN_1423dfda0
-ExeDecl<void(void*, void*, void*)> FUN_1424f1390;
+ExeDecl<void(void*, void*, void*)>::type FUN_1424f1390;
 #define ConvertAS3ValueToString FUN_1424f1390
-ExeDecl<void(void*, void*, int*, int, void*)> FUN_1424f0d30;
+ExeDecl<void(void*, void*, int*, int, void*)>::type FUN_1424f0d30;
 #define ConvertAS3ValueToInt32 FUN_1424f0d30
-ExeDecl<std::uint8_t(void*)> FUN_1424f0be0;
+ExeDecl<std::uint8_t(void*)>::type FUN_1424f0be0;
 #define ConvertAS3ValueToBool FUN_1424f0be0
-ExeDecl<void(void*)> FUN_1423dfa20;   // RefCountBaseGC::ReleaseInternal(this = the object)
+ExeDecl<void(void*)>::type FUN_1423dfa20;   // RefCountBaseGC::ReleaseInternal(this = the object)
 #define ReleaseAS3GcObject FUN_1423dfa20
-ExeDecl<void(void*)> FUN_14257dc30;
-ExeDecl<void(void*)> FUN_14257dcd0;
-ExeDecl<void(void*)> FUN_14257dcb0;
-ExeDecl<bool(void*, void*)> FUN_142518c70;
-ExeDecl<void(void*, std::uint64_t)> FUN_142526340;
-ExeDecl<void(void*)> FUN_142519860;
-ExeDecl<bool(const void*, const void*)> FUN_142510dc0;
-ExeDecl<void(void*, const void*)> FUN_1424efe00;
-ExeDecl<void(void*, const void*)> FUN_1424f1f70;
-ExeDecl<bool(const void*)> FUN_142514f70;
-ExeDecl<const char*(void*, void*)> FUN_142506e10;
-ExeDecl<void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t)> FUN_142519d50;
-ExeDecl<void(void*)> FUN_1424ddc20;
-ExeDecl<void(void*, void*, const void*)> FUN_1424d6750;
+ExeDecl<void(void*)>::type FUN_14257dc30;
+ExeDecl<void(void*)>::type FUN_14257dcd0;
+ExeDecl<void(void*)>::type FUN_14257dcb0;
+ExeDecl<bool(void*, void*)>::type FUN_142518c70;
+ExeDecl<void(void*, std::uint64_t)>::type FUN_142526340;
+ExeDecl<void(void*)>::type FUN_142519860;
+ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
+ExeDecl<void(void*, const void*)>::type FUN_1424efe00;
+ExeDecl<void(void*, const void*)>::type FUN_1424f1f70;
+ExeDecl<bool(const void*)>::type FUN_142514f70;
+ExeDecl<const char*(void*, void*)>::type FUN_142506e10;
+ExeDecl<void(void*, std::uint32_t, void*, std::uint32_t, std::uint32_t)>::type FUN_142519d50;
+ExeDecl<void(void*)>::type FUN_1424ddc20;
+ExeDecl<void(void*, void*, const void*)>::type FUN_1424d6750;
 namespace Scaleform { namespace GFx { class InteractiveObject; }}
-ExeDecl<void(void*, Scaleform::GFx::InteractiveObject*)> FUN_1424d6480;   // the AVM interactive-object base constructor
-ExeDecl<void(void*, void*, const void*)> FUN_1424dabd0;
-ExeDecl<void(void*, void*)> FUN_1424d6ac0;
+ExeDecl<void(void*, Scaleform::GFx::InteractiveObject*)>::type FUN_1424d6480;   // the AVM interactive-object base constructor
+ExeDecl<void(void*, void*, const void*)>::type FUN_1424dabd0;
+ExeDecl<void(void*, void*)>::type FUN_1424d6ac0;
 void FUN_140019470(void* self, std::uint64_t* output); // defined below (external: other units take its address)
 void FUN_140019660(void* self, std::uint64_t* output);
-ExeDecl<void*(void*, void*)> FUN_1400199e0;
-ExeDecl<void*(void*, void*)> FUN_14001ad20;
-ExeDecl<void(void*)> FUN_1425a4030;
-ExeDecl<void()> FUN_14257e080;
-ExeDecl<void(void*, void*, void*)> FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
-ExeDecl<int(void*, void*)> FUN_1428d8f14;
-ExeDecl<int(void*, void*)> FUN_1428d8efc;
-ExeDecl<void(void*)> FUN_1427443c0;
-ExeDecl<std::uint64_t()> FUN_1425e3480;
-ExeDecl<int(void*, bool*)> FUN_142303a6b;
-ExeDecl<void(void*)> FUN_142745f50;
-ExeDecl<int(void*, const char*, unsigned, void*, void**)> FUN_142303a29;
-ExeDecl<int(void*, std::uint32_t*, unsigned)> FUN_142303a4d;
-ExeDecl<void*(void*, void*)> FUN_142516600;
-ExeDecl<void*(void*, void*)> FUN_14250d8f0;
-ExeDecl<void(void*, void*, void*)> FUN_142442c30;
-ExeDecl<void(void*, void*)> FUN_1424edca0;
-ExeDecl<void(void*, void*, void*, void*)> FUN_142467b50;
-ExeDecl<void(void*, void*, int)> FUN_1424687d0;
-ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)> FUN_1424fef00;
-ExeDecl<void(void*, void*, double)> FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
-ExeDecl<void(void*)> FUN_140026ed0;
-ExeDecl<void()> FUN_140026db0;
-extern ExeDecl<void*> DAT_14317bf80;
+ExeDecl<void*(void*, void*)>::type FUN_1400199e0;
+ExeDecl<void*(void*, void*)>::type FUN_14001ad20;
+ExeDecl<void(void*)>::type FUN_1425a4030;
+ExeDecl<void()>::type FUN_14257e080;
+ExeDecl<void(void*, void*, void*)>::type FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
+ExeDecl<int(void*, void*)>::type FUN_1428d8f14;
+ExeDecl<int(void*, void*)>::type FUN_1428d8efc;
+ExeDecl<void(void*)>::type FUN_1427443c0;
+ExeDecl<std::uint64_t()>::type FUN_1425e3480;
+ExeDecl<int(void*, bool*)>::type FUN_142303a6b;
+ExeDecl<void(void*)>::type FUN_142745f50;
+ExeDecl<int(void*, const char*, unsigned, void*, void**)>::type FUN_142303a29;
+ExeDecl<int(void*, std::uint32_t*, unsigned)>::type FUN_142303a4d;
+ExeDecl<void*(void*, void*)>::type FUN_142516600;
+ExeDecl<void*(void*, void*)>::type FUN_14250d8f0;
+ExeDecl<void(void*, void*, void*)>::type FUN_142442c30;
+ExeDecl<void(void*, void*)>::type FUN_1424edca0;
+ExeDecl<void(void*, void*, void*, void*)>::type FUN_142467b50;
+ExeDecl<void(void*, void*, int)>::type FUN_1424687d0;
+ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type FUN_1424fef00;
+ExeDecl<void(void*, void*, double)>::type FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
+ExeDecl<void(void*)>::type FUN_140026ed0;
+ExeDecl<void()>::type FUN_140026db0;
+extern ExeDecl<void*>::type DAT_14317bf80;
 #define AvmInteractiveVtable DAT_14317bf80
-extern ExeDecl<void*> DAT_1431b7c70;
+extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoTraitsVtable DAT_1431b7c70
-extern ExeDecl<void*> DAT_1431b7f60;
+extern ExeDecl<void*>::type DAT_1431b7f60;
 #define VideoTraitsBaseVtable DAT_1431b7f60
-extern ExeDecl<void*> DAT_1431b7ea0;
+extern ExeDecl<void*>::type DAT_1431b7ea0;
 #define VideoTraitsSubVtableA DAT_1431b7ea0
-extern ExeDecl<void*> DAT_1431b7de0;
+extern ExeDecl<void*>::type DAT_1431b7de0;
 #define VideoTraitsSubVtableB DAT_1431b7de0
-extern ExeDecl<void*> DAT_1431b4c60; extern ExeDecl<void*> DAT_1431bec40;
+extern ExeDecl<void*>::type DAT_1431b4c60; extern ExeDecl<void*>::type DAT_1431bec40;
 #define VideoAudioVtableA DAT_1431b4c60
 #define VideoAudioVtableB DAT_1431bec40
-extern ExeDecl<void*> DAT_1431bed60; extern ExeDecl<void*> DAT_1431bedd8;
+extern ExeDecl<void*>::type DAT_1431bed60; extern ExeDecl<void*>::type DAT_1431bedd8;
 #define VideoAudioDeleteVtable DAT_1431bed60
 #define VideoAudioSubVtable DAT_1431bedd8
-extern ExeDecl<void*> DAT_1431bede8;
+extern ExeDecl<void*>::type DAT_1431bede8;
 #define VideoAudioEventVtable DAT_1431bede8
-extern ExeDecl<void*> DAT_1431bcbb0;
+extern ExeDecl<void*>::type DAT_1431bcbb0;
 #define VideoSoundDeleteVtable DAT_1431bcbb0
-extern ExeDecl<void*> DAT_1431bef00;
+extern ExeDecl<void*>::type DAT_1431bef00;
 #define VideoSoundVtable DAT_1431bef00
-extern ExeDecl<void*> DAT_1431bef38;
+extern ExeDecl<void*>::type DAT_1431bef38;
 #define VideoSoundSubVtable DAT_1431bef38
-extern ExeDecl<void*> DAT_1431bee78;
+extern ExeDecl<void*>::type DAT_1431bee78;
 #define VideoAudioStreamVtable DAT_1431bee78
-extern ExeDecl<void*> DAT_1431beef0;
+extern ExeDecl<void*>::type DAT_1431beef0;
 #define VideoAudioStreamSubVtable DAT_1431beef0
-extern ExeDecl<void*> DAT_1431b7160; extern ExeDecl<void*> DAT_1431b7900;
+extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900;
 #define VideoClassInfoA DAT_1431b7160
 #define VideoClassVtableA DAT_1431b7900
-extern ExeDecl<void*> DAT_1431b71b0; extern ExeDecl<void*> DAT_1431b7260;
+extern ExeDecl<void*>::type DAT_1431b71b0; extern ExeDecl<void*>::type DAT_1431b7260;
 #define VideoInstanceVtableA DAT_1431b71b0
 #define VideoCTraitsVtable DAT_1431b7260
-extern ExeDecl<void*> DAT_1431b7b50; extern ExeDecl<void*> DAT_1431b7d50;
+extern ExeDecl<void*>::type DAT_1431b7b50; extern ExeDecl<void*>::type DAT_1431b7d50;
 #define VideoClassInfoB DAT_1431b7b50
 #define VideoClassVtableB DAT_1431b7d50
-extern ExeDecl<void*> DAT_1431b7c70;
+extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoInstanceVtableB DAT_1431b7c70
-ExeDecl<void(void*)> FUN_1424df220;
-ExeDecl<void*(void*)> FUN_1424eb610;
-ExeDecl<void(void*, void*)> FUN_140010b80;
+ExeDecl<void(void*)>::type FUN_1424df220;
+ExeDecl<void*(void*)>::type FUN_1424eb610;
+ExeDecl<void(void*, void*)>::type FUN_140010b80;
 extern "C" void* DAT_143b15f60;
 
 namespace {
-using VideoGenericThunk = void(*)(void*, void*, void*);
+typedef void (*VideoGenericThunk)(void*, void*, void*);
 
 void ReleaseVideoAtom(std::uint64_t* value)
 {
@@ -264,7 +266,7 @@ void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
                    Scaleform::GFx::AS3::Value* args)
 {
     auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
-    auto number = std::numeric_limits<double>::quiet_NaN();
+    double number = Scaleform::GFx::NumberUtil::NaN();   // the exe calls NumberUtil::NaN (0x1425e3ee0)
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
         reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA)(
@@ -282,7 +284,7 @@ void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
                    Scaleform::GFx::AS3::Value* args)
 {
     auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
-    auto number = std::numeric_limits<double>::quiet_NaN();
+    double number = Scaleform::GFx::NumberUtil::NaN();   // the exe calls NumberUtil::NaN (0x1425e3ee0)
     if (argc != 0) args->Convert2NumberInline(number);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
         reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB)(
@@ -849,7 +851,7 @@ void FUN_14001a8e0(std::uint64_t* closure)
 // @0x14001a000
 Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* FUN_14001a000(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
-    using DisplayObject = Scaleform::GFx::AS3::Instances::fl_display::DisplayObject;
+    typedef Scaleform::GFx::AS3::Instances::fl_display::DisplayObject DisplayObject;
     new (object) Scaleform::GFx::AS3::Instances::fl_display::DisplayObject(*traits);
     *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x68) = 320.0;
     *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x70) = 240.0;
@@ -1319,8 +1321,8 @@ void* FUN_14001b340(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(
 // @0x142742ed0
 void* FUN_142742ed0(void* destination, const std::uint64_t* source)
 {
-    using Element = Scaleform::GFx::Video::VideoPlayerImpl*;
-    using Data = Scaleform::ArrayDataBase<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy>;
+    typedef Scaleform::GFx::Video::VideoPlayerImpl* Element;
+    typedef Scaleform::ArrayDataBase<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy> Data;
     auto* output = static_cast<Data*>(destination);
     output->Data = nullptr; output->Size = 0; output->Policy.SetCapacity(0);
     const auto count = source[1];
@@ -1883,12 +1885,12 @@ void* FUN_14001a470(void* self)
     auto* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
     auto* movieDef = FUN_14250d8f0(root, self);
     if (!movieDef) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
-    alignas(8) std::uint64_t createInfo[3]{};
+    __declspec(align(8)) std::uint64_t createInfo[3] = { 0 };
     FUN_142442c30(self, createInfo, movieDef);
     if (!createInfo[0]) {
         // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
         const unsigned emptyVideoId = 0x10005;
-        alignas(8) std::uint64_t tmp[3];
+        __declspec(align(8)) std::uint64_t tmp[3];
         memcpy(createInfo, FUN_1425cf500(movieDef, tmp, &emptyVideoId), sizeof(createInfo));
     }
     auto* creator = *reinterpret_cast<void**>(library + 0x18);
@@ -2069,7 +2071,7 @@ std::uint64_t* FUN_142743240(std::uint64_t* object, void* owner, void* stream, i
     reinterpret_cast<std::uint32_t*>(object)[10] = sampleBits;
     const auto pcmBytes = static_cast<std::int32_t>((channels / 1000) * (sampleBits >> 3) * rate * 0x5dc);
     *reinterpret_cast<std::int32_t*>(reinterpret_cast<unsigned char*>(object) + 100) = pcmBytes;
-    alignas(8) unsigned char info[0xd8]{};
+    __declspec(align(8)) unsigned char info[0xd8] = { 0 };
     *reinterpret_cast<std::uint32_t*>(info) = sizeof(info);
     *reinterpret_cast<std::int32_t*>(info + 4) = pcmBytes;
     *reinterpret_cast<std::int32_t*>(info + 0xc) = static_cast<std::int32_t>(rate);
@@ -2087,8 +2089,8 @@ std::uint64_t* FUN_142743240(std::uint64_t* object, void* owner, void* stream, i
 
 // MS2: VideoPlayer.clear's thunk (instance ThunkInfo table 0x1431b79e0, entry 8) was never recovered;
 // same member-pointer forwarding as the other video thunks (exe: movsxd rcx,[143b27790]; add rcx,[r8+10]; jmp [143b27788]).
-extern ExeDecl<void*> DAT_143b27788;
-extern ExeDecl<int> DAT_143b27790;
+extern ExeDecl<void*>::type DAT_143b27788;
+extern ExeDecl<int>::type DAT_143b27790;
 // @0x14001a180
 void FUN_14001a180(void*, void*, void* callFrame, void* result)
 {
