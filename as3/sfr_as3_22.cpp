@@ -1066,12 +1066,12 @@ extern "C" void FUN_142677740(void* operation, void*, Scaleform::Render::ImageDa
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: uses the executable's FMOD wrapper calls and preserves its defaults and result handling.
+// Master channel group volume, 1.0 when the group cannot be fetched.
 // @0x142745840
 float QueryMasterVolume(void* player)
 {
     float volume = 1.0f;
-    void* group = nullptr;
+    void* group;   // getMasterChannelGroup out-param, only read on FMOD_OK
     if (FUN_1428d8e9c(*reinterpret_cast<void**>(static_cast<char*>(player) + 0x10), &group) == 0)
         FUN_1428d8f26(group, &volume);
     return volume;
@@ -1337,12 +1337,12 @@ bool QuerySoundFormat(void* player, unsigned* formatFlag, int* channels, int* fr
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: gets the master channel group and applies the requested mute state on success.
+// Gets the master channel group and applies the requested mute state on success.
 // @0x142745e70
 void SetMasterMuted(void* player, bool muted)
 {
     void* system = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x10);
-    void* group = nullptr;
+    void* group;   // getMasterChannelGroup out-param, only read on FMOD_OK
     if (FUN_1428d8e9c(system, &group) == 0)
         FUN_1428d8f2c(group, muted);
 }
