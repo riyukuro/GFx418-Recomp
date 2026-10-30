@@ -2976,11 +2976,11 @@ static void Sfr31ArrResizeNC(UPInt* a, const void* addr, UPInt n, UPInt esz, UIn
     a[1] = n;
 }
 
-// MS2-FUNCTIONAL 0x142523850: raw model of ArrayDataBase<8-byte elem, AllocatorGH>::Reserve
+// MS2-FUNCTIONAL 0x142523850: raw model of ArrayDataBase<8-byte elem, AllocatorLH>::Reserve (AllocAutoHeap)
 // @0x142523850
 void Sfr31ReserveGH8a(UPInt* a, const void* addr, UPInt n) { Sfr31ArrReserve(a, addr, n, 8, 2, 0); }
 
-// MS2-FUNCTIONAL 0x142523990: raw model of ArrayDataBase<8-byte elem, AllocatorGH>::Reserve
+// MS2-FUNCTIONAL 0x142523990: raw model of ArrayDataBase<8-byte elem, AllocatorLH>::Reserve (AllocAutoHeap)
 // @0x142523990
 void Sfr31ReserveGH8b(UPInt* a, const void* addr, UPInt n) { Sfr31ArrReserve(a, addr, n, 8, 2, 0); }
 
@@ -3272,7 +3272,8 @@ static void Sfr31PushByte(UPInt* a, UInt8 b)
     }
     else if (n < a[2])
         goto store;
-    Sfr31ArrReserve(a, a, n < a[1] ? n : n + (n >> 2), 1, 2, 0);
+    // ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70): the global heap, not the array's own
+    Sfr31ArrReserve(a, a, n < a[1] ? n : n + (n >> 2), 1, 2, Memory::pGlobalHeap);
 store:
     a[1] = n;
     *reinterpret_cast<UInt8*>(a[0] + n - 1) = b;
