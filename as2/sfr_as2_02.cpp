@@ -904,17 +904,17 @@ void AvmSprite::SpriteLineStyle(const FnCall& fn)
         unsigned caps       = 0;
         unsigned joins      = 0;
         float    miterLimit = 3.0f;
-        if (fn.NArgs >= 2)
+        if (fn.NArgs > 1)
         {
             rgba = fn.Arg(1).ToUInt32(fn.Env) | 0xFF000000;
-            if (fn.NArgs >= 3)
+            if (fn.NArgs > 2)
             {
                 float alpha = float(fn.Arg(2).ToNumber(fn.Env)) * 255.0f / 100.0f;
                 rgba        = (UInt32(Alg::Max(0.0f, Alg::Min(alpha, 255.0f))) << 24) | (rgba & 0xFFFFFF);
-                if (fn.NArgs >= 4)
+                if (fn.NArgs > 3)
                 {
                     hinting = fn.Arg(3).ToBool(fn.Env);
-                    if (fn.NArgs >= 5)
+                    if (fn.NArgs > 4)
                     {
                         ASString str = fn.Arg(4).ToString(fn.Env);
                         if (str == "none")
