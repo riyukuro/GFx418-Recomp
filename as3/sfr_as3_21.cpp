@@ -565,8 +565,9 @@ void VectorBase<UInt32>::PushBackValueUnsafe(const Value& v)
 }
 
 // @0x142562f30
+// noinline: the exe calls it from Vector_uint::lengthSet (the sfr_as3_20 AS3Constructor inlines its own copy).
 template <>
-CheckResult VectorBase<UInt32>::Resize(UPInt size)
+SF_NOINLINE CheckResult VectorBase<UInt32>::Resize(UPInt size)
 {
     bool ok = false;
     if (CheckFixed())
@@ -631,8 +632,9 @@ void VectorBase<Value::Number>::PushBackValueUnsafe(const Value& v)
 }
 
 // @0x142562ff0
+// noinline: the exe calls it from Vector_double::lengthSet.
 template <>
-CheckResult VectorBase<Value::Number>::Resize(UPInt size)
+SF_NOINLINE CheckResult VectorBase<Value::Number>::Resize(UPInt size)
 {
     bool ok = false;
     if (CheckFixed())
@@ -899,7 +901,6 @@ void Vector_String::lengthGet(UInt32& result)
 }
 
 // @0x142564ce0
-// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
 void Vector_String::lengthSet(const Value& result, UInt32 len)
 {
     SF_UNUSED(result);
@@ -989,7 +990,6 @@ void Vector_double::lengthGet(UInt32& result)
 }
 
 // @0x142564d00
-// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
 void Vector_double::lengthSet(const Value& result, UInt32 len)
 {
     SF_UNUSED(result);
@@ -1079,7 +1079,6 @@ void Vector_int::lengthGet(UInt32& result)
 }
 
 // @0x142564d20
-// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
 void Vector_int::lengthSet(const Value& result, UInt32 len)
 {
     SF_UNUSED(result);
@@ -1260,7 +1259,6 @@ void Vector_uint::lengthGet(UInt32& result)
 }
 
 // @0x142564d60
-// MS2-FUNCTIONAL: Resize is inlined here, the exe calls it
 void Vector_uint::lengthSet(const Value& result, UInt32 len)
 {
     SF_UNUSED(result);
