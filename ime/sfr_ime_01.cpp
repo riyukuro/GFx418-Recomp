@@ -3147,9 +3147,9 @@ namespace Scaleform { namespace GFx { namespace IME {
 
 // MS2-FUNCTIONAL: constructs the language bar COM bridge, its two callback objects, and the 0x100-character input buffer.
 // @0x1423d54d0
-unsigned long long* FUN_1423d54d0(unsigned long long* self)
+unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long owner)
 {
-    FUN_1423cabb0(self, 0);
+    FUN_1423cabb0(self, owner);
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x1b4) = 1;
     self[0] = reinterpret_cast<unsigned long long>(DAT_14313b520);
     self[0x3a] = 0;

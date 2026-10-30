@@ -41,7 +41,7 @@ void FUN_14257dcb0(void*); // RefCountImpl::Release
 // Bodies in sfr_ime_01 (the IME manager unit).
 namespace Scaleform { namespace GFx { namespace IME {
 unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
-unsigned long long* FUN_1423d54d0(unsigned long long* self);
+unsigned long long* FUN_1423d54d0(unsigned long long* self, unsigned long long owner);
 void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData);
 void* FUN_1423d18b0(void* raw, void* owner, void* userData);
 void FUN_1423cc3d0(void* raw);
@@ -394,7 +394,7 @@ bool FUN_1423c9ba0(void* self, Log* log, void* opener, const char* xmlPath, bool
             mem ? FUN_1423cdbb0(static_cast<unsigned long long*>(mem), self, (void*)w[0xd]) : 0);
         mem = Memory::pGlobalHeap->Alloc(0x1d8);
         w[0xf] = reinterpret_cast<unsigned long long>(
-            mem ? FUN_1423d54d0(static_cast<unsigned long long*>(mem)) : 0);
+            mem ? FUN_1423d54d0(static_cast<unsigned long long*>(mem), reinterpret_cast<unsigned long long>(self)) : 0);
     }
     else if (os == 0)
     {
