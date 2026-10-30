@@ -2607,10 +2607,17 @@ namespace InstanceTraits { namespace fl
         result.SetSInt32(-1);
     }
 
+    // True when the object _this is the prototype object of cls. The class is looked up before _this is read (the exe loads
+    // the object pointer between the class lookup and the GetPrototype call).
+    static SF_INLINE bool IsPrototypeOf(const Value& _this, Class& cls)
+    {
+        return _this.GetObject() == &cls.GetPrototype();
+    }
+
     // @0x1423e1be0
     void QName::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsQName()).GetPrototype())
+        if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsQName())))
             result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
         else
         {
@@ -2628,7 +2635,7 @@ namespace InstanceTraits { namespace fl
     // @0x1423e1840
     void XMLList::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXMLList()).GetPrototype())
+        if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsXMLList())))
             result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
         else
         {
@@ -2746,7 +2753,7 @@ namespace InstanceTraits { namespace fl
     // @0x1423e7a30
     void XML::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+        if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsXML())))
             result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
         else
         {
@@ -2763,7 +2770,7 @@ namespace InstanceTraits { namespace fl
     // @0x1423e7b30
     void XML::PropertyIsEnumerableProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+        if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsXML())))
             return Object::AS3propertyIsEnumerable(ti, vm, _this, result, argc, argv);
 
         if (!IsXMLObject(_this))
@@ -2776,7 +2783,7 @@ namespace InstanceTraits { namespace fl
     // @0x1423e7c30
     void XML::HasOwnPropertyProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsObject() && _this.GetObject() == &FUN_142508460(vm.GetXMLSupport().GetITraitsXML()).GetPrototype())
+        if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsXML())))
             return Object::AS3hasOwnProperty(ti, vm, _this, result, argc, argv);
 
         if (!IsXMLObject(_this))
