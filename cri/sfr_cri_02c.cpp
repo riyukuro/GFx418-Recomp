@@ -2021,7 +2021,7 @@ void FUN_140038e10(void)
 // @0x1400378b0
 void FUN_1400378b0(void* player)
 {
-    (void)player;                            // the exe passes the player; only its dead load differs
+    if (player == player) {}                 // the CRI unused-argument idiom: /Od loads player (the exe's dead load)
     FUN_140039f50(DAT_143ffd550);
 }
 
@@ -2029,7 +2029,7 @@ void FUN_1400378b0(void* player)
 // @0x1400378e0
 void FUN_1400378e0(void* player)
 {
-    (void)player;                            // the exe passes the player; only its dead load differs
+    if (player == player) {}                 // the CRI unused-argument idiom: /Od loads player (the exe's dead load)
     FUN_140039f8c(DAT_143ffd550);
 }
 #pragma optimize("", on)
