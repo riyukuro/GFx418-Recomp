@@ -5004,30 +5004,272 @@ void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long lo
     cx18_CommandInsert(table, hash, key, value[0], value[1]);
 }
 
-// MS2-FUNCTIONAL: routes the IME key event through the recovered key state and candidate paging handler.
-// @0x1423d2710
-void FUN_1423d2710(void* manager, int, unsigned, long long, wchar_t*)
+// Invokes an ActionScript callback of the IMM IME object's movie (+0xa8, bridge at +0x18, Invoke = slot 0x78).
+static void cx18_InvokeInputWindow(unsigned char* self, const char* name, Scaleform::GFx::Value* args, unsigned count)
 {
-    unsigned char event[0x28]{};
-    *reinterpret_cast<unsigned*>(event + 0xc) = WM_KEYDOWN;
-    *reinterpret_cast<unsigned long long*>(event + 0x10) = *reinterpret_cast<unsigned short*>(
-        static_cast<unsigned char*>(manager) + 0xd0);
-    FUN_1423d4c20(manager, event);
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
+    Scaleform::GFx::Value result;
+    if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+        reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+            bridge, name, &result, args, count);
 }
 
-// MS2-FUNCTIONAL: applies IMM composition notifications through the shared window message handler.
-// @0x1423d3510
-void FUN_1423d3510(long long* manager, unsigned long long, unsigned long long flags)
+// Shows the UTF-8 copy of the reading string at +0x40 in the input window at the composition cursor (offset
+// -[+0x64]): DisplayInputWindow(text, cursor.x1, cursor.y2, height), height = cursor.y2 - cursor.y1 or 0.
+static void cx18_DisplayReading(unsigned char* self, const char* text, bool withHeight)
 {
-    if (!manager || !manager[1]) return;
-    if (flags == 0) {
-        *reinterpret_cast<unsigned*>(manager + 0xc) = 0;
-        FUN_1423d43b0(manager);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
+    Scaleform::GFx::Value args[4];
+    args[0] = Scaleform::GFx::Value(text);
+    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
+    args[3] = Scaleform::GFx::Value(withHeight ? static_cast<double>(cursorRect.y2 - cursorRect.y1) : 0.0);
+    cx18_InvokeInputWindow(self, "DisplayInputWindow", args, 4);
+}
+
+// Reading-string window of the IMM IME object, called from its WM_IME_COMPOSITION handler (0x1423d3510) for
+// GCS_COMPATTR. Removes the old input window, then updates the reading text at +0x40 from the last key (+0xd0) by the
+// input mode at +0x98: modes 1/3/5/7 copy the composition reading string; mode 2 (key 0x3000 only) writes the key into
+// the +0xb0 buffer at index +0xc8 and copies it (other keys reset that buffer to four spaces); modes 4/10 append up
+// to five keys and handle backspace; 0x10000/0x20000/0x30000/0x60000/0xa10000/0xb10000/0xd00001/0xd00002 copy the
+// reading string; 0x110000 appends a..z; 0x40000/0x50000/0x70000/0x90000/0xa0000 restart the text when the target
+// clause (first attribute 1) moves (its index kept at +0x5a4) and append otherwise. Escape clears it. A non-empty
+// result goes to DisplayInputWindow.
+// MS2-FUNCTIONAL: the exe builds the four arguments in a heap Value array
+// @0x1423d2710
+void FUN_1423d2710(void* manager, int key, unsigned length, long long attributes, wchar_t* reading)
+{
+    auto* self = static_cast<unsigned char*>(manager);
+    cx18_InvokeInputWindow(self, "RemoveInputWindow", nullptr, 0);
+    const wchar_t ch = *reinterpret_cast<wchar_t*>(self + 0xd0);
+    wchar_t* text = *reinterpret_cast<wchar_t**>(self + 0x40);
+    if (ch == 0x1b) {
+        *text = 0;
         return;
     }
-    if (flags & 0x800) FUN_1423d1d10(manager, WM_IME_COMPOSITION, flags, 0);
-    if (flags & 0x10) FUN_1423d1d10(manager, WM_IME_COMPOSITION, flags, 0);
-    if (flags & 0x88) FUN_1423d5060(manager, 0);
+    const int textLength = static_cast<int>(wcslen(text));
+    const auto* attrs = reinterpret_cast<const char*>(attributes);
+    auto append = [&](wchar_t c) {
+        text[textLength] = c;
+        text[textLength + 1] = 0;
+    };
+    const int mode = *reinterpret_cast<int*>(self + 0x98);
+    switch (mode) {
+    case 1: case 3: case 5: case 7:
+        Scaleform::SFwcscpy(text, wcslen(reading) + 1, reading);
+        break;
+    case 2: {
+        const int index = *reinterpret_cast<int*>(self + 0xc8);
+        if (index > 4) return;
+        wchar_t* buffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
+        if (key != 0x3000) {
+            buffer[0] = buffer[1] = buffer[2] = buffer[3] = L' ';
+            buffer[4] = 0;
+            return;
+        }
+        buffer[index] = ch;
+        Scaleform::SFwcscpy(text, wcslen(buffer) + 1, buffer);
+        break;
+    }
+    case 4: case 10:
+        if (key != 0x3000) {
+            *text = 0;
+            return;
+        }
+        if (ch != L'\r' && ch != L' ' && ch != L'\b' && textLength < 5) append(ch);
+        if (ch == L'\b') {
+            const int n = static_cast<int>(wcslen(text));
+            if (n > 0) text[n - 1] = 0;
+        }
+        break;
+    case 0x10000: case 0x20000: case 0x30000: case 0x60000: case 0xa10000: case 0xb10000: case 0xd00001: case 0xd00002: {
+        const int n = static_cast<int>(wcslen(reading));
+        memcpy(text, reading, static_cast<size_t>(n) * 2);
+        text[n] = 0;
+        break;
+    }
+    case 0x110000:
+        if (ch == L'\b') {
+            if (textLength > 0) text[textLength - 1] = 0;
+        } else if (static_cast<unsigned short>(ch - L'a') < 26) {
+            append(ch);
+        }
+        break;
+    case 0x40000: case 0x50000: case 0x70000: case 0x90000: case 0xa0000:
+        if (key != 0x3000) {
+            *text = 0;
+        } else if (ch == L'\b') {
+            if (textLength > 0) text[textLength - 1] = 0;
+        } else if (ch != L'\r' && ch != L' ') {
+            unsigned target = 0;
+            while (static_cast<int>(target) < static_cast<int>(length) && attrs[target] != ATTR_TARGET_CONVERTED)
+                ++target;
+            if (target == length) return;
+            auto& lastTarget = *reinterpret_cast<unsigned*>(self + 0x5a4);
+            if (lastTarget == target) {
+                append(ch);
+            } else {
+                lastTarget = target;
+                text[0] = ch;
+                text[1] = 0;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    text = *reinterpret_cast<wchar_t**>(self + 0x40);
+    const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(text, -1);
+    if (!static_cast<int>(size)) return;
+    char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<int>(size) + 1)));
+    Scaleform::UTF8Util::EncodeString(utf8, text, -1);
+    cx18_DisplayReading(self, utf8, true);
+    Scaleform::Memory::Free(utf8);
+}
+
+// WM_IME_COMPOSITION of the IMM IME object (vtbl 0x14313a5f8 slot 10). No flags: clears the composition length
+// (+0x60). GCS_RESULTSTR: the result string is finalized into the IME manager, kept in its String at +0x98 and
+// broadcast (slot 11); the input window is removed. CS_INSERTCHAR|CS_NOMOVECARET: wParam becomes a one-character
+// composition. GCS_COMPSTR|GCS_CURSORPOS: vtbl+0xb8. GCS_COMPATTR: sets the composition cursor, computes +0x64 from
+// the target clause, highlights each run of equal attributes, repositions the candidate window in mode 0x40000 and
+// updates the reading window (0x1423d2710). Exactly GCS_CURSORPOS|GCS_DELTASTART: shows the reading text at +0x40.
+// MS2-FUNCTIONAL: the exe builds the Invoke arguments in heap Value arrays
+// @0x1423d3510
+void FUN_1423d3510(long long* manager, unsigned long long wParam, unsigned long long flags)
+{
+    auto* self = reinterpret_cast<unsigned char*>(manager);
+    if (!manager[1]) return;
+    auto** vtable = *reinterpret_cast<void***>(self);
+    auto* states = reinterpret_cast<Scaleform::GFx::StateBag*>(*reinterpret_cast<unsigned char**>(self + 8) + 0x10);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime = states->GetIMEManager();
+    if (!flags) {
+        *reinterpret_cast<unsigned*>(self + 0x60) = 0;
+        return;
+    }
+    if (flags & GCS_RESULTSTR) {
+        Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> result = states->GetIMEManager();
+        HIMC context = cx18_ImmGetContext(hwnd);
+        const LONG size = cx18_ImmGetCompositionStringW(context, GCS_RESULTSTR, nullptr, 0);
+        auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(size) * 2 + 2)));
+        if (static_cast<unsigned>(cx18_ImmGetCompositionStringW(context, GCS_RESULTSTR, text, size) + 2) > 1) {
+            text[static_cast<unsigned>(size) >> 1] = 0;
+            result->SetWideCursor(false);
+        }
+        *reinterpret_cast<unsigned*>(self + 0x60) = 0;
+        *reinterpret_cast<unsigned*>(self + 0x68) = 0;
+        **reinterpret_cast<wchar_t**>(self + 0x40) = 0;
+        *reinterpret_cast<wchar_t*>(self + 0xd0) = 0;
+        cx18_InvokeInputWindow(self, "RemoveInputWindow", nullptr, 0);
+        cx18_ImmReleaseContext(hwnd, context);
+        result->FinalizeComposition(text);
+        *reinterpret_cast<Scaleform::String*>(reinterpret_cast<unsigned char*>(result.GetPtr()) + 0x98) = text;
+        result->BroadcastIMEConversion(text);
+        if (text) Scaleform::Memory::Free(text);
+    }
+    if ((flags & (CS_INSERTCHAR | CS_NOMOVECARET)) == (CS_INSERTCHAR | CS_NOMOVECARET)) {
+        wchar_t inserted[2] = { static_cast<wchar_t>(wParam), 0 };
+        *reinterpret_cast<unsigned*>(self + 0x68) = 1;
+        *reinterpret_cast<unsigned*>(self + 0x60) = 1;
+        ime->SetWideCursor(true);
+        ime->SetCompositionPosition();
+        ime->SetCompositionText(inserted, 1);
+        ime->SetCursorInComposition(0);
+    }
+    if ((flags & (GCS_COMPSTR | GCS_CURSORPOS)) == (GCS_COMPSTR | GCS_CURSORPOS))
+        reinterpret_cast<void(*)(void*, void*)>(vtable[0xb8 / sizeof(void*)])(self, self + 0x60);
+    if (flags & GCS_COMPATTR) {
+        HIMC context = cx18_ImmGetContext(hwnd);
+        const LONG attrSize = cx18_ImmGetCompositionStringW(context, GCS_COMPATTR, nullptr, 0);
+        auto* attrs = static_cast<signed char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(attrSize) + 1)));
+        cx18_ImmGetCompositionStringW(context, GCS_COMPATTR, attrs, attrSize);
+        unsigned length = *reinterpret_cast<unsigned*>(self + 0x60);
+        if (static_cast<unsigned>(attrSize) < length) length = static_cast<unsigned>(attrSize);
+        const LONG readSize = cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, nullptr, 0);
+        auto* reading = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<unsigned>(readSize) * 2 + 2)));
+        memset(reading, 0, static_cast<size_t>(static_cast<unsigned>(readSize) * 2));
+        cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, reading, readSize);
+        reading[static_cast<unsigned>(readSize) >> 1] = 0;
+        const SPInt cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
+        cx18_ImmReleaseContext(hwnd, context);
+        ime->SetCursorInComposition(cursor);
+
+        struct Segment { int start; int end; int attr; };
+        Segment* segments = nullptr;
+        UPInt count = 0, capacity = 0;
+        auto push = [&](const Segment& segment) {
+            const UPInt size = count + 1;
+            if (size >= capacity) {
+                unsigned long long array[3] = { reinterpret_cast<unsigned long long>(segments), count, capacity };
+                FUN_1423d1240(array, array, size + (size >> 2));
+                segments = reinterpret_cast<Segment*>(array[0]);
+                capacity = array[2];
+            }
+            segments[size - 1] = segment;
+            count = size;
+        };
+        Segment current = { 0, 0, attrs[0] };
+        signed char previous = attrs[0];
+        *reinterpret_cast<unsigned*>(self + 0x64) = length;
+        unsigned remaining = length;
+        for (int i = 0; i < static_cast<int>(length); ++i, --remaining) {
+            if (attrs[i] != previous) {
+                push(current);
+                previous = attrs[i];
+                if (previous == ATTR_TARGET_CONVERTED || previous == ATTR_TARGET_NOTCONVERTED)
+                    *reinterpret_cast<unsigned*>(self + 0x64) = remaining;
+                current.attr = attrs[i];
+                current.start = i;
+            }
+            current.end = i;
+        }
+        current.end = static_cast<int>(length) - 1;
+        push(current);
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+        if (!(mode & 0xf000)) {
+            for (UPInt i = 0; i < count; ++i) {
+                Scaleform::GFx::IMEManagerBase::TextHighlightStyle style;
+                switch (segments[i].attr) {
+                case ATTR_INPUT: style = Scaleform::GFx::IMEManagerBase::THS_CompositionSegment; break;
+                case ATTR_TARGET_CONVERTED:
+                case ATTR_TARGET_NOTCONVERTED: style = Scaleform::GFx::IMEManagerBase::THS_ClauseSegment; break;
+                case ATTR_CONVERTED: style = Scaleform::GFx::IMEManagerBase::THS_ConvertedSegment; break;
+                case ATTR_INPUT_ERROR: style = Scaleform::GFx::IMEManagerBase::THS_LowConfSegment; break;
+                default: continue;
+                }
+                ime->HighlightText(static_cast<UPInt>(segments[i].start),
+                                   static_cast<UPInt>(segments[i].end - segments[i].start + 1), style, false);
+            }
+        }
+        if (*reinterpret_cast<unsigned*>(self + 0x98) == 0x40000) {
+            Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+            ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
+            Scaleform::GFx::Value args[3];
+            args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+            args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
+            args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1));
+            cx18_InvokeInputWindow(self, "RepositionCandWindow", args, 3);
+        }
+        FUN_1423d2710(self, static_cast<int>(wParam), length, reinterpret_cast<long long>(attrs), reading);
+        if (reading) Scaleform::Memory::Free(reading);
+        Scaleform::Memory::Free(attrs);
+        if (segments) Scaleform::Memory::Free(segments);
+    }
+    if (flags == (GCS_CURSORPOS | GCS_DELTASTART)) {
+        if (reinterpret_cast<Scaleform::String*>(self + 0x10)->GetLength())
+            cx18_InvokeInputWindow(self, "RemoveInputWindow", nullptr, 0);
+        const wchar_t* text = *reinterpret_cast<wchar_t**>(self + 0x40);
+        const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(text, -1);
+        char* utf8 = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<int>(size) + 1)));
+        Scaleform::UTF8Util::EncodeString(utf8, text, -1);
+        cx18_DisplayReading(self, utf8, false);
+        **reinterpret_cast<wchar_t**>(self + 0x40) = 0;
+        Scaleform::Memory::Free(utf8);
+    }
 }
 
 // MS2-FUNCTIONAL: WM_IME_COMPOSITION of the Vista (TSF) IME object (vtbl 0x14313a450 slot 10). No flags: the
