@@ -1848,28 +1848,12 @@ extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded pointer storage with the executable's AllocatorLH heap slots.
+// MS2-FUNCTIONAL: ArrayDataBase<void*, AllocatorLH_POD<void*>, ArrayDefaultPolicy>::Reserve, allocating in the heap that owns
+// `allocator`; the AllocInfo slot differs (see Ime01ArrayGH).
 // @0x1423d95f0
 extern "C" void FUN_1423d95f0(void* rawArray, void* allocator, unsigned long long requested)
 {
-    auto* array = static_cast<unsigned long long*>(rawArray);
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    if (!requested) {
-        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
-        array[0] = 0;
-        array[2] = 0;
-        return;
-    }
-    const unsigned long long capacity = (requested + 3) & ~3ull;
-    if (array[0]) {
-        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
-            DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * sizeof(void*)));
-    } else {
-        unsigned allocFlags = 2;
-        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long, unsigned*)>(heapVtable[14])(
-            DAT_143b15f60, allocator, capacity * sizeof(void*), &allocFlags));
-    }
-    array[2] = capacity;
+    static_cast<ArrayDataBase<void*, AllocatorLH_POD<void*>, ArrayDefaultPolicy>*>(rawArray)->Reserve(allocator, requested);
 }
 
 // ArrayDataBase<T, AllocatorGH_POD, ArrayDefaultPolicy>::Reserve for an element of ElementSize bytes.
