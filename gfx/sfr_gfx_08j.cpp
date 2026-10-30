@@ -52,9 +52,10 @@ public:
     unsigned          FontFlags;     // +0x20 the style bits only
 
     GFxSystemFontResourceKey(const char* pfontName, unsigned fontFlags, FontProvider* pfontProvider)
-        : pFontProvider(pfontProvider), FontName(String(pfontName).ToLower()),
-          FontFlags(fontFlags & Render::Font::FF_Style_Mask)
     {
+        FontName      = String(pfontName).ToLower(); // font names are case-insensitive
+        FontFlags     = fontFlags & Render::Font::FF_Style_Mask;
+        pFontProvider = pfontProvider;
     }
 };
 
@@ -102,7 +103,7 @@ void* FUN_1426536b0(GFxSystemFontResourceKeyInterface* p, unsigned flags)
 {
     p->GFxSystemFontResourceKeyInterface::~GFxSystemFontResourceKeyInterface();
     if (flags & 1)
-        operator delete(p);
+        ::operator delete(p, 8);
     return p;
 }
 
@@ -140,7 +141,7 @@ void* FUN_142654d60(TextureGlyphBinder* p, unsigned flags)
 {
     p->TextureGlyphBinder::~TextureGlyphBinder();
     if (flags & 1)
-        operator delete(p);
+        ::operator delete(p, 0x10);
     return p;
 }
 
@@ -149,7 +150,7 @@ void* FUN_142654d90(TextureGlyphData::TextureGlyphVisitor* p, unsigned flags)
 {
     p->TextureGlyphData::TextureGlyphVisitor::~TextureGlyphVisitor();
     if (flags & 1)
-        operator delete(p);
+        ::operator delete(p, 8);
     return p;
 }
 
@@ -218,11 +219,11 @@ static String BuildStringFromRanges(const Array<Range>& ranges)
 // @0x1426540b0
 FontData::FontData(const char* name, unsigned fontFlags) : Render::Font(fontFlags), Name(0)
 {
-    UPInt size = SFstrlen(name) + 1;
-    Name       = (char*)SF_ALLOC(size, StatMD_Fonts_Mem);
+    Name = (char*)SF_ALLOC(SFstrlen(name) + 1, StatMD_Fonts_Mem);
     if (Name)
-        strcpy_s(Name, size, name);
-    Flags |= 0x2000; // FF_HasLayout
+        SFstrcpy(Name, SFstrlen(name) + 1, name);
+
+    Flags |= 0x2000; // SetHasLayout(1)
 }
 
 // @0x1426541a0
@@ -249,19 +250,21 @@ void* FUN_142654b50(FontData* p, unsigned flags)
 // @0x142655db0
 const char* FontData::GetName() const { return Name; }
 
-// MS2-FUNCTIONAL 0x142655b80: the hash lookup result is materialized through the found-value pointer (cmove); same lookup and default
 // @0x142655b80
 int FontData::GetGlyphIndex(UInt16 code)
 {
-    const UInt16* pindex = CodeTable.Get(code);
-    return pindex ? *pindex : -1;
+    UInt16 glyphIndex;
+    if (CodeTable.Get(code, &glyphIndex))
+    {
+        return glyphIndex;
+    }
+    return -1;
 }
 
-// MS2-FUNCTIONAL 0x142655620: the exe compares the 16-bit index with an imm16 cmp where our compiler loads 0xffff into a register; same logic
 // @0x142655620
 float FontData::GetAdvance(unsigned glyphIndex) const
 {
-    if ((UInt16)glyphIndex == 0xffff)
+    if (IsMissingGlyph(glyphIndex))
         return GetNominalGlyphWidth();
     if (AdvanceTable.GetSize() == 0)
     {
@@ -276,22 +279,24 @@ float FontData::GetAdvance(unsigned glyphIndex) const
     return 0;
 }
 
-// MS2-FUNCTIONAL 0x142655cb0: register allocation and the 0xffff compare form differ; same kerning-pair lookup
 // @0x142655cb0
 float FontData::GetKerningAdjustment(unsigned lastCode, unsigned thisCode) const
 {
+    float       adjustment;
     KerningPair k;
-    k.Char0            = (UInt16)lastCode;
-    k.Char1            = (UInt16)thisCode;
-    const float* padj = KerningPairs.Get(k);
-    return padj ? *padj : 0;
+    k.Char0 = (UInt16)lastCode;
+    k.Char1 = (UInt16)thisCode;
+    if (KerningPairs.Get(k, &adjustment))
+    {
+        return adjustment;
+    }
+    return 0;
 }
 
-// MS2-FUNCTIONAL 0x142655c50: the exe compares the 16-bit index with an imm16 cmp; same logic
 // @0x142655c50
 float FontData::GetGlyphWidth(unsigned glyphIndex) const
 {
-    if ((UInt16)glyphIndex == 0xffff)
+    if (IsMissingGlyph(glyphIndex))
         return GetNominalGlyphWidth();
     if (glyphIndex < AdvanceTable.GetSize())
     {
@@ -302,11 +307,10 @@ float FontData::GetGlyphWidth(unsigned glyphIndex) const
     return GetAdvance(glyphIndex);
 }
 
-// MS2-FUNCTIONAL 0x142655b20: the exe compares the 16-bit index with an imm16 cmp; same logic
 // @0x142655b20
 float FontData::GetGlyphHeight(unsigned glyphIndex) const
 {
-    if ((UInt16)glyphIndex == 0xffff || AdvanceTable.GetSize() == 0)
+    if (IsMissingGlyph(glyphIndex) || AdvanceTable.GetSize() == 0)
         return GetNominalGlyphHeight();
     if (glyphIndex < AdvanceTable.GetSize())
         return AdvanceTable[glyphIndex].Height / 20.0f;
@@ -316,7 +320,7 @@ float FontData::GetGlyphHeight(unsigned glyphIndex) const
 // @0x142655980
 RectF& FontData::GetGlyphBounds(unsigned glyphIndex, RectF* prect) const
 {
-    if ((UInt16)glyphIndex == 0xffff)
+    if (IsMissingGlyph(glyphIndex))
     {
         prect->x1 = prect->y1 = 0;
         prect->SetWidth(GetGlyphWidth(glyphIndex));
@@ -758,10 +762,10 @@ void TextureGlyphData::AddTexture(ResourceId textureId, ImageResource* pimageRes
 // @0x142654ec0
 void TextureGlyphData::AddTextureGlyph(unsigned glyphIndex, const TextureGlyph& glyph)
 {
-    if (glyphIndex >= TextureGlyphs.GetSize())
+    if (TextureGlyphs.GetSize() <= glyphIndex)
     {
         TextureGlyphs.Resize(glyphIndex + 1);
-        if (glyphIndex >= TextureGlyphs.GetSize())
+        if (TextureGlyphs.GetSize() <= glyphIndex)
             return;
     }
     TextureGlyphs[glyphIndex] = glyph;
@@ -774,7 +778,7 @@ TextureGlyph DAT_143a2f650;
 // MS2-FUNCTIONAL 0x142655e80: the exe builds the empty glyph on first use (thread-safe guard, atexit FUN_142cc9540);
 // here it is a namespace-scope object
 // @0x142655e80
-const TextureGlyph& TextureGlyphData::GetTextureGlyph(unsigned glyphIndex) const
+SF_NOINLINE const TextureGlyph& TextureGlyphData::GetTextureGlyph(unsigned glyphIndex) const
 {
     if (glyphIndex < TextureGlyphs.GetSize())
         return TextureGlyphs[glyphIndex];
@@ -784,7 +788,7 @@ const TextureGlyph& TextureGlyphData::GetTextureGlyph(unsigned glyphIndex) const
 // @0x142657d70
 void TextureGlyphData::VisitTextureGlyphs(TextureGlyphVisitor* pvisitor)
 {
-    for (UPInt i = 0; i < TextureGlyphs.GetSize(); ++i)
+    for (UPInt i = 0, n = TextureGlyphs.GetSize(); i < n; ++i)
         pvisitor->Visit((unsigned)i, &TextureGlyphs[i]);
 }
 
@@ -809,9 +813,9 @@ void TextureGlyphData::VisitTextures(TexturesVisitor* pvisitor, ResourceBinding*
 // @0x142657f70
 void TextureGlyphData::WipeTextureGlyphs()
 {
-    TextureGlyph emptyGlyph;
-    for (UPInt i = 0; i < TextureGlyphs.GetSize(); ++i)
-        TextureGlyphs[i] = emptyGlyph;
+    TextureGlyph defaultTg;
+    for (UPInt i = 0, n = TextureGlyphs.GetSize(); i < n; i++)
+        TextureGlyphs[i] = defaultTg;
 }
 
 } // namespace GFx

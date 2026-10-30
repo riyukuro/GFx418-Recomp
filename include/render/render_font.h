@@ -101,6 +101,8 @@ public:
     virtual float GetNominalGlyphHeight() const { return 1024.0f; }
 
     unsigned GetFontFlags() const { return Flags; }
+    // (appended, sfh) SDK Render_Font.h
+    static bool IsMissingGlyph(unsigned glyphIndex) { return (glyphIndex & 0xFFFF) == 0xFFFF; }
     float    GetAscent() const     { return Ascent; }
     float    GetDescent() const    { return Descent; }
     float    GetLeading() const    { return Leading; }

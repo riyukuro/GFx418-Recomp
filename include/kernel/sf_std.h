@@ -70,6 +70,12 @@ int SF_CDECL SFtowupper(wchar_t ch);
 
 // (appended for GFx FontManager, sfr_gfx_07g)
 inline UPInt SF_CDECL SFstrlen(const char* str) { return strlen(str); }
+// (appended for GFx FontData, sfh) SF_MSVC_SAFESTRING form
+inline char* SF_CDECL SFstrcpy(char* dest, UPInt destsize, const char* src)
+{
+    strcpy_s(dest, destsize, src);
+    return dest;
+}
 
 // (appended for GFx::Value::operator==, fq1) the game's /Od units keep SFstrcmp as an out-of-line COMDAT; SFwcscmp is
 // the kernel's own (exe 0x1425a4c70, sfr_kernel_02).
