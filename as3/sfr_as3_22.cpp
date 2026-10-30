@@ -1266,11 +1266,12 @@ bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: reports channels, integer default frequency, and the executable's supported-format flag.
+// reports channels, integer default frequency, and the executable's supported-format flag.
 // @0x142745ac0
 bool QuerySoundFormat(void* player, unsigned* formatFlag, int* channels, int* frequency)
 {
-    void* sound = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
+    // the sound member is re-read after each FMOD call
+    void* const& sound = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
     if (!sound)
         return false;
 
@@ -1283,10 +1284,13 @@ bool QuerySoundFormat(void* player, unsigned* formatFlag, int* channels, int* fr
     float defaultFrequency = 0.0f;
     if (FUN_1428d8eb4(sound, &defaultFrequency, nullptr, nullptr, nullptr) != 0)
         return false;
-    *frequency = static_cast<int>(defaultFrequency);
-    if (soundFormat != 2 && soundFormat != 5)
+    *frequency = static_cast<int>(static_cast<unsigned>(defaultFrequency));
+    if (soundFormat == 2)
+        *formatFlag = 0;
+    else if (soundFormat == 5)
+        *formatFlag = 1;
+    else
         return false;
-    *formatFlag = soundFormat == 5 ? 1u : 0u;
     return true;
 }
 }
@@ -1968,33 +1972,34 @@ void DrawImageViewport(void* command, void* contextOwner, void** image, void* st
             *reinterpret_cast<void**>(static_cast<unsigned char*>(command) + 8)) + 0x48) != 0) + 0x0f, true, true);
 }
 
-// MS2-FUNCTIONAL: clips a rectangle to the destination image and fills the surviving pixels with the selected alpha-adjusted color.
+// DICommand_FillRect::ExecuteSW: clips ApplyRect to the image and fills it, opaque unless the image is transparent.
 // @0x142676ac0
 void FillClippedImageRect(void* command, void*, void* image)
 {
+    // DICommand_FillRect::ExecuteSW: ApplyRect at +0x10, FillColor at +0x20, pImage at +8.
     auto* bytes = static_cast<unsigned char*>(command);
-    auto* plane = *reinterpret_cast<unsigned**>(static_cast<unsigned char*>(image) + 0x10);
-    const int x0 = static_cast<int>(*reinterpret_cast<unsigned*>(bytes + 0x10));
-    const int y0 = static_cast<int>(*reinterpret_cast<unsigned*>(bytes + 0x14));
-    const int x1 = *reinterpret_cast<int*>(bytes + 0x18);
-    const int y1 = *reinterpret_cast<int*>(bytes + 0x1c);
-    if (static_cast<int>(plane[1]) < y0 || y1 < 0 || x1 < 0 || static_cast<int>(plane[0]) < x0)
+    Render::ImageData& dest = *static_cast<Render::ImageData*>(image);
+    const Render::Rect<SInt32>& applyRect = *reinterpret_cast<const Render::Rect<SInt32>*>(bytes + 0x10);
+    const Render::ImageSize destSize = dest.GetSize();
+    Render::Rect<SInt32> dstImageRect(0, 0, static_cast<SInt32>(destSize.Width), static_cast<SInt32>(destSize.Height));
+    Render::Rect<SInt32> clippedRect;
+    if (!dstImageRect.IntersectRect(&clippedRect, applyRect))
         return;
-    const int left = x0 < 0 ? 0 : x0;
-    const int right = x1 < static_cast<int>(plane[0]) ? x1 : static_cast<int>(plane[0]);
-    const int top = y0 < 0 ? 0 : y0;
-    const int bottom = y1 < static_cast<int>(plane[1]) ? y1 : static_cast<int>(plane[1]);
-    const long long pitch = *reinterpret_cast<long long*>(plane + 2);
-    const long long base = *reinterpret_cast<long long*>(plane + 6);
-    unsigned color = *reinterpret_cast<unsigned*>(bytes + 0x20) | 0xff000000u;
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 8)) + 0x48))
-        color = *reinterpret_cast<unsigned*>(bytes + 0x20);
-    for (int y = top; y < bottom; ++y)
-        for (int x = left; x < right; ++x)
-            FUN_14257d390(image, base + pitch * y, static_cast<unsigned>(x), color);
+
+    UInt32 fillColor = *reinterpret_cast<UInt32*>(bytes + 0x20);
+    if (!*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 8)) + 0x48))
+        fillColor |= (UInt32)255 << 24;
+
+    int x, y;
+    for (y = clippedRect.y1; y < clippedRect.y2; y++)
+    {
+        UByte* row = dest.GetScanline(y);
+        for (x = clippedRect.x1; x < clippedRect.x2; x++)
+            FUN_14257d390(image, reinterpret_cast<long long>(row), static_cast<unsigned>(x), fillColor);
+    }
 }
 
-// MS2-FUNCTIONAL: fills every pixel using the executable's image write helper and the stored color value.
+// DICommand_Clear::ExecuteSW: fills every pixel through the image write helper with the stored color.
 // @0x142675ca0
 void FillImageData(void* command, void*, void* image)
 {
@@ -2270,30 +2275,29 @@ namespace Scaleform {
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: serializes pause changes, updates paused timestamps, and pulses the completion event on resume.
+// serializes pause changes, updates paused timestamps, and pulses the completion event on resume.
 // @0x142745eb0
 void SetAudioPaused(void* player, bool paused)
 {
     auto* bytes = static_cast<unsigned char*>(player);
-    auto* lock = reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70);
-    EnterCriticalSection(lock);
-    if (static_cast<bool>(bytes[0x68]) != paused) {
+    Lock::Locker locker(reinterpret_cast<Lock*>(bytes + 0x70));
+    bool& pausedFlag = *reinterpret_cast<bool*>(bytes + 0x68);
+    if (pausedFlag != paused) {
         void* channel = *reinterpret_cast<void**>(bytes + 0x38);
         if (channel)
             FUN_1428d8ed8(channel, paused);
-        bytes[0x68] = paused;
+        pausedFlag = paused;
         const long long now = static_cast<long long>(FUN_1425e3480());
-        if (!paused) {
-            *reinterpret_cast<long long*>(bytes + 0x48) = now;
-            auto* event = reinterpret_cast<Scaleform::Event*>(*reinterpret_cast<void**>(bytes + 0x28));
-            event->PulseEvent();
-        } else {
+        if (paused) {
             *reinterpret_cast<long long*>(bytes + 0x50) = now;
-            auto* accumulated = reinterpret_cast<long long*>(bytes + 0x58);
-            *accumulated += now - *reinterpret_cast<long long*>(bytes + 0x48);
+            *reinterpret_cast<long long*>(bytes + 0x58) += now - *reinterpret_cast<long long*>(bytes + 0x48);
+        } else {
+            *reinterpret_cast<long long*>(bytes + 0x48) = now;
+            // the manager (+0x28) wakes its worker through the Event at +0x20
+            auto* manager = *reinterpret_cast<unsigned char**>(bytes + 0x28);
+            reinterpret_cast<Scaleform::Event*>(manager + 0x20)->PulseEvent();
         }
     }
-    LeaveCriticalSection(lock);
 }
 
 // MS2-FUNCTIONAL: computes elapsed playback time under the player's lock and clamps/records the audio end time.
