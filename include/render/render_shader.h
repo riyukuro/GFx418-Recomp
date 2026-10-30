@@ -51,13 +51,13 @@ public:
     {
         if (sd->pVDesc->BatchUniforms[var].Offset >= 0)
         {
-            int array = sd->pVDesc->BatchUniforms[var].Array;
+            unsigned array = sd->pVDesc->BatchUniforms[var].Array;
             SetUniform0(sd, array, v, n,
                         index + sd->pVDesc->BatchUniforms[var].Offset + batch * sd->pVDesc->Uniforms[array].BatchSize, 0);
         }
         else if (sd->pFDesc->BatchUniforms[var].Offset >= 0)
         {
-            int array = sd->pFDesc->BatchUniforms[var].Array;
+            unsigned array = sd->pFDesc->BatchUniforms[var].Array;
             SetUniform0(sd, array, v, n,
                         index + sd->pFDesc->BatchUniforms[var].Offset + batch * sd->pFDesc->Uniforms[array].BatchSize, 0);
         }

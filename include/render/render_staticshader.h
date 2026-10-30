@@ -84,10 +84,11 @@ public:
         }
         if ((fillFlags & 4) && shader != 0x9003)
             shader += 0x10;
-        if (batchType == PrimitiveBatch::DP_Batch)
-            shader += 2;
-        else if (batchType == PrimitiveBatch::DP_Instanced)
-            shader += 4;
+        switch (batchType)
+        {
+        case PrimitiveBatch::DP_Batch:     shader += 2; break;
+        case PrimitiveBatch::DP_Instanced: shader += 4; break;
+        }
         if (fillFlags & 1)
             shader += 1;
         if (fillFlags & 8)

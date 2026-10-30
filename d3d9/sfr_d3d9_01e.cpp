@@ -101,7 +101,7 @@ HAL::HAL(ThreadCommandQueue* commandQueue)
     }
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272e650
 HAL::~HAL()
 {
@@ -123,7 +123,7 @@ void RenderEvent::End()
     D3DPERF_EndEvent();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142731df0
 Render::RenderEvent& HAL::GetEvent(EventType type)
 {
@@ -191,7 +191,7 @@ bool HAL::checkMaskBufferCaps()
 }
 
 // a full-viewport quad (two triangles) from the mask erase vertices
-// MS2-FUNCTIONAL: cl inlines setLinearStreamSource here, the exe calls it
+// cl inlines setLinearStreamSource here, the exe calls it
 // @0x142737f10
 void HAL::drawScreenQuad()
 {
@@ -200,7 +200,7 @@ void HAL::drawScreenQuad()
     pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x1427387f0
 bool HAL::initializeShaders(bool)
 {
@@ -211,13 +211,12 @@ bool HAL::initializeShaders(bool)
     }
     for (unsigned i = 0; i < FragShaderDesc::FSI_Count; i++)
     {
-        const FragShaderDesc* desc = FragShaderDesc::Descs[i];
-        if (!desc)
+        if (!FragShaderDesc::Descs[i])
             continue;
         // the dynamic looping shaders only where the device runs them
-        if ((desc->Flags & 4) && !SManager.HasDynamicLoopingSupport())
+        if ((FragShaderDesc::Descs[i]->Flags & 4) && !SManager.HasDynamicLoopingSupport())
             continue;
-        if (!StaticFShaders[i].Init(this, desc))
+        if (!StaticFShaders[i].Init(this, FragShaderDesc::Descs[i]))
             return false;
     }
     return true;
@@ -247,7 +246,7 @@ void HAL::setLinearStreamSource(PrimitiveBatch::BatchType type)
     PrevBatchType = type;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142738de0
 bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
 {
@@ -263,7 +262,7 @@ bool HAL::shouldRenderFilters(const FilterPrimitive* prim) const
     return false;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272f910
 RenderTarget* HAL::CreateRenderTarget(IDirect3DSurface9* colorSurface, IDirect3DSurface9* depthSurface)
 {
@@ -324,7 +323,7 @@ RenderTarget* HAL::CreateRenderTarget(Render::Texture* texture, bool needsStenci
     return prt;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272fbe0
 RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStencil)
 {
@@ -335,11 +334,11 @@ RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStenc
     if (data && (!needsStencil || data->pDSSurface))
         return prt;
 
-    D3D9::Texture*     pt   = (D3D9::Texture*)prt->GetTexture();
     IDirect3DSurface9* surf = 0;
+    D3D9::Texture*     pt   = (D3D9::Texture*)prt->GetTexture();
     pt->pTextures[0].pTexture->GetSurfaceLevel(0, &surf);
-    DepthStencilBuffer* pdsb = 0;
     IDirect3DSurface9*  pdss = 0;
+    DepthStencilBuffer* pdsb = 0;
     if (needsStencil)
         pdsb = createTargetDepthStencil(pRenderBufferManager, size, &pdss);
     RenderTargetData::UpdateData(prt, surf, pdsb, pdss);
@@ -350,7 +349,7 @@ RenderTarget* HAL::CreateTempRenderTarget(const ImageSize& size, bool needsStenc
     return prt;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142731c80
 void HAL::EndMaskSubmit()
 {
@@ -606,7 +605,7 @@ void HAL::PopMask()
 }
 
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272f830
 PrimitiveFill* HAL::CreatePrimitiveFill(const PrimitiveFillData& data)
 {
@@ -804,7 +803,7 @@ void HAL::DrawableCopyChannel(Render::Texture** tex, const Matrix2F* texgen, con
     DrawableMerge(tex, texgen, cxmul);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x1427315c0
 void HAL::DrawableMerge(Render::Texture** tex, const Matrix2F* texgen, const Matrix4F* cxmul)
 {
@@ -874,7 +873,7 @@ void HAL::DrawablePaletteMap(Render::Texture** tex, const Matrix2F* texgen, cons
     }
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142731b00
 void HAL::DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, unsigned op,
                             UInt32 threshold, UInt32 color, UInt32 mask, bool copySource)
@@ -1238,7 +1237,7 @@ void HAL::PushFilters(FilterPrimitive* prim)
     FilterStack.PushBack(e);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142732830
 void HAL::PopFilters()
 {
@@ -1683,7 +1682,7 @@ D3D9::FragShader* FUN_14272dbd0(D3D9::FragShader* p)
 }
 
 // RenderBuffer::~RenderBuffer, a copy the HAL dtor calls
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272e5e0
 void FUN_14272e5e0(RenderBuffer* p)
 {
@@ -1699,7 +1698,7 @@ void FUN_14272e730(Render::HAL* hal)
 }
 
 // RenderBuffer::~RenderBuffer, a second copy
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272e8f0
 void FUN_14272e8f0(RenderBuffer* p)
 {
@@ -1771,7 +1770,7 @@ void FUN_142733fd0(FilterStackData* a, const void* pheapAddr, UPInt newSize)
 }
 
 // FilterStack's PushBack
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142732e40
 void FUN_142732e40(FilterStackData* a, const Render::HAL::FilterStackEntry& e)
 {
