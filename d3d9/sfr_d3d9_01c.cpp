@@ -104,7 +104,7 @@ void RenderSync::WaitFence(FenceType, UInt64 handle, const FenceFrame&)
     // the frame's own fence has not been issued yet: issue it now and start a new one for the rest of the frame
     if (query == pNextEndFrameFence)
     {
-        query->Issue(D3DISSUE_END);
+        pNextEndFrameFence->Issue(D3DISSUE_END);
         query = pNextEndFrameFence;
         if (FAILED(pDevice->CreateQuery(D3DQUERYTYPE_EVENT, &pNextEndFrameFence)))
             pNextEndFrameFence = 0;
@@ -284,7 +284,6 @@ void MeshCache::UnlockBuffers()
         pRQCaches->ClearCacheLocked(Cache_Mesh);
 }
 
-// MS2-FUNCTIONAL: register allocation and branch layout of the fence test
 // @0x14273a5e0
 UPInt MeshCache::Evict(Render::MeshCacheItem* pbatch, AllocAddr* allocator, MeshBase* skipMesh)
 {
@@ -302,7 +301,7 @@ UPInt MeshCache::Evict(Render::MeshCacheItem* pbatch, AllocAddr* allocator, Mesh
     UPInt ibfree = p->pIndexBuffer ? IndexBuffers.Free(p->IBAllocSize, p->pIndexBuffer, p->IBAllocOffset) : 0;
     UPInt result;
     if (allocator)
-        result = (allocator == &VertexBuffers.GetAllocator()) ? vbfree : ibfree;
+        result = (&VertexBuffers.GetAllocator() == allocator) ? vbfree : ibfree;
     else
         result = vbfree + ibfree;
 
