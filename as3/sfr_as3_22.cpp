@@ -3899,17 +3899,16 @@ void FUN_142675870(void* command, void* context, void* textures, const void* tex
         reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
         const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
         const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
-        for (unsigned i = 0; i < 4; ++i) {
+        for (unsigned i = 0; i < 3; ++i) {
             transform[i] *= scaleX * 2.0f;
             transform[i + 4] *= scaleY * DrawableImageScale2;
         }
         unsigned origin[2] = {};
         reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
-        transform[3] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
-                       size[0] + transform[3];
-        transform[7] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
-                       size[1] + transform[7];
-        transform[7] *= DrawableImageScale2;
+        transform[3] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
+                        size[0] + transform[3] * scaleX) * 2.0f;
+        transform[7] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
+                        size[1] + transform[7] * scaleY) * DrawableImageScale2;
     } else {
         transform[0] = ImageViewportBias;
         transform[3] = ImageViewportClampBias;
@@ -3940,16 +3939,16 @@ void FUN_142675560(void* command, void* context, void* textures, const void* tex
         reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, size);
         const float scaleX = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x24) - *reinterpret_cast<int*>(bytes + 0x1c)) / size[1];
         const float scaleY = static_cast<float>(*reinterpret_cast<int*>(bytes + 0x20) - *reinterpret_cast<int*>(bytes + 0x18)) / size[0];
-        for (unsigned i = 0; i < 4; ++i) {
+        for (unsigned i = 0; i < 3; ++i) {
             transform[i] *= scaleY * 2.0f;
             transform[i + 4] *= scaleX * DrawableImageScale2;
         }
         unsigned origin[2] = {};
         reinterpret_cast<void* (*)(void*, unsigned*)>(imageVtable[5])(image, origin);
-        transform[3] = (static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
-                       size[0] + transform[3];
+        transform[3] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x28)) - origin[0] * ImageViewportScale) /
+                        size[0] + transform[3] * scaleY) * 2.0f;
         transform[7] = ((static_cast<float>(*reinterpret_cast<int*>(bytes + 0x2c)) - origin[1] * ImageViewportScale) /
-                       size[1] + transform[7]) * DrawableImageScale2;
+                        size[1] + transform[7] * scaleX) * DrawableImageScale2;
     } else {
         transform[0] = ImageViewportBias;
         transform[3] = ImageViewportClampBias;
@@ -3958,9 +3957,9 @@ void FUN_142675560(void* command, void* context, void* textures, const void* tex
     }
     auto* renderer = *reinterpret_cast<void**>(static_cast<unsigned char*>(context) + 8);
     auto** rendererVtable = *reinterpret_cast<void***>(renderer);
-    reinterpret_cast<void (*)(void*, void*, const void*, const float*, const unsigned*, unsigned)>(rendererVtable[47])(
-        renderer, textures, texgen, transform, *reinterpret_cast<const unsigned**>(bytes + 0x40),
-        *reinterpret_cast<unsigned*>(bytes + 0x48));
+    reinterpret_cast<void (*)(void*, void*, const void*, const float*, unsigned, const unsigned*)>(rendererVtable[47])(
+        renderer, textures, texgen, transform, *reinterpret_cast<unsigned*>(bytes + 0x48),
+        *reinterpret_cast<const unsigned**>(bytes + 0x40));
 }
 
 namespace GFx { namespace AMP {
