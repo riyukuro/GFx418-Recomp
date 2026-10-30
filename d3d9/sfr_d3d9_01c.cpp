@@ -355,7 +355,6 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshConte
     return true;
 }
 
-// MS2-FUNCTIONAL: register allocation and block layout of the clean-up path
 // @0x142739840
 MeshCache::AllocResult MeshCache::AllocCacheItem(Render::MeshCacheItem** item, UByte** vertexDataStart,
                                                  IndexType** indexDataStart, MeshCacheItem::MeshType meshType,
@@ -367,48 +366,44 @@ MeshCache::AllocResult MeshCache::AllocCacheItem(Render::MeshCacheItem** item, U
         return Alloc_StateError;
 
     UPInt       vbOffset = 0, ibOffset = 0;
-    MeshBuffer* vb = 0;
-    MeshBuffer* ib = 0;
-    AllocResult result = Alloc_Fail;
-    UPInt       ibSize = indexCount * sizeof(IndexType);
+    MeshBuffer *pvb = 0, *pib = 0;
+    UByte      *pvdata, *pidata;
+    AllocResult failType = Alloc_Fail;
 
-    if (!allocBuffer(&vbOffset, &vb, VertexBuffers, vertexBufferSize, waitForCache))
+    if (!allocBuffer(&vbOffset, &pvb, VertexBuffers, vertexBufferSize, waitForCache))
     {
         // too big when no buffer could ever hold it
         if (!VertexBuffers.CheckAllocationSize(vertexBufferSize))
-            result = Alloc_Fail_TooBig;
+            failType = Alloc_Fail_TooBig;
+handle_alloc_fail:
+        // give back what was taken
+        if (pvb) VertexBuffers.Free(vertexBufferSize, pvb, vbOffset);
+        if (pib) IndexBuffers.Free(indexCount * sizeof(IndexType), pib, ibOffset);
+        return failType;
     }
-    else if (!allocBuffer(&ibOffset, &ib, IndexBuffers, ibSize, waitForCache))
+    if (!allocBuffer(&ibOffset, &pib, IndexBuffers, indexCount * sizeof(IndexType), waitForCache))
     {
-        if (!IndexBuffers.CheckAllocationSize(ibSize))
-            result = Alloc_Fail_TooBig;
-    }
-    else
-    {
-        UByte* vdata = vb->Lock(LockedBuffers.pFirst);
-        UByte* idata = ib->Lock(LockedBuffers.pFirst);
-        if (vdata && idata)
-        {
-            MeshCacheItem* p = MeshCacheItem::Create(meshType, &CacheList, mc, vb, ib, (unsigned)vbOffset,
-                                                     vertexBufferSize, vertexCount, (unsigned)ibOffset, ibSize,
-                                                     indexCount);
-            *item = p;
-            if (p)
-            {
-                *vertexDataStart = vdata + vbOffset;
-                *indexDataStart  = (IndexType*)(idata + ibOffset);
-                return Alloc_Success;
-            }
-            result = Alloc_StateError;
-        }
+        if (!IndexBuffers.CheckAllocationSize(indexCount * sizeof(IndexType)))
+            failType = Alloc_Fail_TooBig;
+        goto handle_alloc_fail;
     }
 
-    // give back what was taken
-    if (vb)
-        VertexBuffers.GetAllocator().Free((vb->Index << 24) | (vbOffset >> 4), (vertexBufferSize + 15) >> 4);
-    if (ib)
-        IndexBuffers.GetAllocator().Free((ib->Index << 24) | (ibOffset >> 4), (indexCount * 2 + 15) >> 4);
-    return result;
+    pvdata = pvb->Lock(LockedBuffers.pFirst);
+    pidata = pib->Lock(LockedBuffers.pFirst);
+    if (!pvdata || !pidata)
+        goto handle_alloc_fail;
+
+    *item = MeshCacheItem::Create(meshType, &CacheList, mc, pvb, pib, (unsigned)vbOffset, vertexBufferSize,
+                                  vertexCount, (unsigned)ibOffset, indexCount * sizeof(IndexType), indexCount);
+    if (!*item)
+    {
+        failType = Alloc_StateError;
+        goto handle_alloc_fail;
+    }
+
+    *vertexDataStart = pvdata + vbOffset;
+    *indexDataStart  = (IndexType*)(pidata + ibOffset);
+    return Alloc_Success;
 }
 
 // @0x14273a780
@@ -427,83 +422,78 @@ void MeshCache::GetStats(Stats* stats)
     stats->UsedSize[MeshBuffer_GpuMem | MeshBuffer_Index]   = IndexBuffers.GetAllocator().GetFreeSize() << 4;
 }
 
-// MS2-FUNCTIONAL: block layout of the eviction fall-backs
 // @0x14273b590
 bool MeshCache::allocBuffer(UPInt* offset, MeshBuffer** buffer, MeshBufferSet& mbs, UPInt size, bool waitForCache)
 {
     if (mbs.Alloc(size, buffer, offset))
         return true;
 
-    if (!CacheList.EvictPendingFree(mbs.GetAllocator()))
+    MeshCacheItem* pitems;
+
+    if (CacheList.EvictPendingFree(mbs.GetAllocator()))
+        goto alloc_size_available;
+
+    if (getTotalSize() + MinSupportedGranularity <= Params.MemLimit)
     {
-        bool done = false;
-        if (getTotalSize() + MinSupportedGranularity <= Params.MemLimit)
+        // below the limit: trim the LRU tail to its size, then add a chunk buffer
+        if (CacheList.EvictLRUTillLimit(CacheList.GetSlot(MCL_LRUTail), mbs.GetAllocator(), size,
+                                        Params.LRUTailSize))
+            goto alloc_size_available;
+
+        if (size > mbs.GetGranularity())
+            return false;
+
+        UPInt allocSize = Alg::PMin(Params.MemLimit - getTotalSize(), mbs.GetGranularity());
+        if (size <= allocSize)
         {
-            // below the limit: trim the LRU tail to its size, then add a chunk buffer
-            if (CacheList.EvictLRUTillLimit(CacheList.GetSlot(MCL_LRUTail), mbs.GetAllocator(), size,
-                                            Params.LRUTailSize))
-                done = true;
-            else
+            MeshBuffer* pbuff = mbs.CreateBuffer(allocSize, MeshBuffer::AT_Chunk, 0, pHeap, pDevice,
+                                                 BufferCreateFlags);
+            if (pbuff)
             {
-                UPInt allocSize = mbs.GetGranularity();
-                if (size > allocSize)
-                    return false;
-                allocSize = Alg::Min(allocSize, Params.MemLimit - VertexBuffers.GetTotalSize() -
-                                                    IndexBuffers.GetTotalSize());
-                if (size <= allocSize)
-                {
-                    MeshBuffer* p = mbs.CreateBuffer(allocSize, MeshBuffer::AT_Chunk, 0, pHeap, pDevice,
-                                                     BufferCreateFlags);
-                    if (p)
-                    {
-                        ChunkBuffers.PushBack(p);
-                        done = true;
-                    }
-                }
-            }
-        }
-
-        if (!done && !CacheList.EvictLRU(CacheList.GetSlot(MCL_LRUTail), mbs.GetAllocator(), size))
-        {
-            if (VBSizeEvictedInLock > Params.VBLockEvictSizeLimit)
-                return false;
-
-            // take last frame's items whose fences have passed
-            MeshCacheListSet::ListSlot& prev = CacheList.GetSlot(MCL_PrevFrame);
-            for (;;)
-            {
-                MeshCacheItem* p = (MeshCacheItem*)prev.GetFirst();
-                if (prev.IsNull(p))
-                    break;
-                if (UsesDynamicMeshes() && p->GPUFence && p->GPUFence->IsPending(FenceType_Vertex))
-                    continue;
-                if (Evict(p, &mbs.GetAllocator()) >= size)
-                {
-                    done = true;
-                    break;
-                }
-            }
-
-            if (!done)
-            {
-                if (!waitForCache)
-                    return false;
-                // this frame's items, waiting on their fences
-                MeshCacheListSet::ListSlot& cur = CacheList.GetSlot(MCL_ThisFrame);
-                for (;;)
-                {
-                    MeshCacheItem* p = (MeshCacheItem*)cur.GetFirst();
-                    if (cur.IsNull(p))
-                        return false;
-                    if (UsesDynamicMeshes() && p->GPUFence && p->GPUFence->IsPending(FenceType_Vertex))
-                        p->GPUFence->WaitFence(FenceType_Vertex);
-                    if (Evict(p, &mbs.GetAllocator()) >= size)
-                        break;
-                }
+                ChunkBuffers.PushBack(pbuff);
+                goto alloc_size_available;
             }
         }
     }
-    return mbs.Alloc(size, buffer, offset);
+
+    if (CacheList.EvictLRU(CacheList.GetSlot(MCL_LRUTail), mbs.GetAllocator(), size))
+        goto alloc_size_available;
+
+    if (VBSizeEvictedInLock > Params.VBLockEvictSizeLimit)
+        return false;
+
+    {
+        // last frame's items whose fences have passed (the exe restarts from the head after a pending one too)
+        MeshCacheListSet::ListSlot& prevFrameList = CacheList.GetSlot(MCL_PrevFrame);
+        pitems = (MeshCacheItem*)prevFrameList.GetFirst();
+        while (!prevFrameList.IsNull(pitems))
+        {
+            if (!UsesDynamicMeshes() || !pitems->GPUFence || !pitems->GPUFence->IsPending(FenceType_Vertex))
+            {
+                if (Evict(pitems, &mbs.GetAllocator()) >= size)
+                    goto alloc_size_available;
+            }
+            pitems = (MeshCacheItem*)prevFrameList.GetFirst();
+        }
+
+        // this frame's items, waiting on their fences
+        MeshCacheListSet::ListSlot& thisFrameList = CacheList.GetSlot(MCL_ThisFrame);
+        pitems = (MeshCacheItem*)thisFrameList.GetFirst();
+        while (waitForCache && !thisFrameList.IsNull(pitems))
+        {
+            if (UsesDynamicMeshes() && pitems->GPUFence && pitems->GPUFence->IsPending(FenceType_Vertex))
+                pitems->GPUFence->WaitFence(FenceType_Vertex);
+            if (Evict(pitems, &mbs.GetAllocator()) >= size)
+                goto alloc_size_available;
+            pitems = (MeshCacheItem*)thisFrameList.GetFirst();
+        }
+        return false;
+    }
+
+alloc_size_available:
+    if (!mbs.Alloc(size, buffer, offset))
+        return false;
+    return true;
 }
 
 // @0x14273b870
@@ -649,7 +639,6 @@ bool MeshCache::createInstancingVertexBuffer(IDirect3DDevice9* device)
     return true;
 }
 
-// MS2-FUNCTIONAL: the exe lays out the quad fill differently (unroll and scheduling)
 // @0x14273bba0
 bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDevice9* device)
 {
@@ -660,10 +649,10 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDevice9* device)
         UByte  index;
         UByte  pad[3];
     };
+    EraseVertex* p = 0;
     if (device->CreateVertexBuffer(30 * 6 * sizeof(EraseVertex), D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT,
                                    &pMaskEraseBatchVertexBuffer.GetRawRef(), 0) != D3D_OK)
         return false;
-    EraseVertex* p = 0;
     if (FAILED(pMaskEraseBatchVertexBuffer->Lock(0, 30 * 6 * sizeof(EraseVertex), (void**)&p, 0)))
     {
         pMaskEraseBatchVertexBuffer.Clear();
@@ -671,13 +660,12 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDevice9* device)
     }
     for (unsigned i = 0; i < 30; i++)
     {
-        unsigned v = i * 6;
-        p[v + 0].x = 0; p[v + 0].y = 1; p[v + 0].index = (UByte)i;
-        p[v + 1].x = 0; p[v + 1].y = 0; p[v + 1].index = (UByte)i;
-        p[v + 2].x = 1; p[v + 2].y = 0; p[v + 2].index = (UByte)i;
-        p[v + 3].x = 0; p[v + 3].y = 1; p[v + 3].index = (UByte)i;
-        p[v + 4].x = 1; p[v + 4].y = 0; p[v + 4].index = (UByte)i;
-        p[v + 5].x = 1; p[v + 5].y = 1; p[v + 5].index = (UByte)i;
+        p[i * 6 + 0].x = 0; p[i * 6 + 0].y = 1; p[i * 6 + 0].index = (UByte)i;
+        p[i * 6 + 1].x = 0; p[i * 6 + 1].y = 0; p[i * 6 + 1].index = (UByte)i;
+        p[i * 6 + 2].x = 1; p[i * 6 + 2].y = 0; p[i * 6 + 2].index = (UByte)i;
+        p[i * 6 + 3].x = 0; p[i * 6 + 3].y = 1; p[i * 6 + 3].index = (UByte)i;
+        p[i * 6 + 4].x = 1; p[i * 6 + 4].y = 0; p[i * 6 + 4].index = (UByte)i;
+        p[i * 6 + 5].x = 1; p[i * 6 + 5].y = 1; p[i * 6 + 5].index = (UByte)i;
     }
     pMaskEraseBatchVertexBuffer->Unlock();
     return true;
