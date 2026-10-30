@@ -4294,14 +4294,19 @@ void* FUN_142416720(const void* self)
     return *(void**)(*(const char* const*)((const char*)self + 0xf8) + 0x20);
 }
 
-// XMLList: the operation needs a one item list
-// MS2-FUNCTIONAL: written from the exe
-// @0x1424172b0
-CheckResult FUN_1424172b0(const Instances::fl::XMLList* self, const char* method_name)
+// XMLList: the operation needs a one item list. A member in the exe (this in rcx, the result in rdx), so it is
+// declared on a view of XMLList.
+struct Sfr04XMLListView : public Instances::fl::XMLList
 {
-    if (self->List.GetSize() != 1)
+    CheckResult FUN_1424172b0(const char* method_name) const;
+};
+// written from the exe
+// @0x1424172b0
+CheckResult Sfr04XMLListView::FUN_1424172b0(const char* method_name) const
+{
+    if (List.GetSize() != 1)
     {
-        VM& vm = self->GetVM();
+        VM& vm = GetVM();
         vm.ThrowTypeError(VM::Error(VM::eXMLOnlyWorksWithOneItemLists, vm, method_name));
         return false;
     }
@@ -4387,15 +4392,19 @@ namespace Scaleform { namespace GFx { namespace AS3
 namespace Instances { namespace fl
 {
     // for-in over a QName: "uri", then "localName"
-    // MS2-FUNCTIONAL: the exe selects the literal and its length before one CreateConstString call
     // @0x142416330
     void QName::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
     {
         StringManager& sm = GetVM().GetStringManager();
-        if (ind.Get() == 1)
+        switch (ind.Get())
+        {
+        case 1:
             name.Assign(sm.CreateConstString("uri"));
-        else if (ind.Get() == 2)
+            break;
+        case 2:
             name.Assign(sm.CreateConstString("localName"));
+            break;
+        }
     }
 
     // @0x142429490
