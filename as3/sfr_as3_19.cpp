@@ -365,7 +365,7 @@ void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
 
 // MS2-FUNCTIONAL 0x1425276d0: updates the pair name, prior-name chain and name-to-slot map; Ptr/Hash helpers produce different temporary refcount code.
 // @0x1425276d0
-void Slots::SetKey(AbsoluteIndex ind, const ASString& key)
+__declspec(noinline) void Slots::SetKey(AbsoluteIndex ind, const ASString& key)
 {
     const UInt32 ownIndex = static_cast<UInt32>(ind.Get()) - static_cast<UInt32>(FirstOwnSlotNum);
     Pair& pair = VArray[ownIndex];
@@ -446,32 +446,28 @@ void State::SetRegister(AbsoluteIndex ind, const Value& v)
 // @0x14253fde0
 void State::SetLocal0()
 {
-    Registers[0].Assign(OpStack[OpStack.GetSize() - 1]);
-    MarkChanged(0);
+    SetRegister(AbsoluteIndex(0), OpStack[OpStack.GetSize() - 1]);
     FUN_14251ccc0(this, 1);
 }
 
 // @0x14253fe30
 void State::SetLocal1()
 {
-    Registers[1].Assign(OpStack[OpStack.GetSize() - 1]);
-    MarkChanged(1);
+    SetRegister(AbsoluteIndex(1), OpStack[OpStack.GetSize() - 1]);
     FUN_14251ccc0(this, 1);
 }
 
 // @0x14253fe80
 void State::SetLocal2()
 {
-    Registers[2].Assign(OpStack[OpStack.GetSize() - 1]);
-    MarkChanged(2);
+    SetRegister(AbsoluteIndex(2), OpStack[OpStack.GetSize() - 1]);
     FUN_14251ccc0(this, 1);
 }
 
 // @0x14253fed0
 void State::SetLocal3()
 {
-    Registers[3].Assign(OpStack[OpStack.GetSize() - 1]);
-    MarkChanged(3);
+    SetRegister(AbsoluteIndex(3), OpStack[OpStack.GetSize() - 1]);
     FUN_14251ccc0(this, 1);
 }
 
@@ -1665,7 +1661,7 @@ char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multina
 
 // A run-time multiname taken from a QName object: its name and namespace.
 // @0x1425273b0
-void Sfr27MultinameFromQName(Multiname* mn, const Value* v)
+__declspec(noinline) void Sfr27MultinameFromQName(Multiname* mn, const Value* v)
 {
     const UPInt q = reinterpret_cast<UPInt>(v->GetGASRefCountBase());
     mn->Name.Assign(*reinterpret_cast<const ASString*>(q + 0x38));
@@ -1685,10 +1681,10 @@ void Sfr27MultinameFromQName(Multiname* mn, const Value* v)
 void Multiname::SetRTNameUnsafe(const Value& v)
 {
     const UInt32 k = static_cast<UInt32>(v.GetKind());
-    if (k - 0xc < 4 && v.GetGASRefCountBase() != NULL)
+    if (k - 0xc <= 3 && v.GetGASRefCountBase() != NULL)
     {
         const Traits& tr = reinterpret_cast<Object*>(v.GetGASRefCountBase())->GetTraits();
-        if (static_cast<int>(tr.TraitsType) == 0xc && ((~(static_cast<UPInt>(tr.Flags) >> 5)) & 1) != 0)
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
         {
             Sfr27MultinameFromQName(this, &v);
             return;
@@ -1743,23 +1739,27 @@ void Sfr27ExecInitSlot(VM* vm, SPInt slot)
 // @0x1425241f0
 void ValueStack::Reserve(UInt16 n)
 {
-    Page* page = pCurrentPage;
-    Value* stack;
-    if (pCurrent + n < page->Values + page->PageSize)
-        stack = pCurrent + 1;
+    if (pCurrent + n < pCurrentPage->Values + pCurrentPage->PageSize)
+    {
+        pStack = pCurrent + 1;
+    }
     else
     {
-        Page* np = NewPage(n);
-        np->pNext = NULL;
-        np->pPrev = pCurrentPage;
-        pCurrentPage->pNext = np;
+        Page* p = NewPage(n);
+
+        p->pNext = NULL;
+        p->pPrev = pCurrentPage;
+        pCurrentPage->pNext = p;
+
         pCurrentPage->pCurrent = pCurrent;
         pCurrentPage->pFirst = pStack;
-        stack = np->Values;
-        pCurrentPage = np;
-        pCurrent = np->Values - 1;
+
+        pCurrentPage = p;
+
+        pStack = pCurrentPage->Values;
+        pCurrent = pCurrentPage->Values;
+        --pCurrent;
     }
-    pStack = stack;
     ReservedNum = n;
     ++pCurrentPage->ReservationNum;
 }
@@ -1768,36 +1768,34 @@ void ValueStack::Reserve(UInt16 n)
 // @0x1425240e0
 void ValueRegisterFile::Reserve(UInt16 num)
 {
-    const UInt16 used = Unk00;
-    Page* page = pCurrentPage;
-    UInt16 previousSize = 0;
-    Value* regs;
-    if (page->PageSize < static_cast<UInt32>(used) + num)
+    UInt16 currSize = 0;
+
+    if (Unk00 + num <= pCurrentPage->PageSize)
     {
-        Page* np = NewPage(num);
-        np->pNext = NULL;
-        np->pPrev = pCurrentPage;
-        pCurrentPage->pNext = np;
-        pCurrentPage->ReservedNum = Unk00;
-        pCurrentPage->pCurrent = pRF;
-        pCurrentPage = np;
-        regs = np->Values;
-        Unk00 = num;
+        currSize = static_cast<UInt16>(Unk00 - (pRF - pCurrentPage->Values));
+        pRF = pCurrentPage->Values + Unk00;
+        Unk00 = Unk00 + num;
     }
     else
     {
-        previousSize = static_cast<UInt16>(used - (pRF - page->Values));
-        regs = page->Values + used;
-        Unk00 = static_cast<UInt16>(used + num);
+        Page* p = NewPage(num);
+
+        p->pNext = NULL;
+        p->pPrev = pCurrentPage;
+        pCurrentPage->pNext = p;
+        pCurrentPage->ReservedNum = Unk00;
+        pCurrentPage->pCurrent = pRF;
+        pCurrentPage = p;
+
+        pRF = pCurrentPage->Values;
+        Unk00 = num;
     }
-    pRF = regs;
-    GetReservations(pCurrentPage)[pCurrentPage->CurrPos] = previousSize;
-    ++pCurrentPage->CurrPos;
+
+    Page* page = pCurrentPage;
+    GetReservations(page)[page->CurrPos++] = currSize;
+
     for (UInt32 i = 0; i < num; ++i)
-    {
-        *reinterpret_cast<UInt32*>(&regs[i]) = 0;
-        reinterpret_cast<UPInt*>(&regs[i])[1] = 0;
-    }
+        Construct<Value>(pRF + i);
 }
 
 
@@ -2035,7 +2033,7 @@ void Sfr31BitmapSetMovieDef(UPInt self, Resource* def)
 // @0x142528f20
 void Slots::SetSlotInfo(AbsoluteIndex ind, const ASString& k, const SlotInfo& v)
 {
-    FUN_1424e0b80(&VArray[static_cast<UInt32>(ind.Get()) - static_cast<UInt32>(FirstOwnSlotNum)].Value, &v);
+    FUN_1424e0b80(&VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value, &v);
     SetKey(ind, k);
 }
 
