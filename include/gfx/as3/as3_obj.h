@@ -122,6 +122,8 @@ public:
     explicit AbsoluteIndex(SPInt ind) : Index(ind) { }
     SPInt Get() const       { return Index; }
     bool  IsValid() const   { return Index >= 0; }
+    // (appended, sfb) SDK AS3_Index.h: a negative index counts as below any count.
+    bool operator <(UPInt other) const { return Index < 0 ? true : (UPInt)Index < other; }
 private:
     SPInt Index;
 };

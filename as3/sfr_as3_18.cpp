@@ -405,16 +405,10 @@ CheckResult GetStrNumber(ASStringNode* str, Value::Number& result)
 
 // ==== slots, traits, classes ====
 
-// MS2-FUNCTIONAL: the exe materializes the own/parent test as a bool before branching
 // @0x14250dce0
 ASStringNode* Slots::GetSlotNameNode(AbsoluteIndex ind) const
 {
-    bool inParent;
-    if (ind.Get() < 0)
-        inParent = true;
-    else
-        inParent = static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum;
-    if (inParent)
+    if (ind < FirstOwnSlotNum)
         return Parent->GetSlotNameNode(ind);
     return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Key.GetPtr();
 }
@@ -4033,12 +4027,11 @@ bool FUN_142515160(const Render::Text::TextFormat* pthis)
 }
 
 // Slots::GetSlotInfo of a traits object, one level inlined.
-// MS2-FUNCTIONAL the exe keeps the parent test in a flag and returns the own slot last
 // @0x14250dca0
 __declspec(noinline) const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind)
 {
     const Slots& s = *pthis;
-    if (ind.Get() < 0 || static_cast<UPInt>(ind.Get()) < s.FirstOwnSlotNum)
+    if (ind < s.FirstOwnSlotNum)
         return s.Parent->GetSlotInfo(ind);
     return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
