@@ -2364,7 +2364,7 @@ namespace Instances { namespace fl_text
         if (name.GetSize() != 0 && pname[0] == '.')
             pstyle = CSS.GetStyle(Text::StyleManager::CSS_Class, pname + 1, name.GetSize() - 1);
         else
-            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Tag, pname);
+            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Tag, pname, name.GetSize());
         if (!pstyle)
         {
             result = NULL;
