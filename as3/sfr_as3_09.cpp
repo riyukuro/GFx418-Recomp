@@ -804,58 +804,40 @@ namespace Instances { namespace fl_events {
     // ---- EventDispatcher listener queries ----------------------------------------------------------------------------
 
     // @0x14246c230
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveActivateHandler() const
     {
-        if (pImpl)
-            return pImpl->HasActivate;
-        return false;
+        return pImpl ? pImpl->HasActivate : false;
     }
     // @0x14246c250
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveDeactivateHandler() const
     {
-        if (pImpl)
-            return pImpl->HasDeactivate;
-        return false;
+        return pImpl ? pImpl->HasDeactivate : false;
     }
     // @0x14246c270
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveEnterFrameHandler() const
     {
-        if (pImpl)
-            return pImpl->HasEnterFrame;
-        return false;
+        return pImpl ? pImpl->HasEnterFrame : false;
     }
     // @0x14246c290
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveExitFrameHandler() const
     {
-        if (pImpl)
-            return pImpl->HasExitFrame;
-        return false;
+        return pImpl ? pImpl->HasExitFrame : false;
     }
     // @0x14246c2b0
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveFrameConstructedHandler() const
     {
-        if (pImpl)
-            return pImpl->HasFrameConstructed;
-        return false;
+        return pImpl ? pImpl->HasFrameConstructed : false;
     }
     // @0x14246c2d0
-    // MS2-FUNCTIONAL: cl tests the flag bit and returns 0/1 by branches; the exe shifts the flag word into eax
     bool EventDispatcher::MayHaveRenderHandler() const
     {
-        if (pImpl)
-            return pImpl->HasRender;
-        return false;
+        return pImpl ? pImpl->HasRender : false;
     }
 
     // @0x14246a140
     bool EventDispatcher::HasButtonHandlers() const
     {
-        return pImpl && (pImpl->CaptureButtonHandlersCnt || pImpl->ButtonHandlersCnt);
+        return pImpl && (pImpl->CaptureButtonHandlersCnt > 0 || pImpl->ButtonHandlersCnt > 0);
     }
 
     // @0x14246a160
@@ -2185,7 +2167,6 @@ namespace Classes { namespace fl_events {
     }
 
     // @0x1424674c0
-    // MS2-FUNCTIONAL: the argument Values are set up in another order
     SPtr<Instances::fl_events::Event> EventDispatcher::CreateMouseCursorEventObject(const ASString& cursor, unsigned mouseIdx)
     {
         ASVM& vm = static_cast<ASVM&>(GetVM());
@@ -2194,9 +2175,8 @@ namespace Classes { namespace fl_events {
         if (Class* cls = GetVM().GetClass(StringDataPtr("scaleform.gfx.MouseCursorEvent")))
         {
             vm.ConstructInstance(result, cls, 3, argv);
-            Instances::fl_gfx::MouseCursorEvent* evt = static_cast<Instances::fl_gfx::MouseCursorEvent*>(result.GetPtr());
-            evt->mouseIdx = mouseIdx;
-            evt->cursor = cursor;
+            static_cast<Instances::fl_gfx::MouseCursorEvent*>(result.GetPtr())->mouseIdx = mouseIdx;
+            static_cast<Instances::fl_gfx::MouseCursorEvent*>(result.GetPtr())->cursor = cursor;
         }
         return result;
     }
@@ -2643,7 +2623,8 @@ namespace Instances { namespace fl_events {
 
     // @0x14246fc50
     // MS2-FUNCTIONAL: the exe builds the argument array inline
-    void Event::toString(ASString& result)
+    // Not inlined: TimerEvent::toString tail-calls it in the exe.
+    SF_NOINLINE void Event::toString(ASString& result)
     {
         static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase" };
         FormatEventString(*this, result, GetEventName(), props, 4);
@@ -2858,11 +2839,9 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246c930
-    // MS2-FUNCTIONAL: the exe builds the string through a temporary (one more reference round trip)
     void TextEvent::SetText(wchar_t ch)
     {
-        wchar_t buf[1] = { ch };
-        Text = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode(buf, 1));
+        Text = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode(&ch, 1));
     }
 
     // @0x14246c9a0
