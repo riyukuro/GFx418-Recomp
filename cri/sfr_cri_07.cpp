@@ -520,7 +520,7 @@ int FUN_140067cd0(int *, cri_u8, cri_u8);
 void FUN_140067dd0(cri_u8, cri_u4);
 void FUN_140067e00(int *, cri_u4);
 cri_u4 FUN_140067e80(cri_u8, cri_u4);
-cri_u8 FUN_140067ec0(int *, int);
+int FUN_140067ec0(int *, int);
 cri_u4 FUN_140067f40(cri_u8);
 int FUN_140067f70(int *);
 void FUN_140067fc0(cri_u8, cri_u4);
@@ -1131,7 +1131,7 @@ void FUN_140066460(longlong arg1, uint arg2)
 // @0x140066a10
 void FUN_140066a10(longlong arg1, uint arg2)
 {
-  short s_v1;
+  longlong s_v1;
   uint u_v2;
   uint *pu_v3;
   ulonglong u_v4;
@@ -1146,30 +1146,12 @@ void FUN_140066a10(longlong arg1, uint arg2)
                           (((int)(arg2 / *(uint *)((char *)arg1 + 0x15a0) << 4) >> 1) * (int)s_v1 +
                           ((int)(arg2 % *(uint *)((char *)arg1 + 0x15a0) << 4) >> 1)) +
                          *(longlong *)((char *)arg1 + 0x16b0));
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
+        for (int j = 0; j < 8; j++) {
+          *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
+          pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
+          pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
+        }
         arg2 = arg2 + 1;
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-        pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
-        *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
-        pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
       } while (arg2 < u_v2);
     }
   }
@@ -1508,11 +1490,7 @@ void FUN_140067390(longlong arg1)
   cri_u4 u_v2;
   
   l_v1 = arg1 + 0xc80;
-  u_v2 = 4;
-  if (*(int *)((char *)arg1 + 0x1554) == 0) {
-    u_v2 = 0xffffffff;
-  }
-  *(cri_u4 *)((char *)arg1 + 0x14d0) = u_v2;
+  *(cri_u4 *)((char *)arg1 + 0x14d0) = (*(int *)((char *)arg1 + 0x1554) == 0) ? 0xffffffff : 4;
   *(longlong *)((char *)arg1 + 0x14d8) = l_v1;
   *(longlong *)((char *)arg1 + 0x14e8) = l_v1;
   *(longlong *)((char *)arg1 + 0x14f8) = l_v1;
@@ -1877,23 +1855,18 @@ cri_u4 FUN_140067bf0(cri_u8 arg1)
 // @0x140067c20
 int FUN_140067c20(int *arg1)
 {
-  int i_v1;
-  
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
-    i_v1 = -1;
+    return -1;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
-    i_v1 = -1;
+    return -1;
   }
-  else {
-    if (arg1[1] == 1) {
-      SetEvent(*(HANDLE *)(arg1 + 4));
-    }
-    i_v1 = arg1[1];
+  if (arg1[1] == 1) {
+    SetEvent(*(HANDLE *)(arg1 + 4));
   }
-  return i_v1;
+  return arg1[1];
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -1916,28 +1889,26 @@ int FUN_140067cd0(int *arg1, cri_u8 arg2, cri_u8 arg3)
   
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
-    i_v1 = -1;
+    return -1;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
-    i_v1 = -1;
+    return -1;
   }
-  else if (arg1[1] == 0) {
-    FUN_1400683d0((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
-    *(cri_u8 *)((char *)arg1 + 0x50) = arg2;
-    *(cri_u8 *)((char *)arg1 + 0x58) = arg3;
-    arg1[1] = 1;
-    arg1[0x18] = arg1[0x18] + 1;
-    if (arg1[0x18] == 0x7fffffff) {
-      arg1[0x18] = 1;
-    }
-    i_v1 = arg1[0x18];
-    FUN_140068430((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
-    SetEvent(*(HANDLE *)(arg1 + 4));
+  if (arg1[1] != 0) {
+    return -1;
   }
-  else {
-    i_v1 = -1;
+  FUN_1400683d0((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
+  *(cri_u8 *)((char *)arg1 + 0x50) = arg2;
+  *(cri_u8 *)((char *)arg1 + 0x58) = arg3;
+  arg1[1] = 1;
+  arg1[0x18] = arg1[0x18] + 1;
+  if (arg1[0x18] == 0x7fffffff) {
+    arg1[0x18] = 1;
   }
+  i_v1 = arg1[0x18];
+  FUN_140068430((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
+  SetEvent(*(HANDLE *)(arg1 + 4));
   return i_v1;
 }
 
@@ -1991,31 +1962,24 @@ cri_u4 FUN_140067e80(cri_u8 arg1, cri_u4 arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067ec0
-cri_u8 FUN_140067ec0(int *arg1, int arg2)
+int FUN_140067ec0(int *arg1, int arg2)
 {
-  cri_u8 u_v1;
-  
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
-    u_v1 = 0;
+    return 0;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
-    u_v1 = 0;
+    return 0;
   }
-  else if (arg1[0x18] == arg2) {
-    if (arg1[1] == 0) {
-      u_v1 = 1;
-    }
-    else {
-      SetEvent(*(HANDLE *)(arg1 + 4));
-      u_v1 = 0;
-    }
+  if (arg1[0x18] != arg2) {
+    return 1;
   }
-  else {
-    u_v1 = 1;
+  if (arg1[1] == 0) {
+    return 1;
   }
-  return u_v1;
+  SetEvent(*(HANDLE *)(arg1 + 4));
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -2034,20 +1998,15 @@ cri_u4 FUN_140067f40(cri_u8 arg1)
 // @0x140067f70
 int FUN_140067f70(int *arg1)
 {
-  int i_v1;
-  
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
-    i_v1 = 0;
+    return 0;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
-    i_v1 = 0;
+    return 0;
   }
-  else {
-    i_v1 = arg1[0x1b];
-  }
-  return i_v1;
+  return arg1[0x1b];
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -2457,11 +2416,9 @@ void FUN_140068920(longlong arg1, int arg2)
   *(int *)((char *)arg1 + 0x1794) = *(int *)((char *)arg1 + 0x1794) + (1 - arg2);
   pi_v1 = (int *)((char *)arg1 + 0x179c);
   *pi_v1 = *pi_v1 + (1 - arg2);
-  if (*pi_v1 < 0) {
-    do {
-      *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) + *(int *)((char *)arg1 + 0x15a0);
-      *(int *)((char *)arg1 + 0x1798) = *(int *)((char *)arg1 + 0x1798) + -1;
-    } while (*(int *)((char *)arg1 + 0x179c) < 0);
+  while (*pi_v1 < 0) {
+    *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) + *(int *)((char *)arg1 + 0x15a0);
+    *(int *)((char *)arg1 + 0x1798) = *(int *)((char *)arg1 + 0x1798) + -1;
   }
   return;
 }
@@ -2728,11 +2685,11 @@ void FUN_140069020(longlong *arg1, int arg2, longlong *arg3, longlong *arg4)
   l_v2 = arg1[1];
   arg3[1] = l_v2;
   *(int *)(arg4 + 1) = (int)l_v2;
-  if (arg2 < (int)arg3[1]) {
+  if ((int)arg3[1] > arg2) {
     *(int *)(arg3 + 1) = arg2;
   }
   pl_v1 = arg4 + 1;
-  *(int *)pl_v1 = (int)*pl_v1 - (int)arg3[1];
+  *(int *)pl_v1 -= (int)arg3[1];
   if ((int)*pl_v1 == 0) {
     *arg4 = 0;
     return;
@@ -2802,20 +2759,18 @@ char * FUN_1400691b0(longlong *arg1, char *arg2, char *arg3, cri_u8 *arg4)
   *(cri_u4 *)(arg4 + 1) = 0;
   _Str1 = (char *)*arg1;
   pc_v2 = _Str1 + (int)arg1[1];
-  while( true ) {
-    if (pc_v2 <= _Str1) {
-      return (char *)0x0;
+  while (_Str1 < pc_v2) {
+    if (strncmp(_Str1,arg2,7) == 0) {
+      FUN_140069190((longlong)_Str1,(longlong *)arg4);
+      break;
     }
-    i_v1 = strncmp(_Str1,arg2,7);
-    if (i_v1 == 0) break;
-    if ((arg3 != (char *)0x0) && (i_v1 = strncmp(_Str1,arg3,7), i_v1 == 0)) {
+    if ((arg3 != (char *)0x0) && strncmp(_Str1,arg3,7) == 0) {
       return (char *)0x0;
     }
     i_v1 = FUN_1400690e0(_Str1 + 8);
     _Str1 = _Str1 + (i_v1 + 0x10);
   }
-  FUN_140069190((longlong)_Str1,(longlong *)arg4);
-  if (pc_v2 <= _Str1) {
+  if (_Str1 >= pc_v2) {
     return (char *)0x0;
   }
   return _Str1;
@@ -28012,30 +27967,12 @@ void FUN_14008ce50(longlong arg1, uint arg2)
                           (((int)(arg2 / *(uint *)((char *)arg1 + 0x6cc) << 4) >> 1) * i_v4 +
                           ((int)(arg2 % *(uint *)((char *)arg1 + 0x6cc) << 4) >> 1)) +
                          *(longlong *)((char *)arg1 + 0xc50));
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
+        for (int j = 0; j < 8; j++) {
+          *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
+          pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
+          pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
+        }
         arg2 = arg2 + 1;
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-        pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
-        *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
-        pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
       } while (arg2 < u_v1);
     }
   }
@@ -55041,9 +54978,9 @@ void FUN_1400afed0(const char *arg1, const char *arg2)
 // @0x1400aff40
 void FUN_1400aff40(int arg1)
 {
-  if (*(cri_code **)(&DAT_143d688b0 + (longlong)arg1 * 0x10) != (cri_code *)0x0) {
-    (**(cri_code **)(&DAT_143d688b0 + (longlong)arg1 * 0x10))
-              (*(cri_u8 *)(&DAT_143d688b8 + (longlong)arg1 * 0x10));
+  struct ent { cri_code *fn; cri_u8 arg; } *t = (ent *)&DAT_143d688b0;   // one table symbol, as in the exe
+  if (t[arg1].fn != (cri_code *)0x0) {
+    (*t[arg1].fn)(t[arg1].arg);
   }
   return;
 }
