@@ -14,6 +14,16 @@
 #include <sys/timeb.h>
 #undef GetObject
 
+// The exe calls these ResizeNoConstruct instances out of line (explicitly instantiated in sfr_as3_04).
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>,
+    AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
+    AllocatorDH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
+    AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+}
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2588,7 +2598,6 @@ namespace Instances { namespace fl
         return InsertChildAt(Children.GetSize(), child);
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line ArrayLH PushBack 0x142420060; ours inlines it
     // @0x142404db0
     void XMLElement::AppendChild(const SPtr<XML>& child)
     {
@@ -2612,7 +2621,6 @@ namespace Instances { namespace fl
 }}}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-    // MS2-FUNCTIONAL: exe stores the raw pointer after an out-of-line resize 0x14241ff20; ours pushes an SPtr
     // @0x142403b60
     void NamespaceArray::Add(Instances::Namespace& ns, bool checkUnique)
     {
@@ -2625,7 +2633,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
         Namespaces.PushBack(SPtr<Instances::Namespace>(&ns));
     }
 
-    // MS2-FUNCTIONAL: same push as Add, inlined into the loop
     // @0x142404230
     void NamespaceArray::AddUnique(const NamespaceArray& other)
     {
@@ -3018,7 +3025,6 @@ namespace Instances { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: exe pushes through the out-of-line ArrayLH resize 0x142420060 and stores raw
     // @0x142405500
     bool AttrGet::Call(UPInt ind)
     {
@@ -3034,7 +3040,6 @@ namespace Instances { namespace fl
         return true;
     }
 
-    // MS2-FUNCTIONAL: exe pushes through the out-of-line ArrayLH resize 0x142420060 and stores raw
     // @0x1424055e0
     bool ChildGet::Call(UPInt ind)
     {
