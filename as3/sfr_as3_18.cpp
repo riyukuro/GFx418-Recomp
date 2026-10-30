@@ -781,23 +781,15 @@ VTable& Traits::GetVT() const
 
 // ==== prototypes ====
 
-// Whether slot i belongs to the parent table (a negative index counts as one).
-static SF_INLINE bool IsParentSlot(const Slots& s, SPInt i)
+// Slots::GetSlotInfo (sfr_as3_04 0x142416fb0), one level inline here as in the exe.
+static SF_INLINE const SlotInfo& Sfr18GetSlotInfo(const Slots& s, AbsoluteIndex ind)
 {
-    if (i < 0)
-        return true;
-    return static_cast<UPInt>(i) < s.FirstOwnSlotNum;
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
 }
 
-// Whether slot i is not past the end of the table.
-static SF_INLINE bool IsBeforeEnd(const Slots& s, SPInt i)
-{
-    if (i < 0)
-        return true;
-    return static_cast<UPInt>(i) < s.GetSlotInfoNum();
-}
-
-// MS2-FUNCTIONAL: the exe calls the parent slot lookups out of line and re-reads FirstOwnSlotNum after each call
+// MS2-FUNCTIONAL: GetSlotInfo/GetSlotNameNode one level inline as in the exe (560 vs 556); ours keeps FirstOwnSlotNum in a register, the exe re-reads it at each use
 // @0x142511890
 void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
 {
@@ -805,16 +797,13 @@ void Class::InitPrototypeFromVTable(AS3::Object& obj, ConvertFunc f) const
     const VTable& vt = itr.GetVT();
     for (SPInt i = 0; static_cast<UInt32>(i) < itr.GetSlotInfoNum(); )
     {
-        const SlotInfo& si = IsParentSlot(itr, i) ? itr.Parent->GetSlotInfo(AbsoluteIndex(i))
-                                                  : itr.VArray[static_cast<UInt32>(i) - itr.FirstOwnSlotNum].Value;
+        const SlotInfo& si = Sfr18GetSlotInfo(itr, AbsoluteIndex(i));
         if (si.BindType == SlotInfo::BT_Code)
         {
-            ASStringNode* name = IsParentSlot(itr, i) ? itr.Parent->GetSlotNameNode(AbsoluteIndex(i))
-                                                      : itr.VArray[static_cast<UInt32>(i) - itr.FirstOwnSlotNum].Key.GetPtr();
-            obj.AddDynamicSlotValuePair(ASString(name), (this->*f)(vt.VTMethods[si.ValueInd], itr),
+            obj.AddDynamicSlotValuePair(ASString(itr.GetSlotNameNode(AbsoluteIndex(i))), (this->*f)(vt.VTMethods[static_cast<UInt32>(si.ValueInd)], itr),
                                         SlotInfo::aDontEnum);
         }
-        if (IsBeforeEnd(itr, i))
+        if (AbsoluteIndex(i) < itr.GetSlotInfoNum())
             ++i;
     }
 }
@@ -5759,8 +5748,26 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& index, Object* obj);   // 0x142500f90
 
+// Value::Swap (sfr_as3_19) in the SDK form, inline here as in the exe.
+struct Sfr18ValueSwap
+{
+    static SF_INLINE void Swap(Value& self, Value& other)
+    {
+        const UInt32       tmpFlags = other.Flags;
+        const Value::Extra tmpBonus = other.Bonus;
+        const Value::VU    tmpValue = other.value;
+
+        other.Flags = self.Flags;
+        other.Bonus = self.Bonus;
+        other.value = self.value;
+
+        self.Flags = tmpFlags;
+        self.Bonus = tmpBonus;
+        self.value = tmpValue;
+    }
+};
+
 // GetSuperProperty: the property mn of _this as the parent of ot (by default _this's traits) has it.
-// MS2-FUNCTIONAL the exe swaps the read value into result field by field
 // @0x14250ef80
 CheckResult GetSuperProperty(VM& vm, const Traits* ot, Value& result, const Value& _this, const Multiname& mn,
                              SlotInfo::ValTarget vtt)
@@ -5772,11 +5779,11 @@ CheckResult GetSuperProperty(VM& vm, const Traits* ot, Value& result, const Valu
         UPInt index = 0;
         if (const SlotInfo* si = FindFixedSlot(vm, *parent, mn, index, NULL))
         {
-            Value      value;
-            CheckResult ok(false);
+            Value value;
+            bool  ok;
             if (*FUN_14250e2d0(si, &ok, &vm, &value, &_this, &parent->GetVT(), vtt))
             {
-                result.Swap(value);
+                Sfr18ValueSwap::Swap(result, value);
                 return true;
             }
         }
