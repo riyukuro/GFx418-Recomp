@@ -3087,10 +3087,15 @@ public:
     // The AS3 object, kept raw or as a tagged collectible pointer.
     Instances::fl_display::DisplayObject* GetAS3Obj() const
     {
-        UPInt p = pAS3RawPtr ? reinterpret_cast<UPInt>(pAS3RawPtr) : reinterpret_cast<UPInt>(pAS3CollectiblePtr);
-        if (p & 1)
-            --p;
-        return reinterpret_cast<Instances::fl_display::DisplayObject*>(p);
+        union
+        {
+            UPInt v;
+            Instances::fl_display::DisplayObject* p;
+        } u;
+        u.p = (pAS3RawPtr) ? pAS3RawPtr : pAS3CollectiblePtr;
+        if (u.v & 1)
+            u.v -= 1;
+        return u.p;
     }
     // The root of the movie this object is in (0x14250d990).
     DisplayObject* GetRoot();
@@ -3124,7 +3129,6 @@ static inline AvmInteractiveObj* ToAvmInteractiveObj(GFx::InteractiveObject* p)
 
 namespace Instances { namespace fl_display
 {
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x14244b870
     SF_NOINLINE void Sprite::dropTargetGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
@@ -3144,8 +3148,6 @@ namespace Instances { namespace fl_display
 
 namespace Instances { namespace fl_display
 {
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; register
-    // assignment follows. Same loads and calls.
     // @0x142452090
     SF_NOINLINE void DisplayObject::rootGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
@@ -3154,7 +3156,6 @@ namespace Instances { namespace fl_display
         result = pavm->GetAS3Obj();
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Sprite>::operator= instance (0x14243d950) and strips the collectible tag with a branch; ours inlines both
     // @0x14244ec30
     void Sprite::hitAreaGet(SPtr<Instances::fl_display::Sprite>& result)
     {
@@ -3191,35 +3192,30 @@ namespace Instances { namespace fl_display
         result = NULL;
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x142449e00
     SF_NOINLINE void SimpleButton::downStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         SetButtonStateResult(result, FUN_142509970(ToAvmDisplayObj(pDispObj)));
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x14244f4a0
     SF_NOINLINE void SimpleButton::hitTestStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         SetButtonStateResult(result, FUN_14250a600(ToAvmDisplayObj(pDispObj)));
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x142450e50
     SF_NOINLINE void SimpleButton::overStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         SetButtonStateResult(result, FUN_14250cbe0(ToAvmDisplayObj(pDispObj)));
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x142454700
     SF_NOINLINE void SimpleButton::upStateGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
         SetButtonStateResult(result, FUN_14250f960(ToAvmDisplayObj(pDispObj)));
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov, and shrink-wraps differently; same loads and calls
     // @0x14244ffb0
     SF_NOINLINE void DisplayObject::loaderInfoGet(SPtr<Instances::fl_display::LoaderInfo>& result)
     {
@@ -3230,7 +3226,6 @@ namespace Instances { namespace fl_display
         result = pobj->pLoaderInfo;
     }
 
-    // MS2-FUNCTIONAL: exe strips the collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x1424504a0
     SF_NOINLINE void DisplayObject::maskGet(SPtr<Instances::fl_display::DisplayObject>& result)
     {
@@ -3239,7 +3234,6 @@ namespace Instances { namespace fl_display
             result = ToAvmDisplayObj(pDispObj->GetMask())->GetAS3Obj();
     }
 
-    // MS2-FUNCTIONAL: collectible tag strip compiles to cmov; container assignment goes through the out-of-line SPtr operator= in the exe
     // @0x142451260
     SF_NOINLINE void DisplayObject::parentGet(SPtr<Instances::fl_display::DisplayObjectContainer>& result)
     {
@@ -3927,29 +3921,29 @@ namespace Instances { namespace fl_display
         ToAvmDispContainer(pDispObj)->SwapChildrenAt(i1, i2);
     }
 
-    // MS2-FUNCTIONAL: exe loads this->pDispObj before the child test; ours after it
     // @0x142452d20
     void DisplayObjectContainer::setChildIndex(const Value& result, Instances::fl_display::DisplayObject* child, SInt32 index)
     {
         SF_UNUSED(result);
+        GFx::DisplayObject* container = pDispObj;
         if (child->pDispObj)
         {
-            const unsigned idx = index >= 0 ? index : 0;
-            AvmDisplayObjContainer* pcont = ToAvmDispContainer(pDispObj);
-            pcont->SetChildIndex(child->pDispObj, idx);
+            if (index < 0) index = 0;
+            AvmDisplayObjContainer* avmObj = ToAvmDispContainer(container);
+            avmObj->SetChildIndex(child->pDispObj, (unsigned)index);
         }
     }
 
-    // MS2-FUNCTIONAL: exe loads this->pDispObj before the child test; ours after it
     // @0x142452d90
     void Stage::setChildIndex(const Value& result, Instances::fl_display::DisplayObject* child, SInt32 index)
     {
         SF_UNUSED(result);
+        GFx::DisplayObject* container = pDispObj;
         if (child->pDispObj)
         {
-            const unsigned idx = index >= 0 ? index : 0;
-            AvmDisplayObjContainer* pcont = ToAvmDispContainer(pDispObj);
-            pcont->SetChildIndex(child->pDispObj, idx);
+            if (index < 0) index = 0;
+            AvmDisplayObjContainer* avmObj = ToAvmDispContainer(container);
+            avmObj->SetChildIndex(child->pDispObj, (unsigned)index);
         }
     }
 
@@ -4609,21 +4603,47 @@ namespace Instances { namespace fl_display
         result = (static_cast<ASVM&>(GetVM()).GetMovieImpl()->Flags & 0x4000) != 0;
     }
 
+    // The SDK's ToAvmDisplayObj, which passes a null object through.
+    static SF_INLINE AvmDisplayObj* ToAvmDisplayObjOrNull(GFx::DisplayObject* po)
+    {
+        if (!po)
+            return NULL;
+        return static_cast<AvmDisplayObj*>(po->GetAvmObjImpl());
+    }
+
+    // The SDK's DisplayObjectBase::CharToInteractiveObject.
+    static SF_INLINE GFx::InteractiveObject* CharToInteractiveObject(GFx::DisplayObject* po)
+    {
+        return po->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(po) : 0;
+    }
+
+    // The SDK's InteractiveObject flag setters.
+    static SF_INLINE void SetIOFlag(GFx::InteractiveObject* pio, UInt32 mask, bool v)
+    {
+        (v) ? pio->Flags |= mask : pio->Flags &= (~mask);
+    }
+    // A two-bit flag: both bits for true, the low (defined) bit alone for false.
+    static SF_INLINE void SetIOFlag2(GFx::InteractiveObject* pio, UInt32 mask, bool v)
+    {
+        (v) ? (pio->Flags |= mask) : pio->Flags = ((pio->Flags & (~mask)) | ((mask - 1) & mask));
+    }
+
     // @0x1424487c0
     void Sprite::buttonModeGet(bool& result)
     {
-        // The AS3 sprite part keeps the button mode in its flags byte at +0x60.
-        result = pDispObj ? (reinterpret_cast<const UByte*>(ToAvmDisplayObj(pDispObj))[0x60] & 1) != 0 : false;
+        if (!pDispObj)
+            result = false;
+        else
+            result = (reinterpret_cast<const UByte*>(ToAvmDisplayObj(pDispObj))[0x60] & 1) != 0;
     }
 
     // @0x1424487e0
     void Sprite::buttonModeSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        if (!pDispObj)
-            return;
-        UByte& flags = reinterpret_cast<UByte*>(ToAvmDisplayObj(pDispObj))[0x60];
-        flags = v ? (UByte)(flags | 1) : (UByte)(flags & ~1);
+        // The AS3 sprite part keeps the button mode in its flags byte at +0x60.
+        UByte* pspr = reinterpret_cast<UByte*>(ToAvmDisplayObjOrNull(pDispObj));
+        (v) ? pspr[0x60] |= 1 : pspr[0x60] &= ~1;
     }
 
     // @0x142448b80
@@ -4669,28 +4689,28 @@ namespace Instances { namespace fl_display
     void SimpleButton::downStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_1425272f0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+        FUN_1425272f0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
     }
 
     // @0x14244f520
     void SimpleButton::hitTestStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_142527490(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+        FUN_142527490(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
     }
 
     // @0x142450ed0
     void SimpleButton::overStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_1425287b0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+        FUN_1425287b0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
     }
 
     // @0x142454780
     void SimpleButton::upStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_14252a4e0(pDispObj ? ToAvmDisplayObj(pDispObj) : NULL, v->pDispObj);
+        FUN_14252a4e0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
     }
 
     // @0x14244b970
@@ -4843,34 +4863,27 @@ namespace Instances { namespace fl_display
     void DisplayObjectContainer::mouseChildrenSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseChildrenDisabled) : (flags | GFx::InteractiveObject::Mask_MouseChildrenDisabled);
+        SetIOFlag(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()), GFx::InteractiveObject::Mask_MouseChildrenDisabled, !v);
     }
 
     // @0x1424507e0
     void Stage::mouseChildrenSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseChildrenDisabled) : (flags | GFx::InteractiveObject::Mask_MouseChildrenDisabled);
+        SetIOFlag(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()), GFx::InteractiveObject::Mask_MouseChildrenDisabled, !v);
     }
 
     // @0x142450810
     void InteractiveObject::mouseEnabledGet(bool& result)
     {
-        GFx::InteractiveObject* pio = pDispObj->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()) : NULL;
-        result = (pio->Flags & GFx::InteractiveObject::Mask_MouseDisabled) == 0;
+        result = !((CharToInteractiveObject(pDispObj)->Flags & GFx::InteractiveObject::Mask_MouseDisabled) != 0);
     }
 
     // @0x142450840
     void InteractiveObject::mouseEnabledSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        GFx::InteractiveObject* pio = pDispObj->IsInteractiveObject() ? static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()) : NULL;
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags & ~GFx::InteractiveObject::Mask_MouseDisabled) : (flags | GFx::InteractiveObject::Mask_MouseDisabled);
+        SetIOFlag(CharToInteractiveObject(pDispObj), GFx::InteractiveObject::Mask_MouseDisabled, !v);
     }
 
     // @0x142450d40
@@ -4937,9 +4950,7 @@ namespace Instances { namespace fl_display
     {
         SF_UNUSED(result);
         // focusRect: both bits for true, the defined bit alone for false.
-        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_FocusRect) : ((flags & ~0x80u) | 0x100u);
+        SetIOFlag2(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()), GFx::InteractiveObject::Mask_FocusRect, v);
     }
 
     // @0x142453a30
@@ -5007,9 +5018,7 @@ namespace Instances { namespace fl_display
     {
         SF_UNUSED(result);
         // useHandCursor: both bits for true, the defined bit alone for false.
-        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_UseHandCursor) : ((flags & ~0x200u) | 0x400u);
+        SetIOFlag2(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()), GFx::InteractiveObject::Mask_UseHandCursor, v);
     }
 
     // @0x1424548f0
@@ -5017,9 +5026,7 @@ namespace Instances { namespace fl_display
     {
         SF_UNUSED(result);
         // useHandCursor: both bits for true, the defined bit alone for false.
-        GFx::InteractiveObject* pio = static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr());
-        UInt32 flags = pio->Flags;
-        pio->Flags = v ? (flags | GFx::InteractiveObject::Mask_UseHandCursor) : ((flags & ~0x200u) | 0x400u);
+        SetIOFlag2(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()), GFx::InteractiveObject::Mask_UseHandCursor, v);
     }
 
     // Not implemented in this build: a warning, nothing else.
