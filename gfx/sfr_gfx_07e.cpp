@@ -52,6 +52,9 @@
 #include "../include/gfx/gfx_shapedef.h"
 #include "../include/kernel/sf_allocator.h"
 
+// ResourceBinding::GetResourceData, called out of line by FontResourceCreator::CreateResource (the header copy inlines)
+void FUN_1425d0f20(const Scaleform::GFx::ResourceBinding* pbinding, Scaleform::GFx::ResourceBindData* pdata, unsigned index);
+
 namespace Scaleform { namespace GFx {
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -519,7 +522,6 @@ public:
 FontResourceCreator FontResourceCreator_Static;
 
 // @0x142636a00
-// MS2-FUNCTIONAL: the exe calls ResourceBinding::GetResourceData out of line (0x1425d0f20); here it is inlined
 bool FontResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
                                          MemoryHeap* pheap) const
 {
@@ -533,7 +535,7 @@ bool FontResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbi
             Render::Font* psubFont = pfont->pFontData;
             if (psubFont->GetGlyphShapeCount() && pfontData->MatchSubstituteFont(psubFont))
             {
-                pdefImpl->GetResourceBinding().GetResourceData(pbindData, pfont->BindIndex);
+                FUN_1425d0f20(&pdefImpl->GetResourceBinding(), pbindData, pfont->BindIndex);
                 return true;
             }
         }

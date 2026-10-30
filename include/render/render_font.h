@@ -126,9 +126,7 @@ public:
     // fd can stand in for this font: same name and the same style / code page.
     bool MatchSubstituteFont(Font* fd) const
     {
-        const char* name  = fd->GetName();
-        unsigned    flags = fd->GetFontFlags() & FF_CreateFont_Mask;
-        return MatchFont(name, flags);
+        return MatchFont(fd->GetName(), fd->GetFontFlags() & FF_CreateFont_Mask);
     }
 
 protected:

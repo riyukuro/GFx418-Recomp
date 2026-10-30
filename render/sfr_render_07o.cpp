@@ -1794,7 +1794,7 @@ void TextMeshProvider::addMask(TmpTextStorage& storage)
     storage.Entries.PushBack(e);
 }
 
-// MS2-FUNCTIONAL: snap test: the exe shifts the font flags (shr 7) and tests each glyph flag from memory; register choice
+// MS2-FUNCTIONAL 0x1426e56c0: snap test: the exe tests each glyph flag from memory (cl loads gp.Flags once) and swaps rbx/rdi for data/node
 // @0x1426e56c0
 void TextMeshProvider::addRasterGlyph(TmpTextStorage& storage, TextLayerType type, GlyphRunData& data, UInt32 color,
                                       GlyphNode* node, float screenSize, bool snap, float stretch)
@@ -1802,7 +1802,7 @@ void TextMeshProvider::addRasterGlyph(TmpTextStorage& storage, TextLayerType typ
     // raster-only fonts (font flag 0x80) and readable unstretched glyphs start on a whole pixel
     float x = data.NewLineX;
     const GlyphParam& gp = node->Param;
-    if (snap && (((data.pFont->GetFontFlags() >> 7) & 1) != 0 ||
+    if (snap && ((UByte)(data.pFont->GetFontFlags() >> 7) & 1 ||
                  ((gp.Flags & GlyphParam::OptRead) != 0 && ((gp.Flags & GlyphParam::Stretch) ? 2.5f : 1.0f) <= 1.0f)))
         x = snapX(data);
 
