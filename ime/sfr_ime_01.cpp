@@ -196,7 +196,7 @@ extern "C" const void* DAT_14313bc60[];
 extern "C" void FUN_1423dd1c0();
 extern "C" void FUN_1423dc7b0();
 extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
-extern "C" void FUN_142576820(void*, const char*, void**, int);
+extern "C" void FUN_142576820(void*, const char*, const Scaleform::GFx::Value*, int);
 extern "C" void FUN_1425b49b0();
 extern "C" void FUN_14257dc30(void*);
 extern "C" int FUN_14256eff0(void*);           // Movie::GetAVMVersion
@@ -1362,20 +1362,22 @@ void* FUN_1423db7f0(unsigned long long* object)
     return object;
 }
 
-// MS2-FUNCTIONAL: performs the executable's sample text and selection updates through the movie helpers.
+// Sample text and selection updates through the movie helpers.
 // @0x1423ca350
 void FUN_1423ca350(void* self)
 {
-    struct { void* pObjectInterface; unsigned Type; const char* pString; } value = { nullptr, 6, "Hello World" };
-    FUN_142576820(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
-                  "_root.Edit_MLine1.textBox.text", reinterpret_cast<void**>(&value), 1);
+    {
+        Scaleform::GFx::Value value("Hello World");
+        FUN_142576820(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
+                      "_root.Edit_MLine1.textBox.text", &value, 1 /* Movie::SV_Sticky */);
+    }
     FUN_1423ca030(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
                   "Selection.setSelection", "%d %d", 5, 5);
 }
 
-// MS2-FUNCTIONAL: attaches the movie: notifies the object at +0x18 (vtable slot 0x90) and the current IME child at
-// +0x70 (slot 1, with the movie), then publishes the operating-system label to an AVM version 1 movie as
-// _global.gfx_ime_os_version (a GFx::Value string, laid out raw).
+// MS2-FUNCTIONAL: the exe tests +0x70 before the +0x80 store; ours after. Same code otherwise.
+// Attaches the movie: notifies the object at +0x18 (vtable slot 0x90) and the current IME child at +0x70 (slot 1,
+// with the movie), then publishes the operating-system label to an AVM version 1 movie as _global.gfx_ime_os_version.
 // @0x1423ca410
 void FUN_1423ca410(void* self, void* movie)
 {
@@ -1385,20 +1387,25 @@ void FUN_1423ca410(void* self, void* movie)
     unsigned char* p = static_cast<unsigned char*>(self);
     void* obj = *reinterpret_cast<void**>(p + 0x18);
     (*reinterpret_cast<void (***)(void*)>(obj))[0x90 / 8](obj);
+    void** child = reinterpret_cast<void**>(p + 0x70);
     p[0x80] = 0;
-    void* child = *reinterpret_cast<void**>(p + 0x70);
-    if (child) {
+    if (*child) {
         FUN_14257dc30(movie);
         void* arg = movie;
-        (*reinterpret_cast<void (***)(void*, void**)>(child))[1](child, &arg);
+        (*reinterpret_cast<void (***)(void*, void**)>(*child))[1](*child, &arg);
     }
     *reinterpret_cast<void**>(p + 0xa0) = movie;
-    int os = *reinterpret_cast<int*>(p + 0xbc);
-    struct { void* pObjectInterface; unsigned Type; const char* pString; } value =
-        { nullptr, 6, os == 1 ? "Vista" : os == 0 ? "XP" : "Undetermined" };
+    const int os = *reinterpret_cast<int*>(p + 0xbc);
+    Scaleform::GFx::Value value;
+    if (os == 1)
+        value.SetString("Vista");
+    else if (os == 0)
+        value.SetString("XP");
+    else
+        value.SetString("Undetermined");
     if (FUN_14256eff0(movie) == 1)
-        FUN_142576820(*reinterpret_cast<void**>(p + 0xa0), "_global.gfx_ime_os_version",
-                      reinterpret_cast<void**>(&value), 1);
+        FUN_142576820(*reinterpret_cast<void**>(p + 0xa0), "_global.gfx_ime_os_version", &value,
+                      1 /* Movie::SV_Sticky */);
 }
 
 // MS2-FUNCTIONAL: stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the
