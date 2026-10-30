@@ -710,19 +710,31 @@ void SF_STDCALL GFx_FontTextureInfoLoader(LoadProcess* p, const TagInfo& tagInfo
 }
 
 // DefineExternalGradientImage: a gradient image kept in a file of its own.
-// MS2-FUNCTIONAL 0x1425c7840: same reads, log text and handle; the string release inlines differently.
+// MS2-FUNCTIONAL 0x1425c7840: same reads, log text and handle; the three inlined Stream::ReadU16 bodies schedule differently.
 // @0x1425c7840
 void SF_STDCALL GFx_DefineExternalGradientImageLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    Stream*    in = p->GetStream();
-    ResourceId rid(in->ReadU16() | ResourceId::IdType_GradientImage);
-    UInt16     format = in->ReadU16();
-    UInt16     size   = in->ReadU16();
-    String     fileName;
-    in->ReadStringWithLength(&fileName);
-    in->LogParse("  DefineExternalGradientImage: tagInfo.TagType = %d, id = 0x%X, fmt = %d, name = '%s', size = %d\n",
-                 tagInfo.TagType, rid.GetIdValue(), format, fileName.ToCStr(), size);
-    GFx_CreateImageFileResourceHandle(p, rid, fileName.ToCStr(), "", format, 0, 0);
+    Stream*  pin              = p->GetStream();
+
+    unsigned    gradientId       = pin->ReadU16();
+    unsigned    bitmapResourceId = gradientId | ResourceId::IdType_GradientImage;
+    UInt16      bitmapFormat     = pin->ReadU16();
+    UInt16      gradSize         = pin->ReadU16();
+
+    String   imageFileName;
+    pin->ReadStringWithLength(&imageFileName);
+
+    pin->LogParse("  DefineExternalGradientImage: tagInfo.TagType = %d, id = 0x%X, fmt = %d, name = '%s', size = %d\n",
+        tagInfo.TagType,
+        bitmapResourceId,
+        bitmapFormat,
+        imageFileName.ToCStr(),
+        gradSize);
+
+    // Register image resource data.
+    GFx_CreateImageFileResourceHandle(p, ResourceId(bitmapResourceId),
+                                      imageFileName.ToCStr(), "", bitmapFormat,
+                                      0, 0);
 }
 
 // What a sub-image request holds (sfr_gfx_07e).
@@ -740,23 +752,22 @@ public:
 };
 
 // DefineSubImage: a rectangle of an image defined before, created per binding.
-// MS2-FUNCTIONAL 0x1425c7a50: same reads and data resource; the info allocation and release inline differently.
 // @0x1425c7a50
 void SF_STDCALL GFx_DefineSubImageLoader(LoadProcess* p, const TagInfo&)
 {
-    UInt16 id      = p->ReadU16();
-    UInt16 imageId = p->ReadU16();
-    UInt16 x1      = p->ReadU16();
-    UInt16 y1      = p->ReadU16();
-    UInt16 x2      = p->ReadU16();
-    UInt16 y2      = p->ReadU16();
+    unsigned bitmapResourceId   = p->ReadU16();
+    unsigned baseImageId        = p->ReadU16();
+    UInt16   left               = p->ReadU16();
+    UInt16   top                = p->ReadU16();
+    UInt16   right              = p->ReadU16();
+    UInt16   bottom             = p->ReadU16();
 
-    SubImageResourceInfo* pinfo = SF_NEW SubImageResourceInfo;
-    pinfo->ImageId              = ResourceId(imageId | 0x90000); // the exe's id type of the base image
-    pinfo->Rect                 = Render::ImageRect(x1, y1, x2, y2);
-    p->AddDataResource(ResourceId(id), SubImageResourceCreator::CreateSubImageResourceData(pinfo));
-    if (pinfo)
-        pinfo->Release();
+    Ptr<SubImageResourceInfo> psubimage = *SF_NEW SubImageResourceInfo;
+    psubimage->ImageId = ResourceId(baseImageId | ResourceId::IdType_DynFontImage);
+    psubimage->Rect = Render::ImageRect(left, top, right, bottom);
+
+    ResourceData rdata = SubImageResourceCreator::CreateSubImageResourceData(psubimage);
+    p->AddDataResource(ResourceId(bitmapResourceId), rdata);
 }
 
 // DefineSceneAndFrameLabelData: the scenes of the main timeline and their frame labels (only the first such tag).
