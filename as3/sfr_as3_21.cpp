@@ -1785,7 +1785,7 @@ void SoundObject::AttachResource(SoundResource* presource)
 // @0x142565230
 void SoundObject::AttachToTarget(Sprite* psprite)
 {
-    pTargetHandle = psprite->GetCharacterHandle();
+    pTargetHandle.SetPtr(psprite->GetCharacterHandle());
     psprite->AttachSoundObject(this);
 }
 
