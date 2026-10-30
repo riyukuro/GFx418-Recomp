@@ -2517,11 +2517,22 @@ void FUN_140043550(CriSint32* state, void* input)
 // @0x140041ee0
 CriSint32 FUN_140041ee0(const void* player)
 {
-    struct PlayerConfig { CriUint8 Reserved00[0x4c]; CriSint32 Channels; };
-    CriSint32 flags[3] = { 1, 1, 0x5a };
-    CriSint32 channels = ((const PlayerConfig*)player)->Channels;
-    CriSint32 workSize = channels == 0 ? 0x40 : channels * 0x40;
-    return 0x5a + FUN_140046420(0, (CriUint32)workSize, (const CriUint32*)flags);
+    // the local names place the slots as in the exe (vc9 orders /Od locals by a hash of the name)
+    struct PlayerConfig { CriUint8 Reserved00[0x4c]; CriUint32 Channels; };
+    CriSint32 total = 0;
+    CriUint32 settings[2];
+    settings[0] = 1;
+    settings[1] = 1;
+    CriSint32 head = 0x5a;
+    total += head;
+    CriUint32 size;
+    if (((const PlayerConfig*)player)->Channels > 0)
+        size = ((const PlayerConfig*)player)->Channels * 0x40;
+    else
+        size = 0x40;
+    CriSint32 jSize = FUN_140046420(0, size, settings);
+    total += jSize;
+    return total;
 }
 
 // MS2-FUNCTIONAL: report whether an audio decoder has enough queued samples for the requested operation.
@@ -3129,22 +3140,33 @@ void FUN_14003e180(void* object, const void* frame)
         CriUint8 Reserved18[0xa8];
         CriUint32 QueueLane;
     };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    Reader* p;
+    CriUint64 chk[2];
+    CriUint32 i;
+    CriUint32 ndec;
+    DecodedChunk* cur;
+    CriBool released;
+    p = (Reader*)object;
+    released = 0;
     // count the in-use lane (2), the one GetFrame parks taken frames in
-    CriUint32 queued = (CriUint32)FUN_1400467b8(((Reader*)object)->Queue, 2) / ((Reader*)object)->BlockSize;
-    CriBool released = 0;
-    for (CriUint32 index = 0; index < queued; ++index)
+    ndec = (CriUint32)FUN_1400467b8(p->Queue, 2) / p->BlockSize;
+    for (i = 0; i < ndec; ++i)
     {
-        CriUint64 chunk[2] = {};
-        FUN_1400467a0(((Reader*)object)->Queue, 2, -1, chunk);
-        // match the frame's token (its first field), not the address of the caller's frame info
-        if (chunk[0] && ((DecodedChunk*)chunk[0])->Frame == *(const void* const*)frame)
+        FUN_1400467a0(p->Queue, 2, -1, chk);
+        if (chk[0])
         {
-            FUN_1400467b0(((Reader*)object)->Queue, ((DecodedChunk*)chunk[0])->QueueLane, chunk);
-            released = 1;
-            break;
+            cur = (DecodedChunk*)chk[0];
+            // match the frame's token (its first field), not the address of the caller's frame info
+            if (cur->Frame == *(const void* const*)frame)
+            {
+                FUN_1400467b0(p->Queue, cur->QueueLane, chk);
+                released = 1;
+                break;
+            }
         }
         if (!released)
-            FUN_1400467b0(((Reader*)object)->Queue, 2, chunk);
+            FUN_1400467b0(p->Queue, 2, chk);
     }
     if (!released)
         FUN_140041110(0, "E11120202M : Failed criVdec_ReleaseFramePointer().", 0);
@@ -3154,6 +3176,7 @@ void FUN_14003e180(void* object, const void* frame)
 // @0x140042600
 void FUN_140042600(void* manager, void* heap, CriSint32 index)
 {
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
     struct TrackSet
     {
         CriUint8 Reserved00[0x10];
@@ -3162,10 +3185,12 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index)
         CriUint8 Reserved1c[0x14];
         void* Outputs[8];
     };
+    CriUint32 i;
+    void* output;
+    TrackSet* track;
     if (!manager || !heap)
         return;
-    void** table = (void**)manager;
-    TrackSet* track = (TrackSet*)table[index];
+    track = (TrackSet*)((void**)manager)[index];
     if (!track)
         return;
     if (track->Decoder)
@@ -3173,16 +3198,17 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index)
         FUN_140053470(track->Decoder);
         track->Decoder = NULL;
     }
-    for (CriUint32 channel = 0; channel < track->ChannelCount; ++channel)
+    for (i = 0; i < track->ChannelCount; ++i)
     {
-        if (track->Outputs[channel])
+        output = track->Outputs[i];
+        if (output)
         {
-            FUN_140046784(track->Outputs[channel]);
-            track->Outputs[channel] = NULL;
+            FUN_140046784(output);
+            track->Outputs[i] = NULL;
         }
     }
     FUN_140027fb4(heap, track);
-    table[index] = NULL;
+    ((void**)manager)[index] = NULL;
 }
 #pragma optimize("", on)
 
