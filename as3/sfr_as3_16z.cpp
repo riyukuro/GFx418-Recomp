@@ -365,22 +365,23 @@ void FUN_1424d4220(void* self, void* pheapAddr, const void* nodeRef, UPInt hashV
 
 // A use of pdefImpl: an entry already listed counts one more use; otherwise one is added (holding the definition)
 // with a single use.
-// MS2-FUNCTIONAL: the hash lookup and add are called through their exe addresses
+// MS2-FUNCTIONAL: register allocation only (exe keeps the key in rbx and copies it to rdi for the Ptr); the hash
+// lookup and add are called through their exe addresses
 // @0x1424e8e20
 void MovieRoot::AddLoadedMovieDef(MovieDefImpl* pdefImpl)
 {
     struct Info { Ptr<MovieDefImpl> pMovieDef; unsigned UseCnt; };
     struct NodeRef { MovieDefImpl* const* pFirst; const Info* pSecond; };
-    UPInt key = reinterpret_cast<UPInt>(pdefImpl);
-    Info* pinfo = static_cast<Info*>(FUN_1425059f0(&LoadedMovieDefs, key));
+    // the key is the pointer itself: the lookup gets the parameter's address. The exe's lookup is a template
+    // instance cl could see did not write the key; ours is an address call, so the copy keeps it in a register.
+    MovieDefImpl* const def = pdefImpl;
+    Info* pinfo = static_cast<Info*>(FUN_1425059f0(&LoadedMovieDefs, reinterpret_cast<const UPInt&>(pdefImpl)));
     if (pinfo)
     {
         ++pinfo->UseCnt;
         return;
     }
-    Info info;
-    info.pMovieDef = pdefImpl;
-    info.UseCnt = 1;
+    Info info = { def, 1 };
     NodeRef ref = { &pdefImpl, &info };
     FUN_1424d4220(&LoadedMovieDefs, &LoadedMovieDefs, &ref, reinterpret_cast<UPInt>(pdefImpl));
 }
