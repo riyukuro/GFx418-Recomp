@@ -162,6 +162,12 @@ void FUN_1400467a8(void* object, long operation, void* chunk);
 void FUN_1400467b0(void* object, long operation, void* chunk);
 long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
+// sfr_cri_03's names and types for 0x14003b3fc, 0x14003b674 and 0x1400467c0: the /Od ADX loader functions below
+// call these and the typed 0x1400467a0-b8 overloads, so their arguments are passed directly (no Any temporaries).
+struct CriUsfStandardHeader;
+unsigned long criUsfCmn_ParseUsfHeaderStd(const unsigned char* data, unsigned long size, CriUsfStandardHeader* header);
+const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned long size, long* contentSize);
+void criSj_SplitChunk(const void* source, unsigned long maximum, void* prefix, void* suffix);
 void FUN_14004c370();
 void FUN_14004c7c0(Any a0,Any a1);
 void FUN_14004da40(void);
@@ -251,10 +257,10 @@ cri_u32 FUN_140051ec0(longlong *a1,uint *a2);
 cri_u32 FUN_140052010(longlong *a1,int a2,int a3);
 cri_u32 FUN_140052050(longlong *a1,int a2,int a3);
 cri_u64 FUN_1400520c0(longlong a1,longlong *a2);
-cri_u64 FUN_140052720(longlong a1,longlong *a2);
+cri_u64 FUN_140052720(longlong a1,longlong *a2,cri_u32 a3);
 int FUN_1400527c0(longlong a1,void *a2,int a3);
 int FUN_140052950(longlong a1,uint a2,cri_u64 a3);
-cri_u32 FUN_140052a10(longlong a1,longlong *a2);
+cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3);
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 void FUN_140052ef0(cri_u8 *a1);
 int FUN_140052fa0(void);
@@ -282,6 +288,10 @@ void FUN_140064f70(void *dst,int value,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
 cri_u64 FUN_140065450(Any a0,Any a1);
+// Typed views of 0x140062a40 and 0x140065450 (sfr_cri_06 defines them with cri_any): 0x140050bd0 returns their 32-bit
+// results unchanged.
+cri_u32 FUN_140062a40(longlong a1,cri_u64 a2,void *a3);
+cri_u32 FUN_140065450(longlong a1,cri_u64 a2);
 void FUN_140065770();
 void FUN_140065790();
 void FUN_1400657a0(Any a0);
@@ -329,14 +339,14 @@ void FUN_140068f30(Any a0);
 void FUN_140069020(Any a0,Any a1,Any a2,Any a3);
 cri_u64 FUN_140069270(cri_u64 a0,cri_u64 a1,cri_u64 a2);
 cri_u64 FUN_140069480(cri_u64 a0,cri_u64 a1,cri_u64 a2,cri_u64 a3);
-int FUN_140069844(Any a0,Any a1,Any a2,Any a3,Any a4,Any a5,Any a6,Any a7);
-int FUN_140069ac4(Any a0,Any a1,Any a2,Any a3,Any a4,Any a5,Any a6,Any a7);
-void FUN_140069e44(Any a0);
-void FUN_140069e54(Any a0,Any a1);
-void FUN_140069e5c(Any a0,Any a1,Any a2,Any a3);
-void FUN_140069e98(Any a0,Any a1,Any a2,Any a3);
-void FUN_140069ef4(Any a0,Any a1,Any a2);
-uint FUN_14006a7f8(Any a0,Any a1,Any a2);
+int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
+int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
+void FUN_140069e44(longlong);
+void FUN_140069e54(longlong, int);
+void FUN_140069e5c(longlong, int, int, int);
+void FUN_140069e98(longlong, uint, short, short);
+void FUN_140069ef4(longlong, uint, uint);
+uint FUN_14006a7f8(cri_u64, uint, longlong);
 void FUN_14006aa90();
 /* unknown */ void FUN_142ccc860();
 /* unknown */ void FUN_142ccca50();
@@ -419,12 +429,10 @@ static __forceinline cri_u32 FUN_140051ec0(Any a0,Any a1) { return FUN_140051ec0
 static __forceinline cri_u32 FUN_140052010(Any a0,Any a1,Any a2) { return FUN_140052010((longlong *)a0.v,(int)a1.v,(int)a2.v); }
 static __forceinline cri_u32 FUN_140052050(Any a0,Any a1,Any a2) { return FUN_140052050((longlong *)a0.v,(int)a1.v,(int)a2.v); }
 static __forceinline cri_u64 FUN_1400520c0(Any a0,Any a1) { return FUN_1400520c0((longlong)a0.v,(longlong *)a1.v); }
-static __forceinline cri_u64 FUN_140052720(Any a0,Any a1) { return FUN_140052720((longlong)a0.v,(longlong *)a1.v); }
-static __forceinline cri_u64 FUN_140052720(Any a0,Any a1,Any a2) { return FUN_140052720((longlong)a0.v,(longlong *)a1.v); }
+static __forceinline cri_u64 FUN_140052720(Any a0,Any a1,Any a2) { return FUN_140052720((longlong)a0.v,(longlong *)a1.v,(cri_u32)a2.v); }
 static __forceinline int FUN_1400527c0(Any a0,Any a1,Any a2) { return FUN_1400527c0((longlong)a0.v,(void *)a1.v,(int)a2.v); }
 static __forceinline int FUN_140052950(Any a0,Any a1,Any a2) { return FUN_140052950((longlong)a0.v,(uint)a1.v,(cri_u64)a2.v); }
-static __forceinline cri_u32 FUN_140052a10(Any a0,Any a1) { return FUN_140052a10((longlong)a0.v,(longlong *)a1.v); }
-static __forceinline cri_u32 FUN_140052a10(Any a0,Any a1,Any a2) { return FUN_140052a10((longlong)a0.v,(longlong *)a1.v); }
+static __forceinline cri_u32 FUN_140052a10(Any a0,Any a1,Any a2) { return FUN_140052a10((longlong)a0.v,(longlong *)a1.v,(cri_u32)a2.v); }
 static __forceinline cri_u32 FUN_140052ae0(Any a0,Any a1) { return FUN_140052ae0((longlong)a0.v,(longlong *)a1.v); }
 static __forceinline void FUN_140052ef0(Any a0) { FUN_140052ef0((cri_u8 *)a0.v); }
 static __forceinline long FUN_140053000(Any a0) { return FUN_140053000((cri_u8 *)a0.v); }
@@ -1713,20 +1721,16 @@ cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004ff90
-cri_u64 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
+cri_u32 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
 {
-  int i_v1;
   cri_u64 *pu_v2;
-  cri_u64 u_v3;
   
   if (a1 == 0) {
     pu_v2 = cri_conv(&DAT_143badb38);
   }
   else {
-    i_v1 = FUN_14004e0a0(a1);
-    if (i_v1 != 0) {
-      u_v3 = FUN_14004ff50(0,0xff030203);
-      return u_v3;
+    if (FUN_14004e0a0(a1) != 0) {
+      return FUN_14004ff50(0,0xff030203);
     }
     pu_v2 = (&CriAt<cri_u64>(a1, 0x1618));
   }
@@ -1737,27 +1741,17 @@ cri_u64 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050000
-cri_u64 FUN_140050000(longlong a1,cri_u64 *a2)
+cri_u32 FUN_140050000(longlong a1,cri_u64 *a2)
 {
-  int i_v1;
-  cri_u64 u_v2;
-  
+  struct Q { cri_u64 q[4]; };
   if (a1 == 0) {
-    *a2 = cri_conv(DAT_143badb38);
-    a2[1] = cri_conv(DAT_143badb40);
-    a2[2] = cri_conv(DAT_143badb48);
-    a2[3] = cri_conv(DAT_143badb50);
+    *(Q *)a2 = *(Q *)&DAT_143badb38;
     return 0;
   }
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    u_v2 = FUN_14004ff50(0,0xff030204);
-    return u_v2;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff030204);
   }
-  *a2 = CriAt<cri_u64>(a1, 0x1618);
-  a2[1] = CriAt<cri_u64>(a1, 0x1620);
-  a2[2] = CriAt<cri_u64>(a1, 0x1628);
-  a2[3] = CriAt<cri_u64>(a1, 0x1630);
+  *(Q *)a2 = *(Q *)&CriAt<cri_u64>(a1, 0x1618);
   return 0;
 }
 
@@ -2259,31 +2253,28 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050b30
-void FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3)
+cri_u32 FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3)
 {
-  cri_u64 u_v1;
-  int i_v2;
+  cri_u64 base;
+  int size;
   longlong l_v3;
-  cri_u64 u_v4;
+  cri_u32 err;
   
-  i_v2 = FUN_14004e0a0(a1);
-  if (i_v2 != 0) {
-    FUN_14004ff50(0,0xff03020a);
-    return;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020a);
   }
-  u_v1 = *a2;
-  i_v2 = CriAt<int>(a2, 0x8);
-  l_v3 = FUN_1400530c0(u_v1,i_v2,0xcc);
+  base = *a2;
+  size = CriAt<int>(a2, 0x8);
+  l_v3 = FUN_1400530c0(base,size,0xcc);
   if (l_v3 == 0) {
-    *a3 = i_v2;
-    u_v4 = 0xff030305;
+    *a3 = size;
+    err = 0xff030305;
   }
   else {
-    u_v4 = 0;
-    *a3 = (int)l_v3 - (int)u_v1;
+    *a3 = (int)l_v3 - (int)base;
+    err = 0;
   }
-  FUN_14004ff50(a1,u_v4);
-  return;
+  return FUN_14004ff50(a1,err);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2307,13 +2298,10 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
   ulonglong u_v5;
   int i_v6;
   uint u_v7;
-  int i_v8;
   ulonglong u_v9;
   
-  i_v6 = FUN_14004e0a0(a1);
-  if (i_v6 != 0) {
-    u_v9 = FUN_14004ff50(0,0xff030209);
-    return u_v9;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff030209);
   }
   u_v9 = *(ulonglong *)((longlong)a3 + 0x50);
   if (((((u_v9 != 0) && (u_v4 = *(ulonglong *)((longlong)a3 + 0x40), u_v4 != 0)) &&
@@ -2321,13 +2309,12 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
       ((((u_v9 & 0x7f) == 0 && ((u_v4 & 0x7f) == 0)) &&
        (((u_v5 & 0x7f) == 0 && ((u_v9 != u_v4 && (u_v9 != u_v5)))))))) &&
      ((u_v4 != u_v5 &&
-      (((((u_v1 = *(ushort *)((longlong)a3 + 0x5a), 0 < (short)u_v1 &&
-          (u_v2 = *(ushort *)((longlong)a3 + 0x58), 0 < (short)u_v2)) &&
-         ((short)u_v1 < 0x4001)) && (((short)u_v2 < 0x4001 && ((u_v1 & 0x7f) == 0)))) &&
+      (((((u_v1 = *(ushort *)((longlong)a3 + 0x5a), (short)u_v1 > 0 &&
+          (u_v2 = *(ushort *)((longlong)a3 + 0x58), (short)u_v2 > 0)) &&
+         ((short)u_v1 <= 0x4000)) && (((short)u_v2 <= 0x4000 && ((u_v1 & 0x7f) == 0)))) &&
        ((u_v2 & 0x7f) == 0)))))) {
     if (CriAt<int>(a1, 0x17b8) == 2) {
-      u_v9 = FUN_140062a40(a1,a2,a3);
-      return u_v9;
+      return FUN_140062a40(a1,a2,a3);
     }
     i_v6 = CriAt<int>(a1, 0x162c);
     i_v3 = CriAt<int>(a1, 0x1630);
@@ -2341,52 +2328,42 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
     FUN_1400657e0(a1);
     memcpy(*(void **)((longlong)a3 + 0x60),(&CriAt<cri_u8>(a1, 0x1598)),0x80);
     if (CriAt<int>(a1, 0x1568) != 0) {
-      i_v8 = CriAt<int>(a1, 0x1598) + 7;
-      **(int **)((longlong)a3 + 0x60) = (int)(i_v8 + (i_v8 >> 0x1f & 7U)) >> 3;
-      i_v8 = CriAt<int>(a1, 0x159c) + 7;
-      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 4) =
-           (int)(i_v8 + (i_v8 >> 0x1f & 7U)) >> 3;
-      i_v8 = CriAt<int>(a1, 0x1598) + 0xf;
-      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 8) =
-           (int)(i_v8 + (i_v8 >> 0x1f & 0xfU)) >> 4;
-      i_v8 = CriAt<int>(a1, 0x159c) + 0xf;
-      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 0xc) =
-           (int)(i_v8 + (i_v8 >> 0x1f & 0xfU)) >> 4;
+      **(int **)((longlong)a3 + 0x60) = (CriAt<int>(a1, 0x1598) + 7) / 8;
+      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 4) = (CriAt<int>(a1, 0x159c) + 7) / 8;
+      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 8) = (CriAt<int>(a1, 0x1598) + 0xf) / 16;
+      *(int *)(*(longlong *)((longlong)a3 + 0x60) + 0xc) = (CriAt<int>(a1, 0x159c) + 0xf) / 16;
     }
     *(int *)((longlong)a3 + 0x68) = CriAt<int>(a1, 0x162c) - i_v6;
     *(int *)((longlong)a3 + 0x6c) = CriAt<int>(a1, 0x1630) - i_v3;
     *(cri_u16 *)((longlong)a3 + 0x70) = CriAt<cri_u16>(a1, 0x16a8);
-    return (ulonglong)u_v7;
+    return u_v7;
   }
-  u_v9 = FUN_14004ff50(a1,0xff030306);
-  return u_v9;
+  return FUN_14004ff50(a1,0xff030306);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050e00
-void FUN_140050e00(cri_u64 a1,cri_u64 a2)
+cri_u32 FUN_140050e00(cri_u64 a1,cri_u64 a2)
 {
-  int i_v1;
   uint u_v2;
-  cri_u64 u_v3;
+  cri_u32 err;
   
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    FUN_14004ff50(0,0xff03020a);
-    return;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020a);
   }
-  u_v3 = 0xff030305;
+  err = 0xff030305;
   u_v2 = FUN_140051d90(a2);
-  if (u_v2 != 0) {
-    while ((u_v2 & 0xcc) == 0) {
-      i_v1 = FUN_140052010(a2,1,4);
-      if ((i_v1 != 4) || (u_v2 = FUN_140051d90(a2), u_v2 == 0)) goto LAB_140050e6f;
+  while (u_v2 != 0) {
+    if ((u_v2 & 0xcc) != 0) {
+      err = 0;
+      break;
     }
-    u_v3 = 0;
+    if (FUN_140052010(a2,1,4) != 4) {
+      break;
+    }
+    u_v2 = FUN_140051d90(a2);
   }
-LAB_140050e6f:
-  FUN_14004ff50(a1,u_v3);
-  return;
+  return FUN_14004ff50(a1,err);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -2995,6 +2972,8 @@ void FUN_140051d20(longlong *a1,int *a2,int *a3)
 // @0x140051d90
 cri_u32 FUN_140051d90(longlong *a1)
 {
+  // Local structs go to the Any parameters as void*: an Any(Buf*) or Any(Info*) instantiation is named after this
+  // function, and tools/fullexe/alias.py takes it as a definition of 0x140051d90 (the intro's demux threads crashed).
   struct Buf { cri_u64 Ptr; int Len; };
   struct Info { cri_u64 Lo; cri_u64 Hi; };
   cri_u32 result;
@@ -3010,13 +2989,13 @@ cri_u32 FUN_140051d90(longlong *a1)
     }
     found = FUN_1400530c0(buf.Ptr,buf.Len,0xffffffff);
     if (found != 0) break;
-    FUN_140069020(&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),&buf,&info);
+    FUN_140069020((void *)&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),(void *)&buf,(void *)&info);
     (**(code **)(*a1 + 0x40))(a1,0,&buf);
     (**(code **)(*a1 + 0x38))(a1,1,&info);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&buf);
   }
   result = FUN_140053000(found);
-  FUN_140069020(&buf,(cri_u32)((int)found - (int)buf.Ptr),&buf,&info);
+  FUN_140069020((void *)&buf,(cri_u32)((int)found - (int)buf.Ptr),(void *)&buf,(void *)&info);
   (**(code **)(*a1 + 0x40))(a1,0,&buf);
   (**(code **)(*a1 + 0x38))(a1,1,&info);
   return result;
@@ -3373,7 +3352,8 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052720
-cri_u64 FUN_140052720(longlong a1,longlong *a2)
+// The third parameter is unused; 0x140052ae0 passes it (r8d).
+cri_u64 FUN_140052720(longlong a1,longlong *a2,cri_u32 a3)
 {
   struct Stream;
   struct Info { cri_u64 Lo; cri_u64 Hi; };
@@ -3393,7 +3373,7 @@ cri_u64 FUN_140052720(longlong a1,longlong *a2)
   s->Vt->Read(s,1,0x7fffffff,cur);
   aligned = *(ulonglong *)cur & 0xfffffffffffffffc;
   bits = (*(volatile int *)cur << 3) - ((int)aligned << 3); // the exe reads the low dword again here
-  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,&info);
+  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(void *)&info);
   s->Vt->Seek(s,0,cur);
   s->Vt->Write(s,1,&info);
   FUN_140051d90(a2);
@@ -3500,7 +3480,8 @@ int FUN_140052950(longlong a1,uint a2,cri_u64 a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052a10
-cri_u32 FUN_140052a10(longlong a1,longlong *a2)
+// The third parameter is unused; 0x140052ae0 passes it (r8d).
+cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3)
 {
   struct Info { cri_u64 Lo; cri_u64 Hi; };
   longlong *cur;
@@ -3516,7 +3497,7 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2)
   aligned = ptr & 0xfffffffffffffffc;
   bits = ((int)*cur << 3) - ((int)aligned << 3);
   result = FUN_1400527c0(a1,(void *)ptr,CriAt<int>(a1, 0x1808));
-  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,&info);
+  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(void *)&info);
   (**(code **)(*a2 + 0x40))(a2,0,cur);
   (**(code **)(*a2 + 0x38))(a2,1,&info);
   FUN_140051d90(a2);
@@ -3527,67 +3508,63 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2)
 // @0x140052ae0
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2)
 {
-  int i_v1;
+  struct Chunk { cri_u64 Data; cri_u32 Size; };
+  Chunk ck;
+  Chunk first;
+  int ret;
   uint u_v2;
-  cri_u64 u_v3;
   cri_u32 u_v4;
-  __declspec(align(16)) cri_u8 frame_[32];
-  cri_u64 &loc_28 = *(cri_u64 *)(frame_ + 0);
-  cri_u32 &loc_20 = *(cri_u32 *)(frame_ + 8);
-  cri_u64 &loc_18 = *(cri_u64 *)(frame_ + 16);
-  cri_u32 &loc_10 = *(cri_u32 *)(frame_ + 24);
   
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    u_v3 = FUN_14004ff50(0,0xff03020c);
-    return u_v3;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020c);
   }
   u_v4 = 0;
   CriAt<cri_u32>(a1, 0x18c4) = 0;
-  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,&loc_28);
-  (**(code **)(*a2 + 0x38))(a2,1,&loc_28);
-  loc_18 = loc_28;
-  loc_10 = loc_20;
-  i_v1 = FUN_140051270(a1,&loc_18);
-  if (i_v1 == 2) {
-    u_v3 = FUN_140062ae0(a1,a2);
-    return u_v3;
+  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,&ck);
+  (**(code **)(*a2 + 0x38))(a2,1,&ck);
+  first.Data = ck.Data;
+  first.Size = ck.Size;
+  if (FUN_140051270(a1,(int *)&first) == 2) {
+    return FUN_140062ae0(a1,a2);
   }
-  i_v1 = FUN_140052950(a1,0xffffffff,a2);
-  while( true ) {
-    if (i_v1 != 0) {
-      u_v3 = FUN_14004ff50(a1,i_v1);
-      return u_v3;
-    }
-    u_v2 = FUN_140051210(a2,&loc_28);
+  ret = FUN_140052950(a1,0xffffffff,(cri_u64)a2);
+  while (ret == 0) {
+    u_v2 = FUN_140051210(a2,(cri_u64 *)&ck);
     if (u_v2 == 0) {
-      return 0;
+      goto done;
     }
     if ((u_v2 & 3) != 0) {
-      return 0;
+      goto done;
     }
-    if ((char)u_v2 < '\0') break;
-    if (u_v2 == 4) {
+    if ((char)u_v2 < 0) {
+      ret = 0xfffffffe;
+      goto done;
+    }
+    switch (u_v2) {
+    case 4:
       u_v4 = 4;
       FUN_1400515c0(a1,a2);
-    }
-    else if (u_v2 == 8) {
+      break;
+    case 8:
       u_v4 = 8;
       FUN_140051380(a1,a2);
-    }
-    else if (u_v2 == 0x10) {
+      break;
+    case 0x10:
       FUN_140052720(a1,a2,u_v4);
-    }
-    else if (u_v2 == 0x20) {
+      break;
+    case 0x20:
       FUN_140052a10(a1,a2,u_v4);
-    }
-    else if (u_v2 == 0x40) {
+      break;
+    case 0x40:
+      u_v4 = u_v2;
       FUN_1400520c0(a1,a2);
-      u_v4 = 0x40;
+      break;
     }
-    i_v1 = FUN_140052950(a1,0xffffffff,a2);
+    ret = FUN_140052950(a1,0xffffffff,(cri_u64)a2);
   }
-  return 0xfffffffe;
+  return FUN_14004ff50(a1,ret);
+done:
+  return ret;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -3613,27 +3590,17 @@ cri_u32 FUN_140052c80(cri_u64 a1,cri_u64 *a2,int *a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052d00
-cri_u64 FUN_140052d00(longlong a1,int *a2)
+cri_u32 FUN_140052d00(longlong a1,int *a2)
 {
-  int i_v1;
-  int i_v2;
-  cri_u64 u_v3;
-  
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    u_v3 = FUN_14004ff50(0,0xff03020c);
-    return u_v3;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020c);
   }
   memcpy(a2,(&CriAt<cri_u8>(a1, 0x1598)),0x80);
   if (CriAt<int>(a1, 0x1568) != 0) {
-    i_v1 = (int)(*a2 + 7 + (*a2 + 7 >> 0x1f & 7U)) >> 3;
-    *a2 = i_v1;
-    i_v2 = (int)(a2[1] + 7 + (a2[1] + 7 >> 0x1f & 7U)) >> 3;
-    a2[1] = i_v2;
-    i_v1 = i_v1 + 0xf;
-    a2[2] = (int)(i_v1 + (i_v1 >> 0x1f & 0xfU)) >> 4;
-    i_v2 = i_v2 + 0xf;
-    a2[3] = (int)(i_v2 + (i_v2 >> 0x1f & 0xfU)) >> 4;
+    a2[0] = (a2[0] + 7) / 8;
+    a2[1] = (a2[1] + 7) / 8;
+    a2[2] = (a2[0] + 0xf) / 16;
+    a2[3] = (a2[1] + 0xf) / 16;
   }
   return 0;
 }
@@ -3651,40 +3618,28 @@ cri_u32 FUN_140052da0(longlong a1,cri_u32 *a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052df0
-cri_u64 FUN_140052df0(longlong a1,int *a2,cri_u32 *a3,int *a4)
+cri_u32 FUN_140052df0(longlong a1,int *a2,cri_u32 *a3,int *a4)
 {
-  int i_v1;
-  cri_u64 u_v2;
-  
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 == 0) {
-    *a2 = CriAt<int>(a1, 0x16d8) << 0xb;
-    *a3 = CriAt<cri_u32>(a1, 0x16e8);
-    if (CriAt<int>(a1, 0x16d4) == 0x3ffff) {
-      *a4 = -1;
-    }
-    else {
-      *a4 = (CriAt<int>(a1, 0x16e8) * CriAt<int>(a1, 0x16d4)) / 0x708;
-    }
-    u_v2 = 0;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020f);
+  }
+  *a2 = CriAt<int>(a1, 0x16d8) << 0xb;
+  *a3 = CriAt<cri_u32>(a1, 0x16e8);
+  if (CriAt<int>(a1, 0x16d4) == 0x3ffff) {
+    *a4 = -1;
   }
   else {
-    u_v2 = FUN_14004ff50(0,0xff03020f);
+    *a4 = (CriAt<int>(a1, 0x16e8) * CriAt<int>(a1, 0x16d4)) / 0x708;
   }
-  return u_v2;
+  return 0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052e90
-cri_u64 FUN_140052e90(longlong a1,cri_u32 *a2,cri_u32 *a3)
+cri_u32 FUN_140052e90(longlong a1,cri_u32 *a2,cri_u32 *a3)
 {
-  int i_v1;
-  cri_u64 u_v2;
-  
-  i_v1 = FUN_14004e0a0(a1);
-  if (i_v1 != 0) {
-    u_v2 = FUN_14004ff50(0,0xff03020e);
-    return u_v2;
+  if (FUN_14004e0a0(a1) != 0) {
+    return FUN_14004ff50(0,0xff03020e);
   }
   *a2 = CriAt<cri_u32>(a1, 0x16e0);
   *a3 = CriAt<cri_u32>(a1, 0x16e4);
@@ -3999,46 +3954,60 @@ cri_u64 FUN_140053650(longlong a1)
   return 0;
 }
 
+// The 0x74-byte ADX header at player+0x28 (layout from the stores in 0x140053e60).
+struct AdxHdr {
+  cri_u8 Bytes[8];       // 0x00: 4, ?, 3, 4, 0x12, channel count at [5]
+  cri_u32 Rate;          // 0x08: a3
+  cri_u32 Samples;       // 0x0c: a4
+  cri_u32 BlockBits;     // 0x10: 0x20
+  cri_u16 Hp;            // 0x14: 500
+  cri_u16 HistA[8];      // 0x16
+  cri_u16 HistB[8];      // 0x26
+  cri_u16 Pad36[3];
+  cri_u16 Flag3c;        // 0x3c: 1
+  cri_u8 Rest[0x74 - 0x3e];
+};
+
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400536d0
 void FUN_1400536d0(longlong a1)
 {
-  __declspec(align(16)) cri_u8 frame_[112];
-  uint &loc_78 = *(uint *)(frame_ + 0);
-  cri_u32 (&loc_68)[2] = *(cri_u32 (*)[2])(frame_ + 16);
-  cri_u64 &loc_60 = *(cri_u64 *)(frame_ + 24);
-  int &loc_58 = *(int *)(frame_ + 32);
-  cri_u64 &loc_50 = *(cri_u64 *)(frame_ + 40);
-  longlong &loc_48 = *(longlong *)(frame_ + 48);
-  cri_u8 (&loc_40)[15] = *(cri_u8 (*)[15])(frame_ + 56);
-  char &loc_31 = *(char *)(frame_ + 71);
-  cri_u64 &loc_18 = *(cri_u64 *)(frame_ + 96);
-  
-  loc_50 = (*(cri_u64*)((char*)(a1) + 0x18));
-  loc_48 = a1 + 0x9c;
-  FUN_1400467a0(loc_50,1,0xffffffff,&loc_60);
-  if (loc_58 != 0) {
-    FUN_14003b3fc(loc_60,loc_58,loc_40);
-    if (loc_31 == '\0') {
-      loc_18 = FUN_14003b674(loc_60,loc_58,loc_68);
-      FUN_14006a7f8(loc_18,loc_68[0],a1 + 0x28);
-      FUN_140069e44(loc_48);
-      FUN_140069e54(loc_48,(int)(*(char*)((char*)(a1) + 0x2d)));
-      FUN_140069e5c(loc_48,0,0,0);
-      FUN_140069ef4(loc_48,(int)(*(short*)((char*)(a1) + 0x3c)),(*(cri_u32*)((char*)(a1) + 0x30)));
-      for (loc_78 = 0; loc_78 < (uint)(int)(*(char*)((char*)(a1) + 0x2d)); loc_78 = loc_78 + 1) {
-        FUN_140069e98(loc_48,loc_78,*(cri_u16 *)(a1 + 0x3e + (ulonglong)loc_78 * 2),
-                      *(cri_u16 *)(a1 + 0x4e + (ulonglong)loc_78 * 2));
-      }
-      FUN_1400467b0(loc_50,0,&loc_60);
-      (*(cri_u32*)((char*)(a1) + 0x170)) = 0;
-      (*(cri_u8*)((char*)(a1) + 0x10)) = 2;
-    }
-    else {
-      FUN_1400467b0(loc_50,0,&loc_60);
-    }
+  struct Chunk { const cri_u8* Data; unsigned long Size; };
+  struct UsfHdr { cri_u32 W0, W4, W8; cri_u8 Bc, Bd, Be, Flag; cri_u32 W10[5]; };   // CriUsfStandardHeader, 0x24 bytes
+  uint i;
+  AdxHdr* sj;
+  long len;
+  Chunk usfh;
+  void* data;
+  longlong hdr;
+  UsfHdr usf;
+
+  data = *(void**)((char*)a1 + 0x18);
+  sj = (AdxHdr*)((char*)a1 + 0x28);
+  hdr = a1 + 0x9c;
+  FUN_1400467a0(data,1,0xffffffff,&usfh);
+  if (usfh.Size == 0) {
+    return;
   }
-  return;
+  // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
+  if (criUsfCmn_ParseUsfHeaderStd(usfh.Data,usfh.Size,(CriUsfStandardHeader*)&usf), usf.Flag != 0) {
+    FUN_1400467b0(data,0,&usfh);
+    return;
+  }
+  {
+  const cri_u8* contents = criUsfCmn_GetContents(usfh.Data,usfh.Size,&len);
+  FUN_14006a7f8((cri_u64)contents,len,a1 + 0x28);
+  FUN_140069e44(hdr);
+  FUN_140069e54(hdr,(int)(char)sj->Bytes[5]);
+  FUN_140069e5c(hdr,0,0,0);
+  FUN_140069ef4(hdr,(int)(short)sj->Hp,sj->Rate);
+  for (i = 0; i < (uint)(int)(char)sj->Bytes[5]; i = i + 1) {
+    FUN_140069e98(hdr,i,sj->HistA[i],sj->HistB[i]);
+  }
+  FUN_1400467b0(data,0,&usfh);
+  *(cri_u32*)((char*)a1 + 0x170) = 0;
+  *((cri_u8*)a1 + 0x10) = 2;
+  }
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -4076,33 +4045,33 @@ void FUN_140053880(longlong a1)
   loc_34 = (uint)(*(char*)((char*)(a1) + 0x2d));
   loc_68 = a1 + 0x9c;
   loc_98 = 0;
-  FUN_1400467a0(loc_70,1,0xffffffff,&loc_80);
+  FUN_1400467a0((void *)loc_70,1,0xffffffff,&loc_80);
   if (loc_78 != 0) {
-    FUN_14003b3fc(loc_80,loc_78,loc_60);
+    criUsfCmn_ParseUsfHeaderStd((const cri_u8 *)loc_80,loc_78,(CriUsfStandardHeader *)loc_60);
     if (loc_51 == '\0') {
-      loc_88 = (cri_u8 *)FUN_14003b674(loc_80,loc_78,&loc_12c);
+      loc_88 = (cri_u8 *)criUsfCmn_GetContents((const cri_u8 *)loc_80,loc_78,(long *)&loc_12c);
       loc_128 = CONCAT11(*loc_88,loc_88[1]);
       if (loc_128 == -0x7fff) {
-        FUN_1400467b0(loc_70,0,&loc_80);
+        FUN_1400467b0((void *)loc_70,0,&loc_80);
         (*(cri_u8*)((char*)(a1) + 0x10)) = 1;
       }
       else {
         loc_38 = (int)(((ulonglong)loc_12c / 0x12) / (ulonglong)loc_34) * 0x20;
         loc_130 = loc_38 * (*(int*)((char*)(a1) + 0x16c));
         for (loc_134 = 0; loc_134 < loc_34; loc_134 = loc_134 + 1) {
-          u_v1 = FUN_1400467b8(*(cri_u64 *)(loc_90 + (ulonglong)loc_134 * 8));
+          u_v1 = FUN_1400467b8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0);
           if (u_v1 < loc_130) {
-            FUN_1400467a8(loc_70,1,&loc_80);
+            FUN_1400467a8((void *)loc_70,1,&loc_80);
             return;
           }
         }
         for (loc_134 = 0; loc_134 < loc_34; loc_134 = loc_134 + 1) {
-          FUN_1400467a0(*(cri_u64 *)(loc_90 + (ulonglong)loc_134 * 8),0,loc_130,
+          FUN_1400467a0(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,loc_130,
                         &uStack_118 + (ulonglong)loc_134 * 2);
           if (auStack_110[(ulonglong)loc_134 * 4] < loc_130) {
-            FUN_1400467a8(*(cri_u64 *)(loc_90 + (ulonglong)loc_134 * 8),0,
+            FUN_1400467a8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,
                           &uStack_118 + (ulonglong)loc_134 * 2);
-            FUN_1400467a8(loc_70,1,&loc_80);
+            FUN_1400467a8((void *)loc_70,1,&loc_80);
             return;
           }
           loc_178[loc_134] = (&uStack_118)[(ulonglong)loc_134 * 2];
@@ -4113,11 +4082,11 @@ void FUN_140053880(longlong a1)
           (*(*(code **)((char*)(a1) + 0x178)))(&loc_80,(*(cri_u64*)((char*)(a1) + 0x180)));
         }
         if ((*(int*)((char*)(a1) + 0x168)) == 0) {
-          loc_38 = FUN_140069844(loc_68,loc_98,loc_88,loc_12c,loc_138,loc_34,loc_178
+          loc_38 = FUN_140069844(loc_68,loc_98,loc_88,loc_12c,(int *)loc_138,loc_34,(longlong *)loc_178
                                    ,loc_98);
         }
         else {
-          loc_38 = FUN_140069ac4(loc_68,loc_98,loc_88,loc_12c,loc_138,loc_34,loc_1b8
+          loc_38 = FUN_140069ac4(loc_68,loc_98,loc_88,loc_12c,(int *)loc_138,loc_34,(longlong *)loc_1b8
                                    ,loc_98);
         }
         if ((uint)((*(int*)((char*)(a1) + 0x34)) - (*(int*)((char*)(a1) + 0x170))) < loc_38) {
@@ -4131,15 +4100,15 @@ void FUN_140053880(longlong a1)
           else {
             loc_30 = loc_38 << 2;
           }
-          FUN_1400467c0(&uStack_118 + (ulonglong)loc_134 * 2,loc_30,loc_28,loc_18);
-          FUN_1400467b0(*(cri_u64 *)(loc_90 + (ulonglong)loc_134 * 8),1,loc_28);
-          FUN_1400467a8(*(cri_u64 *)(loc_90 + (ulonglong)loc_134 * 8),0,loc_18);
+          criSj_SplitChunk(&uStack_118 + (ulonglong)loc_134 * 2,loc_30,loc_28,loc_18);
+          FUN_1400467b0(*(void **)(loc_90 + (ulonglong)loc_134 * 8),1,loc_28);
+          FUN_1400467a8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,loc_18);
         }
-        FUN_1400467b0(loc_70,0,&loc_80);
+        FUN_1400467b0((void *)loc_70,0,&loc_80);
       }
     }
     else {
-      FUN_1400467b0(loc_70,0,&loc_80);
+      FUN_1400467b0((void *)loc_70,0,&loc_80);
     }
   }
   return;
@@ -4155,41 +4124,45 @@ void FUN_140053e40(longlong a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053e60
-void FUN_140053e60(longlong a1,cri_u8 a2,cri_u32 a3,cri_u32 a4)
+// Declared as sfr_cri_03 calls it: the exe passes the channel count as a 32-bit value and stores its low byte.
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
+void FUN_140053e60(void* a1, unsigned long a2, unsigned long a3, unsigned long a4)
 {
-  longlong l_v1;
-  cri_u32 loc_28;
-  
-  l_v1 = a1 + 0x9c;
-  if ((*(char*)((char*)(a1) + 0x10)) == '\x01') {
-    memset((&(*(cri_u8*)((char*)(a1) + 0x28))),0,0x74);
-    (*(cri_u8*)((char*)(a1) + 0x28)) = 4;
-    (*(cri_u8*)((char*)(a1) + 0x2a)) = 3;
-    (*(cri_u8*)((char*)(a1) + 0x2b)) = 4;
-    (*(cri_u8*)((char*)(a1) + 0x2c)) = 0x12;
-    (*(cri_u8*)((char*)(a1) + 0x2d)) = a2;
-    (*(cri_u32*)((char*)(a1) + 0x30)) = a3;
-    (*(cri_u32*)((char*)(a1) + 0x34)) = a4;
-    (*(cri_u32*)((char*)(a1) + 0x38)) = 0x20;
-    (*(cri_u16*)((char*)(a1) + 0x3c)) = 500;
-    for (loc_28 = 0; loc_28 < (*(char*)((char*)(a1) + 0x2d)); loc_28 = loc_28 + 1) {
-      *(cri_u16 *)(a1 + 0x3e + (longlong)loc_28 * 2) = 0;
-      *(cri_u16 *)(a1 + 0x4e + (longlong)loc_28 * 2) = 0;
-    }
-    (*(cri_u16*)((char*)(a1) + 0x64)) = 1;
-    FUN_140069e44(l_v1);
-    FUN_140069e54(l_v1,(int)(*(char*)((char*)(a1) + 0x2d)));
-    FUN_140069e5c(l_v1,0,0,0);
-    FUN_140069ef4(l_v1,(int)(*(short*)((char*)(a1) + 0x3c)),(*(cri_u32*)((char*)(a1) + 0x30)));
-    for (loc_28 = 0; loc_28 < (*(char*)((char*)(a1) + 0x2d)); loc_28 = loc_28 + 1) {
-      FUN_140069e98(l_v1,loc_28,*(cri_u16 *)(a1 + 0x3e + (longlong)loc_28 * 2),
-                    *(cri_u16 *)(a1 + 0x4e + (longlong)loc_28 * 2));
-    }
-    (*(cri_u32*)((char*)(a1) + 0x170)) = 0;
-    (*(cri_u8*)((char*)(a1) + 0x10)) = 2;
+  int i;
+  AdxHdr* hdr;
+  longlong adx;
+
+  hdr = (AdxHdr*)((cri_u8*)a1 + 0x28);
+  adx = (longlong)a1 + 0x9c;
+  if (*((cri_u8*)a1 + 0x10) != 1) {
+    return;
   }
-  return;
+  memset(hdr,0,0x74);
+  hdr->Bytes[0] = 4;
+  hdr->Bytes[2] = 3;
+  hdr->Bytes[3] = 4;
+  hdr->Bytes[4] = 0x12;
+  hdr->Bytes[5] = (cri_u8)a2;
+  hdr->Rate = a3;
+  hdr->Samples = a4;
+  hdr->BlockBits = 0x20;
+  hdr->Hp = 500;
+  for (i = 0; i < (char)hdr->Bytes[5]; i = i + 1) {
+    hdr->HistA[i] = 0;
+    hdr->HistB[i] = 0;
+  }
+  hdr->Flag3c = 1;
+  FUN_140069e44(adx);
+  FUN_140069e54(adx,(int)(char)hdr->Bytes[5]);
+  FUN_140069e5c(adx,0,0,0);
+  FUN_140069ef4(adx,(int)(short)hdr->Hp,hdr->Rate);
+  for (i = 0; i < (char)hdr->Bytes[5]; i = i + 1) {
+    FUN_140069e98(adx,i,hdr->HistA[i],hdr->HistB[i]);
+  }
+  *(cri_u32*)((char*)a1 + 0x170) = 0;
+  *((cri_u8*)a1 + 0x10) = 2;
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140054040
