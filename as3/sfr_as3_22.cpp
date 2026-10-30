@@ -106,7 +106,6 @@ extern ExeDecl<void*> DAT_14318f030;
 #define AS3MovieViewValueVtable ((void*)&DAT_14318f030)
 extern ExeDecl<void*> DAT_1431921c0;
 #define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
-extern "C" void FUN_14268cd80(void*, void*, unsigned);
 extern "C" void FUN_14268c510(void*, void*, unsigned);
 extern "C" void FUN_14268d2b0(void*, void*, unsigned);
 extern "C" void FUN_14268c930(void*, void*, unsigned);
@@ -272,6 +271,39 @@ template void MsgFormat::FormatD1<UInt64>(const UInt64&);
 template Render::TreeContainer*
 Render::ContextImpl::Context::CreateEntry<Render::TreeContainer>();
 
+} // namespace Scaleform
+
+namespace Scaleform {
+// The AMP readers call these two instances out of line.
+// MS2-PIN: ??_7ScriptBufferStats@MovieInstructionStats@AMP@GFx@Scaleform@@6B@ 0x14318f020
+// MS2-PIN: ??_7?$RefCountBase@UScriptBufferStats@MovieInstructionStats@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
+typedef GFx::AMP::MovieInstructionStats::ScriptBufferStats AmpScriptBufferStats;
+typedef GFx::AMP::MovieInstructionStats::InstructionTimePair AmpInstructionTimePair;
+template<> SF_NOINLINE void ArrayDataBase<Ptr<AmpScriptBufferStats>, AllocatorLH<Ptr<AmpScriptBufferStats>, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorLH<Ptr<AmpScriptBufferStats>, Stat_Default_Mem>::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+template<> SF_NOINLINE void ArrayData<AmpInstructionTimePair, AllocatorLH<AmpInstructionTimePair, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::Resize(UPInt newSize)
+{
+    UPInt oldSize = this->Size;
+    BaseType::ResizeNoConstruct(this, newSize);
+    if (newSize > oldSize)
+        AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
 } // namespace Scaleform
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1789,7 +1821,6 @@ extern "C" void FUN_142690a20(void* setObject, void* allocator, std::int64_t req
     }
 }
 // The following stream and movie record helpers remain in the same Scaleform namespace.
-void ReadNarrowString(void*, void*);
 void ResizeStringArray(void**, std::size_t);
 static void ReadMovieBytes(void* stream, void* destination, std::size_t size)
 {
@@ -1831,30 +1862,23 @@ void ReadMovieImageRecord(void* object, void* stream, unsigned version)
     }
 }
 
-// MS2-FUNCTIONAL: reads a movie image's versioned narrow-string and scalar fields from the input stream.
 // @0x14268c370
-void ReadMovieImageFields(void* object, void* stream, unsigned version)
+void GFx::AMP::ImageInfo::Read(File& str, UInt32 version)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    ReadMovieBytes(stream, bytes + 0x10, 4);
-    ReadNarrowString(stream, bytes + 0x18);
-    if (version < 0x1d) {
-        std::uint32_t ignoredLength = 0;
-        ReadMovieBytes(stream, &ignoredLength, 4);
-        for (std::uint32_t i = 0; i < ignoredLength; ++i) {
-            unsigned char ignored = 0;
-            ReadMovieBytes(stream, &ignored, 1);
-        }
+    Id = str.ReadUInt32();
+    readString(str, &Name);
+    if (version < 29)
+    {
+        String dummy;
+        readString(str, &dummy);
     }
-    ReadMovieBytes(stream, bytes + 0x20, 4);
-    unsigned char flag = 0;
-    ReadMovieBytes(stream, &flag, 1);
-    bytes[0x24] = flag != 0;
-    ReadMovieBytes(stream, bytes + 0x28, 4);
-    ReadMovieBytes(stream, bytes + 0x2c, 4);
-    ReadMovieBytes(stream, bytes + 0x30, 4);
-    ReadMovieBytes(stream, bytes + 0x34, 4);
-    ReadMovieBytes(stream, bytes + 0x38, 4);
+    Bytes = str.ReadUInt32();
+    External = (ReadUByte(str) != 0);
+    AtlasId = str.ReadUInt32();
+    AtlasTop = str.ReadUInt32();
+    AtlasBottom = str.ReadUInt32();
+    AtlasLeft = str.ReadUInt32();
+    AtlasRight = str.ReadUInt32();
 }
 
 // MS2-FUNCTIONAL: reads the versioned image resource fields and its array of narrow-string labels.
@@ -1865,12 +1889,12 @@ void ReadImageResourceRecord(void* object, void* stream, unsigned version)
     ReadMovieBytes(stream, bytes + 0x10, 4);
     if (version > 0x13)
         ReadMovieBytes(stream, bytes + 0x14, 4);
-    ReadNarrowString(stream, bytes + 0x18);
+    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x18));
     if (version > 4)
-        ReadNarrowString(stream, bytes + 0x20);
-    ReadNarrowString(stream, bytes + 0x28);
-    ReadNarrowString(stream, bytes + 0x30);
-    ReadNarrowString(stream, bytes + 0x38);
+        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x20));
+    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x28));
+    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x30));
+    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x38));
     std::uint32_t count = 0;
     ReadMovieBytes(stream, &count, 4);
     ResizeStringArray(reinterpret_cast<void**>(bytes + 0x40), count);
@@ -3112,33 +3136,17 @@ static void WriteImageStream(void* stream, const void* data, unsigned size)
     reinterpret_cast<void (*)(void*, const void*, unsigned)>(streamVtable[9])(stream, data, size);
 }
 
-void WriteNarrowString(void*, const String*);
 void WriteTextTreeNode(const void*, void*, unsigned);
 void WriteTextRecordGroup(void*, void*, unsigned);
 void WriteStringResourceTable(void*, void*, unsigned);
-void WriteTextMetadata(const void*, void*, unsigned);
 
-// MS2-FUNCTIONAL: writes the collection count, each image record header, and every nested 16-byte entry through the stream vtable.
 // @0x14268f4b0
-void WriteImageMetadataRecords(void* object, void* stream)
+void GFx::AMP::MovieInstructionStats::Write(File& str, UInt32 version) const
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    unsigned value = static_cast<unsigned>(*reinterpret_cast<std::size_t*>(bytes + 0x18));
-    WriteImageStream(stream, &value, 4);
-    void** records = *reinterpret_cast<void***>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    for (std::size_t i = 0; i < count; ++i) {
-        auto* record = static_cast<unsigned char*>(records[i]);
-        value = *reinterpret_cast<unsigned*>(record + 0x10); WriteImageStream(stream, &value, 4);
-        value = *reinterpret_cast<unsigned*>(record + 0x14); WriteImageStream(stream, &value, 4);
-        value = *reinterpret_cast<unsigned*>(record + 0x18); WriteImageStream(stream, &value, 4);
-        const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(record + 0x28);
-        value = static_cast<unsigned>(nestedCount); WriteImageStream(stream, &value, 4);
-        auto* nested = *reinterpret_cast<unsigned char**>(record + 0x20);
-        for (std::size_t j = 0; j < nestedCount; ++j) {
-            WriteImageStream(stream, nested + j * 0x10, 4);
-            WriteImageStream(stream, nested + j * 0x10 + 8, 8);
-        }
+    WriteUInt32(str, static_cast<UInt32>(BufferStatsArray.GetSize()));
+    for (UPInt i = 0; i < BufferStatsArray.GetSize(); ++i)
+    {
+        BufferStatsArray[i]->Write(str, version);
     }
 }
 
@@ -3151,7 +3159,7 @@ void WriteMovieImageData(void* object, void* stream, unsigned version)
     WriteImageStream(stream, bytes + 0x14, 4);
     WriteImageStream(stream, bytes + 0x18, 4);
     if (version > 3) {
-        WriteNarrowString(stream, reinterpret_cast<const String*>(bytes + 0x20));
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const String*>(bytes + 0x20));
         WriteImageStream(stream, bytes + 0x28, 4);
         WriteImageStream(stream, bytes + 0x2c, 4);
         WriteImageStream(stream, bytes + 0x30, 4);
@@ -3166,11 +3174,11 @@ void WriteMovieImageData(void* object, void* stream, unsigned version)
         for (std::size_t i = 0; i < count; ++i) {
             auto* entry = static_cast<unsigned char*>(entries[i]);
             if (version > 10)
-                WriteNarrowString(stream, reinterpret_cast<const String*>(entry + 0x10));
+                ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const String*>(entry + 0x10));
             WriteImageStream(stream, entry + 0x18, 4);
         }
     }
-    WriteImageMetadataRecords(*reinterpret_cast<void**>(bytes + 0x58), stream);
+    (*reinterpret_cast<::Scaleform::GFx::AMP::MovieInstructionStats**>(bytes + 0x58))->Write(*static_cast<::Scaleform::File*>(stream), version);
     FUN_14268ef30(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
     WriteStringResourceTable(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
     if (version > 0x18)
@@ -3224,7 +3232,7 @@ void WriteStringResourceTable(void* object, void* stream, unsigned version)
 void WriteTextRecordGroup(void* object, void* stream, unsigned version)
 {
     auto* bytes = static_cast<unsigned char*>(object);
-    Scaleform::WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(bytes + 0x10));
+    ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(bytes + 0x10));
     const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x20);
     auto** nodes = *reinterpret_cast<void***>(bytes + 0x18);
     auto** streamVtable = *reinterpret_cast<void***>(stream);
@@ -3247,7 +3255,7 @@ void WriteTextRecordGroup(void* object, void* stream, unsigned version)
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, &key, 8);
         auto* value = *reinterpret_cast<unsigned char**>(row + 0x28);
         auto* text = reinterpret_cast<const Scaleform::String*>(value + 0x10);
-        Scaleform::WriteNarrowString(stream, text);
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *text);
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x18, 4);
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x20, 8);
         reinterpret_cast<void (*)(void*, const void*, std::size_t)>(streamVtable[9])(stream, value + 0x28, 4);
@@ -3289,7 +3297,7 @@ extern "C" void FUN_14268ef30(void* object, void* stream, unsigned version)
             continue;
         WriteAs3RecordBytes(stream, row + 0x20, 8);
         auto* value = *reinterpret_cast<unsigned char**>(row + 0x28);
-        Scaleform::WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(value + 0x10));
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(value + 0x10));
         WriteAs3RecordBytes(stream, value + 0x18, 4);
         if (version > 8) {
             WriteAs3RecordBytes(stream, value + 0x20, 8);
@@ -3300,31 +3308,24 @@ extern "C" void FUN_14268ef30(void* object, void* stream, unsigned version)
     }
 }
 
-// MS2-FUNCTIONAL: reads a length-prefixed narrow string from the stream, appending each byte to the destination.
 // @0x142690630
-void ReadNarrowString(void* stream, void* destination)
+void GFx::AMP::readString(File& file, String* str)
 {
-    auto** vtable = *reinterpret_cast<void***>(stream);
-    unsigned length = 0;
-    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, &length, sizeof(length));
-    for (unsigned i = 0; i < length; ++i) {
-        unsigned char ch = 0;
-        reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, &ch, 1);
-        FUN_142585f70(destination, static_cast<signed char>(ch));
+    UInt32 stringLength = file.ReadUInt32();
+    for (UInt32 i = 0; i < stringLength; ++i)
+    {
+        str->AppendChar(GFx::AMP::ReadSByte(file));
     }
 }
 
-// MS2-FUNCTIONAL: writes a narrow string's 32-bit length followed by its bytes to the stream.
 // @0x142690c70
-void WriteNarrowString(void* stream, const Scaleform::String* text)
+void GFx::AMP::writeString(File& file, const String& str)
 {
-    auto** vtable = *reinterpret_cast<void***>(stream);
-    const unsigned length = static_cast<unsigned>(text->GetLength());
-    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, &length, sizeof(length));
-    const auto encoded = *reinterpret_cast<const std::uintptr_t*>(text);
-    auto* raw = reinterpret_cast<const unsigned char*>(encoded & ~std::uintptr_t(3));
-    for (unsigned i = 0; i < length; ++i)
-        reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, raw + 12 + i, 1);
+    GFx::AMP::WriteUInt32(file, static_cast<UInt32>(str.GetLength()));
+    for (UPInt i = 0; i < str.GetLength(); ++i)
+    {
+        GFx::AMP::WriteSByte(file, str.ToCStr()[i]);
+    }
 }
 
 static void WriteStreamBytes(void* stream, const void* data, std::size_t size)
@@ -3413,7 +3414,7 @@ void WriteMovieImageAggregate(const void* object, void* stream, unsigned version
         WriteStreamBytes(stream, &recordCount, 4);
         auto** records = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0x140));
         for (unsigned i = 0; i < recordCount; ++i)
-            WriteTextMetadata(records[i], stream, version);
+            static_cast<const ::Scaleform::GFx::AMP::ImageInfo*>(records[i])->Write(*static_cast<::Scaleform::File*>(stream), version);
     }
     if (version < 8) {
         WriteStreamBytes(stream, &zero, 4);
@@ -3421,20 +3422,18 @@ void WriteMovieImageAggregate(const void* object, void* stream, unsigned version
     }
 }
 
-// MS2-FUNCTIONAL: serializes the record's scalar fields followed by each fixed-width value and timestamp pair.
 // @0x142690380
-void WriteValueRecord(const void* record, void* stream)
+void GFx::AMP::MovieInstructionStats::ScriptBufferStats::Write(File& str, UInt32 version) const
 {
-    auto* src = static_cast<const unsigned char*>(record);
-    WriteStreamBytes(stream, src + 0x10, 4);
-    WriteStreamBytes(stream, src + 0x14, 4);
-    WriteStreamBytes(stream, src + 0x18, 4);
-    const unsigned count = *reinterpret_cast<const unsigned*>(src + 0x28);
-    WriteStreamBytes(stream, &count, 4);
-    auto* entries = static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(src + 0x20));
-    for (unsigned i = 0; i < count; ++i) {
-        WriteStreamBytes(stream, entries + i * 0x10, 4);
-        WriteStreamBytes(stream, entries + i * 0x10 + 8, 8);
+    SF_UNUSED(version);
+    WriteUInt32(str, SwdHandle);
+    WriteUInt32(str, BufferOffset);
+    WriteUInt32(str, BufferLength);
+    WriteUInt32(str, static_cast<UInt32>(InstructionTimesArray.GetSize()));
+    for (UPInt i = 0; i < InstructionTimesArray.GetSize(); ++i)
+    {
+        WriteUInt32(str, InstructionTimesArray[i].Offset);
+        WriteUInt64(str, InstructionTimesArray[i].Time);
     }
 }
 
@@ -3446,16 +3445,16 @@ void WriteTextRecord(const void* record, void* stream, unsigned version)
     WriteStreamBytes(stream, src + 0x10, 4);
     if (version > 0x13)
         WriteStreamBytes(stream, src + 0x14, 4);
-    WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x18));
+    ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + 0x18));
     if (version > 4)
-        WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x20));
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + 0x20));
     for (std::size_t offset : { std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
-        WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + offset));
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + offset));
     const unsigned count = *reinterpret_cast<const unsigned*>(src + 0x48);
     WriteStreamBytes(stream, &count, 4);
     auto* strings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(src + 0x40));
     for (unsigned i = 0; i < count; ++i)
-        WriteNarrowString(stream, strings + i);
+        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), strings[i]);
     for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) })
         WriteStreamBytes(stream, src + offset, 4);
     if (version > 9) {
@@ -3470,21 +3469,19 @@ static void ReadStreamBytes(void* stream, void* data, std::size_t size)
     reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, data, size);
 }
 
-// MS2-FUNCTIONAL: reads three scalar values and a counted list of 16-byte value/timestamp records.
 // @0x14268e010
-void ReadValueRecord(void* record, void* stream)
+void GFx::AMP::MovieInstructionStats::ScriptBufferStats::Read(File& str, UInt32 version)
 {
-    auto* dst = static_cast<unsigned char*>(record);
-    ReadStreamBytes(stream, dst + 0x10, 4);
-    ReadStreamBytes(stream, dst + 0x14, 4);
-    ReadStreamBytes(stream, dst + 0x18, 4);
-    unsigned count = 0;
-    ReadStreamBytes(stream, &count, 4);
-    ResizeRawArray(reinterpret_cast<void**>(dst + 0x20), dst + 0x20, count, 0x10);
-    auto* entries = static_cast<unsigned char*>(*reinterpret_cast<void**>(dst + 0x20));
-    for (unsigned i = 0; i < count; ++i) {
-        ReadStreamBytes(stream, entries + i * 0x10, 4);
-        ReadStreamBytes(stream, entries + i * 0x10 + 8, 8);
+    SF_UNUSED(version);
+    SwdHandle = str.ReadUInt32();
+    BufferOffset = str.ReadUInt32();
+    BufferLength = str.ReadUInt32();
+    UInt32 iSize = str.ReadUInt32();
+    InstructionTimesArray.Resize(iSize);
+    for (UPInt i = 0; i < InstructionTimesArray.GetSize(); ++i)
+    {
+        InstructionTimesArray[i].Offset = str.ReadUInt32();
+        InstructionTimesArray[i].Time = ReadUInt64(str);
     }
 }
 
@@ -3510,54 +3507,15 @@ static void ReadAs3StreamBytes(void* stream, void* output, std::size_t size)
     reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, output, size);
 }
 
-// MS2-FUNCTIONAL: rebuilds the counted text value records, including each record's scalar values and 16-byte samples.
 // @0x14268cd80
-extern "C" void FUN_14268cd80(void* object, void* stream, unsigned)
+void GFx::AMP::MovieInstructionStats::Read(File& str, UInt32 version)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    unsigned count = 0;
-    ReadAs3StreamBytes(stream, &count, 4);
-    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x10), count);
-    auto** records = *reinterpret_cast<unsigned char***>(bytes + 0x10);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    std::uint32_t statId = 0x242;
-    for (unsigned i = 0; i < count; ++i) {
-        auto* record = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-            DAT_143b15f60, object, 0x38, &statId));
-        if (!record) {
-            if (records[i])
-                FUN_14257dcb0(records[i]);
-            records[i] = nullptr;
-            std::uint32_t discarded = 0;
-            ReadAs3StreamBytes(stream, &discarded, 4);
-            ReadAs3StreamBytes(stream, &discarded, 4);
-            ReadAs3StreamBytes(stream, &discarded, 4);
-            unsigned valueCount = 0;
-            ReadAs3StreamBytes(stream, &valueCount, 4);
-            for (unsigned j = 0; j < valueCount; ++j) {
-                std::uint64_t discardedValue = 0;
-                ReadAs3StreamBytes(stream, &discarded, 4);
-                ReadAs3StreamBytes(stream, &discardedValue, 8);
-            }
-            continue;
-        }
-        std::memset(record, 0, 0x38);
-        *reinterpret_cast<void**>(record) = AS3TextValueRecordVtable;
-        *reinterpret_cast<std::uint32_t*>(record + 8) = 1;
-        if (records[i])
-            FUN_14257dcb0(records[i]);
-        records[i] = record;
-        ReadAs3StreamBytes(stream, record + 0x10, 4);
-        ReadAs3StreamBytes(stream, record + 0x14, 4);
-        ReadAs3StreamBytes(stream, record + 0x18, 4);
-        unsigned valueCount = 0;
-        ReadAs3StreamBytes(stream, &valueCount, 4);
-        Scaleform::ResizeRawArray(reinterpret_cast<void**>(record + 0x20), record + 0x20, valueCount, 0x10);
-        auto* values = *reinterpret_cast<unsigned char**>(record + 0x20);
-        for (unsigned j = 0; j < valueCount; ++j) {
-            ReadAs3StreamBytes(stream, values + j * 0x10, 4);
-            ReadAs3StreamBytes(stream, values + j * 0x10 + 8, 8);
-        }
+    UInt32 iSize = str.ReadUInt32();
+    BufferStatsArray.Resize(iSize);
+    for (UPInt i = 0; i < BufferStatsArray.GetSize(); ++i)
+    {
+        BufferStatsArray[i] = *SF_HEAP_AUTO_NEW(this) ScriptBufferStats();
+        BufferStatsArray[i]->Read(str, version);
     }
 }
 
@@ -3634,7 +3592,7 @@ extern "C" void* FUN_142686d30(void* object)
 extern "C" void FUN_14268c930(void* object, void* stream, unsigned version)
 {
     auto* bytes = static_cast<unsigned char*>(object);
-    Scaleform::ReadNarrowString(stream, bytes + 0x10);
+    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x10));
     unsigned count = 0;
     ReadAs3StreamBytes(stream, &count, 4);
     Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x18), count);
@@ -3664,7 +3622,7 @@ extern "C" void FUN_14268c930(void* object, void* stream, unsigned version)
             DAT_143b15f60, object, 0x30, &cachedStat));
         if (!value) {
             Scaleform::String discardedName;
-            Scaleform::ReadNarrowString(stream, &discardedName);
+            ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(&discardedName));
             std::uint32_t discarded = 0;
             std::uint64_t discardedWide = 0;
             ReadAs3StreamBytes(stream, &discarded, 4);
@@ -3677,7 +3635,7 @@ extern "C" void FUN_14268c930(void* object, void* stream, unsigned version)
         *reinterpret_cast<void**>(value) = AS3MovieViewValueVtable;
         *reinterpret_cast<std::uint32_t*>(value + 8) = 1;
         new (value + 0x10) Scaleform::StringLH();
-        Scaleform::ReadNarrowString(stream, value + 0x10);
+        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(value + 0x10));
         ReadAs3StreamBytes(stream, value + 0x18, 4);
         ReadAs3StreamBytes(stream, value + 0x20, 8);
         ReadAs3StreamBytes(stream, value + 0x28, 4);
@@ -3715,7 +3673,7 @@ extern "C" void FUN_14268c510(void* object, void* stream, unsigned version)
             DAT_143b15f60, object, 0x30, &statId));
         if (!value) {
             Scaleform::String discardedName;
-            Scaleform::ReadNarrowString(stream, &discardedName);
+            ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(&discardedName));
             std::uint32_t discarded = 0;
             std::uint64_t discardedWide = 0;
             ReadAs3StreamBytes(stream, &discarded, 4);
@@ -3731,7 +3689,7 @@ extern "C" void FUN_14268c510(void* object, void* stream, unsigned version)
         *reinterpret_cast<void**>(value) = AS3MovieViewValueVtable;
         *reinterpret_cast<std::uint32_t*>(value + 8) = 1;
         new (value + 0x10) Scaleform::StringLH();
-        Scaleform::ReadNarrowString(stream, value + 0x10);
+        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(value + 0x10));
         ReadAs3StreamBytes(stream, value + 0x18, 4);
         if (version > 8) {
             ReadAs3StreamBytes(stream, value + 0x20, 8);
@@ -3766,7 +3724,7 @@ extern "C" void FUN_14268d2b0(void* object, void* stream, unsigned version)
     for (unsigned i = 0; i < stringCount; ++i) {
         struct { std::uint64_t key; Scaleform::String value; } entry{ 0 };
         ReadAs3StreamBytes(stream, &entry.key, 8);
-        Scaleform::ReadNarrowString(stream, &entry.value);
+        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(&entry.value));
         const std::uint64_t hash = Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&entry.key));
         // The exe sets an existing key's string in place (0x14268d4d8) and adds only when it is absent.
         std::uint64_t* found = nullptr;
@@ -3907,7 +3865,7 @@ extern "C" void FUN_14268d5c0(void* object, void* stream, unsigned version)
             new (extra + 0x18) Scaleform::StringLH();
             if (extras[i]) FUN_14257dcb0(extras[i]);
             extras[i] = extra;
-            Scaleform::ReadMovieImageFields(extra, stream, version);
+            reinterpret_cast<::Scaleform::GFx::AMP::ImageInfo*>(extra)->Read(*static_cast<::Scaleform::File*>(stream), version);
         }
     }
     if (version < 8) {
@@ -3926,7 +3884,7 @@ extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
     ReadAs3StreamBytes(stream, bytes + 0x14, 4);
     ReadAs3StreamBytes(stream, bytes + 0x18, 4);
     if (version > 3) {
-        Scaleform::ReadNarrowString(stream, bytes + 0x20);
+        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x20));
         ReadAs3StreamBytes(stream, bytes + 0x28, 4);
         ReadAs3StreamBytes(stream, bytes + 0x2c, 4);
         ReadAs3StreamBytes(stream, bytes + 0x30, 4);
@@ -3948,7 +3906,7 @@ extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
                     FUN_14257dcb0(markers[i]);
                 markers[i] = nullptr;
                 Scaleform::String discardedName;
-                Scaleform::ReadNarrowString(stream, &discardedName);
+                ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(&discardedName));
                 std::uint32_t discardedTime = 0;
                 ReadAs3StreamBytes(stream, &discardedTime, 4);
                 continue;
@@ -3964,33 +3922,33 @@ extern "C" void FUN_14268cfe0(void* object, void* stream, unsigned version)
             if (version < 11)
                 reinterpret_cast<Scaleform::StringLH*>(marker + 0x10)->operator=("Marker");
             else
-                Scaleform::ReadNarrowString(stream, marker + 0x10);
+                ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(marker + 0x10));
             ReadAs3StreamBytes(stream, marker + 0x18, 4);
         }
     }
-    FUN_14268cd80(*reinterpret_cast<void**>(bytes + 0x58), stream, version);
+    (*reinterpret_cast<::Scaleform::GFx::AMP::MovieInstructionStats**>(bytes + 0x58))->Read(*static_cast<::Scaleform::File*>(stream), version);
     FUN_14268c510(*reinterpret_cast<void**>(bytes + 0x60), stream, version);
     FUN_14268d2b0(*reinterpret_cast<void**>(bytes + 0x68), stream, version);
     if (version > 0x18)
         FUN_14268c930(*reinterpret_cast<void**>(bytes + 0x70), stream, version);
 }
 
-// MS2-FUNCTIONAL: writes text metadata and a version-gated empty compatibility string, normalizing the boolean byte.
 // @0x14268ed90
-void WriteTextMetadata(const void* record, void* stream, unsigned version)
+void GFx::AMP::ImageInfo::Write(File& str, UInt32 version) const
 {
-    auto* src = static_cast<const unsigned char*>(record);
-    WriteStreamBytes(stream, src + 0x10, 4);
-    WriteNarrowString(stream, reinterpret_cast<const Scaleform::String*>(src + 0x18));
-    if (version < 0x1d) {
-        const unsigned zeroLength = 0;
-        WriteStreamBytes(stream, &zeroLength, 4);
+    WriteUInt32(str, Id);
+    writeString(str, Name);
+    if (version < 29)
+    {
+        writeString(str, "");
     }
-    WriteStreamBytes(stream, src + 0x20, 4);
-    const unsigned char enabled = *reinterpret_cast<const unsigned char*>(src + 0x24) != 0;
-    WriteStreamBytes(stream, &enabled, 1);
-    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x2c), std::size_t(0x30), std::size_t(0x34), std::size_t(0x38) })
-        WriteStreamBytes(stream, src + offset, 4);
+    WriteUInt32(str, Bytes);
+    WriteUByte(str, External ? 1 : 0);
+    WriteUInt32(str, AtlasId);
+    WriteUInt32(str, AtlasTop);
+    WriteUInt32(str, AtlasBottom);
+    WriteUInt32(str, AtlasLeft);
+    WriteUInt32(str, AtlasRight);
 }
 
 // MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot (entry + 0x18).

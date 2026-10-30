@@ -288,14 +288,25 @@ static_assert(offsetof(ProfileFrame, FileHandles) == 0x110, "ProfileFrame FileHa
 static_assert(offsetof(ProfileFrame, MemoryByStatId) == 0x128, "ProfileFrame MemoryByStatId");
 static_assert(offsetof(ProfileFrame, ImageList) == 0x140, "ProfileFrame ImageList");
 
-// Little endian File helpers of the AMP serialization (SF_File.h inline readers/writers).
-inline UByte  ReadUByte(File& str)  { UByte v = 0; str.Read(&v, 1); return v; }
-inline UInt64 ReadUInt64(File& str) { UInt64 v = 0; str.Read(reinterpret_cast<UByte*>(&v), 8); return v; }
-inline float  ReadFloat(File& str)  { float v = 0; str.Read(reinterpret_cast<UByte*>(&v), 4); return v; }
-inline void   WriteUByte(File& str, UByte v)   { str.Write(&v, 1); }
-inline void   WriteUInt32(File& str, UInt32 v) { str.Write(reinterpret_cast<const UByte*>(&v), 4); }
-inline void   WriteUInt64(File& str, UInt64 v) { str.Write(reinterpret_cast<const UByte*>(&v), 8); }
-inline void   WriteFloat(File& str, float v)   { str.Write(reinterpret_cast<const UByte*>(&v), 4); }
+// Little endian File helpers of the AMP serialization (SF_File.h inline readers/writers over PRead/PWrite).
+inline UInt8  PRead8(File& str)  { UInt8 v = 0; str.Read(&v, 1); return v; }
+inline UInt64 PRead64(File& str) { UInt64 v = 0; str.Read(reinterpret_cast<UByte*>(&v), 8); return v; }
+inline bool   PWrite8(File& str, UInt8 v)   { return str.Write(&v, 1) == 1; }
+inline bool   PWrite32(File& str, UInt32 v) { return str.Write(reinterpret_cast<UByte*>(&v), 4) == 4; }
+inline bool   PWrite64(File& str, UInt64 v) { return str.Write(reinterpret_cast<UByte*>(&v), 8) == 8; }
+
+inline UByte  ReadUByte(File& str)  { return static_cast<UByte>(PRead8(str)); }
+inline SByte  ReadSByte(File& str)  { return static_cast<SByte>(PRead8(str)); }
+inline UInt64 ReadUInt64(File& str) { return PRead64(str); }
+inline float  ReadFloat(File& str)  { float v = 0.0f; str.Read(reinterpret_cast<UByte*>(&v), 4); return v; }
+inline void   WriteUByte(File& str, UByte v)   { PWrite8(str, static_cast<UInt8>(v)); }
+inline void   WriteSByte(File& str, SByte v)   { PWrite8(str, static_cast<UInt8>(v)); }
+inline void   WriteUInt32(File& str, UInt32 v) { PWrite32(str, v); }
+inline void   WriteUInt64(File& str, UInt64 v) { PWrite64(str, v); }
+inline void   WriteFloat(File& str, float v)   { str.Write(reinterpret_cast<UByte*>(&v), 4); }
+
+void readString(File& file, String* str);
+void writeString(File& file, const String& str);
 
 } // namespace AMP
 } // namespace GFx
