@@ -104,9 +104,21 @@ static Scaleform::UPInt VideoHashKey4(const void* key)
     return hash;
 }
 
-template<class CopyEntry>
+static void ConstructVideoHashValue(Scaleform::UPInt* destination, unsigned type, void* object)
+{
+    if (object) {
+        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    *reinterpret_cast<unsigned*>(destination) = type;
+    destination[1] = reinterpret_cast<Scaleform::UPInt>(object);
+}
+
+// Empty slots hold no value: the exe copy-constructs into the home slot and the relocated entry, and only the home
+// slot that still holds its old entry is assigned.
+template<class ConstructEntry, class AssignEntry>
 static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const void* key,
-                                 Scaleform::UPInt hash, CopyEntry copyEntry)
+                                 Scaleform::UPInt hash, ConstructEntry constructEntry, AssignEntry assignEntry)
 {
     auto** tableSlot = reinterpret_cast<void**>(tableRef);
     auto* table = static_cast<Scaleform::UPInt*>(*tableSlot);
@@ -121,17 +133,18 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
     auto* homeEntry = entries + home * 3;
     if (homeEntry[0] == ~Scaleform::UPInt(1)) {
         homeEntry[0] = ~Scaleform::UPInt(0);
-        copyEntry(homeEntry + 1, key);
+        constructEntry(homeEntry + 1, key);
         return;
     }
     Scaleform::UPInt freeIndex = (home + 1) & mask;
     while (entries[freeIndex * 3] != ~Scaleform::UPInt(1)) freeIndex = (freeIndex + 1) & mask;
     auto* freeEntry = entries + freeIndex * 3;
     freeEntry[0] = homeEntry[0];
-    copyEntry(freeEntry + 1, homeEntry + 1);
+    ConstructVideoHashValue(freeEntry + 1, *reinterpret_cast<const unsigned*>(homeEntry + 1),
+                            reinterpret_cast<void*>(homeEntry[2]));
     const bool belongsHere = (VideoHashKey4(homeEntry + 1) & mask) == home;
     if (belongsHere) {
-        copyEntry(homeEntry + 1, key);
+        assignEntry(homeEntry + 1, key);
         homeEntry[0] = freeIndex;
     } else {
         Scaleform::UPInt predecessor = VideoHashKey4(homeEntry + 1) & mask;
@@ -141,9 +154,21 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
             previous = entries + predecessor * 3;
         }
         previous[0] = freeIndex;
-        copyEntry(homeEntry + 1, key);
+        assignEntry(homeEntry + 1, key);
         homeEntry[0] = ~Scaleform::UPInt(0);
     }
+}
+
+static void ConstructVideoHashFromValue(Scaleform::UPInt* destination, const void* source)
+{
+    auto* value = static_cast<const unsigned*>(source);
+    ConstructVideoHashValue(destination, *value, *reinterpret_cast<void* const*>(value + 2));
+}
+
+static void ConstructVideoHashFromPair(Scaleform::UPInt* destination, const void* source)
+{
+    auto* pair = static_cast<void* const*>(source);
+    ConstructVideoHashValue(destination, *static_cast<const unsigned*>(pair[0]), *static_cast<void**>(pair[1]));
 }
 
 static void CopyVideoHashValue(Scaleform::UPInt* destination, const void* source)
@@ -1894,14 +1919,14 @@ void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt req
 void FUN_14000b6e0(Scaleform::UPInt* tableRef, void* owner, const unsigned* keyValue,
                    Scaleform::UPInt hash)
 {
-    InsertVideoHashEntry(tableRef, owner, keyValue, hash, CopyVideoHashValue);
+    InsertVideoHashEntry(tableRef, owner, keyValue, hash, ConstructVideoHashFromValue, CopyVideoHashValue);
 }
 
 // MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record.
 // @0x14000b9e0
 void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash)
 {
-    InsertVideoHashEntry(tableRef, owner, pair, hash, CopyVideoHashPair);
+    InsertVideoHashEntry(tableRef, owner, pair, hash, ConstructVideoHashFromPair, CopyVideoHashPair);
 }
 
 // MS2-FUNCTIONAL: hashes a 32-bit track key and inserts its value into the keyed table.
