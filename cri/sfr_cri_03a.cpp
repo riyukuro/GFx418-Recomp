@@ -614,6 +614,11 @@ static inline CriUint64 criUtfReadBE64(const CriUint8* p)
     return ((CriUint64)criUtfReadBE32(p) << 32) | criUtfReadBE32(p + 4);
 }
 
+static inline const CriUint8* criUtfRecordAddr(const CriUtfRtvView* table, CriUint32 row, const CriUtfRtvColumn* col)
+{
+    return table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
+}
+
 static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, CriUint32 row,
                                                     CriUint32 field, const CriUtfRtvColumn** column)
 {
@@ -987,36 +992,67 @@ CriUint64 FUN_14003afb0(const CriUtfRtvView* table, const CriUint8* field, CriUt
 CriSint32 criUtfRtv_SumWithAlignment32(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
                                        CriUint32 field, CriSint32 alignment)
 {
-    const CriUtfRtvColumn* col = &table->Columns[field];
     CriSint32 rounded = alignment - 1;
-    CriUint32 mask = (CriUint32)-(CriSint32)alignment & ~((CriUint32)alignment - 1);
+    CriUint32 mask = (CriUint32)-1 - rounded;
     CriSint32 sum = 0;
-    if (col->Type == 2 || col->Type == 4)
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    if (col->Type == 2)
     {
-        if (col->IsRecordField)
-        {
-            const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * firstRow + col->DataOffset;
-            do
-            {
-                CriUint32 value = col->Type == 2 ? (((CriUint32)p[0] << 8) | p[1]) : criUtfReadBE32(p);
-                sum += (CriSint32)((value + rounded) & mask);
-                p += table->RecordSize;
-            } while (--count >= 0);
-            return sum;
-        }
-        if (col->Type == 2)
+        if (!col->IsRecordField)
             return (CriSint32)(CriUint16)((CriUint16)col->DefaultValue[1] + (CriUint16)rounded & (CriUint16)mask) * count;
-        return (CriSint32)(((CriUint32)col->DefaultValue[1] + rounded) & mask) * count;
+        const CriUint8* p = criUtfRecordAddr(table, firstRow, col);
+        do
+        {
+            sum += (CriSint32)(((CriUint16)(p[0] << 8) | p[1]) + rounded & mask);
+            p += table->RecordSize;
+        } while (count--);
     }
-    return 0;
+    else if (col->Type == 4)
+    {
+        if (!col->IsRecordField)
+            return (CriSint32)(((CriUint32)col->DefaultValue[1] + rounded) & mask) * count;
+        const CriUint8* p = criUtfRecordAddr(table, firstRow, col);
+        do
+        {
+            sum += (CriSint32)((criUtfReadBE32(p) + rounded) & mask);
+            p += table->RecordSize;
+        } while (count--);
+    }
+    return sum;
 }
 
-// MS2-FUNCTIONAL: this 64-bit variant shares the executable's row iteration and alignment rounding behavior.
+// MS2-FUNCTIONAL: the 64-bit variant: the same row walk and alignment rounding, summed into 64 bits.
 // @0x14003adac
 CriUint64 FUN_14003adac(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
                         CriUint32 field, CriSint32 alignment)
 {
-    return (CriUint64)(CriUint32)criUtfRtv_SumWithAlignment32(table, firstRow, count, field, alignment);
+    CriSint32 rounded = alignment - 1;
+    CriUint32 mask = (CriUint32)-1 - rounded;
+    CriUint64 sum = 0;
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    if (col->Type == 2)
+    {
+        if (!col->IsRecordField)
+            return (CriUint32)(CriUint16)((CriUint16)col->DefaultValue[1] + (CriUint16)rounded & (CriUint16)mask) * count;
+        const CriUint8* p = criUtfRecordAddr(table, firstRow, col);
+        do
+        {
+            sum += (CriUint64)(CriUint32)(((CriUint16)(p[0] << 8) | p[1]) + rounded) & (CriUint64)mask;
+            p += table->RecordSize;
+        } while (count--);
+    }
+    else if (col->Type == 4)
+    {
+        if (!col->IsRecordField)
+            return (((CriUint32)col->DefaultValue[1] + rounded) & mask) * count;
+        const CriUint8* p = criUtfRecordAddr(table, firstRow, col);
+        do
+        {
+            sum += (CriUint64)(CriUint32)(criUtfReadBE32(p) + rounded) & (CriUint64)mask;
+            p += table->RecordSize;
+        } while (count--);
+    }
+    return sum;
 }
 
 // MS2-FUNCTIONAL: parse USF chunk ID and size as network-order dwords, requiring the minimum 16-byte header.
