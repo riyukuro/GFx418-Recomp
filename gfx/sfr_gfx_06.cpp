@@ -84,7 +84,7 @@ DisplayObjectBase::DisplayObjectBase(ASMovieRootBase* pasRoot, InteractiveObject
     : pASRoot(pasRoot), Id(id.GetIdValue()), Depth(-1), CreateFrame(0), pParent(pparent), pGeomData(0),
       pPerspectiveData(0), pIndXFormData(0), ClipDepth(0), Flags(0), BlendMode(Render::Blend_None), AvmObjOffset(0)
 {
-    Flags |= Mask_Visible;
+    SetVisibleFlag();
 }
 
 // @0x1425f0900
@@ -373,12 +373,16 @@ const char* DisplayObject::GetAbsolutePath(String* ppath) const
 Render::BlendMode DisplayObjectBase::GetActiveBlendMode() const
 {
     Render::BlendMode blend = Render::Blend_None;
-    for (const DisplayObjectBase* pchar = this; pchar; pchar = pchar->pParentChar)
+    const DisplayObjectBase* pchar = this;
+
+    while (pchar)
     {
         blend = pchar->GetBlendMode();
         if (blend > Render::Blend_Layer)
-            break;
+            return blend;
+        pchar = pchar->pParentChar;
     }
+    // Return last blend mode.
     return blend;
 }
 
