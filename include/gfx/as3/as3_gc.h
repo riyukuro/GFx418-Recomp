@@ -130,6 +130,23 @@ public:
     void NotifyObjectDied()     { pObject = 0; }
 };
 
+#ifdef MS2_AS3_SCU
+// (sfg) AS3_Object.cpp's bodies, inlined into the SCU (see Value::Release).
+SF_INLINE void Value::AddRefWeakRefSCU() const
+{
+    Bonus.pWeakProxy->AddRef();
+}
+SF_INLINE void Value::ReleaseWeakRefSCU()
+{
+    Bonus.pWeakProxy->Release();
+    Bonus.pWeakProxy = NULL;
+    value.VS._1.VObj = NULL;
+    value.VS._2.VObj = NULL;
+    SetWeakRef(false);
+    SetKind(kUndefined);
+}
+#endif
+
 template <int Stat>
 class RefCountCollector : public RefCountBase<RefCountCollector<Stat>, Stat>
 {

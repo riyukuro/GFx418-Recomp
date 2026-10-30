@@ -51,6 +51,7 @@
 // MS2-RANGE: 0x1424eb610-0x1424eb640 .text$mn
 // MS2-RANGE: 0x1424eb640-0x1424eb6b0 .text$mn
 // MS2-RANGE: 0x1424eb6b0-0x1424eb700 .text$mn
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -75,42 +76,66 @@
 #include <vector>
 #undef GetObject   // windows.h
 
-// MS2-FUNCTIONAL 0x1424debc0: releases the argument Value at +0x178, the Multiname at +0x148, and then the TR::ReadArgs base (0x1424dea90; CallArgs at +0x120, not AS3::ReadArgs' +0x118).
+namespace Scaleform { namespace GFx { namespace AS3 {
+// (sfg) the call readers' implicit destructors (AS3_VMRead.h; 4.1 layout: ReadArgsMn also derives from MnReader).
+class Sfr16MnReader
+{
+    VMAbcFile& File;
+};
+struct Sfr16ReadArgsObject : public ReadArgs
+{
+    Value ArgObject;                    // +0x138
+};
+struct Sfr16ReadArgsMn : public ReadArgs, public Sfr16MnReader
+{
+    Multiname ArgMN;                    // +0x140
+};
+struct Sfr16ReadArgsMnObject : public Sfr16ReadArgsMn
+{
+    const Value ArgObject;              // +0x170
+};
+namespace TR {
+struct Sfr16ReadArgsObject : public ReadArgs
+{
+    Value ArgObject;                    // +0x140
+};
+struct Sfr16ReadArgsMn : public ReadArgs, public MnReader
+{
+    Multiname ArgMN;                    // +0x148
+};
+struct Sfr16ReadArgsMnObject : public Sfr16ReadArgsMn
+{
+    const Value ArgObject;              // +0x178
+};
+} // namespace TR
+}}} // Scaleform::GFx::AS3
+
+// TR::ReadArgsMnObject::~ReadArgsMnObject
 // @0x1424debc0
 void FUN_1424debc0(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x178)->~Value();
-    reinterpret_cast<Scaleform::GFx::AS3::Multiname*>(bytes + 0x148)->~Multiname();
-    reinterpret_cast<Scaleform::GFx::AS3::TR::ReadArgs*>(self)->~ReadArgs();
+    static_cast<Scaleform::GFx::AS3::TR::Sfr16ReadArgsMnObject*>(self)->~Sfr16ReadArgsMnObject();
 }
 
-// MS2-FUNCTIONAL 0x1424deb40: releases the value at +0x170 and multiname at +0x140 before the ReadArgs base.
+// ReadArgsMnObject::~ReadArgsMnObject
 // @0x1424deb40
 void FUN_1424deb40(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x170)->~Value();
-    reinterpret_cast<Scaleform::GFx::AS3::Multiname*>(bytes + 0x140)->~Multiname();
-    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+    static_cast<Scaleform::GFx::AS3::Sfr16ReadArgsMnObject*>(self)->~Sfr16ReadArgsMnObject();
 }
 
-// MS2-FUNCTIONAL 0x1424dec40: releases the value at +0x138 before the ReadArgs base.
+// ReadArgsObject::~ReadArgsObject
 // @0x1424dec40
 void FUN_1424dec40(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x138)->~Value();
-    reinterpret_cast<Scaleform::GFx::AS3::ReadArgs*>(self)->~ReadArgs();
+    static_cast<Scaleform::GFx::AS3::Sfr16ReadArgsObject*>(self)->~Sfr16ReadArgsObject();
 }
 
-// MS2-FUNCTIONAL 0x1424decc0: releases the value at +0x140 before the TR::ReadArgs base (0x1424dea90).
+// TR::ReadArgsObject::~ReadArgsObject
 // @0x1424decc0
 void FUN_1424decc0(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x140)->~Value();
-    reinterpret_cast<Scaleform::GFx::AS3::TR::ReadArgs*>(self)->~ReadArgs();
+    static_cast<Scaleform::GFx::AS3::TR::Sfr16ReadArgsObject*>(self)->~Sfr16ReadArgsObject();
 }
 
 namespace Scaleform {

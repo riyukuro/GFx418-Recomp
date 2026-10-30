@@ -808,12 +808,24 @@ private:
     void ReleaseInternal();
     void AddRefWeakRef() const;
     void ReleaseWeakRef();
+#ifdef MS2_AS3_SCU
+    // (sfg) the exe builds AS3 as one SCU (AS3_All.cpp), so AS3_Object.cpp's AddRefWeakRef/ReleaseWeakRef are
+    // visible to every AS3 function and get inlined. A unit defines MS2_AS3_SCU before its includes to get that
+    // shape; the bodies are in as3_gc.h after WeakProxy.
+    SF_INLINE void AddRefWeakRefSCU() const;
+    SF_INLINE void ReleaseWeakRefSCU();
+#define MS2_AS3_ADDREF_WEAK AddRefWeakRefSCU
+#define MS2_AS3_RELEASE_WEAK ReleaseWeakRefSCU
+#else
+#define MS2_AS3_ADDREF_WEAK AddRefWeakRef
+#define MS2_AS3_RELEASE_WEAK ReleaseWeakRef
+#endif
     SF_INLINE void AddRef() const
     {
         if (IsRefCounted())
         {
             if (IsWeakRef())
-                AddRefWeakRef();
+                MS2_AS3_ADDREF_WEAK();
             else
                 AddRefInternal();
         }
@@ -823,7 +835,7 @@ private:
         if (IsRefCounted())
         {
             if (IsWeakRef())
-                ReleaseWeakRef();
+                MS2_AS3_RELEASE_WEAK();
             else
                 ReleaseInternal();
         }
