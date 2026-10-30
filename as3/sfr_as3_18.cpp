@@ -1578,13 +1578,6 @@ __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& t
 void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b);   // raises verify error 0x42c (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
-namespace {
-// an object kind (Object .. ThunkFunction) holding null
-SF_FORCEINLINE bool TrIsNullObject(const Value& v)
-{
-    return static_cast<UInt32>(v.GetKind()) - 12u <= 3u && TrRd(reinterpret_cast<UPInt>(&v), 0x10) == 0;
-}
-}
 
 }}}}
 
@@ -1692,16 +1685,16 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
                 const bool num1 = IsNumericType(t1);
                 if (num1 && IsNumericType(t2))
                     JoinSNodesUpdateType(tv, fv, GetNumberType());
-                else if (TR::TrIsNullObject(tv) || t1 == nullTr)
+                else if (tv.IsNull() || t1 == nullTr)
                 {
-                    if (TR::TrIsNullObject(fv) || t2 == nullTr)
+                    if (fv.IsNull() || t2 == nullTr)
                         ;
                     else if (t2 != &GetStringType() && IsNumericType(t2))
                         goto fail;
                     else
                         tv.Assign(fv);
                 }
-                else if (TR::TrIsNullObject(fv) || t2 == nullTr)
+                else if (fv.IsNull() || t2 == nullTr)
                 {
                     if (t1 != &GetStringType() && num1)
                         goto fail;
@@ -1848,33 +1841,23 @@ void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM:
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace {
-// SlotInfo::IsClassType: the slot's declared type (its trait's type multiname in the ABC file) is "Class" in the
-// public namespace. Raw-offset model of the ABC constant pool.
+// SlotInfo::IsClassType: the slot's declared type (TraitInfo::GetTypeName: a slot or const trait's type multiname,
+// else the name of the class it binds) is "Class" in the public namespace.
 SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
 {
-    using TR::TrRd;
-    const UByte* mn = reinterpret_cast<const UByte*>(si.TI);   // the ABC type multiname
-    const UPInt file = reinterpret_cast<UPInt>(si.File.GetPtr());
-    if (!file || !mn)
+    if (si.File.GetPtr() == NULL || si.TI == NULL)
         return false;
-    const UPInt abc = TrRd(file, 0x28);
-    const int mind = *reinterpret_cast<const int*>(mn + 0xc);
-    UPInt qn;   // the QName of the type
-    if ((*mn & 0xf) == 0 || (*mn & 0xf) == 6)
-        qn = mind ? TrRd(abc, 0xb8) + static_cast<SPInt>(mind) * 0x10 : abc + 0xe8;
-    else
-    {
-        const SPInt q = *reinterpret_cast<const int*>(
-            *reinterpret_cast<const UPInt*>(TrRd(abc, 0x140) + static_cast<SPInt>(mind) * 8) + 0x24);
-        qn = q ? TrRd(abc, 0xb8) + q * 0x10 : abc + 0xe8;
-    }
-    const int nsi = *reinterpret_cast<const int*>(qn + 4);
-    const UInt32* ns = reinterpret_cast<const UInt32*>(nsi ? TrRd(abc, 0x88) + static_cast<SPInt>(nsi) * 0x18
-                                                           : abc + 0xd0);
-    const UPInt sv = TrRd(abc, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(qn + 8)) * 8;
-    const StringDataPtr tn = reinterpret_cast<const Abc::StringView*>(sv)->ToStringDataPtr();
-    return tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (*ns & ~4u) == 0 &&
-           *reinterpret_cast<const UPInt*>(ns + 4) == 0;
+    const Abc::File&      f  = si.File->GetAbcFile();
+    const Abc::ConstPool& cp = f.Const_Pool;
+    const Abc::TraitInfo& ti = *si.TI;
+    const Abc::Multiname& mn = ti.GetType() == Abc::TraitInfo::tSlot || ti.GetType() == Abc::TraitInfo::tConst
+                                   ? cp.GetMultiname(ti.Ind)
+                                   : cp.GetMultiname(f.AS3_Classes.Info[ti.Ind]->inst_info.name_ind);
+    const Abc::NamespaceInfo& ns = mn.Ind ? cp.ConstNamespace[mn.Ind] : cp.any_namespace;
+    const StringDataPtr       tn = cp.GetString(mn.NameIndex);
+    // NamespaceInfo::IsPublic (public or explicit) with an empty URI
+    return tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (static_cast<UInt32>(ns.Kind) & ~4u) == 0 &&
+           ns.NameURI.GetSize() == 0;
 }
 }
 
