@@ -419,29 +419,24 @@ void AvmSprite::CreateChildren()
 }
 
 // ToInt32 of ECMA-262: NaN, infinities and zeros give 0, everything else is truncated modulo 2^32.
-// MS2-FUNCTIONAL: same NaN/zero tests, floor/fmod reduction and wrap; xmm7 holds 0.0 across the calls in the exe.
 // @0x1424f1d60
 SInt32 ConvertDouble2SInt32(Double v)
 {
-    if (NumberUtil::IsNaNOrInfinity(v) || NumberUtil::IsPOSITIVE_ZERO(v) || NumberUtil::IsNEGATIVE_ZERO(v))
+    if (NumberUtil::IsNaNOrInfinity(v) || NumberUtil::IsNEGATIVE_ZERO(v) || NumberUtil::IsPOSITIVE_ZERO(v))
         return 0;
-    const bool neg = v < 0.0;
-    Double d = v;
-    if (neg)
-        d = -d;
-    d = floor(d);
-    if (d > 4294967295.0)
-        d = fmod(d, 4294967296.0);
-    if (d >= 2147483648.0)
+    Double result = v < 0.0 ? ::floor(-v) : ::floor(v);
+    if (result > 4294967295.0)
+        result = ::fmod(result, 4294967296.0);
+    if (result >= (Double)2147483648.0)
     {
-        const int low = int(d - 2147483648.0);
-        if (neg)
-            return SInt32(0x80000000u - unsigned(low));
-        return SInt32(unsigned(low) + 0x80000000u);
+        const SInt32 tmp = SInt32(result - 2147483648.0);
+        if (v < 0.0)
+            return 0x80000000 - tmp;
+        else
+            return 0x80000000 + tmp;
     }
-    if (neg)
-        d = -d;
-    return int(d);
+    else
+        return SInt32(v < 0.0 ? -result : result);
 }
 
 // The thunk of a method 4.1.18 does not implement: a warning naming it.
@@ -1623,6 +1618,12 @@ static inline void Sfr33ThrowTypeError(VM& vm, const VM::Error& e)
     FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
 }
 
+// VM::ThrowMemoryError, inlined.
+static inline void Sfr33ThrowMemoryError(VM& vm, const VM::Error& e)
+{
+    FUN_14252ecb0(&vm, &e, &fl_errors::MemoryErrorCI);
+}
+
 // Primitives coerce to their own class and to Object (ints also to Number); objects to any class above theirs.
 // undefined becomes null; the tracer-only kinds pass through untouched.
 SF_INLINE bool Sfr33CoerceClassValue(const ClassTraits::Traits& self, const Value& value, Value& result)
@@ -1834,7 +1835,6 @@ void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* 
 
 // Class::Construct: a new instance of the class in _this (a MemoryError when none could be made), initialized
 // and handed to PostInit; when PreInit refuses it, a call from the VM drops its arguments off the stack.
-// MS2-FUNCTIONAL 0x1424f0610: two argument loads before the throw call are swapped; same results
 // @0x1424f0610
 void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCall)
 {
@@ -1842,10 +1842,7 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
     VM& vm = GetClassTraits().GetVM();
     itr.MakeObject(_this, itr);
     if (_this.IsObject() && _this.GetObject() == NULL)
-    {
-        const VM::Error e(VM::ErrorID(1000) /* eOutOfMemoryError */, vm);
-        FUN_14252ecb0(&vm, &e, &fl_errors::MemoryErrorCI);
-    }
+        Sfr33ThrowMemoryError(vm, VM::Error(VM::ErrorID(1000) /* eOutOfMemoryError */, vm));
     if (PreInit(_this))
     {
         _this.GetObject()->InitInstance(extCall);
@@ -2945,8 +2942,6 @@ struct Sfr33FlashUIAccess : FlashUI
 };
 
 // MovieRoot::CheckAvm (virtual): creates the AS3 VM on first use and runs its startup code.
-// MS2-FUNCTIONAL 0x1424eecb0: 262 bytes against 260; the new VM is kept in rsi (exe rbx) and the verbose flag is
-// read as a dword after the null test instead of a byte.
 // @0x1424eecb0
 bool Sfr33CheckAvm(MovieRoot* self)
 {
@@ -2956,12 +2951,19 @@ bool Sfr33CheckAvm(MovieRoot* self)
         // the movie still holds its ActionControl after the Ptr temp releases it
         const ActionControl* pac = Ptr<ActionControl>(*static_cast<ActionControl*>(
             self->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_ActionControl)));
-        self->SetNeedToCheckOpCode(pac ? (pac->GetActionFlags() & ActionControl::Action_Verbose) != 0 : false);
+        if (pac != NULL)
+        {
+            self->SetNeedToCheckOpCode((pac->GetActionFlags() & ActionControl::Action_Verbose) != 0);
+        }
+        else
+        {
+            self->SetNeedToCheckOpCode(false);
+        }
         Sfr33FlashUIAccess::SetCurrState(*self, FlashUI::sStep);
         Sfr33NullFileLoader loader;
         avm = SF_HEAP_NEW(self->GetMovieImpl()->GetMovieHeap())
             ASVM(self, *self, loader, self->BuiltinsMgr, *self->MemContext->ASGC);
-        avm->ExecuteCode(1);
+        self->pAVM->ExecuteCode(1);
     }
     return avm != NULL;
 }
