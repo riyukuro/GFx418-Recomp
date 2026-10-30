@@ -1235,7 +1235,8 @@ Scaleform::GFx::AS3::Value* FUN_1400151e0(Scaleform::GFx::AS3::Value* dst,
 // @0x140013ec0
 Scaleform::GFx::AS3::Value* FUN_140013ec0(Scaleform::GFx::AS3::Value* dst)
 {
-    return new (dst) Scaleform::GFx::AS3::Value(Scaleform::GFx::AS3::Value::GetUndefined());
+    dst->Scaleform::GFx::AS3::Value::Value(Scaleform::GFx::AS3::Value::GetUndefined());   // in place, no null check
+    return dst;
 }
 
 // MS2-FUNCTIONAL: initializes the same undefined Value payload as the executable default helper.
@@ -1822,12 +1823,14 @@ Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
 }
 
 // MS2-FUNCTIONAL: allocates the observed 0x68-byte prototype object and initializes its environment links.
+// BEHAVIOUR FIX: allocates from the movie's heap (Environment::GetHeap), as the exe does and as the constructor
+// path at 0x140012340 already did; it used the global heap.
 // @0x140011d50
 Scaleform::GFx::AS2::Object* FUN_140011d50(void*, Scaleform::GFx::AS2::Environment* environment)
 {
-    void* storage = Scaleform::Memory::Alloc(0x68);
-    if (!storage) return nullptr;
-    return FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), environment);
+    void* storage = environment->GetHeap()->Alloc(0x68);
+    if (storage) return FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), environment);
+    return nullptr;
 }
 
 // MS2-FUNCTIONAL: releases the interface array storage and runs the executable prototype finalizer.
@@ -2296,16 +2299,20 @@ void FUN_140014b50(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method class_::NetStream::resetDRMVouchers() is not implemented\n"); }
 
 // MS2-FUNCTIONAL: reads the indexed AS3 value, maps an empty object-like value to the null string, otherwise stringifies it.
+// BEHAVIOUR FIX: the null-object test read +8 (the weak proxy) in place of the object pointer at +0x10, so a live
+// object with no weak proxy came back as the null string and was never stringified.
 // @0x140015af0
 void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned count,
                    const Scaleform::GFx::AS3::Value* values)
 {
-    if (index >= count) return;
+    if (count <= index) return;
     const auto* value = reinterpret_cast<const unsigned char*>(values) +
                         static_cast<unsigned __int64>(index) * sizeof(Scaleform::GFx::AS3::Value);
+    // The object pointer of kinds 0xc-0xf is at +0x10 (+8 holds the weak proxy).
     const unsigned tag = *reinterpret_cast<const unsigned*>(value) & 0x1f;
-    if (tag >= 0x0c && tag <= 0x0f &&
-        !*reinterpret_cast<void* const*>(value + sizeof(unsigned) * 2))
+    bool isNullObject = false;
+    if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void* const*>(value + 0x10) == nullptr;
+    if (isNullObject)
     {
         result->SetNull();
         return;
@@ -3293,8 +3300,10 @@ Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
 Scaleform::Render::TreeShape::NodeData* FUN_140011010(
     Scaleform::Render::TreeShape::NodeData* destination, void* provider)
 {
-    if (!destination) return nullptr;
-    new (destination) Scaleform::Render::TreeShape::NodeData();
+    // The exe runs the base NodeData(ET_Shape) ctor (0x1424d9310) in place, no null check, then stores the TreeShape
+    // vftable, then the provider and morph ratio.
+    destination->Scaleform::Render::TreeNode::NodeData::NodeData(Scaleform::Render::ContextImpl::EntryData::ET_Shape);
+    destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
         auto addRef = reinterpret_cast<void (*)(void*)>(
