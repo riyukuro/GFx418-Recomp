@@ -1090,38 +1090,44 @@ void CriMvEasyPlayer::executeUpdate(CriError& err)
 // @0x14001fb00
 void CriMvEasyPlayer::updateStatus(CriError& err)
 {
-    CriSint32 ply_status;
+    CriSint32 track_;
+    CriUint64 count9;
+    CriUint64 unit;
+    CriFloat32 now;
     TimerType timer;
     CriFloat32 frame_end;
-    CriUint64 unit;
-    CriUint64 count;
-    CriFloat32 now;
-    CriSint32 track;
+    CriSint32 ply_status2;
 
-    ply_status = FUN_1400310b0(mvply);
-    switch (ply_status)
+    ply_status2 = FUN_1400310b0(mvply);
+    switch (ply_status2)
     {
     case 2:
         if (req_decode_header == 1)
         {
-            break;
+            // still waiting for the header request to complete
         }
-        setupPlayback();
-        if (error_flag == 1)
+        else
         {
-            err = CRIERR_NG;
-            break;
+            setupPlayback();
+            if (error_flag == 1)
+            {
+                err = CRIERR_NG;
+                break;
+            }
+            setupSeekPosition();
+            FUN_140031100(mvply);
         }
-        setupSeekPosition();
-        FUN_140031100(mvply);
         break;
     case 4:
         if (req_prepare == 1)
         {
-            break;
+            // still waiting for the prepare request to complete
         }
-        unk724 = 1;
-        FUN_140031100(mvply);
+        else
+        {
+            unk724 = 1;
+            FUN_140031100(mvply);
+        }
         break;
     case 6:
         if (modules_stopped == 0)
@@ -1129,10 +1135,10 @@ void CriMvEasyPlayer::updateStatus(CriError& err)
             timer = GetMasterTimer();
             if (timer == MVEASY_TIMER_SYSTEM || (timer == MVEASY_TIMER_AUDIO && stimer != NULL))
             {
-                GetTime(count, unit);
+                GetTime(count9, unit);
                 frame_end = (CriFloat32)(frame_info.frame_id + 1) / (CriFloat32)frame_info.framerate * 1000.0f *
                             1000.0f;
-                now = (CriFloat32)(count * 1000) / (CriFloat32)unit;
+                now = (CriFloat32)(count9 * 1000) / (CriFloat32)unit;
                 if (frame_end > now)
                 {
                     unk6f0 = 1;
@@ -1148,7 +1154,7 @@ void CriMvEasyPlayer::updateStatus(CriError& err)
         }
         if (detachOutputs() == 1)
         {
-            completeStop(ply_status);
+            completeStop(ply_status2);
         }
         break;
     case 5:
@@ -1156,11 +1162,11 @@ void CriMvEasyPlayer::updateStatus(CriError& err)
         {
             *(CriUint64*)playback_info = *(CriUint64*)playback_info + 1;
         }
-        track = stmprm.track_play_audio;
+        track_ = stmprm.track_play_audio;
         FUN_14002fbe0(mvply, &stmprm);
         if (mvply->num_audio_out > 0)
         {
-            stmprm.track_play_audio = track;
+            stmprm.track_play_audio = track_;
         }
         break;
     }
