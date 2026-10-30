@@ -7906,9 +7906,10 @@ bool AS3ValueObjectInterface::SetDisplayInfo(void* pdata, const Value::DisplayIn
 }
 
 }} // namespace Scaleform::GFx
+// Tracer::GetValueTraits (sfr_as3_18)
+Scaleform::UPInt FUN_14250ff00(Scaleform::UPInt tracer, const Scaleform::GFx::AS3::Value& v, bool super_tr);
 namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 78
-namespace TR { UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance); }
 
 // The traits of a tracer value: kinds 8/9 carry them, undefined has the VM's Object-less default, and the builtin Class
 // traits stand for Object.
@@ -7964,7 +7965,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x20);
         FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x50));
         ++*reinterpret_cast<int*>(R + 0x10);
-        const UPInt tr = TR::Sfr27TracerGetValueTraits(tracer, reinterpret_cast<const Value*>(R + 0x50), op == 4);
+        const UPInt tr = FUN_14250ff00(tracer, *reinterpret_cast<const Value*>(R + 0x50), op == 4);
         const bool ok = FUN_1424f8b00(reinterpret_cast<void*>(tracer), op, reinterpret_cast<void*>(state),
                                       reinterpret_cast<const Traits*>(tr), reinterpret_cast<const Multiname*>(R + 0x20),
                                       static_cast<int>(idx));
@@ -7990,7 +7991,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         *reinterpret_cast<int*>(R + 0x10) += FUN_142520380(R, R + 0x40);
         FUN_14251cd30(reinterpret_cast<State*>(state), reinterpret_cast<Value*>(R + 0x70));
         ++*reinterpret_cast<int*>(R + 0x10);
-        const UPInt tr = TR::Sfr27TracerGetValueTraits(tracer, reinterpret_cast<const Value*>(R + 0x70), op == 5);
+        const UPInt tr = FUN_14250ff00(tracer, *reinterpret_cast<const Value*>(R + 0x70), op == 5);
         UInt32* val = reinterpret_cast<UInt32*>(R + 0x18);
         const UPInt vt = Sfr31TrTraitsOfVal(vmA, val);
         const bool ok = FUN_1424f92f0(reinterpret_cast<void*>(tracer), op, reinterpret_cast<const Traits*>(tr),

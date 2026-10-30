@@ -2235,9 +2235,6 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
     return true;
 }
 
-namespace Scaleform { namespace GFx { namespace AS3 {
-namespace TR { UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance); }
-}}}
 Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value);   // value -> traits
 
 // Tracer: emits the call op (0x45 callsuper, 0x46 callproperty, 0x4e/0x4f the void forms, ...) of the call info
@@ -2256,7 +2253,7 @@ bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind)
     ArrayDH<Value>& opstack = *reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38);
     const bool super_call = op == 0x45 || op == 0x4e;
     const UByte* t = reinterpret_cast<const UByte*>(
-        TR::Sfr27TracerGetValueTraits(reinterpret_cast<UPInt>(self), reinterpret_cast<const Value*>(info + 0x178), super_call));
+        reinterpret_cast<const Tracer*>(self)->GetValueTraits(*reinterpret_cast<const Value*>(info + 0x178), super_call));
     const int argc = *reinterpret_cast<const int*>(info + 0x18);
     const Multiname& mn = *reinterpret_cast<const Multiname*>(info + 0x148);
     const unsigned mnw = *reinterpret_cast<const unsigned*>(&mn);
@@ -2347,7 +2344,6 @@ push:
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-namespace TR { bool Sfr27TracerIsPrimitiveType(UPInt tracer, UPInt traits); }
 void* Sfr33LazyGet80b(void** self);
 }}}
 // The type of the slot si of the traits t as a tracer value (result); the return carries false (first byte) when
@@ -2379,7 +2375,7 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
     if ((*reinterpret_cast<const unsigned*>(reinterpret_cast<const UByte*>(pmn) + 0x10) & 0x1f) - 8 < 2)
         goto object_result;
     if (!((tb[0x68] >> 2) & 1) &&
-        !TR::Sfr27TracerIsPrimitiveType(reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(t)))
+        !reinterpret_cast<const Tracer*>(self)->IsPrimitiveType(t))
     {
         if (t->IsGlobal() && FUN_1424f8910(self, state, mn, true, false))
             return true;

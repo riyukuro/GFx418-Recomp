@@ -1220,36 +1220,41 @@ bool Tracer::IsStringType(const Value& v) const
 
 namespace TR {
 
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // int, uint or Number
 // @0x142514510
-__declspec(noinline) bool Sfr27TracerIsNumericType(UPInt tracer, UPInt traits)
+__declspec(noinline) bool Tracer::IsNumericType(const Traits* tr) const
 {
-    const UPInt vm = TrVM(tracer);
-    return traits == TrBuiltin(vm, 0x220) || traits == TrBuiltin(vm, 0x228) || traits == TrBuiltin(vm, 0x218);
+    return tr == &GetSIntType() || tr == &GetUIntType() || tr == &GetNumberType();
 }
 
 // Boolean, void, null or numeric: no reference counting needed
 // @0x142514420
-bool Sfr27TracerIsNotRefCountedType(UPInt tracer, UPInt traits)
+bool Tracer::IsNotRefCountedType(const Traits* tr) const
 {
-    const UPInt vm = TrVM(tracer);
-    if (traits != TrBuiltin(vm, 0x210) && traits != TrRd(vm, 0x278) && traits != TrRd(vm, 0x270))
-        return Sfr27TracerIsNumericType(tracer, traits);
+    if (tr != &GetBooleanType() && tr != &GetVoidType() && tr != &GetVM().GetITraitsNull())
+        return IsNumericType(tr);
     return true;
 }
 
 // Boolean, void, null, numeric or String
 // @0x142514a80
-bool Sfr27TracerIsPrimitiveType(UPInt tracer, UPInt traits)
+bool Tracer::IsPrimitiveType(const Traits* tr) const
 {
-    const UPInt vm = TrVM(tracer);
-    if (traits != TrBuiltin(vm, 0x210) && traits != TrRd(vm, 0x278) && traits != TrRd(vm, 0x270))
+    if (tr != &GetBooleanType() && tr != &GetVoidType() && tr != &GetVM().GetITraitsNull())
     {
-        if (!Sfr27TracerIsNumericType(tracer, traits) && traits != TrBuiltin(vm, 0x230))
+        if (!IsNumericType(tr) && tr != &GetStringType())
             return false;
     }
     return true;
 }
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 // @0x14250fe80
 __declspec(noinline) const Traits* State::GetValueTraits(const Value& v) const
@@ -1257,18 +1262,28 @@ __declspec(noinline) const Traits* State::GetValueTraits(const Value& v) const
     return reinterpret_cast<const Traits*>(TraceValueTraits(reinterpret_cast<UPInt>(pTracer), &v));
 }
 
-// With classes resolved to their instance traits (asInstance), the traits' parent.
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// For super_tr the call frame's origination traits (else the value's traits), then their parent.
 // MS2-FUNCTIONAL 0x14250ff00: clang shrink-wraps the frame (only the call path saves registers); the exe saves rbx / rdi up front
 // @0x14250ff00
-UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance)
+const Traits* Tracer::GetValueTraits(const Value& v, bool super_tr) const
 {
-    UPInt t;
-    if (!asInstance || (t = TrRd(TrRd(tracer, 0x20), 0x40)) == 0)
-        t = TraceValueTraits(tracer, v);
-    if (asInstance && t != 0)
-        return TrRd(t, 0x88);
-    return t;
+    const Traits* result = NULL;
+    if (super_tr)
+        result = CF.OriginationTraits;
+    if (result == NULL)
+        result = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &v));
+    if (super_tr && result)
+        result = result->GetParent();
+    return result;
 }
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 // The unsigned 30-bit operand following the opcode of the n-th last instruction.
 // @0x14250c1f0
@@ -1735,14 +1750,14 @@ __declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_1425178e0(Scalefor
                 FUN_142515930(tracer, tv, fv, objTr);
             else
             {
-                const bool num1 = Sfr27TracerIsNumericType(tracer, t1);
-                if (num1 && Sfr27TracerIsNumericType(tracer, t2))
+                const bool num1 = reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t1));
+                if (num1 && reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t2)))
                     FUN_142515930(tracer, tv, fv, TrBuiltin(vm, 0x218));
                 else if (TrIsNullObject(tv) || t1 == TrRd(vm, 0x270))
                 {
                     if (TrIsNullObject(fv) || t2 == TrRd(vm, 0x270))
                         ;
-                    else if (t2 != TrBuiltin(vm, 0x230) && Sfr27TracerIsNumericType(tracer, t2))
+                    else if (t2 != TrBuiltin(vm, 0x230) && reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t2)))
                         goto fail;
                     else
                         tv.Assign(fv);
