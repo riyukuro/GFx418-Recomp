@@ -466,7 +466,16 @@ extern "C" void FUN_1424dfbf0(void* self)
     using Page = Scaleform::GFx::AS3::ValueStack::Page;
     std::vector<Page*> pages;
 
-    Page* page = *reinterpret_cast<Page**>(bytes + 0x18);
+    Page* page = *reinterpret_cast<Page**>(bytes + 0x20);
+    while (page)
+    {
+        Page* next = page->pNext;
+        if (std::find(pages.begin(), pages.end(), page) == pages.end())
+            pages.push_back(page);
+        page = next;
+    }
+
+    page = *reinterpret_cast<Page**>(bytes + 0x18);
     auto* top = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
     while (page)
     {
@@ -476,20 +485,13 @@ extern "C" void FUN_1424dfbf0(void* self)
             top->~Value();
             --top;
         }
-        if (std::find(pages.begin(), pages.end(), page) == pages.end())
-            pages.push_back(page);
+        // a page already on the reserved list ends the walk
+        if (std::find(pages.begin(), pages.end(), page) != pages.end())
+            break;
+        pages.push_back(page);
         page = page->pPrev;
         if (page)
             top = page->pCurrent;
-    }
-
-    page = *reinterpret_cast<Page**>(bytes + 0x20);
-    while (page)
-    {
-        Page* next = page->pNext;
-        if (std::find(pages.begin(), pages.end(), page) == pages.end())
-            pages.push_back(page);
-        page = next;
     }
 
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
