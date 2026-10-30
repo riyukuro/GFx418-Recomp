@@ -3021,28 +3021,19 @@ static inline SPtr<Instances::fl_events::Event> Sfr34_CreateStageEvent(MovieRoot
         ->CreateEventObject(type, false, false);
 }
 
-// Sets the event's target to obj and dispatches it from obj.
-static inline void Sfr34_DispatchFrom(Instances::fl_display::DisplayObject* obj, Instances::fl_events::Event* evt,
-                                      DisplayObject* pdispObj)
-{
-    FUN_14243d870(&evt->Target, obj);
-    obj->DispatchEventObject(evt, pdispObj);
-}
-
 // The AS3 object becomes collectible and gets "added"; on the stage, "addedToStage" goes down the branch
 // (to the children too unless the timeline placed the object).
-// MS2-FUNCTIONAL the exe calls CheckAvm through the vftable before each VM read (ours too) but schedules the root loads differently
 // @0x1425185d0
 void AvmDisplayObj::OnAdded(bool byTimeline)
 {
-    Instances::fl_display::DisplayObject* obj  = GetAS3Obj();
-    MovieRoot*                            root = AS3RootOf(pDispObj);
+    const ASString&                       added = AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_added);
+    Instances::fl_display::DisplayObject* obj   = GetAS3Obj();
     FUN_142526340(this, obj);
     if (obj)
     {
-        SPtr<Instances::fl_events::Event> evt =
-            obj->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_added), true, false);
-        Sfr34_DispatchFrom(obj, evt, pDispObj);
+        SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(added, true, false);
+        FUN_14243d870(&evt->Target, obj);
+        obj->DispatchEventObject(evt, pDispObj);
     }
     if (IsStageAccessible())
     {
@@ -3059,16 +3050,16 @@ void AvmDisplayObj::OnAdded(bool byTimeline)
 
 // "removed" to the AS3 object, "removedFromStage" down the branch; the object is then kept raw (no longer
 // collectible).
-// MS2-FUNCTIONAL the exe calls CheckAvm through the vftable before each VM read (ours too) but schedules the root loads differently
 // @0x14251ace0
 void AvmDisplayObj::OnRemoved(bool byTimeline)
 {
-    Instances::fl_display::DisplayObject* obj     = GetAS3Obj();
     const ASString&                       removed = AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_removed);
+    Instances::fl_display::DisplayObject* obj     = GetAS3Obj();
     if (obj)
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(removed, true, false);
-        Sfr34_DispatchFrom(obj, evt, pDispObj);
+        FUN_14243d870(&evt->Target, obj);
+        obj->DispatchEventObject(evt, pDispObj);
     }
     if (IsStageAccessible())
     {
@@ -3086,7 +3077,6 @@ void AvmDisplayObj::OnRemoved(bool byTimeline)
 }
 
 // A copy of evt, targeted at and dispatched from this object.
-// MS2-FUNCTIONAL our compiler shrink-wraps the register saves (chained unwind) where the exe saves them in the prolog
 // @0x14251f3a0
 void AvmDisplayObj::PropagateEvent(const Instances::fl_events::Event& evt, bool inclChildren)
 {
@@ -3094,11 +3084,14 @@ void AvmDisplayObj::PropagateEvent(const Instances::fl_events::Event& evt, bool 
     SPtr<Instances::fl_events::Event> e = evt.Clone();
     Instances::fl_display::DisplayObject* obj = GetAS3Obj();
     if (obj)
-        Sfr34_DispatchFrom(obj, e, pDispObj);
+    {
+        FUN_14243d870(&e->Target, obj);
+        obj->DispatchEventObject(e, pDispObj);
+    }
 }
 
 // The container's own copy, then (inclChildren) every child's branch.
-// MS2-FUNCTIONAL our compiler shrink-wraps the register saves (chained unwind) where the exe saves them in the prolog
+// MS2-FUNCTIONAL same length; the exe lays out the child's null-AvmDisplayObj branch the other way round
 // @0x14251f430
 void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& evt, bool inclChildren)
 {
@@ -3106,7 +3099,10 @@ void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& e
         SPtr<Instances::fl_events::Event> e = evt.Clone();
         Instances::fl_display::DisplayObject* obj = GetAS3Obj();
         if (obj)
-            Sfr34_DispatchFrom(obj, e, pDispObj);
+        {
+            FUN_14243d870(&e->Target, obj);
+            obj->DispatchEventObject(e, pDispObj);
+        }
     }
     if (inclChildren)
     {
@@ -4229,7 +4225,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // sfr34 batch Q: VM class registry and weak file list, slot iteration and types, focus changes, and the
 // number output helpers.
 
-// MS2-FUNCTIONAL the exe calls MultinameHash::Add out of line (0x1424e5e80, not recovered yet); here it is inlined
+// MS2-FUNCTIONAL the exe calls MultinameHash::Add out of line (sfr_as3_16z FUN_1424e5e80, which takes the value by value; the exe's takes const T&); here it is inlined
 // @0x1425210e0
 void VM::RegisterClassTraits(ClassTraits::Traits& tr)
 {
@@ -4713,7 +4709,8 @@ static inline void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
     if (obj && obj->HasEventHandler(root->BuiltinsMgr.GetBuiltin(type), false))
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(root->BuiltinsMgr.GetBuiltin(type), true, false);
-        Sfr34_DispatchFrom(obj, evt, avm->pDispObj);
+        FUN_14243d870(&evt->Target, obj);
+        obj->DispatchEventObject(evt, avm->pDispObj);
     }
 }
 
@@ -4798,31 +4795,11 @@ Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* se
     return self->GetResource(pbinding);
 }
 
-// ArrayDataBase<UByte, AllocatorGH_POD<UByte, 2>>::Reserve (granularity 4).
-// MS2-FUNCTIONAL manually recovered from the executable: rounds capacity to four bytes and uses allocator tag 2.
+namespace Scaleform {
+// ArrayDataBase<UByte, AllocatorGH_POD<UByte, 2>>::Reserve.
 // @0x142522d10
-void FUN_142522d10(Scaleform::ArrayDataBase<Scaleform::UByte, Scaleform::AllocatorGH_POD<Scaleform::UByte, 2>,
-                                            Scaleform::ArrayDefaultPolicy>* self,
-                   const void* pheapAddr, Scaleform::UPInt newCapacity)
-{
-    SF_UNUSED(pheapAddr);
-    if (newCapacity == 0)
-    {
-        if (self->Data)
-        {
-            SF_FREE(self->Data);
-            self->Data = NULL;
-        }
-        self->Policy.SetCapacity(0);
-        return;
-    }
-    newCapacity = (newCapacity + 3) & ~Scaleform::UPInt(3);
-    if (self->Data)
-        self->Data = static_cast<Scaleform::UByte*>(SF_REALLOC(self->Data, newCapacity, Scaleform::Stat_Default_Mem));
-    else
-        self->Data = static_cast<Scaleform::UByte*>(SF_ALLOC(newCapacity, Scaleform::Stat_Default_Mem));
-    self->Policy.SetCapacity(newCapacity);
-}
+template void ArrayDataBase<UByte, AllocatorGH_POD<UByte, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+} // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
