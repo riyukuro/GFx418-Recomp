@@ -1,10 +1,12 @@
-// Recovered CRI Movie decoder and timing helpers from MapleStory2.exe, written from the executable's behavior.
+// Recovered CRI Movie decoder and timing helpers from MapleStory2.exe, written from the executable's behavior: the /Od
+// criMvPly, criVmpv, criVdecCmn, Amng/Adec, criAlphaDec and criVdec objs (with the small /O2 objs between them) and the
+// mpvumc code. The /Os criCs/criUtf objs below are sfr_cri_03a, the /Os criUsfDmx/criSj objs above are sfr_cri_03b.
 // The CRI Movie 3.07 library was built with VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake):
 // keep it C++03 (no auto, decltype, variadic templates, brace-init or nullptr). clang-cl compiles it as before.
 // MS2-UNIT: sfr_cri_03
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x140039ea8-0x140046a1c .text$mn
+// MS2-RANGE: 0x14003b6e0-0x140044e84 .text$mn
 // MS2-RANGE: 0x142ccb000-0x142ccd143 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -304,110 +306,22 @@ void FUN_140043680(void* object)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: allocate and initialize the CRI universal stream-joint object with its executable vtable.
-// @0x140046324
-void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
-{
-    CriSint32 size = FUN_140045910((const CriSint32*)config) + 8; // criSjUni_CalculateWorkSize, called as the external
-    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjUni", 8, (CriSint32)allocationMode);
-    if (!allocation)
-    {
-        FUN_140038e24(0, "E09021217B", -3);
-        return NULL;
-    }
-    *allocation = heap;
-    void* object = FUN_1400459ec(config, allocation + 1, size - 8);
-    if (!object)
-    {
-        FUN_140027fb4(heap, allocation);
-        return NULL;
-    }
-    *(const void**)object = &PTR_FUN_143a48638;
-    return object;
-}
+void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode);
 
-// MS2-FUNCTIONAL: allocate and initialize the CRI ring-buffer stream-joint object with its executable vtable.
-// @0x1400464f4
-void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
-{
-    CriSint32 size = FUN_140045ed0((const CriSint32*)config) + 8; // criSjRbf_CalculateWorkSize, called as the external
-    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjRbf", 8, (CriSint32)allocationMode);
-    if (!allocation)
-    {
-        FUN_140038e24(0, "E09021703B", -3);
-        return NULL;
-    }
-    *allocation = heap;
-    void* object = FUN_140045eec(config, allocation + 1, size - 8);
-    if (!object)
-    {
-        FUN_140027fb4(heap, allocation);
-        return NULL;
-    }
-    *(const void**)object = &PTR_FUN_143a48668;
-    return object;
-}
+void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode);
 
-// MS2-FUNCTIONAL: construct a configured universal stream-joint from the caller's three-word settings.
-// @0x1400463f4
-void FUN_1400463f4(void* heap, CriUint32 first, CriUint32 second, const CriUint32* settings)
-{
-    CriUint32 config[3] = { settings[0], first, second };
-    FUN_140046324(config, heap, settings[1]);
-}
+void FUN_1400463f4(void* heap, CriUint32 first, CriUint32 second, const CriUint32* settings);
 
-// MS2-FUNCTIONAL: construct the default universal stream-joint with the requested pool dimensions.
-// @0x14004647c
-void FUN_14004647c(void* heap, CriUint32 first, CriUint32 second)
-{
-    const CriUint32 config[3] = { 0, first, second };
-    FUN_140046324(config, heap, 1);
-}
+void FUN_14004647c(void* heap, CriUint32 first, CriUint32 second);
 
-// MS2-FUNCTIONAL: construct a temporary universal stream-joint with the requested pool dimensions.
-// @0x1400464c8
-void* FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second)
-{
-    const CriUint32 config[3] = { 1, first, second };
-    return FUN_140046324(config, heap, 1);
-}
+void* FUN_1400464c8(void* heap, CriUint32 first, CriUint32 second);
 
-// MS2-FUNCTIONAL: create the configured ring-buffer stream-joint and preserve its 24-byte setup record.
-// @0x1400465c4
 void* FUN_1400465c4(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
-                   CriUint64 poolBytes, const CriUint32* settings)
-{
-    struct JointConfig { CriUint32 Mode; CriUint32 First; CriUint32 Second; CriUint32 Third; CriUint64 PoolBytes; };
-    JointConfig config;
-    config.Mode = settings[0];
-    config.First = first;
-    config.Second = second;
-    config.Third = third;
-    config.PoolBytes = poolBytes;
-    return FUN_1400464f4(&config, heap, settings[1]);
-}
+                   CriUint64 poolBytes, const CriUint32* settings);
 
-// MS2-FUNCTIONAL: destroy the universal stream-joint lock and free its heap-prefixed allocation.
-// @0x1400463c8
-void FUN_1400463c8(void* object)
-{
-    struct Storage { void* Heap; CriUint8 Payload[1]; };
-    Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
-    void* heap = storage->Heap;
-    FUN_140045998(object);
-    FUN_140027fb4(heap, storage);
-}
+void FUN_1400463c8(void* object);
 
-// MS2-FUNCTIONAL: destroy the ring-buffer stream-joint lock and free its heap-prefixed allocation.
-// @0x140046598
-void FUN_140046598(void* object)
-{
-    struct Storage { void* Heap; CriUint8 Payload[1]; };
-    Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
-    void* heap = storage->Heap;
-    FUN_140045fdc(object);
-    FUN_140027fb4(heap, storage);
-}
+void FUN_140046598(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -454,35 +368,9 @@ CriUint32 FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: split a stream chunk, append the selected range, and return bytes left after the requested size.
-// @0x1400468f4
-CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriUint32 maximum)
-{
-    struct ChunkView { CriUint64 Begin; CriUint32 Size; };
-    const ChunkView* view = (const ChunkView*)chunk;
-    CriUint32 copied = maximum;
-    CriSint32 remaining = 0;
-    if (maximum >= view->Size)
-    {
-        remaining = (CriSint32)(maximum - view->Size);
-        copied = view->Size;
-    }
-    criSj_SplitChunk(chunk, copied, (void*)chunk, suffix);
-    // Slot 4 is PutChunk(joint, id, chunk): the exe passes the prefix (still in r8 after the leaf split).
-    void** vtable = *(void***)streamJoint;
-    ((void (*)(void*, CriSint32, const void*))vtable[4])(streamJoint, 0, chunk);
-    return remaining;
-}
+CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriUint32 maximum);
 
-// MS2-FUNCTIONAL: format a diagnostic through CRI's bounded printf adapter.
-// @0x1400469a4
-void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ...)
-{
-    va_list arguments;
-    va_start(arguments, format);
-    _vsnprintf(buffer, capacity, format, arguments);
-    va_end(arguments);
-}
+void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ...);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -542,22 +430,9 @@ CriUint32 FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: calculate universal stream-joint work bytes plus the two aligned block headers.
-// @0x140046420
-CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* settings)
-{
-    CriSint32 headerBytes = FUN_140027dd0(8);
-    CriUint32 config[3] = { settings[0], first, second };
-    return FUN_140045910((const CriSint32*)config) + headerBytes * 2;
-}
+CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* settings);
 
-// MS2-FUNCTIONAL: request work sizing for the default one-block stream-joint setup.
-// @0x1400464a8
-void FUN_1400464a8(CriUint32 first, CriUint32 second)
-{
-    const CriUint32 settings[2] = { 0, 1 };
-    FUN_140046420(first, second, settings);
-}
+void FUN_1400464a8(CriUint32 first, CriUint32 second);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -652,28 +527,7 @@ void FUN_140043610(void* trackSet)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: refresh a read-buffer header when its state is active, then drain one queued chunk.
-// @0x1400458b8
-void FUN_1400458b8(void* object)
-{
-    struct ReaderBuffer
-    {
-        CriUint8 Reserved00[9];
-        CriUint8 State;
-        CriUint8 Reserved0a[0x16];
-        void* Queue;
-        CriUint8 Reserved28[8];
-        CriUint8 Chunk[0x20];
-    };
-    ReaderBuffer* reader = (ReaderBuffer*)object;
-    if (reader->State == 1 || reader->State == 2)
-        FUN_140045474(object);
-    if (reader->Queue)
-    {
-        FUN_1400467a0(reader->Queue, 1, -1, reader->Chunk);
-        FUN_1400467a8(reader->Queue, 1, reader->Chunk);
-    }
-}
+void FUN_1400458b8(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -695,14 +549,7 @@ void FUN_140042800(void* manager)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: pass this function's variadic arguments to the executable's string scanner as one va_list.
-// @0x1400469c4
-void FUN_1400469c4(void* string, const CriChar8* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    FUN_14029dd60(string, format, args);
-}
+void FUN_1400469c4(void* string, const CriChar8* format, ...);
 #pragma optimize("", on)
 
 void FUN_1400478a0(void);
@@ -727,132 +574,25 @@ struct CriLockFields
 };
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this wrapper reproduces its aligned storage and initialization.
-// @0x140039ea8
-void* criCs_Create(void* work, CriSint32 size)
-{
-    FUN_1400385b8();
-    memset(work, 0, (size_t)size);
-    uintptr_t aligned = (uintptr_t)work;
-    aligned = (aligned + 7) & ~(uintptr_t)7;
-    LPCRITICAL_SECTION section = (LPCRITICAL_SECTION)aligned;
-    if (!criCsWin_InitializeCriticalSection(section))
-    {
-        FUN_140038ddc(0, "E2006081802:InitializeCriticalSection function has failed.");
-        return NULL;
-    }
-    return section;
-}
+void* criCs_Create(void* work, CriSint32 size);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this wrapper destroys and clears the caller's lock storage.
-// @0x140039f00
-void criCs_Destroy(LPCRITICAL_SECTION section)
-{
-    CriLockFields* lock = (CriLockFields*)section;
-    if (lock->Depth > 0)
-        FUN_140038ddc(0, "E2010062902:Critical section object will be deleted while some process is still in the section.");
-    if (!criCsWin_DeleteCriticalSection(section))
-    {
-        FUN_140038ddc(0, "E2006081803:DeleteCriticalSection function has failed.");
-        return;
-    }
-    memset(section, 0, 0x30);
-}
+void criCs_Destroy(LPCRITICAL_SECTION section);
 
-// MS2-FUNCTIONAL: the CRI lock helper enters the section, reporting a failed enter, and tracks the recursive depth and
-// owning thread.
-// @0x140039f50
-void FUN_140039f50(LPCRITICAL_SECTION section)
-{
-    CriLockFields* lock = (CriLockFields*)section;
-    if (!FUN_140039e24(section))
-    {
-        FUN_140038ddc(0, "E2006081804:EnterCriticalSection function has failed.");
-        return;
-    }
-    lock->Depth++;
-    if (lock->Depth == 1)
-        lock->OwnerThread = GetCurrentThreadId();
-}
+void FUN_140039f50(LPCRITICAL_SECTION section);
 
-// MS2-FUNCTIONAL: the CRI lock helper clears its owner at the outermost exit, then reports an unbalanced leave or
-// leaves the section, reporting a failed LeaveCriticalSection with the library's (Enter-worded) message.
-// @0x140039f8c
-void FUN_140039f8c(LPCRITICAL_SECTION section)
-{
-    CriLockFields* lock = (CriLockFields*)section;
-    lock->Depth--;
-    if (lock->Depth == 0)
-        lock->OwnerThread = 0;
-    if (lock->Depth < 0)
-        FUN_140038ddc(0, "E2010062901:Mismatch of the number of entering and leaving to critical section.");
-    else if (!FUN_140039e4c(section))
-        FUN_140038ddc(0, "E2006081805:EnterCriticalSection function has failed.");
-}
+void FUN_140039f8c(LPCRITICAL_SECTION section);
 
-// MS2-FUNCTIONAL: preserves CRI's null diagnostic and serializes the old-value/store operation with its shared lock.
-// @0x14003a050
-CriUint32 criAtomic_TestAndSet(CriUint32* target, CriUint32 value)
-{
-    if (!target)
-    {
-        FUN_140038e24(0, "E2008071421", -2);
-        return value;
-    }
-    FUN_140039f50((LPCRITICAL_SECTION)DAT_143b27be8);
-    CriUint32 old = *target;
-    *target = value;
-    FUN_140039f8c((LPCRITICAL_SECTION)DAT_143b27be8);
-    return old;
-}
+CriUint32 criAtomic_TestAndSet(CriUint32* target, CriUint32 value);
 
-// @0x140039fc8
-void criAtomic_Initialize()
-{
-    if (++DAT_143b27be0 == 1) {
-        memset(DAT_143b27bf0, 0, (size_t)DAT_143b27be0 + 0x47);
-        DAT_143b27be8 = criCs_Create(DAT_143b27bf0, 0x48);
-    }
-}
+void criAtomic_Initialize();
 
-// @0x14003a010
-void criAtomic_Finalize()
-{
-    if (--DAT_143b27be0 == 0) {
-        if (DAT_143b27be8) {
-            criCs_Destroy((LPCRITICAL_SECTION)DAT_143b27be8);
-            DAT_143b27be8 = NULL;
-        }
-        memset(DAT_143b27bf0, 0, 0x48);
-    }
-}
+void criAtomic_Finalize();
 
-// @0x14003a0b4
-CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment)
-{
-    CriUint64 rem = value % alignment;
-    return rem ? value + alignment - rem : value;
-}
+CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment);
 
-// @0x14003a0f8
-CriUint32 FUN_14003a0f8(CriSint32 index)
-{
-    return (CriUint32)((CriUint32)((index + 2 * index) * 16) + (CriUint64)0xb8);
-}
+CriUint32 FUN_14003a0f8(CriSint32 index);
 
-// MS2-FUNCTIONAL: releases UTF table allocations and all four lazily allocated fast-search indexes.
-// @0x14003a108
-void criUtfRtv_Destroy(CriUint64* table)
-{
-    typedef void(__fastcall* FreeFn)(void*, void*);
-    CriUint64* heap = (CriUint64*)table[0];
-    if (table[0xc] != 0 && heap)
-        ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x16]);
-    for (CriUint32 index = 0; index < 4; ++index)
-        if (table[0xe + index * 2] != 0)
-            FUN_140046d50(table, index);
-    ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x15]);
-}
+void criUtfRtv_Destroy(CriUint64* table);
 #pragma optimize("", on)
 
 // @0x14003b840
@@ -882,66 +622,12 @@ void FUN_14003b6e0()
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: route UTF allocations through the caller's CRI heap using its allocation mode.
-// @0x14003b20c
 void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 alignment,
-                    CriSint32 allocationMode)
-{
-    CriSint32 type = 0;
-    switch (allocationMode)
-    {
-    case 0:
-        break;
-    case 1:
-        type = 1;
-        break;
-    case 2:
-        type = 2;
-        break;
-    case 3:
-        type = 3;
-        break;
-    default:
-        FUN_140038e24(0, "E08092651B", -3);
-        break;
-    }
-    return FUN_140027f7c(heap, size, name, alignment, type);
-}
+                    CriSint32 allocationMode);
 
-// @0x14003b2a4
-void FUN_14003b2a4(void* heap, void* memory)
-{
-    FUN_140027fb4(heap, memory);
-}
+void FUN_14003b2a4(void* heap, void* memory);
 
-// MS2-FUNCTIONAL: adapt the four CRI heap modes and callbacks before constructing a UTF runtime table.
-// @0x14003b2ac
-void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUint32 size)
-{
-    struct HeapCallbacks { void* Allocate; void* Free; void* Heap; } callbacks;
-    CriSint32 type = 0;
-    switch (allocationMode)
-    {
-    case 0:
-        break;
-    case 1:
-        type = 1;
-        break;
-    case 2:
-        type = 2;
-        break;
-    case 3:
-        type = 3;
-        break;
-    default:
-        FUN_140038e24(0, "E08092650B", -3);
-        break;
-    }
-    callbacks.Allocate = (void*)FUN_14003b20c;
-    callbacks.Free = (void*)FUN_14003b2a4;
-    callbacks.Heap = heap;
-    return FUN_14003a1a0(&callbacks, (CriUint32)type, data, size);
-}
+void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriUint32 size);
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
@@ -951,78 +637,7 @@ void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriU
 static CriSint32 s_nUtfRtvReportAllocError = 0;
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// @0x14003a1a0
-void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* data, CriUint32 size)
-{
-    typedef void* (*AllocateFn)(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
-    typedef void (*FreeFn)(void*, void*);
-    struct Callbacks { AllocateFn Allocate; FreeFn Free; void* Context; };
-    struct RuntimeTable
-    {
-        void* Self;
-        Callbacks Init;
-        CriUint32 Flags, Reserved24;
-        const CriUint8* Base;
-        CriUint32 Size, Reserved34;
-        const CriUint8* RecordData;
-        const CriUint8* StringData;
-        const CriUint8* BlobData;
-        const CriUint8* Reserved50;
-        CriUint16 FieldCount, RecordSize;
-        CriUint32 RecordCount;
-        void* Columns;
-        CriUint8 Slots[0x40];
-        void* Context;
-        void* SecondaryAllocation;
-    };
-    if (!callbackBlock)
-    {
-        FUN_140038e24(0, "E06100303", -2);
-        return NULL;
-    }
-
-    Callbacks* callbacks = (Callbacks*)callbackBlock;
-    CriUint8* rawTable = (CriUint8*)callbacks->Allocate(callbacks->Context, 0xb8, "@UTF1", 0x10,
-                                                        (CriSint32)allocationMode);
-    if (!rawTable)
-    {
-        if (s_nUtfRtvReportAllocError)
-            FUN_140038e24(0, "E06100310", -3);
-        return NULL;
-    }
-
-    memset(rawTable, 0, 0xb8);
-    void* tableMemory = rawTable;
-    size_t tableSpace = 0xb8;
-    RuntimeTable* table = (RuntimeTable*)std::align(0x10, sizeof(RuntimeTable), tableMemory, tableSpace);
-    CriUint32 fieldCount = FUN_1400472c0((const CriUint8*)data, size);
-    CriUint32 recordsSize = fieldCount * 0x30;
-    CriUint8* rawRecords = (CriUint8*)callbacks->Allocate(callbacks->Context, (CriSint32)recordsSize,
-                                                           "@UTF2", 0x10, (CriSint32)allocationMode);
-    if (rawRecords)
-    {
-        memset(rawRecords, 0, recordsSize);
-        void* recordsMemory = rawRecords;
-        size_t recordsSpace = recordsSize;
-        void* records = std::align(0x10, recordsSize, recordsMemory, recordsSpace);
-        if (FUN_140046e04(table, rawTable, fieldCount, records, rawRecords, data, size,
-                          callbackBlock, allocationMode))
-            return table;
-        criUtfRtv_Destroy((CriUint64*)table);
-        return NULL;
-    }
-
-    table->Self = &table->Init;
-    table->Init = *callbacks;
-    table->Flags = allocationMode;
-    table->Columns = NULL;
-    table->Context = rawTable;
-    table->SecondaryAllocation = NULL;
-    criUtfRtv_Destroy((CriUint64*)table);
-    if (s_nUtfRtvReportAllocError)
-        FUN_140038e24(0, "E06100312", -3);
-    return NULL;
-}
+void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* data, CriUint32 size);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -1058,29 +673,11 @@ const void** FUN_14003bf10()
 // ==== CRI UTF heap callback helpers ================================================================================
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: this callback forwarder uses the executable's two-word heap interface.
-// @0x14003a0d0
-void* criUtfHeap_Alloc(void* heap, CriUint32 size, const char* tag, CriSint32 align, CriSint32 flags)
-{
-    void** slots = (void**)heap;
-    return ((void*(__fastcall*)(void*, CriUint32, const char*, CriSint32, CriSint32))slots[0])(slots[2], size, tag, align, flags);
-}
+void* criUtfHeap_Alloc(void* heap, CriUint32 size, const char* tag, CriSint32 align, CriSint32 flags);
 
-// MS2-FUNCTIONAL: this callback forwarder uses the executable's three-word UTF heap interface.
-// @0x14003a0ec
-void FUN_14003a0ec(void* heap, void* p)
-{
-    void** slots = (void**)heap;
-    ((void(__fastcall*)(void*, void*))slots[1])(slots[2], p);
-}
+void FUN_14003a0ec(void* heap, void* p);
 
-// MS2-FUNCTIONAL: this callback forwarder uses the executable's two-word heap interface.
-// @0x14003a184
-void* FUN_14003a184(void* heap, CriUint32 size, const char* tag, CriSint32 align)
-{
-    void** slots = (void**)heap;
-    return ((void*(__fastcall*)(void*, CriUint32, const char*, CriSint32, CriSint32))slots[0])(slots[2], size, tag, align, 1);
-}
+void* FUN_14003a184(void* heap, CriUint32 size, const char* tag, CriSint32 align);
 #pragma optimize("", on)
 
 // ==== CRI UTF runtime table field accessors ========================================================================
@@ -1107,464 +704,57 @@ static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, C
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 #pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
-// MS2-FUNCTIONAL: the CRI table library was built with VS2008; preserve its field-name scan and 0xffffffff sentinel.
-// @0x14003a3e0
-CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name)
-{
-    CriSint32 i;
-    for (i = 0; i < table->FieldCount; ++i)
-        if (strcmp(name, table->Columns[i].Name) == 0)
-            break;
-    if (i == table->FieldCount)
-        i = -1;
-    return (CriUint32)i;
-}
+CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor reads the table's row count.
-// @0x14003a45c
-CriUint32 FUN_14003a45c(const CriUtfRtvView* table)
-{
-    return table->RecordCount;
-}
+CriUint32 FUN_14003a45c(const CriUtfRtvView* table);
 
-// MS2-FUNCTIONAL: use the cached sorted row index to find a UTF string key by binary search.
-// @0x14003aeb4
-CriUint32 FUN_14003aeb4(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name)
-{
-    CriUint32 low, high;
-    const CriUint32* rows = table->Slots[slotIndex].SortedRows;
-    CriUint32 key = table->Slots[slotIndex].Key;
-    low = 0;
-    high = table->RecordCount;
-    for (;;)
-    {
-        CriUint32 middle = (high + low - 1) >> 1;
-        int order = strcmp(criUtfRtv_GetDataStr(table, rows[middle], key), name);
-        if (order == 0)
-            return rows[middle];
-        if (order > 0)
-            high = middle;
-        else
-            low = middle + 1;
-        if (low == high)
-            return 0xffffffff;
-    }
-}
+CriUint32 FUN_14003aeb4(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name);
 #pragma intrinsic(strcmp)
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; field types 0/2/4 read the executable's byte positions.
-// @0x14003a460
-CriUint8 criUtfRtv_GetDataUint8(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    CriUint8 result = 0;
-    if (col->IsRecordField && row < table->RecordCount)
-    {
-        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
-        switch (col->Type)
-        {
-        case 0:
-        case 1:
-            result = p[0];
-            break;
-        case 2:
-        case 3:
-            result = p[1];
-            break;
-        case 4:
-        case 5:
-            result = p[3];
-            break;
-        }
-    }
-    else if (col->HasDefault)
-    {
-        switch (col->Type)
-        {
-        case 0:
-        case 1:
-            result = (CriUint8)col->DefaultValue[1];
-            break;
-        case 2:
-        case 3:
-            result = (CriUint8)(CriUint16)col->DefaultValue[1];
-            break;
-        case 4:
-        case 5:
-            result = (CriUint8)(CriUint32)col->DefaultValue[1];
-            break;
-        }
-    }
-    return result;
-}
+CriUint8 criUtfRtv_GetDataUint8(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor decodes stored integers in network byte order.
-// @0x14003a58c
-CriUint32 criUtfRtv_GetDataUint32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    CriUint32 result = 0;
-    if (col->IsRecordField && row < table->RecordCount)
-    {
-        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
-        switch (col->Type)
-        {
-        case 0:
-        case 1:
-            result = p[0];
-            break;
-        case 2:
-        case 3:
-            result = ((CriUint32)p[0] << 8) | p[1];
-            break;
-        case 4:
-        case 5:
-            result = criUtfReadBE32(p);
-            break;
-        }
-    }
-    else if (col->HasDefault)
-    {
-        switch (col->Type)
-        {
-        case 0:
-        case 1:
-            result = (CriUint8)col->DefaultValue[1];
-            break;
-        case 2:
-        case 3:
-            result = (CriUint16)col->DefaultValue[1];
-            break;
-        case 4:
-        case 5:
-            result = (CriUint32)col->DefaultValue[1];
-            break;
-        }
-    }
-    return result;
-}
+CriUint32 criUtfRtv_GetDataUint32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor reads 64-bit big-endian record fields.
-// @0x14003a648
-CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    return p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[1] : 0);
-}
+CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; decode the record's big-endian IEEE single precision bits.
-// @0x14003a6e8
-CriFloat32 criUtfRtv_GetDataFloat32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    if (col->IsRecordField && row < table->RecordCount)
-    {
-        // the exe reuses the field argument's home slot for the bits
-        field = criUtfReadBE32(table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset);
-        return *(const CriFloat32*)&field;
-    }
-    if (col->HasDefault)
-        return *(const CriFloat32*)&col->DefaultValue[1];
-    return 0.0f;
-}
+CriFloat32 criUtfRtv_GetDataFloat32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; decode the record's big-endian IEEE double precision bits.
-// @0x14003a754
-double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    if (col->IsRecordField && row < table->RecordCount)
-    {
-        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
-        CriUint64 bits = p[0];
-        bits = (bits << 8) | p[1];
-        bits = (bits << 8) | p[2];
-        bits = (bits << 8) | p[3];
-        bits = (bits << 8) | p[4];
-        bits = (bits << 8) | p[5];
-        bits = (bits << 8) | p[6];
-        bits = (bits << 8) | p[7];
-        return *(const double*)&bits;
-    }
-    if (col->HasDefault)
-        return *(const double*)&col->DefaultValue[1];
-    return 0.0;
-}
+double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: CRI Base was built with VS2008; string cells hold a big-endian offset into the table string block.
-// @0x14003a7f4
-const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    const CriChar8* result = NULL;
-    if (col->IsRecordField && row < table->RecordCount)
-    {
-        CriUint32 offset = criUtfReadBE32(table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset);
-        if (!offset)
-            return NULL;
-        return (const CriChar8*)(table->StringData + offset);
-    }
-    if (col->HasDefault)
-        result = (const CriChar8*)col->DefaultValue[1];
-    return result;
-}
+const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, CriUint32 field);
 
-// MS2-FUNCTIONAL: the CRI name-based callback resolves its field, then forwards to the corresponding typed accessor.
-// @0x14003a85c
-CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    if (field < 0)
-        return 0;
-    return criUtfRtv_GetDataUint32(table, row, field);
-}
+CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: this second CRI callback has the same executable body and forwards the resolved field to uint32.
-// @0x14003a894
-CriUint32 FUN_14003a894(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    if (field < 0)
-        return 0;
-    return criUtfRtv_GetDataUint32(table, row, field);
-}
+CriUint32 FUN_14003a894(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a float.
-// @0x14003a8cc
-CriFloat32 criUtfRtv_GetDataFload32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    return field < 0 ? 0 : criUtfRtv_GetDataFloat32(table, row, field);
-}
+CriFloat32 criUtfRtv_GetDataFload32Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a double.
-// @0x14003a904
-double criUtfRtv_GetDataFloat64Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    return field < 0 ? 0 : criUtfRtv_GetDataFloat64(table, row, field);
-}
+double criUtfRtv_GetDataFloat64Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a string.
-// @0x14003a940
-const CriChar8* criUtfRtv_GetDataStrFn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    if (field < 0)
-        return NULL;
-    return criUtfRtv_GetDataStr(table, row, field);
-}
+const CriChar8* criUtfRtv_GetDataStrFn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: the CRI name-based callback resolves the field before reading a byte.
-// @0x14003a978
-CriUint8 criUtfRtv_GetDataUint8Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
-{
-    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
-    if (field < 0)
-        return 0;
-    return criUtfRtv_GetDataUint8(table, row, field);
-}
+CriUint8 criUtfRtv_GetDataUint8Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name);
 
-// MS2-FUNCTIONAL: this decoder copies the field representation into the CRI's tagged 24-byte cell value.
-// @0x14003a9e4
 void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* address,
-                                  CriSint32 type, CriUtfRtvCell* cell)
-{
-    cell->Type = (CriUint8)type;
-    switch (type)
-    {
-    case 0: case 1:
-        cell->Value[0] = address[0];
-        break;
-    case 2: case 3:
-        *(CriUint16*)cell->Value = (CriUint16)(((CriUint32)address[0] << 8) | address[1]);
-        break;
-    case 4: case 5: case 8:
-        *(CriUint32*)cell->Value = criUtfReadBE32(address);
-        break;
-    case 6: case 7: case 9:
-        *(CriUint64*)cell->Value = criUtfReadBE64(address);
-        break;
-    case 10:
-    {
-        CriUint32 offset = criUtfReadBE32(address);
-        *(CriUint64*)cell->Value = offset ? (CriUint64)(table->StringData + offset) : 0;
-        break;
-    }
-    case 11:
-    {
-        CriUint32 offset = criUtfReadBE32(address);
-        *(CriUint64*)cell->Value = (CriUint64)(table->BlobData + (CriSint32)offset);
-        *(CriUint32*)(cell->Value + 8) = criUtfReadBE32(address + 4);
-        break;
-    }
-    case 12:
-        *(CriUint64*)cell->Value = criUtfReadBE64(address);
-        *(CriUint64*)(cell->Value + 8) = criUtfReadBE64(address + 8);
-        break;
-    default:
-        break;
-    }
-}
+                                  CriSint32 type, CriUtfRtvCell* cell);
 
-// MS2-FUNCTIONAL: this accessor copies the column's default triple or decodes its row cell into the caller record.
-// @0x14003af50
-CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    if (!col->IsRecordField || row >= table->RecordCount)
-        memcpy(cell, col->DefaultValue, sizeof(col->DefaultValue));
-    else
-        criUtfRtv_GetCellValFromAddr(table, table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset,
-                                     col->Type, cell);
-    return 1;
-}
+CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
 
-// MS2-FUNCTIONAL: decode a UTF column descriptor, its optional name, and its default cell.
-// @0x14003afb0
-CriUint64 FUN_14003afb0(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column)
-{
-    CriUint8 flags = field[0];
-    column->Type = flags & 0x0f;
-    column->HasDefault = (flags >> 5) & 1;
-    CriUint32 consumed = 1;
-    if (flags & 0x10)
-    {
-        CriUint32 nameOffset = criUtfReadBE32(field + consumed);
-        column->Name = nameOffset ? (const CriChar8*)(table->StringData + nameOffset) : NULL;
-        consumed += 4;
-    }
-    else
-        column->Name = NULL;
+CriUint64 FUN_14003afb0(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column);
 
-    if (flags & 0x20)
-    {
-        criUtfRtv_GetCellValFromAddr(table, field + consumed, column->Type,
-                                     (CriUtfRtvCell*)column->DefaultValue);
-        switch (column->Type)
-        {
-        case 0: case 1: consumed += 1; break;
-        case 2: case 3: consumed += 2; break;
-        case 4: case 5: case 8: case 10: consumed += 4; break;
-        case 6: case 7: case 9: consumed += 8; break;
-        case 11: consumed += 8; break;
-        case 12: consumed += 16; break;
-        default: break;
-        }
-    }
-    else
-    {
-        // The exe writes only the cell's type byte (+0x18) and its first value qword (+0x20).
-        ((CriUtfRtvCell*)column->DefaultValue)->Type = 0xff;
-        memset((CriUint8*)column->DefaultValue + 8, 0, 8);
-    }
-    column->IsRecordField = (flags >> 6) & 1;
-    return consumed;
-}
-
-// MS2-FUNCTIONAL: the table's 16/32-bit signed fields are summed after rounding each value up to the requested alignment.
-// @0x14003aca8
 CriSint32 criUtfRtv_SumWithAlignment32(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
-                                       CriUint32 field, CriSint32 alignment)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    CriSint32 rounded = alignment - 1;
-    CriUint32 mask = (CriUint32)-(CriSint32)alignment & ~((CriUint32)alignment - 1);
-    CriSint32 sum = 0;
-    if (col->Type == 2 || col->Type == 4)
-    {
-        if (col->IsRecordField)
-        {
-            const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * firstRow + col->DataOffset;
-            do
-            {
-                CriUint32 value = col->Type == 2 ? (((CriUint32)p[0] << 8) | p[1]) : criUtfReadBE32(p);
-                sum += (CriSint32)((value + rounded) & mask);
-                p += table->RecordSize;
-            } while (--count >= 0);
-            return sum;
-        }
-        if (col->Type == 2)
-            return (CriSint32)(CriUint16)((CriUint16)col->DefaultValue[1] + (CriUint16)rounded & (CriUint16)mask) * count;
-        return (CriSint32)(((CriUint32)col->DefaultValue[1] + rounded) & mask) * count;
-    }
-    return 0;
-}
+                                       CriUint32 field, CriSint32 alignment);
 
-// MS2-FUNCTIONAL: this 64-bit variant shares the executable's row iteration and alignment rounding behavior.
-// @0x14003adac
 CriUint64 FUN_14003adac(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
-                        CriUint32 field, CriSint32 alignment)
-{
-    return (CriUint64)(CriUint32)criUtfRtv_SumWithAlignment32(table, firstRow, count, field, alignment);
-}
+                        CriUint32 field, CriSint32 alignment);
 
-// MS2-FUNCTIONAL: parse USF chunk ID and size as network-order dwords, requiring the minimum 16-byte header.
-// @0x14003b358
-CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUint32* id, CriUint32* chunkSize)
-{
-    if (size < 0x10)
-    {
-        *id = 0;
-        *chunkSize = 0;
-        return 0;
-    }
-    *id = criUtfReadBE32(data);
-    *chunkSize = criUtfReadBE32(data + 4);
-    return 1;
-}
+CriBool criUsfCmn_GetChunkIdAndSIze(const CriUint8* data, CriUint32 size, CriUint32* id, CriUint32* chunkSize);
 
-// MS2-FUNCTIONAL: create a UTF runtime table using the CRI heap callback convention.
-// @0x14003b348
-void* criUtfRtv_Create(void* heap, void* table, CriUint32 size)
-{
-    return FUN_14003b2ac(heap, 1, table, size);
-}
+void* criUtfRtv_Create(void* heap, void* table, CriUint32 size);
 
-// MS2-FUNCTIONAL: decode the executable's 0x24-byte USF standard header fields.
-// @0x14003b3fc
-CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header)
-{
-    CriUint8 headerSize = data[9];
-    if (size <= 0x0f || headerSize == 0 || headerSize > size)
-        return 0;
-    // The chunk id, size, offset word and the four trailing dwords are big-endian in the stream;
-    // the exe stores them byte-swapped so callers read native integers.
-    CriUint8* out = header->Data;
-    CriUint32 value = criUtfReadBE32(data);
-    memcpy(out, &value, 4);
-    value = criUtfReadBE32(data + 4);
-    memcpy(out + 4, &value, 4);
-    out[8] = data[8]; out[9] = data[9];
-    CriUint16 offset = (CriUint16)(((CriUint32)data[10] << 8) | data[11]);
-    memcpy(out + 10, &offset, 2);
-    out[12] = data[12]; out[13] = data[13]; out[14] = data[14];
-    out[15] = data[15] & 3;
-    out[16] = data[15] >> 4;
-    for (CriUint32 i = 0; i < 4; ++i)
-    {
-        value = criUtfReadBE32(data + 0x10 + i * 4);
-        memcpy(out + 0x14 + i * 4, &value, 4);
-    }
-    return headerSize;
-}
+CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
 
-// MS2-FUNCTIONAL: return the payload after the variable USF header and remove its embedded header-size fields.
-// @0x14003b674
-const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize)
-{
-    CriUint32 id, chunkSize;
-    *contentSize = 0;
-    if (criUsfCmn_GetChunkIdAndSIze(data, size, &id, &chunkSize) && size >= 0x10)
-    {
-        CriUint8 headerSize = data[9];
-        CriUint16 offset = (CriUint16)((data[10] << 8) | data[11]);
-        *contentSize = (CriSint32)(chunkSize - offset - headerSize);
-        return data + (headerSize + 8);
-    }
-    return NULL;
-}
+const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -2579,267 +1769,34 @@ void* FUN_140044e40(void* decoder)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: store one output stream joint and its size flags in the demux table.
-// @0x140044fb0
-void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
-{
-    struct Output { void* stream; CriUint32 flags; CriSint32 limit; };
-    (*(Output**)((CriUint8*)demux + 0x18))[index].stream = stream;
-    (*(Output**)((CriUint8*)demux + 0x18))[index].flags = flags;
-    (*(Output**)((CriUint8*)demux + 0x18))[index].limit = limit;
-}
+void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit);
 
-// MS2-FUNCTIONAL: compute the executable's fixed and per-chain work-area size.
-// @0x140045910
-CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
-{
-    CriSint32 base = 0x58;
-    if (config[0] == 1)
-        base += 0x48;
-    return base + config[2] * 0x20 + 8;
-}
+CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 
-// MS2-FUNCTIONAL: calculate the demux work area from its two unified-joint pools and output records.
-// @0x140044eb0
-CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
-{
-    const CriSint32 config[3] = { 1, 0, 0x80 };
-    CriSint32 jointBytes = criSjUni_CalculateWorkSize(config);
-    CriSint32 roundedJointBytes = (jointBytes + 7) & ~7;
-    CriSint32 recordBytes = outputCount * 0x10 + 0x17;
-    CriSint32 recordUnits = (recordBytes + ((recordBytes >> 31) & 7)) >> 3;
-    return roundedJointBytes + 0x48 + roundedJointBytes + recordUnits * 8;
-}
+CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount);
 
-// MS2-FUNCTIONAL: calculate ring-buffer work size from its synchronization flag and pool sizes.
-// @0x140045ed0
-CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config)
-{
-    CriSint32 size = 0x58;
-    if (config[0] == 1)
-    {
-        size += 0x48;
-    }
-    return config[1] + config[2] + config[3] + size;
-}
+CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 
-// MS2-FUNCTIONAL: destroy the ring-buffer lock and clear its lock pointer.
-// @0x140045fdc
-void FUN_140045fdc(void* ringBuffer)
-{
-    void* lock;
-    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
-    if (lock)
-    {
-        criCs_Destroy((LPCRITICAL_SECTION)lock);
-        lock = NULL;
-        memcpy((CriUint8*)ringBuffer + 0x10, &lock, sizeof(lock));
-    }
-}
+void FUN_140045fdc(void* ringBuffer);
 
-// MS2-FUNCTIONAL: enter the ring-buffer's optional critical section.
-// @0x140046014
-void FUN_140046014(void* ringBuffer)
-{
-    void* lock;
-    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
-    if (lock)
-        FUN_140039f50((LPCRITICAL_SECTION)lock);
-}
+void FUN_140046014(void* ringBuffer);
 
-// MS2-FUNCTIONAL: leave the ring-buffer's optional critical section.
-// @0x14004602c
-void FUN_14004602c(void* ringBuffer)
-{
-    void* lock;
-    memcpy(&lock, (CriUint8*)ringBuffer + 0x10, sizeof(lock));
-    if (lock)
-        FUN_140039f8c((LPCRITICAL_SECTION)lock);
-}
+void FUN_14004602c(void* ringBuffer);
 
-// MS2-FUNCTIONAL: clear all ring-buffer counters and restore its available-capacity field.
-// @0x140046044
-void criSjRbf_Reset(void* ringBuffer)
-{
-    struct RingBufferState
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;      // 0x10
-        CriUint8 Reserved18[0x08];
-        CriUint32 Field20;            // 0x20
-        CriUint32 Free;               // 0x24
-        CriUint32 Field28;            // 0x28
-        CriUint32 Field2C;            // 0x2c
-        CriUint8 Reserved30[0x08];
-        CriUint32 Capacity;           // 0x38
-        CriUint8 Reserved3C[0x04];
-        CriUint32 Field40[4];         // 0x40
-    };
-    RingBufferState* rb = (RingBufferState*)ringBuffer;
-    if (rb->Lock)
-        FUN_140039f50(rb->Lock);
-    rb->Field20 = 0;
-    rb->Field28 = 0;
-    rb->Field2C = 0;
-    rb->Field40[0] = 0;
-    rb->Field40[1] = 0;
-    rb->Field40[2] = 0;
-    rb->Field40[3] = 0;
-    rb->Free = rb->Capacity;
-    if (rb->Lock)
-        FUN_140039f8c(rb->Lock);
-}
+void criSjRbf_Reset(void* ringBuffer);
 
-// MS2-FUNCTIONAL: reserve a bounded input or output region from the CRI stream ring buffer.
-// @0x140046094
-void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requested, void* result)
-{
-    CriUint8* bytes = (CriUint8*)ringBuffer;
-    FUN_140046014(ringBuffer);
-    CriUint32 size, end, available, position;
-    void* data;
-    memcpy(&size, bytes + 0x38, sizeof(size));
-    memcpy(&end, bytes + 0x3c, sizeof(end));
-    memcpy(&data, bytes + 0x30, sizeof(data));
-    if (direction == 0)
-    {
-        memcpy(&position, bytes + 0x28, sizeof(position));
-        memcpy(&available, bytes + 0x24, sizeof(available));
-        CriUint32 contiguous = size - position + end;
-        if (available < contiguous)
-            contiguous = available;
-        if (requested > contiguous)
-            requested = contiguous;
-        void* chunk = (CriUint8*)data + position;
-        position = (position + requested) % size;
-        available -= requested;
-        CriUint32 total;
-        memcpy(&total, bytes + 0x40, sizeof(total));
-        total += requested;
-        memcpy(bytes + 0x28, &position, sizeof(position));
-        memcpy(bytes + 0x24, &available, sizeof(available));
-        memcpy(bytes + 0x40, &total, sizeof(total));
-        memcpy(result, &chunk, sizeof(chunk));
-        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
-        CriUint32 zero = 0;
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
-    }
-    else if (direction == 1)
-    {
-        memcpy(&position, bytes + 0x2c, sizeof(position));
-        memcpy(&available, bytes + 0x20, sizeof(available));
-        CriUint32 contiguous = size - position + end;
-        if (available < contiguous)
-            contiguous = available;
-        if (requested > contiguous)
-            requested = contiguous;
-        void* chunk = (CriUint8*)data + position;
-        position = (position + requested) % size;
-        available -= requested;
-        CriUint32 total;
-        memcpy(&total, bytes + 0x48, sizeof(total));
-        total += requested;
-        memcpy(bytes + 0x2c, &position, sizeof(position));
-        memcpy(bytes + 0x20, &available, sizeof(available));
-        memcpy(bytes + 0x48, &total, sizeof(total));
-        memcpy(result, &chunk, sizeof(chunk));
-        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
-        CriUint32 zero = 0;
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
-    }
-    else
-    {
-        void* empty = NULL;
-        CriUint32 zero = 0;
-        memcpy(result, &empty, sizeof(empty));
-        memcpy((CriUint8*)result + 8, &zero, sizeof(zero));
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
-    }
-    FUN_14004602c(ringBuffer);
-}
+void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requested, void* result);
 
-// MS2-FUNCTIONAL: pop a recycled 0x20-byte chunk from the unified stream-joint free list.
-// @0x14004592c
-void* FUN_14004592c(void* streamJoint)
-{
-    struct ChunkPool { CriUint8 Reserved[0x48]; void* FreeChunk; };
-    ChunkPool* pool = (ChunkPool*)streamJoint;
-    void* result = NULL;
-    void* chunk = pool->FreeChunk;
-    if (chunk != NULL)
-    {
-        result = chunk;
-        pool->FreeChunk = *(void**)chunk;
-        memset(result, 0, 0x20);
-    }
-    return result;
-}
+void* FUN_14004592c(void* streamJoint);
 
-// MS2-FUNCTIONAL: return a 0x20-byte stream-joint chunk to the unified free list.
-// @0x140045964
-void FUN_140045964(void* streamJoint, void* chunk)
-{
-    memset(chunk, 0, 0x20);
-    void* head;
-    memcpy(&head, (CriUint8*)streamJoint + 0x48, sizeof(head));
-    memcpy(chunk, &head, sizeof(head));
-    memcpy((CriUint8*)streamJoint + 0x48, &chunk, sizeof(chunk));
-}
+void FUN_140045964(void* streamJoint, void* chunk);
 
-// MS2-FUNCTIONAL: release the stream-joint lock when one was initialized.
-// @0x140045998
-void FUN_140045998(void* streamJoint)
-{
-    void* lock;
-    memcpy(&lock, (CriUint8*)streamJoint + 0x10, sizeof(lock));
-    if (lock)
-    {
-        criCs_Destroy((LPCRITICAL_SECTION)lock);
-        lock = NULL;
-        memcpy((CriUint8*)streamJoint + 0x10, &lock, sizeof(lock));
-    }
-}
+void FUN_140045998(void* streamJoint);
 
-// MS2-FUNCTIONAL: count recycled chunks while honoring the stream-joint lock.
-// @0x140045b34
-CriSint32 criSjUni_GetNumChainPool(void* streamJoint)
-{
-    struct ChainPool { CriUint8 Reserved00[0x10]; LPCRITICAL_SECTION Lock; CriUint8 Reserved18[0x30]; void* FreeChunk; };
-    ChainPool* pool = (ChainPool*)streamJoint;
-    if (pool->Lock)
-        FUN_140039f50(pool->Lock);
-    CriSint32 count = 0;
-    for (void* chunk = pool->FreeChunk; chunk; chunk = *(void**)chunk)
-        ++count;
-    if (pool->Lock)
-        FUN_140039f8c(pool->Lock);
-    return count;
-}
+CriSint32 criSjUni_GetNumChainPool(void* streamJoint);
 
-// MS2-FUNCTIONAL: drain every active stream-joint queue and return its chunks to the free list.
-// @0x140045b7c
 #pragma function(memset)
-void criSjUni_Reset(void* streamJoint)
-{
-    struct ChainPool { CriUint8 Reserved00[0x10]; LPCRITICAL_SECTION Lock; CriUint8 Reserved18[8]; void* Lists[4]; CriUint8 Reserved40[8]; void* FreeChunk; };
-    ChainPool* pool = (ChainPool*)streamJoint;
-    if (pool->Lock)
-        FUN_140039f50(pool->Lock);
-    for (CriUint32 index = 0; index < 4; ++index)
-    {
-        void* chunk;
-        while ((chunk = pool->Lists[index]) != NULL)
-        {
-            pool->Lists[index] = *(void**)chunk;
-            memset(chunk, 0, 0x20);
-            *(void**)chunk = pool->FreeChunk;
-            pool->FreeChunk = chunk;
-        }
-        pool->Lists[index] = NULL;
-    }
-    if (pool->Lock)
-        FUN_140039f8c(pool->Lock);
-}
+void criSjUni_Reset(void* streamJoint);
 #pragma intrinsic(memset)
 #pragma optimize("", on)
 
@@ -3105,64 +2062,10 @@ void FUN_14003b720(CriMvSubAudioTrackState* state, CriSint32 count,
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: search the table's 32-bit record field in row order and return its first matching row.
-// @0x14003b168
-CriUint32 criUtfRtv_SearchRecNoByUint32(const CriUtfRtvView* table, CriUint32 field, CriUint32 value)
-{
-    // a CriUtfRtvCell without byte arrays, which the exe does not treat as a /GS buffer
-    struct Cell { CriUint64 Type; CriUint32 Value; CriUint32 Reserved0C; CriUint64 Reserved10; } cell;
-    CriUint32 size = table->RecordSize;
-    CriUint32 row = 0;
-    CriUint32 result = 0xffffffff;
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    CriUint32 offset = col->DataOffset;
-    if (col->IsRecordField && col->Type == 4)
-    {
-        for (; row < table->RecordCount; ++row)
-        {
-            criUtfRtv_GetCellValFromAddr(table, table->RecordData + size * row + offset, 4, (CriUtfRtvCell*)&cell);
-            if (value == cell.Value)
-            {
-                result = row;
-                break;
-            }
-        }
-    }
-    return result;
-}
+CriUint32 criUtfRtv_SearchRecNoByUint32(const CriUtfRtvView* table, CriUint32 field, CriUint32 value);
 
-// MS2-FUNCTIONAL: find the row whose string record field equals value. A sorted index slot on the field
-// is searched through FUN_14003aeb4; otherwise the rows are scanned in order and RecordCount means no match.
-// @0x14003b094
 #pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
-CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field, const CriChar8* value)
-{
-    // a CriUtfRtvCell without byte arrays, which the exe does not treat as a /GS buffer
-    struct Cell { CriUint64 Type; const CriChar8* Value; CriUint64 Reserved10; } cell;
-    CriUint32 size = table->RecordSize;
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    CriUint32 offset = col->DataOffset;
-    const CriUint8* records = table->RecordData;
-    CriUint32 row;
-    CriUint32 slot;
-    if (col->IsRecordField && col->Type == 10)
-    {
-        for (slot = 0; slot < 4; ++slot)
-            if (table->Slots[slot].Key == field)
-                break;
-        if (slot < 4)
-            return FUN_14003aeb4(table, slot, value);
-        for (row = 0; row < table->RecordCount; ++row)
-        {
-            criUtfRtv_GetCellValFromAddr(table, records + size * row + offset, col->Type, (CriUtfRtvCell*)&cell);
-            if (strcmp(value, cell.Value) == 0)
-                break;
-        }
-    }
-    else
-        row = 0xffffffff;
-    return row;
-}
+CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field, const CriChar8* value);
 #pragma intrinsic(strcmp)
 #pragma optimize("", on)
 
@@ -3209,45 +2112,15 @@ void mpvumc_IncreMbadr(CriMpvDecoderState* state)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: read the initialized flag stored in the CRI demux object.
-// @0x140044f8c
-CriSint32 FUN_140044f8c(void* object)
-{
-    if (object == NULL)
-    {
-        return 0;
-    }
-    return *((signed char*)object + 9);
-}
+CriSint32 FUN_140044f8c(void* object);
 
-// MS2-FUNCTIONAL: reset the demux object's secondary state and mark it initialized.
-// @0x140044f9c
-void FUN_140044f9c(void* object)
-{
-    *((CriUint8*)object + 10) = 0;
-    *((CriUint8*)object + 9) = 1;
-}
+void FUN_140044f9c(void* object);
 
-// MS2-FUNCTIONAL: store the demux object's opaque user-data pointer.
-// @0x140044fa8
-void FUN_140044fa8(void* object, void* value)
-{
-    *(void**)((CriUint8*)object + 0x10) = value;
-}
+void FUN_140044fa8(void* object, void* value);
 
-// MS2-FUNCTIONAL: clear the demux object's one-byte status flag.
-// @0x140044fd8
-void FUN_140044fd8(void* object, CriUint8 value)
-{
-    *((CriUint8*)object + 0xb) = value;
-}
+void FUN_140044fd8(void* object, CriUint8 value);
 
-// MS2-FUNCTIONAL: mark the demux object's reset flag.
-// @0x140044fdc
-void FUN_140044fdc(void* object)
-{
-    *((CriUint8*)object + 10) = 1;
-}
+void FUN_140044fdc(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -3363,183 +2236,42 @@ void FUN_140044680(CriUint64* pair)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: decrement CRI's shared demux counter.
-// @0x140044ea8
-void FUN_140044ea8(void)
-{
-    --DAT_143ba9d28;
-}
+void FUN_140044ea8(void);
 
-// MS2-FUNCTIONAL: lock the object's embedded CRI critical section when present.
-// @0x1400459bc
-void FUN_1400459bc(void* object)
-{
-    void* section = *(void**)((CriUint8*)object + 0x10);
-    if (section)
-        FUN_140039f50((LPCRITICAL_SECTION)section);
-}
+void FUN_1400459bc(void* object);
 
-// MS2-FUNCTIONAL: unlock the object's embedded CRI critical section when present.
-// @0x1400459d4
-void FUN_1400459d4(void* object)
-{
-    void* section = *(void**)((CriUint8*)object + 0x10);
-    if (section)
-        FUN_140039f8c((LPCRITICAL_SECTION)section);
-}
+void FUN_1400459d4(void* object);
 
-// MS2-FUNCTIONAL: call the stream-joint object's first virtual operation.
-// @0x140046798
-void FUN_140046798(void* object)
-{
-    (*(void (**)(void*))((CriUint8*)*(void**)object + 8))(object);
-}
+void FUN_140046798(void* object);
 
-// MS2-FUNCTIONAL: call the stream-joint object's deleting destructor slot.
-// @0x140046784
-void FUN_140046784(void* object)
-{
-    DAT_143ba9d30 = "\nCRI Stream Joint/PCx64 Ver.1.01.00 Build:Jan 13 2012 19:02:02\n";
-    (**(void (***)(void*))object)(object);
-}
+void FUN_140046784(void* object);
 
-// MS2-FUNCTIONAL: split a stream-joint chunk into a bounded prefix and its remaining suffix.
-// @0x1400467c0
-void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
-{
-    struct SjChunk
-    {
-        CriUint8* Data;
-        CriUint32 Size;
-        CriUint32 Reserved;
-    };
-    SjChunk* head = (SjChunk*)prefix;
-    SjChunk* tail = (SjChunk*)suffix;
-    // The exe copies the whole 16-byte chunk into prefix (+0xc included) and never writes suffix+0xc.
-    *head = *(const SjChunk*)source;
-    tail->Size = head->Size;
-    if (head->Size > maximum)
-        head->Size = maximum;
-    tail->Size -= head->Size;
-    if (tail->Size == 0)
-    {
-        tail->Data = NULL;
-        return;
-    }
-    tail->Data = head->Data + head->Size;
-}
+void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 
-// MS2-FUNCTIONAL: place a bounded prefix on the input queue and return the suffix to output.
-// @0x140046814
-void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size)
-{
-    struct SjChunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
-    typedef void (*PutChunk)(void*, CriSint32, void*);
-    struct SjInterface { void* Reserved[3]; PutChunk UngetChunk; PutChunk PutChunk; };
-    const SjChunk* source = (const SjChunk*)chunk;
-    SjChunk prefix = *source, suffix;
-    if (size > source->Size)
-        size = source->Size;
-    criSj_SplitChunk(&prefix, size, &prefix, &suffix);
-    (*(SjInterface**)streamJoint)->PutChunk(streamJoint, 1, &prefix);
-    (*(SjInterface**)streamJoint)->UngetChunk(streamJoint, 0, &suffix);
-}
+void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 
-// MS2-FUNCTIONAL: place a bounded prefix on the output queue and return the suffix to input.
-// @0x140046894
-void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size)
-{
-    struct SjChunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
-    typedef void (*PutChunk)(void*, CriSint32, void*);
-    struct SjInterface { void* Reserved[3]; PutChunk UngetChunk; PutChunk PutChunk; };
-    const SjChunk* source = (const SjChunk*)chunk;
-    SjChunk prefix = *source, suffix;
-    if (size > source->Size)
-        size = source->Size;
-    criSj_SplitChunk(&prefix, size, &prefix, &suffix);
-    (*(SjInterface**)streamJoint)->PutChunk(streamJoint, 0, &prefix);
-    (*(SjInterface**)streamJoint)->UngetChunk(streamJoint, 1, &suffix);
-}
+void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 
-// MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
-// @0x1400467a0
-void FUN_1400467a0(void* object, CriSint32 operation = 0, CriUint32 limit = 0, void* output = NULL)
-{
-    typedef void (*Callback)(void*, CriSint32, CriUint32, void*);
-    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x10))(object, operation, limit, output);
-}
+void FUN_1400467a0(void* object, CriSint32 operation = 0, CriUint32 limit = 0, void* output = NULL);
 
-// MS2-FUNCTIONAL: call the stream-joint object's third virtual operation.
-// @0x1400467a8
-void FUN_1400467a8(void* object, CriSint32 operation = 0, void* chunk = NULL)
-{
-    typedef void (*Callback)(void*, CriSint32, void*);
-    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x18))(object, operation, chunk);
-}
+void FUN_1400467a8(void* object, CriSint32 operation = 0, void* chunk = NULL);
 
-// MS2-FUNCTIONAL: call the stream-joint object's fourth virtual operation.
-// @0x1400467b0
-void FUN_1400467b0(void* object, CriSint32 operation = 0, void* chunk = NULL)
-{
-    typedef void (*Callback)(void*, CriSint32, void*);
-    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x20))(object, operation, chunk);
-}
+void FUN_1400467b0(void* object, CriSint32 operation = 0, void* chunk = NULL);
 
-// MS2-FUNCTIONAL: call the stream-joint object's fifth virtual operation.
-// @0x1400467b8
-CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
-{
-    typedef CriSint32 (*Callback)(void*, CriSint32);
-    return ((Callback)*(void**)((CriUint8*)*(void**)object + 0x28))(object, query);
-}
+CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0);
 
-// MS2-FUNCTIONAL: call the stream-joint object's indexed range operation with default bounds.
-// @0x140046804
-void FUN_140046804(void* object, void* value)
-{
-    ((void (*)(void*, CriSint32, CriSint32, void*))*(void**)((CriUint8*)*(void**)object + 0x10))(object, 0, -1, value);
-}
+void FUN_140046804(void* object, void* value);
 
-// MS2-FUNCTIONAL: copy a null-terminated string with the executable's bounded secure CRT helper.
-// @0x140046944
-char* FUN_140046944(char* dst, size_t size, const char* src)
-{
-    strcpy_s(dst, size, src);
-    return dst;
-}
+char* FUN_140046944(char* dst, size_t size, const char* src);
 
-// MS2-FUNCTIONAL: copy a bounded string with the executable's secure CRT helper.
-// @0x14004695c
-char* FUN_14004695c(char* dst, size_t size, const char* src, size_t count)
-{
-    strncpy_s(dst, size, src, count);
-    return dst;
-}
+char* FUN_14004695c(char* dst, size_t size, const char* src, size_t count);
 
-// MS2-FUNCTIONAL: append a bounded string with the executable's secure CRT helper.
-// @0x140046974
-char* FUN_140046974(char* dst, size_t size, const char* src, size_t count)
-{
-    strncat_s(dst, size, src, count);
-    return dst;
-}
+char* FUN_140046974(char* dst, size_t size, const char* src, size_t count);
 
-// MS2-FUNCTIONAL: append a null-terminated string with the executable's secure CRT helper.
-// @0x14004698c
-char* FUN_14004698c(char* dst, size_t size, const char* src)
-{
-    strcat_s(dst, size, src);
-    return dst;
-}
+char* FUN_14004698c(char* dst, size_t size, const char* src);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: copy the requested number of bytes with the executable's secure CRT helper.
-// @0x1400469f0
-void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count)
-{
-    memcpy_s(dst, size, src, count);
-    return dst;
-}
+void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: execute the CRI Movie Player manager initialization hook.
@@ -3689,14 +2421,7 @@ void FUN_140041dd0(void* heap)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: initialize the USF demux runtime banner on first use and increment its reference count.
-// @0x140044e84
-void FUN_140044e84(void)
-{
-    if (DAT_143ba9d28 == 0)
-        DAT_143ba9d20 = "\nCRI UsfDmx/PCx64 Ver.1.01.03 Build:Jan 13 2012 19:02:04\n";
-    ++DAT_143ba9d28;
-}
+void FUN_140044e84(void);
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: initialize the CRI timer context and its default interval/counter fields.
@@ -3745,28 +2470,7 @@ void* FUN_140041c60(void* manager, CriUint32 flags)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: sum the queued byte counts in one CRI reader ring-buffer lane.
-// @0x140045c08
-CriSint32 FUN_140045c08(void* object, CriSint32 lane)
-{
-    struct ReaderRing
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Section;
-        CriUint8 Reserved18[8];
-        void* Queues[2];
-    };
-    struct QueueEntry { QueueEntry* Next; CriUint8 Reserved08[0x10]; CriSint32 Size; };
-    ReaderRing* ring = (ReaderRing*)object;
-    if (ring->Section)
-        FUN_140039f50(ring->Section);
-    CriSint32 total = 0;
-    for (QueueEntry* entry = (QueueEntry*)ring->Queues[lane]; entry; entry = entry->Next)
-        total += entry->Size;
-    if (ring->Section)
-        FUN_140039f8c(ring->Section);
-    return total;
-}
+CriSint32 FUN_140045c08(void* object, CriSint32 lane);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -3987,48 +2691,8 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
-// @0x1400453c4
 #pragma function(memset)
-void FUN_1400453c4(void* object)
-{
-    struct QueueEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
-    struct OutputState
-    {
-        CriUint8 Reserved00[8];
-        CriUint8 Reading;
-        CriUint8 Writing;
-        CriUint8 Active;
-        CriUint8 Reserved0b[1];
-        CriUint32 Count;
-        CriUint8 Reserved10[8];
-        QueueEntry* Entries;
-        void* InputQueue;
-        void* OutputQueue;
-    };
-    struct Chunk { void* Data; CriUint64 Size; }; // scalar members: no /GS buffer
-    OutputState* state = (OutputState*)object;
-    Chunk chunk;
-    CriUint32 last;
-    state->Writing = 0;
-    state->Reading = 0;
-    // drain the filled lane (1) back to the free lane (0), returning each chunk
-    while (FUN_1400467b8(state->InputQueue, 1) != 0)
-    {
-        FUN_1400467a0(state->InputQueue, 1, -1, &chunk);
-        FUN_1400467b0(state->InputQueue, 0, &chunk);
-    }
-    memset(state->Entries, 0, (state->Count + 1) * sizeof(QueueEntry));
-    state->Active = 0;
-    FUN_140046798(state->InputQueue);
-    FUN_140046798(state->OutputQueue);
-    last = state->Count;
-    state->Entries[last].Queue = state->OutputQueue;
-    state->Entries[last].Reserved = 0;
-    state->Entries[last].State = -1;
-    state->Writing = 0;
-    state->Reading = 1;
-}
+void FUN_1400453c4(void* object);
 #pragma intrinsic(memset)
 #pragma optimize("", on)
 
@@ -4055,132 +2719,25 @@ CriBool FUN_140040f80(const void* packet, CriSint32 size)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: compute ring-buffer memory requirements for the CRI movie stream joint.
-// @0x140046604
 CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
-                        const CriUint32* settings)
-{
-    struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
-    CriSint32 overhead = FUN_140027dd0(8);
-    Setup setup = { settings[0], first, second, third, 0 };
-    return FUN_140045ed0((const CriSint32*)&setup) + overhead * 2;
-}
+                        const CriUint32* settings);
 
-// MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
-// @0x140046678
-void* FUN_140046678(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
-{
-    const CriUint32 settings[2] = { 0, 1 };
-    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
-}
+void* FUN_140046678(void* heap, CriUint32 first, CriUint32 second, CriUint32 third);
 
-// MS2-FUNCTIONAL: create a configured ring-buffer stream joint with caller-supplied pool storage.
-// @0x1400466ac
 void* FUN_1400466ac(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
-                   CriUint64 poolBytes)
-{
-    const CriUint32 settings[2] = { 0, 1 };
-    return FUN_1400465c4(heap, first, second, third, poolBytes, settings);
-}
+                   CriUint64 poolBytes);
 
-// MS2-FUNCTIONAL: calculate stream-joint requirements using the default setup flags.
-// @0x1400466dc
-CriSint32 FUN_1400466dc(CriUint32 first, CriUint32 second, CriUint32 third)
-{
-    const CriUint32 settings[2] = { 0, 1 };
-    return FUN_140046604(first, second, third, settings);
-}
+CriSint32 FUN_1400466dc(CriUint32 first, CriUint32 second, CriUint32 third);
 
-// MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint using the static pool descriptor.
-// @0x1400466fc
-void* FUN_1400466fc(void* heap, CriUint32 first, CriUint32 second, CriUint32 third)
-{
-    const CriUint32 settings[2] = { 1, 1 };
-    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
-}
+void* FUN_1400466fc(void* heap, CriUint32 first, CriUint32 second, CriUint32 third);
 
-// MS2-FUNCTIONAL: create a non-zero initialized ring-buffer stream joint with caller pool storage.
-// @0x140046730
 void* FUN_140046730(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
-                   CriUint64 poolBytes)
-{
-    const CriUint32 settings[2] = { 1, 1 };
-    return FUN_1400465c4(heap, first, second, third, poolBytes, settings);
-}
+                   CriUint64 poolBytes);
 
-// MS2-FUNCTIONAL: create a stream joint using caller setup flags and the static pool descriptor.
-// @0x140046760
 void* FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 third,
-                   const CriUint32* settings)
-{
-    return FUN_1400465c4(heap, first, second, third, (CriUint64)&DAT_1431b9ca0, settings);
-}
+                   const CriUint32* settings);
 
-// MS2-FUNCTIONAL: append a decoder read span to its wrapped input buffer and update read counters.
-// @0x140046170
-void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span)
-{
-    CriUint32 length = (CriUint32)span[1];
-    uintptr_t source = (uintptr_t)span[0];
-    if (length == 0 || source == 0)
-        return;
-    CriUint8* bytes = (CriUint8*)ring;
-    void* lock;
-    void* buffer;
-    CriUint32 writeOffset, capacity;
-    memcpy(&lock, bytes + 0x10, sizeof(lock));
-    memcpy(&buffer, bytes + 0x30, sizeof(buffer));
-    memcpy(&writeOffset, bytes + 0x38, sizeof(writeOffset));
-    memcpy(&capacity, bytes + 0x3c, sizeof(capacity));
-    CriUint32 sourceOffset = (CriUint32)source - (CriUint32)(uintptr_t)buffer;
-    if (mode == 1)
-    {
-        if (sourceOffset < capacity)
-        {
-            CriUint32 first = capacity - sourceOffset;
-            if (length < first)
-                first = length;
-            memcpy((CriUint8*)buffer + writeOffset + sourceOffset, (const void*)source, first);
-        }
-        CriUint32 end = sourceOffset + length;
-        if (writeOffset < end)
-        {
-            CriUint32 wrapped = end - writeOffset;
-            if (length < wrapped)
-                wrapped = length;
-            memcpy(buffer, (CriUint8*)buffer + end - wrapped, wrapped);
-        }
-        if (lock)
-            FUN_140039f50((LPCRITICAL_SECTION)lock);
-        CriUint32 value;
-        memcpy(&value, bytes + 0x20, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x20, &value, sizeof(value));
-        memcpy(&value, bytes + 0x4c, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x4c, &value, sizeof(value));
-    }
-    else
-    {
-        if (mode != 0)
-        {
-            span[1] = 0;
-            span[0] = 0;
-            return;
-        }
-        if (lock)
-            FUN_140039f50((LPCRITICAL_SECTION)lock);
-        CriUint32 value;
-        memcpy(&value, bytes + 0x24, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x24, &value, sizeof(value));
-        memcpy(&value, bytes + 0x44, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x44, &value, sizeof(value));
-    }
-    if (lock)
-        FUN_140039f8c((LPCRITICAL_SECTION)lock);
-}
+void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span);
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: create the named CRI video heap and attach its allocator to the returned adapter.
@@ -4299,31 +2856,7 @@ void FUN_1400436d0(void* state)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: release the decoder, both stream joints, and the heap-owned reader state.
-// @0x140044f28
-void FUN_140044f28(void* object)
-{
-    struct DecoderOwner
-    {
-        void* Heap;
-        void* Reserved08[2];
-        void* DecoderBuffer;
-        void* InputJoint;
-        void* OutputJoint;
-    };
-    DecoderOwner* owner = (DecoderOwner*)object;
-    if (!owner)
-        return;
-    void* heap = owner->Heap;
-    if (heap && owner->DecoderBuffer)
-        FUN_140027fb4(heap, owner->DecoderBuffer);
-    if (owner->InputJoint)
-        FUN_140046784(owner->InputJoint);
-    if (owner->OutputJoint)
-        FUN_140046784(owner->OutputJoint);
-    if (heap)
-        FUN_140027fb4(heap, owner);
-}
+void FUN_140044f28(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -4438,110 +2971,11 @@ static __forceinline CriSjChunkNode* criSjRbf_PopFreeNode(CriSjRingQueue* queue)
     return node;
 }
 
-// MS2-FUNCTIONAL: dequeue a chunk large enough for the request or split its head in single-buffer mode.
-// @0x140045c60
-void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output)
-{
-    CriSjRingQueue* queue = (CriSjRingQueue*)object;
-    CriSjChunk* result = (CriSjChunk*)output;
-    if (queue->Lock)
-        FUN_140039f50(queue->Lock);
-    CriSjChunkNode* node = queue->Heads[lane];
-    if (node)
-    {
-        CriSjChunk chunk = node->Chunk;
-        if (chunk.Size <= requested)
-        {
-            *result = chunk;
-            queue->Heads[lane] = node->Next;
-            memset(node, 0, sizeof(*node));
-            node->Next = queue->FreeList;
-            queue->FreeList = node;
-        }
-        else if (queue->Mode == 1)
-        {
-            CriSjChunk suffix;
-            criSj_SplitChunk(&chunk, requested, &chunk, &suffix);
-            *result = chunk;
-            node->Chunk = suffix;
-        }
-        else
-        {
-            result->Data = NULL;
-            result->Size = 0;
-        }
-    }
-    else
-    {
-        result->Data = NULL;
-        result->Size = 0;
-    }
-    if (queue->Lock)
-        FUN_140039f8c(queue->Lock);
-}
+void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output);
 
-// MS2-FUNCTIONAL: append a contiguous input chunk to the lane tail or consume a recycled node.
-// @0x140045d34
-void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input)
-{
-    CriSjRingQueue* queue = (CriSjRingQueue*)object;
-    const CriSjChunk* chunk = (const CriSjChunk*)input;
-    if (chunk->Size > 0 && chunk->Data)
-    {
-        if (queue->Lock)
-            FUN_140039f50(queue->Lock);
-        CriSjChunkNode** tail = &queue->Heads[lane];
-        CriSjChunkNode* last = NULL;
-        for (CriSjChunkNode* walk = *tail; walk; walk = walk->Next)
-        {
-            last = walk;
-            tail = &walk->Next;
-        }
-        CriSjChunkNode* node = NULL;
-        if (queue->Mode == 1 && last && (CriUint8*)last->Chunk.Data + last->Chunk.Size == chunk->Data)
-            last->Chunk.Size += chunk->Size;
-        else
-            node = criSjRbf_PopFreeNode(queue);
-        if (node)
-        {
-            node->Chunk = *chunk;
-            *tail = node;
-        }
-        if (queue->Lock)
-            FUN_140039f8c(queue->Lock);
-    }
-}
+void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input);
 
-// MS2-FUNCTIONAL: prepend a contiguous input chunk or a recycled node to the selected ring lane.
-// @0x140045e04
-void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
-{
-    CriSjRingQueue* queue = (CriSjRingQueue*)object;
-    const CriSjChunk* chunk = (const CriSjChunk*)input;
-    if (chunk->Size > 0 && chunk->Data)
-    {
-        if (queue->Lock)
-            FUN_140039f50(queue->Lock);
-        CriSjChunkNode* head = queue->Heads[lane];
-        if (queue->Mode == 1 && head && (CriUint8*)chunk->Data + chunk->Size == head->Chunk.Data)
-        {
-            head->Chunk.Data = chunk->Data;
-            head->Chunk.Size += chunk->Size;
-        }
-        else
-        {
-            CriSjChunkNode* node = criSjRbf_PopFreeNode(queue);
-            if (node)
-            {
-                node->Chunk = *chunk;
-                node->Next = queue->Heads[lane];
-                queue->Heads[lane] = node;
-            }
-        }
-        if (queue->Lock)
-            FUN_140039f8c(queue->Lock);
-    }
-}
+void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input);
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: initialize shared MPV library work buffers once and maintain their reference count.
@@ -4753,57 +3187,7 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: allocate a USF demux state, output table, and its paired stream joints.
-// @0x1400452b4
-void* FUN_1400452b4(void* heap, CriSint32 outputCount)
-{
-    struct OutputEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
-    struct UsfState
-    {
-        void* Heap;
-        CriUint8 Running;
-        CriUint8 Initialized;
-        CriUint8 Closed;
-        CriUint8 Reserved0b;
-        CriSint32 OutputCount;
-        void* Reserved10;
-        OutputEntry* Outputs;
-        void* InputQueue;
-        void* OutputQueue;
-        CriUint8 Reserved30[0x10];
-    };
-    UsfState* state = (UsfState*)FUN_140027ed8(heap, 0x40, "CriUsfDmx", 0);
-    if (!state)
-        return NULL;
-    memset(state, 0, sizeof(*state));
-    state->Heap = heap;
-    state->OutputCount = outputCount;
-    state->Outputs = (OutputEntry*)FUN_140027ed8(heap, (outputCount + 1) * 0x10,
-                                                 "CriUsfDmxOut", 0);
-    if (!state->Outputs)
-    {
-        FUN_140044f28(state);
-        return NULL;
-    }
-    memset(state->Outputs, 0, ((size_t)outputCount + 1) * sizeof(OutputEntry));
-    state->InputQueue = FUN_1400464c8(heap, 0, 0x80);
-    if (!state->InputQueue)
-    {
-        FUN_140044f28(state);
-        return NULL;
-    }
-    state->OutputQueue = FUN_1400464c8(heap, 0, 0x80);
-    if (!state->OutputQueue)
-    {
-        FUN_140044f28(state);
-        return NULL;
-    }
-    state->Outputs[outputCount].Queue = state->OutputQueue;
-    state->Outputs[outputCount].State = -1;
-    state->Running = 1;
-    memset(state->Reserved30, 0, sizeof(state->Reserved30));
-    return state;
-}
+void* FUN_1400452b4(void* heap, CriSint32 outputCount);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -4847,81 +3231,10 @@ CriBool FUN_140042cf0(void* trackSet, void* operation)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: read the three queue counters for the selected CRI stream joint lane.
-// @0x1400450c0
 void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* second,
-                   CriUint32* third)
-{
-    struct QueueEntry { void* Queue; void* Reserved; };
-    struct StreamQueues { CriUint8 Reserved00[0x18]; QueueEntry* Entries; };
-    QueueEntry* entries = ((StreamQueues*)stream)->Entries;
-    if (!entries[lane].Queue)
-        return;
-    *first = (CriUint32)FUN_1400467b8(entries[lane].Queue, 1);
-    *second = (CriUint32)FUN_1400467b8(entries[lane].Queue, 0);
-    *third = (CriUint32)FUN_1400467b8(entries[lane].Queue, 2);
-}
+                   CriUint32* third);
 
-// MS2-FUNCTIONAL: advance the read or write cursor of a CRI ring-buffer stream joint after a consumed chunk.
-// @0x14004624c
-void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
-{
-    struct Chunk { CriUint8* Data; CriSint32 Size; };
-    struct Joint
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;
-        CriUint8 Reserved18[8];
-        CriSint32 Counter20;
-        CriSint32 Counter24;
-        CriUint32 WriteCursor;
-        CriUint32 ReadCursor;
-        CriUint8* Base;
-        CriUint32 Capacity;
-        CriSint32 Reserved3c;
-        CriSint32 Avail40;
-        CriSint32 Reserved44;
-        CriSint32 Avail48;
-    };
-    Joint* state = (Joint*)joint;
-    Chunk* chunk = (Chunk*)chunkPtr;
-    if (chunk->Size == 0 || !chunk->Data)
-        return;
-    if (lane == 0)
-    {
-        if (state->Lock)
-            FUN_140039f50(state->Lock);
-        CriUint32 capacity = state->Capacity;
-        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->WriteCursor) % capacity;
-        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
-        {
-            state->WriteCursor = cursor;
-            state->Counter24 += chunk->Size;
-            state->Avail40 -= chunk->Size;
-        }
-    }
-    else
-    {
-        if (lane != 1)
-        {
-            chunk->Size = 0;
-            chunk->Data = NULL;
-            return;
-        }
-        if (state->Lock)
-            FUN_140039f50(state->Lock);
-        CriUint32 capacity = state->Capacity;
-        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->ReadCursor) % capacity;
-        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
-        {
-            state->ReadCursor = cursor;
-            state->Counter20 += chunk->Size;
-            state->Avail48 -= chunk->Size;
-        }
-    }
-    if (state->Lock)
-        FUN_140039f8c(state->Lock);
-}
+void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -4985,41 +3298,7 @@ void* FUN_140044470(void* implementation, void* heap, void* parameter)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: skip leading zero bytes of the first stream queue chunk and split it between two joints.
-// @0x140044fe4
-void FUN_140044fe4(void* stream)
-{
-    struct Chunk { CriUint8* Data; CriSint32 Size; };
-    struct Stream { CriUint8 Reserved00[0x10]; void* Source; CriUint8 Reserved18[8]; void* First; void* Second; };
-    Stream* state = (Stream*)stream;
-    void* source = state->Source;
-    void* first = state->First;
-    void* second = state->Second;
-    Chunk chunk;
-    CriUint8 split[16];
-    FUN_1400467a0(source, 1, 0x7fffffff, &chunk);
-    CriSint32 index = 1;
-    if (1 < chunk.Size)
-    {
-        CriUint8* scan = chunk.Data;
-        do
-        {
-            ++scan;
-            if (*scan != 0)
-            {
-                criSj_SplitChunk(&chunk, index, &chunk, split);
-                FUN_1400467a8(source, 1, split);
-                FUN_1400467b0(first, 1, &chunk);
-                second = state->Second;
-                FUN_1400467b0(second, 1, &chunk);
-                return;
-            }
-            ++index;
-        } while (index < chunk.Size);
-    }
-    FUN_1400467b0(first, 1, &chunk);
-    FUN_1400467b0(second, 1, &chunk);
-}
+void FUN_140044fe4(void* stream);
 #pragma optimize("", on)
 
 extern "C" const void* PTR_FUN_143a485d8;
@@ -5030,82 +3309,9 @@ void FUN_14002e6bc(CriMvWorkAllocator*);
 void FUN_140038ddc(CriSint32, const CriChar8*);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: lay out a CRI ring-buffer stream joint inside the supplied work area.
-// @0x140045eec
-void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
-{
-    const CriSint32* settings = (const CriSint32*)config;
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
-    memset(object, 0, 0x50);
-    object[0] = (void*)&PTR_FUN_143a48608;
-    object[1] = (void*)"CriSjRbf";
-    if (settings[0] == 1)
-    {
-        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
-        object[2] = criCs_Create(csWork, 0x48);
-        if (!object[2])
-        {
-            FUN_140038ddc(0, "E09021620B:Failed in criCs_Create().");
-            return NULL;
-        }
-    }
-    else
-    {
-        object[2] = NULL;
-    }
-    object[3] = *(void* const*)(settings + 4);
-    object[6] = FUN_14002e6c0(&allocator, (CriUint32)(settings[1] + settings[2]), (CriUint32)settings[3]);
-    *(CriSint32*)(object + 7) = settings[1];
-    *(CriSint32*)((CriUint8*)object + 0x3c) = settings[2];
-    FUN_140046798(object);
-    FUN_14002e6bc(&allocator);
-    return object;
-}
+void* FUN_140045eec(const void* config, void* work, CriSint32 workSize);
 
-// MS2-FUNCTIONAL: lay out a CRI universal stream joint and its free list of 0x20-byte chunk records.
-// @0x1400459ec
-void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
-{
-    const CriUint32* settings = (const CriUint32*)config;
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
-    memset(object, 0, 0x50);
-    object[0] = (void*)&PTR_FUN_143a485d8;
-    object[1] = (void*)"CriSjUni";
-    if (settings[0] == 1)
-    {
-        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
-        object[2] = criCs_Create(csWork, 0x48);
-        if (!object[2])
-        {
-            FUN_140038ddc(0, "E09021213:Failed in criCs_Create().");
-            return NULL;
-        }
-    }
-    else
-    {
-        object[2] = NULL;
-    }
-    *(CriUint32*)(object + 3) = settings[1];
-    object[4] = NULL;
-    object[5] = NULL;
-    object[6] = NULL;
-    object[7] = NULL;
-    object[8] = FUN_14002e6c0(&allocator, settings[2] << 5, 8);
-    object[9] = NULL;
-    for (CriUint32 index = 0; index < settings[2]; ++index)
-    {
-        void** record = (void**)((CriUint8*)object[8] + (CriUint64)index * 0x20);
-        memset(record, 0, 0x20);
-        record[0] = object[9];
-        object[9] = record;
-    }
-    FUN_14002e6bc(&allocator);
-    return object;
-}
+void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize);
 #pragma optimize("", on)
 
 
@@ -6127,65 +4333,7 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: build a stream demuxer object holding two universal stream joints and a per-track table.
-// @0x140045144
-void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
-{
-    struct Track { void* Joint; CriUint32 Reserved08; CriUint32 Limit; };
-    struct Demux
-    {
-        void* Reserved00;
-        CriUint8 Ready;
-        CriUint8 Reserved09;
-        CriUint8 Reserved0a;
-        CriUint8 Reserved0b;
-        CriSint32 Count;
-        void* Reserved10;
-        Track* Tracks;
-        void* Input;
-        void* Output;
-        CriUint64 Tail[2];
-    };
-    static_assert(sizeof(Demux) == 0x40, "layout");
-    memset(work, 0, (size_t)workSize);
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    Demux* demux = (Demux*)FUN_14002e6c0(&allocator, 0x40, 8);
-    if (demux != NULL)
-    {
-        demux->Reserved00 = NULL;
-        demux->Reserved10 = NULL;
-        demux->Reserved09 = 0;
-        demux->Count = count;
-        demux->Reserved0a = 0;
-        demux->Tracks = (Track*)FUN_14002e6c0(&allocator, (CriUint32)(count + 1) * 0x10, 8);
-        if (demux->Tracks != NULL)
-        {
-            CriUint32 config[3] = { 1, 0, 0x80 };
-            CriUint32 size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-            demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
-            if (demux->Input != NULL)
-            {
-                config[2] = 0x80;
-                size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-                demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
-                if (demux->Output != NULL)
-                {
-                    Track* last = &demux->Tracks[(CriUint32)demux->Count];
-                    last->Joint = demux->Output;
-                    last->Reserved08 = 0;
-                    last->Limit = 0xffffffffu;
-                    demux->Ready = 1;
-                    memset(demux->Tail, 0, sizeof(demux->Tail));
-                    FUN_14002e6bc(&allocator);
-                    return demux;
-                }
-            }
-        }
-        FUN_140044f28(demux);
-    }
-    return NULL;
-}
+void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize);
 #pragma optimize("", on)
 
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
@@ -6279,169 +4427,7 @@ void FUN_1400428e0(void* trackSet, void* player)
 CriSint32 criSjUni_GetNumChainPool(void* streamJoint);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: match demuxed USF chunks against the per-track filters and hand them to the matching track queues.
-// @0x140045474
-void FUN_140045474(void* object)
-{
-    struct Chunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
-    struct TrackEntry { void* Queue; CriUint32 Type; CriUint32 Id; };
-    struct Demux
-    {
-        CriUint8 Reserved00[9];
-        CriUint8 State;
-        CriUint8 Flush;
-        CriUint8 Primed;
-        CriSint32 Count;
-        void* Input;
-        TrackEntry* Tracks;
-        void* Output;
-    };
-    static_assert(offsetof(Demux, Output) == 0x20 && sizeof(TrackEntry) == 0x10, "layout");
-    Demux* demux = (Demux*)object;
-    void* input = demux->Input;
-    void* output = demux->Output;
-    TrackEntry* tracks = demux->Tracks;
-    CriSint32 count = demux->Count;
-    Chunk first;
-    Chunk second;
-    Chunk split;
-    Chunk rest;
-    Chunk tail;
-    CriUsfStandardHeader header;
-    CriSint32 index;
-    CriSint32 matched;
-    CriSint32 available;
-    CriUint32 headerSize;
-    CriUint32 needed;
-    CriUint32 type;
-    Chunk* source;
-    CriUint32 length;
-    if (demux->Primed == 1)
-    {
-        void* queue = tracks[count].Queue;
-        FUN_1400467a0(queue, 1, 0xffffffff, &first);
-        while (first.Size != 0)
-        {
-            FUN_1400467b0(queue, 0, &first);
-            FUN_1400467a0(queue, 1, 0xffffffff, &first);
-        }
-        count += 1;
-        first.Size = 0;
-    }
-    do
-    {
-        FUN_1400467a0(output, 1, 0xffffffff, &first);
-        if (first.Size == 0)
-        {
-            if (demux->State == 2)
-            {
-                demux->State = 3;
-                return;
-            }
-            goto drainInput;
-        }
-        matched = 0;
-        for (index = 0; index < count; ++index)
-        {
-            if (tracks[index].Queue != NULL)
-            {
-                FUN_1400467a0(tracks[index].Queue, 0, 0xffffffff, &second);
-                if (first.Data == second.Data)
-                {
-                    length = second.Size < first.Size ? second.Size : first.Size;
-                    criSj_SplitChunk(&first, length, &first, &split);
-                    criSj_SplitChunk(&second, length, &second, &rest);
-                    FUN_1400467b0(input, 0, &first);
-                    FUN_1400467a8(output, 1, &split);
-                    FUN_1400467a8(tracks[index].Queue, 0, &rest);
-                    break;
-                }
-                FUN_1400467a8(tracks[index].Queue, 0, &second);
-            }
-            ++matched;
-        }
-    } while (matched != count);
-    FUN_1400467a8(output, 1, &first);
-drainInput:
-    {
-        available = FUN_1400467b8(input, 1);
-        FUN_1400467a0(input, 1, 0x7fffffff, &first);
-        while (first.Size != 0)
-        {
-            available -= (CriSint32)first.Size;
-            if (*first.Data == 0)
-            {
-                FUN_1400467a8(input, 1, &first);
-                FUN_140044fe4(object);
-            }
-            else
-            {
-                tail.Data = NULL;
-                tail.Size = 0;
-                if (criUsfCmn_ParseUsfHeaderStd(first.Data, first.Size, &header) == 0)
-                    goto releaseFirst;
-                memcpy(&headerSize, header.Data + 4, sizeof(headerSize));
-                needed = headerSize + 8;
-                if (first.Size < needed)
-                {
-                    if (available < 1)
-                        goto releaseFirst;
-                    FUN_1400467a0(input, 1, 0x7fffffff, &tail);
-                    if (tail.Size + first.Size < needed)
-                    {
-                        FUN_1400467a8(input, 1, &tail);
-                        goto releaseFirst;
-                    }
-                    source = &tail;
-                    length = (headerSize - first.Size) + 8;
-                }
-                else
-                {
-                    source = &first;
-                    length = needed;
-                }
-                criSj_SplitChunk(source, length, source, &second);
-                FUN_1400467a8(input, 1, &second);
-                memcpy(&type, header.Data, sizeof(type));
-                for (index = 0; index < count; ++index)
-                {
-                    TrackEntry* track = &tracks[index];
-                    if (track->Queue != NULL && (track->Type == 0 || track->Type == type) &&
-                        (track->Id == 0xffffffffu || track->Id == (CriUint32)header.Data[12]))
-                    {
-                        if (criSjUni_GetNumChainPool(output) < 3 || criSjUni_GetNumChainPool(track->Queue) < 3)
-                            goto releaseTail;
-                        FUN_1400467b0(track->Queue, 1, &first);
-                        FUN_1400467b0(output, 1, &first);
-                        first.Data = NULL;
-                        first.Size = 0;
-                        if (tail.Data != NULL)
-                        {
-                            FUN_1400467b0(track->Queue, 1, &tail);
-                            FUN_1400467b0(output, 1, &tail);
-                            tail.Data = NULL;
-                            tail.Size = 0;
-                        }
-                        break;
-                    }
-                }
-                if (index == count)
-                {
-releaseTail:
-                    if (tail.Data != NULL)
-                        FUN_1400467a8(input, 1, &tail);
-releaseFirst:
-                    FUN_1400467a8(input, 1, &first);
-                    return;
-                }
-            }
-            available = FUN_1400467b8(input, 1);
-            FUN_1400467a0(input, 1, 0x7fffffff, &first);
-        }
-    }
-    if (demux->Flush == 1)
-        demux->State = 2;
-}
+void FUN_140045474(void* object);
 #pragma optimize("", on)
 
 // ---- MPEG video (PSFD section) macroblock reconstruction helpers ----
@@ -7686,22 +5672,10 @@ void* FUN_140041d00(cri03_host08* self, CriSint32 a, void*, CriSint32 d)
 
 struct cri03_kinds { void* vtbl; void* _08[3]; CriSint32 k1; CriSint32 k0; };
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: field +0x20 for kind 1, +0x24 for kind 0, else 0.
-// @0x140046000
-CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind)
-{
-    if (kind == 1)
-        return self->k1;
-    if (kind == 0)
-        return self->k0;
-    return 0;
-}
+CriSint32 FUN_140046000(cri03_kinds* self, CriSint32 kind);
 #pragma optimize("", on)
 
-// Boot tags 96/98: these address-named entry points create critical sections.
-// Strong definitions prevent stale CuePoint::Resize alias rows from selecting
-// an unrelated array implementation. All forms call the recovered body above.
-void* FUN_140039ea8(void* work, CriSint32 size) { return criCs_Create(work, size); }
-extern "C" void* FUN_140039ea8(void* work, int size) { return criCs_Create(work, size); }
-void* FUN_1400385c8(void* work, CriUint32 size) { return criCs_Create(work, static_cast<CriSint32>(size)); }
-extern "C" void* FUN_1400385c8(void* work, unsigned long long size) { return criCs_Create(work, static_cast<CriSint32>(size)); }
+void* FUN_140039ea8(void* work, CriSint32 size);
+extern "C" void* FUN_140039ea8(void* work, int size);
+void* FUN_1400385c8(void* work, CriUint32 size);
+extern "C" void* FUN_1400385c8(void* work, unsigned long long size);
