@@ -2213,20 +2213,24 @@ void RectangleProto::InflatePoint(const FnCall& fn)
 {
     if (fn.NArgs > 0)
     {
-        MS2_AS2_CHECK_THIS(fn, Rectangle);
-        RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
-        Object*          p     = fn.Arg(0).ToObject(fn.Env);
-        if (!p)
+        if (!fn.CheckThisPtr(ObjectInterface::Object_Rectangle))
+            fn.ThisPtrError("Rectangle");
+        else
         {
-            pthis->SetProperties(fn.Env->GetSC(), Rectangle_NaNParams);
-            return;
+            RectangleObject* pthis = (RectangleObject*)fn.ThisPtr;
+            Object*          p     = fn.Arg(0).ToObject(fn.Env);
+            if (!p)
+            {
+                pthis->SetProperties(fn.Env->GetSC(), Rectangle_NaNParams);
+                return;
+            }
+            ASRect   r;
+            GASPoint pt(GASPoint::NoInit);
+            pthis->GetProperties(fn.Env, r);
+            GFxObject_GetPointProperties(fn.Env, p, pt);
+            r.Expand(pt.x, pt.y);
+            pthis->SetProperties(fn.Env, r);
         }
-        ASRect   r;
-        GASPoint pt(GASPoint::NoInit);
-        pthis->GetProperties(fn.Env, r);
-        GFxObject_GetPointProperties(fn.Env, p, pt);
-        r.Expand(pt.x, pt.y);
-        pthis->SetProperties(fn.Env, r);
     }
 }
 
