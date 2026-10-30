@@ -540,14 +540,14 @@ namespace ClassTraits { namespace fl_vec {
         typedef InstanceTraits::fl_vec::Vector_object InstanceTraitsType;
         typedef Classes::fl_vec::Vector_object ClassType;
 
+        // Kept above the tagged GetAS3ObjectType: within its tag window it was bound to 0x1425601a0.
+        const ClassTraits::Traits& GetEnclosedClassTraits() const { return *EnclosedClassTraits; }
         Vector_object(VM& vm);                                  // 0x1425552d0
         Vector_object(VM& vm, const ASString& n, const ClassTraits::Traits* ect);  // 0x142555310
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;             // 0x14255c1d0 (sfr_as3_21)
         // @0x1425601a0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::fl_vec::Vector_object"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);        // 0x142547190
-
-        const ClassTraits::Traits& GetEnclosedClassTraits() const { return *EnclosedClassTraits; }
 
         SPtr<const ClassTraits::Traits> EnclosedClassTraits;    // +0xc8
     };
