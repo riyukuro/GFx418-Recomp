@@ -592,23 +592,30 @@ ResourceHandle SF_STDCALL GFx_CreateImageFileResourceHandle(LoadProcess* p, Reso
                                                             const char* pexportName, UInt16 fileFormat,
                                                             UInt16 targetWidth, UInt16 targetHeight)
 {
-    ImageFileInfo* pfi = SF_NEW ImageFileInfo;
-    pfi->FileName      = pfilename;
-    pfi->ExportName    = pexportName;
-    pfi->pExporterInfo = p->GetLoadTaskData()->GetExporterInfo();
-    pfi->Format        = (FileTypeConstants::FileFormatType)fileFormat;
-    pfi->TargetWidth   = targetWidth;
-    pfi->TargetHeight  = targetHeight;
-    if ((rid.GetIdValue() & ResourceId::IdType_Bit_TypeMask) == ResourceId::IdType_FontImage)
-        pfi->Use = Resource::Use_FontTexture;
-    ResourceHandle rh = p->AddDataResource(rid, ImageFileResourceCreator::CreateImageFileResourceData(pfi));
+    ResourceHandle rh;
+
+    // Fill in file information.
+    Ptr<ImageFileInfo> pfi = *new ImageFileInfo;
     if (pfi)
-        pfi->Release();
+    {
+        pfi->FileName      = pfilename;
+        pfi->ExportName    = pexportName;
+        pfi->pExporterInfo = p->GetExporterInfo();
+        pfi->Format        = (FileTypeConstants::FileFormatType)fileFormat;
+        pfi->TargetWidth   = targetWidth;
+        pfi->TargetHeight  = targetHeight;
+
+        // Font textures convert to A8.
+        if (rid.GetIdType() == ResourceId::IdType_FontImage)
+            pfi->Use = Resource::Use_FontTexture;
+
+        // Add resource id and data.
+        rh = p->AddDataResource(rid, ImageFileResourceCreator::CreateImageFileResourceData(pfi));
+    }
     return rh;
 }
 
 // DefineExternalImage / DefineExternalImage2: a bitmap kept in a file of its own.
-// MS2-FUNCTIONAL 0x1425c6950: same reads, log text and handle; the string releases inline differently.
 // @0x1425c6950
 void SF_STDCALL GFx_DefineExternalImageLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
