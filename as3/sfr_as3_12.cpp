@@ -578,6 +578,7 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 
 
 const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);  // VM::Resolve2ClassTraits
+const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);  // Traits::GetConstructor
 
 // ==== flash.system: natives of the class objects ====================================================================
 
@@ -635,7 +636,6 @@ namespace Classes { namespace fl_system
 }}
 
 // The global escapeMultiByte(): the AS3 escaping, or the AS2 byte escaping under System.useCodePage.
-// MS2-FUNCTIONAL: Traits::GetConstructor is inlined here (an out-of-line call in the exe); register allocation differs
 // @0x1424a02f0
 void escapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
 {
@@ -644,13 +644,13 @@ void escapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
     Multiname mn(vm, StringDataPtr("flash.utils.System"));
     const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
     if (ctr && ctr->ITraits)
-        useCodePage = static_cast<Classes::fl_system::System&>(ctr->GetConstructor()).useCodePage;
+        useCodePage = static_cast<const Classes::fl_system::System&>(FUN_142508490(ctr)).useCodePage;
     String str;
-    if (!useCodePage)
-        ASUtils::AS3::Escape(value.ToCStr(), value.GetSize(), str);
-    else
+    if (useCodePage)
         ASUtils::Escape(value.ToCStr(), value.GetSize(), &str);
-    result = vm.GetStringManager().CreateString(str);
+    else
+        ASUtils::AS3::Escape(value.ToCStr(), value.GetSize(), str);
+    result = vm.GetStringManager().CreateString(str.ToCStr(), str.GetSize());
 }
 
 namespace Classes { namespace fl_system
@@ -687,7 +687,6 @@ namespace Classes { namespace fl_system
 }}
 
 // The global unescapeMultiByte(): result is left as it is when the AS3 decoding fails.
-// MS2-FUNCTIONAL: Traits::GetConstructor is inlined here (an out-of-line call in the exe); register allocation differs
 // @0x1424a09c0
 void unescapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
 {
@@ -696,16 +695,13 @@ void unescapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
     Multiname mn(vm, StringDataPtr("flash.utils.System"));
     const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
     if (ctr && ctr->ITraits)
-        useCodePage = static_cast<Classes::fl_system::System&>(ctr->GetConstructor()).useCodePage;
+        useCodePage = static_cast<const Classes::fl_system::System&>(FUN_142508490(ctr)).useCodePage;
     String str;
-    if (!useCodePage)
-    {
-        if (!ASUtils::AS3::Unescape(value.ToCStr(), value.GetSize(), str))
-            return;
-    }
-    else
+    if (useCodePage)
         ASUtils::Unescape(value.ToCStr(), value.GetSize(), &str);
-    result = vm.GetStringManager().CreateString(str);
+    else if (!ASUtils::AS3::Unescape(value.ToCStr(), value.GetSize(), str))
+        return;
+    result = vm.GetStringManager().CreateString(str.ToCStr(), str.GetSize());
 }
 
 }}} // namespace Scaleform::GFx::AS3
