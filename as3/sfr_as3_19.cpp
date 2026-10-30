@@ -2348,16 +2348,28 @@ void Sfr31SyncSetInt64(UPInt* self, SInt64 val)
     }
 }
 
-// MS2-FUNCTIONAL 0x142528fb0: same logic; Value init/release and register allocation differ
+// MS2-FUNCTIONAL 0x142528fb0: the exe places the kind-2 (false) result block before the kind-3 (true) one
 // @0x142528fb0
 char* Sfr31PropRefSetSlotValue(UPInt self, char* ret, UPInt vm, const Value* v)
 {
-    UPInt w = Sfr31Rd(self, 0);
-    UInt32 k = static_cast<UInt32>(w) & 3;
-    char tmp[32];
-    if (k == 0) { *ret = *Sfr27SlotSetValueThis(reinterpret_cast<const SlotInfo*>(w), tmp, reinterpret_cast<VM*>(vm), v, reinterpret_cast<const Value*>(self + 0x10), 0); return ret; }
-    if (k != 1) { *ret = (k == 2) ? 0 : 1; return ret; }
-    reinterpret_cast<Value*>(w & ~UPInt(1))->Assign(*v);
+    // PropRef: the low two bits of the first word tag a SlotInfo (0), a Value (1) or a missing property (2).
+    const UPInt w = Sfr31Rd(self, 0);
+    switch (w & 3)
+    {
+    case 0:
+    {
+        char tmp;   // CheckResult
+        *ret = *Sfr27SlotSetValueThis(reinterpret_cast<const SlotInfo*>(w), &tmp, reinterpret_cast<VM*>(vm), v, reinterpret_cast<const Value*>(self + 0x10), 0);
+        return ret;
+    }
+    case 1:
+        reinterpret_cast<Value*>(w & ~UPInt(1))->Assign(*v);
+        *ret = 1;
+        return ret;
+    case 2:
+        *ret = 0;
+        return ret;
+    }
     *ret = 1;
     return ret;
 }
@@ -2433,19 +2445,29 @@ bool Sfr31TracerHasTraits(UPInt self, UPInt tr)
     return false;
 }
 
-// Replace the 16-byte holder at self+0x30 by a fresh one {a, b}; b registers itself with a's heap.
-// MS2-FUNCTIONAL 0x14252a5a0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
-// @0x14252a5a0
-void Sfr31SetHolder(UPInt self, UPInt a, UPInt b, UInt8 flag)
+// ASUserData view: SetLastObjectValue is a member call (exe 0x142575f10).
+struct Sfr31UserDataView { void FUN_142575f10(UPInt movie, UPInt owner, bool isdobj); };
+
+// Instances::fl::Object view: pUserDataHolder at +0x30.
+struct Sfr31ObjectUserDataView
 {
-    if (Sfr31Rd(self, 0x30) != 0)
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(Sfr31Rd(self, 0x30)));
+    UInt8 Pad[0x30];
+    UPInt* pUserDataHolder;
+    void SetUserData(UPInt pmovieView, UPInt puserData, bool isdobj);
+};
+
+// Object::SetUserData: replace the 16-byte holder {movie, userdata}; the user data records this object.
+// @0x14252a5a0
+void Sfr31ObjectUserDataView::SetUserData(UPInt pmovieView, UPInt puserData, bool isdobj)
+{
+    if (pUserDataHolder != 0)
+        Memory::pGlobalHeap->Free(pUserDataHolder);
     AllocInfo ai(0x151, 0, 0);   // StatMV_VM_Instance_Mem, as in Sfr31SetHolderOf
-    UPInt* h = static_cast<UPInt*>(Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(self), 0x10, &ai));
-    if (h != 0) { h[0] = a; h[1] = b; }
-    *reinterpret_cast<UPInt**>(self + 0x30) = h;
-    if (b != 0)
-        FUN_142575f10(b, Sfr31Rd(a, 0x38), self, flag);
+    UPInt* h = static_cast<UPInt*>(Memory::pGlobalHeap->AllocAutoHeap(this, 0x10, &ai));
+    if (h != 0) { h[0] = pmovieView; h[1] = puserData; }
+    pUserDataHolder = h;
+    if (puserData != 0)
+        reinterpret_cast<Sfr31UserDataView*>(puserData)->FUN_142575f10(Sfr31Rd(pmovieView, 0x38), reinterpret_cast<UPInt>(this), isdobj);
 }
 
 // @0x14252a4f0
@@ -3008,20 +3030,39 @@ static inline void Sfr31ReleaseStr(UPInt node)
 typedef void (*Sfr31VFn1)(UPInt);
 typedef void (*Sfr31VFn3)(UPInt, UPInt, UPInt);
 
-// ShapeMeshProvider holder of a TreeShape (render tree entry): swap the provider, queue the entry for propagation.
-// MS2-FUNCTIONAL 0x142528eb0: raw-offset model; codegen differs from the exe
-// @0x142528eb0
-void Sfr31TreeShapeSetShape(UPInt self, UPInt provider)
+namespace {
+// Ptr<ShapeMeshProvider> (RefCountBase at +0x10 of the provider): operator= AddRefs the new one, Releases the old one.
+struct Sfr31ShapePtr
 {
-    UPInt data = reinterpret_cast<UPInt>(FUN_142581a40(reinterpret_cast<void*>(self), 0x400));
-    if (provider != 0)
-        reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(provider + 0x10, 0), 8))(provider + 0x10);
-    const UPInt old = Sfr31Rd(data, 0x90);
-    if (old != 0)
-        reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(old + 0x10, 0), 0x10))(old + 0x10);
-    Sfr31Wr(data, 0x90, provider);
-    if (Sfr31Rd(self, 0x28) == 0)
-        FUN_142581430(reinterpret_cast<void*>(self));
+    UPInt pObject;
+    void operator=(UPInt p)
+    {
+        if (p != 0)
+            reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(p + 0x10, 0), 8))(p + 0x10);
+        if (pObject != 0)
+            reinterpret_cast<Sfr31VFn1>(Sfr31Rd(Sfr31Rd(pObject + 0x10, 0), 0x10))(pObject + 0x10);
+        pObject = p;
+    }
+};
+struct Sfr31TreeShapeNodeData { UInt8 Pad[0x90]; Sfr31ShapePtr pShape; };
+
+struct Sfr31TreeShapeEntry
+{
+    UInt8 Pad[0x28];
+    void* pPropagateNext;
+    bool hasPropagate() const { return pPropagateNext != 0; }
+    void SetShape(UPInt pshape);
+};
+}
+
+// ShapeMeshProvider holder of a TreeShape (render tree entry): swap the provider, queue the entry for propagation.
+// @0x142528eb0
+void Sfr31TreeShapeEntry::SetShape(UPInt pshape)
+{
+    Sfr31TreeShapeNodeData* pdata = static_cast<Sfr31TreeShapeNodeData*>(FUN_142581a40(this, 0x400));
+    pdata->pShape = pshape;
+    if (!hasPropagate())
+        FUN_142581430(this);
 }
 
 // ShapeObject::SetRatio: only when its render node is a shape node.
