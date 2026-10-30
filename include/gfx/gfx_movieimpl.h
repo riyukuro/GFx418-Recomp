@@ -407,10 +407,8 @@ public:
     }
     bool IsDisableFocusRolloverEvent() const
     {
-        int v = (Flags >> Shift_DisableFocusRolloverEvent) & 3;
-        if (v == 3)
-            v = -1;
-        return v == 1;
+        UInt32 v = (Flags >> Shift_DisableFocusRolloverEvent) & 3;
+        return ((v == 3) ? -1 : int(v)) == 1;
     }
     // (appended, sfr24) the arrow keys move the focus even where the focused character shows no focus rectangle
     // (alwaysEnableArrowKeys extension property)

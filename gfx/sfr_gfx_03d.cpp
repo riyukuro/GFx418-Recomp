@@ -395,12 +395,14 @@ void IMEManagerBase::SetCompositionText(const wchar_t* pstr, UPInt len)
         pTextField->SetCompositionStringText(pstr, len);
 }
 
-// MS2-FUNCTIONAL 0x1425b4e40: register allocation differs; same calls
 // @0x1425b4e40
 void IMEManagerBase::SetCompositionPosition()
 {
     if (pTextField)
-        pTextField->SetCompositionStringPosition(pTextField->GetCaretIndex());
+    {
+        UPInt caret = pTextField->GetCaretIndex();
+        pTextField->SetCompositionStringPosition(caret);
+    }
 }
 
 // @0x1425b4ea0

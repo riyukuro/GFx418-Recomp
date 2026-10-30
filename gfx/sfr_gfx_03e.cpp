@@ -780,9 +780,7 @@ Double TextField::GetTextWidth() const
 const String* TextField::GetRestrict() const
 {
     const Text::EditorKit* peditor = static_cast<const Text::EditorKit*>(pDocument->GetEditorKit());
-    if (!peditor)
-        return NULL;
-    return peditor->GetRestrict();
+    return peditor ? peditor->GetRestrict() : NULL;
 }
 
 // The shadow style string as last set (empty before).

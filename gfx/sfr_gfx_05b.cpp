@@ -69,9 +69,11 @@ bool Sprite::IsSoundPlaying(ASSoundIntf* psnd)
     {
         for (UPInt i = 0; i < pActiveSounds->Sounds.GetSize(); i++)
         {
-            ActiveSoundItem* item = pActiveSounds->Sounds[i];
-            if (item->pSoundObject == psnd)
+            if (pActiveSounds->Sounds[i]->pSoundObject == psnd)
+            {
+                ActiveSoundItem* item = pActiveSounds->Sounds[i];
                 return item->pChannel && item->pChannel->IsPlaying();
+            }
         }
     }
     return false;
@@ -1241,7 +1243,10 @@ bool Sprite::OnEvent(const EventId& id)
 void Sprite::OnEventXmlsocketOnxml()
 {
     if (HasAvmObject())
-        GetAvmSprite()->OnEvent(EventId(EventId::Event_SockXML));
+    {
+        EventId id(EventId::Event_SockXML);
+        GetAvmSprite()->OnEvent(id);
+    }
 }
 
 // @0x1425dbce0
@@ -1251,7 +1256,10 @@ void Sprite::OnEventIntervalTimer() {}
 void Sprite::OnEventLoadProgress()
 {
     if (HasAvmObject())
-        GetAvmSprite()->OnEvent(EventId(EventId::Event_LoadProgress));
+    {
+        EventId id(EventId::Event_LoadProgress);
+        GetAvmSprite()->OnEvent(id);
+    }
 }
 
 // @0x1425dbf10
@@ -1373,7 +1381,11 @@ bool Sprite::IsFocusEnabled(FocusMovedType fmt) const
     if (FocusEnabled == 0 && HasAvmObject())
         return GetAvmSprite()->IsFocusEnabled(fmt);
     if (FocusEnabled == 2)
-        return HasAvmObject() && GetAvmIntObj()->ActsAsButton();
+    {
+        if (HasAvmObject())
+            return GetAvmIntObj()->ActsAsButton();
+        return false;
+    }
     return FocusEnabled == 1;
 }
 
