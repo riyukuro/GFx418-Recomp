@@ -5142,31 +5142,28 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
 
 // VM::IsOfType: whether v is of the class ctr: a number in the range of int or uint (when integral) is of those,
 // any int or uint a Number, everything of Object; references by their class (or a base of it, or an interface).
-// MS2-FUNCTIONAL free function (not declared in the shared VM class); its jump table starts at kind 1, the exe's at 0
 // @0x1425146d0
 bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
 {
     const BuiltinTraitsType tt = ctr.GetTraitsType();
-    bool                    is;
     switch (v.GetKind())
     {
+    case Value::kUndefined:
+        return false;
     case Value::kBoolean:
-        is = tt == Traits_Boolean;
-        break;
+        return tt == Traits_Boolean || &ctr == &vm.GetClassTraitsObject();
     case Value::kInt:
         if (tt == Traits_UInt)
             return v.AsInt() >= 0;
         if (tt == Traits_Number)
             return true;
-        is = tt == Traits_SInt;
-        break;
+        return tt == Traits_SInt || &ctr == &vm.GetClassTraitsObject();
     case Value::kUInt:
         if (tt == Traits_SInt)
             return v.AsUInt() <= 0x7fffffff;
         if (tt == Traits_Number)
             return true;
-        is = tt == Traits_UInt;
-        break;
+        return tt == Traits_UInt || &ctr == &vm.GetClassTraitsObject();
     case Value::kNumber:
     {
         double ip;
@@ -5177,14 +5174,12 @@ bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
             if (tt == Traits_SInt)
                 return ip >= -2147483648.0 && ip <= 2147483647.0;
         }
-        is = tt == Traits_Number;
-        break;
+        return tt == Traits_Number || &ctr == &vm.GetClassTraitsObject();
     }
     case Value::kString:
         if (!v.GetStringNode())
             return false;
-        is = tt == Traits_String;
-        break;
+        return tt == Traits_String || &ctr == &vm.GetClassTraitsObject();
     case Value::kObject:
         if (!v.GetObject())
             return false;
@@ -5202,7 +5197,6 @@ bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
     default:
         return false;
     }
-    return is || &ctr == &vm.GetClassTraitsObject();
 }
 
 } } } // namespace Scaleform::GFx::AS3
@@ -6497,7 +6491,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // Once its invoke time is reached: a Timer's event (while under its repeat count) or the setInterval function
 // (an exception printed and dropped); then the timer stops (a timeout, or the repeat count reached) or its next
 // invoke time is a whole number of intervals (at least a tenth of the frame) past the current one.
-// MS2-FUNCTIONAL register allocation differs (the exe keeps the zero in r14 only on the function path)
 // @0x142512fc0
 bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
 {
@@ -6533,18 +6526,22 @@ bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
             Active = false;
         else
         {
-            const UInt64 frameMks = UInt64(frameTime * 1000000.f);
-            UInt64       next     = 0;
-            if (RepeatCount == 0 || CurrentCount < RepeatCount)
-            {
-                UInt64 interval = Interval;
-                if (interval < frameMks / 10)
-                    interval = unsigned(frameMks / 10);
-                if (interval != 0)
-                    next = (currentTime - InvokeTime + interval) / interval * interval;
-            }
-            if (next > 0)
-                InvokeTime += next;
+            // GetNextInterval, inline here
+            const auto nextInterval = [this](UInt64 currentTime, UInt64 frameTime) -> UInt64 {
+                if (RepeatCount != 0 && CurrentCount >= RepeatCount)
+                    return 0;
+                UInt64 interval;
+                if (Interval < frameTime / 10)
+                    interval = unsigned(frameTime / 10);
+                else
+                    interval = Interval;
+                if (interval == 0)
+                    return 0;
+                return (((currentTime - InvokeTime) + interval) / interval) * interval;
+            };
+            UInt64 interval = nextInterval(currentTime, UInt64(frameTime * 1000000.f));
+            if (interval > 0)
+                InvokeTime += interval;
             else
                 InvokeTime = currentTime;
         }
