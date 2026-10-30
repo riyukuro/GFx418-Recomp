@@ -864,29 +864,32 @@ void criSjRbf_Reset(void* ringBuffer)
         FUN_140039f8c(rb->Lock);
 }
 
+// The CRI ring-buffer stream joint (criSjRbf) and the chunk it hands out.
+struct CriSjRbfFields
+{
+    CriUint8 Reserved00[0x10];
+    LPCRITICAL_SECTION Lock;      // 0x10
+    CriUint8 Reserved18[0x08];
+    CriUint32 OutputFree;         // 0x20
+    CriUint32 InputFree;          // 0x24
+    CriUint32 InputPosition;      // 0x28
+    CriUint32 OutputPosition;     // 0x2c
+    CriUint8* Data;               // 0x30
+    CriUint32 Size;               // 0x38
+    CriUint32 Extra;              // 0x3c: mirrored tail past Size
+    CriUint32 InputGot;           // 0x40
+    CriUint32 InputPut;           // 0x44
+    CriUint32 OutputGot;          // 0x48
+    CriUint32 OutputPut;          // 0x4c
+};
+struct CriSjRbfChunk { CriUint8* Data; CriUint32 Size; };
+
 // MS2-FUNCTIONAL: reserve a bounded input or output region from the CRI stream ring buffer.
 // @0x140046094
 void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requested, void* result)
 {
-    struct RingBuffer
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;      // 0x10
-        CriUint8 Reserved18[0x08];
-        CriUint32 OutputFree;         // 0x20
-        CriUint32 InputFree;          // 0x24
-        CriUint32 InputPosition;      // 0x28
-        CriUint32 OutputPosition;     // 0x2c
-        CriUint8* Data;               // 0x30
-        CriUint32 Size;               // 0x38
-        CriUint32 Extra;              // 0x3c
-        CriUint32 InputTotal;         // 0x40
-        CriUint32 Reserved44;
-        CriUint32 OutputTotal;        // 0x48
-    };
-    struct Chunk { CriUint8* Data; CriUint32 Size; };
-    RingBuffer* rb = (RingBuffer*)ringBuffer;
-    Chunk* chunk = (Chunk*)result;
+    CriSjRbfFields* rb = (CriSjRbfFields*)ringBuffer;
+    CriSjRbfChunk* chunk = (CriSjRbfChunk*)result;
     if (rb->Lock)
         FUN_140039f50(rb->Lock);
     if (direction == 0)
@@ -900,7 +903,7 @@ void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requeste
         chunk->Data = rb->Data + rb->InputPosition;
         rb->InputPosition = (rb->InputPosition + requested) % rb->Size;
         rb->InputFree -= chunk->Size;
-        rb->InputTotal += chunk->Size;
+        rb->InputGot += chunk->Size;
     }
     else if (direction == 1)
     {
@@ -913,7 +916,7 @@ void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requeste
         chunk->Data = rb->Data + rb->OutputPosition;
         rb->OutputPosition = (rb->OutputPosition + requested) % rb->Size;
         rb->OutputFree -= chunk->Size;
-        rb->OutputTotal += chunk->Size;
+        rb->OutputGot += chunk->Size;
     }
     else
     {
@@ -1540,66 +1543,48 @@ void* FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 thi
 // @0x140046170
 void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span)
 {
-    CriUint32 length = (CriUint32)span[1];
-    uintptr_t source = (uintptr_t)span[0];
-    if (length == 0 || source == 0)
+    CriSjRbfFields* rb = (CriSjRbfFields*)ring;
+    CriSjRbfChunk* chunk = (CriSjRbfChunk*)span;
+    if (chunk->Size == 0 || chunk->Data == NULL)
         return;
-    CriUint8* bytes = (CriUint8*)ring;
-    void* lock;
-    void* buffer;
-    CriUint32 writeOffset, capacity;
-    memcpy(&lock, bytes + 0x10, sizeof(lock));
-    memcpy(&buffer, bytes + 0x30, sizeof(buffer));
-    memcpy(&writeOffset, bytes + 0x38, sizeof(writeOffset));
-    memcpy(&capacity, bytes + 0x3c, sizeof(capacity));
-    CriUint32 sourceOffset = (CriUint32)source - (CriUint32)(uintptr_t)buffer;
     if (mode == 1)
     {
-        if (sourceOffset < capacity)
+        CriUint32 offset = (CriUint32)(chunk->Data - rb->Data);
+        if (offset < rb->Extra)
         {
-            CriUint32 first = capacity - sourceOffset;
-            if (length < first)
-                first = length;
-            memcpy((CriUint8*)buffer + writeOffset + sourceOffset, (const void*)source, first);
+            CriUint32 first = rb->Extra - offset;
+            if (chunk->Size < first)
+                first = chunk->Size;
+            memcpy(rb->Data + (offset + rb->Size), chunk->Data, first);
         }
-        CriUint32 end = sourceOffset + length;
-        if (writeOffset < end)
+        CriUint32 end = (CriUint32)(chunk->Data + chunk->Size - rb->Data);
+        if (end > rb->Size)
         {
-            CriUint32 wrapped = end - writeOffset;
-            if (length < wrapped)
-                wrapped = length;
-            memcpy(buffer, (CriUint8*)buffer + end - wrapped, wrapped);
+            CriUint32 wrapped = end - rb->Size;
+            if (chunk->Size < wrapped)
+                wrapped = chunk->Size;
+            memcpy(rb->Data, rb->Data + (end - wrapped), wrapped);
         }
-        if (lock)
-            FUN_140039f50((LPCRITICAL_SECTION)lock);
-        CriUint32 value;
-        memcpy(&value, bytes + 0x20, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x20, &value, sizeof(value));
-        memcpy(&value, bytes + 0x4c, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x4c, &value, sizeof(value));
+        if (rb->Lock)
+            FUN_140039f50(rb->Lock);
+        rb->OutputFree += chunk->Size;
+        rb->OutputPut += chunk->Size;
+    }
+    else if (mode == 0)
+    {
+        if (rb->Lock)
+            FUN_140039f50(rb->Lock);
+        rb->InputFree += chunk->Size;
+        rb->InputPut += chunk->Size;
     }
     else
     {
-        if (mode != 0)
-        {
-            span[1] = 0;
-            span[0] = 0;
-            return;
-        }
-        if (lock)
-            FUN_140039f50((LPCRITICAL_SECTION)lock);
-        CriUint32 value;
-        memcpy(&value, bytes + 0x24, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x24, &value, sizeof(value));
-        memcpy(&value, bytes + 0x44, sizeof(value));
-        value += length;
-        memcpy(bytes + 0x44, &value, sizeof(value));
+        chunk->Size = 0;
+        chunk->Data = NULL;
+        return;
     }
-    if (lock)
-        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+    if (rb->Lock)
+        FUN_140039f8c(rb->Lock);
 }
 #pragma optimize("", on)
 
@@ -1875,61 +1860,42 @@ void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* se
 // @0x14004624c
 void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr)
 {
-    struct Chunk { CriUint8* Data; CriSint32 Size; };
-    struct Joint
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;
-        CriUint8 Reserved18[8];
-        CriSint32 Counter20;
-        CriSint32 Counter24;
-        CriUint32 WriteCursor;
-        CriUint32 ReadCursor;
-        CriUint8* Base;
-        CriUint32 Capacity;
-        CriSint32 Reserved3c;
-        CriSint32 Avail40;
-        CriSint32 Reserved44;
-        CriSint32 Avail48;
-    };
-    Joint* state = (Joint*)joint;
-    Chunk* chunk = (Chunk*)chunkPtr;
-    if (chunk->Size == 0 || !chunk->Data)
+    CriSjRbfFields* rb = (CriSjRbfFields*)joint;
+    CriSjRbfChunk* chunk = (CriSjRbfChunk*)chunkPtr;
+    if (chunk->Size <= 0 || chunk->Data == NULL)
         return;
     if (lane == 0)
     {
-        if (state->Lock)
-            FUN_140039f50(state->Lock);
-        CriUint32 capacity = state->Capacity;
-        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->WriteCursor) % capacity;
-        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
+        if (rb->Lock)
+            FUN_140039f50(rb->Lock);
+        CriUint32 position = (rb->Size - chunk->Size + rb->InputPosition) % rb->Size;
+        if (position == (CriUint32)((chunk->Data - rb->Data) % (CriSint64)rb->Size))
         {
-            state->WriteCursor = cursor;
-            state->Counter24 += chunk->Size;
-            state->Avail40 -= chunk->Size;
+            rb->InputPosition = position;
+            rb->InputFree += chunk->Size;
+            rb->InputGot -= chunk->Size;
+        }
+    }
+    else if (lane == 1)
+    {
+        if (rb->Lock)
+            FUN_140039f50(rb->Lock);
+        CriUint32 position = (rb->Size - chunk->Size + rb->OutputPosition) % rb->Size;
+        if (position == (CriUint32)((chunk->Data - rb->Data) % (CriSint64)rb->Size))
+        {
+            rb->OutputPosition = position;
+            rb->OutputFree += chunk->Size;
+            rb->OutputGot -= chunk->Size;
         }
     }
     else
     {
-        if (lane != 1)
-        {
-            chunk->Size = 0;
-            chunk->Data = NULL;
-            return;
-        }
-        if (state->Lock)
-            FUN_140039f50(state->Lock);
-        CriUint32 capacity = state->Capacity;
-        CriUint32 cursor = (capacity - (CriUint32)chunk->Size + state->ReadCursor) % capacity;
-        if (cursor == (CriUint32)((chunk->Data - state->Base) % (CriSint64)capacity))
-        {
-            state->ReadCursor = cursor;
-            state->Counter20 += chunk->Size;
-            state->Avail48 -= chunk->Size;
-        }
+        chunk->Size = 0;
+        chunk->Data = NULL;
+        return;
     }
-    if (state->Lock)
-        FUN_140039f8c(state->Lock);
+    if (rb->Lock)
+        FUN_140039f8c(rb->Lock);
 }
 #pragma optimize("", on)
 
