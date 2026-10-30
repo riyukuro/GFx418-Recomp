@@ -2355,86 +2355,117 @@ namespace Classes { namespace fl_net
     }
 }}
 
+// Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_11). The exe inlines
+// them into the MakeInstance/MakeObject functions below.
+namespace Instances { namespace fl_net
+{
+    inline NetConnection::NetConnection(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+
+    inline SharedObject::SharedObject(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+
+    inline URLLoader::URLLoader(InstanceTraits::Traits& t)
+        : Instances::fl_events::EventDispatcher(t)
+        , pLoadQueue(NULL)
+        , DataFormat(GetVM().GetStringManager().CreateEmptyString())
+    {
+        DataFormat = "text";
+    }
+
+    inline URLRequest::URLRequest(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Url(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    inline URLRequestHeader::URLRequestHeader(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , HeaderName(GetVM().GetStringManager().CreateEmptyString())
+        , HeaderValue(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    inline URLVariables::URLVariables(InstanceTraits::Traits& t)
+        : Instances::fl::Object(t)
+        , Source(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+}}
+
 namespace InstanceTraits { namespace fl_net
 {
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499520
     Pickable<NetConnection::InstanceType> NetConnection::MakeInstance(NetConnection& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499590
     Pickable<SharedObject::InstanceType> SharedObject::MakeInstance(SharedObject& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
+    // MS2-FUNCTIONAL: register allocation (rbx/rdi swapped for the result and the new instance)
     // @0x142499620
     Pickable<URLLoader::InstanceType> URLLoader::MakeInstance(URLLoader& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x1424996c0
     Pickable<URLRequest::InstanceType> URLRequest::MakeInstance(URLRequest& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499750
     Pickable<URLRequestHeader::InstanceType> URLRequestHeader::MakeInstance(URLRequestHeader& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499800
     Pickable<URLVariables::InstanceType> URLVariables::MakeInstance(URLVariables& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499890
     void NetConnection::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<NetConnection&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x1424998f0
     void SharedObject::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<SharedObject&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499970
     void URLLoader::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<URLLoader&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499a10
     void URLRequest::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<URLRequest&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499a90
     void URLRequestHeader::MakeObject(Value& result, Traits& t)
     {
         result.Pick(MakeInstance(static_cast<URLRequestHeader&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor (defined out of line in sfr_as3_11); ours calls it
     // @0x142499b30
     void URLVariables::MakeObject(Value& result, Traits& t)
     {
@@ -3437,3 +3468,9 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ??_7ASSharedObjectLoader@AS3@GFx@Scaleform@@6B@ 0x1431633e8
 // MS2-PIN: ??_7ResourceVisitor@MovieDef@GFx@Scaleform@@6B@ 0x143169d08
 // MS2-PIN: ??_7GlyphVisitor@StaticTextSnapshotData@GFx@Scaleform@@6B@ 0x14316a500
+// MS2-PIN: ??_7NetConnection@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162698
+// MS2-PIN: ??_7SharedObject@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162f58
+// MS2-PIN: ??_7URLLoader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163950
+// MS2-PIN: ??_7URLRequest@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143162228
+// MS2-PIN: ??_7URLRequestHeader@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143164430
+// MS2-PIN: ??_7URLVariables@fl_net@Instances@AS3@GFx@Scaleform@@6B@ 0x143163b50
