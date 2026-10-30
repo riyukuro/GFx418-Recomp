@@ -211,7 +211,7 @@ void AvmSprite::OnEventLoad()
     ActionPriority::Priority prio = LeHasClipEventHandler(this, EventId(EventId::Event_Load))
                                         ? ActionPriority::AP_Frame : ActionPriority::AP_Load;
     LeSetEventAction(GetAS2Root()->InsertEmptyAction(prio), GetSprite(), EventId(EventId::Event_Load));
-    GetSprite()->Flags |= DisplayObjectBase::Mask_JustLoaded;
+    GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_JustLoaded;
 
     AvmSprite::ExecuteInitActionFrameTags(0);
     GetSprite()->DefaultOnEventLoad();
@@ -239,7 +239,7 @@ bool AvmSprite::OnUnloading(bool mayRemove)
     if (!mayRemove)
     {
         Sprite* psprite = GetSprite();
-        if ((psprite->Flags & DisplayObjectBase::Mask_JustLoaded) && !psprite->IsAcceptAnimMovesFlagSet())
+        if ((psprite->DisplayObjectBase::Flags & DisplayObjectBase::Mask_JustLoaded) && !psprite->IsAcceptAnimMovesFlagSet())
         {
             MovieRoot::ActionEntry* pe = psprite->GetMovieImpl() ? GetAS2Root()->InsertEmptyAction() : 0;
             if (pe)

@@ -71,9 +71,9 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
             if (GetASEnvironment()->CheckExtensions())
             {
                 if (val.ToBool(GetASEnvironment()))
-                    pDispObj->Flags |= DisplayObjectBase::Mask_TopmostLevel;
+                    pDispObj->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_TopmostLevel;
                 else
-                    pDispObj->Flags &= ~DisplayObjectBase::Mask_TopmostLevel;
+                    pDispObj->DisplayObjectBase::Flags &= ~DisplayObjectBase::Mask_TopmostLevel;
                 if (pDispObj->IsTopmostLevelFlagSet())
                     pDispObj->GetMovieImpl()->AddTopmostLevelCharacter(pDispObj);
                 else

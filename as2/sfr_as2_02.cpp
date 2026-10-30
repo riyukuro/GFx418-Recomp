@@ -2320,7 +2320,7 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
         psprite->GetLevelMatrix(&level);
         Render::PointF local = level.TransformByInverse(pt);
         bool hit = false;
-        if (!(psprite->Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+        if (!(psprite->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
         {
             if (bounds.Contains(local))
             {
