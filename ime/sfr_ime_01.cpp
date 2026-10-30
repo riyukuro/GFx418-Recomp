@@ -3646,49 +3646,67 @@ void FUN_1423d61f0(void* manager, const char* command, const char* value)
     FUN_1423d7e80(manager, command, value);
 }
 
-// MS2-FUNCTIONAL: resets composition state, initializes the IME window positions, and applies them through IMM32.
+// WM_IME_STARTCOMPOSITION of the IMM IME object (vtbl 0x14313a5f8; the Vista twin is 0x1423d05a0). Starts the
+// composition, resets the candidate counters (+0xcc/+0x64/+0xd4), the target clause (+0x5a4), the reading text (+0x40)
+// and the four-space mode buffer (+0xb0), stores the layout and its at-caret flag (+0x5a0, forced by the modes), and
+// moves the IMM composition and candidate windows off screen, or for mode 0x1000000 to the cursor rect the owner
+// (vtbl+0x190) maps. True unless mode 0x1000000.
+// MS2-FUNCTIONAL: the exe keeps an unused GFx::Value local
 // @0x1423d43b0
 bool FUN_1423d43b0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
     if (!owner) return false;
-    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
-    void* textState = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(factory))[3])(factory);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+    ime->StartComposition();
     *reinterpret_cast<unsigned*>(self + 0xcc) = 0;
     *reinterpret_cast<unsigned*>(self + 0x64) = 0;
     *reinterpret_cast<unsigned*>(self + 0xd4) = 0;
     *reinterpret_cast<unsigned*>(self + 0x5a4) = 1;
     std::memset(*reinterpret_cast<void**>(self + 0x40), 0, 0x100);
     auto* modeBuffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
-    if (modeBuffer) {
-        modeBuffer[0] = modeBuffer[1] = modeBuffer[2] = modeBuffer[3] = L' ';
-        modeBuffer[4] = 0;
-    }
+    modeBuffer[0] = modeBuffer[1] = modeBuffer[2] = modeBuffer[3] = L' ';
+    modeBuffer[4] = 0;
     HKL layout = GetKeyboardLayout(0);
     *reinterpret_cast<HKL*>(self + 0x58) = layout;
-    unsigned mode = cx18_ImmGetProperty(layout, 4) >> 0x12 & 1;
-    const int state = *reinterpret_cast<int*>(self + 0x98);
-    if (state == 0xd00001) mode = 0;
-    else if (state == 0xa10000 || state == 0xb10000 || state == 6) mode = 1;
-    *reinterpret_cast<unsigned*>(self + 0x5a0) = mode;
+    auto& atCaret = *reinterpret_cast<unsigned*>(self + 0x5a0);
+    atCaret = cx18_ImmGetProperty(layout, IGP_PROPERTY) >> 0x12 & 1;
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (mode == 0xd00001) atCaret = 0;
+    else if (mode == 0xa10000 || mode == 0xb10000 || mode == 6) atCaret = 1;
 
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
     HIMC context = cx18_ImmGetContext(hwnd);
-    if (context) {
-        CANDIDATEFORM candidate{};
-        candidate.dwIndex = 0;
-        candidate.dwStyle = CFS_CANDIDATEPOS;
-        candidate.ptCurrentPos = { -1000, -1000 };
-        COMPOSITIONFORM composition{};
-        composition.dwStyle = CFS_POINT;
-        composition.ptCurrentPos = candidate.ptCurrentPos;
-        cx18_ImmSetCompositionWindow(context, &composition);
-        cx18_ImmSetCandidateWindow(context, &candidate);
-        cx18_ImmReleaseContext(hwnd, context);
+    POINT position = { -1000, -1000 };
+    if (mode == 0x1000000) {
+        Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> metrics =
+            reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+        Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+        if (metrics) {
+            metrics->GetMetrics(&viewRect, &cursorRect, 0);
+            Scaleform::Render::RectF mapped(0, 0, 0, 0);
+            const auto* screen = reinterpret_cast<const Scaleform::Render::RectF*(*)(
+                void*, Scaleform::Render::RectF*, const Scaleform::Render::RectF*, int)>(
+                    (*reinterpret_cast<void***>(owner))[0x190 / sizeof(void*)])(owner, &mapped, &cursorRect, 0);
+            position.x = static_cast<LONG>(screen->x1);
+            position.y = static_cast<LONG>(screen->y2);
+        }
+        WINDOWINFO info;
+        GetWindowInfo(hwnd, &info);
     }
-    if (textState) FUN_14257dcb0(textState);
-    return state != 0x01000000;
+    CANDIDATEFORM candidate;
+    candidate.dwIndex = 0;
+    candidate.dwStyle = CFS_CANDIDATEPOS;
+    candidate.ptCurrentPos = position;
+    COMPOSITIONFORM composition;
+    composition.dwStyle = CFS_FORCE_POSITION;
+    composition.ptCurrentPos = position;
+    cx18_ImmSetCompositionWindow(context, &composition);
+    cx18_ImmSetCandidateWindow(context, &candidate);
+    cx18_ImmReleaseContext(hwnd, context);
+    return mode != 0x1000000;
 }
 
 // MS2-FUNCTIONAL: WM_IME_STARTCOMPOSITION of the Vista IME object (vtbl 0x14313a450 slot 11; the XP twin is
@@ -4227,138 +4245,266 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
     *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
 }
 
-// MS2-FUNCTIONAL: computes the executable's mode-specific candidate page and rebuilds the visible Scaleform rows.
+static void cx18_InvokeInputWindow(unsigned char* self, const char* name, Scaleform::GFx::Value* args, unsigned count);
+void FUN_1423d5060(void* raw, int);
+
+// Candidate list modes whose selection is shown relative to the visible page (the others select nothing, -1).
+static bool cx18_CandidateSelectsInPage(unsigned mode)
+{
+    return (mode == 2 || mode == 4 || mode == 10) || (mode & 0xf00) || mode == 0x40000 || mode == 0x70000 ||
+        mode == 0x110000 || mode == 0x210000 || mode == 0x410000 || mode == 0xd10000;
+}
+
+// Fills the candidate list object (+0x30) with the UTF-8 rows [first, first + visible) of an IMM candidate list.
+static void cx18_FillCandidateRows(unsigned char* self, const CANDIDATELIST* list, int first, int visible)
+{
+    void* output = *reinterpret_cast<void**>(self + 0x30);
+    FUN_1423d9500(output);
+    for (int i = 0; i < visible; ++i) {
+        const wchar_t* wide = reinterpret_cast<const wchar_t*>(
+            reinterpret_cast<const unsigned char*>(list) + list->dwOffset[first + i]);
+        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
+        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size + 1)));
+        Scaleform::UTF8Util::EncodeString(text, wide, -1);
+        text[size] = 0;
+        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+        if (item) {
+            FUN_1423cdb60(item, text);
+            ++*reinterpret_cast<int*>(item + 1);
+        }
+        unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+        FUN_1423d9490(output, &retained);
+        Scaleform::Memory::Free(text);
+        if (item) FUN_14257dcd0(item);
+    }
+}
+
+// Candidate list update of the IMM IME object (IMN_CHANGECANDIDATE). Reads IMM candidate list listIndex, stores its
+// count (+0xcc), the page size (+0xd4, never shrinking) and the first visible row (+0x70: the page start, or the
+// selection's page for the 0xf00 modes). An empty list calls RemoveList; otherwise the mode decides the visible rows
+// (0x410000: up to five from the selection; 0x60000: from the selection; else one page), they replace the rows of
+// the list object at +0x30, the selection is set (relative to the page in the paging modes, else -1) and +0x5bc
+// marks the list shown.
+// MS2-FUNCTIONAL: the exe releases the input context a second time after the rows (kept), and an unused Value local
 // @0x1423d3120
 void FUN_1423d3120(void* raw, DWORD listIndex)
 {
     auto* self = static_cast<unsigned char*>(raw);
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
     HIMC context = cx18_ImmGetContext(hwnd);
-    if (!context) return;
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
-    if (!bytes) { cx18_ImmReleaseContext(hwnd, context); return; }
-    auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes));
-    if (!list) { cx18_ImmReleaseContext(hwnd, context); return; }
-    const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, list, bytes);
-    const DWORD count = list->dwCount;
-    const DWORD selection = list->dwSelection;
-    const DWORD osPage = list->dwPageSize;
-    *reinterpret_cast<DWORD*>(self + 0xcc) = count;
-    DWORD page = *reinterpret_cast<DWORD*>(self + 0xd4);
+    if (!bytes) return;
+    auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(bytes) * 0x1c));
+    cx18_ImmGetCandidateListW(context, listIndex, list, bytes);
+    *reinterpret_cast<DWORD*>(self + 0xcc) = list->dwCount;
+    const int osPage = static_cast<int>(list->dwPageSize);
+    const int selection = static_cast<int>(list->dwSelection);
+    int& page = *reinterpret_cast<int*>(self + 0xd4);
     if (page <= osPage) page = osPage;
-    *reinterpret_cast<DWORD*>(self + 0xd4) = page;
-    DWORD first = list->dwPageStart;
+    int& first = *reinterpret_cast<int*>(self + 0x70);
+    first = static_cast<int>(list->dwPageStart);
     const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    if (mode & 0xf00) first = page ? selection - selection % page : list->dwPageStart;
-    *reinterpret_cast<DWORD*>(self + 0x70) = first;
+    if (mode & 0xf00) first = selection - selection % page;
     cx18_ImmReleaseContext(hwnd, context);
-    void* values = nullptr;
-    void* movie = *reinterpret_cast<void**>(self + 0x868);
-    if (movie) {
-        void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
-        if (manager) values = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
-    }
+    const int count = *reinterpret_cast<int*>(self + 0xcc);
     if (!count) {
-        if (values) {
-            Scaleform::GFx::Value result;
-            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(values, "RemoveList", &result, nullptr, 0);
-        }
+        cx18_InvokeInputWindow(self, "RemoveList", nullptr, 0);
         Scaleform::Memory::Free(list);
         return;
     }
-    DWORD visible = page;
+    int visible;
     if (mode == 0x410000) {
-        if (count > selection && count - selection > 5) visible = 5;
-        else visible = count - selection;
+        visible = count;
+        if (5 < count && 5 < count - selection) visible = 5;
+        else if (5 < count) visible = count - selection;
         first = selection;
-    } else if (mode == 0x40000) {
-        const DWORD remain = count - first;
-        if (remain <= osPage) visible = remain;
-    } else if (mode == 0x60000) {
-        first = selection;
-        if (count - selection <= osPage) visible = count - selection;
-    } else if (mode != 0xd00001 && osPage <= count) {
-        const DWORD remain = count - first;
-        if (remain <= osPage) visible = remain;
-    }
-    *reinterpret_cast<DWORD*>(self + 0x70) = first;
-
-    void* output = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d9500(output);
-    const DWORD end = visible < count - first ? first + visible : count;
-    for (DWORD i = first; i < end; ++i) {
-        const DWORD offset = list->dwOffset[i];
-        if (offset >= fetched) break;
-        const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(list) + offset);
-        const int chars = static_cast<int>(wcslen(wide));
-        const int n = WideCharToMultiByte(CP_UTF8, 0, wide, chars, nullptr, 0, nullptr, nullptr);
-        if (n <= 0) continue;
-        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(n) + 1));
-        if (!text) continue;
-        WideCharToMultiByte(CP_UTF8, 0, wide, chars, text, n, nullptr, nullptr);
-        text[n] = 0;
-        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
-        if (item) {
-            FUN_1423cdb60(item, text);
-            ++*reinterpret_cast<int*>(item + 1);
-            unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-            FUN_1423d9490(output, &retained);
-            FUN_14257dcd0(item);
+    } else {
+        visible = osPage;
+        if (mode == 0x40000) {
+            if (count - first <= osPage) visible = count - first;
+        } else if (mode == 0x60000) {
+            first = selection;
+            if (count - selection <= osPage) visible = count - selection;
+        } else {
+            visible = count;
+            if (mode != 0xd00001 && osPage <= count) {
+                visible = osPage;
+                if (count - first <= osPage) visible = count - first;
+            }
         }
-        Scaleform::Memory::Free(text);
     }
-    const unsigned long long selected = selection >= first ? selection - first : 0;
-    FUN_1423d97f0(output, selected, 0);
-    FUN_1423d9b40(output);
+    cx18_FillCandidateRows(self, list, first, visible);
     Scaleform::Memory::Free(list);
+    cx18_ImmReleaseContext(hwnd, context);
+    long long selected = -1;
+    if (cx18_CandidateSelectsInPage(*reinterpret_cast<unsigned*>(self + 0x98))) {
+        const int inPage = selection - first;
+        selected = inPage < 0 ? 0 : inPage;
+    }
+    void* output = *reinterpret_cast<void**>(self + 0x30);
+    FUN_1423d97f0(output, static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(output);
+    self[0x5bc] = 1;
 }
 
-// MS2-FUNCTIONAL: uses the recovered candidate page sizing and row conversion for the selected IMM list.
+// Candidate list open of the IMM IME object (IMN_OPENCANDIDATE). Like 0x1423d3120, but the page size (+0xd4) is the
+// list's own, mode 0x410000 shows at most five rows, the visible row count goes to +0x6c, the list window is rebuilt
+// (RemoveList, then CreateList(page size, at-caret flag +0x5a0)) and the selection is its index within the page.
+// An empty list does nothing.
+// MS2-FUNCTIONAL: the exe builds the CreateList arguments in a heap Value array, releases the input context a
+// second time after the rows (kept), and keeps an unused Value local
 // @0x1423d46f0
-void FUN_1423d46f0(void* manager, DWORD listIndex)
+void FUN_1423d46f0(void* raw, DWORD listIndex)
 {
-    FUN_1423d3120(manager, listIndex);
+    auto* self = static_cast<unsigned char*>(raw);
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    HIMC context = cx18_ImmGetContext(hwnd);
+    const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
+    if (!bytes) return;
+    auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(bytes) * 0x1c));
+    cx18_ImmGetCandidateListW(context, listIndex, list, bytes);
+    *reinterpret_cast<DWORD*>(self + 0xcc) = list->dwCount;
+    const int selection = static_cast<int>(list->dwSelection);
+    int& first = *reinterpret_cast<int*>(self + 0x70);
+    first = static_cast<int>(list->dwPageStart);
+    int page = static_cast<int>(list->dwPageSize);
+    *reinterpret_cast<int*>(self + 0xd4) = page;
+    cx18_ImmReleaseContext(hwnd, context);
+    const int count = *reinterpret_cast<int*>(self + 0xcc);
+    if (!count) {
+        Scaleform::Memory::Free(list);
+        return;
+    }
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+    if (mode & 0xf00) first = selection - selection % *reinterpret_cast<int*>(self + 0xd4);
+    int visible;
+    if (mode == 0x410000) {
+        page = 5;
+        visible = count < 5 ? count : 5;
+    } else {
+        visible = page;
+        if (mode == 0x40000) {
+            if (count - first <= page) visible = count - first;
+        } else if (mode == 0x60000) {
+            first = selection;
+            if (count - selection <= page) visible = count - selection;
+        } else {
+            visible = count;
+            if (mode != 0xd00001 && page <= count) {
+                visible = page;
+                if (count - first <= page) visible = count - first;
+            }
+        }
+    }
+    *reinterpret_cast<int*>(self + 0x6c) = visible;
+    {
+        Scaleform::GFx::Value args[2];
+        args[0] = Scaleform::GFx::Value(static_cast<double>(page));
+        args[1] = Scaleform::GFx::Value(static_cast<double>(*reinterpret_cast<int*>(self + 0x5a0)));
+        cx18_InvokeInputWindow(self, "RemoveList", nullptr, 0);
+        cx18_InvokeInputWindow(self, "CreateList", args, 2);
+    }
+    cx18_FillCandidateRows(self, list, first, visible);
+    Scaleform::Memory::Free(list);
+    cx18_ImmReleaseContext(hwnd, context);
+    long long selected = -1;
+    if (cx18_CandidateSelectsInPage(*reinterpret_cast<unsigned*>(self + 0x98)))
+        selected = selection % *reinterpret_cast<int*>(self + 0xd4);
+    void* output = *reinterpret_cast<void**>(self + 0x30);
+    FUN_1423d97f0(output, static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(output);
+    self[0x5bc] = 1;
 }
 
-// MS2-FUNCTIONAL: updates the IME keyboard/layout state, decodes key events, and pages candidate lists for the executable modes.
+// The words the exe reads for input mode 4 (Cangjie), indexed by tolower(key) - 0x20 over 0x20..0x7a: the radicals
+// for a..y and 'Z' for z (0x14313a910 + 4); keys below 'a' read the bytes before it (0x14313a70c + 8 * (key - 0x20)).
+static const unsigned short cx18_CangjieKeys[0x5b] = {
+    0x0001, 0x0001, 0x0000, 0x3107, 0x0042, 0x0000, 0x310f, 0x0044, 0x0000, 0x310d, 0x0046, 0x0000,
+    0x3115, 0x0048, 0x0000, 0x311b, 0x004a, 0x0001, 0x311c, 0x004c, 0x0002, 0x3129, 0x004e, 0x0000,
+    0x311f, 0x0050, 0x0002, 0x3106, 0x0052, 0x0000, 0x310b, 0x0054, 0x0000, 0x3127, 0x0056, 0x0000,
+    0x310a, 0x0058, 0x0000, 0x3117, 0x005a, 0x0000, 0x3105, 0x0032, 0x0000, 0x02c7, 0x0034, 0x0003,
+    0x3113, 0x0036, 0x0003, 0x02d9, 0x0038, 0x0002, 0x311e, 0x0030, 0x0002, 0x311d, 0x002e, 0x0002,
+    0x3125, 0x003b, 0x0002, 0x3126, 0x0000, 0x65e5, 0x6708, 0x91d1, 0x6728, 0x6c34, 0x706b, 0x571f,
+    0x7af9, 0x6208, 0x5341, 0x5927, 0x4e2d, 0x4e00, 0x5f13, 0x4eba, 0x5fc3, 0x624b, 0x53e3, 0x5c38,
+    0x5eff, 0x5c71, 0x5973, 0x7530, 0x96e3, 0x535c, 0x005a,
+};
+
+// Key event hook of the IMM IME object (WM_KEYDOWN/WM_KEYUP). Stores the layout (+0x58, +0x5a8) and the IMM virtual
+// key (+0xd0); in mode 0x70000 PgDn/PgUp move the IMM candidate page by nine. A key down that is not VK_PROCESSKEY
+// marks a key pending (+0xa0) and an IME UI message (+0xa1). On its key up with no UI message and no composition
+// (+0x60) the input window is closed (vtbl+0x80, RemoveInputWindow). A key down then translates the key to its
+// character (+0xd0; backspace, return, escape and space stop here): mode 2 (Zhuyin) maps it through the key records
+// at +0xd8 (bopomofo to +0xd0, class to +0xc8), mode 4 (Cangjie) through the radical table. A key up after a
+// candidate list was shown (+0x5bc) repositions the candidate window (0x1423d5060).
 // @0x1423d4c20
 void FUN_1423d4c20(void* raw, const void* event)
 {
     auto* self = static_cast<unsigned char*>(raw);
     auto* message = static_cast<const unsigned char*>(event);
-    const UINT type = *reinterpret_cast<const UINT*>(message + 0xc);
-    if (type != WM_KEYDOWN && type != WM_KEYUP) return;
+    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+    auto& key = *reinterpret_cast<unsigned short*>(self + 0xd0);
+    BYTE state[256];
+    wchar_t translated[0x14];
+    UINT type = *reinterpret_cast<const UINT*>(message + 0xc);
+    if (type == WM_KEYDOWN || type == WM_KEYUP) {
+        GetKeyboardState(state);
+        HKL layout = GetKeyboardLayout(0);
+        *reinterpret_cast<HKL*>(self + 0x58) = layout;
+        *reinterpret_cast<HKL*>(self + 0x5a8) = layout;
+        const BYTE scan = message[0x1a];
+        key = static_cast<unsigned short>(cx18_ImmGetVirtualKey(hwnd));
+        if (*reinterpret_cast<int*>(self + 0x98) == 0x70000) {
+            if (key == VK_NEXT) {
+                HIMC context = cx18_ImmGetContext(hwnd);
+                cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
+                cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) + 9);
+                cx18_ImmReleaseContext(hwnd, context);
+            }
+            if (*reinterpret_cast<int*>(self + 0x98) == 0x70000 && key == VK_PRIOR) {
+                HIMC context = cx18_ImmGetContext(hwnd);
+                cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
+                cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) - 9);
+                cx18_ImmReleaseContext(hwnd, context);
+            }
+        }
+        ToUnicodeEx(key, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
+        type = *reinterpret_cast<const UINT*>(message + 0xc);
+    }
     const WPARAM wParam = *reinterpret_cast<const WPARAM*>(message + 0x10);
     const LPARAM lParam = *reinterpret_cast<const LPARAM*>(message + 0x18);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    BYTE state[256]{};
-    GetKeyboardState(state);
-    HKL layout = GetKeyboardLayout(0);
-    *reinterpret_cast<HKL*>(self + 0x58) = layout;
-    *reinterpret_cast<HKL*>(self + 0x5a8) = layout;
-    const UINT virtualKey = cx18_ImmGetVirtualKey(hwnd);
-    *reinterpret_cast<short*>(self + 0xd0) = static_cast<short>(virtualKey);
-    wchar_t translated[0x14]{};
-    ToUnicodeEx(virtualKey, static_cast<UINT>((lParam >> 16) & 0xff), state,
-        translated, 0x14, 0, layout);
-
-    const int mode = *reinterpret_cast<int*>(self + 0x98);
-    if (mode == 0x70000 && (virtualKey == VK_NEXT || virtualKey == VK_PRIOR)) {
-        HIMC context = cx18_ImmGetContext(hwnd);
-        if (context) {
-            cx18_ImmNotifyIME(context, 0x10, 0, 0);
-            const int delta = virtualKey == VK_NEXT ? 9 : -9;
-            cx18_ImmNotifyIME(context, 0x16, 0, *reinterpret_cast<int*>(self + 0x70) + delta);
-            cx18_ImmReleaseContext(hwnd, context);
-        }
-    }
     if (type == WM_KEYDOWN && wParam != VK_PROCESSKEY)
         *reinterpret_cast<short*>(self + 0xa0) = 1;
-    else if (type == WM_KEYUP) {
-        const BOOL consumed = cx18_ImmIsUIMessageW(nullptr, type, wParam, lParam);
-        *reinterpret_cast<unsigned char*>(self + 0xa1) = consumed ? 1 : 0;
-        if (!consumed) *reinterpret_cast<short*>(self + 0xa0) = 0;
+    if (self[0xa0] && cx18_ImmIsUIMessageW(nullptr, type, wParam, lParam))
+        self[0xa1] = 1;
+    if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYUP && self[0xa0]) {
+        self[0xa0] = 0;
+        if (!self[0xa1] && *reinterpret_cast<int*>(self + 0x60) == 0) {
+            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(self))[0x80 / sizeof(void*)])(self);
+            cx18_InvokeInputWindow(self, "RemoveInputWindow", nullptr, 0);
+        }
+    }
+    if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYDOWN) {
+        const BYTE scan = message[0x1a];
+        const UINT virtualKey = cx18_ImmGetVirtualKey(hwnd);
+        key = static_cast<unsigned short>(virtualKey);
+        ToUnicodeEx(virtualKey & 0xffff, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
+        unsigned short ch = static_cast<unsigned short>(translated[0]);
+        key = ch;
+        if (ch < 0x21 && (0x108002100ull >> ch & 1)) return;
+        int mode = *reinterpret_cast<int*>(self + 0x98);
+        if (mode == 2 && ch > 0x1f && ch < 0x7b) {
+            const int index = tolower(ch) - 0x20;
+            ch = *reinterpret_cast<unsigned short*>(self + 0xdc + 12 * index);
+            key = ch;
+            *reinterpret_cast<int*>(self + 0xc8) = *reinterpret_cast<int*>(self + 0xe0 + 12 * index);
+            mode = *reinterpret_cast<int*>(self + 0x98);
+        }
+        if (mode == 4 && static_cast<unsigned short>(ch - 0x20) < 0x5b)
+            key = cx18_CangjieKeys[tolower(ch) - 0x20];
+    }
+    if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYUP && self[0x5bc]) {
+        FUN_1423d5060(self, -*reinterpret_cast<int*>(self + 0x64));
+        self[0x5bc] = 0;
     }
 }
 
@@ -4448,32 +4594,23 @@ addToLists:
     return result;
 }
 
-// MS2-FUNCTIONAL: reports the current caret position and candidate-window height to the GFx external interface.
+// Moves the candidate window of the IMM IME object to the composition cursor at offset: RepositionCandWindow(x1, y2,
+// y2 - y1) of the cursor rect IMEManagerBase::GetMetrics reports.
+// MS2-FUNCTIONAL: the exe builds the three arguments in a heap Value array
 // @0x1423d5060
-void FUN_1423d5060(void* raw, int)
+void FUN_1423d5060(void* raw, int offset)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    POINT caret{};
-    GetCaretPos(&caret);
-    ClientToScreen(hwnd, &caret);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, offset);
     Scaleform::GFx::Value args[3];
-    auto* bytes = reinterpret_cast<unsigned char*>(args);
-    const double values[3] = { static_cast<double>(caret.x), static_cast<double>(caret.y),
-                               static_cast<double>(GetSystemMetrics(SM_CYSMICON)) };
-    for (unsigned i = 0; i < 3; ++i) {
-        *reinterpret_cast<unsigned*>(bytes + i * 0x20 + 8) = Scaleform::GFx::Value::VT_Number;
-        *reinterpret_cast<double*>(bytes + i * 0x20 + 0x10) = values[i];
-    }
-    void* movie = *reinterpret_cast<void**>(self + 0xa8);
-    void* manager = movie ? *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8) : nullptr;
-    void* interfaceState = manager ? *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18) : nullptr;
-    if (interfaceState) {
-        Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
-            (*reinterpret_cast<void***>(interfaceState))[0x78 / sizeof(void*)])(
-                interfaceState, "RepositionCandWindow", &result, args, 3);
-    }
+    args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
+    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
+    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1));
+    cx18_InvokeInputWindow(self, "RepositionCandWindow", args, 3);
 }
 
 // MS2-FUNCTIONAL: composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
