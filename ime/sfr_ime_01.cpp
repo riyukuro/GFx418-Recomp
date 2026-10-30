@@ -2283,26 +2283,29 @@ void FUN_1423cc720(unsigned long long* array, void*, unsigned long long requeste
     array[2] = capacity;
 }
 
-// MS2-FUNCTIONAL: loads the active IME module, hides its reading window when available, and releases the context.
+// The IME module's reading-string entry points (exe 0x143b103d0 / 0x143b103d8), kept by FUN_1423cb660 only.
+static FARPROC s_imeGetReadingString;
+static FARPROC s_imeShowReadingWindow;
+
+struct ImeReadingWindowHost { unsigned char opaque[0x68]; HWND hwnd; };
+struct ImeReadingWindowOwner { unsigned char opaque[0x78]; ImeReadingWindowHost* host; };
+
+// Loads the current keyboard layout's IME module and hides its reading window through ShowReadingWindow.
+// MS2-FUNCTIONAL: the exe loads the +0x78 host into rcx for ImmGetContext (rax here); 2 bytes
 // @0x1423cb660
 void FUN_1423cb660(void* self)
 {
-    char fileName[0x104]{};
+    char fileName[0x104];
     if (!cx18_ImmGetIMEFileNameA(GetKeyboardLayout(0), fileName, sizeof(fileName))) return;
     HMODULE ime = LoadLibraryA(fileName);
     if (!ime) return;
-    FARPROC getReading = GetProcAddress(ime, "GetReadinString");
-    FARPROC showWindow = GetProcAddress(ime, "ShowReadingWindow");
-    (void)getReading;
-    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x78);
-    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(child) + 0x68);
-    if (showWindow) {
-        HIMC context = cx18_ImmGetContext(hwnd);
-        if (context) {
-            reinterpret_cast<void(WINAPI*)(HIMC, int)>(showWindow)(context, 0);
-            cx18_ImmReleaseContext(hwnd, context);
-        }
-    }
+    s_imeGetReadingString = GetProcAddress(ime, "GetReadinString");
+    s_imeShowReadingWindow = GetProcAddress(ime, "ShowReadingWindow");
+    if (!s_imeShowReadingWindow) return;
+    HIMC context = cx18_ImmGetContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd);
+    if (!context) return;
+    reinterpret_cast<void(WINAPI*)(HIMC, int)>(s_imeShowReadingWindow)(context, 0);
+    cx18_ImmReleaseContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd, context);
 }
 
 // MS2-FUNCTIONAL: reopens the IME context when absent, applies the requested open state, and restores association.
