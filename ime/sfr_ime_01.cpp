@@ -798,25 +798,23 @@ String* FUN_1423cf4a0(void* self, String* output)
     return new (output) String(label);
 }
 
-// MS2-FUNCTIONAL: recreates the executable's COM instance activation, nested object creation, and release sequence.
 // @0x1423da8b0
 HRESULT FUN_1423da8b0(void*, void* argument, void* value)
 {
-    void* factory = nullptr;
+    void* factory;
     HRESULT result = CoCreateInstance(*reinterpret_cast<const IID*>(DAT_1431c4878), nullptr,
         CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(DAT_1431c51b8), &factory);
     if (FAILED(result)) return result;
-    void* object = nullptr;
-    const HRESULT created = reinterpret_cast<HRESULT(*)(void*, void*, void**, unsigned)>(
-        (*reinterpret_cast<void***>(factory))[5])(factory, argument, &object, 0);
-    if (FAILED(created)) {
-        result = static_cast<HRESULT>(0x80070005u);
-    } else {
+    void* object;
+    if (SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, void*, void**, unsigned)>(
+            (*reinterpret_cast<void***>(factory))[5])(factory, argument, &object, 0))) {
         result = reinterpret_cast<HRESULT(*)(void*, void*)>(
             (*reinterpret_cast<void***>(object))[5])(object, value);
-        reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+        static_cast<IUnknown*>(object)->Release();
+    } else {
+        result = E_FAIL;
     }
-    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(factory))[2])(factory);
+    static_cast<IUnknown*>(factory)->Release();
     return result;
 }
 
