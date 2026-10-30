@@ -11,6 +11,8 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/cri/cri_vendor_shim.h"
+extern "C" void _ReadWriteBarrier(void);
+#pragma intrinsic(_ReadWriteBarrier)
 extern "C" const char* _DAT_143c494f0;
 extern "C" cri_code* DAT_143e64b00;
 extern "C" cri_code* DAT_143e64b08;
@@ -9459,6 +9461,7 @@ void FUN_14005e720()
 // @0x14005ebc0
 void FUN_14005ebc0()
 {
+  _ReadWriteBarrier();   // emits nothing; keeps /O2 from dropping FUN_1400627a0's call to this empty function, which the exe makes
   return;
 }
 
