@@ -4421,97 +4421,6 @@ void FUN_140042700(void* trackSet, void* player)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: dequeue a chunk large enough for the request or split its head in single-buffer mode.
-// @0x140045c60
-void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output)
-{
-    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
-    struct RingQueue
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;
-        CriSint32 Mode;
-        CriUint32 Reserved1c;
-        ChunkNode* Heads[5];
-        ChunkNode* FreeList;
-    };
-    RingQueue* queue = (RingQueue*)object;
-    if (queue->Lock)
-        FUN_140039f50(queue->Lock);
-    ChunkNode* node = queue->Heads[lane];
-    if (node && node->Size <= requested)
-    {
-        output[0] = (CriUint64)node->Data;
-        output[1] = node->Size;
-        queue->Heads[lane] = node->Next;
-        memset(node, 0, sizeof(*node));
-        node->Next = queue->FreeList;
-        queue->FreeList = node;
-    }
-    else if (node && queue->Mode == 1)
-    {
-        CriUint64 chunk[2] = { (CriUint64)node->Data, node->Size };
-        CriUint64 prefix[2] = {}, suffix[2] = {};
-        criSj_SplitChunk(chunk, requested, prefix, suffix);
-        output[0] = prefix[0];
-        output[1] = prefix[1];
-        node->Data = (void*)suffix[0];
-        node->Size = (CriUint32)suffix[1];
-    }
-    else
-    {
-        output[0] = 0;
-        output[1] = 0;
-    }
-    if (queue->Lock)
-        FUN_140039f8c(queue->Lock);
-}
-
-// MS2-FUNCTIONAL: append a contiguous input chunk to the lane tail or consume a recycled node.
-// @0x140045d34
-void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input)
-{
-    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
-    struct RingQueue
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;
-        CriSint32 Mode;
-        CriUint32 Reserved1c;
-        ChunkNode* Heads[5];
-        ChunkNode* FreeList;
-    };
-    RingQueue* queue = (RingQueue*)object;
-    void* data = (void*)input[0];
-    CriUint32 size = (CriUint32)input[1];
-    if (size != 0 && data)
-    {
-        if (queue->Lock)
-            FUN_140039f50(queue->Lock);
-        ChunkNode** tail = &queue->Heads[lane];
-        ChunkNode* last = NULL;
-        while (*tail)
-        {
-            last = *tail;
-            tail = &(*tail)->Next;
-        }
-        if (queue->Mode == 1 && last && (CriUint8*)last->Data + last->Size == data)
-            last->Size += size;
-        else if (queue->FreeList)
-        {
-            ChunkNode* node = queue->FreeList;
-            queue->FreeList = node->Next;
-            memset(node, 0, sizeof(*node));
-            node->Data = data;
-            node->Size = size;
-            *tail = node;
-        }
-        if (queue->Lock)
-            FUN_140039f8c(queue->Lock);
-    }
-}
-
-// MS2-FUNCTIONAL: prepend a contiguous input chunk or a recycled node to the selected ring lane.
 struct CriSjChunk { void* Data; CriUint32 Size, Reserved0c; };
 struct CriSjChunkNode { CriSjChunkNode* Next; CriUint64 Reserved08; CriSjChunk Chunk; };
 struct CriSjRingQueue
@@ -4524,18 +4433,94 @@ struct CriSjRingQueue
     CriSjChunkNode* FreeList;
 };
 
-// pops a cleared node off the queue's free list (NULL when it is empty); inlined into FUN_140045e04
+// pops a cleared node off the queue's free list (NULL when it is empty); inlined into FUN_140045d34 and FUN_140045e04.
+// The node is taken back from memset's result, so the callers re-test it after the clear, as the exe does.
 static __forceinline CriSjChunkNode* criSjRbf_PopFreeNode(CriSjRingQueue* queue)
 {
     CriSjChunkNode* node = queue->FreeList;
     if (node)
     {
         queue->FreeList = node->Next;
-        memset(node, 0, sizeof(*node));
+        node = (CriSjChunkNode*)memset(node, 0, sizeof(*node));
     }
     return node;
 }
 
+// MS2-FUNCTIONAL: dequeue a chunk large enough for the request or split its head in single-buffer mode.
+// @0x140045c60
+void FUN_140045c60(void* object, CriSint32 lane, CriUint32 requested, CriUint64* output)
+{
+    CriSjRingQueue* queue = (CriSjRingQueue*)object;
+    CriSjChunk* result = (CriSjChunk*)output;
+    if (queue->Lock)
+        FUN_140039f50(queue->Lock);
+    CriSjChunkNode* node = queue->Heads[lane];
+    if (node)
+    {
+        CriSjChunk chunk = node->Chunk;
+        if (chunk.Size <= requested)
+        {
+            *result = chunk;
+            queue->Heads[lane] = node->Next;
+            memset(node, 0, sizeof(*node));
+            node->Next = queue->FreeList;
+            queue->FreeList = node;
+        }
+        else if (queue->Mode == 1)
+        {
+            CriSjChunk suffix;
+            criSj_SplitChunk(&chunk, requested, &chunk, &suffix);
+            *result = chunk;
+            node->Chunk = suffix;
+        }
+        else
+        {
+            result->Data = NULL;
+            result->Size = 0;
+        }
+    }
+    else
+    {
+        result->Data = NULL;
+        result->Size = 0;
+    }
+    if (queue->Lock)
+        FUN_140039f8c(queue->Lock);
+}
+
+// MS2-FUNCTIONAL: append a contiguous input chunk to the lane tail or consume a recycled node.
+// @0x140045d34
+void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input)
+{
+    CriSjRingQueue* queue = (CriSjRingQueue*)object;
+    const CriSjChunk* chunk = (const CriSjChunk*)input;
+    if (chunk->Size > 0 && chunk->Data)
+    {
+        if (queue->Lock)
+            FUN_140039f50(queue->Lock);
+        CriSjChunkNode** tail = &queue->Heads[lane];
+        CriSjChunkNode* last = NULL;
+        for (CriSjChunkNode* walk = *tail; walk; walk = walk->Next)
+        {
+            last = walk;
+            tail = &walk->Next;
+        }
+        CriSjChunkNode* node = NULL;
+        if (queue->Mode == 1 && last && (CriUint8*)last->Chunk.Data + last->Chunk.Size == chunk->Data)
+            last->Chunk.Size += chunk->Size;
+        else
+            node = criSjRbf_PopFreeNode(queue);
+        if (node)
+        {
+            node->Chunk = *chunk;
+            *tail = node;
+        }
+        if (queue->Lock)
+            FUN_140039f8c(queue->Lock);
+    }
+}
+
+// MS2-FUNCTIONAL: prepend a contiguous input chunk or a recycled node to the selected ring lane.
 // @0x140045e04
 void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
 {
