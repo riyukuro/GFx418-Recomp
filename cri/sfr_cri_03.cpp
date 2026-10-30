@@ -3064,28 +3064,29 @@ void FUN_14003e820(void* handle, CriUint32 frameRate)
 // @0x14003e750
 void FUN_14003e750(void* handle, CriSint32 frame, CriUint64* timestamp, CriUint64* offset)
 {
-    CriUint32 frameRate, selected = 0, key = 0;
-    memcpy(&frameRate, (CriUint8*)handle + 0x38, sizeof(frameRate));
+    struct FrameTime { CriSint32 Frame; CriUint32 Milliseconds; };
+    CriSint32 i;
+    FrameTime* table;
+    CriSint32 slot;
+    CriVmpvHnFields* obj;
+    obj = (CriVmpvHnFields*)handle;
+    table = (FrameTime*)((CriUint8*)obj + 0x1b4);
+    slot = 0;
     *timestamp = 0;
-    *offset = frameRate;
-    if (frame != 0)
+    *offset = obj->FrameRate;
+    if (frame == 0)
+        return;
+    for (i = 0; i < 8; i++)
     {
-        for (key = 0; key < 8; ++key)
+        if (table[i].Frame == frame - 1)
         {
-            CriSint32 candidate;
-            memcpy(&candidate, (CriUint8*)handle + 0x1b4 + key * 8, sizeof(candidate));
-            if (candidate == frame - 1)
-            {
-                selected = key;
-                break;
-            }
+            slot = i;
+            break;
         }
-        if (key == 8)
-            selected = 7;
-        CriUint32 milliseconds;
-        memcpy(&milliseconds, (CriUint8*)handle + 0x1b8 + selected * 8, sizeof(milliseconds));
-        *timestamp = (CriUint64)milliseconds * 1000;
     }
+    if (i == 8)
+        slot = 7;
+    *timestamp = (CriUint64)table[slot].Milliseconds * 1000;
 }
 
 // MS2-FUNCTIONAL: normalize the movie player's two 64-entry audio-track maps and copy the active entries.
@@ -4620,10 +4621,10 @@ void* FUN_14003e2a0(void* source, void* destination)
         void* Value;
         CriUint32 Field08, Field0c, Field10, Field14;
         CriUint64 Field18;
-        CriUint8 Reserved20[0x30];
+        CriUint64 Reserved20[6];
         CriUint32 Field50;
-        CriUint8 Reserved54[0x5c];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
-    } input = {};
+        CriUint32 Reserved54[0x17];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
+    } input;
     struct DescriptorOutput
     {
         void* Value;
@@ -4632,18 +4633,18 @@ void* FUN_14003e2a0(void* source, void* destination)
         CriUint8 Reserved28[0x20];
         CriUint32 Ready;
     };
-    if (!FUN_14003da40(source, &input))
+    void* found = FUN_14003da40(source, &input);
+    if (!found)
         return NULL;
-    DescriptorOutput* output = (DescriptorOutput*)destination;
-    output->Value = input.Value;
-    output->Field08 = input.Field08;
-    output->Field0c = input.Field0c;
-    output->Field10 = input.Field10;
-    output->Field14 = input.Field50;
-    output->Field18 = input.Field14;
-    output->Field20 = input.Field18;
-    output->Ready = 1;
-    return output->Value;
+    ((DescriptorOutput*)destination)->Field08 = input.Field08;
+    ((DescriptorOutput*)destination)->Field20 = input.Field18;
+    ((DescriptorOutput*)destination)->Value = input.Value;
+    ((DescriptorOutput*)destination)->Field0c = input.Field0c;
+    ((DescriptorOutput*)destination)->Field10 = input.Field10;
+    ((DescriptorOutput*)destination)->Field14 = input.Field50;
+    ((DescriptorOutput*)destination)->Field18 = input.Field14;
+    ((DescriptorOutput*)destination)->Ready = 1;
+    return ((DescriptorOutput*)destination)->Value;
 }
 
 // MS2-FUNCTIONAL: obtain an alternate CRI video descriptor and publish its packed playback fields.
@@ -4655,10 +4656,10 @@ void* FUN_14003e5d0(void* source, void* destination)
         void* Value;
         CriUint32 Field08, Field0c, Field10, Field14;
         CriUint64 Field18;
-        CriUint8 Reserved20[0x30];
+        CriUint64 Reserved20[6];
         CriUint32 Field50;
-        CriUint8 Reserved54[0x5c];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
-    } input = {};
+        CriUint32 Reserved54[0x17];   // the callee copies a whole 0xb0-byte decoded frame here (exe local is 0xb0)
+    } input;
     struct DescriptorOutput
     {
         void* Value;
@@ -4667,18 +4668,18 @@ void* FUN_14003e5d0(void* source, void* destination)
         CriUint8 Reserved28[0x20];
         CriUint32 Ready;
     };
-    if (!FUN_14003dd50(source, &input))
+    void* found = FUN_14003dd50(source, &input);
+    if (!found)
         return NULL;
-    DescriptorOutput* output = (DescriptorOutput*)destination;
-    output->Value = input.Value;
-    output->Field08 = input.Field08;
-    output->Field0c = input.Field0c;
-    output->Field10 = input.Field10;
-    output->Field14 = input.Field50;
-    output->Field18 = input.Field14;
-    output->Field20 = input.Field18;
-    output->Ready = 1;
-    return output->Value;
+    ((DescriptorOutput*)destination)->Field08 = input.Field08;
+    ((DescriptorOutput*)destination)->Field20 = input.Field18;
+    ((DescriptorOutput*)destination)->Value = input.Value;
+    ((DescriptorOutput*)destination)->Field0c = input.Field0c;
+    ((DescriptorOutput*)destination)->Field10 = input.Field10;
+    ((DescriptorOutput*)destination)->Field14 = input.Field50;
+    ((DescriptorOutput*)destination)->Field18 = input.Field14;
+    ((DescriptorOutput*)destination)->Ready = 1;
+    return ((DescriptorOutput*)destination)->Value;
 }
 
 // MS2-FUNCTIONAL: release the matching decoded frame from the pending ring and report if none matched.
