@@ -255,7 +255,7 @@ void* FUN_140015c00(void* object, unsigned __int64 flags)
 // @0x140014400
 void FUN_140014400(void* object, void*, char invoke)
 {
-    void* target = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
+    void*& target = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);   // re-read after the call
     FUN_140025300(target);
     if (invoke)
     {
@@ -1243,7 +1243,7 @@ Scaleform::GFx::AS3::Value* FUN_140013ec0(Scaleform::GFx::AS3::Value* dst)
 UInt32* FUN_140015340(UInt32* dst)
 {
     Scaleform::GFx::AS3::Value* value = reinterpret_cast<Scaleform::GFx::AS3::Value*>(dst);
-    new (value) Scaleform::GFx::AS3::Value(Scaleform::GFx::AS3::Value::GetUndefined());
+    value->Scaleform::GFx::AS3::Value::Value(Scaleform::GFx::AS3::Value::GetUndefined());   // in place, no null check
     return dst;
 }
 
@@ -1760,7 +1760,7 @@ void* FUN_140010e60(void** destination, void* const* source)
         void** iface = *reinterpret_cast<void***>(static_cast<char*>(old) + 0x10);
         reinterpret_cast<void (*)(void*)>(iface[2])(static_cast<char*>(old) + 0x10);
     }
-    *destination = value;
+    *destination = *source;
     return destination;
 }
 
@@ -3082,10 +3082,13 @@ unsigned FUN_140011450(void* object, const unsigned* source)
     // the new last entry, at the resized count; the exe returns that count
     auto size = *reinterpret_cast<unsigned __int64*>(array + 8);
     char* item = *reinterpret_cast<char**>(array) + size * 0x10 - 0x10;
-    *reinterpret_cast<unsigned*>(item) = *source;
-    void* value = *reinterpret_cast<void* const*>(source + 2);
-    if (value) FUN_14257dc30(value);
-    *reinterpret_cast<void**>(item + 8) = value;
+    if (item)   // the exe's placement copy construction of the entry
+    {
+        *reinterpret_cast<unsigned*>(item) = *source;
+        void* value = *reinterpret_cast<void* const*>(source + 2);
+        if (value) FUN_14257dc30(value);
+        *reinterpret_cast<void**>(item + 8) = *reinterpret_cast<void* const*>(source + 2);
+    }
     return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(array + 8));
 }
 
