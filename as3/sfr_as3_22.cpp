@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x1426899e0-0x142690d10 .text$mn
 // MS2-RANGE: 0x142744560-0x142746480 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/kernel/sf_array.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/kernel/sf_string.h"
@@ -307,59 +308,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // THUNKS-END
 
 // MS2-PIN: ??$FormatD1@_K@MsgFormat@Scaleform@@QEAAXAEB_K@Z 0x142685ff0
-
-namespace Scaleform {
-extern "C" void FUN_1425463f0(void*, const void*, UPInt);
-extern "C" void FUN_142546490(void*, const void*, UPInt);
-
-// ArrayData::Resize shrinks only after the size drops below half capacity; growth reserves 25% headroom.
-// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
-// @0x1425684a0
-void ResizeTextStyleArray(void* array, UPInt size)
-{
-    UPInt* fields = static_cast<UPInt*>(array);
-    if (size < fields[1])
-    {
-        if (size < (fields[2] >> 1))
-        {
-            FUN_1425463f0(array, array, size);
-            fields[1] = size;
-            return;
-        }
-    }
-    else if (fields[2] <= size)
-    {
-        FUN_1425463f0(array, array, (size >> 2) + size);
-        fields[1] = size;
-        return;
-    }
-    fields[1] = size;
-}
-
-// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
-// @0x142568520
-void ResizeStaticTextArray(void* array, UPInt size)
-{
-    UPInt* fields = static_cast<UPInt*>(array);
-    if (size < fields[1])
-    {
-        if (size < (fields[2] >> 1))
-        {
-            FUN_142546490(array, array, size);
-            fields[1] = size;
-            return;
-        }
-    }
-    else if (fields[2] <= size)
-    {
-        FUN_142546490(array, array, (size >> 2) + size);
-        fields[1] = size;
-        return;
-    }
-    fields[1] = size;
-}
-
-}
 
 enum FMOD_RESULT : int {};
 struct FMOD_CREATESOUNDEXINFO;
@@ -1858,7 +1806,6 @@ void GFx::AMP::ServerState::Read(File& str, UInt32 version)
 
 
 
-void ResizeStrongPointerArrayB(void**, std::size_t);
 static void ResizeRawArray(void**, void*, std::size_t, std::size_t);
 void FUN_14257dc30(void*);
 // @0x14268aff0
@@ -2382,19 +2329,7 @@ void ReserveGlobalPointerArray(void** array, void*, std::size_t requested)
     ReserveHeapArray(array, nullptr, requested, 8, false);
 }
 
-// MS2-FUNCTIONAL: uses the local heap owner and eight-byte element stride observed by the executable.
-// @0x14268e4c0
-void ReserveLocalPointerArrayA(void** array, void* heapOwner, std::size_t requested)
-{
-    ReserveHeapArray(array, heapOwner, requested, 8, true);
-}
 
-// MS2-FUNCTIONAL: preserves the local heap allocation and four-element capacity rounding.
-// @0x14268e560
-void ReserveLocalPointerArrayB(void** array, void* heapOwner, std::size_t requested)
-{
-    ReserveHeapArray(array, heapOwner, requested, 8, true);
-}
 
 
 static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested, std::size_t stride)
@@ -2419,30 +2354,7 @@ unsigned long long FUN_1425e3480();
 int FUN_1428d8ed8(void*, bool);
 
 namespace Scaleform {
-static void ResizeStrongPointerArray(void** array, void* heapOwner, std::size_t requested)
-{
-    const std::size_t oldSize = reinterpret_cast<std::size_t>(array[1]);
-    const std::size_t capacity = reinterpret_cast<std::size_t>(array[2]);
-    auto** elements = static_cast<void**>(array[0]);
-    if (requested < oldSize) {
-        for (std::size_t i = oldSize; i > requested; --i)
-            if (elements[i - 1]) FUN_14257dcb0(elements[i - 1]);
-        if (requested < (capacity >> 1))
-            ReserveLocalPointerArrayA(array, heapOwner, requested);
-    } else if (capacity <= requested) {
-        ReserveLocalPointerArrayA(array, heapOwner, requested + (requested >> 2));
-    }
-    // The exe's callers null the added slots inline (rep stos, 0x14268cde1).
-    if (requested > oldSize)
-        std::memset(static_cast<void**>(array[0]) + oldSize, 0, (requested - oldSize) * sizeof(void*));
-    array[1] = reinterpret_cast<void*>(requested);
-}
 
-// Untyped stand-in for the merge helpers below; the typed MarkerInfo copy is 0x14268eac0.
-void ResizeStrongPointerArrayB(void** array, std::size_t requested)
-{
-    ResizeStrongPointerArray(array, array, requested);
-}
 
 }
 
@@ -3559,18 +3471,6 @@ void GFx::AMP::MovieFunctionStats::Merge(const MovieFunctionStats& other)
     }
 }
 
-static void CopyAs3StrongArray(void** destinationArray, void* const* sourceArray)
-{
-    const std::size_t count = reinterpret_cast<const std::size_t*>(sourceArray)[1];
-    Scaleform::ResizeStrongPointerArrayB(destinationArray, count);
-    auto** dstItems = static_cast<void**>(destinationArray[0]);
-    auto* srcItems = static_cast<void* const*>(sourceArray[0]);
-    for (std::size_t i = 0; i < count; ++i) {
-        if (srcItems[i]) FUN_14257dc30(srcItems[i]);
-        if (dstItems[i]) FUN_14257dcb0(dstItems[i]);
-        dstItems[i] = srcItems[i];
-    }
-}
 
 static void CopyAs3RawRecords(unsigned char* destinationList, const unsigned char* sourceList, std::size_t stride)
 {
@@ -4406,3 +4306,11 @@ template void Ms2SourceFileDescSet::BaseType::add<Scaleform::GFx::AMP::SourceFil
 template void Ms2UInt64SetBase::add<Scaleform::UInt64>(void* pheapAddr, const Scaleform::UInt64& key, Scaleform::UPInt hashValue);
 // @0x142690a20
 template void Ms2UInt64SetBase::setRawCapacity(void* pheapAddr, Scaleform::UPInt newSize);
+// @0x1425684a0
+template void Scaleform::ArrayData<Scaleform::GFx::AS3::Abc::MethodInfo*, Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::MethodInfo*, Scaleform::GFx::AS3::StatMV_VM_AbcFile_Mem>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+// @0x142568520
+template void Scaleform::ArrayData<Scaleform::GFx::AS3::Abc::ScriptInfo*, Scaleform::AllocatorLH_POD<Scaleform::GFx::AS3::Abc::ScriptInfo*, Scaleform::GFx::AS3::StatMV_VM_AbcFile_Mem>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::GFx::AMP::ImageInfo>, Scaleform::AllocatorLH<Scaleform::Ptr<Scaleform::GFx::AMP::ImageInfo>, Scaleform::Stat_Default_Mem>, Scaleform::ArrayDefaultPolicy>::Reserve(const void* pheapAddr, Scaleform::UPInt newCapacity);
+template void Scaleform::ArrayDataBase<Scaleform::Ptr<Scaleform::GFx::AMP::MovieProfile>, Scaleform::AllocatorLH<Scaleform::Ptr<Scaleform::GFx::AMP::MovieProfile>, Scaleform::Stat_Default_Mem>, Scaleform::ArrayDefaultPolicy>::Reserve(const void* pheapAddr, Scaleform::UPInt newCapacity);
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UImageInfo@AMP@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@UImageInfo@AMP@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x14268e4c0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@V?$Ptr@UMovieProfile@AMP@GFx@Scaleform@@@Scaleform@@U?$AllocatorLH@V?$Ptr@UMovieProfile@AMP@GFx@Scaleform@@@Scaleform@@$01@2@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x14268e560
