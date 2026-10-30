@@ -35,9 +35,9 @@ extern void* DAT_143b27bc0;
 extern CriSint32 DAT_143b27bc8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
-extern CriSint32 DAT_1431b97a0[];
-extern const char* DAT_1431b97a8[];
-extern const char* DAT_1431b9820;
+struct CriErrorText { CriSint32 code; const char* text; };
+extern CriErrorText DAT_1431b97a0[];   // {code, text} pairs ending with {0, NULL}
+extern const char DAT_1431b9820[];     // ":"
 extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriSint32 DAT_143b27948;

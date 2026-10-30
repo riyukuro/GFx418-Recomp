@@ -36,9 +36,9 @@ extern void* DAT_143b27bc0;
 extern CriSint32 DAT_143b27bc8;
 extern CriUint32 DAT_143b27bcc;
 extern CriUint32 DAT_143b27bd0;
-extern CriSint32 DAT_1431b97a0[];
-extern const char* DAT_1431b97a8[];
-extern const char* DAT_1431b9820;
+struct CriErrorText { CriSint32 code; const char* text; };
+extern CriErrorText DAT_1431b97a0[];   // {code, text} pairs ending with {0, NULL}
+extern const char DAT_1431b9820[];     // ":"
 extern const void* DAT_143b27a40;
 extern CriUint16 DAT_143b2794c;
 extern CriSint32 DAT_143b27948;
@@ -2083,15 +2083,12 @@ void FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, Cri
 void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
 {
     const char* description = "Unknown Error.";
-    if (DAT_1431b97a8[0])
+    for (CriSint32 i = 0; DAT_1431b97a0[i].text; ++i)
     {
-        for (CriUint32 i = 0; DAT_1431b97a8[i * 2]; ++i)
+        if (DAT_1431b97a0[i].code == error)
         {
-            if (DAT_1431b97a0[i * 4] == error)
-            {
-                description = DAT_1431b97a8[i * 2];
-                break;
-            }
+            description = DAT_1431b97a0[i].text;
+            break;
         }
     }
     FUN_140046944(DAT_143b27ab0, 0x100, code);
