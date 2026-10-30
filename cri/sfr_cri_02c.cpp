@@ -2064,9 +2064,9 @@ void FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, Cri
         DAT_143b27bb8 = NULL;
         DAT_143b27bc0 = NULL;
         secondary(message, value, flags, owner);
+        DAT_143b27bb8 = (void*)notify;
+        DAT_143b27bc0 = (void*)secondary;
     }
-    DAT_143b27bb8 = (void*)notify;
-    DAT_143b27bc0 = (void*)secondary;
     if (DAT_143b27bc8 == 1 && category == 1)
         ++DAT_143b27bd0;
     else
@@ -3074,7 +3074,7 @@ void FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMov
     output[1] = FUN_14003a85c(document, 0, "num_channels");
     output[2] = FUN_14003a85c(document, 0, "total_samples");
     output[3] = FUN_14003a85c(document, 0, "ixsize");
-    suggestedSize4 = FUN_14003a85c(document, 0, "ixsize");
+    suggestedSize4 = FUN_14003a85c(document, 0, "ixsize\0");   // the same name; the exe keeps a second copy (0x143a47288)
     if (suggestedSize4 > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = suggestedSize4;
     criUtfRtv_Destroy((CriUint64*)document);
