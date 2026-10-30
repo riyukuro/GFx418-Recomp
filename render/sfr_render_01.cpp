@@ -21,12 +21,14 @@ extern "C" void FUN_14015b310(void*, unsigned long long);
 
 namespace Scaleform {
 
+// The exe calls these two out of line from the deleting destructors below (they come from the Kernel TU there).
 // @0x14257db40
-RefCountImplCore::~RefCountImplCore() {}
+__declspec(noinline) RefCountImplCore::~RefCountImplCore() {}
 
 // @0x14257db50
-RefCountNTSImplCore::~RefCountNTSImplCore() {}
+__declspec(noinline) RefCountNTSImplCore::~RefCountNTSImplCore() {}
 
+// MS2-FUNCTIONAL: the exe inlines ~RefCountImplCore here (its Kernel TU); ours calls it, since it is noinline for the deleting dtors
 // @0x14257db60
 RefCountWeakSupportImpl::~RefCountWeakSupportImpl()
 {
@@ -1267,7 +1269,7 @@ void Texture::LoseTextureData()
 // The in-place inverse is emitted out of line here (one shared COMDAT copy, 0x14257c730).
 template Matrix2x4<float>& Matrix2x4<float>::Invert();
 
-// MS2-FUNCTIONAL: preserves ImageUpdate member teardown and both allocator delete branches.
+// Keeps the ImageUpdate member teardown and both allocator delete branches.
 // @0x142579ac0
 void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
 {
@@ -1327,7 +1329,7 @@ void* FUN_142579d80(TextureImage* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: preserves TextureManager subobject teardown and both allocator delete branches.
+// Keeps the TextureManager subobject teardown and both allocator delete branches.
 // @0x142579e30
 void* FUN_142579e30(TextureManager* object, unsigned flags)
 {
