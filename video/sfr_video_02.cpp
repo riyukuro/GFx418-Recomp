@@ -2615,8 +2615,9 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
-    extern void FUN_14000c280(void*, unsigned, void*);
-    FUN_14000c280(context, prototypeType, prototype);
+    extern void FUN_14000c280(void*, unsigned, void**);
+    void* prototypeSlot = prototype;
+    FUN_14000c280(context, prototypeType, &prototypeSlot);
 
     auto* manager = context->GetStringManager();
     auto* nameNode = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(
@@ -2631,8 +2632,7 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
-            if ((*count & 0x03ffffffu) == 0)
-                FUN_1425925f0(prototype);
+            FUN_1425925f0(prototype);
         }
     }
     return result;
