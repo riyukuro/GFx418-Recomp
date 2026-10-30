@@ -3020,9 +3020,10 @@ void Sfr31ResizeNCIObj(UPInt* a, void* heap, UPInt n) { Sfr31ArrResizeNC(a, 0, n
 // @0x1425248e0
 void Sfr31ResizeNCMaskStack(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 0x10, 2, 0, Sfr31ElObj); }
 
-// MS2-FUNCTIONAL 0x142524e20: ResizeNoConstruct of a Value array
+// MS2-FUNCTIONAL 0x142524e20: ResizeNoConstruct of a global-heap Value array (ArrayData<Value, AllocatorGH>; its
+// Reserve 0x142523cb0 allocates from pGlobalHeap, stat id 2)
 // @0x142524e20
-void Sfr31ResizeNCValueA(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 0x20, 331, 0, Sfr31ElValue); }
+void Sfr31ResizeNCValueA(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 0x20, 2, Memory::pGlobalHeap, Sfr31ElValue); }
 
 // MS2-FUNCTIONAL 0x142524ec0: ResizeNoConstruct of a Value array
 // @0x142524ec0
