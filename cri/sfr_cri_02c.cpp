@@ -2703,14 +2703,15 @@ void* FUN_14002f1f0(CriHeap heap)
     workFields->CriticalWork = FUN_140027ed8(heap, 0x48, "CriMvPly: CriCsWork", 4);
     if (!workFields->CriticalWork)
     {
-        FUN_14002f610(words);
+        FUN_140027fb4(heap, words);
         FUN_140037950(NULL, "E08102001M : Can't allocate cs handle memory.", 0x48);
         return NULL;
     }
     workFields->CriticalSection = FUN_1400385c8(workFields->CriticalWork, 0x48);
     if (!workFields->CriticalSection)
     {
-        FUN_14002f610(words);
+        FUN_140027fb4(heap, workFields->CriticalWork);
+        FUN_140027fb4(heap, words);
         FUN_140037950(NULL, "E05081501M : Can't create CriticalSection for CRI Movie.", 0);
         return NULL;
     }
@@ -2724,7 +2725,7 @@ void* FUN_14002f1f0(CriHeap heap)
         FUN_140037950(NULL, "E05063002M : Can't allocate internal heap memory.", 0x2800);
         return NULL;
     }
-    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
+    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, words[0x376]);
     if (!heapFields->HeapHandle)
     {
         FUN_14002f610(words);
@@ -2733,7 +2734,7 @@ void* FUN_14002f1f0(CriHeap heap)
     }
     words[0x372] = 0x2800;
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
-    queues->InputBuffer = FUN_140046730(heap, 0x2800, 0, 0x40, "CriMvPly: HeadAnalyInput");
+    queues->InputBuffer = FUN_140046730(heap, words[0x372], 0, 0x40, "CriMvPly: HeadAnalyInput");
     if (!queues->InputBuffer)
     {
         FUN_14002f610(words);
@@ -2742,7 +2743,7 @@ void* FUN_14002f1f0(CriHeap heap)
     }
     words[0x35c] = 8;
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
-    state->Demux = FUN_1400452b4(heap, 8);
+    state->Demux = FUN_1400452b4(heap, words[0x35c]);
     if (!state->Demux)
     {
         FUN_14002f610(words);
