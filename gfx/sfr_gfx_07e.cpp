@@ -827,7 +827,7 @@ public:
 
 // The base image comes from the info or, by id, from the binding.
 // @0x142639000
-// MS2-FUNCTIONAL: the exe inlines ResourceBinding::GetResourceData (the frozen fast path) here; cl keeps it out of line
+// MS2-FUNCTIONAL 0x142639000: the inlined frozen-path copy of the ResourceBindData AddRefs the new resource before releasing the old one in the exe (ours releases first)
 bool SubImageResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
                                              MemoryHeap* pheap) const
 {
