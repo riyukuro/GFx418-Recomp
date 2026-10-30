@@ -186,6 +186,7 @@ public:
         Shift_OptAdvListMarker = 23
     };
     bool IsOptAdvListFlagSet() const          { return (Flags & Mask_OptAdvList) != 0; }
+    bool IsMarkedToRemoveFromOptimizedPlayList() const { return (Flags & Mask_MarkedToRemoveFromOptAdvList) != 0; }
     bool IsOptAdvListMarkerSet() const        { return ((Flags >> Shift_OptAdvListMarker) & 1) != 0; }
     void SetOptAdvListMarker(bool v)          { if (v) Flags |= Mask_OptAdvListMarker; else Flags &= ~Mask_OptAdvListMarker; }
     void ClearMarkToRemoveFromOptimizedPlayList() { Flags &= ~Mask_MarkedToRemoveFromOptAdvList; }
@@ -233,7 +234,7 @@ public:
     // Joins or leaves the optimized advance list as CheckAdvanceStatus decides.
     void ModifyOptimizedPlayList()
     {
-        switch (CheckAdvanceStatus(IsInOptimizedPlayList()))
+        switch (CheckAdvanceStatus(IsOptAdvListFlagSet() && !IsMarkedToRemoveFromOptimizedPlayList()))
         {
         case 1:  AddToOptimizedPlayList(); break;
         case -1: MarkToRemoveFromOptimizedPlayList(); break;

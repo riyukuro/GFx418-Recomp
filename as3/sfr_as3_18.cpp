@@ -2433,37 +2433,26 @@ bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
 
 // AvmTextField::OnEventLoad: the field joins the play list after its place in the parent, and the optimized
 // advance list when it asks to.
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
 // @0x1425190f0
 void AvmTextField_OnEventLoad(UPInt self)
 {
-    InteractiveObject* t = reinterpret_cast<InteractiveObject*>(AccRd(self, 0x18));
+    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
+    InteractiveObject* t = static_cast<InteractiveObject*>(avm->pDispObj);
     if (InteractiveObject* pafter = ToAvmInteractiveObj(t->GetParent())->FindInsertToPlayList(t))
         t->InsertToPlayListAfter(pafter);
     else
         t->AddToPlayList();
-    UInt32& f = *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(t) + 0xb8);
-    const bool inOptList = (f & 0x200000) && !(f & 0x400000);   // OptAdvList, not MarkedToRemoveFromOptAdvList
-    // TextField slot 97: whether the field needs advancing (-1 none, 1 yes)
-    const int st = reinterpret_cast<int (*)(void*, bool)>(AccRd(AccRd(reinterpret_cast<UPInt>(t), 0), 0x308))(t, inOptList);
-    if (st == -1)
-        f |= 0x400000;
-    else if (st == 1)
-        FUN_1425f7e30(t);
-    UPInt obj = AccRd(self, 0x10);
-    if (!obj)
-        obj = AccRd(self, 8);
-    FUN_142526340(reinterpret_cast<void*>(self), reinterpret_cast<void*>(obj & ~UPInt(1)));
+    static_cast<InteractiveObject*>(avm->pDispObj)->ModifyOptimizedPlayList();
+    FUN_142526340(avm, avm->GetAS3Obj());
 }
 
 // AvmTextField::GetStyleSheet; self is the AvmTextFieldBase part (+0x40). The style manager of the field's
 // style sheet when the field uses one.
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
 // @0x14250ef30
 UPInt AvmTextField_GetStyleSheet(UPInt self)
 {
     const UPInt sheet = FUN_1425b7e60(AccRd(self - 0x28, 0));
-    if (reinterpret_cast<bool (*)(UPInt)>(AccRd(AccRd(self, 0), 0xc0))(self))   // AvmTextFieldBase slot 24: HasStyleSheet
+    if (reinterpret_cast<const AvmTextFieldBase*>(self)->HasStyleSheet())
         return AccRd(sheet, 0x40) + 0x50;
     return 0;
 }
