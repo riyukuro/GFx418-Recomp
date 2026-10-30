@@ -3417,7 +3417,9 @@ template void Scaleform::HashSetBase<SOSharedObjectNode,
 // MS2-PIN: ??_GTextSnapshot@fl_text@InstanceTraits@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424abb10
 // MS2-PIN: ??_7StaticText@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a510
 // MS2-PIN: ??_GStaticText@fl_text@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142442e10
-// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorLH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14249a070
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14249a070
+// MS2-PIN: ?PushBack@?$ArrayData@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXAEBQEAVObject@AS3@GFx@2@@Z 0x142499e10
+// MS2-PIN: ?Resize@?$ArrayData@PEAVObject@AS3@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14249a110
 // MS2-PIN: ??0StaticText@fl_text@Instances@AS3@GFx@Scaleform@@QEAA@AEAVTraits@InstanceTraits@345@@Z 0x1424a8d20 ; unique
 // MS2-PIN: ??_7StyleManagerBase@Text@Render@Scaleform@@6B@ 0x14316a718
 // MS2-PIN: ??_7StyleManager@Text@GFx@Scaleform@@6B@ 0x14316a738

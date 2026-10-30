@@ -29,7 +29,7 @@ public:
 private:
     VM*                                 pVM;            // +0x10
     Instances::fl::Object*              pData;          // +0x18
-    ArrayLH<AS3::Object*>               ObjectStack;    // +0x20
+    Array<AS3::Object*>                 ObjectStack;    // +0x20: global heap (Reserve 0x14249a070 calls pGlobalHeap->Alloc)
     bool                                bArrayIsTop;    // +0x38
 };
 
