@@ -3901,6 +3901,20 @@ void FUN_1423cc3d0(void* raw)
     }
 }
 
+// The exe's Zhuyin (Bopomofo) key table at 0x14313a720 (41 records of {key, bopomofo char, class}); a copy, so
+// the fullexe does not bind an extern DAT_ to a placeholder.
+static const unsigned cx18_ZhuyinKeys[41][3] = {
+    { 'A', 0x3107, 0 }, { 'B', 0x3116, 0 }, { 'C', 0x310f, 0 }, { 'D', 0x310e, 0 }, { 'E', 0x310d, 0 },
+    { 'F', 0x3111, 0 }, { 'G', 0x3115, 0 }, { 'H', 0x3118, 0 }, { 'I', 0x311b, 2 }, { 'J', 0x3128, 1 },
+    { 'K', 0x311c, 2 }, { 'L', 0x3120, 2 }, { 'M', 0x3129, 1 }, { 'N', 0x3125, 0 }, { 'O', 0x311f, 2 },
+    { 'P', 0x3123, 2 }, { 'Q', 0x3106, 0 }, { 'R', 0x3110, 0 }, { 'S', 0x310b, 0 }, { 'T', 0x3114, 0 },
+    { 'U', 0x3127, 1 }, { 'V', 0x3112, 0 }, { 'W', 0x310a, 0 }, { 'X', 0x310c, 0 }, { 'Y', 0x3117, 0 },
+    { 'Z', 0x3108, 0 }, { '1', 0x3105, 0 }, { '2', 0x3109, 0 }, { '3', 0x2c7, 3 }, { '4', 0x2cb, 3 },
+    { '5', 0x3113, 0 }, { '6', 0x2ca, 3 }, { '7', 0x2d9, 3 }, { '8', 0x311a, 2 }, { '9', 0x311e, 2 },
+    { '0', 0x3122, 2 }, { ',', 0x311d, 2 }, { '.', 0x3121, 2 }, { '/', 0x3125, 2 }, { ';', 0x3124, 2 },
+    { '-', 0x3126, 2 }
+};
+
 // MS2-FUNCTIONAL: initializes the executable's input-window strings, owner link, callback table, and UTF-16 backing arrays.
 // @0x1423d18b0
 void* FUN_1423d18b0(void* raw, void* owner, void* userData)
@@ -3925,23 +3939,27 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
     bytes[0x80] = 1;
     *reinterpret_cast<unsigned long long*>(bytes + 0x84) = 0x14;
     *reinterpret_cast<unsigned*>(bytes + 0x8c) = 0x00ffffff;
+    words[0xb] = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x60) = 0;
     *reinterpret_cast<unsigned short*>(bytes + 0xa0) = 0;
-    words[0xb4] = 1;
     words[0xb6] = 0;
+    *reinterpret_cast<unsigned*>(bytes + 0x5a0) = 1;
     bytes[0x5bc] = 0;
 
-    auto initializeArray = [](unsigned long long* array) {
-        auto* buffer = static_cast<wchar_t*>(Scaleform::Memory::Alloc(0x200));
-        if (!buffer) return;
-        std::memset(buffer, 0, 0x200);
-        array[0] = reinterpret_cast<unsigned long long>(buffer);
-        array[1] = 0x100;
-        array[2] = 0x100;
-    };
-    initializeArray(words + 8);
-    initializeArray(words + 0x16);
+    // both text buffers are resized to 0x100 wchar_ts: empty, so each reserves 0x140 (the grow step) through its
+    // AllocatorLH Reserve (the owner's heap), +0xb0 first. The buffers are not cleared.
+    FUN_1423d5340(words + 0x16, words + 0x16, 0x140);
+    words[0x17] = 0x100;
+    FUN_1423d1380(words + 8, words + 8, 0x140);
+    words[9] = 0x100;
+
+    // the key -> {key, bopomofo, class} records at +0xd8, indexed by tolower(key) - 0x20
+    for (const auto& rec : cx18_ZhuyinKeys) {
+        const int index = tolower(static_cast<signed char>(rec[0])) - 0x20;
+        for (int k = 0; k < 3; ++k)
+            *reinterpret_cast<unsigned*>(bytes + 0xd8 + 12 * index + 4 * k) = rec[k];
+    }
     return raw;
 }
 
