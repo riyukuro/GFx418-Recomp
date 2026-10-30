@@ -330,6 +330,38 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl
 {
+    // Inline copies of the Object/XML instance ctors (their out-of-line copies are in sfr_as3_01c). The exe
+    // inlines them into DeepCopy, the parser callbacks and the XMLList MakeInstance users below.
+    inline XMLList::XMLList(InstanceTraits::Traits& t)
+        : Instance(t), TargetProperty(NULL)
+    {
+    }
+
+    inline Object::Object(InstanceTraits::Traits& t)
+        : Instance(t)
+    {
+    }
+
+    inline XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : Object(t), Text(text), Parent(parent)
+    {
+    }
+
+    inline XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+
+    inline XMLProcInstr::XMLProcInstr(InstanceTraits::Traits& t, const ASString& name, const ASString& data, XML* parent)
+        : XML(t, name, parent), Data(data)
+    {
+    }
+
+    inline XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+
     // @0x1423ff040
     void Date::AS3setUTCDate(Value& result, unsigned argc, const Value* argv)
     {
@@ -2275,10 +2307,19 @@ namespace Instances { namespace fl
 void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// Inline copy of the XMLList MakeInstance (out of line in sfr_as3_04); the exe inlines it into AS3text.
+namespace InstanceTraits { namespace fl
+{
+    inline Pickable<Instances::fl::XMLList> XMLList::MakeInstance(XMLList& t)
+    {
+        return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
+    }
+}}
+
 namespace Instances { namespace fl
 {
     // A new list of the text children.
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation in the inlined SPtr pick (the old list in rdx, the exe uses rcx)
     // @0x1424018e0
     __declspec(noinline) void XML::AS3text(SPtr<XMLList>& result)
     {
@@ -3057,7 +3098,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 }}}}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
 
-    // MS2-FUNCTIONAL: exe inlines the XML ctor 0x1423efce0
     // @0x1424087b0
     Pickable<XML> XML::DeepCopy(XML* parent)
     {
@@ -3072,7 +3112,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return Pickable<XML>(itr.MakeInstanceAttr(itr, *Ns, Text, Data, parent).GetPtr());
     }
 
-    // MS2-FUNCTIONAL: exe inlines the XMLComment ctor
     // @0x1424088b0
     Pickable<XML> XMLComment::DeepCopy(XML* parent)
     {
@@ -3080,7 +3119,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return Pickable<XML>(SF_HEAP_NEW(itr.GetVM().GetMemoryHeap()) XMLComment(itr, Text, parent));
     }
 
-    // MS2-FUNCTIONAL: exe inlines the XMLProcInstr ctor 0x1423f0260
     // @0x142408d40
     Pickable<XML> XMLProcInstr::DeepCopy(XML* parent)
     {
@@ -3090,7 +3128,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 }}}}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
 
-    // MS2-FUNCTIONAL: exe inlines the XMLText ctor 0x1423f02e0
     // @0x142408e00
     Pickable<XML> XMLText::DeepCopy(XML* parent)
     {
@@ -4150,3 +4187,9 @@ template void CISet::CheckExpand(void*);
 // MS2-PIN: ??_7AttrGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439c8
 // MS2-PIN: ??_7ChildGetFirst@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439d8
 // MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8
+// MS2-PIN: ??_7Object@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f590
+// MS2-PIN: ??_7XML@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431429d0
+// MS2-PIN: ??_7XMLComment@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431434f8
+// MS2-PIN: ??_7XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436d0
+// MS2-PIN: ??_7XMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143330
+// MS2-PIN: ??_7XMLText@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143168
