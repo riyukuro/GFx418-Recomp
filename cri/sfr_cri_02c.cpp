@@ -2332,39 +2332,36 @@ void FUN_140035260(void* player, void* output, const void* frameInfo,
         CriUint64 token; CriUint32 frameId; CriUint32 width; CriUint32 height; CriUint32 flags;
         CriUint32 playerWidth; CriUint32 playerHeight; CriUint32 pitch; CriUint32 reserved0;
         CriUint64 displayWidth; CriUint64 displayHeight; CriUint32 textureWidth; CriUint32 frameSize;
-        CriUint32 textureHeight; CriUint32 playerFormat; CriUint32 planeCount; CriUint32 reserved1;
+        CriUint32 textureHeight; CriUint32 playerFormat; CriSint32 planeCount; CriUint32 reserved1;
         PlaneOutput planes[4];
     };
-    FrameSource* frame = (FrameSource*)frameInfo;
-    FrameOutput* result = (FrameOutput*)output;
-    CriUint8* state = (CriUint8*)player;
-    result->token = firstWord;
-    result->frameId = frame->frameId;
-    result->width = frame->width;
-    result->height = frame->height;
-    result->flags = flags;
-    result->pitch = frame->pitch;
-    result->displayWidth = frame->displayWidth;
-    result->displayHeight = frame->displayHeight;
-    result->textureWidth = frame->textureWidth;
-    result->frameSize = frame->frameSize;
-    result->textureHeight = frame->textureHeight;
-    memcpy(&result->playerWidth, state + 0xafc, sizeof(CriUint32));
-    memcpy(&result->playerHeight, state + 0xb00, sizeof(CriUint32));
-    memcpy(&result->playerFormat, state + 0xd54, sizeof(CriUint32));
-    CriUint32 planeCount = frame->planeCount;
-    result->planeCount = planeCount;
-    result->planes[0].data = result->planes[1].data = 0;
-    result->planes[2].data = result->planes[3].data = 0;
-    for (CriUint32 i = 0; i < planeCount; ++i)
+    ((FrameOutput*)output)->token = firstWord;
+    ((FrameOutput*)output)->frameId = ((const FrameSource*)frameInfo)->frameId;
+    ((FrameOutput*)output)->textureWidth = ((const FrameSource*)frameInfo)->textureWidth;
+    ((FrameOutput*)output)->width = ((const FrameSource*)frameInfo)->width;
+    ((FrameOutput*)output)->height = ((const FrameSource*)frameInfo)->height;
+    ((FrameOutput*)output)->flags = flags;
+    ((FrameOutput*)output)->pitch = ((const FrameSource*)frameInfo)->pitch;
+    ((FrameOutput*)output)->displayWidth = ((const FrameSource*)frameInfo)->displayWidth;
+    ((FrameOutput*)output)->displayHeight = ((const FrameSource*)frameInfo)->displayHeight;
+    ((FrameOutput*)output)->frameSize = ((const FrameSource*)frameInfo)->frameSize;
+    ((FrameOutput*)output)->textureHeight = ((const FrameSource*)frameInfo)->textureHeight;
+    memcpy(&((FrameOutput*)output)->playerWidth, (const CriUint8*)player + 0xafc, sizeof(CriUint32));
+    memcpy(&((FrameOutput*)output)->playerHeight, (const CriUint8*)player + 0xb00, sizeof(CriUint32));
+    memcpy(&((FrameOutput*)output)->playerFormat, (const CriUint8*)player + 0xd54, sizeof(CriUint32));
+    ((FrameOutput*)output)->planes[0].data = 0;
+    ((FrameOutput*)output)->planes[1].data = 0;
+    ((FrameOutput*)output)->planes[2].data = 0;
+    ((FrameOutput*)output)->planes[3].data = 0;
+    ((FrameOutput*)output)->planeCount = ((const FrameSource*)frameInfo)->planeCount;
+    for (CriSint32 i = 0; i < ((FrameOutput*)output)->planeCount; ++i)
     {
-        PlaneSource* source = &frame->planes[i];
-        PlaneOutput* dest = &result->planes[i];
-        dest->data = source->data;
-        dest->pitch = source->pitch;
-        dest->width = source->width;
-        dest->lines = source->lines;
-        dest->size = source->pitch * source->lines;
+        PlaneOutput* dest = &((FrameOutput*)output)->planes[i];
+        dest->data = ((const FrameSource*)frameInfo)->planes[i].data;
+        dest->pitch = ((const FrameSource*)frameInfo)->planes[i].pitch;
+        dest->width = ((const FrameSource*)frameInfo)->planes[i].width;
+        dest->lines = ((const FrameSource*)frameInfo)->planes[i].lines;
+        dest->size = dest->pitch * dest->lines;
     }
 }
 
