@@ -1058,7 +1058,7 @@ bool FUN_14267b1c0(StyledText* self, const wchar_t* phtml, UPInt htmlSize,
                     // the text after the image must not repeat it
                     pparentFmt->SetImageDesc(0);
                     lastFmt.SetImageDesc(0);
-                    self->SetDefaultTextFormat(pparentFmt);
+                    self->SetDefaultTextFormat(*pparentFmt);
                 }
                 else if (pcurDesc->ElemId == HTML_TAB)
                     self->AppendString("\t", 1, StyledText::NLP_ReplaceCRLF);
