@@ -5483,7 +5483,7 @@ namespace Scaleform { namespace GFx { namespace AS3
     void FUN_142423d00(Class* cl)
     {
         SPtr<AS3::Object>& proto = *reinterpret_cast<SPtr<AS3::Object>*>(reinterpret_cast<char*>(cl) + 0x48);
-        proto = Pickable<AS3::Object>(cl->GetVM().MakeObject().GetPtr(), PickValue);
+        proto = Pickable<AS3::Object>(cl->GetVM().MakeObject());
         cl->InitPrototype(cl->GetPrototype());
     }
 
