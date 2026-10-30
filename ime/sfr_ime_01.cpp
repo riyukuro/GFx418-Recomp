@@ -1835,7 +1835,7 @@ extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
-void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count);
+__declspec(noinline) void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count);
 
 // MS2-FUNCTIONAL: resizes the executable's Value array, destructing removed entries before changing its capacity.
 // @0x1423d9730
@@ -2123,25 +2123,21 @@ void FUN_1423ca6b0(void* raw, const char* name)
     }
 }
 
-// MS2-FUNCTIONAL: appends a 32-byte Value record and retains its referenced payload when required.
 // @0x1423d4fa0
-void FUN_1423d4fa0(unsigned long long* array, const unsigned long long* value)
+void FUN_1423d4fa0(unsigned long long* array, const Scaleform::GFx::Value* value)
 {
+    // ArrayData<Value>::PushBack: the generic Resize(size + 1) inline, then a placement copy.
     const unsigned long long oldLength = array[1];
     const unsigned long long newLength = oldLength + 1;
-    if (newLength >= array[2])
+    if (newLength < oldLength) {
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(array[0]) + newLength, oldLength - newLength);
+        if (newLength < (array[2] >> 1))
+            FUN_1423d12e0(array, array, newLength);
+    } else if (newLength >= array[2]) {
         FUN_1423d12e0(array, array, (newLength >> 2) + newLength);
-    array[1] = newLength;
-    auto* output = reinterpret_cast<unsigned long long*>(array[0]) + (newLength - 1) * 4;
-    output[0] = 0;
-    output[1] = value[1];
-    output[2] = value[2];
-    output[3] = value[3];
-    if ((static_cast<unsigned>(value[1]) >> 6) & 1) {
-        output[0] = value[0];
-        void* ref = reinterpret_cast<void*>(value[0]);
-        reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(ref))[1])(ref);
     }
+    array[1] = newLength;
+    new (reinterpret_cast<Scaleform::GFx::Value*>(array[0]) + newLength - 1) Scaleform::GFx::Value(*value);
 }
 
 // The keyboard layouts the IMM IME object saved (+0x80 count, +0x90 records) and the active one (+0x198).
