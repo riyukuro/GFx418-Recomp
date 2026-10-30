@@ -1285,13 +1285,21 @@ const Traits* Tracer::GetValueTraits(const Value& v, bool super_tr) const
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
-// The unsigned 30-bit operand following the opcode of the n-th last instruction.
+}}}} // namespace Scaleform::GFx::AS3::TR
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// The unsigned 30-bit operand following the opcode of the cp-th last instruction.
 // @0x14250c1f0
-int Sfr27TracerGetNextU30(UPInt tracer, UPInt n)
+int Tracer::GetNextU30(UPInt cp) const
 {
-    UPInt pos = *reinterpret_cast<const UPInt*>(TrRd(tracer, 0x70) - 8 + (TrRd(tracer, 0x78) - n) * 8) + 1;
-    return Abc::ReadU30<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), pos);
+    UPInt pos = OrigOpcodePos[OrigOpcodePos.GetSize() - cp - 1] + 1;
+    return Abc::ReadU30<UInt8>(pCode, pos);
 }
+
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 }}}} // namespace Scaleform::GFx::AS3::TR
 
@@ -1583,7 +1591,6 @@ __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& t
 }}}} // namespace Scaleform::GFx::AS3::TR
 
 // ---- Tracer merging of the block entry states (free functions; as3_tracer.h declares them as Tracer members) ----
-void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);   // ArrayDH<Value> growth
 void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b);   // raises verify error 0x42c (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
@@ -1814,45 +1821,51 @@ fail:
     return out;
 }
 
-// Tracer::MergeLists: merges from's operand stack / scope stack / register file into to's, entry by entry; to grows
-// to from's size unless sizes must agree (update).
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+namespace {
+// a state's operand stack, scope stack or register file
+SF_FORCEINLINE ArrayDH<Value>& TrMergeList(TR::State& st, TR::MergeSet ms)
+{
+    switch (ms)
+    {
+    case TR::msOpStack:     return st.GetOpStack();
+    case TR::msScopeStack:  return st.GetScopeStack();
+    default:                return st.GetRegisters();
+    }
+}
+SF_FORCEINLINE const ArrayDH<Value>& TrMergeList(const TR::State& st, TR::MergeSet ms)
+{
+    return TrMergeList(const_cast<TR::State&>(st), ms);
+}
+}
+
+// Merges from's operand stack / scope stack / register file into to's, entry by entry; to grows to from's size
+// unless sizes must agree (update).
 // MS2-FUNCTIONAL 0x142517740: CheckResult zero-init and AddRef ordering differ from the exe
 // @0x142517740
-__declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_142517740(Scaleform::UPInt tracer, Scaleform::GFx::AS3::CheckResult* out,
-                                                Scaleform::UPInt to, Scaleform::UPInt from, bool update, int ms)
+__declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::State& from, bool update, TR::MergeSet ms)
 {
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    UPInt* ta = reinterpret_cast<UPInt*>(TrMergeArray(to, ms));
-    const UPInt* fa = reinterpret_cast<const UPInt*>(TrMergeArray(from, ms));
-    if (update && ta[1] != fa[1])
+    ArrayDH<Value>& tl = TrMergeList(to, ms);
+    const ArrayDH<Value>& fl = TrMergeList(from, ms);
+    if (update && tl.GetSize() != fl.GetSize())
+        return false;
+    for (UPInt i = 0; i < fl.GetSize(); ++i)
     {
-        *out = false;
-        return out;
-    }
-    for (UPInt i = 0; i < fa[1]; ++i)
-    {
-        if (i < ta[1])
+        if (i < tl.GetSize())
         {
             CheckResult r(false);
-            if (!*FUN_1425178e0(tracer, &r, i, to, from, ms))
-            {
-                *out = false;
-                return out;
-            }
+            if (!*FUN_1425178e0(reinterpret_cast<UPInt>(this), &r, i, reinterpret_cast<UPInt>(&to),
+                                reinterpret_cast<UPInt>(&from), ms))
+                return false;
         }
         else
-        {
-            const Value& s = reinterpret_cast<const Value*>(fa[0])[i];
-            FUN_1424201a0(ta, reinterpret_cast<void*>(ta[3]), ta[1] + 1);
-            new (reinterpret_cast<Value*>(ta[0]) + ta[1] - 1) Value(s, Value::NotRefCounted);
-            TrAddRef(s);
-        }
+            tl.PushBack(fl[i]);
     }
-    *out = true;
-    return out;
+    return true;
 }
+
+}}} // namespace Scaleform::GFx::AS3
 
 // ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
 Scaleform::UPInt* FUN_1424d9f30(Scaleform::UPInt* self, Scaleform::UPInt heap, Scaleform::UPInt body, Scaleform::UPInt ops,
@@ -2025,47 +2038,44 @@ __declspec(safebuffers) const char* FUN_14250cf20(void* state, char* ret, const 
     return ret;
 }
 
-// Tracer::JoinSNodes: a block's state joined into the entry state of the block it falls / jumps into: the operand
-// stack, the scope stack and the registers (a mismatch reported, the rest still joined); the target marked visited.
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// A block's state joined into the entry state of the block it falls / jumps into: the operand stack, the scope stack
+// and the registers (a mismatch reported, the rest still joined); the target marked initialized.
 // MS2-FUNCTIONAL 0x142511b00: the exe inlines MergeLists (and MergeValues for the two stacks); here they are called
 // @0x142511b00
-void FUN_142511b00(Scaleform::UPInt tracer, Scaleform::UPInt* now, Scaleform::UPInt* old)
+void Tracer::InitializeBlock(TR::Block& to, const TR::Block& from)
 {
-    using namespace Scaleform::GFx::AS3;
-    const Scaleform::UPInt to = now[3], from = old[3];
-    CheckResult r(false);
-    FUN_142517740(tracer, &r, to, from, false, 0);
-    FUN_142517740(tracer, &r, to, from, false, 1);
-    FUN_142517740(tracer, &r, to, from, true, 2);
-    *reinterpret_cast<Scaleform::UInt32*>(now + 2) |= 1;
+    MergeLists(*to.pState, *from.pState, false, TR::msOpStack);
+    MergeLists(*to.pState, *from.pState, false, TR::msScopeStack);
+    MergeLists(*to.pState, *from.pState, true, TR::msRegisterFile);
+    to.Flags |= 1;
 }
 
-// Tracer::MergeBlock: a block's state merged into an already visited block's entry state: unless the target is a
-// catch target, its operand stack (when as deep) and its scope stack (VerifyError 1031 on a mismatch), then its
-// registers.
+// A block's state merged into an already visited block's entry state: unless the target is a catch target, its
+// operand stack (when as deep) and its scope stack (VerifyError 1031 on a mismatch), then its registers.
 // MS2-FUNCTIONAL 0x142516c40: the exe inlines MergeLists and MergeValues for the two stacks; here they are called
 // @0x142516c40
-char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old)
+CheckResult Tracer::MergeBlock(TR::Block& to, const TR::Block& from)
 {
-    using namespace Scaleform::GFx::AS3;
-    CheckResult* out = static_cast<CheckResult*>(buf);
-    const Scaleform::UPInt to = now[3], from = old[3];
-    if (!(*reinterpret_cast<const Scaleform::UInt32*>(reinterpret_cast<Scaleform::UPInt>(now) + 0x14) & 4))
+    TR::State& ts = *to.pState;
+    const TR::State& fs = *from.pState;
+    if (!(to.Type & 4))
     {
-        CheckResult r(false);
-        FUN_142517740(tracer, &r, to, from, true, 0);
-        if (!*FUN_142517740(tracer, &r, to, from, false, 1))
+        MergeLists(ts, fs, true, TR::msOpStack);
+        if (!MergeLists(ts, fs, false, TR::msScopeStack))
         {
-            VM& vm = *reinterpret_cast<VM*>(TR::TrVM(tracer));
+            VM& vm = GetVM();
             const VM::Error e(VM::ErrorID(1031) /* eScopeDepthUnbalancedError */, vm,
-                              static_cast<int>(TR::TrRd(to, 0x60)), static_cast<int>(TR::TrRd(from, 0x60)));
+                              static_cast<int>(ts.GetScopeStack().GetSize()), static_cast<int>(fs.GetScopeStack().GetSize()));
             FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
-            *out = false;
-            return reinterpret_cast<char*>(out);
+            return false;
         }
     }
-    return reinterpret_cast<char*>(FUN_142517740(tracer, out, to, from, true, 2));
+    return MergeLists(ts, fs, true, TR::msRegisterFile);
 }
+
+}}} // namespace Scaleform::GFx::AS3
 
 // ---- Small accessors (leaf functions of the display and VM glue; their classes are not named yet) ----
 namespace Scaleform { namespace GFx { namespace AS3 {

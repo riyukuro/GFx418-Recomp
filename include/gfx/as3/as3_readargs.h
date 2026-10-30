@@ -150,6 +150,12 @@ class State
 {
 public:
     ArrayDH<Value>& GetOpStack() { return OpStack; }
+    // (appended, sfb) SDK AS3_Tracer.h getters.
+    const ArrayDH<Value>& GetOpStack() const    { return OpStack; }
+    ArrayDH<Value>& GetScopeStack()             { return ScopeStack; }
+    const ArrayDH<Value>& GetScopeStack() const { return ScopeStack; }
+    ArrayDH<Value>& GetRegisters()              { return Registers; }
+    const ArrayDH<Value>& GetRegisters() const  { return Registers; }
     Value::TraceNullType CanBeNull(const InstanceTraits::Traits& traits) const; // 0x1424ee980
     InstanceTraits::Traits& GetFunctType(const Value& value) const; // 0x14250a1b0
     void SetRegister(AbsoluteIndex ind, const Value& v);            // 0x142528e20

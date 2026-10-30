@@ -15,7 +15,17 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace InstanceTraits { namespace fl { class Catch; } }
 
 namespace TR {
-class Block;
+class State;
+// (appended, sfb) the head of a traced block (List<TR::Block> node); the rest is not recovered.
+class Block
+{
+public:
+    Block*  pPrev;      // +0x00
+    Block*  pNext;      // +0x08
+    UInt32  Flags;      // +0x10 bit 0: its entry state is initialized
+    UInt32  Type;       // +0x14 bit 1: try start, bit 2: catch target
+    State*  pState;     // +0x18 the entry state
+};
 // Which part of a state MergeLists joins.
 enum MergeSet { msOpStack, msScopeStack, msRegisterFile };
 } // namespace TR
