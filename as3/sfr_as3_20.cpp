@@ -876,12 +876,15 @@ void FUN_14254d380(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v,
     Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint>& result,
     const Scaleform::GFx::AS3::Value& callback, const Scaleform::GFx::AS3::Value& thisObject, Scaleform::GFx::AS3::Instances::fl_vec::Vector_uint& owner);
 
+// Traits::GetConstructor, out of line in the exe.
+const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);
+
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
 
 // The element type of a Vector.<T> of objects: ClassTraits::fl_vec::Vector_object keeps it at +0xc8.
 static const ClassTraits::Traits& GetEnclosedClassTraits(const Vector_object& v)
 {
-    const ClassTraits::Traits& ctr = v.GetTraits().GetConstructor().GetClassTraits();
+    const ClassTraits::Traits& ctr = FUN_142508490(&v.GetTraits()).GetClassTraits();
     return **reinterpret_cast<ClassTraits::Traits* const*>(reinterpret_cast<const char*>(&ctr) + 0xc8);
 }
 
@@ -1405,7 +1408,6 @@ void Vector_int::AS3push(Value& result, unsigned argc, const Value* argv)
     result.SetUInt32((UInt32)V.V.GetSize());
 }
 
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line (0x142508490); ours inlines it
 // @0x1425582a0
 void Vector_object::AS3push(Value& result, unsigned argc, const Value* argv)
 {
@@ -1517,7 +1519,7 @@ template <class I, class TR, typename T>
 static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
 {
     VM& vm = self.VMRef;
-    const ClassTraits::Traits& currClassTR = owner.GetTraits().GetConstructor().GetClassTraits();
+    const ClassTraits::Traits& currClassTR = FUN_142508490(&owner.GetTraits()).GetClassTraits();
     Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
     I& r = *pr.GetPtr();
     result.Pick(pr);
@@ -2020,23 +2022,23 @@ using namespace Scaleform::GFx::AS3;
 namespace VI = Scaleform::GFx::AS3::Instances::fl_vec;
 namespace VT = Scaleform::GFx::AS3::InstanceTraits::fl_vec;
 
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547960
 void FUN_142547960(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
 { VI::VectorConcat<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547c40
 void FUN_142547c40(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
 { VI::VectorConcat<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547f30
 void FUN_142547f30(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
 { VI::VectorConcat<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142548280
 void FUN_142548280(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
 { VI::VectorConcat<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor out of line; ours inlines it
+// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142548580
 void FUN_142548580(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorConcat<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
@@ -2110,7 +2112,7 @@ void FUN_142551250(VectorBase<Value::Number>& v, Value& result, unsigned argc, c
 // @0x142551cb0
 void FUN_142551cb0(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
 { VI::VectorSort<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: the exe calls Traits::GetConstructor and Value::SetNull out of line; ours inlines them
+// MS2-FUNCTIONAL: the exe keeps Value::SetNull and the result-array growth out of line; ours inlines them
 // @0x1425526f0
 void FUN_1425526f0(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
 { VI::VectorSort<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
