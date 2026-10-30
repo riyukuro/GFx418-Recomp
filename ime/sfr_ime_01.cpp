@@ -1038,7 +1038,7 @@ void FUN_1423ca640(void* self, unsigned value)
     *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x84) = value;
     void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x70);
     void** vtable = *reinterpret_cast<void***>(child);
-    reinterpret_cast<void(*)(void*)>(vtable[17])(child);
+    reinterpret_cast<void(*)(void*, unsigned)>(vtable[17])(child, value);
 }
 
 // (sfr33) packed refcounted pointer release as the dtors inline it: the masked pointer is freed without a reload.
