@@ -933,14 +933,16 @@ Scaleform::GFx::AS3::Value* FUN_14001a690(Scaleform::GFx::AS3::Value* value, Sca
     value->Pick(object);
     return value;
 }
-// MS2-FUNCTIONAL: converts coordinate arguments and stores the Video rectangle in twips.
+// MS2-FUNCTIONAL: converts the width/height arguments into the Video's +0x68/+0x70 and stores the rectangle in twips.
 // @0x14001a760
 void FUN_14001a760(void* self, unsigned count, Scaleform::GFx::AS3::Value* args)
 {
     if (count > 1) {
-        double ignored = 0;
-        args[0].Convert2NumberInline(ignored);
-        args[1].Convert2NumberInline(ignored);
+        // The exe converts into the members (0x14001a78f/0x14001a7a1: Convert2Number with r8 = self+0x68, self+0x70);
+        // converting into a dropped local left new Video(w, h) at the 320x240 default, so the class-select video drew
+        // at 320x240 in the top-left of its box.
+        args[0].Convert2Number(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68));
+        args[1].Convert2Number(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70));
         auto* player = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
         *reinterpret_cast<std::uint32_t*>(player + 0xe0) = 0;
         *reinterpret_cast<std::uint32_t*>(player + 0xe4) = 0;
