@@ -1310,11 +1310,23 @@ void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
     }
 }
 
-// MS2-FUNCTIONAL: grows or shrinks the pointer array using the observed quarter-capacity policy.
+// MS2-FUNCTIONAL: reserves the WeakPtrProxy pointer array on the global heap (ArrayDataBase<.., AllocatorGH>::Reserve).
+// BEHAVIOUR FIX: the exe allocates a new buffer with the global heap's Alloc (vtable +0x50, 0x140006897); ours
+// forwarded to FUN_1400050c0, the AllocAutoHeap version, which picks the heap owning `owner` (the array's address).
 // @0x140006810
-void FUN_140006810(void** array, void* owner, Scaleform::UPInt capacity)
+void FUN_140006810(void** array, void* owner, Scaleform::UPInt requested)
 {
-    FUN_1400050c0(array, owner, capacity);
+    (void)owner;
+    if (requested == 0) {
+        if (array[0]) Scaleform::Memory::Free(array[0]);
+        array[0] = nullptr;
+        array[2] = nullptr;
+        return;
+    }
+    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    if (array[0]) array[0] = Scaleform::Memory::Realloc(array[0], capacity * sizeof(void*));
+    else array[0] = Scaleform::Memory::Alloc(capacity * sizeof(void*), Scaleform::AllocInfo(2, 0, 0));
+    array[2] = reinterpret_cast<void*>(capacity);
 }
 
 // MS2-FUNCTIONAL: reallocates storage for 16-byte records with four-element capacity rounding.
