@@ -140,11 +140,19 @@ void EventChains::AddToChain(EventId::IdCode evtId, DisplayObject* obj)
         chain->PushBack(WeakPtr<DisplayObject>(obj));
 }
 
-// MS2-FUNCTIONAL: ClearAction inlined with another register and frame layout than the exe.
+void FUN_142423b90(Value* v);   // Value::SetUndefined, out of line in the exe
+__declspec(noinline) void* DeleteAs3_1424e2420(void* p, unsigned flags);   // ActionEntry's deleting dtor (below)
+
 // @0x1424eae40
 void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
 {
-    pentry->ClearAction();
+    // ActionEntry::ClearAction, with the exe's out-of-line SetUndefined (the SCU would inline it here)
+    pentry->Type         = ActionEntry::Entry_None;
+    pentry->pCharacter   = NULL;
+    pentry->pAS3Obj      = NULL;
+    pentry->CFunction    = NULL;
+    FUN_142423b90(&pentry->Function);
+    pentry->pNLoadInitCL = NULL;
     if (FreeEntriesCount < 50)
     {
         pentry->pNextEntry = pFreeEntry;
@@ -152,7 +160,7 @@ void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
         ++FreeEntriesCount;
     }
     else
-        delete pentry;
+        DeleteAs3_1424e2420(pentry, 1);   // delete pentry
 }
 
 // Runs the frame: the class constructors still queued, the two highest action levels, then queues the frame
