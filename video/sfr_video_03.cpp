@@ -2104,15 +2104,15 @@ std::uint64_t* FUN_142743240(std::uint64_t* object, void* owner, void* stream, i
     object[6] = 0; object[8] = 0;
     reinterpret_cast<std::uint32_t*>(object)[18] = rate;
     *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c) = channels;
-    object[0xb] = 0; reinterpret_cast<std::uint32_t*>(object)[0xc] = 0;
+    object[0xb] = 0; reinterpret_cast<std::uint32_t*>(object)[0x18] = 0;
     *reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(object) + 0x6c) = 0;
     if (stream) FUN_14257dc30(stream);
     if (object[8]) FUN_14257dcb0(reinterpret_cast<void*>(object[8]));
     object[8] = reinterpret_cast<std::uintptr_t>(stream);
     const std::uint32_t format = stereo ? 5 : 2;
     const std::uint32_t sampleBits = stereo ? 0x20 : 0x10;
-    reinterpret_cast<std::uint32_t*>(object)[0xd] = format;
-    reinterpret_cast<std::uint32_t*>(object)[10] = sampleBits;
+    reinterpret_cast<std::uint32_t*>(object)[0x1a] = format;
+    reinterpret_cast<std::uint32_t*>(object)[0x14] = sampleBits;
     const auto pcmBytes = static_cast<std::int32_t>((channels / 1000) * (sampleBits >> 3) * rate * 0x5dc);
     *reinterpret_cast<std::int32_t*>(reinterpret_cast<unsigned char*>(object) + 100) = pcmBytes;
     __declspec(align(8)) unsigned char info[0xd8] = { 0 };
