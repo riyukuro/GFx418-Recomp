@@ -480,7 +480,9 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
     return result;
 }
 
-// MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages.
+// MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages. Reviewed case by case
+// against the exe, same behaviour. The rest is register allocation: the exe keeps self in rsi, the result in rdi and
+// the case 5 temporary in rbx.
 // @0x1423d41f0
 LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
 {
@@ -488,38 +490,53 @@ LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long l
     if (!child) return 0;
     LRESULT handled = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x5b8) = static_cast<unsigned>(value);
-    auto** vtable = reinterpret_cast<void**>(self[0]);
-    if (message == 3) {
-        reinterpret_cast<void(*)(void*, int)>(vtable[0x110 / sizeof(void*)])(self, 0);
-        handled = static_cast<unsigned>(self[0x13] - 5) > 1;
-    } else if (message == 4) {
+    Scaleform::GFx::Value unused;
+    switch (message) {
+    case 3:
+        reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x110 / sizeof(void*)])(self, 0);
+        handled = static_cast<unsigned>(*reinterpret_cast<int*>(self + 0x13) - 5) > 1;
+        break;
+    case 4: {
         FUN_1423d9500(reinterpret_cast<void*>(self[6]));
         *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0x5bc) = 0;
+        Scaleform::GFx::Value result;
         void* movie = reinterpret_cast<void*>(self[0x15]);
         void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-        if (values) {
-            Scaleform::GFx::Value result;
+        if (values)
             reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
                 (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                     values, "RemoveList", &result, 0, 0);
-        }
-    } else if (message == 5) {
+        break;
+    }
+    case 5: {
         void* factory = static_cast<unsigned char*>(child) + 0x10;
         void* temporary = reinterpret_cast<void*(*)(void*, int)>(
             (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
-        reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
-        handled = static_cast<unsigned>(self[0x13] - 5) > 1;
+        reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x118 / sizeof(void*)])(self, 0);
+        handled = static_cast<unsigned>(*reinterpret_cast<int*>(self + 0x13) - 5) > 1;
         if (temporary) FUN_14257dcb0(temporary);
-    } else if (message == 0xe) {
-        const unsigned mode = static_cast<unsigned>(self[0x13]);
-        if (mode == 4 && *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x9c) == 0x04040404)
-            handled = value == 1 || value == 2;
-        else if (mode == 2)
-            handled = value == 0x10 || value == 0x11 || value == 0x1a || value == 0x1b || value == 0x1c;
+        break;
     }
-    if (!handled && message != 3 && message != 4 && message != 5)
-        reinterpret_cast<void(*)(void*, unsigned, unsigned long long, unsigned long long)>(
-            vtable[0x70 / sizeof(void*)])(self, reason, message, value);
+    case 0xe: {
+        const int mode = *reinterpret_cast<int*>(self + 0x13);
+        if (mode == 4) {
+            if (*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x9c) == 0x04040404 &&
+                (value == 1 || value == 2)) {
+                handled = 1;
+                break;
+            }
+        } else if (mode == 2) {
+            if (value == 0x10 || value == 0x11 || value == 0x1a || value == 0x1b || value == 0x1c) {
+                handled = 1;
+                break;
+            }
+        }
+    }
+    default:
+        reinterpret_cast<void(*)(void*, unsigned long long, unsigned long long, unsigned long long)>(
+            reinterpret_cast<void**>(self[0])[0x70 / sizeof(void*)])(self, reason, message, value);
+        break;
+    }
     return handled;
 }
 
