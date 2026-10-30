@@ -212,7 +212,7 @@ extern "C" void* DAT_143b15f60;
 namespace {
 typedef void (*VideoGenericThunk)(void*, void*, void*);
 
-void ReleaseVideoAtom(std::uint64_t* value)
+__forceinline void ReleaseVideoAtom(std::uint64_t* value)
 {
     auto atom = *value;
     if (!atom) return;
@@ -221,7 +221,7 @@ void ReleaseVideoAtom(std::uint64_t* value)
     if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(reinterpret_cast<void*>(atom)); }
 }
 
-void RetainVideoAtom(std::uint64_t atom)
+__forceinline void RetainVideoAtom(std::uint64_t atom)
 {
     if (atom) {
         auto* refs = reinterpret_cast<std::uint32_t*>(atom + 0x10);
@@ -342,6 +342,7 @@ std::uint64_t* FUN_140016e30(std::uint64_t* out, std::uint64_t type, std::uint64
 }
 
 // MS2-FUNCTIONAL: normalizes the AS3 value tag and calls the trait setter for non-default values.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140016ed0
 void FUN_140016ed0(std::uint64_t* value, void* object)
 {
@@ -351,6 +352,7 @@ void FUN_140016ed0(std::uint64_t* value, void* object)
         (&VideoNative1)(object, value, nullptr);
     }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: computes the executable's 8-byte key hash and searches its chained bucket.
 // @0x140016f40
@@ -375,53 +377,59 @@ std::int64_t FUN_140016f40(void* tablePtr, const std::uint64_t* key)
 }
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: forwards an AS3 value through the third property thunk unless its receiver is disabled.
+// forwards an AS3 value through the third property thunk unless its receiver is disabled.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140016fd0
-void FUN_140016fd0(void*, void* object, void* callFrame, void* member, int argc,
+void FUN_140016fd0(void*, void* object, void* callFrame, void* member, unsigned argc,
                    const std::uint8_t* args)
 {
+    auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
     std::uint64_t value = 0;
-    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (argc > 0 && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
-        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkC)(
             *reinterpret_cast<const int*>(&VideoThunkBaseC) + root, member, value);
     }
 }
+#pragma optimize("", on)
 namespace {
 
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: forwards the AS3 value through the fourth property thunk unless its receiver is disabled.
+// forwards the AS3 value through the fourth property thunk unless its receiver is disabled.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017020
-void FUN_140017020(void*, void* object, void* callFrame, void* member, int argc,
+void FUN_140017020(void*, void* object, void* callFrame, void* member, unsigned argc,
                    const std::uint8_t* args)
 {
+    auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
     std::uint64_t value = 0;
-    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (argc > 0 && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
-        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkD)(
             *reinterpret_cast<const int*>(&VideoThunkBaseD) + root, member, value);
     }
 }
+#pragma optimize("", on)
 namespace {
 
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: forwards the AS3 value through the fifth property thunk unless its receiver is disabled.
+// forwards the AS3 value through the fifth property thunk unless its receiver is disabled.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017070
-void FUN_140017070(void*, void* object, void* callFrame, void* member, int argc,
+void FUN_140017070(void*, void* object, void* callFrame, void* member, unsigned argc,
                    const std::uint8_t* args)
 {
+    auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
     std::uint64_t value = 0;
-    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
+    if (argc > 0 && (*args & 0x1f)) value = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<std::uint8_t*>(static_cast<std::uint8_t*>(object) + 0x180) == 0) {
-        auto root = *reinterpret_cast<std::uint64_t*>(static_cast<std::uint8_t*>(callFrame) + 0x10);
         reinterpret_cast<void(*)(std::uint64_t, void*, std::uint64_t)>(VideoThunkE)(
             *reinterpret_cast<const int*>(&VideoThunkBaseE) + root, member, value);
     }
 }
+#pragma optimize("", on)
 namespace {
 
 
@@ -485,72 +493,94 @@ void FUN_140017990(void* object)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x1400179b0
 void FUN_1400179b0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x1400179f0
 void FUN_1400179f0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017a30
 void FUN_140017a30(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017a70
 void FUN_140017a70(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017ab0
 void FUN_140017ab0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017af0
 void FUN_140017af0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017b30
 void FUN_140017b30(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017b70
 void FUN_140017b70(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017bb0
 void FUN_140017bb0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017bf0
 void FUN_140017bf0(std::uint64_t* value) { ReleaseVideoAtom(value); }
-// MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("", on)
+// releases the stored AS3 atom, including inline tagged integers.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x140017c30
 void FUN_140017c30(std::uint64_t* value) { ReleaseVideoAtom(value); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: replaces an AS3 atom without taking a reference to the replacement.
 // @0x140017c70
 std::uint64_t* FUN_140017c70(std::uint64_t* destination, std::uint64_t replacement)
 {
-    if (*destination != replacement) { ReleaseVideoAtom(destination); *destination = replacement; }
+    if (replacement != *destination) { ReleaseVideoAtom(destination); *destination = replacement; }
     return destination;
 }
 
-// MS2-FUNCTIONAL: replaces an AS3 atom and retains an object-valued replacement.
+// replaces an AS3 atom and retains an object-valued replacement.
 // @0x140017cd0
 std::uint64_t* FUN_140017cd0(std::uint64_t* destination, std::uint64_t replacement)
 {
-    if (*destination != replacement) { ReleaseVideoAtom(destination); RetainVideoAtom(replacement); *destination = replacement; }
+    if (replacement != *destination) { ReleaseVideoAtom(destination); RetainVideoAtom(replacement); *destination = replacement; }
     return destination;
 }
 
-// MS2-FUNCTIONAL: copy-assigns an AS3 atom with a retain of its managed object payload.
+// copy-assigns an AS3 atom with a retain of its managed object payload.
 // @0x140017d40
 std::uint64_t* FUN_140017d40(std::uint64_t* destination, const std::uint64_t* source)
 {
-    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    if (source != destination) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
     return destination;
 }
-// MS2-FUNCTIONAL: copy-assigns an AS3 atom with a retain of its managed object payload.
+// copy-assigns an AS3 atom with a retain of its managed object payload.
 // @0x140017db0
 std::uint64_t* FUN_140017db0(std::uint64_t* destination, const std::uint64_t* source)
 {
-    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    if (source != destination) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
     return destination;
 }
 
-// MS2-FUNCTIONAL: assigns the AS3 object's unsafe Value view and then releases its retained atom.
+// assigns the AS3 object's unsafe Value view and then releases its retained atom.
 // @0x140017e40
 void* FUN_140017e40(void* result, Scaleform::GFx::AS3::Value* value, std::uint64_t* atom)
 {
@@ -558,7 +588,7 @@ void* FUN_140017e40(void* result, Scaleform::GFx::AS3::Value* value, std::uint64
     ReleaseVideoAtom(atom);
     return result;
 }
-// MS2-FUNCTIONAL: assigns the AS3 object's unsafe Value view and then releases its retained atom.
+// assigns the AS3 object's unsafe Value view and then releases its retained atom.
 // @0x140017eb0
 void* FUN_140017eb0(void* result, Scaleform::GFx::AS3::Value* value, std::uint64_t* atom)
 {
@@ -571,14 +601,14 @@ void* FUN_140017eb0(void* result, Scaleform::GFx::AS3::Value* value, std::uint64
 // @0x1400190c0
 std::uint64_t* FUN_1400190c0(std::uint64_t* destination, std::uint64_t replacement)
 {
-    if (*destination != replacement) { ReleaseVideoAtom(destination); *destination = replacement; }
+    if (replacement != *destination) { ReleaseVideoAtom(destination); *destination = replacement; }
     return destination;
 }
-// MS2-FUNCTIONAL: copy-assigns an atom while retaining its managed object.
+// copy-assigns an atom while retaining its managed object.
 // @0x140019120
 std::uint64_t* FUN_140019120(std::uint64_t* destination, const std::uint64_t* source)
 {
-    if (destination != source) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
+    if (source != destination) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
     return destination;
 }
 // MS2-FUNCTIONAL: assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
@@ -626,52 +656,44 @@ void* FUN_14001a2b0(void* result, std::uint32_t* value, const std::uint32_t* num
     return result;
 }
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
-// MS2-FUNCTIONAL: reads the current frame record's integer field at offset 0x10.
+// reads the current frame record's integer field at offset 0x10.
 // @0x14001a330
 void FUN_14001a330(void* self, std::uint32_t* result)
 {
     auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
     auto index = frames[0x6d];
-    auto* slot = frames + index * 4;
-    auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = reinterpret_cast<void**>(instance)[0xc];
-    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    auto* slot = frames + static_cast<std::size_t>(index) * 4;
+    auto data = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(slot))[0xc])(slot);
     *result = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10);
 }
-// MS2-FUNCTIONAL: writes the current frame record's integer field at offset 0x10.
+// writes the current frame record's integer field at offset 0x10.
 // @0x14001a360
 void FUN_14001a360(void* self, void*, std::uint32_t number)
 {
     auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
     auto index = frames[0x6d];
-    auto* slot = frames + index * 4;
-    auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = reinterpret_cast<void**>(instance)[0xc];
-    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    auto* slot = frames + static_cast<std::size_t>(index) * 4;
+    auto data = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(slot))[0xc])(slot);
     *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10) = number;
 }
-// MS2-FUNCTIONAL: reads the current frame record's flag byte at offset 0x14.
+// reads the current frame record's flag byte at offset 0x14.
 // @0x14001a390
 void FUN_14001a390(void* self, std::uint8_t* result)
 {
     auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
     auto index = frames[0x6d];
-    auto* slot = frames + index * 4;
-    auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = reinterpret_cast<void**>(instance)[0xc];
-    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    auto* slot = frames + static_cast<std::size_t>(index) * 4;
+    auto data = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(slot))[0xc])(slot);
     *result = *(static_cast<unsigned char*>(data) + 0x14);
 }
-// MS2-FUNCTIONAL: writes the current frame record's flag byte at offset 0x14.
+// writes the current frame record's flag byte at offset 0x14.
 // @0x14001a3c0
 void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
 {
     auto* frames = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
     auto index = frames[0x6d];
-    auto* slot = frames + index * 4;
-    auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = reinterpret_cast<void**>(instance)[0xc];
-    auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
+    auto* slot = frames + static_cast<std::size_t>(index) * 4;
+    auto data = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(slot))[0xc])(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
 // The Video display object's leaf slots; external, the vtable copies of data_rdata_sf_video take their addresses.
@@ -722,14 +744,14 @@ const char* FUN_14001ae30(const void*) { return "ClassTraits::Video"; }
 // @0x14001aff0
 const char* FUN_14001aff0(const void*) { return "flash.media.Video"; }
 
-// MS2-FUNCTIONAL: releases the retained atom field and runs the inherited AS3 cleanup.
+// releases the retained atom field and runs the inherited AS3 cleanup.
 // @0x140019060
 void FUN_140019060(void* object)
 {
     ReleaseVideoAtom(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
     FUN_1424df220(object);
 }
-// MS2-FUNCTIONAL: releases the retained atom field and runs the inherited AS3 cleanup.
+// releases the retained atom field and runs the inherited AS3 cleanup.
 // @0x140019b00
 void FUN_140019b00(void* object)
 {
@@ -766,7 +788,7 @@ void FUN_14001b880(std::uint64_t* holder)
     if (object) { auto** vtable = *reinterpret_cast<void***>(object); reinterpret_cast<void(*)(void*)>(vtable[8])(object); }
 }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: retains the replacement heap, releases the previous heap, then stores it.
+// retains the replacement heap, releases the previous heap, then stores it.
 // @0x14001b8a0
 std::uint64_t* FUN_14001b8a0(std::uint64_t* holder, void* replacement)
 {
@@ -775,7 +797,7 @@ std::uint64_t* FUN_14001b8a0(std::uint64_t* holder, void* replacement)
     *holder = reinterpret_cast<std::uintptr_t>(replacement);
     return holder;
 }
-// MS2-FUNCTIONAL: releases the previous heap and stores the supplied pointer without retaining it.
+// releases the previous heap and stores the supplied pointer without retaining it.
 // @0x14001b8e0
 std::uint64_t* FUN_14001b8e0(std::uint64_t* holder, std::uint64_t replacement)
 {
@@ -915,7 +937,7 @@ void FUN_14001a410(void* self, void*, void* netStream)
 }
 // (sfr33) external: the Video traits / display vtable copies of data_rdata_sf_video take these addresses.
 
-// MS2-FUNCTIONAL: destroys AS3 CTraits and conditionally frees the allocation through the Scaleform heap.
+// destroys AS3 CTraits and conditionally frees the allocation through the Scaleform heap.
 // @0x14001a5c0
 Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_14001a5c0(Scaleform::GFx::AS3::InstanceTraits::CTraits* traits, std::uint32_t flags)
 {
@@ -926,7 +948,7 @@ Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_14001a5c0(Scaleform::GFx::AS3:
     }
     return traits;
 }
-// MS2-FUNCTIONAL: transfers an object into an AS3 Value using the Pick operation.
+// transfers an object into an AS3 Value using the Pick operation.
 // @0x14001a690
 Scaleform::GFx::AS3::Value* FUN_14001a690(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
 {
@@ -1032,23 +1054,31 @@ void FUN_14001abd0(void*, void* vm, void* context, std::uint32_t* output)
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
 }
 
-// MS2-FUNCTIONAL: forwards an object atom to the corresponding video property setter.
+// forwards an object atom to the corresponding video property setter.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x14001ac80
-void FUN_14001ac80(void*, void* vm, void* context, std::uint64_t property, int count, const std::uint8_t* args)
+void FUN_14001ac80(void*, void* vm, void* context, std::uint64_t property, unsigned count, const std::uint8_t* args)
 {
-    std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
+    auto root = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10);
+    std::uint64_t atom = 0;
+    if (count > 0 && (*args & 0x1f) != 0) atom = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC)(*reinterpret_cast<const int*>(&VideoPropBaseSetC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetC)(*reinterpret_cast<const int*>(&VideoPropBaseSetC) + root, property, atom);
 }
-// MS2-FUNCTIONAL: forwards an object atom to the second corresponding video property setter.
+#pragma optimize("", on)
+// forwards an object atom to the second corresponding video property setter.
+#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
 // @0x14001acd0
-void FUN_14001acd0(void*, void* vm, void* context, std::uint64_t property, int count, const std::uint8_t* args)
+void FUN_14001acd0(void*, void* vm, void* context, std::uint64_t property, unsigned count, const std::uint8_t* args)
 {
-    std::uint64_t atom = (count && ((*args & 0x1f) != 0)) ? *reinterpret_cast<const std::uint64_t*>(args + 0x10) : 0;
+    auto root = *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10);
+    std::uint64_t atom = 0;
+    if (count > 0 && (*args & 0x1f) != 0) atom = *reinterpret_cast<const std::uint64_t*>(args + 0x10);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD)(*reinterpret_cast<const int*>(&VideoPropBaseSetD) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), property, atom);
+        reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t, std::uint64_t)>(VideoPropSetD)(*reinterpret_cast<const int*>(&VideoPropBaseSetD) + root, property, atom);
 }
-// MS2-FUNCTIONAL: releases the retained atom field and invokes the AS3 cleanup hook.
+#pragma optimize("", on)
+// releases the retained atom field and invokes the AS3 cleanup hook.
 // @0x14001ae40
 void FUN_14001ae40(void* object)
 {
@@ -1070,7 +1100,7 @@ __declspec(noinline) void* FUN_14001afe0(void* object) { return object ? static_
 // @0x14001b980
 void FUN_14001b980(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
+// retains the replacement, releases the previous pointer, then stores it.
 // @0x14001b9a0
 std::uint64_t* FUN_14001b9a0(std::uint64_t* holder, void* replacement)
 {
@@ -1078,7 +1108,7 @@ std::uint64_t* FUN_14001b9a0(std::uint64_t* holder, void* replacement)
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: releases the previous pointer and stores the replacement without retaining it.
+// releases the previous pointer and stores the replacement without retaining it.
 // @0x14001b9f0
 std::uint64_t* FUN_14001b9f0(std::uint64_t* holder, std::uint64_t replacement)
 {
@@ -1089,7 +1119,7 @@ std::uint64_t* FUN_14001b9f0(std::uint64_t* holder, std::uint64_t replacement)
 // @0x14001ba50
 void FUN_14001ba50(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
+// retains the replacement, releases the previous pointer, then stores it.
 // @0x14001ba70
 std::uint64_t* FUN_14001ba70(std::uint64_t* holder, void* replacement)
 {
@@ -1097,7 +1127,7 @@ std::uint64_t* FUN_14001ba70(std::uint64_t* holder, void* replacement)
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: retains the new shared stream and releases the old stream.
+// retains the new shared stream and releases the old stream.
 // @0x14001bba0
 std::uint64_t* FUN_14001bba0(std::uint64_t* holder, void* replacement)
 {
@@ -1105,7 +1135,7 @@ std::uint64_t* FUN_14001bba0(std::uint64_t* holder, void* replacement)
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: retains and stores a non-null shared stream, or clears the holder.
+// retains and stores a non-null shared stream, or clears the holder.
 // @0x14001bc00
 std::uint64_t* FUN_14001bc00(std::uint64_t* holder, void* replacement)
 {
@@ -1122,7 +1152,7 @@ void FUN_14001bc40(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 // @0x14001bca0
 void FUN_14001bca0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
+// retains the replacement shared stream and releases the old stream.
 // @0x14001bcc0
 std::uint64_t* FUN_14001bcc0(std::uint64_t* holder, void* replacement)
 {
@@ -1135,7 +1165,7 @@ std::uint64_t* FUN_14001bcc0(std::uint64_t* holder, void* replacement)
 // @0x14001bd70
 void FUN_14001bd70(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: releases the old shared stream and replaces it without retaining the new stream.
+// releases the old shared stream and replaces it without retaining the new stream.
 // @0x14001bd90
 std::uint64_t* FUN_14001bd90(std::uint64_t* holder, std::uint64_t replacement)
 {
@@ -1146,7 +1176,7 @@ std::uint64_t* FUN_14001bd90(std::uint64_t* holder, std::uint64_t replacement)
 // @0x14001bdf0
 void FUN_14001bdf0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 #pragma optimize("", on)
-// MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
+// retains the replacement shared stream and releases the old stream.
 // @0x14001be10
 std::uint64_t* FUN_14001be10(std::uint64_t* holder, void* replacement)
 {
@@ -1154,14 +1184,14 @@ std::uint64_t* FUN_14001be10(std::uint64_t* holder, void* replacement)
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: releases the old shared stream and stores the supplied pointer without retaining it.
+// releases the old shared stream and stores the supplied pointer without retaining it.
 // @0x14001be50
 std::uint64_t* FUN_14001be50(std::uint64_t* holder, std::uint64_t replacement)
 {
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
 }
 
-// MS2-FUNCTIONAL: forwards event dispatch to the common AS3 interactive object handler.
+// forwards event dispatch to the common AS3 interactive object handler.
 // @0x14001b040
 __declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return FUN_142518c70(object, event); }
 // MS2-FUNCTIONAL: normalizes a tagged atom and dispatches it through the recovered AS3 helper.
@@ -1173,10 +1203,10 @@ __declspec(noinline) void thunk_FUN_142519080(void* value)
     if (atom & 1) --atom;
     FUN_142526340(value, atom);
 }
-// MS2-FUNCTIONAL: AvmInteractiveObj::OnEventUnload.
+// AvmInteractiveObj::OnEventUnload.
 // @0x14001b060
 __declspec(noinline) void thunk_FUN_142519860(void* object) { FUN_142519860(object); }
-// MS2-FUNCTIONAL: forwards absolute path formatting to the AS3 display object helper.
+// forwards absolute path formatting to the AS3 display object helper.
 // @0x14001b0a0
 __declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) { return FUN_142506e10(object, path); }
 // MS2-FUNCTIONAL: forwards focus changes to the shared AS3 interactive object handler.
@@ -1185,7 +1215,7 @@ __declspec(noinline) void FUN_14001b0e0(void* object, std::uint32_t event, void*
 {
     FUN_142519d50(object, event, target, controller, moved);
 }
-// MS2-FUNCTIONAL: restores the executable's AvmInteractiveObj vtable and destroys the base object.
+// restores the executable's AvmInteractiveObj vtable and destroys the base object.
 // @0x14001b3a0
 __declspec(noinline) void* FUN_14001b3a0(void* object)
 {
@@ -1193,7 +1223,7 @@ __declspec(noinline) void* FUN_14001b3a0(void* object)
     FUN_1424ddc20(object);
     return object;
 }
-// MS2-FUNCTIONAL: replaces the pointer only after releasing the previously stored value.
+// replaces the pointer only after releasing the previously stored value.
 // @0x14001bac0
 std::uint64_t* FUN_14001bac0(std::uint64_t* holder, std::uint64_t replacement)
 {
@@ -1221,7 +1251,7 @@ void FUN_14001bf90(void* object)
 {
     if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20)) FUN_14257e080();
 }
-// MS2-FUNCTIONAL: adds the resource (id, resource) to the movie load task while no failure is present. The exe passes its
+// adds the resource (id, resource) to the movie load task while no failure is present. The exe passes its
 // incoming r8 (the Resource*) through untouched.
 // @0x14001bfd0
 void FUN_14001bfd0(void* object, const std::uint32_t* id, void* pResource)
@@ -1380,7 +1410,7 @@ void* FUN_14001a080(void* traits)
     *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
     return traits;
 }
-// MS2-FUNCTIONAL: releases an old reference and stores the supplied pointer.
+// releases an old reference and stores the supplied pointer.
 // @0x14001a0e0
 std::uint64_t* FUN_14001a0e0(std::uint64_t* holder, std::uint64_t replacement)
 {
@@ -1422,13 +1452,13 @@ void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
 
 namespace {
 
-// MS2-FUNCTIONAL: initializes a null output and forwards metadata handling to its callback helper.
+// initializes a null output and forwards metadata handling to its callback helper.
 // @0x140019850
 std::uint64_t* FUN_140019850(void* self, std::uint64_t* result)
 {
     *result = 0; FUN_140019470(self, result); return result;
 }
-// MS2-FUNCTIONAL: initializes a null output and forwards cue-point handling to its callback helper.
+// initializes a null output and forwards cue-point handling to its callback helper.
 // @0x140019870
 std::uint64_t* FUN_140019870(void* self, std::uint64_t* result)
 {
@@ -1768,7 +1798,7 @@ void FUN_1400192e0(void* callback, std::uint64_t* output)
 namespace {
 
 namespace {
-void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t fieldOffset)
+__forceinline void GetVideoSoundTransform(void* self, std::uint64_t* output, std::size_t fieldOffset)
 {
     auto* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
     Scaleform::GFx::AS3::Value classValue;
