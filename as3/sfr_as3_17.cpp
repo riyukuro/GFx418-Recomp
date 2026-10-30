@@ -6501,12 +6501,11 @@ void FUN_1425046d0(Scaleform::UPInt self)
 }
 
 // Drops the loader info of the AS3 object of the AVM display object at +0x90 (the AvmBitmap ForceShutdown slot).
-// MS2-FUNCTIONAL: register choice
 // @0x1425047c0
 void FUN_1425047c0(Scaleform::UPInt self)
 {
     const Scaleform::GFx::AS3::AvmDisplayObj& avm = *reinterpret_cast<const Scaleform::GFx::AS3::AvmDisplayObj*>(self + 0x90);
-    if (avm.pAS3RawPtr || avm.pAS3CollectiblePtr)
+    if (Scaleform::GFx::AS3::Sfr33HasAS3Obj(&avm))
         FUN_142446e70(avm.GetAS3Obj(), NULL);
 }
 
