@@ -527,6 +527,7 @@ void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, bool weak
 {
     typedef Instances::fl_utils::Dictionary::ContainerType ContainerType;
     typedef RefCountCollector<StatMV_ActionScript_Mem> CollectorType;
+    typedef PtrReleaseProxy<StatMV_VM> ReleaseProxy;
 
     if (weakKeys && op == &CollectorType::MarkInCycleCall)
     {
@@ -547,11 +548,12 @@ void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, bool weak
                 obj = v.GetObject();
             if (obj)
             {
-                Ptr<CollectorType::PtrReleaseProxy> proxy = *SF_HEAP_AUTO_NEW(&h) CollectorType::PtrReleaseProxy();
-                obj->AddRef();
-                proxy->Data2 = obj;
-                proxy->pNext = prcc->HeadDelayedPtrRelease;
-                prcc->HeadDelayedPtrRelease = proxy;
+                // The proxy's destructor drops the value's reference once the collection is over.
+                Ptr<ReleaseProxy> proxy = *SF_HEAP_AUTO_NEW(&h) ReleaseProxy();
+                proxy->Data2 = const_cast<ASRefCountBaseType*>(obj);
+                Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(prcc->HeadDelayedPtrRelease);
+                proxy->pNext = head;
+                head = proxy;
             }
             it.RemoveAlt(*it);
         }
@@ -2490,6 +2492,6 @@ template ArrayDataBase<GFx::AS3::SPtr<MS2_VMAbcFile>, AllocatorGH<GFx::AS3::SPtr
 // MS2-PIN: ?GetLog@ASVM@AS3@GFx@Scaleform@@QEBAPEAVLog@4@XZ 0x1424c90e0
 // The delayed-release proxy the Dictionary GC builds; its bases' tables only appear in its inline ctors, whose stores
 // the exe drops, so they pair with the proxy's own one-slot table (the folded deleting dtor).
-// MS2-PIN: ??_7PtrReleaseProxy@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x142dc9d48
-// MS2-PIN: ??_7?$RefCountBase@UPtrReleaseProxy@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
-// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$PtrReleaseProxy@$0BEI@@AS3@GFx@Scaleform@@6B@ 0x14314ba40
+// MS2-PIN: ??_7?$RefCountBase@V?$PtrReleaseProxy@$0BEI@@AS3@GFx@Scaleform@@$0BEI@@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BEI@@Scaleform@@6B@ 0x142dc9d48
