@@ -139,7 +139,6 @@ struct Video04ArrayPaged
 class AS2VideoSupportImpl : public AS2VideoSupport
 {
 public:
-    virtual ~AS2VideoSupportImpl() {}
     virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
                                                  ResourceId rid, MovieDefImpl* pbindDefImpl);
     virtual void               RegisterASClasses(AS2::GlobalContext& gc, ASStringContext& sc);
@@ -150,57 +149,60 @@ public:
 class AS3VideoSupportImpl : public AS3VideoSupport
 {
 public:
-    virtual ~AS3VideoSupportImpl() {}
     virtual DisplayObjectBase* CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef, InteractiveObject* pparent,
                                                  ResourceId rid, MovieDefImpl* pbindDefImpl);
     virtual void               RegisterASClasses(AS3::VM* pvm);
 };
 
-// MS2-FUNCTIONAL: creates the AS2 video support object in the global heap.
+// MS2-FUNCTIONAL: creates the AS2 video support object in the global heap. (exe codegen is cl 15: xor eax,eax null path, no tail call; cl 17 does not emit it)
 // @0x1400019f0
 AS2VideoSupport* AS2VideoSupport::CreateInstance()
 {
     return SF_HEAP_NEW(Memory::pGlobalHeap) AS2VideoSupportImpl;
 }
 
-// MS2-FUNCTIONAL: creates the AS3 video support object in the global heap.
+// MS2-FUNCTIONAL: creates the AS3 video support object in the global heap. (exe codegen is cl 15: xor eax,eax null path, no tail call; cl 17 does not emit it)
 // @0x140002730
 AS3VideoSupport* AS3VideoSupport::CreateInstance()
 {
     return SF_HEAP_NEW(Memory::pGlobalHeap) AS3VideoSupportImpl;
 }
 
-// MS2-FUNCTIONAL: allocates the 0x160 byte AS2 video character in the movie heap and constructs it and its AVM part.
+// allocates the 0x160 byte AS2 video character in the movie heap and constructs it and its AVM part.
 // @0x140001690
 DisplayObjectBase* AS2VideoSupportImpl::CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef,
                                                           InteractiveObject* pparent, ResourceId rid,
                                                           MovieDefImpl* pbindDefImpl)
 {
     char* pmem = (char*)proot->pHeap->Alloc(0x160, (const AllocInfo*)0);
-    InteractiveObject* pobj = 0;
+    InteractiveObject* pobj;
     if (pmem)
     {
         ResourceId localId = rid;
         pobj = FUN_140010000(pmem, pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
     }
+    else
+        pobj = 0;
     if (pmem + 0x110 != 0)
         FUN_14000e2b0(pmem + 0x110, pobj);
     return (DisplayObjectBase*)pobj;
 }
 
-// MS2-FUNCTIONAL: allocates the 0x168 byte AS3 video character in the movie heap and constructs it and its AVM part.
+// allocates the 0x168 byte AS3 video character in the movie heap and constructs it and its AVM part.
 // @0x140002560
 DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, CharacterDef* pcharDef,
                                                           InteractiveObject* pparent, ResourceId rid,
                                                           MovieDefImpl* pbindDefImpl)
 {
     char* pmem = (char*)proot->pHeap->Alloc(0x168, (const AllocInfo*)0);
-    InteractiveObject* pobj = 0;
+    InteractiveObject* pobj;
     if (pmem)
     {
         ResourceId localId = rid;
         pobj = FUN_140010000(pmem, pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
     }
+    else
+        pobj = 0;
     if (pmem + 0x110 != 0)
         FUN_14001af70_ctor(pmem + 0x110, pobj);
     return (DisplayObjectBase*)pobj;
@@ -223,12 +225,12 @@ void AS2VideoSupportImpl::AttachAudio(AS2::Object* pnetStream, Sprite* pchar)
 
 // ---- GC pointer and ASString hash helpers ----
 
-// MS2-FUNCTIONAL: slot of an ArrayPaged (page of 1024 pointers): returns the element address, growing the page table.
+// slot of an ArrayPaged (page of 1024 pointers): returns the element address, growing the page table.
 // @0x140001870
 void* FUN_140001870(Video04ArrayPaged* array)
 {
     std::uint64_t index = array->Size >> 10;
-    if (array->PageCount <= index)
+    if (index >= array->PageCount)
     {
         if (!FUN_142592950(array, index))
             return 0;
@@ -236,29 +238,28 @@ void* FUN_140001870(Video04ArrayPaged* array)
     return (char*)array->Pages[index] + (std::uint64_t)(array->Size & 0x3ff) * 8;
 }
 
-// MS2-FUNCTIONAL: finds the entry holding the key in a hash with GC values; returns its index or -1.
+// MS2-FUNCTIONAL: finds the entry holding the key in a hash with GC values; returns its index or -1. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
 // @0x140001a30
 std::uint64_t FUN_140001a30(Video04Hash* hash, ASStringNode** key, std::uint64_t index)
 {
     Video04HashTable* table = *hash;
-    Video04HashEntry* entry = &table->Entries[index];
-    if (entry->NextInChain != -2 && (std::uint64_t)(entry->Key->HashFlags & table->SizeMask) == index)
+    std::uint64_t hashValue = index;
+    const Video04HashEntry* entry = &table->Entries[index];
+    if (entry->NextInChain == -2 || (std::uint64_t)(entry->Key->HashFlags & table->SizeMask) != hashValue)
+        return 0xffffffffffffffffull;
+    for (;;)
     {
-        std::uint64_t at = index;
-        for (;;)
-        {
-            if ((std::uint64_t)(entry->Key->HashFlags & table->SizeMask) == index && entry->Key == *key)
-                return at;
-            at = (std::uint64_t)entry->NextInChain;
-            if (at == 0xffffffffffffffffull)
-                break;
-            entry = &table->Entries[at];
-        }
+        if ((std::uint64_t)(entry->Key->HashFlags & table->SizeMask) == hashValue && entry->Key == *key)
+            return index;
+        index = (std::uint64_t)entry->NextInChain;
+        if (index == 0xffffffffffffffffull)
+            break;
+        entry = &table->Entries[index];
     }
     return 0xffffffffffffffffull;
 }
 
-// MS2-FUNCTIONAL: returns the address of the pair stored for the key, or 0.
+// MS2-FUNCTIONAL: returns the address of the pair stored for the key, or 0. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
 // @0x140001ad0
 void* FUN_140001ad0(Video04Hash* hash, ASStringNode** key)
 {
@@ -266,13 +267,13 @@ void* FUN_140001ad0(Video04Hash* hash, ASStringNode** key)
     if (table)
     {
         std::int64_t at = (std::int64_t)FUN_140001a30(hash, key, (*key)->HashFlags & table->SizeMask);
-        if (-1 < at)
-            return (char*)table + at * 0x20 + 0x18;
+        if (at >= 0)
+            return (char*)&table->Entries[at].Key;
     }
     return 0;
 }
 
-// MS2-FUNCTIONAL: assigns a GC pointer (adds the new reference, releases the old one).
+// assigns a GC pointer (adds the new reference, releases the old one).
 // @0x140001b10
 Video04GcObject** FUN_140001b10(Video04GcObject** dst, Video04GcObject** src)
 {
@@ -300,7 +301,7 @@ void FUN_140001ba0(char* pair)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: returns the value part (the address 8 bytes into the pair) stored for the key, or 0.
+// MS2-FUNCTIONAL: returns the value part (the address 8 bytes into the pair) stored for the key, or 0. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
 // The parameters are plain pointers so the definition has external linkage: the AS2 units call it as
 // ASStringHash<ClassRegEntry>::Get (hash, const ASString& key).
 // @0x140001bd0
@@ -312,9 +313,9 @@ void* FUN_140001bd0(void* phash, void* pkey)
     if (table)
     {
         std::int64_t at = (std::int64_t)FUN_140001a30(hash, key, (*key)->HashFlags & table->SizeMask);
-        if (-1 < at)
+        if (at >= 0)
         {
-            char* pair = (char*)table + at * 0x20 + 0x18;
+            char* pair = (char*)&table->Entries[at].Key;
             if (pair != 0)
                 return pair + 8;
         }
@@ -322,7 +323,7 @@ void* FUN_140001bd0(void* phash, void* pkey)
     return 0;
 }
 
-// MS2-FUNCTIONAL: assigns a {key node, GC value} pair.
+// assigns a {key node, GC value} pair.
 // @0x140001c20
 Video04Pair* FUN_140001c20(Video04Pair* dst, Video04Pair* src)
 {
@@ -333,7 +334,7 @@ Video04Pair* FUN_140001c20(Video04Pair* dst, Video04Pair* src)
     return dst;
 }
 
-// MS2-FUNCTIONAL: destroys a pair held as {key node, ?, GC value}.
+// MS2-FUNCTIONAL: destroys a pair held as {key node, ?, GC value}. (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
 // @0x140001c80
 void FUN_140001c80(std::int64_t* p)
 {
@@ -341,7 +342,7 @@ void FUN_140001c80(std::int64_t* p)
     ((ASStringNode*)p[0])->Release();
 }
 
-// MS2-FUNCTIONAL: scalar deleting form of the above.
+// MS2-FUNCTIONAL: scalar deleting form of the above. (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
 // @0x140001cf0
 std::int64_t* FUN_140001cf0(std::int64_t* p, unsigned flags)
 {
@@ -352,7 +353,7 @@ std::int64_t* FUN_140001cf0(std::int64_t* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL: frees a hash slot: drops the GC value and key and marks the slot freed (-2 stored as 0xff..fe).
+// MS2-FUNCTIONAL: frees a hash slot: drops the GC value and key and marks the slot freed (-2 stored as 0xff..fe). (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
 // @0x140001de0
 void FUN_140001de0(std::int64_t* slot)
 {
@@ -361,6 +362,7 @@ void FUN_140001de0(std::int64_t* slot)
     slot[0] = -2;
 }
 
+// MS2-FUNCTIONAL: same as 0x140001de0 (cl 15 add [m],-1).
 // @0x140001e30
 void FUN_140001e30(std::int64_t* slot)
 {
@@ -369,9 +371,9 @@ void FUN_140001e30(std::int64_t* slot)
     slot[0] = -2;
 }
 
-// MS2-FUNCTIONAL: clears a hash with GC values: frees every used slot, then returns the table to the global heap.
-// @0x140001f40
-void FUN_140001f40(Video04Hash* hash)
+// clears a hash with GC values: frees every used slot, then returns the table to the global heap.
+// (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1; cl 17 does not emit it)
+__forceinline void Video04ClearHash(Video04Hash* hash)
 {
     Video04HashTable* table = *hash;
     if (table)
@@ -392,95 +394,116 @@ void FUN_140001f40(Video04Hash* hash)
     }
 }
 
+// MS2-FUNCTIONAL: the clear above (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1).
+// @0x140001f40
+void FUN_140001f40(Video04Hash* hash)
+{
+    Video04ClearHash(hash);
+}
+
+// MS2-FUNCTIONAL: same body as the above (the exe carries a second full copy). (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1; cl 17 does not emit it)
 // @0x140001ff0
 void FUN_140001ff0(Video04Hash* hash)
 {
-    FUN_140001f40(hash);
+    Video04ClearHash(hash);
 }
 
-// MS2-FUNCTIONAL: adds {key, value} to the hash at the key's hash code.
+// adds {key, value} to the hash at the key's hash code.
 // @0x1400020d0
 void FUN_1400020d0(void* hash, ASStringNode** key, void* value)
 {
-    struct { ASStringNode** Key; void* Value; } pair = {key, value};
+    struct { ASStringNode** Key; void* Value; } pair;
+    pair.Value = value;
+    pair.Key = key;
     FUN_142591a00(hash, hash, &pair, (*key)->HashFlags);
 }
 
-// MS2-FUNCTIONAL: registers one builtin: looks the builtin's name up in the context's class hash and, when it is not
+// registers one builtin: looks the builtin's name up in the context's class hash and, when it is not
 // registered yet, builds its prototype with the supplied callback and stores it on the global object.
-static void Video04RegisterBuiltin(Video04Context* context, void* sc, Video04Global* global, size_t nameOffset, void* (*builder)(void*, void*))
+// The builtin name is fetched again at every use (FUN_1429561c0 is the context's builtin table getter).
+#define VIDEO04_NAME(context, nameOffset) ((ASStringNode**)(FUN_1429561c0(context) + (nameOffset)))
+
+// A Value holding a string (tag byte 0xb, the node at +8).
+struct Video04StringValue
 {
-    char* builtins = FUN_1429561c0(context);
-    Video04Hash* hash = &context->Classes;
-    ASStringNode** name = (ASStringNode**)(builtins + nameOffset);
-    if (*hash)
+    unsigned char Tag;
+    ASStringNode* Name;
+    Video04StringValue(ASStringNode** name) : Tag(0xb), Name(*name) { Name->RefCount++; }
+};
+
+__forceinline void* Video04HashGet(Video04Hash* hash, ASStringNode** key)
+{
+    Video04HashTable* table = *hash;
+    if (table)
     {
-        std::int64_t at = (std::int64_t)FUN_140001a30(hash, name, (*name)->HashFlags & (*hash)->SizeMask);
-        if (-1 < at)
+        std::int64_t at = (std::int64_t)FUN_140001a30(hash, key, (*key)->HashFlags & table->SizeMask);
+        if (at >= 0)
         {
-            char* pair = (char*)*hash + at * 0x20 + 0x18;
-            if (pair != 0 && pair != (char*)-8)
-                return;
+            char* pair = (char*)&table->Entries[at].Key;
+            if (pair != 0)
+                return pair + 8;
         }
     }
-    struct { void* Builder; Video04GcObject* Value; } proto = {(void*)builder, 0};
-    struct { ASStringNode** Key; void* Value; } keyValue = {name, &proto};
-    FUN_142591a00(hash, hash, &keyValue, (*name)->HashFlags);
-    Video04GcRelease(proto.Value);
+    return 0;
+}
+
+__forceinline void Video04RegisterBuiltin(Video04Context* context, void* sc, Video04Global* global, size_t nameOffset, void* (*builder)(void*, void*))
+{
+    if (Video04HashGet(&context->Classes, VIDEO04_NAME(context, nameOffset)))
+        return;
+    {
+        struct { void* Builder; Video04GcObject* Value; } proto = {(void*)builder, 0};
+        struct { ASStringNode** Key; void* Value; } keyValue = {VIDEO04_NAME(context, nameOffset), &proto};
+        FUN_142591a00(&context->Classes, &context->Classes, &keyValue, (*keyValue.Key)->HashFlags);
+        Video04GcRelease(proto.Value);
+    }
     unsigned char flags = 0;
-    struct { std::uint64_t Tag; ASStringNode* Name; } member;
-    member.Tag = 0xb;
-    member.Name = *name;
-    ((unsigned*)((char*)member.Name + 0x18))[0] += 1;
+    Video04StringValue member(VIDEO04_NAME(context, nameOffset));
     void** vtable = global->Members.VTable;
-    ((void (*)(void*, void*, void*, void*, void*))vtable[10])(&global->Members, sc, name, &member, &flags);
+    ((void (*)(void*, void*, void*, void*, void*))vtable[10])(&global->Members, sc, VIDEO04_NAME(context, nameOffset), &member, &flags);
     FUN_1429260b0(&member);
 }
 
+// MS2-FUNCTIONAL: registers the video builtin (exe codegen is cl 15: r12 for sc, null-tested &Entries[at], shared
+// stack slot for the key pair and the member value; cl 17 does not emit it).
 // @0x140002100
 void FUN_140002100(Video04Context* context, void* sc, Video04Global* global)
 {
     Video04RegisterBuiltin(context, sc, global, 0x110, &FUN_1400126f0);
 }
 
+// MS2-FUNCTIONAL: as 0x140002100 for the next builtin.
 // @0x140002240
 void FUN_140002240(Video04Context* context, void* sc, Video04Global* global)
 {
     Video04RegisterBuiltin(context, sc, global, 0x118, &FUN_14000cf20);
 }
 
+// MS2-FUNCTIONAL: as 0x140002100 for the next builtin.
 // @0x140002380
 void FUN_140002380(Video04Context* context, void* sc, Video04Global* global)
 {
     Video04RegisterBuiltin(context, sc, global, 0x120, &FUN_14000ed60);
 }
 
-// MS2-FUNCTIONAL: the AS2 registration: the base builtin and the three video builtins on the global object.
+// the AS2 registration: the base builtin and the three video builtins on the global object (gc.Global reread for each).
 // @0x1400024c0
 void AS2VideoSupportImpl::RegisterASClasses(AS2::GlobalContext& gc, ASStringContext& sc)
 {
     Video04Context* context = (Video04Context*)&gc;
-    Video04Global* global = context->Global;
-    FUN_1425916c0(context, &sc, global);
-    FUN_140002100(context, &sc, global);
-    FUN_140002240(context, &sc, global);
-    FUN_140002380(context, &sc, global);
+    FUN_1425916c0(context, &sc, context->Global);
+    FUN_140002100(context, &sc, context->Global);
+    FUN_140002240(context, &sc, context->Global);
+    FUN_140002380(context, &sc, context->Global);
 }
 
-// MS2-FUNCTIONAL: the exe's scalar deleting destructors of the video support classes skip the vptr stores and the
-// intermediate base destructors (one RefCountNTSImplCore destructor call, then the heap free); ours go through the chain.
+// The scalar deleting destructors are implicit (no vptr stores in the exe).
 // MS2-PIN: ??_G?$RefCountBaseNTS@VAS2VideoSupport@Video@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x140001750
-// MS2-FUNCTIONAL 0x140001750: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_GAS2VideoSupport@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x140001930
-// MS2-FUNCTIONAL 0x140001930: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_GAS2VideoSupportImpl@@UEAAPEAXI@Z 0x1400019b0
-// MS2-FUNCTIONAL 0x1400019b0: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_G?$RefCountBaseNTS@VAS3VideoSupport@Video@GFx@Scaleform@@$01@Scaleform@@UEAAPEAXI@Z 0x140002620
-// MS2-FUNCTIONAL 0x140002620: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_GAS3VideoSupport@Video@GFx@Scaleform@@UEAAPEAXI@Z 0x140002680
-// MS2-FUNCTIONAL 0x140002680: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_GAS3VideoSupportImpl@@UEAAPEAXI@Z 0x1400026f0
-// MS2-FUNCTIONAL 0x1400026f0: the exe's deleting destructor skips the vptr stores and the base destructor chain (one RefCountNTSImplCore dtor call, then the heap free); ours runs the chain
 // MS2-PIN: ??_7?$RefCountBaseNTS@VAS2VideoSupport@Video@GFx@Scaleform@@$01@Scaleform@@6B@ 0x1431b4a88
 // MS2-PIN: ??_7AS2VideoSupport@Video@GFx@Scaleform@@6B@ 0x1431b4a90
 // MS2-PIN: ??_7AS2VideoSupportImpl@@6B@ 0x1431b4ab0
