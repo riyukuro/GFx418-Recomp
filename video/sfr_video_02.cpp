@@ -3357,6 +3357,9 @@ void FUN_1400112a0(
 }
 
 // MS2-FUNCTIONAL: recreates the video render node after its provider changes, retaining the parent slot and transform.
+// BEHAVIOUR FIX: as in the exe, the old node's transform is kept and the node moved only when it has a parent; with
+// no parent the new node gets the identity 2D matrix (ours copied the old transform). The child index is the
+// search position, so a node not found in its parent removes and reinserts at the end (ours skipped both).
 // @0x1400105b0
 void* FUN_1400105b0(void* object)
 {
@@ -3364,42 +3367,43 @@ void* FUN_1400105b0(void* object)
     auto* bytes = static_cast<unsigned char*>(object);
     auto** nodeSlot = reinterpret_cast<TreeNode**>(bytes + 0x48);
     TreeNode* oldNode = *nodeSlot;
-    TreeContainer* parent = oldNode ? static_cast<TreeContainer*>(oldNode->GetParent()) : nullptr;
-    Scaleform::UPInt childIndex = ~Scaleform::UPInt(0);
-    if (parent) {
-        for (Scaleform::UPInt i = 0, count = parent->GetSize(); i < count; ++i) {
-            if (parent->GetAt(i) == oldNode) { childIndex = i; break; }
-        }
-    }
-    const bool is3D = oldNode && oldNode->Is3D();
-    Matrix3F matrix3;
+    const bool hadNode = oldNode != nullptr;
     Matrix2F matrix2;
+    Matrix3F matrix3;
     Matrix3F view;
     Matrix4F projection;
-    bool hasView = false, hasProjection = false;
-    if (oldNode) {
+    Scaleform::UPInt childIndex = ~Scaleform::UPInt(0);
+    bool is3D = false, hasView = false, hasProjection = false;
+    TreeContainer* parent = nullptr;
+    if (oldNode && (parent = static_cast<TreeContainer*>(oldNode->GetParent())) != nullptr) {
+        const Scaleform::UPInt count = parent->GetSize();
+        for (childIndex = 0; childIndex < count; ++childIndex)
+            if (parent->GetAt(childIndex) == oldNode) break;
         const auto* oldData = reinterpret_cast<const unsigned char*>(oldNode->GetReadOnlyDataBase());
-        if (is3D) memcpy(&matrix3, oldData + 0x10, sizeof(matrix3));
-        else memcpy(&matrix2, oldData + 0x10, sizeof(matrix2));
+        is3D = oldNode->Is3D();
         if (is3D) {
+            memcpy(&matrix3, oldData + 0x10, sizeof(matrix3));
             const State* state = oldNode->GetState(static_cast<StateType>(5));
             if (state) {
                 const auto* payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
                 memcpy(&view, payload + 0x10, sizeof(view));
                 hasView = true;
             }
-            state = oldNode->GetState(static_cast<StateType>(6));
+            else hasView = false;
+            state = (*nodeSlot)->GetState(static_cast<StateType>(6));
             if (state) {
                 const auto* payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
                 memcpy(&projection, payload + 0x10, sizeof(projection));
                 hasProjection = true;
             }
+            else hasProjection = false;
         }
-        if (parent && childIndex != ~Scaleform::UPInt(0)) parent->Remove(childIndex, 1);
-        oldNode->Release();
-        *nodeSlot = nullptr;
+        else memcpy(&matrix2, oldData + 0x10, sizeof(matrix2));
+        parent->Remove(childIndex, 1);
     }
-    if (!oldNode) return nullptr;
+    if (*nodeSlot) (*nodeSlot)->Release();
+    *nodeSlot = nullptr;
+    if (!hadNode) return *nodeSlot;
 
     // slot 1 returns the new node as a Ptr through the hidden result slot; the exe reads the node from it (0x14001094d)
     typedef Scaleform::Render::ContextImpl::Entry** (*CreateNode)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
@@ -3422,9 +3426,9 @@ void* FUN_1400105b0(void* object)
             if (hasProjection) node->SetProjectionMatrix3D(projection);
         }
         else node->SetMatrix(matrix2);
-        if (parent && childIndex != ~Scaleform::UPInt(0)) parent->Insert(childIndex, node);
     }
-    return node;
+    if (parent) parent->Insert(childIndex, *nodeSlot);
+    return *nodeSlot;
 }
 
 // MS2-FUNCTIONAL: constructs the video shape provider, scales its geometry to the decoded frame, and creates a tree entry.
