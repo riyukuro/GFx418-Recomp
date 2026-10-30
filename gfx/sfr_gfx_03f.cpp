@@ -136,6 +136,7 @@ template void ArrayData<RangeData<GFx::TextField::CSSHolderBase::UrlZone>,
 template void RangeDataArray<GFx::TextField::CSSHolderBase::UrlZone>::Iterator::Remove();
 // @0x1425bc870
 template void RangeDataArray<GFx::TextField::CSSHolderBase::UrlZone>::SetRange(const TypedRangeData&);
+// MS2-FUNCTIONAL 0x1425bf1a0: same rehash and calls; the frame layout differs
 // @0x1425bf1a0
 template void decltype(StringHashLH<Ptr<Render::Text::ImageDesc> >::mHash)::BaseType::setRawCapacity(void*, UPInt);
 
@@ -813,7 +814,7 @@ void TextField::SetY(Double y)
         y = 0;
     Matrix m = GetMatrix();
     y        = Render::PixelsToTwips(y);
-    Render::PointF p = m.TransformByInverse(Render::PointF(float(y)));
+    Render::PointF p = m.TransformByInverse(Render::PointF(0, float(y)));
     p.y -= pDocument->GetViewRect().y1;
     p = m.Transform(p);
     DisplayObjectBase::SetY(Double(Render::TwipsToPixels(p.y)));
@@ -831,6 +832,7 @@ void TextField::SetYScale(Double yscale)
 }
 
 // The display info's position (the current one when unset), in pixels relative to the text rectangle.
+// MS2-FUNCTIONAL 0x1425be970: same math; the exe calls the out-parameter TransformByInverse overload
 // @0x1425be970
 Render::PointF TextField::TransformToTextRectSpace(const GFx::Value::DisplayInfo& info) const
 {
