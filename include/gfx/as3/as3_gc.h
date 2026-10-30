@@ -210,6 +210,8 @@ public:
     Ptr<PtrReleaseProxy>                    HeadDelayedPtrRelease;      // +0x80
 
     RefCountCollector() : FirstFreeRootIndex(SF_MAX_UPINT), Flags(0) { pLastPtr = &ListRoot; }
+    // a last collection before the members go (the exe's ??_G 0x1424e2040 calls Collect(0) first)
+    ~RefCountCollector() { Collect(); }
 
     bool IsCollecting() const   { return (Flags & Flags_Collecting) != 0; }
     bool IsAddingRoot() const   { return (Flags & Flags_AddingRoot) != 0; }
