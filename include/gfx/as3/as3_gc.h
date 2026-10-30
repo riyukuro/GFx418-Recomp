@@ -178,7 +178,10 @@ public:
         Ptr<PtrReleaseProxy>    pNext;      // +0x20
     };
 
-    typedef HashLH<const BaseType*, WeakProxy*, FixedSizeHash<const BaseType*>, Stat> WeakProxyHash;
+    // The exe's WProxyHash allocates from the global heap with Stat_Default_Mem: its add (0x1424d40a0) and
+    // setRawCapacity (0x1425415a0) are the AllocatorGH<GASRefCountBase*, 2> instances, pGlobalHeap->Alloc +0x50.
+    typedef Hash<const BaseType*, WeakProxy*, FixedSizeHash<const BaseType*>, AllocatorGH<const BaseType*, Stat_Default_Mem> >
+        WeakProxyHash;
 
     ArrayPagedLH_POD<const BaseType*, 10, 5>  Roots;                   // +0x10 free slots hold (next free << 1) | 1
     UPInt                                   FirstFreeRootIndex;         // +0x38
