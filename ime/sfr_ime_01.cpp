@@ -1483,19 +1483,22 @@ __declspec(noinline) unsigned long long FUN_1423d9490(void* object, unsigned lon
     return 0;
 }
 
-// MS2-FUNCTIONAL: compares the executable GUID, queries the child interface, and propagates its four-byte result at the observed offsets.
+// TSF compartment change sink: for the watched compartment GUID, reads its VT_I4 value and passes it on (FUN_1423cc7c0).
+// As in the exe, the VARIANT is not initialised or cleared.
 // @0x1423d70d0
 unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
 {
-    if (guid[0] == DAT_14313b410 && guid[1] == DAT_14313b418) {
+    // IsEqualGUID (memcmp) against the conversion-mode compartment GUID, whose halves are separate pieces in the fullexe.
+    if (memcmp(guid, &DAT_14313b410, 8) == 0 && memcmp(guid + 1, &DAT_14313b418, 8) == 0) {
         auto* bytes = static_cast<unsigned char*>(object);
-        void* child = *reinterpret_cast<void**>(bytes + 0x20);
-        unsigned char result[16]{};
-        const int hr = reinterpret_cast<int(*)(void*, void*)>((*reinterpret_cast<void***>(child))[4])(child, result);
-        const short code = *reinterpret_cast<short*>(result);
-        if (hr >= 0 && code == 3) {
-            *reinterpret_cast<unsigned*>(bytes - 0xcc) = *reinterpret_cast<unsigned*>(result + 8);
-            FUN_1423cc7c0(bytes - 0x1a0, *reinterpret_cast<unsigned*>(result + 8));
+        void* compartment = *reinterpret_cast<void**>(bytes + 0x20);
+        VARIANT value;
+        // ITfCompartment::GetValue
+        const HRESULT hr = reinterpret_cast<HRESULT(*)(void*, VARIANT*)>((*reinterpret_cast<void***>(compartment))[4])(
+            compartment, &value);
+        if (SUCCEEDED(hr) && value.vt == VT_I4) {
+            *reinterpret_cast<LONG*>(bytes - 0xcc) = value.lVal;
+            FUN_1423cc7c0(bytes - 0x1a0, value.lVal);
         }
     }
     return 1;
