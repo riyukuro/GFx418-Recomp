@@ -3849,7 +3849,7 @@ void ColorTransformCtorFunction::GlobalCtor(const FnCall& fn)
     {
         Ptr<ColorTransformObject> pct = static_cast<ColorTransformObject*>(fn.ThisPtr);
         fn.Result->SetAsObject(pct.GetPtr());
-        if (fn.NArgs >= 8)
+        if (fn.NArgs > 7)
         {
             Render::Cxform& cx = pct->mColorTransform;
             cx.M[0][0] = (float)fn.Arg(0).ToNumber(fn.Env);
