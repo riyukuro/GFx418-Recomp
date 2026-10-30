@@ -3773,16 +3773,20 @@ UInt8* Sfr31ConstructOrClear(UPInt self, UInt8* ret, UPInt* out, const char* gna
     return ret;
 }
 
-// pushwith: the (non-null) object on top of the operand stack moves onto the scope stack.
+// pushscope: the (non-null) object on top of the operand stack moves onto the scope stack. An undefined or null
+// object throws and stays on the operand stack.
 // MS2-FUNCTIONAL 0x14253f4e0: behavior-equivalent recovery; codegen differs from exe
 // @0x14253f4e0
 void Sfr31ExecPushWith(UPInt vmAddr)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
     Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
-    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(top));
-    if ((*reinterpret_cast<const UInt32*>(top) & 0x1f) == 0)
+    const UInt32 kind = *reinterpret_cast<const UInt32*>(top) & 0x1f;
+    if (kind == 0 || (kind - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) == 0))
+    {
+        Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(top));
         return;
+    }
     vm.ScopeStack.PushBack(Value::GetUndefined());
     UInt32* dst = reinterpret_cast<UInt32*>(vm.ScopeStack.GetDataPtr() + vm.ScopeStack.GetSize() - 1);
     UInt32* src = reinterpret_cast<UInt32*>(top);
