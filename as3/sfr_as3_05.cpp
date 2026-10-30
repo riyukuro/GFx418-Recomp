@@ -629,125 +629,607 @@ template struct ThunkFunc0<Instances::fl_display::MovieClip, 3, SPtr<Instances::
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+namespace fl_display
+{
+    extern const ClassInfo AVM1MovieCI;
+    extern const ClassInfo ActionScriptVersionCI;
+    extern const ClassInfo BitmapCI;
+    extern const ClassInfo BitmapDataChannelCI;
+    extern const ClassInfo BlendModeCI;
+    extern const ClassInfo CapsStyleCI;
+    extern const ClassInfo DisplayObjectContainerCI;
+    extern const ClassInfo FrameLabelCI;
+    extern const ClassInfo GradientTypeCI;
+    extern const ClassInfo GraphicsCI;
+    extern const ClassInfo IBitmapDrawableCI;
+    extern const ClassInfo InteractiveObjectCI;
+    extern const ClassInfo InterpolationMethodCI;
+    extern const ClassInfo JointStyleCI;
+    extern const ClassInfo LineScaleModeCI;
+    extern const ClassInfo LoaderCI;
+    extern const ClassInfo LoaderInfoCI;
+    extern const ClassInfo MorphShapeCI;
+    extern const ClassInfo MovieClipCI;
+    extern const ClassInfo PixelSnappingCI;
+    extern const ClassInfo SWFVersionCI;
+    extern const ClassInfo SceneCI;
+    extern const ClassInfo ShaderCI;
+    extern const ClassInfo ShaderDataCI;
+    extern const ClassInfo ShapeCI;
+    extern const ClassInfo SimpleButtonCI;
+    extern const ClassInfo SpreadMethodCI;
+    extern const ClassInfo SpriteCI;
+    extern const ClassInfo StageAlignCI;
+    extern const ClassInfo StageCI;
+    extern const ClassInfo StageDisplayStateCI;
+    extern const ClassInfo StageQualityCI;
+    extern const ClassInfo StageScaleModeCI;
+}
+
 // ---- fl_display class traits factories ----
 // The exe builds each class traits object here with its constructor (sfr_as3_06) inlined, except for
-// DisplayObject and BitmapData, whose constructors stay out of line.
+// DisplayObject and BitmapData, whose constructors stay out of line. The __forceinline copies below
+// repeat the sfr_as3_06 bodies so cl expands them the same way; keep the two in step.
 
 namespace ClassTraits { namespace fl_display
 {
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243caf0); the exe inlines it into MakeClassTraits.
+    __forceinline StageAlign::StageAlign(ClassTraits::Traits& t)
+        : Class(t)
+        , Bottom("B")
+        , BottomLeft("BL")
+        , BottomRight("BR")
+        , Left("L")
+        , Right("R")
+        , Top("T")
+        , TopLeft("TL")
+        , TopRight("TR")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c9b0); the exe inlines it into MakeClassTraits.
+    __forceinline StageAlign::StageAlign(VM& vm)
+        : Traits(vm, AS3::fl_display::StageAlignCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageAlignCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageAlign(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242c7d0
     Pickable<Traits> StageAlign::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) StageAlign(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243cc70); the exe inlines it into MakeClassTraits.
+    __forceinline StageDisplayState::StageDisplayState(ClassTraits::Traits& t)
+        : Class(t)
+        , FullScreen("fullScreen")
+        , FullScreenInteractive("fullScreenInteractive")
+        , Normal("normal")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243cb70); the exe inlines it into MakeClassTraits.
+    __forceinline StageDisplayState::StageDisplayState(VM& vm)
+        : Traits(vm, AS3::fl_display::StageDisplayStateCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageDisplayStateCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageDisplayState(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242d350
     Pickable<Traits> StageDisplayState::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) StageDisplayState(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243ad40); the exe inlines it into MakeClassTraits.
+    __forceinline FrameLabel::FrameLabel(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243ac40); the exe inlines it into MakeClassTraits.
+    __forceinline FrameLabel::FrameLabel(VM& vm)
+        : Traits(vm, AS3::fl_display::FrameLabelCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::FrameLabel(vm, AS3::fl_display::FrameLabelCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242d840
     Pickable<Traits> FrameLabel::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) FrameLabel(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243cdd0); the exe inlines it into MakeClassTraits.
+    __forceinline StageQuality::StageQuality(ClassTraits::Traits& t)
+        : Class(t)
+        , Best("best")
+        , High("high")
+        , Low("low")
+        , Medium("medium")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243ccc0); the exe inlines it into MakeClassTraits.
+    __forceinline StageQuality::StageQuality(VM& vm)
+        : Traits(vm, AS3::fl_display::StageQualityCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageQualityCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageQuality(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242dbf0
     Pickable<Traits> StageQuality::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) StageQuality(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243aec0); the exe inlines it into MakeClassTraits.
+    __forceinline GradientType::GradientType(ClassTraits::Traits& t)
+        : Class(t)
+        , Linear("linear")
+        , Radial("radial")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243adc0); the exe inlines it into MakeClassTraits.
+    __forceinline GradientType::GradientType(VM& vm)
+        : Traits(vm, AS3::fl_display::GradientTypeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::GradientTypeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::GradientType(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242dd60
     Pickable<Traits> GradientType::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientType(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243cf30); the exe inlines it into MakeClassTraits.
+    __forceinline StageScaleMode::StageScaleMode(ClassTraits::Traits& t)
+        : Class(t)
+        , ExactFit("exactFit")
+        , NoBorder("noBorder")
+        , NoScale("noScale")
+        , ShowAll("showAll")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243ce20); the exe inlines it into MakeClassTraits.
+    __forceinline StageScaleMode::StageScaleMode(VM& vm)
+        : Traits(vm, AS3::fl_display::StageScaleModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageScaleModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageScaleMode(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242deb0
     Pickable<Traits> StageScaleMode::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) StageScaleMode(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bf00); the exe inlines it into MakeClassTraits.
+    __forceinline SWFVersion::SWFVersion(ClassTraits::Traits& t)
+        : Class(t)
+        , Flash1(1)
+        , Flash2(2)
+        , Flash3(3)
+        , Flash4(4)
+        , Flash5(5)
+        , Flash6(6)
+        , Flash7(7)
+        , Flash8(8)
+        , Flash9(9)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bde0); the exe inlines it into MakeClassTraits.
+    __forceinline SWFVersion::SWFVersion(VM& vm)
+        : Traits(vm, AS3::fl_display::SWFVersionCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::SWFVersionCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SWFVersion(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242e020
     Pickable<Traits> SWFVersion::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) SWFVersion(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c1a0); the exe inlines it into MakeClassTraits.
+    __forceinline ShaderData::ShaderData(VM& vm)
+        : Traits(vm, AS3::fl_display::ShaderDataCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::ShaderDataCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242e1a0
     Pickable<Traits> ShaderData::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) ShaderData(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b000); the exe inlines it into MakeClassTraits.
+    __forceinline Graphics::Graphics(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243af00); the exe inlines it into MakeClassTraits.
+    __forceinline Graphics::Graphics(VM& vm)
+        : Traits(vm, AS3::fl_display::GraphicsCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Graphics(vm, AS3::fl_display::GraphicsCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242e2c0
     Pickable<Traits> Graphics::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Graphics(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c0c0); the exe inlines it into MakeClassTraits.
+    __forceinline Shader::Shader(VM& vm)
+        : Traits(vm, AS3::fl_display::ShaderCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::ShaderCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242e400
     Pickable<Traits> Shader::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Shader(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bd90); the exe inlines it into MakeClassTraits.
+    __forceinline PixelSnapping::PixelSnapping(ClassTraits::Traits& t)
+        : Class(t)
+        , Always("always")
+        , Auto("auto")
+        , Never("never")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bc90); the exe inlines it into MakeClassTraits.
+    __forceinline PixelSnapping::PixelSnapping(VM& vm)
+        : Traits(vm, AS3::fl_display::PixelSnappingCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::PixelSnappingCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::PixelSnapping(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242eb30
     Pickable<Traits> PixelSnapping::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) PixelSnapping(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c380); the exe inlines it into MakeClassTraits.
+    __forceinline Shape::Shape(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c280); the exe inlines it into MakeClassTraits.
+    __forceinline Shape::Shape(VM& vm)
+        : Traits(vm, AS3::fl_display::ShapeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Shape(vm, AS3::fl_display::ShapeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+
     // @0x14242f3b0
     Pickable<Traits> Shape::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Shape(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a360); the exe inlines it into MakeClassTraits.
+    __forceinline BitmapDataChannel::BitmapDataChannel(ClassTraits::Traits& t)
+        : Class(t)
+        , Alpha(8)
+        , Blue(4)
+        , Green(2)
+        , Red(1)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a260); the exe inlines it into MakeClassTraits.
+    __forceinline BitmapDataChannel::BitmapDataChannel(VM& vm)
+        : Traits(vm, AS3::fl_display::BitmapDataChannelCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::BitmapDataChannelCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BitmapDataChannel(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242f5a0
     Pickable<Traits> BitmapDataChannel::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapDataChannel(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a720); the exe inlines it into MakeClassTraits.
+    __forceinline CapsStyle::CapsStyle(ClassTraits::Traits& t)
+        : Class(t)
+        , None("none")
+        , Round("round")
+        , Square("square")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a620); the exe inlines it into MakeClassTraits.
+    __forceinline CapsStyle::CapsStyle(VM& vm)
+        : Traits(vm, AS3::fl_display::CapsStyleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::CapsStyleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::CapsStyle(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242f7f0
     Pickable<Traits> CapsStyle::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) CapsStyle(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c4f0); the exe inlines it into MakeClassTraits.
+    __forceinline SimpleButton::SimpleButton(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_SimpleButton;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c3e0); the exe inlines it into MakeClassTraits.
+    __forceinline SimpleButton::SimpleButton(VM& vm)
+        : Traits(vm, AS3::fl_display::SimpleButtonCI)
+    {
+        TraitsType = Traits_SimpleButton;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::SimpleButton(vm, AS3::fl_display::SimpleButtonCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x14242fde0
     Pickable<Traits> SimpleButton::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) SimpleButton(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b060); the exe inlines it into MakeClassTraits.
+    __forceinline IBitmapDrawable::IBitmapDrawable(VM& vm)
+        : Traits(vm, AS3::fl_display::IBitmapDrawableCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::Interface(vm, AS3::fl_display::IBitmapDrawableCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430340
     Pickable<Traits> IBitmapDrawable::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) IBitmapDrawable(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243abe0); the exe inlines it into MakeClassTraits.
+    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_DisplayObjectContainer;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243aad0); the exe inlines it into MakeClassTraits.
+    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm)
+        : Traits(vm, AS3::fl_display::DisplayObjectContainerCI)
+    {
+        TraitsType = Traits_DisplayObjectContainer;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::DisplayObjectContainer(vm, AS3::fl_display::DisplayObjectContainerCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430460
     Pickable<Traits> DisplayObjectContainer::MakeClassTraits(VM& vm)
     {
@@ -760,84 +1242,446 @@ namespace ClassTraits { namespace fl_display
         return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObject(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b3b0); the exe inlines it into MakeClassTraits.
+    __forceinline InterpolationMethod::InterpolationMethod(ClassTraits::Traits& t)
+        : Class(t)
+        , LinearRgb("linearRGB")
+        , Rgb("rgb")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b2b0); the exe inlines it into MakeClassTraits.
+    __forceinline InterpolationMethod::InterpolationMethod(VM& vm)
+        : Traits(vm, AS3::fl_display::InterpolationMethodCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::InterpolationMethodCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::InterpolationMethod(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430600
     Pickable<Traits> InterpolationMethod::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) InterpolationMethod(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439d00); the exe inlines it into MakeClassTraits.
+    __forceinline AVM1Movie::AVM1Movie(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_AVM1Movie;
+        SetMemSize(0x68);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439bf0); the exe inlines it into MakeClassTraits.
+    __forceinline AVM1Movie::AVM1Movie(VM& vm)
+        : Traits(vm, AS3::fl_display::AVM1MovieCI)
+    {
+        TraitsType = Traits_AVM1Movie;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::AVM1Movie(vm, AS3::fl_display::AVM1MovieCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430750
     Pickable<Traits> AVM1Movie::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) AVM1Movie(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b4f0); the exe inlines it into MakeClassTraits.
+    __forceinline JointStyle::JointStyle(ClassTraits::Traits& t)
+        : Class(t)
+        , Bevel("bevel")
+        , Miter("miter")
+        , Round("round")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b3f0); the exe inlines it into MakeClassTraits.
+    __forceinline JointStyle::JointStyle(VM& vm)
+        : Traits(vm, AS3::fl_display::JointStyleCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::JointStyleCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::JointStyle(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430890
     Pickable<Traits> JointStyle::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) JointStyle(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b650); the exe inlines it into MakeClassTraits.
+    __forceinline LineScaleMode::LineScaleMode(ClassTraits::Traits& t)
+        : Class(t)
+        , Horizontal("horizontal")
+        , None("none")
+        , Normal("normal")
+        , Vertical("vertical")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b540); the exe inlines it into MakeClassTraits.
+    __forceinline LineScaleMode::LineScaleMode(VM& vm)
+        : Traits(vm, AS3::fl_display::LineScaleModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::LineScaleModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LineScaleMode(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x1424309f0
     Pickable<Traits> LineScaleMode::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) LineScaleMode(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b7b0); the exe inlines it into MakeClassTraits.
+    __forceinline Loader::Loader(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_Loader;
+        SetMemSize(0x78);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b6a0); the exe inlines it into MakeClassTraits.
+    __forceinline Loader::Loader(VM& vm)
+        : Traits(vm, AS3::fl_display::LoaderCI)
+    {
+        TraitsType = Traits_Loader;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Loader(vm, AS3::fl_display::LoaderCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430b60
     Pickable<Traits> Loader::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Loader(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c950); the exe inlines it into MakeClassTraits.
+    __forceinline Stage::Stage(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_Stage;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c920); the exe inlines it into MakeClassTraits.
+    __forceinline Stage::Stage(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c810); the exe inlines it into MakeClassTraits.
+    __forceinline Stage::Stage(VM& vm)
+        : Traits(vm, AS3::fl_display::StageCI)
+    {
+        TraitsType = Traits_Stage;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Stage(vm, AS3::fl_display::StageCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::Stage(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430ca0
     Pickable<Traits> Stage::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Stage(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b940); the exe inlines it into MakeClassTraits.
+    __forceinline LoaderInfo::LoaderInfo(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b910); the exe inlines it into MakeClassTraits.
+    __forceinline LoaderInfo::LoaderInfo(ClassTraits::Traits& t)
+        : Class(t)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b810); the exe inlines it into MakeClassTraits.
+    __forceinline LoaderInfo::LoaderInfo(VM& vm)
+        : Traits(vm, AS3::fl_display::LoaderInfoCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::LoaderInfo(vm, AS3::fl_display::LoaderInfoCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LoaderInfo(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142430fd0
     Pickable<Traits> LoaderInfo::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderInfo(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c650); the exe inlines it into MakeClassTraits.
+    __forceinline SpreadMethod::SpreadMethod(ClassTraits::Traits& t)
+        : Class(t)
+        , Pad("pad")
+        , Reflect("reflect")
+        , Repeat("repeat")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c550); the exe inlines it into MakeClassTraits.
+    __forceinline SpreadMethod::SpreadMethod(VM& vm)
+        : Traits(vm, AS3::fl_display::SpreadMethodCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::SpreadMethodCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SpreadMethod(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x1424318e0
     Pickable<Traits> SpreadMethod::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) SpreadMethod(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439e50); the exe inlines it into MakeClassTraits.
+    __forceinline ActionScriptVersion::ActionScriptVersion(ClassTraits::Traits& t)
+        : Class(t)
+        , Actionscript2(2)
+        , Actionscript3(3)
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439d60); the exe inlines it into MakeClassTraits.
+    __forceinline ActionScriptVersion::ActionScriptVersion(VM& vm)
+        : Traits(vm, AS3::fl_display::ActionScriptVersionCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::ActionScriptVersionCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::ActionScriptVersion(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142431a40
     Pickable<Traits> ActionScriptVersion::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) ActionScriptVersion(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b250); the exe inlines it into MakeClassTraits.
+    __forceinline InteractiveObject::InteractiveObject(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_InteractiveObject;
+        SetMemSize(0x70);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b140); the exe inlines it into MakeClassTraits.
+    __forceinline InteractiveObject::InteractiveObject(VM& vm)
+        : Traits(vm, AS3::fl_display::InteractiveObjectCI)
+    {
+        TraitsType = Traits_InteractiveObject;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::InteractiveObject(vm, AS3::fl_display::InteractiveObjectCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142431b90
     Pickable<Traits> InteractiveObject::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObject(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace Classes { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a540); the exe inlines it into MakeClassTraits.
+    __forceinline BlendMode::BlendMode(ClassTraits::Traits& t)
+        : Class(t)
+        , Add("add")
+        , Alpha("alpha")
+        , Darken("darken")
+        , Difference("difference")
+        , Erase("erase")
+        , Hardlight("hardlight")
+        , Invert("invert")
+        , Layer("layer")
+        , Lighten("lighten")
+        , Multiply("multiply")
+        , Normal("normal")
+        , Overlay("overlay")
+        , Screen("screen")
+        , Subtract("subtract")
+    {
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243a3a0); the exe inlines it into MakeClassTraits.
+    __forceinline BlendMode::BlendMode(VM& vm)
+        : Traits(vm, AS3::fl_display::BlendModeCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::BlendModeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BlendMode(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142432ad0
     Pickable<Traits> BlendMode::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) BlendMode(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bab0); the exe inlines it into MakeClassTraits.
+    __forceinline MorphShape::MorphShape(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_MorphShape;
+        SetMemSize(0x68);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243b9a0); the exe inlines it into MakeClassTraits.
+    __forceinline MorphShape::MorphShape(VM& vm)
+        : Traits(vm, AS3::fl_display::MorphShapeCI)
+    {
+        TraitsType = Traits_MorphShape;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MorphShape(vm, AS3::fl_display::MorphShapeCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142434400
     Pickable<Traits> MorphShape::MakeClassTraits(VM& vm)
     {
@@ -850,28 +1694,138 @@ namespace ClassTraits { namespace fl_display
         return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapData(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439f90); the exe inlines it into MakeClassTraits.
+    __forceinline Bitmap::Bitmap(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_Bitmap;
+        SetMemSize(0x78);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x142439e80); the exe inlines it into MakeClassTraits.
+    __forceinline Bitmap::Bitmap(VM& vm)
+        : Traits(vm, AS3::fl_display::BitmapCI)
+    {
+        TraitsType = Traits_Bitmap;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Bitmap(vm, AS3::fl_display::BitmapCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142435180
     Pickable<Traits> Bitmap::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Bitmap(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c7b0); the exe inlines it into MakeClassTraits.
+    __forceinline Sprite::Sprite(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_Sprite;
+        SetMemSize(0x78);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c6a0); the exe inlines it into MakeClassTraits.
+    __forceinline Sprite::Sprite(VM& vm)
+        : Traits(vm, AS3::fl_display::SpriteCI)
+    {
+        TraitsType = Traits_Sprite;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Sprite(vm, AS3::fl_display::SpriteCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x1424354d0
     Pickable<Traits> Sprite::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) Sprite(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bc20); the exe inlines it into MakeClassTraits.
+    __forceinline MovieClip::MovieClip(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        TraitsType = Traits_MovieClip;
+        SetMemSize(0x88);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bb10); the exe inlines it into MakeClassTraits.
+    __forceinline MovieClip::MovieClip(VM& vm)
+        : Traits(vm, AS3::fl_display::MovieClipCI)
+    {
+        TraitsType = Traits_MovieClip;
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MovieClip(vm, AS3::fl_display::MovieClipCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142437730
     Pickable<Traits> MovieClip::MakeClassTraits(VM& vm)
     {
         return Pickable<Traits>(new(vm.GetMemoryHeap()) MovieClip(vm));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the class traits constructor; ours is out of line in sfr_as3_06
+}}
+
+namespace InstanceTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243c060); the exe inlines it into MakeClassTraits.
+    __forceinline Scene::Scene(VM& vm, const ClassInfo& ci)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x48);
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
+    // Out of line in sfr_as3_06 (0x14243bf60); the exe inlines it into MakeClassTraits.
+    __forceinline Scene::Scene(VM& vm)
+        : Traits(vm, AS3::fl_display::SceneCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Scene(vm, AS3::fl_display::SceneCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
+    }
+}}
+
+namespace ClassTraits { namespace fl_display
+{
     // @0x142438130
     Pickable<Traits> Scene::MakeClassTraits(VM& vm)
     {
@@ -1385,3 +2339,68 @@ template void Scaleform::HashSet<Scaleform::GFx::AS3::Value, Scaleform::GFx::AS3
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorDH@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@_KVValue@AS3@GFx@Scaleform@@V?$FixedSizeHash@_K@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x14242a870
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@VASString@GFx@Scaleform@@V?$FixedSizeHash@VASString@GFx@Scaleform@@@3@V43@U?$AllocatorDH@VASString@GFx@Scaleform@@$01@3@V?$HashsetCachedEntry@VASString@GFx@Scaleform@@V?$FixedSizeHash@VASString@GFx@Scaleform@@@3@@3@@Scaleform@@AEAAXPEAX_K@Z 0x14242aaa0
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@VValue@AS3@GFx@Scaleform@@UHashFunctor@1234@U51234@U?$AllocatorGH@VValue@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@VValue@AS3@GFx@Scaleform@@UHashFunctor@1234@@4@@Scaleform@@AEAAXPEAX_K@Z 0x14242ac40
+// MS2-PIN: ??_7ActionScriptVersion@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x143149790
+// MS2-PIN: ??_7ActionScriptVersion@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431496f0
+// MS2-PIN: ??_7AVM1Movie@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143149fe0
+// MS2-PIN: ??_7AVM1Movie@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143149f38
+// MS2-PIN: ??_7BitmapDataChannel@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314ad50
+// MS2-PIN: ??_7BitmapDataChannel@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314acb8
+// MS2-PIN: ??_7Bitmap@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314a428
+// MS2-PIN: ??_7Bitmap@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314a388
+// MS2-PIN: ??_7BlendMode@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314a840
+// MS2-PIN: ??_7BlendMode@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314a7b0
+// MS2-PIN: ??_7CapsStyle@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314af48
+// MS2-PIN: ??_7CapsStyle@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314aeb8
+// MS2-PIN: ??_7DisplayObjectContainer@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314b1c8
+// MS2-PIN: ??_7DisplayObjectContainer@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314b118
+// MS2-PIN: ??_7FrameLabel@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314bf68
+// MS2-PIN: ??_7FrameLabel@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314bec0
+// MS2-PIN: ??_7GradientType@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314c090
+// MS2-PIN: ??_7GradientType@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314bff8
+// MS2-PIN: ??_7Graphics@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314c2f8
+// MS2-PIN: ??_7Graphics@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314c250
+// MS2-PIN: ??_7IBitmapDrawable@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314a718
+// MS2-PIN: ??_7InteractiveObject@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314a648
+// MS2-PIN: ??_7InteractiveObject@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314a598
+// MS2-PIN: ??_7InterpolationMethod@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314c528
+// MS2-PIN: ??_7InterpolationMethod@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314c488
+// MS2-PIN: ??_7JointStyle@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314c6b0
+// MS2-PIN: ??_7JointStyle@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314c620
+// MS2-PIN: ??_7LineScaleMode@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314c830
+// MS2-PIN: ??_7LineScaleMode@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314c798
+// MS2-PIN: ??_7Loader@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314b3d8
+// MS2-PIN: ??_7Loader@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314b338
+// MS2-PIN: ??_7LoaderInfo@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314b950
+// MS2-PIN: ??_7LoaderInfo@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314b8c0
+// MS2-PIN: ??_7LoaderInfo@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314b818
+// MS2-PIN: ??_7MorphShape@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314ce50
+// MS2-PIN: ??_7MorphShape@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314cda8
+// MS2-PIN: ??_7MovieClip@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314d290
+// MS2-PIN: ??_7MovieClip@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314d1e8
+// MS2-PIN: ??_7PixelSnapping@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314d5c8
+// MS2-PIN: ??_7PixelSnapping@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314d530
+// MS2-PIN: ??_7Scene@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314d488
+// MS2-PIN: ??_7Scene@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314d3e8
+// MS2-PIN: ??_7ShaderData@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314ead8
+// MS2-PIN: ??_7Shader@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314eb68
+// MS2-PIN: ??_7Shape@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314d840
+// MS2-PIN: ??_7Shape@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314d7a0
+// MS2-PIN: ??_7SimpleButton@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314da50
+// MS2-PIN: ??_7SimpleButton@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314d9a8
+// MS2-PIN: ??_7SpreadMethod@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314dc20
+// MS2-PIN: ??_7SpreadMethod@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314db88
+// MS2-PIN: ??_7Sprite@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314d068
+// MS2-PIN: ??_7Sprite@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314cfc8
+// MS2-PIN: ??_7StageAlign@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314e3a0
+// MS2-PIN: ??_7StageAlign@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314e310
+// MS2-PIN: ??_7StageDisplayState@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314e528
+// MS2-PIN: ??_7StageDisplayState@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314e490
+// MS2-PIN: ??_7Stage@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314b668
+// MS2-PIN: ??_7Stage@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314b5d8
+// MS2-PIN: ??_7Stage@fl_display@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14314b538
+// MS2-PIN: ??_7StageQuality@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314e6d8
+// MS2-PIN: ??_7StageQuality@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314e640
+// MS2-PIN: ??_7StageScaleMode@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314e878
+// MS2-PIN: ??_7StageScaleMode@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314e7e0
+// MS2-PIN: ??_7SWFVersion@fl_display@Classes@AS3@GFx@Scaleform@@6B@ 0x14314e9f0
+// MS2-PIN: ??_7SWFVersion@fl_display@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314e960
