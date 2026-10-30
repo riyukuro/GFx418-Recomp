@@ -434,12 +434,13 @@ void FUN_140017070(void*, void* object, void* callFrame, void* member, unsigned 
 namespace {
 
 
-// MS2-FUNCTIONAL: returns the chained hash-set bucket index for a matching 8-byte key.
+// returns the value slot of the hash-set entry holding the 8-byte key, or null.
 // @0x140017440
 void* FUN_140017440(void* table, const std::uint64_t* key)
 {
     auto index = FUN_140016f40(table, key);
-    return index < 0 ? nullptr : static_cast<unsigned char*>(table) + (index + 1) * 0x20;
+    if (index >= 0) return *static_cast<unsigned char**>(table) + (index + 1) * 0x20;
+    return nullptr;
 }
 
 } // namespace: externally referenced Video native
