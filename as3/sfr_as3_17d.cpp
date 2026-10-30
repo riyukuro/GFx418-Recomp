@@ -3,6 +3,11 @@
 // source, written from the exe.
 // MS2-UNIT: sfr_as3_17d
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1424e20e0-0x1424e2150 .text$mn
+// MS2-RANGE: 0x1424e2390-0x1424e2420 .text$mn
+// MS2-RANGE: 0x1424e2c10-0x1424e2c90 .text$mn
+// MS2-RANGE: 0x1424e2d20-0x1424e2d80 .text$mn
+// MS2-RANGE: 0x1424e37a0-0x1424e3830 .text$mn
 // MS2-RANGE: 0x1424ede80-0x1424ee490 .text$mn
 // MS2-RANGE: 0x1424efb40-0x1424efc30 .text$mn
 // MS2-RANGE: 0x1424f03f0-0x1424f05a0 .text$mn
@@ -1198,3 +1203,8 @@ bool Sfr34d_ValueObjIfc::AttachMovie(void* pdata, GFx::Value* pmc, const char* s
 // MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
 // MS2-PIN: ??_7?$ShapeDataFloatTempl@V?$Array@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@6B@ 0x14317bb40
 // MS2-PIN: ??_7ShapeDataFloat@Render@Scaleform@@6B@ 0x14317bb98
+// MS2-PIN: ??_G?$ShapeDataFloatTempl@V?$Array@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@UEAAPEAXI@Z 0x1424e20e0
+// MS2-PIN: ??_GAbcFileWithMovieDef@ASVM@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2390
+// MS2-PIN: ??_GComplexFill@Render@Scaleform@@UEAAPEAXI@Z 0x1424e2c10
+// MS2-PIN: ??_GFile@Abc@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2d20
+// MS2-PIN: ??_GShapeDataFloat@Render@Scaleform@@UEAAPEAXI@Z 0x1424e37a0

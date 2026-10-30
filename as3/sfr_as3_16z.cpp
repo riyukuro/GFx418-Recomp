@@ -2,13 +2,20 @@
 // the upper half of sfr_as3_16's range (split with cx18 at 0x1424e2040). Our own source, written from the exe.
 // MS2-UNIT: sfr_as3_16z
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424e2040-0x1424e2bb0 .text$mn
-// MS2-RANGE: 0x1424e2c10-0x1424e3020 .text$mn
-// MS2-RANGE: 0x1424e3260-0x1424e3580 .text$mn
+// MS2-RANGE: 0x1424e2040-0x1424e20e0 .text$mn
+// MS2-RANGE: 0x1424e2150-0x1424e2210 .text$mn
+// MS2-RANGE: 0x1424e2290-0x1424e2330 .text$mn
+// MS2-RANGE: 0x1424e2420-0x1424e28e0 .text$mn
+// MS2-RANGE: 0x1424e29a0-0x1424e2bb0 .text$mn
+// MS2-RANGE: 0x1424e2c90-0x1424e2d20 .text$mn
+// MS2-RANGE: 0x1424e2d80-0x1424e3020 .text$mn
+// MS2-RANGE: 0x1424e3260-0x1424e3290 .text$mn
+// MS2-RANGE: 0x1424e33f0-0x1424e3580 .text$mn
 // MS2-RANGE: 0x1424e35e0-0x1424e3690 .text$mn
-// MS2-RANGE: 0x1424e37a0-0x1424e3bd0 .text$mn
+// MS2-RANGE: 0x1424e3830-0x1424e3bd0 .text$mn
 // MS2-RANGE: 0x1424e3c30-0x1424e3cc0 .text$mn
-// MS2-RANGE: 0x1424e3d60-0x1424e4290 .text$mn
+// MS2-RANGE: 0x1424e3d60-0x1424e3e50 .text$mn
+// MS2-RANGE: 0x1424e3eb0-0x1424e4290 .text$mn
 // MS2-RANGE: 0x1424e42c0-0x1424e46f0 .text$mn
 // MS2-RANGE: 0x1424e5e80-0x1424e63b0 .text$mn
 // MS2-RANGE: 0x1424e6aa0-0x1424e6f90 .text$mn
@@ -1064,47 +1071,10 @@ static void Sfr21GNodeData(void* p)
     FUN_14257eb30(p);
 }
 
-// RefCountCollector<323> (vftable 0x14317b038)
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e2040
-void* DeleteAs3_1424e2040(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b040); Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
-
-// ShapeDataFloatTempl<ArrayStaticBuffPOD<UByte,..>>
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e20e0
-void* DeleteAs3_1424e20e0(void* p, unsigned flags) { Sfr21GShapeData(p); Sfr21GFree(p, flags); return p; }
-
-// RefCountImpl
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e21a0
-void* DeleteAs3_1424e21a0(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317c9f8); FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
-
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e2210
-void* DeleteAs3_1424e2210(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317bde0); Sfr21GPtr(p, 0x18); FUN_14257db40(p); Sfr21GFree(p, flags); return p; }
-
 // ASRefCountCollector
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e2290
 void* DeleteAs3_1424e2290(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b040); Sfr21GCollector(p); Sfr21GFree(p, flags); return p; }
-
-// ASVM
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line destructor through its address
-// @0x1424e2330
-void* DeleteAs3_1424e2330(void* p, unsigned flags) { FUN_1424dd500(p); Sfr21GFree(p, flags); return p; }
-
-// an Abc::File subclass holding a resource
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e2390
-void* DeleteAs3_1424e2390(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317d8a8);
-    Sfr21GPtr(p, 0x190);
-    Sfr21GRes(p, 0x188);
-    FUN_1425456e0(p);
-    Sfr21GFree(p, flags);
-    return p;
-}
 
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
 // @0x1424e2420
@@ -1167,22 +1137,6 @@ void* DeleteAs3_1424e2760(void* p, unsigned) { FUN_1424ddb80(p); return p; }
 // @0x1424e27d0
 void* DeleteAs3_1424e27d0(void* p, unsigned) { Sfr21GAvmInteractive(p); return p; }
 
-// AvmLoader
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e28e0
-void* DeleteAs3_1424e28e0(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317de60);
-    Sfr21GVft(p, 0x18, DAT_14317e228);
-    Sfr21GVft(p, 0x140, DAT_14317e330);
-    Sfr21GVft(p, 0x150, DAT_14317e3e8);
-    *Sfr21At(p, 0x6d) = 0;
-    Sfr21GAvmInteractive(Sfr21At(p, 0x110));
-    FUN_1425fbcf0(p);
-    Sfr21GFree(p, flags);
-    return p;
-}
-
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmSprite through its address
 // @0x1424e29a0
 void* DeleteAs3_1424e29a0(void* p, unsigned) { FUN_1424ddce0(p); return p; }
@@ -1200,18 +1154,6 @@ void* DeleteAs3_1424e2ac0(void* p, unsigned) { Sfr21GAvmInteractive(p); return p
 // @0x1424e2b50
 void* DeleteAs3_1424e2b50(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags); return p; }
 
-// ComplexFill
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e2c10
-void* DeleteAs3_1424e2c10(void* p, unsigned flags)
-{
-    Sfr21GPtr(p, 0x18);
-    Sfr21GVRel(p, 0x10);
-    FUN_14257db40(p);
-    Sfr21GFree(p, flags);
-    return p;
-}
-
 // MS2-FUNCTIONAL: scalar deleting destructor of an empty class (vftable 0x14317f848), written out
 // @0x1424e2c90
 void* DeleteAs3_1424e2c90(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317f848); Sfr21GFree(p, flags); return p; }
@@ -1226,11 +1168,6 @@ void* DeleteAs3_1424e2ce0(void* p, unsigned flags)
         ::operator delete(p, 0x10);
     return p;
 }
-
-// Abc::File
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~File through its address
-// @0x1424e2d20
-void* DeleteAs3_1424e2d20(void* p, unsigned flags) { FUN_1425456e0(p); Sfr21GFree(p, flags); return p; }
 
 // an empty interface (8 bytes), operator delete
 // @0x1424e2d80
@@ -1274,42 +1211,6 @@ void* DeleteAs3_1424e3260(void* p, unsigned flags)
         ::operator delete(p, 8);
     return p;
 }
-
-// a MovieDefRootNode subclass with an SPtr array
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e3290
-void* DeleteAs3_1424e3290(void* p, unsigned flags)
-{
-    Sfr21GVft(p, 0, DAT_14317d8c0);
-    UPInt* data = static_cast<UPInt*>(Sfr21Mem(p, 0x40));
-    for (SPInt i = *reinterpret_cast<SPInt*>(Sfr21At(p, 0x48)) - 1; i >= 0; --i)
-    {
-        data = static_cast<UPInt*>(Sfr21Mem(p, 0x40));
-        UPInt v = data[i];
-        if (!v)
-            continue;
-        if (!(v & 1))
-        {
-            UInt32& rc = *reinterpret_cast<UInt32*>(v + 0x10);
-            if (rc & 0x3fffff)
-            {
-                --rc;
-                FUN_1423dfa20(reinterpret_cast<void*>(v));
-            }
-        }
-        data[i] = 0;
-    }
-    FUN_1424dc630(Sfr21At(p, 0x40));
-    Sfr21GVft(p, 0, DAT_14317c9e0);
-    Sfr21GPtr(p, 0x38);
-    Sfr21GFree(p, flags);
-    return p;
-}
-
-// MovieDefRootNode
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e3380
-void* DeleteAs3_1424e3380(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317c9e0); Sfr21GPtr(p, 0x38); Sfr21GFree(p, flags); return p; }
 
 // MovieRoot
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~MovieRoot through its address
@@ -1355,18 +1256,6 @@ void* DeleteAs3_1424e3510(void* p, unsigned flags)
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~CTraits through its address
 // @0x1424e3630
 void* DeleteAs3_1424e3630(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags); return p; }
-
-// ShapeDataFloat
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
-// @0x1424e37a0
-void* DeleteAs3_1424e37a0(void* p, unsigned flags)
-{
-    if (void* m = Sfr21Mem(p, 0x68))
-        Memory::pGlobalHeap->Free(m);
-    Sfr21GShapeData(p);
-    Sfr21GFree(p, flags);
-    return p;
-}
 
 // ShapeObject
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
@@ -1439,11 +1328,6 @@ void* DeleteAs3_1424e3d60(void* p, unsigned flags)
     Sfr21GFree(p, flags);
     return p;
 }
-
-// VM
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~VM through its address
-// @0x1424e3e50
-void* DeleteAs3_1424e3e50(void* p, unsigned flags) { FUN_1424df380(p); Sfr21GFree(p, flags); return p; }
 
 // VMAbcFile (its destructor is inlined here in the exe)
 // MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets through the exe's member dtors
@@ -1830,6 +1714,18 @@ struct __declspec(novtable) Unk_As3_16zSpriteBaseProbe : AvmSpriteBase { Unk_As3
 Unk_As3_16zButtonBaseProbe::Unk_As3_16zButtonBaseProbe() {}
 Unk_As3_16zTextFieldBaseProbe::Unk_As3_16zTextFieldBaseProbe() {}
 Unk_As3_16zSpriteBaseProbe::Unk_As3_16zSpriteBaseProbe() {}
+// (sfg) and the GC collector's: RefCountCollector<323>'s vftable and deleting destructor (0x1424e2040).
+struct __declspec(novtable) Unk_As3_16zCollectorProbe : AS3::RefCountCollector<AS3::StatMV_ActionScript_Mem>
+{
+    Unk_As3_16zCollectorProbe();
+};
+Unk_As3_16zCollectorProbe::Unk_As3_16zCollectorProbe() {}
+// (sfg) RefCountBase<ASIntervalTimerIntf, 323>'s vftable and deleting destructor (0x1424e21a0).
+struct __declspec(novtable) Unk_As3_16zTimerIntfProbe : ASIntervalTimerIntf
+{
+    Unk_As3_16zTimerIntfProbe();
+};
+Unk_As3_16zTimerIntfProbe::Unk_As3_16zTimerIntfProbe() {}
 
 }} // namespace Scaleform::GFx
 
@@ -1889,3 +1785,11 @@ void DisplayObjectBase::AdvanceFrame(bool, float)
 }
 
 }} // namespace Scaleform::GFx
+// MS2-PIN: ??_G?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2040
+// MS2-FUNCTIONAL 0x1424e21a0: the exe stores the vftable and calls ~RefCountImpl (0x14257db40); our kernel RefCountImpl has no destructor of its own, so ours calls ~RefCountImplCore.
+// MS2-PIN: ??_G?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@UEAAPEAXI@Z 0x1424e21a0
+// MS2-PIN: ??_7?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b040
+// MS2-PIN: ??_7Root@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b010
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7?$RefCountBase@V?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+// MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
