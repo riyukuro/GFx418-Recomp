@@ -837,8 +837,10 @@ void FUN_1400134e0(void* object)
     reinterpret_cast<ASStringNode**>(static_cast<char*>(object) + 0x10)[0]->Release();
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x140013100
 void FUN_140013100(void** ref) { if (*ref) FUN_14257dcd0(*ref); }
+#pragma optimize("", on)
 
 // @0x140013120
 void** FUN_140013120(void** ref, void* value)
@@ -848,8 +850,10 @@ void** FUN_140013120(void** ref, void* value)
     return ref;
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x140013180
 void FUN_140013180(void** ref) { if (*ref) FUN_14257dcd0(*ref); }
+#pragma optimize("", on)
 
 // @0x1400131a0
 void** FUN_1400131a0(void** ref, void* value)
@@ -859,8 +863,10 @@ void** FUN_1400131a0(void** ref, void* value)
     return ref;
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x1400132d0
 void FUN_1400132d0(void** ref) { if (*ref) FUN_14257dcb0(*ref); }
+#pragma optimize("", on)
 
 // @0x1400159f0
 void** FUN_1400159f0(void** result, void* context)
@@ -1354,6 +1360,7 @@ long long* FUN_14000f990(long long* dst, const long long* src)
     return dst;
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x14000fbc0
 void FUN_14000fbc0(void* object)
 {
@@ -1361,12 +1368,17 @@ void FUN_14000fbc0(void* object)
     if (ref)
         FUN_14257dcb0(ref);
 }
+#pragma optimize("", on)
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x14000f4b0
 void FUN_14000f4b0(void** object) { if (*object) FUN_14257dcb0(*object); }
+#pragma optimize("", on)
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x14000f4e0
 void FUN_14000f4e0(void** object) { if (*object) FUN_14257dcb0(*object); }
+#pragma optimize("", on)
 
 // @0x14000f500
 void** FUN_14000f500(void** dst, void* value)
@@ -1441,8 +1453,10 @@ void FUN_14000f6f0(void** object)
     }
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x14000f740
 void FUN_14000f740(void** object) { if (*object) FUN_14257dcd0(*object); }
+#pragma optimize("", on)
 
 // @0x14000fd10
 void** FUN_14000fd10(void** dst, void** src)
@@ -1478,6 +1492,7 @@ UInt32* FUN_14000fe90(UInt32* dst, const UInt32* src)
     return dst;
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x14000fed0
 void FUN_14000fed0(void* object)
 {
@@ -1485,6 +1500,7 @@ void FUN_14000fed0(void* object)
     if (ref)
         FUN_14257dcb0(ref);
 }
+#pragma optimize("", on)
 
 // @0x14000f060
 void FUN_14000f060(void** object)
@@ -1617,6 +1633,7 @@ void FUN_1400103f0(UInt32* dst, const UInt32* src)
     *reinterpret_cast<void**>(dst + 2) = payload;
 }
 
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // @0x1400121c0
 void FUN_1400121c0(void** slot)
 {
@@ -1627,6 +1644,7 @@ void FUN_1400121c0(void** slot)
         FUN_1425925f0(object);
     }
 }
+#pragma optimize("", on)
 
 // @0x1400121f0
 void** FUN_1400121f0(void** slot, void* value)
