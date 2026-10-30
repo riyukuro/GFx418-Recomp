@@ -35,7 +35,7 @@ namespace Scaleform { namespace GFx { namespace IME {
 void FUN_1423d9090(void*, void*, unsigned long long);
 void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
 void FUN_1423d9b40(void*);
-    unsigned char FUN_1423da320(void*, void*, void*, void*);
+    unsigned char FUN_1423da320(void*);
     __declspec(noinline) void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
     void FUN_1423d5fd0(void*);
@@ -346,34 +346,32 @@ void FUN_1423d2f00(void* self)
     }
 }
 
-// MS2-FUNCTIONAL: closes the executable's composition state, Escape-clears candidate modes, and removes the input window.
 // @0x1423ce5a0
 void FUN_1423ce5a0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
     cx18_ImmNotifyIME(context, 0x11, 0, 0);
-    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8), nullptr, nullptr, nullptr);
-    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
-    if (mode - 5u < 2u) {
-        INPUT input{};
+    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8));
+    if (*reinterpret_cast<unsigned*>(bytes + 0x98) - 5u <= 1u) {
+        INPUT input;
         input.type = INPUT_KEYBOARD;
         input.ki.wVk = VK_ESCAPE;
         input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
         SendInput(1, &input, sizeof(input));
     }
-    *reinterpret_cast<unsigned short*>(*reinterpret_cast<unsigned short**>(bytes + 0x40)) = 0;
+    **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
-    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-    if (values) {
+    {
         Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, "RemoveInputWindow", &result, 0, 0);
+        if (void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18)) {
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, "RemoveInputWindow", &result, 0, 0);
+        }
     }
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
 }
 
 // MS2-FUNCTIONAL: processes the executable's IME key and mouse messages, including composition cancellation.
@@ -409,7 +407,7 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
     HIMC context = cx18_ImmGetContext(hwnd);
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
     cx18_ImmNotifyIME(context, 0x11, 0, 0);
-    FUN_1423da320(reinterpret_cast<void*>(self[0x19]), nullptr, nullptr, nullptr);
+    FUN_1423da320(reinterpret_cast<void*>(self[0x19]));
     if (mode == 5 || mode == 6) {
         INPUT input{};
         input.type = INPUT_KEYBOARD;
@@ -835,7 +833,7 @@ struct Unk_ImeComRef
 // The exe wraps the query in catch(...) (continuation 0x1423da407 returns the result reached so far); the three
 // interfaces are smart-pointer locals released in order first, second, third.
 // @0x1423da320
-unsigned char FUN_1423da320(void* object, void*, void*, void*)
+unsigned char FUN_1423da320(void* object)
 {
     auto* bytes = static_cast<unsigned char*>(object);
     Unk_ImeComRef third;
@@ -3324,39 +3322,42 @@ void FUN_1423d99f0(void* raw, void** value)
     FUN_14257dcd0(*value);
 }
 
-// MS2-FUNCTIONAL: cancels composition, sends Escape down and up for candidate modes, and removes the candidate list.
 // @0x1423cefe0
 void FUN_1423cefe0(void* object)
 {
     auto* bytes = static_cast<unsigned char*>(object);
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    // Two Values the exe constructs on entry and never uses.
+    Scaleform::GFx::Value unused0;
+    Scaleform::GFx::Value unused1;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, 0x15, 1, 0);
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
-    cx18_ImmReleaseContext(hwnd, context);
-    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8), nullptr, nullptr, nullptr);
-    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
-    if (mode - 5u < 2u) {
-        INPUT inputs[2]{};
-        for (auto& input : inputs) {
-            input.type = INPUT_KEYBOARD;
-            input.ki.wVk = VK_ESCAPE;
-            input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
-        }
-        inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
+    FUN_1423da320(*reinterpret_cast<void**>(bytes + 0xc8));
+    if (*reinterpret_cast<unsigned*>(bytes + 0x98) - 5u <= 1u) {
+        INPUT inputs[2];
+        memset(inputs, 0, sizeof(inputs));
         // The exe sends each key separately with cbSize = sizeof(inputs) (0x50), which SendInput rejects, so no
         // Escape actually reaches the window.
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].ki.wVk = VK_ESCAPE;
+        inputs[0].ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
         SendInput(1, &inputs[0], sizeof(inputs));
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].ki.wVk = VK_ESCAPE;
+        inputs[1].ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
+        inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
         SendInput(1, &inputs[1], sizeof(inputs));
     }
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
-    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-    if (values) {
+    {
         Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, "RemoveList", &result, 0, 0);
+        if (void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18)) {
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, "RemoveList", &result, 0, 0);
+        }
     }
 }
 
