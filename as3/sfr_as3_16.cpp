@@ -550,48 +550,44 @@ VM::~VM()
 }
 }}} // namespace Scaleform::GFx::AS3
 
-extern "C" void FUN_1423de770(void*, void*);
 extern "C" void FUN_14257dcb0(void* object);
 
-// MS2-FUNCTIONAL 0x1424de240: preserves the MovieRoot load-state reset, range bookkeeping, and exceptional cleanup path.
+// ASRefCountCollector::ForceCollect inlined through the movie root's collector pointer.
+// MS2-FUNCTIONAL 0x1424de240: same stores; the exe keeps the zero in esi across Collect (FrameCnt = 0 from it) and tail-calls the Stats observer release.
 // @0x1424de240
 void FUN_1424de240(long long* state)
 {
-    auto* root = reinterpret_cast<unsigned char*>(*state);
-    if (root[0xb1] != 0)
+    using namespace Scaleform::GFx::AS3;
+    auto* gc = reinterpret_cast<ASRefCountCollector*>(*state);
+    if (gc->SuspendCnt > 0)
         return;
 
-    const auto previous = *reinterpret_cast<unsigned*>(root + 0x18);
-    long long cleanup[2] = {};
-    FUN_1423de770(root, cleanup);
-    *reinterpret_cast<unsigned*>(root + 0x88) = 0;
-    const auto limit = *reinterpret_cast<unsigned*>(root + 0x90);
-    *reinterpret_cast<unsigned*>(root + 0x94) = previous;
-    *reinterpret_cast<unsigned*>(root + 0x90) = previous < limit ? limit : previous;
-    if ((root[0x78] & 0x10) != 0)
-        root[0xb0] = 1;
-    if (cleanup[0] != 0)
-        FUN_14257dcb0(reinterpret_cast<void*>(cleanup[0]));
+    const unsigned roots = static_cast<unsigned>(gc->GetRootsCount());
+    ASRefCountCollector::Stats stats = {};
+    gc->Collect(&stats);
+    gc->FrameCnt = 0;
+    gc->LastRootCount = roots;
+    gc->PeakRootCount = Scaleform::Alg::Max(gc->PeakRootCount, roots);
+    if (gc->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
+        gc->CollectionScheduledFlags = 1;
 }
 
 // MS2-FUNCTIONAL 0x1424de460: applies the same root range reset to the nested MovieRoot and releases the owning reference.
 // @0x1424de460
 void FUN_1424de460(long long* owner)
 {
-    auto* root = reinterpret_cast<unsigned char*>(*reinterpret_cast<unsigned long long*>(*owner + 0x20));
-    if (root[0xb1] == 0)
+    using namespace Scaleform::GFx::AS3;
+    auto* gc = *reinterpret_cast<ASRefCountCollector**>(*owner + 0x20);
+    if (gc->SuspendCnt == 0)
     {
-        const auto previous = *reinterpret_cast<unsigned*>(root + 0x18);
-        long long cleanup[2] = {};
-        FUN_1423de770(root, cleanup);
-        *reinterpret_cast<unsigned*>(root + 0x88) = 0;
-        const auto limit = *reinterpret_cast<unsigned*>(root + 0x90);
-        *reinterpret_cast<unsigned*>(root + 0x94) = previous;
-        *reinterpret_cast<unsigned*>(root + 0x90) = previous < limit ? limit : previous;
-        if ((root[0x78] & 0x10) != 0)
-            root[0xb0] = 1;
-        if (cleanup[0] != 0)
-            FUN_14257dcb0(reinterpret_cast<void*>(cleanup[0]));
+        const unsigned roots = static_cast<unsigned>(gc->GetRootsCount());
+        ASRefCountCollector::Stats stats = {};
+        gc->Collect(&stats);
+        gc->FrameCnt = 0;
+        gc->LastRootCount = roots;
+        gc->PeakRootCount = Scaleform::Alg::Max(gc->PeakRootCount, roots);
+        if (gc->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
+            gc->CollectionScheduledFlags = 1;
     }
     if (*owner != 0)
         FUN_14257dcb0(reinterpret_cast<void*>(*owner));
@@ -2274,35 +2270,11 @@ void FUN_1424dcce0(void* self)
     static_cast<Scaleform::Hash<Scaleform::UPInt, Scaleform::UPInt>*>(self)->~Hash();
 }
 
-// Clears text-format font handles, releasing each Resource before freeing the set.
-// MS2-FUNCTIONAL: preserves per-entry Resource::Release and table freeing; the template-generated frame is larger.
+// HashLH<Ptr<Resource>, UPInt> dtor: releases each text-format font Resource key, then frees the table.
 // @0x1424dcd40
 void FUN_1424dcd40(void* self)
 {
-    auto* tableRef = static_cast<Scaleform::UInt64*>(self);
-    Scaleform::UInt64 table = *tableRef;
-    if (table)
-    {
-        Scaleform::UInt64 offset = 0;
-        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(table + 8) + 1;
-        do
-        {
-            auto* next = reinterpret_cast<Scaleform::UInt64*>(table + offset + 0x10);
-            if (*next != static_cast<Scaleform::UInt64>(-2))
-            {
-                auto* resource = *reinterpret_cast<Scaleform::GFx::Resource**>(table + offset + 0x20);
-                if (resource)
-                    resource->Release();
-                *next = static_cast<Scaleform::UInt64>(-2);
-            }
-            offset += 0x20;
-            --count;
-        } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, reinterpret_cast<void*>(table));
-        *tableRef = 0;
-    }
+    static_cast<Scaleform::HashLH<Scaleform::Ptr<Scaleform::GFx::Resource>, Scaleform::UPInt> *>(self)->~HashLH();
 }
 
 using Sfr16NamespaceHashKey = Scaleform::GFx::AS3::AbcMultinameHash<
