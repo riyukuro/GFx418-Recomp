@@ -2239,28 +2239,27 @@ void FUN_1423ccdc0(unsigned long long* object, String text)
             object, *reinterpret_cast<unsigned*>(bytes + 0xd4));
 }
 
-// MS2-FUNCTIONAL: submits the default unsupported message and the selected language-specific movie text.
+// Shows "Not Supported", then for the first saved layout record (+0xb8, 0x30 bytes each, +0xd0 of them) whose mode is the
+// current +0x88 mode and that has a layout: its +0x18 text when the +0x190 state is 2, its +0x10 text when it is 1.
+// MS2-FUNCTIONAL: register choice only (exe holds the +0x88 mode in r8d, ours r9d).
 // @0x1423cc2d0
 void FUN_1423cc2d0(unsigned long long* object)
 {
-    String text("Not Supported");
-    FUN_1423ccdc0(object, text);
-    const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0xd0);
-    if (!count) return;
-    for (unsigned i = 0; i < count; ++i) {
-        const unsigned flags = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(object) + 0x88);
-        auto* record = reinterpret_cast<unsigned char*>(object[0x17]) + i * 0x30;
-        if (flags != 0x1000000 && *reinterpret_cast<unsigned*>(record + 0x20) == flags &&
-            *reinterpret_cast<void**>(record + 0x28)) {
-            auto* states = reinterpret_cast<unsigned*>(object[50]);
-            if (states[i] == 2) {
-                text = *reinterpret_cast<String*>(record + 0x18);
-                FUN_1423ccdc0(object, text);
-            }
-            if (states[i] != 1) return;
-            text = *reinterpret_cast<String*>(record + 0x10);
-            FUN_1423ccdc0(object, text);
-            return;
+    struct LayoutRecord { unsigned char pad[0x10]; String text1; String text2; unsigned mode; void* layout; };
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    FUN_1423ccdc0(object, String("Not Supported"));
+    unsigned i = 0;
+    if (!*reinterpret_cast<unsigned*>(bytes + 0xd0))
+        return;
+    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x88);
+    for (; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+        if (mode != 0x1000000 && mode == reinterpret_cast<LayoutRecord*>(object[0x17])[i].mode &&
+            reinterpret_cast<LayoutRecord*>(object[0x17])[i].layout) {
+            if (reinterpret_cast<unsigned*>(object[50])[i] == 2)
+                FUN_1423ccdc0(object, reinterpret_cast<LayoutRecord*>(object[0x17])[i].text2);
+            if (reinterpret_cast<unsigned*>(object[50])[i] == 1)
+                FUN_1423ccdc0(object, reinterpret_cast<LayoutRecord*>(object[0x17])[i].text1);
+            break;
         }
     }
 }
