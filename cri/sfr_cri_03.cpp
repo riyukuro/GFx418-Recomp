@@ -48,7 +48,10 @@ extern "C" const void* PTR_FUN_1431b9b10;
 extern "C" const void* PTR_FUN_1431b4f78;
 void FUN_1400532b0(void);
 void FUN_1400532d0(void);
-void FUN_140041190(void);
+void FUN_140041190(void*, CriSint32);
+CriBool FUN_140039e24(LPCRITICAL_SECTION);
+CriBool FUN_140039e4c(LPCRITICAL_SECTION);
+void FUN_140038ddc(CriSint32, const CriChar8*);
 void* FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
@@ -152,8 +155,10 @@ void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value)
 
 // MS2-FUNCTIONAL: report the picture decode failure through the generic CRI error callback.
 // @0x140041190
-void FUN_140041190(void)
+void FUN_140041190(void* object, CriSint32 value)
 {
+    object = object;
+    value = value;
     FUN_1400410d0(NULL, "E07111401M : An error occurred while decoding picture data in MPV module.", 0);
 }
 
@@ -162,9 +167,10 @@ void FUN_140041190(void)
 void FUN_1400435d0(void* object)
 {
     struct SyncHolder { CriUint8 Reserved[0x10]; void* Sync; };
-    SyncHolder* holder = (SyncHolder*)object;
-    if (holder && holder->Sync)
-        FUN_140053570(holder->Sync);
+    if (!object)
+        return;
+    if (((SyncHolder*)object)->Sync)
+        FUN_140053570(((SyncHolder*)object)->Sync);
 }
 
 // MS2-FUNCTIONAL: increment the movie player's paired audio and video progress counters.
@@ -368,8 +374,9 @@ void FUN_140046598(void* object)
 {
     struct Storage { void* Heap; CriUint8 Payload[1]; };
     Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
+    void* heap = storage->Heap;
     FUN_140045fdc(object);
-    FUN_140027fb4(storage->Heap, storage);
+    FUN_140027fb4(heap, storage);
 }
 #pragma optimize("", on)
 
@@ -690,26 +697,43 @@ void criCs_Destroy(LPCRITICAL_SECTION section)
     memset(section, 0, 0x30);
 }
 
-// MS2-FUNCTIONAL: the CRI lock helper tracks recursive depth and its owning thread around EnterCriticalSection.
+// The CRI lock: a critical section followed by the owning thread and the recursion depth.
+struct CriLockFields
+{
+    RTL_CRITICAL_SECTION Section;  // 0x00
+    DWORD OwnerThread;             // 0x28
+    CriSint32 Depth;               // 0x2c
+};
+
+// MS2-FUNCTIONAL: the CRI lock helper enters the section, reporting a failed enter, and tracks the recursive depth and
+// owning thread.
 // @0x140039f50
 void FUN_140039f50(LPCRITICAL_SECTION section)
 {
-    EnterCriticalSection(section);
-    CriSint32* depth = (CriSint32*)((CriUint8*)section + 0x2c);
-    ++*depth;
-    if (*depth == 1)
-        *(DWORD*)((CriUint8*)section + 0x28) = GetCurrentThreadId();
+    CriLockFields* lock = (CriLockFields*)section;
+    if (!FUN_140039e24(section))
+    {
+        FUN_140038ddc(0, "E2006081804:EnterCriticalSection function has failed.");
+        return;
+    }
+    lock->Depth++;
+    if (lock->Depth == 1)
+        lock->OwnerThread = GetCurrentThreadId();
 }
 
-// MS2-FUNCTIONAL: the CRI lock helper clears its owner at the outermost exit and then leaves the section.
+// MS2-FUNCTIONAL: the CRI lock helper clears its owner at the outermost exit, then reports an unbalanced leave or
+// leaves the section, reporting a failed LeaveCriticalSection with the library's (Enter-worded) message.
 // @0x140039f8c
 void FUN_140039f8c(LPCRITICAL_SECTION section)
 {
-    CriSint32* depth = (CriSint32*)((CriUint8*)section + 0x2c);
-    --*depth;
-    if (*depth == 0)
-        *(DWORD*)((CriUint8*)section + 0x28) = 0;
-    LeaveCriticalSection(section);
+    CriLockFields* lock = (CriLockFields*)section;
+    lock->Depth--;
+    if (lock->Depth == 0)
+        lock->OwnerThread = 0;
+    if (lock->Depth < 0)
+        FUN_140038ddc(0, "E2010062901:Mismatch of the number of entering and leaving to critical section.");
+    else if (!FUN_140039e4c(section))
+        FUN_140038ddc(0, "E2006081805:EnterCriticalSection function has failed.");
 }
 
 // MS2-FUNCTIONAL: preserves CRI's null diagnostic and serializes the old-value/store operation with its shared lock.
@@ -797,7 +821,7 @@ void FUN_14003b880()
 // @0x14003b6e0
 void FUN_14003b6e0()
 {
-    CriMvCodecRegistrationEntry registration = {};
+    CriMvCodecRegistrationEntry registration;
     registration.CodecId = 1;
     registration.VideoDecoderInterface = (void*)FUN_14003bed0();
     registration.AlphaDecoderInterface = (void*)FUN_14003bf10();
@@ -934,17 +958,16 @@ void CriMv::InitializeMana(CriError& error)
     }
     FUN_140024f80();
 }
-#pragma optimize("", on)
 
 // @0x14003bed0
 const void** FUN_14003bed0()
 {
     DAT_143b27c48 = "\ncriVmpv/PCx64 Ver.3.32 Build:Jan 20 2012 18:13:28\n";
     FUN_14004dc70();
-    return DAT_143a47bc0;
+    const void** table = DAT_143a47bc0;
+    return table;
 }
 
-#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x14003bf10
 const void** FUN_14003bf10()
 {
@@ -1178,8 +1201,10 @@ const CriChar8* criUtfRtv_GetDataStrFn(const CriUtfRtvView* table, CriUint32 row
 // @0x14003a978
 CriUint8 criUtfRtv_GetDataUint8Fn(const CriUtfRtvView* table, CriUint32 row, const CriChar8* name)
 {
-    CriUint32 field = criUtfRtv_ConvFieldNameToNo(table, name);
-    return field == 0xffffffff ? 0 : criUtfRtv_GetDataUint8(table, row, field);
+    CriSint32 field = (CriSint32)criUtfRtv_ConvFieldNameToNo(table, name);
+    if (field < 0)
+        return 0;
+    return criUtfRtv_GetDataUint8(table, row, field);
 }
 
 // MS2-FUNCTIONAL: this decoder copies the field representation into the CRI's tagged 24-byte cell value.
@@ -2341,15 +2366,9 @@ void criVdec_SetProcessorMask(void* decoder, CriUint32 mask)
 void FUN_140044390(const void* decoderInterface)
 {
     DAT_143ba9d18 = "\ncriVdec/PCx64 Ver.3.30 Build:Jan 20 2012 18:13:28\n";
-    if (decoderInterface)
-    {
-        void* initialize = *(void* const*)decoderInterface;
-        if (initialize)
-        {
-            typedef void (*Callback)(void);
-            ((Callback)initialize)();
-        }
-    }
+    typedef void (*Callback)(void);
+    if (decoderInterface && *(Callback const*)decoderInterface)
+        (*(Callback const*)decoderInterface)();
 }
 
 // MS2-FUNCTIONAL: call the decoder interface's finalize entry point.
@@ -2559,16 +2578,17 @@ void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requeste
 // @0x14004592c
 void* FUN_14004592c(void* streamJoint)
 {
-    CriUint8* bytes = (CriUint8*)streamJoint;
-    void* chunk;
-    memcpy(&chunk, bytes + 0x48, sizeof(chunk));
-    if (!chunk)
-        return NULL;
-    void* next;
-    memcpy(&next, chunk, sizeof(next));
-    memcpy(bytes + 0x48, &next, sizeof(next));
-    memset(chunk, 0, 0x20);
-    return chunk;
+    struct ChunkPool { CriUint8 Reserved[0x48]; void* FreeChunk; };
+    ChunkPool* pool = (ChunkPool*)streamJoint;
+    void* result = NULL;
+    void* chunk = pool->FreeChunk;
+    if (chunk != NULL)
+    {
+        result = chunk;
+        pool->FreeChunk = *(void**)chunk;
+        memset(result, 0, 0x20);
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: return a 0x20-byte stream-joint chunk to the unified free list.
@@ -2775,13 +2795,13 @@ void FUN_140041080(void* handle, void* first, void* second)
 
 // MS2-FUNCTIONAL: mark the CRI handle's error state when a handle is supplied.
 // @0x140041150
-void FUN_140041150(void* handle)
+void FUN_140041150(void* handle, void* unused)
 {
-    if (handle)
-    {
-        CriUint32 state = 4;
-        memcpy((CriUint8*)handle + 0x18, &state, sizeof(state));
-    }
+    struct HandleState { CriUint8 Reserved[0x18]; CriUint32 State; };
+    HandleState* hn = (HandleState*)handle;
+    unused = unused;
+    if (hn)
+        hn->State = 4;
 }
 
 // MS2-FUNCTIONAL: invoke the Initialize entry in the decoder interface table.
