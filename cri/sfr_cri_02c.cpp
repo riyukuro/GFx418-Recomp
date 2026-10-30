@@ -1959,6 +1959,7 @@ void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, v
         return;
     }
     FUN_140036f40(player, &chunk, outputInfo);
+    FUN_140037a10();
     memset(destination, 0, capacity);
     CriUint32 bytes = *(CriUint32*)((CriUint8*)outputInfo + 8);
     if (bytes > capacity)
@@ -4105,9 +4106,10 @@ CriBool FUN_140031990(void* player)
     FUN_140034330(player, ((CriMvPlyInputQueueFields*)player)->InputBuffer, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, ((CriMvPlyInputQueueFields*)player)->HeaderBuffer);
     FUN_1400453c4(((CriMvPlyStateTransitionFields*)player)->Demux);
     FUN_140046798(((CriMvPlyInputQueueFields*)player)->ReadBuffer);
-    void* nextInput = ((ReadModeView*)player)->Mode == 0
-        ? ((CriMvPlyInputQueueFields*)player)->HeaderBuffer : ((MemoryInputView*)player)->Input;
-    FUN_140044fa8(((CriMvPlyStateTransitionFields*)player)->Demux, nextInput);
+    if (((ReadModeView*)player)->Mode == 0)
+        FUN_140044fa8(((CriMvPlyStateTransitionFields*)player)->Demux, ((CriMvPlyInputQueueFields*)player)->HeaderBuffer);
+    else
+        FUN_140044fa8(((CriMvPlyStateTransitionFields*)player)->Demux, ((MemoryInputView*)player)->Input);
     FUN_140044fb0(((CriMvPlyStateTransitionFields*)player)->Demux, 0, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, 0, (CriUint32)-1);
     FUN_140044fd8(((CriMvPlyStateTransitionFields*)player)->Demux, 0);
     FUN_140044f9c(((CriMvPlyStateTransitionFields*)player)->Demux);
