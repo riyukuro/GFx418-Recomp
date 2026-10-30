@@ -4014,104 +4014,97 @@ void FUN_1400536d0(longlong a1)
 // @0x140053880
 void FUN_140053880(longlong a1)
 {
-  uint u_v1;
-  __declspec(align(16)) cri_u8 frame_[448];
-  cri_u64 (&loc_1b8)[8] = *(cri_u64 (*)[8])(frame_ + 0);
-  cri_u64 (&loc_178)[8] = *(cri_u64 (*)[8])(frame_ + 64);
-  cri_u8 (&loc_138)[4] = *(cri_u8 (*)[4])(frame_ + 128);
-  uint &loc_134 = *(uint *)(frame_ + 132);
-  uint &loc_130 = *(uint *)(frame_ + 136);
-  uint &loc_12c = *(uint *)(frame_ + 140);
-  short &loc_128 = *(short *)(frame_ + 144);
-  cri_u64 &uStack_118 = *(cri_u64 *)(frame_ + 160);
-  uint (&auStack_110)[30] = *(uint (*)[30])(frame_ + 168);
-  uint &loc_98 = *(uint *)(frame_ + 288);
-  longlong &loc_90 = *(longlong *)(frame_ + 296);
-  cri_u8 * &loc_88 = *(cri_u8 * *)(frame_ + 304);
-  cri_u64 &loc_80 = *(cri_u64 *)(frame_ + 312);
-  int &loc_78 = *(int *)(frame_ + 320);
-  cri_u64 &loc_70 = *(cri_u64 *)(frame_ + 328);
-  longlong &loc_68 = *(longlong *)(frame_ + 336);
-  cri_u8 (&loc_60)[15] = *(cri_u8 (*)[15])(frame_ + 344);
-  char &loc_51 = *(char *)(frame_ + 359);
-  uint &loc_38 = *(uint *)(frame_ + 384);
-  uint &loc_34 = *(uint *)(frame_ + 388);
-  int &loc_30 = *(int *)(frame_ + 392);
-  cri_u8 (&loc_28)[16] = *(cri_u8 (*)[16])(frame_ + 400);
-  cri_u8 (&loc_18)[24] = *(cri_u8 (*)[24])(frame_ + 416);
-  
-  loc_70 = (*(cri_u64*)((char*)(a1) + 0x18));
-  loc_90 = (*(longlong*)((char*)(a1) + 0x20));
-  loc_34 = (uint)(*(char*)((char*)(a1) + 0x2d));
-  loc_68 = a1 + 0x9c;
-  loc_98 = 0;
-  FUN_1400467a0((void *)loc_70,1,0xffffffff,&loc_80);
-  if (loc_78 != 0) {
-    criUsfCmn_ParseUsfHeaderStd((const cri_u8 *)loc_80,loc_78,(CriUsfStandardHeader *)loc_60);
-    if (loc_51 == '\0') {
-      loc_88 = (cri_u8 *)criUsfCmn_GetContents((const cri_u8 *)loc_80,loc_78,(long *)&loc_12c);
-      loc_128 = CONCAT11(*loc_88,loc_88[1]);
-      if (loc_128 == -0x7fff) {
-        FUN_1400467b0((void *)loc_70,0,&loc_80);
-        (*(cri_u8*)((char*)(a1) + 0x10)) = 1;
-      }
-      else {
-        loc_38 = (int)(((ulonglong)loc_12c / 0x12) / (ulonglong)loc_34) * 0x20;
-        loc_130 = loc_38 * (*(int*)((char*)(a1) + 0x16c));
-        for (loc_134 = 0; loc_134 < loc_34; loc_134 = loc_134 + 1) {
-          u_v1 = FUN_1400467b8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0);
-          if (u_v1 < loc_130) {
-            FUN_1400467a8((void *)loc_70,1,&loc_80);
-            return;
-          }
-        }
-        for (loc_134 = 0; loc_134 < loc_34; loc_134 = loc_134 + 1) {
-          FUN_1400467a0(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,loc_130,
-                        &uStack_118 + (ulonglong)loc_134 * 2);
-          if (auStack_110[(ulonglong)loc_134 * 4] < loc_130) {
-            FUN_1400467a8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,
-                          &uStack_118 + (ulonglong)loc_134 * 2);
-            FUN_1400467a8((void *)loc_70,1,&loc_80);
-            return;
-          }
-          loc_178[loc_134] = (&uStack_118)[(ulonglong)loc_134 * 2];
-          loc_1b8[loc_134] = (&uStack_118)[(ulonglong)loc_134 * 2];
-          loc_98 = auStack_110[(ulonglong)loc_134 * 4] / (*(uint*)((char*)(a1) + 0x16c));
-        }
-        if ((*(longlong*)((char*)(a1) + 0x178)) != 0) {
-          (*(*(code **)((char*)(a1) + 0x178)))(&loc_80,(*(cri_u64*)((char*)(a1) + 0x180)));
-        }
-        if ((*(int*)((char*)(a1) + 0x168)) == 0) {
-          loc_38 = FUN_140069844(loc_68,loc_98,loc_88,loc_12c,(int *)loc_138,loc_34,(longlong *)loc_178
-                                   ,loc_98);
-        }
-        else {
-          loc_38 = FUN_140069ac4(loc_68,loc_98,loc_88,loc_12c,(int *)loc_138,loc_34,(longlong *)loc_1b8
-                                   ,loc_98);
-        }
-        if ((uint)((*(int*)((char*)(a1) + 0x34)) - (*(int*)((char*)(a1) + 0x170))) < loc_38) {
-          loc_38 = (*(int*)((char*)(a1) + 0x34)) - (*(int*)((char*)(a1) + 0x170));
-        }
-        (*(uint*)((char*)(a1) + 0x170)) = (*(int*)((char*)(a1) + 0x170)) + loc_38;
-        for (loc_134 = 0; loc_134 < loc_34; loc_134 = loc_134 + 1) {
-          if ((*(int*)((char*)(a1) + 0x168)) == 0) {
-            loc_30 = loc_38 << 1;
-          }
-          else {
-            loc_30 = loc_38 << 2;
-          }
-          criSj_SplitChunk(&uStack_118 + (ulonglong)loc_134 * 2,loc_30,loc_28,loc_18);
-          FUN_1400467b0(*(void **)(loc_90 + (ulonglong)loc_134 * 8),1,loc_28);
-          FUN_1400467a8(*(void **)(loc_90 + (ulonglong)loc_134 * 8),0,loc_18);
-        }
-        FUN_1400467b0((void *)loc_70,0,&loc_80);
-      }
-    }
-    else {
-      FUN_1400467b0((void *)loc_70,0,&loc_80);
+  struct Chunk { const cri_u8* Data; unsigned long Size; };
+  struct UsfHdr { cri_u32 W0, W4, W8; cri_u8 Bc, Bd, Be, Flag; cri_u32 W10[5]; };   // CriUsfStandardHeader, 0x24 bytes
+  typedef void (*ChunkCallback)(Chunk*, void*);
+  // cl 15 /Od places the locals by a hash of their names (ascending bucket, then the reverse of the declaration order
+  // within a bucket); these names and this declaration order give the exe's slots.
+  Chunk sfx;
+  Chunk pfx;
+  uint cutLen;
+  uint nchans;
+  uint samples;
+  UsfHdr hdrStd;
+  longlong ctx;
+  void* sj;
+  Chunk chunk;
+  const cri_u8* pdata;
+  void** chans;
+  uint nsamp;
+  Chunk bufs[8];
+  cri_u16 code;
+  long nLen;
+  uint room;
+  uint i;
+  int x;
+  longlong dst16A[8];
+  longlong dst32[8];
+
+  sj = *(void**)((char*)a1 + 0x18);
+  chans = *(void***)((char*)a1 + 0x20);
+  nchans = (int)*(char*)((char*)a1 + 0x2d);
+  ctx = a1 + 0x9c;
+  nsamp = 0;
+  FUN_1400467a0(sj,1,0xffffffff,&chunk);
+  if (chunk.Size == 0) {
+    return;
+  }
+  // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
+  if (criUsfCmn_ParseUsfHeaderStd(chunk.Data,chunk.Size,(CriUsfStandardHeader*)&hdrStd), hdrStd.Flag != 0) {
+    FUN_1400467b0(sj,0,&chunk);
+    return;
+  }
+  pdata = criUsfCmn_GetContents(chunk.Data,chunk.Size,&nLen);
+  code = (cri_u16)((pdata[0] << 8) | pdata[1]);
+  if (code == 0x8001) {
+    FUN_1400467b0(sj,0,&chunk);
+    *((cri_u8*)a1 + 0x10) = 1;
+    return;
+  }
+  samples = (uint)nLen / 0x12 / nchans * 0x20;
+  room = samples * *(uint*)((char*)a1 + 0x16c);
+  for (i = 0; i < nchans; i = i + 1) {
+    if ((uint)FUN_1400467b8(chans[i],0) < room) {
+      FUN_1400467a8(sj,1,&chunk);
+      return;
     }
   }
-  return;
+  for (i = 0; i < nchans; i = i + 1) {
+    FUN_1400467a0(chans[i],0,room,&bufs[i]);
+    if (bufs[i].Size < room) {
+      FUN_1400467a8(chans[i],0,&bufs[i]);
+      FUN_1400467a8(sj,1,&chunk);
+      return;
+    }
+    dst16A[i] = (longlong)bufs[i].Data;
+    dst32[i] = (longlong)bufs[i].Data;
+    nsamp = bufs[i].Size / *(uint*)((char*)a1 + 0x16c);
+  }
+  if (*(ChunkCallback*)((char*)a1 + 0x178) != 0) {
+    (*(ChunkCallback*)((char*)a1 + 0x178))(&chunk,*(void**)((char*)a1 + 0x180));
+  }
+  if (*(int*)((char*)a1 + 0x168) == 0) {
+    samples = FUN_140069844(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst16A,nsamp);
+  }
+  else {
+    samples = FUN_140069ac4(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst32,nsamp);
+  }
+  if (samples > (uint)(*(int*)((char*)a1 + 0x34) - *(int*)((char*)a1 + 0x170))) {
+    samples = *(int*)((char*)a1 + 0x34) - *(int*)((char*)a1 + 0x170);
+  }
+  *(uint*)((char*)a1 + 0x170) = *(int*)((char*)a1 + 0x170) + samples;
+  for (i = 0; i < nchans; i = i + 1) {
+    if (*(int*)((char*)a1 + 0x168) == 0) {
+      cutLen = (uint)(samples * sizeof(short));
+    }
+    else {
+      cutLen = (uint)(samples * sizeof(int));
+    }
+    criSj_SplitChunk(&bufs[i],cutLen,&pfx,&sfx);
+    FUN_1400467b0(chans[i],1,&pfx);
+    FUN_1400467a8(chans[i],0,&sfx);
+  }
+  FUN_1400467b0(sj,0,&chunk);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
