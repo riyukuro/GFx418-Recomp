@@ -151,6 +151,9 @@ public:
     static void* operator new(size_t size, CriHeap heap, const CriChar8* name, CriUint32 align); // 0x14002e680
     static void  operator delete(void* ptr, size_t size);                                   // 0x14002e5b0
     static void  operator delete(void* ptr, CriHeap heap);
+    // The placement form the unwind of `new(heap, name, align) T` calls; one of the exe's identical criHeap_Free
+    // wrappers at 0x14002e5e8-0x14002e618.
+    static void  operator delete(void* ptr, CriHeap heap, const CriChar8*, CriUint32) { operator delete(ptr, heap); }
 };
 
 // Stack allocator used while assembling the CRI movie player's persistent work area (0x18 bytes).
@@ -620,7 +623,7 @@ struct CriMvCuePointInfo
 };
 
 // The memory "file" reader the easy player uses for SetData (sfr_cri_02).
-class CriMvEasyFileReaderMem : public CriMvFileReaderInterface
+class CriMvEasyFileReaderMem : public CriMvFileReaderInterface, public CriAllocator
 {
     friend void* FUN_140038c40(CriMvEasyFileReaderMem* reader, CriUint32 flags);
 public:
@@ -648,6 +651,7 @@ private:
     AsyncStatus CloseState;                                                                 // 0x34
     AsyncStatus ReadState;                                                                  // 0x38
 };
+static_assert(sizeof(CriMvEasyFileReaderMem) == 0x40, "CriMvEasyFileReaderMem is the exe's 0x40-byte reader");
 
 // The player handle the easy player drives (criMvPly, sfr_cri_02); only the members this layer touches.
 struct CriMvPlyObj

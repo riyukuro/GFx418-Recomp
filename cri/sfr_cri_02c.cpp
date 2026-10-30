@@ -1327,7 +1327,9 @@ CriBool FUN_140030f10(void* player, void* source, CriUint32 stream)
 // @0x140030ed0
 CriSint32 criMvPly_CalcSubAudioWorkSize(void* player, void* source)
 {
-    return FUN_140042150(player, (const CriUint32*)source);
+    CriSint32 size = 0;
+    size = FUN_140042150(player, (const CriUint32*)source);
+    return size;
 }
 
 // MS2-FUNCTIONAL: retain CRI's critical-section bracket around work-buffer preparation.
@@ -4531,18 +4533,22 @@ void FUN_1400369e0(void* player)
 // @0x140036e30
 void FUN_140036e30(void* player, CriMvSubtitleChunk* chunk)
 {
-    void* queue = player ? ((CriMvSubtitleFields*)player)->Queue : NULL;
-    if (queue)
-        FUN_1400467b0(queue, 0, chunk);
+    if (player == NULL)
+        return;
+    if (((CriMvSubtitleFields*)player)->Queue == NULL)
+        return;
+    FUN_1400467b0(((CriMvSubtitleFields*)player)->Queue, 0, chunk);
 }
 
 // MS2-FUNCTIONAL: return a subtitle chunk to the head of the player's subtitle queue.
 // @0x140036e80
 void FUN_140036e80(void* player, CriMvSubtitleChunk* chunk)
 {
-    void* queue = player ? ((CriMvSubtitleFields*)player)->Queue : NULL;
-    if (queue)
-        FUN_1400467a8(queue, 1, chunk);
+    if (player == NULL)
+        return;
+    if (((CriMvSubtitleFields*)player)->Queue == NULL)
+        return;
+    FUN_1400467a8(((CriMvSubtitleFields*)player)->Queue, 1, chunk);
 }
 
 // MS2-FUNCTIONAL: release the main and current alpha frame held by the easy player.
@@ -4759,33 +4765,42 @@ CriUint32 FUN_140036050(void* player, CriUint32 format, void* output, CriUint32 
 
 // MS2-FUNCTIONAL: request the next alpha-frame metadata record when the alpha decoder is present.
 // @0x140035e90
-CriBool FUN_140035e90(void* player, void* frameInfo, void* reserved1, void* reserved2)
+CriBool FUN_140035e90(void* player, void* frameInfo)
 {
-    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
-    if (!decoder)
+    void* frame = NULL;
+    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder == NULL)
         return 0;
-    return FUN_140043f10(decoder, frameInfo) != NULL;
+    frame = FUN_140043f10(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+    if (frame == NULL)
+        return 0;
+    return 1;
 }
 
 // MS2-FUNCTIONAL: advance the alpha decoder to the requested frame, releasing frames skipped en route.
 // @0x140035db0
-CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo, void* reserved)
+CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo)
 {
-    if (!FUN_140035e90(player, frameInfo, frameInfo, reserved))
+    void* alpha = NULL;
+    CriBool ok = FUN_140035e90(player, frameInfo);
+    if (ok == 0)
         return 0;
-    void* decoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
-    for (;;)
+    while (targetFrame > *(CriSint32*)((CriUint8*)frameInfo + 8))
     {
-        CriSint32 currentFrame = *(CriSint32*)((CriUint8*)frameInfo + 8);
-        if (targetFrame <= currentFrame)
-            return 1;
-        if (!FUN_140043fe0(decoder, frameInfo))
+        alpha = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+        if (alpha != NULL)
+            FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+        else
             return 0;
-        FUN_140044050(decoder, frameInfo);
         // the decoder rewrote frameInfo: compare the frame it now holds, not the one read above
         if (*(CriSint32*)((CriUint8*)frameInfo + 8) + 1 == targetFrame)
-            return FUN_140043f10(decoder, frameInfo) != NULL;
+        {
+            alpha = FUN_140043f10(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+            if (alpha == NULL)
+                return 0;
+            break;
+        }
     }
+    return 1;
 }
 
 // MS2-FUNCTIONAL: pair the next video frame with its matching alpha frame when the alpha decoder is ready.
@@ -4809,7 +4824,7 @@ void* FUN_140035c80(void* player, void* output)
             return NULL;
         }
         CriUint8 alphaFrame[0x50] = {};
-        if (!FUN_140035db0(player, frame.frame_id, alphaFrame, NULL))
+        if (!FUN_140035db0(player, frame.frame_id, alphaFrame))
             return NULL;
     }
 
@@ -4903,18 +4918,17 @@ void* FUN_1400385c8(void* work, CriSint32 workSize)
 // @0x1400385d0
 CriMvEasyFileReaderMem* CriMvEasyFileReaderMem::Create(CriHeap heap)
 {
-    void* memory = CriAllocator::operator new(0x40, heap, CRIHEAP_TYPE_FIX, "CriMvEasyFileReaderMem", 4);
-    if (!memory)
+    CriMvEasyFileReaderMem* reader = new(heap, "CriMvEasyFileReaderMem", 4) CriMvEasyFileReaderMem();
+    if (reader == NULL)
         return NULL;
-    CriMvEasyFileReaderMem* reader = ::new(memory) CriMvEasyFileReaderMem();
     reader->Data = NULL;
     reader->FileSize = -1;
-    reader->Heap = heap;
     reader->Position = 0;
     reader->ReadSize = 0;
+    reader->Heap = heap;
     reader->OpenState = ASYNC_STATUS_STOP;
-    reader->CloseState = ASYNC_STATUS_STOP;
     reader->ReadState = ASYNC_STATUS_STOP;
+    reader->CloseState = ASYNC_STATUS_STOP;
     return reader;
 }
 
@@ -5061,7 +5075,7 @@ void* FUN_140038c40(CriMvEasyFileReaderMem* reader, CriUint32 flags)
 // @0x1400386c0
 void CriMvEasyFileReaderMem::Destroy(void)
 {
-    FUN_140038c40(this, 1);
+    delete this;
 }
 #pragma optimize("", on)
 // MS2-PIN: ?FUN_140033810@@YAXPEAX@Z 0x140033810
