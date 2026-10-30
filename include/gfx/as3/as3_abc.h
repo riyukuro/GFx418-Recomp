@@ -108,6 +108,8 @@ class NamespaceInfo
 public:
     NamespaceInfo() : Kind(NS_Undefined) {}
     NamespaceInfo(NamespaceKind k, const StringDataPtr& uri) : Kind(k), NameURI(uri) {}
+    // The URI built in place (ConstPool's any namespace).
+    NamespaceInfo(NamespaceKind k, const char* uri, UPInt size) : Kind(k), NameURI(uri, size) {}
 
     NamespaceKind Kind;                         // +0x00
     StringDataPtr NameURI;                      // +0x08

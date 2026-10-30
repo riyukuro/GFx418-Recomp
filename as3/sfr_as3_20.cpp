@@ -29,15 +29,13 @@
 #undef GetObject
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// MS2-FUNCTIONAL 0x142545230: initializes the constant-pool arrays and the any namespace; the exe leaves DoubleCount and
-// ConstDouble unset (zeroed here).
+// Initializes the constant-pool arrays and the any namespace. As in the exe, DoubleCount and ConstDouble stay unset:
+// Reader::Read (sfr_as3_21) zeroes and fills them before any GetDouble.
 // @0x142545230
 // The any namespace (multiname index 0) is the public one with an empty, non-null URI: the exe stores kind 0 and "".
 Abc::ConstPool::ConstPool()
-    : DoubleCount(0), ConstDouble(0), AnyType{MNF_QName, 0, 0, -1}
+    : any_namespace(Abc::NS_Public, "", 0), AnyType{MNF_QName, 0, 0, -1}
 {
-    any_namespace.Kind = Abc::NS_Public;
-    any_namespace.NameURI = StringDataPtr("", 0);
 }
 
 // @0x142543f40
