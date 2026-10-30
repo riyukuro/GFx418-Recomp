@@ -72,18 +72,10 @@ extern "C" cri_u64 _DAT_143c49498;
 extern "C" cri_u64 _DAT_143c494a0;
 extern "C" cri_u64 _DAT_143c494a8;
 extern "C" cri_u64 _DAT_143c494b0;
-extern "C" unsigned char DAT_143babdf0;
-extern "C" double DAT_143bac640;
-extern "C" double DAT_143bac658;
-extern "C" double DAT_143bac670;
-extern "C" unsigned char DAT_143bac690;
-extern "C" unsigned char DAT_143bace90;
-extern "C" double _DAT_143bac648;
-extern "C" double _DAT_143bac650;
-extern "C" double _DAT_143bac660;
-extern "C" double _DAT_143bac668;
-extern "C" double _DAT_143bac678;
-extern "C" double _DAT_143bac680;
+extern "C" double DAT_143babdf0[256];                 // U levels
+extern "C" double DAT_143bac640[9];                   // 3x3 YUV -> RGB matrix (data_bss_game keeps the pieces contiguous)
+extern "C" double DAT_143bac690[256];                 // Y levels
+extern "C" double DAT_143bace90[256];                 // V levels
 extern "C" int DAT_1431ba290;
 extern "C" int DAT_1431ba2e0;
 extern "C" int DAT_1431ba2e8;
@@ -433,59 +425,35 @@ static __forceinline void FUN_140053470(Any a0) { FUN_140053470((cri_u64 *)a0.v)
 static __forceinline void FUN_1400536d0(Any a0) { FUN_1400536d0((longlong)a0.v); }
 static __forceinline void FUN_140053880(Any a0) { FUN_140053880((longlong)a0.v); }
 static __forceinline void FUN_140054040(Any a0,Any a1,Any a2) { FUN_140054040((longlong)a0.v,(cri_u64)a1.v,(cri_u64)a2.v); }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: build the 256-entry Y/U/V lookup tables (4 shorts each) from the 3x3 YUV -> RGB matrix and the
+// level tables. Only diff: VC9 puts the tv walker in r11 where the exe has rdx, which shifts r8-r11 (483 vs 485 bytes).
 // @0x14004da40
 void FUN_14004da40(void)
 {
-  longlong l_v1;
-  longlong l_v2;
-  longlong l_v3;
-  cri_u16 *pu_v4;
-  longlong l_v5;
-  longlong l_v6;
-  longlong l_v7;
-  cri_u16 *pu_v8;
-  cri_u16 *pu_v9;
-  double d_v10;
-  
-  FUN_14004c7c0(&DAT_143a48740,&DAT_143bac640);
-  l_v1 = cri_conv(DAT_143babde0);
-  l_v5 = DAT_143babdd8 - DAT_143babdd0;
-  l_v7 = DAT_143babde0 - DAT_143babdd8;
-  l_v6 = DAT_143babde0 - DAT_143babdd0;
-  l_v2 = 0;
-  pu_v4 = (&CriAt<cri_u16>(DAT_143babdd8, 0x6));
-  pu_v8 = (&CriAt<cri_u16>(DAT_143babdd0, 0x2));
-  do {
-    l_v3 = l_v2 + 8;
-    pu_v9 = pu_v8 + 4;
-    pu_v8[1] = (short)(int)(DAT_143bac640 * *(double *)((longlong)&DAT_143bac690 + l_v2) + 0.5);
-    *pu_v8 = (short)(int)(DAT_143bac658 * *(double *)((longlong)&DAT_143bac690 + l_v2) + 0.5);
-    d_v10 = DAT_143bac670 * *(double *)((longlong)&DAT_143bac690 + l_v2);
-    pu_v8[2] = 0x3fc0;
-    pu_v8[-1] = (short)(int)(d_v10 + 0.5);
-    pu_v4[-1] = (short)(int)((*(double *)((longlong)&DAT_143babdf0 + l_v2) - 128.0) *
-                              _DAT_143bac648 + 0.5);
-    *(short *)(l_v5 + -8 + (longlong)pu_v9) =
-         (short)(int)((*(double *)((longlong)&DAT_143babdf0 + l_v2) - 128.0) * _DAT_143bac660 + 0.5
-                     );
-    d_v10 = (*(double *)((longlong)&DAT_143babdf0 + l_v2) - 128.0) * _DAT_143bac678;
-    *pu_v4 = 0;
-    pu_v4[-3] = (short)(int)(d_v10 + 0.5);
-    *(short *)(l_v2 + 4 + l_v1) =
-         (short)(int)((*(double *)((longlong)&DAT_143bace90 + l_v2) - 128.0) * _DAT_143bac650 + 0.5
-                     );
-    *(short *)(l_v6 + -8 + (longlong)pu_v9) =
-         (short)(int)((*(double *)((longlong)&DAT_143bace90 + l_v2) - 128.0) * _DAT_143bac668 + 0.5
-                     );
-    d_v10 = (*(double *)((longlong)&DAT_143bace90 + l_v2) - 128.0) * _DAT_143bac680;
-    *(cri_u16 *)(l_v7 + -8 + (longlong)(pu_v4 + 4)) = 0;
-    *(short *)(l_v2 + l_v1) = (short)(int)(d_v10 + 0.5);
-    l_v2 = l_v3;
-    pu_v4 = pu_v4 + 4;
-    pu_v8 = pu_v9;
-  } while (l_v3 < 0x800);
-  return;
+  struct Ent { short c[4]; };
+  Ent *ty;
+  Ent *tu;
+  Ent *tv;
+  int i;
+
+  FUN_14004c7c0(&DAT_143a48740,DAT_143bac640);
+  tv = (Ent *)DAT_143babde0;
+  ty = (Ent *)DAT_143babdd0;
+  tu = (Ent *)DAT_143babdd8;
+  for (i = 0; i < 256; i++) {
+    ty[i].c[2] = (short)(int)(DAT_143bac640[0] * DAT_143bac690[i] + 0.5);
+    ty[i].c[1] = (short)(int)(DAT_143bac640[3] * DAT_143bac690[i] + 0.5);
+    ty[i].c[0] = (short)(int)(DAT_143bac640[6] * DAT_143bac690[i] + 0.5);
+    ty[i].c[3] = 0x3fc0;
+    tu[i].c[2] = (short)(int)((DAT_143babdf0[i] - 128.0) * DAT_143bac640[1] + 0.5);
+    tu[i].c[1] = (short)(int)((DAT_143babdf0[i] - 128.0) * DAT_143bac640[4] + 0.5);
+    tu[i].c[0] = (short)(int)((DAT_143babdf0[i] - 128.0) * DAT_143bac640[7] + 0.5);
+    tu[i].c[3] = 0;
+    tv[i].c[2] = (short)(int)((DAT_143bace90[i] - 128.0) * DAT_143bac640[2] + 0.5);
+    tv[i].c[1] = (short)(int)((DAT_143bace90[i] - 128.0) * DAT_143bac640[5] + 0.5);
+    tv[i].c[0] = (short)(int)((DAT_143bace90[i] - 128.0) * DAT_143bac640[8] + 0.5);
+    tv[i].c[3] = 0;
+  }
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -508,30 +476,25 @@ void FUN_14004dc70(void)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: look up record 0x40 in the buffer. Return 1 if thunk_FUN_14005b040 is set; otherwise look up the
+// next record and return whether bit 4 of its value is clear. Only diff: the exe sign-extends the inverted byte
+// (movsx eax,al) before the mask; VC9 drops it in every form tried.
 // @0x14004dc90
-uint FUN_14004dc90(cri_u64 a1,cri_u64 a2)
+uint FUN_14004dc90(cri_u64 a1,int a2)
 {
-  byte b_v1;
-  int i_v2;
-  longlong l_v3;
-  
-  l_v3 = FUN_1400530c0(a1,a2,0x40);
-  if (l_v3 != 0) {
-    i_v2 = thunk_FUN_14005b040();
-    if (i_v2 != 0) {
-      return 1;
-    }
-    i_v2 = (int)a2 + ((int)a1 - (int)(l_v3 + 4));
-    if (0 < i_v2) {
-      l_v3 = FUN_1400530c0(l_v3 + 4,i_v2,0xffffffff);
-      if (l_v3 != 0) {
-        b_v1 = FUN_140053000(l_v3);
-        return ((int)(char)~b_v1 & 0x10U) >> 4;
-      }
-    }
-  }
-  return 0;
+  longlong p = FUN_1400530c0(a1,a2,0x40);
+  if (p == 0)
+    return 0;
+  if (thunk_FUN_14005b040() != 0)
+    return 1;
+  p += 4;
+  a2 += (int)a1 - (int)p;
+  if (a2 <= 0)
+    return 0;
+  p = FUN_1400530c0(p,a2,-1);
+  if (p == 0)
+    return 0;
+  return ((int)(char)~(byte)FUN_140053000((uchar*)p) & 0x10U) >> 4;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -763,7 +726,6 @@ void FUN_14004e100(longlong a1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e1c0
 void FUN_14004e1c0(int a1,longlong a2)
 {
@@ -774,8 +736,8 @@ void FUN_14004e1c0(int a1,longlong a2)
   p = (longlong)a1 * 0x1980 + work;
   FUN_140064eb0(&DAT_143badab0,&DAT_1431ba290,0x40);
   _DAT_143badb00 = p;
-  DAT_143badb10 = a1;
   DAT_143badb08 = p + 0x330;
+  DAT_143badb10 = a1;
   DAT_143badb18 = work;
 }
 
