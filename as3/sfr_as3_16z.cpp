@@ -95,19 +95,20 @@ void AvmDisplayObjContainer::AddChildAt(DisplayObjectBase* ch, unsigned index)
     if (ch->GetParent())
         AvmDisplayObjContainer::FromBase(static_cast<DisplayObjContainer*>(ch->GetParent())->GetAvmDispContainer())
             ->RemoveChild(ch);
-    DisplayObjContainer* pcont = GetDisplayObjContainer();
-    unsigned count = static_cast<unsigned>(pcont->mDisplayList.GetCount());
+    // the SDK's DisplayList::GetCount returns an unsigned
+    const unsigned count = unsigned(GetDisplayObjContainer()->mDisplayList.GetCount());
     if (index > count)
         index = count;
-    pcont->mDisplayList.AddEntryAtIndex(pcont, index, ch);
-    ch->pParent = pcont;
+    GetDisplayObjContainer()->mDisplayList.AddEntryAtIndex(GetDisplayObjContainer(), index, ch);
+    ch->pParent = GetDisplayObjContainer();
     ch->Depth   = -1;
     ch->SetUnloaded(false);
     ch->SetUnloading(false);
     if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsInPlayList())
-        ToAvmInteractiveObj(static_cast<InteractiveObject*>(ch))->MoveBranchInPlayList();
-    if (ch->IsScriptableObject())
-        ToAvmDisplayObj(ch)->OnAdded(false);
+        AvmInteractiveObj::FromBase(static_cast<InteractiveObject*>(ch)->GetAvmIntObj())->MoveBranchInPlayList();
+    // the SDK's ToAvmDisplayObj(ch->CharToScriptableObject()): null-safe casts, then the call with no test
+    DisplayObjectBase* const psobj = ch->IsScriptableObject() ? ch : NULL;
+    static_cast<AvmDisplayObj*>(psobj ? psobj->GetAvmObjImpl() : NULL)->OnAdded(false);
 }
 
 // MovieRoot::AddStickyVariable: keeps name = val under path until its target exists (permanently for
