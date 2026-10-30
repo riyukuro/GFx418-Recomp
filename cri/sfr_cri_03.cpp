@@ -4400,8 +4400,8 @@ void FUN_140042700(void* trackSet, void* player)
     struct PlayerState { CriUint8 Reserved00[0xe58]; CriSint32 ParameterUpdateEnabled; };
     if (((AudioTrackSet*)trackSet)->Tracks[0])
     {
-        CriUint32 control = ((TrackControl*)((AudioTrackSet*)trackSet)->Tracks[0])->Control;
-        FUN_1400345e0(player, ((AudioTrackSet*)trackSet)->Configuration, control, -1);
+        FUN_1400345e0(player, ((AudioTrackSet*)trackSet)->Configuration,
+                      ((TrackControl*)((AudioTrackSet*)trackSet)->Tracks[0])->Control, -1);
     }
     for (CriSint32 index = 0; index < ((AudioTrackSet*)trackSet)->Count; ++index)
     {
@@ -5223,7 +5223,7 @@ void FUN_140040a90(void* player)
         FUN_1400467b0(state->Queue, 0, pending);
 }
 
-// MS2-FUNCTIONAL: report the per-lane picture queue depths of a VMPV player in whole pictures.
+// report the per-lane picture queue depths of a VMPV player in whole pictures.
 // @0x140040e40
 void FUN_140040e40(void* player, CriUint32* total, CriUint32* first, CriSint32* second, CriUint32* third,
                    CriUint32* fourth)
@@ -5233,7 +5233,9 @@ void FUN_140040e40(void* player, CriUint32* total, CriUint32* first, CriSint32* 
     *second = 0;
     *third = 0;
     *fourth = 0;
-    if (!state || !state->Queue)
+    if (!state)
+        return;
+    if (!state->Queue)
         return;
     *total = state->PictureCount;
     *first = (CriUint32)FUN_1400467b8(state->Queue, 1) / state->UnitSize;
