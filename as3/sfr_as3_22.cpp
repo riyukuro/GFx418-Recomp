@@ -57,6 +57,8 @@ extern ExeDecl<void*> DAT_143192160;
 #define AS3MovieMemoryItemVtable ((void*)&DAT_143192160)
 extern ExeDecl<void*> DAT_1431bede8;
 #define AS3AudioEventVtable DAT_1431bede8
+extern "C" char DAT_1431bcbb0[];   // the sound objects' outermost base
+#define AS3SoundObjectBaseVtable DAT_1431bcbb0
 extern ExeDecl<void*> DAT_1431bec40;
 #define AS3AudioListNodeVtable DAT_1431bec40
 extern ExeDecl<void*> DAT_1431bed18;
@@ -2300,12 +2302,12 @@ void SetAudioPaused(void* player, bool paused)
     }
 }
 
-// MS2-FUNCTIONAL: computes elapsed playback time under the player's lock and clamps/records the audio end time.
+// computes elapsed playback time under the player's lock and clamps/records the audio end time.
 // @0x142745980
 float QueryAudioElapsedSeconds(void* player)
 {
     auto* bytes = static_cast<unsigned char*>(player);
-    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70));
+    Lock::Locker locker(reinterpret_cast<Lock*>(bytes + 0x70));
     float elapsedSeconds;
     if (!bytes[0x68] && !bytes[0x69]) {
         auto* format = *reinterpret_cast<unsigned char**>(bytes + 0x30);
@@ -2318,19 +2320,20 @@ float QueryAudioElapsedSeconds(void* player)
         const std::uint64_t now = FUN_1425e3480();
         std::uint64_t elapsed = (*reinterpret_cast<std::uint64_t*>(bytes + 0x58) -
                                  *reinterpret_cast<std::uint64_t*>(bytes + 0x48)) + now;
-        if (duration < elapsed) {
+        if (elapsed > duration) {
             bytes[0x69] = 1;
             *reinterpret_cast<std::uint64_t*>(bytes + 0x50) = now;
             *reinterpret_cast<std::uint64_t*>(bytes + 0x58) = duration;
-            elapsed = duration;
+            elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
+                             static_cast<float>(duration) / 1000000.0f;
+        } else {
+            elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
+                             static_cast<float>(elapsed) / 1000000.0f;
         }
-        elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
-                         static_cast<float>(elapsed) / 1000000.0f;
     } else {
         elapsedSeconds = *reinterpret_cast<float*>(bytes + 0x98) +
                          static_cast<float>(*reinterpret_cast<std::uint64_t*>(bytes + 0x58)) / 1000000.0f;
     }
-    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(bytes + 0x70));
     return elapsedSeconds;
 }
 
@@ -3713,49 +3716,52 @@ void* FUN_1427449f0(void* manager, void* requestData)
     return returned;
 }
 
-// MS2-FUNCTIONAL: creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
+// creates and links a sound request under the manager lock, then initializes its FMOD sound or stream.
 // @0x142744ea0
 void* CreateAudioRequest(void* manager, const char* path, bool stream)
 {
     auto* managerBytes = static_cast<unsigned char*>(manager);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    unsigned flags[2] = { 2, 0 };
-    auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
-        DAT_143b15f60, 0x40, flags));
-    if (!object)
-        return nullptr;
-
-    EnterCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
-    auto* node = object + 0x10;
-    auto* sentinel = managerBytes + 0xb0;
-    void* oldTail = *reinterpret_cast<void**>(managerBytes + 0xc0);
-    *reinterpret_cast<void***>(object) = &AS3SoundRequestVtable;
-    *reinterpret_cast<unsigned*>(object + 8) = 1;
-    *reinterpret_cast<void***>(node) = &AS3SoundRequestNodeVtable;
-    *reinterpret_cast<void**>(node + 8) = sentinel;
-    *reinterpret_cast<void**>(node + 0x10) = oldTail;
-    *reinterpret_cast<void**>(static_cast<unsigned char*>(oldTail) + 8) = node;
-    *reinterpret_cast<void**>(managerBytes + 0xc0) = node;
-    *reinterpret_cast<void**>(object + 0x28) = manager;
-    *reinterpret_cast<void**>(object + 0x30) = nullptr;
-    *reinterpret_cast<void**>(object + 0x38) = nullptr;
-
-    LeaveCriticalSection(reinterpret_cast<CRITICAL_SECTION*>(managerBytes + 0xc8));
+    unsigned char* object;
+    {
+        Lock::Locker locker(reinterpret_cast<Lock*>(managerBytes + 0xc8));
+        // SF_NEW SoundRequest(manager): the ctor chain stores each base vtable in turn and links
+        // the node (+0x10) at the tail of the manager's request list (sentinel +0xb0).
+        auto* mem = static_cast<unsigned char*>(Memory::Alloc(0x40));
+        if (mem) {
+            *reinterpret_cast<void**>(mem) = AS3SoundObjectBaseVtable;
+            auto* node = mem + 0x10;
+            auto* sentinel = managerBytes + 0xb0;
+            *reinterpret_cast<volatile int*>(mem + 8) = 1;   // AtomicInt RefCount
+            *reinterpret_cast<void***>(node) = &AS3AudioListNodeVtable;
+            *reinterpret_cast<void**>(node + 0x10) = *reinterpret_cast<void**>(sentinel + 0x10);
+            *reinterpret_cast<void**>(node + 8) = sentinel;
+            *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(sentinel + 0x10) + 8) = node;
+            *reinterpret_cast<void**>(sentinel + 0x10) = node;
+            *reinterpret_cast<void***>(mem) = &AS3SoundRequestVtable;
+            *reinterpret_cast<void***>(node) = &AS3SoundRequestNodeVtable;
+            *reinterpret_cast<void**>(mem + 0x38) = nullptr;
+            *reinterpret_cast<void**>(mem + 0x28) = manager;
+            *reinterpret_cast<void**>(mem + 0x30) = nullptr;
+            object = mem;
+        } else {
+            object = nullptr;
+        }
+    }
     auto* system = *reinterpret_cast<FMOD::System**>(managerBytes + 0x10);
     auto* sound = reinterpret_cast<FMOD::Sound**>(object + 0x30);
     const auto result = stream
         ? system->createStream(path, 0x49, nullptr, sound)
         : system->createSound(path, 0x49, nullptr, sound);
-    if (result == 0)
-        return object;
-
-    *sound = nullptr;
+    if (result != 0) {
+        *sound = nullptr;
     // Release, not delete: the request is already linked into the manager's list.
-    if (InterlockedDecrement(reinterpret_cast<volatile long*>(object + 8)) == 0) {
-        auto** objectVtable = *reinterpret_cast<void***>(object);
-        reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
+        if (InterlockedDecrement(reinterpret_cast<volatile long*>(object + 8)) == 0) {
+            auto** objectVtable = *reinterpret_cast<void***>(object);
+            reinterpret_cast<void (*)(void*, unsigned)>(objectVtable[0])(object, 1);
+        }
+        return nullptr;
     }
-    return nullptr;
+    return object;
 }
 
 // MS2-FUNCTIONAL: builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
