@@ -133,8 +133,8 @@ void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void*
 void     FUN_140039f50(void* section);
 void     FUN_140039f8c(void* section);
 void     FUN_1400411f8(void);
-void     FUN_140046944(char* buffer, CriUint32 capacity, const char* text);
-void     FUN_14004698c(char* buffer, CriUint32 capacity, const char* text);
+char*    FUN_140046944(char* dst, size_t size, const char* src);
+char*    FUN_14004698c(char* dst, size_t size, const char* src);
 void     FUN_140038190(const void* key);
 CriBool  FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64* offset);
 void     FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, CriSint32 flags, void* owner);
@@ -487,15 +487,25 @@ struct CriVideoRecordCopyView
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x140038000
-void FUN_140038000(void** record, void*)
+void FUN_140038000(void** record, void* userData)
 {
-    CriSint32 contentsSize = 0;
-    CriUint8* contents = (CriUint8*)criUsfCmn_GetContents((const CriUint8*)record[0],
-        *(CriUint32*)((CriUint8*)record + 8), &contentsSize);
-    if (!contents || contentsSize <= 0x13f)
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): p, length, scramble, i, ptr, ctx.
+    CriUint8* p;
+    CriSint32 length;
+    CriUint32 i;
+    const CriUint8* scramble;
+    CriUint8* ptr;
+    void* ctx = userData;
+    scramble = DAT_143b27a88;
+    if (!FUN_140037a10)                      // the exe tests the function's address, which is never null
         return;
-    for (CriUint32 i = 0x140; i < (CriUint32)contentsSize; ++i)
-        contents[i] ^= DAT_143b27a88[i % 0x20];
+    if (ctx == ctx) {}                       // the CRI unused-argument idiom: /Od loads it (the exe's dead load)
+    p = (CriUint8*)criUsfCmn_GetContents((const CriUint8*)record[0], *(CriUint32*)((CriUint8*)record + 8), &length);
+    if ((CriUint32)length < 0x140)
+        return;
+    ptr = p;
+    for (i = 0x140; i < (CriUint32)length; i++)
+        ptr[i] ^= scramble[i % 0x20];
 }
 
 // @0x1400380d0
@@ -736,43 +746,59 @@ CriSint32 FUN_140039330(CriMvEasyPlayer* easyPlayer, const CriMvFrameInfo* frame
 // @0x140039180
 CriBool FUN_140039180(CriMvEasyPlayer* easyPlayer, CriSint32 updateTime, CriUint32* output)
 {
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): onTime, videoFrame, hasFrame, result, handle,
+    // state.
+    CriBool result = 0;
+    CriSint32 state;
+    void* handle;
+    CriMvFrameInfo videoFrame;               // left uninitialised, as in the exe
+    CriBool hasFrame;
+    CriBool onTime;
     *output = 0;
-    if (easyPlayer->pause_flag == 1 || easyPlayer->unk724 == 1)
-        return 0;
-    CriSint32 status = criMvPly_GetStatus(easyPlayer->mvply);
-    if (status >= 0 && status <= 4)
-        return 0;
-
-    CriMvFrameInfo frame = {};
-    void* frameToken = FUN_140035c80(easyPlayer->mvply, &frame);
-    CriBool hasFrame = frameToken != NULL;
-    CriBool onTime = FUN_140039330(easyPlayer, &frame);
-    CriBool result = hasFrame == 1 && onTime == 1;
+    if (easyPlayer->pause_flag == 1)
+        return result;
+    if (easyPlayer->unk724 == 1)
+        return result;
+    state = criMvPly_GetStatus(easyPlayer->mvply);
+    switch (state)
+    {
+    case 0: case 1: case 2: case 3: case 4:
+        return result;
+    }
+    handle = FUN_140035c80(easyPlayer->mvply, &videoFrame);
+    hasFrame = handle != NULL;
+    onTime = FUN_140039330(easyPlayer, &videoFrame);
+    if (hasFrame == 1 && onTime == 1)
+        result = 1;
     if (updateTime == 1)
-        FUN_1400393f0(easyPlayer, onTime, hasFrame, 0, frame.time, frame.tunit);
+        FUN_1400393f0(easyPlayer, onTime, hasFrame, 0, videoFrame.time, videoFrame.tunit);
     if (result == 1)
-        easyPlayer->frame_info = frame;
+        easyPlayer->frame_info = videoFrame;
     return result;
 }
 
 // MS2-FUNCTIONAL: fetch video and optional alpha frame metadata and retain the alpha snapshot on the easy player.
 // @0x140039010
-CriBool FUN_140039010(CriMvEasyPlayer* easyPlayer, void* yuvBuffers, void* outputInfo, CriUint32* result)
+CriBool FUN_140039010(CriMvEasyPlayer* easyPlayer, void* yuvBuffers, void* outputInfo, CriUint32* output)
 {
-    *result = 0;
-    if (!FUN_140039180(easyPlayer, 0, result))
-        return 0;
-    CriBool hasVideo = FUN_140035710(easyPlayer->mvply, yuvBuffers, outputInfo);
-    if (hasVideo)
+    struct AlphaFrameCopy { CriUint8* imageptr; CriUint64 rest[6]; };   // the 0x38-byte alpha frame info
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): alphaInfo, ready, result.
+    AlphaFrameCopy alphaInfo;
+    CriBool result = 0;
+    CriBool ready = 0;
+    *output = 0;
+    if (FUN_140039180(easyPlayer, 0, output) != 1)
+        return result;
+    result = FUN_140035710(easyPlayer->mvply, yuvBuffers, outputInfo);
+    if (result == 1)
     {
-        CriMvEasyPlayerFrameFields* frameFields = (CriMvEasyPlayerFrameFields*)easyPlayer;
-        CriMvAlphaFrameSnapshot alpha = {};
-        if (FUN_140035800(easyPlayer->mvply, yuvBuffers, &alpha))
-            memcpy(frameFields->AlphaFrameInfo, &alpha, sizeof(alpha));
-        else
-            memset(frameFields->AlphaFrameInfo, 0, sizeof(frameFields->AlphaFrameInfo));
+        ready = FUN_140035800(easyPlayer->mvply, yuvBuffers, &alphaInfo);
+        if (ready == 1)
+            *(AlphaFrameCopy*)easyPlayer->alpha_frame_info = alphaInfo;
     }
-    return hasVideo;
+    if (ready != 1)                          // no alpha frame: only the image pointer is cleared
+        ((AlphaFrameCopy*)easyPlayer->alpha_frame_info)->imageptr = NULL;
+    return result;
 }
 
 // MS2-FUNCTIONAL: restores CRI's alternating timestamp-error correction using the frame-rate and state fields it stores.
@@ -984,14 +1010,34 @@ void criMvPly_TerminateSupply(void* player)
     FUN_140044fdc(((CriMvSupplyInputBuffer*)player)->InputBuffer);
 }
 
-// MS2-FUNCTIONAL: initializes the observed 0x90-byte next-frame record and its two sentinel fields.
+// Resets a CriMvFrameInfo field by field, all four image planes included; pitch is left as is.
 // @0x140035090
 void FUN_140035090(void* record)
 {
-    memset(record, 0, 0x90);
-    *(CriSint32*)((CriUint8*)record + 8) = -1;
-    *(CriUint32*)((CriUint8*)record + 0x30) = 1;
-    *(CriSint32*)((CriUint8*)record + 0x3c) = -1;
+    CriSint32 i;
+    CriMvImageBufferInfo* buf;
+    ((CriMvFrameInfo*)record)->imageptr = NULL;
+    ((CriMvFrameInfo*)record)->frame_id = -1;
+    ((CriMvFrameInfo*)record)->cnt_concatenated_movie = 0;
+    ((CriMvFrameInfo*)record)->width = 0;
+    ((CriMvFrameInfo*)record)->height = 0;
+    ((CriMvFrameInfo*)record)->disp_width = 0;
+    ((CriMvFrameInfo*)record)->disp_height = 0;
+    ((CriMvFrameInfo*)record)->framerate = 0;
+    ((CriMvFrameInfo*)record)->time = 0;
+    ((CriMvFrameInfo*)record)->tunit = 1;
+    ((CriMvFrameInfo*)record)->frame_id_per_data = -1;
+    ((CriMvFrameInfo*)record)->csc_flag = 0;
+    ((CriMvFrameInfo*)record)->alpha_type = 0;
+    ((CriMvFrameInfo*)record)->num_images = 0;
+    for (i = 0; i < 4; i++) {
+        buf = &((CriMvFrameInfo*)record)->image_info[i];
+        buf->imageptr = NULL;
+        buf->line_pitch = 0;
+        buf->line_size = 0;
+        buf->num_lines = 0;
+        buf->bufsize = 0;
+    }
 }
 
 // MS2-FUNCTIONAL: return the next decoded video frame and release its decoder-owned record afterward.
@@ -1751,16 +1797,20 @@ void FUN_140035480(void* player, void* destination, const void* source)
 // @0x140035af0
 CriBool FUN_140035af0(void* player, void* buffer, CriUint32 format, void* outputInfo)
 {
-    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
-    if (!decoders->AlphaDecoder || !crimvply_isUnderGetFrameCondition(player))
-        return 0;
-
     struct DimensionsView { CriUint8 Reserved[0x60c]; CriUint32 Width; CriUint32 Height; };
     struct BufferRequest { void* Buffer; CriUint32 Width; CriUint32 Height; CriUint32 Format; };
-    BufferRequest request = { buffer, ((DimensionsView*)player)->Width,
-                              ((DimensionsView*)player)->Height, format };
-    CriUint8 frameInfo[0x50] = {};
-    if (!FUN_140043f70(decoders->AlphaDecoder, &request, frameInfo))
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): frameInfo, ret, buf.
+    CriUint64 frameInfo[10];                 // the 0x50-byte alpha frame record, filled by the decoder
+    BufferRequest buf;
+    CriSint32 ret = 0;
+    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder == NULL || !crimvply_isUnderGetFrameCondition(player))
+        return 0;
+    buf.Buffer = buffer;
+    buf.Width = ((DimensionsView*)player)->Width;
+    buf.Height = ((DimensionsView*)player)->Height;
+    buf.Format = format;
+    ret = FUN_140043f70(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &buf, frameInfo);
+    if (ret == 0)
     {
         FUN_140037910(NULL, "E08082104M : Cannot copy the alpha frame buffer to user's buffer.", 0);
         return 0;
@@ -1937,37 +1987,25 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
 // @0x140036f40
 void FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
 {
-    struct SubtitleOutputView
-    {
-        const CriUint8* Text;
-        CriUint32 Value8;
-        CriUint32 Channel;
-        CriUint64 FrameDuration;
-        CriUint64 Position;
-        CriUint32 TextSize;
-        CriUint32 Reserved24;
-        CriUint32 FrameId;
-        CriUint32 Reserved2C;
-        CriUint32 Offset;
-        CriUint32 Reserved34;
-    };
-    SubtitleOutputView* output = (SubtitleOutputView*)outputInfo;
-    CriSint32 contentSize = 0;
-    const CriUint8* content = criUsfCmn_GetContents(chunk->Data, chunk->Size, &contentSize);
-    const CriUint32* fields = (const CriUint32*)content;
-    output->Channel = fields[0];
-    output->FrameDuration = fields[1];
-    output->Offset = fields[2];
-    output->TextSize = fields[3];
-    output->Value8 = fields[4];
-    output->Text = content + 20;
-    output->FrameId = ((CriMvSubtitleFields*)player)->SubtitleIndex;
-
-    CriUint64 count = 0;
-    CriUint64 unit = 0;
-    FUN_140044b20(((CriMvDecoderHandleFields*)player)->VideoDecoder, output->FrameId,
-                  &count, &unit);
-    output->Position = (count / unit) * output->FrameDuration + output->Offset;
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): p, length, ptr, curTime, tunit.
+    const CriUint8* p;
+    CriSint32 length;
+    const CriSint32* ptr;
+    CriUint64 curTime;
+    CriUint64 tunit;
+    p = criUsfCmn_GetContents(chunk->Data, chunk->Size, &length);
+    ptr = (const CriSint32*)p;
+    ((CriMvSubtitleInfo*)outputInfo)->channel_no = ptr[0];
+    ((CriMvSubtitleInfo*)outputInfo)->time_unit = ptr[1];
+    ((CriMvSubtitleInfo*)outputInfo)->in_time_per_data = ptr[2];
+    ((CriMvSubtitleInfo*)outputInfo)->duration_time = ptr[3];
+    ((CriMvSubtitleInfo*)outputInfo)->data_size = ptr[4];
+    ((CriMvSubtitleInfo*)outputInfo)->dataptr = (CriUint8*)(ptr + 5);
+    ((CriMvSubtitleInfo*)outputInfo)->cnt_concatenated_movie = ((CriMvSubtitleFields*)player)->SubtitleIndex;
+    FUN_140044b20(((CriMvDecoderHandleFields*)player)->VideoDecoder,
+                  ((CriMvSubtitleInfo*)outputInfo)->cnt_concatenated_movie, &curTime, &tunit);
+    ((CriMvSubtitleInfo*)outputInfo)->in_time = curTime / tunit * ((CriMvSubtitleInfo*)outputInfo)->time_unit
+                                               + ((CriMvSubtitleInfo*)outputInfo)->in_time_per_data;
 }
 
 // MS2-FUNCTIONAL: read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage.
@@ -2108,19 +2146,23 @@ void FUN_140038ce4(CriSint32 category, const char* message, CriSint32 value, Cri
     }
 }
 
+// The error-text lookup; inlined into FUN_140038e24, its early return is the exe's out-of-line found block.
+static __inline const char* criErr_GetErrorText(CriSint32 error)
+{
+    CriSint32 i;
+    for (i = 0; DAT_1431b97a0[i].text != NULL; i++)
+    {
+        if (DAT_1431b97a0[i].code == error)
+            return DAT_1431b97a0[i].text;
+    }
+    return "Unknown Error.";
+}
+
 // MS2-FUNCTIONAL: find the CRI error text by code, format its message, and send it through the shared dispatcher.
 // @0x140038e24
 void FUN_140038e24(CriSint32 category, const char* code, CriSint32 error)
 {
-    const char* description = "Unknown Error.";
-    for (CriSint32 i = 0; DAT_1431b97a0[i].text; ++i)
-    {
-        if (DAT_1431b97a0[i].code == error)
-        {
-            description = DAT_1431b97a0[i].text;
-            break;
-        }
-    }
+    const char* description = criErr_GetErrorText(error);
     FUN_140046944(DAT_143b27ab0, 0x100, code);
     FUN_14004698c(DAT_143b27ab0, 0x100, DAT_1431b9820);
     FUN_14004698c(DAT_143b27ab0, 0x100, description);
@@ -3514,22 +3556,20 @@ void FUN_140033e60(void* player, CriMovieStreamSlotView* slot)
 {
     struct RotationGateView { CriUint8 Reserved[0xb28]; CriSint32 BufferCount; };
     struct StreamCounterView { CriUint8 Reserved[0x5ec]; CriUint32 Count; };
-    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
     if (slot->PendingPrimary != 0 || slot->PendingSubtitle != 0 ||
         slot->PendingAlpha != 0 || slot->PendingAuxiliary != 0)
         return;
     if (((RotationGateView*)player)->BufferCount >= 0 && slot->Reserved2C4 != 0)
         return;
-
-    CriUint16 nextIndex = (CriUint16)((state->Selector.Current + 1) & 1);
-    CriMovieStreamSlotView* next = &state->Ring.Slots[nextIndex];
-    CriUint32 dataSize = *(CriUint32*)((CriUint8*)next->PrimaryOutput + 0x44);
-    slot->NextDataOffset = next->NextDataOffset + dataSize;
+    // the other slot of the two-slot ring: its data offset plus its primary data size (+0x58)
+    slot->NextDataOffset = ((CriMovieStreamSlotsView*)player)->Ring.Slots[(((CriMovieStreamSlotsView*)player)->Selector.Current + 1) % 2].NextDataOffset;
+    slot->NextDataOffset += *(CriUint32*)(((CriMovieStreamSlotsView*)player)->Ring.Slots[(((CriMovieStreamSlotsView*)player)->Selector.Current + 1) % 2].PrimaryOutput + 0x44);
     if (!FUN_140033ff0(player, ((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader, slot))
         FUN_140037950(player, "E07092101M: Entried movie file can not be concatenated with playing file.", 0);
     slot->Active = 0;
-    state->Selector.Current = nextIndex;
-    ++((StreamCounterView*)player)->Count;
+    ((CriMovieStreamSlotsView*)player)->Selector.Current++;
+    ((CriMovieStreamSlotsView*)player)->Selector.Current %= 2;
+    ((StreamCounterView*)player)->Count++;
 }
 #pragma optimize("", on)
 
@@ -3992,29 +4032,35 @@ void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maxi
 // @0x140033610
 void FUN_140033610(void* player)
 {
-    void* queue = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
-    struct ChunkView { void* Data; CriUint32 Size; } chunk = {};
-    CriUint8 parsedHeader[0x24];
-    CriSint32 contentSize = 0;
-    for (;;)
+    struct ChunkView { void* Data; CriUint32 Size; };
+    // the parsed USF chunk header (0x24 bytes); no byte array, so /GS adds no cookie, as in the exe
+    struct UsfChunkHeader { CriUint32 Words[9]; };   // byte 0xf is the chunk type
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): p, length, work, chunk, header.
+    const CriUint8* p;
+    CriSint32 length;
+    void* work;
+    ChunkView chunk;
+    UsfChunkHeader header;
+    work = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
+    while ((CriUint32)FUN_1400467b8(work, 1) > 0)
     {
-        if (FUN_1400467b8(queue, 1) == 0)
-            return;
-        FUN_1400467a0(queue, 1, -1, &chunk);
-        if (chunk.Size < 0x20)
+        FUN_1400467a0(work, 1, -1, &chunk);
+        if (chunk.Size >= 0x20)
         {
-            FUN_1400467a8(queue, 1, &chunk);
-            return;
+            FUN_14003b3fc((const CriUint8*)chunk.Data, chunk.Size, &header);
+            p = criUsfCmn_GetContents((const CriUint8*)chunk.Data, chunk.Size, &length);
+            if (((CriUint8*)&header)[0xf] != 2 && ((CriUint8*)&header)[0xf] != 3)
+            {
+                FUN_1400467a8(work, 1, &chunk);
+                break;
+            }
+            FUN_1400467b0(work, 2, &chunk);
         }
-        memset(parsedHeader, 0, sizeof(parsedHeader));
-        FUN_14003b3fc((const CriUint8*)chunk.Data, chunk.Size, parsedHeader);
-        criUsfCmn_GetContents((const CriUint8*)chunk.Data, chunk.Size, &contentSize);
-        if (parsedHeader[0xf] != 2 && parsedHeader[0xf] != 3)
+        else
         {
-            FUN_1400467a8(queue, 1, &chunk);
-            return;
+            FUN_1400467a8(work, 1, &chunk);
+            break;
         }
-        FUN_1400467b0(queue, 2, &chunk);
     }
 }
 
@@ -4154,37 +4200,35 @@ void FUN_1400317b0(void* player)
     ((LockView*)player)->Value = 1;
     if (isLockedInputChunk(player) == 1)
         return;
-
-    if (((OpenPhaseView*)player)->Phase == 0)
+    switch (((OpenPhaseView*)player)->Phase)
     {
+    case 0:
         if (FUN_1400318f0(player) != 1)
-            goto cleanup;
-        if (!((MetaHeapView*)player)->Heap && !((AllocatorView*)player)->Allocate)
+            break;
+        if (((MetaHeapView*)player)->Heap == NULL && ((AllocatorView*)player)->Allocate == NULL)
         {
             ((InputReadyView*)player)->Ready = 0;
             FUN_140033610(player);
         }
-        if (((InputReadyView*)player)->Ready == 0)
+        if ((CriUint32)((InputReadyView*)player)->Ready > 0)
+            ((OpenPhaseView*)player)->Phase = 1;
+        else
         {
             ((OpenPhaseView*)player)->Phase = 3;
             ((CriMvPlyStateTransitionFields*)player)->Status = 2;
-            goto cleanup;
+            break;
         }
-        ((OpenPhaseView*)player)->Phase = 1;
-    }
-
-    if (((OpenPhaseView*)player)->Phase == 1)
-    {
+        // fall through
+    case 1:
         if (FUN_140031990(player) != 1)
-            goto cleanup;
+            break;
         ((OpenPhaseView*)player)->Phase = 2;
+        // fall through
+    case 2:
+        if (FUN_140032040(player) == 1)
+            ((CriMvPlyStateTransitionFields*)player)->Status = 2;
+        break;
     }
-    else if (((OpenPhaseView*)player)->Phase != 2)
-        goto cleanup;
-
-    if (FUN_140032040(player) == 1)
-        ((CriMvPlyStateTransitionFields*)player)->Status = 2;
-cleanup:
     ((LockView*)player)->Value = 0;
 }
 
@@ -4849,29 +4893,32 @@ CriBool FUN_140035db0(void* player, CriSint32 targetFrame, void* frameInfo)
 // @0x140035c80
 void* FUN_140035c80(void* player, void* output)
 {
+    // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): videoFrame, videoToken, alphaFrame, result.
+    CriMvFrameInfo videoFrame;               // left uninitialised, as in the exe; the decoder fills it
+    void* videoToken;
+    CriUint64 alphaFrame[10];                // the 0x50-byte alpha frame record
+    CriSint32 result;
     FUN_140035090(output);
     if (!crimvply_isUnderGetFrameCondition(player))
         return NULL;
-
-    CriMvFrameInfo frame = {};
-    void* frameToken = FUN_140044870(((CriMvDecoderHandleFields*)player)->VideoDecoder, &frame);
-    if (!frameToken)
-        return NULL;
-
-    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+    videoToken = FUN_140044870(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame);
+    if (videoToken != NULL)
     {
-        if (FUN_140043cb0(((CriMvDecoderHandleFields*)player)->AlphaDecoder) == 3)
+        if (((CriMvDecoderHandleFields*)player)->AlphaDecoder != NULL
+            && FUN_140043cb0(((CriMvDecoderHandleFields*)player)->AlphaDecoder) == 3)
         {
             FUN_140037950(player, "E08092600M : Alpha channel is longer than video frame. should be same.", 0);
             return NULL;
         }
-        CriUint8 alphaFrame[0x50] = {};
-        if (!FUN_140035db0(player, frame.frame_id, alphaFrame))
-            return NULL;
+        if (((CriMvDecoderHandleFields*)player)->AlphaDecoder != NULL)
+        {
+            result = FUN_140035db0(player, videoFrame.frame_id, alphaFrame);
+            if (result == 0)
+                return NULL;
+        }
+        FUN_140035260(player, output, &videoFrame, (CriUint64)(uintptr_t)videoToken, 0);
     }
-
-    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, 0);
-    return frameToken;
+    return videoToken;
 }
 #pragma optimize("", on)
 
