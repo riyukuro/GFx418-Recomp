@@ -27,6 +27,7 @@
 // The Avm* deleting destructors free only on a global delete, and AvmButton / AvmTextField / AvmStaticText are modeled.
 #define SF_AS3_AVM_INPLACE_DELETE
 #define SF_AS3_AVMBUTTON_MODEL
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -1014,40 +1015,12 @@ static void Sfr21GVRel(void* p, UPInt off)
 // SPtr<GASRefCountBase>: tagged (bit 0) pointers are weak; the count lives in the low 22 bits of +0x10
 static void Sfr21GSPtr(void* p, UPInt off)
 {
-    UPInt& v = *reinterpret_cast<UPInt*>(Sfr21At(p, off));
-    if (!v)
-        return;
-    if (v & 1)
-        v -= 1;
-    else
-    {
-        UInt32& rc = *reinterpret_cast<UInt32*>(v + 0x10);
-        if (rc & 0x3fffff)
-        {
-            --rc;
-            FUN_1423dfa20(reinterpret_cast<void*>(v));
-        }
-    }
+    reinterpret_cast<SPtr<GASRefCountBase>*>(Sfr21At(p, off))->~SPtr();
 }
 // Value: object kinds (>9) release their reference; weak references drop the shared counter
 static void Sfr21GValue(void* p, UPInt off)
 {
-    char* v = Sfr21At(p, off);
-    UInt32& flags = *reinterpret_cast<UInt32*>(v);
-    if ((flags & 0x1f) <= 9)
-        return;
-    if (flags >> 9 & 1)
-    {
-        int* w = *reinterpret_cast<int**>(v + 8);
-        if (--*w == 0)
-            Memory::pGlobalHeap->Free(w);
-        flags &= 0xfffffde0;
-        *reinterpret_cast<void**>(v + 8) = 0;
-        *reinterpret_cast<void**>(v + 0x10) = 0;
-        *reinterpret_cast<void**>(v + 0x18) = 0;
-    }
-    else
-        FUN_142521f00(v);
+    reinterpret_cast<Value*>(Sfr21At(p, off))->~Value();
 }
 static void Sfr21GCollector(void* p)
 {
