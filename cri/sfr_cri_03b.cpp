@@ -1781,6 +1781,7 @@ void FUN_140042600(void* manager, void* heap, CriSint32 index);
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: allocate a USF demux state, output table, and its paired stream joints.
 // @0x1400452b4
 void* FUN_1400452b4(void* heap, CriSint32 outputCount)
@@ -1804,16 +1805,19 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
     if (!state)
         return NULL;
     memset(state, 0, sizeof(*state));
+    state->Reserved10 = NULL;
     state->Heap = heap;
+    state->Initialized = 0;
     state->OutputCount = outputCount;
-    state->Outputs = (OutputEntry*)FUN_140027ed8(heap, (outputCount + 1) * 0x10,
+    state->Outputs = (OutputEntry*)FUN_140027ed8(heap, ((CriUint32)outputCount + 1) * 0x10,
                                                  "CriUsfDmxOut", 0);
     if (!state->Outputs)
     {
         FUN_140044f28(state);
         return NULL;
     }
-    memset(state->Outputs, 0, ((size_t)outputCount + 1) * sizeof(OutputEntry));
+    memset(state->Outputs, 0, (size_t)((CriUint32)outputCount + 1) * sizeof(OutputEntry));
+    state->Closed = 0;
     state->InputQueue = FUN_1400464c8(heap, 0, 0x80);
     if (!state->InputQueue)
     {
@@ -1826,12 +1830,15 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
         FUN_140044f28(state);
         return NULL;
     }
-    state->Outputs[outputCount].Queue = state->OutputQueue;
-    state->Outputs[outputCount].State = -1;
+    CriUint32 last = state->OutputCount;
+    state->Outputs[last].Queue = state->OutputQueue;
+    state->Outputs[last].Reserved = 0;
+    state->Outputs[last].State = -1;
     state->Running = 1;
     memset(state->Reserved30, 0, sizeof(state->Reserved30));
     return state;
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
