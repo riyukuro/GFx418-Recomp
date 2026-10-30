@@ -857,7 +857,7 @@ void FUN_1400544b0()
   pc_v2 = (char *)&DAT_1431baa30 + 0x40;  // the alternate scan; [-0x40] is the zigzag scan
   do {
     (&DAT_143fe8260)[pc_v2[-0x40]] = (char)i_v1;
-    (&DAT_143fe82a0)[*pc_v2] = (char)i_v1;
+    (&DAT_143fe8260 + 0x40)[*pc_v2] = (char)i_v1;   // DAT_143fe82a0: the exe addresses both tables from one base
     i_v1 = i_v1 + 1;
     pc_v2 = pc_v2 + 1;
   } while (i_v1 < 0x40);
