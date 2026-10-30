@@ -1139,27 +1139,29 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 namespace {
 inline UPInt TrRd(UPInt base, UPInt off) { return *reinterpret_cast<const UPInt*>(base + off); }
-// tracer -> method info -> the VM
-inline UPInt TrVM(UPInt tracer) { return TrRd(TrRd(TrRd(tracer, 0x20), 0x28), 0x20); }
-// the instance traits of one of the VM's builtin classes
-inline UPInt TrBuiltin(UPInt vm, UPInt off) { return TrRd(TrRd(vm, off), 0xc0); }
 }
 
 // The traits a tracer value stands for: undefined is void, traits values themselves, the rest their own class.
 // Class is read as Object.
-static UPInt TraceValueTraits(UPInt tracer, const Value* v)
+static SF_FORCEINLINE const Traits* TraceValueTraits(const Tracer& tr, const Value& v)
 {
-    const UPInt vm = TrVM(tracer);
-    const UInt32 k = static_cast<UInt32>(v->GetKind());
-    UPInt t;
-    if (k == 0)
-        t = TrRd(vm, 0x278);
-    else if (k == 8 || k == 9)
-        t = TrRd(reinterpret_cast<UPInt>(v), 0x10);
-    else
-        t = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), *v));
-    if (t != 0 && t == TrRd(vm, 0x1f0))
-        t = TrRd(vm, 0x1f8);
+    const Traits* t = NULL;
+    switch (v.GetKind())
+    {
+    case Value::kUndefined:
+        t = &tr.GetVM().GetITraitsVoid();
+        break;
+    case Value::kInstanceTraits:
+        t = &v.GetInstanceTraits();
+        break;
+    case Value::kClassTraits:
+        t = &v.GetClassTraits();
+        break;
+    default:
+        t = &FUN_14250ffc0(tr.GetVM(), v);
+    }
+    if (t && t == &tr.GetVM().GetClassTraitsClassClass())
+        t = &tr.GetVM().GetClassTraitsObject();
     return t;
 }
 
@@ -1259,7 +1261,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 // @0x14250fe80
 __declspec(noinline) const Traits* State::GetValueTraits(const Value& v) const
 {
-    return reinterpret_cast<const Traits*>(TraceValueTraits(reinterpret_cast<UPInt>(pTracer), &v));
+    return TraceValueTraits(*static_cast<const Tracer*>(pTracer), v);
 }
 
 }}}} // namespace Scaleform::GFx::AS3::TR
@@ -1275,7 +1277,7 @@ const Traits* Tracer::GetValueTraits(const Value& v, bool super_tr) const
     if (super_tr)
         result = CF.OriginationTraits;
     if (result == NULL)
-        result = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &v));
+        result = TR::TraceValueTraits(*this, v);
     if (super_tr && result)
         result = result->GetParent();
     return result;
@@ -1401,14 +1403,7 @@ Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm)
     return NULL;
 }
 
-// ---- Tracer word-code writers and block bookkeeping (Tracer members; the TR::State helpers below still read the
-// word code through raw offsets) ----
-namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
-namespace {
-typedef ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem> TrWordCode;   // *WCode +0x28
-inline TrWordCode& TrWCode(UPInt tracer) { return *reinterpret_cast<TrWordCode*>(TrRd(tracer, 0x28)); }
-}
-}}}} // namespace Scaleform::GFx::AS3::TR
+// ---- Tracer word-code writers and block bookkeeping ----
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1528,19 +1523,13 @@ void FUN_14251f8e0(void* self, int op, Scaleform::UPInt arg)
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 namespace {
-// Values of int, uint, Number and Boolean are never null (Tracer::IsNotNullableType, inlined).
-SF_FORCEINLINE int TrNullTypeOf(UPInt vm, UPInt traits)
+// Values of int, uint, Number and Boolean are never null (State::CanBeNull / Tracer::IsNotNullableType, inlined).
+SF_FORCEINLINE Value::TraceNullType TrNullTypeOf(const Tracer& t, const InstanceTraits::Traits& traits)
 {
-    if (traits == TrBuiltin(vm, 0x220) || traits == TrBuiltin(vm, 0x228) || traits == TrBuiltin(vm, 0x218) ||
-        traits == TrBuiltin(vm, 0x210))
+    if (&traits == &t.GetSIntType() || &traits == &t.GetUIntType() || &traits == &t.GetNumberType() ||
+        &traits == &t.GetBooleanType())
         return Value::NotNull;
     return Value::NullOrNot;
-}
-// Tracer::ReplaceOpCode: the last word written becomes op.
-SF_FORCEINLINE void TrReplaceOpCode(UPInt tracer, int op)
-{
-    TrWordCode& wcode = TrWCode(tracer);
-    wcode[wcode.GetSize() - 1] = static_cast<UInt32>(op);
 }
 }
 }}}} // namespace Scaleform::GFx::AS3::TR
@@ -1552,24 +1541,23 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 // @0x142520d80
 void State::RefineOpCodeReg1(InstanceTraits::Traits& type, Abc::Code::OpCode op, int reg_num)
 {
-    const UPInt tracer = reinterpret_cast<UPInt>(pTracer);
+    Tracer& tr = *static_cast<Tracer*>(pTracer);
     if (GetValueTraits(Registers[static_cast<UInt32>(reg_num)]) == &type)
-        TrReplaceOpCode(tracer, op);
+        tr.ReplaceOpCode(op);
     else
-        ConvertRegisterTo(reg_num, type,
-                          static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(tracer), reinterpret_cast<UPInt>(&type))));
-    static_cast<Tracer*>(pTracer)->PushNewOpCodeArg(static_cast<UInt32>(reg_num));
+        ConvertRegisterTo(reg_num, type, TrNullTypeOf(tr, type));
+    tr.PushNewOpCodeArg(static_cast<UInt32>(reg_num));
 }
 
 // The same for the operand stack top.
 // @0x142520e60
 void State::RefineOpCodeStack1(InstanceTraits::Traits& type, Abc::Code::OpCode op)
 {
-    const UPInt tracer = reinterpret_cast<UPInt>(pTracer);
+    Tracer& tr = *static_cast<Tracer*>(pTracer);
     if (GetValueTraits(OpStack.Back()) == &type)
-        TrReplaceOpCode(tracer, op);
+        tr.ReplaceOpCode(op);
     else
-        ConvertOpTo(type, static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(tracer), reinterpret_cast<UPInt>(&type))));
+        ConvertOpTo(type, TrNullTypeOf(tr, type));
 }
 
 // The same for the top two operands (the top one is popped; the one left is converted).
@@ -1579,9 +1567,9 @@ __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& t
 {
     Value popped = PopOpValue();
     if (GetValueTraits(OpStack.Back()) == &type && GetValueTraits(popped) == &type)
-        TrReplaceOpCode(reinterpret_cast<UPInt>(pTracer), op);
+        static_cast<Tracer*>(pTracer)->ReplaceOpCode(op);
     else
-        ConvertOpTo(type, static_cast<Value::TraceNullType>(TrNullTypeOf(TrVM(reinterpret_cast<UPInt>(pTracer)), reinterpret_cast<UPInt>(&type))));
+        ConvertOpTo(type, TrNullTypeOf(*static_cast<Tracer*>(pTracer), type));
 }
 
 }}}} // namespace Scaleform::GFx::AS3::TR
@@ -1668,8 +1656,8 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
 {
     Value& tv = TrMergeList(to, ms)[ind];
     const Value& fv = TrMergeList(from, ms)[ind];
-    const Traits* t1 = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &tv));
-    const Traits* t2 = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &fv));
+    const Traits* t1 = TR::TraceValueTraits(*this, tv);
+    const Traits* t2 = TR::TraceValueTraits(*this, fv);
     const Traits* nullTr = &GetVM().GetITraitsNull();
 
     if (ms == TR::msScopeStack)
