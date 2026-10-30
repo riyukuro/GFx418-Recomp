@@ -72,6 +72,7 @@ void FUN_140046784(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void FUN_14003cae0(void*);
 CriSint32 FUN_14003cff0(void*);
+CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
 void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
@@ -1971,52 +1972,47 @@ void FUN_14003cdd0(void* handle)
 // @0x14003cca0
 void FUN_14003cca0(void* handle)
 {
-    CriSint32 state, open, ready;
-    memcpy(&state, ((CriUint8*)handle) + 0x1c, sizeof(state));
-    memcpy(&open, ((CriUint8*)handle) + 0x24, sizeof(open));
-    if (state == 1)
+    struct Fields
     {
-        if (open == 1)
+        CriUint8 Reserved00[0x18];
+        CriSint32 Status;                   // 0x18
+        CriSint32 DecodeEnd;                // 0x1c
+        CriSint32 FrameReady;               // 0x20
+        CriSint32 Opened;                   // 0x24
+        CriUint8 Reserved28[0x164];
+        CriUint32 Consumed;                 // 0x18c
+        CriUint32 Buffered;                 // 0x190
+        CriUint8 Reserved194[0x10];
+        CriUint32 Additional;               // 0x1a4
+    };
+    CriSint32 i;
+    Fields* hn;
+    CriUint32 limit;
+    hn = (Fields*)handle;
+    if (hn->DecodeEnd == 1)
+    {
+        if (hn->Opened == 1)
             return;
-        FUN_14003cdd0(handle);
-        state = 0;
-        memcpy(((CriUint8*)handle) + 0x18, &state, sizeof(state));
-        memcpy(((CriUint8*)handle) + 0x1c, &state, sizeof(state));
+        FUN_14003cdd0(hn);
+        hn->Status = 0;
+        hn->DecodeEnd = 0;
     }
-    memcpy(&state, ((CriUint8*)handle) + 0x18, sizeof(state));
-    if (state == 1 || state == 2)
-        for (CriSint32 i = 0; i < 7; ++i)
-            FUN_14003cff0(handle);
+    if (hn->Status == 1 || hn->Status == 2)
+        for (i = 0; i < 7; ++i)
+            FUN_14003cff0(hn);
 
-    memcpy(&state, ((CriUint8*)handle) + 0x18, sizeof(state));
-    if (state == 1)
+    if (hn->Status == 1)
     {
-        CriUint32 pictures;
-        memcpy(&pictures, ((CriUint8*)handle) + 0x188, sizeof(pictures));
-        if (pictures >= 2)
-            state = 2;
-        else
-        {
-            memcpy(&ready, ((CriUint8*)handle) + 0x20, sizeof(ready));
-            if (ready == 1)
-                state = 2;
-        }
-        memcpy(((CriUint8*)handle) + 0x18, &state, sizeof(state));
+        if ((CriSint32)criVdecCmn_GetNumPictureData(hn) >= 2)
+            hn->Status = 2;
+        else if (hn->FrameReady == 1)
+            hn->Status = 2;
     }
-    memcpy(&state, ((CriUint8*)handle) + 0x18, sizeof(state));
-    memcpy(&ready, ((CriUint8*)handle) + 0x20, sizeof(ready));
-    if (state == 2 && ready == 1)
+    if (hn->Status == 2 && hn->FrameReady == 1)
     {
-        CriUint32 consumed, buffered;
-        memcpy(&consumed, ((CriUint8*)handle) + 0x18c, sizeof(consumed));
-        memcpy(&buffered, ((CriUint8*)handle) + 400, sizeof(buffered));
-        CriUint32 additional;
-        memcpy(&additional, ((CriUint8*)handle) + 0x1a4, sizeof(additional));
-        if (consumed <= buffered + additional)
-        {
-            state = 3;
-            memcpy(((CriUint8*)handle) + 0x18, &state, sizeof(state));
-        }
+        limit = hn->Buffered + hn->Additional;
+        if (hn->Consumed <= limit)
+            hn->Status = 3;
     }
 }
 
