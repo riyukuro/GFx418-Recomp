@@ -3001,12 +3001,11 @@ namespace Instances { namespace fl
         return true;
     }
 
-    // MS2-FUNCTIONAL: exe assigns through the out-of-line SPtr<XML> operator= 0x1423f1970
     // @0x142405640
     bool ChildGetFirst::Call(UPInt ind)
     {
         if (Result.GetPtr() == NULL)
-            Result = Element.Children[ind];
+            Result = Element.Children[ind].GetPtr();
         return true;
     }
 }}
