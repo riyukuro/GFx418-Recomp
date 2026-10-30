@@ -26,6 +26,7 @@ extern "C" void FUN_142743580(void*);       // audio channel dtor
 extern "C" void FUN_1427434d0(void*);       // array-valued set Clear
 extern "C" void FUN_142582530(void*);       // Event::~Event
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
+extern "C" void FUN_14258d0b0(void*);       // Lock::~Lock
 
 static inline void* RawDeleteTail(void* self, unsigned flags, UPInt size)
 {
@@ -74,7 +75,7 @@ void* FUN_142743ac0(void* self, unsigned flags)
     char* sound = RawField<char*>(self, 0x30);
     if (_InterlockedExchangeAdd((volatile long*)(sound + 8), -1) == 1 && sound)
         (*(void (**)(void*, unsigned))*(void**)sound)(sound, 1);
-    DeleteCriticalSection(RawFieldPtr<CRITICAL_SECTION>(self, 0x70));
+    FUN_14258d0b0(RawFieldPtr<void>(self, 0x70));
     FUN_142743580(self);
     return RawDeleteTail(self, flags, 0xa0);
 }
