@@ -2021,16 +2021,117 @@ void Classes::fl::Object::SetupSlotValues(AS3::Object&) const
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+// Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_01c). The exe inlines
+// them into the MakeObject/MakeInstance functions below.
+namespace Instances { namespace fl {
+    __forceinline Array::Array(InstanceTraits::Traits& t)
+        : Instance(t), SA(t.GetVM().GetMemoryHeap())
+    {
+    }
+
+    inline Catch::Catch(InstanceTraits::Traits& t)
+        : Instance(t)
+    {
+    }
+
+    inline Date::Date(InstanceTraits::Traits& t)
+        : Instance(t), TimeValue(0), LocalTZA(0)
+    {
+    }
+
+    inline Error::Error(InstanceTraits::Traits& t)
+        : Instance(t)
+        , message(GetVM().GetStringManager().CreateEmptyString())
+        , name(GetVM().GetStringManager().CreateEmptyString())
+        , ID(0)
+        , StackTrace(GetVM().GetStringManager().CreateEmptyString())
+    {
+        name = t.GetName();
+        GetVM().GetStackTraceASString(StackTrace);
+    }
+
+    inline Object::Object(InstanceTraits::Traits& t)
+        : Instance(t)
+    {
+    }
+
+    __forceinline QName::QName(InstanceTraits::Traits& t)
+        : Instance(t)
+        , LocalName(GetVM().GetStringManager().CreateEmptyString())
+        , Ns(&t.GetVM().GetPublicNamespace())
+    {
+    }
+
+    inline QName::QName(InstanceTraits::Traits& t, const ASString& local, Instances::Namespace* ns)
+        : Instance(t), LocalName(local), Ns(ns)
+    {
+    }
+
+    inline RegExp::RegExp(InstanceTraits::Traits& t)
+        : Instance(t)
+        , CompRegExp(NULL)
+        , MatchOffset(-1)
+        , MatchLength(0)
+        , IsGlobal(false)
+        , LastIndex(0)
+        , OptionFlags(0x800)
+        , HasNamedGroups(false)
+    {
+    }
+
+    inline XMLList::XMLList(InstanceTraits::Traits& t)
+        : Instance(t), TargetProperty(NULL)
+    {
+    }
+
+    __forceinline XML::XML(InstanceTraits::Traits& t)
+        : Object(t), Text(t.GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+
+    __forceinline XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : Object(t), Text(text), Parent(parent)
+    {
+    }
+
+    __forceinline XMLAttr::XMLAttr(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+                     const ASString& value, XML* parent)
+        : XML(t, name, parent), Data(value)
+    {
+        Ns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
+    }
+
+    inline XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+
+    inline XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+                           XML* parent)
+        : XML(t, name, parent)
+    {
+        Ns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
+    }
+
+    __forceinline XMLProcInstr::XMLProcInstr(InstanceTraits::Traits& t, const ASString& name, const ASString& data, XML* parent)
+        : XML(t, name, parent), Data(data)
+    {
+    }
+
+    inline XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+        : XML(t, text, parent)
+    {
+    }
+}} // namespace Instances::fl
+
 namespace InstanceTraits
 {
-    // MS2-FUNCTIONAL: the exe inlines the Catch constructor
     // @0x14241be30
     void fl::Catch::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Catch(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Object constructor
     // @0x14241c060
     void fl::Object::MakeObject(Value& result, Traits& t)
     {
@@ -2038,56 +2139,49 @@ namespace InstanceTraits
     }
 
     // An interface makes plain objects.
-    // MS2-FUNCTIONAL: the exe inlines the Object constructor
     // @0x14241bfd0
     void Interface::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Object(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Object constructor
     // @0x14241aaf0
     Pickable<Instances::fl::Object> Interface::MakeInstance(Interface& t)
     {
         return Pickable<Instances::fl::Object>(new(t.Alloc()) Instances::fl::Object(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Object constructor
     // @0x14241ac70
     Pickable<Instances::fl::Object> fl::Object::MakeInstance(Object& t)
     {
         return Pickable<Instances::fl::Object>(new(t.Alloc()) Instances::fl::Object(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor
     // @0x14241a500
     Pickable<Instances::fl::Array> fl::Array::MakeInstance(Array& t)
     {
         return Pickable<Instances::fl::Array>(new(t.Alloc()) Instances::fl::Array(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241bd80
     void fl::Array::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Array(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Date constructor
     // @0x14241a620
     Pickable<Instances::fl::Date> fl::Date::MakeInstance(Date& t)
     {
         return Pickable<Instances::fl::Date>(new(t.Alloc()) Instances::fl::Date(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Date constructor
     // @0x14241beb0
     void fl::Date::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::Date(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Error constructor
     // @0x14241a6a0
     __declspec(noinline) Pickable<Instances::fl::Error> fl::Error::MakeInstance(Error& t)
     {
@@ -2100,35 +2194,31 @@ namespace InstanceTraits
         result.Pick(MakeInstance(static_cast<Error&>(t)));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
     // @0x14241ad90
     Pickable<Instances::fl::RegExp> fl::RegExp::MakeInstance(RegExp& t)
     {
         return Pickable<Instances::fl::RegExp>(new(t.Alloc()) Instances::fl::RegExp(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
     // @0x14241c160
     void fl::RegExp::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::RegExp(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XML constructor
+    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241c230
     void fl::XML::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::XML(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241af80
     __declspec(noinline) Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t)
     {
         return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241b010
     Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t, AS3::Object& target_obj,
                                                               const ASString& target_prop, Instances::Namespace& target_ns)
@@ -2140,7 +2230,6 @@ namespace InstanceTraits
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLElement constructor
     // @0x14241b5b0
     Pickable<Instances::fl::XMLElement> fl::XML::MakeInstanceElement(XML& t, const Instances::Namespace& ns,
                                                                     const ASString& name, Instances::fl::XML* parent)
@@ -2148,7 +2237,6 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLElement>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLElement(t, ns, name, parent));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLAttr constructor
     // @0x14241b3e0
     Pickable<Instances::fl::XMLAttr> fl::XML::MakeInstanceAttr(XML& t, const Instances::Namespace& ns, const ASString& name,
                                                               const ASString& value, Instances::fl::XML* parent)
@@ -2156,7 +2244,6 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLAttr>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLAttr(t, ns, name, value, parent));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLText constructor
     // @0x14241b850
     Pickable<Instances::fl::XMLText> fl::XML::MakeInstanceText(XML& t, const StringDataPtr& str, Instances::fl::XML* parent)
     {
@@ -2165,14 +2252,12 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLText>(new(vm.GetMemoryHeap()) Instances::fl::XMLText(t, text, parent));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLComment constructor
     // @0x14241b500
     Pickable<Instances::fl::XMLComment> fl::XML::MakeInstanceComment(XML& t, const ASString& str, Instances::fl::XML* parent)
     {
         return Pickable<Instances::fl::XMLComment>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLComment(t, str, parent));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLProcInstr constructor
     // @0x14241b6e0
     Pickable<Instances::fl::XMLProcInstr> fl::XML::MakeInstanceProcInstr(XML& t, const ASString& name, const ASString& data,
                                                                         Instances::fl::XML* parent)
@@ -2180,7 +2265,6 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLProcInstr>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLProcInstr(t, name, data, parent));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241c2b0
     void fl::XMLList::MakeObject(Value& result, Traits& t)
     {
@@ -2190,7 +2274,6 @@ namespace InstanceTraits
 
 namespace Classes { namespace fl
 {
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor
     // @0x14241c350
     Pickable<AS3::Object> Array::MakePrototype() const
     {
@@ -2199,7 +2282,6 @@ namespace Classes { namespace fl
     }
 
     // A Date prototype gets its own traits so its constructor is Date.
-    // MS2-FUNCTIONAL: the exe inlines the Date constructor
     // @0x14241c400
     Pickable<AS3::Object> Date::MakePrototype() const
     {
@@ -2215,7 +2297,6 @@ namespace Classes { namespace fl
         return itr.MakeInstance(itr);
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the RegExp constructor
     // @0x14241c560
     Pickable<AS3::Object> RegExp::MakePrototype() const
     {
@@ -2295,7 +2376,6 @@ namespace Classes
 }
 }}} // namespace Scaleform::GFx::AS3
 
-// MS2-FUNCTIONAL: the exe inlines the Catch constructor
 // @0x14241a5b0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Catch>
 Scaleform::GFx::AS3::InstanceTraits::fl::Catch::MakeInstance(Catch& t)
@@ -3216,13 +3296,12 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x142429df0
     __declspec(noinline) void XML::prototypeGet(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
             GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
-        result = itr.MakeInstance(itr);
+        result = Pickable<XMLList>(new(itr.Alloc()) XMLList(itr));
     }
 
     // @0x142415320
@@ -3365,29 +3444,29 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the QName constructor
     // @0x142416c50
     SPtr<QName> XMLAttr::GetQName()
     {
         InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
-        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, Ns.GetPtr()));
+        Instances::Namespace* ns = Ns.GetPtr();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, ns));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the QName constructor
     // @0x142416d00
     SPtr<QName> XMLElement::GetQName()
     {
         InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
-        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, Ns.GetPtr()));
+        Instances::Namespace* ns = Ns.GetPtr();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, ns));
     }
 
     // A processing instruction's target is in the public namespace.
-    // MS2-FUNCTIONAL: the exe inlines the QName constructor
     // @0x142416db0
     SPtr<QName> XMLProcInstr::GetQName()
     {
         InstanceTraits::Traits& itr = GetVM().GetXMLSupport().GetClassTraitsQName()->GetInstanceTraits();
-        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, &GetVM().GetPublicNamespace()));
+        Instances::Namespace* ns = &GetVM().GetPublicNamespace();
+        return Pickable<QName>(new(itr.Alloc()) QName(itr, Text, ns));
     }
 
     // @0x142421c40
@@ -4252,7 +4331,6 @@ Pickable<Instances::Function> InstanceTraits::Function::FUN_14241a410(VMAbcFile&
 }
 
 // InstanceTraits::fl::QName: a new QName (empty local name, public namespace)
-// MS2-FUNCTIONAL: the exe inlines the QName constructor
 // @0x14241ace0
 Pickable<Instances::fl::QName> InstanceTraits::fl::QName::FUN_14241ace0(InstanceTraits::Traits& t)
 {
@@ -4260,7 +4338,6 @@ Pickable<Instances::fl::QName> InstanceTraits::fl::QName::FUN_14241ace0(Instance
 }
 
 // InstanceTraits::fl::XML: a new node of kind none with empty text
-// MS2-FUNCTIONAL: the exe inlines the XML constructor
 // @0x14241ae30
 __declspec(noinline) Pickable<Instances::fl::XML> InstanceTraits::fl::XML::FUN_14241ae30(InstanceTraits::Traits& t)
 {
@@ -4268,7 +4345,6 @@ __declspec(noinline) Pickable<Instances::fl::XML> InstanceTraits::fl::XML::FUN_1
 }
 
 // InstanceTraits::fl::XML: a new node of kind none holding text
-// MS2-FUNCTIONAL: the exe inlines the XML constructor
 // @0x14241aec0
 Pickable<Instances::fl::XML> InstanceTraits::fl::XML::FUN_14241aec0(InstanceTraits::Traits& t, const ASString& text,
                                                                     Instances::fl::XML* parent)
@@ -4367,14 +4443,13 @@ namespace Instances { namespace fl
 
 namespace InstanceTraits { namespace fl
 {
-    // MS2-FUNCTIONAL: the exe inlines the QName constructor
+    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241c0c0
     void QName::MakeObject(Value& result, Traits& t)
     {
         result.Pick(new(t.Alloc()) Instances::fl::QName(t));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLText constructor
     // @0x14241b7a0
     Pickable<Instances::fl::XMLText> XML::MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent)
     {
@@ -6055,3 +6130,17 @@ namespace Instances { namespace fl
 }} // namespace Instances::fl
 
 }}} // namespace Scaleform::GFx::AS3
+// MS2-PIN: ??_7Array@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431415b0
+// MS2-PIN: ??_7Catch@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143140530
+// MS2-PIN: ??_7Date@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142508
+// MS2-PIN: ??_7Error@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143141b80
+// MS2-PIN: ??_7Object@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f590
+// MS2-PIN: ??_7QName@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143140810
+// MS2-PIN: ??_7RegExp@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143141880
+// MS2-PIN: ??_7XML@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431429d0
+// MS2-PIN: ??_7XMLAttr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142dc8
+// MS2-PIN: ??_7XMLComment@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431434f8
+// MS2-PIN: ??_7XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142fa0
+// MS2-PIN: ??_7XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436d0
+// MS2-PIN: ??_7XMLProcInstr@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143330
+// MS2-PIN: ??_7XMLText@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143168
