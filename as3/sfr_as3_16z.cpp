@@ -768,13 +768,13 @@ void FUN_1424e5e80(TClassTraitsCache* self, const ASString& name, const Instance
     self->Add(name, ns, v);
 }
 
-// An ArrayLH<SPtr<>> at +0x20 grown by one reference-counted object. No caller or reference is left in the exe.
-// MS2-FUNCTIONAL: owner class unknown; raw offset
+// An ArrayLH<SPtr<Instances::Namespace> > at +0x20 grown by one namespace (the exe's Resize calls the Namespace
+// DestructArray 0x1424094f0 and Reserve 0x14241f880). No caller or reference is left in the exe.
 // @0x1424e62f0
-void FUN_1424e62f0(void* self, GASRefCountBase* p)
+void FUN_1424e62f0(void* self, Instances::Namespace* p)
 {
-    reinterpret_cast<ArrayLH<SPtr<GASRefCountBase> >*>(static_cast<char*>(self) + 0x20)
-        ->PushBack(SPtr<GASRefCountBase>(p));
+    reinterpret_cast<ArrayLH<SPtr<Instances::Namespace> >*>(static_cast<char*>(self) + 0x20)
+        ->PushBack(SPtr<Instances::Namespace>(p));
 }
 
 // TR::Block (0x28 bytes, Tracer heap): a ListNode, then the block's flags, type, entry state and code offset.
