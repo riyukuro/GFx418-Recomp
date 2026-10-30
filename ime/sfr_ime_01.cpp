@@ -21,6 +21,7 @@
 #include "../include/gfx/gfx_state.h"
 #include "../include/gfx/gfx_value.h"
 #include "../include/gfx/gfx_imemanager.h"
+#include "../include/gfx/gfx_event.h"
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
@@ -48,7 +49,7 @@ void FUN_1423d9b40(void*);
     void FUN_1423cc7c0(void*, unsigned);
     void FUN_1423cde00(void*);
     void FUN_1423cdf60(unsigned long long*);
-    unsigned long long FUN_1423daf30(void*, int);
+    __declspec(noinline) unsigned long long FUN_1423daf30(void*, int);
     void FUN_1423ccdc0(unsigned long long*, String*);
     void FUN_1423cc2d0(unsigned long long*);
     void FUN_1423cc570(unsigned long long*);
@@ -377,57 +378,55 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
 }
 
-// MS2-FUNCTIONAL: processes the executable's IME key and mouse messages, including composition cancellation.
+// MS2-FUNCTIONAL: the exe keeps the constant 1 as an immediate; ours hoists it into ebp. Same code otherwise.
+// IME key and mouse filter: a Shift key-up is sent to the movie after a VK_PROCESSKEY key-up, and the arrow or Enter keys cancel the composition and remove the input window.
 // @0x1423d0cf0
 void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
 {
-    const unsigned message = *reinterpret_cast<const unsigned*>(event + 0xc);
-    const unsigned long long key = *reinterpret_cast<const unsigned long long*>(event + 0x10);
-    if (message == 0x100 && key == 0x10) {
-        *reinterpret_cast<unsigned short*>(self + 0x14) = 1;
+    auto* bytes = reinterpret_cast<unsigned char*>(self);
+    const auto message = [event] { return *reinterpret_cast<const unsigned*>(event + 0xc); };
+    const auto key = [event] { return *reinterpret_cast<const unsigned long long*>(event + 0x10); };
+    if (message() == WM_KEYDOWN && key() == VK_SHIFT) {
+        *reinterpret_cast<unsigned short*>(bytes + 0xa0) = 1;
     }
-    if (message == 0x101 && static_cast<unsigned char>(self[0x14]) == 1 && key == 0xe5) {
-        void* child = reinterpret_cast<void*>(self[1]);
-        if (child) {
-            unsigned char notification[0x28]{};
-            *reinterpret_cast<unsigned*>(notification) = 6;
-            *reinterpret_cast<unsigned*>(notification + 8) = 0x10;
-            reinterpret_cast<void(*)(void*, const void*)>((*reinterpret_cast<void***>(child))[0x110 / sizeof(void*)])(
-                child, notification);
+    if (message() == WM_KEYUP && bytes[0xa0] == 1 && key() == VK_PROCESSKEY) {
+        void* movie = reinterpret_cast<void*>(self[1]);
+        Scaleform::GFx::KeyEvent shiftUp(Scaleform::GFx::Event::KeyUp, Scaleform::Key::Shift);
+        if (movie) {
+            reinterpret_cast<void(*)(void*, const Scaleform::GFx::Event*)>((*reinterpret_cast<void***>(movie))[0x110 / sizeof(void*)])(
+                movie, &shiftUp);
         }
     }
-    if ((message == 0x101 || message == 0x202) &&
-        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9)) {
+    if ((message() == WM_KEYUP || message() == WM_LBUTTONUP) && bytes[0xb9]) {
         reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(self))[0x110 / sizeof(void*)])(
-            self, -*reinterpret_cast<int*>(reinterpret_cast<unsigned char*>(self) + 0x64));
-        *reinterpret_cast<unsigned char*>(reinterpret_cast<unsigned char*>(self) + 0xb9) = 0;
+            self, -*reinterpret_cast<int*>(bytes + 0x64));
+        bytes[0xb9] = 0;
     }
-    const unsigned mode = static_cast<unsigned>(self[0x13]);
-    const bool inputMode = mode == 0xd00001 || (mode >= 5 && mode <= 6) || mode == 0xa10000 || mode == 0xb10000;
-    const bool clearKey = (message == 0x100 && key == 0x25) || (key >= 0x26 && key <= 0x28) || key == 0xd;
-    if (!inputMode || !clearKey) return;
-    HWND hwnd = reinterpret_cast<HWND>(self[5]);
-    HIMC context = cx18_ImmGetContext(hwnd);
-    cx18_ImmNotifyIME(context, 0x15, 4, 0);
-    cx18_ImmNotifyIME(context, 0x11, 0, 0);
+    const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
+    if (!(mode == 0xd00001 || mode == 5 || mode == 6 || mode == 0xa10000 || mode == 0xb10000)) return;
+    if ((message() != WM_KEYDOWN || key() != VK_LEFT) && key() - VK_UP > 2 && key() != VK_RETURN) return;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
+    cx18_ImmNotifyIME(context, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
+    cx18_ImmNotifyIME(context, NI_CLOSECANDIDATE, 0, 0);
     FUN_1423da320(reinterpret_cast<void*>(self[0x19]));
-    if (mode == 5 || mode == 6) {
-        INPUT input{};
+    if (*reinterpret_cast<unsigned*>(bytes + 0x98) - 5 <= 1) {
+        INPUT input;
         input.type = INPUT_KEYBOARD;
         input.ki.wVk = VK_ESCAPE;
         input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
         SendInput(1, &input, sizeof(input));
     }
-    *reinterpret_cast<unsigned short*>(*reinterpret_cast<unsigned short**>(self + 8)) = 0;
-    void* movie = reinterpret_cast<void*>(self[0x15]);
-    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-    if (values) {
+    **reinterpret_cast<unsigned short**>(self + 8) = 0;
+    {
         Scaleform::GFx::Value output;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, "RemoveInputWindow", &output, nullptr, 0);
+        void* movie = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(self[0x15]) + 0x18);
+        if (movie) {
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
+                (*reinterpret_cast<void***>(movie))[0x78 / sizeof(void*)])(
+                    movie, "RemoveInputWindow", &output, nullptr, 0);
+        }
     }
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
 }
 
 // MS2-FUNCTIONAL: dispatches the executable's IME composition and candidate-list messages by input mode.
@@ -1314,7 +1313,7 @@ void* FUN_1423ce250(unsigned long long* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: follows the executable's IME-language gate and keyboard injection sequence.
+// IME language gate: forwards the digit to the candidate list (+0xc8), or injects the digit key with SendInput. Like the exe, only type, wVk and wScan of INPUT are set.
 // @0x1423d1420
 void FUN_1423d1420(void* object, int index)
 {
@@ -1322,13 +1321,13 @@ void FUN_1423d1420(void* object, int index)
     const unsigned state = *reinterpret_cast<unsigned*>(bytes + 0x98);
     if ((state & 0xf00000) == 0 && (((state - 0x10000) & 0xfffcffff) != 0 || state == 0x40000)) {
         FUN_1423daf30(*reinterpret_cast<void**>(bytes + 0xc8), index);
-        return;
+    } else {
+        INPUT input;
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = static_cast<WORD>(index + 0x31);
+        input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(index + 0x31, MAPVK_VK_TO_VSC));
+        SendInput(1, &input, sizeof(INPUT));
     }
-    INPUT input{};
-    input.type = INPUT_KEYBOARD;
-    input.ki.wVk = static_cast<WORD>(index + 0x31);
-    input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(index + 0x31, MAPVK_VK_TO_VSC));
-    SendInput(1, &input, sizeof(INPUT));
 }
 
 // MS2-FUNCTIONAL: the exe forms values + count - 1 as (count * 32 - 32) + values; ours as (values - 32) + count * 32.
