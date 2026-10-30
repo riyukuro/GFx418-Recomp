@@ -21,6 +21,7 @@
 #include "ms2/scaleform/include/gfx/gfx_drawingcontext.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_display.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"   // ASUserData
@@ -1112,31 +1113,62 @@ static UPInt TraceValueTraits(UPInt tracer, const Value* v)
     return t;
 }
 
-// @0x142514000
-bool Sfr27TracerIsBooleanType(UPInt tracer, const Value* v)
+// Tracer::GetValueTraits(v, false) (0x14250ff00, Sfr27TracerGetValueTraits below), inlined by the Is*Type checks.
+static SF_INLINE const Traits* Sfr18TracerValueTraits(const Tracer& tr, const Value& v)
 {
-    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x210);
+    const Traits* result = NULL;
+
+    switch (v.GetKind())
+    {
+    case Value::kUndefined:
+        result = &tr.GetVoidType();
+        break;
+    case Value::kInstanceTraits:
+        result = &v.GetInstanceTraits();
+        break;
+    case Value::kClassTraits:
+        result = &v.GetClassTraits();
+        break;
+    default:
+        result = &tr.GetVM().GetValueTraits(v);
+    }
+
+    // A hack.
+    if (result && result == &tr.GetVM().GetClassTraitsClassClass())
+        result = &tr.GetVM().GetClassTraitsObject();
+
+    return result;
+}
+
+} // namespace TR
+
+// @0x142514000
+bool Tracer::IsBooleanType(const Value& v) const
+{
+    return TR::Sfr18TracerValueTraits(*this, v) == &GetBooleanType();
 }
 // @0x142514470
-bool Sfr27TracerIsNumberType(UPInt tracer, const Value* v)
+bool Tracer::IsNumberType(const Value& v) const
 {
-    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x218);
+    return TR::Sfr18TracerValueTraits(*this, v) == &GetNumberType();
 }
 // @0x142514c30
-bool Sfr27TracerIsIntType(UPInt tracer, const Value* v)
+bool Tracer::IsSIntType(const Value& v) const
 {
-    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x220);
+    return TR::Sfr18TracerValueTraits(*this, v) == &GetSIntType();
 }
 // @0x1425150c0
-bool Sfr27TracerIsUIntType(UPInt tracer, const Value* v)
+bool Tracer::IsUIntType(const Value& v) const
 {
-    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x228);
+    return TR::Sfr18TracerValueTraits(*this, v) == &GetUIntType();
 }
 // @0x142514e10
-bool Sfr27TracerIsStringType(UPInt tracer, const Value* v)
+bool Tracer::IsStringType(const Value& v) const
 {
-    return TraceValueTraits(tracer, v) == TrBuiltin(TrVM(tracer), 0x230);
+    return TR::Sfr18TracerValueTraits(*this, v) == &GetStringType();
 }
+
+namespace TR {
 
 // int, uint or Number
 // @0x142514510

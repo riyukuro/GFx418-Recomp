@@ -54,6 +54,14 @@ public:
     bool IsSIntType(const Value& v) const;                                        // 0x142514c30
     bool IsStringType(const Value& v) const;                                      // 0x142514e10
     bool IsUIntType(const Value& v) const;                                        // 0x1425150c0
+    // (appended, sfb) SDK AS3_Tracer.h inline getters: the VM of the call frame's file and its builtin types.
+    VM& GetVM() const                               { return CF.GetVM(); }
+    InstanceTraits::Traits& GetBooleanType() const  { return GetVM().GetClassTraitsBoolean().GetInstanceTraits(); }
+    InstanceTraits::Traits& GetNumberType() const   { return GetVM().GetClassTraitsNumber().GetInstanceTraits(); }
+    InstanceTraits::Traits& GetSIntType() const     { return GetVM().GetClassTraitsSInt().GetInstanceTraits(); }
+    InstanceTraits::Traits& GetUIntType() const     { return GetVM().GetClassTraitsUInt().GetInstanceTraits(); }
+    InstanceTraits::Traits& GetStringType() const   { return GetVM().GetClassTraitsString().GetInstanceTraits(); }
+    InstanceTraits::Traits& GetVoidType() const     { return GetVM().GetITraitsVoid(); }
 
     // (appended, sfr24) no exe names; public so that TR::State and VMAbcFile can call them.
     // Traces every block of the method body, then writes the word code. 0x1424f7840
