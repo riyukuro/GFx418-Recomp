@@ -2142,7 +2142,8 @@ void FUN_14001d6d0(CriUint64* array, CriSint64 index)
     --array[1];
 }
 
-// MS2-FUNCTIONAL: release the stored allocation through Scaleform's global heap.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the stored allocation through Scaleform's global heap.
 // @0x140029a10
 void FUN_140029a10(void** value)
 {
@@ -2153,6 +2154,7 @@ void FUN_140029a10(void** value)
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: copy both embedded Scaleform strings in the CRI value object.
 // @0x140029070
@@ -2269,7 +2271,8 @@ void* FUN_140028360(void* guard, CRITICAL_SECTION* section)
     return guard;
 }
 
-// MS2-FUNCTIONAL: release the referenced CRI object through its deleting virtual slot.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the referenced CRI object through its deleting virtual slot.
 // @0x140028480
 void FUN_140028480(void* object)
 {
@@ -2279,6 +2282,7 @@ void FUN_140028480(void* object)
         ((void (*)(void*, CriUint32))vtable[0])(object, 1);
     }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: restore the SoundChannelDelegate vtable and honor scalar-delete requests.
 // @0x1400284b0
@@ -2339,13 +2343,15 @@ void* FUN_140028a30(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: release a RefCountImpl target held by this pointer slot.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release a RefCountImpl target held by this pointer slot.
 // @0x140028ad0
 void FUN_140028ad0(void** slot)
 {
     if (*slot)
         FUN_14257dcb0(*slot);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: replace a RefCountImpl pointer, retaining the new target before releasing the old one.
 // @0x140028af0
@@ -2369,21 +2375,25 @@ void* FUN_140028b30(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the stored RefCountImplCore target.
 // @0x140028bb0
 void FUN_140028bb0(void** slot)
 {
     if (*slot)
         FUN_14257dcd0(*slot);
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the stored RefCountImplCore target.
 // @0x140028c20
 void FUN_140028c20(void** slot)
 {
     if (*slot)
         FUN_14257dcd0(*slot);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028c40
@@ -2407,13 +2417,15 @@ void* FUN_140028c90(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the stored RefCountImplCore target.
 // @0x140028d00
 void FUN_140028d00(void** slot)
 {
     if (*slot)
         FUN_14257dcd0(*slot);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028d20
@@ -2437,13 +2449,15 @@ void* FUN_140028d70(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: release the stored RefCountImplCore target.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// release the stored RefCountImplCore target.
 // @0x140028dd0
 void FUN_140028dd0(void** slot)
 {
     if (*slot)
         FUN_14257dcd0(*slot);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028df0
@@ -2479,7 +2493,8 @@ void* FUN_140028eb0(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: these three CRI members each release their owned heap buffer.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// these three CRI members each release their owned heap buffer.
 // @0x140029af0
 void FUN_140029af0(void** value)
 {
@@ -2490,8 +2505,10 @@ void FUN_140029af0(void** value)
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: this member releases its owned Scaleform heap buffer when non-null.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// this member releases its owned Scaleform heap buffer when non-null.
 // @0x140029b10
 void FUN_140029b10(void** value)
 {
@@ -2502,8 +2519,10 @@ void FUN_140029b10(void** value)
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: this member releases its owned Scaleform heap buffer when non-null.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// this member releases its owned Scaleform heap buffer when non-null.
 // @0x140029e20
 void FUN_140029e20(void** value)
 {
@@ -2514,8 +2533,10 @@ void FUN_140029e20(void** value)
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forward the CRI adapter's start callback when one is installed.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// forward the CRI adapter's start callback when one is installed.
 // @0x140029f20
 void FUN_140029f20(void* adapter)
 {
@@ -2526,8 +2547,10 @@ void FUN_140029f20(void* adapter)
         ((void (*)(void*))vtable[2])(target);
     }
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forward the CRI adapter's stop callback when one is installed.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// forward the CRI adapter's stop callback when one is installed.
 // @0x140029f40
 void FUN_140029f40(void* adapter)
 {
@@ -2538,8 +2561,10 @@ void FUN_140029f40(void* adapter)
         ((void (*)(void*))vtable[3])(target);
     }
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: pass the enabled state through the adapter's third callback.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// pass the enabled state through the adapter's third callback.
 // @0x140029f60
 void FUN_140029f60(void* adapter, int enabled)
 {
@@ -2550,6 +2575,7 @@ void FUN_140029f60(void* adapter, int enabled)
         ((void (*)(void*, bool))vtable[4])(target, enabled == 1);
     }
 }
+#pragma optimize("", on)
 
 static void CriArrayReserve(void** array, CriUint64* capacity, CriUint64 count, size_t elementSize)
 {

@@ -282,19 +282,23 @@ Video04GcObject** FUN_140001b10(Video04GcObject** dst, Video04GcObject** src)
     return dst;
 }
 
-// MS2-FUNCTIONAL: releases a GC pointer.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases a GC pointer.
 // @0x140001b70
 void FUN_140001b70(Video04GcObject** p)
 {
     Video04GcRelease(*p);
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the GC pointer held in the second word of a pair.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the GC pointer held in the second word of a pair.
 // @0x140001ba0
 void FUN_140001ba0(char* pair)
 {
     Video04GcRelease(*(Video04GcObject**)(pair + 8));
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: returns the value part (the address 8 bytes into the pair) stored for the key, or 0.
 // The parameters are plain pointers so the definition has external linkage: the AS2 units call it as

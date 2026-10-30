@@ -475,13 +475,15 @@ void FUN_140017880(void* receiver, std::uint64_t* atom)
     EraseVideoAtomHashEntry(&table, &key);
 }
 
-// MS2-FUNCTIONAL: decrements a live AS3 object reference and invokes the runtime release hook.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// decrements a live AS3 object reference and invokes the runtime release hook.
 // @0x140017990
 void FUN_140017990(void* object)
 {
     auto* refs = reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(object) + 0x10);
     if ((*refs & 0x3fffff) != 0) { --*refs; ReleaseAS3GcObject(object); }
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: releases the stored AS3 atom, including inline tagged integers.
 // @0x1400179b0
@@ -746,20 +748,24 @@ void* FUN_140019b60(void* object, std::uint64_t flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: invokes the stored object's callback with this closure as context.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// invokes the stored object's callback with this closure as context.
 // @0x14001b3f0
 void FUN_14001b3f0(std::uint64_t* closure)
 {
     auto* object = reinterpret_cast<std::uint64_t*>(closure[0]);
     if (object) reinterpret_cast<void(*)(void*, std::uint64_t)>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(object) + 2))(object, closure[1]);
 }
-// MS2-FUNCTIONAL: invokes the stored object's release slot.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// invokes the stored object's release slot.
 // @0x14001b880
 void FUN_14001b880(std::uint64_t* holder)
 {
     auto* object = reinterpret_cast<void*>(holder[0]);
     if (object) { auto** vtable = *reinterpret_cast<void***>(object); reinterpret_cast<void(*)(void*)>(vtable[8])(object); }
 }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: retains the replacement heap, releases the previous heap, then stores it.
 // @0x14001b8a0
 std::uint64_t* FUN_14001b8a0(std::uint64_t* holder, void* replacement)
@@ -1057,9 +1063,11 @@ __declspec(noinline) void* FUN_14001afd0(void* object) { return object ? static_
 // @0x14001afe0
 __declspec(noinline) void* FUN_14001afe0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x30 : nullptr; }
 
-// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the retained pointer stored in the holder.
 // @0x14001b980
 void FUN_14001b980(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
 // @0x14001b9a0
 std::uint64_t* FUN_14001b9a0(std::uint64_t* holder, void* replacement)
@@ -1074,9 +1082,11 @@ std::uint64_t* FUN_14001b9f0(std::uint64_t* holder, std::uint64_t replacement)
 {
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
 }
-// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the retained pointer stored in the holder.
 // @0x14001ba50
 void FUN_14001ba50(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: retains the replacement, releases the previous pointer, then stores it.
 // @0x14001ba70
 std::uint64_t* FUN_14001ba70(std::uint64_t* holder, void* replacement)
@@ -1100,12 +1110,16 @@ std::uint64_t* FUN_14001bc00(std::uint64_t* holder, void* replacement)
     if (replacement) FUN_14257dc30(replacement);
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the shared stream stored in the holder.
 // @0x14001bc40
 void FUN_14001bc40(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
-// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the shared stream stored in the holder.
 // @0x14001bca0
 void FUN_14001bca0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
 // @0x14001bcc0
 std::uint64_t* FUN_14001bcc0(std::uint64_t* holder, void* replacement)
@@ -1114,18 +1128,22 @@ std::uint64_t* FUN_14001bcc0(std::uint64_t* holder, void* replacement)
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder));
     *holder = reinterpret_cast<std::uintptr_t>(replacement); return holder;
 }
-// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the shared stream stored in the holder.
 // @0x14001bd70
 void FUN_14001bd70(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: releases the old shared stream and replaces it without retaining the new stream.
 // @0x14001bd90
 std::uint64_t* FUN_14001bd90(std::uint64_t* holder, std::uint64_t replacement)
 {
     if (*holder) FUN_14257dcb0(reinterpret_cast<void*>(*holder)); *holder = replacement; return holder;
 }
-// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the shared stream stored in the holder.
 // @0x14001bdf0
 void FUN_14001bdf0(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: retains the replacement shared stream and releases the old stream.
 // @0x14001be10
 std::uint64_t* FUN_14001be10(std::uint64_t* holder, void* replacement)
@@ -1180,15 +1198,21 @@ std::uint64_t* FUN_14001bac0(std::uint64_t* holder, std::uint64_t replacement)
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
     *holder = replacement; return holder;
 }
-// MS2-FUNCTIONAL: releases the retained pointer stored in the holder.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the retained pointer stored in the holder.
 // @0x14001bb40
 void FUN_14001bb40(void** holder) { if (*holder) FUN_14257dcd0(*holder); }
-// MS2-FUNCTIONAL: releases the shared stream stored in the holder.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the shared stream stored in the holder.
 // @0x14001bb80
 void FUN_14001bb80(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
-// MS2-FUNCTIONAL: releases the Scaleform resource stored in the holder.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the Scaleform resource stored in the holder.
 // @0x14001bd20
 void FUN_14001bd20(void** holder) { if (*holder) FUN_1425a4030(*holder); }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: requests the global Scaleform log when no video log is installed.
 // @0x14001bf90
 void FUN_14001bf90(void* object)
@@ -1463,7 +1487,8 @@ void FUN_14001b460(std::uint8_t optional)
         if (optional) FUN_140026db0();
     }
 }
-// MS2-FUNCTIONAL: finalizes CRI movie work and its heap on the final reference release.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// finalizes CRI movie work and its heap on the final reference release.
 // @0x14001b4f0
 void FUN_14001b4f0()
 {
@@ -1477,6 +1502,7 @@ void FUN_14001b4f0()
         criHeap_Finalize();
     }
 }
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: allocates one 16 KiB read buffer per stream and frees partial allocations on failure.
 // @0x14001b550
 std::uint64_t FUN_14001b550(void* state, int count, std::uint32_t chunkSize)
