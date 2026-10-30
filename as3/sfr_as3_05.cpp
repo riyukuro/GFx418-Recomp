@@ -592,8 +592,12 @@ template struct ThunkFunc1<Instances::fl_display::DisplayObject, 36, const Value
 template struct ThunkFunc0<Instances::fl_display::BitmapData, 10, const Value>;
 // thunk 0x142438270: Instances::fl_display::DisplayObject::scaleZGet
 template struct ThunkFunc0<Instances::fl_display::DisplayObject, 37, Value::Number>;
+// Instances::fl_display::BitmapData::draw argument 3 default
+template <> struct ThunkMethodDefault<Instances::fl_display::BitmapData, 11, 3, const ASString&>
+{
+    SF_INLINE static ASString Get(StringManager& sm) { return sm.CreateConstString("null"); }
+};
 // thunk 0x1424382e0: Instances::fl_display::BitmapData::draw
-// MS2-FUNCTIONAL: not matched: the exe frame is set up through rsp rather than r11 and is 26 bytes longer (376 against 350); same template body
 template struct ThunkFunc6<Instances::fl_display::BitmapData, 11, const Value, Instances::fl::Object*, Instances::fl_geom::Matrix*, Instances::fl_geom::ColorTransform*, const ASString&, Instances::fl_geom::Rectangle*, bool>;
 // thunk 0x142438460: Instances::fl_display::DisplayObject::scaleZSet
 template struct ThunkFunc1<Instances::fl_display::DisplayObject, 38, const Value, Value::Number>;
