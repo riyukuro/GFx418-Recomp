@@ -3030,7 +3030,7 @@ void FUN_140016060(void*, void* instance, void* traits, void* context, int hasVa
     Scaleform::GFx::AS3::Value undefinedValue;
     auto* stored = hasValue ? value : &undefinedValue;
     reinterpret_cast<void(*)(char*, void*, const Scaleform::GFx::AS3::Value*)>(DAT_143b27678)(
-        reinterpret_cast<char*>(DAT_143b27680) + offset, context, stored);
+        *reinterpret_cast<int*>(&DAT_143b27680) + reinterpret_cast<char*>(offset), context, stored);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
