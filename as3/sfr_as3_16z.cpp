@@ -759,11 +759,11 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
 
 class Tracer;
 
-// TClassTraitsCache::Add, out of line.
-// MS2-FUNCTIONAL: MultinameHash::Add is inline in the header; a free function at its exe address
+// TClassTraitsCache::Add, out of line (MultinameHash::Add is inline in the header; a free function at its exe
+// address). The value is taken by const reference, as the SDK's Add does.
 // @0x1424e5e80
 void FUN_1424e5e80(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns,
-                   ClassTraits::Traits* v)
+                   ClassTraits::Traits* const& v)
 {
     self->Add(name, ns, v);
 }
