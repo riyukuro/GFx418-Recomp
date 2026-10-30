@@ -210,6 +210,33 @@ struct ImageInfo : public RefCountBase<ImageInfo, StatAmp_ProfileFrame>
     void Write(File& str, UInt32 version) const;
 };
 
+// The AMP server state (Amp_ProfileFrame.h). exe vftable 0x1431921e0.
+class ServerState : public RefCountBase<ServerState, StatAmp_ProfileFrame>
+{
+public:
+    UInt32                  StateFlags;
+    SInt32                  ProfileLevel;
+    StringLH                ConnectedApp;
+    StringLH                ConnectedFile;
+    StringLH                AaMode;
+    StringLH                StrokeType;
+    StringLH                CurrentLocale;
+    ArrayLH<String>         Locales;
+    float                   CurveTolerance;
+    float                   CurveToleranceMin;
+    float                   CurveToleranceMax;
+    float                   CurveToleranceStep;
+    UInt64                  CurrentFileId;
+    UInt32                  CurrentLineNumber;
+
+    ServerState();
+    ServerState& operator=(const ServerState& rhs);
+    bool operator!=(const ServerState& rhs) const;
+
+    void        Read(File& str, UInt32 version);
+    void        Write(File& str, UInt32 version) const;
+};
+
 // One frame of profile data. 4.1.18 (AMP stream version 31) has no Gc* timings or root counts.
 class ProfileFrame : public RefCountBase<ProfileFrame, StatAmp_ProfileFrame>
 {

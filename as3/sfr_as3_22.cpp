@@ -41,7 +41,6 @@ extern "C" void* DAT_143b15f60;
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 // The vftables below are the tables themselves: their users store the table's address (the exe's lea), not its slot 0.
 extern ExeDecl<void*> DAT_1431921e0;
-#define AS3TextRecordVtable DAT_1431921e0
 extern ExeDecl<void*> DAT_1431921b0;
 #define AS3MovieImageDataVtable ((void*)&DAT_1431921b0)
 extern ExeDecl<void*> DAT_143192170;
@@ -172,6 +171,8 @@ namespace Scaleform {
 // MS2-PIN: ??_7ImageInfo@AMP@GFx@Scaleform@@6B@ 0x1431921c0
 // MS2-PIN: ??_7?$RefCountBase@VProfileFrame@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921d0
 // MS2-PIN: ??_7ProfileFrame@AMP@GFx@Scaleform@@6B@ 0x1431921d0
+// MS2-PIN: ??_7?$RefCountBase@VServerState@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921e0
+// MS2-PIN: ??_7ServerState@AMP@GFx@Scaleform@@6B@ 0x1431921e0
 // MS2-PIN: ??_7FunctionDesc@AMP@GFx@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7?$RefCountBase@UFunctionDesc@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7MarkerInfo@MovieProfile@AMP@GFx@Scaleform@@6B@ 0x14318f048
@@ -1923,13 +1924,6 @@ extern "C" void FUN_142690a20(void* setObject, void* allocator, std::int64_t req
     }
 }
 // The following stream and movie record helpers remain in the same Scaleform namespace.
-void ResizeStringArray(void**, std::size_t);
-static void ReadMovieBytes(void* stream, void* destination, std::size_t size)
-{
-    auto** vtable = *reinterpret_cast<void***>(stream);
-    reinterpret_cast<void (*)(void*, void*, std::size_t)>(vtable[10])(stream, destination, size);
-}
-
 // @0x14268c190
 void GFx::AMP::FuncTreeItem::Read(File& str, UInt32 version)
 {
@@ -1964,40 +1958,36 @@ void GFx::AMP::ImageInfo::Read(File& str, UInt32 version)
     AtlasRight = str.ReadUInt32();
 }
 
-// MS2-FUNCTIONAL: reads the versioned image resource fields and its array of narrow-string labels.
 // @0x14268e140
-void ReadImageResourceRecord(void* object, void* stream, unsigned version)
+void GFx::AMP::ServerState::Read(File& str, UInt32 version)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    ReadMovieBytes(stream, bytes + 0x10, 4);
-    if (version > 0x13)
-        ReadMovieBytes(stream, bytes + 0x14, 4);
-    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x18));
-    if (version > 4)
-        ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x20));
-    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x28));
-    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x30));
-    ::Scaleform::GFx::AMP::readString(*static_cast<::Scaleform::File*>(stream), reinterpret_cast<::Scaleform::String*>(bytes + 0x38));
-    std::uint32_t count = 0;
-    ReadMovieBytes(stream, &count, 4);
-    ResizeStringArray(reinterpret_cast<void**>(bytes + 0x40), count);
-    auto* strings = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x40));
-    for (std::uint32_t i = 0; i < count; ++i) {
-        std::uint32_t length = 0;
-        ReadMovieBytes(stream, &length, 4);
-        for (std::uint32_t j = 0; j < length; ++j) {
-            unsigned char ch = 0;
-            ReadMovieBytes(stream, &ch, 1);
-            FUN_142585f70(strings + static_cast<std::size_t>(i) * 8, static_cast<signed char>(ch));
-        }
+    StateFlags = str.ReadUInt32();
+    if (version >= 20)
+    {
+        ProfileLevel = static_cast<SInt32>(str.ReadUInt32());
     }
-    ReadMovieBytes(stream, bytes + 0x58, 4);
-    ReadMovieBytes(stream, bytes + 0x5c, 4);
-    ReadMovieBytes(stream, bytes + 0x60, 4);
-    ReadMovieBytes(stream, bytes + 0x64, 4);
-    if (version > 9) {
-        ReadMovieBytes(stream, bytes + 0x68, 8);
-        ReadMovieBytes(stream, bytes + 0x70, 4);
+    readString(str, &ConnectedApp);
+    if (version >= 5)
+    {
+        readString(str, &ConnectedFile);
+    }
+    readString(str, &AaMode);
+    readString(str, &StrokeType);
+    readString(str, &CurrentLocale);
+    UInt32 size = str.ReadUInt32();
+    Locales.Resize(size);
+    for (UInt32 i = 0; i < size; ++i)
+    {
+        readString(str, &Locales[i]);
+    }
+    CurveTolerance = ReadFloat(str);
+    CurveToleranceMin = ReadFloat(str);
+    CurveToleranceMax = ReadFloat(str);
+    CurveToleranceStep = ReadFloat(str);
+    if (version >= 10)
+    {
+        CurrentFileId = ReadUInt64(str);
+        CurrentLineNumber = str.ReadUInt32();
     }
 }
 
@@ -2331,20 +2321,22 @@ void GFx::AMP::MovieProfile::Merge(const MovieProfile& rhs)
     FunctionTreeStats->Merge(*rhs.FunctionTreeStats);
 }
 
-// MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
 // @0x14268a870
-void* FindTreeNodeByKey(void* node, int key)
+const GFx::AMP::FuncTreeItem* GFx::AMP::FuncTreeItem::GetTreeItem(UInt32 treeItemId) const
 {
-    auto* bytes = static_cast<unsigned char*>(node);
-    if (*reinterpret_cast<int*>(bytes + 0x28) == key)
-        return node;
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < childCount; ++i) {
-        if (void* found = FindTreeNodeByKey(children[i], key))
-            return found;
+    if (treeItemId == TreeItemId)
+    {
+        return this;
     }
-    return nullptr;
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        const FuncTreeItem* childItem = Children[i]->GetTreeItem(treeItemId);
+        if (childItem != NULL)
+        {
+            return childItem;
+        }
+    }
+    return NULL;
 }
 
 // @0x14268ac40
@@ -2695,12 +2687,6 @@ void ReserveLocalPointerArrayB(void** array, void* heapOwner, std::size_t reques
     ReserveHeapArray(array, heapOwner, requested, 8, true);
 }
 
-// MS2-FUNCTIONAL: preserves the local heap allocation and four-element capacity rounding.
-// @0x14268e600
-void ReserveLocalPointerArrayC(void** array, void* heapOwner, std::size_t requested)
-{
-    ReserveHeapArray(array, heapOwner, requested, 8, true);
-}
 
 static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested, std::size_t stride)
 {
@@ -2755,32 +2741,6 @@ void ResizeStrongPointerArrayB(void** array, std::size_t requested)
     ResizeStrongPointerArray(array, array, requested);
 }
 
-// MS2-FUNCTIONAL: releases truncated string storage and default-constructs every newly added element.
-// @0x14268e8c0
-void ResizeStringArray(void** array, std::size_t requested)
-{
-    const std::size_t oldSize = reinterpret_cast<std::size_t>(array[1]);
-    const std::size_t capacity = reinterpret_cast<std::size_t>(array[2]);
-    auto* elements = static_cast<unsigned long long*>(array[0]);
-    if (requested < oldSize) {
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        for (std::size_t i = oldSize; i > requested; --i) {
-            const auto encoded = elements[i - 1];
-            if (!encoded) continue;
-            auto* data = reinterpret_cast<unsigned char*>(encoded & ~3ull);
-            if (InterlockedDecrement(reinterpret_cast<volatile long*>(data + 8)) == 0)
-                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
-        }
-        if (requested < (capacity >> 1))
-            ReserveLocalPointerArrayA(array, array, requested);
-    } else if (capacity <= requested) {
-        ReserveLocalPointerArrayA(array, array, requested + (requested >> 2));
-    }
-    elements = static_cast<unsigned long long*>(array[0]);
-    array[1] = reinterpret_cast<void*>(requested);
-    for (std::size_t i = oldSize; i < requested; ++i)
-        new (elements + i) Scaleform::String();
-}
 }
 
 namespace Scaleform {
@@ -3068,22 +3028,6 @@ void CheckExpandAS3CachedSet(void** set, void* owner)
         FUN_1427478c0(set, owner, table[1] * 2 + 2);
 }
 
-// MS2-FUNCTIONAL: decrements every encoded object's reference count, frees objects released by the array, then frees the backing buffer.
-// @0x142687170
-void DestroyStrongReferenceArray(void** array)
-{
-    auto* elements = static_cast<unsigned long long*>(array[0]);
-    const std::size_t count = reinterpret_cast<std::size_t>(array[1]);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    for (std::size_t i = count; i != 0; --i) {
-        const auto encoded = elements[i - 1];
-        auto* object = reinterpret_cast<unsigned char*>(encoded & ~3ull);
-        auto* refs = reinterpret_cast<volatile long*>(object + 8);
-        if (encoded && InterlockedDecrement(refs) == 0)
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
-    }
-    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, elements);
-}
 
 
 static void WriteImageStream(void* stream, const void* data, unsigned size)
@@ -3249,12 +3193,6 @@ void GFx::AMP::writeString(File& file, const String& str)
     }
 }
 
-static void WriteStreamBytes(void* stream, const void* data, std::size_t size)
-{
-    auto** vtable = *reinterpret_cast<void***>(stream);
-    reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, data, size);
-}
-
 // @0x14268fb40
 void GFx::AMP::ProfileFrame::Write(File& str, UInt32 version) const
 {
@@ -3401,29 +3339,35 @@ void GFx::AMP::MovieInstructionStats::ScriptBufferStats::Write(File& str, UInt32
     }
 }
 
-// MS2-FUNCTIONAL: serializes the complete text record, including version-gated strings and 64-bit timing fields.
 // @0x142690480
-void WriteTextRecord(const void* record, void* stream, unsigned version)
+void GFx::AMP::ServerState::Write(File& str, UInt32 version) const
 {
-    auto* src = static_cast<const unsigned char*>(record);
-    WriteStreamBytes(stream, src + 0x10, 4);
-    if (version > 0x13)
-        WriteStreamBytes(stream, src + 0x14, 4);
-    ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + 0x18));
-    if (version > 4)
-        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + 0x20));
-    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
-        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), *reinterpret_cast<const Scaleform::String*>(src + offset));
-    const unsigned count = *reinterpret_cast<const unsigned*>(src + 0x48);
-    WriteStreamBytes(stream, &count, 4);
-    auto* strings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(src + 0x40));
-    for (unsigned i = 0; i < count; ++i)
-        ::Scaleform::GFx::AMP::writeString(*static_cast<::Scaleform::File*>(stream), strings[i]);
-    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) })
-        WriteStreamBytes(stream, src + offset, 4);
-    if (version > 9) {
-        WriteStreamBytes(stream, src + 0x68, 8);
-        WriteStreamBytes(stream, src + 0x70, 4);
+    WriteUInt32(str, StateFlags);
+    if (version >= 20)
+    {
+        WriteUInt32(str, static_cast<UInt32>(ProfileLevel));
+    }
+    writeString(str, ConnectedApp);
+    if (version >= 5)
+    {
+        writeString(str, ConnectedFile);
+    }
+    writeString(str, AaMode);
+    writeString(str, StrokeType);
+    writeString(str, CurrentLocale);
+    WriteUInt32(str, static_cast<UInt32>(Locales.GetSize()));
+    for (UPInt i = 0; i < Locales.GetSize(); ++i)
+    {
+        writeString(str, Locales[i]);
+    }
+    WriteFloat(str, CurveTolerance);
+    WriteFloat(str, CurveToleranceMin);
+    WriteFloat(str, CurveToleranceMax);
+    WriteFloat(str, CurveToleranceStep);
+    if (version >= 10)
+    {
+        WriteUInt64(str, CurrentFileId);
+        WriteUInt32(str, CurrentLineNumber);
     }
 }
 
@@ -3959,18 +3903,6 @@ void GFx::AMP::MovieFunctionStats::Merge(const MovieFunctionStats& other)
     }
 }
 
-static bool SameAs3String(const Scaleform::String* left, const Scaleform::String* right)
-{
-    const std::size_t length = left->GetLength();
-    if (length != right->GetLength())
-        return false;
-    const auto leftBits = *reinterpret_cast<const std::uintptr_t*>(left);
-    const auto rightBits = *reinterpret_cast<const std::uintptr_t*>(right);
-    const auto* leftChars = reinterpret_cast<const unsigned char*>((leftBits & ~std::uintptr_t(3)) + 12);
-    const auto* rightChars = reinterpret_cast<const unsigned char*>((rightBits & ~std::uintptr_t(3)) + 12);
-    return std::memcmp(leftChars, rightChars, length) == 0;
-}
-
 static void CopyAs3StrongArray(void** destinationArray, void* const* sourceArray)
 {
     const std::size_t count = reinterpret_cast<const std::size_t*>(sourceArray)[1];
@@ -4074,72 +4006,72 @@ GFx::AMP::MovieProfile& GFx::AMP::MovieProfile::operator=(const MovieProfile& rh
     return *this;
 }
 
-// MS2-FUNCTIONAL: compares a text record's strings, string array, scalar identity, and near-equal geometry values.
+// The String != String of SF_String.h (SFstrcmp); sf_string.h only has the const char* compare.
+static inline bool operator!=(const String& lhs, const String& rhs)
+{
+    return SFstrcmp(lhs.ToCStr(), rhs.ToCStr()) != 0;
+}
+
 // @0x142687620
-long long TextRecordEquivalent(const void* leftRecord, const void* rightRecord)
+bool GFx::AMP::ServerState::operator!=(const ServerState& rhs) const
 {
-    auto* left = static_cast<const unsigned char*>(leftRecord);
-    auto* right = static_cast<const unsigned char*>(rightRecord);
-    if (*reinterpret_cast<const std::uint32_t*>(left + 0x10) != *reinterpret_cast<const std::uint32_t*>(right + 0x10) ||
-        *reinterpret_cast<const std::uint32_t*>(left + 0x14) != *reinterpret_cast<const std::uint32_t*>(right + 0x14))
-        return 1;
-    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x20), std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
-        if (!SameAs3String(reinterpret_cast<const Scaleform::String*>(left + offset),
-                           reinterpret_cast<const Scaleform::String*>(right + offset)))
-            return 1;
-    const std::size_t stringCount = *reinterpret_cast<const std::size_t*>(left + 0x48);
-    if (stringCount != *reinterpret_cast<const std::size_t*>(right + 0x48))
-        return 1;
-    auto* leftStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(left + 0x40));
-    auto* rightStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(right + 0x40));
-    for (std::size_t i = 0; i < stringCount; ++i)
-        if (!SameAs3String(leftStrings + i, rightStrings + i))
-            return 1;
-    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64) }) {
-        const float difference = *reinterpret_cast<const float*>(left + offset) - *reinterpret_cast<const float*>(right + offset);
-        if (fabsf(difference) > 0.0001)
-            return 1;
+    if (StateFlags != rhs.StateFlags) return true;
+    if (ProfileLevel != rhs.ProfileLevel) return true;
+    if (ConnectedApp != rhs.ConnectedApp) return true;
+    if (ConnectedFile != rhs.ConnectedFile) return true;
+    if (AaMode != rhs.AaMode) return true;
+    if (StrokeType != rhs.StrokeType) return true;
+    if (CurrentLocale != rhs.CurrentLocale) return true;
+    if (Locales.GetSize() != rhs.Locales.GetSize()) return true;
+    for (UPInt i = 0; i < Locales.GetSize(); ++i)
+    {
+        if (Locales[i] != rhs.Locales[i]) return true;
     }
-    return (*reinterpret_cast<void* const*>(left + 0x68) == *reinterpret_cast<void* const*>(right + 0x68) &&
-            *reinterpret_cast<const std::uint32_t*>(left + 0x70) == *reinterpret_cast<const std::uint32_t*>(right + 0x70)) ? 0 : 1;
+    if (Alg::Abs(CurveTolerance - rhs.CurveTolerance) > 0.0001) return true;
+    if (Alg::Abs(CurveToleranceMin - rhs.CurveToleranceMin) > 0.0001) return true;
+    if (Alg::Abs(CurveToleranceMax - rhs.CurveToleranceMax) > 0.0001) return true;
+    if (Alg::Abs(CurveToleranceStep - rhs.CurveToleranceStep) > 0.0001) return true;
+    if (CurrentFileId != rhs.CurrentFileId) return true;
+    if (CurrentLineNumber != rhs.CurrentLineNumber) return true;
+
+    return false;
 }
 
-// MS2-FUNCTIONAL: copies the record's scalar fields and strings, resizes its owned string list, then assigns each element.
 // @0x142687540
-void* CopyTextRecord(void* destination, const void* source)
+GFx::AMP::ServerState& GFx::AMP::ServerState::operator=(const ServerState& rhs)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<const unsigned char*>(source);
-    *reinterpret_cast<unsigned*>(dst + 0x10) = *reinterpret_cast<const unsigned*>(src + 0x10);
-    *reinterpret_cast<unsigned*>(dst + 0x14) = *reinterpret_cast<const unsigned*>(src + 0x14);
-    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x20), std::size_t(0x28), std::size_t(0x30), std::size_t(0x38) })
-        *reinterpret_cast<Scaleform::String*>(dst + offset) = *reinterpret_cast<const Scaleform::String*>(src + offset);
-    const std::size_t count = *reinterpret_cast<const std::size_t*>(src + 0x48);
-    ResizeStringArray(reinterpret_cast<void**>(dst + 0x40), count);
-    auto* dstStrings = static_cast<Scaleform::String*>(*reinterpret_cast<void**>(dst + 0x40));
-    auto* srcStrings = static_cast<const Scaleform::String*>(*reinterpret_cast<void* const*>(src + 0x40));
-    for (std::size_t i = 0; i < count; ++i)
-        dstStrings[i] = srcStrings[i];
-    for (std::size_t offset : { std::size_t(0x58), std::size_t(0x5c), std::size_t(0x60), std::size_t(0x64), std::size_t(0x70) })
-        *reinterpret_cast<unsigned*>(dst + offset) = *reinterpret_cast<const unsigned*>(src + offset);
-    *reinterpret_cast<unsigned long long*>(dst + 0x68) = *reinterpret_cast<const unsigned long long*>(src + 0x68);
-    return destination;
+    StateFlags = rhs.StateFlags;
+    ProfileLevel = rhs.ProfileLevel;
+    ConnectedApp = rhs.ConnectedApp;
+    ConnectedFile = rhs.ConnectedFile;
+    AaMode = rhs.AaMode;
+    StrokeType = rhs.StrokeType;
+    CurrentLocale = rhs.CurrentLocale;
+    Locales.Resize(rhs.Locales.GetSize());
+    for (UPInt i = 0; i < Locales.GetSize(); ++i)
+    {
+        Locales[i] = rhs.Locales[i];
+    }
+    CurveTolerance = rhs.CurveTolerance;
+    CurveToleranceMin = rhs.CurveToleranceMin;
+    CurveToleranceMax = rhs.CurveToleranceMax;
+    CurveToleranceStep = rhs.CurveToleranceStep;
+    CurrentFileId = rhs.CurrentFileId;
+    CurrentLineNumber = rhs.CurrentLineNumber;
+    return *this;
 }
 
-// MS2-FUNCTIONAL: initializes the refcounted text record, all five local-heap strings, and its empty child state.
 // @0x1426870e0
-void* InitializeTextRecord(void* object)
+GFx::AMP::ServerState::ServerState() :
+    StateFlags(0),
+    ProfileLevel(0),
+    CurveTolerance(0.0f),
+    CurveToleranceMin(0.0f),
+    CurveToleranceMax(0.0f),
+    CurveToleranceStep(0.0f),
+    CurrentFileId(0),
+    CurrentLineNumber(0)
 {
-    auto* fields = static_cast<unsigned long long*>(object);
-    *reinterpret_cast<void***>(object) = &AS3TextRecordVtable;
-    *reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 8) = 1;
-    fields[2] = 0;
-    for (std::size_t i = 3; i <= 7; ++i)
-        new (fields + i) Scaleform::StringLH();
-    for (std::size_t i = 8; i <= 13; ++i)
-        fields[i] = 0;
-    *reinterpret_cast<unsigned*>(fields + 14) = 0;
-    return object;
 }
 
 namespace GFx { namespace AMP {
@@ -4750,3 +4682,36 @@ template void Scaleform::ArrayDataBase<Ms2FuncStats, Scaleform::AllocatorGH<Ms2F
 // @0x1426860f0
 template void Scaleform::Alg::QuickSortSliced(Scaleform::Array<Ms2FuncStats>& arr, Scaleform::UPInt start, Scaleform::UPInt end,
                                               bool (*less)(const Ms2FuncStats&, const Ms2FuncStats&));
+
+// COMDATs of the ServerState Locales array (ArrayLH<String>).
+typedef Scaleform::ArrayDataBase<Scaleform::String, Scaleform::AllocatorLH<Scaleform::String, 2>, Scaleform::ArrayDefaultPolicy> Ms2StringLHArrayBase;
+// symbols.tsv binds ~ArrayDataBase<String, AllocatorLH> to its other copy (0x1422fc040); this one is the
+// copy sfr_kernel_03n calls as FUN_142687170.
+// @0x142687170
+extern "C" void FUN_142687170(Ms2StringLHArrayBase* locales)
+{
+    Scaleform::AllocatorLH<Scaleform::String, 2>::DestructArray(locales->Data, locales->Size);
+    Scaleform::AllocatorLH<Scaleform::String, 2>::Free(locales->Data);
+}
+// ArrayData<String, AllocatorLH>::Resize. symbols.tsv binds Reserve<String, AllocatorLH> to 0x1422fdbd0, but this
+// copy calls the Reserve at 0x14268e600 (the Ptr<ImageInfo> one, folded), so it reaches it by VA.
+extern "C" void FUN_14268e600(Ms2StringLHArrayBase* locales, const void* pheapAddr, Scaleform::UPInt newCapacity);
+// @0x14268e8c0
+extern "C" void FUN_14268e8c0(Ms2StringLHArrayBase* locales, Scaleform::UPInt newSize)
+{
+    typedef Scaleform::AllocatorLH<Scaleform::String, 2> Allocator;
+    Scaleform::UPInt oldSize = locales->Size;
+    if (newSize < oldSize)
+    {
+        Allocator::DestructArray(locales->Data + newSize, oldSize - newSize);
+        if (newSize < (locales->Policy.GetCapacity() >> 1))
+            FUN_14268e600(locales, locales, newSize);
+    }
+    else if (newSize >= locales->Policy.GetCapacity())
+    {
+        FUN_14268e600(locales, locales, newSize + (newSize >> 2));
+    }
+    locales->Size = newSize;
+    if (newSize > oldSize)
+        Allocator::ConstructArray(locales->Data + oldSize, newSize - oldSize);
+}
