@@ -2501,16 +2501,13 @@ void FUN_140050480(longlong a1,int a2,cri_u64 a3)
 // @0x140050520
 void FUN_140050520(void)
 {
-  int i_v1;
-  cri_u32 u_v2;
-  longlong l_v3;
-  cri_u32 *pu_v4;
-  ulonglong u_v5;
-  uint u_v6;
-  ulonglong u_v7;
+  struct Work { cri_u64 Handle; cri_u64 Reserved08; cri_u8 Area[0xf0]; };
+  struct Slot { cri_u32 State; cri_u32 Id; cri_u32 Reserved08; };
+  int i;
+  longlong h;
   
   DAT_143c49100 = DAT_143c49100 + 1;
-  if ((DAT_143c49100 == 1) && (i_v1 = FUN_1400501f0(), 1 < i_v1)) {
+  if ((DAT_143c49100 == 1) && (1 < (int)FUN_1400501f0())) {
     DAT_143c490f8 = (cri_u64)FUN_1400682e0(&DAT_143badb88,0x30);
     // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
     DAT_143c490f0 = ((cri_u64)&DAT_143badf80 + 0x5f) & ~(cri_u64)0x7f;
@@ -2519,27 +2516,17 @@ void FUN_140050520(void)
     memset((void *)DAT_143c490e0,0,0x300);
     DAT_143badbdc = 3;
     FUN_1400677f0();
-    u_v5 = 0;
-    DAT_143badb84 = cri_conv(DAT_143badbdc);
-    if (0 < DAT_143badbdc) {
-      pu_v4 = cri_conv((&DAT_143badbb8 + 4));
-      u_v7 = u_v5;
-      while( true ) {
-        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x100 + 0x10,0x7c);  // per-thread work area at entry + 0x10
-        *(longlong *)(u_v5 + (longlong)DAT_143c490e0) = l_v3;
-        if (l_v3 == 0) break;
-        pu_v4[-1] = 0xffffffff;
-        u_v2 = FUN_140067f40(l_v3);
-        u_v6 = (int)u_v7 + 1;
-        u_v7 = (ulonglong)u_v6;
-        *pu_v4 = u_v2;
-        u_v5 = u_v5 + 0x100;
-        pu_v4 = pu_v4 + 3;
-        if (DAT_143badbdc <= (int)u_v6) {
-          return;
-        }
+    DAT_143badb84 = DAT_143badbdc;
+    for (i = 0; i < DAT_143badbdc; i++) {
+      // per-thread work area at entry + 0x10
+      h = FUN_140067890(((Work *)DAT_143c490e0)[i].Area,0x7c);
+      ((Work *)DAT_143c490e0)[i].Handle = h;
+      if (h == 0) {
+        FUN_14004ff50(0,0xff030602);
+        return;
       }
-      FUN_14004ff50(0,0xff030602);
+      ((Slot *)&DAT_143badbb8)[i].State = 0xffffffff;
+      ((Slot *)&DAT_143badbb8)[i].Id = FUN_140067f40(h);
     }
   }
   return;
@@ -3497,32 +3484,31 @@ void FUN_140051d20(longlong *a1,int *a2,int *a3)
 // @0x140051d90
 cri_u32 FUN_140051d90(longlong *a1)
 {
-  cri_u32 u_v1;
-  longlong l_v2;
-  __declspec(align(16)) cri_u8 frame_[32];
-  int &loc_28 = *(int *)(frame_ + 0);
-  cri_u32 &uStack_24 = *(cri_u32 *)(frame_ + 4);
-  int &loc_20 = *(int *)(frame_ + 8);
-  cri_u8 (&loc_18)[16] = *(cri_u8 (*)[16])(frame_ + 16);
-  
-  (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
+  struct Buf { cri_u64 Ptr; int Len; };
+  struct Info { cri_u64 Lo; cri_u64 Hi; };
+  cri_u32 result;
+  longlong found;
+  Buf buf;
+  Info info;
+
+  (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&buf);
   while( true ) {
-    if (loc_20 < 4) {
-      (**(code **)(*a1 + 0x38))(a1,1,&loc_28);
+    if (buf.Len < 4) {
+      (**(code **)(*a1 + 0x38))(a1,1,&buf);
       return 0;
     }
-    l_v2 = FUN_1400530c0(CONCAT44(uStack_24,loc_28),loc_20,0xffffffff);
-    if (l_v2 != 0) break;
-    FUN_140069020(&loc_28,loc_20 + -3,&loc_28,loc_18);
-    (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
-    (**(code **)(*a1 + 0x38))(a1,1,loc_18);
-    (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
+    found = FUN_1400530c0(buf.Ptr,buf.Len,0xffffffff);
+    if (found != 0) break;
+    FUN_140069020(&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),&buf,&info);
+    (**(code **)(*a1 + 0x40))(a1,0,&buf);
+    (**(code **)(*a1 + 0x38))(a1,1,&info);
+    (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&buf);
   }
-  u_v1 = FUN_140053000(l_v2);
-  FUN_140069020(&loc_28,(int)l_v2 - loc_28,&loc_28,loc_18);
-  (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
-  (**(code **)(*a1 + 0x38))(a1,1,loc_18);
-  return u_v1;
+  result = FUN_140053000(found);
+  FUN_140069020(&buf,(cri_u32)((int)found - (int)buf.Ptr),&buf,&info);
+  (**(code **)(*a1 + 0x40))(a1,0,&buf);
+  (**(code **)(*a1 + 0x38))(a1,1,&info);
+  return result;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -4249,7 +4235,9 @@ int FUN_140052fa0(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053000
-long FUN_140053000(cri_u8 *a1)
+// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
+// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
+__declspec(noinline) inline long FUN_140053000(cri_u8 *a1)
 {
   if (((((cri_u32)a1[0] << 8) | a1[1]) << 8 | a1[2]) != 1) {
     return 0;
@@ -4278,7 +4266,9 @@ longlong FUN_140053030(longlong a1,int a2,int a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400530c0
-longlong FUN_1400530c0(longlong a1,int a2,int a3)
+// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
+// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
+__declspec(noinline) inline longlong FUN_1400530c0(longlong a1,int a2,int a3)
 {
   cri_u8 *buf = (cri_u8 *)a1;
   cri_u32 code = 0xffffff00;
