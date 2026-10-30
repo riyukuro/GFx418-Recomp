@@ -759,7 +759,8 @@ Double TextField::GetY() const
 // @0x1425b9360
 UInt32 TextField::GetTextColor32() const
 {
-    return pDocument->GetDefaultTextFormat()->GetColor32() & 0xFFFFFFu;
+    Color c(pDocument->GetDefaultTextFormat()->GetColor32());
+    return (((UInt32)c.GetRed() << 8 | c.GetGreen()) << 8) | c.GetBlue();
 }
 
 // The formatted text's size in pixels.
@@ -847,9 +848,10 @@ bool TextField::IsTabable() const
     {
         if (HasAvmObject())
             return GetAvmObjImpl()->ToAvmTextFieldBase()->IsTabable();
-        return true;
     }
-    return tabEnabled == InteractiveObject::Mask_TabEnabled;
+    else if (tabEnabled != InteractiveObject::Mask_TabEnabled)
+        return false;
+    return true;
 }
 
 // @0x1425b9770
@@ -903,16 +905,18 @@ bool TextField::OnMouseWheelEvent(int mwDelta)
 }
 
 // Whether mouse mouseIndex is over the zone of urlRange still (false once another zone overlapping it is hit).
+// MS2-FUNCTIONAL 0x1425b9c20: same loop; the exe saves rbx/rdi only after the empty-array check (shrink-wrapped prolog)
 // @0x1425b9c20
 bool TextField::IsUrlTheSame(unsigned mouseIndex, const Range& urlRange)
 {
     if (!pCSSData)
         return true;
     RangeDataArray<CSSHolderBase::UrlZone>& zones = pCSSData->UrlZones;
-    for (unsigned i = 0; i < zones.Count(); ++i)
+    unsigned n = unsigned(zones.Count());
+    for (unsigned i = 0; i < n; ++i)
     {
         const RangeData<CSSHolderBase::UrlZone>& zone = zones[i];
-        if (zone.Index < urlRange.NextIndex() && urlRange.Index < zone.NextIndex() &&
+        if (urlRange.NextIndex() > zone.Index && zone.NextIndex() > urlRange.Index &&
             pCSSData->MouseState[mouseIndex].UrlZoneIndex != i + 1)
             return false;
     }
@@ -924,11 +928,11 @@ bool TextField::IsUrlTheSame(unsigned mouseIndex, const Range& urlRange)
 static inline const Render::PointF& MouseLastPositionOf(MovieImpl* proot, unsigned mouseIndex)
 {
     const MouseState* pms =
-        mouseIndex < 4 ? reinterpret_cast<const MouseState*>(proot->MouseState0_1260) + mouseIndex : NULL;
+        mouseIndex >= 4 ? NULL : reinterpret_cast<const MouseState*>(proot->MouseState0_1260) + mouseIndex;
     return pms->GetLastPosition();
 }
 
-// MS2-FUNCTIONAL 0x1425b9cc0: same mouse point through the inverse world matrix; the exe calls the out-of-line TransformByInverse
+// MS2-FUNCTIONAL 0x1425b9cc0: same code; the exe loads the two identity-matrix rows in the other order
 // @0x1425b9cc0
 bool TextField::IsUrlUnderMouseCursor(unsigned mouseIndex, Render::PointF* ppnt, Range* purlRangePos)
 {
@@ -938,7 +942,8 @@ bool TextField::IsUrlUnderMouseCursor(unsigned mouseIndex, Render::PointF* ppnt,
     Render::PointF mousePos = MouseLastPositionOf(proot, mouseIndex);
     Matrix worldMat;
     GetWorldMatrix(&worldMat);
-    Render::PointF pnt = worldMat.TransformByInverse(mousePos);
+    Render::PointF pnt(Render::PointF::NoInit);
+    worldMat.TransformByInverse(&pnt, mousePos);
     if (ppnt)
         *ppnt = pnt;
     return pDocument->IsUrlAtPoint(pnt.x, pnt.y, purlRangePos);
