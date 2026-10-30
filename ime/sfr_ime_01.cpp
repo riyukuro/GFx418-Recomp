@@ -3034,7 +3034,8 @@ unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned lon
 // 0 when any step fails.
 // MS2-FUNCTIONAL: the exe masks the major byte after the shift (shl; and 0xff000000), ours before it.
 // @0x1423cb260
-unsigned FUN_1423cb260()
+unsigned FUN_1423cb260();
+static __forceinline unsigned Ime01ImeVersion()
 {
     HKL layout = GetKeyboardLayout(0);
     char fileName[0x400];
@@ -3070,6 +3071,11 @@ unsigned FUN_1423cb260()
         }
     }
     return 0;
+}
+
+unsigned FUN_1423cb260()
+{
+    return Ime01ImeVersion();
 }
 
 // MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
@@ -5534,79 +5540,66 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
 // @0x1423cbe90
 void FUN_1423cbe90(long long* manager, unsigned language)
 {
+    struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+    struct ProfileRecord { unsigned char pad[0x10]; String text1; String text2; unsigned mode; unsigned layout; };
     auto* bytes = reinterpret_cast<unsigned char*>(manager);
-    void* provider = reinterpret_cast<void*>(manager[0xf]);
-    if (!provider) return;
-    auto** vtable = reinterpret_cast<void**>(manager[0]);
-    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>(vtable[4])(
+    if (!manager[0xf]) return;
+    const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>((*reinterpret_cast<void***>(manager))[4])(
         manager, static_cast<unsigned short>(language));
     *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
     FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), mode);
     wchar_t locale[0x104];
-    if (!GetLocaleInfoW(static_cast<unsigned short>(language), LOCALE_SLANGUAGE, locale, 0x104)) {
-        reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
-            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
-        provider = reinterpret_cast<void*>(manager[0xf]);
-        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[0x60 / sizeof(void*)])(
-            provider, "Unsupported");
+    if (!GetLocaleInfoW(MAKELCID(LOWORD(language), SORT_DEFAULT), LOCALE_SLANGUAGE, locale, 0x104)) {
+        const DWORD error = GetLastError();
+        reinterpret_cast<void(*)(void*, DWORD, const char*)>((*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)])(
+            manager, error, "GFxIME Error: Error Initializing Input Language Name ");
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x60 / sizeof(void*)])(
+            reinterpret_cast<void*>(manager[0xf]), "Unsupported");
         return;
     }
-    {
-        String localeText(locale);
-        provider = reinterpret_cast<void*>(manager[0xf]);
-        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(provider))[0x78 / sizeof(void*)])(
-            provider, localeText.ToCStr());
-    }
-    auto& flags = *reinterpret_cast<unsigned*>(bytes + 0x88);
-    flags = 0x1000000;
+    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x78 / sizeof(void*)])(
+        reinterpret_cast<void*>(manager[0xf]), String(locale).ToCStr());
+    *reinterpret_cast<unsigned*>(bytes + 0x88) = 0x1000000;
     if (!(language & 0xe0000000)) {
-        struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
-        const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x160);
-        const auto* records = reinterpret_cast<const LayoutRecord*>(manager[0x2b]);
-        for (unsigned i = 0; i < count; ++i) {
-            if (records[i].layoutId == (language >> 16)) {
-                String layoutText(records[i].layoutText);
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), layoutText);
+        unsigned i = 0;
+        for (; i < *reinterpret_cast<unsigned*>(bytes + 0x160); ++i) {
+            if ((language >> 16) == reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutId) {
+                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager),
+                              String(reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutText));
                 FUN_1423cb660(manager);
                 return;
             }
         }
-        String localeText(locale);
-        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), localeText);
+        FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), String(locale));
     } else {
-        const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0xd0);
-        for (unsigned i = 0; i < count; ++i) {
-            auto* entry = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-            if (*reinterpret_cast<unsigned*>(entry + 0x28) != language) continue;
-            flags = *reinterpret_cast<unsigned*>(entry + 0x20);
-            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2) {
-                String text(*reinterpret_cast<String*>(entry + 0x18));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+            if (language == reinterpret_cast<ProfileRecord*>(manager[0x17])[i].layout) {
+                *reinterpret_cast<unsigned*>(bytes + 0x88) = reinterpret_cast<ProfileRecord*>(manager[0x17])[i].mode;
+                if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 2)
+                    FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager),
+                                  reinterpret_cast<ProfileRecord*>(manager[0x17])[i].text2);
+                if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1)
+                    FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager),
+                                  reinterpret_cast<ProfileRecord*>(manager[0x17])[i].text1);
+                FUN_1423cb660(manager);
+                *reinterpret_cast<unsigned*>(bytes + 0x188) = 0;
+                if (*reinterpret_cast<unsigned*>(bytes + 0x88) == 4) {
+                    const unsigned version = Ime01ImeVersion();
+                    *reinterpret_cast<unsigned*>(bytes + 0x188) = version;
+                    FUN_1423ca660(reinterpret_cast<void*>(manager[0xf]), version);
+                }
+                break;
             }
-            if (reinterpret_cast<unsigned*>(manager[0x32])[i] == 1) {
-                entry = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-                String text(*reinterpret_cast<String*>(entry + 0x10));
-                FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), text);
-            }
-            FUN_1423cb660(manager);
-            *reinterpret_cast<unsigned*>(bytes + 0x188) = 0;
-            if (flags == 4) {
-                const unsigned version = FUN_1423cb260();
-                *reinterpret_cast<unsigned*>(bytes + 0x188) = version;
-                FUN_1423ca660(reinterpret_cast<void*>(manager[0xf]), version);
-            }
-            break;
         }
-        if (flags == 0x1000000) {
-            String unsupported("Not Supported");
-            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), unsupported);
-        }
+        if (*reinterpret_cast<unsigned*>(bytes + 0x88) == 0x1000000)
+            FUN_1423ccdc0(reinterpret_cast<unsigned long long*>(manager), String("Not Supported"));
     }
     const unsigned currentMode = *reinterpret_cast<unsigned*>(bytes + 0x84);
     if (currentMode == 0x400 || currentMode == 0x2000) return;
+    const unsigned flags = *reinterpret_cast<unsigned*>(bytes + 0x88);
     if (flags == 0x1000000 || (flags & 0xf00000)) return;
-    provider = reinterpret_cast<void*>(manager[0xf]);
-    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(provider))[0x98 / sizeof(void*)])(provider);
+    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(manager[0xf]))[0x98 / sizeof(void*)])(
+        reinterpret_cast<void*>(manager[0xf]));
 }
 
 // MS2-FUNCTIONAL: ITfInputProcessorProfileActivationSink::OnActivated: refreshes the mode and locale label, then
