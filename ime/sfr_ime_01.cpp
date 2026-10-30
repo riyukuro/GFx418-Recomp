@@ -820,6 +820,16 @@ HRESULT FUN_1423da8b0(void*, void* argument, void* value)
     return result;
 }
 
+// ITfSource (msctf.h): the TSF sink advise interface, queried with IID_ITfSource (DAT_1431c51e8).
+#ifndef CONNECT_E_NOCONNECTION
+#define CONNECT_E_NOCONNECTION static_cast<HRESULT>(0x80040200L)  // olectl.h
+#endif
+struct ImeTfSource : IUnknown
+{
+    virtual HRESULT STDMETHODCALLTYPE AdviseSink(REFIID riid, IUnknown* punk, DWORD* pdwCookie) = 0;
+    virtual HRESULT STDMETHODCALLTYPE UnadviseSink(DWORD dwCookie) = 0;
+};
+
 // Holds one COM interface and releases it (vtable slot 2) when it goes out of scope, including during unwind.
 struct Unk_ImeComRef
 {
@@ -1499,45 +1509,36 @@ void* FUN_1423dbcb0(unsigned long long* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: performs the executable's interface query, value probe, reset callback, and release sequence.
 // @0x1423db000
 void FUN_1423db000(unsigned long long* object)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(object);
-    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1c);
-    if (*key == 0xffffffff) return;
-    void* source = reinterpret_cast<void*>(object[5]);
-    void* result = 0;
-    auto** sourceVtable = *reinterpret_cast<void***>(source);
-    const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
-    if (hr >= 0) {
-        auto** resultVtable = *reinterpret_cast<void***>(result);
-        const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-        if (status == static_cast<int>(0x80040200u))
-            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
-        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    if (*reinterpret_cast<DWORD*>(bytes + 0x1c) != 0xffffffff) {
+        ImeTfSource* source;
+        if (SUCCEEDED(reinterpret_cast<IUnknown*>(object[5])->QueryInterface(
+                *reinterpret_cast<const IID*>(DAT_1431c51e8), reinterpret_cast<void**>(&source)))) {
+            if (source->UnadviseSink(*reinterpret_cast<DWORD*>(bytes + 0x1c)) == CONNECT_E_NOCONNECTION)
+                reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+            source->Release();
+        }
+        *reinterpret_cast<DWORD*>(bytes + 0x1c) = 0xffffffff;
     }
-    *key = 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: same queried interface sequence, with this event record's key at +0x18.
 // @0x1423db060
 void FUN_1423db060(unsigned long long* object)
 {
-    unsigned* key = reinterpret_cast<unsigned*>(object + 3);
-    if (*key == 0xffffffff) return;
-    void* source = reinterpret_cast<void*>(object[5]);
-    void* result = 0;
-    auto** sourceVtable = *reinterpret_cast<void***>(source);
-    const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
-    if (hr >= 0) {
-        auto** resultVtable = *reinterpret_cast<void***>(result);
-        const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-        if (status == static_cast<int>(0x80040200u))
-            reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
-        reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    if (*reinterpret_cast<DWORD*>(bytes + 0x18) != 0xffffffff) {
+        ImeTfSource* source;
+        if (SUCCEEDED(reinterpret_cast<IUnknown*>(object[5])->QueryInterface(
+                *reinterpret_cast<const IID*>(DAT_1431c51e8), reinterpret_cast<void**>(&source)))) {
+            if (source->UnadviseSink(*reinterpret_cast<DWORD*>(bytes + 0x18)) == CONNECT_E_NOCONNECTION)
+                reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[2])(object);
+            source->Release();
+        }
+        *reinterpret_cast<DWORD*>(bytes + 0x18) = 0xffffffff;
     }
-    *key = 0xffffffff;
 }
 
 // the class destructor is shared and recovered; opaque allocator vtable dispatch uses Scaleform's equivalent Memory facade.
@@ -1970,48 +1971,39 @@ int FUN_1423d6b70(void* self)
     return success;
 }
 
-// MS2-FUNCTIONAL: queries the event result and clears the pending composition when the host rejects it.
 // @0x1423d7610
 void FUN_1423d7610(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1b8);
-    if (*key == 0xffffffff) return;
-    void* source = *reinterpret_cast<void**>(bytes + 0x1d0);
-    void* result = nullptr;
-    if (source) {
-        auto** vtable = *reinterpret_cast<void***>(source);
-        int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
-        if (hr >= 0) {
-            auto** resultVtable = *reinterpret_cast<void***>(result);
-            const int status = reinterpret_cast<int(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-            if (status == static_cast<int>(0x80040200u))
-                (*reinterpret_cast<void(***)(void*)>(bytes + 0x1a0))[2](bytes + 0x1a0);  // the embedded interface at +0x1a0
-            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    ImeTfSource* source = nullptr;
+    if (*reinterpret_cast<DWORD*>(bytes + 0x1b8) != 0xffffffff) {
+        if (IUnknown* manager = *reinterpret_cast<IUnknown**>(bytes + 0x1d0)) {
+            if (SUCCEEDED(manager->QueryInterface(*reinterpret_cast<const IID*>(DAT_1431c51e8),
+                                                  reinterpret_cast<void**>(&source)))) {
+                if (source->UnadviseSink(*reinterpret_cast<DWORD*>(bytes + 0x1b8)) == CONNECT_E_NOCONNECTION)
+                    reinterpret_cast<IUnknown*>(bytes + 0x1a0)->Release();  // the embedded sink at +0x1a0
+                source->Release();
+            }
         }
+        *reinterpret_cast<DWORD*>(bytes + 0x1b8) = 0xffffffff;
     }
-    *key = 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: queries and acknowledges the second executable-tracked composition key.
 // @0x1423d7690
 void FUN_1423d7690(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    unsigned* key = reinterpret_cast<unsigned*>(bytes + 0x1b0);
-    if (*key == 0xffffffff) return;
-    void* source = *reinterpret_cast<void**>(bytes + 0x1d0);
-    void* result = nullptr;
-    if (source) {
-        auto** vtable = *reinterpret_cast<void***>(source);
-        const int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(vtable[0])(source, DAT_1431c51e8, &result);
-        if (hr >= 0) {
-            auto** resultVtable = *reinterpret_cast<void***>(result);
-            reinterpret_cast<void(*)(void*, unsigned)>(resultVtable[4])(result, *key);
-            reinterpret_cast<void(*)(void*)>(resultVtable[2])(result);
+    if (*reinterpret_cast<DWORD*>(bytes + 0x1b0) != 0xffffffff) {
+        if (IUnknown* manager = *reinterpret_cast<IUnknown**>(bytes + 0x1d0)) {
+            ImeTfSource* source;
+            if (SUCCEEDED(manager->QueryInterface(*reinterpret_cast<const IID*>(DAT_1431c51e8),
+                                                  reinterpret_cast<void**>(&source)))) {
+                source->UnadviseSink(*reinterpret_cast<DWORD*>(bytes + 0x1b0));
+                source->Release();
+            }
         }
+        *reinterpret_cast<DWORD*>(bytes + 0x1b0) = 0xffffffff;
     }
-    *key = 0xffffffff;
 }
 
 // @0x1423dac70
