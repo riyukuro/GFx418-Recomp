@@ -2501,10 +2501,10 @@ CriBool CriMvEasyPlayer::isEndReadFile(void)
     return end;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400233c0
 void CriMvEasyPlayer::executeFileCloseServer(void)
 {
+    CriMvFileReaderInterface::AsyncStatus close_status;
     if (freader == NULL || data_type == 2)
     {
         return;
@@ -2517,7 +2517,8 @@ void CriMvEasyPlayer::executeFileCloseServer(void)
     }
     if (unk4c0 == 5 && freader != NULL && data_type == 1)
     {
-        switch (freader->GetCloseStatus())
+        close_status = freader->GetCloseStatus();
+        switch (close_status)
         {
         case CriMvFileReaderInterface::ASYNC_STATUS_COMPLETE:
             file_closing = 0;
@@ -2545,7 +2546,6 @@ void CriMvEasyPlayer::executeFileCloseServer(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400235a0
 void CriMvEasyPlayer::executeFileOpenServer(void)
 {
@@ -2591,14 +2591,14 @@ void CriMvEasyPlayer::executeFileOpenServer(void)
                 {
                     file_read_end = fsize - file_offset;
                 }
-                else if ((CriSint64)(file_offset + file_range) > fsize)
-                {
-                    setNormalErrorStatus("E10090801M: Given file range overruns the file size. "
-                                         "Check the parameters of SetFileRange() ");
-                    return;
-                }
                 else
                 {
+                    if ((CriSint64)(file_offset + file_range) > fsize)
+                    {
+                        setNormalErrorStatus("E10090801M: Given file range overruns the file size. "
+                                             "Check the parameters of SetFileRange() ");
+                        return;
+                    }
                     file_read_end = file_range;
                 }
                 freader->Seek(file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
@@ -2703,12 +2703,13 @@ void CriMvEasyPlayer::detachCenterVoice(void)
     attached_center_voice_track = -1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
 // @0x140023b10
 void CriMvEasyPlayer::AttachSubAudioInterface(CriMvSoundInterface* subsound, CriError& err)
 {
+    CriSint32 plystat;
     err = CRIERR_OK;
-    switch (FUN_1400310b0(mvply))
+    plystat = FUN_1400310b0(mvply);
+    switch (plystat)
     {
     case 0:
     case 1:
@@ -2882,11 +2883,16 @@ CriUint64 CriMvEasyPlayer::CalcTimeFromFrameId(CriSint32 frame_id, CriUint64 uni
     return count;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
 // @0x140024120
 CriSint32 CriMvEasyPlayer::SearchNextEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type,
                                                       CriMvEventPoint* eventinfo, CriError& err)
 {
+    // VC9 lays the locals out by a hash of their names; these names give the exe's slots.
+    CriMvEventPoint* p;             // the event point being checked
+    CriUint32 i;
+    CriFloat32 ms;                  // the requested time in ms
+    CriFloat32 time;                // the event point's time in ms
+    CriMvCuePointInfo* cueinfo;
     CriSint32 frame_id = -1;
     err = CRIERR_OK;
     memset(eventinfo, 0, sizeof(CriMvEventPoint));
@@ -2896,28 +2902,26 @@ CriSint32 CriMvEasyPlayer::SearchNextEventPointByTime(CriUint64 count, CriUint64
         err = CRIERR_NG;
         return frame_id;
     }
-    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
+    cueinfo = &mvply->cuepoint;
     if (cueinfo == NULL)
     {
         err = CRIERR_NG;
         return frame_id;
     }
-    CriFloat32 time_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
-    CriUint32 i;
+    ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
     for (i = 0; i < cueinfo->num_eventpoint; i++)
     {
-        CriMvEventPoint* ep = &cueinfo->eventtable[i];
-        CriFloat32 ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
-        if (time_ms >= ep_ms)
+        p = &cueinfo->eventtable[i];
+        time = (CriFloat32)p->time * 1000.0f / (CriFloat32)p->tunit;
+        if (ms >= time)
         {
             continue;
         }
-        if (ep->type != type && type != -1)
+        if (p->type != type && type != -1)
         {
             continue;
         }
-        CriMvEventPoint found = *ep;
-        *eventinfo = found;
+        *eventinfo = *p;
         break;
     }
     if (i == cueinfo->num_eventpoint)
@@ -2928,11 +2932,17 @@ CriSint32 CriMvEasyPlayer::SearchNextEventPointByTime(CriUint64 count, CriUint64
     return frame_id;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
 // @0x140024360
 CriSint32 CriMvEasyPlayer::SearchPrevEventPointByTime(CriUint64 count, CriUint64 unit, CriSint32 type,
                                                       CriMvEventPoint* eventinfo, CriError& err)
 {
+    // VC9 lays the locals out by a hash of their names; these names give the exe's slots.
+    CriMvEventPoint* p;             // the event point being checked
+    CriUint32 i;
+    CriFloat32 ms;                  // the requested time in ms
+    CriFloat32 ep_ms;               // the event point's time in ms
+    CriMvEventPoint* best;          // the last matching event point before the requested time
+    CriMvCuePointInfo* cueinfo;
     CriSint32 frame_id = -1;
     err = CRIERR_OK;
     memset(eventinfo, 0, sizeof(CriMvEventPoint));
@@ -2942,23 +2952,23 @@ CriSint32 CriMvEasyPlayer::SearchPrevEventPointByTime(CriUint64 count, CriUint64
         err = CRIERR_NG;
         return frame_id;
     }
-    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
-    CriMvEventPoint* prev = NULL;
+    cueinfo = &mvply->cuepoint;
+    best = NULL;
     if (cueinfo == NULL)
     {
         err = CRIERR_NG;
         return frame_id;
     }
-    CriFloat32 time_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
-    for (CriUint32 i = 0; i < cueinfo->num_eventpoint; i++)
+    ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    for (i = 0; i < cueinfo->num_eventpoint; i++)
     {
-        CriMvEventPoint* ep = &cueinfo->eventtable[i];
-        CriFloat32 ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
-        if (time_ms > ep_ms)
+        p = &cueinfo->eventtable[i];
+        ep_ms = (CriFloat32)p->time * 1000.0f / (CriFloat32)p->tunit;
+        if (ms > ep_ms)
         {
-            if (ep->type == type || type == -1)
+            if (p->type == type || type == -1)
             {
-                prev = ep;
+                best = p;
             }
         }
         else
@@ -2966,12 +2976,11 @@ CriSint32 CriMvEasyPlayer::SearchPrevEventPointByTime(CriUint64 count, CriUint64
             break;
         }
     }
-    if (prev == NULL)
+    if (best == NULL)
     {
         return frame_id;
     }
-    CriMvEventPoint found = *prev;
-    *eventinfo = found;
+    *eventinfo = *best;
     frame_id = CalcFrameIdFromTime(eventinfo->time, eventinfo->tunit);
     return frame_id;
 }
