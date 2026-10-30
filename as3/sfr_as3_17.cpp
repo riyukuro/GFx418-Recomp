@@ -3193,20 +3193,17 @@ bool Sfr33SplitQualifiedName(const UByte* self, const char* qname, ASString& pkg
 // TR::State::ConvertOpTo: the operand stack top (+0x38) becomes a value of traits tr.
 // MS2-FUNCTIONAL 0x1424f1e50: the exe inlines the weak-reference release of the temporary Value (ours calls ReleaseWeakRef).
 // @0x1424f1e50
-void Sfr33StateConvertOpTo(UByte* st, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
+void TR::State::ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
-    Value v(tr, isNull);
-    ArrayDH<Value>& os = *reinterpret_cast<ArrayDH<Value>*>(st + 0x38);
-    os[os.GetSize() - 1].Assign(v);
+    OpStack.Back().Assign(Value(tr, isNull));
 }
 
 // TR::State::ConvertRegisterTo: register ind (+0x18) becomes a value of traits tr.
 // MS2-FUNCTIONAL 0x1424f1ed0: the exe inlines the weak-reference release of the temporary Value (ours calls ReleaseWeakRef).
 // @0x1424f1ed0
-void Sfr33StateConvertRegisterTo(UByte* st, UInt32 ind, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
+void TR::State::ConvertRegisterTo(UInt32 ind, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
-    Value v(tr, isNull);
-    (*reinterpret_cast<ArrayDH<Value>*>(st + 0x18))[ind].Assign(v);
+    Registers[ind].Assign(Value(tr, isNull));
 }
 
 

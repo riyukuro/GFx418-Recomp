@@ -188,7 +188,8 @@ public:
     Value PopOpValue();                     // 0x14251cd30
     // (sfr24) the operand stack top (or register ind) becomes a value of type tr, null or not as nt says.
     void ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType nt);                          // 0x1424f1e50
-    void ConvertRegisterTo(AbsoluteIndex ind, InstanceTraits::Traits& tr, Value::TraceNullType nt); // 0x1424f1ed0
+    // (sfb) the exe zero-extends a 32-bit register index (mov ecx,edx), not an AbsoluteIndex.
+    void ConvertRegisterTo(UInt32 ind, InstanceTraits::Traits& tr, Value::TraceNullType nt);        // 0x1424f1ed0
     // (appended, sfr24) where FindProp found the property.
     enum ScopeType { stScopeStack, stStoredScope, stGlobalObject };
 
