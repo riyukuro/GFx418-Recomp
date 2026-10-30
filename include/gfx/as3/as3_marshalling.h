@@ -589,7 +589,8 @@ void ThunkFunc5<T, N, R, A0, A1, A2, A3, A4>::Func(const ThunkInfo&, VM& vm, con
     const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs5<R, A0, A1, A2, A3, A4> args(vm, result, argc, argv, ThunkMakeDefs5<T, N, A0, A1, A2, A3, A4>(vm.GetStringManager()));
+    const ThunkDefs5<A0, A1, A2, A3, A4> defs = ThunkMakeDefs5<T, N, A0, A1, A2, A3, A4>(vm.GetStringManager());
+    ThunkArgs5<R, A0, A1, A2, A3, A4> args(vm, result, argc, argv, defs);
     if (vm.IsException())
         return;
     (self.*Method)(args.r, args.a0, args.a1, args.a2, args.a3, args.a4);
