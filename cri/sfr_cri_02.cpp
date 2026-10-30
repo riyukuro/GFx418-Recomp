@@ -1,8 +1,11 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): the rest of the Scaleform GFx 4.1.18 Video player glue
 // (VideoPlayerImpl, the decoders and readers over CRI, 0x14002a0e0-0x14002e548). Our own source, written from the exe;
-// the leaked SDK copies were only used to name things. The Video add-on lib was built with VS2012, so it can only be
-// functional with our toolset. The CRI Movie 3.07.01 internals after it (VS2008 SP1) are sfr_cri_02c.
+// the leaked SDK copies were only used to name things. The Video add-on lib was built with VS2012 Update 4, and so is
+// this unit (MS2-TOOLSET: vc11, cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or
+// variadic templates. clang-cl compiles it as before. The CRI Movie 3.07.01 internals after it (VS2008 SP1) are
+// sfr_cri_02c.
 // MS2-UNIT: sfr_cri_02
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14002a0e0-0x14002e548 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -1996,6 +1999,12 @@ void* FUN_14002d3c0(void*, size_t size)
     return allocate(heap, size, flags);
 }
 
+// The exe's heap-release helpers below call and return instead of tail-calling: favor-size codegen (/Os). The rest of
+// the unit matches the /Ot default; only cl 17.00 sees the pragma.
+#if defined(_MSC_VER) && _MSC_VER == 1700
+#pragma optimize("s", on)
+#endif
+
 // MS2-FUNCTIONAL: return a non-null allocation to the global Scaleform heap.
 // @0x14002d3f0
 void FUN_14002d3f0(void* allocation)
@@ -2072,6 +2081,10 @@ void FUN_14002acd0(const void* slot)
     if (*(void* const*)slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
+
+#if defined(_MSC_VER) && _MSC_VER == 1700
+#pragma optimize("", on)
+#endif
 
 // MS2-FUNCTIONAL: append a run of pointer values, growing backing storage by the observed quarter margin.
 // @0x14002a4a0
@@ -2278,14 +2291,14 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 void* memoryOwner = *(void**)((CriUint8*)reader + 0x18);
                 void* allocator = *(void**)((CriUint8*)memoryOwner + 0x18);
                 void** vtable = *(void***)allocator;
-                using Allocate = void* (__fastcall*)(void*, size_t, CriUint32, CriUint32);
+                typedef void* (__fastcall* Allocate)(void*, size_t, CriUint32, CriUint32);
                 void* resource = ((Allocate)vtable[1])(allocator, (size_t)request->ArgumentA, 0x21, 0x1b6);
                 ReaderMemoryView* state = (ReaderMemoryView*)reader;
                 if (state->Resource)
                     FUN_14257dcb0(state->Resource);
                 state->Resource = resource;
                 void** resourceVtable = resource ? *(void***)resource : NULL;
-                using IsReady = CriBool (__fastcall*)(void*);
+                typedef CriBool (__fastcall* IsReady)(void*);
                 if (!resource || !((IsReady)resourceVtable[2])(resource))
                 {
                     state->State2c = 3;
@@ -2294,7 +2307,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 }
                 else
                 {
-                    using GetSize = CriSint32 (__fastcall*)(void*);
+                    typedef CriSint32 (__fastcall* GetSize)(void*);
                     // the exe takes the length first, then marks the open complete, then stores the size
                     CriSint32 length = ((GetSize)resourceVtable[6])(resource);
                     state->State2c = 2;
@@ -2312,7 +2325,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 ReaderMemoryView* state = (ReaderMemoryView*)request->Request;
                 void* resource = state->Resource;
                 void** vtable = resource ? *(void***)resource : NULL;
-                using IsFinished = CriBool (__fastcall*)(void*);
+                typedef CriBool (__fastcall* IsFinished)(void*);
                 state->State30 = (!resource || ((IsFinished)vtable[0x98 / sizeof(void*)])(resource)) ? 2 : 3;
                 if (resource)
                     FUN_14257dcb0(resource);
