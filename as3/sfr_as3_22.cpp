@@ -340,33 +340,43 @@ static FMOD::Sound* SoundForLength(void* soundSource)
     return *reinterpret_cast<FMOD::Sound**>(static_cast<char*>(soundSource) + 0x30);
 }
 
-// MS2-FUNCTIONAL: retains the executable's null check, FMOD millisecond query, and failure result.
+// retains the executable's null check, FMOD millisecond query, and failure result.
 // @0x142745760
 unsigned QuerySoundLength(void* soundSource)
 {
-    FMOD::Sound* sound = SoundForLength(soundSource);
-    unsigned length = 0;
-    return sound && sound->getLength(&length, 8) == 0 ? length : 0;
+    if (FMOD::Sound* sound = SoundForLength(soundSource))
+    {
+        unsigned length = 0;
+        if (sound->getLength(&length, 8) == 0)
+            return length;
+    }
+    return 0;
 }
 
-// MS2-FUNCTIONAL: byte-identical behavior to the neighboring FMOD length query; emitted as a distinct exe copy.
+// Same body as QuerySoundLength; a distinct exe copy.
 // @0x1427457a0
 unsigned QuerySoundLengthCopy(void* soundSource)
 {
-    FMOD::Sound* sound = SoundForLength(soundSource);
-    unsigned length = 0;
-    return sound && sound->getLength(&length, 8) == 0 ? length : 0;
+    if (FMOD::Sound* sound = SoundForLength(soundSource))
+    {
+        unsigned length = 0;
+        if (sound->getLength(&length, 8) == 0)
+            return length;
+    }
+    return 0;
 }
 
-// MS2-FUNCTIONAL: retains the executable's sample-unit query and conversion to seconds.
+// retains the executable's sample-unit query and conversion to seconds.
 // @0x1427457e0
 float QuerySoundDuration(void* soundSource)
 {
-    FMOD::Sound* sound = SoundForLength(soundSource);
-    unsigned length = 0;
-    if (!sound || sound->getLength(&length, 1) != 0)
-        return 0.0f;
-    return static_cast<float>(length) / 1000.0f;
+    if (FMOD::Sound* sound = SoundForLength(soundSource))
+    {
+        unsigned length = 0;
+        if (sound->getLength(&length, 1) == 0)
+            return static_cast<float>(length) / 1000.0f;
+    }
+    return 0.0f;
 }
 
 // MS2-FUNCTIONAL: reads one PCM block, applies the executable's six-sample endian shuffle, writes both FMOD lock regions, and advances the ring offsets.
@@ -448,7 +458,7 @@ int FUN_1428d8efc(void*, void*);
 int FUN_1428d8f14(void*, void*);
 void FUN_14257d390(void*, long long, unsigned, unsigned);
 void FUN_14257bf70(void*, void*, long long, unsigned);
-int FUN_1427483a0(void*, int);
+bool FUN_1427483a0(void*, int);   // AppendableSoundData::SetReadPosition (returns bool)
 unsigned long long FUN_142748160(void*, void*, unsigned);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
@@ -2033,7 +2043,7 @@ unsigned long long OpenAudioStream(void* stream, void*, unsigned* length, void*,
     return 0;
 }
 
-// MS2-FUNCTIONAL: FMOD userseek callback (exinfo +0x90): seeks the stream to pos, error value 20 on failure.
+// FMOD userseek callback (exinfo +0x90): seeks the stream to pos, error value 20 on failure.
 // @0x142745490
 unsigned long long ValidateAudioStream(void*, void* position, void* stream)
 {
