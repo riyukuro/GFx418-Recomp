@@ -633,7 +633,7 @@ void FUN_1423d7140(unsigned long long* manager)
     if (!GetLocaleInfoW(static_cast<LCID>(reinterpret_cast<ULONG_PTR>(layout) & 0xffff), LOCALE_SLANGUAGE,
                         locale, _countof(locale))) {
         reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
-            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language ");
+            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
         void* languageObject = reinterpret_cast<void*>(manager[0xf]);
         reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
             languageObject, "Unsupported");
@@ -4478,7 +4478,7 @@ void FUN_1423d4c20(void* raw, const void* event)
         const UINT virtualKey = cx18_ImmGetVirtualKey(hwnd);
         key = static_cast<unsigned short>(virtualKey);
         ToUnicodeEx(virtualKey & 0xffff, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
-        unsigned short ch = static_cast<unsigned short>(translated[0]);
+        unsigned short ch = static_cast<unsigned short>(static_cast<short>(static_cast<signed char>(translated[0])));
         key = ch;
         if (ch < 0x21 && (0x108002100ull >> ch & 1)) return;
         int mode = *reinterpret_cast<int*>(self + 0x98);
@@ -4825,6 +4825,8 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
         const char* language = reinterpret_cast<const char*>((self[0x16] & ~3ull) + 0xc);
         reinterpret_cast<void(*)(void*, const char*)>(vtable[12])(self, language);
         reinterpret_cast<void(*)(void*)>(vtable[19])(self);
+        // The exe reloads the name here: either slot may have replaced the string at +0xb0.
+        language = reinterpret_cast<const char*>((self[0x16] & ~3ull) + 0xc);
         if (std::strcmp(language, "Korean") == 0 && provider)
             reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(provider))[10])(provider, -1);
         reinterpret_cast<void(*)(void*, int)>(vtable[6])(self, -1);
