@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -205,10 +206,9 @@ void Object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 void Value::Pick(Value& other)
 {
     Release();
-    Flags = other.Flags;
-    Bonus = other.Bonus;
-    value = other.value;
-    other.Flags = kUndefined;
+    SIMD::PrefetchObj(&other);
+    memcpy(this, &other, sizeof(Value));
+    other.SetFlags(0);
 }
 
 // @0x14251c7a0
