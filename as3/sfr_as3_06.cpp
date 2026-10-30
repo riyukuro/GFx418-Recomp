@@ -1537,16 +1537,23 @@ namespace Instances { namespace fl_display
     }
 
     // @0x14243d290
+    // The exe computes the descriptors' offset in 32 bits.
+    static __forceinline void ClearFrameScript(MovieClip::FrameScript* pfs)
+    {
+        if (pfs->pData)
+        {
+            MovieClip::FrameScript::Descr* pdescrs = reinterpret_cast<MovieClip::FrameScript::Descr*>(
+                static_cast<UByte*>(pfs->pData) + ((pfs->FrameCnt + 31u) >> 5) * 4u);
+            for (unsigned i = 0; i < pfs->DescrCnt; ++i)
+                pdescrs[i].~Descr();
+            SF_FREE(pfs->pData);
+            pfs->pData = NULL;
+        }
+    }
+
     void MovieClip::FrameScript::Clear()
     {
-        if (pData)
-        {
-            Descr* pdescrs = GetDescrs();
-            for (unsigned i = 0; i < DescrCnt; ++i)
-                pdescrs[i].~Descr();
-            SF_FREE(pData);
-            pData = NULL;
-        }
+        ClearFrameScript(this);
     }
 
     // @0x1424443f0
@@ -1877,7 +1884,6 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142440d70
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Sprite::AS3Constructor(unsigned, const Value*)
     {
         FUN_1424f3320(ToAvmDisplayObj(pDispObj));
@@ -2066,17 +2072,6 @@ namespace Instances { namespace fl_display
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- Loader / LoaderInfo load notifications ----
-// EventDispatcher::HasEventHandler(type, capture), CreateEventObject(type, bubbles, cancelable), and the IOErrorEvent /
-// ProgressEvent makers, with their hidden return slots spelled out.
-bool FUN_14246a160(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis, const Scaleform::GFx::ASString& type, bool capture);
-void FUN_142466cd0(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
-                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret,
-                   const Scaleform::GFx::ASString& type, bool bubbles, bool cancelable);
-void FUN_142467190(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
-                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret, const char* ptext);
-void FUN_142467dc0(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* pthis,
-                   Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event>* pret,
-                   const Scaleform::GFx::ASString& type);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2097,20 +2092,18 @@ namespace Instances { namespace fl_display
     }
 
     // Dispatches a plain event of the given name to pthis' listeners, if it has any.
-    static void DispatchLoadEvent(fl_events::EventDispatcher* pthis, LoadEventName name)
+    static __forceinline void DispatchLoadEvent(fl_events::EventDispatcher* pthis, LoadEventName name)
     {
         ASString type = GetLoadEventName(pthis->GetVM(), name);
-        if (FUN_14246a160(pthis, type, false))
+        if (pthis->HasEventHandler(type, false))
         {
-            SPtr<fl_events::Event> evt;
-            FUN_142466cd0(pthis, &evt, type, false, false);
+            SPtr<fl_events::Event> evt = pthis->CreateEventObject(type, false, false);
             evt->Target = pthis;
             pthis->DispatchSingleEvent(evt, false);
         }
     }
 
     // @0x1424421e0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::ExecuteCompleteEvent()
     {
         if (pContentLoaderInfo)
@@ -2118,14 +2111,12 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424422a0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void LoaderInfo::ExecuteCompleteEvent()
     {
         DispatchLoadEvent(this, LoadEvent_complete);
     }
 
     // @0x142442410
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::ExecuteErrorEvent(const char* purl)
     {
         if (!pContentLoaderInfo)
@@ -2136,17 +2127,14 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142442520
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void LoaderInfo::ExecuteErrorEvent(const char* ptext)
     {
-        SPtr<fl_events::Event> evt;
-        FUN_142467190(this, &evt, ptext);
+        SPtr<fl_events::Event> evt = CreateIOErrorEventObject(ptext);
         evt->Target = this;
         DispatchSingleEvent(evt, false);
     }
 
     // @0x1424425d0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::ExecuteInitEvent(GFx::DisplayObject* pcontent)
     {
         if (pContentLoaderInfo)
@@ -2154,25 +2142,23 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424426d0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void LoaderInfo::ExecuteInitEvent(GFx::DisplayObject* pcontent)
     {
+        ASString type = GetLoadEventName(GetVM(), LoadEvent_init);
         if (pcontent)
         {
-            // Make sure the content has its AS3 object (AvmDisplayObj virtual slot 15), then publish it.
-            AvmDisplayObj* pavm = ToAvmDisplayObj(pcontent);
-            typedef void (*CreateASInstanceFn)(AvmDisplayObj*, bool);
-            (*reinterpret_cast<CreateASInstanceFn* const*>(pavm))[15](pavm, true);
-            DisplayObject* pas3 = pavm->pAS3RawPtr;
-            if (!pas3)
-                pas3 = reinterpret_cast<DisplayObject*>(reinterpret_cast<UPInt>(pavm->pAS3CollectiblePtr) & ~(UPInt)1);
-            Content = pas3;
+            ToAvmDisplayObj(pcontent)->CreateASInstance(true);
+            Content = ToAvmDisplayObj(pcontent)->GetAS3Obj();
         }
-        DispatchLoadEvent(this, LoadEvent_init);
+        if (HasEventHandler(type, false))
+        {
+            SPtr<fl_events::Event> evt = CreateEventObject(type, false, false);
+            evt->Target = this;
+            DispatchSingleEvent(evt, false);
+        }
     }
 
     // @0x1424428f0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::ExecuteOpenEvent()
     {
         if (pContentLoaderInfo)
@@ -2180,14 +2166,12 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424429b0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void LoaderInfo::ExecuteOpenEvent()
     {
         DispatchLoadEvent(this, LoadEvent_open);
     }
 
     // @0x142442a60
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal)
     {
         if (pContentLoaderInfo)
@@ -2195,33 +2179,25 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142442b50
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void LoaderInfo::ExecuteProgressEvent(UPInt bytesLoaded, UPInt bytesTotal)
     {
         ASString type = GetLoadEventName(GetVM(), LoadEvent_progress);
-        if (FUN_14246a160(this, type, false))
+        if (HasEventHandler(type, false))
         {
-            SPtr<fl_events::Event> evt;
-            FUN_142467dc0(this, &evt, type);
+            SPtr<fl_events::Event> evt = CreateProgressEventObject(type);
             evt->Target = this;
             BytesLoaded = (UInt32)bytesLoaded;
             BytesTotal = (UInt32)bytesTotal;
-            // ProgressEvent's bytesLoaded / bytesTotal (+0x58 / +0x60, 64-bit counts).
-            UByte* pevt = reinterpret_cast<UByte*>(evt.GetPtr());
-            *reinterpret_cast<UInt64*>(pevt + 0x58) = bytesLoaded;
-            *reinterpret_cast<UInt64*>(pevt + 0x60) = bytesTotal;
+            static_cast<fl_events::ProgressEvent*>(evt.GetPtr())->BytesLoaded = bytesLoaded;
+            static_cast<fl_events::ProgressEvent*>(evt.GetPtr())->BytesTotal = bytesTotal;
             DispatchSingleEvent(evt, false);
         }
     }
 
-    // MS2-FUNCTIONAL: code byte-exact; unwind info differs (exe frame 16B vs 13B)
     // @0x142443d00
     GFx::DisplayObject* LoaderInfo::GetContentDispObj() const
     {
-        Ptr<GFx::DisplayObject> p;
-        if (Content)
-            p = Content->pDispObj;
-        return p.GetPtr();
+        return Content ? Content->pDispObj : Ptr<GFx::DisplayObject>();
     }
 
     // @0x142443e40
@@ -2266,11 +2242,21 @@ namespace Instances { namespace fl_display
         void*                       pNext;          // +0x00
         int                         Type;           // +0x08
         Ptr<GFx::DisplayObject>     pCharacter;     // +0x10
-        SPtr<Instances::fl::Object> pAS3Obj;        // +0x18
+        SPtr<DisplayObject>         pAS3Obj;        // +0x18
         UByte                       Pad20[0x18];    // +0x20
         Value                       Function;       // +0x38
         void                        (*CFunction)(const LoaderActionEntry& entry); // +0x58
         Ptr<RefCountImpl>           pRef;           // +0x60
+
+        SF_INLINE void SetAction(GFx::DisplayObject* pcharacter, DisplayObject* pas3, void (*func)(const LoaderActionEntry& entry))
+        {
+            Type        = 3;
+            pCharacter  = pcharacter;
+            pAS3Obj     = pas3;
+            CFunction   = func;
+            Function.SetUndefined();
+            pRef        = NULL;
+        }
     };
     // MovieRoot::ActionQueueType::InsertEntry
     extern "C" LoaderActionEntry* FUN_142512800(void* pqueue, int prio);
@@ -2287,7 +2273,6 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424427d0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     static void LoaderInitAction(const LoaderActionEntry& entry)
     {
         static_cast<Loader*>(entry.pAS3Obj.GetPtr())->ExecuteInitEvent(entry.pCharacter);
@@ -2300,38 +2285,28 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142445ca0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::QueueCompleteEvent()
     {
         if (!pContentLoaderInfo)
             return;
         if (LoaderActionEntry* pentry = InsertLoaderAction(GetVM()))
         {
-            pentry->Type        = 3;
-            pentry->pCharacter  = pDispObj;
-            pentry->pAS3Obj     = this;
-            pentry->CFunction   = LoaderCompleteAction;
-            pentry->Function.SetUndefined();
-            pentry->pRef        = NULL;
+            pentry->SetAction(pDispObj, this, LoaderCompleteAction);
         }
     }
 
     // @0x142445db0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Loader::QueueInitEvent(GFx::DisplayObject* pcontent, Ptr<RefCountImpl> pref)
     {
-        if (!pContentLoaderInfo)
-            return;
-        if (LoaderActionEntry* pentry = InsertLoaderAction(GetVM()))
+        if (pContentLoaderInfo)
         {
-            pentry->Type        = 3;
-            pentry->pCharacter  = pDispObj;
-            pentry->pAS3Obj     = this;
-            pentry->CFunction   = LoaderInitAction;
-            pentry->Function.SetUndefined();
-            pentry->pRef        = NULL;
-            pentry->pCharacter  = pcontent;
-            pentry->pRef        = pref;
+            LoaderActionEntry* pentry = InsertLoaderAction(GetVM());
+            if (pentry)
+            {
+                pentry->SetAction(pDispObj, this, LoaderInitAction);
+                pentry->pCharacter  = pcontent;
+                pentry->pRef        = pref;
+            }
         }
     }
 
@@ -2552,11 +2527,10 @@ void FUN_142440dd0(Scaleform::Render::FilterSet* pset, Scaleform::Render::Filter
 }
 
 // The frame script table destructor (an unreferenced COMDAT): Clear inlined.
-// MS2-FUNCTIONAL: ours calls the out-of-line Clear
 // @0x142440e50
 void FUN_142440e50(Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript* pthis)
 {
-    pthis->~FrameScript();
+    Scaleform::GFx::AS3::Instances::fl_display::ClearFrameScript(pthis);
 }
 
 // ASVM::_constructInstance (exe body; as3_asvm.h clashes with as3_support.h's MovieRoot in this unit).
