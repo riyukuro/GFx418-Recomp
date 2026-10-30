@@ -1882,11 +1882,17 @@ void FUN_1400182f0(void* callback, const std::uint32_t* info)
             Scaleform::GFx::AS3::Value value(static_cast<Scaleform::UInt32>(number));
             object->AddDynamicSlotValuePair(key, value);
         };
+        // width, height and subtitleTracksCount are AS3 ints (kind 2), the other counts uints (kind 3).
+        auto addSigned = [&](const char* name, std::uint32_t number) {
+            Scaleform::GFx::ASString key(manager->CreateStringNode(name));
+            Scaleform::GFx::AS3::Value value(static_cast<Scaleform::SInt32>(number));
+            object->AddDynamicSlotValuePair(key, value);
+        };
         const float scale = VideoDurationScale;
         addNumber("duration", (static_cast<float>(info[4]) * scale) / static_cast<float>(info[2]));
-        addInt("width", info[0]); addInt("height", info[1]); addInt("totalFrames", info[4]);
+        addSigned("width", info[0]); addSigned("height", info[1]); addInt("totalFrames", info[4]);
         addNumber("frameRate", static_cast<float>(info[2]) / scale);
-        addInt("subtitleTracksCount", info[0xc]); addInt("audioTracksCount", info[0x10]); addInt("cuePointsCount", info[8]);
+        addSigned("subtitleTracksCount", info[0xc]); addInt("audioTracksCount", info[0x10]); addInt("cuePointsCount", info[8]);
         Scaleform::GFx::AS3::Value objectValue(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
         Scaleform::GFx::AS3::Value result;
         FUN_1424fef00(vmRoot, callbackValue, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &objectValue, 0);
