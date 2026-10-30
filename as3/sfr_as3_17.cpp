@@ -558,27 +558,41 @@ const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, c
     return NULL;
 }
 
+// The value's collectable and closure object slots (out of line in the 4.2 SDK, inlined in the exe).
+inline GASRefCountBase** Value::AsGASRefCountBasePtrPtr() const
+{
+    return (GASRefCountBase**)(&value.VS._1.VObj);
+}
+inline GASRefCountBase** Value::AsClosurePtrPtr() const
+{
+    return (GASRefCountBase**)(&value.VS._2.VObj);
+}
+
 // Visits the collectable a value holds.
-// MS2-FUNCTIONAL: the member offset is selected before the add
 // @0x142504530
 void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
                               ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
 {
     typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
                                   const ASRefCountBaseType&);
-    const char* p = reinterpret_cast<const char*>(&v);
-    const unsigned kind = v.GetKind();
-    if (kind < Value::kNamespace)
-        return;
-    if (kind <= Value::kThunkFunction)
-        p += 0x10;          // the object
-    else if (kind <= Value::kVTableIndClosure)
-        p += 0x18;          // a closure's object
-    else
-        return;
-    const ASRefCountBaseType* const* pchild = reinterpret_cast<const ASRefCountBaseType* const*>(p);
-    if (*pchild)
-        reinterpret_cast<GcOpWithOwner>(op)(prcc, const_cast<const ASRefCountBaseType**>(pchild), owner);
+    switch (v.GetKind())
+    {
+    case Value::kFunction:
+    case Value::kObject:
+    case Value::kClass:
+    case Value::kThunkFunction:
+    case Value::kNamespace:
+        if (v.GetGASRefCountBase())
+            reinterpret_cast<GcOpWithOwner>(op)(prcc, (const ASRefCountBaseType**)v.AsGASRefCountBasePtrPtr(), owner);
+        break;
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        if (v.GetClosure())
+            reinterpret_cast<GcOpWithOwner>(op)(prcc, (const ASRefCountBaseType**)v.AsClosurePtrPtr(), owner);
+        break;
+    default:
+        break;
+    }
 }
 
 SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
@@ -588,7 +602,6 @@ SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
         ForEachChild_GC_Internal(prcc, v, op, owner);
 }
 
-// MS2-FUNCTIONAL: the inlined value visits laid out differently
 // @0x142503b50
 void SlotInfo::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Object& obj,
                                ASRefCountBaseType::GcOp op) const
@@ -599,7 +612,7 @@ void SlotInfo::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
     {
     case BT_ValueArray:
         // the global object's value array (GlobalObjectCPP +0xa8; its members are not modelled yet)
-        AS3::ForEachChild_GC(prcc, (*reinterpret_cast<Value* const*>(reinterpret_cast<const char*>(&obj) + 0xa8))[ValueInd],
+        AS3::ForEachChild_GC(prcc, (*reinterpret_cast<Value* const*>(reinterpret_cast<const char*>(&obj) + 0xa8))[static_cast<UInt32>(ValueInd)],
                              op, obj);
         break;
     case BT_Value:
@@ -6504,19 +6517,14 @@ void FUN_1425046d0(Scaleform::UPInt self)
         reinterpret_cast<Scaleform::RefCountImpl*>(Sfr21AccRd(Sfr21AccRd(self, 0x10), 0x30)));
 }
 
-// Drops the loader info of the AS3 object (+0xa0, else the tagged +0x98 pointer).
-// MS2-FUNCTIONAL: raw-offset vftable slot
+// Drops the loader info of the AS3 object of the AVM display object at +0x90 (the AvmBitmap ForceShutdown slot).
+// MS2-FUNCTIONAL: register choice; the untagging dec is a cmove here
 // @0x1425047c0
 void FUN_1425047c0(Scaleform::UPInt self)
 {
-    Scaleform::UPInt obj = Sfr21AccRd(self, 0xa0);
-    if (!obj)
-        obj = Sfr21AccRd(self, 0x98);
-    if (!obj)
-        return;
-    if (obj & 1)
-        --obj;
-    FUN_142446e70(reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(obj), NULL);
+    const Scaleform::GFx::AS3::AvmDisplayObj& avm = *reinterpret_cast<const Scaleform::GFx::AS3::AvmDisplayObj*>(self + 0x90);
+    if (avm.pAS3RawPtr || avm.pAS3CollectiblePtr)
+        FUN_142446e70(avm.GetAS3Obj(), NULL);
 }
 
 // MS2-FUNCTIONAL: the exe returns its .rdata copy
@@ -6555,12 +6563,12 @@ const char* FUN_142506ee4(Scaleform::UPInt self, Scaleform::String* ppath) { ret
 // @0x142507b70
 Scaleform::UPInt FUN_142507b70(Scaleform::UPInt self) { return Sfr21AccRd(self, 0xc0); }
 
-// The display object's (+0x18 back from the AVM base) flag bit 4 at +0xb8.
-// MS2-FUNCTIONAL: raw-offset vftable slot
+// The enabled bit (Mask_Enabled, 0x10) of the AVM object's display object (+0x18 back from the AVM base), as 0 or 1.
+// MS2-FUNCTIONAL: the exe zero-extends the shifted byte before the mask (movzx; and eax,1)
 // @0x142508500
 unsigned FUN_142508500(Scaleform::UPInt self)
 {
-    return (*reinterpret_cast<const Scaleform::UInt32*>(Sfr21AccRd(self - 0x18, 0) + 0xb8) >> 4) & 1;
+    return static_cast<Scaleform::UByte>((*reinterpret_cast<Scaleform::GFx::InteractiveObject* const*>(self - 0x18))->Flags >> 4) & 1;
 }
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x142508514
