@@ -1828,7 +1828,7 @@ namespace Instances { namespace fl_media
         {
             Instances::fl_net::URLRequest* stream = static_cast<Instances::fl_net::URLRequest*>(argv[0].GetObject());
             Instances::fl_media::SoundLoaderContext* context = NULL;
-            if (argc > 1 && FUN_1425145d0(vm, argv[1], "flash.media.SoundLoaderContext"))
+            if (argc >= 2 && FUN_1425145d0(vm, argv[1], "flash.media.SoundLoaderContext"))
                 // The exe reads the context from argv[0] (the URLRequest), not argv[1] (0x1424d08fb mov rsi,[rbp+0x10]).
                 context = static_cast<Instances::fl_media::SoundLoaderContext*>(argv[0].GetObject());
             Value result;
