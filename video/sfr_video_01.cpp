@@ -1380,15 +1380,17 @@ void* FUN_140007230(void** destination, const void** source)
     return FUN_140006db0(destination, source);
 }
 
-// MS2-FUNCTIONAL: appends and retains one object in the pointer array.
+// MS2-FUNCTIONAL: the exe forms the last slot as `lea rcx,[rax+r11*8-8]`; cl 17.00.61030 emits dec + lea for every
+// source form tried (work/p5h/tmp/pb1.cpp)
 // @0x140007270
 void FUN_140007270(void** array, void** value)
 {
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     FUN_140006e70(array, array, fields[1] + 1);
-    auto** slot = static_cast<void**>(*array) + fields[1] - 1;
-    if (*value) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*value))[1])(*value);
-    *slot = *value;
+    auto* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
+    // the element is a Ptr whose pointee keeps a plain int refcount at +0 (exe: `if (p) inc dword [p]`, no virtual
+    // AddRef), copy-constructed in place
+    ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
 }
 
 // MS2-FUNCTIONAL: destroys weak-pair records and releases their backing allocation.
@@ -1539,15 +1541,17 @@ void** FUN_140007600(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: appends an object pointer to the array and retains it.
+// MS2-FUNCTIONAL: the exe forms the last slot as `lea rcx,[rax+r11*8-8]`; cl 17.00.61030 emits dec + lea for every
+// source form tried (work/p5h/tmp/pb1.cpp)
 // @0x140007680
 void FUN_140007680(void** array, void** value)
 {
     auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     FUN_140006e70(array, array, fields[1] + 1);
-    auto** slot = static_cast<void**>(*array) + fields[1] - 1;
-    if (*value) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*value))[1])(*value);
-    *slot = *value;
+    auto* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
+    // the element is a Ptr whose pointee keeps a plain int refcount at +0 (exe: `if (p) inc dword [p]`, no virtual
+    // AddRef), copy-constructed in place
+    ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
 }
 
 // MS2-FUNCTIONAL: releases all weak pairs in the backing array and then frees it.
