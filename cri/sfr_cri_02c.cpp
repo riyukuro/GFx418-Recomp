@@ -3703,7 +3703,7 @@ CriBool FUN_140031ae0(void* player)
     struct QueueView { CriUint8 Reserved[0xd78]; void* Input; void* Read; };
     struct MetaStreamView { CriUint8 Reserved[0xe78]; void* Stream; };
     if (((MetaStreamView*)player)->Stream)
-        FUN_140031f40(player);
+        FUN_140031f00(player);
 
     CriSint32 workSize = ((BaseSizeView*)player)->Size + 0x800;
     if (((FeatureSizeA*)player)->Enabled != 0)
@@ -3721,7 +3721,7 @@ CriBool FUN_140031ae0(void* player)
         return 0;
     if (!FUN_140031da0(player, heap))
     {
-        FUN_140031f40(player);
+        FUN_140031f00(player);
         return 0;
     }
     return 1;
