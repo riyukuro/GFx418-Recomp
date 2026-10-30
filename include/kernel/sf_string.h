@@ -175,7 +175,9 @@ public:
 
     // (appended for the font config reader, sfr_gfx_11) the text pointer as a cast (explicit here so that the
     // include tree keeps its overloads unambiguous), case-insensitive compares and the case-sensitive hash.
+#if !defined(_MSC_VER) || _MSC_VER >= 1800  // cl 17.00 (the vc11 toolset) has no explicit conversion operators
     explicit operator const char*() const { return GetData()->Data; }
+#endif
     int CompareNoCase(const char* pstr) const { return CompareNoCase(GetData()->Data, pstr); }
     int CompareNoCase(const String& str) const { return CompareNoCase(GetData()->Data, str.ToCStr()); }
 
@@ -184,7 +186,7 @@ public:
         UPInt operator()(const String& data) const
         {
             UPInt size = data.GetSize();
-            return String::BernsteinHashFunction((const char*)data, size);
+            return String::BernsteinHashFunction(data.ToCStr(), size);
         }
     };
 
