@@ -1310,11 +1310,12 @@ void FUN_1400363b0(void* player, void* chunk, CriUint32 type)
 // @0x1400377a0
 void FUN_1400377a0(void* player, void* videoDecoder, void* alphaDecoder)
 {
-    CriUint32* words = (CriUint32*)player;
-    FUN_140044d20(videoDecoder, words[0x8d0 / 4]);
-    FUN_140044270(alphaDecoder, words[0x8d0 / 4]);
-    FUN_140044d70(videoDecoder, words[0x8cc / 4], words + 0x8d4 / 4, words + 0x9d4 / 4);
-    FUN_1400442c0(alphaDecoder, words[0x8cc / 4], words + 0x8d4 / 4, words + 0x9d4 / 4);
+    FUN_140044d20(videoDecoder, ((CriUint32*)player)[0x8d0 / 4]);
+    FUN_140044270(alphaDecoder, ((CriUint32*)player)[0x8d0 / 4]);
+    FUN_140044d70(videoDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
+                  (CriUint32*)player + 0x9d4 / 4);
+    FUN_1400442c0(alphaDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
+                  (CriUint32*)player + 0x9d4 / 4);
 }
 
 // MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
@@ -3088,15 +3089,15 @@ void FUN_140034730(void* player)
 void FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
+    CriUint32 suggestedSize4;
     void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
     output[0] = FUN_14003a85c(document, 0, "sampling_rate");
     output[1] = FUN_14003a85c(document, 0, "num_channels");
     output[2] = FUN_14003a85c(document, 0, "total_samples");
     output[3] = FUN_14003a85c(document, 0, "ixsize");
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
-    WorkSizeView* work = (WorkSizeView*)workInfo;
-    if (work->Size < suggestedSize)
-        work->Size = suggestedSize;
+    suggestedSize4 = FUN_14003a85c(document, 0, "ixsize");
+    if (suggestedSize4 > ((WorkSizeView*)workInfo)->Size)
+        ((WorkSizeView*)workInfo)->Size = suggestedSize4;
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
@@ -4380,10 +4381,9 @@ CriBool FUN_140031410(void* player)
 {
     if (!player)
         return 0;
-    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
-    CriBool result = FUN_140043d40(decoders->VideoDecoder);
-    if (decoders->AlphaDecoder)
-        FUN_1400446c0(decoders->AlphaDecoder);
+    CriBool result = FUN_1400446c0(((CriMvDecoderHandleFields*)player)->VideoDecoder);
+    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+        FUN_140043d40(((CriMvDecoderHandleFields*)player)->AlphaDecoder);
     return result;
 }
 
@@ -4592,11 +4592,11 @@ void FUN_140036e80(void* player, CriMvSubtitleChunk* chunk)
 // @0x140038fa0
 CriSint32 FUN_140038fa0(void* easyPlayer, const CriMvFrameInfo* frameInfo, CriError* error)
 {
-    CriMvEasyPlayerFrameFields* fields = (CriMvEasyPlayerFrameFields*)easyPlayer;
     *error = CRIERR_OK;
-    FUN_140035a40(fields->PlayerHandle, frameInfo);
-    if (*(CriUint64*)fields->AlphaFrameInfo)
-        FUN_140035a90(fields->PlayerHandle, (const CriUint64*)fields->AlphaFrameInfo);
+    FUN_140035a40(((CriMvEasyPlayerFrameFields*)easyPlayer)->PlayerHandle, frameInfo);
+    if (*(CriUint64*)((CriMvEasyPlayerFrameFields*)easyPlayer)->AlphaFrameInfo)
+        FUN_140035a90(((CriMvEasyPlayerFrameFields*)easyPlayer)->PlayerHandle,
+                      (const CriUint64*)((CriMvEasyPlayerFrameFields*)easyPlayer)->AlphaFrameInfo);
     return 1;
 }
 
