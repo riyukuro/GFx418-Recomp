@@ -1114,32 +1114,21 @@ void** FUN_140014e10(void** values, void* first, void* second)
     return values;
 }
 
-static void ReleaseAS3ValueAt(void* address)
-{
-    Scaleform::GFx::AS3::Value* value = static_cast<Scaleform::GFx::AS3::Value*>(address);
-    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
-    {
-        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
-    }
-}
-
-// MS2-FUNCTIONAL: releases the VideoPlayer references and AS3 fields before delegating to the recovered base dtor.
+// Releases the VideoPlayer references and AS3 fields before delegating to the recovered base dtor.
 // @0x140014830
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* dispatcher)
 {
+    // the exe's dtor: vftable store, the player detached with no null check, the AS3 Value members destroyed in
+    // place in reverse order (0xd8, 0xb8, 0x98), then the two weak references (+0x58, +0x50)
     char* fields = reinterpret_cast<char*>(dispatcher);
-    void* player = *reinterpret_cast<void**>(fields + 0x50);
-    if (player)
-    {
-        *reinterpret_cast<void**>(static_cast<char*>(player) + 0x18) = 0;
-        FUN_140025300(player);
-    }
-    ReleaseAS3ValueAt(fields + 0x98);
-    ReleaseAS3ValueAt(fields + 0xb8);
-    ReleaseAS3ValueAt(fields + 0xd8);
-    void* weakRefs[2] = {*reinterpret_cast<void**>(fields + 0x58), player};
-    for (void* ref : weakRefs)
-        if (ref) FUN_14257dcd0(ref);
+    *reinterpret_cast<void**>(fields) = &PTR_FUN_1431b7360;
+    *reinterpret_cast<void**>(*reinterpret_cast<char**>(fields + 0x50) + 0x18) = nullptr;
+    FUN_140025300(*reinterpret_cast<void**>(fields + 0x50));
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xd8)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xb8)->~Value();
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0x98)->~Value();
+    if (*reinterpret_cast<void**>(fields + 0x58)) FUN_14257dcd0(*reinterpret_cast<void**>(fields + 0x58));
+    if (*reinterpret_cast<void**>(fields + 0x50)) FUN_14257dcd0(*reinterpret_cast<void**>(fields + 0x50));
     dispatcher->EventDispatcher::~EventDispatcher();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
