@@ -1314,17 +1314,16 @@ void* FUN_142579cc0(SubImage* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: preserves TextureImage base teardown and both allocator delete branches.
 // @0x142579d80
 void* FUN_142579d80(TextureImage* object, unsigned flags)
 {
     object->TextureImage::~TextureImage();
     if (flags & 1)
     {
-        if (flags & 4)
-            FUN_14015b310(object, sizeof(TextureImage));
-        else
+        if (!(flags & 4))
             Memory::Free(object);
+        else
+            FUN_14015b310(object, sizeof(TextureImage));
     }
     return object;
 }
