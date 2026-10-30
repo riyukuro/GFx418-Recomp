@@ -4103,7 +4103,8 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
 
 // MS2-FUNCTIONAL: composition-text update. It reads GCS_COMPSTR, turns every space and U+3000 into U+00A0 and, by mode,
 // clears the composition text, sends the text, or sends it, sets the cursor from GCS_CURSORPOS, stores
-// length - cursor at +0x64 and highlights the whole text. Other modes change nothing.
+// length - cursor at +0x64 and highlights the whole text. Other modes change nothing. Reviewed case by case against
+// the exe, same behaviour; the exe keeps the U+00A0 value and the counter in other registers (1 byte longer).
 // @0x1423d2410
 void FUN_1423d2410(void* raw, unsigned* outputLength)
 {
@@ -4111,17 +4112,18 @@ void FUN_1423d2410(void* raw, unsigned* outputLength)
     void* owner = *reinterpret_cast<void**>(self + 8);
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
         reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    Scaleform::GFx::Value unused;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const LONG size = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
     auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<SPInt>(size * 2)) + 2));
     cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, size);
     const int count = size / 2;
     text[count] = 0;
-    for (int i = 0; i < count; ++i)
-        if (text[i] == L' ' || text[i] == 0x3000) text[i] = 0x00a0;
+    wchar_t* cursor = text;
+    for (int i = 0; i < count; ++i, ++cursor)
+        if (*cursor == L' ' || *cursor == 0x3000) *cursor = 0x00a0;
 
-    switch (*reinterpret_cast<unsigned*>(self + 0x98)) {
+    switch (*reinterpret_cast<int*>(self + 0x98)) {
     case 1: case 3: case 5: case 7:
     case 0x10000: case 0x20000: case 0x30000: case 0x60000: case 0xd00001:
         ime->SetCompositionText(L"", -1);
@@ -4145,8 +4147,8 @@ void FUN_1423d2410(void* raw, unsigned* outputLength)
         break;
     }
     }
-    cx18_ImmReleaseContext(hwnd, context);
-    Scaleform::Memory::Free(text);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    if (text) Scaleform::Memory::Free(text);
 }
 
 // MS2-FUNCTIONAL: IMM candidate-list update of the Vista IME object (vtable slot 36). It stores the count at +0xd8, the
