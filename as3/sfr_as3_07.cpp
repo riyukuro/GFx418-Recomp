@@ -1438,7 +1438,7 @@ namespace Instances { namespace fl_display
         }
         psprite->SetPlayState(state);
         FUN_142520080(vm.GetMovieRoot());
-        for (unsigned level = 0; level < 4; ++level)
+        for (unsigned level = 0; level <= 3; ++level)
             FUN_1424fa320(vm.GetMovieRoot(), level);
     }
 
@@ -3569,10 +3569,10 @@ namespace Instances { namespace fl_display
         ASString upper(value.ToUpperNode());
         UInt32 c0 = 0, c1 = 0;
         const int len = (int)upper.GetLength();
-        if (len > 0)
+        if (len >= 1)
         {
             c0 = upper.GetCharAt(0);
-            if (len > 1)
+            if (len >= 2)
                 c1 = upper.GetCharAt(1);
         }
         // Two-letter codes in either order pick a corner, one letter an edge.
