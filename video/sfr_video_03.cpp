@@ -341,18 +341,19 @@ std::uint64_t* FUN_140016e30(std::uint64_t* out, std::uint64_t type, std::uint64
     return out;
 }
 
-// MS2-FUNCTIONAL: normalizes the AS3 value tag and calls the trait setter for non-default values.
-#pragma optimize("t", off)   // the exe has a frame + call here, no tail call
+// MS2-FUNCTIONAL: cl15 shape, the exe calls [rax] where cl 17 /O2 tail-jumps (and /Os reschedules the tag ops).
+// normalizes the AS3 value tag and visits it through its ForEachChild slot with the VideoNative1 op.
 // @0x140016ed0
 void FUN_140016ed0(std::uint64_t* value, void* object)
 {
     auto& tag = *reinterpret_cast<std::uint32_t*>(value + 2);
     if ((tag & 0x70000000) != 0x10000000) {
+        void** vtable = *reinterpret_cast<void***>(value);
         tag = (tag & 0x9fffffff) | 0x10000000;
-        (&VideoNative1)(object, value, nullptr);
+        reinterpret_cast<void(*)(void*, void*, void*)>(vtable[0])(
+            value, object, reinterpret_cast<void*>(&VideoNative1));
     }
 }
-#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: computes the executable's 8-byte key hash and searches its chained bucket.
 // @0x140016f40
@@ -1401,12 +1402,13 @@ std::uint64_t* FUN_142742f70(std::uint64_t* destination, const std::uint64_t* so
 
 namespace {
 
-// MS2-FUNCTIONAL: runs the base AS3 traits initializer and installs the Video traits vtable and object size.
+// MS2-FUNCTIONAL: cl15 shape, the vtable goes through r11 and the size store is scheduled before it.
+// forwards VM and ClassInfo to the CTraits ctor and installs the Video traits vtable and object size (+0x60).
 // @0x14001a080
-void* FUN_14001a080(void* traits)
+void* FUN_14001a080(void* traits, void* vm, const void* classInfo)
 {
-    FUN_1424d6750(traits, nullptr, nullptr);
-    *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(traits) + 0xc) = 0x78;
+    FUN_1424d6750(traits, vm, classInfo);
+    *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(traits) + 0x60) = 0x78;
     *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
     return traits;
 }
