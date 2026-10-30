@@ -3184,8 +3184,10 @@ unsigned long long* FUN_1423d54d0(unsigned long long* self)
         hr = reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(managerVtable[0])(
             manager, DAT_1431c5028, &language);
         if (SUCCEEDED(hr) && language) {
+            // DAT_14313b410 and DAT_14313b418 are the two halves of one GUID, but separate pieces in the fullexe.
+            const unsigned long long compartment[2] = {DAT_14313b410, DAT_14313b418};
             reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
-                (*reinterpret_cast<void***>(language))[3])(language, &DAT_14313b410,
+                (*reinterpret_cast<void***>(language))[3])(language, compartment,
                     reinterpret_cast<void**>(self + 0x38));
             reinterpret_cast<ULONG(*)(void*)>((*reinterpret_cast<void***>(language))[2])(language);
         }
