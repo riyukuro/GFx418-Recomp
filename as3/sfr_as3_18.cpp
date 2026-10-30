@@ -2157,19 +2157,31 @@ bool Sfr27TextFieldHasStyleSheet(UPInt self)
 // ==== VMAbcFile: interned strings and namespaces ====
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// MS2-FUNCTIONAL: the exe grows IntStrings through an out-of-line resize and interns the node by hand
-// @0x14250b240
-ASString VMAbcFile::GetInternedString(UPInt ind)
+void FUN_142524a30(void* self, const void* pheapAddr, UPInt newSize);   // IntStrings' ResizeNoConstruct
+
+// ArrayData::Resize of IntStrings, with the exe's out-of-line ResizeNoConstruct.
+static SF_INLINE void Sfr18ResizeIntStrings(ArrayLH<SPtr<ASStringNode> >& a, UPInt newSize)
 {
-    if (IntStrings.GetSize() <= ind)
-        IntStrings.Resize(ind + 1);
-    if (!IntStrings[ind])
+    const UPInt oldSize = a.GetSize();
+    FUN_142524a30(&a, &a, newSize);
+    if (newSize > oldSize)
+        ConstructArray<SPtr<ASStringNode> >(a.GetDataPtr() + oldSize, newSize - oldSize);
+}
+
+// SDK VMFile::GetInternedString form.
+// @0x14250b240
+ASString VMAbcFile::GetInternedString(UPInt strIndex)
+{
+    if (strIndex >= IntStrings.GetSize())
+        Sfr18ResizeIntStrings(IntStrings, strIndex + 1);
+
+    if (IntStrings[strIndex].GetPtr() == NULL)
     {
-        const StringDataPtr s = pFile->Const_Pool.GetString(ind);
-        ASString str = GetVM().GetStringManager().CreateString(s.ToCStr(), s.GetSize());
-        IntStrings[ind] = str.GetNode();
+        const StringDataPtr s = pFile->Const_Pool.GetString(static_cast<UInt32>(strIndex));
+        IntStrings[strIndex].SetPtr(GetVM().GetStringManager().CreateString(s.ToCStr(), s.GetSize()).GetNode());
     }
-    return ASString(IntStrings[ind]);
+
+    return ASString(IntStrings[strIndex]);
 }
 
 // MS2-FUNCTIONAL: the hash lookup/add are not the exe's template copies
