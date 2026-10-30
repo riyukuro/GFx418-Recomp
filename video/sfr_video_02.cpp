@@ -182,7 +182,7 @@ public:
 
 // MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140013350
-void* FUN_140013350(void* object, unsigned __int64 flags)
+void* FUN_140013350(void* object, unsigned int flags)
 {
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -191,7 +191,7 @@ void* FUN_140013350(void* object, unsigned __int64 flags)
 
 // MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140014bb0
-void* FUN_140014bb0(void* object, unsigned __int64 flags)
+void* FUN_140014bb0(void* object, unsigned int flags)
 {
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -200,7 +200,7 @@ void* FUN_140014bb0(void* object, unsigned __int64 flags)
 
 // MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140015550
-void* FUN_140015550(void* object, unsigned __int64 flags)
+void* FUN_140015550(void* object, unsigned int flags)
 {
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -264,12 +264,16 @@ void FUN_140014400(void* object, void*, char invoke)
     }
 }
 
-// MS2-FUNCTIONAL: returns the integer result of the object's count query plus one as a double.
+// MS2-FUNCTIONAL: returns the unsigned result of the object's count query plus one, through float, as a double.
+// BEHAVIOUR FIX: the exe converts the unsigned count to float first (cvtsi2ss of the zero-extended value), then to
+// double. It used to convert the signed int straight to double.
 // @0x1400146c0
 void FUN_1400146c0(void* object, double* result)
 {
     extern int FUN_140025360(void*);
-    *result = static_cast<double>(FUN_140025360(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x50)) + 1);
+    const float count = static_cast<float>(
+        static_cast<unsigned>(FUN_140025360(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x50))) + 1u);
+    *result = count;
 }
 
 // MS2-FUNCTIONAL: updates the stored track index and releases the old AS3 value when its tag requires it.
@@ -1897,11 +1901,15 @@ unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
 }
 
 // MS2-FUNCTIONAL: constructs a Value from the supplied strong object pointer.
+// BEHAVIOUR FIX: the exe constructs the Value with Flags = 0 and a null Bonus (weak proxy) before the assign. The
+// SetUndefinedUnsafe here only cleared the kind bits of the uninitialised slot, which left stray flag bits and a
+// garbage weak-proxy pointer in the new Value.
 // @0x1400156a0
 Scaleform::GFx::AS3::Value* FUN_1400156a0(Scaleform::GFx::AS3::Value* result,
                                          Scaleform::GFx::AS3::Object* const* object)
 {
-    result->SetUndefinedUnsafe();
+    *reinterpret_cast<Scaleform::UInt32*>(result) = 0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(result) + 8) = nullptr;
     result->AssignUnsafe(*object);
     return result;
 }
@@ -1972,11 +1980,13 @@ void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
 {
     frame[0] = vm;
     frame[1] = receiver;
-    frame[2] = reinterpret_cast<void*>(*extra);
+    // ThunkArgs1<bool>::a0 is one byte, stored as the exe stores it (the rest of the slot is padding).
+    unsigned char& a0 = *reinterpret_cast<unsigned char*>(&frame[2]);
+    a0 = *extra;
     if (convert)
     {
         extern unsigned char FUN_1424f0be0(uintptr_t);
-        frame[2] = reinterpret_cast<void*>(FUN_1424f0be0(value));
+        a0 = FUN_1424f0be0(value);
     }
     return frame;
 }
