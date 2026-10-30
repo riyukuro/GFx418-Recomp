@@ -4592,23 +4592,26 @@ void FUN_14003ef00(void* object)
         CriUint8 Reserved60[0x20];
         Playback Current;
     };
-    Playback* playback = &((Reader*)object)->Current;
-    CriSint32 samples = (CriUint32)FUN_1400467b8(((Reader*)object)->Queue, 3) / ((Reader*)object)->BlockSize;
+    void** token2;
+    CriSint32 samples;
+    Playback* playback;
+    void* chunk3[2];
+    playback = &((Reader*)object)->Current;
+    samples = (CriUint32)FUN_1400467b8(((Reader*)object)->Queue, 3) / ((Reader*)object)->BlockSize;
     if (samples > 0)
     {
-        void* chunk[2];
-        FUN_1400467a0(((Reader*)object)->Queue, 3, 0xffffffff, chunk);
+        FUN_1400467a0(((Reader*)object)->Queue, 3, 0xffffffff, chunk3);
         // keep the chunk whose token (its first field) is the one being played
-        if (chunk[0])
+        if (chunk3[0])
         {
-            void** token = (void**)chunk[0];
-            if (playback->CurrentData != *token)
+            token2 = (void**)chunk3[0];
+            if (playback->CurrentData != *token2)
             {
-                FUN_1400467b0(((Reader*)object)->Queue, 0, chunk);
+                FUN_1400467b0(((Reader*)object)->Queue, 0, chunk3);
                 return;
             }
         }
-        FUN_1400467a8(((Reader*)object)->Queue, 3, chunk);
+        FUN_1400467a8(((Reader*)object)->Queue, 3, chunk3);
     }
 }
 
