@@ -478,18 +478,26 @@ bool Environment::ParsePath(ASStringContext* psc, const ASString& path, ASString
     return true;
 }
 
+static SF_FORCEINLINE InteractiveObject* GetMovieAtLevel(const MovieImpl* pmovieImpl, int level);
+
+// Queues DoTransferFocus(newFocus, fmt, controllerIdx) on _level0: an action entry without a character never runs.
 // MS2-FUNCTIONAL: queues the same CFunction and three argument values using recovered ActionEntry/Array interfaces.
 // @0x142972490
 void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, unsigned controllerIdx,
                               FocusMovedType fmt)
 {
+    Array<Value> params;
+    params.PushBack(Value(newFocus));
+    params.PushBack(Value(static_cast<int>(fmt)));
+    params.PushBack(Value(static_cast<Number>(controllerIdx)));
     MovieRoot* root = ToAS2Root(penv->GetTarget());
+    InteractiveObject* plevel0 = GetMovieAtLevel(root->pMovieImpl, 0);
     MovieRoot::ActionEntry* entry = root->InsertEmptyAction(ActionPriority::AP_Frame);
-    entry->Type = MovieRoot::ActionEntry::Entry_CFunction;
-    entry->CFunction = DoTransferFocus;
-    entry->FunctionParams.PushBack(Value(newFocus));
-    entry->FunctionParams.PushBack(Value(static_cast<int>(fmt)));
-    entry->FunctionParams.PushBack(Value(static_cast<Number>(controllerIdx)));
+    entry->Type          = MovieRoot::ActionEntry::Entry_CFunction;
+    entry->pCharacter    = plevel0;
+    entry->pActionBuffer = 0;
+    entry->CFunction     = DoTransferFocus;
+    entry->FunctionParams = params;
 }
 
 // MS2-FUNCTIONAL: follows the exe's this adjustment and TextField style-sheet pointer tests at +0x108/+0x40.
