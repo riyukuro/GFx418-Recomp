@@ -644,12 +644,13 @@ void FUN_140042800(void* manager)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: pass two variadic formatter arguments to the executable's Scaleform string formatter.
+// MS2-FUNCTIONAL: pass this function's variadic arguments to the executable's string scanner as one va_list.
 // @0x1400469c4
-void FUN_1400469c4(void* string, const CriChar8* format, CriUint64 first, CriUint64 second)
+void FUN_1400469c4(void* string, const CriChar8* format, ...)
 {
-    const CriUint64 arguments[2] = { first, second };
-    FUN_14029dd60(string, format, arguments);
+    va_list args;
+    va_start(args, format);
+    FUN_14029dd60(string, format, args);
 }
 #pragma optimize("", on)
 
@@ -938,11 +939,14 @@ const void** FUN_14003bed0()
     return DAT_143a47bc0;
 }
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x14003bf10
 const void** FUN_14003bf10()
 {
-    return DAT_143a47cb0;
+    const void** table = DAT_143a47cb0;
+    return table;
 }
+#pragma optimize("", on)
 
 // ==== CRI UTF heap callback helpers ================================================================================
 
@@ -1476,13 +1480,23 @@ void FUN_14003ca00(void* context, CriSint32 count, const CriSint32* horizontal,
     FUN_1400500b0(count, parameters);
 }
 
+// The VMPV handle fields read and written by the /Od accessors below.
+struct CriVmpvHnFields
+{
+    CriUint8 Reserved00[0x18];
+    CriSint32 Status;                       // 0x18
+    CriUint8 Reserved1C[4];
+    CriUint32 FrameReady;                   // 0x20
+    CriUint8 Reserved24[0x14];
+    CriUint32 FrameRate;                    // 0x38
+};
+
 // MS2-FUNCTIONAL: return the VMPV handle's current status field.
 // @0x14003cc70
 CriSint32 criVmpv_GetStatus(const void* handle)
 {
-    CriSint32 status;
-    memcpy(&status, (const CriUint8*)handle + 0x18, sizeof(status));
-    return status;
+    const CriVmpvHnFields* hn = (const CriVmpvHnFields*)handle;
+    return hn->Status;
 }
 
 // MS2-FUNCTIONAL: create and configure the MPV instance owned by a VMPV handle.
@@ -1883,17 +1897,16 @@ void* FUN_14003d940(void* handle)
 // @0x14003d970
 void FUN_14003d970(void* handle)
 {
-    CriUint32 ready = 1;
-    memcpy((CriUint8*)handle + 0x20, &ready, sizeof(ready));
+    CriVmpvHnFields* hn = (CriVmpvHnFields*)handle;
+    hn->FrameReady = 1;
 }
 
 // MS2-FUNCTIONAL: return the number of picture records held by a video decoder.
 // @0x14003d9a0
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
 {
-    CriUint32 count;
-    memcpy(&count, (const CriUint8*)decoder + 0x188, sizeof(count));
-    return count;
+    const CriUint8* hn = (const CriUint8*)decoder;
+    return *(const CriUint32*)(hn + 0x188);
 }
 #pragma optimize("", on)
 
@@ -2234,15 +2247,9 @@ void FUN_140044390(const void* decoderInterface)
 // @0x1400443d0
 void FUN_1400443d0(void* decoderInterface)
 {
-    if (!decoderInterface)
-        return;
-    void* finalize;
-    memcpy(&finalize, (CriUint8*)decoderInterface + 8, sizeof(finalize));
-    if (finalize)
-    {
-        typedef void (*Callback)(void);
-        ((Callback)finalize)();
-    }
+    typedef void (*Callback)(void);
+    if (decoderInterface && *(Callback*)((CriUint8*)decoderInterface + 8))
+        (*(Callback*)((CriUint8*)decoderInterface + 8))();
 }
 
 // MS2-FUNCTIONAL: set the VDEC DLG parameters through its decoder interface.
@@ -2278,12 +2285,10 @@ void* FUN_140044e40(void* decoder)
 // @0x140044fb0
 void criUsfDmx_SetOutputSj(void* demux, CriUint32 index, void* stream, CriUint32 flags, CriSint32 limit)
 {
-    void* outputs;
-    memcpy(&outputs, (CriUint8*)demux + 0x18, sizeof(outputs));
-    CriUint8* record = (CriUint8*)outputs + (size_t)index * 0x10;
-    memcpy(record, &stream, sizeof(stream));
-    memcpy(record + 8, &flags, sizeof(flags));
-    memcpy(record + 0xc, &limit, sizeof(limit));
+    struct Output { void* stream; CriUint32 flags; CriSint32 limit; };
+    (*(Output**)((CriUint8*)demux + 0x18))[index].stream = stream;
+    (*(Output**)((CriUint8*)demux + 0x18))[index].flags = flags;
+    (*(Output**)((CriUint8*)demux + 0x18))[index].limit = limit;
 }
 
 // MS2-FUNCTIONAL: compute the executable's fixed and per-chain work-area size.
@@ -2670,26 +2675,18 @@ void FUN_140041150(void* handle)
 // @0x140043a20
 void FUN_140043a20(const void* decoder)
 {
-    if (decoder)
-    {
-        typedef void (*VoidFunction)(void);
-        VoidFunction fn = *(VoidFunction*)decoder;
-        if (fn)
-            fn();
-    }
+    typedef void (*VoidFunction)(void);
+    if (decoder && *(VoidFunction*)decoder)
+        (*(VoidFunction*)decoder)();
 }
 
 // MS2-FUNCTIONAL: invoke the decoder interface's finalize entry when present.
 // @0x140043a50
 void FUN_140043a50(void* decoder)
 {
-    if (decoder)
-    {
-        typedef void (*VoidFunction)(void);
-        VoidFunction fn = *(VoidFunction*)((CriUint8*)decoder + 8);
-        if (fn)
-            fn();
-    }
+    typedef void (*VoidFunction)(void);
+    if (decoder && *(VoidFunction*)((CriUint8*)decoder + 8))
+        (*(VoidFunction*)((CriUint8*)decoder + 8))();
 }
 
 // MS2-FUNCTIONAL: query the decoder work size and include the executable's 0x2e-byte wrapper.
@@ -2745,7 +2742,8 @@ void FUN_14003e710(void* unused, void* output)
 // @0x14003e820
 void FUN_14003e820(void* handle, CriUint32 frameRate)
 {
-    memcpy((CriUint8*)handle + 0x38, &frameRate, sizeof(frameRate));
+    CriVmpvHnFields* hn = (CriVmpvHnFields*)handle;
+    hn->FrameRate = frameRate;
 }
 
 // MS2-FUNCTIONAL: return the frame timestamp and selected concatenation offset in milliseconds.
@@ -3246,7 +3244,7 @@ void FUN_1400412e0(void* player, CriSint32 state)
 {
     void* target = *(void**)((CriUint8*)player + 0x10);
     if (target)
-        (*(void (**)(void*, CriBool))((CriUint8*)*(void**)target + 0x30))(target, state == 1);
+        (*(void (**)(void*, CriUint8))((CriUint8*)*(void**)target + 0x30))(target, state == 1);
 }
 
 // MS2-FUNCTIONAL: forward the supplied output pointer to the attached player's slot-four callback.
@@ -3299,7 +3297,7 @@ void FUN_140041250(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x10))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x10))(target);
 }
 
 // MS2-FUNCTIONAL: forward to the attached object's virtual operation at slot five when present.
@@ -3308,7 +3306,7 @@ void FUN_1400412c0(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x28))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x28))(target);
 }
 
 // MS2-FUNCTIONAL: forward to the attached object's virtual destroy operation when present.
@@ -3317,7 +3315,7 @@ void FUN_140041340(void* object)
 {
     void** target = *(void***)((CriUint8*)object + 0x10);
     if (target)
-        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x40))(*target);
+        ((void (*)(void*))*(void**)((CriUint8*)*target + 0x40))(target);
 }
 
 // MS2-FUNCTIONAL: invoke the global heap manager's work-size operation.
