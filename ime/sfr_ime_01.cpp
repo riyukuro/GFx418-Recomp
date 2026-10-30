@@ -1504,16 +1504,13 @@ unsigned long long FUN_1423d70d0(void* object, const unsigned long long* guid)
     return 1;
 }
 
-// MS2-FUNCTIONAL: forwards a copied String to the child method at vtable offset +0x68 and releases the consumed argument.
+// Forwards a copy of the by-value String to the +0x78 child's vtable slot 13 (+0x68); the argument is destroyed on return.
 // @0x1423ca8b0
-unsigned char FUN_1423ca8b0(void* object, String* value)
+unsigned char FUN_1423ca8b0(void* object, String value)
 {
-    String local(*value);
-    void* child = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78);
-    auto** vtable = *reinterpret_cast<void***>(child);
-    const unsigned char result = reinterpret_cast<unsigned char(*)(void*, String)>(vtable[13])(child, local);
-    value->~String();
-    return result;
+    void** slot = *reinterpret_cast<void***>(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78)) + 13;
+    return reinterpret_cast<unsigned char(*)(void*, String)>(*slot)(
+        *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78), value);
 }
 
 // @0x1423cdda0
