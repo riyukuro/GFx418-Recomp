@@ -36,7 +36,6 @@
 #include "ms2/scaleform/include/gfx/gfx_imagecreator.h"
 #undef GetObject   // windows.h
 
-void* FUN_14241ba70(void* traits, void* ret, int kind, const void* uri, const void* prefix);   // Namespace::MakeInternedInstance
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
 void FUN_1425f9ba0(Scaleform::UPInt self, char* ret, const void* matrix);
 Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b);
@@ -53,18 +52,6 @@ void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // ArrayLH_POD<UPInt>::Resi
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-
-namespace {
-const Value& GetNullSingleton()
-{
-    static const Value nullValue = []() {
-        Value value;
-        value.SetNullUnsafe();
-        return value;
-    }();
-    return nullValue;
-}
-}
 
 // The VM of the tracer's call frame (Tracer::CF at +0x20, as3_tracer.h; that header is not included here).
 static SF_INLINE VM& Sfr18TracerVM(const void* tracer)
@@ -100,11 +87,13 @@ SPInt Slots::GetPrevSlotIndex(SPInt ind) const
     return slots->VArray[static_cast<UPInt>(ind - static_cast<SPInt>(slots->FirstOwnSlotNum))].Prev;
 }
 
-// MS2-FUNCTIONAL 0x14250c230: returns the same null singleton; the exe keeps its TLS initializer inside this function.
+// MS2-FUNCTIONAL 0x14250c230: the SDK form; the exe constant-initializes v (its Value(Object*) is inline there),
+// ours calls the out-of-line ctor (sfr_as3_15) inside the guard.
 // @0x14250c230
 const Value& Value::GetNull()
 {
-    return GetNullSingleton();
+    static const Value v((Object*)NULL);
+    return v;
 }
 
 // MS2-FUNCTIONAL 0x14250f8f0: default-constructed Value has the undefined tag; local-static initialization differs.
@@ -688,34 +677,40 @@ CheckResult VMAbcFile::Load(bool to_execute)
 
 // ==== VM: interned namespaces ====
 
+// VM::MakeInternedNamespace (0x1425162a0), which the exe inlines into the VMAbcFile interning.
+static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(const VM& vm, Abc::NamespaceKind kind,
+                                                                          const ASString& uri)
+{
+    if (uri.IsEmpty() && kind == Abc::NS_Public)
+        return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
+    return static_cast<InstanceTraits::fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
+        .MakeInternedInstance(kind, uri, Value::GetUndefined());
+}
+
+// VM::MakeInternedNamespace(kind, const StringDataPtr&) (0x142516340), likewise inlined.
+static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(const VM& vm, Abc::NamespaceKind kind,
+                                                                          const StringDataPtr& uri)
+{
+    return Sfr18MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
+}
+
 // @0x1425162a0
 Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const
 {
-    if (uri.IsEmpty() && kind == Abc::NS_Public)
-    {
-        Instances::Namespace* ns = PublicNamespace.GetPtr();
-        if (ns)
-            ns->AddRef();
-        return Pickable<Instances::Namespace>(ns);
-    }
-    InstanceTraits::fl::Namespace& itr =
-        static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
-    Pickable<Instances::Namespace> r;
-    FUN_14241ba70(&itr, &r, kind, &uri, &Value::GetUndefined());
-    return r;
+    return Sfr18MakeInternedNamespace(*this, kind, uri);
 }
 
 // @0x142516340
 Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const
 {
-    return MakeInternedNamespace(kind, GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
+    return Sfr18MakeInternedNamespace(*this, kind, uri);
 }
 
-// MS2-FUNCTIONAL 0x142516400: the exe inlines the string creation and the interned factory call with a different frame.
 // @0x142516400
 Pickable<Instances::Namespace> VM::MakeInternedNamespace(Abc::NamespaceKind kind, const char* name) const
 {
-    return MakeInternedNamespace(kind, GetStringManager().CreateString(name ? name : ""));
+    return Sfr18MakeInternedNamespace(*this, kind,
+                                      GetStringManager().GetStringManager()->CreateString(name ? name : ""));
 }
 
 // ==== traits vtable ====
@@ -2182,23 +2177,6 @@ ASString VMAbcFile::GetInternedString(UPInt strIndex)
     }
 
     return ASString(IntStrings[strIndex]);
-}
-
-// VM::MakeInternedNamespace (0x1425162a0), which the exe inlines into the VMAbcFile interning.
-static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind,
-                                                                          const ASString& uri)
-{
-    if (uri.IsEmpty() && kind == Abc::NS_Public)
-        return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
-    return static_cast<InstanceTraits::fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
-        .MakeInternedInstance(kind, uri, Value::GetUndefined());
-}
-
-// VM::MakeInternedNamespace(kind, const StringDataPtr&) (0x142516340), likewise inlined.
-static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind,
-                                                                          const StringDataPtr& uri)
-{
-    return Sfr18MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
 }
 
 // @0x14250ae60
