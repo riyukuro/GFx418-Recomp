@@ -578,13 +578,13 @@ int Thread::GetOSPriority(ThreadPriority p)
 
 }  // namespace Scaleform
 
-// Optional callback every Scaleform thread runs on startup, before its Run() (not in the SDK; null unless the game
-// sets it).
+// Optional callbacks for every Scaleform thread (not in the SDK; ms2.cpp sets them to FUN_141b6de20 / FUN_141b6db40):
+// start-up, run before its Run(), and out-of-memory, run when the thread body throws std::bad_alloc.
 extern void (*DAT_143b15f88)();
+extern int (*DAT_143b15f90)(size_t);
 
 namespace Scaleform {
 
-// MS2-FUNCTIONAL: the exe's frame is 0x10 larger with two more IP-to-state entries (try layout not reproduced)
 unsigned WINAPI Thread_Win32StartFn(void* handle)
 {
     Thread* thread = (Thread*)handle;
@@ -593,18 +593,27 @@ unsigned WINAPI Thread_Win32StartFn(void* handle)
     ::SetThreadPriority(GetCurrentThread(), Thread::GetOSPriority(thread->Priority));
     thread->IdValue = (ThreadId)(UPInt)::GetCurrentThreadId();
 
-    // MS2 addition: the start hook and the thread body run under a catch-all (in a library built without unwind
-    // semantics, so cl warns C4530); an escaping exception just ends the thread
+    // MS2 addition: the start hook, then the thread body under a catch of std::bad_alloc (in a library built without
+    // unwind semantics, so cl warns C4530), which reports the failure as efd's ThreadProc does
+    if (DAT_143b15f88)
+        DAT_143b15f88();
     unsigned result;
 #pragma warning(suppress : 4530)
     try
     {
-        if (DAT_143b15f88)
-            DAT_143b15f88();
         result = thread->PRun();
     }
-    catch (...)
+    catch (std::bad_alloc& e)
     {
+        e.what();
+        result = 2;
+        if (DAT_143b15f90)
+            DAT_143b15f90(0);
+        else
+        {
+            MessageBoxA(NULL, "error memory depletion", "Error", MB_ICONHAND | MB_TOPMOST | MB_SETFOREGROUND);
+            TerminateProcess(GetCurrentProcess(), 2);
+        }
     }
     thread->FinishAndRelease();
     ThreadList::RemoveRunningThread(thread);
