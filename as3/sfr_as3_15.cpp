@@ -4087,7 +4087,15 @@ void FocusManager::alwaysEnableArrowKeysGet(bool& result)
 {
     ASVM& vm = static_cast<ASVM&>(GetVM());
     if (vm.ExtensionsEnabled)
-        result = vm.GetMovieImpl()->IsAlwaysEnableFocusArrowKeys();
+    {
+        // The exe tests the two-bit setting for unset before comparing it with 1.
+        int v = (vm.GetMovieImpl()->Flags >> MovieImpl::Shift_AlwaysEnableArrowKeys) & 3;
+        int t = (v == 3) ? -1 : v;
+        if (t)
+            result = t == 1;
+        else
+            result = false;
+    }
 }
 
 // The two-bit setting is left at 1 for true, 0 (unset) for false.
@@ -4109,7 +4117,15 @@ void FocusManager::disableFocusKeysGet(bool& result)
 {
     ASVM& vm = static_cast<ASVM&>(GetVM());
     if (vm.ExtensionsEnabled)
-        result = vm.GetMovieImpl()->IsDisableFocusKeys();
+    {
+        // The exe tests the two-bit setting for unset before comparing it with 1.
+        int v = (vm.GetMovieImpl()->Flags >> MovieImpl::Shift_DisableFocusKeys) & 3;
+        int t = (v == 3) ? -1 : v;
+        if (t)
+            result = t == 1;
+        else
+            result = false;
+    }
 }
 
 // @0x1424c9eb0
@@ -4146,8 +4162,13 @@ void FocusManager::setModalClip(const Value& result, Instances::fl_display::Spri
     SF_UNUSED(result);
     ASVM& vm = static_cast<ASVM&>(GetVM());
     if (vm.ExtensionsEnabled)
-        vm.GetMovieImpl()->SetModalClip(sprite ? static_cast<GFx::Sprite*>(sprite->pDispObj.GetPtr()) : NULL,
-                                        controllerIdx);
+    {
+        MovieImpl* proot = vm.GetMovieImpl();
+        if (sprite)
+            proot->SetModalClip(static_cast<GFx::Sprite*>(sprite->pDispObj.GetPtr()), controllerIdx);
+        else
+            proot->SetModalClip(NULL, controllerIdx);
+    }
 }
 
 // @0x1424c9ef0
@@ -4217,7 +4238,7 @@ static GFx::InteractiveObject* Sfr24IntObjOf(Instances::fl_display::InteractiveO
 void InteractiveObjectEx::getHitTestDisable(bool& result, Instances::fl_display::InteractiveObject* obj)
 {
     GFx::InteractiveObject* pio = Sfr24IntObjOf(obj);
-    result = pio ? (pio->Flags & GFx::InteractiveObject::Mask_HitTestDisable) != 0 : false;
+    result = pio ? UInt8(pio->Flags >> 11) & 1 : false;    // bit 11 = Mask_HitTestDisable
 }
 
 // @0x1424cb940
