@@ -2582,30 +2582,34 @@ void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
         ++DAT_143b2794c;
 }
 
-// MS2-FUNCTIONAL: parse an MFS memory-file path into its hexadecimal size and address components.
+// MS2-FUNCTIONAL: parse an MFS:<hex-address>.<hex-size> memory-file path into its two values.
 // @0x1400389f0
 CriBool FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64* offset)
 {
+    // As in the exe: no NULL checks, no length bound on either field, and an empty or
+    // non-hex field parses as whatever _strtoui64 makes of it.
     (void)reader;
-    if (!path || memcmp(path, "MFS:", 4) != 0)
-        return 0;
-    const char* cursor = path + 4;
-    char first[32] = {};
-    CriUint32 length = 0;
-    while (*cursor && *cursor != '.')
+    char prefix[] = "MFS:";
+    CriUint32 i;
+    char text[0x20];
+    for (i = 0; i < sizeof(prefix) - 1; ++i)
     {
-        if (length + 1 < sizeof(first))
-            first[length] = *cursor;
-        ++length;
-        ++cursor;
+        if (!path[i] || path[i] != prefix[i])
+            return 0;
     }
-    if (*cursor != '.')
-        return 0;
-    ++cursor;
-    if (size)
-        *size = (CriUint64)_strtoui64(first, NULL, 16);
-    if (offset)
-        *offset = (CriUint64)_strtoui64(cursor, NULL, 16);
+    memset(text, 0, sizeof(text));
+    for (CriSint32 n = 0; path[i] != '.'; ++n, ++i)
+    {
+        text[n] = path[i];
+        if (!path[i])
+            return 0;
+    }
+    *size = FUN_140038bd0(text, NULL, 16);
+    ++i;
+    memset(text, 0, sizeof(text));
+    for (CriSint32 n = 0; path[i]; ++i, ++n)
+        text[n] = path[i];
+    *offset = FUN_140038bd0(text, NULL, 16);
     return 1;
 }
 
@@ -4919,41 +4923,22 @@ CriMvEasyFileReaderMem::CriMvEasyFileReaderMem()
 // @0x140038720
 void CriMvEasyFileReaderMem::Open(CriChar8* fname)
 {
+    // The exe leaves the parsing to FUN_1400389f0 and only stores its two results.
+    CriBool result = 1;
+    CriUint64 address;
+    CriUint64 size;
     OpenState = ASYNC_STATUS_BUSY;
-    if (!fname || strncmp(fname, "MFS:", 4) != 0)
+    result = FUN_1400389f0(this, fname, &address, &size);
+    if (result == 1)
+    {
+        Data = (CriUint8*)address;
+        FileSize = (CriSint64)size;
+    }
+    else
     {
         OpenState = ASYNC_STATUS_ERROR;
         return;
     }
-    const CriChar8* dot = strchr(fname + 4, '.');
-    if (!dot || dot == fname + 4 || !dot[1])
-    {
-        OpenState = ASYNC_STATUS_ERROR;
-        return;
-    }
-    char addressText[32] = {};
-    char sizeText[32] = {};
-    size_t addressLen = (size_t)(dot - (fname + 4));
-    if (addressLen >= sizeof(addressText) || strlen(dot + 1) >= sizeof(sizeText))
-    {
-        OpenState = ASYNC_STATUS_ERROR;
-        return;
-    }
-    memcpy(addressText, fname + 4, addressLen);
-    strcpy_s(sizeText, dot + 1);
-    char* endAddress = NULL;
-    char* endSize = NULL;
-    unsigned __int64 address = _strtoui64(addressText, &endAddress, 16);
-    unsigned __int64 size = _strtoui64(sizeText, &endSize, 16);
-    if (!endAddress || *endAddress || !endSize || *endSize)
-    {
-        OpenState = ASYNC_STATUS_ERROR;
-        return;
-    }
-    Data = (CriUint8*)(uintptr_t)address;
-    FileSize = (CriSint64)size;
-    Position = 0;
-    ReadSize = 0;
     OpenState = ASYNC_STATUS_COMPLETE;
 }
 #pragma optimize("", on)
