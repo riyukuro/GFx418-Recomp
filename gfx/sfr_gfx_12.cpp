@@ -296,7 +296,7 @@ bool AppendableSoundData::SetReadPosition(unsigned pos)
 {
     ChunkLock.DoLock();
     bool found = false;
-    if (pFirstChunk)
+    if (pReadChunk)
     {
         pReadChunk = pFirstChunk;
         unsigned end = pReadChunk->Used;
