@@ -104,7 +104,7 @@ void FUN_14257db50(void* object);
 void FUN_14257e4a0(void*, void*);
 void FUN_140054040(void*, void*, void*);
 void FUN_140053540(void*);
-void FUN_140037910(CriSint32, const CriChar8*, CriSint32);
+void FUN_140037910(void*, const CriChar8*, CriSint32);
 void FUN_1400379b0(CriSint32, const CriChar8*);
 void FUN_140053650(void*);
 void FUN_140053470(void*);
@@ -146,6 +146,7 @@ struct CriUsfHeaderFields
 };
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 CriSint32 FUN_140045910(const CriSint32*);
+CriSint32 FUN_140045ed0(const CriSint32*);
 void* FUN_1400459ec(const void*, void*, CriSint32);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void* FUN_140045eec(const void*, void*, CriSint32);
@@ -417,14 +418,14 @@ CriBool FUN_140043810(void* object, void* owner)
         CriUint8 Reserved18[0x18];
         void* Queue;
     };
-    DecoderState* decoder = (DecoderState*)object;
-    if (!decoder || !owner)
+    if (!object || !owner)
         return 1;
-    if (decoder->Type)
+    if (object && ((DecoderState*)object)->Type)
     {
-        if (FUN_140053630(decoder->Work) != 3)
+        if (FUN_140053630(((DecoderState*)object)->Work) != 3)
             return 0;
-        if (FUN_1400467b8(decoder->Queue, 1) != 0)
+        CriUint32 queued = (CriUint32)FUN_1400467b8(((DecoderState*)object)->Queue, 1);
+        if (queued > 0)
             return 0;
     }
     return 1;
@@ -505,12 +506,16 @@ CriUint32 FUN_14003d9d0(void* object)
 CriBool FUN_140042d70(void* decoderList, void* owner)
 {
     struct DecoderList { void* Decoders[2]; CriSint32 Count; };
+    CriBool ready;
+    CriSint32 index;
     if (!decoderList)
         return 1;
-    DecoderList* list = (DecoderList*)decoderList;
-    for (CriSint32 index = 0; index < list->Count; ++index)
-        if (!FUN_140043810(list->Decoders[index], owner))
+    for (index = 0; index < ((DecoderList*)decoderList)->Count; ++index)
+    {
+        ready = FUN_140043810(((DecoderList*)decoderList)->Decoders[index], owner);
+        if (!ready)
             return 0;
+    }
     return 1;
 }
 
@@ -672,13 +677,15 @@ void FUN_1400458b8(void* object)
 void FUN_140042800(void* manager)
 {
     struct AudioManager { void* Decoders[2]; CriSint32 Count; void* InputJoint; };
-    AudioManager* audio = (AudioManager*)manager;
-    if (!audio)
+    CriSint32 index;
+    void* joint;
+    if (!manager)
         return;
-    if (audio->InputJoint)
-        FUN_140046798(audio->InputJoint);
-    for (CriSint32 index = 0; index < audio->Count; ++index)
-        FUN_140043610(audio->Decoders[index]);
+    joint = ((AudioManager*)manager)->InputJoint;
+    if (joint)
+        FUN_140046798(joint);
+    for (index = 0; index < ((AudioManager*)manager)->Count; ++index)
+        FUN_140043610(((AudioManager*)manager)->Decoders[index]);
 }
 #pragma optimize("", on)
 
@@ -2826,17 +2833,13 @@ void FUN_140041df0(void* manager, void* callback, void* userData)
 // @0x140041e30
 void FUN_140041e30(void* manager, void* callback, void* userData, CriSint32 stream)
 {
+    struct AudioDecoder { void* Reserved[2]; void* Decrypt; };
     if (!manager)
         return;
-    void* decoder;
-    memcpy(&decoder, (CriUint8*)manager + (size_t)stream * sizeof(void*), sizeof(decoder));
-    if (decoder)
-    {
-        void* decrypt;
-        memcpy(&decrypt, (CriUint8*)decoder + 0x10, sizeof(decrypt));
-        if (decrypt)
-            FUN_140054040(decrypt, callback, userData);
-    }
+    AudioDecoder* decoder = ((AudioDecoder**)manager)[stream];
+    if (!decoder || !decoder->Decrypt)
+        return;
+    FUN_140054040(decoder->Decrypt, callback, userData);
 }
 
 // MS2-FUNCTIONAL: store the two frame dimensions on a CRI video handle.
@@ -3126,10 +3129,11 @@ void FUN_140044050(CriUint64* pair, void* value)
 // @0x1400440a0
 CriUint32 FUN_1400440a0(CriUint64* pair, void* first, CriUint32 second, void* third)
 {
-    if (!pair || !*(void**)((CriUint8*)pair[1] + 0x88))
-        return 0;
-    return (*(CriUint32 (**)(CriUint64, void*, CriUint32, void*))((CriUint8*)pair[1] + 0x88))(
-        pair[0], first, second, third);
+    typedef CriUint32 (*Callback)(CriUint64, void*, CriUint32, void*);
+    CriUint32 result = 0;
+    if (pair && ((CriDecoderWrapper*)pair)->Table[0x88 / 8])
+        result = ((Callback)((CriDecoderWrapper*)pair)->Table[0x88 / 8])(pair[0], first, second, third);
+    return result;
 }
 
 // MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x48 when provided.
@@ -3662,13 +3666,13 @@ void FUN_140043550(CriSint32* state, void* input)
     };
     if (!input || !state)
         return;
-    InputState* decoder = (InputState*)state;
-    decoder->ResetState = 0;
-    if (decoder->HasState == 0)
-        return;
-    if (!decoder->InputControl)
-        FUN_140037910(0, "E05063023M : Don't have input SJ for Audio decoder.", 0);
-    FUN_140053540(decoder->AudioDecoder);
+    ((InputState*)state)->ResetState = 0;
+    if (((InputState*)state)->HasState != 0)
+    {
+        if (!((InputState*)state)->InputControl)
+            FUN_140037910(input, "E05063023M : Don't have input SJ for Audio decoder.", 0);
+        FUN_140053540(((InputState*)state)->AudioDecoder);
+    }
 }
 
 // MS2-FUNCTIONAL: compute the audio player work area from its configured channel count.
@@ -3760,7 +3764,7 @@ void* FUN_140041f70(void* owner, void* heap, const void* config)
     if (!joint)
     {
         FUN_1400420b0(manager, heap);
-        FUN_140037910(0, "E05063016M : Can't create SJ for input audio.", 0);
+        FUN_140037910(owner, "E05063016M : Can't create SJ for input audio.", 0);
         return NULL;
     }
     return manager;
@@ -3804,7 +3808,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     if (!audioDecoder)
     {
         FUN_140042600(manager, heap, decoderIndex);
-        FUN_140037910(0, "E05063014M : Can't create Audio decoder.", 0);
+        FUN_140037910(owner, "E05063014M : Can't create Audio decoder.", 0);
         return 0;
     }
     FUN_1400534d0(audioDecoder);
@@ -3829,7 +3833,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
         if (!output)
         {
             FUN_140042600(manager, heap, decoderIndex);
-            FUN_140037910(0, "E05063018M : Can't create SJ for output audio.", 0);
+            FUN_140037910(owner, "E05063018M : Can't create SJ for output audio.", 0);
             return 0;
         }
     }
@@ -3922,7 +3926,7 @@ CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
     struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
     CriSint32 overhead = FUN_140027dd0(8);
     Setup setup = { settings[0], first, second, third, 0 };
-    return criSjRbf_CalculateWorkSize((const CriSint32*)&setup) + overhead * 2;
+    return FUN_140045ed0((const CriSint32*)&setup) + overhead * 2;
 }
 
 // MS2-FUNCTIONAL: create a standard ring-buffer stream joint using the static CRI pool descriptor.
@@ -4139,19 +4143,20 @@ void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSi
 void FUN_1400436d0(void* state)
 {
     struct AdecState { CriSint32 Present; CriUint8 Reserved04[0x0c]; void* Decoder; };
-    if (!state)
+    if (!state || !((AdecState*)state)->Present)
         return;
-    AdecState* adec = (AdecState*)state;
-    if (!adec->Present || !adec->Decoder)
-        return;
-    if (FUN_140053630(adec->Decoder) == 4)
+    void* decoder = ((AdecState*)state)->Decoder;
+    if (decoder)
     {
-        FUN_1400379b0(0, "Status of Adec is ERROR.");
-        return;
+        if (FUN_140053630(decoder) == 4)
+            FUN_1400379b0(0, "Status of Adec is ERROR.");
+        else
+        {
+            DAT_143ba9d10 = 1;
+            FUN_140053650(decoder);
+            DAT_143ba9d10 = 0;
+        }
     }
-    DAT_143ba9d10 = 1;
-    FUN_140053650(adec->Decoder);
-    DAT_143ba9d10 = 0;
 }
 #pragma optimize("", on)
 
@@ -4666,23 +4671,25 @@ void FUN_140040a20(void* player, void** inputDescriptor)
         CriUint32 DescriptorValue;
     };
     struct InputDescriptor { CriUint8 Reserved00[0xb4]; CriUint32 Value; };
-    PlayerState* state = (PlayerState*)player;
-    ((InputDescriptor*)*inputDescriptor)->Value = state->DescriptorValue;
-    FUN_1400467b0(state->Joint, 1, inputDescriptor);
-    ++state->InputCount;
+    InputDescriptor* descriptor = (InputDescriptor*)*inputDescriptor;
+    descriptor->Value = ((PlayerState*)player)->DescriptorValue;
+    FUN_1400467b0(((PlayerState*)player)->Joint, 1, inputDescriptor);
+    ++((PlayerState*)player)->InputCount;
 }
 
 // MS2-FUNCTIONAL: verify each decoder entry in a CRI track set accepts the supplied operation.
 // @0x140042cf0
 CriBool FUN_140042cf0(void* trackSet, void* operation)
 {
+    struct TrackSet { void* Decoders[2]; CriSint32 Count; };
+    CriBool ready;
+    CriSint32 index;
     if (!trackSet)
         return 1;
-    struct TrackSet { void* Decoders[2]; CriSint32 Count; };
-    TrackSet* set = (TrackSet*)trackSet;
-    for (CriSint32 index = 0; index < set->Count; ++index)
+    for (index = 0; index < ((TrackSet*)trackSet)->Count; ++index)
     {
-        if (!FUN_140043750(set->Decoders[index], operation))
+        ready = FUN_140043750(((TrackSet*)trackSet)->Decoders[index], operation);
+        if (!ready)
             return 0;
     }
     return 1;
@@ -4695,15 +4702,14 @@ CriBool FUN_140042cf0(void* trackSet, void* operation)
 void FUN_1400450c0(void* stream, CriUint32 lane, CriUint32* first, CriUint32* second,
                    CriUint32* third)
 {
-    struct StreamQueues { CriUint8 Reserved00[0x18]; CriUint8* Entries; };
-    StreamQueues* state = (StreamQueues*)stream;
-    CriUint8* entry = state->Entries + (size_t)lane * 0x10;
-    void* queue = *(void**)entry;
-    if (!queue)
+    struct QueueEntry { void* Queue; void* Reserved; };
+    struct StreamQueues { CriUint8 Reserved00[0x18]; QueueEntry* Entries; };
+    QueueEntry* entries = ((StreamQueues*)stream)->Entries;
+    if (!entries[lane].Queue)
         return;
-    *first = (CriUint32)FUN_1400467b8(queue, 1);
-    *second = (CriUint32)FUN_1400467b8(queue, 0);
-    *third = (CriUint32)FUN_1400467b8(queue, 2);
+    *first = (CriUint32)FUN_1400467b8(entries[lane].Queue, 1);
+    *second = (CriUint32)FUN_1400467b8(entries[lane].Queue, 0);
+    *third = (CriUint32)FUN_1400467b8(entries[lane].Queue, 2);
 }
 
 // MS2-FUNCTIONAL: advance the read or write cursor of a CRI ring-buffer stream joint after a consumed chunk.
