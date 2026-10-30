@@ -1003,7 +1003,7 @@ void FUN_140013a40(SInt32* result, const Scaleform::GFx::AS3::Value* input)
 // @0x140015170
 void FUN_140015170(UInt32 index, SInt32* result, UInt32 length, const void* values)
 {
-    if (index < length)
+    if (length > index)
     {
         const Scaleform::GFx::AS3::Value* input = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(
             static_cast<const char*>(values) + static_cast<size_t>(index) * 0x20);
@@ -1249,8 +1249,8 @@ void** FUN_140014060(void** result, void* context)
 {
     ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
     ASStringNode* node = manager->CreateConstStringNode("null", 4, 0);
-    node->AddRef();
     *result = node;
+    node->AddRef();
     return result;
 }
 
@@ -1260,8 +1260,8 @@ void** FUN_1400140a0(void** result, void* context)
 {
     ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
     ASStringNode* node = manager->CreateConstStringNode("null", 4, 0);
-    node->AddRef();
     *result = node;
+    node->AddRef();
     return result;
 }
 
@@ -1300,7 +1300,7 @@ void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Objec
 // @0x140015140
 void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::AS3::Value* values)
 {
-    if (index < length)
+    if (length > index)
         *result = (reinterpret_cast<Scaleform::GFx::AS3::Value*>(
                        reinterpret_cast<char*>(values) + static_cast<size_t>(index) * 0x20))->Convert2Boolean();
 }
@@ -2702,144 +2702,188 @@ void FUN_140014900(void* object, const unsigned long long* encodedName)
 }
 
 // Shared path for the generated AS3 trait getters in this range.
-static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
-                            void* callback, void* base)
+// ThunkDefault<R> of as3_marshalling.h for the result types used here.
+template <typename R> struct Video02ThunkDefault;
+template <> struct Video02ThunkDefault<bool> { static bool Get() { return false; } };
+template <> struct Video02ThunkDefault<Scaleform::UInt32> { static Scaleform::UInt32 Get() { return 0; } };
+template <> struct Video02ThunkDefault<double>
 {
-    unsigned char payload[16] = {};
-    auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
-    reinterpret_cast<void(*)(char*, void*)>(callback)(reinterpret_cast<char*>(base) + offset, payload);
-    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) == 0)
-    {
-        output[0] = (output[0] & (type == 1 ? 0xffffffe1u : type == 3 ? 0xffffffe3u : 0xffffffe4u)) | type;
-        std::memcpy(reinterpret_cast<char*>(output) + 0x10, payload, sizeof(payload));
-    }
+    static double Get() { return Scaleform::GFx::NumberUtil::NaN(); }
+};
+
+// ThunkArgs0<R> of as3_marshalling.h: the result starts at its default and the destructor stores it unless the
+// call raised an exception.
+// BEHAVIOUR FIX: the Number getters start from NaN, as the exe does (they used to start from 0), and the result is
+// not stored when the getter raised.
+template <typename R>
+struct Video02ThunkResult
+{
+    Video02ThunkResult(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Value& result)
+        : vm(vm), result(result), r(Video02ThunkDefault<R>::Get()) {}
+    ~Video02ThunkResult() { if (!vm.IsException()) result.AssignUnsafe(r); }
+
+    Scaleform::GFx::AS3::VM&    vm;
+    Scaleform::GFx::AS3::Value& result;
+    R                           r;
+};
+
+// ThunkFunc0<T, N, R>::Func: calls the getter through its method pointer (code at `method`, this adjustment in the
+// int at `adjust`) on the object in the this value.
+template <typename R>
+static __forceinline void Video02TraitGet(void* instance, void* traits, unsigned* output, void*& method, void*& adjust)
+{
+    char* self = *reinterpret_cast<char**>(static_cast<char*>(traits) + 0x10);   // the this value's object
+    Video02ThunkResult<R> args(*static_cast<Scaleform::GFx::AS3::VM*>(instance),
+                               *reinterpret_cast<Scaleform::GFx::AS3::Value*>(output));
+    reinterpret_cast<void (*)(char*, R*)>(method)(self + *reinterpret_cast<int*>(&adjust), &args.r);
 }
 
-static void Video02TraitSet(void* instance, void* traits, void* context, int hasValue,
-                            Scaleform::GFx::AS3::Value* value, void* callback, void* base,
-                            bool isBoolean)
+// ThunkArgs1<const Value, A0> argument conversion: the out-of-line Value converters, as the exe calls them.
+static __forceinline void Video02ThunkConvert(const Scaleform::GFx::AS3::Value& from, double& to)
 {
-    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) != 0)
+    from.Convert2Number(to);
+}
+static __forceinline void Video02ThunkConvert(const Scaleform::GFx::AS3::Value& from, bool& to)
+{
+    to = from.Convert2Boolean();
+}
+
+// ThunkArgs1<const Value, A0>: the argument starts at its default and is converted from argv[0] when given.
+template <typename A0>
+struct Video02ThunkArgs1
+{
+    Video02ThunkArgs1(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Value& result, unsigned argc,
+                      const Scaleform::GFx::AS3::Value* argv)
+        : vm(vm), r(result), a0(Video02ThunkDefault<A0>::Get())
+    {
+        if (argc > 0)
+            Video02ThunkConvert(argv[0], a0);
+    }
+
+    Scaleform::GFx::AS3::VM&    vm;
+    Scaleform::GFx::AS3::Value& r;
+    A0                          a0;
+};
+
+// ThunkFunc1<T, N, const Value, A0>::Func: calls the setter through its method pointer (code at `method`, this
+// adjustment in the int at `adjust`) unless the argument conversion raised an exception.
+// BEHAVIOUR FIX: the exception check comes after the conversion, as in the exe. It used to come before it, so the
+// setter still ran with a default argument when Convert2Number/Convert2Boolean raised.
+template <typename A0>
+static __forceinline void Video02TraitSet(void* instance, void* traits, void* context, int hasValue,
+                                          Scaleform::GFx::AS3::Value* value, void*& method, void*& adjust)
+{
+    char* self = *reinterpret_cast<char**>(static_cast<char*>(traits) + 0x10);   // the this value's object
+    Scaleform::GFx::AS3::VM& vm = *static_cast<Scaleform::GFx::AS3::VM*>(instance);
+    Video02ThunkArgs1<A0> args(vm, *static_cast<Scaleform::GFx::AS3::Value*>(context), hasValue, value);
+    if (vm.IsException())
         return;
-    auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
-    auto target = reinterpret_cast<char*>(base) + offset;
-    if (isBoolean)
-    {
-        unsigned char converted = hasValue && value->Convert2Boolean();
-        reinterpret_cast<void(*)(char*, void*, unsigned char)>(callback)(target, context, converted);
-    }
-    else
-    {
-        double converted = Scaleform::GFx::NumberUtil::NaN();
-        if (hasValue)
-            value->Convert2NumberInline(converted);
-        reinterpret_cast<void(*)(char*, void*, double)>(callback)(target, context, converted);
-    }
+    reinterpret_cast<void (*)(char*, void*, A0)>(method)(self + *reinterpret_cast<int*>(&adjust), &args.r, args.a0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015d20
 void FUN_140015d20(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b274d8, DAT_143b274e0);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b274d8, DAT_143b274e0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015da0
 void FUN_140015da0(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27518, DAT_143b27520);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27518, DAT_143b27520);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015eb0
 void FUN_140015eb0(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 3, DAT_143b27698, DAT_143b276a0);
+    Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b27698, DAT_143b276a0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015f20
 void FUN_140015f20(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 3, DAT_143b27458, DAT_143b27460);
+    Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b27458, DAT_143b27460);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015f90
 void FUN_140015f90(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 1, DAT_143b27478, DAT_143b27480);
+    Video02TraitGet<bool>(instance, traits, output, DAT_143b27478, DAT_143b27480);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016100
 void FUN_140016100(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b274f8, DAT_143b27500);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b274f8, DAT_143b27500);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016180
 void FUN_140016180(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27448, DAT_143b27450);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27448, DAT_143b27450);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016200
 void FUN_140016200(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 3, DAT_143b274c8, DAT_143b274d0);
+    Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b274c8, DAT_143b274d0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016270
 void FUN_140016270(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b274b8, DAT_143b274c0);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b274b8, DAT_143b274c0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016530
 void FUN_140016530(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 1, DAT_143b276e8, DAT_143b276f0);
+    Video02TraitGet<bool>(instance, traits, output, DAT_143b276e8, DAT_143b276f0);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016600
 void FUN_140016600(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27578, DAT_143b27580);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27578, DAT_143b27580);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016680
 void FUN_140016680(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27568, DAT_143b27570);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27568, DAT_143b27570);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016790
 void FUN_140016790(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27468, DAT_143b27470);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27468, DAT_143b27470);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x1400168a0
 void FUN_1400168a0(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b27508, DAT_143b27510);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b27508, DAT_143b27510);
 }
 
 // MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x1400169b0
 void FUN_1400169b0(void*, void* instance, void* traits, unsigned* output)
 {
-    Video02TraitGet(instance, traits, output, 4, DAT_143b274e8, DAT_143b274f0);
+    Video02TraitGet<double>(instance, traits, output, DAT_143b274e8, DAT_143b274f0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2847,7 +2891,7 @@ void FUN_1400169b0(void*, void* instance, void* traits, unsigned* output)
 void FUN_140015e20(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b276a8, DAT_143b276b0, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b276a8, DAT_143b276b0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2855,7 +2899,7 @@ void FUN_140015e20(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016000(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b276c8, DAT_143b276d0, true);
+    Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b276c8, DAT_143b276d0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2863,7 +2907,7 @@ void FUN_140016000(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_1400162f0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27628, DAT_143b27630, true);
+    Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27628, DAT_143b27630);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2871,7 +2915,7 @@ void FUN_1400162f0(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016350(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27648, DAT_143b27650, true);
+    Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27648, DAT_143b27650);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2879,7 +2923,7 @@ void FUN_140016350(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_1400163b0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27538, DAT_143b27540, true);
+    Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27538, DAT_143b27540);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2887,7 +2931,7 @@ void FUN_1400163b0(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016410(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27618, DAT_143b27620, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27618, DAT_143b27620);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2895,7 +2939,7 @@ void FUN_140016410(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_1400164a0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27688, DAT_143b27690, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27688, DAT_143b27690);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2903,7 +2947,7 @@ void FUN_1400164a0(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_1400165a0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b276b8, DAT_143b276c0, true);
+    Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b276b8, DAT_143b276c0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2911,7 +2955,7 @@ void FUN_1400165a0(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016700(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b275c8, DAT_143b275d0, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275c8, DAT_143b275d0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2919,7 +2963,7 @@ void FUN_140016700(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016810(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b275a8, DAT_143b275b0, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275a8, DAT_143b275b0);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2927,7 +2971,7 @@ void FUN_140016810(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016920(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27658, DAT_143b27660, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27658, DAT_143b27660);
 }
 
 // MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
@@ -2935,7 +2979,7 @@ void FUN_140016920(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016a30(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b27438, DAT_143b27440, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27438, DAT_143b27440);
 }
 
 // MS2-FUNCTIONAL: stores either the supplied AS3 Value or an undefined Value in the active trait slot.
@@ -2957,7 +3001,7 @@ void FUN_140016060(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016ac0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
 {
-    Video02TraitSet(instance, traits, context, hasValue, value, DAT_143b275b8, DAT_143b275c0, false);
+    Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275b8, DAT_143b275c0);
 }
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
