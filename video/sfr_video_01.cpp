@@ -182,12 +182,14 @@ void FUN_140002980(void* stream)
     if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[10])(channel);
 }
 
-// MS2-FUNCTIONAL: releases the currently retained audio channel if one is assigned.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the currently retained audio channel if one is assigned.
 // @0x1400029d0
 void FUN_1400029d0(void** channel)
 {
     if (*channel) FUN_14257dcb0(*channel);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: returns the terminated byte string length using the exe's bounded scan behavior.
 // @0x140002f70
@@ -245,7 +247,8 @@ void* FUN_140002e80(void* stream)
     return stream;
 }
 
-// MS2-FUNCTIONAL: stores the ready flag and forwards the state update to the active player.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// stores the ready flag and forwards the state update to the active player.
 // @0x140003580
 void FUN_140003580(void* player, bool ready)
 {
@@ -254,6 +257,7 @@ void FUN_140003580(void* player, bool ready)
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[21])(impl);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: forwards playback start to the active player implementation.
 // @0x1400035b0
@@ -297,7 +301,8 @@ void FUN_140003650(void* player, unsigned threshold)
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
 }
 
-// MS2-FUNCTIONAL: updates the pool count and notifies the active player.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// updates the pool count and notifies the active player.
 // @0x140003680
 void FUN_140003680(void* player, unsigned count)
 {
@@ -306,8 +311,10 @@ void FUN_140003680(void* player, unsigned count)
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[23])(impl);
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: updates buffer time and notifies the active player.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// updates buffer time and notifies the active player.
 // @0x1400036b0
 void FUN_1400036b0(void* player, float time)
 {
@@ -316,8 +323,10 @@ void FUN_1400036b0(void* player, float time)
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[24])(impl);
 }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: updates the open timeout and notifies the active player.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// updates the open timeout and notifies the active player.
 // @0x1400036e0
 void FUN_1400036e0(void* player, float timeout)
 {
@@ -326,6 +335,7 @@ void FUN_1400036e0(void* player, float timeout)
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[26])(impl);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: forwards video information retrieval into the active player.
 // @0x140003710
@@ -336,15 +346,21 @@ void FUN_140003710(void* player)
         static_cast<unsigned char*>(player) + 0xf0);
 }
 
-// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases an owned Scaleform reference when present.
 // @0x140003770
 void FUN_140003770(void** value) { if (*value) FUN_14257dcb0(*value); }
-// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases an owned Scaleform reference when present.
 // @0x140003810
 void FUN_140003810(void** value) { if (*value) FUN_14257dcb0(*value); }
-// MS2-FUNCTIONAL: releases an owned Scaleform reference when present.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases an owned Scaleform reference when present.
 // @0x140003850
 void FUN_140003850(void** value) { if (*value) FUN_14257dcb0(*value); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: releases the previous interface and stores the retained replacement.
 // @0x140003a70
@@ -467,9 +483,11 @@ Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** con
     return result;
 }
 
-// MS2-FUNCTIONAL: releases the weak reference proxy held by this slot.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the weak reference proxy held by this slot.
 // @0x140003b20
 void FUN_140003b20(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: replaces the weak reference proxy after releasing its prior proxy.
 // @0x140003b40
@@ -480,9 +498,11 @@ void** FUN_140003b40(void** proxy, void* replacement)
     return proxy;
 }
 
-// MS2-FUNCTIONAL: releases the weak reference proxy held by this slot.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the weak reference proxy held by this slot.
 // @0x140003c00
 void FUN_140003c00(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: retains the replacement proxy before releasing the current proxy.
 // @0x140003c20
@@ -503,12 +523,16 @@ void** FUN_140003c70(void** proxy, void* replacement)
     return proxy;
 }
 
-// MS2-FUNCTIONAL: releases a weak reference proxy when the slot is populated.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases a weak reference proxy when the slot is populated.
 // @0x140003d10
 void FUN_140003d10(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
-// MS2-FUNCTIONAL: releases a weak reference proxy when the slot is populated.
+#pragma optimize("", on)
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases a weak reference proxy when the slot is populated.
 // @0x140003da0
 void FUN_140003da0(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: creates and retains a display object's character handle on first use.
 // @0x140004310
@@ -641,13 +665,17 @@ void** FUN_1400045c0(void** proxy, unsigned flags)
 // @0x140004dd0
 void FUN_140004dd0(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
-// MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// frees the object held by the first pointer slot when non-null.
 // @0x140004e50
 void FUN_140004e50(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: frees the object held by the first pointer slot when non-null.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// frees the object held by the first pointer slot when non-null.
 // @0x140004e90
 void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: obtains the live object behind a weak proxy, clearing an expired proxy slot.
 // @0x140005000
@@ -771,13 +799,17 @@ void FUN_140005690(void* stream)
     }
 }
 
-// MS2-FUNCTIONAL: releases the owned player-side allocation.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the owned player-side allocation.
 // @0x140005760
 void FUN_140005760(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the owned player-side allocation.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the owned player-side allocation.
 // @0x140005830
 void FUN_140005830(void** value) { if (*value) Scaleform::Memory::Free(*value); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: releases the owned intrusive reference stored in the slot.
 // @0x140005870
@@ -900,13 +932,17 @@ void FUN_140005ca0(void** array, Scaleform::UPInt size)
         memset(static_cast<unsigned char*>(*array) + oldSize * 12, 0, (size - oldSize) * 12);
 }
 
-// MS2-FUNCTIONAL: releases the stored allocation through Scaleform's global heap.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the stored allocation through Scaleform's global heap.
 // @0x140005f60
 void FUN_140005f60(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the stored allocation through Scaleform's global heap.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the stored allocation through Scaleform's global heap.
 // @0x140005fa0
 void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: releases the two Scaleform::String data references, then optionally frees the pair.
 // @0x140005d30
@@ -955,12 +991,14 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005f00(
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases the retained weak proxy in the owning SyncObject field.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the retained weak proxy in the owning SyncObject field.
 // @0x1400061f0
 void FUN_1400061f0(void** proxy)
 {
     if (*proxy) FUN_14257dcd0(*proxy);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: resolves a weak proxy and clears the slot after the target has died.
 // @0x140006240
@@ -1079,13 +1117,15 @@ void FUN_140002e10(void*) {}
 // @0x140002e20
 void FUN_140002e20(void*) {}
 
-// MS2-FUNCTIONAL: releases the retained interface in this slot.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the retained interface in this slot.
 // @0x140003a50
 void FUN_140003a50(void** interfaceSlot)
 {
     if (*interfaceSlot)
         reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(*interfaceSlot))[2])(*interfaceSlot);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: releases the String data pair in reverse field order.
 // @0x140004b00
@@ -1168,13 +1208,17 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases the single allocation held by this stack or page descriptor.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the single allocation held by this stack or page descriptor.
 // @0x140006bb0
 void FUN_140006bb0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the single allocation held by this stack or page descriptor.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// releases the single allocation held by this stack or page descriptor.
 // @0x140006bd0
 void FUN_140006bd0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: drops one reference on each weak-pointer proxy in the array (freeing it at zero), then frees the array.
 // @0x140006c70
@@ -1995,7 +2039,8 @@ void FUN_14000bd60(void** array, Scaleform::UPInt size)
 // @0x14000be30
 void FUN_14000be30(void** array) { FUN_14000b8f0(array); }
 
-// MS2-FUNCTIONAL: frees the owning index and releases its track-record array.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// frees the owning index and releases its track-record array.
 // @0x14000c320
 void FUN_14000c320(void* owner)
 {
@@ -2006,6 +2051,7 @@ void FUN_14000c320(void* owner)
     FUN_14000b530(*records, *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x20));
     if (*records) Scaleform::Memory::Free(*records);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: finalizes the prototype subobject and the NetStream base subobject.
 // @0x14000aec0
