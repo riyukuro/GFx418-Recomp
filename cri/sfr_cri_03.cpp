@@ -1085,105 +1085,111 @@ CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFr
 // @0x14003cae0
 void FUN_14003cae0(void* handle)
 {
-    CriUint8* bytes = (CriUint8*)handle;
-    CriSint32 zero = 0;
-    memcpy(bytes + 8, &zero, sizeof(zero));
-    memcpy(bytes + 0x18, &zero, sizeof(zero));
+    struct FrameRecord { void* Data; CriUint8 Reserved08[0xc0]; };
+    struct Handle
+    {
+        CriUint8 Reserved00[8]; CriSint32 State; CriUint8 Reserved0c[4]; void* Heap; CriSint32 Status;
+        CriUint8 Reserved1c[0x20]; CriUint32 FrameCount; CriUint8 Reserved40[8]; FrameRecord* Frames;
+        CriUint8 Reserved50[8]; void* FrameJoint; CriUint8 Reserved60[0x18]; void* Mpv;
+        CriUint8 Reserved80[0x100]; void* InputJoint; CriUint8 Reserved188[0x98]; void* Decoder;
+    };
+    typedef void (*ReleaseFunc)(void*);
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
+    CriUint32 i;
+    void* vmpv;
+    Handle* self;
     void* heap;
-    void* mpv;
-    void* frameJoint;
-    void* frames;
-    void* inputJoint;
-    memcpy(&heap, bytes + 0x10, sizeof(heap));
-    memcpy(&mpv, bytes + 0x78, sizeof(mpv));
-    memcpy(&frameJoint, bytes + 0x58, sizeof(frameJoint));
-    memcpy(&frames, bytes + 0x48, sizeof(frames));
-    memcpy(&inputJoint, bytes + 0x180, sizeof(inputJoint));
-
-    void* decoder = NULL;
-    memcpy(&decoder, bytes + 0x220, sizeof(decoder));
-    if (decoder)
+    self = (Handle*)handle;
+    self->State = 0;
+    self->Status = 0;
+    heap = self->Heap;
+    vmpv = self->Mpv;
+    if (self->Decoder != NULL)
     {
-        void** vtable = *(void***)decoder;
-        ((void (*)(void*))vtable[3])(decoder);
-        decoder = NULL;
-        memcpy(bytes + 0x220, &decoder, sizeof(decoder));
+        ((ReleaseFunc)(*(void***)self->Decoder)[3])(self->Decoder);
+        self->Decoder = NULL;
     }
-    if (frameJoint)
+    if (self->FrameJoint != NULL)
     {
-        FUN_140046784(frameJoint);
-        frameJoint = NULL;
-        memcpy(bytes + 0x58, &frameJoint, sizeof(frameJoint));
+        FUN_140046784(self->FrameJoint);
+        self->FrameJoint = NULL;
     }
-    if (frames)
+    if (self->Frames != NULL)
     {
-        CriUint32 frameCount;
-        memcpy(&frameCount, bytes + 0x3c, sizeof(frameCount));
-        for (CriUint32 i = 0; i < frameCount; ++i)
+        for (i = 0; i < self->FrameCount; i++)
         {
-            void* frame = NULL;
-            memcpy(&frame, (CriUint8*)frames + (size_t)i * 200, sizeof(frame));
-            if (frame)
-                FUN_140027fb4(heap, frame);
+            if (self->Frames[i].Data != NULL)
+                FUN_140027fb4(heap, self->Frames[i].Data);
         }
-        FUN_140027fb4(heap, frames);
+        FUN_140027fb4(heap, self->Frames);
     }
-    if (inputJoint)
+    if (self->InputJoint != NULL)
     {
-        FUN_140046784(inputJoint);
-        inputJoint = NULL;
-        memcpy(bytes + 0x180, &inputJoint, sizeof(inputJoint));
+        FUN_140046784(self->InputJoint);
+        self->InputJoint = NULL;
     }
-    if (mpv)
-        FUN_14004e2a0(mpv);
-    FUN_140027fb4(heap, handle);
+    if (vmpv != NULL)
+        FUN_14004e2a0(vmpv);
+    FUN_140027fb4(heap, self);
 }
 
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: drain pending VMPV input, reset frame records, and restore the ready handle state.
 // @0x14003cdd0
 void FUN_14003cdd0(void* handle)
 {
-    CriUint8* bytes = (CriUint8*)handle;
-    CriSint32 inactive = 0;
-    memcpy(bytes + 8, &inactive, sizeof(inactive));
-    CriUint8 chunk[16] = {};
-    void* inputJoint = NULL;
-    memcpy(&inputJoint, bytes + 0x180, sizeof(inputJoint));
-    while (FUN_1400467b8(inputJoint, 2) != 0)
+    struct FrameRecord { void* Data; CriUint8 Reserved08[8]; CriUint8 Info[0xb0]; CriUint8 ReservedC0[8]; };
+    struct Handle
     {
-        FUN_1400467a0(inputJoint, 2, -1, chunk);
-        FUN_1400467b0(inputJoint, 0, chunk);
-    }
-    if (inputJoint)
-        FUN_140046798(inputJoint);
-
-    memset(bytes + 400, 0, 0x18);
-    memset(bytes + 0x188, 0, 8);
-    void* frameJoint = NULL;
-    CriUint8* frameRecords = NULL;
-    CriUint32 frameCount, recordBytes;
-    memcpy(&frameJoint, bytes + 0x58, sizeof(frameJoint));
-    memcpy(&frameRecords, bytes + 0x48, sizeof(frameRecords));
-    memcpy(&frameCount, bytes + 0x3c, sizeof(frameCount));
-    memcpy(&recordBytes, bytes + 0x50, sizeof(recordBytes));
-    FUN_140046798(frameJoint);
-    memset(bytes + 0x60, 0, 12);
-    for (CriUint32 i = 0; i < frameCount; ++i)
+        CriUint8 Reserved00[8]; CriSint32 State; CriUint8 Reserved0c[0xc]; CriSint32 Status;
+        CriUint8 Reserved1c[0x20]; CriUint32 FrameCount; CriUint8 Reserved40[8]; FrameRecord* Frames;
+        CriUint32 RecordBytes; CriUint8 Reserved54[4]; void* FrameJoint; void* FrameHead; CriSint32 FrameQueued;
+        CriUint8 Reserved6c[4]; void* Current; CriUint8 Reserved78[0x18]; void* Slot0; CriUint8 Reserved98[0x18];
+        void* Slot1; CriUint8 ReservedB8[0x18]; void* Slot2; CriUint8 ReservedD8[0xa8]; void* InputJoint;
+        CriSint32 Input0; CriSint32 Input1; CriSint32 Counter[6];
+    };
+    struct QueueRecord { void* Data; CriUint32 Size; };
+    struct Chunk { CriUint64 Data; CriUint64 Size; };
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
+    Chunk elem;                              // a chunk pulled off the input joint and handed back to it
+    CriUint32 i;
+    Handle* self;
+    QueueRecord entry;
+    self = (Handle*)handle;
+    self->State = 0;
+    while ((CriUint32)FUN_1400467b8(self->InputJoint, 2) > 0)
     {
-        CriUint8* record = frameRecords + (size_t)i * 200;
-        memset(record + 0x10, 0, 0xb0);
-        struct QueueRecord { void* Data; CriUint64 Size; } queueRecord = { record, recordBytes };
-        FUN_1400467b0(frameJoint, 0, &queueRecord);
+        FUN_1400467a0(self->InputJoint, 2, 0xffffffff, &elem);
+        FUN_1400467b0(self->InputJoint, 0, &elem);
     }
-    memset(bytes + 0x90, 0, sizeof(void*));
-    memset(bytes + 0xb0, 0, sizeof(void*));
-    memset(bytes + 0xd0, 0, sizeof(void*));
-    memset(bytes + 0x70, 0, sizeof(void*));
-    CriSint32 active = 1;
-    CriSint32 status = 0;
-    memcpy(bytes + 8, &active, sizeof(active));
-    memcpy(bytes + 0x18, &status, sizeof(status));
+    if (self->InputJoint != NULL)
+        FUN_140046798(self->InputJoint);
+    self->Counter[0] = 0;
+    self->Counter[1] = 0;
+    self->Counter[2] = 0;
+    self->Counter[3] = 0;
+    self->Counter[4] = 0;
+    self->Counter[5] = 0;
+    self->Input0 = 0;
+    self->Input1 = 0;
+    FUN_140046798(self->FrameJoint);
+    self->FrameHead = NULL;
+    self->FrameQueued = 0;
+    for (i = 0; i < self->FrameCount; i++)
+    {
+        entry.Data = &self->Frames[i];
+        entry.Size = self->RecordBytes;
+        memset(self->Frames[i].Info, 0, sizeof(self->Frames[i].Info));
+        FUN_1400467b0(self->FrameJoint, 0, &entry);
+    }
+    self->Slot0 = NULL;
+    self->Slot1 = NULL;
+    self->Slot2 = NULL;
+    self->Current = NULL;
+    self->State = 1;
+    self->Status = 0;
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: advance VMPV input consumption and move the handle through decode and ready states.
 // @0x14003cca0
@@ -4030,31 +4036,61 @@ void* FUN_14003dd50(void* player, void* output)
     return ((CriDecodedFrame*)output)->Base;
 }
 
-// MS2-FUNCTIONAL: copy one tiled luma plane row by row into a caller buffer with its own pitch.
+#pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
+// MS2-FUNCTIONAL: copy one tiled luma plane row by row into a caller buffer with its own pitch. Only diff: srcPitch
+// sits at [rsp+0x5c], the exe has 0x5a (same as FUN_14003e850: a separate CriSint16 local is 4-aligned).
 // @0x14003e370
 CriBool FUN_14003e370(void* player, void* destination, void* source)
 {
-    struct Player { CriUint8 Reserved00[0x1c]; CriSint32 Busy; CriUint8 Reserved20[0xd8]; CriSint32 Width; };
+    struct Player { CriUint8 Reserved00[0x1c]; CriSint32 Busy; CriUint8 Reserved20[0xd8]; CriSint32 Width; CriSint32 Height; };
     struct Destination { CriUint8* Data; CriUint32 RowBytes; CriUint32 Rows; CriUint32 Pitch; };
     struct Source { const CriUint8* Data; };
-    static_assert(offsetof(Player, Width) == 0xf8, "layout");
-    if (((Player*)player)->Busy == 1 || !((Source*)source) || !((Source*)source)->Data)
+    static_assert(offsetof(Player, Width) == 0xf8 && offsetof(Player, Height) == 0xfc, "layout");
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
+    Player* p;
+    CriUint8* dstp;
+    CriUint32 rowsLeft;
+    CriUint32 i;
+    CriUint32 lineLen;
+    const CriUint8* pU;                      // chroma plane pointers: computed, never read (as in the exe)
+    const CriUint8* planeV;
+    const CriUint8* lumaRow;
+    CriSint16 chromaPitch;
+    CriSint16 srcPitch;
+    CriSint32 nHeight;
+    CriUint32 numRows;
+    CriUint32 rowLimit;
+    const CriUint8* srcLine;
+    CriSint32 widthL;
+    p = (Player*)player;
+    if (p->Busy == 1)
         return 0;
-    CriSint32 aligned = ((((Player*)player)->Width + 0xf) / 0x10) * 0x10 + 0x7f;
-    CriSint16 srcPitch = (CriSint16)(aligned / 0x80) * 0x80;
-    const CriUint8* srcRow = ((Source*)source)->Data;
-    CriUint32 copyBytes = (CriUint32)(CriSint32)srcPitch;
-    if (((Destination*)destination)->RowBytes < copyBytes)
-        copyBytes = ((Destination*)destination)->RowBytes;
-    CriUint8* dstRow = ((Destination*)destination)->Data;
-    for (CriUint32 row = 0; row < ((Destination*)destination)->Rows; ++row)
+    if (((Source*)source) == NULL || ((Source*)source)->Data == NULL)
+        return 0;
+    widthL = p->Width;
+    nHeight = p->Height;
+    srcPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
+    chromaPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    lumaRow = ((Source*)source)->Data;
+    pU = lumaRow + (((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20);
+    planeV = pU + (((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20 / 2);
+    rowLimit = ((Destination*)destination)->RowBytes;
+    numRows = ((Destination*)destination)->Rows;
+    rowsLeft = numRows;
+    lineLen = srcPitch;
+    if (lineLen > rowLimit)
+        lineLen = rowLimit;
+    srcLine = lumaRow;
+    dstp = ((Destination*)destination)->Data;
+    for (i = 0; i < rowsLeft; i++)
     {
-        memcpy(dstRow, srcRow, copyBytes);
-        srcRow += srcPitch;
-        dstRow += ((Destination*)destination)->Pitch;
+        memcpy(dstp, srcLine, lineLen);
+        srcLine = srcLine + srcPitch;
+        dstp = dstp + ((Destination*)destination)->Pitch;
     }
     return 1;
 }
+#pragma intrinsic(memcpy)
 
 // MS2-FUNCTIONAL: pull one demuxed chunk from a video player's input queue and advance its decode state machine.
 // @0x14003cff0
@@ -4177,7 +4213,10 @@ CriSint32 FUN_14003cff0(void* player)
     return result;
 }
 
+#pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
 // MS2-FUNCTIONAL: copy the three tiled YUV420 planes of a decoded picture into caller planes with their own pitches.
+// Only diff: srcPitchY sits at [rsp+0x5c], the exe has 0x5a. Each CriSint16 local is 4-aligned even when it shares
+// chromaPitch's bucket. CriSint16[2] packs the pair but moves widthL down to 0x5c (the exe leaves 0x5c free), and [3] adds a /GS cookie.
 // @0x14003e850
 void FUN_14003e850(void* player, void* source, void* destination)
 {
@@ -4185,46 +4224,72 @@ void FUN_14003e850(void* player, void* source, void* destination)
     struct Plane { CriUint8* Data; CriUint32 RowBytes; CriUint32 Rows; CriUint32 Pitch; CriUint32 Reserved; };
     struct Destination { Plane Planes[3]; };
     static_assert(offsetof(Player, Height) == 0xfc && sizeof(Plane) == 0x18, "layout");
-    Player* ply = (Player*)player;
-    Destination* dst = (Destination*)destination;
-    CriSint32 alignedWidth = ((ply->Width + 0xf) / 0x10) * 0x10;
-    CriSint32 alignedHeight = ((ply->Height + 0x1f) / 0x20) * 0x20;
-    CriSint16 lumaPitch = (CriSint16)((alignedWidth + 0x7f) / 0x80) * 0x80;
-    CriSint16 chromaPitch = (CriSint16)((alignedWidth / 2 + 0x7f) / 0x80) * 0x80;
-    const CriUint8* lumaStart = (const CriUint8*)source;
-    const CriUint8* chromaStart = lumaStart + (CriSint64)(((alignedWidth + 0x7f) / 0x80) * 0x80 * alignedHeight);
-    const CriUint8* chroma2Start = chromaStart +
-                                   (CriSint64)(((alignedWidth / 2 + 0x7f) / 0x80) * 0x80 * (alignedHeight / 2));
-    CriUint32 chromaBytes = (dst->Planes[0].RowBytes + 1U) / 2;
-    CriUint32 chromaRows = (dst->Planes[0].Rows + 1U) / 2;
-    CriUint32 lumaCopy = (CriUint32)(CriSint32)lumaPitch;
-    if (dst->Planes[0].RowBytes < lumaCopy)
-        lumaCopy = dst->Planes[0].RowBytes;
-    CriUint8* out = dst->Planes[0].Data;
-    for (CriUint32 row = 0; row < dst->Planes[0].Rows; ++row)
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
+    CriUint8* dstp;
+    CriUint32 rowsLeft;
+    CriUint32 rowsUV;
+    CriUint32 i;
+    CriUint32 lineLen;
+    CriUint32 halfBytes;
+    const CriUint8* pU;
+    const CriUint8* planeV;
+    const CriUint8* lumaRow;
+    CriSint16 srcPitchY;
+    CriSint16 chromaPitch;
+    CriSint32 nHeight;
+    CriUint32 numRows;
+    CriUint32 rowLimit;
+    const CriUint8* srcLine;
+    CriSint32 widthL;
+    widthL = ((Player*)player)->Width;
+    nHeight = ((Player*)player)->Height;
+    srcPitchY = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
+    chromaPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    lumaRow = (const CriUint8*)source;
+    pU = lumaRow + (((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20);
+    planeV = pU + (((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20 / 2);
+    rowLimit = ((Destination*)destination)->Planes[0].RowBytes;
+    numRows = ((Destination*)destination)->Planes[0].Rows;
+    halfBytes = (((Destination*)destination)->Planes[0].RowBytes + 1) / 2;
+    rowsUV = (((Destination*)destination)->Planes[0].Rows + 1) / 2;
+    rowsLeft = numRows;
+    lineLen = srcPitchY;
+    if (lineLen > rowLimit)
+        lineLen = rowLimit;
+    srcLine = lumaRow;
+    dstp = ((Destination*)destination)->Planes[0].Data;
+    for (i = 0; i < rowsLeft; i++)
     {
-        memcpy(out, lumaStart, lumaCopy);
-        lumaStart += lumaPitch;
-        out += dst->Planes[0].Pitch;
+        memcpy(dstp, srcLine, lineLen);
+        srcLine = srcLine + srcPitchY;
+        dstp = dstp + ((Destination*)destination)->Planes[0].Pitch;
     }
-    CriUint32 chromaCopy = (CriUint32)(CriSint32)chromaPitch;
-    if (chromaBytes < chromaCopy)
-        chromaCopy = chromaBytes;
-    out = dst->Planes[1].Data;
-    for (CriUint32 row = 0; row < chromaRows; ++row)
+    rowsLeft = rowsUV;
+    lineLen = chromaPitch;
+    if (lineLen > halfBytes)
+        lineLen = halfBytes;
+    srcLine = pU;
+    dstp = ((Destination*)destination)->Planes[1].Data;
+    for (i = 0; i < rowsLeft; i++)
     {
-        memcpy(out, chromaStart, chromaCopy);
-        chromaStart += chromaPitch;
-        out += dst->Planes[1].Pitch;
+        memcpy(dstp, srcLine, lineLen);
+        srcLine = srcLine + chromaPitch;
+        dstp = dstp + ((Destination*)destination)->Planes[1].Pitch;
     }
-    out = dst->Planes[2].Data;
-    for (CriUint32 row = 0; row < chromaRows; ++row)
+    rowsLeft = rowsUV;
+    lineLen = chromaPitch;
+    if (lineLen > halfBytes)
+        lineLen = halfBytes;
+    srcLine = planeV;
+    dstp = ((Destination*)destination)->Planes[2].Data;
+    for (i = 0; i < rowsLeft; i++)
     {
-        memcpy(out, chroma2Start, chromaCopy);
-        chroma2Start += chromaPitch;
-        out += dst->Planes[2].Pitch;
+        memcpy(dstp, srcLine, lineLen);
+        srcLine = srcLine + chromaPitch;
+        dstp = dstp + ((Destination*)destination)->Planes[2].Pitch;
     }
 }
+#pragma intrinsic(memcpy)
 #pragma optimize("", on)
 
 void* FUN_1400530c0(const void*, CriUint32, CriUint32);
@@ -4232,70 +4297,92 @@ CriBool FUN_140026dd0(void*, CriUint8*, CriUint32, CriUint32, void*, void*);
 void FUN_140021c90(void*, CriSint32, void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+#pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
 // MS2-FUNCTIONAL: look for a start-code signature across the tail of one chunk and the head of the next.
 // @0x1400405d0
 CriBool FUN_1400405d0(void* firstChunk, void* secondChunk, CriUint32 offset)
 {
     struct Chunk { CriUint8* Data; CriUint32 Size; };
-    Chunk* first = (Chunk*)firstChunk;
-    Chunk* second = (Chunk*)secondChunk;
-    Chunk head;
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
     Chunk tail;
-    if (first->Size < offset)
+    CriUint64 overlap;                       // up to 3 bytes from each side of the seam (CriUint64: no /GS buffer)
+    CriSint32 tb;
+    CriSint32 hb;
+    Chunk head;
+    void* startCode;
+    if (offset <= ((Chunk*)firstChunk)->Size)
     {
-        head.Data = NULL;
-        head.Size = 0;
-        if (second->Data == NULL)
-        {
-            tail.Data = NULL;
-            tail.Size = 0;
-        }
-        else
-        {
-            tail.Data = second->Data + (offset - first->Size);
-            tail.Size = second->Size - (offset - first->Size);
-        }
-    }
-    else
-    {
-        if (first->Data == NULL)
+        if (((Chunk*)firstChunk)->Data == NULL)
         {
             head.Data = NULL;
             head.Size = 0;
         }
         else
         {
-            head.Data = first->Data + offset;
-            head.Size = first->Size - offset;
+            head.Data = &((Chunk*)firstChunk)->Data[offset];
+            head.Size = ((Chunk*)firstChunk)->Size - offset;
         }
-        if (second->Data == NULL)
+        if (((Chunk*)secondChunk)->Data == NULL)
         {
             tail.Data = NULL;
             tail.Size = 0;
         }
         else
         {
-            tail.Data = second->Data;
-            tail.Size = second->Size;
+            tail.Data = ((Chunk*)secondChunk)->Data;
+            tail.Size = ((Chunk*)secondChunk)->Size;
         }
     }
-    if (head.Data != NULL && head.Size >= 4 && FUN_1400530c0(head.Data, head.Size, 0x80) != 0)
-        return 1;
-    if (tail.Data == NULL || tail.Size == 0)
+    else
+    {
+        head.Data = NULL;
+        head.Size = 0;
+        if (((Chunk*)secondChunk)->Data == NULL)
+        {
+            tail.Data = NULL;
+            tail.Size = 0;
+        }
+        else
+        {
+            tail.Data = &((Chunk*)secondChunk)->Data[offset - ((Chunk*)firstChunk)->Size];
+            tail.Size = ((Chunk*)secondChunk)->Size - (offset - ((Chunk*)firstChunk)->Size);
+        }
+    }
+    if (head.Data != NULL && head.Size > 3)
+    {
+        startCode = FUN_1400530c0(head.Data, head.Size, 0x80);
+        if (startCode != NULL)
+            return 1;
+    }
+    if (tail.Data == NULL || tail.Size <= 0)
         return 0;
-    CriUint8 joined[8];
-    CriUint32 headBytes = head.Size < 4 ? head.Size : 3;
-    CriUint32 tailBytes = tail.Size < 4 ? tail.Size : 3;
-    if (head.Data != NULL && (CriSint32)headBytes > 0)
-        memcpy(joined, head.Data + (head.Size - headBytes), (size_t)(CriSint32)headBytes);
-    if (tail.Data != NULL && (CriSint32)tailBytes > 0)
-        memcpy(joined + (CriSint32)headBytes, tail.Data, (size_t)(CriSint32)tailBytes);
-    if ((CriSint32)(headBytes + tailBytes) >= 4 && FUN_1400530c0(joined, headBytes + tailBytes, 0x80) != 0)
-        return 1;
-    if (tail.Data == NULL || tail.Size < 4 || FUN_1400530c0(tail.Data, tail.Size, 0x80) == 0)
-        return 0;
-    return 1;
+    if (head.Size > 3)
+        hb = 3;
+    else
+        hb = head.Size;
+    if (tail.Size > 3)
+        tb = 3;
+    else
+        tb = tail.Size;
+    if (head.Data != NULL && hb > 0)
+        memcpy(&overlap, head.Data + (head.Size - hb), hb);
+    if (tail.Data != NULL && tb > 0)
+        memcpy((CriUint8*)&overlap + hb, tail.Data, tb);
+    if (hb + tb > 3)
+    {
+        startCode = FUN_1400530c0(&overlap, hb + tb, 0x80);
+        if (startCode != NULL)
+            return 1;
+    }
+    if (tail.Data != NULL && tail.Size > 3)
+    {
+        startCode = FUN_1400530c0(tail.Data, tail.Size, 0x80);
+        if (startCode != NULL)
+            return 1;
+    }
+    return 0;
 }
+#pragma intrinsic(memcpy)
 #pragma optimize("", on)
 
 void FUN_1400436d0(void*);
@@ -5495,46 +5582,52 @@ CriSint32 FUN_140052d00(void*, void*);
 CriSint32 FUN_140040850(void* player, void* stream, void* second, CriSint32* consumed, void* frames)
 {
     struct Stream { void* Data; CriSint32 Size; };
-    struct Object { CriUint8 Reserved00[0x18]; CriSint32 Reserved18; CriSint32 Reserved1c; CriSint32 Reserved20; CriSint32 Reserved24; };
+    struct Player { CriUint8 Reserved00[0x78]; void* Decoder; CriUint8 Reserved80[0x1a0]; void* Field; CriUint8* Base; CriSint32 Total; CriSint32 Extra; };
+    struct Field { CriUint8 Reserved00[0x18]; CriSint32 Rest; CriSint32 Span; CriSint32 Tail; CriSint32 Head; };
     typedef CriSint32 (*SizeFunc)(void*, CriSint32);
     typedef void (*ReleaseFunc)(void*);
-    Stream* input = (Stream*)stream;
-    Stream* tail = (Stream*)second;
-    void* temporary = NULL;
-    void* object;
-    if (second == NULL)
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout (ties: later = lower slot).
+    void* p;                                 // the bitstream object handed to the MPEG decoder
+    CriSint32 res;
+    void* temporary;                         // a bitstream object created here, released at the end
+    CriSint32 headBytes;
+    Field* field;
+    CriSint32 tailSize;
+    p = NULL;
+    temporary = NULL;
+    if (second != NULL)
     {
-        object = FUN_14004eea0(input->Data, (CriUint32)input->Size);
-        temporary = object;
-        if (!object)
+        field = (Field*)((Player*)player)->Field;
+        if (field != NULL)
+        {
+            p = field;
+            headBytes = (CriSint32)((CriUint8*)((Stream*)stream)->Data - ((Player*)player)->Base);
+            tailSize = ((Stream*)second)->Size + ((Player*)player)->Extra;
+            field->Head = headBytes;
+            field->Tail = tailSize;
+            field->Span = headBytes - tailSize;
+            field->Rest = ((Player*)player)->Total - field->Span;
+        }
+        else
+        {
             return -1;
+        }
     }
     else
     {
-        object = CriMpvField<void*>(player, 0x220);
-        if (!object)
+        temporary = FUN_14004eea0(((Stream*)stream)->Data, (CriUint32)((Stream*)stream)->Size);
+        if (temporary == NULL)
             return -1;
-        CriSint32 head = (CriSint32)(uintptr_t)input->Data - (CriSint32)(uintptr_t)CriMpvField<void*>(player, 0x228);
-        CriSint32 tailBytes = tail->Size + CriMpvField<CriSint32>(player, 0x234);
-        CriMpvField<CriSint32>(object, 0x24) = head;
-        CriMpvField<CriSint32>(object, 0x20) = tailBytes;
-        CriMpvField<CriSint32>(object, 0x1c) = head - tailBytes;
-        CriMpvField<CriSint32>(object, 0x18) = CriMpvField<CriSint32>(player, 0x230) - CriMpvField<CriSint32>(object, 0x1c);
+        p = temporary;
     }
-    CriSint32 result = FUN_140050bd0(CriMpvField<void*>(player, 0x78), object, frames);
-    void** vtable = *(void***)object;
+    res = FUN_140050bd0(((Player*)player)->Decoder, p, frames);
     if (second == NULL)
-    {
-        *consumed = input->Size - ((SizeFunc)vtable[9])(object, 1);
-    }
+        *consumed = ((Stream*)stream)->Size - ((SizeFunc)(*(void***)p)[9])(p, 1);
     else
-    {
-        CriSint32 total = input->Size + tail->Size;
-        *consumed = total - ((SizeFunc)vtable[9])(object, 1);
-    }
-    if (temporary)
+        *consumed = ((Stream*)stream)->Size + ((Stream*)second)->Size - ((SizeFunc)(*(void***)p)[9])(p, 1);
+    if (temporary != NULL)
         ((ReleaseFunc)(*(void***)temporary)[3])(temporary);
-    return result;
+    return res;
 }
 #pragma optimize("", on)
 
