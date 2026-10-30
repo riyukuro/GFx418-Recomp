@@ -46,7 +46,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425244e0(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524a30(UPInt* a, const void* addr, UPInt n); }}}
 void FUN_14251cd30(Scaleform::GFx::AS3::TR::State* state, Scaleform::GFx::AS3::Value* popped);   // State::PopOpValue
-void FUN_1424e6aa0(Scaleform::UPInt tracer, void* state, Scaleform::UInt64 pos, int a, int b);
+void FUN_1424e6aa0(Scaleform::UPInt tracer, void* state, Scaleform::UInt64 pos, int a, bool b);
 void FUN_1424d6cf0(void* err, int id, void* vm, const void* a1, const void* a2);   // VM::Error::Error(id, vm, Value, Value)
 void FUN_1424d6f40(void* err, int id, void* vm, const void* a1);   // VM::Error::Error(id, vm, Value)
 void FUN_1424d79f0(void* err, int id, void* vm, const char* a1, const void* a2);   // VM::Error::Error(id, vm, char*, Value)
@@ -593,8 +593,10 @@ struct StV
 };
 
 // The popped operand lives in raw storage: PopOpValue fills it in and the exe releases it at the end.
+// Storage of a popped Value (filled by PopOpValue). The empty ctor keeps cl from treating it as a /GS buffer.
 struct TrPopped
 {
+    TrPopped() {}
     Value& Get() { return *reinterpret_cast<Value*>(&w0); }
     UPInt w0, w1, w2, w3;
 };
@@ -2712,23 +2714,22 @@ Value* Sfr31ResolveInvokeAlias(UPInt root, const char* name)
 void Sfr31SetMouseCursorType(UPInt self, const ASString* name, UInt32 mouse)
 {
     const char* s = name->ToCStr();
-    SInt32 v;
+    SInt32 v = -1;
     if (strcmp(s, "arrow") == 0) v = 0;
     else if (strcmp(s, "button") == 0) v = 3;
     else if (strcmp(s, "hand") == 0) v = 1;
     else if (strcmp(s, "ibeam") == 0) v = 2;
-    else v = -1;
     SInt32* p0;
     SInt32* p1;
-    if (mouse < 4)
-    {
-        p0 = reinterpret_cast<SInt32*>(Sfr31Rd(self, 0x10) + 0x12a0 + static_cast<UPInt>(mouse) * 0x50);
-        p1 = reinterpret_cast<SInt32*>(Sfr31Rd(self, 0x10) + 0x12a4 + static_cast<UPInt>(mouse) * 0x50);
-    }
-    else
+    if (mouse >= 4)
     {
         p0 = reinterpret_cast<SInt32*>(0x40);
         p1 = reinterpret_cast<SInt32*>(0x44);
+    }
+    else
+    {
+        p0 = reinterpret_cast<SInt32*>(Sfr31Rd(self, 0x10) + 0x12a0 + static_cast<UPInt>(mouse) * 0x50);
+        p1 = reinterpret_cast<SInt32*>(Sfr31Rd(self, 0x10) + 0x12a4 + static_cast<UPInt>(mouse) * 0x50);
     }
     typedef void (*Fn)(UPInt, UInt32, SInt32);
     reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(self, 0), 0x18))(self, mouse, v);
