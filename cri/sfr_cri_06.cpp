@@ -507,8 +507,8 @@ cri_u4 FUN_140052010(longlong *a1, int a2, int a3);   // sfr_cri_05b
 int FUN_140052950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u1 FUN_140053000(cri_any = cri_any());
 void FUN_140054170(cri_any = cri_any());
-bool FUN_140054210(cri_any = cri_any());
-bool FUN_140054230(cri_any = cri_any());
+int FUN_140054210(cri_any = cri_any());
+int FUN_140054230(cri_any = cri_any());
 void FUN_140054250(cri_any = cri_any());
 void FUN_140054320(cri_any = cri_any());
 void FUN_140054490(cri_any = cri_any());
@@ -750,7 +750,7 @@ void thunk_FUN_140054080()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054210
-bool FUN_140054210(cri_any cri_p0)
+int FUN_140054210(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
   return *(cri_code **)((char *)arg1 + 0x1bc8) == (cri_code *)FUN_140054170;
@@ -758,10 +758,10 @@ bool FUN_140054210(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054230
-bool FUN_140054230(cri_any cri_p0)
+int FUN_140054230(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  return *(cri_u1 **)((char *)arg1 + 0x1bc8) == CRI_ADDR(FUN_1400541f0);
+  return *(cri_code **)((char *)arg1 + 0x1bc8) == (cri_code *)FUN_1400541f0;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
