@@ -1768,15 +1768,14 @@ void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: DoAbc base destruction and scalar delete are modeled from our shared ExecuteTag declaration.
+// ExecuteTag scalar deleting destructor (slot 0 of the ExecuteTag vftable 0x14313ba68): an 8-byte object, freed with
+// sized delete. The exe's twin of ??_GExecuteTag (0x1423dbc20).
 // @0x1423dbbf0
-void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
+void* FUN_1423dbbf0(Scaleform::GFx::ExecuteTag* self, unsigned flags)
 {
-    Scaleform::GFx::AS3::AbcDataBuffer* abc = self->pAbc.GetPtr();
-    if (abc) abc->Release();
     self->Scaleform::GFx::ExecuteTag::~ExecuteTag();
     if (flags & 1)
-        ::operator delete(self);
+        ::operator delete(self, sizeof(Scaleform::GFx::ExecuteTag));
     return self;
 }
 
