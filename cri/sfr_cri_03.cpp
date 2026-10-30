@@ -39,7 +39,13 @@ extern "C" const char* DAT_143b27c48;
 extern "C" const void* DAT_143a47bc0[];
 extern "C" const void* DAT_143a47cb0[];
 extern "C" const char* DAT_143ba9d18;
-extern "C" const CriChar8 DAT_143a482e8[];
+// "<SUDPS_>": the USF packet signature FUN_140040f80 copies into a local
+struct CriUsfSignature
+{
+    // nine scalar bytes, not a char[9]: keeps the local copy out of /GS
+    CriChar8 Text0, Text1, Text2, Text3, Text4, Text5, Text6, Text7, Terminator;
+};
+extern "C" const CriUsfSignature DAT_143a482e8;
 extern "C" const CriUint64 DAT_1431b9ca0;
 extern "C" const void* PTR_LAB_143a48350;
 extern "C" const void* PTR_FUN_143a48638;
@@ -301,46 +307,44 @@ void FUN_140043680(void* object)
 // @0x140046324
 void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 workSize = criSjUni_CalculateWorkSize((const CriSint32*)config);
-    CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjUni", 8,
-                                                     (CriSint32)allocationMode);
+    CriSint32 size = FUN_140045910((const CriSint32*)config) + 8; // criSjUni_CalculateWorkSize, called as the external
+    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjUni", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
         FUN_140038e24(0, "E09021217B", -3);
         return NULL;
     }
-    memcpy(allocation, &heap, sizeof(heap));
-    void* object = FUN_1400459ec(config, allocation + 8, workSize);
-    if (object)
+    *allocation = heap;
+    void* object = FUN_1400459ec(config, allocation + 1, size - 8);
+    if (!object)
     {
-        *(const void**)object = &PTR_FUN_143a48638;
-        return object;
+        FUN_140027fb4(heap, allocation);
+        return NULL;
     }
-    FUN_140027fb4(heap, allocation);
-    return NULL;
+    *(const void**)object = &PTR_FUN_143a48638;
+    return object;
 }
 
 // MS2-FUNCTIONAL: allocate and initialize the CRI ring-buffer stream-joint object with its executable vtable.
 // @0x1400464f4
 void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
 {
-    CriSint32 workSize = criSjRbf_CalculateWorkSize((const CriSint32*)config);
-    CriUint8* allocation = (CriUint8*)FUN_140027f7c(heap, workSize + 8, "CriSjRbf", 8,
-                                                     (CriSint32)allocationMode);
+    CriSint32 size = FUN_140045ed0((const CriSint32*)config) + 8; // criSjRbf_CalculateWorkSize, called as the external
+    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjRbf", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
         FUN_140038e24(0, "E09021703B", -3);
         return NULL;
     }
-    memcpy(allocation, &heap, sizeof(heap));
-    void* object = FUN_140045eec(config, allocation + 8, workSize);
-    if (object)
+    *allocation = heap;
+    void* object = FUN_140045eec(config, allocation + 1, size - 8);
+    if (!object)
     {
-        *(const void**)object = &PTR_FUN_143a48668;
-        return object;
+        FUN_140027fb4(heap, allocation);
+        return NULL;
     }
-    FUN_140027fb4(heap, allocation);
-    return NULL;
+    *(const void**)object = &PTR_FUN_143a48668;
+    return object;
 }
 
 // MS2-FUNCTIONAL: construct a configured universal stream-joint from the caller's three-word settings.
@@ -883,10 +887,23 @@ void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 
                     CriSint32 allocationMode)
 {
     CriSint32 type = 0;
-    if (allocationMode >= 0 && allocationMode <= 3)
-        type = allocationMode;
-    else
+    switch (allocationMode)
+    {
+    case 0:
+        break;
+    case 1:
+        type = 1;
+        break;
+    case 2:
+        type = 2;
+        break;
+    case 3:
+        type = 3;
+        break;
+    default:
         FUN_140038e24(0, "E08092651B", -3);
+        break;
+    }
     return FUN_140027f7c(heap, size, name, alignment, type);
 }
 
@@ -902,10 +919,23 @@ void* FUN_14003b2ac(void* heap, CriSint32 allocationMode, const void* data, CriU
 {
     struct HeapCallbacks { void* Allocate; void* Free; void* Heap; } callbacks;
     CriSint32 type = 0;
-    if (allocationMode >= 0 && allocationMode <= 3)
-        type = allocationMode;
-    else
+    switch (allocationMode)
+    {
+    case 0:
+        break;
+    case 1:
+        type = 1;
+        break;
+    case 2:
+        type = 2;
+        break;
+    case 3:
+        type = 3;
+        break;
+    default:
         FUN_140038e24(0, "E08092650B", -3);
+        break;
+    }
     callbacks.Allocate = (void*)FUN_14003b20c;
     callbacks.Free = (void*)FUN_14003b2a4;
     callbacks.Heap = heap;
@@ -2788,35 +2818,29 @@ CriSint32 criSjUni_GetNumChainPool(void* streamJoint)
 
 // MS2-FUNCTIONAL: drain every active stream-joint queue and return its chunks to the free list.
 // @0x140045b7c
+#pragma function(memset)
 void criSjUni_Reset(void* streamJoint)
 {
-    CriUint8* bytes = (CriUint8*)streamJoint;
-    void* lock;
-    memcpy(&lock, bytes + 0x10, sizeof(lock));
-    if (lock)
-        FUN_140039f50((LPCRITICAL_SECTION)lock);
+    struct ChainPool { CriUint8 Reserved00[0x10]; LPCRITICAL_SECTION Lock; CriUint8 Reserved18[8]; void* Lists[4]; CriUint8 Reserved40[8]; void* FreeChunk; };
+    ChainPool* pool = (ChainPool*)streamJoint;
+    if (pool->Lock)
+        FUN_140039f50(pool->Lock);
     for (CriUint32 index = 0; index < 4; ++index)
     {
-        size_t listOffset = 0x20 + (size_t)index * sizeof(void*);
-        void* node;
-        memcpy(&node, bytes + listOffset, sizeof(node));
-        while (node)
+        void* chunk;
+        while ((chunk = pool->Lists[index]) != NULL)
         {
-            void* next;
-            memcpy(&next, node, sizeof(next));
-            memset(node, 0, 0x20);
-            void* freeHead;
-            memcpy(&freeHead, bytes + 0x48, sizeof(freeHead));
-            memcpy(node, &freeHead, sizeof(freeHead));
-            memcpy(bytes + 0x48, &node, sizeof(node));
-            node = next;
+            pool->Lists[index] = *(void**)chunk;
+            memset(chunk, 0, 0x20);
+            *(void**)chunk = pool->FreeChunk;
+            pool->FreeChunk = chunk;
         }
-        void* empty = NULL;
-        memcpy(bytes + listOffset, &empty, sizeof(empty));
+        pool->Lists[index] = NULL;
     }
-    if (lock)
-        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+    if (pool->Lock)
+        FUN_140039f8c(pool->Lock);
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 // FUN_140041a10's body; the exe inlines it into the outer timer's getters
@@ -3837,16 +3861,18 @@ void FUN_1400420b0(void* manager, void* heap)
         CriSint32 Count;
         void* InputJoint;
     };
-    AudioManager* audio = (AudioManager*)manager;
-    for (CriSint32 index = 0; index < audio->Count; ++index)
+    CriSint32 index;
+    void* joint;
+    for (index = 0; index < ((AudioManager*)manager)->Count; ++index)
     {
-        if (audio->Decoders[index])
+        if (((AudioManager*)manager)->Decoders[index])
             FUN_140042600(manager, heap, index);
     }
-    if (audio->InputJoint)
+    joint = ((AudioManager*)manager)->InputJoint;
+    if (joint)
     {
-        FUN_140046784(audio->InputJoint);
-        audio->InputJoint = NULL;
+        FUN_140046784(joint);
+        ((AudioManager*)manager)->InputJoint = NULL;
     }
     FUN_140027fb4(heap, manager);
 }
@@ -4007,22 +4033,20 @@ void FUN_1400453c4(void* object)
 // @0x140040f80
 CriBool FUN_140040f80(const void* packet, CriSint32 size)
 {
-    struct PacketHeader
-    {
-        CriUint32 Reserved00;
-        CriChar8 Signature[8];
-        CriUint8 Reserved0c[0x0b];
-        CriChar8 CscFlag;
-    };
+    CriSint32 index;
+    CriBool result = 0;
+    CriUsfSignature signature = DAT_143a482e8;
+    const CriChar8* header = (const CriChar8*)packet + 4;
     if (size < 0x18)
         return 0;
-    const PacketHeader* header = (const PacketHeader*)packet;
-    for (CriUint32 index = 0; index < 8; ++index)
+    for (index = 0; index < sizeof(signature) - 1; ++index)
     {
-        if (header->Signature[index] != DAT_143a482e8[index])
+        if (header[index] != ((const CriChar8*)&signature)[index])
             return 0;
     }
-    return header->CscFlag == 'C';
+    if (header[0x13] == 'C') // the CSC flag after the 8-byte signature
+        result = 1;
+    return result;
 }
 #pragma optimize("", on)
 
