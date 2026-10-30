@@ -30,6 +30,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include "ms2/scaleform/include/gfx/gfx_button.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
+#include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
@@ -1837,7 +1838,7 @@ char* Sfr27ObjectSetSlotValue(Object* obj, char* ret, UInt32 slot, Value* v)
 // @0x1425265d0
 bool Sfr27ObjectInterfaceSetArraySize(void* self, UPInt obj, UInt32 size)
 {
-    FUN_14241fe30(reinterpret_cast<void*>(obj + 0x38), size);
+    reinterpret_cast<Instances::fl::Array*>(obj)->Resize(size);
     return true;
 }
 
@@ -2314,12 +2315,17 @@ void Sfr31StatePushTyped(UPInt st)
     reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(*r);
 }
 
-// MS2-FUNCTIONAL 0x142526430: same logic; Value init/release and register allocation differ
+// The syncing object: vtable slot 1 returns the render-side object it mirrors to (or null).
+struct Sfr31SyncView
+{
+    virtual void Slot0();
+    virtual UPInt GetTarget();
+};
+
 // @0x142526430
 void Sfr31SyncSetInt(UPInt* self, SInt32 val)
 {
-    typedef UPInt (*Get)(void*);
-    UPInt o = reinterpret_cast<Get>(Sfr31Rd(self[0], 8))(self);
+    UPInt o = reinterpret_cast<Sfr31SyncView*>(self)->GetTarget();
     if (o != 0 && val != FUN_142622510(o))
     {
         UInt64 t = FUN_1425e3560();
@@ -2329,12 +2335,10 @@ void Sfr31SyncSetInt(UPInt* self, SInt32 val)
     }
 }
 
-// MS2-FUNCTIONAL 0x1425263b0: same logic; Value init/release and register allocation differ
 // @0x1425263b0
 void Sfr31SyncSetInt64(UPInt* self, SInt64 val)
 {
-    typedef UPInt (*Get)(void*);
-    UPInt o = reinterpret_cast<Get>(Sfr31Rd(self[0], 8))(self);
+    UPInt o = reinterpret_cast<Sfr31SyncView*>(self)->GetTarget();
     if (o != 0 && val != FUN_1426224d0(o))
     {
         UInt64 t = FUN_1425e3560();
@@ -2403,20 +2407,26 @@ void Sfr31StatePushPool(UPInt st, UInt32 ind)
     reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(*r);
 }
 
+// Instance traits seen through their vtable: slot 16 (+0x80) is the subtype test.
+#define SFR31_VPAD4(p) virtual void p##0(); virtual void p##1(); virtual void p##2(); virtual void p##3();
+struct Sfr31TraitsVtView
+{
+    SFR31_VPAD4(a) SFR31_VPAD4(b) SFR31_VPAD4(c) SFR31_VPAD4(d)
+    virtual char IsSubtypeOf(UPInt tr);
+};
+
 // A recorded state's traits equal to, or derived from, tr (state array at +0xd0, 0x30 bytes each).
-// MS2-FUNCTIONAL 0x14252e480: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14252e480
 bool Sfr31TracerHasTraits(UPInt self, UPInt tr)
 {
     const UPInt root = Sfr31Rd(self, 0x78);
-    for (UPInt i = 0, off = 0; i < Sfr31Rd(self, 0xd8); ++i, off += 0x30)
+    for (UPInt i = 0; i < Sfr31Rd(self, 0xd8); ++i)
     {
-        UPInt t = FUN_14250d760(root, Sfr31Rd(self, 0xd0) + off);
+        UPInt t = FUN_14250d760(root, Sfr31Rd(self, 0xd0) + i * 0x30);
         if (t != 0)
         {
             UPInt p = Sfr31Rd(t, 0xc0);
-            typedef char (*Fn)(UPInt, UPInt);
-            if (p == tr || reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(p, 0), 0x80))(p, tr) != 0)
+            if (p == tr || reinterpret_cast<Sfr31TraitsVtView*>(p)->IsSubtypeOf(tr) != 0)
                 return true;
         }
     }
@@ -3032,24 +3042,31 @@ void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
     }
 }
 
+// An object value whose traits are of builtin type ty and not a user subclass (flag bit 5 clear).
+static inline bool Sfr31IsObjectOfTraitsType(UPInt v, int ty)
+{
+    if ((*reinterpret_cast<const UInt32*>(v) & 0x1f) - 0xc <= 3)
+    {
+        const UPInt o = Sfr31Rd(v, 0x10);
+        if (o != 0)
+        {
+            const UPInt tr = Sfr31Rd(o, 0x20);
+            if (*reinterpret_cast<const int*>(tr + 0x70) == ty
+                && (static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5)) & 1) != 0)
+                return true;
+        }
+    }
+    return false;
+}
+
 // checkfilter: the top of the operand stack must be an XML or XMLList instance, else TypeError 1123.
 // MS2-FUNCTIONAL 0x142536ab0: behavior-equivalent recovery; codegen differs from exe
 // @0x142536ab0
 void Sfr31ExecCheckFilter(UPInt vm)
 {
     const UPInt top = Sfr31Rd(vm, 0x50);
-    const UInt32 k = (*reinterpret_cast<const UInt32*>(top) & 0x1f) - 0xc;
-    if (k <= 3)
-    {
-        const UPInt o = Sfr31Rd(top, 0x10);
-        if (o != 0)
-        {
-            const UPInt tr = Sfr31Rd(o, 0x20);
-            const int ty = *reinterpret_cast<const int*>(tr + 0x70);
-            if ((ty == 0xd || ty == 0xe) && (*reinterpret_cast<const UInt8*>(tr + 0x68) & 0x20) == 0)
-                return;
-        }
-    }
+    if (Sfr31IsObjectOfTraitsType(top, 0xd) || Sfr31IsObjectOfTraitsType(top, 0xe))   // IsXMLObject || IsXMLListObject
+        return;
     const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), *reinterpret_cast<const Value*>(top)));
     UPInt name = 0;
     typedef UPInt* (*GetName)(UPInt, UPInt*);
