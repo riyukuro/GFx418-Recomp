@@ -18,6 +18,7 @@
 #include "ms2/scaleform/kernel/sf_random.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
+#include "ms2/scaleform/include/gfx/amp/amp_profileframe.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
 #include "ms2/scaleform/include/render/render_color.h"
 #include "hook/ms2hook.h"
@@ -1380,20 +1381,16 @@ void DetachChannelNode(void* node)
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: multiplies each 64-bit element in each nested 16-byte record by the supplied factor.
 // @0x142687900
-void ScaleNestedRecords(void* array, unsigned factor)
+GFx::AMP::MovieInstructionStats& GFx::AMP::MovieInstructionStats::operator*=(unsigned num)
 {
-    auto* bytes = static_cast<unsigned char*>(array);
-    void** items = *reinterpret_cast<void***>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    for (std::size_t i = 0; i < count; ++i) {
-        auto* item = static_cast<unsigned char*>(items[i]);
-        const std::size_t n = *reinterpret_cast<std::size_t*>(item + 0x28);
-        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
-        for (std::size_t j = 0; j < n; ++j)
-            values[j * 2 + 1] *= factor;
+    for (UPInt i = 0; i < BufferStatsArray.GetSize(); ++i)
+    {
+        ArrayLH<InstructionTimePair>& times = BufferStatsArray[i]->InstructionTimesArray;
+        for (UPInt j = 0; j < times.GetSize(); ++j)
+            times[j].Time *= num;
     }
+    return *this;
 }
 
 // MS2-FUNCTIONAL: scales nested 16-byte entries, 32-byte paired records, and 24-byte timestamp records.
@@ -1509,21 +1506,16 @@ void DivideRecordPairs(void* array, unsigned long long divisor)
     }
 }
 
-// MS2-FUNCTIONAL: divides each 64-bit element in each nested 16-byte record by the low 32-bit divisor.
 // @0x142688580
-void DivideNestedRecords(void* array, unsigned long long divisor)
+GFx::AMP::MovieInstructionStats& GFx::AMP::MovieInstructionStats::operator/=(unsigned numFrames)
 {
-    auto* bytes = static_cast<unsigned char*>(array);
-    void** items = *reinterpret_cast<void***>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    const unsigned d = static_cast<unsigned>(divisor);
-    for (std::size_t i = 0; i < count; ++i) {
-        auto* item = static_cast<unsigned char*>(items[i]);
-        const std::size_t n = *reinterpret_cast<std::size_t*>(item + 0x28);
-        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
-        for (std::size_t j = 0; j < n; ++j)
-            values[j * 2 + 1] /= d;
+    for (UPInt i = 0; i < BufferStatsArray.GetSize(); ++i)
+    {
+        ArrayLH<InstructionTimePair>& times = BufferStatsArray[i]->InstructionTimesArray;
+        for (UPInt j = 0; j < times.GetSize(); ++j)
+            times[j].Time /= numFrames;
     }
+    return *this;
 }
 }
 
