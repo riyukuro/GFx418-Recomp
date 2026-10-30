@@ -3432,6 +3432,9 @@ void* FUN_1400105b0(void* object)
 }
 
 // MS2-FUNCTIONAL: constructs the video shape provider, scales its geometry to the decoded frame, and creates a tree entry.
+// BEHAVIOUR FIX: the video rectangle is (0, 0, width, height) as in the exe, where ours drew it at the frame bounds
+// (left, top, right, bottom), offsetting it from the bitmap fill; without a provider the placeholder path is the
+// exe's 0,0 -> 1,1 segment (ours was a zero-length line). Both paths are closed as the exe does.
 // @0x140011610
 void* FUN_140011610(void* object, void** result, void* context)
 {
@@ -3453,7 +3456,8 @@ void* FUN_140011610(void* object, void** result, void* context)
     if (!provider) {
         FUN_14252c8b0(path, 0, 0, 0);
         FUN_142518040(path, 0.0f, 0.0f);
-        FUN_142515a20(path, 0.0f, 0.0f);
+        FUN_142515a20(path, 1.0f, 1.0f);
+        FUN_140011410(path);
         FUN_1424f96c0(path);
     } else {
         auto** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
@@ -3494,7 +3498,9 @@ void* FUN_140011610(void* object, void** result, void* context)
             auto pathVtable = *reinterpret_cast<void***>(path);
             auto fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
             FUN_14252c8b0(path, fillStyles, 0, 0);
-            FUN_140011500(shape, left, top, right, bottom);
+            // the rectangle is the frame's size at the origin (0x140011943), not its bounds
+            FUN_140011500(shape, 0.0f, 0.0f, right - left, bottom - top);
+            FUN_140011410(path);
             FUN_1426786e0(shape);
             // The closing reference drop is RefCountImpl::Release (exe 0x140011982 -> 0x14257dcb0), not vftable slot 2:
             // slot 2 of ??_7ComplexFill (0x1424e3830) is a deleting dtor, which freed the fill while the path still
