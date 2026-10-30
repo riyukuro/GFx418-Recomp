@@ -1970,8 +1970,8 @@ void FUN_140015750(void** frame)
 {
     char* vm = static_cast<char*>(frame[0]);
     if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
-        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetSInt32Unsafe(
-            static_cast<Scaleform::SInt32>(reinterpret_cast<intptr_t>(frame[2])));
+        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetUInt32Unsafe(
+            static_cast<Scaleform::UInt32>(reinterpret_cast<intptr_t>(frame[2])));
 }
 
 // MS2-FUNCTIONAL: writes a boolean result only when the VM has no pending exception.
