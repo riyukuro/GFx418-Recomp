@@ -394,12 +394,18 @@ void MovieDataDef::LoadTaskData::OnMovieDataDefRelease()
 }
 
 // @0x1425d0590
-// MS2-FUNCTIONAL: HeapDesc Arena store order differs
 MemoryHeap* MovieDataDef::LoadTaskData::GetImageHeap()
 {
     if (!pImageHeap)
     {
-        HeapDesc desc(HeapDesc::Heap_FixedGranularity, 32, 4 * 1024, 0, ~UPInt(0), 0, HeapId_Images);
+        HeapDesc desc;
+        desc.Flags       = HeapDesc::Heap_FixedGranularity;
+        desc.MinAlign    = 32;
+        desc.Granularity = 4 * 1024;
+        desc.Reserve     = 0;
+        desc.Threshold   = ~UPInt(0);
+        desc.Limit       = 0;
+        desc.HeapId      = HeapId_Images;
         pImageHeap = *pHeap->CreateHeap("_Images", desc);
     }
     return pImageHeap;
@@ -1253,7 +1259,6 @@ unsigned MovieDefImpl::GetMetadata(char* pbuff, unsigned buffSize) const
 }
 
 // @0x1425d0620
-// MS2-FUNCTIONAL: branch layout of the lazy heap creation
 MemoryHeap* MovieDefImpl::GetImageHeap() const
 {
     return GetDataDef()->GetImageHeap();
