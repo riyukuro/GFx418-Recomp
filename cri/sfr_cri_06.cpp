@@ -11422,7 +11422,7 @@ int FUN_140062890()
 // @0x1400628c0
 cri_u4 thunk_FUN_14005b040()
 {
-  return DAT_143e64b88;
+  return FUN_14005b040();   // the exe's thunk is a jmp to FUN_14005b040
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
