@@ -16,6 +16,14 @@
 #include "ms2/scaleform/include/gfx/as3/as3_abc.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 
+// The exe keeps Clear out of line for the POD vectors (0x14255b340 / b3c0 / b440) and inlines RemoveAt into
+// its callers; with Clear inlined, RemoveAt grows past the inline budget.
+namespace Scaleform {
+template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<SInt32, AllocatorDH<SInt32, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
+template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<UInt32, AllocatorDH<UInt32, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
+template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<double, AllocatorDH<double, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
+}
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -948,7 +956,6 @@ void Vector_double::AS3reverse(SPtr<Vector_double>& result)
 }
 
 // @0x142558850
-// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
 void Vector_double::AS3shift(Value::Number& result)
 {
     if (V.CheckFixed() && V.V.GetSize() != 0)
@@ -1045,7 +1052,6 @@ void Vector_int::AS3reverse(SPtr<Vector_int>& result)
 }
 
 // @0x142558910
-// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
 void Vector_int::AS3shift(SInt32& result)
 {
     if (V.CheckFixed() && V.V.GetSize() != 0)
@@ -1237,7 +1243,6 @@ void Vector_uint::AS3reverse(SPtr<Vector_uint>& result)
 }
 
 // @0x142558a60
-// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
 void Vector_uint::AS3shift(UInt32& result)
 {
     if (V.CheckFixed() && V.V.GetSize() != 0)
@@ -1482,7 +1487,6 @@ CheckResult Vector_String::DeleteProperty(const Multiname& prop_name)
 }
 
 // @0x14255b890
-// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
 CheckResult Vector_double::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
@@ -1492,7 +1496,6 @@ CheckResult Vector_double::DeleteProperty(const Multiname& prop_name)
 }
 
 // @0x14255b970
-// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
 CheckResult Vector_int::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
@@ -1511,7 +1514,6 @@ CheckResult Vector_object::DeleteProperty(const Multiname& prop_name)
 }
 
 // @0x14255baf0
-// MS2-FUNCTIONAL: RemoveAt's Clear is inlined here, the exe calls it
 CheckResult Vector_uint::DeleteProperty(const Multiname& prop_name)
 {
     UInt32 ind;
