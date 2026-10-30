@@ -790,9 +790,8 @@ void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
     array[1] = reinterpret_cast<void*>(size);
 }
 
-// MS2-FUNCTIONAL: resizes the array of 16-byte records with four-element capacity rounding.
-// @0x1400051c0
-void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
+// the exe inlines the body into FUN_1400069a0.
+static __forceinline void Video01ResizeRecords(void** array, Scaleform::UPInt requested)
 {
     auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
     auto* data = array[0];
@@ -809,6 +808,13 @@ void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
             DAT_143b15f60, capacity * 16, flags);
     }
     array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: resizes the array of 16-byte records with four-element capacity rounding.
+// @0x1400051c0
+void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
+{
+    Video01ResizeRecords(array, requested);
 }
 
 // MS2-FUNCTIONAL: resizes the array of 12-byte records with four-element capacity rounding.
@@ -1359,7 +1365,7 @@ void FUN_140006810(void** array, void* owner, Scaleform::UPInt requested)
 // @0x1400069a0
 void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
 {
-    FUN_1400051c0(array, owner, capacity);
+    Video01ResizeRecords(array, capacity);
 }
 
 // MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
@@ -1769,9 +1775,8 @@ void FUN_140009ec0(Scaleform::GFx::ASStringNode** nodeSlot)
     if (*nodeSlot && !(*nodeSlot)->pLower) (*nodeSlot)->ResolveLowercase_Impl();
 }
 
-// MS2-FUNCTIONAL: compares string node identity, using cached lowercase nodes for insensitive mode.
-// @0x14000a030
-bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
+// the exe inlines the body into FUN_14000a090.
+static __forceinline bool Video01NodeEquals(Scaleform::GFx::ASStringNode** left,
                    Scaleform::GFx::ASStringNode** right, bool caseSensitive)
 {
     if (caseSensitive) return *left == *right;
@@ -1779,12 +1784,20 @@ bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
     return *left && *right && (*left)->pLower == (*right)->pLower;
 }
 
+// MS2-FUNCTIONAL: compares string node identity, using cached lowercase nodes for insensitive mode.
+// @0x14000a030
+bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
+                   Scaleform::GFx::ASStringNode** right, bool caseSensitive)
+{
+    return Video01NodeEquals(left, right, caseSensitive);
+}
+
 // MS2-FUNCTIONAL: returns the equality result with the same case handling as the bool helper.
 // @0x14000a090
 bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
                    Scaleform::GFx::ASStringNode** right, bool caseSensitive)
 {
-    return FUN_14000a030(left, right, caseSensitive);
+    return Video01NodeEquals(left, right, caseSensitive);
 }
 
 // MS2-FUNCTIONAL: erases one retained object from the pointer array and compacts the tail.
@@ -1859,9 +1872,8 @@ void* FUN_14000b050(void** destination, const void** source)
     return FUN_140007840(destination, source);
 }
 
-// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
-// @0x14000b080
-void FUN_14000b080(void** table)
+// the exe inlines the body into FUN_14000b120.
+static __forceinline void Video01ReleaseValueTable(void** table)
 {
     if (!*table) return;
     auto* data = static_cast<unsigned char*>(*table);
@@ -1879,8 +1891,15 @@ void FUN_14000b080(void** table)
 }
 
 // MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
+// @0x14000b080
+void FUN_14000b080(void** table)
+{
+    Video01ReleaseValueTable(table);
+}
+
+// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
 // @0x14000b120
-void FUN_14000b120(void** table) { FUN_14000b080(table); }
+void FUN_14000b120(void** table) { Video01ReleaseValueTable(table); }
 
 // MS2-FUNCTIONAL: allocates a power-of-two table, rehashes live key/value entries, and releases the old table.
 // @0x14000b3b0
@@ -1975,9 +1994,8 @@ void FUN_14000b2a0(void* records, Scaleform::UPInt count)
     }
 }
 
-// MS2-FUNCTIONAL: copies the cue-point kind, label, metadata, and nested record array.
-// @0x14000b350
-unsigned* FUN_14000b350(unsigned* destination, const unsigned* source)
+// the exe inlines the body into FUN_14000b620.
+static __forceinline unsigned* Video01CopyCuePoint(unsigned* destination, const unsigned* source)
 {
     *destination = *source;
     new (destination + 2) Scaleform::String(
@@ -1993,11 +2011,18 @@ unsigned* FUN_14000b350(unsigned* destination, const unsigned* source)
     return destination;
 }
 
+// MS2-FUNCTIONAL: copies the cue-point kind, label, metadata, and nested record array.
+// @0x14000b350
+unsigned* FUN_14000b350(unsigned* destination, const unsigned* source)
+{
+    return Video01CopyCuePoint(destination, source);
+}
+
 // MS2-FUNCTIONAL: copies the cue-point kind, label, metadata, and nested record array if non-null.
 // @0x14000b620
 void FUN_14000b620(unsigned* destination, const unsigned* source)
 {
-    if (destination) FUN_14000b350(destination, source);
+    if (destination) Video01CopyCuePoint(destination, source);
 }
 
 // MS2-FUNCTIONAL: releases the nested String pair arrays and the String member of each 48-byte record.
@@ -2342,7 +2367,7 @@ public:
 };
 
 template<class Functor>
-static void ForEachVideoObjectChild(void* object,
+static __forceinline void ForEachVideoObjectChild(void* object,
     Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     using namespace Scaleform::GFx::AS2;
@@ -2622,7 +2647,7 @@ void FUN_1400067a0(void** values, Scaleform::UPInt count)
 }
 
 template<class Functor>
-static void ForEachVideoPrototypeChild(void* object,
+static __forceinline void ForEachVideoPrototypeChild(void* object,
     Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     using namespace Scaleform::GFx::AS2;
@@ -3969,7 +3994,8 @@ InteractiveObject* VideoObject::GetASCharacter()
 // @0x14000db10
 const InteractiveObject* VideoObject::GetASCharacter() const
 {
-    return const_cast<VideoObject*>(this)->GetASCharacter();
+    Ptr<InteractiveObject> strong = pCharacter;   // the exe inlines the non-const lookup
+    return strong.GetPtr();
 }
 
 // MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
