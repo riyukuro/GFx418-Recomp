@@ -247,7 +247,7 @@ Scaleform::UPInt FUN_140002f70(const char* text)
     return static_cast<Scaleform::UPInt>(cursor - text);
 }
 
-// MS2-FUNCTIONAL: replaces the retained audio channel after releasing its previous value.
+// replaces the retained audio channel after releasing its previous value.
 // @0x1400029f0
 void** FUN_1400029f0(void** channel, void* replacement)
 {
@@ -413,7 +413,7 @@ void FUN_140003810(void** value) { if (*value) FUN_14257dcb0(*value); }
 void FUN_140003850(void** value) { if (*value) FUN_14257dcb0(*value); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the previous interface and stores the retained replacement.
+// releases the previous interface and stores the retained replacement.
 // @0x140003a70
 void** FUN_140003a70(void** destination, void* replacement)
 {
@@ -423,7 +423,7 @@ void** FUN_140003a70(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases and replaces a non-null interface slot without retaining the replacement.
+// releases and replaces a non-null interface slot without retaining the replacement.
 // @0x140003ab0
 void** FUN_140003ab0(void** destination, void* replacement)
 {
@@ -490,7 +490,7 @@ Scaleform::GFx::ASString* FUN_140003940(Scaleform::GFx::AS2::Environment* enviro
     return result;
 }
 
-// MS2-FUNCTIONAL: looks up the selected movie string manager for a built-in table index.
+// looks up the selected movie string manager for a built-in table index.
 // @0x1400043e0
 Scaleform::GFx::ASStringNodeHolder* FUN_1400043e0(Scaleform::GFx::AS2::Environment* environment, int index)
 {
@@ -499,7 +499,7 @@ Scaleform::GFx::ASStringNodeHolder* FUN_1400043e0(Scaleform::GFx::AS2::Environme
     return &context->GetStringManager()->Builtins[index];
 }
 
-// MS2-FUNCTIONAL: selects a built-in string manager within the environment's global context.
+// selects a built-in string manager within the environment's global context.
 // @0x1400044e0
 Scaleform::GFx::ASStringNodeHolder* FUN_1400044e0(Scaleform::GFx::AS2::GlobalContext** context, int index)
 {
@@ -540,7 +540,7 @@ Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** con
 void FUN_140003b20(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: replaces the weak reference proxy after releasing its prior proxy.
+// replaces the weak reference proxy after releasing its prior proxy.
 // @0x140003b40
 void** FUN_140003b40(void** proxy, void* replacement)
 {
@@ -555,7 +555,7 @@ void** FUN_140003b40(void** proxy, void* replacement)
 void FUN_140003c00(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: retains the replacement proxy before releasing the current proxy.
+// retains the replacement proxy before releasing the current proxy.
 // @0x140003c20
 void** FUN_140003c20(void** proxy, void* replacement)
 {
@@ -565,7 +565,7 @@ void** FUN_140003c20(void** proxy, void* replacement)
     return proxy;
 }
 
-// MS2-FUNCTIONAL: replaces the weak reference proxy after releasing its prior proxy.
+// replaces the weak reference proxy after releasing its prior proxy.
 // @0x140003c70
 void** FUN_140003c70(void** proxy, void* replacement)
 {
@@ -592,7 +592,7 @@ void FUN_140004310(void* object)
     if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x70)) FUN_1425f1910(object);
 }
 
-// MS2-FUNCTIONAL: retrieves the display object's character type into the caller's output slot.
+// retrieves the display object's character type into the caller's output slot.
 // @0x140004330
 void** FUN_140004330(void** character, void** result)
 {
@@ -600,7 +600,7 @@ void** FUN_140004330(void** character, void** result)
     return result;
 }
 
-// MS2-FUNCTIONAL: retrieves the display object's subtype into the caller's output slot.
+// retrieves the display object's subtype into the caller's output slot.
 // @0x140004350
 void** FUN_140004350(void** character, void** result)
 {
@@ -683,7 +683,7 @@ void FUN_140004770(void* object)
     if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl, owner + 0xf0);
 }
 
-// MS2-FUNCTIONAL: builds the three-field URL location value using owned copies of the two strings.
+// builds the three-field URL location value using owned copies of the two strings.
 // @0x140004290
 Scaleform::GFx::URLBuilder::LocationInfo* FUN_140004290(
     Scaleform::GFx::URLBuilder::LocationInfo* location, Scaleform::GFx::URLBuilder::FileUse use,
@@ -693,7 +693,7 @@ Scaleform::GFx::URLBuilder::LocationInfo* FUN_140004290(
     return new (location) Scaleform::GFx::URLBuilder::LocationInfo(use, filename, parentPath);
 }
 
-// MS2-FUNCTIONAL: destroys a character handle and frees its allocation when requested.
+// destroys a character handle and frees its allocation when requested.
 // @0x1400042d0
 Scaleform::GFx::CharacterHandle* FUN_1400042d0(Scaleform::GFx::CharacterHandle* handle, unsigned flags)
 {
@@ -711,7 +711,7 @@ Scaleform::GFx::AS2::FnCall* FUN_1400043b0(Scaleform::GFx::AS2::FnCall* call, un
     return call;
 }
 
-// MS2-FUNCTIONAL: releases the owned proxy at this weak-pointer slot when present.
+// releases the owned proxy at this weak-pointer slot when present.
 // @0x1400045c0
 void** FUN_1400045c0(void** proxy, unsigned flags)
 {
@@ -880,7 +880,7 @@ void FUN_140005830(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 // @0x140005870
 void FUN_140005870(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
-// MS2-FUNCTIONAL: destroys a weak-support object and conditionally frees its storage.
+// destroys a weak-support object and conditionally frees its storage.
 // @0x1400058c0
 Scaleform::RefCountWeakSupportImpl* FUN_1400058c0(Scaleform::RefCountWeakSupportImpl* value, unsigned flags)
 {
@@ -899,7 +899,7 @@ void FUN_140005900(Scaleform::GFx::CharacterHandle** value)
     }
 }
 
-// MS2-FUNCTIONAL: retains the replacement character handle before releasing the previous one.
+// retains the replacement character handle before releasing the previous one.
 // @0x140005940
 void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replacement)
 {
@@ -1088,7 +1088,7 @@ void* FUN_140002a60(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the shared base destructor and conditionally releases the allocation.
+// runs the shared base destructor and conditionally releases the allocation.
 // @0x140002b30
 void* FUN_140002b30(void* object, unsigned flags)
 {
@@ -1097,7 +1097,7 @@ void* FUN_140002b30(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the ref-counted base destructor and conditionally releases the allocation.
+// runs the ref-counted base destructor and conditionally releases the allocation.
 // @0x140002bb0
 void* FUN_140002bb0(void* object, unsigned flags)
 {
@@ -1120,7 +1120,7 @@ void* FUN_140002c10(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// runs the common ref-counted base destructor and optional allocation release.
 // @0x140002cc0
 void* FUN_140002cc0(void* object, unsigned flags)
 {
@@ -1129,7 +1129,7 @@ void* FUN_140002cc0(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// runs the common ref-counted base destructor and optional allocation release.
 // @0x140002d20
 void* FUN_140002d20(void* object, unsigned flags)
 {
@@ -1138,7 +1138,7 @@ void* FUN_140002d20(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the common ref-counted base destructor and optional allocation release.
+// runs the common ref-counted base destructor and optional allocation release.
 // @0x140002e40
 void* FUN_140002e40(void* object, unsigned flags)
 {
@@ -1211,7 +1211,7 @@ void* FUN_140003df0(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: destroys weak-reference support state and optionally frees the object.
+// destroys weak-reference support state and optionally frees the object.
 // @0x140004fb0
 void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 {
@@ -1239,7 +1239,7 @@ void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the base object's shared state and optionally its storage.
+// releases the base object's shared state and optionally its storage.
 // @0x140004f30
 void* FUN_140004f30(void* object, unsigned flags)
 {
@@ -1602,7 +1602,7 @@ void FUN_1400074a0(Scaleform::UPInt* object)
 // @0x140007570
 void FUN_140007570(void** slot) { ReleaseAs2GCObject(*slot); }
 
-// MS2-FUNCTIONAL: retains the incoming AS2 object, releases the old value, and assigns it.
+// retains the incoming AS2 object, releases the old value, and assigns it.
 // @0x1400075a0
 void** FUN_1400075a0(void** destination, void** source)
 {
@@ -1619,7 +1619,7 @@ void** FUN_1400075a0(void** destination, void** source)
 // @0x1400076d0
 void FUN_1400076d0(void** slot) { ReleaseAs2GCObject(*slot); }
 
-// MS2-FUNCTIONAL: retains a replacement AS2 object and releases the previous reference.
+// retains a replacement AS2 object and releases the previous reference.
 // @0x140007700
 void** FUN_140007700(void** destination, void* replacement)
 {
@@ -1632,7 +1632,7 @@ void** FUN_140007700(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: overwrites the slot after releasing its previous AS2 reference.
+// overwrites the slot after releasing its previous AS2 reference.
 // @0x140007760
 void** FUN_140007760(void** destination, void* replacement)
 {
@@ -1656,7 +1656,7 @@ void FUN_140007a40(Scaleform::UPInt* object)
     pair->pSecond = nullptr;
 }
 
-// MS2-FUNCTIONAL: retains the replacement AS2 object and releases the old slot value.
+// retains the replacement AS2 object and releases the old slot value.
 // @0x140007600
 void** FUN_140007600(void** destination, void* replacement)
 {
@@ -1725,7 +1725,7 @@ void FUN_1400078d0(void** value)
     ReleaseAs2GCObject(value[1]);
 }
 
-// MS2-FUNCTIONAL: releases the second-field object reference and optionally deletes the wrapper.
+// releases the second-field object reference and optionally deletes the wrapper.
 // @0x140007960
 void* FUN_140007960(void* value, unsigned flags)
 {
@@ -1750,7 +1750,7 @@ unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: destroys the AS2 call frame and optionally deletes its storage.
+// destroys the AS2 call frame and optionally deletes its storage.
 // @0x140007b70
 void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 {
@@ -1759,7 +1759,7 @@ void* FUN_140007b70(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
     return call;
 }
 
-// MS2-FUNCTIONAL: destroys a prototype base and optionally deletes its storage.
+// destroys a prototype base and optionally deletes its storage.
 // @0x140007c80
 void* FUN_140007c80(Scaleform::GFx::AS2::GASPrototypeBase* prototype, unsigned flags)
 {
@@ -1821,14 +1821,14 @@ void FUN_14000a8f0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: initializes an empty string-record array from the supplied source records.
+// initializes an empty string-record array from the supplied source records.
 // @0x14000a950
 void* FUN_14000a950(void** destination, const void** source)
 {
     return FUN_140007840(destination, source);
 }
 
-// MS2-FUNCTIONAL: releases the AS2 object stored in a hash entry and marks the entry unused.
+// releases the AS2 object stored in a hash entry and marks the entry unused.
 // @0x14000a9f0
 void FUN_14000a9f0(Scaleform::UPInt* entry)
 {
@@ -1836,7 +1836,7 @@ void FUN_14000a9f0(Scaleform::UPInt* entry)
     entry[0] = ~Scaleform::UPInt(1);
 }
 
-// MS2-FUNCTIONAL: releases the AS2 object stored in a hash entry and marks the entry unused.
+// releases the AS2 object stored in a hash entry and marks the entry unused.
 // @0x14000aa30
 void FUN_14000aa30(Scaleform::UPInt* entry)
 {
@@ -1844,7 +1844,7 @@ void FUN_14000aa30(Scaleform::UPInt* entry)
     entry[0] = ~Scaleform::UPInt(1);
 }
 
-// MS2-FUNCTIONAL: destroys a NetStream and optionally returns its allocation to the global heap.
+// destroys a NetStream and optionally returns its allocation to the global heap.
 // BEHAVIOUR FIX (latent): ~NetStream is called directly (call 0x140008070) as in the exe. The virtual
 // stream->~NetStream() would recurse through exe vftable 0x1431b5030 slot 2 (this function).
 // The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
@@ -1865,7 +1865,7 @@ void FUN_14000b020(void* cue)
     memset(bytes + 0x18, 0, 0x18);
 }
 
-// MS2-FUNCTIONAL: initializes an empty cue-point array and copies the supplied records.
+// initializes an empty cue-point array and copies the supplied records.
 // @0x14000b050
 void* FUN_14000b050(void** destination, const void** source)
 {
@@ -2060,7 +2060,7 @@ void FUN_14000bbf0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: destroys the NetStream provider and optionally frees its allocation.
+// destroys the NetStream provider and optionally frees its allocation.
 // @0x14000cbd0
 void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsigned flags)
 {
@@ -2069,7 +2069,7 @@ void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsig
     return provider;
 }
 
-// MS2-FUNCTIONAL: destroys the NetStream constructor function and optionally releases its allocation.
+// destroys the NetStream constructor function and optionally releases its allocation.
 // BEHAVIOUR FIX (latent): ~CFunctionObject is called directly (call 0x1429255a0) as in the exe. The virtual call would
 // recurse through exe vftable 0x1431b56b0 slot 2 (this function).
 // The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
@@ -2164,20 +2164,27 @@ void FUN_14000c320(void* owner)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: finalizes the prototype subobject and the NetStream base subobject.
-// @0x14000aec0
-void FUN_14000aec0(void* object)
+// the NetStream prototype destructor body; the exe inlines it into FUN_14000a7b0.
+static __forceinline void Video01NetStreamProtoDtor(void* object)
 {
     auto* bytes = static_cast<unsigned char*>(object);
+    // the implicit prototype destructor resets its three vftables first
+    *reinterpret_cast<void**>(bytes) = &NetStreamPrototypeVtable;
+    *reinterpret_cast<void**>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
+    *reinterpret_cast<void**>(bytes + 0xd8) = &NetStreamPrototypeBaseVtable;
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0xd8)->GASPrototypeBase::~GASPrototypeBase();
     reinterpret_cast<Scaleform::GFx::AS2::NetStream*>(object)->NetStream::~NetStream();
 }
 
-// MS2-FUNCTIONAL: releases the derived prototype and NetStream state.
-// @0x14000a7b0
-void FUN_14000a7b0(void* object) { FUN_14000aec0(object); }
+// finalizes the prototype subobject and the NetStream base subobject.
+// @0x14000aec0
+void FUN_14000aec0(void* object) { Video01NetStreamProtoDtor(object); }
 
-// MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
+// releases the derived prototype and NetStream state.
+// @0x14000a7b0
+void FUN_14000a7b0(void* object) { Video01NetStreamProtoDtor(object); }
+
+// destroys the prototype and NetStream base, then optionally frees the object.
 // @0x14000a880
 __declspec(noinline) void* FUN_14000a880(void* object, unsigned flags)
 {
@@ -2196,7 +2203,7 @@ void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_
 void* FUN_14000a020(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0x20, flags); }
 
 // The exe re-stores the three own vftables (0x1431b53c0/0x1431b5310/0x1431b5300) first; nothing reads them before the bases'.
-// MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
+// destroys the prototype and NetStream base, then optionally frees the object.
 // @0x14000b1c0
 void* FUN_14000b1c0(void* object, unsigned flags)
 {
@@ -2212,14 +2219,14 @@ void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number)
     value->SetNumber(number);
 }
 
-// MS2-FUNCTIONAL: sets the bool tag and payload after releasing any previous reference.
+// sets the bool tag and payload after releasing any previous reference.
 // @0x14000d2a0
 void FUN_14000d2a0(Scaleform::GFx::AS2::Value* value, bool boolean)
 {
     value->SetBool(boolean);
 }
 
-// MS2-FUNCTIONAL: allocates from the global Scaleform heap using the requested memory stat.
+// allocates from the global Scaleform heap using the requested memory stat.
 // @0x14000d360
 void* FUN_14000d360(Scaleform::UPInt size, void* owner)
 {
@@ -2234,7 +2241,7 @@ struct VideoPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
     using GASPrototypeBase::InitFunctionMembers;
 };
 
-// MS2-FUNCTIONAL: registers methods in the GAS prototype subobject at its observed object offset.
+// registers methods in the GAS prototype subobject at its observed object offset.
 // @0x14000d390
 void FUN_14000d390(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASStringContext* context,
@@ -2251,7 +2258,7 @@ struct VideoCtorProtoInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
     using GASPrototypeBase::InitFunctionMembers;
 };
 
-// MS2-FUNCTIONAL: initializes the NetStream constructor's prototype members at the observed subobject offset.
+// initializes the NetStream constructor's prototype members at the observed subobject offset.
 // @0x140003ba0
 void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASStringContext* context,
@@ -2404,14 +2411,25 @@ void FUN_14000dc30(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     ForEachVideoObjectChild<VideoGcPassAccess::Release>(object, collector);
 }
 
+// The collector pass dispatch (release, mark, scan) that the exe inlines into each wrapper.
+typedef void (*Video01GcPass)(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
+static __forceinline void Video01DispatchGc(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector, int operation,
+                                            Video01GcPass release, Video01GcPass mark, Video01GcPass scan)
+{
+    switch (operation)
+    {
+    case 0: release(object, collector); break;
+    case 1: mark(object, collector); break;
+    case 2: scan(object, collector); break;
+    }
+}
+
 // MS2-FUNCTIONAL: dispatches the video object's release, mark, and scan collector passes.
 // @0x14000e1a0
 void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
 {
-    if (operation == 0) FUN_14000dc30(object, collector);
-    else if (operation == 1) FUN_14000d870(object, collector);
-    else if (operation == 2) FUN_14000d9c0(object, collector);
+    Video01DispatchGc(object, collector, operation, FUN_14000dc30, FUN_14000d870, FUN_14000d9c0);
 }
 
 // MS2-FUNCTIONAL: dispatches release, mark, and scan passes for the AS2 video object.
@@ -2419,14 +2437,14 @@ void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 void FUN_140007f70(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
 {
-    FUN_14000a730(object, collector, operation);
+    Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
 // MS2-FUNCTIONAL: releases one retained AS2 reference in the slot.
 // @0x14000dd50
 void FUN_14000dd50(void** slot) { ReleaseAs2GCObject(*slot); }
 
-// MS2-FUNCTIONAL: releases an old AS2 reference and stores the replacement.
+// releases an old AS2 reference and stores the replacement.
 // @0x14000dd80
 void** FUN_14000dd80(void** slot, void* replacement)
 {
@@ -2440,7 +2458,7 @@ void** FUN_14000dd80(void** slot, void* replacement)
 void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
 {
-    FUN_14000e1a0(object, collector, operation);
+    Video01DispatchGc(object, collector, operation, FUN_14000dc30, FUN_14000d870, FUN_14000d9c0);
 }
 
 // MS2-FUNCTIONAL: destroys the Video object and optionally frees its allocation.
@@ -2527,9 +2545,7 @@ unsigned FUN_14000d320(void*) { return 0x7027cf; }
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
 {
-    if (operation == 0) FUN_14000a5d0(object, collector);
-    else if (operation == 1) FUN_14000a230(object, collector);
-    else if (operation == 2) FUN_14000a420(object, collector);
+    Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
 // MS2-FUNCTIONAL: releases the prototype's member table and weak provider, then finalizes the AS2 object base.
@@ -2560,7 +2576,7 @@ void FUN_14000a3a0(void* object)
 void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
 {
-    FUN_14000a730(object, collector, operation);
+    Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
 // The exe's own (0x1431b4fe8) and SyncObject (0x1431b4f78) vftable stores here and in FUN_1400062e0 are dead:
@@ -2686,7 +2702,7 @@ void FUN_14000a420(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     ForEachVideoPrototypeChild<VideoGcPassAccess::Scan>(object, collector);
 }
 
-// MS2-FUNCTIONAL: performs the collector's release transition on one AS2 object.
+// performs the collector's release transition on one AS2 object.
 // @0x14000a540
 void FUN_14000a540(Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    Scaleform::GFx::AS2::ASRefCountBaseType* object)
