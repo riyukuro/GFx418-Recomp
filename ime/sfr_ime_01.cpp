@@ -541,30 +541,31 @@ void FUN_1423cb0f0(void* self)
     }
 }
 
-// MS2-FUNCTIONAL: unlinks this DOM string node from the executable's bucket chains and releases its key allocation.
+// MS2-FUNCTIONAL: unlinks this DOM string node from the owner's hash set (an inlined Scaleform HashSet::RemoveAlt:
+// natural index kept apart from the walking index, entry count re-read through the owner) and frees its key.
+// Same code as the exe except that rsi and rdi are swapped.
 // @0x1423cc570
 void FUN_1423cc570(unsigned long long* node)
 {
-    auto* owner = reinterpret_cast<unsigned long long*>(node[6]);
-    auto* table = owner ? reinterpret_cast<unsigned long long*>(owner[1]) : nullptr;
-    if (table) {
+    auto* owner = reinterpret_cast<unsigned long long* const*>(node[6]);
+    unsigned long long* table;
+    if (owner && (table = owner[1]) != nullptr) {
         const unsigned long long mask = table[1];
-        const unsigned long long bucket = *reinterpret_cast<unsigned*>(node + 4) & mask;
-        auto* slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (bucket + 1) * 0x10);
+        unsigned long long index = *reinterpret_cast<unsigned*>(node + 4) & mask;
+        auto* slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x10);
         if (slot[0] != 0xfffffffffffffffeull &&
-            ((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) == bucket)) {
+            ((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) == index)) {
             unsigned long long previous = 0xffffffffffffffffull;
-            unsigned long long current = bucket;
-            while (((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) != bucket) ||
+            unsigned long long natural = index;
+            while (((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) != natural) ||
                    slot[1] != reinterpret_cast<unsigned long long>(node)) {
-                const unsigned long long nextSlot = slot[0];
-                if (nextSlot == 0xffffffffffffffffull) goto unlink_done;
-                previous = current;
-                current = nextSlot;
-                slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (current + 1) * 0x10);
+                previous = index;
+                index = slot[0];
+                if (index == 0xffffffffffffffffull) goto unlink_done;
+                slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x10);
             }
             const unsigned long long next = slot[0];
-            if (bucket == current) {
+            if (natural == index) {
                 if (next != 0xffffffffffffffffull) {
                     slot[0] = 0xfffffffffffffffeull;
                     auto* replacement = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (next + 1) * 0x10);
@@ -577,7 +578,7 @@ void FUN_1423cc570(unsigned long long* node)
                 prior[0] = next;
             }
             slot[0] = 0xfffffffffffffffeull;
-            --table[0];
+            --owner[1][0];
         }
     }
 unlink_done:
