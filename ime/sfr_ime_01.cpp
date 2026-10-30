@@ -3030,42 +3030,46 @@ unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned lon
     return 0;
 }
 
-// MS2-FUNCTIONAL: reads the active IME DLL's executable version resource and combines it with the current keyboard layout.
+// Reads the active IME DLL's version resource and combines its version bytes with the current keyboard layout's low word;
+// 0 when any step fails.
+// MS2-FUNCTIONAL: the exe masks the major byte after the shift (shl; and 0xff000000), ours before it.
 // @0x1423cb260
 unsigned FUN_1423cb260()
 {
     HKL layout = GetKeyboardLayout(0);
-    char fileName[0x400]{};
-    if (!cx18_ImmGetIMEFileNameA(layout, fileName, 0x3ff)) return 0;
-    HMODULE version = LoadLibraryA("Version");
-    if (!version) return 0;
-    using GetSizeFn = DWORD (WINAPI*)(LPCSTR, LPDWORD);
-    using GetInfoFn = BOOL (WINAPI*)(LPCSTR, DWORD, DWORD, LPVOID);
-    using QueryFn = BOOL (WINAPI*)(LPCVOID, LPCSTR, LPVOID*, PUINT);
-    auto getSize = reinterpret_cast<GetSizeFn>(GetProcAddress(version, "GetFileVersionInfoSizeA"));
-    auto getInfo = reinterpret_cast<GetInfoFn>(GetProcAddress(version, "GetFileVersionInfoA"));
-    auto query = reinterpret_cast<QueryFn>(GetProcAddress(version, "VerQueryValueA"));
-    if (!getSize || !getInfo || !query) return 0;
-    DWORD handle = 0;
-    const DWORD size = getSize(fileName, &handle);
-    if (!size) return 0;
-    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-    void* data = reinterpret_cast<void*(*)(void*, unsigned long long, unsigned)>(heap[10])(
-        DAT_143b15f60, size, 0);
-    if (!data) return 0;
-    unsigned result = 0;
-    if (getInfo(fileName, handle, size, data)) {
-        void* fixedInfo = nullptr;
-        UINT length = 0;
-        if (query(data, DAT_14305cd3c, &fixedInfo, &length) && fixedInfo) {
-            const unsigned versionWord = *reinterpret_cast<unsigned*>(
-                static_cast<unsigned char*>(fixedInfo) + 8);
-            result = ((versionWord & 0xff) << 16) | ((versionWord & 0xff0000) << 8) |
-                (static_cast<unsigned>(reinterpret_cast<ULONG_PTR>(layout)) & 0xffff);
+    char fileName[0x400];
+    if (cx18_ImmGetIMEFileNameA(layout, fileName, 0x3ff)) {
+        if (HMODULE version = LoadLibraryA("Version")) {
+            using GetSizeFn = DWORD (WINAPI*)(LPCSTR, LPDWORD);
+            using GetInfoFn = BOOL (WINAPI*)(LPCSTR, DWORD, DWORD, LPVOID);
+            using QueryFn = BOOL (WINAPI*)(LPCVOID, LPCSTR, LPVOID*, PUINT);
+            auto getSize = reinterpret_cast<GetSizeFn>(GetProcAddress(version, "GetFileVersionInfoSizeA"));
+            auto getInfo = reinterpret_cast<GetInfoFn>(GetProcAddress(version, "GetFileVersionInfoA"));
+            auto query = reinterpret_cast<QueryFn>(GetProcAddress(version, "VerQueryValueA"));
+            if (getSize && getInfo && query) {
+                DWORD handle;
+                if (const DWORD size = getSize(fileName, &handle)) {
+                    void* data = reinterpret_cast<void*(*)(void*, unsigned long long, unsigned)>(
+                        (*reinterpret_cast<void***>(DAT_143b15f60))[10])(DAT_143b15f60, size, 0);
+                    if (data) {
+                        void* fixedInfo;
+                        UINT length;
+                        if (getInfo(fileName, handle, size, data) && query(data, DAT_14305cd3c, &fixedInfo, &length)) {
+                            const unsigned versionWord = *reinterpret_cast<unsigned*>(
+                                static_cast<unsigned char*>(fixedInfo) + 8);
+                            reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(
+                                DAT_143b15f60, data);
+                            return (static_cast<unsigned char>(versionWord) << 16) | ((versionWord & 0xff0000) << 8) |
+                                static_cast<unsigned short>(reinterpret_cast<ULONG_PTR>(layout));
+                        }
+                    }
+                    reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(
+                        DAT_143b15f60, data);
+                }
+            }
         }
     }
-    reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, data);
-    return result;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
