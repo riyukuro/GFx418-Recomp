@@ -214,6 +214,18 @@ struct VideoCharacterDef
 
 // ==== Video ==========================================================================================================
 
+__forceinline void Video::Initialize()
+{
+    if (!Initialized++)
+    {
+        criHeap_Initialize();
+        HandleWorkSize = CriMv::CalcMovieHandleWork(VIDEO_HANDLE_MAX);
+        pHandleWorkBuf = SF_ALLOC(HandleWorkSize, Stat_Video_Mem);
+        CriMv::SetupMovieHandleWork(VIDEO_HANDLE_MAX, pHandleWorkBuf, HandleWorkSize);
+        CriMv::Initialize();
+    }
+}
+
 // @0x14001cbb0
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
 Video::Video(const VideoVMSupport& vmSupport, Thread::ThreadPriority priority, bool autoInit)
@@ -222,8 +234,17 @@ Video::Video(const VideoVMSupport& vmSupport, Thread::ThreadPriority priority, b
     pAS2VSupport = vmSupport.pAS2VSupport;
     pAS3VSupport = vmSupport.pAS3VSupport;
     // MemoryHeap::CreateHeap(name, flags, minAlign, granularity, reserve, threshold, limit, heapId, arena)
-    struct { unsigned Flags; UPInt MinAlign, Granularity, Reserve, Threshold, Limit, HeapId, Arena; } desc =
-        { 0, 64, 128 * 1024, 0, ~UPInt(0), 0, 8 /* HeapId_Video */, 0 };
+    struct VideoHeapDesc
+    {
+        unsigned Flags;
+        UPInt    MinAlign, Granularity, Reserve, Threshold, Limit, HeapId, Arena;
+        VideoHeapDesc(unsigned flags, UPInt minAlign, UPInt granularity, UPInt reserve, UPInt threshold, UPInt limit,
+                      UPInt heapId, UPInt arena)
+            : Flags(flags), MinAlign(minAlign), Granularity(granularity), Reserve(reserve), Threshold(threshold),
+              Limit(limit), HeapId(heapId), Arena(arena)
+        {
+        }
+    } desc(0, 64, 128 * 1024, 0, ~UPInt(0), 0, 8 /* HeapId_Video */, 0);
     pHeap = *Memory::GetGlobalHeap()->CreateHeap("_Video_Heap", *(const HeapDesc*)&desc);
     if (autoInit)
         Initialize();
@@ -241,18 +262,6 @@ Video::~Video()
         SF_FREE(pAS3VSupport);
     Finalize();
     pHeap = NULL;
-}
-
-void Video::Initialize()
-{
-    if (!Initialized++)
-    {
-        criHeap_Initialize();
-        HandleWorkSize = CriMv::CalcMovieHandleWork(VIDEO_HANDLE_MAX);
-        pHandleWorkBuf = SF_ALLOC(HandleWorkSize, Stat_Video_Mem);
-        CriMv::SetupMovieHandleWork(VIDEO_HANDLE_MAX, pHandleWorkBuf, HandleWorkSize);
-        CriMv::Initialize();
-    }
 }
 
 void Video::Finalize()
@@ -1664,7 +1673,8 @@ void VideoPlayerImpl::SetReloadThresholdTime(float time)
 
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400289b0
-void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
+// The exe frame has no /GS cookie; VS2012 did not protect this 12-byte POD.
+__declspec(safebuffers) void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
 {
     if (pPlayer)
     {
@@ -2579,34 +2589,37 @@ void FUN_140029f60(void* adapter, int enabled)
 }
 #pragma optimize("", on)
 
-static void CriArrayReserve(void** array, CriUint64* capacity, CriUint64 count, size_t elementSize)
+static __forceinline void CriArrayReserve(void** array, CriUint64* capacity, CriUint64 count, size_t elementSize)
 {
-    void* heap = DAT_143b15f60;
-    void** vtable = *(void***)heap;
+    void* data = array[0];
     if (count == 0)
     {
-        if (array[0])
+        if (data)
         {
-            ((void (*)(void*, void*))vtable[12])(heap, array[0]);
-            array[0] = NULL;
+            void* heap = DAT_143b15f60;
+            ((void (*)(void*, void*))(*(void***)heap)[12])(heap, data);
         }
+        array[0] = NULL;
         *capacity = 0;
         return;
     }
 
+    void* heap = DAT_143b15f60;
     CriUint64 newCapacity = (count + 3) & ~(CriUint64)3;
-    if (array[0])
+    if (data)
     {
-        array[0] = ((void* (*)(void*, void*, size_t))vtable[11])(
-            heap, array[0], (size_t)(newCapacity * elementSize));
+        data = ((void* (*)(void*, void*, size_t))(*(void***)heap)[11])(
+            heap, data, (size_t)(newCapacity * elementSize));
+        *capacity = newCapacity;
+        array[0] = data;
     }
     else
     {
         CriUint32 heapFlags = 2;
-        array[0] = ((void* (*)(void*, size_t, const CriUint32*))vtable[10])(
+        array[0] = ((void* (*)(void*, size_t, const CriUint32*))(*(void***)heap)[10])(
             heap, (size_t)(newCapacity * elementSize), &heapFlags);
+        *capacity = newCapacity;
     }
-    *capacity = newCapacity;
 }
 
 // MS2-FUNCTIONAL: grow or release the CRI pointer vector with four-slot capacity rounding.
