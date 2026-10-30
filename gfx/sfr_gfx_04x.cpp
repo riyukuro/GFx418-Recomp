@@ -44,6 +44,7 @@
 #include "../include/gfx/gfx_resource.h"
 #include "../include/gfx/gfx_fontresource.h"
 #include "../include/gfx/gfx_shapeswf.h"
+#include "../include/gfx/gfx_morphcharacter.h"
 #include "../include/gfx/gfx_scale9grid.h"
 #include "../include/gfx/gfx_spritedef.h"
 #include "../include/gfx/gfx_buttondef.h"
@@ -283,17 +284,7 @@ public:
     Render::Image* GetImage() { return reinterpret_cast<Render::Image*>(this); }
 };
 
-// A DefineMorphShape character (0x38 bytes; not recovered yet): constructed and read here, used as the Resource it is.
-class MorphCharacterDef : public NewOverrideBase<StatMD_CharDefs_Mem>
-{
-    UByte Data[0x38];
-
-public:
-    MorphCharacterDef();
-    void Read(LoadProcess* p, const TagInfo& tagInfo, bool withStyle);
-
-    Resource* GetResource() { return reinterpret_cast<Resource*>(this); }
-};
+__declspec(noinline) UInt32 FUN_1425c8c20(LoadProcess* p); // LoadProcess::ReadU32, out of line (defined below)
 
 enum { Tag_DefineBitsJpeg4 = 90 };
 
@@ -304,7 +295,7 @@ enum { Tag_DefineBitsJpeg4 = 90 };
 void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo)
 {
     ResourceId rid(p->ReadU16());
-    UInt32     alphaOffset = p->ReadU32();
+    UInt32     alphaOffset = FUN_1425c8c20(p);
     if (tagInfo.TagType == Tag_DefineBitsJpeg4)
     {
         UInt16 deblocking = p->ReadU16();
@@ -353,14 +344,12 @@ void SF_STDCALL GFx_DefineBitsJpeg3Loader(LoadProcess* p, const TagInfo& tagInfo
 // @0x1425c4d00
 void SF_STDCALL GFx_DefineShapeMorphLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    ResourceId rid(p->ReadU16());
-    p->LogParse("  ShapeMorphLoader: id = %d\n", rid.GetIdIndex());
+    UInt16 characterId = p->ReadU16();
+    p->LogParse("  ShapeMorphLoader: id = %d\n", characterId);
 
-    MorphCharacterDef* pmorph = SF_HEAP_NEW(p->GetLoadHeap()) MorphCharacterDef();
-    pmorph->Read(p, tagInfo, true);
-    p->AddResource(rid, pmorph ? pmorph->GetResource() : 0);
-    if (pmorph)
-        pmorph->GetResource()->Release();
+    Ptr<MorphCharacterDef> morph = *SF_HEAP_NEW(p->GetLoadHeap()) MorphCharacterDef;
+    morph->Read(p, tagInfo, true);
+    p->AddResource(ResourceId(characterId), morph.GetPtr());
 }
 
 // ExportAssets: the exported symbol names of the file's characters.
@@ -832,7 +821,7 @@ template void LogBase<LoadProcess>::LogWarning(const char* pfmt, ...) const;
 // @0x1425c8c20
 UInt32 FUN_1425c8c20(LoadProcess* p)
 {
-    return p->ReadU32();
+    return p->GetStream()->ReadU32(); // LoadProcess::ReadU32, out of line
 }
 
 } // namespace GFx

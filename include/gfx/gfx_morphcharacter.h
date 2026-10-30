@@ -1,8 +1,7 @@
 // Recovered Scaleform 4.1.18 GFx: the DefineMorphShape character (GFx_MorphCharacter). Own header of sfr_gfx_08s3
 // (lane sfr24); others may include it and append.
 //
-// sfr_gfx_04x declares a partial local MorphCharacterDef (it only constructs and reads one); it must not include this
-// header.
+// sfr_gfx_04x includes it for GFx_DefineShapeMorphLoader (0x1425c4d00).
 #ifndef MS2_SF_GFX_MORPHCHARACTER_H
 #define MS2_SF_GFX_MORPHCHARACTER_H
 
