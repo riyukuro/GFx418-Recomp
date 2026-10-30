@@ -715,6 +715,7 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flag
 
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);
+void FUN_14241e430(void* arr, const Scaleform::GFx::AS3::Value* v);   // ArrayDH<Value>::PushBack (sfr_as3_04)
 extern void FUN_14257eb30(void*);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1274,7 +1275,9 @@ static Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const Cla
 // @0x1424e5500
 void Traits::Add2StoredScopeStack(const Value& o)
 {
-    InitScope.PushBack(o);
+    // The exe tail-calls the out-of-line ArrayDH<Value>::PushBack (sfr_as3_04). Under MS2_AS3_SCU the Value copy is
+    // inline, and cl then inlines PushBack too, so call it through its address.
+    FUN_14241e430(&InitScope, &o);
 }
 
 // MS2-FUNCTIONAL: our TU inlines VTable::AddMethod (0x1424e8ed0, defined below), which the exe calls; the get/set
