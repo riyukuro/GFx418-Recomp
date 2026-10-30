@@ -50,7 +50,7 @@ void Bundle::UpdateChain(BundleEntry* newTop)
     UPInt i = 0;
     for (BundleEntry* e = newTop; e; e = e->pChain, i++)
     {
-        if (i < Entries.GetSize() && Entries[i] == e)
+        if (i < Entries.GetSize() && e == Entries[i])
             continue;
 
         // already ours further down: drop the entries in between
@@ -61,7 +61,7 @@ void Bundle::UpdateChain(BundleEntry* newTop)
                 j++;
             if (j > i)
                 RemoveEntries(i, j - i);
-            if (i < Entries.GetSize() && Entries[i] == e)
+            if (i < Entries.GetSize() && e == Entries[i])
                 continue;
         }
 
