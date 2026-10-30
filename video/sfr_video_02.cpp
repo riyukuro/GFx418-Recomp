@@ -2017,22 +2017,27 @@ void** FUN_140014ac0(void*, void** result, void* traits)
 }
 
 // MS2-FUNCTIONAL: grows the executable pointer array in five-slot chunks and appends a fresh payload block.
+// BEHAVIOUR FIX: the table grows only when the index reaches the capacity (+0x18), as the exe does; ours compared
+// the page count (+0x10), so every append reallocated the table and added five more slots. The table and the
+// 0x2000-byte page come from the array's own heap (AllocAutoHeap on the array, stat 2), not the global heap.
 // @0x140013600
 void FUN_140013600(void* array, unsigned __int64 index)
 {
     char* bytes = static_cast<char*>(array);
-    auto capacity = *reinterpret_cast<unsigned __int64*>(bytes + 0x18);
-    char* data = *reinterpret_cast<char**>(bytes + 0x20);
-    if (*reinterpret_cast<unsigned __int64*>(bytes + 0x10) <= index)
+    const unsigned __int64 capacity = *reinterpret_cast<unsigned __int64*>(bytes + 0x18);
+    if (index >= capacity)
     {
-        if (!data)
-            data = static_cast<char*>(Scaleform::Memory::Alloc(0x28));
+        char* data = *reinterpret_cast<char**>(bytes + 0x20);
+        void* grown;
+        if (data)
+            grown = Scaleform::Memory::Realloc(data, capacity * 8 + 0x28);
         else
-            data = static_cast<char*>(Scaleform::Memory::Realloc(data, capacity * 8 + 0x28));
-        *reinterpret_cast<unsigned __int64*>(bytes + 0x18) = capacity + 5;
-        *reinterpret_cast<char**>(bytes + 0x20) = data;
+            grown = Scaleform::Memory::AllocAutoHeap(array, 0x28, Scaleform::AllocInfo(2, 0, 0));
+        *reinterpret_cast<unsigned __int64*>(bytes + 0x18) += 5;
+        *reinterpret_cast<void**>(bytes + 0x20) = grown;
     }
-    *reinterpret_cast<void**>(data + index * 8) = Scaleform::Memory::Alloc(0x2000);
+    void* page = Scaleform::Memory::AllocAutoHeap(array, 0x2000, Scaleform::AllocInfo(2, 0, 0));
+    (*reinterpret_cast<void***>(bytes + 0x20))[index] = page;
     ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
 }
 
