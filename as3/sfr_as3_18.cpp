@@ -3613,7 +3613,7 @@ bool MovieRoot::Init(MovieDefImpl* pmovieDef)
     Sfr34_CheckAvm(this);
     FUN_1424f4000(this, pmovieDef);
     pMovieImpl->SetLevelMovie(0, static_cast<DisplayObjContainer*>(pStage));
-    Ptr<Video::VideoBase> pvideo = static_cast<StateBag*>(pMovieImpl->pStateBag)->GetVideo();
+    Ptr<Video::VideoBase> pvideo = static_cast<StateBag&>(*pMovieImpl->pStateBag).GetVideo();
     if (pvideo && pvideo->GetAS3Support())
     {
         MovieRoot* proot = static_cast<MovieRoot*>(pMovieImpl->pASMovieRoot);
