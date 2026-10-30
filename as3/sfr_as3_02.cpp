@@ -1022,7 +1022,7 @@ namespace InstanceTraits { namespace fl
             {
                 AS3::Object::DynAttrsType::ConstIterator it = da->Find(name);
                 if (!it.IsEnd())
-                    return result.SetBool(!((it->First.Flags >> 1) & 1));
+                    return result.SetBool(!(it->First.Flags & 1));
             }
         }
         else if (_this.GetKind() == Value::kNamespace && argv[0].IsString())
