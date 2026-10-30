@@ -2308,27 +2308,27 @@ void FUN_1423cb660(void* self)
     cx18_ImmReleaseContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd, context);
 }
 
-// MS2-FUNCTIONAL: reopens the IME context when absent, applies the requested open state, and restores association.
+// Sets the IME open status (ImmSetOpenStatus), associating a default context for the call when the window has none.
 // @0x1423d1760
-unsigned long long FUN_1423d1760(void* self, unsigned char open)
+bool FUN_1423d1760(void* self, unsigned char open)
 {
-    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
+    unsigned char* bytes = static_cast<unsigned char*>(self);
     bool wasAssociated = true;
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     if (!context) {
         wasAssociated = false;
-        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
-        context = cx18_ImmGetContext(hwnd);
+        cx18_ImmAssociateContextEx(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr, 0x10);
+        context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
         if (!context) {
-            cx18_ImmReleaseContext(hwnd, nullptr);
-            return 0;
+            cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr);
+            return false;
         }
     }
-    const BOOL result = cx18_ImmSetOpenStatus(context, open);
-    if (!wasAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
-    cx18_ImmReleaseContext(hwnd, context);
-    *reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(self) + 0x80) = open;
-    return result != 0;
+    const bool result = cx18_ImmSetOpenStatus(context, open) != 0;
+    if (!wasAssociated) cx18_ImmAssociateContextEx(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr, 0);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
+    bytes[0x80] = open;
+    return result;
 }
 
 // MS2-FUNCTIONAL: converts UTF-8 composition text to UTF-16 and sends it through the executable's IME composition API.
