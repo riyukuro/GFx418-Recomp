@@ -504,7 +504,7 @@ int FUN_140067630(const char *, const char *, ...);
 void FUN_140067680(char *, size_t, const char *, va_list);
 FILE * FUN_1400676c0(const char *, const char *);
 void FUN_140067700();
-int FUN_140067750();
+void FUN_140067750();
 void FUN_140067790();
 void FUN_1400677c0();
 void FUN_1400677f0();
@@ -534,7 +534,7 @@ void FUN_140068280(const char *);
 void FUN_1400682a0();
 void FUN_1400682c0();
 cri_u8 FUN_1400682e0(longlong, uint);
-cri_u8 FUN_140068380(LPCRITICAL_SECTION);
+void FUN_140068380(LPCRITICAL_SECTION);
 cri_u4 FUN_1400683d0(LPCRITICAL_SECTION);
 cri_u4 FUN_140068430(LPCRITICAL_SECTION);
 void FUN_140068490(short *, int *, longlong);
@@ -1439,12 +1439,11 @@ void FUN_140067210(longlong arg1)
   pu_v1 = *(cri_u8 **)(&DAT_143d74960 + (longlong)i_v2 * 8);
   if (*(int *)((char *)arg1 + 0x17bc) != 8) {
     if (*(int *)((char *)arg1 + 0x1814) == 0) {
-      u_v3 = *pu_v1;
+      *(cri_u8 *)((char *)arg1 + 0x1818) = *pu_v1;
     }
     else {
-      u_v3 = pu_v1[1];
+      *(cri_u8 *)((char *)arg1 + 0x1818) = pu_v1[1];
     }
-    *(cri_u8 *)((char *)arg1 + 0x1818) = u_v3;
     u_v3 = pu_v1[2];
     *(cri_u8 *)((char *)arg1 + 0x1828) = 0;
     *(cri_u8 *)((char *)arg1 + 0x1820) = u_v3;
@@ -1675,19 +1674,16 @@ void FUN_140067700()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067750
-int FUN_140067750()
+void FUN_140067750()
 {
-  int i_v1;
-  
-  i_v1 = --DAT_143d4eee8;
-  if (i_v1 == 0) {
+  if (--DAT_143d4eee8 == 0) {
     _DAT_143d4eee0 = 0;
     if (DAT_143d4eed8 != 0) {
-      i_v1 = (int)FUN_140068380((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
+      FUN_140068380((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
       DAT_143d4eed8 = 0;
     }
   }
-  return i_v1;
+  return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -1720,6 +1716,7 @@ void FUN_1400677c0()
   return;
 }
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400677f0
 void FUN_1400677f0()
@@ -1744,7 +1741,6 @@ void FUN_140067840()
   return;
 }
 
-#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067890
 cri_u8 FUN_140067890(cri_u8 arg1, cri_u4 arg2)
@@ -2217,31 +2213,39 @@ cri_u8 FUN_1400682e0(longlong arg1, uint arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068380
-cri_u8 FUN_140068380(LPCRITICAL_SECTION arg1)
+#pragma function(memset)                      // the exe obj calls memset here
+void FUN_140068380(LPCRITICAL_SECTION arg1)
 {
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
     FUN_1400b09a0("CRICRS_Destroy : NULL pointer is passed.");
+    return;
   }
-  else {
+  __try {
     DeleteCriticalSection(arg1);
-    memset(arg1,0,0x28);
   }
-  return 0;
+  __except (EXCEPTION_EXECUTE_HANDLER) {
+    FUN_1400b09a0("CRICRS_Destroy : DeleteCriticalSection failed.");
+  }
+  memset(arg1,0,0x28);
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400683d0
 cri_u4 FUN_1400683d0(LPCRITICAL_SECTION arg1)
 {
-  cri_u4 u_v1;
+  cri_u4 u_v1 = 0;
   
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
     FUN_1400b09a0("CRICRS_Enter : NULL pointer is passed.");
-    u_v1 = 0xffffffff;
+    return 0xffffffff;
   }
-  else {
+  __try {
     EnterCriticalSection(arg1);
-    u_v1 = 0;
+  }
+  __except (EXCEPTION_EXECUTE_HANDLER) {
+    FUN_1400b09a0("CRICRS_Enter : EnterCriticalSection failed.");
+    u_v1 = 0xffffffff;
   }
   return u_v1;
 }
@@ -2250,15 +2254,18 @@ cri_u4 FUN_1400683d0(LPCRITICAL_SECTION arg1)
 // @0x140068430
 cri_u4 FUN_140068430(LPCRITICAL_SECTION arg1)
 {
-  cri_u4 u_v1;
+  cri_u4 u_v1 = 0;
   
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
     FUN_1400b09a0("CRICRS_Leave : NULL pointer is passed.");
-    u_v1 = 0xffffffff;
+    return 0xffffffff;
   }
-  else {
+  __try {
     LeaveCriticalSection(arg1);
-    u_v1 = 0;
+  }
+  __except (EXCEPTION_EXECUTE_HANDLER) {
+    FUN_1400b09a0("CRICRS_Leave : LeaveCriticalSection failed.");
+    u_v1 = 0xffffffff;
   }
   return u_v1;
 }
@@ -2408,7 +2415,6 @@ void FUN_140068840(int *arg1, longlong *arg2, longlong *arg3)
   cri_u1 u_v2;
   cri_u1 u_v3;
   longlong l_v4;
-  longlong l_v5;
   longlong l_v6;
   
   *(cri_u1 *)((longlong)*arg1 + *arg3) = *(cri_u1 *)((longlong)*arg1 + *arg2);
@@ -2417,9 +2423,8 @@ void FUN_140068840(int *arg1, longlong *arg2, longlong *arg3)
   l_v6 = (longlong)arg1[1];
   l_v4 = arg2[2];
   u_v1 = *(cri_u1 *)(l_v4 + 1 + l_v6);
-  l_v5 = *(short *)((longlong)arg3 + 0x1a) + l_v4;
-  u_v2 = *(cri_u1 *)(l_v5 + l_v6);
-  u_v3 = *(cri_u1 *)(l_v5 + 1 + l_v6);
+  u_v2 = *(cri_u1 *)(*(short *)((longlong)arg3 + 0x1a) + l_v4 + l_v6);
+  u_v3 = *(cri_u1 *)(*(short *)((longlong)arg3 + 0x1a) + l_v4 + 1 + l_v6);
   *(cri_u1 *)(l_v6 + arg3[2]) = *(cri_u1 *)(l_v4 + l_v6);
   *(cri_u1 *)((longlong)arg1[1] + 1 + arg3[2]) = u_v1;
   *(cri_u1 *)
