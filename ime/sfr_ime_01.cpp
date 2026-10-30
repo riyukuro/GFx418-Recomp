@@ -1872,6 +1872,14 @@ extern "C" void FUN_1423d95f0(void* rawArray, void* allocator, unsigned long lon
     array[2] = capacity;
 }
 
+// ArrayDataBase<T, AllocatorGH_POD, ArrayDefaultPolicy>::Reserve for an element of ElementSize bytes.
+// The exe compiles one copy per element size; each puts the AllocInfo in the r9 home slot (rsp+0x48), where cl 19.16
+// uses the r8 one (rsp+0x40). That slot is the only difference.
+template <unsigned long long ElementSize>
+struct Ime01Pod { unsigned char bytes[ElementSize]; };
+template <unsigned long long ElementSize>
+using Ime01ArrayGH = ArrayDataBase<Ime01Pod<ElementSize>, AllocatorGH_POD<Ime01Pod<ElementSize>>, ArrayDefaultPolicy>;
+
 static void cx18_ReserveGH(unsigned long long* array, unsigned long long requested, unsigned long long stride)
 {
     void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
@@ -1892,15 +1900,15 @@ static void cx18_ReserveGH(unsigned long long* array, unsigned long long request
     array[2] = capacity;
 }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded 12-byte ReadBufferInfo and transform storage.
+// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 12-byte ReadBufferInfo/transform elements; the AllocInfo slot differs (see Ime01ArrayGH).
 // @0x1423d1240
-void FUN_1423d1240(unsigned long long* array, void*, unsigned long long count)
-{ cx18_ReserveGH(array, count, 0xc); }
+void FUN_1423d1240(unsigned long long* array, void* heapAddr, unsigned long long count)
+{ reinterpret_cast<Ime01ArrayGH<0xc>*>(array)->Reserve(heapAddr, count); }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded 32-byte AS2/AS3 Value storage.
+// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 32-byte Value elements; the AllocInfo slot differs (see Ime01ArrayGH).
 // @0x1423d12e0
-void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count)
-{ cx18_ReserveGH(array, count, 0x20); }
+void FUN_1423d12e0(unsigned long long* array, void* heapAddr, unsigned long long count)
+{ reinterpret_cast<Ime01ArrayGH<0x20>*>(array)->Reserve(heapAddr, count); }
 
 // The candidate list's Value array (ArrayData<Value, AllocatorGH<Value, 2>>).
 typedef ArrayDataBase<Scaleform::GFx::Value, AllocatorGH<Scaleform::GFx::Value, 2>, ArrayDefaultPolicy> ValueArrayBase;
@@ -2272,45 +2280,15 @@ void FUN_1423cc2d0(unsigned long long* object)
     }
 }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded 0x18-byte IME records through the executable heap vtable.
+// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 0x18-byte elements; the AllocInfo slot differs (see Ime01ArrayGH).
 // @0x1423cc680
-void FUN_1423cc680(unsigned long long* array, void*, unsigned long long requested)
-{
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    const unsigned long long capacity = (requested + 3) & ~3ull;
-    if (!requested) {
-        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
-        array[0] = 0;
-        array[2] = 0;
-        return;
-    }
-    void* memory = reinterpret_cast<void*>(array[0]);
-    const unsigned long long bytes = capacity * 0x18;
-    unsigned allocFlags = 2;
-    if (memory) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(DAT_143b15f60, memory, bytes));
-    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(DAT_143b15f60, bytes, &allocFlags));
-    array[2] = capacity;
-}
+void FUN_1423cc680(unsigned long long* array, void* heapAddr, unsigned long long requested)
+{ reinterpret_cast<Ime01ArrayGH<0x18>*>(array)->Reserve(heapAddr, requested); }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded 0x10-byte Value records through the executable heap vtable.
+// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 0x10-byte elements; the AllocInfo slot differs (see Ime01ArrayGH).
 // @0x1423cc720
-void FUN_1423cc720(unsigned long long* array, void*, unsigned long long requested)
-{
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    const unsigned long long capacity = (requested + 3) & ~3ull;
-    if (!requested) {
-        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
-        array[0] = 0;
-        array[2] = 0;
-        return;
-    }
-    void* memory = reinterpret_cast<void*>(array[0]);
-    const unsigned long long bytes = capacity << 4;
-    unsigned allocFlags = 2;
-    if (memory) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(DAT_143b15f60, memory, bytes));
-    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(DAT_143b15f60, bytes, &allocFlags));
-    array[2] = capacity;
-}
+void FUN_1423cc720(unsigned long long* array, void* heapAddr, unsigned long long requested)
+{ reinterpret_cast<Ime01ArrayGH<0x10>*>(array)->Reserve(heapAddr, requested); }
 
 // The IME module's reading-string entry points (exe 0x143b103d0 / 0x143b103d8), kept by FUN_1423cb660 only.
 static FARPROC s_imeGetReadingString;
