@@ -634,7 +634,7 @@ void FUN_14001a330(void* self, std::uint32_t* result)
     auto index = frames[0x6d];
     auto* slot = frames + index * 4;
     auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto getter = reinterpret_cast<void**>(instance)[0xc];
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *result = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10);
 }
@@ -646,7 +646,7 @@ void FUN_14001a360(void* self, void*, std::uint32_t number)
     auto index = frames[0x6d];
     auto* slot = frames + index * 4;
     auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto getter = reinterpret_cast<void**>(instance)[0xc];
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(data) + 0x10) = number;
 }
@@ -658,7 +658,7 @@ void FUN_14001a390(void* self, std::uint8_t* result)
     auto index = frames[0x6d];
     auto* slot = frames + index * 4;
     auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto getter = reinterpret_cast<void**>(instance)[0xc];
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *result = *(static_cast<unsigned char*>(data) + 0x14);
 }
@@ -670,7 +670,7 @@ void FUN_14001a3c0(void* self, void*, std::uint8_t flag)
     auto index = frames[0x6d];
     auto* slot = frames + index * 4;
     auto* instance = *reinterpret_cast<unsigned char**>(slot);
-    auto getter = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char***>(instance) + 0xc);
+    auto getter = reinterpret_cast<void**>(instance)[0xc];
     auto data = reinterpret_cast<void*(*)(void*)>(getter)(slot);
     *(static_cast<unsigned char*>(data) + 0x14) = flag;
 }
