@@ -23,6 +23,7 @@
 #include "../include/gfx/gfx_imemanager.h"
 #include "../include/gfx/as3/as3_support.h"
 #include "../include/gfx/xml/xml_object.h"
+#include "ms2/scaleform/kernel/sf_wstring.h"
 
 // Scaleform::UTF8Util::EncodeString (exe 0x1425a73c0); the shared sf_utf8util.h does not declare it.
 namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeString(char* buff, const wchar_t* chars, SPInt length); } }
@@ -2331,22 +2332,25 @@ bool FUN_1423d1760(void* self, unsigned char open)
     return result;
 }
 
-// MS2-FUNCTIONAL: converts UTF-8 composition text to UTF-16 and sends it through the executable's IME composition API.
+// Sets the IME composition string (SCS_SETSTR) to the UTF-8 `text`, decoded by WStringBuffer; the byte length is the
+// UTF-8 character count (UTF8Util::GetLength) times two, as in the exe.
 // @0x1423d14d0
 bool FUN_1423d14d0(void* self, const char* text)
 {
-    const int utf16Length = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
-    std::vector<wchar_t> converted(utf16Length > 0 ? static_cast<size_t>(utf16Length) : 1, L'\0');
-    if (utf16Length > 0) MultiByteToWideChar(CP_UTF8, 0, text, -1, converted.data(), utf16Length);
-    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
-    if (!context) return false;
-    static const wchar_t empty[] = L"";
-    const wchar_t* composition = converted[0] ? converted.data() : empty;
-    const BOOL result = cx18_ImmSetCompositionStringW(context, 9, composition,
-        static_cast<DWORD>(Scaleform::UTF8Util::GetLength(text, -1) * sizeof(wchar_t)), nullptr, 0);
-    cx18_ImmReleaseContext(hwnd, context);
-    return result != 0;
+    unsigned char* bytes = static_cast<unsigned char*>(self);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
+    const SPInt length = Scaleform::UTF8Util::GetLength(text, -1);
+    Scaleform::WStringBuffer composition;
+    composition = text;
+    bool result;
+    if (context) {
+        const wchar_t* chars = composition.GetBuffer();
+        result = cx18_ImmSetCompositionStringW(context, SCS_SETSTR, chars ? chars : L"",
+                                               static_cast<DWORD>(length * sizeof(wchar_t)), nullptr, 0) != 0;
+        cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
+    } else
+        result = false;
+    return result;
 }
 
 // Sets the IME conversion mode for the current keyboard layout (saved at +0x90). The low conversion bits are
