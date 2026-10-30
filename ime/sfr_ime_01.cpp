@@ -4604,7 +4604,8 @@ void FUN_1423d5060(void* raw, int offset)
 // the exe returns without releasing the context) or sends it with SetCompositionText and writes its length to
 // *outputLength. The candidate modes also set the cursor, store length - cursor at +0x64 and highlight the whole text.
 // It then sets the composition cursor and, unless the mode has a low nibble, calls RepositionInputWindow(x1, y2) of
-// the cursor rect IMEManagerBase::GetMetrics reports.
+// the cursor rect IMEManagerBase::GetMetrics reports. Reviewed against the exe, same behaviour; the exe builds the
+// RepositionInputWindow arguments in an inlined Value array (FUN_1423d12e0/FUN_1423ce6c0) and keeps an unused Value.
 // @0x1423ce730
 void FUN_1423ce730(void* raw, unsigned* outputLength)
 {
@@ -4631,7 +4632,7 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
     *outputLength = static_cast<unsigned>(count);
     if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
         const LONG cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
-        ime->SetCursorInComposition(static_cast<UPInt>(cursor));
+        ime->SetCursorInComposition(static_cast<unsigned>(cursor));
         *reinterpret_cast<unsigned*>(self + 0x64) = *outputLength - static_cast<unsigned>(cursor);
         ime->HighlightText(0, *outputLength, Scaleform::GFx::IMEManagerBase::THS_CompositionSegment, false);
     }
