@@ -71,7 +71,7 @@ void SF_STDCALL GFx_DefineVideoStreamLoader(LoadProcess* p, const TagInfo& tagIn
 // @0x1425c6620
 void SF_STDCALL GFx_FileAttributesLoader(LoadProcess* p)
 {
-    const unsigned flags = p->ReadU16();
+    const UInt16 flags = p->ReadU16();
     p->GetLoadTaskData()->SetFileAttributes(flags);
     if (flags)
     {
@@ -131,23 +131,27 @@ void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInf
         definition->Release();
 }
 
-// MS2-FUNCTIONAL: keeps the compacted-font diagnostic and creates/registers FontData; parser helper side effects are retained.
 // @0x1425c4db0
 void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    const UInt16 fontId = p->ReadU16();
-    const ResourceId id(fontId);
+    UInt16  fontId = p->ReadU16();
+
     p->LogParse("  Font: id = %d\n", fontId);
-    if (tagInfo.TagType == static_cast<TagType>(0x3ed))
+
+    Ptr<Render::Font> pf;
+    if (tagInfo.TagType == static_cast<TagType>(0x3ed)) // Tag_DefineCompactedFont
     {
         p->LogError("Trying to load compacted font with SF_NO_COMPACTED_FONT_SUPPORT defined.");
         return;
     }
+    else
+    {
+        FontData* pfd = SF_HEAP_NEW(p->GetLoadHeap()) FontData;
+        pf = *pfd;
+        FUN_142655fe0(pfd, p, &tagInfo); // FontData::Read
+    }
 
-    Ptr<FontData> font = *SF_HEAP_NEW(p->GetLoadHeap()) FontData();
-    FUN_142655fe0(font.GetPtr(), p, &tagInfo);
-    ResourceHandle handle = p->AddFontDataResource(id, font.GetPtr());
-    (void)handle;
+    p->AddFontDataResource(ResourceId(fontId), pf);
 }
 
 // MS2-FUNCTIONAL: reads shape data, creates its character wrapper, registers the id, and balances both references; bound-rect tracing is omitted.
@@ -638,14 +642,13 @@ void SF_STDCALL GFx_SetTabIndexLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // Scalar-deleting ExecuteTag wrapper; two identical wrappers are retained at their executable addresses.
-// MS2-FUNCTIONAL: stores the ExecuteTag base vptr through a base instance, then follows the scalar-delete flag.
 // @0x1425c8550
 void* FUN_1425c8550(void* object, unsigned flags)
 {
     ExecuteTag base;
     *reinterpret_cast<const void**>(object) = *reinterpret_cast<const void* const*>(&base);
     if (flags & 1)
-        ::operator delete(object);
+        ::operator delete(object, 0x10);
     return object;
 }
 
@@ -655,7 +658,7 @@ void* FUN_1425c8670(void* object, unsigned flags)
     ExecuteTag base;
     *reinterpret_cast<const void**>(object) = *reinterpret_cast<const void* const*>(&base);
     if (flags & 1)
-        ::operator delete(object);
+        ::operator delete(object, 0x10);
     return object;
 }
 
