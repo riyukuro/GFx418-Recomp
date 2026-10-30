@@ -5475,12 +5475,18 @@ static SF_INLINE UInt32 Sfr33GFxObjectType(const Object* obj)
     return type;
 }
 
+// GFx::Value::IsManagedValue: the VTC_ManagedBit of the type.
+static SF_FORCEINLINE bool Sfr33IsManagedValue(const Sfr33GFxValueRaw* v)
+{
+    return (v->Type >> 6) & 1;
+}
+
 // pval becomes a managed reference to obj kept through iface (the old managed value is released first).
 static SF_INLINE bool Sfr33SetObjectValue(GFx::Value::ObjectInterface* iface, GFx::Value* pval, Object* obj)
 {
     const UInt32 type = Sfr33GFxObjectType(obj);
     Sfr33GFxValueRaw* v = reinterpret_cast<Sfr33GFxValueRaw*>(pval);
-    if ((v->Type >> 6) & 1)   // VTC_ManagedBit
+    if (Sfr33IsManagedValue(v))
         v->pObjectInterface->ObjectRelease(pval, v->pData);
     v->pData            = obj;
     v->Type             = type | GFx::Value::VTC_ManagedBit;
@@ -5498,7 +5504,6 @@ bool Sfr33ObjectInterfaceSetObject(GFx::Value::ObjectInterface* self, GFx::Value
 }
 
 // The same with the interface passed in (the first argument is unused).
-// MS2-FUNCTIONAL 0x1424f3dc0: the exe allocates registers differently; same results
 // @0x1424f3dc0
 bool Sfr33SetObjectValueThrough(void* self, GFx::Value* pval, GFx::Value::ObjectInterface* iface, Object* obj)
 {

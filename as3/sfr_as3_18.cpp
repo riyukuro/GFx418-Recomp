@@ -2365,14 +2365,22 @@ bool AvmTextField_IsTabable(UPInt self)
     return !FUN_1425b9b10(reinterpret_cast<UPInt>(avm->pDispObj));
 }
 
+// The SDK's AvmDisplayObj::HasAS3Obj: either pointer set.
+static SF_FORCEINLINE bool Sfr34HasAS3Obj(const AvmDisplayObj* avm)
+{
+    return avm->pAS3RawPtr || avm->pAS3CollectiblePtr;
+}
+
 // AvmTextField::OnKeyEvent; self is the AvmInteractiveObjBase part (+0x30).
-// MS2-FUNCTIONAL the HasAS3Obj test is folded into the GetAS3Obj load and pDispObj is loaded later
 // @0x14251a350
 bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
 {
     const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
-    if (avm->pAS3RawPtr || avm->pAS3CollectiblePtr)
-        FUN_142467ec0(avm->GetAS3Obj(), &id, avm->pDispObj);
+    if (Sfr34HasAS3Obj(avm))
+    {
+        DisplayObject* dobj = avm->pDispObj;
+        FUN_142467ec0(avm->GetAS3Obj(), &id, dobj);
+    }
     return false;
 }
 
@@ -2385,7 +2393,7 @@ bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self - 0x40);
     if (id.Id == EventId::Event_Press)
     {
-        if (avm->pAS3RawPtr || avm->pAS3CollectiblePtr)
+        if (Sfr34HasAS3Obj(avm))
         {
             EventId click(id);
             click.Id = AS3Event_Click;
@@ -2545,13 +2553,12 @@ void AvmInteractiveObj::OnFocus(InteractiveObject::FocusEventType event, Interac
     as3obj->DispatchEventObject(evt, pDispObj);
 }
 
-// MS2-FUNCTIONAL same length; the exe swaps rbp and rsi between this and the event name
 // @0x142519ee0
 bool AvmInteractiveObj::OnFocusChange(InteractiveObject* ptoBeFocused, unsigned controllerIdx, FocusMovedType fmt,
                                       ProcessFocusKeyInfo* pfocusKeyInfo)
 {
     const char* type = (fmt == GFx_FocusMovedByKeyboard) ? "keyFocusChange" : "mouseFocusChange";
-    if (pAS3RawPtr || pAS3CollectiblePtr)
+    if (Sfr34HasAS3Obj(this))
     {
         Instances::fl_display::DisplayObject* related =
             ptoBeFocused ? ToAvmInteractiveObj(ptoBeFocused)->GetAS3Obj() : NULL;
