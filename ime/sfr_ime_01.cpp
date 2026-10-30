@@ -903,15 +903,15 @@ HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output
 unsigned char FUN_1423ce460(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    void* provider = *reinterpret_cast<void**>(bytes + 8);
+    unsigned char* provider = *reinterpret_cast<unsigned char**>(bytes + 8);
     Scaleform::GFx::Value unused;  // the exe keeps an unused Value local here
     unsigned char result;
     if (!provider)
         result = 1;
     else {
-        void** factoryVtable = *reinterpret_cast<void***>(static_cast<unsigned char*>(provider) + 0x10);
-        void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>(factoryVtable[3])(
-            static_cast<unsigned char*>(provider) + 0x10, 0x18);
+        void* factory = provider + 0x10;
+        void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>((*reinterpret_cast<void***>(factory))[3])(
+            factory, 0x18);
         if (!temporary)
             result = 1;
         else {
@@ -2433,22 +2433,22 @@ void FUN_1423d07e0(void* self)
         reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
 }
 
-// MS2-FUNCTIONAL: Windows IME calls and field offsets match; imm32 entry points are resolved at runtime because this target does not link imm32.lib.
-// MS2-FUNCTIONAL: imm32 entry points are resolved at runtime because this target does not link imm32.lib.
+// Cancels the composition (NI_COMPOSITIONSTR: CPS_CANCEL, CPS_COMPLETE, CPS_CONVERT) and clears the buffer.
 // @0x1423ce4f0
 void FUN_1423ce4f0(void* self)
 {
     unsigned char* bytes = static_cast<unsigned char*>(self);
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
     cx18_ImmNotifyIME(context, 0x15, 1, 0);
     cx18_ImmNotifyIME(context, 0x15, 3, 0);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
 }
 
-// MS2-FUNCTIONAL: imm32 entry points are resolved at runtime; the Win32 key and notification sequence follows the exe.
+// Selects candidate `key`: through the IMM candidate list (NI_SELECTCANDIDATESTR, NI_OPENCANDIDATE,
+// NI_SETCANDIDATE_PAGESTART), or for five values of +0x98 by sending the digit key ('1' + key) with SendInput.
+// MS2-FUNCTIONAL: the exe keeps key in esi and self in rdi (swapped here); same instructions
 // @0x1423d53e0
 void FUN_1423d53e0(void* self, int key)
 {
@@ -2456,19 +2456,18 @@ void FUN_1423d53e0(void* self, int key)
     int state = *reinterpret_cast<int*>(bytes + 0x98);
     if (state != 0x110000 && state != 0x210000 && state != 0xc10000 &&
         state != 0x60000 && state != 0xd10000) {
-        HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-        HIMC context = cx18_ImmGetContext(hwnd);
+        HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
         cx18_ImmNotifyIME(context, 0x12, 0, *reinterpret_cast<int*>(bytes + 0x70) + key);
         cx18_ImmNotifyIME(context, 0x11, 0, 0);
         cx18_ImmNotifyIME(context, 0x16, 0, *reinterpret_cast<DWORD*>(bytes + 0x70));
-        cx18_ImmReleaseContext(hwnd, context);
-        return;
+        cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
+    } else {
+        INPUT input;
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = static_cast<WORD>(key + 0x31);
+        input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(key + 0x31, 0));
+        SendInput(1, &input, sizeof(input));
     }
-    INPUT input;
-    input.type = INPUT_KEYBOARD;
-    input.ki.wVk = static_cast<WORD>(key + 0x31);
-    input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(key + 0x31, 0));
-    SendInput(1, &input, sizeof(input));
 }
 
 // @0x1423d1c90
@@ -2502,12 +2501,11 @@ void* FUN_1423db9d0(Scaleform::GFx::State* self, unsigned flags)
 void FUN_1423d1c10(void* self)
 {
     unsigned char* bytes = static_cast<unsigned char*>(self);
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
     cx18_ImmNotifyIME(context, 0x15, 1, 0);
     cx18_ImmNotifyIME(context, 0x15, 3, 0);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     *reinterpret_cast<unsigned short*>(bytes + 0xd0) = 0;
 }
