@@ -4396,6 +4396,9 @@ void FUN_140036710(void* player)
     void* queue = ((SubtitleQueueView*)player)->Queue;
     if (!queue)
         return;
+    CriSint32 status = getInternalStatus(player);
+    if (status == 0 || status == 1 || status == 2)
+        return;
 
     struct SubtitleRingState
     {
