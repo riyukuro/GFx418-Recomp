@@ -83,6 +83,12 @@ public:
     void PushNewOpCodeArg(UPInt code);                                            // 0x14251fcd0
     // The last written opcode dropped: the word code cut back to its recorded position.
     void PopNewOpCode();                                                          // 0x14251cc80
+    // (appended, sfb) no exe names. The code of the last pushed value dropped when it has no side effects (a push
+    // or a local get), else a pop emitted.
+    void PopPrevValue();                                                          // 0x1424f9180
+    // The push of the constant v emitted (ind: its constant pool index; pop: drop the last pushed value first);
+    // false when v has no push opcode.
+    bool PushConstValue(const Value& v, int ind, bool pop);                       // 0x1424f9060
 
 private:
     int  GetNextU30(UPInt cp) const;                                              // 0x14250c1f0

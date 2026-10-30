@@ -1380,93 +1380,93 @@ Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm)
     return NULL;
 }
 
-// ---- Tracer word-code writers and block bookkeeping (free functions under the names sfr_as3_17 / sfr_as3_19 call;
-// the Tracer of as3_tracer.h keeps these members private: raw offsets) ----
+// ---- Tracer word-code writers and block bookkeeping (Tracer members; the TR::State helpers below still read the
+// word code through raw offsets) ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 namespace {
-typedef ArrayDH_POD<UPInt, StatMV_VM>             TrPosArray;   // OrigOpcodePos +0x70 / NewOpcodePos +0x90
 typedef ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem> TrWordCode;   // *WCode +0x28
-inline TrPosArray& TrPos(UPInt tracer, UPInt off) { return *reinterpret_cast<TrPosArray*>(tracer + off); }
 inline TrWordCode& TrWCode(UPInt tracer) { return *reinterpret_cast<TrWordCode*>(TrRd(tracer, 0x28)); }
-// A new opcode starts at the word code's end.
-SF_FORCEINLINE void TrPushNewOpCode(UPInt tracer, int op)
-{
-    TrPos(tracer, 0x90).PushBack(TrWCode(tracer).GetSize());
-    TrWCode(tracer).PushBack(static_cast<UPInt>(static_cast<SPInt>(op)));
-}
 }
 }}}} // namespace Scaleform::GFx::AS3::TR
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // Tracer::PushNewOpCode: op at the word code's end, its position noted in NewOpcodePos.
 // @0x14251f930
-__declspec(noinline) void FUN_14251f930(void* tr, int op)
+__declspec(noinline) void Tracer::PushNewOpCode(Abc::Code::OpCode op)
 {
-    Scaleform::GFx::AS3::TR::TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
+    NewOpcodePos.PushBack(WCode.GetSize());
+    WCode.PushBack(static_cast<UPInt>(static_cast<SPInt>(op)));
 }
 
 // The same with one argument word.
 // @0x14251fb90
-void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg)
+void Tracer::PushNewOpCode(Abc::Code::OpCode op, UPInt arg1)
 {
-    using namespace Scaleform::GFx::AS3::TR;
-    TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
-    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg);
+    NewOpcodePos.PushBack(WCode.GetSize());
+    WCode.PushBack(static_cast<UPInt>(static_cast<SPInt>(op)));
+    WCode.PushBack(arg1);
 }
 
 // The same with two argument words.
 // @0x14251fa10
-void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2)
+void Tracer::PushNewOpCode(Abc::Code::OpCode op, UPInt arg1, UPInt arg2)
 {
-    using namespace Scaleform::GFx::AS3::TR;
-    TrPushNewOpCode(reinterpret_cast<Scaleform::UPInt>(tr), op);
-    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg1);
-    TrWCode(reinterpret_cast<Scaleform::UPInt>(tr)).PushBack(arg2);
+    NewOpcodePos.PushBack(WCode.GetSize());
+    WCode.PushBack(static_cast<UPInt>(static_cast<SPInt>(op)));
+    WCode.PushBack(arg1);
+    WCode.PushBack(arg2);
 }
 
 // Tracer::PushNewOpCodeArg: one argument word at the word code's end.
 // @0x14251fcd0
-__declspec(noinline) void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt arg)
+__declspec(noinline) void Tracer::PushNewOpCodeArg(UPInt code)
 {
-    Scaleform::GFx::AS3::TR::TrWCode(tracer).PushBack(arg);
+    WCode.PushBack(code);
 }
+
+}}} // namespace Scaleform::GFx::AS3
 
 // Slots 1 and 2 of the 3-slot vftable 0x14317f848 (the class whose deleting destructors 0x1424e2c90 and 0x1424e3a00
 // store it): forward to the tracer held at +0x10 of the second argument.
 // @0x14251aca0
 void FUN_14251aca0(void*, void* p, int op)
 {
-    FUN_14251f930(*reinterpret_cast<void**>(static_cast<char*>(p) + 0x10), op);
+    (*reinterpret_cast<Scaleform::GFx::AS3::Tracer**>(static_cast<char*>(p) + 0x10))
+        ->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op));
 }
 
 // @0x14251acd0
 void FUN_14251acd0(void*, Scaleform::UPInt p, Scaleform::UPInt arg)
 {
-    FUN_14251fcd0(*reinterpret_cast<Scaleform::UPInt*>(p + 0x10), arg);
+    (*reinterpret_cast<Scaleform::GFx::AS3::Tracer**>(p + 0x10))->PushNewOpCodeArg(arg);
 }
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Tracer::PopNewOpCode: the last new opcode and its arguments dropped from the word code.
 // @0x14251cc80
-void FUN_14251cc80(Scaleform::UPInt tracer)
+void Tracer::PopNewOpCode()
 {
-    using namespace Scaleform::GFx::AS3::TR;
-    TrPosArray& pos = TrPos(tracer, 0x90);
-    const Scaleform::UPInt top = pos.Back();
+    ArrayDH_POD<UPInt, StatMV_VM>& pos = NewOpcodePos;
+    const UPInt top = pos.Back();
     FUN_142524870(&pos, pos.GetSize() - 1);
-    FUN_1425247f0(&TrWCode(tracer), top);
+    FUN_1425247f0(&WCode, top);
 }
 
-// Tracer::StoreOrigOpCodePos: a byte code position inside the code becomes the current one, is noted in
+// Tracer::RegisterOrigOpCode: a byte code position inside the code becomes the current one, is noted in
 // OrigOpcodePos and maps to the word code's end.
 // @0x1425212f0
-void FUN_1425212f0(Scaleform::UPInt tracer, Scaleform::UPInt pos)
+void Tracer::RegisterOrigOpCode(Abc::TCodeOffset opcode_cp)
 {
-    using namespace Scaleform::GFx::AS3::TR;
-    if (pos >= TrRd(tracer, 0x58))
+    if (opcode_cp >= CodeEnd)
         return;
-    *reinterpret_cast<Scaleform::UPInt*>(tracer + 0x38) = pos;
-    TrPos(tracer, 0x70).PushBack(pos);
-    TrPos(tracer, 0xd0)[pos] = TrWCode(tracer).GetSize();
+    CurrOffset = opcode_cp;
+    OrigOpcodePos.PushBack(opcode_cp);
+    Orig2newPosMap[opcode_cp] = WCode.GetSize();
 }
+
+}}} // namespace Scaleform::GFx::AS3
 
 // Tracer::GetGlobalObject: the traced value of the global object, the saved scope's first value or else the method's
 // 'this' (the state's first register). By value (out).
@@ -1549,7 +1549,7 @@ void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsi
         TrReplaceOpCode(tracer, op);
     else
         FUN_1424f1ed0(state, static_cast<int>(idx), traits, TrNullTypeOf(TrVM(tracer), traits));
-    FUN_14251fcd0(TrRd(state, 0), idx);
+    reinterpret_cast<Tracer*>(TrRd(state, 0))->PushNewOpCodeArg(idx);
 }
 
 // TR::State::RefineOpCodeStack1: the same for the operand stack top.

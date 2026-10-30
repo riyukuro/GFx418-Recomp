@@ -2049,7 +2049,6 @@ void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* valu
 
 void FUN_1424d29d0(void* set, void* pheapAddr, const Scaleform::UPInt* key, Scaleform::UPInt hash);   // HashSetLH<SPtr>::add
 namespace Scaleform { namespace GFx { namespace AS3 {
-void Sfr33TracerPopLast(UByte* self);
 const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& index, Object* obj);
 }}}
 
@@ -2077,7 +2076,7 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
     default: tag = UPInt(-1); break;
     }
     if (pop)
-        Sfr33TracerPopLast(self);
+        reinterpret_cast<Tracer*>(self)->PopPrevValue();
     const UByte* pv = reinterpret_cast<const UByte*>(&v);
     FUN_14251fb90(self, 0xb5, *reinterpret_cast<const UPInt*>(pv + 0x10) + tag);
     file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
@@ -4788,70 +4787,69 @@ bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pv
     return h.Get(key, pvalue);
 }
 
-// Tracer (ABC optimizer) helpers: self+0x28 the code array, self+0x90/+0x98 the code positions of the values
-// pushed so far.
 // Drops the code of the last pushed value when it has no side effects (a push or local get), else emits a pop.
 // @0x1424f9180
-SF_NOINLINE void Sfr33TracerPopLast(UByte* self)
+SF_NOINLINE void Tracer::PopPrevValue()
 {
-    UPInt* const positions = reinterpret_cast<UPInt*>(self + 0x90);
-    const UPInt n = positions[1];
+    ArrayDH_POD<UPInt, StatMV_VM>& positions = NewOpcodePos;
+    const UPInt n = positions.GetSize();
     int op = 2;
     if (n)
-        op = *reinterpret_cast<const int*>(**reinterpret_cast<UPInt* const* const*>(self + 0x28) +
-                                           reinterpret_cast<UPInt*>(positions[0])[n - 1]);
+        op = static_cast<int>(WCode[positions[n - 1]]);
     switch (op)
     {
     case 0x20: case 0x21: case 0x24: case 0x25: case 0x26: case 0x27: case 0x28: case 0x2a: case 0x2c: case 0x2d:
     case 0x2e: case 0x2f: case 0x31: case 0x60: case 0x62: case 0x64: case 0x65: case 0x67: case 0x6e: case 0xb5:
     case 0xd0: case 0xd1: case 0xd2: case 0xd3:
     {
-        const UPInt pos = reinterpret_cast<UPInt*>(positions[0])[n - 1];
-        FUN_142524870(positions, n - 1);
-        FUN_1425247f0(*reinterpret_cast<void* const*>(self + 0x28), pos);
+        const UPInt pos = positions[n - 1];
+        FUN_142524870(&positions, n - 1);
+        FUN_1425247f0(&WCode, pos);
         return;
     }
     default:
-        FUN_14251f930(self, 0x29);   // pop
+        PushNewOpCode(static_cast<Abc::Code::OpCode>(0x29));   // pop
     }
 }
 
 // Emits the push of the constant v (ind: its constant pool index; pop: drop the last pushed value first); false
 // when v has no push opcode.
 // @0x1424f9060
-bool Sfr33TracerPushConst(UByte* self, const Value& v, int ind, bool pop)
+bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
 {
     int op;
-    switch (static_cast<int>(v.GetKind()))
+    const int kind = static_cast<int>(v.GetKind());
+    if (kind == 8 || kind == 9)
     {
-    case 8:
-    case 9:
-        FUN_14251fb90(self, 0xb6, ind + 1);
+        PushNewOpCode(static_cast<Abc::Code::OpCode>(0xb6), static_cast<UInt32>(ind + 1));
         return true;
+    }
+    switch (kind)
+    {
     case 0:
         if (pop)
-            Sfr33TracerPopLast(self);
+            PopPrevValue();
         op = 0x21;   // pushundefined
         break;
     case 1:
         if (pop)
-            Sfr33TracerPopLast(self);
+            PopPrevValue();
         op = v.AsBool() ? 0x26 : 0x27;   // pushtrue / pushfalse
         break;
     case 4:
         if (!NumberUtil::IsNaN(v.AsNumber()))
             return false;
         if (pop)
-            Sfr33TracerPopLast(self);
+            PopPrevValue();
         op = 0x28;   // pushnan
         break;
     case 12:
     case 13:
-        return FUN_1424f86d0(self, v, pop);
+        return FUN_1424f86d0(this, v, pop);
     default:
         return false;
     }
-    FUN_14251f930(self, op);
+    PushNewOpCode(static_cast<Abc::Code::OpCode>(op));
     return true;
 }
 
