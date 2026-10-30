@@ -26,6 +26,12 @@
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
+// The exe calls this ResizeNoConstruct instance out of line (explicitly instantiated in sfr_as3_04).
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>,
+    AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+}
+
 // The core library's GlobalObject hash key is a borrowed C string. Keep this
 // local declaration here: the shared AS3 headers do not expose the key type.
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
@@ -3192,7 +3198,6 @@ template AS3XMLPtr& AS3XMLPtr::operator=(GFx::AS3::Instances::fl::XML*);
 // @0x1423f19e0
 template AS3XMLPtr& AS3XMLPtr::operator=(Pickable<GFx::AS3::Instances::fl::XML>);
 using AS3XMLPtrArrayLHBase = ArrayBase<ArrayData<AS3XMLPtr, AllocatorLH<AS3XMLPtr, Stat_Default_Mem>, ArrayDefaultPolicy>>;
-// MS2-FUNCTIONAL: the exe calls ArrayDataBase::ResizeNoConstruct (0x142420060) out of line; ours inlines it.
 // @0x1423f1760
 template const AS3XMLPtrArrayLHBase& AS3XMLPtrArrayLHBase::operator=(const AS3XMLPtrArrayLHBase&);
 using AS3NamespacePtrArrayData = ArrayDataBase<AS3NamespacePtr, AllocatorDH<AS3NamespacePtr, Stat_Default_Mem>,
