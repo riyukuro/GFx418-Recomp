@@ -581,64 +581,103 @@ CheckResult GetVectorInd(ASStringNode* node, UInt32& ind)
 
 // ==== value stack and register file pages ====
 
-// MS2-FUNCTIONAL: the exe inlines AllocPage (out of line in sfr_as3_16) into the not-found path
+// ValueStack::AllocPage (0x1424eb6b0, sfr_as3_16), which the exe inlines into NewPage.
+static SF_INLINE ValueStack::Page* Sfr18AllocStackPage(ValueStack& vs, UInt16 pageSize)
+{
+    const UInt16 size = Alg::Max<UInt16>(pageSize, 64);
+    ValueStack::Page* p = static_cast<ValueStack::Page*>(
+        SF_HEAP_AUTO_ALLOC(&vs, sizeof(ValueStack::Page) + sizeof(Value) * (size - 1)));
+    p->PageSize       = size;
+    p->ReservationNum = 0;
+    return p;
+}
+
 // @0x1425182a0
 ValueStack::Page* ValueStack::NewPage(UInt16 pageSize)
 {
     Page* p = pReserved;
-    for (; p; p = p->pNext)
-        if (pageSize <= p->PageSize)
-            break;
-    if (!p)
-        return AllocPage(pageSize);
-
-    if (p == pReserved)
+    while (p)
     {
-        pReserved = p->pNext;
-        if (pReserved)
-            pReserved->pPrev = NULL;
+        if (p->PageSize >= pageSize)
+            break;
+        p = p->pNext;
+    }
+
+    if (p)
+    {
+        if (p == pReserved)
+        {
+            pReserved = p->pNext;
+            if (pReserved)
+                pReserved->pPrev = NULL;
+            p->pNext = NULL;
+        }
+        else
+        {
+            p->pPrev->pNext = p->pNext;
+            if (p->pNext)
+                p->pNext->pPrev = p->pPrev;
+            p->pNext = NULL;
+            p->pPrev = NULL;
+        }
     }
     else
-    {
-        p->pPrev->pNext = p->pNext;
-        if (p->pNext)
-            p->pNext->pPrev = p->pPrev;
-        p->pPrev = NULL;
-    }
-    p->pNext = NULL;
+        p = Sfr18AllocStackPage(*this, pageSize);
+
     return p;
 }
 
-// MS2-FUNCTIONAL: the exe inlines AllocPage (out of line in sfr_as3_16) into the not-found path
 // @0x1425181c0
 ValueRegisterFile::Page* ValueRegisterFile::NewPage(UInt16 pageSize)
 {
+    Page* p = NULL;
     if (pageSize <= Unk02)
     {
-        Page* p = pReservedPage;
-        for (; p; p = p->pNext)
-            if (pageSize <= p->PageSize)
-                break;
-        if (p)
+        p = pReservedPage;
+        while (p)
         {
-            if (p == pReservedPage)
-            {
-                pReservedPage = p->pNext;
-                if (pReservedPage)
-                    pReservedPage->pPrev = NULL;
-            }
-            else
-            {
-                p->pPrev->pNext = p->pNext;
-                if (p->pNext)
-                    p->pNext->pPrev = p->pPrev;
-                p->pPrev = NULL;
-            }
-            p->pNext = NULL;
-            return p;
+            if (p->PageSize >= pageSize)
+                break;
+            p = p->pNext;
         }
     }
-    return AllocPage(pageSize);
+
+    if (p)
+    {
+        if (p == pReservedPage)
+        {
+            pReservedPage = p->pNext;
+            if (pReservedPage)
+                pReservedPage->pPrev = NULL;
+            p->pNext = NULL;
+        }
+        else
+        {
+            p->pPrev->pNext = p->pNext;
+            if (p->pNext)
+                p->pNext->pPrev = p->pPrev;
+            p->pNext = NULL;
+            p->pPrev = NULL;
+        }
+    }
+    else
+    {
+        // AllocPage (0x1424eb640, sfr_as3_16), inlined here in the exe.
+        if (pageSize > MaxAllocatedPageSize)
+            MaxAllocatedPageSize = static_cast<UInt16>((pageSize + 64) / 64 * 64);
+        else
+            MaxAllocatedPageSize = Alg::Max<UInt16>(MaxAllocatedPageSize, 64);
+
+        const UInt16 size = MaxAllocatedPageSize;
+        p = static_cast<Page*>(SF_HEAP_AUTO_ALLOC(this, sizeof(Page) - sizeof(Value) +
+                                                       (sizeof(Value) + sizeof(UInt16)) * size));
+        p->PageSize    = size;
+        p->ReservedNum = 0;
+        p->CurrPos     = 0;
+        p->pCurrent    = NULL;
+    }
+
+    return p;
 }
 
 // @0x142521fb0
