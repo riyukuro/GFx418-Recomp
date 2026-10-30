@@ -3940,14 +3940,14 @@ struct CriDecodedPlane { CriUint8* Data; CriUint32 Width; CriUint32 Height; CriU
 struct CriDecodedFrame
 {
     CriUint8* Base;
-    CriUint8 Reserved08[4];
+    CriUint32 Reserved08;                     // reserves are word-typed: the exe's frame local has no /GS cookie
     CriUint32 Width;
     CriUint32 Height;
-    CriUint8 Reserved14[0x24];
+    CriUint32 Reserved14[9];
     CriUint32 PlaneCount;
     CriUint32 Reserved3c;
     CriDecodedPlane Planes[3];
-    CriUint8 Reserved88[0x28];
+    CriUint64 Reserved88[5];
 };
 struct CriFrameRecord { CriUint8* Key; CriUint8 Reserved08[8]; CriDecodedFrame Frame; CriUint32 Mode; };
 struct CriVideoFrameSource
@@ -3964,78 +3964,118 @@ struct CriVideoFrameSource
 static_assert(sizeof(CriDecodedFrame) == 0xb0 && offsetof(CriFrameRecord, Mode) == 0xc0 &&
               offsetof(CriVideoFrameSource, Queue) == 0x58 && offsetof(CriVideoFrameSource, Window) == 0x90 &&
               offsetof(CriVideoFrameSource, Position) == 0x190, "layout");
-
-// Describe the tiled YUV420 layout of a decoded frame whose picture memory starts at frame->Base.
-inline void CriDescribeTiledFrame(CriDecodedFrame* frame)
-{
-    CriUint32 width = frame->Width;
-    CriUint32 height = frame->Height;
-    CriUint32 alignedWidth = ((width + 0xf) / 0x10) * 0x10;
-    CriSint16 lumaPitch = (CriSint16)((alignedWidth + 0x7f) / 0x80) * 0x80;
-    CriSint16 chromaPitch = (CriSint16)((alignedWidth / 2 + 0x7f) / 0x80) * 0x80;
-    CriUint8* base = frame->Base;
-    CriUint8* lumaEnd = base + (CriUint64)(((alignedWidth + 0x7f) / 0x80) * 0x80 * ((height + 0x1f) / 0x20) * 0x20);
-    CriUint8* chromaEnd = lumaEnd + (CriUint64)(((alignedWidth / 2 + 0x7f) / 0x80) * 0x80 *
-                                                ((((height + 0x1f) / 0x20) * 0x20) / 2));
-    frame->PlaneCount = 3;
-    frame->Planes[0].Data = base;
-    frame->Planes[0].Width = width;
-    frame->Planes[0].Height = height;
-    frame->Planes[0].Pitch = (CriUint32)(CriSint32)lumaPitch;
-    frame->Planes[1].Data = lumaEnd;
-    frame->Planes[1].Width = width / 2;
-    frame->Planes[1].Height = height / 2;
-    frame->Planes[1].Pitch = (CriUint32)(CriSint32)chromaPitch;
-    frame->Planes[2].Data = chromaEnd;
-    frame->Planes[2].Width = width / 2;
-    frame->Planes[2].Height = height / 2;
-    frame->Planes[2].Pitch = (CriUint32)(CriSint32)chromaPitch;
-}
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: peek the next decoded picture of a VMPV player and describe its tiled YUV420 planes.
+// MS2-FUNCTIONAL: peek the next decoded picture of a VMPV player and describe its tiled YUV420 planes. Only diff:
+// ours copies record->Frame into frame through a temp at [rsp+0x120]; the exe copies it straight into [rsp+0x68].
 // @0x14003da40
 void* FUN_14003da40(void* player, void* output)
 {
-    if (FUN_140040de0(player) == 0)
+    // C-style function-scope locals; the names give cl 15's name-hash slot order the exe has
+    // (names that share a bucket are declared in reverse slot order)
+    CriFrameRecord* queueRecord;
+    CriUint32 width;
+    CriUint32 height;
+    CriVideoFrameSource* self = (CriVideoFrameSource*)player;
+    CriSint16 pitch2[2];                    // [0] chroma pitch, [1] luma pitch
+    CriUint8* base;
+    CriUint8* crPlane;
+    CriUint8* pCb;
+    struct { CriFrameRecord* Record; CriUint64 Size; } it;
+    if (FUN_140040de0(self) == 0)
         return NULL;
-    // Joint queue items are 16-byte {record, size} chunks; an 8-byte local overflows into the saved registers.
-    struct { CriFrameRecord* Record; CriUint64 Size; } item;
-    FUN_1400467a0(((CriVideoFrameSource*)player)->Queue, 1, 0xffffffff, &item);
-    CriFrameRecord* record = item.Record;
-    if (!record)
+    FUN_1400467a0(self->Queue, 1, 0xffffffff, &it);
+    if (it.Record == NULL)
         return NULL;
-    memcpy(((CriDecodedFrame*)output), &record->Frame, sizeof(record->Frame));
-    FUN_140040c00(player, ((CriDecodedFrame*)output));
-    CriDescribeTiledFrame(((CriDecodedFrame*)output));
-    FUN_1400467a8(((CriVideoFrameSource*)player)->Queue, 1, &item);
-    return ((CriDecodedFrame*)output)->Base;
+    queueRecord = it.Record;
+    CriDecodedFrame frame = queueRecord->Frame;
+    *(CriDecodedFrame*)output = frame;
+    FUN_140040c00(self, (CriDecodedFrame*)output);
+    width = ((CriDecodedFrame*)output)->Width;
+    height = ((CriDecodedFrame*)output)->Height;
+    pitch2[1] = (CriSint16)(((width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80);
+    pitch2[0] = (CriSint16)(((width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    base = ((CriDecodedFrame*)output)->Base;
+    pCb = base + ((width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80 * ((height + 0x1f) / 0x20 * 0x20);
+    crPlane = pCb + ((width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * ((height + 0x1f) / 0x20 * 0x20 / 2);
+    ((CriDecodedFrame*)output)->PlaneCount = 3;
+    ((CriDecodedFrame*)output)->Planes[0].Data = base;
+    ((CriDecodedFrame*)output)->Planes[0].Width = width;
+    ((CriDecodedFrame*)output)->Planes[0].Height = height;
+    ((CriDecodedFrame*)output)->Planes[0].Pitch = pitch2[1];
+    ((CriDecodedFrame*)output)->Planes[1].Data = pCb;
+    ((CriDecodedFrame*)output)->Planes[1].Width = width / 2;
+    ((CriDecodedFrame*)output)->Planes[1].Height = height / 2;
+    ((CriDecodedFrame*)output)->Planes[1].Pitch = pitch2[0];
+    ((CriDecodedFrame*)output)->Planes[2].Data = crPlane;
+    ((CriDecodedFrame*)output)->Planes[2].Width = width / 2;
+    ((CriDecodedFrame*)output)->Planes[2].Height = height / 2;
+    ((CriDecodedFrame*)output)->Planes[2].Pitch = pitch2[0];
+    FUN_1400467a8(self->Queue, 1, &it);
+    return base;
 }
 
-// MS2-FUNCTIONAL: take the next decoded picture of a VMPV player, describe its planes and mark it consumed.
+// MS2-FUNCTIONAL: take the next decoded picture of a VMPV player, describe its planes and mark it consumed. Only
+// diff: the same extra struct-copy temp as FUN_14003da40.
 // @0x14003dd50
 void* FUN_14003dd50(void* player, void* output)
 {
-    if (FUN_140040de0(player) == 0)
+    // C-style function-scope locals named for cl 15's name-hash slot order, as in FUN_14003da40
+    struct CriWindowRef { CriUint8 Reserved00[0x10]; void* Window; };
+    CriFrameRecord* queueRecord;
+    CriUint32 width;
+    CriUint32 height;
+    CriVideoFrameSource* self = (CriVideoFrameSource*)player;
+    CriSint16 pitch2[2];                    // [0] chroma pitch, [1] luma pitch
+    CriUint8* base;
+    CriUint8* crPlane;
+    CriUint8* pCb;
+    CriWindowRef* desc;
+    struct { CriFrameRecord* Record; CriUint64 Size; } it;
+    if (FUN_140040de0(self) == 0)
         return NULL;
-    if (DAT_143b27c78 == 1 && FUN_1400467b8(((CriVideoFrameSource*)player)->Queue, 2) != 0)
+    if (DAT_143b27c78 == 1 && (CriUint32)FUN_1400467b8(self->Queue, 2) > 0)
         return NULL;
-    struct { CriFrameRecord* Record; CriUint64 Size; } item;
-    FUN_1400467a0(((CriVideoFrameSource*)player)->Queue, 1, 0xffffffff, &item);
-    CriFrameRecord* record = item.Record;
-    if (!record)
+    FUN_1400467a0(self->Queue, 1, 0xffffffff, &it);
+    if (it.Record == NULL)
         return NULL;
-    CriFrameRecord* taken = record;
-    memcpy(((CriDecodedFrame*)output), &record->Frame, sizeof(record->Frame));
-    FUN_140040c00(player, ((CriDecodedFrame*)output));
-    CriDescribeTiledFrame(((CriDecodedFrame*)output));
-    ((CriVideoFrameSource*)player)->Position += 1;
-    FUN_1400467b0(((CriVideoFrameSource*)player)->Queue, 2, &item);
-    if (((CriVideoFrameSource*)player)->Window == (void*)taken->Key)
-        taken->Mode = ((CriVideoFrameSource*)player)->ChannelCount < 3 ? 0 : 3;
+    queueRecord = it.Record;
+    CriDecodedFrame frame = queueRecord->Frame;
+    *(CriDecodedFrame*)output = frame;
+    FUN_140040c00(self, (CriDecodedFrame*)output);
+    width = ((CriDecodedFrame*)output)->Width;
+    height = ((CriDecodedFrame*)output)->Height;
+    pitch2[1] = (CriSint16)(((width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80);
+    pitch2[0] = (CriSint16)(((width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    base = ((CriDecodedFrame*)output)->Base;
+    pCb = base + ((width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80 * ((height + 0x1f) / 0x20 * 0x20);
+    crPlane = pCb + ((width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * ((height + 0x1f) / 0x20 * 0x20 / 2);
+    ((CriDecodedFrame*)output)->PlaneCount = 3;
+    ((CriDecodedFrame*)output)->Planes[0].Data = base;
+    ((CriDecodedFrame*)output)->Planes[0].Width = width;
+    ((CriDecodedFrame*)output)->Planes[0].Height = height;
+    ((CriDecodedFrame*)output)->Planes[0].Pitch = pitch2[1];
+    ((CriDecodedFrame*)output)->Planes[1].Data = pCb;
+    ((CriDecodedFrame*)output)->Planes[1].Width = width / 2;
+    ((CriDecodedFrame*)output)->Planes[1].Height = height / 2;
+    ((CriDecodedFrame*)output)->Planes[1].Pitch = pitch2[0];
+    ((CriDecodedFrame*)output)->Planes[2].Data = crPlane;
+    ((CriDecodedFrame*)output)->Planes[2].Width = width / 2;
+    ((CriDecodedFrame*)output)->Planes[2].Height = height / 2;
+    ((CriDecodedFrame*)output)->Planes[2].Pitch = pitch2[0];
+    self->Position += 1;
+    FUN_1400467b0(self->Queue, 2, &it);
+    desc = (CriWindowRef*)((CriUint8*)self + 0x80);
+    if (desc->Window == (void*)queueRecord->Key)
+    {
+        if (self->ChannelCount <= 2)
+            queueRecord->Mode = 0;
+        else
+            queueRecord->Mode = 3;
+    }
     else
-        taken->Mode = 0;
+        queueRecord->Mode = 0;
     return ((CriDecodedFrame*)output)->Base;
 }
 
