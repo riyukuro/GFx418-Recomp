@@ -654,8 +654,6 @@ void Traits::ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const
         GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
 }
 
-// MS2-FUNCTIONAL: the parent-slot test of the inlined GetSlotInfo is not materialised as a bool
-// MS2-FUNCTIONAL: the tag bit of the inlined GetAS3Obj is cleared with a cmov, not a branch
 // @0x142505cc0
 SPtr<Instances::fl_display::DisplayObject> AvmDisplayObjContainer::GetAS3ChildAt(unsigned index)
 {
@@ -669,7 +667,6 @@ SPtr<Instances::fl_display::DisplayObject> AvmDisplayObjContainer::GetAS3ChildAt
     return NULL;
 }
 
-// MS2-FUNCTIONAL: the tag bit of the inlined GetAS3Obj is cleared with a cmov, not a branch
 // @0x142505d40
 SPtr<Instances::fl_display::DisplayObject> AvmDisplayObjContainer::GetAS3ChildByName(const ASString& name)
 {
@@ -6518,7 +6515,7 @@ void FUN_1425046d0(Scaleform::UPInt self)
 }
 
 // Drops the loader info of the AS3 object of the AVM display object at +0x90 (the AvmBitmap ForceShutdown slot).
-// MS2-FUNCTIONAL: register choice; the untagging dec is a cmove here
+// MS2-FUNCTIONAL: register choice
 // @0x1425047c0
 void FUN_1425047c0(Scaleform::UPInt self)
 {

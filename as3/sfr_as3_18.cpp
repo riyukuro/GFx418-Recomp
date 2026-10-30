@@ -2366,7 +2366,6 @@ bool AvmDisplayObj::IsStageAccessible() const
     return false;
 }
 
-// MS2-FUNCTIONAL register allocation of the inlined GetAS3Obj differs
 // @0x142519080
 void AvmInteractiveObj::OnEventLoad()
 {
@@ -2374,68 +2373,62 @@ void AvmInteractiveObj::OnEventLoad()
 }
 
 // AvmButton::IsTabable; self is the AvmInteractiveObjBase part (+0x30) of the button.
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
 // @0x142514eb0
 bool AvmButton_IsTabable(UPInt self)
 {
-    InteractiveObject* b = reinterpret_cast<InteractiveObject*>(AccRd(self - 0x18, 0));
-    if (!b->GetVisible())
+    const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
+    if (!avm->pDispObj->GetVisible())
         return false;
-    const UInt32 tab = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(b) + 0xb8) & 0x60;   // TabEnabled
-    if (tab)
-        return tab == 0x60;
-    return *reinterpret_cast<const SInt16*>(reinterpret_cast<UPInt>(b) + 0xbc) > 0;          // TabIndex
+    const InteractiveObject* io = static_cast<const InteractiveObject*>(avm->pDispObj);
+    if ((io->Flags & InteractiveObject::Mask_TabEnabled) != 0)
+        return (io->Flags & InteractiveObject::Mask_TabEnabled) == InteractiveObject::Mask_TabEnabled;
+    return io->TabIndex > 0;
 }
 
 // AvmTextField::IsTabable; as the button, and an editable field is tabable by default.
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
 // @0x142515050
 bool AvmTextField_IsTabable(UPInt self)
 {
-    InteractiveObject* t = reinterpret_cast<InteractiveObject*>(AccRd(self - 0x18, 0));
-    if (!t->GetVisible())
+    const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
+    if (!avm->pDispObj->GetVisible())
         return false;
-    const UInt32 tab = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(t) + 0xb8) & 0x60;
-    if (tab)
-        return tab == 0x60;
-    if (*reinterpret_cast<const SInt16*>(reinterpret_cast<UPInt>(t) + 0xbc) > 0)
+    const InteractiveObject* io = static_cast<const InteractiveObject*>(avm->pDispObj);
+    if ((io->Flags & InteractiveObject::Mask_TabEnabled) != 0)
+        return (io->Flags & InteractiveObject::Mask_TabEnabled) == InteractiveObject::Mask_TabEnabled;
+    else if (io->TabIndex > 0)
         return true;
-    return !FUN_1425b9b10(reinterpret_cast<UPInt>(t));
+    return !FUN_1425b9b10(reinterpret_cast<UPInt>(avm->pDispObj));
 }
 
 // AvmTextField::OnKeyEvent; self is the AvmInteractiveObjBase part (+0x30).
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// MS2-FUNCTIONAL the HasAS3Obj test is folded into the GetAS3Obj load and pDispObj is loaded later
 // @0x14251a350
 bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
 {
-    UPInt obj = AccRd(self - 0x20, 0);
-    if (!obj)
-        obj = AccRd(self - 0x28, 0);
-    if (obj)
-        FUN_142467ec0(reinterpret_cast<void*>(obj & ~UPInt(1)), &id, reinterpret_cast<void*>(AccRd(self - 0x18, 0)));
+    const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
+    if (avm->pAS3RawPtr || avm->pAS3CollectiblePtr)
+        FUN_142467ec0(avm->GetAS3Obj(), &id, avm->pDispObj);
     return false;
 }
 
 // AvmButton::OnMouseEvent; self is the AvmButtonBase part (+0x40). A press becomes a click, the rest goes to
 // OnEvent.
-// MS2-FUNCTIONAL free function on the subobject this; register allocation and branch layout differ
+// MS2-FUNCTIONAL free function on the subobject this: fields are read off the AvmDisplayObj base, not off self
 // @0x14251a830
 bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
 {
+    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self - 0x40);
     if (id.Id == EventId::Event_Press)
     {
-        UPInt obj = AccRd(self - 0x30, 0);
-        if (!obj)
-            obj = AccRd(self - 0x38, 0);
-        if (obj)
+        if (avm->pAS3RawPtr || avm->pAS3CollectiblePtr)
         {
             EventId click(id);
             click.Id = AS3Event_Click;
-            FUN_142467ec0(reinterpret_cast<void*>(obj & ~UPInt(1)), &click, reinterpret_cast<void*>(AccRd(self - 0x28, 0)));
+            FUN_142467ec0(avm->GetAS3Obj(), &click, avm->pDispObj);
         }
         return true;
     }
-    return reinterpret_cast<AvmDisplayObj*>(self - 0x40)->OnEvent(id);
+    return avm->OnEvent(id);
 }
 
 // AvmTextField::OnEventLoad: the field joins the play list after its place in the parent, and the optimized

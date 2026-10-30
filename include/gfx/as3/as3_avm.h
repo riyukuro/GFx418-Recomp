@@ -101,12 +101,15 @@ public:
     // (appended, sfr19) the AS3 object, kept raw or as a tagged collectible pointer
     Instances::fl_display::DisplayObject* GetAS3Obj() const
     {
-        Instances::fl_display::DisplayObject* p = pAS3RawPtr;
-        if (!p)
-            p = pAS3CollectiblePtr;
-        if (reinterpret_cast<UPInt>(p) & 1)
-            p = reinterpret_cast<Instances::fl_display::DisplayObject*>(reinterpret_cast<UByte*>(p) - 1);
-        return p;
+        union
+        {
+            UPInt v;
+            Instances::fl_display::DisplayObject* p;
+        } u;
+        u.p = (pAS3RawPtr) ? pAS3RawPtr : pAS3CollectiblePtr;
+        if (u.v & 1)
+            u.v -= 1;
+        return u.p;
     }
     // (appended, sfr19)
     AvmInteractiveObj*                      GetAvmParent() const;   // 0x142507550
