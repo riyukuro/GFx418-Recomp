@@ -9568,7 +9568,8 @@ char Sfr31MovieRootSetVariable(UPInt root, const char* path, const void* gfxValu
     char result = *reinterpret_cast<SetPropFn>(Sfr31Rd(Sfr31Rd(obj, 0), 0x30))(reinterpret_cast<void*>(obj), &resSlot, &mn, &converted);
     if (((result == 0 && setType != 0) || setType == 2) && *reinterpret_cast<const UInt32*>(memberNode + 0x20) != 0)
     {
-        Sfr31AvmStickyVarNode* node = static_cast<Sfr31AvmStickyVarNode*>(SF_HEAP_ALLOC(Memory::pGlobalHeap, sizeof(Sfr31AvmStickyVarNode), 0x147));
+        Sfr31AvmStickyVarNode* node = static_cast<Sfr31AvmStickyVarNode*>(
+            SF_HEAP_ALLOC(reinterpret_cast<MovieImpl*>(Sfr31Rd(root, 0x10))->GetMovieHeap(), sizeof(Sfr31AvmStickyVarNode), 0x147));   // movie heap, as the exe ([[root+0x10]+0x40])
         node->VTbl = Sfr31AvmStickyTable;
         new (&node->Name) ASString(member);
         node->pNext = NULL;
