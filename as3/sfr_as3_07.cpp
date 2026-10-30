@@ -3358,7 +3358,7 @@ namespace Instances { namespace fl_display
             Matrix2F level;
             pDispObj->GetLevelMatrix(&level);
             Render::PointF local = level.TransformByInverse(pt);
-            if (!(pDispObj->Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
+            if (!(pDispObj->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
             {
                 if (!bounds.Contains(local))
                     return;
