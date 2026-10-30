@@ -271,37 +271,49 @@ __forceinline void EraseVideoAtomHashEntry(void* tablePtr, const std::uint64_t* 
 }
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the first property thunk.
+namespace {
+// ThunkArgs1<const Value, Number>: the argument starts at its default (NaN) and goes through the out-of-line Convert2Number.
+struct VideoNumberArgs
+{
+    VideoNumberArgs(void* vm, void* result, unsigned argc, const Scaleform::GFx::AS3::Value* argv, double def)
+        : vm(vm), r(result), a0(def)
+    {
+        if (argc > 0)
+            argv[0].Convert2Number(a0);
+    }
+    void* vm;
+    void* r;
+    double a0;
+};
+// ThunkFunc1::Func: calls the member through its code pointer and int this-adjust unless the VM threw.
+__forceinline void VideoNumberThunk(void* vm, void* callFrame, void* result, unsigned argc,
+                                    const Scaleform::GFx::AS3::Value* argv, void*& method, const void* adjust)
+{
+    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
+    VideoNumberArgs args(vm, result, argc, argv, Scaleform::GFx::NumberUtil::NaN());
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
+        reinterpret_cast<void(*)(void*, void*, double)>(method)(root + *static_cast<const int*>(adjust), args.r, args.a0);
+}
+} // namespace
+// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the first property thunk. Same code as the
+// exe except one register copy (movaps here, movapd in the exe).
 // @0x140016b50
 void FUN_140016b50(void*, void* object, void* callFrame, void* member, int argc,
                    Scaleform::GFx::AS3::Value* args)
 {
-    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
-    double number = Scaleform::GFx::NumberUtil::NaN();   // the exe calls NumberUtil::NaN (0x1425e3ee0)
-    if (argc != 0) args->Convert2NumberInline(number);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
-        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkA)(
-            root + *reinterpret_cast<const int*>(&VideoThunkBaseA),
-            member, number);
-    }
+    VideoNumberThunk(object, callFrame, member, static_cast<unsigned>(argc), args, VideoThunkA, &VideoThunkBaseA);
 }
 namespace {
 
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the second property thunk.
+// MS2-FUNCTIONAL: forwards the normalized AS3 number argument through the second property thunk. Same code as the
+// exe except one register copy (movaps here, movapd in the exe).
 // @0x140016be0
 void FUN_140016be0(void*, void* object, void* callFrame, void* member, int argc,
                    Scaleform::GFx::AS3::Value* args)
 {
-    auto* root = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callFrame) + 0x10);
-    double number = Scaleform::GFx::NumberUtil::NaN();   // the exe calls NumberUtil::NaN (0x1425e3ee0)
-    if (argc != 0) args->Convert2NumberInline(number);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(object) + 0x180) == 0) {
-        reinterpret_cast<void(*)(void*, void*, double)>(VideoThunkB)(
-            root + *reinterpret_cast<const int*>(&VideoThunkBaseB),
-            member, number);
-    }
+    VideoNumberThunk(object, callFrame, member, static_cast<unsigned>(argc), args, VideoThunkB, &VideoThunkBaseB);
 }
 namespace {
 
