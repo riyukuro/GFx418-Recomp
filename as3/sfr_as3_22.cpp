@@ -1236,39 +1236,30 @@ template<> void FuncTreeItem::Visit<FunctionTreeVisitor>(FunctionTreeVisitor& vi
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: clips the requested rectangle against both image sizes and returns the origin delta.
+// MS2-FUNCTIONAL: register allocation differs (the exe holds the min edge in the other operand).
+// DICommand_SourceRect::CalculateDestClippedRect: clips the source rectangle against the
+// source image, then shifts it by DestPoint - TopLeft and clips it against the destination.
 // @0x142675bb0
 bool ClipImageRect(void* command, void* firstImage, void* secondImage, const int* requested,
                    unsigned* clipped, int* originDelta)
 {
-    const unsigned* firstSize = *reinterpret_cast<unsigned**>(static_cast<char*>(firstImage) + 0x10);
-    const unsigned* secondSize = *reinterpret_cast<unsigned**>(static_cast<char*>(secondImage) + 0x10);
-    const int dx = *reinterpret_cast<const int*>(static_cast<const char*>(command) + 0x28) - requested[0];
-    const int dy = *reinterpret_cast<const int*>(static_cast<const char*>(command) + 0x2c) - requested[1];
-    originDelta[0] = dx;
-    originDelta[1] = dy;
+    const Render::Rect<SInt32>& srcRect = *reinterpret_cast<const Render::Rect<SInt32>*>(requested);
+    Render::Rect<SInt32>& dstClippedRect = *reinterpret_cast<Render::Rect<SInt32>*>(clipped);
+    Render::Point<SInt32>& delta = *reinterpret_cast<Render::Point<SInt32>*>(originDelta);
+    const Render::Point<SInt32>& destPoint =
+        *reinterpret_cast<const Render::Point<SInt32>*>(static_cast<char*>(command) + 0x28);
+    delta = destPoint - srcRect.TopLeft();
 
-    const int reqLeft = requested[0];
-    const int reqTop = requested[1];
-    const int reqRight = requested[2];
-    const int reqBottom = requested[3];
-    if (reqTop > static_cast<int>(firstSize[1]) || reqBottom < 0 || reqRight < 0 ||
-        reqLeft > static_cast<int>(firstSize[0]))
+    const Render::ImageSize srcSize = static_cast<Render::ImageData*>(firstImage)->GetSize();
+    const Render::ImageSize destSize = static_cast<Render::ImageData*>(secondImage)->GetSize();
+    Render::Rect<SInt32> srcImageRect(0, 0, static_cast<SInt32>(srcSize.Width), static_cast<SInt32>(srcSize.Height));
+    Render::Rect<SInt32> dstImageRect(0, 0, static_cast<SInt32>(destSize.Width), static_cast<SInt32>(destSize.Height));
+    Render::Rect<SInt32> srcClippedRect;
+
+    if (!srcImageRect.IntersectRect(&srcClippedRect, srcRect))
         return false;
-
-    const unsigned left = static_cast<unsigned>(reqLeft < 0 ? 0 : reqLeft) + dx;
-    const unsigned right = static_cast<unsigned>(reqRight < static_cast<int>(firstSize[0]) ? reqRight : firstSize[0]) + dx;
-    const unsigned top = static_cast<unsigned>(reqTop < 0 ? 0 : reqTop) + dy;
-    const unsigned bottom = static_cast<unsigned>(reqBottom < static_cast<int>(firstSize[1]) ? reqBottom : firstSize[1]) + dy;
-    if (static_cast<int>(right) < 0 || static_cast<int>(top) > static_cast<int>(secondSize[1]) ||
-        static_cast<int>(left) > static_cast<int>(secondSize[0]) || static_cast<int>(bottom) < 0)
+    if (!srcClippedRect.Offset(delta).IntersectRect(&dstClippedRect, dstImageRect))
         return false;
-
-    // The start corner is clamped into the second image (cmovle at 0x142675c5f / 0x142675c72).
-    clipped[0] = static_cast<int>(left) > 0 ? left : 0;
-    clipped[1] = static_cast<int>(top) > 0 ? top : 0;
-    clipped[2] = right < secondSize[0] ? right : secondSize[0];
-    clipped[3] = bottom < secondSize[1] ? bottom : secondSize[1];
     return true;
 }
 }
@@ -2007,16 +1998,12 @@ void FillClippedImageRect(void* command, void*, void* image)
 // @0x142675ca0
 void FillImageData(void* command, void*, void* image)
 {
-    auto* bytes = static_cast<unsigned char*>(image);
-    auto* plane = *reinterpret_cast<unsigned**>(bytes + 0x10);
-    const unsigned width = plane[0];
-    const unsigned height = plane[1];
-    const long long pitch = *reinterpret_cast<long long*>(plane + 2);
-    const long long base = *reinterpret_cast<long long*>(plane + 6);
+    Render::ImageData* data = static_cast<Render::ImageData*>(image);
     const unsigned color = *reinterpret_cast<unsigned*>(static_cast<char*>(command) + 0x10);
-    for (unsigned y = 0; y < height; ++y) {
-        for (unsigned x = 0; x < width; ++x)
-            FUN_14257d390(image, base + pitch * y, x, color);
+    for (unsigned y = 0; y < data->GetHeight(); ++y) {
+        UByte* row = data->GetScanline(y);
+        for (unsigned x = 0; x < data->GetWidth(); ++x)
+            FUN_14257d390(image, reinterpret_cast<long long>(row), x, color);
     }
 }
 
@@ -3279,30 +3266,13 @@ void GFx::AMP::ImageInfo::Write(File& str, UInt32 version) const
     WriteUInt32(str, AtlasRight);
 }
 
-// MS2-FUNCTIONAL: hashes the eight byte key, follows the selected bucket's collision chain, and returns the matching value slot (entry + 0x18).
+// The manager's request table (+0xa8): HashLH<UInt64, ArrayLH<void*> >::Get, the FixedSizeHash
+// of the eight key bytes; returns the channel array (entry + 0x18) or null.
+typedef HashLH<UInt64, ArrayLH<void*> > Sfr22RequestHash;
 // @0x142745630
 void* FindAudioRequestEntry(void** set, const unsigned char* key)
 {
-    auto* table = static_cast<std::uint64_t*>(*set);
-    if (!table)
-        return nullptr;
-    const std::uint64_t hash =
-        (((((std::uint64_t(key[3]) * 0x1003f + key[2]) * 0x1003f + key[1]) * 0x1003f + key[4] * 0xfc5d1543ec5f01ull) +
-           key[5] * 0x9b302c28162c613full + key[7] * 0xd7c3e496a311b1bfull +
-           key[6] * 0x5d02f409d62aee81ull - 0x514d9afbc3e934fbull + key[0])) & table[1];
-    auto* node = table + 2 + hash * 6;
-    if (static_cast<std::int64_t>(*node) != -2 && node[1] == hash) {
-        std::uint64_t index = hash;
-        while (node[1] != hash || node[2] != *reinterpret_cast<const std::uint64_t*>(key)) {
-            index = node[0];
-            if (index == ~std::uint64_t(0))
-                return nullptr;
-            node = table + 2 + index * 6;
-        }
-        if (static_cast<std::int64_t>(index) >= 0)
-            return table + 5 + index * 6;
-    }
-    return nullptr;
+    return reinterpret_cast<Sfr22RequestHash*>(set)->Get(*reinterpret_cast<const UInt64*>(key));
 }
 
 // MS2-FUNCTIONAL: removes a finished request from its keyed channel list, pulses completion when the table empties, and stops/releases the channel.
