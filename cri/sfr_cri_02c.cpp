@@ -1758,9 +1758,9 @@ CriBool FUN_140035a90(void* player, const CriUint64* frameInfo)
 // @0x140035a40
 CriBool FUN_140035a40(void* player, const CriMvFrameInfo* frameInfo)
 {
-    void* localFrame[23] = {};
+    void* localFrame[21];
     localFrame[0] = (void*)*(const CriUint64*)frameInfo;
-    FUN_140044050(*(void**)((CriUint8*)player + 0xe08), localFrame);
+    FUN_140044a30(*(void**)((CriUint8*)player + 0xe08), localFrame);
     return 1;
 }
 
