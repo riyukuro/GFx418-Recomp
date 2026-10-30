@@ -1108,16 +1108,18 @@ namespace Instances { namespace fl_events {
     // read or written. Without a display object target the local values are 0.
 
     // @0x14246a1a0
-    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe (3 bytes longer)
+    // the display object is fetched before the matrix; the point is assigned (Point's operator= reads the result)
     void GestureEvent::InitLocalCoords()
     {
         if (LocalInitialized)
             return;
         if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
         {
+            GFx::DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj;
             Render::Matrix2F m;
-            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
-            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            pdisp->GetWorldMatrix(&m);
+            Render::PointF p;
+            p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
             LocalX = p.x;
             LocalY = p.y;
         }
@@ -1130,16 +1132,18 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a2f0
-    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    // the display object is fetched before the matrix; the point is assigned (Point's operator= reads the result)
     void MouseEvent::InitLocalCoords()
     {
         if (LocalInitialized)
             return;
         if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
         {
+            GFx::DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj;
             Render::Matrix2F m;
-            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
-            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            pdisp->GetWorldMatrix(&m);
+            Render::PointF p;
+            p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
             LocalX = p.x;
             LocalY = p.y;
         }
@@ -1152,16 +1156,18 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a450
-    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    // the display object is fetched before the matrix; the point is assigned (Point's operator= reads the result)
     void PressAndTapGestureEvent::InitTapLocalCoords()
     {
         if (TapLocalInitialized)
             return;
         if (Unk_a9 && Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
         {
+            GFx::DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj;
             Render::Matrix2F m;
-            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
-            Render::PointF p = m.TransformByInverse(Render::PointF(float(TapStageX), float(TapStageY)));
+            pdisp->GetWorldMatrix(&m);
+            Render::PointF p;
+            p = m.TransformByInverse(Render::PointF(float(TapStageX), float(TapStageY)));
             TapLocalX = p.x;
             TapLocalY = p.y;
         }
@@ -1174,26 +1180,29 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a5c0
-    // MS2-FUNCTIONAL: block layout of the matrix path differs from the exe
+    // the display object is fetched before the matrix; the point is assigned (Point's operator= reads the result)
     void TouchEvent::InitLocalCoords()
     {
         if (LocalInitialized)
             return;
         if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
         {
+            GFx::DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj;
             Render::Matrix2F m;
-            static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetWorldMatrix(&m);
-            Render::PointF p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
+            pdisp->GetWorldMatrix(&m);
+            Render::PointF p;
+            p = m.TransformByInverse(Render::PointF(float(StageX), float(StageY)));
             LocalX = p.x;
             LocalY = p.y;
-            Render::PointF s = m.TransformByInverse(Render::PointF(float(SizeX), float(SizeY)));
+            Render::PointF s;
+            s = m.TransformByInverse(Render::PointF(float(SizeX), float(SizeY)));
             SizeX = s.x;
             SizeY = s.y;
         }
         else
         {
-            LocalX = 0;
             LocalY = 0;
+            LocalX = 0;
             SizeX = 0;
             SizeY = 0;
         }
@@ -1201,7 +1210,7 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a780
-    // MS2-FUNCTIONAL: block layout of the parent-matrix path differs from the exe
+    // the parent is fetched before the matrix; the points are assigned (Point's operator= reads the result)
     void TransformGestureEvent::InitLocalOffset()
     {
         if (LocalOffsetInitialized)
@@ -1209,9 +1218,9 @@ namespace Instances { namespace fl_events {
         if (Target && FUN_1425145d0(GetVM(), Value(Target), "flash.display.DisplayObject"))
         {
             // the offset is relative to the target's parent
-            Render::Matrix2F m;
             GFx::InteractiveObject* parent =
                 static_cast<Instances::fl_display::DisplayObject*>(Target.GetPtr())->pDispObj->GetParent();
+            Render::Matrix2F m;
             if (parent)
             {
                 Render::Matrix2F pm;
@@ -1219,8 +1228,10 @@ namespace Instances { namespace fl_events {
                 m = pm;
             }
             Value::Number x = StageX, y = StageY;
-            Render::PointF p0 = m.TransformByInverse(Render::PointF(float(x), float(y)));
-            Render::PointF p1 = m.TransformByInverse(Render::PointF(float(x + OffsetX), float(y + OffsetY)));
+            Render::PointF p0;
+            p0 = m.TransformByInverse(Render::PointF(float(x), float(y)));
+            Render::PointF p1;
+            p1 = m.TransformByInverse(Render::PointF(float(x + OffsetX), float(y + OffsetY)));
             LocalOffsetX = p1.x - p0.x;
             LocalOffsetY = p1.y - p0.y;
         }
@@ -2823,18 +2834,20 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246c8d0
-    // MS2-FUNCTIONAL: cl orders the field copies differently
+    // the exe copies the fields through a reference to EvtId (one byte of the AsciiCode union, not the SDK's
+    // EvtId = eid), then tests the stored AsciiCode
     void KeyboardEvent::SetEventId(const EventId& id)
     {
-        EvtId.Id              = id.Id;
-        EvtId.WcharCode       = id.WcharCode;
-        EvtId.KeyCode         = id.KeyCode;
-        EvtId.AsciiCode       = id.AsciiCode;
-        EvtId.RollOverCnt     = id.RollOverCnt;
-        EvtId.KeyboardIndex   = id.KeyboardIndex;
-        EvtId.KeysState       = id.KeysState;
-        EvtId.MouseWheelDelta = id.MouseWheelDelta;
-        if (!EvtId.AsciiCode)
+        EventId& e = EvtId;
+        e.Id              = id.Id;
+        e.WcharCode       = id.WcharCode;
+        e.KeyCode         = id.KeyCode;
+        e.AsciiCode       = id.AsciiCode;
+        e.RollOverCnt     = id.RollOverCnt;
+        e.KeyboardIndex   = id.KeyboardIndex;
+        e.KeysState       = id.KeysState;
+        e.MouseWheelDelta = id.MouseWheelDelta;
+        if (EvtId.AsciiCode == 0)
             EvtId.AsciiCode = EvtId.ConvertKeyCodeToAscii();
     }
 
