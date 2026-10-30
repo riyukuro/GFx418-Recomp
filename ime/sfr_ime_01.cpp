@@ -2159,25 +2159,30 @@ LayoutNameKey* FUN_1423d7df0(void*, LayoutNameKey* key)
     return key;
 }
 
-// MS2-FUNCTIONAL: implements the executable's supported COM interface IDs and returns the matching interface view.
+// An object with a second interface view at +8, whose QueryInterface follows.
+struct ImeQiFirst { void* vftable; };
+struct ImeQiSecond { void* vftable; };
+struct ImeQiObject : ImeQiFirst, ImeQiSecond {};
+
+// The QueryInterface of an object with two interface views: IUnknown (DAT_1431c4828), DAT_1431c4d58, DAT_1431c4e08
+// and DAT_1431c4ee8 answer with the object itself, DAT_14313b8b8 with its +8 view.
 // @0x1423dadd0
-long long FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
+HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** output)
 {
-    if (!output) return static_cast<long long>(0x80070057u);
+    if (!output) return E_INVALIDARG;
     *output = nullptr;
-    long long* view = object;
-    if ((iid[0] != DAT_1431c4828 || iid[1] != DAT_1431c4830) &&
-        (iid[0] != DAT_1431c4d58 || iid[1] != DAT_1431c4d60)) {
-        if (iid[0] == DAT_14313b8b8 && iid[1] == DAT_14313b8c0) view = object ? object + 1 : nullptr;
-        else if (iid[0] != DAT_1431c4e08 || iid[1] != DAT_1431c4e10) {
-            if (iid[0] != DAT_1431c4ee8 || iid[1] != DAT_1431c4ef0)
-                return static_cast<long long>(0x80004002u);
-        }
-    }
-    *output = view;
-    if (!view) return static_cast<long long>(0x80004002u);
-    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[1])(object);
-    return 0;
+    const IID& riid = *reinterpret_cast<const IID*>(iid);
+    if (riid == *reinterpret_cast<const IID*>(&DAT_1431c4828) || riid == *reinterpret_cast<const IID*>(&DAT_1431c4d58))
+        *output = object;
+    else if (riid == *reinterpret_cast<const IID*>(&DAT_14313b8b8))
+        *output = static_cast<ImeQiSecond*>(reinterpret_cast<ImeQiObject*>(object));
+    else if (riid == *reinterpret_cast<const IID*>(&DAT_1431c4e08) || riid == *reinterpret_cast<const IID*>(&DAT_1431c4ee8))
+        *output = object;
+    else
+        return E_NOINTERFACE;
+    if (!*output) return E_NOINTERFACE;
+    reinterpret_cast<IUnknown*>(object)->AddRef();
+    return S_OK;
 }
 
 // MS2-FUNCTIONAL: emits the executable's four-part IME command log message when the state bag has a logger.
@@ -6500,7 +6505,7 @@ int FUN_1423da42c(void* self)
 
 // MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423dadd0.
 // @0x1423dae98
-long long FUN_1423dae98(void* self, const unsigned long long* iid, void** output)
+HRESULT FUN_1423dae98(void* self, const unsigned long long* iid, void** output)
 {
     return FUN_1423dadd0((long long*)((UByte*)self - 8), iid, output);
 }
