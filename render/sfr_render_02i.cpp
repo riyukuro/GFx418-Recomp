@@ -352,7 +352,7 @@ void DrawableImage::CopyPixels(DrawableImage* source, const Rect<SInt32>& source
 }
 
 // The viewport of a Draw root: the clip rectangle (or the whole image) of a render target the image's size.
-static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, const ImageSize& size)
+static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, const ImageSize& size, unsigned flags)
 {
     Viewport vp;
     vp.BufferWidth   = size.Width;
@@ -362,7 +362,7 @@ static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, c
     vp.Width         = area.Width();
     vp.Height        = area.Height();
     vp.ScissorLeft   = vp.ScissorTop = vp.ScissorWidth = vp.ScissorHeight = 0;
-    vp.Flags         = Viewport::View_IsRenderTexture;
+    vp.Flags         = flags;
     root->SetViewport(vp);
 }
 
@@ -407,7 +407,7 @@ void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cx
     data->pMeshProvider       = shapeData;
     shape->AddToPropagate();
 
-    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize());
+    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize(), 0);
     root->SetMatrix(matrix);
     shape->SetMatrix(Matrix2F::Identity);
     shape->SetCxform(cxform);
@@ -435,7 +435,7 @@ void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform
     Ptr<TreeNode> child = *subtree->Clone(pContext->RContext);
     FUN_1425eae70(root, child);
 
-    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize());
+    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize(), Viewport::View_IsRenderTexture);
     root->SetMatrix(matrix);
     child->SetMatrix(Matrix2F::Identity);
     child->SetCxform(cxform);
