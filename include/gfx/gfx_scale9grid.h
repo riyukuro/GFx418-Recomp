@@ -10,7 +10,8 @@ namespace Scaleform { namespace GFx {
 
 using Render::RectF;
 
-struct Scale9Grid : public NewOverrideBase<Stat_Default_Mem>
+// Allocated under StatMD_CharDefs_Mem (0x102, gfx_characterdef.h), as in the SDK and the exe's DefineScalingGrid loader.
+struct Scale9Grid : public NewOverrideBase<0x102>
 {
     RectF Rect;
 
