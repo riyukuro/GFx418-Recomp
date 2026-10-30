@@ -4348,22 +4348,24 @@ CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 
         void* Queue;
     };
     struct PlayerState { CriUint8 Reserved00[8]; CriSint32 State; };
-    AudioTrack* audio = (AudioTrack*)track;
-    PlayerState* movie = (PlayerState*)player;
-    if (!audio || !audio->Decoder || !audio->Present)
+    if (!track)
         return 0;
-    if (audio->ChannelCount < channel)
+    if (!((AudioTrack*)track)->Decoder || !((AudioTrack*)track)->Present)
+        return 0;
+    if (channel > ((AudioTrack*)track)->ChannelCount)
     {
         FUN_140037950(player, "E05063028M : Requested audio channel number is too many.", channel);
         return 0;
     }
-    if (movie->State == 1)
+    if (((PlayerState*)player)->State == 1)
         return 0;
     CriSint32 status = FUN_1400310b0(player);
-    if (status != 4 && status != 5)
+    if (status != 5 && status != 4)
         return 0;
     CriUint32 available = FUN_140043420(track, player, channel);
-    return available < maximum ? available : maximum;
+    if (maximum < available)
+        available = maximum;
+    return available;
 }
 
 // MS2-FUNCTIONAL: apply the selected channel's three decoder parameters to its audio decoder.
@@ -4510,41 +4512,54 @@ void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input)
 }
 
 // MS2-FUNCTIONAL: prepend a contiguous input chunk or a recycled node to the selected ring lane.
+struct CriSjChunk { void* Data; CriUint32 Size, Reserved0c; };
+struct CriSjChunkNode { CriSjChunkNode* Next; CriUint64 Reserved08; CriSjChunk Chunk; };
+struct CriSjRingQueue
+{
+    CriUint8 Reserved00[0x10];
+    LPCRITICAL_SECTION Lock;
+    CriSint32 Mode;
+    CriUint32 Reserved1c;
+    CriSjChunkNode* Heads[5];
+    CriSjChunkNode* FreeList;
+};
+
+// pops a cleared node off the queue's free list (NULL when it is empty); inlined into FUN_140045e04
+static __forceinline CriSjChunkNode* criSjRbf_PopFreeNode(CriSjRingQueue* queue)
+{
+    CriSjChunkNode* node = queue->FreeList;
+    if (node)
+    {
+        queue->FreeList = node->Next;
+        memset(node, 0, sizeof(*node));
+    }
+    return node;
+}
+
 // @0x140045e04
 void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input)
 {
-    struct ChunkNode { ChunkNode* Next; CriUint64 Reserved08; void* Data; CriUint32 Size, Reserved1c; };
-    struct RingQueue
-    {
-        CriUint8 Reserved00[0x10];
-        LPCRITICAL_SECTION Lock;
-        CriSint32 Mode;
-        CriUint32 Reserved1c;
-        ChunkNode* Heads[5];
-        ChunkNode* FreeList;
-    };
-    RingQueue* queue = (RingQueue*)object;
-    void* data = (void*)input[0];
-    CriUint32 size = (CriUint32)input[1];
-    if (size != 0 && data)
+    CriSjRingQueue* queue = (CriSjRingQueue*)object;
+    const CriSjChunk* chunk = (const CriSjChunk*)input;
+    if (chunk->Size > 0 && chunk->Data)
     {
         if (queue->Lock)
             FUN_140039f50(queue->Lock);
-        ChunkNode*& head = queue->Heads[lane];
-        if (queue->Mode == 1 && head && (CriUint8*)data + size == head->Data)
+        CriSjChunkNode* head = queue->Heads[lane];
+        if (queue->Mode == 1 && head && (CriUint8*)chunk->Data + chunk->Size == head->Chunk.Data)
         {
-            head->Data = data;
-            head->Size += size;
+            head->Chunk.Data = chunk->Data;
+            head->Chunk.Size += chunk->Size;
         }
-        else if (queue->FreeList)
+        else
         {
-            ChunkNode* node = queue->FreeList;
-            queue->FreeList = node->Next;
-            memset(node, 0, sizeof(*node));
-            node->Data = data;
-            node->Size = size;
-            node->Next = head;
-            head = node;
+            CriSjChunkNode* node = criSjRbf_PopFreeNode(queue);
+            if (node)
+            {
+                node->Chunk = *chunk;
+                node->Next = queue->Heads[lane];
+                queue->Heads[lane] = node;
+            }
         }
         if (queue->Lock)
             FUN_140039f8c(queue->Lock);
