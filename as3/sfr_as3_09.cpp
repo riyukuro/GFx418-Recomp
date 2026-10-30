@@ -324,11 +324,7 @@ namespace Instances { namespace fl_events {
             SizeY = Render::PixelsToTwips(v);
         }
         if (argc >= 10)
-        {
-            // pressure: converted and dropped
-            Value::Number v;
-            argv[9].Convert2Number(v);
-        }
+            argv[9].Convert2Number(Pressure);
         if (argc >= 11)
         {
             RelatedObj = NULL;
