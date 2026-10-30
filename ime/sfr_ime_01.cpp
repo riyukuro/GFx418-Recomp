@@ -2770,52 +2770,44 @@ unsigned long long FUN_1423da730(void* raw, int state)
     return 0;
 }
 
-// MS2-FUNCTIONAL: reads the active keyboard layout into [+0x198], maps it to the language id at [+0x84] and shows its
+// Reads the active keyboard layout into [+0x198], maps it to the language id at [+0x84] and shows its
 // locale name. For a plain layout (HKL & 0xe0000000 == 0) it sets mode 0x1000000 and shows the "Layout Text" of the
 // registry layout record whose id matches the HKL's high word, else the locale name; for an IME layout it shows the
 // IME's mode text through FUN_1423cc2d0.
+// MS2-FUNCTIONAL: the exe re-zero-extends the HKL high word inside the layout loop (4 bytes longer); otherwise the same code.
 // @0x1423d8870
 void FUN_1423d8870(unsigned long long* manager)
 {
     struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+    auto* bytes = reinterpret_cast<unsigned char*>(manager);
     manager[0x33] = reinterpret_cast<unsigned long long>(GetKeyboardLayout(0));
-    auto** vtable = reinterpret_cast<void**>(manager[0]);
-    const unsigned language = reinterpret_cast<unsigned(*)(void*, short)>(vtable[4])(
-        manager, static_cast<short>(manager[0x33]));
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = language;
+    const unsigned language = reinterpret_cast<unsigned(*)(void*, unsigned short)>((*reinterpret_cast<void***>(manager))[4])(
+        manager, *reinterpret_cast<unsigned short*>(bytes + 0x198));
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = language;
     FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), language);
     wchar_t locale[0x104];
-    if (!GetLocaleInfoW(static_cast<unsigned short>(manager[0x33]), LOCALE_SLANGUAGE, locale, 0x104)) {
-        reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
-            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
-        void* languageObject = reinterpret_cast<void*>(manager[0xf]);
-        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
-            languageObject, "Unsupported");
+    if (!GetLocaleInfoW(*reinterpret_cast<unsigned short*>(bytes + 0x198), LOCALE_SLANGUAGE, locale, 0x104)) {
+        const DWORD error = GetLastError();
+        reinterpret_cast<void(*)(void*, DWORD, const char*)>((*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)])(
+            manager, error, "GFxIME Error: Error Initializing Input Language Name ");
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x78 / sizeof(void*)])(
+            reinterpret_cast<void*>(manager[0xf]), "Unsupported");
         return;
     }
-    {
-        String localeText(locale);
-        void* languageObject = reinterpret_cast<void*>(manager[0xf]);
-        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
-            languageObject, localeText.ToCStr());
-    }
-    if (manager[0x33] & 0xe0000000) {
-        FUN_1423cc2d0(manager);
-        return;
-    }
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x88) = 0x1000000;
-    const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x160);
-    const auto* records = reinterpret_cast<const LayoutRecord*>(manager[0x2b]);
-    const unsigned layoutId = static_cast<unsigned short>(manager[0x33] >> 16);
-    for (unsigned i = 0; i < count; ++i) {
-        if (records[i].layoutId == layoutId) {
-            String layoutText(records[i].layoutText);
-            FUN_1423ccdc0(manager, layoutText);
-            return;
+    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x78 / sizeof(void*)])(
+        reinterpret_cast<void*>(manager[0xf]), String(locale).ToCStr());
+    const unsigned long long layout = manager[0x33];
+    if (!(layout & 0xe0000000)) {
+        *reinterpret_cast<unsigned*>(bytes + 0x88) = 0x1000000;
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0x160); ++i) {
+            if (HIWORD(layout) == reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutId) {
+                FUN_1423ccdc0(manager, String(reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutText));
+                return;
+            }
         }
-    }
-    String localeText(locale);
-    FUN_1423ccdc0(manager, localeText);
+        FUN_1423ccdc0(manager, String(locale));
+    } else
+        FUN_1423cc2d0(manager);
 }
 
 // MS2-FUNCTIONAL: resolves the configured language string, activates its executable HKL, and reports activation failure.
