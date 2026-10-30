@@ -314,7 +314,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Scaleform {
 extern "C" void FUN_1425463f0(void*, const void*, UPInt);
 extern "C" void FUN_142546490(void*, const void*, UPInt);
-extern "C" void FUN_142623bc0(void*, const void*, UPInt); // the UByte array Reserve this Resize calls
 
 // ArrayData::Resize shrinks only after the size drops below half capacity; growth reserves 25% headroom.
 // MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call targets; register allocation differs.
@@ -363,30 +362,6 @@ void ResizeStaticTextArray(void* array, UPInt size)
     fields[1] = size;
 }
 
-// ArrayData<UByte, AllocatorGH_POD<UByte, 2>>::Resize, kept local so the template's Reserve rows (0x142546350 /
-// 0x142623bc0) stay as they are; it calls the Reserve at 0x142623bc0 as the exe does.
-// MS2-FUNCTIONAL: preserves the executable's size/capacity decisions and reserve call target; register allocation differs.
-// @0x14268e740
-void ResizeByteArray(void* array, UPInt size)
-{
-    UPInt* fields = static_cast<UPInt*>(array);
-    if (size < fields[1])
-    {
-        if (size < (fields[2] >> 1))
-        {
-            FUN_142623bc0(array, array, size);
-            fields[1] = size;
-            return;
-        }
-    }
-    else if (fields[2] <= size)
-    {
-        FUN_142623bc0(array, array, (size >> 2) + size);
-        fields[1] = size;
-        return;
-    }
-    fields[1] = size;
-}
 }
 
 enum FMOD_RESULT : int {};
@@ -2701,12 +2676,6 @@ static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested,
     array[1] = reinterpret_cast<void*>(requested);
 }
 
-// MS2-FUNCTIONAL: applies the observed quarter-growth and half-shrink rules to the byte array.
-// @0x14268e840
-void ResizeLocalByteArray(void** array, std::size_t requested)
-{
-    ResizeRawArray(array, array, requested, 1);
-}
 
 }
 
@@ -4715,3 +4684,9 @@ extern "C" void FUN_14268e8c0(Ms2StringLHArrayBase* locales, Scaleform::UPInt ne
     if (newSize > oldSize)
         Allocator::ConstructArray(locales->Data + oldSize, newSize - oldSize);
 }
+
+// COMDATs of the FunctionTimings / SourceLineTimings arrays (ArrayLH of the 0x20 / 0x18 byte POD stats).
+// @0x14268e740
+template void Scaleform::ArrayData<Scaleform::GFx::AMP::MovieFunctionStats::FuncStats, Scaleform::AllocatorLH<Scaleform::GFx::AMP::MovieFunctionStats::FuncStats, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+// @0x14268e840
+template void Scaleform::ArrayData<Scaleform::GFx::AMP::MovieSourceLineStats::SourceStats, Scaleform::AllocatorLH<Scaleform::GFx::AMP::MovieSourceLineStats::SourceStats, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
