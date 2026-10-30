@@ -358,11 +358,11 @@ ASString Instances::fl::Array::ToStringInternal(const ASString& sep) const
 
 // ---- Slots ----
 
-// MS2-FUNCTIONAL: the exe materialises the parent-slot test as a bool (setb) before branching
+// the parent test is the SDK's AbsoluteIndex < UPInt (a negative index counts as below), as a bool
 // @0x142416fb0
 const SlotInfo& Slots::GetSlotInfo(AbsoluteIndex ind) const
 {
-    if (ind.Get() < 0 || static_cast<UPInt>(ind.Get()) < FirstOwnSlotNum)
+    if (ind < FirstOwnSlotNum)
         return Parent->GetSlotInfo(ind);
     return VArray[static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum].Value;
 }
