@@ -478,36 +478,53 @@ bool GFxInitImportActions::IsInitImportActionsTag() const
 }
 
 // ImportAssets / ImportAssets2: the symbols another file supplies, bound when that file is loaded.
-// MS2-FUNCTIONAL 0x1425c5d70: same reads, log text and objects; the symbol array growth inlines differently.
+// MS2-FUNCTIONAL 0x1425c5d70: same reads, calls, log text and objects; register assignment (rsi/r14, edi/esi) and the
+// hoisted -1 of the string release differ.
 // @0x1425c5d70
 void SF_STDCALL GFx_ImportLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    Stream* in = p->GetStream();
-    String  sourceUrl;
-    in->ReadString(&sourceUrl);
+    Stream* pin = p->GetStream();
+
+    String sourceUrl;
+    pin->ReadString(&sourceUrl);
+
     if (tagInfo.TagType == Tag_ImportAssets2)
-        in->ReadU16(); // reserved
-    unsigned count = in->ReadU16();
-    p->LogParse(tagInfo.TagType == Tag_ImportAssets2 ? "  importAssets2: SourceUrl = %s, count = %d\n"
-                                                     : "  importAssets: SourceUrl = %s, count = %d\n",
+    {
+        unsigned val = p->ReadU16(); // reserved, 1
+        SF_UNUSED(val);
+    }
+
+    int count = pin->ReadU16();
+
+    p->LogParse(((tagInfo.TagType != Tag_ImportAssets2) ? "  importAssets: SourceUrl = %s, count = %d\n"
+                                                        : "  importAssets2: SourceUrl = %s, count = %d\n"),
                 sourceUrl.ToCStr(), count);
 
-    ImportData* pimport = p->GetLoadTaskData()->AllocMovieDefClass<ImportData>();
-    pimport->Frame      = p->GetLoadingFrame();
-    pimport->SourceUrl  = sourceUrl;
-    for (unsigned i = 0; i < count; i++)
-    {
-        String   symbolName;
-        unsigned id = in->ReadU16();
-        in->ReadString(&symbolName);
-        p->LogParse("  import: id = %d, name = %s\n", id, symbolName.ToCStr());
-        ResourceHandle rh = p->GetLoadTaskData()->AddNewResourceHandle(ResourceId(id));
-        pimport->AddSymbol(symbolName.ToCStr(), id, rh.GetBindIndex());
-    }
-    p->AddImportData(pimport);
+    ImportData* pimportData = p->AllocMovieDefClass<ImportData>();
+    pimportData->Frame      = p->GetLoadingFrame();
+    pimportData->SourceUrl  = sourceUrl;
 
-    GFxInitImportActions* ptag = new (p->AllocTagMemory(sizeof(GFxInitImportActions))) GFxInitImportActions;
-    ptag->ImportIndex          = pimport->ImportIndex;
+    // Get the imports.
+    for (int i = 0; i < count; i++)
+    {
+        String symbolName;
+        UInt16 id = pin->ReadU16();
+
+        pin->ReadString(&symbolName);
+        p->LogParse("  import: id = %d, name = %s\n", id, symbolName.ToCStr());
+
+        // And add ResourceId so that it's handle can be referenced by new load operations.
+        ResourceHandle rh = p->AddNewResourceHandle(ResourceId(id));
+        // Add import symbol to data.
+        pimportData->AddSymbol(symbolName.ToCStr(), id, rh.GetBindIndex());
+    }
+
+    // Pass completed ImportData to GFxMovieDataDef.
+    p->AddImportData(pimportData);
+
+    // Add InitAction import tag, so that init actions are processed correctly.
+    GFxInitImportActions* ptag = p->AllocTag<GFxInitImportActions>();
+    ptag->ImportIndex          = pimportData->ImportIndex;
     p->AddInitImportAction(ptag);
 }
 
@@ -779,50 +796,49 @@ void SF_STDCALL GFx_DefineSubImageLoader(LoadProcess* p, const TagInfo&)
 }
 
 // DefineSceneAndFrameLabelData: the scenes of the main timeline and their frame labels (only the first such tag).
-// MS2-FUNCTIONAL 0x1425c7ca0: same reads, log text and scene table, including the scene end the exe stores as the
-// next scene's offset; the label array growth inlines differently.
 // @0x1425c7ca0
 void SF_STDCALL GFx_DefineSceneAndFrameLabelDataLoader(LoadProcess* p, const TagInfo&)
 {
-    MovieDataDef::LoadTaskData* pdata = p->GetLoadTaskData();
-    if (pdata->HasScenes())
+    if (p->HasScenes()) // not first call, ignore
         return;
 
-    Stream*  in        = p->GetStream();
-    unsigned numScenes = in->ReadVU32();
-    p->LogParse("  Scene and Frame Label Data, numscenes = %d\n", numScenes);
-    for (unsigned i = 0; i < numScenes; i++)
+    Stream* in         = p->GetStream();
+    UInt32  sceneCount = in->ReadVU32();
+
+    p->LogParse("  Scene and Frame Label Data, numscenes = %d\n", sceneCount);
+
+    for (UInt32 i = 0; i < sceneCount; ++i)
     {
-        unsigned offset = in->ReadVU32();
+        UInt32   off = in->ReadVU32();
         StringDH name(p->GetLoadHeap());
         in->ReadString(&name);
-        p->LogParse("   Scene[%d] = { %d, \"%s\" }\n", i, offset, name.ToCStr());
-        pdata->AddScene(name, offset);
-    }
 
-    unsigned numLabels = in->ReadVU32();
-    p->LogParse("  frameLabelCount = %d\n", numLabels);
-    MovieDataDef::SceneInfo* pscene     = const_cast<MovieDataDef::SceneInfo*>(pdata->GetScene(0));
-    unsigned                 sceneIndex = 0;
-    for (unsigned i = 0; i < numLabels; i++)
+        p->LogParse("   Scene[%d] = { %d, \"%s\" }\n", i, off, name.ToCStr());
+        p->AddScene(name, off);
+    }
+    UInt32 frameLabelCount = in->ReadVU32();
+    p->LogParse("  frameLabelCount = %d\n", frameLabelCount);
+    unsigned                 sceneIdx = 0;
+    MovieDataDef::SceneInfo* curScene = p->GetScene(sceneIdx);
+    for (UInt32 i = 0; i < frameLabelCount; ++i)
     {
-        unsigned number = in->ReadVU32();
+        UInt32   num = in->ReadVU32();
         StringDH label(p->GetLoadHeap());
         in->ReadString(&label);
-        p->LogParse("   Label[%d] = { %d, \"%s\" }\n", i, number, label.ToCStr());
-        for (;;)
+
+        p->LogParse("   Label[%d] = { %d, \"%s\" }\n", i, num, label.ToCStr());
+
+        // check if this frame within the current scene
+        MovieDataDef::SceneInfo* nextScene;
+        while ((nextScene = p->GetScene(sceneIdx + 1)) != NULL && num >= nextScene->Offset)
         {
-            MovieDataDef::SceneInfo* pnext =
-                const_cast<MovieDataDef::SceneInfo*>(pdata->GetScene(sceneIndex + 1));
-            if (!pnext || pnext->Offset > number)
-                break;
-            pscene->NumFrames = pnext->Offset;
-            sceneIndex++;
-            pscene = pnext;
+            curScene->NumFrames = nextScene->Offset;
+            curScene            = nextScene;
+            ++sceneIdx;
         }
-        pscene->AddFrameLabel(label, number);
+        curScene->AddFrameLabel(label, num);
     }
-    pscene->NumFrames = pdata->GetTotalFrames() - pscene->Offset;
+    curScene->NumFrames = p->GetTotalFrames() - curScene->Offset;
 }
 
 // ---- LoadProcess helpers ----

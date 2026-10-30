@@ -151,6 +151,15 @@ public:
     };
     unsigned GetFileAttributes() const { return pLoadData->GetFileAttributes(); }
     void SetMetadata(UByte* pdata, unsigned size) { pLoadData->SetMetadata(pdata, size); }
+    // (appended, sfh) the scene table of DefineSceneAndFrameLabelData (sfr_gfx_04x), re-read through pLoadData as in the
+    // SDK
+    unsigned GetTotalFrames() const                    { return pLoadData->GetTotalFrames(); }
+    void     AddScene(const String& name, unsigned off) { pLoadData->AddScene(name, off); }
+    bool     HasScenes() const                         { return pLoadData->HasScenes(); }
+    MovieDataDef::SceneInfo* GetScene(UPInt index)
+    {
+        return const_cast<MovieDataDef::SceneInfo*>(pLoadData->GetScene(index));
+    }
 
     // exe 0x1425c8ca0
     UByte ReadU8()            { return GetStream()->ReadU8(); }
@@ -304,6 +313,10 @@ public:
     unsigned GetASInitActionTagsNum() const { return ASInitActionTagsNum; }
     // (appended, sfr33) the InitActions of an import: run first, not counted
     void     AddInitImportAction(ExecuteTag* ptag) { InitActionTags.PushBack(ptag); }
+    // (appended, sfh) the ImportAssets loader (sfr_gfx_04x) goes through these SDK wrappers
+    template <class T>
+    T*             AllocMovieDefClass()                 { return pLoadData->AllocMovieDefClass<T>(); }
+    ResourceHandle AddNewResourceHandle(ResourceId rid) { return pLoadData->AddNewResourceHandle(rid); }
 
     // (appended, sfr_gfx_04x) the file of the tag stream at its read position (exe 0x1425c8b50)
     File* GetUnderlyingFile();
