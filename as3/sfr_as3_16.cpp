@@ -1800,39 +1800,19 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
         pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
-// MS2-FUNCTIONAL: the default destructor inlines the contained Value cleanup that the executable calls through its
-// helper; the cleanup is equivalent, but the leaf/frame differs.
+// Only the This member Value is released (its SCU ~Value inlines).
 // @0x1424de8f0
 PropRef::~PropRef()
 {
-    auto* value = reinterpret_cast<Scaleform::UInt32*>(reinterpret_cast<unsigned char*>(this) + 0x10);
-    if ((*value & 0x1f) < 10)
-        return;
-    if ((*value >> 9) & 1)
-    {
-        auto* refCount = *reinterpret_cast<int**>(value + 2);
-        --*refCount;
-        if (*refCount == 0)
-        {
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refCount);
-        }
-        *value &= 0xfffffde0;
-        value[2] = 0;
-        value[4] = 0;
-        value[6] = 0;
-        return;
-    }
-    FUN_142521f00(value);
-    // The exe tail-jumps into ReleaseInternal and is done; the member ~Value of This still runs after this body, so
-    // drop the kind here or it releases the same value a second time.
-    *value &= 0xffffffe0;
 }
 
 // @0x1424e0b40
 PropRef& PropRef::operator=(PropRef&& other)
 {
+    // The exe copies the union once per member (pSI, pValue, pObject).
+    pSI = other.pSI;
     pValue = other.pValue;
+    pObject = other.pObject;
     SlotIndex = other.SlotIndex;
     This.Assign(other.This);
     return *this;
