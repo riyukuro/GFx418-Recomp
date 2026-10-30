@@ -1549,7 +1549,7 @@ static __forceinline void VectorFilter(VectorBase<T>& self, SPtr<I>& result, con
     if (callback.IsNullOrUndefined() || !self.CheckCallable(callback))
         return;
 
-    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    Value _this(!thisObject.IsNullOrUndefined() ? thisObject : callback);
     for (UPInt i = 0; i < (UInt32)self.V.GetSize(); ++i)
     {
         const Value argv[3] = {ElementValue(self.V[i]), Value((UInt32)i), Value(&owner)};
@@ -2034,7 +2034,6 @@ void FUN_142548f60(VectorBase<Value::Number>& v, SPtr<VI::Vector_double>& result
 // @0x142549300
 void FUN_142549300(VectorBase<SInt32>& v, SPtr<VI::Vector_int>& result, const Value& callback, const Value& thisObject, VI::Vector_int& owner)
 { VI::VectorFilter<VI::Vector_int, VT::Vector_int>(v, result, callback, thisObject, owner); }
-// MS2-FUNCTIONAL: register assignment for thisObject/callback differs from the exe
 // @0x1425496a0
 void FUN_1425496a0(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const Value& callback, const Value& thisObject, VI::Vector_object& owner)
 { VI::VectorFilter<VI::Vector_object, VT::Vector_object>(v, result, callback, thisObject, owner); }
