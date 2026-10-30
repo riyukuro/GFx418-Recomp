@@ -100,9 +100,9 @@ void SoundInfo::Play(InteractiveObject* pchar)
         return;
 
     Sprite* sprite = 0;
-    if (pchar->Flags & DisplayObjectBase::Mask_Sprite)
+    if (pchar->IsSprite())
         sprite = reinterpret_cast<Sprite*>(pchar);
-    else if (pchar->pParent && (pchar->pParent->Flags & DisplayObjectBase::Mask_Sprite))
+    else if (pchar->pParent && pchar->pParent->IsSprite())
         sprite = reinterpret_cast<Sprite*>(pchar->pParent);
     if (!sprite)
         return;
