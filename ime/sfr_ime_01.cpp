@@ -2633,36 +2633,36 @@ unsigned long long FUN_1423daf30(void* raw, int offset)
     return 0;
 }
 
-// MS2-FUNCTIONAL: synchronizes Korean IME association and the observed conversion/sentence mode fields.
+// Enables or disables the window IME (IACE_DEFAULT). For Korean the sentence mode is cleared; for other languages the
+// native-mode bit and phrase prediction follow the flag. Reviewed against the exe, same behaviour.
+// MS2-FUNCTIONAL: 7 bytes short; the exe does not keep the zero-extended flag across calls and does not hoist the
+// shared ImmGetConversionStatus call (it calls it in both branches); register allocation otherwise
 // @0x1423cfbe0
 void FUN_1423cfbe0(void* raw, unsigned char enabled)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    int composition = *reinterpret_cast<int*>(self + 0xbc);
-    if (!enabled && composition > 0)
+    if (!enabled && *reinterpret_cast<int*>(self + 0xbc) > 0)
         *reinterpret_cast<unsigned char*>(self + 0xc0) = 1;
-    if (composition != 0) return;
+    if (*reinterpret_cast<int*>(self + 0xbc) != 0) return;
 
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC oldContext = cx18_ImmGetContext(hwnd);
-    String language;
-    void* languageSource = *reinterpret_cast<void**>(self + 0xa8);
-    reinterpret_cast<void(*)(void*, String*)>((*reinterpret_cast<void***>(languageSource))[0x50 / sizeof(void*)])(
-        languageSource, &language);
-    const bool korean = std::strcmp(language.ToCStr(), "Korean") == 0;
-    cx18_ImmAssociateContextEx(hwnd, nullptr, static_cast<DWORD>(enabled) << 4);
-    HIMC context = cx18_ImmGetContext(hwnd);
-    DWORD conversion = 0;
-    DWORD sentence = 0;
-    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
-    if (!korean) {
-        conversion = enabled ? (conversion | 1u) : (conversion & ~1u);
-        sentence = static_cast<DWORD>(enabled) << 3;
+    HIMC oldContext = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
+    // IMEManagerBase::GetInputLanguage (slot 10); the exe inlines strcmp and drops the String right away
+    const bool korean =
+        std::strcmp((*reinterpret_cast<IMEManagerBase**>(self + 0xa8))->GetInputLanguage().ToCStr(), "Korean") == 0;
+    cx18_ImmAssociateContextEx(*reinterpret_cast<HWND*>(self + 0x28), nullptr, static_cast<DWORD>(enabled) << 4);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
+    DWORD conversion;
+    DWORD sentence;
+    if (korean) {
+        cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+        cx18_ImmSetConversionStatus(context, conversion, IME_SMODE_NONE);
     } else {
-        sentence = 0;
+        cx18_ImmGetConversionStatus(context, &conversion, &sentence);
+        conversion = enabled ? (conversion | IME_CMODE_NATIVE) : (conversion & ~IME_CMODE_NATIVE);
+        sentence = enabled ? IME_SMODE_PHRASEPREDICT : IME_SMODE_NONE;
+        cx18_ImmSetConversionStatus(context, conversion, sentence);
     }
-    cx18_ImmSetConversionStatus(context, conversion, sentence);
-    cx18_ImmReleaseContext(hwnd, oldContext);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), oldContext);
     *reinterpret_cast<unsigned char*>(self + 0xc0) = 0;
 }
 
