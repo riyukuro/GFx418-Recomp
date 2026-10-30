@@ -2959,8 +2959,8 @@ void FUN_140050fc0(void)
   FUN_140050f90(&DAT_143c49350,0x50);
   FUN_140050f90(&DAT_143c49300,0x50);
   FUN_140050f90(&DAT_143c49160,0x50);
-  _DAT_143c493b8 = cri_conv(FUN_142ccc860);
   _DAT_143c493a8 = cri_conv(FUN_142cccb30);
+  _DAT_143c493b8 = cri_conv(FUN_142ccc860);
   _DAT_143c491b8 = cri_conv(&LAB_142ccc850);
   _DAT_143c491c0 = cri_conv(&LAB_142ccc850);
   _DAT_143c491c8 = cri_conv(&LAB_142ccc850);
