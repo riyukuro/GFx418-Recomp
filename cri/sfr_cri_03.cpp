@@ -5697,7 +5697,10 @@ inline void CriMpvSetTiledFrame(void* frame, CriUint8* base, CriSint32 width, Cr
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: pull the next demuxed video picture, decode it and update the reference-picture window.
+// MS2-FUNCTIONAL: pull the next demuxed video picture, decode it and update the reference-picture window. Still DIFF
+// by structure, same behaviour: the exe switches on the picture type (case 1-2 I/P, case 3 B, default "D Picture" at
+// one site), describes the tiled planes inline and reads player fields directly, where ours uses an if chain and
+// CriMpvField / CriMpvSetTiledFrame calls (4425 vs 5631 bytes).
 // @0x14003efc0
 CriSint32 FUN_14003efc0(void* player)
 {
