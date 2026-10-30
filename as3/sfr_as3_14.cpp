@@ -1035,11 +1035,14 @@ namespace Instances { namespace fl_utils
         Data[Position++] = (UInt8)v;
     }
 
-    // MS2-FUNCTIONAL: grow + memcpy register allocation differs
     // @0x1424bf440
     void ByteArray::Write(const void* src, UInt32 n)
     {
-        GrowFor(n);
+        const UInt32 newPos = Position + n;
+        if (newPos >= Data.GetSize())
+            Resize(newPos);
+        else if (newPos >= Length)
+            Length = newPos;
         memcpy(Data.GetDataPtr() + Position, src, n);
         Position += n;
     }
@@ -1060,7 +1063,11 @@ namespace Instances { namespace fl_utils
     {
         if (Endian != endianLittle)
             v = SwapBytes(v);
-        GrowFor(sizeof(T));
+        const UInt32 newPos = Position + (UInt32)sizeof(T);
+        if (newPos >= Data.GetSize())
+            Resize(newPos);
+        else if (newPos >= Length)
+            Length = newPos;
         *reinterpret_cast<T*>(Data.GetDataPtr() + Position) = v;
         Position += sizeof(T);
     }
@@ -1463,12 +1470,14 @@ namespace Instances { namespace fl_utils
         Write(&value, 8);
     }
 
-    // MS2-FUNCTIONAL: inlined WriteValue register allocation differs
     // @0x1424c07b0
     void ByteArray::writeFloat(const Value& result, Value::Number value)
     {
         SF_UNUSED(result);
-        WriteValue((float)value);
+        float v = static_cast<float>(value);
+        if (Endian != endianLittle)
+            v = SwapBytes(v);
+        Write(&v, sizeof(v));
     }
 
     // @0x1424c0890
@@ -1512,32 +1521,33 @@ namespace Instances { namespace fl_utils
         vm.ThrowError(VM::Error(VM::eNotImplementedError, vm, "ByteArray::writeObject()"));
     }
 
-    // MS2-FUNCTIONAL: inlined WriteValue register allocation differs
     // @0x1424c0ae0
     void ByteArray::writeShort(const Value& result, SInt32 value)
     {
         SF_UNUSED(result);
-        WriteValue((UInt16)value);
+        SInt16 v = static_cast<SInt16>(value);
+        if (Endian != endianLittle)
+            v = (SInt16)(((UInt16)v >> 8) | (v << 8));
+        Write(&v, sizeof(v));
     }
 
     // A 16-bit length, then the UTF-8 bytes.
-    // MS2-FUNCTIONAL: UTF length check + Write call scheduling differs
+    // MS2-FUNCTIONAL: the exe calls Write(const void*, UInt32) out of line twice; cl inlines both here
     // @0x1424c0b90
     void ByteArray::writeUTF(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
-        UInt32 size = value.GetSize();
-        if (size < 0x10000)
+        if (value.GetSize() > 65535)
         {
-            UInt16 len = (UInt16)size;
-            if (Endian != endianLittle)
-                len = SwapBytes(len);
-            Write(&len, 2);
-            Write(value.ToCStr(), size);
-            return;
+            VM& vm = GetVM();
+            return vm.ThrowRangeError(VM::Error(VM::eNotImplementedError, vm, "ByteArray::writeUTF"));
         }
-        VM& vm = GetVM();
-        vm.ThrowRangeError(VM::Error(VM::eNotImplementedError, vm, "ByteArray::writeUTF"));
+        const UInt16 size = static_cast<UInt16>(value.GetSize());
+        UInt16 len = size;
+        if (Endian != endianLittle)
+            len = SwapBytes(len);
+        Write(&len, sizeof(len));
+        Write(value.ToCStr(), size);
     }
 
     // @0x1424c0c50
