@@ -237,13 +237,12 @@ void  FUN_1425245c0(UPInt* a, UPInt n);
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
 
-// MS2-FUNCTIONAL 0x1425274f0: ownership and interface-flag effects match; exact refcount codegen remains to compare.
 // @0x1425274f0
 void Traits::SetInstanceTraits(Pickable<InstanceTraits::Traits> itr)
 {
-    const UInt32 incomingFlags = static_cast<UInt32>(itr->Flags);
-    const SPInt interfaceMask = -static_cast<SPInt>((incomingFlags >> 2) & 1);
-    Flags ^= (Flags ^ interfaceMask) & AS3::Traits::IsInterfaceMask;
+    // SDK SetIsInterface(itr->IsInterface()); our shared header only has the argument-less setter.
+    Flags = (Flags & ~static_cast<SPInt>(AS3::Traits::IsInterfaceMask))
+        | (-static_cast<SPInt>(itr->IsInterface()) & AS3::Traits::IsInterfaceMask);
     ITraits = itr;
 }
 
@@ -564,7 +563,8 @@ void State::PushITraits(InstanceTraits::Traits* tr)
 void State::KillRegister(UInt32 ind)
 {
     FUN_14251fcd0(reinterpret_cast<UPInt>(pTracer), static_cast<UInt32>(ind));
-    Registers[ind].Assign(Value::GetUndefined());
+    const Value& undef = Value::GetUndefined();
+    Registers[ind].Assign(undef);
     const UInt32 sh = ind & 7;
     RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] | (1u << sh));
     RegChanged[ind >> 3] = static_cast<UInt8>(RegChanged[ind >> 3] & ~(1u << sh));
@@ -9064,6 +9064,8 @@ void Scaleform::GFx::AS3::Class::lengthGet(Scaleform::SInt32& result)
 // The out-of-line array COMDATs of this range, on the real element types (header templates, so attributed by
 // byte match or MS2-PIN rather than by tag).
 namespace Scaleform {
+// The exe calls the Value range destructor out of line from the ResizeNoConstruct bodies (0x1424f6d50, sfr_as3_17).
+extern template void ConstructorMov<GFx::AS3::Value>::DestructArray(GFx::AS3::Value*, UPInt);
 template void ArrayDataBase<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524e20
 template void ArrayDataBase<GFx::AS3::Value, AllocatorLH<GFx::AS3::Value, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524ec0
 template void ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524cd0
