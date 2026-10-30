@@ -836,7 +836,7 @@ CriUint64 FUN_14003a0b4(CriUint64 value, CriUint32 alignment)
 // @0x14003a0f8
 CriUint32 FUN_14003a0f8(CriSint32 index)
 {
-    return (CriUint32)((index + 2 * index) * 16 + 0xb8);
+    return (CriUint32)((CriUint32)((index + 2 * index) * 16) + (CriUint64)0xb8);
 }
 
 // MS2-FUNCTIONAL: releases UTF table allocations and all four lazily allocated fast-search indexes.
