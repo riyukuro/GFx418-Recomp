@@ -1893,10 +1893,10 @@ namespace Instances { namespace fl_media
     // @0x1424d09a0
     void SoundTransform::AS3Constructor(unsigned argc, const Value* argv)
     {
-        if (argc > 0)
+        if (argc >= 1)
         {
             argv[0].Convert2Number(Volume);
-            if (argc > 1)
+            if (argc >= 2)
                 argv[1].Convert2Number(Pan);
         }
     }
