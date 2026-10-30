@@ -839,15 +839,14 @@ CriUint32 FUN_14003a0f8(CriSint32 index)
 // @0x14003a108
 void criUtfRtv_Destroy(CriUint64* table)
 {
+    typedef void(__fastcall* FreeFn)(void*, void*);
     CriUint64* heap = (CriUint64*)table[0];
-    void(__fastcall* freeMem)(void*, void*) = (void(__fastcall*)(void*, void*))heap[1];
-    void* heapContext = (void*)heap[2];
     if (table[0xc] != 0 && heap)
-        freeMem(heapContext, (void*)table[0x16]);
-    for (CriSint32 index = 0; index < 4; ++index)
+        ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x16]);
+    for (CriUint32 index = 0; index < 4; ++index)
         if (table[0xe + index * 2] != 0)
             FUN_140046d50(table, index);
-    freeMem(heapContext, (void*)table[0x15]);
+    ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x15]);
 }
 #pragma optimize("", on)
 
@@ -2820,82 +2819,81 @@ void criSjUni_Reset(void* streamJoint)
 }
 #pragma optimize("", on)
 
+// FUN_140041a10's body; the exe inlines it into the outer timer's getters
+static __forceinline void criTimer_GetTime(const void* state, CriSint64* elapsed, CriUint64* timestamp)
+{
+    struct InnerTimer { CriUint64 Start; CriUint64 Stop; CriUint8 Running; };
+    const InnerTimer* timer = (const InnerTimer*)state;
+    *timestamp = FUN_1425e3510();
+    if (timer->Running)
+        *elapsed = FUN_1425e3560() - timer->Start;
+    else
+        *elapsed = timer->Stop - timer->Start;
+}
+
 // MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
 // @0x140041a10
 void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
 {
-    CriUint64 now = FUN_1425e3510();
-    *timestamp = now;
-    CriUint8* bytes = (CriUint8*)state;
-    CriUint64 base;
-    if (bytes[0x10] != 0)
-        base = FUN_1425e3560();
-    else
-        memcpy(&base, bytes + 8, sizeof(base));
-    CriUint64 start;
-    memcpy(&start, bytes, sizeof(start));
-    *elapsed = (CriSint64)(base - start);
+    criTimer_GetTime(state, elapsed, timestamp);
 }
 
 // MS2-FUNCTIONAL: toggle the timer record's paused state and accumulate elapsed ticks.
 // @0x140041ad0
-void FUN_140041ad0(void* state, CriBool paused)
+void FUN_140041ad0(void* state, CriUint8 paused)
 {
-    CriUint8* bytes = (CriUint8*)state;
-    if (bytes[0x28] == paused)
+    struct InnerTimer { CriUint64 Start; CriUint64 Stop; CriUint8 Running; CriUint8 Reserved11[7]; };
+    struct TimerState
+    {
+        CriUint8 Reserved00[0x10];
+        InnerTimer Inner;                     // the FUN_140041a10 timer
+        CriUint8 Paused;
+        CriUint8 Reserved29[7];
+        CriSint64 Delta;
+        CriUint64 Now;
+        CriSint64 Total;
+    };
+    TimerState* timer = (TimerState*)state;
+    if (timer->Paused == paused)
         return;
     CriUint64 now = FUN_1425e3560();
     if (paused)
     {
-        memcpy(bytes + 0x18, &now, sizeof(now));
-        bytes[0x20] = 0;
-        CriUint64 timestamp = FUN_1425e3510();
-        memcpy(bytes + 0x38, &timestamp, sizeof(timestamp));
-        CriUint64 base;
-        if (bytes[0x20] == 0)
-            memcpy(&base, bytes + 0x18, sizeof(base));
-        else
-            base = FUN_1425e3560();
-        CriUint64 start, elapsed, total;
-        memcpy(&start, bytes + 0x10, sizeof(start));
-        elapsed = base - start;
-        memcpy(bytes + 0x30, &elapsed, sizeof(elapsed));
-        memcpy(&total, bytes + 0x40, sizeof(total));
-        total += elapsed;
-        memcpy(bytes + 0x40, &total, sizeof(total));
-        bytes[0x28] = paused;
-        return;
+        timer->Inner.Stop = now;
+        timer->Inner.Running = 0;
+        criTimer_GetTime(&timer->Inner, &timer->Delta, &timer->Now);
+        timer->Total += timer->Delta;
     }
-    memcpy(bytes + 0x10, &now, sizeof(now));
-    bytes[0x20] = 1;
-    bytes[0x28] = 0;
+    else
+    {
+        timer->Inner.Start = now;
+        timer->Inner.Running = 1;
+    }
+    timer->Paused = paused;
 }
 
 // MS2-FUNCTIONAL: report the accumulated pause duration or the active timer delta and timestamp.
 // @0x140041b50
 void FUN_140041b50(void* state, CriSint64* elapsed, CriUint64* timestamp)
 {
-    CriUint8* bytes = (CriUint8*)state;
-    if (bytes[0x28] != 0)
+    struct TimerState
     {
-        memcpy(elapsed, bytes + 0x40, sizeof(*elapsed));
-        memcpy(timestamp, bytes + 0x38, sizeof(*timestamp));
+        CriUint8 Reserved00[0x10];
+        CriUint8 Inner[0x20];                 // the FUN_140041a10 timer: start, stop, running
+        CriSint64 Delta;
+        CriUint64 Now;
+        CriSint64 Total;
+    };
+    TimerState* timer = (TimerState*)state;
+    if (timer->Inner[0x18])
+    {
+        *elapsed = timer->Total;
+        *timestamp = timer->Now;
         return;
     }
-    CriUint64 now = FUN_1425e3510();
-    memcpy(bytes + 0x38, &now, sizeof(now));
-    CriUint64 base;
-    if (bytes[0x20] == 0)
-        memcpy(&base, bytes + 0x18, sizeof(base));
-    else
-        base = FUN_1425e3560();
-    CriUint64 start, total;
-    memcpy(&start, bytes + 0x10, sizeof(start));
-    CriUint64 delta = base - start;
-    memcpy(bytes + 0x30, &delta, sizeof(delta));
-    memcpy(&total, bytes + 0x40, sizeof(total));
-    *elapsed = (CriSint64)(total + delta);
-    *timestamp = now;
+    criTimer_GetTime(timer->Inner, &timer->Delta, &timer->Now);
+    *elapsed = timer->Total + timer->Delta;
+    *timestamp = timer->Now;
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
