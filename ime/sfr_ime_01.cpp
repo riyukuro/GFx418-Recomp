@@ -2177,9 +2177,9 @@ void* FUN_1423d7df0(void*, void* rawStringInfo)
 {
     char layoutName[16]{};
     GetKeyboardLayoutNameA(layoutName);
-    const unsigned long long length = strlen(layoutName) + 1;
+    const unsigned long long length = strlen(layoutName);
     auto* stringInfo = static_cast<unsigned char*>(rawStringInfo);
-    *reinterpret_cast<String*>(stringInfo) = layoutName;
+    new (stringInfo) String(layoutName);
     *reinterpret_cast<unsigned long long*>(stringInfo + 8) = HashFunction(layoutName, length);
     *reinterpret_cast<unsigned long long*>(stringInfo + 16) = length;
     return rawStringInfo;
@@ -3622,7 +3622,7 @@ void FUN_1423d5910(void* raw, const char* requested)
         auto* record = names + i * 0x20;
         const char* name = *reinterpret_cast<const char**>(record);
         const HKL layout = *reinterpret_cast<HKL*>(record + 0x18);
-        if (!name || _stricmp(name, requested) != 0 || !layout) continue;
+        if (!name || std::strcmp(name, requested) != 0 || !layout) continue;
 
         void* provider = nullptr;
         HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
@@ -5738,7 +5738,6 @@ unsigned FUN_1423d8140(long long* manager)
     if (!count) {
         reinterpret_cast<void(*)(void*, const char*, const char*)>(vtable[0xe])(
             manager, "No IME's Installed!", "GFxIME Error");
-        return 1;
     }
     auto* layouts = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(count * sizeof(HKL)));
     GetKeyboardLayoutList(static_cast<int>(count), reinterpret_cast<HKL*>(layouts));
