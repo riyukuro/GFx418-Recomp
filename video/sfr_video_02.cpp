@@ -1522,9 +1522,9 @@ void FUN_14000f2d0(void* tag, void* movieData)
     Stream* stream = *reinterpret_cast<Stream**>(movie + 0x418);
     if (!stream) stream = reinterpret_cast<Stream*>(movie + 0x50);
     char* fields = static_cast<char*>(tag);
-    *reinterpret_cast<UInt16*>(fields + 0x20) = stream->ReadU16();
-    *reinterpret_cast<UInt16*>(fields + 0x24) = stream->ReadU16();
-    *reinterpret_cast<UInt16*>(fields + 0x28) = stream->ReadU16();
+    *reinterpret_cast<unsigned*>(fields + 0x20) = stream->ReadU16();
+    *reinterpret_cast<unsigned*>(fields + 0x24) = stream->ReadU16();
+    *reinterpret_cast<unsigned*>(fields + 0x28) = stream->ReadU16();
     stream->ReadUInt(5);
     fields[0x2c] = static_cast<char>(stream->ReadUInt(2));
     fields[0x2d] = stream->ReadUInt(1) != 0;
