@@ -82,7 +82,7 @@ void FUN_1400467a8(void*, CriSint32, void*);
 void FUN_1400467b0(void*, CriSint32, void*);
 CriSint32 FUN_1400467b8(void*, CriSint32);
 void FUN_140046798(void*);
-void FUN_1400467a0(void*, CriSint32, CriSint32, void*);
+void FUN_1400467a0(void*, CriSint32, CriUint32, void*);
 CriSint32 FUN_140053630(void*);
 CriUint32 FUN_140043420(void*, void*, CriUint32);
 CriBool FUN_140043750(void*, const void*);
@@ -1593,7 +1593,7 @@ CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
         return 1;
     }
     CriUint32 required = (CriUint32)criVmpv_CalcMovieHandleWork((CriSint32)count);
-    if (workSize < required)
+    if (required > workSize)
     {
         FUN_140041110(NULL, "E08102802M : SetupMovieHandleWork(): worksize is short.", workSize);
         return 0;
@@ -3462,9 +3462,9 @@ void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size)
 
 // MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
 // @0x1400467a0
-void FUN_1400467a0(void* object, CriSint32 operation = 0, CriSint32 limit = 0, void* output = NULL)
+void FUN_1400467a0(void* object, CriSint32 operation = 0, CriUint32 limit = 0, void* output = NULL)
 {
-    typedef void (*Callback)(void*, CriSint32, CriSint32, void*);
+    typedef void (*Callback)(void*, CriSint32, CriUint32, void*);
     ((Callback)*(void**)((CriUint8*)*(void**)object + 0x10))(object, operation, limit, output);
 }
 
@@ -3990,6 +3990,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: drain and reset a CRI movie output ring before restoring its terminal queue entry.
 // @0x1400453c4
+#pragma function(memset)
 void FUN_1400453c4(void* object)
 {
     struct QueueEntry { void* Queue; CriUint32 Reserved; CriSint32 State; };
@@ -4006,26 +4007,30 @@ void FUN_1400453c4(void* object)
         void* InputQueue;
         void* OutputQueue;
     };
+    struct Chunk { void* Data; CriUint64 Size; }; // scalar members: no /GS buffer
     OutputState* state = (OutputState*)object;
+    Chunk chunk;
+    CriUint32 last;
     state->Writing = 0;
     state->Reading = 0;
     // drain the filled lane (1) back to the free lane (0), returning each chunk
     while (FUN_1400467b8(state->InputQueue, 1) != 0)
     {
-        CriUint8 chunk[0x10];
-        FUN_1400467a0(state->InputQueue, 1, -1, chunk);
-        FUN_1400467b0(state->InputQueue, 0, chunk);
+        FUN_1400467a0(state->InputQueue, 1, -1, &chunk);
+        FUN_1400467b0(state->InputQueue, 0, &chunk);
     }
-    memset(state->Entries, 0, ((size_t)state->Count + 1) * sizeof(QueueEntry));
+    memset(state->Entries, 0, (state->Count + 1) * sizeof(QueueEntry));
     state->Active = 0;
     FUN_140046798(state->InputQueue);
     FUN_140046798(state->OutputQueue);
-    state->Entries[state->Count].Queue = state->OutputQueue;
-    state->Entries[state->Count].Reserved = 0;
-    state->Entries[state->Count].State = -1;
+    last = state->Count;
+    state->Entries[last].Queue = state->OutputQueue;
+    state->Entries[last].Reserved = 0;
+    state->Entries[last].State = -1;
     state->Writing = 0;
     state->Reading = 1;
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -4369,13 +4374,19 @@ void FUN_140043970(void* track, void* player)
     };
     struct ChannelParameters { CriUint32 First, Second, Third, Reserved; };
     struct PlayerParameters { CriUint8 Reserved00[0xb2c]; ChannelParameters Channels[16]; };
+    CriSint32 index;
+    CriUint32 value2;
+    CriUint32 value1;
+    CriUint32 value3;
     if (!track || !player)
         return;
-    AudioTrack* audio = (AudioTrack*)track;
-    if (!audio->Present)
+    if (!((AudioTrack*)track)->Present)
         return;
-    ChannelParameters* channel = &((PlayerParameters*)player)->Channels[audio->Channel];
-    FUN_140053e60(audio->Decoder, channel->Second, channel->First, channel->Third);
+    index = ((AudioTrack*)track)->Channel;
+    value2 = ((PlayerParameters*)player)->Channels[index].Second;
+    value1 = ((PlayerParameters*)player)->Channels[index].First;
+    value3 = ((PlayerParameters*)player)->Channels[index].Third;
+    FUN_140053e60(((AudioTrack*)track)->Decoder, value2, value1, value3);
 }
 
 // MS2-FUNCTIONAL: reset every audio track in a player and apply updated decoder parameters when enabled.
