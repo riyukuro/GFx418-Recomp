@@ -845,11 +845,11 @@ bool DrawableImage::mergeQueueWith(Image* other)
     {
         DICommandQueue* oldQueue = image->pQueue;
         DrawableImage*  prev     = oldQueue->pCPUModifiedImageList;
-        if (prev == image)
+        if (image == prev)
             oldQueue->pCPUModifiedImageList = image->pCPUModifiedNext;
         else
         {
-            while (prev->pCPUModifiedNext != image)
+            while (image != prev->pCPUModifiedNext)
                 prev = prev->pCPUModifiedNext;
             prev->pCPUModifiedNext = image->pCPUModifiedNext;
         }
