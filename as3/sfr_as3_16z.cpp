@@ -68,24 +68,25 @@ inline MovieImpl::WideStringStorage::~WideStringStorage()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// MS2-FUNCTIONAL: same calls and stores; the exe lays out the frame and the parent lookup differently.
 // @0x1424e6d90
 void AvmDisplayObjContainer::AddChild(DisplayObjectBase* ch)
 {
     if (ch->GetParent())
         AvmDisplayObjContainer::FromBase(static_cast<DisplayObjContainer*>(ch->GetParent())->GetAvmDispContainer())
             ->RemoveChild(ch);
-    DisplayObjContainer* pcont = GetDisplayObjContainer();
-    pcont->mDisplayList.AddEntryAtIndex(pcont, pcont->mDisplayList.GetCount(), ch);
-    pcont->mDisplayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
-    ch->pParent = pcont;
+    // the SDK's DisplayList::GetCount returns an unsigned
+    DisplayList& dl = GetDisplayObjContainer()->mDisplayList;
+    dl.AddEntryAtIndex(GetDisplayObjContainer(), unsigned(dl.GetCount()), ch);
+    dl.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
+    ch->pParent = GetDisplayObjContainer();
     ch->Depth   = -1;
     ch->SetUnloaded(false);
     ch->SetUnloading(false);
     if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsInPlayList())
-        ToAvmInteractiveObj(static_cast<InteractiveObject*>(ch))->MoveBranchInPlayList();
-    if (ch->IsScriptableObject())
-        ToAvmDisplayObj(ch)->OnAdded(false);
+        AvmInteractiveObj::FromBase(static_cast<InteractiveObject*>(ch)->GetAvmIntObj())->MoveBranchInPlayList();
+    // the SDK's ToAvmDisplayObj(ch->CharToScriptableObject()): null-safe casts, then the call with no test
+    DisplayObjectBase* const psobj = ch->IsScriptableObject() ? ch : NULL;
+    static_cast<AvmDisplayObj*>(psobj ? psobj->GetAvmObjImpl() : NULL)->OnAdded(false);
 }
 
 // @0x1424e6e90
