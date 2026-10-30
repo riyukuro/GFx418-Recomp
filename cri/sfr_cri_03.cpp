@@ -3836,16 +3836,14 @@ CriBool FUN_140043750(void* decoder, const void* operation)
     struct Operation { CriUint8 Reserved00[0x10]; CriSint32 Active; CriUint8 Reserved14[0xe08]; CriSint32 Scale; };
     if (!decoder || !operation)
         return 1;
-    TrackState* track = (TrackState*)decoder;
-    if (track->Present)
+    if (((TrackState*)decoder)->Present)
     {
-        CriSint32 status = (CriSint32)FUN_140053630(track->AudioDecoder);
+        CriSint32 status = (CriSint32)FUN_140053630(((TrackState*)decoder)->AudioDecoder);
         if (status == 0 || status == 1)
             return 0;
-        const Operation* request = (const Operation*)operation;
-        CriUint32 required = (track->Threshold / 0x3c) * 8 * (CriUint32)request->Scale;
-        CriUint32 queued = (CriUint32)FUN_1400467b8(track->Queue, 1);
-        if (queued < required && request->Active == 0)
+        CriUint32 needed = (((TrackState*)decoder)->Threshold / 0x3c) * 8 * (CriUint32)((const Operation*)operation)->Scale;
+        CriUint32 available = (CriUint32)FUN_1400467b8(((TrackState*)decoder)->Queue, 1);
+        if (available < needed && ((const Operation*)operation)->Active == 0)
             return 0;
     }
     return 1;
@@ -4231,14 +4229,16 @@ void FUN_140040c00(void* player, void* context)
         CriSint32 FrameAdjustment;
         CriSint32 SegmentIndex;
     };
-    PlayerTimeline* timeline = (PlayerTimeline*)player;
-    FrameContext* frame = (FrameContext*)context;
-    CriSint32 adjusted = timeline->FrameOffset;
-    if (timeline->FrameAdjustment > 0)
-        adjusted += timeline->FrameAdjustment;
-    frame->Frame = adjusted + frame->FrameAdjustment;
-    FUN_140040cc0(player, (CriUint32)frame->Frame, &frame->SegmentIndex, &frame->SegmentDelta);
-    frame->PresentationTime = (CriUint64)(CriUint32)(adjusted + timeline->TimestampBase) * 1000;
+    CriSint32 adjusted;
+    if (((PlayerTimeline*)player)->FrameAdjustment > 0)
+        adjusted = ((PlayerTimeline*)player)->FrameOffset + ((PlayerTimeline*)player)->FrameAdjustment;
+    else
+        adjusted = ((PlayerTimeline*)player)->FrameOffset;
+    ((FrameContext*)context)->Frame = adjusted + ((FrameContext*)context)->FrameAdjustment;
+    FUN_140040cc0(player, (CriUint32)((FrameContext*)context)->Frame, &((FrameContext*)context)->SegmentIndex,
+                  &((FrameContext*)context)->SegmentDelta);
+    ((FrameContext*)context)->PresentationTime =
+        (CriUint64)(CriUint32)(adjusted + ((PlayerTimeline*)player)->TimestampBase) * 1000;
 }
 
 // MS2-FUNCTIONAL: locate a frame among eight media segments and return its index and end-relative offset.
@@ -4576,6 +4576,7 @@ void FUN_14003c080(void)
 // @0x14003ef00
 void FUN_14003ef00(void* object)
 {
+    struct Playback { CriUint8 Reserved00[0x10]; void* CurrentData; };
     struct Reader
     {
         CriUint8 Reserved00[0x50];
@@ -4583,20 +4584,25 @@ void FUN_14003ef00(void* object)
         CriUint32 Reserved54;
         void* Queue;
         CriUint8 Reserved60[0x20];
-        CriUint8 Reserved80[0x10];
-        void* CurrentData;
+        Playback Current;
     };
-    Reader* reader = (Reader*)object;
-    CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 3) / reader->BlockSize;
+    Playback* playback = &((Reader*)object)->Current;
+    CriSint32 samples = (CriUint32)FUN_1400467b8(((Reader*)object)->Queue, 3) / ((Reader*)object)->BlockSize;
     if (samples > 0)
     {
-        CriUint64 chunk[2] = {};
-        FUN_1400467a0(reader->Queue, 3, -1, chunk);
+        void* chunk[2];
+        FUN_1400467a0(((Reader*)object)->Queue, 3, 0xffffffff, chunk);
         // keep the chunk whose token (its first field) is the one being played
-        if (!chunk[0] || reader->CurrentData == *(void**)chunk[0])
-            FUN_1400467a8(reader->Queue, 3, chunk);
-        else
-            FUN_1400467b0(reader->Queue, 0, chunk);
+        if (chunk[0])
+        {
+            void** token = (void**)chunk[0];
+            if (playback->CurrentData != *token)
+            {
+                FUN_1400467b0(((Reader*)object)->Queue, 0, chunk);
+                return;
+            }
+        }
+        FUN_1400467a8(((Reader*)object)->Queue, 3, chunk);
     }
 }
 
