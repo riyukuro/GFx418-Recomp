@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
 #include <windows.h>
 #include <imm.h>
+#pragma comment(lib, "imm32.lib")
 #include <oleauto.h>
 #include <cstdarg>
 #include <vector>
@@ -35,7 +36,7 @@ void FUN_1423d9090(void*, void*, unsigned long long);
 void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
 void FUN_1423d9b40(void*);
     unsigned char FUN_1423da320(void*, void*, void*, void*);
-    void FUN_1423d9500(void*);
+    __declspec(noinline) void FUN_1423d9500(void*);
     void FUN_1425b43c0(void*);
     void FUN_1423d5fd0(void*);
     void FUN_1423c8bb0(unsigned long long*);
@@ -53,93 +54,76 @@ void FUN_1423d9b40(void*);
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
 extern "C" void FUN_1425c8cf0(unsigned, void*);
 
-static HIMC cx18_ImmGetContext(HWND hwnd)
+static __forceinline HIMC cx18_ImmGetContext(HWND hwnd)
 {
-    typedef HIMC (WINAPI* Fn)(HWND);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetContext"))(hwnd);
+    return ImmGetContext(hwnd);
 }
-static DWORD cx18_ImmGetCandidateListW(HIMC context, DWORD index, LPCANDIDATELIST list, DWORD bytes)
+static __forceinline DWORD cx18_ImmGetCandidateListW(HIMC context, DWORD index, LPCANDIDATELIST list, DWORD bytes)
 {
-    typedef DWORD (WINAPI* Fn)(HIMC, DWORD, LPCANDIDATELIST, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCandidateListW"))(
+    return ImmGetCandidateListW(
         context, index, list, bytes);
 }
-static LONG cx18_ImmGetCompositionStringW(HIMC context, DWORD index, LPVOID buffer, DWORD bytes)
+static __forceinline LONG cx18_ImmGetCompositionStringW(HIMC context, DWORD index, LPVOID buffer, DWORD bytes)
 {
-    typedef LONG (WINAPI* Fn)(HIMC, DWORD, LPVOID, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetCompositionStringW"))(
+    return ImmGetCompositionStringW(
         context, index, buffer, bytes);
 }
-static DWORD cx18_ImmGetProperty(HKL layout, DWORD index)
+static __forceinline DWORD cx18_ImmGetProperty(HKL layout, DWORD index)
 {
-    typedef DWORD (WINAPI* Fn)(HKL, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetProperty"))(layout, index);
+    return ImmGetProperty(layout, index);
 }
-static BOOL cx18_ImmSetCompositionWindow(HIMC context, LPCOMPOSITIONFORM form)
+static __forceinline BOOL cx18_ImmSetCompositionWindow(HIMC context, LPCOMPOSITIONFORM form)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, LPCOMPOSITIONFORM);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCompositionWindow"))(context, form);
+    return ImmSetCompositionWindow(context, form);
 }
-static BOOL cx18_ImmSetCandidateWindow(HIMC context, LPCANDIDATEFORM form)
+static __forceinline BOOL cx18_ImmSetCandidateWindow(HIMC context, LPCANDIDATEFORM form)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, LPCANDIDATEFORM);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCandidateWindow"))(context, form);
+    return ImmSetCandidateWindow(context, form);
 }
-static UINT cx18_ImmGetVirtualKey(HWND hwnd)
+static __forceinline UINT cx18_ImmGetVirtualKey(HWND hwnd)
 {
-    typedef UINT (WINAPI* Fn)(HWND);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetVirtualKey"))(hwnd);
+    return ImmGetVirtualKey(hwnd);
 }
-static BOOL cx18_ImmIsUIMessageW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+static __forceinline BOOL cx18_ImmIsUIMessageW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    typedef BOOL (WINAPI* Fn)(HWND, UINT, WPARAM, LPARAM);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmIsUIMessageW"))(
+    return ImmIsUIMessageW(
         hwnd, message, wParam, lParam);
 }
-static BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
+static __forceinline BOOL cx18_ImmNotifyIME(HIMC context, DWORD action, DWORD index, DWORD value)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmNotifyIME"))(context, action, index, value);
+    return ImmNotifyIME(context, action, index, value);
 }
-static BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
+static __forceinline BOOL cx18_ImmReleaseContext(HWND hwnd, HIMC context)
 {
-    typedef BOOL (WINAPI* Fn)(HWND, HIMC);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmReleaseContext"))(hwnd, context);
+    return ImmReleaseContext(hwnd, context);
 }
-static UINT cx18_ImmGetIMEFileNameA(HKL layout, LPSTR buffer, UINT capacity)
+static __forceinline UINT cx18_ImmGetIMEFileNameA(HKL layout, LPSTR buffer, UINT capacity)
 {
-    typedef UINT (WINAPI* Fn)(HKL, LPSTR, UINT);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetIMEFileNameA"))(layout, buffer, capacity);
+    return ImmGetIMEFileNameA(layout, buffer, capacity);
 }
-static BOOL cx18_ImmAssociateContextEx(HWND hwnd, HIMC context, DWORD flags)
+static __forceinline BOOL cx18_ImmAssociateContextEx(HWND hwnd, HIMC context, DWORD flags)
 {
-    typedef BOOL (WINAPI* Fn)(HWND, HIMC, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmAssociateContextEx"))(hwnd, context, flags);
+    return ImmAssociateContextEx(hwnd, context, flags);
 }
-static BOOL cx18_ImmSetOpenStatus(HIMC context, BOOL open)
+static __forceinline BOOL cx18_ImmSetOpenStatus(HIMC context, BOOL open)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, BOOL);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetOpenStatus"))(context, open);
+    return ImmSetOpenStatus(context, open);
 }
-static BOOL cx18_ImmGetOpenStatus(HIMC context)
+static __forceinline BOOL cx18_ImmGetOpenStatus(HIMC context)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetOpenStatus"))(context);
+    return ImmGetOpenStatus(context);
 }
-static BOOL cx18_ImmGetConversionStatus(HIMC context, DWORD* conversion, DWORD* sentence)
+static __forceinline BOOL cx18_ImmGetConversionStatus(HIMC context, DWORD* conversion, DWORD* sentence)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, DWORD*, DWORD*);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetConversionStatus"))(context, conversion, sentence);
+    return ImmGetConversionStatus(context, conversion, sentence);
 }
-static BOOL cx18_ImmSetConversionStatus(HIMC context, DWORD conversion, DWORD sentence)
+static __forceinline BOOL cx18_ImmSetConversionStatus(HIMC context, DWORD conversion, DWORD sentence)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetConversionStatus"))(context, conversion, sentence);
+    return ImmSetConversionStatus(context, conversion, sentence);
 }
-static BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID comp, DWORD compBytes, LPCVOID read, DWORD readBytes)
+static __forceinline BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID comp, DWORD compBytes, LPCVOID read, DWORD readBytes)
 {
-    typedef BOOL (WINAPI* Fn)(HIMC, DWORD, LPCVOID, DWORD, LPCVOID, DWORD);
-    return reinterpret_cast<Fn>(GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmSetCompositionStringW"))(context, index, comp, compBytes, read, readBytes);
+    return ImmSetCompositionStringW(context, index, const_cast<LPVOID>(comp), compBytes, const_cast<LPVOID>(read), readBytes);
 }
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
@@ -313,17 +297,19 @@ GFxIMEManagerWin32::BaseState::~BaseState()
 
 namespace Scaleform { namespace GFx { namespace IME {
 
-// MS2-FUNCTIONAL: follows the executable's composition-specific Escape path and both candidate/input-window teardown paths.
 // @0x1423d2f00
 void FUN_1423d2f00(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
+    // Two Values the exe constructs on entry and never uses.
+    Scaleform::GFx::Value unused0;
+    Scaleform::GFx::Value unused1;
     if (*reinterpret_cast<unsigned*>(bytes + 0x98) == 0x00c10000) {
         void* base = *reinterpret_cast<void**>(bytes + 8);
         void* factory = static_cast<unsigned char*>(base) + 0x10;
         void* value = reinterpret_cast<void*(*)(void*, int)>(
             (*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
-        INPUT input{};
+        INPUT input;
         input.type = INPUT_KEYBOARD;
         input.ki.wVk = VK_ESCAPE;
         input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
@@ -331,31 +317,32 @@ void FUN_1423d2f00(void* self)
         FUN_1425b43c0(value);
         FUN_1423d9500(*reinterpret_cast<void**>(bytes + 0x30));
         void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
-        void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-        if (values) {
+        {
             Scaleform::GFx::Value result;
-            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
-                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                    values, "RemoveList", &result, 0, 0);
+            if (void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18)) {
+                reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
+                    (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                        values, "RemoveList", &result, 0, 0);
+            }
         }
         if (value) FUN_14257dcb0(value);
         return;
     }
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, 0x15, 1, 0);
     cx18_ImmNotifyIME(context, 0x11, 0, 0);
     cx18_ImmNotifyIME(context, 0x15, 4, 0);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
     **reinterpret_cast<unsigned short**>(bytes + 0x40) = 0;
     *reinterpret_cast<unsigned short*>(bytes + 0xd0) = 0;
     void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
-    void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-    if (values) {
+    {
         Scaleform::GFx::Value result;
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
-            (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
-                values, "RemoveInputWindow", &result, 0, 0);
+        if (void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18)) {
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
+                (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
+                    values, "RemoveInputWindow", &result, 0, 0);
+        }
     }
 }
 
@@ -788,10 +775,7 @@ unsigned long long FUN_1423cf3e0(void* self)
         context = cx18_ImmGetContext(hwnd);
         if (!context) return static_cast<unsigned long long>(cx18_ImmReleaseContext(hwnd, nullptr)) & ~0xffull;
     }
-    using GetOpenStatusFn = BOOL (WINAPI*)(HIMC);
-    auto getOpenStatus = reinterpret_cast<GetOpenStatusFn>(
-        GetProcAddress(GetModuleHandleA("imm32.dll"), "ImmGetOpenStatus"));
-    const BOOL open = getOpenStatus(context);
+    const BOOL open = ImmGetOpenStatus(context);
     if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
     cx18_ImmReleaseContext(hwnd, context);
     return open != 0;
@@ -1069,14 +1053,20 @@ unsigned long long FUN_1423ca920(void*, unsigned long long* packedPtr)
     return static_cast<unsigned long long>(remaining) & ~0xffULL;
 }
 
-// MS2-FUNCTIONAL: initializes executable-observed fields; one abstract interface's purecall-only vtable lacks a class declaration.
 // @0x1423d9430
 void* FUN_1423d9430(void* object, void* owner)
 {
     auto* words = static_cast<unsigned long long*>(object);
     words[0] = reinterpret_cast<unsigned long long>(DAT_14313a210);
-    for (unsigned index : { 0x102u, 0x103u, 0x104u, 0x105u, 0x106u, 0x107u, 0x109u, 0x10au, 0x10bu })
-        words[index] = 0;
+    words[0x102] = 0;
+    words[0x103] = 0;
+    words[0x104] = 0;
+    words[0x105] = 0;
+    words[0x106] = 0;
+    words[0x107] = 0;
+    words[0x109] = 0;
+    words[0x10a] = 0;
+    words[0x10b] = 0;
     *reinterpret_cast<unsigned char*>(words + 2) = 0;
     words[1] = 0;
     words[0x10d] = reinterpret_cast<unsigned long long>(owner);
@@ -1310,12 +1300,12 @@ void FUN_1423d1420(void* object, int index)
     SendInput(1, &input, sizeof(INPUT));
 }
 
-// MS2-FUNCTIONAL: destroys GFx::Value entries in reverse order (managed values released through their object interface).
+// MS2-FUNCTIONAL: the exe forms values + count - 1 as (count * 32 - 32) + values; ours as (values - 32) + count * 32.
+// destroys GFx::Value entries in reverse order (ConstructorMov<Value>::DestructArray).
 // @0x1423ce6c0
 void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
 {
-    while (count)
-        values[--count].~Value();
+    ConstructorMov<Scaleform::GFx::Value>::DestructArray(values, count);
 }
 
 // MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
@@ -1637,7 +1627,7 @@ void FUN_1423ca680(void* self, void* value)
 }
 
 // @0x1423d97d0
-__declspec(noinline) void FUN_1423d97d0(void* self, long long enabled)
+__declspec(noinline) void FUN_1423d97d0(void* self, const char* enabled)
 {
     char* text = static_cast<char*>(self) + 0x10;
     if (enabled)
@@ -1658,21 +1648,18 @@ int FUN_1423daeb0(long long* self)
     return count;
 }
 
-// MS2-FUNCTIONAL: indirect calls through opaque child vtables retain Ghidra’s recovered slots; child interface signatures are unavailable.
+struct ImeSinkOwnerView {
+    struct Unknown { virtual void Slot0() = 0; virtual void Slot1() = 0; virtual void Release() = 0; virtual void Slot3() = 0; virtual void Slot4() = 0; };
+    unsigned char pad0[0x28]; Unknown* first; unsigned char pad30[0x10]; Unknown* second;
+};
 // @0x1423daef0
 void FUN_1423daef0(void* self)
 {
-    unsigned char* bytes = static_cast<unsigned char*>(self);
-    void* first = *reinterpret_cast<void**>(bytes + 0x28);
-    if (first) {
-        void** vtable = *reinterpret_cast<void***>(first);
-        reinterpret_cast<void(*)(void*)>(vtable[2])(first);
-    }
-    void* second = *reinterpret_cast<void**>(bytes + 0x40);
-    if (second) {
-        void** vtable = *reinterpret_cast<void***>(second);
-        reinterpret_cast<void(*)(void*)>(vtable[4])(second);
-        reinterpret_cast<void(*)(void*)>(vtable[2])(second);
+    auto* view = static_cast<ImeSinkOwnerView*>(self);
+    if (view->first) view->first->Release();
+    if (view->second) {
+        view->second->Slot4();
+        view->second->Release();
     }
 }
 
@@ -1776,7 +1763,7 @@ void* FUN_1423dbbf0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
 }
 
 // @0x1423cb740
-unsigned HashFunction(const char* text, unsigned long long length)
+__declspec(noinline) unsigned HashFunction(const char* text, unsigned long long length)
 {
     return static_cast<unsigned>(String::BernsteinHashFunctionCIS(text, length, 0x1505)) & 0xffffff;
 }
@@ -1788,20 +1775,18 @@ void FUN_1423d9500(void* self)
                   static_cast<unsigned char*>(self) + 0x848, 0);
 }
 
-// MS2-FUNCTIONAL: the executable passes a non-null global token to FUN_1423d97d0; its body only tests non-nullness.
 // @0x1423ce570
 void FUN_1423ce570(void* self)
 {
     *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = "";
-    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30), 1);
+    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30), "");
 }
 
 // @0x1423d0f10
 void FUN_1423d0f10(void* self, char* text)
 {
     *reinterpret_cast<String*>(static_cast<unsigned char*>(self) + 0x10) = text;
-    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
-                  reinterpret_cast<long long>(text));
+    FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30), text);
 }
 
 // MS2-FUNCTIONAL: trims retained array items, grows through the executable's reserve helper, and stores the new length.
@@ -1893,33 +1878,15 @@ void FUN_1423d1240(unsigned long long* array, void*, unsigned long long count)
 void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count)
 { cx18_ReserveGH(array, count, 0x20); }
 
-// MS2-FUNCTIONAL: reserves four-entry-rounded 32-byte Value storage at the parallel array site.
+// The candidate list's Value array (ArrayData<Value, AllocatorGH<Value, 2>>).
+typedef ArrayDataBase<Scaleform::GFx::Value, AllocatorGH<Scaleform::GFx::Value, 2>, ArrayDefaultPolicy> ValueArrayBase;
+
+// MS2-FUNCTIONAL: the AllocInfo temp sits in the r9 home slot in the exe, the r8 home slot here.
+// ArrayDataBase<Value>::Reserve: four-entry-rounded 32-byte Value storage.
 // @0x1423d7370
-void FUN_1423d7370(unsigned long long* array, void*, unsigned long long count)
+void FUN_1423d7370(unsigned long long* array, void* heapAddr, unsigned long long count)
 {
-    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-    if (!count) {
-        if (array[0]) {
-            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
-            array[0] = 0;
-            array[2] = 0;
-            return;
-        }
-        array[2] = 0;
-        return;
-    }
-    const unsigned long long capacity = (count + 3) & ~3ull;
-    const unsigned long long bytes = capacity << 5;
-    if (array[0]) {
-        array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heap[11])(
-            DAT_143b15f60, reinterpret_cast<void*>(array[0]), bytes));
-        array[2] = capacity;
-        return;
-    }
-    unsigned flags = 2;
-    array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heap[10])(
-        DAT_143b15f60, bytes, &flags));
-    array[2] = capacity;
+    reinterpret_cast<ValueArrayBase*>(array)->Reserve(heapAddr, count);
 }
 
 static void cx18_ReserveWide(unsigned long long* array, void* allocator, unsigned long long requested, unsigned flags)
@@ -2055,43 +2022,41 @@ void FUN_1423d7690(void* self)
     *key = 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: queries the executable's composition callback IID and records the returned result key.
 // @0x1423dac70
-bool FUN_1423dac70(void* self)
+int FUN_1423dac70(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     void* source = *reinterpret_cast<void**>(bytes + 0x28);
-    void* result = nullptr;
+    void* result;
+    int success = 0;
     auto** sourceVtable = *reinterpret_cast<void***>(source);
-    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
-    bool success = false;
-    if (hr >= 0) {
+    if (reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result) >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
-        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
-            result, &DAT_1431c4d58, bytes, bytes + 0x18);
-        success = hr >= 0;
-        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x18) = 0xffffffff;
+        if (reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+                result, &DAT_1431c4d58, bytes, bytes + 0x18) < 0)
+            *reinterpret_cast<unsigned*>(bytes + 0x18) = 0xffffffff;
+        else
+            success = 1;
     }
     if (result) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(result))[2])(result);
     return success;
 }
 
-// MS2-FUNCTIONAL: queries the executable's second composition callback IID and updates its result key.
 // @0x1423dacf0
-bool FUN_1423dacf0(void* self)
+int FUN_1423dacf0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     void* source = *reinterpret_cast<void**>(bytes + 0x28);
     void* result = nullptr;
+    int success = 0;
     auto** sourceVtable = *reinterpret_cast<void***>(source);
-    int hr = reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result);
-    bool success = false;
-    if (hr >= 0) {
+    if (reinterpret_cast<int(*)(void*, const void*, void**)>(sourceVtable[0])(source, DAT_1431c51e8, &result) >= 0) {
         auto** resultVtable = *reinterpret_cast<void***>(result);
-        hr = reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
-            result, &DAT_14313b8b8, bytes + 8, bytes + 0x1c);
-        success = hr >= 0;
-        if (!success) *reinterpret_cast<unsigned*>(bytes + 0x1c) = 0xffffffff;
+        if (reinterpret_cast<int(*)(void*, const void*, void*, void*)>(resultVtable[3])(
+                result, &DAT_14313b8b8, bytes + 8, bytes + 0x1c) < 0)
+            *reinterpret_cast<unsigned*>(bytes + 0x1c) = 0xffffffff;
+        else
+            success = 1;
     }
     if (result) reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(result))[2])(result);
     return success;
@@ -2161,37 +2126,55 @@ void FUN_1423d4fa0(unsigned long long* array, const unsigned long long* value)
     }
 }
 
-// MS2-FUNCTIONAL: activates the saved keyboard layout whose name matches the requested string.
+// The keyboard layouts the IMM IME object saved (+0x80 count, +0x90 records) and the active one (+0x198).
+struct SavedLayout { char* name; void* p8; void* p10; HKL layout; };
+struct SavedLayoutsView
+{
+    unsigned char pad0[0x80];
+    unsigned count;
+    unsigned char pad84[0xc];
+    SavedLayout* layouts;
+    unsigned char pad98[0x100];
+    HKL active;
+
+    int Find(const char* name) const
+    {
+        for (unsigned i = 0; i < count; ++i)
+            if (strcmp(layouts[i].name, name) == 0 && layouts[i].layout)
+                return i;
+        return -1;
+    }
+};
+static_assert(sizeof(SavedLayout) == 0x20, "IME layout");
+static_assert(offsetof(SavedLayoutsView, active) == 0x198, "IME layout");
+
+// activates the saved keyboard layout whose name matches the requested string.
 // @0x1423d7890
 void FUN_1423d7890(void* self, const char* name)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    const unsigned count = *reinterpret_cast<unsigned*>(bytes + 0x80);
-    auto* entries = reinterpret_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0x90));
-    for (unsigned i = 0; i < count; ++i) {
-        char* savedName = *reinterpret_cast<char**>(entries + i * 0x20);
-        if (savedName && strcmp(savedName, name) == 0) {
-            HKL layout = *reinterpret_cast<HKL*>(entries + i * 0x20 + 0x18);
-            if (!layout) continue;
-            *reinterpret_cast<HKL*>(bytes + 0x198) = layout;
-            ActivateKeyboardLayout(layout, 0);
-            return;
-        }
+    auto* view = static_cast<SavedLayoutsView*>(self);
+    int index = view->Find(name);
+    if (index != -1) {
+        view->active = view->layouts[index].layout;
+        ActivateKeyboardLayout(view->active, 0);
     }
 }
 
-// MS2-FUNCTIONAL: stores the current keyboard-layout name together with its executable hash and byte length.
+// A keyboard-layout name keyed by its hash (slot 5 of 0x143138530 returns it by value).
+struct LayoutNameKey { String name; UPInt hash; SPInt length; };
+
+// stores the current keyboard-layout name together with its hash and byte length.
 // @0x1423d7df0
-void* FUN_1423d7df0(void*, void* rawStringInfo)
+LayoutNameKey* FUN_1423d7df0(void*, LayoutNameKey* key)
 {
-    char layoutName[16]{};
+    char layoutName[KL_NAMELENGTH];
     GetKeyboardLayoutNameA(layoutName);
-    const unsigned long long length = strlen(layoutName);
-    auto* stringInfo = static_cast<unsigned char*>(rawStringInfo);
-    new (stringInfo) String(layoutName);
-    *reinterpret_cast<unsigned long long*>(stringInfo + 8) = HashFunction(layoutName, length);
-    *reinterpret_cast<unsigned long long*>(stringInfo + 16) = length;
-    return rawStringInfo;
+    int length = static_cast<int>(strlen(layoutName));
+    unsigned hash = HashFunction(layoutName, length);
+    new (key) String(layoutName);
+    key->hash = hash;
+    key->length = length;
+    return key;
 }
 
 // MS2-FUNCTIONAL: implements the executable's supported COM interface IDs and returns the matching interface view.
@@ -2501,19 +2484,16 @@ void FUN_1423d53e0(void* self, int key)
     SendInput(1, &input, sizeof(input));
 }
 
-// MS2-FUNCTIONAL: opaque AS3 movie and value interfaces use executable vtable slots and recovered offsets.
 // @0x1423d1c90
 void FUN_1423d1c90(void** self)
 {
     void** selfVtable = *reinterpret_cast<void***>(self);
     reinterpret_cast<void(*)(void*)>(selfVtable[0x80 / sizeof(void*)])(self);
     void* movie = reinterpret_cast<void**>(self)[0x15];
-    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
-    if (bridge) {
-        unsigned char value[0x18] = {};
-        void** vtable = *reinterpret_cast<void***>(bridge);
-        reinterpret_cast<void(*)(void*, const char*, void*, int, int)>(vtable[0x78 / sizeof(void*)])
-            (bridge, "RemoveInputWindow", value, 0, 0);
+    Scaleform::GFx::Value result;
+    if (void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18)) {
+        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, unsigned, unsigned)>(
+            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RemoveInputWindow", &result, 0, 0);
     }
 }
 
