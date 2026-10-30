@@ -1393,117 +1393,122 @@ GFx::AMP::MovieInstructionStats& GFx::AMP::MovieInstructionStats::operator*=(uns
     return *this;
 }
 
-// MS2-FUNCTIONAL: scales nested 16-byte entries, 32-byte paired records, and 24-byte timestamp records.
+// Inlined into the MovieProfile operators; the exe has no out-of-line copy.
+inline GFx::AMP::MovieFunctionStats& GFx::AMP::MovieFunctionStats::operator*=(unsigned num)
+{
+    for (UPInt i = 0; i < FunctionTimings.GetSize(); ++i)
+    {
+        FunctionTimings[i].TimesCalled *= num;
+        FunctionTimings[i].TotalTime *= num;
+    }
+    return *this;
+}
+
+inline GFx::AMP::MovieSourceLineStats& GFx::AMP::MovieSourceLineStats::operator*=(unsigned num)
+{
+    for (UPInt i = 0; i < SourceLineTimings.GetSize(); ++i)
+    {
+        SourceLineTimings[i].TotalTime *= num;
+    }
+    return *this;
+}
+
+inline GFx::AMP::MovieSourceLineStats& GFx::AMP::MovieSourceLineStats::operator/=(unsigned numFrames)
+{
+    for (UPInt i = 0; i < SourceLineTimings.GetSize(); ++i)
+    {
+        SourceLineTimings[i].TotalTime /= numFrames;
+    }
+    return *this;
+}
+
 // @0x142687980
-void* ScaleTextTreeRecords(void* object, unsigned factor)
+GFx::AMP::MovieProfile& GFx::AMP::MovieProfile::operator*=(unsigned num)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto* nestedArray = *reinterpret_cast<unsigned char**>(bytes + 0x58);
-    auto** nestedItems = *reinterpret_cast<unsigned char***>(nestedArray + 0x10);
-    const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(nestedArray + 0x18);
-    for (std::size_t i = 0; i < nestedCount; ++i) {
-        auto* item = nestedItems[i];
-        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
-        const std::size_t count = *reinterpret_cast<std::size_t*>(item + 0x28);
-        for (std::size_t j = 0; j < count; ++j)
-            values[j * 2 + 1] *= factor;
-    }
-
-    auto* pairArray = *reinterpret_cast<unsigned char**>(bytes + 0x60);
-    auto* pairs = *reinterpret_cast<unsigned char**>(pairArray + 0x10);
-    const std::size_t pairCount = *reinterpret_cast<std::size_t*>(pairArray + 0x18);
-    for (std::size_t i = 0; i < pairCount; ++i) {
-        auto* pair = pairs + i * 0x20;
-        *reinterpret_cast<unsigned*>(pair + 0x10) *= factor;
-        *reinterpret_cast<unsigned long long*>(pair + 0x18) *= factor;
-    }
-
-    auto* timeArray = *reinterpret_cast<unsigned char**>(bytes + 0x68);
-    auto* times = *reinterpret_cast<unsigned char**>(timeArray + 0x10);
-    const std::size_t timeCount = *reinterpret_cast<std::size_t*>(timeArray + 0x18);
-    for (std::size_t i = 0; i < timeCount; ++i)
-        *reinterpret_cast<unsigned long long*>(times + i * 0x18 + 0x10) *= factor;
-    return object;
+    *InstructionStats *= num;
+    *FunctionStats *= num;
+    *SourceLineStats *= num;
+    return *this;
 }
 
-// MS2-FUNCTIONAL: divides the nested 16-byte records, 32-byte paired records, and 24-byte timestamp records.
 // @0x142688600
-void* DivideTextTreeRecords(void* object, unsigned long long divisor)
+GFx::AMP::MovieProfile& GFx::AMP::MovieProfile::operator/=(unsigned numFrames)
 {
-    const unsigned d = static_cast<unsigned>(divisor);
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto* nestedArray = *reinterpret_cast<unsigned char**>(bytes + 0x58);
-    auto** nestedItems = *reinterpret_cast<unsigned char***>(nestedArray + 0x10);
-    const std::size_t nestedCount = *reinterpret_cast<std::size_t*>(nestedArray + 0x18);
-    for (std::size_t i = 0; i < nestedCount; ++i) {
-        auto* item = nestedItems[i];
-        auto* values = *reinterpret_cast<unsigned long long**>(item + 0x20);
-        const std::size_t count = *reinterpret_cast<std::size_t*>(item + 0x28);
-        for (std::size_t j = 0; j < count; ++j)
-            values[j * 2 + 1] /= d;
-    }
-
-    auto* pairArray = *reinterpret_cast<unsigned char**>(bytes + 0x60);
-    auto* pairs = *reinterpret_cast<unsigned char**>(pairArray + 0x10);
-    const std::size_t pairCount = *reinterpret_cast<std::size_t*>(pairArray + 0x18);
-    for (std::size_t i = 0; i < pairCount; ++i) {
-        auto* pair = pairs + i * 0x20;
-        *reinterpret_cast<unsigned*>(pair + 0x10) /= d;
-        *reinterpret_cast<unsigned long long*>(pair + 0x18) /= d;
-    }
-
-    auto* timeArray = *reinterpret_cast<unsigned char**>(bytes + 0x68);
-    auto* times = *reinterpret_cast<unsigned char**>(timeArray + 0x10);
-    const std::size_t timeCount = *reinterpret_cast<std::size_t*>(timeArray + 0x18);
-    for (std::size_t i = 0; i < timeCount; ++i)
-        *reinterpret_cast<unsigned long long*>(times + i * 0x18 + 0x10) /= d;
-    return object;
+    *InstructionStats /= numFrames;
+    *FunctionStats /= numFrames;
+    *SourceLineStats /= numFrames;
+    return *this;
 }
 
-// MS2-FUNCTIONAL: scales the fixed timing fields, child tree records, paired counters, and all three MemItem trees.
 // @0x142687ae0
-void* ScaleTextTree(void* object, unsigned factor)
+GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator*=(unsigned num)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    *reinterpret_cast<unsigned long long*>(bytes + 0x10) *= factor;
-    for (std::size_t offset = 0x18; offset <= 0xc8; offset += 4)
-        *reinterpret_cast<unsigned*>(bytes + offset) *= factor;
-
-    auto** childArray = *reinterpret_cast<void***>(bytes + 0xd0);
-    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
-    for (std::size_t i = 0; i < childCount; ++i)
-        ScaleTextTreeRecords(childArray[i], factor);
-
-    auto* records = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xe8));
-    const std::size_t recordCount = *reinterpret_cast<std::size_t*>(records + 0x18);
-    auto* entries = *reinterpret_cast<unsigned char**>(records + 0x10);
-    for (std::size_t i = 0; i < recordCount; ++i) {
-        auto* entry = entries + i * 0x20;
-        *reinterpret_cast<unsigned*>(entry + 0x10) *= factor;
-        *reinterpret_cast<unsigned long long*>(entry + 0x18) *= factor;
+    TimeStamp *= num;
+    FramesPerSecond *= num;
+    AdvanceTime *= num;
+    TimelineTime *= num;
+    ActionTime *= num;
+    InputTime *= num;
+    MouseTime *= num;
+    GetVariableTime *= num;
+    SetVariableTime *= num;
+    InvokeTime *= num;
+    DisplayTime *= num;
+    PresentTime *= num;
+    TesselationTime *= num;
+    GradientGenTime *= num;
+    UserTime *= num;
+    LineCount *= num;
+    MaskCount *= num;
+    FilterCount *= num;
+    MeshCount *= num;
+    TriangleCount *= num;
+    DrawPrimitiveCount *= num;
+    StrokeCount *= num;
+    GradientFillCount *= num;
+    MeshThrashing *= num;
+    RasterizedGlyphCount *= num;
+    FontTextureCount *= num;
+    NumFontCacheTextureUpdates *= num;
+    FontThrashing *= num;
+    FontFill *= num;
+    FontFail *= num;
+    FontMisses *= num;
+    FontTotalArea *= num;
+    FontUsedArea *= num;
+    TotalMemory *= num;
+    ImageMemory *= num;
+    ImageGraphicsMemory *= num;
+    MovieDataMemory *= num;
+    MovieViewMemory *= num;
+    MeshCacheMemory *= num;
+    MeshCacheGraphicsMemory *= num;
+    MeshCacheUnusedMemory *= num;
+    MeshCacheGraphicsUnusedMemory *= num;
+    FontCacheMemory *= num;
+    VideoMemory *= num;
+    SoundMemory *= num;
+    OtherMemory *= num;
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        *MovieStats[i] *= num;
     }
-
-    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) }) {
-        auto* item = *reinterpret_cast<Scaleform::MemItem**>(bytes + offset);
-        if (item)
-            item->operator*=(factor);
-    }
-    return object;
+    *DisplayStats *= num;
+    *MemoryByStatId *= num;
+    *Images *= num;
+    *Fonts *= num;
+    return *this;
 }
 
-// MS2-FUNCTIONAL: divides the 32-bit and 64-bit values of each 32-byte record by the divisor.
 // @0x142688520
-void DivideRecordPairs(void* array, unsigned long long divisor)
+GFx::AMP::MovieFunctionStats& GFx::AMP::MovieFunctionStats::operator/=(unsigned numFrames)
 {
-    auto* bytes = static_cast<unsigned char*>(array);
-    auto* records = *reinterpret_cast<unsigned char**>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    const unsigned d = static_cast<unsigned>(divisor);
-    for (std::size_t i = 0; i < count; ++i) {
-        auto* record = records + i * 0x20;
-        *reinterpret_cast<unsigned*>(record) /= d;
-        *reinterpret_cast<unsigned long long*>(record + 8) /= d;
+    for (UPInt i = 0; i < FunctionTimings.GetSize(); ++i)
+    {
+        FunctionTimings[i].TimesCalled /= numFrames;
+        FunctionTimings[i].TotalTime /= numFrames;
     }
+    return *this;
 }
 
 // @0x142688580
@@ -4150,57 +4155,64 @@ extern "C" void FUN_1426860f0(void** array, std::size_t first, std::size_t last,
     }
 }
 
-// MS2-FUNCTIONAL: divides movie timing counters, nested text and metric timestamps, renderer records, and MemItem totals.
 // @0x142688760
-extern "C" long long FUN_142688760(void* object, std::uint32_t divisor)
+GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator/=(unsigned numFrames)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    *reinterpret_cast<std::uint64_t*>(bytes + 0x10) /= divisor;
-    for (std::size_t offset = 0x18; offset <= 0xc8; offset += 4)
-        *reinterpret_cast<std::uint32_t*>(bytes + offset) /= divisor;
-
-    const std::size_t movieCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
-    auto** movies = *reinterpret_cast<unsigned char***>(bytes + 0xd0);
-    for (std::size_t movieIndex = 0; movieIndex < movieCount; ++movieIndex) {
-        auto* movie = movies[movieIndex];
-        auto* textGroup = *reinterpret_cast<unsigned char**>(movie + 0x58);
-        const std::size_t textCount = *reinterpret_cast<std::size_t*>(textGroup + 0x18);
-        auto** texts = *reinterpret_cast<unsigned char***>(textGroup + 0x10);
-        for (std::size_t i = 0; i < textCount; ++i) {
-            auto* text = texts[i];
-            const std::size_t valueCount = *reinterpret_cast<std::size_t*>(text + 0x28);
-            auto* values = *reinterpret_cast<unsigned char**>(text + 0x20);
-            for (std::size_t j = 0; j < valueCount; ++j)
-                *reinterpret_cast<std::uint64_t*>(values + j * 0x10 + 8) /= divisor;
-        }
-
-        auto* metrics = *reinterpret_cast<unsigned char**>(movie + 0x60);
-        const std::size_t metricCount = *reinterpret_cast<std::size_t*>(metrics + 0x18);
-        auto* metricRows = *reinterpret_cast<unsigned char**>(metrics + 0x10);
-        for (std::size_t i = 0; i < metricCount; ++i) {
-            auto* row = metricRows + i * 0x20;
-            *reinterpret_cast<std::uint32_t*>(row + 0x10) /= divisor;
-            *reinterpret_cast<std::uint64_t*>(row + 0x18) /= divisor;
-        }
-
-        auto* names = *reinterpret_cast<unsigned char**>(movie + 0x68);
-        const std::size_t nameCount = *reinterpret_cast<std::size_t*>(names + 0x18);
-        auto* nameRows = *reinterpret_cast<unsigned char**>(names + 0x10);
-        for (std::size_t i = 0; i < nameCount; ++i)
-            *reinterpret_cast<std::uint64_t*>(nameRows + i * 0x18 + 0x10) /= divisor;
+    TimeStamp /= numFrames;
+    FramesPerSecond /= numFrames;
+    AdvanceTime /= numFrames;
+    TimelineTime /= numFrames;
+    ActionTime /= numFrames;
+    InputTime /= numFrames;
+    MouseTime /= numFrames;
+    GetVariableTime /= numFrames;
+    SetVariableTime /= numFrames;
+    InvokeTime /= numFrames;
+    DisplayTime /= numFrames;
+    PresentTime /= numFrames;
+    TesselationTime /= numFrames;
+    GradientGenTime /= numFrames;
+    UserTime /= numFrames;
+    LineCount /= numFrames;
+    MaskCount /= numFrames;
+    FilterCount /= numFrames;
+    MeshCount /= numFrames;
+    TriangleCount /= numFrames;
+    DrawPrimitiveCount /= numFrames;
+    StrokeCount /= numFrames;
+    GradientFillCount /= numFrames;
+    MeshThrashing /= numFrames;
+    RasterizedGlyphCount /= numFrames;
+    FontTextureCount /= numFrames;
+    NumFontCacheTextureUpdates /= numFrames;
+    FontThrashing /= numFrames;
+    FontFill /= numFrames;
+    FontFail /= numFrames;
+    FontMisses /= numFrames;
+    FontTotalArea /= numFrames;
+    FontUsedArea /= numFrames;
+    TotalMemory /= numFrames;
+    ImageMemory /= numFrames;
+    ImageGraphicsMemory /= numFrames;
+    MovieDataMemory /= numFrames;
+    MovieViewMemory /= numFrames;
+    MeshCacheMemory /= numFrames;
+    MeshCacheGraphicsMemory /= numFrames;
+    MeshCacheUnusedMemory /= numFrames;
+    MeshCacheGraphicsUnusedMemory /= numFrames;
+    FontCacheMemory /= numFrames;
+    VideoMemory /= numFrames;
+    SoundMemory /= numFrames;
+    OtherMemory /= numFrames;
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        *MovieStats[i] /= numFrames;
     }
-
-    auto* renderer = *reinterpret_cast<unsigned char**>(bytes + 0xe8);
-    const std::size_t rendererCount = *reinterpret_cast<std::size_t*>(renderer + 0x18);
-    auto* rendererRows = *reinterpret_cast<unsigned char**>(renderer + 0x10);
-    for (std::size_t i = 0; i < rendererCount; ++i) {
-        auto* row = rendererRows + i * 0x20;
-        *reinterpret_cast<std::uint32_t*>(row + 0x10) /= divisor;
-        *reinterpret_cast<std::uint64_t*>(row + 0x18) /= divisor;
-    }
-    for (std::size_t offset : { std::size_t(0x128), std::size_t(0x130), std::size_t(0x138) })
-        reinterpret_cast<Scaleform::MemItem*>(*reinterpret_cast<void**>(bytes + offset))->operator/=(divisor);
-    return static_cast<long long>(reinterpret_cast<std::uintptr_t>(object));
+    *DisplayStats /= numFrames;
+    *MemoryByStatId /= numFrames;
+    *Images /= numFrames;
+    *Fonts /= numFrames;
+    return *this;
 }
 
 // MS2-FUNCTIONAL: copies the image resource record and its nested strong-reference arrays, metric lists, and lookup sets.
