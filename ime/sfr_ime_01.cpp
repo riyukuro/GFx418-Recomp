@@ -918,25 +918,25 @@ HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output
 }
 
 // Follows the executable's nested IME provider query and releases its temporary refcounted object.
-// MS2-FUNCTIONAL: the exe keeps the provider in rcx and the result in dil (rax/bl here); same blocks
+// MS2-FUNCTIONAL: same code as the exe except that the result and the temporary swap rbx and rdi (135 vs 138 bytes)
 // @0x1423ce460
 unsigned char FUN_1423ce460(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    unsigned char* provider = *reinterpret_cast<unsigned char**>(bytes + 8);
     Scaleform::GFx::Value unused;  // the exe keeps an unused Value local here
-    unsigned char result;
+    unsigned char* provider = *reinterpret_cast<unsigned char**>(bytes + 8);
+    bool result;
     if (!provider)
-        result = 1;
+        result = true;
     else {
         void* factory = provider + 0x10;
         void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>((*reinterpret_cast<void***>(factory))[3])(
             factory, 0x18);
         if (!temporary)
-            result = 1;
+            result = true;
         else {
             void* interfaceObject = *reinterpret_cast<void**>(static_cast<unsigned char*>(temporary) + 0x18);
-            result = reinterpret_cast<unsigned char(*)(void*)>(
+            result = reinterpret_cast<bool(*)(void*)>(
                 (*reinterpret_cast<void***>(interfaceObject))[0x70 / sizeof(void*)])(interfaceObject);
             FUN_14257dcb0(temporary);
         }
