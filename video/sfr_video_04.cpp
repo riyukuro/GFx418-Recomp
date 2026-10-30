@@ -1,7 +1,11 @@
 // Recovered Scaleform GFx 4.1.18 video glue from the executable (own source, SDK material is reference only): the AS2
 // and AS3 video support objects (CreateInstance, CreateASCharacter, RegisterASClasses, scalar deleting destructors) and
 // the handful of ASString-keyed hash / GC pointer helpers their registration code instantiates.
+// The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
+// cmake/ms2-unit-profiles.cmake): no alias `using` (so ExeDecl is a struct), explicit conversion operators or variadic
+// templates. clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_04
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140001690-0x140002780 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -14,39 +18,38 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_asstring.h"
 #include "../include/gfx/gfx_resource.h"
-#include "hook/ms2hook.h"
 #include <cstdint>
 #include <new>
 
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
-template <class T> using ExeDecl = T;
+template <class T> struct ExeDecl { typedef T type; };
 
 using namespace Scaleform;
 using namespace Scaleform::GFx;
 using namespace Scaleform::GFx::Video;
 
 // ---- exe callees outside this unit ----
-ExeDecl<void(void*)> FUN_1425925f0;                       // GC object: release tail
-ExeDecl<char(void*, std::uint64_t)> FUN_142592950;        // ArrayPaged: grow to hold a page index
-ExeDecl<void(void*, void*, void*, unsigned)> FUN_142591a00;   // hash: add {key, value} at a hash code
-ExeDecl<void(void*, void*, void*)> FUN_1425916c0;        // registers the first builtin
-ExeDecl<char*(void*)> FUN_1429561c0;                          // GlobalContext::GetStringManager(this = context): the builtin name table
-ExeDecl<void(void*)> FUN_1429260b0;                       // AS2 value destructor
-ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)> FUN_140010000;   // the video character constructor
-ExeDecl<void*(void*, InteractiveObject*)> FUN_14000e2b0;          // the AVM video character constructor
-ExeDecl<void*(void*, InteractiveObject*)> FUN_14001af70;     // the AS3 AVM video character constructor
+ExeDecl<void(void*)>::type FUN_1425925f0;                       // GC object: release tail
+ExeDecl<char(void*, std::uint64_t)>::type FUN_142592950;        // ArrayPaged: grow to hold a page index
+ExeDecl<void(void*, void*, void*, unsigned)>::type FUN_142591a00;   // hash: add {key, value} at a hash code
+ExeDecl<void(void*, void*, void*)>::type FUN_1425916c0;        // registers the first builtin
+ExeDecl<char*(void*)>::type FUN_1429561c0;                          // GlobalContext::GetStringManager(this = context): the builtin name table
+ExeDecl<void(void*)>::type FUN_1429260b0;                       // AS2 value destructor
+ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)>::type FUN_140010000;   // the video character constructor
+ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14000e2b0;          // the AVM video character constructor
+ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
 #define FUN_14001af70_ctor FUN_14001af70
-ExeDecl<void*(void*, void*)> FUN_1400126f0;
-ExeDecl<void*(void*, void*)> FUN_14000cf20;
-ExeDecl<void*(void*, void*)> FUN_14000ed60;
-ExeDecl<void(void*, void*, void*)> FUN_140001270;           // AS2VideoSupport::AttachAudio
+ExeDecl<void*(void*, void*)>::type FUN_1400126f0;
+ExeDecl<void*(void*, void*)>::type FUN_14000cf20;
+ExeDecl<void*(void*, void*)>::type FUN_14000ed60;
+ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSupport::AttachAudio
 #ifndef MS2_HOOK_DLL   // the hook DLL's ms2sym.obj already maps this name to the exe address (alternatename conflict)
 #pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
 #endif
-ExeDecl<void(void*, void*)> FUN_1425210d0;                   // AS3 class registration
-extern ExeDecl<void*> DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
-extern ExeDecl<void*> DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
+ExeDecl<void(void*, void*)>::type FUN_1425210d0;                   // AS3 class registration
+extern ExeDecl<void*>::type DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
+extern ExeDecl<void*>::type DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
 // The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &DAT_1431b7b50,
 // &DAT_1431b7160, 0 }). Filled at run time: the hook DLL cannot take exe addresses in static data.
 const void* DAT_143a462f0[3];
