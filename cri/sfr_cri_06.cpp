@@ -13043,7 +13043,7 @@ void FUN_140064d90(cri_any cri_p0)
   FUN_140063cb0();
   FUN_140064d20();
   FUN_140064d40();
-  FUN_140064760();
+  thunk_FUN_140064760();                // the exe calls the jmp thunk at 0x140064990
   FUN_1400649a0();
   if (arg1 != 0) {
     FUN_140064d60(arg1);
