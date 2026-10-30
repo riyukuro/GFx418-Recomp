@@ -2184,20 +2184,35 @@ ASString VMAbcFile::GetInternedString(UPInt strIndex)
     return ASString(IntStrings[strIndex]);
 }
 
-// MS2-FUNCTIONAL: the hash lookup/add are not the exe's template copies
+// VM::MakeInternedNamespace (0x1425162a0), which the exe inlines into the VMAbcFile interning.
+static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind,
+                                                                          const ASString& uri)
+{
+    if (uri.IsEmpty() && kind == Abc::NS_Public)
+        return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
+    return static_cast<InstanceTraits::fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
+        .MakeInternedInstance(kind, uri, Value::GetUndefined());
+}
+
+// VM::MakeInternedNamespace(kind, const StringDataPtr&) (0x142516340), likewise inlined.
+static SF_INLINE Pickable<Instances::Namespace> Sfr18MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind,
+                                                                          const StringDataPtr& uri)
+{
+    return Sfr18MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
+}
+
 // @0x14250ae60
 Instances::Namespace& VMAbcFile::GetInternedNamespace(UPInt ind)
 {
     typedef AbcMultinameHash<SPtr<Instances::Namespace> >::Key NsKey;
-    SPtr<Instances::Namespace>* found = IntNamespaces.Entries.Get(NsKey(ind));
+    SPtr<Instances::Namespace>* found = IntNamespaces.Get(ind);
     if (!found)
     {
         const Abc::ConstPool& cp = pFile->Const_Pool;
         const Abc::NamespaceInfo& info = ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
-        ASString uri = GetVM().GetStringManager().CreateString(info.NameURI.ToCStr(), info.NameURI.GetSize());
-        Pickable<Instances::Namespace> ns = GetVM().MakeInternedNamespace(info.Kind, uri);
+        Pickable<Instances::Namespace> ns = Sfr18MakeInternedNamespace(GetVM(), info.Kind, info.NameURI);
         IntNamespaces.Entries.Add(NsKey(ind), SPtr<Instances::Namespace>(ns));
-        found = IntNamespaces.Entries.Get(NsKey(ind));
+        found = IntNamespaces.Get(ind);
     }
     return **found;
 }
@@ -2209,32 +2224,43 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The namespace a multiname is qualified with; one with a type argument gets that argument's namespace uri appended
 // after a '$', so each (namespace, type) pair interns separately.
-// MS2-FUNCTIONAL: the hash lookup/add are not the exe's template copies
+// AbcMultinameHash::Get(const Abc::Multiname&): only a QName (or QNameA) is interned by namespace index.
+static SF_INLINE SPtr<Instances::Namespace>* Sfr18GetInterned(AbcMultinameHash<SPtr<Instances::Namespace> >& h,
+                                                              const Abc::Multiname& mn)
+{
+    if ((static_cast<UInt32>(mn.Kind) & 3) <= 1)
+        return h.Get(mn.Ind, mn.NextIndex);
+    return NULL;
+}
+
+// ConstPool::GetNamespace: index 0 is the any namespace.
+static SF_INLINE const Abc::NamespaceInfo& Sfr18GetNamespace(const Abc::ConstPool& cp, SPInt ind)
+{
+    return ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
+}
+
 // @0x14250abf0
 Instances::Namespace& VMAbcFile::GetInternedNamespace(const Abc::Multiname& mn)
 {
     typedef AbcMultinameHash<SPtr<Instances::Namespace> >::Key NsKey;
-    const bool keyed = (static_cast<UInt32>(mn.Kind) & 3) < 2;
-    const NsKey key(mn.Ind, mn.NextIndex);
-    if (keyed)
+    SPtr<Instances::Namespace>* pns = Sfr18GetInterned(IntNamespaces, mn);
+    if (pns == NULL)
     {
-        SPtr<Instances::Namespace>* found = IntNamespaces.Entries.Get(key);
-        if (found)
-            return **found;
+        const Abc::ConstPool& cp = pFile->Const_Pool;
+        const Abc::NamespaceInfo& info = Sfr18GetNamespace(cp, mn.Ind);
+        ASString uri = GetVM().GetStringManager().CreateString(info.NameURI.ToCStr(), info.NameURI.GetSize());
+        if (mn.NextIndex >= 0)
+        {
+            const Abc::Multiname& next = cp.GetMultiname(mn.NextIndex);
+            const Abc::NamespaceInfo& ninfo = Sfr18GetNamespace(cp, next.Ind);
+            uri.Append("$", 1);
+            uri.Append(GetVM().GetStringManager().CreateString(ninfo.NameURI.ToCStr(), ninfo.NameURI.GetSize()));
+        }
+        IntNamespaces.Entries.Add(NsKey(mn.Ind, mn.NextIndex),
+                                  SPtr<Instances::Namespace>(Sfr18MakeInternedNamespace(GetVM(), info.Kind, uri)));
+        pns = Sfr18GetInterned(IntNamespaces, mn);
     }
-    const Abc::ConstPool& cp = pFile->Const_Pool;
-    const Abc::NamespaceInfo& info = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
-    ASString uri = GetVM().GetStringManager().CreateString(info.NameURI.ToCStr(), info.NameURI.GetSize());
-    if (mn.NextIndex >= 0)
-    {
-        const Abc::Multiname& next = cp.GetMultiname(mn.NextIndex);
-        const Abc::NamespaceInfo& ninfo = next.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[next.Ind];
-        uri.Append("$", 1);
-        uri.Append(GetVM().GetStringManager().CreateString(ninfo.NameURI.ToCStr(), ninfo.NameURI.GetSize()));
-    }
-    Pickable<Instances::Namespace> ns = GetVM().MakeInternedNamespace(info.Kind, uri);
-    IntNamespaces.Entries.Add(key, SPtr<Instances::Namespace>(ns));
-    return **IntNamespaces.Entries.Get(key);
+    return **pns;
 }
 
 

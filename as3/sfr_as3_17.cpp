@@ -4787,11 +4787,7 @@ UPInt Sfr33FindObjectIndexInChain(void*, ArrayLH<WeakPtr<DisplayObject> >* chain
 
 // AbcMultinameHash<SPtr<Namespace>>::Get: the namespace interned for constant pool index ind (and next).
 // @0x1425057f0
-const SPtr<Instances::Namespace>* Sfr33AbcNamespaceHashGet(const AbcMultinameHash<SPtr<Instances::Namespace> >& h,
-                                                           UPInt ind, SPInt next)
-{
-    return h.Entries.Get(AbcMultinameHash<SPtr<Instances::Namespace> >::Key(ind, next));
-}
+template SPtr<Instances::Namespace>* AbcMultinameHash<SPtr<Instances::Namespace> >::Get(UPInt ind, SInt32 next_ind);
 
 // Hash<UPInt, UPInt>::Get of a bytewise-hashed 8-byte key: *pvalue (unless NULL) receives its value.
 // @0x1425058c0

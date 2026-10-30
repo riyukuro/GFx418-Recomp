@@ -55,6 +55,10 @@ public:
     };
 
     typedef HashLH<Key, C, FixedSizeHash<Key>, SID> TContainer;
+
+    // Not inlined in the exe (0x1425057f0 for the namespace hash).
+    SF_NOINLINE C* Get(UPInt ind, SInt32 next_ind = -1) { return Entries.Get(Key(ind, next_ind)); }
+
     TContainer Entries;
 };
 
