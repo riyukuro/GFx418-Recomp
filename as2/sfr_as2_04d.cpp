@@ -166,12 +166,20 @@ void* DeleteAs2_14292bfc0(MouseListener* p, unsigned flags)
     return p;
 }
 
+extern const void* DAT_143215370[];   // RefCountBaseGC<323> vftable
+// Scalar deleting destructor of the RefCountBaseGC<323> base (vftable 0x143215370 slot): stores the base vptr and
+// frees through the Scaleform heap (the objects come from it), as the exe does.
 // @0x14292cae0
-// MS2-FUNCTIONAL: scalar deleting destructor written out; the class is not recovered, so its destructor chain is called by address
 void* DeleteAs2_14292cae0(void* p, unsigned flags)
 {
+    *(const void**)p = DAT_143215370;
     if (flags & 1)
-        ::operator delete(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x20);
+    }
     return p;
 }
 
