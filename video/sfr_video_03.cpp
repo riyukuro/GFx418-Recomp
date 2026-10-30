@@ -2055,9 +2055,10 @@ std::uint64_t* FUN_142743050(std::uint64_t* object, void* player, void* streamSt
     *reinterpret_cast<std::uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x98) = 0;
     if (streamState) _InterlockedIncrement(reinterpret_cast<volatile long*>(static_cast<unsigned char*>(streamState) + 8));
     object[0xb] = 0; object[0xc] = 0;
-    bool paused = false;
-    FUN_142303a6b(reinterpret_cast<void*>(object[7]), &paused);
-    if (paused) { object[10] = object[9]; return object; }
+    // The channel's paused state lands in the member at +0x68, which SetAudioPaused and QueryAudioElapsedSeconds read.
+    auto* paused = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(object) + 0x68);
+    FUN_142303a6b(reinterpret_cast<void*>(object[7]), paused);
+    if (*paused) { object[10] = object[9]; return object; }
     FUN_142745f50(streamState);
     object[9] = FUN_1425e3480();
     const auto a = *reinterpret_cast<std::uint32_t*>(static_cast<unsigned char*>(streamState) + 0x70);
