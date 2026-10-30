@@ -2076,115 +2076,43 @@ void FUN_1424dc9f0(void* self)
     bytes[8] = 0;
 }
 
-// Clears the chained hash table's entries to the free sentinel, then releases the table block.
-// MS2-FUNCTIONAL: clears the same 0x28-byte entry chain and frees the backing block; loop register allocation differs.
+// (sfg) a 0x10-byte trivially destructible payload; only the 0x28-byte cached node entry matters here.
+struct Unk_As3_16HashPayload16 { Scaleform::UPInt A, B; };
+
+// HashLH<UPInt, 16-byte POD> dtor: clears the chained entries to the free sentinel, then releases the table block.
 // @0x1424dca60
 void FUN_1424dca60(void* self)
 {
-    auto** table = static_cast<void**>(self);
-    if (*table)
-    {
-        auto* bytes = static_cast<unsigned char*>(*table);
-        Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8) + 1;
-        for (Scaleform::UPInt i = 0; i < count; ++i)
-        {
-            auto* next = reinterpret_cast<Scaleform::UPInt*>(bytes + i * 0x28 + 0x10);
-            if (*next != static_cast<Scaleform::UPInt>(-2))
-                *next = static_cast<Scaleform::UPInt>(-2);
-        }
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, reinterpret_cast<void*>(*table));
-        *table = nullptr;
-    }
+    static_cast<Scaleform::HashLH<Scaleform::UPInt, Unk_As3_16HashPayload16>*>(self)->~HashLH();
 }
 
 // HashNode<DynAttrsKey, Value> releases the Value union and its ASString key.
-// MS2-FUNCTIONAL: preserves the Value payload/refcount cleanup and key release; branch lowering differs by two bytes.
 // @0x1424dcac0
 void FUN_1424dcac0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* value = bytes + 0x10;
-    auto* tag = reinterpret_cast<Scaleform::UInt32*>(value);
-    if ((*tag & 0x1f) > 9)
-    {
-        if (((*tag >> 9) & 1) == 0)
-            FUN_142521f00(value);
-        else
-        {
-            auto* refCount = *reinterpret_cast<int**>(value + 8);
-            --*refCount;
-            if (*refCount == 0)
-            {
-                auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refCount);
-            }
-            *tag &= 0xfffffde0;
-            *reinterpret_cast<void**>(value + 8) = nullptr;
-            *reinterpret_cast<void**>(value + 0x10) = nullptr;
-            *reinterpret_cast<void**>(value + 0x18) = nullptr;
-        }
-    }
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x10)->~Value();
     auto* name = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(bytes + 8);
     if (--name->RefCount == 0)
         name->ReleaseNode();
 }
 
 // HashNode<ASString, Value> releases its Value payload and string key.
-// MS2-FUNCTIONAL: preserves both reference-count paths and the ASString release; branch lowering differs by two bytes.
 // @0x1424dcb40
 void FUN_1424dcb40(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* value = bytes + 8;
-    auto* tag = reinterpret_cast<Scaleform::UInt32*>(value);
-    if ((*tag & 0x1f) > 9)
-    {
-        if (((*tag >> 9) & 1) == 0)
-            FUN_142521f00(value);
-        else
-        {
-            auto* refCount = *reinterpret_cast<int**>(value + 8);
-            --*refCount;
-            if (*refCount == 0)
-            {
-                auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refCount);
-            }
-            *tag &= 0xfffffde0;
-            *reinterpret_cast<void**>(value + 8) = nullptr;
-            *reinterpret_cast<void**>(value + 0x10) = nullptr;
-            *reinterpret_cast<void**>(value + 0x18) = nullptr;
-        }
-    }
+    reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 8)->~Value();
     auto* name = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(bytes);
     if (--name->RefCount == 0)
         name->ReleaseNode();
 }
 
-// MS2-FUNCTIONAL: preserves the tagged Value refcount release and zeroing behavior; branch/frame lowering differs.
+// Value::~Value (the SCU Release: weak proxy drop or ReleaseInternal).
 // @0x1424dd460
 void FUN_1424dd460(void* self)
 {
-    auto* value = static_cast<Scaleform::UInt32*>(self);
-    if ((*value & 0x1f) < 10)
-        return;
-    if ((*value >> 9) & 1)
-    {
-        auto* refs = *reinterpret_cast<int**>(value + 2);
-        --*refs;
-        if (*refs == 0)
-        {
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, refs);
-        }
-        *value &= 0xfffffde0;
-        for (unsigned i = 2; i != 8; ++i)
-            value[i] = 0;
-        return;
-    }
-    FUN_142521f00(value);
+    static_cast<Scaleform::GFx::AS3::Value*>(self)->~Value();
 }
 
 namespace Scaleform {
@@ -2270,22 +2198,22 @@ template SfrCx18ASStringValueSet::~HashSetBase();
 extern "C" void FUN_1423dfa20(void* object);   // RefCountBaseGC::ReleaseInternal
 
 // Assigns a tagged AS3 reference and transfers the old/new reference counts.
-// MS2-FUNCTIONAL 0x1424e0860: refcount operations and branch outcomes match; Clang saves the old value in another register.
 // @0x1424e0860
 Scaleform::UInt64* FUN_1424e0860(Scaleform::UInt64* self, Scaleform::UInt64 value)
 {
-    if (value != *self)
+    const Scaleform::UInt64 cur = *self;
+    if (value != cur)
     {
-        if (*self)
+        if (cur)
         {
-            if ((*self & 1) == 0)
-            {
-                auto* refs = reinterpret_cast<Scaleform::UInt32*>(*self + 0x10);
-                if ((*refs & 0x3fffff) != 0)
-                    --*refs, FUN_1423dfa20(reinterpret_cast<void*>(*self));
-            }
+            if (cur & 1)
+                *self = cur - 1;
             else
-                *self = *self - 1;
+            {
+                auto* refs = reinterpret_cast<Scaleform::UInt32*>(cur + 0x10);
+                if ((*refs & 0x3fffff) != 0)
+                    --*refs, FUN_1423dfa20(reinterpret_cast<void*>(cur));
+            }
         }
         if (value)
         {
@@ -2339,29 +2267,11 @@ void FUN_1424dcc30(void* self)
     }
 }
 
-// Clears a fixed-size cached hash table and releases its backing block.
-// MS2-FUNCTIONAL: resets every table entry and frees the block; the compiler folds the exe's redundant null check.
+// Hash<UPInt, UPInt> dtor: clears a cached hash table and releases its backing block.
 // @0x1424dcce0
 void FUN_1424dcce0(void* self)
 {
-    auto* table = static_cast<Scaleform::UInt64*>(self);
-    if (*table)
-    {
-        Scaleform::UInt64 offset = 0;
-        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
-        do
-        {
-            auto* next = reinterpret_cast<Scaleform::UInt64*>(*table + offset + 0x10);
-            if (*next != static_cast<Scaleform::UInt64>(-2))
-                *next = static_cast<Scaleform::UInt64>(-2);
-            offset += 0x20;
-            --count;
-        } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, reinterpret_cast<void*>(*table));
-        *table = 0;
-    }
+    static_cast<Scaleform::Hash<Scaleform::UPInt, Scaleform::UPInt>*>(self)->~Hash();
 }
 
 // Clears text-format font handles, releasing each Resource before freeing the set.
