@@ -28,9 +28,17 @@
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
+#include "ms2/scaleform/include/gfx/gfx_button.h"
 #include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425245c0(UPInt* a, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524470(UPInt* a, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425247f0(UPInt* a, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524870(UPInt* a, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425248e0(UPInt* a, const void* addr, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524c30(UPInt* a, const void* addr, UPInt n); }}}
+namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524af0(UPInt* a, const void* addr, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524680(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524710(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425244e0(UPInt* a, UPInt n); }}}
@@ -221,9 +229,9 @@ void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
 char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
 void  Sfr31StateTraceOp(UPInt state, unsigned char op, UPInt* pos);
 UPInt Sfr31ResolveClassTraits(UPInt vmAddr, UPInt link, UPInt entry);
-void  Sfr31ResizeNCPod8a(UPInt* a, const void* addr, UPInt n);
+void  FUN_142524af0(UPInt* a, const void* addr, UPInt n);
 UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);
-void  Sfr31ResizeObjZero(UPInt* a, UPInt n);
+void  FUN_1425245c0(UPInt* a, UPInt n);
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace ClassTraits {
@@ -2980,62 +2988,6 @@ static void Sfr31ArrResizeNC(UPInt* a, const void* addr, UPInt n, UPInt esz, UIn
     a[1] = n;
 }
 
-// MS2-FUNCTIONAL 0x142523850: raw model of ArrayDataBase<8-byte elem, AllocatorLH>::Reserve (AllocAutoHeap)
-// @0x142523850
-void Sfr31ReserveGH8a(UPInt* a, const void* addr, UPInt n) { Sfr31ArrReserve(a, addr, n, 8, 2, 0); }
-
-// MS2-FUNCTIONAL 0x142524d80: ResizeNoConstruct of an ASString array
-// @0x142524d80
-void Sfr31ResizeNCStr(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElStrNode); }
-
-// MS2-FUNCTIONAL 0x142524af0: ResizeNoConstruct of an SPtr array (the cut tail is released)
-// @0x142524af0
-void Sfr31ResizeNCPod8a(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
-
-// MS2-FUNCTIONAL 0x142524b90: ResizeNoConstruct of an SPtr array (the cut tail is released)
-// @0x142524b90
-void Sfr31ResizeNCPod8b(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
-
-// MS2-FUNCTIONAL 0x142524c30: ResizeNoConstruct of an SPtr array (the cut tail is released)
-// @0x142524c30
-void Sfr31ResizeNCPod8c(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 8, 2, 0, Sfr31ElSPtr); }
-
-// MS2-FUNCTIONAL 0x1425248e0: ResizeNoConstruct of a 16-byte-element array whose first word is a released object
-// @0x1425248e0
-void Sfr31ResizeNCMaskStack(UPInt* a, const void* addr, UPInt n) { Sfr31ArrResizeNC(a, addr, n, 0x10, 2, 0, Sfr31ElObj); }
-
-// MS2-FUNCTIONAL 0x142524870: Resize of a POD array that carries its heap at +0x18 (no destruct)
-// @0x142524870
-void Sfr31ResizeDH(UPInt* a, UPInt n) { Sfr31ArrResizeNC(a, 0, n, 8, 2, reinterpret_cast<MemoryHeap*>(a[3]), Sfr31ElNone); }
-
-// MS2-FUNCTIONAL 0x1425247f0: Resize of a POD array (no destruct)
-// @0x1425247f0
-void Sfr31ResizePod(UPInt* a, UPInt n) { Sfr31ArrResizeNC(a, a, n, 8, 2, 0, Sfr31ElNone); }
-
-// MS2-FUNCTIONAL 0x142524470: ArrayDataCC<ASString>::Resize; new slots copy the default string (self+0x18)
-// @0x142524470
-void Sfr31ResizeCCStr(UPInt* a, UPInt n)
-{
-    const UPInt old = a[1];
-    Sfr31ArrResizeNC(a, a, n, 8, 2, 0, Sfr31ElStrNode);
-    for (UPInt i = old; i < n; ++i)
-    {
-        const UPInt def = a[3];
-        Sfr31Wr(a[0], i * 8, def);
-        ++*reinterpret_cast<int*>(def + 0x18);
-    }
-}
-
-// MS2-FUNCTIONAL 0x1425245c0: Resize of a pointer array, new slots zeroed
-// @0x1425245c0
-void Sfr31ResizeObjZero(UPInt* a, UPInt n)
-{
-    const UPInt old = a[1];
-    Sfr31ArrResizeNC(a, a, n, 8, 2, 0, Sfr31ElObj);
-    for (UPInt i = old; i < n; ++i)
-        Sfr31Wr(a[0], i * 8, 0);
-}
-
 // ---- batch 21
 static inline void Sfr31ReleaseStr(UPInt node)
 {
@@ -4525,7 +4477,7 @@ void Sfr31UnregisterClassTraits(UPInt self)
         Sfr31ReleaseStr(key[0]);
         Sfr31ReleaseStr(node);
     }
-    Sfr31ResizeNCPod8a(reinterpret_cast<UPInt*>(self + 0xa0), reinterpret_cast<const void*>(self + 0xa0), 0);
+    FUN_142524af0(reinterpret_cast<UPInt*>(self + 0xa0), reinterpret_cast<const void*>(self + 0xa0), 0);
 }
 
 // ---- batch 39
@@ -5977,7 +5929,7 @@ void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 {
     UPInt* names = reinterpret_cast<UPInt*>(vt + 0x20);
     if (names[1] <= idx)
-        Sfr31ResizeCCStr(names, idx + 1);
+        FUN_142524470(names, idx + 1);
     UPInt slotIdx = idx;
     const char* prefix = 0;
     if (kind == 0xc)
@@ -5986,7 +5938,7 @@ void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
     {
         slotIdx = idx + 1;
         if (names[1] <= slotIdx)
-            Sfr31ResizeCCStr(names, idx + 2);
+            FUN_142524470(names, idx + 2);
         prefix = "set ";
     }
     else if (kind != 0xb)
@@ -6074,11 +6026,11 @@ void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
     }
     UPInt* arr = reinterpret_cast<UPInt*>(btn + static_cast<UPInt>(state) * 0x20 + 0xe8);
     if (obj == 0)
-        Sfr31ResizeNCMaskStack(arr, arr, 0);
+        FUN_1425248e0(arr, arr, 0);
     else
     {
         const UPInt old = arr[1];
-        Sfr31ResizeNCMaskStack(arr, arr, 1);
+        FUN_1425248e0(arr, arr, 1);
         if (old == 0)
             *reinterpret_cast<UPInt*>(arr[0]) = 0;
         UPInt* slot = reinterpret_cast<UPInt*>(arr[0]);
@@ -6186,7 +6138,7 @@ void Sfr31ClassTraitsCleanup(UPInt self)
         return;
     Sfr31UnregisterClassTraits(self);
     for (UPInt i = Sfr31Rd(self, 0xc0); i != 0; --i)
-        Sfr31ResizePod(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3, 0);
+        FUN_1425247f0(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3, 0);
     FUN_1425244e0(reinterpret_cast<UPInt*>(self + 0xb8), 0);
     FUN_1424ef7b0(self + 0x38);
     const UPInt table = Sfr31Rd(self, 0x70);
@@ -6231,7 +6183,7 @@ void Sfr31ClassTraitsCleanup(UPInt self)
         }
     }
     FUN_1424ef860(self + 0x70);
-    Sfr31ResizeNCPod8c(reinterpret_cast<UPInt*>(self + 0x78), reinterpret_cast<const void*>(self + 0x78), 0);
+    FUN_142524c30(reinterpret_cast<UPInt*>(self + 0x78), reinterpret_cast<const void*>(self + 0x78), 0);
     FUN_1424ef5b0(self + 0x30);
     FUN_142524680(reinterpret_cast<UPInt*>(self + 0x40), 0);
     FUN_142524a30(reinterpret_cast<UPInt*>(self + 0x58), reinterpret_cast<const void*>(self + 0x58), 0);
@@ -6641,7 +6593,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     UPInt p = code0 + 1;
     if (op != 0x91 && op != 0x93 && op - 0xc0u > 1)
         return false;
-    Sfr31ResizeDH(posArr, posArr[1] + 1);
+    FUN_142524870(posArr, posArr[1] + 1);
     reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
     int curTy = 4;
     int want;
@@ -6650,7 +6602,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     if (next == 0x73 || next == 0x74 || next == 0x75)
     {
         want = next == 0x73 ? 2 : (next == 0x74 ? 3 : 4);
-        Sfr31ResizeDH(posArr, posArr[1] + 1);
+        FUN_142524870(posArr, posArr[1] + 1);
         pushed = 2;
         reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
         next = code[p++];
@@ -6669,7 +6621,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
         r = 0xffffffffu - 1;
     if ((next != 0x63 && !(next >= 0xd4 && next <= 0xd7)) || r != reg)
     {
-        Sfr31ResizeDH(posArr, posArr[1] - pushed);
+        FUN_142524870(posArr, posArr[1] - pushed);
         return false;
     }
     const UInt32 k = regv[0] & 0x1f;
@@ -7999,7 +7951,7 @@ static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
         if (!Sfr31DispBelongsTo(elem, def))
             ++i;
         else if (arr[1] == 1)
-            Sfr31ResizeObjZero(arr, 0);
+            FUN_1425245c0(arr, 0);
         else
         {
             FUN_14257dcd0(reinterpret_cast<void*>(elem));
@@ -8745,7 +8697,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
         if (c != '+')
             return 0;
         UPInt* posArr = reinterpret_cast<UPInt*>(tracer + 0x70);
-        Sfr31ResizeDH(posArr, posArr[1] + 1);
+        FUN_142524870(posArr, posArr[1] + 1);
         reinterpret_cast<UPInt*>(posArr[0])[posArr[1] - 1] = p;
         const UInt8 d = code[p++];
         if (d == 'm')
@@ -8758,7 +8710,7 @@ char Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state
             Sfr31TracerSkipOrigOpCode(tracer, pos, p);
             return 1;
         }
-        Sfr31ResizeDH(posArr, posArr[1] - 1);
+        FUN_142524870(posArr, posArr[1] - 1);
         return 0;
     }
     case 0x70:
@@ -9659,3 +9611,16 @@ template void ArrayData<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx:
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@VValue@AS3@GFx@Scaleform@@U?$AllocatorLH@VValue@AS3@GFx@Scaleform@@$0BEL@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142524ec0
 // MS2-PIN: ?Resize@?$ArrayData@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespaceSet@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x142524680
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UException@MethodBodyInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH@UException@MethodBodyInfo@Abc@AS3@GFx@Scaleform@@$0BFE@@6@UArrayDefaultPolicy@6@@Scaleform@@QEAAXPEBX_K@Z 0x142523b70
+namespace Scaleform {
+template void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, Stat_Default_Mem>, ArrayDefaultPolicy>::Reserve(const void* pheapAddr, UPInt newCapacity);   // 0x142523850
+template void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524b90 (MovieRoot::AbcFiles)
+template void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524c30 (VMAbcFile::Children)
+template void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524af0 (VMAbcFile::LoadedClasses)
+template void ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x142524d80
+template void ArrayDataCC<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x142524470 (VTable::NamesT)
+template void ArrayData<Ptr<GFx::InteractiveObject>, AllocatorLH<Ptr<GFx::InteractiveObject>, GFx::AS3::StatMV_ActionScript_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x1425245c0 (RolloverStack)
+template void ArrayData<UPInt, AllocatorLH_POD<UPInt, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x1425247f0
+template void ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x142524870 (Tracer TCodeOffset arrays)
+template void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x1425248e0 (Button::StateCharArray)
+}
+// MS2-PIN: ?Resize@?$ArrayDataCC@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEL@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAX_K@Z 0x142524470
