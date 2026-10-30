@@ -872,29 +872,29 @@ unsigned char FUN_1423da320(void* object)
     return result;
 }
 
-// MS2-FUNCTIONAL: returns the executable's supported COM interface views and increments the shared refcount.
+// The owner of the two sink interfaces at +0x1a0 and +0x1a8 whose QueryInterface follows.
+struct ImeSinkOwnerHead { unsigned char opaque[0x1a0]; };
+struct ImeSinkFirst { void* vftable; };
+struct ImeSinkSecond { void* vftable; };
+struct ImeSinkOwner : ImeSinkOwnerHead, ImeSinkFirst, ImeSinkSecond {};
+
+// The QueryInterface of the sink embedded at +0x1a0 of its owner: IUnknown (DAT_1431c4828) and the interface at
+// DAT_14313b400 answer with the owner's +0x1a8 view, DAT_1431c5018 with the +0x1a0 view.
 // @0x1423d72a0
-long long FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
+HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output)
 {
-    if (!output) return static_cast<long long>(0x80070057u);
+    if (!output) return E_INVALIDARG;
     *output = nullptr;
-    auto* words = static_cast<unsigned long long*>(object);
-    unsigned long long* view;
-    if ((iid[0] == DAT_1431c4828 && iid[1] == DAT_1431c4830) ||
-        (iid[0] == *reinterpret_cast<const unsigned long long*>(DAT_14313b400) &&
-         iid[1] == *reinterpret_cast<const unsigned long long*>(DAT_14313b400 + 8))) {
-        view = words + 1;
-    } else if (iid[0] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018) &&
-               iid[1] == *reinterpret_cast<const unsigned long long*>(DAT_1431c5018 + 8)) {
-        view = words;
-    } else {
-        return static_cast<long long>(0x80004002u);
-    }
-    if (reinterpret_cast<unsigned long long>(object) == 0x1a0) view = nullptr;
-    *output = view;
-    if (!view) return static_cast<long long>(0x80004002u);
-    reinterpret_cast<void(*)(void*)>((*reinterpret_cast<void***>(object))[1])(object);
-    return 0;
+    const IID& riid = *reinterpret_cast<const IID*>(iid);
+    if (riid == *reinterpret_cast<const IID*>(&DAT_1431c4828) || riid == *reinterpret_cast<const IID*>(DAT_14313b400))
+        *output = static_cast<ImeSinkSecond*>(reinterpret_cast<ImeSinkOwner*>(static_cast<unsigned char*>(object) - 0x1a0));
+    else if (riid == *reinterpret_cast<const IID*>(DAT_1431c5018))
+        *output = static_cast<ImeSinkFirst*>(reinterpret_cast<ImeSinkOwner*>(static_cast<unsigned char*>(object) - 0x1a0));
+    else
+        return E_NOINTERFACE;
+    if (!*output) return E_NOINTERFACE;
+    static_cast<IUnknown*>(object)->AddRef();
+    return S_OK;
 }
 
 // Follows the executable's nested IME provider query and releases its temporary refcounted object.
@@ -6458,7 +6458,7 @@ int FUN_1423d7350(void* self)
 
 // MS2-FUNCTIONAL: adjustor thunk (this - 8) to the QueryInterface at 0x1423d72a0.
 // @0x1423d7344
-long long FUN_1423d7344(void* self, const unsigned long long* iid, void** output)
+HRESULT FUN_1423d7344(void* self, const unsigned long long* iid, void** output)
 {
     return FUN_1423d72a0((UByte*)self - 8, iid, output);
 }
