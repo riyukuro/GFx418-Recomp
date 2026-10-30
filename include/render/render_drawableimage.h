@@ -862,10 +862,12 @@ public:
     bool AddCommand_NTS(const C& cmd)
     {
         void* buffer = allocCommandFromPage(sizeof(C), &QueueLock);
-        if (!buffer)
-            return false;
-        Construct<C>(buffer, cmd);
-        return true;
+        if (buffer)
+        {
+            Construct<C>(buffer, cmd);
+            return true;
+        }
+        return false;
     }
     template<class C>
     bool AddCommand(const C& cmd)

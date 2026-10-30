@@ -312,11 +312,10 @@ void DrawableImage::ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourc
     addCommand(DICommand_ApplyFilter(this, source, sourceRect, destPoint, filter));
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425eb180
 void DrawableImage::CalcFilterRect(RectF* result, const Rect<SInt32>& sourceRect, Filter* filter)
 {
-    RectF bounds((float)sourceRect.x1, (float)sourceRect.y1, (float)sourceRect.x2, (float)sourceRect.y2);
+    RectF bounds = sourceRect;
     TreeNode::NodeData::expandByFilterBounds(filter, &bounds);
     if (result)
         *result = bounds;
@@ -1058,7 +1057,6 @@ void DrawableImageContext::processTreeRootKillList()
 // MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
 // MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
-// MS2-FUNCTIONAL ??$AddCommand@UDICommand_Map@Render@Scaleform@@@DICommandQueue@Render@Scaleform@@QEAA_NAEBUDICommand_Map@12@@Z: the Ptr<DrawableImage> copy goes through rcx instead of rax and our build reuses the null page pointer as the false result where the exe clears dil on an explicit failure path
 // MS2-PIN: ??$AddCommand@UDICommand_Map@Render@Scaleform@@@DICommandQueue@Render@Scaleform@@QEAA_NAEBUDICommand_Map@12@@Z 0x1425e8420
 // MS2-PIN: ??$addCommand@UDICommand_CopyPixels@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_CopyPixels@12@@Z 0x1425e8960
 // MS2-PIN: ??$addCommand@UDICommand_FillRect@Render@Scaleform@@@DrawableImage@Render@Scaleform@@IEAAXAEBUDICommand_FillRect@12@@Z 0x1425e8c20
