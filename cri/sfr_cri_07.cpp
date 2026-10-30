@@ -335,9 +335,9 @@ extern "C" longlong DAT_143d68878;
 extern "C" unsigned char DAT_143d688b0;
 extern "C" unsigned char DAT_143d688b8;
 extern "C" unsigned char DAT_143d68930;
-extern "C" int DAT_143d68ab0;
-extern "C" int DAT_143d68ab4;
-extern "C" int DAT_143d68ab8;
+extern "C" volatile int DAT_143d68ab0;   // the SVM init count; volatile only gives the exe's re-read after the decrement
+extern "C" volatile int DAT_143d68ab4;   // the SVM lock depth and type; volatile only gives the exe's re-reads
+extern "C" volatile int DAT_143d68ab8;
 extern "C" longlong DAT_143d68ac8;
 extern "C" int DAT_143d68ad0;
 extern "C" unsigned char DAT_143d74820;
@@ -650,7 +650,7 @@ uint FUN_1400a3920(cri_any = cri_any(), cri_any = cri_any());
 uint FUN_1400a8ad0(cri_any = cri_any(), cri_any = cri_any());
 uint FUN_1400adc50(cri_any = cri_any(), cri_any = cri_any());
 void FUN_1400afd20();
-void FUN_1400afd30(cri_any = cri_any());
+void FUN_1400afd30(uint);
 void FUN_1400afd70();
 void FUN_1400afde0(const char *, ...);
 void FUN_1400afe60(const char *);
@@ -658,7 +658,7 @@ void FUN_1400afed0(const char *, const char *);
 void FUN_1400aff40(cri_any = cri_any());
 cri_u8 FUN_1400affc0();
 void FUN_1400b0090();
-ulonglong FUN_1400b0130();
+int FUN_1400b0130();
 void FUN_1400b01f0();
 void FUN_1400b0210();
 void FUN_1400b0240(int);
@@ -671,11 +671,11 @@ void FUN_1400b0500(uint, uint, cri_u8, cri_u8, char *);
 void FUN_1400b05c0(int, cri_u8, cri_u8);
 uint FUN_1400b0610(int);
 cri_u4 FUN_1400b06c0(uint, uint);
-ulonglong FUN_1400b07d0(cri_any = cri_any(), ...);
+uint FUN_1400b07d0(int *, cri_u8, cri_u8, cri_u8);
 cri_u4 FUN_1400b0820(uint, longlong, longlong, char *);
 void FUN_1400b0880(uint, uint);
 void FUN_1400b08b0(uint, uint, cri_u8, cri_u8, char *);
-void FUN_1400b0920(cri_any = cri_any(), ...);
+void FUN_1400b0920(uint, uint, cri_u8, cri_u8);
 void FUN_1400b09a0(const char *);
 void FUN_1400b0a10(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1720(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
@@ -55292,9 +55292,8 @@ void FUN_1400afd20()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400afd30
-void FUN_1400afd30(cri_any cri_p0)
+void FUN_1400afd30(uint arg1)
 {
-  cri_u4 arg1 = cri_p0;
   if (DAT_143d68398 != (cri_code *)0x0) {
     (*DAT_143d68398)(DAT_143d683a0);
     if (DAT_143d68ab4 == 0) {
@@ -55441,24 +55440,23 @@ void FUN_1400b0090()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0130
-ulonglong FUN_1400b0130()
+int FUN_1400b0130()
 {
-  ulonglong u_v1;
+  int i_v1;
   cri_u8 *pu_v2;
   
-  DAT_143d68ab0 = DAT_143d68ab0 - 1;
-  u_v1 = (ulonglong)DAT_143d68ab0;
-  if (DAT_143d68ab0 == 0) {
+  i_v1 = --DAT_143d68ab0;
+  if (i_v1 == 0) {
     pu_v2 = (ulonglong *)&DAT_143d68870;
     do {
       FUN_140068380(*pu_v2);
       pu_v2 = pu_v2 + 1;
     } while ((longlong)pu_v2 < ((longlong)&DAT_143d688b0));
-    u_v1 = FUN_1400affc0();
+    i_v1 = (int)FUN_1400affc0();
     DAT_143d68860 = 0;
     DAT_143d68868 = 0;
   }
-  return u_v1;
+  return i_v1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -55522,8 +55520,7 @@ void FUN_1400b0290(int arg1)
 void FUN_1400b02e0(int arg1)
 {
   if (DAT_143d683a8 != (cri_code *)0x0) {
-    DAT_143d68ab4 = DAT_143d68ab4 + -1;
-    if (DAT_143d68ab4 == 0) {
+    if (--DAT_143d68ab4 == 0) {
       if (DAT_143d68ab8 != arg1) {
         FUN_1400afde0("2103102:SVM:svm_unlock:lock type miss match.(type org=%d, type now=%d)",
                       DAT_143d68ab8,arg1);
@@ -55703,7 +55700,7 @@ cri_u4 FUN_1400b06c0(uint arg1, uint arg2)
       FUN_1400b0240(arg1);
       l_v1 = (longlong)(int)arg2 + (longlong)(int)arg1 * 6;
       if (*(cri_code **)(&DAT_143d683d0 + l_v1 * 0x18) != (cri_code *)0x0) {
-        u_v2 = (**(cri_code **)(&DAT_143d683d0 + l_v1 * 0x18))
+        u_v2 = (**(uint (**)(cri_u8))(&DAT_143d683d0 + l_v1 * 0x18))
                           (*(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18 + 8));
       }
       FUN_1400b0290(arg1);
@@ -55720,26 +55717,18 @@ cri_u4 FUN_1400b06c0(uint arg1, uint arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b07d0
-ulonglong FUN_1400b07d0(cri_any cri_p0, ...)
+uint FUN_1400b07d0(int *arg1, cri_u8 a2, cri_u8 a3, cri_u8 a4)   // rdx, r8, r9 go to the hook untouched
 {
-  int *arg1 = cri_p0;
-  va_list ap; va_start(ap,cri_p0);
-  cri_u8 a2 = va_arg(ap,cri_u8), a3 = va_arg(ap,cri_u8), a4 = va_arg(ap,cri_u8);  // rdx, r8, r9: the exe calls the hook with them untouched
-  va_end(ap);
   int i_v1;
-  ulonglong u_v2;
   
   if (DAT_143d68390 != (cri_code *)0x0) {
-                    /* WARNING: Could not recover jumptable at 0x0001400b07ea. Too many branches */
-                    /* WARNING: Treating indirect jump as call */
-    u_v2 = (*DAT_143d68390)(arg1,a2,a3,a4);
-    return u_v2;
+    return (*(uint (*)(int *, cri_u8, cri_u8, cri_u8))DAT_143d68390)(arg1,a2,a3,a4);   // the exe tail-jumps to the hook
   }
   FUN_1400afd70();
-  i_v1 = *arg1;
+  i_v1 = *arg1 != 1;
   *arg1 = 1;
   FUN_1400b0340();
-  return (ulonglong)(i_v1 != 1);
+  return (uint)i_v1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -55776,12 +55765,9 @@ void FUN_1400b08b0(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0920
-void FUN_1400b0920(cri_any cri_p0, ...)
+void FUN_1400b0920(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4)
 {
-  va_list ap; va_start(ap,cri_p0);
-  cri_u8 arg2 = va_arg(ap,cri_u8), arg3 = va_arg(ap,cri_u8), arg4 = va_arg(ap,cri_u8);
-  va_end(ap);
-  FUN_1400b08b0(cri_p0,arg2,arg3,arg4,0);  // the exe passes rcx..r9 through and a zero 5th argument
+  FUN_1400b08b0(arg1,arg2,arg3,arg4,0);
   return;
 }
 
