@@ -207,10 +207,12 @@ void TreeNode::SetMatrix(const Matrix2F& m)
 }
 
 // @0x14261d490
-// MS2-FUNCTIONAL: flag test computed in 16-bit registers
 void TreeNode::SetMatrix3D(const Matrix3F& m)
 {
-    NodeData* data = GetWritableData(Change_Matrix + (Is3D() ? 0 : Change_3D));
+    unsigned flags = Change_Matrix;
+    if (!GetReadOnlyData()->Is3D())
+        flags |= Change_3D;
+    NodeData* data = GetWritableData(flags);
     data->SetMatrix3D(m);
     AddToPropagate();
 }
@@ -598,17 +600,17 @@ void TreeContainer::Remove(UPInt index, UPInt count)
 TreeContainer::NodeData& TreeContainer::NodeData::operator=(const NodeData& src) = default;
 
 // @0x14261ce60
-// MS2-FUNCTIONAL: register allocation differs (loop over the child array)
 void TreeContainer::NodeData::ReleaseNodes() const
 {
-    UPInt count = Children.GetSize();
-    if (count)
+    UPInt c = Children.GetSize();
+    if (c != 0)
     {
-        TreeNode* const* nodes = Children.GetMultipleAt(0);
-        for (UPInt i = 0; i < count; i++)
+        TreeNode* const* pn = Children.GetMultipleAt(0);
+        while (c--)
         {
-            nodes[i]->SetParent(0);
-            nodes[i]->Release();
+            (*pn)->SetParent(0);
+            (*pn)->Release();
+            pn++;
         }
     }
     TreeNode::NodeData::ReleaseNodes();
