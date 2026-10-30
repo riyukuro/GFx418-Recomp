@@ -4077,13 +4077,18 @@ bool FUN_142515160(const Render::Text::TextFormat* pthis)
 }
 
 // Slots::GetSlotInfo of a traits object, one level inlined.
-// @0x14250dca0
-__declspec(noinline) const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind)
+static SF_INLINE const SlotInfo& Sfr18TraitsSlotInfo(const Traits* pthis, AbsoluteIndex ind)
 {
     const Slots& s = *pthis;
     if (ind < s.FirstOwnSlotNum)
         return s.Parent->GetSlotInfo(ind);
     return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
+// @0x14250dca0
+__declspec(noinline) const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind)
+{
+    return Sfr18TraitsSlotInfo(pthis, ind);
 }
 
 // Object::UserDataHolder (defined in sfr_as3_16; only declared in the shared header).
@@ -4215,7 +4220,8 @@ ClassTraits::Traits* FUN_1425085b0(const SlotInfo* psi, VM* pvm);  // SlotInfo::
 ClassTraits::Traits* FUN_14250dc30(const Traits* pthis, UInt32 ind)
 {
     const AbsoluteIndex abs(SPInt(UPInt(ind) - 1 + UInt32(pthis->FirstOwnSlotInd.Get())));
-    return FUN_1425085b0(&FUN_14250dca0(pthis, abs), &pthis->GetVM());
+    const SlotInfo& si = Sfr18TraitsSlotInfo(pthis, abs);
+    return FUN_1425085b0(&si, &pthis->GetVM());
 }
 
 // The 1-based index of the next enumerable slot after ind; 0 past the last.
@@ -4225,7 +4231,7 @@ public:
     GlobalSlotIndex GetNextSlotIndex(GlobalSlotIndex ind) const;
 };
 
-// MS2-FUNCTIONAL member of a view over Traits (no caller or reference is left in the exe)
+// MS2-FUNCTIONAL member of a view over Traits (no caller or reference is left in the exe); i and its copy swap registers
 // @0x14250bf90
 GlobalSlotIndex Sfr34_TraitsView::GetNextSlotIndex(GlobalSlotIndex ind) const
 {
@@ -4236,7 +4242,7 @@ GlobalSlotIndex Sfr34_TraitsView::GetNextSlotIndex(GlobalSlotIndex ind) const
         if (i >= num)
             return GlobalSlotIndex(0);
         ++i;
-    } while (FUN_14250dca0(this, AbsoluteIndex(SPInt(i) - 1)).DontEnum);
+    } while (FUN_14250dca0(this, AbsoluteIndex(SPInt(i) - 1)).IsDontEnum());
     return GlobalSlotIndex(i);
 }
 

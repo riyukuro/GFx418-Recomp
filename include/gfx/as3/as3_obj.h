@@ -207,6 +207,9 @@ public:
         ValueInd = static_cast<SInt32>(offset.Get());
     }
 
+    // (appended, sfb) SDK AS3_Slot.h
+    bool IsDontEnum() const { return DontEnum != 0; }
+
     // +0x00 attribute and binding bit fields (sfr19: was one SInt32 Bits; the copies mask 1/2/4/8/0x10/0x3e0/0x7fffc00)
     UInt32                                  ReadOnly:1;
     UInt32                                  DontEnum:1;
