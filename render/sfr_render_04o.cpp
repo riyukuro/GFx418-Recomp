@@ -409,7 +409,7 @@ bool ExternalFontWinAPI::GetGlyphRaster(unsigned glyphIndex, unsigned hintedSize
 // @0x142648360
 float ExternalFontWinAPI::GetAdvance(unsigned glyphIndex) const
 {
-    if (UInt16(glyphIndex) == 0xFFFFu)
+    if ((glyphIndex & 0xFFFF) == 0xFFFF)
         return GetNominalGlyphWidth();
 
     Lock::Locker lock(pFontLock);
@@ -428,7 +428,7 @@ float ExternalFontWinAPI::GetKerningAdjustment(unsigned lastCode, unsigned thisC
 // @0x142648c50
 float ExternalFontWinAPI::GetGlyphWidth(unsigned glyphIndex) const
 {
-    if (UInt16(glyphIndex) == 0xFFFF)
+    if ((glyphIndex & 0xFFFF) == 0xFFFF)
         return GetNominalGlyphWidth();
 
     Lock::Locker lock(pFontLock);
@@ -438,7 +438,7 @@ float ExternalFontWinAPI::GetGlyphWidth(unsigned glyphIndex) const
 // @0x1426484f0
 float ExternalFontWinAPI::GetGlyphHeight(unsigned glyphIndex) const
 {
-    if (UInt16(glyphIndex) == 0xFFFF)
+    if ((glyphIndex & 0xFFFF) == 0xFFFF)
         return GetNominalGlyphHeight();
 
     Lock::Locker lock(pFontLock);
@@ -448,7 +448,7 @@ float ExternalFontWinAPI::GetGlyphHeight(unsigned glyphIndex) const
 // @0x142648420
 RectF& ExternalFontWinAPI::GetGlyphBounds(unsigned glyphIndex, RectF* prect) const
 {
-    if (UInt16(glyphIndex) == 0xFFFF)
+    if ((glyphIndex & 0xFFFF) == 0xFFFF)
     {
         prect->SetRect(0, 0, GetNominalGlyphWidth(), GetNominalGlyphHeight());
         return *prect;
