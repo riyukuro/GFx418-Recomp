@@ -474,7 +474,8 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
             result = 2;
         }
     } else if (type == 0xe && secondModes) {
-        reinterpret_cast<void(*)(void*, unsigned, unsigned)>(vtable[0x70 / sizeof(void*)])(self, message, 0xe);
+        reinterpret_cast<void(*)(void*, unsigned, unsigned long long, LPARAM)>(
+            vtable[0x70 / sizeof(void*)])(self, message, 0xe, value);
         return 2;
     }
     if (result) return result;
@@ -485,11 +486,11 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
 
 // MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages.
 // @0x1423d41f0
-bool FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
+LRESULT FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long message, unsigned long long value)
 {
     void* child = reinterpret_cast<void*>(self[1]);
-    if (!child) return false;
-    bool handled = false;
+    if (!child) return 0;
+    LRESULT handled = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x5b8) = static_cast<unsigned>(value);
     auto** vtable = reinterpret_cast<void**>(self[0]);
     if (message == 3) {
@@ -518,10 +519,11 @@ bool FUN_1423d41f0(unsigned long long* self, unsigned reason, unsigned long long
         if (mode == 4 && *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x9c) == 0x04040404)
             handled = value == 1 || value == 2;
         else if (mode == 2)
-            handled = value == 2 || value == 0x1a || value == 0x1b;
+            handled = value == 0x10 || value == 0x11 || value == 0x1a || value == 0x1b || value == 0x1c;
     }
     if (!handled && message != 3 && message != 4 && message != 5)
-        reinterpret_cast<void(*)(void*, unsigned)>(vtable[0x70 / sizeof(void*)])(self, reason);
+        reinterpret_cast<void(*)(void*, unsigned, unsigned long long, unsigned long long)>(
+            vtable[0x70 / sizeof(void*)])(self, reason, message, value);
     return handled;
 }
 
