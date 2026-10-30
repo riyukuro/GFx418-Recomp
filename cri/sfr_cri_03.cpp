@@ -2140,20 +2140,19 @@ void FUN_14257c050(void*, CriUint32, void*);
 // @0x140041910
 void* FUN_140041910(void** decoderObject, void** mediaInterface)
 {
-    if (decoderObject[2])
-        return decoderObject[2];
+    // the exe reads the cached instance twice (test, then return), as a volatile read does
+    if (((void* volatile*)decoderObject)[2] != NULL)
+        return ((void* volatile*)decoderObject)[2];
     // the second argument is the media object itself; the exe calls through its own vtable (0x140041941 rbp = [rdx])
-    void* mediaObject = mediaInterface;
-    void** decoderVtable = *(void***)decoderObject;
-    void** mediaVtable = *(void***)mediaObject;
-    CriUint32 codec = ((CriUint32 (*)(void*))decoderVtable[15])(decoderObject);
-    CriUint8 outputInfo[8] = {};
-    CriUint64 output = ((CriUint64 (*)(void*, void*))decoderVtable[5])(decoderObject, outputInfo);
-    CriUint32 channels = ((CriUint32 (*)(void*))decoderVtable[7])(decoderObject);
-    CriUint32 format = ((CriUint32 (*)(void*))decoderVtable[4])(decoderObject);
+    void** mediaVtable = *(void***)mediaInterface;
+    CriUint32 codec = ((CriUint32 (*)(void*))(*(void***)decoderObject)[15])(decoderObject);
+    CriUint64 outputInfo;
+    CriUint64 output = ((CriUint64 (*)(void*, void*))(*(void***)decoderObject)[5])(decoderObject, &outputInfo);
+    CriUint32 channels = ((CriUint32 (*)(void*))(*(void***)decoderObject)[7])(decoderObject);
+    CriUint32 format = ((CriUint32 (*)(void*))(*(void***)decoderObject)[4])(decoderObject);
     void* instance = ((void* (*)(void*, CriUint32, CriUint32, CriUint64, CriUint32,
                                   void*, void*))mediaVtable[1])(
-        mediaObject, format, channels, output, codec, decoderObject, NULL);
+        mediaInterface, format, channels, output, codec, decoderObject, NULL);
     FUN_14257da20(decoderObject, instance);
     return instance;
 }
@@ -6834,13 +6833,12 @@ CriSint32 FUN_142ccd080(void* decoder)
     CriUint8* coefficients = base + MPV_COEF_INTRA;
     CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
     CriUint8* counts = base + 0x1350;
-    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER);
     for (CriSint32 block = 0; block < 6; ++block)
     {
         if (mask < 0)
         {
             CriMpvField<void*>(context, 0x20) = coefficients;
-            counts[block] = (CriUint8)decode(decoder, context);
+            counts[block] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER)(decoder, context);
         }
         mask += mask;
         coefficients += 0x100;
