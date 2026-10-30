@@ -347,7 +347,7 @@ void MeshCacheItem::Destroy(MeshBase* skipMesh, bool freeMemory)
 {
     pCacheList->RemoveNode(this);
 
-    if (Type <= Mesh_Complex)
+    if ((Type == Mesh_Regular) || (Type == Mesh_Complex))
     {
         for (MeshCacheItemUseNode* n = PrimitiveBatches.GetFirst(); !PrimitiveBatches.IsNull(n); n = n->pNext)
             n->pMeshItem = 0;
