@@ -1120,39 +1120,92 @@ CriUint32 FUN_14003aeb4(const CriUtfRtvView* table, CriUint32 slotIndex, const C
 // @0x14003a460
 CriUint8 criUtfRtv_GetDataUint8(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    if (!p)
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    CriUint8 result = 0;
+    if (col->IsRecordField && row < table->RecordCount)
     {
-        if (col->HasDefault && col->Type >= 0 && col->Type < 6)
-            return (CriUint8)col->DefaultValue[1];
-        return 0;
+        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
+        switch (col->Type)
+        {
+        case 0:
+        case 1:
+            result = p[0];
+            break;
+        case 2:
+        case 3:
+            result = p[1];
+            break;
+        case 4:
+        case 5:
+            result = p[3];
+            break;
+        }
     }
-    if (col->Type < 0 || col->Type >= 6)
-        return 0;
-    return p[col->Type == 0 ? 0 : (col->Type == 2 ? 1 : 3)];
+    else if (col->HasDefault)
+    {
+        switch (col->Type)
+        {
+        case 0:
+        case 1:
+            result = (CriUint8)col->DefaultValue[1];
+            break;
+        case 2:
+        case 3:
+            result = (CriUint8)(CriUint16)col->DefaultValue[1];
+            break;
+        case 4:
+        case 5:
+            result = (CriUint8)(CriUint32)col->DefaultValue[1];
+            break;
+        }
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor decodes stored integers in network byte order.
 // @0x14003a58c
 CriUint32 criUtfRtv_GetDataUint32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    if (!p)
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    CriUint32 result = 0;
+    if (col->IsRecordField && row < table->RecordCount)
     {
-        if (!col->HasDefault || col->Type < 0 || col->Type >= 6)
-            return 0;
-        CriUint64 d = col->DefaultValue[1];
-        return col->Type < 2 ? (CriUint8)d : (col->Type < 4 ? (CriUint16)d : (CriUint32)d);
+        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
+        switch (col->Type)
+        {
+        case 0:
+        case 1:
+            result = p[0];
+            break;
+        case 2:
+        case 3:
+            result = ((CriUint32)p[0] << 8) | p[1];
+            break;
+        case 4:
+        case 5:
+            result = criUtfReadBE32(p);
+            break;
+        }
     }
-    if (col->Type < 0 || col->Type >= 6)
-        return 0;
-    if (col->Type < 2)
-        return p[0];
-    if (col->Type < 4)
-        return ((CriUint32)p[0] << 8) | p[1];
-    return criUtfReadBE32(p);
+    else if (col->HasDefault)
+    {
+        switch (col->Type)
+        {
+        case 0:
+        case 1:
+            result = (CriUint8)col->DefaultValue[1];
+            break;
+        case 2:
+        case 3:
+            result = (CriUint16)col->DefaultValue[1];
+            break;
+        case 4:
+        case 5:
+            result = (CriUint32)col->DefaultValue[1];
+            break;
+        }
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor reads 64-bit big-endian record fields.
@@ -1168,36 +1221,57 @@ CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* table, CriUint32 row, Cri
 // @0x14003a6e8
 CriFloat32 criUtfRtv_GetDataFloat32(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    CriUint32 bits = p ? criUtfReadBE32(p) : (col->HasDefault ? (CriUint32)col->DefaultValue[1] : 0);
-    CriFloat32 value;
-    memcpy(&value, &bits, sizeof(value));
-    return value;
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    if (col->IsRecordField && row < table->RecordCount)
+    {
+        // the exe reuses the field argument's home slot for the bits
+        field = criUtfReadBE32(table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset);
+        return *(const CriFloat32*)&field;
+    }
+    if (col->HasDefault)
+        return *(const CriFloat32*)&col->DefaultValue[1];
+    return 0.0f;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; decode the record's big-endian IEEE double precision bits.
 // @0x14003a754
 double criUtfRtv_GetDataFloat64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    CriUint64 bits = p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[1] : 0);
-    double value;
-    memcpy(&value, &bits, sizeof(value));
-    return value;
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    if (col->IsRecordField && row < table->RecordCount)
+    {
+        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
+        CriUint64 bits = p[0];
+        bits = (bits << 8) | p[1];
+        bits = (bits << 8) | p[2];
+        bits = (bits << 8) | p[3];
+        bits = (bits << 8) | p[4];
+        bits = (bits << 8) | p[5];
+        bits = (bits << 8) | p[6];
+        bits = (bits << 8) | p[7];
+        return *(const double*)&bits;
+    }
+    if (col->HasDefault)
+        return *(const double*)&col->DefaultValue[1];
+    return 0.0;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; string cells hold a big-endian offset into the table string block.
 // @0x14003a7f4
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    if (!p)
-        return col->HasDefault ? (const CriChar8*)col->DefaultValue[1] : NULL;
-    CriUint32 offset = criUtfReadBE32(p);
-    return offset ? (const CriChar8*)(table->StringData + offset) : NULL;
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    const CriChar8* result = NULL;
+    if (col->IsRecordField && row < table->RecordCount)
+    {
+        CriUint32 offset = criUtfReadBE32(table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset);
+        if (!offset)
+            return NULL;
+        return (const CriChar8*)(table->StringData + offset);
+    }
+    if (col->HasDefault)
+        result = (const CriChar8*)col->DefaultValue[1];
+    return result;
 }
 
 // MS2-FUNCTIONAL: the CRI name-based callback resolves its field, then forwards to the corresponding typed accessor.
@@ -6552,14 +6626,16 @@ void FUN_142cccad0(void* decoder)
 // @0x142cccb30
 void FUN_142cccb30(void* decoder, CriSint32 run)
 {
-    CriUint8 zeroMotion[0x20] = {};
+    struct Motion { CriSint32 Reserved00[6]; CriSint32 X; CriSint32 Y; CriSint32 Reserved20[4]; } zeroMotion;
+    zeroMotion.X = 0;
+    zeroMotion.Y = 0;
     CriSint32 target = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
     mpvumc_SubMbadr((CriMpvDecoderState*)decoder, run);
     if (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target)
     {
         do
         {
-            FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF0, zeroMotion, 0);
+            FUN_142ccc8c0(decoder, (CriUint8*)decoder + MPV_REF0, &zeroMotion, 0);
             mpvumc_IncreMbadr((CriMpvDecoderState*)decoder);
         } while (CriMpvField<CriSint32>(decoder, MPV_ADDRESS) < target);
     }
