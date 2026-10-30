@@ -982,18 +982,18 @@ namespace Instances { namespace fl_filters
         ASString type = GetVM().GetStringManager().CreateConstString("inner");
         bool knockout(false);
 
-        if (argc > 0 && !argv[0].Convert2Number(distance)) return;
-        if (argc > 1 && !argv[1].Convert2Number(angle)) return;
-        if (argc > 2 && !argv[2].Convert2UInt32(highlightColor)) return;
-        if (argc > 3 && !argv[3].Convert2Number(highlightAlpha)) return;
-        if (argc > 4 && !argv[4].Convert2UInt32(shadowColor)) return;
-        if (argc > 5 && !argv[5].Convert2Number(shadowAlpha)) return;
-        if (argc > 6 && !argv[6].Convert2Number(blurX)) return;
-        if (argc > 7 && !argv[7].Convert2Number(blurY)) return;
-        if (argc > 8 && !argv[8].Convert2Number(strength)) return;
-        if (argc > 9 && !argv[9].Convert2Int32(quality)) return;
-        if (argc > 10 && !argv[10].Convert2String(type)) return;
-        if (argc > 11) knockout = argv[11].Convert2Boolean();
+        if (argc >= 1 && !argv[0].Convert2Number(distance)) return;
+        if (argc >= 2 && !argv[1].Convert2Number(angle)) return;
+        if (argc >= 3 && !argv[2].Convert2UInt32(highlightColor)) return;
+        if (argc >= 4 && !argv[3].Convert2Number(highlightAlpha)) return;
+        if (argc >= 5 && !argv[4].Convert2UInt32(shadowColor)) return;
+        if (argc >= 6 && !argv[5].Convert2Number(shadowAlpha)) return;
+        if (argc >= 7 && !argv[6].Convert2Number(blurX)) return;
+        if (argc >= 8 && !argv[7].Convert2Number(blurY)) return;
+        if (argc >= 9 && !argv[8].Convert2Number(strength)) return;
+        if (argc >= 10 && !argv[9].Convert2Int32(quality)) return;
+        if (argc >= 11 && !argv[10].Convert2String(type)) return;
+        if (argc >= 12) knockout = argv[11].Convert2Boolean();
 
         Value result;
         distanceSet(result, distance);
