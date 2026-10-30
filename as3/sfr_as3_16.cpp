@@ -2236,7 +2236,7 @@ template SfrCx18TextFormatSet::~HashSetBase();
 template SfrCx18ASStringValueSet::~HashSetBase();
 }
 
-extern "C" void FUN_1423dfa20();
+extern "C" void FUN_1423dfa20(void* object);   // RefCountBaseGC::ReleaseInternal
 
 // Assigns a tagged AS3 reference and transfers the old/new reference counts.
 // MS2-FUNCTIONAL 0x1424e0860: refcount operations and branch outcomes match; Clang saves the old value in another register.
@@ -2251,7 +2251,7 @@ Scaleform::UInt64* FUN_1424e0860(Scaleform::UInt64* self, Scaleform::UInt64 valu
             {
                 auto* refs = reinterpret_cast<Scaleform::UInt32*>(*self + 0x10);
                 if ((*refs & 0x3fffff) != 0)
-                    --*refs, FUN_1423dfa20();
+                    --*refs, FUN_1423dfa20(reinterpret_cast<void*>(*self));
             }
             else
                 *self = *self - 1;
@@ -2290,7 +2290,7 @@ void FUN_1424dcc30(void* self)
                         if ((*refs & 0x3fffff) != 0)
                         {
                             --*refs;
-                            FUN_1423dfa20();
+                            FUN_1423dfa20(reinterpret_cast<void*>(value));
                         }
                     }
                     else
@@ -2398,7 +2398,7 @@ void FUN_1424dcdd0(void* self)
                         if ((*refs & 0x3fffff) != 0)
                         {
                             --*refs;
-                            FUN_1423dfa20();
+                            FUN_1423dfa20(reinterpret_cast<void*>(value));
                         }
                     }
                     else
