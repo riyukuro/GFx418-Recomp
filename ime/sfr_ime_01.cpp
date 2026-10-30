@@ -3832,12 +3832,13 @@ unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long
         const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0xd0);
         for (unsigned i = 0; i < count; ++i) {
             auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-            if (*reinterpret_cast<unsigned*>(record + 0x20) != code) continue;
+            const unsigned recordCode = *reinterpret_cast<unsigned*>(record + 0x20);
+            if (recordCode != code) continue;
             auto** vtable = reinterpret_cast<void**>(manager[0]);
             const unsigned state = reinterpret_cast<unsigned*>(manager[0x32])[i];
             if (state == 1 || state == 2) {
                 *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) =
-                    reinterpret_cast<unsigned(*)(void*)>(vtable[3])(manager);
+                    reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3])(manager, recordCode);
                 for (unsigned mode = 0; mode < manager[0x13]; ++mode) {
                     auto* item = reinterpret_cast<unsigned char*>(manager[0x12]) + mode * 0x20;
                     if (*reinterpret_cast<unsigned*>(item + 0x10) ==
