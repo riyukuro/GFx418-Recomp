@@ -632,38 +632,34 @@ void FUN_1423da150(void* self, void* output, const String* key)
     *reinterpret_cast<unsigned*>(value + 8) = 6;
 }
 
-// MS2-FUNCTIONAL: queries the active keyboard layout, updates its locale label, and selects the executable's mode text.
+// Queries the active keyboard layout (+0x198), stores its language (+0x84), shows its locale name in the +0x78 movie and
+// shows "Not Supported" / the locale name / the layout text for the current +0x88 mode.
 // @0x1423d7140
 void FUN_1423d7140(unsigned long long* manager)
 {
-    const HKL layout = GetKeyboardLayout(0);
-    manager[0x33] = reinterpret_cast<unsigned long long>(layout);
-    auto** vtable = reinterpret_cast<void**>(manager[0]);
-    const unsigned language = reinterpret_cast<unsigned(*)(void*, short)>(vtable[4])(
-        manager, static_cast<short>(manager[0x33]));
-    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = language;
+    auto* bytes = reinterpret_cast<unsigned char*>(manager);
+    manager[0x33] = reinterpret_cast<unsigned long long>(GetKeyboardLayout(0));
+    const unsigned language = reinterpret_cast<unsigned(*)(void*, unsigned short)>((*reinterpret_cast<void***>(manager))[4])(
+        manager, *reinterpret_cast<unsigned short*>(bytes + 0x198));
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = language;
     FUN_1423ca560(reinterpret_cast<GFxIMEManagerWin32*>(manager[0xf]), language);
-    wchar_t locale[0x104]{};
-    if (!GetLocaleInfoW(static_cast<LCID>(reinterpret_cast<ULONG_PTR>(layout) & 0xffff), LOCALE_SLANGUAGE,
-                        locale, _countof(locale))) {
-        reinterpret_cast<void(*)(void*, DWORD, const char*)>(vtable[0x78 / sizeof(void*)])(
-            manager, GetLastError(), "GFxIME Error: Error Initializing Input Language Name ");
-        void* languageObject = reinterpret_cast<void*>(manager[0xf]);
-        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
-            languageObject, "Unsupported");
+    wchar_t locale[0x104];
+    if (!GetLocaleInfoW(*reinterpret_cast<unsigned short*>(bytes + 0x198), LOCALE_SLANGUAGE, locale, 0x104)) {
+        const DWORD error = GetLastError();
+        reinterpret_cast<void(*)(void*, DWORD, const char*)>((*reinterpret_cast<void***>(manager))[0x78 / sizeof(void*)])(
+            manager, error, "GFxIME Error: Error Initializing Input Language Name ");
+        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x78 / sizeof(void*)])(
+            reinterpret_cast<void*>(manager[0xf]), "Unsupported");
         return;
     }
-    String localeText(locale);
-    void* languageObject = reinterpret_cast<void*>(manager[0xf]);
-    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(languageObject))[0x78 / sizeof(void*)])(
-        languageObject, localeText.ToCStr());
-    unsigned mode = static_cast<unsigned>(manager[0x11]);
+    reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager[0xf]))[0x78 / sizeof(void*)])(
+        reinterpret_cast<void*>(manager[0xf]), String(locale).ToCStr());
+    unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x88);
     if (mode == 0x01000000) {
-        String unsupported("Not Supported");
-        FUN_1423ccdc0(manager, unsupported);
-        mode = static_cast<unsigned>(manager[0x11]);
+        FUN_1423ccdc0(manager, String("Not Supported"));
+        mode = *reinterpret_cast<unsigned*>(bytes + 0x88);
     }
-    if (mode == 0x03000000) FUN_1423ccdc0(manager, localeText);
+    if (mode == 0x03000000) FUN_1423ccdc0(manager, String(locale));
     else FUN_1423cc2d0(manager);
 }
 
