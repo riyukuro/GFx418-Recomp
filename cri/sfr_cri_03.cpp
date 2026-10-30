@@ -1697,14 +1697,20 @@ CriSint32 criVmpv_GetStatus(const void* handle)
 
 // MS2-FUNCTIONAL: create and configure the MPV instance owned by a VMPV handle.
 // @0x14003c8d0
-CriBool createMpvHn(void* handle)
+CriBool createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height, CriUint32 frames)
 {
+    struct VmpvHandle { CriUint8 Reserved00[0x18]; CriSint32 Status; CriUint8 Reserved1C[0x5c]; void* Mpv; };
+    // the exe self-assigns its unused parameters (the CRI unused-argument idiom)
+    heap = heap;
+    width = width;
+    height = height;
+    frames = frames;
     void* mpv = FUN_14004e580();
-    memcpy((CriUint8*)handle + 0x78, &mpv, sizeof(mpv));
-    if (!mpv)
+    ((VmpvHandle*)handle)->Mpv = mpv;
+    if (!((VmpvHandle*)handle)->Mpv)
     {
-        CriSint32 error = 4;
-        memcpy((CriUint8*)handle + 0x18, &error, sizeof(error));
+        FUN_1400410d0(0, "E05070103M : Can't create the internal decoder handle (MPV). You may need to increase the maximum number of handle resources.", 0);
+        ((VmpvHandle*)handle)->Status = 4;
         return 0;
     }
     FUN_14004e2f0(mpv, 6, 3);
@@ -1737,7 +1743,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     }
     memset(handle, 0, 600);
     memcpy(handle + 0x10, &heap, sizeof(heap));
-    if (!createMpvHn(handle))
+    if (!createMpvHn(handle, heap, width, height, requestedFrames))
     {
         FUN_14003cae0(handle);
         return NULL;
