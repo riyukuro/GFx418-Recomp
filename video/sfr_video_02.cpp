@@ -1,6 +1,10 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64: Scaleform GFx 4.1.18 Video glue, AS3 half.
 // Source is written from the executable; leaked SDK copies are naming/layout reference only.
+// The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
+// cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or variadic templates.
+// clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_02
+// MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14000e470-0x140016b50 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -378,6 +382,11 @@ void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
         }
     }
 }
+
+// 0x140010250 is the out-of-line copy of this SF_INLINE operator; cl 17.00 inlines every call, so instantiate it
+// MS2-PIN: ??4?$WeakPtr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@QEAAXPEAVVideoProvider@Video@GFx@1@@Z 0x140010250
+// MS2-FUNCTIONAL 0x140010250: the exe's copy releases the old proxy with `add [rdx],-1`, cl 17.00.61030 emits `dec`
+template void Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>::operator=(Scaleform::GFx::Video::VideoProvider*);
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -1296,7 +1305,7 @@ void FUN_140012a90(Scaleform::GFx::AS3::Value* value)
 {
     if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
     {
-        alignas(Scaleform::GFx::AS3::Value) unsigned char storage[sizeof(Scaleform::GFx::AS3::Value)];
+        __declspec(align(8)) unsigned char storage[sizeof(Scaleform::GFx::AS3::Value)];
         new (storage) Scaleform::GFx::AS3::Value(*value);
     }
 }
@@ -2678,7 +2687,7 @@ void FUN_140014900(void* object, const unsigned long long* encodedName)
 static void Video02TraitGet(void* instance, void* traits, unsigned* output, unsigned type,
                             void* callback, void* base)
 {
-    unsigned char payload[16]{};
+    unsigned char payload[16] = {};
     auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
     reinterpret_cast<void(*)(char*, void*)>(callback)(reinterpret_cast<char*>(base) + offset, payload);
     if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) == 0)
@@ -3284,7 +3293,7 @@ void* FUN_1400105b0(void* object)
     if (!oldNode) return nullptr;
 
     // slot 1 returns the new node as a Ptr through the hidden result slot; the exe reads the node from it (0x14001094d)
-    using CreateNode = Scaleform::Render::ContextImpl::Entry** (*)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
+    typedef Scaleform::Render::ContextImpl::Entry** (*CreateNode)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
     auto create = reinterpret_cast<CreateNode>((*reinterpret_cast<void***>(object))[1]);
     Scaleform::Render::ContextImpl::Entry* temporary = nullptr;
     const auto contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
@@ -3317,11 +3326,11 @@ void* FUN_140011610(void* object, void** result, void* context)
     const auto ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
     auto* iface = static_cast<unsigned char*>(object) + ifaceIndex * 4;
     auto** ifaceVtable = *reinterpret_cast<void***>(iface);
-    using GetVideoExtent = void* (*)(void*);
+    typedef void* (*GetVideoExtent)(void*);
     auto* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(iface));
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    alignas(16) unsigned allocInfo[4] = { 2, 0, 0, 0 };
-    using Allocate = void* (*)(void*, void*, size_t, const void*);
+    __declspec(align(16)) unsigned allocInfo[4] = { 2, 0, 0, 0 };
+    typedef void* (*Allocate)(void*, void*, size_t, const void*);
     auto allocate = reinterpret_cast<Allocate>(heapVtable[14]);
     auto* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
     if (!shape) { *result = nullptr; return result; }
@@ -3380,7 +3389,7 @@ void* FUN_140011610(void* object, void** result, void* context)
             FUN_14257dcb0(transform);
         }
     }
-    using AllocateNodeData = void* (*)(void*, size_t, size_t);
+    typedef void* (*AllocateNodeData)(void*, size_t, size_t);
     void* nodeHeap = *reinterpret_cast<void**>(context);  // MS2: exe 0x140011a06 allocates from [context], the context's heap
     auto allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10]);
     auto* nodeData = static_cast<unsigned char*>(allocateNodeData(nodeHeap, 0xa0, 0));
@@ -3391,7 +3400,7 @@ void* FUN_140011610(void* object, void** result, void* context)
     }
     FUN_1424d9310(nodeData, 3);
     *reinterpret_cast<const void* const**>(nodeData) = Scaleform::Render::TreeShapeNodeDataVTable;
-    using AddRef = void (*)(void*);
+    typedef void (*AddRef)(void*);
     auto* providerBase = shape + 0x10;
     reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
     *reinterpret_cast<void**>(nodeData + 0x90) = shape;
@@ -3410,10 +3419,10 @@ void* FUN_140011610(void* object, void** result, void* context)
 namespace {
 struct AS2ObjectGCTraversal : Scaleform::GFx::AS2::Object
 {
-    using Collector = Scaleform::GFx::AS2::ASRefCountBaseType::Collector;
-    using ReleaseFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor;
-    using MarkInCycleFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor;
-    using ScanInUseFunctor = Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::Collector Collector;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::ReleaseFunctor ReleaseFunctor;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::MarkInCycleFunctor MarkInCycleFunctor;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor ScanInUseFunctor;
     template<class Functor> static void Run(const Scaleform::GFx::AS2::Object* object, Collector* collector)
     {
         reinterpret_cast<const AS2ObjectGCTraversal*>(object)->template ForEachChild_GC<Functor>(collector);
@@ -3422,7 +3431,7 @@ struct AS2ObjectGCTraversal : Scaleform::GFx::AS2::Object
 
 struct AS2PrototypeGCTraversal : Scaleform::GFx::AS2::GASPrototypeBase
 {
-    using Collector = Scaleform::GFx::AS2::ASRefCountBaseType::Collector;
+    typedef Scaleform::GFx::AS2::ASRefCountBaseType::Collector Collector;
     template<class Functor> static void Run(const AS2PrototypeGCTraversal* self, Collector* collector)
     {
         self->Constructor.template ForEachChild_GC<Functor>(collector);
