@@ -777,12 +777,12 @@ CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
 // @0x140044eb0
 CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
 {
-    const CriSint32 config[3] = { 1, 0, 0x80 };
-    CriSint32 jointBytes = criSjUni_CalculateWorkSize(config);
-    CriSint32 roundedJointBytes = (jointBytes + 7) & ~7;
-    CriSint32 recordBytes = outputCount * 0x10 + 0x17;
-    CriSint32 recordUnits = (recordBytes + ((recordBytes >> 31) & 7)) >> 3;
-    return roundedJointBytes + 0x48 + roundedJointBytes + recordUnits * 8;
+    CriSint32 config[3] = { 1, 0, 0x80 };
+    CriSint32 inputBytes = (criSjUni_CalculateWorkSize(config) + 7) / 8 * 8;
+    config[2] = 0x80;
+    CriSint32 outputUnits = (criSjUni_CalculateWorkSize(config) + 7) / 8;
+    CriSint32 recordUnits = (outputCount * 0x10 + 0x17) / 8;
+    return inputBytes + (outputUnits + recordUnits) * 8 + 0x48;
 }
 
 // MS2-FUNCTIONAL: calculate ring-buffer work size from its synchronization flag and pool sizes.
@@ -1924,25 +1924,25 @@ void FUN_140044fe4(void* stream)
     void* first = state->First;
     void* second = state->Second;
     Chunk chunk;
-    CriUint8 split[16];
+    Chunk split;
     FUN_1400467a0(source, 1, 0x7fffffff, &chunk);
     CriSint32 index = 1;
     if (1 < chunk.Size)
     {
-        CriUint8* scan = chunk.Data;
+        CriUint8* scan = chunk.Data + 1;
         do
         {
-            ++scan;
             if (*scan != 0)
             {
-                criSj_SplitChunk(&chunk, index, &chunk, split);
-                FUN_1400467a8(source, 1, split);
+                criSj_SplitChunk(&chunk, index, &chunk, &split);
+                FUN_1400467a8(source, 1, &split);
                 FUN_1400467b0(first, 1, &chunk);
                 second = state->Second;
                 FUN_1400467b0(second, 1, &chunk);
                 return;
             }
             ++index;
+            ++scan;
         } while (index < chunk.Size);
     }
     FUN_1400467b0(first, 1, &chunk);
@@ -2281,6 +2281,7 @@ void FUN_1400531e0(void*, const void*, void*, void*);
 CriBool FUN_1400415f0(void* handle, void* planeSet);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: build a stream demuxer object holding two universal stream joints and a per-track table.
 // @0x140045144
 void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
@@ -2305,41 +2306,45 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     CriMvWorkAllocator allocator;
     FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
     Demux* demux = (Demux*)FUN_14002e6c0(&allocator, 0x40, 8);
-    if (demux != NULL)
+    if (demux == NULL)
+        return NULL;
+    demux->Reserved00 = NULL;
+    demux->Reserved10 = NULL;
+    demux->Reserved09 = 0;
+    demux->Count = count;
+    demux->Reserved0a = 0;
+    demux->Tracks = (Track*)FUN_14002e6c0(&allocator, (CriUint32)(count + 1) * 0x10, 8);
+    if (demux->Tracks == NULL)
     {
-        demux->Reserved00 = NULL;
-        demux->Reserved10 = NULL;
-        demux->Reserved09 = 0;
-        demux->Count = count;
-        demux->Reserved0a = 0;
-        demux->Tracks = (Track*)FUN_14002e6c0(&allocator, (CriUint32)(count + 1) * 0x10, 8);
-        if (demux->Tracks != NULL)
-        {
-            CriUint32 config[3] = { 1, 0, 0x80 };
-            CriUint32 size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-            demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
-            if (demux->Input != NULL)
-            {
-                config[2] = 0x80;
-                size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-                demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
-                if (demux->Output != NULL)
-                {
-                    Track* last = &demux->Tracks[(CriUint32)demux->Count];
-                    last->Joint = demux->Output;
-                    last->Reserved08 = 0;
-                    last->Limit = 0xffffffffu;
-                    demux->Ready = 1;
-                    memset(demux->Tail, 0, sizeof(demux->Tail));
-                    FUN_14002e6bc(&allocator);
-                    return demux;
-                }
-            }
-        }
         FUN_140044f28(demux);
+        return NULL;
     }
-    return NULL;
+    CriUint32 config[3] = { 1, 0, 0x80 };
+    CriUint32 size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
+    demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+    if (demux->Input == NULL)
+    {
+        FUN_140044f28(demux);
+        return NULL;
+    }
+    config[2] = 0x80;
+    size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
+    demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+    if (demux->Output == NULL)
+    {
+        FUN_140044f28(demux);
+        return NULL;
+    }
+    CriUint32 last = demux->Count;
+    demux->Tracks[last].Joint = demux->Output;
+    demux->Tracks[last].Reserved08 = 0;
+    demux->Tracks[last].Limit = 0xffffffffu;
+    demux->Ready = 1;
+    memset(demux->Tail, 0, sizeof(demux->Tail));
+    FUN_14002e6bc(&allocator);
+    return demux;
 }
+#pragma intrinsic(memset)
 #pragma optimize("", on)
 
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
