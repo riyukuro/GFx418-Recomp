@@ -904,6 +904,7 @@ void BooleanCtorFunction::GlobalCtor(const FnCall& fn)
     }
 }
 
+// @0x14295bd30
 void NumberCtorFunction::GlobalCtor(const FnCall& fn)
 {
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Number && !fn.ThisPtr->IsBuiltinPrototype())
@@ -915,10 +916,7 @@ void NumberCtorFunction::GlobalCtor(const FnCall& fn)
     }
     else
     {
-        if (fn.NArgs == 0)
-            fn.Result->SetNumber(0);
-        else
-            fn.Result->SetNumber(fn.Arg(0).ToNumber(fn.Env));
+        fn.Result->SetNumber((fn.NArgs == 0) ? 0 : fn.Arg(0).ToNumber(fn.Env));
     }
 }
 
@@ -3538,6 +3536,7 @@ void ColorMatrixFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("matrix"), Value(Value::UNSET));
 }
 
+// MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x1429591e0
 void BlurFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3576,6 +3575,7 @@ static inline void SetFilterRGB(Render::Color& c, UInt32 rgb)
     c.SetAlpha(alpha);
 }
 
+// MS2-FUNCTIONAL the exe inlines the DropShadowFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x14295a4b0
 void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3669,6 +3669,7 @@ void DropShadowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
 }
 
+// MS2-FUNCTIONAL the exe inlines the GlowFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x14295b480
 void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3743,6 +3744,7 @@ void GlowFilterCtorFunction::GlobalCtor(const FnCall& fn)
     pfilter->SetMemberRaw(psc, psc->CreateConstString("quality"), Value(Value::UNSET));
 }
 
+// MS2-FUNCTIONAL the exe inlines the BevelFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x142958720
 void BevelFilterCtorFunction::GlobalCtor(const FnCall& fn)
 {
