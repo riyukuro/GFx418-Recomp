@@ -1317,7 +1317,7 @@ void FUN_1423cd060(void* log, const char* format, ...)
     va_list args;
     va_start(args, format);
     auto** vtable = *reinterpret_cast<void***>(log);
-    reinterpret_cast<void(*)(void*, unsigned*, const char*, void*)>(vtable[1])(log, &flags, format, &args);
+    reinterpret_cast<void(*)(void*, unsigned*, const char*, void*)>(vtable[1])(log, &flags, format, args);
     va_end(args);
 }
 
@@ -4063,22 +4063,15 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     auto* self = static_cast<unsigned char*>(raw);
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
     HIMC context = cx18_ImmGetContext(hwnd);
-    if (!context) return;
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
-    if (!bytes) {
-        cx18_ImmReleaseContext(hwnd, context);
-        return;
-    }
-    auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes));
-    if (!candidates) {
-        cx18_ImmReleaseContext(hwnd, context);
-        return;
-    }
+    if (!bytes) return;
+    auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes * sizeof(CANDIDATELIST)));
     const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, candidates, bytes);
-    cx18_ImmReleaseContext(hwnd, context);
     *reinterpret_cast<DWORD*>(self + 0xd8) = candidates->dwCount;
+    const DWORD selection = candidates->dwSelection;
     *reinterpret_cast<DWORD*>(self + 0x70) = candidates->dwPageStart;
-    if (fetched < offsetof(CANDIDATELIST, dwOffset) || candidates->dwCount == 0) {
+    cx18_ImmReleaseContext(hwnd, context);
+    if (candidates->dwCount == 0) {
         Scaleform::Memory::Free(candidates);
         return;
     }
@@ -4087,37 +4080,35 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     FUN_1423d9500(list);
     for (int i = static_cast<int>(candidates->dwPageStart); i < static_cast<int>(candidates->dwCount); ++i) {
         const DWORD offset = candidates->dwOffset[i];
-        if (offset > fetched || offset < offsetof(CANDIDATELIST, dwOffset)) break;
+        if (offset > fetched || offset < sizeof(CANDIDATELIST)) break;
         const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(candidates) + offset);
-        const int chars = static_cast<int>(wcslen(wide));
-        const int required = WideCharToMultiByte(CP_UTF8, 0, wide, chars, nullptr, 0, nullptr, nullptr);
-        if (required <= 0) continue;
-        char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(required) + 1));
-        if (!text) continue;
-        WideCharToMultiByte(CP_UTF8, 0, wide, chars, text, required, nullptr, nullptr);
-        text[required] = 0;
+        const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(wide, -1);
+        char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size) + 1));
+        Scaleform::UTF8Util::EncodeStringSafe(text, static_cast<Scaleform::UPInt>(size) + 1, wide, -1);
+        text[size] = 0;
         auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
         if (item) {
             FUN_1423cdb60(item, text);
             ++*reinterpret_cast<int*>(item + 1);
-            unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-            FUN_1423d9490(list, &retained);
-            FUN_14257dcd0(item);
         }
+        unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+        FUN_1423d9490(list, &retained);
         Scaleform::Memory::Free(text);
+        if (item) FUN_14257dcd0(item);
     }
+    Scaleform::Memory::Free(candidates);
+    cx18_ImmReleaseContext(hwnd, context);
 
     long long selected = -1;
     const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
     if (state == 0x110000 || state == 0x210000 || state == 0xd00800 ||
         state == 0xd00900 || state == 0xd00a00 || state == 0xd10000) {
-        const int relative = static_cast<int>(candidates->dwSelection - candidates->dwPageStart);
+        const int relative = static_cast<int>(selection - *reinterpret_cast<DWORD*>(self + 0x70));
         selected = relative > 0 ? relative : 0;
     }
     FUN_1423d97f0(list, static_cast<unsigned long long>(selected), 0);
     FUN_1423d9b40(list);
     *reinterpret_cast<unsigned char*>(self + 0xb9) = 1;
-    Scaleform::Memory::Free(candidates);
 }
 
 // MS2-FUNCTIONAL: composition-text update. It reads GCS_COMPSTR, turns every space and U+3000 into U+00A0 and, by mode,
@@ -4182,7 +4173,7 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
     HIMC context = cx18_ImmGetContext(hwnd);
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
     if (!bytes) return;
-    auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes));
+    auto* candidates = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(bytes * sizeof(CANDIDATELIST)));
     const DWORD fetched = cx18_ImmGetCandidateListW(context, listIndex, candidates, bytes);
     *reinterpret_cast<DWORD*>(self + 0xd8) = candidates->dwCount;
     *reinterpret_cast<DWORD*>(self + 0x70) = candidates->dwPageStart;
@@ -4215,7 +4206,7 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
     FUN_1423d9500(list);
     for (int i = static_cast<int>(candidates->dwPageStart); i < static_cast<int>(candidates->dwCount); ++i) {
         const DWORD offset = candidates->dwOffset[i];
-        if (offset > fetched || offset < offsetof(CANDIDATELIST, dwOffset)) break;
+        if (offset > fetched || offset < sizeof(CANDIDATELIST)) break;
         const wchar_t* wide = reinterpret_cast<const wchar_t*>(reinterpret_cast<const unsigned char*>(candidates) + offset);
         const SPInt size = Scaleform::UTF8Util::GetEncodeStringSize(wide, -1);
         char* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size) + 1));
