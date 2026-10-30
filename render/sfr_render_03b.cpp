@@ -1090,15 +1090,6 @@ bool DocView::IsUrlAtPoint(float x, float y, Range* purlPosRange)
     return rv;
 }
 
-// moves a rectangle by a point (Rect += Point in this build: x1, x2, then y1, y2)
-static inline void OffsetRect(RectF* r, const PointF& pt)
-{
-    r->x1 += pt.x;
-    r->x2 += pt.x;
-    r->y1 += pt.y;
-    r->y2 += pt.y;
-}
-
 // @0x142611ff0
 bool DocView::GetCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
 {
@@ -1128,7 +1119,7 @@ bool DocView::GetCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
                 pCharRect->x2 += float(glyph.GetAdvance());
                 pCharRect->y1 = GFX_TEXT_GUTTER;
                 pCharRect->y2 = float(line.GetHeight());
-                OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY())));
+                *pCharRect += PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY()));
                 break;
             }
             advance += glyph.GetAdvance();
@@ -1174,7 +1165,7 @@ bool DocView::GetExactCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
                     pCharRect->x2 *= scale;
                     pCharRect->y1 = line.GetBaseLineOffset() - pfont->GetAscent() * scale + GFX_TEXT_GUTTER;
                     pCharRect->y2 = pCharRect->y1 + textHeight;
-                    OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY())));
+                    *pCharRect += PointF(float(advance) + GFX_TEXT_GUTTER, float(line.GetOffsetY()));
                 }
                 else
                 {
@@ -1184,7 +1175,7 @@ bool DocView::GetExactCharBoundaries(RectF* pCharRect, UPInt indexOfChar)
                     pCharRect->y1 = -pimg->GetBaseLineY();
                     pCharRect->x2 = pCharRect->x1 + pimg->GetScreenWidth();
                     pCharRect->y2 = pCharRect->y1 + pimg->GetScreenHeight();
-                    OffsetRect(pCharRect, PointF(float(advance) + GFX_TEXT_GUTTER, line.GetOffsetY() + GFX_TEXT_GUTTER));
+                    *pCharRect += PointF(float(advance) + GFX_TEXT_GUTTER, line.GetOffsetY() + GFX_TEXT_GUTTER);
                 }
                 break;
             }
