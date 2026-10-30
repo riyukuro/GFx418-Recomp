@@ -1857,7 +1857,6 @@ __declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_142517740(Scalefor
 // ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
 Scaleform::UPInt* FUN_1424d9f30(Scaleform::UPInt* self, Scaleform::UPInt heap, Scaleform::UPInt body, Scaleform::UPInt ops,
                                 Scaleform::UPInt extra);   // Tracer::Tracer (sfr_as3_15)
-void FUN_1424f7840(void* tracer);   // Tracer::EmitCode (sfr_as3_17)
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1873,7 +1872,7 @@ __declspec(safebuffers) const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& VMAbcFi
         FUN_1424d9f30(tr.q, reinterpret_cast<UPInt>(vm.GetMemoryHeap()), reinterpret_cast<UPInt>(&cf),
                       reinterpret_cast<UPInt>(&OpCodeArray[mbi_ind]), reinterpret_cast<UPInt>(&Exceptions[mbi_ind]));
         if (!vm.IsException())
-            FUN_1424f7840(&tr);
+            reinterpret_cast<Tracer*>(&tr)->EmitCode();
         FUN_1424df070(&tr);
     }
     return OpCodeArray[mbi_ind];

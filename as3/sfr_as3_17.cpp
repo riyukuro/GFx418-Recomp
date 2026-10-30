@@ -3031,89 +3031,90 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
 UByte* FUN_1424e6aa0(void* tracer, void* blocks, UPInt pos, int a, bool b);   // Tracer: the block starting at pos
 void FUN_142530220(void* tracer, UPInt pos, void* block);   // Tracer::TraceBlock
 
+// The head of a TR::Block (unrecovered): its flags and its entry state.
+struct Sfr33TrBlockView
+{
+    void*       pPrev;      // +0x00 List<TR::Block> node
+    void*       pNext;      // +0x08
+    UInt32      Flags;      // +0x10 bit 0: not yet traced
+    UInt32      Type;       // +0x14 bit 1: try start, bit 2: catch target
+    TR::State*  pState;     // +0x18
+};
+
 // Tracer::EmitCode: seeds each exception handler block with its caught type, traces the body from the
 // first block, then patches the recorded branch offsets and copies the remapped exception table.
-// MS2-FUNCTIONAL 0x1424f7840: raw-offset model of the Tracer (the class is not recovered here)
+// MS2-FUNCTIONAL 0x1424f7840: TR::Block is a layout view and the block and trace helpers stay FUN_ calls
 // @0x1424f7840
-void FUN_1424f7840(void* tracer)
+void Tracer::EmitCode()
 {
-    typedef ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem> CodeType;
     typedef Abc::MethodBodyInfo::ExceptionInfo ExcInfo;
-    UByte* const tr = static_cast<UByte*>(tracer);
-    if (tr[0x10])
+    if (Done)
         return;
-    UByte* const st = *reinterpret_cast<UByte**>(tr + 0x20);
-    VMAbcFile& file = **reinterpret_cast<VMAbcFile**>(st + 0x28);
-    UByte* const abc = *reinterpret_cast<UByte**>(reinterpret_cast<UByte*>(&file) + 0x28);
+    VMAbcFile& file = *CF.pFile;
+    const Abc::File& abc = file.GetAbcFile();
     VM& vm = file.GetVM();
-    UByte* const vmb = reinterpret_cast<UByte*>(&vm);
-    const Abc::MethodBodyInfo& mbi =
-        *(*reinterpret_cast<Abc::MethodBodyInfo* const* const*>(abc + 0x170))[*reinterpret_cast<const int*>(st + 0x30)];
+    const Abc::MethodBodyInfo& mbi = *abc.MethodBodies.Info[CF.MBIIndex];
     const ArrayLH_POD<ExcInfo, StatMV_VM_AbcFile_Mem>& ei = mbi.exception.info;
     for (UPInt i = 0; i < ei.GetSize(); ++i)
     {
         const ExcInfo& e = ei[i];
-        UByte* b = FUN_1424e6aa0(tr, *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(tr + 0x118) + 0x18), e.from, 0, false);
+        Sfr33TrBlockView* b = reinterpret_cast<Sfr33TrBlockView*>(
+            FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, e.from, 0, false));
         if (b)
         {
-            *reinterpret_cast<UInt32*>(b + 0x10) &= ~1u;
-            *reinterpret_cast<UInt32*>(b + 0x14) |= 2;
+            b->Flags &= ~1u;
+            b->Type |= 2;
         }
-        b = FUN_1424e6aa0(tr, *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(tr + 0x118) + 0x18), e.target, 0, false);
+        b = reinterpret_cast<Sfr33TrBlockView*>(
+            FUN_1424e6aa0(this, reinterpret_cast<Sfr33TrBlockView*>(Blocks.pNext)->pState, e.target, 0, false));
         if (!b)
             continue;
-        *reinterpret_cast<UInt32*>(b + 0x14) |= 4;
-        UByte* const bst = *reinterpret_cast<UByte**>(b + 0x18);
+        b->Type |= 4;
         unsigned flags = 0x48;
-        void* rt;
+        InstanceTraits::Traits* rt;
         if (e.exc_type_ind == 0)
-            rt = *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(vmb + 0x1f8) + 0xc0);
+            rt = &vm.GetClassTraitsObject().GetInstanceTraits();
         else
         {
-            const UByte* mn = *reinterpret_cast<UByte**>(abc + 0xb8) + static_cast<SPInt>(e.exc_type_ind) * 0x10;
-            const UByte* ct = static_cast<const UByte*>(FUN_142524f60(&vm, &file, mn));
+            const Abc::Multiname& mn = abc.Const_Pool.const_multiname[e.exc_type_ind];
+            ClassTraits::Traits* ct = static_cast<ClassTraits::Traits*>(FUN_142524f60(&vm, &file, &mn));
             if (!ct)
             {
-                const Value name(file.GetInternedString(*reinterpret_cast<const int*>(mn + 8)));
+                const Value name(file.GetInternedString(mn.NameIndex));
                 const VM::Error err(VM::ErrorID(1014) /* eClassNotFoundError */, vm, name);
                 FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
                 return;
             }
-            rt = *reinterpret_cast<void* const*>(ct + 0xc0);
-            if (rt == *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(vmb + 0x220) + 0xc0) ||
-                rt == *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(vmb + 0x228) + 0xc0) ||
-                rt == *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(vmb + 0x218) + 0xc0) ||
-                rt == *reinterpret_cast<void**>(*reinterpret_cast<UByte**>(vmb + 0x210) + 0xc0))
+            rt = &ct->GetInstanceTraits();
+            if (rt == &vm.GetClassTraitsSInt().GetInstanceTraits() || rt == &vm.GetClassTraitsUInt().GetInstanceTraits() ||
+                rt == &vm.GetClassTraitsNumber().GetInstanceTraits() || rt == &vm.GetClassTraitsBoolean().GetInstanceTraits())
                 flags = 8;
         }
         Value v;
         Sfr33TracerValueSet(v, flags, rt, false);
-        reinterpret_cast<ArrayDH<Value>*>(bst + 0x38)->PushBack(v);
+        b->pState->GetOpStack().PushBack(v);
     }
-    FUN_142530220(tr, 0, *reinterpret_cast<void**>(tr + 0x118));
-    CodeType& code = **reinterpret_cast<CodeType**>(tr + 0x28);
+    FUN_142530220(this, 0, Blocks.pNext);
     if (vm.IsException())
     {
-        code.Resize(0);
+        WCode.Resize(0);
         return;
     }
-    struct Recalc { UPInt pos; SInt32 off; };
-    const UPInt* map = *reinterpret_cast<UPInt**>(tr + 0xd0);
-    const UPInt mapn = *reinterpret_cast<UPInt*>(tr + 0xd8);
-    for (UPInt i = 0; i < *reinterpret_cast<UPInt*>(tr + 0xb8); ++i)
+    for (UPInt i = 0; i < PosToRecalculate.GetSize(); ++i)
     {
-        const Recalc& r = (*reinterpret_cast<Recalc**>(tr + 0xb0))[i];
-        UPInt& c = code[r.pos];
-        c = c < mapn ? map[c] + r.off - r.pos : 0;
+        const Recalculate& r = PosToRecalculate[i];
+        UPInt& c = WCode[r.pos];
+        c = c < Orig2newPosMap.GetSize() ? Orig2newPosMap[c] + r.base - r.pos : 0;
     }
-    Abc::MethodBodyInfo::Exception& out = **reinterpret_cast<Abc::MethodBodyInfo::Exception**>(tr + 0x30);
     for (UPInt i = 0; i < ei.GetSize(); ++i)
     {
         const ExcInfo& e = ei[i];
-        out.info.PushBack(ExcInfo(static_cast<Abc::SInd>(map[e.from]), static_cast<Abc::SInd>(map[e.to]),
-                                  static_cast<Abc::SInd>(map[e.target]), e.exc_type_ind, e.var_name_ind));
+        WException.info.PushBack(ExcInfo(static_cast<Abc::SInd>(Orig2newPosMap[e.from]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[e.to]),
+                                         static_cast<Abc::SInd>(Orig2newPosMap[e.target]), e.exc_type_ind,
+                                         e.var_name_ind));
     }
-    tr[0x10] = 1;
+    Done = true;
 }
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 
@@ -3134,7 +3135,7 @@ const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame
                       reinterpret_cast<UPInt>(&code), reinterpret_cast<UPInt>(&(*reinterpret_cast<ArrayLH<Abc::MethodBodyInfo::Exception,
                           StatMV_VM_VMAbcFile_Mem>*>(pf + 0xd0))[cf.MBIIndex]));   // Exceptions
         if (!vm.IsException())
-            FUN_1424f7840(&tr);
+            reinterpret_cast<Tracer*>(&tr)->EmitCode();
         FUN_1424df070(&tr);
     }
     return (*reinterpret_cast<ArrayLH<CodeType, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xb8))[cf.MBIIndex];
