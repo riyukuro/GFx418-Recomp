@@ -889,6 +889,23 @@ static const ClassTraits::Traits& GetEnclosedClassTraits(const Vector_object& v)
 
 // ---- AS3Constructor: (length = 0, fixed = false)
 
+// The exe inlines VectorBase<SInt32/UInt32>::Resize (sfr_as3_21) into those two constructors; this is the
+// same body. The String and double constructors call Resize out of line.
+template <typename T>
+inline CheckResult ResizeInline(VectorBase<T>& v, UPInt size)
+{
+    bool ok = false;
+    if (v.CheckFixed())
+    {
+        UPInt i = v.V.GetSize();
+        v.V.Resize(size);
+        for (; i < size; ++i)
+            v.V[i] = 0;
+        ok = true;
+    }
+    return ok;
+}
+
 // @0x142557110
 void Vector_String::AS3Constructor(unsigned argc, const Value* argv)
 {
@@ -919,7 +936,6 @@ void Vector_double::AS3Constructor(unsigned argc, const Value* argv)
         V.Fixed = argv[1].Convert2Boolean();
 }
 
-// MS2-FUNCTIONAL: the exe inlines VectorBase<SInt32>::Resize here; ours calls it
 // @0x1425571f0
 void Vector_int::AS3Constructor(unsigned argc, const Value* argv)
 {
@@ -928,7 +944,7 @@ void Vector_int::AS3Constructor(unsigned argc, const Value* argv)
         UInt32 length;
         if (!argv[0].Convert2UInt32(length))
             return;
-        if (!V.Resize(length))
+        if (!ResizeInline(V, length))
             return;
     }
     if (argc > 1)
@@ -950,7 +966,6 @@ void Vector_object::AS3Constructor(unsigned argc, const Value* argv)
         V.Fixed = argv[1].Convert2Boolean();
 }
 
-// MS2-FUNCTIONAL: the exe inlines VectorBase<UInt32>::Resize here; ours calls it
 // @0x142557330
 void Vector_uint::AS3Constructor(unsigned argc, const Value* argv)
 {
@@ -959,7 +974,7 @@ void Vector_uint::AS3Constructor(unsigned argc, const Value* argv)
         UInt32 length;
         if (!argv[0].Convert2UInt32(length))
             return;
-        if (!V.Resize(length))
+        if (!ResizeInline(V, length))
             return;
     }
     if (argc > 1)
@@ -1409,17 +1424,19 @@ void Vector_uint::AS3push(Value& result, unsigned argc, const Value* argv)
 
 // ---- reverse
 
-// MS2-FUNCTIONAL: Ptr<ASStringNode> swap temporaries scheduled differently
+// Same helper as sfr_as3_21's: Alg::Swap, and the result assigned from a pointer argument.
+template <typename A, typename C>
+inline void ReverseT(A& v, SPtr<C>& result, C* obj)
+{
+    for (SPInt i = 0, j = (SPInt)v.GetSize() - 1; i < j; ++i, --j)
+        Alg::Swap(v[i], v[j]);
+    result = obj;
+}
+
 // @0x1425583c0
 void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 {
-    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
-    {
-        const Ptr<ASStringNode> tmp = V.V[i];
-        V.V[i] = V.V[j];
-        V.V[j] = tmp;
-    }
-    result = this;
+    ReverseT(V.V, result, this);
 }
 
 }}}}} // namespace Scaleform::GFx::AS3::Instances::fl_vec
@@ -2427,18 +2444,16 @@ template ThunkDefs2<const Value&, const Value&> ThunkMakeDefs2<Instances::fl_vec
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace Alg {
-// MS2-FUNCTIONAL: uses ref-counted Ptr assignment for the exe's explicit retain/release swap sequence.
 // @0x14254fda0
 void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values)
 {
-    UPInt left = 0;
-    UPInt right = values.GetSize();
-    while (left < right && left < --right)
+    SPInt from = 0;
+    SPInt to = (SPInt)values.GetSize() - 1;
+    while (from < to)
     {
-        Ptr<GFx::ASStringNode> value = values[left];
-        values[left] = values[right];
-        values[right] = value;
-        ++left;
+        Swap(values[from], values[to]);
+        ++from;
+        --to;
     }
 }
 }}
