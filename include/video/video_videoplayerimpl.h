@@ -42,6 +42,9 @@ class VideoReader : public RefCountBaseNTS<VideoReader, Stat_Default_Mem>, publi
 {
 public:
     VideoReader(VideoReaderConfig* pconfig);                                         // 0x14002d970
+    // The same constructor, inlined where the exe inlines it (VideoReaderConfigSmp::CreateReader).
+    enum InlineCtorTag { InlineCtor };
+    VideoReader(VideoReaderConfig* pconfig, InlineCtorTag);
     virtual ~VideoReader();
 
     virtual void        Open(CriChar8* fname);

@@ -951,7 +951,7 @@ VideoPlayerImpl::VideoPlayerImpl(MemoryHeap* pheap)
 }
 
 // Puts the player back to the state of a newly opened file (Open and the SetSyncObject restart).
-static inline void ResetForOpen(VideoPlayerImpl* p)
+static __forceinline void ResetForOpen(VideoPlayerImpl* p)
 {
     p->StopAndWait();
     p->pPlayer->SetCuePointCallback(NULL, NULL, SF_VIDEO_ERR);
@@ -1334,6 +1334,15 @@ VideoReader::VideoReader(VideoReaderConfig* pconfig)
     CloseStatus = ASYNC_STATUS_STOP;
 }
 
+__forceinline VideoReader::VideoReader(VideoReaderConfig* pconfig, InlineCtorTag)
+    : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
+{
+    FUN_14001d650(pconfig, this);
+    OpenStatus  = ASYNC_STATUS_STOP;
+    ReadStatus  = ASYNC_STATUS_STOP;
+    CloseStatus = ASYNC_STATUS_STOP;
+}
+
 // MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002d430
 VideoReader::~VideoReader()
@@ -1404,7 +1413,7 @@ void VideoReader::Read(CriUint8* buffer, CriSint64 req_size)
 VideoReader* VideoReaderConfigSmp::CreateReader()
 {
     void* mem = pHeap->Alloc(sizeof(VideoReader));
-    return mem ? ::new(mem) VideoReader(this) : NULL;
+    return mem ? ::new(mem) VideoReader(this, VideoReader::InlineCtor) : NULL;
 }
 
 }}} // namespace Scaleform::GFx::Video
