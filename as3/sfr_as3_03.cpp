@@ -2019,7 +2019,7 @@ namespace Instances { namespace fl
     {
         InstanceTraits::Traits& itr = GetInstanceTraits();
         Array* arr = new(itr.Alloc()) Array(itr);
-        result = arr;
+        result.Pick(arr);
         const SInt32 len = static_cast<SInt32>(SA.GetSize());
         if (startIndex < 0)
             startIndex += len;

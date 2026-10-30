@@ -378,7 +378,7 @@ namespace Instances { namespace fl
     {
         InstanceTraits::Traits& itr = GetInstanceTraits();
         Array* arr = new(itr.Alloc()) Array(itr);
-        result = arr;
+        result.Pick(arr);
         if (callback.IsNullOrUndefined())
             return;
         Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
@@ -421,7 +421,7 @@ namespace Instances { namespace fl
     {
         InstanceTraits::Traits& itr = GetInstanceTraits();
         Array* arr = new(itr.Alloc()) Array(itr);
-        result = arr;
+        result.Pick(arr);
         if (callback.IsNullOrUndefined())
             return;
         Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
