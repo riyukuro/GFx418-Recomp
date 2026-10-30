@@ -1820,7 +1820,7 @@ void Traits::CalculateMemSize(unsigned parent_size)
 }
 
 // Class::Call: a class called as a function converts its single argument to the class (a TypeError when it
-// cannot); any other argument count is an ArgumentError.
+// cannot); any other argument count is a RangeError (exe 0x1424ee79b).
 // MS2-FUNCTIONAL 0x1424ee6f0: the exe holds the class name in another frame slot; same results
 // @0x1424ee6f0
 void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
@@ -1840,7 +1840,7 @@ void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* 
     {
         VM& vm = ctr.GetVM();
         const VM::Error e(VM::eCoerceArgumentCountError, vm, int(argc));
-        FUN_14252ecb0(&vm, &e, &fl::ArgumentErrorCI);
+        FUN_14252ecb0(&vm, &e, &fl::RangeErrorCI);
     }
 }
 
