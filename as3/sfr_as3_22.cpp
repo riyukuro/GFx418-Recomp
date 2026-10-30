@@ -38,7 +38,6 @@ extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
 extern "C" void* DAT_143b15f60;
-extern "C" void FUN_1426867f0(void*, void*, void*, std::uint64_t);
 extern "C" void FUN_142690a20(void*, void*, std::int64_t);
 // The vftables below are the tables themselves: their users store the table's address (the exe's lea), not its slot 0.
 extern ExeDecl<void*> DAT_1431921e0;
@@ -110,7 +109,7 @@ extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
 extern "C" void FUN_142689aa0(void*, void*, void*);
 extern "C" void FUN_142689cb0(void*, void*, void*);
-extern "C" void* FUN_142689640(void*, int);
+extern "C" void* FUN_142689640(void*, bool);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 
@@ -130,111 +129,7 @@ static void WriteFixedHashValue(std::uint64_t* row, const std::uint64_t* value)
 }
 namespace Scaleform { static std::uint64_t HashImageKey(const unsigned char* key); }
 
-// MS2-FUNCTIONAL: clears or rebuilds the fixed 0x38-byte movie-record hash table and reinserts each occupied key/payload pair.
-// @0x1426906b0
-extern "C" void FUN_1426906b0(void* setObject, void* allocator, std::size_t requestedSize)
-{
-    auto** set = static_cast<std::uint64_t**>(setObject);
-    auto* oldTable = *set;
-    if (!requestedSize) {
-        if (oldTable) {
-            const std::uint64_t oldCapacity = oldTable[1] + 1;
-            auto* bytes = reinterpret_cast<unsigned char*>(oldTable);
-            for (std::uint64_t i = 0; i < oldCapacity; ++i) {
-                auto* row = reinterpret_cast<std::uint64_t*>(bytes + 0x10 + i * 0x38);
-                if (static_cast<std::int64_t>(row[0]) != -2)
-                    row[0] = UINT64_MAX - 1;
-            }
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, oldTable);
-            *set = nullptr;
-        }
-        return;
-    }
 
-    std::uint64_t capacity = 8;
-    while (capacity < requestedSize)
-        capacity <<= 1;
-    int statId = 2;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* newTable = reinterpret_cast<std::uint64_t* (*)(void*, std::size_t, const int*)>(heapVtable[10])(
-        DAT_143b15f60, static_cast<std::size_t>(capacity * 0x38 + 0x10), &statId);
-    newTable[0] = 0;
-    newTable[1] = capacity - 1;
-    auto* newBytes = reinterpret_cast<unsigned char*>(newTable);
-    for (std::uint64_t i = 0; i < capacity; ++i)
-        *reinterpret_cast<std::uint64_t*>(newBytes + 0x10 + i * 0x38) = UINT64_MAX - 1;
-    *set = newTable;
-
-    if (oldTable) {
-        const std::uint64_t oldCapacity = oldTable[1] + 1;
-        auto* oldBytes = reinterpret_cast<unsigned char*>(oldTable);
-        for (std::uint64_t i = 0; i < oldCapacity; ++i) {
-            auto* row = reinterpret_cast<std::uint64_t*>(oldBytes + 0x10 + i * 0x38);
-            if (static_cast<std::int64_t>(row[0]) != -2) {
-                const auto* key = reinterpret_cast<const unsigned char*>(oldBytes + 0x20 + i * 0x38);
-                const auto* payload = reinterpret_cast<const std::uint64_t*>(oldBytes + 0x28 + i * 0x38);
-                struct Pair { const unsigned char* key; const std::uint64_t* payload; } pair{key, payload};
-                FUN_1426867f0(setObject, allocator, &pair, Scaleform::HashImageKey(key));
-                row[0] = UINT64_MAX - 1;
-            }
-        }
-        auto** oldHeapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void (*)(void*, void*)>(oldHeapVtable[12])(DAT_143b15f60, oldTable);
-    }
-}
-
-// MS2-FUNCTIONAL: inserts a key and six qwords of cached payload into the fixed-size hash table, relocating collisions and growing it as needed.
-// @0x1426867f0
-extern "C" void FUN_1426867f0(void* setObject, void* allocator, void* valueData, std::uint64_t hash)
-{
-    auto* value = static_cast<std::uint64_t*>(valueData);
-    auto** set = static_cast<std::uint64_t**>(setObject);
-    auto* table = *set;
-    std::uint64_t capacity;
-    if (!table) {
-        capacity = 8;
-    } else {
-        if (table[0] * 5 <= table[1] * 4 + 4)
-            goto insert_entry;
-        capacity = table[1] * 2 + 2;
-    }
-    FUN_1426906b0(setObject, allocator, capacity);
-insert_entry:
-    table = *set;
-    const std::uint64_t bucket = hash & table[1];
-    ++table[0];
-    auto* row = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) + 0x10 + bucket * 0x38);
-    const std::uint64_t occupant = row[0];
-    if (static_cast<std::int64_t>(occupant) == -2) {
-        row[0] = UINT64_MAX;
-        WriteFixedHashValue(row, value);
-    } else {
-        std::uint64_t empty = bucket;
-        do {
-            empty = (empty + 1) & table[1];
-        } while (static_cast<std::int64_t>(*reinterpret_cast<std::uint64_t*>(
-            reinterpret_cast<unsigned char*>(table) + 0x10 + empty * 0x38)) != -2);
-        auto* target = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) + 0x10 + empty * 0x38);
-        if (row[1] == bucket) {
-            target[0] = occupant;
-            CopyFixedHashPayload(target, row);
-            row[0] = empty;
-        } else {
-            auto* previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
-                0x10 + row[1] * 0x38);
-            while (previous[0] != bucket)
-                previous = reinterpret_cast<std::uint64_t*>(reinterpret_cast<unsigned char*>(table) +
-                    0x10 + previous[0] * 0x38);
-            target[0] = occupant;
-            CopyFixedHashPayload(target, row);
-            previous[0] = empty;
-            row[0] = UINT64_MAX;
-        }
-        WriteFixedHashValue(row, value);
-    }
-    row[1] = bucket;
-}
 namespace Scaleform {
 
 namespace GFx { class StaticTextRecord; class TaskThreadInPool; }
@@ -654,8 +549,6 @@ int FUN_1428d8ef6(void*, unsigned, unsigned);
 int FUN_1428d8f0e(void*, unsigned, unsigned, unsigned, unsigned);
 int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
 void FUN_142742830(long long*, unsigned long long*);
-void FUN_14268b710(void*, Scaleform::Log*);
-void FUN_14268bd60(void*, Scaleform::Log*);
 
 // The copy-style ops share the exe's clip: the op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
 // destination point. The span is clipped against the source and then the destination, in destination space; the
@@ -1369,40 +1262,48 @@ template<> void FuncTreeItem::Visit<OffsetIdVisitor>(OffsetIdVisitor& visitor)
 }
 }}
 
-void* FindFixedHashKey(void*, void*, const unsigned char*);
-void AddImageHashValue(void*, const unsigned char*, const void*);
 
-// MS2-FUNCTIONAL: adds or updates this tree node's fixed-hash record, then processes all child nodes.
-// @0x142686440
-void AccumulateImageTreeValue(void* node, void* set)
+namespace GFx { namespace AMP {
+enum { NativeCodeSwdHandle = 1 };
+
+struct FunctionTreeVisitor
 {
-    auto* bytes = static_cast<unsigned char*>(node);
-    auto* key = bytes + 0x10;
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(set) + 8) != 0 ||
-        (*reinterpret_cast<std::uint64_t*>(key) >> 32) == 1) {
-        std::uint64_t found[2] = {};
-        FindFixedHashKey(set, found, key);
-        auto* table = found[0] ? *reinterpret_cast<unsigned char**>(found[0]) : nullptr;
-        if (!table || static_cast<std::int64_t>(found[1]) >
-                          *reinterpret_cast<std::int64_t*>(table + 8)) {
-            struct ValueRecord { std::uint64_t key; std::uint64_t index; std::uint32_t count; std::uint32_t pad; std::uint64_t size; };
-            ValueRecord value{*reinterpret_cast<std::uint64_t*>(key), 0, 1, 0,
-                              *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
-                              *reinterpret_cast<std::uint64_t*>(bytes + 0x18)};
-            AddImageHashValue(set, key, &value);
-        } else {
-            auto* entry = table + 0x38 + found[1] * 0x38;
-            ++*reinterpret_cast<std::uint32_t*>(entry);
-            *reinterpret_cast<std::uint64_t*>(entry + 8) +=
-                *reinterpret_cast<std::uint64_t*>(bytes + 0x20) -
-                *reinterpret_cast<std::uint64_t*>(bytes + 0x18);
+    FunctionTreeVisitor(bool includeActionscipt) : IncludeActionScript(includeActionscipt) { }
+    void operator()(const FuncTreeItem* root)
+    {
+        if (IncludeActionScript || (root->FunctionId >> 32) == GFx::AMP::NativeCodeSwdHandle)
+        {
+            Hash<UInt64, MovieFunctionStats::FuncStats>::Iterator it = FuncMap.Find(root->FunctionId);
+            if (it != FuncMap.End())
+            {
+                ++it->Second.TimesCalled;
+                it->Second.TotalTime += root->EndTime - root->BeginTime;
+            }
+            else
+            {
+                MovieFunctionStats::FuncStats funcStats;
+                funcStats.FunctionId = root->FunctionId;
+                funcStats.CallerId = 0;
+                funcStats.TimesCalled = 1;
+                funcStats.TotalTime = root->EndTime - root->BeginTime;
+                FuncMap.Add(root->FunctionId, funcStats);
+            }
         }
     }
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < count; ++i)
-        AccumulateImageTreeValue(children[i], set);
+    Hash<UInt64, MovieFunctionStats::FuncStats> FuncMap;
+    bool IncludeActionScript;
+};
+
+// @0x142686440
+template<> void FuncTreeItem::Visit<FunctionTreeVisitor>(FunctionTreeVisitor& visitor)
+{
+    visitor(this);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->Visit(visitor);
+    }
 }
+}}
 }
 
 namespace Scaleform {
@@ -1868,37 +1769,6 @@ GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator+=(const ProfileFrame& r
     return *this;
 }
 
-// MS2-FUNCTIONAL: hashes the eight-byte key, follows the bucket collision chain, and returns the matching cached node index.
-// @0x14268a450
-void* FindFixedHashKey(void* setObject, void* result, const unsigned char* key)
-{
-    auto* output = static_cast<std::uint64_t*>(result);
-    auto* set = static_cast<unsigned char*>(setObject);
-    auto* table = *reinterpret_cast<unsigned char**>(set);
-    std::int64_t found = -1;
-    if (table) {
-        const std::uint64_t hash = HashImageKey(key);
-        const std::uint64_t bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
-        std::int64_t index = static_cast<std::int64_t>(bucket);
-        auto* entry = reinterpret_cast<std::int64_t*>(table + 0x10 + bucket * 0x38);
-        if (entry[0] != -2 && static_cast<std::uint64_t>(entry[1]) == bucket) {
-            for (;;) {
-                if (static_cast<std::uint64_t>(entry[1]) == bucket &&
-                    static_cast<std::uint64_t>(entry[2]) == *reinterpret_cast<const std::uint64_t*>(key)) {
-                    found = index;
-                    break;
-                }
-                index = entry[0];
-                if (index == -1)
-                    break;
-                entry = reinterpret_cast<std::int64_t*>(table + 0x10 + index * 0x38);
-            }
-        }
-    }
-    output[0] = found < 0 ? 0 : reinterpret_cast<std::uint64_t>(setObject);
-    output[1] = found < 0 ? 0 : static_cast<std::uint64_t>(found);
-    return result;
-}
 
 // MS2-FUNCTIONAL: resolves both cached labels and formats every timing record into the executable's temporary String sink.
 // @0x14268a040
@@ -1943,13 +1813,6 @@ void FUN_14268a040(void* source)
     }
 }
 
-// MS2-FUNCTIONAL: inserts an eight-byte key/value pair through the recovered cached hash-set insertion routine.
-// @0x1426899e0
-void AddImageHashValue(void* set, const unsigned char* key, const void* value)
-{
-    struct Pair { const unsigned char* key; std::uint64_t value; } pair{key, reinterpret_cast<std::uint64_t>(value)};
-    FUN_1426867f0(set, set, &pair, HashImageKey(key));
-}
 
 // MS2-FUNCTIONAL: inserts a pointer value into the allocator-backed open-addressed hash set, relocating collisions and growing at the executable's load threshold.
 // @0x1426869a0
@@ -2810,12 +2673,6 @@ static void ReserveHeapArray(void** array, void* heapOwner, std::size_t requeste
     array[2] = reinterpret_cast<void*>(capacity);
 }
 
-// MS2-FUNCTIONAL: rounds capacity to four values and allocates or reallocates 32-byte records.
-// @0x14268e420
-void ReserveValueRecordArray(void** array, void* heapOwner, std::size_t requested)
-{
-    ReserveHeapArray(array, heapOwner, requested, 32, false);
-}
 
 // MS2-FUNCTIONAL: rounds pointer capacity to four slots and uses the global heap's allocate, reallocate, and free paths.
 // @0x142678170
@@ -3228,23 +3085,6 @@ void DestroyStrongReferenceArray(void** array)
     reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, elements);
 }
 
-// MS2-FUNCTIONAL: marks each occupied fixed-width hash bucket deleted, frees the table allocation, and clears the set pointer.
-// @0x1426871f0
-void ClearFixedHashSet(void** set)
-{
-    auto* table = static_cast<unsigned char*>(set[0]);
-    if (!table)
-        return;
-    const std::size_t buckets = *reinterpret_cast<std::size_t*>(table + 8) + 1;
-    for (std::size_t i = 0; i < buckets; ++i) {
-        auto* marker = reinterpret_cast<long long*>(table + 0x10 + i * 0x38);
-        if (*marker != -2)
-            *marker = -2;
-    }
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, table);
-    set[0] = nullptr;
-}
 
 static void WriteImageStream(void* stream, const void* data, unsigned size)
 {
@@ -4153,25 +3993,6 @@ static void CopyAs3RawRecords(unsigned char* destinationList, const unsigned cha
                     *reinterpret_cast<void* const*>(sourceList + 0x10), count * stride);
 }
 
-// MS2-FUNCTIONAL: orders a half-open range of 32-byte records using the supplied comparison callback.
-// @0x1426860f0
-extern "C" void FUN_1426860f0(void** array, std::size_t first, std::size_t last,
-                              unsigned char (*less)(const void*, const void*))
-{
-    auto* data = static_cast<unsigned char*>(*array);
-    if (!data || last <= first)
-        return;
-    unsigned char saved[0x20];
-    for (std::size_t i = first + 1; i < last; ++i) {
-        std::memcpy(saved, data + i * 0x20, sizeof(saved));
-        std::size_t position = i;
-        while (position > first && less(saved, data + (position - 1) * 0x20)) {
-            std::memcpy(data + position * 0x20, data + (position - 1) * 0x20, 0x20);
-            --position;
-        }
-        std::memcpy(data + position * 0x20, saved, sizeof(saved));
-    }
-}
 
 // @0x142688760
 GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator/=(unsigned numFrames)
@@ -4364,31 +4185,29 @@ void* CreateAudioEventManager()
     return object;
 }
 
-// MS2-FUNCTIONAL: prints the movie-view heading and enumerates the function and renderer hash tables.
+namespace GFx { namespace AMP {
 // @0x14268c080
-void LogMovieViewFunctions(void* movieView, Scaleform::Log* log)
+void MovieProfile::Print(Log* log) const
 {
-    auto* bytes = static_cast<unsigned char*>(movieView);
-    auto encoded = *reinterpret_cast<std::uintptr_t*>(bytes + 0x20);
-    const char* name = reinterpret_cast<const char*>((encoded & ~std::uintptr_t(3)) + 0xc);
-    log->LogMessage("========== MOVIE VIEW FUNCTIONS FOR %s ======\n", name);
-    FUN_14268b710(*reinterpret_cast<void**>(bytes + 0x60), log);
-    FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0x70), log);
+    log->LogMessage("========== MOVIE VIEW FUNCTIONS FOR %s ======\n", ViewName.ToCStr());
+    FunctionStats->Print(log);
+    FunctionTreeStats->Print(log);
 }
+}}
 
-// MS2-FUNCTIONAL: logs each movie view's function tables followed by both renderer function tables.
+namespace GFx { namespace AMP {
 // @0x14268c0d0
-void LogMovieAndRendererFunctions(void* movieRoot, Scaleform::Log* log)
+void ProfileFrame::Print(Log* log) const
 {
-    auto* bytes = static_cast<unsigned char*>(movieRoot);
-    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
-    for (std::size_t i = 0; i < count; ++i)
-        LogMovieViewFunctions(views[i], log);
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        MovieStats[i]->Print(log);
+    }
     log->LogMessage("========== RENDERER FUNCTIONS ===============\n");
-    FUN_14268b710(*reinterpret_cast<void**>(bytes + 0xe8), log);
-    FUN_14268bd60(*reinterpret_cast<void**>(bytes + 0xf0), log);
+    DisplayStats->Print(log);
+    DisplayFunctionStats->Print(log);
 }
+}}
 
 // MS2-FUNCTIONAL: links either an ordinary sound request or callback-backed stream request, then configures the FMOD source and dispatches stream format metadata.
 // The whole body runs under the manager lock (+0xc8), as in the exe: the request is linked into the list before its FMOD
@@ -4737,94 +4556,86 @@ void FUN_142675560(void* command, void* context, void* textures, const void* tex
         *reinterpret_cast<unsigned*>(bytes + 0x48));
 }
 
-// MS2-FUNCTIONAL: snapshots accumulated renderer timings, resolves cached labels, logs each duration/count pair, and releases the snapshot.
+namespace GFx { namespace AMP {
 // @0x14268bd60
-void FUN_14268bd60(void* source, Scaleform::Log* log)
+void MovieFunctionTreeStats::Print(Log* log) const
 {
-    auto* snapshot = static_cast<unsigned char*>(FUN_142689640(source, 1));
-    if (!snapshot)
-        return;
-    auto* table = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(source) + 0x30);
-    auto* entries = *reinterpret_cast<const unsigned char**>(snapshot + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(snapshot + 0x18);
-    for (std::size_t i = 0; i < count; ++i) {
-        const auto* record = entries + i * 0x20;
-        const std::uint64_t key = *reinterpret_cast<const std::uint64_t*>(record);
-        const Scaleform::String* label = nullptr;
-        if (table) {
-            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
-            const std::uint64_t bucket = HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & mask;
-            auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
-            if (static_cast<std::int64_t>(row[0]) != -2 && row[1] == bucket) {
-                for (;;) {
-                    if (row[1] == bucket && row[2] == key) {
-                        label = reinterpret_cast<const Scaleform::String*>(row + 3);
-                        break;
-                    }
-                    const std::uint64_t next = row[0];
-                    if (next == UINT64_MAX)
-                        break;
-                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
-                }
-            }
+    // Accumulate (0x142689640) lives in sfr_kernel_03n under its FUN_ name.
+    Ptr<MovieFunctionStats> accumulatedStats = *static_cast<MovieFunctionStats*>(
+        FUN_142689640(const_cast<MovieFunctionTreeStats*>(this), true));
+
+    for (UPInt i = 0; i < accumulatedStats->FunctionTimings.GetSize(); ++i)
+    {
+        String entry;
+        String name;
+        FunctionDescMap::ConstIterator descIt;
+        descIt = FunctionInfo.Find(accumulatedStats->FunctionTimings[i].FunctionId);
+        if (descIt != FunctionInfo.End())
+        {
+            name = descIt->Second->Name;
         }
-        // The exe skips records without a name (0x14268bf0b: empty String data) and logs the time / 1000 as ms.
-        if (!label)
-            continue;
-        const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
-        const auto* data = reinterpret_cast<const std::uint64_t*>(encoded & ~std::uint64_t(3));
-        if ((*data & 0x7fffffffffffffffull) == 0)
-            continue;
-        const char* name = reinterpret_cast<const char*>(data) + 0x0c;
-        const std::uint64_t ticks = *reinterpret_cast<const std::uint64_t*>(record + 0x18);
-        const unsigned calls = *reinterpret_cast<const unsigned*>(record + 0x10);
-        log->LogMessage("%s: %llu ms (%u times)\n", name,
-                        static_cast<unsigned long long>(ticks / 1000ull), calls);
+        if (!name.IsEmpty())
+        {
+            Format(entry, "{0}: {1} ms ({2} times)\n", name.ToCStr(), accumulatedStats->FunctionTimings[i].TotalTime / 1000, accumulatedStats->FunctionTimings[i].TimesCalled);
+            log->LogMessage("%s", entry.ToCStr());
+        }
     }
-    FUN_14257dcb0(snapshot);
 }
+}}
 
 }
 
-// MS2-FUNCTIONAL: emits each accumulated function timing record with its cached name; the executable additionally merges duplicates and sorts by frequency.
+namespace Scaleform { namespace GFx { namespace AMP {
+bool funcStatsLess(const MovieFunctionStats::FuncStats& lhs, const MovieFunctionStats::FuncStats& rhs)
+{
+    return lhs.TotalTime > rhs.TotalTime;
+}
+
 // @0x14268b710
-void FUN_14268b710(void* source, Scaleform::Log* log)
+void MovieFunctionStats::Print(Log* log) const
 {
-    auto* bytes = static_cast<unsigned char*>(source);
-    auto* records = *reinterpret_cast<const unsigned char**>(bytes + 0x10);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x18);
-    auto* table = *reinterpret_cast<unsigned char**>(bytes + 0x28);
-    for (std::size_t i = 0; i < count; ++i) {
-        const auto* record = records + i * 0x20;
-        const std::uint64_t key = *reinterpret_cast<const std::uint64_t*>(record);
-        const Scaleform::String* label = nullptr;
-        if (table) {
-            const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(table + 8);
-            const std::uint64_t bucket = Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(&key)) & mask;
-            auto* row = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
-            if (static_cast<std::int64_t>(row[0]) != -2 && row[1] == bucket) {
-                for (;;) {
-                    if (row[1] == bucket && row[2] == key) {
-                        label = reinterpret_cast<const Scaleform::String*>(row + 3);
-                        break;
-                    }
-                    const std::uint64_t next = row[0];
-                    if (next == UINT64_MAX)
-                        break;
-                    row = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
-                }
-            }
+    Hash<UInt64, FuncStats> funcMap;
+    for (UPInt i = 0; i < FunctionTimings.GetSize(); ++i)
+    {
+        Hash<UInt64, FuncStats>::Iterator it = funcMap.Find(FunctionTimings[i].FunctionId);
+        if (it != funcMap.End())
+        {
+            ++it->Second.TimesCalled;
+            it->Second.TotalTime += FunctionTimings[i].TotalTime;
         }
-        const char* name = "";
-        if (label) {
-            const std::uint64_t encoded = *reinterpret_cast<const std::uint64_t*>(label);
-            name = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
+        else
+        {
+            funcMap.Add(FunctionTimings[i].FunctionId, FunctionTimings[i]);
         }
-        log->LogMessage("%s: %llu ms (%u times)\n", name,
-                        static_cast<unsigned long long>(*reinterpret_cast<const std::uint64_t*>(record + 0x18) / 1000ull),  // exe 0x14268bc25
-                        *reinterpret_cast<const unsigned*>(record + 0x10));
+    }
+
+    Array<FuncStats> sortedList;
+    for (Hash<UInt64, FuncStats>::Iterator it = funcMap.Begin(); it != funcMap.End(); ++it)
+    {
+        FuncStats newItem;
+        newItem.FunctionId = it->First;
+        newItem.CallerId = it->Second.CallerId;
+        newItem.TotalTime = it->Second.TotalTime;
+        newItem.TimesCalled = it->Second.TimesCalled;
+        sortedList.PushBack(newItem);
+    }
+    Alg::QuickSortSliced(sortedList, 0, sortedList.GetSize(), funcStatsLess);
+
+    for (UPInt i = 0; i < sortedList.GetSize(); ++i)
+    {
+        String entry;
+        String name;
+        FunctionDescMap::ConstIterator descIt;
+        descIt = FunctionInfo.Find(sortedList[i].FunctionId);
+        if (descIt != FunctionInfo.End())
+        {
+            name = descIt->Second->Name;
+        }
+        Format(entry, "{0}: {1} ms ({2} times)\n", name.ToCStr(), sortedList[i].TotalTime / 1000, sortedList[i].TimesCalled);
+        log->LogMessage("%s", entry.ToCStr());
     }
 }
+}}}
 
 namespace Scaleform { namespace GFx {
 
@@ -4919,3 +4730,23 @@ int FUN_142745f30(void*, void* source, bool flag)
 
 // MS2-PIN: ??_7MemItem@Scaleform@@6B@ 0x143192160
 // MS2-PIN: ??_7?$RefCountBase@UMemItem@Scaleform@@$01@Scaleform@@6B@ 0x143193df0
+
+// COMDATs of the AMP function-stats printing (MovieFunctionStats::Print, the FunctionTreeVisitor).
+typedef Scaleform::Hash<Scaleform::UInt64, Scaleform::GFx::AMP::MovieFunctionStats::FuncStats> Ms2FuncStatsHash;
+typedef Scaleform::GFx::AMP::MovieFunctionStats::FuncStats Ms2FuncStats;
+typedef decltype(Ms2FuncStatsHash::mHash) Ms2FuncStatsSet;
+// @0x1426906b0
+template void Ms2FuncStatsSet::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
+// @0x1426867f0
+template void Ms2FuncStatsSet::BaseType::add<Ms2FuncStatsHash::NodeRef>(void* pheapAddr, const Ms2FuncStatsHash::NodeRef& key, Scaleform::UPInt hashValue);
+// @0x14268a450
+template Ms2FuncStatsSet::BaseType::Iterator Ms2FuncStatsSet::BaseType::FindAlt<Scaleform::UInt64>(const Scaleform::UInt64& key);
+// @0x1426899e0
+template void Ms2FuncStatsHash::Add(const Scaleform::UInt64& key, const Ms2FuncStats& value);
+// @0x1426871f0
+template Ms2FuncStatsSet::BaseType::~HashSetBase();
+// @0x14268e420
+template void Scaleform::ArrayDataBase<Ms2FuncStats, Scaleform::AllocatorGH<Ms2FuncStats, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void* pheapAddr, Scaleform::UPInt newCapacity);
+// @0x1426860f0
+template void Scaleform::Alg::QuickSortSliced(Scaleform::Array<Ms2FuncStats>& arr, Scaleform::UPInt start, Scaleform::UPInt end,
+                                              bool (*less)(const Ms2FuncStats&, const Ms2FuncStats&));
