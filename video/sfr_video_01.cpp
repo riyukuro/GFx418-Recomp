@@ -156,31 +156,53 @@ static void CopyVideoHashPair(Scaleform::UPInt* destination, const void* source)
     FUN_140007870(reinterpret_cast<unsigned*>(destination), const_cast<void**>(static_cast<void* const*>(source)));
 }
 
-// MS2-FUNCTIONAL: forwards the video sound stream's channel attachment callback when a channel is present.
+// The sound channel a video sound stream holds at +0x10; only the slots these wrappers call are named
+struct VideoSoundStreamChannel
+{
+    virtual void Slot0(); virtual void Slot1(); virtual void Slot2(); virtual void Slot3(); virtual void Slot4();
+    virtual void Start();                   // +0x28
+    virtual void Slot6(); virtual void Slot7(); virtual void Slot8(); virtual void Slot9();
+    virtual void Stop();                    // +0x50
+    virtual void SetVolume(float volume);   // +0x58
+};
+struct VideoSoundStreamState
+{
+    void* vtable;
+    void* unknown8;
+    VideoSoundStreamChannel* pChannel;   // +0x10
+    float Volume;                        // +0x18
+};
+
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// MS2-FUNCTIONAL: the exe tests the member in memory (cmp [rcx+10h],0) and loads it again for the call
+// forwards the video sound stream's channel attachment callback when a channel is present.
 // @0x140002930
-void FUN_140002930(void* stream)
+void FUN_140002930(void* object)
 {
-    void* channel = *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10);
-    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[5])(channel);
+    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    if (stream->pChannel) stream->pChannel->Start();
 }
 
-// MS2-FUNCTIONAL: stores the stream state and notifies the attached channel of the new state.
+// stores the stream volume and passes it on to the attached channel.
+// BEHAVIOUR FIX: the volume is a float (xmm1, movss [rcx+18h]); it was taken as an unsigned from edx, so +0x18 held junk.
 // @0x140002960
-void FUN_140002960(void* stream, unsigned state)
+void FUN_140002960(void* object, float volume)
 {
-    auto* bytes = static_cast<unsigned char*>(stream);
-    *reinterpret_cast<unsigned*>(bytes + 0x18) = state;
-    void* channel = *reinterpret_cast<void**>(bytes + 0x10);
-    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[11])(channel);
+    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    stream->Volume = volume;
+    VideoSoundStreamChannel* channel = stream->pChannel;
+    if (channel) channel->SetVolume(volume);
 }
 
-// MS2-FUNCTIONAL: forwards the stop notification when the stream has an attached channel.
+// MS2-FUNCTIONAL: the exe tests the member in memory (cmp [rcx+10h],0) and loads it again for the call
+// forwards the stop notification when the stream has an attached channel.
 // @0x140002980
-void FUN_140002980(void* stream)
+void FUN_140002980(void* object)
 {
-    void* channel = *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10);
-    if (channel) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(channel))[10])(channel);
+    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    if (stream->pChannel) stream->pChannel->Stop();
 }
+#pragma optimize("", on)
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // releases the currently retained audio channel if one is assigned.
@@ -209,17 +231,16 @@ void** FUN_1400029f0(void** channel, void* replacement)
     return channel;
 }
 
-// MS2-FUNCTIONAL: detaches the sound channel from the stream and tears down the video sound base.
+// detaches the sound channel from the stream and tears down the video sound base. The exe clears the channel's
+// back-pointer without a null test, then releases the Ptr member (null-tested).
 // @0x140002ab0
 void FUN_140002ab0(void* stream)
 {
     auto* bytes = static_cast<unsigned char*>(stream);
     *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
     auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
-    if (*channelSlot) {
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = nullptr;
-        FUN_14257dcb0(*channelSlot);
-    }
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = nullptr;
+    if (*channelSlot) FUN_14257dcb0(*channelSlot);
     *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
     FUN_14257db50(stream);
 }
@@ -255,7 +276,7 @@ void FUN_140003580(void* player, bool ready)
     auto* bytes = static_cast<unsigned char*>(player);
     bytes[0xc0] = ready;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[21])(impl);
+    if (impl) reinterpret_cast<void (*)(void*, bool)>((*reinterpret_cast<void***>(impl))[21])(impl, ready);
 }
 #pragma optimize("", on)
 
@@ -291,15 +312,19 @@ void FUN_140003610(void* player)
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[7])(impl);
 }
 
-// MS2-FUNCTIONAL: updates the reload threshold and notifies the active player.
+#pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
+// updates the reload threshold and notifies the active player.
+// BEHAVIOUR FIX: the threshold is a float (movss [rcx+0C8h],xmm1); it was taken as an unsigned from edx and not
+// passed on, so +0xc8 and the player's vfunc got junk.
 // @0x140003650
-void FUN_140003650(void* player, unsigned threshold)
+void FUN_140003650(void* player, float threshold)
 {
     auto* bytes = static_cast<unsigned char*>(player);
-    *reinterpret_cast<unsigned*>(bytes + 0xc8) = threshold;
+    *reinterpret_cast<float*>(bytes + 0xc8) = threshold;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[22])(impl, threshold);
 }
+#pragma optimize("", on)
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // updates the pool count and notifies the active player.
@@ -309,7 +334,7 @@ void FUN_140003680(void* player, unsigned count)
     auto* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<unsigned*>(bytes + 0xc4) = count;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[23])(impl);
+    if (impl) reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(impl))[23])(impl, count);
 }
 #pragma optimize("", on)
 
@@ -321,7 +346,7 @@ void FUN_1400036b0(void* player, float time)
     auto* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<float*>(bytes + 0xcc) = time;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[24])(impl);
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[24])(impl, time);
 }
 #pragma optimize("", on)
 
@@ -333,7 +358,7 @@ void FUN_1400036e0(void* player, float timeout)
     auto* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<float*>(bytes + 0xd0) = timeout;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[26])(impl);
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[26])(impl, timeout);
 }
 #pragma optimize("", on)
 
@@ -566,45 +591,53 @@ void FUN_140004600(void* object)
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
 }
 
-// MS2-FUNCTIONAL: stores the reload-threshold value and forwards it to the active player.
+#pragma optimize("t", off)   // the exe builds these favouring size: frame + call, no tail call
+// BEHAVIOUR FIX (0x140004650..0x1400046e0): each setter passes the stored value on to the player's vfunc (xmm1, or edx
+// for the frame-pool count), as the exe does; the calls had no value argument, so the player read a junk register.
+// stores the reload-threshold value and forwards it to the active player.
 // @0x140004650
 void FUN_140004650(void* object, double threshold)
 {
     auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    *reinterpret_cast<float*>(owner + 0xc8) = static_cast<float>(threshold);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[22])(impl);
+    const float value = static_cast<float>(threshold);
+    *reinterpret_cast<float*>(owner + 0xc8) = value;
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[22])(impl, value);
 }
 
-// MS2-FUNCTIONAL: updates the frame-pool count on the NetStream's player and forwards the new value.
+// updates the frame-pool count on the NetStream's player and forwards the new value.
 // @0x140004680
 void FUN_140004680(void* object, double count)
 {
     auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    *reinterpret_cast<int*>(owner + 0xc4) = static_cast<int>(count);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[23])(impl);
+    const unsigned value = static_cast<unsigned>(count);
+    *reinterpret_cast<unsigned*>(owner + 0xc4) = value;
+    if (impl) reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(impl))[23])(impl, value);
 }
 
-// MS2-FUNCTIONAL: updates buffer time on the NetStream's player and forwards it.
+// updates buffer time on the NetStream's player and forwards it.
 // @0x1400046b0
 void FUN_1400046b0(void* object, double time)
 {
     auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    *reinterpret_cast<float*>(owner + 0xcc) = static_cast<float>(time);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[24])(impl);
+    const float value = static_cast<float>(time);
+    *reinterpret_cast<float*>(owner + 0xcc) = value;
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[24])(impl, value);
 }
 
-// MS2-FUNCTIONAL: updates the open timeout on the NetStream's player and forwards it.
+// updates the open timeout on the NetStream's player and forwards it.
 // @0x1400046e0
 void FUN_1400046e0(void* object, double timeout)
 {
     auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    *reinterpret_cast<float*>(owner + 0xd0) = static_cast<float>(timeout);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[26])(impl);
+    const float value = static_cast<float>(timeout);
+    *reinterpret_cast<float*>(owner + 0xd0) = value;
+    if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[26])(impl, value);
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: forwards a seek position to the active player implementation.
 // @0x140004710
@@ -840,7 +873,7 @@ void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replac
 {
     if (replacement) ++*reinterpret_cast<int*>(replacement);
     auto* old = static_cast<Scaleform::GFx::CharacterHandle*>(*destination);
-    if (old && --*reinterpret_cast<int*>(old) < 1) {
+    if (old && --*reinterpret_cast<int*>(old) <= 0) {
         old->~CharacterHandle();
         Scaleform::Memory::Free(old);
     }
@@ -1503,15 +1536,22 @@ void FUN_140007510(Scaleform::UPInt* owner)
     FUN_140007200(owner + 1);
 }
 
-// MS2-FUNCTIONAL: releases both owned AS2 references according to the weak/internal mode bits.
-// @0x1400074a0
-void FUN_1400074a0(Scaleform::UPInt* pair)
+struct As2WeakObjectPair
 {
-    auto* flags = reinterpret_cast<unsigned char*>(pair + 2);
-    if (!(flags[0] & 2)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[0]));
-    pair[0] = 0;
-    if (!(flags[0] & 1)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[1]));
-    pair[1] = 0;
+    void* pFirst;
+    void* pSecond;
+    unsigned char Flags;   // bit 1: pFirst is weak, bit 0: pSecond is weak
+};
+
+// releases both owned AS2 references according to the weak/internal mode bits.
+// @0x1400074a0
+void FUN_1400074a0(Scaleform::UPInt* object)
+{
+    auto* pair = reinterpret_cast<As2WeakObjectPair*>(object);
+    if (!(pair->Flags & 2)) ReleaseAs2GCObject(pair->pFirst);
+    pair->pFirst = nullptr;
+    if (!(pair->Flags & 1)) ReleaseAs2GCObject(pair->pSecond);
+    pair->pSecond = nullptr;
 }
 
 // MS2-FUNCTIONAL: releases the owned AS2 object reference stored in the slot.
@@ -1561,15 +1601,15 @@ void** FUN_140007760(void** destination, void* replacement)
 // @0x1400077b0
 void FUN_1400077b0(void** slot) { ReleaseAs2GCObject(*slot); }
 
-// MS2-FUNCTIONAL: releases both references in the temporary AS2 value pair.
+// releases both references in the temporary AS2 value pair.
 // @0x140007a40
-void FUN_140007a40(Scaleform::UPInt* pair)
+void FUN_140007a40(Scaleform::UPInt* object)
 {
-    auto* flags = reinterpret_cast<unsigned char*>(pair + 2);
-    if (!(flags[0] & 2)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[0]));
-    pair[0] = 0;
-    if (!(flags[0] & 1)) ReleaseAs2GCObject(reinterpret_cast<void*>(pair[1]));
-    pair[1] = 0;
+    auto* pair = reinterpret_cast<As2WeakObjectPair*>(object);
+    if (!(pair->Flags & 2)) ReleaseAs2GCObject(pair->pFirst);
+    pair->pFirst = nullptr;
+    if (!(pair->Flags & 1)) ReleaseAs2GCObject(pair->pSecond);
+    pair->pSecond = nullptr;
 }
 
 // MS2-FUNCTIONAL: retains the replacement AS2 object and releases the old slot value.
@@ -1607,11 +1647,13 @@ void FUN_1400077f0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: initializes an empty two-string record array and copies the supplied records.
+// initializes an empty two-string record array and copies the supplied records.
 // @0x140007840
 void* FUN_140007840(void** destination, const void** source)
 {
-    destination[0] = destination[1] = destination[2] = nullptr;
+    destination[0] = nullptr;
+    destination[1] = nullptr;
+    destination[2] = nullptr;
     FUN_140007370(destination, static_cast<const Scaleform::String*>(*source),
                   reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
     return destination;
@@ -1752,10 +1794,13 @@ void FUN_14000aa30(Scaleform::UPInt* entry)
 }
 
 // MS2-FUNCTIONAL: destroys a NetStream and optionally returns its allocation to the global heap.
+// BEHAVIOUR FIX (latent): ~NetStream is called directly (call 0x140008070) as in the exe. The virtual
+// stream->~NetStream() would recurse through exe vftable 0x1431b5030 slot 2 (this function).
+// The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
 // @0x14000aa70
 void* FUN_14000aa70(Scaleform::GFx::AS2::NetStream* stream, unsigned flags)
 {
-    stream->~NetStream();
+    stream->NetStream::~NetStream();
     if (flags & 1) Scaleform::Memory::Free(stream);
     return stream;
 }
@@ -1962,11 +2007,14 @@ void* FUN_14000cbd0(Scaleform::GFx::AS2::VideoProviderNetStream* provider, unsig
 }
 
 // MS2-FUNCTIONAL: destroys the NetStream constructor function and optionally releases its allocation.
+// BEHAVIOUR FIX (latent): ~CFunctionObject is called directly (call 0x1429255a0) as in the exe. The virtual call would
+// recurse through exe vftable 0x1431b56b0 slot 2 (this function).
+// The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
 // @0x14000cee0
 Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFunctionObject* object,
                                                     unsigned flags)
 {
-    object->~CFunctionObject();
+    object->CFunctionObject::~CFunctionObject();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -2016,7 +2064,7 @@ void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
         FUN_14000b530(static_cast<unsigned char*>(*array) + size * 0x30, fields[1] - size);
         if (size < fields[2] / 2) FUN_14000b940(array, owner, size);
     }
-    else if (fields[2] <= size) FUN_14000b940(array, owner, size + (size >> 2));
+    else if (size >= fields[2]) FUN_14000b940(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
@@ -2068,7 +2116,7 @@ void FUN_14000a7b0(void* object) { FUN_14000aec0(object); }
 
 // MS2-FUNCTIONAL: destroys the prototype and NetStream base, then optionally frees the object.
 // @0x14000a880
-void* FUN_14000a880(void* object, unsigned flags)
+__declspec(noinline) void* FUN_14000a880(void* object, unsigned flags)
 {
     FUN_14000aec0(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -2076,6 +2124,7 @@ void* FUN_14000a880(void* object, unsigned flags)
 }
 
 // The NetStream prototype's deleting destructor seen through its two secondary bases.
+// The exe thunks are the compiler adjustors (sub rcx,imm; jmp); these free-function forms emit add rcx,-imm.
 // 0x1431b5300 [0]: this adjustor of the +0xd8 base
 // @0x14000a010
 void* FUN_14000a010(void* object, unsigned flags) { return FUN_14000a880(static_cast<unsigned char*>(object) - 0xd8, flags); }
@@ -2184,12 +2233,15 @@ void* FUN_14000d5c0(void* object, unsigned flags)
 }
 
 // MS2-FUNCTIONAL: releases the owned object pointer and destroys the AS2 Object base.
+// BEHAVIOUR FIX (latent): tail-jumps to Object::~Object (0x142925cf0) as in the exe. Through the exe vftable a virtual
+// object->~Object() reaches slot 2 (FUN_14000de80 on a Video) and releases the proxy again.
+// The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
 // @0x14000d5f0
 void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
 {
     auto** slot = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
     if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
-    object->~Object();
+    object->Object::~Object();
 }
 
 // MS2-FUNCTIONAL: releases a weak proxy and optionally deletes its wrapper.
@@ -2329,12 +2381,15 @@ void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 }
 
 // MS2-FUNCTIONAL: destroys the Video object and optionally frees its allocation.
+// BEHAVIOUR FIX (latent): the base destructor is called directly (call 0x142925cf0) as in the exe. A virtual
+// object->~Object() would recurse through exe vftable 0x1431b5af0 slot 2 (this function).
+// The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
 // @0x14000de80
 void* FUN_14000de80(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
     auto** proxy = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
     if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release();
-    object->~Object();
+    object->Object::~Object();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }

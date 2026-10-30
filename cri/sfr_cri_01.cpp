@@ -799,10 +799,12 @@ SwfVideoSyncObject::~SwfVideoSyncObject()
 {
 }
 
+// BEHAVIOUR FIX (latent): the destructor runs non-virtually (inlined in the exe). The virtual self->~SwfVideoSyncObject()
+// would recurse through exe vftable 0x1431b8a60 slot 0 (this function); the fullexe's own vftable avoids that.
 // @0x140025e50
 SwfVideoSyncObject* FUN_140025e50(SwfVideoSyncObject* self, UInt32 flags)
 {
-    self->~SwfVideoSyncObject();
+    self->SwfVideoSyncObject::~SwfVideoSyncObject();
     if (flags & 1)
         Memory::Free(self);
     return self;
