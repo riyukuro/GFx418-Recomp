@@ -1057,15 +1057,14 @@ bool AvmDisplayObjContainer::IsTabable() const
     return io->TabIndex > 0;
 }
 
-// MS2-FUNCTIONAL: same code, the exe keeps strlen+1 in rdi and the copy in rbx (registers swapped)
 // @0x142511760
 void AvmDisplayObj::InitClassName(const char* name)
 {
     if (!pClassName)
     {
-        const UPInt len = SFstrlen(name) + 1;
-        char* p = static_cast<char*>(SF_HEAP_AUTO_ALLOC(pDispObj, len));
-        memcpy(p, name, len);
+        UPInt len = SFstrlen(name);
+        char* p = (char*)SF_HEAP_AUTO_ALLOC(pDispObj, len + 1);
+        memcpy(p, name, len + 1);
         pClassName = p;
     }
 }
