@@ -29,7 +29,7 @@
 // Shared render/AS3 cleanup COMDATs are placed in this SCU by the executable.  Their data structures are
 // recovered here from the code that uses them; the neighboring AS3 text visitor classes live in sfr_as3_13.
 // RangeData<CSSHolderBase::UrlZone>: Index, Length, then the zone (SavedFmt, HitCount, OverCount).
-struct CX18ArrayLHEntry { Scaleform::SPInt Index; Scaleform::UPInt Length; Scaleform::RefCountImpl* SavedFmt; unsigned char Rest[8]; };
+struct CX18ArrayLHEntry { Scaleform::SPInt Index; Scaleform::UPInt Length; Scaleform::RefCountNTSImpl* SavedFmt; unsigned char Rest[8]; };
 struct CX18ArrayLH { CX18ArrayLHEntry* Data; Scaleform::UPInt Size; Scaleform::UPInt Capacity; };
 // Hash<String, String> cached-hash node (0x20 bytes) and the table header the entries follow.
 struct CX18StringPairEntry
@@ -61,7 +61,7 @@ void FUN_1424a9ed0(void* pdata)
     CX18ArrayLH* array = (CX18ArrayLH*)pdata;
     for (Scaleform::UPInt i = array->Size; i; --i)
     {
-        Scaleform::RefCountImpl* fmt = array->Data[i - 1].SavedFmt;
+        Scaleform::RefCountNTSImpl* fmt = array->Data[i - 1].SavedFmt;   // TextFormat: RefCountBaseNTS (0x14257dcd0)
         if (fmt)
             fmt->Release();
     }
