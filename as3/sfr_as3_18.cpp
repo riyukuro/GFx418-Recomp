@@ -374,32 +374,56 @@ bool IsXMLObject(Object* obj)
     return result;
 }
 
+// Original isdigit() may assert if c > 127.
+static inline bool Sfr18IsDigit(char c)
+{
+    return ('0' <= c && c <= '9');
+}
+
 // A string of decimal digits, optionally followed by '.' and zeros only: its number.
 // @0x14250ee30
-CheckResult GetStrNumber(ASStringNode* str, Value::Number& result)
+CheckResult GetStrNumber(ASStringNode* sn, Value::Number& result)
 {
-    if (str == NULL || str->Size == 0)
+    if (sn == NULL)
         return false;
-    const char* s = str->pData;
-    if (static_cast<UByte>(s[0] - '0') > 9)
-        return false;
-    for (unsigned i = 1; i < str->Size; ++i)
+
+    const unsigned ssize = sn->Size;
+
+    if (ssize > 0)
     {
-        if (static_cast<UByte>(s[i] - '0') > 9)
+        const char* sdata = sn->pData;
+        char c = sdata[0];
+        if (Sfr18IsDigit(c))
         {
-            if (s[i] != '.')
-                return false;
-            for (++i; i < str->Size; ++i)
+            for (unsigned i = 1; i < ssize; ++i)
             {
-                if (s[i] != '0')
+                c = sdata[i];
+                if (!Sfr18IsDigit(c))
+                {
+                    if (c == '.')
+                    {
+                        for (unsigned j = i + 1; j < ssize; ++j)
+                        {
+                            if (sdata[j] != '0')
+                                return false;
+                        }
+
+                        // Everything is fine.
+                        break;
+                    }
+
                     return false;
+                }
             }
-            break;
+
+            char* end;
+            result = strtod(sdata, &end);
+
+            return true;
         }
     }
-    char* end;
-    result = strtod(s, &end);
-    return true;
+
+    return false;
 }
 
 // ==== slots, traits, classes ====
@@ -430,15 +454,19 @@ Value VTable::GetValue(AbsoluteIndex ind) const
     return v;
 }
 
-// MS2-FUNCTIONAL: same calls; register allocation and the separator select differ
 // @0x14250d570
 ASString InstanceTraits::Traits::GetQualifiedName(QNameFormat f) const
 {
-    const Instances::Namespace& ns = GetNamespace();
+    const ASString& nsUri = GetNamespace().GetUri();
     const ASString name = GetName();
-    if (ns.GetUri().IsEmpty())
+
+    if (nsUri.IsEmpty())
         return name;
-    return ns.GetUri() + (f == qnfWithColons ? "::" : ".") + name;
+
+    if (f == qnfWithColons)
+        return nsUri + "::" + name;
+
+    return nsUri + "." + name;
 }
 
 // @0x14250d4c0
@@ -3756,7 +3784,8 @@ bool FUN_1424445f0(const Scaleform::GFx::AS3::Instances::fl_display::DisplayObje
 // MovieRoot::GetRootMovie (slot 14): the nearest display object up from dobj whose AS3 object has loader info,
 // else the root of the stage dobj's movie sits on. When that is no container, its parent's root movie is
 // taken instead. No dobj gives this stage's root.
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
+// SDK AS3_MovieRoot.cpp form on the inlined AvmDisplayObj::GetRoot.
+// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function; one branch target as in GetRoot
 // @0x14250daa0
 Scaleform::GFx::DisplayObjContainer* FUN_14250daa0(const Scaleform::GFx::AS3::MovieRoot* self,
                                                    Scaleform::GFx::DisplayObject* dobj)
@@ -3766,28 +3795,19 @@ Scaleform::GFx::DisplayObjContainer* FUN_14250daa0(const Scaleform::GFx::AS3::Mo
     using namespace Scaleform::GFx::AS3;
     if (!dobj)
         return static_cast<Stage*>(self->pStage)->pRoot;
-    AvmDisplayObj*     avm = ToAvmDisplayObj(dobj);
-    DisplayObjectBase* r   = NULL;
-    for (AvmDisplayObj* p = avm; p; )
+    else
     {
-        Instances::fl_display::DisplayObject* as3 = p->GetAS3Obj();
-        if (as3 && FUN_1424445f0(as3))
+        DisplayObject* r = ToAvmDisplayObj(dobj)->GetRoot();
+        if (!r)
+            return static_cast<Stage*>(self->pStage)->pRoot;
+        else
         {
-            r = p->pDispObj;
-            break;
+            if (r->IsDisplayObjContainer())
+                return static_cast<DisplayObjContainer*>(r);
+            else
+                return self->GetRootMovie418(r->GetParent());
         }
-        InteractiveObject* parent = p->pDispObj->GetParent();
-        if (!parent)
-            break;
-        p = ToAvmInteractiveObj(parent);
     }
-    if (!r)
-        r = static_cast<Stage*>(static_cast<MovieRoot*>(avm->pDispObj->GetASMovieRoot())->pStage)->pRoot;
-    if (!r)
-        return static_cast<Stage*>(self->pStage)->pRoot;
-    if (r->IsDisplayObjContainer())
-        return static_cast<DisplayObjContainer*>(r);
-    return self->GetRootMovie418(r->GetParent());
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -4608,19 +4628,20 @@ void ClassTraits::Traits::RegisterSlots()
 // URLLoader, and small helpers (resource handle lookup, operand stack unwinding, class traits by multiname).
 
 // The nearest display object up from this one whose AS3 object has loader info, else the root of the stage.
-// MS2-FUNCTIONAL loop layout (the exe re-reads the AS3 pointer after the null test)
+// SDK AS3_AvmDisplayObj.cpp loop (GetAvmParent inlined); not found gives the stage's root.
+// MS2-FUNCTIONAL one branch target: the exe leaves the loop straight from a NULL parent
 // @0x14250d990
 DisplayObject* AvmDisplayObj::GetRoot()
 {
-    for (AvmDisplayObj* p = this; p; )
+    AvmDisplayObj* cur = this;
+    while (cur && (!cur->GetAS3Obj() || !FUN_1424445f0(cur->GetAS3Obj())))
     {
-        Instances::fl_display::DisplayObject* as3 = p->GetAS3Obj();
-        if (as3 && FUN_1424445f0(as3))
-            return p->pDispObj;
-        InteractiveObject* parent = p->pDispObj->GetParent();
-        if (!parent)
-            break;
-        p = ToAvmInteractiveObj(parent);
+        AvmInteractiveObj* parent = ToAvmInteractiveObj(cur->pDispObj->GetParent());
+        cur = parent;
+    }
+    if (cur)
+    {
+        return cur->pDispObj;
     }
     return static_cast<Stage*>(AS3RootOf(pDispObj)->pStage)->pRoot;
 }
