@@ -745,39 +745,47 @@ void FUN_1423d5fd0(void* self)
     sink->Release();
 }
 
-// MS2-FUNCTIONAL: follows the executable's selected TextField refcount and input-eligibility checks.
+// Whether the movie's focused character accepts IME input: it locks the focus group's WeakPtr (dropping a dead proxy),
+// and accepts only a TextField (type 4) whose flag bits 11 and 2 are clear and that is not read-only
+// (FUN_1425b9b10 = TextField::IsReadOnly).
+// Reviewed against the exe, same behaviour.
+// MS2-FUNCTIONAL: 17 bytes short; the exe increments the refcount before it loads the flag word and keeps the
+// result in dil (cmove), we load early and keep it in bl
 // @0x1423cf570
 unsigned char FUN_1423cf570(void*, void* rawMovie)
 {
-    if (!rawMovie) return 0;
-    auto* movie = static_cast<unsigned char*>(rawMovie);
-    auto* selected = movie + static_cast<unsigned>(movie[0x3464]) * 0x60;
-    auto* handle = *reinterpret_cast<unsigned long long**>(selected + 0x2e88);
-    if (!handle) return 0;
-    auto* field = reinterpret_cast<unsigned char*>(handle[1]);
-    if (!field) {
-        auto* count = reinterpret_cast<volatile long*>(handle);
-        if (_InterlockedDecrement(count) == 0) {
-            void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, handle);
-        }
-        *reinterpret_cast<void**>(selected + 0x2e88) = nullptr;
-        return 0;
-    }
-    auto* refs = reinterpret_cast<volatile long*>(field + 8);
-    if (*refs == 0) return 0;
-    *refs += 2;
-    FUN_14257dcd0(field);
-    const int type = reinterpret_cast<int(*)(void*)>((*reinterpret_cast<void***>(field))[0x258 / sizeof(void*)])(field);
     unsigned char accepted = 0;
-    if (type == 4) {
-        ++*refs;
-        const unsigned flags = *reinterpret_cast<unsigned*>(field + 0xfc);
-        if (((flags >> 11) & 1) == 0 && !FUN_1425b9b10(field) && ((flags >> 2) & 1) == 0)
-            accepted = 1;
-        FUN_14257dcd0(field);
+    if (rawMovie) {
+        auto* movie = static_cast<unsigned char*>(rawMovie);
+        // the focus group's WeakPtr to the last focused character
+        auto* selected = movie + static_cast<unsigned>(movie[0x3464]) * 0x60;
+        auto* handle = *reinterpret_cast<int**>(selected + 0x2e88);
+        if (handle) {
+            auto* field = *reinterpret_cast<unsigned char**>(handle + 2);
+            if (field) {
+                if (*reinterpret_cast<int*>(field + 8) != 0) {
+                    *reinterpret_cast<int*>(field + 8) += 2;
+                    FUN_14257dcd0(field);
+                    if (reinterpret_cast<int(*)(void*)>((*reinterpret_cast<void***>(field))[0x258 / sizeof(void*)])(
+                            field) == 4) {
+                        ++*reinterpret_cast<int*>(field + 8);
+                        // the TextField flag word at +0xfc: bit 11 and bit 2 block IME input
+                        if (!(static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 11) & 1) &&
+                            !FUN_1425b9b10(field))
+                            accepted = (static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 2) & 1)
+                                           ? accepted : 1;
+                        FUN_14257dcd0(field);
+                    }
+                    FUN_14257dcd0(field);
+                }
+            } else {
+                if (--*handle == 0)
+                    reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(
+                        DAT_143b15f60, handle);
+                *reinterpret_cast<void**>(selected + 0x2e88) = nullptr;
+            }
+        }
     }
-    FUN_14257dcd0(field);
     return accepted;
 }
 
