@@ -322,7 +322,11 @@ public:
 
     // (appended, sfr_gfx_01i) the copy shares the child array (sfr_render_03c, 0x14261b540); the default one
     // leaves the words to the owner, which clears them
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
     TreeNodeArray() = default;
+#else   // cl 17.00 (vc11 units) has no `= default`
+    TreeNodeArray() { }
+#endif
     TreeNodeArray(const TreeNodeArray& src);
     void operator=(const TreeNodeArray& src);   // 0x14261b6b0
 

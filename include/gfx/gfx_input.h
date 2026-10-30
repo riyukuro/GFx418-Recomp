@@ -195,9 +195,15 @@ public:
     void ResetPrevButtonsState() { PrevButtonsState = CurButtonsState; }
     // (appended, sfr_as2_05u) AS2 MovieRoot::GenerateMouseEvents
     // (sfr36) templates so the WeakPtr <-> Ptr conversions wait for a complete InteractiveObject at the caller
-    template<class T = InteractiveObject> Ptr<T> GetActiveEntity() const  { return ActiveEntity; }
-    template<class T = InteractiveObject> Ptr<T> GetTopmostEntity() const { return TopmostEntity; }
-    template<class T = InteractiveObject> void SetActiveEntity(typename std::remove_reference<T>::type* pent) { ActiveEntity = pent; }
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
+#define SF_INPUT_ENTITY_T class T = InteractiveObject
+#else   // cl 17.00 (vc11 units) has no default template arguments for function templates: name the type
+#define SF_INPUT_ENTITY_T class T
+#endif
+    template<SF_INPUT_ENTITY_T> Ptr<T> GetActiveEntity() const  { return ActiveEntity; }
+    template<SF_INPUT_ENTITY_T> Ptr<T> GetTopmostEntity() const { return TopmostEntity; }
+    template<SF_INPUT_ENTITY_T> void SetActiveEntity(typename std::remove_reference<T>::type* pent) { ActiveEntity = pent; }
+#undef SF_INPUT_ENTITY_T
     bool IsMouseInsideEntityLast() const            { return MouseInsideEntityLast; }
     void SetMouseInsideEntityLast(bool v)           { MouseInsideEntityLast = v; }
 };

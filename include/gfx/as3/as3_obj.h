@@ -963,7 +963,15 @@ public:
     PropRef& operator=(PropRef&& other);
     // (sfr24) the move assignment would delete the implicit copies; keep them as they were
     PropRef(const PropRef& other) : pValue(other.pValue), SlotIndex(other.SlotIndex), This(other.This) { }
+#if !defined(_MSC_VER) || _MSC_VER >= 1800
     PropRef& operator=(const PropRef& other) = default;
+#else   // cl 17.00 (vc11 units) has no `= default`: the same memberwise copy
+    PropRef& operator=(const PropRef& other)
+    {
+        pValue = other.pValue; SlotIndex = other.SlotIndex; This = other.This;
+        return *this;
+    }
+#endif
 
     // Not found.
     PropRef() : pValue(0), SlotIndex(0) { }
