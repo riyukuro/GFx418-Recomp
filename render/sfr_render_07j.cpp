@@ -176,7 +176,7 @@ void RenderQueueProcessor::drawProcessedPrimitives()
     }
 
     // the current item was prepared in part (a cache ran full): emit what it has so far
-    if (queue.GetHead() != CurrentItem)
+    if (CurrentItem != queue.GetHead())
     {
         RenderQueueItem* item = queue.GetTailItem();
         item->EmitToHAL(*this);
