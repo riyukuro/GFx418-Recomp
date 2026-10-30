@@ -459,19 +459,49 @@ void FUN_142621c80(char* self, char* snap)
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
-// @0x142621ed0
-void FUN_142621ed0(char* self, U arg)
+// FuncTreeItem: RefCountBase header, FunctionId, BeginTime, EndTime, TreeItemId, ArrayLH<Ptr<FuncTreeItem>> Children.
+struct AmpFuncTreeItem
 {
-    EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    U ctx[2] = { arg, (U)self };
-    for (U i = 0; i < RawField<U>(self, 0x50); i++)
+    void* VTable;
+    U RefCount;
+    U FunctionId;
+    U BeginTime;
+    U EndTime;
+    U TreeItemId;
+    AmpFuncTreeItem** ChildData;
+    U ChildSize;
+    U ChildPolicy;
+};
+
+// FuncStatsVisitor: FrameInfo, CallingView (FUN_14261e730 is FuncTreeItem::Visit over it).
+class AmpFuncStatsVisitor
+{
+public:
+    AmpFuncStatsVisitor(U frameInfo, char* callingView) : FrameInfo(frameInfo), CallingView(callingView) {}
+    void operator()(const AmpFuncTreeItem* treeItem)
     {
-        char* item = ((char**)RawField<U>(self, 0x48))[i];
-        FUN_142624700((U)self, RawField<U>(item, 0x10), RawField<int>(item, 0x20) - RawField<int>(item, 0x18), 1, arg);
-        for (U j = 0; j < RawField<U>(item, 0x38); j++)
-            FUN_14261e730(((char**)RawField<U>(item, 0x30))[j], ctx);
+        FUN_142624700((U)CallingView, treeItem->FunctionId, (UInt32)(treeItem->EndTime - treeItem->BeginTime), 1, FrameInfo);
     }
-    LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
+
+private:
+    U FrameInfo;
+    char* CallingView;
+};
+
+// ViewStats::CollectTimingStats: visits every function root, the root's Visit inlined.
+// MS2-FUNCTIONAL 0x142621ed0: same visits and calls; the exe tail-jumps to LeaveCriticalSection, cl here calls it (22 bytes differ)
+// @0x142621ed0
+void FUN_142621ed0(char* self, U frameInfo)
+{
+    RawLocker locker(self + 0xe0);
+    AmpFuncStatsVisitor visitor(frameInfo, self);
+    for (UPInt i = 0; i < RawField<U>(self, 0x50); ++i)
+    {
+        AmpFuncTreeItem* rootItem = RawField<AmpFuncTreeItem**>(self, 0x48)[i];
+        visitor(rootItem);
+        for (UPInt j = 0; j < rootItem->ChildSize; ++j)
+            FUN_14261e730((char*)rootItem->ChildData[j], (U*)&visitor);
+    }
 }
 
 
@@ -712,16 +742,34 @@ static inline char* RawNewScope(char* self)
     return o;
 }
 
-// Mirrors the top scope's (record, count) pair into the locked statistics fields.
+// ViewStats::CallInfo, one 0x18 entry of the call stack at +0x30.
+struct AmpCallInfo
+{
+    void* FunctionInfo;
+    U FileId;
+    UInt32 LineNumber;
+};
+
+// ArrayLH<CallInfo>: Data, Size, Policy.
+struct AmpCallstack
+{
+    AmpCallInfo* Data;
+    U Size;
+    U Policy;
+    bool IsEmpty() const { return Size == 0; }
+    AmpCallInfo& Back() { return Data[Size - 1]; }
+};
+
+// ViewStats::RefreshActiveLine: copies the top call's file and line under ActiveLock (+0x78).
 static inline void RawPublishTopScope(char* self)
 {
-    if (RawField<U>(self, 0x38))
+    AmpCallstack& callstack = RawField<AmpCallstack>(self, 0x30);
+    if (!callstack.IsEmpty())
     {
-        char* slot = (char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18;
-        EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
-        RawField<U>(self, 0x68) = *(U*)(slot - 0x10);
-        RawField<int>(self, 0x70) = *(int*)(slot - 8);
-        LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x78));
+        AmpCallInfo& back = callstack.Back();
+        RawLocker lock(self + 0x78);
+        RawField<U>(self, 0x68) = back.FileId;
+        RawField<UInt32>(self, 0x70) = back.LineNumber;
     }
 }
 
@@ -745,14 +793,16 @@ static inline void RawPushScope(char* self, U id, U arg)
     FUN_14257dcb0(o);
 }
 
+// MS2-FUNCTIONAL 0x142622c90: same pop; the exe tests Callstack.Size in memory and loads it again for Back() (110 bytes against 112)
 // @0x142622c90
 void FUN_142622c90(char* self, U arg)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    if (RawField<U>(self, 0x38))
+    AmpCallstack& callstack = RawField<AmpCallstack>(self, 0x30);
+    if (!callstack.IsEmpty())
     {
-        U id = *(U*)(*(char**)((char*)RawField<U>(self, 0x30) + RawField<U>(self, 0x38) * 0x18 - 0x18) + 0x10);
-        FUN_142623050(self, (int)(id >> 32), (int)(id & 0xffffffff), arg);
+        U functionId = RawField<U>(callstack.Back().FunctionInfo, 0x10);
+        FUN_142623050(self, (int)(functionId >> 32), (int)functionId, arg);
     }
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
@@ -959,6 +1009,7 @@ void FUN_142623560(char* self, U delta)
     *(U*)((char*)*set + 0x30 + idx * 0x28) += delta;
 }
 
+// MS2-FUNCTIONAL 0x1426237c0: same copy under ActiveLock; Callstack.Size is tested in memory as in 0x142622c90 (90 bytes against 92)
 // @0x1426237c0
 void FUN_1426237c0(char* self) { RawPublishTopScope(self); }
 
