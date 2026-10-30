@@ -462,8 +462,8 @@ void Sprite::SetRendererString(ASString) {}
 void Sprite::SetRendererFloat(float) {}
 void Sprite::SetRendererMatrix(float*, unsigned) {}
 
-// The children's rect bounds. Folded in the exe into the identical DisplayObjContainer::GetBounds (0x1425db2f0), so
-// untagged here too.
+// The children's rect bounds (Sprite's own vtable slot; DisplayObjContainer::GetBounds is a different function).
+// @0x1425db2f0
 RectF Sprite::GetRectBounds(const Matrix& t) const
 {
     return mDisplayList.GetRectBounds(t);
@@ -517,10 +517,12 @@ void Sprite::SetIMECandidateListFont(FontResource* pfont)
         pRootNode->pFontManager->SetIMECandidateFont(pfontHandle);
 }
 
-// @0x1425db2f0
+// The children's bounds (DisplayList::GetBounds 0x1425f9580), not their rect bounds: the DisplayObjContainer, Stage
+// and AvmLoader vtables point to 0x1425078e0, whose transcription is the Sfr33ContainerBounds stand-in in sfr_as3_17, so
+// untagged here.
 RectF DisplayObjContainer::GetBounds(const Matrix& t) const
 {
-    return mDisplayList.GetRectBounds(t);
+    return mDisplayList.GetBounds(t);
 }
 
 // With a drawing API the children live in the second node of the clip's container.
