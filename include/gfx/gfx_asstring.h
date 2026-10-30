@@ -298,6 +298,8 @@ public:
         return ASString(CreateConstStringNode(pstr, strlen(pstr), 0));
     }
     ASString CreateString(const char* pstr, UPInt length) { return ASString(CreateStringNode(pstr, length)); }
+    // (appended, sfb) the SDK single-argument form (VM::GetInternedNamespace 0x14250ab50).
+    ASString CreateString(const char* pstr) { return ASString(CreateStringNode(pstr)); }
 
     ASStringNode* GetEmptyStringNode() { return &EmptyStringNode; }
     ASStringNode* GetNullStringNode()  { return &NullStringNode; }

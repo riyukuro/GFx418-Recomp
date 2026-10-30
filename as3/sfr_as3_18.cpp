@@ -131,20 +131,20 @@ Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const AS
     return *FUN_142415c20(&traits, kind, uri, Value::GetUndefined());
 }
 
-// MS2-FUNCTIONAL 0x14250aac0: builds the URI node with the VM string manager and delegates to the shared interner.
+// The URI as a VM string, then interned (SDK AS3_VM.cpp form).
 // @0x14250aac0
 Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const StringDataPtr& uri) const
 {
-    ASString value = GetStringManager().CreateString(uri.ToCStr(), uri.GetSize());
-    return GetInternedNamespace(kind, value);
+    return GetInternedNamespace(kind, GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
 }
 
-// MS2-FUNCTIONAL 0x14250ab50: normalizes a null C string to empty before interning.
+// A null C string is taken as empty before interning (SDK AS3_VM.cpp form).
+// MS2-FUNCTIONAL scheduling only: the exe loads the string manager ahead of the null test
 // @0x14250ab50
-Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const char* uri) const
+Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const char* name) const
 {
-    ASString value = GetStringManager().CreateString(uri ? uri : "", uri ? strlen(uri) : 0);
-    return GetInternedNamespace(kind, value);
+    if (!name) name = "";
+    return GetInternedNamespace(kind, GetStringManager().CreateString(name));
 }
 
 // MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
@@ -4937,17 +4937,26 @@ ClassTraits::Traits*  FUN_142524f60(VM& vm, VMAbcFile& file, const Abc::Multinam
 
 // The class traits of an ABC class by the name of its instance info: from the VM's class traits cache, else (for
 // the scaleform.gfx package) made for it.
-// MS2-FUNCTIONAL register allocation (the VM and the namespace swap callee-saved registers)
+// MS2-FUNCTIONAL SDK GetUserDefinedTraits form; register allocation only (the VM, the namespace and the result swap
+// callee-saved registers)
 // @0x14250f9a0
 ClassTraits::Traits* FUN_14250f9a0(VM& vm, VMAbcFile& file, const Abc::ClassInfo& ci)
 {
     const Abc::Multiname&  mn   = file.GetAbcFile().Const_Pool.GetMultiname(ci.inst_info.name_ind);
     const ASString         name = file.GetInternedString(mn.NameIndex);
-    Instances::Namespace&  ns   = file.GetInternedNamespace(mn.Ind);
-    ClassTraits::Traits**  p    = FUN_142414ac0(&vm.ClassTraitsSet, name, ns);
-    if (!p && ns.GetUri().GetSize() >= 13 && strncmp(ns.GetUri().ToCStr(), "scaleform.gfx", 13) == 0)
-        return FUN_142524f60(vm, file, mn);
-    return *p;
+    const Instances::Namespace& ns = file.GetInternedNamespace(mn.Ind);
+    ClassTraits::Traits**  ptr  = FUN_142414ac0(&vm.ClassTraitsSet, name, ns);
+    if (ptr == NULL)
+    {
+        // check for *scaleform extension* packages.
+        const ASString& t_uri = ns.GetUri();
+        const StringDataPtr t_str(t_uri.ToCStr(), t_uri.GetSize());
+        const StringDataPtr scaleform_gfx("scaleform.gfx");
+        if (t_str.GetSize() >= scaleform_gfx.GetSize() &&
+            strncmp(t_str.ToCStr(), scaleform_gfx.ToCStr(), scaleform_gfx.GetSize()) == 0)
+            return FUN_142524f60(vm, file, mn);
+    }
+    return *ptr;
 }
 
 // An ABC multiname in a public (or explicit) namespace: its namespace, or any of its namespace set.
