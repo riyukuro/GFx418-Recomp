@@ -913,6 +913,7 @@ CriBool createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height,
 }
 
 // MS2-FUNCTIONAL: build a VMPV handle with its decoder instance, frame pool, and stream joints.
+// Stays DIFF: the exe is /TC codegen (call results parked in r11 before each store), which C++ doesn't emit.
 // @0x14003c390
 void* FUN_14003c390(void* heap, const CriUint32* config)
 {
@@ -968,7 +969,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     memcpy(handle + 0x50, &frameRecordBytes, sizeof(frameRecordBytes));
 
     size_t recordsBytes = (size_t)frameRecordBytes * frameCount;
-    CriUint8* records = (CriUint8*)FUN_140027ed8(heap, (CriSint32)(recordsBytes + 4),
+    CriUint8* records = (CriUint8*)FUN_140027ed8(heap, (CriSint32)recordsBytes,
                                                  "CriVmpv: FrmPoolInfoAry", 4);
     memcpy(handle + 0x48, &records, sizeof(records));
     if (!records)
@@ -3789,6 +3790,8 @@ void FUN_14003bb60(void*, CriUint8*, CriUint32, CriUint32, const void*, const vo
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: convert YUV (and optional alpha) planes into the caller's 32-bit ARGB buffer.
+// Stays DIFF: the exe returns 0/1 in eax, which neither caller (0x140026ebf, 0x14003bab3) reads; an int return
+// would change the mangled name used by sfr_cri_01c, 03a and the CRI hook table.
 // @0x14003bb60
 void FUN_14003bb60(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize, const void* srcbufs,
                    const void* src_vinf, const void* src_ainf)
@@ -4093,6 +4096,7 @@ CriBool FUN_14003e370(void* player, void* destination, void* source)
 #pragma intrinsic(memcpy)
 
 // MS2-FUNCTIONAL: pull one demuxed chunk from a video player's input queue and advance its decode state machine.
+// Stays DIFF: the exe is /TC codegen (switch temp through r11b, size add through r11d), which C++ doesn't emit.
 // @0x14003cff0
 CriSint32 FUN_14003cff0(void* player)
 {
@@ -4643,67 +4647,71 @@ void FUN_1400428e0(void* trackSet, void* player)
                     CriUint8 Reservede5c[0x10]; CriSint32 Started; };
     static_assert(offsetof(Player, Elapsed) == 0xe58 && offsetof(Player, Started) == 0xe6c &&
                   offsetof(TrackSet, Callback) == 0x28, "layout");
-    Player* ply = (Player*)player;
-    void* queue = ((TrackSet*)trackSet)->Queue;
-    CriSint32 counts[2] = {};
-    for (;;)
+    // C-style function-scope locals; the names give cl 15's name-hash slot order the exe has
+    CriSint32 accepted;
+    void* inQueue = ((TrackSet*)trackSet)->Queue;
+    CriUint32 ret;
+    Chunk chunk;
+    CriSint32 idx;
+    CriSint32 index;                        // unused; the exe keeps a 4-byte slot for it at [rsp+0x5c]
+    CriSint32 payloadBytes;
+    const CriUint8* pPayload;
+    CriSint32 tally[2] = {0};
+    CriUsfHeaderFields usfHdr;
+    while ((CriUint32)FUN_1400467b8(inQueue, 1) > 0)
     {
-        Chunk chunk;
-        do
+        FUN_1400467a0(inQueue, 1, 0xffffffff, &chunk);
+        if (chunk.Size >= 0x20)
         {
-            if (FUN_1400467b8(queue, 1) == 0)
+            criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)&usfHdr);
+            pPayload = criUsfCmn_GetContents(chunk.Data, chunk.Size, &payloadBytes);
+            if (usfHdr.Kind == 1)
             {
-                if (FUN_1400467b8(queue, 1) != 0)
-                    return;
-                for (CriSint32 index = 0; index < ((TrackSet*)trackSet)->Count; ++index)
+                accepted = 1;
+                if (((TrackSet*)trackSet)->Callback != NULL)
+                    accepted = ((TrackSet*)trackSet)->Callback(((TrackSet*)trackSet)->CallbackArg, &chunk, usfHdr.Byte0C);
+                if (accepted == 1)
                 {
-                    if (((TrackSet*)trackSet)->Decoders[index]->Active == 1)
-                        FUN_1400436d0(((TrackSet*)trackSet)->Decoders[index]);
+                    FUN_1400467b0(inQueue, 0, &chunk);
                 }
-                return;
+                else
+                {
+                    FUN_1400467a8(inQueue, 1, &chunk);
+                    return;
+                }
             }
-            FUN_1400467a0(queue, 1, 0xffffffff, &chunk);
-        } while (chunk.Size < 0x20);
-        CriUsfStandardHeader header;
-        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, &header);
-        CriSint32 contentSize;
-        criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize);
-        CriUint8 kind = header.Data[15];
-        CriUint8 track = header.Data[12];
-        if (kind == 1)
-        {
-            CriSint32 accepted = 1;
-            if (((TrackSet*)trackSet)->Callback != NULL)
-                accepted = ((TrackSet*)trackSet)->Callback(((TrackSet*)trackSet)->CallbackArg, &chunk, track);
-            if (accepted != 1)
+            else if (usfHdr.Kind == 0)
             {
-                FUN_1400467a8(queue, 1, &chunk);
-                return;
+                if (((Player*)player)->Elapsed > 0 && ((Player*)player)->Started != 1)
+                {
+                    if ((float)usfHdr.Words[1] / (float)usfHdr.Words[2] <
+                        (float)((Player*)player)->Elapsed * 1000.0f / (float)((Player*)player)->Rate)
+                    {
+                        FUN_1400467b0(inQueue, 0, &chunk);
+                        continue;
+                    }
+                    else
+                    {
+                        ((Player*)player)->Started = 1;
+                    }
+                }
+                ret = FUN_140042ba0(trackSet, &chunk, usfHdr.Byte0C, tally);
+                if (ret == 1)
+                    return;
             }
-            FUN_1400467b0(queue, 0, &chunk);
-            continue;
-        }
-        if (kind != 0)
-        {
-            FUN_1400467b0(queue, 0, &chunk);
-            continue;
-        }
-        if (0 < ply->Elapsed && ply->Started != 1)
-        {
-            CriUint32 timeNumerator;
-            CriUint32 timeDenominator;
-            memcpy(&timeNumerator, header.Data + 0x14, sizeof(timeNumerator));
-            memcpy(&timeDenominator, header.Data + 0x18, sizeof(timeDenominator));
-            if ((float)timeNumerator / (float)timeDenominator <
-                ((float)ply->Elapsed * 1000.0) / (float)ply->Rate)
+            else
             {
-                FUN_1400467b0(queue, 0, &chunk);
-                continue;
+                FUN_1400467b0(inQueue, 0, &chunk);
             }
-            ply->Started = 1;
         }
-        if (FUN_140042ba0(trackSet, &chunk, track, counts) == 1)
-            return;
+    }
+    if (FUN_1400467b8(inQueue, 1) == 0)
+    {
+        for (idx = 0; idx < ((TrackSet*)trackSet)->Count; idx++)
+        {
+            if (((TrackSet*)trackSet)->Decoders[idx]->Active == 1)
+                FUN_1400436d0(((TrackSet*)trackSet)->Decoders[idx]);
+        }
     }
 }
 #pragma optimize("", on)
