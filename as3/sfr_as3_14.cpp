@@ -10,6 +10,14 @@
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
 
+namespace Scaleform {
+// The ByteArray storage grows through this out of line (0x1424beea0) in the exe.
+template <> inline SF_NOINLINE void ArrayBase<ArrayData<UInt8, AllocatorLH_POD<UInt8>, ArrayDefaultPolicy> >::Resize(UPInt newSize)
+{
+    Data.Resize(newSize);
+}
+}
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -905,23 +913,21 @@ namespace Instances { namespace fl_utils
     {
     }
 
-    // MS2-FUNCTIONAL: VM::Error temporary construction/destruction scheduling differs
     // @0x1424bf180
     void ByteArray::ThrowEOFError()
     {
-        VM& vm = GetVM();
         Value v;
+        VM& vm = GetVM();
         vm.Construct("flash.errors.EOFError", v, 0, NULL, true);
         if (!vm.IsException() && !v.IsNullOrUndefined())
             GetVM().Throw(v);
     }
 
-    // MS2-FUNCTIONAL: VM::Error temporary construction/destruction scheduling differs
     // @0x1424bf250
     void ByteArray::ThrowMemoryError()
     {
-        VM& vm = GetVM();
         Value v;
+        VM& vm = GetVM();
         vm.Construct("flash.errors.MemoryError", v, 0, NULL, true);
         if (!vm.IsException() && !v.IsNullOrUndefined())
             GetVM().Throw(v);
@@ -952,7 +958,6 @@ namespace Instances { namespace fl_utils
         return true;
     }
 
-    // MS2-FUNCTIONAL: the exe keeps this in rcx and the position in edx; ours swaps them
     // @0x1424becd0
     UInt16 ByteArray::ReadUInt16()
     {
@@ -986,49 +991,46 @@ namespace Instances { namespace fl_utils
     void ByteArray::Resize(UInt32 size)
     {
         UPInt oldSize = Data.GetSize();
-        if (oldSize < size)
+        if (size > oldSize)
         {
             Data.Resize(size);
             memset(Data.GetDataPtr() + oldSize, 0, size - oldSize);
         }
         Length = size;
-        if (size < Position)
+        if (Position > size)
             Position = size;
     }
 
     // Write(char/UInt8/bool) are unused out of line; writeByte/writeBoolean inline them.
-    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424bf320
     void ByteArray::Write(char v)
     {
         const UInt32 newPos = Position + 1;
         if (newPos >= Data.GetSize())
             Resize(newPos);
-        else if (Length <= newPos)
+        else if (newPos >= Length)
             Length = newPos;
         Data[Position++] = (UInt8)v;
     }
 
-    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424bf3b0
     void ByteArray::Write(UInt8 v)
     {
         const UInt32 newPos = Position + 1;
         if (newPos >= Data.GetSize())
             Resize(newPos);
-        else if (Length <= newPos)
+        else if (newPos >= Length)
             Length = newPos;
         Data[Position++] = v;
     }
 
-    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424bf4f0
     void ByteArray::Write(bool v)
     {
         const UInt32 newPos = Position + 1;
         if (newPos >= Data.GetSize())
             Resize(newPos);
-        else if (Length <= newPos)
+        else if (newPos >= Length)
             Length = newPos;
         Data[Position++] = (UInt8)v;
     }
@@ -1046,13 +1048,8 @@ namespace Instances { namespace fl_utils
     template <typename T>
     inline bool ByteArray::ReadValue(T& v)
     {
-        if (Position + (UInt32)sizeof(T) > Data.GetSize())
-        {
-            ThrowEOFError();
+        if (!Read(&v, sizeof(T)))
             return false;
-        }
-        memcpy(&v, Data.GetDataPtr() + Position, sizeof(T));
-        Position += sizeof(T);
         if (Endian != endianLittle)
             v = SwapBytes(v);
         return true;
@@ -1121,21 +1118,16 @@ namespace Instances { namespace fl_utils
     }
 
     // ba[i] = v stores the low byte of uint(v), growing the array up to i.
-    // MS2-FUNCTIONAL: ind and v stack slots are swapped (0x24/0x28)
     // @0x1424bf000
     CheckResult ByteArray::SetProperty(const Multiname& prop_name, const Value& value)
     {
-        UInt32 v;
         UInt32 ind;
         if (GetArrayInd(prop_name, ind))
         {
+            UInt32 v;
             if (!value.Convert2UInt32(v))
                 return false;
-            const UInt32 i = ind;
-            const UInt8 b = (UInt8)v;
-            if (i >= Length)
-                Resize(i + 1);
-            Data[i] = b;
+            Set(ind, static_cast<UInt8>(v));
             return true;
         }
         return Object::SetProperty(prop_name, value);
@@ -1148,20 +1140,17 @@ namespace Instances { namespace fl_utils
     }
 
     // zlib-compresses the content in place; the position ends after it.
-    // MS2-FUNCTIONAL: tail call into the compress helper differs
     // @0x1424bf590
     void ByteArray::compress(Value& result, unsigned, const Value*)
     {
         SF_UNUSED(result);
         if (Length == 0)
             return;
-        unsigned long destLen = Length * 3 / 2 + 0x20;
+        UPInt destLen = Length * 3 / 2 + 0x20;
         UInt8* buf = (UInt8*)SF_HEAP_AUTO_ALLOC(this, destLen);
-        compress2(buf, &destLen, Data.GetDataPtr(), Length, 9);
-        Length = 0;
-        if (Position != 0)
-            Position = 0;
-        Write(buf, destLen);
+        compress2(buf, (unsigned long*)&destLen, Data.GetDataPtr(), Length, 9);
+        Resize(0);
+        Write(buf, (UInt32)destLen);
         SF_FREE(buf);
     }
 
@@ -1273,14 +1262,12 @@ namespace Instances { namespace fl_utils
         ThrowEOFError();
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bf9e0
     void ByteArray::readDouble(Value::Number& result)
     {
         ReadValue(result);
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue + float conversion register allocation differs
     // @0x1424bfa30
     void ByteArray::readFloat(Value::Number& result)
     {
@@ -1289,7 +1276,6 @@ namespace Instances { namespace fl_utils
             result = v;
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bfab0
     void ByteArray::readInt(SInt32& result)
     {
@@ -1333,7 +1319,6 @@ namespace Instances { namespace fl_utils
         vm.ThrowError(VM::Error(VM::eNotImplementedError, vm, "ByteArray::readObject()"));
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bfde0
     void ByteArray::readShort(SInt32& result)
     {
@@ -1341,7 +1326,6 @@ namespace Instances { namespace fl_utils
     }
 
     // A 16-bit length, then that many UTF-8 bytes.
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bfe40
     void ByteArray::readUTF(ASString& result)
     {
@@ -1365,14 +1349,12 @@ namespace Instances { namespace fl_utils
         result = Data[Position++];
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bff00
     void ByteArray::readUnsignedInt(UInt32& result)
     {
         ReadValue(result);
     }
 
-    // MS2-FUNCTIONAL: inlined ReadValue register allocation differs
     // @0x1424bff40
     void ByteArray::readUnsignedShort(UInt32& result)
     {
@@ -1413,9 +1395,7 @@ namespace Instances { namespace fl_utils
             return;
         UInt8* src = (UInt8*)SF_HEAP_AUTO_ALLOC(this, len);
         memcpy(src, Data.GetDataPtr(), len);
-        Length = 0;
-        if (Position != 0)
-            Position = 0;
+        Resize(0);
 
         ZInflateStream zs;
         zs.next_in = src;
@@ -1440,7 +1420,6 @@ namespace Instances { namespace fl_utils
         inflateEnd(&zs);
     }
 
-    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424c05c0
     void ByteArray::writeBoolean(const Value& result, bool value)
     {
@@ -1448,7 +1427,6 @@ namespace Instances { namespace fl_utils
         Write(value);
     }
 
-    // MS2-FUNCTIONAL: exe calls ArrayBase::Resize out of line; ours inlines it
     // @0x1424c0650
     void ByteArray::writeByte(const Value& result, SInt32 value)
     {
@@ -1654,25 +1632,25 @@ namespace Instances { namespace fl_gfx
     void GamePadAnalogEvent::AS3Constructor(unsigned argc, const Value* argv)
     {
         Event::AS3Constructor(argc, argv);
-        if (argc > 3)
+        if (argc >= 4)
         {
             UInt32 v;
             argv[3].Convert2UInt32(v);
             Code = v;
         }
-        if (argc > 4)
+        if (argc >= 5)
         {
             UInt32 v;
             argv[4].Convert2UInt32(v);
             ControllerIdx = v;
         }
-        if (argc > 5)
+        if (argc >= 6)
         {
             Value::Number v;
             argv[5].Convert2Number(v);
             XValue = v;
         }
-        if (argc > 6)
+        if (argc >= 7)
         {
             Value::Number v;
             argv[6].Convert2Number(v);
