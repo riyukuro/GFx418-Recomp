@@ -486,14 +486,17 @@ void FUN_1400493c0();
 void FUN_14004de60(cri_any = cri_any());
 void FUN_14004dfc0(cri_any = cri_any());
 cri_u4 FUN_14004ff50(cri_any = cri_any(), cri_any = cri_any());
-DWORD FUN_1400501f0(cri_any = cri_any());
-void FUN_140050210(cri_any = cri_any(), cri_any = cri_any());
+DWORD FUN_1400501f0();   // sfr_cri_05b
+void FUN_140050520();   // sfr_cri_05b
+void FUN_140050670();   // sfr_cri_05b
+void FUN_140054080();   // sfr_cri_05b
+void FUN_140050210(longlong, cri_u4);   // sfr_cri_05b
 void FUN_140050310(cri_any = cri_any());
-longlong FUN_140050730(cri_any = cri_any());
+longlong FUN_140050730();   // sfr_cri_05b
 cri_u8 FUN_140050820(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140051d90(cri_any = cri_any());
 cri_u4 FUN_140051ec0(cri_any = cri_any(), cri_any = cri_any());
-cri_u4 FUN_140052010(cri_any = cri_any(), cri_any = cri_any(), ...);
+cri_u4 FUN_140052010(longlong *a1, int a2, int a3);   // sfr_cri_05b
 int FUN_140052950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u1 FUN_140053000(cri_any = cri_any());
 void FUN_140054170(cri_any = cri_any());
@@ -735,12 +738,7 @@ void FUN_1400541f0(char *ctx)
 // @0x140054200
 void thunk_FUN_140054080()
 {
-  FUN_14006aa90();
-  FUN_140066320();
-  FUN_140066180(&DAT_143fe82e0);
-  FUN_1400659a0((cri_u1 *)&DAT_1431ba950,(cri_u1 *)&DAT_143fe8420);
-  FUN_1400659a0((cri_u1 *)&DAT_1431ba990,(cri_u1 *)&DAT_143fe83e0);
-  return;
+  FUN_140054080();   // the exe's thunk is a jmp to FUN_140054080 (sfr_cri_05b)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -7091,7 +7089,7 @@ void FUN_14005b300(cri_any cri_p0, cri_any cri_p1)
   u_v2 = FUN_140051d90(arg2);
   if (u_v2 != 0) {
     while ((u_v2 & 0xcc) == 0) {
-      i_v1 = FUN_140052010(arg2,1,4);
+      i_v1 = FUN_140052010((longlong *)arg2,1,4);
       if ((i_v1 != 4) || (u_v2 = FUN_140051d90(arg2), u_v2 == 0)) goto LAB_14005b36f;
     }
     u_v3 = 0;
@@ -12819,67 +12817,7 @@ void FUN_140064760()
 // @0x140064990
 void thunk_FUN_140064760()
 {
-  longlong l_v1;
-  cri_u4 *pu_v2;
-  
-  _DAT_143d49d80 = 0;
-  _DAT_143d49d88 = 0;
-  _DAT_143d49d90 = 0x6404000064040;
-  _DAT_143d49d98 = 0x6404000064040;
-  _DAT_143d49da0 = 0x8020200080202;
-  _DAT_143d49e00 = 0x9010d;
-  _DAT_143d49da8 = 0x8010900080109;
-  _DAT_143d49e04 = 0x90600;
-  _DAT_143d49db0 = 0x8040000080400;
-  _DAT_143d49e08 = 0x9010c;
-  _DAT_143d49db8 = 0x8010800080108;
-  _DAT_143d49e0c = 0x9010b;
-  _DAT_143d49dc0 = 0x7010700070107;
-  _DAT_143d49dc8 = 0x7010700070107;
-  _DAT_143d49dd0 = 0x7010600070106;
-  _DAT_143d49dd8 = 0x7010600070106;
-  _DAT_143d49de0 = 0x7020100070201;
-  _DAT_143d49de8 = 0x7020100070201;
-  _DAT_143d49df0 = 0x7010500070105;
-  _DAT_143d49df8 = 0x7010500070105;
-  _DAT_143d49e20 = 0x6030000060300;
-  _DAT_143d49e28 = 0x6030000060300;
-  _DAT_143d49e30 = 0x6030000060300;
-  _DAT_143d49e38 = 0x6030000060300;
-  _DAT_143d49e10 = 0x90203;
-  _DAT_143d49e40 = 0x6010400060104;
-  _DAT_143d49e48 = 0x6010400060104;
-  _DAT_143d49e50 = 0x6010400060104;
-  _DAT_143d49e58 = 0x6010400060104;
-  _DAT_143d49e14 = 0x90301;
-  _DAT_143d49e60 = 0x6010300060103;
-  _DAT_143d49e68 = 0x6010300060103;
-  _DAT_143d49e70 = 0x6010300060103;
-  _DAT_143d49e78 = 0x6010300060103;
-  _DAT_143d49e18 = 0x90500;
-  _DAT_143d49e80 = 0x5020000050200;
-  _DAT_143d49e88 = 0x5020000050200;
-  _DAT_143d49e90 = 0x5020000050200;
-  _DAT_143d49e98 = 0x5020000050200;
-  _DAT_143d49ea0 = 0x5020000050200;
-  _DAT_143d49ea8 = 0x5020000050200;
-  _DAT_143d49eb0 = 0x5020000050200;
-  _DAT_143d49eb8 = 0x5020000050200;
-  _DAT_143d49ec0 = 0x5010200050102;
-  _DAT_143d49ec8 = 0x5010200050102;
-  _DAT_143d49ed0 = 0x5010200050102;
-  _DAT_143d49ed8 = 0x5010200050102;
-  _DAT_143d49ee0 = 0x5010200050102;
-  _DAT_143d49ee8 = 0x5010200050102;
-  _DAT_143d49ef0 = 0x5010200050102;
-  _DAT_143d49ef8 = 0x5010200050102;
-  _DAT_143d49e1c = 0x9010a;
-  pu_v2 = CRI_ADDR(DAT_143d49f00);
-  for (l_v1 = 0x20; l_v1 != 0; l_v1 = l_v1 + -1) {
-    *pu_v2 = 0x40101;
-    pu_v2 = pu_v2 + 1;
-  }
-  return;
+  FUN_140064760();   // the exe's thunk is a jmp to FUN_140064760
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -13200,89 +13138,14 @@ void FUN_140064f70(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 // @0x140064fe0
 void thunk_FUN_140050520()
 {
-  int i_v1;
-  cri_u4 u_v2;
-  longlong l_v3;
-  cri_u4 *pu_v4;
-  ulonglong u_v5;
-  uint u_v6;
-  ulonglong u_v7;
-  
-  DAT_143c49100 = DAT_143c49100 + 1;
-  if ((DAT_143c49100 == 1) && (i_v1 = FUN_1400501f0(), 1 < i_v1)) {
-    DAT_143c490f8 = (void*)FUN_1400682e0(&DAT_143badb88,0x30);  // edx = 0x30 in the exe
-    // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
-    DAT_143c490f0 = ((longlong)&DAT_143badf80 + 0x5f) & ~(longlong)0x7f;
-    memset((void *)DAT_143c490f0,0,0x9b100);
-    DAT_143c490e0 = ((longlong)&DAT_143badc00 + 0x5f) & ~(longlong)0x7f;
-    memset((void *)DAT_143c490e0,0,0x300);
-    DAT_143badbdc = 3;
-    FUN_1400677f0();
-    u_v5 = 0;
-    DAT_143badb84 = DAT_143badbdc;
-    if (0 < DAT_143badbdc) {
-      pu_v4 = (cri_u4 *)(&DAT_143badbb8 + 4);
-      u_v7 = u_v5;
-      while( true ) {
-        l_v3 = FUN_140067890(DAT_143c490e0 + (longlong)(int)u_v7 * 0x100 + 0x10,0x7c);  // per-thread work area at entry + 0x10
-        *(longlong *)(u_v5 + (longlong)DAT_143c490e0) = l_v3;
-        if (l_v3 == 0) break;
-        pu_v4[-1] = 0xffffffff;
-        u_v2 = FUN_140067f40(l_v3);
-        u_v6 = (int)u_v7 + 1;
-        u_v7 = (ulonglong)u_v6;
-        *pu_v4 = u_v2;
-        u_v5 = u_v5 + 0x100;
-        pu_v4 = pu_v4 + 3;
-        if (DAT_143badbdc <= (int)u_v6) {
-          return;
-        }
-      }
-      FUN_14004ff50(0,0xff030602);
-    }
-  }
-  return;
+  FUN_140050520();   // the exe's thunk is a jmp to FUN_140050520 (sfr_cri_05b)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ff0
 void thunk_FUN_140050670()
 {
-  int i_v1;
-  longlong l_v2;
-  longlong l_v3;
-  longlong l_v4;
-  
-  DAT_143c49100 = DAT_143c49100 + -1;
-  if (DAT_143c49100 == 0) {
-    i_v1 = FUN_1400501f0();
-    if (i_v1 < 2) {
-      return;
-    }
-    if (DAT_143c490f8 != 0) {
-      FUN_140068380(DAT_143c490f8);  // rcx = the handle just tested
-      DAT_143c490f8 = 0;
-    }
-    l_v4 = (longlong)(DAT_143badbdc + -1);
-    if (-1 < DAT_143badbdc + -1) {
-      l_v3 = l_v4 << 8;
-      l_v2 = DAT_143c490e0;
-      do {
-        if (*(longlong *)(l_v3 + l_v2) != 0) {
-          FUN_140067a90(*(longlong *)(l_v3 + l_v2));  // rcx = the slot just tested
-          l_v2 = DAT_143c490e0;
-          *(cri_u8 *)(l_v3 + DAT_143c490e0) = 0;
-        }
-        l_v3 = l_v3 + -0x100;
-        l_v4 = l_v4 + -1;
-      } while (-1 < l_v4);
-    }
-    FUN_140067840();
-  }
-  if (DAT_143c49100 < 0) {
-    DAT_143c49100 = 0;
-  }
-  return;
+  FUN_140050670();   // the exe's thunk is a jmp to FUN_140050670 (sfr_cri_05b)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
