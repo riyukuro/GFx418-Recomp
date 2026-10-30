@@ -11,6 +11,13 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/cri/cri_vendor_shim.h"
+// The exe takes these table addresses with a plain lea, and VC9 keeps the fill loops at their full length, so the
+// launder (and its stack spill) is only needed where clang could bound a loop by the scalar declaration.
+#if defined(__clang__)
+#define CRI_FILL_ADDR(x) CRI_ADDR(x)
+#else
+#define CRI_FILL_ADDR(x) (&(x))
+#endif
 extern "C" void _ReadWriteBarrier(void);
 #pragma intrinsic(_ReadWriteBarrier)
 extern "C" const char* _DAT_143c494f0;
@@ -1066,10 +1073,8 @@ void FUN_140054a40(cri_any cri_p0)
 void FUN_140054a80(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  uint u_v1;
   int i_v2;
   longlong l_v3;
-  uint u_v4;
   
   if (*(int *)((char *)arg1 + 0x318) == 3) {
     i_v2 = 0;
@@ -1077,16 +1082,14 @@ void FUN_140054a80(cri_any cri_p0)
   }
   else {
     *(int *)((char *)arg1 + 0xc10) = *(int *)((char *)arg1 + 0xc10) + 1;
-    u_v1 = *(int *)((char *)arg1 + 0xc10) - 1;
-    u_v4 = (int)u_v1 >> 0x1f;
-    i_v2 = (u_v1 & 1 ^ u_v4) - u_v4;
+    i_v2 = (*(int *)((char *)arg1 + 0xc10) - 1) % 2;
   }
   *(int *)((char *)arg1 + 0xc0c) = i_v2;
   *(cri_u4 *)((char *)arg1 + 0x720) =
        *(cri_u4 *)(&DAT_1431bab30 + (ulonglong)*(uint *)((char *)arg1 + 0x314) * 4);
-  l_v3 = (ulonglong)*(uint *)((char *)arg1 + 0x330) * 0x40;
   *(cri_u4 *)((char *)arg1 + 0x730) =
        *(cri_u4 *)(&DAT_1431bab40 + (ulonglong)*(uint *)((char *)arg1 + 0x314) * 4);
+  l_v3 = (ulonglong)*(uint *)((char *)arg1 + 0x330) * 0x40;
   *(cri_u8 *)((char *)arg1 + 0x734) = *(cri_u8 *)(&DAT_143fe8260 + l_v3);
   *(cri_u8 *)((char *)arg1 + 0x73c) = *(cri_u8 *)(&DAT_143fe8268 + l_v3);
   *(cri_u8 *)((char *)arg1 + 0x744) = *(cri_u8 *)(&DAT_143fe8270 + l_v3);
@@ -1103,35 +1106,15 @@ void FUN_140054a80(cri_any cri_p0)
 void FUN_140054b60(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  cri_u1 *pu_v1;
   longlong l_v2;
-  longlong l_v3;
-  cri_u1 *pu_v4;
   
-  pu_v4 = (cri_u1 *)(arg1 + 300);
-  l_v2 = 0;
-  do {
-    l_v3 = l_v2 + 4;
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xa80 + arg1) = pu_v4[-0x104];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xac0 + arg1) = *pu_v4;
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb00 + arg1) = pu_v4[0x230];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb40 + arg1) = pu_v4[0x334];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8261)[l_v2] + 0xa80 + arg1) = pu_v4[-0x100];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8261)[l_v2] + 0xac0 + arg1) = pu_v4[4];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8261)[l_v2] + 0xb00 + arg1) = pu_v4[0x234];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8261)[l_v2] + 0xb40 + arg1) = pu_v4[0x338];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8262)[l_v2] + 0xa80 + arg1) = pu_v4[-0xfc];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8262)[l_v2] + 0xac0 + arg1) = pu_v4[8];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8262)[l_v2] + 0xb00 + arg1) = pu_v4[0x238];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8262)[l_v2] + 0xb40 + arg1) = pu_v4[0x33c];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8263)[l_v2] + 0xa80 + arg1) = pu_v4[-0xf8];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8263)[l_v2] + 0xac0 + arg1) = pu_v4[0xc];
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8263)[l_v2] + 0xb00 + arg1) = pu_v4[0x23c];
-    pu_v1 = pu_v4 + 0x340;
-    pu_v4 = pu_v4 + 0x10;
-    *(cri_u1 *)((longlong)(char)(&DAT_143fe8263)[l_v2] + 0xb40 + arg1) = *pu_v1;
-    l_v2 = l_v3;
-  } while (l_v3 < 0x40);
+  /* the exe's x4-unrolled body is the compiler's: one byte of each of four int tables, scattered by DAT_143fe8260 */
+  for (l_v2 = 0; l_v2 < 0x40; l_v2++) {
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xa80 + arg1) = *(cri_u1 *)(arg1 + 0x28 + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xac0 + arg1) = *(cri_u1 *)(arg1 + 0x12c + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb00 + arg1) = *(cri_u1 *)(arg1 + 0x35c + l_v2 * 4);
+    *(cri_u1 *)((longlong)(char)(&DAT_143fe8260)[l_v2] + 0xb40 + arg1) = *(cri_u1 *)(arg1 + 0x460 + l_v2 * 4);
+  }
   return;
 }
 
@@ -6060,15 +6043,14 @@ void FUN_14005a1b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
 // @0x14005a4b0
 void FUN_14005a4b0()
 {
-  ushort u_v1;
+  uint u_v1;
   cri_u1 *pu_v2;
   longlong l_v3;
-  longlong l_v4;
   int i_v5;
-  ushort *pu_v6;
+  int i_v4;
   ushort *pu_v7;
   
-  pu_v2 = CRI_ADDR(DAT_143ee68c1);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143ee68c1);
   l_v3 = 0x800;
   do {
     pu_v2[-1] = 0;
@@ -6076,18 +6058,13 @@ void FUN_14005a4b0()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bac00);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bac00);
   l_v3 = 0x23;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x800L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143ee68c0 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x800ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143ee68c0 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
@@ -6099,16 +6076,15 @@ void FUN_14005a4b0()
 // @0x14005a530
 void FUN_14005a530()
 {
-  ushort u_v1;
+  uint u_v1;
   cri_u1 *pu_v2;
   longlong l_v3;
-  longlong l_v4;
   int i_v5;
-  ushort *pu_v6;
+  int i_v4;
   ushort *pu_v7;
   longlong l_v8;
   
-  pu_v2 = CRI_ADDR(DAT_143fe8241);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143fe8241);
   l_v3 = 4;
   do {
     pu_v2[-1] = 0;
@@ -6117,23 +6093,18 @@ void FUN_14005a530()
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
   l_v8 = 2;
-  pu_v7 = CRI_ADDR(DAT_1431bac90);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bac90);
   l_v3 = 2;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(4L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143fe8240 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(4ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143fe8240 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143e66841);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e66841);
   l_v3 = 0x40;
   do {
     pu_v2[-1] = 0;
@@ -6141,23 +6112,18 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bac98);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bac98);
   l_v3 = 7;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x40L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e66840 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x40ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e66840 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143f680c1);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143f680c1);
   l_v3 = 0x40;
   do {
     pu_v2[-1] = 0;
@@ -6165,23 +6131,18 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bacb8);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bacb8);
   l_v3 = 0xb;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x40L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143f680c0 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x40ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143f680c0 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143e65801);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e65801);
   do {
     pu_v2[-1] = 0;
     *pu_v2 = 0x7f;
@@ -6190,7 +6151,7 @@ void FUN_14005a530()
   } while (l_v8 != 0);
   l_v8 = 0x10;
   _DAT_143e65802 = 0x401;
-  pu_v2 = CRI_ADDR(DAT_143e64be1);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e64be1);
   l_v3 = 0x10;
   do {
     pu_v2[-1] = 0;
@@ -6198,23 +6159,18 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bace8);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bace8);
   l_v3 = 5;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x10L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e64be0 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x10ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e64be0 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143f68141);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143f68141);
   l_v3 = 0x80;
   do {
     pu_v2[-1] = 0;
@@ -6222,22 +6178,17 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bad00);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bad00);
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x80L >> ((byte)u_v1 & 0x3f));
-    l_v3 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143f68140 + (ulonglong)*pu_v7 * 2);
-      for (; l_v3 != 0; l_v3 = l_v3 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x80ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143f68140 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v8 = l_v8 + -1;
   } while (l_v8 != 0);
-  pu_v2 = CRI_ADDR(DAT_143f67cc1);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143f67cc1);
   l_v3 = 0x200;
   do {
     pu_v2[-1] = 0;
@@ -6245,23 +6196,18 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bad40);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bad40);
   l_v3 = 0x14;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x200L >> ((byte)u_v1 & 0x3f));
-    l_v8 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143f67cc0 + (ulonglong)*pu_v7 * 2);
-      for (; l_v8 != 0; l_v8 = l_v8 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x200ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143f67cc0 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143e66831);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e66831);
   l_v3 = 8;
   do {
     pu_v2[-1] = 0;
@@ -6269,18 +6215,13 @@ void FUN_14005a530()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bad90);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bad90);
   l_v3 = 3;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(8L >> ((byte)u_v1 & 0x3f));
-    l_v8 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e66830 + (ulonglong)*pu_v7 * 2);
-      for (; l_v8 != 0; l_v8 = l_v8 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(8ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e66830 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
@@ -6292,15 +6233,14 @@ void FUN_14005a530()
 // @0x14005a820
 void FUN_14005a820()
 {
-  ushort u_v1;
+  uint u_v1;
   cri_u1 *pu_v2;
   longlong l_v3;
-  longlong l_v4;
+  int i_v4;
   int i_v5;
-  ushort *pu_v6;
   ushort *pu_v7;
   
-  pu_v2 = CRI_ADDR(DAT_143e65821);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e65821);
   l_v3 = 0x800;
   do {
     pu_v2[-1] = 0;
@@ -6308,23 +6248,18 @@ void FUN_14005a820()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bada0);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bada0);
   l_v3 = 0x21;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x800L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e65820 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x800ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e65820 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143e66821);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e66821);
   l_v3 = 4;
   do {
     pu_v2[-1] = 0;
@@ -6332,18 +6267,13 @@ void FUN_14005a820()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bae28);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bae28);
   l_v3 = 3;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(4L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e66820 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(4ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e66820 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
@@ -6355,15 +6285,14 @@ void FUN_14005a820()
 // @0x14005a900
 void FUN_14005a900()
 {
-  ushort u_v1;
+  uint u_v1;
   cri_u1 *pu_v2;
   longlong l_v3;
-  longlong l_v4;
   int i_v5;
-  ushort *pu_v6;
+  int i_v4;
   ushort *pu_v7;
   
-  pu_v2 = CRI_ADDR(DAT_143e65401);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e65401);
   l_v3 = 0x200;
   do {
     pu_v2[-1] = 0;
@@ -6371,18 +6300,13 @@ void FUN_14005a900()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431bae40);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431bae40);
   l_v3 = 0x40;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x200L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e65400 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x200ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e65400 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
@@ -6394,16 +6318,15 @@ void FUN_14005a900()
 // @0x14005a980
 void FUN_14005a980()
 {
-  ushort u_v1;
+  uint u_v1;
   cri_u1 *pu_v2;
   longlong l_v3;
-  longlong l_v4;
   int i_v5;
-  ushort *pu_v6;
+  int i_v4;
   ushort *pu_v7;
   longlong l_v8;
   
-  pu_v2 = CRI_ADDR(DAT_143ee78c1);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143ee78c1);
   l_v3 = 0x200;
   do {
     pu_v2[-1] = 0;
@@ -6412,23 +6335,18 @@ void FUN_14005a980()
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
   l_v8 = 0xc;
-  pu_v7 = CRI_ADDR(DAT_1431baf40);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431baf40);
   l_v3 = 0xc;
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x200L >> ((byte)u_v1 & 0x3f));
-    l_v4 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143ee78c0 + (ulonglong)*pu_v7 * 2);
-      for (; l_v4 != 0; l_v4 = l_v4 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x200ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143ee78c0 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v2 = CRI_ADDR(DAT_143e64c01);
+  pu_v2 = (cri_u1 *)CRI_FILL_ADDR(DAT_143e64c01);
   l_v3 = 0x400;
   do {
     pu_v2[-1] = 0;
@@ -6436,17 +6354,12 @@ void FUN_14005a980()
     pu_v2 = pu_v2 + 2;
     l_v3 = l_v3 + -1;
   } while (l_v3 != 0);
-  pu_v7 = CRI_ADDR(DAT_1431baf70);
+  pu_v7 = (ushort *)CRI_FILL_ADDR(DAT_1431baf70);
   do {
     u_v1 = pu_v7[1];
-    i_v5 = (int)(0x400L >> ((byte)u_v1 & 0x3f));
-    l_v3 = (longlong)i_v5;
-    if (0 < i_v5) {
-      pu_v6 = (ushort *)(&DAT_143e64c00 + (ulonglong)*pu_v7 * 2);
-      for (; l_v3 != 0; l_v3 = l_v3 + -1) {
-        *pu_v6 = u_v1;
-        pu_v6 = pu_v6 + 1;
-      }
+    i_v5 = (int)(0x400ULL >> (byte)u_v1);
+    for (i_v4 = 0; i_v4 < i_v5; i_v4++) {
+      ((ushort *)(&DAT_143e64c00 + (ulonglong)*pu_v7 * 2))[i_v4] = (ushort)u_v1;
     }
     pu_v7 = pu_v7 + 2;
     l_v8 = l_v8 + -1;
