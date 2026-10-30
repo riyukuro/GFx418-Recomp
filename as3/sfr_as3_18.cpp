@@ -48,6 +48,8 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
 void FUN_142524870(void* arr, Scaleform::UPInt n);   // ArrayDH_POD<UPInt>::Resize, out of line
 void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // ArrayLH_POD<UPInt>::Resize (the word code), out of line
+// Value::operator=(const ASString&), out of line in the exe
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -177,38 +179,34 @@ const InstanceTraits::Traits& VM::GetInstanceTraits(const Value& v) const
     }
 }
 
-// MS2-FUNCTIONAL 0x14250be40: iterator preserves bucket order; exact tombstone boundary comparison remains to verify.
 // @0x14250be40
 GlobalSlotIndex Object::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const DynAttrsType& attrs = DynAttrs;
-    DynAttrsType::ConstIterator it = attrs.Begin();
-    // ind is the 1-based index of the entry last returned: the search starts at the entry after it
-    const UPInt start = ind.IsValid() ? static_cast<UPInt>(ind.Get()) : 0;
-    for (; !it.IsEnd(); ++it)
-    {
-        if (static_cast<UPInt>(it.GetIndex()) < start)
-            continue;
-        if ((it->First.Flags & 1) == 0)
-            return GlobalSlotIndex(static_cast<UInt32>(it.GetIndex() + 1));
-    }
-    return GlobalSlotIndex(0);
+    const DynAttrsType::ConstIterator bit = DynAttrs.Begin();
+    // AbsoluteIndex(GlobalSlotIndex) is ind - 1
+    DynAttrsType::ConstIterator it(bit.GetContainer(), (ind.IsValid() ? static_cast<SPInt>(ind.Get() - 1) : -1));
+
+    if (it.IsEnd())
+        return GlobalSlotIndex(0);
+
+    ++it;
+    // Skip "DontEnum" properties.
+    while (!it.IsEnd() && (it->First.Flags & 1))
+        ++it;
+
+    if (it.IsEnd())
+        return GlobalSlotIndex(0);
+    else
+        return GlobalSlotIndex(static_cast<UInt32>(it.GetIndex() + 1));
 }
 
-// MS2-FUNCTIONAL 0x14250c010: name lookup follows the recovered bucket index; invalid-index behavior remains to verify.
 // @0x14250c010
 void Object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    const UPInt target = ind.IsValid() ? static_cast<UPInt>(ind.Get() - 1) : 0;
-    for (DynAttrsType::ConstIterator it = DynAttrs.Begin(); !it.IsEnd(); ++it)
-    {
-        if (static_cast<UPInt>(it.GetIndex()) == target)
-        {
-            name.Assign(it->First.Name);
-            return;
-        }
-    }
-    name.SetUndefined();
+    const DynAttrsType::ConstIterator bit = DynAttrs.Begin();
+    DynAttrsType::ConstIterator it(bit.GetContainer(), ind.Get() - 1);
+
+    FUN_1424e0d40(name, it->First.Name);   // name = it->First.GetName()
 }
 
 // ==== Value: references ====
