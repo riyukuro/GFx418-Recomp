@@ -2349,38 +2349,46 @@ bool FUN_1423d14d0(void* self, const char* text)
     return result != 0;
 }
 
-// MS2-FUNCTIONAL: maps the executable's Japanese, Korean, and Chinese mode values to IMM conversion flags.
+// Sets the IME conversion mode for the current keyboard layout (saved at +0x90). The low conversion bits are
+// cleared and, per language, `mode` picks the native/full-shape bits: Japanese 0 / 4 / 8 / 0x16, Korean 0x32 or 0,
+// Chinese (0x404 / 0x804) 2 or 0; mode 1 keeps alphanumeric, any other mode is unsupported for these languages and
+// sets nothing (the IME may already have been opened). Other languages always take the cleared mode. Returns
+// whether the mode was applied.
+// Checked case by case against the exe's control flow (Korean chat depends on the 0x412 path).
+// MS2-FUNCTIONAL: the exe loads the whole HKL and does not thread the 0x411 block past the 0x412 test
 // @0x1423d15b0
-unsigned long long FUN_1423d15b0(void* self, int mode)
+bool FUN_1423d15b0(void* self, int mode)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    HWND hwnd = *reinterpret_cast<HWND*>(bytes + 0x28);
-    HKL layout = GetKeyboardLayout(0);
-    *reinterpret_cast<HKL*>(bytes + 0x90) = layout;
-    HIMC context = cx18_ImmGetContext(hwnd);
+    *reinterpret_cast<HKL*>(bytes + 0x90) = GetKeyboardLayout(0);
     bool wasAssociated = true;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     if (!context) {
         wasAssociated = false;
-        cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
-        context = cx18_ImmGetContext(hwnd);
+        cx18_ImmAssociateContextEx(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr, 0x10);
+        context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
         if (!context) {
-            cx18_ImmReleaseContext(hwnd, nullptr);
-            return 0;
+            cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr);
+            return false;
         }
     }
-    DWORD conversion = 0, sentence = 0;
-    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
     bool supported = true;
+    DWORD conversion, sentence;
+    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
     if ((conversion & 0xf) == 0) cx18_ImmSetOpenStatus(context, TRUE);
     conversion &= ~0xfu;
-    const unsigned language = static_cast<unsigned>(reinterpret_cast<unsigned long long>(layout) & 0xffff);
+    const unsigned long long language = reinterpret_cast<unsigned long long>(*reinterpret_cast<HKL*>(bytes + 0x90)) & 0xffff;
     if (language == 0x411) {
-        if (mode == 0) conversion |= 8;
-        else if (mode == 4) conversion |= 9;
-        else if (mode == 8) conversion |= 0xb;
-        else if (mode == 0x16) conversion |= 3;
-        else if (mode != 1) supported = false;
-    } else if (language == 0x412) {
+        switch (mode) {
+        case 0: conversion |= 8; break;
+        case 1: break;
+        case 4: conversion |= 9; break;
+        case 8: conversion |= 0xb; break;
+        case 0x16: conversion |= 3; break;
+        default: supported = false; break;
+        }
+    }
+    if (language == 0x412) {
         if (mode == 0x32) conversion |= 9;
         else if (mode == 0) conversion |= 8;
         else if (mode != 1) supported = false;
@@ -2394,8 +2402,8 @@ unsigned long long FUN_1423d15b0(void* self, int mode)
         bytes[0x80] = 1;
         cx18_ImmSetOpenStatus(context, TRUE);
     }
-    cx18_ImmReleaseContext(hwnd, context);
-    if (!wasAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
+    if (!wasAssociated) cx18_ImmAssociateContextEx(*reinterpret_cast<HWND*>(bytes + 0x28), nullptr, 0);
     return supported;
 }
 
