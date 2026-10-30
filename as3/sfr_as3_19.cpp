@@ -2440,7 +2440,7 @@ void Sfr31SetHolder(UPInt self, UPInt a, UPInt b, UInt8 flag)
 {
     if (Sfr31Rd(self, 0x30) != 0)
         Memory::pGlobalHeap->Free(reinterpret_cast<void*>(Sfr31Rd(self, 0x30)));
-    AllocInfo ai;
+    AllocInfo ai(0x151, 0, 0);   // StatMV_VM_Instance_Mem, as in Sfr31SetHolderOf
     UPInt* h = static_cast<UPInt*>(Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(self), 0x10, &ai));
     if (h != 0) { h[0] = a; h[1] = b; }
     *reinterpret_cast<UPInt**>(self + 0x30) = h;
@@ -4415,16 +4415,17 @@ void Sfr31ExecPushNamespace(UPInt vm, UPInt target)
     {
         const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
         ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
-        UInt8 tmp[8];
-        const bool ok = *FUN_1424f1390(top, tmp, &str) != 0;
+        const bool ok = top->Convert2String(str);
         if (ok && *reinterpret_cast<const UInt32*>(Sfr31Rd(reinterpret_cast<UPInt>(&str), 0) + 0x20) != 0)
         {
+            // SF_HEAP_AUTO_NEW(tr) Instances::fl::Namespace(...): the ctor's prefix argument is evaluated before the allocation.
+            const Value& prefix = Value::GetUndefined();
             const UPInt tr = Sfr31Rd(Sfr31Rd(vm, 0x200), 0xc0);
-            AllocInfo ai;
+            AllocInfo ai(0x148, 0, 0);   // StatMV_VM_Instance_Mem-family id the exe passes
             void* mem = Memory::pGlobalHeap->AllocAutoHeap(reinterpret_cast<void*>(tr), 0x60, &ai);
             UPInt ns = 0;
             if (mem != 0)
-                ns = reinterpret_cast<UPInt>(FUN_1423edb60(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &Value::GetUndefined()));
+                ns = reinterpret_cast<UPInt>(FUN_1423edb60(mem, Sfr31Rd(tr, 0x78), Sfr31Rd(tr, 0xe8), 0, &str, &prefix));
             const UPInt old = Sfr31Rd(target, 0x58);
             if (ns != old)
             {
