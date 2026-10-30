@@ -567,7 +567,8 @@ void ThunkFunc3<T, N, R, A0, A1, A2>::Func(const ThunkInfo&, VM& vm, const Value
     const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs3<R, A0, A1, A2> args(vm, result, argc, argv, ThunkMakeDefs3<T, N, A0, A1, A2>(vm.GetStringManager()));
+    const ThunkDefs3<A0, A1, A2> defs = ThunkMakeDefs3<T, N, A0, A1, A2>(vm.GetStringManager());
+    ThunkArgs3<R, A0, A1, A2> args(vm, result, argc, argv, defs);
     if (vm.IsException())
         return;
     (self.*Method)(args.r, args.a0, args.a1, args.a2);
@@ -578,7 +579,8 @@ void ThunkFunc4<T, N, R, A0, A1, A2, A3>::Func(const ThunkInfo&, VM& vm, const V
     const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs4<R, A0, A1, A2, A3> args(vm, result, argc, argv, ThunkMakeDefs4<T, N, A0, A1, A2, A3>(vm.GetStringManager()));
+    const ThunkDefs4<A0, A1, A2, A3> defs = ThunkMakeDefs4<T, N, A0, A1, A2, A3>(vm.GetStringManager());
+    ThunkArgs4<R, A0, A1, A2, A3> args(vm, result, argc, argv, defs);
     if (vm.IsException())
         return;
     (self.*Method)(args.r, args.a0, args.a1, args.a2, args.a3);
@@ -601,7 +603,8 @@ void ThunkFunc6<T, N, R, A0, A1, A2, A3, A4, A5>::Func(const ThunkInfo&, VM& vm,
     const Value* argv)
 {
     T& self = static_cast<T&>(*obj.GetObject());
-    ThunkArgs6<R, A0, A1, A2, A3, A4, A5> args(vm, result, argc, argv, ThunkMakeDefs6<T, N, A0, A1, A2, A3, A4, A5>(vm.GetStringManager()));
+    const ThunkDefs6<A0, A1, A2, A3, A4, A5> defs = ThunkMakeDefs6<T, N, A0, A1, A2, A3, A4, A5>(vm.GetStringManager());
+    ThunkArgs6<R, A0, A1, A2, A3, A4, A5> args(vm, result, argc, argv, defs);
     if (vm.IsException())
         return;
     (self.*Method)(args.r, args.a0, args.a1, args.a2, args.a3, args.a4, args.a5);
