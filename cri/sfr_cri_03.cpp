@@ -2140,13 +2140,12 @@ void MPVDEC_ResetDc(CriMpvDecoderState* state)
     state->DcPredictors[0] = 0x400;
 }
 
-// MS2-FUNCTIONAL: adjust macroblock address and column by 1 minus the supplied run length.
+// Adjust macroblock address and column by 1 minus the supplied run length. The exe computes 1 - run once per field.
 // @0x142ccc580
 void mpvumc_SubMbadr(CriMpvDecoderState* state, CriSint32 run)
 {
-    CriSint32 delta = 1 - run;
-    state->MacroblockAddress += delta;
-    state->MacroblockColumn += delta;
+    state->MacroblockAddress += 1 - run;
+    state->MacroblockColumn += 1 - run;
     while (state->MacroblockColumn < 0)
     {
         state->MacroblockColumn += state->MacroblockWidth;
