@@ -27,6 +27,7 @@
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
+extern char* FUN_1429561c0(void*);   // GlobalContext::GetStringManager: the builtin name table (out of line in the exe)
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
 extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
 extern const void* FUN_14261c640(const void*, int);
@@ -2443,20 +2444,25 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
                    Scaleform::GFx::ASString* name, Scaleform::GFx::AS2::Value* value)
 {
     // `object` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
-    const bool constructor2 = name->CompareBuiltIn_CaseCheck(
-        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__), context->IsCaseSensitive());
-    const bool constructor = name->CompareBuiltIn_CaseCheck(
-        context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor), context->IsCaseSensitive());
-    auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
-        reinterpret_cast<char*>(object) - 0x20);
-    if (constructor2 || constructor)
+    // the builtins come from the string manager at +0x280 (__constructor__) and +0x278 (constructor), the exe's
+    // out-of-line GetStringManager call (0x140011e14); constructor is only tested when __constructor__ fails.
+    // BEHAVIOUR FIX: the compare runs on the builtin with the name as its argument, as in the exe, so the name's
+    // lowercase node is resolved before the case-insensitive compare (SWF <= 6). Ours resolved the builtin's and
+    // read the name's pLower unresolved, so "constructor" spelled in another case could miss.
+    typedef Scaleform::GFx::ASString Builtin;
+    const bool constructor2 = reinterpret_cast<const Builtin*>(FUN_1429561c0(context->pContext) + 0x280)
+        ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
+    if (constructor2 || reinterpret_cast<const Builtin*>(FUN_1429561c0(context->pContext) + 0x278)
+        ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive()))
     {
+        auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20);
         auto* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
             reinterpret_cast<char*>(object) + 0x48);
         prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor2);
         return;
     }
-    owner->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
+    reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20)
+        ->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, value);
 }
 
 // MS2-FUNCTIONAL: the NetConnection constructor: reuses a NetConnection `this` that is not the builtin prototype
