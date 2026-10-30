@@ -159,7 +159,7 @@ void FrameCounter::AdvanceFrame(bool nextFrame, float framePos)
     MovieRoot* proot = static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot);
     if (proot->ASFramesToExecute)
     {
-        FUN_1424fa5b0(proot->pAVM, 1);
+        FUN_1424fa5b0(proot->pAVM, proot->ASFramesToExecute);
         if (proot->pAVM->HandleException)
             proot->pAVM->HandleException = false;
         proot->ASFramesToExecute = 0;
