@@ -12,7 +12,9 @@
 // MS2-PIN: ?FUN_14261fd80@GFx@Scaleform@@YA_KPEAXPEBE@Z 0x14261fd80
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
 
+#define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
+#include "../include/kernel/sf_hash.h"
 
 #include <new>
 #include <string.h>
@@ -107,6 +109,7 @@ struct Sfr31StaticState
 };
 
 // The shared empty state, made on first use; returned (rax in the exe: the movie loader calls through it).
+// MS2-FUNCTIONAL 0x14261e310: same lazy static init; cl duplicates the tail after _Init_thread_footer and the exe stores the vtable at run time (117 bytes against 148)
 // @0x14261e310
 void* FUN_14261e310()
 {
@@ -144,6 +147,7 @@ void FUN_14261e440(void*) {}
 // @0x14261e450
 void FUN_14261e450(void*) {}
 
+// MS2-FUNCTIONAL 0x14261e460: same lazy static init; the tail after _Init_thread_footer differs as in 0x14261e310 (105 bytes against 122)
 // @0x14261e460
 void FUN_14261e460()
 {
@@ -237,41 +241,178 @@ void FUN_14261e730(char* node, U* ctx)
         FUN_14261e730(*(char**)(RawField<char*>(node, 0x30) + i * 8), ctx);
 }
 
+// HashSetBase::add for the Movie* -> Ptr<ASIMEManager> sets, as the SDK writes it: the displaced natural entry
+// is moved with the entry's copy constructor (FUN_14261f3e0 / FUN_14261f440), the new value assigned Ptr-style.
+struct MovieEntry
+{
+    SPInt NextInChain;
+    U HashValue;
+    U Key;
+    void* Value;
+};
+
+static __forceinline void MovieEntryAssign(MovieEntry* e, const U& key, void* const& value)
+{
+    e->Key = key;
+    if (value)
+        FUN_14257dc30(value);
+    if (e->Value)
+        FUN_14257dcb0(e->Value);
+    e->Value = value;
+}
+
+char* FUN_14261f3e0(char* self, const char* src);
+char* FUN_14261f440(char* self, const char* src);
+
+template<void (*CheckExpand)(U**, void*), char* (*CopyEntry)(char*, const char*)>
+static __forceinline void MovieHashAdd(U** self, void* heapAddr, const U& key, void* const& value, U hashValue)
+{
+    CheckExpand(self, heapAddr);
+    hashValue &= (*self)[1];
+    (*self)[0]++;
+    SPInt index = (SPInt)hashValue;
+    MovieEntry* natural = &((MovieEntry*)(*self + 2))[index];
+    if (natural->NextInChain == -2)
+    {
+        natural->NextInChain = -1;
+        natural->Key = key;
+        if (value)
+            FUN_14257dc30(value);
+        natural->Value = value;
+    }
+    else
+    {
+        SPInt blankIndex = index;
+        do
+            blankIndex = (blankIndex + 1) & (*self)[1];
+        while (((MovieEntry*)(*self + 2))[blankIndex].NextInChain != -2);
+        MovieEntry* blank = &((MovieEntry*)(*self + 2))[blankIndex];
+        if (natural->HashValue == (U)index)
+        {
+            CopyEntry((char*)blank, (const char*)natural);
+            MovieEntryAssign(natural, key, value);
+            natural->NextInChain = blankIndex;
+        }
+        else
+        {
+            SPInt collidedIndex = (SPInt)natural->HashValue;
+            for (;;)
+            {
+                MovieEntry* e = &((MovieEntry*)(*self + 2))[collidedIndex];
+                if (e->NextInChain == index)
+                {
+                    CopyEntry((char*)blank, (const char*)natural);
+                    e->NextInChain = blankIndex;
+                    break;
+                }
+                collidedIndex = e->NextInChain;
+            }
+            MovieEntryAssign(natural, key, value);
+            natural->NextInChain = -1;
+        }
+    }
+    natural->HashValue = hashValue;
+}
+
+// MS2-FUNCTIONAL 0x14261e7a0: same SDK HashSet add; register allocation and the merged final Value store differ (408 bytes against 413)
 // @0x14261e7a0
 void FUN_14261e7a0(U** self, void* ctx, const char* node, U hash)
 {
-    FUN_1426206a0(self, ctx);
-    RawHashAdd<0x20, MoviePtrOps>(self, node, hash);
+    MovieHashAdd<FUN_1426206a0, FUN_14261f3e0>(self, ctx, *(const U*)node, *(void* const*)(node + 8), hash);
 }
 
+// MS2-FUNCTIONAL 0x14261e940: same SDK HashSet add as 0x14261e7a0 (408 bytes against 413)
 // @0x14261e940
 void FUN_14261e940(U** self, void* ctx, const char* node, U hash)
 {
-    FUN_1426206f0(self, ctx);
-    RawHashAdd<0x20, MoviePtrOps>(self, node, hash);
+    MovieHashAdd<FUN_1426206f0, FUN_14261f440>(self, ctx, *(const U*)node, *(void* const*)(node + 8), hash);
 }
 
+// HashNode<two-word key, U>: a 0x28 entry whose key copies as one 16-byte block.
+struct WordsKey { U W[2]; };
+struct WordsEntry
+{
+    SPInt NextInChain;
+    U HashValue;
+    WordsKey Key;
+    U Value;
+
+    WordsEntry(const WordsRefOps::Ref& r, SPInt next)
+        : NextInChain(next), Key(*(const WordsKey*)r.Key), Value(*r.Value) {}
+};
+
+static __forceinline void WordsEntryCopy(WordsEntry* d, const WordsEntry* s)
+{
+    d->NextInChain = s->NextInChain;
+    d->HashValue = s->HashValue;
+    d->Key = s->Key;
+    d->Value = s->Value;
+}
+
+// MS2-FUNCTIONAL 0x14261eae0: same SDK HashSet add; cl merges the Value store of the empty-slot and moved-entry paths, the exe does not (33 bytes differ)
 // @0x14261eae0
-void FUN_14261eae0(U** self, void* ctx, WordsRefOps::Ref* ref, U hash)
+void FUN_14261eae0(U** self, void* ctx, WordsRefOps::Ref* ref, U hashValue)
 {
     RawCheckExpand<FUN_142624840>(self, ctx);
-    RawHashAdd<0x28, WordsRefOps>(self, *ref, hash);
+    hashValue &= (*self)[1];
+    (*self)[0]++;
+    SPInt index = (SPInt)hashValue;
+    WordsEntry* natural = &((WordsEntry*)(*self + 2))[index];
+    if (natural->NextInChain == -2)
+    {
+        ::new (natural) WordsEntry(*ref, -1);
+    }
+    else
+    {
+        SPInt blankIndex = index;
+        do
+            blankIndex = (blankIndex + 1) & (*self)[1];
+        while (((WordsEntry*)(*self + 2))[blankIndex].NextInChain != -2);
+        WordsEntry* blank = &((WordsEntry*)(*self + 2))[blankIndex];
+        if (natural->HashValue == (U)index)
+        {
+            WordsEntryCopy(blank, natural);
+            natural->Key = *(const WordsKey*)ref->Key;
+            natural->Value = *ref->Value;
+            natural->NextInChain = blankIndex;
+        }
+        else
+        {
+            SPInt collidedIndex = (SPInt)natural->HashValue;
+            for (;;)
+            {
+                WordsEntry* e = &((WordsEntry*)(*self + 2))[collidedIndex];
+                if (e->NextInChain == index)
+                {
+                    WordsEntryCopy(blank, natural);
+                    e->NextInChain = blankIndex;
+                    break;
+                }
+                collidedIndex = e->NextInChain;
+            }
+            natural->Key = *(const WordsKey*)ref->Key;
+            natural->Value = *ref->Value;
+            natural->NextInChain = -1;
+        }
+    }
+    natural->HashValue = hashValue;
 }
 
+// MS2-FUNCTIONAL 0x14261ec70: same SDK HashSet add; register allocation and tail merging differ (472 bytes against 497)
 // @0x14261ec70
 void FUN_14261ec70(U** self, void* ctx, NodeRef* ref, U hash)
 {
-    RawCheckExpand<FUN_142624d70>(self, ctx);
-    RawHashAdd<0x20, MoviePtrRefOps>(self, *ref, hash);
+    MovieHashAdd<RawCheckExpand<FUN_142624d70>, FUN_14261f3e0>(self, ctx, *ref->Key, *ref->Value, hash);
 }
 
+// MS2-FUNCTIONAL 0x14261ee70: same SDK HashSet add as 0x14261ec70 (472 bytes against 497)
 // @0x14261ee70
 void FUN_14261ee70(U** self, void* ctx, NodeRef* ref, U hash)
 {
-    RawCheckExpand<FUN_142624f80>(self, ctx);
-    RawHashAdd<0x20, MoviePtrRefOps>(self, *ref, hash);
+    MovieHashAdd<RawCheckExpand<FUN_142624f80>, FUN_14261f440>(self, ctx, *ref->Key, *ref->Value, hash);
 }
 
+// MS2-FUNCTIONAL 0x14261f070: same raw-layout HashSet add; scheduling differs (439 bytes against 418)
 // @0x14261f070
 void FUN_14261f070(U** self, void* ctx, KeyStringOps::Ref* ref, U hash)
 {
@@ -279,6 +420,7 @@ void FUN_14261f070(U** self, void* ctx, KeyStringOps::Ref* ref, U hash)
     RawHashAdd<0x20, KeyStringOps>(self, *ref, hash);
 }
 
+// MS2-FUNCTIONAL 0x14261f220: same raw-layout HashSet add; scheduling differs (419 bytes against 440)
 // @0x14261f220
 void FUN_14261f220(U** self, void* ctx, StringKeyOps::Ref* ref, U hash)
 {
@@ -290,57 +432,63 @@ void FUN_14261f220(U** self, void* ctx, StringKeyOps::Ref* ref, U hash)
 // @0x14261f3e0
 char* FUN_14261f3e0(char* self, const char* src)
 {
-    MoviePtrOps::Copy(self + 0x10, src + 0x10);
-    *(U*)self = *(const U*)src;
-    *(U*)(self + 8) = *(const U*)(src + 8);
+    U* d = (U*)self;
+    const U* s = (const U*)src;
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    if (s[3])
+        FUN_14257dc30((void*)s[3]);
+    d[3] = s[3];
     return self;
 }
 
 // @0x14261f440
 char* FUN_14261f440(char* self, const char* src)
 {
-    MoviePtrOps::Copy(self + 0x10, src + 0x10);
-    *(U*)self = *(const U*)src;
-    *(U*)(self + 8) = *(const U*)(src + 8);
+    U* d = (U*)self;
+    const U* s = (const U*)src;
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    if (s[3])
+        FUN_14257dc30((void*)s[3]);
+    d[3] = s[3];
     return self;
 }
 
 // An array of counted pointers (stride 0x18, pointer at +0): release each from the back, free the block.
 // @0x14261f7b0
-void FUN_14261f7b0(U* array)
+__declspec(noinline) void FUN_14261f7b0(U* array)
 {
     U count = array[1];
-    char* data = (char*)array[0];
-    for (U i = count; i; i--)
+    char* e = (char*)array[0] + (count - 1) * 0x18;
+    for (U i = 0; i < count; i++, e -= 0x18)
     {
-        void* p = *(void**)(data + (i - 1) * 0x18);
+        void* p = *(void**)e;
         if (p)
             FUN_14257dcb0(p);
     }
-    Memory::Free(data);
+    Memory::Free((void*)array[0]);
 }
 
 // @0x14261f820
-void FUN_14261f820(U* self) { RawClearPtrSet(self); }
+__declspec(noinline) void FUN_14261f820(U* self) { RawClearPtrSet(self); }
 
 // @0x14261f8b0
-void FUN_14261f8b0(U* self) { RawClearPtrSet(self); }
+__declspec(noinline) void FUN_14261f8b0(U* self) { RawClearPtrSet(self); }
 
+// MS2-FUNCTIONAL 0x14261f940: same string-set clear; base and index operand order differs (3 bytes)
 // @0x14261f940
-void FUN_14261f940(U* self) { RawClearStringSet(self, 0x18); }
+__declspec(noinline) void FUN_14261f940(U* self) { RawClearStringSet(self, 0x18); }
 
 // @0x14261f9e0
-void FUN_14261f9e0(U* self) { RawClearStringSet(self, 0x10); }
+__declspec(noinline) void FUN_14261f9e0(U* self) { RawClearStringSet(self, 0x10); }
 
-// FixedSizeHash of an AbcMultinameHash key (sixteen bytes mixed with per-position multipliers).
-static inline U RawMultinameKeyHash(const unsigned char* k)
+// FixedSizeHash of an AbcMultinameHash key: sdbm over its sixteen bytes.
+static __forceinline U RawMultinameKeyHash(const unsigned char* k)
 {
-    return (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[10] * (U)-0xd284be79967327fLL +
-           (U)k[0xd] * (U)-0x5b36ed498d7fdcc1LL + (U)k[9] * 0x5950f7eab156c23fULL +
-           (U)k[0xe] * (U)-0x5fcdf299af38537fLL + (U)k[0xb] * 0x772db89a0d1b92bfULL + (U)k[4] * 0xfc5d1543ec5f01ULL +
-           (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[0xc] * 0xcda7b04cc881d01ULL +
-           (U)k[7] * (U)-0x283c1b695cee4e41LL + (U)k[0xf] * 0x79b79cf58da473bfULL +
-           (U)k[6] * 0x5d02f409d62aee81ULL + (U)k[8] * (U)-0x2341bdc2ce641ffLL + (U)-0x1d7e9924e6be7efbLL + (U)k[0];
+    return FixedSizeHash<UByte[16]>::SDBM_Hash(k, 16);
 }
 
 // @0x14261fc40
@@ -350,7 +498,7 @@ U FUN_14261fc40(void*, const unsigned char* key) { return RawMultinameKeyHash(ke
 U FUN_14261fd80(void*, const unsigned char* key) { return RawMultinameKeyHash(key); }
 
 // Scalar deleting destructors of 0x10-byte ref-counted bases.
-static inline void* RawDeletingDtor(void* self, unsigned flags)
+static __forceinline void* RawDeletingDtor(void* self, unsigned flags)
 {
     FUN_14257db40(self);
     if (flags & 1)
@@ -376,6 +524,7 @@ void* FUN_14261ffe0(void* self, unsigned flags) { return RawDeletingDtor(self, f
 
 // The AMP server state: counters, locks, the message-type / resource tables, and the default "Object Interface"
 // message type (id 0xe) registered in both the id table and the name table.
+// MS2-FUNCTIONAL 0x14261f4a0: same AMP state ctor field stores; scheduling differs (765 bytes against 782)
 // @0x14261f4a0
 void* FUN_14261f4a0(char* self)
 {
@@ -451,6 +600,7 @@ void* FUN_14261f4a0(char* self)
 }
 
 // The AMP server state's destructor body.
+// MS2-FUNCTIONAL 0x14261fa90: same dtor; base and index operand order in the inlined plain-set clear differs (4 bytes)
 // @0x14261fa90
 void FUN_14261fa90(char* self)
 {
@@ -464,14 +614,13 @@ void FUN_14261fa90(char* self)
     FUN_14261f820(RawFieldPtr<U>(self, 0xa0));
     FUN_14258d0b0(self + 0x78);
     U count = RawField<U>(self, 0x50);
-    char* data = RawField<char*>(self, 0x48);
-    for (U i = count; i; i--)
+    void** e = RawField<void**>(self, 0x48) + (count - 1);
+    for (U i = 0; i < count; i++, e--)
     {
-        void* p = *(void**)(data + (i - 1) * 8);
-        if (p)
-            FUN_14257dcb0(p);
+        if (*e)
+            FUN_14257dcb0(*e);
     }
-    Memory::Free(data);
+    Memory::Free(RawField<void*>(self, 0x48));
     FUN_14261f7b0(RawFieldPtr<U>(self, 0x30));
     FUN_14261f9e0(RawFieldPtr<U>(self, 0x20));
     FUN_14261f8b0(RawFieldPtr<U>(self, 0x18));

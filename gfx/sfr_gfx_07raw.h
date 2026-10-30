@@ -8,6 +8,11 @@
 
 #include <new>
 
+// A unit whose exe callers inline these helpers defines MS2_RAW_INLINE as __forceinline before the include.
+#ifndef MS2_RAW_INLINE
+#define MS2_RAW_INLINE inline
+#endif
+
 namespace Scaleform { namespace GFx {
 
 typedef UPInt U;
@@ -25,7 +30,7 @@ static inline char* RawEntry(U* table, U index, U stride) { return (char*)table 
 
 // HashSetBase::CheckExpand: 8 entries first, doubled when the load passes 4/5.
 template<void (*Grow)(U**, void*, U)>
-static inline void RawCheckExpand(U** self, void* ctx)
+static MS2_RAW_INLINE void RawCheckExpand(U** self, void* ctx)
 {
     U* table = *self;
     if (!table)
@@ -36,7 +41,7 @@ static inline void RawCheckExpand(U** self, void* ctx)
 
 // HashSetBase::add: place a new entry at its hash's home slot, moving a squatter out to a free slot first.
 template<U Stride, class Ops, class Arg>
-static inline void RawHashAdd(U** self, Arg arg, U hash)
+static MS2_RAW_INLINE void RawHashAdd(U** self, Arg arg, U hash)
 {
     U* table = *self;
     U home = hash & table[1];
@@ -215,7 +220,7 @@ struct StringKeyOps
 };
 
 // Frees a set whose payload at +0x18 of each live entry is a counted pointer.
-static inline void RawClearPtrSet(U* self)
+static MS2_RAW_INLINE void RawClearPtrSet(U* self)
 {
     if (!*self)
         return;
@@ -236,7 +241,7 @@ static inline void RawClearPtrSet(U* self)
 }
 
 // Frees a set whose payload at +0x18 (or +0x10) of each live entry is a String.
-static inline void RawClearStringSet(U* self, U payload)
+static MS2_RAW_INLINE void RawClearStringSet(U* self, U payload)
 {
     if (!*self)
         return;
@@ -255,7 +260,7 @@ static inline void RawClearStringSet(U* self, U payload)
 }
 
 // Frees a set with no per-entry payload to release (stride 0x30 entries).
-static inline void RawClearPlainSet(U* self, U stride)
+static MS2_RAW_INLINE void RawClearPlainSet(U* self, U stride)
 {
     if (!*self)
         return;
@@ -271,7 +276,7 @@ static inline void RawClearPlainSet(U* self, U stride)
 }
 
 // FixedSizeHash of an eight-byte key (bytes mixed with per-position multipliers).
-static inline U RawKey8Hash(U key)
+static MS2_RAW_INLINE U RawKey8Hash(U key)
 {
     const unsigned char* k = (const unsigned char*)&key;
     return (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
@@ -280,7 +285,7 @@ static inline U RawKey8Hash(U key)
 }
 
 // Looks an eight-byte key up in a set whose entries keep it as their first payload word; -1 when absent.
-static inline SPInt RawFindKey8(U* table, U key, U stride)
+static MS2_RAW_INLINE SPInt RawFindKey8(U* table, U key, U stride)
 {
     if (!table)
         return -1;
@@ -303,7 +308,7 @@ static inline SPInt RawFindKey8(U* table, U key, U stride)
 
 // Appends a slot to a {data, size, capacity} array through the exe's Reserve instance; returns the new slot.
 template<void (*Reserve)(U*, void*, U)>
-static inline char* RawArrayPush(U* array, U elemSize)
+static MS2_RAW_INLINE char* RawArrayPush(U* array, U elemSize)
 {
     U n = array[1] + 1;
     if (array[2] <= n)
