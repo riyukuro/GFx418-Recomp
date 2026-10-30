@@ -11,6 +11,9 @@
 #include <windows.h>
 #include "../include/cri/cri_decomp.h"
 
+extern "C" void _ReadWriteBarrier(void);
+#pragma intrinsic(_ReadWriteBarrier)
+
 extern "C" const char* _DAT_143bad690;
 extern "C" const char* _DAT_143bad6a8;
 extern "C" const char* _DAT_143badb28;
@@ -552,6 +555,9 @@ cri_u32 FUN_14004dd30(void)
 // @0x14004ddb0
 cri_u64 FUN_14004ddb0(cri_u64 a1)
 {
+  // The exe calls this from another obj, so the call stays even though it does nothing. The barrier emits no code; it
+  // only stops VC9 from dropping the same-TU calls.
+  _ReadWriteBarrier();
   return a1;
 }
 
@@ -601,12 +607,13 @@ void FUN_14004de60(longlong a1)
   l_v1 = a1 + 0xc80;
   CriAt<longlong>(a1, 0x1458) = l_v1;
   CriAt<longlong>(a1, 0x1460) = l_v1 + 0x180;
-  CriAt<longlong>(a1, 0x17e8) = a1;
-  CriAt<longlong>(a1, 0x17c8) = a1 + 0x100;
-  CriAt<longlong>(a1, 0x17d0) = a1 + 0x180;
-  CriAt<longlong>(a1, 0x17d8) = a1 + 0x200;
-  CriAt<longlong>(a1, 0x17e0) = a1 + 0x280;
-  CriAt<longlong>(a1, 0x17f0) = a1 + 0x80;
+  longlong *t = &CriAt<longlong>(a1, 0x17c8);
+  t[4] = a1;
+  t[0] = a1 + 0x100;
+  t[1] = a1 + 0x180;
+  t[2] = a1 + 0x200;
+  t[3] = a1 + 0x280;
+  t[5] = a1 + 0x80;
   return;
 }
 
@@ -2163,6 +2170,9 @@ void FUN_14004feb0(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4)
 // @0x14004ff00
 void FUN_14004ff00(void)
 {
+  // The exe calls this from another obj, so the call stays even though it does nothing. The barrier emits no code; it
+  // only stops VC9 from dropping the same-TU calls.
+  _ReadWriteBarrier();
   return;
 }
 
@@ -2780,6 +2790,9 @@ void FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3)
 // @0x140050bc0
 void FUN_140050bc0(void)
 {
+  // The exe calls this from another obj, so the call stays even though it does nothing. The barrier emits no code; it
+  // only stops VC9 from dropping the same-TU calls.
+  _ReadWriteBarrier();
   return;
 }
 
