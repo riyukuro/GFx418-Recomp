@@ -808,6 +808,16 @@ template class VectorBase<Value>;
 
 namespace Instances { namespace fl_vec {
 
+// The exe's AS3reverse bodies swap through Alg::Swap and keep the SPtr null test on the result object, so the
+// object reaches SetPtr as a plain pointer argument, not as this.
+template <typename A, typename C>
+inline void ReverseT(A& v, SPtr<C>& result, C* obj)
+{
+    for (SPInt i = 0, j = (SPInt)v.GetSize() - 1; i < j; ++i, --j)
+        Alg::Swap(v[i], v[j]);
+    result = obj;
+}
+
 // ---- Vector_String
 
 // @0x142560270
@@ -946,13 +956,7 @@ CheckResult Vector_double::GetProperty(const Multiname& prop_name, Value& value)
 // @0x1425584f0
 void Vector_double::AS3reverse(SPtr<Vector_double>& result)
 {
-    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
-    {
-        const Value::Number tmp = V.V[i];
-        V.V[i] = V.V[j];
-        V.V[j] = tmp;
-    }
-    result = this;
+    ReverseT(V.V, result, this);
 }
 
 // @0x142558850
@@ -1042,13 +1046,7 @@ CheckResult Vector_int::GetProperty(const Multiname& prop_name, Value& value)
 // @0x142558590
 void Vector_int::AS3reverse(SPtr<Vector_int>& result)
 {
-    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
-    {
-        const SInt32 tmp = V.V[i];
-        V.V[i] = V.V[j];
-        V.V[j] = tmp;
-    }
-    result = this;
+    ReverseT(V.V, result, this);
 }
 
 // @0x142558910
@@ -1139,11 +1137,7 @@ CheckResult Vector_object::GetProperty(const Multiname& prop_name, Value& value)
 // MS2-FUNCTIONAL: Value::Swap inlined differently
 void Vector_object::AS3reverse(SPtr<Vector_object>& result)
 {
-    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
-    {
-        V.V[i].Swap(V.V[j]);
-    }
-    result = this;
+    ReverseT(V.V, result, this);
 }
 
 // @0x1425589d0
@@ -1233,13 +1227,7 @@ CheckResult Vector_uint::GetProperty(const Multiname& prop_name, Value& value)
 // @0x142558700
 void Vector_uint::AS3reverse(SPtr<Vector_uint>& result)
 {
-    for (SPInt i = 0, j = (SPInt)V.V.GetSize() - 1; i < j; ++i, --j)
-    {
-        const UInt32 tmp = V.V[i];
-        V.V[i] = V.V[j];
-        V.V[j] = tmp;
-    }
-    result = this;
+    ReverseT(V.V, result, this);
 }
 
 // @0x142558a60
