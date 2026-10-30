@@ -339,7 +339,9 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
     }
 }
 
-// MS2-FUNCTIONAL: refreshes the provider image and render-tree state; the transform cache refresh is simplified.
+// Locks the weak provider (a dead proxy is released and the WeakPtr cleared), takes the active provider's texture into
+// +0x100 with its extent, then refreshes the render tree. Same calls and stores as the exe.
+// MS2-FUNCTIONAL: VS2012 codegen (cl 17.00.61030 emits dec where the exe's build 65501 has add [r],-1; register order).
 // @0x140010a70
 void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
@@ -1846,11 +1848,14 @@ void FUN_140011b10(void* object, void* stringContext, void* functions, const voi
     FUN_142961830(static_cast<char*>(object) + 0x68, object, stringContext, functions, flags);
 }
 
-// MS2-FUNCTIONAL: sets the result to the executable's undefined Value without releasing its fresh storage.
+// The exe copies Value::GetUndefined() into a temp, copy-constructs the fresh result storage from it (no release of the
+// old contents) and destroys the temp.
+// MS2-FUNCTIONAL: VS2012 codegen (register and block order differ).
 // @0x1400158e0
 Scaleform::GFx::AS3::Value* FUN_1400158e0(Scaleform::GFx::AS3::Value* result)
 {
-    result->SetUndefinedUnsafe();
+    Scaleform::GFx::AS3::Value undefinedValue(Scaleform::GFx::AS3::Value::GetUndefined());
+    result->Scaleform::GFx::AS3::Value::Value(undefinedValue);   // in place, no null check
     return result;
 }
 
