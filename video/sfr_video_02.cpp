@@ -2557,9 +2557,8 @@ Scaleform::GFx::InteractiveObject* FUN_140010000(
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes the Connect prototype's Object, vtables, and native method table.
-// @0x140012510
-Scaleform::GFx::AS2::Object* FUN_140012510(
+// the Connect prototype's constructor body; the exe inlines it into FUN_1400126f0.
+static __forceinline Scaleform::GFx::AS2::Object* Video02ConnectProtoInit(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
     void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
 {
@@ -2573,14 +2572,33 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
     return object;
 }
 
-static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
+// MS2-FUNCTIONAL: initializes the Connect prototype's Object, vtables, and native method table.
+// @0x140012510
+Scaleform::GFx::AS2::Object* FUN_140012510(
+    Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
+    void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
+{
+    return Video02ConnectProtoInit(object, context, prototype, constructor);
+}
+
+// the exe inlines the builder into both of its callers.
+namespace Scaleform { namespace GFx { namespace AS2 {
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func);
+}}}
+extern void FUN_1429260b0(void*);
+struct Video02ValueStorage
+{
+    Video02ValueStorage() {}
+    std::uint64_t Raw0, Raw1;
+};
+
+static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context,
     Scaleform::GFx::AS2::CFunctionPtr callback, void* functionVtable, void* functionInterfaceVtable,
     unsigned prototypeSize, unsigned prototypeType, unsigned stringOffset, bool connectPrototype)
 {
     Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
-    auto* heap = context->pHeap;
-    auto* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(heap->Alloc(0x70));
+    auto* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
     if (function)
     {
         extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
@@ -2588,15 +2606,13 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         *reinterpret_cast<void**>(function) = functionVtable;
         *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = functionInterfaceVtable;
     }
-    result->Function = function;
-    result->pLocalFrame = nullptr;
-    result->Flags = 0;
+    result->Init(*function);   // adopts the new function's reference
 
-    auto* prototype = static_cast<Scaleform::GFx::AS2::Object*>(heap->Alloc(prototypeSize));
+    auto* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(prototypeSize));
     if (prototype)
     {
         if (connectPrototype)
-            FUN_140012510(prototype, &stringContext,
+            Video02ConnectProtoInit(prototype, &stringContext,
                 context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
         else
         {
@@ -2616,16 +2632,22 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         *count = (*count + 1) & 0x8fffffff;
     }
     extern void FUN_14000c280(void*, unsigned, void**);
-    void* prototypeSlot = prototype;
-    FUN_14000c280(context, prototypeType, &prototypeSlot);
+    {
+        void* prototypeSlot = prototype;
+        FUN_14000c280(context, prototypeType, &prototypeSlot);
+    }
 
-    auto* manager = context->GetStringManager();
-    auto* nameNode = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(
-        reinterpret_cast<char*>(manager) + stringOffset);
-    Scaleform::GFx::ASString name(nameNode);
-    Scaleform::GFx::AS2::Value value(*result);
     Scaleform::GFx::AS2::PropFlags flags;
-    context->pGlobal->SetMemberRaw(&stringContext, name, value, flags);
+    Scaleform::GFx::AS2::Object* global = context->pGlobal;
+    auto* manager = context->GetStringManager();
+    const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+        reinterpret_cast<char*>(manager) + stringOffset);
+    // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+    Video02ValueStorage valueStorage;
+    auto* value = Scaleform::GFx::AS2::FUN_142923b90(
+        reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result);
+    global->SetMemberRaw(&stringContext, name, *value, flags);
+    FUN_1429260b0(&valueStorage);
     if (prototype)
     {
         auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
@@ -2638,7 +2660,8 @@ static Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     return result;
 }
 
-// MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype.
+// MS2-FUNCTIONAL: creates and registers the attachVideo native function and prototype. Same calls and order as the exe;
+// the rest is register and frame layout (the exe uses an r11 frame, VC9 style).
 // @0x14000ed60
 Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
@@ -2647,7 +2670,8 @@ Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
         &PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
 }
 
-// MS2-FUNCTIONAL: creates and registers the Connect native function and prototype.
+// MS2-FUNCTIONAL: creates and registers the Connect native function and prototype. Same calls and order as the exe;
+// the rest is register and frame layout (the exe uses an r11 frame, VC9 style).
 // @0x1400126f0
 Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
@@ -3551,7 +3575,7 @@ struct AS2ObjectGCTraversal : Scaleform::GFx::AS2::Object
 struct AS2PrototypeGCTraversal : Scaleform::GFx::AS2::GASPrototypeBase
 {
     typedef Scaleform::GFx::AS2::ASRefCountBaseType::Collector Collector;
-    template<class Functor> static void Run(const AS2PrototypeGCTraversal* self, Collector* collector)
+    template<class Functor> static __forceinline void Run(const AS2PrototypeGCTraversal* self, Collector* collector)
     {
         self->Constructor.template ForEachChild_GC<Functor>(collector);
         self->__Constructor__.template ForEachChild_GC<Functor>(collector);
@@ -3565,7 +3589,7 @@ struct AS2PrototypeGCTraversal : Scaleform::GFx::AS2::GASPrototypeBase
 };
 
 template<class Functor>
-void VisitAS2PrototypeChildren(Scaleform::GFx::AS2::Object* object,
+__forceinline void VisitAS2PrototypeChildren(Scaleform::GFx::AS2::Object* object,
                                Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     AS2ObjectGCTraversal::Run<Functor>(object, collector);
