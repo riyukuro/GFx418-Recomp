@@ -465,7 +465,6 @@ void DisplayObjContainer::MoveDisplayObject(const CharPosInfo& pos)
 }
 
 // @0x1425fced0
-// MS2-FUNCTIONAL: the exe tests the two optimized-list flag bits with shr / test and branches; cl folds them into one mask compare
 void DisplayObjContainer::OnInsertionAsLevel(int level)
 {
     if (level == 0)

@@ -412,7 +412,6 @@ MemoryHeap* MovieDataDef::LoadTaskData::GetImageHeap()
 }
 
 // @0x1425cd850
-// MS2-FUNCTIONAL: store order of the copied header fields differs
 void MovieDataDef::LoadTaskData::BeginSWFLoading(const MovieHeaderData& header)
 {
     Header.FileLength = header.FileLength;
@@ -910,7 +909,6 @@ const String* MovieDataDef::TranslateNumberToFrameString(const StringHashLH<unsi
 
 
 // @0x1425d1550
-// MS2-FUNCTIONAL: UpdateLoadState is inlined here
 void MovieDataDef::LoadTaskData::InitEmptyMovieDef()
 {
     {
@@ -1170,7 +1168,6 @@ MovieDefImpl* MovieDefImpl::BindTaskData::GetImportSourceMovie(unsigned importIn
 }
 
 // @0x1425cd430
-// MS2-FUNCTIONAL: register allocation in the inlined PushBack
 void MovieDefImpl::BindTaskData::AddResourceImportMovie(MovieDefImpl* pdefImpl)
 {
     ResourceImports.PushBack(pdefImpl);

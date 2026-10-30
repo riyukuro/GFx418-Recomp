@@ -706,7 +706,6 @@ PlayState Sprite::GetPlayState() const
 }
 
 // @0x1425dceb0
-// MS2-FUNCTIONAL: the exe keeps the new state in edx and reloads PlayStatePriv only after the play list update
 void Sprite::SetPlayState(PlayState s)
 {
     PlayStatePriv = s;

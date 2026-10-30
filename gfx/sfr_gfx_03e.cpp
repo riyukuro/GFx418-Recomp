@@ -983,7 +983,6 @@ void TextField::OnEventLoad()
 
 // Unloaded: the IME manager is looked up (its focus handling is compiled out) and the text's layout is
 // invalidated before the base unload.
-// MS2-FUNCTIONAL 0x1425b9fc0: the exe only takes and drops the IME manager reference here
 // @0x1425b9fc0
 void TextField::OnEventUnload()
 {
