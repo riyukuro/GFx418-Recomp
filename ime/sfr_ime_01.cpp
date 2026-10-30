@@ -200,6 +200,7 @@ extern "C" void FUN_1425b49b0();
 extern "C" void FUN_14257dc30(void*);
 extern "C" int FUN_14256eff0(void*);           // Movie::GetAVMVersion
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
+namespace Scaleform { namespace GFx { void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity); } }
 extern "C" void FUN_1422fbf60(void*);
 
 struct HWND__;
@@ -3915,27 +3916,38 @@ void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
     return words;
 }
 
-// MS2-FUNCTIONAL: appends the executable's built-in IME name pairs and locale IDs to the manager's 0x30-byte records.
+// Appends the built-in IME name pairs and locale IDs to the manager's 0x30-byte records: an inlined
+// ArrayData::PushBack of a temporary record (ResizeNoConstruct, then copy construction).
 // @0x1423cc3d0
 void FUN_1423cc3d0(void* raw)
 {
+    struct BuiltinIme { const char* name; const char* display; unsigned locale; const void* reserved; };
+    struct Record {
+        struct Unknown { unsigned long long low, high; Unknown() {} } unknown;
+        Scaleform::String name;
+        Scaleform::String display;
+        unsigned locale;
+        void* profiles;
+        Record() : locale(0x2000000), profiles(nullptr) {}
+    };
     auto* self = static_cast<unsigned char*>(raw);
-    auto* array = reinterpret_cast<unsigned long long*>(self + 0xb8);
-    const auto* entries = reinterpret_cast<const unsigned char*>(DAT_143a293e0);
-    const int count = DAT_143a2a6b4;
-    for (int i = 0; i < count; ++i) {
-        const auto* entry = entries + static_cast<size_t>(i) * 0x20;
-        const char* name = *reinterpret_cast<const char* const*>(entry);
-        const char* display = *reinterpret_cast<const char* const*>(entry + 8);
-        const unsigned locale = *reinterpret_cast<const unsigned*>(entry + 0x10);
-        const unsigned long long next = array[1] + 1;
-        if (next >= array[2]) cx18_ReserveGH(array, next ? (next >> 2) + next : 4, 0x30);
-        auto* record = static_cast<unsigned char*>(reinterpret_cast<void*>(array[0])) + (next - 1) * 0x30;
-        std::memset(record, 0, 0x30);
-        new (record + 0x10) Scaleform::String(name ? name : "");
-        new (record + 0x18) Scaleform::String(display ? display : "");
-        *reinterpret_cast<unsigned*>(record + 0x20) = locale;
-        array[1] = next;
+    const auto* entries = reinterpret_cast<const BuiltinIme*>(DAT_143a293e0);
+    for (int i = 0; i < DAT_143a2a6b4; ++i) {
+        auto* array = reinterpret_cast<unsigned long long*>(self + 0xb8);
+        Record record;
+        record.display = entries[i].display;
+        record.name = entries[i].name;
+        record.locale = entries[i].locale;
+        const unsigned long long size = array[1];
+        const unsigned long long newSize = size + 1;
+        if (newSize < size) {
+            FUN_1423c9330(array[0] + newSize * sizeof(Record), size - newSize);
+            if (newSize < (array[2] >> 1))
+                Scaleform::GFx::FUN_1423ca2b0(array, array, newSize);
+        } else if (newSize >= array[2])
+            Scaleform::GFx::FUN_1423ca2b0(array, array, newSize + (newSize >> 2));
+        array[1] = newSize;
+        new (reinterpret_cast<Record*>(array[0]) + newSize - 1) Record(record);
         ++*reinterpret_cast<int*>(self + 0xd0);
     }
 }
@@ -5971,6 +5983,9 @@ unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned
 // MS2-FUNCTIONAL: Vista provider slot 1 (table 0x14313b520): loads the registry layouts, lists each TSF language
 // (FUN_1423d5d80) and registers every enabled or active keyboard profile with its IME record (FUN_1423cada0),
 // chaining a copy of the profile onto the record's +0x28 list; the active profile sets +0x88 and the mode.
+// Reviewed step by step against the exe, same behaviour. Two small differences: the exe returns a bool (mov al),
+// and it does not null the enumerator before EnumProfiles; ours does, so a failed call skips the language. The exe
+// frame is 0x10 smaller (GS data 0x370).
 // @0x1423d64b0
 unsigned long long FUN_1423d64b0(long long raw)
 {
