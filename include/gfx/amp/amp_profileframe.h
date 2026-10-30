@@ -83,6 +83,16 @@ public:
     void                ResetTreeIds(FuncTreeItem* other);
     int                 GetNumItems();
 
+    template<typename T>
+    void Visit(T& visitor)
+    {
+        visitor(this);
+        for (UPInt i = 0; i < Children.GetSize(); ++i)
+        {
+            Children[i]->Visit(visitor);
+        }
+    }
+
     void Read(File& str, UInt32 version);
     void Write(File& str, UInt32 version) const;
 };

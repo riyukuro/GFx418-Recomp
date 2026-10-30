@@ -105,14 +105,9 @@ extern ExeDecl<void*> DAT_14318f030;
 #define AS3MovieViewValueVtable ((void*)&DAT_14318f030)
 extern ExeDecl<void*> DAT_1431921c0;
 #define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
-extern "C" void* FUN_142686d30(void*);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
 extern "C" void FUN_1426251d0(void*, void*, std::int64_t);
-extern "C" void FUN_14268aff0(void*, void*);
-extern "C" void FUN_14268a8e0(void*, void*);
-extern "C" void FUN_14268b3e0(void*, void*);
-extern "C" void FUN_14268ac40(void*, void*);
 extern "C" void FUN_142689aa0(void*, void*, void*);
 extern "C" void FUN_142689cb0(void*, void*, void*);
 extern "C" void* FUN_142689640(void*, int);
@@ -280,6 +275,8 @@ namespace Scaleform {
 // MS2-PIN: ??_7MovieProfile@AMP@GFx@Scaleform@@6B@ 0x1431921b0
 // MS2-PIN: ??_7?$RefCountBase@UImageInfo@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921c0
 // MS2-PIN: ??_7ImageInfo@AMP@GFx@Scaleform@@6B@ 0x1431921c0
+// MS2-PIN: ??_7?$RefCountBase@VProfileFrame@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921d0
+// MS2-PIN: ??_7ProfileFrame@AMP@GFx@Scaleform@@6B@ 0x1431921d0
 // MS2-PIN: ??_7FunctionDesc@AMP@GFx@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7?$RefCountBase@UFunctionDesc@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7MarkerInfo@MovieProfile@AMP@GFx@Scaleform@@6B@ 0x14318f048
@@ -1301,43 +1298,76 @@ bool InitializeAudioSystem(void* player, void* system, unsigned char flag0, unsi
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: recursively computes the greatest node depth field while walking the child array.
+namespace GFx { namespace AMP {
+class MaxIdVisitor
+{
+public:
+    MaxIdVisitor() : MaxId(0) { }
+    void operator()(FuncTreeItem* treeItem)
+    {
+        MaxId = Alg::Max(MaxId, treeItem->TreeItemId);
+    }
+    UInt32 MaxId;
+};
+
+class NumItemsVisitor
+{
+public:
+    NumItemsVisitor() : NumItems(0) { }
+    void operator()(FuncTreeItem* treeItem)
+    {
+        SF_UNUSED(treeItem);
+        ++NumItems;
+    }
+    int NumItems;
+};
+
+class OffsetIdVisitor
+{
+public:
+    OffsetIdVisitor(UInt32 offsetId) : OffsetId(offsetId) { }
+    void operator()(FuncTreeItem* treeItem)
+    {
+        treeItem->TreeItemId += OffsetId;
+    }
+private:
+    UInt32 OffsetId;
+};
+
 // @0x142686540
-void UpdateTreeMaximumDepth(void* node, unsigned* maximum)
+template<> void FuncTreeItem::Visit<MaxIdVisitor>(MaxIdVisitor& visitor)
 {
-    auto* bytes = static_cast<unsigned char*>(node);
-    const unsigned depth = *reinterpret_cast<unsigned*>(bytes + 0x28);
-    if (depth > *maximum)
-        *maximum = depth;
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t count = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < count; ++i)
-        UpdateTreeMaximumDepth(children[i], maximum);
+    visitor(this);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->Visit(visitor);
+    }
 }
+}}
 
-// MS2-FUNCTIONAL: counts each tree node and all descendants using the executable's child range.
+namespace GFx { namespace AMP {
 // @0x1426865a0
-void CountTreeNodes(void* node, int* count)
+template<> void FuncTreeItem::Visit<NumItemsVisitor>(NumItemsVisitor& visitor)
 {
-    ++*count;
-    auto* bytes = static_cast<unsigned char*>(node);
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < childCount; ++i)
-        CountTreeNodes(children[i], count);
+    visitor(this);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->Visit(visitor);
+    }
 }
+}}
 
-// MS2-FUNCTIONAL: adds the supplied count to every node's 32-bit accumulated value recursively.
+namespace GFx { namespace AMP {
 // @0x1426865f0
-void AddTreeNodeValue(void* node, const int* value)
+template<> void FuncTreeItem::Visit<OffsetIdVisitor>(OffsetIdVisitor& visitor)
 {
-    auto* bytes = static_cast<unsigned char*>(node);
-    *reinterpret_cast<int*>(bytes + 0x28) += *value;
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < childCount; ++i)
-        AddTreeNodeValue(children[i], value);
+    visitor(this);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->Visit(visitor);
+    }
 }
+}}
 
 void* FindFixedHashKey(void*, void*, const unsigned char*);
 void AddImageHashValue(void*, const unsigned char*, const void*);
@@ -1660,53 +1690,42 @@ GFx::AMP::MovieInstructionStats& GFx::AMP::MovieInstructionStats::operator/=(uns
 }
 
 namespace Scaleform {
-static int CountMovieRoots(void** roots, std::size_t rootCount)
-{
-    int total = 0;
-    for (std::size_t i = 0; i < rootCount; ++i) {
-        int count = 1;
-        auto* root = static_cast<unsigned char*>(roots[i]);
-        void** children = *reinterpret_cast<void***>(root + 0x30);
-        const std::size_t childCount = *reinterpret_cast<std::size_t*>(root + 0x38);
-        for (std::size_t j = 0; j < childCount; ++j)
-            CountTreeNodes(children[j], &count);
-        total += count;
-    }
-    return total;
-}
-
-// MS2-FUNCTIONAL: counts descendants across every root view and the extra root tree, seeding each view node at one.
+namespace GFx { namespace AMP {
 // @0x14268a6d0
-int CountMovieViewNodes(void* movie)
+int ProfileFrame::GetNumFunctionTreeStats() const
 {
-    auto* bytes = static_cast<unsigned char*>(movie);
-    int total = 0;
-    auto** views = *reinterpret_cast<void***>(bytes + 0xd0);
-    const std::size_t viewCount = *reinterpret_cast<std::size_t*>(bytes + 0xd8);
-    for (std::size_t i = 0; i < viewCount; ++i) {
-        auto* viewRoots = static_cast<unsigned char*>(views[i]) + 0x70;
-        total += CountMovieRoots(*reinterpret_cast<void***>(viewRoots + 0x18),
-                                 *reinterpret_cast<std::size_t*>(viewRoots + 0x20));
+    int numFunctionTreeStats = 0;
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        MovieFunctionTreeStats* treeStats = MovieStats[i]->FunctionTreeStats;
+        if (treeStats != NULL)
+        {
+            for (UPInt j = 0; j < treeStats->FunctionRoots.GetSize(); ++j)
+            {
+                numFunctionTreeStats += treeStats->FunctionRoots[j]->GetNumItems();
+            }
+        }
     }
-    auto* roots = static_cast<unsigned char*>(*reinterpret_cast<void**>(bytes + 0xf0));
-    if (roots)
-        total += CountMovieRoots(*reinterpret_cast<void***>(roots + 0x18),
-                                 *reinterpret_cast<std::size_t*>(roots + 0x20));
-    return total;
+    if (DisplayFunctionStats)
+    {
+        for (UPInt j = 0; j < DisplayFunctionStats->FunctionRoots.GetSize(); ++j)
+        {
+            numFunctionTreeStats += DisplayFunctionStats->FunctionRoots[j]->GetNumItems();
+        }
+    }
+    return numFunctionTreeStats;
 }
+}}
 
-// MS2-FUNCTIONAL: returns one plus the recursive descendant count, matching the executable's seed value.
+namespace GFx { namespace AMP {
 // @0x14268a810
-unsigned CountTreeWithRoot(void* node)
+int FuncTreeItem::GetNumItems()
 {
-    int count = 1;
-    auto* bytes = static_cast<unsigned char*>(node);
-    void** children = *reinterpret_cast<void***>(bytes + 0x30);
-    const std::size_t childCount = *reinterpret_cast<std::size_t*>(bytes + 0x38);
-    for (std::size_t i = 0; i < childCount; ++i)
-        CountTreeNodes(children[i], &count);
-    return static_cast<unsigned>(count);
+    NumItemsVisitor visitor;
+    Visit(visitor);
+    return visitor.NumItems;
 }
+}}
 
 static std::uint64_t HashImageKey(const unsigned char* key)
 {
@@ -1718,18 +1737,135 @@ static std::uint64_t HashImageKey(const unsigned char* key)
             0x514d9afbc3e934fbull + key[0]);
 }
 
-// MS2-FUNCTIONAL: accumulates the fixed counters and merges nested movie lookup tables; variable view and id lists remain to be copied.
 // @0x142687eb0
-extern "C" void* FUN_142687eb0(void* destination, const void* source)
+GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator+=(const ProfileFrame& rhs)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    const auto* src = static_cast<const unsigned char*>(source);
-    *reinterpret_cast<std::uint64_t*>(dst + 0x10) += *reinterpret_cast<const std::uint64_t*>(src + 0x10);
-    for (std::size_t offset = 0x18; offset <= 0xc8; offset += sizeof(std::uint32_t))
-        *reinterpret_cast<std::uint32_t*>(dst + offset) += *reinterpret_cast<const std::uint32_t*>(src + offset);
-    FUN_14268a8e0(*reinterpret_cast<void**>(dst + 0xe8), *reinterpret_cast<void* const*>(src + 0xe8));
-    FUN_14268ac40(*reinterpret_cast<void**>(dst + 0xf0), *reinterpret_cast<void* const*>(src + 0xf0));
-    return destination;
+    TimeStamp += rhs.TimeStamp;
+    FramesPerSecond += rhs.FramesPerSecond;
+    AdvanceTime += rhs.AdvanceTime;
+    TimelineTime += rhs.TimelineTime;
+    ActionTime += rhs.ActionTime;
+    InputTime += rhs.InputTime;
+    MouseTime += rhs.MouseTime;
+    GetVariableTime += rhs.GetVariableTime;
+    SetVariableTime += rhs.SetVariableTime;
+    InvokeTime += rhs.InvokeTime;
+    DisplayTime += rhs.DisplayTime;
+    PresentTime += rhs.PresentTime;
+    TesselationTime += rhs.TesselationTime;
+    GradientGenTime += rhs.GradientGenTime;
+    UserTime += rhs.UserTime;
+    LineCount += rhs.LineCount;
+    MaskCount += rhs.MaskCount;
+    FilterCount += rhs.FilterCount;
+    MeshCount += rhs.MeshCount;
+    TriangleCount += rhs.TriangleCount;
+    DrawPrimitiveCount += rhs.DrawPrimitiveCount;
+    StrokeCount += rhs.StrokeCount;
+    GradientFillCount += rhs.GradientFillCount;
+    MeshThrashing += rhs.MeshThrashing;
+    RasterizedGlyphCount += rhs.RasterizedGlyphCount;
+    FontTextureCount += rhs.FontTextureCount;
+    NumFontCacheTextureUpdates += rhs.NumFontCacheTextureUpdates;
+    FontThrashing += rhs.FontThrashing;
+    FontFill += rhs.FontFill;
+    FontFail += rhs.FontFail;
+    FontMisses += rhs.FontMisses;
+    FontTotalArea += rhs.FontTotalArea;
+    FontUsedArea += rhs.FontUsedArea;
+    TotalMemory += rhs.TotalMemory;
+    ImageMemory += rhs.ImageMemory;
+    ImageGraphicsMemory += rhs.ImageGraphicsMemory;
+    MovieDataMemory += rhs.MovieDataMemory;
+    MovieViewMemory += rhs.MovieViewMemory;
+    MeshCacheMemory += rhs.MeshCacheMemory;
+    MeshCacheGraphicsMemory += rhs.MeshCacheGraphicsMemory;
+    MeshCacheUnusedMemory += rhs.MeshCacheUnusedMemory;
+    MeshCacheGraphicsUnusedMemory += rhs.MeshCacheGraphicsUnusedMemory;
+    FontCacheMemory += rhs.FontCacheMemory;
+    VideoMemory += rhs.VideoMemory;
+    SoundMemory += rhs.SoundMemory;
+    OtherMemory += rhs.OtherMemory;
+
+    for (UPInt i = 0; i < rhs.MovieStats.GetSize(); ++i)
+    {
+        bool found = false;
+        for (UPInt j = 0; j < MovieStats.GetSize(); ++j)
+        {
+            if (MovieStats[j]->ViewHandle == rhs.MovieStats[i]->ViewHandle)
+            {
+                MovieStats[j]->Merge(*rhs.MovieStats[i]);
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found)
+        {
+            MovieProfile* newStats = SF_HEAP_AUTO_NEW(this) MovieProfile();
+            *newStats = *rhs.MovieStats[i];
+            MovieStats.PushBack(*newStats);
+        }
+    }
+    DisplayStats->Merge(*rhs.DisplayStats);
+    DisplayFunctionStats->Merge(*rhs.DisplayFunctionStats);
+
+    for (UPInt i = 0; i < rhs.SwdHandles.GetSize(); ++i)
+    {
+        bool found = false;
+        for (UPInt j = 0; j < SwdHandles.GetSize(); ++j)
+        {
+            if (SwdHandles[j] == rhs.SwdHandles[i])
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            SwdHandles.PushBack(rhs.SwdHandles[i]);
+        }
+    }
+
+    for (UPInt i = 0; i < rhs.FileHandles.GetSize(); ++i)
+    {
+        bool found = false;
+        for (UPInt j = 0; j < FileHandles.GetSize(); ++j)
+        {
+            if (FileHandles[j] == rhs.FileHandles[i])
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            FileHandles.PushBack(rhs.FileHandles[i]);
+        }
+    }
+
+    MemoryByStatId->Merge(*rhs.MemoryByStatId);
+    Images->Merge(*rhs.Images);
+    Fonts->Merge(*rhs.Fonts);
+
+    for (UPInt i = 0; i < rhs.ImageList.GetSize(); ++i)
+    {
+        bool found = false;
+        for (UPInt j = 0; j < ImageList.GetSize(); ++j)
+        {
+            if (ImageList[j]->Id == rhs.ImageList[i]->Id)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            ImageList.PushBack(rhs.ImageList[i]);
+        }
+    }
+
+    return *this;
 }
 
 // MS2-FUNCTIONAL: hashes the eight-byte key, follows the bucket collision chain, and returns the matching cached node index.
@@ -2106,65 +2242,48 @@ insert_string:
 void ResizeStrongPointerArrayB(void**, std::size_t);
 static void ResizeRawArray(void**, void*, std::size_t, std::size_t);
 void FUN_14257dc30(void*);
-// MS2-FUNCTIONAL: merges sampled timing pairs into matching text value records, adding unmatched records with retained ownership.
 // @0x14268aff0
-extern "C" void FUN_14268aff0(void* destination, void* source)
+void GFx::AMP::MovieInstructionStats::Merge(const MovieInstructionStats& other)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<unsigned char*>(source);
-    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x18);
-    auto** sourceRecords = *reinterpret_cast<unsigned char***>(src + 0x10);
-    for (std::size_t i = 0; i < sourceCount; ++i) {
-        auto* incoming = sourceRecords[i];
-        const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x18);
-        auto** destinationRecords = *reinterpret_cast<unsigned char***>(dst + 0x10);
-        std::size_t match = 0;
-        while (match < destinationCount &&
-               (*reinterpret_cast<std::uint32_t*>(destinationRecords[match] + 0x10) != *reinterpret_cast<std::uint32_t*>(incoming + 0x10) ||
-                *reinterpret_cast<std::uint32_t*>(destinationRecords[match] + 0x14) != *reinterpret_cast<std::uint32_t*>(incoming + 0x14)))
-            ++match;
+    for (UPInt i = 0; i < other.BufferStatsArray.GetSize(); ++i)
+    {
+        bool buffersMerged = false;
+        for (UPInt j = 0; j < BufferStatsArray.GetSize(); ++j)
+        {
+            if (BufferStatsArray[j]->SwdHandle == other.BufferStatsArray[i]->SwdHandle
+                && BufferStatsArray[j]->BufferOffset == other.BufferStatsArray[i]->BufferOffset)
+            {
+                SF_ASSERT(BufferStatsArray[j]->BufferLength == other.BufferStatsArray[i]->BufferLength);
+                ArrayLH<InstructionTimePair>& thisArray = BufferStatsArray[j]->InstructionTimesArray;
+                const ArrayLH<InstructionTimePair>& otherArray = BufferStatsArray[i]->InstructionTimesArray;
+                for (UPInt k = 0; k < otherArray.GetSize(); ++k)
+                {
+                    bool instructionsMerged = false;
+                    for (UPInt l = 0; l < thisArray.GetSize(); ++l)
+                    {
+                        if (thisArray[l].Offset == otherArray[k].Offset)
+                        {
+                            thisArray[l].Time += otherArray[k].Time;
+                            instructionsMerged = true;
+                            break;
+                        }
+                    }
 
-        if (match == destinationCount) {
-            std::uint32_t statId = 0x242;
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            auto* copy = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-                DAT_143b15f60, destination, 0x38, &statId));
-            if (!copy)
-                continue;
-            std::memset(copy, 0, 0x38);
-            *reinterpret_cast<void**>(copy) = AS3TextValueRecordVtable;
-            *reinterpret_cast<std::uint32_t*>(copy + 8) = 1;
-            std::memcpy(copy + 0x10, incoming + 0x10, 12);
-            const std::size_t sampleCount = *reinterpret_cast<std::size_t*>(incoming + 0x28);
-            ResizeRawArray(reinterpret_cast<void**>(copy + 0x20), copy + 0x20, sampleCount, 0x10);
-            if (sampleCount)
-                std::memcpy(*reinterpret_cast<void**>(copy + 0x20), *reinterpret_cast<void**>(incoming + 0x20), sampleCount * 0x10);
-            ResizeStrongPointerArrayB(reinterpret_cast<void**>(dst + 0x10), destinationCount + 1);
-            destinationRecords = *reinterpret_cast<unsigned char***>(dst + 0x10);
-            FUN_14257dc30(copy);
-            destinationRecords[destinationCount] = copy;
-            FUN_14257dcb0(copy);
-            continue;
+                    if (!instructionsMerged)
+                    {
+                        thisArray.PushBack(otherArray[k]);
+                    }
+                }
+                buffersMerged = true;
+                break;
+            }
         }
 
-        auto* target = destinationRecords[match];
-        const std::size_t sourceSamples = *reinterpret_cast<std::size_t*>(incoming + 0x28);
-        auto* sourceValues = *reinterpret_cast<unsigned char**>(incoming + 0x20);
-        for (std::size_t j = 0; j < sourceSamples; ++j) {
-            const std::uint32_t key = *reinterpret_cast<std::uint32_t*>(sourceValues + j * 0x10);
-            const std::size_t targetSamples = *reinterpret_cast<std::size_t*>(target + 0x28);
-            auto* targetValues = *reinterpret_cast<unsigned char**>(target + 0x20);
-            std::size_t valueIndex = 0;
-            while (valueIndex < targetSamples && *reinterpret_cast<std::uint32_t*>(targetValues + valueIndex * 0x10) != key)
-                ++valueIndex;
-            if (valueIndex < targetSamples) {
-                *reinterpret_cast<std::uint64_t*>(targetValues + valueIndex * 0x10 + 8) +=
-                    *reinterpret_cast<std::uint64_t*>(sourceValues + j * 0x10 + 8);
-            } else {
-                ResizeRawArray(reinterpret_cast<void**>(target + 0x20), target + 0x20, targetSamples + 1, 0x10);
-                targetValues = *reinterpret_cast<unsigned char**>(target + 0x20);
-                std::memcpy(targetValues + targetSamples * 0x10, sourceValues + j * 0x10, 0x10);
-            }
+        if (!buffersMerged)
+        {
+            ScriptBufferStats* newBufferStats = SF_HEAP_AUTO_NEW(this) ScriptBufferStats();
+            *newBufferStats = *other.BufferStatsArray[i];
+            BufferStatsArray.PushBack(*newBufferStats);
         }
     }
 }
@@ -2289,89 +2408,64 @@ extern "C" void FUN_142689cb0(void* destination, void* allocator, void* sourceSe
     }
 }
 
-// MS2-FUNCTIONAL: merges keyed movie-name counters and inserts the source table's retained String values by their 64-bit keys.
 // @0x14268b3e0
-extern "C" void FUN_14268b3e0(void* destination, void* source)
+void GFx::AMP::MovieSourceLineStats::Merge(const MovieSourceLineStats& other)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<unsigned char*>(source);
-    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x18);
-    auto* sourceRows = *reinterpret_cast<unsigned char**>(src + 0x10);
-    for (std::size_t i = 0; i < sourceCount; ++i) {
-        auto* incoming = sourceRows + i * 0x18;
-        const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x18);
-        auto* destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
-        std::size_t match = 0;
-        while (match < destinationCount &&
-               (*reinterpret_cast<std::uint64_t*>(destinationRows + match * 0x18) != *reinterpret_cast<std::uint64_t*>(incoming) ||
-                *reinterpret_cast<std::uint32_t*>(destinationRows + match * 0x18 + 8) != *reinterpret_cast<std::uint32_t*>(incoming + 8)))
-            ++match;
-        if (match < destinationCount) {
-            *reinterpret_cast<std::uint64_t*>(destinationRows + match * 0x18 + 0x10) +=
-                *reinterpret_cast<std::uint64_t*>(incoming + 0x10);
-        } else {
-            ResizeRawArray(reinterpret_cast<void**>(dst + 0x10), dst + 0x10, destinationCount + 1, 0x18);
-            destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
-            std::memcpy(destinationRows + destinationCount * 0x18, incoming, 0x18);
-        }
-    }
-
-    auto* sourceTable = *reinterpret_cast<unsigned char**>(src + 0x28);
-    if (!sourceTable)
-        return;
-    const std::uint64_t mask = *reinterpret_cast<std::uint64_t*>(sourceTable + 8);
-    for (std::uint64_t i = 0; i <= mask; ++i) {
-        auto* row = sourceTable + 0x10 + i * 0x20;
-        if (*reinterpret_cast<std::int64_t*>(row) == -2)
-            continue;
-        const auto* entry = reinterpret_cast<const std::uint64_t*>(row + 0x10);
-        Scaleform::AddStringHashEntry(dst + 0x28, dst + 0x28, entry,
-            Scaleform::HashImageKey(reinterpret_cast<const unsigned char*>(entry)));
-    }
-}
-
-// MS2-FUNCTIONAL: intersects the scalar limits, adds unique tagged strings with retained references, and merges the four nested resource tables.
-// @0x14268b280
-void MergeMovieResourceTables(void* destination, void* source)
-{
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<unsigned char*>(source);
-    const unsigned firstLimit = *reinterpret_cast<unsigned*>(dst + 0x14);
-    const unsigned otherFirst = *reinterpret_cast<unsigned*>(src + 0x14);
-    *reinterpret_cast<unsigned*>(dst + 0x14) = firstLimit < otherFirst ? firstLimit : otherFirst;
-    const unsigned secondLimit = *reinterpret_cast<unsigned*>(dst + 0x18);
-    const unsigned otherSecond = *reinterpret_cast<unsigned*>(src + 0x18);
-    *reinterpret_cast<unsigned*>(dst + 0x18) = secondLimit < otherSecond ? secondLimit : otherSecond;
-
-    auto** srcItems = *reinterpret_cast<std::uint64_t***>(src + 0x40);
-    const std::size_t srcCount = *reinterpret_cast<std::size_t*>(src + 0x48);
-    for (std::size_t i = 0; i < srcCount; ++i) {
-        // Re-read each pass: the append below can reallocate the destination array.
-        auto** dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
-        const std::size_t dstCount = *reinterpret_cast<std::size_t*>(dst + 0x48);
-        const std::uint64_t encoded = *reinterpret_cast<std::uint64_t*>(srcItems[i] + 0x10);
-        const char* candidate = reinterpret_cast<const char*>((encoded & ~std::uint64_t(3)) + 0x0c);
-        bool duplicate = false;
-        for (std::size_t j = 0; j < dstCount; ++j) {
-            const std::uint64_t existing = *reinterpret_cast<std::uint64_t*>(dstItems[j] + 0x10);
-            const char* text = reinterpret_cast<const char*>((existing & ~std::uint64_t(3)) + 0x0c);
-            if (std::strcmp(candidate, text) == 0) {
-                duplicate = true;
+    for (UPInt i = 0; i < other.SourceLineTimings.GetSize(); ++i)
+    {
+        bool merged = false;
+        for (UPInt j = 0; j < SourceLineTimings.GetSize(); ++j)
+        {
+            if (SourceLineTimings[j].FileId == other.SourceLineTimings[i].FileId
+                && SourceLineTimings[j].LineNumber == other.SourceLineTimings[i].LineNumber)
+            {
+                SourceLineTimings[j].TotalTime += other.SourceLineTimings[i].TotalTime;
+                merged = true;
                 break;
             }
         }
-        if (!duplicate) {
-            auto** array = reinterpret_cast<void**>(dst + 0x40);
-            ResizeStrongPointerArrayB(array, *reinterpret_cast<std::size_t*>(dst + 0x48) + 1);
-            dstItems = *reinterpret_cast<std::uint64_t***>(dst + 0x40);
-            FUN_14257dc30(srcItems[i]);
-            dstItems[*reinterpret_cast<std::size_t*>(dst + 0x48) - 1] = srcItems[i];
+        if (!merged)
+        {
+            SourceLineTimings.PushBack(other.SourceLineTimings[i]);
         }
     }
-    FUN_14268aff0(*reinterpret_cast<void**>(dst + 0x58), *reinterpret_cast<void**>(src + 0x58));
-    FUN_14268a8e0(*reinterpret_cast<void**>(dst + 0x60), *reinterpret_cast<void**>(src + 0x60));
-    FUN_14268b3e0(*reinterpret_cast<void**>(dst + 0x68), *reinterpret_cast<void**>(src + 0x68));
-    FUN_14268ac40(*reinterpret_cast<void**>(dst + 0x70), *reinterpret_cast<void**>(src + 0x70));
+
+    SourceFileDescMap::ConstIterator it;
+    for (it = other.SourceFileInfo.Begin(); it != other.SourceFileInfo.End(); ++it)
+    {
+        SourceFileInfo.Set(it->First, it->Second);
+    }
+}
+
+// @0x14268b280
+void GFx::AMP::MovieProfile::Merge(const MovieProfile& rhs)
+{
+    SF_ASSERT(ViewHandle == rhs.ViewHandle);
+    SF_ASSERT(ViewName == rhs.ViewName);
+    MinFrame = Alg::Min(MinFrame, rhs.MinFrame);
+    MaxFrame = Alg::Max(MaxFrame, rhs.MaxFrame);
+
+    for (UPInt i = 0; i < rhs.Markers.GetSize(); ++i)
+    {
+        bool found = false;
+        for (UPInt j = 0; j < Markers.GetSize(); ++j)
+        {
+            if (rhs.Markers[i]->Name == Markers[j]->Name)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            Markers.PushBack(Markers[i]);
+        }
+    }
+
+    InstructionStats->Merge(*rhs.InstructionStats);
+    FunctionStats->Merge(*rhs.FunctionStats);
+    SourceLineStats->Merge(*rhs.SourceLineStats);
+    FunctionTreeStats->Merge(*rhs.FunctionTreeStats);
 }
 
 // MS2-FUNCTIONAL: performs depth-first child traversal and returns the first node with the requested key.
@@ -2390,53 +2484,19 @@ void* FindTreeNodeByKey(void* node, int key)
     return nullptr;
 }
 
-// MS2-FUNCTIONAL: appends retained tree entries, repairs cumulative child counters, and merges movie-to-manager hash entries.
 // @0x14268ac40
-extern "C" void FUN_14268ac40(void* destination, void* source)
+void GFx::AMP::MovieFunctionTreeStats::Merge(const MovieFunctionTreeStats& other)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<unsigned char*>(source);
-    const std::size_t oldCount = *reinterpret_cast<std::size_t*>(dst + 0x20);
-    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x20);
-    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(dst + 0x18), oldCount + sourceCount);
-    auto** dstItems = *reinterpret_cast<void***>(dst + 0x18);
-    auto** srcItems = *reinterpret_cast<void***>(src + 0x18);
-    for (std::size_t i = 0; i < sourceCount; ++i) {
-        if (srcItems[i]) FUN_14257dc30(srcItems[i]);
-        dstItems[oldCount + i] = srcItems[i];
+    FunctionRoots.Append(other.FunctionRoots);
+    for (UPInt i = 1; i < FunctionRoots.GetSize(); ++i)
+    {
+        FunctionRoots[i]->ResetTreeIds(FunctionRoots[i - 1]);
     }
 
-    const std::size_t count = *reinterpret_cast<std::size_t*>(dst + 0x20);
-    for (std::size_t i = 1; i < count; ++i) {
-        auto* previous = static_cast<unsigned char*>(dstItems[i - 1]);
-        auto* current = static_cast<unsigned char*>(dstItems[i]);
-        int base = *reinterpret_cast<int*>(previous + 0x28);
-        auto** previousChildren = *reinterpret_cast<void***>(previous + 0x30);
-        const std::size_t previousCount = *reinterpret_cast<std::size_t*>(previous + 0x38);
-        for (std::size_t j = 0; j < previousCount; ++j)
-            Scaleform::UpdateTreeMaximumDepth(previousChildren[j], reinterpret_cast<unsigned*>(&base));
-        auto** currentChildren = *reinterpret_cast<void***>(current + 0x30);
-        const std::size_t currentCount = *reinterpret_cast<std::size_t*>(current + 0x38);
-        for (std::size_t j = 0; j < currentCount; ++j) {
-            auto* child = static_cast<unsigned char*>(currentChildren[j]);
-            *reinterpret_cast<int*>(child + 0x28) += base;
-            auto** grandchildren = *reinterpret_cast<void***>(child + 0x30);
-            const std::size_t grandchildCount = *reinterpret_cast<std::size_t*>(child + 0x38);
-            for (std::size_t k = 0; k < grandchildCount; ++k)
-                Scaleform::AddTreeNodeValue(grandchildren[k], &base);
-        }
-    }
-
-    auto* sourceTable = *reinterpret_cast<std::uint64_t**>(src + 0x30);
-    if (!sourceTable)
-        return;
-    const std::uint64_t mask = sourceTable[1];
-    for (std::uint64_t i = 0; i <= mask; ++i) {
-        auto* entry = sourceTable + 2 + i * 4;
-        if (static_cast<std::int64_t>(entry[0]) == -2)
-            continue;
-        AddMovieViewHashEntry(reinterpret_cast<void**>(dst + 0x30), dst + 0x30,
-                              entry[2], reinterpret_cast<void*>(entry[3]));
+    FunctionDescMap::ConstIterator it;
+    for (it = other.FunctionInfo.Begin(); it != other.FunctionInfo.End(); ++it)
+    {
+        FunctionInfo.Set(it->First, it->Second);
     }
 }
 }
@@ -3608,25 +3668,60 @@ static void* CreateAs3ReportBlock(void* owner, std::size_t size, std::uint32_t s
     return block;
 }
 
-// MS2-FUNCTIONAL: initializes the movie resource data record, its three memory items, lookup set, and named tree list.
 // @0x142686d30
-extern "C" void* FUN_142686d30(void* object)
+GFx::AMP::ProfileFrame::ProfileFrame() :
+    TimeStamp(0),
+    FramesPerSecond(0),
+    AdvanceTime(0),
+    ActionTime(0),
+    TimelineTime(0),
+    InputTime(0),
+    MouseTime(0),
+    GetVariableTime(0),
+    SetVariableTime(0),
+    InvokeTime(0),
+    DisplayTime(0),
+    PresentTime(0),
+    TesselationTime(0),
+    GradientGenTime(0),
+    UserTime(0),
+    LineCount(0),
+    MaskCount(0),
+    FilterCount(0),
+    MeshCount(0),
+    TriangleCount(0),
+    DrawPrimitiveCount(0),
+    StrokeCount(0),
+    GradientFillCount(0),
+    MeshThrashing(0),
+    RasterizedGlyphCount(0),
+    FontTextureCount(0),
+    NumFontCacheTextureUpdates(0),
+    FontThrashing(0),
+    FontFill(0),
+    FontFail(0),
+    FontMisses(0),
+    FontTotalArea(0),
+    FontUsedArea(0),
+    TotalMemory(0),
+    ImageMemory(0),
+    ImageGraphicsMemory(0),
+    MovieDataMemory(0),
+    MovieViewMemory(0),
+    MeshCacheMemory(0),
+    MeshCacheGraphicsMemory(0),
+    MeshCacheUnusedMemory(0),
+    MeshCacheGraphicsUnusedMemory(0),
+    FontCacheMemory(0),
+    VideoMemory(0),
+    SoundMemory(0),
+    OtherMemory(0)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    std::memset(bytes + 0x10, 0, 0x148);
-    *reinterpret_cast<void**>(bytes) = AS3MovieResourceDataVtable;
-    *reinterpret_cast<std::uint32_t*>(bytes + 8) = 1;
-    void* itemA = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
-    void* itemB = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
-    void* itemC = CreateAs3ReportBlock(object, 0x48, 2, AS3MovieMemoryItemVtable, true);
-    void* values = CreateAs3ReportBlock(object, 0x30, 0x242, AS3MovieImageValueSetVtable, false);
-    void* tree = CreateAs3ReportBlock(object, 0x38, 2, AS3MovieImageTreeVtable, true);
-    *reinterpret_cast<void**>(bytes + 0x128) = itemA;
-    *reinterpret_cast<void**>(bytes + 0x130) = itemB;
-    *reinterpret_cast<void**>(bytes + 0x138) = itemC;
-    *reinterpret_cast<void**>(bytes + 0xe8) = values;
-    *reinterpret_cast<void**>(bytes + 0xf0) = tree;
-    return object;
+    MemoryByStatId = *SF_HEAP_AUTO_NEW(this) MemItem(0);
+    Images = *SF_HEAP_AUTO_NEW(this) MemItem(0);
+    Fonts = *SF_HEAP_AUTO_NEW(this) MemItem(0);
+    DisplayStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionStats();
+    DisplayFunctionStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionTreeStats();
 }
 
 // @0x14268c930
@@ -3994,30 +4089,33 @@ void RemoveAudioRequest(void* manager, void* request)
     }
 }
 
-// MS2-FUNCTIONAL: merges 32-byte image metric records by their two-word key, accumulating the count and total fields.
 // @0x14268a8e0
-extern "C" void FUN_14268a8e0(void* destination, void* source)
+void GFx::AMP::MovieFunctionStats::Merge(const MovieFunctionStats& other)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<const unsigned char*>(source);
-    const std::size_t sourceCount = *reinterpret_cast<const std::size_t*>(src + 0x18);
-    auto* sourceRows = *reinterpret_cast<const unsigned char* const*>(src + 0x10);
-    for (std::size_t i = 0; i < sourceCount; ++i) {
-        const auto* incoming = sourceRows + i * 0x20;
-        const std::size_t destinationCount = *reinterpret_cast<const std::size_t*>(dst + 0x18);
-        auto* destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
-        std::size_t match = 0;
-        while (match < destinationCount && std::memcmp(destinationRows + match * 0x20, incoming, 16) != 0)
-            ++match;
-        if (match < destinationCount) {
-            auto* row = destinationRows + match * 0x20;
-            *reinterpret_cast<std::uint32_t*>(row + 0x10) += *reinterpret_cast<const std::uint32_t*>(incoming + 0x10);
-            *reinterpret_cast<std::uint64_t*>(row + 0x18) += *reinterpret_cast<const std::uint64_t*>(incoming + 0x18);
-        } else {
-            Scaleform::ResizeRawArray(reinterpret_cast<void**>(dst + 0x10), dst + 0x10, destinationCount + 1, 0x20);
-            destinationRows = *reinterpret_cast<unsigned char**>(dst + 0x10);
-            std::memcpy(destinationRows + destinationCount * 0x20, incoming, 0x20);
+    for (UPInt i = 0; i < other.FunctionTimings.GetSize(); ++i)
+    {
+        bool merged = false;
+        for (UPInt j = 0; j < FunctionTimings.GetSize(); ++j)
+        {
+            if (FunctionTimings[j].FunctionId == other.FunctionTimings[i].FunctionId
+                && FunctionTimings[j].CallerId == other.FunctionTimings[i].CallerId)
+            {
+                FunctionTimings[j].TimesCalled += other.FunctionTimings[i].TimesCalled;
+                FunctionTimings[j].TotalTime += other.FunctionTimings[i].TotalTime;
+                merged = true;
+                break;
+            }
         }
+        if (!merged)
+        {
+            FunctionTimings.PushBack(other.FunctionTimings[i]);
+        }
+    }
+
+    FunctionDescMap::ConstIterator it;
+    for (it = other.FunctionInfo.Begin(); it != other.FunctionInfo.End(); ++it)
+    {
+        FunctionInfo.Set(it->First, it->Second);
     }
 }
 
@@ -4135,36 +4233,24 @@ GFx::AMP::ProfileFrame& GFx::AMP::ProfileFrame::operator/=(unsigned numFrames)
     return *this;
 }
 
-// MS2-FUNCTIONAL: copies the image resource record and its nested strong-reference arrays, metric lists, and lookup sets.
 // @0x142687250
-extern "C" long long FUN_142687250(void* destination, const void* source)
+GFx::AMP::MovieProfile& GFx::AMP::MovieProfile::operator=(const MovieProfile& rhs)
 {
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto* src = static_cast<const unsigned char*>(source);
-    std::memcpy(dst + 0x10, src + 0x10, 12);
-    *reinterpret_cast<Scaleform::String*>(dst + 0x20) = *reinterpret_cast<const Scaleform::String*>(src + 0x20);
-    std::memcpy(dst + 0x28, src + 0x28, 20);
-
-    CopyAs3StrongArray(reinterpret_cast<void**>(dst + 0x40), reinterpret_cast<void* const*>(src + 0x40));
-
-    auto* dstPtrRecords = *reinterpret_cast<unsigned char**>(dst + 0x58);
-    auto* srcPtrRecords = *reinterpret_cast<const unsigned char* const*>(src + 0x58);
-    CopyAs3StrongArray(reinterpret_cast<void**>(dstPtrRecords + 0x10), reinterpret_cast<void* const*>(srcPtrRecords + 0x10));
-    auto* dstMetrics = *reinterpret_cast<unsigned char**>(dst + 0x60);
-    auto* srcMetrics = *reinterpret_cast<const unsigned char* const*>(src + 0x60);
-    CopyAs3RawRecords(dstMetrics, srcMetrics, 0x20);
-    FUN_142689aa0(dstMetrics + 0x28, dstMetrics + 0x28, const_cast<unsigned char*>(srcMetrics + 0x28));
-    auto* dstNames = *reinterpret_cast<unsigned char**>(dst + 0x68);
-    auto* srcNames = *reinterpret_cast<const unsigned char* const*>(src + 0x68);
-    CopyAs3RawRecords(dstNames, srcNames, 0x18);
-    FUN_142689cb0(dstNames + 0x28, dstNames + 0x28, const_cast<unsigned char*>(srcNames + 0x28));
-
-    auto* dstTree = *reinterpret_cast<unsigned char**>(dst + 0x70);
-    auto* srcTree = *reinterpret_cast<const unsigned char* const*>(src + 0x70);
-    *reinterpret_cast<Scaleform::String*>(dstTree + 0x10) = *reinterpret_cast<const Scaleform::String*>(srcTree + 0x10);
-    CopyAs3StrongArray(reinterpret_cast<void**>(dstTree + 0x18), reinterpret_cast<void* const*>(srcTree + 0x18));
-    FUN_142689aa0(dstTree + 0x30, dstTree + 0x30, const_cast<unsigned char*>(srcTree + 0x30));
-    return static_cast<long long>(reinterpret_cast<std::uintptr_t>(destination));
+    ViewHandle = rhs.ViewHandle;
+    MinFrame = rhs.MinFrame;
+    MaxFrame = rhs.MaxFrame;
+    ViewName = rhs.ViewName;
+    Version = rhs.Version;
+    Width = rhs.Width;
+    Height = rhs.Height;
+    FrameRate = rhs.FrameRate;
+    FrameCount = rhs.FrameCount;
+    Markers = rhs.Markers;
+    *InstructionStats = *rhs.InstructionStats;
+    *FunctionStats = *rhs.FunctionStats;
+    *SourceLineStats = *rhs.SourceLineStats;
+    *FunctionTreeStats = *rhs.FunctionTreeStats;
+    return *this;
 }
 
 // MS2-FUNCTIONAL: compares a text record's strings, string array, scalar identity, and near-equal geometry values.
@@ -4235,29 +4321,20 @@ void* InitializeTextRecord(void* object)
     return object;
 }
 
-// MS2-FUNCTIONAL: finds the source tree's maximum depth and adds it to each destination child and descendant.
+namespace GFx { namespace AMP {
 // @0x14268e6a0
-void AddTreeDepthOffset(void* destination, void* source)
+void FuncTreeItem::ResetTreeIds(FuncTreeItem* other)
 {
-    auto* src = static_cast<unsigned char*>(source);
-    int maximum = *reinterpret_cast<int*>(src + 0x28);
-    auto** sourceChildren = *reinterpret_cast<void***>(src + 0x30);
-    const std::size_t sourceCount = *reinterpret_cast<std::size_t*>(src + 0x38);
-    for (std::size_t i = 0; i < sourceCount; ++i)
-        UpdateTreeMaximumDepth(sourceChildren[i], reinterpret_cast<unsigned*>(&maximum));
+    MaxIdVisitor maxIdVisitor;
+    other->Visit(maxIdVisitor);
+    OffsetIdVisitor offsetVisitor(maxIdVisitor.MaxId);
 
-    auto* dst = static_cast<unsigned char*>(destination);
-    auto** destinationChildren = *reinterpret_cast<void***>(dst + 0x30);
-    const std::size_t destinationCount = *reinterpret_cast<std::size_t*>(dst + 0x38);
-    for (std::size_t i = 0; i < destinationCount; ++i) {
-        auto* child = static_cast<unsigned char*>(destinationChildren[i]);
-        *reinterpret_cast<int*>(child + 0x28) += maximum;
-        auto** grandchildren = *reinterpret_cast<void***>(child + 0x30);
-        const std::size_t grandchildCount = *reinterpret_cast<std::size_t*>(child + 0x38);
-        for (std::size_t j = 0; j < grandchildCount; ++j)
-            AddTreeNodeValue(grandchildren[j], &maximum);
+    for (UPInt i = 0; i < Children.GetSize(); ++i)
+    {
+        Children[i]->Visit(offsetVisitor);
     }
 }
+}}
 
 // MS2-FUNCTIONAL: allocates the audio event manager and constructs its event, locks, and circular list sentinel.
 // @0x142744fe0
