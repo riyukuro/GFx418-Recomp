@@ -1626,7 +1626,7 @@ std::uint64_t* FUN_140017250(std::uint64_t* record, std::uint64_t vm, std::uint6
 }
 
 namespace {
-void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, std::uint32_t instanceFlags)
+void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, std::uint32_t instanceFlags, void** classObjectVtable)
 {
     FUN_1424dabd0(classTraits, vm, classInfo);
     *reinterpret_cast<void***>(classTraits) = classVtable;
@@ -1644,7 +1644,9 @@ void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void*
     auto* ctraits = allocate(heap, 0x50, 0);
     if (ctraits) {
         FUN_1424d6ac0(ctraits, classTraits);
-        *reinterpret_cast<void***>(ctraits) = &VideoCTraitsVtable;
+        // only the first class overrides the Class vftable; the second keeps the ctor's
+        if (classObjectVtable)
+            *reinterpret_cast<void***>(ctraits) = classObjectVtable;
     }
     if (instance) {
         auto* slot = reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(instance) + 0x80);
@@ -1659,13 +1661,13 @@ void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void*
 // @0x1400199e0
 void* FUN_1400199e0(void* traits, void* vm)
 {
-    return BuildVideoTraits(traits, vm, &VideoClassInfoA, &VideoClassVtableA, &VideoInstanceVtableA, 0xf8);
+    return BuildVideoTraits(traits, vm, &VideoClassInfoA, &VideoClassVtableA, &VideoInstanceVtableA, 0xf8, &VideoCTraitsVtable);
 }
 // MS2-FUNCTIONAL: constructs the VideoPlayer AS3 class traits and its instance and native traits objects.
 // @0x14001ad20
 void* FUN_14001ad20(void* traits, void* vm)
 {
-    return BuildVideoTraits(traits, vm, &VideoClassInfoB, &VideoClassVtableB, &VideoInstanceVtableB, 0x78);
+    return BuildVideoTraits(traits, vm, &VideoClassInfoB, &VideoClassVtableB, &VideoInstanceVtableB, 0x78, nullptr);
 }
 namespace {
 
