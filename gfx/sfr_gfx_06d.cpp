@@ -482,10 +482,9 @@ void DisplayObjContainer::OnInsertionAsLevel(int level)
 }
 
 // @0x1425fcfa0
-// MS2-FUNCTIONAL: stack frame layout (0x20 bytes larger here) and the flag tests (the exe uses shr / test al, 1)
 bool DisplayObjContainer::PointTestLocal(const PointF& pt, UByte hitTestMask) const
 {
-    if (Flags & Mask_HitTestDisable)
+    if ((UByte)(Flags >> 11) & 1)
         return false;
 
     if (!(DisplayObjectBase::Flags & Mask_Scale9GridExists) && !GetBounds(Matrix2F()).Contains(pt))
@@ -500,12 +499,16 @@ bool DisplayObjContainer::PointTestLocal(const PointF& pt, UByte hitTestMask) co
     if (pmask && pmask->IsUsedAsMask() && !pmask->IsUnloaded())
     {
         Matrix2F matrix;
-        Matrix2F maskWorld;
-        pmask->GetWorldMatrix(&maskWorld);
-        matrix.SetInverse(maskWorld);
-        Matrix2F world;
-        GetWorldMatrix(&world);
-        matrix.Prepend(world);
+        {
+            Matrix2F maskWorld;
+            pmask->GetWorldMatrix(&maskWorld);
+            matrix.SetInverse(maskWorld);
+        }
+        {
+            Matrix2F world;
+            GetWorldMatrix(&world);
+            matrix.Prepend(world);
+        }
         PointF p(matrix.M[0][0] * pt.x + matrix.M[0][1] * pt.y + matrix.M[0][3],
                  matrix.M[1][0] * pt.x + matrix.M[1][1] * pt.y + matrix.M[1][3]);
 

@@ -881,7 +881,7 @@ void TextField::TextDocumentListener::OnScroll(Render::Text::DocView&)
 // @0x1425ba750
 bool TextField::PointTestLocal(const PointF& pt, UByte hitTestMask) const
 {
-    if (IntObjFlagsOf(this) & InteractiveObject::Mask_HitTestDisable)
+    if ((UByte)(IntObjFlagsOf(this) >> 11) & 1)
         return false;
     if ((hitTestMask & HitTest_IgnoreInvisible) && !GetVisible())
         return false;

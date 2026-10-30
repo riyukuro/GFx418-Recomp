@@ -601,11 +601,10 @@ RectF Sprite::GetFocusRect() const
 }
 
 // hitTestMask: 1 tests the shapes instead of the bounds, 2 skips invisible clips.
-// MS2-FUNCTIONAL: the exe materialises the HitTestDisable test as shr/test al,1 (cl folds it to one test)
 // @0x1425dc2e0
 bool Sprite::PointTestLocal(const PointF& pt, UByte hitTestMask) const
 {
-    if (InteractiveObject::Flags & Mask_HitTestDisable)
+    if ((UByte)(InteractiveObject::Flags >> 11) & 1)
         return false;
     if (!(DisplayObjectBase::Flags & Mask_Scale9GridExists) && !GetBounds(Matrix()).Contains(pt))
         return false;
@@ -970,7 +969,6 @@ void Sprite::Restart()
 
 // Hands the no-advance state down to the children and updates their place on the advance list.
 // @0x1425dc3e0
-// MS2-FUNCTIONAL: the exe tests the two play list bits one shift at a time (shr/test), cl folds them into one mask compare
 void Sprite::PropagateNoAdvanceGlobalFlag()
 {
     bool noAdvance = IsNoAdvanceGlobalFlagSet();
@@ -982,16 +980,15 @@ void Sprite::PropagateNoAdvanceGlobalFlag()
             continue;
         pich->SetNoAdvanceGlobalFlag(IsNoAdvanceGlobalFlagSet() || noAdvance);
         pich->PropagateNoAdvanceGlobalFlag();
-        int status = pich->CheckAdvanceStatus(pich->IsInOptimizedPlayList());
-        if (status == -1)
-            pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
-        else if (status == 1)
-            pich->AddToOptimizedPlayList();
+        switch (pich->CheckAdvanceStatus(((UByte)(pich->Flags >> 21) & 1) && !((UByte)(pich->Flags >> 22) & 1)))
+        {
+        case 1:  pich->AddToOptimizedPlayList(); break;
+        case -1: pich->Flags |= Mask_MarkedToRemoveFromOptAdvList; break;
+        }
     }
 }
 
 // @0x1425dc500
-// MS2-FUNCTIONAL: the exe tests the two play list bits one shift at a time (shr/test), cl folds them into one mask compare
 void Sprite::PropagateNoAdvanceLocalFlag()
 {
     bool noAdvance = IsNoAdvanceLocalFlagSet();
@@ -1003,11 +1000,11 @@ void Sprite::PropagateNoAdvanceLocalFlag()
             continue;
         pich->SetNoAdvanceLocalFlag(IsNoAdvanceLocalFlagSet() || noAdvance);
         pich->PropagateNoAdvanceLocalFlag();
-        int status = pich->CheckAdvanceStatus(pich->IsInOptimizedPlayList());
-        if (status == -1)
-            pich->Flags |= Mask_MarkedToRemoveFromOptAdvList;
-        else if (status == 1)
-            pich->AddToOptimizedPlayList();
+        switch (pich->CheckAdvanceStatus(((UByte)(pich->Flags >> 21) & 1) && !((UByte)(pich->Flags >> 22) & 1)))
+        {
+        case 1:  pich->AddToOptimizedPlayList(); break;
+        case -1: pich->Flags |= Mask_MarkedToRemoveFromOptAdvList; break;
+        }
     }
 }
 
