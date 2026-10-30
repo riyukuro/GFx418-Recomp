@@ -2686,32 +2686,31 @@ void AvmInteractiveObj::OnFocus(InteractiveObject::FocusEventType event, Interac
     as3obj->DispatchEventObject(evt, pDispObj);
 }
 
-// MS2-FUNCTIONAL register allocation and shared epilogue of the no-AS3-object return
+// MS2-FUNCTIONAL same length; the exe swaps rbp and rsi between this and the event name
 // @0x142519ee0
 bool AvmInteractiveObj::OnFocusChange(InteractiveObject* ptoBeFocused, unsigned controllerIdx, FocusMovedType fmt,
                                       ProcessFocusKeyInfo* pfocusKeyInfo)
 {
     const char* type = (fmt == GFx_FocusMovedByKeyboard) ? "keyFocusChange" : "mouseFocusChange";
-    bool result = true;
-    if (!pAS3RawPtr && !pAS3CollectiblePtr)
-        return result;
-    Instances::fl_display::DisplayObject* related = NULL;
-    if (ptoBeFocused)
-        related = ToAvmInteractiveObj(ptoBeFocused)->GetAS3Obj();
-    Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
-    SPtr<Instances::fl_events::FocusEvent> evt =
-        as3obj->CreateFocusEventObject(Sfr34_AS3Root(this)->GetStringManager418()->CreateConstString(type),
-                                       related, controllerIdx, false, 0);
-    evt->Cancelable = true;
-    if (fmt == GFx_FocusMovedByKeyboard)
+    if (pAS3RawPtr || pAS3CollectiblePtr)
     {
-        const Sfr34_FocusKeyInfoView* pinfo = reinterpret_cast<const Sfr34_FocusKeyInfoView*>(pfocusKeyInfo);
-        evt->KeyCode  = pinfo->KeyCode;
-        evt->ShiftKey = (pinfo->KeysState & 1) != 0;
+        Instances::fl_display::DisplayObject* related =
+            ptoBeFocused ? ToAvmInteractiveObj(ptoBeFocused)->GetAS3Obj() : NULL;
+        Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
+        SPtr<Instances::fl_events::FocusEvent> evt =
+            as3obj->CreateFocusEventObject(Sfr34_AS3Root(this)->GetStringManager418()->CreateConstString(type),
+                                           related, controllerIdx, false, 0);
+        evt->Cancelable = true;
+        if (fmt == GFx_FocusMovedByKeyboard)
+        {
+            const Sfr34_FocusKeyInfoView* pinfo = reinterpret_cast<const Sfr34_FocusKeyInfoView*>(pfocusKeyInfo);
+            evt->KeyCode  = pinfo->KeyCode;
+            evt->ShiftKey = (pinfo->KeysState & 1) != 0;
+        }
+        as3obj->DispatchEventObject(evt, pDispObj);
+        return !evt->DefaultPrevented;
     }
-    as3obj->DispatchEventObject(evt, pDispObj);
-    result = !evt->DefaultPrevented;
-    return result;
+    return true;
 }
 
 // Takes the object and its branch (the play list entries before it that descend from it) out of the play list and
@@ -3353,20 +3352,25 @@ void AvmDisplayObj::OnEventUnload()
 void FUN_1424f03f0(Scaleform::GFx::AS3::MemoryContextImpl::HeapLimit* self, Scaleform::MemoryHeap* heap);  // HeapLimit::Collect
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// MemoryHeap::GetLimit (Limit at +0x60 of the heap).
+static SF_INLINE UPInt Sfr18HeapGetLimit(const MemoryHeap* heap)
+{
+    return *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(heap) + 0x60);
+}
+
 // The heap may grow by HeapLimitMultiplier of its footprint between collections. Past that (or past the user
 // limit) the garbage is collected first: right away, or (inside an allocation) at the next frame.
-// MS2-FUNCTIONAL same logic; the exe lays out the no-collection path first and allocates other registers
 // @0x1425198d0
 bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLimit)
 {
-    const UPInt footprint = heap->GetFootprint();
-    const UPInt heapLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
-    const float growth    = float(footprint) * HeapLimitMultiplier;
-    const UPInt newLimit  = UPInt(growth) + heapLimit + overLimit;
-    UPInt       limit;
-    if (SPInt(growth) > SPInt(footprint - LastCollectionFootprint) && (!UserLevelLimit || newLimit <= UserLevelLimit))
-        limit = newLimit;
-    else
+    UPInt footprint = heap->GetFootprint();
+    UPInt heapLimit = Sfr18HeapGetLimit(heap);
+
+    SPInt allocsSinceLastCollect = (SPInt)footprint - LastCollectionFootprint;
+    UPInt newLimit = (heapLimit + overLimit) + (UPInt)(footprint * HeapLimitMultiplier);
+
+    if (allocsSinceLastCollect >= (SPInt)(footprint * HeapLimitMultiplier) ||
+        (UserLevelLimit != 0 && newLimit > UserLevelLimit))
     {
         if (AllocCount)
         {
@@ -3374,15 +3378,27 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
             return true;
         }
         FUN_1424f03f0(this, heap);
-        if (!UserLevelLimit || newLimit <= UserLevelLimit)
-            return true;
-        if (overLimit > footprint - LastCollectionFootprint)
-            CurrentLimit = limit = heapLimit + (LastCollectionFootprint - footprint) + overLimit;
-        else
-            limit = CurrentLimit;
+
+        if (UserLevelLimit != 0 && newLimit > UserLevelLimit)
+        {
+            if (overLimit > (footprint - LastCollectionFootprint))
+            {
+                CurrentLimit = heapLimit + (overLimit - (footprint - LastCollectionFootprint));
+                heap->SetLimit(CurrentLimit);
+                CurrentLimit = Sfr18HeapGetLimit(heap);
+            }
+            else
+            {
+                heap->SetLimit(CurrentLimit);
+                CurrentLimit = Sfr18HeapGetLimit(heap);
+            }
+        }
     }
-    heap->SetLimit(limit);
-    CurrentLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
+    else
+    {
+        heap->SetLimit(newLimit);
+        CurrentLimit = Sfr18HeapGetLimit(heap);
+    }
     return true;
 }
 
