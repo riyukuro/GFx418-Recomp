@@ -665,13 +665,20 @@ void FUN_14001a1e0(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Objec
 {
     value->Pick(object);
 }
-// MS2-FUNCTIONAL: initializes an AS3 numeric Value with a 32-bit integer payload.
+// the AS3 Value payload union: the int goes into a stack copy and all 16 bytes are stored.
+union VideoValueUnion {
+    std::int32_t VInt;
+    std::uint64_t Raw[2];
+};
+// MS2-FUNCTIONAL: cl15 shape, the exe copies the union through lea rdx,[rsp] (same stores).
+// initializes an AS3 numeric Value with a 32-bit integer payload.
 // @0x14001a260
-void FUN_14001a260(std::uint32_t* value, std::uint32_t number)
+inline void FUN_14001a260(std::uint32_t* value, std::uint32_t number)
 {
     value[0] = (value[0] & 0xffffffe2) | 2;
-    *reinterpret_cast<std::uint64_t*>(value + 4) = number;
-    *reinterpret_cast<std::uint64_t*>(value + 6) = 0;
+    VideoValueUnion u;
+    u.VInt = static_cast<std::int32_t>(number);
+    *reinterpret_cast<VideoValueUnion*>(value + 4) = u;
 }
 // MS2-FUNCTIONAL: copies a 32-bit integer payload into an AS3 numeric Value.
 // @0x14001a2b0
@@ -863,38 +870,42 @@ void FUN_140019cd0(std::uint64_t* closure)
 }
 
 namespace {
-void ConvertVideoCallback(void* vm, std::uint64_t callback, std::uint64_t context, Scaleform::GFx::AS3::Value* output)
+struct VideoCallbackClosure {
+    std::uint64_t Vm, Output, Object;
+    VideoCallbackClosure(void* vm, void* output)
+        : Vm(reinterpret_cast<std::uintptr_t>(vm)), Output(reinterpret_cast<std::uintptr_t>(output)), Object(0) {}
+};
+// the callback writes its object into closure[2]; closure = {vm, output, object} as VideoCallbackToValue reads it.
+// The base is the int this-adjust of the member-function pointer (low dword only, the high dword is garbage).
+__forceinline void ConvertVideoCallback(void* vm, void* callback, const void* base, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    void* object = nullptr;
-    auto thunk = reinterpret_cast<void(*)(std::uint64_t, void**)>(callback);
-    thunk(reinterpret_cast<std::uintptr_t>(reinterpret_cast<void*>(context)), reinterpret_cast<void**>(&object));
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        RetainVideoAtom(reinterpret_cast<std::uintptr_t>(object));
-        output->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
-        auto temporary = reinterpret_cast<std::uintptr_t>(object);
-        ReleaseVideoAtom(&temporary);
-    }
-    auto temporary = reinterpret_cast<std::uintptr_t>(object);
-    ReleaseVideoAtom(&temporary);
+    VideoCallbackClosure closure(vm, output);
+    reinterpret_cast<void(*)(std::uintptr_t, std::uint64_t*)>(callback)(
+        *static_cast<const int*>(base) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10),
+        &closure.Object);
+    VideoCallbackToValue(&closure.Vm);
 }
 } // namespace
-// MS2-FUNCTIONAL: invokes the metadata callback and converts its object result to an AS3 Value.
+// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
+// invokes the metadata callback and converts its object result to an AS3 Value.
 // @0x140019d70
 void FUN_140019d70(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackA), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseA) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, VideoCallbackA, &VideoCallbackBaseA, context, output);
 }
-// MS2-FUNCTIONAL: invokes the cue point callback and converts its object result to an AS3 Value.
+// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
+// invokes the cue point callback and converts its object result to an AS3 Value.
 // @0x140019e20
 void FUN_140019e20(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackB), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseB) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, VideoCallbackB, &VideoCallbackBaseB, context, output);
 }
-// MS2-FUNCTIONAL: invokes the subtitle callback and converts its object result to an AS3 Value.
+// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
+// invokes the subtitle callback and converts its object result to an AS3 Value.
 // @0x140019ed0
 void FUN_140019ed0(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
-    ConvertVideoCallback(vm, reinterpret_cast<std::uintptr_t>(VideoCallbackC), reinterpret_cast<std::uintptr_t>(VideoCallbackBaseC) + *reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(context) + 0x10), output);
+    ConvertVideoCallback(vm, VideoCallbackC, &VideoCallbackBaseC, context, output);
 }
 
 // MS2-FUNCTIONAL: copies a 32-bit integer into the numeric payload of an AS3 Value.
