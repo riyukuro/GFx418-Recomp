@@ -2491,13 +2491,13 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
     // The items, a line each, with the namespaces in scope at the target passed down.
-    // MS2-FUNCTIONAL: the exe keeps the collected namespaces in an ArrayDH; a plain-object target ends the walk
+    // MS2-FUNCTIONAL: a plain-object target ends the walk
     // @0x142403310
     void XMLList::AS3toXMLString(ASString& result)
     {
         VM& vm = GetVM();
         const UPInt size = List.GetSize();
-        NamespaceArray na;
+        NamespaceArray na(vm.GetMemoryHeap());
         if (size)
         {
             const Instances::Namespace& pub = vm.GetPublicNamespace();

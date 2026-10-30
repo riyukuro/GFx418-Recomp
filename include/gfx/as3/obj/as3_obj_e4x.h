@@ -12,11 +12,15 @@ struct XML_ParserStruct;    // expat's parser (third_party/src/expat-2.0.1, the 
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The namespaces declared on an element (its in-scope list). 0x18 bytes.
+// A list of namespaces collected on the stack (ToXMLString's declared/used sets). 0x20 bytes. The exe's Add
+// (0x142403b60) grows it as an ArrayDH: an ArrayLH finds its heap by the array's own address, and a stack address
+// is in no heap. An element's own in-scope list is the 0x18 NamespaceArrayLH below, read through this type.
 class NamespaceArray
 {
 public:
-    ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x00
+    explicit NamespaceArray(MemoryHeap* heap) : Namespaces(heap) {}
+
+    ArrayDH<SPtr<Instances::Namespace> >    Namespaces;     // +0x00 (pHeap +0x18)
 
     // (appended, sfr19) pushes ns; with checkUnique, not if an equal namespace (uri + kind) is already in. 0x142403b60
     void Add(Instances::Namespace& ns, bool checkUnique = true);
@@ -28,6 +32,13 @@ public:
     bool FindByPrefix(const ASString& prefix) const;
     // (appended, sfr19) a namespace with uri is in. 0x14240af70
     bool FindByUri(const ASString& uri) const;
+};
+
+// The namespaces declared on an element (its in-scope list). 0x18 bytes. GetInScopeNamespaces hands it out as a
+// const NamespaceArray: the first 0x18 bytes (Data, Size, Policy) are laid out the same.
+struct NamespaceArrayLH
+{
+    ArrayLH<SPtr<Instances::Namespace> >    Namespaces;     // +0x00
 };
 
 namespace Instances { namespace fl {
@@ -97,7 +108,10 @@ namespace Instances { namespace fl {
         virtual PropRef FindDynamicSlot(const Multiname& mn);
 
         // @0x142415c10
-        virtual const NamespaceArray* GetInScopeNamespaces() const { return &Namespaces; }
+        virtual const NamespaceArray* GetInScopeNamespaces() const
+        {
+            return reinterpret_cast<const NamespaceArray*>(&Namespaces);
+        }
         // @0x142403ff0
         virtual void AddInScopeNamespace(const Instances::Namespace& ns);
         // @0x142404db0
@@ -207,7 +221,7 @@ namespace Instances { namespace fl {
 
     public:
         SPtr<Instances::Namespace>      Ns;             // +0x48
-        NamespaceArray                  Namespaces;     // +0x50 declared on this element
+        NamespaceArrayLH                Namespaces;     // +0x50 declared on this element
         ArrayLH<SPtr<XMLAttr> >         Attrs;          // +0x68
         ArrayLH<SPtr<XML> >             Children;       // +0x80
 

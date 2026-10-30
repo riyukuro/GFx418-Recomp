@@ -4759,10 +4759,10 @@ namespace Instances { namespace fl
             AddIndent(buf, ident);
 
         // the namespaces declared by the ancestors or here, and the ones this tag has to declare
-        NamespaceArray declared;
+        NamespaceArray declared(vm.GetMemoryHeap());
         if (ancestorNamespaces)
             declared.AddUnique(*ancestorNamespaces);
-        NamespaceArray toDeclare;
+        NamespaceArray toDeclare(vm.GetMemoryHeap());
 
         for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
         {
@@ -4787,7 +4787,7 @@ namespace Instances { namespace fl
         }
 
         // the namespaces of the name (first) and of the attributes; an unprefixed one gets a fresh prefix
-        NamespaceArray used;
+        NamespaceArray used(vm.GetMemoryHeap());
         {
             SPtr<Instances::Namespace> ns = FUN_142419d00(*Ns, &declared);
             used.Add(*ns, false);
