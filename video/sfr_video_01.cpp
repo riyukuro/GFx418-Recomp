@@ -278,9 +278,10 @@ void* FUN_140002e80(void* stream)
     *reinterpret_cast<unsigned*>(bytes + 8) = 1;
     *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
     auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
+    *channelSlot = nullptr;
     void* channel = nullptr;
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt)>(heapVtable[10])(DAT_143b15f60, 0x20);
+    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(DAT_143b15f60, 0x20, nullptr);
     if (channel) {
         auto* channelBytes = static_cast<unsigned char*>(channel);
         *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
