@@ -2072,8 +2072,7 @@ namespace Instances { namespace fl_display
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
             return;
         }
-        // Color is the packed 32-bit value itself
-        FUN_1425ec9e0(pImage, Render::Point<SInt32>(x, y), reinterpret_cast<const Render::Color&>(color));
+        FUN_1425ec9e0(pImage, Render::Point<SInt32>(x, y), Render::Color(color));
     }
 
     // @0x142450cb0
