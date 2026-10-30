@@ -810,6 +810,15 @@ static Sfr21TrBlock* Sfr21TracerGetBlock(Tracer* self, UPInt from)
     return block;
 }
 
+// The SDK's SF_HEAP_NEW of a Block (whose ctor sets the not-dead bit): the heap new is non-throwing, so the
+// ctor runs only on a non-NULL allocation.
+struct Sfr21NewTrBlock : Sfr21TrBlock
+{
+    Sfr21NewTrBlock(UPInt f, UInt32 type, void* st) { Flags |= 1; Type = type; pState = st; From = f; }
+    void* operator new(size_t size, MemoryHeap* heap) throw() { return heap->Alloc(size, (const AllocInfo*)0); }
+    void operator delete(void*, MemoryHeap*) {}
+};
+
 static void Sfr21InsertBlockAfter(Sfr21TrBlock* block, Sfr21TrBlock* node)
 {
     node->pPrev = block->pNext->pPrev;
@@ -875,11 +884,7 @@ void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool che
         return block;
     }
 
-    Sfr21TrBlock* node = static_cast<Sfr21TrBlock*>(heap->Alloc(sizeof(Sfr21TrBlock), (const AllocInfo*)0));
-    node->Flags |= 1;
-    node->Type = type;
-    node->pState = state;
-    node->From = from;
+    Sfr21TrBlock* node = new (heap) Sfr21NewTrBlock(from, type, state);
     Sfr21InsertBlockAfter(block, node);
     if (type == 1)
         node->Flags &= ~1u;
@@ -887,7 +892,6 @@ void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool che
 }
 
 // Tracer::AddBlock(from): a block (without a state yet) starting at from, unless one already does.
-// MS2-FUNCTIONAL: Tracer members private; raw offsets
 // @0x1424e6cf0
 void FUN_1424e6cf0(Tracer* self, UPInt from)
 {
@@ -896,11 +900,7 @@ void FUN_1424e6cf0(Tracer* self, UPInt from)
         return;
 
     MemoryHeap* heap = *reinterpret_cast<MemoryHeap**>(reinterpret_cast<char*>(self) + 0x18);
-    Sfr21TrBlock* node = static_cast<Sfr21TrBlock*>(heap->Alloc(sizeof(Sfr21TrBlock), (const AllocInfo*)0));
-    node->Flags |= 1;
-    node->Type = 0;
-    node->pState = NULL;
-    node->From = from;
+    Sfr21TrBlock* node = new (heap) Sfr21NewTrBlock(from, 0, NULL);
     Sfr21InsertBlockAfter(block, node);
 }
 
