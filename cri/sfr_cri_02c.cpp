@@ -1376,7 +1376,7 @@ CriUint32 FUN_140030280(void* player, void* heap, void* work)
         memcpy((CriUint8*)player + 0xdf8, &readSize, sizeof(readSize));
         memcpy((CriUint8*)player + 0xdfc, &readExtension, sizeof(readExtension));
         void* readBuffer = FUN_140046730(heap, (CriSint32)readSize, (CriSint32)readExtension,
-                                         0x40, "CriMvPly::ReadBuf");
+                                         0x40, "CriMvPly: ReadBuf");
         memcpy((CriUint8*)player + 0xd88, &readBuffer, sizeof(readBuffer));
         if (!readBuffer)
         {
@@ -2673,7 +2673,7 @@ void* FUN_14002f1f0(CriHeap heap)
         FUN_140037950(NULL, "E09031803M : criMvPly_Create was called without Initialization.", 0);
         return NULL;
     }
-    CriUint32* words = (CriUint32*)FUN_140027ed8(heap, 0xf18, "CriMvPly::HnObj", 4);
+    CriUint32* words = (CriUint32*)FUN_140027ed8(heap, 0xf18, "CriMvPly: HnObj", 4);
     if (!words)
     {
         FUN_140037950(NULL, "E05063001M : Can't allocate handle object memory.", 0xf18);
@@ -2696,7 +2696,7 @@ void* FUN_14002f1f0(CriHeap heap)
     heapFields->Heap = heap;
     *(CriHeap*)((CriUint8*)words + 0xde8) = heap;
 
-    workFields->CriticalWork = FUN_140027ed8(heap, 0x48, "CriMvPly::CriCsWork", 4);
+    workFields->CriticalWork = FUN_140027ed8(heap, 0x48, "CriMvPly: CriCsWork", 4);
     if (!workFields->CriticalWork)
     {
         FUN_14002f610(words);
@@ -2712,7 +2712,7 @@ void* FUN_14002f1f0(CriHeap heap)
     }
 
     words[0x376] = 0x2800;
-    void* localBuffer = FUN_140027ed8(heap, 0x2800, "CriMvPly::LocalHeapBuf", 4);
+    void* localBuffer = FUN_140027ed8(heap, 0x2800, "CriMvPly: LocalHeapBuf", 4);
     *(void**)((CriUint8*)words + 0xde0) = localBuffer;
     if (!localBuffer)
     {
@@ -2729,7 +2729,7 @@ void* FUN_14002f1f0(CriHeap heap)
     }
     words[0x372] = 0x2800;
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
-    queues->InputBuffer = FUN_140046730(heap, 0x2800, 0, 0x40, "CriMvPly::HeadAnalyInput");
+    queues->InputBuffer = FUN_140046730(heap, 0x2800, 0, 0x40, "CriMvPly: HeadAnalyInput");
     if (!queues->InputBuffer)
     {
         FUN_14002f610(words);
@@ -3622,7 +3622,7 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
     }
 
     ((MetadataView*)player)->Stream = FUN_140046730(heap, (CriSint32)size, 0, (CriSint32)alignment,
-                                  "CriMvPly::MetaInput");
+                                  "CriMvPly: MetaInput");
     if (!((MetadataView*)player)->Stream)
     {
         FUN_140037950(player, "E08120201M : Can't create meta SJ.", 0);
@@ -3674,7 +3674,7 @@ CriBool FUN_140031da0(void* player, void* heap)
     else
     {
         ((EventConfigView*)player)->Table = FUN_140027ed8(((EventConfigView*)player)->Heap, (CriSint32)(((EventConfigView*)player)->Count * 0x38),
-                                     "CriMvPly::EventTable", 4);
+                                     "CriMvPly: EventTable", 4);
         if (!((EventConfigView*)player)->Table)
         {
             FUN_140037950(player, "E09011601M : Can't allocate EventTable Memory.", 0);

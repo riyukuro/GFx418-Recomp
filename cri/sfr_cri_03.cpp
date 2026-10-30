@@ -1735,7 +1735,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     void* source = NULL;
     memcpy(&source, config64 + 3, sizeof(source));
 
-    CriUint8* handle = (CriUint8*)FUN_140027ed8(heap, 600, "CriVmpv__HnObj", 4);
+    CriUint8* handle = (CriUint8*)FUN_140027ed8(heap, 600, "CriVmpv: HnObj", 4);
     if (!handle)
     {
         FUN_140041110(NULL, "E05070701M : Can't allocate vmpv handle object memory.", 600);
@@ -1776,7 +1776,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
 
     size_t recordsBytes = (size_t)frameRecordBytes * frameCount;
     CriUint8* records = (CriUint8*)FUN_140027ed8(heap, (CriSint32)(recordsBytes + 4),
-                                                 "CriVmpv__FrmPoolInfoAry", 4);
+                                                 "CriVmpv: FrmPoolInfoAry", 4);
     memcpy(handle + 0x48, &records, sizeof(records));
     if (!records)
     {
@@ -1789,7 +1789,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
     for (CriUint32 i = 0; i < frameCount; ++i)
     {
         CriUint8* frame = (CriUint8*)FUN_140027ed8(heap, (CriSint32)frameBytes,
-                                                   "CriVmpv__FrmPoolBuf", 0x800);
+                                                   "CriVmpv: FrmPoolBuf", 0x800);
         memcpy(records + (size_t)i * frameRecordBytes, &frame, sizeof(frame));
         if (!frame)
         {
@@ -3885,7 +3885,7 @@ void FUN_1400420b0(void* manager, void* heap)
 void* FUN_140041f70(void* owner, void* heap, const void* config)
 {
     CriUint8* manager = (CriUint8*)FUN_140027ed8(heap, 0x38,
-                                                 "CriMvPly__CriMvPlyAmngObj", 4);
+                                                 "CriMvPly: CriMvPlyAmngObj", 4);
     if (!manager)
     {
         FUN_140037950(owner, "E07090701M : Can't allocate CriMvPlyAmng handle", 0x38);
@@ -3918,7 +3918,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     if (!enabled)
         return 0;
     CriUint8* decoder = (CriUint8*)FUN_140027ed8(heap, 0x98,
-                                                  "CriMvPly__CriMvPlyAdecObj", 4);
+                                                  "CriMvPly: CriMvPlyAdecObj", 4);
     memcpy((CriUint8*)manager + (size_t)decoderIndex * sizeof(void*), &decoder, sizeof(decoder));
     if (!decoder)
     {
@@ -3966,7 +3966,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
         void* output = NULL;
         output = ((void* (*)(void*, CriUint32, CriUint32, CriUint32, CriUint64))FUN_140046730)(
             heap, streamBytes, chunkBytes, 4,
-            (CriUint64)(uintptr_t)"CriMvPly__AoutBuf");
+            (CriUint64)(uintptr_t)"CriMvPly: AoutBuf");
         memcpy(decoder + 0x30 + (size_t)channel * 16, &output, sizeof(output));
         if (!output)
         {
