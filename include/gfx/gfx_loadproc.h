@@ -150,10 +150,12 @@ public:
         FileAttr_HasMetadata       = 0x10
     };
     unsigned GetFileAttributes() const { return pLoadData->GetFileAttributes(); }
+    void SetMetadata(UByte* pdata, unsigned size) { pLoadData->SetMetadata(pdata, size); }
 
     // exe 0x1425c8ca0
     UByte ReadU8()            { return GetStream()->ReadU8(); }
     int   Tell()              { return GetStream()->Tell(); }
+    int   GetTagEndPosition() { return GetStream()->GetTagEndPosition(); }
     void  SetPosition(int pos) { GetStream()->SetPosition(pos); }
 
     // Bytes of the SWF data read so far.

@@ -117,18 +117,24 @@ void SF_STDCALL GFx_DefineExternalStreamSoundLoader(LoadProcess* p, const TagInf
     }
 }
 
-// MS2-FUNCTIONAL: reports the unsupported binary-data tag and preserves its resource id; reserved payload handling is simplified.
+UInt32 FUN_1425c8c20(LoadProcess* p); // LoadProcess::ReadU32, out of line (sfr_gfx_04x)
+
 // @0x1425c8010
 void SF_STDCALL GFx_DefineBinaryDataLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    (void)tagInfo;
+    SF_UNUSED(tagInfo);
     p->LogError("Tag 'DefineBinaryData' (87) is not supported, potentially 'TLF text' fields are used. Switch to 'Classic Text'.");
-    ResourceId id(p->ReadU16());
-    p->ReadU32();
-    ButtonDef* definition = SF_HEAP_NEW(p->GetLoadHeap()) ButtonDef();
-    p->AddResource(id, definition);
-    if (definition)
-        definition->Release();
+
+    int characterId = p->ReadU16();
+    p->LogParse("  DefineBinaryData: CharId = %d\n", characterId);
+    FUN_1425c8c20(p); // skip reserved.
+
+    if (p->IsVerboseParse())
+        p->GetStream()->LogTagBytes();
+
+    // create a fake character to prevent errors, such as 'resource with id=... not found'.
+    Ptr<ButtonDef> ch = *SF_HEAP_NEW(p->GetLoadHeap()) ButtonDef;
+    p->AddResource(ResourceId(characterId), ch);
 }
 
 // @0x1425c4db0
@@ -154,41 +160,45 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->AddFontDataResource(ResourceId(fontId), pf);
 }
 
-// MS2-FUNCTIONAL: reads shape data, creates its character wrapper, registers the id, and balances both references; bound-rect tracing is omitted.
+// MS2-FUNCTIONAL 0x1425c4b70: the exe's bounds vcall (slot +0x38) sets no float arg (our xorps xmm2) and swaps r12/r15.
 // @0x1425c4b70
 void SF_STDCALL GFx_DefineShapeLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    const ResourceId id(p->ReadU16());
-    struct CharacterStorage { UByte bytes[0x30]; };
-    // The exe inlines ConstShapeWithStyles' default constructor here; FUN_142659740 is the abstract base's.
-    ConstShapeWithStyles* shape = ::new (p->GetLoadHeap()->Alloc(sizeof(ConstShapeWithStyles))) ConstShapeWithStyles();
-    shape->Read(p, tagInfo.TagType, tagInfo.TagDataOffset + tagInfo.TagLength - p->Tell(), true);
+    UInt16  characterId = p->ReadU16();
+    p->LogParse("  ShapeLoader: id = %d\n", characterId);
 
-    CharacterStorage* character = static_cast<CharacterStorage*>(p->GetLoadHeap()->Alloc(sizeof(CharacterStorage)));
-    FUN_1426597e0(character, shape);
-    p->AddResource(id, reinterpret_cast<CharacterDef*>(character));
-    reinterpret_cast<Resource*>(character)->Release();
-    FUN_14257dcb0(shape);
+    // The exe inlines ConstShapeWithStyles' default constructor here; FUN_142659740 is the abstract base's.
+    Ptr<ConstShapeWithStyles> shp = *SF_HEAP_NEW(p->GetLoadHeap()) ConstShapeWithStyles;
+    int shapeOffset = p->GetStream()->Tell();
+    shp->Read(p, tagInfo.TagType, tagInfo.TagLength - (shapeOffset - tagInfo.TagDataOffset), true);
+
+    Ptr<SwfShapeCharacterDef>  ch =
+        *SF_HEAP_NEW(p->GetLoadHeap()) SwfShapeCharacterDef(shp);
+
+    p->LogParse("  bound rect:");
+    p->GetStream()->LogParseClass(static_cast<ShapeBaseCharacterDef*>(ch.GetPtr())->GetBoundsLocal());
+
+    p->AddResource(ResourceId(characterId), ch.GetPtr());
 }
 
-// MS2-FUNCTIONAL: copies the metadata payload into LoadTaskData and parse-logs its first 255 bytes.
 // @0x1425c64f0
-void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo&)
+void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    Stream* stream = p->GetStream();
-    const int length = stream->GetTagEndPosition() - stream->Tell();
-    if (length < 0)
-        return;
+    SF_UNUSED(tagInfo);
 
-    UByte* data = static_cast<UByte*>(Memory::Alloc(static_cast<UPInt>(length) + 1));
-    if (!data)
-        return;
-    for (int i = 0; i < length; ++i)
-        data[i] = p->ReadU8();
-    p->GetLoadTaskData()->SetMetadata(data, static_cast<unsigned>(length));
-    data[(length < 0xff) ? length : 0xff] = 0;
-    p->LogParse("  metadata: %s\n", data);
-    Memory::Free(data);
+    // Determine the size of meta-data and read it into the buffer.
+    int     size = p->GetTagEndPosition() - p->Tell();
+    UByte*  pbuff = (UByte*)SF_ALLOC(size + 1, Stat_Default_Mem);
+    if (pbuff)
+    {
+        for(int i=0; i<size; i++)
+            pbuff[i] = p->ReadU8();
+        p->SetMetadata(pbuff, (unsigned)size);
+
+        pbuff[Alg::Min<int>(size,255)] = 0;
+        p->LogParse("  metadata: %s\n", pbuff);
+        SF_FREE(pbuff);
+    }
 }
 
 // The MovieDefImpl key (pDataDef +0x10, pBindStates +0x18) hashes pDataDef and the eight state pointers of its
