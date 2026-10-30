@@ -533,7 +533,7 @@ cri_u8 FUN_140068210(longlong);
 void FUN_140068280(const char *);
 void FUN_1400682a0();
 void FUN_1400682c0();
-cri_u8 FUN_1400682e0(longlong, uint);
+cri_u8 FUN_1400682e0(longlong, int);
 void FUN_140068380(LPCRITICAL_SECTION);
 cri_u4 FUN_1400683d0(LPCRITICAL_SECTION);
 cri_u4 FUN_140068430(LPCRITICAL_SECTION);
@@ -2149,26 +2149,31 @@ void FUN_1400682c0()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400682e0
-cri_u8 FUN_1400682e0(longlong arg1, uint arg2)
+#pragma function(memset)                      // the exe obj calls memset here
+cri_u8 FUN_1400682e0(longlong arg1, int arg2)
 {
   LPCRITICAL_SECTION lpCriticalSection;
   
   _DAT_143d4ef38 = "\nCRI CRS/PCx64 Ver.1.04 Build:Jan 13 2012 18:29:21\n";
   if (arg1 == 0) {
     FUN_1400b09a0("CRICRS_Create : Illegal parameter is passed.");
-    lpCriticalSection = (LPCRITICAL_SECTION)0x0;
+    return 0;
   }
-  else if (arg2 < 0x30) {
+  if ((size_t)arg2 < 0x30) {  // the exe sign-extends the size and compares unsigned
     FUN_1400b09a0("CRICRS_Create : Work area size is too short.");
-    lpCriticalSection = (LPCRITICAL_SECTION)0x0;
+    return 0;
   }
-  else {
-    lpCriticalSection = (LPCRITICAL_SECTION)(arg1 + 7U & 0xfffffffffffffff8);
-    memset(lpCriticalSection,0,0x28);
+  lpCriticalSection = (LPCRITICAL_SECTION)(arg1 + 7U & 0xfffffffffffffff8);
+  memset(lpCriticalSection,0,0x28);
+  __try {
     InitializeCriticalSection(lpCriticalSection);
+  } __except (1) {
+    FUN_1400b09a0("CRICRS_Create : InitializeCriticalSection failed.");
+    return 0;
   }
   return (cri_u8)lpCriticalSection;
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068380
