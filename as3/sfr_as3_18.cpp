@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_vec_base.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
+#include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fntraits.h"
 #include "ms2/scaleform/include/gfx/gfx_loaderimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
@@ -62,29 +63,29 @@ const Value& GetNullSingleton()
 }
 }
 
-// MS2-FUNCTIONAL 0x14250a1b0: kind-to-trait selection matches; exe branches before following the VM trait pointer chain.
+// The VM of the tracer's call frame (Tracer::CF at +0x20, as3_tracer.h; that header is not included here).
+static SF_INLINE VM& Sfr18TracerVM(const void* tracer)
+{
+    return (*reinterpret_cast<const CallFrame* const*>(static_cast<const UByte*>(tracer) + 0x20))->GetVM();
+}
+
 // @0x14250a1b0
 InstanceTraits::Traits& TR::State::GetFunctType(const Value& value) const
 {
-    const UPInt stateRoot = *reinterpret_cast<const UPInt*>(this);
-    const UPInt traceContext = *reinterpret_cast<const UPInt*>(stateRoot + 0x20);
-    const UPInt vmTraits = *reinterpret_cast<const UPInt*>(traceContext + 0x28);
-    const UPInt builtinTraits = *reinterpret_cast<const UPInt*>(vmTraits + 0x20);
-    const UPInt functions = *reinterpret_cast<const UPInt*>(builtinTraits + 0x208);
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(&value) & 0x1f;
-    UPInt offset = 0xc0;
-    if (kind == 5)
-        offset = 0xc8;
-    else if (kind != 7)
+    switch (value.GetKind())
     {
-        if (kind == 0x10)
-            offset = 0xd0;
-        else if (kind == 0x11)
-            offset = 0xe0;
+    case Value::kThunk:
+        return static_cast<ClassTraits::Function&>(Sfr18TracerVM(pTracer).GetClassTraitsFunction()).GetThunkTraits();
+    case Value::kThunkClosure:
+        return static_cast<ClassTraits::Function&>(Sfr18TracerVM(pTracer).GetClassTraitsFunction()).GetThunkFunctionTraits();
+    case Value::kVTableInd: // So far kVTableInd is used with MethodInd only.
+    case Value::kVTableIndClosure:
+        return static_cast<ClassTraits::Function&>(Sfr18TracerVM(pTracer).GetClassTraitsFunction()).GetVTableTraits();
+    default:
+        break;
     }
-    else
-        offset = 0xe0;
-    return **reinterpret_cast<InstanceTraits::Traits**>(functions + offset);
+
+    return Sfr18TracerVM(pTracer).GetClassTraitsFunction().GetInstanceTraits();
 }
 
 // @0x14250cc30
