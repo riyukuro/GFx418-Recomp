@@ -29,6 +29,7 @@
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include "ms2/scaleform/include/gfx/gfx_button.h"
+#include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
@@ -4948,423 +4949,6 @@ static inline UPInt Sfr31HashNew(UPInt heap, UPInt cap, UPInt stride, UInt32 id,
     return t;
 }
 
-// Rebuilds the raw 8-byte key set at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142540c40: raw-offset model; the empty/clear paths are inlined
-// @0x142540c40
-void Sfr31HashResizeA(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x18;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x2, 1);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x18;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d2890(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the int to AutoPtr<ArrayLH<WeakPtr<DisplayObject>>> map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142540e40: raw-offset model; the empty/clear paths are inlined
-// @0x142540e40
-void Sfr31HashResizeB(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x20;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropAutoPtr(e);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x2, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x20;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d2be0(&nt, heap, reinterpret_cast<void*>(e + 0x8), UPInt(SInt64(*reinterpret_cast<int*>(e + 8))));
-                Sfr31DropAutoPtr(e);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the 4-byte key set at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142540fc0: raw-offset model; the empty/clear paths are inlined
-// @0x142540fc0
-void Sfr31HashResizeC(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x28;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x28, 0x2, 0);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x28;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d2d50(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 4));
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the 4-byte key to SPtr map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142541170: raw-offset model; the empty/clear paths are inlined
-// @0x142541170
-void Sfr31HashResizeD(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x20;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropSPtr(e + 0x18);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x154, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x20;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d2eb0(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 4));
-                Sfr31DropSPtr(e + 0x18);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the pointer key to Resource map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x1425418d0: raw-offset model; the empty/clear paths are inlined
-// @0x1425418d0
-void Sfr31HashResizeE(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x20;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropResource(e + 0x10);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x2, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x20;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d3030(&nt, heap, reinterpret_cast<void*>(e + 0x8), Sfr31Rd(e, 8));
-                Sfr31DropResource(e + 0x10);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the 8-byte key to SPtr map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142541a60: raw-offset model; the empty/clear paths are inlined
-// @0x142541a60
-void Sfr31HashResizeF(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x20;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropSPtr(e + 0x18);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x20, 0x154, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x20;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d3200(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
-                Sfr31DropSPtr(e + 0x18);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the multiname key to SPtr map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142541fe0: raw-offset model; the empty/clear paths are inlined
-// @0x142541fe0
-void Sfr31HashResizeG(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x28;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropSPtr(e + 0x20);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x28, 0x154, 2);
-    if (*tbl != 0)
-    {
-        UPInt tmpFn = 0;
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x28;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d3380(&nt, heap, reinterpret_cast<void*>(e + 0x10), FUN_1424e0f00(&tmpFn, reinterpret_cast<void*>(e + 0x10)));
-                Sfr31DropSPtr(e + 0x20);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the ASStringNode pointer set at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142542170: raw-offset model; the empty/clear paths are inlined
-// @0x142542170
-void Sfr31HashResizeH(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x18;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropStrNode(e + 8);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x14d, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x18;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d3530(&nt, heap, reinterpret_cast<void*>(e + 0x8), *reinterpret_cast<UInt32*>(Sfr31Rd(e, 8) + 0x1c));
-                Sfr31DropStrNode(e + 8);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the ASString to Value map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142542450: raw-offset model; the empty/clear paths are inlined
-// @0x142542450
-void Sfr31HashResizeI(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x30;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    FUN_1424dcb40(reinterpret_cast<void*>(e + 8));
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x30, 0x144, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x30;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d3870(&nt, heap, reinterpret_cast<void*>(e + 0x8), *reinterpret_cast<UInt32*>(Sfr31Rd(e, 8) + 0x1c));
-                FUN_1424dcb40(reinterpret_cast<void*>(e + 8));
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
-// Rebuilds the SPtr key set at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x1425425e0: raw-offset model; the empty/clear paths are inlined
-// @0x1425425e0
-void Sfr31HashResizeJ(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x18;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    Sfr31DropSPtr(e + 0x10);
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    const UPInt cap = Sfr31HashCap(count);
-    UPInt nt = Sfr31HashNew(heap, cap, 0x18, 0x2, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x18;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                FUN_1424d5020(&nt, heap, reinterpret_cast<void*>(e + 0x10), Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8));
-                Sfr31DropSPtr(e + 0x10);
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
 // Chained insert into a hash table whose entries cache the slot index (next at +0, slot at +8, key and value at +0x10).
 static inline void Sfr31HashAddCached(UPInt* nt, UPInt heap, UInt64 hash, UPInt k0, UPInt k1)
 {
@@ -5413,39 +4997,6 @@ static inline void Sfr31HashAddCached(UPInt* nt, UPInt heap, UInt64 hash, UPInt 
     Sfr31Wr(nat, 8, idx);
 }
 
-// Rebuilds the GASRefCountBase pointer to WeakProxy pointer map at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x1425415a0: raw-offset model; the empty path and the cached insert are inlined
-// @0x1425415a0
-void Sfr31HashResizeK(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-                Sfr31Wr(*tbl + 0x10, i * 0x20, UPInt(-2));
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    UPInt nt = Sfr31HashNew(heap, Sfr31HashCap(count), 0x20, 2, 1);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x20;
-            if (Sfr31Rd(e, 0) != UPInt(-2))
-            {
-                Sfr31HashAddCached(&nt, heap, Sfr31Sdbm(reinterpret_cast<const void*>(e + 0x10), 8), Sfr31Rd(e, 0x10), Sfr31Rd(e, 0x18));
-                Sfr31Wr(e, 0, UPInt(-2));
-            }
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
-}
-
 // Dynamic-attribute node (key {id, name string}, Value) assignment over an existing node.
 static inline void Sfr31DynNodeAssign(UPInt dst, UPInt src)
 {
@@ -5455,87 +5006,6 @@ static inline void Sfr31DynNodeAssign(UPInt dst, UPInt src)
     Sfr31ReleaseStr(Sfr31Rd(dst, 8));
     Sfr31Wr(dst, 8, nn);
     reinterpret_cast<Value*>(dst + 0x10)->Assign(*reinterpret_cast<const Value*>(src + 0x10));
-}
-
-// Rebuilds the dynamic-attribute map (key {id, name string} to Value) at the requested capacity (0 empties it).
-// MS2-FUNCTIONAL 0x142541ca0: raw-offset model; the empty path and the cached insert are inlined
-// @0x142541ca0
-void Sfr31HashResizeDyn(UPInt* tbl, UPInt heap, UPInt count)
-{
-    if (count == 0)
-    {
-        if (*tbl != 0)
-        {
-            for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-            {
-                const UPInt e = *tbl + 0x10 + i * 0x40;
-                if (Sfr31Rd(e, 0) != UPInt(-2))
-                {
-                    FUN_1424dcac0(reinterpret_cast<void*>(e + 0x10));
-                    Sfr31Wr(e, 0, UPInt(-2));
-                }
-            }
-            Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-            *tbl = 0;
-        }
-        return;
-    }
-    UPInt nt = Sfr31HashNew(heap, Sfr31HashCap(count), 0x40, 2, 2);
-    if (*tbl != 0)
-    {
-        for (UPInt i = 0; i < Sfr31Rd(*tbl, 8) + 1; ++i)
-        {
-            const UPInt e = *tbl + 0x10 + i * 0x40;
-            if (Sfr31Rd(e, 0) == UPInt(-2))
-                continue;
-            const UPInt node = e + 0x10;
-            const UInt32 h = *reinterpret_cast<UInt32*>(Sfr31Rd(node, 8) + 0x1c);
-            FUN_1424eeff0(&nt, heap);
-            ++*reinterpret_cast<SPInt*>(nt);
-            const UPInt mask = Sfr31Rd(nt, 8);
-            const UPInt idx = UPInt(UInt32(mask) & h & 0xffffff);
-            const UPInt base = nt + 0x10;
-            const UPInt nat = base + idx * 0x40;
-            const UPInt oldNext = Sfr31Rd(nat, 0);
-            if (oldNext == UPInt(-2))
-            {
-                Sfr31Wr(nat, 0, UPInt(-1));
-                FUN_1424d5390(reinterpret_cast<void*>(nat + 0x10), reinterpret_cast<void*>(node));
-            }
-            else
-            {
-                UPInt fr = idx;
-                do
-                    fr = (fr + 1) & mask;
-                while (Sfr31Rd(base + fr * 0x40, 0) != UPInt(-2));
-                const UPInt free = base + fr * 0x40;
-                const UPInt slot = Sfr31Rd(nat, 8);
-                Sfr31Wr(free, 0, oldNext);
-                Sfr31Wr(free, 8, slot);
-                FUN_1424d5390(reinterpret_cast<void*>(free + 0x10), reinterpret_cast<void*>(nat + 0x10));
-                if (slot == idx)
-                    Sfr31Wr(nat, 0, fr);
-                else
-                {
-                    UPInt p = base + slot * 0x40;
-                    UPInt nx = Sfr31Rd(p, 0);
-                    while (nx != idx)
-                    {
-                        p = base + nx * 0x40;
-                        nx = Sfr31Rd(p, 0);
-                    }
-                    Sfr31Wr(p, 0, fr);
-                    Sfr31Wr(nat, 0, UPInt(-1));
-                }
-                Sfr31DynNodeAssign(nat + 0x10, node);
-            }
-            Sfr31Wr(nat, 8, idx);
-            FUN_1424dcac0(reinterpret_cast<void*>(node));
-            Sfr31Wr(e, 0, UPInt(-2));
-        }
-        Memory::pGlobalHeap->Free(reinterpret_cast<void*>(*tbl));
-    }
-    *tbl = nt;
 }
 
 // ---- batch 42
@@ -9624,3 +9094,118 @@ template void ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, GFx::AS3::StatMV_VM>, Ar
 template void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);   // 0x1425248e0 (Button::StateCharArray)
 }
 // MS2-PIN: ?Resize@?$ArrayDataCC@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEL@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAX_K@Z 0x142524470
+
+// The out-of-line HashSetBase::setRawCapacity COMDATs of this range, on the node/allocator/entry types of the add
+// instances in sfr_as3_15 (the same typedefs, repeated here).
+namespace Scaleform {
+template<class N, class A, class E>
+struct MS2_HashSetOf
+{
+    typedef HashSetBase<N, typename N::NodeHashF, typename N::NodeAltHashF, A, E> Type;
+};
+typedef HashSetBase<const void*, FixedSizeHash<const void*>, FixedSizeHash<const void*>, AllocatorGH<const void*, 2>,
+                    HashsetCachedEntry<const void*, FixedSizeHash<const void*> > > MS2_ObjPtrSet;
+typedef HashNode<int, AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2> >, IdentityHash<int> > MS2_DepthToObjsNode;
+typedef MS2_HashSetOf<MS2_DepthToObjsNode, AllocatorLH<int, 2>,
+                      HashsetNodeEntry<MS2_DepthToObjsNode, MS2_DepthToObjsNode::NodeHashF> >::Type MS2_DepthToObjsSet;
+struct MS2_SlotPos
+{
+    SPInt       Ind;
+    const void* pSlots;
+
+    MS2_SlotPos(const MS2_SlotPos& other) : Ind(other.Ind), pSlots(other.pSlots) {}
+    MS2_SlotPos& operator=(const MS2_SlotPos& other)
+    {
+        Ind    = other.Ind;
+        pSlots = other.pSlots;
+        return *this;
+    }
+};
+typedef HashNode<UInt32, MS2_SlotPos, FixedSizeHash<UInt32> > MS2_SlotPosNode;
+typedef MS2_HashSetOf<MS2_SlotPosNode, AllocatorDH<UInt32, 2>,
+                      HashsetCachedNodeEntry<MS2_SlotPosNode, MS2_SlotPosNode::NodeHashF> >::Type MS2_SlotPosSet;
+typedef HashNode<UInt32, GFx::AS3::SPtr<GFx::AS3::InstanceTraits::Function>, FixedSizeHash<UInt32> > MS2_FunctionTraitsNode;
+typedef MS2_HashSetOf<MS2_FunctionTraitsNode, AllocatorLH<UInt32, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_FunctionTraitsNode, MS2_FunctionTraitsNode::NodeHashF> >::Type
+    MS2_FunctionTraitsSet;
+typedef HashNode<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*, FixedSizeHash<GFx::AS3::GASRefCountBase*> > MS2_WeakProxyNode;
+typedef MS2_HashSetOf<MS2_WeakProxyNode, AllocatorGH<GFx::AS3::GASRefCountBase*, 2>,
+                      HashsetCachedNodeEntry<MS2_WeakProxyNode, MS2_WeakProxyNode::NodeHashF> >::Type MS2_WeakProxySet;
+struct MS2_LoadedMovieDefInfo
+{
+    Ptr<GFx::MovieDefImpl> pMovieDef;
+    unsigned               UseCnt;
+
+    MS2_LoadedMovieDefInfo(GFx::MovieDefImpl* def) : pMovieDef(def), UseCnt(1) {}
+};
+typedef HashNode<GFx::MovieDefImpl*, MS2_LoadedMovieDefInfo, IdentityHash<GFx::MovieDefImpl*> > MS2_LoadedMovieDefNode;
+typedef MS2_HashSetOf<MS2_LoadedMovieDefNode, AllocatorLH<GFx::MovieDefImpl*, 2>,
+                      HashsetNodeEntry<MS2_LoadedMovieDefNode, MS2_LoadedMovieDefNode::NodeHashF> >::Type
+    MS2_LoadedMovieDefSet;
+typedef HashNode<const GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::SPtr<GFx::AS3::InstanceTraits::Traits>,
+                 FixedSizeHash<const GFx::AS3::Abc::MethodBodyInfo*> > MS2_ActivationTraitsNode;
+typedef MS2_HashSetOf<MS2_ActivationTraitsNode, AllocatorLH<const GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_ActivationTraitsNode, MS2_ActivationTraitsNode::NodeHashF> >::Type
+    MS2_ActivationTraitsSet;
+typedef GFx::AS3::AbcMultinameHash<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace> >::Key MS2_AbcNsKey;
+typedef HashNode<MS2_AbcNsKey, GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, FixedSizeHash<MS2_AbcNsKey> > MS2_AbcNsNode;
+typedef MS2_HashSetOf<MS2_AbcNsNode, AllocatorLH<MS2_AbcNsKey, GFx::AS3::StatMV_VM_VMAbcFile_Mem>,
+                      HashsetCachedNodeEntry<MS2_AbcNsNode, MS2_AbcNsNode::NodeHashF> >::Type MS2_AbcNsSet;
+typedef HashNode<GFx::ASString, GFx::AS3::Value, GFx::ASStringHashFunctor> MS2_StringValueNode;
+typedef MS2_HashSetOf<MS2_StringValueNode, AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>,
+                      HashsetNodeEntry<MS2_StringValueNode, MS2_StringValueNode::NodeHashF> >::Type MS2_StringValueSet;
+typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> MS2_GCRootPtr;
+typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<MS2_GCRootPtr>, AllocatorLH<MS2_GCRootPtr, 2>,
+                    HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
+
+extern template void MS2_ObjPtrSet::add<const void*>(void*, const void* const&, UPInt);
+extern template void MS2_ObjPtrSet::Clear();
+template<class T> struct MS2_SetValueOf;
+template<class C, class H, class AH, class A, class E>
+struct MS2_SetValueOf<HashSetBase<C, H, AH, A, E> >
+{
+    typedef C Type;
+};
+typedef decltype(GFx::AS3::Object::DynAttrsType::mHash)::BaseType MS2_DynAttrsSet;
+typedef decltype(GFx::AS3::Slots::SetType::mHash)::BaseType MS2_SlotNameSet;
+extern template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode>(void*, const MS2_DepthToObjsNode&, UPInt);
+extern template void MS2_DepthToObjsSet::Clear();
+extern template void MS2_SlotPosSet::add<MS2_SlotPosNode>(void*, const MS2_SlotPosNode&, UPInt);
+extern template void MS2_FunctionTraitsSet::add<MS2_FunctionTraitsNode>(void*, const MS2_FunctionTraitsNode&, UPInt);
+extern template void MS2_FunctionTraitsSet::Clear();
+extern template void MS2_WeakProxySet::CheckExpand(void*);
+extern template void MS2_LoadedMovieDefSet::add<MS2_LoadedMovieDefNode>(void*, const MS2_LoadedMovieDefNode&, UPInt);
+extern template void MS2_ActivationTraitsSet::add<MS2_ActivationTraitsNode>(void*, const MS2_ActivationTraitsNode&, UPInt);
+extern template void MS2_ActivationTraitsSet::Clear();
+extern template void MS2_DynAttrsSet::CheckExpand(void*);
+extern template void MS2_AbcNsSet::add<MS2_AbcNsNode>(void*, const MS2_AbcNsNode&, UPInt);
+extern template void MS2_AbcNsSet::Clear();
+extern template void MS2_SlotNameSet::add<MS2_SetValueOf<MS2_SlotNameSet>::Type>(void*, const MS2_SetValueOf<MS2_SlotNameSet>::Type&, UPInt);
+extern template void MS2_SlotNameSet::Clear();
+extern template void MS2_StringValueSet::add<MS2_StringValueNode>(void*, const MS2_StringValueNode&, UPInt);
+extern template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
+extern template void MS2_GCRootSet::Clear();
+extern template MS2_FunctionTraitsSet::~HashSetBase();
+extern template MS2_ActivationTraitsSet::~HashSetBase();
+extern template MS2_DynAttrsSet::~HashSetBase();
+extern template MS2_StringValueSet::~HashSetBase();
+extern template MS2_AbcNsSet::~HashSetBase();
+extern template MS2_GCRootSet::~HashSetBase();
+extern template UPInt FixedSizeHash<MS2_AbcNsKey>::operator()(const MS2_AbcNsKey&) const;
+template void MS2_ObjPtrSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142540c40
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@H$01@2@V?$HashsetNodeEntry@U?$HashNode@HV?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@V?$IdentityHash@H@2@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142540e40
+template void MS2_DepthToObjsSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142540e40
+template void MS2_SlotPosSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142540fc0
+template void MS2_FunctionTraitsSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142541170
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@PEAVGASRefCountBase@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@PEAVGASRefCountBase@AS3@GFx@Scaleform@@PEAVWeakProxy@234@V?$FixedSizeHash@PEAVGASRefCountBase@AS3@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425415a0
+template void MS2_WeakProxySet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x1425415a0
+template void MS2_LoadedMovieDefSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x1425418d0
+template void MS2_ActivationTraitsSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142541a60
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UDynAttrsKey@Object@AS3@GFx@Scaleform@@$01@2@V?$HashsetCachedNodeEntry@U?$HashNode@UDynAttrsKey@Object@AS3@GFx@Scaleform@@VValue@345@UDynAttrsKeyHashFunctor@2345@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142541ca0
+template void decltype(GFx::AS3::Object::DynAttrsType::mHash)::BaseType::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142541ca0
+template void MS2_AbcNsSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142541fe0
+template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142542170
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x142542450
+template void MS2_StringValueSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x142542450
+template void MS2_GCRootSet::setRawCapacity(void* pheapAddr, UPInt newSize);   // 0x1425425e0
+}
