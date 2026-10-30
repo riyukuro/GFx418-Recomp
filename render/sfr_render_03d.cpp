@@ -1315,14 +1315,14 @@ RectF ShapeMeshProvider::getLayerBounds(unsigned layer) const
 }
 
 // @0x1426326d0
-// MS2-FUNCTIONAL: ours loads the morph-to shape once ahead of the branch; the exe loads it in each branch
 Matrix2F ShapeMeshProvider::getMorphMatrix(unsigned layer, unsigned fillIndex) const
 {
     unsigned strokeStyle = GetLayerStroke(layer);
     if (strokeStyle == 0)
     {
+        unsigned fillStyleIdx = GetStyleByFillIdx(layer, fillIndex);
         FillStyleType style;
-        pMorphData->pMorphTo->GetFillStyle(GetStyleByFillIdx(layer, fillIndex), &style);
+        pMorphData->pMorphTo->GetFillStyle(fillStyleIdx, &style);
         return style.pFill->ImageMatrix;
     }
     StrokeStyleType stroke;
@@ -1364,29 +1364,26 @@ void ShapeMeshProvider::GetFillData(FillData* data, unsigned layer, unsigned fil
 // The matrix the fill's texture coordinates are generated with: the image matrix of the fill (morphed between the
 // two shapes' inverses), adjusted to the 9-grid scaling and mapped into the image's UV space.
 // The vertices of a mesh: through its 9-grid, the image cells or the tessellated fill / stroke of its layer.
-// MS2-FUNCTIONAL: frame 0x10 larger (the exe saves rbp in the home slot of meshGenFlags)
 // @0x14262b1f0
 bool ShapeMeshProvider::GetData(MeshBase* mesh, VertexOutput* out, unsigned meshGenFlags)
 {
     Ptr<Scale9GridInfo> s9g;
     unsigned            layer = mesh->GetLayer();
-    bool                ret;
-    if (mesh->GetScale9Grid() && DrawLayers[layer].Image9GridType)
+    unsigned i9g = DrawLayers[layer].Image9GridType;
+
+    if (mesh->GetScale9Grid() && i9g)
     {
         s9g = *SF_HEAP_AUTO_NEW(this) Scale9GridInfo(mesh->GetScale9Grid(), Matrix2F());
-        ret = generateImage9Grid(s9g, mesh, out, layer);
+        return generateImage9Grid(s9g, mesh, out, layer);
     }
-    else
-    {
-        if (mesh->GetScale9Grid())
-            s9g = *SF_HEAP_AUTO_NEW(this) Scale9GridInfo(mesh->GetScale9Grid(), mesh->GetScale9Grid()->ViewMtx);
-        unsigned strokeStyle = DrawLayers[layer].StrokeStyle;
-        if (strokeStyle == 0)
-            ret = tessellateFill(s9g, layer, mesh, out, meshGenFlags);
-        else
-            ret = tessellateStroke(s9g, strokeStyle, layer, mesh, out, meshGenFlags);
-    }
-    return ret;
+
+    if (mesh->GetScale9Grid())
+        s9g = *SF_HEAP_AUTO_NEW(this) Scale9GridInfo(mesh->GetScale9Grid(), mesh->GetScale9Grid()->ViewMtx);
+
+    unsigned strokeStyle = GetLayerStroke(layer);
+    if (strokeStyle == 0)
+        return tessellateFill(s9g, layer, mesh, out, meshGenFlags);
+    return tessellateStroke(s9g, strokeStyle, layer, mesh, out, meshGenFlags);
 }
 
 // MS2-FUNCTIONAL: the inlined inverse of the 9-grid adjustment schedules its products in another order (registers)
