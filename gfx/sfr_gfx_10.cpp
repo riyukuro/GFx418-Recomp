@@ -17,6 +17,8 @@
 #include "ms2/scaleform/kernel/sf_log.h"
 #include "ms2/ms2recover.h"
 
+CStringW FUN_14016a730(const char* sz, int nCodePage);    // a multi-byte text as a wide string (0 = the locale's code page)
+
 using namespace Scaleform;
 
 // This unit is built without optimisation, so its copies of the Log / RefCount base classes differ from the shared
@@ -122,7 +124,7 @@ void GFxLogger::LogMessageVarg(LogMessageId messageId, const char* fmt, va_list 
             strChannel = L"[Script]";
         else if (nChannel == LogChannel_Parse)
             strChannel = L"[Parse]";
-        CStringW strMessage((const char*)strText);
+        CStringW strMessage = FUN_14016a730((const char*)strText, 0);
         Unk_GfxLog(CLogString::GetInstance(), nLevel, 0x1a, L"[Gfx]{0} {1}", strChannel, strMessage);
     }
 }
