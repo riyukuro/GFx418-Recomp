@@ -30,7 +30,10 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_support.h"
+#include "ms2/scaleform/include/gfx/gfx_state.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
 #include "ms2/scaleform/include/gfx/as3/as3_stage.h"
@@ -59,21 +62,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // @0x1424ee980
 Value::TraceNullType TR::State::CanBeNull(const InstanceTraits::Traits& traits) const
 {
-    const UPInt stateRoot = *reinterpret_cast<const UPInt*>(this);
-    const UPInt traceContext = *reinterpret_cast<const UPInt*>(stateRoot + 0x20);
-    const UPInt vmTraits = *reinterpret_cast<const UPInt*>(traceContext + 0x28);
-    const UPInt builtinTraits = *reinterpret_cast<const UPInt*>(vmTraits + 0x20);
-    const InstanceTraits::Traits* const arg = &traits;
-    if (arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
-                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x220) + 0xc0) &&
-        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
-                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x228) + 0xc0) &&
-        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
-                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x218) + 0xc0) &&
-        arg != *reinterpret_cast<const InstanceTraits::Traits* const*>(
-                  *reinterpret_cast<const UPInt*>(builtinTraits + 0x210) + 0xc0))
-        return Value::NullOrNot;
-    return Value::NotNull;
+    return static_cast<const Tracer*>(pTracer)->CanBeNull(traits);
 }
 
 // MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
@@ -1457,12 +1446,10 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Tracer::CanBeNull: values of the int, uint, Number and Boolean instance traits are never null.
 // @0x1424eea80
-Value::TraceNullType Sfr33TracerCanBeNull(const UByte* self, const InstanceTraits::Traits* tr)
+Value::TraceNullType Tracer::CanBeNull(const InstanceTraits::Traits& traits) const
 {
-    const UByte* pfile = *reinterpret_cast<const UByte* const*>(*reinterpret_cast<const UByte* const*>(self + 0x20) + 0x28);
-    const VM& vm = **reinterpret_cast<VM* const*>(pfile + 0x20);
-    if (tr == &vm.TraitsInt->GetInstanceTraits() || tr == &vm.TraitsUint->GetInstanceTraits() ||
-        tr == &vm.TraitsNumber->GetInstanceTraits() || tr == &vm.TraitsBoolean->GetInstanceTraits())
+    if (&traits == &GetSIntType() || &traits == &GetUIntType() || &traits == &GetNumberType() ||
+        &traits == &GetBooleanType())
         return Value::NotNull;
     return Value::NullOrNot;
 }
@@ -2251,7 +2238,6 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace TR { UPInt Sfr27TracerGetValueTraits(UPInt tracer, const Value* v, bool asInstance); }
-Value::TraceNullType Sfr33TracerCanBeNull(const UByte* self, const InstanceTraits::Traits* tr);
 }}}
 Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value);   // value -> traits
 
@@ -2322,7 +2308,7 @@ bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind)
                         ret = reinterpret_cast<const InstanceTraits::Traits*>(
                             FUN_14250a060(reinterpret_cast<UPInt>(vm2), &f));
                     }
-                    flags = ((static_cast<unsigned>(Sfr33TracerCanBeNull(self, ret)) & ~8u) << 5) | 8;
+                    flags = ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8;
                     rt = ret;
                     goto push;
                 }
@@ -2436,7 +2422,7 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
                     ret = reinterpret_cast<const InstanceTraits::Traits*>(FUN_14250a060(reinterpret_cast<UPInt>(vm), &f));
                 }
                 Value v;
-                Sfr33TracerValueSet(v, ((static_cast<unsigned>(Sfr33TracerCanBeNull(self, ret)) & ~8u) << 5) | 8,
+                Sfr33TracerValueSet(v, ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8,
                                     const_cast<InstanceTraits::Traits*>(ret), false);
                 opstack.PushBack(v);
                 return true;
@@ -2478,8 +2464,8 @@ bool FUN_1424f8b00(void* tr, int op, void* state, const Scaleform::GFx::AS3::Tra
             goto object_result;
         Value v;
         Sfr33TracerValueSet(v,
-                            ((static_cast<unsigned>(Sfr33TracerCanBeNull(
-                                  self, reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u) << 5) | 8,
+                            ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(
+                                  *reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u) << 5) | 8,
                             const_cast<UByte*>(rt), false);
         opstack.PushBack(v);
         FUN_14251fb90(self, op, static_cast<UPInt>(static_cast<SPInt>(ind)));
@@ -2653,7 +2639,7 @@ bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop,
             ret = reinterpret_cast<const InstanceTraits::Traits*>(FUN_14250a060(reinterpret_cast<UPInt>(vm), &f));
         }
         Value v;
-        Sfr33TracerValueSet(v, ((static_cast<unsigned>(Sfr33TracerCanBeNull(self, ret)) & ~8u) << 5) | 8,
+        Sfr33TracerValueSet(v, ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8,
                             const_cast<InstanceTraits::Traits*>(ret), false);
         opstack.PushBack(v);
         return true;
@@ -2951,26 +2937,29 @@ const Ptr<Abc::File>& Sfr33NullFileLoader::GetFile(UPInt)
 UPInt Sfr33NullFileLoader::GetSize() const { return 0; }
 const Abc::File* Sfr33NullFileLoader::GetFile(const ASString&) { return NULL; }
 
+// FlashUI::SetCurrState is protected (MovieRoot::CheckAvm, a member, calls it).
+struct Sfr33FlashUIAccess : FlashUI
+{
+    static void SetCurrState(FlashUI& ui, StateType s) { static_cast<Sfr33FlashUIAccess&>(ui).FlashUI::SetCurrState(s); }
+};
+
 // MovieRoot::CheckAvm (virtual): creates the AS3 VM on first use and runs its startup code.
-// MS2-FUNCTIONAL 0x1424eecb0: self lives in rbx (exe rdi) and the null test of the released ActionControl is merged with the one before Release.
+// MS2-FUNCTIONAL 0x1424eecb0: 262 bytes against 260; the new VM is kept in rsi (exe rbx) and the verbose flag is
+// read as a dword after the null test instead of a byte.
 // @0x1424eecb0
 bool Sfr33CheckAvm(MovieRoot* self)
 {
-    UByte* const p = reinterpret_cast<UByte*>(self);
-    Scaleform::AutoPtr<ASVM>& avm = *reinterpret_cast<Scaleform::AutoPtr<ASVM>*>(p + 0x48);
+    Scaleform::AutoPtr<ASVM>& avm = *reinterpret_cast<Scaleform::AutoPtr<ASVM>*>(&self->pAVM);
     if (!avm)
     {
-        // FlashUI (+0x28): verbose actions from the movie's ActionControl, output level 3
-        const StateBag* states = reinterpret_cast<const StateBag*>(reinterpret_cast<const UByte*>(self->GetMovieImpl()) + 0x10);
-        State* pac = states->GetStateAddRef(State::State_ActionControl);   // the movie's Movie::StateBag base
-        if (pac)
-            pac->Release();
-        p[0x34] = pac ? (reinterpret_cast<const UByte*>(pac)[0x18] & 1) : 0;
-        *reinterpret_cast<int*>(p + 0x30) = 3;
+        // the movie still holds its ActionControl after the Ptr temp releases it
+        const ActionControl* pac = Ptr<ActionControl>(*static_cast<ActionControl*>(
+            self->GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_ActionControl)));
+        self->SetNeedToCheckOpCode(pac ? (pac->GetActionFlags() & ActionControl::Action_Verbose) != 0 : false);
+        Sfr33FlashUIAccess::SetCurrState(*self, FlashUI::sStep);
         Sfr33NullFileLoader loader;
         avm = SF_HEAP_NEW(self->GetMovieImpl()->GetMovieHeap())
-            ASVM(self, *reinterpret_cast<FlashUI*>(p + 0x28), loader, self->BuiltinsMgr,
-                 **reinterpret_cast<ASRefCountCollector* const*>(*reinterpret_cast<UByte* const*>(p + 0x40) + 0x20));
+            ASVM(self, *self, loader, self->BuiltinsMgr, *self->MemContext->ASGC);
         avm->ExecuteCode(1);
     }
     return avm != NULL;
@@ -3448,29 +3437,34 @@ void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const Scop
 
 
 // Tracer::CanBeNull of a traced value: values of class traits are never null, others go by their instance traits.
-// MS2-FUNCTIONAL 0x1424ee9e0: the exe orders the tracer kind tests differently (block layout).
 // @0x1424ee9e0
-Value::TraceNullType Sfr33TracerCanBeNullValue(const UByte* self, const Value& v)
+Value::TraceNullType Tracer::CanBeNull(const Value& v) const
 {
-    const UByte* pfile = *reinterpret_cast<const UByte* const*>(*reinterpret_cast<const UByte* const*>(self + 0x20) + 0x28);
-    VM& vm = **reinterpret_cast<VM* const*>(pfile + 0x20);
     const Traits* tr;
-    const unsigned kind = v.GetKind();
-    if (kind == Value::kUndefined)
-        tr = vm.TraitsVoid.GetPtr();
-    else if (kind == Value::kInstanceTraits || kind == Value::kClassTraits)
-        tr = *reinterpret_cast<const Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
-    else
-        tr = &FUN_14250ffc0(vm, v);
+    switch (v.GetKind())
+    {
+    case Value::kUndefined:
+        tr = GetVM().TraitsVoid.GetPtr();
+        break;
+    case Value::kInstanceTraits:
+        tr = &v.GetInstanceTraits();
+        break;
+    case Value::kClassTraits:
+        tr = &v.GetClassTraits();
+        break;
+    default:
+        tr = &FUN_14250ffc0(GetVM(), v);
+        break;
+    }
     if (tr)
     {
-        if (tr == vm.TraitsClassClass.GetPtr())
-            tr = vm.TraitsObject.GetPtr();
+        if (tr == GetVM().TraitsClassClass.GetPtr())
+            tr = GetVM().TraitsObject.GetPtr();
         if (tr)
         {
             if (tr->IsClassTraits())
                 return Value::NotNull;
-            return Sfr33TracerCanBeNull(self, reinterpret_cast<const InstanceTraits::Traits*>(tr));
+            return CanBeNull(*static_cast<const InstanceTraits::Traits*>(tr));
         }
     }
     return Value::NullOrNot;
