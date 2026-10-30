@@ -442,13 +442,15 @@ struct CriMvRequestManagerView
     void* StopEvent;
 };
 
+// The VideoReader seen from its CRI file reader interface (+0x10): +0x18 is VideoReader::ReadSize, +0x1c..+0x24 the
+// open/close/read statuses (1 = busy), +0x28 Position, +0x30 FilePos, +0x38 FileSize.
 struct CriMvReaderRequestView
 {
     CriUint8 Reserved0[8];
     void* Queue;
     CriUint8 Reserved1[8];
+    CriUint32 ReadBytes;
     CriUint32 OpenPending;
-    CriUint32 Reserved2;
     CriUint32 ClosePending;
     CriUint32 ReadPending;
     CriUint64 ReadSize;
@@ -1436,8 +1438,9 @@ void FUN_14002e1e0(void* object, void* input)
     state->FileSize = ~(CriUint64)0;
     state->ReadPending = 0;
     state->ClosePending = 0;
-    state->ReadSize = 0;
+    state->ReadBytes = 0;
     state->ReadPosition = 0;
+    state->ReadSize = 0;
     FUN_14002e140(state->Queue, 0, (CriUint8*)object - 0x10, input, NULL, NULL);
 }
 
