@@ -1333,7 +1333,7 @@ void FUN_1423d1420(void* object, int index)
 // MS2-FUNCTIONAL: the exe forms values + count - 1 as (count * 32 - 32) + values; ours as (values - 32) + count * 32.
 // destroys GFx::Value entries in reverse order (ConstructorMov<Value>::DestructArray).
 // @0x1423ce6c0
-void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
+__declspec(noinline) void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
 {
     ConstructorMov<Scaleform::GFx::Value>::DestructArray(values, count);
 }
@@ -3281,38 +3281,52 @@ void FUN_1423cdf60(unsigned long long* self)
     FUN_1423ca920(nullptr, &self[2]);
 }
 
-// MS2-FUNCTIONAL: forwards each executable-provided argument descriptor and invokes the matching AS3 method with an .Add suffix.
+// A by-value Ptr to a RefCountNTSImpl object (released through FUN_14257dcd0 when the callee returns).
+struct Ime01NtsPtr
+{
+    void* p;
+    Ime01NtsPtr(const Ime01NtsPtr& src);
+    ~Ime01NtsPtr() { if (p) FUN_14257dcd0(p); }
+};
+// An ArrayDataBase<GFx::Value> the exe declares and never fills; only its DestructArray(0, 0) call is left.
+struct Ime01UnusedValueArray
+{
+    Scaleform::GFx::Value* data = nullptr;
+    unsigned long long size = 0;
+    ~Ime01UnusedValueArray() { FUN_1423ce6c0(data, size); }
+};
+
+// MS2-FUNCTIONAL: fills the +0x828 argument Values from the descriptors and invokes "<name>.Add" with them. The exe keeps
+// the result Value dtor's two dead zero stores (rbp held at 0); cl drops them here, which shifts the register allocation.
 // @0x1423d99f0
-void FUN_1423d99f0(void* raw, void** value)
+void FUN_1423d99f0(void* raw, Ime01NtsPtr value)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    if (!*reinterpret_cast<unsigned char*>(self + 0x10)) {
-        if (*value) FUN_14257dcd0(*value);
-        return;
-    }
-    if (!*value) return;
+    if (*reinterpret_cast<unsigned char*>(self + 0x10)) {
+        if (!value.p) return;
 
-    // The command goes in the member buffer at +0x410; the descriptor and argument arrays are the
-    // pointers stored at +0x828/+0x810, and .Add gets the descriptors with the count at +0x830 (0x1423d9ac3).
-    char* command = reinterpret_cast<char*>(self + 0x410);
-    strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
-    strcat_s(command, 0x400, ".Add");
-    for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i) {
-        void* input = *value;
-        reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(input))[1])(input,
-            *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
-            *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
+        // The command goes in the member buffer at +0x410; the descriptor and argument arrays are the
+        // pointers stored at +0x828/+0x810, and .Add gets the descriptors with the count at +0x830 (0x1423d9ac3).
+        char* command = reinterpret_cast<char*>(self + 0x410);
+        strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
+        strcat_s(command, 0x400, ".Add");
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i) {
+            void* input = value.p;
+            reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(input))[1])(input,
+                *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
+                *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
+        }
+        Scaleform::GFx::Value result;
+        Ime01UnusedValueArray unused;
+        void* movie = *reinterpret_cast<void**>(self + 0x868);
+        void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
+        void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
+        if (bridge)
+            reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
+                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, command, &result,
+                    *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828), *reinterpret_cast<unsigned*>(self + 0x830));
+        command[0] = 0;
     }
-    void* movie = *reinterpret_cast<void**>(self + 0x868);
-    void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
-    void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
-    Scaleform::GFx::Value result;
-    if (bridge)
-        reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
-            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, command, &result,
-                *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828), *reinterpret_cast<unsigned*>(self + 0x830));
-    command[0] = 0;
-    FUN_14257dcd0(*value);
 }
 
 // @0x1423cefe0
