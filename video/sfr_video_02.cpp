@@ -1033,20 +1033,28 @@ void FUN_1400150b0(UInt32 index, void*, UInt32 length, const void* values)
     }
 }
 
-// MS2-FUNCTIONAL: converts the input Value into the supplied ASString through the recovered conversion method.
+// MS2-FUNCTIONAL: ThunkReadArg(ASString&): a null object gives the null string, else Convert2String. Only the
+// VC9 `add [m],-1` release and register choice differ (cl15 object).
 // @0x140013f20
 uintptr_t FUN_140013f20(uintptr_t self, Scaleform::GFx::ASString* result,
                         const Scaleform::GFx::AS3::Value* input)
 {
-    input->Convert2String(*result);
+    if (input->IsNull())
+        result->SetNull();
+    else
+        input->Convert2String(*result);
     return self;
 }
 
-// MS2-FUNCTIONAL: converts the input Value into the supplied ASString through the recovered conversion method.
+// MS2-FUNCTIONAL: ThunkReadArg(ASString&): a null object gives the null string, else Convert2String. Only the
+// VC9 `add [m],-1` release and register choice differ (cl15 object).
 // @0x140015420
 void FUN_140015420(Scaleform::GFx::ASString* result, const Scaleform::GFx::AS3::Value* input)
 {
-    input->Convert2String(*result);
+    if (input->IsNull())
+        result->SetNull();
+    else
+        input->Convert2String(*result);
 }
 
 // MS2-FUNCTIONAL: drops a retained AS3 object value using its executable release path.
