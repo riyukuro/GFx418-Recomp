@@ -1039,21 +1039,46 @@ void FUN_14003c130(void)
 // @0x14003c190
 CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFrames)
 {
-    CriUint32 frameCount = (CriUint32)decideInternalFramePoolNum(requestedFrames);
-    CriUint32 paddedWidth = ((CriUint32)width + 0x0f) & ~0x0f;
-    CriUint32 paddedHeight = ((CriUint32)height + 0x1f) & ~0x1f;
-    CriUint32 luma = ((paddedWidth + 0x7f) & ~0x7f) * paddedHeight;
-    CriUint32 chromaWidth = ((paddedWidth / 2 + 0x7f) & ~0x7f);
-    CriUint32 chromaHeight = paddedHeight / 2;
-    CriUint32 frameBytes = luma + chromaWidth * chromaHeight * 2;
-    const CriUint32 settings[2] = { 1, 1 };
-    CriSint32 total = 0x25c;
-    total += FUN_140046420(0, 0x20, settings);
-    total += (CriSint32)(200 * frameCount + 4);
-    for (CriUint32 i = 0; i < frameCount; ++i)
-        total += (CriSint32)(frameBytes + 0x800);
-    total += FUN_140046420(0, frameCount, settings);
-    return total;
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    // (names that share a bucket are declared in reverse slot order)
+    CriUint32 settings[2];
+    CriUint32 pbuf;
+    CriUint32 i;
+    CriUint32 num;
+    CriSint32 sj2;
+    CriSint32 work;
+    CriUint32 record;
+    CriUint32 size3;
+    CriSint32 j1;
+    CriSint32 ret;
+    CriUint32 bytes;
+    CriSint32 head;
+    work = 0;
+    ret = decideInternalFramePoolNum(requestedFrames);
+    num = ret;
+    // luma plane (16-aligned width padded to 128, 32-aligned height) plus the two half-size chroma planes
+    bytes = ((((CriUint32)width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80) * (((CriUint32)height + 0x1f) / 0x20 * 0x20) +
+            ((((CriUint32)width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80) *
+                ((((CriUint32)height + 0x1f) / 0x20 * 0x20) / 2) * 2;
+    record = 200;
+    head = 0x25c;
+    work += head;
+    settings[0] = 1;
+    settings[1] = 1;
+    j1 = FUN_140046420(0, 0x20, settings);
+    work += j1;
+    size3 = record * num + 4;
+    work += size3;
+    for (i = 0; i < num; ++i)
+    {
+        pbuf = bytes + 0x800;
+        work += pbuf;
+    }
+    settings[0] = 1;
+    settings[1] = 1;
+    sj2 = FUN_140046420(0, num, settings);
+    work += sj2;
+    return work;
 }
 
 // MS2-FUNCTIONAL: release the MPV handle, stream joints, frame buffers, and owning VMPV allocation.
@@ -1212,50 +1237,55 @@ void FUN_14003cca0(void* handle)
 // @0x14003d550
 void FUN_14003d550(void* handle)
 {
-    CriUint8* bytes = (CriUint8*)handle;
-    CriUint32 index = 0;
-    CriUint32 slot = 0;
-    for (; index < 8; ++index)
+    struct Entry { CriSint32 Begin, End; };
+    struct PlayerTimeline
     {
-        CriUint32 timestamp;
-        memcpy(&timestamp, bytes + 0x1b8 + (size_t)index * 8, sizeof(timestamp));
-        if (timestamp == 0)
+        CriUint8 Reserved000[0x18c];
+        CriSint32 Frame;
+        CriUint8 Reserved190[0x20];
+        CriSint32 Time;
+        Entry Entries[8];
+        CriSint32 FinalEnd;
+        CriUint8 Reserved1f8[0x40];
+        CriSint32 Offset;
+    };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriSint32 i;
+    Entry* base;
+    CriSint32 slot;
+    base = ((PlayerTimeline*)handle)->Entries;
+    slot = 0;
+    for (i = 0; i < 8; ++i)
+    {
+        if (base[i].End == 0)
         {
-            slot = index;
+            slot = i;
             break;
         }
     }
-    if (index == 8)
+    if (i == 8)
     {
-        CriUint32 oldest;
-        memcpy(&oldest, bytes + 0x1b8, sizeof(oldest));
-        memcpy(bytes + 500, &oldest, sizeof(oldest));
-        for (index = 0; index < 8; ++index)
+        ((PlayerTimeline*)handle)->FinalEnd = base[0].End;
+        for (i = 0; i < 8; ++i)
         {
-            if (index < 7)
+            if (i < 7)
             {
-                memcpy(bytes + 0x1b4 + (size_t)index * 8,
-                       bytes + 0x1b4 + (size_t)(index + 1) * 8, sizeof(CriUint32));
-                memcpy(bytes + 0x1b8 + (size_t)index * 8,
-                       bytes + 0x1b8 + (size_t)(index + 1) * 8, sizeof(CriUint32));
+                base[i].Begin = base[i + 1].Begin;
+                base[i].End = base[i + 1].End;
             }
             else
             {
-                CriUint32 zero = 0;
-                memcpy(bytes + 0x1b4 + (size_t)index * 8, &zero, sizeof(zero));
-                memcpy(bytes + 0x1b8 + (size_t)index * 8, &zero, sizeof(zero));
+                base[i].Begin = 0;
+                base[i].End = 0;
             }
         }
         slot = 7;
     }
-    CriUint32 timestamp, frameNumber;
-    CriSint32 offset;
-    memcpy(&timestamp, bytes + 0x1b0, sizeof(timestamp));
-    memcpy(bytes + 0x1b4 + (size_t)slot * 8, &timestamp, sizeof(timestamp));
-    memcpy(&frameNumber, bytes + 0x18c, sizeof(frameNumber));
-    memcpy(&offset, bytes + 0x238, sizeof(offset));
-    CriUint32 adjusted = offset < 1 ? frameNumber : frameNumber + (CriUint32)offset;
-    memcpy(bytes + 0x1b8 + (size_t)slot * 8, &adjusted, sizeof(adjusted));
+    base[slot].Begin = ((PlayerTimeline*)handle)->Time;
+    if (((PlayerTimeline*)handle)->Offset <= 0)
+        base[slot].End = ((PlayerTimeline*)handle)->Frame;
+    else
+        base[slot].End = ((PlayerTimeline*)handle)->Frame + ((PlayerTimeline*)handle)->Offset;
 }
 
 // MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
@@ -2719,7 +2749,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
         output = ((void* (*)(void*, CriUint32, CriUint32, CriUint32, CriUint64))FUN_140046730)(
             heap, streamBytes, chunkBytes, 4,
             (CriUint64)(uintptr_t)"CriMvPly: AoutBuf");
-        memcpy(decoder + 0x30 + (size_t)channel * 16, &output, sizeof(output));
+        memcpy(decoder + 0x30 + (size_t)channel * sizeof(void*), &output, sizeof(output));
         if (!output)
         {
             FUN_140042600(manager, heap, decoderIndex);
@@ -2731,7 +2761,7 @@ CriBool FUN_140042270(void* manager, void* owner, void* heap, const CriUint32* d
     for (CriUint32 channel = 0; channel < channelCount; ++channel)
     {
         void* output = NULL;
-        memcpy(&output, decoder + 0x30 + (size_t)channel * 16, sizeof(output));
+        memcpy(&output, decoder + 0x30 + (size_t)channel * sizeof(void*), sizeof(output));
         FUN_140053510(audioDecoder, channel, output);
     }
     CriSint32 count;
@@ -2853,36 +2883,47 @@ void FUN_140040c00(void* player, void* context)
 
 // MS2-FUNCTIONAL: locate a frame among eight media segments and return its index and end-relative offset.
 // @0x140040cc0
-void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSint32* delta)
+void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSint32* deltaOut)
 {
+    struct Entry { CriSint32 Begin, End; };
     struct PlayerTimeline
     {
-        CriUint8 Reserved000[0x190];
-        CriUint8 Reserved190[0x24];
-        struct Entry { CriSint32 Begin, End; } Entries[8];
+        CriUint8 Reserved000[0x1b4];
+        Entry Entries[8];
         CriSint32 FinalEnd;
     };
-    CriSint32 index = 0;
-    CriSint32 selected = 0;
-    for (; index < 8; ++index)
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriSint32 i;
+    Entry* base;
+    CriSint32 start;
+    CriSint32 delta;
+    base = ((PlayerTimeline*)player)->Entries;
+    start = 0;
+    delta = -1;
+    for (i = 0; i < 8; ++i)
     {
-        const PlayerTimeline::Entry& entry = ((PlayerTimeline*)player)->Entries[index];
-        if (entry.End == 0)
+        if (base[i].End == 0)
         {
-            selected = index == 0 ? 0 : ((PlayerTimeline*)player)->Entries[index - 1].Begin + 1;
+            if (i == 0)
+                start = 0;
+            else
+                start = base[i - 1].Begin + 1;
             break;
         }
-        if (frame < (CriUint32)entry.End)
+        if (frame < (CriUint32)base[i].End)
         {
-            selected = entry.Begin;
+            start = base[i].Begin;
             break;
         }
     }
-    if (index == 8)
-        selected = ((PlayerTimeline*)player)->Entries[7].Begin + 1;
-    CriSint32 end = index == 0 ? ((PlayerTimeline*)player)->FinalEnd : ((PlayerTimeline*)player)->Entries[index - 1].End;
-    *segmentIndex = selected;
-    *delta = (CriSint32)frame - end;
+    if (i == 8)
+        start = base[7].Begin + 1;
+    if (i == 0)
+        delta = frame - ((PlayerTimeline*)player)->FinalEnd;
+    else
+        delta = frame - base[i - 1].End;
+    *segmentIndex = start;
+    *deltaOut = delta;
 }
 
 // MS2-FUNCTIONAL: execute one audio decoder operation unless its status is already an error.
@@ -3429,38 +3470,46 @@ static_assert(offsetof(CriVideoQueueFields, Queue) == 0x58 && offsetof(CriVideoQ
 // @0x14003ed40
 CriSint32 FUN_14003ed40(void* player)
 {
-    struct Chunk { const CriUint8* Data; CriSint32 Size; CriSint32 Reserved; };
-    void* queue = ((CriVideoQueueFields*)player)->InputQueue;
-    CriSint32 count = 0;
-    while (FUN_1400467b8(queue, 2) != 0)
+    struct Chunk { const CriUint8* Data; CriUint32 Size; CriSint32 Reserved; };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriSint32 count;
+    CriUsfHeaderFields uhdr;
+    void* stream;
+    Chunk cur;
+    Chunk second;
+    count = 0;
+    stream = ((CriVideoQueueFields*)player)->InputQueue;
+    while ((CriUint32)FUN_1400467b8(stream, 2) > 0)
     {
-        Chunk second = {};
-        Chunk first;
-        FUN_1400467a0(queue, 2, 0xffffffff, &first);
-        if (FUN_14003eeb0(&first) != 0)
+        second.Data = NULL;
+        FUN_1400467a0(stream, 2, 0xffffffff, &cur);
+        if (FUN_14003eeb0(&cur) == 0)
         {
-            FUN_1400467a8(queue, 2, &first);
-            return count;
-        }
-        if (FUN_14003d6c0(&first) != 0)
-        {
-            if (FUN_1400467b8(queue, 2) == 0)
+            if (FUN_14003d6c0(&cur) != 0)
             {
-                FUN_1400467a8(queue, 2, &first);
-                return count;
+                if ((CriUint32)FUN_1400467b8(stream, 2) > 0)
+                {
+                    FUN_1400467a0(stream, 2, 0xffffffff, &second);
+                    criUsfCmn_ParseUsfHeaderStd(cur.Data, cur.Size, (CriUsfStandardHeader*)&uhdr);
+                    if (cur.Size + second.Size < uhdr.Size + 8)
+                        FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
+                }
+                else
+                {
+                    FUN_1400467a8(stream, 2, &cur);
+                    break;
+                }
             }
-            FUN_1400467a0(queue, 2, 0xffffffff, &second);
-            CriUsfStandardHeader header = {};
-            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &header);
-            CriUint32 payload;
-            memcpy(&payload, header.Data + 4, sizeof(payload));
-            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
-                FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
+            FUN_1400467b0(stream, 0, &cur);
+            if (second.Data != NULL)
+                FUN_1400467b0(stream, 0, &second);
+            count = count + 1;
         }
-        FUN_1400467b0(queue, 0, &first);
-        if (second.Data)
-            FUN_1400467b0(queue, 0, &second);
-        ++count;
+        else
+        {
+            FUN_1400467a8(stream, 2, &cur);
+            break;
+        }
     }
     return count;
 }
@@ -3545,29 +3594,33 @@ CriUint32 FUN_140043420(void* decoder, void* player, CriUint32 channels)
         void* Handle;
         CriUint32 ChannelLimit;
         CriUint8 Reserved1c[0x14];
-        void* Queues[1];
+        void* Queues[1];                      // one ring per channel, 8 bytes apart (exe [decoder+channel*8+0x30])
     };
     struct Player { CriUint8 Reserved00[8]; CriSint32 Mode; CriUint8 Reserved0c[0xe10]; CriUint32 FrameSize; };
-    Decoder* base = (Decoder*)decoder;
-    Player* ply = (Player*)player;
-    if (!base || !base->Handle || base->Enabled == 0)
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriUint32 count;
+    CriUint32 channel;
+    CriSint32 status;
+    CriUint32 result;
+    if (decoder == NULL)
         return 0;
-    if (base->ChannelLimit < channels)
+    if (((Decoder*)decoder)->Handle == NULL || ((Decoder*)decoder)->Enabled == 0)
+        return 0;
+    if (channels > ((Decoder*)decoder)->ChannelLimit)
         FUN_140037950(player, "E05063028M : Requested audio channel number is too many", channels);
-    if (ply->Mode == 1)
+    if (((Player*)player)->Mode == 1)
         return 0;
-    CriSint32 status = FUN_1400310b0(player);
+    status = FUN_1400310b0(player);
     if (status != 5 && status != 4)
         return 0;
-    CriUint32 frameSize = ply->FrameSize;
-    CriUint32 minimum = (CriUint32)FUN_1400467b8(base->Queues[0], 1) / frameSize;
-    for (CriUint32 channel = 1; channel < channels; ++channel)
+    result = (CriUint32)FUN_1400467b8(((Decoder*)decoder)->Queues[0], 1) / ((Player*)player)->FrameSize;
+    for (channel = 1; channel < channels; ++channel)
     {
-        CriUint32 count = (CriUint32)FUN_1400467b8((&base->Queues[0])[channel * 2], 1) / frameSize;
-        if (count < minimum)
-            minimum = count;
+        count = (CriUint32)FUN_1400467b8(((Decoder*)decoder)->Queues[channel], 1) / ((Player*)player)->FrameSize;
+        if (count < result)
+            result = count;
     }
-    return minimum;
+    return result;
 }
 
 // MS2-FUNCTIONAL: run a video player's decode step once the demuxer has queued data.
@@ -3800,8 +3853,10 @@ void FUN_14003bb60(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32
 
 CriBool FUN_14003b8b0(void*, CriUint8*, CriUint32, CriUint32, void*);
 
+#pragma function(memset)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: fetch the next decoded frame (and alpha frame) and convert it into a 32-bit ARGB buffer.
+// MS2-FUNCTIONAL: fetch the next decoded frame (and alpha frame) and convert it into a 32-bit ARGB buffer. Only diff: the
+// exe loads bufsize into eax (dead) before FUN_140035090.
 // @0x14003b8b0
 CriBool FUN_14003b8b0(void* player, CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize, void* frameinfo)
 {
@@ -3816,48 +3871,56 @@ CriBool FUN_14003b8b0(void* player, CriUint8* imagebuf, CriUint32 pitch, CriUint
         void* AlphaDecoder;
     };
     static_assert(offsetof(Player, VideoDecoder) == 0xe08 && offsetof(Player, AlphaDecoder) == 0xe40, "layout");
-    Player* ply = (Player*)player;
-    FrameInfo* output = (FrameInfo*)frameinfo;
-    FUN_140035090(output);
+    // Names chosen so cl 15's name-hash slot order matches the exe's [rsp+N] layout.
+    void* pFrame;                            // the frame pointer each Get returns
+    CriUint64 alphaAttr[7];                  // alpha conversion info (FUN_1400351c0)
+    CriUint64 yuv[8];                        // YUV source buffers for FUN_14003bb60
+    CriMvFrameInfo picture;                  // the decoded video frame
+    CriBool rv;
+    CriMvFrameInfo convFrame;
+    CriUint64 ainf[10];                      // the decoded alpha frame
+    rv = 0;
+    FUN_140035090((FrameInfo*)frameinfo);
     if (!FUN_140035560(player))
         return 0;
-    if (bufsize < output->Width * 4 * output->Height)
+    if (bufsize < ((FrameInfo*)frameinfo)->Width * 4 * ((FrameInfo*)frameinfo)->Height)
     {
         FUN_140037950(player, "E09012805M : ARGB buffer is too small.", 0);
-        return 0;
+        return rv;
     }
-    CriUint8 alphaInfo[0x38];
-    CriUint8 alphaCopy[0x38];
-    CriMvFrameInfo videoFrame;
-    CriMvFrameInfo converted;
-    CriUint8 alphaFrame[0x50];
-    CriUint8 yuvInfo[0x40];
-    FUN_1400351c0(alphaInfo);
-    memset(alphaFrame, 0, sizeof(alphaFrame));
-    void* videoToken = FUN_1400449c0(ply->VideoDecoder, &videoFrame);
-    if (!videoToken)
+    FUN_1400351c0(alphaAttr);
+    memset(ainf, 0, sizeof(ainf));
+    pFrame = FUN_1400449c0(((Player*)player)->VideoDecoder, &picture);
+    if (pFrame == NULL)
     {
         FUN_140037910(0, "E10060101M : Cannot get the pointer to video frame buffer.", 0);
         return 0;
     }
-    if (ply->AlphaDecoder != NULL && FUN_140043fe0(ply->AlphaDecoder, alphaFrame) == NULL)
+    if (((Player*)player)->AlphaDecoder != NULL)
     {
-        FUN_140037910(0, "E08082502M : Cannot get the pointer to alpha frame buffer.", 0);
-        return 0;
+        pFrame = FUN_140043fe0(((Player*)player)->AlphaDecoder, ainf);
+        if (pFrame == NULL)
+        {
+            FUN_140037910(0, "E08082502M : Cannot get the pointer to alpha frame buffer.", 0);
+            return 0;
+        }
     }
-    FUN_140035260(player, &converted, &videoFrame, (CriUint64)(uintptr_t)videoFrame.imageptr, videoFrame.width);
-    FUN_140035480(player, alphaInfo, alphaFrame);
-    FUN_1400358d0(yuvInfo, &videoFrame);
-    FUN_1400359e0(yuvInfo, alphaFrame);
-    FUN_14003bb60(player, imagebuf, pitch, bufsize, yuvInfo, &converted, alphaInfo);
-    memcpy(&ply->FrameId, (const CriUint8*)&videoFrame + 0xa8, sizeof(ply->FrameId));
-    if (ply->AlphaDecoder != NULL)
-        FUN_140044050((CriUint64*)ply->AlphaDecoder, alphaFrame);
-    FUN_140044a30(ply->VideoDecoder, &videoFrame);
-    FUN_140035260(player, output, &videoFrame, (CriUint64)(uintptr_t)imagebuf, pitch);
-    return 1;
+    FUN_140035260(player, &convFrame, &picture, (CriUint64)(uintptr_t)picture.imageptr, picture.width);
+    FUN_140035480(player, alphaAttr, ainf);
+    FUN_1400358d0(yuv, &picture);
+    FUN_1400359e0(yuv, ainf);
+    FUN_14003bb60(player, imagebuf, pitch, bufsize, yuv, &convFrame, alphaAttr);
+    ((Player*)player)->FrameId = *(CriUint32*)((CriUint8*)&picture + 0xa8);
+    if (((Player*)player)->AlphaDecoder != NULL)
+        FUN_140044050((CriUint64*)((Player*)player)->AlphaDecoder, ainf);
+    FUN_140044a30(((Player*)player)->VideoDecoder, &picture);
+    FUN_140035260(player, frameinfo, &picture, (CriUint64)(uintptr_t)imagebuf, pitch);
+    // The exe returns rv, which is still 0 here; its only caller (GetFrameOnTimeAs32bitARGB via 0x1400418a0)
+    // discards the result.
+    return rv;
 }
 #pragma optimize("", on)
+#pragma intrinsic(memset)
 
 extern "C" CriUint32 DAT_143b27c78;
 
@@ -4277,66 +4340,103 @@ CriUint32 FUN_140042ba0(void* trackSet, void* chunk, CriSint32 id, CriSint32* co
 
 CriUint32 FUN_140043890(void*, void*, CriUint32, CriUint32);
 
-namespace
-{
-// Shared body of the 16-bit and 32-bit PCM drains: each channel queue is copied into its own output buffer.
-inline CriUint32 CriDrainAudioChannels(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode,
-                                       CriUint32* info, CriUint32 stride)
-{
-    struct Decoder { CriUint8 Reserved00[0x30]; void* Queues[8]; };
-    struct Player { CriUint8 Reserved00[0xb2c]; CriUint32 Rate; CriUint8 Reserveb30[0x2ec]; CriUint32 FrameSize; };
-    struct Chunk { void* Data; CriUint32 Size; };
-    static_assert(offsetof(Player, FrameSize) == 0xe1c, "layout");
-    Decoder* source = (Decoder*)decoder;
-    Player* ply = (Player*)player;
-    CriUint32 frames = FUN_140043890(decoder, player, channels, mode);
-    if (frames == 0)
-        return 0;
-    CriUint8* cursors[8];
-    CriUint32 remaining[8] = {};
-    for (CriUint32 channel = 0; channel < channels; ++channel)
-    {
-        cursors[channel] = ((CriUint8* const*)outputs)[channel];
-        remaining[channel] = frames;
-    }
-    while (remaining[0] != 0)
-    {
-        for (CriUint32 channel = 0; channel < channels; ++channel)
-        {
-            void* queue = source->Queues[channel];
-            Chunk chunk;
-            FUN_1400467a0(queue, 1, remaining[channel] * ply->FrameSize, &chunk);
-            if (chunk.Size != 0)
-            {
-                CriUint32 count = chunk.Size / ply->FrameSize;
-                memcpy(cursors[channel], chunk.Data, count * ply->FrameSize);
-                cursors[channel] += (CriUint64)count * stride;
-                remaining[channel] -= count;
-            }
-            FUN_1400467b0(queue, 0, &chunk);
-        }
-    }
-    info[0] = channels;
-    info[1] = frames;
-    info[2] = ply->Rate;
-    return frames;
-}
-}
-
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+#pragma function(memcpy, memset)              // the exe calls memcpy/memset here rather than expanding them
 // MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 16-bit output buffers.
 // @0x140042f40
 CriUint32 FUN_140042f40(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
 {
-    return CriDrainAudioChannels(decoder, player, channels, outputs, mode, info, 2);
+    struct Decoder { CriUint8 Reserved00[0x30]; void* Queues[8]; };
+    struct Player { CriUint8 Reserved00[0xb2c]; CriUint32 Rate; CriUint8 Reserveb30[0x2ec]; CriUint32 FrameSize; };
+    struct Chunk { void* Data; CriUint32 Size; };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriUint32 res;
+    CriSint16* dst[8];
+    Chunk chk;
+    CriUint32 i;
+    CriUint32 frames;
+    CriUint32 remain[8];
+    void* sj;
+    CriUint32 len;
+    frames = FUN_140043890(decoder, player, channels, mode);
+    if (frames == 0)
+        return 0;
+    for (i = 0; i < channels; ++i)
+    {
+        dst[i] = ((CriSint16**)outputs)[i];
+        remain[i] = frames;
+    }
+    while (remain[0] > 0)
+    {
+        for (i = 0; i < channels; ++i)
+        {
+            sj = ((Decoder*)decoder)->Queues[i];
+            FUN_1400467a0(sj, 1, remain[i] * ((Player*)player)->FrameSize, &chk);
+            if (chk.Size > 0)
+            {
+                len = chk.Size / ((Player*)player)->FrameSize;
+                memcpy(dst[i], chk.Data, len * ((Player*)player)->FrameSize);
+                dst[i] = dst[i] + len;
+                remain[i] = remain[i] - len;
+            }
+            FUN_1400467b0(sj, 0, &chk);
+        }
+    }
+    res = frames;
+    info[0] = channels;
+    info[1] = res;
+    info[2] = ((Player*)player)->Rate;
+    return res;
 }
 
 // MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 32-bit output buffers.
 // @0x1400431a0
 CriUint32 FUN_1400431a0(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
 {
-    return CriDrainAudioChannels(decoder, player, channels, outputs, mode, info, 4);
+    struct Decoder { CriUint8 Reserved00[0x30]; void* Queues[8]; };
+    struct Player { CriUint8 Reserved00[0xb2c]; CriUint32 Rate; CriUint8 Reserveb30[0x2ec]; CriUint32 FrameSize; };
+    struct Chunk { void* Data; CriUint32 Size; };
+    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
+    CriUint32 res;
+    CriSint32* dst[8];
+    Chunk chk;
+    CriUint32 i;
+    CriUint32 frames;
+    CriUint32 remain[8];
+    void* sj;
+    CriUint32 len;
+    frames = FUN_140043890(decoder, player, channels, mode);
+    if (frames == 0)
+        return 0;
+    memset(remain, 0, sizeof(remain));
+    for (i = 0; i < channels; ++i)
+    {
+        dst[i] = ((CriSint32**)outputs)[i];
+        remain[i] = frames;
+    }
+    while (remain[0] > 0)
+    {
+        for (i = 0; i < channels; ++i)
+        {
+            sj = ((Decoder*)decoder)->Queues[i];
+            FUN_1400467a0(sj, 1, remain[i] * ((Player*)player)->FrameSize, &chk);
+            if (chk.Size > 0)
+            {
+                len = chk.Size / ((Player*)player)->FrameSize;
+                memcpy(dst[i], chk.Data, len * ((Player*)player)->FrameSize);
+                dst[i] = dst[i] + len;
+                remain[i] = remain[i] - len;
+            }
+            FUN_1400467b0(sj, 0, &chk);
+        }
+    }
+    res = frames;
+    info[0] = channels;
+    info[1] = res;
+    info[2] = ((Player*)player)->Rate;
+    return res;
 }
+#pragma intrinsic(memcpy, memset)
 #pragma optimize("", on)
 
 void FUN_1400531e0(void*, const void*, void*, void*);
