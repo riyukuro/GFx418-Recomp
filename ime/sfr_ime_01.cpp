@@ -145,8 +145,6 @@ static BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD index, LPCVOID com
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_1424ddcb0(void* self);   // the in-place AvmDisplayObj destructor (sfr_as3_16)
 extern "C" void FUN_14257db50(void*);
-extern "C" void FUN_1425b4e80(void*, const wchar_t*, ...);
-extern "C" void FUN_1425b4ea0(void*);
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
@@ -4120,61 +4118,52 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     Scaleform::Memory::Free(candidates);
 }
 
-// MS2-FUNCTIONAL: forwards IMM composition text to the recovered GFx text-state helpers and preserves the executable mode cases.
+// MS2-FUNCTIONAL: composition-text update. It reads GCS_COMPSTR, turns every space and U+3000 into U+00A0 and, by mode,
+// clears the composition text, sends the text, or sends it, sets the cursor from GCS_CURSORPOS, stores
+// length - cursor at +0x64 and highlights the whole text. Other modes change nothing.
 // @0x1423d2410
 void FUN_1423d2410(void* raw, unsigned* outputLength)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
-    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
-    void* base = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
     HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
     HIMC context = cx18_ImmGetContext(hwnd);
-    if (!context) {
-        if (base) FUN_14257dcb0(base);
-        return;
-    }
-    const LONG byteCount = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
-    if (byteCount < 0) {
-        cx18_ImmReleaseContext(hwnd, context);
-        if (base) FUN_14257dcb0(base);
-        return;
-    }
-    const unsigned count = static_cast<unsigned>(byteCount / sizeof(wchar_t));
-    auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc((count + 1) * sizeof(wchar_t)));
-    if (!text) {
-        cx18_ImmReleaseContext(hwnd, context);
-        if (base) FUN_14257dcb0(base);
-        return;
-    }
-    cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, static_cast<DWORD>(byteCount));
+    const LONG size = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
+    auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<SPInt>(size * 2)) + 2));
+    cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, size);
+    const int count = size / 2;
     text[count] = 0;
-    for (unsigned i = 0; i < count; ++i)
+    for (int i = 0; i < count; ++i)
         if (text[i] == L' ' || text[i] == 0x3000) text[i] = 0x00a0;
 
-    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    const bool clear = mode == 1 || mode == 3 || mode == 5 || mode == 7 || mode == 0x60000 || mode == 0xd00001;
-    const bool update = mode == 2 || mode == 4 || mode == 6 || mode == 10 || mode == 0x200 || mode == 0x300 ||
-        mode == 0x400 || mode == 0x70000 || mode == 0x90000 || mode == 0xa0000 || mode == 0xd00002 ||
-        mode == 0xd00800 || mode == 0xd00900;
-    const bool composition = mode == 0xc10000 || mode == 0x110000 || mode == 0x210000 || mode == 0x410000 ||
-        mode == 0x810000 || mode == 0x910000 || mode == 0xd10000;
-    if (clear) {
-        FUN_1425b4e80(base, L"", -1ll);
-        if (outputLength) *outputLength = 0;
-    } else if (update) {
-        FUN_1425b4e80(base, text, -1ll);
-        if (outputLength) *outputLength = count;
-    } else if (composition) {
-        FUN_1425b4e80(base, text);
-        if (outputLength) *outputLength = count;
-        const LONG readBytes = cx18_ImmGetCompositionStringW(context, GCS_COMPREADSTR, nullptr, 0);
-        FUN_1425b4ea0(base);
-        *reinterpret_cast<unsigned*>(self + 0x64) = count - static_cast<unsigned>(readBytes);
+    switch (*reinterpret_cast<unsigned*>(self + 0x98)) {
+    case 1: case 3: case 5: case 7:
+    case 0x10000: case 0x20000: case 0x30000: case 0x60000: case 0xd00001:
+        ime->SetCompositionText(L"", -1);
+        *outputLength = 0;
+        break;
+    case 2: case 4: case 6: case 10:
+    case 0x100: case 0x200: case 0x300: case 0x400: case 0x500:
+    case 0x40000: case 0x70000: case 0x90000: case 0xa0000:
+    case 0xd00002: case 0xd00800: case 0xd00900:
+        ime->SetCompositionText(text, -1);
+        *outputLength = static_cast<unsigned>(count);
+        break;
+    case 0x110000: case 0x210000: case 0x410000: case 0x810000: case 0x910000:
+    case 0xc10000: case 0xd10000: {
+        ime->SetCompositionText(text, -1);
+        *outputLength = static_cast<unsigned>(count);
+        const LONG cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
+        ime->SetCursorInComposition(static_cast<UPInt>(cursor));
+        *reinterpret_cast<unsigned*>(self + 0x64) = static_cast<unsigned>(count - cursor);
+        ime->HighlightText(0, static_cast<UPInt>(count), Scaleform::GFx::IMEManagerBase::THS_CompositionSegment, false);
+        break;
     }
-    Scaleform::Memory::Free(text);
+    }
     cx18_ImmReleaseContext(hwnd, context);
-    if (base) FUN_14257dcb0(base);
+    Scaleform::Memory::Free(text);
 }
 
 // MS2-FUNCTIONAL: IMM candidate-list update of the Vista IME object (vtable slot 36). It stores the count at +0xd8, the
@@ -4993,7 +4982,7 @@ void FUN_1423cf670(void* raw, const unsigned* attributes)
     auto* self = static_cast<unsigned char*>(raw);
     auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
     if (!owner || !attributes) return;
-    auto* factory = *reinterpret_cast<unsigned char**>(owner + 0x10);
+    auto* factory = owner + 0x10;
     void* temporary = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
     if (!temporary) return;
     const unsigned short flags = *reinterpret_cast<const unsigned short*>(attributes + 10);
