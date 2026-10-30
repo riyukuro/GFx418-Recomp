@@ -5518,13 +5518,6 @@ bool Sfr33SetObjectValueThrough(void* self, GFx::Value* pval, GFx::Value::Object
     return Sfr33SetObjectValue(iface, pval, obj);
 }
 
-// Value::AddRefClosure: the closure object, if any, gains a reference. The exe expands it inline (no copy of its own).
-void Value::AddRefClosure() const
-{
-    if (value.VS._2.VObj)
-        value.VS._2.VObj->AddRef();
-}
-
 // A host value as an AS3 value. Managed strings and objects come from this movie and are shared as they are; a
 // function object keeps its kFunction tag. Closures carry their kind in bit 1 of the object pointer.
 // MS2-FUNCTIONAL 0x1425048d0: the exe calls the Value assignments out of line; same results

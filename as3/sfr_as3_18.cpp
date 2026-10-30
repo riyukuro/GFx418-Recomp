@@ -4707,14 +4707,19 @@ void MovieRoot::ProcessLoadBinaryMT(GFx::LoadQueueEntry* pentry, LoadStates* pls
 ClassTraits::Traits** FUN_142505aa0(TClassTraitsCache* cache, const Multiname& mn);   // MultinameHash::Get
 
 // The class traits of the class mn names: Class for the any type, else from the VM's class traits cache.
-// MS2-FUNCTIONAL Multiname::IsAnyType is inlined (the exe keeps the string reference while testing it)
+// SDK AS3_VM.cpp form with Multiname::IsAnyType inlined.
 // @0x14250d760
 const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn)
 {
+    const ClassTraits::Traits* result;
     if (mn.Name.IsNullOrUndefined() || (mn.Name.IsString() && mn.Name.AsString().IsEmpty()))
-        return vm.TraitsClassClass;
-    ClassTraits::Traits** p = FUN_142505aa0(&vm.ClassTraitsSet, mn);
-    return p ? *p : NULL;
+        result = vm.TraitsClassClass;
+    else
+    {
+        ClassTraits::Traits** pptraits = FUN_142505aa0(&vm.ClassTraitsSet, mn);
+        result = pptraits ? *pptraits : NULL;
+    }
+    return result;
 }
 
 // The values of the operand stack above to are destroyed, down to the start of its current page.
@@ -4788,7 +4793,8 @@ static inline Value Sfr34_Closure(UInt32 kind, const void* p1, Object* obj)
 
 // VTable::GetMethod: method slot ind of obj's traits as a value: a thunk becomes a thunk closure of obj, a method
 // index a VTable index closure of obj; other slots are copied.
-// MS2-FUNCTIONAL free function (the member is not declared in the shared VTable class)
+// MS2-FUNCTIONAL free function (the member is not declared in the shared VTable class); SDK form, the exe tail-calls the
+// temporary closure's release (jmp vs our call/ret)
 // @0x14250ba10
 void FUN_14250ba10(const VTable* vt, Value& result, AbsoluteIndex ind, Object* obj)
 {
@@ -4796,10 +4802,10 @@ void FUN_14250ba10(const VTable* vt, Value& result, AbsoluteIndex ind, Object* o
     switch (m.GetKind())
     {
     case Value::kThunk:
-        result.Assign(Sfr34_Closure(Value::kThunkClosure, &m.AsThunk(), obj));
+        result.Assign(Value(obj, m.AsThunk()));
         return;
     case Value::kMethodInd:
-        result.Assign(Sfr34_Closure(Value::kVTableIndClosure, reinterpret_cast<const void*>(UPInt(ind.Get())), obj));
+        result.Assign(Value(obj, static_cast<SInt32>(ind.Get())));
         return;
     default:
         break;

@@ -821,6 +821,13 @@ protected:
     UserDataHolder*     pUserDataHolder;    // +0x30
 };
 
+// (sfb) Value::AddRefClosure (declared in as3_value.h): the closure object, if any, gains a reference.
+SF_INLINE void Value::AddRefClosure() const
+{
+    if (value.VS._2.VObj)
+        value.VS._2.VObj->AddRef();
+}
+
 // Instance of an AS3 class. 0x38 bytes.
 class Instance : public Object
 {

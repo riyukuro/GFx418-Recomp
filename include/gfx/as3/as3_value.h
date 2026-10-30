@@ -449,6 +449,8 @@ public:
         AddRefClosure();
         SetSuperCall(super);
     }
+    // (appended, sfb) the 4.1 form without the super-call flag (VTable::GetMethod 0x14250ba10).
+    SF_INLINE Value(Object* p, SInt32 ind) : Flags(kVTableIndClosure), value(p, ind) { AddRefClosure(); }
     ~Value() { Release(); }
 
     // Tracer values.
@@ -794,7 +796,8 @@ private:
 
     SF_INLINE void AddRefString() const         { value.VS._1.VStr->AddRef(); }
     void AddRefObject() const;
-    void AddRefClosure() const;
+    // (sfb) the exe expands it inline everywhere (no copy of its own); defined in as3_obj.h after Object.
+    SF_INLINE void AddRefClosure() const;
     SF_INLINE void AddRefMethodClosure() const
     {
         AddRefClosure();
