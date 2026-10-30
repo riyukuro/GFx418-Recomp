@@ -299,13 +299,13 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // @0x1425602c0
 AbsoluteIndex ArrayBase::GetNextArrayIndex(AbsoluteIndex ind) const
 {
-    const SInt32 size = (SInt32)GetSize();
+    const UInt32 size = GetSize();
     if (!ind.IsValid())
     {
         if (size != 0)
             return AbsoluteIndex(0);
     }
-    else if ((UPInt)ind.Get() < (UPInt)(SPInt)(size - 1))
+    else if ((UPInt)ind.Get() < size - 1)
         return AbsoluteIndex(ind.Get() + 1);
     return AbsoluteIndex(-1);
 }
@@ -809,21 +809,26 @@ void Vector_String::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 }
 
 // @0x142560510
-// MS2-FUNCTIONAL: Value setter codegen differs
 void Vector_String::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    if (ind.IsValid())
-        name.SetUInt32(ind.Get() - 1);
-    else
+    if (!ind.IsValid())
         name.SetUndefined();
+    else
+    {
+        const UInt32 i = ind.Get() - 1;
+        name.SetUInt32(i);
+    }
 }
 
 // @0x142560330
-// MS2-FUNCTIONAL: index arithmetic codegen differs
 GlobalSlotIndex Vector_String::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
-    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+    GlobalSlotIndex result(0);
+    AbsoluteIndex next((SPInt)ind.Get() - 1);
+    next = V.GetNextArrayIndex(next);
+    if (next.IsValid())
+        result = GlobalSlotIndex((UInt32)next.Get() + 1);
+    return result;
 }
 
 // @0x1425607e0
@@ -892,21 +897,26 @@ void Vector_double::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 }
 
 // @0x1425605a0
-// MS2-FUNCTIONAL: Value setter codegen differs
 void Vector_double::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    if (ind.IsValid())
-        name.SetUInt32(ind.Get() - 1);
-    else
+    if (!ind.IsValid())
         name.SetUndefined();
+    else
+    {
+        const UInt32 i = ind.Get() - 1;
+        name.SetUInt32(i);
+    }
 }
 
 // @0x142560390
-// MS2-FUNCTIONAL: index arithmetic codegen differs
 GlobalSlotIndex Vector_double::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
-    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+    GlobalSlotIndex result(0);
+    AbsoluteIndex next((SPInt)ind.Get() - 1);
+    next = V.GetNextArrayIndex(next);
+    if (next.IsValid())
+        result = GlobalSlotIndex((UInt32)next.Get() + 1);
+    return result;
 }
 
 // @0x142560870
@@ -984,21 +994,26 @@ void Vector_int::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 }
 
 // @0x142560630
-// MS2-FUNCTIONAL: Value setter codegen differs
 void Vector_int::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    if (ind.IsValid())
-        name.SetUInt32(ind.Get() - 1);
-    else
+    if (!ind.IsValid())
         name.SetUndefined();
+    else
+    {
+        const UInt32 i = ind.Get() - 1;
+        name.SetUInt32(i);
+    }
 }
 
 // @0x1425603f0
-// MS2-FUNCTIONAL: index arithmetic codegen differs
 GlobalSlotIndex Vector_int::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
-    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+    GlobalSlotIndex result(0);
+    AbsoluteIndex next((SPInt)ind.Get() - 1);
+    next = V.GetNextArrayIndex(next);
+    if (next.IsValid())
+        result = GlobalSlotIndex((UInt32)next.Get() + 1);
+    return result;
 }
 
 // @0x142560930
@@ -1076,21 +1091,26 @@ void Vector_object::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 }
 
 // @0x1425606c0
-// MS2-FUNCTIONAL: Value setter codegen differs
 void Vector_object::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    if (ind.IsValid())
-        name.SetUInt32(ind.Get() - 1);
-    else
+    if (!ind.IsValid())
         name.SetUndefined();
+    else
+    {
+        const UInt32 i = ind.Get() - 1;
+        name.SetUInt32(i);
+    }
 }
 
 // @0x142560450
-// MS2-FUNCTIONAL: index arithmetic codegen differs
 GlobalSlotIndex Vector_object::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
-    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+    GlobalSlotIndex result(0);
+    AbsoluteIndex next((SPInt)ind.Get() - 1);
+    next = V.GetNextArrayIndex(next);
+    if (next.IsValid())
+        result = GlobalSlotIndex((UInt32)next.Get() + 1);
+    return result;
 }
 
 // @0x1425609f0
@@ -1166,21 +1186,26 @@ void Vector_uint::GetDynamicProperty(AbsoluteIndex ind, Value& value)
 }
 
 // @0x142560750
-// MS2-FUNCTIONAL: Value setter codegen differs
 void Vector_uint::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
 {
-    if (ind.IsValid())
-        name.SetUInt32(ind.Get() - 1);
-    else
+    if (!ind.IsValid())
         name.SetUndefined();
+    else
+    {
+        const UInt32 i = ind.Get() - 1;
+        name.SetUInt32(i);
+    }
 }
 
 // @0x1425604b0
-// MS2-FUNCTIONAL: index arithmetic codegen differs
 GlobalSlotIndex Vector_uint::GetNextDynPropIndex(GlobalSlotIndex ind) const
 {
-    const AbsoluteIndex next = V.GetNextArrayIndex(AbsoluteIndex((SPInt)ind.Get() - 1));
-    return GlobalSlotIndex(next.IsValid() ? (UInt32)next.Get() + 1 : 0);
+    GlobalSlotIndex result(0);
+    AbsoluteIndex next((SPInt)ind.Get() - 1);
+    next = V.GetNextArrayIndex(next);
+    if (next.IsValid())
+        result = GlobalSlotIndex((UInt32)next.Get() + 1);
+    return result;
 }
 
 // @0x142560a80
