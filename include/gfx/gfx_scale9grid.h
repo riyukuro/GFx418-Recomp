@@ -13,6 +13,11 @@ using Render::RectF;
 struct Scale9Grid : public NewOverrideBase<Stat_Default_Mem>
 {
     RectF Rect;
+
+    Scale9Grid() : Rect(0) {}
+    Scale9Grid(const RectF& r) : Rect(r) {}
+
+    Scale9Grid& operator=(const RectF& r) { Rect = r; return *this; }
 };
 
 }} // namespace Scaleform::GFx

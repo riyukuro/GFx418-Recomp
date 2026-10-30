@@ -121,7 +121,7 @@ public:
     {
         if (!pScale9Grid)
             pScale9Grid = SF_HEAP_AUTO_NEW(this) Scale9Grid;
-        pScale9Grid->Rect = r;
+        *pScale9Grid = r;
     }
 };
 

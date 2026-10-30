@@ -353,8 +353,6 @@ void SF_STDCALL GFx_DefineShapeMorphLoader(LoadProcess* p, const TagInfo& tagInf
 }
 
 // ExportAssets: the exported symbol names of the file's characters.
-// MS2-FUNCTIONAL 0x1425c5bb0: same reads, lookups and log text; the id read and the string release inline
-// differently.
 // @0x1425c5bb0
 void SF_STDCALL GFx_ExportLoader(LoadProcess* p, const TagInfo&)
 {
@@ -362,14 +360,17 @@ void SF_STDCALL GFx_ExportLoader(LoadProcess* p, const TagInfo&)
     p->LogParse("  export: count = %d\n", count);
     for (unsigned i = 0; i < count; i++)
     {
-        UInt16   id = p->GetStream()->ReadU16();
+        UInt16   id = p->ReadU16();
         StringDH symbolName(p->GetLoadHeap());
+
         p->GetStream()->ReadString(&symbolName);
+
         p->LogParse("  export: id = %d, name = %s\n", id, symbolName.ToCStr());
 
+        ResourceId     rid(id);
         ResourceHandle hres;
-        if (p->GetResourceHandle(&hres, ResourceId(id)))
-            p->ExportResource(symbolName, ResourceId(id), hres);
+        if (p->GetResourceHandle(&hres, rid))
+            p->ExportResource(symbolName, rid, hres);
         else
             p->LogError("Don't know how to export Resource '%s'", symbolName.ToCStr());
     }
@@ -511,45 +512,52 @@ void SF_STDCALL GFx_ImportLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // DefineScalingGrid: the 9-slice grid of a sprite or button defined before.
-// MS2-FUNCTIONAL 0x1425c66d0: same reads, checks and log text; the handle release inlines differently.
+// MS2-FUNCTIONAL 0x1425c66d0: same reads, checks, log text and grid store; cl duplicates the grid-pointer store per
+// allocation branch and keeps the button branch inline, the exe merges the store and moves that branch after the return.
 // @0x1425c66d0
 void SF_STDCALL GFx_Scale9GridLoader(LoadProcess* p, const TagInfo&)
 {
-    Stream* in = p->GetStream();
-    UInt16  id = in->ReadU16();
-    RectF   r(0);
-    in->ReadRect(&r);
-    if (in->IsVerboseParse())
-        p->LogParse("Scale9GridLoader, id=%d, x1=%d, y1=%d, x2=%d, y2=%d\n", id, (int)r.x1, (int)r.y1, (int)r.x2,
-                    (int)r.y2);
-    if (r.x2 <= r.x1)
+    Stream* pin = p->GetStream();
+
+    RectF    r(0);
+    unsigned refId = pin->ReadU16();
+    pin->ReadRect(&r);
+
+    if (pin->IsVerboseParse())
     {
-        p->LogWarning("Scale9Grid for resource=%d has negative width %f", id, (double)((r.x2 - r.x1) / 20.0f));
-        return;
+        p->LogParse("Scale9GridLoader, id=%d, x1=%d, y1=%d, x2=%d, y2=%d\n",
+            refId, int(r.x1), int(r.y1), int(r.x2), int(r.y2));
     }
-    if (r.y2 <= r.y1)
+
+    if (r.x1 >= r.x2)
     {
-        p->LogWarning("Scale9Grid for resource=%d has negative height %f", id, (double)((r.y2 - r.y1) / 20.0f));
+        p->LogWarning("Scale9Grid for resource=%d has negative width %f", refId, (r.x2 - r.x1) / 20);
         return;
     }
 
-    ResourceHandle rh;
-    if (p->GetLoadTaskData()->GetResourceHandle(&rh, ResourceId(id)))
+    if (r.y1 >= r.y2)
     {
-        Resource* pres = rh.GetResourcePtr();
-        if (pres)
+        p->LogWarning("Scale9Grid for resource=%d has negative height %f", refId, (r.y2 - r.y1) / 20);
+        return;
+    }
+
+    ResourceHandle handle;
+    if (p->GetLoadTaskData()->GetResourceHandle(&handle, ResourceId(refId)))
+    {
+        Resource* rptr = handle.GetResourcePtr();
+        if (rptr)
         {
-            unsigned typeCode = pres->GetResourceTypeCode() & Resource::RT_TypeCode_Mask;
-            if (typeCode == (Resource::RT_SpriteDef << Resource::RT_TypeCode_Shift))
+            if (rptr->GetResourceType() == Resource::RT_SpriteDef)
             {
-                SpriteDef* psprite = static_cast<SpriteDef*>(pres);
-                if (!psprite->pScale9Grid)
-                    psprite->pScale9Grid = SF_HEAP_AUTO_NEW(psprite) Scale9Grid;
-                psprite->pScale9Grid->Rect = r;
+                SpriteDef* sp = static_cast<SpriteDef*>(rptr);
+                if (!sp->pScale9Grid)
+                    sp->pScale9Grid = SF_HEAP_AUTO_NEW(sp) Scale9Grid;
+                *sp->pScale9Grid = r;
             }
-            else if (typeCode == (Resource::RT_ButtonDef << Resource::RT_TypeCode_Shift))
+            else if (rptr->GetResourceType() == Resource::RT_ButtonDef)
             {
-                static_cast<ButtonDef*>(pres)->SetScale9Grid(r);
+                ButtonDef* b = static_cast<ButtonDef*>(rptr);
+                b->SetScale9Grid(r);
             }
         }
     }
