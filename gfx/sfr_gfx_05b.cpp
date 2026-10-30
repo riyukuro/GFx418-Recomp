@@ -229,6 +229,8 @@ void Sprite::SetSoundVolume(int volume, int subVolume)
 
 // Applies the inherited volume to the clip's channels (a sound object with its own transform keeps its volume),
 // then to the child clips.
+// MS2-FUNCTIONAL 0x1425dd720: the exe tests the child's interactive and sprite flag bits one at a time (shr/test), ours
+// merges them into one and/cmp; same calls (the recursive call is not in the exe's .pdata pairing)
 // @0x1425dd720
 void Sprite::UpdateActiveSoundVolume()
 {
@@ -279,6 +281,8 @@ void Sprite::SetSoundPan(int pan)
     UpdateActiveSoundPan();
 }
 
+// MS2-FUNCTIONAL 0x1425dd5b0: the exe tests the child's interactive and sprite flag bits one at a time (shr/test), ours
+// merges them into one and/cmp; same calls (the recursive call is not in the exe's .pdata pairing)
 // @0x1425dd5b0
 void Sprite::UpdateActiveSoundPan()
 {
@@ -1151,7 +1155,9 @@ int Sprite::GetLevel() const
 // @0x1425dbb60
 bool Sprite::IsLevelMovie() const
 {
-    return GetAvmSprite()->IsLevelMovie();
+    if (HasAvmObject())
+        return GetAvmSprite()->IsLevelMovie();
+    return false;
 }
 
 // @0x1425dbc60
