@@ -306,28 +306,31 @@ CheckResult Value::ToNumberValueInline()
     return CheckResult(true);
 }
 
-// MS2-FUNCTIONAL 0x14252f670: register allocation and branch layout differ (/O2 codegen); same calls as the exe.
+// MS2-FUNCTIONAL 0x14252f670: only the two stack slots differ (exe 0x38/0x40, ours 0x40/0x48); same code as the exe.
 // ToInt32 in place: Convert2Int32 (objects through their hintNone primitive) then SetSInt32, as in the exe.
 // @0x14252f670
 CheckResult Value::ToInt32Value()
 {
     SInt32 result;
-    if (!Convert2Int32(result))
-        return false;
-    SetSInt32(result);
-    return true;
+    if (Convert2Int32(result))
+    {
+        SetSInt32(result);
+        return true;
+    }
+    return false;
 }
 
-// MS2-FUNCTIONAL 0x14252fe80: register allocation and branch layout differ (/O2 codegen); same calls as the exe.
 // ToUInt32 in place: Convert2UInt32 then SetUInt32, as in the exe.
 // @0x14252fe80
 CheckResult Value::ToUInt32Value()
 {
+    CheckResult ok(true);
     UInt32 result;
-    if (!Convert2UInt32(result))
-        return false;
-    SetUInt32(result);
-    return true;
+    if (Convert2UInt32(result))
+        SetUInt32(result);
+    else
+        ok = false;
+    return ok;
 }
 
 // MS2-FUNCTIONAL 0x14252fe10: converts into an ASString and assigns it back; the exe routes allocation through the supplied StringManager.
@@ -869,26 +872,37 @@ void Sfr27TraceConvertTopUInt(State* st)
 }
 
 
+// The same traits value as an owned temporary: the exe fills it like TrTraitsScratch and destroys it as a Value.
+// Top*/Reg* still differ: the exe tail-calls the weak-proxy free (jmp [rax+0x60]), which cl does not do while the
+// temporary's address is passed to Assign (likely a /GL effect); Reg* also interleave the two stores differently.
+struct TrTraitsValue : TrTraitsScratch
+{
+    ~TrTraitsValue() { const_cast<Value&>(Get()).~Value(); }
+};
+
 #define SFR27_TOP_OP(Name, Off) \
     void State::Name() \
     { \
-        Value tv(TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
-        OpStack[OpStack.GetSize() - 1].Assign(tv); \
+        TrTraitsValue tv; \
+        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
+        OpStack[OpStack.GetSize() - 1].Assign(tv.Get()); \
     }
 #define SFR27_POP2_OP(Name, Off) \
     void State::Name() \
     { \
         TrPopped popped; \
         FUN_14251cd30(this, &popped.Get()); \
-        Value tv(TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
-        OpStack[OpStack.GetSize() - 1].Assign(tv); \
+        TrTraitsValue tv; \
+        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
+        OpStack[OpStack.GetSize() - 1].Assign(tv.Get()); \
         popped.Get().~Value(); \
     }
 #define SFR27_REG_OP(Name, Off) \
     void State::Name(UInt32 ind) \
     { \
-        Value tv(TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
-        Registers[ind].Assign(tv); \
+        TrTraitsValue tv; \
+        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
+        Registers[ind].Assign(tv.Get()); \
     }
 
 // dxns / dxnslate: the method must set the SETS_DXNS flag (and XML support must be enabled).
@@ -2232,8 +2246,9 @@ void Sfr31ButtonSwitchState(UPInt self, int mouseState)
 // @0x142527300
 bool Sfr31SetElement(UPInt self, UPInt array, UInt32 ind, const void* gfxValue)
 {
+    const UPInt root = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18);
     Value v;
-    FUN_1425048d0(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(self + 8) + 0x18), gfxValue, &v);
+    FUN_1425048d0(root, gfxValue, &v);
     FUN_1424213b0(array + 0x38, ind, &v);
     return true;
 }
@@ -2525,20 +2540,19 @@ bool Sfr31ContainerSetChildIndex(UPInt self, DisplayObjectBase* ch, UInt32 index
 }
 
 // pop: with a running frame flag clear the exe's slow helper pops, otherwise the top is released inline.
-// MS2-FUNCTIONAL 0x14253f920: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14253f920
 void Sfr31ExecPop(VM* vm)
 {
     const UPInt i = VmRd(vm, 0x78) - 1;
     Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
-    if (*reinterpret_cast<const char*>((i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8)) == 0)
+    if (*reinterpret_cast<const char*>((i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8)) != 0)
     {
-        FUN_1424efe30(vm, top, top);
-        return;
+        Value*& cur = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
+        cur->~Value();
+        --cur;
     }
-    Value*& cur = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
-    cur->~Value();
-    --cur;
+    else
+        FUN_1424efe30(vm, top, top);
 }
 
 // MS2-FUNCTIONAL 0x14253f9e0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
