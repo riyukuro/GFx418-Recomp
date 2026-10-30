@@ -602,8 +602,8 @@ void FUN_140062690(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_1400627a0();
 void FUN_1400627f0(cri_any = cri_any());
 cri_u4 FUN_140062820();
-cri_u8 FUN_140062830();
-cri_u8 FUN_140062860();
+int FUN_140062830();
+int FUN_140062860();
 int FUN_140062890();
 void FUN_1400628d0();
 ulonglong FUN_140062900(cri_any = cri_any());
@@ -11303,20 +11303,30 @@ cri_u4 FUN_140062820()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062830
-cri_u8 FUN_140062830()
+int FUN_140062830()
 {
   if (DAT_143a4a0c8 == -1) {
-    DAT_143a4a0c8 = 1;
+    __try {
+      DAT_143a4a0c8 = 0;
+      DAT_143a4a0c8 = 1;
+    } __except (1) {
+      DAT_143a4a0c8 = 0;
+    }
   }
   return DAT_143a4a0c8;  // the exe returns the cached flag in eax (FUN_140059090 spins forever on 0)
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062860
-cri_u8 FUN_140062860()
+int FUN_140062860()
 {
   if (DAT_143a4a0cc == -1) {
-    DAT_143a4a0cc = 1;
+    __try {
+      DAT_143a4a0cc = 0;
+      DAT_143a4a0cc = 1;
+    } __except (1) {
+      DAT_143a4a0cc = 0;
+    }
   }
   return DAT_143a4a0cc;  // the exe returns the cached flag in eax (FUN_140059090 spins forever on 0)
 }
@@ -11326,7 +11336,12 @@ cri_u8 FUN_140062860()
 int FUN_140062890()
 {
   if (DAT_143a4a0d0 == -1) {
-    DAT_143a4a0d0 = 1;
+    __try {
+      DAT_143a4a0d0 = 0;
+      DAT_143a4a0d0 = 1;
+    } __except (1) {
+      DAT_143a4a0d0 = 0;
+    }
   }
   return DAT_143a4a0d0;  // the exe returns the flag in eax (FUN_14004bf40 in sfr_cri_04 tests it)
 }
