@@ -1169,24 +1169,24 @@ int FUN_14004e9f0(longlong a1,int a2,int a3,int *a4)
     FUN_14004e5b0("E2004090247"," : NULL pointer is passed.");
     return 0;
   }
-  if (CriAt<int>(a1, 0x8) != 0) {
-    i_v1 = 0;
-    if (a2 != 0) {
-      if (a2 == 1) {
-        i_v1 = a3;
-        if (CriAt<int>(a1, 0x18) < a3) {
-          i_v1 = CriAt<int>(a1, 0x18);
-        }
-      }
-      else if (CriAt<code *>(a1, 0x30) != (code *)0x0) {
-        (*CriAt<code *>(a1, 0x30))(CriAt<cri_u64>(a1, 0x38),0xfffffffd);
-      }
-    }
-    *a4 = i_v1;
-    return i_v1 == a3;
+  if (CriAt<int>(a1, 0x8) == 0) {
+    FUN_14004e5b0("E2004090248"," : Specified handle is invalid.");
+    return 0;
   }
-  FUN_14004e5b0("E2004090248"," : Specified handle is invalid.");
-  return 0;
+  if (a2 == 0) {
+    i_v1 = 0;
+  }
+  else if (a2 == 1) {
+    i_v1 = (CriAt<int>(a1, 0x18) < a3) ? CriAt<int>(a1, 0x18) : a3;
+  }
+  else {
+    i_v1 = 0;
+    if (CriAt<code *>(a1, 0x30) != (code *)0x0) {
+      (*CriAt<code *>(a1, 0x30))(CriAt<cri_u64>(a1, 0x38),0xfffffffd);
+    }
+  }
+  *a4 = i_v1;
+  return i_v1 == a3;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -1245,32 +1245,29 @@ void FUN_14004eb70(void)
 // @0x14004eb90
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
 {
-  int *pi_v1;
-  longlong l_v2;
-  cri_u64 *pu_v3;
-  int i_v4;
-  
-  i_v4 = 0;
-  pi_v1 = cri_conv(&DAT_143ffbce8);
-  do {
-    if (*pi_v1 == 0) break;
-    pi_v1 = pi_v1 + 0x10;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)pi_v1 < (longlong)&DAT_143ffd4e8);
-  if (i_v4 == 0x60) {
+  struct Entry { void *Vtbl; int Used; void *Name; cri_u8 Reserved18[8]; cri_u64 Arg; cri_u32 Param; void *Fn; Entry *Self; };
+  Entry *pool = (Entry *)&DAT_143ffbce0;
+  Entry *e;
+  int i;
+  int *used;
+  i = 0;
+  for (used = &pool[0].Used; (longlong)used < (longlong)&pool[0x60].Used; used += 0x10) {
+    if (*used == 0) break;
+    i++;
+  }
+  if (i == 0x60) {
     return (cri_u64 *)0x0;
   }
-  l_v2 = (longlong)i_v4 * 0x40;
-  pu_v3 = (cri_u64 *)(&DAT_143ffbce0 + l_v2);
-  *pu_v3 = cri_conv(&DAT_143a487e0);
-  *(cri_u64 *)(&DAT_143ffbd00 + l_v2) = a1;
-  *(cri_u8 **)(&DAT_143ffbcf0 + l_v2) = cri_conv(&DAT_1431ba2e8);
-  (&DAT_143ffbce8)[(longlong)i_v4 * 0x10] = 1;
-  *(cri_u32 *)(&DAT_143ffbd08 + l_v2) = a2;
-  *(cri_u64 **)(&DAT_143ffbd18 + l_v2) = pu_v3;
-  *(cri_u8 **)(&DAT_143ffbd10 + l_v2) = cri_conv(&FUN_14004e5a0);
-  FUN_14004e770(pu_v3);
-  return pu_v3;
+  e = &pool[i];
+  e->Vtbl = &DAT_143a487e0;
+  e->Arg = a1;
+  e->Name = &DAT_1431ba2e8;
+  e->Used = 1;
+  e->Param = a2;
+  e->Self = e;
+  e->Fn = (void *)&FUN_14004e5a0;
+  FUN_14004e770((longlong)e);
+  return (cri_u64 *)e;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
@@ -3881,17 +3878,27 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
 // @0x140052720
 cri_u64 FUN_140052720(longlong a1,longlong *a2)
 {
-  int *pi_v1;
-  uint u_v2;
-  cri_u8 loc_18 [16];
-  
-  pi_v1 = (&CriAt<int>(a1, 0x1800));
-  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,pi_v1);
-  u_v2 = (uint)*(cri_u64 *)pi_v1 & 0xfffffffc;
-  FUN_140069020(pi_v1,(((int)(*pi_v1 * 8 + u_v2 * -8 + 7) >> 3) - *pi_v1) + 4 + u_v2,pi_v1,
-                loc_18);
-  (**(code **)(*a2 + 0x40))(a2,0,pi_v1);
-  (**(code **)(*a2 + 0x38))(a2,1,loc_18);
+  struct Stream;
+  struct Info { cri_u64 Lo; cri_u64 Hi; };
+  struct StreamVt {
+    void *Reserved00[6];
+    void (*Read)(Stream *s,int a,int n,cri_u8 **cur);
+    void (*Write)(Stream *s,int a,struct Info *info);
+    void (*Seek)(Stream *s,int a,cri_u8 **cur);
+  };
+  struct Stream { StreamVt *Vt; };
+  struct Obj { cri_u8 Reserved00[0x1800]; cri_u8 *Cur; };
+  Stream *s = (Stream *)a2;
+  cri_u8 **cur = &((Obj *)a1)->Cur;
+  Info info;
+  ulonglong aligned;
+  int bits;
+  s->Vt->Read(s,1,0x7fffffff,cur);
+  aligned = *(ulonglong *)cur & 0xfffffffffffffffc;
+  bits = (*(volatile int *)cur << 3) - ((int)aligned << 3); // the exe reads the low dword again here
+  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,&info);
+  s->Vt->Seek(s,0,cur);
+  s->Vt->Write(s,1,&info);
   FUN_140051d90(a2);
   return 0;
 }
@@ -3965,58 +3972,58 @@ int FUN_1400527c0(longlong a1,void *a2,int a3)
 // @0x140052950
 int FUN_140052950(longlong a1,uint a2,cri_u64 a3)
 {
-  uint u_v1;
-  int i_v2;
-  int i_v3;
-  
-  if (CriAt<int>(a1, 0x17f8) != 0) {
-    CriAt<int>(a1, 0x17fc) = CriAt<int>(a1, 0x17fc) + 1;
-    CriAt<cri_u32>(a1, 0x17f8) = 0;
-    CriAt<int>(a1, 0x162c) = CriAt<int>(a1, 0x162c) + 1;
-    if (CriAt<int>(a1, 0x1544) == 0) {
+  struct Obj { cri_u8 Reserved00[0x1544]; int Synced; cri_u8 Reserved1548[0xe4]; volatile int Resyncs; int Recovered;
+               cri_u8 Reserved1634[0x1c4]; int Lost; volatile int LostCount; };
+  Obj *o = (Obj *)a1;
+  longlong *s = (longlong *)a3;
+  int result;
+  uint code;
+  int synced = o->Synced;
+  if (o->Lost != 0) {
+    o->LostCount++;
+    o->Lost = 0;
+    o->Resyncs++;
+    if (synced == 0) {
       return -2;
     }
-    CriAt<int>(a1, 0x1630) = CriAt<int>(a1, 0x1630) + 1;
+    o->Recovered++;
   }
-  i_v3 = -2 - (uint)(CriAt<int>(a1, 0x1544) != 0);
-  u_v1 = FUN_140051d90(a3);
-  if (u_v1 != 0) {
-    while ((a2 & u_v1) == 0) {
-      i_v2 = FUN_140052010(a3,1,4);
-      if (i_v2 != 4) {
-        return i_v3;
-      }
-      u_v1 = FUN_140051d90(a3);
-      if (u_v1 == 0) {
-        return i_v3;
-      }
+  result = (synced != 0) ? -3 : -2;
+  for (code = FUN_140051d90(s); code != 0; code = FUN_140051d90(s)) {
+    if ((a2 & code) != 0) {
+      result = 0;
+      break;
     }
-    i_v3 = 0;
+    if (FUN_140052010(s,1,4) != 4) {
+      break;
+    }
   }
-  return i_v3;
+  return result;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052a10
 cri_u32 FUN_140052a10(longlong a1,longlong *a2)
 {
-  int *pi_v1;
-  uint u_v2;
-  uint u_v3;
-  cri_u32 u_v4;
-  cri_u8 loc_18 [16];
+  struct Info { cri_u64 Lo; cri_u64 Hi; };
+  longlong *cur;
+  cri_u64 ptr;
+  cri_u64 aligned;
+  int bits;
+  cri_u32 result;
+  Info info;
   
-  pi_v1 = (&CriAt<int>(a1, 0x1800));
-  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,pi_v1);
-  u_v3 = (uint)*(cri_u64 *)pi_v1;
-  u_v2 = u_v3 & 0xfffffffc;
-  u_v4 = FUN_1400527c0(a1,*(cri_u64 *)pi_v1,CriAt<cri_u32>(a1, 0x1808));
-  FUN_140069020(pi_v1,(((int)(u_v3 * 8 + u_v2 * -8 + 7) >> 3) - *pi_v1) + 4 + u_v2,pi_v1,
-                loc_18);
-  (**(code **)(*a2 + 0x40))(a2,0,pi_v1);
-  (**(code **)(*a2 + 0x38))(a2,1,loc_18);
+  cur = (&CriAt<longlong>(a1, 0x1800));
+  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,cur);
+  ptr = (cri_u64)*cur;
+  aligned = ptr & 0xfffffffffffffffc;
+  bits = ((int)*cur << 3) - ((int)aligned << 3);
+  result = FUN_1400527c0(a1,(void *)ptr,CriAt<int>(a1, 0x1808));
+  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,&info);
+  (**(code **)(*a2 + 0x40))(a2,0,cur);
+  (**(code **)(*a2 + 0x38))(a2,1,&info);
   FUN_140051d90(a2);
-  return u_v4;
+  return result;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
