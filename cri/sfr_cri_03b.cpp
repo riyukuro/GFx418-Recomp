@@ -868,68 +868,60 @@ void criSjRbf_Reset(void* ringBuffer)
 // @0x140046094
 void criSjRbf_GetChunk(void* ringBuffer, CriSint32 direction, CriUint32 requested, void* result)
 {
-    CriUint8* bytes = (CriUint8*)ringBuffer;
-    FUN_140046014(ringBuffer);
-    CriUint32 size, end, available, position;
-    void* data;
-    memcpy(&size, bytes + 0x38, sizeof(size));
-    memcpy(&end, bytes + 0x3c, sizeof(end));
-    memcpy(&data, bytes + 0x30, sizeof(data));
+    struct RingBuffer
+    {
+        CriUint8 Reserved00[0x10];
+        LPCRITICAL_SECTION Lock;      // 0x10
+        CriUint8 Reserved18[0x08];
+        CriUint32 OutputFree;         // 0x20
+        CriUint32 InputFree;          // 0x24
+        CriUint32 InputPosition;      // 0x28
+        CriUint32 OutputPosition;     // 0x2c
+        CriUint8* Data;               // 0x30
+        CriUint32 Size;               // 0x38
+        CriUint32 Extra;              // 0x3c
+        CriUint32 InputTotal;         // 0x40
+        CriUint32 Reserved44;
+        CriUint32 OutputTotal;        // 0x48
+    };
+    struct Chunk { CriUint8* Data; CriUint32 Size; };
+    RingBuffer* rb = (RingBuffer*)ringBuffer;
+    Chunk* chunk = (Chunk*)result;
+    if (rb->Lock)
+        FUN_140039f50(rb->Lock);
     if (direction == 0)
     {
-        memcpy(&position, bytes + 0x28, sizeof(position));
-        memcpy(&available, bytes + 0x24, sizeof(available));
-        CriUint32 contiguous = size - position + end;
-        if (available < contiguous)
-            contiguous = available;
-        if (requested > contiguous)
+        CriUint32 contiguous = rb->Extra - rb->InputPosition + rb->Size;
+        if (rb->InputFree < contiguous)
+            contiguous = rb->InputFree;
+        if (contiguous < requested)
             requested = contiguous;
-        void* chunk = (CriUint8*)data + position;
-        position = (position + requested) % size;
-        available -= requested;
-        CriUint32 total;
-        memcpy(&total, bytes + 0x40, sizeof(total));
-        total += requested;
-        memcpy(bytes + 0x28, &position, sizeof(position));
-        memcpy(bytes + 0x24, &available, sizeof(available));
-        memcpy(bytes + 0x40, &total, sizeof(total));
-        memcpy(result, &chunk, sizeof(chunk));
-        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
-        CriUint32 zero = 0;
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+        chunk->Size = requested;
+        chunk->Data = rb->Data + rb->InputPosition;
+        rb->InputPosition = (rb->InputPosition + requested) % rb->Size;
+        rb->InputFree -= chunk->Size;
+        rb->InputTotal += chunk->Size;
     }
     else if (direction == 1)
     {
-        memcpy(&position, bytes + 0x2c, sizeof(position));
-        memcpy(&available, bytes + 0x20, sizeof(available));
-        CriUint32 contiguous = size - position + end;
-        if (available < contiguous)
-            contiguous = available;
-        if (requested > contiguous)
+        CriUint32 contiguous = rb->Extra - rb->OutputPosition + rb->Size;
+        if (rb->OutputFree < contiguous)
+            contiguous = rb->OutputFree;
+        if (contiguous < requested)
             requested = contiguous;
-        void* chunk = (CriUint8*)data + position;
-        position = (position + requested) % size;
-        available -= requested;
-        CriUint32 total;
-        memcpy(&total, bytes + 0x48, sizeof(total));
-        total += requested;
-        memcpy(bytes + 0x2c, &position, sizeof(position));
-        memcpy(bytes + 0x20, &available, sizeof(available));
-        memcpy(bytes + 0x48, &total, sizeof(total));
-        memcpy(result, &chunk, sizeof(chunk));
-        memcpy((CriUint8*)result + 8, &requested, sizeof(requested));
-        CriUint32 zero = 0;
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+        chunk->Size = requested;
+        chunk->Data = rb->Data + rb->OutputPosition;
+        rb->OutputPosition = (rb->OutputPosition + requested) % rb->Size;
+        rb->OutputFree -= chunk->Size;
+        rb->OutputTotal += chunk->Size;
     }
     else
     {
-        void* empty = NULL;
-        CriUint32 zero = 0;
-        memcpy(result, &empty, sizeof(empty));
-        memcpy((CriUint8*)result + 8, &zero, sizeof(zero));
-        memcpy((CriUint8*)result + 12, &zero, sizeof(zero));
+        chunk->Size = 0;
+        chunk->Data = NULL;
     }
-    FUN_14004602c(ringBuffer);
+    if (rb->Lock)
+        FUN_140039f8c(rb->Lock);
 }
 
 // MS2-FUNCTIONAL: pop a recycled 0x20-byte chunk from the unified stream-joint free list.
@@ -2031,18 +2023,30 @@ void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
 // @0x1400459ec
 void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
 {
-    const CriUint32* settings = (const CriUint32*)config;
+    struct Chunk { Chunk* Next; CriUint8 Reserved08[0x18]; };
+    struct StreamJoint
+    {
+        const void* Vtable;           // 0x00
+        const char* Name;             // 0x08
+        LPCRITICAL_SECTION Lock;      // 0x10
+        CriUint32 Mode;               // 0x18
+        void* Lists[4];               // 0x20
+        Chunk* Chunks;                // 0x40
+        Chunk* FreeChunk;             // 0x48
+    };
+    struct Config { CriUint32 Locked; CriUint32 Mode; CriUint32 NumChunks; };
+    const Config* settings = (const Config*)config;
     CriMvWorkAllocator allocator;
     FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
+    StreamJoint* object = (StreamJoint*)FUN_14002e6c0(&allocator, 0x50, 8);
     memset(object, 0, 0x50);
-    object[0] = (void*)&PTR_FUN_143a485d8;
-    object[1] = (void*)"CriSjUni";
-    if (settings[0] == 1)
+    object->Vtable = &PTR_FUN_143a485d8;
+    object->Name = "CriSjUni";
+    if (settings->Locked == 1)
     {
         void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
-        object[2] = criCs_Create(csWork, 0x48);
-        if (!object[2])
+        object->Lock = (LPCRITICAL_SECTION)criCs_Create(csWork, 0x48);
+        if (!object->Lock)
         {
             FUN_140038ddc(0, "E09021213:Failed in criCs_Create().");
             return NULL;
@@ -2050,21 +2054,21 @@ void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
     }
     else
     {
-        object[2] = NULL;
+        object->Lock = NULL;
     }
-    *(CriUint32*)(object + 3) = settings[1];
-    object[4] = NULL;
-    object[5] = NULL;
-    object[6] = NULL;
-    object[7] = NULL;
-    object[8] = FUN_14002e6c0(&allocator, settings[2] << 5, 8);
-    object[9] = NULL;
-    for (CriUint32 index = 0; index < settings[2]; ++index)
+    object->Mode = settings->Mode;
+    object->Lists[0] = NULL;
+    object->Lists[1] = NULL;
+    object->Lists[2] = NULL;
+    object->Lists[3] = NULL;
+    object->Chunks = (Chunk*)FUN_14002e6c0(&allocator, settings->NumChunks << 5, 8);
+    object->FreeChunk = NULL;
+    for (CriUint32 index = 0; index < settings->NumChunks; ++index)
     {
-        void** record = (void**)((CriUint8*)object[8] + (CriUint64)index * 0x20);
+        Chunk* record = &object->Chunks[index];
         memset(record, 0, 0x20);
-        record[0] = object[9];
-        object[9] = record;
+        record->Next = object->FreeChunk;
+        object->FreeChunk = record;
     }
     FUN_14002e6bc(&allocator);
     return object;
