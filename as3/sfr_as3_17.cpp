@@ -195,29 +195,13 @@ void IntervalTimer::Clear()
 // @0x1424f0b70
 bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
 {
-    const ASStringNode* uri = ns.GetUri().GetNode();
-    const UInt8 nsKind = static_cast<UInt8>(ns.GetKind());
-    const UInt32 kind = static_cast<UInt32>(Kind);
-    const GASRefCountBase* object = Obj.GetPtr();
-    if ((kind & 3) != 2)
-    {
-        const Instances::Namespace* candidate = static_cast<const Instances::Namespace*>(object);
-        return candidate && candidate->GetUri().GetNode() == uri &&
-               ((static_cast<UInt8>(candidate->GetKind()) ^ nsKind) & 0x0f) == 0;
-    }
-    if (!object)
-        return false;
+    if ((static_cast<UInt32>(Kind) & 3) != 2)
+        return static_cast<const Instances::Namespace&>(*Obj) == ns;
 
-    const char* bytes = reinterpret_cast<const char*>(object);
-    const auto* entries = *reinterpret_cast<SPtr<Instances::Namespace> const* const*>(bytes + 0x20);
-    const UPInt count = *reinterpret_cast<const UPInt*>(bytes + 0x28);
-    for (UPInt i = 0; i < count; ++i)
-    {
-        const Instances::Namespace* candidate = entries[i].GetPtr();
-        if (candidate && candidate->GetUri().GetNode() == uri &&
-            ((static_cast<UInt8>(candidate->GetKind()) ^ nsKind) & 0x0f) == 0)
+    const ArrayLH<SPtr<Instances::Namespace> >& nss = static_cast<const NamespaceSet&>(*Obj).GetNamespaces();
+    for (UPInt i = 0; i < nss.GetSize(); ++i)
+        if (*nss[i] == ns)
             return true;
-    }
     return false;
 }
 
@@ -1583,18 +1567,19 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // and asks for a collection (+0xb0) when the flags (+0x78) want one per addition.
 // MS2-FUNCTIONAL 0x142504630: the high-water max lands in esi (exe copies the count to ecx first); same stores.
 // @0x142504630
-__declspec(noinline) void Sfr33CollectorQueue(UByte* self, RefCountImpl* p)
+__declspec(noinline) void Sfr33CollectorQueue(UByte* raw, RefCountImpl* p)
 {
-    if (self[0xb1] > 0)
+    ASRefCountCollector* self = reinterpret_cast<ASRefCountCollector*>(raw);
+    if (self->SuspendCnt > 0)
         return;
-    const unsigned count = *reinterpret_cast<unsigned*>(self + 0x18);
+    const unsigned curRootCount = static_cast<unsigned>(self->GetRootsCount());
     Sfr33CollectorEntry e(p);
     FUN_1423de770(self, e);
-    *reinterpret_cast<unsigned*>(self + 0x94) = count;
-    *reinterpret_cast<unsigned*>(self + 0x90) = Alg::Max(*reinterpret_cast<unsigned*>(self + 0x90), count);
-    *reinterpret_cast<unsigned*>(self + 0x88) = 0;
-    if (self[0x78] & 0x10)
-        self[0xb0] = 1;
+    self->LastRootCount = curRootCount;
+    self->PeakRootCount = Alg::Max(self->PeakRootCount, curRootCount);
+    self->FrameCnt = 0;
+    if (self->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
+        self->CollectionScheduledFlags = 1;
 }
 
 // Queues p as above (or only asks for a collection while one runs), frees an empty queue's pages unless the flags
@@ -2798,40 +2783,40 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm);
 const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Instances::Namespace& ns, UPInt& index,
                               Object* obj);
 
-// The slot bind type of a value declared with the ABC multiname ns of file tr in vm (2: any/Object value; 5..9: the
-// primitive types; 3: an object of another class). The tail of Traits::GetBindingType (inlined there in the exe).
-static int Sfr33CallerAccessKind(UByte* vm, const UByte* tr, const UByte* ns)
-{
-    UByte* cur = static_cast<UByte*>(FUN_142524f60(vm, tr, ns));
-    if (!cur)
-        return 2;
-    switch (*reinterpret_cast<const int*>(cur + 0x70))
-    {
-    case 1: return 5;
-    case 2: return 6;
-    case 3: return 7;
-    case 4: return 8;
-    case 5: return 9;
-    case 9: break;
-    default:
-        return (cur != *reinterpret_cast<UByte* const*>(vm + 0x1f8)) + 2;
-    }
-    return 2;
-}
-
 // How a slot of these traits declared with the ABC multiname mn of file stores its value: the any type is a plain
 // value, otherwise the class traits mn names in the traits' VM (this+0x78) decide.
-// MS2-FUNCTIONAL 0x1425075e0: the null-traits return is laid out before the switch (exe: after); same code.
 // @0x1425075e0
 SlotInfo::BindingType Traits::GetBindingType(VMAbcFile& file, const Abc::Multiname& mn) const
 {
-    const UByte* self = reinterpret_cast<const UByte*>(this);
-    const UByte* tr = reinterpret_cast<const UByte*>(&file);
-    const UByte* ns = reinterpret_cast<const UByte*>(&mn);
-    if (ns == *reinterpret_cast<UByte* const*>(tr + 0x28) + 0xe8)
-        return static_cast<SlotInfo::BindingType>(2);
-    return static_cast<SlotInfo::BindingType>(
-        Sfr33CallerAccessKind(*reinterpret_cast<UByte* const*>(self + 0x78), tr, ns));
+    VM& vm = GetVM();
+    SlotInfo::BindingType result;
+
+    if (&mn == &file.GetAbcFile().Const_Pool.AnyType)
+        result = SlotInfo::BT_Value;
+    else
+    {
+        const ClassTraits::Traits* ct = static_cast<const ClassTraits::Traits*>(FUN_142524f60(&vm, &file, &mn));
+        if (ct)
+        {
+            switch (ct->GetTraitsType())
+            {
+            case Traits_Boolean:    result = SlotInfo::BT_Boolean; break;
+            case Traits_SInt:       result = SlotInfo::BT_Int; break;
+            case Traits_UInt:       result = SlotInfo::BT_UInt; break;
+            case Traits_Number:     result = SlotInfo::BT_Number; break;
+            case Traits_String:     result = SlotInfo::BT_String; break;
+            case Traits_Function:   result = SlotInfo::BT_Value; break;
+            default:
+                if (ct == &vm.GetClassTraitsObject())
+                    result = SlotInfo::BT_Value;
+                else
+                    result = SlotInfo::BT_ObjectAS;
+            }
+        }
+        else
+            result = SlotInfo::BT_Value;
+    }
+    return result;
 }
 
 // The declared type of the fixed slot of tr named name in ns (NULL when there is none).
