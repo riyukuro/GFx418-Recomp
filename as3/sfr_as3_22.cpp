@@ -1113,31 +1113,37 @@ float QueryChannelVolume(void* player)
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: preserves the executable's time-unit conversions and both FMOD position queries.
-// @0x1427458e0
-float QueryChannelTime(void* player)
+// Channel position in seconds, less the stream start offset; both FMOD position queries are kept.
+struct Sfr22ChannelPlayerView
 {
-    void* channel = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x38);
-    if (!channel)
-        return 0.0f;
-
-    unsigned offset = 0;
-    void* soundSource = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x30);
-    if (soundSource) {
-        void* metadata = *reinterpret_cast<void**>(static_cast<char*>(soundSource) + 0x38);
-        if (metadata) {
-            const auto numerator = *reinterpret_cast<int*>(static_cast<char*>(metadata) + 0x1c) * 1000;
-            const auto denominator = *reinterpret_cast<unsigned*>(static_cast<char*>(metadata) + 0x14);
-            if (denominator)
-                offset = static_cast<unsigned>(numerator) / denominator;
+    float QueryChannelTime();
+    // Stream start offset in ms; the exe does not guard the zero sample rate.
+    unsigned StartOffset()
+    {
+        void* soundSource = *reinterpret_cast<void**>(reinterpret_cast<char*>(this) + 0x30);
+        if (soundSource) {
+            void* metadata = *reinterpret_cast<void**>(static_cast<char*>(soundSource) + 0x38);
+            if (metadata)
+                return static_cast<unsigned>(*reinterpret_cast<int*>(static_cast<char*>(metadata) + 0x1c) * 1000)
+                     / *reinterpret_cast<unsigned*>(static_cast<char*>(metadata) + 0x14);
         }
+        return 0;
     }
+};
 
+// @0x1427458e0
+float Sfr22ChannelPlayerView::QueryChannelTime()
+{
+    auto* bytes = reinterpret_cast<unsigned char*>(this);
+    void* channel = *reinterpret_cast<void**>(bytes + 0x38);
     unsigned position = 0;
-    unsigned dspPosition = 0;
-    reinterpret_cast<FMOD::Channel*>(channel)->getPosition(&position, 1);
-    reinterpret_cast<FMOD::Channel*>(channel)->getPosition(&dspPosition, 4);
-    (void)dspPosition;
+    unsigned offset = 0;
+    if (channel) {
+        offset = StartOffset();
+        reinterpret_cast<FMOD::Channel*>(channel)->getPosition(&position, 1);
+        unsigned dspPosition = 0;
+        (*reinterpret_cast<FMOD::Channel**>(bytes + 0x38))->getPosition(&dspPosition, 4);
+    }
     return static_cast<float>(position - offset) / 1000.0f;
 }
 
@@ -1968,21 +1974,19 @@ void GFx::AMP::MovieFunctionTreeStats::Merge(const MovieFunctionTreeStats& other
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: locks the sound region at offset zero, clears the first segment, and unlocks it.
+// Locks the sound region at offset zero, clears the first segment, and unlocks it.
 // @0x142744600
 void ClearSoundBuffer(void* player)
 {
     auto* bytes = static_cast<unsigned char*>(player);
-    void* sound = *reinterpret_cast<void**>(bytes + 0x30);
-    const unsigned length = *reinterpret_cast<unsigned*>(bytes + 0x64);
-    void* first = nullptr;
-    void* second = nullptr;
-    unsigned firstLength = 0;
-    unsigned secondLength = 0;
-    if (FUN_1428d8ea8(sound, 0, length, &first, &second, &firstLength, &secondLength) == 0) {
-        if (first && firstLength)
-            memset(first, 0, firstLength);
-        FUN_1428d8eae(sound, first, second, firstLength, secondLength);
+    void* first;   // Sound::lock out-params, only read on FMOD_OK
+    void* second;
+    unsigned firstLength;
+    unsigned secondLength;
+    if (FUN_1428d8ea8(*reinterpret_cast<void**>(bytes + 0x30), 0, *reinterpret_cast<unsigned*>(bytes + 0x64),
+                      &first, &second, &firstLength, &secondLength) == 0) {
+        memset(first, 0, firstLength);
+        FUN_1428d8eae(*reinterpret_cast<void**>(bytes + 0x30), first, second, firstLength, secondLength);
     }
 }
 }
