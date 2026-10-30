@@ -585,7 +585,7 @@ void FUN_140089e90(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void * FUN_140089f60(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140089fe0(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008a180(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_14008a2b0(cri_any = cri_any());
+void FUN_14008a2b0(longlong);
 void FUN_14008a3c0(cri_any = cri_any());
 void FUN_14008a430(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008a5b0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -593,8 +593,8 @@ void FUN_14008a730(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_14008a830(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008a970(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008aa80(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_14008ab00(cri_any = cri_any());
-void FUN_14008ab40(cri_any = cri_any());
+void FUN_14008ab00(longlong);
+void FUN_14008ab40(longlong);
 void FUN_14008ab60(longlong, cri_u4, int);
 void FUN_14008b6b0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14008b780(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -3788,7 +3788,7 @@ uint FUN_14006a7f8(cri_u8 cri_p0, uint cri_p1, longlong cri_p2)
   
   local_res18[0] = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  i_v1 = FUN_14006a110(arg1,arg2);  // the exe passes rcx/rdx through
+  i_v1 = FUN_14006a110(arg1,arg2,arg3,arg3 + 1);
   if (((-1 < i_v1) &&
       (i_v1 = FUN_14006a16c(arg1,arg2,local_res18,arg3 + 2,arg3 + 3,arg3 + 4,
                              arg3 + 5,arg3 + 8,arg3 + 0xc,arg3 + 0x10), -1 < i_v1)) &&
@@ -3816,7 +3816,7 @@ cri_u2 FUN_14006a928(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   
   local_res18[0] = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  i_v1 = FUN_14006a110(arg1,arg2);  // the exe passes rcx/rdx through
+  i_v1 = FUN_14006a110(arg1,arg2,arg3,arg3 + 1);
   if ((-1 < i_v1) &&
      (i_v1 = FUN_14006a16c(arg1,arg2,local_res18,arg3 + 2,arg3 + 3,arg3 + 4,
                             arg3 + 5,arg3 + 8,arg3 + 0xc,arg3 + 0x10), -1 < i_v1)) {
@@ -26801,9 +26801,8 @@ void FUN_14008a180(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008a2b0
-void FUN_14008a2b0(cri_any cri_p0)
+void FUN_14008a2b0(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   cri_u8 u_v1;
   
   *(int *)((char *)arg1 + 0xc60) = (int)*(short *)((char *)arg1 + 0x1bba);
@@ -27174,9 +27173,8 @@ void FUN_14008aa80(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008ab00
-void FUN_14008ab00(cri_any cri_p0)
+void FUN_14008ab00(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   cri_code *pc_v1;
   
   if (*(int *)((char *)arg1 + 0xd44) != 0) {
@@ -27193,10 +27191,10 @@ void FUN_14008ab00(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008ab40
-void FUN_14008ab40(cri_any cri_p0)
+void FUN_14008ab40(longlong arg1)
 {
-  FUN_14008ab00(cri_p0);  // the exe passes rcx through
-  FUN_14008a2b0();
+  FUN_14008ab00(arg1);
+  FUN_14008a2b0(arg1);
   return;
 }
 
