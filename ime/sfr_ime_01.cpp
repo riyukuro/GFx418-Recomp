@@ -29,6 +29,7 @@ namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeString(char* bu
 namespace Scaleform { namespace UTF8Util { SPInt SF_STDCALL GetEncodeStringSize(const wchar_t* chars, SPInt length); } }
 namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeStringSafe(char* buff, UPInt buffSize, const wchar_t* chars, SPInt length); } }
 
+namespace Scaleform { int SF_CDECL SFstricmp(const char* a, const char* b); }
 namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
 namespace Scaleform { namespace GFx { namespace IME {
 
@@ -1040,15 +1041,13 @@ static __forceinline void Sfr33ReleasePacked(unsigned long long packed)
         Memory::Free(reinterpret_cast<void*>(p));
 }
 
-// MS2-FUNCTIONAL: the packed atomic pointer is decremented at the exe's +8 counter; its heap release is routed through our Memory facade.
 // @0x1423ca920
-unsigned long long FUN_1423ca920(void*, unsigned long long* packedPtr)
+bool FUN_1423ca920(void*, unsigned long long* packedPtr)
 {
-    volatile long* count = reinterpret_cast<volatile long*>((*packedPtr & ~3ULL) + sizeof(void*));
-    const long remaining = _InterlockedDecrement(count);
-    if (remaining == 0)
-        Memory::Free(reinterpret_cast<void*>(*packedPtr & ~3ULL));
-    return static_cast<unsigned long long>(remaining) & ~0xffULL;
+    unsigned char* data = reinterpret_cast<unsigned char*>(*packedPtr & ~3ULL);
+    if (_InterlockedDecrement(reinterpret_cast<volatile long*>(data + sizeof(void*))) == 0)
+        Memory::Free(data);
+    return false;
 }
 
 // @0x1423d9430
@@ -1176,14 +1175,13 @@ void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
         FUN_1423d9090(table, reinterpret_cast<void*>(key), data[1] * 2 + 2);
 }
 
-// MS2-FUNCTIONAL: releases the held ABC data and executes the ExecuteTag base teardown before optional scalar delete.
 // @0x1423dbba0
 void* FUN_1423dbba0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
 {
     Scaleform::GFx::AS3::AbcDataBuffer* abc = self->pAbc.GetPtr();
     if (abc) abc->Release();
     self->Scaleform::GFx::ExecuteTag::~ExecuteTag();
-    if (flags & 1) ::operator delete(self);
+    if (flags & 1) ::operator delete(self, 0x10);
     return self;
 }
 
@@ -1209,14 +1207,13 @@ void FUN_1423cad60(void* object)
     *reinterpret_cast<unsigned**>(bytes + 0x190) = new unsigned[count];
 }
 
-// MS2-FUNCTIONAL: formats and releases the OS message exactly when the executable's +0x78 logger flag is set.
 // @0x1423cb920
 void FUN_1423cb920(void* object, DWORD code)
 {
     if (*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x78)) {
-        char* message = 0;
+        char* message;
         FormatMessageA(0x1100, 0, code, 0, reinterpret_cast<LPSTR>(&message), 0, 0);
-        if (message) LocalFree(message);
+        LocalFree(message);
     }
 }
 
@@ -1432,18 +1429,15 @@ void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
 }
 
 
-// MS2-FUNCTIONAL: appends a retained pointer to the executable-observed dynamic array using its expansion helper.
 // @0x1423d9490
 unsigned long long FUN_1423d9490(void* object, unsigned long long* value)
 {
     auto* array = reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(object) + 0x848);
-    const unsigned long long length = *reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(object) + 0x850);
-    FUN_1423d9690(array, array, length + 1);
-    auto* data = reinterpret_cast<unsigned long long*>(array[0]);
-    unsigned long long item = *value;
-    if (item) ++*reinterpret_cast<volatile long*>(item + 8);
-    data[length] = item;
-    if (item) FUN_14257dcd0(reinterpret_cast<void*>(item));
+    FUN_1423d9690(array, array, array[1] + 1);
+    unsigned long long* slot = reinterpret_cast<unsigned long long*>(array[0]) + array[1] - 1;
+    if (*value) ++*reinterpret_cast<int*>(*value + 8);
+    *slot = *value;
+    if (*value) FUN_14257dcd0(reinterpret_cast<void*>(*value));
     return 0;
 }
 
@@ -1477,19 +1471,19 @@ unsigned char FUN_1423ca8b0(void* object, String* value)
     return result;
 }
 
-// MS2-FUNCTIONAL: clears each executable-observed 0x28-byte hash node and releases the backing allocation.
 // @0x1423cdda0
 void FUN_1423cdda0(void** table)
 {
-    if (!*table) return;
-    auto* nodes = static_cast<unsigned char*>(*table);
-    const unsigned long long count = *reinterpret_cast<unsigned long long*>(nodes + 8) + 1;
-    for (unsigned long long index = 0; index < count; ++index) {
-        unsigned long long* state = reinterpret_cast<unsigned long long*>(nodes + index * 0x28 + 0x10);
-        if (*state != ~1ULL) *state = ~1ULL;
+    if (*table) {
+        const unsigned long long sizeMask = *reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(*table) + 8);
+        for (unsigned long long index = 0; index <= sizeMask; ++index) {
+            unsigned long long* state = reinterpret_cast<unsigned long long*>(
+                static_cast<unsigned char*>(*table) + index * 0x28 + 0x10);
+            if (*state != ~1ULL) *state = ~1ULL;
+        }
+        if (*table) Memory::Free(*table);
+        *table = 0;
     }
-    Memory::Free(nodes);
-    *table = 0;
 }
 
 // restores the executable's AS2/AS3 support vtable, runs shared base cleanup, and follows the 0x10 delete path.
@@ -2407,7 +2401,7 @@ unsigned long long FUN_1423d15b0(void* self, int mode)
     return supported;
 }
 
-void FUN_1423d94f0(void*, void*);
+__declspec(noinline) void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
 extern void FUN_1425b4ec0(void*, int);
@@ -2526,12 +2520,12 @@ void FUN_1423d1c10(void* self)
 // @0x1423d1830
 void FUN_1423d1830(void* self, unsigned long long* movie)
 {
-    unsigned long long value = *movie;
+    const unsigned long long value = *movie;
     *reinterpret_cast<unsigned long long*>(static_cast<unsigned char*>(self) + 8) = value;
     FUN_1423d94f0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30),
                   reinterpret_cast<void*>(value));
-    if (value)
-        reinterpret_cast<Scaleform::GFx::Movie*>(value)->Release();
+    if (*movie)
+        reinterpret_cast<Scaleform::GFx::Movie*>(*movie)->Release();
 }
 
 // @0x1423d94f0
