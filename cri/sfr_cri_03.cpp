@@ -1076,14 +1076,18 @@ static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, C
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
+#pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
 // MS2-FUNCTIONAL: the CRI table library was built with VS2008; preserve its field-name scan and 0xffffffff sentinel.
 // @0x14003a3e0
 CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* table, const CriChar8* name)
 {
-    for (CriUint32 i = 0; i < table->FieldCount; ++i)
+    CriSint32 i;
+    for (i = 0; i < table->FieldCount; ++i)
         if (strcmp(name, table->Columns[i].Name) == 0)
-            return i;
-    return 0xffffffff;
+            break;
+    if (i == table->FieldCount)
+        i = -1;
+    return (CriUint32)i;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; this accessor reads the table's row count.
@@ -1097,24 +1101,26 @@ CriUint32 FUN_14003a45c(const CriUtfRtvView* table)
 // @0x14003aeb4
 CriUint32 FUN_14003aeb4(const CriUtfRtvView* table, CriUint32 slotIndex, const CriChar8* name)
 {
-    const CriUtfRtvView::CachedIndex* slot = &table->Slots[slotIndex];
-    CriUint32 low = 0;
-    CriUint32 high = table->RecordCount;
-    while (low < high)
+    CriUint32 low, high;
+    const CriUint32* rows = table->Slots[slotIndex].SortedRows;
+    CriUint32 key = table->Slots[slotIndex].Key;
+    low = 0;
+    high = table->RecordCount;
+    for (;;)
     {
-        CriUint32 middle = low + ((high - low) >> 1);
-        CriUint32 row = slot->SortedRows[middle];
-        const CriChar8* candidate = criUtfRtv_GetDataStr(table, row, slot->Key);
-        int order = strcmp(candidate ? candidate : "", name);
+        CriUint32 middle = (high + low - 1) >> 1;
+        int order = strcmp(criUtfRtv_GetDataStr(table, rows[middle], key), name);
         if (order == 0)
-            return row;
-        if (order < 0)
-            low = middle + 1;
-        else
+            return rows[middle];
+        if (order > 0)
             high = middle;
+        else
+            low = middle + 1;
+        if (low == high)
+            return 0xffffffff;
     }
-    return 0xffffffff;
 }
+#pragma intrinsic(strcmp)
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; field types 0/2/4 read the executable's byte positions.
 // @0x14003a460
@@ -3080,30 +3086,61 @@ void FUN_14003b720(CriMvSubAudioTrackState* state, CriSint32 count,
 // @0x14003b168
 CriUint32 criUtfRtv_SearchRecNoByUint32(const CriUtfRtvView* table, CriUint32 field, CriUint32 value)
 {
+    // a CriUtfRtvCell without byte arrays, which the exe does not treat as a /GS buffer
+    struct Cell { CriUint64 Type; CriUint32 Value; CriUint32 Reserved0C; CriUint64 Reserved10; } cell;
+    CriUint32 size = table->RecordSize;
+    CriUint32 row = 0;
+    CriUint32 result = 0xffffffff;
     const CriUtfRtvColumn* col = &table->Columns[field];
-    if (!col->IsRecordField || col->Type != 4)
-        return 0xffffffff;
-    for (CriUint32 row = 0; row < table->RecordCount; ++row)
-        if (criUtfRtv_GetDataUint32(table, row, field) == value)
-            return row;
-    return 0xffffffff;
+    CriUint32 offset = col->DataOffset;
+    if (col->IsRecordField && col->Type == 4)
+    {
+        for (; row < table->RecordCount; ++row)
+        {
+            criUtfRtv_GetCellValFromAddr(table, table->RecordData + size * row + offset, 4, (CriUtfRtvCell*)&cell);
+            if (value == cell.Value)
+            {
+                result = row;
+                break;
+            }
+        }
+    }
+    return result;
 }
 
-// MS2-FUNCTIONAL: search the table's string record field in row order and return its first matching row.
+// MS2-FUNCTIONAL: find the row whose string record field equals value. A sorted index slot on the field
+// is searched through FUN_14003aeb4; otherwise the rows are scanned in order and RecordCount means no match.
 // @0x14003b094
+#pragma function(strcmp)                      // the exe calls strcmp here rather than expanding it
 CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field, const CriChar8* value)
 {
+    // a CriUtfRtvCell without byte arrays, which the exe does not treat as a /GS buffer
+    struct Cell { CriUint64 Type; const CriChar8* Value; CriUint64 Reserved10; } cell;
+    CriUint32 size = table->RecordSize;
     const CriUtfRtvColumn* col = &table->Columns[field];
-    if (!col->IsRecordField || col->Type != 10)
-        return 0xffffffff;
-    for (CriUint32 row = 0; row < table->RecordCount; ++row)
+    CriUint32 offset = col->DataOffset;
+    const CriUint8* records = table->RecordData;
+    CriUint32 row;
+    CriUint32 slot;
+    if (col->IsRecordField && col->Type == 10)
     {
-        const CriChar8* candidate = criUtfRtv_GetDataStr(table, row, field);
-        if (candidate && strcmp(candidate, value) == 0)
-            return row;
+        for (slot = 0; slot < 4; ++slot)
+            if (table->Slots[slot].Key == field)
+                break;
+        if (slot < 4)
+            return FUN_14003aeb4(table, slot, value);
+        for (row = 0; row < table->RecordCount; ++row)
+        {
+            criUtfRtv_GetCellValFromAddr(table, records + size * row + offset, col->Type, (CriUtfRtvCell*)&cell);
+            if (strcmp(value, cell.Value) == 0)
+                break;
+        }
     }
-    return 0xffffffff;
+    else
+        row = 0xffffffff;
+    return row;
 }
+#pragma intrinsic(strcmp)
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: these state initializers clear the decoder's four motion-vector components.
