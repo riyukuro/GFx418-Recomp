@@ -1105,8 +1105,9 @@ CriBool criCs_IsInCriticalSection(const void* state)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this stores its caller-supplied metadata allocator.
 // @0x1400301d0
-void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate, void* freeFn)
+void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate, void* freeFn, CriSint32 metaFlag)
 {
+    if (metaFlag == metaFlag) {} // read and unused, as in the exe (CriMvEasyPlayer passes its meta_flag)
     ((CriMvMetadataAllocatorFields*)player)->Work = work;
     ((CriMvMetadataAllocatorFields*)player)->Allocate = allocate;
     ((CriMvMetadataAllocatorFields*)player)->Free = freeFn;
