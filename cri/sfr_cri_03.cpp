@@ -125,7 +125,7 @@ void FUN_140053e60(void*, CriUint32, CriUint32, CriUint32);
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
 void FUN_14004f8a0(void);
 void FUN_14004eb50(void);
-void FUN_14004e3b0(CriUint64, CriUint64);
+int FUN_14004e3b0(unsigned int size, CriUint64 base);   // sfr_cri_05: int(cri_u32, cri_u64)
 void* FUN_14003da40(void*, void*);
 void* FUN_14003dd50(void*, void*);
 void* FUN_140027ed8(void*, CriSint32, const CriChar8*, ...);
@@ -3078,30 +3078,36 @@ void FUN_140045d34(void* object, CriSint32 lane, const CriUint64* input);
 void FUN_140045e04(void* object, CriSint32 lane, const CriUint64* input);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: initialize shared MPV library work buffers once and maintain their reference count.
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
+// Initialize the shared MPV library work buffers once and keep their reference count.
 // @0x14003c080
 void FUN_14003c080(void)
 {
     if (DAT_143b27c68 == 0)
     {
-        DAT_143b27c50 = 0;
-        DAT_143b27c58 = 0;
-        DAT_143b27c60 = 0;
-        DAT_143b27c64 = 0;
+        // the 0x18-byte work descriptor at DAT_143b27c50 (size, aligned base, mode, reserved); data_cri keeps the
+        // pieces contiguous
+        memset(&DAT_143b27c50, 0, 0x18);
         if (DAT_143b27c70 == 0)
         {
             FUN_1400410d0(0, "E10092150M : MPV libwork is not set.", 0);
             return;
         }
-        DAT_143b27c50 = (CriUint64)DAT_143b27c6c << 2;
-        DAT_143b27c58 = (DAT_143b27c70 + 3) & ~(CriUint64)3;
-        DAT_143b27c60 = 3;
+        else
+        {
+            DAT_143b27c50 = DAT_143b27c6c << 2;
+            DAT_143b27c58 = (DAT_143b27c70 + 3) & ~(CriUint64)3;
+            DAT_143b27c60 = 3;
+        }
         FUN_14004f8a0();
         FUN_14004eb50();
         FUN_14004e3b0(DAT_143b27c50, DAT_143b27c58);
     }
-    ++DAT_143b27c68;
+    DAT_143b27c68 = DAT_143b27c68 + 1;
 }
+#pragma intrinsic(memset)
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: drain one pending movie ring chunk after its sample count reaches a full block.
@@ -3967,8 +3973,8 @@ static_assert(sizeof(CriDecodedFrame) == 0xb0 && offsetof(CriFrameRecord, Mode) 
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: peek the next decoded picture of a VMPV player and describe its tiled YUV420 planes. Only diff:
-// ours copies record->Frame into frame through a temp at [rsp+0x120]; the exe copies it straight into [rsp+0x68].
+// Peek the next decoded picture of a VMPV player and describe its tiled YUV420 planes. record->Frame is assigned
+// straight to the output (one /Od temp at [rsp+0x68]), not through a named local.
 // @0x14003da40
 void* FUN_14003da40(void* player, void* output)
 {
@@ -3989,8 +3995,7 @@ void* FUN_14003da40(void* player, void* output)
     if (it.Record == NULL)
         return NULL;
     queueRecord = it.Record;
-    CriDecodedFrame frame = queueRecord->Frame;
-    *(CriDecodedFrame*)output = frame;
+    *(CriDecodedFrame*)output = queueRecord->Frame;
     FUN_140040c00(self, (CriDecodedFrame*)output);
     width = ((CriDecodedFrame*)output)->Width;
     height = ((CriDecodedFrame*)output)->Height;
@@ -4016,8 +4021,7 @@ void* FUN_14003da40(void* player, void* output)
     return base;
 }
 
-// MS2-FUNCTIONAL: take the next decoded picture of a VMPV player, describe its planes and mark it consumed. Only
-// diff: the same extra struct-copy temp as FUN_14003da40.
+// Take the next decoded picture of a VMPV player, describe its planes and mark it consumed.
 // @0x14003dd50
 void* FUN_14003dd50(void* player, void* output)
 {
@@ -4041,8 +4045,7 @@ void* FUN_14003dd50(void* player, void* output)
     if (it.Record == NULL)
         return NULL;
     queueRecord = it.Record;
-    CriDecodedFrame frame = queueRecord->Frame;
-    *(CriDecodedFrame*)output = frame;
+    *(CriDecodedFrame*)output = queueRecord->Frame;
     FUN_140040c00(self, (CriDecodedFrame*)output);
     width = ((CriDecodedFrame*)output)->Width;
     height = ((CriDecodedFrame*)output)->Height;
@@ -4080,8 +4083,8 @@ void* FUN_14003dd50(void* player, void* output)
 }
 
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
-// MS2-FUNCTIONAL: copy one tiled luma plane row by row into a caller buffer with its own pitch. Only diff: srcPitch
-// sits at [rsp+0x5c], the exe has 0x5a (same as FUN_14003e850: a separate CriSint16 local is 4-aligned).
+// Copy one tiled luma plane row by row into a caller buffer with its own pitch. The two pitches share one 8-byte
+// struct local, as in the exe (separate CriSint16 locals are each 4-aligned; a CriSint16[2] moves widthL into 0x5c).
 // @0x14003e370
 CriBool FUN_14003e370(void* player, void* destination, void* source)
 {
@@ -4098,8 +4101,7 @@ CriBool FUN_14003e370(void* player, void* destination, void* source)
     const CriUint8* pU;                      // chroma plane pointers: computed, never read (as in the exe)
     const CriUint8* planeV;
     const CriUint8* lumaRow;
-    CriSint16 chromaPitch;
-    CriSint16 srcPitch;
+    struct { CriSint16 Chroma; CriSint16 Luma; CriUint32 Unused; } srcPitch;   // the exe's 8-byte pitch slot: 0x58/0x5a, 0x5c unused
     CriSint32 nHeight;
     CriUint32 numRows;
     CriUint32 rowLimit;
@@ -4112,15 +4114,15 @@ CriBool FUN_14003e370(void* player, void* destination, void* source)
         return 0;
     widthL = p->Width;
     nHeight = p->Height;
-    srcPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
-    chromaPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    srcPitch.Luma = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
+    srcPitch.Chroma = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
     lumaRow = ((Source*)source)->Data;
     pU = lumaRow + (((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20);
     planeV = pU + (((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20 / 2);
     rowLimit = ((Destination*)destination)->RowBytes;
     numRows = ((Destination*)destination)->Rows;
     rowsLeft = numRows;
-    lineLen = srcPitch;
+    lineLen = srcPitch.Luma;
     if (lineLen > rowLimit)
         lineLen = rowLimit;
     srcLine = lumaRow;
@@ -4128,7 +4130,7 @@ CriBool FUN_14003e370(void* player, void* destination, void* source)
     for (i = 0; i < rowsLeft; i++)
     {
         memcpy(dstp, srcLine, lineLen);
-        srcLine = srcLine + srcPitch;
+        srcLine = srcLine + srcPitch.Luma;
         dstp = dstp + ((Destination*)destination)->Pitch;
     }
     return 1;
@@ -4258,9 +4260,8 @@ CriSint32 FUN_14003cff0(void* player)
 }
 
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
-// MS2-FUNCTIONAL: copy the three tiled YUV420 planes of a decoded picture into caller planes with their own pitches.
-// Only diff: srcPitchY sits at [rsp+0x5c], the exe has 0x5a. Each CriSint16 local is 4-aligned even when it shares
-// chromaPitch's bucket. CriSint16[2] packs the pair but moves widthL down to 0x5c (the exe leaves 0x5c free), and [3] adds a /GS cookie.
+// Copy the three tiled YUV420 planes of a decoded picture into caller planes with their own pitches. The two pitches
+// share one 8-byte struct local (0x58/0x5a, 0x5c unused), as in FUN_14003e370.
 // @0x14003e850
 void FUN_14003e850(void* player, void* source, void* destination)
 {
@@ -4278,8 +4279,7 @@ void FUN_14003e850(void* player, void* source, void* destination)
     const CriUint8* pU;
     const CriUint8* planeV;
     const CriUint8* lumaRow;
-    CriSint16 srcPitchY;
-    CriSint16 chromaPitch;
+    struct { CriSint16 Chroma; CriSint16 Luma; CriUint32 Unused; } srcPitch;   // the exe's 8-byte pitch slot: 0x58/0x5a, 0x5c unused
     CriSint32 nHeight;
     CriUint32 numRows;
     CriUint32 rowLimit;
@@ -4287,8 +4287,8 @@ void FUN_14003e850(void* player, void* source, void* destination)
     CriSint32 widthL;
     widthL = ((Player*)player)->Width;
     nHeight = ((Player*)player)->Height;
-    srcPitchY = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
-    chromaPitch = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
+    srcPitch.Luma = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80);
+    srcPitch.Chroma = (CriSint16)((((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80);
     lumaRow = (const CriUint8*)source;
     pU = lumaRow + (((widthL + 0xf) / 0x10) * 0x10 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20);
     planeV = pU + (((widthL + 0xf) / 0x10) * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * (((nHeight + 0x1f) / 0x20) * 0x20 / 2);
@@ -4297,7 +4297,7 @@ void FUN_14003e850(void* player, void* source, void* destination)
     halfBytes = (((Destination*)destination)->Planes[0].RowBytes + 1) / 2;
     rowsUV = (((Destination*)destination)->Planes[0].Rows + 1) / 2;
     rowsLeft = numRows;
-    lineLen = srcPitchY;
+    lineLen = srcPitch.Luma;
     if (lineLen > rowLimit)
         lineLen = rowLimit;
     srcLine = lumaRow;
@@ -4305,11 +4305,11 @@ void FUN_14003e850(void* player, void* source, void* destination)
     for (i = 0; i < rowsLeft; i++)
     {
         memcpy(dstp, srcLine, lineLen);
-        srcLine = srcLine + srcPitchY;
+        srcLine = srcLine + srcPitch.Luma;
         dstp = dstp + ((Destination*)destination)->Planes[0].Pitch;
     }
     rowsLeft = rowsUV;
-    lineLen = chromaPitch;
+    lineLen = srcPitch.Chroma;
     if (lineLen > halfBytes)
         lineLen = halfBytes;
     srcLine = pU;
@@ -4317,11 +4317,11 @@ void FUN_14003e850(void* player, void* source, void* destination)
     for (i = 0; i < rowsLeft; i++)
     {
         memcpy(dstp, srcLine, lineLen);
-        srcLine = srcLine + chromaPitch;
+        srcLine = srcLine + srcPitch.Chroma;
         dstp = dstp + ((Destination*)destination)->Planes[1].Pitch;
     }
     rowsLeft = rowsUV;
-    lineLen = chromaPitch;
+    lineLen = srcPitch.Chroma;
     if (lineLen > halfBytes)
         lineLen = halfBytes;
     srcLine = planeV;
@@ -4329,7 +4329,7 @@ void FUN_14003e850(void* player, void* source, void* destination)
     for (i = 0; i < rowsLeft; i++)
     {
         memcpy(dstp, srcLine, lineLen);
-        srcLine = srcLine + chromaPitch;
+        srcLine = srcLine + srcPitch.Chroma;
         dstp = dstp + ((Destination*)destination)->Planes[2].Pitch;
     }
 }
@@ -5066,42 +5066,52 @@ CriSint32 FUN_142cccba0(void* decoder)
     return 0;
 }
 
-// MS2-FUNCTIONAL: decode the coded 8x8 inter blocks of a macroblock and hand them to the block output function.
+// Decode the coded 8x8 inter blocks of a macroblock, then hand each coded block to the block output function. The
+// exe writes the output pass out block by block and re-reads both function slots for every call.
 // @0x142cccd80
 CriSint32 FUN_142cccd80(void* decoder)
 {
     CriUint8* base = (CriUint8*)decoder;
     CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriSint32 quant = CriMpvField<CriSint32>(decoder, MPV_QUANT);
     CriMpvField<CriSint32>(context, 0x48) = 1;
-    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<CriSint32>(context, 0x30) = quant;
     CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE_FIRST;
     CriSint32 counts[6];
-    CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
-    CriUint8* coefficients = base + MPV_COEF_LUMA;
-    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER);
-    for (CriSint32 block = 0; block < 6; ++block)
+    CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) << 2;
+    for (CriUint32 block = 0; block < 6; ++block)
     {
         if (mask < 0)
         {
-            CriMpvField<void*>(context, 0x20) = coefficients;
-            counts[block] = decode(decoder, context);
+            CriMpvField<void*>(context, 0x20) = base + MPV_COEF_LUMA + block * 0x80;
+            counts[block] = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER)(decoder, context);
         }
         mask += mask;
-        coefficients += 0x80;
     }
-    CriMpvBlockFunc emit = CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC);
     void** slots = (void**)(base + MPV_BLOCK_SLOTS);
-    mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
-    for (CriSint32 block = 0; block < 6; ++block)
-    {
-        if (mask < 0)
-            emit(base + MPV_COEF_LUMA + (CriSint64)block * 0x80, slots[block], counts[block]);
-        mask += mask;
-    }
+    mask = CriMpvField<CriSint32>(decoder, MPV_CODED) << 2;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA, slots[0], counts[0]);
+    mask += mask;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA + 0x80, slots[1], counts[1]);
+    mask += mask;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA + 0x100, slots[2], counts[2]);
+    mask += mask;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA + 0x180, slots[3], counts[3]);
+    mask += mask;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA + 0x200, slots[4], counts[4]);
+    mask += mask;
+    if (mask < 0)
+        CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA + 0x280, slots[5], counts[5]);
     return 0;
 }
 
-// MS2-FUNCTIONAL: decode the six blocks of an intra macroblock into 16-bit coefficient planes and emit their counts.
+// Decode the six blocks of an intra macroblock into 16-bit coefficient planes and emit their counts. The decode slot
+// is re-read for every block, as in the exe.
 // @0x142cccef0
 CriSint32 FUN_142cccef0(void* decoder)
 {
@@ -5109,56 +5119,55 @@ CriSint32 FUN_142cccef0(void* decoder)
     CriUint8* intra = base + MPV_COEF_INTRA;
     memset(intra, 0, 0x600);
     CriUint8* context = base + MPV_BLOCK_CONTEXT;
+    CriSint32 quant = CriMpvField<CriSint32>(decoder, MPV_QUANT);
     CriMpvField<CriSint32>(context, 0x48) = 0;
-    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<CriSint32>(context, 0x30) = quant;
     CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE;
     CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_LUMA);
     CriMpvField<void*>(context, 0x20) = intra;
     CriMpvField<void*>(context, 0x38) = base + MPV_DC;
-    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK);
     CriUint8* counts = base + 0x1350;
-    counts[0] = (CriUint8)decode(decoder, context);
+    counts[0] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0x400;
-    counts[1] = (CriUint8)decode(decoder, context);
+    counts[1] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0x500;
-    counts[2] = (CriUint8)decode(decoder, context);
+    counts[2] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0x600;
-    counts[3] = (CriUint8)decode(decoder, context);
+    counts[3] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_CHROMA);
     CriMpvField<void*>(context, 0x38) = base + MPV_DC + 4;
     CriMpvField<void*>(context, 0x20) = base + 0x700;
-    counts[4] = (CriUint8)decode(decoder, context);
+    counts[4] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x38) = base + MPV_DC + 8;
     CriMpvField<void*>(context, 0x20) = base + 0x800;
-    counts[5] = (CriUint8)decode(decoder, context);
+    counts[5] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<CriMpvEmitFunc>(decoder, MPV_BLOCK_FUNC)(counts);
     return 0;
 }
 
 // MS2-FUNCTIONAL: decode the coded inter blocks of a macroblock into 16-bit coefficient planes and emit their counts.
+// Same length and instructions as the exe; only the register choice differs (decoder in rbx, the exe uses rdi).
 // @0x142ccd080
 CriSint32 FUN_142ccd080(void* decoder)
 {
     CriUint8* base = (CriUint8*)decoder;
+    CriSint32 quant = CriMpvField<CriSint32>(decoder, MPV_QUANT);
     CriUint8* context = base + MPV_BLOCK_CONTEXT;
     CriMpvField<CriSint32>(context, 0x48) = 1;
-    CriMpvField<CriSint32>(context, 0x30) = CriMpvField<CriSint32>(decoder, MPV_QUANT);
+    CriMpvField<CriSint32>(context, 0x30) = quant;
     CriMpvField<void*>(context, 0x28) = base + MPV_COEF_BASE_FIRST;
-    CriUint8* coefficients = base + MPV_COEF_INTRA;
     CriSint32 mask = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
-    CriUint8* counts = base + 0x1350;
-    for (CriSint32 block = 0; block < 6; ++block)
+    for (CriUint32 block = 0; block < 6; ++block)
     {
         if (mask < 0)
         {
-            CriMpvField<void*>(context, 0x20) = coefficients;
-            counts[block] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_INTER)(decoder, context);
+            CriMpvField<void*>(context, 0x20) = base + MPV_COEF_INTRA + block * 0x100;
+            base[0x1350 + block] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(base, MPV_DECODE_INTER)(base, context);
         }
         mask += mask;
-        coefficients += 0x100;
     }
     CriMpvField<CriSint32>(decoder, 0x1380) = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
-    CriMpvField<CriMpvEmitFunc>(decoder, MPV_EMIT_FUNC)(counts);
+    CriMpvField<CriMpvEmitFunc>(decoder, MPV_EMIT_FUNC)(base + 0x1350);
     return 0;
 }
 
