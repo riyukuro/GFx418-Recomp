@@ -239,15 +239,21 @@ CriUint32 FUN_140041300(void* object)
 {
     struct ReaderOwner { CriUint8 Reserved[0x10]; void* Reader; };
     ReaderOwner* owner = (ReaderOwner*)object;
-    if (!owner->Reader)
+    void* reader = owner->Reader;
+    if (!reader)
         return 0;
-    void** vtable = *(void***)owner->Reader;
-    CriSint32 state = ((CriSint32 (*)(void*))vtable[7])(owner->Reader);
-    if (state == 0)
+    void** vtable = *(void***)reader;
+    switch (((CriSint32 (*)(void*))vtable[7])(reader))
+    {
+    case 0:
         return 0;
-    if (state == 1)
+    case 1:
         return 1;
-    return state == 2 ? 0 : 2;
+    case 2:
+        return 0;
+    default:
+        return 2;
+    }
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -263,11 +269,10 @@ void FUN_140043680(void* object)
         CriUint8 Reserved18[0x78];
         CriSint32 Active;
     };
-    PlayerState* player = (PlayerState*)object;
-    if (player && player->Type)
+    if (object && ((PlayerState*)object)->Type)
     {
-        player->Active = 1;
-        FUN_140053e40(player->Work);
+        ((PlayerState*)object)->Active = 1;
+        FUN_140053e40(((PlayerState*)object)->Work);
     }
 }
 #pragma optimize("", on)
@@ -432,10 +437,10 @@ CriSint32 FUN_1400468f4(void* streamJoint, const void* chunk, void* suffix, CriU
     const ChunkView* view = (const ChunkView*)chunk;
     CriUint32 copied = maximum;
     CriSint32 remaining = 0;
-    if (view->Size <= maximum)
+    if (maximum >= view->Size)
     {
-        copied = view->Size;
         remaining = (CriSint32)(maximum - view->Size);
+        copied = view->Size;
     }
     criSj_SplitChunk(chunk, copied, (void*)chunk, suffix);
     // Slot 4 is PutChunk(joint, id, chunk): the exe passes the prefix (still in r8 after the leaf split).
@@ -575,9 +580,8 @@ void FUN_14003e6a0(void* target, const CriUint64* settings)
 void FUN_1400427b0(void* decoderList)
 {
     struct DecoderList { void* Decoders[2]; CriSint32 Count; };
-    DecoderList* list = (DecoderList*)decoderList;
-    for (CriSint32 index = 0; index < list->Count; ++index)
-        FUN_1400435d0(list->Decoders[index]);
+    for (CriSint32 index = 0; index < ((DecoderList*)decoderList)->Count; ++index)
+        FUN_1400435d0(((DecoderList*)decoderList)->Decoders[index]);
 }
 
 // MS2-FUNCTIONAL: notify every decoder in the audio list that its player is active.
@@ -1412,7 +1416,10 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 // @0x14003bf30
 CriSint32 criVmpv_CalcMovieHandleWork(CriSint32 count)
 {
-    return count * 0x8000 + 0x2084;
+    CriUint32 work;
+    work = (CriUint32)((CriUint32)(count * 4 * 0x2000 + 0x2080) / sizeof(CriUint32) * sizeof(CriUint32));
+    work += sizeof(CriUint32);
+    return work;
 }
 
 // MS2-FUNCTIONAL: install the caller's VMPV work buffer after validating its size and global handle state.
@@ -1903,16 +1910,20 @@ void FUN_14003d550(void* handle)
 // @0x14003d4b0
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
 {
-    memcpy((CriUint8*)handle + 0x200, &videoBuffer, sizeof(videoBuffer));
-    memcpy((CriUint8*)handle + 0x208, &alphaBuffer, sizeof(alphaBuffer));
+    struct HandleBuffers { CriUint8 Reserved[0x200]; void* VideoBuffer; void* AlphaBuffer; };
+    HandleBuffers* hn = (HandleBuffers*)handle;
+    hn->VideoBuffer = videoBuffer;
+    hn->AlphaBuffer = alphaBuffer;
 }
 
 // MS2-FUNCTIONAL: publish the secondary video and alpha output buffers on a movie handle.
 // @0x14003d500
 void FUN_14003d500(void* handle, void* videoBuffer, void* alphaBuffer)
 {
-    memcpy((CriUint8*)handle + 0x210, &videoBuffer, sizeof(videoBuffer));
-    memcpy((CriUint8*)handle + 0x218, &alphaBuffer, sizeof(alphaBuffer));
+    struct HandleBuffers { CriUint8 Reserved[0x210]; void* VideoBuffer; void* AlphaBuffer; };
+    HandleBuffers* hn = (HandleBuffers*)handle;
+    hn->VideoBuffer = videoBuffer;
+    hn->AlphaBuffer = alphaBuffer;
 }
 
 // MS2-FUNCTIONAL: return the frame pointer currently stored in a CRI VMPV handle.
@@ -2403,12 +2414,12 @@ void FUN_140044de0(void* decoder, void* first, void* second)
 void* FUN_140044e40(void* decoder)
 {
     // unlike its neighbours this slot sits in the interface table itself and takes no object (0x140044e6e)
-    if (!decoder)
-        return NULL;
-    void* target = *(void**)((CriUint8*)decoder + 0xe8);
-    if (!target)
-        return NULL;
-    return ((void* (*)(void))target)();
+    typedef void* (*Callback)(void);
+    struct DecoderTable { CriUint8 Reserved[0xe8]; Callback Slot; };
+    void* result = NULL;
+    if (decoder && ((DecoderTable*)decoder)->Slot)
+        result = ((DecoderTable*)decoder)->Slot();
+    return result;
 }
 #pragma optimize("", on)
 
@@ -2620,21 +2631,15 @@ void FUN_140045998(void* streamJoint)
 // @0x140045b34
 CriSint32 criSjUni_GetNumChainPool(void* streamJoint)
 {
-    CriUint8* bytes = (CriUint8*)streamJoint;
-    void* lock;
-    memcpy(&lock, bytes + 0x10, sizeof(lock));
-    if (lock)
-        FUN_140039f50((LPCRITICAL_SECTION)lock);
+    struct ChainPool { CriUint8 Reserved00[0x10]; LPCRITICAL_SECTION Lock; CriUint8 Reserved18[0x30]; void* FreeChunk; };
+    ChainPool* pool = (ChainPool*)streamJoint;
+    if (pool->Lock)
+        FUN_140039f50(pool->Lock);
     CriSint32 count = 0;
-    void* chunk;
-    memcpy(&chunk, bytes + 0x48, sizeof(chunk));
-    while (chunk)
-    {
+    for (void* chunk = pool->FreeChunk; chunk; chunk = *(void**)chunk)
         ++count;
-        memcpy(&chunk, chunk, sizeof(chunk));
-    }
-    if (lock)
-        FUN_140039f8c((LPCRITICAL_SECTION)lock);
+    if (pool->Lock)
+        FUN_140039f8c(pool->Lock);
     return count;
 }
 
@@ -2781,16 +2786,20 @@ void FUN_140041e30(void* manager, void* callback, void* userData, CriSint32 stre
 // @0x140041030
 void FUN_140041030(void* handle, CriUint32 width, CriUint32 height)
 {
-    memcpy((CriUint8*)handle + 0x238, &width, sizeof(width));
-    memcpy((CriUint8*)handle + 0x23c, &height, sizeof(height));
+    struct HandleSize { CriUint8 Reserved[0x238]; CriUint32 Width; CriUint32 Height; };
+    HandleSize* hn = (HandleSize*)handle;
+    hn->Width = width;
+    hn->Height = height;
 }
 
 // MS2-FUNCTIONAL: publish the two caller-provided buffer pointers on the CRI video handle.
 // @0x140041080
 void FUN_140041080(void* handle, void* first, void* second)
 {
-    memcpy((CriUint8*)handle + 0x248, &first, sizeof(first));
-    memcpy((CriUint8*)handle + 0x250, &second, sizeof(second));
+    struct HandleBuffers { CriUint8 Reserved[0x248]; void* First; void* Second; };
+    HandleBuffers* hn = (HandleBuffers*)handle;
+    hn->First = first;
+    hn->Second = second;
 }
 
 // MS2-FUNCTIONAL: mark the CRI handle's error state when a handle is supplied.
@@ -2839,13 +2848,11 @@ CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
 // @0x140043c50
 void* FUN_140043c50(void** decoder)
 {
-    if (!decoder || !decoder[1])
-        return NULL;
-    void** apiTable = (void**)decoder[1];
-    if (!apiTable[0x28 / sizeof(void*)])
-        return NULL;
-    typedef void* (*FrameInfoFunction)(void*);
-    return ((FrameInfoFunction)apiTable[0x28 / sizeof(void*)])(*decoder);
+    typedef void* (*Callback)(void*);
+    void* result = NULL;
+    if (decoder && ((CriDecoderWrapper*)decoder)->Table[0x28 / 8])
+        result = ((Callback)((CriDecoderWrapper*)decoder)->Table[0x28 / 8])(((CriDecoderWrapper*)decoder)->Object);
+    return result;
 }
 
 // MS2-FUNCTIONAL: copy an RFB frame only while the VMPV handle is not stopped and data is present.
@@ -3136,8 +3143,11 @@ CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, C
 // @0x1400445d0
 CriUint64 FUN_1400445d0(CriUint64* pair)
 {
-    return pair && *(void**)((CriUint8*)pair[1] + 0x28)
-        ? (*(CriUint64 (**)(CriUint64))((CriUint8*)pair[1] + 0x28))(pair[0]) : 0;
+    typedef CriUint64 (*Callback)(CriUint64);
+    CriUint64 result = 0;
+    if (pair && ((CriDecoderWrapper*)pair)->Table[0x28 / 8])
+        result = ((Callback)((CriDecoderWrapper*)pair)->Table[0x28 / 8])(pair[0]);
+    return result;
 }
 
 // MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x38 when provided.
@@ -3515,7 +3525,7 @@ void* FUN_140041c00(void* context)
 
 // MS2-FUNCTIONAL: destroy the global heap manager and optionally free its owning object.
 // @0x140041c60
-void* FUN_140041c60(void* manager, CriUint64 flags)
+void* FUN_140041c60(void* manager, CriUint32 flags)
 {
     *(const void**)manager = &PTR_FUN_1431b4f78;
     FUN_14257db50(manager);
