@@ -103,7 +103,7 @@ extern "C" int DAT_143c49100;
 extern "C" int DAT_143c494e8;
 extern "C" int DAT_143c494f8;
 extern "C" int DAT_143c49500;
-extern "C" int DAT_143d49580;
+extern "C" __declspec(align(16)) unsigned char DAT_143d49580[0x400];
 extern "C" int DAT_143d49680;
 extern "C" int DAT_143d49780;
 extern "C" int DAT_143d49880;
@@ -129,19 +129,19 @@ extern "C" int DAT_143d4a2c0;
 extern "C" int DAT_143d4a2e0;
 extern "C" int DAT_143d4a300;
 extern "C" int DAT_143d4a320;
-extern "C" int DAT_143d4a340;
+extern "C" __declspec(align(16)) unsigned char DAT_143d4a340[0x80];
 extern "C" unsigned char DAT_143d4a3bc;
 extern "C" unsigned char DAT_143d4a3bd;
 extern "C" unsigned char DAT_143d4a3be;
 extern "C" unsigned char DAT_143d4a3bf;
 extern "C" int DAT_143d4a3c0;
 extern "C" int DAT_143d4a3c4;
-extern "C" int DAT_143d4a400;
+extern "C" __declspec(align(16)) unsigned char DAT_143d4a400[0x80];
 extern "C" unsigned char DAT_143d4a47c;
 extern "C" unsigned char DAT_143d4a47d;
 extern "C" unsigned char DAT_143d4a47e;
 extern "C" unsigned char DAT_143d4a47f;
-extern "C" int DAT_143d4a480;
+extern "C" __declspec(align(16)) unsigned char DAT_143d4a480[0x400];
 extern "C" int DAT_143d4a580;
 extern "C" int DAT_143d4a680;
 extern "C" int DAT_143d4a700;
@@ -511,7 +511,7 @@ int FUN_140054210(cri_any = cri_any());
 int FUN_140054230(cri_any = cri_any());
 void FUN_140054250(cri_any = cri_any());
 void FUN_140054320(cri_any = cri_any());
-void FUN_140054490(cri_any = cri_any());
+void FUN_140054490(cri_u8);
 void FUN_1400544b0();
 void FUN_1400544e0(cri_any = cri_any());
 void FUN_1400545f0(cri_any = cri_any());
@@ -522,7 +522,7 @@ void FUN_140054a80(cri_any = cri_any());
 void FUN_140054b60(cri_any = cri_any());
 longlong FUN_140054cf0(cri_any = cri_any(), cri_any = cri_any());
 longlong FUN_140055410(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140055510(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void FUN_140055510(longlong, void *, int);
 longlong FUN_140055550(cri_any = cri_any(), cri_any = cri_any());
 longlong FUN_140057fe0(cri_any = cri_any(), cri_any = cri_any());
 longlong FUN_1400584e0(cri_any = cri_any(), cri_any = cri_any());
@@ -571,8 +571,8 @@ void FUN_14005b280(cri_any = cri_any(), ...);
 void FUN_14005b2a0(cri_any = cri_any(), ...);
 void FUN_14005b2c0(cri_any = cri_any(), ...);
 void FUN_14005b2e0(cri_any = cri_any(), ...);
-void FUN_14005b300(cri_any = cri_any(), cri_any = cri_any());
-void FUN_14005b390(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void FUN_14005b300(cri_u8, cri_u8);
+void FUN_14005b390(longlong, cri_u8, void *);
 void FUN_14005b560(cri_any = cri_any());
 void FUN_14005b580(cri_any = cri_any());
 void FUN_14005b5c0(cri_any = cri_any());
@@ -580,7 +580,7 @@ void FUN_14005b650(cri_any = cri_any());
 void FUN_14005b6d0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005b810(cri_any = cri_any());
 void FUN_14005b860(longlong);
-void FUN_14005b8a0(cri_any = cri_any());
+void FUN_14005b8a0(longlong);
 cri_u8 FUN_14005b8c0(cri_any = cri_any());
 void FUN_14005dc70(cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005e5b0(longlong, void *);
@@ -606,9 +606,9 @@ int FUN_140062830();
 int FUN_140062860();
 int FUN_140062890();
 void FUN_1400628d0();
-ulonglong FUN_140062900(cri_any = cri_any());
-void FUN_140062910(cri_any = cri_any());
-void FUN_140062920(cri_any = cri_any());
+ulonglong FUN_140062900(longlong);
+void FUN_140062910(longlong);
+void FUN_140062920(longlong);
 void FUN_140062950(cri_any = cri_any());
 cri_u8 FUN_140062a40(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140062ab0(cri_any = cri_any());
@@ -626,8 +626,8 @@ cri_u8 FUN_140063eb0(cri_any = cri_any());
 cri_u2 * FUN_140064070(cri_any = cri_any());
 void FUN_140064360();
 void FUN_140064440();
-void FUN_140064510(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140064640(cri_any = cri_any(), cri_any = cri_any());
+void FUN_140064510();
+void FUN_140064640();
 void FUN_140064760();
 void FUN_1400649a0();
 longlong FUN_140064ae0(cri_any = cri_any());
@@ -658,7 +658,7 @@ void FUN_140065790();
 void FUN_1400657a0(cri_any = cri_any());
 void FUN_1400657e0();
 void FUN_140065800();
-void FUN_140065900(cri_any = cri_any());
+void FUN_140065900(void *);
 int FUN_140065940(int);
 void FUN_1400659a0(const cri_u1 *, cri_u1 *);
 void FUN_1400659f0();
@@ -829,7 +829,7 @@ void FUN_140054320(cri_any cri_p0)
     *(longlong *)((char *)arg1 + 0x19a8) = arg1 + 0x1600;
   }
   if (pc_v1 == (cri_code *)&FUN_1400541f0) {
-    FUN_140065900(arg1 + 0x19b0);
+    FUN_140065900((char *)arg1 + 0x19b0);
     *(longlong *)((char *)arg1 + 0x1a18) = arg1 + 0x1380;
     *(longlong *)((char *)arg1 + 0x19e8) = arg1 + 0xd80;
     *(longlong *)((char *)arg1 + 0x1980) = arg1 + 0x780;
@@ -845,9 +845,8 @@ void FUN_140054320(cri_any cri_p0)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054490
-void FUN_140054490(cri_any cri_p0)
+void FUN_140054490(cri_u8 arg1)
 {
-  cri_u8 arg1 = cri_p0;
   FUN_140054250(arg1);  // the exe passes rcx through
   FUN_140054320(arg1);
   return;
@@ -1500,21 +1499,20 @@ longlong FUN_140055410(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140055510
-void FUN_140055510(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void FUN_140055510(longlong arg1, void *arg2, int arg3)
 {
-  longlong arg1 = cri_p0;
-  void *arg2 = cri_p1;
-  int arg3 = cri_p2;
   int i_v1;
   int i_v2;
+  char *dst;
   
   i_v1 = *(int *)((char *)arg1 + 0x1c54);
+  dst = *(char **)((char *)arg1 + 0x1c48) + i_v1;
   i_v2 = *(int *)((char *)arg1 + 0x1c50) - i_v1;
   if (arg3 < i_v2) {
     i_v2 = arg3;
   }
   *(int *)((char *)arg1 + 0x1c54) = i_v1 + i_v2;
-  memcpy((void *)((longlong)i_v1 + *(longlong *)((char *)arg1 + 0x1c48)),arg2,(longlong)i_v2);
+  memcpy(dst,arg2,(longlong)i_v2);
   return;
 }
 
@@ -6985,10 +6983,8 @@ void FUN_14005b2e0(cri_any cri_p0, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b300
-void FUN_14005b300(cri_any cri_p0, cri_any cri_p1)
+void FUN_14005b300(cri_u8 arg1, cri_u8 arg2)
 {
-  cri_u8 arg1 = cri_p0;
-  cri_u8 arg2 = cri_p1;
   int i_v1;
   uint u_v2;
   cri_u8 u_v3;
@@ -7000,25 +6996,23 @@ void FUN_14005b300(cri_any cri_p0, cri_any cri_p1)
   }
   u_v3 = 0xff030305;
   u_v2 = FUN_140051d90(arg2);
-  if (u_v2 != 0) {
-    while ((u_v2 & 0xcc) == 0) {
-      i_v1 = FUN_140052010((longlong *)arg2,1,4);
-      if ((i_v1 != 4) || (u_v2 = FUN_140051d90(arg2), u_v2 == 0)) goto LAB_14005b36f;
+  while (u_v2 != 0) {
+    if ((u_v2 & 0xcc) != 0) {
+      u_v3 = 0;
+      break;
     }
-    u_v3 = 0;
+    i_v1 = FUN_140052010((longlong *)arg2,1,4);
+    if (i_v1 != 4) break;
+    u_v2 = FUN_140051d90(arg2);
   }
-LAB_14005b36f:
   FUN_14005af30(arg1,u_v3);
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b390
-void FUN_14005b390(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void FUN_14005b390(longlong arg1, cri_u8 arg2, void *arg3)
 {
-  longlong arg1 = cri_p0;
-  cri_u8 arg2 = cri_p1;
-  void *arg3 = cri_p2;
   ushort u_v1;
   ushort u_v2;
   int i_v3;
@@ -7261,9 +7255,8 @@ void FUN_14005b860(longlong arg1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b8a0
-void FUN_14005b8a0(cri_any cri_p0)
+void FUN_14005b8a0(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   if (*(int *)((char *)arg1 + 0x318) == 3) {
     FUN_14005b5c0(arg1);  // tail jmp keeps rcx
     return;
@@ -11371,26 +11364,23 @@ void thunk_FUN_14005b0b0(cri_any cri_unused, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062900
-ulonglong FUN_140062900(cri_any cri_p0)
+ulonglong FUN_140062900(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   return FUN_14005b0d0(*(ulonglong *)((char *)arg1 + 0x18f8));
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062910
-void FUN_140062910(cri_any cri_p0)
+void FUN_140062910(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   FUN_14005b0f0(*(ulonglong *)((char *)arg1 + 0x1848));
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062920
-void FUN_140062920(cri_any cri_p0)
+void FUN_140062920(longlong arg1)
 {
-  longlong arg1 = cri_p0;
   if (arg1 == 0) {
     FUN_14005b110();
     return;
@@ -12546,26 +12536,34 @@ cri_u2 * FUN_140064070(cri_any cri_p0)
 // @0x140064360
 void FUN_140064360()
 {
-  DAT_143d4a3bc = 0x76;
-  DAT_143d4a3bd = 0x76;
-  _DAT_143d4a340 = 0x1212121212121212;
-  _DAT_143d4a348 = 0x1212121212121212;
-  _DAT_143d4a350 = 0x1212121212121212;
-  _DAT_143d4a358 = 0x1212121212121212;
-  DAT_143d4a3be = 0x87;
-  _DAT_143d4a360 = 0x2222222222222222;
-  _DAT_143d4a368 = 0x2222222222222222;
-  _DAT_143d4a370 = 0x2222222222222222;
-  _DAT_143d4a378 = 0x2222222222222222;
-  DAT_143d4a3bf = 0x87;
-  _DAT_143d4a380 = 0x303030303030303;
-  _DAT_143d4a388 = 0x303030303030303;
-  _DAT_143d4a390 = 0x3333333333333333;
-  _DAT_143d4a398 = 0x3333333333333333;
-  _DAT_143d4a3a0 = 0x4343434343434343;
-  _DAT_143d4a3a8 = 0x4343434343434343;
-  _DAT_143d4a3b0 = 0x5454545454545454;
-  _DAT_143d4a3b8 = 0x65656565;
+  int i;
+  cri_u1 *p = DAT_143d4a340;
+
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x12;
+  }
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x22;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x3;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x33;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x43;
+  }
+  for (i = 0; i < 0x8; i++) {
+    *p++ = 0x54;
+  }
+  for (i = 0; i < 0x4; i++) {
+    *p++ = 0x65;
+  }
+  *p++ = 0x76;
+  *p++ = 0x76;
+  *p++ = 0x87;
+  *p++ = 0x87;
   return;
 }
 
@@ -12573,104 +12571,116 @@ void FUN_140064360()
 // @0x140064440
 void FUN_140064440()
 {
-  DAT_143d4a47c = 0x66;
-  DAT_143d4a47d = 0x66;
-  _DAT_143d4a400 = 0x202020202020202;
-  _DAT_143d4a408 = 0x202020202020202;
-  _DAT_143d4a410 = 0x202020202020202;
-  _DAT_143d4a418 = 0x202020202020202;
-  DAT_143d4a47e = 0x77;
-  _DAT_143d4a420 = 0x1212121212121212;
-  _DAT_143d4a428 = 0x1212121212121212;
-  _DAT_143d4a430 = 0x1212121212121212;
-  _DAT_143d4a438 = 0x1212121212121212;
-  DAT_143d4a47f = 0x88;
-  _DAT_143d4a440 = 0x2222222222222222;
-  _DAT_143d4a448 = 0x2222222222222222;
-  _DAT_143d4a450 = 0x2222222222222222;
-  _DAT_143d4a458 = 0x2222222222222222;
-  _DAT_143d4a460 = 0x3333333333333333;
-  _DAT_143d4a468 = 0x3333333333333333;
-  _DAT_143d4a470 = 0x4444444444444444;
-  _DAT_143d4a478 = 0x55555555;
+  int i;
+  cri_u1 *p = DAT_143d4a400;
+
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x2;
+  }
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x12;
+  }
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x22;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x33;
+  }
+  for (i = 0; i < 0x8; i++) {
+    *p++ = 0x44;
+  }
+  for (i = 0; i < 0x4; i++) {
+    *p++ = 0x55;
+  }
+  *p++ = 0x66;
+  *p++ = 0x66;
+  *p++ = 0x77;
+  *p++ = 0x88;
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064510
-void FUN_140064510(cri_any cri_p0, cri_any cri_p1)
+void FUN_140064510()
 {
-  cri_u8 arg1 = cri_p0;
-  cri_u4 arg2 = cri_p1;
-  int i_v1;
-  
-  i_v1 = CONCAT31((int3)((uint)arg2 >> 8),0x12);
-  memset(&DAT_143d4a480,i_v1,0x100);
-  i_v1 = CONCAT31((int3)((uint)i_v1 >> 8),0x22);
-  memset(&DAT_143d4a580,i_v1,0x100);
-  i_v1 = CONCAT31((int3)((uint)i_v1 >> 8),3);
-  memset(&DAT_143d4a680,i_v1,0x80);
-  i_v1 = CONCAT31((int3)((uint)i_v1 >> 8),0x33);
-  memset(&DAT_143d4a700,i_v1,0x80);
-  memset(&DAT_143d4a780,CONCAT31((int3)((uint)i_v1 >> 8),0x43),0x80);
-  _DAT_143d4a840 = 0x6565656565656565;
-  _DAT_143d4a848 = 0x6565656565656565;
-  _DAT_143d4a850 = 0x6565656565656565;
-  _DAT_143d4a858 = 0x6565656565656565;
-  _DAT_143d4a800 = 0x5454545454545454;
-  _DAT_143d4a860 = 0x7676767676767676;
-  _DAT_143d4a868 = 0x7676767676767676;
-  _DAT_143d4a870 = 0x8787878787878787;
-  _DAT_143d4a808 = 0x5454545454545454;
-  _DAT_143d4a810 = 0x5454545454545454;
-  _DAT_143d4a818 = 0x5454545454545454;
-  _DAT_143d4a820 = 0x5454545454545454;
-  _DAT_143d4a878 = 0x98989898;
-  _DAT_143d4a828 = 0x5454545454545454;
-  _DAT_143d4a830 = 0x5454545454545454;
-  _DAT_143d4a838 = 0x5454545454545454;
-  DAT_143d4a87c = 0xa9;
-  DAT_143d4a87d = 0xa9;
-  DAT_143d4a87e = 0xb9;
-  DAT_143d4a87f = 0xb9;
+  int i;
+  cri_u1 *p = DAT_143d4a480;
+
+  for (i = 0; i < 0x100; i++) {
+    *p++ = 0x12;
+  }
+  for (i = 0; i < 0x100; i++) {
+    *p++ = 0x22;
+  }
+  for (i = 0; i < 0x80; i++) {
+    *p++ = 0x3;
+  }
+  for (i = 0; i < 0x80; i++) {
+    *p++ = 0x33;
+  }
+  for (i = 0; i < 0x80; i++) {
+    *p++ = 0x43;
+  }
+  for (i = 0; i < 0x40; i++) {
+    *p++ = 0x54;
+  }
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x65;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x76;
+  }
+  for (i = 0; i < 0x8; i++) {
+    *p++ = 0x87;
+  }
+  for (i = 0; i < 0x4; i++) {
+    *p++ = 0x98;
+  }
+  *p++ = 0xa9;
+  *p++ = 0xa9;
+  *p++ = 0xb9;
+  *p++ = 0xb9;
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064640
-void FUN_140064640(cri_any cri_p0, cri_any cri_p1)
+void FUN_140064640()
 {
-  cri_u8 arg1 = cri_p0;
-  cri_u4 arg2 = cri_p1;
-  int i_v1;
-  
-  i_v1 = CONCAT31((int3)((uint)arg2 >> 8),2);
-  memset(&DAT_143d49580,i_v1,0x100);
-  i_v1 = CONCAT31((int3)((uint)i_v1 >> 8),0x12);
-  memset(&DAT_143d49680,i_v1,0x100);
-  i_v1 = CONCAT31((int3)((uint)i_v1 >> 8),0x22);
-  memset(&DAT_143d49780,i_v1,0x100);
-  memset(&DAT_143d49880,CONCAT31((int3)((uint)i_v1 >> 8),0x33),0x80);
-  _DAT_143d49940 = 0x5555555555555555;
-  _DAT_143d49948 = 0x5555555555555555;
-  _DAT_143d49950 = 0x5555555555555555;
-  _DAT_143d49958 = 0x5555555555555555;
-  _DAT_143d49900 = 0x4444444444444444;
-  _DAT_143d49960 = 0x6666666666666666;
-  _DAT_143d49968 = 0x6666666666666666;
-  _DAT_143d49970 = 0x7777777777777777;
-  _DAT_143d49908 = 0x4444444444444444;
-  _DAT_143d49910 = 0x4444444444444444;
-  _DAT_143d49918 = 0x4444444444444444;
-  _DAT_143d49920 = 0x4444444444444444;
-  _DAT_143d49978 = 0x88888888;
-  _DAT_143d49928 = 0x4444444444444444;
-  _DAT_143d49930 = 0x4444444444444444;
-  _DAT_143d49938 = 0x4444444444444444;
-  DAT_143d4997c = 0x99;
-  DAT_143d4997d = 0x99;
-  DAT_143d4997e = 0xaa;
-  DAT_143d4997f = 0xba;
+  int i;
+  cri_u1 *p = DAT_143d49580;
+
+  for (i = 0; i < 0x100; i++) {
+    *p++ = 0x2;
+  }
+  for (i = 0; i < 0x100; i++) {
+    *p++ = 0x12;
+  }
+  for (i = 0; i < 0x100; i++) {
+    *p++ = 0x22;
+  }
+  for (i = 0; i < 0x80; i++) {
+    *p++ = 0x33;
+  }
+  for (i = 0; i < 0x40; i++) {
+    *p++ = 0x44;
+  }
+  for (i = 0; i < 0x20; i++) {
+    *p++ = 0x55;
+  }
+  for (i = 0; i < 0x10; i++) {
+    *p++ = 0x66;
+  }
+  for (i = 0; i < 0x8; i++) {
+    *p++ = 0x77;
+  }
+  for (i = 0; i < 0x4; i++) {
+    *p++ = 0x88;
+  }
+  *p++ = 0x99;
+  *p++ = 0x99;
+  *p++ = 0xaa;
+  *p++ = 0xba;
   return;
 }
 
@@ -13474,9 +13484,8 @@ void FUN_140065800()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065900
-void FUN_140065900(cri_any cri_p0)
+void FUN_140065900(void *arg1)
 {
-  void *arg1 = cri_p0;
   memset(arg1,0,0x78);
   return;
 }
@@ -13519,8 +13528,8 @@ void FUN_1400659a0(const cri_u1 *arg1, cri_u1 *arg2)
 // @0x1400659f0
 void FUN_1400659f0()
 {
-  DAT_143d4ab80 = CRI_ADDR(DAT_143d4ab90);
-  memcpy(&DAT_143d4ab90,&DAT_1431bbcd0,0x50);
+  DAT_143d4ab80 = (float *)((cri_u8)((char *)&DAT_143d4ab90 + 0xf) & ~(cri_u8)0xf);  // 16-aligned buffer (the piece is already aligned)
+  memcpy(DAT_143d4ab80,&DAT_1431bbcd0,0x50);
   return;
 }
 
