@@ -15,6 +15,7 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BED@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142523a30 ; order
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0 ; unique
 // MS2-PINS-END tplpin
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/as3_vmabcfile.h"
@@ -2130,12 +2131,12 @@ void Sfr31ShutdownRegistered(UPInt self)
 void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
 {
     const UPInt traits = FUN_14250fa80(self);
-    const int kind = *reinterpret_cast<const int*>(si);
-    if (((kind << 22) >> 27) != 0xb || argc == 0xb)
+    const SInt32 bt = si->BindType;
+    const SPInt index = si->ValueInd;
+    if (bt != SlotInfo::BT_Code || argc == bt)
     {
-        ASStringNode* node = *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const char*>(si) + 0x28);
-        ASString name(node);
-        Sfr31StoreSlotValue(traits, (kind << 5) >> 15, reinterpret_cast<const Value*>(arg), argc, reinterpret_cast<const UPInt*>(&name));
+        ASString name(si->Name.GetPtr());
+        Sfr31StoreSlotValue(traits, index, reinterpret_cast<const Value*>(arg), argc, reinterpret_cast<const UPInt*>(&name));
     }
 }
 
@@ -2383,7 +2384,6 @@ Scaleform::UPInt FUN_142506f00(Scaleform::UPInt link, Scaleform::UPInt traits, S
 Scaleform::UPInt FUN_14250ae60(Scaleform::UPInt link, Scaleform::UPInt ind);
 Scaleform::GFx::AS3::Value* FUN_1423ef9b0(Scaleform::GFx::AS3::Value* out, Scaleform::UPInt x);
 Scaleform::UPInt FUN_14250d760(Scaleform::UPInt root, Scaleform::UPInt pos);
-void FUN_142575f10(Scaleform::UPInt obj, Scaleform::UPInt heap, Scaleform::UPInt owner, Scaleform::UPInt flag);
 void FUN_14257dcd0(void* obj);
 void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* a, Scaleform::GFx::AS3::Value* b);
 
@@ -2464,7 +2464,7 @@ void Sfr31ObjectUserDataView::SetUserData(UPInt pmovieView, UPInt puserData, boo
 {
     if (pUserDataHolder != 0)
         Memory::pGlobalHeap->Free(pUserDataHolder);
-    AllocInfo ai(0x151, 0, 0);   // StatMV_VM_Instance_Mem, as in Sfr31SetHolderOf
+    AllocInfo ai(0x151, 0, 0);   // StatMV_VM_Instance_Mem, as in AS3ValueObjectInterface::SetUserData
     UPInt* h = static_cast<UPInt*>(Memory::pGlobalHeap->AllocAutoHeap(this, 0x10, &ai));
     if (h != 0) { h[0] = pmovieView; h[1] = puserData; }
     pUserDataHolder = h;
@@ -2472,12 +2472,18 @@ void Sfr31ObjectUserDataView::SetUserData(UPInt pmovieView, UPInt puserData, boo
         reinterpret_cast<Sfr31UserDataView*>(puserData)->FUN_142575f10(Sfr31Rd(pmovieView, 0x38), reinterpret_cast<UPInt>(this), isdobj);
 }
 
+} // namespace AS3
+
+// AS3ValueObjectInterface::SetUserData (vftable slot 36): the AS3 object pdata gets a new {movie, user data} holder.
 // @0x14252a4f0
-void Sfr31SetHolderOf(UPInt owner, UPInt self, UPInt b, UInt8 flag)
+void AS3ValueObjectInterface::SetUserData(void* pdata, ASUserData* puserdata, bool isdobj)
 {
+    using namespace AS3;
+    const UPInt self = reinterpret_cast<UPInt>(pdata);
+    const UPInt b = reinterpret_cast<UPInt>(puserdata);
     if (self != 0)
     {
-        const UPInt a = Sfr31Rd(owner, 8);
+        const UPInt a = reinterpret_cast<UPInt>(pMovieRoot);
         if (Sfr31Rd(self, 0x30) != 0)
             Memory::pGlobalHeap->Free(reinterpret_cast<void*>(Sfr31Rd(self, 0x30)));
         AllocInfo ai(0x151, 0, 0);
@@ -2485,9 +2491,11 @@ void Sfr31SetHolderOf(UPInt owner, UPInt self, UPInt b, UInt8 flag)
         if (h != 0) { h[0] = a; h[1] = b; }
         *reinterpret_cast<UPInt**>(self + 0x30) = h;
         if (b != 0)
-            FUN_142575f10(b, Sfr31Rd(a, 0x38), self, flag);
+            reinterpret_cast<Sfr31UserDataView*>(b)->FUN_142575f10(Sfr31Rd(a, 0x38), self, isdobj);
     }
 }
+
+namespace AS3 {
 
 // MS2-FUNCTIONAL 0x142526610: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142526610
