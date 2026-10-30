@@ -449,12 +449,14 @@ void RenderTargetData::UpdateData(RenderBuffer* buffer, IDirect3DSurface9* prt, 
     data->CacheID             = 0;
 }
 
-// MS2-FUNCTIONAL: the base beginMaskDisplay is inlined in the exe (no separate body size); same effect
 // @0x142736d60
 void HAL::beginMaskDisplay()
 {
     Render::HAL::beginMaskDisplay();
-    StencilChecked = false;
+    StencilChecked       = false;
+    StencilAvailable     = false;
+    MultiBitStencil      = false;
+    DepthBufferAvailable = false;
 }
 
 // MS2-FUNCTIONAL: written from the decompile
