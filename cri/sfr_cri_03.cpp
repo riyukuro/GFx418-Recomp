@@ -21,7 +21,8 @@ extern "C" CriSint32 DAT_143b27be0;
 extern "C" void* DAT_143b27be8;
 extern "C" CriUint8 DAT_143b27bf0[0x48];
 extern "C" const char* DAT_143ba9d08;
-extern "C" const char* DAT_143ba9d20;
+extern "C" const char* volatile DAT_143ba9d20;
+extern "C" const char* DAT_143ba9d30;
 extern "C" void* DAT_143b15f60;
 extern "C" CriUint8 DAT_143b27c80[];
 extern "C" CriUint32 DAT_143b27c60;
@@ -483,7 +484,7 @@ CriBool FUN_140042d70(void* decoderList, void* owner)
 // MS2-FUNCTIONAL: forward one decoder's interleaved output request.
 // @0x140042e40
 CriUint32 FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32 channels,
-                   void* output, CriUint32 flags, CriUint32* result)
+                        void* output, CriUint32 flags, CriUint32* result)
 {
     return FUN_140042f40(((void**)decoders)[index], player, channels, output, flags, result);
 }
@@ -491,7 +492,7 @@ CriUint32 FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32
 // MS2-FUNCTIONAL: forward one decoder's planar output request.
 // @0x140042ea0
 CriUint32 FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 channels,
-                   void* output, CriUint32 flags, CriUint32* result)
+                        void* output, CriUint32 flags, CriUint32* result)
 {
     return FUN_1400431a0(((void**)decoders)[index], player, channels, output, flags, result);
 }
@@ -1407,6 +1408,7 @@ CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: return the configured movie handle limit or the default limit of sixteen.
 // @0x14003c030
 CriUint32 criVmpv_GetMaxNumberOfHandles(void)
@@ -1421,6 +1423,7 @@ void* FUN_14003c060(CriUint32* count)
     *count = DAT_143b27c6c;
     return (void*)(uintptr_t)DAT_143b27c70;
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: include the configured internal frame pool in the requested count.
@@ -1607,6 +1610,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
 // @0x14003c130
 void FUN_14003c130(void)
@@ -1619,6 +1623,7 @@ void FUN_14003c130(void)
         FUN_14004f8d0();
     }
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: size the VMPV frame pool, output records, and its two stream-joint work areas.
@@ -2606,6 +2611,7 @@ void FUN_140041b50(void* state, CriSint64* elapsed, CriUint64* timestamp)
     *timestamp = now;
 }
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: install the notification callback and its user data on a player manager.
 // @0x140041df0
 void FUN_140041df0(void* manager, void* callback, void* userData)
@@ -2613,6 +2619,7 @@ void FUN_140041df0(void* manager, void* callback, void* userData)
     memcpy((CriUint8*)manager + 0x28, &callback, sizeof(callback));
     memcpy((CriUint8*)manager + 0x30, &userData, sizeof(userData));
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: route a decrypt callback to the selected active audio decoder.
@@ -3045,7 +3052,7 @@ void FUN_140046798(void* object)
 // @0x140046784
 void FUN_140046784(void* object)
 {
-    // The exe also stores a version string at DAT_143ba9d30 here; no symbol is bound for it, so the store is omitted.
+    DAT_143ba9d30 = "\nCRI Stream Joint/PCx64 Ver.1.01.00 Build:Jan 13 2012 19:02:02\n";
     (**(void (***)(void*))object)(object);
 }
 
@@ -3107,58 +3114,32 @@ void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size)
 // @0x1400467a0
 void FUN_1400467a0(void* object, CriSint32 operation = 0, CriSint32 limit = 0, void* output = NULL)
 {
-    if (object)
-    {
-        void* target = *(void**)((CriUint8*)*(void**)object + 0x10);
-        if (target)
-        {
-            typedef void (*Callback)(void*, CriSint32, CriSint32, void*);
-            ((Callback)target)(object, operation, limit, output);
-        }
-    }
+    typedef void (*Callback)(void*, CriSint32, CriSint32, void*);
+    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x10))(object, operation, limit, output);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's third virtual operation.
 // @0x1400467a8
 void FUN_1400467a8(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
-    if (object)
-    {
-        void* target = *(void**)((CriUint8*)*(void**)object + 0x18);
-        if (target)
-        {
-            typedef void (*Callback)(void*, CriSint32, void*);
-            ((Callback)target)(object, operation, chunk);
-        }
-    }
+    typedef void (*Callback)(void*, CriSint32, void*);
+    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x18))(object, operation, chunk);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's fourth virtual operation.
 // @0x1400467b0
 void FUN_1400467b0(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
-    if (object)
-    {
-        void* target = *(void**)((CriUint8*)*(void**)object + 0x20);
-        if (target)
-        {
-            typedef void (*Callback)(void*, CriSint32, void*);
-            ((Callback)target)(object, operation, chunk);
-        }
-    }
+    typedef void (*Callback)(void*, CriSint32, void*);
+    ((Callback)*(void**)((CriUint8*)*(void**)object + 0x20))(object, operation, chunk);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's fifth virtual operation.
 // @0x1400467b8
 CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
 {
-    if (!object)
-        return 0;
-    void* target = *(void**)((CriUint8*)*(void**)object + 0x28);
-    if (!target)
-        return 0;
     typedef CriSint32 (*Callback)(void*, CriSint32);
-    return ((Callback)target)(object, query);
+    return ((Callback)*(void**)((CriUint8*)*(void**)object + 0x28))(object, query);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's indexed range operation with default bounds.
@@ -3209,6 +3190,7 @@ void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count)
     return dst;
 }
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: execute the CRI Movie Player manager initialization hook.
 // @0x140041ea0
 void criMvPlyAmng_Initialize(void)
@@ -3222,6 +3204,7 @@ void criMvPlyAmng_Finalize(void)
 {
     FUN_1400532d0();
 }
+#pragma optimize("", on)
 
 // MS2-FUNCTIONAL: initialize the timer snapshot with the current CRI clock and its live-state flag.
 // @0x1400419d0
@@ -3291,6 +3274,7 @@ CriBool FUN_140041220(void* player, void*, CriUint32 first, CriUint32 second)
     return target ? (*(CriBool (**)(void*, CriUint32, CriUint32))((CriUint8*)*(void**)target + 8))(target, first, second) : 0;
 }
 
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: return the player's shared work-memory size and default alignment.
 // @0x1400411e0
 void* FUN_1400411e0(CriUint32* size)
@@ -3298,6 +3282,7 @@ void* FUN_1400411e0(CriUint32* size)
     *size = 0x10;
     return DAT_143b27c80;
 }
+#pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: publish CRI Base's runtime banner string.
