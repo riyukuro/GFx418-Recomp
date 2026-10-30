@@ -649,7 +649,7 @@ extern "C" void FUN_14257db40(void* self);   // RefCountImplCore::~RefCountImplC
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
 
 namespace {
-void* Sfr16ScalarDeletingDtor(void* self, Scaleform::UPInt flags)
+void* Sfr16ScalarDeletingDtor(void* self, unsigned int flags)
 {
     FUN_14257db40(self);
     if (flags & 1)
@@ -670,7 +670,7 @@ void* Sfr16ScalarDeletingDtor(void* self, Scaleform::UPInt flags)
 extern "C" void FUN_14257db50(void* self);   // RefCountNTSImplCore::~RefCountNTSImplCore: stores its vptr through self
 
 // Same as Sfr16ScalarDeletingDtor for the classes whose base is RefCountNTSImplCore.
-void* Sfr16ScalarDeletingDtorNts(void* self, Scaleform::UPInt flags)
+void* Sfr16ScalarDeletingDtorNts(void* self, unsigned int flags)
 {
     FUN_14257db50(self);
     if (flags & 1)
@@ -691,38 +691,27 @@ void* Sfr16ScalarDeletingDtorNts(void* self, Scaleform::UPInt flags)
 
 // The exe contains byte-identical generic scalar-deleting destructor copies with ambiguous owners.
 // @0x1424e1c20
-// MS2-FUNCTIONAL 0x1424e1c20: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1c20(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1c20(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1c80
-// MS2-FUNCTIONAL 0x1424e1c80: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1c80(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1c80(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1ce0
-// MS2-FUNCTIONAL 0x1424e1ce0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1ce0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1ce0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1d40
-// MS2-FUNCTIONAL 0x1424e1d40: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1d40(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1d40(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1da0
-// MS2-FUNCTIONAL 0x1424e1da0: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1da0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1da0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1e00
-// MS2-FUNCTIONAL 0x1424e1e00: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1e00(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1e00(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1e60
-// MS2-FUNCTIONAL 0x1424e1e60: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1e60(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1e60(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 // @0x1424e1ec0
-// MS2-FUNCTIONAL 0x1424e1ec0: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1ec0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1ec0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 // @0x1424e1f20
-// MS2-FUNCTIONAL 0x1424e1f20: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1f20(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1f20(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1f80
-// MS2-FUNCTIONAL 0x1424e1f80: runs the shared base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtor(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtor(self, flags); }
 // @0x1424e1fe0
-// MS2-FUNCTIONAL 0x1424e1fe0: runs the RefCountNTSImplCore base cleanup, then follows the scalar-delete flags to heap free or sized delete.
-extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, Scaleform::UPInt flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
+extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);
@@ -740,16 +729,15 @@ SlotInfo::~SlotInfo()
 }
 
 // The exe releases the embedded context bag before the entry-data members, then conditionally frees the node.
-// MS2-FUNCTIONAL 0x1424e1bd0: same cleanup order and delete-flag behavior; this generic deleting dtor has no recovered
-// concrete owner type in our headers.
+// The generic deleting dtor has no recovered concrete owner type in our headers; the node is 0x90 bytes.
 // @0x1424e1bd0
-void* FUN_1424e1bd0(void* node, Scaleform::UPInt flags)
+void* FUN_1424e1bd0(void* node, unsigned int flags)
 {
     if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
         FUN_142626160(static_cast<char*>(node) + 0x40);
     FUN_14257eb30(node);
     if (flags & 1)
-        ::operator delete(node);
+        ::operator delete(node, 0x90);
     return node;
 }
 
@@ -1910,24 +1898,18 @@ Scaleform::GFx::AS3::Value* FUN_1424e1a20(const Scaleform::GFx::AS3::Value* func
 }
 
 // Releases the rollover references in reverse order, then the raw heap array.
-// MS2-FUNCTIONAL 0x1424de510: same referenced objects and cleanup order; cl lays out the loop and indirect heap call differently.
+// A rollover array of NTS-refcounted objects followed by the last hovered one; the implicit dtor releases the
+// last hovered object, then the array from its end.
+struct Unk_As3_16RolloverState
+{
+    Scaleform::ArrayLH<Scaleform::Ptr<Scaleform::RefCountNTSImpl> > Rollover;  // +0x00
+    Scaleform::Ptr<Scaleform::RefCountNTSImpl>                      LastHover; // +0x18
+};
+
 // @0x1424de510
 void FUN_1424de510(void* self)
 {
-    auto* bytes = static_cast<char*>(self);
-    void* lastHover = *reinterpret_cast<void**>(bytes + 0x18);
-    if (lastHover)
-        reinterpret_cast<Scaleform::RefCountNTSImpl*>(lastHover)->Release();
-
-    void** rollover = *reinterpret_cast<void***>(bytes);
-    Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8);
-    while (count != 0)
-    {
-        void* object = rollover[--count];
-        if (object)
-            reinterpret_cast<Scaleform::RefCountNTSImpl*>(object)->Release();
-    }
-    Scaleform::Memory::Free(rollover);
+    static_cast<Unk_As3_16RolloverState*>(self)->~Unk_As3_16RolloverState();
 }
 
 // MS2-PIN: ?Sfr34_ModifyOptimizedPlayList@AS3@GFx@Scaleform@@YAXPEAVInteractiveObject@23@@Z 0x142517e70
@@ -2313,20 +2295,16 @@ template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::opera
     const Sfr16NamespaceHashKey&) const;
 
 namespace Scaleform { namespace Render {
-// MS2-FUNCTIONAL ?operator=@StrokeStyleType@Render@Scaleform@@QEAAAEAU123@AEBU123@@Z: copies the scalar style fields and uses Ptr assignment for the owned fill and dash references.
 // @0x1424e0cb0
 StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
 {
-    if (this != &other)
-    {
-        Width = other.Width;
-        Units = other.Units;
-        Flags = other.Flags;
-        Miter = other.Miter;
-        Color = other.Color;
-        pFill = other.pFill;
-        pDashes = other.pDashes;
-    }
+    Width = other.Width;
+    Units = other.Units;
+    Flags = other.Flags;
+    Miter = other.Miter;
+    Color = other.Color;
+    pFill = other.pFill;
+    pDashes = other.pDashes;
     return *this;
 }
 }} // namespace Scaleform::Render
