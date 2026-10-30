@@ -759,9 +759,7 @@ void FUN_140019b00(void* object)
 {
     FUN_140019060(object);
 }
-// MS2-FUNCTIONAL: releases the retained atom field and optionally frees the object through the Scaleform heap.
-// @0x140019b60
-void* FUN_140019b60(void* object, std::uint64_t flags)
+__forceinline void* VideoAtomHolderDestroy(void* object, unsigned flags)
 {
     ReleaseVideoAtom(reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
     FUN_1424df220(object);
@@ -770,6 +768,12 @@ void* FUN_140019b60(void* object, std::uint64_t flags)
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, object);
     }
     return object;
+}
+// releases the retained atom field and optionally frees the object through the Scaleform heap.
+// @0x140019b60
+void* FUN_140019b60(void* object, unsigned flags)
+{
+    return VideoAtomHolderDestroy(object, flags);
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
@@ -808,24 +812,31 @@ std::uint64_t* FUN_14001b8e0(std::uint64_t* holder, std::uint64_t replacement)
     return holder;
 }
 
-// MS2-FUNCTIONAL: converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
-// @0x140019c30
-void FUN_140019c30(std::uint64_t* closure)
+// converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
+__forceinline void VideoCallbackToValue(std::uint64_t* closure)
 {
     auto* vm = reinterpret_cast<unsigned char*>(closure[0]);
-    auto atom = closure[2];
     if (vm[0x180] == 0) {
+        auto* value = reinterpret_cast<Scaleform::GFx::AS3::Value*>(closure[1]);
+        auto atom = closure[2];
         RetainVideoAtom(atom);
-        reinterpret_cast<Scaleform::GFx::AS3::Value*>(closure[1])->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(atom));
+        value->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(atom));
         ReleaseVideoAtom(&atom);
     }
     ReleaseVideoAtom(closure + 2);
 }
-// MS2-FUNCTIONAL: converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
+// MS2-FUNCTIONAL: the exe calls the final atom release where cl 17 /O2 tail-jumps (/Os loses the shrink-wrapped rbx).
+// @0x140019c30
+void FUN_140019c30(std::uint64_t* closure)
+{
+    VideoCallbackToValue(closure);
+}
+// MS2-FUNCTIONAL: the exe calls the final atom release where cl 17 /O2 tail-jumps (/Os loses the shrink-wrapped rbx).
+// converts a callback object to an unsafe Value when the VM has no pending exception, then drops the callback atom.
 // @0x140019cd0
 void FUN_140019cd0(std::uint64_t* closure)
 {
-    FUN_140019c30(closure);
+    VideoCallbackToValue(closure);
 }
 
 namespace {
@@ -1086,11 +1097,11 @@ void FUN_14001ae40(void* object)
 {
     FUN_140019060(object);
 }
-// MS2-FUNCTIONAL: releases the retained atom field, invokes AS3 cleanup, and conditionally frees the object.
+// releases the retained atom field, invokes AS3 cleanup, and conditionally frees the object.
 // @0x14001aea0
-void* FUN_14001aea0(void* object, std::uint64_t flags)
+void* FUN_14001aea0(void* object, unsigned flags)
 {
-    return FUN_140019b60(object, flags);
+    return VideoAtomHolderDestroy(object, flags);
 }
 // @0x14001afd0
 __declspec(noinline) void* FUN_14001afd0(void* object) { return object ? static_cast<unsigned char*>(object) + 0x40 : nullptr; }
