@@ -378,18 +378,27 @@ void FUN_1423ce5a0(void* self)
     cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
 }
 
+// The key filter re-reads the event's message and key on every test, as the exe does.
+static __forceinline unsigned Ime01EventMessage(const unsigned char* event)
+{
+    return *reinterpret_cast<const unsigned*>(event + 0xc);
+}
+
+static __forceinline unsigned long long Ime01EventKey(const unsigned char* event)
+{
+    return *reinterpret_cast<const unsigned long long*>(event + 0x10);
+}
+
 // MS2-FUNCTIONAL: the exe keeps the constant 1 as an immediate; ours hoists it into ebp. Same code otherwise.
 // IME key and mouse filter: a Shift key-up is sent to the movie after a VK_PROCESSKEY key-up, and the arrow or Enter keys cancel the composition and remove the input window.
 // @0x1423d0cf0
 void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(self);
-    const auto message = [event] { return *reinterpret_cast<const unsigned*>(event + 0xc); };
-    const auto key = [event] { return *reinterpret_cast<const unsigned long long*>(event + 0x10); };
-    if (message() == WM_KEYDOWN && key() == VK_SHIFT) {
+    if (Ime01EventMessage(event) == WM_KEYDOWN && Ime01EventKey(event) == VK_SHIFT) {
         *reinterpret_cast<unsigned short*>(bytes + 0xa0) = 1;
     }
-    if (message() == WM_KEYUP && bytes[0xa0] == 1 && key() == VK_PROCESSKEY) {
+    if (Ime01EventMessage(event) == WM_KEYUP && bytes[0xa0] == 1 && Ime01EventKey(event) == VK_PROCESSKEY) {
         void* movie = reinterpret_cast<void*>(self[1]);
         Scaleform::GFx::KeyEvent shiftUp(Scaleform::GFx::Event::KeyUp, Scaleform::Key::Shift);
         if (movie) {
@@ -397,14 +406,14 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
                 movie, &shiftUp);
         }
     }
-    if ((message() == WM_KEYUP || message() == WM_LBUTTONUP) && bytes[0xb9]) {
+    if ((Ime01EventMessage(event) == WM_KEYUP || Ime01EventMessage(event) == WM_LBUTTONUP) && bytes[0xb9]) {
         reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(self))[0x110 / sizeof(void*)])(
             self, -*reinterpret_cast<int*>(bytes + 0x64));
         bytes[0xb9] = 0;
     }
     const unsigned mode = *reinterpret_cast<unsigned*>(bytes + 0x98);
     if (!(mode == 0xd00001 || mode == 5 || mode == 6 || mode == 0xa10000 || mode == 0xb10000)) return;
-    if ((message() != WM_KEYDOWN || key() != VK_LEFT) && key() - VK_UP > 2 && key() != VK_RETURN) return;
+    if ((Ime01EventMessage(event) != WM_KEYDOWN || Ime01EventKey(event) != VK_LEFT) && Ime01EventKey(event) - VK_UP > 2 && Ime01EventKey(event) != VK_RETURN) return;
     HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
     cx18_ImmNotifyIME(context, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
     cx18_ImmNotifyIME(context, NI_CLOSECANDIDATE, 0, 0);
