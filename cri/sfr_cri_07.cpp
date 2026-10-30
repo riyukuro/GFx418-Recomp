@@ -276,7 +276,7 @@ extern "C" unsigned char DAT_143d4adf0;
 extern "C" unsigned char DAT_143d4edf0;
 extern "C" longlong DAT_143d4ee10;
 extern "C" int DAT_143d4eea8;
-extern "C" int DAT_143d4eee8;
+extern "C" volatile int DAT_143d4eee8;      // the exe re-reads it after each inc/dec: volatile
 extern "C" int DAT_143d4eef0;
 extern "C" int DAT_143d4ef30;
 extern "C" unsigned char DAT_143d4ef50;
@@ -504,7 +504,7 @@ int FUN_140067630(const char *, const char *, ...);
 void FUN_140067680(char *, size_t, const char *, va_list);
 FILE * FUN_1400676c0(const char *, const char *);
 void FUN_140067700();
-ulonglong FUN_140067750();
+int FUN_140067750();
 void FUN_140067790();
 void FUN_1400677c0();
 void FUN_1400677f0();
@@ -1663,8 +1663,7 @@ FILE * FUN_1400676c0(const char *name, const char *mode)
 // @0x140067700
 void FUN_140067700()
 {
-  DAT_143d4eee8 = DAT_143d4eee8 + 1;
-  if (DAT_143d4eee8 == 1) {
+  if (++DAT_143d4eee8 == 1) {
     _DAT_143d4eee0 = 0;
     DAT_143d4eed8 = (void*)FUN_1400682e0((longlong)&DAT_143d4eea8,0x30);
     if (DAT_143d4eed8 == 0) {
@@ -1676,20 +1675,19 @@ void FUN_140067700()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067750
-ulonglong FUN_140067750()
+int FUN_140067750()
 {
-  ulonglong u_v1;
+  int i_v1;
   
-  DAT_143d4eee8 = DAT_143d4eee8 - 1;
-  u_v1 = (ulonglong)DAT_143d4eee8;
-  if (DAT_143d4eee8 == 0) {
+  i_v1 = --DAT_143d4eee8;
+  if (i_v1 == 0) {
     _DAT_143d4eee0 = 0;
     if (DAT_143d4eed8 != 0) {
-      u_v1 = FUN_140068380((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
+      i_v1 = (int)FUN_140068380((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
       DAT_143d4eed8 = 0;
     }
   }
-  return u_v1;
+  return i_v1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -1831,19 +1829,21 @@ void FUN_140067a90(cri_u8 arg1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067ac0
+#pragma function(memset)                      // the exe obj calls memset here
 void FUN_140067ac0(void *arg1)
 {
-  DWORD loc_18;
-  BOOL loc_14;
+  DWORD loc_14;
+  BOOL loc_18;
   
   if (*(int *)((longlong)arg1 + 4) != 0) {
     FUN_140067e00((int *)arg1,*(cri_u4 *)((longlong)arg1 + 0x60));
   }
-  while( true ) {
+  for (;;) {
     *(cri_u4 *)((longlong)arg1 + 0x68) = 1;
     SetEvent(*(HANDLE *)((longlong)arg1 + 0x10));
-    loc_14 = GetExitCodeThread(*(HANDLE *)((longlong)arg1 + 8),&loc_18);
-    if ((loc_14 == 0) || (loc_18 != 0x103)) break;
+    loc_18 = GetExitCodeThread(*(HANDLE *)((longlong)arg1 + 8),&loc_14);
+    if (loc_18 == 0) break;
+    if (loc_14 != 0x103) break;
     Sleep(10);
   }
   WaitForSingleObject(*(HANDLE *)((longlong)arg1 + 8),0xffffffff);
@@ -1863,6 +1863,7 @@ void FUN_140067ac0(void *arg1)
   memset(arg1,0,0x78);
   return;
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067bf0
@@ -1959,18 +1960,23 @@ void FUN_140067dd0(cri_u8 arg1, cri_u4 arg2)
 void FUN_140067e00(int *arg1, cri_u4 arg2)
 {
   int i_v1;
+  int i_v2;
   
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
+    return;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
+    return;
   }
-  else {
-    i_v1 = FUN_140067ec0(arg1,arg2);
-    if ((i_v1 == 0) && (i_v1 = FUN_140067c20(arg1), i_v1 != 0)) {
-      FUN_140068210((longlong)arg1);
-    }
+  i_v2 = FUN_140067ec0(arg1,arg2);
+  if (i_v2 != 0) {
+    return;
+  }
+  i_v1 = FUN_140067c20(arg1);
+  if (i_v1 != 0) {
+    FUN_140068210((longlong)arg1);
   }
   return;
 }
@@ -2062,19 +2068,19 @@ void FUN_140067fc0(cri_u8 arg1, cri_u4 arg2)
 // @0x140067ff0
 void FUN_140067ff0(int *arg1, int arg2)
 {
-  int i_v1;
-  
   if (arg1 == (int *)0x0) {
     FUN_140068280("NULL pointer is passed.");
+    return;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     FUN_140068280("Invalid handle is passed.");
+    return;
   }
-  else if (arg1[0x1b] != arg2) {
-    SetThreadPriority(*(HANDLE *)(arg1 + 2),arg2);
-    i_v1 = GetThreadPriority(*(HANDLE *)(arg1 + 2));
-    arg1[0x1b] = i_v1;
+  if (arg1[0x1b] == arg2) {
+    return;
   }
+  SetThreadPriority(*(HANDLE *)(arg1 + 2),arg2);
+  arg1[0x1b] = GetThreadPriority(*(HANDLE *)(arg1 + 2));
   return;
 }
 
@@ -2127,13 +2133,15 @@ void FUN_1400680a0(int *arg1, uint arg2)
 // @0x140068190
 cri_u8 FUN_140068190(longlong arg1)
 {
-  *(cri_u4 *)(arg1 + 100) = 1;
-  while( true ) {
-    WaitForSingleObject(*(HANDLE *)((char *)arg1 + 0x10),0xffffffff);
-    ResetEvent(*(HANDLE *)((char *)arg1 + 0x10));
-    if (*(int *)((char *)arg1 + 0x68) != 0) break;
-    FUN_140068200(arg1);
-    FUN_140068210(arg1);
+  longlong l_v1 = arg1;
+  
+  *(cri_u4 *)((char *)l_v1 + 100) = 1;
+  for (;;) {
+    WaitForSingleObject(*(HANDLE *)((char *)l_v1 + 0x10),0xffffffff);
+    ResetEvent(*(HANDLE *)((char *)l_v1 + 0x10));
+    if (*(int *)((char *)l_v1 + 0x68) != 0) break;
+    FUN_140068200(l_v1);
+    FUN_140068210(l_v1);
   }
   return 0;
 }
@@ -2431,7 +2439,7 @@ void FUN_1400688f0(longlong arg1, longlong arg2, int *arg3)
   i_v1 = *(int *)((char *)arg1 + 0x1798);
   i_v2 = *(int *)((char *)arg1 + 0x179c);
   *arg3 = *(short *)((char *)arg2 + 0x18) * i_v1 + i_v2;
-  arg3[1] = (int)*(short *)((char *)arg2 + 0x1a) * i_v1 * 2 + i_v2 * 2;
+  arg3[1] = (int)*(short *)((char *)arg2 + 0x1a) * (i_v1 << 1) + (i_v2 << 1);
   return;
 }
 
@@ -2458,7 +2466,7 @@ void FUN_140068920(longlong arg1, int arg2)
 void FUN_140068960(longlong arg1)
 {
   *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) + 1;
-  if (*(int *)((char *)arg1 + 0x15a0) <= *(int *)((char *)arg1 + 0x179c)) {
+  if (*(int *)((char *)arg1 + 0x179c) >= *(int *)((char *)arg1 + 0x15a0)) {
     *(int *)((char *)arg1 + 0x1798) = *(int *)((char *)arg1 + 0x1798) + 1;
     *(cri_u4 *)((char *)arg1 + 0x179c) = 0;
   }
@@ -26472,7 +26480,7 @@ void FUN_140089e90(longlong arg1, cri_u8 arg2, cri_u4 *arg3)
   FUN_14005dc70(arg1,arg2);  // the exe passes rcx/rdx through
   *(int *)((char *)arg1 + 0xd14) = *(int *)((char *)arg1 + 0xd14) + *(int *)((char *)arg1 + 0xd0c);
   *(int *)((char *)arg1 + 0xd18) = *(int *)((char *)arg1 + 0xd18) + *(int *)((char *)arg1 + 0xd10);
-  if (*(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) - 1U <= *(uint *)((char *)arg1 + 0x6f0)) {
+  if (*(uint *)((char *)arg1 + 0x6f0) >= *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) - 1U) {
     arg3[5] = 1;
   }
   u_v1 = *(cri_u4 *)((char *)arg1 + 0xd0c);

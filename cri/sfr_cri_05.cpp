@@ -304,7 +304,7 @@ char * FUN_1400674d0(char *dst,int size,const char *src);
 char * FUN_140067590(char *dst,int size,const char *src);
 void FUN_1400674a0(const char *msg);
 void FUN_140067700();
-ulonglong FUN_140067750();
+int FUN_140067750();
 void FUN_140067790();
 void FUN_1400677c0();
 void FUN_1400677f0();
