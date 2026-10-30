@@ -2466,25 +2466,33 @@ void ReleaseAudioRequestRecord(void* request)
     }
 }
 
-// MS2-FUNCTIONAL: clears a player sound's callback data, drops its FMOD sound when referenced, and detaches its list node.
+// Player sound record as a List node: prev/next at +8/+0x10 point at other records.
+struct Sfr22ListNodeView
+{
+    void* pVtbl;
+    Sfr22ListNodeView* pPrev;
+    Sfr22ListNodeView* pNext;
+};
+
+// Clears a player sound's callback data, drops its FMOD sound when referenced, and detaches its list node.
 // @0x142746380
 void ClearPlayerSoundRecord(void* request)
 {
     auto* bytes = static_cast<unsigned char*>(request);
+    const long refCount = *reinterpret_cast<volatile long*>(bytes - 8);   // atomic refcount
     *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
-    if (*reinterpret_cast<long*>(bytes - 8) > 0) {
+    if (refCount > 0) {
         auto* sound = *reinterpret_cast<FMOD::Sound**>(bytes + 0x20);
         if (sound)
             sound->release();
         *reinterpret_cast<FMOD::Sound**>(bytes + 0x20) = nullptr;
     }
-    auto* next = *reinterpret_cast<void**>(bytes + 0x10);
-    if (next) {
-        auto* previous = *reinterpret_cast<void**>(bytes + 8);
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
-        *reinterpret_cast<void**>(bytes + 8) = nullptr;
-        *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
+    auto* node = reinterpret_cast<Sfr22ListNodeView*>(bytes);
+    if (node->pNext) {
+        node->pPrev->pNext = node->pNext;   // list RemoveNode: both links re-read
+        node->pNext->pPrev = node->pPrev;
+        node->pPrev = nullptr;
+        node->pNext = nullptr;
     }
 }
 

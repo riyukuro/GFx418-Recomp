@@ -684,15 +684,15 @@ void Sfr27TraceLookupSwitch(State* st, UInt64* pos)
     StV s(st);
     const UPInt tracer = s.Tracer();
     FUN_14251ccc0(st, 1);
-    const int base = static_cast<int>(TrRd(tracer, 0x38));
-    int off = Abc::ReadS24<UInt8>(s.Code(), *pos);
-    Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), (base - static_cast<int>(*pos)) + off, 1);
-    const int caseCount = Abc::ReadU30<UInt8>(s.Code(), *pos);
+    const UPInt base = TrRd(tracer, 0x38);
+    int off = Abc::ReadS24<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), *pos);
+    Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), static_cast<int>(base - *pos) + off, 1);
+    const int caseCount = Abc::ReadU30<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), *pos);
     FUN_14251fcd0(tracer, static_cast<SPInt>(caseCount));
     for (int i = 0; i <= caseCount; ++i)
     {
-        off = Abc::ReadS24<UInt8>(s.Code(), *pos);
-        Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), (base - static_cast<int>(*pos)) + off, i + 3);
+        off = Abc::ReadS24<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), *pos);
+        Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), static_cast<int>(base - *pos) + off, i + 3);
     }
     FUN_1424e6aa0(tracer, st, *pos, 1, 1);
 }
@@ -777,11 +777,11 @@ void Sfr27TraceNewArray(State* st, UInt32 argc)
 }
 
 // @0x14253cd00
-void Sfr27TraceNewObject(State* st, int propCount)
+void Sfr27TraceNewObject(State* st, UInt32 propCount)
 {
     StV s(st);
-    FUN_14251fcd0(s.Tracer(), static_cast<SPInt>(propCount));
-    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, static_cast<UInt32>(propCount * 2));
+    FUN_14251fcd0(s.Tracer(), propCount);
+    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, propCount * 2);
     TrTraitsScratch t;
     t.SetTraits(TrITraits(s.Tracer(), 0x1f8));
     s.OpStack().PushBack(t.Get());
