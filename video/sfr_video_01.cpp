@@ -2521,23 +2521,25 @@ void* FUN_1400062e0(void* object, unsigned flags)
 }
 
 // MS2-FUNCTIONAL: promotes a live weak proxy to a strong object reference in the output slot.
+// BEHAVIOUR FIX: a live object with a non-zero count gets a plain (RefCountNTSImpl) AddRef, as in the exe. This
+// used to call 0x14257dcb0 (RefCountImpl::Release), so every promotion dropped a reference instead of taking one.
+// The weak slot also holds the proxy pointer untagged; the exe does not mask its low bits.
 // @0x140006350
 void** FUN_140006350(void** weakSlot, void** result)
 {
-    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
-        reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
+    auto* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
         auto* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
-        if (!object) {
-            proxy->Release();
-            *weakSlot = nullptr;
-        } else {
+        if (object) {
             auto* count = reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
             if (*count != 0) {
-                FUN_14257dcb0(object);
+                ++*count;
                 *result = object;
                 return result;
             }
+        } else {
+            proxy->Release();
+            *weakSlot = nullptr;
         }
     }
     *result = nullptr;
