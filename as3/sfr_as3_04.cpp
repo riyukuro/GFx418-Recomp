@@ -2388,7 +2388,7 @@ void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scalef
 // VM::GetValueTraits.
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // The parts of str split at each delim (at most limit of them), as a new Array: no delim gives str itself, an empty
-// delim each character. A delim that ends str adds no trailing empty part.
+// delim each character. A delim that ends str adds a trailing empty part.
 // MS2-FUNCTIONAL: the exe inlines SparseArray::PushBack at each push
 // @0x142424ca0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Scaleform::GFx::AS3::VM& vm,
@@ -2441,14 +2441,6 @@ Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Sca
             if (c1 == 0 || c2 == 0 || c1 != c2)
                 break;
         }
-        if (c1 == 0)
-        {
-            if (count >= limit)
-                return arr;
-            SPInt len = (c2 == 0) ? (SPInt)(int)(matchStart - start) : (SPInt)(int)SFstrlen(start);
-            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
-            return arr;
-        }
         if (c2 == 0)
         {
             if (count >= limit)
@@ -2458,8 +2450,16 @@ Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Sca
             ++count;
             start = cur = before;
         }
-        else
+        else if (c1 != 0)
             cur = next;
+        if (c1 == 0)
+        {
+            if (count >= limit)
+                return arr;
+            SPInt len = (c2 == 0) ? (SPInt)(int)(matchStart - start) : (SPInt)(int)SFstrlen(start);
+            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
+            return arr;
+        }
     }
 }
 // ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::allocatePage, the VM call frame stack (pages of
