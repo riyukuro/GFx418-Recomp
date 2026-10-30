@@ -167,47 +167,69 @@ void AvmDisplayObjContainer::FillTabableArray(InteractiveObject::FillTabablePara
 // @0x142501920
 InteractiveObject* AvmDisplayObjContainer::FindInsertToPlayList(InteractiveObject* ch)
 {
-    DisplayObjContainer* pcont = GetDisplayObjContainer();
-    unsigned n = (unsigned)pcont->mDisplayList.GetCount();
+    InteractiveObject* afterCh = NULL;
+    DisplayObjContainer* dobjParent = GetDisplayObjContainer();
+    unsigned n = (unsigned)dobjParent->mDisplayList.GetCount();
     if (n == 0)
-        return GetIntObj()->pPlayPrev;
-    unsigned i;
-    InteractiveObject* plast = NULL;
-    for (i = 0; i < n; ++i)
+        afterCh = dobjParent->pPlayPrev;
+    else
     {
-        DisplayObjectBase* pch = pcont->mDisplayList.GetDisplayObject(i);
-        if (pch == ch)
-            break;
-        if (pch->IsInteractiveObject() && static_cast<InteractiveObject*>(pch)->IsInPlayList())
-            plast = static_cast<InteractiveObject*>(pch);
-    }
-    if (!plast)
-        return GetIntObj()->pPlayPrev;
-
-    // the next interactive child already in the play list goes after it
-    for (++i; i < n; ++i)
-    {
-        DisplayObjectBase* pch = pcont->mDisplayList.GetDisplayObject(i);
-        if (pch->IsInteractiveObject() && static_cast<InteractiveObject*>(pch)->IsInPlayList())
-            return static_cast<InteractiveObject*>(pch);
-    }
-    // else after the last of the branch of the previous one
-    InteractiveObject* pbranch = plast;
-    InteractiveObject* p = plast;
-    for (;;)
-    {
-        while (p == GetIntObj())
+        // the last child before ch that is in the play list
+        InteractiveObject* dobPrevSpr = NULL;
+        unsigned i = 0;
+        for (; i < n; ++i)
         {
-            p = pbranch = pbranch->pPlayPrev;
-            if (!pbranch)
-                return NULL;
+            DisplayObjectBase* pcur = dobjParent->mDisplayList.GetDisplayObject(i);
+            if (pcur == ch)
+                break;
+            if (pcur->IsInteractiveObject() && static_cast<InteractiveObject*>(pcur)->IsInPlayList())
+                dobPrevSpr = static_cast<InteractiveObject*>(pcur);
         }
-        if (p == GetIntObj()->GetParent())
-            return pbranch;
-        p = p->GetParent();
-        if (!p)
-            return pbranch;
+        if (!dobPrevSpr)
+            afterCh = dobjParent->pPlayPrev;
+        else
+        {
+            // the next child after ch that is in the play list
+            InteractiveObject* dobNextSpr = NULL;
+            for (++i; i < n; ++i)
+            {
+                DisplayObjectBase* pcur = dobjParent->mDisplayList.GetDisplayObject(i);
+                if (pcur->IsInteractiveObject() && static_cast<InteractiveObject*>(pcur)->IsInPlayList())
+                {
+                    dobNextSpr = static_cast<InteractiveObject*>(pcur);
+                    break;
+                }
+            }
+            if (dobNextSpr)
+                afterCh = dobNextSpr;
+            else
+            {
+                // walk back from the previous one to the first object whose parent chain leaves this one
+                InteractiveObject* pcur = dobPrevSpr;
+                InteractiveObject* parpar = GetIntObj()->GetParent();
+                for (; pcur; pcur = pcur->pPlayPrev)
+                {
+                    InteractiveObject* c = pcur;
+                    for (; c; c = c->GetParent())
+                    {
+                        if (c == GetIntObj())
+                            break;
+                        else if (c == parpar)
+                        {
+                            c = NULL;
+                            break;
+                        }
+                    }
+                    if (!c)
+                    {
+                        afterCh = pcur;
+                        break;
+                    }
+                }
+            }
+        }
     }
+    return afterCh;
 }
 
 // MS2-FUNCTIONAL 0x1424f6f50: the exe inlines GetRenderNode differently and re-reads the array data pointer
@@ -270,26 +292,29 @@ RectF AvmBitmap::GetBounds(const Matrix& t) const
     return result;
 }
 
-// MS2-FUNCTIONAL 0x142507910: the exe calls Matrix2F::EncloseTransform (0x1425e52d0) out of line
+// MS2-FUNCTIONAL 0x142507910: one instruction short: the exe does not load the morph ratio (xmm2) for the GetBoundsLocal
+// virtual call; ours passes the default 0
 // @0x142507910
 RectF ShapeObject::GetBounds(const Matrix& t) const
 {
     RectF r(0);
-    if (!pDrawing)
+    if (pDrawing)
     {
-        t.EncloseTransform(&r, pDef->GetBoundsLocal());
-        return r;
+        RectF b(0);
+        pDrawing->ComputeBound(&b);
+        if (!b.IsEmpty())
+        {
+            RectF tb = t.EncloseTransform(b);
+            if (!r.IsEmpty())
+                r.Union(tb);
+            else
+                r = tb;
+        }
     }
-    RectF b(0);
-    pDrawing->ComputeBound(&b);
-    if (b.IsEmpty())
-        return r;
-    RectF tb;
-    t.EncloseTransform(&tb, b);
-    if (!r.IsEmpty())
-        r.Union(tb);
     else
-        r = tb;
+    {
+        r = t.EncloseTransform(pDef->GetBoundsLocal());
+    }
     return r;
 }
 
