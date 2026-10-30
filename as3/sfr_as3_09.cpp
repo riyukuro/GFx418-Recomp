@@ -123,8 +123,9 @@ namespace Instances { namespace fl_events {
         if (argc >= 4)
         {
             RelatedObj = NULL;
-            if (argv[3].GetObject() && FUN_1425145d0(GetVM(), argv[3], "flash.display.InteractiveObject"))
-                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[3].GetObject());
+            AS3::Object* pobj = argv[3].GetObject();
+            if (pobj && FUN_1425145d0(GetVM(), argv[3], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(pobj);
         }
         if (argc >= 5)
             ShiftKey = argv[4].Convert2Boolean();
@@ -137,12 +138,14 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x142465610
-    // MS2-FUNCTIONAL: the exe zeroes the phaseSet result Value before loading the phase string and saves rbp inside the branch
     void GestureEvent::AS3Constructor(unsigned argc, const Value* argv)
     {
         Event::AS3Constructor(argc, argv);
         if (argc >= 4)
-            phaseSet(Value(), argv[3].AsString());
+        {
+            Value r;
+            phaseSet(r, argv[3].AsString());
+        }
         if (argc >= 5)
         {
             Value::Number v;
@@ -198,8 +201,9 @@ namespace Instances { namespace fl_events {
         if (argc >= 6)
         {
             RelatedObj = NULL;
-            if (argv[5].GetObject() && FUN_1425145d0(GetVM(), argv[5], "flash.display.InteractiveObject"))
-                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[5].GetObject());
+            AS3::Object* pobj = argv[5].GetObject();
+            if (pobj && FUN_1425145d0(GetVM(), argv[5], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(pobj);
         }
         if (argc >= 7)
             CtrlKey = argv[6].Convert2Boolean();
@@ -215,7 +219,11 @@ namespace Instances { namespace fl_events {
                 ButtonsMask &= ~1u;
         }
         if (argc >= 11)
-            argv[10].Convert2Int32(Delta);
+        {
+            SInt32 v;
+            argv[10].Convert2Int32(v);
+            Delta = v;
+        }
     }
 
     // @0x142465950
@@ -233,7 +241,10 @@ namespace Instances { namespace fl_events {
     {
         Event::AS3Constructor(argc, argv);
         if (argc >= 4)
-            phaseSet(Value(), argv[3].AsString());
+        {
+            Value r;
+            phaseSet(r, argv[3].AsString());
+        }
         if (argc >= 5)
             localXSet(Value(), argv[4].AsNumber());
         if (argc >= 6)
@@ -322,8 +333,9 @@ namespace Instances { namespace fl_events {
         {
             RelatedObj = NULL;
             // The exe takes the object from argv[5] and type-tests argv[10].
-            if (argv[5].GetObject() && FUN_1425145d0(GetVM(), argv[10], "flash.display.InteractiveObject"))
-                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(argv[5].GetObject());
+            AS3::Object* pobj = argv[5].GetObject();
+            if (pobj && FUN_1425145d0(GetVM(), argv[10], "flash.display.InteractiveObject"))
+                RelatedObj = static_cast<Instances::fl_display::InteractiveObject*>(pobj);
         }
         if (argc >= 12)
             CommandKey = argv[11].Convert2Boolean();
@@ -338,12 +350,14 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x142465f00
-    // MS2-FUNCTIONAL: the inlined GestureEvent::AS3Constructor is scheduled differently
     void TransformGestureEvent::AS3Constructor(unsigned argc, const Value* argv)
     {
         GestureEvent::AS3Constructor(argc, argv);
         if (argc >= 4)
-            phaseSet(Value(), argv[3].AsString());
+        {
+            Value r;
+            phaseSet(r, argv[3].AsString());
+        }
         // The exe stores localX/localY into the gesture point but flags the offset as initialized.
         if (argc >= 5)
         {
@@ -360,11 +374,23 @@ namespace Instances { namespace fl_events {
             LocalY = Render::PixelsToTwips(v);
         }
         if (argc >= 7)
-            argv[6].Convert2Number(ScaleX);
+        {
+            Value::Number v;
+            argv[6].Convert2Number(v);
+            ScaleX = v;
+        }
         if (argc >= 8)
-            argv[7].Convert2Number(ScaleY);
+        {
+            Value::Number v;
+            argv[7].Convert2Number(v);
+            ScaleY = v;
+        }
         if (argc >= 9)
-            argv[8].Convert2Number(Rotation);
+        {
+            Value::Number v;
+            argv[8].Convert2Number(v);
+            Rotation = v;
+        }
         if (argc >= 10)
         {
             Value::Number v;
