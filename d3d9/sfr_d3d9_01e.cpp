@@ -143,18 +143,17 @@ Render::TextureManager* HAL::GetTextureManager()
     return pTextureManager.GetPtr();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x1427327c0
 void HAL::MapVertexFormat(PrimitiveFillType fill, const VertexFormat* sourceFormat, const VertexFormat** single,
                           const VertexFormat** batch, const VertexFormat** instanced, unsigned)
 {
-    unsigned flags = MVF_Align | MVF_AlignVertexAttrs | MVF_ReverseColor;
-    if (SManager.HasInstancingSupport())
-        flags |= MVF_HasInstancing;
-    SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced, flags);
+    SManager.MapVertexFormat(fill, sourceFormat, single, batch, instanced,
+                             (SManager.HasInstancingSupport() ? MVF_HasInstancing : 0) |
+                                 MVF_Align | MVF_AlignVertexAttrs | MVF_ReverseColor);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142736d70
 bool HAL::checkMaskBufferCaps()
 {
@@ -168,13 +167,12 @@ bool HAL::checkMaskBufferCaps()
             depthStencil->GetDesc(&desc);
             switch (desc.Format)
             {
-            case D3DFMT_D15S1:
-                StencilAvailable = true;
-                break;
             case D3DFMT_D24S8:
             case D3DFMT_D24X4S4:
             case D3DFMT_D24FS8:
                 MultiBitStencil  = true;
+                // fall through
+            case D3DFMT_D15S1:
                 StencilAvailable = true;
                 break;
             default:
@@ -1705,36 +1703,53 @@ void FUN_14272e8f0(RenderBuffer* p)
     p->RenderBuffer::~RenderBuffer();
 }
 
+void FUN_14015b310(void*, UPInt);   // sized operator delete (__empty_global_delete)
+
 // a RefCountNTSImplCore deleting dtor
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272efd0
 void* FUN_14272efd0(RefCountNTSImplCore* p, unsigned flags)
 {
     p->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            FUN_14015b310(p, 0x10);
+    }
     return p;
 }
 
 // a RefCountNTSImplCore deleting dtor, a second copy
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272f030
 void* FUN_14272f030(RefCountNTSImplCore* p, unsigned flags)
 {
     p->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            FUN_14015b310(p, 0x10);
+    }
     return p;
 }
 
 // DepthStencilBuffer's deleting dtor
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x14272f090
 void* FUN_14272f090(DepthStencilBuffer* p, unsigned flags)
 {
     p->DepthStencilBuffer::~DepthStencilBuffer();
     if (flags & 1)
-        Memory::Free(p);
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            FUN_14015b310(p, 0x30);
+    }
     return p;
 }
 
