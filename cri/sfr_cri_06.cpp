@@ -7,7 +7,7 @@
 // MS2-UNIT: sfr_cri_06
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x140054170-0x1400627a0 .text$mn
+// MS2-RANGE: 0x140054250-0x1400627a0 .text$mn
 // MS2-RANGE: 0x140062c10-0x140066180 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -711,65 +711,15 @@ void FUN_140095450(cri_any = cri_any());
 void FUN_142ccb4f0(cri_any = cri_any());
 void FUN_142ccb500(cri_any = cri_any());
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x140054170
-void FUN_140054170(cri_any cri_p0)
-{
-  longlong arg1 = cri_p0;
-  uint bit;
-  longlong i;
-  V16 **src;
-  V16 *dst;
-  longlong n;
-  
-  i = 0;
-  bit = 1;
-  src = (V16 **)((char *)arg1 + 0x1980);
-  dst = (V16 *)((char *)arg1 + 0x780);
-  n = 6;
-  do {
-    if ((*(uint *)((char *)arg1 + 0x71c) & bit) != 0) {
-      FUN_14006aaa0(*src,dst,((char *)arg1)[i + 0xc6c]);
-    }
-    dst = dst + 8;
-    i = i + 1;
-    src = src + 1;
-    bit = _rotl(bit,1);
-    n = n + -1;
-  } while (n != 0);
-}
+void FUN_140054170(cri_any cri_p0);
 
-// The decoder's alternate output callback (FUN_140054250 stores it at +0x1bc8, compared as DAT_1400541f0; Ghidra made no
-// function here): forwards the decoder's sample block at +0x19b0 to the block writer.
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
-// @0x1400541f0
-void FUN_1400541f0(char *ctx)
-{
-  FUN_1400662f0(ctx + 0x19b0);
-}
+void FUN_1400541f0(char *ctx);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x140054200
-void thunk_FUN_140054080()
-{
-  FUN_140054080();   // the exe's thunk is a jmp to FUN_140054080 (sfr_cri_05b)
-}
+void thunk_FUN_140054080();
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x140054210
-int FUN_140054210(cri_any cri_p0)
-{
-  longlong arg1 = cri_p0;
-  return *(cri_code **)((char *)arg1 + 0x1bc8) == (cri_code *)FUN_140054170;
-}
+int FUN_140054210(cri_any cri_p0);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x140054230
-int FUN_140054230(cri_any cri_p0)
-{
-  longlong arg1 = cri_p0;
-  return *(cri_code **)((char *)arg1 + 0x1bc8) == (cri_code *)FUN_1400541f0;
-}
+int FUN_140054230(cri_any cri_p0);
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054250
