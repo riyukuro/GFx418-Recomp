@@ -2362,8 +2362,10 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
 Scaleform::GFx::AS2::Object* FUN_1400122e0(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context, void* prototype)
 {
-    extern void FUN_14291f790(void*, void*, void*);
-    FUN_14291f790(object, context, prototype);
+    // the exe runs Object(ASStringContext*) (0x14291f6f0), not the prototype overload (0x14291f790), and sets the
+    // prototype once below, after the vtables are stored
+    extern void FUN_14291f6f0(void*, void*);
+    FUN_14291f6f0(object, context);
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
     extern void FUN_140007ba0(void*, void*, void*);
