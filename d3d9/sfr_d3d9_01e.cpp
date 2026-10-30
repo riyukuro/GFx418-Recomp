@@ -1637,6 +1637,8 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray
                     pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vertexBaseIndex, 0, fr.VertexCount,
                                                   startIndex + fr.IndexOffset, fr.IndexCount / 3);
                     AccumulatedStats.Primitives++;
+                    if (i != matrixCount - 1)
+                        ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
                 }
             }
             else
@@ -1802,6 +1804,7 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
         {
         case PrimFill_None:
         case PrimFill_Mask:
+            break;
         case PrimFill_SolidColor:
             if (fill->GetSolidColor().GetAlpha() != 0xff)
                 *fillFlags |= 0x10;
@@ -1898,7 +1901,7 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
     else if (cur.pFDesc->BatchUniforms[tg].Array >= 0 && cur.pFDesc->BatchUniforms[tg].Size)
         n = cur.pFDesc->BatchUniforms[tg].Size;
     else if (cur.pFDesc->Uniforms[tg].Location >= 0 && cur.pFDesc->Uniforms[tg].Size > 0)
-        n = cur.pFDesc->Uniforms[tg].Size / cur.pFDesc->Uniforms[tg].ElementSize;
+        n = cur.pFDesc->Uniforms[tg].Size / cur.pVDesc->Uniforms[tg].ElementSize; // (the SDK divides by the vertex side)
     unsigned texgenCount = (n >> 1) & 0x7fff;
 
     for (unsigned i = 0; i < meshCount; i++)
@@ -1922,7 +1925,7 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
         }
 
         if (type == PrimFill_Mask)
-            psi->SetColor(cur, D3D9::Uniform::SU_cxmul, Color(0x80800000), 0, i);
+            psi->SetColor(cur, D3D9::Uniform::SU_cxmul, Color(0x80800000));
         else if (*fillFlags & 4)
         {
             const Cxform& cx = m.pHandle->pHeader->HasElement(HC::Element_Cxform)

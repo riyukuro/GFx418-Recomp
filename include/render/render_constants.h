@@ -51,8 +51,6 @@ enum BlendMode
     Blend_Overwrite,
     Blend_OverwriteAll,
     Blend_FullAdditive,
-    Blend_FilterBlend,
-    Blend_Ignore,
     Blend_Count
 };
 
