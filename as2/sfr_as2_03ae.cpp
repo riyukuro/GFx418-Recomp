@@ -17,7 +17,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 // The render tree entry's destroyHelper (Render::ContextImpl::Entry is not usable in this unit).
 void FUN_142581700(void* pentry);
 
-// MS2-FUNCTIONAL: the raw members are released by hand in the exe's order; ASMovieRootBase's destructor is a call
+// MS2-FUNCTIONAL: the raw members are released by hand; the exe drops +0x58/+0x50 before them and inlines
+// ASMovieRootBase's destructor, here a call
 // @0x142925be0
 MovieRoot::~MovieRoot()
 {
@@ -27,9 +28,9 @@ MovieRoot::~MovieRoot()
     Memory::pGlobalHeap->Free(pLevelRoots);
     BuiltinsMgr.pStringManager->ReleaseBuiltinArray(BuiltinsMgr.Builtins, StringManager::BuiltinCount);
     GetActionQueue().~ActionQueueType();
-    ExternalIntfRetVal.~Value();
-    if (pGlobalContext)
-        pGlobalContext->Release();
+    // ExternalIntfRetVal (+0x58) and pGlobalContext (+0x50) are real members: their implicit destructors drop them
+    // once, after the body. (Destroying them here as well dropped the Value's refs and released the GlobalContext
+    // twice.) The exe destroys them before the raw +0x38/+0x30/+0x28 releases below.
     if (MemContext)
         MemContext->Release();
     if (pAS2Support)
