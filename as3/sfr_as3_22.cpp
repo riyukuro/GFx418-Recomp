@@ -105,7 +105,6 @@ extern ExeDecl<void*> DAT_14318f030;
 #define AS3MovieViewValueVtable ((void*)&DAT_14318f030)
 extern ExeDecl<void*> DAT_1431921c0;
 #define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
-extern "C" void* FUN_142686ae0(void*);
 extern "C" void* FUN_142686d30(void*);
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 extern "C" void FUN_14257dcb0(void*);
@@ -254,9 +253,6 @@ template void ArrayData<GFx::AS3::Abc::MethodInfo*, AllocatorLH_POD<GFx::AS3::Ab
 template void ArrayData<GFx::AS3::Abc::ScriptInfo*, AllocatorLH_POD<GFx::AS3::Abc::ScriptInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
 // MS2-PIN: ?Resize@?$ArrayData@PEAVTraitInfo@Abc@AS3@GFx@Scaleform@@U?$AllocatorLH_POD@PEAVTraitInfo@Abc@AS3@GFx@Scaleform@@$0BFC@@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAX_K@Z 0x1425685a0
 template void ArrayData<GFx::AS3::Abc::TraitInfo*, AllocatorLH_POD<GFx::AS3::Abc::TraitInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt);
-// MS2-PIN: ?Resize@?$ArrayData@MU?$AllocatorLH_POD@M$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAX_K@Z 0x14268e7c0
-// MS2-FUNCTIONAL 0x14268e7c0: resize behavior matches; executable calls Reserve at 0x142623c60 while the source map selects 0x14268e380.
-template void ArrayData<float, AllocatorLH_POD<float, 2>, ArrayDefaultPolicy>::Resize(UPInt);
 template void MsgFormat::FormatD1<unsigned long>(const unsigned long&);
 template void MsgFormat::FormatD1<const char*>(const char* const&);
 template void MsgFormat::FormatD1<UInt64>(const UInt64&);
@@ -272,6 +268,18 @@ namespace Scaleform {
 // The AMP readers call these instances out of line (the Ptr ones fold into 0x1426240f0 / 0x14268ec00).
 // MS2-PIN: ??_7ScriptBufferStats@MovieInstructionStats@AMP@GFx@Scaleform@@6B@ 0x14318f020
 // MS2-PIN: ??_7FuncTreeItem@AMP@GFx@Scaleform@@6B@ 0x14318f040
+// MS2-PIN: ??_7?$RefCountBase@UMovieInstructionStats@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x143192170
+// MS2-PIN: ??_7MovieInstructionStats@AMP@GFx@Scaleform@@6B@ 0x143192170
+// MS2-PIN: ??_7?$RefCountBase@UMovieFunctionTreeStats@AMP@GFx@Scaleform@@$01@Scaleform@@6B@ 0x143192180
+// MS2-PIN: ??_7MovieFunctionTreeStats@AMP@GFx@Scaleform@@6B@ 0x143192180
+// MS2-PIN: ??_7?$RefCountBase@UMovieFunctionStats@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x143192190
+// MS2-PIN: ??_7MovieFunctionStats@AMP@GFx@Scaleform@@6B@ 0x143192190
+// MS2-PIN: ??_7?$RefCountBase@UMovieSourceLineStats@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921a0
+// MS2-PIN: ??_7MovieSourceLineStats@AMP@GFx@Scaleform@@6B@ 0x1431921a0
+// MS2-PIN: ??_7?$RefCountBase@UMovieProfile@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921b0
+// MS2-PIN: ??_7MovieProfile@AMP@GFx@Scaleform@@6B@ 0x1431921b0
+// MS2-PIN: ??_7?$RefCountBase@UImageInfo@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x1431921c0
+// MS2-PIN: ??_7ImageInfo@AMP@GFx@Scaleform@@6B@ 0x1431921c0
 // MS2-PIN: ??_7FunctionDesc@AMP@GFx@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7?$RefCountBase@UFunctionDesc@AMP@GFx@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f030
 // MS2-PIN: ??_7MarkerInfo@MovieProfile@AMP@GFx@Scaleform@@6B@ 0x14318f048
@@ -281,6 +289,7 @@ namespace Scaleform {
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0CEC@@Scaleform@@6B@ 0x14318f020
 typedef GFx::AMP::MovieInstructionStats::ScriptBufferStats AmpScriptBufferStats;
 typedef GFx::AMP::MovieInstructionStats::InstructionTimePair AmpInstructionTimePair;
+// @0x14268ec00
 template<> SF_NOINLINE void ArrayDataBase<Ptr<AmpScriptBufferStats>, AllocatorLH<Ptr<AmpScriptBufferStats>, Stat_Default_Mem>,
     ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
 {
@@ -313,6 +322,7 @@ template<> SF_NOINLINE void ArrayDataBase<Ptr<GFx::AMP::FuncTreeItem>, Allocator
     }
     Size = newSize;
 }
+// @0x14268eac0
 template<> SF_NOINLINE void ArrayDataBase<Ptr<GFx::AMP::MovieProfile::MarkerInfo>, AllocatorLH<Ptr<GFx::AMP::MovieProfile::MarkerInfo>, Stat_Default_Mem>,
     ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
 {
@@ -329,6 +339,50 @@ template<> SF_NOINLINE void ArrayDataBase<Ptr<GFx::AMP::MovieProfile::MarkerInfo
     }
     Size = newSize;
 }
+// @0x14268eb60
+template<> SF_NOINLINE void ArrayDataBase<Ptr<GFx::AMP::MovieProfile>, AllocatorLH<Ptr<GFx::AMP::MovieProfile>, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorLH<Ptr<GFx::AMP::MovieProfile>, Stat_Default_Mem>::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+// @0x14268ea20
+template<> SF_NOINLINE void ArrayDataBase<Ptr<GFx::AMP::ImageInfo>, AllocatorLH<Ptr<GFx::AMP::ImageInfo>, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorLH<Ptr<GFx::AMP::ImageInfo>, Stat_Default_Mem>::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+// @0x14268e9a0
+template<> SF_NOINLINE void ArrayData<UInt64, AllocatorLH<UInt64, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::Resize(UPInt newSize)
+{
+    UPInt oldSize = this->Size;
+    BaseType::ResizeNoConstruct(this, newSize);
+    if (newSize > oldSize)
+        AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
+// @0x14268e7c0
 template<> SF_NOINLINE void ArrayData<AmpInstructionTimePair, AllocatorLH<AmpInstructionTimePair, Stat_Default_Mem>,
     ArrayDefaultPolicy>::Resize(UPInt newSize)
 {
@@ -2751,12 +2805,6 @@ void ResizeLocalByteArray(void** array, std::size_t requested)
     ResizeRawArray(array, array, requested, 1);
 }
 
-// MS2-FUNCTIONAL: applies the same backing-array thresholds to the eight-byte record array.
-// @0x14268e9a0
-void ResizeLocalRecordArray(void** array, std::size_t requested)
-{
-    ResizeRawArray(array, array, requested, 8);
-}
 }
 
 void FUN_14257dcb0(void* object);
@@ -2784,30 +2832,8 @@ static void ResizeStrongPointerArray(void** array, void* heapOwner, std::size_t 
     array[1] = reinterpret_cast<void*>(requested);
 }
 
-// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
-// @0x14268ea20
-void ResizeStrongPointerArrayA(void** array, std::size_t requested)
-{
-    ResizeStrongPointerArray(array, array, requested);
-}
-
-// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
-// @0x14268eac0
+// Untyped stand-in for the merge helpers below; the typed MarkerInfo copy is 0x14268eac0.
 void ResizeStrongPointerArrayB(void** array, std::size_t requested)
-{
-    ResizeStrongPointerArray(array, array, requested);
-}
-
-// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
-// @0x14268eb60
-void ResizeStrongPointerArrayC(void** array, std::size_t requested)
-{
-    ResizeStrongPointerArray(array, array, requested);
-}
-
-// MS2-FUNCTIONAL: releases removed strong references, follows Scaleform's capacity thresholds, and updates size.
-// @0x14268ec00
-void ResizeStrongPointerArrayD(void** array, std::size_t requested)
 {
     ResizeStrongPointerArray(array, array, requested);
 }
@@ -3329,91 +3355,134 @@ static void WriteStreamBytes(void* stream, const void* data, std::size_t size)
     reinterpret_cast<void (*)(void*, const void*, std::size_t)>(vtable[9])(stream, data, size);
 }
 
-// MS2-FUNCTIONAL: writes versioned movie counters and nested records in stream order, delegating child serializers to their recovered entry points.
 // @0x14268fb40
-void WriteMovieImageAggregate(const void* object, void* stream, unsigned version)
+void GFx::AMP::ProfileFrame::Write(File& str, UInt32 version) const
 {
-    const auto* bytes = static_cast<const unsigned char*>(object);
-    WriteStreamBytes(stream, bytes + 0x10, 8);
-    const unsigned leading[] = {0x18, 0x1c, 0x24, 0x20};
-    for (unsigned offset : leading)
-        WriteStreamBytes(stream, bytes + offset, 4);
-    const std::uint32_t zero = 0;
-    if (version < 0x15)
-        WriteStreamBytes(stream, &zero, 4);
-    for (unsigned offset = 0x28; offset <= 0x3c; offset += 4)
-        WriteStreamBytes(stream, bytes + offset, 4);
-    if (version > 0x1d)
-        WriteStreamBytes(stream, bytes + 0x40, 4);
-    for (unsigned offset = 0x44; offset <= 0x58; offset += 4)
-        WriteStreamBytes(stream, bytes + offset, 4);
-    if (version > 0xf)
-        WriteStreamBytes(stream, bytes + 0x5c, 4);
-    for (unsigned offset = 0x60; offset <= 0x7c; offset += 4)
-        WriteStreamBytes(stream, bytes + offset, 4);
-    if (version > 0xd) {
-        for (unsigned offset = 0x80; offset <= 0x88; offset += 4)
-            WriteStreamBytes(stream, bytes + offset, 4);
-        if (version > 0x17)
-            WriteStreamBytes(stream, bytes + 0x8c, 4);
-        if (version > 0x1a) {
-            WriteStreamBytes(stream, bytes + 0x90, 4);
-            WriteStreamBytes(stream, bytes + 0x94, 4);
+    WriteUInt64(str, TimeStamp);
+    WriteUInt32(str, FramesPerSecond);
+    WriteUInt32(str, AdvanceTime);
+    WriteUInt32(str, TimelineTime);
+    WriteUInt32(str, ActionTime);
+    if (version < 21)
+    {
+        WriteUInt32(str, 0);
+    }
+    WriteUInt32(str, InputTime);
+    WriteUInt32(str, MouseTime);
+    WriteUInt32(str, GetVariableTime);
+    WriteUInt32(str, SetVariableTime);
+    WriteUInt32(str, InvokeTime);
+    WriteUInt32(str, DisplayTime);
+    if (version >= 30)
+    {
+        WriteUInt32(str, PresentTime);
+    }
+    WriteUInt32(str, TesselationTime);
+    WriteUInt32(str, GradientGenTime);
+    WriteUInt32(str, UserTime);
+    WriteUInt32(str, LineCount);
+    WriteUInt32(str, MaskCount);
+    WriteUInt32(str, FilterCount);
+    if (version >= 16)
+    {
+        WriteUInt32(str, MeshCount);
+    }
+    WriteUInt32(str, TriangleCount);
+    WriteUInt32(str, DrawPrimitiveCount);
+    WriteUInt32(str, StrokeCount);
+    WriteUInt32(str, GradientFillCount);
+    WriteUInt32(str, MeshThrashing);
+    WriteUInt32(str, RasterizedGlyphCount);
+    WriteUInt32(str, FontTextureCount);
+    WriteUInt32(str, NumFontCacheTextureUpdates);
+    if (version >= 14)
+    {
+        WriteUInt32(str, FontThrashing);
+        WriteUInt32(str, FontFill);
+        WriteUInt32(str, FontFail);
+        if (version >= 24)
+        {
+            WriteUInt32(str, FontMisses);
+        }
+        if (version >= 27)
+        {
+            WriteUInt32(str, FontTotalArea);
+            WriteUInt32(str, FontUsedArea);
         }
     }
-    WriteStreamBytes(stream, bytes + 0x98, 8);
-    if (version > 0x1c)
-        WriteStreamBytes(stream, bytes + 0xa0, 4);
-    for (unsigned offset = 0xa4; offset <= 0xac; offset += 4)
-        WriteStreamBytes(stream, bytes + offset, 4);
-    if (version > 0x1b)
-        WriteStreamBytes(stream, bytes + 0xb0, 12);
-    WriteStreamBytes(stream, bytes + 0xbc, 16);
+    WriteUInt32(str, TotalMemory);
+    WriteUInt32(str, ImageMemory);
+    if (version >= 29)
+    {
+        WriteUInt32(str, ImageGraphicsMemory);
+    }
+    WriteUInt32(str, MovieDataMemory);
+    WriteUInt32(str, MovieViewMemory);
+    WriteUInt32(str, MeshCacheMemory);
+    if (version >= 28)
+    {
+        WriteUInt32(str, MeshCacheGraphicsMemory);
+        WriteUInt32(str, MeshCacheUnusedMemory);
+        WriteUInt32(str, MeshCacheGraphicsUnusedMemory);
+    }
+    WriteUInt32(str, FontCacheMemory);
+    WriteUInt32(str, VideoMemory);
+    WriteUInt32(str, SoundMemory);
+    WriteUInt32(str, OtherMemory);
 
-    const unsigned viewCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0xd8));
-    WriteStreamBytes(stream, &viewCount, 4);
-    auto** views = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0xd0));
-    for (unsigned i = 0; i < viewCount; ++i)
-        static_cast<const GFx::AMP::MovieProfile*>(views[i])->Write(*static_cast<File*>(stream), version);
-    if (version > 0xe)
-        (*reinterpret_cast<GFx::AMP::MovieFunctionStats* const*>(bytes + 0xe8))->Write(*static_cast<File*>(stream), version);
-    if (version > 0x18)
-        (*reinterpret_cast<GFx::AMP::MovieFunctionTreeStats* const*>(bytes + 0xf0))->Write(*static_cast<File*>(stream), version);
+    WriteUInt32(str, static_cast<UInt32>(MovieStats.GetSize()));
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        MovieStats[i]->Write(str, version);
+    }
+    if (version >= 15)
+    {
+        DisplayStats->Write(str, version);
+    }
+    if (version >= 25)
+    {
+        DisplayFunctionStats->Write(str, version);
+    }
+    WriteUInt32(str, static_cast<UInt32>(SwdHandles.GetSize()));
+    for (UPInt i = 0; i < SwdHandles.GetSize(); ++i)
+    {
+        WriteUInt32(str, SwdHandles[i]);
+    }
+    if (version >= 9)
+    {
+        WriteUInt32(str, static_cast<UInt32>(FileHandles.GetSize()));
+        for (UPInt i = 0; i < FileHandles.GetSize(); ++i)
+        {
+            WriteUInt64(str, FileHandles[i]);
+        }
+    }
+    MemoryByStatId->Write(str, version);
+    if (version <= 18)
+    {
+        Ptr<MemItem> tmp = *SF_HEAP_AUTO_NEW(this) MemItem(0);
+        tmp->Write(str, version);
+    }
+    if (version >= 3)
+    {
+        Images->Write(str, version);
+    }
+    if (version >= 7)
+    {
+        Fonts->Write(str, version);
+    }
+    if (version >= 17)
+    {
+        WriteUInt32(str, static_cast<UInt32>(ImageList.GetSize()));
+        for (UInt32 i = 0; i < ImageList.GetSize(); ++i)
+        {
+            ImageList[i]->Write(str, version);
+        }
+    }
 
-    const unsigned idCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x100));
-    WriteStreamBytes(stream, &idCount, 4);
-    auto* ids = *reinterpret_cast<const std::uint32_t* const*>(bytes + 0xf8);
-    for (unsigned i = 0; i < idCount; ++i)
-        WriteStreamBytes(stream, ids + i, 4);
-    if (version > 8) {
-        const unsigned valueCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x118));
-        WriteStreamBytes(stream, &valueCount, 4);
-        auto* values = *reinterpret_cast<const std::uint64_t* const*>(bytes + 0x110);
-        for (unsigned i = 0; i < valueCount; ++i)
-            WriteStreamBytes(stream, values + i, 8);
-    }
-    reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x128))->Write(
-        *static_cast<Scaleform::File*>(stream), version);
-    if (version < 0x13) {
-        Scaleform::MemItem legacy(0);
-        legacy.Write(*static_cast<Scaleform::File*>(stream), version);
-    }
-    if (version > 2)
-        reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x130))->Write(
-            *static_cast<Scaleform::File*>(stream), version);
-    if (version > 6)
-        reinterpret_cast<const Scaleform::MemItem*>(*reinterpret_cast<void* const*>(bytes + 0x138))->Write(
-            *static_cast<Scaleform::File*>(stream), version);
-    if (version > 0x10) {
-        const unsigned recordCount = static_cast<unsigned>(*reinterpret_cast<const std::size_t*>(bytes + 0x148));
-        WriteStreamBytes(stream, &recordCount, 4);
-        auto** records = *reinterpret_cast<void***>(const_cast<unsigned char*>(bytes + 0x140));
-        for (unsigned i = 0; i < recordCount; ++i)
-            static_cast<const ::Scaleform::GFx::AMP::ImageInfo*>(records[i])->Write(*static_cast<::Scaleform::File*>(stream), version);
-    }
-    if (version < 8) {
-        WriteStreamBytes(stream, &zero, 4);
-        WriteStreamBytes(stream, &zero, 4);
+    if (version < 8)
+    {
+        WriteUInt32(str, 0);
+        WriteUInt32(str, 0);
     }
 }
 
@@ -3512,36 +3581,16 @@ void GFx::AMP::MovieInstructionStats::Read(File& str, UInt32 version)
     }
 }
 
-// MS2-FUNCTIONAL: initializes the movie image data record, its five strings, and the four owned collection records.
 // @0x142686ae0
-extern "C" void* FUN_142686ae0(void* object)
+GFx::AMP::MovieProfile::MovieProfile() :
+    ViewHandle(0),
+    MinFrame(0),
+    MaxFrame(0)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    std::memset(bytes + 0x10, 0, 0x68);
-    *reinterpret_cast<void**>(bytes) = AS3MovieImageDataVtable;
-    *reinterpret_cast<std::uint32_t*>(bytes + 8) = 1;
-    new (bytes + 0x20) Scaleform::StringLH();
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    const std::size_t sizes[4] = { 0x28, 0x30, 0x30, 0x38 };
-    void* vtables[4] = { AS3MovieImageStringSetVtable, AS3MovieImageValueSetVtable,
-                         AS3MovieImageNameSetVtable, AS3MovieImageTreeVtable };
-    const std::size_t offsets[4] = { 0x58, 0x60, 0x68, 0x70 };
-    std::uint32_t stat = 0x242;
-    for (unsigned i = 0; i < 4; ++i) {
-        auto* child = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-            DAT_143b15f60, object, sizes[i], &stat));
-        if (!child) {
-            *reinterpret_cast<void**>(bytes + offsets[i]) = nullptr;
-            continue;
-        }
-        std::memset(child, 0, sizes[i]);
-        *reinterpret_cast<void**>(child) = vtables[i];
-        *reinterpret_cast<std::uint32_t*>(child + 8) = 1;
-        if (i == 3)
-            new (child + 0x10) Scaleform::StringLH();
-        *reinterpret_cast<void**>(bytes + offsets[i]) = child;
-    }
-    return object;
+    InstructionStats = *SF_HEAP_AUTO_NEW(this) MovieInstructionStats();
+    FunctionStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionStats();
+    SourceLineStats = *SF_HEAP_AUTO_NEW(this) MovieSourceLineStats();
+    FunctionTreeStats = *SF_HEAP_AUTO_NEW(this) MovieFunctionTreeStats();
 }
 
 static void* CreateAs3ReportBlock(void* owner, std::size_t size, std::uint32_t statId, void* vtable, bool hasString)
@@ -3667,125 +3716,136 @@ void GFx::AMP::MovieSourceLineStats::Read(File& str, UInt32 version)
     }
 }
 
-// MS2-FUNCTIONAL: reads the aggregate movie image header, nested movies, timing arrays, and versioned memory report trees.
 // @0x14268d5c0
-extern "C" void FUN_14268d5c0(void* object, void* stream, unsigned version)
+void GFx::AMP::ProfileFrame::Read(File& str, UInt32 version)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    ReadAs3StreamBytes(stream, bytes + 0x10, 8);
-    for (std::size_t offset : { std::size_t(0x18), std::size_t(0x1c), std::size_t(0x24), std::size_t(0x20) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version < 0x15) {
-        std::uint32_t legacy = 0;
-        ReadAs3StreamBytes(stream, &legacy, 4);
+    TimeStamp = ReadUInt64(str);
+    FramesPerSecond = str.ReadUInt32();
+    AdvanceTime = str.ReadUInt32();
+    TimelineTime = str.ReadUInt32();
+    ActionTime = str.ReadUInt32();
+    if (version < 21)
+    {
+        str.ReadUInt32();
     }
-    for (std::size_t offset : { std::size_t(0x28), std::size_t(0x2c), std::size_t(0x30), std::size_t(0x34),
-                                std::size_t(0x38), std::size_t(0x3c) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version > 0x1d) ReadAs3StreamBytes(stream, bytes + 0x40, 4);
-    for (std::size_t offset : { std::size_t(0x44), std::size_t(0x48), std::size_t(0x4c), std::size_t(0x50),
-                                std::size_t(0x54), std::size_t(0x58) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version > 0x0f) ReadAs3StreamBytes(stream, bytes + 0x5c, 4);
-    for (std::size_t offset : { std::size_t(0x60), std::size_t(0x64), std::size_t(0x68), std::size_t(0x6c),
-                                std::size_t(0x70), std::size_t(0x74), std::size_t(0x78), std::size_t(0x7c) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version > 0x0d) {
-        for (std::size_t offset : { std::size_t(0x80), std::size_t(0x84), std::size_t(0x88) })
-            ReadAs3StreamBytes(stream, bytes + offset, 4);
-        if (version > 0x17) ReadAs3StreamBytes(stream, bytes + 0x8c, 4);
-        if (version > 0x1a) {
-            ReadAs3StreamBytes(stream, bytes + 0x90, 4);
-            ReadAs3StreamBytes(stream, bytes + 0x94, 4);
+    InputTime = str.ReadUInt32();
+    MouseTime = str.ReadUInt32();
+    GetVariableTime = str.ReadUInt32();
+    SetVariableTime = str.ReadUInt32();
+    InvokeTime = str.ReadUInt32();
+    DisplayTime = str.ReadUInt32();
+    if (version >= 30)
+    {
+        PresentTime = str.ReadUInt32();
+    }
+    TesselationTime = str.ReadUInt32();
+    GradientGenTime = str.ReadUInt32();
+    UserTime = str.ReadUInt32();
+    LineCount = str.ReadUInt32();
+    MaskCount = str.ReadUInt32();
+    FilterCount = str.ReadUInt32();
+    if (version >= 16)
+    {
+        MeshCount = str.ReadUInt32();
+    }
+    TriangleCount = str.ReadUInt32();
+    DrawPrimitiveCount = str.ReadUInt32();
+    StrokeCount = str.ReadUInt32();
+    GradientFillCount = str.ReadUInt32();
+    MeshThrashing = str.ReadUInt32();
+    RasterizedGlyphCount = str.ReadUInt32();
+    FontTextureCount = str.ReadUInt32();
+    NumFontCacheTextureUpdates = str.ReadUInt32();
+    if (version >= 14)
+    {
+        FontThrashing = str.ReadUInt32();
+        FontFill = str.ReadUInt32();
+        FontFail = str.ReadUInt32();
+        if (version >= 24)
+        {
+            FontMisses = str.ReadUInt32();
+        }
+        if (version >= 27)
+        {
+            FontTotalArea = str.ReadUInt32();
+            FontUsedArea = str.ReadUInt32();
         }
     }
-    for (std::size_t offset : { std::size_t(0x98), std::size_t(0x9c) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version > 0x1c) ReadAs3StreamBytes(stream, bytes + 0xa0, 4);
-    for (std::size_t offset : { std::size_t(0xa4), std::size_t(0xa8), std::size_t(0xac) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
-    if (version > 0x1b) {
-        for (std::size_t offset : { std::size_t(0xb0), std::size_t(0xb4), std::size_t(0xb8) })
-            ReadAs3StreamBytes(stream, bytes + offset, 4);
+    TotalMemory = str.ReadUInt32();
+    ImageMemory = str.ReadUInt32();
+    if (version >= 29)
+    {
+        ImageGraphicsMemory = str.ReadUInt32();
     }
-    for (std::size_t offset : { std::size_t(0xbc), std::size_t(0xc0), std::size_t(0xc4), std::size_t(0xc8) })
-        ReadAs3StreamBytes(stream, bytes + offset, 4);
+    MovieDataMemory = str.ReadUInt32();
+    MovieViewMemory = str.ReadUInt32();
+    MeshCacheMemory = str.ReadUInt32();
+    if (version >= 28)
+    {
+        MeshCacheGraphicsMemory = str.ReadUInt32();
+        MeshCacheUnusedMemory = str.ReadUInt32();
+        MeshCacheGraphicsUnusedMemory = str.ReadUInt32();
+    }
+    FontCacheMemory = str.ReadUInt32();
+    VideoMemory = str.ReadUInt32();
+    SoundMemory = str.ReadUInt32();
+    OtherMemory = str.ReadUInt32();
 
-    unsigned imageCount = 0;
-    ReadAs3StreamBytes(stream, &imageCount, 4);
-    Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0xd0), imageCount);
-    auto** images = *reinterpret_cast<unsigned char***>(bytes + 0xd0);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    std::uint32_t imageStat = 0x242;
-    for (unsigned i = 0; i < imageCount; ++i) {
-        auto* image = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-            DAT_143b15f60, object, 0x78, &imageStat));
-        if (!image)
-            return;
-        image = static_cast<unsigned char*>(FUN_142686ae0(image));
-        if (images[i]) FUN_14257dcb0(images[i]);
-        images[i] = image;
-        reinterpret_cast<GFx::AMP::MovieProfile*>(image)->Read(*static_cast<File*>(stream), version);
+    MovieStats.Resize(str.ReadUInt32());
+    for (UPInt i = 0; i < MovieStats.GetSize(); ++i)
+    {
+        MovieStats[i] = *SF_HEAP_AUTO_NEW(this) MovieProfile();
+        MovieStats[i]->Read(str, version);
     }
-    if (version > 0x0e) (*reinterpret_cast<GFx::AMP::MovieFunctionStats**>(bytes + 0xe8))->Read(*static_cast<File*>(stream), version);
-    if (version > 0x18) (*reinterpret_cast<GFx::AMP::MovieFunctionTreeStats**>(bytes + 0xf0))->Read(*static_cast<File*>(stream), version);
+    if (version >= 15)
+    {
+        DisplayStats->Read(str, version);
+    }
+    if (version >= 25)
+    {
+        DisplayFunctionStats->Read(str, version);
+    }
+    SwdHandles.Resize(str.ReadUInt32());
+    for (UPInt i = 0; i < SwdHandles.GetSize(); ++i)
+    {
+        SwdHandles[i] = str.ReadUInt32();
+    }
+    if (version >= 9)
+    {
+        FileHandles.Resize(str.ReadUInt32());
+        for (UPInt i = 0; i < FileHandles.GetSize(); ++i)
+        {
+            FileHandles[i] = ReadUInt64(str);
+        }
+    }
+    MemoryByStatId->Read(str, version);
+    if (version <= 18)
+    {
+        Ptr<MemItem> tmp = *SF_HEAP_AUTO_NEW(this) MemItem(0);
+        tmp->Read(str, version);
+    }
+    if (version >= 3)
+    {
+        Images->Read(str, version);
+    }
+    if (version >= 7)
+    {
+        Fonts->Read(str, version);
+    }
+    if (version >= 17)
+    {
+        ImageList.Resize(str.ReadUInt32());
+        for (UPInt i = 0; i < ImageList.GetSize(); ++i)
+        {
+            ImageList[i] = *SF_HEAP_AUTO_NEW(this) ImageInfo();
+            ImageList[i]->Read(str, version);
+        }
+    }
 
-    unsigned idCount = 0;
-    ReadAs3StreamBytes(stream, &idCount, 4);
-    Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0xf8), bytes + 0xf8, idCount, 4);
-    auto* ids = *reinterpret_cast<std::uint32_t**>(bytes + 0xf8);
-    for (unsigned i = 0; i < idCount; ++i)
-        ReadAs3StreamBytes(stream, ids + i, 4);
-    if (version > 8) {
-        unsigned count = 0;
-        ReadAs3StreamBytes(stream, &count, 4);
-        Scaleform::ResizeRawArray(reinterpret_cast<void**>(bytes + 0x110), bytes + 0x110, count, 8);
-        auto* values = *reinterpret_cast<std::uint64_t**>(bytes + 0x110);
-        for (unsigned i = 0; i < count; ++i)
-            ReadAs3StreamBytes(stream, values + i, 8);
-    }
-    // the 0x128 item, an old file's dropped item, then 0x130 (version 3 on) and 0x138 (version 7 on)
-    auto readItem = [&](std::size_t offset) {
-        auto* item = *reinterpret_cast<Scaleform::MemItem**>(bytes + offset);
-        if (item) item->Read(*reinterpret_cast<Scaleform::File*>(stream), version);
-    };
-    readItem(0x128);
-    if (version < 0x13) {
-        std::uint32_t itemStat = 2;
-        void* legacy = reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-            DAT_143b15f60, object, sizeof(Scaleform::MemItem), &itemStat);
-        if (legacy) {
-            ::new (legacy) Scaleform::MemItem(2);
-            static_cast<Scaleform::MemItem*>(legacy)->Read(*reinterpret_cast<Scaleform::File*>(stream), version);
-            FUN_14257dcb0(legacy);
-        }
-    }
-    if (version >= 3) readItem(0x130);
-    if (version >= 7) readItem(0x138);
-    if (version > 0x10) {
-        unsigned extraCount = 0;
-        ReadAs3StreamBytes(stream, &extraCount, 4);
-        Scaleform::ResizeStrongPointerArrayB(reinterpret_cast<void**>(bytes + 0x140), extraCount);
-        auto** extras = *reinterpret_cast<unsigned char***>(bytes + 0x140);
-        std::uint32_t extraStat = 0x242;
-        for (unsigned i = 0; i < extraCount; ++i) {
-            auto* extra = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, void*, std::size_t, const void*)>(heapVtable[14])(
-                DAT_143b15f60, object, 0x40, &extraStat));
-            if (!extra)
-                return;
-            std::memset(extra, 0, 0x40);
-            *reinterpret_cast<void**>(extra) = AS3MovieImageExtraVtable;
-            *reinterpret_cast<std::uint32_t*>(extra + 8) = 1;
-            new (extra + 0x18) Scaleform::StringLH();
-            if (extras[i]) FUN_14257dcb0(extras[i]);
-            extras[i] = extra;
-            reinterpret_cast<::Scaleform::GFx::AMP::ImageInfo*>(extra)->Read(*static_cast<::Scaleform::File*>(stream), version);
-        }
-    }
-    if (version < 8) {
-        std::uint32_t legacy = 0;
-        ReadAs3StreamBytes(stream, &legacy, 4);
-        ReadAs3StreamBytes(stream, &legacy, 4);
+    if (version < 8)
+    {
+        str.ReadUInt32();
+        str.ReadUInt32();
     }
 }
 
