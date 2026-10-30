@@ -3202,7 +3202,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // An XML node enumerates as a one-item list: its only name is "0".
-    // MS2-FUNCTIONAL: the exe addresses the empty builtin off the string manager (lea) instead of a copied pointer
+    // Past the end the name is the "null" builtin (Builtins[2], as in the SDK).
     // @0x1424163b0
     void XML::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
     {
@@ -3210,7 +3210,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         if (ind.IsValid())
             name.Assign(sm.CreateConstString("0"));
         else
-            name.Assign(sm.GetBuiltin(AS3Builtin_empty_));
+            name.Assign(sm.GetBuiltin(AS3Builtin_null));
     }
 
     // @0x142416670
