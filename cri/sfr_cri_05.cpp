@@ -882,15 +882,11 @@ int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
 // @0x14004e460
 longlong FUN_14004e460(longlong a1)
 {
-  cri_u64 u_v1;
-  longlong l_v2;
-  int i_v3;
+  int i;
   
-  l_v2 = a1;
   FUN_14004e100(a1);
-  i_v3 = 0;
-  CriAt<cri_u32>(l_v2, 0x153c) = 0;
-  FUN_140064eb0(l_v2 + 0x1540,&DAT_143badab0,0x40);
+  CriAt<cri_u32>(a1, 0x153c) = 0;
+  FUN_140064eb0(a1 + 0x1540,&DAT_143badab0,0x40);
   CriAt<cri_u64>(a1, 0x1588) = 0;
   CriAt<cri_u64>(a1, 0x1590) = 0;
   CriAt<cri_u32>(a1, 0x1580) = 0x7fffffff;
@@ -905,16 +901,14 @@ longlong FUN_14004e460(longlong a1)
   CriAt<cri_u32>(a1, 0x17c0) = 0;
   CriAt<cri_u32>(a1, 0x17c4) = 0;
   CriAt<cri_u32>(a1, 0x1814) = 0;
-  do {
-    FUN_1400511a0(a1,i_v3,0,0,0);
-    i_v3 = i_v3 + 1;
-  } while (i_v3 < 4);
+  for (i = 0; i < 4; i++) {
+    FUN_1400511a0(a1,i,0,0,0);
+  }
   FUN_1400511d0(a1,0,0);
   FUN_140066350(a1);
   CriAt<cri_u32>(a1, 0x18f0) = 0;
   FUN_140065000(a1);
-  u_v1 = FUN_140062900(a1);
-  CriAt<cri_u64>(a1, 0x1848) = u_v1;
+  CriAt<cri_u64>(a1, 0x1848) = FUN_140062900(a1);
   CriAt<cri_u32>(a1, 0x1538) = 2;
   return a1;
 }
@@ -3000,7 +2994,9 @@ void FUN_140050fc0(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400511a0
-void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5)
+// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
+// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
+__declspec(noinline) inline void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5)
 {
   struct Entry { cri_u64 Data; cri_u64 Size; cri_u64 Extra; };
   Entry *entries;
@@ -3013,7 +3009,9 @@ void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400511d0
-void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3)
+// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
+// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
+__declspec(noinline) inline void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3)
 {
   CriAt<cri_u64>(a1, 0x18b8) = a2;
   CriAt<cri_u32>(a1, 0x18c0) = a3;
