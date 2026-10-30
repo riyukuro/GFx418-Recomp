@@ -1009,7 +1009,6 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b08d0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Font::fontNameGet(Value& result)
     {
         if (pFont)
@@ -1101,7 +1100,6 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424abd70
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextLineMetrics::AS3Constructor(unsigned argc, const Value* argv)
     {
         if (argc > 0)
@@ -1388,12 +1386,12 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b3fb0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::scrollHSet(const Value& result, SInt32 value)
     {
         SF_UNUSED(result);
+        if (value < 0) value = 0;
         void* ptf = DisplayTextField(this);
-        FUN_142615390(DocViewOf(ptf), (unsigned long long)(SInt64)((value < 0 ? 0 : value) * TwipsPerPixel));
+        FUN_142615390(DocViewOf(ptf), (unsigned long long)(SInt64)(value * TwipsPerPixel));
         FUN_1425bc060(ptf);
     }
 
@@ -1404,12 +1402,12 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b4030
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::scrollVSet(const Value& result, SInt32 value)
     {
         SF_UNUSED(result);
+        if (value < 1) value = 1;
         void* ptf = DisplayTextField(this);
-        FUN_142615670(DocViewOf(ptf), (unsigned)((value < 1 ? 1 : value) - 1));
+        FUN_142615670(DocViewOf(ptf), (unsigned)(value - 1));
         FUN_1425bc060(ptf);
     }
 
@@ -1527,13 +1525,10 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl_text
 {
     // TextFormat keeps its properties as Values; a string property reads back null while it is unset.
-    static inline void GetStringProperty(ASString& result, const Instances::fl::Object* pobj, UPInt offset)
+    static __forceinline void GetStringProperty(ASString& result, const Instances::fl::Object* pobj, UPInt offset)
     {
         const Value& v = *(const Value*)((const UByte*)pobj + offset);
-        if (v.IsNull())
-            result.SetNull();
-        else
-            result = v.AsString();
+        result.AssignNode(v.IsNull() ? result.GetManager()->GetNullStringNode() : v.AsStringNode());
     }
 
     // @0x1424af820
@@ -2081,12 +2076,25 @@ namespace Instances { namespace fl_text
         FieldFlags(ptf) |= 0x10000;
     }
 
+    // The DocView's flags byte as the SDK's inline setters touch it.
+    struct DocViewFlagsView
+    {
+        UByte Pad[0x149];
+        UInt8 Flags;
+        void SetUseDeviceFont()   { Flags |= 0x20; }
+        void ClearUseDeviceFont() { Flags &= (~0x20); }
+        void SetPasswordMode()    { Flags |= 0x10; }
+        void SetMultiline()       { Flags |= 4; }
+        void ClearMultiline()     { Flags &= (~4); }
+        bool IsMultiline() const  { return (Flags & 4) != 0; }
+        void ClearPasswordMode()  { Flags &= (~0x10); }
+    };
 
     // Re-applies the auto-size mode to the document view after a layout setting changed; horizontal auto-sizing is
     // off while the text wraps.
     // @0x1424af5f0
     // MS2-FUNCTIONAL: written from the exe's control flow
-    void TextFieldUpdateAutoSize(TextField* pthis)
+    SF_NOINLINE void TextFieldUpdateAutoSize(TextField* pthis)
     {
         void* ptf = DisplayTextField(pthis);
         bool autoSize = (FieldFlags(ptf) & 1) != 0;
@@ -2130,14 +2138,11 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b2f80
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::htmlTextGet(ASString& result)
     {
         void* text;
-        FUN_1425b91e0(DisplayTextField(this), &text, true);
-        ASString& s = *reinterpret_cast<ASString*>(&text);
-        result = s;
-        s.~ASString();
+        result = *reinterpret_cast<ASString*>(FUN_1425b91e0(DisplayTextField(this), &text, true));
+        reinterpret_cast<ASString*>(&text)->~ASString();
     }
 
     // @0x1424b3270
@@ -2146,27 +2151,24 @@ namespace Instances { namespace fl_text
     {
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
-        UByte& flags = ViewFlags(DocViewOf(ptf));
-        if (((flags & 4) != 0) != value)
+        DocViewFlagsView* pdoc = static_cast<DocViewFlagsView*>(DocViewOf(ptf));
+        if (pdoc->IsMultiline() != value)
         {
             if (value)
-                flags |= 4;
+                pdoc->SetMultiline();
             else
-                flags &= ~4;
+                pdoc->ClearMultiline();
             TextFieldUpdateAutoSize(this);
         }
         FUN_1425bc060(ptf);
     }
 
     // @0x1424b4e30
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::textGet(ASString& result)
     {
         void* text;
-        FUN_1425b91e0(DisplayTextField(this), &text, false);
-        ASString& s = *reinterpret_cast<ASString*>(&text);
-        result = s;
-        s.~ASString();
+        result = *reinterpret_cast<ASString*>(FUN_1425b91e0(DisplayTextField(this), &text, false));
+        reinterpret_cast<ASString*>(&text)->~ASString();
     }
 
     // @0x1424b4ea0
@@ -2187,7 +2189,6 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b5440
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::wordWrapSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
@@ -3361,7 +3362,7 @@ namespace Instances { namespace fl_text
     // @0x1424afd30
     void TextField::backgroundGet(bool& result)
     {
-        result = (*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x13c) >> 24) != 0;
+        result = Render::Color(*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x13c)).GetAlpha() != 0;
     }
 
     // @0x1424afd50
@@ -3413,7 +3414,7 @@ namespace Instances { namespace fl_text
     // @0x1424afde0
     void TextField::borderGet(bool& result)
     {
-        result = (*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x138) >> 24) != 0;
+        result = Render::Color(*(UInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0x138)).GetAlpha() != 0;
     }
 
     // @0x1424afe00
@@ -3485,19 +3486,18 @@ namespace Instances { namespace fl_text
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
         UInt32 flags = FieldFlags(ptf);
-        if ((((flags >> 2) & 1) != 0) != v)
+        if ((bool)((flags >> 2) & 1) != v)
         {
             if (v)
                 flags |= 4;
             else
                 flags &= ~4u;
-            void* pdoc = DocViewOf(ptf);
             FieldFlags(ptf) = flags;
             // The view's password mode, and its reformat request.
             if (v)
-                ViewFlags(pdoc) |= 0x10;
+                static_cast<DocViewFlagsView*>(DocViewOf(ptf))->SetPasswordMode();
             else
-                ViewFlags(pdoc) &= ~0x10;
+                static_cast<DocViewFlagsView*>(DocViewOf(ptf))->ClearPasswordMode();
             *((UByte*)DocViewOf(ptf) + 0x14b) |= 2;
         }
         FUN_1425bc060(ptf);
@@ -3513,11 +3513,11 @@ namespace Instances { namespace fl_text
     void TextField::embedFontsSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        UByte& flags = ViewFlags(DocViewOf(DisplayTextField(this)));
+        void* ptf = DisplayTextField(this);
         if (v)
-            flags &= ~0x20;
+            static_cast<DocViewFlagsView*>(DocViewOf(ptf))->ClearUseDeviceFont();
         else
-            flags |= 0x20;
+            static_cast<DocViewFlagsView*>(DocViewOf(ptf))->SetUseDeviceFont();
     }
 
     // @0x1424b09b0
@@ -3618,8 +3618,9 @@ namespace Instances { namespace fl_text
     void TextField::maxCharsGet(SInt32& result)
     {
         // The view's character limit (+0xc8), 0 when unlimited.
+        void* ptf = DisplayTextField(this);
         result = 0;
-        SInt32 maxChars = *(SInt32*)((UByte*)DocViewOf(DisplayTextField(this)) + 0xc8);
+        SInt32 maxChars = *(SInt32*)((UByte*)DocViewOf(ptf) + 0xc8);
         if (maxChars)
             result = maxChars;
     }
@@ -3755,6 +3756,15 @@ namespace Instances { namespace fl_text
         result = ((FieldFlags(DisplayTextField(this)) >> 8) & 1) != 0;
     }
 
+    // The editor kit's flags word as the SDK's inline setters touch it.
+    struct EditorKitFlagsView
+    {
+        UByte  Pad[0xa0];
+        UInt16 Flags;
+        void SetUseRichClipboard()   { Flags |= 4; }
+        void ClearUseRichClipboard() { Flags &= (~4); }
+    };
+
     // @0x1424b53c0
     void TextField::useRichTextClipboardSet(const Value& result, bool v)
     {
@@ -3768,13 +3778,13 @@ namespace Instances { namespace fl_text
         void* pdoc = DocViewOf(ptf);
         FieldFlags(ptf) = flags;
         // The view's editor kit (+0xd8) keeps its own rich-clipboard flag.
-        void* pkit = *(void**)((UByte*)pdoc + 0xd8);
+        EditorKitFlagsView* pkit = *(EditorKitFlagsView**)((UByte*)pdoc + 0xd8);
         if (pkit)
         {
-            if ((flags >> 8) & 1)
-                *(UInt16*)((UByte*)pkit + 0xa0) |= 4;
+            if ((UByte)(flags >> 8) & 1)
+                pkit->SetUseRichClipboard();
             else
-                *(UInt16*)((UByte*)pkit + 0xa0) &= 0xfffb;
+                pkit->ClearUseRichClipboard();
         }
     }
 
@@ -3869,12 +3879,14 @@ namespace Instances { namespace fl_ui
 
 // Vtable-slot leaves without pdata; data_rdata_sf_a's vtable image reaches them by VA.
 
-// MS2-FUNCTIONAL: returns the address of the +0x50 member of the object held at +0x40, or null.
+// Returns the address of the +0x50 member of the object held at +0x40, or null.
 // @0x1424aceb0
 void* FUN_1424aceb0(void* self)
 {
     UByte* p = *(UByte**)((UByte*)self + 0x40);
-    return p ? p + 0x50 : nullptr;
+    if (p)
+        return p + 0x50;
+    return p;
 }
 
 // MS2-FUNCTIONAL: reports whether the object at +0x40 is set.
