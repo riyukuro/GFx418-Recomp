@@ -1590,20 +1590,11 @@ __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& t
 
 }}}} // namespace Scaleform::GFx::AS3::TR
 
-// ---- Tracer merging of the block entry states (free functions; as3_tracer.h declares them as Tracer members) ----
+// ---- Tracer merging of the block entry states ----
 void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b);   // raises verify error 0x42c (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 namespace {
-// The trace null type of a value joined to the instance traits itr: never null for the value classes, else what the
-// two sides agree on.
-SF_FORCEINLINE Value::TraceNullType TrJoinNullType(UPInt vm, UPInt itr, const Value& to, const Value& from)
-{
-    if (itr == TrBuiltin(vm, 0x220) || itr == TrBuiltin(vm, 0x228) || itr == TrBuiltin(vm, 0x218) ||
-        itr == TrBuiltin(vm, 0x210))
-        return Value::NotNull;
-    return CanBeNull(to, from);
-}
 // to = the traits value { kind, null type } for tr (a temporary assigned through Value::Assign)
 __declspec(safebuffers) SF_FORCEINLINE void TrAssignTraits(Value& to, UInt32 flags, UPInt tr)
 {
@@ -1615,211 +1606,14 @@ __declspec(safebuffers) SF_FORCEINLINE void TrAssignTraits(Value& to, UInt32 fla
     to.Assign(v);
     v.~Value();
 }
-__declspec(safebuffers) SF_FORCEINLINE void TrJoinClassTraits(UPInt tracer, Value& to, const Value& from, UPInt ctr)
-{
-    const UPInt vm = TrVM(tracer);
-    TrAssignTraits(to, static_cast<UInt32>(TrJoinNullType(vm, TrRd(ctr, 0xc0), to, from)) << 5 | Value::kClassTraits, ctr);
-}
-// a state's operand stack, scope stack or register file (Tracer::MergeSet 0 / 1 / 2)
-SF_FORCEINLINE UPInt TrMergeArray(UPInt state, int ms)
-{
-    switch (ms)
-    {
-    case 0: return state + 0x38;
-    case 1: return state + 0x58;
-    case 2: return state + 0x18;
-    }
-    return 0;
-}
 // an object kind (Object .. ThunkFunction) holding null
 SF_FORCEINLINE bool TrIsNullObject(const Value& v)
 {
     return static_cast<UInt32>(v.GetKind()) - 12u <= 3u && TrRd(reinterpret_cast<UPInt>(&v), 0x10) == 0;
 }
-// Value::AddRef with its weak-reference and per-kind paths inline
-SF_FORCEINLINE void TrAddRef(const Value& v)
-{
-    const UPInt p = reinterpret_cast<UPInt>(&v);
-    const UInt32 flags = *reinterpret_cast<const UInt32*>(p);
-    const UInt32 k = flags & 0x1f;
-    if (k <= 9)
-        return;
-    if ((flags >> 9) & 1)
-    {
-        ++*reinterpret_cast<int*>(TrRd(p, 8));
-        return;
-    }
-    if (k == 10)
-    {
-        ++*reinterpret_cast<int*>(TrRd(p, 0x10) + 0x18);
-        return;
-    }
-    UPInt obj;
-    if (k <= 15)
-        obj = TrRd(p, 0x10);
-    else if (k <= 17)
-        obj = TrRd(p, 0x18);
-    else
-        return;
-    if (obj != 0)
-    {
-        UInt32* rc = reinterpret_cast<UInt32*>(obj + 0x10);
-        *rc = (*rc + 1) & 0x8fbfffff;
-    }
-}
-SF_FORCEINLINE bool TrRegChanged(UPInt state, UPInt ind)
-{
-    return (reinterpret_cast<const UByte*>(TrRd(state, 0x78))[ind >> 3] & (1u << (ind & 7))) != 0;
-}
 }
 
 }}}}
-
-
-// Tracer::IsAnyType: Object (or Class) instance traits.
-// @0x142513f50
-__declspec(noinline) bool FUN_142513f50(Scaleform::UPInt tracer, Scaleform::UPInt traits)
-{
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    const UPInt vm = TrVM(tracer);
-    return traits == TrBuiltin(vm, 0x1f8) || traits == TrBuiltin(vm, 0x1f0);
-}
-
-// Tracer::JoinSNodesUpdateType(Value& to, const Value& from, const ClassTraits::Traits& tr)
-// MS2-FUNCTIONAL 0x142515840: clang tail-calls the weak-proxy free; the exe calls it and returns
-// @0x142515840
-__declspec(safebuffers) void FUN_142515840(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value& to, const Scaleform::GFx::AS3::Value& from,
-                   Scaleform::UPInt ctr)
-{
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    TrJoinClassTraits(tracer, to, from, ctr);
-}
-
-// Tracer::JoinSNodesUpdateType(Value& to, const Value& from, const InstanceTraits::Traits& tr)
-// MS2-FUNCTIONAL 0x142515930: clang tail-calls the weak-proxy free; the exe calls it and returns
-// @0x142515930
-__declspec(noinline) __declspec(safebuffers) void FUN_142515930(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value& to,
-                                        const Scaleform::GFx::AS3::Value& from, Scaleform::UPInt itr)
-{
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    const UPInt vm = TrVM(tracer);
-    TrAssignTraits(to, static_cast<UInt32>(TrJoinNullType(vm, itr, to, from)) << 5 | Value::kInstanceTraits, itr);
-}
-
-// Tracer::MergeValues: merges entry ind of from's operand stack / scope stack / register file into to's; a type
-// conflict raises the verify error and fails.
-// MS2-FUNCTIONAL 0x1425178e0: register allocation and block layout of the traits-join cases differ
-// @0x1425178e0
-__declspec(safebuffers) Scaleform::GFx::AS3::CheckResult* FUN_1425178e0(Scaleform::UPInt tracer, Scaleform::GFx::AS3::CheckResult* out,
-                                                Scaleform::UPInt ind, Scaleform::UPInt to, Scaleform::UPInt from, int ms)
-{
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    Value& tv = reinterpret_cast<Value*>(TrRd(TrMergeArray(to, ms), 0))[ind];
-    const Value& fv = reinterpret_cast<const Value*>(TrRd(TrMergeArray(from, ms), 0))[ind];
-    const UPInt t1 = TraceValueTraits(tracer, &tv);
-    const UPInt t2 = TraceValueTraits(tracer, &fv);
-
-    if (ms == 1)
-    {
-        if (tv.GetWith() != fv.GetWith())
-            goto fail;
-    }
-    else if (ms == 2)
-    {
-        if (!TrRegChanged(from, ind))
-            goto update;
-        if (!TrRegChanged(to, ind))
-        {
-            tv.Assign(fv);
-            goto update;
-        }
-    }
-
-    if (t1 != t2)
-    {
-        if (tv.GetKind() == Value::kUndefined)
-            tv.Assign(fv);
-        else
-        {
-            const UPInt vm = TrVM(tracer);
-            const UPInt objTr = TrBuiltin(vm, 0x1f8);
-            if (t1 == objTr || t1 == TrBuiltin(vm, 0x1f0))
-                ;
-            else if (FUN_142513f50(tracer, t2))
-                FUN_142515930(tracer, tv, fv, objTr);
-            else
-            {
-                const bool num1 = reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t1));
-                if (num1 && reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t2)))
-                    FUN_142515930(tracer, tv, fv, TrBuiltin(vm, 0x218));
-                else if (TrIsNullObject(tv) || t1 == TrRd(vm, 0x270))
-                {
-                    if (TrIsNullObject(fv) || t2 == TrRd(vm, 0x270))
-                        ;
-                    else if (t2 != TrBuiltin(vm, 0x230) && reinterpret_cast<const Tracer*>(tracer)->IsNumericType(reinterpret_cast<const Traits*>(t2)))
-                        goto fail;
-                    else
-                        tv.Assign(fv);
-                }
-                else if (TrIsNullObject(fv) || t2 == TrRd(vm, 0x270))
-                {
-                    if (t1 != TrBuiltin(vm, 0x230) && num1)
-                        goto fail;
-                }
-                else
-                {
-                    // the nearest common base: mark t1's chain, find the first marked one on t2's
-                    for (UPInt t = t1; t != 0; t = TrRd(t, 0x88))
-                        *reinterpret_cast<UPInt*>(t + 0x68) |= 0x80;
-                    bool found = false;
-                    for (UPInt t = t2; t != 0; t = TrRd(t, 0x88))
-                    {
-                        const UPInt f = TrRd(t, 0x68);
-                        if (f & 0x80)
-                        {
-                            found = true;
-                            if (f & 0x20)
-                                TrJoinClassTraits(tracer, tv, fv, t);
-                            else
-                                FUN_142515930(tracer, tv, fv, t);
-                            break;
-                        }
-                    }
-                    for (UPInt t = t1; t != 0; t = TrRd(t, 0x88))
-                        *reinterpret_cast<UPInt*>(t + 0x68) &= ~static_cast<UPInt>(0x80);
-                    if (!found)
-                        goto fail;
-                }
-            }
-        }
-    }
-
-    if (ms == 2)
-    {
-    update:
-        UByte& bits = reinterpret_cast<UByte*>(TrRd(to, 0x78))[ind >> 3];
-        const unsigned bit = static_cast<unsigned>(ind & 7);
-        if (TrRegChanged(from, ind) || TrRegChanged(to, ind))
-            bits = static_cast<UByte>(bits | (1u << bit));
-        else
-            bits = static_cast<UByte>(bits & ~(1u << bit));
-    }
-    *out = true;
-    return out;
-
-fail:
-    FUN_14252efe0(tracer, t1, t2);
-    *out = false;
-    return out;
-}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1838,6 +1632,146 @@ SF_FORCEINLINE const ArrayDH<Value>& TrMergeList(const TR::State& st, TR::MergeS
 {
     return TrMergeList(const_cast<TR::State&>(st), ms);
 }
+// Tracer::CanBeNull(const InstanceTraits::Traits&) (sfr_as3_17), which the exe inlines here
+SF_FORCEINLINE Value::TraceNullType TrCanBeNull(const Tracer& t, const InstanceTraits::Traits& traits)
+{
+    return &traits == &t.GetSIntType() || &traits == &t.GetUIntType() || &traits == &t.GetNumberType() ||
+                   &traits == &t.GetBooleanType()
+               ? Value::NotNull
+               : Value::NullOrNot;
+}
+}
+
+// Object (or Class) instance traits.
+// @0x142513f50
+__declspec(noinline) bool Tracer::IsAnyType(const Traits* tr) const
+{
+    return tr == &GetVM().GetClassTraitsObject().GetInstanceTraits() ||
+           tr == &GetVM().GetClassTraitsClassClass().GetInstanceTraits();
+}
+
+// MS2-FUNCTIONAL 0x142515840: the exe keeps the inlined CanBeNull result in a register and tests it again, and tail-calls
+// the weak-proxy free
+// @0x142515840
+__declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from, ClassTraits::Traits& tr) const
+{
+    // If a new type is always not null, then there is no reason to check "to" and "from".
+    Value::TraceNullType null = TrCanBeNull(*this, tr.GetInstanceTraits());
+    if (null != Value::NotNull)
+        null = AS3::CanBeNull(to_be_merged, from);
+    to_be_merged.Assign(Value(tr, null));
+}
+
+// MS2-FUNCTIONAL 0x142515930: the exe keeps the inlined CanBeNull result in a register and tests it again, and tail-calls
+// the weak-proxy free
+// @0x142515930
+__declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from,
+                                                                               InstanceTraits::Traits& tr) const
+{
+    // If a new type is always not null, then there is no reason to check "to" and "from".
+    Value::TraceNullType null = TrCanBeNull(*this, tr);
+    if (null != Value::NotNull)
+        null = AS3::CanBeNull(to_be_merged, from);
+    to_be_merged.Assign(Value(tr, null));
+}
+
+// Merges entry ind of from's operand stack / scope stack / register file into to's; a type conflict raises the
+// verify error and fails.
+// MS2-FUNCTIONAL 0x1425178e0: register allocation and block layout of the traits-join cases differ
+// @0x1425178e0
+__declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to, const TR::State& from, TR::MergeSet ms)
+{
+    Value& tv = TrMergeList(to, ms)[ind];
+    const Value& fv = TrMergeList(from, ms)[ind];
+    const Traits* t1 = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &tv));
+    const Traits* t2 = reinterpret_cast<const Traits*>(TR::TraceValueTraits(reinterpret_cast<UPInt>(this), &fv));
+    const Traits* nullTr = &GetVM().GetITraitsNull();
+
+    if (ms == TR::msScopeStack)
+    {
+        if (tv.GetWith() != fv.GetWith())
+            goto fail;
+    }
+    else if (ms == TR::msRegisterFile)
+    {
+        if (!from.IsRegChanged(ind))
+            goto update;
+        if (!to.IsRegChanged(ind))
+        {
+            tv.Assign(fv);
+            goto update;
+        }
+    }
+
+    if (t1 != t2)
+    {
+        if (tv.GetKind() == Value::kUndefined)
+            tv.Assign(fv);
+        else
+        {
+            InstanceTraits::Traits& objTr = GetVM().GetClassTraitsObject().GetInstanceTraits();
+            if (t1 == &objTr || t1 == &GetVM().GetClassTraitsClassClass().GetInstanceTraits())
+                ;
+            else if (IsAnyType(t2))
+                JoinSNodesUpdateType(tv, fv, objTr);
+            else
+            {
+                const bool num1 = IsNumericType(t1);
+                if (num1 && IsNumericType(t2))
+                    JoinSNodesUpdateType(tv, fv, GetNumberType());
+                else if (TR::TrIsNullObject(tv) || t1 == nullTr)
+                {
+                    if (TR::TrIsNullObject(fv) || t2 == nullTr)
+                        ;
+                    else if (t2 != &GetStringType() && IsNumericType(t2))
+                        goto fail;
+                    else
+                        tv.Assign(fv);
+                }
+                else if (TR::TrIsNullObject(fv) || t2 == nullTr)
+                {
+                    if (t1 != &GetStringType() && num1)
+                        goto fail;
+                }
+                else
+                {
+                    // the nearest common base: mark t1's chain, find the first marked one on t2's
+                    for (const Traits* t = t1; t != NULL; t = t->GetParent())
+                        t->Flags |= Traits::TmpBitMask;
+                    bool found = false;
+                    for (const Traits* t = t2; t != NULL; t = t->GetParent())
+                    {
+                        if (t->Flags & Traits::TmpBitMask)
+                        {
+                            found = true;
+                            if (t->IsClassTraits())
+                                JoinSNodesUpdateType(tv, fv, const_cast<ClassTraits::Traits&>(
+                                                                 static_cast<const ClassTraits::Traits&>(*t)));
+                            else
+                                JoinSNodesUpdateType(tv, fv, const_cast<InstanceTraits::Traits&>(
+                                                                 static_cast<const InstanceTraits::Traits&>(*t)));
+                            break;
+                        }
+                    }
+                    for (const Traits* t = t1; t != NULL; t = t->GetParent())
+                        t->Flags &= ~static_cast<SPInt>(Traits::TmpBitMask);
+                    if (!found)
+                        goto fail;
+                }
+            }
+        }
+    }
+
+    if (ms == TR::msRegisterFile)
+    {
+    update:
+        to.SetRegChanged(ind, from.IsRegChanged(ind) || to.IsRegChanged(ind));
+    }
+    return true;
+
+fail:
+    FUN_14252efe0(reinterpret_cast<UPInt>(this), reinterpret_cast<UPInt>(t1), reinterpret_cast<UPInt>(t2));
+    return false;
 }
 
 // Merges from's operand stack / scope stack / register file into to's, entry by entry; to grows to from's size
@@ -1854,9 +1788,7 @@ __declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::
     {
         if (i < tl.GetSize())
         {
-            CheckResult r(false);
-            if (!*FUN_1425178e0(reinterpret_cast<UPInt>(this), &r, i, reinterpret_cast<UPInt>(&to),
-                                reinterpret_cast<UPInt>(&from), ms))
+            if (!MergeValues(i, to, from, ms))
                 return false;
         }
         else

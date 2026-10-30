@@ -156,6 +156,17 @@ public:
     const ArrayDH<Value>& GetScopeStack() const { return ScopeStack; }
     ArrayDH<Value>& GetRegisters()              { return Registers; }
     const ArrayDH<Value>& GetRegisters() const  { return Registers; }
+    // (appended, sfb) the register-changed bit of register ind (Tracer::MergeValues joins them).
+    bool IsRegChanged(UPInt ind) const { return (RegChanged[ind >> 3] & (1u << (ind & 7))) != 0; }
+    void SetRegChanged(UPInt ind, bool v)
+    {
+        UInt8& bits = RegChanged[ind >> 3];
+        const unsigned bit = static_cast<unsigned>(ind & 7);
+        if (v)
+            bits = static_cast<UInt8>(bits | (1u << bit));
+        else
+            bits = static_cast<UInt8>(bits & ~(1u << bit));
+    }
     Value::TraceNullType CanBeNull(const InstanceTraits::Traits& traits) const; // 0x1424ee980
     InstanceTraits::Traits& GetFunctType(const Value& value) const; // 0x14250a1b0
     void SetRegister(AbsoluteIndex ind, const Value& v);            // 0x142528e20
