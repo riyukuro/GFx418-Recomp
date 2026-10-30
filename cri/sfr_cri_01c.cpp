@@ -3248,7 +3248,6 @@ void Finalize(CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024ff0
 CriBool IsLibraryInitialized(void)
 {
@@ -3256,7 +3255,10 @@ CriBool IsLibraryInitialized(void)
     {
         return 1;
     }
-    return 0;
+    else
+    {
+        return 0;
+    }
 }
 
 // MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
@@ -3423,31 +3425,42 @@ extern const CriChar8* const DAT_143a46488[4];  // block type names: NONE, FIX, 
 #define CRIHEAP_BLOCK_SIZE      (CRIHEAP_HEADER_SIZE + 4)   // with the back-offset dword
 #define CRIHEAP_ALIGN           8
 #define CRIHEAP_ALIGN_UP(p)     (((CriUint64)(p) + (CRIHEAP_ALIGN - 1)) & ~(CriUint64)(CRIHEAP_ALIGN - 1))
-#define CRIHEAP_DEFAULT_ALIGNSPC(b) \
-    ((((CriUint64)(b) + CRIHEAP_BLOCK_SIZE) & 7) ? CRIHEAP_ALIGN - (((CriUint64)(b) + CRIHEAP_BLOCK_SIZE) & 7) : 0)
 
 static const CriChar8* const criheap_version = "\nCRI Heap/PCx64 Ver.1.21.02 Build:Jan 13 2012 19:02:05\n";
 
 // Address of the block's data.
-static CriUint8* criheap_GetDataAddress(CriHeapBlock* blk)
+static __inline CriUint8* criheap_GetDataAddress(CriHeapBlock* blk)
 {
     return (CriUint8*)blk + CRIHEAP_BLOCK_SIZE + blk->alignspc;
 }
 
 // Stores the data-to-header offset in the dword in front of the data.
-static void criheap_SetBackOffset(CriHeapBlock* blk)
+static __inline void criheap_SetBackOffset(CriHeapBlock* blk)
 {
-    ((CriUint32*)criheap_GetDataAddress(blk))[-1] = blk->alignspc + CRIHEAP_BLOCK_SIZE;
+    // The exe finds the dword by aligning the header end up to 8 (the data is always 8-aligned, so it is data - 4).
+    *((CriUint32*)CRIHEAP_ALIGN_UP((CriUint8*)blk + CRIHEAP_HEADER_SIZE + blk->alignspc) - 1) =
+        blk->alignspc + CRIHEAP_BLOCK_SIZE;
 }
 
 // Whole size of a block: header, alignment space, data and trailing gap.
-static CriSint32 criheap_GetBlockSize(CriHeapBlock* blk)
+static __inline CriSint32 criheap_GetBlockSize(CriHeapBlock* blk)
 {
-    return blk->alignspc + blk->gap + blk->memsize + CRIHEAP_BLOCK_SIZE;
+    return blk->gap + blk->memsize + blk->alignspc + CRIHEAP_BLOCK_SIZE;
+}
+
+// Alignment space that puts the data of a block at adr on 8 (the exe tests the remainder at run time).
+static __inline CriSint32 criheap_CalcDefaultAlignSpace(CriUint64 adr)
+{
+    CriSint32 spc = (CriSint32)((adr + CRIHEAP_BLOCK_SIZE) & 7);
+    if (spc != 0)
+    {
+        spc = CRIHEAP_ALIGN - spc;
+    }
+    return spc;
 }
 
 // Alignment space that puts the block's data on align (at least 8).
-static CriUint32 criheap_CalcAlignSpace(CriHeapBlock* blk, CriSint32 align)
+static __inline CriUint16 criheap_CalcAlignSpace(CriHeapBlock* blk, CriSint32 align)
 {
     CriSint32 a = (align < CRIHEAP_ALIGN) ? CRIHEAP_ALIGN : align;
     CriUint32 rem = (CriUint32)(((CriUint64)blk + CRIHEAP_BLOCK_SIZE) % (CriUint64)(CriSint64)a);
@@ -3465,13 +3478,13 @@ static CriHeap criheap_InitializeHandle(CriHeap heap, CriSint32 size)
 {
     CriUint8* top = (CriUint8*)heap + sizeof(struct _criheap_struct);
     CriHeapBlock* blk;
-    CriSint32 pad;
+    CriSint64 pad;
 
     heap->totalsize = size;
     blk = (CriHeapBlock*)CRIHEAP_ALIGN_UP(top);
-    pad = (CriSint32)((CriUint8*)blk - top);
+    pad = (CriUint8*)blk - top;
     memset(blk, 0, CRIHEAP_HEADER_SIZE);
-    blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
+    blk->alignspc = (CriUint16)criheap_CalcDefaultAlignSpace((CriUint64)blk);
     blk->nextblock = NULL;
     blk->type = CRIHEAP_TYPE_NONE;
     blk->gap = 0;
@@ -3485,58 +3498,57 @@ static CriHeap criheap_InitializeHandle(CriHeap heap, CriSint32 size)
 }
 
 // Front-to-back search for a FIX block: a freed block of exactly this size and alignment, or the free area.
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027278
-static CriHeapBlock* criheap_SearchFixBlock(CriHeap heap, CriSint32 size, CriSint32 align)
+__inline CriHeapBlock* criheap_SearchFixBlock(CriHeap heap, CriSint32 size, CriUint16 align)
 {
-    CriHeapBlock* blk;
-    for (blk = heap->topblock; blk != NULL; blk = blk->nextblock)
+    CriHeapBlock* blk = heap->topblock;
+    do
     {
-        if (blk->used)
+        if (!blk->used)
         {
-            continue;
+            if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align))
+            {
+                return blk;
+            }
+            if (blk->type == CRIHEAP_TYPE_NONE)
+            {
+                return blk;
+            }
         }
-        if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align))
-        {
-            return blk;
-        }
-        if (blk->type == CRIHEAP_TYPE_NONE)
-        {
-            return blk;
-        }
-    }
+        blk = blk->nextblock;
+    } while (blk != NULL);
     return NULL;
 }
 
 // Back-to-front search for a TEMPORARY block.
 // MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400272e0
-static CriHeapBlock* criheap_SearchTemporaryBlock(CriHeap heap, CriSint32 size, CriSint32 align)
+static CriHeapBlock* criheap_SearchTemporaryBlock(CriHeap heap, CriSint32 size, CriUint16 align)
 {
-    CriHeapBlock* blk;
-    for (blk = heap->taleblock; blk != NULL; blk = blk->prevblock)
+    CriHeapBlock* blk = heap->taleblock;
+    do
     {
-        if (blk->used)
+        if (!blk->used)
         {
-            continue;
+            CriSint32 space = blk->memsize + blk->gap + blk->alignspc;
+            if (criheap_CalcAlignSpace(blk, align) + size <= space
+                && (blk->type == CRIHEAP_TYPE_NONE || blk->type == CRIHEAP_TYPE_TEMPORARY))
+            {
+                return blk;
+            }
+            if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align)
+                && blk->type == CRIHEAP_TYPE_TEMPORARY)
+            {
+                return blk;
+            }
         }
-        if ((CriSint32)(criheap_CalcAlignSpace(blk, align) + size) <= blk->memsize + blk->gap + blk->alignspc
-            && (blk->type == CRIHEAP_TYPE_NONE || blk->type == CRIHEAP_TYPE_TEMPORARY))
-        {
-            return blk;
-        }
-        if (blk->memsize == size && blk->alignspc == criheap_CalcAlignSpace(blk, align)
-            && blk->type == CRIHEAP_TYPE_TEMPORARY)
-        {
-            return blk;
-        }
-    }
+        blk = blk->prevblock;
+    } while (blk != NULL);
     return NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400273b8
-static CriHeapBlock* criheap_SearchBlock(CriHeap heap, CriSint32 type, CriSint32 size, CriSint32 align)
+__forceinline CriHeapBlock* criheap_SearchBlock(CriHeap heap, CriSint32 type, CriSint32 size, CriUint16 align)
 {
     CriHeapBlock* blk = NULL;
     switch (type)
@@ -3566,11 +3578,11 @@ static CriHeapBlock* criheap_DivideFixBlock(CriHeap heap, CriHeapBlock* blk, Cri
     CriSint32 blksize = criheap_GetBlockSize(blk);
     CriUint16 alignspc = (CriUint16)criheap_CalcAlignSpace(blk, align);
     CriSint32 offset = alignspc + size + CRIHEAP_BLOCK_SIZE;
-    CriSint32 hdrpad = (CRIHEAP_BLOCK_SIZE & 7) ? CRIHEAP_ALIGN - (CRIHEAP_BLOCK_SIZE & 7) : 0;
+    CriSint32 hdrpad = criheap_CalcDefaultAlignSpace(0);
     CriHeapBlock* rest;
     CriUint16 gap;
 
-    if (blksize < hdrpad + offset + CRIHEAP_BLOCK_SIZE)
+    if (criheap_GetBlockSize(blk) < hdrpad + offset + CRIHEAP_BLOCK_SIZE)
     {
         return NULL;
     }
@@ -3578,7 +3590,7 @@ static CriHeapBlock* criheap_DivideFixBlock(CriHeap heap, CriHeapBlock* blk, Cri
     gap = (CriUint16)((CriUint16)(CriUint64)rest - (CriUint16)(CriUint64)((CriUint8*)blk + offset));
     offset += gap;
     memset(rest, 0, CRIHEAP_HEADER_SIZE);
-    rest->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(rest);
+    rest->alignspc = (CriUint16)criheap_CalcDefaultAlignSpace((CriUint64)rest);
     rest->prevblock = blk;
     rest->memsize = blksize - rest->alignspc - offset - CRIHEAP_BLOCK_SIZE;
     rest->nextblock = blk->nextblock;
@@ -3602,7 +3614,6 @@ static CriHeapBlock* criheap_DivideFixBlock(CriHeap heap, CriHeapBlock* blk, Cri
 }
 
 // Cuts a TEMPORARY block from the back of a free block (or takes all of it when no header fits).
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027638
 static CriHeapBlock* criheap_DivideTemporaryBlock(CriHeap heap, CriHeapBlock* blk, CriSint32 size,
                                                   const CriChar8* name, CriSint32 align)
@@ -3627,25 +3638,25 @@ static CriHeapBlock* criheap_DivideTemporaryBlock(CriHeap heap, CriHeapBlock* bl
         {
             return NULL;
         }
+        blk->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)blk) - CRIHEAP_BLOCK_SIZE);
         blk->memsize = size;
         blk->type = CRIHEAP_TYPE_TEMPORARY;
         blk->gap = gap;
         blk->nameadr = name;
         blk->used = 1;
-        blk->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)blk) - CRIHEAP_BLOCK_SIZE);
         criheap_SetBackOffset(blk);
         return blk;
     }
+    tmp->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)tmp) - CRIHEAP_BLOCK_SIZE);
     tmp->memsize = size;
     tmp->type = CRIHEAP_TYPE_TEMPORARY;
-    tmp->alignspc = (CriUint16)((CriUint16)(data - (CriUint8*)tmp) - CRIHEAP_BLOCK_SIZE);
-    tmp->prevblock = blk;
     tmp->nextblock = blk->nextblock;
+    tmp->prevblock = blk;
     tmp->gap = gap;
     tmp->nameadr = name;
     tmp->used = 1;
     criheap_SetBackOffset(tmp);
-    blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
+    blk->alignspc = (CriUint16)criheap_CalcDefaultAlignSpace((CriUint64)blk);
     if (blk->nextblock != NULL)
     {
         blk->nextblock->prevblock = tmp;
@@ -3660,11 +3671,11 @@ static CriHeapBlock* criheap_DivideTemporaryBlock(CriHeap heap, CriHeapBlock* bl
     return tmp;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400277c0
 static void* criheap_Alloc(CriHeap heap, CriSint32 type, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
     CriHeapBlock* blk;
+    CriUint16 alignspc;
 
     if (size < 0)
     {
@@ -3675,7 +3686,8 @@ static void* criheap_Alloc(CriHeap heap, CriSint32 type, CriSint32 size, const C
     {
         return NULL;
     }
-    if (size == blk->memsize && criheap_CalcAlignSpace(blk, align) == blk->alignspc)
+    alignspc = criheap_CalcAlignSpace(blk, align);
+    if (size == blk->memsize && alignspc == blk->alignspc)
     {
         if (blk->type == CRIHEAP_TYPE_NONE)
         {
@@ -3699,10 +3711,10 @@ static void* criheap_Alloc(CriHeap heap, CriSint32 type, CriSint32 size, const C
         default:
             return NULL;
         }
-        if (blk == NULL)
-        {
-            return NULL;
-        }
+    }
+    if (blk == NULL)
+    {
+        return NULL;
     }
     heap->currentsize += criheap_GetBlockSize(blk);
     if (heap->peaksize < heap->currentsize)
@@ -3712,21 +3724,18 @@ static void* criheap_Alloc(CriHeap heap, CriSint32 type, CriSint32 size, const C
     return criheap_GetDataAddress(blk);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027974
 void* criheap_AllocFixNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
     return criheap_Alloc(heap, CRIHEAP_TYPE_FIX, size, name, align);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027994
 void* criheap_AllocTemporaryNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
     return criheap_Alloc(heap, CRIHEAP_TYPE_TEMPORARY, size, name, align);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400279b4
 void* criheap_AllocDynamicNoLock(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -3734,7 +3743,6 @@ void* criheap_AllocDynamicNoLock(CriHeap heap, CriSint32 size, const CriChar8* n
 }
 
 // Releases a block and merges it with free neighbours.
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400279e8
 static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
 {
@@ -3747,11 +3755,14 @@ static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
     {
         heap->currentsize += -CRIHEAP_BLOCK_SIZE - blk->gap - blk->alignspc - blk->memsize;
     }
-    next = blk->nextblock;
     prev = blk->prevblock;
-    nextnext = (next != NULL) ? next->nextblock : NULL;
+    next = blk->nextblock;
+    nextnext = NULL;
+    if (next != NULL)
+    {
+        nextnext = next->nextblock;
+    }
     blk->used = 0;
-    cur = blk;
     if (prev != NULL && !prev->used)
     {
         prev->nextblock = next;
@@ -3766,6 +3777,10 @@ static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
         }
         cur = prev;
     }
+    else
+    {
+        cur = blk;
+    }
     if (next != NULL && !next->used)
     {
         cur->nextblock = next->nextblock;
@@ -3774,7 +3789,15 @@ static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
         {
             next->nextblock->prevblock = cur;
         }
-        if (nextnext == NULL)
+        // The exe tests which block absorbed next before it tests for the tail; both store the same block.
+        if (cur == blk)
+        {
+            if (nextnext == NULL)
+            {
+                heap->taleblock = blk;
+            }
+        }
+        else if (nextnext == NULL)
         {
             heap->taleblock = cur;
         }
@@ -3791,7 +3814,6 @@ static void criheap_FreeBlock(CriHeap heap, CriHeapBlock* blk)
 }
 
 // Frees a block; a FIX block in front of the free area is folded into it with the free blocks before it.
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027ae4
 static CriSint32 criheap_Free(CriHeap heap, CriHeapBlock* blk)
 {
@@ -3803,47 +3825,50 @@ static CriSint32 criheap_Free(CriHeap heap, CriHeapBlock* blk)
         criheap_FreeBlock(heap, blk);
         return size;
     }
-    if (blk->type != CRIHEAP_TYPE_FIX)
+    else if (blk->type == CRIHEAP_TYPE_FIX)
     {
-        return -1;
-    }
-    heap->currentsize += -CRIHEAP_BLOCK_SIZE - blk->gap - blk->alignspc - size;
-    next = blk->nextblock;
-    if (next != NULL && next->type == CRIHEAP_TYPE_NONE)
-    {
-        CriUint8* end = (CriUint8*)next + criheap_GetBlockSize(next);
-        while (blk->prevblock != NULL && blk->prevblock->used != 1)
+        heap->currentsize += -CRIHEAP_BLOCK_SIZE - blk->gap - blk->alignspc - size;
+        next = blk->nextblock;
+        if (next != NULL && next->type == CRIHEAP_TYPE_NONE)
         {
-            blk = blk->prevblock;
-        }
-        blk->used = 0;
-        blk->type = CRIHEAP_TYPE_NONE;
-        blk->alignspc = (CriUint16)CRIHEAP_DEFAULT_ALIGNSPC(blk);
-        blk->gap = 0;
-        blk->nameadr = NULL;
-        blk->memsize = (CriSint32)(end - (CriUint8*)blk) - (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE);
-        blk->nextblock = next->nextblock;
-        if (next->nextblock != NULL)
-        {
-            next->nextblock->prevblock = blk;
+            CriUint8* end = (CriUint8*)next + (CriUint32)criheap_GetBlockSize(next);
+            while (blk->prevblock != NULL && blk->prevblock->used != 1)
+            {
+                blk = blk->prevblock;
+            }
+            blk->used = 0;
+            blk->type = CRIHEAP_TYPE_NONE;
+            blk->alignspc = (CriUint16)criheap_CalcDefaultAlignSpace((CriUint64)blk);
+            blk->gap = 0;
+            blk->nameadr = NULL;
+            blk->memsize = (CriSint32)(end - (CriUint8*)blk) - (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE);
+            blk->nextblock = next->nextblock;
+            if (blk->nextblock != NULL)
+            {
+                blk->nextblock->prevblock = blk;
+            }
+            else
+            {
+                heap->taleblock = blk;
+            }
         }
         else
         {
-            heap->taleblock = blk;
+            blk->used = 0;
+            if (next == NULL)
+            {
+                blk->type = CRIHEAP_TYPE_NONE;
+                blk->nameadr = NULL;
+            }
         }
-        return size;
     }
-    blk->used = 0;
-    if (next == NULL)
+    else
     {
-        blk->type = CRIHEAP_TYPE_NONE;
-        blk->nameadr = NULL;
+        return -1;
     }
     return size;
 }
-#pragma optimize("", on)
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027be4 (external: data_data_game's table takes it as FUN_140027be4)
 CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
 {
@@ -3852,18 +3877,18 @@ CriSint32 criheap_FreeNoLock(CriHeap heap, void* ptr)
         FUN_140038ddc(0, "E08062600H:Pointer was NULL.");
         return 0;
     }
-    if ((CriUint8*)heap <= (CriUint8*)ptr && (CriUint8*)ptr <= (CriUint8*)heap + heap->totalsize)
+    if ((CriUint8*)heap <= (CriUint8*)ptr && (CriUint8*)heap + heap->totalsize >= (CriUint8*)ptr)
     {
         return criheap_Free(heap, (CriHeapBlock*)((CriUint8*)ptr - ((CriUint32*)ptr)[-1]));
     }
     FUN_140038ddc(0, "E08021402H:Bad pointer was appointed.");
     return 0;
 }
+#pragma optimize("", on)
 
 extern "C" {
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027048
 void FUN_140027048(void)
 {
@@ -3874,7 +3899,6 @@ void FUN_140027048(void)
     }
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027c2c
 CriSint32 CRIAPI criHeap_EnterCriticalSection(void)
 {
@@ -3887,7 +3911,6 @@ CriSint32 CRIAPI criHeap_EnterCriticalSection(void)
     return 0;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027c5c
 CriSint32 CRIAPI criHeap_LeaveCriticalSection(void)
 {
@@ -3900,7 +3923,6 @@ CriSint32 CRIAPI criHeap_LeaveCriticalSection(void)
     return 0;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027dd0
 CriSint32 CRIAPI criHeap_DebugGetWorstExtraSize(CriSint32 alignment)
 {
@@ -3911,14 +3933,12 @@ CriSint32 CRIAPI criHeap_DebugGetWorstExtraSize(CriSint32 alignment)
     return alignment + CRIHEAP_BLOCK_SIZE + CRIHEAP_ALIGN;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027de0
 void* FUN_140027de0(void* obj, const CriChar8* msg, CriSint32 p1)
 {
     return FUN_140038ce4(0, msg, p1, 0, obj);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027df8
 static CriSint32 criheap_DebugPrintf(const CriChar8* format, ...)
 {
@@ -3932,7 +3952,6 @@ static CriSint32 criheap_DebugPrintf(const CriChar8* format, ...)
 }
 
 // The library initialization without the reference count.
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027e5c
 void FUN_140027e5c(void)
 {
@@ -3945,18 +3964,18 @@ void FUN_140027e5c(void)
     }
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// The exe updates the init count in memory and reads it back (a volatile access).
 // @0x140027ea4
 __declspec(noinline) void CRIAPI criHeap_Finalize(void)
 {
-    if (--DAT_143b278d8 == 0 && DAT_143b278e0 != NULL)
+    (*(volatile CriSint32*)&DAT_143b278d8)--;
+    if (*(volatile CriSint32*)&DAT_143b278d8 == 0 && DAT_143b278e0 != NULL)
     {
         FUN_140039f00(DAT_143b278e0);
         DAT_143b278e0 = NULL;
     }
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027ed8
 void* CRIAPI criHeap_AllocFix(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -3968,7 +3987,6 @@ void* CRIAPI criHeap_AllocFix(CriHeap heap, CriSint32 size, const CriChar8* name
     return NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027f0c
 void* CRIAPI criHeap_AllocTemporary(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -3980,7 +3998,6 @@ void* CRIAPI criHeap_AllocTemporary(CriHeap heap, CriSint32 size, const CriChar8
     return NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027f44
 void* CRIAPI criHeap_AllocDynamic(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -3992,7 +4009,6 @@ void* CRIAPI criHeap_AllocDynamic(CriHeap heap, CriSint32 size, const CriChar8* 
     return NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027f7c
 void* CRIAPI criHeap_Alloc(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type)
 {
@@ -4008,7 +4024,6 @@ void* CRIAPI criHeap_Alloc(CriHeap heap, CriSint32 size, const CriChar8* name, C
     return NULL;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027fb4
 CriSint32 CRIAPI criHeap_Free(CriHeap heap, void* ptr)
 {
@@ -4020,7 +4035,6 @@ CriSint32 CRIAPI criHeap_Free(CriHeap heap, void* ptr)
     return 0;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140027fec
 CriHeap CRIAPI criHeap_Create(void* ptr, CriSint32 size)
 {
@@ -4035,7 +4049,6 @@ CriHeap CRIAPI criHeap_Create(void* ptr, CriSint32 size)
     return heap;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140028030
 CriHeap CRIAPI criHeap_CreateNoSerialize(void* ptr, CriSint32 size)
 {
@@ -4050,7 +4063,6 @@ CriHeap CRIAPI criHeap_CreateNoSerialize(void* ptr, CriSint32 size)
     return heap;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140028074
 void CRIAPI criHeap_Destroy(CriHeap heap)
 {
@@ -4063,7 +4075,6 @@ void CRIAPI criHeap_Destroy(CriHeap heap)
     } while (blk != NULL);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400280a4
 void* FUN_1400280a4(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -4074,7 +4085,6 @@ void* FUN_1400280a4(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint3
     return mem;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x140028100
 void* FUN_140028100(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -4085,7 +4095,6 @@ void* FUN_140028100(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint3
     return mem;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x14002815c
 void* FUN_14002815c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align)
 {
@@ -4096,7 +4105,6 @@ void* FUN_14002815c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint3
     return mem;
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
 // @0x1400281b8
 CriSint32 FUN_1400281b8(CriHeap heap, void* ptr)
 {
@@ -4129,11 +4137,12 @@ void CRIAPI criHeap_DebugPrintBlockInformationAll(CriHeap heap)
                         heap->currentsize, heap->peaksize);
 }
 
-// MS2-FUNCTIONAL: CRI Heap was compiled optimized by an older MSVC; VS2017 schedules and allocates registers differently
+// The exe updates the init count in memory and reads it back (a volatile access).
 // @0x1400282e0
 __declspec(noinline) void CRIAPI criHeap_Initialize(void)
 {
-    if (++DAT_143b278d8 == 1)
+    (*(volatile CriSint32*)&DAT_143b278d8)++;
+    if (*(volatile CriSint32*)&DAT_143b278d8 == 1)
     {
         DAT_143b278d0 = criheap_version;
         FUN_1400411f8();
