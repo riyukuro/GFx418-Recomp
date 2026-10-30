@@ -4111,16 +4111,16 @@ CriSint32 FUN_1400281b8(CriHeap heap, void* ptr)
 // @0x1400281ec
 void CRIAPI criHeap_DebugPrintBlockInformationAll(CriHeap heap)
 {
+    CriSint32 no = 0;
     CriHeapBlock* blk = heap->topblock;
     CriSint32 total = (CriSint32)((CriUint32)(CriUint64)blk - (CriUint32)(CriUint64)heap);
-    CriSint32 no = 0;
     do
     {
         no++;
-        total += criheap_GetBlockSize(blk);
+        total += blk->alignspc + blk->gap + blk->memsize + CRIHEAP_BLOCK_SIZE;
         criheap_DebugPrintf("%05d: MBLK:%08xH(%08xH) ", no, (CriUint32)(CriUint64)blk,
                             (CriUint16)(blk->alignspc + CRIHEAP_BLOCK_SIZE));
-        criheap_DebugPrintf("PTR:%08xH(%08xH) ", (CriUint32)(CriUint64)criheap_GetDataAddress(blk), blk->memsize);
+        criheap_DebugPrintf("PTR:%08xH(%08xH) ", (CriUint32)(CriUint64)((CriUint8*)blk + CRIHEAP_BLOCK_SIZE + blk->alignspc), blk->memsize);
         criheap_DebugPrintf("%s %s ", DAT_143a46488[blk->type], DAT_143a46478[blk->used]);
         criheap_DebugPrintf("\"%s\"\r\n", (blk->nameadr != NULL) ? blk->nameadr : DAT_143a46470);
         blk = blk->nextblock;
