@@ -344,17 +344,19 @@ void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
     char* object = reinterpret_cast<char*>(pvideo);
     // the AVM interface (object + [0x6d]*4) slot 12 returns the video extent; FUN_140011610 scales the fill by it
-    auto* iface = object + static_cast<unsigned char>(object[0x6d]) * 4;
+    auto* iface = object + static_cast<unsigned char>(object[0x6d]) * sizeof(int);
     auto* extent = static_cast<int*>(reinterpret_cast<void* (*)(void*)>((*reinterpret_cast<void***>(iface))[12])(iface));
     Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
         reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
     Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
+    // both locals live to the end: the exe releases strong, then next, after FUN_1400105b0
+    Scaleform::Ptr<Scaleform::GFx::Video::VideoImage> next;
     Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> strong = *provider;
     if (strong && strong->IsActive())
     {
         int width, height;
-        Scaleform::Ptr<Scaleform::GFx::Video::VideoImage> next = strong->GetTexture(&width, &height);
+        next = strong->GetTexture(&width, &height);
         // the exe only swaps the reference (0x140010b24); image +0x40 is the owning player CreateTexture stored
         if (next)
         {
@@ -2695,19 +2697,21 @@ void FUN_140015c40(void* object)
 // @0x140014460
 void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3::Value* input)
 {
-    if (!hasValue)
+    if (static_cast<unsigned>(hasValue) < 1)
         return;
-    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(reinterpret_cast<char*>(object) + 0x20) + 0x78);  // MS2: exe 0x1400144be
+    char* self = static_cast<char*>(object);
     Scaleform::GFx::AS3::Value text(*input);
-    text.ToStringValue(vm->GetStringManager());
-    *reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(object) + 0x60) = 0;
+    // MS2: exe 0x1400144be: the VM is [[this+0x20]+0x78], re-read for each use
+    text.ToStringValue((*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78))->GetStringManager());
+    // OpenUrl takes the url chars, read through a temp ASString (inc/dec of the node refcount at 0x1400144de)
+    const char* url = text.AsString().ToCStr();
     extern void FUN_140026720(void*, void*, void*);
-    auto* surface = *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x50);
-    // OpenUrl takes the url chars: the exe passes the node's pData (mov rdi,[node] at 0x1400144e1), not the node
-    FUN_140026720(surface, const_cast<char*>(text.GetStringNode()->pData), vm);
-    FUN_140025750(surface,
-        static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x88) * 100.0),
-        static_cast<int>(*reinterpret_cast<double*>(reinterpret_cast<char*>(object) + 0x90) * 100.0));
+    *reinterpret_cast<unsigned char*>(self + 0x60) = 0;
+    FUN_140026720(*reinterpret_cast<void**>(self + 0x50), const_cast<char*>(url),
+                  *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78));
+    FUN_140025750(*reinterpret_cast<void**>(self + 0x50),
+        static_cast<int>(*reinterpret_cast<double*>(self + 0x88) * 100.0),
+        static_cast<int>(*reinterpret_cast<double*>(self + 0x90) * 100.0));
 }
 
 // MS2-FUNCTIONAL: interns the dynamic property name and invokes the executable trait setter.
