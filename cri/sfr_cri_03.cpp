@@ -496,7 +496,8 @@ CriUint32 FUN_14003d9d0(void* object)
     CriUint32 samples = (CriUint32)FUN_1400467b8(reader->Queue, 1);
     if (reader->AddOneUnit)
         samples += reader->Unit;
-    return samples / reader->Unit;
+    samples /= reader->Unit;
+    return samples;
 }
 
 // MS2-FUNCTIONAL: return ready when every stored audio decoder has completed its terminal transition.
@@ -584,16 +585,19 @@ CriBool FUN_14003d6c0(const void* input)
         return 1;
 }
 
+#pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: copy the stream-joint setup header into a zeroed 0xb0-byte local work record.
 // @0x14003e6a0
 void FUN_14003e6a0(void* target, const CriUint64* settings)
 {
-    struct SetupRecord { CriUint64 First; CriUint32 Count; CriUint8 Reserved[0xa4]; };
-    SetupRecord setup = {};
-    setup.First = settings[0];
+    struct SetupRecord { CriUint64 First; CriUint32 Count; CriUint32 Reserved[0x29]; };
+    SetupRecord setup;
+    memset(&setup, 0, sizeof(setup));
     memcpy(&setup.Count, settings + 1, sizeof(setup.Count));
+    setup.First = settings[0];
     FUN_14003e180(target, &setup);
 }
+#pragma intrinsic(memset)
 
 // MS2-FUNCTIONAL: release the pending synchronization object for each member of the audio decoder list.
 // @0x1400427b0
@@ -624,13 +628,16 @@ void FUN_140043610(void* trackSet)
         CriUint8 Reserved00[0x18];
         CriUint32 Count;
         CriUint8 Reserved1c[0x14];
-        void** Tracks;
+        void* Tracks[1];                      // inline array at 0x30, Count entries
     };
-    TrackSet* tracks = (TrackSet*)trackSet;
-    if (tracks)
-        for (CriUint32 index = 0; index < tracks->Count; ++index)
-            if (tracks->Tracks[index])
-                FUN_140046798(tracks->Tracks[index]);
+    if (!trackSet)
+        return;
+    for (CriUint32 index = 0; index < ((TrackSet*)trackSet)->Count; ++index)
+    {
+        void* track = ((TrackSet*)trackSet)->Tracks[index];
+        if (track)
+            FUN_140046798(track);
+    }
 }
 #pragma optimize("", on)
 
@@ -1432,13 +1439,14 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 {
     CriUint32 id, chunkSize;
     *contentSize = 0;
-    if (!criUsfCmn_GetChunkIdAndSIze(data, size, &id, &chunkSize))
-        return NULL;
-    CriUint8 headerSize = data[9];
-    if (size < 0x10 || headerSize == 0)
-        return NULL;
-    *contentSize = (CriSint32)(chunkSize - ((CriUint32)data[10] << 8 | data[11]) - headerSize);
-    return data + headerSize + 8;
+    if (criUsfCmn_GetChunkIdAndSIze(data, size, &id, &chunkSize) && size >= 0x10)
+    {
+        CriUint8 headerSize = data[9];
+        CriUint16 offset = (CriUint16)((data[10] << 8) | data[11]);
+        *contentSize = (CriSint32)(chunkSize - offset - headerSize);
+        return data + (headerSize + 8);
+    }
+    return NULL;
 }
 #pragma optimize("", on)
 
@@ -2182,20 +2190,16 @@ CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* fra
 // @0x140043be0
 void FUN_140043be0(void* decoder)
 {
-    if (!decoder)
-        return;
-    void** object = (void**)decoder;
-    if (!object[1])
-        return;
-    void** apiTable = (void**)object[1];
     typedef void (*DestroyCallback)(void*);
-    DestroyCallback destroy = (DestroyCallback)apiTable[0x20 / sizeof(void*)];
-    if (!destroy)
-        return;
-    destroy(object[0]);
-    object[0] = NULL;
-    object[1] = NULL;
-    FUN_140027fb4(object[2], decoder);
+    struct DecoderTable { CriUint8 Reserved[0x20]; DestroyCallback Destroy; };
+    struct DecoderWrapper { void* Object; DecoderTable* Table; void* Heap; };
+    if (decoder && ((DecoderWrapper*)decoder)->Table->Destroy)
+    {
+        ((DecoderWrapper*)decoder)->Table->Destroy(((DecoderWrapper*)decoder)->Object);
+        ((DecoderWrapper*)decoder)->Object = NULL;
+        ((DecoderWrapper*)decoder)->Table = NULL;
+        FUN_140027fb4(((DecoderWrapper*)decoder)->Heap, decoder);
+    }
 }
 
 // MS2-FUNCTIONAL: retrieve an alpha decoder frame pointer through its callback table.
@@ -2888,13 +2892,15 @@ void FUN_140043a50(void* decoder)
 // @0x140043a80
 CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
 {
-    if (!decoder)
-        return 0;
     typedef CriSint32 (*WorkSizeFunction)(CriSint32, CriSint32, CriSint32);
-    WorkSizeFunction fn = *(WorkSizeFunction*)((CriUint8*)decoder + 0x10);
-    if (!fn)
-        return 0;
-    return fn(a, b, c) + 0x2e;
+    struct DecoderTable { CriUint8 Reserved[0x10]; WorkSizeFunction WorkSize; };
+    CriSint32 result = 0;
+    if (decoder && ((DecoderTable*)decoder)->WorkSize)
+    {
+        result = ((DecoderTable*)decoder)->WorkSize(a, b, c);
+        result = (CriSint32)(result + (CriUint64)0x2e);
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: invoke the alpha decoder interface's frame-info query when available.
@@ -2912,11 +2918,13 @@ void* FUN_140043c50(void** decoder)
 // @0x14003e110
 CriBool FUN_14003e110(void* handle, void* output, void** frame)
 {
-    CriUint32 stopped;
-    memcpy(&stopped, (CriUint8*)handle + 0x1c, sizeof(stopped));
-    if (stopped == 1 || !frame || !*frame)
+    struct VmpvHandle { CriUint8 Reserved[0x1c]; CriUint32 Stopped; };
+    VmpvHandle* vmpv = (VmpvHandle*)handle;
+    if (vmpv->Stopped == 1)
         return 0;
-    FUN_14003e850(handle, *frame, output);
+    if (!frame || !*frame)
+        return 0;
+    FUN_14003e850(vmpv, *frame, output);
     return 1;
 }
 #pragma optimize("", on)
@@ -3185,11 +3193,15 @@ void FUN_140044330(CriUint64* pair, void* first, void* second)
 // @0x140044400
 CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, CriUint32 third)
 {
-    if (!callbackPair || !*(void**)((CriUint8*)callbackPair + 0x10))
-        return 0;
-    CriUint32 result = ((CriUint32 (*)(CriUint32, CriUint32, CriUint32))
-        *(void**)((CriUint8*)callbackPair + 0x10))(first, second, third);
-    return result + 0x3e;
+    typedef CriSint32 (*WorkSizeFunction)(CriUint32, CriUint32, CriUint32);
+    struct DecoderTable { CriUint8 Reserved[0x10]; WorkSizeFunction WorkSize; };
+    CriSint32 result = 0;
+    if (callbackPair && ((DecoderTable*)callbackPair)->WorkSize)
+    {
+        result = ((DecoderTable*)callbackPair)->WorkSize(first, second, third);
+        result = (CriSint32)(result + (CriUint64)0x3e);
+    }
+    return result;
 }
 
 // MS2-FUNCTIONAL: obtain the value from the Vdec callback at table offset 0x28, defaulting to zero.
@@ -3283,28 +3295,32 @@ void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void*
 // @0x140046814
 void criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size)
 {
-    CriUint8 prefix[0x10], suffix[0x10];
-    CriUint32 available;
-    memcpy(&available, (const CriUint8*)chunk + 8, sizeof(available));
-    if (available < size)
-        size = available;
-    criSj_SplitChunk(chunk, size, prefix, suffix);
-    FUN_1400467b0(streamJoint, 1, prefix);
-    FUN_1400467a8(streamJoint, 0, suffix);
+    struct SjChunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
+    typedef void (*PutChunk)(void*, CriSint32, void*);
+    struct SjInterface { void* Reserved[3]; PutChunk UngetChunk; PutChunk PutChunk; };
+    const SjChunk* source = (const SjChunk*)chunk;
+    SjChunk prefix = *source, suffix;
+    if (size > source->Size)
+        size = source->Size;
+    criSj_SplitChunk(&prefix, size, &prefix, &suffix);
+    (*(SjInterface**)streamJoint)->PutChunk(streamJoint, 1, &prefix);
+    (*(SjInterface**)streamJoint)->UngetChunk(streamJoint, 0, &suffix);
 }
 
 // MS2-FUNCTIONAL: place a bounded prefix on the output queue and return the suffix to input.
 // @0x140046894
 void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size)
 {
-    CriUint8 prefix[0x10], suffix[0x10];
-    CriUint32 available;
-    memcpy(&available, (const CriUint8*)chunk + 8, sizeof(available));
-    if (available < size)
-        size = available;
-    criSj_SplitChunk(chunk, size, prefix, suffix);
-    FUN_1400467b0(streamJoint, 0, prefix);
-    FUN_1400467a8(streamJoint, 1, suffix);
+    struct SjChunk { CriUint8* Data; CriUint32 Size; CriUint32 Reserved; };
+    typedef void (*PutChunk)(void*, CriSint32, void*);
+    struct SjInterface { void* Reserved[3]; PutChunk UngetChunk; PutChunk PutChunk; };
+    const SjChunk* source = (const SjChunk*)chunk;
+    SjChunk prefix = *source, suffix;
+    if (size > source->Size)
+        size = source->Size;
+    criSj_SplitChunk(&prefix, size, &prefix, &suffix);
+    (*(SjInterface**)streamJoint)->PutChunk(streamJoint, 0, &prefix);
+    (*(SjInterface**)streamJoint)->UngetChunk(streamJoint, 1, &suffix);
 }
 
 // MS2-FUNCTIONAL: call the stream-joint object's second virtual operation.
@@ -3621,7 +3637,7 @@ CriSint32 FUN_140045c08(void* object, CriSint32 lane)
 void FUN_140044560(CriUint64* adapter)
 {
     struct FileAdapterOps { CriUint8 Reserved00[0x20]; void* Free; };
-    if (adapter && adapter[1] && ((FileAdapterOps*)adapter[1])->Free)
+    if (adapter && ((FileAdapterOps*)adapter[1])->Free)
     {
         ((void (*)(CriUint64))((FileAdapterOps*)adapter[1])->Free)(adapter[0]);
         adapter[0] = 0;
@@ -4155,14 +4171,15 @@ void FUN_140044f28(void* object)
     DecoderOwner* owner = (DecoderOwner*)object;
     if (!owner)
         return;
-    if (owner->Heap && owner->DecoderBuffer)
-        FUN_140027fb4(owner->Heap, owner->DecoderBuffer);
+    void* heap = owner->Heap;
+    if (heap && owner->DecoderBuffer)
+        FUN_140027fb4(heap, owner->DecoderBuffer);
     if (owner->InputJoint)
         FUN_140046784(owner->InputJoint);
     if (owner->OutputJoint)
         FUN_140046784(owner->OutputJoint);
-    if (owner->Heap)
-        FUN_140027fb4(owner->Heap, owner);
+    if (heap)
+        FUN_140027fb4(heap, owner);
 }
 #pragma optimize("", on)
 
