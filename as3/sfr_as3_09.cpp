@@ -2522,10 +2522,10 @@ namespace Instances { namespace fl_events {
     // ---- simple properties ------------------------------------------------------------------------------------------
 
     // @0x14246f880
-    // MS2-FUNCTIONAL: the exe's counted pointer assignment releases the old value inline (leaf); cl calls out
+    // assigned from the raw pointer (SetPtr, inline), as currentTargetGet
     void Event::targetGet(SPtr<Instances::fl::Object>& result)
     {
-        result = Target;
+        result = Target.GetPtr();
     }
 
     // @0x142472d20
