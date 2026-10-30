@@ -229,34 +229,45 @@ __forceinline void RetainVideoAtom(std::uint64_t atom)
     }
 }
 
-void EraseVideoAtomHashEntry(void* tablePtr, const std::uint64_t* key)
+struct VideoAtomHashEntry { std::uint64_t NextInChain, HashValue, Key, Value; };
+struct VideoAtomHashTable { std::uint64_t EntryCount, SizeMask; };
+__forceinline VideoAtomHashEntry& VideoAtomE(VideoAtomHashTable* table, std::uint64_t index)
 {
-    auto* table = *reinterpret_cast<unsigned char**>(tablePtr);
-    if (!table) return;
-    std::uint64_t hash = 0x1505;
-    auto* bytes = reinterpret_cast<const unsigned char*>(key);
-    for (int i = 7; i >= 0; --i) hash = bytes[i] + hash * 0x1003f;
-    auto bucket = hash & *reinterpret_cast<std::uint64_t*>(table + 8);
-    auto* entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + bucket * 0x20);
-    if (entry[0] == ~std::uint64_t(1) || entry[1] != bucket) return;
-    std::uint64_t previous = ~std::uint64_t(0), current = bucket;
-    while (entry[1] != bucket || entry[2] != *key) {
-        previous = current;
-        current = entry[0];
-        if (current == ~std::uint64_t(0)) return;
-        entry = reinterpret_cast<std::uint64_t*>(table + 0x10 + current * 0x20);
+    return *(reinterpret_cast<VideoAtomHashEntry*>(table + 1) + index);
+}
+
+// HashSetBase::RemoveAlt over the cached-hash atom table (SDBM hash of the 8 key bytes).
+__forceinline void EraseVideoAtomHashEntry(void* tablePtr, const std::uint64_t* key)
+{
+    auto*& table = *reinterpret_cast<VideoAtomHashTable**>(tablePtr);
+    if (table == nullptr) return;
+    std::size_t size = 8;
+    std::uint64_t h = 0x1505;
+    auto* data = reinterpret_cast<const unsigned char*>(key);
+    while (size > 0) { size--; h = (h << 16) + (h << 6) - h + data[size]; }
+    std::int64_t index = h & table->SizeMask;
+    VideoAtomHashEntry* e = &VideoAtomE(table, index);
+    if (e->NextInChain == ~std::uint64_t(1) || e->HashValue != static_cast<std::uint64_t>(index)) return;
+    std::int64_t naturalIndex = index;
+    std::int64_t prevIndex = -1;
+    while (e->HashValue != static_cast<std::uint64_t>(naturalIndex) || !(e->Key == *key)) {
+        prevIndex = index;
+        index = e->NextInChain;
+        if (index == -1) return;
+        e = &VideoAtomE(table, index);
     }
-    auto next = entry[0];
-    if (current == bucket && next != ~std::uint64_t(0)) {
-        auto* following = reinterpret_cast<std::uint64_t*>(table + 0x10 + next * 0x20);
-        entry[0] = ~std::uint64_t(1);
-        entry[0] = following[0]; entry[1] = following[1]; entry[2] = following[2]; entry[3] = following[3];
-        following[0] = ~std::uint64_t(1);
+    if (naturalIndex == index) {
+        if (e->NextInChain != ~std::uint64_t(0)) {
+            VideoAtomHashEntry* ee = &VideoAtomE(table, e->NextInChain);
+            e->NextInChain = ~std::uint64_t(1);
+            *e = *ee;
+            e = ee;
+        }
     } else {
-        if (current != bucket) *reinterpret_cast<std::uint64_t*>(table + 0x10 + previous * 0x20) = next;
-        entry[0] = ~std::uint64_t(1);
+        VideoAtomE(table, prevIndex).NextInChain = e->NextInChain;
     }
-    --*reinterpret_cast<std::uint64_t*>(table);
+    e->NextInChain = ~std::uint64_t(1);
+    table->EntryCount--;
 }
 
 } // namespace: externally referenced Video native
@@ -465,24 +476,30 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
 namespace {
 
 
-// MS2-FUNCTIONAL: drops the recorded atom-table payload and removes its key from the receiver cache.
+void FUN_140017320(std::uint64_t* table, const std::uint64_t* key);
+
+// MS2-FUNCTIONAL: cl15 shape (add [m],-1 on the payload count, inlined lookup).
+// drops the recorded atom-table payload (freed through the global heap at zero) and removes its key from the receiver cache.
 // @0x140017880
 void FUN_140017880(void* receiver, std::uint64_t* atom)
 {
-    if ((*reinterpret_cast<std::uint32_t*>(atom + 2) & 0x04000000) == 0) return;
-    *reinterpret_cast<std::uint32_t*>(atom + 2) &= 0xfbffffff;
-    auto* table = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(receiver) + 0x70);
-    if (!table) return;
-    const std::uint64_t key = reinterpret_cast<std::uintptr_t>(atom);
-    auto index = FUN_140016f40(&table, &key);
-    if (index < 0) return;
-    auto* entry = reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x20;
+    auto& flags = *reinterpret_cast<std::uint32_t*>(atom + 2);
+    if ((flags & 0x04000000) == 0) return;
+    flags &= 0xfbffffff;
+    auto* holder = reinterpret_cast<std::uint64_t*>(static_cast<unsigned char*>(receiver) + 0x70);
+    if (*holder == 0) return;
+    std::uint64_t key = reinterpret_cast<std::uintptr_t>(atom);
+    auto* entry = static_cast<unsigned char*>(FUN_140017440(holder, &key));
+    if (!entry) return;
     auto* value = *reinterpret_cast<std::uint32_t**>(entry + 8);
     if (!value) return;
-    value[2] = value[3] = 0;
-    --value[0];
-    if (value[0] == 0) { auto fn = *reinterpret_cast<VideoGenericThunk*>(*reinterpret_cast<unsigned char***>(value) + 0x60); fn(value, nullptr, nullptr); }
-    EraseVideoAtomHashEntry(&table, &key);
+    *reinterpret_cast<std::uint64_t*>(value + 2) = 0;
+    if (--value[0] == 0) {
+        auto** heap = *reinterpret_cast<void***>(DAT_143b15f60);
+        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, value);
+    }
+    key = reinterpret_cast<std::uintptr_t>(atom);
+    FUN_140017320(holder, &key);
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
