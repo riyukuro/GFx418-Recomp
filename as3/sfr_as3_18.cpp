@@ -1487,22 +1487,18 @@ void Tracer::RegisterOrigOpCode(Abc::TCodeOffset opcode_cp)
     Orig2newPosMap[opcode_cp] = WCode.GetSize();
 }
 
-}}} // namespace Scaleform::GFx::AS3
-
-// Tracer::GetGlobalObject: the traced value of the global object, the saved scope's first value or else the method's
-// 'this' (the state's first register). By value (out).
+// The traced value of the global object: the saved scope's first value or else the method's 'this' (the state's
+// first register).
 // MS2-FUNCTIONAL 0x14250a490: the copied Value's reference count bump stays out of line in our Value model; the exe inlines it.
 // @0x14250a490
-Scaleform::GFx::AS3::Value* FUN_14250a490(Scaleform::UPInt tracer, Scaleform::GFx::AS3::Value* out, Scaleform::UPInt state)
+Value Tracer::GetGlobalObject(const TR::State& st) const
 {
-    using namespace Scaleform::GFx::AS3;
-    const CallFrame& cf = *reinterpret_cast<const CallFrame*>(TR::TrRd(tracer, 0x20));
-    if (cf.pSavedScope && cf.pSavedScope->GetSize() != 0)
-        new (out) Value((*cf.pSavedScope)[0]);
-    else
-        new (out) Value(*reinterpret_cast<const Value*>(TR::TrRd(state, 0x18)));
-    return out;
+    if (CF.pSavedScope && CF.pSavedScope->GetSize() != 0)
+        return (*CF.pSavedScope)[0];
+    return st.GetRegisters()[0];
 }
+
+}}} // namespace Scaleform::GFx::AS3
 
 // Writer forwards of an opcode and its argument words (the object at +8 gets op through slot 1, each argument
 // through slot 2). No direct callers.
@@ -1595,17 +1591,6 @@ void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 namespace {
-// to = the traits value { kind, null type } for tr (a temporary assigned through Value::Assign)
-__declspec(safebuffers) SF_FORCEINLINE void TrAssignTraits(Value& to, UInt32 flags, UPInt tr)
-{
-    struct { UInt32 flags; UInt32 pad; UPInt bonus; UPInt tr; UPInt w3; } buf;   // raw storage of the temporary
-    buf.bonus = 0;
-    buf.flags = flags;
-    buf.tr = tr;
-    Value& v = *reinterpret_cast<Value*>(&buf);
-    to.Assign(v);
-    v.~Value();
-}
 // an object kind (Object .. ThunkFunction) holding null
 SF_FORCEINLINE bool TrIsNullObject(const Value& v)
 {
@@ -1873,102 +1858,94 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v);       // VM::GetF
 void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
 }}} // namespace Scaleform::GFx::AS3
 
-// TR::State::GetPropertyType: the traced type of a property read through the slot si of the traits t, into result:
-// the function type of a method slot, the return type of a getter, else the slot's declared type (its class for a
-// Class-typed or class-bound slot). An unknown declared type raises VerifyError 1014 (false).
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace {
+// SlotInfo::IsClassType: the slot's declared type (its trait's type multiname in the ABC file) is "Class" in the
+// public namespace. Raw-offset model of the ABC constant pool.
+SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
+{
+    using TR::TrRd;
+    const UByte* mn = reinterpret_cast<const UByte*>(si.TI);   // the ABC type multiname
+    const UPInt file = reinterpret_cast<UPInt>(si.File.GetPtr());
+    if (!file || !mn)
+        return false;
+    const UPInt abc = TrRd(file, 0x28);
+    const int mind = *reinterpret_cast<const int*>(mn + 0xc);
+    UPInt qn;   // the QName of the type
+    if ((*mn & 0xf) == 0 || (*mn & 0xf) == 6)
+        qn = mind ? TrRd(abc, 0xb8) + static_cast<SPInt>(mind) * 0x10 : abc + 0xe8;
+    else
+    {
+        const SPInt q = *reinterpret_cast<const int*>(
+            *reinterpret_cast<const UPInt*>(TrRd(abc, 0x140) + static_cast<SPInt>(mind) * 8) + 0x24);
+        qn = q ? TrRd(abc, 0xb8) + q * 0x10 : abc + 0xe8;
+    }
+    const int nsi = *reinterpret_cast<const int*>(qn + 4);
+    const UInt32* ns = reinterpret_cast<const UInt32*>(nsi ? TrRd(abc, 0x88) + static_cast<SPInt>(nsi) * 0x18
+                                                           : abc + 0xd0);
+    const UPInt sv = TrRd(abc, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(qn + 8)) * 8;
+    const StringDataPtr tn = reinterpret_cast<const Abc::StringView*>(sv)->ToStringDataPtr();
+    return tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (*ns & ~4u) == 0 &&
+           *reinterpret_cast<const UPInt*>(ns + 4) == 0;
+}
+}
+
+namespace TR {
+
+// The traced type of a property read through the slot si of obj_traits, into type: the function type of a method
+// slot, the return type of a getter, else the slot's declared type (its class for a Class-typed or class-bound slot).
+// An unknown declared type raises VerifyError 1014 (false).
 // MS2-FUNCTIONAL 0x14250cf20: raw-offset model of the ABC type multiname ("Class" in the public namespace) test
 // @0x14250cf20
-__declspec(safebuffers) const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si,
-                                                  Scaleform::GFx::AS3::Value& result)
+__declspec(safebuffers) CheckResult State::GetPropertyType(const Traits* obj_traits, const SlotInfo& si, Value& type) const
 {
-    using namespace Scaleform;
-    using namespace Scaleform::GFx::AS3;
-    using namespace Scaleform::GFx::AS3::TR;
-    using Scaleform::GFx::ASString;
-    const TR::State& st = *static_cast<const State*>(state);
-    const UPInt s = reinterpret_cast<UPInt>(si);
-    const UInt32 w = *reinterpret_cast<const UInt32*>(s);
-    const int bt = static_cast<SInt32>(w << 22) >> 27;
-    const Traits& tr = *static_cast<const Traits*>(t);
-    UPInt rt;
-    UInt32 flags;
-    if (bt > 10 && !(w & 0x4000000))   // a method / accessor slot with a valid value index
+    VM& vm = static_cast<const Tracer*>(pTracer)->GetVM();
+    if (si.BindType >= SlotInfo::BT_Code && si.ValueInd >= 0)
     {
-        const SPInt ind = static_cast<SPInt>(static_cast<SInt32>(w << 5) >> 15);
-        if (bt == 11)
+        if (si.BindType == SlotInfo::BT_Code)
         {
-            const Value f = tr.GetVT().GetValue(AbsoluteIndex(ind));
-            rt = reinterpret_cast<UPInt>(&st.GetFunctType(f));
+            // Retrieve function type.
+            InstanceTraits::Traits& tr = GetFunctType(obj_traits->GetVT().GetValue(AbsoluteIndex(si.ValueInd)));
+            type = Value(tr, CanBeNull(tr));
         }
         else
         {
-            VM& vm = *reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(state), 0)));
-            const UPInt methods = TrRd(reinterpret_cast<UPInt>(&tr.GetVT()), 8);
-            rt = reinterpret_cast<UPInt>(&FUN_14250a060(
-                vm, *reinterpret_cast<const Value*>(methods + (static_cast<UPInt>(ind) & 0xffffffff) * 0x20)));
+            // Retrieve function return type.
+            InstanceTraits::Traits& tr =
+                FUN_14250a060(vm, obj_traits->GetVT().VTMethods[static_cast<UInt32>(si.ValueInd)]);
+            type = Value(tr, CanBeNull(tr));
         }
-        flags = (static_cast<UInt32>(st.CanBeNull(*reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u) << 5 |
-                Value::kInstanceTraits;
+        return true;
     }
+
+    ClassTraits::Traits* ctr = FUN_1425085b0(&si, &vm);
+    if (ctr == NULL)
+    {
+        struct { UPInt node; } nb;   // raw storage: GetDataTypeName constructs the name in it
+        ASString& name = *reinterpret_cast<ASString*>(&nb);
+        FUN_142508720(&si, &name, &vm);
+        {
+            const Value tv(name);
+            const VM::Error e(VM::ErrorID(1014) /* eClassNotFoundError */, vm, tv);
+            FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
+        }
+        name.~ASString();
+        return false;
+    }
+
+    // IsClass: a class trait; IsClassType: declared as Class.
+    if (si.BindType == SlotInfo::BT_ValueArray || (si.TI && (*reinterpret_cast<const UByte*>(si.TI) & 0xf) == 4) ||
+        TrIsClassTypeSlot(si))
+        type = Value(*ctr, Value::NotNull);
     else
     {
-        VM& vm = *reinterpret_cast<VM*>(TrVM(TrRd(reinterpret_cast<UPInt>(state), 0)));
-        ClassTraits::Traits* ct = FUN_1425085b0(static_cast<const SlotInfo*>(si), &vm);
-        if (!ct)
-        {
-            struct { UPInt node; } nb;   // raw storage: GetDataTypeName constructs the name in it
-            ASString& name = *reinterpret_cast<ASString*>(&nb);
-            FUN_142508720(static_cast<const SlotInfo*>(si), &name, &vm);
-            {
-                const Value tv(name);
-                const VM::Error e(VM::ErrorID(1014) /* eClassNotFoundError */, vm, tv);
-                FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI);
-            }
-            name.~ASString();
-            *ret = 0;
-            return ret;
-        }
-        rt = reinterpret_cast<UPInt>(ct);
-        flags = Value::kClassTraits;
-        const UByte* mn = *reinterpret_cast<const UByte* const*>(s + 0x20);   // the ABC type multiname
-        if ((w & 0x3e0) != 0x20 && !(mn && (*mn & 0xf) == 4))
-        {
-            bool isClass = false;
-            const UPInt file = *reinterpret_cast<const UPInt*>(s + 0x18);
-            if (file && mn)
-            {
-                const UPInt abc = TrRd(file, 0x28);
-                const int mind = *reinterpret_cast<const int*>(mn + 0xc);
-                UPInt qn;   // the QName of the type
-                if ((*mn & 0xf) == 0 || (*mn & 0xf) == 6)
-                    qn = mind ? TrRd(abc, 0xb8) + static_cast<SPInt>(mind) * 0x10 : abc + 0xe8;
-                else
-                {
-                    const SPInt q = *reinterpret_cast<const int*>(
-                        *reinterpret_cast<const UPInt*>(TrRd(abc, 0x140) + static_cast<SPInt>(mind) * 8) + 0x24);
-                    qn = q ? TrRd(abc, 0xb8) + q * 0x10 : abc + 0xe8;
-                }
-                const int nsi = *reinterpret_cast<const int*>(qn + 4);
-                const UInt32* ns = reinterpret_cast<const UInt32*>(nsi ? TrRd(abc, 0x88) + static_cast<SPInt>(nsi) * 0x18
-                                                                       : abc + 0xd0);
-                const UPInt sv = TrRd(abc, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(qn + 8)) * 8;
-                const StringDataPtr tn = reinterpret_cast<const Abc::StringView*>(sv)->ToStringDataPtr();
-                isClass = tn.ToCStr() && strncmp(tn.ToCStr(), "Class", 5) == 0 && (*ns & ~4u) == 0 &&
-                          *reinterpret_cast<const UPInt*>(ns + 4) == 0;
-            }
-            if (!isClass)
-            {
-                rt = TrRd(rt, 0xc0);
-                flags = (static_cast<UInt32>(st.CanBeNull(*reinterpret_cast<const InstanceTraits::Traits*>(rt))) & ~8u)
-                            << 5 |
-                        Value::kInstanceTraits;
-            }
-        }
+        InstanceTraits::Traits& itr = ctr->GetInstanceTraits();
+        type = Value(itr, CanBeNull(itr));
     }
-    TrAssignTraits(result, flags, rt);
-    *ret = 1;
-    return ret;
+    return true;
 }
+
+}}}} // namespace Scaleform::GFx::AS3::TR
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
