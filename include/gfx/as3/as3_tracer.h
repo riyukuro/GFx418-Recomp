@@ -94,7 +94,7 @@ public:
     // The last written opcode dropped: the word code cut back to its recorded position.
     void PopNewOpCode();                                                          // 0x14251cc80
     // (appended, sfb) the last written word becomes op (the State refiners inline it).
-    void ReplaceOpCode(Abc::Code::OpCode op)                                      { WCode[WCode.GetSize() - 1] = op; }
+    void ReplaceOpCode(Abc::Code::OpCode op)                                      { WCode[WCode.GetSize() - 1] = static_cast<UInt32>(op); }
     // (appended, sfb) no exe names. The code of the last pushed value dropped when it has no side effects (a push
     // or a local get), else a pop emitted.
     void PopPrevValue();                                                          // 0x1424f9180

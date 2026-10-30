@@ -1546,7 +1546,7 @@ void State::RefineOpCodeReg1(InstanceTraits::Traits& type, Abc::Code::OpCode op,
         tr.ReplaceOpCode(op);
     else
         ConvertRegisterTo(reg_num, type, TrNullTypeOf(tr, type));
-    tr.PushNewOpCodeArg(static_cast<UInt32>(reg_num));
+    static_cast<Tracer*>(pTracer)->PushNewOpCodeArg(static_cast<UInt32>(reg_num));
 }
 
 // The same for the operand stack top.
@@ -2465,24 +2465,14 @@ template GFx::AS3::Value& ArrayBase<ArrayData<GFx::AS3::Value, AllocatorLH<GFx::
 template void ArrayData<char, AllocatorGH<char, 2>, ArrayDefaultPolicy>::PushBack(const char&);
 template void ArrayBase<ArrayDataDH<Ptr<GFx::DisplayObjectBase>, AllocatorDH<Ptr<GFx::DisplayObjectBase>, 2>, ArrayDefaultPolicy> >::InsertAt(
     UPInt, const Ptr<GFx::DisplayObjectBase>&);
-// VMAppDomain is not modeled; the array only stores the SPtr word, so a
-// GASRefCountBase element array produces the same Reserve body.
-// MS2-FUNCTIONAL wrapper over the SPtr<GASRefCountBase> instantiation (VMAppDomain not modeled)
+// The exe folds the SPtr<VMAppDomain> and VMAbcFile* POD Reserves into one body; symbols.tsv names the latter.
 // @0x142522ef0
-void Sfr34_VMAppDomainArray_Reserve(void* self, const void* pheapAddr, UPInt newCapacity)
-{
-    ((ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>,
-        AllocatorLH<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>, 329>, ArrayDefaultPolicy>*)self)->Reserve(pheapAddr, newCapacity);
-}
-// The exe element type is Instances::fl::Namespace, which this model keeps as
-// Instances::Namespace; only the SPtr word is stored, so the body is the same.
-// MS2-FUNCTIONAL wrapper over the SPtr<Instances::Namespace> instantiation (fl::Namespace not modeled)
+template void ArrayDataBase<GFx::AS3::VMAbcFile*, AllocatorLH_POD<GFx::AS3::VMAbcFile*, 329>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// The exe element type: Instances::fl::Namespace, which this model keeps as Instances::Namespace.
+namespace GFx { namespace AS3 { namespace Instances { namespace fl { class Namespace : public Instances::Namespace {}; } } } }
 // @0x142522db0
-void Sfr34_FlNamespaceArray_Reserve(void* self, const void* pheapAddr, UPInt newCapacity)
-{
-    ((ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
-        AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>*)self)->Reserve(pheapAddr, newCapacity);
-}
+template void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::Namespace>,
+    AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::Namespace>, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 
 // ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::PopBack;
 // the paged CC allocator is not modeled. Pages hold 64 frames of 0xa8 bytes.
@@ -3387,19 +3377,21 @@ bool Sfr34_ValueObjIfc::PushBack(void* pdata, const GFx::Value& value)
 // @0x14251cbe0
 bool Sfr34_ValueObjIfc::PopBack(void* pdata, GFx::Value* pval)
 {
-    SparseArray&     sa   = static_cast<Instances::fl::Array*>(pdata)->SA;
-    const MovieRoot* root = GetAS3Root();
-    const SInt32     size = SInt32(sa.GetSize());
-    if (size <= 0)
+    Instances::fl::Array* arr  = static_cast<Instances::fl::Array*>(pdata);
+    const MovieRoot*      root = GetAS3Root();
+    const int sz = static_cast<int>(arr->GetSize());
+    if (sz <= 0)
     {
         if (pval)
             pval->SetUndefined();
         return false;
     }
-    const UPInt last = UPInt(size - 1);
     if (pval)
-        root->ASValue2GFxValue(sa.At(last), pval);
-    sa.Resize(last);
+    {
+        const Value& asval = arr->At(sz - 1);
+        root->ASValue2GFxValue(asval, pval);
+    }
+    arr->Resize(sz - 1);
     return true;
 }
 
@@ -4586,11 +4578,11 @@ DisplayObject* AvmDisplayObj::GetRoot()
 
 // A "change" (or "scroll") event to the AS3 object of a text field when it listens for one. self is the
 // AvmTextFieldBase part (+0x40) of the AS3 text field.
-static inline void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
+static SF_FORCEINLINE void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
 {
     const AvmDisplayObj*                  avm  = reinterpret_cast<const AvmDisplayObj*>(self - 0x40);
-    Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
     MovieRoot*                            root = AS3RootOf(avm->pDispObj);
+    Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
     if (obj && obj->HasEventHandler(root->BuiltinsMgr.GetBuiltin(type), false))
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(root->BuiltinsMgr.GetBuiltin(type), true, false);
