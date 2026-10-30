@@ -1625,11 +1625,15 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Array);
     ArrayObject* pthis = (ArrayObject*)fn.ThisPtr;
-    ArrayCC<ASString> fields(fn.Env->GetBuiltin(ASBuiltin_empty_));
-    ArrayLH<int>      options;
+    // The exe holds the field names in an ArrayCC on the movie heap and the option words in a global-heap
+    // Array; a stack ArrayLH would look its heap up from the stack address.
+    ArrayCC<ASString>* pfields = SF_HEAP_NEW(fn.Env->GetHeap()) ArrayCC<ASString>(fn.Env->GetBuiltin(ASBuiltin_empty_));
+    ArrayCC<ASString>& fields  = *pfields;
+    Array<UInt32>      options;
     if (fn.NArgs == 0)
     {
         fn.Result->SetUndefined();
+        delete pfields;
         return;
     }
     pthis->LengthValueOverriden = false;
@@ -1712,6 +1716,7 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
         ArrayObjectElements_Resize(&pnew->Elements, 0);
         fn.Result->SetAsObject(pthis);
     }
+    delete pfields;
 }
 
 // ---- Matrix ----
