@@ -618,9 +618,12 @@ void Sfr27TraceIfTrueFalse(State* st, UInt64* pos, int op)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    if (FUN_142514000(tracer, &s.Top()))
-        s.LastOp() = static_cast<UInt64>(op != 0x11) + 0x33;
-    const int off = Abc::ReadS24<UInt8>(s.Code(), *pos);
+    if (FUN_142514000(tracer, &s.OpStack().Back()))
+    {
+        UPInt* ops = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
+        reinterpret_cast<UInt64*>(ops[0])[ops[1] - 1] = static_cast<UInt64>(op != 0x11) + 0x33;
+    }
+    const int off = Abc::ReadS24<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), *pos);
     FUN_14251ccc0(st, 1);
     Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), off, -1);
 }
@@ -715,7 +718,7 @@ void Sfr27TraceCheckNumericOp(State* st)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    void* tr = FUN_14250fe80(st, &s.Top());
+    void* tr = FUN_14250fe80(st, &s.OpStack().Back());
     const UPInt vm = TrVM(tracer);
     if (tr != reinterpret_cast<void*>(TrRd(TrRd(vm, 0x210), 0xc0)) &&
         tr != reinterpret_cast<void*>(TrRd(vm, 0x278)) && tr != reinterpret_cast<void*>(TrRd(vm, 0x270)))
@@ -726,7 +729,8 @@ void Sfr27TraceCheckNumericOp(State* st)
             return;
         }
     }
-    s.LastOp() = 0x6b;
+    UPInt* ops = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
+    reinterpret_cast<UInt64*>(ops[0])[ops[1] - 1] = 0x6b;
     FUN_14251ccc0(st, 1);
 }
 
@@ -735,12 +739,15 @@ void Sfr27TraceDup2Check(State* st)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    void* tr = FUN_14250fe80(st, &s.Top());
+    void* tr = FUN_14250fe80(st, &s.OpStack().Back());
     const UPInt vm = TrVM(tracer);
     if (tr == reinterpret_cast<void*>(TrRd(TrRd(vm, 0x210), 0xc0)) ||
         tr == reinterpret_cast<void*>(TrRd(vm, 0x278)) || tr == reinterpret_cast<void*>(TrRd(vm, 0x270)) ||
         FUN_142514510(tracer, tr))
-        s.LastOp() = 0x69;
+    {
+        UPInt* ops = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
+        reinterpret_cast<UInt64*>(ops[0])[ops[1] - 1] = 0x69;
+    }
     s.OpStack().PushBack(Value::GetUndefined());
     s.Top().Assign(s.Below());
 }
