@@ -553,41 +553,42 @@ void MeshCache::destroyPendingBuffers()
     PendingDestructionBuffers.PushListToFront(stillPending);
 }
 
-// MS2-FUNCTIONAL: register allocation of the slot loop
 // @0x14273c0e0
 bool MeshCache::evictMeshesInBuffer(MeshCacheListSet::ListSlot* plist, UPInt count, MeshBuffer* pbuffer)
 {
-    bool pending = false;
+    bool evictionFailed = false;
     for (unsigned i = 0; i < count; i++)
     {
-        MeshCacheListSet::ListSlot& list = plist[i];
-        MeshCacheItem* p = (MeshCacheItem*)list.GetFirst();
-        while (!list.IsNull(p))
+        MeshCacheItem* pitem = (MeshCacheItem*)plist[i].GetFirst();
+        while (!plist[i].IsNull(pitem))
         {
-            if (p->pVertexBuffer != pbuffer && p->pIndexBuffer != pbuffer)
+            if ((pitem->pVertexBuffer == pbuffer) || (pitem->pIndexBuffer == pbuffer))
             {
-                p = (MeshCacheItem*)p->pNext;
+                // Evict returns the bytes released; zero means the mesh was still in use
+                if (Evict(pitem) == 0)
+                {
+                    evictionFailed = true;
+                    // the buffer is going away, so its addresses still have to be freed
+                    if (pitem->pVertexBuffer == pbuffer)
+                    {
+                        VertexBuffers.Free(pitem->VBAllocSize, pitem->pVertexBuffer, pitem->VBAllocOffset);
+                        pitem->pVertexBuffer = 0;
+                    }
+                    if (pitem->pIndexBuffer == pbuffer)
+                    {
+                        IndexBuffers.Free(pitem->IBAllocSize, pitem->pIndexBuffer, pitem->IBAllocOffset);
+                        pitem->pIndexBuffer = 0;
+                    }
+                }
+
+                // Evict may modify the cache items, so start again
+                pitem = (MeshCacheItem*)plist[i].GetFirst();
                 continue;
             }
-            if (Evict(p) == 0)
-            {
-                // left pending: drop just its space in this buffer
-                pending = true;
-                if (p->pVertexBuffer == pbuffer)
-                {
-                    VertexBuffers.Free(p->VBAllocSize, p->pVertexBuffer, p->VBAllocOffset);
-                    p->pVertexBuffer = 0;
-                }
-                if (p->pIndexBuffer == pbuffer)
-                {
-                    IndexBuffers.Free(p->IBAllocSize, p->pIndexBuffer, p->IBAllocOffset);
-                    p->pIndexBuffer = 0;
-                }
-            }
-            p = (MeshCacheItem*)list.GetFirst();
+            pitem = (MeshCacheItem*)pitem->pNext;
         }
     }
-    return !pending;
+    return !evictionFailed;
 }
 
 // @0x14273b480
@@ -612,29 +613,41 @@ void MeshCache::adjustMeshCacheParams(MeshCacheParams* params, IDirect3DDevice9*
         params->StagingBufferSize = minStaging;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the instancing buffer (unrolled fill) before the tail call
 // @0x14273bd30
 bool MeshCache::createStaticVertexBuffers(IDirect3DDevice9* device)
 {
     return createInstancingVertexBuffer(device) && createMaskEraseBatchVertexBuffer(device);
 }
 
-// MS2-FUNCTIONAL: the exe unrolls the index fill into 30 stores; ours is vectorised
 // @0x14273b9b0
+// the SDK's per-instance vertex: the instance index in the colour's low byte
+class Render_InstanceData
+{
+public:
+    UInt32 Instance;
+};
+
 bool MeshCache::createInstancingVertexBuffer(IDirect3DDevice9* device)
 {
-    // the instance index of each of the 30 instances a batch may hold
-    if (device->CreateVertexBuffer(30 * sizeof(UInt32), D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT,
-                                   &pInstancingVertexBuffer.GetRawRef(), 0) != D3D_OK)
+    HRESULT              createResult;
+    DWORD                lockFlags  = 0;
+    unsigned             bufferSize = sizeof(Render_InstanceData) * 30;
+    Render_InstanceData* pbuffer    = 0;
+
+    createResult = device->CreateVertexBuffer(bufferSize, D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT,
+                                              &pInstancingVertexBuffer.GetRawRef(), 0);
+    if (createResult != D3D_OK)
         return false;
-    UInt32* p = 0;
-    if (FAILED(pInstancingVertexBuffer->Lock(0, 30 * sizeof(UInt32), (void**)&p, 0)))
+
+    if (FAILED(pInstancingVertexBuffer->Lock(0, bufferSize, (void**)&pbuffer, lockFlags)))
     {
-        pInstancingVertexBuffer.Clear();
+        pInstancingVertexBuffer = 0;
         return false;
     }
+
     for (unsigned i = 0; i < 30; i++)
-        p[i] = i;
+        pbuffer[i].Instance = i; // low byte
+
     pInstancingVertexBuffer->Unlock();
     return true;
 }
@@ -673,8 +686,6 @@ bool MeshCache::createMaskEraseBatchVertexBuffer(IDirect3DDevice9* device)
 
 }}} // namespace Scaleform::Render::D3D9
 
-// MS2-FUNCTIONAL 0x142739d80: shrink-wrapping of the early return and the buffer constructor's store order
-// MS2-FUNCTIONAL 0x142739ef0: shrink-wrapping of the early return and the buffer constructor's store order
 // MS2-PIN: ??1MeshBufferSet@D3D9@Render@Scaleform@@UEAA@XZ 0x142739130
 // MS2-PIN: ??_G?$MeshBufferImpl@UIDirect3DIndexBuffer9@@@D3D9@Render@Scaleform@@UEAAPEAXI@Z 0x142739260
 // MS2-PIN: ??_G?$MeshBufferImpl@UIDirect3DVertexBuffer9@@@D3D9@Render@Scaleform@@UEAAPEAXI@Z 0x1427392d0

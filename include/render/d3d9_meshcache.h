@@ -254,29 +254,39 @@ public:
     virtual MeshBuffer* CreateBuffer(UPInt size, AllocType type, unsigned arena, MemoryHeap* heap,
                                      IDirect3DDevice9* device, unsigned flags)
     {
-        UPInt index;
-        for (index = 0; index < Buffers.GetSize(); index++)
-            if (!Buffers[index])
-                break;
+        return Create(size, type, arena, heap, device, flags, *this);
+    }
+
+    // MeshBufferImpl::Create in the SDK
+    static T* Create(UPInt size, AllocType type, unsigned arena, MemoryHeap* heap, IDirect3DDevice9* device,
+                     unsigned flags, MeshBufferSet& mbs)
+    {
+        UPInt index = 0;
+        while ((index < mbs.Buffers.GetSize()) && mbs.Buffers[index])
+            index++;
         if (index == 256)
             return 0;
 
-        size = (size + 15) & ~(UPInt)15;
+        size = ((size + 16 - 1) >> 4) << 4;
+
         T* p = SF_HEAP_NEW(heap) T(size, type, arena, flags);
-        if (!p)
-            return 0;
+        if (!p) return 0;
+
         if (!p->allocBuffer(device))
         {
             delete p;
             return 0;
         }
         p->Index = index;
-        Allocator.AddSegment(index << 24, size >> 4);
-        TotalSize += size;
-        if (index == Buffers.GetSize())
-            Buffers.PushBack(p);
+
+        mbs.Allocator.AddSegment(index << 24, size >> 4);
+        mbs.TotalSize += size;
+
+        if (index == mbs.Buffers.GetSize())
+            mbs.Buffers.PushBack(p);
         else
-            Buffers[index] = p;
+            mbs.Buffers[index] = p;
+
         return p;
     }
 };
