@@ -477,12 +477,13 @@ void FUN_1424f03f0(UByte* self, MemoryHeap* heap)
     Movie* pmovie;
     if (reinterpret_cast<Sfr17dAmpFindMovieByHeap>((*static_cast<void***>(amp))[37])(amp, heap, &pmovie))
     {
+        void* stats = *reinterpret_cast<void**>(reinterpret_cast<UByte*>(pmovie) + 0x30);
         UByte* gc = reinterpret_cast<UByte*>((*reinterpret_cast<MemoryContextImpl**>(self + 0x10))->ASGC.GetPtr());
         if (gc[0xb1] > 0)
             gc[0xb0] = 1;
         else
         {
-            FUN_142504630(gc, *reinterpret_cast<void**>(reinterpret_cast<UByte*>(pmovie) + 0x30));
+            FUN_142504630(gc, stats);
             if (!(gc[0x78] & 2) && *reinterpret_cast<UPInt*>(gc + 0x18) == 0)
                 FUN_1424efab0(gc + 0x10);
             *reinterpret_cast<unsigned*>(gc + 0x90) = 0;
