@@ -1262,9 +1262,8 @@ namespace Instances { namespace fl_events
     // @0x142461040
     SFR08_INSTANCE_CTOR ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
         : Event(t)
-        , BytesLoaded(0)
-        , BytesTotal(0)
     {
+        BytesLoaded = BytesTotal = 0;
     }
 }}
 
@@ -1634,8 +1633,8 @@ namespace Instances { namespace fl_events
     SFR08_INSTANCE_CTOR TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
-        ScaleX = ScaleY = 1.0;
         OffsetX = OffsetY = LocalOffsetX = LocalOffsetY = 0;
+        ScaleX = ScaleY = 1.0;
         Rotation = 0;
         LocalOffsetInitialized = false;
     }
