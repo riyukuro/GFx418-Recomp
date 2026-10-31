@@ -2821,7 +2821,6 @@ namespace InstanceTraits { namespace fl
 
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: Array constructor length validation and Append as in the exe; compiler codegen differs.
     // @0x1423f5550
     void Array::AS3Constructor(unsigned argc, const Value* argv)
     {
