@@ -55,7 +55,7 @@ void* FUN_142620240(void* self, unsigned flags)
 {
     U size = RawField<U>(self, 0x38);
     void** p = (void**)RawField<U>(self, 0x30) + (size - 1);
-    for (; size != 0; size--, p--)
+    for (; size != 0; p--, size--)
     {
         if (*p)
             FUN_14257dcb0(*p);
@@ -68,38 +68,36 @@ void* FUN_142620240(void* self, unsigned flags)
 
 // Array::Reserve for POD-like elements: capacity rounded up to four, freed at zero. The exe keeps one full copy per
 // instance.
-#define RAW_RESERVE(name, Elem)                                                                  \
-    void name(U* array, void* heapOwner, U n)                                                    \
-    {                                                                                            \
-        if (n == 0)                                                                              \
-        {                                                                                        \
-            if (array[0])                                                                        \
-            {                                                                                    \
-                Memory::Free((void*)array[0]);                                                   \
-                array[0] = 0;                                                                    \
-                array[2] = 0;                                                                    \
-                return;                                                                          \
-            }                                                                                    \
-            array[2] = 0;                                                                        \
-            return;                                                                              \
-        }                                                                                        \
-        U cap = (n + 3) & ~3ULL;                                                                 \
-        if (array[0])                                                                            \
-        {                                                                                        \
-            array[0] = (U)Memory::Realloc((void*)array[0], cap * Elem);                          \
-            array[2] = cap;                                                                      \
-            return;                                                                              \
-        }                                                                                        \
-        array[0] = (U)Memory::AllocAutoHeap(heapOwner, cap * Elem, AllocInfo(2, 0, 0));          \
-        array[2] = cap;                                                                          \
+#define RAW_RESERVE(name, Elem)                                                              \
+    void name(U* array, void* heapOwner, U n)                                                \
+    {                                                                                        \
+        U cap;                                                                               \
+        if (n == 0)                                                                          \
+        {                                                                                    \
+            cap = 0;                                                                         \
+            if (array[0])                                                                    \
+            {                                                                                \
+                Memory::Free((void*)array[0]);                                               \
+                array[0] = 0;                                                                \
+            }                                                                                \
+        }                                                                                    \
+        else                                                                                 \
+        {                                                                                    \
+            cap = (n + 4 - 1) / 4 * 4;                                                       \
+            if (array[0])                                                                    \
+                array[0] = (U)Memory::Realloc((void*)array[0], cap * Elem);                    \
+            else                                                                             \
+                array[0] = (U)Memory::AllocAutoHeap(heapOwner, cap * Elem, AllocInfo(2, 0, 0));\
+        }                                                                                    \
+        array[2] = cap;                                                                      \
     }
 
-// MS2-FUNCTIONAL 0x142623d00: register allocation only: the exe keeps the zero in rdi (saved with rbx) and shares the
-// free path's stores; same calls, same stores.
-// MS2-FUNCTIONAL 0x142623da0: as 0x142623d00 (register allocation of the shared zero).
-// MS2-FUNCTIONAL 0x142623e40: as 0x142623d00 (register allocation of the shared zero).
-// MS2-FUNCTIONAL 0x142623ee0: as 0x142623d00 (register allocation of the shared zero).
-// MS2-FUNCTIONAL 0x142623f80: as 0x142623d00 (register allocation of the shared zero).
+// MS2-FUNCTIONAL 0x142623d00: stack slots and tail merging only: the exe saves rbx in the first home slot, puts the
+// AllocInfo in the fourth, and sends the empty no-data path to the shared capacity store; same calls, same stores.
+// MS2-FUNCTIONAL 0x142623da0: as 0x142623d00 (stack slots and tail merging).
+// MS2-FUNCTIONAL 0x142623e40: as 0x142623d00 (stack slots and tail merging).
+// MS2-FUNCTIONAL 0x142623ee0: as 0x142623d00 (stack slots and tail merging).
+// MS2-FUNCTIONAL 0x142623f80: as 0x142623d00 (stack slots and tail merging).
 // @0x142623d00
 RAW_RESERVE(FUN_142623d00, 0x18)
 // @0x142623da0
