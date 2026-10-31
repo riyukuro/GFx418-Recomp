@@ -49,6 +49,7 @@ extern const void* DAT_1431b91b0[];
 extern const void* DAT_1431b91d8[];
 extern const void* DAT_1431b9170[];
 extern const void* DAT_143149940[];
+extern unsigned char DAT_142dc9d48[];
 extern const void* DAT_1431b93b0[];
 extern const void* DAT_1431b9360[];
 extern const void* DAT_1431b9410[];
@@ -1391,21 +1392,22 @@ VideoReader* VideoReaderConfigSmp::CreateReader()
 
 }}} // namespace Scaleform::GFx::Video
 
-// MS2-FUNCTIONAL: append a request node to the reader queue under its lock and wake the worker event.
+// Append a request node to the reader queue under its lock and wake the worker event. noinline: the exe's
+// close request (0x14002e230) calls it.
 // @0x14002e140
-void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c)
+__declspec(noinline) void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c)
 {
     CriMvRequestQueueView* queueView = (CriMvRequestQueueView*)queue;
     FUN_14258aca0(queueView->Lock);
     CriMvRequestNode* node = FUN_14002d890((CriMvRequestPoolView*)&queueView->Reserved0[0x40]);
-    node->ArgumentB = b;
     node->Operation = operation;
     node->Request = request;
     node->ArgumentA = a;
+    node->ArgumentB = b;
     node->ArgumentC = c;
-    node->Previous = (CriMvRequestNode*)&queueView->Head;
     node->Next = queueView->Head;
-    node->Next->Previous = node;
+    node->Previous = (CriMvRequestNode*)&queueView->Head;
+    queueView->Head->Previous = node;
     queueView->Head = node;
     FUN_14258bb70(queueView->Lock);
     FUN_142583d50(queueView->Event);
@@ -1426,7 +1428,7 @@ void FUN_14002e1e0(void* object, void* input)
     FUN_14002e140(state->Queue, 0, (CriUint8*)object - 0x10, input, NULL, NULL);
 }
 
-// MS2-FUNCTIONAL: mark close pending and append the reader close operation.
+// Mark close pending and append the reader close operation.
 // @0x14002e230
 void FUN_14002e230(void* object)
 {
@@ -1604,16 +1606,15 @@ void FUN_14002a550(void* items, CriSint64 count)
     }
 }
 
-// MS2-FUNCTIONAL: resize a vector of two-string records and initialize each newly added pair.
 // @0x14002aa30
 void FUN_14002aa30(CriUint64* array, CriUint64 length)
 {
     CriUint64 oldLength = array[1];
     FUN_140006f50(array, array, length);
-    if (oldLength < length)
+    if (length > oldLength)
     {
         CriUint8* item = (CriUint8*)array[0] + oldLength * 0x10;
-        for (CriUint64 i = oldLength; i < length; ++i, item += 0x10)
+        for (CriUint64 i = length - oldLength; i != 0; --i, item += 0x10)
         {
             if (item)
             {
@@ -1636,14 +1637,15 @@ void FUN_14002ab90(void* object)
     FUN_14257db50(object);
 }
 
-// MS2-FUNCTIONAL: initialize the shared reference-count core and retain its first owned object.
 // @0x14002aab0
 void* FUN_14002aab0(void* object, void* first, void* second)
 {
     void** fields = (void**)object;
-    fields[0] = (void*)DAT_143149940;
+    fields[0] = (void*)DAT_142dc9d48;   // RefCountImplCore base vftable
+    _ReadWriteBarrier();
     *(CriUint32*)((CriUint8*)object + 8) = 1;
     fields[0] = (void*)DAT_143149940;
+    _ReadWriteBarrier();
     fields[2] = first;
     fields[3] = second;
     fields[4] = NULL;
@@ -1692,31 +1694,26 @@ void* FUN_14002abd0(void* object, CriUint32 tag, const CriUint32* sizePair,
     return object;
 }
 
-// MS2-FUNCTIONAL: clear the request vector while retaining a single-entry allocation when possible.
 // @0x14002aec0
 void FUN_14002aec0(CriUint64* array)
 {
-    if (array[1] == 0)
+    // ResizeNoConstruct(0): shrinking to an empty array frees it, growing from capacity 0 reserves 0
+    const CriUint64 newSize = 0;
+    if (newSize < array[1])
     {
-        if (array[2] == 0)
+        if (newSize < (array[2] >> 1))
         {
-            FUN_140029d30(array, array, 0);
-            array[1] = 0;
-            return;
+            if (array[0])
+            {
+                FUN_14002d3f0((void*)array[0]);
+                array[0] = 0;
+            }
+            array[2] = 0;
         }
     }
-    else if ((array[2] & ~CriUint64(1)) != 0)
-    {
-        if (array[0])
-        {
-            FUN_14002d3f0((void*)array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-        array[1] = 0;
-        return;
-    }
-    array[1] = 0;
+    else if (newSize >= array[2])
+        FUN_140029d30(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
 }
 
 // Destroy the same owned fields and optionally free the containing allocation.
@@ -1952,16 +1949,13 @@ void* FUN_14002d280(void** slot, void* replacement)
     return slot;
 }
 
-// MS2-FUNCTIONAL: allocate a block from the global Scaleform heap (alloc info 6) and return it.
 // @0x14002d3c0
 void* FUN_14002d3c0(void*, size_t size)
 {
-    CriUint32 flags[6] = { 6, 0, 0, 0, 0, 0 };
+    CriUint32 info[4];   // AllocInfo: only the stat id is set
+    info[0] = 6;
     void* heap = DAT_143b15f60;
-    CriUint8* vtable = (CriUint8*)*(void**)heap;
-    void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
-        *(void* (__fastcall **)(void*, size_t, CriUint32*))(vtable + 0x50);
-    return allocate(heap, size, flags);
+    return (*(void* (__fastcall **)(void*, size_t, CriUint32*))(*(CriUint8**)heap + 0x50))(heap, size, info);
 }
 
 // The exe's heap-release helpers below call and return instead of tail-calling: favor-size codegen (/Os). The rest of
@@ -2085,31 +2079,26 @@ void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
     CriConstructArray8((CriUint64*)array[0] + oldLength, count, source);
 }
 
-// MS2-FUNCTIONAL: clear a vector while preserving its one-element inline-capacity sentinel.
 // @0x14002afe0
 void FUN_14002afe0(CriUint64* array)
 {
-    if (array[1] == 0)
+    // ResizeNoConstruct(0): shrinking to an empty array frees it, growing from capacity 0 reserves 0
+    const CriUint64 newSize = 0;
+    if (newSize < array[1])
     {
-        if (array[2] == 0)
+        if (newSize < (array[2] >> 1))
         {
-            FUN_140029bf0(array, array, 0);
-            array[1] = 0;
-            return;
+            if (array[0])
+            {
+                FUN_14002d3f0((void*)array[0]);
+                array[0] = 0;
+            }
+            array[2] = 0;
         }
     }
-    else if ((array[2] & ~((CriUint64)1)) != 0)
-    {
-        if (array[0])
-        {
-            FUN_14002d3f0((void*)array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-        array[1] = 0;
-        return;
-    }
-    array[1] = 0;
+    else if (newSize >= array[2])
+        FUN_140029bf0(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
 }
 
 // Clear the destination vector before cloning its two-word source state.
@@ -2338,7 +2327,7 @@ void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
     FUN_142583d50(config->Event);
     FUN_14258aca0(config->Lock);
     CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
-    while (config->Tail != sentinel)
+    while (sentinel->Previous != sentinel)
         FUN_14258bc20(config->Condition, config->Lock, -1);
     FUN_14258bb70(config->Lock);
 }
@@ -2356,27 +2345,30 @@ void FUN_14002d750(CriMvReaderThreadConfigView* config, void* reader)
     FUN_14258bb70(config->Lock);
 }
 
-// MS2-FUNCTIONAL: apply an origin-relative seek to the reader's active input or output cursor.
 // @0x14002d7b0
 CriUint64 FUN_14002d7b0(void* request, CriSint64 offset, CriSint32 origin)
 {
     CriMvReaderRequestView* view = (CriMvReaderRequestView*)request;
-    CriMvReaderThreadConfigView* config = (CriMvReaderThreadConfigView*)view->Queue;
-    FUN_14258aca0(config->Lock);
-    CriUint64* cursor = &view->ReadSize;
-    if (origin == 1)
-        *cursor = view->ReadPosition;
-    else if (origin == 2)
-        *cursor = view->FileSize;
-    else
-        *cursor = 0;
-    *cursor += (CriUint64)offset;
-    CriUint64 result = *cursor;
-    FUN_14258bb70(config->Lock);
+    FUN_14258aca0(((CriMvReaderThreadConfigView*)view->Queue)->Lock);
+    switch (origin)
+    {
+    case 1:
+        view->ReadSize = view->ReadPosition;
+        break;
+    case 2:
+        view->ReadSize = view->FileSize;
+        break;
+    default:
+        view->ReadSize = 0;
+        break;
+    }
+    view->ReadSize += (CriUint64)offset;
+    _ReadWriteBarrier();   // the seek is stored before the Lock::Locker dtor reads the queue
+    CriUint64 result = view->ReadSize;
+    FUN_14258bb70(((CriMvReaderThreadConfigView*)view->Queue)->Lock);
     return result;
 }
 
-// MS2-FUNCTIONAL: acquire a request node from the free list or the current 127-entry block.
 // @0x14002d890
 CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
 {
@@ -2386,18 +2378,13 @@ CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
         pool->FreeList = result->Next;
         return result;
     }
-    CriUint32 index = pool->NodesInLastBlock;
-    if (index < 0x7f)
-    {
-        pool->NodesInLastBlock = index + 1;
-        return &pool->LastBlock->Nodes[index];
-    }
-    CriUint32 flags[8] = { 6, 0, 0, 0, 0, 0, 0, 0 };
+    if (pool->NodesInLastBlock < 0x7f)
+        return &pool->LastBlock->Nodes[pool->NodesInLastBlock++];
+    CriUint32 info;   // AllocInfo: stat id 6
+    info = 6;
     void* heap = DAT_143b15f60;
-    CriUint8* vtable = (CriUint8*)*(void**)heap;
-    void* (__fastcall *allocate)(void*, size_t, CriUint32*) =
-        *(void* (__fastcall **)(void*, size_t, CriUint32*))(vtable + 0x50);
-    CriMvRequestBlock* block = (CriMvRequestBlock*)allocate(heap, sizeof(CriMvRequestBlock), flags);
+    CriMvRequestBlock* block = (CriMvRequestBlock*)(*(void* (__fastcall **)(void*, size_t, CriUint32*))(
+        *(CriUint8**)heap + 0x50))(heap, sizeof(CriMvRequestBlock), &info);
     block->NextBlock = NULL;
     if (pool->LastBlock)
         pool->LastBlock->NextBlock = block;
