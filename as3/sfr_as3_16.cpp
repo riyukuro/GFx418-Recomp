@@ -2070,7 +2070,7 @@ void FUN_1424dcac0(void* self)
 
 // HashNode<ASString, Value> releases its Value payload and string key.
 // @0x1424dcb40
-void FUN_1424dcb40(void* self)
+SF_NOINLINE void FUN_1424dcb40(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 8)->~Value();
@@ -2132,6 +2132,12 @@ using SfrCx18ASStringValueNode = HashNode<GFx::ASString, GFx::AS3::Value, GFx::A
 using SfrCx18ASStringValueSet = HashSetBase<SfrCx18ASStringValueNode, SfrCx18ASStringValueNode::NodeHashF,
     SfrCx18ASStringValueNode::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
     HashsetNodeEntry<SfrCx18ASStringValueNode, SfrCx18ASStringValueNode::NodeHashF> >;
+// The entry's node destructor is the out-of-line 0x1424dcb40 in the exe.
+template<> inline void HashsetNodeEntry<SfrCx18ASStringValueNode, SfrCx18ASStringValueNode::NodeHashF>::Clear()
+{
+    FUN_1424dcb40(&Value);
+    NextInChain = -2;
+}
 using SfrCx18ClassTraitsCopyAssignment = SfrCx18ClassTraitsNode& (SfrCx18ClassTraitsNode::*)(
     const SfrCx18ClassTraitsNode&);
 static SfrCx18ClassTraitsCopyAssignment SfrCx18ForceClassTraitsCopyAssignment =
@@ -2162,7 +2168,7 @@ template SfrCx18ParagraphFormatSet::~HashSetBase();
 // MS2-FUNCTIONAL: releases the same cached format references and backing table; the template expansion has different unwind code.
 // @0x1424dd3b0
 template SfrCx18TextFormatSet::~HashSetBase();
-// MS2-FUNCTIONAL: releases occupied ASString/Value nodes and frees the backing table; template branch lowering differs.
+// MS2-FUNCTIONAL: same code and size as the exe; only the loop index and table registers (rbx/rdi) are swapped.
 // @0x1424dd110
 template SfrCx18ASStringValueSet::~HashSetBase();
 }
@@ -2196,46 +2202,14 @@ Scaleform::UInt64* FUN_1424e0860(Scaleform::UInt64* self, Scaleform::UInt64 valu
     return self;
 }
 
-// Clears the cached namespace-trait entries and releases the table.
-// MS2-FUNCTIONAL: applies the same tagged SPtr refcount release and clears each occupied entry before freeing the table.
+// VMAbcFile::FunctionTraitsCache dtor (HashLH<UInt32, SPtr<InstanceTraits::Function> >): releases each cached
+// traits reference, then frees the table.
 // @0x1424dcc30
 void FUN_1424dcc30(void* self)
 {
-    auto* table = static_cast<Scaleform::UInt64*>(self);
-    if (*table)
-    {
-        Scaleform::UInt64 offset = 0;
-        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
-        do
-        {
-            auto* entry = reinterpret_cast<Scaleform::UInt64*>(*table + offset);
-            if (entry[2] != static_cast<Scaleform::UInt64>(-2))
-            {
-                Scaleform::UInt64 value = entry[5];
-                if (value)
-                {
-                    if ((value & 1) == 0)
-                    {
-                        auto* refs = reinterpret_cast<Scaleform::UInt32*>(value + 0x10);
-                        if ((*refs & 0x3fffff) != 0)
-                        {
-                            --*refs;
-                            reinterpret_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(value)->ReleaseInternal();
-                        }
-                    }
-                    else
-                        entry[5] = value - 1;
-                }
-                entry[2] = static_cast<Scaleform::UInt64>(-2);
-            }
-            offset += 0x20;
-            --count;
-        } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            Scaleform::Memory::pGlobalHeap, reinterpret_cast<void*>(*table));
-        *table = 0;
-    }
+    using namespace Scaleform::GFx::AS3;
+    static_cast<Scaleform::HashLH<Scaleform::UInt32, SPtr<InstanceTraits::Function>,
+        Scaleform::FixedSizeHash<Scaleform::UInt32>, StatMV_VM_VMAbcFile_Mem>*>(self)->~HashLH();
 }
 
 // Hash<UPInt, UPInt> dtor: clears a cached hash table and releases its backing block.
@@ -2261,47 +2235,14 @@ using Sfr16NamespaceMap = Scaleform::HashSetBase<Sfr16NamespaceMapNode,
     Sfr16NamespaceMapNode::NodeHashF, Sfr16NamespaceMapNode::NodeAltHashF,
     Scaleform::AllocatorLH<Sfr16NamespaceHashKey, 340>,
     Scaleform::HashsetCachedEntry<Sfr16NamespaceMapNode, Sfr16NamespaceMapNode::NodeHashF>>;
-// Clears VMAbcFile::ActivationTraitsCacheTable: same body as FUN_1424dcc30 (0x20-byte cached entries, SPtr value at
-// +0x18). Not the AbcMultinameHash<SPtr<Namespace>> set destructor (that one is 0x1424dcf10, 0x28-byte entries).
-// MS2-FUNCTIONAL: applies the same tagged SPtr refcount release and clears each occupied entry before freeing the table.
+// VMAbcFile::ActivationTraitsCache dtor (HashLH<Abc::MbiInd, SPtr<InstanceTraits::Traits> >; MbiInd is a UInt32
+// index): same body as FUN_1424dcc30. Not the AbcMultinameHash<SPtr<Namespace>> set destructor (0x1424dcf10).
 // @0x1424dcdd0
 void FUN_1424dcdd0(void* self)
 {
-    auto* table = static_cast<Scaleform::UInt64*>(self);
-    if (*table)
-    {
-        Scaleform::UInt64 offset = 0;
-        Scaleform::UInt64 count = *reinterpret_cast<Scaleform::UInt64*>(*table + 8) + 1;
-        do
-        {
-            auto* entry = reinterpret_cast<Scaleform::UInt64*>(*table + offset);
-            if (entry[2] != static_cast<Scaleform::UInt64>(-2))
-            {
-                Scaleform::UInt64 value = entry[5];
-                if (value)
-                {
-                    if ((value & 1) == 0)
-                    {
-                        auto* refs = reinterpret_cast<Scaleform::UInt32*>(value + 0x10);
-                        if ((*refs & 0x3fffff) != 0)
-                        {
-                            --*refs;
-                            reinterpret_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(value)->ReleaseInternal();
-                        }
-                    }
-                    else
-                        entry[5] = value - 1;
-                }
-                entry[2] = static_cast<Scaleform::UInt64>(-2);
-            }
-            offset += 0x20;
-            --count;
-        } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            Scaleform::Memory::pGlobalHeap, reinterpret_cast<void*>(*table));
-        *table = 0;
-    }
+    using namespace Scaleform::GFx::AS3;
+    static_cast<Scaleform::HashLH<Scaleform::UInt32, SPtr<InstanceTraits::Traits>,
+        Scaleform::FixedSizeHash<Scaleform::UInt32>, StatMV_VM_VMAbcFile_Mem>*>(self)->~HashLH();
 }
 // @0x1424e0f00
 template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::operator()(
