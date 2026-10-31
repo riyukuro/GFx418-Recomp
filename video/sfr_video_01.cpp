@@ -1708,12 +1708,12 @@ void FUN_140007680(void** array, void** value)
     ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
 }
 
-// MS2-FUNCTIONAL: releases all weak pairs in the backing array and then frees it.
+// releases all weak pairs in the backing array and then frees it
 // @0x1400077f0
 void FUN_1400077f0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
@@ -1838,12 +1838,12 @@ void FUN_14000a800(void** array, Scaleform::UPInt index)
     --fields[1];
 }
 
-// MS2-FUNCTIONAL: releases all weak pairs and the allocated pair array.
+// releases all weak pairs and the allocated pair array
 // @0x14000a8f0
 void FUN_14000a8f0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
@@ -2001,18 +2001,18 @@ void FUN_14000c280(void* owner, unsigned key, void** value)
     ReleaseAs2GCObject(*value);
 }
 
-// MS2-FUNCTIONAL: releases the String pair array and the String member, then optionally deletes the owner.
+// releases the String pair array and the String member, then optionally deletes the owner
 // @0x14000b230
 void* FUN_14000b230(void* owner, unsigned flags)
 {
     unsigned char* bytes = static_cast<unsigned char*>(owner);
     void** array = reinterpret_cast<void**>(bytes + 0x18);
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
     Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (data) data->Release();
+    data->Release();   // a String's data is never null
     if (flags & 1) ::operator delete(owner);
     return owner;
 }
@@ -2067,30 +2067,30 @@ void FUN_14000b530(void* records, Scaleform::UPInt count)
     while (count--) {
         void** nested = reinterpret_cast<void**>(record);
         Scaleform::UPInt nestedCount = *reinterpret_cast<Scaleform::UPInt*>(record + 8);
-        if (*nested) FUN_1400068d0(*nested, nestedCount);
+        FUN_1400068d0(*nested, nestedCount);
         if (*nested) Scaleform::Memory::Free(*nested);
         Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
             (*reinterpret_cast<Scaleform::UPInt*>(record - 0x10)) & ~Scaleform::UPInt(3));
-        if (data) data->Release();
+        data->Release();   // a String's data is never null
         record -= 0x30;
     }
 }
 
-// MS2-FUNCTIONAL: destroys every nested video-track record and releases the outer array.
+// destroys every nested video-track record and releases the outer array
 // @0x14000b8f0
 void FUN_14000b8f0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_14000b530(*array, fields[1]);
+    FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: destroys the track records and releases their backing allocation.
+// destroys the track records and releases their backing allocation
 // @0x14000bbf0
 void FUN_14000bbf0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_14000b530(*array, fields[1]);
+    FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
@@ -2164,7 +2164,7 @@ void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: destroys all track records and releases the array buffer.
+// destroys all track records and releases the array buffer
 // @0x14000bd10
 void FUN_14000bd10(void** array) { FUN_14000b8f0(array); }
 
@@ -2179,7 +2179,7 @@ void FUN_14000bd60(void** array, Scaleform::UPInt size)
         FUN_14000b2a0(static_cast<unsigned char*>(*array) + oldSize * 0x30, size - oldSize);
 }
 
-// MS2-FUNCTIONAL: destroys all track records and releases the array buffer.
+// destroys all track records and releases the array buffer
 // @0x14000be30
 void FUN_14000be30(void** array) { FUN_14000b8f0(array); }
 
@@ -2722,32 +2722,32 @@ void FUN_14000a540(Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector
     VideoGcPassAccess::Release::Call(collector, object);
 }
 
-// MS2-FUNCTIONAL: releases the String pair array and the String member owned by this record.
+// releases the String pair array and the String member owned by this record
 // @0x14000b300
 void FUN_14000b300(void* owner)
 {
     unsigned char* bytes = static_cast<unsigned char*>(owner);
     void** array = reinterpret_cast<void**>(bytes + 0x18);
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
     Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (data) data->Release();
+    data->Release();   // a String's data is never null
 }
 
-// MS2-FUNCTIONAL: releases the String pair array and the String member of this owner.
+// releases the String pair array and the String member of this owner
 // @0x14000afd0
 void FUN_14000afd0(void* owner)
 {
     unsigned char* bytes = static_cast<unsigned char*>(owner);
     void** array = reinterpret_cast<void**>(bytes + 0x18);
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
     Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
-    if (data) data->Release();
+    data->Release();   // a String's data is never null
 }
 
 // MS2-FUNCTIONAL: routes prototype constructor names to GASPrototypeBase and delegates other names.
