@@ -14,9 +14,11 @@ void FUN_1424dd110(void* paliases);                                       // ~AS
 void FUN_142423b90(Scaleform::GFx::AS3::Value* v);                        // Value::SetUndefined
 void FUN_1424ef380(void** pchains);                                       // EventChains::Clear
 // ArrayLH<SPtr<DisplayObject>>::Resize 0x1425245c0 (sfr_as3_19)
-namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ResizeObjZero(UPInt* a, UPInt n); } } }
+namespace Scaleform { namespace GFx { namespace AS3 {
+void Sfr31ResizeObjZero(UPInt* a, UPInt n);
+void Sfr31ShutdownRegistered(UPInt self);  // ASVM: drops the loaded ABC files
+} } }
 void FUN_142524b90(void* parr, void* pheapAddr, Scaleform::UPInt n);      // ArrayLH<SPtr<VMAbcFile>> resize
-void FUN_142530d50(Scaleform::GFx::AS3::ASVM* pavm);                      // ASVM: drops the loaded ABC files
 void FUN_14257dcd0(void* p);                                              // RefCountNTSImpl::Release
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -63,7 +65,7 @@ void MovieRoot::Shutdown()
         FUN_142524b90(&pnode->AbcFiles, &pnode->AbcFiles, 0);
     }
     (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
-    FUN_142530d50(pAVM);
+    Scaleform::GFx::AS3::Sfr31ShutdownRegistered(reinterpret_cast<UPInt>(pAVM));
     (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
     if (pAVM)
     {
