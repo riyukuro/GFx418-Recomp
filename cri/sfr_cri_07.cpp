@@ -448,7 +448,7 @@ extern "C" void* _DAT_143d74970;
 extern "C" void* _DAT_143d749b0;
 void FUN_14006aa60(short *src, short *dst);
 
-void FUN_140035090(void *);  // C3: the definition's signature
+void crimvply_clearFrameInfoMembers(void *);  // C3: the definition's signature
 void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
 void FUN_140035260(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
 long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
@@ -457,24 +457,24 @@ void FUN_140037910(void *, char const *, long);  // C3: the definition's signatu
 void FUN_140037950(void *, char const *, long);  // C3: the definition's signature
 void FUN_140038ce4(long, char const *, long, long, void *);  // C3: the definition's signature
 long criAlphaDec_CopyAlphaFrameBuffer(void *, void *, void *);  // C3: the definition (0x140043f70)
-void * FUN_140043fe0(void *, void *);  // C3: the definition's signature
+void * criAlphaDec_GetAlphaFramePointer(void *, void *);  // C3: the definition's signature
 void FUN_140044050(unsigned __int64 *, void *);  // C3: the definition's signature
 long criVdec_CopyFrameYuvBuffers(void *, void *, void *);  // C3: the definition (0x140044950)
-void * FUN_1400449c0(void *, void *);  // C3: the definition's signature
-void FUN_140044a30(void *, void *);  // C3: the definition's signature
+void * criVdec_GetFramePointer(void *, void *);  // C3: the definition's signature
+void criVdec_ReleaseFramePointer(void *, void *);  // C3: the definition's signature
 void FUN_140050210(__int64, unsigned int);  // C3: the definition's signature
 unsigned __int64 FUN_140050820(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // C3: the definition's signature
 cri_u4 FUN_140051ec0(longlong *, uint *);
-void FUN_140054320(cri_any = cri_any());
-void FUN_14005dc70(cri_any = cri_any(), cri_any = cri_any());
-void FUN_1400627f0(cri_any = cri_any());
-int FUN_140062830(void);  // C3: the definition's signature
-int FUN_140062860();
-void FUN_140064dd0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void M2VIDCT_SetWork(cri_any = cri_any());
+void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
+void CFTCOM_SetCftFunctionName(cri_any = cri_any());
+int UTY_SupportSse2(void);  // C3: the definition's signature
+int UTY_SupportSse();
+void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065800();
-int FUN_140065940(int);
-void FUN_1400659a0(const cri_u1 *, cri_u1 *);
-void FUN_1400659f0();
+int seq2dctfsir(int);
+void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
+void initB0Tbl();
 void FUN_140066180(longlong);
 void FUN_1400661e0();
 void FUN_140066320();
@@ -585,8 +585,8 @@ uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
 int FUN_14006a750(short *, int, ushort *);
 uint FUN_14006a7f8(cri_u8, uint, longlong);
 uint FUN_14006a928(cri_u8, cri_u4, longlong);
-void FUN_14006aa90();
-void FUN_14006aaa0(V16 *, V16 *, int);
+void DCT_Isse2Init();
+void DCT_Isse2Trans(V16 *, V16 *, int);
 longlong FUN_14006b0d0(longlong);
 longlong FUN_140073c80(longlong);
 longlong FUN_14007ba60(longlong);
@@ -686,7 +686,7 @@ cri_u4 FUN_1400b0820(uint, longlong, longlong, char *);
 void FUN_1400b0880(uint, uint);
 void FUN_1400b08b0(uint, uint, cri_u8, cri_u8, char *);
 void FUN_1400b0920(uint, uint, cri_u8, cri_u8);
-void FUN_1400b09a0(const char *);
+void CRIERR_CallErr(const char *);
 void FUN_1400b0a10(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1720(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1e50(cri_any = cri_any(), cri_any = cri_any(), ...);
@@ -694,19 +694,19 @@ int FUN_14029dd60(const char *, const char *, ...);   // game code's legacy inli
 cri_u8 * FUN_142096410(cri_any = cri_any());
 
 // @0x140066180
-// Stores the 64 double table entries at 0x143d4abf0 as floats in zigzag (FUN_140065940) order.
+// Stores the 64 double table entries at 0x143d4abf0 as floats in zigzag (seq2dctfsir) order.
 void FUN_140066180(longlong arg1)
 {
   int i;
   
   for (i = 0; i < 0x40; i = i + 1) {
-    *(float *)(arg1 + (longlong)FUN_140065940(i) * 4) = (float)(&DAT_143d4abf0)[i];
+    *(float *)(arg1 + (longlong)seq2dctfsir(i) * 4) = (float)(&DAT_143d4abf0)[i];
   }
   return;
 }
 
 // @0x1400661e0
-// Clears the 64x64 float table at 0x143d4adf0, then fills row FUN_140065940(i) with FUN_140095810's transform of the
+// Clears the 64x64 float table at 0x143d4adf0, then fills row seq2dctfsir(i) with FUN_140095810's transform of the
 // unit vector i scaled by 1 / table[i].
 void FUN_1400661e0()
 {
@@ -728,7 +728,7 @@ void FUN_1400661e0()
     }
     FUN_140095810(loc_438,loc_238);
     for (j = 0; j < 0x40; j = j + 1) {
-      *(float *)(&DAT_143d4adf0 + ((longlong)FUN_140065940(i) * 0x40 + j) * 4) = (float)loc_238[j];
+      *(float *)(&DAT_143d4adf0 + ((longlong)seq2dctfsir(i) * 0x40 + j) * 4) = (float)loc_238[j];
     }
   }
   return;
@@ -764,7 +764,7 @@ void FUN_140066310(char *ctx)
 void FUN_140066320()
 {
   _DAT_143d4ab88 = (void*)FUN_140095430();
-  FUN_1400659f0();
+  initB0Tbl();
   FUN_140065800();
   FUN_1400661e0();
   return;
@@ -1223,10 +1223,10 @@ void FUN_140066e10(longlong arg1)
   FUN_140095440((cri_u8)((cri_u1 *)&FUN_140066e00),0);
   FUN_140066320();
   FUN_140066180(arg1 + 0x11a0);
-  i_v1 = FUN_140062830();
+  i_v1 = UTY_SupportSse2();
   if (i_v1 != 0) {
-    FUN_14006aa90();
-    DAT_143d4ee18 = (cri_code *)FUN_14006aaa0;
+    DCT_Isse2Init();
+    DAT_143d4ee18 = (cri_code *)DCT_Isse2Trans;
     DAT_143d4ee08 = (cri_u1 *)&FUN_14006aa60;
   }
   return;
@@ -1325,7 +1325,7 @@ void FUN_140067100(longlong arg1)
 {
   longlong l_v1;
   
-  FUN_140064dd0(arg1 + 0x1100,&DAT_1431bbd60,8);
+  UTY_MemcpyDword(arg1 + 0x1100,&DAT_1431bbd60,8);
   *(cri07_tbl32 *)((char *)arg1 + 0x12a0) = *(const cri07_tbl32 *)((const cri_u1 *)CRI_FILL_ADDR(DAT_1431bbdc1) + 0x3f);
   l_v1 = DAT_143d74a40;
   *(cri_u4 *)((char *)arg1 + 0x12c8) = 0x15;
@@ -1404,7 +1404,7 @@ void FUN_1400672b0(longlong arg1)
   FUN_140066fe0((longlong)loc_98,(cri_u1 *)((char *)arg1 + 0x1120),(longlong)pu_v3);
   _DAT_143d74990 = arg1 + 0x1120;
   _DAT_143d749b0 = pu_v3;
-  FUN_1400659a0(loc_98,loc_58);
+  DCT_FsriInitScanTbl(loc_98,loc_58);
   pu_v3 = &DAT_143d4ee60;
   FUN_140066fe0((longlong)loc_58,(cri_u1 *)((char *)arg1 + 0x1160),(longlong)pu_v3);
   DAT_143d74988 = arg1 + 0x1160;
@@ -1570,7 +1570,7 @@ void FUN_140067700()
     _DAT_143d4eee0 = 0;
     DAT_143d4eed8 = (void*)FUN_1400682e0((longlong)&DAT_143d4eea8,0x30);
     if (DAT_143d4eed8 == 0) {
-      FUN_1400b09a0("E2006101804 : Failed to create critical section.");
+      CRIERR_CallErr("E2006101804 : Failed to create critical section.");
     }
   }
   return;
@@ -1596,7 +1596,7 @@ void FUN_140067790()
   
   i_v1 = FUN_1400683d0((LPCRITICAL_SECTION)DAT_143d4eed8);
   if (i_v1 < 0) {
-    FUN_1400b09a0(
+    CRIERR_CallErr(
                  "E2006022403 : The function has been executed before initialization (or after finalization)."
                  );
   }
@@ -1610,7 +1610,7 @@ void FUN_1400677c0()
   
   i_v1 = FUN_140068430((LPCRITICAL_SECTION)DAT_143d4eed8);
   if (i_v1 < 0) {
-    FUN_1400b09a0(
+    CRIERR_CallErr(
                  "E2006022404 : The function has been executed before initialization (or after finalization)."
                  );
   }
@@ -1955,7 +1955,7 @@ void FUN_1400680a0(int *arg1, uint arg2)
 // @0x140068280
 void FUN_140068280(const char *arg1)
 {
-  FUN_1400b09a0(arg1);
+  CRIERR_CallErr(arg1);
   return;
 }
 
@@ -1981,11 +1981,11 @@ cri_u8 FUN_1400682e0(longlong arg1, int arg2)
   
   _DAT_143d4ef38 = "\nCRI CRS/PCx64 Ver.1.04 Build:Jan 13 2012 18:29:21\n";
   if (arg1 == 0) {
-    FUN_1400b09a0("CRICRS_Create : Illegal parameter is passed.");
+    CRIERR_CallErr("CRICRS_Create : Illegal parameter is passed.");
     return 0;
   }
   if ((size_t)arg2 < 0x30) {  // the exe sign-extends the size and compares unsigned
-    FUN_1400b09a0("CRICRS_Create : Work area size is too short.");
+    CRIERR_CallErr("CRICRS_Create : Work area size is too short.");
     return 0;
   }
   lpCriticalSection = (LPCRITICAL_SECTION)(arg1 + 7U & 0xfffffffffffffff8);
@@ -1993,7 +1993,7 @@ cri_u8 FUN_1400682e0(longlong arg1, int arg2)
   __try {
     InitializeCriticalSection(lpCriticalSection);
   } __except (1) {
-    FUN_1400b09a0("CRICRS_Create : InitializeCriticalSection failed.");
+    CRIERR_CallErr("CRICRS_Create : InitializeCriticalSection failed.");
     return 0;
   }
   return (cri_u8)lpCriticalSection;
@@ -2005,14 +2005,14 @@ cri_u8 FUN_1400682e0(longlong arg1, int arg2)
 void FUN_140068380(LPCRITICAL_SECTION arg1)
 {
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
-    FUN_1400b09a0("CRICRS_Destroy : NULL pointer is passed.");
+    CRIERR_CallErr("CRICRS_Destroy : NULL pointer is passed.");
     return;
   }
   __try {
     DeleteCriticalSection(arg1);
   }
   __except (EXCEPTION_EXECUTE_HANDLER) {
-    FUN_1400b09a0("CRICRS_Destroy : DeleteCriticalSection failed.");
+    CRIERR_CallErr("CRICRS_Destroy : DeleteCriticalSection failed.");
   }
   memset(arg1,0,0x28);
 }
@@ -2024,14 +2024,14 @@ cri_u4 FUN_1400683d0(LPCRITICAL_SECTION arg1)
   cri_u4 u_v1 = 0;
   
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
-    FUN_1400b09a0("CRICRS_Enter : NULL pointer is passed.");
+    CRIERR_CallErr("CRICRS_Enter : NULL pointer is passed.");
     return 0xffffffff;
   }
   __try {
     EnterCriticalSection(arg1);
   }
   __except (EXCEPTION_EXECUTE_HANDLER) {
-    FUN_1400b09a0("CRICRS_Enter : EnterCriticalSection failed.");
+    CRIERR_CallErr("CRICRS_Enter : EnterCriticalSection failed.");
     u_v1 = 0xffffffff;
   }
   return u_v1;
@@ -2043,14 +2043,14 @@ cri_u4 FUN_140068430(LPCRITICAL_SECTION arg1)
   cri_u4 u_v1 = 0;
   
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
-    FUN_1400b09a0("CRICRS_Leave : NULL pointer is passed.");
+    CRIERR_CallErr("CRICRS_Leave : NULL pointer is passed.");
     return 0xffffffff;
   }
   __try {
     LeaveCriticalSection(arg1);
   }
   __except (EXCEPTION_EXECUTE_HANDLER) {
-    FUN_1400b09a0("CRICRS_Leave : LeaveCriticalSection failed.");
+    CRIERR_CallErr("CRICRS_Leave : LeaveCriticalSection failed.");
     u_v1 = 0xffffffff;
   }
   return u_v1;
@@ -2607,7 +2607,7 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
   cri_u4 &loc_c0 = *(cri_u4 *)(frame_ + 312);
   cri_u1 *loc_b8 = frame_ + 320;
   
-  FUN_140035090((void *)arg3);
+  crimvply_clearFrameInfoMembers((void *)arg3);
   i_v1 = crimvply_isUnderGetFrameCondition((void *)arg1);
   if (i_v1 == 0) {
     u_v2 = 0;
@@ -2615,16 +2615,16 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
   else {
     memset(loc_1f8,0,0x50);
     crimvply_clearAlphaFrameInfoMembers(loc_1a8);
-    FUN_1400449c0((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
+    criVdec_GetFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
     if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-      FUN_140043fe0((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
+      criAlphaDec_GetAlphaFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
     }
     pu_v3 = loc_1f8;
     FUN_1400356a0((void *)arg1,loc_b8,loc_1a8,(const CriMvFrameInfo *)loc_168,pu_v3);
     u_v4 = (cri_u4)((ulonglong)pu_v3 >> 0x20);
     i_v1 = FUN_140069480(arg1,arg2,(cri_u8 *)loc_b8,(cri_u8 *)loc_1a8);
     if (i_v1 == 0) {
-      FUN_140044a30((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
+      criVdec_ReleaseFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
         FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
@@ -2632,7 +2632,7 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
       u_v2 = 0;
     }
     else {
-      FUN_140044a30((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
+      criVdec_ReleaseFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
         FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
@@ -2716,7 +2716,7 @@ cri_u8 FUN_140069480(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
     else {
       if (u_v1 == 1) {
         if (arg2[6] == 0) {
-          l_v3 = (longlong)FUN_140043fe0((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
+          l_v3 = (longlong)criAlphaDec_GetAlphaFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           if (l_v3 != 0) {
             FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           }
@@ -3464,9 +3464,9 @@ uint FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3)
 
 void FUN_14006aa60(short *src, short *dst);
 
-void FUN_14006aa90();
+void DCT_Isse2Init();
 
-void FUN_14006aaa0(V16 *arg1, V16 *arg2, int arg3);
+void DCT_Isse2Trans(V16 *arg1, V16 *arg2, int arg3);
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14006b0d0
@@ -25695,7 +25695,7 @@ void FUN_140089e90(longlong arg1, cri_u8 arg2, cri_u4 *arg3)
   arg3[5] = 0;
   *(cri_u4 *)((char *)arg1 + 0xd0c) = 0;
   *(cri_u4 *)((char *)arg1 + 0xd10) = 0;
-  FUN_14005dc70(arg1,arg2);  // the exe passes rcx/rdx through
+  M2VFRM_ParseSsc(arg1,arg2);  // the exe passes rcx/rdx through
   *(int *)((char *)arg1 + 0xd14) = *(int *)((char *)arg1 + 0xd14) + *(int *)((char *)arg1 + 0xd0c);
   *(int *)((char *)arg1 + 0xd18) = *(int *)((char *)arg1 + 0xd18) + *(int *)((char *)arg1 + 0xd10);
   if (*(uint *)((char *)arg1 + 0x6f0) >= *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) - 1U) {
@@ -25716,7 +25716,7 @@ void * FUN_140089f60(void *arg1, int arg2)
   
   _Dst = (void *)((longlong)arg2 * 0x1c80 + (longlong)arg1);
   memcpy(_Dst,arg1,0x1c60);
-  FUN_140054320(_Dst);
+  M2VIDCT_SetWork(_Dst);
   return _Dst;
 }
 
@@ -27708,7 +27708,7 @@ void FUN_14008d2a0(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
   cri_u1 u_v313;
   cri_u1 u_v323;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToArgb8888Int2smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToArgb8888Int2smp");
   i_v261 = *(int *)((longlong)arg2 + 0xc);
   l_v277 = *arg1;
   pu_v264 = (cri_u1 *)arg1[1];
@@ -29929,7 +29929,7 @@ void FUN_14008e570(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
   cri_u1 u_v314;
   cri_u1 u_v324;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToRgb888Int2smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToRgb888Int2smp");
   i_v274 = *(int *)((longlong)arg2 + 0xc);
   l_v261 = *arg1;
   pu_v266 = (cri_u1 *)arg1[1];
@@ -31759,7 +31759,7 @@ void FUN_14008fa50(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
   cri_u1 u_v83;
   cri_u1 u_v85;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToArgb8888Prg");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToArgb8888Prg");
   loc_c0 = arg1[2];
   l_v52 = *arg2;
   l_v62 = arg1[1];
@@ -32246,7 +32246,7 @@ void FUN_140090080(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
   cri_u1 u_v82;
   cri_u1 u_v84;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToRgb888Prg");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToRgb888Prg");
   loc_a8 = arg1[2];
   l_v52 = *arg2;
   l_v61 = arg1[1];
@@ -32824,7 +32824,7 @@ void FUN_140090730(cri_u8 *arg1, longlong *arg2, cri_u8 arg3, longlong arg4)
   V16 au_v201;
   short s_v206;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToYcc422pix2Int2smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToYcc422pix2Int2smp");
   i_v8 = *(int *)((longlong)arg2 + 0xc);
   pu_v183 = (uint *)*arg2;
   i_v9 = *(int *)(arg1 + 3);
@@ -33872,7 +33872,7 @@ void FUN_140090f20(cri_u8 *arg1, cri_u8 *arg2)
   byte *loc_90;
   ulonglong loc_78;
   
-  FUN_1400627f0("cft_c_Ycc420plnToArgb8888Int1smp");
+  CFTCOM_SetCftFunctionName("cft_c_Ycc420plnToArgb8888Int1smp");
   u_v6 = *(uint *)(arg2 + 1);
   i_v7 = *(int *)((longlong)arg1 + 0x1c);
   pb_v16 = (byte *)*arg1;
@@ -34254,7 +34254,7 @@ void FUN_140091df0(cri_u8 *arg1, longlong *arg2)
   ulonglong u_v22;
   int local_res8;
   
-  FUN_1400627f0("cft_c_Ycc420plnToArgb8888Prg1smp");
+  CFTCOM_SetCftFunctionName("cft_c_Ycc420plnToArgb8888Prg1smp");
   i_v4 = (int)arg2[2];
   pu_v14 = (uint *)*arg2;
   pb_v15 = (byte *)*arg1;
@@ -34460,7 +34460,7 @@ void FUN_1400923d0(cri_u8 *arg1, longlong *arg2)
   ulonglong loc_90;
   byte *loc_80;
   
-  FUN_1400627f0("cft_c_Ycc420plnToYcc422pix2Int1smp");
+  CFTCOM_SetCftFunctionName("cft_c_Ycc420plnToYcc422pix2Int1smp");
   i_v6 = *(int *)(arg1 + 3);
   pu_v23 = (uint *)*arg2;
   pb_v29 = (byte *)*arg1;
@@ -34600,7 +34600,7 @@ void FUN_1400927c0(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
-  if (FUN_140062860() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
+  if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
     FUN_1400b0a10(arg1,arg2,arg3,arg4);
   }
@@ -34614,7 +34614,7 @@ void FUN_140092850(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
-  if (FUN_140062860() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
+  if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
     FUN_1400b1720(arg1,arg2,arg3,arg4);
   }
@@ -34628,7 +34628,7 @@ void FUN_1400928e0(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
-  if (FUN_140062860() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
+  if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 2) {
     FUN_1400b1e50(arg1,arg2,arg3,arg4);
   }
@@ -34670,7 +34670,7 @@ void FUN_140092970(longlong arg1, longlong arg2)
   uint *pu_v27;
   ulonglong local_res10;
   
-  FUN_1400627f0("CFT_Ycc420plnToRgb555");
+  CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb555");
   i_v1 = *(int *)((char *)arg2 + 0x10);
   pu_v23 = *(uint **)(arg1 + 8);
   pu_v21 = *(ushort **)(arg2 + 8);
@@ -34839,7 +34839,7 @@ void FUN_140093150(longlong arg1, longlong arg2)
   ushort *pu_v27;
   ulonglong local_res20;
   
-  FUN_1400627f0("CFT_Ycc420plnToRgb555WithDither");
+  CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb555WithDither");
   i_v1 = *(int *)((char *)arg2 + 0x10);
   pu_v25 = *(uint **)(arg1 + 8);
   pu_v23 = *(ushort **)(arg2 + 8);
@@ -35202,7 +35202,7 @@ void FUN_140093ec0(longlong arg1, longlong arg2)
   ulonglong local_res10;
   
   if (DAT_143d67f50 == 1) {
-    FUN_1400627f0("CFT_Ycc420plnToRgb565");
+    CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb565");
     i_v1 = *(int *)((char *)arg2 + 0x10);
     pu_v23 = *(uint **)(arg1 + 8);
     pu_v21 = *(ushort **)(arg2 + 8);
@@ -35376,7 +35376,7 @@ void FUN_1400946b0(longlong arg1, longlong arg2)
   ulonglong local_res20;
   
   if (DAT_143d67f50 == 1) {
-    FUN_1400627f0("CFT_Ycc420plnToRgb565WithDither");
+    CFTCOM_SetCftFunctionName("CFT_Ycc420plnToRgb565WithDither");
     i_v1 = *(int *)((char *)arg2 + 0x10);
     pu_v25 = *(uint **)(arg1 + 8);
     pu_v23 = *(ushort **)(arg2 + 8);
@@ -53999,7 +53999,7 @@ void FUN_1400afde0(const char *arg1, ...)
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
-  FUN_1400b09a0((const char *)&DAT_143d74840);
+  CRIERR_CallErr((const char *)&DAT_143d74840);
   return;
 }
 
@@ -54016,7 +54016,7 @@ void FUN_1400afe60(const char *arg1)
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
-  FUN_1400b09a0((const char *)&DAT_143d74840);
+  CRIERR_CallErr((const char *)&DAT_143d74840);
   return;
 }
 
@@ -54028,7 +54028,7 @@ void FUN_1400afed0(const char *arg1, const char *arg2)
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
-  FUN_1400b09a0((const char *)&DAT_143d74840);
+  CRIERR_CallErr((const char *)&DAT_143d74840);
   return;
 }
 
@@ -54153,7 +54153,7 @@ void FUN_1400b0240(int arg1)
   }
   i_v1 = FUN_1400683d0((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
   if (i_v1 < 0) {
-    FUN_1400b09a0(
+    CRIERR_CallErr(
                  "E2006022405 : The function has been executed before initialization (or after finalization)."
                  );
   }
@@ -54170,7 +54170,7 @@ void FUN_1400b0290(int arg1)
   }
   i_v1 = FUN_140068430((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
   if (i_v1 < 0) {
-    FUN_1400b09a0(
+    CRIERR_CallErr(
                  "E2006022406 : The function has been executed before initialization (or after finalization)."
                  );
   }
@@ -54533,7 +54533,7 @@ void FUN_1400b0a10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   short s_v97;
   ulonglong loc_68;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToArgb8888Int1smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToArgb8888Int1smp");
   pu_v20 = (cri_u8 *)*arg1;
   l_v22 = *arg2;
   l_v15 = arg1[1];
@@ -55331,7 +55331,7 @@ void FUN_1400b1720(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
   short s_v65;
   ulonglong loc_a0;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToArgb8888Prg1smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToArgb8888Prg1smp");
   pu_v18 = (cri_u8 *)*arg1;
   l_v20 = *arg2;
   l_v21 = arg1[1];
@@ -55819,7 +55819,7 @@ void FUN_1400b1e50(cri_any cri_p0, cri_any cri_p1, ...)
   V16 au_v96;
   V16 au_v97;
   
-  FUN_1400627f0("cft_sse_Ycc420plnToYcc422pix2Int1smp");
+  CFTCOM_SetCftFunctionName("cft_sse_Ycc420plnToYcc422pix2Int1smp");
   i_v5 = *(int *)(arg1 + 3);
   i_v6 = (int)arg2[2];
   pu_v57 = (ulonglong *)*arg1;

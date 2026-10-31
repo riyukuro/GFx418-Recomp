@@ -1,6 +1,6 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): CRI MvCore / Sofdec vendor middleware, the IDCT obj at
 // 0x14006aa60-0x14006b0d0 (the DC rounding hook, an empty init function and the 8x8 IDCT). In the exe it is its own obj
-// inside sfr_cri_07's range: FUN_140066e10 in 07 still calls the empty FUN_14006aa90, a call VC9 drops for an empty
+// inside sfr_cri_07's range: FUN_140066e10 in 07 still calls the empty DCT_Isse2Init, a call VC9 drops for an empty
 // function in the same TU. Written from the executable. The CRI library was built with VS2008 SP1, and so is this unit
 // (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake): keep it C++03 (no auto, decltype, variadic templates, brace-init or
 // nullptr). Every function is a behaviour-equivalent transcription.
@@ -36,7 +36,7 @@ extern "C" cri_code* DAT_143d68860;
 extern "C" cri_u1 DAT_143d4ee20;
 extern "C" cri_u1 DAT_143d4ee60;
 
-void FUN_140065e70(cri_any = cri_any(), cri_any = cri_any());
+void DCT_FsriTransCore(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065fc0(char *ctx, int mask);
 uint FUN_14004ff50(longlong a1, uint a2);
 extern "C" cri_u1* PTR_FUN_143a4a5a0;
@@ -237,16 +237,16 @@ void FUN_140044a30(cri_any = cri_any(), cri_any = cri_any());
 void FUN_140050210(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 FUN_140050820(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140051ec0(longlong *, uint *);
-void FUN_140054320(cri_any = cri_any());
-void FUN_14005dc70(cri_any = cri_any(), cri_any = cri_any());
-void FUN_1400627f0(cri_any = cri_any());
+void M2VIDCT_SetWork(cri_any = cri_any());
+void M2VFRM_ParseSsc(cri_any = cri_any(), cri_any = cri_any());
+void CFTCOM_SetCftFunctionName(cri_any = cri_any());
 cri_u8 FUN_140062830();
-int FUN_140062860();
-void FUN_140064dd0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+int UTY_SupportSse();
+void UTY_MemcpyDword(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065800();
-int FUN_140065940(int);
-void FUN_1400659a0(const cri_u1 *, cri_u1 *);
-void FUN_1400659f0();
+int seq2dctfsir(int);
+void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
+void initB0Tbl();
 void FUN_140066180(longlong);
 void FUN_1400661e0();
 void FUN_140066320();
@@ -357,8 +357,8 @@ uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
 int FUN_14006a750(short *, int, ushort *);
 uint FUN_14006a7f8(cri_u8, uint, longlong);
 uint FUN_14006a928(cri_u8, cri_u4, longlong);
-void FUN_14006aa90();
-void FUN_14006aaa0(V16 *, V16 *, int);
+void DCT_Isse2Init();
+void DCT_Isse2Trans(V16 *, V16 *, int);
 longlong FUN_14006b0d0(longlong);
 longlong FUN_140073c80(longlong);
 longlong FUN_14007ba60(longlong);
@@ -458,7 +458,7 @@ cri_u4 FUN_1400b0820(uint, longlong, longlong, char *);
 void FUN_1400b0880(uint, uint);
 void FUN_1400b08b0(uint, uint, cri_u8, cri_u8, char *);
 void FUN_1400b0920(uint, uint, cri_u8, cri_u8);
-void FUN_1400b09a0(const char *);
+void CRIERR_CallErr(const char *);
 void FUN_1400b0a10(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1720(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1e50(cri_any = cri_any(), cri_any = cri_any(), ...);
@@ -737,14 +737,14 @@ void FUN_14006aa60(short *src, short *dst)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14006aa90
-void FUN_14006aa90()
+void DCT_Isse2Init()
 {
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14006aaa0
-void FUN_14006aaa0(V16 *arg1, V16 *arg2, int arg3)
+void DCT_Isse2Trans(V16 *arg1, V16 *arg2, int arg3)
 {
   short s_v1;
   ushort u_v2;

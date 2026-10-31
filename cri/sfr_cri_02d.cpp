@@ -110,7 +110,7 @@ typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
     CriUint8  Type;                         // 0x0f
     CriUint32 Reserved10[5];
 } CriUsfChunkHeader;
-typedef struct CriMvSubtitleItemInfo        // FUN_140036f40 fills 0x38 bytes
+typedef struct CriMvSubtitleItemInfo        // analyzeSubtitleInfo fills 0x38 bytes
 {
     CriUint32 Reserved0[3];
     CriSint32 Channel;                      // 0x0c
@@ -119,46 +119,46 @@ typedef struct CriMvSubtitleItemInfo        // FUN_140036f40 fills 0x38 bytes
 typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; } CriMvSubtitleFrameCounter;
 
 void FUN_140028074(void* heap);
-CriBool FUN_140031aa0(void* player);
+CriBool allocateMetaWork(void* player);
 void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
-void FUN_1400453c4(void* demux);
-void FUN_1400458b8(void* demux);
-void FUN_140044f9c(void* demux);
-void FUN_140044fa8(void* demux, void* value);
+void criUsfDmx_Stop(void* demux);
+void criUsfDmx_Execute(void* demux);
+void criUsfDmx_Start(void* demux);
+void criUsfDmx_SetInputSj(void* demux, void* value);
 void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
-void FUN_140044fd8(void* demux, CriUint8 value);
-void FUN_140046798(void* streamJoint);
-void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded);
+void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);
+void criSj_Reset(void* streamJoint);
+void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
 void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
-void FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
+void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
-void FUN_140046804(void* object, void* value);
+void criSj_GetInputChunk(void* object, void* value);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
-void FUN_140037910(void* owner, const char* message, CriSint32 value);
-void FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
+void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
+void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
-CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input);
-CriBool FUN_1400314d0(void* player);
-void FUN_140031570(void* player);
-void FUN_140033810(void* player);
-void FUN_1400344f0(void* player);
-void FUN_140034690(void* player);
-void FUN_140034730(void* player);
-void FUN_1400428e0(void* audioManager, void* player);
+CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
+CriBool isEndStopProcessingProc(void* player);
+void resetHandle(void* player);
+void executeMvPlyPrepServer(void* player);
+void executeMvPlyPlayingServer(void* player);
+void executeVideoServer(void* player);
+void executeUsfServer(void* player);
+void criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
 CriSint32 getInternalStatus(void* player);
 CriBool isLockedInputChunk(const void* player);
-void FUN_1400420b0(void* manager, void* heap);
-void FUN_140043be0(void* decoder);
-void FUN_140044560(CriUint64* adapter);
-void FUN_140046784(void* streamJoint);
+void criMvPlyAmng_Destroy(void* manager, void* heap);
+void criAlphaDec_Destroy(void* decoder);
+void criVdec_Destroy(CriUint64* adapter);
+void criSj_Destroy(void* streamJoint);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
-void FUN_140036e30(void* player, CriMvSubtitleChunk* chunk);
-void FUN_140036e80(void* player, CriMvSubtitleChunk* chunk);
-void FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
-CriBool FUN_140037a10(void);
-void FUN_140035260(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
-void FUN_140035480(void* player, void* destination, const void* source);
-void* FUN_140043fe0(void* decoder, void* frameInfo);
+void releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+void ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
+void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
+CriBool criMvPly_IsSetDefaultDecryptionKey(void);
+void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frameInfo, CriUint64 firstWord, CriUint32 flags);
+void crimvply_makeAlphaFrameInfoMembers(void* player, void* destination, const void* source);
+void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
 void crimvply_clearAlphaFrameInfoMembers(void* info);
 CriBool crimvply_isUnderGetFrameCondition(void* player);
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct CriMvAlphaDecoderFrameInfo* info);
@@ -194,28 +194,28 @@ void FUN_140030cb0(void* player)
     heap = *(void**)((CriUint8*)player + 0xdf0);
     if (*(void**)((CriUint8*)player + 0xe28))
     {
-        FUN_140046784(*(void**)((CriUint8*)player + 0xe28));
+        criSj_Destroy(*(void**)((CriUint8*)player + 0xe28));
         *(void**)((CriUint8*)player + 0xe28) = 0;
     }
     if (*(void**)((CriUint8*)player + 0xe10))
     {
-        FUN_1400420b0(*(void**)((CriUint8*)player + 0xe10), heap);
+        criMvPlyAmng_Destroy(*(void**)((CriUint8*)player + 0xe10), heap);
         *(void**)((CriUint8*)player + 0xe10) = 0;
     }
     if (*(void**)((CriUint8*)player + 0xe40))
     {
-        FUN_140043be0(*(void**)((CriUint8*)player + 0xe40));
+        criAlphaDec_Destroy(*(void**)((CriUint8*)player + 0xe40));
         *(void**)((CriUint8*)player + 0xe40) = 0;
     }
     if (*(void**)((CriUint8*)player + 0xe08))
     {
-        FUN_140044560(*(CriUint64**)((CriUint8*)player + 0xe08));
+        criVdec_Destroy(*(CriUint64**)((CriUint8*)player + 0xe08));
         *(void**)((CriUint8*)player + 0xe08) = 0;
     }
     handle = *(void**)((CriUint8*)player + 0xd88);
     if (handle)
     {
-        FUN_140046784(handle);
+        criSj_Destroy(handle);
         *(CriUint32*)((CriUint8*)player + 0xdf8) = 0;
         *(CriUint32*)((CriUint8*)player + 0xdfc) = 0;
         *(void**)((CriUint8*)player + 0xd88) = 0;
@@ -240,19 +240,19 @@ void FUN_140031290(void* player)
         return;
 
     if (((CriMvPlyStateView*)player)->Status != 1)
-        FUN_140034730(player);
-    FUN_140034690(player);
+        executeUsfServer(player);
+    executeVideoServer(player);
 
     if (((CriMvPlyStateView*)player)->Status == 8)
     {
-        if (FUN_1400314d0(player) == 1)
+        if (isEndStopProcessingProc(player) == 1)
         {
             if (isLockedInputChunk(player) == 1)
             {
                 ((CriMvPlyStateView*)player)->StopState = 3;
                 return;
             }
-            FUN_140031570(player);
+            resetHandle(player);
             ((CriMvPlyStateView*)player)->Status = 9;
             ((CriMvPlyStateView*)player)->StopState = 5;
             ((CriMvPlyStateView*)player)->InternalFlags = 0;
@@ -261,7 +261,7 @@ void FUN_140031290(void* player)
     }
 
     if (((CriMvPlyStateView*)player)->AudioManager)
-        FUN_1400428e0(((CriMvPlyStateView*)player)->AudioManager, player);
+        criMvPlyAmng_ExecuteAudioServer(((CriMvPlyStateView*)player)->AudioManager, player);
     status = getInternalStatus(player);
     switch (status)
     {
@@ -270,10 +270,10 @@ void FUN_140031290(void* player)
     case 2:
         break;
     case 3:
-        FUN_140033810(player);
+        executeMvPlyPrepServer(player);
         break;
     case 5:
-        FUN_1400344f0(player);
+        executeMvPlyPlayingServer(player);
         break;
     }
 }
@@ -284,20 +284,20 @@ CriBool FUN_140031990(void* player)
 {
     void* demux;
     demux = ((CriMvPlyDemuxFields*)player)->Demux;
-    if (FUN_140031aa0(player) != 1)
+    if (allocateMetaWork(player) != 1)
         return 0;
     FUN_140034330(player, ((CriMvPlyDemuxFields*)player)->InputBuffer, ((CriMvPlyDemuxFields*)player)->ReadBuffer,
                   ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
-    FUN_1400453c4(demux);
-    FUN_140046798(((CriMvPlyDemuxFields*)player)->ReadBuffer);
+    criUsfDmx_Stop(demux);
+    criSj_Reset(((CriMvPlyDemuxFields*)player)->ReadBuffer);
     if (((CriMvPlyDemuxFields*)player)->ReadMode == 0)
-        FUN_140044fa8(demux, ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
+        criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
     else
-        FUN_140044fa8(demux, ((CriMvPlyDemuxFields*)player)->MemoryInput);
+        criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->MemoryInput);
     FUN_140044fb0(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
-    FUN_140044fd8(demux, 0);
-    FUN_140044f9c(demux);
-    FUN_1400458b8(demux);
+    criUsfDmx_SetThrououtSwitch(demux, 0);
+    criUsfDmx_Start(demux);
+    criUsfDmx_Execute(demux);
     return 1;
 }
 
@@ -316,24 +316,24 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         FUN_1400467a0(readBuffer, 2, -1, &chunk);
     while ((CriUint32)FUN_1400467b8(readBuffer, 1) > 0)
     {
-        FUN_140046804(dataQueue, &dst);
+        criSj_GetInputChunk(dataQueue, &dst);
         FUN_1400467a0(readBuffer, 1, -1, &chunk);
         if (chunk.Type > dst.Capacity)
-            FUN_140037910(player, "E08120301M : Illigal data size of analize header against demux data line.", dst.Capacity);
+            crimvply_occurFatalError(player, "E08120301M : Illigal data size of analize header against demux data line.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
         written += chunk.Type;
         FUN_140046814(dataQueue, &dst, chunk.Type);
     }
     while ((CriUint32)FUN_1400467b8(source, 1) > 0)
     {
-        FUN_140046804(dataQueue, &dst);
+        criSj_GetInputChunk(dataQueue, &dst);
         FUN_1400467a0(source, 1, -1, &chunk);
         if (chunk.Type > dst.Capacity)
-            FUN_140037910(player, "E08120302M : Illigal data size in read buffer data line of analize header.", dst.Capacity);
+            crimvply_occurFatalError(player, "E08120302M : Illigal data size in read buffer data line of analize header.", dst.Capacity);
         memcpy(dst.Data, chunk.Chunk, chunk.Type);
         written += chunk.Type;
         FUN_140046814(dataQueue, &dst, chunk.Type);
-        FUN_1400467b0(source, 0, &chunk);
+        criSj_PutChunk(source, 0, &chunk);
     }
 }
 
@@ -362,7 +362,7 @@ void FUN_140034d40(void* player, CriMovieInputChunk* output)
     case 10:
         return;
     }
-    source = FUN_140037050(player, 0, 0);
+    source = criMvPly_GetInputSj(player, 0, 0);
     if (!source)
         return;
     if (isLockedInputChunk(player) == 1)
@@ -386,10 +386,10 @@ void FUN_140034d40(void* player, CriMovieInputChunk* output)
 void FUN_1400356a0(void* player, void* output, void* alphaOutput,
                    const struct CriMvFrameInfo* frameInfo, const void* alphaInfo)
 {
-    FUN_140035260(player, output, frameInfo, *(const CriUint64*)frameInfo,
+    crimvply_makeFrameInfoMembers(player, output, frameInfo, *(const CriUint64*)frameInfo,
                   *(const CriUint32*)((const CriUint8*)frameInfo + 0x0c));
     if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
-        FUN_140035480(player, alphaOutput, alphaInfo);
+        crimvply_makeAlphaFrameInfoMembers(player, alphaOutput, alphaInfo);
 }
 
 // get the current alpha frame only while the movie is in a frame-producing state
@@ -405,10 +405,10 @@ CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
         return 0;
     if (!crimvply_isUnderGetFrameCondition(player))
         return 0;
-    frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+    frame = criAlphaDec_GetAlphaFramePointer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
     if (frame != 0)
     {
-        FUN_140035480(player, outputInfo, frameInfo);
+        crimvply_makeAlphaFrameInfoMembers(player, outputInfo, frameInfo);
         crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
             (const struct CriMvAlphaDecoderFrameInfo*)frameInfo);
         result = 1;
@@ -457,18 +457,18 @@ void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, v
     FUN_140036b80(player, &chunk, ((CriMvSubtitleFields*)player)->SubtitleChannel);
     if (!chunk.Data || chunk.Size < 0x20)
     {
-        FUN_140036e80(player, &chunk);
+        ungetSubtitleChunk(player, &chunk);
         return;
     }
-    FUN_140036f40(player, &chunk, outputInfo);
-    FUN_140037a10();
+    analyzeSubtitleInfo(player, &chunk, outputInfo);
+    criMvPly_IsSetDefaultDecryptionKey();
     memset(destination, 0, capacity);
     if (((CriUint32*)outputInfo)[2] > capacity)
         count = capacity;
     else
         count = ((CriUint32*)outputInfo)[2];
     memcpy(destination, *(void**)outputInfo, count);
-    FUN_140036e30(player, &chunk);
+    releaseSubtitleChunk(player, &chunk);
 }
 
 // Select the next subtitle chunk matching a channel while consuming decoder control records.
@@ -499,23 +499,23 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
         {
             if (headerInfo.Type == 1)
             {
-                accepted = FUN_140036d50(player, (const CriMovieInputChunk*)&record);
+                accepted = recordSubtitleHeader(player, (const CriMovieInputChunk*)&record);
                 if (accepted == 0)
                 {
-                    FUN_1400467a8(sj, 1, &record);
+                    criSj_UngetChunk(sj, 1, &record);
                     return 0;
                 }
                 ++((CriMvSubtitleFrameCounter*)player)->Value;
             }
-            FUN_1400467b0(sj, 0, &record);
+            criSj_PutChunk(sj, 0, &record);
             ++count;
         }
         else
         {
-            FUN_140036f40(player, (CriMvSubtitleChunk*)&record, &item);
+            analyzeSubtitleInfo(player, (CriMvSubtitleChunk*)&record, &item);
             if (channel != item.Channel)
             {
-                FUN_1400467b0(sj, 0, &record);
+                criSj_PutChunk(sj, 0, &record);
                 ++count;
             }
             else

@@ -39,7 +39,7 @@ void FUN_1400b0940(cri07b_errcb func, cri_u8 obj)
 // Reports a CRI error message to the callback unless the error level is -1.
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b09a0
-void FUN_1400b09a0(const char *msg)
+void CRIERR_CallErr(const char *msg)
 {
   if (DAT_143d68ad0 != -1) {
     (*(cri07b_errcb)PTR_FUN_143a4a5c0)(DAT_143d68ac8, msg);

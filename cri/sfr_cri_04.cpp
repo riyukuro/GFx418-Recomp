@@ -34,7 +34,7 @@ int FUN_14004bef0(byte *a1,byte *a2);
 void FUN_14004bf40(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3);
 void FUN_1400627f0(const char *a1);
-int FUN_140062860(void);    // sfr_cri_06 (the exe tests eax)
+int UTY_SupportSse(void);    // sfr_cri_06 (the exe tests eax)
 int FUN_140062890(void);
 
 static __forceinline void FUN_140047b30(Any a0,Any a1,Any a2) { FUN_140047b30((cri_u64 *)a0.v,(longlong *)a1.v,(byte *)a2.v); }
@@ -494,14 +494,14 @@ void FUN_140049390(longlong a1,longlong a2,longlong *a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400493c0
-void FUN_1400493c0(void)
+void CFT_Ycc420plnToArgb8888Init(void)
 {
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400493d0
-void FUN_1400493d0(longlong a1,longlong a2)
+void CFT_Ycc420plnToRgb888(longlong a1,longlong a2)
 {
   ushort u_v1;
   uint u_v2;
@@ -2829,7 +2829,7 @@ void FUN_14004bf40(cri_u64 a1,longlong a2,cri_u64 a3)
   int i_v2;
   
   i_v1 = FUN_14004bef0((byte *)a1,(byte *)a2);
-  i_v2 = FUN_140062860();
+  i_v2 = UTY_SupportSse();
   if ((i_v2 == 0) || (i_v1 == 0)) {
     i_v2 = FUN_140062890();
     if ((i_v2 == 0) || (i_v1 == 0)) {
@@ -2853,7 +2853,7 @@ void FUN_14004bff0(cri_u64 a1,longlong a2,cri_u64 a3)
   int i_v2;
   
   i_v1 = FUN_14004bef0((byte *)a1,(byte *)a2);
-  i_v2 = FUN_140062860();
+  i_v2 = UTY_SupportSse();
   if ((i_v2 == 0) || (i_v1 == 0)) {
     i_v2 = FUN_140062890();
     if ((i_v2 == 0) || (i_v1 == 0)) {

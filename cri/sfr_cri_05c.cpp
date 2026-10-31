@@ -174,14 +174,14 @@ const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned l
 void criSj_SplitChunk(const void* source, unsigned long maximum, void* prefix, void* suffix);
 void FUN_14004c370();
 void FUN_14004c7c0(Any a0,Any a1);
-void FUN_14004da40(void);
-cri_u32 FUN_14004dd30(void);
+void cftfx_makeConvYccRgbTable(void);
+cri_u32 mpvlib_ChkFatal(void);
 cri_u64 FUN_14004ddb0(cri_u64 a1);
-void FUN_14004ddc0(void);
-void FUN_14004de20(void);
+void mpvlib_InitClip0255(void);
+void mpvlib_InitObjTbl(void);
 void FUN_14004de60(longlong a1);
 void FUN_14004def0(cri_u32 *a1);
-longlong FUN_14004df90(void);
+longlong mpvlib_SearchFreeHn(void);
 void FUN_14004dfc0(longlong a1);
 void FUN_14004e030(int a1,cri_u32 a2);
 long FUN_14004e0a0(longlong a1);
@@ -191,8 +191,8 @@ void FUN_14004e1c0(int a1,longlong a2);
 void FUN_14004e270(longlong a1);
 longlong FUN_14004e460(longlong a1);
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2);
-void FUN_14004e610(void);
-void FUN_14004e650(void);
+void sjmem_Init(void);
+void sjmem_Finish(void);
 void FUN_14004e680(cri_u64 *a1);
 cri_u64 FUN_14004e6e0(longlong a1);
 void FUN_14004e730(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -207,8 +207,8 @@ cri_u32 FUN_14004eb00(longlong a1);
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2);
 cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2);
 void FUN_14004ef20(cri_u64 a1,cri_u64 a2);
-void FUN_14004ef80(void);
-void FUN_14004efc0(void);
+void sjrbf_Init(void);
+void sjrbf_Finish(void);
 void FUN_14004f000(void *a1);
 cri_u64 FUN_14004f060(longlong a1);
 void FUN_14004f0b0(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -227,25 +227,25 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3);
 cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 cri_u64 * FUN_14004f9a0(void *a1,uint a2);
 void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4);
-void FUN_14004ff00(void);
+void MPVERR_Init(void);
 void FUN_14004ff10(cri_u64 *a1);
 void FUN_14004ff30(cri_u64 *a1,int a2);
 cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2);
-void FUN_140050100(void);
-void FUN_1400501d0(void);
-void FUN_1400501e0(void);
-DWORD FUN_1400501f0(void);
+void mpvmulti_SetDlgPara(void);
+void mpvmulti_lock(void);
+void mpvmulti_unlock(void);
+DWORD mpvmulti_GetNumberOfProcessors(void);
 void FUN_140050280(longlong a1);
-int * FUN_1400502b0(void);
+int * mpvmulti_CreateMulti(void);
 longlong FUN_140050320(longlong a1,void *a2);
 long FUN_140050380(longlong a1,cri_u64 a2,cri_u32 a3);
 cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3);
 void FUN_140050480(longlong a1,int a2,cri_u64 a3);
-void FUN_140050770(longlong *a1);
-void FUN_140050bc0(void);
+void mpvmulti_DecServer(longlong *a1);
+void MPVFRM_Init(void);
 cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
 void FUN_140050f90(cri_u64 *a1,ulonglong a2);
-void FUN_140050fc0(void);
+void MPVHDEC_Init(void);
 void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5);
 void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3);
 long FUN_140051210(longlong *a1,cri_u64 *a2);
@@ -267,35 +267,35 @@ int FUN_140052950(longlong a1,uint a2,cri_u64 a3);
 cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3);
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 void FUN_140052ef0(cri_u8 *a1);
-int FUN_140052fa0(void);
+int MPVDELI_Init(void);
 long FUN_140053000(cri_u8 *a1);
 longlong FUN_1400530c0(longlong a1,int a2,int a3);
 void FUN_140053470(cri_u64 *a1);
 void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
-void FUN_1400628d0();
+void MPVM2V_Init();
 cri_u64 FUN_140062900(Any a0);
-void FUN_140062910(longlong a0);
+void MPVM2V_Destroy(longlong a0);
 void FUN_140062920(longlong a0,int a1,cri_u32 a2);
 cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
-void FUN_140062ab0(cri_any);  // C3: the definition's signature
+void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
-void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void UTY_MemcpyDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
-void FUN_140064f70(cri_any,cri_any,cri_any);  // C3: the definition's signature
+void UTY_MemsetDword(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
 cri_u64 FUN_140065450(cri_any,cri_any);  // C3: the definition's signature
 // sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
-void FUN_140065770();
-void FUN_140065790();
-void FUN_1400657a0(cri_any);  // C3: the definition's signature
-void FUN_1400657e0(void);  // C3: the definition's signature
+void MPVUMC_Init();
+void MPVUMC_Finish();
+void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
+void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
 void FUN_140066180(__int64);  // C3: the definition's signature
@@ -345,11 +345,11 @@ void FUN_140069e5c(longlong, int, int, int);
 void FUN_140069e98(longlong, uint, short, short);
 void FUN_140069ef4(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
-void FUN_14006aa90();
+void DCT_Isse2Init();
 void FUN_142ccc860(void *,long);  // C3: the definition's signature
 void FUN_142ccca50(void *);  // C3: the definition's signature
 void FUN_142ccca90(void *);  // C3: the definition's signature
-void FUN_142cccad0(void *);  // C3: the definition's signature
+void MPVUMC_BiDirect(void *);  // C3: the definition's signature
 void FUN_142cccb30(void *,long);  // C3: the definition's signature
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
@@ -443,9 +443,9 @@ void FUN_14004e5a0(void);
 
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2);
 
-void FUN_14004e610(void);
+void sjmem_Init(void);
 
-void FUN_14004e650(void);
+void sjmem_Finish(void);
 
 void FUN_14004e680(cri_u64 *a1);
 
@@ -469,33 +469,33 @@ cri_u64 FUN_14004eab0(longlong a1);
 
 cri_u32 FUN_14004eb00(longlong a1);
 
-void FUN_14004eb50(void);
+void SJMEM_Init(void);
 
-void FUN_14004eb70(void);
+void SJMEM_Finish(void);
 
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2);
 
-void FUN_14004ec20(cri_u64 a1);
+void SJMEM_Destroy(cri_u64 a1);
 
-cri_u64 FUN_14004ec40(cri_u64 a1);
+cri_u64 SJMEM_GetUuid(cri_u64 a1);
 
-void FUN_14004ec70(cri_u64 a1,cri_u64 a2,cri_u64 a3);
+void SJMEM_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3);
 
-void FUN_14004ecb0(cri_u64 a1);
+void SJMEM_Reset(cri_u64 a1);
 
-cri_u32 FUN_14004ecd0(cri_u64 a1,cri_u32 a2);
+cri_u32 SJMEM_GetNumData(cri_u64 a1,cri_u32 a2);
 
-void FUN_14004ed10(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
+void SJMEM_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
 
-void FUN_14004ed60(cri_u64 a1,cri_u32 a2,cri_u64 a3);
+void SJMEM_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3);
 
-void FUN_14004eda0(cri_u64 a1,cri_u32 a2,cri_u64 a3);
+void SJMEM_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3);
 
-cri_u32 FUN_14004ede0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
+cri_u32 SJMEM_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
 
-cri_u64 FUN_14004ee40(cri_u64 a1);
+cri_u64 SJMEM_GetBufPtr(cri_u64 a1);
 
-cri_u32 FUN_14004ee70(cri_u64 a1);
+cri_u32 SJMEM_GetBufSize(cri_u64 a1);
 
 cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2);
 
@@ -503,9 +503,9 @@ void FUN_14004eee0(cri_u64 a1, int a2);
 
 void FUN_14004ef20(cri_u64 a1,cri_u64 a2);
 
-void FUN_14004ef80(void);
+void sjrbf_Init(void);
 
-void FUN_14004efc0(void);
+void sjrbf_Finish(void);
 
 void FUN_14004f000(void *a1);
 
@@ -537,9 +537,9 @@ void FUN_14004f7f0(longlong a1,int a2,int a3,cri_u32 a4);
 
 cri_u32 FUN_14004f840(longlong a1,int a2,int a3);
 
-void FUN_14004f8a0(void);
+void SJRBF_Init(void);
 
-void FUN_14004f8d0(void);
+void SJRBF_Finish(void);
 
 cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 
@@ -547,43 +547,43 @@ cri_u64 * FUN_14004f9a0(void *a1,uint a2);
 
 void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4);
 
-void FUN_14004fa80(cri_u64 a1);
+void SJRBF_Destroy(cri_u64 a1);
 
-cri_u64 FUN_14004faa0(cri_u64 a1);
+cri_u64 SJRBF_GetUuid(cri_u64 a1);
 
-void FUN_14004fad0(cri_u64 a1,cri_u64 a2,cri_u64 a3);
+void SJRBF_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3);
 
-void FUN_14004fb10(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4);
+void SJRBF_EntryPutFunc(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4);
 
-void FUN_14004fb60(cri_u64 a1);
+void SJRBF_Reset(cri_u64 a1);
 
-cri_u32 FUN_14004fb80(cri_u64 a1,cri_u32 a2);
+cri_u32 SJRBF_GetNumData(cri_u64 a1,cri_u32 a2);
 
-void FUN_14004fbc0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
+void SJRBF_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
 
-void FUN_14004fc10(cri_u64 a1,cri_u32 a2,cri_u64 a3);
+void SJRBF_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3);
 
-void FUN_14004fc50(cri_u64 a1,cri_u32 a2,cri_u64 a3);
+void SJRBF_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3);
 
-cri_u32 FUN_14004fc90(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
+cri_u32 SJRBF_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4);
 
-cri_u64 FUN_14004fcf0(cri_u64 a1);
+cri_u64 SJRBF_GetBufPtr(cri_u64 a1);
 
-cri_u32 FUN_14004fd20(cri_u64 a1);
+cri_u32 SJRBF_GetBufSize(cri_u64 a1);
 
-cri_u32 FUN_14004fd50(cri_u64 a1);
+cri_u32 SJRBF_GetXtrSize(cri_u64 a1);
 
-void FUN_14004fd80(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4);
+void SJRBF_SetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4);
 
-cri_u32 FUN_14004fdd0(cri_u64 a1,cri_u32 a2,cri_u32 a3);
+cri_u32 SJRBF_GetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 
-cri_u64 FUN_14004fe20(cri_u64 a1,cri_u32 a2,cri_u32 a3);
+cri_u64 SJRBF_Create(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 
-cri_u64 FUN_14004fe70(cri_u64 a1,cri_u32 a2);
+cri_u64 SJRBF_CreateHndl(cri_u64 a1,cri_u32 a2);
 
-void FUN_14004feb0(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4);
+void SJRBF_SetBuffer(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4);
 
-void FUN_14004ff00(void);
+void MPVERR_Init(void);
 
 void FUN_14004ff10(cri_u64 *a1);
 
@@ -591,27 +591,27 @@ void FUN_14004ff30(cri_u64 *a1,int a2);
 
 cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2);
 
-cri_u32 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3);
+cri_u32 MPV_SetErrFunc(longlong a1,cri_u64 a2,cri_u64 a3);
 
-cri_u32 FUN_140050000(longlong a1,cri_u64 *a2);
+cri_u32 MPV_GetErrInf(longlong a1,cri_u64 *a2);
 
-void FUN_1400500b0(uint a1,longlong a2);
+void MPV_SetDlgPara(uint a1,longlong a2);
 
-void FUN_140050100(void);
+void mpvmulti_SetDlgPara(void);
 
-void FUN_1400501d0(void);
+void mpvmulti_lock(void);
 
-void FUN_1400501e0(void);
+void mpvmulti_unlock(void);
 
-DWORD FUN_1400501f0(void);
+DWORD mpvmulti_GetNumberOfProcessors(void);
 
-void FUN_140050210(longlong a1,uint a2);
+void MPVMULTI_SetProcessorMask(longlong a1,uint a2);
 
 void FUN_140050280(longlong a1);
 
-int * FUN_1400502b0(void);
+int * mpvmulti_CreateMulti(void);
 
-void FUN_140050310(cri_u32 *a1);
+void MPVMULTI_Destroy(cri_u32 *a1);
 
 longlong FUN_140050320(longlong a1,void *a2);
 
@@ -621,39 +621,39 @@ cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3);
 
 void FUN_140050480(longlong a1,int a2,cri_u64 a3);
 
-void FUN_140050520(void);
+void MPVMULTI_Init(void);
 
-void FUN_140050670(void);
+void MPVMULTI_Finish(void);
 
-longlong FUN_140050730(void);
+longlong MPVMULTI_Create(void);
 
-void FUN_140050770(longlong *a1);
+void mpvmulti_DecServer(longlong *a1);
 
-cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4);
+cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4);
 
-cri_u32 FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3);
+cri_u32 MPV_SkipFrm(cri_u64 a1,cri_u64 *a2,int *a3);
 
-void FUN_140050bc0(void);
+void MPVFRM_Init(void);
 
 cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
 
 cri_u32 FUN_140050e00(cri_u64 a1,cri_u64 a2);
 
-void FUN_140050e90(longlong a1);
+void MPV_RequestStop(longlong a1);
 
-cri_u32 FUN_140050ef0(cri_u64 a1,cri_u64 *a2,int *a3,cri_u64 a4);
+cri_u32 MPV_DecodeFrm(cri_u64 a1,cri_u64 *a2,int *a3,cri_u64 a4);
 
 void FUN_140050f80(void);
 
 void FUN_140050f90(cri_u64 *a1,ulonglong a2);
 
-void FUN_140050fc0(void);
+void MPVHDEC_Init(void);
 
 __declspec(noinline) void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5);
 
 __declspec(noinline) void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3);
 
-void FUN_1400511f0(longlong a1,cri_u64 *a2,cri_u32 *a3);
+void MPV_GetPicUsr(longlong a1,cri_u64 *a2,cri_u32 *a3);
 
 long FUN_140051210(longlong *a1,cri_u64 *a2);
 
@@ -671,7 +671,7 @@ cri_u64 FUN_1400515c0(longlong a1,longlong *a2);
 
 cri_u32 FUN_140051c10(longlong a1,longlong a2,int a3);
 
-void FUN_140051d20(longlong *a1,int *a2,int *a3);
+void MPVHDEC_GoNextDelim(longlong *a1,int *a2,int *a3);
 
 cri_u32 FUN_140051d90(longlong *a1);
 
@@ -693,21 +693,21 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3);
 
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 
-cri_u32 FUN_140052c80(cri_u64 a1,cri_u64 *a2,int *a3);
+cri_u32 MPV_DecodePicAtr(cri_u64 a1,cri_u64 *a2,int *a3);
 
-cri_u32 FUN_140052d00(longlong a1,int *a2);
+cri_u32 MPV_GetPicAtr(longlong a1,int *a2);
 
-cri_u32 FUN_140052da0(longlong a1,cri_u32 *a2);
+cri_u32 MPV_GetBitRate(longlong a1,cri_u32 *a2);
 
-cri_u32 FUN_140052df0(longlong a1,int *a2,cri_u32 *a3,int *a4);
+cri_u32 MPV_GetVbvBufSiz(longlong a1,int *a2,cri_u32 *a3,int *a4);
 
-cri_u32 FUN_140052e90(longlong a1,cri_u32 *a2,cri_u32 *a3);
+cri_u32 MPV_GetLinkFlg(longlong a1,cri_u32 *a2,cri_u32 *a3);
 
 void FUN_140052ef0(cri_u8 *a1);
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140052fa0
-int FUN_140052fa0(void)
+int MPVDELI_Init(void)
 {
   cri_u8 table[256];
   FUN_140052ef0(table);
@@ -811,7 +811,7 @@ long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400532b0
-void FUN_1400532b0(void)
+void criAdec_Initialize(void)
 {
   _DAT_143c494e0 = cri_conv("\ncriAdec/PCx64 Ver.1.09 Build:Jan 20 2012 18:13:27\n");
   return;
@@ -820,7 +820,7 @@ void FUN_1400532b0(void)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400532d0
-void FUN_1400532d0(void)
+void criAdec_Finalize(void)
 {
   return;
 }
@@ -845,7 +845,7 @@ int FUN_1400532e0(int a1)
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053340
-cri_u64 * FUN_140053340(cri_u64 a1,uint a2,cri_u32 a3)
+cri_u64 * criAdec_Create(cri_u64 a1,uint a2,cri_u32 a3)
 {
   cri_u64 *adec;
 
@@ -898,7 +898,7 @@ void FUN_1400534d0(void* a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400534f0
-void FUN_1400534f0(longlong a1,cri_u64 a2)
+void criAdec_SetInputSj(longlong a1,cri_u64 a2)
 {
   (*(cri_u64*)((char*)(a1) + 0x18)) = a2;
   return;
@@ -906,7 +906,7 @@ void FUN_1400534f0(longlong a1,cri_u64 a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053510
-void FUN_140053510(longlong a1,uint a2,cri_u64 a3)
+void criAdec_SetOutputSj(longlong a1,uint a2,cri_u64 a3)
 {
   *(cri_u64 *)((*(longlong*)((char*)(a1) + 0x20)) + (ulonglong)a2 * 8) = a3;
   return;
@@ -952,7 +952,7 @@ long FUN_140053630(void* a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053650
-cri_u64 FUN_140053650(longlong a1)
+cri_u64 criAadx_Execute(longlong a1)
 {
   if ((*(int*)((char*)(a1) + 0xc)) == 1) {
     if (FUN_1400467b8((*(void**)((char*)(a1) + 0x18)),1) == 0) {
@@ -1123,7 +1123,7 @@ void FUN_140053880(longlong a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053e40
-void FUN_140053e40(longlong a1)
+void criAdec_TerminateSupply(longlong a1)
 {
   (*(cri_u32*)((char*)(a1) + 0xc)) = 1;
   return;
@@ -1133,7 +1133,7 @@ void FUN_140053e40(longlong a1)
 // @0x140053e60
 // Declared as sfr_cri_03 calls it: the exe passes the channel count as a 32-bit value and stores its low byte.
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-void FUN_140053e60(void* a1, unsigned long a2, unsigned long a3, unsigned long a4)
+void criAadx_InsertDummyHeader(void* a1, unsigned long a2, unsigned long a3, unsigned long a4)
 {
   int i;
   AdxHdr* hdr;
@@ -1183,9 +1183,9 @@ void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140054080
-void FUN_140054080(void)
+void m2vidct_InitIdctTbls(void)
 {
-  FUN_14006aa90();
+  DCT_Isse2Init();
   FUN_140066320();
   FUN_140066180((__int64)&DAT_143fe82e0);
   FUN_1400659a0((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);

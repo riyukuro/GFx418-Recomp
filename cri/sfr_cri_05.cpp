@@ -156,14 +156,14 @@ long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 void FUN_14004c370();
 void FUN_14004c7c0(double *, double *);  // C3: the definition's signature
-void FUN_14004da40(void);
-cri_u32 FUN_14004dd30(void);
+void cftfx_makeConvYccRgbTable(void);
+cri_u32 mpvlib_ChkFatal(void);
 cri_u64 FUN_14004ddb0(cri_u64 a1);
-void FUN_14004ddc0(void);
-void FUN_14004de20(void);
+void mpvlib_InitClip0255(void);
+void mpvlib_InitObjTbl(void);
 void FUN_14004de60(longlong a1);
 void FUN_14004def0(cri_u32 *a1);
-longlong FUN_14004df90(void);
+longlong mpvlib_SearchFreeHn(void);
 void FUN_14004dfc0(longlong a1);
 void FUN_14004e030(int a1,cri_u32 a2);
 long FUN_14004e0a0(longlong a1);
@@ -173,8 +173,8 @@ void FUN_14004e1c0(int a1,longlong a2);
 void FUN_14004e270(longlong a1);
 longlong FUN_14004e460(longlong a1);
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2);
-void FUN_14004e610(void);
-void FUN_14004e650(void);
+void sjmem_Init(void);
+void sjmem_Finish(void);
 void FUN_14004e680(cri_u64 *a1);
 cri_u64 FUN_14004e6e0(longlong a1);
 void FUN_14004e730(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -189,8 +189,8 @@ cri_u32 FUN_14004eb00(longlong a1);
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2);
 cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2);
 void FUN_14004ef20(cri_u64 a1,cri_u64 a2);
-void FUN_14004ef80(void);
-void FUN_14004efc0(void);
+void sjrbf_Init(void);
+void sjrbf_Finish(void);
 void FUN_14004f000(void *a1);
 cri_u64 FUN_14004f060(longlong a1);
 void FUN_14004f0b0(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -209,25 +209,25 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3);
 cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 cri_u64 * FUN_14004f9a0(void *a1,uint a2);
 void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4);
-void FUN_14004ff00(void);
+void MPVERR_Init(void);
 void FUN_14004ff10(cri_u64 *a1);
 void FUN_14004ff30(cri_u64 *a1,int a2);
 cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2);
-void FUN_140050100(void);
-void FUN_1400501d0(void);
-void FUN_1400501e0(void);
-DWORD FUN_1400501f0(void);
+void mpvmulti_SetDlgPara(void);
+void mpvmulti_lock(void);
+void mpvmulti_unlock(void);
+DWORD mpvmulti_GetNumberOfProcessors(void);
 void FUN_140050280(longlong a1);
-int * FUN_1400502b0(void);
+int * mpvmulti_CreateMulti(void);
 longlong FUN_140050320(longlong a1,void *a2);
 long FUN_140050380(longlong a1,cri_u64 a2,cri_u32 a3);
 cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3);
 void FUN_140050480(longlong a1,int a2,cri_u64 a3);
-void FUN_140050770(longlong *a1);
-void FUN_140050bc0(void);
+void mpvmulti_DecServer(longlong *a1);
+void MPVFRM_Init(void);
 cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
 void FUN_140050f90(cri_u64 *a1,ulonglong a2);
-void FUN_140050fc0(void);
+void MPVHDEC_Init(void);
 void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5);
 void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3);
 long FUN_140051210(longlong *a1,cri_u64 *a2);
@@ -249,34 +249,34 @@ int FUN_140052950(longlong a1,uint a2,cri_u64 a3);
 cri_u32 FUN_140052a10(longlong a1,longlong *a2);
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 void FUN_140052ef0(cri_u8 *a1);
-int FUN_140052fa0(void);
+int MPVDELI_Init(void);
 long FUN_140053000(cri_u8 *a1);
 longlong FUN_1400530c0(longlong a1,int a2,int a3);
 void FUN_140053470(cri_u64 *a1);
 void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
-void FUN_1400628d0();
+void MPVM2V_Init();
 unsigned __int64 FUN_140062900(__int64);  // C3: the definition's signature
-void FUN_140062910(longlong a0);
+void MPVM2V_Destroy(longlong a0);
 void FUN_140062920(__int64);  // C3: the definition's signature
 cri_u64 FUN_140062a40(Any a0,Any a1,Any a2);
 void FUN_140062ab0(Any a0);
 cri_u64 FUN_140062ae0(Any a0,Any a1);
-int FUN_140062bc0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+int MPVDEC_CheckVersion(cri_any, cri_any, cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_1400630c0(void);  // C3: the definition's signature
-void FUN_140064d90(cri_any);  // C3: the definition's signature
-void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
-void * FUN_140064eb0(cri_any, cri_any, cri_any);  // C3: the definition's signature
-void FUN_140064f70(cri_any, cri_any, cri_any);  // C3: the definition's signature
-void FUN_140065000(cri_any);  // C3: the definition's signature
-void FUN_140065030(cri_any);  // C3: the definition's signature
+void MPVVLC_Init(cri_any);  // C3: the definition's signature
+void UTY_MemcpyDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void * MEM_Copy(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void UTY_MemsetDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void MPVSL_Create(cri_any);  // C3: the definition's signature
+void MPVSL_Destroy(cri_any);  // C3: the definition's signature
 cri_u64 FUN_140065450(Any a0,Any a1);
-void FUN_140065770();
-void FUN_140065790();
+void MPVUMC_Init();
+void MPVUMC_Finish();
 void FUN_1400657a0(Any a0);
 void FUN_1400657e0(Any a0);
-void FUN_140065900(void *);  // C3: the definition's signature
+void DCT_FsriInitPa(void *);  // C3: the definition's signature
 void FUN_1400659a0(Any a0,Any a1);
 void FUN_140066180(Any a0);
 void FUN_140066320();
@@ -327,7 +327,7 @@ void FUN_140069e5c(Any a0,Any a1,Any a2,Any a3);
 void FUN_140069e98(Any a0,Any a1,Any a2,Any a3);
 void FUN_140069ef4(Any a0,Any a1,Any a2);
 uint FUN_14006a7f8(Any a0,Any a1,Any a2);
-void FUN_14006aa90();
+void DCT_Isse2Init();
 /* unknown */ void FUN_142ccc860();
 /* unknown */ void FUN_142ccca50();
 /* unknown */ void FUN_142ccca90();
@@ -426,7 +426,7 @@ static __forceinline void FUN_140054040(Any a0,Any a1,Any a2) { FUN_140054040((l
 // MS2-FUNCTIONAL: build the 256-entry Y/U/V lookup tables (4 shorts each) from the 3x3 YUV -> RGB matrix and the
 // level tables. Only diff: VC9 puts the tv walker in r11 where the exe has rdx, which shifts r8-r11 (483 vs 485 bytes).
 // @0x14004da40
-void FUN_14004da40(void)
+void cftfx_makeConvYccRgbTable(void)
 {
   struct Ent { short c[4]; };
   Ent *ty;
@@ -456,19 +456,19 @@ void FUN_14004da40(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004dc30
-void FUN_14004dc30(longlong a1)
+void CFT_MakeArgb8888ColAdjTbl(longlong a1)
 {
   DAT_143babdd8 = a1 + 0x800;
   DAT_143babde0 = a1 + 0x1000;
   DAT_143babdd0 = a1;
   FUN_14004c370();
-  FUN_14004da40();
+  cftfx_makeConvYccRgbTable();
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004dc70
-void FUN_14004dc70(void)
+void criMovieDecoderCore_FourceLinkVersionInfo(void)
 {
   _DAT_143bad690 = cri_conv("\nCRI MvCore/PCx64 Ver.1.00 Build:Jan 13 2012 18:30:47\n");
   return;
@@ -478,7 +478,7 @@ void FUN_14004dc70(void)
 // next record and return whether bit 4 of its value is clear. Only diff: the exe sign-extends the inverted byte
 // (movsx eax,al) before the mask; VC9 drops it in every form tried.
 // @0x14004dc90
-uint FUN_14004dc90(cri_u64 a1,int a2)
+uint MPV_IsConformable(cri_u64 a1,int a2)
 {
   longlong p = FUN_1400530c0(a1,a2,0x40);
   if (p == 0)
@@ -497,15 +497,15 @@ uint FUN_14004dc90(cri_u64 a1,int a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004dd30
-cri_u32 FUN_14004dd30(void)
+cri_u32 mpvlib_ChkFatal(void)
 {
   if ((int)FUN_1400630c0() != 0) {  // C3: the exe tests only the low 32 bits of the u64 result
     return FUN_14004ff50(0,0xff03ff03);
   }
-  if (FUN_140062bc0(&DAT_1431ba2e0,0x1900,0x80) != 0) {
+  if (MPVDEC_CheckVersion(&DAT_1431ba2e0,0x1900,0x80) != 0) {
     return FUN_14004ff50(0,0xff03ff07);
   }
-  if (FUN_140052fa0() != 0) {
+  if (MPVDELI_Init() != 0) {
     return FUN_14004ff50(0,0xff03ff09);
   }
   return 0;
@@ -523,7 +523,7 @@ cri_u64 FUN_14004ddb0(cri_u64 a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004ddc0
-void FUN_14004ddc0(void)
+void mpvlib_InitClip0255(void)
 {
   int i;
   cri_u8 *p;
@@ -540,7 +540,7 @@ void FUN_14004ddc0(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004de20
-void FUN_14004de20(void)
+void mpvlib_InitObjTbl(void)
 {
   cri_u32 *pu_v1;
   ulonglong u_v2;
@@ -626,7 +626,7 @@ void FUN_14004def0(cri_u32 *a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004df90
-longlong FUN_14004df90(void)
+longlong mpvlib_SearchFreeHn(void)
 {
   longlong l_v1;
   int i_v2;
@@ -694,9 +694,9 @@ long FUN_14004e0a0(longlong a1)
 // @0x14004e0c0
 void FUN_14004e0c0(longlong a1)
 {
-  FUN_14004ddc0();
+  mpvlib_InitClip0255();
   if (a1 != 0) {
-    FUN_140064dd0(a1,&DAT_143bad6b0,0x100);
+    UTY_MemcpyDword(a1,&DAT_143bad6b0,0x100);
     DAT_143ffd4e8 = a1 + 0x180;
   }
   return;
@@ -730,9 +730,9 @@ void FUN_14004e1c0(int a1,longlong a2)
   ulonglong work;
   longlong p;
   work = (a2 + 0x7f) & ~(longlong)0x7f;
-  FUN_140064f70((void *)work,0,(cri_u64)(longlong)((a1 + 1) * 0x2000) >> 2);
+  UTY_MemsetDword((void *)work,0,(cri_u64)(longlong)((a1 + 1) * 0x2000) >> 2);
   p = (longlong)a1 * 0x1980 + work;
-  FUN_140064eb0(&DAT_143badab0,&DAT_1431ba290,0x40);
+  MEM_Copy(&DAT_143badab0,&DAT_1431ba290,0x40);
   _DAT_143badb00 = p;
   DAT_143badb08 = p + 0x330;
   DAT_143badb10 = a1;
@@ -741,9 +741,9 @@ void FUN_14004e1c0(int a1,longlong a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e250
-void FUN_14004e250(void)
+void MPV_Finish(void)
 {
-  FUN_140065790();
+  MPVUMC_Finish();
   thunk_FUN_140050670();
   ((void (*)())thunk_FUN_14005b0b0)();  // C3: called with no arguments, like the exe
   return;
@@ -753,20 +753,20 @@ void FUN_14004e250(void)
 // @0x14004e270
 void FUN_14004e270(longlong a1)
 {
-  FUN_140065900((void *)((char *)a1 + 0x1350));
+  DCT_FsriInitPa((void *)((char *)a1 + 0x1350));
   FUN_14004dfc0(a1);
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e2a0
-cri_u32 FUN_14004e2a0(longlong a1)
+cri_u32 MPV_Destroy(longlong a1)
 {
   if (FUN_14004e0a0(a1) != 0) {
     return FUN_14004ff50(0,0xff030201);
   }
-  FUN_140062910(a1);
-  FUN_140065030(a1);
+  MPVM2V_Destroy(a1);
+  MPVSL_Destroy(a1);
   ((void (*)(longlong))FUN_140066360)(a1);  // C3: the exe passes a1 to the argument-less definition (C call)
   *(cri_u32 *)((char *)(a1) + 0x1538) = 1;
   return 0;
@@ -774,7 +774,7 @@ cri_u32 FUN_14004e2a0(longlong a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e2f0
-cri_u32 FUN_14004e2f0(longlong a1,int a2,cri_u32 a3)
+cri_u32 MPV_SetCond(longlong a1,int a2,cri_u32 a3)
 {
   cri_u32 *table;
   if (a1 == 0) {
@@ -794,7 +794,7 @@ cri_u32 FUN_14004e2f0(longlong a1,int a2,cri_u32 a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e360
-cri_u32 FUN_14004e360(longlong a1,int a2,cri_u32 *a3)
+cri_u32 MPV_GetCond(longlong a1,int a2,cri_u32 *a3)
 {
   cri_u32 *p;
   
@@ -813,14 +813,14 @@ cri_u32 FUN_14004e360(longlong a1,int a2,cri_u32 *a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e3b0
-int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
+int MPV_Init(cri_u32 a1,cri_u64 a2)
 {
   longlong l_v1;
   int i_v2;
   cri_u64 u_v3;
   
   _DAT_143bad6a8 = cri_conv("\nCRI MPV/PCx64 Ver.2.080 Build:Jan 13 2012 18:29:27\n");
-  i_v2 = FUN_14004dd30();
+  i_v2 = mpvlib_ChkFatal();
   if (i_v2 != 0) {
     if (i_v2 == -0xfc00fb) {
       i_v2 = -0xfc00fb;
@@ -830,17 +830,17 @@ int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
   u_v3 = FUN_14004ddb0(a2);
   FUN_14004e1c0(a1,u_v3);
   l_v1 = cri_conv(DAT_143badb08);
-  FUN_14004ff00();
-  FUN_140050fc0();
-  FUN_140050bc0();
+  MPVERR_Init();
+  MPVHDEC_Init();
+  MPVFRM_Init();
   thunk_FUN_140050520();
-  ((void (*)(longlong, longlong))FUN_140064d90)(l_v1 + 0x1320,l_v1);  // C3: two arguments to the one-argument definition (C call)
+  ((void (*)(longlong, longlong))MPVVLC_Init)(l_v1 + 0x1320,l_v1);  // C3: two arguments to the one-argument definition (C call)
   FUN_140067370(l_v1);
-  FUN_140065770();
+  MPVUMC_Init();
   FUN_140066f60(l_v1);
   FUN_14004e0c0(l_v1 + 0x18d0);
-  FUN_14004de20();
-  FUN_1400628d0();
+  mpvlib_InitObjTbl();
+  MPVM2V_Init();
   return 0;
 }
 
@@ -852,7 +852,7 @@ longlong FUN_14004e460(longlong a1)
   
   FUN_14004e100(a1);
   CriAt<cri_u32>(a1, 0x153c) = 0;
-  FUN_140064eb0(a1 + 0x1540,&DAT_143badab0,0x40);
+  MEM_Copy(a1 + 0x1540,&DAT_143badab0,0x40);
   CriAt<cri_u64>(a1, 0x1588) = 0;
   CriAt<cri_u64>(a1, 0x1590) = 0;
   CriAt<cri_u32>(a1, 0x1580) = 0x7fffffff;
@@ -873,7 +873,7 @@ longlong FUN_14004e460(longlong a1)
   FUN_1400511d0(a1,0,0);
   FUN_140066350(a1);
   CriAt<cri_u32>(a1, 0x18f0) = 0;
-  FUN_140065000(a1);
+  MPVSL_Create(a1);
   CriAt<cri_u64>(a1, 0x1848) = FUN_140062900(a1);
   CriAt<cri_u32>(a1, 0x1538) = 2;
   return a1;
@@ -881,11 +881,11 @@ longlong FUN_14004e460(longlong a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004e580
-longlong FUN_14004e580(void)
+longlong MPV_Create(void)
 {
   longlong l_v1;
   
-  l_v1 = FUN_14004df90();
+  l_v1 = mpvlib_SearchFreeHn();
   if (l_v1 == 0) {
     return 0;
   }

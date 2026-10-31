@@ -20,16 +20,16 @@ struct CriUsfStandardHeader;
 typedef struct CriUsfHeaderFields { CriUint32 ChunkId, Size, Word08; CriUint8 Byte0C, Byte0D, Byte0E, Kind; CriUint32 Words[5]; } CriUsfHeaderFields;
 typedef struct CriVideoQueueFields { CriUint8 Reserved00[0x180]; void* InputQueue; } CriVideoQueueFields;
 
-void FUN_1400467a0(void* object, CriSint32 operation, CriUint32 limit, void* output);
-void FUN_1400467a8(void* object, CriSint32 operation, void* chunk);
-void FUN_1400467b0(void* object, CriSint32 operation, void* chunk);
+void criSj_GetChunk(void* object, CriSint32 operation, CriUint32 limit, void* output);
+void criSj_UngetChunk(void* object, CriSint32 operation, void* chunk);
+void criSj_PutChunk(void* object, CriSint32 operation, void* chunk);
 CriSint32 FUN_1400467b8(void* object, CriSint32 query);
-void FUN_1400345e0(void* player, void* value, CriUint32 type, CriUint32 flags);
+void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUint32 flags);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, struct CriUsfStandardHeader* header);
 CriSint32 FUN_14003eeb0(const void* input);
 CriSint32 FUN_14003d6c0(const void* input);
 void FUN_1400410d0(void* owner, const char* message, CriUint32 value);
-void FUN_140043550(CriSint32* state, void* input);
+void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
 void FUN_140043970(void* track, void* player);
 // the C name binds to sfr_cri_03a's C++ definition in the full exe (the FUN_<va> names above are aliased by their VA; this
 // one has none, so the link left it to a trap stub); the hook DLL's ms2sym.obj already maps it to the exe address
@@ -54,32 +54,32 @@ CriSint32 FUN_14003ed40(void* player)
     while ((CriUint32)FUN_1400467b8(stream, 2) > 0)
     {
         second.Data = 0;
-        FUN_1400467a0(stream, 2, 0xffffffff, &cur);
+        criSj_GetChunk(stream, 2, 0xffffffff, &cur);
         if (FUN_14003eeb0(&cur) == 0)
         {
             if (FUN_14003d6c0(&cur) != 0)
             {
                 if ((CriUint32)FUN_1400467b8(stream, 2) > 0)
                 {
-                    FUN_1400467a0(stream, 2, 0xffffffff, &second);
+                    criSj_GetChunk(stream, 2, 0xffffffff, &second);
                     criUsfCmn_ParseUsfHeaderStd(cur.Data, cur.Size, (struct CriUsfStandardHeader*)&uhdr);
                     if (cur.Size + second.Size < uhdr.Size + 8)
                         FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
                 }
                 else
                 {
-                    FUN_1400467a8(stream, 2, &cur);
+                    criSj_UngetChunk(stream, 2, &cur);
                     break;
                 }
             }
-            FUN_1400467b0(stream, 0, &cur);
+            criSj_PutChunk(stream, 0, &cur);
             if (second.Data != 0)
-                FUN_1400467b0(stream, 0, &second);
+                criSj_PutChunk(stream, 0, &second);
             count = count + 1;
         }
         else
         {
-            FUN_1400467a8(stream, 2, &cur);
+            criSj_UngetChunk(stream, 2, &cur);
             break;
         }
     }
@@ -97,12 +97,12 @@ void FUN_140042700(void* trackSet, void* player)
     CriSint32 index;
     if (((AudioTrackSet*)trackSet)->Tracks[0])
     {
-        FUN_1400345e0(player, ((AudioTrackSet*)trackSet)->Configuration,
+        criMvPly_SetDemuxOutputSj(player, ((AudioTrackSet*)trackSet)->Configuration,
                       ((TrackControl*)((AudioTrackSet*)trackSet)->Tracks[0])->Control, (CriUint32)-1);
     }
     for (index = 0; index < ((AudioTrackSet*)trackSet)->Count; ++index)
     {
-        FUN_140043550((CriSint32*)((AudioTrackSet*)trackSet)->Tracks[index], player);
+        mvPlyAdec_StartAudioDecoder((CriSint32*)((AudioTrackSet*)trackSet)->Tracks[index], player);
         if (((PlayerState*)player)->ParameterUpdateEnabled > 0)
             FUN_140043970(((AudioTrackSet*)trackSet)->Tracks[index], player);
     }

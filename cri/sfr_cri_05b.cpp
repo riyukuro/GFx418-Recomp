@@ -172,14 +172,14 @@ const unsigned char* criUsfCmn_GetContents(const unsigned char* data, unsigned l
 void criSj_SplitChunk(const void* source, unsigned long maximum, void* prefix, void* suffix);
 void FUN_14004c370();
 void FUN_14004c7c0(Any a0,Any a1);
-void FUN_14004da40(void);
-cri_u32 FUN_14004dd30(void);
+void cftfx_makeConvYccRgbTable(void);
+cri_u32 mpvlib_ChkFatal(void);
 cri_u64 FUN_14004ddb0(cri_u64 a1);
-void FUN_14004ddc0(void);
-void FUN_14004de20(void);
+void mpvlib_InitClip0255(void);
+void mpvlib_InitObjTbl(void);
 void FUN_14004de60(longlong a1);
 void FUN_14004def0(cri_u32 *a1);
-longlong FUN_14004df90(void);
+longlong mpvlib_SearchFreeHn(void);
 void FUN_14004dfc0(longlong a1);
 void FUN_14004e030(int a1,cri_u32 a2);
 long FUN_14004e0a0(longlong a1);
@@ -189,8 +189,8 @@ void FUN_14004e1c0(int a1,longlong a2);
 void FUN_14004e270(longlong a1);
 longlong FUN_14004e460(longlong a1);
 void FUN_14004e5b0(cri_u64 a1,cri_u64 a2);
-void FUN_14004e610(void);
-void FUN_14004e650(void);
+void sjmem_Init(void);
+void sjmem_Finish(void);
 void FUN_14004e680(cri_u64 *a1);
 cri_u64 FUN_14004e6e0(longlong a1);
 void FUN_14004e730(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -205,8 +205,8 @@ cri_u32 FUN_14004eb00(longlong a1);
 cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2);
 cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2);
 void FUN_14004ef20(cri_u64 a1,cri_u64 a2);
-void FUN_14004ef80(void);
-void FUN_14004efc0(void);
+void sjrbf_Init(void);
+void sjrbf_Finish(void);
 void FUN_14004f000(void *a1);
 cri_u64 FUN_14004f060(longlong a1);
 void FUN_14004f0b0(longlong a1,cri_u64 a2,cri_u64 a3);
@@ -225,25 +225,25 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3);
 cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 cri_u64 * FUN_14004f9a0(void *a1,uint a2);
 void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4);
-void FUN_14004ff00(void);
+void MPVERR_Init(void);
 void FUN_14004ff10(cri_u64 *a1);
 void FUN_14004ff30(cri_u64 *a1,int a2);
 cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2);
-void FUN_140050100(void);
-void FUN_1400501d0(void);
-void FUN_1400501e0(void);
-DWORD FUN_1400501f0(void);
+void mpvmulti_SetDlgPara(void);
+void mpvmulti_lock(void);
+void mpvmulti_unlock(void);
+DWORD mpvmulti_GetNumberOfProcessors(void);
 void FUN_140050280(longlong a1);
-int * FUN_1400502b0(void);
+int * mpvmulti_CreateMulti(void);
 longlong FUN_140050320(longlong a1,void *a2);
 long FUN_140050380(longlong a1,cri_u64 a2,cri_u32 a3);
 cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3);
 void FUN_140050480(longlong a1,int a2,cri_u64 a3);
-void FUN_140050770(longlong *a1);
-void FUN_140050bc0(void);
+void mpvmulti_DecServer(longlong *a1);
+void MPVFRM_Init(void);
 cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3);
 void FUN_140050f90(cri_u64 *a1,ulonglong a2);
-void FUN_140050fc0(void);
+void MPVHDEC_Init(void);
 void FUN_1400511a0(longlong a1,int a2,cri_u64 a3,cri_u64 a4, cri_u64 a5);
 void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3);
 long FUN_140051210(longlong *a1,cri_u64 *a2);
@@ -265,35 +265,35 @@ int FUN_140052950(longlong a1,uint a2,cri_u64 a3);
 cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3);
 cri_u32 FUN_140052ae0(longlong a1,longlong *a2);
 void FUN_140052ef0(cri_u8 *a1);
-int FUN_140052fa0(void);
+int MPVDELI_Init(void);
 long FUN_140053000(cri_u8 *a1);
 longlong FUN_1400530c0(longlong a1,int a2,int a3);
 void FUN_140053470(cri_u64 *a1);
 void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
-void FUN_1400628d0();
+void MPVM2V_Init();
 cri_u64 FUN_140062900(Any a0);
-void FUN_140062910(longlong a0);
+void MPVM2V_Destroy(longlong a0);
 void FUN_140062920(longlong a0,int a1,cri_u32 a2);
 cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
-void FUN_140062ab0(cri_any);  // C3: the definition's signature
+void MPVM2V_RequestStop(cri_any);  // C3: the definition's signature
 unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
-void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void UTY_MemcpyDword(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
-void FUN_140064f70(cri_any,cri_any,cri_any);  // C3: the definition's signature
+void UTY_MemsetDword(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
 cri_u64 FUN_140065450(cri_any,cri_any);  // C3: the definition's signature
 // sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
-void FUN_140065770();
-void FUN_140065790();
-void FUN_1400657a0(cri_any);  // C3: the definition's signature
-void FUN_1400657e0(void);  // C3: the definition's signature
+void MPVUMC_Init();
+void MPVUMC_Finish();
+void MPVUMC_InitOutRfb(cri_any);  // C3: the definition's signature
+void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
 void FUN_140066180(__int64);  // C3: the definition's signature
@@ -343,11 +343,11 @@ void FUN_140069e5c(longlong, int, int, int);
 void FUN_140069e98(longlong, uint, short, short);
 void FUN_140069ef4(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
-void FUN_14006aa90();
+void DCT_Isse2Init();
 void FUN_142ccc860(void *,long);  // C3: the definition's signature
 void FUN_142ccca50(void *);  // C3: the definition's signature
 void FUN_142ccca90(void *);  // C3: the definition's signature
-void FUN_142cccad0(void *);  // C3: the definition's signature
+void MPVUMC_BiDirect(void *);  // C3: the definition's signature
 void FUN_142cccb30(void *,long);  // C3: the definition's signature
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
@@ -455,7 +455,7 @@ void FUN_14004e5b0(cri_u64 a1,cri_u64 a2)
 }
 
 // @0x14004e610
-void FUN_14004e610(void)
+void sjmem_Init(void)
 {
   if (DAT_143badb24 == 0) {
     memset(&DAT_143ffbce0,0,0x1800);
@@ -464,7 +464,7 @@ void FUN_14004e610(void)
 }
 
 // @0x14004e650
-void FUN_14004e650(void)
+void sjmem_Finish(void)
 {
   DAT_143badb24 = DAT_143badb24 + -1;
   if (DAT_143badb24 == 0) {
@@ -712,20 +712,20 @@ cri_u32 FUN_14004eb00(longlong a1)
 }
 
 // @0x14004eb50
-void FUN_14004eb50(void)
+void SJMEM_Init(void)
 {
   FUN_140067700();
   FUN_140067790();
-  FUN_14004e610();
+  sjmem_Init();
   FUN_1400677c0();
   return;
 }
 
 // @0x14004eb70
-void FUN_14004eb70(void)
+void SJMEM_Finish(void)
 {
   FUN_140067790();
-  FUN_14004e650();
+  sjmem_Finish();
   FUN_1400677c0();
   FUN_140067750();
   return;
@@ -760,7 +760,7 @@ cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
 }
 
 // @0x14004ec20
-void FUN_14004ec20(cri_u64 a1)
+void SJMEM_Destroy(cri_u64 a1)
 {
   FUN_140067790();
   FUN_14004e680(a1);
@@ -769,7 +769,7 @@ void FUN_14004ec20(cri_u64 a1)
 }
 
 // @0x14004ec40
-cri_u64 FUN_14004ec40(cri_u64 a1)
+cri_u64 SJMEM_GetUuid(cri_u64 a1)
 {
   cri_u64 u_v1;
   
@@ -780,7 +780,7 @@ cri_u64 FUN_14004ec40(cri_u64 a1)
 }
 
 // @0x14004ec70
-void FUN_14004ec70(cri_u64 a1,cri_u64 a2,cri_u64 a3)
+void SJMEM_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004e730(a1,a2,a3);
@@ -789,7 +789,7 @@ void FUN_14004ec70(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 }
 
 // @0x14004ecb0
-void FUN_14004ecb0(cri_u64 a1)
+void SJMEM_Reset(cri_u64 a1)
 {
   FUN_140067790();
   FUN_14004e770(a1);
@@ -798,7 +798,7 @@ void FUN_14004ecb0(cri_u64 a1)
 }
 
 // @0x14004ecd0
-cri_u32 FUN_14004ecd0(cri_u64 a1,cri_u32 a2)
+cri_u32 SJMEM_GetNumData(cri_u64 a1,cri_u32 a2)
 {
   cri_u32 u_v1;
   
@@ -809,7 +809,7 @@ cri_u32 FUN_14004ecd0(cri_u64 a1,cri_u32 a2)
 }
 
 // @0x14004ed10
-void FUN_14004ed10(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
+void SJMEM_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   FUN_140067790();
   FUN_14004e820((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
@@ -818,7 +818,7 @@ void FUN_14004ed10(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 }
 
 // @0x14004ed60
-void FUN_14004ed60(cri_u64 a1,cri_u32 a2,cri_u64 a3)
+void SJMEM_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004e8c0((longlong)a1,(int)a2,(longlong *)a3);
@@ -827,7 +827,7 @@ void FUN_14004ed60(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 }
 
 // @0x14004eda0
-void FUN_14004eda0(cri_u64 a1,cri_u32 a2,cri_u64 a3)
+void SJMEM_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004e940((longlong)a1,(int)a2,(longlong *)a3);
@@ -836,7 +836,7 @@ void FUN_14004eda0(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 }
 
 // @0x14004ede0
-cri_u32 FUN_14004ede0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
+cri_u32 SJMEM_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   cri_u32 u_v1;
   
@@ -847,7 +847,7 @@ cri_u32 FUN_14004ede0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 }
 
 // @0x14004ee40
-cri_u64 FUN_14004ee40(cri_u64 a1)
+cri_u64 SJMEM_GetBufPtr(cri_u64 a1)
 {
   cri_u64 u_v1;
   
@@ -858,7 +858,7 @@ cri_u64 FUN_14004ee40(cri_u64 a1)
 }
 
 // @0x14004ee70
-cri_u32 FUN_14004ee70(cri_u64 a1)
+cri_u32 SJMEM_GetBufSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
@@ -909,7 +909,7 @@ void FUN_14004ef20(cri_u64 a1,cri_u64 a2)
 }
 
 // @0x14004ef80
-void FUN_14004ef80(void)
+void sjrbf_Init(void)
 {
   if (DAT_143badb30 == 0) {
     memset(&DAT_143fe84e0,0,0x13800);
@@ -918,7 +918,7 @@ void FUN_14004ef80(void)
 }
 
 // @0x14004efc0
-void FUN_14004efc0(void)
+void sjrbf_Finish(void)
 {
   DAT_143badb30 = DAT_143badb30 + -1;
   if (DAT_143badb30 == 0) {
@@ -1331,21 +1331,21 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3)
 }
 
 // @0x14004f8a0
-void FUN_14004f8a0(void)
+void SJRBF_Init(void)
 {
   _DAT_143badb28 = cri_conv("\nSJ/PCx64 Ver.6.48 Build:Jan 13 2012 18:30:46\n");
   FUN_140067700();
   FUN_140067790();
-  FUN_14004ef80();
+  sjrbf_Init();
   FUN_1400677c0();
   return;
 }
 
 // @0x14004f8d0
-void FUN_14004f8d0(void)
+void SJRBF_Finish(void)
 {
   FUN_140067790();
-  FUN_14004efc0();
+  sjrbf_Finish();
   FUN_1400677c0();
   FUN_140067750();
   return;
@@ -1427,7 +1427,7 @@ void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4)
 }
 
 // @0x14004fa80
-void FUN_14004fa80(cri_u64 a1)
+void SJRBF_Destroy(cri_u64 a1)
 {
   FUN_140067790();
   FUN_14004f000(a1);
@@ -1436,7 +1436,7 @@ void FUN_14004fa80(cri_u64 a1)
 }
 
 // @0x14004faa0
-cri_u64 FUN_14004faa0(cri_u64 a1)
+cri_u64 SJRBF_GetUuid(cri_u64 a1)
 {
   cri_u64 u_v1;
   
@@ -1447,7 +1447,7 @@ cri_u64 FUN_14004faa0(cri_u64 a1)
 }
 
 // @0x14004fad0
-void FUN_14004fad0(cri_u64 a1,cri_u64 a2,cri_u64 a3)
+void SJRBF_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004f0b0(a1,a2,a3);
@@ -1456,7 +1456,7 @@ void FUN_14004fad0(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 }
 
 // @0x14004fb10
-void FUN_14004fb10(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4)
+void SJRBF_EntryPutFunc(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4)
 {
   FUN_140067790();
   FUN_14004f0f0(a1,a2,a3,a4);
@@ -1465,7 +1465,7 @@ void FUN_14004fb10(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4)
 }
 
 // @0x14004fb60
-void FUN_14004fb60(cri_u64 a1)
+void SJRBF_Reset(cri_u64 a1)
 {
   FUN_140067790();
   FUN_14004f150(a1);
@@ -1474,7 +1474,7 @@ void FUN_14004fb60(cri_u64 a1)
 }
 
 // @0x14004fb80
-cri_u32 FUN_14004fb80(cri_u64 a1,cri_u32 a2)
+cri_u32 SJRBF_GetNumData(cri_u64 a1,cri_u32 a2)
 {
   cri_u32 u_v1;
   
@@ -1485,7 +1485,7 @@ cri_u32 FUN_14004fb80(cri_u64 a1,cri_u32 a2)
 }
 
 // @0x14004fbc0
-void FUN_14004fbc0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
+void SJRBF_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   FUN_140067790();
   FUN_14004f220((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
@@ -1494,7 +1494,7 @@ void FUN_14004fbc0(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 }
 
 // @0x14004fc10
-void FUN_14004fc10(cri_u64 a1,cri_u32 a2,cri_u64 a3)
+void SJRBF_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004f350((longlong)a1,(int)a2,(longlong *)a3);
@@ -1503,7 +1503,7 @@ void FUN_14004fc10(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 }
 
 // @0x14004fc50
-void FUN_14004fc50(cri_u64 a1,cri_u32 a2,cri_u64 a3)
+void SJRBF_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
   FUN_140067790();
   FUN_14004f490((longlong)a1,(int)a2,(longlong *)a3);
@@ -1512,7 +1512,7 @@ void FUN_14004fc50(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 }
 
 // @0x14004fc90
-cri_u32 FUN_14004fc90(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
+cri_u32 SJRBF_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   cri_u32 u_v1;
   
@@ -1523,7 +1523,7 @@ cri_u32 FUN_14004fc90(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 }
 
 // @0x14004fcf0
-cri_u64 FUN_14004fcf0(cri_u64 a1)
+cri_u64 SJRBF_GetBufPtr(cri_u64 a1)
 {
   cri_u64 u_v1;
   
@@ -1534,7 +1534,7 @@ cri_u64 FUN_14004fcf0(cri_u64 a1)
 }
 
 // @0x14004fd20
-cri_u32 FUN_14004fd20(cri_u64 a1)
+cri_u32 SJRBF_GetBufSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
@@ -1545,7 +1545,7 @@ cri_u32 FUN_14004fd20(cri_u64 a1)
 }
 
 // @0x14004fd50
-cri_u32 FUN_14004fd50(cri_u64 a1)
+cri_u32 SJRBF_GetXtrSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
@@ -1556,7 +1556,7 @@ cri_u32 FUN_14004fd50(cri_u64 a1)
 }
 
 // @0x14004fd80
-void FUN_14004fd80(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4)
+void SJRBF_SetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4)
 {
   FUN_140067790();
   FUN_14004f7f0(a1,a2,a3,a4);
@@ -1565,7 +1565,7 @@ void FUN_14004fd80(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4)
 }
 
 // @0x14004fdd0
-cri_u32 FUN_14004fdd0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
+cri_u32 SJRBF_GetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 {
   cri_u32 u_v1;
   
@@ -1576,7 +1576,7 @@ cri_u32 FUN_14004fdd0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 }
 
 // @0x14004fe20
-cri_u64 FUN_14004fe20(cri_u64 a1,cri_u32 a2,cri_u32 a3)
+cri_u64 SJRBF_Create(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 {
   cri_u64 u_v1;
   
@@ -1587,7 +1587,7 @@ cri_u64 FUN_14004fe20(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 }
 
 // @0x14004fe70
-cri_u64 FUN_14004fe70(cri_u64 a1,cri_u32 a2)
+cri_u64 SJRBF_CreateHndl(cri_u64 a1,cri_u32 a2)
 {
   cri_u64 u_v1;
   
@@ -1598,7 +1598,7 @@ cri_u64 FUN_14004fe70(cri_u64 a1,cri_u32 a2)
 }
 
 // @0x14004feb0
-void FUN_14004feb0(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4)
+void SJRBF_SetBuffer(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4)
 {
   FUN_140067790();
   FUN_14004fa50(a1,a2,a3,a4);
@@ -1607,7 +1607,7 @@ void FUN_14004feb0(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4)
 }
 
 // @0x14004ff00
-void FUN_14004ff00(void)
+void MPVERR_Init(void)
 {
   // The exe calls this from another obj, so the call stays even though it does nothing. The barrier emits no code; it
   // only stops VC9 from dropping the same-TU calls.
@@ -1648,7 +1648,7 @@ cri_u32 FUN_14004ff50(longlong a1,cri_u32 a2)
 }
 
 // @0x14004ff90
-cri_u32 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
+cri_u32 MPV_SetErrFunc(longlong a1,cri_u64 a2,cri_u64 a3)
 {
   cri_u64 *pu_v2;
   
@@ -1667,7 +1667,7 @@ cri_u32 FUN_14004ff90(longlong a1,cri_u64 a2,cri_u64 a3)
 }
 
 // @0x140050000
-cri_u32 FUN_140050000(longlong a1,cri_u64 *a2)
+cri_u32 MPV_GetErrInf(longlong a1,cri_u64 *a2)
 {
   struct Q { cri_u64 q[4]; };
   if (a1 == 0) {
@@ -1683,7 +1683,7 @@ cri_u32 FUN_140050000(longlong a1,cri_u64 *a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400500b0
-void FUN_1400500b0(uint a1,longlong a2)
+void MPV_SetDlgPara(uint a1,longlong a2)
 {
   struct Entry { cri_u32 A, B, C; };
   Entry *src = (Entry *)a2;
@@ -1702,7 +1702,7 @@ void FUN_1400500b0(uint a1,longlong a2)
 }
 
 // @0x140050100
-void FUN_140050100(void)
+void mpvmulti_SetDlgPara(void)
 {
   struct Ch { longlong Handle; cri_u8 Reserved08[0xf8]; };
   struct Cfg { cri_u32 Value[3]; };
@@ -1727,21 +1727,21 @@ void FUN_140050100(void)
 }
 
 // @0x1400501d0
-void FUN_1400501d0(void)
+void mpvmulti_lock(void)
 {
   FUN_1400683d0((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
 // @0x1400501e0
-void FUN_1400501e0(void)
+void mpvmulti_unlock(void)
 {
   FUN_140068430((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
 // @0x1400501f0
-DWORD FUN_1400501f0(void)
+DWORD mpvmulti_GetNumberOfProcessors(void)
 {
   _SYSTEM_INFO loc_38;
   
@@ -1751,7 +1751,7 @@ DWORD FUN_1400501f0(void)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050210
-void FUN_140050210(longlong a1,uint a2)
+void MPVMULTI_SetProcessorMask(longlong a1,uint a2)
 {
   int i_v1;
   uint u_v2;
@@ -1761,7 +1761,7 @@ void FUN_140050210(longlong a1,uint a2)
   
   if (CriAt<uint>(a1, 0x10) != a2) {
     CriAt<uint>(a1, 0x10) = a2;
-    i_v1 = FUN_1400501f0();
+    i_v1 = mpvmulti_GetNumberOfProcessors();
     u_v5 = (ulonglong)DAT_143badbdc;
     i_v3 = 0;
     u_v2 = 0;
@@ -1790,14 +1790,14 @@ joined_r0x00014005024e:
 void FUN_140050280(longlong a1)
 {
   CriAt<cri_u32>(a1, 0x14) = 1;
-  FUN_1400501d0();
+  mpvmulti_lock();
   CriAt<cri_u32>(a1, 0x88) = 0x96;
-  FUN_1400501e0();
+  mpvmulti_unlock();
   return;
 }
 
 // @0x1400502b0
-int * FUN_1400502b0(void)
+int * mpvmulti_CreateMulti(void)
 {
   struct Obj { int Used; cri_u8 Reserved04[0x4d84]; };
   Obj *obj = (Obj *)DAT_143c490f0;
@@ -1816,7 +1816,7 @@ int * FUN_1400502b0(void)
 }
 
 // @0x140050310
-void FUN_140050310(cri_u32 *a1)
+void MPVMULTI_Destroy(cri_u32 *a1)
 {
   *a1 = 0;
   return;
@@ -1863,7 +1863,7 @@ cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3)
   int i;
   cri_u32 result;
 
-  FUN_1400501d0();
+  mpvmulti_lock();
   i = o->Next;
   if (i < o->Count) {
     if (i < o->Limit) {
@@ -1880,7 +1880,7 @@ cri_u32 FUN_1400503e0(longlong a1,void *a2,int *a3)
   else {
     result = 1;
   }
-  FUN_1400501e0();
+  mpvmulti_unlock();
   return result;
 }
 
@@ -1911,7 +1911,7 @@ void FUN_140050480(longlong a1,int a2,cri_u64 a3)
 }
 
 // @0x140050520
-void FUN_140050520(void)
+void MPVMULTI_Init(void)
 {
   struct Work { cri_u64 Handle; cri_u64 Reserved08; cri_u8 Area[0xf0]; };
   struct Slot { cri_u32 State; cri_u32 Id; cri_u32 Reserved08; };
@@ -1919,7 +1919,7 @@ void FUN_140050520(void)
   longlong h;
   
   DAT_143c49100 = DAT_143c49100 + 1;
-  if ((DAT_143c49100 == 1) && (1 < (int)FUN_1400501f0())) {
+  if ((DAT_143c49100 == 1) && (1 < (int)mpvmulti_GetNumberOfProcessors())) {
     DAT_143c490f8 = (cri_u64)FUN_1400682e0((__int64)&DAT_143badb88,0x30);
     // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
     DAT_143c490f0 = ((cri_u64)&DAT_143badf80 + 0x5f) & ~(cri_u64)0x7f;
@@ -1945,7 +1945,7 @@ void FUN_140050520(void)
 }
 
 // @0x140050670
-void FUN_140050670(void)
+void MPVMULTI_Finish(void)
 {
   struct Ch { longlong Handle; cri_u8 Reserved08[0xf8]; };
   longlong i;
@@ -1953,7 +1953,7 @@ void FUN_140050670(void)
 
   DAT_143c49100 = DAT_143c49100 + -1;
   if (DAT_143c49100 == 0) {
-    if ((int)FUN_1400501f0() <= 1) {
+    if ((int)mpvmulti_GetNumberOfProcessors() <= 1) {
       return;
     }
     if (DAT_143c490f8 != 0) {
@@ -1980,14 +1980,14 @@ void FUN_140050670(void)
 }
 
 // @0x140050730
-longlong FUN_140050730(void)
+longlong MPVMULTI_Create(void)
 {
   int i_v1;
   longlong l_v2;
   
-  i_v1 = FUN_1400501f0();
+  i_v1 = mpvmulti_GetNumberOfProcessors();
   if (1 < i_v1) {
-    l_v2 = (longlong)FUN_1400502b0();
+    l_v2 = (longlong)mpvmulti_CreateMulti();
     if (l_v2 == 0) {
       FUN_14004ff50(0,0xff030601);
     }
@@ -2000,7 +2000,7 @@ longlong FUN_140050730(void)
 }
 
 // @0x140050770
-void FUN_140050770(longlong *a1)
+void mpvmulti_DecServer(longlong *a1)
 {
   struct Out { int Base; int Size; int Offset; int Start; int End; int Last; };
   struct Funcs { void (*Read)(longlong obj,void *info,Out *out); };
@@ -2031,7 +2031,7 @@ void FUN_140050770(longlong *a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140050820
-cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
+cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 {
   cri_u64 u_v1;
   int i_v2;
@@ -2061,7 +2061,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   }
   CriAt<cri_u32>(a4, 0x1c) = 1;
   local_res18 = a3;
-  FUN_140050100();
+  mpvmulti_SetDlgPara();
   CriAt<cri_u64>(a1, 0x8) = a4[1];
   CriAt<cri_u32>(a1, 0x88) = 0;
   CriAt<cri_u32>(a1, 0x108) = 0x96;
@@ -2108,7 +2108,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
         pl_v10[-1] = a1;
         l_v7 = (*CriAt<code *>(l_v7, 0x8))(u_v1,i_v14);
         *pl_v10 = l_v7;
-        u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),(unsigned __int64)FUN_140050770,
+        u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),(unsigned __int64)mpvmulti_DecServer,
                               (unsigned __int64)(loc_88 + (longlong)i_v14 * 2));
         l_v7 = cri_conv(DAT_143c490e0);
         *(cri_u32 *)(DAT_143c490e0 + 8 + u_v9) = u_v4;
@@ -2126,7 +2126,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   }
   loc_88[1] = *a4;
   loc_88[0] = a1;
-  FUN_140050770(loc_88);
+  mpvmulti_DecServer(loc_88);
   if ((CriAt<int>(a1, 0x14) != 0) && (0 < l_v13)) {
     pl_v10 = loc_88 + 3;
     l_v7 = l_v13;
@@ -2163,7 +2163,7 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 }
 
 // @0x140050b30
-cri_u32 FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3)
+cri_u32 MPV_SkipFrm(cri_u64 a1,cri_u64 *a2,int *a3)
 {
   cri_u64 base;
   int size;
@@ -2188,7 +2188,7 @@ cri_u32 FUN_140050b30(cri_u64 a1,cri_u64 *a2,int *a3)
 }
 
 // @0x140050bc0
-void FUN_140050bc0(void)
+void MPVFRM_Init(void)
 {
   // The exe calls this from another obj, so the call stays even though it does nothing. The barrier emits no code; it
   // only stops VC9 from dropping the same-TU calls.
@@ -2227,13 +2227,13 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
     i_v6 = CriAt<int>(a1, 0x162c);
     i_v3 = CriAt<int>(a1, 0x1630);
     memcpy((&CriAt<cri_u8>(a1, 0x1638)),a3,0x78);
-    FUN_1400657a0(a1);
+    MPVUMC_InitOutRfb(a1);
     FUN_140067420(a1);
     FUN_140067470(a1);
     FUN_140066f80(a1);
     FUN_140067210(a1);
     u_v7 = ((cri_u32 (*)(longlong,cri_u64))FUN_140065450)(a1,a2);  // the exe uses only the low half of the cri_u64 result
-    ((void (*)(longlong))FUN_1400657e0)(a1);  // the exe still passes a1 to the void(void) definition
+    ((void (*)(longlong))MPVUMC_EndOfFrame)(a1);  // the exe still passes a1 to the void(void) definition
     memcpy(*(void **)((longlong)a3 + 0x60),(&CriAt<cri_u8>(a1, 0x1598)),0x80);
     if (CriAt<int>(a1, 0x1568) != 0) {
       **(int **)((longlong)a3 + 0x60) = (CriAt<int>(a1, 0x1598) + 7) / 8;
@@ -2274,7 +2274,7 @@ cri_u32 FUN_140050e00(cri_u64 a1,cri_u64 a2)
 }
 
 // @0x140050e90
-void FUN_140050e90(longlong a1)
+void MPV_RequestStop(longlong a1)
 {
   int i_v1;
   
@@ -2285,7 +2285,7 @@ void FUN_140050e90(longlong a1)
   }
   CriAt<cri_u32>(a1, 0x18f0) = 1;
   if (CriAt<int>(a1, 0x17b8) == 2) {
-    FUN_140062ab0(a1);
+    MPVM2V_RequestStop(a1);
   }
   if (CriAt<longlong>(a1, 0x18f8) != 0) {
     FUN_140050280(CriAt<longlong>(a1, 0x18f8));
@@ -2294,7 +2294,7 @@ void FUN_140050e90(longlong a1)
 }
 
 // @0x140050ef0
-cri_u32 FUN_140050ef0(cri_u64 a1,cri_u64 *a2,int *a3,cri_u64 a4)
+cri_u32 MPV_DecodeFrm(cri_u64 a1,cri_u64 *a2,int *a3,cri_u64 a4)
 {
   cri_u32 u_v1;
   int i_v2;
@@ -2339,7 +2339,7 @@ void FUN_140050f90(cri_u64 *a1,ulonglong a2)
 }
 
 // @0x140050fc0
-void FUN_140050fc0(void)
+void MPVHDEC_Init(void)
 {
   FUN_140050f90(&DAT_143c493a0,0x50);
   FUN_140050f90(&DAT_143c491b0,0xa0);
@@ -2365,7 +2365,7 @@ void FUN_140050fc0(void)
   _DAT_143c49268 = cri_conv(FUN_142ccca50);
   _DAT_143c492c8 = cri_conv(FUN_142ccca90);
   _DAT_143c493b0 = cri_conv(FUN_142cccb30);
-  _DAT_143c49408 = cri_conv(FUN_142cccad0);
+  _DAT_143c49408 = cri_conv(MPVUMC_BiDirect);
   _DAT_143c49118 = cri_conv(FUN_140068cc0);
   _DAT_143c49120 = cri_conv(FUN_140068cc0);
   _DAT_143c49128 = cri_conv(FUN_140068d50);
@@ -2410,7 +2410,7 @@ __declspec(noinline) void FUN_1400511d0(longlong a1,cri_u64 a2,cri_u32 a3)
 }
 
 // @0x1400511f0
-void FUN_1400511f0(longlong a1,cri_u64 *a2,cri_u32 *a3)
+void MPV_GetPicUsr(longlong a1,cri_u64 *a2,cri_u32 *a3)
 {
   if (a2 != (cri_u64 *)0x0) {
     *a2 = CriAt<cri_u64>(a1, 0x18b8);
@@ -2492,14 +2492,14 @@ void FUN_140051330(longlong a1)
   if (i_v1 == 0) {
     i_v1 = 1;
   }
-  FUN_140064dd0(a1 + 0xc00,*(cri_u64 *)(&DAT_143d749a0 + (longlong)i_v1 * 8),0x10);
+  UTY_MemcpyDword(a1 + 0xc00,*(cri_u64 *)(&DAT_143d749a0 + (longlong)i_v1 * 8),0x10);
   return;
 }
 
 // @0x140051360
 void FUN_140051360(longlong a1)
 {
-  FUN_140064f70(a1 + 0xc40,0x10101010,0x10);
+  UTY_MemsetDword(a1 + 0xc40,0x10101010,0x10);
   return;
 }
 
@@ -2843,7 +2843,7 @@ cri_u32 FUN_140051c10(longlong a1,longlong a2,int a3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140051d20
-void FUN_140051d20(longlong *a1,int *a2,int *a3)
+void MPVHDEC_GoNextDelim(longlong *a1,int *a2,int *a3)
 {
   longlong l_v1;
   int i_v2;
@@ -3456,7 +3456,7 @@ done:
 }
 
 // @0x140052c80
-cri_u32 FUN_140052c80(cri_u64 a1,cri_u64 *a2,int *a3)
+cri_u32 MPV_DecodePicAtr(cri_u64 a1,cri_u64 *a2,int *a3)
 {
   cri_u32 u_v1;
   int i_v2;
@@ -3476,7 +3476,7 @@ cri_u32 FUN_140052c80(cri_u64 a1,cri_u64 *a2,int *a3)
 }
 
 // @0x140052d00
-cri_u32 FUN_140052d00(longlong a1,int *a2)
+cri_u32 MPV_GetPicAtr(longlong a1,int *a2)
 {
   if (FUN_14004e0a0(a1) != 0) {
     return FUN_14004ff50(0,0xff03020c);
@@ -3492,7 +3492,7 @@ cri_u32 FUN_140052d00(longlong a1,int *a2)
 }
 
 // @0x140052da0
-cri_u32 FUN_140052da0(longlong a1,cri_u32 *a2)
+cri_u32 MPV_GetBitRate(longlong a1,cri_u32 *a2)
 {
   if (FUN_14004e0a0(a1) != 0) {
     return FUN_14004ff50(0,0xff03020d);
@@ -3502,7 +3502,7 @@ cri_u32 FUN_140052da0(longlong a1,cri_u32 *a2)
 }
 
 // @0x140052df0
-cri_u32 FUN_140052df0(longlong a1,int *a2,cri_u32 *a3,int *a4)
+cri_u32 MPV_GetVbvBufSiz(longlong a1,int *a2,cri_u32 *a3,int *a4)
 {
   if (FUN_14004e0a0(a1) != 0) {
     return FUN_14004ff50(0,0xff03020f);
@@ -3519,7 +3519,7 @@ cri_u32 FUN_140052df0(longlong a1,int *a2,cri_u32 *a3,int *a4)
 }
 
 // @0x140052e90
-cri_u32 FUN_140052e90(longlong a1,cri_u32 *a2,cri_u32 *a3)
+cri_u32 MPV_GetLinkFlg(longlong a1,cri_u32 *a2,cri_u32 *a3)
 {
   if (FUN_14004e0a0(a1) != 0) {
     return FUN_14004ff50(0,0xff03020e);
@@ -3569,7 +3569,7 @@ void FUN_140052ef0(cri_u8 *a1)
   }
 }
 
-int FUN_140052fa0(void);
+int MPVDELI_Init(void);
 
 long FUN_140053000(cri_u8 *a1);
 
@@ -3585,24 +3585,24 @@ cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4);
 long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5);
 #pragma optimize("", on)
 
-void FUN_1400532b0(void);
+void criAdec_Initialize(void);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-void FUN_1400532d0(void);
+void criAdec_Finalize(void);
 
 int FUN_1400532e0(int a1);
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-cri_u64 * FUN_140053340(cri_u64 a1,uint a2,cri_u32 a3);
+cri_u64 * criAdec_Create(cri_u64 a1,uint a2,cri_u32 a3);
 #pragma intrinsic(memset)
 
 void FUN_140053470(cri_u64 *a1);
 
 void FUN_1400534d0(void* a1);
 
-void FUN_1400534f0(longlong a1,cri_u64 a2);
+void criAdec_SetInputSj(longlong a1,cri_u64 a2);
 
-void FUN_140053510(longlong a1,uint a2,cri_u64 a3);
+void criAdec_SetOutputSj(longlong a1,uint a2,cri_u64 a3);
 
 void FUN_140053540(longlong a1);
 
@@ -3612,7 +3612,7 @@ void FUN_1400535b0(longlong a1,int *a2);
 
 long FUN_140053630(void* a1);
 
-cri_u64 FUN_140053650(longlong a1);
+cri_u64 criAadx_Execute(longlong a1);
 
 // The 0x74-byte ADX header at player+0x28 (layout from the stores in 0x140053e60).
 struct AdxHdr {
@@ -3632,16 +3632,16 @@ void FUN_1400536d0(longlong a1);
 
 void FUN_140053880(longlong a1);
 
-void FUN_140053e40(longlong a1);
+void criAdec_TerminateSupply(longlong a1);
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-void FUN_140053e60(void* a1, unsigned long a2, unsigned long a3, unsigned long a4);
+void criAadx_InsertDummyHeader(void* a1, unsigned long a2, unsigned long a3, unsigned long a4);
 #pragma intrinsic(memset)
 
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 #pragma optimize("", on)
 
-void FUN_140054080(void);
+void m2vidct_InitIdctTbls(void);
 
 void FUN_1400540d0(void);
 
