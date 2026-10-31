@@ -1240,7 +1240,9 @@ void FUN_140013a20(UByte* result, Scaleform::GFx::AS3::Value* input)
     *result = input->Convert2Boolean();
 }
 
-// MS2-FUNCTIONAL: transfers the object reference into the AS3 Value using the recovered Pick operation.
+// MS2-FUNCTIONAL: transfers the object reference into the AS3 Value through Value::Pick. The exe calls Pick from a
+// frame (sub rsp; call; add rsp); ours tail-jumps, and neither optimize("t", off) nor optimize("g", off) gives the
+// exe's form.
 // @0x140013790
 void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Object* object)
 {
@@ -2232,7 +2234,7 @@ void FUN_140014810(void* self, const void* result, double value)
 void FUN_140014b50(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method class_::NetStream::resetDRMVouchers() is not implemented\n"); }
 
-// MS2-FUNCTIONAL: reads the indexed AS3 value, maps an empty object-like value to the null string, otherwise stringifies it.
+// reads the indexed AS3 value, maps an empty object-like value to the null string, otherwise stringifies it.
 // BEHAVIOUR FIX: the null-object test read +8 (the weak proxy) in place of the object pointer at +0x10, so a live
 // object with no weak proxy came back as the null string and was never stringified.
 // @0x140015af0
@@ -2245,7 +2247,7 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
     // The object pointer of kinds 0xc-0xf is at +0x10 (+8 holds the weak proxy).
     const unsigned tag = *reinterpret_cast<const unsigned*>(value) & 0x1f;
     bool isNullObject = false;
-    if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void* const*>(value + 0x10) == 0;
+    if (tag >= 0x0c && tag <= 0x0f) isNullObject = *reinterpret_cast<void* const*>(value + 0x10) == 0;
     if (isNullObject)
     {
         result->SetNull();
@@ -2272,19 +2274,19 @@ void* FUN_140012f10(void* object, void* traits)
     return object;
 }
 
-// MS2-FUNCTIONAL: constructs the native AS2 function object with the executable's video constructor callback and tables.
+// constructs the native AS2 function object with the executable's video constructor callback and tables.
 // @0x14000ecc0
 Scaleform::GFx::AS2::CFunctionObject* FUN_14000ecc0(
     Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
 {
     extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
     FUN_142919df0(object, context, FUN_14000e100);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5fb0;
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b5f20;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5fb0;
     return object;
 }
 
-// MS2-FUNCTIONAL: constructs the frame-rate native function object and installs its executable tables.
+// constructs the frame-rate native function object and installs its executable tables.
 // @0x140012650
 Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
@@ -2292,8 +2294,8 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     extern void FUN_140012340(const Scaleform::GFx::AS2::FnCall&);
     extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
     FUN_142919df0(object, context, FUN_140012340);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b67d0;
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b6740;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b67d0;
     return object;
 }
 
