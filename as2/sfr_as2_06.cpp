@@ -2676,12 +2676,16 @@ void ActionBufferData::Read(Stream* pin, unsigned length)
 
 } // namespace AS2
 
+inline bool MovieImpl::IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const
+{
+    Ptr<InteractiveObject> focused = FocusGroups[FocusGroupIndexes[controllerIdx]].LastFocused;
+    return focused.GetPtr() == ch;
+}
+
 // @0x142965bb0
 bool MovieImpl::IsKeyboardFocused(const InteractiveObject* ch, unsigned controllerIdx) const
 {
-    const unsigned group = FocusGroupIndexes[controllerIdx];
-    Ptr<InteractiveObject> focused = FocusGroups[group].LastFocused;
-    return focused.GetPtr() == ch && FocusGroups[group].FocusRectShown;
+    return IsFocused(ch, controllerIdx) && IsFocusRectShown(controllerIdx);
 }
 
 // The host side of AS2 values; only the members recovered in this unit.
@@ -2753,26 +2757,43 @@ bool CSSHolder_HasStyleSheet(const void* pholder)
     return *reinterpret_cast<void* const*>(static_cast<const UByte*>(pholder) + 0x40) != 0;
 }
 
-// MS2-FUNCTIONAL: the environment is read through GetLevel0Environment
+// The SDK's Value_AS2ObjectData (sfr_as2_03g 0x142923f30), which the exe inlines here.
+struct InlineAS2ObjectData
+{
+    AS2::ObjectInterface* pObject;
+    AS2::Environment*     pEnv;
+    AS2::MovieRoot*       pRoot;
+
+    SF_FORCEINLINE InlineAS2ObjectData(MovieImpl* pmovie, void* pdata, bool isdobj)
+    {
+        pRoot   = static_cast<AS2::MovieRoot*>(pmovie->pASMovieRoot);
+        pEnv    = GetLevel0Environment(pRoot->pMovieImpl);
+        pObject = static_cast<AS2::ObjectInterface*>(pdata);
+        if (isdobj)
+        {
+            DisplayObject* d = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovie);
+            if (!d)
+            {
+                pObject = 0;
+                return;
+            }
+            pObject = AS2::ToAvmCharacter(static_cast<InteractiveObject*>(d));
+        }
+    }
+};
+
+// MS2-FUNCTIONAL: the exe null-checks the character +8 adjust with cmove and loads the string manager before strlen
 // @0x14295d5e0
 bool AS2ValueObjectInterface::HasMember(void* pdata, const char* name, bool isCharacter) const
 {
-    AS2::MovieRoot* root = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
-    AS2::Environment* env = GetLevel0Environment(root->pMovieImpl);
-    AS2::ObjectInterface* object = static_cast<AS2::ObjectInterface*>(pdata);
-    if (isCharacter)
-    {
-        DisplayObject* displayObject = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-        if (!displayObject)
-            return false;
-        InteractiveObject* interactive = static_cast<InteractiveObject*>(displayObject);
-        object = static_cast<AS2::AvmCharacter*>(interactive->GetAvmIntObj());
-    }
-    if (!object)
+    InlineAS2ObjectData o(pMovieRoot, pdata, isCharacter);
+    if (!o.pObject)
         return false;
     // GetMember, not HasMember: the character's members (child clips, properties) only resolve through it
     AS2::Value member;
-    return object->GetMember(env, env->StringContext.CreateConstString(name), &member);
+    if (!o.pObject->GetMember(o.pEnv, o.pEnv->StringContext.CreateConstString(name), &member))
+        return false;
+    return true;
 }
 
 // The host's reference to a string node, a wide string, an AS object or a character handle.
@@ -2924,7 +2945,10 @@ __declspec(noinline) void GFx::AS2::PagedStack<Ptr<GFx::AS2::FunctionObject>, 32
         pPageStart   = ptop->Values;
         pPageEnd     = ptop->Values + 32;
         pCurrent     = pPageEnd - 1;
-        pPrevPageTop = Pages.GetSize() > 1 ? &Pages[Pages.GetSize() - 2]->Values[32 - 1] : pPageStart;
+        if (Pages.GetSize() > 1)
+            pPrevPageTop = Pages[Pages.GetSize() - 2]->Values + 32 - 1;
+        else
+            pPrevPageTop = pPageStart;
     }
     else
     {
