@@ -566,7 +566,7 @@ bool HAL::createDefaultRenderBuffer()
     return true;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x1427329c0
 void HAL::PopMask()
 {
@@ -581,10 +581,9 @@ void HAL::PopMask()
 
     // a clipped mask gives back the view it narrowed
     MaskStackTop--;
-    MaskStackEntry& e = MaskStack[MaskStackTop];
-    if (e.pPrimitive->IsClipped())
+    if (MaskStack[MaskStackTop].pPrimitive->IsClipped())
     {
-        ViewRect = e.OldViewRect;
+        ViewRect = MaskStack[MaskStackTop].OldViewRect;
         if (MaskStack[MaskStackTop].OldViewportValid)
             HALState |= HS_ViewValid;
         else
