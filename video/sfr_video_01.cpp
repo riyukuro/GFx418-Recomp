@@ -1353,12 +1353,12 @@ void FUN_1400068d0(void* records, Scaleform::UPInt count)
     }
 }
 
-// MS2-FUNCTIONAL: destroys every weak pair in the storage and releases the array allocation.
+// destroys every weak pair in the storage and releases the array allocation
 // @0x140006e20
 void FUN_140006e20(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (fields[1]) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
@@ -1544,12 +1544,12 @@ void FUN_140007270(void** array, void** value)
     ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
 }
 
-// MS2-FUNCTIONAL: destroys weak-pair records and releases their backing allocation.
+// destroys weak-pair records and releases their backing allocation
 // @0x1400072c0
 void FUN_1400072c0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (*array) FUN_1400068d0(*array, fields[1]);
+    FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
 
@@ -2462,14 +2462,6 @@ void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
                    int operation)
 {
     Video01DispatchGc(object, collector, operation, FUN_14000dc30, FUN_14000d870, FUN_14000d9c0);
-}
-
-// MS2-FUNCTIONAL: dispatches release, mark, and scan passes for the AS2 video object.
-// @0x140007f70
-void FUN_140007f70(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
-                   int operation)
-{
-    Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
 // @0x14000dd50
@@ -4092,6 +4084,28 @@ FunctionRef FUN_14000cf20(GlobalContext* global)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// A view that reaches the collector's protected pass functors (never constructed).
+struct Video01NetStreamGc : Scaleform::GFx::AS2::NetStream
+{
+    static __forceinline void Dispatch(const Scaleform::GFx::AS2::NetStream* stream, Collector* collector, int operation)
+    {
+        switch (operation)
+        {
+        case 0: stream->ForEachChild_GC<ReleaseFunctor>(collector); break;
+        case 1: stream->ForEachChild_GC<MarkInCycleFunctor>(collector); break;
+        case 2: stream->ForEachChild_GC<ScanInUseFunctor>(collector); break;
+        }
+    }
+};
+
+// A second copy of NetStream::ExecuteForEachChild_GC (0x140007fb0): the collector passes over a NetStream's children.
+// @0x140007f70
+void FUN_140007f70(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
+                   int operation)
+{
+    Video01NetStreamGc::Dispatch(static_cast<const Scaleform::GFx::AS2::NetStream*>(object), collector, operation);
+}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 // The video object vtable points at these small AS2 base implementations in the executable.
