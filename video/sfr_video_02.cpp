@@ -750,19 +750,24 @@ void FUN_140011120(void** parray, UInt32 value)
 // BEHAVIOUR FIX: reserves through ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70) like the exe, not
 // FUN_1425eec50 (the 16-byte-element FillStyleType ResizeNoConstruct, about 25 times the memory). The shrink branch
 // now reserves when the size drops below half the capacity, as the exe does; it was inverted (unreachable after +1).
+// the SDK ArrayDataBase::ResizeNoConstruct, inlined into its PushBack caller
+static __forceinline void Video02ResizeBytes(unsigned __int64* array, unsigned __int64 newSize)
+{
+    if (newSize < array[1])
+    {
+        if (newSize < (array[2] >> 1))
+            FUN_142522c70(array, array, newSize);
+    }
+    else if (newSize >= array[2])
+        FUN_142522c70(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
+}
+
 // @0x140010f60
 void FUN_140010f60(unsigned __int64* array, const UByte* value)
 {
-    unsigned __int64 nextSize = array[1] + 1;
-    if (nextSize < array[1])
-    {
-        if (nextSize < (array[2] >> 1))
-            FUN_142522c70(array, array, nextSize);
-    }
-    else if (nextSize >= array[2])
-        FUN_142522c70(array, array, nextSize + (nextSize >> 2));
-    array[1] = nextSize;
-    UByte* slot = reinterpret_cast<UByte*>(array[0]) + nextSize - 1;   // placement construction of the new last byte
+    Video02ResizeBytes(array, array[1] + 1);
+    UByte* slot = reinterpret_cast<UByte*>(array[0]) + array[1] - 1;   // placement construction of the new last byte
     if (slot) *slot = *value;
 }
 
