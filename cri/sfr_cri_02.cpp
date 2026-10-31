@@ -641,7 +641,7 @@ VideoDecoderThrd::VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority pri
 // nothing virtual runs between it and ~RefCountNTSImplCore, so the store is dead.
 // MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002b2e0
-VideoDecoderThrd::~VideoDecoderThrd()
+__declspec(noinline) VideoDecoderThrd::~VideoDecoderThrd()
 {
     if (pDecodeThread)
         FUN_14257dcb0(pDecodeThread);
@@ -2002,6 +2002,13 @@ void FUN_14002d3f0(void* allocation)
     }
 }
 
+// The global heap's Free, inlined without the null test (the deleting dtors and the request pools).
+static inline void CriHeapFreeRaw(void* allocation)
+{
+    void* heap = DAT_143b15f60;
+    (*(void (__fastcall **)(void*, void*))(*(CriUint8**)heap + 0x60))(heap, allocation);
+}
+
 // Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a250
 void FUN_14002a250(const void* slot)
@@ -2168,63 +2175,57 @@ void* FUN_14002c780(void* object, void* source)
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the base reference-count state and conditionally free its storage.
 // @0x14002a2b0
-void* FUN_14002a2b0(void* object, CriUint64 flags)
+void* FUN_14002a2b0(void* object, CriUint32 flags)
 {
     FUN_14257db50(object);
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the alternate reference-count state and conditionally free its storage.
 // @0x14002ac70
-void* FUN_14002ac70(void* object, CriUint64 flags)
+void* FUN_14002ac70(void* object, CriUint32 flags)
 {
     FUN_142579470(object);
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the container's base object and optionally return its allocation to the heap.
 // @0x14002bac0
-void* FUN_14002bac0(void* object, CriUint64 flags)
+void* FUN_14002bac0(void* object, CriUint32 flags)
 {
     static_cast<Scaleform::GFx::Video::VideoDecoderThrd*>(object)->Scaleform::GFx::Video::VideoDecoderThrd::~VideoDecoderThrd();
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the second container base and optionally free its allocation.
 // @0x14002c8f0
-void* FUN_14002c8f0(void* object, CriUint64 flags)
+void* FUN_14002c8f0(void* object, CriUint32 flags)
 {
     static_cast<Scaleform::GFx::Video::VideoPlayerImpl*>(object)->Scaleform::GFx::Video::VideoPlayerImpl::~VideoPlayerImpl();
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the reader configuration and optionally release the containing block.
 // @0x14002e510
-void* FUN_14002e510(void* object, CriUint64 flags)
+void* FUN_14002e510(void* object, CriUint32 flags)
 {
     Scaleform::GFx::Video::FUN_14002e2a0(object);
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
-// MS2-FUNCTIONAL: run the shared refcount base cleanup and optionally release its allocation.
 // @0x14002d840
-void* FUN_14002d840(void* object, CriUint64 flags)
+void* FUN_14002d840(void* object, CriUint32 flags)
 {
     FUN_14257db50(object);
     if (flags & 1)
-        FUN_14002d3f0(object);
+        CriHeapFreeRaw(object);
     return object;
 }
 
@@ -2423,32 +2424,26 @@ CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
 
 static void CriReleaseRequestBlocks(CriMvRequestBlock* block)
 {
-    void* heap = DAT_143b15f60;
-    CriUint8* vtable = (CriUint8*)*(void**)heap;
-    void (__fastcall *release)(void*, void*) = *(void (__fastcall **)(void*, void*))(vtable + 0x60);
     while (block)
     {
         CriMvRequestBlock* next = block->NextBlock;
-        release(heap, block);
+        CriHeapFreeRaw(block);
         block = next;
     }
 }
 
-// MS2-FUNCTIONAL: release every request block from the first queue-pool instantiation.
 // @0x14002d930
 void FUN_14002d930(CriMvRequestPoolView* pool)
 {
     CriReleaseRequestBlocks(pool->FirstBlock);
 }
 
-// MS2-FUNCTIONAL: release every request block from the second queue-pool instantiation.
 // @0x14002dd80
 void FUN_14002dd80(CriMvRequestPoolView* pool)
 {
     CriReleaseRequestBlocks(pool->FirstBlock);
 }
 
-// MS2-FUNCTIONAL: release every request block from the third queue-pool instantiation.
 // @0x14002e010
 void FUN_14002e010(CriMvRequestPoolView* pool)
 {
