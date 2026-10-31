@@ -1429,19 +1429,14 @@ template void BuildVertexArray<D3D9::D3DVertexDeclBuilder>(const VertexFormat*, 
 
 namespace Scaleform { namespace Render { namespace D3D9 {
 
-// MS2-FUNCTIONAL: base vftable store order / the element copy differ
 // @0x142740f10
 SysVertexFormat::SysVertexFormat(IDirect3DDevice9* device, const VertexFormat* format, const VertexShaderDesc* vdesc)
     : pVDecl(0)
 {
     D3DVertexDeclBuilder builder(vdesc);
     BuildVertexArray(format, builder);
-    if (FAILED(device->CreateVertexDeclaration(builder.Elements, &pVDecl)))
-    {
-        if (pVDecl)
-            pVDecl->Release();
+    if (FAILED(device->CreateVertexDeclaration(builder.Elements, &pVDecl.GetRawRef())))
         pVDecl = 0;
-    }
     memcpy(VertexElements, builder.Elements, sizeof(VertexElements));
 }
 

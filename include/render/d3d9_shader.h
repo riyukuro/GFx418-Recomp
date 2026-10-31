@@ -168,13 +168,8 @@ class SysVertexFormat : public Render::SystemVertexFormat
 {
 public:
     SysVertexFormat(IDirect3DDevice9* device, const VertexFormat* format, const VertexShaderDesc* vdesc);   // 0x142740f10
-    virtual ~SysVertexFormat()
-    {
-        if (pVDecl)
-            pVDecl->Release();
-    }
 
-    IDirect3DVertexDeclaration9* pVDecl;              // +0x10
+    Ptr<IDirect3DVertexDeclaration9> pVDecl;          // +0x10
     D3DVERTEXELEMENT9            VertexElements[8];   // +0x18
 };
 
