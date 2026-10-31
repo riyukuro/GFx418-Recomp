@@ -1473,101 +1473,105 @@ void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
     }
 }
 
-// MS2-FUNCTIONAL: resize the first eight-byte vector flavor, using its three-quarter growth policy.
 // @0x14002a380
 void FUN_14002a380(void* array, void* source, CriUint64 length)
 {
     CriUint64* fields = (CriUint64*)array;
-    CriUint64 capacity = fields[2];
     if (length < fields[1])
     {
-        if (length < (capacity >> 1))
+        if (length < (fields[2] >> 1))
             FUN_140029bf0(array, source, length);
     }
-    else if (capacity <= length)
-        FUN_140029bf0(array, source, (length >> 2) + length);
+    else if (length >= fields[2])
+        FUN_140029bf0(array, source, length + (length >> 2));
     fields[1] = length;
 }
 
-// MS2-FUNCTIONAL: resize the second eight-byte vector flavor with its matching allocator helper.
 // @0x14002a3e0
 void FUN_14002a3e0(void* array, void* source, CriUint64 length)
 {
     CriUint64* fields = (CriUint64*)array;
-    CriUint64 capacity = fields[2];
-    if ((length < fields[1] && length < (capacity >> 1)) ||
-        (length >= fields[1] && capacity <= length))
-        FUN_140029c90(array, source, length < fields[1] ? length : (length >> 2) + length);
+    if (length < fields[1])
+    {
+        if (length < (fields[2] >> 1))
+            FUN_140029c90(array, source, length);
+    }
+    else if (length >= fields[2])
+        FUN_140029c90(array, source, length + (length >> 2));
     fields[1] = length;
 }
 
-// MS2-FUNCTIONAL: resize the third eight-byte vector flavor with its matching allocator helper.
 // @0x14002a440
 void FUN_14002a440(void* array, void* source, CriUint64 length)
 {
     CriUint64* fields = (CriUint64*)array;
-    CriUint64 capacity = fields[2];
-    if ((length < fields[1] && length < (capacity >> 1)) ||
-        (length >= fields[1] && capacity <= length))
-        FUN_140029d30(array, source, length < fields[1] ? length : (length >> 2) + length);
+    if (length < fields[1])
+    {
+        if (length < (fields[2] >> 1))
+            FUN_140029d30(array, source, length);
+    }
+    else if (length >= fields[2])
+        FUN_140029d30(array, source, length + (length >> 2));
     fields[1] = length;
 }
 
-// MS2-FUNCTIONAL: grow and append one entry to the first eight-byte vector flavor.
+// ArrayData::ResizeNoConstruct as the PushBacks inline it: newSize arrives by value, so Size is read again.
+typedef void (*CriArrayReserveFn)(void* array, void* source, CriUint64 capacity);
+static inline void CriArrayResizeNoConstruct(CriUint64* array, CriArrayReserveFn reserve, CriUint64 newSize)
+{
+    if (newSize < array[1])
+    {
+        if (newSize < (array[2] >> 1))
+            reserve(array, array, newSize);
+    }
+    else if (newSize >= array[2])
+        reserve(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
+}
+
 // @0x14002a780
 void FUN_14002a780(CriUint64* array, const CriUint64* value)
 {
-    CriUint64 length = array[1] + 1;
-    CriUint64 capacity = array[2];
-    if (length < array[1])
-    {
-        if ((capacity >> 1) <= length)
-            FUN_140029bf0(array, array, length);
-    }
-    else if (length >= capacity)
-        FUN_140029bf0(array, array, (length >> 2) + length);
-    array[1] = length;
-    *(CriUint64*)(array[0] - 8 + length * 8) = *value;
+    CriArrayResizeNoConstruct(array, FUN_140029bf0, array[1] + 1);
+    CriUint64* destination = (CriUint64*)array[0] + array[1] - 1;
+    if (destination)
+        *destination = *value;
 }
 
-// MS2-FUNCTIONAL: grow and append one entry to the second eight-byte vector flavor.
 // @0x14002a800
 void FUN_14002a800(CriUint64* array, const CriUint64* value)
 {
-    CriUint64 length = array[1] + 1;
-    CriUint64 capacity = array[2];
-    if (length < array[1])
-    {
-        if ((capacity >> 1) <= length)
-            FUN_140029c90(array, array, length);
-    }
-    else if (length >= capacity)
-        FUN_140029c90(array, array, (length >> 2) + length);
-    array[1] = length;
-    *(CriUint64*)(array[0] - 8 + length * 8) = *value;
+    CriArrayResizeNoConstruct(array, FUN_140029c90, array[1] + 1);
+    CriUint64* destination = (CriUint64*)array[0] + array[1] - 1;
+    if (destination)
+        *destination = *value;
 }
 
-// MS2-FUNCTIONAL: set the first vector's logical length and resize its backing store as needed.
 // @0x14002a880
 void FUN_14002a880(void* array, CriUint64 length)
 {
     CriUint64* fields = (CriUint64*)array;
-    if (length < fields[1] && length < (fields[2] >> 1))
-        FUN_140029d30(array, array, length);
-    else if (length >= fields[1] && fields[2] <= length)
-        FUN_140029d30(array, array, (length >> 2) + length);
+    if (length < fields[1])
+    {
+        if (length < (fields[2] >> 1))
+            FUN_140029d30(array, array, length);
+    }
+    else if (length >= fields[2])
+        FUN_140029d30(array, array, length + (length >> 2));
     fields[1] = length;
 }
 
-// MS2-FUNCTIONAL: set the second vector's logical length and resize through its allocator flavor.
 // @0x14002a9b0
 void FUN_14002a9b0(void* array, CriUint64 length)
 {
     CriUint64* fields = (CriUint64*)array;
-    if (length < fields[1] && length < (fields[2] >> 1))
-        FUN_140029bf0(array, array, length);
-    else if (length >= fields[1] && fields[2] <= length)
-        FUN_140029bf0(array, array, (length >> 2) + length);
+    if (length < fields[1])
+    {
+        if (length < (fields[2] >> 1))
+            FUN_140029bf0(array, array, length);
+    }
+    else if (length >= fields[2])
+        FUN_140029bf0(array, array, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1869,21 +1873,11 @@ CriUint32* FUN_14002c260(CriUint32* destination, const CriUint32* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: append a three-word record using the vector's twelve-byte element stride.
 // @0x14002a900
 void FUN_14002a900(CriUint64* array, const CriUint32* value)
 {
-    CriUint64 length = array[1] + 1;
-    CriUint64 capacity = array[2];
-    if (length < array[1])
-    {
-        if ((capacity >> 1) <= length)
-            FUN_140029d30(array, array, length);
-    }
-    else if (length >= capacity)
-        FUN_140029d30(array, array, (length >> 2) + length);
-    array[1] = length;
-    CriUint32* destination = (CriUint32*)(array[0] - 12 + length * 12);
+    CriArrayResizeNoConstruct(array, FUN_140029d30, array[1] + 1);
+    CriUint32* destination = (CriUint32*)(array[0] - 12 + array[1] * 12);
     if (destination)
     {
         destination[0] = value[0];
