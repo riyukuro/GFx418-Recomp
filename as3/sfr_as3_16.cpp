@@ -114,6 +114,8 @@ AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=
     }
     return *this;
 }
+// Traits' vtable holder releases through the out-of-line 0x142524290.
+template<> SF_NOINLINE void AutoPtr<GFx::AS3::VTable>::Reset(GFx::AS3::VTable* p, bool owner);
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -942,8 +944,7 @@ Class::~Class()
 {
 }
 
-// MS2-FUNCTIONAL: inlining differs: the exe inlines the InitScope ArrayDH dtor and calls AutoPtr<VTable>::Reset
-// out of line (0x142524290); cl does the opposite.
+// pVTable's release is the out-of-line AutoPtr<VTable>::Reset (0x142524290, declared above).
 // @0x1424df220
 Traits::~Traits()
 {
