@@ -128,41 +128,39 @@ namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // VM::GetValueTraits (exe body).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
+namespace Scaleform { namespace GFx { namespace AS3 {
+bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr);   // VM::IsOfType against class traits (sfr_as3_18)
+// The AvmButton state / stage / heap getters fold into these sfr_as3_17/18 accessors; MovieRoot::ExecuteActionQueue.
+void* Sfr33FirstEntry(const UByte* self);
+UPInt Sfr27AccFirst148(UPInt self);
+UPInt Sfr27AccFirst108(UPInt self);
+UPInt Sfr27AccFirstE8(UPInt self);
+UPInt Sfr27Acc14250edf0(UPInt self);
+UPInt Sfr27Acc14250a5c0(UPInt self);
+void  Sfr33ExecuteActionQueue(MovieRoot* proot, MovieRoot::ActionLevel lvl);
+}}} // namespace Scaleform::GFx::AS3
 // AvmButton::GetDownStateObject / GetHitStateObject / GetOverStateObject / GetUpStateObject (exe bodies).
-Scaleform::GFx::DisplayObject* FUN_142509970(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
-Scaleform::GFx::DisplayObject* FUN_14250a600(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
-Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
-Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+static inline Scaleform::GFx::DisplayObject* FUN_142509970(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr33FirstEntry((const Scaleform::UByte*)pavm); }
+static inline Scaleform::GFx::DisplayObject* FUN_14250a600(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27AccFirst148((Scaleform::UPInt)pavm); }
+static inline Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27AccFirst108((Scaleform::UPInt)pavm); }
+static inline Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27AccFirstE8((Scaleform::UPInt)pavm); }
 // AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
 void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
-// VM::IsOfType against class traits; MovieImpl::UpdateAllRenderNodes (exe bodies).
-bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
-                   const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
-void FUN_142577c60(Scaleform::GFx::MovieImpl* pmovie);
+// MovieImpl::UpdateAllRenderNodes (exe body).
+static inline void FUN_142577c60(Scaleform::GFx::MovieImpl * p0) { ((Scaleform::GFx::MovieImpl*)(p0))->UpdateAllRenderNodes(); }
 // AvmDisplayObj heap getter (exe body): the memory heap of the object's movie.
-Scaleform::MemoryHeap* FUN_14250a5c0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+static inline Scaleform::MemoryHeap* FUN_14250a5c0(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::MemoryHeap*)::Scaleform::GFx::AS3::Sfr27Acc14250a5c0((Scaleform::UPInt)pavm); }
 // MovieRoot::RemoveActionQueueEntriesFor, QueueFrameActions, ExecuteActionQueue.
 void FUN_142522490(Scaleform::GFx::AS3::MovieRoot* proot, int level, Scaleform::GFx::DisplayObject* pdobj);
 void FUN_142520080(Scaleform::GFx::AS3::MovieRoot* proot);
-void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);
+static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { ::Scaleform::GFx::AS3::Sfr33ExecuteActionQueue(proot, static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }
 // AvmDisplayObj::GetStage (exe body): the stage display object of this object's movie.
-Scaleform::GFx::DisplayObject* FUN_14250edf0(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+static inline Scaleform::GFx::DisplayObject* FUN_14250edf0(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27Acc14250edf0((Scaleform::UPInt)pavm); }
 // Sprite::GetTextSnapshot (exe body): fills a StaticTextSnapshotData from the sprite's static text fields.
-void FUN_1425db410(Scaleform::GFx::DisplayObject* psprite, void* psnapshotData);
+static inline void FUN_1425db410(Scaleform::GFx::DisplayObject * p0, void * p1) { ((const Scaleform::GFx::Sprite*)(p0))->GetTextSnapshot((Scaleform::GFx::StaticTextSnapshotData *)(p1)); }
 // Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle into the complex fill (exe body).
 void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, unsigned argc,
                    const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill);
-// Scrolls the pixels of a bitmap image by (x, y) (exe body).
-void FUN_1425eed00(Scaleform::Render::ImageBase* pimage, int x, int y);
-// Flood fills a bitmap image from a point (exe body).
-void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
-// Fills a rect of a bitmap image with one color (exe body).
-void FUN_1425ec860(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Rect<Scaleform::SInt32>& rect, const Scaleform::Render::Color& color);
-// Applies a color transform to a rect of a bitmap image (exe body).
-void FUN_1425eb200(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Rect<Scaleform::SInt32>& rect, const Scaleform::Render::Cxform& cxform);
-// Fills a bitmap image with random noise (exe body).
-void FUN_1425eddc0(Scaleform::Render::ImageBase* pimage, Scaleform::SInt32 randomSeed, Scaleform::UInt32 low, Scaleform::UInt32 high,
-                   Scaleform::UInt32 channelOptions, bool grayScale);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -181,40 +179,48 @@ public:
     // The per-channel (r, g, b, a) value counts of the image, or of rect when given.
     void  Histogram(Rect<SInt32>* rect, unsigned colors[4][256]);                                                  // 0x1425ed440
     // Alpha hit tests of the image at firstPoint: against a rect, or against a second image placed at secondPoint.
-    bool  HitTest(const Point<SInt32>& firstPoint, const Rect<SInt32>& secondRect, UInt32 firstAlphaThreshold);   // 0x1425ed5e0
+    bool  HitTest(const Point<SInt32>& firstPoint, const Rect<SInt32>& secondRect, unsigned firstAlphaThreshold);   // 0x1425ed5e0
     bool  HitTest(ImageBase* secondImage, const Point<SInt32>& firstPoint, const Point<SInt32>& secondPoint,
-                  UInt32 firstAlphaThreshold, UInt32 secondAlphaThreshold);                                     // 0x1425ed800
+                  unsigned firstAlphaThreshold, unsigned secondAlphaThreshold);                                     // 0x1425ed800
+    // The channel masks CopyChannel takes.
+    enum ChannelBits
+    {
+        Channel_Red   = 0x01,
+        Channel_Green = 0x02,
+        Channel_Blue  = 0x04,
+        Channel_Alpha = 0x08
+    };
     // Copies one channel of a rect of the source image into a channel of this image at destPoint.
-    void  CopyChannel(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                      UInt32 sourceChannel, UInt32 destChannel);                                                  // 0x1425eb570
+    void  CopyChannel(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                      ChannelBits sourceChannel, ChannelBits destChannel);                                                  // 0x1425eb570
     // The bounds of the pixels whose (pixel & mask) equals color (or differs from it without findColor).
     Rect<SInt32> GetColorBoundsRect(UInt32 mask, UInt32 color, bool findColor);                                  // 0x1425ecb50
     // Fills this image with the per-pixel difference of image0 and image1.
-    void  Compare(ImageBase* image0, ImageBase* image1);                                                            // 0x1425eb390
+    void  Compare(DrawableImage* image0, DrawableImage* image1);                                                            // 0x1425eb390
     // Copies a rect of the source image to destPoint, optionally through the alpha of alphaSource at alphaPoint.
-    void  CopyPixels(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                     ImageBase* alphaSource, const Point<SInt32>* alphaPoint, bool mergeAlpha);                 // 0x1425eb700
+    void  CopyPixels(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                     DrawableImage* alphaSource, const Point<SInt32>* alphaPoint, bool mergeAlpha);                 // 0x1425eb700
     // Reads the pixels of sourceRect into the provider / writes the provider's pixels into destRect.
     bool  GetPixels(DIPixelProvider& provider, const Rect<SInt32>& sourceRect);                                   // 0x1425ecdf0
     bool  SetPixels(const Rect<SInt32>& destRect, DIPixelProvider& provider);                                     // 0x1425ef060
     // The twips area a filter covers when applied to sourceRect (twips).
     static void CalcFilterRect(RectF* result, const Rect<SInt32>& sourceRect, Filter* filter);                     // 0x1425eb180
     // Blends a rect of the source image into this image at destPoint with per-channel multipliers (0..256).
-    void  Merge(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                UInt32 redMultiplier, UInt32 greenMultiplier, UInt32 blueMultiplier, UInt32 alphaMultiplier); // 0x1425edc00
+    void  Merge(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                unsigned redMultiplier, unsigned greenMultiplier, unsigned blueMultiplier, unsigned alphaMultiplier); // 0x1425edc00
     // Maps each channel of a rect of the source image through a 256-entry table (NULL leaves the channel as is);
     // the results of the four channels are added.
-    void  PaletteMap(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+    void  PaletteMap(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                      UInt32** channels);                                                                          // 0x1425ee140
     // Copies numPixels pseudo-random pixels of a rect of the source image to destPoint (fillColor when the source
     // is this image); returns the seed to continue the dissolve with.
-    SInt32 PixelDissolve(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                         SInt32 randomSeed, SInt32 numPixels, Color fillColor);                                  // 0x1425ee720
+    unsigned PixelDissolve(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                           unsigned randomSeed, unsigned numPixels, Color fillColor);                                  // 0x1425ee720
     // Fills this image with Perlin noise; offsets holds x / y float pairs, one per octave (offsetCount floats).
     void  PerlinNoise(float frequencyX, float frequencyY, unsigned numOctaves, unsigned randomSeed, bool stitch,
                       bool fractalNoise, unsigned channelOptions, bool grayScale, float* offsets, unsigned offsetCount); // 0x1425ee4d0
     // Threshold compare operations ("<", "<=", ">", ">=", "==", "!=").
-    enum ThresholdOperation
+    enum OperationType
     {
         Operation_Less,
         Operation_LessEqual,
@@ -225,8 +231,8 @@ public:
     };
     // Tests the pixels of a rect of the source image against threshold (both masked) and writes color where the
     // test passes (the source pixel otherwise, with copySource) to this image at destPoint.
-    UInt32 Threshold(ImageBase* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                     ThresholdOperation op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);           // 0x1425ef1e0
+    void  Threshold(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                    OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource);           // 0x1425ef1e0
     // Applies filter to a rect of the source image, writing the result to this image at destPoint.
     void  ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                       Filter* filter);                                                                            // 0x1425eaff0
@@ -235,12 +241,30 @@ public:
                const Rect<SInt32>* clipRect);                                                                     // 0x1425ebf70
     void  Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
                const Rect<SInt32>* clipRect, bool smoothing);                                                     // 0x1425eb8c0
+    void  Scroll(int x, int y);                                                                                  // 0x1425eed00
+    void  FloodFill(const Point<SInt32>& pt, Color color);                                                       // 0x1425ec9e0
+    void  FillRect(const Rect<SInt32>& rect, Color color);                                                       // 0x1425ec860
+    void  ColorTransform(const Rect<SInt32>& rect, const Cxform& cxform);                                         // 0x1425eb200
+    void  Noise(unsigned randomSeed, unsigned low, unsigned high, unsigned channelOptions, bool grayScale);   // 0x1425eddc0
     bool  IsTransparent() const { return Transparent; }
 
     UByte Unrecovered_00[0x48];
     bool  Transparent;                                  // +0x48 the image has an alpha channel
 };
+// The BitmapData images are DrawableImages (Image is the first base, so the ImageBase sits at offset 0).
+static inline DrawableImage* AsDrawableImage(ImageBase* pimage) { return reinterpret_cast<DrawableImage*>(pimage); }
 }} // namespace Scaleform::Render
+
+// Scrolls the pixels of a bitmap image by (x, y) (exe body).
+static inline void FUN_1425eed00(Scaleform::Render::ImageBase * p0, int p1, int p2) { ((Scaleform::Render::DrawableImage*)(p0))->Scroll(p1, p2); }
+// Flood fills a bitmap image from a point (exe body).
+void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
+// Fills a rect of a bitmap image with one color (exe body).
+static inline void FUN_1425ec860(Scaleform::Render::ImageBase * p0, Scaleform::Render::Rect<long> const & p1, Scaleform::Render::Color const & p2) { ((Scaleform::Render::DrawableImage*)(p0))->FillRect(p1, (Scaleform::Render::Color)(p2)); }
+// Applies a color transform to a rect of a bitmap image (exe body).
+static inline void FUN_1425eb200(Scaleform::Render::ImageBase * p0, Scaleform::Render::Rect<long> const & p1, Scaleform::Render::Cxform const & p2) { ((Scaleform::Render::DrawableImage*)(p0))->ColorTransform(p1, p2); }
+// Fills a bitmap image with random noise (exe body).
+static inline void FUN_1425eddc0(Scaleform::Render::ImageBase * p0, long p1, unsigned long p2, unsigned long p3, unsigned long p4, bool p5) { ((Scaleform::Render::DrawableImage*)(p0))->Noise((unsigned int)(p1), (unsigned int)(p2), (unsigned int)(p3), (unsigned int)(p4), p5); }
 
 Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
@@ -252,7 +276,7 @@ void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::Dis
 void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 // MovieImpl::GetDrawableImageContext (made on first use).
-void* FUN_14256f220(Scaleform::GFx::MovieImpl* pmovie);
+static inline void * FUN_14256f220(Scaleform::GFx::MovieImpl * p0) { return (void *)(((Scaleform::GFx::MovieImpl*)(p0))->GetDrawableImageContext()); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2127,7 +2151,7 @@ namespace Instances { namespace fl_display
 
         ASString opstr = argv[3].AsString();
         const char* pop = opstr.ToCStr();
-        Render::DrawableImage::ThresholdOperation op;
+        Render::DrawableImage::OperationType op;
         if (!strcmp(pop, "<="))
             op = Render::DrawableImage::Operation_LessEqual;
         else if (!strcmp(pop, "<"))
@@ -2159,7 +2183,7 @@ namespace Instances { namespace fl_display
             return;
         if (argc >= 8)
             copySource = argv[7].Convert2Boolean();
-        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->Threshold(sourceBitmapData->pImage,
+        reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->Threshold(Render::AsDrawableImage(sourceBitmapData->pImage),
             Render::Rect<SInt32>((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                  (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height)),
             Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), op, thresholdValue, color, mask, copySource);
@@ -2271,7 +2295,7 @@ namespace Instances { namespace fl_display
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
             Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
-            result = pimage->PixelDissolve(sourceBitmapData->pImage, rect, dp, randomSeed, numPixels, color);
+            result = pimage->PixelDissolve(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, randomSeed, numPixels, color);
         }
     }
 #pragma strict_gs_check(pop)
@@ -2631,7 +2655,7 @@ namespace Instances { namespace fl_display
                 Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
                 Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                           (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-                reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PaletteMap(sourceBitmapData->pImage, rect, dp, channels);
+                reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->PaletteMap(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, channels);
             }
         }
     }
@@ -2667,7 +2691,7 @@ namespace Instances { namespace fl_display
             Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-            pimage->Merge(psource, rect, dp, mult[0], mult[1], mult[2], mult[3]);
+            pimage->Merge(Render::AsDrawableImage(psource), rect, dp, mult[0], mult[1], mult[2], mult[3]);
         }
     }
 #pragma strict_gs_check(pop)
@@ -4298,7 +4322,7 @@ namespace Instances { namespace fl_display
         SPtr<BitmapData> pdiff;
         clone(pdiff);
         Render::DrawableImage* pdst = pdiff ? reinterpret_cast<Render::DrawableImage*>(pdiff->pImage.GetPtr()) : NULL;
-        pdst->Compare(pImage, pother);
+        pdst->Compare(Render::AsDrawableImage(pImage), Render::AsDrawableImage(pother));
         result = pdiff;
         }
     }
@@ -4338,7 +4362,8 @@ namespace Instances { namespace fl_display
             Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-            pimage->CopyChannel(sourceBitmapData->pImage, rect, dp, sourceChannel, destChannel);
+            pimage->CopyChannel(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp,
+                                (Render::DrawableImage::ChannelBits)sourceChannel, (Render::DrawableImage::ChannelBits)destChannel);
         }
     }
 #pragma strict_gs_check(pop)
@@ -4388,7 +4413,7 @@ namespace Instances { namespace fl_display
             Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
             Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
                                       (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-            pimage->CopyPixels(sourceBitmapData->pImage, rect, dp, palpha, &ap, mergeAlpha);
+            pimage->CopyPixels(Render::AsDrawableImage(sourceBitmapData->pImage), rect, dp, Render::AsDrawableImage(palpha), &ap, mergeAlpha);
         }
     }
 #pragma strict_gs_check(pop)
