@@ -1719,14 +1719,13 @@ void AvmSprite::OnAddedDisplayObject(InteractiveObject* ch, unsigned sessionId, 
         psprite->Flags |= Sprite::Flags_OnLoadReqd;
 }
 
-// MS2-FUNCTIONAL the MovieRoot vftable is not modeled: DoActions is called directly (the exe goes through slot 7)
 // @0x14297d460
 bool AvmSprite::ReplaceChildCharacterOnLoad(InteractiveObject* poldChar, InteractiveObject* pnewChar)
 {
     if (!ReplaceChildCharacter(poldChar, pnewChar))
         return false;
     pnewChar->OnEventLoad();
-    GetAS2Root()->MovieRoot::DoActions();
+    GetAS2Root()->DoActions();
     return true;
 }
 
