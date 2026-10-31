@@ -189,11 +189,11 @@ String* FUN_1423c95f0(void*, String* out)
     return out;
 }
 
-// MS2-FUNCTIONAL: the system default locale's abbreviated language name (LOCALE_SABBREVLANGNAME).
+// The system default locale's abbreviated language name (LOCALE_SABBREVLANGNAME).
 // @0x1423c9610
 String* FUN_1423c9610(void*, String* out)
 {
-    char name[16];
+    char name[4];
     if (GetLocaleInfoA(LOCALE_SYSTEM_DEFAULT, LOCALE_SABBREVLANGNAME, name, 4))
     {
         new (out) String(name);
@@ -204,21 +204,25 @@ String* FUN_1423c9610(void*, String* out)
     return out;
 }
 
-// MS2-FUNCTIONAL: the OS family name for the version GetOSVersion stored at +0xbc.
+// The OS family name for the version GetOSVersion stored at +0xbc.
 // @0x1423c9670
 String* FUN_1423c9670(void* self, String* out)
 {
-    int os = At<int>(self, 0xbc);
-    if (os == 0)
+    switch (At<int>(self, 0xbc))
+    {
+    case 0:
         new (out) String("XP");
-    else if (os == 1)
+        return out;
+    case 1:
         new (out) String("Vista");
-    else
+        return out;
+    default:
         new (out) String("Unknown");
-    return out;
+        return out;
+    }
 }
 
-// MS2-FUNCTIONAL: classifies the OS: 0 XP/2003, 1 Vista+, 2 Windows 2000, 3 Win32s/9x.
+// Classifies the OS: 0 XP/2003, 1 Vista+, 2 Windows 2000, 3 Win32s/9x.
 // @0x1423c96d0
 void FUN_1423c96d0(void*, int* os)
 {
@@ -226,40 +230,39 @@ void FUN_1423c96d0(void*, int* os)
     info.dwOSVersionInfoSize = sizeof(info);
 #pragma warning(suppress: 4996)
     GetVersionExW(&info);
-    if (info.dwPlatformId == VER_PLATFORM_WIN32s)
+    switch (info.dwPlatformId)
     {
+    case VER_PLATFORM_WIN32s:
         *os = 3;
-        return;
-    }
-    if (info.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-    {
+        break;
+    case VER_PLATFORM_WIN32_WINDOWS:
         if (info.dwMinorVersion == 0 || info.dwMinorVersion == 10 || info.dwMinorVersion == 90)
             *os = 3;
-        return;
+        break;
+    case VER_PLATFORM_WIN32_NT:
+        if (info.dwMajorVersion == 5)
+        {
+            if (info.dwMinorVersion == 0)
+                *os = 2;
+            else if (info.dwMinorVersion - 1 <= 1)
+                *os = 0;
+        }
+        else if (info.dwMajorVersion == 6)
+            *os = 1;
+        break;
     }
-    if (info.dwPlatformId != VER_PLATFORM_WIN32_NT)
-        return;
-    if (info.dwMajorVersion == 5)
-    {
-        if (info.dwMinorVersion == 0)
-            *os = 2;
-        else if (info.dwMinorVersion - 1 <= 1)
-            *os = 0;
-    }
-    else if (info.dwMajorVersion == 6)
-        *os = 1;
 }
 
 }}} // namespace Scaleform::GFx::IME
 
 namespace Scaleform { namespace GFx {
 
-// MS2-FUNCTIONAL: MovieImpl::GetCachedLog; the exe reuses the StateBag::GetLog temporary.
+// MovieImpl::GetCachedLog; the exe reads the StateBag::GetLog temporary through the call's result register.
 // @0x1423c94e0
 Log* FUN_1423c94e0(MovieImpl* movie)
 {
-    if (!(movie->Flags & MovieImpl::Flag_CachedLogFlag))
-        movie->pCachedLog = movie->GetLog();
+    if (!((UByte)(movie->Flags >> 1) & 1))
+        movie->pCachedLog = movie->GetStateBag()->GetLog();
     return movie->pCachedLog;
 }
 
@@ -497,16 +500,22 @@ extern "C" void FUN_1423ca030(void* movie, const char* method, const char* fmt, 
     va_end(args);
 }
 
-// MS2-FUNCTIONAL: destroys a run of 0x30-byte IME records (names at +0x10/+0x18), last to first.
-// @0x1423c9330
-extern "C" void FUN_1423c9330(unsigned long long records, unsigned long long count)
+// A 0x30-byte IME list record; only the two names need destroying.
+struct IMERecordView
 {
-    for (; count; --count)
-    {
-        unsigned char* record = reinterpret_cast<unsigned char*>(records) + (count - 1) * 0x30;
-        reinterpret_cast<Scaleform::String*>(record + 0x18)->~String();
-        reinterpret_cast<Scaleform::String*>(record + 0x10)->~String();
-    }
+    char             Pad0[0x10];
+    Scaleform::String Name;      // +0x10
+    Scaleform::String Value;     // +0x18
+    char             Pad20[0x10];
+};
+
+// Allocator DestructArray over the IME records: last to first.
+// @0x1423c9330
+extern "C" void FUN_1423c9330(IMERecordView* p, unsigned long long count)
+{
+    p += count - 1;
+    for (unsigned long long i = 0; i < count; ++i, --p)
+        p->~IMERecordView();
 }
 
 namespace Scaleform { namespace GFx { namespace IME {
