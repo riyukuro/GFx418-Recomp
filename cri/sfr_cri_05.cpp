@@ -279,9 +279,9 @@ void FUN_1400657e0(Any a0);
 void DCT_FsriInitPa(void *);  // C3: the definition's signature
 void FUN_1400659a0(Any a0,Any a1);
 void FUN_140066180(Any a0);
-void FUN_140066320();
+void DCT_FsriInit();
 void FUN_140066350(__int64);  // C3: the definition's signature
-void FUN_140066360(void);  // C3: the definition's signature
+void MPVCONCEAL_Finish(void);  // C3: the definition's signature
 void FUN_140066f60(__int64);  // C3: the definition's signature
 void FUN_140066f80(Any a0);
 void FUN_140067210(Any a0);
@@ -293,12 +293,12 @@ char * FUN_140067590(Any a0,Any a1,Any a2);
 char * FUN_1400674d0(char *dst,int size,const char *src);
 char * FUN_140067590(char *dst,int size,const char *src);
 void FUN_1400674a0(const char *msg);
-void FUN_140067700();
-void FUN_140067750();
-void FUN_140067790();
-void FUN_1400677c0();
-void FUN_1400677f0();
-void FUN_140067840();
+void SJCRS_Init();
+void SJCRS_Finish();
+void SJCRS_Lock();
+void SJCRS_Unlock();
+void CRIDLG_Init();
+void CRIDLG_Finish();
 cri_u64 FUN_140067890(Any a0,Any a1);
 void FUN_140067a90(Any a0);
 cri_u32 FUN_140067c90(Any a0,Any a1,Any a2);
@@ -767,7 +767,7 @@ cri_u32 MPV_Destroy(longlong a1)
   }
   MPVM2V_Destroy(a1);
   MPVSL_Destroy(a1);
-  ((void (*)(longlong))FUN_140066360)(a1);  // C3: the exe passes a1 to the argument-less definition (C call)
+  ((void (*)(longlong))MPVCONCEAL_Finish)(a1);  // C3: the exe passes a1 to the argument-less definition (C call)
   *(cri_u32 *)((char *)(a1) + 0x1538) = 1;
   return 0;
 }

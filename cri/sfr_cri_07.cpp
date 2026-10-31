@@ -475,15 +475,15 @@ void FUN_140065800();
 int seq2dctfsir(int);
 void DCT_FsriInitScanTbl(const cri_u1 *, cri_u1 *);
 void initB0Tbl();
-void FUN_140066180(longlong);
+void DCT_FsriInitScaleTbl(longlong);
 void FUN_1400661e0();
-void FUN_140066320();
-void FUN_140066350(longlong);
-void FUN_140066360();
-void FUN_140066370(longlong);
-void FUN_1400663b0(longlong);
-void FUN_1400663d0(longlong, cri_u4 *, cri_u4 *);
-void FUN_1400663f0(longlong);
+void DCT_FsriInit();
+void MPVCONCEAL_Init(longlong);
+void MPVCONCEAL_Finish();
+void MPVCONCEAL_StartFrame(longlong);
+void MPVCONCEAL_StartTask(longlong);
+void MPVCONCEAL_GetMbaInfo(longlong, cri_u4 *, cri_u4 *);
+void MPVCONCEAL_SkippedMb(longlong);
 int FUN_140066400(longlong);
 void FUN_140066460(longlong, uint);
 void FUN_140066a10(longlong, uint);
@@ -491,130 +491,130 @@ void FUN_140066c60(longlong, int);
 void FUN_140066d80(cri_u8);
 void FUN_140066da0(cri_u8);
 void FUN_140066de0(cri_u8);
-void FUN_140066e10(longlong);
-void FUN_140066e70();
-void FUN_140066e90(longlong, int);
-void FUN_140066f30(longlong, int);
-void FUN_140066f60(longlong);
-void FUN_140066f80(longlong);
-void FUN_140066fe0(longlong, cri_u1 *, longlong);
-void FUN_140067100(longlong);
-void FUN_140067210(longlong);
-void FUN_1400672b0(longlong);
-void FUN_140067370(cri_u8);
-void FUN_140067390(longlong);
-void FUN_140067420(longlong);
-void FUN_140067470(longlong);
-char * FUN_1400674d0(char *, size_t, const char *);
-char * FUN_140067510(char *, size_t, const char *, size_t);
-char * FUN_140067550(char *, size_t, const char *, size_t);
-char * FUN_140067590(char *, size_t, const char *);
+void mpvcdec_InitDct(longlong);
+void mpvcdec_InitFuncsIdct();
+void mpvcdec_SetDctFunc(longlong, int);
+void mpvcdec_SetBlocksFunc(longlong, int);
+void MPVCDEC_Init(longlong);
+void MPVCDEC_StartFrame(longlong);
+void mpvbdec_MakeTable(longlong, cri_u1 *, longlong);
+void mpvbdec_SetupIxa(longlong);
+void MPVBDEC_StartFrame(longlong);
+void mpvbdec_InitZigzagTable(longlong);
+void MPVBDEC_Init(cri_u8);
+void mpvcmc_InitMcOiTa(longlong);
+void MPVCMC_InitMcOiRt(longlong);
+void MPVCMC_SetCcnt(longlong);
+char * CRICRW_Strcpy(char *, size_t, const char *);
+char * CRICRW_Strncpy(char *, size_t, const char *, size_t);
+char * CRICRW_Strncat(char *, size_t, const char *, size_t);
+char * CRICRW_Strcat(char *, size_t, const char *);
 int FUN_1400675d0(char *, size_t, const char *, ...);
 int FUN_140067630(const char *, const char *, ...);
-void FUN_140067680(char *, size_t, const char *, va_list);
+void CRICRW_Vsprintf(char *, size_t, const char *, va_list);
 FILE * FUN_1400676c0(const char *, const char *);
-void FUN_140067700();
-void FUN_140067750();
-void FUN_140067790();
-void FUN_1400677c0();
-void FUN_1400677f0();
-void FUN_140067840();
-cri_u8 FUN_140067890(cri_u8, cri_u4);
-cri_u8 FUN_1400678d0(longlong, uint);
-void FUN_140067a90(cri_u8);
+void SJCRS_Init();
+void SJCRS_Finish();
+void SJCRS_Lock();
+void SJCRS_Unlock();
+void CRIDLG_Init();
+void CRIDLG_Finish();
+cri_u8 CRIDLG_Create(cri_u8, cri_u4);
+cri_u8 cridlg_Create(longlong, uint);
+void CRIDLG_Destroy(cri_u8);
 void FUN_140067ac0(void *);
-cri_u4 FUN_140067bf0(cri_u8);
-int FUN_140067c20(int *);
-cri_u4 FUN_140067c90(cri_u8, cri_u8, cri_u8);
-int FUN_140067cd0(int *, cri_u8, cri_u8);
-void FUN_140067dd0(cri_u8, cri_u4);
-void FUN_140067e00(int *, cri_u4);
-cri_u4 FUN_140067e80(cri_u8, cri_u4);
-int FUN_140067ec0(int *, int);
-cri_u4 FUN_140067f40(cri_u8);
-int FUN_140067f70(int *);
-void FUN_140067fc0(cri_u8, cri_u4);
-void FUN_140067ff0(int *, int);
-void FUN_140068070(cri_u8, cri_u4);
-void FUN_1400680a0(int *, uint);
+cri_u4 CRIDLG_GetStat(cri_u8);
+int cridlg_GetStat(int *);
+cri_u4 CRIDLG_TryBeginInvoke(cri_u8, cri_u8, cri_u8);
+int cridlg_TryBeginInvoke(int *, cri_u8, cri_u8);
+void CRIDLG_EndInvoke(cri_u8, cri_u4);
+void cridlg_EndInvoke(int *, cri_u4);
+cri_u4 CRIDLG_IsCompleted(cri_u8, cri_u4);
+int cridlg_IsCompleted(int *, int);
+cri_u4 CRIDLG_GetPriority(cri_u8);
+int cridlg_GetPriority(int *);
+void CRIDLG_SetPriority(cri_u8, cri_u4);
+void cridlg_SetPriority(int *, int);
+void CRIDLG_SetAffinityMask(cri_u8, cri_u4);
+void cridlg_SetAffinityMask(int *, uint);
 cri_u8 FUN_140068190(longlong);
 cri_u8 FUN_140068200(cri_u8);
 cri_u8 FUN_140068210(longlong);
-void FUN_140068280(const char *);
-void FUN_1400682a0();
-void FUN_1400682c0();
-cri_u8 FUN_1400682e0(longlong, int);
-void FUN_140068380(LPCRITICAL_SECTION);
-cri_u4 FUN_1400683d0(LPCRITICAL_SECTION);
-cri_u4 FUN_140068430(LPCRITICAL_SECTION);
-void FUN_140068490(short *, int *, longlong);
+void cridlg_assert(const char *);
+void cridlg_lock();
+void cridlg_unlock();
+cri_u8 CRICRS_Create(longlong, int);
+void CRICRS_Destroy(LPCRITICAL_SECTION);
+cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
+cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
+void mpvumct_OutputIntra6blk(short *, int *, longlong);
 void FUN_140068590(longlong *, longlong, uint);
-void FUN_1400686c0(longlong *, longlong, uint);
-void FUN_140068840(int *, longlong *, longlong *);
-void FUN_1400688f0(longlong, longlong, int *);
-void FUN_140068920(longlong, int);
-void FUN_140068960(longlong);
-void FUN_140068990(longlong);
-void FUN_140068a40(longlong, longlong, int *, longlong *, longlong);
-void FUN_140068cc0(longlong, int);
-void FUN_140068d50(longlong, int);
+void mpvumct_BiMakeMb(longlong *, longlong, uint);
+void mpvumct_PpicSkipMb(int *, longlong *, longlong *);
+void mpvumct_CalcOfs(longlong, longlong, int *);
+void mpvumct_SubMbadr(longlong, int);
+void mpvumct_IncreMbadr(longlong);
+void MPVUMCT_Intra(longlong);
+void mpvumct_OneReadMb(longlong, longlong, int *, longlong *, longlong);
+void MPVUMCT_PpicSkipped(longlong, int);
+void MPVUMCT_BpicSkipped(longlong, int);
 void FUN_140068db0(longlong);
 void FUN_140068e70(longlong);
-void FUN_140068f30(longlong);
-void FUN_140069020(longlong *, int, longlong *, longlong *);
-void FUN_140069060(uint, char *);
-int FUN_1400690e0(char *);
-void FUN_140069140(longlong *, cri_u8);
-void FUN_140069190(longlong, longlong *);
-char * FUN_1400691b0(longlong *, char *, char *, cri_u8 *);
-cri_u8 FUN_140069270(longlong, cri_u8 *, cri_u8);
-cri_u8 FUN_140069480(longlong, cri_u8 *, cri_u8 *, cri_u8 *);
-int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
+void MPVUMCT_BiDirect(longlong);
+void SJ_SplitChunk(longlong *, int, longlong *, longlong *);
+void sj_val_to_hexstr(uint, char *);
+int sj_hexstr_to_val(char *);
+void SJ_MakeTag(longlong *, cri_u8);
+void SJ_GetTagContent(longlong, longlong *);
+char * SJ_SearchTag(longlong *, char *, char *, cri_u8 *);
+cri_u8 criMvPly_GetFrameYUVBuffers(longlong, cri_u8 *, cri_u8);
+cri_u8 criMvPly_CopyFrameYUVBuffers(longlong, cri_u8 *, cri_u8 *, cri_u8 *);
+int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
-void FUN_140069e44(longlong);
-void FUN_140069e54(longlong, int);
-void FUN_140069e5c(longlong, int, int, int);
-void FUN_140069e98(longlong, uint, short, short);
-void FUN_140069ef4(longlong, uint, uint);
+void criAdxDecCore_Reset(longlong);
+void criAdxDecCore_SetNumChan(longlong, int);
+void criAdxDecCore_SetEncryptionKey(longlong, int, int, int);
+void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
+void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
 int FUN_14006a090(cri_u1 *, uint);
-int FUN_14006a110(short *, uint, cri_u1 *, cri_u1 *);
-int FUN_14006a16c(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
-uint FUN_14006a260(longlong, uint, ushort *, ushort *);
-uint FUN_14006a388(longlong, uint, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
-uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
-int FUN_14006a750(short *, int, ushort *);
-uint FUN_14006a7f8(cri_u8, uint, longlong);
-uint FUN_14006a928(cri_u8, cri_u4, longlong);
+int criAdxDec_DecodeInfoVer(short *, uint, cri_u1 *, cri_u1 *);
+int criAdxDec_DecodeBasicInfo(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
+uint criAdxDec_DecodeInfoInitialDelay(longlong, uint, ushort *, ushort *);
+uint criAdxDec_DecodeInfoLoop(longlong, uint, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
+uint criAdxDec_DecodeInfoAinf(longlong, uint, uint *, void *, ushort *, ushort *);
+int criAdxDec_DecodeInfoExADPCM2(short *, int, ushort *);
+uint criAdxDec_DecodeHeader(cri_u8, uint, longlong);
+uint criAdxDec_DecodeHeaderEx(cri_u8, cri_u4, longlong);
 void DCT_Isse2Init();
 void DCT_Isse2Trans(V16 *, V16 *, int);
 longlong FUN_14006b0d0(longlong);
 longlong FUN_140073c80(longlong);
 longlong FUN_14007ba60(longlong);
 longlong FUN_140083350(longlong);
-void FUN_140089e90(longlong, cri_u8, cri_u4 *);
-void * FUN_140089f60(void *, int);
-void FUN_140089fe0(longlong, cri_u8);
-void FUN_14008a180(longlong, cri_u8, int *);
-void FUN_14008a2b0(longlong);
-void FUN_14008a3c0(longlong);
+void m2vsl_DecSliceOne(longlong, cri_u8, cri_u4 *);
+void * m2vsl_DuplicateObj(void *, int);
+void M2VSL_DecPicture(longlong, cri_u8);
+void m2vsl_DecTaskOne(longlong, cri_u8, int *);
+void m2vmc_SetFrameBuffer(longlong);
+void M2VMC_MacroBlock(longlong);
 void FUN_14008a430(longlong, int, int);
 void FUN_14008a5b0(longlong, int, int);
-void FUN_14008a730(longlong, uint, int, int, int);
-void FUN_14008a830(longlong, int *, int *, int, int);
-void FUN_14008a970(longlong, uint);
-void FUN_14008aa80(longlong, cri_u4, cri_u4);
-void FUN_14008ab00(longlong);
-void FUN_14008ab40(longlong);
-void FUN_14008ab60(longlong, cri_u4, int);
+void m2vmc_AddBlock_thumbnail(longlong, uint, int, int, int);
+void Dual_Prime_Arithmetic(longlong, int *, int *, int, int);
+void M2VMC_Skipped(longlong, uint);
+void m2vmc_AddBlocks_thumbnail(longlong, cri_u4, cri_u4);
+void m2vmc_SetFunction(longlong);
+void M2VMC_StartFrame(longlong);
+void M2VPRD_FormPredictions(longlong, cri_u4, int);
 void FUN_14008b6b0(longlong, longlong, int, cri_u4, uint, cri_u4, int, int, uint, uint, int);
-void FUN_14008b780(longlong, longlong, int, cri_u8, int, int, int, int, uint, uint, int);
+void form_component_prediction_thumbnail(longlong, longlong, int, cri_u8, int, int, int, int, uint, uint, int);
 void FUN_14008c150(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
-void FUN_14008c400(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
-void FUN_14008c780(longlong);
-void FUN_14008c7b0(longlong);
-void FUN_14008c7e0(longlong);
-void FUN_14008c800(longlong, cri_u4 *, cri_u4 *);
-void FUN_14008c820(longlong);
+void form_prediction_thumbnail(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
+void M2VPRD_SetFunction(longlong);
+void M2VCONCEAL_StartFrame(longlong);
+void M2VCONCEAL_StartTask(longlong);
+void M2VCONCEAL_GetMbaInfo(longlong, cri_u4 *, cri_u4 *);
+void M2VCONCEAL_SkippedMb(longlong);
 int FUN_14008c830(longlong);
 void FUN_14008c890(longlong, uint);
 void FUN_14008ce50(longlong, uint);
@@ -623,35 +623,35 @@ void FUN_14008d220(cri_u8);
 void FUN_14008d240(cri_u8);
 void FUN_14008d280(cri_u8);
 void FUN_14008d2a0(longlong *, longlong *, longlong, longlong);
-void FUN_14008e570(longlong *, longlong *, longlong, longlong);
-void FUN_14008fa50(longlong *, longlong *, longlong, longlong);
-void FUN_140090080(longlong *, longlong *, longlong, longlong);
+void cft_sse_Ycc420plnToRgb888Int2smp(longlong *, longlong *, longlong, longlong);
+void cft_sse_Ycc420plnToArgb8888Prg(longlong *, longlong *, longlong, longlong);
+void cft_sse_Ycc420plnToRgb888Prg(longlong *, longlong *, longlong, longlong);
 void FUN_140090730(cri_u8 *, longlong *, cri_u8, longlong);
-void FUN_140090f20(cri_u8 *, cri_u8 *);
-void FUN_140091df0(cri_u8 *, longlong *);
-void FUN_1400923d0(cri_u8 *, longlong *);
-void FUN_1400927c0(byte *, byte *, cri_u8, cri_u8);
-void FUN_140092850(byte *, byte *, cri_u8, cri_u8);
-void FUN_1400928e0(byte *, byte *, cri_u8, cri_u8);
-void FUN_140092970(longlong, longlong);
-void FUN_140093150(longlong, longlong);
+void cft_c_Ycc420plnToArgb8888Int1smp(cri_u8 *, cri_u8 *);
+void cft_c_Ycc420plnToArgb8888Prg1smp(cri_u8 *, longlong *);
+void cft_c_Ycc420plnToYcc422pix2Int1smp(cri_u8 *, longlong *);
+void CFT_Ycc420plnToArgb8888Int1smp(byte *, byte *, cri_u8, cri_u8);
+void CFT_Ycc420plnToArgb8888Prg1smp(byte *, byte *, cri_u8, cri_u8);
+void CFT_Ycc420plnToYcc422pix2Int1smp(byte *, byte *, cri_u8, cri_u8);
+void CFT_Ycc420plnToRgb555(longlong, longlong);
+void CFT_Ycc420plnToRgb555WithDither(longlong, longlong);
 void FUN_140093890(void *, int, int);
 void FUN_140093940(void *, byte, byte, int);
-void FUN_140093cf0();
-void FUN_140093ec0(longlong, longlong);
-void FUN_1400946b0(longlong, longlong);
+void CFT_Ycc420plnToRgb555Init();
+void CFT_Ycc420plnToRgb565(longlong, longlong);
+void CFT_Ycc420plnToRgb565WithDither(longlong, longlong);
 void FUN_140094df0(void *, int, int);
 void FUN_140094ea0(void *, byte, byte, int);
-void FUN_140095250();
-cri_u8 FUN_140095430();
-void FUN_140095440(cri_u8, cri_u8);
-void FUN_140095450(cri_u4);
-void FUN_140095480();
-void FUN_140095590(void *, void *, void *);
-void FUN_140095800(void *, void *);
-void FUN_140095810(void *, void *);
-void FUN_140095820(longlong, cri_u2 *);
-void FUN_1400959a0(longlong, cri_u2 *);
+void CFT_Ycc420plnToRgb565Init();
+cri_u8 DCT_GetVerStr();
+void DCT_SetErrFunc(cri_u8, cri_u8);
+void DCTVER_Error(cri_u4);
+void DCT_AcInit();
+void dctac_TransDouble(void *, void *, void *);
+void DCT_AcFdctDouble(void *, void *);
+void DCT_AcIdctDouble(void *, void *);
+void DCT_AcFdctShort(longlong, cri_u2 *);
+void DCT_AcIdctShort(longlong, cri_u2 *);
 void FUN_140095b20();
 uint FUN_140095b40(longlong, uint *);
 uint FUN_14009a3d0(longlong, uint *);
@@ -659,43 +659,43 @@ uint FUN_14009ec40(longlong, uint *);
 uint FUN_1400a3920(longlong, uint *);
 uint FUN_1400a8ad0(longlong, uint *);
 uint FUN_1400adc50(longlong, uint *);
-void FUN_1400afd20();
-void FUN_1400afd30(uint);
-void FUN_1400afd70();
-void FUN_1400afde0(const char *, ...);
-void FUN_1400afe60(const char *);
-void FUN_1400afed0(const char *, const char *);
+void MPVABDEC_Init();
+void svm_lock(uint);
+void SVM_Lock();
+void SVM_CallErr(const char *, ...);
+void SVM_CallErr1(const char *);
+void SVM_CallErr2(const char *, const char *);
 void FUN_1400aff40(int);
-cri_u8 FUN_1400affc0();
-void FUN_1400b0090();
-int FUN_1400b0130();
+cri_u8 svm_reset_variable();
+void SVM_Init();
+int SVM_Finish();
 void FUN_1400b01f0();
 void FUN_1400b0210();
-void FUN_1400b0240(int);
-void FUN_1400b0290(int);
-void FUN_1400b02e0(int);
-void FUN_1400b0340();
-uint FUN_1400b03a0(uint, longlong, longlong, char *);
-void FUN_1400b0470(uint, uint);
-void FUN_1400b0500(uint, uint, cri_u8, cri_u8, char *);
-void FUN_1400b05c0(int, cri_u8, cri_u8);
-uint FUN_1400b0610(int);
-cri_u4 FUN_1400b06c0(uint, uint);
-uint FUN_1400b07d0(int *, cri_u8, cri_u8, cri_u8);
-cri_u4 FUN_1400b0820(uint, longlong, longlong, char *);
-void FUN_1400b0880(uint, uint);
-void FUN_1400b08b0(uint, uint, cri_u8, cri_u8, char *);
-void FUN_1400b0920(uint, uint, cri_u8, cri_u8);
+void svm_enterCriticalSection(int);
+void svm_leaveCriticalSection(int);
+void svm_unlock(int);
+void SVM_Unlock();
+uint svm_SetCbSvr(uint, longlong, longlong, char *);
+void svm_DelCbSvr(uint, uint);
+void svm_SetCbSvrId(uint, uint, cri_u8, cri_u8, char *);
+void SVM_SetCbBdr(int, cri_u8, cri_u8);
+uint SVM_ExecSvrFunc(int);
+cri_u4 SVM_ExecSvrFuncId(uint, uint);
+uint SVM_TestAndSet(int *, cri_u8, cri_u8, cri_u8);
+cri_u4 SVM_SetCbSvrWithString(uint, longlong, longlong, char *);
+void SVM_DelCbSvr(uint, uint);
+void SVM_SetCbSvrIdWithString(uint, uint, cri_u8, cri_u8, char *);
+void SVM_SetCbSvrId(uint, uint, cri_u8, cri_u8);
 void CRIERR_CallErr(const char *);
-void FUN_1400b0a10(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
-void FUN_1400b1720(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
+void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
+void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), ...);
 void FUN_1400b1e50(cri_any = cri_any(), cri_any = cri_any(), ...);
 int FUN_14029dd60(const char *, const char *, ...);   // game code's legacy inline sscanf
 cri_u8 * FUN_142096410(cri_any = cri_any());
 
 // @0x140066180
 // Stores the 64 double table entries at 0x143d4abf0 as floats in zigzag (seq2dctfsir) order.
-void FUN_140066180(longlong arg1)
+void DCT_FsriInitScaleTbl(longlong arg1)
 {
   int i;
   
@@ -706,7 +706,7 @@ void FUN_140066180(longlong arg1)
 }
 
 // @0x1400661e0
-// Clears the 64x64 float table at 0x143d4adf0, then fills row seq2dctfsir(i) with FUN_140095810's transform of the
+// Clears the 64x64 float table at 0x143d4adf0, then fills row seq2dctfsir(i) with DCT_AcIdctDouble's transform of the
 // unit vector i scaled by 1 / table[i].
 void FUN_1400661e0()
 {
@@ -716,7 +716,7 @@ void FUN_1400661e0()
   double loc_238 [64];
   
   memset(&DAT_143d4adf0,0,0x4000);
-  FUN_140095480();
+  DCT_AcInit();
   for (i = 0; i < 0x40; i = i + 1) {
     for (j = 0; j < 0x40; j = j + 1) {
       if (j == i) {
@@ -726,14 +726,14 @@ void FUN_1400661e0()
         loc_438[j] = 0.0;
       }
     }
-    FUN_140095810(loc_438,loc_238);
+    DCT_AcIdctDouble(loc_438,loc_238);
     for (j = 0; j < 0x40; j = j + 1) {
       *(float *)(&DAT_143d4adf0 + ((longlong)seq2dctfsir(i) * 0x40 + j) * 4) = (float)loc_238[j];
     }
   }
   return;
 }
-// The four block-writer callbacks FUN_140066e90 stores at +0x1738/+0x1740 (Ghidra made no functions here): all blocks
+// The four block-writer callbacks mpvcdec_SetDctFunc stores at +0x1738/+0x1740 (Ghidra made no functions here): all blocks
 // (mask -1) or the decoder's block mask at +0x30, into FUN_140065e70 or its sibling FUN_140065fc0.
 // @0x1400662e0
 void FUN_1400662e0(char *ctx)
@@ -761,9 +761,9 @@ void FUN_140066310(char *ctx)
 
 
 // @0x140066320
-void FUN_140066320()
+void DCT_FsriInit()
 {
-  _DAT_143d4ab88 = (void*)FUN_140095430();
+  _DAT_143d4ab88 = (void*)DCT_GetVerStr();
   initB0Tbl();
   FUN_140065800();
   FUN_1400661e0();
@@ -771,20 +771,20 @@ void FUN_140066320()
 }
 
 // @0x140066350
-void FUN_140066350(longlong arg1)
+void MPVCONCEAL_Init(longlong arg1)
 {
   *(cri_u4 *)((char *)arg1 + 0x18e0) = 0;
   return;
 }
 
 // @0x140066360
-void FUN_140066360()
+void MPVCONCEAL_Finish()
 {
   return;
 }
 
 // @0x140066370
-void FUN_140066370(longlong arg1)
+void MPVCONCEAL_StartFrame(longlong arg1)
 {
   *(cri_u1 **)((char *)arg1 + 0x18d0) = PTR_LAB_1431bbd20[*(int *)((char *)arg1 + 0x1570)];
   *(int *)((char *)arg1 + 0x18e0) = *(int *)((char *)arg1 + 0x18e0) + 1;
@@ -794,7 +794,7 @@ void FUN_140066370(longlong arg1)
 }
 
 // @0x1400663b0
-void FUN_1400663b0(longlong arg1)
+void MPVCONCEAL_StartTask(longlong arg1)
 {
   *(cri_u4 *)((char *)arg1 + 0x18d8) = 0xffffffff;
   *(cri_u4 *)((char *)arg1 + 0x18dc) = 0xffffffff;
@@ -802,7 +802,7 @@ void FUN_1400663b0(longlong arg1)
 }
 
 // @0x1400663d0
-void FUN_1400663d0(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
+void MPVCONCEAL_GetMbaInfo(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 {
   *arg2 = *(cri_u4 *)((char *)arg1 + 0x18d8);
   *arg3 = *(cri_u4 *)((char *)arg1 + 0x18dc);
@@ -810,7 +810,7 @@ void FUN_1400663d0(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 }
 
 // @0x1400663f0
-void FUN_1400663f0(longlong arg1)
+void MPVCONCEAL_SkippedMb(longlong arg1)
 {
   *(int *)((char *)arg1 + 0x18dc) = *(int *)((char *)arg1 + 0x1794) + -1;
   return;
@@ -1207,7 +1207,7 @@ void FUN_140066de0(cri_u8 arg1)
   return;
 }
 
-// The callback FUN_140066e10 registers with FUN_140095440 (Ghidra made no function here): FUN_14004ff50 with no handle.
+// The callback mpvcdec_InitDct registers with DCT_SetErrFunc (Ghidra made no function here): FUN_14004ff50 with no handle.
 // @0x140066e00
 uint FUN_140066e00(longlong a1, uint a2)
 {
@@ -1216,13 +1216,13 @@ uint FUN_140066e00(longlong a1, uint a2)
 }
 
 // @0x140066e10
-void FUN_140066e10(longlong arg1)
+void mpvcdec_InitDct(longlong arg1)
 {
   int i_v1;
   
-  FUN_140095440((cri_u8)((cri_u1 *)&FUN_140066e00),0);
-  FUN_140066320();
-  FUN_140066180(arg1 + 0x11a0);
+  DCT_SetErrFunc((cri_u8)((cri_u1 *)&FUN_140066e00),0);
+  DCT_FsriInit();
+  DCT_FsriInitScaleTbl(arg1 + 0x11a0);
   i_v1 = UTY_SupportSse2();
   if (i_v1 != 0) {
     DCT_Isse2Init();
@@ -1233,7 +1233,7 @@ void FUN_140066e10(longlong arg1)
 }
 
 // @0x140066e70
-void FUN_140066e70()
+void mpvcdec_InitFuncsIdct()
 {
   _DAT_143d4ee00 = &PTR_FUN_1431bbd40;
   _DAT_143d4edf8 = &PTR_FUN_1431bbd50;
@@ -1241,7 +1241,7 @@ void FUN_140066e70()
 }
 
 // @0x140066e90
-void FUN_140066e90(longlong arg1, int arg2)
+void mpvcdec_SetDctFunc(longlong arg1, int arg2)
 {
   if (*(int *)((char *)arg1 + 0x1568) != 0) {
     if (arg2 == 2) {
@@ -1270,7 +1270,7 @@ void FUN_140066e90(longlong arg1, int arg2)
 }
 
 // @0x140066f30
-void FUN_140066f30(longlong arg1, int arg2)
+void mpvcdec_SetBlocksFunc(longlong arg1, int arg2)
 {
   *(cri_u8 *)((char *)arg1 + 0x1700) = **(cri_u8 **)(&DAT_143d4edf0 + (longlong)arg2 * 8);
   *(cri_u8 *)((char *)arg1 + 0x1708) =
@@ -1279,16 +1279,16 @@ void FUN_140066f30(longlong arg1, int arg2)
 }
 
 // @0x140066f60
-void FUN_140066f60(longlong arg1)
+void MPVCDEC_Init(longlong arg1)
 {
   DAT_143d4ee10 = arg1;
-  FUN_140066e10(arg1);  // the exe passes rcx through
-  FUN_140066e70();
+  mpvcdec_InitDct(arg1);  // the exe passes rcx through
+  mpvcdec_InitFuncsIdct();
   return;
 }
 
 // @0x140066f80
-void FUN_140066f80(longlong arg1)
+void MPVCDEC_StartFrame(longlong arg1)
 {
   int i_v1;
   
@@ -1296,14 +1296,14 @@ void FUN_140066f80(longlong arg1)
   if (*(int *)((char *)arg1 + 0x156c) == 0) {
     i_v1 = 1;
   }
-  FUN_140066e90(arg1,i_v1);
-  FUN_140066f30(arg1,i_v1);
+  mpvcdec_SetDctFunc(arg1,i_v1);
+  mpvcdec_SetBlocksFunc(arg1,i_v1);
   return;
 }
 
 // @0x140066fe0
 // arg2[i] = arg1[scan[i]] (the matrix in scan order); arg3[arg1[i]] = the default intra matrix
-void FUN_140066fe0(longlong arg1, cri_u1 *arg2, longlong arg3)
+void mpvbdec_MakeTable(longlong arg1, cri_u1 *arg2, longlong arg3)
 {
   int i;
   
@@ -1317,11 +1317,11 @@ void FUN_140066fe0(longlong arg1, cri_u1 *arg2, longlong arg3)
   return;
 }
 
-// The 32-byte table FUN_140067100 copies to +0x12a0 (exe .rdata 0x1431bbe00, inside data_cri's DAT_1431bbdc1 piece).
+// The 32-byte table mpvbdec_SetupIxa copies to +0x12a0 (exe .rdata 0x1431bbe00, inside data_cri's DAT_1431bbdc1 piece).
 struct cri07_tbl32 { cri_u8 q[4]; };
 
 // @0x140067100
-void FUN_140067100(longlong arg1)
+void mpvbdec_SetupIxa(longlong arg1)
 {
   longlong l_v1;
   
@@ -1349,7 +1349,7 @@ void FUN_140067100(longlong arg1)
 }
 
 // @0x140067210
-void FUN_140067210(longlong arg1)
+void MPVBDEC_StartFrame(longlong arg1)
 {
   cri_u8 *pu_v1;
   int i_v2;
@@ -1382,7 +1382,7 @@ void FUN_140067210(longlong arg1)
 }
 
 // @0x1400672b0
-void FUN_1400672b0(longlong arg1)
+void mpvbdec_InitZigzagTable(longlong arg1)
 {
   int i_v1;
   cri_u1 *pu_v2;
@@ -1401,29 +1401,29 @@ void FUN_1400672b0(longlong arg1)
     pu_v2 = pu_v2 + 1;
   } while (i_v1 < 0x40);
   pu_v3 = &DAT_143d4ee20;
-  FUN_140066fe0((longlong)loc_98,(cri_u1 *)((char *)arg1 + 0x1120),(longlong)pu_v3);
+  mpvbdec_MakeTable((longlong)loc_98,(cri_u1 *)((char *)arg1 + 0x1120),(longlong)pu_v3);
   _DAT_143d74990 = arg1 + 0x1120;
   _DAT_143d749b0 = pu_v3;
   DCT_FsriInitScanTbl(loc_98,loc_58);
   pu_v3 = &DAT_143d4ee60;
-  FUN_140066fe0((longlong)loc_58,(cri_u1 *)((char *)arg1 + 0x1160),(longlong)pu_v3);
+  mpvbdec_MakeTable((longlong)loc_58,(cri_u1 *)((char *)arg1 + 0x1160),(longlong)pu_v3);
   DAT_143d74988 = arg1 + 0x1160;
   DAT_143d749a8 = pu_v3;
   return;
 }
 
 // @0x140067370
-void FUN_140067370(cri_u8 arg1)
+void MPVBDEC_Init(cri_u8 arg1)
 {
-  FUN_1400672b0(arg1);  // the exe passes rcx through
-  FUN_140067100(arg1);
-  FUN_1400afd20();
+  mpvbdec_InitZigzagTable(arg1);  // the exe passes rcx through
+  mpvbdec_SetupIxa(arg1);
+  MPVABDEC_Init();
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140067390
-void FUN_140067390(longlong arg1)
+void mpvcmc_InitMcOiTa(longlong arg1)
 {
   longlong l_v1;
   cri_u4 u_v2;
@@ -1446,7 +1446,7 @@ void FUN_140067390(longlong arg1)
 }
 
 // @0x140067420
-void FUN_140067420(longlong arg1)
+void MPVCMC_InitMcOiRt(longlong arg1)
 {
   cri_u4 u_v1;
   int i_v2;
@@ -1467,7 +1467,7 @@ void FUN_140067420(longlong arg1)
 }
 
 // @0x140067470
-void FUN_140067470(longlong arg1)
+void MPVCMC_SetCcnt(longlong arg1)
 {
   cri_u4 u_v1;
   
@@ -1483,39 +1483,39 @@ void FUN_140067470(longlong arg1)
 // @0x140067490
 void thunk_FUN_140067390(longlong arg1)
 {
-  FUN_140067390(arg1);
+  mpvcmc_InitMcOiTa(arg1);
 }
 
 // @0x1400674a0
 void thunk_FUN_1400afe60(const char *arg1)
 {
-  FUN_1400afe60(arg1);
+  SVM_CallErr1(arg1);
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x1400674d0
-char * FUN_1400674d0(char *dst, size_t size, const char *src)
+char * CRICRW_Strcpy(char *dst, size_t size, const char *src)
 {
   errno_t err = strcpy_s(dst, size, src);
   return dst;
 }
 
 // @0x140067510
-char * FUN_140067510(char *dst, size_t size, const char *src, size_t count)
+char * CRICRW_Strncpy(char *dst, size_t size, const char *src, size_t count)
 {
   errno_t err = strncpy_s(dst, size, src, count);
   return dst;
 }
 
 // @0x140067550
-char * FUN_140067550(char *dst, size_t size, const char *src, size_t count)
+char * CRICRW_Strncat(char *dst, size_t size, const char *src, size_t count)
 {
   errno_t err = strncat_s(dst, size, src, count);
   return dst;
 }
 
 // @0x140067590
-char * FUN_140067590(char *dst, size_t size, const char *src)
+char * CRICRW_Strcat(char *dst, size_t size, const char *src)
 {
   errno_t err = strcat_s(dst, size, src);
   return dst;
@@ -1545,7 +1545,7 @@ int FUN_140067630(const char *buf, const char *format, ...)
 }
 
 // @0x140067680
-void FUN_140067680(char *arg1,size_t arg2,const char *arg3,va_list arg4)
+void CRICRW_Vsprintf(char *arg1,size_t arg2,const char *arg3,va_list arg4)
 {
   _vsnprintf(arg1,arg2,arg3,arg4);
   return;
@@ -1564,11 +1564,11 @@ FILE * FUN_1400676c0(const char *name, const char *mode)
 #pragma optimize("", on)
 
 // @0x140067700
-void FUN_140067700()
+void SJCRS_Init()
 {
   if (++DAT_143d4eee8 == 1) {
     _DAT_143d4eee0 = 0;
-    DAT_143d4eed8 = (void*)FUN_1400682e0((longlong)&DAT_143d4eea8,0x30);
+    DAT_143d4eed8 = (void*)CRICRS_Create((longlong)&DAT_143d4eea8,0x30);
     if (DAT_143d4eed8 == 0) {
       CRIERR_CallErr("E2006101804 : Failed to create critical section.");
     }
@@ -1577,12 +1577,12 @@ void FUN_140067700()
 }
 
 // @0x140067750
-void FUN_140067750()
+void SJCRS_Finish()
 {
   if (--DAT_143d4eee8 == 0) {
     _DAT_143d4eee0 = 0;
     if (DAT_143d4eed8 != 0) {
-      FUN_140068380((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
+      CRICRS_Destroy((LPCRITICAL_SECTION)DAT_143d4eed8);  // rcx = the handle just tested
       DAT_143d4eed8 = 0;
     }
   }
@@ -1590,11 +1590,11 @@ void FUN_140067750()
 }
 
 // @0x140067790
-void FUN_140067790()
+void SJCRS_Lock()
 {
   int i_v1;
   
-  i_v1 = FUN_1400683d0((LPCRITICAL_SECTION)DAT_143d4eed8);
+  i_v1 = CRICRS_Enter((LPCRITICAL_SECTION)DAT_143d4eed8);
   if (i_v1 < 0) {
     CRIERR_CallErr(
                  "E2006022403 : The function has been executed before initialization (or after finalization)."
@@ -1604,11 +1604,11 @@ void FUN_140067790()
 }
 
 // @0x1400677c0
-void FUN_1400677c0()
+void SJCRS_Unlock()
 {
   int i_v1;
   
-  i_v1 = FUN_140068430((LPCRITICAL_SECTION)DAT_143d4eed8);
+  i_v1 = CRICRS_Leave((LPCRITICAL_SECTION)DAT_143d4eed8);
   if (i_v1 < 0) {
     CRIERR_CallErr(
                  "E2006022404 : The function has been executed before initialization (or after finalization)."
@@ -1619,41 +1619,41 @@ void FUN_1400677c0()
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // @0x1400677f0
-void FUN_1400677f0()
+void CRIDLG_Init()
 {
   _DAT_143d4ef20 = "\nCRI DLG/PCx64 Ver.1.16 Build:Jan 13 2012 18:29:22\n";
   DAT_143d4ef30 = DAT_143d4ef30 + 1;
   if (DAT_143d4ef30 == 1) {
-    DAT_143d4ef28 = (void*)FUN_1400682e0((longlong)&DAT_143d4eef0,0x30);
+    DAT_143d4ef28 = (void*)CRICRS_Create((longlong)&DAT_143d4eef0,0x30);
   }
   return;
 }
 
 // @0x140067840
-void FUN_140067840()
+void CRIDLG_Finish()
 {
   DAT_143d4ef30 = DAT_143d4ef30 + -1;
   if ((DAT_143d4ef30 == 0) && (DAT_143d4ef28 != 0)) {
-    FUN_140068380((LPCRITICAL_SECTION)DAT_143d4ef28);
+    CRICRS_Destroy((LPCRITICAL_SECTION)DAT_143d4ef28);
     DAT_143d4ef28 = 0;
   }
   return;
 }
 
 // @0x140067890
-cri_u8 FUN_140067890(cri_u8 arg1, cri_u4 arg2)
+cri_u8 CRIDLG_Create(cri_u8 arg1, cri_u4 arg2)
 {
   cri_u8 u_v1;
   
-  FUN_1400682a0();
-  u_v1 = FUN_1400678d0(arg1,arg2);
-  FUN_1400682c0();
+  cridlg_lock();
+  u_v1 = cridlg_Create(arg1,arg2);
+  cridlg_unlock();
   return u_v1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400678d0
-cri_u8 FUN_1400678d0(longlong arg1, uint arg2)
+cri_u8 cridlg_Create(longlong arg1, uint arg2)
 {
   int i_v1;
   HANDLE pv_v2;
@@ -1663,11 +1663,11 @@ cri_u8 FUN_1400678d0(longlong arg1, uint arg2)
   cri_u4 *loc_10;
   
   if (arg1 == 0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     loc_10 = (cri_u4 *)0x0;
   }
   else if (arg2 < 0x7c) {
-    FUN_140068280("Work area size is too short.");
+    cridlg_assert("Work area size is too short.");
     loc_10 = (cri_u4 *)0x0;
   }
   else {
@@ -1676,14 +1676,14 @@ cri_u8 FUN_1400678d0(longlong arg1, uint arg2)
     pv_v2 = CreateEventA((LPSECURITY_ATTRIBUTES)0x0,1,0,(LPCSTR)0x0);
     *(HANDLE *)(loc_10 + 4) = pv_v2;
     if (*(longlong *)(loc_10 + 4) == 0) {
-      FUN_140068280("E2004112601 : Can not create wait event.");
+      cridlg_assert("E2004112601 : Can not create wait event.");
       loc_10 = (cri_u4 *)0x0;
     }
     else {
-      u_v3 = FUN_1400682e0((longlong)(loc_10 + 8),0x30);  // rcx = loc_10 + 0x20 bytes, edx = 0x30 in the exe
+      u_v3 = CRICRS_Create((longlong)(loc_10 + 8),0x30);  // rcx = loc_10 + 0x20 bytes, edx = 0x30 in the exe
       *(cri_u8 *)(loc_10 + 6) = u_v3;
       if (*(longlong *)(loc_10 + 6) == 0) {
-        FUN_140068280("E2004112602 : Can not create critical section.");
+        cridlg_assert("E2004112602 : Can not create critical section.");
         CloseHandle(*(HANDLE *)(loc_10 + 4));
         loc_10 = (cri_u4 *)0x0;
       }
@@ -1691,9 +1691,9 @@ cri_u8 FUN_1400678d0(longlong arg1, uint arg2)
         u_v4 = _beginthreadex((void *)0x0,0,(unsigned (__stdcall *)(void *))FUN_140068190,loc_10,0,loc_18);
         *(uintptr_t *)(loc_10 + 2) = u_v4;
         if (*(longlong *)(loc_10 + 2) == 0) {
-          FUN_140068280("E2004112603 : Can not create thread.");
+          cridlg_assert("E2004112603 : Can not create thread.");
           CloseHandle(*(HANDLE *)(loc_10 + 4));
-          FUN_140068380((LPCRITICAL_SECTION)(*(cri_u8 *)(loc_10 + 6)));
+          CRICRS_Destroy((LPCRITICAL_SECTION)(*(cri_u8 *)(loc_10 + 6)));
           loc_10 = (cri_u4 *)0x0;
         }
         else {
@@ -1712,34 +1712,34 @@ cri_u8 FUN_1400678d0(longlong arg1, uint arg2)
 }
 
 // @0x140067a90
-void FUN_140067a90(cri_u8 arg1)
+void CRIDLG_Destroy(cri_u8 arg1)
 {
-  FUN_1400682a0();
+  cridlg_lock();
   FUN_140067ac0((void *)arg1);
-  FUN_1400682c0();
+  cridlg_unlock();
   return;
 }
 
 // @0x140067bf0
-cri_u4 FUN_140067bf0(cri_u8 arg1)
+cri_u4 CRIDLG_GetStat(cri_u8 arg1)
 {
   cri_u4 u_v1;
   
-  FUN_1400682a0();
-  u_v1 = FUN_140067c20((int *)arg1);
-  FUN_1400682c0();
+  cridlg_lock();
+  u_v1 = cridlg_GetStat((int *)arg1);
+  cridlg_unlock();
   return u_v1;
 }
 
 // @0x140067c20
-int FUN_140067c20(int *arg1)
+int cridlg_GetStat(int *arg1)
 {
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return -1;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return -1;
   }
   if (arg1[1] == 1) {
@@ -1749,33 +1749,33 @@ int FUN_140067c20(int *arg1)
 }
 
 // @0x140067c90
-cri_u4 FUN_140067c90(cri_u8 arg1, cri_u8 arg2, cri_u8 arg3)
+cri_u4 CRIDLG_TryBeginInvoke(cri_u8 arg1, cri_u8 arg2, cri_u8 arg3)
 {
   cri_u4 u_v1;
   
-  FUN_1400682a0();
-  u_v1 = FUN_140067cd0((int *)arg1,arg2,arg3);
-  FUN_1400682c0();
+  cridlg_lock();
+  u_v1 = cridlg_TryBeginInvoke((int *)arg1,arg2,arg3);
+  cridlg_unlock();
   return u_v1;
 }
 
 // @0x140067cd0
-int FUN_140067cd0(int *arg1, cri_u8 arg2, cri_u8 arg3)
+int cridlg_TryBeginInvoke(int *arg1, cri_u8 arg2, cri_u8 arg3)
 {
   int i_v1;
   
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return -1;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return -1;
   }
   if (arg1[1] != 0) {
     return -1;
   }
-  FUN_1400683d0((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
+  CRICRS_Enter((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
   *(cri_u8 *)((char *)arg1 + 0x50) = arg2;
   *(cri_u8 *)((char *)arg1 + 0x58) = arg3;
   arg1[1] = 1;
@@ -1784,39 +1784,39 @@ int FUN_140067cd0(int *arg1, cri_u8 arg2, cri_u8 arg3)
     arg1[0x18] = 1;
   }
   i_v1 = arg1[0x18];
-  FUN_140068430((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
+  CRICRS_Leave((LPCRITICAL_SECTION)(*(cri_u8 *)(arg1 + 6)));
   SetEvent(*(HANDLE *)(arg1 + 4));
   return i_v1;
 }
 
 // @0x140067dd0
-void FUN_140067dd0(cri_u8 arg1, cri_u4 arg2)
+void CRIDLG_EndInvoke(cri_u8 arg1, cri_u4 arg2)
 {
-  FUN_1400682a0();
-  FUN_140067e00((int *)arg1,arg2);
-  FUN_1400682c0();
+  cridlg_lock();
+  cridlg_EndInvoke((int *)arg1,arg2);
+  cridlg_unlock();
   return;
 }
 
 // @0x140067e00
-void FUN_140067e00(int *arg1, cri_u4 arg2)
+void cridlg_EndInvoke(int *arg1, cri_u4 arg2)
 {
   int i_v1;
   int i_v2;
   
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return;
   }
-  i_v2 = FUN_140067ec0(arg1,arg2);
+  i_v2 = cridlg_IsCompleted(arg1,arg2);
   if (i_v2 != 0) {
     return;
   }
-  i_v1 = FUN_140067c20(arg1);
+  i_v1 = cridlg_GetStat(arg1);
   if (i_v1 != 0) {
     FUN_140068210((longlong)arg1);
   }
@@ -1824,25 +1824,25 @@ void FUN_140067e00(int *arg1, cri_u4 arg2)
 }
 
 // @0x140067e80
-cri_u4 FUN_140067e80(cri_u8 arg1, cri_u4 arg2)
+cri_u4 CRIDLG_IsCompleted(cri_u8 arg1, cri_u4 arg2)
 {
   cri_u4 u_v1;
   
-  FUN_1400682a0();
-  u_v1 = FUN_140067ec0((int *)arg1,arg2);
-  FUN_1400682c0();
+  cridlg_lock();
+  u_v1 = cridlg_IsCompleted((int *)arg1,arg2);
+  cridlg_unlock();
   return u_v1;
 }
 
 // @0x140067ec0
-int FUN_140067ec0(int *arg1, int arg2)
+int cridlg_IsCompleted(int *arg1, int arg2)
 {
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return 0;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return 0;
   }
   if (arg1[0x18] != arg2) {
@@ -1856,48 +1856,48 @@ int FUN_140067ec0(int *arg1, int arg2)
 }
 
 // @0x140067f40
-cri_u4 FUN_140067f40(cri_u8 arg1)
+cri_u4 CRIDLG_GetPriority(cri_u8 arg1)
 {
   cri_u4 u_v1;
   
-  FUN_1400682a0();
-  u_v1 = FUN_140067f70((int *)arg1);
-  FUN_1400682c0();
+  cridlg_lock();
+  u_v1 = cridlg_GetPriority((int *)arg1);
+  cridlg_unlock();
   return u_v1;
 }
 
 // @0x140067f70
-int FUN_140067f70(int *arg1)
+int cridlg_GetPriority(int *arg1)
 {
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return 0;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return 0;
   }
   return arg1[0x1b];
 }
 
 // @0x140067fc0
-void FUN_140067fc0(cri_u8 arg1, cri_u4 arg2)
+void CRIDLG_SetPriority(cri_u8 arg1, cri_u4 arg2)
 {
-  FUN_1400682a0();
-  FUN_140067ff0((int *)arg1,arg2);
-  FUN_1400682c0();
+  cridlg_lock();
+  cridlg_SetPriority((int *)arg1,arg2);
+  cridlg_unlock();
   return;
 }
 
 // @0x140067ff0
-void FUN_140067ff0(int *arg1, int arg2)
+void cridlg_SetPriority(int *arg1, int arg2)
 {
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
     return;
   }
   if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
     return;
   }
   if (arg1[0x1b] == arg2) {
@@ -1909,17 +1909,17 @@ void FUN_140067ff0(int *arg1, int arg2)
 }
 
 // @0x140068070
-void FUN_140068070(cri_u8 arg1, cri_u4 arg2)
+void CRIDLG_SetAffinityMask(cri_u8 arg1, cri_u4 arg2)
 {
-  FUN_1400682a0();
-  FUN_1400680a0((int *)arg1,arg2);
-  FUN_1400682c0();
+  cridlg_lock();
+  cridlg_SetAffinityMask((int *)arg1,arg2);
+  cridlg_unlock();
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400680a0
-void FUN_1400680a0(int *arg1, uint arg2)
+void cridlg_SetAffinityMask(int *arg1, uint arg2)
 {
   BOOL BVar1;
   HANDLE hProcess;
@@ -1930,10 +1930,10 @@ void FUN_1400680a0(int *arg1, uint arg2)
   longlong loc_10;
   
   if (arg1 == (int *)0x0) {
-    FUN_140068280("NULL pointer is passed.");
+    cridlg_assert("NULL pointer is passed.");
   }
   else if (*arg1 == 0) {
-    FUN_140068280("Invalid handle is passed.");
+    cridlg_assert("Invalid handle is passed.");
   }
   else if (*(ulonglong *)((char *)arg1 + 0x70) != (ulonglong)arg2) {
     hProcess = GetCurrentProcess();
@@ -1953,29 +1953,29 @@ void FUN_1400680a0(int *arg1, uint arg2)
 }
 
 // @0x140068280
-void FUN_140068280(const char *arg1)
+void cridlg_assert(const char *arg1)
 {
   CRIERR_CallErr(arg1);
   return;
 }
 
 // @0x1400682a0
-void FUN_1400682a0()
+void cridlg_lock()
 {
-  FUN_1400683d0((LPCRITICAL_SECTION)DAT_143d4ef28);
+  CRICRS_Enter((LPCRITICAL_SECTION)DAT_143d4ef28);
   return;
 }
 
 // @0x1400682c0
-void FUN_1400682c0()
+void cridlg_unlock()
 {
-  FUN_140068430((LPCRITICAL_SECTION)DAT_143d4ef28);
+  CRICRS_Leave((LPCRITICAL_SECTION)DAT_143d4ef28);
   return;
 }
 
 // @0x1400682e0
 #pragma function(memset)                      // the exe obj calls memset here
-cri_u8 FUN_1400682e0(longlong arg1, int arg2)
+cri_u8 CRICRS_Create(longlong arg1, int arg2)
 {
   LPCRITICAL_SECTION lpCriticalSection;
   
@@ -2002,7 +2002,7 @@ cri_u8 FUN_1400682e0(longlong arg1, int arg2)
 
 // @0x140068380
 #pragma function(memset)                      // the exe obj calls memset here
-void FUN_140068380(LPCRITICAL_SECTION arg1)
+void CRICRS_Destroy(LPCRITICAL_SECTION arg1)
 {
   if (arg1 == (LPCRITICAL_SECTION)0x0) {
     CRIERR_CallErr("CRICRS_Destroy : NULL pointer is passed.");
@@ -2019,7 +2019,7 @@ void FUN_140068380(LPCRITICAL_SECTION arg1)
 #pragma intrinsic(memset)
 
 // @0x1400683d0
-cri_u4 FUN_1400683d0(LPCRITICAL_SECTION arg1)
+cri_u4 CRICRS_Enter(LPCRITICAL_SECTION arg1)
 {
   cri_u4 u_v1 = 0;
   
@@ -2038,7 +2038,7 @@ cri_u4 FUN_1400683d0(LPCRITICAL_SECTION arg1)
 }
 
 // @0x140068430
-cri_u4 FUN_140068430(LPCRITICAL_SECTION arg1)
+cri_u4 CRICRS_Leave(LPCRITICAL_SECTION arg1)
 {
   cri_u4 u_v1 = 0;
   
@@ -2058,7 +2058,7 @@ cri_u4 FUN_140068430(LPCRITICAL_SECTION arg1)
 #pragma optimize("", on)
 
 // @0x140068490
-void FUN_140068490(short *arg1, int *arg2, longlong arg3)
+void mpvumct_OutputIntra6blk(short *arg1, int *arg2, longlong arg3)
 {
   **(cri_u1 **)(arg2 + 2) = *(cri_u1 *)(*arg1 + arg3);
   **(cri_u1 **)(arg2 + 6) = *(cri_u1 *)(arg1[0x40] + arg3);
@@ -2130,7 +2130,7 @@ void FUN_140068590(longlong *arg1, longlong arg2, uint arg3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400686c0
-void FUN_1400686c0(longlong *arg1, longlong arg2, uint arg3)
+void mpvumct_BiMakeMb(longlong *arg1, longlong arg2, uint arg3)
 {
   byte *pb_v1;
   byte *pb_v2;
@@ -2193,7 +2193,7 @@ void FUN_1400686c0(longlong *arg1, longlong arg2, uint arg3)
 }
 
 // @0x140068840
-void FUN_140068840(int *arg1, longlong *arg2, longlong *arg3)
+void mpvumct_PpicSkipMb(int *arg1, longlong *arg2, longlong *arg3)
 {
   cri_u1 u_v1;
   cri_u1 u_v2;
@@ -2219,7 +2219,7 @@ void FUN_140068840(int *arg1, longlong *arg2, longlong *arg3)
 }
 
 // @0x1400688f0
-void FUN_1400688f0(longlong arg1, longlong arg2, int *arg3)
+void mpvumct_CalcOfs(longlong arg1, longlong arg2, int *arg3)
 {
   int i_v1;
   int i_v2;
@@ -2232,7 +2232,7 @@ void FUN_1400688f0(longlong arg1, longlong arg2, int *arg3)
 }
 
 // @0x140068920
-void FUN_140068920(longlong arg1, int arg2)
+void mpvumct_SubMbadr(longlong arg1, int arg2)
 {
   int *pi_v1;
   
@@ -2247,7 +2247,7 @@ void FUN_140068920(longlong arg1, int arg2)
 }
 
 // @0x140068960
-void FUN_140068960(longlong arg1)
+void mpvumct_IncreMbadr(longlong arg1)
 {
   *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) + 1;
   if (*(int *)((char *)arg1 + 0x179c) >= *(int *)((char *)arg1 + 0x15a0)) {
@@ -2260,14 +2260,14 @@ void FUN_140068960(longlong arg1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068990
-void FUN_140068990(longlong arg1)
+void MPVUMCT_Intra(longlong arg1)
 {
   longlong l_v1;
-  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int local_res[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
   int &local_res8 = local_res[0];
   int &local_resc = local_res[1];
   
-  FUN_1400688f0(arg1,arg1 + 0x16b0,local_res);
+  mpvumct_CalcOfs(arg1,arg1 + 0x16b0,local_res);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
   l_v1 = *(longlong *)((char *)arg1 + 0x16c0) + (longlong)local_resc;
@@ -2276,13 +2276,13 @@ void FUN_140068990(longlong arg1)
   l_v1 = l_v1 + *(short *)((char *)arg1 + 0x16ca);
   *(longlong *)((char *)arg1 + 0x14b0) = l_v1;
   *(longlong *)((char *)arg1 + 0x14c0) = l_v1 + 1;
-  FUN_140068490((short *)arg1,(int *)((char *)arg1 + 0x1468),*(cri_u8 *)((char *)arg1 + 0x12f8));
+  mpvumct_OutputIntra6blk((short *)arg1,(int *)((char *)arg1 + 0x1468),*(cri_u8 *)((char *)arg1 + 0x12f8));
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068a40
-void FUN_140068a40(longlong arg1, longlong arg2, int *arg3, longlong *arg4, longlong arg5)
+void mpvumct_OneReadMb(longlong arg1, longlong arg2, int *arg3, longlong *arg4, longlong arg5)
 {
   int i_v1;
   cri_code *UNRECOVERED_JUMPTABLE;
@@ -2300,7 +2300,7 @@ void FUN_140068a40(longlong arg1, longlong arg2, int *arg3, longlong *arg4, long
   
   i_v8 = (int)*(short *)((longlong)arg4 + 0x1a);
   i_v3 = (int)(short)arg4[3];
-  FUN_1400688f0(arg1,(longlong)arg4,arg3);  // the exe passes r8 (arg3) through: the callee writes two ints to it
+  mpvumct_CalcOfs(arg1,(longlong)arg4,arg3);  // the exe passes r8 (arg3) through: the callee writes two ints to it
   i_v11 = *(int *)((char *)arg5 + 0x18);
   i_v4 = *(int *)((char *)arg5 + 0x1c);
   i_v1 = *(int *)((char *)arg1 + 0x179c) * -0x20;
@@ -2374,28 +2374,28 @@ void FUN_140068a40(longlong arg1, longlong arg2, int *arg3, longlong *arg4, long
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068cc0
-void FUN_140068cc0(longlong arg1, int arg2)
+void MPVUMCT_PpicSkipped(longlong arg1, int arg2)
 {
   int i_v1;
   int i_v2;
   longlong l_v3;
-  int local_res8[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int local_res8[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
   
   i_v1 = *(int *)((char *)arg1 + 0x1794);
   l_v3 = arg1;
-  FUN_140068920(arg1,arg2);
+  mpvumct_SubMbadr(arg1,arg2);
   i_v2 = *(int *)((char *)l_v3 + 0x1794);
   while (i_v2 < i_v1) {
-    FUN_1400688f0(arg1,arg1 + 0x1638,local_res8);
-    FUN_140068840(local_res8,(longlong *)((char *)arg1 + 0x1638),(longlong *)((char *)arg1 + 0x1658));
-    FUN_140068960(arg1);
+    mpvumct_CalcOfs(arg1,arg1 + 0x1638,local_res8);
+    mpvumct_PpicSkipMb(local_res8,(longlong *)((char *)arg1 + 0x1638),(longlong *)((char *)arg1 + 0x1658));
+    mpvumct_IncreMbadr(arg1);
     i_v2 = *(int *)((char *)arg1 + 0x1794);
   }
   return;
 }
 
 // @0x140068d50
-void FUN_140068d50(longlong arg1, int arg2)
+void MPVUMCT_BpicSkipped(longlong arg1, int arg2)
 {
   int i_v1;
   int i_v2;
@@ -2406,11 +2406,11 @@ void FUN_140068d50(longlong arg1, int arg2)
   i_v1 = *(int *)((char *)arg1 + 0x1794);
   *(cri_u4 *)((char *)arg1 + 0x17a8) = 0;
   l_v4 = arg1;
-  FUN_140068920(arg1,arg2);
+  mpvumct_SubMbadr(arg1,arg2);
   i_v2 = *(int *)((char *)l_v4 + 0x1794);
   while (i_v2 < i_v1) {
     (*pc_v3)(arg1);
-    FUN_140068960(arg1);
+    mpvumct_IncreMbadr(arg1);
     i_v2 = *(int *)((char *)arg1 + 0x1794);
   }
   return;
@@ -2421,11 +2421,11 @@ void FUN_140068d50(longlong arg1, int arg2)
 void FUN_140068db0(longlong arg1)
 {
   longlong l_v1;
-  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int local_res[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
   int &local_res8 = local_res[0];
   int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1638),
+  mpvumct_OneReadMb(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1638),
                 arg1 + 0x174c);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
@@ -2444,11 +2444,11 @@ void FUN_140068db0(longlong arg1)
 void FUN_140068e70(longlong arg1)
 {
   longlong l_v1;
-  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int local_res[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
   int &local_res8 = local_res[0];
   int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1658),
+  mpvumct_OneReadMb(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1658),
                 arg1 + 6000);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
@@ -2464,16 +2464,16 @@ void FUN_140068e70(longlong arg1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068f30
-void FUN_140068f30(longlong arg1)
+void MPVUMCT_BiDirect(longlong arg1)
 {
   longlong l_v1;
-  int local_res[2];  // FUN_1400688f0 writes the chroma and luma offsets as one int pair
+  int local_res[2];  // mpvumct_CalcOfs writes the chroma and luma offsets as one int pair
   int &local_res8 = local_res[0];
   int &local_resc = local_res[1];
   
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1638),
+  mpvumct_OneReadMb(arg1,*(cri_u8 *)((char *)arg1 + 0x1458),local_res,(longlong *)((char *)arg1 + 0x1638),
                 arg1 + 0x174c);
-  FUN_140068a40(arg1,*(cri_u8 *)((char *)arg1 + 0x1460),local_res,(longlong *)((char *)arg1 + 0x1658),
+  mpvumct_OneReadMb(arg1,*(cri_u8 *)((char *)arg1 + 0x1460),local_res,(longlong *)((char *)arg1 + 0x1658),
                 arg1 + 6000);
   *(longlong *)((char *)arg1 + 0x1470) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b0);
   *(longlong *)((char *)arg1 + 0x1480) = (longlong)local_res8 + *(longlong *)((char *)arg1 + 0x16b8);
@@ -2483,12 +2483,12 @@ void FUN_140068f30(longlong arg1)
   l_v1 = *(short *)((char *)arg1 + 0x16ca) + l_v1;
   *(longlong *)((char *)arg1 + 0x14b0) = l_v1;
   *(longlong *)((char *)arg1 + 0x14c0) = l_v1 + 1;
-  FUN_1400686c0((longlong *)((char *)arg1 + 0x1448),arg1 + 0x1468,*(cri_u4 *)((char *)arg1 + 0x17a8));
+  mpvumct_BiMakeMb((longlong *)((char *)arg1 + 0x1448),arg1 + 0x1468,*(cri_u4 *)((char *)arg1 + 0x17a8));
   return;
 }
 
 // @0x140069020
-void FUN_140069020(longlong *arg1, int arg2, longlong *arg3, longlong *arg4)
+void SJ_SplitChunk(longlong *arg1, int arg2, longlong *arg3, longlong *arg4)
 {
   longlong *pl_v1;
   longlong l_v2;
@@ -2511,7 +2511,7 @@ void FUN_140069020(longlong *arg1, int arg2, longlong *arg3, longlong *arg4)
 }
 
 // @0x140069060
-void FUN_140069060(uint arg1, char *arg2)
+void sj_val_to_hexstr(uint arg1, char *arg2)
 {
   int v = (int)arg1;
   
@@ -2531,7 +2531,7 @@ void FUN_140069060(uint arg1, char *arg2)
 }
 
 // @0x1400690e0
-int FUN_1400690e0(char *arg1)
+int sj_hexstr_to_val(char *arg1)
 {
   return (((((*(int *)(&DAT_143a4a120 + (longlong)*arg1 * 4) * 0x10 +
              *(int *)(&DAT_143a4a120 + (longlong)arg1[1] * 4)) * 0x10 +
@@ -2543,27 +2543,27 @@ int FUN_1400690e0(char *arg1)
 }
 
 // @0x140069140
-void FUN_140069140(longlong *arg1, cri_u8 arg2)
+void SJ_MakeTag(longlong *arg1, cri_u8 arg2)
 {
   memset((void *)*arg1,0,(ulonglong)*(uint *)(arg1 + 1));
-  FUN_140067510((char *)*arg1,8,(const char *)arg2,7);  // r9d = 7 in the exe
-  FUN_140069060((int)arg1[1] + -0x10,(char *)(*arg1 + 8));
+  CRICRW_Strncpy((char *)*arg1,8,(const char *)arg2,7);  // r9d = 7 in the exe
+  sj_val_to_hexstr((int)arg1[1] + -0x10,(char *)(*arg1 + 8));
   return;
 }
 
 // @0x140069190
-void FUN_140069190(longlong arg1, longlong *arg2)
+void SJ_GetTagContent(longlong arg1, longlong *arg2)
 {
   cri_u4 u_v1;
   
   *arg2 = arg1 + 0x10;
-  u_v1 = FUN_1400690e0((char *)(arg1 + 8));
+  u_v1 = sj_hexstr_to_val((char *)(arg1 + 8));
   *(cri_u4 *)(arg2 + 1) = u_v1;
   return;
 }
 
 // @0x1400691b0
-char * FUN_1400691b0(longlong *arg1, char *arg2, char *arg3, cri_u8 *arg4)
+char * SJ_SearchTag(longlong *arg1, char *arg2, char *arg3, cri_u8 *arg4)
 {
   int i_v1;
   char *_Str1;
@@ -2575,13 +2575,13 @@ char * FUN_1400691b0(longlong *arg1, char *arg2, char *arg3, cri_u8 *arg4)
   pc_v2 = _Str1 + (int)arg1[1];
   while (_Str1 < pc_v2) {
     if (strncmp(_Str1,arg2,7) == 0) {
-      FUN_140069190((longlong)_Str1,(longlong *)arg4);
+      SJ_GetTagContent((longlong)_Str1,(longlong *)arg4);
       break;
     }
     if ((arg3 != (char *)0x0) && strncmp(_Str1,arg3,7) == 0) {
       return (char *)0x0;
     }
-    i_v1 = FUN_1400690e0(_Str1 + 8);
+    i_v1 = sj_hexstr_to_val(_Str1 + 8);
     _Str1 = _Str1 + (i_v1 + 0x10);
   }
   if (_Str1 >= pc_v2) {
@@ -2593,7 +2593,7 @@ char * FUN_1400691b0(longlong *arg1, char *arg2, char *arg3, cri_u8 *arg4)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140069270
-cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
+cri_u8 criMvPly_GetFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
 {
   int i_v1;
   cri_u8 u_v2;
@@ -2622,7 +2622,7 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
     pu_v3 = loc_1f8;
     FUN_1400356a0((void *)arg1,loc_b8,loc_1a8,(const CriMvFrameInfo *)loc_168,pu_v3);
     u_v4 = (cri_u4)((ulonglong)pu_v3 >> 0x20);
-    i_v1 = FUN_140069480(arg1,arg2,(cri_u8 *)loc_b8,(cri_u8 *)loc_1a8);
+    i_v1 = criMvPly_CopyFrameYUVBuffers(arg1,arg2,(cri_u8 *)loc_b8,(cri_u8 *)loc_1a8);
     if (i_v1 == 0) {
       criVdec_ReleaseFramePointer((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
@@ -2647,7 +2647,7 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140069480
-cri_u8 FUN_140069480(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
+cri_u8 criMvPly_CopyFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
 {
   uint u_v1;
   int i_v2;
@@ -2746,7 +2746,7 @@ cri_u8 FUN_140069480(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140069844
-int FUN_140069844(longlong cri_p0, int cri_p1, byte *cri_p2, uint cri_p3, int *cri_p4, uint cri_p5, longlong *cri_p6, uint cri_p7)
+int criAdxDecCore_Decode(longlong cri_p0, int cri_p1, byte *cri_p2, uint cri_p3, int *cri_p4, uint cri_p5, longlong *cri_p6, uint cri_p7)
 {
   longlong arg1 = cri_p0;
   int arg2 = cri_p1;
@@ -3026,7 +3026,7 @@ LAB_140069dee:
 }
 
 // @0x140069e44
-void FUN_140069e44(longlong cri_p0)
+void criAdxDecCore_Reset(longlong cri_p0)
 {
   void *arg1 = (void *)cri_p0;
   memset(arg1,0,0xcc);
@@ -3034,7 +3034,7 @@ void FUN_140069e44(longlong cri_p0)
 }
 
 // @0x140069e54
-void FUN_140069e54(longlong cri_p0, int cri_p1)
+void criAdxDecCore_SetNumChan(longlong cri_p0, int cri_p1)
 {
   longlong arg1 = cri_p0;
   cri_u1 arg2 = cri_p1;
@@ -3043,7 +3043,7 @@ void FUN_140069e54(longlong cri_p0, int cri_p1)
 }
 
 // @0x140069e5c
-void FUN_140069e5c(longlong cri_p0, int cri_p1, int cri_p2, int cri_p3)
+void criAdxDecCore_SetEncryptionKey(longlong cri_p0, int cri_p1, int cri_p2, int cri_p3)
 {
   longlong arg1 = cri_p0;
   cri_u2 arg2 = cri_p1;
@@ -3056,7 +3056,7 @@ void FUN_140069e5c(longlong cri_p0, int cri_p1, int cri_p2, int cri_p3)
 }
 
 // @0x140069e98
-void FUN_140069e98(longlong cri_p0, uint cri_p1, short cri_p2, short cri_p3)
+void criAdxDecCore_SetDlyVal(longlong cri_p0, uint cri_p1, short cri_p2, short cri_p3)
 {
   longlong arg1 = cri_p0;
   uint arg2 = cri_p1;
@@ -3074,7 +3074,7 @@ void FUN_140069e98(longlong cri_p0, uint cri_p1, short cri_p2, short cri_p3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140069ef4
-void FUN_140069ef4(longlong cri_p0, uint cri_p1, uint cri_p2)
+void criAdxDecCore_SetCutoffFreqency(longlong cri_p0, uint cri_p1, uint cri_p2)
 {
   float *arg1 = (float *)cri_p0;
   uint arg2 = cri_p1;
@@ -3158,7 +3158,7 @@ int FUN_14006a090(cri_u1 *arg1, uint arg2)
 #pragma intrinsic(strlen, memcmp)
 
 // @0x14006a110
-int FUN_14006a110(short *arg1, uint arg2, cri_u1 *arg3, cri_u1 *arg4)
+int criAdxDec_DecodeInfoVer(short *arg1, uint arg2, cri_u1 *arg3, cri_u1 *arg4)
 {
   int i_v1;
   
@@ -3184,7 +3184,7 @@ int FUN_14006a110(short *arg1, uint arg2, cri_u1 *arg3, cri_u1 *arg4)
 // read the ADX header: 0x8000 magic, data offset, encoding, block size, sample bits, channels, rate, sample count,
 // and the samples per block
 // @0x14006a16c
-int FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5, char *arg6, cri_u1 *arg7, cri_u4 *arg8, cri_u4 *arg9, int *arg10)
+int criAdxDec_DecodeBasicInfo(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5, char *arg6, cri_u1 *arg7, cri_u4 *arg8, cri_u4 *arg9, int *arg10)
 {
   if (arg2 < 0x10) {
     return -1;
@@ -3209,7 +3209,7 @@ int FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5
 }
 
 // @0x14006a260
-uint FUN_14006a260(longlong arg1, uint arg2, ushort *arg3, ushort *arg4)
+uint criAdxDec_DecodeInfoInitialDelay(longlong arg1, uint arg2, ushort *arg3, ushort *arg4)
 {
   int r;
   cri_u1 ver;
@@ -3218,7 +3218,7 @@ uint FUN_14006a260(longlong arg1, uint arg2, ushort *arg3, ushort *arg4)
   uint i;
   const ushort *p;
 
-  r = FUN_14006a110((short *)arg1,(uint)arg2,&ver,&b2);
+  r = criAdxDec_DecodeInfoVer((short *)arg1,(uint)arg2,&ver,&b2);
   if (r < 0) {
     return r;
   }
@@ -3253,7 +3253,7 @@ uint FUN_14006a260(longlong arg1, uint arg2, ushort *arg3, ushort *arg4)
 // MS2-FUNCTIONAL: the exe keeps the constant 4 in esi (version compares and offset steps); ours uses immediates,
 // 1 byte short
 // @0x14006a388
-uint FUN_14006a388(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9)
+uint criAdxDec_DecodeInfoLoop(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9)
 {
   int r;
   cri_u1 ver;
@@ -3265,7 +3265,7 @@ uint FUN_14006a388(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *a
   short s;
 
   *arg4 = 0;
-  r = FUN_14006a110((short *)arg1,arg2,&ver,&b2);
+  r = criAdxDec_DecodeInfoVer((short *)arg1,arg2,&ver,&b2);
   if (r < 0) {
     return r;
   }
@@ -3320,7 +3320,7 @@ uint FUN_14006a388(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *a
 // MS2-FUNCTIONAL: the exe loads the AINF tag's first byte before the second and keeps the size word in edx; ours
 // loads byte +1 first and swaps edx/r8d in the 32-bit byte swap
 // @0x14006a598
-uint FUN_14006a598(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg5, ushort *arg6)
+uint criAdxDec_DecodeInfoAinf(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg5, ushort *arg6)
 {
   int r;
   cri_u1 ver;
@@ -3332,7 +3332,7 @@ uint FUN_14006a598(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg
   short s;
 
   *arg3 = 0;
-  r = FUN_14006a110((short *)arg1,(uint)arg2,&ver,&b2);
+  r = criAdxDec_DecodeInfoVer((short *)arg1,(uint)arg2,&ver,&b2);
   if (r < 0) {
     return r;
   }
@@ -3386,7 +3386,7 @@ uint FUN_14006a598(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg
 #pragma intrinsic(memcpy)
 
 // @0x14006a750
-int FUN_14006a750(short *arg1, int arg2, ushort *arg3)
+int criAdxDec_DecodeInfoExADPCM2(short *arg1, int arg2, ushort *arg3)
 {
   if (arg2 < 0x12) {
     return -1;
@@ -3405,17 +3405,17 @@ int FUN_14006a750(short *arg1, int arg2, ushort *arg3)
 // MS2-FUNCTIONAL: cl gives the offset and the AINF size one home slot; the exe gives each its own and pushes
 // rbp/rsi instead of saving them in the home area
 // @0x14006a7f8
-uint FUN_14006a7f8(cri_u8 arg1, uint arg2, longlong arg3)
+uint criAdxDec_DecodeHeader(cri_u8 arg1, uint arg2, longlong arg3)
 {
   uint size;
   ushort ofs;
 
   ofs = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
+  if (criAdxDec_DecodeInfoVer((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
     return 0;
   }
-  if (FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+  if (criAdxDec_DecodeBasicInfo((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
                     (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
                     (int *)((char *)arg3 + 0x10)) < 0) {
     return 0;
@@ -3423,41 +3423,41 @@ uint FUN_14006a7f8(cri_u8 arg1, uint arg2, longlong arg3)
   if (arg2 < ofs) {
     return 0;
   }
-  FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
-  FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
+  criAdxDec_DecodeInfoInitialDelay(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
+  criAdxDec_DecodeInfoLoop(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
                 (uint *)((char *)arg3 + 0x40),(uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),
                 (uint *)((char *)arg3 + 0x4c));
-  FUN_14006a598(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
+  criAdxDec_DecodeInfoAinf(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
                 (ushort *)((char *)arg3 + 0x62));
-  FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
+  criAdxDec_DecodeInfoExADPCM2((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
   return ofs;
 }
 
-// FUN_14006a7f8 without the size check: parse the ADX header into arg3 and return the data offset (0 on a bad
+// criAdxDec_DecodeHeader without the size check: parse the ADX header into arg3 and return the data offset (0 on a bad
 // header)
 // @0x14006a928
-uint FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3)
+uint criAdxDec_DecodeHeaderEx(cri_u8 arg1, cri_u4 arg2, longlong arg3)
 {
   cri_u2 ofs;
   uint size;
 
   ofs = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
+  if (criAdxDec_DecodeInfoVer((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
     return 0;
   }
-  if (FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+  if (criAdxDec_DecodeBasicInfo((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
                          (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
                          (int *)((char *)arg3 + 0x10)) < 0) {
     return 0;
   }
-  FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
-  FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
+  criAdxDec_DecodeInfoInitialDelay(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
+  criAdxDec_DecodeInfoLoop(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
                 (uint *)((char *)arg3 + 0x40),(uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),
                 (uint *)((char *)arg3 + 0x4c));
-  FUN_14006a598(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
+  criAdxDec_DecodeInfoAinf(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
                 (ushort *)((char *)arg3 + 0x62));
-  FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
+  criAdxDec_DecodeInfoExADPCM2((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
   return ofs;
 }
 #pragma optimize("", on)
@@ -25683,7 +25683,7 @@ LAB_140089480:
 }
 
 // @0x140089e90
-void FUN_140089e90(longlong arg1, cri_u8 arg2, cri_u4 *arg3)
+void m2vsl_DecSliceOne(longlong arg1, cri_u8 arg2, cri_u4 *arg3)
 {
   cri_u4 u_v1;
   
@@ -25705,12 +25705,12 @@ void FUN_140089e90(longlong arg1, cri_u8 arg2, cri_u4 *arg3)
   arg3[1] = 0;
   *arg3 = u_v1;
   arg3[2] = *(cri_u4 *)((char *)arg1 + 0xd10);
-  FUN_14008c800(arg1,arg3 + 3,arg3 + 4);
+  M2VCONCEAL_GetMbaInfo(arg1,arg3 + 3,arg3 + 4);
   return;
 }
 
 // @0x140089f60
-void * FUN_140089f60(void *arg1, int arg2)
+void * m2vsl_DuplicateObj(void *arg1, int arg2)
 {
   void *_Dst;
   
@@ -25722,7 +25722,7 @@ void * FUN_140089f60(void *arg1, int arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140089fe0
-void FUN_140089fe0(longlong arg1, cri_u8 arg2)
+void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
 {
   uint u_v1;
   ulonglong u_v2;
@@ -25741,7 +25741,7 @@ void FUN_140089fe0(longlong arg1, cri_u8 arg2)
   int &loc_14 = *(int *)(frame_ + 36);
   cri_u2 &loc_10 = *(cri_u2 *)(frame_ + 40);
   
-  FUN_14008c7b0(arg1);  // the exe passes rcx through
+  M2VCONCEAL_StartFrame(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x1c58) != 0) {
     FUN_140050210(*(longlong *)((char *)arg1 + 0x1c58),*(cri_u4 *)((char *)arg1 + 0x1a84));
     loc_30 = &PTR_FUN_143a4a5a0;
@@ -25777,7 +25777,7 @@ LAB_14008a134:
       goto LAB_14008a134;
     }
     *(short *)((char *)arg1 + 0x1b98) = *(short *)((char *)arg1 + 0x1b98) + 1;
-    FUN_140089e90(arg1,arg2,(cri_u4 *)&loc_38);
+    m2vsl_DecSliceOne(arg1,arg2,(cri_u4 *)&loc_38);
     i_v3 = (int)loc_30 + (int)loc_38;
     if (i_v3 != 0) {
       *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + i_v3;
@@ -25795,13 +25795,13 @@ LAB_14008a134:
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008a180
-void FUN_14008a180(longlong arg1, cri_u8 arg2, int *arg3)
+void m2vsl_DecTaskOne(longlong arg1, cri_u8 arg2, int *arg3)
 {
   int i_v1;
   ulonglong u_v2;
   int local_res8 [2];
   int local_res18 [2];
-  // FUN_140089e90 fills one 6-int struct at rsp+0x20 in the exe.
+  // m2vsl_DecSliceOne fills one 6-int struct at rsp+0x20 in the exe.
   struct { int n0; int n1; int n2; int n3; int n4; int n5; } fr;
   
   *arg3 = 0;
@@ -25815,12 +25815,12 @@ void FUN_14008a180(longlong arg1, cri_u8 arg2, int *arg3)
   fr.n5 = 0;
   u_v2 = FUN_140051ec0((longlong *)arg2,(uint *)local_res18);
   if ((u_v2 & 1) != 0) {
-    FUN_14008c7e0(arg1);
+    M2VCONCEAL_StartTask(arg1);
     FUN_140051ec0((longlong *)arg2,(uint *)local_res8);
     if (local_res18[0] == local_res8[0]) {
       do {
         *(short *)((char *)arg1 + 0x1b98) = *(short *)((char *)arg1 + 0x1b98) + 1;
-        FUN_140089e90(arg1,arg2,(cri_u4 *)&fr);
+        m2vsl_DecSliceOne(arg1,arg2,(cri_u4 *)&fr);
         arg3[1] = arg3[1] + fr.n1;
         *arg3 = *arg3 + fr.n0;
         arg3[2] = arg3[2] + fr.n2;
@@ -25855,7 +25855,7 @@ struct CriSrcPlanes {
 // copy the decoder's source rectangle and plane pointers into the output block (the 0x1b28 fields are read through
 // their own pointer, so cl reloads each one as the exe does)
 // @0x14008a2b0
-void FUN_14008a2b0(longlong arg1)
+void m2vmc_SetFrameBuffer(longlong arg1)
 {
   CriSrcPlanes *src = (CriSrcPlanes *)((char *)arg1 + 0x1b28);
   cri_u8 u_v1;
@@ -25889,7 +25889,7 @@ void FUN_14008a2b0(longlong arg1)
 }
 
 // @0x14008a3c0
-void FUN_14008a3c0(longlong arg1)
+void M2VMC_MacroBlock(longlong arg1)
 {
   int i_v1;
   int i_v2;
@@ -25897,7 +25897,7 @@ void FUN_14008a3c0(longlong arg1)
   i_v2 = *(uint *)((char *)arg1 + 0x6f0) % *(uint *)((char *)arg1 + 0x6cc) << 4;
   i_v1 = *(uint *)((char *)arg1 + 0x6f0) / *(uint *)((char *)arg1 + 0x6cc) << 4;
   if ((*(byte *)((char *)arg1 + 0x5e8) & 4) == 0) {
-    FUN_14008ab60(arg1,i_v2,i_v1);
+    M2VPRD_FormPredictions(arg1,i_v2,i_v1);
   }
   if (*(int *)((char *)arg1 + 0x71c) != 0) {
     (**(cri_code **)((char *)arg1 + 0xd48))(arg1,i_v2,i_v1);
@@ -26067,7 +26067,7 @@ void FUN_14008a5b0(longlong arg1, int arg2, int arg3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008a730
-void FUN_14008a730(longlong arg1, uint arg2, int arg3, int arg4, int arg5)
+void m2vmc_AddBlock_thumbnail(longlong arg1, uint arg2, int arg3, int arg4, int arg5)
 {
   int i_v1;
   int i_v2;
@@ -26106,7 +26106,7 @@ void FUN_14008a730(longlong arg1, uint arg2, int arg3, int arg4, int arg5)
 }
 
 // @0x14008a830
-void FUN_14008a830(longlong arg1, int *arg2, int *arg3, int arg4, int arg5)
+void Dual_Prime_Arithmetic(longlong arg1, int *arg2, int *arg3, int arg4, int arg5)
 {
   if (*(int *)((char *)arg1 + 0x318) == 3) {
     if (*(int *)((char *)arg1 + 0x31c) != 0) {
@@ -26136,7 +26136,7 @@ void FUN_14008a830(longlong arg1, int *arg2, int *arg3, int arg4, int arg5)
 // MS2-FUNCTIONAL: code identical except one scheduling slot: the exe masks flag bit 2 before the loop counter's inc,
 // ours after (for/while/hoisted-increment forms tried).
 // @0x14008a970
-void FUN_14008a970(longlong arg1, uint arg2)
+void M2VMC_Skipped(longlong arg1, uint arg2)
 {
   cri_u4 u_v1;
   cri_u4 u_v2;
@@ -26169,7 +26169,7 @@ void FUN_14008a970(longlong arg1, uint arg2)
   *(uint *)((char *)arg1 + 0x5e8) = u_v5 & 0xfffffffb;
   while (arg2 = arg2 + 1, arg2 < u_v3) {
     *(uint *)((char *)arg1 + 0x6f0) = arg2;
-    FUN_14008a3c0(arg1);
+    M2VMC_MacroBlock(arg1);
   }
   *(uint *)((char *)arg1 + 0x6f0) = u_v3;
   *(uint *)((char *)arg1 + 0x5e8) = u_v5;
@@ -26180,7 +26180,7 @@ void FUN_14008a970(longlong arg1, uint arg2)
 }
 
 // @0x14008aa80
-void FUN_14008aa80(longlong arg1, cri_u4 arg2, cri_u4 arg3)
+void m2vmc_AddBlocks_thumbnail(longlong arg1, cri_u4 arg2, cri_u4 arg3)
 {
   int i;
   int mask;
@@ -26188,19 +26188,19 @@ void FUN_14008aa80(longlong arg1, cri_u4 arg2, cri_u4 arg3)
   mask = *(int *)((char *)arg1 + 0x71c);
   for (i = 0; i < 6; i = i + 1) {
     if ((mask & 1) != 0) {
-      FUN_14008a730(arg1,i,arg2,arg3,~(*(uint *)((char *)arg1 + 0x5e8) >> 2) & 1);
+      m2vmc_AddBlock_thumbnail(arg1,i,arg2,arg3,~(*(uint *)((char *)arg1 + 0x5e8) >> 2) & 1);
     }
     mask = mask >> 1;
   }
 }
 
 // @0x14008ab00
-void FUN_14008ab00(longlong arg1)
+void m2vmc_SetFunction(longlong arg1)
 {
   cri_code *pc_v1;
   
   if (*(int *)((char *)arg1 + 0xd44) != 0) {
-    *(cri_code **)((char *)arg1 + 0xd48) = (cri_code *)FUN_14008aa80;
+    *(cri_code **)((char *)arg1 + 0xd48) = (cri_code *)m2vmc_AddBlocks_thumbnail;
     return;
   }
   pc_v1 = (cri_code *)FUN_14008a5b0;
@@ -26212,16 +26212,16 @@ void FUN_14008ab00(longlong arg1)
 }
 
 // @0x14008ab40
-void FUN_14008ab40(longlong arg1)
+void M2VMC_StartFrame(longlong arg1)
 {
-  FUN_14008ab00(arg1);
-  FUN_14008a2b0(arg1);
+  m2vmc_SetFunction(arg1);
+  m2vmc_SetFrameBuffer(arg1);
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008ab60
-void FUN_14008ab60(longlong arg1, cri_u4 arg2, int arg3)
+void M2VPRD_FormPredictions(longlong arg1, cri_u4 arg2, int arg3)
 {
   int i_v1;
   uint u_v2;
@@ -26234,7 +26234,7 @@ void FUN_14008ab60(longlong arg1, cri_u4 arg2, int arg3)
   cri_u4 u_v9;
   cri_u4 u_v10;
   int i_v11;
-  // FUN_14008a830 fills int[4] at rsp+0x70 in the exe (loc_58..loc_4c).
+  // Dual_Prime_Arithmetic fills int[4] at rsp+0x70 in the exe (loc_58..loc_4c).
   __declspec(align(16)) cri_u1 frame_[0x10];
   cri_u4 &loc_58 = *(cri_u4 *)(frame_ + 0);
   cri_u4 &loc_54 = *(cri_u4 *)(frame_ + 4);
@@ -26300,7 +26300,7 @@ void FUN_14008ab60(longlong arg1, cri_u4 arg2, int arg3)
         }
       }
       else if (i_v1 == 2) {
-        FUN_14008a830(arg1,(int *)&loc_58,(int *)((char *)arg1 + 0x68c),u_v9,i_v11);
+        Dual_Prime_Arithmetic(arg1,(int *)&loc_58,(int *)((char *)arg1 + 0x68c),u_v9,i_v11);
         if (i_v4 < 2) {
           (**(cri_code **)((char *)arg1 + 0xd50))
                     (arg1,arg1 + 0xc30,0,arg1 + 0xc48,0,1,1,0x10,8,arg2,i_v5,loc_48,
@@ -26361,7 +26361,7 @@ LAB_14008b322:
       if (*(int *)((char *)arg1 + 0xc0c) == 0) {
         l_v3 = arg1 + 0xc30;
       }
-      FUN_14008a830(arg1,(int *)&loc_58,(int *)((char *)arg1 + 0x68c),u_v9,i_v11);
+      Dual_Prime_Arithmetic(arg1,(int *)&loc_58,(int *)((char *)arg1 + 0x68c),u_v9,i_v11);
       (**(cri_code **)((char *)arg1 + 0xd50))
                 (arg1,arg1 + 0xc30,i_v1 == 2,arg1 + 0xc48,0,1,1,0x10,0x10,arg2,arg3,
                  u_v9,i_v11,0);
@@ -26452,7 +26452,7 @@ void FUN_14008b6b0(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, uint arg
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008b780
-void FUN_14008b780(longlong arg1, longlong arg2, int arg3, cri_u8 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11)
+void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u8 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11)
 {
   byte b_v1;
   int i_v2;
@@ -26776,7 +26776,7 @@ void FUN_14008c150(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int 
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008c400
-void FUN_14008c400(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
+void form_prediction_thumbnail(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
 {
   int i_v1;
   int i_v2;
@@ -26834,7 +26834,7 @@ void FUN_14008c400(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int 
   if (arg3 != 0) {
     i_v1 = i_v3;
   }
-  FUN_14008b780((longlong)i_v1 + *arg2,(longlong)i_v2 + *arg4,
+  form_component_prediction_thumbnail((longlong)i_v1 + *arg2,(longlong)i_v2 + *arg4,
                 *(int *)((char *)arg1 + 0xc60) << (arg6 & 0x1f),i_v7,arg8 >> 3,arg9 >> 3,
                 arg10 >> 3,arg11 >> 3,i_v8,i_v5,arg14);
   arg8 = arg8 >> 4;
@@ -26852,7 +26852,7 @@ void FUN_14008c400(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int 
   if (arg3 != 0) {
     i_v1 = i_v3;
   }
-  FUN_14008b780((longlong)i_v1 + arg2[1],(longlong)i_v2 + arg4[1],i_v7,i_v6,arg8,
+  form_component_prediction_thumbnail((longlong)i_v1 + arg2[1],(longlong)i_v2 + arg4[1],i_v7,i_v6,arg8,
                 arg9,arg10,arg11,i_v8 / 2,i_v5 / 2,arg14);
   i_v2 = i_v4;
   if (arg5 != 0) {
@@ -26861,26 +26861,26 @@ void FUN_14008c400(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int 
   if (arg3 != 0) {
     i_v4 = i_v3;
   }
-  FUN_14008b780((longlong)i_v4 + arg2[2],(longlong)i_v2 + arg4[2],i_v7,i_v6,arg8,
+  form_component_prediction_thumbnail((longlong)i_v4 + arg2[2],(longlong)i_v2 + arg4[2],i_v7,i_v6,arg8,
                 arg9,arg10,arg11,i_v8 / 2,i_v5 / 2,arg14);
   return;
 }
 
 // @0x14008c780
-void FUN_14008c780(longlong arg1)
+void M2VPRD_SetFunction(longlong arg1)
 {
   cri_code *pc_v1;
   
   pc_v1 = (cri_code *)FUN_14008c150;
   if (*(int *)((char *)arg1 + 0xd44) != 0) {
-    pc_v1 = (cri_code *)FUN_14008c400;
+    pc_v1 = (cri_code *)form_prediction_thumbnail;
   }
   *(cri_code **)((char *)arg1 + 0xd50) = pc_v1;
   return;
 }
 
 // @0x14008c7b0
-void FUN_14008c7b0(longlong arg1)
+void M2VCONCEAL_StartFrame(longlong arg1)
 {
   *(cri_u1 **)((char *)arg1 + 0x1be0) = PTR_LAB_1431bc450[*(int *)((char *)arg1 + 0x1a80)];
   *(cri_u4 *)((char *)arg1 + 0xc98) = 0xffffffff;
@@ -26889,7 +26889,7 @@ void FUN_14008c7b0(longlong arg1)
 }
 
 // @0x14008c7e0
-void FUN_14008c7e0(longlong arg1)
+void M2VCONCEAL_StartTask(longlong arg1)
 {
   *(cri_u4 *)((char *)arg1 + 0xc98) = 0xffffffff;
   *(cri_u4 *)((char *)arg1 + 0xc9c) = 0xffffffff;
@@ -26897,7 +26897,7 @@ void FUN_14008c7e0(longlong arg1)
 }
 
 // @0x14008c800
-void FUN_14008c800(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
+void M2VCONCEAL_GetMbaInfo(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 {
   *arg2 = *(cri_u4 *)((char *)arg1 + 0xc98);
   *arg3 = *(cri_u4 *)((char *)arg1 + 0xc9c);
@@ -26905,7 +26905,7 @@ void FUN_14008c800(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 }
 
 // @0x14008c820
-void FUN_14008c820(longlong arg1)
+void M2VCONCEAL_SkippedMb(longlong arg1)
 {
   *(int *)((char *)arg1 + 0xc9c) = *(int *)((char *)arg1 + 0x6f0) + -1;
   return;
@@ -27272,7 +27272,7 @@ void FUN_14008d0b0(longlong arg1, int arg2)
   *(cri_u4 *)((char *)arg1 + 0xbb0) = 0;
   *(cri_u4 *)((char *)arg1 + 0xbb4) = 0;
   *(cri_u4 *)(arg1 + 3000) = 0;
-  FUN_14008a970(arg1,arg2 + -1);
+  M2VMC_Skipped(arg1,arg2 + -1);
   *(cri_u4 *)((char *)arg1 + 0x5e8) = u_v3;
   *(int *)((char *)arg1 + 0x2e0) = i_v1;
   *(cri_u4 *)((char *)arg1 + 0xb9c) = u_v2;
@@ -29558,7 +29558,7 @@ void FUN_14008d2a0(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008e570
-void FUN_14008e570(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
+void cft_sse_Ycc420plnToRgb888Int2smp(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 {
   cri_u8 u_v1;
   cri_u8 u_v2;
@@ -31655,7 +31655,7 @@ void FUN_14008e570(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008fa50
-void FUN_14008fa50(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
+void cft_sse_Ycc420plnToArgb8888Prg(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 {
   cri_u8 u_v1;
   cri_u8 u_v2;
@@ -32144,7 +32144,7 @@ void FUN_14008fa50(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140090080
-void FUN_140090080(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
+void cft_sse_Ycc420plnToRgb888Prg(longlong *arg1, longlong *arg2, longlong arg3, longlong arg4)
 {
   cri_u8 u_v1;
   cri_u8 u_v2;
@@ -33822,7 +33822,7 @@ void FUN_140090730(cri_u8 *arg1, longlong *arg2, cri_u8 arg3, longlong arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140090f20
-void FUN_140090f20(cri_u8 *arg1, cri_u8 *arg2)
+void cft_c_Ycc420plnToArgb8888Int1smp(cri_u8 *arg1, cri_u8 *arg2)
 {
   cri_u1 u_v1;
   cri_u1 u_v2;
@@ -34228,7 +34228,7 @@ void FUN_140090f20(cri_u8 *arg1, cri_u8 *arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140091df0
-void FUN_140091df0(cri_u8 *arg1, longlong *arg2)
+void cft_c_Ycc420plnToArgb8888Prg1smp(cri_u8 *arg1, longlong *arg2)
 {
   cri_u1 u_v1;
   cri_u1 u_v2;
@@ -34415,7 +34415,7 @@ void FUN_140091df0(cri_u8 *arg1, longlong *arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400923d0
-void FUN_1400923d0(cri_u8 *arg1, longlong *arg2)
+void cft_c_Ycc420plnToYcc422pix2Int1smp(cri_u8 *arg1, longlong *arg2)
 {
   uint u_v1;
   byte *pb_v2;
@@ -34596,35 +34596,35 @@ void FUN_1400923d0(cri_u8 *arg1, longlong *arg2)
 }
 
 // @0x1400927c0
-void FUN_1400927c0(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
+void CFT_Ycc420plnToArgb8888Int1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
   if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
-    FUN_1400b0a10(arg1,arg2,arg3,arg4);
+    cft_sse_Ycc420plnToArgb8888Int1smp(arg1,arg2,arg3,arg4);
   }
   else {
-    FUN_140090f20((cri_u8 *)arg1,(cri_u8 *)arg2);
+    cft_c_Ycc420plnToArgb8888Int1smp((cri_u8 *)arg1,(cri_u8 *)arg2);
   }
 }
 
 // @0x140092850
-void FUN_140092850(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
+void CFT_Ycc420plnToArgb8888Prg1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
   if (UTY_SupportSse() != 0 && ((arg1[0x10] | arg1[8] | arg1[0] | arg2[0]) & 0xf) == 0 && (arg2[0xc] & 3) == 0 &&
       ((w = *(uint *)&arg2[8]) & 0xf) == 0 && abs(*(int *)&arg2[0x10]) >= (int)((w + 0xf) & ~0xfu) * 4) {
-    FUN_1400b1720(arg1,arg2,arg3,arg4);
+    cft_sse_Ycc420plnToArgb8888Prg1smp(arg1,arg2,arg3,arg4);
   }
   else {
-    FUN_140091df0((cri_u8 *)arg1,(longlong *)arg2);
+    cft_c_Ycc420plnToArgb8888Prg1smp((cri_u8 *)arg1,(longlong *)arg2);
   }
 }
 
 // @0x1400928e0
-void FUN_1400928e0(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
+void CFT_Ycc420plnToYcc422pix2Int1smp(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
 {
   uint w;
   
@@ -34633,13 +34633,13 @@ void FUN_1400928e0(byte *arg1, byte *arg2, cri_u8 arg3, cri_u8 arg4)
     FUN_1400b1e50(arg1,arg2,arg3,arg4);
   }
   else {
-    FUN_1400923d0((cri_u8 *)arg1,(longlong *)arg2);
+    cft_c_Ycc420plnToYcc422pix2Int1smp((cri_u8 *)arg1,(longlong *)arg2);
   }
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140092970
-void FUN_140092970(longlong arg1, longlong arg2)
+void CFT_Ycc420plnToRgb555(longlong arg1, longlong arg2)
 {
   int i_v1;
   int i_v2;
@@ -34808,7 +34808,7 @@ void FUN_140092970(longlong arg1, longlong arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093150
-void FUN_140093150(longlong arg1, longlong arg2)
+void CFT_Ycc420plnToRgb555WithDither(longlong arg1, longlong arg2)
 {
   int i_v1;
   int i_v2;
@@ -35121,7 +35121,7 @@ void FUN_140093940(void *arg1, byte arg2, byte arg3, int arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093cf0
-void FUN_140093cf0()
+void CFT_Ycc420plnToRgb555Init()
 {
   int *pi_v1;
   int *pi_v2;
@@ -35170,7 +35170,7 @@ void FUN_140093cf0()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093ec0
-void FUN_140093ec0(longlong arg1, longlong arg2)
+void CFT_Ycc420plnToRgb565(longlong arg1, longlong arg2)
 {
   int i_v1;
   int i_v2;
@@ -35344,7 +35344,7 @@ void FUN_140093ec0(longlong arg1, longlong arg2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400946b0
-void FUN_1400946b0(longlong arg1, longlong arg2)
+void CFT_Ycc420plnToRgb565WithDither(longlong arg1, longlong arg2)
 {
   int i_v1;
   int i_v2;
@@ -35692,7 +35692,7 @@ void FUN_140094ea0(void *arg1, byte arg2, byte arg3, int arg4)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140095250
-void FUN_140095250()
+void CFT_Ycc420plnToRgb565Init()
 {
   int *pi_v1;
   int *pi_v2;
@@ -35741,14 +35741,14 @@ void FUN_140095250()
 }
 
 // @0x140095430
-cri_u8 FUN_140095430()
+cri_u8 DCT_GetVerStr()
 {
   _DAT_143d67f58 = "\nCRI DCT/PCx64 Ver.2.038 Build:Jan 13 2012 18:29:23\n";
-  return (cri_u8)_DAT_143d67f58;  // the exe returns the version string in rax (FUN_140066320 stores it)
+  return (cri_u8)_DAT_143d67f58;  // the exe returns the version string in rax (DCT_FsriInit stores it)
 }
 
 // @0x140095440
-void FUN_140095440(cri_u8 arg1, cri_u8 arg2)
+void DCT_SetErrFunc(cri_u8 arg1, cri_u8 arg2)
 {
   DAT_143d67f60 = (cri_code *)arg1;
   DAT_143d67f68 = arg2;
@@ -35756,7 +35756,7 @@ void FUN_140095440(cri_u8 arg1, cri_u8 arg2)
 }
 
 // @0x140095450
-void FUN_140095450(cri_u4 arg1)
+void DCTVER_Error(cri_u4 arg1)
 {
   _DAT_143d67f70 = arg1;
   if (DAT_143d67f60 != (cri_code *)0x0) {
@@ -35767,7 +35767,7 @@ void FUN_140095450(cri_u4 arg1)
 
 // @0x140095480
 // Builds the 8x8 DCT basis at 0x143d68190 and its transpose at 0x143d67f90.
-void FUN_140095480()
+void DCT_AcInit()
 {
   int i;
   int j;
@@ -35776,7 +35776,7 @@ void FUN_140095480()
   double *basis = (double *)CRI_FILL_ADDR(DAT_143d68190);
   double *transpose = (double *)CRI_FILL_ADDR(DAT_143d67f90);
   
-  _DAT_143d67f80 = (void*)FUN_140095430();
+  _DAT_143d67f80 = (void*)DCT_GetVerStr();
   for (i = 0; i < 8; i = i + 1) {
     // the DCT row scale: sqrt(1/8) (0x3fd6a09e667f3bcd) for row 0, 1/2 (0x3fe0000000000000) for the others
     if (i == 0) {
@@ -35796,7 +35796,7 @@ void FUN_140095480()
 
 // @0x140095590
 // Multiplies the 8x8 block cri_p0 by the matrix cri_p2 on both sides, writing the result to cri_p1 transposed.
-void FUN_140095590(void *cri_p0, void *cri_p1, void *cri_p2)
+void dctac_TransDouble(void *cri_p0, void *cri_p1, void *cri_p2)
 {
   const double *in = (const double *)cri_p0;
   double *out = (double *)cri_p1;
@@ -35829,22 +35829,22 @@ void FUN_140095590(void *cri_p0, void *cri_p1, void *cri_p2)
 }
 
 // @0x140095800
-void FUN_140095800(void *arg1, void *arg2)
+void DCT_AcFdctDouble(void *arg1, void *arg2)
 {
-  FUN_140095590(arg1,arg2,&DAT_143d67f90);
+  dctac_TransDouble(arg1,arg2,&DAT_143d67f90);
   return;
 }
 
 // @0x140095810
-void FUN_140095810(void *arg1, void *arg2)
+void DCT_AcIdctDouble(void *arg1, void *arg2)
 {
-  FUN_140095590(arg1,arg2,&DAT_143d68190);
+  dctac_TransDouble(arg1,arg2,&DAT_143d68190);
   return;
 }
 
-// inverse-DCT an 8x8 block of coefficients through doubles (FUN_140095800) and store it rounded and clamped to -0x800..0x7ff
+// inverse-DCT an 8x8 block of coefficients through doubles (DCT_AcFdctDouble) and store it rounded and clamped to -0x800..0x7ff
 // @0x140095820
-void FUN_140095820(longlong arg1, cri_u2 *arg2)
+void DCT_AcFdctShort(longlong arg1, cri_u2 *arg2)
 {
   double blk[64];
   int i;
@@ -35856,7 +35856,7 @@ void FUN_140095820(longlong arg1, cri_u2 *arg2)
       blk[i * 8 + j] = (double)((short *)arg1)[i * 8 + j];
     }
   }
-  FUN_140095800(blk,blk);
+  DCT_AcFdctDouble(blk,blk);
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
       v = (int)floor(blk[i * 8 + j] + 0.5);
@@ -35867,9 +35867,9 @@ void FUN_140095820(longlong arg1, cri_u2 *arg2)
   }
 }
 
-// inverse-DCT an 8x8 block of coefficients through doubles (FUN_140095810) and store it rounded and clamped to -0x100..0xff
+// inverse-DCT an 8x8 block of coefficients through doubles (DCT_AcIdctDouble) and store it rounded and clamped to -0x100..0xff
 // @0x1400959a0
-void FUN_1400959a0(longlong arg1, cri_u2 *arg2)
+void DCT_AcIdctShort(longlong arg1, cri_u2 *arg2)
 {
   double blk[64];
   int i;
@@ -35881,7 +35881,7 @@ void FUN_1400959a0(longlong arg1, cri_u2 *arg2)
       blk[i * 8 + j] = (double)((short *)arg1)[i * 8 + j];
     }
   }
-  FUN_140095810(blk,blk);
+  DCT_AcIdctDouble(blk,blk);
   for (i = 0; i < 8; i++) {
     for (j = 0; j < 8; j++) {
       v = (int)floor(blk[i * 8 + j] + 0.5);
@@ -35892,7 +35892,7 @@ void FUN_1400959a0(longlong arg1, cri_u2 *arg2)
   }
 }
 
-// Sets the two CRI hook tables (no .pdata in the exe: a leaf); FUN_1400afd20 is a jmp to it.
+// Sets the two CRI hook tables (no .pdata in the exe: a leaf); MPVABDEC_Init is a jmp to it.
 // @0x140095b20
 void FUN_140095b20()
 {
@@ -53963,13 +53963,13 @@ LAB_1400afa63:
 }
 
 // @0x1400afd20
-void FUN_1400afd20()
+void MPVABDEC_Init()
 {
   FUN_140095b20();
 }
 
 // @0x1400afd30
-void FUN_1400afd30(uint arg1)
+void svm_lock(uint arg1)
 {
   if (DAT_143d68398 != (cri_code *)0x0) {
     (*DAT_143d68398)(DAT_143d683a0);
@@ -53982,19 +53982,19 @@ void FUN_1400afd30(uint arg1)
 }
 
 // @0x1400afd70
-void FUN_1400afd70()
+void SVM_Lock()
 {
-  FUN_1400afd30(1);
+  svm_lock(1);
   return;
 }
 
 // @0x1400afde0
-void FUN_1400afde0(const char *arg1, ...)
+void SVM_CallErr(const char *arg1, ...)
 {
   va_list ap;
   memset(&DAT_143d74840,0,0x100);
   va_start(ap,arg1);
-  FUN_140067680((char *)&DAT_143d74840,0x100,arg1,ap);
+  CRICRW_Vsprintf((char *)&DAT_143d74840,0x100,arg1,ap);
   va_end(ap);
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
@@ -54004,7 +54004,7 @@ void FUN_1400afde0(const char *arg1, ...)
 }
 
 // @0x1400afe60
-void FUN_1400afe60(const char *arg1)
+void SVM_CallErr1(const char *arg1)
 {
   if (arg1 == 0) {
                     /* WARNING: Could not recover jumptable at 0x0001400afe76. Too many branches */
@@ -54012,7 +54012,7 @@ void FUN_1400afe60(const char *arg1)
     (*DAT_143d68860)(DAT_143d68868,0);
     return;
   }
-  FUN_140067510((char *)&DAT_143d74840,0x100,arg1,0xff);  // r9d = 0xff in the exe
+  CRICRW_Strncpy((char *)&DAT_143d74840,0x100,arg1,0xff);  // r9d = 0xff in the exe
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
@@ -54021,10 +54021,10 @@ void FUN_1400afe60(const char *arg1)
 }
 
 // @0x1400afed0
-void FUN_1400afed0(const char *arg1, const char *arg2)
+void SVM_CallErr2(const char *arg1, const char *arg2)
 {
-  FUN_140067510((char *)&DAT_143d74840,0x100,arg1,0xff);  // r9d = 0xff in the exe
-  FUN_140067550((char *)&DAT_143d74840,0x100,arg2,0xff);
+  CRICRW_Strncpy((char *)&DAT_143d74840,0x100,arg1,0xff);  // r9d = 0xff in the exe
+  CRICRW_Strncat((char *)&DAT_143d74840,0x100,arg2,0xff);
   if (DAT_143d68860 != (cri_code *)0x0) {
     (*DAT_143d68860)(DAT_143d68868,&DAT_143d74840);
   }
@@ -54045,7 +54045,7 @@ void FUN_1400aff40(int arg1)
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 #pragma function(memset)                // the exe calls memset here rather than expanding it
 // @0x1400affc0
-cri_u8 FUN_1400affc0()
+cri_u8 svm_reset_variable()
 {
   int i;
   
@@ -54078,7 +54078,7 @@ cri_u8 FUN_1400affc0()
 #pragma intrinsic(memset)
 
 // @0x1400b0090
-void FUN_1400b0090()
+void SVM_Init()
 {
   longlong l_v1;
   int i_v2;
@@ -54086,14 +54086,14 @@ void FUN_1400b0090()
   
   _DAT_143d683c8 = "\nSVM/PCx64 Ver.1.68 Build:Jan 13 2012 18:29:22\n";
   if (DAT_143d68ab0 == 0) {
-    FUN_1400affc0();
+    svm_reset_variable();
     i_v2 = 0;
     pl_v3 = &DAT_143d68870;
     do {
-      l_v1 = FUN_1400682e0((longlong)(&DAT_143d68930 + (longlong)i_v2 * 0x30),0x30);
+      l_v1 = CRICRS_Create((longlong)(&DAT_143d68930 + (longlong)i_v2 * 0x30),0x30);
       *pl_v3 = l_v1;
       if (l_v1 == 0) {
-        FUN_1400afe60("E2005102100 : Failed to create critical section.");
+        SVM_CallErr1("E2005102100 : Failed to create critical section.");
         return;
       }
       i_v2 = i_v2 + 1;
@@ -54106,7 +54106,7 @@ void FUN_1400b0090()
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0130
-int FUN_1400b0130()
+int SVM_Finish()
 {
   int i_v1;
   cri_u8 *pu_v2;
@@ -54115,10 +54115,10 @@ int FUN_1400b0130()
   if (i_v1 == 0) {
     pu_v2 = (ulonglong *)&DAT_143d68870;
     do {
-      FUN_140068380((LPCRITICAL_SECTION)(*pu_v2));
+      CRICRS_Destroy((LPCRITICAL_SECTION)(*pu_v2));
       pu_v2 = pu_v2 + 1;
     } while ((longlong)pu_v2 < ((longlong)&DAT_143d688b0));
-    i_v1 = (int)FUN_1400affc0();
+    i_v1 = (int)svm_reset_variable();
     DAT_143d68860 = 0;
     DAT_143d68868 = 0;
   }
@@ -54144,14 +54144,14 @@ void FUN_1400b0210()
 }
 
 // @0x1400b0240
-void FUN_1400b0240(int arg1)
+void svm_enterCriticalSection(int arg1)
 {
   int i_v1;
   
   if ((arg1 < 0) || (8 <= arg1)) {
-    FUN_1400afe60("E2005102101 : svm_enterCriticalSection : Invalid parameter. :Sint32 svtype");
+    SVM_CallErr1("E2005102101 : svm_enterCriticalSection : Invalid parameter. :Sint32 svtype");
   }
-  i_v1 = FUN_1400683d0((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
+  i_v1 = CRICRS_Enter((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
   if (i_v1 < 0) {
     CRIERR_CallErr(
                  "E2006022405 : The function has been executed before initialization (or after finalization)."
@@ -54161,14 +54161,14 @@ void FUN_1400b0240(int arg1)
 }
 
 // @0x1400b0290
-void FUN_1400b0290(int arg1)
+void svm_leaveCriticalSection(int arg1)
 {
   int i_v1;
   
   if ((arg1 < 0) || (8 <= arg1)) {
-    FUN_1400afe60("E2005102102 : svm_enterCriticalSection : Invalid parameter. :Sint32 svtype");
+    SVM_CallErr1("E2005102102 : svm_enterCriticalSection : Invalid parameter. :Sint32 svtype");
   }
-  i_v1 = FUN_140068430((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
+  i_v1 = CRICRS_Leave((LPCRITICAL_SECTION)((&DAT_143d68870)[arg1]));
   if (i_v1 < 0) {
     CRIERR_CallErr(
                  "E2006022406 : The function has been executed before initialization (or after finalization)."
@@ -54178,12 +54178,12 @@ void FUN_1400b0290(int arg1)
 }
 
 // @0x1400b02e0
-void FUN_1400b02e0(int arg1)
+void svm_unlock(int arg1)
 {
   if (DAT_143d683a8 != (cri_code *)0x0) {
     if (--DAT_143d68ab4 == 0) {
       if (DAT_143d68ab8 != arg1) {
-        FUN_1400afde0("2103102:SVM:svm_unlock:lock type miss match.(type org=%d, type now=%d)",
+        SVM_CallErr("2103102:SVM:svm_unlock:lock type miss match.(type org=%d, type now=%d)",
                       DAT_143d68ab8,arg1);
       }
       DAT_143d68ab8 = 0;
@@ -54194,15 +54194,15 @@ void FUN_1400b02e0(int arg1)
 }
 
 // @0x1400b0340
-void FUN_1400b0340()
+void SVM_Unlock()
 {
-  FUN_1400b02e0(1);
+  svm_unlock(1);
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b03a0
-uint FUN_1400b03a0(uint arg1, longlong arg2, longlong arg3, char *arg4)
+uint svm_SetCbSvr(uint arg1, longlong arg2, longlong arg3, char *arg4)
 {
   char *pc_v1;
   uint u_v2;
@@ -54211,7 +54211,7 @@ uint FUN_1400b03a0(uint arg1, longlong arg2, longlong arg3, char *arg4)
   ulonglong u_v5;
   
   if (arg1 <= 7) {
-    FUN_1400b0240(arg1);
+    svm_enterCriticalSection(arg1);
     u_v3 = 0;
     pl_v4 = (longlong *)(&DAT_143d683d0 + (longlong)(int)arg1 * 0x90);
     u_v5 = u_v3;
@@ -54232,53 +54232,53 @@ uint FUN_1400b03a0(uint arg1, longlong arg2, longlong arg3, char *arg4)
       u_v3 = (ulonglong)u_v2;
       pl_v4 = pl_v4 + 3;
     } while ((longlong)u_v5 < 6);
-    FUN_1400b0290(arg1);
+    svm_leaveCriticalSection(arg1);
     if (u_v2 == 6) {
-      FUN_1400afe60("1051001:SVM_SetCbSvr:too many server function");
+      SVM_CallErr1("1051001:SVM_SetCbSvr:too many server function");
       u_v2 = 0xffffffff;
     }
   }
   else {
-    FUN_1400afe60("1071205:SVM_SetCbSvrId:illegal svtype");
+    SVM_CallErr1("1071205:SVM_SetCbSvrId:illegal svtype");
     u_v2 = 0xffffffff;
   }
   return u_v2;
 }
 
 // @0x1400b0470
-void FUN_1400b0470(uint arg1, uint arg2)
+void svm_DelCbSvr(uint arg1, uint arg2)
 {
   longlong l_v1;
   
   if (arg2 <= 5) {
     if (arg1 <= 7) {
-      FUN_1400b0240(arg1);
+      svm_enterCriticalSection(arg1);
       l_v1 = (longlong)(int)arg2 + (longlong)(int)arg1 * 6;
       *(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18) = 0;
       *(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18 + 8) = 0;
       *(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18 + 0x10) = 0;
-      FUN_1400b0290(arg1);
+      svm_leaveCriticalSection(arg1);
       return;
     }
-    FUN_1400afe60("1071206:SVM_SetCbSvrId:illegal svtype");
+    SVM_CallErr1("1071206:SVM_SetCbSvrId:illegal svtype");
     return;
   }
-  FUN_1400afe60("1051002:SVM_DelCbSvr:illegal id");
+  SVM_CallErr1("1051002:SVM_DelCbSvr:illegal id");
   return;
 }
 
 // @0x1400b0500
-void FUN_1400b0500(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
+void svm_SetCbSvrId(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
 {
   longlong l_v1;
   char *pc_v2;
   
   if (arg2 <= 5) {
     if (arg1 <= 7) {
-      FUN_1400b0240(arg1);
+      svm_enterCriticalSection(arg1);
       l_v1 = (longlong)(int)arg2 + (longlong)(int)arg1 * 6;
       if (*(longlong *)(&DAT_143d683d0 + l_v1 * 0x18) != 0) {
-        FUN_1400afe60("2100801:SVM_SetCbSvrId:over write callback function.");
+        SVM_CallErr1("2100801:SVM_SetCbSvrId:over write callback function.");
       }
       *(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18) = arg3;
       *(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18 + 8) = arg4;
@@ -54287,7 +54287,7 @@ void FUN_1400b0500(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
         pc_v2 = arg5;
       }
       *(char **)(&DAT_143d683d0 + l_v1 * 0x18 + 0x10) = pc_v2;
-      FUN_1400b0290(arg1);
+      svm_leaveCriticalSection(arg1);
       return;
     }
     pc_v2 = "1071202:SVM_SetCbSvrId:illegal svtype";
@@ -54295,17 +54295,17 @@ void FUN_1400b0500(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
   else {
     pc_v2 = "1071201:SVM_SetCbSvrId:illegal id";
   }
-  FUN_1400afe60(pc_v2);
+  SVM_CallErr1(pc_v2);
   return;
 }
 
 // @0x1400b05c0
-void FUN_1400b05c0(int arg1, cri_u8 arg2, cri_u8 arg3)
+void SVM_SetCbBdr(int arg1, cri_u8 arg2, cri_u8 arg3)
 {
-  FUN_1400afd70();
+  SVM_Lock();
   *(cri_u8 *)(&DAT_143d688b0 + (longlong)arg1 * 0x10) = arg2;
   *(cri_u8 *)(&DAT_143d688b0 + (longlong)arg1 * 0x10 + 8) = arg3;
-  FUN_1400b0340();
+  SVM_Unlock();
   return;
 }
 
@@ -54316,7 +54316,7 @@ struct cri07_srvcb { uint (*fn)(cri_u8); cri_u8 arg; cri_u8 spare; };
 // @0x1400b0610
 // Runs the 6 callbacks registered for server slot arg1 (each 0x18-byte entry: function, argument, spare) with the
 // slot's busy flag set around each call; returns the OR of their results and bumps the slot's run count.
-uint FUN_1400b0610(int arg1)
+uint SVM_ExecSvrFunc(int arg1)
 {
   uint (*fn)(cri_u8);
   cri_u8 arg;
@@ -54328,7 +54328,7 @@ uint FUN_1400b0610(int arg1)
   
   l_v7 = (longlong)arg1;
   u_v5 = 0;
-  FUN_1400b0240(arg1);
+  svm_enterCriticalSection(arg1);
   l_v6 = 6;
   pu_v4 = (cri07_srvcb *)(&DAT_143d683d0 + l_v7 * 0x90);
   do {
@@ -54343,13 +54343,13 @@ uint FUN_1400b0610(int arg1)
     pu_v4 = pu_v4 + 1;
     l_v6 = l_v6 + -1;
   } while (l_v6 != 0);
-  FUN_1400b0290(arg1);
+  svm_leaveCriticalSection(arg1);
   (&DAT_143d74940)[l_v7] = (&DAT_143d74940)[l_v7] + 1;
   return u_v5;
 }
 
 // @0x1400b06c0
-cri_u4 FUN_1400b06c0(uint arg1, uint arg2)
+cri_u4 SVM_ExecSvrFuncId(uint arg1, uint arg2)
 {
   longlong l_v1;
   cri_u4 u_v2;
@@ -54358,13 +54358,13 @@ cri_u4 FUN_1400b06c0(uint arg1, uint arg2)
   u_v2 = 0;
   if (arg2 <= 5) {
     if (arg1 <= 7) {
-      FUN_1400b0240(arg1);
+      svm_enterCriticalSection(arg1);
       l_v1 = (longlong)(int)arg2 + (longlong)(int)arg1 * 6;
       if (*(cri_code **)(&DAT_143d683d0 + l_v1 * 0x18) != (cri_code *)0x0) {
         u_v2 = (**(uint (**)(cri_u8))(&DAT_143d683d0 + l_v1 * 0x18))
                           (*(cri_u8 *)(&DAT_143d683d0 + l_v1 * 0x18 + 8));
       }
-      FUN_1400b0290(arg1);
+      svm_leaveCriticalSection(arg1);
       return u_v2;
     }
     pc_v3 = "1071302:SVM_ExecSvrFuncId:illegal svtype";
@@ -54372,64 +54372,64 @@ cri_u4 FUN_1400b06c0(uint arg1, uint arg2)
   else {
     pc_v3 = "1071301:SVM_ExecSvrFuncId:illegal id";
   }
-  FUN_1400afe60(pc_v3);
+  SVM_CallErr1(pc_v3);
   return 0;
 }
 
 // @0x1400b07d0
-uint FUN_1400b07d0(int *arg1, cri_u8 a2, cri_u8 a3, cri_u8 a4)   // rdx, r8, r9 go to the hook untouched
+uint SVM_TestAndSet(int *arg1, cri_u8 a2, cri_u8 a3, cri_u8 a4)   // rdx, r8, r9 go to the hook untouched
 {
   int i_v1;
   
   if (DAT_143d68390 != (cri_code *)0x0) {
     return (*(uint (*)(int *, cri_u8, cri_u8, cri_u8))DAT_143d68390)(arg1,a2,a3,a4);   // the exe tail-jumps to the hook
   }
-  FUN_1400afd70();
+  SVM_Lock();
   i_v1 = *arg1 != 1;
   *arg1 = 1;
-  FUN_1400b0340();
+  SVM_Unlock();
   return (uint)i_v1;
 }
 
 // @0x1400b0820
-cri_u4 FUN_1400b0820(uint arg1, longlong arg2, longlong arg3, char *arg4)
+cri_u4 SVM_SetCbSvrWithString(uint arg1, longlong arg2, longlong arg3, char *arg4)
 {
   cri_u4 u_v1;
   
-  FUN_1400afd70();
-  u_v1 = FUN_1400b03a0(arg1,arg2,arg3,arg4);
-  FUN_1400b0340();
+  SVM_Lock();
+  u_v1 = svm_SetCbSvr(arg1,arg2,arg3,arg4);
+  SVM_Unlock();
   return u_v1;
 }
 
 // @0x1400b0880
-void FUN_1400b0880(uint arg1, uint arg2)
+void SVM_DelCbSvr(uint arg1, uint arg2)
 {
-  FUN_1400afd70();
-  FUN_1400b0470(arg1,arg2);
-  FUN_1400b0340();
+  SVM_Lock();
+  svm_DelCbSvr(arg1,arg2);
+  SVM_Unlock();
   return;
 }
 
 // @0x1400b08b0
-void FUN_1400b08b0(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
+void SVM_SetCbSvrIdWithString(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4, char *arg5)
 {
-  FUN_1400afd70();
-  FUN_1400b0500(arg1,arg2,arg3,arg4,arg5);
-  FUN_1400b0340();
+  SVM_Lock();
+  svm_SetCbSvrId(arg1,arg2,arg3,arg4,arg5);
+  SVM_Unlock();
   return;
 }
 
 // @0x1400b0920
-void FUN_1400b0920(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4)
+void SVM_SetCbSvrId(uint arg1, uint arg2, cri_u8 arg3, cri_u8 arg4)
 {
-  FUN_1400b08b0(arg1,arg2,arg3,arg4,0);
+  SVM_SetCbSvrIdWithString(arg1,arg2,arg3,arg4,0);
   return;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0a10
-void FUN_1400b0a10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
+void cft_sse_Ycc420plnToArgb8888Int1smp(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
 {
   cri_u8 *arg1 = cri_p0;
   longlong *arg2 = cri_p1;
@@ -55259,7 +55259,7 @@ void FUN_1400b0a10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b1720
-void FUN_1400b1720(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
+void cft_sse_Ycc420plnToArgb8888Prg1smp(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, ...)
 {
   cri_u8 *arg1 = cri_p0;
   longlong *arg2 = cri_p1;

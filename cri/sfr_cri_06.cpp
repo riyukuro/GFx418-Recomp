@@ -692,22 +692,22 @@ __int64 FUN_14006b0d0(__int64);  // C3: the definition's signature
 __int64 FUN_140073c80(__int64);  // C3: the definition's signature
 __int64 FUN_14007ba60(__int64);  // C3: the definition's signature
 __int64 FUN_140083350(__int64);  // C3: the definition's signature
-void FUN_140089fe0(__int64, unsigned __int64);  // C3: the definition's signature
+void M2VSL_DecPicture(__int64, unsigned __int64);  // C3: the definition's signature
 void FUN_14008a3c0(__int64);  // C3: the definition's signature
 void FUN_14008a970(__int64, unsigned int);  // C3: the definition's signature
-void FUN_14008ab40(__int64);  // C3: the definition's signature
-void FUN_14008c780(__int64);  // C3: the definition's signature
+void M2VMC_StartFrame(__int64);  // C3: the definition's signature
+void M2VPRD_SetFunction(__int64);  // C3: the definition's signature
 void FUN_14008c820(__int64);  // C3: the definition's signature
 void FUN_14008d2a0(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
-void FUN_14008e570(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
-void FUN_14008fa50(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
-void FUN_140090080(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
+void cft_sse_Ycc420plnToRgb888Int2smp(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
+void cft_sse_Ycc420plnToArgb8888Prg(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
+void cft_sse_Ycc420plnToRgb888Prg(__int64 *, __int64 *, __int64, __int64);  // C3: the definition's signature
 void FUN_140090730(unsigned __int64 *, __int64 *, unsigned __int64, __int64);  // C3: the definition's signature
-void FUN_1400927c0(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
-void FUN_140092850(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
-void FUN_1400928e0(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
-void FUN_140093cf0();
-void FUN_140095250();
+void CFT_Ycc420plnToArgb8888Int1smp(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
+void CFT_Ycc420plnToArgb8888Prg1smp(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
+void CFT_Ycc420plnToYcc422pix2Int1smp(unsigned char *, unsigned char *, unsigned __int64, unsigned __int64);  // C3: the definition's signature
+void CFT_Ycc420plnToRgb555Init();
+void CFT_Ycc420plnToRgb565Init();
 void FUN_140095450(unsigned int);  // C3: the definition's signature
 struct CriMpvDecoderState;
 void MPVDEC_ResetMv(CriMpvDecoderState* state);  // C3: sfr_cri_03's definitions (0x142ccb4f0/0x142ccb500)
@@ -5167,11 +5167,11 @@ void FUN_14005b390(longlong arg1, cri_u8 arg2, void *arg3)
       *(cri_u8 *)((char *)arg1 + 0x1bb0) = *(cri_u8 *)((char *)arg1 + 0x1b78);
       *(cri_u8 *)((char *)arg1 + 0x1bb8) = *(cri_u8 *)((char *)arg1 + 0x1b80);
       *(cri_u4 *)((char *)arg1 + 0xd44) = *(cri_u4 *)((char *)arg1 + 0x1a78);
-      FUN_14008c780(arg1);
-      FUN_14008ab40(arg1);
+      M2VPRD_SetFunction(arg1);
+      M2VMC_StartFrame(arg1);
       M2VIDCT_SetFunction(arg1);
       M2VVLC_SetFunction(arg1);
-      FUN_140089fe0(arg1,arg2);
+      M2VSL_DecPicture(arg1,arg2);
       *(int *)((longlong)arg3 + 0x68) = *(int *)((char *)arg1 + 0x1a44) - i_v7;
       *(int *)((longlong)arg3 + 0x6c) = *(int *)((char *)arg1 + 0x1a48) - i_v3;
       *(cri_u2 *)((longlong)arg3 + 0x70) = *(cri_u2 *)((char *)arg1 + 0x1b98);
@@ -9147,7 +9147,7 @@ void CFT_Ycc420plnToArgb8888Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   src.h = *(uint *)((char *)arg2 + 0x18);
   i_v2 = CFTCOM_GetOptimizeSpeed();
   if (i_v2 != 0) {
-    FUN_1400927c0((unsigned char *)&dst,(unsigned char *)&src,(unsigned __int64)&DAT_143a488c0,u_v1);
+    CFT_Ycc420plnToArgb8888Int1smp((unsigned char *)&dst,(unsigned char *)&src,(unsigned __int64)&DAT_143a488c0,u_v1);
     return;
   }
   i_v2 = UTY_SupportSse();
@@ -9192,7 +9192,7 @@ void CFT_Ycc420plnToRgb888Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
       ((src.f & 3) == 0)) &&
      (((src.w & 0xf) == 0 &&
       abs((int)src.h) >= (int)((src.w + 0xf) & ~0xfu) * 3))) {
-    FUN_14008e570((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
+    cft_sse_Ycc420plnToRgb888Int2smp((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
   cft_c_Ycc420plnToRgb888Int2smp(&dst,&src);
@@ -9224,7 +9224,7 @@ void CFT_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   src.h = *(uint *)((char *)arg2 + 0x18);
   i_v2 = CFTCOM_GetOptimizeSpeed();
   if (i_v2 != 0) {
-    FUN_140092850((unsigned char *)&dst,(unsigned char *)&src,(unsigned __int64)&DAT_143a488c0,u_v1);
+    CFT_Ycc420plnToArgb8888Prg1smp((unsigned char *)&dst,(unsigned char *)&src,(unsigned __int64)&DAT_143a488c0,u_v1);
     return;
   }
   i_v2 = UTY_SupportSse();
@@ -9233,7 +9233,7 @@ void CFT_Ycc420plnToArgb8888Prg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
       ((src.f & 3) == 0)) &&
      (((src.w & 0xf) == 0 &&
       abs((int)src.h) >= (int)((src.w + 0xf) & ~0xfu) * 4))) {
-    FUN_14008fa50((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
+    cft_sse_Ycc420plnToArgb8888Prg((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
   cft_c_Ycc420plnToArgb8888Prg(&dst,&src);
@@ -9269,7 +9269,7 @@ void CFT_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
       ((src.f & 3) == 0)) &&
      (((src.w & 0xf) == 0 &&
       abs((int)src.h) >= (int)((src.w + 0xf) & ~0xfu) * 3))) {
-    FUN_140090080((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
+    cft_sse_Ycc420plnToRgb888Prg((__int64 *)&dst,(__int64 *)&src,(__int64)&DAT_143a488c0,u_v1);
     return;
   }
   cft_c_Ycc420plnToRgb888Prg(&dst,&src);
@@ -9303,7 +9303,7 @@ void CFT_Ycc420plnToYcc422pix2Int(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2
   src.h = *(uint *)((char *)arg2 + 0x18);
   i_v3 = CFTCOM_GetOptimizeSpeed();
   if (i_v3 != 0) {
-    FUN_1400928e0((unsigned char *)&dst,(unsigned char *)&src,u_v1,u_v2);
+    CFT_Ycc420plnToYcc422pix2Int1smp((unsigned char *)&dst,(unsigned char *)&src,u_v1,u_v2);
     return;
   }
   i_v3 = UTY_SupportSse();

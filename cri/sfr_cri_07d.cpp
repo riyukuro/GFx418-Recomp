@@ -21,12 +21,12 @@ typedef unsigned __int64 cri_u8;
 typedef __int64 longlong;
 typedef cri_u8 cri_code(cri_u8);
 
-void FUN_140067e00(int *, cri_u4);
+void cridlg_EndInvoke(int *, cri_u4);
 cri_u8 FUN_140068200(cri_u8);
 cri_u8 FUN_140068210(longlong);
-void FUN_140068380(LPCRITICAL_SECTION);
-cri_u4 FUN_1400683d0(LPCRITICAL_SECTION);
-cri_u4 FUN_140068430(LPCRITICAL_SECTION);
+void CRICRS_Destroy(LPCRITICAL_SECTION);
+cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
+cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // stop a CRI worker thread: signal it until it exits, then close its event, lock and thread handles and clear the
@@ -39,7 +39,7 @@ void FUN_140067ac0(void *arg1)
   BOOL loc_18;
 
   if (*(int *)((longlong)arg1 + 4) != 0) {
-    FUN_140067e00((int *)arg1,*(cri_u4 *)((longlong)arg1 + 0x60));
+    cridlg_EndInvoke((int *)arg1,*(cri_u4 *)((longlong)arg1 + 0x60));
   }
   for (;;) {
     *(cri_u4 *)((longlong)arg1 + 0x68) = 1;
@@ -56,7 +56,7 @@ void FUN_140067ac0(void *arg1)
     *(cri_u8 *)((longlong)arg1 + 0x10) = 0;
   }
   if (*(longlong *)((longlong)arg1 + 0x18) != 0) {
-    FUN_140068380((LPCRITICAL_SECTION)(*(cri_u8 *)((longlong)arg1 + 0x18)));
+    CRICRS_Destroy((LPCRITICAL_SECTION)(*(cri_u8 *)((longlong)arg1 + 0x18)));
     *(cri_u8 *)((longlong)arg1 + 0x18) = 0;
   }
   if (*(longlong *)((longlong)arg1 + 8) != 0) {
@@ -95,14 +95,14 @@ cri_u8 FUN_140068200(cri_u8 arg1)
 // @0x140068210
 cri_u8 FUN_140068210(longlong arg1)
 {
-  FUN_1400683d0((LPCRITICAL_SECTION)(*(cri_u8 *)((char *)arg1 + 0x18)));
+  CRICRS_Enter((LPCRITICAL_SECTION)(*(cri_u8 *)((char *)arg1 + 0x18)));
   if (*(int *)(arg1 + 4) == 1) {
     if (*(longlong *)((char *)arg1 + 0x50) != 0) {
       (**(cri_code **)((char *)arg1 + 0x50))(*(cri_u8 *)((char *)arg1 + 0x58));
     }
     *(cri_u4 *)(arg1 + 4) = 0;
   }
-  FUN_140068430((LPCRITICAL_SECTION)(*(cri_u8 *)((char *)arg1 + 0x18)));
+  CRICRS_Leave((LPCRITICAL_SECTION)(*(cri_u8 *)((char *)arg1 + 0x18)));
   return 0;
 }
 #pragma optimize("", on)

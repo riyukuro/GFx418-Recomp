@@ -705,8 +705,8 @@ void FUN_140090730(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_1400927c0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140092850(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_1400928e0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_140093cf0();
-void FUN_140095250();
+void CFT_Ycc420plnToRgb555Init();
+void CFT_Ycc420plnToRgb565Init();
 void FUN_140095450(cri_any = cri_any());
 void FUN_142ccb4f0(cri_any = cri_any());
 void FUN_142ccb500(cri_any = cri_any());

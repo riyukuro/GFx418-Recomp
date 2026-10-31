@@ -297,7 +297,7 @@ void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
 void FUN_140066180(__int64);  // C3: the definition's signature
-void FUN_140066320();
+void DCT_FsriInit();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
 void FUN_140066f60(Any a0);
@@ -309,12 +309,12 @@ void FUN_140067470(__int64);  // C3: the definition's signature
 char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 char * FUN_140067590(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 void FUN_1400674a0(const char *msg);
-void FUN_140067700();
-void FUN_140067750();
-void FUN_140067790();
-void FUN_1400677c0();
-void FUN_1400677f0();
-void FUN_140067840();
+void SJCRS_Init();
+void SJCRS_Finish();
+void SJCRS_Lock();
+void SJCRS_Unlock();
+void CRIDLG_Init();
+void CRIDLG_Finish();
 unsigned __int64 FUN_140067890(unsigned __int64, unsigned int);  // C3: the definition's signature
 void FUN_140067a90(unsigned __int64);  // C3: the definition's signature
 unsigned int FUN_140067c90(unsigned __int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
@@ -335,13 +335,13 @@ void FUN_140068f30(__int64);  // C3: the definition's signature
 void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
 unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
 unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
-int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
+int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
-void FUN_140069e44(longlong);
-void FUN_140069e54(longlong, int);
-void FUN_140069e5c(longlong, int, int, int);
-void FUN_140069e98(longlong, uint, short, short);
-void FUN_140069ef4(longlong, uint, uint);
+void criAdxDecCore_Reset(longlong);
+void criAdxDecCore_SetNumChan(longlong, int);
+void criAdxDecCore_SetEncryptionKey(longlong, int, int, int);
+void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
+void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void DCT_Isse2Init();
 void FUN_142ccc860(void *,long);  // C3: the definition's signature
@@ -714,20 +714,20 @@ cri_u32 FUN_14004eb00(longlong a1)
 // @0x14004eb50
 void SJMEM_Init(void)
 {
-  FUN_140067700();
-  FUN_140067790();
+  SJCRS_Init();
+  SJCRS_Lock();
   sjmem_Init();
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004eb70
 void SJMEM_Finish(void)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   sjmem_Finish();
-  FUN_1400677c0();
-  FUN_140067750();
+  SJCRS_Unlock();
+  SJCRS_Finish();
   return;
 }
 
@@ -762,9 +762,9 @@ cri_u64 * FUN_14004eb90(cri_u64 a1,cri_u32 a2)
 // @0x14004ec20
 void SJMEM_Destroy(cri_u64 a1)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e680(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -773,27 +773,27 @@ cri_u64 SJMEM_GetUuid(cri_u64 a1)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004e6e0(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004ec70
 void SJMEM_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e730(a1,a2,a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004ecb0
 void SJMEM_Reset(cri_u64 a1)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e770(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -802,36 +802,36 @@ cri_u32 SJMEM_GetNumData(cri_u64 a1,cri_u32 a2)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004e7b0(a1,a2);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004ed10
 void SJMEM_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e820((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004ed60
 void SJMEM_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e8c0((longlong)a1,(int)a2,(longlong *)a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004eda0
 void SJMEM_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004e940((longlong)a1,(int)a2,(longlong *)a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -840,9 +840,9 @@ cri_u32 SJMEM_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004e9f0((longlong)a1,(int)a2,(int)a3,(int *)a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -851,9 +851,9 @@ cri_u64 SJMEM_GetBufPtr(cri_u64 a1)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004eab0(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -862,9 +862,9 @@ cri_u32 SJMEM_GetBufSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004eb00(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -873,9 +873,9 @@ cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = (cri_u64)FUN_14004eb90(a1,a2);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1334,20 +1334,20 @@ cri_u32 FUN_14004f840(longlong a1,int a2,int a3)
 void SJRBF_Init(void)
 {
   _DAT_143badb28 = cri_conv("\nSJ/PCx64 Ver.6.48 Build:Jan 13 2012 18:30:46\n");
-  FUN_140067700();
-  FUN_140067790();
+  SJCRS_Init();
+  SJCRS_Lock();
   sjrbf_Init();
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004f8d0
 void SJRBF_Finish(void)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   sjrbf_Finish();
-  FUN_1400677c0();
-  FUN_140067750();
+  SJCRS_Unlock();
+  SJCRS_Finish();
   return;
 }
 
@@ -1429,9 +1429,9 @@ void FUN_14004fa50(longlong a1,longlong a2,cri_u32 a3,cri_u32 a4)
 // @0x14004fa80
 void SJRBF_Destroy(cri_u64 a1)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f000(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -1440,36 +1440,36 @@ cri_u64 SJRBF_GetUuid(cri_u64 a1)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f060(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004fad0
 void SJRBF_EntryErrFunc(cri_u64 a1,cri_u64 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f0b0(a1,a2,a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004fb10
 void SJRBF_EntryPutFunc(cri_u64 a1,cri_u32 a2,cri_u64 a3,cri_u64 a4)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f0f0(a1,a2,a3,a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004fb60
 void SJRBF_Reset(cri_u64 a1)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f150(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -1478,36 +1478,36 @@ cri_u32 SJRBF_GetNumData(cri_u64 a1,cri_u32 a2)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f1a0(a1,a2);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004fbc0
 void SJRBF_GetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f220((longlong)a1,(int)a2,(int)a3,(longlong *)a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004fc10
 void SJRBF_PutChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f350((longlong)a1,(int)a2,(longlong *)a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
 // @0x14004fc50
 void SJRBF_UngetChunk(cri_u64 a1,cri_u32 a2,cri_u64 a3)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f490((longlong)a1,(int)a2,(longlong *)a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -1516,9 +1516,9 @@ cri_u32 SJRBF_IsGetChunk(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u64 a4)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f620((longlong)a1,(int)a2,(int)a3,(int *)a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1527,9 +1527,9 @@ cri_u64 SJRBF_GetBufPtr(cri_u64 a1)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f700(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1538,9 +1538,9 @@ cri_u32 SJRBF_GetBufSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f750(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1549,18 +1549,18 @@ cri_u32 SJRBF_GetXtrSize(cri_u64 a1)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f7a0(a1);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004fd80
 void SJRBF_SetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004f7f0(a1,a2,a3,a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -1569,9 +1569,9 @@ cri_u32 SJRBF_GetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 {
   cri_u32 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = FUN_14004f840(a1,a2,a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1580,9 +1580,9 @@ cri_u64 SJRBF_Create(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = (cri_u64)FUN_14004f8f0(a1,a2,a3);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
@@ -1591,18 +1591,18 @@ cri_u64 SJRBF_CreateHndl(cri_u64 a1,cri_u32 a2)
 {
   cri_u64 u_v1;
   
-  FUN_140067790();
+  SJCRS_Lock();
   u_v1 = (cri_u64)FUN_14004f9a0(a1,a2);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return u_v1;
 }
 
 // @0x14004feb0
 void SJRBF_SetBuffer(cri_u64 a1,cri_u64 a2,cri_u32 a3,cri_u32 a4)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   FUN_14004fa50(a1,a2,a3,a4);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return;
 }
 
@@ -1825,10 +1825,10 @@ void MPVMULTI_Destroy(cri_u32 *a1)
 // @0x140050320
 longlong FUN_140050320(longlong a1,void *a2)
 {
-  FUN_140067790();
+  SJCRS_Lock();
   memcpy((&CriAt<cri_u8>(a1, 0x188)),a2,0x68);
   memcpy((&CriAt<cri_u8>(a1, 0x208)),a2,0x68);
-  FUN_1400677c0();
+  SJCRS_Unlock();
   return a1 + 0x188;
 }
 
@@ -1927,7 +1927,7 @@ void MPVMULTI_Init(void)
     DAT_143c490e0 = ((cri_u64)&DAT_143badc00 + 0x5f) & ~(cri_u64)0x7f;
     memset((void *)DAT_143c490e0,0,0x300);
     DAT_143badbdc = 3;
-    FUN_1400677f0();
+    CRIDLG_Init();
     DAT_143badb84 = DAT_143badbdc;
     for (i = 0; i < DAT_143badbdc; i++) {
       // per-thread work area at entry + 0x10
@@ -1972,7 +1972,7 @@ void MPVMULTI_Finish(void)
         i--;
       } while (i >= 0);
     }
-    FUN_140067840();
+    CRIDLG_Finish();
   }
   if (DAT_143c49100 < 0) {
     DAT_143c49100 = 0;

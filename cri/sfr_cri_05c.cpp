@@ -299,7 +299,7 @@ void MPVUMC_EndOfFrame(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
 void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
 void FUN_140066180(__int64);  // C3: the definition's signature
-void FUN_140066320();
+void DCT_FsriInit();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
 void FUN_140066f60(Any a0);
@@ -311,12 +311,12 @@ void FUN_140067470(__int64);  // C3: the definition's signature
 char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 char * FUN_140067590(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 void FUN_1400674a0(const char *msg);
-void FUN_140067700();
-void FUN_140067750();
-void FUN_140067790();
-void FUN_1400677c0();
-void FUN_1400677f0();
-void FUN_140067840();
+void SJCRS_Init();
+void SJCRS_Finish();
+void SJCRS_Lock();
+void SJCRS_Unlock();
+void CRIDLG_Init();
+void CRIDLG_Finish();
 unsigned __int64 FUN_140067890(unsigned __int64, unsigned int);  // C3: the definition's signature
 void FUN_140067a90(unsigned __int64);  // C3: the definition's signature
 unsigned int FUN_140067c90(unsigned __int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
@@ -337,13 +337,13 @@ void FUN_140068f30(__int64);  // C3: the definition's signature
 void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
 unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
 unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
-int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
+int criAdxDecCore_Decode(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
-void FUN_140069e44(longlong);
-void FUN_140069e54(longlong, int);
-void FUN_140069e5c(longlong, int, int, int);
-void FUN_140069e98(longlong, uint, short, short);
-void FUN_140069ef4(longlong, uint, uint);
+void criAdxDecCore_Reset(longlong);
+void criAdxDecCore_SetNumChan(longlong, int);
+void criAdxDecCore_SetEncryptionKey(longlong, int, int, int);
+void criAdxDecCore_SetDlyVal(longlong, uint, short, short);
+void criAdxDecCore_SetCutoffFreqency(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void DCT_Isse2Init();
 void FUN_142ccc860(void *,long);  // C3: the definition's signature
@@ -1011,12 +1011,12 @@ void FUN_1400536d0(longlong a1)
   {
   const cri_u8* contents = criUsfCmn_GetContents(usfh.Data,usfh.Size,&len);
   FUN_14006a7f8((cri_u64)contents,len,a1 + 0x28);
-  FUN_140069e44(hdr);
-  FUN_140069e54(hdr,(int)(char)sj->Bytes[5]);
-  FUN_140069e5c(hdr,0,0,0);
-  FUN_140069ef4(hdr,(int)(short)sj->Hp,sj->Rate);
+  criAdxDecCore_Reset(hdr);
+  criAdxDecCore_SetNumChan(hdr,(int)(char)sj->Bytes[5]);
+  criAdxDecCore_SetEncryptionKey(hdr,0,0,0);
+  criAdxDecCore_SetCutoffFreqency(hdr,(int)(short)sj->Hp,sj->Rate);
   for (i = 0; i < (uint)(int)(char)sj->Bytes[5]; i = i + 1) {
-    FUN_140069e98(hdr,i,sj->HistA[i],sj->HistB[i]);
+    criAdxDecCore_SetDlyVal(hdr,i,sj->HistA[i],sj->HistB[i]);
   }
   FUN_1400467b0(data,0,&usfh);
   *(cri_u32*)((char*)a1 + 0x170) = 0;
@@ -1098,7 +1098,7 @@ void FUN_140053880(longlong a1)
     (*(ChunkCallback*)((char*)a1 + 0x178))(&chunk,*(void**)((char*)a1 + 0x180));
   }
   if (*(int*)((char*)a1 + 0x168) == 0) {
-    samples = FUN_140069844(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst16A,nsamp);
+    samples = criAdxDecCore_Decode(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst16A,nsamp);
   }
   else {
     samples = FUN_140069ac4(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst32,nsamp);
@@ -1159,12 +1159,12 @@ void criAadx_InsertDummyHeader(void* a1, unsigned long a2, unsigned long a3, uns
     hdr->HistB[i] = 0;
   }
   hdr->Flag3c = 1;
-  FUN_140069e44(adx);
-  FUN_140069e54(adx,(int)(char)hdr->Bytes[5]);
-  FUN_140069e5c(adx,0,0,0);
-  FUN_140069ef4(adx,(int)(short)hdr->Hp,hdr->Rate);
+  criAdxDecCore_Reset(adx);
+  criAdxDecCore_SetNumChan(adx,(int)(char)hdr->Bytes[5]);
+  criAdxDecCore_SetEncryptionKey(adx,0,0,0);
+  criAdxDecCore_SetCutoffFreqency(adx,(int)(short)hdr->Hp,hdr->Rate);
   for (i = 0; i < (char)hdr->Bytes[5]; i = i + 1) {
-    FUN_140069e98(adx,i,hdr->HistA[i],hdr->HistB[i]);
+    criAdxDecCore_SetDlyVal(adx,i,hdr->HistA[i],hdr->HistB[i]);
   }
   *(cri_u32*)((char*)a1 + 0x170) = 0;
   *((cri_u8*)a1 + 0x10) = 2;
@@ -1186,7 +1186,7 @@ void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3)
 void m2vidct_InitIdctTbls(void)
 {
   DCT_Isse2Init();
-  FUN_140066320();
+  DCT_FsriInit();
   FUN_140066180((__int64)&DAT_143fe82e0);
   FUN_1400659a0((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);
   FUN_1400659a0((const unsigned char *)&DAT_1431ba990,(unsigned char *)&DAT_143fe83e0);
