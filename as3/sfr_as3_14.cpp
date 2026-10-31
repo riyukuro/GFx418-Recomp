@@ -893,7 +893,10 @@ namespace Instances { namespace fl_utils
     {
         SF_UNUSED(result);
         if (pCoreTimer && pCoreTimer->IsActive())
-            static_cast<ASVM&>(GetVM()).GetMovieImpl()->ClearIntervalTimer(pCoreTimer->GetId());
+        {
+            MovieImpl* proot = static_cast<const ASVM&>(GetVM()).GetMovieImpl();
+            proot->ClearIntervalTimer(int(pCoreTimer->GetId()));
+        }
         pCoreTimer = NULL;
     }
 
@@ -973,22 +976,23 @@ namespace Instances { namespace fl_utils
     }
 
     // MS2-FUNCTIONAL: string-node creation call shape differs
+    static inline bool IsUTF8BOM(const char* str) { return (UInt8)str[0] == 0xEF && (UInt8)str[1] == 0xBB && (UInt8)str[2] == 0xBF; }
+
     // @0x1424bed20
     CheckResult ByteArray::ReadUTFBytes(ASString& result, UInt32 len)
     {
-        if (Data.GetSize() < (UPInt)(Position + len))
+        if (!(Position + len <= Data.GetSize()))
         {
             ThrowEOFError();
             return false;
         }
-        const char* p = (const char*)Data.GetDataPtr() + Position;
         // A UTF-8 byte order mark is skipped.
-        if (len > 2 && (UInt8)p[0] == 0xef && (UInt8)p[1] == 0xbb && (UInt8)p[2] == 0xbf)
+        if (len > 2 && IsUTF8BOM(reinterpret_cast<char*>(Data.GetDataPtr() + Position)))
         {
             len -= 3;
             Position += 3;
         }
-        result = GetVM().GetStringManager().CreateString((const char*)Data.GetDataPtr() + Position, len);
+        result = GetVM().GetStringManager().CreateString(reinterpret_cast<char*>(Data.GetDataPtr() + Position), len);
         Position += len;
         return true;
     }
@@ -1171,7 +1175,10 @@ namespace Instances { namespace fl_utils
     // @0x1424bf6d0
     void ByteArray::endianGet(ASString& result)
     {
-        result = GetVM().GetStringManager().GetStringManager()->CreateConstString(Endian == endianBig ? "bigEndian" : "littleEndian", Endian == endianBig ? 9 : 12);
+        if (Endian == endianBig)
+            result = GetVM().GetStringManager().GetStringManager()->CreateConstString("bigEndian", 9);
+        else
+            result = GetVM().GetStringManager().GetStringManager()->CreateConstString("littleEndian", 12);
     }
 
     // @0x1424bf750
@@ -1376,6 +1383,9 @@ namespace Instances { namespace fl_utils
 
     // The content as text: UTF-16 after a byte order mark, UTF-8 otherwise.
     // MS2-FUNCTIONAL: string creation from the data buffer: register allocation differs
+    static inline bool IsUTF16BE(const char* str) { return (UInt8)str[0] == 0xFE && (UInt8)str[1] == 0xFF; }
+    static inline bool IsUTF16LE(const char* str) { return (UInt8)str[0] == 0xFF && (UInt8)str[1] == 0xFE; }
+
     // @0x1424c0380
     void ByteArray::toString(ASString& result)
     {
@@ -1383,16 +1393,24 @@ namespace Instances { namespace fl_utils
         const char* p = (const char*)Data.GetDataPtr();
         if (size > 1)
         {
-            if (((UInt8)p[0] == 0xfe && (UInt8)p[1] == 0xff) || ((UInt8)p[0] == 0xff && (UInt8)p[1] == 0xfe))
+            if (IsUTF16BE(p))
             {
-                result = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode(
-                    (const wchar_t*)(p + 2), (SPInt)((size - 2) >> 1)));
+                p += 2;
+                size = (size - 2) >> 1;
+                result = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode((const wchar_t*)p, (SPInt)size));
                 return;
             }
-            if (size > 2 && (UInt8)p[0] == 0xef && (UInt8)p[1] == 0xbb && (UInt8)p[2] == 0xbf)
+            else if (IsUTF16LE(p))
             {
-                size -= 3;
-                p += 3;
+                p += 2;
+                size = (size - 2) >> 1;
+                result = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode((const wchar_t*)p, (SPInt)size));
+                return;
+            }
+            else if (size > 2 && (UInt8)p[0] == 0xef && (UInt8)p[1] == 0xbb && (UInt8)p[2] == 0xbf)
+            {
+                result = GetVM().GetStringManager().CreateString(p + 3, size - 3);
+                return;
             }
         }
         result = GetVM().GetStringManager().CreateString(p, size);
@@ -1417,8 +1435,8 @@ namespace Instances { namespace fl_utils
         int ret;
         do
         {
-            zs.avail_out = 0x2000;
             zs.next_out = out;
+            zs.avail_out = 0x2000;
             ret = inflate(&zs, 0);
             Write(out, 0x2000 - zs.avail_out);
         } while (ret == 0);
@@ -1510,7 +1528,7 @@ namespace Instances { namespace fl_utils
             // Writes as many bytes as there are characters (the exe's behaviour).
             WStringBuffer wb;
             wb.SetString(value.ToCStr(), value.GetSize());
-            if (wb.GetLength() < 0x100000000ULL)
+            if (wb.GetLength() <= 0xFFFFFFFFU)
                 Write(wb.GetBuffer(), (UInt32)wb.GetLength());
             return;
         }
@@ -1940,7 +1958,7 @@ namespace Classes { namespace fl_gfx
         if (pime)
         {
             String str(pime->GetCompositionString());
-            result = result.GetManager()->CreateString(str.ToCStr(), str.GetSize());
+            result.AssignNode(result.GetManager()->CreateStringNode(str.ToCStr(), str.GetSize()));
         }
     }
 
@@ -1954,7 +1972,7 @@ namespace Classes { namespace fl_gfx
         if (pime)
         {
             String str = pime->GetWindowsVersion();
-            result = result.GetManager()->CreateString(str.ToCStr(), str.GetSize());
+            result.AssignNode(result.GetManager()->CreateStringNode(str.ToCStr(), str.GetSize()));
         }
     }
 
@@ -2267,9 +2285,10 @@ namespace ClassTraits { namespace fl_gfx
 }}
 
 // The movie's log, for the fl_gfx natives' LogBase helpers.
+// Through the StateBag directly (no MovieImpl::GetLog wrapper): the exe reads the Ptr through the call's result register.
 Log* ASVM::GetLog() const
 {
-    return GetMovieImpl()->GetLog();
+    return GetMovieImpl()->GetStateBag()->GetLog();
 }
 
 }}} // namespace Scaleform::GFx::AS3
