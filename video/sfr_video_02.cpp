@@ -1089,13 +1089,13 @@ void FUN_140014d30(void* object)
 
 static void* NumberNaNBits();
 
-// MS2-FUNCTIONAL: stores the executable's NaN payload in the third numeric field.
+// Stores the executable's NaN payload in the third numeric field.
 // @0x140014e10
 void** FUN_140014e10(void** values, void* first, void* second)
 {
     values[0] = first;
     values[1] = second;
-    values[2] = NumberNaNBits();
+    *reinterpret_cast<double*>(&values[2]) = NumberUtil::NaN();
     return values;
 }
 
@@ -1237,13 +1237,14 @@ uintptr_t FUN_140012cd0(uintptr_t self, UByte* result, Scaleform::GFx::AS3::Valu
     return self;
 }
 
-// MS2-FUNCTIONAL: forwards the executable's argument frame to the recovered VM internal invocation method.
+// Forwards the executable's argument frame to the recovered VM internal invocation method.
 // @0x140012c30
 void FUN_140012c30(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value& function,
                    const Scaleform::GFx::AS3::Value& thisValue, Scaleform::GFx::AS3::Value& result,
-                   unsigned argc, const Scaleform::GFx::AS3::Value* argv, bool discardResult)
+                   unsigned argc, const Scaleform::GFx::AS3::Value* argv, bool)
 {
-    vm->ExecuteInternalUnsafe(function, thisValue, result, argc, argv, discardResult);
+    // The exe ignores the discard flag and always keeps the result.
+    vm->ExecuteInternalUnsafe(function, thisValue, result, argc, argv, false);
 }
 
 // @0x140013a20
