@@ -897,7 +897,6 @@ void HAL::DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const
     drawScreenQuad();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
 // @0x142730ec0
 void HAL::DrawableCopyback(Render::Texture* tex, const Matrix2F& mvpIn, const Matrix2F& texgen)
 {
@@ -907,10 +906,9 @@ void HAL::DrawableCopyback(Render::Texture* tex, const Matrix2F& mvpIn, const Ma
     ShaderInterfaceAccess::BeginPrimitive(psi);
 
     // shifted a pixel of the clip space: D3D9 samples pixel centers
-    Size<int> size = drawableTargetSize(this);
-    Matrix2F  mvp(mvpIn);
-    mvp.M[0][3] -= 1.0f / (float)(unsigned)size.Width;
-    mvp.M[1][3] += 1.0f / (float)(unsigned)size.Height;
+    Matrix2F mvp = mvpIn;
+    mvp.Tx() -= 1.0f / RenderTargetStack.Back().pRenderTarget->GetSize().Width;
+    mvp.Ty() += 1.0f / RenderTargetStack.Back().pRenderTarget->GetSize().Height;
     const ShaderPair& cur = psi->GetCurrentShaders();
     psi->SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
     psi->SetUniform(cur, Uniform::SU_texgen, &texgen.M[0][0], 8);
