@@ -35,8 +35,7 @@ struct SortKeyInterface;
 extern SortKeyInterface SKI_NullInterface;
 class SKI_Primitive { public: static SKI_Primitive Instance; static SKI_Primitive Instance3D; };
 class SKI_ComplexPrimitive { public: static SKI_ComplexPrimitive Instance; static SKI_ComplexPrimitive Instance3D; };
-class SKI_MaskStart { public: static SKI_MaskStart Instance; static SKI_MaskStart InstanceClipped; };
-class SKI_MaskEnd { public: class RQII_EndMask; static RQII_EndMask EndMaskItem; static SKI_MaskEnd Instance; };
+class SKI_MaskEnd { public: class RQII_EndMask; static RQII_EndMask EndMaskItem; };
 class SKI_BlendMode
 {
 public:
@@ -85,6 +84,13 @@ extern "C" char DAT_143a30338[];
 extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
+// SKI_MaskStart::Instance / InstanceClipped and SKI_MaskEnd::Instance (sfr_render_06e) stay DAT_ names: 06e takes
+// their addresses in static data (the mask key table), so a real-name row would make the hook DLL rebind the
+// definitions to the exe (ADDR64 against an exe global). The full exe aliases these to the definitions
+// (tools/fullexe/alias-manual.tsv).
+extern "C" char DAT_143a2fd28[];
+extern "C" char DAT_143a2fd38[];
+extern "C" char DAT_143a2fd50[];
 
 extern "C" void FUN_142521f00(void*);       // AS3::Value::ReleaseInternal
 
@@ -274,14 +280,14 @@ void FUN_142cc96f0()
 // @0x142cc9710
 void FUN_142cc9710()
 {
-    RawSetVtable(RawObj(Render::SKI_MaskStart::InstanceClipped), DAT_1431927c8);
+    RawSetVtable(DAT_143a2fd38, DAT_1431927c8);
 }
 
 // static Render::SortKeyInterface at 0x143a2fd28: back to its interface base vftable.
 // @0x142cc9720
 void FUN_142cc9720()
 {
-    RawSetVtable(RawObj(Render::SKI_MaskStart::Instance), DAT_1431927c8);
+    RawSetVtable(DAT_143a2fd28, DAT_1431927c8);
 }
 
 // SKI_BlendMode::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
@@ -337,7 +343,7 @@ void FUN_142cc9790()
 // @0x142cc97a0
 void FUN_142cc97a0()
 {
-    RawSetVtable(RawObj(Render::SKI_MaskEnd::Instance), DAT_1431927c8);
+    RawSetVtable(DAT_143a2fd50, DAT_1431927c8);
 }
 
 // SKI_Primitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
