@@ -1320,16 +1320,16 @@ void FUN_140006bb0(void** allocation) { if (*allocation) Scaleform::Memory::Free
 void FUN_140006bd0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: drops one reference on each weak-pointer proxy in the array (freeing it at zero), then frees the array.
+// drops one reference on each weak-pointer proxy in the array (freeing it at zero), then frees the array:
+// SDK DestructArray(Data, Size), last element first
 // @0x140006c70
 void FUN_140006c70(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    void** items = static_cast<void**>(*array);
-    for (Scaleform::UPInt i = fields[1]; i != 0; --i) {
-        void* proxy = items[i - 1];
-        if (proxy && --*static_cast<int*>(proxy) == 0) Scaleform::Memory::Free(proxy);
-    }
+    Scaleform::UPInt count = fields[1];
+    void** items = static_cast<void**>(*array) + count - 1;
+    for (Scaleform::UPInt i = 0; i < count; ++i, --items)
+        if (*items) static_cast<Scaleform::WeakPtrProxy*>(*items)->Release();
     if (*array) Scaleform::Memory::Free(*array);
 }
 
