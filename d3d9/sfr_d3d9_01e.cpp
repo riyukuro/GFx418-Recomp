@@ -1257,53 +1257,43 @@ void HAL::PopFilters()
     Render::HAL::PopFilters();
 }
 
-// a channel in 0..1, zero kept exact
-static float clearChannel(UByte c)
-{
-    return c ? (float)c / 255.0f : 0.0f;
-}
-
-// MS2-FUNCTIONAL: written from the decompile
 // @0x142736e50
 void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 {
-    ScopedRenderEvent evt(GetEvent(Event_Clear), __FUNCTION__);
-    ShaderInterface* psi = &ShaderData;
-    if (color.GetAlpha() == 0xff && !(VP.Flags & Viewport::View_Stereo_AnySplit))
+    ScopedRenderEvent GPUEvent(GetEvent(Event_Clear), __FUNCTION__);
+    color = Profiler.GetClearColor(color);
+    if (color.GetAlpha() == 0xFF && !(VP.Flags & Viewport::View_Stereo_AnySplit))
     {
-        // opaque: the device clears it
-        D3DRECT dr = { r.x1 + VP.Left, r.y1 + VP.Top, r.x2 + VP.Left, r.y2 + VP.Top };
-        pDevice->Clear(1, &dr, D3DCLEAR_TARGET, color.ToColor32(), 1.0f, 0);
-        return;
+        // Do more efficient HW clear. Device::Clear expects render-target coordinates.
+        D3DRECT  cr = { r.x1 + VP.Left, r.y1 + VP.Top,
+                        r.x2 + VP.Left, r.y2 + VP.Top };
+        D3DCOLOR d3dc = D3DCOLOR_XRGB(color.GetRed(), color.GetGreen(), color.GetBlue());
+        pDevice->Clear(1, &cr, D3DCLEAR_TARGET, d3dc, 1.0f,  0);
     }
+    else
+    {
+        float colorf[4];
+        color.GetRGBAFloat(colorf, colorf+1, colorf+2, colorf+3);
+        Matrix2F m((float)r.Width(), 0.0f, (float)r.x1,
+            0.0f, (float)r.Height(), (float)r.y1);
 
-    // blended: a solid quad over the rectangle
-    float colorf[4] = { clearChannel(color.GetRed()), clearChannel(color.GetGreen()), clearChannel(color.GetBlue()),
-                        clearChannel(color.GetAlpha()) };
-    Matrix2F m;
-    m.M[0][0] = (float)(r.x2 - r.x1);
-    m.M[0][1] = 0.0f;
-    m.M[0][2] = 0.0f;
-    m.M[0][3] = (float)r.x1;
-    m.M[1][0] = 0.0f;
-    m.M[1][1] = (float)(r.y2 - r.y1);
-    m.M[1][2] = 0.0f;
-    m.M[1][3] = (float)r.y1;
-    Matrix2F mvp;
-    mvp.SetToAppend(m, Matrices.UserView);
+        Matrix2F  mvp(m, Matrices.UserView);
 
-    setDrawableShader(psi, 0x8003, MappedXY16iAlphaSolid[0]);
-    ShaderInterfaceAccess::BeginPrimitive(psi);
-    const ShaderPair& cur = psi->GetCurrentShaders();
-    psi->SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
-    psi->SetUniformInline(cur, Uniform::SU_cxmul, colorf, 4);
-    psi->Finish(1);
-    setLinearStreamSource(PrimitiveBatch::DP_Batch);
-    pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
-    pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
+        ShaderInterface* psi = &ShaderData;
+        setDrawableShader(psi, 0x8003, MappedXY16iAlphaSolid[0]);
+        ShaderInterfaceAccess::BeginPrimitive(psi);
+        const ShaderPair& cur = psi->GetCurrentShaders();
+        psi->SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
+        psi->SetUniformInline(cur, Uniform::SU_cxmul, colorf, 4);
+        psi->Finish(1);
+
+        setLinearStreamSource(PrimitiveBatch::DP_Batch);
+        pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
+        pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
+    }
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// MS2-FUNCTIONAL: the SDK SetMatrix split per branch; the exe keeps i and count in stack slots across the batch loop
 // @0x142737c40
 void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt count)
 {
@@ -1322,25 +1312,20 @@ void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt
         for (unsigned j = 0; j < drawRangeCount; j++)
         {
             const MatrixPoolImpl::HMatrix& m = matrices[i + j];
-            Matrix2F mvp2(Matrix2F::NoInit);
-            Matrix4F mvp4(Matrix4F::NoInit);
-            const float* mvp;
-            unsigned size;
             if (m.Has3D())
             {
                 Matrix3F t(Matrix3F::NoInit);
                 t.MultiplyMatrix(m.GetMatrix3D(), Matrix2F::Identity);
-                mvp4.MultiplyMatrix(Matrices.GetUVPO(), t);
-                mvp = &mvp4.M[0][0];
-                size = 16;
+                Matrix4F mvp(Matrix4F::NoInit);
+                mvp.MultiplyMatrix(Matrices.GetUVPO(), t);
+                psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, &mvp.M[0][0], 16, 0, j);
             }
             else
             {
-                mvp2.SetToAppend(Matrix2F::Identity, m.GetMatrix2D(), Matrices.UserView);
-                mvp = &mvp2.M[0][0];
-                size = 8;
+                Matrix2F mvp(Matrix2F::NoInit);
+                mvp.SetToAppend(Matrix2F::Identity, m.GetMatrix2D(), Matrices.UserView);
+                psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, &mvp.M[0][0], 8, 0, j);
             }
-            psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, mvp, size, 0, j);
         }
         psi->Finish(drawRangeCount);
         pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, drawRangeCount * 2);

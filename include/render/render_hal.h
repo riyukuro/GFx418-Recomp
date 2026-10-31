@@ -200,6 +200,7 @@ public:
     // the empty profile mode state of this build
     struct ProfileViews
     {
+        Color GetClearColor(Color c) const { return c; }   // the SDK's non-profiling build
     };
 
     HAL(ThreadCommandQueue* commandQueue = 0);   // 0x1426beb60
