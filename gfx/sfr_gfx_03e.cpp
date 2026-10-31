@@ -219,17 +219,25 @@ TextField::~TextField()
 }
 
 // The document listener: the line format callback is wanted only when the translator wraps the lines itself.
-// MS2-FUNCTIONAL 0x1425b58d0: same base ctor and TranslatorChanged call; the exe inlines TranslatorChanged with a shorter frame
+TextField* TextField::TextDocumentListener::GetTextField() const
+{
+    return (TextField*)(((UByte*)this) -
+        ((UByte*)&(((TextField*)this)->TextDocListener) -
+        (UByte*)((TextField*)this)));
+}
+
 // @0x1425b58d0
 TextField::TextDocumentListener::TextDocumentListener()
     : DocumentListener(Mask_OnScroll | Mask_OnMaxScrollChanged | Mask_OnViewChanged)
 {
-    TranslatorChanged();
-}
-
-TextField* TextField::TextDocumentListener::GetTextField() const
-{
-    return reinterpret_cast<TextField*>(reinterpret_cast<UPInt>(this) - offsetof(TextField, TextDocListener));
+    Ptr<Translator> ptrans = TranslatorOf(GetTextField()->GetMovieImpl());
+    if (ptrans)
+    {
+        if (ptrans->HandlesCustomWordWrapping())
+        {
+            HandlersMask |= Mask_OnLineFormat;
+        }
+    }
 }
 
 // @0x1425beab0
@@ -788,9 +796,7 @@ const String* TextField::GetRestrict() const
 // @0x1425b9100
 ASString TextField::GetShadowStyle() const
 {
-    if (pShadow)
-        return pShadow->ShadowStyleStr;
-    return ASString(GetStringManager()->GetEmptyStringNode());
+    return (pShadow ? pShadow->ShadowStyleStr : GetStringManager()->CreateEmptyString());
 }
 
 // The text, or the HTML text when asked for and the field is HTML; with a style sheet the HTML is the original
@@ -892,35 +898,41 @@ bool TextField::PointTestLocal(const PointF& pt, UByte hitTestMask) const
 // @0x1425ba680
 bool TextField::OnMouseWheelEvent(int mwDelta)
 {
-    if (!(Flags & Flags_MouseWheelEnabled))
-        return false;
-    int vscroll = int(pDocument->GetVScrollOffset()) - mwDelta;
-    if (vscroll < 0)
-        vscroll = 0;
-    if (vscroll > int(pDocument->GetMaxVScroll()))
-        vscroll = pDocument->GetMaxVScroll();
-    pDocument->SetVScrollOffset(unsigned(vscroll));
-    SetDirtyFlag();
-    return true;
+    if ((UByte)(Flags >> 7) & 1)   // Flags_MouseWheelEnabled, as a shifted byte test (exe shr/test al)
+    {
+        int vscroll = (int)pDocument->GetVScrollOffset();
+        vscroll -= mwDelta;
+        if (vscroll < 0)
+            vscroll = 0;
+        if (vscroll > (int)pDocument->GetMaxVScroll())
+            vscroll = (int)pDocument->GetMaxVScroll();
+        pDocument->SetVScrollOffset((unsigned)vscroll);
+        SetDirtyFlag();
+        return true;
+    }
+    return false;
 }
 
 // Whether mouse mouseIndex is over the zone of urlRange still (false once another zone overlapping it is hit).
-// MS2-FUNCTIONAL 0x1425b9c20: same loop; the exe saves rbx/rdi only after the empty-array check (shrink-wrapped prolog)
 // @0x1425b9c20
 bool TextField::IsUrlTheSame(unsigned mouseIndex, const Range& urlRange)
 {
-    if (!pCSSData)
-        return true;
-    RangeDataArray<CSSHolderBase::UrlZone>& zones = pCSSData->UrlZones;
-    unsigned n = unsigned(zones.Count());
-    for (unsigned i = 0; i < n; ++i)
+    bool rv = true;
+    if (pCSSData)
     {
-        const RangeData<CSSHolderBase::UrlZone>& zone = zones[i];
-        if (urlRange.NextIndex() > zone.Index && zone.NextIndex() > urlRange.Index &&
-            pCSSData->MouseState[mouseIndex].UrlZoneIndex != i + 1)
-            return false;
+        for (unsigned i = 0, zonesNum = (unsigned)pCSSData->UrlZones.Count(); i < zonesNum; ++i)
+        {
+            if (pCSSData->UrlZones[i].Intersects(urlRange))
+            {
+                if (pCSSData->MouseState[mouseIndex].UrlZoneIndex != i + 1)
+                {
+                    rv = false;
+                    break;
+                }
+            }
+        }
     }
-    return true;
+    return rv;
 }
 
 // The last position of mouse mouseIndex (the movie keeps four mouse states; without the player layout their
@@ -970,8 +982,10 @@ bool TextField::OnCharEvent(UInt32 wcharCode, unsigned controllerIdx)
 // @0x1425b9ec0
 void TextField::OnEventLoad()
 {
-    const char* ptext = pDef->DefaultText.GetLength() ? pDef->DefaultText.ToCStr() : "";
-    SetTextValue(ptext, IsHtml(), false);
+    if (pDef->DefaultText.GetLength() > 0)
+        SetTextValue(pDef->DefaultText.ToCStr(), IsHtml(), false);
+    else
+        SetTextValue("", IsHtml(), false);
     pDocument->Format();
     InteractiveObject::OnEventLoad();
     if (!pGeomData)

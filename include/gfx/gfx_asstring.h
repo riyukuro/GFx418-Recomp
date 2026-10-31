@@ -303,6 +303,7 @@ public:
 
     ASStringNode* GetEmptyStringNode() { return &EmptyStringNode; }
     ASStringNode* GetNullStringNode()  { return &NullStringNode; }
+    ASString      CreateEmptyString()  { return ASString(GetEmptyStringNode()); }
 
     // Builtin name tables (exe: Init 0x1425c0ec0, Release 0x1425c1350).
     void InitBuiltinArray(ASStringNodeHolder* nodes, const char** strings, unsigned count);
