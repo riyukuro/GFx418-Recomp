@@ -14,10 +14,10 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Helpers of other units, bound by address. The members among them keep the member call convention (this, then the
 // result).
-ClassTraits::Traits*  FUN_142524f60(VM* vm, VMAbcFile* file, const Abc::Multiname* mn);  // VM: the class traits mn names
-void                  FUN_14252ecb0(VM* vm, const VM::Error* error, const ClassInfo* ci); // VM: raise as class ci
-Value*                FUN_142508a80(const VM* vm, Value* result, const ClassTraits::Traits* tr);  // VM: default of tr
-char*                 FUN_142529720(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj);  // set slot
+UPInt  Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                      // VM: the class traits mn names
+void   Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);        // VM: raise as class ci
+Value* Sfr33GetDefaultValue(VM* vm, Value* result, const ClassTraits::Traits& tr);     // VM: default of tr
+char*  Sfr27SlotSetValueObj(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj);  // set slot
 Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
                                     const Value& prefix);  // the interned namespace {kind, uri}
 
@@ -59,11 +59,12 @@ inline Value DetailValue(VMAbcFile& file, const Abc::ValueDetail& d)
 inline Value TypeDefaultValue(VM& vm, VMAbcFile& file, const Abc::TraitInfo& ti)
 {
     const Abc::Multiname mn = file.GetAbcFile().Const_Pool.GetMultiname(ti.Ind);
-    const ClassTraits::Traits* ctr = FUN_142524f60(&vm, &file, &mn);
+    const ClassTraits::Traits* ctr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31ResolveClassTraits(
+        reinterpret_cast<UPInt>(&vm), reinterpret_cast<UPInt>(&file), reinterpret_cast<UPInt>(&mn)));
     if (!ctr)
         return Value::GetUndefined();
     Value v;
-    FUN_142508a80(&vm, &v, ctr);
+    Sfr33GetDefaultValue(&vm, &v, *ctr);
     return v;
 }
 
@@ -85,12 +86,14 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
     {
         const Abc::ConstPool&      cp = pFile->GetAbcFile().Const_Pool;
         const Abc::Multiname&      mn = cp.GetMultiname(mi.ParamTypes[i]);
-        const ClassTraits::Traits* tr = FUN_142524f60(&pFile->GetVM(), pFile, &mn);
+        const ClassTraits::Traits* tr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31ResolveClassTraits(
+            reinterpret_cast<UPInt>(&pFile->GetVM()), reinterpret_cast<UPInt>(pFile), reinterpret_cast<UPInt>(&mn)));
         if (!tr)
         {
             VM&             vm = pFile->GetVM();
             const VM::Error e(eClassNotFoundError, vm, cp.ConstStr[mn.NameIndex].ToStringDataPtr().ToCStr());
-            FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
+            Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                              reinterpret_cast<UPInt>(&fl::ReferenceErrorCI));
             return;
         }
 
@@ -101,7 +104,8 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
             {
                 VM&             vm = pFile->GetVM();
                 const VM::Error e(VM::eCheckTypeFailedError, vm, argv[i], tr->GetName().ToCStr());
-                FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+                Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                                  reinterpret_cast<UPInt>(&fl::TypeErrorCI));
                 return;
             }
         }
@@ -112,7 +116,8 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
             {
                 VM&             vm = pFile->GetVM();
                 const VM::Error e(VM::eCheckTypeFailedError, vm, DetailValue(*pFile, d), tr->GetName().ToCStr());
-                FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+                Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                                  reinterpret_cast<UPInt>(&fl::TypeErrorCI));
                 return;
             }
         }
@@ -122,7 +127,8 @@ void CallFrame::SetupRegisters(const Abc::MethodInfo& mi, const Value& _this, un
             VM&             vm = pFile->GetVM();
             const VM::Error e(VM::eWrongArgumentCountError, vm, Name->pData, (int)first_opt, (int)param_count,
                               (int)argc);
-            FUN_14252ecb0(&vm, &e, &fl::ArgumentErrorCI);
+            Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                              reinterpret_cast<UPInt>(&fl::ArgumentErrorCI));
             return;
         }
         regs[reg++] = v;
@@ -202,7 +208,7 @@ CheckResult Traits::SetupSlotValues(VMAbcFile& file, const Abc::HasTraits& t, Ob
         const Value v = ti.default_value.ValueIndex >= 1 ? DetailValue(file, ti.default_value)
                                                          : TypeDefaultValue(GetVM(), file, ti);
         char ok;
-        FUN_142529720(si, &ok, &GetVM(), &v, &for_obj);
+        Sfr27SlotSetValueObj(si, &ok, &GetVM(), &v, &for_obj);
         if (!ok)
         {
             --vm.InInitializer;
