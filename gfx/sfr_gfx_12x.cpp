@@ -11,17 +11,12 @@
 #include "hook/ms2hook.h"
 #include <string.h>
 
-// The exe functions this unit uses but does not define, declared by their FUN_<va> names: the hook DLL binds them to
-// the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
-template <class T> using ExeDecl = T;
+// The Expat library linked into the exe (libgfxexpat, built static), as sfr_gfx_12 includes it.
+#define XML_STATIC
+#include "../third_party/src/expat-2.0.1/lib/expat.h"
 
 using namespace Scaleform;
 using namespace Scaleform::GFx::XML;
-
-// The Expat position queries (the same declarations as sfr_gfx_12's).
-ExeDecl<int(void*)> FUN_1423b2ab0; static constexpr ExeDecl<int(void*)>& XML_GetCurrentColumnNumber = FUN_1423b2ab0;
-ExeDecl<int(void*)> FUN_1423b2b10; static constexpr ExeDecl<int(void*)>& XML_GetCurrentLineNumber = FUN_1423b2b10;
-ExeDecl<int(void*)> FUN_1423b2a90; static constexpr ExeDecl<int(void*)>& XML_GetCurrentByteIndex = FUN_1423b2a90;
 
 // The user data ParseString hands to Expat: the parser, the handler being fed and the locator it was given.
 struct Unk_ParserExpatUserData
@@ -34,7 +29,7 @@ struct Unk_ParserExpatUserData
 // Copies Expat's current position into the locator before a handler call (column made one-based).
 static inline void UpdateLocator(Unk_ParserExpatUserData* ud)
 {
-    void*          parser  = ud->Parser;
+    XML_Parser     parser  = (XML_Parser)ud->Parser;
     ParserLocator* locator = ud->Locator;
     locator->Column      = XML_GetCurrentColumnNumber(parser) + 1;
     locator->Line        = XML_GetCurrentLineNumber(parser);
@@ -67,7 +62,6 @@ void FUN_1423b14e0(Unk_XmlMsgBuffer* buffer, const char* fmt, const char** v1)
 }
 
 // Expat character data: the text (not terminated) and its length.
-// MS2-FUNCTIONAL: Characters(StringRef(s, len)) after the locator update.
 // @0x1423b1660
 void FUN_1423b1660(void* userData, const char* s, int len)
 {
@@ -78,7 +72,6 @@ void FUN_1423b1660(void* userData, const char* s, int len)
 }
 
 // Expat comment: the terminated comment text.
-// MS2-FUNCTIONAL: Comment(StringRef(data)) after the locator update.
 // @0x1423b16d0
 void FUN_1423b16d0(void* userData, const char* data)
 {
@@ -89,7 +82,6 @@ void FUN_1423b16d0(void* userData, const char* data)
 }
 
 // Expat default handler (the text nothing else handled, e.g. entity references): reported as a skipped entity.
-// MS2-FUNCTIONAL: SkippedEntity(StringRef(s, len)) after the locator update.
 // @0x1423b1760
 void FUN_1423b1760(void* userData, const char* s, int len)
 {
@@ -112,7 +104,6 @@ void FUN_1423b17d0(void* userData, const char* name)
 }
 
 // The locator update on its own (the callbacks inline it).
-// MS2-FUNCTIONAL: the inlined locator update as a function.
 // @0x1423b18d0
 void FUN_1423b18d0(void* userData)
 {

@@ -12,10 +12,11 @@
 void* FUN_142742ed0(void*, const Scaleform::UPInt*);                       // ArrayBase<ArrayData<VideoPlayerImpl*>> copy ctor (sfr_video_03)
 Scaleform::UPInt* FUN_142742f70(Scaleform::UPInt*, const Scaleform::UPInt*); // set entry copy (link, hash, key, array) (sfr_video_03)
 
+namespace Scaleform { void CheckExpandAS3CachedSet(void** set, void* owner); }   // CheckExpand of the array-valued set (sfr_as3_22)
+
 namespace Scaleform { namespace GFx {
 
-extern "C" void* FUN_142743900(void*, const void*);        // ArrayBase<ArrayData<VideoPlayerImpl*>>::operator=
-extern "C" void FUN_1427445b0(U**, void*);                  // CheckExpand of the array-valued set
+U* FUN_142743900(U* self, const U* source);                 // ArrayBase<ArrayData<VideoPlayerImpl*>>::operator= (sfr_kernel_03o)
 extern "C" void FUN_142747530(U**, void*, U);               // setRawCapacity of the {word, word, int} set
 extern "C" void FUN_1427478c0(U**, void*, U);               // setRawCapacity of the array-valued set
 
@@ -77,7 +78,7 @@ struct KeyArrayOps
     static void Assign(char* d, const U* node)
     {
         *(U*)d = node[0];
-        FUN_142743900(d + 8, node + 1);
+        FUN_142743900((U*)(d + 8), node + 1);
     }
 };
 
@@ -93,7 +94,7 @@ struct KeyArrayRefOps
     static void Assign(char* d, const NodeRef& r)
     {
         *(U*)d = *r.Key;
-        FUN_142743900(d + 8, r.Value);
+        FUN_142743900((U*)(d + 8), (const U*)r.Value);
     }
 };
 
@@ -120,7 +121,7 @@ struct KeyWordIntRefOps
 // @0x1427429d0
 void FUN_1427429d0(U** self, void* heap, const U* node, U hash)
 {
-    FUN_1427445b0(self, heap);
+    CheckExpandAS3CachedSet((void**)self, heap);
     RawHashAdd<0x30, KeyArrayOps, const U*>(self, node, hash);
 }
 
