@@ -774,31 +774,33 @@ static bool setDrawableShader(ShaderInterface* psi, unsigned shader, const Verte
     return psi->SetStaticShader((VertexShaderDesc::ShaderType)shader, (FragShaderDesc::ShaderType)shader, format);
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142731150
 void HAL::DrawableCxform(Render::Texture** tex, const Matrix2F* texgen, const Cxform* cx)
 {
     ScopedRenderEvent evt(GetEvent(Event_DICxform), __FUNCTION__);
+    ShaderInterface* psi = &ShaderData;
     Size<int> size = drawableTargetSize(this);
-    if (setDrawableShader(&ShaderData, 0x11, MappedXY16iAlphaTexture[0]))
+    if (setDrawableShader(psi, 0x11, MappedXY16iAlphaTexture[0]))
     {
-        ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-        ShaderData.SetCxform(ShaderData.GetCurrentShaders(), *cx);
-        FUN_142731310(&SManager, 1, tex, texgen, size, drawableQuadMVP(), &ShaderData, 1);
+        ShaderInterfaceAccess::BeginPrimitive(psi);
+        psi->SetCxform(psi->GetCurrentShaders(), *cx);
+        FUN_142731310(&SManager, 1, tex, texgen, size, drawableQuadMVP(), psi, 1);
     }
     drawScreenQuad();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142730b60
 void HAL::DrawableCompare(Render::Texture** tex, const Matrix2F* texgen)
 {
     ScopedRenderEvent evt(GetEvent(Event_DICompare), __FUNCTION__);
+    ShaderInterface* psi = &ShaderData;
     Size<int> size = drawableTargetSize(this);
-    if (setDrawableShader(&ShaderData, 0x1a651, MappedXY16iAlphaTexture[0]))
+    if (setDrawableShader(psi, 0x1a651, MappedXY16iAlphaTexture[0]))
     {
-        ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-        FUN_142731310(&SManager, 2, tex, texgen, size, drawableQuadMVP(), &ShaderData, 1);
+        ShaderInterfaceAccess::BeginPrimitive(psi);
+        FUN_142731310(&SManager, 2, tex, texgen, size, drawableQuadMVP(), psi, 1);
     }
     drawScreenQuad();
 }
@@ -826,6 +828,7 @@ void HAL::DrawableCopyPixels(Render::Texture** tex, const Matrix2F* texgen, cons
                              bool destAlpha)
 {
     ScopedRenderEvent evt(GetEvent(Event_DICopyPixels), __FUNCTION__);
+    ShaderInterface* psi = &ShaderData;
     Size<int> size = drawableTargetSize(this);
     // a third texture is the alpha source
     unsigned shader = tex[2] ? 0x12a4d : 0x1264d;
@@ -834,10 +837,10 @@ void HAL::DrawableCopyPixels(Render::Texture** tex, const Matrix2F* texgen, cons
     if (!destAlpha)
         shader += 0x4000;
     shader += 0x80;
-    if (setDrawableShader(&ShaderData, shader, MappedXY16iAlphaTexture[0]))
+    if (setDrawableShader(psi, shader, MappedXY16iAlphaTexture[0]))
     {
-        ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-        FUN_142731310(&SManager, tex[2] ? 3 : 2, tex, texgen, size, mvp, &ShaderData, 1);
+        ShaderInterfaceAccess::BeginPrimitive(psi);
+        FUN_142731310(&SManager, tex[2] ? 3 : 2, tex, texgen, size, mvp, psi, 1);
     }
     drawScreenQuad();
 }
@@ -897,19 +900,20 @@ void HAL::DrawableThreshold(Render::Texture** tex, const Matrix2F* texgen, const
 void HAL::DrawableCopyback(Render::Texture* tex, const Matrix2F& mvpIn, const Matrix2F& texgen)
 {
     ScopedRenderEvent evt(GetEvent(Event_DICopyback), __FUNCTION__);
-    setDrawableShader(&ShaderData, 1, MappedXY16iAlphaTexture[0]);
-    ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
+    ShaderInterface* psi = &ShaderData;
+    setDrawableShader(psi, 1, MappedXY16iAlphaTexture[0]);
+    ShaderInterfaceAccess::BeginPrimitive(psi);
 
     // shifted a pixel of the clip space: D3D9 samples pixel centers
     Size<int> size = drawableTargetSize(this);
     Matrix2F  mvp(mvpIn);
     mvp.M[0][3] -= 1.0f / (float)(unsigned)size.Width;
     mvp.M[1][3] += 1.0f / (float)(unsigned)size.Height;
-    const ShaderPair& cur = ShaderData.GetCurrentShaders();
-    ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
-    ShaderData.SetUniform(cur, Uniform::SU_texgen, &texgen.M[0][0], 8);
-    ShaderData.SetTexture(cur, Uniform::SU_tex, tex, ImageFillMode());
-    ShaderData.Finish(1);
+    const ShaderPair& cur = psi->GetCurrentShaders();
+    psi->SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
+    psi->SetUniform(cur, Uniform::SU_texgen, &texgen.M[0][0], 8);
+    psi->SetTexture(cur, Uniform::SU_tex, tex, ImageFillMode());
+    psi->Finish(1);
     drawScreenQuad();
 }
 
@@ -1268,6 +1272,7 @@ static float clearChannel(UByte c)
 void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 {
     ScopedRenderEvent evt(GetEvent(Event_Clear), __FUNCTION__);
+    ShaderInterface* psi = &ShaderData;
     if (color.GetAlpha() == 0xff && !(VP.Flags & Viewport::View_Stereo_AnySplit))
     {
         // opaque: the device clears it
@@ -1291,12 +1296,12 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
     Matrix2F mvp;
     mvp.SetToAppend(m, Matrices.UserView);
 
-    setDrawableShader(&ShaderData, 0x8003, MappedXY16iAlphaSolid[0]);
-    ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-    const ShaderPair& cur = ShaderData.GetCurrentShaders();
-    ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
-    ShaderData.SetUniformInline(cur, Uniform::SU_cxmul, colorf, 4);
-    ShaderData.Finish(1);
+    setDrawableShader(psi, 0x8003, MappedXY16iAlphaSolid[0]);
+    ShaderInterfaceAccess::BeginPrimitive(psi);
+    const ShaderPair& cur = psi->GetCurrentShaders();
+    psi->SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
+    psi->SetUniformInline(cur, Uniform::SU_cxmul, colorf, 4);
+    psi->Finish(1);
     setLinearStreamSource(PrimitiveBatch::DP_Batch);
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
     pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
@@ -1307,8 +1312,9 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
 void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt count)
 {
     ScopedRenderEvent evt(GetEvent(Event_MaskClear), __FUNCTION__);
-    setDrawableShader(&ShaderData, 0x8005, MappedXY16iAlphaSolid[PrimitiveBatch::DP_Batch]);
-    ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
+    ShaderInterface* psi = &ShaderData;
+    setDrawableShader(psi, 0x8005, MappedXY16iAlphaSolid[PrimitiveBatch::DP_Batch]);
+    ShaderInterfaceAccess::BeginPrimitive(psi);
     setLinearStreamSource(PrimitiveBatch::DP_Batch);
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
 
@@ -1338,9 +1344,9 @@ void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt
                 mvp = &mvp2.M[0][0];
                 size = 8;
             }
-            ShaderData.SetUniform(ShaderData.GetCurrentShaders(), Uniform::SU_mvp, mvp, size, 0, j);
+            psi->SetUniform(psi->GetCurrentShaders(), Uniform::SU_mvp, mvp, size, 0, j);
         }
-        ShaderData.Finish(drawRangeCount);
+        psi->Finish(drawRangeCount);
         pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, drawRangeCount * 2);
         AccumulatedStats.Meshes += drawRangeCount;
         AccumulatedStats.Triangles += drawRangeCount * 2;
