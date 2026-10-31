@@ -250,7 +250,7 @@ void Value::Pick(Object* v)
 }
 
 // A weak reference becomes a strong one (undefined when its object is gone).
-// MS2-FUNCTIONAL ?MakeStrongRef@Value@AS3@GFx@Scaleform@@QEAA_NXZ: same AddRef switch; the exe schedules the final Bonus/flag stores differently and encodes the kind mask as imm32
+// The weak proxy is cleared in each branch, which gives the exe its store order.
 // @0x142516670
 bool Value::MakeStrongRef()
 {
@@ -280,15 +280,16 @@ bool Value::MakeStrongRef()
             break;
         }
         Bonus.pWeakProxy->Release();
+        Bonus.pWeakProxy = NULL;
     }
     else
     {
         value.VS._1.VObj = NULL;
         SetKind(kUndefined);
         value.VS._2.VObj = NULL;
+        Bonus.pWeakProxy = NULL;
     }
 
-    Bonus.pWeakProxy = NULL;
     Flags &= ~weakRefMask;
     return true;
     }
