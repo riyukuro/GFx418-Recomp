@@ -69,9 +69,6 @@ void* FUN_142936510(TextField* ptf)
 // Stage / render bookkeeping after a character's target changed: the object at +0x20 runs its slot 77 and the four
 // callbacks on it and on the result.
 void FUN_1425dcaf0(void* pobj);
-void FUN_1425f32c0(void* pobj);
-void FUN_1425fe1c0(void* pobj, int flag);
-void FUN_1425fee30(void* pobj);
 
 // MS2-FUNCTIONAL: raw words
 // @0x142936570
@@ -81,9 +78,9 @@ void FUN_142936570(void* self)
     typedef void* (*Slot77)(void*);
     void* presult = reinterpret_cast<Slot77>((*static_cast<void***>(ptarget))[0x268 / 8])(ptarget);
     FUN_1425dcaf0(ptarget);
-    FUN_1425f32c0(ptarget);
-    FUN_1425fe1c0(presult, 1);
-    FUN_1425fee30(presult);
+    static_cast<DisplayObjectBase*>(ptarget)->InvalidateHitResult();
+    static_cast<DrawingContext*>(presult)->AcquirePath(true);
+    static_cast<DrawingContext*>(presult)->CreateLineComplexFill();
 }
 
 // @0x1429365c0
