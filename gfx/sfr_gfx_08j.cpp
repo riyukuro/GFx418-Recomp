@@ -742,10 +742,15 @@ TextureGlyphData::TextureGlyphData(const TextureGlyphData& src)
       FileCreation(src.FileCreation)
 {
     TextureGlyphs.Resize(src.TextureGlyphs.GetSize());
-    for (UPInt i = 0; i < src.TextureGlyphs.GetSize(); ++i)
+    for (UPInt i = 0, n = src.TextureGlyphs.GetSize(); i < n; ++i)
+    {
         TextureGlyphs[i] = src.TextureGlyphs[i];
-    for (ImageResourceHash::ConstIterator it = src.GlyphsTextures.Begin(); it != src.GlyphsTextures.End(); ++it)
-        GlyphsTextures.Set(it->First, it->Second);
+    }
+    ImageResourceHash::ConstIterator iter = src.GlyphsTextures.Begin();
+    for (; iter != src.GlyphsTextures.End(); ++iter)
+    {
+        GlyphsTextures.Set(iter->First, iter->Second);
+    }
 }
 
 // @0x142654dc0
