@@ -2510,13 +2510,15 @@ namespace Instances { namespace fl
     }
 
     // Simple content: the text of every item but comments and processing instructions; else toXMLString.
-    // MS2-FUNCTIONAL: the exe tail-calls AS3toXMLString (simple's address does not escape under LTCG)
     // @0x142402c20
     void XMLList::AS3toString(ASString& result)
     {
         bool simple;
-
-        AS3hasSimpleContent(simple);
+        {
+            bool s;
+            AS3hasSimpleContent(s);
+            simple = s;
+        }
         if (simple)
         {
             VM& vm = GetVM();
