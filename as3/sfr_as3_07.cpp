@@ -4068,7 +4068,9 @@ namespace Instances { namespace fl_display
     // The AS3 container half of a display object container.
     static SF_FORCEINLINE AvmDisplayObjContainer* ToAvmDispContainer(GFx::DisplayObject* p)
     {
-        return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+        if (!p)
+            return NULL;
+        return AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase());
     }
 
 #pragma strict_gs_check(push, on)
@@ -4101,8 +4103,6 @@ namespace Instances { namespace fl_display
     }
 #pragma strict_gs_check(pop)
 
-    // MS2-FUNCTIONAL: exe tail-calls SwapChildren for a null container and merges the AS3-part paths; ours
-    // duplicates the call tail per path. Same loads and calls.
     // @0x142453890
     SF_NOINLINE void DisplayObjectContainer::swapChildren(const Value& result, Instances::fl_display::DisplayObject* child1,
                                               Instances::fl_display::DisplayObject* child2)
