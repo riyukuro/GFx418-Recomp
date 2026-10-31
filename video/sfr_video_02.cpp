@@ -1638,11 +1638,15 @@ Scaleform::Render::RectF* FUN_1400101e0(const Scaleform::Render::Matrix2F* matri
     return result;
 }
 
+// releases a raw refcounted allocation (count at +0): frees it when the count drops to zero.
+// BEHAVIOUR FIX (latent): this called RefCountImpl::Release (0x14257dcb0: vftable at +0, count at +8, virtual delete);
+// the exe decrements the int at +0 and frees the block. Nothing in the exe calls or references 0x14000ffd0.
 // @0x14000ffd0
 void FUN_14000ffd0(void** object)
 {
-    if (*object)
-        FUN_14257dcb0(*object);
+    void* p = *object;
+    if (p && --*static_cast<int*>(p) == 0)
+        Scaleform::Memory::Free(p);
 }
 
 }}} // namespace Scaleform::GFx::AS2
@@ -1988,7 +1992,12 @@ void FUN_140012e10(void* dispatcher, void* collector, void* operation)
     }
 }
 
-// MS2-FUNCTIONAL: releases the video character's retained AS2 value and then runs its AvmCharacter base destructor.
+namespace Scaleform { namespace GFx { namespace AS2 {
+extern const void* DAT_14317bf80[];   // AvmDisplayObjBase vftable
+}}} // namespace Scaleform::GFx::AS2
+
+// releases the video character's retained AS2 value and then runs its AvmCharacter base destructor. The exe stores
+// the AvmDisplayObjBase vftable at +0x30 first, as the inline AvmDisplayObjBase dtor does.
 // @0x14000e840
 void FUN_14000e840(void* object)
 {
@@ -1999,6 +2008,7 @@ void FUN_14000e840(void* object)
         --*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18);
         FUN_1425925f0(value);
     }
+    *reinterpret_cast<const void**>(bytes + 0x30) = Scaleform::GFx::AS2::DAT_14317bf80;
     static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::~AvmCharacter();
 }
 
