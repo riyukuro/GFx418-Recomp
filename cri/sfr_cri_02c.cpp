@@ -12,7 +12,7 @@
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
 // MS2-RANGE: 0x140031aa0-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
-// MS2-RANGE: 0x1400358d0-0x140036470 .text$mn
+// MS2-RANGE: 0x1400359e0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -152,6 +152,7 @@ CriBool  FUN_140031f40(void* player);
 CriBool  FUN_1400318f0(void* player);
 CriBool  FUN_140032040(void* player);
 CriBool  FUN_140031990(void* player);
+CriUint32 FUN_1400358d0(void* output, const void* info);
 CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
@@ -913,33 +914,6 @@ CriBool crimvply_isUnderGetFrameCondition(void* player)
     if (status != 5 && status != 4)
         return 0;
     return 1;
-}
-
-// MS2-FUNCTIONAL: the CRI Movie library was built with VS2008; this frame-info copier is rebuilt with our VS2017 toolset.
-// @0x1400358d0
-CriUint32 FUN_1400358d0(void* output, const void* info)
-{
-    memset(((CriMvPlaneInfo*)output), 0, 0x40);
-    CriUint32 planes = ((const CriMvFramePlaneSource*)info)->PlaneCount;
-    if (planes != 0)
-    {
-        ((CriMvPlaneInfo*)output)[0].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[0].Buffer;
-        ((CriMvPlaneInfo*)output)[0].Stride = (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[0].Height * (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[0].Width;
-        ((CriMvPlaneInfo*)output)[0].Height = ((const CriMvFramePlaneSource*)info)->Planes[0].Height;
-    }
-    if (planes > 1)
-    {
-        ((CriMvPlaneInfo*)output)[1].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[1].Buffer;
-        ((CriMvPlaneInfo*)output)[1].Stride = (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[1].Height * (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[1].Width;
-        ((CriMvPlaneInfo*)output)[1].Height = ((const CriMvFramePlaneSource*)info)->Planes[1].Height;
-    }
-    if (planes > 2)
-    {
-        ((CriMvPlaneInfo*)output)[2].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[2].Buffer;
-        ((CriMvPlaneInfo*)output)[2].Stride = (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[2].Height * (CriSint32)((const CriMvFramePlaneSource*)info)->Planes[2].Width;
-        ((CriMvPlaneInfo*)output)[2].Height = ((const CriMvFramePlaneSource*)info)->Planes[2].Height;
-    }
-    return planes;
 }
 #pragma optimize("", on)
 
@@ -4295,38 +4269,39 @@ void FUN_140031570(void* player)
     memset(&movie->seektbl, 0, 0x2c);
 }
 
-// MS2-FUNCTIONAL: perform the executable's pending start/stop state transition on the player.
+// perform the executable's pending start/stop state transition on the player.
 // @0x140031140
 void FUN_140031140(void* player)
 {
     // +0x0c is the open-phase read lock FUN_1400317b0 sets; +0x08 (InternalFlags) is the stop request.
     struct OpenLockView { CriUint8 Reserved[0x0c]; CriSint32 Value; };
-    CriSint32 status = ((CriMvPlyStateTransitionFields*)player)->Status;
-    if (status == 2)
+    CriSint32 status = getInternalStatus(player);
+    switch (status)
     {
-        if (((CriMvPlyStateTransitionFields*)player)->StartReady == 1)
+    case 2:
+        if (((CriMvPlyStateTransitionFields*)player)->StartReady != 1)
         {
-            FUN_1400342b0(player);
-            FUN_1400453c4(((CriMvPlyStateTransitionFields*)player)->Demux);
-            ((OpenLockView*)player)->Value = 0;
-            ((CriMvPlyStateTransitionFields*)player)->Status = 3;
-        }
-        else
             FUN_140037950(player, "E05063019M : Can't start movie without work buffer.", 0);
-    }
-    else if (status == 4)
+            break;
+        }
+        FUN_1400342b0(player);
+        FUN_1400453c4(((CriMvPlyStateTransitionFields*)player)->Demux);
+        ((OpenLockView*)player)->Value = 0;
+        ((CriMvPlyStateTransitionFields*)player)->Status = 3;
+        break;
+    case 4:
         ((CriMvPlyStateTransitionFields*)player)->Status = 5;
-    else if (status == 6)
-    {
+        break;
+    case 6:
         ((CriMvPlyStateTransitionFields*)player)->LastFrame = -1;
         ((CriMvPlyStateTransitionFields*)player)->Status = 7;
         ((CriMvPlyStateTransitionFields*)player)->StopState = 0;
-    }
-    else if (status == 9)
-    {
+        break;
+    case 9:
         ((CriMvPlyStateTransitionFields*)player)->LastFrame = -1;
         ((CriMvPlyStateTransitionFields*)player)->Status = 0;
         ((CriMvPlyStateTransitionFields*)player)->StopState = 0;
+        break;
     }
 }
 

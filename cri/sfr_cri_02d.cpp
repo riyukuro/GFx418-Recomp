@@ -11,7 +11,7 @@
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
-// MS2-RANGE: 0x140035800-0x1400358d0 .text$mn
+// MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -52,6 +52,27 @@ typedef struct CriMvPlyDemuxFields
     CriUint8 ReservedDA8[0xe78 - 0xda8];
     void* HeaderBuffer;                     // 0xe78
 } CriMvPlyDemuxFields;
+typedef struct CriMvPlaneInfo
+{
+    CriUint64 Buffer;
+    CriSint32 Stride;
+    CriUint32 Height;
+} CriMvPlaneInfo;
+typedef struct CriMvFramePlaneSourcePlane
+{
+    CriUint64 Buffer;
+    CriUint32 Reserved;
+    CriUint32 Width;
+    CriUint32 Height;
+    CriUint32 Reserved2;
+} CriMvFramePlaneSourcePlane;
+typedef struct CriMvFramePlaneSource
+{
+    CriUint8 Reserved0[0x38];
+    CriUint32 PlaneCount;
+    CriUint32 Reserved1;
+    CriMvFramePlaneSourcePlane Planes[3];
+} CriMvFramePlaneSource;
 typedef struct CriMvSubtitleFields
 {
     CriUint8 Reserved[0xe28];
@@ -112,6 +133,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?criMvPly_GetSubtitle@@YAXPEAX0K0@Z=criMvPly_GetSubtitle")
 #pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
 #pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
+#pragma comment(linker, "/alternatename:?FUN_1400358d0@@YAKPEAXPEBX@Z=FUN_1400358d0")
 #pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_isUnderGetFrameCondition=?crimvply_isUnderGetFrameCondition@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_updateMvPlyYuvBuffersFromAlphadecInfo=?crimvply_updateMvPlyYuvBuffersFromAlphadecInfo@@YAXPEAXPEBUCriMvAlphaDecoderFrameInfo@@@Z")
@@ -268,6 +290,32 @@ CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
         result = 1;
     }
     return result;
+}
+
+// copy the decoded frame's plane descriptors (buffer, size, height) into the caller's YUV buffer description
+// @0x1400358d0
+CriUint32 FUN_1400358d0(void* output, const void* info)
+{
+    memset(output, 0, 0x40);
+    if (((const CriMvFramePlaneSource*)info)->PlaneCount >= 1)
+    {
+        ((CriMvPlaneInfo*)output)[0].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[0].Buffer;
+        ((CriMvPlaneInfo*)output)[0].Stride = ((const CriMvFramePlaneSource*)info)->Planes[0].Height * ((const CriMvFramePlaneSource*)info)->Planes[0].Width;
+        ((CriMvPlaneInfo*)output)[0].Height = ((const CriMvFramePlaneSource*)info)->Planes[0].Height;
+    }
+    if (((const CriMvFramePlaneSource*)info)->PlaneCount >= 2)
+    {
+        ((CriMvPlaneInfo*)output)[1].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[1].Buffer;
+        ((CriMvPlaneInfo*)output)[1].Stride = ((const CriMvFramePlaneSource*)info)->Planes[1].Height * ((const CriMvFramePlaneSource*)info)->Planes[1].Width;
+        ((CriMvPlaneInfo*)output)[1].Height = ((const CriMvFramePlaneSource*)info)->Planes[1].Height;
+    }
+    if (((const CriMvFramePlaneSource*)info)->PlaneCount >= 3)
+    {
+        ((CriMvPlaneInfo*)output)[2].Buffer = ((const CriMvFramePlaneSource*)info)->Planes[2].Buffer;
+        ((CriMvPlaneInfo*)output)[2].Stride = ((const CriMvFramePlaneSource*)info)->Planes[2].Height * ((const CriMvFramePlaneSource*)info)->Planes[2].Width;
+        ((CriMvPlaneInfo*)output)[2].Height = ((const CriMvFramePlaneSource*)info)->Planes[2].Height;
+    }
+    return ((const CriMvFramePlaneSource*)info)->PlaneCount;
 }
 
 // read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage
