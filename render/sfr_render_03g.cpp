@@ -20,6 +20,9 @@ extern char DAT_14318efe8[];
 
 void FUN_14015b310(void*, UPInt);
 
+// The Matrix2F inverse the exe keeps out of line (exe 0x142446cb0, defined by sfr_as2_01).
+namespace AS2 { void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src); }
+
 static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 {
     if (flags & 1)
@@ -114,7 +117,16 @@ RAW_RESERVE(FUN_142623f80, 8)
 // @0x14262ce60
 Render::Matrix2x4<float>* FUN_14262ce60(Render::Matrix2x4<float>* m, float x1, float y1, float x2, float y2, const float* parl)
 {
-    return &m->SetRectToParl(x1, y1, x2, y2, parl);
+    // SetRectToParl with SetParlToParl expanded in it.
+    float src[6] = { x1, y1, x2, y1, x2, y2 };
+    m->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+    Render::Matrix2x4<float> d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1],
+                               parl[1]);
+    // m->Invert(), with the inverse the exe keeps out of line
+    Render::Matrix2x4<float> copy(*m);
+    AS2::Matrix2F_SetInverse(m, copy);
+    m->Append(d);
+    return m;
 }
 
 }} // namespace Scaleform::GFx
