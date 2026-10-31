@@ -250,32 +250,37 @@ void ResourceBinding::GetResourceData_Locked(ResourceBindData* pdata, unsigned i
 
 // The table grows in steps of 16 entries.
 // @0x142636820
-// MS2-FUNCTIONAL: register allocation (the new count lives in rbp / the new table in r12 in the exe)
-void ResourceBinding::SetBindData(unsigned index, const ResourceBindData& rdata)
+void ResourceBinding::SetBindData(unsigned index, const ResourceBindData& bd)
 {
     Lock::Locker lock(&ResourceLock);
-    unsigned newCount = (index + 16) & ~15;
-    if (newCount > ResourceCount)
+
+    unsigned size = ((index + 1) + 15) & ~15;
+
+    if (size > ResourceCount)
     {
         if (!pResources)
         {
-            pResources = (ResourceBindData*)SF_HEAP_ALLOC(pHeap, sizeof(ResourceBindData) * newCount, StatMD_Other_Mem);
-            ConstructArray<ResourceBindData>(pResources, newCount);
+            pResources = (ResourceBindData*)SF_HEAP_ALLOC(pHeap, size * sizeof(ResourceBindData), StatMD_Other_Mem);
+            ConstructArray<ResourceBindData>(pResources, size);
+            ResourceCount = size;
         }
         else
         {
-            ResourceBindData* pnew =
-                (ResourceBindData*)SF_HEAP_ALLOC(pHeap, sizeof(ResourceBindData) * newCount, StatMD_Other_Mem);
-            ConstructArray<ResourceBindData>(pnew, newCount);
+            ResourceBindData* pnewRes =
+                (ResourceBindData*)SF_HEAP_ALLOC(pHeap, size * sizeof(ResourceBindData), StatMD_Other_Mem);
+            ConstructArray<ResourceBindData>(pnewRes, size);
+
             for (unsigned i = 0; i < ResourceCount; i++)
-                pnew[i] = pResources[i];
-            DestructArray(pResources, ResourceCount);
-            SF_FREE(pResources);
-            pResources = pnew;
+                pnewRes[i] = pResources[i];
+
+            DestructArray<ResourceBindData>(pResources, ResourceCount);
+            SF_HEAP_FREE(pHeap, pResources);
+            pResources    = pnewRes;
+            ResourceCount = size;
         }
-        ResourceCount = newCount;
     }
-    pResources[index] = rdata;
+
+    pResources[index] = bd;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -779,10 +784,11 @@ bool ImageFileResourceCreator::CreateResource(DataHandle hdata, ResourceBindData
 
 // The image of the source through the image creator of the binding, as an ImageResource.
 // @0x142638ee0
-// MS2-FUNCTIONAL: register allocation (the exe keeps the heap in rbx, here rdi)
 bool ImageResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pbindData, LoadStates* pls,
                                           MemoryHeap* pheap) const
 {
+    Render::ImageSource* pimageSrc = (Render::ImageSource*)hdata;
+
     ImageCreateInfo cinfo(ImageCreateInfo::Create_FileImage, 0, 0, Resource::Use_None);
     cinfo.SetStates(pls->GetLog(), pls->GetBindStates()->pFileOpener, pls->GetImageFileHandlerRegistry());
     cinfo.pHeap = pheap;
@@ -790,7 +796,9 @@ bool ImageResourceCreator::CreateResource(DataHandle hdata, ResourceBindData* pb
     ImageCreator* pimageCreator = pls->GetImageCreator();
     if (!pimageCreator)
         return false;
-    Ptr<Render::Image> pimage = *pimageCreator->CreateImage(cinfo, (Render::ImageSource*)hdata);
+    Ptr<Render::Image> pimage;
+    if (pimageCreator)
+        pimage = *pimageCreator->CreateImage(cinfo, pimageSrc);
     if (!pimage)
         return false;
     Ptr<ImageResource> pres = *SF_HEAP_NEW(pheap) ImageResource(pimage, Resource::Use_Bitmap);
