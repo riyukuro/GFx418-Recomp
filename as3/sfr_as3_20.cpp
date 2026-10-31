@@ -1523,7 +1523,7 @@ static SF_INLINE void PushElement(Vector_uint& r, UInt32 e)                     
 static SF_INLINE void PushCoerced(Vector_String& r, const Value& v)    { r.PushBack(v.AsStringNode()); }
 static SF_INLINE void PushCoerced(Vector_double& r, const Value& v)    { r.PushBack(v.AsNumber()); }
 static SF_INLINE void PushCoerced(Vector_int& r, const Value& v)       { r.PushBack(v.AsInt()); }
-static SF_INLINE void PushCoerced(Vector_object& r, const Value& v)    { r.PushBack(v); }
+static SF_INLINE void PushCoerced(Vector_object& r, const Value& v)    { r.V.PushBack(v); }   // Vector_object::PushBack, inlined in the exe
 static SF_INLINE void PushCoerced(Vector_uint& r, const Value& v)      { r.PushBack(v.AsUInt()); }
 
 // a concat() argument of the element type, appended in place
@@ -1622,10 +1622,12 @@ static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const 
     Pickable<I> pr = TR::MakeInstance(static_cast<TR&>(owner.GetTraits()));
     I& r = *pr.GetPtr();
     result.Pick(pr);
-    if (callback.IsNullOrUndefined() || !self.CheckCallable(callback))
+    if (callback.IsNullOrUndefined())
+        return;
+    if (!self.CheckCallable(callback))
         return;
 
-    Value _this(thisObject.IsNullOrUndefined() ? callback : thisObject);
+    Value _this(!thisObject.IsNullOrUndefined() ? thisObject : callback);
     const ClassTraits::Traits& tr = MapClassTraits(owner);
     for (UPInt i = 0; i < (UInt32)self.V.GetSize(); ++i)
     {
@@ -1635,8 +1637,14 @@ static __forceinline void VectorMap(VectorBase<T>& self, SPtr<I>& result, const 
         if (self.VMRef.IsException())
             break;
         Value coerced;
-        if (!self.CheckCoerce(tr, res, coerced))
+        // ArrayBase::CheckCoerce, inlined here in the exe
+        if (!tr.Coerce(res, coerced))
+        {
+            VM& vm = self.VMRef;
+            const Traits& vtr = FUN_14250ffc0(vm, res);
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vtr.GetName().ToCStr(), tr.GetName().ToCStr()));
             return;
+        }
         PushCoerced(r, coerced);
     }
 }
@@ -2095,23 +2103,22 @@ void FUN_1425496a0(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const 
 void FUN_142549a60(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
 { VI::VectorFilter<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
 
-// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
 // @0x14254c050
 void FUN_14254c050(VectorBase<Ptr<GFx::ASStringNode> >& v, SPtr<VI::Vector_String>& result, const Value& callback, const Value& thisObject, VI::Vector_String& owner)
 { VI::VectorMap<VI::Vector_String, VT::Vector_String>(v, result, callback, thisObject, owner); }
-// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// MS2-FUNCTIONAL: same code; the exe restores r15 (the loop index) before the _this dtor, ours after it
 // @0x14254c4e0
 void FUN_14254c4e0(VectorBase<Value::Number>& v, SPtr<VI::Vector_double>& result, const Value& callback, const Value& thisObject, VI::Vector_double& owner)
 { VI::VectorMap<VI::Vector_double, VT::Vector_double>(v, result, callback, thisObject, owner); }
-// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// MS2-FUNCTIONAL: same code; the exe restores r15 (the loop index) before the _this dtor, ours after it
 // @0x14254c980
 void FUN_14254c980(VectorBase<SInt32>& v, SPtr<VI::Vector_int>& result, const Value& callback, const Value& thisObject, VI::Vector_int& owner)
 { VI::VectorMap<VI::Vector_int, VT::Vector_int>(v, result, callback, thisObject, owner); }
-// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce and the result PushBack; ours calls them
+// MS2-FUNCTIONAL: the exe swaps the argv and result slots and rotates the loop (exit test at the bottom)
 // @0x14254ce20
 void FUN_14254ce20(VectorBase<Value>& v, SPtr<VI::Vector_object>& result, const Value& callback, const Value& thisObject, VI::Vector_object& owner)
 { VI::VectorMap<VI::Vector_object, VT::Vector_object>(v, result, callback, thisObject, owner); }
-// MS2-FUNCTIONAL: the exe inlines ArrayBase::CheckCoerce; ours calls it
+// MS2-FUNCTIONAL: same code; the exe restores r15 (the loop index) before the _this dtor, ours after it
 // @0x14254d380
 void FUN_14254d380(VectorBase<UInt32>& v, SPtr<VI::Vector_uint>& result, const Value& callback, const Value& thisObject, VI::Vector_uint& owner)
 { VI::VectorMap<VI::Vector_uint, VT::Vector_uint>(v, result, callback, thisObject, owner); }
