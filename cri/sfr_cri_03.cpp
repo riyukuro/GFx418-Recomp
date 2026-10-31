@@ -4877,7 +4877,7 @@ void FUN_142ccc860(void* decoder, CriSint32 run)
     }
 }
 
-// MS2-FUNCTIONAL: motion-compensate one macroblock from a reference frame with a clamped motion vector.
+// motion-compensate one macroblock from a reference frame with a clamped motion vector
 // @0x142ccc8c0
 void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 flags)
 {
@@ -4889,7 +4889,6 @@ void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 
     Frame* frame = (Frame*)referenceFrame;
     CriSint32 mvx = mv->X;
     CriSint32 mvy = mv->Y;
-    CriSint32 widthLimit = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH) << 4;
     CriSint32 heightLimit = CriMpvField<CriSint32>(decoder, MPV_MB_HEIGHT) << 4;
     CriSint32 bound = (-x) * 2;
     if (mvx < bound)
@@ -4899,7 +4898,7 @@ void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 
     }
     else
     {
-        bound = (widthLimit - x) * 2 - 0x20;
+        bound = ((CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH) << 4) - x) * 2 - 0x20;
         if (mvx > bound)
         {
             CriMpvField<CriSint32>(decoder, MPV_CLAMP_COUNT) += 1;
@@ -4927,8 +4926,8 @@ void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 
     CriSint32 chromaStride = frame->ChromaStride;
     CriSint32 chromaX = x >> 1;
     CriSint32 chromaY = y >> 1;
-    CriSint32 halfX = (mvx - (mvx >> 31)) >> 1;
-    CriSint32 halfY = (mvy - (mvy >> 31)) >> 1;
+    CriSint32 halfX = mvx / 2;
+    CriSint32 halfY = mvy / 2;
     FUN_142ccc5f0(frame->Chroma0, CriMpvField<CriUint8*>(decoder, MPV_CB_BASE), chromaStride, chromaStride, 8, 8,
                   chromaX, chromaY, halfX, halfY, flags);
     FUN_142ccc5f0(frame->Chroma1, CriMpvField<CriUint8*>(decoder, MPV_CR_BASE), chromaStride, chromaStride, 8, 8,
