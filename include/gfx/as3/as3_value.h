@@ -475,6 +475,11 @@ public:
     template <typename OT> Value(Pickable<OT> v) : Flags(0) { PickUnsafe(v); }
 
 public:
+    // (sfm) MS2_AS3_ASSIGN_NOALIAS: under LTCG the exe knows Assign keeps no pointer to other, so a
+    // temporary's release after it can end in a tail call; noalias tells cl the same. Opt-in per unit.
+#ifdef MS2_AS3_ASSIGN_NOALIAS
+    __declspec(noalias)
+#endif
     void Assign(const Value& other);
     void AssignUnsafe(const Value& other);
 
@@ -809,6 +814,9 @@ private:
         AddRefObject();
     }
     void AddRefInternal() const;
+#ifdef MS2_AS3_ASSIGN_NOALIAS
+    __declspec(noalias)   // see Assign
+#endif
     void ReleaseInternal();
     void AddRefWeakRef() const;
     void ReleaseWeakRef();

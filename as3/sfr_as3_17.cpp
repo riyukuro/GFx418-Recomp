@@ -25,6 +25,7 @@
 // MS2-RANGE: 0x142507a40-0x1425094e0 .text$mn
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
 #define SF_AS3_AVMBUTTON_MODEL
+#define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/kernel/sf_simd.h"
@@ -3245,7 +3246,6 @@ bool Sfr33SplitQualifiedName(const UByte* self, const char* qname, ASString& pkg
     return true;
 }
 // TR::State::ConvertOpTo: the operand stack top (+0x38) becomes a value of traits tr.
-// MS2-FUNCTIONAL 0x1424f1e50: the exe inlines the weak-reference release of the temporary Value (ours calls ReleaseWeakRef).
 // @0x1424f1e50
 void TR::State::ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
@@ -3253,7 +3253,6 @@ void TR::State::ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType isN
 }
 
 // TR::State::ConvertRegisterTo: register ind (+0x18) becomes a value of traits tr.
-// MS2-FUNCTIONAL 0x1424f1ed0: the exe inlines the weak-reference release of the temporary Value (ours calls ReleaseWeakRef).
 // @0x1424f1ed0
 void TR::State::ConvertRegisterTo(SPInt ind, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
