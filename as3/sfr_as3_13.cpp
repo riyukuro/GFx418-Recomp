@@ -2173,15 +2173,24 @@ namespace Instances { namespace fl_text
         reinterpret_cast<ASString*>(&text)->~ASString();
     }
 
+    // GFx::TextField::SetText(ptext, false) as inlined: drops the html flag again, then sets the text
+    static SF_INLINE bool IsHtmlField(void* ptf) { return ((FieldFlags(ptf) >> 1) & 1) != 0; }
+    static SF_INLINE void SetPlainFieldText(void* ptf, const char* ptext)
+    {
+        if (IsHtmlField(ptf))
+            FieldFlags(ptf) &= ~2u;
+        FUN_1425bd9a0(ptf, ptext, false, true);
+    }
+
     // @0x1424b4ea0
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // MS2-FUNCTIONAL: one byte off, the exe tests the html bit with and al,1 (ours test al,1)
     void TextField::textSet(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
         FieldFlags(ptf) &= ~2u;
         ASString text(value);
-        FUN_1425bd9a0(ptf, text.ToCStr(), false, true);
+        SetPlainFieldText(ptf, text.ToCStr());
     }
 
     // @0x1424b51a0
