@@ -3,6 +3,8 @@
 // The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
 // cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or variadic templates.
 // clang-cl compiles it as before.
+// Keep it C++03 too (no auto, nullptr, range-for, std:: C functions): cl 15.00.30729 with the vc11 options matches
+// 56 more of its rows (this range is VS2008 code), and a toolset for that is pending.
 // MS2-UNIT: sfr_video_02
 // MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
@@ -152,12 +154,12 @@ static void Video02NetConnectionConnect(const Scaleform::GFx::AS2::FnCall&) {}
 // so InitFunctionMembers must get a complete {0, 0}-terminated table.
 static const Scaleform::GFx::AS2::NameFunction Video02ConnectFunctions[] = {   // 0x1431b6410
     {"connect", Video02NetConnectionConnect},
-    {nullptr, nullptr},
+    {0, 0},
 };
 static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     // 0x1431b5800
     {"attachVideo", FUN_14000d400},
     {"clear", reinterpret_cast<Scaleform::GFx::AS2::CFunctionPtr>(&FUN_14000d330)},
-    {nullptr, nullptr},
+    {0, 0},
 };
 namespace Scaleform { namespace GFx { namespace AS2 {
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*); // defined below, in the AS2 block
@@ -343,8 +345,8 @@ void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
     char* object = reinterpret_cast<char*>(pvideo);
     // the AVM interface (object + [0x6d]*4) slot 12 returns the video extent; FUN_140011610 scales the fill by it
-    auto* iface = object + static_cast<unsigned char>(object[0x6d]) * sizeof(int);
-    auto* extent = static_cast<int*>(reinterpret_cast<void* (*)(void*)>((*reinterpret_cast<void***>(iface))[12])(iface));
+    char* iface = object + static_cast<unsigned char>(object[0x6d]) * sizeof(int);
+    int* extent = static_cast<int*>(reinterpret_cast<void* (*)(void*)>((*reinterpret_cast<void***>(iface))[12])(iface));
     Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>* provider =
         reinterpret_cast<Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>*>(object + 0xf8);
     Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
@@ -628,12 +630,12 @@ bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const 
     if ((name.GetHashFlags() & ASConstString::Flag_StandardMember)
         && pavm->SetStandardMember(pavm->GetStandardMemberConstant(name), value, false))
         return true;
-    if (!std::strcmp(name.ToCStr(), "deblocking"))
+    if (!strcmp(name.ToCStr(), "deblocking"))
     {
         *reinterpret_cast<int*>(fields + 0x38) = static_cast<int>(value.ToNumber(penv));
         return true;
     }
-    if (!std::strcmp(name.ToCStr(), "smoothing"))
+    if (!strcmp(name.ToCStr(), "smoothing"))
     {
         *reinterpret_cast<bool*>(fields + 0x3c) = value.ToBool(penv);
         return true;
@@ -653,13 +655,13 @@ bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value*
         && pavm->GetStandardMember(pavm->GetStandardMemberConstant(name), pvalue, false))
         return true;
     const char* key = name.ToCStr();
-    if (!std::strcmp(key, "width"))
+    if (!strcmp(key, "width"))
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x30));
-    else if (!std::strcmp(key, "height"))
+    else if (!strcmp(key, "height"))
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x34));
-    else if (!std::strcmp(key, "deblocking"))
+    else if (!strcmp(key, "deblocking"))
         pvalue->SetNumber(*reinterpret_cast<int*>(fields + 0x38));
-    else if (!std::strcmp(key, "smoothing"))
+    else if (!strcmp(key, "smoothing"))
         pvalue->SetBool(*reinterpret_cast<bool*>(fields + 0x3c));
     else
     {
@@ -670,16 +672,16 @@ bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value*
 }
 
 // @0x14000fc90
-void* FUN_14000fc90(void* dst, const void* src) { return std::memcpy(dst, src, 0x30); }
+void* FUN_14000fc90(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
 
 // @0x14000fcb0
-void* FUN_14000fcb0(void* dst, const void* src) { return std::memcpy(dst, src, 0x30); }
+void* FUN_14000fcb0(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
 
 // @0x14000fcd0
-void* FUN_14000fcd0(void* dst, const void* src) { return std::memcpy(dst, src, 0x40); }
+void* FUN_14000fcd0(void* dst, const void* src) { return memcpy(dst, src, 0x40); }
 
 // @0x14000fcf0
-void* FUN_14000fcf0(void* dst, const void* src) { return std::memcpy(dst, src, 0x40); }
+void* FUN_14000fcf0(void* dst, const void* src) { return memcpy(dst, src, 0x40); }
 
 // The Render state data follows the state refcount and storage pointer in both states.
 // MS2-FUNCTIONAL: stack copy elided; copies the same 0x30-byte state payload.
@@ -690,7 +692,7 @@ bool FUN_14000ff10(const void* node, void* out)
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
-    std::memcpy(out, data + 0x10, 0x30);
+    memcpy(out, data + 0x10, 0x30);
     return true;
 }
 
@@ -702,12 +704,12 @@ bool FUN_14000ff70(const void* node, void* out)
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
-    std::memcpy(out, data + 0x10, 0x40);
+    memcpy(out, data + 0x10, 0x40);
     return true;
 }
 
 // @0x140010eb0
-void* FUN_140010eb0(void* dst, const void* src) { return std::memcpy(dst, src, 0x30); }
+void* FUN_140010eb0(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
 
 // Append one retained 16-byte item (four-byte tag plus refcounted payload).
 // MS2-FUNCTIONAL: uses the executable's Array reserve helper; element copy/refcount behavior recovered.
@@ -808,7 +810,7 @@ void FUN_140012940(ASString* string) { string->SetNull(); }
 void** FUN_140012f60(void* context, void** result, const char* text)
 {
     ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
-    ASStringNode* node = manager->CreateConstStringNode(text, std::strlen(text), 0);
+    ASStringNode* node = manager->CreateConstStringNode(text, strlen(text), 0);
     *result = node;
     ++*reinterpret_cast<unsigned*>(reinterpret_cast<char*>(node) + 0x18);
     return result;
@@ -920,8 +922,8 @@ long long* FUN_1400138d0(long long* dst, const long long* src)
 static void SetScalarValue(UInt32* value, UInt32 kind, const void* payload, size_t payloadSize)
 {
     *value = (*value & ~0x1fu) | kind;
-    std::memset(reinterpret_cast<char*>(value) + 0x10, 0, 0x10);
-    std::memcpy(reinterpret_cast<char*>(value) + 0x10, payload, payloadSize);
+    memset(reinterpret_cast<char*>(value) + 0x10, 0, 0x10);
+    memcpy(reinterpret_cast<char*>(value) + 0x10, payload, payloadSize);
 }
 
 // MS2-FUNCTIONAL: initializes the scalar kind and payload at the offsets used by the executable's AS3 Value.
@@ -1128,7 +1130,7 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     // place in reverse order (0xd8, 0xb8, 0x98), then the two weak references (+0x58, +0x50)
     char* fields = reinterpret_cast<char*>(dispatcher);
     *reinterpret_cast<void**>(fields) = &PTR_FUN_1431b7360;
-    *reinterpret_cast<void**>(*reinterpret_cast<char**>(fields + 0x50) + 0x18) = nullptr;
+    *reinterpret_cast<void**>(*reinterpret_cast<char**>(fields + 0x50) + 0x18) = 0;
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->Stop();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xd8)->~Value();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xb8)->~Value();
@@ -1774,7 +1776,7 @@ Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, 
 // @0x140011410
 void FUN_140011410(void* path)
 {
-    auto* bytes = static_cast<unsigned char*>(path);
+    unsigned char* bytes = static_cast<unsigned char*>(path);
     const float lastX = *reinterpret_cast<float*>(bytes + 0x5c);
     const float lastY = *reinterpret_cast<float*>(bytes + 0x60);
     if (lastX != *reinterpret_cast<float*>(bytes + 0x54) ||
@@ -1826,7 +1828,7 @@ Scaleform::GFx::AS2::Object* FUN_140011d50(void*, Scaleform::GFx::AS2::Environme
 {
     void* storage = environment->GetHeap()->Alloc(0x68);
     if (storage) return FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), environment);
-    return nullptr;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: releases the interface array storage and runs the executable prototype finalizer.
@@ -1869,7 +1871,7 @@ void FUN_140015830(void* object)
     void* first = *reinterpret_cast<void**>(bytes + 0x80);
     if (first) FUN_14257dc30(first);
     if (first) FUN_14257dcb0(first);
-    *reinterpret_cast<void**>(bytes + 0x80) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x80) = 0;
     if (!first) return;
     *reinterpret_cast<unsigned char*>(bytes + 0x78) |= 0x10;
     void* node = first;
@@ -1878,7 +1880,7 @@ void FUN_140015830(void* object)
         void* child = *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20);
         if (child) FUN_14257dc30(child);
         if (child) FUN_14257dcb0(child);
-        *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20) = nullptr;
+        *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20) = 0;
         if (child) FUN_14257dc30(child);
         if (node) FUN_14257dcb0(node);
         if (!child) break;
@@ -1901,7 +1903,7 @@ unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
         if (tag != 0)
         {
             bool isNullObject = false;
-            if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void**>(value + 4) == nullptr;
+            if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void**>(value + 4) == 0;
             if (!isNullObject)
             {
                 *result = 1;
@@ -1922,7 +1924,7 @@ Scaleform::GFx::AS3::Value* FUN_1400156a0(Scaleform::GFx::AS3::Value* result,
                                          Scaleform::GFx::AS3::Object* const* object)
 {
     *reinterpret_cast<Scaleform::UInt32*>(result) = 0;
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(result) + 8) = nullptr;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(result) + 8) = 0;
     result->AssignUnsafe(*object);
     return result;
 }
@@ -1936,7 +1938,7 @@ void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
     void* instanceTraits = FUN_1424eb610(traits);
     Scaleform::GFx::AS3::Object* instance = instanceTraits
         ? static_cast<Scaleform::GFx::AS3::Object*>(FUN_1400140e0(instanceTraits, traits))
-        : nullptr;
+        : 0;
     result->Pick(instance);
 }
 
@@ -2010,7 +2012,7 @@ void** FUN_140014ac0(void*, void** result, void* traits)
     extern void* FUN_1424eb610(void*);
     extern void* FUN_1400140e0(void*, void*);
     void* instanceTraits = FUN_1424eb610(traits);
-    *result = instanceTraits ? FUN_1400140e0(instanceTraits, traits) : nullptr;
+    *result = instanceTraits ? FUN_1400140e0(instanceTraits, traits) : 0;
     return result;
 }
 
@@ -2046,8 +2048,9 @@ void FUN_140012e10(void* dispatcher, void* collector, void* operation)
     char* fields = static_cast<char*>(dispatcher);
     FUN_142469440(dispatcher, collector, operation);
     const unsigned offsets[] = {0x98u, 0xb8u, 0xd8u};
-    for (unsigned offset : offsets)
+    for (const unsigned *it = offsets, *end = offsets + 3; it != end; ++it)
     {
+        unsigned offset = *it;
         unsigned tag = *reinterpret_cast<unsigned*>(fields + offset);
         if ((tag & 0x1f) > 10 && (tag & 0x200) == 0)
             FUN_142504530(collector, fields + offset, operation, dispatcher);
@@ -2086,8 +2089,8 @@ void* FUN_140015250(void* array)
     const unsigned __int64 page = index >> 10;
     if (*reinterpret_cast<unsigned __int64*>(bytes + 0x10) <= page &&
         !FUN_1423dfe30(array, page))
-        return nullptr;
-    auto** pages = *reinterpret_cast<void***>(bytes + 0x20);
+        return 0;
+    void** pages = *reinterpret_cast<void***>(bytes + 0x20);
     return static_cast<char*>(pages[page]) + (index & 0x3ff) * sizeof(void*);
 }
 
@@ -2309,12 +2312,12 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
                    const Scaleform::GFx::AS3::Value* values)
 {
     if (count <= index) return;
-    const auto* value = reinterpret_cast<const unsigned char*>(values) +
+    const unsigned char* value = reinterpret_cast<const unsigned char*>(values) +
                         static_cast<unsigned __int64>(index) * sizeof(Scaleform::GFx::AS3::Value);
     // The object pointer of kinds 0xc-0xf is at +0x10 (+8 holds the weak proxy).
     const unsigned tag = *reinterpret_cast<const unsigned*>(value) & 0x1f;
     bool isNullObject = false;
-    if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void* const*>(value + 0x10) == nullptr;
+    if (tag - 0x0c <= 3) isNullObject = *reinterpret_cast<void* const*>(value + 0x10) == 0;
     if (isNullObject)
     {
         result->SetNull();
@@ -2413,7 +2416,7 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     extern void FUN_140007ba0(void*, void*, void*);
     FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
-    std::memset(reinterpret_cast<char*>(object) + 0x70, 0, 0x38);
+    memset(reinterpret_cast<char*>(object) + 0x70, 0, 0x38);
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
@@ -2427,8 +2430,8 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
 void FUN_14000f470(void* object, void* value)
 {
     unsigned flags = 2;
-    auto* heap = Scaleform::Memory::pGlobalHeap;
-    auto** heapVtable = *reinterpret_cast<void***>(heap);
+    Scaleform::MemoryHeap* heap = Scaleform::Memory::pGlobalHeap;
+    void** heapVtable = *reinterpret_cast<void***>(heap);
     reinterpret_cast<void(*)(void*, void*, void*, unsigned*)>(heapVtable[0x70 / sizeof(void*)])(
         heap, value, object, &flags);
 }
@@ -2450,8 +2453,8 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
     if (constructor2 || reinterpret_cast<const Builtin*>(reinterpret_cast<char*>(context->pContext->GetStringManager()) + 0x278)
         ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive()))
     {
-        auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20);
-        auto* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+        Scaleform::GFx::AS2::Object* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20);
+        Scaleform::GFx::AS2::GASPrototypeBase* prototypeBase = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
             reinterpret_cast<char*>(object) + 0x48);
         prototypeBase->GetMemberRawConstructor(owner, context, *name, value, constructor2);
         return;
@@ -2465,13 +2468,13 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
 // @0x140012340
 void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
 {
-    auto* object = static_cast<Scaleform::GFx::AS2::Object*>(nullptr);
-    auto* thisObject = call.ThisPtr;
+    Scaleform::GFx::AS2::Object* object = static_cast<Scaleform::GFx::AS2::Object*>(0);
+    Scaleform::GFx::AS2::ObjectInterface* thisObject = call.ThisPtr;
     if (thisObject && thisObject->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_NetConnection
         && !thisObject->IsBuiltinPrototype())
     {
         object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(thisObject) - 0x20);
-        auto* refs = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
+        unsigned* refs = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
         *refs = (*refs + 1) & 0x8fffffffu;
     }
     else
@@ -2483,7 +2486,7 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
     call.Result->SetAsObject(object);
     if (object)
     {
-        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
@@ -2509,16 +2512,16 @@ void* FUN_1400140e0(void* object, void* traits)
 {
     extern void FUN_14245f780(void*, void*);
     FUN_14245f780(object, traits);
-    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
     *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b7360;
-    *reinterpret_cast<void**>(bytes + 0x50) = nullptr;
-    *reinterpret_cast<void**>(bytes + 0x58) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x50) = 0;
+    *reinterpret_cast<void**>(bytes + 0x58) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x98) = 0;
-    *reinterpret_cast<void**>(bytes + 0xa0) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xa0) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xb8) = 0;
-    *reinterpret_cast<void**>(bytes + 0xc0) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xc0) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xd8) = 0;
-    *reinterpret_cast<void**>(bytes + 0xe0) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xe0) = 0;
     *reinterpret_cast<double*>(bytes + 0x88) = 1.0;
     bytes[0x60] = 0;
     bytes[0x74] = 0;
@@ -2530,7 +2533,7 @@ void* FUN_1400140e0(void* object, void* traits)
     *reinterpret_cast<unsigned*>(bytes + 0x7c) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x80) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x84) = 0;
-    *reinterpret_cast<void**>(bytes + 0x90) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x90) = 0;
     return object;
 }
 
@@ -2543,14 +2546,14 @@ Scaleform::GFx::InteractiveObject* FUN_140010000(
 {
     object->Scaleform::GFx::InteractiveObject::InteractiveObject(
         binding, root, parent, *resourceId);
-    auto* bytes = reinterpret_cast<char*>(object);
+    char* bytes = reinterpret_cast<char*>(object);
     *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
     *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
-    std::memset(bytes + 0xe0, 0, 0x10);
+    memset(bytes + 0xe0, 0, 0x10);
     *reinterpret_cast<void**>(bytes + 0xf0) = definition;
-    *reinterpret_cast<void**>(bytes + 0xf8) = nullptr;
-    *reinterpret_cast<void**>(bytes + 0x100) = nullptr;
-    auto* dimensions = static_cast<const unsigned char*>(definition);
+    *reinterpret_cast<void**>(bytes + 0xf8) = 0;
+    *reinterpret_cast<void**>(bytes + 0x100) = 0;
+    const unsigned char* dimensions = static_cast<const unsigned char*>(definition);
     *reinterpret_cast<float*>(bytes + 0xe8) =
         static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24)) * 20.0f;
     *reinterpret_cast<float*>(bytes + 0xec) =
@@ -2599,7 +2602,7 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     unsigned prototypeSize, unsigned prototypeType, unsigned stringOffset, bool connectPrototype)
 {
     Scaleform::GFx::AS2::ASStringContext stringContext(context, 8);
-    auto* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
+    Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
     if (function)
     {
         extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
@@ -2609,7 +2612,7 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     }
     result->Init(*function);   // adopts the new function's reference
 
-    auto* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(prototypeSize));
+    Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(prototypeSize));
     if (prototype)
     {
         if (connectPrototype)
@@ -2629,7 +2632,7 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
             FUN_142961830(reinterpret_cast<char*>(prototype) + 0x70, prototype, &stringContext,
                           const_cast<Scaleform::GFx::AS2::NameFunction*>(Video02VideoFunctions), &flags);
         }
-        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     extern void FUN_14000c280(void*, unsigned, void**);
@@ -2640,18 +2643,18 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
 
     Scaleform::GFx::AS2::PropFlags flags;
     Scaleform::GFx::AS2::Object* global = context->pGlobal;
-    auto* manager = context->GetStringManager();
+    Scaleform::GFx::AS2::StringManager* manager = context->GetStringManager();
     const Scaleform::GFx::ASString& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
         reinterpret_cast<char*>(manager) + stringOffset);
     // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
     Video02ValueStorage valueStorage;
-    auto* value = Scaleform::GFx::AS2::FUN_142923b90(
+    Scaleform::GFx::AS2::Value* value = Scaleform::GFx::AS2::FUN_142923b90(
         reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result);
     global->SetMemberRaw(&stringContext, name, *value, flags);
     FUN_1429260b0(&valueStorage);
     if (prototype)
     {
-        auto* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
@@ -2686,33 +2689,33 @@ Scaleform::GFx::AS2::FunctionRef* FUN_1400126f0(
 void FUN_140015c40(void* object)
 {
     // MS2: the movie root is [[object+0x20]+0x78] (exe 0x140015c54), and both Allocs pass a null AllocInfo
-    auto* vm = *reinterpret_cast<void**>(*reinterpret_cast<char**>(reinterpret_cast<char*>(object) + 0x20) + 0x78);
-    auto* manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
-    auto* owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
-    auto** ownerVtable = *reinterpret_cast<void***>(owner);
-    auto* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
-    auto** heapVtable = *reinterpret_cast<void***>(heap);
-    auto* relay = reinterpret_cast<void*(*)(void*, std::size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
-        heap, 0x18, nullptr);
+    void* vm = *reinterpret_cast<void**>(*reinterpret_cast<char**>(reinterpret_cast<char*>(object) + 0x20) + 0x78);
+    void* manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
+    void* owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
+    void** ownerVtable = *reinterpret_cast<void***>(owner);
+    void* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
+    void** heapVtable = *reinterpret_cast<void***>(heap);
+    void* relay = reinterpret_cast<void*(*)(void*, size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x18, 0);
     if (relay)
     {
         *reinterpret_cast<unsigned*>(static_cast<char*>(relay) + 8) = 1;
         *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
         *reinterpret_cast<void**>(relay) = &PTR_FUN_1431b7858;
     }
-    auto** oldRelay = reinterpret_cast<void**>(static_cast<char*>(object) + 0x58);
+    void** oldRelay = reinterpret_cast<void**>(static_cast<char*>(object) + 0x58);
     if (*oldRelay)
         FUN_14257dcd0(*oldRelay);
     *oldRelay = relay;
 
-    auto* state = reinterpret_cast<void*(*)(void*, std::size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
-        heap, 0x108, nullptr);
+    void* state = reinterpret_cast<void*(*)(void*, size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
+        heap, 0x108, 0);
     if (state)
     {
         extern void FUN_140026c60(void*, void*);
         FUN_140026c60(state, relay);
     }
-    auto** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
+    void** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
     if (*oldState)
         FUN_14257dcd0(*oldState);
     *oldState = state;
@@ -2744,13 +2747,13 @@ void FUN_140014900(void* object, const unsigned long long* encodedName)
 {
     // MS2: as exe 0x140014900: traits is the pointer at +0x10, vm is [traits+0x20]+0x78, the name is a
     // String DataDesc (size at +0, chars at +0xc) interned by the ASStringManager, and the result is a whole Value.
-    auto* traits = *reinterpret_cast<char**>(static_cast<char*>(object) + 0x10);
+    char* traits = *reinterpret_cast<char**>(static_cast<char*>(object) + 0x10);
     const unsigned kind = *reinterpret_cast<unsigned*>(traits + 0xd8) & 0x1f;
-    if (kind == 0 || (kind - 0xc <= 3 && *reinterpret_cast<void**>(traits + 0xe8) == nullptr))
+    if (kind == 0 || (kind - 0xc <= 3 && *reinterpret_cast<void**>(traits + 0xe8) == 0))
         return;
-    auto* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(traits + 0x20) + 0x78);
-    auto* desc = reinterpret_cast<const char*>(*encodedName & ~3ull);
-    auto* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(
+    Scaleform::GFx::AS3::VM* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(traits + 0x20) + 0x78);
+    const char* desc = reinterpret_cast<const char*>(*encodedName & ~3ull);
+    Scaleform::GFx::ASStringManager* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(
         *reinterpret_cast<char**>(reinterpret_cast<char*>(vm) + 0x10) + 0x1e8);
     Scaleform::GFx::ASString name(strings->CreateStringNode(desc + 0xc,
         *reinterpret_cast<const unsigned long long*>(desc) & 0x7fffffffffffffffull));
@@ -3050,9 +3053,9 @@ void FUN_140016060(void*, void* instance, void* traits, void* context, int hasVa
 {
     if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) != 0)
         return;
-    auto offset = *reinterpret_cast<std::intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
+    intptr_t offset = *reinterpret_cast<intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
     Scaleform::GFx::AS3::Value undefinedValue;
-    auto* stored = hasValue ? value : &undefinedValue;
+    const Scaleform::GFx::AS3::Value* stored = hasValue ? value : &undefinedValue;
     reinterpret_cast<void(*)(char*, void*, const Scaleform::GFx::AS3::Value*)>(DAT_143b27678)(
         *reinterpret_cast<int*>(&DAT_143b27680) + reinterpret_cast<char*>(offset), context, stored);
 }
@@ -3069,9 +3072,9 @@ void FUN_140016ac0(void*, void* instance, void* traits, void* context, int hasVa
 // @0x140011b40
 void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
 {
-    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+    Scaleform::GFx::AS2::GASPrototypeBase* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<char*>(object) + 0x68);
-    prototype->GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
+    prototype->Scaleform::GFx::AS2::GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
@@ -3111,10 +3114,10 @@ Scaleform::GFx::AS2::Object* FUN_14000ec40(Scaleform::GFx::AS2::Object* object, 
 unsigned FUN_1400113a0(void* array, const unsigned* source)
 {
     char* bytes = static_cast<char*>(array);
-    auto length = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
+    unsigned __int64 length = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
     FUN_1425eec50(bytes + 0x18, bytes + 0x18, length + 1);
     // the new last entry, at the resized count; the exe returns that count
-    auto size = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
+    unsigned __int64 size = *reinterpret_cast<unsigned __int64*>(bytes + 0x20);
     char* item = *reinterpret_cast<char**>(bytes + 0x18) + size * 0x10 - 0x10;
     if (item)   // the exe's placement copy construction of the entry
     {
@@ -3131,10 +3134,10 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
 unsigned FUN_140011450(void* object, const unsigned* source)
 {
     char* array = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88)) + 0x18;
-    auto length = *reinterpret_cast<unsigned __int64*>(array + 8);
+    unsigned __int64 length = *reinterpret_cast<unsigned __int64*>(array + 8);
     FUN_1425eec50(array, array, length + 1);
     // the new last entry, at the resized count; the exe returns that count
-    auto size = *reinterpret_cast<unsigned __int64*>(array + 8);
+    unsigned __int64 size = *reinterpret_cast<unsigned __int64*>(array + 8);
     char* item = *reinterpret_cast<char**>(array) + size * 0x10 - 0x10;
     if (item)   // the exe's placement copy construction of the entry
     {
@@ -3150,18 +3153,18 @@ unsigned FUN_140011450(void* object, const unsigned* source)
 // @0x140010cd0
 void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 {
-    auto* state = static_cast<unsigned char*>(buffer[3]);
+    unsigned char* state = static_cast<unsigned char*>(buffer[3]);
     void* object = buffer[0];
-    auto** vtable = *reinterpret_cast<void***>(object);
+    void** vtable = *reinterpret_cast<void***>(object);
     if (*reinterpret_cast<void**>(state)) {
-        auto release = reinterpret_cast<void (*)(void*, void*)>(
+        void (*release)(void*, void*) = reinterpret_cast<void (*)(void*, void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x60));
         release(object, *reinterpret_cast<void**>(state));
     }
 
     const unsigned __int64 alignment = reinterpret_cast<unsigned __int64*>(buffer)[1];
     const unsigned __int64 size = ((alignment - 1 + requested) / alignment) * alignment;
-    auto allocate = reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(
+    void* (*allocate)(void*, unsigned __int64, unsigned) = reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(
         *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x50));
     *reinterpret_cast<void**>(state + 0x10) = allocate(object, size, 0);
     *reinterpret_cast<void**>(state) = reinterpret_cast<void**>(state)[2];
@@ -3173,7 +3176,7 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 // @0x1400125a0
 void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
 {
-    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->GASPrototypeBase::~GASPrototypeBase();
     object->Object::~Object();
 }
@@ -3203,7 +3206,7 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
 // @0x1400152b0
 void FUN_1400152b0(unsigned __int64* object)
 {
-    auto* words = reinterpret_cast<unsigned*>(object);
+    unsigned* words = reinterpret_cast<unsigned*>(object);
     words[4] &= 0x8fffffff;
     const unsigned flags = words[4] >> 24;
     if (static_cast<int>(words[4]) < 0) {
@@ -3258,14 +3261,14 @@ Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
     void* incoming = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     if (incoming) {
         void* refBase = static_cast<unsigned char*>(incoming) + 0x10;
-        auto addRef = reinterpret_cast<void (*)(void*)>(
+        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
     void* current = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90);
     if (current) {
         void* refBase = static_cast<unsigned char*>(current) + 0x10;
-        auto release = reinterpret_cast<void (*)(void*)>(
+        void (*release)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
         release(refBase);
     }
@@ -3289,7 +3292,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     void* provider = *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(source) + 0x90);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        auto addRef = reinterpret_cast<void (*)(void*)>(
+        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
@@ -3306,7 +3309,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011330(
     Scaleform::Render::TreeShape::NodeData* destination,
     const Scaleform::Render::TreeShape::NodeData* source)
 {
-    return destination ? FUN_140011170(destination, source) : nullptr;
+    return destination ? FUN_140011170(destination, source) : 0;
 }
 
 // MS2-FUNCTIONAL: constructs a TreeShape snapshot with a retained provider and zero morph ratio.
@@ -3314,12 +3317,12 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011330(
 Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
     Scaleform::Render::TreeShape::NodeData* destination, const void* const* providerRef)
 {
-    if (!destination) return nullptr;
+    if (!destination) return 0;
     new (destination) Scaleform::Render::TreeShape::NodeData();
     void* provider = const_cast<void*>(*providerRef);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        auto addRef = reinterpret_cast<void (*)(void*)>(
+        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
@@ -3339,7 +3342,7 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011010(
     destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        auto addRef = reinterpret_cast<void (*)(void*)>(
+        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
@@ -3355,7 +3358,7 @@ void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
     void* provider = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(node) + 0x90);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        auto release = reinterpret_cast<void (*)(void*)>(
+        void (*release)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
         release(refBase);
     }
@@ -3367,13 +3370,13 @@ void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
 void FUN_1400112a0(
     Scaleform::Render::Context* context, const void* const* providerRef)
 {
-    auto* shape = context->CreateEntry<Scaleform::Render::TreeShape>();
+    Scaleform::Render::TreeShape* shape = context->CreateEntry<Scaleform::Render::TreeShape>();
     if (!shape) return;
-    auto* data = shape->GetWritableData(sizeof(Scaleform::Render::TreeShape::NodeData));
+    Scaleform::Render::TreeShape::NodeData* data = shape->GetWritableData(sizeof(Scaleform::Render::TreeShape::NodeData));
     void* provider = const_cast<void*>(*providerRef);
     if (provider) {
         void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        auto addRef = reinterpret_cast<void (*)(void*)>(
+        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
             *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
         addRef(refBase);
     }
@@ -3388,35 +3391,35 @@ void FUN_1400112a0(
 void* FUN_1400105b0(void* object)
 {
     using namespace Scaleform::Render;
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto** nodeSlot = reinterpret_cast<TreeNode**>(bytes + 0x48);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
+    TreeNode** nodeSlot = reinterpret_cast<TreeNode**>(bytes + 0x48);
     TreeNode* oldNode = *nodeSlot;
-    const bool hadNode = oldNode != nullptr;
+    const bool hadNode = oldNode != 0;
     Matrix2F matrix2;
     Matrix3F matrix3;
     Matrix3F view;
     Matrix4F projection;
     Scaleform::UPInt childIndex = ~Scaleform::UPInt(0);
     bool is3D = false, hasView = false, hasProjection = false;
-    TreeContainer* parent = nullptr;
-    if (oldNode && (parent = static_cast<TreeContainer*>(oldNode->GetParent())) != nullptr) {
+    TreeContainer* parent = 0;
+    if (oldNode && (parent = static_cast<TreeContainer*>(oldNode->GetParent())) != 0) {
         const Scaleform::UPInt count = parent->GetSize();
         for (childIndex = 0; childIndex < count; ++childIndex)
             if (parent->GetAt(childIndex) == oldNode) break;
-        const auto* oldData = reinterpret_cast<const unsigned char*>(oldNode->GetReadOnlyDataBase());
+        const unsigned char* oldData = reinterpret_cast<const unsigned char*>(oldNode->GetReadOnlyDataBase());
         is3D = oldNode->Is3D();
         if (is3D) {
             memcpy(&matrix3, oldData + 0x10, sizeof(matrix3));
             const State* state = oldNode->GetState(static_cast<StateType>(5));
             if (state) {
-                const auto* payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
+                const unsigned char* const payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
                 memcpy(&view, payload + 0x10, sizeof(view));
                 hasView = true;
             }
             else hasView = false;
             state = (*nodeSlot)->GetState(static_cast<StateType>(6));
             if (state) {
-                const auto* payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
+                const unsigned char* const payload = *reinterpret_cast<const unsigned char* const*>(reinterpret_cast<const unsigned char*>(state) + 8);
                 memcpy(&projection, payload + 0x10, sizeof(projection));
                 hasProjection = true;
             }
@@ -3426,15 +3429,15 @@ void* FUN_1400105b0(void* object)
         parent->Remove(childIndex, 1);
     }
     if (*nodeSlot) (*nodeSlot)->Release();
-    *nodeSlot = nullptr;
+    *nodeSlot = 0;
     if (!hadNode) return *nodeSlot;
 
     // slot 1 returns the new node as a Ptr through the hidden result slot; the exe reads the node from it (0x14001094d)
     typedef Scaleform::Render::ContextImpl::Entry** (*CreateNode)(void*, Scaleform::Render::ContextImpl::Entry**, void*);
-    auto create = reinterpret_cast<CreateNode>((*reinterpret_cast<void***>(object))[1]);
-    Scaleform::Render::ContextImpl::Entry* temporary = nullptr;
-    const auto contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
-    auto* replacement = *create(object, &temporary,
+    CreateNode create = reinterpret_cast<CreateNode>((*reinterpret_cast<void***>(object))[1]);
+    Scaleform::Render::ContextImpl::Entry* temporary = 0;
+    const uintptr_t contextBase = *reinterpret_cast<uintptr_t*>(bytes + 0x20);
+    Scaleform::Render::ContextImpl::Entry* replacement = *create(object, &temporary,
         reinterpret_cast<void*>(*reinterpret_cast<uintptr_t*>(contextBase + 0x10) + 0x34f0));
     if (replacement) {
         replacement->AddRef();
@@ -3463,20 +3466,20 @@ void* FUN_1400105b0(void* object)
 void* FUN_140011610(void* object, void** result, void* context)
 {
     // the exe asks the interface (object + [0x6d]*4, slot 0x60) for the extent before allocating (0x140011638)
-    const auto ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
-    auto* iface = static_cast<unsigned char*>(object) + ifaceIndex * 4;
-    auto** ifaceVtable = *reinterpret_cast<void***>(iface);
+    const unsigned char ifaceIndex = static_cast<unsigned char>(static_cast<unsigned char*>(object)[0x6d]);
+    unsigned char* iface = static_cast<unsigned char*>(object) + ifaceIndex * 4;
+    void** ifaceVtable = *reinterpret_cast<void***>(iface);
     typedef void* (*GetVideoExtent)(void*);
-    auto* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(iface));
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned char* extent = static_cast<unsigned char*>(reinterpret_cast<GetVideoExtent>(ifaceVtable[12])(iface));
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     __declspec(align(16)) unsigned allocInfo[4] = { 2, 0, 0, 0 };
     typedef void* (*Allocate)(void*, void*, size_t, const void*);
-    auto allocate = reinterpret_cast<Allocate>(heapVtable[14]);
-    auto* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
-    if (!shape) { *result = nullptr; return result; }
+    Allocate allocate = reinterpret_cast<Allocate>(heapVtable[14]);
+    unsigned char* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
+    if (!shape) { *result = 0; return result; }
     FUN_142678490(shape);
-    auto* path = *reinterpret_cast<void**>(shape + 0x88);
-    auto* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
+    void* path = *reinterpret_cast<void**>(shape + 0x88);
+    void* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
     if (!provider) {
         FUN_14252c8b0(path, 0, 0, 0);
         FUN_142518040(path, 0.0f, 0.0f);
@@ -3484,18 +3487,18 @@ void* FUN_140011610(void* object, void** result, void* context)
         FUN_140011410(path);
         FUN_1424f96c0(path);
     } else {
-        auto** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
+        void** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
         if (transform) {
             transform[0] = &DAT_14317b668;   // the ComplexFill vftable address, not its first slot
             transform[1] = reinterpret_cast<void*>(1);
-            transform[2] = nullptr;
-            transform[3] = nullptr;
+            transform[2] = 0;
+            transform[3] = 0;
             float* m = reinterpret_cast<float*>(transform + 4);
             for (int i = 0; i < 8; ++i) m[i] = 0.0f;
             m[0] = m[5] = 0.05f;   // identity scaled by 1/20 (twips)
             *reinterpret_cast<unsigned char*>(transform + 8) = 0;
             reinterpret_cast<int*>(transform)[0x44 / 4] = -1;
-            auto** providerVtable = *reinterpret_cast<void***>(provider);
+            void** providerVtable = *reinterpret_cast<void***>(provider);
             reinterpret_cast<void (*)(void*)>(providerVtable[1])(provider);
             transform[2] = provider;
             float left = *reinterpret_cast<float*>(static_cast<unsigned char*>(object) + 0xe0);
@@ -3508,19 +3511,19 @@ void* FUN_140011610(void* object, void** result, void* context)
             m[4] *= sy; m[5] *= sy; m[6] *= sy; m[7] *= sy;
             *reinterpret_cast<unsigned char*>(transform + 8) =
                 *reinterpret_cast<unsigned char*>(extent + 0x14) ? 3 : 1;
-            auto* pathBytes = static_cast<unsigned char*>(path);
-            auto* fillCount = reinterpret_cast<Scaleform::UPInt*>(pathBytes + 0x20);
-            const auto oldFillCount = *fillCount;
+            unsigned char* pathBytes = static_cast<unsigned char*>(path);
+            Scaleform::UPInt* fillCount = reinterpret_cast<Scaleform::UPInt*>(pathBytes + 0x20);
+            const Scaleform::UPInt oldFillCount = *fillCount;
             FUN_1425eec50(pathBytes + 0x18, pathBytes + 0x18, oldFillCount + 1);
-            auto* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
+            unsigned char* fillArray = *reinterpret_cast<unsigned char**>(pathBytes + 0x18);
             // the new last entry: the exe indexes with the count after the resize (0x1400118cb)
-            auto* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + *fillCount * 0x10);
+            unsigned* fill = reinterpret_cast<unsigned*>(fillArray - 0x10 + *fillCount * 0x10);
             *fill = 0;
             FUN_14257dc30(transform);
             *reinterpret_cast<void**>(fill + 2) = transform;
             FUN_1425ef130(path);
-            auto pathVtable = *reinterpret_cast<void***>(path);
-            auto fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
+            void** pathVtable = *reinterpret_cast<void***>(path);
+            unsigned fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
             FUN_14252c8b0(path, fillStyles, 0, 0);
             // the rectangle is the frame's size at the origin (0x140011943), not its bounds
             FUN_140011500(shape, 0.0f, 0.0f, right - left, bottom - top);
@@ -3534,17 +3537,17 @@ void* FUN_140011610(void* object, void** result, void* context)
     }
     typedef void* (*AllocateNodeData)(void*, size_t, size_t);
     void* nodeHeap = *reinterpret_cast<void**>(context);  // MS2: exe 0x140011a06 allocates from [context], the context's heap
-    auto allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10]);
-    auto* nodeData = static_cast<unsigned char*>(allocateNodeData(nodeHeap, 0xa0, 0));
+    AllocateNodeData allocateNodeData = reinterpret_cast<AllocateNodeData>((*reinterpret_cast<void***>(nodeHeap))[10]);
+    unsigned char* nodeData = static_cast<unsigned char*>(allocateNodeData(nodeHeap, 0xa0, 0));
     if (!nodeData) {
         reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(shape + 0x10))[2])(shape + 0x10);
-        *result = nullptr;
+        *result = 0;
         return result;
     }
     FUN_1424d9310(nodeData, 3);
     *reinterpret_cast<const void* const**>(nodeData) = Scaleform::Render::TreeShapeNodeDataVTable;
     typedef void (*AddRef)(void*);
-    auto* providerBase = shape + 0x10;
+    unsigned char* providerBase = shape + 0x10;
     reinterpret_cast<AddRef>((*reinterpret_cast<void***>(providerBase))[1])(providerBase);
     *reinterpret_cast<void**>(nodeData + 0x90) = shape;
     *reinterpret_cast<float*>(nodeData + 0x98) = 0.0f;
@@ -3581,7 +3584,7 @@ struct AS2PrototypeGCTraversal : Scaleform::GFx::AS2::GASPrototypeBase
         self->__Constructor__.template ForEachChild_GC<Functor>(collector);
         if (self->pInterfaces) {
             for (Scaleform::UPInt i = 0, count = self->pInterfaces->GetSize(); i < count; ++i) {
-                const auto& pinterface = (*self->pInterfaces)[i];
+                const Scaleform::Ptr<Scaleform::GFx::AS2::Object>& pinterface = (*self->pInterfaces)[i];
                 if (pinterface) Functor::Call(collector, pinterface);
             }
         }
@@ -3593,7 +3596,7 @@ __forceinline void VisitAS2PrototypeChildren(Scaleform::GFx::AS2::Object* object
                                Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     AS2ObjectGCTraversal::Run<Functor>(object, collector);
-    auto* proto = reinterpret_cast<const AS2PrototypeGCTraversal*>(
+    const AS2PrototypeGCTraversal* proto = reinterpret_cast<const AS2PrototypeGCTraversal*>(
         reinterpret_cast<const unsigned char*>(object) + 0x68);
     AS2PrototypeGCTraversal::Run<Functor>(proto, collector);
 }
@@ -3647,8 +3650,8 @@ void FUN_140012400(Scaleform::GFx::AS2::Object* object,
 // @0x140011ac0
 void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Environment* environment)
 {
-    auto* stringContext = environment->GetSC();
-    auto* prototype = stringContext->pContext->GetPrototype(
+    Scaleform::GFx::AS2::ASStringContext* stringContext = environment->GetSC();
+    Scaleform::GFx::AS2::Object* prototype = stringContext->pContext->GetPrototype(
         static_cast<Scaleform::GFx::AS2::ASBuiltinType>(0x22));
     reinterpret_cast<Scaleform::GFx::AS2::ObjectInterface*>(
         reinterpret_cast<unsigned char*>(object) + 0x20)->Set__proto__(stringContext, prototype);

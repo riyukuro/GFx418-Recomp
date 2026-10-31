@@ -17,7 +17,11 @@ struct StreamContext;
 
 namespace AS2 {
 
+#if defined(_MSC_VER) && _MSC_VER < 1600 && !defined(__clang__)  // cl 15 (a vc9 compile of the video units) has no enum base; its forward declaration is an extension
+enum ASBuiltinType;
+#else
 enum ASBuiltinType : int;
+#endif
 
 // The log of the action interpreter with the movie's verbosity switches.
 class ActionLogger : public LogBase<ActionLogger>

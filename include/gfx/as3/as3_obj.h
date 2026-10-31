@@ -1003,7 +1003,9 @@ class PropRef
 public:
     ~PropRef();
     operator bool() const;
+#if !defined(_MSC_VER) || _MSC_VER >= 1600  // cl 15 has no rvalue references
     PropRef& operator=(PropRef&& other);
+#endif
     // (sfr24) the move assignment would delete the implicit copies; keep them as they were
     PropRef(const PropRef& other) : pValue(other.pValue), SlotIndex(other.SlotIndex), This(other.This) { }
 #if !defined(_MSC_VER) || _MSC_VER >= 1800

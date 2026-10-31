@@ -365,7 +365,11 @@ public:
     StringView code;                            // +0x08 u30 length, then the byte code
 
     // (appended, sfr24) the AVM2 opcodes (the byte values in the code); the enumerators are not modeled.
+#if defined(_MSC_VER) && _MSC_VER < 1600 && !defined(__clang__)  // cl 15: no enum base
+    enum OpCode;
+#else
     enum OpCode : int;
+#endif
 };
 
 // 0x58 bytes.
