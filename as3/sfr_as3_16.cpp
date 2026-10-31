@@ -166,9 +166,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 ASVM::~ASVM() = default;
 }}} // namespace Scaleform::GFx::AS3
 
-extern "C" void FUN_14257dcd0(void* object); // RefCountNTSImpl::Release
-extern "C" void FUN_1424de460(void* self);
-extern "C" void* DAT_143b15f60;
+void FUN_1424de460(long long* owner);
 
 // MovieRoot is only partially modeled, so keep its destructor out of the class vtable and recover the owned fields
 // from the exe's offsets. The four MouseState rollover arrays use ArrayLH's data/size/capacity prefix.
@@ -195,17 +193,17 @@ extern "C" void FUN_1424de650(void* self)
     *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317daa0;
     FUN_1424dcd40(bytes + 0x6e8);
 
-    auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);
+    auto* heap = Scaleform::Memory::pGlobalHeap;
     for (unsigned i = 4; i-- != 0;)
     {
         auto* state = bytes + 0x360 + i * sizeof(Scaleform::GFx::AS3::MovieRoot::MouseState);
         if (auto* over = *reinterpret_cast<void**>(state + 0x18))
-            FUN_14257dcd0(over);
+            static_cast<const Scaleform::RefCountNTSImpl*>(over)->Release();
         auto** rollover = *reinterpret_cast<void***>(state);
         const auto count = *reinterpret_cast<Scaleform::UPInt*>(state + 8);
         for (Scaleform::UPInt j = count; rollover && j != 0; --j)
             if (rollover[j - 1])
-                FUN_14257dcd0(rollover[j - 1]);
+                static_cast<const Scaleform::RefCountNTSImpl*>(rollover[j - 1])->Release();
         if (rollover)
             heap->Free(rollover);
     }
@@ -214,7 +212,7 @@ extern "C" void FUN_1424de650(void* self)
     if (strings->pStringManager)
         strings->pStringManager->ReleaseBuiltinArray(strings->Builtins, Scaleform::GFx::AS3::AS3BuiltinConst_Count_);
     if (auto* stage = *reinterpret_cast<void**>(bytes + 0x158))
-        FUN_14257dcd0(stage);
+        static_cast<const Scaleform::RefCountNTSImpl*>(stage)->Release();
     Scaleform::DestroyMovieRootDisplayObjects(bytes + 0x150);
     reinterpret_cast<Scaleform::GFx::AS3::MovieRoot::ActionQueueType*>(bytes + 0x88)->~ActionQueueType();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(bytes + 0x58)->~Value();
@@ -225,7 +223,7 @@ extern "C" void FUN_1424de650(void* self)
     *pAvm = nullptr;
     *reinterpret_cast<bool*>(bytes + 0x50) = false;
 
-    FUN_1424de460(bytes + 0x40);
+    FUN_1424de460(reinterpret_cast<long long*>(bytes + 0x40));
     *reinterpret_cast<const void***>(bytes + 0x38) = Scaleform::GFx::AS3::DAT_14317afe8;
     *reinterpret_cast<const void***>(bytes + 0x28) = Scaleform::GFx::AS3::DAT_14317b648;
     reinterpret_cast<Scaleform::GFx::ASMovieRootBase*>(self)->Scaleform::GFx::ASMovieRootBase::~ASMovieRootBase();
@@ -236,7 +234,6 @@ extern "C" void FUN_1424dfbf0(void* self);
 void FUN_1424dc8e0(void* self);
 void FUN_1424de240(long long* state);
 extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
-extern "C" void* DAT_143b15f60;
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
@@ -262,8 +259,6 @@ extern "C" void FUN_1424e0290(void* self)
     Scaleform::GFx::AS3::DeleteAs3_1424e4190(self, 0);
 }
 
-extern "C" void FUN_1424efd80(Scaleform::GFx::AS3::CallFrame* frame);
-extern "C" void FUN_142521fb0(void* registerFile, Scaleform::UInt16 count);
 
 // A copied frame gives back what its constructor reserved: the operand stack reservation (an emptied page with a
 // predecessor goes back to the reserved list and the values still on it move down onto the predecessor), the
@@ -302,8 +297,8 @@ Scaleform::GFx::AS3::CallFrame::~CallFrame()
         }
         else
             stack.pStack = PrevFirstStackPos;
-        FUN_142521fb0(pRegisterFile, static_cast<Scaleform::UInt16>(body.local_reg_count));
-        FUN_1424efd80(this);
+        static_cast<ValueRegisterFile*>(pRegisterFile)->ReleaseReserved(static_cast<Scaleform::UInt16>(body.local_reg_count));
+        ClearScopeStack();
     }
 }
 
@@ -313,7 +308,7 @@ Scaleform::GFx::AS3::CallFrame::~CallFrame()
 extern "C" void FUN_1424df070(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto* heap = static_cast<Scaleform::MemoryHeap*>(DAT_143b15f60);   // the exe frees through Memory::pGlobalHeap
+    auto* heap = Scaleform::Memory::pGlobalHeap;   // the exe frees through Memory::pGlobalHeap
     *reinterpret_cast<const void***>(bytes) = Scaleform::GFx::AS3::DAT_14317b938;
     auto* sentinel = reinterpret_cast<unsigned char*>(bytes + 0x110);
     auto* node = *reinterpret_cast<unsigned char**>(bytes + 0x118);
@@ -467,11 +462,11 @@ extern "C" Scaleform::SPInt FUN_1424e1040(void*, const Scaleform::UInt32* words)
 extern "C" void FUN_1424dfaf0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     while (void* page = *reinterpret_cast<void**>(bytes + 0x18))
     {
         *reinterpret_cast<void**>(bytes + 0x18) = *reinterpret_cast<void**>(static_cast<unsigned char*>(page) + 0x10);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, page);
     }
 
     auto count = *reinterpret_cast<const Scaleform::UInt16*>(bytes);
@@ -481,7 +476,7 @@ extern "C" void FUN_1424dfaf0(void* self)
 
     void* page = *reinterpret_cast<void**>(bytes + 0x10);
     if (page)
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, page);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, page);
 }
 
 // ValueStack teardown: release live values and free each distinct current or reserved page once.
@@ -521,9 +516,9 @@ extern "C" void FUN_1424dfbf0(void* self)
             top = page->pCurrent;
     }
 
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     for (Page* owned : pages)
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, owned);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, owned);
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -545,8 +540,6 @@ VM::~VM()
     reinterpret_cast<Scaleform::UPInt*>(&GlobalObjects)[1] = 0; // Size (+0x1b0)
 }
 }}} // namespace Scaleform::GFx::AS3
-
-extern "C" void FUN_14257dcb0(void* object);
 
 // ASRefCountCollector::ForceCollect inlined through the movie root's collector pointer.
 // MS2-FUNCTIONAL 0x1424de240: same stores; the exe keeps the zero in esi across Collect (FrameCnt = 0 from it) and tail-calls the Stats observer release.
@@ -586,7 +579,7 @@ void FUN_1424de460(long long* owner)
             gc->CollectionScheduledFlags = 1;
     }
     if (*owner != 0)
-        FUN_14257dcb0(reinterpret_cast<void*>(*owner));
+        reinterpret_cast<Scaleform::RefCountImpl*>(*owner)->Release();
 }
 
 // MS2-FUNCTIONAL 0x1424e0940: copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
@@ -640,7 +633,6 @@ unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
     return dst;
 }
 
-extern "C" void* DAT_143b15f60;
 extern "C" void FUN_14257db40(void* self);   // RefCountImplCore::~RefCountImplCore: stores its vptr through self
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
 
@@ -652,8 +644,8 @@ void* Sfr16ScalarDeletingDtor(void* self, unsigned int flags)
     {
         if ((flags & 4) == 0)
         {
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, self);
+            auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, self);
         }
         else
         {
@@ -673,8 +665,8 @@ void* Sfr16ScalarDeletingDtorNts(void* self, unsigned int flags)
     {
         if ((flags & 4) == 0)
         {
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, self);
+            auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, self);
         }
         else
         {
@@ -1863,11 +1855,11 @@ bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
         *static_cast<InstanceTraits::fl::XMLList*>(GetITraitsXMLList());
     Pickable<Instances::fl::XMLList> list = listTraits.MakeInstance(listTraits);
     if (leftXML)
-        list->Apppend(static_cast<Instances::fl::XML*>(&l));
+        list->Append(static_cast<Instances::fl::XML*>(&l));
     else
         list->Append(static_cast<Instances::fl::XMLList&>(l));
     if (rightXML)
-        list->Apppend(static_cast<Instances::fl::XML*>(&r));
+        list->Append(static_cast<Instances::fl::XML*>(&r));
     else
         list->Append(static_cast<Instances::fl::XMLList&>(r));
     result.Pick(list);
@@ -1969,8 +1961,6 @@ template Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>::operator=(
     const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&);
 
-extern "C" void* DAT_143b15f60;
-extern "C" void FUN_1424dde10(void*);
 
 // ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::ClearAndRelease.
 // MS2-FUNCTIONAL: releases pages last-first and destroys each occupied CallFrame; only register allocation differs.
@@ -1993,18 +1983,18 @@ void FUN_1424dc8e0(void* self)
             while (used)
             {
                 frame -= 0xa8;
-                FUN_1424dde10(frame);
+                reinterpret_cast<Scaleform::GFx::AS3::CallFrame*>(frame)->~CallFrame();
                 --used;
             }
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *page);
+            auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, *page);
             numPages = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10);
             --page;
         } while (numPages);
         *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = static_cast<Scaleform::UPInt>(-1);
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
         reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, *reinterpret_cast<void**>(bytes + 0x20));
+            Scaleform::Memory::pGlobalHeap, *reinterpret_cast<void**>(bytes + 0x20));
     }
     *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x18) = 0;
     *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = 0;
@@ -2026,11 +2016,11 @@ void FUN_1424dc9f0(void* self)
             void* data = *reinterpret_cast<void**>(object);
             if (data)
             {
-                auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
+                auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+                reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, data);
             }
-            auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, object);
+            auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, object);
         }
         *reinterpret_cast<void**>(bytes) = 0;
     }
@@ -2156,7 +2146,6 @@ template SfrCx18TextFormatSet::~HashSetBase();
 template SfrCx18ASStringValueSet::~HashSetBase();
 }
 
-extern "C" void FUN_1423dfa20(void* object);   // RefCountBaseGC::ReleaseInternal
 
 // Assigns a tagged AS3 reference and transfers the old/new reference counts.
 // @0x1424e0860
@@ -2173,7 +2162,7 @@ Scaleform::UInt64* FUN_1424e0860(Scaleform::UInt64* self, Scaleform::UInt64 valu
             {
                 auto* refs = reinterpret_cast<Scaleform::UInt32*>(cur + 0x10);
                 if ((*refs & 0x3fffff) != 0)
-                    --*refs, FUN_1423dfa20(reinterpret_cast<void*>(cur));
+                    --*refs, reinterpret_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(cur)->ReleaseInternal();
             }
         }
         if (value)
@@ -2210,7 +2199,7 @@ void FUN_1424dcc30(void* self)
                         if ((*refs & 0x3fffff) != 0)
                         {
                             --*refs;
-                            FUN_1423dfa20(reinterpret_cast<void*>(value));
+                            reinterpret_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(value)->ReleaseInternal();
                         }
                     }
                     else
@@ -2221,9 +2210,9 @@ void FUN_1424dcc30(void* self)
             offset += 0x20;
             --count;
         } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
         reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, reinterpret_cast<void*>(*table));
+            Scaleform::Memory::pGlobalHeap, reinterpret_cast<void*>(*table));
         *table = 0;
     }
 }
@@ -2276,7 +2265,7 @@ void FUN_1424dcdd0(void* self)
                         if ((*refs & 0x3fffff) != 0)
                         {
                             --*refs;
-                            FUN_1423dfa20(reinterpret_cast<void*>(value));
+                            reinterpret_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(value)->ReleaseInternal();
                         }
                     }
                     else
@@ -2287,9 +2276,9 @@ void FUN_1424dcdd0(void* self)
             offset += 0x20;
             --count;
         } while (count);
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
         reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            DAT_143b15f60, reinterpret_cast<void*>(*table));
+            Scaleform::Memory::pGlobalHeap, reinterpret_cast<void*>(*table));
         *table = 0;
     }
 }
