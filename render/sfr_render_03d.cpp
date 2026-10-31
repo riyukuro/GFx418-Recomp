@@ -436,34 +436,39 @@ public:
 
     void Set(unsigned i)
     {
-        grow(i);
+        if (i >= NumBits)
+            resize(i + 1);
         Data[i >> 5] |= 1 << (i & 31);
     }
     void Clr(unsigned i)
     {
-        grow(i);
+        if (i >= NumBits)
+            resize(i + 1);
         Data[i >> 5] &= ~(1 << (i & 31));
     }
 
 private:
-    void grow(unsigned i)
+    void resize(unsigned newSize)
     {
-        if (i >= NumBits)
+        unsigned oldWords = (NumBits + 31) >> 5;
+        unsigned newWords = (newSize + 31) >> 5;
+
+        if (newWords < oldWords * 2)
+            newWords = oldWords * 2; // Resize by the factor of 2
+
+        if (newWords > oldWords)
         {
-            unsigned words    = (NumBits + 31) >> 5;
-            unsigned newWords = Alg::Max(words * 2, (i + 1 + 31) >> 5);
-            if (newWords > words)
+            if (Data == &Static)
             {
-                if (Data == &Static)
-                {
-                    Data    = (UInt32*)pHeap->Alloc(newWords * sizeof(UInt32));
-                    Data[0] = Static;
-                }
-                else
-                    Data = (UInt32*)pHeap->Realloc(Data, newWords * sizeof(UInt32));
-                memset(Data + words, 0, (newWords - words) * sizeof(UInt32));
-                NumBits = newWords << 5;
+                Data  = (UInt32*)pHeap->Alloc(newWords * sizeof(UInt32));
+                *Data = Static;
             }
+            else
+            {
+                Data = (UInt32*)pHeap->Realloc(Data, newWords * sizeof(UInt32));
+            }
+            memset(Data + oldWords, 0, (newWords - oldWords) * sizeof(UInt32));
+            NumBits = newWords * 32;
         }
     }
 
