@@ -4264,11 +4264,10 @@ void InteractiveObjectEx::setTopmostLevel(const Value& result, Instances::fl_dis
         pio->DisplayObjectBase::Flags |= GFx::DisplayObjectBase::Mask_TopmostLevel;
     else
         pio->DisplayObjectBase::Flags &= (UInt16)~GFx::DisplayObjectBase::Mask_TopmostLevel;
-    MovieImpl* pmovie = static_cast<ASVM&>(GetVM()).GetMovieImpl();
     if (pio->IsTopmostLevelFlagSet())
-        pmovie->AddTopmostLevelCharacter(pio);
+        static_cast<ASVM&>(GetVM()).GetMovieImpl()->AddTopmostLevelCharacter(pio);
     else
-        pmovie->RemoveTopmostLevelCharacter(pio);
+        static_cast<ASVM&>(GetVM()).GetMovieImpl()->RemoveTopmostLevelCharacter(pio);
 }
 
 // @0x1424cc0e0
