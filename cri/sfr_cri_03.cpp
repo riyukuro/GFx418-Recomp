@@ -30,7 +30,6 @@ extern "C" CriUint8 DAT_143b27bf0[0x48];
 extern "C" const char* DAT_143ba9d08;
 extern "C" const char* volatile DAT_143ba9d20;
 extern "C" const char* DAT_143ba9d30;
-extern "C" void* DAT_143b15f60;
 extern "C" CriUint8 DAT_143b27c80[];
 extern "C" CriUint32 DAT_143b27c60;
 extern "C" CriUint32 DAT_143b27c64;
@@ -111,10 +110,17 @@ void FUN_1400534d0(void*);
 void FUN_1400534f0(__int64, unsigned __int64);  // C3: the definition's signature
 void FUN_140053510(__int64, unsigned int, unsigned __int64);  // C3: the definition's signature
 void FUN_140042600(void*, void*, CriSint32);
-CriUint64 FUN_1425e3510(void);
-CriUint64 FUN_1425e3560(void);
+// Scaleform runtime calls of the CRI glue, through views of the Scaleform classes (no Scaleform header here)
+namespace Scaleform {
+class MemoryHeap { public: void ReleaseOnFree(void* ptr); };
+class Memory { public: static MemoryHeap* pGlobalHeap; };
+class Timer { public: static unsigned __int64 GetRawTicks(); static unsigned __int64 GetRawFrequency(); };
+namespace Render {
+struct ImagePlane;
+class ImageData { public: void GetPlane(unsigned index, ImagePlane* plane) const; unsigned GetPlaneCount() const; };
+}
+}
 void FUN_14257db50(void* object);
-void FUN_14257e4a0(void*, void*);
 void FUN_140054040(__int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
 void FUN_140053540(__int64);  // C3: the definition's signature
 void FUN_140037910(void*, const CriChar8*, CriSint32);
@@ -257,10 +263,10 @@ void FUN_140041a60(void* object)
     };
     TimerState* state = (TimerState*)object;
     state->Elapsed = 0;
-    state->SystemStart = FUN_1425e3510();
+    state->SystemStart = Scaleform::Timer::GetRawFrequency();
     state->Reserved40 = 0;
     state->Mode = 0;
-    state->Start = FUN_1425e3560();
+    state->Start = Scaleform::Timer::GetRawTicks();
     state->Active = 1;
 }
 
@@ -1378,8 +1384,6 @@ CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
 #pragma optimize("", on)
 
 void FUN_14257da20(void*, void*);
-CriUint32 FUN_14257c0c0(void*);
-void FUN_14257c050(void*, CriUint32, void*);
 
 // MS2-FUNCTIONAL: resolve and cache the decoder instance from its media interface and owner state.
 // @0x140041910
@@ -1415,19 +1419,19 @@ void FUN_140041390(void* owner, void* outputSet)
         size_t Size;
         void* Data;
     } outputs[4] = {};
-    CriUint32 count = FUN_14257c0c0(outputSet);
+    CriUint32 count = ((const Scaleform::Render::ImageData*)outputSet)->GetPlaneCount();
     if (count >= 3)
     {
         for (CriUint32 i = 0; i < 3; ++i)
         {
-            FUN_14257c050(outputSet, i, &outputs[i]);
+            ((const Scaleform::Render::ImageData*)outputSet)->GetPlane(i, (Scaleform::Render::ImagePlane*)&outputs[i]);
             memset(outputs[i].Data, 0, outputs[i].Size);
         }
-        count = FUN_14257c0c0(outputSet);
+        count = ((const Scaleform::Render::ImageData*)outputSet)->GetPlaneCount();
         if (count < 4)
             return;
     }
-    FUN_14257c050(outputSet, count < 3 ? 0 : 3, &outputs[3]);
+    ((const Scaleform::Render::ImageData*)outputSet)->GetPlane(count < 3 ? 0 : 3, (Scaleform::Render::ImagePlane*)&outputs[3]);
     memset(outputs[3].Data, 0, outputs[3].Size);
 }
 
@@ -1859,9 +1863,9 @@ static __forceinline void criTimer_GetTime(const void* state, CriSint64* elapsed
 {
     struct InnerTimer { CriUint64 Start; CriUint64 Stop; CriUint8 Running; };
     const InnerTimer* timer = (const InnerTimer*)state;
-    *timestamp = FUN_1425e3510();
+    *timestamp = Scaleform::Timer::GetRawFrequency();
     if (timer->Running)
-        *elapsed = FUN_1425e3560() - timer->Start;
+        *elapsed = Scaleform::Timer::GetRawTicks() - timer->Start;
     else
         *elapsed = timer->Stop - timer->Start;
 }
@@ -1891,7 +1895,7 @@ void FUN_140041ad0(void* state, CriUint8 paused)
     TimerState* timer = (TimerState*)state;
     if (timer->Paused == paused)
         return;
-    CriUint64 now = FUN_1425e3560();
+    CriUint64 now = Scaleform::Timer::GetRawTicks();
     if (paused)
     {
         timer->Inner.Stop = now;
@@ -2347,7 +2351,7 @@ void criMvPlyAmng_Finalize(void)
 // @0x1400419d0
 void FUN_1400419d0(void* snapshot)
 {
-    *(CriUint64*)snapshot = FUN_1425e3560();
+    *(CriUint64*)snapshot = Scaleform::Timer::GetRawTicks();
     *((CriUint8*)snapshot + 0x10) = 1;
 }
 
@@ -2355,7 +2359,7 @@ void FUN_1400419d0(void* snapshot)
 // @0x1400419f0
 void FUN_1400419f0(void* timer)
 {
-    *(CriUint64*)((CriUint8*)timer + 8) = FUN_1425e3560();
+    *(CriUint64*)((CriUint8*)timer + 8) = Scaleform::Timer::GetRawTicks();
     *((CriUint8*)timer + 0x10) = 0;
 }
 
@@ -2363,7 +2367,7 @@ void FUN_1400419f0(void* timer)
 // @0x140041bd0
 void* FUN_140041bd0(void* snapshot)
 {
-    *(CriUint64*)snapshot = FUN_1425e3560();
+    *(CriUint64*)snapshot = Scaleform::Timer::GetRawTicks();
     *((CriUint8*)snapshot + 0x10) = 1;
     return snapshot;
 }
@@ -2372,7 +2376,7 @@ void* FUN_140041bd0(void* snapshot)
 // @0x140041aa0
 void FUN_140041aa0(void* timer)
 {
-    *(CriUint64*)((CriUint8*)timer + 0x18) = FUN_1425e3560();
+    *(CriUint64*)((CriUint8*)timer + 0x18) = Scaleform::Timer::GetRawTicks();
     *((CriUint8*)timer + 0x20) = 0;
     *(CriUint64*)((CriUint8*)timer + 0x40) = 0;
 }
@@ -2461,7 +2465,7 @@ void FUN_140041340(void* object)
 // @0x140041d20
 CriUint64 FUN_140041d20(void)
 {
-    void* manager = DAT_143b15f60;
+    void* manager = Scaleform::Memory::pGlobalHeap;
     ((void (*)(void*))*(void**)((CriUint8*)*(void**)manager + 0x60))(manager);
     return 0;
 }
@@ -2470,7 +2474,7 @@ CriUint64 FUN_140041d20(void)
 // @0x140041dd0
 void FUN_140041dd0(void* heap)
 {
-    void* manager = DAT_143b15f60;
+    void* manager = Scaleform::Memory::pGlobalHeap;
     ((void (*)(void*, void*))*(void**)((CriUint8*)*(void**)manager + 0x60))(manager, heap);
 }
 
@@ -2500,7 +2504,7 @@ void* FUN_140041c00(void* context)
     TimerContext* timer = (TimerContext*)context;
     timer->Flags = 1;
     timer->Vtable = &PTR_FUN_1431b9b10;
-    timer->Start = FUN_1425e3560();
+    timer->Start = Scaleform::Timer::GetRawTicks();
     timer->Active = 1;
     timer->Mode = 0;
     timer->Current = 0;
@@ -2517,7 +2521,7 @@ void* FUN_140041c60(void* manager, CriUint32 flags)
     FUN_14257db50(manager);
     if (flags & 1)
     {
-        void* globalManager = DAT_143b15f60;
+        void* globalManager = Scaleform::Memory::pGlobalHeap;
         ((void (*)(void*, void*))*(void**)((CriUint8*)*(void**)globalManager + 0x60))(globalManager, manager);
     }
     return manager;
@@ -2842,7 +2846,7 @@ void* FUN_140041d40(void* manager)
     void** fields = (void**)adapter;
     fields[0] = (void*)&PTR_LAB_143a48350;
     fields[1] = heap;
-    FUN_14257e4a0(heap, adapter);
+    ((Scaleform::MemoryHeap*)heap)->ReleaseOnFree(adapter);
     return adapter;
 }
 
@@ -4273,8 +4277,6 @@ void FUN_14003e850(void* player, void* source, void* destination)
 #pragma optimize("", on)
 
 __int64 FUN_1400530c0(__int64, int, int);  // C3: the definition's signature
-CriBool FUN_140026dd0(void*, CriUint8*, CriUint32, CriUint32, void*, void*);
-void FUN_140021c90(void*, CriSint32, void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
@@ -4543,12 +4545,12 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
     CriMvEasyPlayer* owner = state->Player;
     if (owner->IsNextFrameOnTime() == 0)
         return 0;
-    CriUint32 count = FUN_14257c0c0(planeSet);
+    CriUint32 count = ((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount();
     if (count < 3)
     {
         Buffer buffer = {};
-        FUN_14257c050(planeSet, 0, &buffer);
-        FUN_140026dd0(owner, buffer.Data, (CriUint32)buffer.Pitch, (CriUint32)buffer.Size, &state->Frame, &CriMv::ErrorContainer);
+        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&buffer);
+        owner->GetFrameOnTimeAs32bitARGB(buffer.Data, (CriUint32)buffer.Pitch, (CriUint32)buffer.Size, *(CriMvFrameInfo*)&state->Frame, CriMv::ErrorContainer);
         FUN_1400414f0(handle);
     }
     else
@@ -4558,21 +4560,21 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
         Buffer chromaV = {};
         Buffer alpha = {};
         YuvSet yuv = {};
-        FUN_14257c050(planeSet, 0, &luma);
+        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&luma);
         yuv.Entries[0].Data = luma.Data;
         yuv.Entries[0].Size = (CriUint32)luma.Size;
         yuv.Entries[0].Pitch = (CriUint32)luma.Pitch;
-        FUN_14257c050(planeSet, 1, &chromaU);
+        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(1, (Scaleform::Render::ImagePlane*)&chromaU);
         yuv.Entries[1].Data = chromaU.Data;
         yuv.Entries[1].Size = (CriUint32)chromaU.Size;
         yuv.Entries[1].Pitch = (CriUint32)chromaU.Pitch;
-        FUN_14257c050(planeSet, 2, &chromaV);
+        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(2, (Scaleform::Render::ImagePlane*)&chromaV);
         yuv.Entries[2].Data = chromaV.Data;
         yuv.Entries[2].Size = (CriUint32)chromaV.Size;
         yuv.Entries[2].Pitch = (CriUint32)chromaV.Pitch;
-        if (FUN_14257c0c0(planeSet) > 3)
+        if (((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount() > 3)
         {
-            FUN_14257c050(planeSet, 3, &alpha);
+            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(3, (Scaleform::Render::ImagePlane*)&alpha);
             if (state->AlphaKeep == 0)
             {
                 memset(alpha.Data, 0xff, (size_t)alpha.Flags * (size_t)alpha.Pitch);
@@ -4590,7 +4592,7 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
     state->Delivered = 1;
     if (state->PausePending)
     {
-        FUN_140021c90(owner, 1, &CriMv::ErrorContainer);
+        owner->Pause(1, CriMv::ErrorContainer);
         state->PausePending = 0;
     }
     return 1;
