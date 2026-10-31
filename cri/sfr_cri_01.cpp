@@ -1,12 +1,13 @@
-// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Video (VS2012): Video_Video
+// Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Video: Video_Video
 // (0x14001c000-0x14001d7a0), the AS3 VideoProviderNetStream (0x140025090-0x140026db0) and the video player over the CRI
 // easy player (0x140028360-0x14002a0e0). Our own source, written from the exe; the leaked SDK copies were only used to
-// name things. The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
-// cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or variadic templates, and no
-// hook/ms2hook.h (its hook registrations are in ../video/sfr_video_hooks.cpp). clang-cl compiles it as before. The CRI
+// name things. This part of the Video add-on lib is VS2008 SP1 code, so the unit builds with cl 15.00.30729 and the
+// vc11 options (MS2-TOOLSET: vc9v, cmake/ms2-unit-profiles.cmake). Keep it C++03: no auto, nullptr, range-for,
+// __declspec(safebuffers), alias `using`, explicit conversion operators or variadic templates, and no hook/ms2hook.h
+// (its hook registrations are in ../video/sfr_video_hooks.cpp). clang-cl compiles it as before. The CRI
 // Movie runs between them (CriMvEasyPlayer, CriMv, CRI Heap; VS2008 SP1) are sfr_cri_01c.
 // MS2-UNIT: sfr_cri_01
-// MS2-TOOLSET: vc11
+// MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14001c000-0x14001d7a0 .text$mn
 // MS2-RANGE: 0x140025090-0x140026db0 .text$mn
@@ -48,7 +49,7 @@ CriMvSystemTimerInterface::~CriMvSystemTimerInterface() {}
 
 // The exe's copies are the scalar deleting destructors of the two interfaces (CRI's VS2008 build: no sized-delete
 // flag-4 path). Neither has a constructor here, so their ??_G is never emitted; both are written out.
-// MS2-FUNCTIONAL 0x1400283a0: ??_GCriMvSoundInterface written out (own vftable store, then the CRT operator delete)
+// ??_GCriMvSoundInterface written out (own vftable store, then the CRT operator delete)
 // @0x1400283a0
 void* DeleteCriMvSoundInterface(CriMvSoundInterface* p, unsigned flags)
 {
@@ -58,7 +59,7 @@ void* DeleteCriMvSoundInterface(CriMvSoundInterface* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL 0x1400283e0: ??_GCriMvSystemTimerInterface written out (own vftable store, then the CRT operator delete)
+// ??_GCriMvSystemTimerInterface written out (own vftable store, then the CRT operator delete)
 // @0x1400283e0
 void* DeleteCriMvSystemTimerInterface(CriMvSystemTimerInterface* p, unsigned flags)
 {
@@ -227,7 +228,7 @@ __forceinline void Video::Initialize()
 }
 
 // @0x14001cbb0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 Video::Video(const VideoVMSupport& vmSupport, Thread::ThreadPriority priority, bool autoInit)
     : DecodeThreadPriority(priority)
 {
@@ -276,7 +277,7 @@ void Video::Finalize()
 }
 
 // @0x14001c760
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void Video::ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo)
 {
     UInt32 characterId = p->ReadU16();
@@ -393,7 +394,7 @@ private:
 };
 
 // @0x14001cfa0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 VideoSoundRendererStream::VideoSoundRendererStream(MemoryHeap* pheap, Sound::SoundRenderer* psoundPlayer)
     : pHeap(pheap), pSoundPlayer(psoundPlayer),
       pPCMStream(0), ChannelCount(0), SampleRate(0), Stat(Sound_Stopped), TotalGotSamples(0)
@@ -437,7 +438,7 @@ void VideoSoundRendererStream::DestroyOutput()
 }
 
 // @0x14001d420
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoSoundRendererStream::Start(PCMStream* pstream)
 {
     Stat            = Sound_Playing;
@@ -457,7 +458,7 @@ void VideoSoundRendererStream::Start(PCMStream* pstream)
 }
 
 // @0x14001c1e0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoSoundRendererStream::Stop()
 {
     if (pChannel)
@@ -469,7 +470,7 @@ void VideoSoundRendererStream::Stop()
 }
 
 // @0x14001c270
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoSoundRendererStream::Pause(bool sw)
 {
     if (sw == true)
@@ -498,7 +499,7 @@ VideoSound::Status VideoSoundRendererStream::GetStatus() const
 }
 
 // @0x14001c2c0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoSoundRendererStream::GetTime(UInt64* count, UInt64* unit) const
 {
     if (TotalGotSamples == 0)
@@ -523,7 +524,7 @@ void VideoSoundRendererStream::GetTime(UInt64* count, UInt64* unit) const
 }
 
 // @0x14001d130
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 Sound::SoundChannel* VideoSoundRendererStream::GetSoundChannel()
 {
     if (!pChannel)
@@ -568,11 +569,11 @@ unsigned VideoSoundRendererStream::Streamer::GetPCMData(UByte* pdata, unsigned d
 class VideoSoundSystem_SoundRenderer : public VideoSoundSystem
 {
 public:
-    // MS2-FUNCTIONAL: initialize the Scaleform base and retain the selected sound renderer.
+    // initialize the Scaleform base and retain the selected sound renderer.
     // @0x14001c890
     VideoSoundSystem_SoundRenderer(Sound::SoundRenderer* psoundPlayer, MemoryHeap* pheap)
         : VideoSoundSystem(pheap), pSoundPlayer(psoundPlayer) {}
-    // MS2-FUNCTIONAL: release the retained renderer while unwinding through VideoSoundSystem.
+    // release the retained renderer while unwinding through VideoSoundSystem.
     // @0x14001c900
     virtual ~VideoSoundSystem_SoundRenderer() {}
 
@@ -586,7 +587,7 @@ protected:
 };
 
 // @0x14001c9a0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void Video::SetSoundSystem(Sound::SoundRenderer* psoundRenderer)
 {
     if (!psoundRenderer)
@@ -602,7 +603,7 @@ void Video::SetSoundSystem(Sound::SoundRenderer* psoundRenderer)
 // ==== Readers ========================================================================================================
 
 // @0x14001d720
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoReaderConfig::DetachReader(VideoReader* preader)
 {
     for (size_t i = 0; i < Readers.GetSize(); ++i)
@@ -616,7 +617,7 @@ void VideoReaderConfig::DetachReader(VideoReader* preader)
 }
 
 // @0x14001d650
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void VideoReaderConfig::AttachReader(VideoReader* preader)
 {
     Readers.PushBack(preader);
@@ -625,7 +626,7 @@ void VideoReaderConfig::AttachReader(VideoReader* preader)
 // ==== Player creation, I/O ===========================================================================================
 
 // @0x14001c370
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 VideoPlayer* Video::CreateVideoPlayer(MemoryHeap* pheap, TaskManager* ptaskManager,
                                       FileOpenerBase* pfileOpener, Log* plog)
 {
@@ -654,7 +655,7 @@ VideoPlayer* Video::CreateVideoPlayer(MemoryHeap* pheap, TaskManager* ptaskManag
 }
 
 // @0x14001c4c0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void Video::SetReadCallback(ReadCallback* pcallback)
 {
     pReadCallback = pcallback;
@@ -670,7 +671,7 @@ bool Video::IsIORequired() const
 }
 
 // @0x14001c530
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls, other scheduling
+// MS2-FUNCTIONAL: no tail calls, other scheduling
 void Video::EnableIO(bool enable)
 {
     if (pReaderConfig)
@@ -786,7 +787,7 @@ public:
     float  FrameDuration;                     // +0x1c
 };
 
-// MS2-FUNCTIONAL: adapts the SWF target's frame clock: the start frame and the movie's frame duration (+0x274).
+// adapts the SWF target's frame clock: the start frame and the movie's frame duration (+0x274).
 // The exe calls the target's vfunc without a null check (only the weak-proxy fetch is guarded); the one caller
 // (SetSwfSync, 0x140025ec0) passes the movie's live sprite.
 // @0x140025c30
@@ -819,7 +820,6 @@ SwfVideoSyncObject* FUN_140025e50(SwfVideoSyncObject* self, UInt32 flags)
     return self;
 }
 
-// MS2-FUNCTIONAL: calculate elapsed SWF time from the target's current frame and cached frame duration.
 // @0x140025d30
 void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
 {
@@ -856,7 +856,7 @@ static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
 }
 
 // @0x140025090
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 const char* NetStreamInterface::NotificationToString(Notification code)
 {
     switch (code)
@@ -872,7 +872,7 @@ const char* NetStreamInterface::NotificationToString(Notification code)
 }
 
 // @0x140025100
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::Init()
 {
     pVideoPlayer = NULL;
@@ -895,7 +895,6 @@ void VideoProviderNetStream::Init()
 }
 
 // @0x1400251a0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 void VideoProviderNetStream::Pause(bool pause)
 {
     if (pVideoPlayer)
@@ -903,7 +902,7 @@ void VideoProviderNetStream::Pause(bool pause)
 }
 
 // @0x1400251c0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 bool VideoProviderNetStream::IsActive()
 {
     if (!pVideoPlayer)
@@ -914,7 +913,7 @@ bool VideoProviderNetStream::IsActive()
 }
 
 // @0x140025210
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::AllocSubtitleBuffers()
 {
     if (!pSubtitle)
@@ -930,7 +929,7 @@ void VideoProviderNetStream::AllocSubtitleBuffers()
 }
 
 // @0x1400252a0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::ReleaseSubtitleBuffers()
 {
     if (pSubtitleTmp)
@@ -946,7 +945,6 @@ void VideoProviderNetStream::ReleaseSubtitleBuffers()
 }
 
 // @0x140025300
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 void VideoProviderNetStream::Stop()
 {
     if (pVideoPlayer)
@@ -954,7 +952,7 @@ void VideoProviderNetStream::Stop()
 }
 
 // @0x140025360
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+// MS2-FUNCTIONAL: member reloaded after the test
 UInt32 VideoProviderNetStream::GetPosition()
 {
     if (!pVideoPlayer)
@@ -963,7 +961,7 @@ UInt32 VideoProviderNetStream::GetPosition()
 }
 
 // @0x140025380
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetLoopFlag(bool flag)
 {
     LoopFlag = flag;
@@ -971,7 +969,6 @@ void VideoProviderNetStream::SetLoopFlag(bool flag)
         pVideoPlayer->SetLoopFlag(flag);
 }
 
-// MS2-FUNCTIONAL: retain or clear the timeline sync object and immediately install it on an open player.
 // @0x140025ec0
 void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
 {
@@ -991,7 +988,7 @@ struct OpenUrlLocationInfo
     String ParentPath;   // +0x10
 };
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling. The AS3 and movie
+// MS2-FUNCTIONAL: other scheduling. The AS3 and movie
 // objects are read through their exe offsets (the AS3 VM and MovieImpl headers are not shared with this unit), and the
 // movie heap is read directly where the exe calls the virtual MovieImpl::GetHeap.
 // @0x140026720
@@ -1092,7 +1089,6 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
 }
 
 // @0x1400253b0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 void VideoProviderNetStream::SetAudioTrack(int track)
 {
     if (pVideoPlayer)
@@ -1100,7 +1096,6 @@ void VideoProviderNetStream::SetAudioTrack(int track)
 }
 
 // @0x1400253d0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 void VideoProviderNetStream::SetSubAudioTrack(int track)
 {
     if (pVideoPlayer)
@@ -1108,7 +1103,6 @@ void VideoProviderNetStream::SetSubAudioTrack(int track)
 }
 
 // @0x1400253f0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 void VideoProviderNetStream::ReplaceCenterVoice(int track)
 {
     if (pVideoPlayer)
@@ -1116,7 +1110,7 @@ void VideoProviderNetStream::ReplaceCenterVoice(int track)
 }
 
 // @0x140025410
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetSubtitleChannel(int channel)
 {
     if (pVideoPlayer)
@@ -1124,7 +1118,7 @@ void VideoProviderNetStream::SetSubtitleChannel(int channel)
 }
 
 // @0x140025430
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+// MS2-FUNCTIONAL: member reloaded after the test
 int VideoProviderNetStream::GetSubtitleChannel()
 {
     if (!pVideoPlayer)
@@ -1133,7 +1127,7 @@ int VideoProviderNetStream::GetSubtitleChannel()
 }
 
 // @0x140025450
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetBufferTime(float time)
 {
     BufferTime = time;
@@ -1142,7 +1136,7 @@ void VideoProviderNetStream::SetBufferTime(float time)
 }
 
 // @0x140025480
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetNumberOfFramePools(unsigned pools)
 {
     PoolsNumber = pools;
@@ -1151,7 +1145,7 @@ void VideoProviderNetStream::SetNumberOfFramePools(unsigned pools)
 }
 
 // @0x1400254b0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetReloadThresholdTime(float time)
 {
     ReloadThreshHoldTime = time;
@@ -1160,7 +1154,7 @@ void VideoProviderNetStream::SetReloadThresholdTime(float time)
 }
 
 // @0x1400254e0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SetOpenURLTimeout(float timeout)
 {
     OpenURLTimeout = timeout;
@@ -1169,7 +1163,7 @@ void VideoProviderNetStream::SetOpenURLTimeout(float timeout)
 }
 
 // @0x140025510
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
+// MS2-FUNCTIONAL: no tail calls
 void VideoProviderNetStream::SendMetaData()
 {
     if (pNetStreamInterface)
@@ -1177,7 +1171,7 @@ void VideoProviderNetStream::SendMetaData()
 }
 
 // @0x140025580
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+// MS2-FUNCTIONAL: member reloaded after the test
 VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
 {
     if (!pVideoPlayer || !pTextureImage)
@@ -1188,7 +1182,7 @@ VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
 }
 
 // @0x1400255b0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::Close()
 {
     if (pTextureImage)
@@ -1201,7 +1195,7 @@ void VideoProviderNetStream::Close()
 }
 
 // @0x140025650
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::InitSoundChannel()
 {
     if (pAudioTarget)
@@ -1223,7 +1217,7 @@ void VideoProviderNetStream::InitSoundChannel()
 }
 
 // @0x140025750
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SetSoundVolume(int volume, int subVolume)
 {
     if (!pAudioTarget)
@@ -1251,7 +1245,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 using namespace Video;
 
 // @0x140025830
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
 {
     SeekPos = pos;
@@ -1271,7 +1265,7 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
 }
 
 // @0x1400258e0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SendNotification(NetStreamInterface::Notification n, bool error)
 {
     String code(NetStreamInterface::NotificationToString(n));
@@ -1281,7 +1275,7 @@ void VideoProviderNetStream::SendNotification(NetStreamInterface::Notification n
 }
 
 // @0x140025990
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SendSubtitle()
 {
     if (strncmp(pSubtitle, pSubtitleTmp, VInfo.MaxSubtitleLen) != 0)
@@ -1293,7 +1287,7 @@ void VideoProviderNetStream::SendSubtitle()
 }
 
 // @0x140025ad0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
 {
     Sprite* pold = pAudioTarget ? GetAudioTargetSprite(pAudioTarget) : NULL;
@@ -1341,7 +1335,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 using namespace Video;
 
 // @0x140026c60
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 VideoProviderNetStream::VideoProviderNetStream(NetStreamInterface* pnsintf)
     : pNetStreamInterface(pnsintf)
 {
@@ -1349,14 +1342,13 @@ VideoProviderNetStream::VideoProviderNetStream(NetStreamInterface* pnsintf)
 }
 
 // @0x140026320
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 VideoProviderNetStream::~VideoProviderNetStream()
 {
     Close();
 }
 
 // @0x140025a30
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::NotifyVideoCharacters()
 {
     for (UPInt i = 0; i < VideoCharacters.GetSize(); ++i)
@@ -1368,7 +1360,7 @@ void VideoProviderNetStream::NotifyVideoCharacters()
 }
 
 // @0x140025f50
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 {
     if (!pvideo)
@@ -1383,7 +1375,7 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 }
 
 // @0x140026080
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
 {
     if (VideoCharacters.GetSize() == 0)
@@ -1395,7 +1387,7 @@ VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
 }
 
 // @0x140026140
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SendCuePoints()
 {
     for (UPInt i = 0; i < CuePoints.GetSize(); ++i)
@@ -1407,7 +1399,7 @@ void VideoProviderNetStream::SendCuePoints()
 }
 
 // @0x140026450
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::Advance()
 {
     if (!pVideoPlayer)
@@ -1507,7 +1499,6 @@ void     FUN_1423dce40(void* plog, const char* pfmt, ...);   // Log::LogError
 
 namespace Scaleform { namespace GFx { namespace Video {
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400285a0
 void VideoPlayerImpl::Play()
 {
@@ -1521,7 +1512,6 @@ void VideoPlayerImpl::Play()
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028610
 void VideoPlayerImpl::Stop()
 {
@@ -1533,7 +1523,6 @@ void VideoPlayerImpl::Stop()
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028670
 void VideoPlayerImpl::Pause(bool on)
 {
@@ -1549,7 +1538,7 @@ void VideoPlayerImpl::Pause(bool on)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: ; register allocation and block order differ
 // @0x1400286d0
 UInt32 VideoPlayerImpl::GetPosition()
 {
@@ -1561,7 +1550,6 @@ UInt32 VideoPlayerImpl::GetPosition()
     return pos;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028700
 void VideoPlayerImpl::SetSubtitleChannel(int channel)
 {
@@ -1581,14 +1569,14 @@ void VideoPlayerImpl::SetSubtitleChannel(int channel)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: ; register allocation and block order differ
 // @0x140028760
 int VideoPlayerImpl::GetSubtitleChannel()
 {
     return SubtitleChannel == -1 ? -1 : SubtitleChannel;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: ; register allocation and block order differ
 // @0x140028770
 void VideoPlayerImpl::SetDecodeHeaderTimeout(float timeout)
 {
@@ -1598,7 +1586,6 @@ void VideoPlayerImpl::SetDecodeHeaderTimeout(float timeout)
         DecodeHeaderTimeout = 0;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400287d0
 void VideoPlayerImpl::UpdateTexture(VideoImage* pimage, char* subtitle, int subtitleLength)
 {
@@ -1614,7 +1601,6 @@ void VideoPlayerImpl::UpdateTexture(VideoImage* pimage, char* subtitle, int subt
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028870
 void VideoPlayerImpl::SetAudioTrack(int trackIndex)
 {
@@ -1630,7 +1616,6 @@ void VideoPlayerImpl::SetAudioTrack(int trackIndex)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400288e0
 void VideoPlayerImpl::ReplaceCenterVoice(int trackIndex)
 {
@@ -1638,7 +1623,6 @@ void VideoPlayerImpl::ReplaceCenterVoice(int trackIndex)
         pPlayer->ReplaceCenterVoice(trackIndex);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028910
 void VideoPlayerImpl::SetLoopFlag(bool flag)
 {
@@ -1647,7 +1631,6 @@ void VideoPlayerImpl::SetLoopFlag(bool flag)
         pPlayer->SetLoopFlag(LoopFlag);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028950
 void VideoPlayerImpl::SetBufferTime(float time)
 {
@@ -1655,7 +1638,6 @@ void VideoPlayerImpl::SetBufferTime(float time)
         pPlayer->SetBufferingTime(time);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028970
 void VideoPlayerImpl::SetNumberOfFramePools(unsigned pools)
 {
@@ -1663,7 +1645,6 @@ void VideoPlayerImpl::SetNumberOfFramePools(unsigned pools)
         pPlayer->SetNumberOfFramePools(pools);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028990
 void VideoPlayerImpl::SetReloadThresholdTime(float time)
 {
@@ -1671,10 +1652,8 @@ void VideoPlayerImpl::SetReloadThresholdTime(float time)
         pPlayer->SetReloadThresholdTime(time);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400289b0
-// The exe frame has no /GS cookie; VS2012 did not protect this 12-byte POD.
-__declspec(safebuffers) void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
+void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* info)
 {
     if (pPlayer)
     {
@@ -1686,14 +1665,13 @@ __declspec(safebuffers) void VideoPlayerImpl::GetReadBufferInfo(ReadBufferInfo* 
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400291c0
 void CriMvSystemTimer::SetSyncObject(VideoPlayer::SyncObject* psync)
 {
     pSyncObj = psync;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: ; register allocation and block order differ
 // @0x1400292f0
 void VideoDecoderSmp::StopDecoding(VideoPlayer* pplayer)
 {
@@ -1713,14 +1691,12 @@ void VideoDecoderSmp::StopDecoding(VideoPlayer* pplayer)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140028570
 bool VideoDecoderSmp::IsDecodingStopped(VideoPlayer* pplayer)
 {
     return !ExecuteDecode(pplayer);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140029360
 bool VideoDecoderSmp::IsIORequired() const
 {
@@ -1734,7 +1710,6 @@ bool VideoDecoderSmp::IsIORequired() const
     return false;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400293f0
 void VideoPlayerImpl::StopAndWait()
 {
@@ -1749,7 +1724,6 @@ void VideoPlayerImpl::StopAndWait()
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140029480
 void VideoPlayerImpl::Seek(UInt32 pos)
 {
@@ -1768,7 +1742,6 @@ void VideoPlayerImpl::Seek(UInt32 pos)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140029510
 void VideoPlayerImpl::DecodeHeader()
 {
@@ -1804,7 +1777,6 @@ void VideoPlayerImpl::DecodeHeader()
     pDecoder->StopDecoding(this);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140029640
 void VideoPlayerImpl::Decode()
 {
@@ -1876,7 +1848,6 @@ void VideoPlayerImpl::Decode()
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x140029880
 void VideoPlayerImpl::SetSubAudioTrack(int trackIndex)
 {
@@ -1900,7 +1871,6 @@ Sound::SoundChannel* VideoPlayerImpl::GetSoundChannel(SoundTrack track)
     return 0;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x1400298e0
 void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spatinfo[])
 {
@@ -2139,7 +2109,6 @@ void FUN_14001d5d0(CriUint64* array)
     array[1] = 0;
 }
 
-// MS2-FUNCTIONAL: remove one pointer from a Scaleform array and compact the remaining entries.
 // @0x14001d6d0
 void FUN_14001d6d0(CriUint64* array, CriSint64 index)
 {
@@ -2168,7 +2137,6 @@ void FUN_140029a10(void** value)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: copy both embedded Scaleform strings in the CRI value object.
 // @0x140029070
 void* FUN_140029070(void* destination, const void* source)
 {
@@ -2177,7 +2145,6 @@ void* FUN_140029070(void* destination, const void* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: construct the object's two embedded Scaleform strings in place.
 // @0x1400293d0
 void* FUN_1400293d0(void* object)
 {
@@ -2214,7 +2181,6 @@ void* FUN_140029e40(void* object, void* source)
     return object;
 }
 
-// MS2-FUNCTIONAL: release the retained callback and then tear down its reference-count base.
 // @0x140029ed0
 void FUN_140029ed0(void* object)
 {
@@ -2261,7 +2227,6 @@ void* FUN_14002a010(void* mem, void* pheap, void* psound)
     return mem;
 }
 
-// MS2-FUNCTIONAL: tear down the CRI output callback's retained interface and reference-count base.
 // @0x14002a090
 void FUN_14002a090(void* object)
 {
@@ -2274,7 +2239,6 @@ void FUN_14002a090(void* object)
     FUN_14257db50(object);
 }
 
-// MS2-FUNCTIONAL: store the CRI critical section and enter it for the scoped lock guard.
 // @0x140028360
 void* FUN_140028360(void* guard, CRITICAL_SECTION* section)
 {
@@ -2296,7 +2260,6 @@ void FUN_140028480(void* object)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: restore the SoundChannelDelegate vtable and honor scalar-delete requests.
 // @0x1400284b0
 void* FUN_1400284b0(void* object, CriUint8 flags)
 {
@@ -2321,7 +2284,6 @@ void* FUN_140029160(void* object, CriUint64 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: restore SoundChannelDelegate's vtable and apply the scalar-delete flag.
 // @0x140029280
 void* FUN_140029280(void* object, CriUint8 flags)
 {
@@ -2345,7 +2307,6 @@ void* FUN_14001ca70(void* object, CriUint64 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: copy a Scaleform Ptr and retain its target.
 // @0x140028a30
 void* FUN_140028a30(void** slot, void* target)
 {
@@ -2365,7 +2326,6 @@ void FUN_140028ad0(void** slot)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: replace a RefCountImpl pointer, retaining the new target before releasing the old one.
 // @0x140028af0
 void* FUN_140028af0(void** slot, void* target)
 {
@@ -2377,7 +2337,6 @@ void* FUN_140028af0(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: replace an owned RefCountImpl pointer without retaining the incoming target.
 // @0x140028b30
 void* FUN_140028b30(void** slot, void* target)
 {
@@ -2407,7 +2366,6 @@ void FUN_140028c20(void** slot)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028c40
 void* FUN_140028c40(void** slot, void* target)
 {
@@ -2419,7 +2377,6 @@ void* FUN_140028c40(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
 // @0x140028c90
 void* FUN_140028c90(void** slot, void* target)
 {
@@ -2439,7 +2396,6 @@ void FUN_140028d00(void** slot)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028d20
 void* FUN_140028d20(void** slot, void* target)
 {
@@ -2451,7 +2407,6 @@ void* FUN_140028d20(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
 // @0x140028d70
 void* FUN_140028d70(void** slot, void* target)
 {
@@ -2471,7 +2426,6 @@ void FUN_140028dd0(void** slot)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: retain the incoming core pointer and release the previous target.
 // @0x140028df0
 void* FUN_140028df0(void** slot, void* target)
 {
@@ -2483,7 +2437,6 @@ void* FUN_140028df0(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: replace an owned RefCountImplCore pointer without retaining the incoming target.
 // @0x140028e40
 void* FUN_140028e40(void** slot, void* target)
 {
@@ -2493,7 +2446,6 @@ void* FUN_140028e40(void** slot, void* target)
     return slot;
 }
 
-// MS2-FUNCTIONAL: retain and replace the target using the RefCountImpl add/release methods.
 // @0x140028eb0
 void* FUN_140028eb0(void** slot, void* target)
 {
