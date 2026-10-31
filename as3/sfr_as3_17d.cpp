@@ -76,7 +76,7 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self);   // AvmBitmap: the image shape of the render node
 void FUN_142524990(void* arr, void* policy, Scaleform::UPInt n);   // ArrayDH<Ptr<InteractiveObject> >::Resize, out of line
-void* FUN_14261e310();   // the AMP server (AmpServer::GetInstance)
+namespace Scaleform { namespace GFx { void* FUN_14261e310(); } }   // the AMP server (AmpServer::GetInstance)
 // A collector record: a counted object and a second word.
 struct Sfr17dCollectorEntry
 {
@@ -587,9 +587,7 @@ extern void* const AvmStage_vftable[];
 extern void* const AvmStage_vftable_30[];
 extern void* const AvmStage_vftable_40[];
 }}}
-void FUN_1424d6480(void* self, InteractiveObject* pdispObj);   // AvmInteractiveObj::AvmInteractiveObj
 bool FUN_142531f40(AS3::VM& vm, AS3::SPtr<AS3::Object>& pobj, AS3::Object* classObj, unsigned argc, const AS3::Value* argv);   // ASVM::_constructInstance
-void FUN_142446e70(Instances::fl_display::DisplayObject* obj, void* p);   // DisplayObject: sets the loader info
 
 // MS2-FUNCTIONAL 0x1424f4000: the stage's AVM part is built in place (no class model); the exe inlines the Stage constructor and InsertEntry
 // @0x1424f4000
@@ -603,7 +601,7 @@ void FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
     proot->pStage = pstage;
     if (UByte* pavm = static_cast<UByte*>(pmem) + sizeof(Stage))
     {
-        FUN_1424d6480(pavm, pstage);
+        new (pavm) AvmInteractiveObj(pstage);
         *reinterpret_cast<void* const**>(pavm + 0x00) = AvmStage_vftable;
         *reinterpret_cast<void* const**>(pavm + 0x30) = AvmStage_vftable_30;
         *reinterpret_cast<void* const**>(pavm + 0x40) = AvmStage_vftable_40;
@@ -652,7 +650,7 @@ void Stage::ExecuteFrame0Events()
         {
             if (Instances::fl_display::DisplayObject* pas3obj = ToAvmDisplayObj(root)->GetAS3Obj())
             {
-                FUN_142446e70(pas3obj, li);
+                pas3obj->SetLoaderInfo(li);
                 li->Content = ToAvmDisplayObj(root)->GetAS3Obj();
             }
         }
@@ -744,8 +742,6 @@ bool MovieRoot::ExecuteAbc(const AbcDataBuffer* pabc, DisplayObjContainer* pspr)
 
 }}} // namespace Scaleform::GFx::AS3
 
-void FUN_142466be0(void* eventClass, void* ret, const Scaleform::GFx::ASString& type, bool bubbles, bool cancelable);   // the AS3 Event class's object factory
-bool FUN_142467ec0(void* dispatcher, const Scaleform::GFx::EventId* id, void* dispObj);   // EventDispatcher::Dispatch(const EventId&, DisplayObject*)
 
 // AvmDisplayObj: fires the display-list event id at the AS3 object (load, enter frame, the timeline instance's
 // creation and parent property, its constructor, added / removed and the frame and activation broadcasts).
@@ -823,10 +819,9 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
             root->CheckAvm();
             if (!root->pAVM->HandleException)
             {
-                SPtr<Instances::fl_events::Event> evt;
                 root->CheckAvm();
-                FUN_142466be0(*reinterpret_cast<void* const*>(reinterpret_cast<const UByte*>(root->pAVM) + 0x390), &evt,
-                              root->BuiltinsMgr.GetBuiltin(AS3Builtin_addedToStage), false, false);
+                SPtr<Instances::fl_events::Event> evt = static_cast<Classes::fl_events::EventDispatcher*>(
+                    root->pAVM->EventDispatcherClass.GetPtr())->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_addedToStage), false, false);
                 self->PropagateEvent(*evt, false);
             }
         }
@@ -844,10 +839,9 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
         if ((self->Flags & AvmDisplayObj::Flag_Unloaded) && !self->GetAVM()->HandleException)
         {
             root = static_cast<MovieRoot*>(self->pDispObj->pASRoot);
-            SPtr<Instances::fl_events::Event> evt;
             root->CheckAvm();
-            FUN_142466be0(*reinterpret_cast<void* const*>(reinterpret_cast<const UByte*>(root->pAVM) + 0x390), &evt,
-                          root->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false, false);
+            SPtr<Instances::fl_events::Event> evt = static_cast<Classes::fl_events::EventDispatcher*>(
+                root->pAVM->EventDispatcherClass.GetPtr())->CreateEventObject(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false, false);
             self->PropagateEvent(*evt, false);
         }
         self->pDispObj->OnEventUnload();
@@ -856,24 +850,24 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
         if (!as3obj)
             return;
         if (pdisp->MayHaveActivateHandler())
-            FUN_142467ec0(pdisp, &id, self->pDispObj);
+            pdisp->Dispatch(id, self->pDispObj);
         break;
     case Sfr17dEvent_Deactivate:
         if (!as3obj)
             return;
         if (pdisp->MayHaveDeactivateHandler())
-            FUN_142467ec0(pdisp, &id, self->pDispObj);
+            pdisp->Dispatch(id, self->pDispObj);
         break;
     case Sfr17dEvent_Render:
         if (!as3obj)
             return;
         if (pdisp->MayHaveRenderHandler())
-            FUN_142467ec0(pdisp, &id, self->pDispObj);
+            pdisp->Dispatch(id, self->pDispObj);
         break;
     case Sfr17dEvent_Resize:
         if (!as3obj)
             return;
-        FUN_142467ec0(pdisp, &id, self->pDispObj);
+        pdisp->Dispatch(id, self->pDispObj);
         break;
     case Sfr17dEvent_FrameConstructed:
         if (!as3obj)
@@ -893,9 +887,9 @@ void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id)
 }
 
 void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
-bool FUN_142441730(void* bmpData, void* pres, void* pdefImpl);           // BitmapData: binds it to a library bitmap
 
 namespace Scaleform { namespace GFx { namespace AS3 {
+namespace Instances { namespace fl_display { bool BindLibraryBitmap(BitmapData* pthis, Resource* pres, MovieDefImpl* pdefImpl); } }   // 0x142441730
 
 // MS2-FUNCTIONAL 0x1424f2450: written from the exe's control flow (the exe inlines the Value and StringDataPtr temporaries)
 // @0x1424f2450
@@ -966,7 +960,7 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
     VM& vm = *static_cast<MovieRoot*>(pASRoot)->pAVM;
     if (vm.ConstructBuiltinObject(pbmpData, name.ToCStr(), 2, params))
     {
-        FUN_142441730(pbmpData.GetPtr(), pImage.GetPtr(), GetResourceMovieDef());
+        Instances::fl_display::BindLibraryBitmap(pbmpData.GetPtr(), pImage.GetPtr(), GetResourceMovieDef());
         Value r;
         as3bmp->bitmapDataSet(r, pbmpData);
     }
@@ -975,7 +969,6 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
 
 }}} // namespace Scaleform::GFx::AS3
 
-void FUN_1425b8e60(void* ptf, void* pinfo);   // TextField: the display info of a text field (its text rect space)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1059,7 +1052,7 @@ bool Sfr34d_ValueObjIfc::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pi
     DisplayObjectBase::GeomDataType geom;
     pdisp->GetGeomData(geom);
     if (pdisp->GetType() == CharacterDef::TextField)
-        FUN_1425b8e60(pdisp, pinfo);
+        static_cast<TextField*>(pdisp)->GetPosition(pinfo);
     else
     {
         const Double x = Double(geom.X) * 0.05;
