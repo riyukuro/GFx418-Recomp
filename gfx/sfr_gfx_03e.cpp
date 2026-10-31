@@ -260,14 +260,13 @@ void TextField::AddIdImageDescAssoc(const char* idStr, Render::Text::ImageDesc* 
     pImageDescAssoc->Set(idStr, pdesc);
 }
 
-// MS2-FUNCTIONAL 0x1425b67d0: same advance logic; the exe keeps the movie root in a callee-saved register and orders blocks differently
 // @0x1425b67d0
 void TextField::AdvanceFrame(bool nextFrame, float framePos)
 {
     SF_UNUSED(framePos);
     UByte stateFlags = GetStateChangeFlags();
     bool  textSet    = false;
-    if (((stateFlags & StateChanged_Fonts) || (GetMovieImpl()->Flags2 & Flag2_RegisteredFontsChanged)) && pDocument)
+    if (((stateFlags & StateChanged_Fonts) || ((UByte)(GetMovieImpl()->Flags2 >> 1) & 1)) && pDocument)
     {
         InteractiveObject::Flags &= ~Mask_ReqPartialAdvance;
         pDocument->SetCompleteReformatReq();
@@ -280,7 +279,7 @@ void TextField::AdvanceFrame(bool nextFrame, float framePos)
         }
     }
     InteractiveObject::Flags &= ~Mask_ChangedFlags;
-    if (Flags & Flags_ForceOneTimeAdvance)
+    if ((UByte)(Flags >> 14) & 1)
     {
         Flags &= ~Flags_ForceOneTimeAdvance;
         ModifyOptimizedPlayListLocal<TextField>();
@@ -309,7 +308,7 @@ void TextField::AdvanceFrame(bool nextFrame, float framePos)
     }
     if (nextFrame)
     {
-        if ((Flags & Flags_ForceAdvance) && HasAvmObject())
+        if (((UByte)(Flags >> 15) & 1) && HasAvmObject())
             GetAvmObjImpl()->ToAvmTextFieldBase()->UpdateTextFromVariable();
         Flags |= Flags_NextFrame;
     }
@@ -323,7 +322,7 @@ void TextField::AdvanceFrame(bool nextFrame, float framePos)
         if (proot->IsFocused(this) || peditor->IsMouseCaptured())
             peditor->Advance(Double(proot->TimeElapsed) / 1000000.0);
     }
-    if (Flags & Flags_NeedUpdateLayout)
+    if ((UByte)(Flags >> 16) & 1)
         static_cast<Render::TreeText*>(GetRenderNode())->NotifyLayoutChanged();
 }
 
