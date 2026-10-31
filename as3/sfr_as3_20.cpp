@@ -169,25 +169,35 @@ void IMEManager::ShutDown()
 }
 
 // The root sprite gets the SendLangBarMessage callback.
-// MS2-FUNCTIONAL: the pending exception goes through OutputAndIgnoreException (the exe inlines it)
 // @0x1425431d0
 void IMEManager::ASRootMovieCreated(Ptr<Sprite> spr)
 {
     if (!pMovie)
         return;
+    GFx::Value func;
+    Value asFunc;
     MovieRoot* proot = GetAS3Root(pMovie);
     ASVM* pvm = proot->pAVM;
-    GFx::Value func;
     pMovie->CreateFunction(&func, CustomFuncLanguageBar);
-    Value asFunc;
     proot->GFxValue2ASValue(func, &asFunc);
     AvmDisplayObj* pavm = ToAvmDisplayObj(reinterpret_cast<DisplayObjectBase*>(spr.GetPtr()));
-    if (!pavm)
-        return;
-    Multiname name(proot->pAVM->GetPublicNamespace(), Value(proot->BuiltinsMgr.CreateString("SendLangBarMessage")));
-    Instances::fl_display::DisplayObject* pobj = pavm->GetAS3Obj();
-    if (pobj && !pobj->SetProperty(name, asFunc) && pvm->IsException())
-        pvm->OutputAndIgnoreException();
+    if (pavm)
+    {
+        Multiname name(proot->pAVM->GetPublicNamespace(), proot->BuiltinsMgr.CreateString("SendLangBarMessage"));
+        if (pavm->GetAS3Obj())
+        {
+            if (!pavm->GetAS3Obj()->SetProperty(name, asFunc))
+            {
+                if (pvm->IsException())
+                {
+                    // VM::OutputAndIgnoreException, inline in the SDK header
+                    pvm->HandleException = false;
+                    pvm->OutputError(pvm->ExceptionObj);
+                    pvm->ExceptionObj.SetUndefined();
+                }
+            }
+        }
+    }
 }
 
 void IMEManager::IMECommand(Movie* pmovie, const char* pcommand, const char* pparams)
@@ -239,33 +249,36 @@ void IMEManager::BroadcastDisplayStatusWindow(const char* pstr)
 }
 
 // Sends an IMEEventEx of type messageType carrying message to the language bar or the status window.
-// MS2-FUNCTIONAL: register allocation and local order (the exe keeps an unused value and argument array)
 // @0x142543b80
 void IMEManager::DispatchEvent(const char* message, const char* messageType, const char* type)
 {
     if (!pMovie)
         return;
-    MovieRoot* proot = GetAS3Root(pMovie);
-    Value unused;
     ArrayLH<Value> unusedArgs;
-    AvmDisplayObj* pctx = NULL;
-    if (pLangContext2 && strcmp(type, "LangBar") == 0)
-        pctx = ToAvmDisplayObj(pLangContext2);
-    else if (pStatusContext2 && strcmp(type, "StatusWindow") == 0)
-        pctx = ToAvmDisplayObj(pStatusContext2);
-    if (!proot || !pctx)
-        return;
-    Instances::fl_display::DisplayObject* pdispatcher = pctx->GetAS3Obj();
-    ASString evtType = proot->BuiltinsMgr.CreateString(messageType);
-    if (!pdispatcher->HasEventHandler(evtType, false))
-        return;
-    SPtr<Instances::fl_gfx::IMEEventEx> pevt;
-    Value args[3] = { Value(evtType), Value(true), Value(true) };
-    ASVM* pvm = proot->pAVM;
-    pvm->ConstructInstance(pevt, pvm->GetClass(StringDataPtr("scaleform.gfx.IMEEventEx")), 3, args);
-    pevt->Target = pdispatcher;
-    pevt->message = message;
-    pdispatcher->DispatchEventObject(pevt, pdispatcher->pDispObj);
+    MovieRoot* proot = GetAS3Root(pMovie);
+    {
+        AvmDisplayObj* pctx = NULL;
+        Value unused;
+        if (pLangContext2 && strcmp(type, "LangBar") == 0)
+            pctx = ToAvmDisplayObj(pLangContext2);
+        else if (pStatusContext2 && strcmp(type, "StatusWindow") == 0)
+            pctx = ToAvmDisplayObj(pStatusContext2);
+        if (proot && pctx)
+        {
+            Instances::fl_display::DisplayObject* pdispatcher = pctx->GetAS3Obj();
+            const ASString& evtType = proot->BuiltinsMgr.CreateString(messageType);
+            if (pdispatcher->HasEventHandler(evtType, false))
+            {
+                SPtr<Instances::fl_gfx::IMEEventEx> pevt;
+                Value args[3] = { Value(evtType), Value(true), Value(true) };
+                ASVM* pvm = proot->pAVM;
+                pvm->ConstructInstance(pevt, pvm->GetClass(StringDataPtr("scaleform.gfx.IMEEventEx")), 3, args);
+                pevt->Target = pdispatcher;
+                pevt->message = message;
+                pdispatcher->DispatchEventObject(pevt, pdispatcher->pDispObj);
+            }
+        }
+    }
 }
 
 // @0x142543e70
