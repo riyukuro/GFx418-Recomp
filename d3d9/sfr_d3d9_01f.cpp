@@ -26,11 +26,18 @@ bool HAL::BeginScene()
 
     pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
     pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
-    pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 
     // a slight negative bias keeps scaled-down text sharp
-    float lodBias = -0.75f;
-    pDevice->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, *(DWORD*)&lodBias);
+    union
+    {
+        float fbias;
+        DWORD d;
+    } bias;
+    bias.fbias = -0.75f;
+
+    pDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+
+    pDevice->SetSamplerState(0, D3DSAMP_MIPMAPLODBIAS, bias.d);
     pDevice->SetSamplerState(0, D3DSAMP_ELEMENTINDEX, 0);
     pDevice->SetSamplerState(1, D3DSAMP_ELEMENTINDEX, 0);
 
@@ -91,8 +98,6 @@ bool HAL::EndScene()
 }
 
 // @0x142741e90
-// MS2-FUNCTIONAL: register allocation differs (event / texture-manager temporaries) and cl picks shr/and over
-// bt/cmov for the conditional-non-pow2 cap
 bool HAL::InitHAL(const D3D9::HALInitParams& params)
 {
     ScopedRenderEvent evt(GetEvent(Event_InitHAL), "Scaleform::Render::D3D9::HAL::InitHAL");
@@ -106,76 +111,102 @@ bool HAL::InitHAL(const D3D9::HALInitParams& params)
     pDevice->AddRef();
 
     D3DCAPS9 caps;
-    pDevice->GetDeviceCaps(&caps);
     D3DDEVICE_CREATION_PARAMETERS cparams;
+    pDevice->GetDeviceCaps(&caps);
     pDevice->GetCreationParameters(&cparams);
 
     // ConfigFlags bit 4 asks for static mesh buffers
-    if (Cache.Initialize(pDevice, !((params.ConfigFlags >> 4) & 1)) && SManager.Initialize(this))
+    if (!Cache.Initialize(pDevice, !(params.ConfigFlags & 0x10)) ||
+        !SManager.Initialize(this))
     {
-        if (params.pTextureManager)
-        {
-            pTextureManager = (D3D9::TextureManager*)params.pTextureManager;
-        }
-        else
-        {
-            unsigned capFlags;
-            if (!(caps.TextureCaps & D3DPTEXTURECAPS_POW2))
-                capFlags = D3DCapFlags::Cap_NonPow2Tex | ((caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL) ? 0 : D3DCapFlags::Cap_NonPow2TexWrap);
-            else
-                capFlags = (caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL) ? D3DCapFlags::Cap_NonPow2Tex : 0;
-            if (cparams.BehaviorFlags & D3DCREATE_MULTITHREADED)
-                capFlags |= D3DCapFlags::Cap_MultiThreaded;
-            if (caps.Caps2 & D3DCAPS2_DYNAMICTEXTURES)
-                capFlags |= D3DCapFlags::Cap_DynamicTex;
+        ShutdownHAL();
+        return false;
+    }
 
-            IDirect3DDevice9Ex* deviceEx;
-            if (SUCCEEDED(pDevice->QueryInterface(IID_IDirect3DDevice9Ex, (void**)&deviceEx)) && deviceEx)
-            {
-                deviceEx->Release();
-                capFlags |= D3DCapFlags::Cap_D3D9Ex;
-            }
-
-            D3DCapFlags texCaps = { capFlags };
-            pTextureManager = *SF_HEAP_AUTO_NEW(this) TextureManager(pDevice, texCaps, params.RenderThreadId,
-                                                                     pRTCommandQueue);
-            if (!pTextureManager)
-                goto failure;
-        }
-
-        if (params.pRenderBufferManager)
+    if (params.pTextureManager)
+        pTextureManager = (D3D9::TextureManager*)params.pTextureManager;
+    else
+    {
+        // the SDK D3DCapFlags::InitFromHWCaps
+        D3DCapFlags ourCaps;
+        ourCaps.Flags = 0;
+        if (!(caps.TextureCaps & D3DPTEXTURECAPS_POW2))
         {
-            pRenderBufferManager = params.pRenderBufferManager;
+            ourCaps.Flags |= D3DCapFlags::Cap_NonPow2Tex;
+            if (!(caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL))
+                ourCaps.Flags |= D3DCapFlags::Cap_NonPow2TexWrap;
         }
-        else
+        else if (caps.TextureCaps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL)
         {
-            pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric(false, RBGenericImpl::RenderBufferManager::ReuseLimit_ScreenSize, 0);
-            if (!pRenderBufferManager || !createDefaultRenderBuffer())
-                goto failure;
+            ourCaps.Flags |= D3DCapFlags::Cap_NonPow2Tex;
+        }
+        if (cparams.BehaviorFlags & D3DCREATE_MULTITHREADED)
+        {
+            ourCaps.Flags |= D3DCapFlags::Cap_MultiThreaded;
+        }
+        if (caps.Caps2 & D3DCAPS2_DYNAMICTEXTURES)
+        {
+            ourCaps.Flags |= D3DCapFlags::Cap_DynamicTex;
         }
 
-        if (initializeShaders(false))
+        IDirect3DDevice9Ex* d3d9exPtr;
+        if (SUCCEEDED(pDevice->QueryInterface(IID_IDirect3DDevice9Ex, (void**)&d3d9exPtr)) && d3d9exPtr)
         {
-            if (caps.StencilCaps & D3DSTENCILCAPS_INCR)
-                StencilOpInc = D3DSTENCILOP_INCR;
-            else
-                StencilOpInc = (caps.StencilCaps & D3DSTENCILCAPS_INCRSAT) ? D3DSTENCILOP_INCRSAT : D3DSTENCILOP_REPLACE;
+            d3d9exPtr->Release();
+            ourCaps.Flags |= D3DCapFlags::Cap_D3D9Ex;
+        }
 
-            MapVertexFormat(PrimFill_Texture, &VertexXY16iAlpha::Format, &MappedXY16iAlphaTexture[0],
-                            &MappedXY16iAlphaTexture[1], &MappedXY16iAlphaTexture[2], 0);
-            MapVertexFormat(PrimFill_SolidColor, &VertexXY16iAlpha::Format, &MappedXY16iAlphaSolid[0],
-                            &MappedXY16iAlphaSolid[1], &MappedXY16iAlphaSolid[2], 0);
-
-            PresentParams = params.PresentParams;
-            HALState |= HS_ModeSet;
-            notifyHandlers(HAL_Initialize);
-            return true;
+        pTextureManager =
+            *SF_HEAP_AUTO_NEW(this) TextureManager(pDevice, ourCaps,
+                                                   params.RenderThreadId, pRTCommandQueue);
+        if (!pTextureManager)
+        {
+            ShutdownHAL();
+            return false;
         }
     }
 
-failure:
-    ShutdownHAL();
-    return false;
+    // the SDK's params field is a Ptr<RenderBufferManager>: assigned as a Ptr, it is read again after the Release
+    if (params.pRenderBufferManager)
+        pRenderBufferManager = reinterpret_cast<const Ptr<RenderBufferManager>&>(params.pRenderBufferManager);
+    else
+    {
+        pRenderBufferManager = *SF_HEAP_AUTO_NEW(this) RenderBufferManagerGeneric(false, RBGenericImpl::RenderBufferManager::ReuseLimit_ScreenSize, 0);
+        if (!pRenderBufferManager || !createDefaultRenderBuffer())
+        {
+            ShutdownHAL();
+            return false;
+        }
+    }
+
+    if (!initializeShaders(false))
+    {
+        ShutdownHAL();
+        return false;
+    }
+
+    if (caps.StencilCaps & D3DSTENCILCAPS_INCR)
+    {
+        StencilOpInc = D3DSTENCILOP_INCR;
+    }
+    else if (caps.StencilCaps & D3DSTENCILCAPS_INCRSAT)
+    {
+        StencilOpInc = D3DSTENCILOP_INCRSAT;
+    }
+    else
+    {
+        StencilOpInc = D3DSTENCILOP_REPLACE;
+    }
+
+    MapVertexFormat(PrimFill_Texture, &VertexXY16iAlpha::Format, &MappedXY16iAlphaTexture[0],
+                    &MappedXY16iAlphaTexture[1], &MappedXY16iAlphaTexture[2], 0);
+    MapVertexFormat(PrimFill_SolidColor, &VertexXY16iAlpha::Format, &MappedXY16iAlphaSolid[0],
+                    &MappedXY16iAlphaSolid[1], &MappedXY16iAlphaSolid[2], 0);
+
+    memcpy(&PresentParams, &params.PresentParams, sizeof(D3DPRESENT_PARAMETERS));
+    HALState |= HS_ModeSet;
+    notifyHandlers(HAL_Initialize);
+    return true;
 }
 
 // @0x1427422c0
