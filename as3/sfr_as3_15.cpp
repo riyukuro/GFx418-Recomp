@@ -49,8 +49,6 @@ Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const S
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // VM::describeTypeEx (returns the ASString through a hidden pointer)
 Scaleform::GFx::ASString* FUN_1425322c0(Scaleform::GFx::AS3::VM* vm, void* result, const Scaleform::GFx::AS3::Value& v);
-void FUN_1425bc060(void* ptf);                          // TextField::SetDirtyFlag
-bool FUN_1425b9730(void* ptf);                          // TextField::HasStyleSheet
 // DocView::AppendHtml (the image tags it meets go to *pimgInfoArr)
 void FUN_14260de50(void* pdoc, const char* phtml, Scaleform::UPInt htmlSize, bool multiline, void* pimgInfoArr);
 void FUN_1425ba7d0(void* ptf, void* pimgInfoArr);       // TextField::ProcessImageTags
@@ -58,8 +56,6 @@ void FUN_1425ba7d0(void* ptf, void* pimgInfoArr);       // TextField::ProcessIma
 bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
                    const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
 void FUN_142614e30(void* psubst, void* pimgDesc);        // DocView::ImageSubstitutor::RemoveImageDesc
-void FUN_1425bb680(void* ptf, const char* id);           // TextField::RemoveIdImageDescAssoc
-void FUN_1425b7220(void* ptf);                          // TextField::ClearIdImageDescAssoc
 const char* FUN_142509b60(int id);                     // the text of error id ("... {0} ...")
 // AvmTextField: one image substitution element (an object of the script's array) at index idx
 void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
@@ -165,7 +161,6 @@ public:
     virtual Render::Image* CreateImage(const ImageCreateInfo& info, Render::ImageSource* source);
 };
 }}
-Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);   // MovieImpl::GetModalClip
 // MovieImpl's focus-key processing (moveFocus/findFocus): pinfo is a ProcessFocusKeyInfo (MS2_FocusKeyInfo).
 void FUN_142570d80(Scaleform::GFx::MovieImpl* pmovie, void* pinfo, const void* pkeyEntry, bool inclFocusEnabled,
                    void* pfocusGroup);                                                  // MovieImpl::InitFocusKeyInfo
@@ -427,7 +422,7 @@ namespace Classes { namespace fl_gfx
             SetVAlignment(TextDocView(ptf), VAlign_Bottom);
         else if (valign == "center")
             SetVAlignment(TextDocView(ptf), VAlign_Center);
-        FUN_1425bc060(ptf);
+        static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
     }
 
     // @0x1424cb1d0
@@ -477,7 +472,7 @@ namespace Classes { namespace fl_gfx
             SetTextAutoSize(TextDocView(ptf), TAS_Shrink);
         else if (autoSz == "fit")
             SetTextAutoSize(TextDocView(ptf), TAS_Fit);
-        FUN_1425bc060(ptf);
+        static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
     }
 
     // @0x1424caf40
@@ -539,12 +534,12 @@ namespace Classes { namespace fl_gfx
         if (substInfo.IsNull() || substInfo.IsUndefined())
         {
             // clear all substitutions
-            FUN_1425b7220(ptf);
+            static_cast<GFx::TextField*>(ptf)->ClearIdImageDescAssoc();
             DocViewHead* pdoc = TextDocViewHead(ptf);
             delete pdoc->pImageSubstitutor;
             pdoc->pImageSubstitutor = NULL;
             TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
-            FUN_1425bc060(ptf);
+            static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
         }
         else if (substInfo.IsObject())
         {
@@ -611,8 +606,8 @@ namespace Classes { namespace fl_gfx
             {
                 FUN_142614e30(psubst, pimgDesc);
                 TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
-                FUN_1425bb680(ptf, id.ToCStr());
-                FUN_1425bc060(ptf);
+                static_cast<GFx::TextField*>(ptf)->RemoveIdImageDescAssoc(id.ToCStr());
+                static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
             }
         }
         else
@@ -632,7 +627,7 @@ namespace Classes { namespace fl_gfx
                            ->CreateImage(cinfo, (Render::ImageSource*)pimageRes->GetImage());
             }
             pimgDesc->pImage = img;
-            FUN_1425bc060(ptf);
+            static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
         }
     }
 
@@ -654,7 +649,7 @@ namespace Classes { namespace fl_gfx
             vm.ThrowArgumentError(VM::Error(VM::eNullArgumentError, vm, "textField"));
             return;
         }
-        if (FUN_1425b9730(ptf))
+        if (static_cast<GFx::TextField*>(ptf)->HasStyleSheet())
             return;
         ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
         FUN_14260de50(TextDocView(ptf), newHtml.ToCStr(), SF_MAX_UPINT, false, &imageInfoArray);
@@ -662,7 +657,7 @@ namespace Classes { namespace fl_gfx
         *(UInt32*)((UByte*)ptf + 0xfc) |= 0x10000;
         if (imageInfoArray.GetSize() > 0)
             FUN_1425ba7d0(ptf, &imageInfoArray);
-        FUN_1425bc060(ptf);
+        static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
     }
 }}
 
@@ -815,7 +810,7 @@ namespace Classes { namespace fl_gfx
         ASVM& vm = static_cast<ASVM&>(GetVM());
         if (!vm.ExtensionsEnabled)
             return;
-        GFx::Sprite* pmodal = FUN_14256f820(vm.GetMovieImpl(), controllerIdx);
+        GFx::Sprite* pmodal = vm.GetMovieImpl()->GetModalClip(controllerIdx);
         if (!pmodal)
             return;
         Instances::fl_display::DisplayObject* ido = ToAvmDisplayObj15(reinterpret_cast<GFx::DisplayObject*>(pmodal))->GetAS3Obj();
@@ -1007,7 +1002,7 @@ namespace Classes { namespace fl_gfx
         if (parentMovie)
             modal = parentMovie->pDispObj.GetPtr();
         else
-            modal = reinterpret_cast<GFx::DisplayObject*>(FUN_14256f820(proot, controllerIdx));
+            modal = proot->GetModalClip(controllerIdx);
 
         InputEventsQueueEntry::KeyEntry ke;
         ke.Code = keycode;
@@ -3162,7 +3157,6 @@ void* FUN_1423ed1c0(void* self, Scaleform::GFx::AS3::VM& vm);  // InstanceTraits
 void* FUN_1423ed260(void* self, Scaleform::GFx::AS3::VM& vm, void* itr);
 void FUN_142423d00(Scaleform::GFx::AS3::Class* cl);            // Class::InitPrototype-like: the class Class's set-up
 void FUN_142522db0(void* arr, void* heapAddr, Scaleform::UPInt newCap);    // ArrayLH<GlobalObject*> Reserve
-void FUN_1424dde10(void* frame);                               // CallFrame::~CallFrame
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3187,7 +3181,7 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
         memset(def, 0, sizeof(def));
         reinterpret_cast<CallFrame*>(def)->pHeap = MHeap;
         new (CallStack) CallFrame(*reinterpret_cast<CallFrame*>(def));
-        FUN_1424dde10(def);
+        reinterpret_cast<CallFrame*>(def)->~CallFrame();
     }
     new (RegisterFile) ValueRegisterFile();
 
@@ -3710,7 +3704,6 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 // ---- LoadQueueEntryMT_LoadMovie constructor (out of line in the exe; sfr_as3_16 inlines its own copy) ----
 extern const void* DAT_14317d890[];      // LoadQueueEntryMT_LoadMovie vftable
 void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie);   // LoadQueueEntryMT::LoadQueueEntryMT
-void FUN_14257dcb0(void* p);                                                 // Task release
 
 // Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager.
 // MS2-FUNCTIONAL: raw words over the entry (its members are private to the class, whose inline constructor lives in
@@ -3740,12 +3733,12 @@ void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
                                           *reinterpret_cast<const String*>(reinterpret_cast<UByte*>(pentry) + 0x18),
                                           stripped, *(reinterpret_cast<UByte*>(pentry) + 0x24) != 0);
     if (w[5])
-        FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
+        reinterpret_cast<RefCountImpl*>(w[5])->Release();
     w[5] = reinterpret_cast<UPInt>(task);
     void* bag = reinterpret_cast<void*>(movie + 0x10);
     void* tm = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14);
     reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(tm))[1])(tm, task);
-    FUN_14257dcb0(tm);
+    static_cast<RefCountImpl*>(tm)->Release();
     return self;
 }
 // ---- MovieRoot constructor ----
@@ -3753,8 +3746,6 @@ extern const void* DAT_14317d8d8[];      // MovieRoot vftable
 extern const void* DAT_14317da88[];      // MovieRoot secondary vftable (+0x28)
 extern const void* DAT_14317daa0[];      // MovieRoot keyboard-listener vftable (+0x38)
 extern const void* DAT_14317eff8[];      // keyboard-listener forwarder vftable
-void FUN_14257dc30(void* p);                 // RefCountImpl::AddRef
-void FUN_142575ec0(void* pmovie, void* l);   // MovieImpl::SetKeyboardListener
 
 // MS2-FUNCTIONAL: raw words over MovieRoot (several of its members are unrecovered gaps); the exe's dead store of the
 // ASMovieRootBase vftable ahead of the final one is omitted
@@ -3767,7 +3758,7 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     *reinterpret_cast<unsigned*>(b + 8) = 1;
     w[2] = 0;
     if (psupport)
-        FUN_14257dc30(psupport);
+        reinterpret_cast<RefCountImpl*>(psupport)->AddRef();
     w[3] = reinterpret_cast<UPInt>(psupport);
     b[0x20] = reinterpret_cast<UByte (*)(void*)>((*reinterpret_cast<void***>(psupport))[0x30 / 8])(psupport);
     *reinterpret_cast<unsigned*>(b + 0x30) = 0;
@@ -3775,7 +3766,7 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
     w[5] = reinterpret_cast<UPInt>(DAT_14317da88);
     w[7] = reinterpret_cast<UPInt>(DAT_14317daa0);
     if (pctx)
-        FUN_14257dc30(pctx);
+        reinterpret_cast<RefCountImpl*>(pctx)->AddRef();
     w[8] = reinterpret_cast<UPInt>(pctx);
     w[9] = 0;
     b[0x50] = 1;
@@ -3828,7 +3819,7 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
         fwd[0] = reinterpret_cast<UPInt>(DAT_14317eff8);
     }
     reinterpret_cast<UPInt*>(pmovie)[7] = reinterpret_cast<UPInt>(fwd);
-    FUN_142575ec0(pmovie, b + 0x38);
+    reinterpret_cast<MovieImpl*>(pmovie)->SetKeyboardListener(reinterpret_cast<KeyboardState::IListener*>(b + 0x38));
     w[0x80 / 8] = 0;
     unsigned* fl = reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pmovie) + 0x3490);
     *fl = (*fl & 0xdf7fffffu) | 0x10400000u;
