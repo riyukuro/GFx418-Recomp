@@ -50,6 +50,50 @@
 
 // VM: runs the queued code (unrecovered).
 
+// vftables of the data_rdata unit (Sd_ structs there)
+struct Sd_14317c488;
+extern Sd_14317c488 DAT_14317c488;     // ShapeObject +0x18
+struct Sd_14317c498;
+extern Sd_14317c498 DAT_14317c498;     // ShapeObject +0x90
+struct Sd_14317c560;
+extern Sd_14317c560 DAT_14317c560;     // AvmBitmap
+struct Sd_14317c7d8;
+extern Sd_14317c7d8 DAT_14317c7d8;     // AvmBitmap +0x18
+struct Sd_14317c7e8;
+extern Sd_14317c7e8 DAT_14317c7e8;     // AvmBitmap +0x90
+
+// global C++ helpers defined in other units
+void FUN_1424dcce0(void* p);
+void FUN_1424dcc30(void* p);
+void FUN_1424dcdd0(void* p);
+void FUN_1424aa0f0(void* p);            // Text::TextFormat::~TextFormat
+namespace Scaleform { namespace GFx { namespace AS3 { class VM; class Multiname; }}}
+bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
+
+// ArrayDataBase destructors the exe calls out of line (instantiated elsewhere)
+namespace Scaleform {
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, 2>, ArrayDefaultPolicy> SfrAdbStr;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 340>, ArrayDefaultPolicy> SfrAdbNsSet;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> SfrAdbCtr;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::VMAbcFile>, 340>, ArrayDefaultPolicy> SfrAdbFile;
+typedef ArrayDataBase<GFx::AS3::Abc::MethodBodyInfo::Exception, AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy> SfrAdbExc;
+typedef ArrayDataBase<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy> SfrAdbPod;
+template<> SF_NOINLINE SfrAdbStr::~ArrayDataBase();      // 0x1424dc440
+template<> SF_NOINLINE SfrAdbNsSet::~ArrayDataBase();      // 0x1424dc530
+template<> SF_NOINLINE SfrAdbCtr::~ArrayDataBase();      // 0x1424dc5b0
+template<> SF_NOINLINE SfrAdbFile::~ArrayDataBase();      // 0x1424dc6b0
+template<> SF_NOINLINE SfrAdbExc::~ArrayDataBase();      // 0x1424dc800
+template<> SF_NOINLINE SfrAdbPod::~ArrayDataBase();      // 0x1424dc3d0
+typedef HashSetBase<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> >, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> >, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>, 2>, HashsetCachedEntry<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> >> > SfrHsGc;
+typedef HashSetBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript>, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> >, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> >, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript>, 2>, HashsetCachedEntry<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript>, FixedSizeHash<GFx::AS3::SPtr<GFx::AS3::Instances::fl::GlobalObjectScript> >> > SfrHsGos;
+typedef HashSetBase<Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>, Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>::HashFunctor, Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>::HashFunctor, AllocatorLH<Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>, 78>, HashsetCachedEntry<Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>, Render::Text::TextFormatPtrWrapper<Render::Text::ParagraphFormat>::HashFunctor> > SfrHsPf;
+typedef HashSetBase<Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>, Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>::HashFunctor, Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>::HashFunctor, AllocatorLH<Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>, 78>, HashsetCachedEntry<Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>, Render::Text::TextFormatPtrWrapper<Render::Text::TextFormat>::HashFunctor> > SfrHsTf;
+template<> SF_NOINLINE SfrHsGc::~HashSetBase();      // 0x1424dd1a0
+template<> SF_NOINLINE SfrHsGos::~HashSetBase();      // 0x1424dd250
+template<> SF_NOINLINE SfrHsPf::~HashSetBase();      // 0x1424dd300
+template<> SF_NOINLINE SfrHsTf::~HashSetBase();      // 0x1424dd3b0
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx {
 // The wide copy keeps its string node; the characters are decoded once. Inline like in sfr_as2_04, which is what
 // emits the vftable and the deleting destructor here too.
@@ -369,7 +413,8 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
 }
 
 // The loaded-movie-def hash (+0x6e8): the value an identity-hashed key maps to, and the add of a new node.
-void* FUN_1425059f0(const void* self, const UPInt& key);
+void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key);       // 0x1425059f0
+static inline void* FUN_1425059f0(const void* self, const UPInt& key) { return Sfr33IdWordHashGet(static_cast<const UByte*>(self), key); }
 void FUN_1424d4220(void* self, void* pheapAddr, const void* nodeRef, UPInt hashValue);
 
 // A use of pdefImpl: an entry already listed counts one more use; otherwise one is added (holding the definition)
@@ -474,7 +519,8 @@ void Sfr21ASGCAdvanceFrame(ASRefCountCollector* gc, unsigned* movieFrameCnt, uns
     *movieLastCollectFrame = gc->LastCollectionFrameNum;
 }
 
-void FUN_142504630(ASRefCountCollector* gc, void* advanceStats);   // ASRefCountCollector::ForceCollect
+void Sfr33CollectorQueue(UByte* gc, RefCountImpl* stats);            // 0x142504630, ASRefCountCollector::ForceCollect
+static inline void FUN_142504630(ASRefCountCollector* gc, void* stats) { Sfr33CollectorQueue(reinterpret_cast<UByte*>(gc), static_cast<RefCountImpl*>(stats)); }
 
 // MovieRoot::AdvanceFrame: until the main movie's loader events are done, fires its loaderInfo init (once), progress
 // (each full frame, or once loading has finished) and complete events. An invalidated stage gets its RENDER events run
@@ -618,9 +664,11 @@ struct Sfr21SlotsAccess : Slots
     using Slots::FindAddOwnSlotInfo;
 };
 
-ClassTraits::Traits** FUN_142505aa0(TClassTraitsCache* hash, const Multiname& mn);   // MultinameHash::Get
-const Traits* FUN_14250d760(VM& vm, const Multiname& mn);                             // the traits that define mn
-ClassTraits::Traits* FUN_142501310(VM& vm, const Traits& scope, const Multiname& mn); // class traits of mn on one scope
+ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* hash, const Multiname& mn);   // 0x142505aa0, MultinameHash::Get
+const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn);                // the traits that define mn
+}}} // namespace Scaleform::GFx::AS3
+void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn); // class traits of mn on one scope
+namespace Scaleform { namespace GFx { namespace AS3 {
 void FUN_14252ecb0(VM* vm, const VM::Error* error, const void* classInfo);            // raise as an instance of the class
 namespace fl { extern const ClassInfo VerifyErrorCI; }
 
@@ -669,19 +717,19 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
             ctr = vm.TraitsClassClass;
         else
         {
-            ClassTraits::Traits** pctr = FUN_142505aa0(&vm.ClassTraitsSet, mn);
+            ClassTraits::Traits** pctr = Sfr33ClassTraitsCacheGet(&vm.ClassTraitsSet, mn);
             ctr = pctr ? *pctr : NULL;
         }
         if (!ctr)
         {
-            const Traits* owner = FUN_14250d760(vm, mn);
+            const Traits* owner = reinterpret_cast<const Traits*>(FUN_14250d760(vm, mn));
             const VMAbcFile* ownerFile = owner ? owner->GetFilePtr() : NULL;
             for (UPInt g = vm.GlobalObjects.GetSize(); g != 0; --g)
             {
                 const Traits& scope = reinterpret_cast<Object*>(vm.GlobalObjects[g - 1].GetPtr())->GetTraits();
                 if (owner && ownerFile != scope.GetFilePtr())
                     continue;
-                ctr = FUN_142501310(vm, scope, mn);
+                ctr = static_cast<ClassTraits::Traits*>(::FUN_142501310(vm, const_cast<Traits*>(&scope), mn));
                 if (ctr)
                     break;
             }
@@ -910,34 +958,19 @@ void FUN_1424e6cf0(Tracer* self, UPInt from)
 extern "C" {
 void FUN_1423dfa20(void* p);            // RefCountBaseGC::ReleaseInternal
 void FUN_142521f00(void* v);            // Value::ReleaseInternal
-void FUN_1424dcce0(void* p);
 void FUN_1424dc350(void* p);
 void FUN_1424dc260(void* p);
 void FUN_1424dd500(void* p);            // ASVM::~ASVM
 void FUN_1425456e0(void* p);            // Abc::File::~File
-void FUN_1424aa0f0(void* p);            // Text::TextFormat::~TextFormat
-void FUN_1424dd300(void* p);
-void FUN_1424dd3b0(void* p);
 void FUN_14257eb30(void* p);
 void FUN_1424f6d50(void* begin, void* end); // Value array destruct
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
-void FUN_1423f0720(void* p);
+void FUN_1423f0720(void* p);            // ArrayDataBase<SPtr<Namespace>,..,2> dtor (already instantiated here)
 void FUN_142626160(void* p);
 void FUN_1424df070(void* p);            // Tracer::~Tracer
 void FUN_1424df220(void* p);            // ClassTraits::Traits::~Traits
 void FUN_1424df380(void* p);            // VM::~VM
-void FUN_142522a60(void* vm, void* file);
-void FUN_1424dc800(void* p);
-void FUN_1424dc3d0(void* p);
-void FUN_1424dc5b0(void* p);
-void FUN_1424dcc30(void* p);
-void FUN_1424dcdd0(void* p);
-void FUN_1424dc6b0(void* p);
-void FUN_1424dd250(void* p);
-void FUN_1424dc440(void* p);
-void FUN_1424dc530(void* p);
-void FUN_1424dd1a0(void* p);
 void FUN_1424ef5b0(void* p);
 void FUN_1424dcf10(void* p);
 }
@@ -960,11 +993,6 @@ extern const void* DAT_14317bde0[];     // ASMovieRootBase
 // ShapeObject (79 slots, data_rdata_sf_b). Not a DAT_14317c210 extern: that name binds to sfr_as3_15's one-slot
 // ??_7ShapeObject view table in the fullexe.
 extern void* const ShapeObject_vftable[];
-extern const void* DAT_14317c488[];     // ShapeObject +0x18
-extern const void* DAT_14317c498[];     // ShapeObject +0x90
-extern const void* DAT_14317c560[];     // AvmBitmap
-extern const void* DAT_14317c7d8[];     // AvmBitmap +0x18
-extern const void* DAT_14317c7e8[];     // AvmBitmap +0x90
 extern const void* DAT_14317c9d0[];     // Text::Allocator
 extern const void* DAT_14317d220[];     // Stage
 extern const void* DAT_14317d5f0[];     // Stage +0x18
@@ -1068,8 +1096,8 @@ void* DeleteAs3_1424e2520(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, DAT_14317c9d0);
     FUN_1424aa0f0(Sfr21At(p, 0x38));
-    FUN_1424dd300(Sfr21At(p, 0x18));
-    FUN_1424dd3b0(Sfr21At(p, 0x10));
+    reinterpret_cast<Scaleform::SfrHsPf*>(Sfr21At(p, 0x18))->~HashSetBase();
+    reinterpret_cast<Scaleform::SfrHsTf*>(Sfr21At(p, 0x10))->~HashSetBase();
     static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
     Sfr21GFree(p, flags, 0x88);
     return p;
@@ -1083,9 +1111,9 @@ void* DeleteAs3_1424e25b0(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 // @0x1424e2610
 void* DeleteAs3_1424e2610(void* p, unsigned flags)
 {
-    Sfr21GVft(p, 0, DAT_14317c560);
-    Sfr21GVft(p, 0x18, DAT_14317c7d8);
-    Sfr21GVft(p, 0x90, DAT_14317c7e8);
+    Sfr21GVft(p, 0, reinterpret_cast<const void* const*>(&::DAT_14317c560));
+    Sfr21GVft(p, 0x18, reinterpret_cast<const void* const*>(&::DAT_14317c7d8));
+    Sfr21GVft(p, 0x90, reinterpret_cast<const void* const*>(&::DAT_14317c7e8));
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GRes(p, 0xc8);
     Sfr21GRes(p, 0xc0);
@@ -1221,8 +1249,8 @@ void* DeleteAs3_1424e3630(void* p, unsigned flags) { static_cast<Scaleform::GFx:
 void* DeleteAs3_1424e3890(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, ShapeObject_vftable);
-    Sfr21GVft(p, 0x18, DAT_14317c488);
-    Sfr21GVft(p, 0x90, DAT_14317c498);
+    Sfr21GVft(p, 0x18, reinterpret_cast<const void* const*>(&::DAT_14317c488));
+    Sfr21GVft(p, 0x90, reinterpret_cast<const void* const*>(&::DAT_14317c498));
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GPtrNTS(p, 0xc8);
     Sfr21GRes(p, 0xc0);
@@ -1288,17 +1316,17 @@ void* DeleteAs3_1424e3d60(void* p, unsigned flags)
 void* DeleteAs3_1424e3eb0(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, DAT_14317b750);
-    FUN_142522a60(Sfr21Mem(p, 0x20), p);
-    FUN_1424dc800(Sfr21At(p, 0xd0));
-    FUN_1424dc3d0(Sfr21At(p, 0xb8));
-    FUN_1424dc5b0(Sfr21At(p, 0xa0));
+    ::FUN_142522a60(static_cast<VM*>(Sfr21Mem(p, 0x20)), p);
+    reinterpret_cast<Scaleform::SfrAdbExc*>(Sfr21At(p, 0xd0))->~ArrayDataBase();
+    reinterpret_cast<Scaleform::SfrAdbPod*>(Sfr21At(p, 0xb8))->~ArrayDataBase();
+    reinterpret_cast<Scaleform::SfrAdbCtr*>(Sfr21At(p, 0xa0))->~ArrayDataBase();
     FUN_1424dcc30(Sfr21At(p, 0x98));
     FUN_1424dcdd0(Sfr21At(p, 0x90));
-    FUN_1424dc6b0(Sfr21At(p, 0x78));
-    FUN_1424dd250(Sfr21At(p, 0x70));
-    FUN_1424dc440(Sfr21At(p, 0x58));
-    FUN_1424dc530(Sfr21At(p, 0x40));
-    FUN_1424dd1a0(Sfr21At(p, 0x38));
+    reinterpret_cast<Scaleform::SfrAdbFile*>(Sfr21At(p, 0x78))->~ArrayDataBase();
+    reinterpret_cast<Scaleform::SfrHsGos*>(Sfr21At(p, 0x70))->~HashSetBase();
+    reinterpret_cast<Scaleform::SfrAdbStr*>(Sfr21At(p, 0x58))->~ArrayDataBase();
+    reinterpret_cast<Scaleform::SfrAdbNsSet*>(Sfr21At(p, 0x40))->~ArrayDataBase();
+    reinterpret_cast<Scaleform::SfrHsGc*>(Sfr21At(p, 0x38))->~HashSetBase();
     FUN_1424ef5b0(Sfr21At(p, 0x30));
     FUN_1424dcf10(Sfr21At(p, 0x30));
     Sfr21GPtr(p, 0x28);
@@ -1345,13 +1373,15 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 
 extern "C" {
 extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
-void  FUN_142516210(void* log, const char* fmt, ...);                         // LogBase<DisplayObjectBase>::LogError
-void  FUN_1425f2540(void* obj, ASStringNode** result);                        // DisplayObject::GetOriginalName
-void  FUN_1425f24e0(void* obj, ASStringNode** result);                        // DisplayObject::GetName
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
-void  FUN_142517e70(void* io);                                                // InteractiveObject::ModifyOptimizedPlayList
 }
+}}} // namespace Scaleform::GFx::AS3
+// instantiated in sfr_as3_18 (0x142516210), called out of line
+namespace Scaleform { namespace GFx {
+extern template void LogBase<DisplayObjectBase>::LogError(const char* pfmt, ...) const;
+}} // namespace Scaleform::GFx
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 template <class R> static inline R Sfr21VCall(void* obj, UPInt off)
 {
@@ -1423,7 +1453,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
             // An image resource placed on the stage becomes a Bitmap character.
             if (!cc.pResource || (Sfr21VCall<unsigned>(cc.pResource, 0x10) & 0xff00) != 0x100)
             {
-                FUN_142516210(spr + 0x18, "Sprite::AddDisplayObject(): unknown cid = %d\n", unsigned(UInt16(id)));
+                reinterpret_cast<DisplayObjectBase*>(spr)->LogError("Sprite::AddDisplayObject(): unknown cid = %d\n", unsigned(UInt16(id)));
                 return NULL;
             }
             type = 8;
@@ -1452,7 +1482,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
             const bool    isInteractive = *reinterpret_cast<SByte*>(ex + 0x6a) < 0;
             ASStringNode* orig;
             if (isInteractive)
-                FUN_1425f2540(ex, &orig);
+                ::new (static_cast<void*>(&orig)) ASString(reinterpret_cast<Scaleform::GFx::DisplayObject*>(ex)->GetOriginalName());
             else
             {
                 orig = static_cast<ASStringNode*>(Sfr21Mem(root, 0x160));   // builtin ""
@@ -1496,7 +1526,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                         if (!(*reinterpret_cast<UByte*>(ex + 0x88) & 2) && parent)
                         {
                             ASStringNode* nm;
-                            FUN_1425f24e0(ex, &nm);
+                            ::new (static_cast<void*>(&nm)) ASString(reinterpret_cast<Scaleform::GFx::DisplayObject*>(ex)->GetName());
                             {
                                 Multiname mn(vm->GetPublicNamespace(), Value(ASString(nm)));
                                 reinterpret_cast<Object*>(parent)->SetProperty(
@@ -1567,7 +1597,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
             if (!reinterpret_cast<InteractiveObject*>(sp)->IsInPlayList() && parent && reinterpret_cast<InteractiveObject*>(parent)->IsInPlayList())
             {
                 avm->GetAvmParent()->InsertChildToPlayList(reinterpret_cast<InteractiveObject*>(sp));
-                FUN_142517e70(sp);
+                reinterpret_cast<InteractiveObject*>(sp)->ModifyOptimizedPlayList();
             }
             if (!(sp[0x140] & 8))
                 reinterpret_cast<Sprite*>(sp)->DefaultOnEventLoad();
