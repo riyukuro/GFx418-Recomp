@@ -1005,11 +1005,19 @@ namespace Instances { namespace fl_geom
             result = false;
             return;
         }
-        const Value::Number bottom = y + height;
-        const Value::Number right = x + width;
-        const Value::Number bottom2 = toIntersect->y + toIntersect->height;
-        const Value::Number right2 = toIntersect->x + toIntersect->width;
-        result = bottom >= toIntersect->y && bottom2 >= y && right2 >= x && right >= toIntersect->x;
+        Value::Number bottom = y + height;
+        Value::Number right = x + width;
+        Value::Number x2 = toIntersect->x;
+        Value::Number y2 = toIntersect->y;
+        Value::Number bottom2 = toIntersect->y + toIntersect->height;
+        Value::Number right2 = toIntersect->x + toIntersect->width;
+        if ((bottom >= y2) && (bottom2 >= y))
+            if ((right2 >= x) && (right >= x2))
+            {
+                result = true;
+                return;
+            }
+        result = false;
     }
 
     // @0x14248ab10
@@ -2079,11 +2087,12 @@ namespace Instances { namespace fl_geom
     {
         if (v == NULL)
             return GetVM().ThrowTypeError(VM::Error(VM::eConvertNullToObjectError, GetVM()));
+        Render::Point3<double> pdIn(v->x, v->y, v->z);
         Render::Matrix4x4<double> m(mat4);
         m.Tx() = 0;
         m.Ty() = 0;
         m.Tz() = 0;
-        Render::Point3<double> p = m.Transform(Render::Point3<double>(v->x, v->y, v->z));
+        Render::Point3<double> p = m.Transform(pdIn);
         InstanceTraits::fl_geom::Vector3D& itr = static_cast<InstanceTraits::fl_geom::Vector3D&>(v->GetInstanceTraits());
         Pickable<Instances::fl_geom::Vector3D> r = itr.MakeInstance(itr);
         r->x = p.x;
@@ -2299,10 +2308,10 @@ namespace Instances { namespace fl_geom
         Value xv, yv, zv;
         UInt32 len;
         vin->lengthGet(len);
+        Value::Number x, y, z;
         const ClassTraits::Traits& tr = vout->GetVM().GetClassTraitsNumber();
         for (UInt32 i = 0; (SInt32)i < (SInt32)len; i += 3)
         {
-            Value::Number x, y, z;
             if (i < (UInt32)vin->V.V.GetSize())
                 xv.SetNumber(vin->V.V[i]);
             if (!xv.Convert2Number(x))
@@ -2315,12 +2324,11 @@ namespace Instances { namespace fl_geom
                 zv.SetNumber(vin->V.V[i + 2]);
             if (!zv.Convert2Number(z))
                 z = 0;
-            Value::Number rx = mat4.M[0][0] * x + mat4.M[0][1] * y + mat4.M[0][2] * z + mat4.M[0][3];
-            Value::Number ry = mat4.M[1][0] * x + mat4.M[1][1] * y + mat4.M[1][2] * z + mat4.M[1][3];
-            Value::Number rz = mat4.M[2][0] * x + mat4.M[2][1] * y + mat4.M[2][2] * z + mat4.M[2][3];
-            vout->V.Set(i, Value(rx), tr);
-            vout->V.Set(i + 1, Value(ry), tr);
-            vout->V.Set(i + 2, Value(rz), tr);
+            Render::Point3<double> pdIn(x, y, z);
+            Render::Point3<double> pdOut = mat4.Transform(pdIn);
+            vout->V.Set(i, Value(pdOut.x), tr);
+            vout->V.Set(i + 1, Value(pdOut.y), tr);
+            vout->V.Set(i + 2, Value(pdOut.z), tr);
         }
     }
 
