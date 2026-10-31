@@ -579,12 +579,12 @@ void FUN_140069ef4(longlong, uint, uint);
 int FUN_14006a090(cri_u1 *, uint);
 int FUN_14006a110(short *, uint, cri_u1 *, cri_u1 *);
 cri_u8 FUN_14006a16c(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
-uint FUN_14006a260(longlong, cri_u8, ushort *, ushort *);
-cri_u8 FUN_14006a388(longlong, cri_u8, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
+uint FUN_14006a260(longlong, uint, ushort *, ushort *);
+uint FUN_14006a388(longlong, uint, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
 uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
 int FUN_14006a750(short *, int, ushort *);
 uint FUN_14006a7f8(cri_u8, uint, longlong);
-cri_u2 FUN_14006a928(cri_u8, cri_u4, longlong);
+uint FUN_14006a928(cri_u8, cri_u4, longlong);
 void FUN_14006aa90();
 void FUN_14006aaa0(V16 *, V16 *, int);
 longlong FUN_14006b0d0(longlong);
@@ -3207,7 +3207,7 @@ cri_u8 FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *a
 }
 
 // @0x14006a260
-uint FUN_14006a260(longlong arg1, cri_u8 arg2, ushort *arg3, ushort *arg4)
+uint FUN_14006a260(longlong arg1, uint arg2, ushort *arg3, ushort *arg4)
 {
   int r;
   cri_u1 ver;
@@ -3246,67 +3246,71 @@ uint FUN_14006a260(longlong arg1, cri_u8 arg2, ushort *arg3, ushort *arg4)
   return 0;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// read the stream header that follows the version block: its type, the format word (must be 1) and four
+// 32-bit fields (big-endian)
+// MS2-FUNCTIONAL: the exe keeps the constant 4 in esi (version compares and offset steps); ours uses immediates,
+// 1 byte short
 // @0x14006a388
-cri_u8 FUN_14006a388(longlong arg1, cri_u8 arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9)
+uint FUN_14006a388(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9)
 {
-  short s_v1;
-  ushort u_v2;
-  cri_u8 u_v3;
-  uint u_v4;
-  int i_v5;
-  ulonglong u_v6;
-  longlong l_v7;
-  char local_res20 [8];
-  cri_u1 loc_18 [16];
-  
+  int r;
+  cri_u1 ver;
+  cri_u1 b2;
+  uint need;
+  uint off;
+  ushort u;
+  int iv;
+  short s;
+
   *arg4 = 0;
-  l_v7 = arg1;
-  u_v3 = FUN_14006a110((short *)arg1,arg2,(cri_u1 *)local_res20,loc_18);
-  if (-1 < (int)u_v3) {
-    u_v4 = 0x30;
-    if ((local_res20[0] == '\x04') && (u_v4 = 0x3c, 2 < *(byte *)(l_v7 + 7))) {
-      u_v4 = *(char *)(l_v7 + 7) * 4 + 0x34;
-    }
-    if (((uint)arg2 < u_v4) ||
-       (((int)CONCAT62((int6)((ulonglong)arg1 >> 0x10),*(short *)(l_v7 + 2)) >> 8 & 0xffU |
-        (int)(short)(*(short *)(l_v7 + 2) << 8)) < u_v4 - 4)) {
-      u_v3 = 0xffffffff;
-    }
-    else {
-      u_v6 = 0x14;
-      if ((local_res20[0] == '\x04') && (u_v6 = 0x20, 2 < *(byte *)(l_v7 + 7))) {
-        u_v6 = (ulonglong)(*(char *)(l_v7 + 7) * 4 + 0x18);
-      }
-      i_v5 = (int)u_v6;
-      *arg3 = (uint)(*(ushort *)(u_v6 + l_v7) >> 8) |
-                 (int)(short)(*(ushort *)(u_v6 + l_v7) << 8);
-      s_v1 = *(short *)((ulonglong)(i_v5 + 2) + l_v7);
-      u_v2 = s_v1 >> 8 & 0xffU | s_v1 << 8;
-      *arg4 = u_v2;
-      if (u_v2 == 1) {
-        s_v1 = *(short *)((ulonglong)(i_v5 + 6) + l_v7);
-        *arg5 = s_v1 >> 8 & 0xffU | s_v1 << 8;
-        u_v4 = *(uint *)((ulonglong)(i_v5 + 8) + l_v7);
-        *arg6 = (u_v4 << 0x10 | u_v4 & 0xff00) << 8 | (int)u_v4 >> 0x18 & 0xffU |
-                   (int)u_v4 >> 8 & 0xff00U;
-        u_v4 = *(uint *)((ulonglong)(i_v5 + 0xc) + l_v7);
-        *arg7 = (u_v4 << 0x10 | u_v4 & 0xff00) << 8 | (int)u_v4 >> 0x18 & 0xffU |
-                   (int)u_v4 >> 8 & 0xff00U;
-        u_v4 = *(uint *)((ulonglong)(i_v5 + 0x10) + l_v7);
-        *arg8 = (u_v4 << 0x10 | u_v4 & 0xff00) << 8 | (int)u_v4 >> 0x18 & 0xffU |
-                   (int)u_v4 >> 8 & 0xff00U;
-        u_v4 = *(uint *)((ulonglong)(i_v5 + 0x14) + l_v7);
-        *arg9 = (u_v4 << 0x10 | u_v4 & 0xff00) << 8 | (int)u_v4 >> 0x18 & 0xffU |
-                   (int)u_v4 >> 8 & 0xff00U;
-        u_v3 = 0;
-      }
-      else {
-        u_v3 = 0xfffffffe;
-      }
+  r = FUN_14006a110((short *)arg1,arg2,&ver,&b2);
+  if (r < 0) {
+    return r;
+  }
+  need = 0x30;
+  if (ver == 4) {
+    need = 0x3c;
+    if (*(byte *)(arg1 + 7) >= 3) {
+      need = *(char *)(arg1 + 7) * 4 + 0x34;
     }
   }
-  return u_v3;
+  if (arg2 < need) {
+    return 0xffffffff;
+  }
+  if ((uint)(*(short *)(arg1 + 2) >> 8 & 0xff | (int)(short)(*(short *)(arg1 + 2) << 8)) < need - 4) {
+    return 0xffffffff;
+  }
+  off = 0x14;
+  if (ver == 4) {
+    off = 0x20;
+    if (*(byte *)(arg1 + 7) >= 3) {
+      off = *(char *)(arg1 + 7) * 4 + 0x18;
+    }
+  }
+  *arg3 = (uint)(*(ushort *)(arg1 + off) >> 8) | (int)(short)(*(ushort *)(arg1 + off) << 8);
+  off += 2;
+  s = *(short *)(arg1 + off);
+  u = s >> 8 & 0xff | s << 8;
+  *arg4 = u;
+  if (u != 1) {
+    return 0xfffffffe;
+  }
+  off += 4;
+  s = *(short *)(arg1 + off);
+  off += 2;
+  *arg5 = s >> 8 & 0xff | s << 8;
+  iv = *(int *)(arg1 + off);
+  off += 4;
+  *arg6 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
+  iv = *(int *)(arg1 + off);
+  off += 4;
+  *arg7 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
+  iv = *(int *)(arg1 + off);
+  off += 4;
+  *arg8 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
+  iv = *(int *)(arg1 + off);
+  *arg9 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
+  return 0;
 }
 
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
@@ -3395,57 +3399,64 @@ int FUN_14006a750(short *arg1, int arg2, ushort *arg3)
   return 0;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// parse the ADX header into the decoder info block at arg3 and return the data offset (0 on a bad header)
+// MS2-FUNCTIONAL: cl gives the offset and the AINF size one home slot; the exe gives each its own and pushes
+// rbp/rsi instead of saving them in the home area
 // @0x14006a7f8
-uint FUN_14006a7f8(cri_u8 cri_p0, uint cri_p1, longlong cri_p2)
+uint FUN_14006a7f8(cri_u8 arg1, uint arg2, longlong arg3)
 {
-  cri_u8 arg1 = cri_p0;
-  uint arg2 = cri_p1;
-  longlong arg3 = cri_p2;
-  int i_v1;
-  uint u_v2;
-  ushort local_res18 [4];
-  cri_u1 local_res20 [8];
-  
-  local_res18[0] = 0;
+  uint size;
+  ushort ofs;
+
+  ofs = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  i_v1 = FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1));
-  if (((-1 < i_v1) &&
-      (i_v1 = FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)local_res18,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
-                             (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),(int *)((char *)arg3 + 0x10)), -1 < i_v1)) &&
-     (u_v2 = (uint)local_res18[0], u_v2 <= arg2)) {
-    FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
-    FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),(uint *)((char *)arg3 + 0x40),
-                  (uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),(uint *)((char *)arg3 + 0x4c));
-    FUN_14006a598(arg1,arg2,(uint *)local_res20,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),(ushort *)((char *)arg3 + 0x62));
-    FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
-    return u_v2;
+  if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
+    return 0;
   }
-  return 0;
+  if ((int)FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+                    (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
+                    (int *)((char *)arg3 + 0x10)) < 0) {
+    return 0;
+  }
+  if (arg2 < ofs) {
+    return 0;
+  }
+  FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
+  FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
+                (uint *)((char *)arg3 + 0x40),(uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),
+                (uint *)((char *)arg3 + 0x4c));
+  FUN_14006a598(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
+                (ushort *)((char *)arg3 + 0x62));
+  FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
+  return ofs;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// FUN_14006a7f8 without the size check: parse the ADX header into arg3 and return the data offset (0 on a bad
+// header)
 // @0x14006a928
-cri_u2 FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3)
+uint FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3)
 {
-  int i_v1;
-  cri_u2 local_res18 [4];
-  cri_u1 local_res20 [8];
-  
-  local_res18[0] = 0;
+  cri_u2 ofs;
+  uint size;
+
+  ofs = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
-  i_v1 = FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1));
-  if ((-1 < i_v1) &&
-     (i_v1 = FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)local_res18,(cri_u1 *)(arg3 + 2),(char *)(arg3 + 3),(char *)(arg3 + 4),
-                            (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),(int *)((char *)arg3 + 0x10)), -1 < i_v1)) {
-    FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
-    FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),(uint *)((char *)arg3 + 0x40),
-                  (uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),(uint *)((char *)arg3 + 0x4c));
-    FUN_14006a598(arg1,arg2,(uint *)local_res20,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),(ushort *)((char *)arg3 + 0x62));
-    FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
-    return local_res18[0];
+  if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
+    return 0;
   }
-  return 0;
+  if ((int)FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+                         (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
+                         (int *)((char *)arg3 + 0x10)) < 0) {
+    return 0;
+  }
+  FUN_14006a260(arg1,arg2,(ushort *)((char *)arg3 + 0x16),(ushort *)((char *)arg3 + 0x26));
+  FUN_14006a388(arg1,arg2,(uint *)((char *)arg3 + 0x38),(ushort *)((char *)arg3 + 0x3c),(ushort *)((char *)arg3 + 0x3e),
+                (uint *)((char *)arg3 + 0x40),(uint *)((char *)arg3 + 0x44),(uint *)((char *)arg3 + 0x48),
+                (uint *)((char *)arg3 + 0x4c));
+  FUN_14006a598(arg1,arg2,&size,(void *)((char *)arg3 + 0x50),(ushort *)((char *)arg3 + 0x60),
+                (ushort *)((char *)arg3 + 0x62));
+  FUN_14006a750((short *)arg1,arg2,(ushort *)((char *)arg3 + 0x14));
+  return ofs;
 }
 #pragma optimize("", on)
 
