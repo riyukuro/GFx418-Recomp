@@ -2582,27 +2582,32 @@ CriBool FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64
 {
     // As in the exe: no NULL checks, no length bound on either field, and an empty or
     // non-hex field parses as whatever _strtoui64 makes of it.
-    char prefix[] = "MFS:";
+    // Typed buffers: the exe has no /GS cookie here. The names pick the exe's VC9 /Od stack slots
+    // (work/vc9/p10/probe): tag, text, i.
+    struct MfsPrefix { char c0, c1, c2, c3, c4; };
+    struct MfsText { CriUint64 q[4]; };
+    static const MfsPrefix kPrefix = { 'M', 'F', 'S', ':', 0 };
+    MfsText text;
+    MfsPrefix tag = kPrefix;
     CriUint32 i;
-    char text[0x20];
-    for (i = 0; i < sizeof(prefix) - 1; ++i)
+    for (i = 0; i < sizeof(tag) - 1; ++i)
     {
-        if (!path[i] || path[i] != prefix[i])
+        if (!path[i] || path[i] != ((char*)&tag)[i])
             return 0;
     }
-    memset(text, 0, sizeof(text));
+    memset(&text, 0, sizeof(text));
     for (CriSint32 n = 0; path[i] != '.'; ++n, ++i)
     {
-        text[n] = path[i];
+        ((char*)&text)[n] = path[i];
         if (!path[i])
             return 0;
     }
-    *size = FUN_140038bd0(reader, text, NULL, 16);
+    *size = FUN_140038bd0(reader, (char*)&text, NULL, 16);
     ++i;
-    memset(text, 0, sizeof(text));
+    memset(&text, 0, sizeof(text));
     for (CriSint32 n = 0; path[i]; ++i, ++n)
-        text[n] = path[i];
-    *offset = FUN_140038bd0(reader, text, NULL, 16);
+        ((char*)&text)[n] = path[i];
+    *offset = FUN_140038bd0(reader, (char*)&text, NULL, 16);
     return 1;
 }
 
