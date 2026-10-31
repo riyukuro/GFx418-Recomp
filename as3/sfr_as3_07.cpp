@@ -3273,14 +3273,18 @@ namespace Instances { namespace fl_display
         result = NULL;
     }
 
-    // MS2-FUNCTIONAL: register allocation of the inlined SPtr<BitmapData> assignment (exe keeps the old pointer in rdx); same loads, stores and calls
     // @0x142448550
     void Bitmap::bitmapDataSet(const Value& result, Instances::fl_display::BitmapData* value)
     {
         SF_UNUSED(result);
         pBitmapData = value;
         if (pDispObj)
-            FUN_142528e70(pDispObj, value ? value->pDefImpl.GetPtr() : NULL);
+        {
+            if (pBitmapData)
+                FUN_142528e70(pDispObj, pBitmapData->pDefImpl);
+            else
+                FUN_142528e70(pDispObj, NULL);
+        }
         if (pDispObj)
             FUN_142520b20(pDispObj);
     }
@@ -3500,23 +3504,13 @@ namespace Instances { namespace fl_display
         return pmovie->FocusGroups[pmovie->FocusGroupIndexes[0]].LastFocused;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<InteractiveObject>::operator= instance (0x14243d790); ours inlines it
     // @0x14244c080
     SF_NOINLINE void Stage::focusGet(SPtr<Instances::fl_display::InteractiveObject>& result)
     {
         Ptr<GFx::InteractiveObject> focused = FocusedCharacter0(static_cast<ASVM&>(GetVM()).GetMovieImpl());
         if (focused)
         {
-            // the AS3 part (AS3::AvmDisplayObj, as3_avm.h) sits 0x30 before its AvmInteractiveObjBase interface and
-            // keeps the object raw at +0x10 or as a tagged SPtr at +0x08
-            AvmInteractiveObjBase* pavm = focused->GetAvmIntObj();
-            const UPInt* pas3 = pavm ? reinterpret_cast<const UPInt*>(reinterpret_cast<UByte*>(pavm) - 0x30) : NULL;
-            UPInt raw = pas3[2];
-            if (!raw)
-                raw = pas3[1];
-            if (raw & 1)
-                raw -= 1;
-            Instances::fl_display::DisplayObject* ido = reinterpret_cast<Instances::fl_display::DisplayObject*>(raw);
+            Instances::fl_display::DisplayObject* ido = ToAvmInteractiveObj(focused)->GetAS3Obj();
             BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
             if (tt == Traits_InteractiveObject || tt >= Traits_DisplayObjectContainer)
             {
