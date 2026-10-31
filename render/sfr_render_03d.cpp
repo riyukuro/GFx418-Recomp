@@ -932,8 +932,8 @@ void ShapeMeshProvider::acquireShapeData()
             ++shapeLayer;
 
         TmpPathInfoType path;
-        path.ShapeLayer = shapeLayer;
         path.Pos        = pathPos;
+        path.ShapeLayer = shapeLayer;
         path.Styles[0]  = styles[0];
         path.Styles[1]  = styles[1];
         path.Styles[2]  = styles[2];
@@ -960,7 +960,7 @@ void ShapeMeshProvider::acquireShapeData()
     UPInt layerStart   = 0;
     for (i = 0; i < paths.GetSize(); ++i)
     {
-        if (paths[i].ShapeLayer != shapeLayer)
+        if (shapeLayer != paths[i].ShapeLayer)
         {
             createDrawLayers(paths, layerStart, i);
             layerStart = i;
