@@ -678,6 +678,7 @@ protected:
 public:
     // (appended for the static text, sfr_gfx_05d)
     bool      IsIndex() const        { return PType == RP_Index; }
+    bool      IsPointer() const      { return PType == RP_Resource; }
     unsigned  GetBindIndex() const   { return BindIndex; }
     Resource* GetResourcePtr() const { return (PType == RP_Resource) ? GetResource() : 0; }
 

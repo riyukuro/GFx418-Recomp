@@ -839,6 +839,18 @@ public:
     // No more bindings: readers stop taking the lock.
     void Freeze() { Frozen = true; }
 
+    // (appended, sfh) SDK GFx_ResourceHandle.h: ref.GetResource(this) inline
+    template <class C>
+    C* operator[](const ResourcePtr<C>& ref) const
+    {
+        if (ref.IsPointer())
+            return static_cast<C*>(ref.GetResource());
+
+        ResourceBindData rbd;
+        GetResourceData(&rbd, ref.GetBindIndex());
+        return static_cast<C*>(rbd.pResource.GetPtr());
+    }
+
     // (appended for the static text, sfr_gfx_05d) the resource and binding a definition's reference resolves to
     template<class C>
     ResourceBindData GetResourceData(const ResourcePtr<C>& ptr)

@@ -798,18 +798,11 @@ void TextureGlyphData::VisitTextureGlyphs(TextureGlyphVisitor* pvisitor)
 // @0x142657de0
 void TextureGlyphData::VisitTextures(TexturesVisitor* pvisitor, ResourceBinding* pbinding)
 {
-    for (ImageResourceHash::Iterator it = GlyphsTextures.Begin(); it != GlyphsTextures.End(); ++it)
+    ImageResourceHash::ConstIterator iter = GlyphsTextures.Begin();
+    for (; iter != GlyphsTextures.End(); ++iter)
     {
-        ImageResource* pimageRes;
-        if (it->Second.IsIndex())
-        {
-            ResourceBindData resData;
-            pbinding->GetResourceData(&resData, it->Second.GetBindIndex());
-            pimageRes = (ImageResource*)resData.pResource.GetPtr();
-        }
-        else
-            pimageRes = (ImageResource*)it->Second.GetResourcePtr();
-        pvisitor->Visit(it->First, pimageRes);
+        Resource* pres = (*pbinding)[iter->Second];
+        pvisitor->Visit(iter->First, (ImageResource*)pres);
     }
 }
 
