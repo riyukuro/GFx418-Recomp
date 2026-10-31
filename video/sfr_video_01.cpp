@@ -23,6 +23,7 @@ template <class T> struct ExeDecl { typedef T type; };
 
 extern ExeDecl<void*>::type DAT_1431b59f0;
 extern ExeDecl<void*>::type DAT_14317bf80;   // AvmDisplayObjBase vftable
+ExeDecl<void(void*)>::type FUN_1429260b0;    // AS2 Value destructor, called out of line
 #define VideoProtoGCVtable DAT_1431b59f0
 extern ExeDecl<void*>::type DAT_1431b5940;
 #define VideoProtoInterfaceVtable DAT_1431b5940
@@ -1232,11 +1233,11 @@ void FUN_140004b00(Scaleform::UPInt* pair)
     if (first) first->Release();
 }
 
-// MS2-FUNCTIONAL: destroys the base object and releases its allocation when requested.
+// destroys the base object and releases its allocation when requested.
 // @0x140003df0
 void* FUN_140003df0(void* object, unsigned flags)
 {
-    static_cast<Scaleform::GFx::AS2::Value*>(object)->~Value();   // 0x1429260b0
+    FUN_1429260b0(object);   // ~Value
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1552,11 +1553,11 @@ void FUN_1400072c0(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: removes the last stack value and returns its page when it becomes empty.
+// removes the last stack value and returns its page when it becomes empty.
 // @0x140007200
 void FUN_140007200(Scaleform::UPInt* stack)
 {
-    reinterpret_cast<Scaleform::GFx::AS2::Value*>(*stack)->~Value();   // 0x1429260b0
+    FUN_1429260b0(reinterpret_cast<void*>(*stack));   // ~Value
     *stack -= 0x20;
     if (*stack < stack[1]) FUN_140006cf0(stack);
 }
@@ -1602,7 +1603,7 @@ void FUN_140007450(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
     FUN_140007030(owner + 1, value);
 }
 
-// MS2-FUNCTIONAL: removes the last value from the embedded paged stack.
+// removes the last value from the embedded paged stack.
 // @0x140007510
 void FUN_140007510(Scaleform::UPInt* owner)
 {
@@ -1881,13 +1882,21 @@ void* FUN_14000aa70(Scaleform::GFx::AS2::NetStream* stream, unsigned flags)
     return stream;
 }
 
-// MS2-FUNCTIONAL: constructs the cue-point name and zeros its three numeric fields.
+// The cue-point record as its inline ctor builds it: the name and the three numeric fields; +0 and +0x10 are left alone.
+struct Video01CuePoint
+{
+    void*             Unk0;
+    Scaleform::String Name;
+    void*             Unk10;
+    unsigned __int64  Field18, Field20, Field28;
+    Video01CuePoint() { memset(&Field18, 0, 0x18); }
+};
+
+// constructs the cue-point name and zeros its three numeric fields
 // @0x14000b020
 void FUN_14000b020(void* cue)
 {
-    unsigned char* bytes = static_cast<unsigned char*>(cue);
-    new (bytes + 8) Scaleform::String();
-    memset(bytes + 0x18, 0, 0x18);
+    new (cue) Video01CuePoint;
 }
 
 // initializes an empty cue-point array and copies the supplied records.
@@ -3016,11 +3025,12 @@ void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
         pVideoPlayer->SetSyncObject(pSyncObj);
 }
 
-// MS2-FUNCTIONAL: member reloaded after the test
 // @0x140004da0
 VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
 {
-    if (!pVideoPlayer || !pTextureImage)
+    if (!pVideoPlayer)
+        return NULL;
+    if (!pTextureImage)
         return NULL;
     *width  = VInfo.Width;
     *height = VInfo.Height;

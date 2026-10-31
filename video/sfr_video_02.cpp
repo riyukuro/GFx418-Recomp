@@ -3028,7 +3028,7 @@ void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
     object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
-// MS2-FUNCTIONAL: scalar deleting form of VideoObject's prototype destruction.
+// scalar deleting form of VideoObject's prototype destruction.
 // @0x14000ec40
 Scaleform::GFx::AS2::Object* FUN_14000ec40(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
