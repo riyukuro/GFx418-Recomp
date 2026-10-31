@@ -22,6 +22,8 @@ namespace Scaleform {
 template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<SInt32, AllocatorDH<SInt32, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
 template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<UInt32, AllocatorDH<UInt32, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
 template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<double, AllocatorDH<double, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
+// VectorBase<Value>::Resize calls this out of line (0x14241fdd0); InsertAt and RemoveAt inline ArrayDataDH::Resize.
+template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::Resize(UPInt newSize) { Data.Resize(newSize); }
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -784,7 +786,6 @@ void VectorBase<Value>::PushBackValueUnsafe(const Value& v)
     PushBackUnsafe(v);
 }
 
-// MS2-FUNCTIONAL: ours inlines ArrayDataDH<Value>::Resize, the exe calls it (0x14241fdd0)
 // @0x142563240
 template <>
 CheckResult VectorBase<Value>::Resize(UPInt size)
