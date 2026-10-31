@@ -1474,15 +1474,18 @@ void FUN_140006cf0(Scaleform::UPInt* stack)
         reinterpret_cast<Scaleform::UPInt>(reinterpret_cast<void**>(stack[4])[stack[5] - 2]) + 0x3e0;
 }
 
-// MS2-FUNCTIONAL: removes retained elements beyond the new size and adjusts pointer capacity.
+// removes retained elements beyond the new size and adjusts pointer capacity
 // @0x140006e70
 void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1]) {
-        void** items = static_cast<void**>(*array);
-        for (Scaleform::UPInt i = fields[1]; i > size; --i)
-            if (items[i - 1]) static_cast<Scaleform::WeakPtrProxy*>(items[i - 1])->Release();
+        // SDK DestructArray(Data + size, oldSize - size): released from the last element down
+        void** items = static_cast<void**>(*array) + size;
+        Scaleform::UPInt count = fields[1] - size;
+        items += count - 1;
+        for (Scaleform::UPInt i = 0; i < count; ++i, --items)
+            if (*items) static_cast<Scaleform::WeakPtrProxy*>(*items)->Release();
         if (size < fields[2] / 2) FUN_140006810(array, owner, size);
     } else if (size >= fields[2]) {
         FUN_140006810(array, owner, size + (size >> 2));
@@ -1490,17 +1493,13 @@ void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: shrinks or grows an array of two-string records, releasing truncated strings.
+// shrinks or grows an array of two-string records, releasing the truncated ones through FUN_1400068d0
 // @0x140006f50
 void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1]) {
-        Scaleform::String* records = static_cast<Scaleform::String*>(*array);
-        for (Scaleform::UPInt i = size; i < fields[1]; ++i) {
-            records[i * 2].~String();
-            records[i * 2 + 1].~String();
-        }
+        FUN_1400068d0(static_cast<Scaleform::String*>(*array) + size * 2, fields[1] - size);
         if (size < fields[2] / 2) FUN_1400069a0(array, owner, size);
     } else if (size >= fields[2]) {
         FUN_1400069a0(array, owner, size + (size >> 2));
