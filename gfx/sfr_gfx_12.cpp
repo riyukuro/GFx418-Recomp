@@ -43,50 +43,16 @@ public:
 
 }}} // namespace Scaleform::GFx::XML
 
-// The Expat library linked into the exe (parser handle, handler setters, error and position queries).
-ExeDecl<void*(const char*)> FUN_1423b2eb0;
-#define XML_ParserCreate FUN_1423b2eb0
-ExeDecl<void(void*, void*)> FUN_1423b3500;
-#define XML_SetXmlDeclHandler FUN_1423b3500
-ExeDecl<void(void*, void*)> FUN_1423b3400;
-#define XML_SetStartElementHandler FUN_1423b3400
-ExeDecl<void(void*, void*)> FUN_1423b3310;
-#define XML_SetEndElementHandler FUN_1423b3310
-ExeDecl<void(void*, void*)> FUN_1423b3320;
-#define XML_SetCharacterDataHandler FUN_1423b3320
-ExeDecl<void(void*, void*)> FUN_1423b3560;
-#define XML_SetStartNamespaceDeclHandler FUN_1423b3560
-ExeDecl<void(void*, void*)> FUN_1423b3330;
-#define XML_SetCommentHandler FUN_1423b3330
-ExeDecl<void(void*, void*)> FUN_1423b3540;
-#define XML_SetUserData FUN_1423b3540
-ExeDecl<int(void*, const char*, int, int)> FUN_1423b2c20;
-#define XML_Parse FUN_1423b2c20
-ExeDecl<int(void*)> FUN_1423b2ab0;
-#define XML_GetCurrentColumnNumber FUN_1423b2ab0
-ExeDecl<int(void*)> FUN_1423b2b10;
-#define XML_GetCurrentLineNumber FUN_1423b2b10
-ExeDecl<int(void*)> FUN_1423b2a90;
-#define XML_GetCurrentByteIndex FUN_1423b2a90
-ExeDecl<int(void*)> FUN_1423b2b70;
-#define XML_GetErrorCode FUN_1423b2b70
-ExeDecl<const char*(int)> FUN_1423b24b0;
-#define XML_ErrorString FUN_1423b24b0
-ExeDecl<void(void*)> FUN_1423b2f30;
-#define XML_ParserFree FUN_1423b2f30
-// The parser's own callbacks (the handler / user data protocol is private to the exe's ParserExpat).
-ExeDecl<void()> FUN_1423b1d40;
-#define ParserExpat_XmlDeclCallback FUN_1423b1d40
-ExeDecl<void()> FUN_1423b17d0;
-#define ParserExpat_StartElementCallback FUN_1423b17d0
-ExeDecl<void()> FUN_1423b1660;
-#define ParserExpat_EndElementCallback FUN_1423b1660
-ExeDecl<void()> FUN_1423b16d0;
-#define ParserExpat_CharacterDataCallback FUN_1423b16d0
-ExeDecl<void()> FUN_1423b23e0;
-#define ParserExpat_StartNamespaceCallback FUN_1423b23e0
-ExeDecl<void()> FUN_1423b1760;
-#define ParserExpat_CommentCallback FUN_1423b1760
+// The Expat library linked into the exe (libgfxexpat, built static).
+#define XML_STATIC
+#include "../third_party/src/expat-2.0.1/lib/expat.h"
+// The parser's callbacks (sfr_gfx_12x; the handler / user data protocol is private to the exe's ParserExpat).
+void FUN_1423b1d40(void* userData, const char* name, const char** atts);                         // start element
+void FUN_1423b17d0(void* userData, const char* name);                                            // end element
+void FUN_1423b1660(void* userData, const char* s, int len);                                      // character data
+void FUN_1423b16d0(void* userData, const char* data);                                            // comment
+void FUN_1423b23e0(void* userData, const char* version, const char* encoding, int standalone);  // XML declaration
+void FUN_1423b1760(void* userData, const char* s, int len);                                      // default
 // Formats one message into a small caller supplied buffer descriptor (mode 2, buffer, capacity).
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
 ExeDecl<void(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
@@ -149,14 +115,14 @@ bool ParserExpat::ParseString(const char* pdata, UPInt len, ParserHandler* pphan
 {
     ParserLocator locator;
     pphandler->SetDocumentLocator(&locator);
-    void* parser = XML_ParserCreate(0);
-    XML_SetXmlDeclHandler(parser, &ParserExpat_XmlDeclCallback);
-    XML_SetStartElementHandler(parser, &ParserExpat_StartElementCallback);
-    XML_SetEndElementHandler(parser, &ParserExpat_EndElementCallback);
-    XML_SetCharacterDataHandler(parser, &ParserExpat_CharacterDataCallback);
-    XML_SetStartNamespaceDeclHandler(parser, &ParserExpat_StartNamespaceCallback);
-    XML_SetCommentHandler(parser, &ParserExpat_CommentCallback);
-    struct { void* Parser; ParserHandler* Handler; ParserLocator* Locator; } userData = {parser, pphandler, &locator};
+    XML_Parser parser = XML_ParserCreate(0);
+    XML_SetStartElementHandler(parser, &FUN_1423b1d40);
+    XML_SetEndElementHandler(parser, &FUN_1423b17d0);
+    XML_SetCharacterDataHandler(parser, &FUN_1423b1660);
+    XML_SetCommentHandler(parser, &FUN_1423b16d0);
+    XML_SetXmlDeclHandler(parser, &FUN_1423b23e0);
+    XML_SetDefaultHandler(parser, &FUN_1423b1760);
+    struct { XML_Parser Parser; ParserHandler* Handler; ParserLocator* Locator; } userData = {parser, pphandler, &locator};
     XML_SetUserData(parser, &userData);
     pphandler->StartDocument();
     bool result;
@@ -191,6 +157,9 @@ bool ParserExpat::ParseString(const char* pdata, UPInt len, ParserHandler* pphan
 }}} // namespace Scaleform::GFx::XML
 
 // ---- the Sound module ----
+
+// The global statistics object the exe reports sample bytes to (slot 45 on alloc, slot 46 on free; sfr_gfx_07h).
+namespace Scaleform { namespace GFx { void* FUN_14261e310(); }}
 
 namespace Scaleform { namespace Sound {
 
@@ -271,14 +240,11 @@ AppendableSoundData::~AppendableSoundData()
     }
 }
 
-// The global statistics object the exe reports sample bytes to (slot 45 on alloc, slot 46 on free).
-extern "C" void* FUN_14261e310();
-
 // MS2-FUNCTIONAL: reports the freed byte count to the global statistics object and frees the sample block.
 // @0x142747e40
 SoundData::~SoundData()
 {
-    void* pstat = FUN_14261e310();
+    void* pstat = Scaleform::GFx::FUN_14261e310();
     ((void (*)(void*, unsigned))(*(void***)pstat)[46])(pstat, DataSize);
     Memory::pGlobalHeap->Free(pData);
 }
@@ -332,7 +298,7 @@ SoundData::SoundData(unsigned format, unsigned rate, unsigned length, unsigned d
     DataSize = dsize;
     pData    = (UByte*)Memory::pGlobalHeap->Alloc(dsize, 0x20, (const AllocInfo*)0);
     memset(pData, 0, DataSize);
-    void* pstat = FUN_14261e310();
+    void* pstat = Scaleform::GFx::FUN_14261e310();
     ((void (*)(void*, unsigned))(*(void***)pstat)[45])(pstat, DataSize);
 }
 
