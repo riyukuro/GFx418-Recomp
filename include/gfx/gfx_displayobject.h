@@ -482,9 +482,10 @@ public:
     ~CharacterHandle();   // 0x1425f0900
 
     void AddRef() { ++RefCount; }
-    void Release()
+    SF_INLINE void Release()
     {
-        if (--RefCount <= 0)
+        RefCount--;
+        if (RefCount <= 0)
             delete this;
     }
 
@@ -541,7 +542,12 @@ public:
     void SetName(const ASString& name);   // 0x1425f52f0
 
     // The handle naming this object, created on first use.
-    CharacterHandle* GetCharacterHandle() const { return pNameHandle ? pNameHandle.GetPtr() : CreateCharacterHandle(); }
+    SF_INLINE CharacterHandle* GetCharacterHandle() const
+    {
+        if (!pNameHandle)
+            return CreateCharacterHandle();
+        return pNameHandle;
+    }
 
 protected:
     CharacterHandle* CreateCharacterHandle() const;   // 0x1425f1910

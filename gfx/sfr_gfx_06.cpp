@@ -17,7 +17,6 @@
 // MS2-PIN: ??_7DisplayObject@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@2@@ 0x14318dcd0
 // MS2-PIN: ??_7DisplayObject@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@12@@ 0x14318df48
 // MS2-PIN: ??_GDisplayObject@GFx@Scaleform@@UEAAPEAXI@Z 0x1425f0c10
-// MS2-FUNCTIONAL 0x1425f0c10: compiler-generated deleting dtor; inlines ~DisplayObject, which differs as noted there
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_displayobject.h"
 #include "../include/gfx/gfx_interactiveobject.h"
@@ -93,7 +92,6 @@ CharacterHandle::~CharacterHandle()
 }
 
 // @0x1425f0950
-// MS2-FUNCTIONAL: the exe inlines the pNameHandle release with ~CharacterHandle and the heap free, ours calls it
 DisplayObject::~DisplayObject()
 {
     delete pScrollRect;
