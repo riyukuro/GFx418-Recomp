@@ -240,23 +240,24 @@ void* FUN_140001870(Video04ArrayPaged* array)
     return (char*)array->Pages[index] + (std::uint64_t)(array->Size & 0x3ff) * 8;
 }
 
-// MS2-FUNCTIONAL: finds the entry holding the key in a hash with GC values; returns its index or -1. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
+// finds the entry holding the key in a hash with GC values; returns its index or -1. As in SDK findIndexCore, the
+// incoming index is also the hash value the chain entries are compared against, and the walk uses its own index
 // @0x140001a30
 std::uint64_t FUN_140001a30(Video04Hash* hash, ASStringNode** key, std::uint64_t index)
 {
     Video04HashTable* table = *hash;
-    std::uint64_t hashValue = index;
-    const Video04HashEntry* entry = &table->Entries[index];
-    if (entry->NextInChain == -2 || (std::uint64_t)(entry->Key->HashFlags & table->SizeMask) != hashValue)
+    std::uint64_t at = index;
+    const Video04HashEntry* entry = &table->Entries[at];
+    if (entry->NextInChain == -2 || (std::uint64_t)(entry->Key->HashFlags & table->SizeMask) != index)
         return 0xffffffffffffffffull;
     for (;;)
     {
-        if ((std::uint64_t)(entry->Key->HashFlags & table->SizeMask) == hashValue && entry->Key == *key)
-            return index;
-        index = (std::uint64_t)entry->NextInChain;
-        if (index == 0xffffffffffffffffull)
+        if ((std::uint64_t)(entry->Key->HashFlags & table->SizeMask) == index && entry->Key == *key)
+            return at;
+        at = (std::uint64_t)entry->NextInChain;
+        if (at == 0xffffffffffffffffull)
             break;
-        entry = &table->Entries[index];
+        entry = &table->Entries[at];
     }
     return 0xffffffffffffffffull;
 }
