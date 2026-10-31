@@ -18,6 +18,7 @@
 #include "ms2/scaleform/kernel/sf_log.h"
 #include "ms2/scaleform/kernel/sf_random.h"
 #include "ms2/scaleform/include/kernel/sf_threads.h"
+#include "ms2/scaleform/include/kernel/sf_timer.h"
 #include "ms2/scaleform/include/gfx/gfx_rendertree.h"
 #include "ms2/scaleform/include/gfx/amp/amp_profileframe.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
@@ -106,7 +107,8 @@ extern ExeDecl<void*> DAT_14318f030;
 extern ExeDecl<void*> DAT_1431921c0;
 #define AS3MovieImageExtraVtable ((void*)&DAT_1431921c0)
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
-extern "C" void FUN_14257dcb0(void*);
+inline void FUN_14257dcb0(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->Release(); }
+inline void FUN_14257dc30(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->AddRef(); }
 extern "C" void* FUN_142689640(void*, bool);
 int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
 int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
@@ -1827,7 +1829,6 @@ void GFx::AMP::ServerState::Read(File& str, UInt32 version)
 
 
 static void ResizeRawArray(void**, void*, std::size_t, std::size_t);
-void FUN_14257dc30(void*);
 // @0x14268aff0
 void GFx::AMP::MovieInstructionStats::Merge(const MovieInstructionStats& other)
 {
@@ -2303,9 +2304,7 @@ static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested,
 
 }
 
-void FUN_14257dcb0(void* object);
-void FUN_14257dc30(void* object);
-unsigned long long FUN_1425e3480();
+inline unsigned long long FUN_1425e3480() { return Scaleform::Timer::GetProfileTicks(); }
 int FUN_1428d8ed8(void*, bool);
 
 namespace Scaleform {
