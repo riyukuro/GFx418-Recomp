@@ -300,6 +300,8 @@ public:
     ASString CreateString(const char* pstr, UPInt length) { return ASString(CreateStringNode(pstr, length)); }
     // (appended, sfb) the SDK single-argument form (VM::GetInternedNamespace 0x14250ab50).
     ASString CreateString(const char* pstr) { return ASString(CreateStringNode(pstr)); }
+    // (appended, sfh) the SDK String form (CharacterHandle::ChangeName 0x1425f0f70).
+    ASString CreateString(const String& str) { return ASString(CreateStringNode(str.ToCStr(), str.GetSize())); }
 
     ASStringNode* GetEmptyStringNode() { return &EmptyStringNode; }
     ASStringNode* GetNullStringNode()  { return &NullStringNode; }

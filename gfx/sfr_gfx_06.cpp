@@ -49,18 +49,22 @@ static inline ASStringManager* GetRootStringManager(ASMovieRootBase* proot)
 
 // @0x1425f0690
 CharacterHandle::CharacterHandle(const ASString& name, DisplayObject* pparent, DisplayObject* pcharacter)
-    : RefCount(1), pCharacter(pcharacter), Name(name), NamePath(name.GetManager()->GetEmptyStringNode()),
-      OriginalName(name)
+    : Name(name), NamePath(name.GetManager()->CreateEmptyString()), OriginalName(name)
 {
-    // AS2 names resolve by path.
+    RefCount   = 1;
+    pCharacter = pcharacter;
+
+    // AS2 names resolve by path, built from the parent's.
     if (pcharacter && pcharacter->GetAVMVersion() == 1)
     {
-        String path;
+        String namePathBuff;
         if (pparent)
-            pparent->GetAbsolutePath(&path);
-        path += ".";
-        path += Name.ToCStr();
-        NamePath = name.GetManager()->CreateString(path.ToCStr(), path.GetSize());
+        {
+            pparent->GetAbsolutePath(&namePathBuff);
+            namePathBuff += ".";
+        }
+        namePathBuff += Name.ToCStr();
+        NamePath = name.GetManager()->CreateString(namePathBuff);
     }
 }
 
@@ -146,11 +150,15 @@ void CharacterHandle::ChangeName(const ASString& name, DisplayObject* pparent)
     Name = name;
     if (pparent && pparent->GetAVMVersion() == 1)
     {
-        String path;
-        pparent->GetAbsolutePath(&path);
-        path += ".";
-        path += Name.ToCStr();
-        NamePath = name.GetManager()->CreateString(path.ToCStr(), path.GetSize());
+        // The path is built from the parent's.
+        String namePathBuff;
+        if (pparent)
+        {
+            pparent->GetAbsolutePath(&namePathBuff);
+            namePathBuff += ".";
+        }
+        namePathBuff += Name.ToCStr();
+        NamePath = name.GetManager()->CreateString(namePathBuff);
     }
 }
 
@@ -931,12 +939,12 @@ void DisplayObject::SetAcceptAnimMoves(bool accept)
         Flags &= ~Mask_AcceptAnimMoves;
 
     // The movie's continueAnimation flag, cached here.
-    if (GetMovieImpl()->Flags & MovieImpl::Flag_ContinueAnimation)
+    if (G_IsFlagSet<MovieImpl::Flag_ContinueAnimation>(GetMovieImpl()->Flags))
         Flags |= Mask_ContinueAnimation;
     else
         Flags &= ~Mask_ContinueAnimation;
 
-    if ((GetMovieImpl()->Flags & MovieImpl::Flag_ContinueAnimation) && accept)
+    if (G_IsFlagSet<MovieImpl::Flag_ContinueAnimation>(GetMovieImpl()->Flags) && accept)
     {
         // The timeline owns the transform again: the AS properties are read back from the matrix.
         delete pGeomData;
