@@ -154,14 +154,24 @@ namespace Instances { namespace fl_display
     }
 }} // namespace Instances::fl_display
 
+namespace Instances { namespace fl_gfx
+{
+    // The exe inlines the instance ctor into MakeObject; same copy as sfr_as2_01's.
+    __forceinline FocusEventEx::FocusEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : FocusEvent(t)
+        , controllerIdx(0)
+    {
+    }
+}} // namespace Instances::fl_gfx
+
 namespace InstanceTraits { namespace fl_gfx
 {
-    // MS2-FUNCTIONAL: the exe inlines the instance ctor (whole-program optimisation); here it is a call
     // @0x1424c96a0
     void FocusEventEx::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) InstanceType(t));
+        result.Pick(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
     }
 }} // namespace InstanceTraits::fl_gfx
 
 }}} // namespace Scaleform::GFx::AS3
+// MS2-PIN: ??_7FocusEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431752e8
