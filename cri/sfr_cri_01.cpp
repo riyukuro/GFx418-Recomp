@@ -2166,7 +2166,7 @@ void FUN_140029ed0(void* object)
 
 // MS2-FUNCTIONAL: perform the callback teardown and free the object when scalar-delete is requested.
 // @0x140029fa0
-void* FUN_140029fa0(void* object, CriUint64 flags)
+__declspec(noinline) void* FUN_140029fa0(void* object, unsigned flags)
 {
     FUN_140029ed0(object);
     if (flags & 1)
@@ -2670,7 +2670,7 @@ void* FUN_140029260(cri01_cbhost* self, void* a, void* b, void* c)
 // @0x140029ec0
 void* FUN_140029ec0(char* self, CriUint64 flags)
 {
-    return FUN_140029fa0(self - 0x10, flags);
+    return FUN_140029fa0(self - 0x10, (unsigned)flags);
 }
 
 struct cri01_sizer { virtual void v0() = 0; virtual void v1() = 0; virtual void v2() = 0; virtual void v3() = 0;
