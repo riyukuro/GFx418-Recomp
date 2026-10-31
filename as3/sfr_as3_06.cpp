@@ -23,6 +23,7 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 #include "ms2/scaleform/include/render/render_gradients.h"
 #include "ms2/scaleform/include/render/render_twips.h"
 #include "ms2/scaleform/include/render/render_filters.h"
+#include "ms2/scaleform/include/gfx/gfx_button.h"
 #undef GetObject   // windows.h
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1349,9 +1350,6 @@ SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
 
 }}} // namespace Scaleform::GFx::AS3
 
-// Collector op of the marking pass that drops a reference (0x1423df980).
-void FUN_1423df980(Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc,
-                   const Scaleform::GFx::AS3::ASRefCountBaseType** pchild);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1466,7 +1464,7 @@ namespace Instances { namespace fl_display
                         (const ASRefCountBaseType**)&ToAvmDisplayObj(pscr)->pAS3CollectiblePtr;
                     if (pchild &&
                         ((prcc->Flags & Collector::Flags_InCollect) ||
-                         (op != &Collector::KillChildCall && op != &FUN_1423df980)) &&
+                         (op != &Collector::KillChildCall && op != &Collector::ReleaseChildCall)) &&
                         *pchild)
                         AS3::CallGcOp(op, prcc, pchild, *this);
                 }
@@ -1680,7 +1678,12 @@ namespace Instances { namespace fl_display
 // ---- Stage objects of the display classes ----
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
-void FUN_1424edca0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
+// (Folds into sfr_as3_17's Sfr33SetValueDropObject.)
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* self, void* value); }}}
+static inline void FUN_1424edca0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst)
+{
+    ::Scaleform::GFx::AS3::Sfr33SetValueDropObject((Scaleform::UByte*)pavm, pinst);
+}
 // The movie whose library an AS3 object's class came from.
 Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
 // VM::IsOfType(v, class name).
@@ -1689,11 +1692,15 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
                                                    const Scaleform::GFx::ResourceId* prid);
 // MovieImpl::FindExportedResource.
-bool FUN_14256ec50(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::ResourceBindData* pdata,
-                   const Scaleform::String& symbol);
-// AS3::MovieRoot::FindLibrarySymbolInAllABCs, AddScriptableMovieClip.
-bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx::AS3::Instances::fl::Object* pobj,
-                   Scaleform::GFx::CharacterCreateInfo* pinfo);
+static inline bool FUN_14256ec50(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::ResourceBindData * p2, Scaleform::String const & p3) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->FindExportedResource(p1, p2, p3)); }
+// AS3::MovieRoot::FindLibrarySymbolInAllABCs (sfr_as3_17 view), AddScriptableMovieClip.
+namespace Scaleform { namespace GFx { namespace AS3 {
+struct Sfr33MovieRootFind
+{
+    bool FindLibrarySymbolInAllABCs(const void* name, void* pccinfo);
+};
+}}} // namespace Scaleform::GFx::AS3
+static inline bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase * p0, Scaleform::GFx::AS3::Instances::fl::Object const * p1, Scaleform::GFx::CharacterCreateInfo * p2) { return (bool)(((Scaleform::GFx::AS3::Sfr33MovieRootFind*)(p0))->FindLibrarySymbolInAllABCs((void const *)(p1), (void *)(p2))); }
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 // AvmLoader constructor (returns this).
 Scaleform::GFx::DisplayObject* FUN_1424d6500(void* pmem, Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::MovieDefImpl* pdef,
@@ -1701,24 +1708,22 @@ Scaleform::GFx::DisplayObject* FUN_1424d6500(void* pmem, Scaleform::GFx::ASMovie
 // AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
 void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
-// Bitmap's pixel snapping mode of its AS3 name.
-Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 // AvmButton: set the up / over / down / hit test state character.
 void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 // AvmButton set-up after its creation from AS3.
-void FUN_1425ddd20(Scaleform::GFx::DisplayObject* pbtn);
+static inline void FUN_1425ddd20(Scaleform::GFx::DisplayObject * p0) { ((Scaleform::GFx::Button*)(p0))->CreateCharacters(); }
 // MovieImpl::GetDrawableImageContext (made on first use).
-void* FUN_14256f220(Scaleform::GFx::MovieImpl* pmovie);
+static inline void * FUN_14256f220(Scaleform::GFx::MovieImpl * p0) { return (void *)(((Scaleform::GFx::MovieImpl*)(p0))->GetDrawableImageContext()); }
 // Render::DrawableImage constructors (format, size, transparent, fill color) and (transparent, delegate image),
 // with the by-address size and color spelled out.
 Scaleform::Render::ImageBase* FUN_1425e9810(void* pmem, Scaleform::UInt32 format, const Scaleform::UInt32* psize, bool transparent,
                                            const Scaleform::UInt32* pfillColor, void* pcontext);
 Scaleform::Render::ImageBase* FUN_1425e9a00(void* pmem, bool transparent, Scaleform::Render::ImageBase* pdelegate, void* pcontext);
 // AvmSprite: the AS3 constructor of a sprite created from script.
-void FUN_1424f3320(Scaleform::GFx::AS3::AvmDisplayObj* pavm);
+static inline void FUN_1424f3320(Scaleform::GFx::AS3::AvmDisplayObj * p0) { ((Scaleform::GFx::AS3::AvmSprite*)(p0))->CreateChildren(); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1810,7 +1815,7 @@ namespace Instances { namespace fl_display
             ASString mode = vm.GetStringManager().CreateEmptyString();
             if (!argv[1].Convert2String(mode))
                 return;
-            PixelSnapping = FUN_142446f30(this, mode.ToCStr());
+            PixelSnapping = String2PixelSnapping(mode.ToCStr());
             if (argc > 2)
                 Smoothing = argv[2].Convert2Boolean();
         }
