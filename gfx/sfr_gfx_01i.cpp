@@ -412,7 +412,7 @@ bool Movie::InvokeArgs(const char* ppathToMethod, Value* presult, const char* pa
 // @0x142573e70
 void Movie::Release()
 {
-    if (AtomicOps<int>::ExchangeAdd_NoSync(&RefCount, -1) == 1)
+    if ((AtomicOps<int>::ExchangeAdd_NoSync(&RefCount, -1) - 1) == 0)
     {
         Ptr<MemoryContext> memContext = AsRootSlots(pASMovieRoot)->GetMemoryContext();
         delete this;
