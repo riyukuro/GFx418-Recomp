@@ -1029,30 +1029,20 @@ GlyphNode* GlyphCache::RasterizeGlyph(GlyphRunData& data, TextMeshProvider* tm, 
 // coverage saved in KnockOutCopy.
 inline void GlyphCache::knockOut(UByte* raster)
 {
-    const UByte* glyph = &KnockOutCopy[0];
+    const UInt8* src = &KnockOutCopy[0];
+          UInt8* dst = raster;
+
     for (UPInt i = 0; i < KnockOutCopy.GetSize(); ++i)
     {
-        unsigned outside = 255 - *glyph++;
-        *raster = UByte((*raster * outside + 255) >> 8);
-        ++raster;
-    }
-}
-inline void GlyphCache::knockOut(ArrayLH_POD<UByte, SID>& image)
-{
-    const UByte* glyph  = &KnockOutCopy[0];
-    UByte*       raster = &image[0];
-    for (UPInt i = 0; i < KnockOutCopy.GetSize(); ++i)
-    {
-        unsigned outside = 255 - *glyph++;
-        *raster = UByte((*raster * outside + 255) >> 8);
-        ++raster;
+        unsigned s = 255 - *src++;
+        unsigned d = *dst;
+        *dst++ = UInt8((s * d + 255) >> 8);
     }
 }
 
 // A shadow / glow: from the font's own raster when it has one, otherwise the outline is rasterized with the blur
 // radius as extra padding, softened by a gamma, blurred, strengthened and optionally knocked out. Shadows taller
 // than the quality-scaled slot are drawn smaller and stretched back by the node's scale.
-// MS2-FUNCTIONAL: knock-out loop loads the raster pointer before KnockOutCopy's (exe the other way round)
 // @0x1426c6d80
 GlyphNode* GlyphCache::RasterizeShadow(GlyphRunData& data, TextMeshProvider* tm, const GlyphParam& gp,
                                        float screenSize, const GlyphRaster* ras)
@@ -1230,7 +1220,7 @@ GlyphNode* GlyphCache::createShadowFromRaster(GlyphRunData& data, TextMeshProvid
         strengthenImage(&RasterDataSrc[0], srcW, 0, 0, srcW, srcH,
                         gp.GetBlurStrength(), (gp.GetBlurStrength() <= 1.0f) ? 0 : bias);
         if (gp.IsKnockOut())
-            knockOut(RasterDataSrc);
+            knockOut(&RasterDataSrc[0]);
     }
 
     if (srcH == hh && srcW == w)

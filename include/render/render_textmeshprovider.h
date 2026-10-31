@@ -57,7 +57,7 @@ struct VectorGlyphKey
     VectorGlyphKey(FontCacheHandle* font, unsigned glyphIndex, unsigned hintedVector, unsigned hintedRaster,
                    unsigned flags, unsigned outline)
         : pFont(font), GlyphIndex((UInt16)glyphIndex), HintedVector((UInt8)hintedVector),
-          HintedRaster((UInt8)hintedRaster), Flags((UInt16)(flags & (Font::FF_Bold | Font::FF_Italic))),
+          HintedRaster((UInt8)hintedRaster), Flags((UInt16)flags & (Font::FF_Bold | Font::FF_Italic)),
           Outline((UInt16)outline)
     {
     }

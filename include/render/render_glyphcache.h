@@ -313,7 +313,6 @@ private:
                                unsigned w, unsigned h, float ratio, int bias);                       // 0x1426cb510
     void       filterScanline(UByte* sl, unsigned w) const;                                          // 0x1426ca120
     void       knockOut(UByte* raster);
-    void       knockOut(ArrayLH_POD<UByte, SID>& image);
     void       cacheFullWarning();                                                                   // 0x1426c8d00
     void       rasterTooBigWarning();                                                                // 0x1426cb180
     bool       checkInitialization();                                                                // 0x1426c8d30
