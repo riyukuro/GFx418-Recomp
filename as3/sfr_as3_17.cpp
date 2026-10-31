@@ -26,6 +26,7 @@
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
+#include "ms2/scaleform/include/kernel/sf_simd.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/kernel/sf_autoptr.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
@@ -76,29 +77,36 @@ Value::TraceNullType TR::State::CanBeNull(const InstanceTraits::Traits& traits) 
     return static_cast<const Tracer*>(pTracer)->CanBeNull(traits);
 }
 
-// MS2-FUNCTIONAL 0x1424ed8f0: copy and ownership semantics match; the helper-based release/addref changes the call graph.
 // @0x1424ed8f0
 SF_NOINLINE void Value::Assign(const Value& other)
 {
-    if (this != &other)
+    if (&other != this)
     {
         Release();
-        Flags = other.Flags;
-        Bonus = other.Bonus;
-        value = other.value;
-        other.AddRef();
+        SIMD::PrefetchObj(&other);
+        memcpy(this, &other, sizeof(Value));
+        AddRef();
     }
 }
 
-// MS2-FUNCTIONAL: delegates tag selection and retain to the unsafe overload after releasing the previous value.
 // @0x1424ed9d0
 void Value::Assign(const ASString& v)
 {
     Release();
-    AssignUnsafe(v);
+    if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
+    {
+        value = (ASStringNode*)NULL;
+        // null has type Object.
+        SetKind(kObject);
+    }
+    else
+    {
+        SetKind(kString);
+        value = v.GetNode();
+        AddRefString();
+    }
 }
 
-// MS2-FUNCTIONAL: delegates null-string handling and retain to the node overload after releasing the old value.
 // @0x1424edab0
 void Value::Assign(ASStringNode* v)
 {
@@ -106,79 +114,89 @@ void Value::Assign(ASStringNode* v)
     AssignUnsafe(v);
 }
 
-// MS2-FUNCTIONAL: preserves class ownership; Release/SetKind/AddRef schedule the tag cleanup and retain separately.
 // @0x1424edb80
 void Value::Assign(Class* v)
 {
     Release();
     SetKind(kClass);
-    value.VS._1.VClass = v;
+    value = v;
     if (v)
         v->AddRef();
 }
 
-// MS2-FUNCTIONAL: uses the Value helpers for kind cleanup and reference increments.
 // @0x1424edc10
 void Value::Assign(Object* v)
 {
     Release();
     SetKind(kObject);
-    value.VS._1.VObj = v;
+    value = v;
     if (v)
         v->AddRef();
 }
 
-// MS2-FUNCTIONAL 0x1424edce0: unsafe copy retains the same tagged references; assignment order changes the call graph.
 // @0x1424edce0
 void Value::AssignUnsafe(const Value& other)
 {
-    if (this != &other)
+    if (&other != this)
     {
-        Flags = other.Flags;
-        Bonus = other.Bonus;
-        value = other.value;
-        other.AddRef();
+        SIMD::PrefetchObj(&other);
+        memcpy(this, &other, sizeof(Value));
+        AddRef();
     }
 }
 
-// MS2-FUNCTIONAL: delegates string-tag and retain behavior to the node overload.
 // @0x1424edd50
 void Value::AssignUnsafe(const ASString& v)
 {
-    AssignUnsafe(v.GetNode());
+    if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
+    {
+        value = (ASStringNode*)NULL;
+        // null has type Object.
+        SetKind(kObject);
+    }
+    else
+    {
+        SetKind(kString);
+        value = v.GetNode();
+        AddRefString();
+    }
 }
 
-// MS2-FUNCTIONAL: uses SetKind and ASStringNode::AddRef for the exe's explicit flag/refcount sequence.
 // @0x1424eddb0
 void Value::AssignUnsafe(ASStringNode* v)
 {
-    if (!v || v == v->GetManager()->GetNullStringNode())
+    value = v;
+    if (v)
     {
-        SetKind(kObject);
-        value.VS._1.VObj = 0;
-        return;
+        if (v == v->GetManager()->GetNullStringNode())
+        {
+            SetKind(kObject);
+            value = static_cast<Object*>(NULL);
+        }
+        else
+        {
+            SetKind(kString);
+            AddRefString();
+        }
     }
-    SetKind(kString);
-    value.VS._1.VStr = v;
-    v->AddRef();
+    else
+        SetKind(kObject);
 }
 
-// MS2-FUNCTIONAL: uses SetKind and Class::AddRef for the exe's inline flag/refcount updates.
 // @0x1424ede20
 void Value::AssignUnsafe(Class* v)
 {
     SetKind(kClass);
-    value.VS._1.VClass = v;
+    value = v;
     if (v)
         v->AddRef();
 }
 
-// MS2-FUNCTIONAL: uses SetKind and Object::AddRef for the exe's inline flag/refcount updates.
 // @0x1424ede50
 void Value::AssignUnsafe(Object* v)
 {
     SetKind(kObject);
-    value.VS._1.VObj = v;
+    value = v;
     if (v)
         v->AddRef();
 }
@@ -205,46 +223,67 @@ bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
     return false;
 }
 
-// MS2-FUNCTIONAL 0x1424f0be0: implements the exe's falsey cases for nullish, primitive, empty-string, and empty-object
-// values; the numeric predicates use direct IEEE-754 bits instead of the exe's two helper calls.
 // @0x1424f0be0
 bool Value::Convert2Boolean() const
 {
-    switch (GetKind())
+    bool result = false;
+
+    switch(GetKind())
     {
     case kUndefined:
-    case kNamespace:
-        return false;
+        result = false;
+        break;
     case kBoolean:
-        return AsBool();
+        result = value;
+        break;
     case kInt:
-        return AsInt() != 0;
+        result = value.VS._1.VInt != 0;
+        break;
     case kUInt:
-        return AsUInt() != 0;
+        result = value.VS._1.VUInt != 0;
+        break;
     case kNumber:
-    {
-        union NumberBits { Number number; UInt64 bits; } n;
-        n.number = value.VNumber;
-        const UInt64 magnitude = n.bits & 0x7fffffffffffffffULL;
-        const bool nan = (magnitude & 0x7ff0000000000000ULL) == 0x7ff0000000000000ULL &&
-                         (magnitude & 0x000fffffffffffffULL) != 0;
-        return magnitude != 0 && !nan;
-    }
-    case kThunk:
-    case kVTableInd:
-    case kThunkClosure:
-    case kVTableIndClosure:
-        return true;
+        if (IsNaN() || IsPOSITIVE_ZERO() || IsNEGATIVE_ZERO())
+            result = false;
+        else
+            result = true;
+        break;
     case kString:
-        return value.VS._1.VStr && value.VS._1.VStr->Size != 0;
+        if (value.VS._1.VStr)
+            // Not null.
+            result = value.VS._1.VStr->Size != 0;
+        else
+            // null.
+            result = false;
+        break;
+    case kNamespace:
+        result = false;
+        break;
+    case kFunction:
     case kObject:
     case kClass:
-    case kFunction:
     case kThunkFunction:
-        return GetObject() != 0;
+        if (IsNull())
+            result = false;
+        else
+            result = true;
+        break;
+    case kThunkClosure:
+    case kVTableIndClosure:
+        // The same logic as for kFunction. False in case of null.
+        // Because closure is never null, we should return true.
+        // In case of ThunkClosure we always have a thunk.
+        result = true;
+        break;
+    case kThunk:
+    case kVTableInd:
+        result = true;
+        break;
     default:
-        return false;
+        break;
     }
+
+    return result;
 }
 
 // ---- the AVM parts of the display objects (as3_avm.h) and the movie root's action queues ----
@@ -3510,21 +3549,17 @@ void Traits::ConstructTail(Object& obj) const
     }
 }
 
-// MS2-FUNCTIONAL 0x142507210: the exe inlines the PushBack of each SPtr copy; same results
 // @0x142507210
 UPInt VM::GetAllLoadedAbcFiles(Scaleform::Array<SPtr<VMAbcFile> >* destArray) const
 {
-    if (InDestructor)
-        return 0;
-    const UPInt size = VMAbcFilesWeak.GetSize();
-    if (size == 0)
-        return 0;
     UPInt i = 0;
-    do
+    if (!InDestructor)
     {
-        destArray->PushBack(SPtr<VMAbcFile>(VMAbcFilesWeak[i]));
-        ++i;
-    } while (i < size);
+        for (UPInt n = VMAbcFilesWeak.GetSize(); i < n; ++i)
+        {
+            destArray->PushBack(VMAbcFilesWeak[i]);
+        }
+    }
     return i;
 }
 
