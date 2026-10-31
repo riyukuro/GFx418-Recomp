@@ -2650,7 +2650,17 @@ void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p)
     p->ModifyOptimizedPlayList();
 }
 
-// MS2-FUNCTIONAL instruction scheduling of the Value init against the AS3 object load
+// ActionEntry::SetAction(DisplayObject*, const Value&) of the SDK (inline there).
+static SF_INLINE void Sfr34SetFunctionAction(MovieRoot::ActionEntry* pe, DisplayObject* pcharacter, const Value& v)
+{
+    pe->Type = MovieRoot::ActionEntry::Entry_Function;
+    pe->pCharacter = pcharacter;
+    pe->Function = v;
+    pe->CFunction = NULL;
+    pe->pAS3Obj = NULL;
+    pe->pNLoadInitCL = NULL;
+}
+
 // @0x1425200b0
 void AvmSprite::QueueFrameScript(unsigned frame)
 {
@@ -2659,15 +2669,8 @@ void AvmSprite::QueueFrameScript(unsigned frame)
     {
         if (static_cast<Instances::fl_display::Sprite*>(GetAS3Obj())->GetFrameScript(frame, &v))
         {
-            DisplayObject* pdispObj = pDispObj;
-            MovieRoot::ActionEntry* pe =
-                static_cast<MovieRoot*>(pdispObj->GetASMovieRoot())->InsertEmptyAction(MovieRoot::AL_Frame);
-            pe->Type = MovieRoot::ActionEntry::Entry_Function;
-            pe->pCharacter = pdispObj;
-            pe->Function = v;
-            pe->CFunction = NULL;
-            pe->pAS3Obj = NULL;
-            pe->pNLoadInitCL = NULL;
+            Sfr34SetFunctionAction(static_cast<MovieRoot*>(pDispObj->GetASMovieRoot())->InsertEmptyAction(MovieRoot::AL_Frame),
+                                   pDispObj, v);
             SF_UNUSED(as3obj);
         }
     }
