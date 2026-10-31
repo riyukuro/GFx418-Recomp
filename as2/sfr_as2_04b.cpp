@@ -91,6 +91,9 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/render_font.h"
 #include "../include/gfx/as2/as2_intervaltimer.h"
 
+void FUN_14257dcb0(void* p);  // global in the exe
+void FUN_14257dcd0(void* p);  // global in the exe
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The prototype destructors stay out of line.
@@ -102,8 +105,6 @@ template<> SF_NOINLINE Prototype<ColorMatrixFilterObject, Environment>::~Prototy
 template<> SF_NOINLINE Prototype<DropShadowFilterObject, Environment>::~Prototype();  // 0x142924f50
 template<> SF_NOINLINE Prototype<GlowFilterObject, Environment>::~Prototype();  // 0x142924fc0
 
-void FUN_14257dcb0(void* pthis);
-void FUN_14257dcd0(void* pthis);
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_1432155c0[];

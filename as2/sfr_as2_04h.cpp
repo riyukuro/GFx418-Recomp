@@ -25,6 +25,8 @@
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/kernel/sf_arraypaged.h"
 
+void FUN_14257dcd0(void* p);  // global in the exe
+
 void FUN_1424a9ed0(void*);   // global, defined in sfr_as3_12
 void FUN_14000b080(void** table);  // global, defined in sfr_video_01
 
@@ -57,7 +59,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 void FUN_1425925f0(void*);
 void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
-void FUN_14257dcd0(void*);
 void FUN_140001f40(void*);
 void FUN_142581700(void*);
 

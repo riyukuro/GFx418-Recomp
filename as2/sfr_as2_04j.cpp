@@ -29,6 +29,9 @@
 #include "../include/gfx/as2/as2_loadqueueentry.h"
 #include "../include/gfx/gfx_assupport.h"
 
+void FUN_14257dc30(void* p);  // RefCountImpl::AddRef (a global FUN_ in the exe)
+void FUN_14257dcb0(void* p);  // RefCountImpl::Release (a global FUN_ in the exe)
+
 extern "C" void __cdecl __report_rangecheckfailure(void);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -41,8 +44,6 @@ extern const void* DAT_143217798[]; // CSS file task
 extern const void* DAT_1432177b0[]; // GFxAS2LoadQueueEntryMT_LoadCSS
 
 void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie); // LoadQueueEntryMT::LoadQueueEntryMT
-void FUN_14257dc30(void* p);                                               // RefCountImpl::AddRef
-void FUN_14257dcb0(void* p);                                               // RefCountImpl::Release
 
 typedef GFxAS2LoadQueueEntry::HolderType HolderType;
 

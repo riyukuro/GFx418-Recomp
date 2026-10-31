@@ -12,10 +12,10 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_sprite.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
+void FUN_1425f4090(void* p);  // global in the exe
+void FUN_14257dcd0(void* p);  // global in the exe
 
-void FUN_1425f4090(void* pobj);
-void FUN_14257dcd0(void* p);
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Runs the action tags of one frame as their own action session (gotoAndPlay's callFrame).
 // MS2-FUNCTIONAL: the frame count and the session counter are reached by slot and by address
