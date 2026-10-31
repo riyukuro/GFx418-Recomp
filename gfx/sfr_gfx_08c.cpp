@@ -83,7 +83,7 @@ UPInt ImageFileKeyInterface::GetHashCode(KeyHandle hdata) const
 // @0x1426be810
 bool ImageFileKeyInterface::KeyEquals(KeyHandle hdata, const ResourceKey& other)
 {
-    if (other.GetKeyInterface() != this)
+    if (this != other.GetKeyInterface())
         return false;
     return *(ImageFileInfoKeyData*)hdata == *(ImageFileInfoKeyData*)other.GetKeyData();
 }

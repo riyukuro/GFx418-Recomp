@@ -67,7 +67,7 @@ UPInt SoundFileKeyInterface::GetHashCode(KeyHandle hdata) const
 // @0x1426d1d70
 bool SoundFileKeyInterface::KeyEquals(KeyHandle hdata, const ResourceKey& other)
 {
-    if (other.GetKeyInterface() != this)
+    if (this != other.GetKeyInterface())
         return false;
     return *(SoundFileInfoKeyData*)hdata == *(SoundFileInfoKeyData*)other.GetKeyData();
 }
