@@ -1069,16 +1069,14 @@ void ShapeMeshProvider::createDrawLayers(const TmpPathsArray& paths, UPInt i1, U
 
 // Bounds of fills and strokes under m (strokes as round joined); a morph covers both of its ends.
 // @0x14262aac0
-// MS2-FUNCTIONAL: the exe inlines the two morph-end bound computations (fill loop included); ours calls them
 RectF ShapeMeshProvider::GetBounds(const Matrix2F& m) const
 {
     if (pMorphData)
     {
         RectF b1 = ComputeBoundsFillAndStrokesSimplified(pMorphData->ShapeData1, m);
         RectF b2 = ComputeBoundsFillAndStrokesSimplified(pMorphData->ShapeData2, m);
-        RectF bounds(RectF::NoInit);
-        b1.UnionRect(&bounds, b2);
-        return bounds;
+        b1.Union(b2);
+        return b1;
     }
     return ComputeBoundsFillAndStrokesSimplified(*pShapeData, m);
 }
