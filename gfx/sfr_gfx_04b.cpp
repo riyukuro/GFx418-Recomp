@@ -201,29 +201,39 @@ void SF_STDCALL GFx_MetadataLoader(LoadProcess* p, const TagInfo& tagInfo)
     }
 }
 
-// The MovieDefImpl key (pDataDef +0x10, pBindStates +0x18) hashes pDataDef and the eight state pointers of its
-// bind states (+0x10..+0x50 except +0x28), each as p ^ (p >> 7) (the exe folds the shifts into one).
+// GFxMovieDefImplKey::GetHashCode with MovieDefBindStates::GetHashCode inlined (SDK GFx_MovieDef.cpp); the MS2
+// bind states hold eight state pointers (+0x10..+0x50 except +0x28).
 // @0x1425c8fe0
 UPInt FUN_1425c8fe0(const void*, const void* object)
 {
-    const unsigned long long* words = reinterpret_cast<const unsigned long long*>(object);
-    const unsigned long long dataDef = words[2];
-    const unsigned long long* bind = reinterpret_cast<const unsigned long long*>(words[3]);
-    const unsigned long long states = bind[2] ^ bind[3] ^ bind[4] ^ bind[6] ^ bind[7] ^ bind[8] ^ bind[9] ^ bind[10];
-    return static_cast<UPInt>(dataDef ^ ((dataDef ^ states) >> 7) ^ states);
+    struct BindStatesView { UPInt Pad[2]; UPInt pStates[3]; UPInt Pad28; UPInt pStates2[5]; };
+    struct KeyView { UPInt Pad[2]; UPInt pDataDef; const BindStatesView* pBindStates; };
+    const KeyView* key = reinterpret_cast<const KeyView*>(object);
+    const BindStatesView* b = key->pBindStates;
+    UPInt bindHash =
+        b->pStates[0] ^ (b->pStates[0] >> 7) ^
+        b->pStates[1] ^ (b->pStates[1] >> 7) ^
+        b->pStates[2] ^ (b->pStates[2] >> 7) ^
+        b->pStates2[0] ^ (b->pStates2[0] >> 7) ^
+        b->pStates2[1] ^ (b->pStates2[1] >> 7) ^
+        b->pStates2[2] ^ (b->pStates2[2] >> 7) ^
+        b->pStates2[3] ^ (b->pStates2[3] >> 7) ^
+        b->pStates2[4] ^ (b->pStates2[4] >> 7);
+    return key->pDataDef ^ (key->pDataDef >> 7) ^ bindHash;
 }
 
-// The second key combines a String header hash with three cached key words.
+// GFxMovieDataDefFileKeyData::GetHashCode (SDK GFx_MovieDef.cpp), with a third state pointer.
 // @0x1425c9190
 UPInt FUN_1425c9190(const void*, const void* object)
 {
-    const unsigned long long* words = reinterpret_cast<const unsigned long long*>(object);
-    const unsigned long long* stringHeader = reinterpret_cast<const unsigned long long*>(words[2] & ~3ull);
-    const UPInt stringHash = String::BernsteinHashFunction(
-        reinterpret_cast<const char*>(stringHeader) + 0x0c,
-        static_cast<UPInt>(stringHeader[0] & 0x7fffffffffffffffull), 0x1505);
-    const unsigned long long cached = words[3] ^ words[5] ^ words[6];
-    return static_cast<UPInt>((cached >> 7) ^ words[4] ^ cached ^ stringHash);
+    struct KeyView { UPInt Pad[2]; String FileName; UPInt p1; SInt64 ModifyTime; UPInt p2; UPInt p3; };
+    const KeyView* key = reinterpret_cast<const KeyView*>(object);
+    UPInt fileHashCode = String::BernsteinHashFunction(key->FileName.ToCStr(), key->FileName.GetSize());
+    return fileHashCode ^
+        ((UPInt)key->ModifyTime) ^
+        key->p1 ^ (key->p1 >> 7) ^
+        key->p2 ^ (key->p2 >> 7) ^
+        key->p3 ^ (key->p3 >> 7);
 }
 
 // MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
