@@ -234,6 +234,9 @@ public:
 
     // (appended, sfr24) the class traits of the slot's declared type (resolved through vm). 0x1425085b0
     const ClassTraits::Traits* GetDataType(VM& vm) const;
+    // (appended, sfb) the name of the slot's declared type (the class traits' name, else the ABC type multiname's).
+    // 0x142508720
+    ASString GetDataTypeName(VM& vm) const;
     // (appended, sfr24) stores v into this slot of _this (setters run; vt: the vtable of a super call). 0x142529030
     CheckResult SetSlotValue(VM& vm, const Value& v, const Value& _this, const VTable* vt = NULL) const;
 };

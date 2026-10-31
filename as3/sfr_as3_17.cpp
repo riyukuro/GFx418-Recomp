@@ -4960,10 +4960,11 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm)
 // SlotInfo::GetDataTypeName: the name of the slot's declared type: that of the resolved class traits, else the
 // ABC type multiname's name (Object's name for a runtime one), else the name of the bind type's class.
 // MS2-FUNCTIONAL 0x142508720: a void-typed slot takes the void traits' name (the exe dereferences NULL there).
+// A member (this in rcx, the result slot in rdx), as the exe's callers pass it.
 // @0x142508720
-ASString Sfr33SlotDataTypeName(const SlotInfo* psi, VM& vm)
+ASString SlotInfo::GetDataTypeName(VM& vm) const
 {
-    const UByte* si = reinterpret_cast<const UByte*>(psi);
+    const UByte* si = reinterpret_cast<const UByte*>(this);
     const UByte* pvm = reinterpret_cast<const UByte*>(&vm);
     ASString name = vm.GetStringManager().CreateEmptyString();
     const ClassTraits::Traits* ct = *reinterpret_cast<ClassTraits::Traits* const*>(si + 0x10);
