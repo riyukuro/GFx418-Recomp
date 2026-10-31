@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
+// MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
@@ -73,6 +74,12 @@ typedef struct CriMvFramePlaneSource
     CriUint32 Reserved1;
     CriMvFramePlaneSourcePlane Planes[3];
 } CriMvFramePlaneSource;
+typedef struct CriMovieInputChunk
+{
+    const CriUint8* Data;
+    CriUint32 Size;
+    CriUint32 Reserved;
+} CriMovieInputChunk;
 typedef struct CriMvSubtitleFields
 {
     CriUint8 Reserved[0xe28];
@@ -97,6 +104,8 @@ void FUN_140044fa8(void* demux, void* value);
 void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
 void FUN_140044fd8(void* demux, CriUint8 value);
 void FUN_140046798(void* streamJoint);
+void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded);
+void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
 CriBool FUN_1400314d0(void* player);
 void FUN_140031570(void* player);
 void FUN_140033810(void* player);
@@ -128,6 +137,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
 #pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
 #pragma comment(linker, "/alternatename:?criMvPly_GetSubtitle@@YAXPEAX0K0@Z=criMvPly_GetSubtitle")
@@ -255,6 +265,50 @@ CriBool FUN_140031990(void* player)
     FUN_140044f9c(demux);
     FUN_1400458b8(demux);
     return 1;
+}
+
+// expose the next decoded file-read record when the movie state permits a read
+// @0x140034d40
+void FUN_140034d40(void* player, CriMovieInputChunk* output)
+{
+    CriMovieInputChunk* record;
+    CriSint32 status;
+    void* source;
+    output->Data = 0;
+    output->Size = 0;
+    if (((CriMvPlyDemuxFields*)player)->ReadMode == 1)
+        return;
+    if (*(CriSint32*)((CriUint8*)player + 0x0c) == 1)   // the open-phase read lock
+        return;
+    status = getInternalStatus(player);
+    switch (status)
+    {
+    case 0:
+    case 2:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+    case 10:
+        return;
+    }
+    source = FUN_140037050(player, 0, 0);
+    if (!source)
+        return;
+    if (isLockedInputChunk(player) == 1)
+        return;
+    record = (CriMovieInputChunk*)((CriUint8*)player + 0xd90);
+    FUN_1400467a0(source, 0, -1, record);
+    if (record->Size == 0)
+    {
+        output->Data = 0;
+        output->Size = 0;
+    }
+    else
+    {
+        output->Data = record->Data;
+        output->Size = record->Size;
+    }
 }
 
 // copy the decoded frame metadata and add the alpha frame metadata when available

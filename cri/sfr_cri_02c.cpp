@@ -10,7 +10,8 @@
 // MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
-// MS2-RANGE: 0x140031aa0-0x1400356a0 .text$mn
+// MS2-RANGE: 0x140031aa0-0x140034d40 .text$mn
+// MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
 // MS2-RANGE: 0x1400359e0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140039ea8 .text$mn
@@ -153,6 +154,7 @@ CriBool  FUN_1400318f0(void* player);
 CriBool  FUN_140032040(void* player);
 CriBool  FUN_140031990(void* player);
 CriUint32 FUN_1400358d0(void* output, const void* info);
+void     FUN_140034d40(void* player, CriMovieInputChunk* output);
 CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
@@ -3757,29 +3759,6 @@ CriBool FUN_140031ae0(void* player)
         return 0;
     }
     return 1;
-}
-
-// MS2-FUNCTIONAL: expose the next decoded file-read record when the movie state permits a read.
-// @0x140034d40
-void FUN_140034d40(void* player, CriMovieInputChunk* output)
-{
-    struct PlayerStateC { CriUint8 Reserved[0x0c]; CriSint32 Value; };
-    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
-    struct ReadRecordView { CriUint8 Reserved[0xd90]; CriMovieInputChunk Record; };
-    struct ReadSizeView { CriUint8 Reserved[0xd98]; CriSint32 Size; };
-    memset(output, 0, sizeof(*output));
-    CriSint32 status = getInternalStatus(player);
-    if (((ReadModeView*)player)->Mode == 1 || ((PlayerStateC*)player)->Value == 1 ||
-        status == 0 || status == 2 || (status >= 6 && status <= 10))
-        return;
-    CriSint32 lockState = isLockedInputChunk(player);
-    void* source = FUN_140037050(player, NULL, NULL);
-    if (!source || lockState == 1)
-        return;
-    ReadRecordView* current = (ReadRecordView*)player;
-    FUN_1400467a0(source, 0, -1, &current->Record);
-    if (((ReadSizeView*)player)->Size != 0)
-        *output = current->Record;
 }
 
 // refresh the player's pending byte counts from the selected input stream.
