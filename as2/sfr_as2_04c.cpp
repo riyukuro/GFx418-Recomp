@@ -88,16 +88,19 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/text_core.h"
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
+#include "../include/gfx/gfx_textsnapshot.h"
+
+void FUN_1424aa0f0(void* pthis);  // Render::Text::TextFormat destructor (global, as in sfr_as3_13/16z)
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_1424aa050(void* pthis);
-void FUN_1424aa0f0(void* pthis);
+// The NumberObject prototype destructor stays out of line (0x142925030).
+template<> SF_NOINLINE Prototype<NumberObject, Environment>::~Prototype();
+
 void FUN_142606690(void* pthis);
 void FUN_142609070(void* pthis);
 void FUN_1429248c0(void* pthis);
 void FUN_142924ab0(void* pthis);
-void FUN_142925030(void* pthis);
 void FUN_1429250a0(void* pthis);
 void FUN_142925750(void* pthis);
 void FUN_142925cf0(void* pthis);
@@ -419,7 +422,7 @@ void* DeleteAs2_14292c530(void* p, unsigned flags)
 // @0x14292c620
 void* DeleteAs2_14292c620(void* p, unsigned flags)
 {
-    FUN_142925030(p);
+    static_cast<Prototype<NumberObject, Environment>*>(p)->Prototype<NumberObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -835,7 +838,7 @@ void* DeleteAs2_14292d5b0(void* p, unsigned flags)
 void* DeleteAs2_14292d620(void* p, unsigned flags)
 {
     FUN_142606690((void*)((char*)p+0xb0));
-    FUN_1424aa0f0((void*)((char*)p+0x68));
+    ::FUN_1424aa0f0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
     {
@@ -855,7 +858,7 @@ void* DeleteAs2_14292d6a0(void* p, unsigned flags)
     *(const void**)((char*)p+0xd0) = DAT_14321d868;
     FUN_142925750((void*)((char*)p+0xd0));
     FUN_142606690((void*)((char*)p+0xb0));
-    FUN_1424aa0f0((void*)((char*)p+0x68));
+    ::FUN_1424aa0f0((void*)((char*)p+0x68));
     FUN_142925cf0(p);
     if (flags & 1)
     {
@@ -888,7 +891,7 @@ void* DeleteAs2_14292d7b0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_14321e2c8;
     *(const void**)((char*)p+0x20) = DAT_14321e310;
-    FUN_1424aa050((void*)((char*)p+0x68));
+    static_cast<StaticTextSnapshotData*>((void*)((char*)p+0x68))->~StaticTextSnapshotData();
     FUN_142925cf0(p);
     if (flags & 1)
     {
@@ -909,7 +912,7 @@ void* DeleteAs2_14292d830(void* p, unsigned flags)
     FUN_142925750((void*)((char*)p+0x90));
     *(const void**)p = DAT_14321e2c8;
     *(const void**)((char*)p+0x20) = DAT_14321e310;
-    FUN_1424aa050((void*)((char*)p+0x68));
+    static_cast<StaticTextSnapshotData*>((void*)((char*)p+0x68))->~StaticTextSnapshotData();
     FUN_142925cf0(p);
     if (flags & 1)
     {
