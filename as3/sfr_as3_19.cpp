@@ -360,18 +360,20 @@ CheckResult Value::ToNumberValueInline()
     return CheckResult(true);
 }
 
-// MS2-FUNCTIONAL 0x14252f670: only the two stack slots differ (exe 0x38/0x40, ours 0x40/0x48); same code as the exe.
 // ToInt32 in place: Convert2Int32 (objects through their hintNone primitive) then SetSInt32, as in the exe.
 // @0x14252f670
 CheckResult Value::ToInt32Value()
 {
+    bool ok;
     SInt32 result;
     if (Convert2Int32(result))
     {
         SetSInt32(result);
-        return true;
+        ok = true;
     }
-    return false;
+    else
+        ok = false;
+    return ok;
 }
 
 // ToUInt32 in place: Convert2UInt32 then SetUInt32, as in the exe.
@@ -1222,7 +1224,7 @@ void Sfr27ExecCallMethod(VM* vm, UInt32 methodIndex, UInt32 argc)
 static inline UPInt VmRd(VM* vm, UPInt off) { return *reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(vm) + off); }
 
 // Push a copy of v on the VM's operand stack (VM +0x50 is the top-of-stack pointer).
-static inline Value* ExecPushCopy(VM* vm, const Value& v)
+static __forceinline Value* ExecPushCopy(VM* vm, const Value& v)
 {
     Value*& cur = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
     ++cur;
@@ -1234,7 +1236,7 @@ static inline Value* ExecPushCopy(VM* vm, const Value& v)
 void Sfr27ExecGetScopeObject(VM* vm, void* frame, UInt32 index)
 {
     UPInt* scopes = *reinterpret_cast<UPInt**>(reinterpret_cast<UPInt>(frame) + 0x38);
-    if (scopes == NULL || scopes[1] <= index)
+    if (scopes == NULL || static_cast<UPInt>(index) >= scopes[1])
     {
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x7d6), *vm));
         return;
@@ -1247,39 +1249,44 @@ void Sfr27ExecGetScopeObject(VM* vm, void* frame, UInt32 index)
 void Sfr27ExecGetScopeStack(VM* vm, void* frame, UInt32 index)
 {
     const UPInt pos = static_cast<UPInt>(index) + *reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(frame) + 8);
-    if (VmRd(vm, 0x168) <= pos)
+    if (pos >= VmRd(vm, 0x168))
     {
         vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x7d6), *vm));
         return;
     }
-    Value* pushed = ExecPushCopy(vm, reinterpret_cast<Value*>(VmRd(vm, 0x160))[pos]);
-    *reinterpret_cast<UInt32*>(pushed) &= 0xfffffeff;
+    ExecPushCopy(vm, reinterpret_cast<Value*>(VmRd(vm, 0x160))[pos]);
+    *reinterpret_cast<UInt32*>(VmRd(vm, 0x50)) &= 0xfffffeff;
 }
 
 
-// The innermost call frame of the VM (the paged call stack: VM +0x78 frames, 64 per page of 0xa8-byte frames), or 0.
-static inline UPInt ExecTopFrame(VM* vm)
+// SDK VM::GetGlobalObject: the innermost call frame's (VM +0x78 frames, 64 per page of 0xa8-byte frames) first
+// scope object, else its this when that is an object.
+static __forceinline Object* ExecGlobalObject(VM* vm)
 {
     const UPInt count = VmRd(vm, 0x78);
     if (count == 0)
-        return 0;
-    const UPInt i = count - 1;
-    return (i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8);
-}
-
-// The object the frame runs in: the first scope object, else the frame's this when that is an object.
-static inline Object* ExecFrameObject(VM* vm)
-{
-    const UPInt frame = ExecTopFrame(vm);
-    if (frame == 0)
         return NULL;
+    const UPInt i = count - 1;
+    const UPInt frame = (i & 0x3f) * 0xa8 + *reinterpret_cast<const UPInt*>(VmRd(vm, 0x90) + (i >> 6) * 8);
     const UPInt* scopes = *reinterpret_cast<const UPInt* const*>(frame + 0x38);
     if (scopes != NULL && scopes[1] != 0)
         return *reinterpret_cast<Object* const*>(scopes[0] + 0x10);
     const Value* self = *reinterpret_cast<Value* const*>(*reinterpret_cast<const UPInt*>(frame + 0x18) + 8);
-    if (static_cast<UInt32>(self->GetKind()) - 0xc < 4)
-        return reinterpret_cast<Object*>(self->GetGASRefCountBase());
-    return NULL;
+    return static_cast<UInt32>(self->GetKind()) - 0xc <= 3 ? reinterpret_cast<Object*>(self->GetGASRefCountBase()) : NULL;
+}
+
+// SDK Slots::GetSlotInfo, inline: a parent's slot through the parent, an own slot from VArray.
+static __forceinline const SlotInfo& ExecSlotInfo(const Slots& s, AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
+static __forceinline const SlotInfo& ExecGlobalSlotOf(Object* obj, UInt32 slot)
+{
+    Traits& tr = obj->GetTraits();
+    return ExecSlotInfo(tr, AbsoluteIndex(static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(tr.FirstOwnSlotInd.Get())));
 }
 
 static inline const SlotInfo& ExecSlotOf(Object* obj, SPInt slot, bool relativeToOwn)
@@ -1292,14 +1299,15 @@ static inline const SlotInfo& ExecSlotOf(Object* obj, SPInt slot, bool relativeT
 }
 
 // getglobalslot: pushes undefined, then loads the global object's slot into it.
-// MS2-FUNCTIONAL 0x142539490: same push of undefined and slot read; the exe inlines the Value copy (AddRef) and the global-object lookup where ours calls out-of-line helpers (callee count 5 vs 3).
+// MS2-FUNCTIONAL 0x142539490: same code and callees; cl keeps the NULL global object in a different register (2 bytes longer).
 // @0x142539490
 void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
 {
-    Value* top = ExecPushCopy(vm, Value::GetUndefined());
-    Object* obj = ExecFrameObject(vm);
-    CheckResult ok(false);
-    FUN_14250e770(&ExecSlotOf(obj, slot, true), &ok, top, obj);
+    ExecPushCopy(vm, Value::GetUndefined());
+    Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
+    Object* obj = ExecGlobalObject(vm);
+    char result;    // the getter's CheckResult return slot, not read
+    FUN_14250e770(&ExecGlobalSlotOf(obj, slot), &result, top, obj);
 }
 
 // getslot: the object on top of the stack is replaced by the value of its slot.
@@ -1318,14 +1326,17 @@ void Sfr27ExecGetSlot(VM* vm, SPInt slot)
 }
 
 // setglobalslot: the value on top of the stack is stored into the global object's slot and popped.
-// MS2-FUNCTIONAL 0x14253fc90: same slot write into the global object; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
+// MS2-FUNCTIONAL 0x14253fc90: same code and callees; register allocation differs (slot copied early, rsi vs rbp).
 // @0x14253fc90
 void Sfr27ExecSetGlobalSlot(VM* vm, UInt32 slot)
 {
-    Object* obj = ExecFrameObject(vm);
-    Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
-    CheckResult ok(false);
-    Sfr27SlotSetValueObj(&ExecSlotOf(obj, slot, true), reinterpret_cast<char*>(&ok), vm, top, obj);
+    Object* obj = ExecGlobalObject(vm);
+    char result;    // the setter's CheckResult return slot, not read
+    Traits& tr = obj->GetTraits();
+    const AbsoluteIndex ind(static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(tr.FirstOwnSlotInd.Get()));
+    VM& ovm = obj->GetVM();
+    const SlotInfo& si = ExecSlotInfo(tr, ind);
+    Sfr27SlotSetValueObj(&si, &result, &ovm, reinterpret_cast<Value*>(VmRd(vm, 0x50)), obj);
     Value*& cur = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
     cur->~Value();
     --cur;
@@ -2636,7 +2647,6 @@ void Sfr31ExecPop(VM* vm)
         FUN_1424efe30(vm, top, top);
 }
 
-// MS2-FUNCTIONAL 0x14253f9e0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14253f9e0
 void Sfr31ExecPushUndefined(VM* vm)
 {
@@ -2921,33 +2931,78 @@ void Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg)
     r.base = static_cast<int>(arg);
 }
 
+}}}
+void FUN_1424162b0(const Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::GFx::AS3::Value& name,
+                   Scaleform::GFx::AS3::GlobalSlotIndex ind);   // Namespace::GetNextPropertyName (sfr_as3_04)
+void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::GFx::AS3::Value& value,
+                   Scaleform::GFx::AS3::GlobalSlotIndex ind);   // Namespace::GetNextPropertyValue (sfr_as3_04)
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // batch 19
 // nextname/nextvalue share the shape: the index on top is consumed, the object below becomes the name/value.
+// SDK ToType<SInt32> (AS3_CodeExecute.h): converts in place, a failed conversion yields a static dummy.
+static __forceinline SInt32& Sfr31ToTypeSInt32(Value& v, bool& success)
+{
+    static SInt32 tmp;
+    if (success)
+    {
+        SInt32 result;
+        if (v.Convert2Int32(result))
+        {
+            v.SetSInt32(result);
+            success = true;
+        }
+        else
+            success = false;
+    }
+    return success ? *reinterpret_cast<SInt32*>(reinterpret_cast<UPInt>(&v) + 0x10) : tmp;
+}
+
+// nextname/nextvalue (SDK exec_nextname: SH2<1, Value, SInt32>): the index on top is consumed, the object below
+// becomes the name/value; a Namespace is not an Object and is asked directly.
+// SDK SH2<1, Value, SInt32>: _2 converted in place from the top, _1 the value below it, the top popped.
+struct Sfr31SH2ValueSInt32
+{
+    __forceinline Sfr31SH2ValueSInt32(Value*& top)
+    : Success(true)
+    , _2(Sfr31ToTypeSInt32(top[0], Success))
+    , _1(top[-1])
+    {
+        top->~Value();
+        --top;
+    }
+    bool Success;
+    SInt32 _2;
+    Value& _1;
+    bool IsOK() const { return Success; }
+};
+
 static __forceinline void Sfr31ExecNextCommon(VM* vm, bool wantValue)
 {
-    Value*& top = *reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50);
-    UInt64 tmp;
-    long idx;
-    const bool ok = *FUN_1424f0d30(top, &tmp, &idx) != 0;
-    if (ok)
-        top->SetSInt32(idx);
-    top->~Value();
-    --top;
-    if (ok)
+    Sfr31SH2ValueSInt32 stack(*reinterpret_cast<Value**>(reinterpret_cast<UPInt>(vm) + 0x50));
+    if (stack.IsOK())
     {
-        Object* obj = *reinterpret_cast<Object**>(reinterpret_cast<UPInt>(top) + 0x10);
-        if (wantValue)
-            obj->GetNextPropertyValue(*top, GlobalSlotIndex(static_cast<UInt32>(idx)));
+        if (stack._1.IsNamespace())
+        {
+            if (wantValue)
+                ::FUN_142416600(stack._1.GetNamespace(), stack._1, GlobalSlotIndex(static_cast<UInt32>(stack._2)));
+            else
+                ::FUN_1424162b0(stack._1.GetNamespace(), stack._1, GlobalSlotIndex(static_cast<UInt32>(stack._2)));
+        }
         else
-            obj->GetNextPropertyName(*top, GlobalSlotIndex(static_cast<UInt32>(idx)));
+        {
+            Object* obj = *reinterpret_cast<Object**>(reinterpret_cast<UPInt>(&stack._1) + 0x10);
+            if (wantValue)
+                obj->GetNextPropertyValue(stack._1, GlobalSlotIndex(static_cast<UInt32>(stack._2)));
+            else
+                obj->GetNextPropertyName(stack._1, GlobalSlotIndex(static_cast<UInt32>(stack._2)));
+        }
     }
 }
 
-// MS2-FUNCTIONAL 0x14253d2f0: object released through Value::~Value and the namespace case dispatched virtually
 // @0x14253d2f0
 void Sfr27ExecNextName(VM* vm) { Sfr31ExecNextCommon(vm, false); }
 
-// MS2-FUNCTIONAL 0x14253d440: functional recovery; codegen differs from exe
 // @0x14253d440
 void Sfr27ExecNextValue(VM* vm) { Sfr31ExecNextCommon(vm, true); }
 
