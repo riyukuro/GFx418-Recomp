@@ -12,7 +12,6 @@
 // MS2-FUNCTIONAL 0x142624f80: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426251d0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
 // MS2-FUNCTIONAL 0x1426255e0: same rehash (new table of -2 entries, re-add of every live entry with its hash, old entry dtor + free); the exe and ours inline different helpers (RawNewTable / RawHashAdd / clear), so frames differ
-// MS2-FUNCTIONAL 0x142624190: same HashSetBase::Set (one FixedSizeHash, findIndexCore, assign or add); the exe keeps the self and value pointers in rbx/rdi and tail-jumps the found assign (12-14 bytes longer)
 // MS2-FUNCTIONAL 0x142624300: same HashSetBase::Set (one FixedSizeHash, findIndexCore, assign or add); the exe keeps the self and value pointers in rbx/rdi and tail-jumps the found assign (12-14 bytes longer)
 
 #define MS2_RAW_INLINE __forceinline
@@ -161,8 +160,8 @@ struct AmpStringNode
 // @0x142624190
 void FUN_142624190(U** self, const U* key, void* const* value)
 {
+    UPInt hashValue = FixedSizeHash<U>()(*key);
     NodeRef ref = { key, value };
-    UPInt hashValue = FixedSizeHash<U>()(*ref.Key);
     SPInt index = (SPInt)-1;
 
     if (*self != NULL)
@@ -170,7 +169,8 @@ void FUN_142624190(U** self, const U* key, void* const* value)
 
     if (index >= 0)
     {
-        RawField<AmpPtrNode>(RawEntry(*self, (U)index, 0x20), 0x10) = ref;
+        NodeRef src = { key, value };
+        RawField<AmpPtrNode>(RawEntry(*self, (U)index, 0x20), 0x10) = src;
     }
     else
     {

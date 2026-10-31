@@ -478,9 +478,36 @@ __declspec(noinline) void FUN_14261f820(U* self) { RawClearPtrSet(self); }
 // @0x14261f8b0
 __declspec(noinline) void FUN_14261f8b0(U* self) { RawClearPtrSet(self); }
 
-// MS2-FUNCTIONAL 0x14261f940: same string-set clear; base and index operand order differs (3 bytes)
+// The SDK HashSetBase::Clear over a cached entry of HashNode<8-byte key, String>; the exe's [table + offset]
+// operand order comes from this shape (the flat RawClearStringSet gives [offset + table]).
+struct Unk_StringNode24 { U First; String Second; };
+struct Unk_StringEntry24
+{
+    SPInt NextInChain;
+    U HashValue;
+    Unk_StringNode24 Value;
+    bool IsEmpty() const { return NextInChain == -2; }
+    void Free() { Value.~Unk_StringNode24(); NextInChain = -2; }
+};
+struct Unk_StringTable24 { U EntryCount; U SizeMask; };
+
 // @0x14261f940
-__declspec(noinline) void FUN_14261f940(U* self) { RawClearStringSet(self, 0x18); }
+__declspec(noinline) void FUN_14261f940(U* self)
+{
+    Unk_StringTable24*& pTable = *(Unk_StringTable24**)self;
+    if (pTable)
+    {
+        U i, n = pTable->SizeMask;
+        for (i = 0; i <= n; i++)
+        {
+            Unk_StringEntry24* e = &((Unk_StringEntry24*)(pTable + 1))[i];
+            if (!e->IsEmpty())
+                e->Free();
+        }
+        Memory::Free(pTable);
+        pTable = 0;
+    }
+}
 
 // @0x14261f9e0
 __declspec(noinline) void FUN_14261f9e0(U* self) { RawClearStringSet(self, 0x10); }
