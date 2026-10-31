@@ -288,6 +288,8 @@ namespace Instances { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// Value::operator=(Namespace*) out of line (sfr_as3_01c).
+Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self, Scaleform::GFx::AS3::Instances::Namespace* ns);
 // VM::GetValueTraits: the traits of a value (0x14250ffc0).
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
@@ -1590,13 +1592,13 @@ namespace Instances { namespace fl
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines InstanceTraits::fl::XMLList::MakeInstance and the XMLList constructor
     // @0x1423f7120
     __declspec(noinline) void XML::AS3attributes(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = xmlListTraits(GetVM());
-        result = newXMLList(itr);
-        GetAttributes(*result);
+        Pickable<XMLList> list = newXMLList(itr);
+        result = list;
+        GetAttributes(*list);
     }
 
     // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
@@ -1675,13 +1677,13 @@ namespace Instances { namespace fl
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines InstanceTraits::fl::XMLList::MakeInstance and the XMLList constructor
     // @0x1423f7a10
     __declspec(noinline) void XML::AS3children(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = xmlListTraits(GetVM());
-        result = newXMLList(itr);
-        GetChildren(*result, kNone);
+        Pickable<XMLList> list = newXMLList(itr);
+        result = list;
+        GetChildren(*list, kNone);
     }
 
     // The children of every item (GetProperty with the any-name, inlined).
@@ -2138,24 +2140,23 @@ namespace Instances { namespace fl
     }
 
     // The node's namespace, or the in-scope namespace bound to the prefix argv[0] (undefined when there is none).
-    // MS2-FUNCTIONAL: the exe calls Value::operator=(Namespace*) out of line (0x1423f1b90); this build inlines it
+    // The exe calls Value::operator=(Namespace*) out of line (0x1423f1b90).
     // @0x1423fc960
     __declspec(noinline) void XML::AS3namespace_(Value& result, unsigned argc, const Value* argv)
     {
         if (argc == 0)
+            FUN_1423f1b90(&result, &GetCurrNamespace());
+        else
         {
-            result = &GetCurrNamespace();
-            return;
-        }
-
-        ASString prefix = GetVM().GetStringManager().CreateEmptyString();
-        if (argv[0].Convert2String(prefix))
-        {
-            Instances::Namespace* ns = FindNamespaceByPrefix(prefix, NULL);
-            if (ns)
-                result = ns;
-            else
-                result.SetUndefined();
+            ASString prefix = GetVM().GetStringManager().CreateEmptyString();
+            if (argv[0].Convert2String(prefix))
+            {
+                Instances::Namespace* ns = FindNamespaceByPrefix(prefix, NULL);
+                if (ns)
+                    FUN_1423f1b90(&result, ns);
+                else
+                    result.SetUndefined();
+            }
         }
     }
 
