@@ -1549,7 +1549,7 @@ namespace Instances { namespace fl_display
         }
     }
 
-    void MovieClip::FrameScript::Clear()
+    MovieClip::FrameScript::~FrameScript()
     {
         ClearFrameScript(this);
     }

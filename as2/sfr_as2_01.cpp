@@ -3578,25 +3578,100 @@ void DisplayObjectBase::SetVisible(bool visible)
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_7LocalInvokeCallback@?6??BroadcastMessage@AsBroadcasterProto@AS2@GFx@Scaleform@@SAXAEBVFnCall@345@@Z@6B@ 0x143221850
 // MS2-PIN: ??_7LoadVarsStringVisitor@AS2@GFx@Scaleform@@6B@ 0x1432223c8
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
+    __forceinline InteractiveObject::InteractiveObject(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObject(t)
+    {
+    }
+    __forceinline DisplayObjectContainer::DisplayObjectContainer(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::InteractiveObject(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline Sprite::Sprite(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObjectContainer(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline MovieClip::MovieClip(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::Sprite(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline Loader::Loader(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObjectContainer(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline SimpleButton::SimpleButton(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::InteractiveObject(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline Stage::Stage(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObjectContainer(t, Instances::fl::InlineCtor())
+    {
+    }
+    __forceinline AVM1Movie::AVM1Movie(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObject(t)
+    {
+    }
+    __forceinline Bitmap::Bitmap(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObject(t)
+        , PixelSnapping(0)
+        , Smoothing(true)
+    {
+    }
+    __forceinline BitmapData::BitmapData(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , Width(0)
+        , Height(0)
+        , Transparent(true)
+        , Unk59(false)
+    {
+    }
+    __forceinline FrameLabel::FrameLabel(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , FrameNumber(0xffffffff)
+        , FrameName(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+    __forceinline Graphics::Graphics(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , pDispObj(NULL)
+    {
+    }
+    __forceinline LoaderInfo::LoaderInfo(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+        BytesLoaded = 0;
+        BytesTotal = 0;
+    }
+    __forceinline MorphShape::MorphShape(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObject(t)
+    {
+    }
+    __forceinline Scene::Scene(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , SceneInfo(NULL)
+    {
+    }
+    __forceinline Shape::Shape(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::DisplayObject(t)
+    {
+    }
+}}}}}
 // ---- fl_display instance makers: a new instance of the traits' class ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_display {
 // @0x142444c40
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<AVM1Movie::InstanceType> AVM1Movie::MakeInstance(AVM1Movie& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444cb0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Bitmap::InstanceType> Bitmap::MakeInstance(Bitmap& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444d30
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<BitmapData::InstanceType> BitmapData::MakeInstance(BitmapData& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444db0
 // MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
@@ -3605,98 +3680,112 @@ Pickable<DisplayObject::InstanceType> DisplayObject::MakeInstance(DisplayObject&
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 // @0x142444e00
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<DisplayObjectContainer::InstanceType> DisplayObjectContainer::MakeInstance(DisplayObjectContainer& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444e80
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<FrameLabel::InstanceType> FrameLabel::MakeInstance(FrameLabel& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444f10
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Graphics::InstanceType> Graphics::MakeInstance(Graphics& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444f90
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<InteractiveObject::InstanceType> InteractiveObject::MakeInstance(InteractiveObject& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445010
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Loader::InstanceType> Loader::MakeInstance(Loader& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445090
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<LoaderInfo::InstanceType> LoaderInfo::MakeInstance(LoaderInfo& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445110
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<MorphShape::InstanceType> MorphShape::MakeInstance(MorphShape& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445180
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<MovieClip::InstanceType> MovieClip::MakeInstance(MovieClip& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445200
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Scene::InstanceType> Scene::MakeInstance(Scene& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445280
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Shape::InstanceType> Shape::MakeInstance(Shape& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445300
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<SimpleButton::InstanceType> SimpleButton::MakeInstance(SimpleButton& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445380
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Sprite::InstanceType> Sprite::MakeInstance(Sprite& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142445400
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Stage::InstanceType> Stage::MakeInstance(Stage& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 }}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_display
 
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_text {
+    __forceinline CSMSettings::CSMSettings(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t), fontSize(0), insideCutoff(0), outsideCutoff(0)
+    {
+    }
+    __forceinline Font::Font(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , fontName(t.GetVM().GetStringManager().CreateEmptyString())
+        , fontStyle(t.GetVM().GetStringManager().CreateEmptyString())
+        , fontType(t.GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+    __forceinline StyleSheet::StyleSheet(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_events::EventDispatcher(t)
+    {
+    }
+    __forceinline TextField::TextField(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl_display::InteractiveObject(t)
+    {
+    }
+    __forceinline TextLineMetrics::TextLineMetrics(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t), ascent(0), descent(0), height(0), leading(0), width(0), x(0)
+    {
+    }
+    __forceinline TextSnapshot::TextSnapshot(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+    {
+    }
+}}}}}
 // ---- fl_text instance makers ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_text {
 // @0x1424ad0b0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<CSMSettings::InstanceType> CSMSettings::MakeInstance(CSMSettings& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad130
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<Font::InstanceType> Font::MakeInstance(Font& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad200
 // MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
@@ -3705,16 +3794,14 @@ Pickable<StaticText::InstanceType> StaticText::MakeInstance(StaticText& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 // @0x1424ad270
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<StyleSheet::InstanceType> StyleSheet::MakeInstance(StyleSheet& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad300
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<TextField::InstanceType> TextField::MakeInstance(TextField& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad370
 // MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
@@ -3723,68 +3810,106 @@ Pickable<TextFormat::InstanceType> TextFormat::MakeInstance(TextFormat& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 // @0x1424ad3c0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<TextLineMetrics::InstanceType> TextLineMetrics::MakeInstance(TextLineMetrics& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad450
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<TextSnapshot::InstanceType> TextSnapshot::MakeInstance(TextSnapshot& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 }}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_text
 
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_gfx {
+    __forceinline GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Event(t)
+    {
+    }
+    __forceinline IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Object(t)
+        , textColor(-1), selectedTextColor(-1), fontSize(-1), backgroundColor(-1), selectedBackgroundColor(-1)
+        , indexBackgroundColor(-1), selectedIndexBackgroundColor(-1), readingWindowTextColor(-1)
+        , readingWindowBackgroundColor(-1), readingWindowFontSize(-1)
+    {
+    }
+    __forceinline IMEEventEx::IMEEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Event(t)
+        , message(GetVM().GetStringManager().CreateEmptyString())
+    {
+    }
+    __forceinline KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : KeyboardEvent(t)
+        , controllerIdx(0)
+    {
+    }
+    __forceinline MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Event(t)
+        , cursor(GetVM().GetStringManager().CreateEmptyString())
+    {
+        Bubbles = false;
+        Cancelable = true;
+        mouseIdx = 0;
+    }
+    __forceinline MouseEventEx::MouseEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : MouseEvent(t)
+        , mouseIdx(0), buttonIdx(0), nestingIdx(0)
+    {
+    }
+    __forceinline TextEventEx::TextEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : TextEvent(t)
+        , controllerIdx(0), buttonIdx(0)
+    {
+    }
+}}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_gfx {
+    __forceinline FocusEventEx::FocusEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : FocusEvent(t)
+        , controllerIdx(0)
+    {
+    }
+}}}}}
 // ---- fl_gfx instance makers ----
 namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl_gfx {
 // @0x1424c9270
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<FocusEventEx::InstanceType> FocusEventEx::MakeInstance(FocusEventEx& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c92f0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<GamePadAnalogEvent::InstanceType> GamePadAnalogEvent::MakeInstance(GamePadAnalogEvent& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c9360
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<IMECandidateListStyle::InstanceType> IMECandidateListStyle::MakeInstance(IMECandidateListStyle& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c9400
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<IMEEventEx::InstanceType> IMEEventEx::MakeInstance(IMEEventEx& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c9490
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<KeyboardEventEx::InstanceType> KeyboardEventEx::MakeInstance(KeyboardEventEx& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c9510
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<MouseCursorEvent::InstanceType> MouseCursorEvent::MakeInstance(MouseCursorEvent& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c95b0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<MouseEventEx::InstanceType> MouseEventEx::MakeInstance(MouseEventEx& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424c9630
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<TextEventEx::InstanceType> TextEventEx::MakeInstance(TextEventEx& t)
 {
-    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 }}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl_gfx
 
@@ -4016,3 +4141,36 @@ ASString VM::AsString(const Value& v)
 // MS2-PIN: ?Resize@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAAX_K@Z 0x1423dfc30
 // MS2-PIN: ?PushBackSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAA_NAEBQEBV?$RefCountBaseGC@$0BED@@AS3@GFx@2@@Z 0x1423df8a0
 // MS2-PIN: ?allocatePageSafe@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@AEAA_N_K@Z 0x1423dfe30
+// vftables emitted by the InlineCtor copies of the AS3 instance ctors
+// MS2-PIN: ??_7StyleManagerBase@Text@Render@Scaleform@@6B@ 0x14316a718
+// MS2-PIN: ??_7AVM1Movie@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x143149e60
+// MS2-PIN: ??_7Bitmap@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a2b8
+// MS2-PIN: ??_7BitmapData@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a0a8
+// MS2-PIN: ??_7InteractiveObject@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a4b8
+// MS2-PIN: ??_7DisplayObjectContainer@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314b038
+// MS2-PIN: ??_7FrameLabel@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314bdf0
+// MS2-PIN: ??_7Graphics@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314c188
+// MS2-PIN: ??_7Loader@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314b268
+// MS2-PIN: ??_7LoaderInfo@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314b748
+// MS2-PIN: ??_7Sprite@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314cee0
+// MS2-PIN: ??_7MovieClip@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314d0f8
+// MS2-PIN: ??_7MorphShape@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314ccd0
+// MS2-PIN: ??_7Scene@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314d320
+// MS2-PIN: ??_7Shape@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314d6d0
+// MS2-PIN: ??_7SimpleButton@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314d8d0
+// MS2-PIN: ??_7Stage@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314b468
+// MS2-PIN: ??_7FocusEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431752e8
+// MS2-PIN: ??_7GamePadAnalogEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174fb0
+// MS2-PIN: ??_7IMECandidateListStyle@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175be8
+// MS2-PIN: ??_7IMEEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175830
+// MS2-PIN: ??_7KeyboardEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174c10
+// MS2-PIN: ??_7MouseCursorEvent@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x1431741e8
+// MS2-PIN: ??_7MouseEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143174908
+// MS2-PIN: ??_7TextEventEx@fl_gfx@Instances@AS3@GFx@Scaleform@@6B@ 0x143175508
+// MS2-PIN: ??_7StyleManager@Text@GFx@Scaleform@@6B@ 0x14316a738
+// MS2-PIN: ??_7CSMSettings@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x143169b00
+// MS2-PIN: ??_7Font@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x143169d18
+// MS2-PIN: ??_7StyleSheet@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316a758
+// MS2-PIN: ??_7TextField@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316afd8
+// MS2-PIN: ??_7TextLineMetrics@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316b1e0
+// MS2-PIN: ??_7TextSnapshot@fl_text@Instances@AS3@GFx@Scaleform@@6B@ 0x14316bc50

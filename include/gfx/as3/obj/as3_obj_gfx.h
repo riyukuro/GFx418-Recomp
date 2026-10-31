@@ -15,6 +15,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         FocusEventEx(InstanceTraits::Traits& t);                            // 0x1424c5430
+        FocusEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8d40
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::FocusEventEx"; }
         virtual AS3::Object* GetEventClass() const;                         // 0x1424c9090
@@ -28,6 +29,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         GamePadAnalogEvent(InstanceTraits::Traits& t);                      // 0x1424c6060
+        GamePadAnalogEvent(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8dc0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::GamePadAnalogEvent"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x1424c8a20
@@ -67,6 +69,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         IMECandidateListStyle(InstanceTraits::Traits& t);                   // 0x1424c61c0
+        IMECandidateListStyle(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8df0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::IMECandidateListStyle"; }
 
@@ -87,6 +90,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         IMEEventEx(InstanceTraits::Traits& t);                              // 0x1424c6420
+        IMEEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8e30
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::IMEEventEx"; }
 
@@ -98,6 +102,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         KeyboardEventEx(InstanceTraits::Traits& t);                         // 0x1424c67b0
+        KeyboardEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8ea0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::KeyboardEventEx"; }
         virtual AS3::Object* GetEventClass() const;                         // 0x1424c90b0
@@ -111,6 +116,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         MouseCursorEvent(InstanceTraits::Traits& t);                        // 0x1424c6950
+        MouseCursorEvent(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8ee0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::MouseCursorEvent"; }
 
@@ -123,6 +129,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         MouseEventEx(InstanceTraits::Traits& t);                            // 0x1424c6b20
+        MouseEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8f20
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::MouseEventEx"; }
         virtual AS3::Object* GetEventClass() const;                         // 0x1424c90c0
@@ -138,6 +145,7 @@ namespace Instances { namespace fl_gfx {
     {
     public:
         TextEventEx(InstanceTraits::Traits& t);                             // 0x1424c6e10
+        TextEventEx(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424c8f80
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_gfx::TextEventEx"; }
         virtual AS3::Object* GetEventClass() const;                         // 0x1424c90d0

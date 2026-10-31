@@ -195,6 +195,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         AVM1Movie(InstanceTraits::Traits& t);
+        AVM1Movie(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443400
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::AVM1Movie"; }
     };
@@ -204,6 +205,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Bitmap(InstanceTraits::Traits& t);
+        Bitmap(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443450
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Bitmap"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);
@@ -240,6 +242,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         BitmapData(InstanceTraits::Traits& t);
+        BitmapData(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         virtual ~BitmapData();
         // @0x142443480
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::BitmapData"; }
@@ -339,6 +342,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         InteractiveObject(InstanceTraits::Traits& t);
+        InteractiveObject(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         virtual ~InteractiveObject();
         // @0x142443600
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::InteractiveObject"; }
@@ -378,6 +382,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         DisplayObjectContainer(InstanceTraits::Traits& t);
+        DisplayObjectContainer(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443540
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::DisplayObjectContainer"; }
     protected:
@@ -435,6 +440,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         FrameLabel(InstanceTraits::Traits& t);
+        FrameLabel(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443570
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::FrameLabel"; }
         UInt32      FrameNumber;    // +0x38
@@ -451,6 +457,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Graphics(InstanceTraits::Traits& t);
+        Graphics(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424435c0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Graphics"; }
         Ptr<DrawingContext>     pDrawing;   // +0x38
@@ -493,6 +500,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Loader(InstanceTraits::Traits& t);
+        Loader(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443690
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Loader"; }
         virtual void InitInstance(bool extCall);         // 0x142444620
@@ -540,6 +548,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         LoaderInfo(InstanceTraits::Traits& t);
+        LoaderInfo(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424436d0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::LoaderInfo"; }
     protected:
@@ -619,6 +628,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Sprite(InstanceTraits::Traits& t);
+        Sprite(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         virtual ~Sprite();
         // @0x142443870
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Sprite"; }
@@ -685,9 +695,8 @@ namespace Instances { namespace fl_display {
             };
 
             FrameScript() : pData(0), DescrCnt(0), FrameCnt(0) {}
-            ~FrameScript() { Clear(); }
+            ~FrameScript();                                  // 0x14243d290
 
-            void Clear();
             const Descr* Get(unsigned frame);
             // Adds the descriptors (a later one wins for the same frame; an already set frame gets its method
             // replaced), keeping the descriptors sorted by frame (0x1424466b0).
@@ -703,6 +712,7 @@ namespace Instances { namespace fl_display {
         };
 
         MovieClip(InstanceTraits::Traits& t);
+        MovieClip(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443730
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::MovieClip"; }
         virtual bool HasFrameScript() const;                 // 0x1424445d0
@@ -772,6 +782,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         MorphShape(InstanceTraits::Traits& t);
+        MorphShape(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443700
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::MorphShape"; }
     };
@@ -791,6 +802,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Scene(InstanceTraits::Traits& t);
+        Scene(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424437a0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Scene"; }
         const MovieDataDef::SceneInfo*  SceneInfo;  // +0x38
@@ -812,6 +824,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Shape(InstanceTraits::Traits& t);
+        Shape(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by Shape::MakeInstance (sfr_as2_01)
         virtual ~Shape();
         // @0x1424437f0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Shape"; }
@@ -832,6 +845,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         SimpleButton(InstanceTraits::Traits& t);
+        SimpleButton(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x142443820
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::SimpleButton"; }
         virtual void AS3Constructor(unsigned argc, const Value* argv);
@@ -882,6 +896,7 @@ namespace Instances { namespace fl_display {
     {
     public:
         Stage(InstanceTraits::Traits& t);
+        Stage(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424438b0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_display::Stage"; }
 

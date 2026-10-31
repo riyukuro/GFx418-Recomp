@@ -75,6 +75,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         CSMSettings(InstanceTraits::Traits& t);
+        CSMSettings(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424ac470
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::CSMSettings"; }
 
@@ -88,6 +89,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         Font(InstanceTraits::Traits& t);
+        Font(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424ac4b0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::Font"; }
 
@@ -129,6 +131,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         StyleSheet(InstanceTraits::Traits& t);   // 0x1424a8e80
+        StyleSheet(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // (appended, sfr19) 0x1424ac570
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::StyleSheet"; }
 
@@ -155,6 +158,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextField(InstanceTraits::Traits& t);   // 0x1424a9290
+        TextField(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424ac5e0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextField"; }
         virtual void InitInstance(bool extCall = false);        // 0x1424acee0
@@ -453,6 +457,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextLineMetrics(InstanceTraits::Traits& t);
+        TextLineMetrics(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // @0x1424ac6a0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextLineMetrics"; }
 
@@ -472,6 +477,7 @@ namespace Instances { namespace fl_text {
     {
     public:
         TextSnapshot(InstanceTraits::Traits& t);   // 0x1424a9ea0
+        TextSnapshot(InstanceTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeInstance (sfr_as2_01)
         // (appended, sfr19) 0x1424ac6f0
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_text::TextSnapshot"; }
 
