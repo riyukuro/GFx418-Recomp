@@ -1741,7 +1741,7 @@ namespace Instances { namespace fl_events {
 // Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_08). The exe builds the event
 // classes in one TU, so the MakeObject/MakeInstance functions below inline them.
 namespace Instances { namespace fl_events {
-    inline Event::Event(InstanceTraits::Traits& t)
+    __forceinline Event::Event(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , Type(GetVM().GetStringManager().CreateEmptyString())
         , CurrentTarget(NULL)
@@ -1755,35 +1755,35 @@ namespace Instances { namespace fl_events {
         ImmPropagationStopped = false;
     }
 
-    inline EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
+    __forceinline EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , pVM(&t.GetVM())
         , pImpl()
     {
     }
 
-    inline ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
+    __forceinline ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
         : TextEvent(t)
     {
     }
 
-    inline IMEEvent::IMEEvent(InstanceTraits::Traits& t)
+    __forceinline IMEEvent::IMEEvent(InstanceTraits::Traits& t)
         : TextEvent(t)
     {
     }
 
-    inline AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
+    __forceinline AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
         : ErrorEvent(t)
     {
     }
 
-    inline IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
+    __forceinline IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
         : ErrorEvent(t)
         , ErrorText(GetVM().GetStringManager().GetBuiltin(AS3Builtin_empty_))
     {
     }
 
-    inline PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
+    __forceinline PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
         TapLocalX = TapLocalY = 0;
@@ -1791,12 +1791,12 @@ namespace Instances { namespace fl_events {
         TapLocalInitialized = Unk_a9 = false;
     }
 
-    inline TimerEvent::TimerEvent(InstanceTraits::Traits& t)
+    __forceinline TimerEvent::TimerEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
     }
 
-    inline TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
+    __forceinline TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
         ScaleX = ScaleY = 1.0;
@@ -1805,14 +1805,14 @@ namespace Instances { namespace fl_events {
         LocalOffsetInitialized = false;
     }
 
-    inline ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
+    __forceinline ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
         : Event(t)
         , BytesLoaded(0)
         , BytesTotal(0)
     {
     }
 
-    inline FocusEvent::FocusEvent(InstanceTraits::Traits& t)
+    __forceinline FocusEvent::FocusEvent(InstanceTraits::Traits& t)
         : Event(t)
         , ShiftKey(false)
         , KeyCode(0)
@@ -1820,13 +1820,13 @@ namespace Instances { namespace fl_events {
     {
     }
 
-    inline KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
+    __forceinline KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
         : Event(t)
         , KeyLocation(-1)
     {
     }
 
-    inline MouseEvent::MouseEvent(InstanceTraits::Traits& t)
+    __forceinline MouseEvent::MouseEvent(InstanceTraits::Traits& t)
         : Event(t)
         , RelatedObj(NULL)
     {
@@ -1838,20 +1838,20 @@ namespace Instances { namespace fl_events {
         ButtonsMask = 0;
     }
 
-    inline AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
+    __forceinline AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
         Status.SetNull();
     }
 
-    inline NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
+    __forceinline NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
         : Event(t)
         , Code(GetVM().GetStringManager().CreateEmptyString())
         , Level(GetVM().GetStringManager().CreateEmptyString())
     {
     }
 
-    inline TouchEvent::TouchEvent(InstanceTraits::Traits& t)
+    __forceinline TouchEvent::TouchEvent(InstanceTraits::Traits& t)
         : Event(t)
         , RelatedObj(NULL)
     {
@@ -1863,7 +1863,7 @@ namespace Instances { namespace fl_events {
         IsPrimaryTouchPoint = LocalInitialized = false;
     }
 
-    inline StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
+    __forceinline StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
         BeforeOrientation.SetNull();

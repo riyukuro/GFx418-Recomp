@@ -1914,12 +1914,12 @@ namespace Instances { namespace fl_gfx
 {
     // Inline copies of the instance ctors (their out-of-line copies are in sfr_as3_14): the exe
     // builds these classes in one TU, so the MakeObject functions below inline them.
-    inline GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
+    __forceinline GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
     }
 
-    inline IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
+    __forceinline IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
         : Object(t)
         , textColor(-1), selectedTextColor(-1), fontSize(-1), backgroundColor(-1), selectedBackgroundColor(-1)
         , indexBackgroundColor(-1), selectedIndexBackgroundColor(-1), readingWindowTextColor(-1)
@@ -1927,19 +1927,19 @@ namespace Instances { namespace fl_gfx
     {
     }
 
-    inline IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
+    __forceinline IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
         : Event(t)
         , message(GetVM().GetStringManager().CreateEmptyString())
     {
     }
 
-    inline KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
+    __forceinline KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
         : KeyboardEvent(t)
         , controllerIdx(0)
     {
     }
 
-    inline MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
+    __forceinline MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
         : Event(t)
         , cursor(GetVM().GetStringManager().CreateEmptyString())
     {
@@ -1948,13 +1948,13 @@ namespace Instances { namespace fl_gfx
         mouseIdx = 0;
     }
 
-    inline MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
+    __forceinline MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
         : MouseEvent(t)
         , mouseIdx(0), buttonIdx(0), nestingIdx(0)
     {
     }
 
-    inline TextEventEx::TextEventEx(InstanceTraits::Traits& t)
+    __forceinline TextEventEx::TextEventEx(InstanceTraits::Traits& t)
         : TextEvent(t)
         , controllerIdx(0), buttonIdx(0)
     {

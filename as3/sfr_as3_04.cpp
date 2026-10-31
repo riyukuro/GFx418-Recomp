@@ -2029,17 +2029,17 @@ namespace Instances { namespace fl {
     {
     }
 
-    inline Catch::Catch(InstanceTraits::Traits& t)
+    __forceinline Catch::Catch(InstanceTraits::Traits& t)
         : Instance(t)
     {
     }
 
-    inline Date::Date(InstanceTraits::Traits& t)
+    __forceinline Date::Date(InstanceTraits::Traits& t)
         : Instance(t), TimeValue(0), LocalTZA(0)
     {
     }
 
-    inline Error::Error(InstanceTraits::Traits& t)
+    __forceinline Error::Error(InstanceTraits::Traits& t)
         : Instance(t)
         , message(GetVM().GetStringManager().CreateEmptyString())
         , name(GetVM().GetStringManager().CreateEmptyString())
@@ -2050,7 +2050,7 @@ namespace Instances { namespace fl {
         GetVM().GetStackTraceASString(StackTrace);
     }
 
-    inline Object::Object(InstanceTraits::Traits& t)
+    __forceinline Object::Object(InstanceTraits::Traits& t)
         : Instance(t)
     {
     }
@@ -2062,12 +2062,12 @@ namespace Instances { namespace fl {
     {
     }
 
-    inline QName::QName(InstanceTraits::Traits& t, const ASString& local, Instances::Namespace* ns)
+    __forceinline QName::QName(InstanceTraits::Traits& t, const ASString& local, Instances::Namespace* ns)
         : Instance(t), LocalName(local), Ns(ns)
     {
     }
 
-    inline RegExp::RegExp(InstanceTraits::Traits& t)
+    __forceinline RegExp::RegExp(InstanceTraits::Traits& t)
         : Instance(t)
         , CompRegExp(NULL)
         , MatchOffset(-1)
@@ -2079,7 +2079,7 @@ namespace Instances { namespace fl {
     {
     }
 
-    inline XMLList::XMLList(InstanceTraits::Traits& t)
+    __forceinline XMLList::XMLList(InstanceTraits::Traits& t)
         : Instance(t), TargetProperty(NULL)
     {
     }
@@ -2101,12 +2101,12 @@ namespace Instances { namespace fl {
         Ns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
     }
 
-    inline XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+    __forceinline XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : XML(t, text, parent)
     {
     }
 
-    inline XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+    __forceinline XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
                            XML* parent)
         : XML(t, name, parent)
     {
@@ -2118,7 +2118,7 @@ namespace Instances { namespace fl {
     {
     }
 
-    inline XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+    __forceinline XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : XML(t, text, parent)
     {
     }
