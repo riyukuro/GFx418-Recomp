@@ -351,9 +351,9 @@ void FUN_140069ef4(longlong, uint, uint);
 int FUN_14006a090(cri_u1 *, uint);
 int FUN_14006a110(short *, uint, cri_u1 *, cri_u1 *);
 cri_u8 FUN_14006a16c(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
-cri_u8 FUN_14006a260(longlong, cri_u8, ushort *, ushort *);
+uint FUN_14006a260(longlong, cri_u8, ushort *, ushort *);
 cri_u8 FUN_14006a388(longlong, cri_u8, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
-cri_u8 FUN_14006a598(longlong, cri_u8, uint *, void *, ushort *, ushort *);
+uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
 int FUN_14006a750(short *, int, ushort *);
 uint FUN_14006a7f8(cri_u8, uint, longlong);
 cri_u2 FUN_14006a928(cri_u8, cri_u4, longlong);
@@ -705,11 +705,11 @@ int FUN_14006a110(short *arg1, uint arg2, cri_u1 *arg3, cri_u1 *arg4);
 
 cri_u8 FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5, char *arg6, cri_u1 *arg7, cri_u4 *arg8, cri_u4 *arg9, int *arg10);
 
-cri_u8 FUN_14006a260(longlong arg1, cri_u8 arg2, ushort *arg3, ushort *arg4);
+uint FUN_14006a260(longlong arg1, cri_u8 arg2, ushort *arg3, ushort *arg4);
 
 cri_u8 FUN_14006a388(longlong arg1, cri_u8 arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9);
 
-cri_u8 FUN_14006a598(longlong arg1, cri_u8 arg2, uint *arg3, void *arg4, ushort *arg5, ushort *arg6);
+uint FUN_14006a598(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg5, ushort *arg6);
 
 int FUN_14006a750(short *arg1, int arg2, ushort *arg3);
 
