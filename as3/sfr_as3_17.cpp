@@ -1663,6 +1663,12 @@ static inline void Sfr33ThrowTypeError(VM& vm, const VM::Error& e)
     FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
 }
 
+// VM::ThrowRangeError, inlined.
+static inline void Sfr33ThrowRangeError(VM& vm, const VM::Error& e)
+{
+    FUN_14252ecb0(&vm, &e, &fl::RangeErrorCI);
+}
+
 // VM::ThrowReferenceError, inlined.
 static inline void Sfr33ThrowReferenceError(VM& vm, const VM::Error& e)
 {
@@ -1861,7 +1867,7 @@ void Traits::CalculateMemSize(unsigned parent_size)
 
 // Class::Call: a class called as a function converts its single argument to the class (a TypeError when it
 // cannot); any other argument count is a RangeError (exe 0x1424ee79b).
-// MS2-FUNCTIONAL 0x1424ee6f0: the exe holds the class name in another frame slot; same results
+// MS2-FUNCTIONAL 0x1424ee6f0: the exe saves rbx in the rcx home slot and gives the class name its own frame slot (ours: the rcx home slot); same code otherwise
 // @0x1424ee6f0
 void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
 {
@@ -1871,16 +1877,12 @@ void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* 
     {
         if (ctr.Coerce(argv[0], result))
             return;
-        ASString name = GetClassTraits().GetName();
-        VM& vm = GetClassTraits().GetVM();
-        const VM::Error e(VM::eCheckTypeFailedError, vm, argv[0], name.ToCStr());
-        FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+        Sfr33ThrowTypeError(GetClassTraits().GetVM(), VM::Error(VM::eCheckTypeFailedError, GetClassTraits().GetVM(), argv[0], GetClassTraits().GetName().ToCStr()));
     }
     else
     {
         VM& vm = ctr.GetVM();
-        const VM::Error e(VM::eCoerceArgumentCountError, vm, int(argc));
-        FUN_14252ecb0(&vm, &e, &fl::RangeErrorCI);
+        Sfr33ThrowRangeError(vm, VM::Error(VM::eCoerceArgumentCountError, vm, int(argc)));
     }
 }
 
@@ -1947,8 +1949,7 @@ void Sfr33CheckObject(VM* const* self, const Value& v)
     if (v.IsNullOrUndefined())
     {
         VM& vm = **self;
-        const VM::ErrorID id = v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError;
-        Sfr33ThrowTypeError(vm, VM::Error(id, vm));
+        Sfr33ThrowTypeError(vm, VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, vm));
     }
 }
 }}}
@@ -3915,15 +3916,17 @@ CheckResult XMLSupportImpl::EqualsXML(bool& result, Instances::fl::XML& l, Insta
 CheckResult XMLSupportImpl::EqualsXML(bool& stop, bool& result, Instances::fl::XML& l, const Value& r) const
 {
     stop = false;
-    if (!l.HasSimpleContent())
+    if (l.HasSimpleContent())
+    {
+        StringBuffer buf(Memory::GetGlobalHeap());
+        ASString str = l.GetVM().GetStringManager().CreateEmptyString();
+        l.ToString(buf, 0);
+        if (!r.Convert2String(str))
+            return false;
+        result = strncmp(buf.ToCStr(), str.ToCStr(), str.GetSize()) == 0;
+        stop = true;
         return true;
-    StringBuffer buf(Memory::GetGlobalHeap());
-    ASString str = l.GetVM().GetStringManager().CreateEmptyString();
-    l.ToString(buf, 0);
-    if (!r.Convert2String(str))
-        return false;
-    result = strncmp(buf.ToCStr(), str.ToCStr(), str.GetSize()) == 0;
-    stop = true;
+    }
     return true;
 }
 
@@ -4546,12 +4549,18 @@ bool Sfr33GetClassValue(VM& vm, const StringDataPtr& gname, Value& result)
 }
 
 // The value of a tagged object address (bits 1..2: object, class, function, namespace).
-// MS2-FUNCTIONAL 0x142506d60: the exe inlines the object/class assignment and calls the out-of-line function/namespace copies.
+// The out-of-line Value::AssignUnsafe copies for functions and namespaces (sfr_as3_03 defines them).
+struct ValueAssignCopies
+{
+    static void AssignUnsafeFunction(Value& v, Instances::Function* p);    // 0x1424053f0
+    static void AssignUnsafeNamespace(Value& v, Instances::Namespace* p);  // 0x142405420
+};
+
 // @0x142506d60
 Value GetAbsObject(UPInt addr)
 {
     Value result;
-    const UPInt kind = addr & 6;
+    const int kind = addr & 6;
     addr -= kind;
     switch (kind)
     {
@@ -4562,10 +4571,10 @@ Value GetAbsObject(UPInt addr)
         result.AssignUnsafe(reinterpret_cast<Class*>(addr));
         break;
     case 4:
-        result.AssignUnsafe(reinterpret_cast<Instances::Function*>(addr));
+        ValueAssignCopies::AssignUnsafeFunction(result, reinterpret_cast<Instances::Function*>(addr));
         break;
     case 6:
-        result.AssignUnsafe(reinterpret_cast<Instances::Namespace*>(addr));
+        ValueAssignCopies::AssignUnsafeNamespace(result, reinterpret_cast<Instances::Namespace*>(addr));
         break;
     }
     return result;
@@ -4738,10 +4747,10 @@ static SF_INLINE CheckResult Sfr33StringArrayInd(const ASStringNode* sn, UInt32&
             ind = 0;
             return size == 1;
         }
-        if (static_cast<UByte>(s[0] - '0') < 10)
+        if (static_cast<UByte>(s[0] - '0') <= 9)
         {
             for (UInt32 i = 1; i < size; ++i)
-                if (static_cast<UByte>(s[i] - '0') >= 10)
+                if (static_cast<UByte>(s[i] - '0') > 9)
                     return false;
             char* end;
             const double d = strtod(s, &end);
@@ -4756,7 +4765,7 @@ static SF_INLINE CheckResult Sfr33StringArrayInd(const ASStringNode* sn, UInt32&
 }
 
 // ind receives the array index prop_name names (a string of digits or a number).
-// MS2-FUNCTIONAL 0x142507390: the exe lays out its stack frame differently; same results
+// MS2-FUNCTIONAL 0x142507390: the exe saves rbx in the rdx home slot and keeps the strtod end and Convert2UInt32 result in the rcx one; same code otherwise
 // @0x142507390
 CheckResult GetArrayInd(const Multiname& prop_name, UInt32& ind)
 {
@@ -4765,7 +4774,7 @@ CheckResult GetArrayInd(const Multiname& prop_name, UInt32& ind)
     if (kind == Value::kString)
         return Sfr33StringArrayInd(name.GetStringNode(), ind);
     if (kind >= Value::kInt && kind <= Value::kNumber)
-        return name.Convert2UInt32(ind);
+        return static_cast<bool>(name.Convert2UInt32(ind));
     return false;
 }
 
