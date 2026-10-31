@@ -13,6 +13,8 @@
 // MS2-PIN: ??_7Traits@AS3@GFx@Scaleform@@6B@ 0x14317b210
 // MS2-PIN: ??_7Traits@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14317b288
 // MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp AddRefWeakRef and AS3_Value.cpp AddRefInternal inline (as3_value.h)
+#define MS2_AS3_SCU_ADDREF_ONLY
 #define SF_GFX_FOCUSKEY_MEMBERS   // MovieImpl::InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey (gfx_movieimpl.h)
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
@@ -2255,7 +2257,6 @@ template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode>(void*, const MS2_Dept
 // @0x1424d3530
 template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotNameNode>(
     void*, const MS2_SlotNameNode&, UPInt);
-// MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity and the entry copy, here they are calls
 // @0x1424d3870
 template void MS2_StringValueSet::add<MS2_StringValueNode>(void*, const MS2_StringValueNode&, UPInt);
 // MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity and the entry copy, here they are calls
@@ -2264,7 +2265,6 @@ template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode::NodeRef>(void*, const
 // @0x1424d40a0
 template void MS2_WeakProxySet::add<MS2_WeakProxyNode::NodeRef>(void*, const MS2_WeakProxyNode::NodeRef&, UPInt);
 typedef HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value, GFx::AS3::Object::DynAttrsKeyHashFunctor> MS2_DynAttrsNode;
-// MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
 // @0x1424d4600
 template void decltype(GFx::AS3::Object::DynAttrsType::mHash)::BaseType::add<MS2_DynAttrsNode::NodeRef>(
     void*, const MS2_DynAttrsNode::NodeRef&, UPInt);
@@ -2284,7 +2284,6 @@ template void decltype(MS2_AliasClassHash::mHash)::BaseType::setRawCapacity(void
 // MS2-FUNCTIONAL: byte-identical body; the exe calls the folded CheckExpand copy at 0x1424ef090, the symbol table binds ours to 0x1424eefa0
 // @0x1424d3710
 template void decltype(MS2_AliasClassHash::mHash)::BaseType::add<MS2_AliasClassNode>(void*, const MS2_AliasClassNode&, UPInt);
-// MS2-FUNCTIONAL: same template body; register allocation and the save of the scratch registers differ
 // @0x1424d4dd0
 template void MS2_StringValueSet::add<MS2_StringValueNode::NodeRef>(void*, const MS2_StringValueNode::NodeRef&, UPInt);
 // String node -> index maps of the VM (HashLH<ASStringNode*, SInt64>): the nodes hash by their stored HashFlags.
@@ -2446,10 +2445,8 @@ template ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 2>, ArrayDefaul
 // @0x1424d5310
 template ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::ArrayDataDH(
     const ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>&);
-// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d5390
 template MS2_DynAttrsNode::HashNode(const MS2_DynAttrsNode&);
-// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d5420
 template MS2_StringValueNode::HashNode(const MS2_StringValueNode&);
 typedef HashNode<GFx::AS3::TClassTraitsCache::Key, GFx::AS3::ClassTraits::Traits*,
@@ -2758,10 +2755,6 @@ static inline Pickable<Instances::Namespace> MakePublicNamespace(VM& vm, const A
         .MakeInternedInstance(Abc::NS_Public, uri, Value::GetUndefined());
 }
 
-// "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace.
-// MS2-FUNCTIONAL: same code; the exe keeps the separator position in r8 and branches on the "::" decrement
-// (register allocation)
-// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d8f90
 Multiname::Multiname(const Multiname& other)
     : Kind(other.Kind)
@@ -2803,6 +2796,7 @@ Multiname::Multiname(VM& vm)
         Obj.SetPtr(vm.PublicNamespace.GetPtr());
 }
 
+// "pkg.Name" or "pkg::Name" as a public QName; a name without a package is in the public namespace.
 // MS2-FUNCTIONAL: same code; the exe branches on the colon flag before decrementing pos (we select it), and allocates registers differently
 // @0x1424d9040
 Multiname::Multiname(VM& vm, const StringDataPtr& qname)
@@ -3286,7 +3280,6 @@ IntervalTimer::~IntervalTimer()
 {
 }
 
-// MS2-FUNCTIONAL: the exe expands Value::AddRef inline, here it calls the out-of-line AddRefInternal/AddRefWeakRef
 // @0x1424d7e50
 IntervalTimer::IntervalTimer(const Value& function, unsigned delay, bool timeout)
     : Function(function), CurrentCount(0), RepeatCount(0), Interval(UInt64(delay) * 1000), InvokeTime(0), Id(0)
@@ -3328,7 +3321,6 @@ Prototype::Prototype(VM& vm, const ClassInfo& ci, Class& c)
 
 // VM::Error: "Error #<id>: <message>", the message being the error text with the arguments filled in.
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d6b90
 VM::Error::Error(ErrorID id, VM& vm)
     : ID(id)
@@ -3338,10 +3330,9 @@ VM::Error::Error(ErrorID id, VM& vm)
     const int num = id;
     const char* msg = FUN_142509b60(id);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d6cf0
 VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const Value& arg2)
     : ID(id)
@@ -3358,10 +3349,9 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const Value& arg2)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, s1.ToCStr(), s2.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d6f40
 VM::Error::Error(ErrorID id, VM& vm, const Value& arg1)
     : ID(id)
@@ -3375,10 +3365,9 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, s1.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d7130
 VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2)
     : ID(id)
@@ -3392,10 +3381,9 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, s1.ToCStr(), arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d7330
 VM::Error::Error(ErrorID id, VM& vm, int arg1)
     : ID(id)
@@ -3407,10 +3395,9 @@ VM::Error::Error(ErrorID id, VM& vm, int arg1)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d74d0
 VM::Error::Error(ErrorID id, VM& vm, int arg1, int arg2)
     : ID(id)
@@ -3422,10 +3409,9 @@ VM::Error::Error(ErrorID id, VM& vm, int arg1, int arg2)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1, arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d7690
 VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const char* arg2)
     : ID(id)
@@ -3437,10 +3423,9 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const char* arg2)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1, arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d7850
 VM::Error::Error(ErrorID id, VM& vm, const char* arg1)
     : ID(id)
@@ -3452,10 +3437,9 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d79f0
 VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const Value& arg2)
     : ID(id)
@@ -3469,10 +3453,9 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const Value& arg2)
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1, s2.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: same code; the exe loads the string manager before masking the result size (scheduling)
 // @0x1424d7bf0
 VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int arg4)
     : ID(id)
@@ -3484,7 +3467,7 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
     const char* fmt = FUN_142509b60(id);
     Scaleform::Format(msg, fmt, arg1, arg2, arg3, arg4);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
-    Message = vm.GetStringManager().GetStringManager()->CreateString(result.ToCStr(), result.GetSize());
+    Message = vm.GetStringManager().CreateString(result);
 }
 
 // MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03) and ArrayPOD::Resize

@@ -829,7 +829,12 @@ private:
     // still called out of line there.
     SF_INLINE void AddRefInternalSCU() const;
 #define MS2_AS3_ADDREF_WEAK AddRefWeakRefSCU
+#ifdef MS2_AS3_SCU_ADDREF_ONLY
+// (sfi) a unit that mixes SCU and Obj-file rows (sfr_as3_15): the AddRef bodies inline, the weak release called.
+#define MS2_AS3_RELEASE_WEAK ReleaseWeakRef
+#else
 #define MS2_AS3_RELEASE_WEAK ReleaseWeakRefSCU
+#endif
 #define MS2_AS3_ADDREF_STRONG AddRefInternalSCU
 #else
 #define MS2_AS3_ADDREF_WEAK AddRefWeakRef
