@@ -1569,16 +1569,20 @@ void FUN_140007200(Scaleform::UPInt* stack)
     if (*stack < stack[1]) FUN_140006cf0(stack);
 }
 
-// MS2-FUNCTIONAL: resizes the retained pointer array and initializes newly added slots to null.
+// resizes the retained pointer array and initializes newly added slots to null
 // @0x1400072f0
 void FUN_1400072f0(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     const Scaleform::UPInt oldSize = fields[1];
     FUN_140006e70(array, array, size);
-    if (oldSize < size && *array)
-        memset(static_cast<unsigned char*>(*array) + oldSize * sizeof(void*), 0,
-               (size - oldSize) * sizeof(void*));
+    if (size > oldSize) {
+        // SDK ConstructArray(Data + oldSize, size - oldSize): placement-new null pointers
+        Scaleform::UPInt count = size - oldSize;
+        void** slot = static_cast<void**>(*array) + oldSize;
+        for (Scaleform::UPInt i = 0; i < count; ++i, ++slot)
+            ::new (slot) void*(0);
+    }
 }
 
 // MS2-FUNCTIONAL: appends copies of a sequence of two-string records.
