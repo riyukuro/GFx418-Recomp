@@ -68,7 +68,7 @@ public:
         float          CurrentLineWidth;        // +0x2c
         float          LineWidthBeforeWordWrap; // +0x30
         float          DashSymbolWidth;         // +0x34
-        unsigned       Alignment;               // +0x38
+        UInt8          Alignment;               // +0x38
         UPInt          ProposedWordWrapPoint;   // +0x40
         bool           UseHyphenation;          // +0x48
     };
@@ -878,20 +878,21 @@ Render::PointF TextField::TransformToTextRectSpace(const GFx::Value::DisplayInfo
 }
 
 // The geometry data's position is the text rectangle's top-left corner in the parent.
-// MS2-FUNCTIONAL 0x1425beb10: same math in doubles; the exe inlines the point transform
 // @0x1425beb10
 DisplayObjectBase::GeomDataType& TextField::UpdateAndGetGeomData(GeomDataType* pgeomData, bool force)
 {
     GetGeomData(*pgeomData);
     if (force || (Flags & Flags_NeedUpdateGeomData))
     {
-        const RectF&  r  = pDocument->GetViewRect();
-        const Matrix& m  = GetMatrix();
-        Double        x1 = r.x1, y1 = r.y1;
-        Double        px = Double(m.Sx()) * x1 + Double(m.Shx()) * y1 + Double(m.Tx());
-        Double        py = Double(m.Shy()) * x1 + Double(m.Sy()) * y1 + Double(m.Ty());
-        pgeomData->X     = Alg::IRound(px);
-        pgeomData->Y     = Alg::IRound(py);
+        RectF          rr = pDocument->GetViewRect();
+        Matrix         m  = GetMatrix();
+        Render::PointF p  = rr.TopLeft();
+
+        Double x = Double(m.Sx()) * p.x + Double(m.Shx()) * p.y + Double(m.Tx());
+        Double y = Double(m.Shy()) * p.x + Double(m.Sy()) * p.y + Double(m.Ty());
+
+        pgeomData->X = Alg::IRound(x);
+        pgeomData->Y = Alg::IRound(y);
         SetGeomData(*pgeomData);
         Flags &= ~Flags_NeedUpdateGeomData;
     }
@@ -957,18 +958,18 @@ bool TextField::TextDocumentListener::View_OnLineFormat(Render::Text::DocView& v
         return false;
 
     Translator::LineFormatDesc tdesc;
+    tdesc.CurrentLineWidth        = Render::TwipsToPixels(desc.CurrentLineWidth);
+    tdesc.DashSymbolWidth         = Render::TwipsToPixels(desc.DashSymbolWidth);
+    tdesc.LineStartPos            = desc.LineStartPos;
+    tdesc.LineWidthBeforeWordWrap = Render::TwipsToPixels(desc.LineWidthBeforeWordWrap);
+    tdesc.NumCharsInLine          = desc.NumCharsInLine;
+    tdesc.pWidths                 = desc.pWidths;
     tdesc.pParaText               = desc.pParaText;
     tdesc.ParaTextLen             = desc.ParaTextLen;
-    tdesc.pWidths                 = desc.pWidths;
-    tdesc.LineStartPos            = desc.LineStartPos;
-    tdesc.NumCharsInLine          = desc.NumCharsInLine;
-    tdesc.VisibleRectWidth        = Render::TwipsToPixels(desc.VisibleRectWidth);
-    tdesc.CurrentLineWidth        = Render::TwipsToPixels(desc.CurrentLineWidth);
-    tdesc.LineWidthBeforeWordWrap = Render::TwipsToPixels(desc.LineWidthBeforeWordWrap);
-    tdesc.DashSymbolWidth         = Render::TwipsToPixels(desc.DashSymbolWidth);
-    tdesc.Alignment               = desc.Alignment;
     tdesc.ProposedWordWrapPoint   = desc.ProposedWordWrapPoint;
+    tdesc.VisibleRectWidth        = Render::TwipsToPixels(desc.VisibleRectWidth);
     tdesc.UseHyphenation          = desc.UseHyphenation;
+    tdesc.Alignment               = desc.Alignment;
     for (UPInt i = 0; i < tdesc.NumCharsInLine; ++i)
         desc.pWidths[i] = Render::TwipsToPixels(desc.pWidths[i]);
     if (ptrans->OnWordWrapping(&tdesc))
