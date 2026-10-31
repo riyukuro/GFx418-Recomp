@@ -5,6 +5,7 @@
 
 #include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_string.h"
+#include "../include/kernel/sf_refcount.h"
 
 #include <new>
 
@@ -13,12 +14,21 @@
 #define MS2_RAW_INLINE inline
 #endif
 
+void FUN_14257dc30(void*);   // Ptr AddRef (RefCountImpl::AddRef)
+void FUN_14257dcb0(void*);   // Ptr Release (RefCountImpl::Release)
+void FUN_14257dcd0(void*);   // RefCountNTSImpl::Release
+
 namespace Scaleform { namespace GFx {
 
 typedef UPInt U;
 
-void FUN_14257dc30(void*);   // Ptr AddRef
-void FUN_14257dcb0(void*);   // Ptr Release
+using ::FUN_14257dc30;
+using ::FUN_14257dcb0;
+using ::FUN_14257dcd0;
+
+// The base destructors the inlined derived destructors end in (0x14257db40 / 0x14257db50).
+static inline void RawRefCountCoreDtor(void* p) { static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore(); }
+static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<RefCountNTSImplCore*>(p)->RefCountNTSImplCore::~RefCountNTSImplCore(); }
 
 // Typed access to a raw-layout field at a byte offset from a base pointer.
 template<class T> static inline T& RawField(const void* base, UPInt off) { return *(T*)((char*)base + off); }

@@ -86,7 +86,6 @@ extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
 
-void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
 extern "C" void FUN_142521f00(void*);       // AS3::Value::ReleaseInternal
 
 // The Ptr<SystemVertexFormat> slot of a VertexFormat static, released as raw storage like the other Ptr<>s.
@@ -205,7 +204,7 @@ void FUN_142cc9540()
 {
     if (Sfr21AtexitMember* member = RawField<Sfr21AtexitMember*>(DAT_143a2f650, 0x10))
         member->Drop();
-    FUN_14257db40(DAT_143a2f650);
+    RawRefCountCoreDtor(DAT_143a2f650);
 }
 
 // Image9GridVertex::Format.pSysFormat (Ptr<SystemVertexFormat>, 0x143a2f978).

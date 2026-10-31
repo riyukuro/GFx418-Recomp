@@ -16,7 +16,6 @@ namespace Scaleform { namespace GFx {
 
 extern char DAT_14318f0a8[];
 
-void FUN_14257db40(void*);
 void FUN_14015b310(void*, UPInt);
 
 static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
@@ -62,7 +61,7 @@ void* FUN_142685ec0(void* self, unsigned flags)
 // @0x142688cf0
 void* FUN_142688cf0(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;
 }
@@ -70,7 +69,7 @@ void* FUN_142688cf0(void* self, unsigned flags)
 // @0x142688d50
 void* FUN_142688d50(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;
 }
@@ -78,7 +77,7 @@ void* FUN_142688d50(void* self, unsigned flags)
 // @0x142688db0
 void* FUN_142688db0(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;
 }
@@ -86,7 +85,7 @@ void* FUN_142688db0(void* self, unsigned flags)
 // @0x142688e10
 void* FUN_142688e10(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;
 }
@@ -98,7 +97,7 @@ void* FUN_142688ed0(void* self, unsigned flags)
     char* buffer = (char*)(RawField<U>(self, 0x18) & ~(U)3);
     if (_InterlockedDecrement((volatile long*)(buffer + 8)) == 0)
         Memory::Free(buffer);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x40);
     return self;
 }

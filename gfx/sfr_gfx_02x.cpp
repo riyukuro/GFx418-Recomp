@@ -29,10 +29,6 @@
 
 namespace Scaleform { namespace GFx {
 
-void FUN_14257db40(void*);           // RefCountImplCore::~RefCountImplCore
-void FUN_14257db50(void*);           // RefCountBase destructor body
-void FUN_14257dcb0(void*);           // RefCountImpl::Release
-void FUN_14257dcd0(void*);           // RefCountNTSImpl::Release
 void FUN_14015b310(void*, UPInt);    // sized delete
 extern "C" char DAT_143184be8[];     // ??_7Audio@GFx@Scaleform@@6B@
 extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
@@ -42,7 +38,7 @@ extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
 // @0x142591e10
 void* FUN_142591e10(void* self, unsigned flags)
 {
-    FUN_14257db50(self);
+    RawRefCountNTSCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -57,7 +53,7 @@ void* FUN_142591e10(void* self, unsigned flags)
 // @0x142591e70
 void* FUN_142591e70(void* self, unsigned flags)
 {
-    FUN_14257db50(self);
+    RawRefCountNTSCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -79,7 +75,7 @@ void* FUN_142591ed0(void* self, unsigned flags)
     if (RawField<void*>(self, 0x28))
         FUN_14257dcb0(RawField<void*>(self, 0x28));
     RawField<void*>(self, 0) = DAT_143109420;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -96,7 +92,7 @@ void* FUN_142591ed0(void* self, unsigned flags)
 void* FUN_142591f60(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_143109420;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -111,7 +107,7 @@ void* FUN_142591f60(void* self, unsigned flags)
 // @0x142591fd0
 void* FUN_142591fd0(void* self, unsigned flags)
 {
-    FUN_14257db50(self);
+    RawRefCountNTSCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))

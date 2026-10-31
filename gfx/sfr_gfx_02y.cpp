@@ -23,8 +23,6 @@
 namespace Scaleform { namespace GFx {
 
 extern "C" char DAT_143184f20[];          // ??_7ImageFileHandler@Render@Scaleform@@6B@
-void FUN_14257dc30(void*);                // RefCountImpl::AddRef
-void FUN_14257dcb0(void*);                // RefCountImpl::Release
 
 // XML::Support::ParseString: hands the text to the installed parser.
 // @0x14259d960

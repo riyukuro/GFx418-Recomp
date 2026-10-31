@@ -20,7 +20,6 @@ extern "C" char DAT_1431beef0[];
 extern "C" char DAT_1431bede8[];   // audio event listener
 extern "C" char DAT_1431bcbe8[];   // RefCountBase
 
-void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
 void FUN_14015b310(void*, UPInt);           // sized operator delete (Scaleform heap)
 extern "C" void FUN_142743580(void*);       // audio channel dtor
 extern "C" void FUN_1427434d0(void*);       // array-valued set Clear
@@ -44,7 +43,7 @@ static inline void* RawDeleteTail(void* self, unsigned flags, UPInt size)
 // @0x1427439d0
 void* FUN_1427439d0(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x10);
 }
 
@@ -94,7 +93,7 @@ void* FUN_142743b60(void* self, unsigned flags)
         RawField<U>(self, 0x20) = 0;
     }
     RawField<void*>(self, 0x10) = DAT_1431bec40;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x28);
 }
 
@@ -103,7 +102,7 @@ void* FUN_142743b60(void* self, unsigned flags)
 void* FUN_142743c10(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_1431bcbe8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x10);
 }
 
@@ -112,7 +111,7 @@ void* FUN_142743c10(void* self, unsigned flags)
 void* FUN_142743c80(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_1431bcbe8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x10);
 }
 
@@ -130,7 +129,7 @@ void* FUN_142743cf0(void* self, unsigned flags)
     if (RawField<void*>(self, 0x18))
         FUN_14257dcb0(RawField<void*>(self, 0x18));
     RawField<void*>(self, 0) = DAT_1431bcbe8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0xf8);
 }
 

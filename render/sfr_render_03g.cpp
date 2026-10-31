@@ -17,7 +17,6 @@ namespace Scaleform { namespace GFx {
 
 extern char DAT_14318efe8[];
 
-void FUN_14257db40(void*);
 void FUN_14015b310(void*, UPInt);
 
 static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
@@ -35,7 +34,7 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 void* FUN_142620160(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_14318efe8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x10);
     return self;
 }
@@ -45,7 +44,7 @@ void* FUN_142620160(void* self, unsigned flags)
 void* FUN_1426201d0(void* self, unsigned flags)
 {
     Memory::Free(RawField<void*>(self, 0x10));
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x28);
     return self;
 }
@@ -62,7 +61,7 @@ void* FUN_142620240(void* self, unsigned flags)
             FUN_14257dcb0(*p);
     }
     Memory::Free(RawField<void*>(self, 0x30));
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x48);
     return self;
 }
@@ -95,6 +94,12 @@ void* FUN_142620240(void* self, unsigned flags)
         array[2] = cap;                                                                          \
     }
 
+// MS2-FUNCTIONAL 0x142623d00: register allocation only: the exe keeps the zero in rdi (saved with rbx) and shares the
+// free path's stores; same calls, same stores.
+// MS2-FUNCTIONAL 0x142623da0: as 0x142623d00 (register allocation of the shared zero).
+// MS2-FUNCTIONAL 0x142623e40: as 0x142623d00 (register allocation of the shared zero).
+// MS2-FUNCTIONAL 0x142623ee0: as 0x142623d00 (register allocation of the shared zero).
+// MS2-FUNCTIONAL 0x142623f80: as 0x142623d00 (register allocation of the shared zero).
 // @0x142623d00
 RAW_RESERVE(FUN_142623d00, 0x18)
 // @0x142623da0

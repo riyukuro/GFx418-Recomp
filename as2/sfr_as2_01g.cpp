@@ -37,11 +37,6 @@ void* FUN_14258a490(void* mem, void* createParams);                         // T
 int FUN_142747310(void* thread, void* renderer);                            // the FMOD update thread's body
 void FUN_1427474d0(void* channel, void* syncinfo);                          // audio channel: sync point reached
 
-static inline void RawRefCountCoreDtor(void* p)
-{
-    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
-}
-
 static inline void RawRefCountAddRef(void* p)
 {
     static_cast<RefCountImpl*>(p)->AddRef();

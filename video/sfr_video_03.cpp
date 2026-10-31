@@ -11,6 +11,7 @@
 #include "../include/video/video_video.h"
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/gfx/gfx_stream.h"
+#include "../include/gfx/gfx_resource.h"
 #include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_obj.h"
@@ -97,9 +98,9 @@ extern ExeDecl<void*>::type DAT_143b27598; extern ExeDecl<void*>::type DAT_143b2
 #define VideoStringCallbackBaseB DAT_143b275a0
 extern ExeDecl<void*>::type DAT_143b277a8;
 #define VideoCriWork DAT_143b277a8
-extern ExeDecl<std::uint32_t>::type DAT_143b277b0;
+extern ExeDecl<unsigned long>::type DAT_143b277b0;
 #define VideoCriWorkSize DAT_143b277b0
-extern ExeDecl<int>::type DAT_143b277b4;
+extern ExeDecl<unsigned int>::type DAT_143b277b4;
 #define VideoCriUsers DAT_143b277b4
 extern ExeDecl<void*>::type DAT_143b275f0;
 #define VideoCallbackBaseC DAT_143b275f0
@@ -118,8 +119,7 @@ ExeDecl<void(void*, void*, void*)>::type FUN_1424f1390;
 #define ConvertAS3ValueToString FUN_1424f1390
 ExeDecl<void(void*, void*, int*, int, void*)>::type FUN_1424f0d30;
 #define ConvertAS3ValueToInt32 FUN_1424f0d30
-ExeDecl<std::uint8_t(void*)>::type FUN_1424f0be0;
-#define ConvertAS3ValueToBool FUN_1424f0be0
+#define ConvertAS3ValueToBool(v) (static_cast<const Scaleform::GFx::AS3::Value*>(v)->Convert2Boolean())
 ExeDecl<void(void*)>::type FUN_1423dfa20;   // RefCountBaseGC::ReleaseInternal(this = the object)
 #define ReleaseAS3GcObject FUN_1423dfa20
 ExeDecl<void(void*)>::type FUN_14257dc30;
@@ -144,7 +144,6 @@ void FUN_140019470(void* self, std::uint64_t* output); // defined below (externa
 void FUN_140019660(void* self, std::uint64_t* output);
 ExeDecl<void*(void*, void*)>::type FUN_1400199e0;
 ExeDecl<void*(void*, void*)>::type FUN_14001ad20;
-ExeDecl<void(void*)>::type FUN_1425a4030;
 ExeDecl<void()>::type FUN_14257e080;
 ExeDecl<void(void*, void*, void*)>::type FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
 ExeDecl<int(void*, void*)>::type FUN_1428d8f14;
@@ -175,30 +174,30 @@ extern ExeDecl<void*>::type DAT_1431b7ea0;
 #define VideoTraitsSubVtableA DAT_1431b7ea0
 extern ExeDecl<void*>::type DAT_1431b7de0;
 #define VideoTraitsSubVtableB DAT_1431b7de0
-extern ExeDecl<void*>::type DAT_1431b4c60; extern ExeDecl<void*>::type DAT_1431bec40;
+extern ExeDecl<void*>::type DAT_1431b4c60; struct Sd_1431bec40; extern Sd_1431bec40 DAT_1431bec40;
 #define VideoAudioVtableA DAT_1431b4c60
-#define VideoAudioVtableB DAT_1431bec40
-extern ExeDecl<void*>::type DAT_1431bed60; extern ExeDecl<void*>::type DAT_1431bedd8;
-#define VideoAudioDeleteVtable DAT_1431bed60
-#define VideoAudioSubVtable DAT_1431bedd8
-extern ExeDecl<void*>::type DAT_1431bede8;
-#define VideoAudioEventVtable DAT_1431bede8
-extern ExeDecl<void*>::type DAT_1431bcbb0;
-#define VideoSoundDeleteVtable DAT_1431bcbb0
-extern ExeDecl<void*>::type DAT_1431bef00;
-#define VideoSoundVtable DAT_1431bef00
-extern ExeDecl<void*>::type DAT_1431bef38;
-#define VideoSoundSubVtable DAT_1431bef38
-extern ExeDecl<void*>::type DAT_1431bee78;
-#define VideoAudioStreamVtable DAT_1431bee78
-extern ExeDecl<void*>::type DAT_1431beef0;
-#define VideoAudioStreamSubVtable DAT_1431beef0
+#define VideoAudioVtableB (*reinterpret_cast<void**>(&DAT_1431bec40))
+struct Sd_1431bed60; extern Sd_1431bed60 DAT_1431bed60; struct Sd_1431bedd8; extern Sd_1431bedd8 DAT_1431bedd8;
+#define VideoAudioDeleteVtable (*reinterpret_cast<void**>(&DAT_1431bed60))
+#define VideoAudioSubVtable (*reinterpret_cast<void**>(&DAT_1431bedd8))
+struct Sd_1431bede8; extern Sd_1431bede8 DAT_1431bede8;
+#define VideoAudioEventVtable (*reinterpret_cast<void**>(&DAT_1431bede8))
+struct Sd_1431bcbb0; extern Sd_1431bcbb0 DAT_1431bcbb0;
+#define VideoSoundDeleteVtable (*reinterpret_cast<void**>(&DAT_1431bcbb0))
+struct Sd_1431bef00; extern Sd_1431bef00 DAT_1431bef00;
+#define VideoSoundVtable (*reinterpret_cast<void**>(&DAT_1431bef00))
+struct Sd_1431bef38; extern Sd_1431bef38 DAT_1431bef38;
+#define VideoSoundSubVtable (*reinterpret_cast<void**>(&DAT_1431bef38))
+struct Sd_1431bee78; extern Sd_1431bee78 DAT_1431bee78;
+#define VideoAudioStreamVtable (*reinterpret_cast<void**>(&DAT_1431bee78))
+struct Sd_1431beef0; extern Sd_1431beef0 DAT_1431beef0;
+#define VideoAudioStreamSubVtable (*reinterpret_cast<void**>(&DAT_1431beef0))
 extern ExeDecl<void*>::type DAT_1431b7160; extern ExeDecl<void*>::type DAT_1431b7900;
 #define VideoClassInfoA DAT_1431b7160
 #define VideoClassVtableA DAT_1431b7900
-extern ExeDecl<void*>::type DAT_1431b71b0; extern ExeDecl<void*>::type DAT_1431b7260;
-#define VideoInstanceVtableA DAT_1431b71b0
-#define VideoCTraitsVtable DAT_1431b7260
+struct Sd_1431b71b0; extern Sd_1431b71b0 DAT_1431b71b0; struct Sd_1431b7260; extern Sd_1431b7260 DAT_1431b7260;
+#define VideoInstanceVtableA (*reinterpret_cast<void**>(&DAT_1431b71b0))
+#define VideoCTraitsVtable (*reinterpret_cast<void**>(&DAT_1431b7260))
 extern ExeDecl<void*>::type DAT_1431b7b50; extern ExeDecl<void*>::type DAT_1431b7d50;
 #define VideoClassInfoB DAT_1431b7b50
 #define VideoClassVtableB DAT_1431b7d50
@@ -207,7 +206,7 @@ extern ExeDecl<void*>::type DAT_1431b7c70;
 ExeDecl<void(void*)>::type FUN_1424df220;
 ExeDecl<void*(void*)>::type FUN_1424eb610;
 ExeDecl<void(void*, void*)>::type FUN_140010b80;
-extern "C" void* DAT_143b15f60;
+#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 
 namespace {
 typedef void (*VideoGenericThunk)(void*, void*, void*);
@@ -1302,7 +1301,7 @@ void FUN_14001bb80(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
 // releases the Scaleform resource stored in the holder.
 // @0x14001bd20
-void FUN_14001bd20(void** holder) { if (*holder) FUN_1425a4030(*holder); }
+void FUN_14001bd20(void** holder) { if (*holder) static_cast<Scaleform::GFx::Resource*>(*holder)->Release(); }
 #pragma optimize("", on)
 // MS2-FUNCTIONAL: requests the global Scaleform log when no video log is installed.
 // @0x14001bf90

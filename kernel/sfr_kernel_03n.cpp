@@ -29,11 +29,6 @@ extern "C" void FUN_142623bc0(U*, void*, U);                     // ArrayData<0x
 extern "C" void FUN_1426871f0(void*);                           // ~ the grouping hash
 
 // The RefCount base calls, made directly as the exe makes them.
-static inline void RawRefCountCoreDtor(void* p)
-{
-    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
-}
-
 static inline void RawRefCountRelease(void* p)
 {
     static_cast<RefCountImpl*>(p)->Release();

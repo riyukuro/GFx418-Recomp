@@ -48,11 +48,6 @@ extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
 extern "C" void FUN_1427463e0(U*, void*, U); // ArrayData<VideoPlayerImpl*>::Reserve
 
 // The RefCount base calls, made directly as the exe makes them.
-static inline void RawRefCountCoreDtor(void* p)
-{
-    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
-}
-
 static inline void RawRefCountRelease(void* p)
 {
     static_cast<RefCountImpl*>(p)->Release();

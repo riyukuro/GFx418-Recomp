@@ -12,8 +12,13 @@
 #include <new>
 #include <string.h>
 #include <windows.h>
+#include "../include/kernel/sf_timer.h"
+
+unsigned long long FUN_1425e3560();             // performance counter
 
 namespace Scaleform { namespace GFx {
+
+using ::FUN_1425e3560;
 
 namespace {
 // Lock::Locker over the state's critical section: entered here, left when the scope ends.
@@ -32,11 +37,10 @@ extern char DAT_14318f060[];
 extern char DAT_14318f040[];
 extern char DAT_14318f030[];
 
-void FUN_14257db40(void*);
 void FUN_14015b310(void*, UPInt);
 bool FUN_14258bb00(void*);   // Mutex::TryLock
 void FUN_14258bb70(void*);   // Mutex::Unlock
-void FUN_14261fa90(void*);
+void FUN_14261fa90(char*);
 void FUN_142624840(U**, void*, U);
 void FUN_142624af0(U**, void*, U);
 void FUN_142624d70(U**, void*, U);
@@ -54,8 +58,6 @@ void FUN_142624190(U**, const U*, void* const*);   // Hash<key, Ptr>::Set
 void FUN_142624300(U**, const U*, const String*);   // Hash<key, Ptr>::Set (second value type)
 void FUN_142624700(U, U, int, int, U);
 void FUN_14268a570(void*, U*);                // fills a set with the keys reachable from an object
-U FUN_1425e3510();                            // timer frequency
-void FUN_14257dc30(void*);
 void FUN_14261e730(char*, U*);
 void FUN_14261f220(U**, void*, StringKeyOps::Ref*, U);
 void FUN_14261ec70(U**, void*, NodeRef*, U);
@@ -66,10 +68,8 @@ void FUN_142584260(void*);                      // Event::ResetEvent
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-SPInt FUN_1425e3560();                          // performance counter
 U FUN_1425e5080(void*);                         // Alg::Random::Generator::NextRandom
 void* FUN_142686d30(void*);                     // snapshot struct constructor
-void FUN_142585f70(void*, int);                 // String::AppendChar
 void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
 void FUN_1426237c0(char*);
@@ -84,7 +84,7 @@ static inline void RawDelete(void* self, unsigned long long flags, UPInt size)
 void* FUN_1426202f0(char* self, unsigned flags)
 {
     (RawFieldPtr<String>(self, 0x10))->~String();
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -99,7 +99,7 @@ void* FUN_1426202f0(char* self, unsigned flags)
 void* FUN_142620370(char* self, unsigned flags)
 {
     (RawFieldPtr<String>(self, 0x10))->~String();
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -114,7 +114,7 @@ void* FUN_142620370(char* self, unsigned flags)
 void* FUN_1426203f0(char* self, unsigned flags)
 {
     Memory::Free(RawField<void*>(self, 0x20));
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -372,7 +372,7 @@ void FUN_1426214b0(char* self, char* snap)
                     char* rec = (char*)recs[0] + n * 0x10;
                     *(int*)rec = (int)j;
                     n++;
-                    *(U*)(rec + 8) = (v * 1000000) / FUN_1425e3510();
+                    *(U*)(rec + 8) = (v * 1000000) / Timer::GetRawFrequency();
                 }
             }
             char* list = RawField<char*>(snap, 0x58);
@@ -404,7 +404,7 @@ void FUN_142621820(char* self, char* snap)
                 continue;
             U key = RawField<U>(e, 0x10);
             unsigned extra = RawField<unsigned>(e, 0x18);
-            U scaled = (RawField<U>(e, 0x20) * 1000000) / FUN_1425e3510();
+            U scaled = (RawField<U>(e, 0x20) * 1000000) / Timer::GetRawFrequency();
             char* rec = RawArrayPush<FUN_142623d00>((U*)(RawField<char*>(snap, 0x68) + 0x10), 0x18);
             *(U*)rec = key;
             *(unsigned*)(rec + 8) = extra;
@@ -621,17 +621,17 @@ SPInt FUN_142622670(char* self, unsigned period)
     SPInt elapsed = 0;
     if (period == 0)
     {
-        SPInt now = FUN_1425e3560();
+        SPInt now = (SPInt)FUN_1425e3560();
         SPInt prev = RawField<SPInt>(self, 0x160);
         RawField<SPInt>(self, 0x160) = now;
         return now - prev;
     }
     if (RawField<SPInt>(self, 0x160) != 0)
-        elapsed = (FUN_1425e3560() - RawField<SPInt>(self, 0x160)) * (SPInt)period;
+        elapsed = ((SPInt)FUN_1425e3560() - RawField<SPInt>(self, 0x160)) * (SPInt)period;
     int next;
     if (RawField<int>(self, 0x158) == 0)
     {
-        RawField<SPInt>(self, 0x160) = FUN_1425e3560();
+        RawField<SPInt>(self, 0x160) = (SPInt)FUN_1425e3560();
         U r = FUN_1425e5080(self + 0x130) & 0xffffffffULL;
         next = (int)((r * (U)(unsigned)(period * 2)) / 0xffffffffULL);
     }
@@ -1083,7 +1083,7 @@ void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
         U len = strlen(text);
         String s;
         for (U i = 0; i < len; i++)
-            FUN_142585f70(&s, text[i] == ';' ? 0x5c : (int)text[i]);
+            s.AppendChar(text[i] == ';' ? 0x5c : (int)text[i]);
         FUN_142624300(RawFieldPtr<U*>(self, 0xd8), &key, &s);
     }
 }

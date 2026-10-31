@@ -27,8 +27,6 @@ void  FUN_1425c14e0(void*);          // ASStringNode::ReleaseNode
 void  FUN_1425925f0(void*);          // RefCountBaseGC<323>::ReleaseInternal
 void  FUN_1425921b0(U**, void*);     // HashSetBase::CheckExpand
 void  FUN_142592a10(U**, void*, U);  // HashSetBase::setRawCapacity
-void  FUN_14257db40(void*);          // RefCountImplCore::~RefCountImplCore
-void  FUN_14257dcd0(void*);          // RefCountNTSImpl::Release
 void* FUN_142998b50(void*);          // SoundCtorFunction::Register
 
 // The script object interface at +0x20 of an AS2 Object; slot 10 (+0x50) is SetMember.
@@ -213,6 +211,8 @@ void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
 }
 
 // The builtin class registry entry of "Sound": registered on first use, then the class is published as a member.
+// MS2-FUNCTIONAL: register allocation and frame (the exe saves rbx/rsi in home slots and needs no r12); the lookup,
+// the registration and the member publish are the same calls in the same order.
 // @0x1425916c0
 void FUN_1425916c0(void* self, void* psc, void* object)
 {
@@ -299,7 +299,7 @@ void FUN_142591c90(void* self)
     if (RawField<void*>(self, 0x28))
         FUN_14257dcb0(RawField<void*>(self, 0x28));
     RawField<void*>(self, 0) = DAT_143109420;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
 }
 
 // @0x14259d950
