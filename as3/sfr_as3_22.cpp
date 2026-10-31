@@ -1474,11 +1474,9 @@ void DetachChannelNode(void* node)
         *reinterpret_cast<void**>(bytes + 0x28) = nullptr;
     }
     *reinterpret_cast<void**>(bytes + 0x18) = nullptr;
-    void* next = *reinterpret_cast<void**>(bytes + 0x10);
-    if (next) {
-        void* previous = *reinterpret_cast<void**>(bytes + 8);
-        *reinterpret_cast<void**>(static_cast<char*>(previous) + 0x10) = next;
-        *reinterpret_cast<void**>(static_cast<char*>(next) + 8) = previous;
+    if (*reinterpret_cast<void**>(bytes + 0x10)) {
+        *reinterpret_cast<void**>(*reinterpret_cast<char**>(bytes + 8) + 0x10) = *reinterpret_cast<void**>(bytes + 0x10);
+        *reinterpret_cast<void**>(*reinterpret_cast<char**>(bytes + 0x10) + 8) = *reinterpret_cast<void**>(bytes + 8);
         *reinterpret_cast<void**>(bytes + 8) = nullptr;
         *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
     }
@@ -2170,18 +2168,17 @@ unsigned long long ReadAudioCallback(void*, void* buffer, unsigned bytes, unsign
 
 
 namespace Scaleform {
-// MS2-FUNCTIONAL: builds the requested FMOD mode, clears the output handle on failure, and returns FMOD status.
 // @0x1427453b0
 FMOD_RESULT CreateAudioSound(void* player, void* request, FMOD::Sound** sound)
 {
     auto* requestBytes = static_cast<unsigned char*>(request);
-    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
-    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
-    const unsigned flags = (*reinterpret_cast<unsigned*>(requestBytes + 0x10) & 0x1000) ? 0xc0u : 0x4040u;
-    const FMOD_RESULT result = system->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags, nullptr, sound);
-    if (result != 0)
+    const unsigned flags = !((UByte)(*reinterpret_cast<unsigned*>(requestBytes + 0x10) >> 12) & 1) ? 0x4040u : 0xc0u;
+    const FMOD_RESULT result = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(*reinterpret_cast<char**>(static_cast<char*>(player) + 0x28) + 0x10))->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags, nullptr, sound);
+    if (result != 0) {
         *sound = nullptr;
-    return result;
+        return result;
+    }
+    return static_cast<FMOD_RESULT>(0);
 }
 }
 
@@ -2344,11 +2341,13 @@ static void ReserveHeapArray(void** array, void* heapOwner, std::size_t requeste
 }
 
 
-// MS2-FUNCTIONAL: rounds pointer capacity to four slots and uses the global heap's allocate, reallocate, and free paths.
+static SF_INLINE void Sfr22ReserveGH(void** array, const void* pheapAddr, std::size_t requested);
+
+// MS2-FUNCTIONAL: the exe builds the AllocInfo in the fourth parameter's home slot (0x48), ours in the third's (0x40)
 // @0x142678170
-void ReserveGlobalPointerArray(void** array, void*, std::size_t requested)
+void ReserveGlobalPointerArray(void** array, void* heap, std::size_t requested)
 {
-    ReserveHeapArray(array, nullptr, requested, 8, false);
+    Sfr22ReserveGH(array, heap, requested);
 }
 
 
@@ -2504,27 +2503,24 @@ void ReleaseAudioRequestRecord(void* request)
             if (sound)
                 sound->release();
             *reinterpret_cast<FMOD::Sound**>(bytes + 0x20) = nullptr;
-            auto* previous = *reinterpret_cast<void**>(bytes + 8);
-            auto* next = *reinterpret_cast<void**>(bytes + 0x10);
-            if (next) {
-                *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
-                *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
+            if (*reinterpret_cast<void**>(bytes + 0x10)) {
+                *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 8) + 0x10) = *reinterpret_cast<void**>(bytes + 0x10);
+                *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 0x10) + 8) = *reinterpret_cast<void**>(bytes + 8);
                 *reinterpret_cast<void**>(bytes + 8) = nullptr;
                 *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
             }
             if (InterlockedDecrement(references) == 0) {
                 void** object = reinterpret_cast<void**>(bytes - 0x10);
-                reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(object))[0])(object, 1);
+                if (object)
+                    reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(object))[0])(object, 1);
             }
             return;
         }
         count = *references;
     }
-    auto* next = *reinterpret_cast<void**>(bytes + 0x10);
-    if (next) {
-        auto* previous = *reinterpret_cast<void**>(bytes + 8);
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(previous) + 0x10) = next;
-        *reinterpret_cast<void**>(static_cast<unsigned char*>(next) + 8) = previous;
+    if (*reinterpret_cast<void**>(bytes + 0x10)) {
+        *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 8) + 0x10) = *reinterpret_cast<void**>(bytes + 0x10);
+        *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 0x10) + 8) = *reinterpret_cast<void**>(bytes + 8);
         *reinterpret_cast<void**>(bytes + 8) = nullptr;
         *reinterpret_cast<void**>(bytes + 0x10) = nullptr;
     }
@@ -2560,28 +2556,41 @@ void ClearPlayerSoundRecord(void* request)
     }
 }
 
-// MS2-FUNCTIONAL: rounds pointer capacity to four entries, reallocates through the global heap, and frees storage when capacity is zero.
-// @0x1427463e0
-void ReserveVideoPlayerArray(void** array, void*, std::size_t requested)
+// Scaleform AllocInfo: the stat id handed to MemoryHeap::Alloc.
+struct Sfr22AllocInfo
 {
-    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    void* data = array[0];
-    std::size_t capacity = requested ? ((requested + 3) & ~std::size_t(3)) : 0;
-    if (!capacity) {
-        if (data)
-            reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
-        array[0] = nullptr;
+    unsigned StatId;
+    Sfr22AllocInfo(unsigned statId) : StatId(statId) {}
+};
+
+// ArrayDataBase<void*, AllocatorGH, ArrayDefaultPolicy>::Reserve; the exe has one copy per element type.
+static SF_INLINE void Sfr22ReserveGH(void** array, const void* pheapAddr, std::size_t requested)
+{
+    // ArrayDataBase::Reserve with granularity 4 on the global heap.
+    if (requested == 0) {
+        if (array[0]) {
+            reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(DAT_143b15f60, array[0]);
+            array[0] = nullptr;
+        }
         array[2] = nullptr;
-        return;
-    }
-    const std::size_t bytes = capacity * sizeof(void*);
-    if (data) {
-        array[0] = reinterpret_cast<void* (*)(void*, void*, std::size_t)>(vtable[11])(DAT_143b15f60, data, bytes);
     } else {
-        int flags = 2;
-        array[0] = reinterpret_cast<void* (*)(void*, std::size_t, const int*)>(vtable[10])(DAT_143b15f60, bytes, &flags);
+        requested = (requested + 3) / 4 * 4;
+        if (array[0]) {
+            array[0] = reinterpret_cast<void* (*)(void*, void*, std::size_t)>((*reinterpret_cast<void***>(DAT_143b15f60))[11])(
+                DAT_143b15f60, array[0], sizeof(void*) * requested);
+        } else {
+            array[0] = reinterpret_cast<void* (*)(void*, std::size_t, const Sfr22AllocInfo&)>((*reinterpret_cast<void***>(DAT_143b15f60))[10])(
+                DAT_143b15f60, sizeof(void*) * requested, Sfr22AllocInfo(2));
+        }
+        array[2] = reinterpret_cast<void*>(requested);
     }
-    array[2] = reinterpret_cast<void*>(capacity);
+}
+
+// MS2-FUNCTIONAL: the exe builds the AllocInfo in the fourth parameter's home slot (0x48), ours in the third's (0x40)
+// @0x1427463e0
+void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested)
+{
+    Sfr22ReserveGH(array, heap, requested);
 }
 
 // Initializes an empty hash table at eight slots and doubles it when live entries exceed its 80 percent load threshold.
