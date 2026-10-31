@@ -103,12 +103,11 @@ public:
         if (format)
             return format;
 
-        VertexElement* newElements = 0;
-        format = VFormats.Add(&newElements, elements, count);
+        format = VFormats.Add(&elements, elements, count);
         if (!format)
             return 0;
         format->Size      = (size + align - 1) & ~(align - 1);
-        format->pElements = newElements;
+        format->pElements = elements;
         return format;
     }
 
