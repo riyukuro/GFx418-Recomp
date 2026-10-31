@@ -1927,14 +1927,16 @@ void** FUN_140015710(void** frame, void* vm, void* receiver, int convert,
     return frame;
 }
 
-// MS2-FUNCTIONAL: writes an integer result only when the VM has no pending exception.
+// writes an integer result only when the VM has no pending exception.
 // @0x140015750
 void FUN_140015750(void** frame)
 {
     char* vm = static_cast<char*>(frame[0]);
     if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
-        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetUInt32Unsafe(
-            static_cast<Scaleform::UInt32>(reinterpret_cast<intptr_t>(frame[2])));
+    {
+        Scaleform::GFx::AS3::Value* result = static_cast<Scaleform::GFx::AS3::Value*>(frame[1]);
+        result->SetUInt32Unsafe(static_cast<Scaleform::UInt32>(reinterpret_cast<intptr_t>(frame[2])));
+    }
 }
 
 // MS2-FUNCTIONAL: writes a boolean result only when the VM has no pending exception.
@@ -2287,13 +2289,13 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
     reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->Convert2String(*result);
 }
 
-// MS2-FUNCTIONAL: initializes the executable's class-traits object, its 0xf8-byte instance size, and vtable.
+// initializes the executable's class-traits object, its 0xf8-byte instance size, and vtable.
 // @0x140012ec0
 void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 {
     FUN_1424d6750(object, vm, classInfo);
-    *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b71b0;
+    *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
     return object;
 }
 
@@ -2330,7 +2332,7 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes the recovered AS2 function prototype's Object and function-reference bases.
+// initializes the recovered AS2 function prototype's Object and function-reference bases.
 // @0x1400122e0
 Scaleform::GFx::AS2::Object* FUN_1400122e0(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context, void* prototype)
@@ -2339,8 +2341,8 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
     // prototype once below, after the vtables are stored
     extern void FUN_14291f6f0(void*, void*);
     FUN_14291f6f0(object, context);
-    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     extern void FUN_140007ba0(void*, void*, void*);
     FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
     return object;
