@@ -35147,7 +35147,6 @@ void FUN_140093150(longlong arg1, longlong arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093890
 // 16-bit colour table: entry i is the 8-bit level scaled down to arg2 bits and moved to bit arg3, repeated in both halves.
 void FUN_140093890(void *arg1, int arg2, int arg3)
@@ -35157,7 +35156,7 @@ void FUN_140093890(void *arg1, int arg2, int arg3)
   int sh;
   int fill;
   int *p;
-  int n;
+  cri_u8 n;
   
   sh = 8 - arg2;
   memset(arg1,0,0x400);
@@ -35166,12 +35165,12 @@ void FUN_140093890(void *arg1, int arg2, int arg3)
     ((uint *)((char *)arg1 + 0x400))[i] = v << 0x10 | v;
   }
   fill = (0xff >> sh) << arg3;
-  p = (int *)((char *)arg1 + 0x800);
+  p = (int *)((char *)arg1 + 0x808);   // the exe's pointer runs 8 bytes ahead of the four stores
   for (n = 0x40; n != 0; n--) {
+    p[-2] = fill;
+    p[-1] = fill;
     p[0] = fill;
     p[1] = fill;
-    p[2] = fill;
-    p[3] = fill;
     p = p + 4;
   }
 }
@@ -35719,7 +35718,6 @@ void FUN_1400946b0(longlong arg1, longlong arg2)
   } while( true );
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140094df0
 // 16-bit colour table: entry i is the 8-bit level scaled down to arg2 bits and moved to bit arg3, repeated in both halves.
 void FUN_140094df0(void *arg1, int arg2, int arg3)
@@ -35729,7 +35727,7 @@ void FUN_140094df0(void *arg1, int arg2, int arg3)
   int sh;
   int fill;
   int *p;
-  int n;
+  cri_u8 n;
   
   sh = 8 - arg2;
   memset(arg1,0,0x400);
@@ -35738,12 +35736,12 @@ void FUN_140094df0(void *arg1, int arg2, int arg3)
     ((uint *)((char *)arg1 + 0x400))[i] = v << 0x10 | v;
   }
   fill = (0xff >> sh) << arg3;
-  p = (int *)((char *)arg1 + 0x800);
+  p = (int *)((char *)arg1 + 0x808);   // the exe's pointer runs 8 bytes ahead of the four stores
   for (n = 0x40; n != 0; n--) {
+    p[-2] = fill;
+    p[-1] = fill;
     p[0] = fill;
     p[1] = fill;
-    p[2] = fill;
-    p[3] = fill;
     p = p + 4;
   }
 }
