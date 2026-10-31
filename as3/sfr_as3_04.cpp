@@ -2576,7 +2576,8 @@ Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Namespace> FUN_142419d00(
     Pickable<Instances::Namespace> result = ns.GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), ns.GetPrefix());
     if (nsa)
     {
-        for (UPInt i = 0; i < nsa->Namespaces.GetSize(); ++i)
+        const UPInt size = nsa->Namespaces.GetSize();
+        for (UPInt i = 0; i < size; ++i)
         {
             const Instances::Namespace& other = *nsa->Namespaces[i];
             if (other.GetUri().GetNode() == result->GetUri().GetNode())
@@ -2752,7 +2753,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // XML nodes take no indexed assignment.
-    // MS2-FUNCTIONAL: stack slot layout of ind and the CheckResult differs
     // @0x142422070
     CheckResult XML::SetProperty(const Multiname& prop_name, const Value& value)
     {
@@ -2760,8 +2760,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         UInt32 ind;
         if (GetVectorInd(prop_name, ind))
         {
-            VM& vm = GetVM();
-            vm.ThrowTypeError(VM::Error(VM::eXMLAssignmentToIndexedXMLNotAllowed, vm));
+            GetVM().ThrowTypeError(VM::Error(VM::eXMLAssignmentToIndexedXMLNotAllowed, GetVM()));
+            return false;
         }
         return false;
     }
@@ -3626,14 +3626,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         ToXMLString(buf, ident, NULL, NULL);
     }
 
-    // MS2-FUNCTIONAL: the exe selects the pretty flag branchlessly (cmov)
     // @0x142425ea0
     void XMLComment::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
                                  const NamespaceArray* usedNotDeclared)
     {
         SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
         const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
-        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        bool pretty = cl.prettyPrinting;
+        if (cl.prettyIndent < 0)
+            pretty = false;
         if (pretty && ident > 0)
             AddIndent(buf, ident);
         buf.AppendString("<!--", 4);
@@ -3641,14 +3642,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         buf.AppendString("-->", 3);
     }
 
-    // MS2-FUNCTIONAL: the exe selects the pretty flag branchlessly (cmov)
     // @0x142427020
     void XMLProcInstr::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
                                    const NamespaceArray* usedNotDeclared)
     {
         SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
         const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
-        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        bool pretty = cl.prettyPrinting;
+        if (cl.prettyIndent < 0)
+            pretty = false;
         if (pretty && ident > 0)
             AddIndent(buf, ident);
         buf.AppendString("<?", 2);
@@ -3666,7 +3668,9 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     {
         SF_UNUSED2(ancestorNamespaces, usedNotDeclared);
         const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
-        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
+        bool pretty = cl.prettyPrinting;
+        if (cl.prettyIndent < 0)
+            pretty = false;
         if (pretty && ident > 0)
             AddIndent(buf, ident);
         if (static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits())).prettyPrinting)
@@ -3676,7 +3680,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // Simple content prints as the text of its text children, anything else as XML.
-    // MS2-FUNCTIONAL: register allocation differs
     // @0x142425a80
     void XMLElement::ToString(StringBuffer& buf, SInt32 ident)
     {
@@ -3689,7 +3692,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 return;
             }
         }
-        for (UPInt i = 0; i < Children.GetSize(); ++i)
+        const UPInt size = Children.GetSize();
+        for (UPInt i = 0; i < size; ++i)
         {
             XML* child = Children[i];
             if (child->GetKind() == kText)
@@ -4273,11 +4277,11 @@ ClassTraits::Traits* FUN_142415520(Instances::fl::GlobalObjectCPP* self, const A
 }
 
 // XMLList: the descendants of every item
-// MS2-FUNCTIONAL: written from the exe on raw slots
 // @0x142415930
 void FUN_142415930(Instances::fl::XMLList* self, Instances::fl::XMLList& list, const Multiname& prop_name)
 {
-    for (UPInt i = 0; i < self->List.GetSize(); ++i)
+    const UPInt size = self->List.GetSize();
+    for (UPInt i = 0; i < size; ++i)
         self->List[i]->GetDescendants(list, prop_name);
 }
 
@@ -4831,8 +4835,13 @@ namespace Instances { namespace fl
     {
         VM& vm = GetVM();
         const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
-        const bool pretty = cl.prettyIndent >= 0 ? cl.prettyPrinting : false;
-        const SInt32 indentStep = cl.prettyIndent >= 0 ? cl.prettyIndent : 0;
+        SInt32 indentStep = cl.prettyIndent;
+        bool pretty = cl.prettyPrinting;
+        if (indentStep < 0)
+        {
+            pretty = false;
+            indentStep = 0;
+        }
 
         if (pretty && ident > 0)
             AddIndent(buf, ident);
@@ -4983,14 +4992,15 @@ Pickable<Instances::fl::XMLList> Instances::fl::XML::FUN_14241c810(AS3::Object& 
 
 // Instances::Function::StoreScopeStack (private): the closure's stored scope stack (+0x40) becomes the entries of ss
 // from base on.
-// MS2-FUNCTIONAL: free function on the Function layout (the member is private in the shared header)
+// A free function on the Function layout (the member is private in the shared header).
 // @0x142424bd0
 void FUN_142424bd0(Instances::Function* self, UPInt base, const Scaleform::ArrayDH<AS3::Value>& ss)
 {
     Scaleform::ArrayDH<AS3::Value>& stored =
         *reinterpret_cast<Scaleform::ArrayDH<AS3::Value>*>(reinterpret_cast<char*>(self) + 0x40);
     stored.Resize(0);
-    for (UPInt i = base; i < ss.GetSize(); ++i)
+    const UPInt size = ss.GetSize();
+    for (UPInt i = base; i < size; ++i)
         stored.PushBack(ss[i]);
 }
 
