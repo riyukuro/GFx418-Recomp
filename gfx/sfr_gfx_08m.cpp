@@ -124,10 +124,6 @@ FontGlyphPacker::FontGlyphPacker(FontPackParams* params, ImageCreator* pimageCre
     : pFontPackParams(params), pTextureIdGen(ptextureIdGen), pImageCreator(pimageCreator), pLog(plog),
       pFontHeap(fontHeap), Ras(Memory::GetGlobalHeap()), ThreadedLoading(threadedLoading)
 {
-    PackTextureConfig.NominalSize   = 48;
-    PackTextureConfig.PadPixels     = 3;
-    PackTextureConfig.TextureWidth  = 1024;
-    PackTextureConfig.TextureHeight = 1024;
     if (pFontPackParams)
         pFontPackParams->GetTextureConfig(&PackTextureConfig);
     Packer.SetWidth(PackTextureConfig.TextureWidth);
@@ -394,7 +390,7 @@ void FontGlyphPacker::generateTextures(Array<GlyphInfo>* glyphs, unsigned numTex
 }
 
 // @0x1426613f0
-void FontGlyphPacker::GenerateFontBitmaps(const Array<FontResource*>& fonts)
+__declspec(noinline) void FontGlyphPacker::GenerateFontBitmaps(const Array<FontResource*>& fonts)
 {
     int      limit       = pFontPackParams->GetGlyphCountLimit();
     unsigned totalGlyphs = 0;
@@ -425,7 +421,6 @@ void FontGlyphPacker::GenerateFontBitmaps(const Array<FontResource*>& fonts)
     generateTextures(&glyphs, numTextures);
 }
 
-// MS2-FUNCTIONAL 0x1426612b0: the exe inlines the FontGlyphPacker ctor after the allocation; ours calls it
 // @0x1426612b0
 void GFx_GenerateFontBitmaps(FontPackParams* params, const Array<FontResource*>& fonts, ImageCreator* pimageCreator,
                              Log* plog, ResourceId* ptextureIdGen, MemoryHeap* fontHeap, bool threadedLoading)

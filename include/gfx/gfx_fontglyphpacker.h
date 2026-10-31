@@ -95,8 +95,14 @@ private:
     void     rasterizeGlyph(Render::RawImage* texImage, GlyphInfo* gi);
     void     generateTextures(Array<GlyphInfo>* glyphs, unsigned numTextures);
 
+    // The packer's copy starts at the defaults (48 px glyphs, 3 px pad, 1024x1024 pages) before the params override it.
+    struct PackConfig : FontPackParams::TextureConfig
+    {
+        PackConfig() { NominalSize = 48; PadPixels = 3; TextureWidth = 1024; TextureHeight = 1024; }
+    };
+
     FontPackParams*               pFontPackParams;   // +0x10
-    FontPackParams::TextureConfig PackTextureConfig; // +0x18
+    PackConfig                    PackTextureConfig; // +0x18
     ResourceId*                   pTextureIdGen;     // +0x28
     Ptr<ImageCreator>             pImageCreator;     // +0x30
     Ptr<Log>                      pLog;              // +0x38
