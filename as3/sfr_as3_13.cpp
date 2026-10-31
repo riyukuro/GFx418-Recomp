@@ -1530,32 +1530,31 @@ namespace Instances { namespace fl_text
     static __forceinline void GetStringProperty(ASString& result, const Instances::fl::Object* pobj, UPInt offset)
     {
         const Value& v = *(const Value*)((const UByte*)pobj + offset);
-        result.AssignNode(v.IsNull() ? result.GetManager()->GetNullStringNode() : v.AsStringNode());
+        if (v.IsNull())
+            result.AssignNode(result.GetManager()->GetNullStringNode());
+        else
+            result.AssignNode(v.AsStringNode());
     }
 
     // @0x1424af820
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextFormat::alignGet(ASString& result)
     {
         GetStringProperty(result, this, 0x38);
     }
 
     // @0x1424b0870
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextFormat::fontGet(ASString& result)
     {
         GetStringProperty(result, this, 0xd8);
     }
 
     // @0x1424b4c60
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextFormat::targetGet(ASString& result)
     {
         GetStringProperty(result, this, 0x200);
     }
 
     // @0x1424b5330
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextFormat::urlGet(ASString& result)
     {
         GetStringProperty(result, this, 0x240);
@@ -2148,18 +2147,17 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b3270
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::multilineSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
-        DocViewFlagsView* pdoc = static_cast<DocViewFlagsView*>(DocViewOf(ptf));
-        if (pdoc->IsMultiline() != value)
+        bool oldMultiline = static_cast<DocViewFlagsView*>(DocViewOf(ptf))->IsMultiline();
+        if (oldMultiline != value)
         {
             if (value)
-                pdoc->SetMultiline();
+                static_cast<DocViewFlagsView*>(DocViewOf(ptf))->SetMultiline();
             else
-                pdoc->ClearMultiline();
+                static_cast<DocViewFlagsView*>(DocViewOf(ptf))->ClearMultiline();
             TextFieldUpdateAutoSize(this);
         }
         FUN_1425bc060(ptf);
@@ -3774,22 +3772,17 @@ namespace Instances { namespace fl_text
     void TextField::useRichTextClipboardSet(const Value& result, bool v)
     {
         SF_UNUSED(result);
-        void* ptf = DisplayTextField(this);
-        UInt32 flags = FieldFlags(ptf);
-        if (v)
-            flags |= 0x100;
-        else
-            flags &= ~0x100u;
-        void* pdoc = DocViewOf(ptf);
-        FieldFlags(ptf) = flags;
+        struct DocKitView { UByte Pad[0xd8]; EditorKitFlagsView* pEditorKit; };
+        struct FieldView { UByte Pad[0xe0]; DocKitView* pDocument; UByte Pad2[0x14]; UInt32 Flags; };
+        FieldView* ptf = (FieldView*)DisplayTextField(this);
+        (v) ? ptf->Flags |= 0x100 : ptf->Flags &= (~0x100u);
         // The view's editor kit (+0xd8) keeps its own rich-clipboard flag.
-        EditorKitFlagsView* pkit = *(EditorKitFlagsView**)((UByte*)pdoc + 0xd8);
-        if (pkit)
+        if (ptf->pDocument->pEditorKit)
         {
-            if ((UByte)(flags >> 8) & 1)
-                pkit->SetUseRichClipboard();
+            if ((UByte)(ptf->Flags >> 8) & 1)
+                ptf->pDocument->pEditorKit->SetUseRichClipboard();
             else
-                pkit->ClearUseRichClipboard();
+                ptf->pDocument->pEditorKit->ClearUseRichClipboard();
         }
     }
 
