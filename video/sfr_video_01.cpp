@@ -238,13 +238,12 @@ void FUN_1400029d0(void** channel)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: returns the terminated byte string length using the exe's bounded scan behavior.
+// returns the terminated byte string length (the intrinsic strlen: repne scasb).
 // @0x140002f70
+#pragma intrinsic(strlen)
 Scaleform::UPInt FUN_140002f70(const char* text)
 {
-    const char* cursor = text;
-    while (*cursor) ++cursor;
-    return static_cast<Scaleform::UPInt>(cursor - text);
+    return strlen(text);
 }
 
 // replaces the retained audio channel after releasing its previous value.
@@ -617,13 +616,13 @@ void FUN_140003d10(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 void FUN_140003da0(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: creates and retains a display object's character handle on first use. The exe returns the handle
-// (or the created one) in rax; this keeps the void signature that sfr_sf_hooks names. Nothing in the exe calls or
-// references 0x140004310, so no caller reads the result.
+// returns the display object's character handle, creating and retaining it on first use.
 // @0x140004310
-void FUN_140004310(void* object)
+void* FUN_140004310(void* object)
 {
-    if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x70)) FUN_1425f1910(object);
+    void* handle = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x70);
+    if (!handle) handle = FUN_1425f1910(object);
+    return handle;
 }
 
 // retrieves the display object's character type into the caller's output slot.
@@ -736,11 +735,11 @@ Scaleform::GFx::CharacterHandle* FUN_1400042d0(Scaleform::GFx::CharacterHandle* 
     return handle;
 }
 
-// MS2-FUNCTIONAL: destroys the FnCall logging frame and frees its allocation when requested.
+// the LogBase<FnCall> deleting destructor: its inline dtor only restores the 0x1431b4de0 vftable.
 // @0x1400043b0
 Scaleform::GFx::AS2::FnCall* FUN_1400043b0(Scaleform::GFx::AS2::FnCall* call, unsigned flags)
 {
-    call->FnCall::~FnCall();
+    call->Scaleform::GFx::LogBase<Scaleform::GFx::AS2::FnCall>::~LogBase();
     if (flags & 1) operator delete(call);
     return call;
 }
@@ -920,14 +919,11 @@ Scaleform::RefCountWeakSupportImpl* FUN_1400058c0(Scaleform::RefCountWeakSupport
     return value;
 }
 
-// MS2-FUNCTIONAL: decrements a character-handle reference and destroys it at zero.
+// releases a character-handle reference (Ptr<CharacterHandle> dtor).
 // @0x140005900
 void FUN_140005900(Scaleform::GFx::CharacterHandle** value)
 {
-    if (*value && --*reinterpret_cast<int*>(*value) < 1) {
-        (*value)->~CharacterHandle();
-        Scaleform::Memory::Free(*value);
-    }
+    if (*value) (*value)->Release();
 }
 
 // retains the replacement character handle before releasing the previous one.
@@ -1057,14 +1053,18 @@ void FUN_140005df0(Scaleform::UPInt* pair)
     reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3))->Release();
 }
 
-// MS2-FUNCTIONAL: copies both shared string members when a destination pair is supplied.
+// A pair of shared strings, copied member by member by its implicit copy constructor.
+struct Video01StringPair
+{
+    Scaleform::String First;
+    Scaleform::String Second;
+};
+
+// copies both shared string members when a destination pair is supplied.
 // @0x140005db0
 void FUN_140005db0(Scaleform::String* destination, const Scaleform::String* source)
 {
-    if (destination) {
-        new (destination) Scaleform::String(source[0]);
-        new (destination + 1) Scaleform::String(source[1]);
-    }
+    new (destination) Video01StringPair(*reinterpret_cast<const Video01StringPair*>(source));
 }
 
 // MS2-FUNCTIONAL: initializes a FunctionRefBase from the source, including its frame ownership mode.
@@ -1091,24 +1091,38 @@ void FUN_1400061f0(void** proxy)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: resolves a weak proxy and clears the slot after the target has died.
+// resolves a weak proxy (WeakPtr::GetObjectThroughProxy): returns the target while it is alive and still referenced
+// (0 once its count reached zero), and drops the proxy and clears the slot after the target has died.
+// BEHAVIOUR FIX: the slot holds the proxy untagged, as in the exe (it does not mask the low bits), and a target whose
+// count is already zero yields 0 rather than the dying object.
+#pragma push_macro("GetObject")
+#undef GetObject                              // windows.h's GetObjectA
 // @0x140006240
 void* FUN_140006240(void** weakSlot)
 {
-    Scaleform::WeakPtrProxy* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
-        reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
-    if (!proxy) return 0;
-    void* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
-    if (object) return object;
-    proxy->Release();
-    *weakSlot = 0;
-    return 0;
+    // WeakPtr<C>::GetObjectThroughProxy (the slot is the Ptr<WeakPtrProxy>).
+    Scaleform::Ptr<Scaleform::WeakPtrProxy>& pProxy = *reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(weakSlot);
+    Scaleform::RefCountWeakSupportImpl* obj = 0;
+    if (pProxy)
+    {
+        if (pProxy->IsAlive())
+        {
+            obj = pProxy->GetObject();
+            if (obj->GetRefCount() == 0)
+                obj = 0;
+        }
+        else
+            pProxy.Clear();
+    }
+    return obj;
 }
+#pragma pop_macro("GetObject")
 
-// MS2-FUNCTIONAL: runs the Scaleform base destructor and conditionally releases the allocation.
+// the VideoSound deleting destructor: restores its vftable and runs the ref-counted base destructor.
 // @0x140002a60
 void* FUN_140002a60(void* object, unsigned flags)
 {
+    *static_cast<void***>(object) = &VideoSoundVtable;
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
@@ -1253,11 +1267,11 @@ void FUN_140005300(Scaleform::UPInt* pair)
     reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3))->Release();
 }
 
-// MS2-FUNCTIONAL: tears down weak-reference support state and optionally frees its allocation.
+// the VideoProvider deleting destructor (its inline dtor stores the 0x1431b4f30 vftable).
 // @0x140005430
 void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 {
-    object->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
+    static_cast<Scaleform::GFx::Video::VideoProvider*>(object)->VideoProvider::~VideoProvider();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1271,11 +1285,11 @@ void* FUN_140004f30(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the base object's shared state and optionally its storage.
+// the SyncObject deleting destructor (its inline dtor stores the 0x1431b4f78 vftable).
 // @0x140005610
 void* FUN_140005610(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    static_cast<Scaleform::GFx::Video::VideoPlayer::SyncObject*>(object)->SyncObject::~SyncObject();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -2586,26 +2600,6 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
-// The exe's own (0x1431b4fe8) and SyncObject (0x1431b4f78) vftable stores here and in FUN_1400062e0 are dead:
-// ~RefCountNTSImplCore overwrites them.
-// MS2-FUNCTIONAL: releases the weak target proxy and base state of the SWF sync object.
-// @0x140006290
-void FUN_140006290(void* object)
-{
-    void** proxySlot = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x10);
-    if (*proxySlot) static_cast<Scaleform::WeakPtrProxy*>(*proxySlot)->Release();
-    FUN_14257db50(object);
-}
-
-// MS2-FUNCTIONAL: destroys the SWF sync object and optionally frees its storage.
-// @0x1400062e0
-void* FUN_1400062e0(void* object, unsigned flags)
-{
-    FUN_140006290(object);
-    if (flags & 1) Scaleform::Memory::Free(object);
-    return object;
-}
-
 // MS2-FUNCTIONAL: promotes a live weak proxy to a strong object reference in the output slot.
 // BEHAVIOUR FIX: a live object with a non-zero count gets a plain (RefCountNTSImpl) AddRef, as in the exe. This
 // used to call 0x14257dcb0 (RefCountImpl::Release), so every promotion dropped a reference instead of taking one.
@@ -3322,11 +3316,11 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
     return Object::GetMember(penv, name, val);
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140005720
 void NetStream::Seek(Number pos, Environment* penv)
 {
-    pVideoProvider->Seek((float)pos, penv->GetMovieImpl());
+    MovieImpl* proot = penv->GetMovieImpl();
+    pVideoProvider->Seek((float)pos, proot);
 }
 
 // ---- NetStream.prototype
@@ -4078,6 +4072,22 @@ FunctionRef FUN_14000cf20(GlobalContext* global)
 }
 
 }}} // namespace Scaleform::GFx::AS2
+
+// The complete and deleting destructors of SwfVideoSyncObject: its inline dtor stores the own (0x1431b4fe8) vftable,
+// releases the target proxy, and ~SyncObject stores 0x1431b4f78 before the base dtor.
+// @0x140006290
+void FUN_140006290(void* object)
+{
+    static_cast<Scaleform::GFx::AS2::SwfVideoSyncObject*>(object)->SwfVideoSyncObject::~SwfVideoSyncObject();
+}
+
+// @0x1400062e0
+void* FUN_1400062e0(void* object, unsigned flags)
+{
+    static_cast<Scaleform::GFx::AS2::SwfVideoSyncObject*>(object)->SwfVideoSyncObject::~SwfVideoSyncObject();
+    if (flags & 1) Scaleform::Memory::Free(object);
+    return object;
+}
 
 // A view that reaches the collector's protected pass functors (never constructed).
 struct Video01NetStreamGc : Scaleform::GFx::AS2::NetStream
