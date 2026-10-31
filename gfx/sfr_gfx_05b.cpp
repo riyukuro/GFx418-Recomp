@@ -231,8 +231,6 @@ void Sprite::SetSoundVolume(int volume, int subVolume)
 
 // Applies the inherited volume to the clip's channels (a sound object with its own transform keeps its volume),
 // then to the child clips.
-// MS2-FUNCTIONAL 0x1425dd720: the exe tests the child's interactive and sprite flag bits one at a time (shr/test), ours
-// merges them into one and/cmp; same calls (the recursive call is not in the exe's .pdata pairing)
 // @0x1425dd720
 void Sprite::UpdateActiveSoundVolume()
 {
@@ -249,8 +247,12 @@ void Sprite::UpdateActiveSoundVolume()
     for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
-        if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsSprite())
-            static_cast<Sprite*>(ch)->UpdateActiveSoundVolume();
+        if (ch->IsInteractiveObject())
+        {
+            InteractiveObject* pasc = static_cast<InteractiveObject*>(ch);
+            if (pasc->IsSprite())
+                static_cast<Sprite*>(pasc)->UpdateActiveSoundVolume();
+        }
     }
 }
 
@@ -283,8 +285,6 @@ void Sprite::SetSoundPan(int pan)
     UpdateActiveSoundPan();
 }
 
-// MS2-FUNCTIONAL 0x1425dd5b0: the exe tests the child's interactive and sprite flag bits one at a time (shr/test), ours
-// merges them into one and/cmp; same calls (the recursive call is not in the exe's .pdata pairing)
 // @0x1425dd5b0
 void Sprite::UpdateActiveSoundPan()
 {
@@ -301,14 +301,17 @@ void Sprite::UpdateActiveSoundPan()
     for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
-        if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsSprite())
-            static_cast<Sprite*>(ch)->UpdateActiveSoundPan();
+        if (ch->IsInteractiveObject())
+        {
+            InteractiveObject* pasc = static_cast<InteractiveObject*>(ch);
+            if (pasc->IsSprite())
+                static_cast<Sprite*>(pasc)->UpdateActiveSoundPan();
+        }
     }
 }
 
 // Stops every channel of this clip and its child clips.
 // @0x1425dd4d0
-// MS2-FUNCTIONAL: the exe tests the child's interactive and sprite flag bits one shift at a time (bit-field reads?), cl folds them into one mask compare
 void Sprite::StopActiveSounds()
 {
     if (pActiveSounds)
@@ -323,14 +326,17 @@ void Sprite::StopActiveSounds()
     for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
-        if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsSprite())
-            static_cast<Sprite*>(ch)->StopActiveSounds();
+        if (ch->IsInteractiveObject())
+        {
+            InteractiveObject* pasc = static_cast<InteractiveObject*>(ch);
+            if (pasc->IsSprite())
+                static_cast<Sprite*>(pasc)->StopActiveSounds();
+        }
     }
 }
 
 // Stops the channels playing pres, here and in the child clips.
 // @0x1425dd380
-// MS2-FUNCTIONAL: the exe tests the child's interactive and sprite flag bits one shift at a time (bit-field reads?), cl folds them into one mask compare
 void Sprite::StopActiveSounds(SoundResource* pres)
 {
     if (pActiveSounds)
@@ -350,14 +356,17 @@ void Sprite::StopActiveSounds(SoundResource* pres)
     for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
-        if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsSprite())
-            static_cast<Sprite*>(ch)->StopActiveSounds(pres);
+        if (ch->IsInteractiveObject())
+        {
+            InteractiveObject* pasc = static_cast<InteractiveObject*>(ch);
+            if (pasc->IsSprite())
+                static_cast<Sprite*>(pasc)->StopActiveSounds(pres);
+        }
     }
 }
 
 // Stops the channels started by psnd, here and in the child clips.
 // @0x1425dd230
-// MS2-FUNCTIONAL: the exe tests the child's interactive and sprite flag bits one shift at a time (bit-field reads?), cl folds them into one mask compare
 void Sprite::StopActiveSounds(ASSoundIntf* psnd)
 {
     if (pActiveSounds)
@@ -377,8 +386,12 @@ void Sprite::StopActiveSounds(ASSoundIntf* psnd)
     for (unsigned i = 0; i < mDisplayList.GetCount(); i++)
     {
         DisplayObjectBase* ch = mDisplayList.GetDisplayObject(i);
-        if (ch->IsInteractiveObject() && static_cast<InteractiveObject*>(ch)->IsSprite())
-            static_cast<Sprite*>(ch)->StopActiveSounds(psnd);
+        if (ch->IsInteractiveObject())
+        {
+            InteractiveObject* pasc = static_cast<InteractiveObject*>(ch);
+            if (pasc->IsSprite())
+                static_cast<Sprite*>(pasc)->StopActiveSounds(psnd);
+        }
     }
 }
 
