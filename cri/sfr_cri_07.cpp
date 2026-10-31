@@ -1094,7 +1094,8 @@ void FUN_140066460(longlong arg1, uint arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: same code; the exe swaps r8/r9 between the arg1 copy and the row stride (reordered
+// declarations, an inline stride and a for loop all keep ours).
 // @0x140066a10
 void FUN_140066a10(longlong arg1, uint arg2)
 {
@@ -27189,7 +27190,8 @@ void FUN_14008c890(longlong arg1, uint arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: same code; the exe swaps r9/r10 between the arg1 copy and the row stride (reordered
+// declarations, an inline stride and a for loop all keep ours).
 // @0x14008ce50
 void FUN_14008ce50(longlong arg1, uint arg2)
 {

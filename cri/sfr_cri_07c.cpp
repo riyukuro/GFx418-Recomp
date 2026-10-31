@@ -725,12 +725,14 @@ uint FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3);
 void FUN_14006aa60(short *src, short *dst)
 {
   int c = *src;
+  int v;
   if (c >= 0) {
-    *dst = (short)((c + 4) >> 3);
+    v = (c + 4) >> 3;
   }
   else {
-    *dst = (short)-((4 - c) >> 3);
+    v = -((4 - c) >> 3);
   }
+  *dst = (short)v;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
