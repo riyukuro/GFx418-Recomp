@@ -69,6 +69,16 @@ void Sfr31ClassTraitsCleanup(UPInt entry);                                      
 // The AS3 object's +0x50 counted reference set to p (unrecovered).
 void FUN_142446e70(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* obj, void* p);
 void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id);   // AvmDisplayObj: fire the event
+// The Value setters, out of line in the exe (GFxValue2ASValue tail-calls them).
+void FUN_142423b90(Scaleform::GFx::AS3::Value* v);                                        // SetUndefined
+void FUN_142421ed0(Scaleform::GFx::AS3::Value& v);                                        // SetNull
+void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);                                // SetBool
+void FUN_142423a90(Scaleform::GFx::AS3::Value& v, Scaleform::SInt32 i);                   // SetSInt32
+void FUN_14252a460(Scaleform::GFx::AS3::Value& v, Scaleform::UInt32 u);                   // SetUInt32
+void FUN_142421f20(Scaleform::GFx::AS3::Value& v, double n);                              // SetNumber
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // operator=(const ASString&)
+void FUN_1424edab0(Scaleform::GFx::AS3::Value& v, Scaleform::GFx::ASStringNode* node);   // Assign(ASStringNode*)
+void FUN_1424edc10(Scaleform::GFx::AS3::Value& v, Scaleform::GFx::AS3::Object* obj);     // Assign(Object*)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // Trace values for the four built-in scalar traits are definitely non-null; user classes may have
@@ -4549,9 +4559,10 @@ bool Sfr33GetClassValue(VM& vm, const StringDataPtr& gname, Value& result)
 }
 
 // The value of a tagged object address (bits 1..2: object, class, function, namespace).
-// The out-of-line Value::AssignUnsafe copies for functions and namespaces (sfr_as3_03 defines them).
+// The out-of-line Value::Assign/AssignUnsafe copies for functions and namespaces (sfr_as3_03 defines them).
 struct ValueAssignCopies
 {
+    static void AssignFunction(Value& v, Instances::Function* p);          // 0x1424052a0
     static void AssignUnsafeFunction(Value& v, Instances::Function* p);    // 0x1424053f0
     static void AssignUnsafeNamespace(Value& v, Instances::Namespace* p);  // 0x142405420
 };
@@ -5570,45 +5581,74 @@ bool Sfr33SetObjectValueThrough(void* self, GFx::Value* pval, GFx::Value::Object
 
 // A host value as an AS3 value. Managed strings and objects come from this movie and are shared as they are; a
 // function object keeps its kFunction tag. Closures carry their kind in bit 1 of the object pointer.
-// MS2-FUNCTIONAL 0x1425048d0: the exe calls the Value assignments out of line; same results
+// The movie's string manager (+0x348).
+static SF_INLINE ASStringManager* sm(const MovieRoot* root)
+{
+    return *reinterpret_cast<ASStringManager* const*>(reinterpret_cast<const UByte*>(root) + 0x348);
+}
+// v = ASString(node), node already AddRef'd here. The exe keeps the node in a register across the
+// out-of-line operator=, so the reference it is passed is a separate copy of the node pointer.
+static SF_INLINE void Sfr17AssignNode(Value& v, ASStringNode* node)
+{
+    {
+        ASStringNode* str = node;
+        FUN_1424e0d40(v, reinterpret_cast<const ASString&>(str));
+    }
+    node->Release();
+}
+// The exe calls the Value setters out of line here.
+// MS2-FUNCTIONAL 0x1425048d0: rbx and rdi swapped (the destination and the string node); same code otherwise
 // @0x1425048d0
 void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
 {
     const Sfr33GFxValueRaw& gv = reinterpret_cast<const Sfr33GFxValueRaw&>(gfxVal);
-    // The movie's string manager (+0x348).
-    ASStringManager* sm = *reinterpret_cast<ASStringManager* const*>(reinterpret_cast<const UByte*>(this) + 0x348);
-    switch (gv.Type & 0x8f)
+    switch (int(gv.Type & 0x8f))
     {
     case 0:     // VT_Undefined
-        pdestVal->SetUndefined();
-        break;
-    case 1:     // VT_Null
-        pdestVal->SetNull();
+        FUN_142423b90(pdestVal);
         break;
     case 2:     // VT_Boolean
-        pdestVal->SetBool(*reinterpret_cast<const bool*>(&gv.pData));
+        FUN_142421710(*pdestVal, *reinterpret_cast<const bool*>(&gv.pData));
+        break;
+    case 1:     // VT_Null
+        FUN_142421ed0(*pdestVal);
         break;
     case 3:     // VT_Int
-        pdestVal->SetSInt32(*reinterpret_cast<const SInt32*>(&gv.pData));
+        FUN_142423a90(*pdestVal, *reinterpret_cast<const SInt32*>(&gv.pData));
         break;
     case 4:     // VT_UInt
-        pdestVal->SetUInt32(*reinterpret_cast<const UInt32*>(&gv.pData));
+        FUN_14252a460(*pdestVal, *reinterpret_cast<const UInt32*>(&gv.pData));
         break;
     case 5:     // VT_Number
-        pdestVal->SetNumber(*reinterpret_cast<const Double*>(&gv.pData));
+        FUN_142421f20(*pdestVal, *reinterpret_cast<const Double*>(&gv.pData));
         break;
     case 6:     // VT_String
-        if (gv.Type & 0x40)
-            *pdestVal = static_cast<ASStringNode*>(gv.pData);   // pData is the node's first field
+        if ((UByte)(gv.Type >> 6) & 1)
+            FUN_1424edab0(*pdestVal, static_cast<ASStringNode*>(gv.pData));   // pData is the node's first field
         else
-            *pdestVal = ASString(sm->CreateStringNode(static_cast<const char*>(gv.pData)));
+        {
+            ASStringNode* node = sm(this)->CreateStringNode(static_cast<const char*>(gv.pData));
+            node->AddRef();
+            Sfr17AssignNode(*pdestVal, node);
+        }
         break;
     case 7:     // VT_StringW
-        if (gv.Type & 0x40)
-            // The wide text sits after the node pointer of its storage.
-            *pdestVal = ASString(*reinterpret_cast<ASStringNode* const*>(static_cast<const UByte*>(gv.pData) - 8));
-        else
-            *pdestVal = ASString(sm->CreateStringNode(static_cast<const wchar_t*>(gv.pData)));
+        {
+            const wchar_t* pwstr = static_cast<const wchar_t*>(gv.pData);
+            ASStringNode* node;
+            if ((UByte)(gv.Type >> 6) & 1)
+            {
+                // The wide text sits after the node pointer of its storage.
+                node = *reinterpret_cast<ASStringNode* const*>(reinterpret_cast<const UByte*>(pwstr) - 8);
+                node->AddRef();
+            }
+            else
+            {
+                node = sm(this)->CreateStringNode(pwstr);
+                node->AddRef();
+            }
+            Sfr17AssignNode(*pdestVal, node);
+        }
         break;
     case 8:     // VT_Object
     case 9:     // VT_Array
@@ -5620,18 +5660,18 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
                 const Traits& tr = obj->GetTraits();
                 if (tr.GetTraitsType() == Traits_Function && tr.IsInstanceTraits())
                 {
-                    *pdestVal = reinterpret_cast<Instances::Function*>(obj);
+                    ValueAssignCopies::AssignFunction(*pdestVal, reinterpret_cast<Instances::Function*>(obj));
                     break;
                 }
             }
-            *pdestVal = obj;
+            FUN_1424edc10(*pdestVal, obj);
         }
         break;
     case 11:    // VT_Closure
         {
             Object* pobj = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(gv.pData) & ~UPInt(2));
-            if (reinterpret_cast<UPInt>(gv.pData) & 2)
-                *pdestVal = Value(pobj, SInt32(gv.DataAux), false);
+            if ((UByte)(reinterpret_cast<UPInt>(gv.pData) >> 1) & 1)
+                *pdestVal = Value(pobj, SInt32(gv.DataAux));
             else
                 *pdestVal = Value(pobj, *reinterpret_cast<const ThunkInfo*>(gv.DataAux));
         }
