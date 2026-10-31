@@ -77,6 +77,61 @@ static inline U FilledMicros(void* s)
 }
 
 static inline float AtLeast(float floor, float x) { return floor > x ? floor : x; }
+// Lock::Locker over a raw CRITICAL_SECTION member (the channel lock at +0x70, the renderer AuxStreamsLock at +0x80).
+struct ChannelLocker
+{
+    CRITICAL_SECTION* cs;
+    ChannelLocker(CRITICAL_SECTION* c) : cs(c) { EnterCriticalSection(cs); }
+    ~ChannelLocker() { LeaveCriticalSection(cs); }
+};
+
+// The AuxStreamers hash (streamer -> Array<SoundChannelFMODImplAux*>) and its HashSetBase iterator.
+struct AuxTable
+{
+    U EntryCount, SizeMask;
+};
+struct AuxEntry
+{
+    SPInt NextInChain; // -2 = empty
+    U     HashValue;
+    void* Key;
+    void** Data;
+    U     Size, Policy;
+};
+struct AuxIter
+{
+    AuxTable* const* pHash;
+    SPInt Index;
+    AuxIter(AuxTable* const* h, SPInt i) : pHash(h), Index(i) {}
+    static AuxEntry& E(AuxTable* t, SPInt i) { return ((AuxEntry*)(t + 1))[i]; }
+    AuxEntry& operator*() const { return E(*pHash, Index); }
+    void operator++()
+    {
+        if (Index <= (SPInt)(*pHash)->SizeMask)
+        {
+            Index++;
+            while ((U)Index <= (*pHash)->SizeMask && E(*pHash, Index).NextInChain == -2)
+                Index++;
+        }
+    }
+    bool IsEnd() const { return (pHash == 0) || (*pHash == 0) || (Index > (SPInt)(*pHash)->SizeMask); }
+    bool operator==(const AuxIter& o) const
+    {
+        if (IsEnd() && o.IsEnd())
+            return true;
+        return (pHash == o.pHash) && (Index == o.Index);
+    }
+    bool operator!=(const AuxIter& o) const { return !(*this == o); }
+};
+static inline AuxIter AuxBegin(AuxTable* const* h)
+{
+    if (*h == 0)
+        return AuxIter(0, 0);
+    U first = 0;
+    while (first <= (*h)->SizeMask && AuxIter::E(*h, first).NextInChain == -2)
+        first++;
+    return AuxIter(h, first);
+}
 
 struct SoundTransform
 {
@@ -100,7 +155,7 @@ bool FUN_142746480(void* self, float seconds)
 // @0x1427464c0
 void FUN_1427464c0(void* self, float volume)
 {
-    void* group = 0;
+    void* group;
     if (FUN_1428d8e9c(RawField<void*>(self, 0x10), &group) == 0)
         FUN_1428d8f20(group, volume);
 }
@@ -115,6 +170,18 @@ void FUN_142746500(void* self, float pan)
 }
 
 // Channel: seek to a time, past the sample's leading latency.
+// The sample's buffered latency in ms (0 without sample data), inlined in the exe.
+static inline unsigned SampleLatencyMs(void* sample)
+{
+    if (sample)
+    {
+        void* data = RawField<void*>(sample, 0x38);
+        if (data)
+            return RawField<unsigned>(data, 0x1c) * 1000 / RawField<unsigned>(data, 0x14);
+    }
+    return 0;
+}
+
 // @0x142746510
 void FUN_142746510(void* self, float seconds)
 {
@@ -122,23 +189,14 @@ void FUN_142746510(void* self, float seconds)
     void* channel = RawField<void*>(self, 0x38);
     if (!channel)
         return;
-    unsigned latency = 0;
-    void* sample = RawField<void*>(self, 0x30);
-    if (sample)
-    {
-        void* data = RawField<void*>(sample, 0x38);
-        if (data)
-            latency = RawField<unsigned>(data, 0x1c) * 1000 / RawField<unsigned>(data, 0x14);
-    }
-    FUN_1428d8ef6(channel, latency + ms, 1);
+    FUN_1428d8ef6(channel, SampleLatencyMs(RawField<void*>(self, 0x30)) + ms, 1);
 }
 
 // Aux channel: seek, then refill the stream from the new position.
-// MS2-FUNCTIONAL: Lock::Locker spelled as Enter/LeaveCriticalSection.
 // @0x142746560
 void FUN_142746560(void* self, float seconds)
 {
-    EnterCriticalSection(RawLock(self, 0x70));
+    ChannelLocker lock(RawLock(self, 0x70));
     void* sample = RawField<void*>(self, 0x30);
     if (sample && FUN_142746480(sample, seconds))
     {
@@ -152,21 +210,19 @@ void FUN_142746560(void* self, float seconds)
         RawField<char>(self, 0x69) = 0;
         RawField<U>(self, 0x60) = FilledMicros(sample);
     }
-    LeaveCriticalSection(RawLock(self, 0x70));
 }
 
 // Sample: seek the underlying stream to a time.
 // @0x142746640
 bool FUN_142746640(void* self, float seconds)
 {
-    void* sound = RawField<void*>(self, 0x30);
-    void* data = RawField<void*>(self, 0x28);
-    if (!sound || !data)
+    void* data;
+    if (!RawField<void*>(self, 0x30) || !(data = RawField<void*>(self, 0x28)))
         return false;
     unsigned seek = RawField<unsigned>(data, 0x1c);
-    float frequency = 0;
-    FUN_1428d8eb4(sound, &frequency, 0, 0, 0);
-    return FUN_1428d8ec6(sound, (unsigned)(long long)(frequency * seconds) + seek) == 0;
+    float frequency;
+    FUN_1428d8eb4(RawField<void*>(self, 0x30), &frequency, 0, 0, 0);
+    return FUN_1428d8ec6(RawField<void*>(self, 0x30), (unsigned)(long long)(frequency * seconds) + seek) == 0;
 }
 
 // Channel: SetTransforms for channels with no envelope support.
@@ -239,42 +295,47 @@ void FUN_142746a30(void* self, float volume)
 
 // Sample: Start. Plays the sound paused, delays it past the player's latency on the DSP clock, applies the seek,
 // then wraps the channel.
-// MS2-FUNCTIONAL: written from the exe's control flow.
+// MS2-FUNCTIONAL: cl fuses the two pSoundData tests that the exe keeps apart, and the hi/lo DSP clock slots and
+// the scount float sequence differ.
 // @0x142746a40
 void* FUN_142746a40(void* self, bool paused)
 {
-    void* sound = RawField<void*>(self, 0x30);
-    if (!sound)
-        return 0;
-    void* data = RawField<void*>(self, 0x38);
-    unsigned seek = data ? RawField<unsigned>(data, 0x1c) : 0;
-    unsigned length = data ? RawField<unsigned>(data, 0x18) : 0;
-    if (!length)
-        FUN_142303a4d(sound, &length, 2);
-    float frequency = 0;
-    FUN_1428d8eb4(sound, &frequency, 0, 0, 0);
-    char* player = RawField<char*>(self, 0x28);
-    void* system = RawField<void*>(player, 0x10);
-    void* channel = 0;
-    if (FUN_142303a35(system, -1, sound, true, &channel))
-        return 0;
-    unsigned hi = 0, lo = 0;
-    FUN_1428d8ea2(system, &hi, &lo);
-    unsigned delay = (unsigned)(long long)((float)length * RawField<float>(player, 0xf4) / frequency);
-    lo += delay;
-    if (lo < delay)
-        hi++;
-    int r = FUN_1428d8ef0(channel, 2, hi, lo);
-    if (seek)
+    if (RawField<void*>(self, 0x30))
     {
-        if (FUN_1428d8ef6(channel, seek, 2))
+        unsigned latency = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x1c) : 0;
+        unsigned scount = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x18) : 0;
+        if (scount == 0)
+            FUN_142303a4d(RawField<void*>(self, 0x30), &scount, 2);
+
+        float sample_rate;
+        FUN_1428d8eb4(RawField<void*>(self, 0x30), &sample_rate, 0, 0, 0);
+
+        void* pchan;
+        int r;
+        r = FUN_142303a35(RawField<void*>(RawField<char*>(self, 0x28), 0x10), -1, RawField<void*>(self, 0x30), true, &pchan);
+        if (r == 0)
+        {
+            unsigned hi = 0;
+            unsigned lo = 0;
+            r = FUN_1428d8ea2(RawField<void*>(RawField<char*>(self, 0x28), 0x10), &hi, &lo);
+            scount = unsigned(scount * RawField<float>(RawField<char*>(self, 0x28), 0xf4) / sample_rate);
+            lo += scount; // FMOD_64BIT_ADD
+            hi += 0 + (lo < scount);
+            r = FUN_1428d8ef0(pchan, 2, hi, lo);
+            if (latency > 0)
+            {
+                r = FUN_1428d8ef6(pchan, latency, 2);
+                if (r == 0)
+                    r = FUN_1428d8ed8(pchan, paused);
+            }
+        }
+        if (r != 0)
             return 0;
-        r = FUN_1428d8ed8(channel, paused);
+
+        void* mem = Memory::Alloc(0x48);
+        return mem ? FUN_142742fb0((std::uint64_t*)mem, RawField<char*>(self, 0x28), (std::uint64_t)self, pchan) : 0;
     }
-    if (r)
-        return 0;
-    void* mem = Memory::Alloc(0x48);
-    return mem ? FUN_142742fb0((std::uint64_t*)mem, player, (std::uint64_t)self, channel) : 0;
+    return 0;
 }
 
 // AuxStreamer: Start. Plays the stream sound, sizes the 300 ms staging buffer and wraps the channel in an aux
@@ -344,59 +405,74 @@ namespace Scaleform { namespace GFx {
 
 // Aux channel: Stop. Drops the channel from the renderer's per-streamer list (and the streamer's entry once its
 // list is empty), shuts the update thread down when no aux streams remain, then stops and releases the channel.
-// MS2-FUNCTIONAL: Lock::Locker spelled as Enter/LeaveCriticalSection.
+// SoundRendererFMODImpl::DetachAuxStreamer, inlined into Stop.
+static __forceinline void DetachAuxStreamer(char* player, void* pchan)
+{
+    if (!pchan || !RawField<void*>(pchan, 0x30))
+        return;
+    void* psample = RawField<void*>(pchan, 0x30);
+    if (!RawField<void*>(psample, 0x40))
+        return;
+
+    EnterCriticalSection(RawLock(player, 0x80));
+    U key = RawField<U>(psample, 0x40);
+    U* pcont = (U*)FUN_142745630(RawFieldPtr<void*>(player, 0xa8), (const unsigned char*)&key);
+    bool found = false;
+    if (pcont)
+    {
+        U nulls = 0;
+        for (U i = 0; i < pcont[1]; ++i)
+        {
+            if (((void**)pcont[0])[i] == pchan)
+            {
+                ((void**)pcont[0])[i] = 0;
+                found = true;
+            }
+            if (((void**)pcont[0])[i] == 0)
+                nulls++;
+        }
+        if (nulls == pcont[1])
+        {
+            U key2 = RawField<U>(psample, 0x40);
+            FUN_142742830(RawFieldPtr<U*>(player, 0xa8), &key2);
+        }
+        U* set = RawField<U*>(player, 0xa8);
+        if ((!set || set[0] == 0) && RawField<char>(player, 0xf1) && RawField<void*>(player, 0x18))
+        {
+            *(volatile bool*)(player + 0x78) = true; // StopThread
+            // pUpdateThread = NULL; the exe reloads it after the StopThread store
+            if (void* thread = *(void* volatile*)(player + 0x18))
+                FUN_14257dcb0(thread);
+            RawField<void*>(player, 0x18) = 0;
+            FUN_142583d50(player + 0x20);
+        }
+    }
+    if (!found)
+        pchan = 0;
+
+    LeaveCriticalSection(RawLock(player, 0x80));
+    if (pchan)
+    {
+        FUN_142303a65(RawField<void*>(pchan, 0x38));
+        FUN_14257dcb0(pchan);
+    }
+}
+
 // @0x142746da0
 void FUN_142746da0(void* self)
 {
-    char* player = RawField<char*>(self, 0x28);
-    void* sample = RawField<void*>(self, 0x30);
-    if (player && sample && RawField<void*>(sample, 0x40))
-    {
-        EnterCriticalSection(RawLock(player, 0x80));
-        U key = RawField<U>(sample, 0x40);
-        U* list = (U*)FUN_142745630(RawFieldPtr<void*>(player, 0xa8), (const unsigned char*)&key);
-        bool found = false;
-        if (list)
-        {
-            U empty = 0;
-            for (U i = 0; i < list[1]; i++)
-            {
-                void** data = (void**)list[0];
-                if (data[i] == self)
-                {
-                    data[i] = 0;
-                    found = true;
-                }
-                if (((void**)list[0])[i] == 0)
-                    empty++;
-            }
-            if (empty == list[1])
-            {
-                U key2 = RawField<U>(sample, 0x40);
-                FUN_142742830(RawFieldPtr<U*>(player, 0xa8), &key2);
-            }
-            U* set = RawField<U*>(player, 0xa8);
-            if ((!set || set[0] == 0) && RawField<char>(player, 0xf1) && RawField<void*>(player, 0x18))
-            {
-                RawField<char>(player, 0x78) = 1;
-                if (RawField<void*>(player, 0x18))
-                    FUN_14257dcb0(RawField<void*>(player, 0x18));
-                RawField<void*>(player, 0x18) = 0;
-                FUN_142583d50(player + 0x20);
-            }
-        }
-        LeaveCriticalSection(RawLock(player, 0x80));
-        if (found)
-        {
-            FUN_142303a65(RawField<void*>(self, 0x38));
-            FUN_14257dcb0(self);
-        }
-    }
+    if (RawField<char*>(self, 0x28))
+        DetachAuxStreamer(RawField<char*>(self, 0x28), self);
     RawField<U>(self, 0x50) = FUN_1425e3480();
 }
 
-static float AuxUpdateLocked(char* self)
+// Aux channel: Update. Refills the stream when under a third queued, zero-fills it while starving; returns the
+// seconds until the next update is due.
+// @0x142746f10
+float FUN_142746f10(void* channel)
 {
+    char* self = (char*)channel;
+    ChannelLocker lock(RawLock(self, 0x70));
     if (!RawField<bool (**)(void*)>(self, 0)[5](self))
         return 0.5f;
     if (RawField<char>(self, 0x68))
@@ -404,70 +480,66 @@ static float AuxUpdateLocked(char* self)
     void* s = RawField<void*>(self, 0x30);
     U filled = FilledMicros(s);
     U now = FUN_1425e3480();
-    U played = RawField<U>(self, 0x58) - RawField<U>(self, 0x48) + now;
+    U pos = RawField<U>(self, 0x58) + (now - RawField<U>(self, 0x48));
     char starving = RawField<char>(self, 0x69);
-    if (!starving && played > filled)
+    if (!starving && pos > filled)
     {
         RawField<char>(self, 0x69) = 1;
         starving = 1;
         RawField<U>(self, 0x50) = now;
         RawField<U>(self, 0x58) = filled;
     }
-    unsigned queued = 0;
+    unsigned dist = 0;
     if (!starving)
     {
-        unsigned pos = 0;
-        if (FUN_142303a83(RawField<void*>(self, 0x38), &pos, 4))
+        unsigned fmodpos = 0;
+        if (FUN_142303a83(RawField<void*>(self, 0x38), &fmodpos, 4))
             return 0;
         unsigned fill = RawField<unsigned>(s, 0x6c);
-        queued = pos > fill ? RawField<unsigned>(s, 0x64) - pos + fill : fill - pos;
+        dist = fmodpos > fill ? RawField<unsigned>(s, 0x64) - fmodpos + fill : fill - fmodpos;
     }
-    if (queued >= RawField<unsigned>(s, 0x60) / 3)
-        return AtLeast(0.02f, (float)(RawField<U>(self, 0x60) - played) / 1000000.0f * 0.5f);
-    unsigned read;
-    if (RawField<char>(self, 0x69))
+    if (dist < RawField<unsigned>(s, 0x60) / 3)
     {
-        RawField<unsigned>(s, 0x6c) = 0;
-        read = FUN_142745f50(s);
-        if (read)
+        unsigned got = 0;
+        if (RawField<char>(self, 0x69))
         {
-            FUN_1428d8ef6(RawField<void*>(self, 0x38), 0, 4);
-            RawField<char>(self, 0x69) = 0;
-            RawField<U>(self, 0x48) = FUN_1425e3480();
-            played = RawField<U>(self, 0x58);
+            RawField<unsigned>(s, 0x6c) = 0;
+            got = FUN_142745f50(s);
+            if (got > 0)
+            {
+                FUN_1428d8ef6(RawField<void*>(self, 0x38), 0, 4);
+                RawField<char>(self, 0x69) = 0;
+                RawField<U>(self, 0x48) = FUN_1425e3480();
+                pos = RawField<U>(self, 0x58);
+            }
+            else
+            {
+                // ClearSoundBuffer
+                void *p1, *p2;
+                unsigned l1, l2;
+                if (FUN_1428d8ea8(RawField<void*>(s, 0x30), 0, RawField<unsigned>(s, 0x64), &p1, &p2, &l1, &l2) == 0)
+                {
+                    memset(p1, 0, l1);
+                    FUN_1428d8eae(RawField<void*>(s, 0x30), p1, p2, l1, l2);
+                }
+                return 0.02f;
+            }
         }
         else
+            got = FUN_142745f50(s);
+        if (got > 0)
         {
-            void *p1, *p2;
-            unsigned l1, l2;
-            void* sound = RawField<void*>(s, 0x30);
-            if (FUN_1428d8ea8(sound, 0, RawField<unsigned>(s, 0x64), &p1, &p2, &l1, &l2) == 0)
-            {
-                memset(p1, 0, l1);
-                FUN_1428d8eae(sound, p1, p2, l1, l2);
-            }
-            return 0.02f;
+            RawField<U>(self, 0x60) = FilledMicros(s);
+            float t = (RawField<U>(self, 0x60) - pos) / 1000000.f * 2 / 3;
+            return t < 0.02f ? 0.02f : t;
         }
+        return 0.02f;
     }
     else
-        read = FUN_142745f50(s);
-    if (!read)
-        return 0.02f;
-    RawField<U>(self, 0x60) = FilledMicros(s);
-    float x = (float)(RawField<U>(self, 0x60) - played) / 1000000.0f;
-    return AtLeast(0.02f, (x + x) / 3.0f);
-}
-
-// Aux channel: Update. Refills the stream when under a third queued, zero-fills it while starving; returns the
-// seconds until the next update is due.
-// MS2-FUNCTIONAL: Lock::Locker spelled as Enter/LeaveCriticalSection; the body is split into a helper.
-// @0x142746f10
-float FUN_142746f10(void* self)
-{
-    EnterCriticalSection(RawLock(self, 0x70));
-    float wait = AuxUpdateLocked((char*)self);
-    LeaveCriticalSection(RawLock(self, 0x70));
-    return wait;
+    {
+        float t = (RawField<U>(self, 0x60) - pos) / 1000000.f / 2;
+        return t < 0.02f ? 0.02f : t;
+    }
 }
 
 // SoundRenderer: Update.
@@ -482,43 +554,47 @@ float FUN_1427471a0(void* self)
     return wait;
 }
 
-// SoundRenderer: update every aux channel; the soonest next-update time.
-// @0x1427471f0
-float FUN_1427471f0(void* self)
+// UpdateAuxStreams; the update thread inlines it.
+static __forceinline float UpdateAuxStreams(void* self)
 {
-    float wait = 0.5f;
-    U** set = RawFieldPtr<U*>(self, 0xa8);
-    for (U i = 0; *set && i <= (*set)[1]; i++)
+    float nextcall = 0.5f;
+    AuxTable* const* streamers = RawFieldPtr<AuxTable*>(self, 0xa8);
+    for (AuxIter it = AuxBegin(streamers); it != AuxIter(0, 0); ++it)
     {
-        char* e = RawEntry(*set, i, 0x30);
-        if (*(SPInt*)e == -2)
-            continue;
-        for (U j = 0; j < RawField<U>(RawEntry(*set, i, 0x30), 0x20); j++)
+        AuxEntry& cont = *it;
+        for (U i = 0; i < cont.Size; ++i)
         {
-            void* channel = RawField<void**>(RawEntry(*set, i, 0x30), 0x18)[j];
-            if (channel)
+            void* pchan = cont.Data[i];
+            if (pchan)
             {
-                float t = FUN_142746f10(channel);
-                wait = t < wait ? t : wait;
+                float t = FUN_142746f10(pchan);
+                if (t < nextcall) nextcall = t;
             }
         }
     }
-    return wait;
+    return nextcall;
+}
+
+// SoundRenderer: update every aux channel; the soonest next-update time.
+// @0x1427471f0
+__declspec(noinline) float FUN_1427471f0(void* self)
+{
+    return UpdateAuxStreams(self);
 }
 
 // SoundRenderer: the aux-stream update thread.
-// MS2-FUNCTIONAL: the exe inlines FUN_1427471f0; Lock::Locker spelled as Enter/LeaveCriticalSection.
 // @0x142747310
-int FUN_142747310(void* thread, void* renderer)
+int FUN_142747310(void* thread, void* h)
 {
-    char* r = (char*)renderer;
-    FUN_142584540(r + 0x20, 2000);
-    while (!RawField<char>(r, 0x78))
+    char* pRenderer = (char*)h;
+    unsigned wait_time = 2000;
+    while (1)
     {
-        EnterCriticalSection(RawLock(r, 0x80));
-        float wait = FUN_1427471f0(r);
-        LeaveCriticalSection(RawLock(r, 0x80));
-        FUN_142584540(r + 0x20, (unsigned)(long long)(wait * 1000.0f));
+        FUN_142584540(pRenderer + 0x20, wait_time);
+        if (*(volatile bool*)(pRenderer + 0x78)) // StopThread
+            break;
+        ChannelLocker lock(RawLock(pRenderer, 0x80));
+        wait_time = (unsigned)(UpdateAuxStreams(pRenderer) * 1000);
     }
     return 0;
 }
@@ -528,10 +604,14 @@ int FUN_142747310(void* thread, void* renderer)
 void FUN_1427474d0(void* channel, const void* transform)
 {
     const SoundTransform* t = (const SoundTransform*)transform;
-    FUN_142303a71(channel, (t->Left + t->Right) * 0.5f);
-    float pan = fabsf(t->Left - t->Right);
+    // The sum is built in place: (Left + Right) / 2 has cl load Right first.
+    float sum = t->Left;
+    sum += t->Right;
+    FUN_142303a71(channel, sum / 2);
+    float diff = t->Left - t->Right;
+    float pan  = (diff >= 0) ? diff : -diff; // Alg::Abs
     if (t->Left > t->Right)
-        pan *= -1.0f;
+        pan *= -1;
     FUN_1428d8ee4(channel, pan);
 }
 
