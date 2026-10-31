@@ -4492,14 +4492,19 @@ CriUint32 FUN_140036650(void* player)
     return res;
 }
 
-// MS2-FUNCTIONAL: drain subtitle decoder queues whose frame indices have fallen behind playback.
+// release decoded video and alpha frames up to the subtitle end frame count.
 // @0x1400369e0
 void FUN_1400369e0(void* player)
 {
-    struct VideoFrameView { CriUint8 Reserved[0x100]; CriSint32 Index; };
-    struct AlphaFrameView { CriUint8 Reserved[0xb0]; CriSint32 Index; };
-    VideoFrameView videoFrame = {};
-    AlphaFrameView alphaFrame = {};
+    struct AlphaFrame
+    {
+        CriUint8* imageptr;
+        CriSint32 frame_id;     // +0x08
+        CriUint32 width;
+        CriUint32 height;
+        CriUint32 Reserved14;
+        CriUint64 Reserved18[7];
+    };
     struct SubtitleEndState
     {
         CriUint8 Reserved[0xe58];
@@ -4508,38 +4513,45 @@ void FUN_1400369e0(void* player)
         CriSint32 VideoDone; // +0xe64
         CriSint32 AlphaDone; // +0xe68
     };
-    SubtitleEndState* state = (SubtitleEndState*)player;
-    CriSint32 subtitleCount = state->Count;
-    if (subtitleCount <= 0)
+    AlphaFrame alpha;
+    CriMvFrameInfo videoFrame;
+    if (((SubtitleEndState*)player)->Count <= 0)
+        return;
+    if (((SubtitleEndState*)player)->VideoDone == 1 &&
+        (((CriMvDecoderHandleFields*)player)->AlphaDecoder == NULL || ((SubtitleEndState*)player)->AlphaDone == 1))
         return;
 
-    if (state->VideoDone != 1)
+    if (((SubtitleEndState*)player)->VideoDone != 1)
     {
-        void* decoder = ((CriMvDecoderHandleFields*)player)->VideoDecoder;
-        while (FUN_140044870(decoder, &videoFrame))
+        while (FUN_140044870(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame))
         {
-            if (subtitleCount <= videoFrame.Index)
+            if (videoFrame.frame_id >= ((SubtitleEndState*)player)->Count)
             {
-                state->VideoDone = 1;
+                ((SubtitleEndState*)player)->VideoDone = 1;
                 break;
             }
-            FUN_1400449c0(decoder, &videoFrame);
-            FUN_140044a30(decoder, &videoFrame);
+            else
+            {
+                FUN_1400449c0(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame);
+                FUN_140044a30(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame);
+            }
         }
     }
 
-    void* alphaDecoder = ((CriMvDecoderHandleFields*)player)->AlphaDecoder;
-    if (alphaDecoder && state->AlphaDone != 1)
+    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder != NULL && ((SubtitleEndState*)player)->AlphaDone != 1)
     {
-        while (FUN_140043f10(alphaDecoder, &alphaFrame))
+        while (FUN_140043f10(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha))
         {
-            if (subtitleCount <= alphaFrame.Index)
+            if (alpha.frame_id >= ((SubtitleEndState*)player)->Count)
             {
-                state->AlphaDone = 1;
+                ((SubtitleEndState*)player)->AlphaDone = 1;
                 return;
             }
-            FUN_140043fe0(alphaDecoder, &alphaFrame);
-            FUN_140044050(alphaDecoder, &alphaFrame);
+            else
+            {
+                FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha);
+                FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha);
+            }
         }
     }
 }
