@@ -5,6 +5,8 @@
 // vc11, cmake/ms2-unit-profiles.cmake): no alias `using` (so ExeDecl is a struct), explicit conversion operators or
 // variadic templates, and no hook/ms2hook.h (its hook registrations are in sfr_video_hooks.cpp). clang-cl compiles it
 // as before.
+// Keep it C++03 too (no auto, nullptr, range-for, std:: C functions): cl 15.00.30729 with the vc11 options matches
+// 43 more of its rows (part of this range is VS2008 code), and a toolset for that is pending.
 // MS2-UNIT: sfr_video_01
 // MS2-TOOLSET: vc11
 // MS2-FLAGS: scaleform
@@ -83,7 +85,7 @@ extern "C" void* DAT_143b15f60;
 static void ReleaseAs2GCObject(void* object)
 {
     if (!object) return;
-    auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
+    unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
     const unsigned value = *count;
     if ((value & 0x03ffffff) != 0) {
         *count = value - 1;
@@ -98,7 +100,7 @@ struct VideoFinalizeAccess : Scaleform::GFx::AS2::Object
 
 static Scaleform::UPInt VideoHashKey4(const void* key)
 {
-    const auto* bytes = static_cast<const unsigned char*>(key);
+    const unsigned char* bytes = static_cast<const unsigned char*>(key);
     Scaleform::UPInt hash = 0x1505;
     for (int i = 3; i >= 0; --i) hash = hash * 0x1003f + bytes[i];
     return hash;
@@ -107,7 +109,7 @@ static Scaleform::UPInt VideoHashKey4(const void* key)
 static void ConstructVideoHashValue(Scaleform::UPInt* destination, unsigned type, void* object)
 {
     if (object) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     *reinterpret_cast<unsigned*>(destination) = type;
@@ -120,8 +122,8 @@ template<class ConstructEntry, class AssignEntry>
 static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const void* key,
                                  Scaleform::UPInt hash, ConstructEntry constructEntry, AssignEntry assignEntry)
 {
-    auto** tableSlot = reinterpret_cast<void**>(tableRef);
-    auto* table = static_cast<Scaleform::UPInt*>(*tableSlot);
+    void** tableSlot = reinterpret_cast<void**>(tableRef);
+    Scaleform::UPInt* table = static_cast<Scaleform::UPInt*>(*tableSlot);
     if (!table) FUN_14000b3b0(tableRef, owner, 8);
     else if (table[1] * 4 + 4 < table[0] * 5)
         FUN_14000b3b0(tableRef, owner, table[1] * 2 + 2);
@@ -129,8 +131,8 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
     const Scaleform::UPInt mask = table[1];
     ++table[0];
     const Scaleform::UPInt home = hash & mask;
-    auto* entries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(table) + 0x10);
-    auto* homeEntry = entries + home * 3;
+    Scaleform::UPInt* entries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(table) + 0x10);
+    Scaleform::UPInt* homeEntry = entries + home * 3;
     if (homeEntry[0] == ~Scaleform::UPInt(1)) {
         homeEntry[0] = ~Scaleform::UPInt(0);
         constructEntry(homeEntry + 1, key);
@@ -138,7 +140,7 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
     }
     Scaleform::UPInt freeIndex = (home + 1) & mask;
     while (entries[freeIndex * 3] != ~Scaleform::UPInt(1)) freeIndex = (freeIndex + 1) & mask;
-    auto* freeEntry = entries + freeIndex * 3;
+    Scaleform::UPInt* freeEntry = entries + freeIndex * 3;
     freeEntry[0] = homeEntry[0];
     ConstructVideoHashValue(freeEntry + 1, *reinterpret_cast<const unsigned*>(homeEntry + 1),
                             reinterpret_cast<void*>(homeEntry[2]));
@@ -148,7 +150,7 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
         homeEntry[0] = freeIndex;
     } else {
         Scaleform::UPInt predecessor = VideoHashKey4(homeEntry + 1) & mask;
-        auto* previous = entries + predecessor * 3;
+        Scaleform::UPInt* previous = entries + predecessor * 3;
         while (previous[0] != home) {
             predecessor = previous[0];
             previous = entries + predecessor * 3;
@@ -161,13 +163,13 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
 
 static void ConstructVideoHashFromValue(Scaleform::UPInt* destination, const void* source)
 {
-    auto* value = static_cast<const unsigned*>(source);
+    const unsigned* value = static_cast<const unsigned*>(source);
     ConstructVideoHashValue(destination, *value, *reinterpret_cast<void* const*>(value + 2));
 }
 
 static void ConstructVideoHashFromPair(Scaleform::UPInt* destination, const void* source)
 {
-    auto* pair = static_cast<void* const*>(source);
+    void* const* pair = static_cast<void* const*>(source);
     ConstructVideoHashValue(destination, *static_cast<const unsigned*>(pair[0]), *static_cast<void**>(pair[1]));
 }
 
@@ -204,7 +206,7 @@ struct VideoSoundStreamState
 // @0x140002930
 void FUN_140002930(void* object)
 {
-    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    VideoSoundStreamState* stream = static_cast<VideoSoundStreamState*>(object);
     if (stream->pChannel) stream->pChannel->Start();
 }
 
@@ -213,7 +215,7 @@ void FUN_140002930(void* object)
 // @0x140002960
 void FUN_140002960(void* object, float volume)
 {
-    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    VideoSoundStreamState* stream = static_cast<VideoSoundStreamState*>(object);
     stream->Volume = volume;
     VideoSoundStreamChannel* channel = stream->pChannel;
     if (channel) channel->SetVolume(volume);
@@ -224,7 +226,7 @@ void FUN_140002960(void* object, float volume)
 // @0x140002980
 void FUN_140002980(void* object)
 {
-    auto* stream = static_cast<VideoSoundStreamState*>(object);
+    VideoSoundStreamState* stream = static_cast<VideoSoundStreamState*>(object);
     if (stream->pChannel) stream->pChannel->Stop();
 }
 #pragma optimize("", on)
@@ -261,10 +263,10 @@ void** FUN_1400029f0(void** channel, void* replacement)
 // @0x140002ab0
 void FUN_140002ab0(void* stream)
 {
-    auto* bytes = static_cast<unsigned char*>(stream);
+    unsigned char* bytes = static_cast<unsigned char*>(stream);
     *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
-    auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
-    *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = nullptr;
+    void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = 0;
     if (*channelSlot) FUN_14257dcb0(*channelSlot);
     *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
     FUN_14257db50(stream);
@@ -274,16 +276,16 @@ void FUN_140002ab0(void* stream)
 // @0x140002e80
 void* FUN_140002e80(void* stream)
 {
-    auto* bytes = static_cast<unsigned char*>(stream);
+    unsigned char* bytes = static_cast<unsigned char*>(stream);
     *reinterpret_cast<unsigned*>(bytes + 8) = 1;
     *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
-    auto** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
-    *channelSlot = nullptr;
-    void* channel = nullptr;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(DAT_143b15f60, 0x20, nullptr);
+    void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
+    *channelSlot = 0;
+    void* channel = 0;
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(DAT_143b15f60, 0x20, 0);
     if (channel) {
-        auto* channelBytes = static_cast<unsigned char*>(channel);
+        unsigned char* channelBytes = static_cast<unsigned char*>(channel);
         *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
         *reinterpret_cast<unsigned*>(channelBytes + 8) = 1;
         *reinterpret_cast<void**>(channelBytes + 0x10) = stream;
@@ -299,7 +301,7 @@ void* FUN_140002e80(void* stream)
 // @0x140003580
 void FUN_140003580(void* player, bool ready)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
+    unsigned char* bytes = static_cast<unsigned char*>(player);
     bytes[0xc0] = ready;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, bool)>((*reinterpret_cast<void***>(impl))[21])(impl, ready);
@@ -345,7 +347,7 @@ void FUN_140003610(void* player)
 // @0x140003650
 void FUN_140003650(void* player, float threshold)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
+    unsigned char* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<float*>(bytes + 0xc8) = threshold;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[22])(impl, threshold);
@@ -357,7 +359,7 @@ void FUN_140003650(void* player, float threshold)
 // @0x140003680
 void FUN_140003680(void* player, unsigned count)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
+    unsigned char* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<unsigned*>(bytes + 0xc4) = count;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, unsigned)>((*reinterpret_cast<void***>(impl))[23])(impl, count);
@@ -369,7 +371,7 @@ void FUN_140003680(void* player, unsigned count)
 // @0x1400036b0
 void FUN_1400036b0(void* player, float time)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
+    unsigned char* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<float*>(bytes + 0xcc) = time;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[24])(impl, time);
@@ -381,7 +383,7 @@ void FUN_1400036b0(void* player, float time)
 // @0x1400036e0
 void FUN_1400036e0(void* player, float timeout)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
+    unsigned char* bytes = static_cast<unsigned char*>(player);
     *reinterpret_cast<float*>(bytes + 0xd0) = timeout;
     void* impl = *reinterpret_cast<void**>(bytes + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, float)>((*reinterpret_cast<void***>(impl))[26])(impl, timeout);
@@ -392,7 +394,7 @@ void FUN_1400036e0(void* player, float timeout)
 // @0x140003710
 void FUN_140003710(void* player)
 {
-    auto* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
+    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl,
         static_cast<unsigned char*>(player) + 0xf0);
 }
@@ -436,11 +438,11 @@ void** FUN_140003ab0(void** destination, void* replacement)
 // @0x1400033f0
 void FUN_1400033f0(void* player)
 {
-    auto* bytes = static_cast<unsigned char*>(player);
-    *reinterpret_cast<void**>(bytes + 0x48) = nullptr;
+    unsigned char* bytes = static_cast<unsigned char*>(player);
+    *reinterpret_cast<void**>(bytes + 0x48) = 0;
     memset(bytes + 0x50, 0, 0x50);
     *reinterpret_cast<float*>(bytes + 0xa8) = 1.0f / 12.0f;
-    *reinterpret_cast<void**>(bytes + 0xb0) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xb0) = 0;
     bytes[0xc0] = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xc4) = 2;
     *reinterpret_cast<unsigned*>(bytes + 0xc8) = 0;
@@ -450,8 +452,8 @@ void FUN_1400033f0(void* player)
     bytes[0xd8] = bytes[0xd9] = bytes[0xda] = 0;
     bytes[0xdb] = 1;
     bytes[0xdc] = 0;
-    *reinterpret_cast<void**>(bytes + 0xe0) = nullptr;
-    *reinterpret_cast<void**>(bytes + 0xe8) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0xe0) = 0;
+    *reinterpret_cast<void**>(bytes + 0xe8) = 0;
 }
 
 // MS2-FUNCTIONAL: creates a managed AS2 string and stores its retained node in the return object.
@@ -494,7 +496,7 @@ Scaleform::GFx::ASString* FUN_140003940(Scaleform::GFx::AS2::Environment* enviro
 // @0x1400043e0
 Scaleform::GFx::ASStringNodeHolder* FUN_1400043e0(Scaleform::GFx::AS2::Environment* environment, int index)
 {
-    auto* context = *reinterpret_cast<Scaleform::GFx::AS2::GlobalContext**>(
+    Scaleform::GFx::AS2::GlobalContext* context = *reinterpret_cast<Scaleform::GFx::AS2::GlobalContext**>(
         reinterpret_cast<unsigned char*>(environment) + 0xe8);
     return &context->GetStringManager()->Builtins[index];
 }
@@ -529,7 +531,7 @@ Scaleform::GFx::ASString* FUN_140004440(Scaleform::GFx::AS2::Environment* enviro
 Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** context,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    auto* strings = (*context)->GetStringManager();
+    Scaleform::GFx::AS2::StringManager* strings = (*context)->GetStringManager();
     ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(strings->CreateConstString(text));
     return result;
 }
@@ -612,7 +614,7 @@ void** FUN_140004350(void** character, void** result)
 // @0x140004600
 void FUN_140004600(void* object)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
 }
@@ -624,7 +626,7 @@ void FUN_140004600(void* object)
 // @0x140004650
 void FUN_140004650(void* object, double threshold)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     const float value = static_cast<float>(threshold);
     *reinterpret_cast<float*>(owner + 0xc8) = value;
@@ -635,7 +637,7 @@ void FUN_140004650(void* object, double threshold)
 // @0x140004680
 void FUN_140004680(void* object, double count)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     const unsigned value = static_cast<unsigned>(count);
     *reinterpret_cast<unsigned*>(owner + 0xc4) = value;
@@ -646,7 +648,7 @@ void FUN_140004680(void* object, double count)
 // @0x1400046b0
 void FUN_1400046b0(void* object, double time)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     const float value = static_cast<float>(time);
     *reinterpret_cast<float*>(owner + 0xcc) = value;
@@ -657,7 +659,7 @@ void FUN_1400046b0(void* object, double time)
 // @0x1400046e0
 void FUN_1400046e0(void* object, double timeout)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     const float value = static_cast<float>(timeout);
     *reinterpret_cast<float*>(owner + 0xd0) = value;
@@ -669,7 +671,7 @@ void FUN_1400046e0(void* object, double timeout)
 // @0x140004710
 void FUN_140004710(void* object, double position)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, int)>((*reinterpret_cast<void***>(impl))[7])(impl, static_cast<int>(position));
 }
@@ -678,7 +680,7 @@ void FUN_140004710(void* object, double position)
 // @0x140004770
 void FUN_140004770(void* object)
 {
-    auto* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
+    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
     void* impl = *reinterpret_cast<void**>(owner + 0x48);
     if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl, owner + 0xf0);
 }
@@ -740,28 +742,28 @@ void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 // @0x140005000
 void* FUN_140005000(void** weakSlot)
 {
-    auto* proxy = static_cast<unsigned char*>(*weakSlot);
-    if (!proxy) return nullptr;
+    unsigned char* proxy = static_cast<unsigned char*>(*weakSlot);
+    if (!proxy) return 0;
     void* target = *reinterpret_cast<void**>(proxy + 8);
     if (!target) {
         static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
-        *weakSlot = nullptr;
-        return nullptr;
+        *weakSlot = 0;
+        return 0;
     }
     if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) return target;
-    return nullptr;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: grows, resizes, or releases the four-byte-rounded backing array through the Scaleform heap.
 // @0x1400050c0
 void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
 {
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* data = static_cast<unsigned char*>(array[0]);
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    unsigned char* data = static_cast<unsigned char*>(array[0]);
     if (requested == 0) {
         if (data) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
-        array[0] = nullptr;
-        array[2] = nullptr;
+        array[0] = 0;
+        array[2] = 0;
         return;
     }
     const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
@@ -793,13 +795,13 @@ void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
 // the exe inlines the body into FUN_1400069a0.
 static __forceinline void Video01ResizeRecords(void** array, Scaleform::UPInt requested)
 {
-    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* data = array[0];
+    void** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void* data = array[0];
     if (!requested) {
         if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
-        array[0] = nullptr; array[2] = nullptr; return;
+        array[0] = 0; array[2] = 0; return;
     }
-    const auto capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
     if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
         DAT_143b15f60, data, capacity * 16);
     else {
@@ -821,13 +823,13 @@ void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
 // @0x140005260
 void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
 {
-    auto** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* data = array[0];
+    void** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void* data = array[0];
     if (!requested) {
         if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
-        array[0] = nullptr; array[2] = nullptr; return;
+        array[0] = 0; array[2] = 0; return;
     }
-    const auto capacity = (requested + 3) & ~Scaleform::UPInt(3);
+    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
     if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
         DAT_143b15f60, data, capacity * 12);
     else {
@@ -856,9 +858,9 @@ void FUN_140005660(void** value) { if (*value) static_cast<Scaleform::WeakPtrPro
 // @0x140005690
 void FUN_140005690(void* stream)
 {
-    auto* provider = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(stream) + 0x68);
+    unsigned char* provider = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(stream) + 0x68);
     if (provider) {
-        *reinterpret_cast<void**>(provider + 0x18) = nullptr;
+        *reinterpret_cast<void**>(provider + 0x18) = 0;
         void* player = *reinterpret_cast<void**>(provider + 0x48);
         if (player) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(player))[14])(player);
     }
@@ -904,7 +906,7 @@ void FUN_140005900(Scaleform::GFx::CharacterHandle** value)
 void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replacement)
 {
     if (replacement) ++*reinterpret_cast<int*>(replacement);
-    auto* old = static_cast<Scaleform::GFx::CharacterHandle*>(*destination);
+    Scaleform::GFx::CharacterHandle* old = static_cast<Scaleform::GFx::CharacterHandle*>(*destination);
     if (old && --*reinterpret_cast<int*>(old) <= 0) {
         old->~CharacterHandle();
         Scaleform::Memory::Free(old);
@@ -917,13 +919,13 @@ void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replac
 // @0x1400059b0
 void** FUN_1400059b0(void** weakSlot, void** result)
 {
-    *result = nullptr;
-    auto* proxy = static_cast<unsigned char*>(*weakSlot);
+    *result = 0;
+    unsigned char* proxy = static_cast<unsigned char*>(*weakSlot);
     if (!proxy) return result;
     void* target = *reinterpret_cast<void**>(proxy + 8);
     if (!target) {
         static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
-        *weakSlot = nullptr;
+        *weakSlot = 0;
     } else if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) {
         ++*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8);
         *result = target;
@@ -944,7 +946,7 @@ void** FUN_140005a70(void** weakSlot, unsigned flags)
 // @0x140005ac0
 void FUN_140005ac0(void** array, const void** value)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     const Scaleform::UPInt newSize = fields[1] + 1;
     if (newSize >= fields[2]) FUN_1400050c0(array, array, newSize + (newSize >> 2));
     fields[1] = newSize;
@@ -955,8 +957,8 @@ void FUN_140005ac0(void** array, const void** value)
 // @0x140005b40
 void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1], capacity = fields[2];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
     if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, owner, size); }
     else if (capacity <= size) FUN_1400051c0(array, owner, size + (size >> 2));
     fields[1] = size;
@@ -966,8 +968,8 @@ void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
 // @0x140005ba0
 void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1], capacity = fields[2];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
     if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, owner, size); }
     else if (capacity <= size) FUN_140005260(array, owner, size + (size >> 2));
     fields[1] = size;
@@ -977,8 +979,8 @@ void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
 // @0x140005c20
 void FUN_140005c20(void** array, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1], capacity = fields[2];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
     if (size < oldSize) { if (size < capacity / 2) FUN_1400050c0(array, array, size); }
     else if (capacity <= size) FUN_1400050c0(array, array, size + (size >> 2));
     fields[1] = size;
@@ -988,8 +990,8 @@ void FUN_140005c20(void** array, Scaleform::UPInt size)
 // @0x140005ca0
 void FUN_140005ca0(void** array, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1], capacity = fields[2];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
     if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, array, size); }
     else if (capacity <= size) FUN_140005260(array, array, size + (size >> 2));
     fields[1] = size;
@@ -1013,8 +1015,8 @@ void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free
 // @0x140005d30
 void* FUN_140005d30(Scaleform::UPInt* pair, unsigned flags)
 {
-    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
     if (flags & 1) ::operator delete(pair);
@@ -1025,8 +1027,8 @@ void* FUN_140005d30(Scaleform::UPInt* pair, unsigned flags)
 // @0x140005df0
 void FUN_140005df0(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1050,7 +1052,7 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005f00(
     destination->Function = source->Function;
     destination->Flags = 0;
     if (destination->Function) destination->Function->AddRef();
-    destination->pLocalFrame = nullptr;
+    destination->pLocalFrame = 0;
     if (source->pLocalFrame)
         destination->SetLocalFrame(source->pLocalFrame, (source->Flags & 1) != 0);
     return destination;
@@ -1069,14 +1071,14 @@ void FUN_1400061f0(void** proxy)
 // @0x140006240
 void* FUN_140006240(void** weakSlot)
 {
-    auto* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
+    Scaleform::WeakPtrProxy* proxy = reinterpret_cast<Scaleform::WeakPtrProxy*>(
         reinterpret_cast<Scaleform::UPInt>(*weakSlot) & ~Scaleform::UPInt(3));
-    if (!proxy) return nullptr;
-    auto* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
+    if (!proxy) return 0;
+    void* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
     if (object) return object;
     proxy->Release();
-    *weakSlot = nullptr;
-    return nullptr;
+    *weakSlot = 0;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: runs the Scaleform base destructor and conditionally releases the allocation.
@@ -1111,9 +1113,9 @@ void* FUN_140002bb0(void* object, unsigned flags)
 // @0x140002c10
 void* FUN_140002c10(void* object, unsigned flags)
 {
-    auto** fields = static_cast<void**>(object);
-    auto* channel = fields[2];
-    if (channel) *reinterpret_cast<void**>(static_cast<unsigned char*>(channel) + 0x10) = nullptr;
+    void** fields = static_cast<void**>(object);
+    void* channel = fields[2];
+    if (channel) *reinterpret_cast<void**>(static_cast<unsigned char*>(channel) + 0x10) = 0;
     if (channel) FUN_14257dcb0(channel);
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -1159,7 +1161,7 @@ int FUN_140002da0(void*) { return 0; }
 void FUN_140002db0(void*) {}
 // [5] true while a channel is attached
 // @0x140002950
-bool FUN_140002950(void* stream) { return *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10) != nullptr; }
+bool FUN_140002950(void* stream) { return *reinterpret_cast<void**>(static_cast<unsigned char*>(stream) + 0x10) != 0; }
 // [6]
 // @0x140002dc0
 void FUN_140002dc0(void*) {}
@@ -1196,8 +1198,8 @@ void FUN_140003a50(void** interfaceSlot)
 // @0x140004b00
 void FUN_140004b00(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[2] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[2] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1224,8 +1226,8 @@ void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 // @0x140005300
 void FUN_140005300(Scaleform::UPInt* pair)
 {
-    auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
     if (second) second->Release();
     if (first) first->Release();
 }
@@ -1267,7 +1269,7 @@ Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
     destination->Function = source->Function;
     if (destination->Function && !(flags & Scaleform::GFx::AS2::FunctionRefBase::FuncRef_Internal))
         destination->Function->AddRef();
-    destination->pLocalFrame = nullptr;
+    destination->pLocalFrame = 0;
     if (source->pLocalFrame)
         destination->SetLocalFrame(source->pLocalFrame, (source->Flags & 1) != 0);
     return destination;
@@ -1289,8 +1291,8 @@ void FUN_140006bd0(void** allocation) { if (*allocation) Scaleform::Memory::Free
 // @0x140006c70
 void FUN_140006c70(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    auto** items = static_cast<void**>(*array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    void** items = static_cast<void**>(*array);
     for (Scaleform::UPInt i = fields[1]; i != 0; --i) {
         void* proxy = items[i - 1];
         if (proxy && --*static_cast<int*>(proxy) == 0) Scaleform::Memory::Free(proxy);
@@ -1303,7 +1305,7 @@ void FUN_140006c70(void** array)
 void* FUN_140006db0(void** destination, const void** source)
 {
     FUN_140005ca0(destination, reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
-    auto count = reinterpret_cast<const Scaleform::UPInt*>(destination)[1];
+    Scaleform::UPInt count = reinterpret_cast<const Scaleform::UPInt*>(destination)[1];
     if (*destination && count)
         memcpy(*destination, *source, count * 12);
     return destination;
@@ -1313,10 +1315,10 @@ void* FUN_140006db0(void** destination, const void** source)
 // @0x1400068d0
 void FUN_1400068d0(void* records, Scaleform::UPInt count)
 {
-    auto* pair = reinterpret_cast<Scaleform::UPInt*>(records);
+    Scaleform::UPInt* pair = reinterpret_cast<Scaleform::UPInt*>(records);
     for (Scaleform::UPInt i = 0; i < count; ++i, pair += 2) {
-        auto* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-        auto* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
+        Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
+        Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
         if (second) second->Release();
         if (first) first->Release();
     }
@@ -1326,7 +1328,7 @@ void FUN_1400068d0(void* records, Scaleform::UPInt count)
 // @0x140006e20
 void FUN_140006e20(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (fields[1]) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -1351,8 +1353,8 @@ void FUN_140006810(void** array, void* owner, Scaleform::UPInt requested)
     (void)owner;
     if (requested == 0) {
         if (array[0]) Scaleform::Memory::Free(array[0]);
-        array[0] = nullptr;
-        array[2] = nullptr;
+        array[0] = 0;
+        array[2] = 0;
         return;
     }
     const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
@@ -1372,7 +1374,7 @@ void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
 // @0x140006bf0
 void FUN_140006bf0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (fields[1] == 0) {
         if (fields[2] == 0) FUN_1400051c0(array, array, 0);
         fields[1] = 0;
@@ -1380,7 +1382,7 @@ void FUN_140006bf0(void** array)
     }
     if ((fields[2] & ~Scaleform::UPInt(1)) != 0) {
         if (*array) Scaleform::Memory::Free(*array);
-        *array = nullptr;
+        *array = 0;
         fields[2] = 0;
         fields[1] = 0;
         return;
@@ -1392,19 +1394,19 @@ void FUN_140006bf0(void** array)
 // @0x140006a40
 void FUN_140006a40(Scaleform::UPInt* stack)
 {
-    auto** freePage = reinterpret_cast<void**>(stack[7]);
-    void* page = nullptr;
+    void** freePage = reinterpret_cast<void**>(stack[7]);
+    void* page = 0;
     if (freePage) {
         page = freePage;
         stack[7] = *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400);
     } else {
-        auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
         page = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned)>(heapVtable[14])(
             DAT_143b15f60, stack, 0x408, 0);
     }
     if (!page) { stack[0] -= 0x20; return; }
     // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
-    auto size = stack[5] + 1;
+    Scaleform::UPInt size = stack[5] + 1;
     if (size >= stack[6]) FUN_1400050c0(reinterpret_cast<void**>(stack + 4), stack + 4, size + (size >> 2));
     stack[5] = size;
     reinterpret_cast<void**>(stack[4])[size - 1] = page;
@@ -1440,9 +1442,9 @@ void FUN_140006cf0(Scaleform::UPInt* stack)
 // @0x140006e70
 void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1]) {
-        auto** items = static_cast<void**>(*array);
+        void** items = static_cast<void**>(*array);
         for (Scaleform::UPInt i = fields[1]; i > size; --i)
             if (items[i - 1]) static_cast<Scaleform::WeakPtrProxy*>(items[i - 1])->Release();
         if (size < fields[2] / 2) FUN_140006810(array, owner, size);
@@ -1456,9 +1458,9 @@ void FUN_140006e70(void** array, void* owner, Scaleform::UPInt size)
 // @0x140006f50
 void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1]) {
-        auto* records = static_cast<Scaleform::String*>(*array);
+        Scaleform::String* records = static_cast<Scaleform::String*>(*array);
         for (Scaleform::UPInt i = size; i < fields[1]; ++i) {
             records[i * 2].~String();
             records[i * 2 + 1].~String();
@@ -1486,9 +1488,9 @@ void FUN_140007030(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
     *stack += 0x20;
     if (stack[2] <= *stack) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
     if (*stack) {
-        auto* bytes = reinterpret_cast<unsigned char*>(*stack);
+        unsigned char* bytes = reinterpret_cast<unsigned char*>(*stack);
         bytes[0] = 5;
-        auto* object = *value;
+        Scaleform::GFx::AS2::Object* object = *value;
         *reinterpret_cast<Scaleform::GFx::AS2::Object**>(bytes + 8) = object;
         if (object) object->AddRef();
     }
@@ -1506,9 +1508,9 @@ void* FUN_140007230(void** destination, const void** source)
 // @0x140007270
 void FUN_140007270(void** array, void** value)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     FUN_140006e70(array, array, fields[1] + 1);
-    auto* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
+    Scaleform::Ptr<Scaleform::WeakPtrProxy>* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
     // the element is a Ptr whose pointee keeps a plain int refcount at +0 (exe: `if (p) inc dword [p]`, no virtual
     // AddRef), copy-constructed in place
     ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
@@ -1518,7 +1520,7 @@ void FUN_140007270(void** array, void** value)
 // @0x1400072c0
 void FUN_1400072c0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -1536,8 +1538,8 @@ void FUN_140007200(Scaleform::UPInt* stack)
 // @0x1400072f0
 void FUN_1400072f0(void** array, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1];
     FUN_140006e70(array, array, size);
     if (oldSize < size && *array)
         memset(static_cast<unsigned char*>(*array) + oldSize * sizeof(void*), 0,
@@ -1549,10 +1551,10 @@ void FUN_1400072f0(void** array, Scaleform::UPInt size)
 void FUN_140007370(void** array, const Scaleform::String* records, Scaleform::UPInt count)
 {
     if (!count) return;
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1];
     FUN_140006f50(array, array, oldSize + count);
-    auto* destination = static_cast<Scaleform::String*>(*array) + oldSize * 2;
+    Scaleform::String* destination = static_cast<Scaleform::String*>(*array) + oldSize * 2;
     for (Scaleform::UPInt i = 0; i < count; ++i) {
         new (destination + i * 2) Scaleform::String(records[i * 2]);
         new (destination + i * 2 + 1) Scaleform::String(records[i * 2 + 1]);
@@ -1591,11 +1593,11 @@ struct As2WeakObjectPair
 // @0x1400074a0
 void FUN_1400074a0(Scaleform::UPInt* object)
 {
-    auto* pair = reinterpret_cast<As2WeakObjectPair*>(object);
+    As2WeakObjectPair* pair = reinterpret_cast<As2WeakObjectPair*>(object);
     if (!(pair->Flags & 2)) ReleaseAs2GCObject(pair->pFirst);
-    pair->pFirst = nullptr;
+    pair->pFirst = 0;
     if (!(pair->Flags & 1)) ReleaseAs2GCObject(pair->pSecond);
-    pair->pSecond = nullptr;
+    pair->pSecond = 0;
 }
 
 // MS2-FUNCTIONAL: releases the owned AS2 object reference stored in the slot.
@@ -1607,7 +1609,7 @@ void FUN_140007570(void** slot) { ReleaseAs2GCObject(*slot); }
 void** FUN_1400075a0(void** destination, void** source)
 {
     if (*source) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*source) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*source) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*destination);
@@ -1624,7 +1626,7 @@ void FUN_1400076d0(void** slot) { ReleaseAs2GCObject(*slot); }
 void** FUN_140007700(void** destination, void* replacement)
 {
     if (replacement) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*destination);
@@ -1649,11 +1651,11 @@ void FUN_1400077b0(void** slot) { ReleaseAs2GCObject(*slot); }
 // @0x140007a40
 void FUN_140007a40(Scaleform::UPInt* object)
 {
-    auto* pair = reinterpret_cast<As2WeakObjectPair*>(object);
+    As2WeakObjectPair* pair = reinterpret_cast<As2WeakObjectPair*>(object);
     if (!(pair->Flags & 2)) ReleaseAs2GCObject(pair->pFirst);
-    pair->pFirst = nullptr;
+    pair->pFirst = 0;
     if (!(pair->Flags & 1)) ReleaseAs2GCObject(pair->pSecond);
-    pair->pSecond = nullptr;
+    pair->pSecond = 0;
 }
 
 // retains the replacement AS2 object and releases the old slot value.
@@ -1661,7 +1663,7 @@ void FUN_140007a40(Scaleform::UPInt* object)
 void** FUN_140007600(void** destination, void* replacement)
 {
     if (replacement) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*destination);
@@ -1674,9 +1676,9 @@ void** FUN_140007600(void** destination, void* replacement)
 // @0x140007680
 void FUN_140007680(void** array, void** value)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     FUN_140006e70(array, array, fields[1] + 1);
-    auto* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
+    Scaleform::Ptr<Scaleform::WeakPtrProxy>* slot = static_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(*array) + fields[1] - 1;
     // the element is a Ptr whose pointee keeps a plain int refcount at +0 (exe: `if (p) inc dword [p]`, no virtual
     // AddRef), copy-constructed in place
     ::new (slot) Scaleform::Ptr<Scaleform::WeakPtrProxy>(*reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(value));
@@ -1686,7 +1688,7 @@ void FUN_140007680(void** array, void** value)
 // @0x1400077f0
 void FUN_1400077f0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -1695,9 +1697,9 @@ void FUN_1400077f0(void** array)
 // @0x140007840
 void* FUN_140007840(void** destination, const void** source)
 {
-    destination[0] = nullptr;
-    destination[1] = nullptr;
-    destination[2] = nullptr;
+    destination[0] = 0;
+    destination[1] = 0;
+    destination[2] = 0;
     FUN_140007370(destination, static_cast<const Scaleform::String*>(*source),
                   reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
     return destination;
@@ -1708,10 +1710,10 @@ void* FUN_140007840(void** destination, const void** source)
 void FUN_140007870(unsigned* destination, void** source)
 {
     *destination = *static_cast<unsigned*>(*source);
-    auto** sourceSlot = static_cast<void**>(source[1]);
-    void* replacement = sourceSlot ? *sourceSlot : nullptr;
+    void** sourceSlot = static_cast<void**>(source[1]);
+    void* replacement = sourceSlot ? *sourceSlot : 0;
     if (replacement) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
@@ -1738,10 +1740,10 @@ void* FUN_140007960(void* value, unsigned flags)
 // @0x1400079b0
 unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
 {
-    const auto type = *source;
+    const unsigned type = *source;
     void* replacement = *reinterpret_cast<void* const*>(source + 2);
     if (replacement) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
@@ -1804,8 +1806,8 @@ bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
 // @0x14000a800
 void FUN_14000a800(void** array, Scaleform::UPInt index)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    auto** items = static_cast<void**>(*array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    void** items = static_cast<void**>(*array);
     if (fields[1] == 1) { FUN_140006e70(array, array, 0); return; }
     ReleaseAs2GCObject(items[index]);
     memmove(items + index, items + index + 1, (fields[1] - index - 1) * sizeof(void*));
@@ -1816,7 +1818,7 @@ void FUN_14000a800(void** array, Scaleform::UPInt index)
 // @0x14000a8f0
 void FUN_14000a8f0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -1860,7 +1862,7 @@ void* FUN_14000aa70(Scaleform::GFx::AS2::NetStream* stream, unsigned flags)
 // @0x14000b020
 void FUN_14000b020(void* cue)
 {
-    auto* bytes = static_cast<unsigned char*>(cue);
+    unsigned char* bytes = static_cast<unsigned char*>(cue);
     new (bytes + 8) Scaleform::String();
     memset(bytes + 0x18, 0, 0x18);
 }
@@ -1876,18 +1878,18 @@ void* FUN_14000b050(void** destination, const void** source)
 static __forceinline void Video01ReleaseValueTable(void** table)
 {
     if (!*table) return;
-    auto* data = static_cast<unsigned char*>(*table);
-    const auto count = *reinterpret_cast<Scaleform::UPInt*>(data + 8) + 1;
-    auto* bytes = data + 0x10;
+    unsigned char* data = static_cast<unsigned char*>(*table);
+    const Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(data + 8) + 1;
+    unsigned char* bytes = data + 0x10;
     for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x18) {
-        auto* entry = reinterpret_cast<Scaleform::UPInt*>(bytes);
+        Scaleform::UPInt* entry = reinterpret_cast<Scaleform::UPInt*>(bytes);
         if (entry[0] != ~Scaleform::UPInt(1)) {
             ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
             entry[0] = ~Scaleform::UPInt(1);
         }
     }
     Scaleform::Memory::Free(*table);
-    *table = nullptr;
+    *table = 0;
 }
 
 // MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
@@ -1905,24 +1907,24 @@ void FUN_14000b120(void** table) { Video01ReleaseValueTable(table); }
 // @0x14000b3b0
 void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt requested)
 {
-    auto** slot = reinterpret_cast<void**>(tableRef);
+    void** slot = reinterpret_cast<void**>(tableRef);
     if (!requested) { FUN_14000b120(slot); return; }
     Scaleform::UPInt capacity = 8;
     while (capacity < requested) capacity <<= 1;
     unsigned stat = 2;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    auto* fresh = static_cast<Scaleform::UPInt*>(reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    Scaleform::UPInt* fresh = static_cast<Scaleform::UPInt*>(reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
         DAT_143b15f60, owner, capacity * 0x18 + 0x10, &stat));
     fresh[0] = 0;
     fresh[1] = capacity - 1;
-    auto* freshEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(fresh) + 0x10);
+    Scaleform::UPInt* freshEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(fresh) + 0x10);
     for (Scaleform::UPInt i = 0; i < capacity; ++i) freshEntries[i * 3] = ~Scaleform::UPInt(1);
-    auto* old = static_cast<Scaleform::UPInt*>(*slot);
+    Scaleform::UPInt* old = static_cast<Scaleform::UPInt*>(*slot);
     if (old) {
         const Scaleform::UPInt oldCapacity = old[1] + 1;
-        auto* oldEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(old) + 0x10);
+        Scaleform::UPInt* oldEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(old) + 0x10);
         for (Scaleform::UPInt i = 0; i < oldCapacity; ++i) {
-            auto* entry = oldEntries + i * 3;
+            Scaleform::UPInt* entry = oldEntries + i * 3;
             if (entry[0] == ~Scaleform::UPInt(1)) continue;
             FUN_14000b6e0(reinterpret_cast<Scaleform::UPInt*>(&fresh), owner,
                           reinterpret_cast<unsigned*>(entry + 1), VideoHashKey4(entry + 1));
@@ -1962,7 +1964,7 @@ void FUN_14000c220(void* table, const unsigned* key, void* value)
 void FUN_14000c280(void* owner, unsigned key, void** value)
 {
     void* pair[2] = {&key, value};
-    auto* table = reinterpret_cast<unsigned char*>(owner) + 0x10;
+    unsigned char* table = reinterpret_cast<unsigned char*>(owner) + 0x10;
     FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKey4(&key));
     ReleaseAs2GCObject(*value);
 }
@@ -1971,12 +1973,12 @@ void FUN_14000c280(void* owner, unsigned key, void** value)
 // @0x14000b230
 void* FUN_14000b230(void* owner, unsigned flags)
 {
-    auto* bytes = static_cast<unsigned char*>(owner);
-    auto** array = reinterpret_cast<void**>(bytes + 0x18);
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    unsigned char* bytes = static_cast<unsigned char*>(owner);
+    void** array = reinterpret_cast<void**>(bytes + 0x18);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
+    Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
     if (data) data->Release();
     if (flags & 1) ::operator delete(owner);
@@ -1987,7 +1989,7 @@ void* FUN_14000b230(void* owner, unsigned flags)
 // @0x14000b2a0
 void FUN_14000b2a0(void* records, Scaleform::UPInt count)
 {
-    auto* bytes = static_cast<unsigned char*>(records);
+    unsigned char* bytes = static_cast<unsigned char*>(records);
     for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x30) {
         new (bytes + 8) Scaleform::String();
         memset(bytes + 0x18, 0, 0x18);
@@ -2001,10 +2003,10 @@ static __forceinline unsigned* Video01CopyCuePoint(unsigned* destination, const 
     new (destination + 2) Scaleform::String(
         *reinterpret_cast<const Scaleform::String*>(source + 2));
     destination[4] = source[4];
-    auto* targetArray = reinterpret_cast<void**>(destination + 6);
-    *targetArray = nullptr;
-    targetArray[1] = nullptr;
-    targetArray[2] = nullptr;
+    void** targetArray = reinterpret_cast<void**>(destination + 6);
+    *targetArray = 0;
+    targetArray[1] = 0;
+    targetArray[2] = 0;
     FUN_140007370(targetArray,
         *reinterpret_cast<const Scaleform::String* const*>(source + 6),
         *reinterpret_cast<const Scaleform::UPInt*>(source + 8));
@@ -2029,13 +2031,13 @@ void FUN_14000b620(unsigned* destination, const unsigned* source)
 // @0x14000b530
 void FUN_14000b530(void* records, Scaleform::UPInt count)
 {
-    auto* record = static_cast<unsigned char*>(records) - 0x18 + count * 0x30;
+    unsigned char* record = static_cast<unsigned char*>(records) - 0x18 + count * 0x30;
     while (count--) {
-        auto** nested = reinterpret_cast<void**>(record);
-        auto nestedCount = *reinterpret_cast<Scaleform::UPInt*>(record + 8);
+        void** nested = reinterpret_cast<void**>(record);
+        Scaleform::UPInt nestedCount = *reinterpret_cast<Scaleform::UPInt*>(record + 8);
         if (*nested) FUN_1400068d0(*nested, nestedCount);
         if (*nested) Scaleform::Memory::Free(*nested);
-        auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
+        Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
             (*reinterpret_cast<Scaleform::UPInt*>(record - 0x10)) & ~Scaleform::UPInt(3));
         if (data) data->Release();
         record -= 0x30;
@@ -2046,7 +2048,7 @@ void FUN_14000b530(void* records, Scaleform::UPInt count)
 // @0x14000b8f0
 void FUN_14000b8f0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -2055,7 +2057,7 @@ void FUN_14000b8f0(void** array)
 // @0x14000bbf0
 void FUN_14000bbf0(void** array)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_14000b530(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
 }
@@ -2086,11 +2088,11 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
 // @0x14000b940
 void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     if (!capacity) {
         if (*array) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *array);
-        *array = nullptr;
+        *array = 0;
         fields[2] = 0;
         return;
     }
@@ -2112,7 +2114,7 @@ void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
 void FUN_14000b680(void** table, void* owner)
 {
     if (!*table) { FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, 8); return; }
-    auto* fields = static_cast<Scaleform::UPInt*>(*table);
+    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*table);
     if (fields[1] * 4 + 4 < fields[0] * 5)
         FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, fields[1] * 2 + 2);
 }
@@ -2121,7 +2123,7 @@ void FUN_14000b680(void** table, void* owner)
 // @0x14000bc40
 void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (size < fields[1])
     {
         FUN_14000b530(static_cast<unsigned char*>(*array) + size * 0x30, fields[1] - size);
@@ -2139,8 +2141,8 @@ void FUN_14000bd10(void** array) { FUN_14000b8f0(array); }
 // @0x14000bd60
 void FUN_14000bd60(void** array, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1];
     FUN_14000bc40(array, array, size);
     if (oldSize < size && *array)
         FUN_14000b2a0(static_cast<unsigned char*>(*array) + oldSize * 0x30, size - oldSize);
@@ -2155,10 +2157,10 @@ void FUN_14000be30(void** array) { FUN_14000b8f0(array); }
 // @0x14000c320
 void FUN_14000c320(void* owner)
 {
-    auto* bytes = static_cast<unsigned char*>(owner);
-    auto* index = *reinterpret_cast<void**>(bytes + 0x38);
+    unsigned char* bytes = static_cast<unsigned char*>(owner);
+    void* index = *reinterpret_cast<void**>(bytes + 0x38);
     if (index) Scaleform::Memory::Free(index);
-    auto** records = reinterpret_cast<void**>(bytes + 0x18);
+    void** records = reinterpret_cast<void**>(bytes + 0x18);
     FUN_14000b530(*records, *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x20));
     if (*records) Scaleform::Memory::Free(*records);
 }
@@ -2167,7 +2169,7 @@ void FUN_14000c320(void* owner)
 // the NetStream prototype destructor body; the exe inlines it into FUN_14000a7b0.
 static __forceinline void Video01NetStreamProtoDtor(void* object)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
     // the implicit prototype destructor resets its three vftables first
     *reinterpret_cast<void**>(bytes) = &NetStreamPrototypeVtable;
     *reinterpret_cast<void**>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
@@ -2231,7 +2233,7 @@ void FUN_14000d2a0(Scaleform::GFx::AS2::Value* value, bool boolean)
 void* FUN_14000d360(Scaleform::UPInt size, void* owner)
 {
     unsigned stat = 0x143;
-    auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
     return reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
         DAT_143b15f60, owner, size, &stat);
 }
@@ -2248,7 +2250,7 @@ void FUN_14000d390(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::NameFunction* table,
                    const Scaleform::GFx::AS2::PropFlags* flags)
 {
-    auto* prototype = reinterpret_cast<VideoPrototypeInitAccess*>(
+    VideoPrototypeInitAccess* prototype = reinterpret_cast<VideoPrototypeInitAccess*>(
         reinterpret_cast<unsigned char*>(object) + 0x70);
     prototype->InitFunctionMembers(object, context, table, *flags);
 }
@@ -2265,7 +2267,7 @@ void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::NameFunction* table,
                    const Scaleform::GFx::AS2::PropFlags* flags)
 {
-    auto* prototype = reinterpret_cast<VideoCtorProtoInitAccess*>(
+    VideoCtorProtoInitAccess* prototype = reinterpret_cast<VideoCtorProtoInitAccess*>(
         reinterpret_cast<unsigned char*>(object) + 0xd8);
     prototype->InitFunctionMembers(object, context, table, *flags);
 }
@@ -2278,12 +2280,12 @@ Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
     Scaleform::GFx::AS2::ASStringContext* context)
 {
     Scaleform::GFx::AS2::Value member;
-    auto* strings = context->pContext->GetStringManager();
-    const auto& name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
+    Scaleform::GFx::AS2::StringManager* strings = context->pContext->GetStringManager();
+    const Scaleform::GFx::ASString name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
         reinterpret_cast<const unsigned char*>(strings) + 0x280);
     // result is the caller's uninitialized return slot (by-value FunctionRef): construct it, never assign.
     if (object->GetMemberRaw(context, name, &member))
-        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef(member.ToFunction(nullptr));
+        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef(member.ToFunction(0));
     else
         ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef();
     return result;
@@ -2309,7 +2311,7 @@ void* FUN_14000d5c0(void* object, unsigned flags)
 // @0x14000d5f0
 void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
 {
-    auto** slot = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
+    void** slot = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
     if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
     object->Object::~Object();
 }
@@ -2328,7 +2330,7 @@ void* FUN_14000d630(void** proxy, unsigned flags)
 // @0x14000d680
 void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
 {
-    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
     void** slot = reinterpret_cast<void**>(bytes + 0x68);
     if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
@@ -2349,13 +2351,13 @@ void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
                              context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
                                  .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
-    auto* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+    Scaleform::GFx::AS2::Object* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
     if (!hiddenConstructor && !constructor) {
         object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
         return;
     }
-    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+    Scaleform::GFx::AS2::GASPrototypeBase* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<unsigned char*>(subobject) + 0x50);
     prototype->GetMemberRawConstructor(object, context, *name, result, hiddenConstructor);
 }
@@ -2379,13 +2381,13 @@ static __forceinline void ForEachVideoObjectChild(void* object,
 {
     using namespace Scaleform::GFx::AS2;
     reinterpret_cast<VideoObjectGcAccess*>(object)->ForEachChild_GC<Functor>(collector);
-    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
     reinterpret_cast<FunctionRefBase*>(bytes + 0x78)->ForEachChild_GC<Functor>(collector);
     reinterpret_cast<FunctionRefBase*>(bytes + 0x90)->ForEachChild_GC<Functor>(collector);
-    auto** values = reinterpret_cast<void**>(bytes + 0xa8);
+    void** values = reinterpret_cast<void**>(bytes + 0xa8);
     if (!*values) return;
-    auto* fields = static_cast<Scaleform::UPInt*>(*values);
-    auto** items = reinterpret_cast<Object**>(fields[0]);
+    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*values);
+    Object** items = reinterpret_cast<Object**>(fields[0]);
     for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
         if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
 }
@@ -2468,7 +2470,7 @@ void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 // @0x14000de80
 void* FUN_14000de80(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
-    auto** proxy = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
+    void** proxy = reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object) + 0x68);
     if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release();
     object->Object::~Object();
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -2498,7 +2500,7 @@ void FUN_14000e390(void* receiver)
 void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
 {
     void* object = subobject - 1;
-    auto** baseVtable = *reinterpret_cast<void***>(object);
+    void** baseVtable = *reinterpret_cast<void***>(object);
     void* character = reinterpret_cast<void* (*)(void*)>(baseVtable[31])(object);
     reinterpret_cast<void (*)(void*, void*, void*, void*, void*)>(
         (*reinterpret_cast<void***>(*subobject))[3])(subobject, character, b, c, d);
@@ -2509,15 +2511,15 @@ void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
 // @0x14000dbc0
 void FUN_14000dbc0(void* object)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto** table = reinterpret_cast<void**>(bytes + 0xa8);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
+    void** table = reinterpret_cast<void**>(bytes + 0xa8);
     if (*table) {
         if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
         Scaleform::Memory::Free(*table);
-        *table = nullptr;
+        *table = 0;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x68));
-    *reinterpret_cast<void**>(bytes + 0x68) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x68) = 0;
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
@@ -2526,7 +2528,7 @@ void FUN_14000dbc0(void* object)
 void FUN_14000d330(void* wrapper)
 {
     // wrapper is the FnCall; ThisPtr (+0x10) is the Video object's ObjectInterface at +8.
-    auto* bytes = static_cast<unsigned char*>(wrapper);
+    unsigned char* bytes = static_cast<unsigned char*>(wrapper);
     void* object = *reinterpret_cast<void**>(bytes + 0x10);
     if (object) object = static_cast<unsigned char*>(object) - 8;
     if (!object) return;
@@ -2552,21 +2554,21 @@ void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 // @0x14000a3a0
 void FUN_14000a3a0(void* object)
 {
-    auto* bytes = static_cast<unsigned char*>(object);
-    auto** table = reinterpret_cast<void**>(bytes + 0x110);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
+    void** table = reinterpret_cast<void**>(bytes + 0x110);
     if (*table) {
         if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
         Scaleform::Memory::Free(*table);
-        *table = nullptr;
+        *table = 0;
     }
-    auto** proxy = reinterpret_cast<void**>(bytes + 0x68);
+    void** proxy = reinterpret_cast<void**>(bytes + 0x68);
     if (*proxy) {
-        auto* proxyBytes = static_cast<unsigned char*>(*proxy);
-        *reinterpret_cast<void**>(proxyBytes + 0x18) = nullptr;
+        unsigned char* proxyBytes = static_cast<unsigned char*>(*proxy);
+        *reinterpret_cast<void**>(proxyBytes + 0x18) = 0;
         void* listener = *reinterpret_cast<void**>(proxyBytes + 0x48);
         if (listener) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(listener))[14])(listener);
         FUN_14257dcd0(*proxy);
-        *proxy = nullptr;
+        *proxy = 0;
     }
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
@@ -2585,7 +2587,7 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 // @0x140006290
 void FUN_140006290(void* object)
 {
-    auto** proxySlot = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x10);
+    void** proxySlot = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x10);
     if (*proxySlot) static_cast<Scaleform::WeakPtrProxy*>(*proxySlot)->Release();
     FUN_14257db50(object);
 }
@@ -2606,11 +2608,11 @@ void* FUN_1400062e0(void* object, unsigned flags)
 // @0x140006350
 void** FUN_140006350(void** weakSlot, void** result)
 {
-    auto* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
+    Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
-        auto* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
+        void* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
         if (object) {
-            auto* count = reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
+            int* count = reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
             if (*count != 0) {
                 ++*count;
                 *result = object;
@@ -2618,10 +2620,10 @@ void** FUN_140006350(void** weakSlot, void** result)
             }
         } else {
             proxy->Release();
-            *weakSlot = nullptr;
+            *weakSlot = 0;
         }
     }
-    *result = nullptr;
+    *result = 0;
     return result;
 }
 
@@ -2629,8 +2631,8 @@ void** FUN_140006350(void** weakSlot, void** result)
 // @0x140006670
 void FUN_140006670(void** array, Scaleform::UPInt size)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto oldSize = fields[1], capacity = fields[2];
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
     if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, array, size); }
     else if (capacity <= size) FUN_1400051c0(array, array, size + (size >> 2));
     fields[1] = size;
@@ -2640,8 +2642,8 @@ void FUN_140006670(void** array, Scaleform::UPInt size)
 // @0x1400066f0
 void FUN_1400066f0(void** array, const unsigned* record)
 {
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const auto size = fields[1] + 1;
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    const Scaleform::UPInt size = fields[1] + 1;
     if (size >= fields[2]) FUN_140005260(array, array, size + (size >> 2));
     fields[1] = size;
     memcpy(static_cast<unsigned char*>(*array) + (size - 1) * 12, record, 12);
@@ -2655,7 +2657,7 @@ void FUN_140006770(void** slot) { if (*slot) static_cast<Scaleform::WeakPtrProxy
 // @0x1400067a0
 void FUN_1400067a0(void** values, Scaleform::UPInt count)
 {
-    auto** items = static_cast<void**>(values);
+    void** items = static_cast<void**>(values);
     while (count) {
         void* value = items[--count];
         if (value) static_cast<Scaleform::WeakPtrProxy*>(value)->Release();
@@ -2667,16 +2669,16 @@ static __forceinline void ForEachVideoPrototypeChild(void* object,
     Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     using namespace Scaleform::GFx::AS2;
-    auto* stream = static_cast<NetStream*>(object);
+    NetStream* stream = static_cast<NetStream*>(object);
     stream->ForEachChild_GC<Functor>(collector);
-    auto* bytes = static_cast<unsigned char*>(object);
+    unsigned char* bytes = static_cast<unsigned char*>(object);
     const Scaleform::UPInt callbackOffsets[] = { 0xe0, 0xf8 };
-    for (auto offset : callbackOffsets)
-        reinterpret_cast<FunctionRefBase*>(bytes + offset)->ForEachChild_GC<Functor>(collector);
-    auto** table = reinterpret_cast<void**>(bytes + 0x110);
+    for (const Scaleform::UPInt *it = callbackOffsets, *end = callbackOffsets + 2; it != end; ++it)
+        reinterpret_cast<FunctionRefBase*>(bytes + *it)->ForEachChild_GC<Functor>(collector);
+    void** table = reinterpret_cast<void**>(bytes + 0x110);
     if (!*table) return;
-    auto* fields = static_cast<Scaleform::UPInt*>(*table);
-    auto** items = reinterpret_cast<Object**>(fields[0]);
+    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*table);
+    Object** items = reinterpret_cast<Object**>(fields[0]);
     for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
         if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
 }
@@ -2714,12 +2716,12 @@ void FUN_14000a540(Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector
 // @0x14000b300
 void FUN_14000b300(void* owner)
 {
-    auto* bytes = static_cast<unsigned char*>(owner);
-    auto** array = reinterpret_cast<void**>(bytes + 0x18);
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    unsigned char* bytes = static_cast<unsigned char*>(owner);
+    void** array = reinterpret_cast<void**>(bytes + 0x18);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
+    Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
     if (data) data->Release();
 }
@@ -2728,12 +2730,12 @@ void FUN_14000b300(void* owner)
 // @0x14000afd0
 void FUN_14000afd0(void* owner)
 {
-    auto* bytes = static_cast<unsigned char*>(owner);
-    auto** array = reinterpret_cast<void**>(bytes + 0x18);
-    auto* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    unsigned char* bytes = static_cast<unsigned char*>(owner);
+    void** array = reinterpret_cast<void**>(bytes + 0x18);
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (*array) FUN_1400068d0(*array, fields[1]);
     if (*array) Scaleform::Memory::Free(*array);
-    auto* data = reinterpret_cast<Scaleform::String::DataDesc*>(
+    Scaleform::String::DataDesc* data = reinterpret_cast<Scaleform::String::DataDesc*>(
         (*reinterpret_cast<Scaleform::UPInt*>(bytes + 8)) & ~Scaleform::UPInt(3));
     if (data) data->Release();
 }
@@ -2752,13 +2754,13 @@ void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
                              context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
                                  .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
-    auto* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
+    Scaleform::GFx::AS2::Object* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
     if (!hiddenConstructor && !constructor) {
         completeObject->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
         return;
     }
-    auto* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
+    Scaleform::GFx::AS2::GASPrototypeBase* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<unsigned char*>(subobject) + 0xb8);
     prototype->GetMemberRawConstructor(completeObject, context, *name, result, hiddenConstructor);
 }
@@ -3949,7 +3951,7 @@ Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototyp
 {
     typedef Prototype<VideoObject> VideoPrototypeLayout;
     ::new (static_cast<void*>(object)) VideoPrototypeLayout(context, prototype, constructor);
-    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
     *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;
     *reinterpret_cast<void***>(bytes + 0x20) = &VideoProtoInterfaceVtable;
     *reinterpret_cast<void***>(bytes + 0x70) = &VideoProtoBaseVtable;
@@ -3960,11 +3962,11 @@ Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototyp
 // @0x14000e020
 VideoObject* FUN_14000e020(AvmCharacter* character)
 {
-    auto* bytes = reinterpret_cast<unsigned char*>(character);
-    auto** slot = reinterpret_cast<VideoObject**>(bytes + 0x48);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(character);
+    VideoObject** slot = reinterpret_cast<VideoObject**>(bytes + 0x48);
     if (!*slot) {
         void* storage = FUN_14000d360(0x70, character);
-        VideoObject* created = storage ? ::new (storage) VideoObject(character->GetGC(), character->GetDispObj()) : nullptr;
+        VideoObject* created = storage ? ::new (storage) VideoObject(character->GetGC(), character->GetDispObj()) : 0;
         ReleaseAs2GCObject(*slot);
         *slot = created;
     }
@@ -3976,19 +3978,19 @@ VideoObject* FUN_14000e020(AvmCharacter* character)
 AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject)
 {
     FUN_142918930(character, displayObject);
-    auto* bytes = reinterpret_cast<unsigned char*>(character);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(character);
     *reinterpret_cast<unsigned*>(bytes + 0x38) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x3c) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x40) = 0;
     bytes[0x44] = 1;
-    *reinterpret_cast<void**>(bytes + 0x48) = nullptr;
+    *reinterpret_cast<void**>(bytes + 0x48) = 0;
     *reinterpret_cast<void***>(bytes) = &AvmVideoCharacterVtable;
     *reinterpret_cast<void***>(bytes + 8) = &AvmVideoCharacterInterfaceVtable;
     *reinterpret_cast<void***>(bytes + 0x30) = &AvmVideoCharacterBaseVtable;
     VideoObject* video = FUN_14000e020(character);
-    void* held = video ? *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30) : nullptr;
+    void* held = video ? *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30) : 0;
     if (held) {
-        auto* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(held) + 0x18);
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(held) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x18));
@@ -4044,7 +4046,7 @@ Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototyp
                       const FunctionRef& constructor)
 {
     ::new (static_cast<void*>(object)) Prototype<NetStream>(context, prototype, constructor);
-    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
     *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
     *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
     *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamPrototypeBaseVtable;
@@ -4058,11 +4060,11 @@ Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototyp
                       const FunctionRef& constructor)
 {
     FUN_140009e20(object, context, prototype, constructor);
-    auto* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
     *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
     *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
     *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
-    auto* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
+    NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
     access->InitFunctionMembers(object, context, &NetStreamCloseFunctionTable, PropFlags(1));
     return object;
 }
@@ -4072,22 +4074,22 @@ Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototyp
 FunctionRef FUN_14000cf20(GlobalContext* global)
 {
     ASStringContext context(global, 8);
-    auto* ctorObject = SF_HEAP_NEW(context.GetHeap()) NetStreamCtorFunction(&context);
+    NetStreamCtorFunction* ctorObject = SF_HEAP_NEW(context.GetHeap()) NetStreamCtorFunction(&context);
     FunctionRef constructor(ctorObject);
     ctorObject->Release();
 
-    auto* storage = Scaleform::Memory::AllocInHeap(context.GetHeap(), 0x120);
-    Object* proto = nullptr;
+    void* storage = Scaleform::Memory::AllocInHeap(context.GetHeap(), 0x120);
+    Object* proto = 0;
     if (storage) {
-        auto* baseProto = ::new (storage) Prototype<NetStream>(
+        Prototype<NetStream>* baseProto = ::new (storage) Prototype<NetStream>(
             &context, global->GetPrototype(ASBuiltin_Object), constructor);
         proto = baseProto;
-        auto* bytes = static_cast<unsigned char*>(storage);
+        unsigned char* bytes = static_cast<unsigned char*>(storage);
         *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
         *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
         *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
         *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
-        auto* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
+        NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
         access->InitFunctionMembers(baseProto, &context, &NetStreamCloseFunctionTable, PropFlags(1));
     }
 
@@ -4109,13 +4111,13 @@ bool ObjectInterface::IsBuiltinPrototype() const { return false; }
 // @0x140007db0
 void ObjectInterface::AddInterface(ASStringContext*, int, FunctionObject*) {}
 // @0x140007dc0
-const char* Object::GetTextValue(Environment*) const { return nullptr; }
+const char* Object::GetTextValue(Environment*) const { return 0; }
 // @0x140007dd0
 bool Object::DoesImplement(Environment*, const Object* prototype) const { return this == prototype; }
 // @0x140007de0
-InteractiveObject* Object::GetASCharacter() { return nullptr; }
+InteractiveObject* Object::GetASCharacter() { return 0; }
 // @0x140007df0
-const InteractiveObject* Object::GetASCharacter() const { return nullptr; }
+const InteractiveObject* Object::GetASCharacter() const { return 0; }
 // @0x140007e00
 void Object::CheckAndResetCtorRef(FunctionObject*) {}
 // @0x14000ce70
@@ -4126,7 +4128,7 @@ bool FunctionObject::IsAsFunction() const { return false; }
 // @0x14000ce90
 bool CFunctionObject::IsNull() const
 {
-    return *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(this) + 0x68) == nullptr;
+    return *reinterpret_cast<void* const*>(reinterpret_cast<const unsigned char*>(this) + 0x68) == 0;
 }
 // @0x14000cea0
 bool CFunctionObject::IsCFunction() const { return true; }
@@ -4134,7 +4136,7 @@ bool CFunctionObject::IsCFunction() const { return true; }
 // @0x14000ceb0
 int CFunctionObject::GetNumArgs() const { return -1; }
 // @0x14000e370
-const char* ObjectInterface::GetTextValue(Environment*) const { return nullptr; }
+const char* ObjectInterface::GetTextValue(Environment*) const { return 0; }
 }}} // namespace Scaleform::GFx::AS2
 
 // MS2-PIN: ??_7NetStream@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1431b5030
