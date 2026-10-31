@@ -2553,8 +2553,9 @@ Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FUN_142440f80()
     using namespace Scaleform::GFx::AS3;
     Instances::fl_display::MovieClip* pthis = this;
     VM& vm = pthis->GetVM();
+    Class* pclass = vm.GetClass(StringDataPtr("flash.display.Scene"));
     SPtr<Instances::fl_display::Scene> scene;
-    FUN_142531f40(vm, reinterpret_cast<SPtr<AS3::Object>&>(scene), vm.GetClass(StringDataPtr("flash.display.Scene")), 0, NULL);
+    FUN_142531f40(vm, reinterpret_cast<SPtr<AS3::Object>&>(scene), pclass, 0, NULL);
     scene->SpriteObj = static_cast<GFx::Sprite*>(pthis->pDispObj.GetPtr());
     return scene;
 }

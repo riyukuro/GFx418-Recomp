@@ -695,7 +695,7 @@ namespace Instances { namespace fl_display {
             void ForEachChild_GC(Collector* prcc, GcOp op, const Instances::fl::Object& owner) const;
 
             bool    IsSet(unsigned frame) const { return (reinterpret_cast<const UByte*>(pData)[frame >> 3] & (1 << (frame & 7))) != 0; }
-            Descr*  GetDescrs() const   { return reinterpret_cast<Descr*>(reinterpret_cast<UInt32*>(pData) + ((FrameCnt + 31) >> 5)); }
+            Descr*  GetDescrs() const   { return reinterpret_cast<Descr*>(reinterpret_cast<UByte*>(pData) + (UInt32)(((FrameCnt + 31) >> 5) * sizeof(UInt32))); }
 
             void*   pData;      // +0x00: (FrameCnt + 31) / 32 words of bits, then the values
             UInt16  DescrCnt;   // +0x08: number of values
