@@ -611,7 +611,38 @@ void FUN_1424de460(long long* owner)
         reinterpret_cast<Scaleform::RefCountImpl*>(*owner)->Release();
 }
 
-// MS2-FUNCTIONAL 0x1424e0940: copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
+// The exe keeps this SPtr assignment out of line; FUN_1424e0940 calls it.
+template<> SF_NOINLINE inline Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>::operator=(
+    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>& other)
+{
+    return Set(other);
+}
+
+// Tagged ASStringNode pointer assignment (odd = unowned) inlined into FUN_1424e0940.
+static inline void Sfr16AssignName(Scaleform::GFx::ASStringNode** dstName, Scaleform::GFx::ASStringNode* const* srcName)
+{
+    if (srcName != dstName)
+    {
+        if (Scaleform::GFx::ASStringNode* oldName = *dstName)
+        {
+            const auto raw = reinterpret_cast<Scaleform::UPInt>(oldName);
+            if (raw & 1)
+                *reinterpret_cast<Scaleform::UPInt*>(dstName) = raw - 1;
+            else
+                oldName->Release();
+        }
+        Scaleform::GFx::ASStringNode* newName = *srcName;
+        if (newName)
+        {
+            newName->AddRef();
+            newName = *srcName;
+        }
+        *dstName = newName;
+    }
+}
+
+// Copies scalar state, retains the interned name and namespace, and assigns the embedded AS3 Value.
 // @0x1424e0940
 unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
 {
@@ -631,29 +662,13 @@ unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
     *reinterpret_cast<unsigned long long*>(dst + 0x40) = *reinterpret_cast<const unsigned long long*>(src + 0x40);
     *reinterpret_cast<unsigned long long*>(dst + 0x48) = *reinterpret_cast<const unsigned long long*>(src + 0x48);
     *reinterpret_cast<unsigned long long*>(dst + 0x50) = *reinterpret_cast<const unsigned long long*>(src + 0x50);
+    using NamespacePtr = Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>;
+    *reinterpret_cast<NamespacePtr*>(dst + 0x58) = *reinterpret_cast<const NamespacePtr*>(src + 0x58);
     *reinterpret_cast<unsigned long long*>(dst + 0x60) = *reinterpret_cast<const unsigned long long*>(src + 0x60);
     *reinterpret_cast<unsigned short*>(dst + 0x68) = *reinterpret_cast<const unsigned short*>(src + 0x68);
 
-    using NamespacePtr = Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>;
-    *reinterpret_cast<NamespacePtr*>(dst + 0x58) = *reinterpret_cast<const NamespacePtr*>(src + 0x58);
-
-    auto* oldName = *reinterpret_cast<Scaleform::GFx::ASStringNode**>(dst + 0x70);
-    if (oldName)
-    {
-        const auto raw = reinterpret_cast<Scaleform::UPInt>(oldName);
-        if ((raw & 1) == 0)
-        {
-            if (--oldName->RefCount == 0)
-                oldName->ReleaseNode();
-        }
-        else
-            *reinterpret_cast<Scaleform::UPInt*>(dst + 0x70) = raw - 1;
-    }
-
-    auto* newName = *reinterpret_cast<Scaleform::GFx::ASStringNode* const*>(src + 0x70);
-    if (newName)
-        ++newName->RefCount;
-    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(dst + 0x70) = newName;
+    Sfr16AssignName(reinterpret_cast<Scaleform::GFx::ASStringNode**>(dst + 0x70),
+        reinterpret_cast<Scaleform::GFx::ASStringNode* const*>(src + 0x70));
     *reinterpret_cast<unsigned*>(dst + 0x78) = *reinterpret_cast<const unsigned*>(src + 0x78);
     *reinterpret_cast<unsigned*>(dst + 0x7c) = *reinterpret_cast<const unsigned*>(src + 0x7c);
     *reinterpret_cast<unsigned long long*>(dst + 0x80) = *reinterpret_cast<const unsigned long long*>(src + 0x80);
