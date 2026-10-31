@@ -511,228 +511,349 @@ void FontData::ReadFontInfo(Stream* in, TagType tagType)
     ReadCodeTable(in);
 }
 
+// MS2-FUNCTIONAL 0x142655fe0: register allocation and frame (0x118 vs 0xf8); the exe calls 0x142657480 out of line in the DefineFont branch
 // @0x142655fe0
 void FontData::Read(LoadProcess* p, const TagInfo& tagInfo)
 {
-    TagType     tagType = tagInfo.TagType;
-    Stream*     in      = p->GetStream();
-    MemoryHeap* heap    = p->GetLoadHeap();
-    bool        ok      = true;
+    Stream *    pin = p->GetStream();
+    bool        isLoadingFontShapes = p->IsLoadingFontShapes();
+    MemoryHeap* pheap = p->GetLoadHeap();
 
-    if (tagType == 10) // DefineFont
+    // No AddRef() here, to avoid cycle.
+    // OwningMovie is our owner, so it has a ref to us.
+    //OwningMovie = p->GetDataDef();    
+
+    if (tagInfo.TagType == (TagType)10)
     {
-        in->LogParse("reading DefineFont\n");
+        pin->LogParse("reading DefineFont\n");
 
-        int           tableBase = in->Tell();
-        Array<UInt32> offsets;
-        offsets.PushBack(in->ReadU16());
-        in->LogParse("offset[0] = %d\n", offsets[0]);
+        int tableBase = pin->Tell();
+
+        // Read the glyph offsets.  Offsets
+        // are measured from the start of the
+        // offset table.
+        Array<int>    offsets;
+        offsets.PushBack(pin->ReadU16());
+        pin->LogParse("offset[0] = %d\n", offsets[0]);
         int count = offsets[0] >> 1;
-        for (int i = 1; i < count; ++i)
+        for (int i = 1; i < count; i++)
         {
-            UInt16 off = in->ReadU16();
+            UInt16 off = pin->ReadU16();
             if (off == 0)
             {
-                ok = false;
+                // special case for tag with stripped font shapes
+                isLoadingFontShapes = false;
                 break;
             }
             offsets.PushBack(off);
-            in->LogParse("offset[%d] = %d\n", i, offsets[i]);
+            pin->LogParse("offset[%d] = %d\n", i, offsets[i]);
         }
 
         Glyphs.Resize(count);
-        if (!ok)
-            Flags |= 0x1000; // glyph shapes stripped
-        else
+      //  TextureGlyphs.Resize(Glyphs.GetSize());
+
+        if (isLoadingFontShapes)
         {
-            for (int i = 0; i < count; ++i)
+            // Read the glyph shapes.
+            for (int i = 0; i < count; i++)
             {
-                in->SetPosition(tableBase + offsets[i]);
-                int len = (i + 1 < count) ? (int)(offsets[i + 1] - offsets[i])
-                                          : (int)(tagInfo.TagDataOffset + tagInfo.TagLength - (offsets[i] + tableBase));
-                Ptr<ShapeDataBase> pshape = *SF_HEAP_NEW(heap) ConstShapeNoStyles();
-                pshape->Read(p, (TagType)2, len, false);
-                Glyphs[i] = pshape;
-            }
-        }
-        return;
-    }
-
-    if (tagType != 0x30 && tagType != 0x4b) // DefineFont2 / DefineFont3
-        return;
-
-    in->LogParse(tagType == 0x30 ? "reading DefineFont2: " : "reading DefineFont3: ");
-
-    bool hasLayout = in->ReadUInt(1) != 0;
-    if (hasLayout)
-        Flags |= 0x2000;
-    else
-        Flags &= ~0x2000u;
-    unsigned shiftJis  = in->ReadUInt(1);
-    unsigned smallText = in->ReadUInt(1);
-    unsigned ansi      = in->ReadUInt(1);
-    if (shiftJis)
-        Flags = (Flags & ~0x100u) | 0x200;
-    else if (ansi)
-        Flags = (Flags & ~0x200u) | 0x100;
-    else
-        Flags &= ~0x300u;
-    if (smallText)
-        Flags |= 0x8000;
-    else
-        Flags &= ~0x8000u;
-    bool wideOffsets = in->ReadUInt(1) != 0;
-    if (in->ReadUInt(1))
-        Flags |= 0x4000;
-    else
-        Flags &= ~0x4000u;
-    if (in->ReadUInt(1))
-        Flags |= 0x1;
-    else
-        Flags &= ~0x1u;
-    if (in->ReadUInt(1))
-        Flags |= 0x2;
-    else
-        Flags &= ~0x2u;
-
-    UByte langCode = in->ReadU8();
-    Name           = in->ReadStringWithLength(heap);
-    unsigned glyphCount = in->ReadU16();
-    if (in->IsVerboseParse())
-    {
-        in->LogParse("  Name = %s, %d glyphs\n", Name ? Name : "(none)", glyphCount);
-        unsigned codePage = Flags & 0x300;
-        in->LogParse("  HasLayout = %d, CodePage = %s, Italic = %d, Bold = %d\n", hasLayout,
-                     codePage == 0x200 ? "ShiftJIS" : (codePage == 0x100 ? "ANSI" : "Unicode"), Flags & 1,
-                     (Flags >> 1) & 1);
-        in->LogParse("  LangCode = %d\n", langCode);
-    }
-
-    int           tableBase = in->Tell();
-    Array<UInt32> offsets;
-    unsigned      n = 0;
-    if (glyphCount)
-    {
-        UInt32 first = wideOffsets ? in->ReadU32() : in->ReadU16();
-        if (first == 0)
-            ok = false;
-        else
-        {
-            offsets.PushBack(first);
-            n = glyphCount;
-        }
-    }
-    for (unsigned i = 1; i < n; ++i)
-        offsets.PushBack(wideOffsets ? in->ReadU32() : in->ReadU16());
-    UInt32 fontCodeOffset = wideOffsets ? in->ReadU32() : in->ReadU16();
-
-    Glyphs.Resize(glyphCount);
-    if (!ok)
-    {
-        int pos = tableBase + (int)fontCodeOffset;
-        if (pos >= in->GetTagEndPosition())
-            return;
-        in->SetPosition(pos);
-        Flags |= 0x1000; // glyph shapes stripped
-    }
-    else
-    {
-        TagType shapeTag = (tagType == 0x30) ? (TagType)0x16 : tagType;
-        if (hasLayout)
-            AdvanceTable.Resize(glyphCount);
-        for (unsigned i = 0; i < glyphCount; ++i)
-        {
-            in->SetPosition(tableBase + offsets[i]);
-            UInt32 next = (i + 1 < glyphCount) ? offsets[i + 1] : fontCodeOffset;
-            Ptr<ShapeDataBase> pshape = *SF_HEAP_NEW(heap) ConstShapeNoStyles();
-            if (!pshape->Read(p, shapeTag, next - offsets[i], false))
-            {
-                AdvanceTable.Resize(i);
-                Glyphs.Resize(i);
-                return;
-            }
-            Glyphs[i] = pshape;
-
-            if (hasLayout)
-            {
-                RectF bounds(0);
-                pshape->ComputeBound(&bounds);
-                AdvanceEntry& e = AdvanceTable[i];
-                if (bounds.IsNormal())
-                {
-                    e.Left   = (SInt16)(bounds.x1 * 20.0f);
-                    e.Top    = (SInt16)(bounds.y1 * 20.0f);
-                    e.Width  = (UInt16)(SInt16)((bounds.x2 - bounds.x1) * 20.0f);
-                    e.Height = (UInt16)(SInt16)((bounds.y2 - bounds.y1) * 20.0f);
-                }
+                // Seek to the start of the shape data.
+                int newPos = tableBase + offsets[i];
+                pin->SetPosition(newPos);
+                
+                SPInt shapeDataLen;
+                if (i + 1 < count)
+                    shapeDataLen = offsets[i + 1] - offsets[i];
                 else
-                {
-                    e.Left = e.Top = 0;
-                    e.Width = e.Height = 0;
-                }
+                    shapeDataLen = tagInfo.TagDataOffset + tagInfo.TagLength - newPos;
+
+                // Create & read the shape.
+                Ptr<ConstShapeNoStyles> s = *SF_HEAP_NEW_ID(pheap, 0x104 /* StatMD_ShapeData_Mem */) ConstShapeNoStyles;
+                s->Read(p, (TagType)2, (unsigned)shapeDataLen, false);
+
+                Glyphs[i] = s;
             }
         }
-        if (tableBase + (int)fontCodeOffset != in->Tell())
-            return;
+        else
+            SetGlyphShapesStripped();
     }
-
-    ReadCodeTable(in);
-
-    if (hasLayout)
+    else if ((tagInfo.TagType == (TagType)0x30) || (tagInfo.TagType == (TagType)0x4b))
     {
-        float scale = (tagType == 0x4b) ? 0.05f : 1.0f;
-        Ascent      = (float)(SInt16)in->ReadU16() * scale;
-        Descent     = (float)(SInt16)in->ReadU16() * scale;
-        Leading     = (float)(SInt16)in->ReadU16() * scale;
-        if (in->IsVerboseParse())
-            in->LogParse("  Ascent = %d, Descent = %d, Leading = %d\n", (int)Ascent, (int)Descent, (int)Leading);
+        if (tagInfo.TagType == (TagType)0x30)
+            pin->LogParse("reading DefineFont2: ");
+        else
+            pin->LogParse("reading DefineFont3: ");
 
-        if (AdvanceTable.GetSize() != Glyphs.GetSize())
-            AdvanceTable.Resize(Glyphs.GetSize());
-        for (UPInt i = 0; i < AdvanceTable.GetSize(); ++i)
-            AdvanceTable[i].Advance = (float)(SInt16)in->ReadU16() * scale;
+        bool    hasLayout = (pin->ReadUInt(1) != 0);
+        SetHasLayout(hasLayout);
 
-        // the glyph bounds are not kept
-        RectF dummy(0);
-        for (UPInt i = 0; i < Glyphs.GetSize(); ++i)
-            in->ReadRect(&dummy);
+        bool shiftJisFlag        = (pin->ReadUInt(1) != 0);
+        bool pixelAlignedChars   = (pin->ReadUInt(1) != 0);
+        bool ansiFlag            = (pin->ReadUInt(1) != 0);
 
-        int kerningCount = in->ReadU16();
-        if (in->IsVerboseParse())
-            in->LogParse("  KerningCount = %d\n", kerningCount);
-        for (int k = 0; k < kerningCount; ++k)
+        if (shiftJisFlag)  SetCodePage(FF_CodePage_ShiftJis);
+        else if (ansiFlag) SetCodePage(FF_CodePage_Ansi);
+        else               SetCodePage(FF_CodePage_Unicode);
+        
+        SetPixelAligned(pixelAlignedChars);
+        
+        bool    wideOffsets = (pin->ReadUInt(1) != 0);
+        SetWideCodes(pin->ReadUInt(1) != 0);
+        SetItalic(pin->ReadUInt(1) != 0);
+        SetBold(pin->ReadUInt(1) != 0);
+        UByte   langCode = pin->ReadU8(); // Language code
+
+        // Inhibit warning.
+        langCode = langCode;
+
+        Name = pin->ReadStringWithLength(p->GetLoadHeap());
+
+        int glyphCount = pin->ReadU16();
+
+        if (pin->IsVerboseParse())
         {
-            if (in->Tell() >= (int)(tagInfo.TagDataOffset + tagInfo.TagLength))
+            pin->LogParse("  Name = %s, %d glyphs\n", Name ? Name : "(none)", glyphCount);
+
+            const char* pcodePage = "Unicode";
+            if (GetCodePage() == FF_CodePage_ShiftJis)
+                pcodePage = "ShiftJIS";
+            else if (GetCodePage() == FF_CodePage_Ansi)
+                pcodePage = "ANSI";
+
+            pin->LogParse("  HasLayout = %d, CodePage = %s, Italic = %d, Bold = %d\n", 
+                (int)hasLayout, pcodePage, IsItalic(), IsBold());
+            pin->LogParse("  LangCode = %d\n", langCode);
+        }
+
+        
+        int tableBase = pin->Tell();
+
+        // Read the glyph offsets.  Offsets
+        // are measured from the start of the
+        // offset table.
+        Array<int>    offsets;
+        int fontCodeOffset;
+
+        int offsetsCount = glyphCount;
+        if (glyphCount > 0)
+        {
+            // check for the first offset. If it is 0 then shapes
+            // were stripped from the tag.
+            unsigned off0 = (wideOffsets) ? (unsigned)pin->ReadU32() : (unsigned)pin->ReadU16();
+            if (off0 == 0)
             {
-                in->LogError("Corrupted file %s, kerning table of the font '%s' is longer than tagLength.",
-                             in->GetFileName().ToCStr(), Name ? Name : "<noname>");
-                break;
-            }
-            KerningPair kp;
-            if (Flags & 0x4000)
-            {
-                kp.Char0 = in->ReadU16();
-                kp.Char1 = in->ReadU16();
+                // special case for tags with stripped font shapes
+                isLoadingFontShapes = false;
+                offsetsCount = 0;
             }
             else
             {
-                kp.Char0 = in->ReadU8();
-                kp.Char1 = in->ReadU8();
+                offsets.PushBack(off0);
+                //pin->LogParse("offset[0] = %d\n", offsets[0]);
             }
-            float adjustment = (float)(SInt16)in->ReadU16() * scale;
-            if (in->IsVerboseParse())
-                in->LogParse("     Pair: %d - %d,\tadj = %d\n", kp.Char0, kp.Char1, (int)adjustment);
-            KerningPairs.Add(kp, adjustment);
         }
-    }
-
-    if (!ok)
-    {
-        for (UPInt i = 0; i < AdvanceTable.GetSize(); ++i)
+        if (wideOffsets)
         {
-            AdvanceEntry& e = AdvanceTable[i];
-            e.Left = e.Top = 0;
-            e.Width = e.Height = 0;
+            // 32-bit offsets.
+            for (int i = 1; i < offsetsCount; i++)
+            {
+                offsets.PushBack(pin->ReadU32());
+                //pin->LogParse("offset[%d] = %d\n", i, offsets[i]);
+            }
+            fontCodeOffset = pin->ReadU32();
+        }
+        else
+        {
+            // 16-bit offsets.
+            for (int i = 1; i < offsetsCount; i++)
+            {
+                offsets.PushBack(pin->ReadU16());
+                //pin->LogParse("offset[%d] = %d\n", i, offsets[i]);
+            }
+            fontCodeOffset = pin->ReadU16();
+        }
+
+        Glyphs.Resize(glyphCount);
+    //    TextureGlyphs.Resize(Glyphs.GetSize());
+
+        if (isLoadingFontShapes)
+        {
+            TagType fontGlyphShapeTag = (tagInfo.TagType == (TagType)0x30) ?
+                                           (TagType)0x16 : tagInfo.TagType;
+
+            if (hasLayout)
+            {
+                AdvanceTable.Resize(glyphCount);
+            }
+
+            // Read the glyph shapes.
+            for (int i = 0; i < glyphCount; i++)
+            {
+                // Seek to the start of the shape data.
+                int newPos = tableBase + offsets[i];
+                // if we're seeking backwards, then that looks like a bug.
+                pin->SetPosition(newPos);
+
+                SPInt shapeDataLen;
+                if (i + 1 < glyphCount)
+                    shapeDataLen = offsets[i + 1] - offsets[i];
+                else
+                    shapeDataLen = fontCodeOffset - offsets[i];
+
+                // Create & read the shape.
+                Ptr<ConstShapeNoStyles> s = *SF_HEAP_NEW_ID(pheap, StatMD_Fonts_Mem) ConstShapeNoStyles;
+                if (!s->Read(p, fontGlyphShapeTag, (unsigned)shapeDataLen, false))
+                {
+                    // error occurred; correct number of glyphs and break
+                    glyphCount = i;
+                    AdvanceTable.Resize(i);
+                    Glyphs.Resize(i);
+                    return;
+                }
+
+                Glyphs[i] = s;
+
+                if (hasLayout)
+                {
+                    RectF bounds;
+                    s->ComputeBound(&bounds);
+                    AdvanceEntry& ge = AdvanceTable[i];
+                    if (bounds.IsNormal())
+                    {
+                        float left = bounds.x1;
+                        float top  = bounds.y1;
+                        float w = bounds.Width();
+                        float h = bounds.Height();
+                        /*
+                            */
+                        ge.Left    = (SInt16)(left * 20.f);
+                        ge.Top     = (SInt16)(top * 20.f);
+                        ge.Width   = (UInt16)(w * 20.f);
+                        ge.Height  = (UInt16)(h * 20.f);
+                    }
+                    else
+                    {
+                        ge.Left  = ge.Top = 0;
+                        ge.Width = ge.Height = 0;
+                    }
+                }
+                //@DBG
+                //RectF bounds;
+                //s->ComputeBound(&bounds);
+                //if (bounds.IsNormal())
+                //{
+                //    pin->LogParse("  chidx = %d, bounds = (%f, %f, {%f, %f}\n", 
+                //        (int)i, bounds.x1, bounds.y1, bounds.Width(), bounds.Height());
+                //}
+            }
+
+            int currentPosition = pin->Tell();
+            if (fontCodeOffset + tableBase != currentPosition)
+            {
+                // Bad offset!  Don't try to read any more.
+                return;
+            }
+        }
+        else
+        {
+            // Skip the shape data.
+            int newPos = tableBase + fontCodeOffset;
+            if (newPos >= pin->GetTagEndPosition())
+            {
+                // No layout data!
+                return;
+            }
+
+            pin->SetPosition(newPos);
+            SetGlyphShapesStripped();
+        }
+
+        ReadCodeTable(pin);
+
+        // Read layout info for the glyphs.
+        if (hasLayout)
+        {
+            // Multiplier used for scaling.
+            // In SWF 8, font shape constant resolution (tag 75) was increased by 20.
+            float sfactor = (tagInfo.TagType == (TagType)0x4b)  ? 1.0f / 20.0f : 1.0f;
+
+            Ascent = (float) pin->ReadS16() * sfactor;
+            Descent = (float) pin->ReadS16() * sfactor;
+            Leading = (float) pin->ReadS16() * sfactor;
+            
+            if (pin->IsVerboseParse())
+            {
+                pin->LogParse("  Ascent = %d, Descent = %d, Leading = %d\n", 
+                    (int)Ascent, (int)Descent, (int)Leading);
+            }
+
+            // Advance table; i.E. how wide each character is.
+            if (AdvanceTable.GetSize() != Glyphs.GetSize())
+                AdvanceTable.Resize(Glyphs.GetSize());
+            for (UPInt i = 0, n = AdvanceTable.GetSize(); i < n; i++)
+            {
+                AdvanceEntry& ge = AdvanceTable[i];
+                ge.Advance = (float) pin->ReadU16() * sfactor;
+            }
+
+            // Bounds table.
+            //BoundsTable.Resize(Glyphs.GetSize());    // kill
+            RectF  dummyRect;
+            {for (UPInt i = 0, n = Glyphs.GetSize(); i < n; i++)
+            {
+                //BoundsTable[i].Read(pin);  // kill
+                pin->ReadRect(&dummyRect);                   
+            }}
+
+            // Kerning pairs.
+            int kerningCount = pin->ReadU16();
+            if (pin->IsVerboseParse())
+            {
+                pin->LogParse("  KerningCount = %d\n", (int)kerningCount);
+            }
+            for (int i = 0; i < kerningCount; i++)
+            {
+                int off = pin->Tell();
+                if (off >= tagInfo.TagDataOffset + tagInfo.TagLength)
+                {
+                    pin->LogError("Corrupted file %s, kerning table of the font '%s' is longer than tagLength.",
+                                  pin->GetFileName().ToCStr(), (Name) ? Name : "<noname>");
+                    break;
+                }
+
+                UInt16  char0, char1;
+                if (AreWideCodes())
+                {
+                    char0 = pin->ReadU16();
+                    char1 = pin->ReadU16();
+                }
+                else
+                {
+                    char0 = pin->ReadU8();
+                    char1 = pin->ReadU8();
+                }
+                float   adjustment = (float) pin->ReadS16() * sfactor;
+
+                KerningPair k;
+                k.Char0 = char0;
+                k.Char1 = char1;
+
+                if (pin->IsVerboseParse())
+                    pin->LogParse("     Pair: %d - %d,\tadj = %d\n", (int)char0, (int)char1, (int)adjustment);
+
+                // Remember this adjustment; we can look it up quickly
+                // later using the character pair as the key.
+                KerningPairs.Add(k, adjustment);
+            }
+        }
+        if (!isLoadingFontShapes && AdvanceTable.GetSize() > 0)
+        {
+            // reset glyphRects if no FontShapes loaded
+            for (UPInt i = 0, n = AdvanceTable.GetSize(); i < n; i++)
+            {
+                AdvanceEntry& ge = AdvanceTable[i];
+                ge.Left = ge.Top = ge.Height = ge.Width = 0;
+            }
         }
     }
 }

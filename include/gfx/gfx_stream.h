@@ -100,6 +100,7 @@ public:
         Pos = pos + 4;
         return val;
     }
+    SF_FORCEINLINE SInt16 ReadS16() { return (SInt16)ReadU16(); } // (appended, sfh) SDK
     SF_FORCEINLINE SInt32 ReadS32() { return (SInt32)ReadU32(); }
     SF_FORCEINLINE float  ReadFloat()
     {

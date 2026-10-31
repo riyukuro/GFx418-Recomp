@@ -105,6 +105,7 @@ public:
 
     LoadStates*          GetLoadStates() const { return pLoadStates; }
     MemoryHeap*          GetLoadHeap() const   { return pLoadData->GetHeap(); }
+    bool                 IsLoadingFontShapes() const { return 1; } // (appended, sfh) SDK
     const ExporterInfo*  GetExporterInfo() const { return pLoadData->GetExporterInfo(); }
 
     // Byte-aligned readers of the current stream (exe 0x14258ec50, 0x1425c8c20).

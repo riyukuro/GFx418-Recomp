@@ -64,6 +64,7 @@ public:
         FF_CodePage_ShiftJis = 0x0200,
         FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask,
         FF_NotResolved     = 0x0040, // a placeholder the font manager resolves through the font library / provider
+        FF_GlyphShapesStripped = 0x1000,
         FF_HasLayout       = 0x2000,
         FF_WideCodes       = 0x4000,
         FF_PixelAligned    = 0x8000  // glyphs are snapped to pixels (bitmap fonts)
@@ -121,6 +122,9 @@ public:
     void     SetBold(bool v = true)          { (v) ? Flags |= FF_Bold : Flags &= ~FF_Bold; }
     void     SetCodePage(FontFlags codePage) { Flags = (Flags & ~FF_CodePage_Mask) | (codePage & FF_CodePage_Mask); }
     void     SetWideCodes(bool v = true)     { (v) ? Flags |= FF_WideCodes : Flags &= ~FF_WideCodes; }
+    void     SetGlyphShapesStripped()        { Flags |= FF_GlyphShapesStripped; }
+    void     SetHasLayout(bool v = true)     { (v) ? Flags |= FF_HasLayout : Flags &= ~FF_HasLayout; }
+    void     SetPixelAligned(bool v = true)  { (v) ? Flags |= FF_PixelAligned : Flags &= ~FF_PixelAligned; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
     bool     IsResolved() const    { return (Flags & FF_NotResolved) == 0; }
 
