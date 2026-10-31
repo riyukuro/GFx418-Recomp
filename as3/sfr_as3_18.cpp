@@ -120,7 +120,6 @@ const Value& Value::GetNull()
     return v;
 }
 
-// MS2-FUNCTIONAL 0x14250f8f0: default-constructed Value has the undefined tag; local-static initialization differs.
 // @0x14250f8f0
 const Value& Value::GetUndefined()
 {
@@ -132,8 +131,7 @@ const Value& Value::GetUndefined()
 Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
                                     const Value& prefix);
 
-// MS2-FUNCTIONAL 0x14250aa50: the empty public URI fast path matches; the exe tail-calls the lookup-only 0x142415c20,
-// which falls back to the public namespace and never creates one.
+// The exe tail-calls the lookup-only 0x142415c20, which falls back to the public namespace and never creates one.
 // @0x14250aa50
 Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const ASString& uri) const
 {
@@ -458,7 +456,6 @@ void Slots::Inherit(const Slots& p)
     Set = p.Set;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the Value copy's AddRef switch; ours calls it
 // @0x14250fd90
 Value VTable::GetValue(AbsoluteIndex ind) const
 {
@@ -1123,7 +1120,6 @@ MovieRoot::ActionEntry* MovieRoot::ActionQueueType::PrependEntry(ActionLevel lvl
     return pentry;
 }
 
-// MS2-FUNCTIONAL: the exe untags with a branch (dec), cl picks a cmove
 // @0x1425189a0
 void AvmDisplayObj::OnDetachFromTimeline()
 {
@@ -1292,7 +1288,6 @@ __declspec(noinline) const Traits* State::GetValueTraits(const Value& v) const
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // For super_tr the call frame's origination traits (else the value's traits), then their parent.
-// MS2-FUNCTIONAL 0x14250ff00: clang shrink-wraps the frame (only the call path saves registers); the exe saves rbx / rdi up front
 // @0x14250ff00
 const Traits* Tracer::GetValueTraits(const Value& v, bool super_tr) const
 {
@@ -1507,7 +1502,6 @@ void Tracer::RegisterOrigOpCode(Abc::TCodeOffset opcode_cp)
 
 // The traced value of the global object: the saved scope's first value or else the method's 'this' (the state's
 // first register).
-// MS2-FUNCTIONAL 0x14250a490: the copied Value's reference count bump stays out of line in our Value model; the exe inlines it.
 // @0x14250a490
 Value Tracer::GetGlobalObject(const TR::State& st) const
 {
@@ -2484,10 +2478,7 @@ template void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329
     const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key&);
 // MS2-FUNCTIONAL 0x1425224f0: codegen, the exe resizes to 0 through Resize when the last element goes
 template void ArrayBase<ArrayData<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt);
-// MS2-FUNCTIONAL 0x14251cb40: codegen, the exe calls the out-of-line ResizeNoConstruct
 template void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PopBack(UPInt);
-// MS2-FUNCTIONAL 0x14251f800: the Value default/copy ctor and dtor stay out of line in our Value model; the exe inlines
-// the undefined-Value copy into the grown slot
 template GFx::AS3::Value& ArrayBase<ArrayData<GFx::AS3::Value, AllocatorLH<GFx::AS3::Value, 331>, ArrayDefaultPolicy> >::PushDefault();
 template void ArrayData<char, AllocatorGH<char, 2>, ArrayDefaultPolicy>::PushBack(const char&);
 template void ArrayBase<ArrayDataDH<Ptr<GFx::DisplayObjectBase>, AllocatorDH<Ptr<GFx::DisplayObjectBase>, 2>, ArrayDefaultPolicy> >::InsertAt(
@@ -2512,7 +2503,7 @@ struct Sfr34_CallFramePagedArray
     UByte** Pages;      // +0x20  64 CallFrames of 0xa8 bytes per page
 };
 
-// MS2-FUNCTIONAL paged array modeled locally (AllocatorPagedCC not modeled)
+// Paged array modeled locally (AllocatorPagedCC not modeled)
 // @0x14251cba0
 void Sfr34_CallFramePagedArray_PopBack(Sfr34_CallFramePagedArray* self)
 {
@@ -2662,7 +2653,7 @@ void AvmInteractiveObj::MoveBranchInPlayList()
 }
 
 // The out-of-line copy of the inline InteractiveObject::ModifyOptimizedPlayList.
-// MS2-FUNCTIONAL out-of-line copy of the inline member, recovered as a free wrapper
+// Out-of-line copy of the inline member, recovered as a free wrapper
 // @0x142517e70
 void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p)
 {
@@ -3400,7 +3391,7 @@ bool Sfr34_ValueObjIfc::PushBack(void* pdata, const GFx::Value& value)
 }
 
 // The last element (to pval when given) is removed; an empty array gives undefined.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's)
+// Member of a view over the AS3 value object interface (the class is sfr_as3_17's)
 // @0x14251cbe0
 bool Sfr34_ValueObjIfc::PopBack(void* pdata, GFx::Value* pval)
 {
@@ -3761,7 +3752,7 @@ Text::Allocator* FUN_1424d61c0(Text::Allocator* self, MemoryHeap* pheap, UInt8 f
 } }
 
 // MovieRoot::GetTextAllocator: the movie heap's text allocator, made on first use.
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
+// A slot of the exe's MovieRoot vftable, defined as a free function
 // @0x14250f290
 Scaleform::Render::Text::Allocator* FUN_14250f290(Scaleform::GFx::AS3::MovieRoot* self)
 {
@@ -3783,7 +3774,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 static inline Scaleform::GFx::AS3::Value* FUN_142525400(const Scaleform::GFx::AS3::MovieRoot* proot, const char* pname) { return ::Scaleform::GFx::AS3::Sfr31ResolveInvokeAlias(reinterpret_cast<Scaleform::UPInt>(proot), pname); }  // MovieRoot::ResolveInvokeAlias
 
 // MovieRoot::Invoke with a format: InvokeArgs (slot 48) with the variable arguments.
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
+// A slot of the exe's MovieRoot vftable, defined as a free function
 // @0x142513210
 bool FUN_142513210(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName, Scaleform::GFx::Value* presult,
                    const char* pargFmt, ...)
@@ -4165,7 +4156,7 @@ const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind);
 // (forwarder above)  // SlotInfo::GetDataType (sfr_as3_17)
 
 // The declared type of the slot with the 1-based own index ind.
-// MS2-FUNCTIONAL no caller or reference is left in the exe, so a free function; the exe keeps the parent test in a flag
+// No caller or reference is left in the exe, so a free function.
 // @0x14250dc30
 ClassTraits::Traits* FUN_14250dc30(const Traits* pthis, UInt32 ind)
 {
@@ -4212,7 +4203,7 @@ ASString FUN_14250bc60(const Traits& tr)
 }
 
 // MovieRoot::NotifyOnFocusChange (no current focus means the stage).
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
+// A slot of the exe's MovieRoot vftable, defined as a free function
 // @0x142518480
 bool FUN_142518480(const MovieRoot* proot, InteractiveObject* curFocused, InteractiveObject* toBeFocused,
                    unsigned controllerIdx, FocusMovedType fmt, ProcessFocusKeyInfo* pfocusKeyInfo)
@@ -4300,7 +4291,7 @@ void FUN_14251b2b0(const VM* vm, FlashUI* ui, const ArrayDH<Value>* values, UPIn
 }
 
 // The values of the operand stack, bottom first.
-// MS2-FUNCTIONAL the operand stack's positions are read through a layout view (they are private to it)
+// The operand stack's positions are read through a layout view (they are private to it)
 // @0x14251bbc0
 void FUN_14251bbc0(const VM* vm, FlashUI* ui, const ValueStack* values)
 {
@@ -4317,7 +4308,7 @@ void FUN_14251bbc0(const VM* vm, FlashUI* ui, const ValueStack* values)
 }
 
 // The registers of the innermost call frame.
-// MS2-FUNCTIONAL the register file's positions are read through a layout view (they are private to it)
+// The register file's positions are read through a layout view (they are private to it)
 // @0x14251bb20
 void FUN_14251bb20(const VM* vm, FlashUI* ui, const ValueRegisterFile* values)
 {
@@ -4566,7 +4557,7 @@ Pickable<Instances::Namespace> VM::MakeNamespace(Abc::NamespaceKind kind, const 
     return itr.MakeInstance(kind, uri, prefix);
 }
 
-// MS2-FUNCTIONAL the anonymous class info only has its names set
+// The anonymous class info only has its names set
 // @0x1425216d0
 void ClassTraits::Traits::RegisterSlots()
 {
@@ -4618,7 +4609,7 @@ static SF_FORCEINLINE void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
 }
 
 // AvmTextField::NotifyChanged.
-// MS2-FUNCTIONAL free function on the subobject this (AvmTextField is opaque in the shared header)
+// Free function on the subobject this (AvmTextField is opaque in the shared header)
 // @0x142518360
 void FUN_142518360(UPInt self)
 {
@@ -4626,7 +4617,7 @@ void FUN_142518360(UPInt self)
 }
 
 // AvmTextField::OnScroll.
-// MS2-FUNCTIONAL free function on the subobject this (AvmTextField is opaque in the shared header)
+// Free function on the subobject this (AvmTextField is opaque in the shared header)
 // @0x14251ae60
 void FUN_14251ae60(UPInt self)
 {
@@ -4635,7 +4626,7 @@ void FUN_14251ae60(UPInt self)
 
 // The data of a URLLoader's binary load, and its open/progress/complete events; a failed load gives the error
 // event.
-// MS2-FUNCTIONAL a 4.1.18 virtual of the root, defined non-virtual
+// A 4.1.18 virtual of the root, defined non-virtual
 // @0x14251e4b0
 void MovieRoot::ProcessLoadBinaryMT(GFx::LoadQueueEntry* pentry, LoadStates* pls, const ArrayPOD<UByte>& data,
                                     UPInt fileLen, bool succeeded)
@@ -4674,7 +4665,7 @@ const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn)
 }
 
 // The values of the operand stack above to are destroyed, down to the start of its current page.
-// MS2-FUNCTIONAL the operand stack's positions are read through a layout view (they are private to it)
+// The operand stack's positions are read through a layout view (they are private to it)
 // @0x14251ce20
 void FUN_14251ce20(ValueStack* stack, Value* to)
 {
@@ -5103,7 +5094,6 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 }
 
 namespace Scaleform {
-// MS2-FUNCTIONAL the exe inlines the reference count increment of the copied value
 // @0x14251f660
 template void ArrayBase<ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PushBack(
     const GFx::AS3::Value&);
@@ -7707,7 +7697,6 @@ UByte InteractiveObject::GetStateChangeFlags() const
     return UByte((Flags & Mask_ChangedFlags) >> 16);
 }
 
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
 // @0x142510d10
 void InteractiveObject::GotoFrame(unsigned targetFrameNumber)
 {
@@ -7727,7 +7716,6 @@ bool InteractiveObject::OnCharEvent(UInt32 wcharCode, unsigned controllerIdx)
     return false;
 }
 
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
 // @0x14251a100
 void InteractiveObject::OnGettingKeyboardFocus(unsigned controllerIdx, FocusMovedType fmt)
 {
@@ -7779,13 +7767,11 @@ void InteractiveObject::PropagateMouseEvent(const EventId& id)
     OnEvent(id);
 }
 
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
 // @0x14251f5c0
 void InteractiveObject::PropagateNoAdvanceGlobalFlag()
 {
 }
 
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
 // @0x14251f5d0
 void InteractiveObject::PropagateNoAdvanceLocalFlag()
 {
@@ -7882,7 +7868,6 @@ Instances::fl::GlobalObjectScript* Traits::GetGlobalObjectScript() const
     return NULL;
 }
 
-// MS2-FUNCTIONAL: the exe encodes the empty body as `ret 0`.
 // @0x1425117e0
 void Traits::InitOnDemand() const
 {
@@ -8159,7 +8144,6 @@ void FUN_14251acc0(UPInt) {}
 void FUN_14251d060(UPInt) {}
 // @0x1425210c0
 void FUN_1425210c0(UPInt) {}
-// MS2-FUNCTIONAL: the exe's empty slot is `ret 0`
 // @0x1425190d0
 void FUN_1425190d0(UPInt) {}
 // @0x142514d10
@@ -8167,20 +8151,20 @@ bool FUN_142514d10(UPInt) { return true; }
 
 void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[]);
 // Registers a class table with the VM's global object (+0x298).
-// MS2-FUNCTIONAL: raw-layout VM field
+// Raw-layout VM field
 // @0x1425210d0
 void FUN_1425210d0(VM& vm, const ClassInfo* table[])
 {
     FUN_14241e540(reinterpret_cast<Instances::fl::GlobalObjectCPP*>(AccRd(reinterpret_cast<UPInt>(&vm), 0x298)), table);
 }
 
-// MS2-FUNCTIONAL: raw-layout getter
+// Raw-layout getter
 // @0x14250ba00
 UPInt FUN_14250ba00(UPInt self) { return AccRd(self, 0x40); }
-// MS2-FUNCTIONAL: raw-layout getter
+// Raw-layout getter
 // @0x14250d960
 UPInt FUN_14250d960(UPInt self) { return AccRd(self, 0xc8); }
-// MS2-FUNCTIONAL: raw-layout getter
+// Raw-layout getter
 // @0x14250eef0
 UPInt FUN_14250eef0(UPInt self) { return AccRd(AccRd(self, 0x40), 0x18); }
 
@@ -8202,44 +8186,44 @@ float FUN_14250d630(UPInt self)
 
 // -- tail calls into the shared bodies --
 
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x142518a10
 bool FUN_142518a10(UPInt self, const EventId& id)
 {
     return reinterpret_cast<AvmInteractiveObj*>(self)->AvmInteractiveObj::OnEvent(id);
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x142518fc0
 bool FUN_142518fc0(UPInt self, const EventId& id)
 {
     return reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEvent(id);
 }
-// MS2-FUNCTIONAL: free-function form of the AS3 object's load (AvmDisplayObj::OnEventLoad's body)
+// Free-function form of the AS3 object's load (AvmDisplayObj::OnEventLoad's body)
 // @0x142518fe0
 void FUN_142518fe0(UPInt self)
 {
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
     avm->SetAS3ObjCollectible(avm->GetAS3Obj());
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x1425191e0
 void FUN_1425191e0(UPInt self)
 {
     reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x142519890
 void FUN_142519890(UPInt self)
 {
     reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x1425198b0
 void FUN_1425198b0(UPInt self)
 {
     reinterpret_cast<AvmDisplayObj*>(self)->AvmDisplayObj::OnEventUnload();
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x142519d10
 void FUN_142519d10(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
                    FocusMovedType fmt)
@@ -8248,7 +8232,7 @@ void FUN_142519d10(UPInt self, InteractiveObject::FocusEventType event, Interact
     // pointer would add 0x30
     reinterpret_cast<AvmInteractiveObj*>(self - 0x30)->AvmInteractiveObj::OnFocus(event, ch, controllerIdx, fmt);
 }
-// MS2-FUNCTIONAL: free-function form of the inherited slot
+// Free-function form of the inherited slot
 // @0x142519ec0
 void FUN_142519ec0(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
                    FocusMovedType fmt)
@@ -8259,26 +8243,26 @@ void FUN_142519ec0(UPInt self, InteractiveObject::FocusEventType event, Interact
 }
 
 // MovieRoot slots on its EventChains (+0x150) and MovieImpl (+0x10).
-// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// Raw-layout MovieRoot slot
 // @0x1425184f0
 void FUN_1425184f0(UPInt self)
 {
     reinterpret_cast<EventChains*>(self + 0x150)->QueueEvents((EventId::IdCode)AS3Event_Controller);
 }
-// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// Raw-layout MovieRoot slot
 // @0x142518510
 void FUN_142518510(UPInt self, InteractiveObject* pNewFocus, unsigned controllerIdx, FocusMovedType fmt)
 {
     reinterpret_cast<MovieImpl*>(AccRd(self, 0x10))->TransferFocus(pNewFocus, controllerIdx, fmt);
 }
 // activate (0x1000011) or deactivate (0x1000012) to the listening objects.
-// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// Raw-layout MovieRoot slot
 // @0x14251ac40
 void FUN_14251ac40(UPInt self, bool activate)
 {
     reinterpret_cast<EventChains*>(self + 0x150)->Dispatch((EventId::IdCode)((activate ? 0 : 1) + 0x1000011));
 }
-// MS2-FUNCTIONAL: raw-layout MovieRoot slot
+// Raw-layout MovieRoot slot
 // @0x14251ac60
 void FUN_14251ac60(UPInt self)
 {
@@ -8286,7 +8270,7 @@ void FUN_14251ac60(UPInt self)
 }
 
 // Tracer::Output: passed on to the FlashUI of the traced call frame's VM.
-// MS2-FUNCTIONAL: raw-layout walk (CallFrame +0x20 -> +0x28 -> +0x20 -> +0x20)
+// Raw-layout walk (CallFrame +0x20 -> +0x28 -> +0x20 -> +0x20)
 // @0x14251bda0
 void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 {
