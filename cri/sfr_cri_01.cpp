@@ -2269,12 +2269,11 @@ void* FUN_1400284b0(void* object, CriUint8 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: run VideoPlayer's RefCountNTSImplCore teardown and global-heap delete branch.
+// VideoPlayer's deleting dtor: its RefCountNTSImplCore base dtor is empty here.
 // @0x140029160
-void* FUN_140029160(void* object, CriUint64 flags)
+void* FUN_140029160(void* object, unsigned flags)
 {
     *(const void***)object = (const void**)DAT_1431b8e30;
-    FUN_14257db50(object);
     if (flags & 1)
     {
         void* heap = DAT_143b15f60;
@@ -2293,9 +2292,8 @@ void* FUN_140029280(void* object, CriUint8 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: run the CRI binary's RefCountImplCore destructor and heap-delete path.
 // @0x14001ca70
-void* FUN_14001ca70(void* object, CriUint64 flags)
+void* FUN_14001ca70(void* object, unsigned flags)
 {
     FUN_14257db40(object);
     if (flags & 1)
@@ -2595,7 +2593,7 @@ void FUN_140029d30(void** array, void*, CriUint64 count)
     CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*) + 4);
 }
 
-static void* CriRefCountDeletingDtor(void* object, CriUint64 flags)
+static void* CriRefCountDeletingDtor(void* object, unsigned flags)
 {
     FUN_14257db50(object);
     if ((flags & 1) != 0)
@@ -2607,21 +2605,17 @@ static void* CriRefCountDeletingDtor(void* object, CriUint64 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
 // @0x140029970
-void* FUN_140029970(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+void* FUN_140029970(void* object, unsigned flags) { return CriRefCountDeletingDtor(object, flags); }
 
-// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
 // @0x1400299d0
-void* FUN_1400299d0(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+void* FUN_1400299d0(void* object, unsigned flags) { return CriRefCountDeletingDtor(object, flags); }
 
-// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
 // @0x140029a50
-void* FUN_140029a50(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+void* FUN_140029a50(void* object, unsigned flags) { return CriRefCountDeletingDtor(object, flags); }
 
-// MS2-FUNCTIONAL: preserve the common RefCountNTSImplCore teardown and CRI heap deletion flag.
 // @0x140029ab0
-void* FUN_140029ab0(void* object, CriUint64 flags) { return CriRefCountDeletingDtor(object, flags); }
+void* FUN_140029ab0(void* object, unsigned flags) { return CriRefCountDeletingDtor(object, flags); }
 
 // Base vftables the exe does have (the same addresses sfr_video_01 pins for its copies of these classes)
 // MS2-PIN: ??_7RefCountWeakSupportImpl@Scaleform@@6B@ 0x143183cf8
