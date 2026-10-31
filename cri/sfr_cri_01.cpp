@@ -1895,39 +1895,11 @@ void FUN_14257dc30(void*);
 void FUN_14257dcb0(void*);
 extern "C" void* DAT_143b15f60;
 
-// MS2-FUNCTIONAL: resize a Scaleform heap-backed pointer array, keeping capacity four-element aligned.
-// @0x14001c570
-__declspec(noinline) void FUN_14001c570(CriUint64* array, void*, CriUint64 requestedCapacity)
-{
-    void* oldData = (void*)(uintptr_t)array[0];
-    CriUint64 capacity = requestedCapacity == 0 ? 0 : (requestedCapacity + 3) & ~(CriUint64)3;
-    void* heap = DAT_143b15f60;
-    void** vtable = heap ? *(void***)heap : NULL;
-    if (requestedCapacity == 0)
-    {
-        if (oldData && vtable)
-            ((void (*)(void*, void*))vtable[12])(heap, oldData);
-        array[0] = 0;
-        array[2] = 0;
-        return;
-    }
-    if (oldData && vtable)
-    {
-        void* resized = ((void* (*)(void*, void*, size_t))vtable[11])(
-            heap, oldData, (size_t)(capacity * sizeof(void*)));
-        array[0] = (CriUint64)(uintptr_t)resized;
-        array[2] = capacity;
-        return;
-    }
-    if (vtable)
-    {
-        const CriUint32 allocationFlags[2] = { 2, 0 };
-        void* data = ((void* (*)(void*, size_t, const CriUint32*))vtable[10])(
-            heap, (size_t)(capacity * sizeof(void*)), allocationFlags);
-        array[0] = (CriUint64)(uintptr_t)data;
-    }
-    array[2] = capacity;
-}
+// Video::Readers (Array<VideoReader*>) reserve: the SDK's out-of-line ArrayDataBase::Reserve.
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoReader*,
+    Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoReader*, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriVideoReaderArrayBase;
+template void CriVideoReaderArrayBase::Reserve(const void*, Scaleform::UPInt);
 
 // RefCountImpl::Release, inlined: the last reference deletes the object through its virtual destructor.
 class CriRefCountView : public Scaleform::RefCountImplCore
@@ -1969,10 +1941,10 @@ static __forceinline void CriPointerArrayResize(CriUint64* array, CriUint64 newS
     if (newSize < array[1])
     {
         if (newSize < (array[2] >> 1))
-            FUN_14001c570(array, array, newSize);
+            ((CriVideoReaderArrayBase*)array)->Reserve(array, newSize);
     }
     else if (newSize >= array[2])
-        FUN_14001c570(array, array, newSize + (newSize >> 2));
+        ((CriVideoReaderArrayBase*)array)->Reserve(array, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -1993,10 +1965,10 @@ void FUN_14001d310(CriUint64* array, CriUint64 newSize)
     if (newSize < array[1])
     {
         if (newSize < (array[2] >> 1))
-            FUN_14001c570(array, array, newSize);
+            ((CriVideoReaderArrayBase*)array)->Reserve(array, newSize);
     }
     else if (newSize >= array[2])
-        FUN_14001c570(array, array, newSize + (newSize >> 2));
+        ((CriVideoReaderArrayBase*)array)->Reserve(array, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -2037,10 +2009,10 @@ void FUN_14001cab0(void* array, void* arrayArg, CriUint64 newSize)
     if (newSize < fields[1])
     {
         if (newSize < (fields[2] >> 1))
-            FUN_14001c570(fields, arrayArg, newSize);
+            ((CriVideoReaderArrayBase*)fields)->Reserve(arrayArg, newSize);
     }
     else if (newSize >= fields[2])
-        FUN_14001c570(fields, arrayArg, newSize + (newSize >> 2));
+        ((CriVideoReaderArrayBase*)fields)->Reserve(arrayArg, newSize + (newSize >> 2));
     fields[1] = newSize;
 }
 
@@ -2064,22 +2036,7 @@ void* FUN_14001d1d0(void* state)
 // @0x14001d5d0
 void FUN_14001d5d0(CriUint64* array)
 {
-    if (0 < array[1])
-    {
-        if (0 < (array[2] >> 1))
-        {
-            if (array[0])
-            {
-                void* heap = DAT_143b15f60;
-                ((void (*)(void*, void*))(*(void***)heap)[12])(heap, (void*)(uintptr_t)array[0]);
-                array[0] = 0;
-            }
-            array[2] = 0;
-        }
-    }
-    else if (0 >= array[2])
-        FUN_14001c570(array, array, 0);
-    array[1] = 0;
+    ((CriVideoReaderArrayBase*)array)->ResizeNoConstruct(array, 0);
 }
 
 // @0x14001d6d0
@@ -2511,59 +2468,20 @@ void FUN_140029f60(void* adapter, int enabled)
 }
 #pragma optimize("", on)
 
-static __forceinline void CriArrayReserve(void** array, CriUint64* capacity, CriUint64 count, size_t elementSize)
-{
-    void* data = array[0];
-    if (count == 0)
-    {
-        if (data)
-        {
-            void* heap = DAT_143b15f60;
-            ((void (*)(void*, void*))(*(void***)heap)[12])(heap, data);
-        }
-        array[0] = NULL;
-        *capacity = 0;
-        return;
-    }
-
-    void* heap = DAT_143b15f60;
-    CriUint64 newCapacity = (count + 3) & ~(CriUint64)3;
-    if (data)
-    {
-        data = ((void* (*)(void*, void*, size_t))(*(void***)heap)[11])(
-            heap, data, (size_t)(newCapacity * elementSize));
-        *capacity = newCapacity;
-        array[0] = data;
-    }
-    else
-    {
-        CriUint32 heapFlags = 2;
-        array[0] = ((void* (*)(void*, size_t, const CriUint32*))(*(void***)heap)[10])(
-            heap, (size_t)(newCapacity * elementSize), &heapFlags);
-        *capacity = newCapacity;
-    }
-}
-
-// MS2-FUNCTIONAL: grow or release the CRI pointer vector with four-slot capacity rounding.
-// @0x140029bf0
-void FUN_140029bf0(void** array, void*, CriUint64 count)
-{
-    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*));
-}
-
-// MS2-FUNCTIONAL: this CRI vector uses the same four-slot allocation policy.
-// @0x140029c90
-void FUN_140029c90(void** array, void*, CriUint64 count)
-{
-    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*));
-}
-
-// MS2-FUNCTIONAL: this CRI vector stores three-word elements and rounds capacity by four.
-// @0x140029d30
-void FUN_140029d30(void** array, void*, CriUint64 count)
-{
-    CriArrayReserve(array, (CriUint64*)array + 2, count, sizeof(void*) + 4);
-}
+// The SDK's out-of-line ArrayDataBase::Reserve for the decoder's player list (Array<VideoPlayerImpl*>), an
+// unrecovered pointer array and the read-buffer info array.
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayerImpl*,
+    Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayerImpl*, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriVideoPlayerArrayBase;
+// The pointer array behind 0x140029c90 has no remaining callers in the exe; its element type is not recovered.
+typedef Scaleform::ArrayDataBase<void*, Scaleform::AllocatorGH<void*, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriPointerArrayBase;
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::ReadBufferInfo,
+    Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::ReadBufferInfo, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriReadBufferInfoArrayBase;
+template void CriVideoPlayerArrayBase::Reserve(const void*, Scaleform::UPInt);
+template void CriPointerArrayBase::Reserve(const void*, Scaleform::UPInt);
+template void CriReadBufferInfoArrayBase::Reserve(const void*, Scaleform::UPInt);
 
 static void* CriRefCountDeletingDtor(void* object, unsigned flags)
 {
@@ -2637,6 +2555,10 @@ void* FUN_140029ab0(void* object, unsigned flags) { return CriRefCountDeletingDt
 // MS2-PIN: ?SetTransforms@SoundChannelDelegate@Sound@Scaleform@@UEAAXAEBV?$Array@UTransform@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cec0
 // MS2-FUNCTIONAL ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): calls the delegate and returns where clang/VS2017 tail-jump
 // MS2-PIN: ?SetSpatialInfo@SoundChannelDelegate@Sound@Scaleform@@UEAAXQEBV?$Array@UVector@SoundChannel@Sound@Scaleform@@$01UArrayDefaultPolicy@4@@3@@Z 0x14001cee0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVVideoReader@Video@GFx@Scaleform@@U?$AllocatorGH@PEAVVideoReader@Video@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14001c570
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAVVideoPlayerImpl@Video@GFx@Scaleform@@U?$AllocatorGH@PEAVVideoPlayerImpl@Video@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x140029bf0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAXU?$AllocatorGH@PEAX$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x140029c90
+// MS2-PIN: ?Reserve@?$ArrayDataBase@UReadBufferInfo@VideoPlayer@Video@GFx@Scaleform@@U?$AllocatorGH@UReadBufferInfo@VideoPlayer@Video@GFx@Scaleform@@$01@5@UArrayDefaultPolicy@5@@Scaleform@@QEAAXPEBX_K@Z 0x140029d30
 
 // ---- full-exe unresolved: leaves without .pdata that data_cri's tables reference as ?FUN_<va>@@YAXXZ ----
 

@@ -298,9 +298,6 @@ struct CriMvRequestNode;
 struct CriMvRequestPoolView;
 CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool);
 void     FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c);
-void     FUN_140029bf0(void* array, void* source, CriUint64 capacity);
-void     FUN_140029c90(void* array, void* source, CriUint64 capacity);
-void     FUN_140029d30(void* array, void* source, CriUint64 capacity);
 void     FUN_14002afe0(CriUint64* array);
 void     FUN_14002d3f0(void* allocation);
 void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
@@ -1447,6 +1444,17 @@ void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
     }
 }
 
+// The SDK's ArrayDataBase::Reserve instances (sfr_cri_01 pins them).
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayerImpl*,
+    Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayerImpl*, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriVideoPlayerArrayBase;
+// The pointer array behind 0x140029c90 has no remaining callers in the exe; its element type is not recovered.
+typedef Scaleform::ArrayDataBase<void*, Scaleform::AllocatorGH<void*, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriPointerArrayBase;
+typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoPlayer::ReadBufferInfo,
+    Scaleform::AllocatorGH<Scaleform::GFx::Video::VideoPlayer::ReadBufferInfo, Scaleform::Stat_Default_Mem>,
+    Scaleform::ArrayDefaultPolicy> CriReadBufferInfoArrayBase;
+
 // @0x14002a380
 void FUN_14002a380(void* array, void* source, CriUint64 length)
 {
@@ -1454,10 +1462,10 @@ void FUN_14002a380(void* array, void* source, CriUint64 length)
     if (length < fields[1])
     {
         if (length < (fields[2] >> 1))
-            FUN_140029bf0(array, source, length);
+            ((CriVideoPlayerArrayBase*)array)->Reserve(source, length);
     }
     else if (length >= fields[2])
-        FUN_140029bf0(array, source, length + (length >> 2));
+        ((CriVideoPlayerArrayBase*)array)->Reserve(source, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1468,10 +1476,10 @@ void FUN_14002a3e0(void* array, void* source, CriUint64 length)
     if (length < fields[1])
     {
         if (length < (fields[2] >> 1))
-            FUN_140029c90(array, source, length);
+            ((CriPointerArrayBase*)array)->Reserve(source, length);
     }
     else if (length >= fields[2])
-        FUN_140029c90(array, source, length + (length >> 2));
+        ((CriPointerArrayBase*)array)->Reserve(source, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1482,10 +1490,10 @@ void FUN_14002a440(void* array, void* source, CriUint64 length)
     if (length < fields[1])
     {
         if (length < (fields[2] >> 1))
-            FUN_140029d30(array, source, length);
+            ((CriReadBufferInfoArrayBase*)array)->Reserve(source, length);
     }
     else if (length >= fields[2])
-        FUN_140029d30(array, source, length + (length >> 2));
+        ((CriReadBufferInfoArrayBase*)array)->Reserve(source, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1503,10 +1511,23 @@ static inline void CriArrayResizeNoConstruct(CriUint64* array, CriArrayReserveFn
     array[1] = newSize;
 }
 
+template<class ArrayBase>
+static inline void CriArrayResizeNoConstruct(CriUint64* array, CriUint64 newSize)
+{
+    if (newSize < array[1])
+    {
+        if (newSize < (array[2] >> 1))
+            ((ArrayBase*)array)->Reserve(array, newSize);
+    }
+    else if (newSize >= array[2])
+        ((ArrayBase*)array)->Reserve(array, newSize + (newSize >> 2));
+    array[1] = newSize;
+}
+
 // @0x14002a780
 void FUN_14002a780(CriUint64* array, const CriUint64* value)
 {
-    CriArrayResizeNoConstruct(array, FUN_140029bf0, array[1] + 1);
+    CriArrayResizeNoConstruct<CriVideoPlayerArrayBase>(array, array[1] + 1);
     CriUint64* destination = (CriUint64*)array[0] + array[1] - 1;
     if (destination)
         *destination = *value;
@@ -1515,7 +1536,7 @@ void FUN_14002a780(CriUint64* array, const CriUint64* value)
 // @0x14002a800
 void FUN_14002a800(CriUint64* array, const CriUint64* value)
 {
-    CriArrayResizeNoConstruct(array, FUN_140029c90, array[1] + 1);
+    CriArrayResizeNoConstruct<CriPointerArrayBase>(array, array[1] + 1);
     CriUint64* destination = (CriUint64*)array[0] + array[1] - 1;
     if (destination)
         *destination = *value;
@@ -1528,10 +1549,10 @@ void FUN_14002a880(void* array, CriUint64 length)
     if (length < fields[1])
     {
         if (length < (fields[2] >> 1))
-            FUN_140029d30(array, array, length);
+            ((CriReadBufferInfoArrayBase*)array)->Reserve(array, length);
     }
     else if (length >= fields[2])
-        FUN_140029d30(array, array, length + (length >> 2));
+        ((CriReadBufferInfoArrayBase*)array)->Reserve(array, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1542,10 +1563,10 @@ void FUN_14002a9b0(void* array, CriUint64 length)
     if (length < fields[1])
     {
         if (length < (fields[2] >> 1))
-            FUN_140029bf0(array, array, length);
+            ((CriVideoPlayerArrayBase*)array)->Reserve(array, length);
     }
     else if (length >= fields[2])
-        FUN_140029bf0(array, array, length + (length >> 2));
+        ((CriVideoPlayerArrayBase*)array)->Reserve(array, length + (length >> 2));
     fields[1] = length;
 }
 
@@ -1645,23 +1666,7 @@ void* FUN_14002a0e0(void* object, CriUint32 flags)
 // @0x14002aec0
 void FUN_14002aec0(CriUint64* array)
 {
-    // ResizeNoConstruct(0): shrinking to an empty array frees it, growing from capacity 0 reserves 0
-    const CriUint64 newSize = 0;
-    if (newSize < array[1])
-    {
-        if (newSize < (array[2] >> 1))
-        {
-            if (array[0])
-            {
-                FUN_14002d3f0((void*)array[0]);
-                array[0] = 0;
-            }
-            array[2] = 0;
-        }
-    }
-    else if (newSize >= array[2])
-        FUN_140029d30(array, array, newSize + (newSize >> 2));
-    array[1] = newSize;
+    ((CriReadBufferInfoArrayBase*)array)->ResizeNoConstruct(array, 0);
 }
 
 // Destroy the same owned fields and optionally free the containing allocation.
@@ -1812,7 +1817,7 @@ CriUint32* FUN_14002c260(CriUint32* destination, const CriUint32* source)
 // @0x14002a900
 void FUN_14002a900(CriUint64* array, const CriUint32* value)
 {
-    CriArrayResizeNoConstruct(array, FUN_140029d30, array[1] + 1);
+    CriArrayResizeNoConstruct<CriReadBufferInfoArrayBase>(array, array[1] + 1);
     CriUint32* destination = (CriUint32*)(array[0] - 12 + array[1] * 12);
     if (destination)
     {
@@ -2013,10 +2018,10 @@ void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
     if (newLength < oldLength)
     {
         if (newLength < (array[2] >> 1))
-            FUN_140029bf0(array, array, newLength);
+            ((CriVideoPlayerArrayBase*)array)->Reserve(array, newLength);
     }
     else if (newLength >= array[2])
-        FUN_140029bf0(array, array, newLength + (newLength >> 2));
+        ((CriVideoPlayerArrayBase*)array)->Reserve(array, newLength + (newLength >> 2));
     array[1] = newLength;
     CriConstructArray8((CriUint64*)array[0] + oldLength, count, source);
 }
@@ -2024,23 +2029,7 @@ void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
 // @0x14002afe0
 void FUN_14002afe0(CriUint64* array)
 {
-    // ResizeNoConstruct(0): shrinking to an empty array frees it, growing from capacity 0 reserves 0
-    const CriUint64 newSize = 0;
-    if (newSize < array[1])
-    {
-        if (newSize < (array[2] >> 1))
-        {
-            if (array[0])
-            {
-                FUN_14002d3f0((void*)array[0]);
-                array[0] = 0;
-            }
-            array[2] = 0;
-        }
-    }
-    else if (newSize >= array[2])
-        FUN_140029bf0(array, array, newSize + (newSize >> 2));
-    array[1] = newSize;
+    ((CriVideoPlayerArrayBase*)array)->ResizeNoConstruct(array, 0);
 }
 
 // Clear the destination vector before cloning its two-word source state.
