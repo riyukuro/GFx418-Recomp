@@ -1333,14 +1333,16 @@ void FUN_140006c70(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: resizes and copies the 12-byte records from the source array.
+struct Video01Record12 { unsigned a, b, c; };
+
+// MS2-FUNCTIONAL: resizes and copies the 12-byte records from the source array (the SDK Array operator= loop);
+// only the base/index operand order of the per-dword loads and stores differs.
 // @0x140006db0
 void* FUN_140006db0(void** destination, const void** source)
 {
     FUN_140005ca0(destination, reinterpret_cast<const Scaleform::UPInt*>(source)[1]);
-    Scaleform::UPInt count = reinterpret_cast<const Scaleform::UPInt*>(destination)[1];
-    if (*destination && count)
-        memcpy(*destination, *source, count * 12);
+    for (Scaleform::UPInt i = 0; i < reinterpret_cast<const Scaleform::UPInt*>(destination)[1]; i++)
+        static_cast<Video01Record12*>(*destination)[i] = static_cast<const Video01Record12*>(*source)[i];
     return destination;
 }
 
@@ -1515,18 +1517,18 @@ void FUN_140006ff0(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
     if (*stack) ::new (reinterpret_cast<void*>(*stack)) Scaleform::GFx::AS2::Value(*value);
 }
 
-// MS2-FUNCTIONAL: appends a retained object value to the current paged stack block.
+// appends a string Value (type 5) to the current paged stack block
 // @0x140007030
 void FUN_140007030(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
 {
     *stack += 0x20;
-    if (stack[2] <= *stack) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
-    if (*stack) {
-        unsigned char* bytes = reinterpret_cast<unsigned char*>(*stack);
+    if (*stack >= stack[2]) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (unsigned char* bytes = reinterpret_cast<unsigned char*>(*stack)) {
+        // placement Value(const ASString&): type 5 holds the string node and bumps its plain refcount (+0x18)
         bytes[0] = 5;
-        Scaleform::GFx::AS2::Object* object = *value;
-        *reinterpret_cast<Scaleform::GFx::AS2::Object**>(bytes + 8) = object;
-        if (object) object->AddRef();
+        unsigned char* node = *reinterpret_cast<unsigned char**>(value);
+        *reinterpret_cast<unsigned char**>(bytes + 8) = node;
+        ++*reinterpret_cast<int*>(node + 0x18);
     }
 }
 
