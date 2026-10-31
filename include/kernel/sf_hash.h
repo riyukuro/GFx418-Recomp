@@ -163,6 +163,24 @@ public:
         }
     }
 
+#ifdef MS2_SF_HASH_CLEAR_NOINLINE
+    // Inlined copy for callers whose exe body inlines Clear in such a unit (08m GenerateFontBitmaps).
+    __forceinline void ClearInline()
+    {
+        if (pTable)
+        {
+            for (UPInt i = 0, last = pTable->SizeMask; i <= last; i++)
+            {
+                Entry* e = &E(i);
+                if (!e->IsEmpty())
+                    e->Clear();
+            }
+            Allocator::Free(pTable);
+            pTable = 0;
+        }
+    }
+#endif
+
     bool IsEmpty() const { return pTable == 0 || pTable->EntryCount == 0; }
 
     template<class CRef>
@@ -821,6 +839,9 @@ public:
     UPInt GetSize() const { return mHash.GetSize(); }
     bool  IsEmpty() const { return mHash.IsEmpty(); }
     void  Clear()         { mHash.Clear(); }
+#ifdef MS2_SF_HASH_CLEAR_NOINLINE
+    __forceinline void ClearInline() { mHash.ClearInline(); }
+#endif
     void  Resize(UPInt n) { mHash.Resize(n); }
     void  SetCapacity(UPInt n) { mHash.SetCapacity(n); }
 

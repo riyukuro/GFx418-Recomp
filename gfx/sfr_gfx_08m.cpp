@@ -419,33 +419,37 @@ void FontGlyphPacker::generateTextures(Array<GlyphInfo>* glyphs, unsigned numTex
 // @0x1426613f0
 __declspec(noinline) void FontGlyphPacker::GenerateFontBitmaps(const Array<FontResource*>& fonts)
 {
-    int      limit       = pFontPackParams->GetGlyphCountLimit();
-    unsigned totalGlyphs = 0;
-    for (unsigned i = 0; i < fonts.GetSize(); i++)
+    unsigned i;
+    unsigned totalNumGlyphs = 0;
+    for (i = 0; i < fonts.GetSize(); i++)
     {
-        Font* pfont = fonts[i]->GetFont();
-        if (pfont->GetTextureGlyphData())
+        if (fonts[i]->GetFont()->GetTextureGlyphData() != 0)
             continue;
-        if (limit && (int)pfont->GetGlyphShapeCount() > limit)
+
+        if (pFontPackParams->GetGlyphCountLimit() && 
+            (int)fonts[i]->GetFont()->GetGlyphShapeCount() > pFontPackParams->GetGlyphCountLimit())
             continue;
-        totalGlyphs += pfont->GetGlyphShapeCount();
+
+        totalNumGlyphs += fonts[i]->GetFont()->GetGlyphShapeCount();
     }
 
-    Array<GlyphInfo> glyphs;
-    glyphs.Reserve(totalGlyphs);
-    GlyphGeometryHash.Clear();
-    for (unsigned i = 0; i < fonts.GetSize(); i++)
+    Array<GlyphInfo> glyphInfo;
+    glyphInfo.Reserve(totalNumGlyphs);
+    GlyphGeometryHash.ClearInline();
+    for (i = 0; i < fonts.GetSize(); i++)
     {
-        Font* pfont = fonts[i]->GetFont();
-        if (pfont->GetTextureGlyphData())
+        if (fonts[i]->GetFont()->GetTextureGlyphData() != 0)
             continue;
-        if (limit && (int)pfont->GetGlyphShapeCount() > limit)
+
+        if (pFontPackParams->GetGlyphCountLimit() && 
+            (int)fonts[i]->GetFont()->GetGlyphShapeCount() > pFontPackParams->GetGlyphCountLimit())
             continue;
-        generateGlyphInfo(&glyphs, fonts[i]);
+
+        generateGlyphInfo(&glyphInfo, fonts[i]);
     }
 
-    unsigned numTextures = packGlyphRects(&glyphs);
-    generateTextures(&glyphs, numTextures);
+    unsigned numTextures = packGlyphRects(&glyphInfo);
+    generateTextures(&glyphInfo, numTextures);
 }
 
 // @0x1426612b0
