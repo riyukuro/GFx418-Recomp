@@ -327,38 +327,44 @@ void TextField::AdvanceFrame(bool nextFrame, float framePos)
 }
 
 // 1: the field needs to be on the optimized advance list (and is not), -1: it needs to leave it, 0: no change.
-// MS2-FUNCTIONAL 0x1425b6fe0: same result for every flag combination; the exe computes rv with cmov and hoists the movie root load
 // @0x1425b6fe0
 int TextField::CheckAdvanceStatus(bool playingNow)
 {
     int rv = 0;
-    if (!IsAdvanceDisabled() && !(DisplayObjectBase::Flags & Mask_MarkedForRemove))
+    // CanAdvanceChar: not marked for removal, as a shifted byte test (exe shr/not/test al)
+    bool advanceDisabled = IsAdvanceDisabled() || !(bool)((UByte)~(DisplayObjectBase::Flags >> 6) & 1);
+    if (!advanceDisabled)
     {
-        if (!(Flags & (Flags_ForceOneTimeAdvance | Flags_ForceAdvance)))
+        // a field with a variable is always playing
+        bool playing = (Flags & Flags_ForceOneTimeAdvance) != 0 || (Flags & Flags_ForceAdvance) != 0;
+
+        if (!playing)
         {
+            // the cursor of a focused editable field blinks; a drag selection scrolls
             MovieImpl*       proot   = GetMovieImpl();
             Text::EditorKit* peditor = EditorOf(pDocument);
-            // advancing only for the cursor of a focused editable field, or a drag selection
-            if (!IsVisibleFlagSet() || !peditor ||
-                ((peditor->IsReadOnly() || !proot->IsFocused(this)) && !peditor->IsMouseCaptured()))
-            {
-                if (playingNow)
-                    rv = -1;
-                goto check_css;
-            }
+            if (IsVisibleFlagSet() && peditor &&
+                ((!peditor->IsReadOnly() && proot->IsFocused(this)) || peditor->IsMouseCaptured()))
+                playing = true;
         }
-        if (!playingNow)
-            return 1;
-    }
-    else
-        rv = playingNow ? -1 : 0;
-check_css:
-    if (HasAvmObject())
-    {
-        // a style sheet still loading keeps the field advancing
-        const Text::StyleManager* pss = GetAvmObjImpl()->ToAvmTextFieldBase()->GetStyleSheet();
-        if (pss && (pss->IsLoading() || pss->IsLoadingFinished()))
+
+        if (playing && !playingNow)
             rv = 1;
+        else if (!playing && playingNow)
+            rv = -1;
+    }
+    else if (playingNow)
+        rv = -1;
+
+    if (rv != 1)
+    {
+        if (HasAvmObject())
+        {
+            // a style sheet still loading keeps the field advancing
+            const Text::StyleManager* pss = GetAvmObjImpl()->ToAvmTextFieldBase()->GetStyleSheet();
+            if (pss && (pss->IsLoading() || pss->IsLoadingFinished()))
+                rv = 1;
+        }
     }
     return rv;
 }
@@ -1265,10 +1271,10 @@ void TextField::GetPosition(GFx::Value::DisplayInfo* pinfo)
 DisplayObjectBase::TopMostResult TextField::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
 {
     pdescr->pResult = NULL;
-    if ((IntObjFlagsOf(this) & InteractiveObject::Mask_HitTestDisable) || !GetVisible() || pdescr->pIgnoreMC == this)
+    if (((UByte)(IntObjFlagsOf(this) >> 11) & 1) || !GetVisible() || pdescr->pIgnoreMC == this)
         return TopMost_FoundNothing;
 
-    PointF localPt;
+    PointF localPt(PointF::NoInit);
     TransformPointToLocal(&localPt, pt, true, NULL);
     if (ClipDepth == 0 && PointTestLocal(localPt, HitTest_TestShape))
     {
