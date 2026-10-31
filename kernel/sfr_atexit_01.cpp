@@ -28,6 +28,51 @@ struct VertexXY16iInstance { static VertexFormat Format; };
 struct VertexXY16iUV { static VertexFormat Format; };
 }}
 
+// The exit-time statics, as far as these destructors name them (defined in sfr_render_06e/06g/06d/07q and
+// sfr_gfx_07e/08c/08d/08j).
+namespace Scaleform { namespace Render {
+struct SortKeyInterface;
+extern SortKeyInterface SKI_NullInterface;
+class SKI_Primitive { public: static SKI_Primitive Instance; static SKI_Primitive Instance3D; };
+class SKI_ComplexPrimitive { public: static SKI_ComplexPrimitive Instance; static SKI_ComplexPrimitive Instance3D; };
+class SKI_MaskStart { public: static SKI_MaskStart Instance; static SKI_MaskStart InstanceClipped; };
+class SKI_MaskEnd { public: class RQII_EndMask; static RQII_EndMask EndMaskItem; static SKI_MaskEnd Instance; };
+class SKI_BlendMode
+{
+public:
+    class RQII_BlendMode;
+    static RQII_BlendMode BlendModeItem;
+    static SKI_BlendMode InstanceStart;
+    static SKI_BlendMode InstanceEnd;
+};
+class SKI_Filter { public: static SKI_Filter InstanceStart; static SKI_Filter InstanceEnd; };
+class SKI_ViewMatrix3D { public: static SKI_ViewMatrix3D InstanceStart; static SKI_ViewMatrix3D InstanceEnd; };
+class SKI_ProjectionMatrix3D
+{
+public:
+    static SKI_ProjectionMatrix3D InstanceStart;
+    static SKI_ProjectionMatrix3D InstanceEnd;
+};
+class SKI_TextPrimitive { public: static SKI_TextPrimitive Instance; static SKI_TextPrimitive Instance3D; };
+class HALBeginDisplayItem { public: static HALBeginDisplayItem Instance; };
+class HALEndDisplayItem { public: static HALEndDisplayItem Instance; };
+class AmpGlyphImageWriter { public: static AmpGlyphImageWriter Instance; };
+}}
+
+namespace Scaleform { namespace GFx {
+class FontResourceCreator;
+class GFxSystemFontResourceKeyInterface;
+class ImageFileKeyInterface;
+class SoundFileKeyInterface;
+extern FontResourceCreator FontResourceCreator_Static;
+extern GFxSystemFontResourceKeyInterface GFxSystemFontResourceKeyInterface_Instance;
+extern ImageFileKeyInterface ImageFileKeyInterface_Instance;
+extern SoundFileKeyInterface SoundFileKeyInterface_Instance;
+}}
+
+// static AS2::Value array at 0x143a51b50.
+extern unsigned char DAT_143a51b50[];
+
 namespace Scaleform { namespace GFx {
 
 extern "C" char DAT_143184f20[];
@@ -35,48 +80,26 @@ extern "C" char DAT_14318b240[];
 extern "C" char DAT_14318f548[];
 extern "C" char DAT_143191990[];
 extern "C" char DAT_1431927c8[];
-extern "C" char DAT_143a2f430[];
-extern "C" char DAT_143a2f690[];
-extern "C" char DAT_143a2fce8[];
-extern "C" char DAT_143a2fcf8[];
-extern "C" char DAT_143a2fd08[];
-extern "C" char DAT_143a2fd18[];
-extern "C" char DAT_143a2fd28[];
-extern "C" char DAT_143a2fd38[];
-extern "C" char DAT_143a2fd48[];
-extern "C" char DAT_143a2fd50[];
-extern "C" char DAT_143a2fd80[];
-extern "C" char DAT_143a2fd88[];
-extern "C" char DAT_143a2fd98[];
-extern "C" char DAT_143a2fda8[];
-extern "C" char DAT_143a2fdb8[];
-extern "C" char DAT_143a2fdc8[];
-extern "C" char DAT_143a2fdd8[];
-extern "C" char DAT_143a2fde8[];
-extern "C" char DAT_143a2fdf8[];
-extern "C" char DAT_143a2fe08[];
-extern "C" char DAT_143a2fe18[];
-extern "C" char DAT_143a2fe20[];
-extern "C" char DAT_143a2fe28[];
 extern "C" char DAT_143a2fe60[];
-extern "C" char DAT_143a2fee8[];
-extern "C" char DAT_143a2fef8[];
 extern "C" char DAT_143a30338[];
-extern "C" char DAT_143a30340[];
-extern "C" char DAT_143a30350[];
 extern "C" char DAT_143a2dd20[];
 extern "C" char DAT_143b15780[];
 extern "C" char DAT_143a2f650[];
-extern "C" char DAT_143a51b50[];
 
 void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
 extern "C" void FUN_142521f00(void*);       // AS3::Value::ReleaseInternal
-extern "C" void FUN_142939780(void*);       // AS2::Value::DropRefs
 
 // The Ptr<SystemVertexFormat> slot of a VertexFormat static, released as raw storage like the other Ptr<>s.
 static inline char* FormatSysSlot(Render::VertexFormat& format)
 {
     return reinterpret_cast<char*>(&format) + 0x10;
+}
+
+// A named static's storage.
+template <class T>
+static inline char* RawObj(T& object)
+{
+    return reinterpret_cast<char*>(&object);
 }
 
 static inline void RawSetVtable(char* object, char* vtable)
@@ -117,7 +140,7 @@ static inline void RawAs3ValueDtor(char* v)
 static inline void RawAs2ValueDtor(char* v)
 {
     if (RawField<UByte>(v, 0) >= 5)
-        FUN_142939780(v);
+        reinterpret_cast<AS2::Value*>(v)->DropRefs();
 }
 
 // `eh vector destructor iterator' over an AS2::Value array, last element first.
@@ -158,14 +181,14 @@ void FUN_142cc9370()
 // @0x142cc9520
 void FUN_142cc9520()
 {
-    RawSetVtable(DAT_143a2f430, DAT_14318f548);
+    RawSetVtable(RawObj(GFx::FontResourceCreator_Static), DAT_14318f548);
 }
 
 // static ResourceKey::KeyInterface at 0x143a2f690: back to its interface base vftable.
 // @0x142cc9530
 void FUN_142cc9530()
 {
-    RawSetVtable(DAT_143a2f690, DAT_14318b240);
+    RawSetVtable(RawObj(GFx::GFxSystemFontResourceKeyInterface_Instance), DAT_14318b240);
 }
 
 // The member's interface, as far as the destructor uses it (slot 2 lets it go).
@@ -252,147 +275,147 @@ void FUN_142cc96f0()
 // @0x142cc9710
 void FUN_142cc9710()
 {
-    RawSetVtable(DAT_143a2fd38, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_MaskStart::InstanceClipped), DAT_1431927c8);
 }
 
 // static Render::SortKeyInterface at 0x143a2fd28: back to its interface base vftable.
 // @0x142cc9720
 void FUN_142cc9720()
 {
-    RawSetVtable(DAT_143a2fd28, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_MaskStart::Instance), DAT_1431927c8);
 }
 
 // SKI_BlendMode::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9730
 void FUN_142cc9730()
 {
-    RawSetVtable(DAT_143a2fd98, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_BlendMode::InstanceEnd), DAT_1431927c8);
 }
 
 // SKI_Filter::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9740
 void FUN_142cc9740()
 {
-    RawSetVtable(DAT_143a2fdb8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_Filter::InstanceEnd), DAT_1431927c8);
 }
 
 // SKI_ProjectionMatrix3D::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9750
 void FUN_142cc9750()
 {
-    RawSetVtable(DAT_143a2fdf8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ProjectionMatrix3D::InstanceEnd), DAT_1431927c8);
 }
 
 // SKI_ViewMatrix3D::InstanceEnd (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9760
 void FUN_142cc9760()
 {
-    RawSetVtable(DAT_143a2fdd8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ViewMatrix3D::InstanceEnd), DAT_1431927c8);
 }
 
 // SKI_ComplexPrimitive::Instance3D (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9770
 void FUN_142cc9770()
 {
-    RawSetVtable(DAT_143a2fd18, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ComplexPrimitive::Instance3D), DAT_1431927c8);
 }
 
 // SKI_Primitive::Instance3D (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9780
 void FUN_142cc9780()
 {
-    RawSetVtable(DAT_143a2fcf8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_Primitive::Instance3D), DAT_1431927c8);
 }
 
 // SKI_ComplexPrimitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9790
 void FUN_142cc9790()
 {
-    RawSetVtable(DAT_143a2fd08, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ComplexPrimitive::Instance), DAT_1431927c8);
 }
 
 // static Render::SortKeyInterface at 0x143a2fd50: back to its interface base vftable.
 // @0x142cc97a0
 void FUN_142cc97a0()
 {
-    RawSetVtable(DAT_143a2fd50, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_MaskEnd::Instance), DAT_1431927c8);
 }
 
 // SKI_Primitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc97b0
 void FUN_142cc97b0()
 {
-    RawSetVtable(DAT_143a2fce8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_Primitive::Instance), DAT_1431927c8);
 }
 
 // SKI_BlendMode::BlendModeItem (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc97c0
 void FUN_142cc97c0()
 {
-    RawSetVtable(DAT_143a2fd80, DAT_143191990);
+    RawSetVtable(RawObj(Render::SKI_BlendMode::BlendModeItem), DAT_143191990);
 }
 
 // SKI_MaskEnd::EndMaskItem (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc97d0
 void FUN_142cc97d0()
 {
-    RawSetVtable(DAT_143a2fd48, DAT_143191990);
+    RawSetVtable(RawObj(Render::SKI_MaskEnd::EndMaskItem), DAT_143191990);
 }
 
 // SKI_BlendMode::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc97e0
 void FUN_142cc97e0()
 {
-    RawSetVtable(DAT_143a2fd88, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_BlendMode::InstanceStart), DAT_1431927c8);
 }
 
 // SKI_Filter::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc97f0
 void FUN_142cc97f0()
 {
-    RawSetVtable(DAT_143a2fda8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_Filter::InstanceStart), DAT_1431927c8);
 }
 
 // SKI_ProjectionMatrix3D::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9800
 void FUN_142cc9800()
 {
-    RawSetVtable(DAT_143a2fde8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ProjectionMatrix3D::InstanceStart), DAT_1431927c8);
 }
 
 // SKI_ViewMatrix3D::InstanceStart (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9810
 void FUN_142cc9810()
 {
-    RawSetVtable(DAT_143a2fdc8, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_ViewMatrix3D::InstanceStart), DAT_1431927c8);
 }
 
 // static Render::SortKeyInterface at 0x143a2fe08: back to its interface base vftable.
 // @0x142cc9820
 void FUN_142cc9820()
 {
-    RawSetVtable(DAT_143a2fe08, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_NullInterface), DAT_1431927c8);
 }
 
 // static ResourceKey::KeyInterface at 0x143a2fe18: back to its interface base vftable.
 // @0x142cc9830
 void FUN_142cc9830()
 {
-    RawSetVtable(DAT_143a2fe18, DAT_14318b240);
+    RawSetVtable(RawObj(GFx::ImageFileKeyInterface_Instance), DAT_14318b240);
 }
 
 // HALBeginDisplayItem::Instance (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc9840
 void FUN_142cc9840()
 {
-    RawSetVtable(DAT_143a2fe20, DAT_143191990);
+    RawSetVtable(RawObj(Render::HALBeginDisplayItem::Instance), DAT_143191990);
 }
 
 // HALEndDisplayItem::Instance (Render::RenderQueueItem::Interface): back to its interface base vftable.
 // @0x142cc9850
 void FUN_142cc9850()
 {
-    RawSetVtable(DAT_143a2fe28, DAT_143191990);
+    RawSetVtable(RawObj(Render::HALEndDisplayItem::Instance), DAT_143191990);
 }
 
 // static Ptr<> at 0x143a2fe60.
@@ -406,14 +429,14 @@ void FUN_142cc9870()
 // @0x142cc9890
 void FUN_142cc9890()
 {
-    RawSetVtable(DAT_143a2fee8, DAT_143184f20);
+    RawSetVtable(RawObj(Render::AmpGlyphImageWriter::Instance), DAT_143184f20);
 }
 
 // static ResourceKey::KeyInterface at 0x143a2fef8: back to its interface base vftable.
 // @0x142cc98a0
 void FUN_142cc98a0()
 {
-    RawSetVtable(DAT_143a2fef8, DAT_14318b240);
+    RawSetVtable(RawObj(GFx::SoundFileKeyInterface_Instance), DAT_14318b240);
 }
 
 // static Ptr<> at 0x143a30338.
@@ -427,14 +450,14 @@ void FUN_142cc98d0()
 // @0x142cc98f0
 void FUN_142cc98f0()
 {
-    RawSetVtable(DAT_143a30350, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_TextPrimitive::Instance3D), DAT_1431927c8);
 }
 
 // SKI_TextPrimitive::Instance (Render::SortKeyInterface): back to its interface base vftable.
 // @0x142cc9900
 void FUN_142cc9900()
 {
-    RawSetVtable(DAT_143a30340, DAT_1431927c8);
+    RawSetVtable(RawObj(Render::SKI_TextPrimitive::Instance), DAT_1431927c8);
 }
 
 // AS2 Point_DefaultParams, Value[2] at 0x143a51b70.
@@ -469,7 +492,7 @@ void FUN_142cca460()
 // @0x142cca4d0
 void FUN_142cca4d0()
 {
-    RawAs2ValueDtor(DAT_143a51b50);
+    RawAs2ValueDtor(reinterpret_cast<char*>(::DAT_143a51b50));
 }
 
 }} // namespace Scaleform::GFx
