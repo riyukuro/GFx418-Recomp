@@ -174,6 +174,8 @@ public:
     bool           MustBeInPlaylist() const;
 
     bool IsLoadedSeparately() const { return (Flags & Flags_LoadedSeparately) != 0; }
+    void SetUpdateFrame(bool v = true)   { Flags = (UByte)((v) ? (Flags | Flags_UpdateFrame)   : (Flags & (~Flags_UpdateFrame))); }
+    void SetHasLoopedPriv(bool v = true) { Flags = (UByte)((v) ? (Flags | Flags_HasLoopedPriv) : (Flags & (~Flags_HasLoopedPriv))); }
     bool IsLockRoot() const         { return (Flags & Flags_LockRoot) != 0; }
 
     Ptr<TimelineDef>           pDef;            // +0x110 Resource AddRef / Release

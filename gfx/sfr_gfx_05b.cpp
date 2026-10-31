@@ -569,12 +569,7 @@ RectF Sprite::GetBounds(const Matrix& t) const
             RectF tr(RectF::NoInit);
             t.EncloseTransform(&tr, dr);
             if (!(r.x1 >= r.x2 || r.y1 >= r.y2))
-            {
-                r.x1 = Alg::Min(tr.x1, r.x1);
-                r.y1 = Alg::Min(tr.y1, r.y1);
-                r.x2 = Alg::Max(r.x2, tr.x2);
-                r.y2 = Alg::Max(r.y2, tr.y2);
-            }
+                r.Union(tr);
             else
                 r = tr;
         }
@@ -785,7 +780,7 @@ void Sprite::SetHitArea(Sprite* phitArea)
 // @0x1425daab0
 void Sprite::ExecuteFrameTags(unsigned frame)
 {
-    if (!(DisplayObjectBase::Flags & Mask_MovieClip) && frame != 0)
+    if (!((UByte)(DisplayObjectBase::Flags >> 11) & 1) && frame != 0)   // Mask_MovieClip, shifted byte test
         return;
     Ptr<Sprite> keepAlive(this);
     if (frame >= GetLoadingFrame())
@@ -868,34 +863,51 @@ void Sprite::CheckActiveSounds()
 // 1: put the clip on the advance list, -1: take it off, 0: leave it. A clip advances while it plays, while it has
 // sounds or while it is the movie's keep-advancing character; otherwise only if the AVM needs its frame events.
 // @0x1425da750
-// MS2-FUNCTIONAL: the exe keeps advanceDisabled in a register across the AVM calls and saves one fewer nonvolatile
 int Sprite::CheckAdvanceStatus(bool playingNow)
 {
-    bool advanceDisabled = IsAdvanceDisabled() || (DisplayObjectBase::Flags & Mask_MarkedForRemove);
-    if (!advanceDisabled)
+    int rv = 0;
+    // CanAdvanceChar: not marked for removal, as a shifted byte test (exe shr/not/test al)
+    bool advanceDisabled = (IsAdvanceDisabled() || !(bool)((UByte)~(DisplayObjectBase::Flags >> 6) & 1));
+
+    bool advancable = (!advanceDisabled && (GetPlayState() == State_Playing ||
+        GetMovieImpl()->pKeepAdvancingChar == this ||
+        (pActiveSounds && pActiveSounds->Sounds.GetSize() != 0)));
+
+    if (advancable)
     {
-        if (GetPlayState() == State_Playing || GetMovieImpl()->pKeepAdvancingChar == this ||
-            (pActiveSounds && pActiveSounds->Sounds.GetSize() != 0))
-            return !playingNow;
+        rv = !playingNow;
     }
-    if (playingNow)
+    else
     {
-        if (advanceDisabled)
-            return -1;
-        return (HasAvmObject() && GetAvmSprite()->MustBeInPlaylist()) ? 0 : -1;
+        if (playingNow)
+        {
+            if (!advanceDisabled)
+            {
+                if (!MustBeInPlaylist())
+                    rv = -1;
+            }
+            else
+            {
+                rv = -1;
+            }
+        }
+        else
+        {
+            if (!advanceDisabled)
+            {
+                if (MustBeInPlaylist())
+                    rv = 1;
+            }
+        }
     }
-    if (advanceDisabled)
-        return 0;
-    if (HasAvmObject() && GetAvmSprite()->MustBeInPlaylist())
-        return 1;
-    return 0;
+    return rv;
 }
 
 // Per-frame advance: the sounds, the streaming sound block of the frame, then the AVM.
 // @0x1425da130
 void Sprite::AdvanceFrame(bool nextFrame, float framePos)
 {
-    if (!(DisplayObjectBase::Flags & Mask_MovieClip) && IsAdvanceDisabled())
+    if (!((UByte)(DisplayObjectBase::Flags >> 11) & 1) && IsAdvanceDisabled())   // Mask_MovieClip, as a shifted byte test (exe shr/test al)
         return;
     if (IsUnloading())
         return;
@@ -918,21 +930,22 @@ void Sprite::AdvanceFrame(bool nextFrame, float framePos)
 // @0x1425dab70
 void Sprite::ExecuteImportedInitActions(MovieDef* psourceMovie)
 {
-    MovieDefImpl* pdefImpl  = static_cast<MovieDefImpl*>(psourceMovie);
-    MovieDataDef* pdataDef  = pdefImpl->GetDataDef();
-    unsigned      frameCount = pdataDef->GetInitActionListSize();
-    for (unsigned f = 0; f < frameCount; f++)
+    MovieDefImpl* pdefImpl = static_cast<MovieDefImpl*>(psourceMovie);
+    MovieDataDef* pdataDef = pdefImpl->GetDataDef();
+
+    for (UPInt f = 0, fc = pdataDef->GetInitActionListSize(); f < fc; ++f)
     {
-        TimelineDef::Frame actions;
-        if (!pdataDef->GetInitActions(&actions, f))
-            continue;
-        for (unsigned i = 0; i < actions.GetTagCount(); i++)
+        TimelineDef::Frame actionsList;
+        if (pdataDef->GetInitActions(&actionsList, (int)f))
         {
-            ExecuteTag* ptag = actions.GetTag(i);
-            if (ptag->IsInitImportActionsTag())
-                static_cast<GFxInitImportActions*>(ptag)->ExecuteInContext(this, pdefImpl, true);
-            else
-                ptag->ExecuteWithPriority(this, ActionPriority::AP_Highest);
+            for (unsigned i = 0; i < actionsList.GetTagCount(); ++i)
+            {
+                ExecuteTag* e = actionsList.GetTag(i);
+                if (e->IsInitImportActionsTag())
+                    ((GFxInitImportActions*)e)->ExecuteInContext(this, pdefImpl, true);
+                else
+                    e->ExecuteWithPriority(this, ActionPriority::AP_Highest);
+            }
         }
     }
 }
@@ -957,10 +970,12 @@ bool Sprite::GotoLabeledFrame(const char* label, int offset)
 void Sprite::Restart()
 {
     mDisplayList.MarkAllEntriesForRemoval(this, 0);
-    Flags         = (Flags & ~Flags_HasLoopedPriv) | Flags_UpdateFrame;
+    CurrentFrame = 0;
+    RollOverCnt = 0;
+    SetUpdateFrame();
+    SetHasLoopedPriv(false);
     PlayStatePriv = State_Playing;
-    CurrentFrame  = 0;
-    RollOverCnt   = 0;
+
     if (HasAvmObject())
         GetAvmSprite()->ExecuteInitActionFrameTags(CurrentFrame);
     ExecuteFrameTags(CurrentFrame);
@@ -1029,7 +1044,7 @@ void Sprite::SetVisible(bool visible)
 // vtable is not recovered); here both jumps read MovieImpl::pHeap, and the stack frame differs
 void Sprite::GotoFrame(unsigned targetFrameNumber)
 {
-    if (!(DisplayObjectBase::Flags & Mask_MovieClip) || IsUnloading())
+    if (!((UByte)(DisplayObjectBase::Flags >> 11) & 1) || IsUnloading())   // Mask_MovieClip, shifted byte test
         return;
     int target = Alg::Min<int>(targetFrameNumber, GetLoadingFrame() - 1);
     if (target < 0)
