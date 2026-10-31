@@ -1011,36 +1011,47 @@ UInt16 FontResource::calcTopBound(UInt16 code)
 // @0x142658080
 void FontResource::calcLowerUpperTop(Log* log)
 {
+    SInt16 lowerCaseTop = 0;
+    SInt16 upperCaseTop = 0;
     if (pFont && LowerCaseTop == 0 && UpperCaseTop == 0)
     {
-        const char upperCaseTopChars[] = "HEFTUVWXZ";
-        const char lowerCaseTopChars[] = "zxvwy";
-        UInt16     upperCaseTop        = 0;
-        for (const char* p = upperCaseTopChars; *p; ++p)
+        const UByte upperCaseCandidates[] = "HEFTUVWXZ";
+        const UByte lowerCaseCandidates[] = "zxvwy";
+
+        const UByte* p;
+        for (p = upperCaseCandidates; *p; ++p)
         {
             upperCaseTop = calcTopBound(*p);
             if (upperCaseTop)
                 break;
         }
+
         if (upperCaseTop)
         {
-            for (const char* p = lowerCaseTopChars; *p; ++p)
+            for (p = lowerCaseCandidates; *p; ++p)
             {
-                SInt16 lowerCaseTop = (SInt16)calcTopBound(*p);
+                lowerCaseTop = calcTopBound(*p);
                 if (lowerCaseTop)
-                {
-                    LowerCaseTop = lowerCaseTop;
-                    UpperCaseTop = (SInt16)upperCaseTop;
-                    return;
-                }
+                    break;
             }
         }
     }
-    if (log)
-        log->LogWarning("Font '%s%s%s' has no hinting chars (any of 'HEFTUVWXZ' and 'zxvwy'). Auto-Hinting disabled.",
-                        pFont->GetName(), pFont->IsBold() ? " Bold" : "", pFont->IsItalic() ? " Italic" : "");
-    LowerCaseTop = -1;
-    UpperCaseTop = -1;
+    if (lowerCaseTop && upperCaseTop)
+    {
+        LowerCaseTop = lowerCaseTop;
+        UpperCaseTop = upperCaseTop;
+    }
+    else
+    {
+        if (log)
+            log->LogWarning("Font '%s%s%s' has no hinting chars "
+                            "(any of 'HEFTUVWXZ' and 'zxvwy'). Auto-Hinting disabled.",
+                            GetName(),
+                            pFont->IsBold() ? " Bold" : "",
+                            pFont->IsItalic() ? " Italic" : "");
+        LowerCaseTop = -1;
+        UpperCaseTop = -1;
+    }
 }
 
 // ---- RefCountImpl leftovers of the unit (vftable and count only) ----
