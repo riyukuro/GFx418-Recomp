@@ -808,15 +808,12 @@ void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
     array[2] = reinterpret_cast<void*>(capacity);
 }
 
-// MS2-FUNCTIONAL: adjusts the backing capacity with the observed quarter-growth and half-shrink thresholds.
 // @0x140005160
 void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
 {
-    const Scaleform::UPInt oldSize = reinterpret_cast<Scaleform::UPInt>(array[1]);
-    const Scaleform::UPInt capacity = reinterpret_cast<Scaleform::UPInt>(array[2]);
-    if (size < oldSize) {
-        if (size < (capacity >> 1)) FUN_1400050c0(array, heapOwner, size);
-    } else if (capacity <= size) {
+    if (size < reinterpret_cast<Scaleform::UPInt>(array[1])) {
+        if (size < (reinterpret_cast<Scaleform::UPInt>(array[2]) >> 1)) FUN_1400050c0(array, heapOwner, size);
+    } else if (size >= reinterpret_cast<Scaleform::UPInt>(array[2])) {
         FUN_1400050c0(array, heapOwner, size + (size >> 2));
     }
     array[1] = reinterpret_cast<void*>(size);
@@ -977,50 +974,51 @@ void FUN_140005ac0(void** array, const void** value)
     *reinterpret_cast<const void**>(static_cast<unsigned char*>(*array) + newSize * sizeof(void*) - sizeof(void*)) = *value;
 }
 
-// MS2-FUNCTIONAL: adjusts the 16-byte record array using its quarter-growth and half-shrink thresholds.
+// adjusts the 16-byte record array using its quarter-growth and half-shrink thresholds.
 // @0x140005b40
 void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
-    if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, owner, size); }
-    else if (capacity <= size) FUN_1400051c0(array, owner, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400051c0(array, owner, size); }
+    else if (size >= fields[2]) FUN_1400051c0(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: adjusts the 12-byte record array using its quarter-growth and half-shrink thresholds.
+// adjusts the 12-byte record array using its quarter-growth and half-shrink thresholds.
 // @0x140005ba0
 void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
-    if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, owner, size); }
-    else if (capacity <= size) FUN_140005260(array, owner, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) FUN_140005260(array, owner, size); }
+    else if (size >= fields[2]) FUN_140005260(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: adjusts the pointer array capacity using four-element rounding and the observed thresholds.
+// adjusts the pointer array capacity using four-element rounding and the observed thresholds.
 // @0x140005c20
 void FUN_140005c20(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
-    if (size < oldSize) { if (size < capacity / 2) FUN_1400050c0(array, array, size); }
-    else if (capacity <= size) FUN_1400050c0(array, array, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400050c0(array, array, size); }
+    else if (size >= fields[2]) FUN_1400050c0(array, array, size + (size >> 2));
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: resizes the 12-byte record array and clears each newly exposed record.
+// resizes the 12-byte record array and clears each newly exposed record.
 // @0x140005ca0
 void FUN_140005ca0(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
-    if (size < oldSize) { if (size < capacity / 2) FUN_140005260(array, array, size); }
-    else if (capacity <= size) FUN_140005260(array, array, size + (size >> 2));
+    const Scaleform::UPInt oldSize = fields[1];
+    if (size < oldSize) { if (size < fields[2] / 2) FUN_140005260(array, array, size); }
+    else if (size >= fields[2]) FUN_140005260(array, array, size + (size >> 2));
     fields[1] = size;
-    if (oldSize < size && *array)
-        memset(static_cast<unsigned char*>(*array) + oldSize * 12, 0, (size - oldSize) * 12);
+    if (size > oldSize) {
+        unsigned* record = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*array) + oldSize * 12);
+        for (Scaleform::UPInt count = size - oldSize; count != 0; --count, record += 3) {
+            if (record) { record[0] = 0; record[1] = 0; record[2] = 0; }
+        }
+    }
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
@@ -2626,14 +2624,13 @@ void** FUN_140006350(void** weakSlot, void** result)
     return result;
 }
 
-// MS2-FUNCTIONAL: adjusts the 16-byte array's size using the executable's growth thresholds.
+// adjusts the 16-byte array's size using the executable's growth thresholds.
 // @0x140006670
 void FUN_140006670(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt oldSize = fields[1], capacity = fields[2];
-    if (size < oldSize) { if (size < capacity / 2) FUN_1400051c0(array, array, size); }
-    else if (capacity <= size) FUN_1400051c0(array, array, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400051c0(array, array, size); }
+    else if (size >= fields[2]) FUN_1400051c0(array, array, size + (size >> 2));
     fields[1] = size;
 }
 
