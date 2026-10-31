@@ -61,6 +61,8 @@ public:
         FF_CodePage_Mask   = 0x0300,
         FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask,
         FF_NotResolved     = 0x0040, // a placeholder the font manager resolves through the font library / provider
+        FF_HasLayout       = 0x2000,
+        FF_WideCodes       = 0x4000,
         FF_PixelAligned    = 0x8000  // glyphs are snapped to pixels (bitmap fonts)
     };
 
@@ -110,6 +112,7 @@ public:
     bool     IsBold() const        { return (Flags & FF_Bold) != 0; }
     bool     IsDeviceFont() const  { return (Flags & FF_DeviceFont) != 0; }
     bool     IsPixelAligned() const { return (Flags & FF_PixelAligned) != 0; }
+    bool     AreWideCodes() const  { return (Flags & FF_WideCodes) != 0; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
     bool     IsResolved() const    { return (Flags & FF_NotResolved) == 0; }
 

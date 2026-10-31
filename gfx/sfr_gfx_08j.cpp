@@ -329,13 +329,13 @@ RectF& FontData::GetGlyphBounds(unsigned glyphIndex, RectF* prect) const
     else if (glyphIndex < AdvanceTable.GetSize())
     {
         const AdvanceEntry& e = AdvanceTable[glyphIndex];
-        float w = e.Width / 20.0f;
+        float w = float(e.Width)/20.f;
         if (w == 0)
             w = e.Advance;
-        float h   = e.Height / 20.0f;
-        prect->x1 = e.Left / 20.0f;
+        float h = float(e.Height)/20.f;
+        prect->x1 = float(e.Left)/20.f;
+        prect->y1  = float(e.Top)/20.f;
         prect->SetWidth(w);
-        prect->y1 = e.Top / 20.0f;
         prect->SetHeight(h);
     }
     else
@@ -437,23 +437,18 @@ void FontData::ReadCodeTable(Stream* in)
 {
     in->LogParse("reading code table at offset %d\n", in->Tell());
 
-    UPInt glyphCount = Glyphs.GetSize();
-    CodeTable.SetCapacity(glyphCount);
-    if (Flags & 0x4000) // wide codes
+    CodeTable.SetCapacity(Glyphs.GetSize());
+    if (AreWideCodes())
     {
-        for (UPInt i = 0; i < glyphCount; ++i)
-        {
-            UInt16 code = in->ReadU16();
-            CodeTable.Add(code, (UInt16)i);
-        }
+        // Code table is made of UInt16's.
+        for (UPInt i = 0, n = Glyphs.GetSize(); i < n; i++)
+            CodeTable.Add(in->ReadU16(), (UInt16)i);
     }
     else
     {
-        for (UPInt i = 0; i < glyphCount; ++i)
-        {
-            UInt16 code = in->ReadU8();
-            CodeTable.Add(code, (UInt16)i);
-        }
+        // Code table is made of bytes.
+        for (UPInt i = 0, n = Glyphs.GetSize(); i < n; i++)
+            CodeTable.Add(in->ReadU8(), (UInt16)i);
     }
 }
 
