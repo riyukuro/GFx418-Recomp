@@ -597,7 +597,6 @@ bool SGMLParser<Char>::ParseInt(int* pdestVal, const Char* pstr, UPInt len)
 }
 
 // An element or attribute name; one with entities in it is decoded into the buffer.
-// MS2-FUNCTIONAL: clang hoists GetCurCharLength out of the two branches; the exe computes it in each
 // @0x14267f190
 template<class Char>
 void SGMLParser<Char>::ParseName(const Char** ppname, UPInt* plen)
@@ -605,8 +604,8 @@ void SGMLParser<Char>::ParseName(const Char** ppname, UPInt* plen)
     *ppname    = Iter.GetCurCharPtr();
     *plen      = 0;
     bool inBuf = false;
-    while (!Iter.IsFinished() && *Iter != '=' && *Iter != '>' && *Iter != '<' && *Iter != '/' &&
-           !Iter.IsSpace(*Iter))
+    while (!Iter.IsFinished() &&
+           *Iter != '=' && *Iter != '>' && *Iter != '<' && *Iter != '>' && *Iter != '/' && !Iter.IsSpace(*Iter))
     {
         if (Iter.IsEscapedChar())
         {
@@ -618,10 +617,13 @@ void SGMLParser<Char>::ParseName(const Char** ppname, UPInt* plen)
             }
             AppendCharToBuf(*Iter);
         }
-        else if (inBuf)
-            AppendToBuf(Iter.GetCurCharPtr(), Iter.GetCurCharLength());
         else
-            *plen += Iter.GetCurCharLength();
+        {
+            if (inBuf)
+                AppendToBuf(Iter.GetCurCharPtr(), Iter.GetCurCharLength());
+            else
+                (*plen) += Iter.GetCurCharLength();
+        }
         ++Iter;
     }
     if (inBuf)
@@ -631,14 +633,16 @@ void SGMLParser<Char>::ParseName(const Char** ppname, UPInt* plen)
     }
 }
 
-// MS2-FUNCTIONAL: instructions match the exe; the gate still reports a difference (likely in the call relocations)
 // @0x14267f370
 template<class Char>
 bool SGMLParser<Char>::ParseStartElement(const Char** ppelemName, UPInt* pelemLen)
 {
+    bool rv = false;
     if (CurState == SGMLPS_START_ELEMENT)
     {
         ParseName(ppelemName, pelemLen);
+
+        rv = true;
         if (*Iter == '>')
         {
             CurState = SGMLPS_START_ELEMENT_FINISHED;
@@ -651,9 +655,8 @@ bool SGMLParser<Char>::ParseStartElement(const Char** ppelemName, UPInt* pelemLe
             CurState = SGMLPS_START_ELEMENT_ATTR;
             SkipSpaces();
         }
-        return true;
     }
-    return false;
+    return rv;
 }
 
 // Steps over one attribute (name, '=', quoted value) without reading it.
