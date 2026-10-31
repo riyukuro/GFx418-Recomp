@@ -1,11 +1,11 @@
 // Recovered Scaleform GFx 4.1.18 video glue from the executable (own source, SDK material is reference only): the AS2
 // and AS3 video support objects (CreateInstance, CreateASCharacter, RegisterASClasses, scalar deleting destructors) and
 // the handful of ASString-keyed hash / GC pointer helpers their registration code instantiates.
-// The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
-// cmake/ms2-unit-profiles.cmake): no alias `using` (so ExeDecl is a struct), explicit conversion operators or variadic
-// templates. clang-cl compiles it as before.
+// The exe links these from VS2008 objs, so this unit is built with the VS2008 SP1 cl and the vc11 options (MS2-TOOLSET:
+// vc9v, cmake/ms2-unit-profiles.cmake): C++03 with compat.h, no alias `using` (so ExeDecl is a struct), explicit
+// conversion operators or variadic templates. clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_04
-// MS2-TOOLSET: vc11
+// MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140001690-0x140002780 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -156,14 +156,14 @@ public:
     virtual void               RegisterASClasses(AS3::VM* pvm);
 };
 
-// MS2-FUNCTIONAL: creates the AS2 video support object in the global heap. (exe codegen is cl 15: xor eax,eax null path, no tail call; cl 17 does not emit it)
+// creates the AS2 video support object in the global heap.
 // @0x1400019f0
 AS2VideoSupport* AS2VideoSupport::CreateInstance()
 {
     return SF_HEAP_NEW(Memory::pGlobalHeap) AS2VideoSupportImpl;
 }
 
-// MS2-FUNCTIONAL: creates the AS3 video support object in the global heap. (exe codegen is cl 15: xor eax,eax null path, no tail call; cl 17 does not emit it)
+// creates the AS3 video support object in the global heap.
 // @0x140002730
 AS3VideoSupport* AS3VideoSupport::CreateInstance()
 {
@@ -261,7 +261,7 @@ std::uint64_t FUN_140001a30(Video04Hash* hash, ASStringNode** key, std::uint64_t
     return 0xffffffffffffffffull;
 }
 
-// MS2-FUNCTIONAL: returns the address of the pair stored for the key, or 0. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
+// returns the address of the pair stored for the key, or 0.
 // @0x140001ad0
 void* FUN_140001ad0(Video04Hash* hash, ASStringNode** key)
 {
@@ -303,7 +303,7 @@ void FUN_140001ba0(char* pair)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: returns the value part (the address 8 bytes into the pair) stored for the key, or 0. (exe codegen is cl 15: block layout and the unfolded &Entries[at] null test; cl 17 does not emit it)
+// returns the value part (the address 8 bytes into the pair) stored for the key, or 0.
 // The parameters are plain pointers so the definition has external linkage: the AS2 units call it as
 // ASStringHash<ClassRegEntry>::Get (hash, const ASString& key).
 // @0x140001bd0
@@ -336,7 +336,7 @@ Video04Pair* FUN_140001c20(Video04Pair* dst, Video04Pair* src)
     return dst;
 }
 
-// MS2-FUNCTIONAL: destroys a pair held as {key node, ?, GC value}. (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
+// destroys a pair held as {key node, ?, GC value}.
 // @0x140001c80
 void FUN_140001c80(std::int64_t* p)
 {
@@ -344,7 +344,7 @@ void FUN_140001c80(std::int64_t* p)
     ((ASStringNode*)p[0])->Release();
 }
 
-// MS2-FUNCTIONAL: scalar deleting form of the above. (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
+// scalar deleting form of the above.
 // @0x140001cf0
 std::int64_t* FUN_140001cf0(std::int64_t* p, unsigned flags)
 {
@@ -355,7 +355,7 @@ std::int64_t* FUN_140001cf0(std::int64_t* p, unsigned flags)
     return p;
 }
 
-// MS2-FUNCTIONAL: frees a hash slot: drops the GC value and key and marks the slot freed (-2 stored as 0xff..fe). (exe codegen is cl 15: add [m],-1 for the string release; cl 17 does not emit it)
+// frees a hash slot: drops the GC value and key and marks the slot freed (-2 stored as 0xff..fe).
 // @0x140001de0
 void FUN_140001de0(std::int64_t* slot)
 {
@@ -364,7 +364,7 @@ void FUN_140001de0(std::int64_t* slot)
     slot[0] = -2;
 }
 
-// MS2-FUNCTIONAL: same as 0x140001de0 (cl 15 add [m],-1).
+// same as 0x140001de0.
 // @0x140001e30
 void FUN_140001e30(std::int64_t* slot)
 {
