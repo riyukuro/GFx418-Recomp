@@ -1900,14 +1900,16 @@ void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
     result->Pick(instance);
 }
 
-// MS2-FUNCTIONAL: writes a numeric result only when the VM has no pending exception.
+// writes a numeric result only when the VM has no pending exception.
 // @0x1400156d0
 void FUN_1400156d0(void** frame)
 {
     char* vm = static_cast<char*>(frame[0]);
     if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
-        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetNumberUnsafe(
-            *reinterpret_cast<double*>(&frame[2]));
+    {
+        Scaleform::GFx::AS3::Value* result = static_cast<Scaleform::GFx::AS3::Value*>(frame[1]);
+        result->SetNumberUnsafe(*reinterpret_cast<double*>(&frame[2]));
+    }
 }
 
 // MS2-FUNCTIONAL: captures the callback arguments and performs the requested numeric coercion.
@@ -1938,14 +1940,16 @@ void FUN_140015750(void** frame)
     }
 }
 
-// MS2-FUNCTIONAL: writes a boolean result only when the VM has no pending exception.
+// writes a boolean result only when the VM has no pending exception.
 // @0x140015790
 void FUN_140015790(void** frame)
 {
     char* vm = static_cast<char*>(frame[0]);
     if (!*reinterpret_cast<unsigned char*>(vm + 0x180))
-        static_cast<Scaleform::GFx::AS3::Value*>(frame[1])->SetBoolUnsafe(
-            static_cast<unsigned char>(reinterpret_cast<uintptr_t>(frame[2])) != 0);
+    {
+        Scaleform::GFx::AS3::Value* result = static_cast<Scaleform::GFx::AS3::Value*>(frame[1]);
+        result->SetBoolUnsafe(*reinterpret_cast<bool*>(&frame[2]));   // the exe stores the raw low byte
+    }
 }
 
 // @0x1400157d0
