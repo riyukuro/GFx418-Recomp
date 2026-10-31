@@ -860,8 +860,10 @@ namespace Classes
 
 }}} // namespace Scaleform::GFx::AS3
 
-// SF_ECMA_dtostr: shortest round-trip ECMA-262 decimal form of val into buffer, returns its length.
-Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val);
+// SF_ECMA_dtostr: shortest round-trip ECMA-262 decimal form of val into buffer, returns its length (sfr_as3_19).
+namespace Scaleform { namespace GFx { namespace AS3 {
+SPInt Sfr31NumberToChars(char* out, int size, double d);
+}}}
 
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1016,7 +1018,7 @@ namespace InstanceTraits { namespace fl
         else
         {
             char buffer[40];
-            const UPInt len = FUN_142525f20(buffer, sizeof(buffer), num);
+            const UPInt len = Sfr31NumberToChars(buffer, sizeof(buffer), num);
             result = vm.GetStringManager().CreateString(buffer, len);
         }
     }
@@ -2008,8 +2010,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 }}}}}
 
-// SparseArray::PopFront, out of line in the exe.
-void FUN_142423ef0(Scaleform::GFx::AS3::SparseArray* sa);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2052,7 +2052,7 @@ namespace Instances { namespace fl
             return;
         }
         result = saAt03(SA, 0);
-        FUN_142423ef0(&SA);
+        SA.ShiftLeft();
     }
 
     // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
@@ -2136,11 +2136,10 @@ namespace Instances { namespace fl
 }}
 }}}
 
-// FindObjProperty: the slot or dynamic value named mn of the object a value stands for. 0x142501b00
-void FUN_142501b00(Scaleform::GFx::AS3::PropRef& result, Scaleform::GFx::AS3::VM& vm,
-                   const Scaleform::GFx::AS3::Value& value, const Scaleform::GFx::AS3::Multiname& mn, int attr);
-
 namespace Scaleform { namespace GFx { namespace AS3 {
+
+// FindObjProperty: the slot or dynamic value named mn of the object a value stands for (sfr_as3_17). 0x142501b00
+void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr);
 
 // ---- Array.sortOn: elements ordered by one or more named properties, each with its own option bits
 namespace
@@ -2167,8 +2166,8 @@ namespace
             Multiname mn(Vm.GetPublicNamespace(), Names[i]);
             PropRef propA;
             PropRef propB;
-            FUN_142501b00(propA, Vm, a, mn, 0);
-            FUN_142501b00(propB, Vm, b, mn, 0);
+            Sfr33FindObjProperty(propA, Vm, a, mn, 0);
+            Sfr33FindObjProperty(propB, Vm, b, mn, 0);
             if (!PropRefFound03(propA) || !PropRefFound03(propB))
                 continue;
 
@@ -2314,7 +2313,6 @@ namespace Instances { namespace fl
 }}
 }}}
 
-void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // Inline copy of the XMLList MakeInstance (out of line in sfr_as3_04); the exe inlines it into AS3text.
@@ -2371,7 +2369,7 @@ namespace Classes { namespace fl
     {
         VM& vm = GetVM();
         StringManager& sm = vm.GetStringManager();
-        FUN_142516600(vm, result);
+        result = vm.MakeObject();
         result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreComments"), Value(ignoreComments));
         result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreProcessingInstructions"), Value(ignoreProcessingInstructions));
         result->AddDynamicSlotValuePair(sm.CreateConstString("ignoreWhitespace"), Value(ignoreWhitespace));
@@ -2775,17 +2773,16 @@ namespace Instances { namespace fl
 }}
 }}}
 
-// Visits every value of a value array for owner (0x142503660).
-void FUN_142503660(Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc,
-                   const Scaleform::GFx::AS3::ValueArrayDH& a, Scaleform::GFx::AS3::ASRefCountBaseType::GcOp op,
-                   const Scaleform::GFx::AS3::ASRefCountBaseType& owner);
-
 namespace Scaleform { namespace GFx { namespace AS3 {
+// Visits every value of a value array for owner (sfr_as3_17's raw model). 0x142503660
+void Sfr33ValueArrayForEachChildGCa(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const UByte* arr,
+                                    ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+
     // @0x14240c050
     void SparseArray::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, ASRefCountBaseType::GcOp op,
                                       const ASRefCountBaseType& owner) const
     {
-        FUN_142503660(prcc, ValueA, op, owner);
+        Sfr33ValueArrayForEachChildGCa(prcc, reinterpret_cast<const UByte*>(&ValueA), op, owner);
         for (HashDH<UPInt, Value>::ConstIterator it = ValueH.Begin(); !it.IsEnd(); ++it)
             AS3::ForEachChild_GC(prcc, it->Second, op, owner);
     }
@@ -3760,7 +3757,7 @@ namespace Instances
     void Function::ForEachChild_GC(Collector* prcc, GcOp op) const
     {
         FunctionBase::ForEachChild_GC(prcc, op);
-        FUN_142503660(prcc, StoredScopeStack, op, *this);
+        Sfr33ValueArrayForEachChildGCa(prcc, reinterpret_cast<const UByte*>(&StoredScopeStack), op, *this);
         AS3::ForEachChild_GC(prcc, StoredThis, op, *this);
     }
 
