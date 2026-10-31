@@ -2645,7 +2645,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: register allocation; exe keeps ns in r13 and the hoisted size in rsi (555 vs 571 bytes)
     // @0x142403ff0
     void XMLElement::AddInScopeNamespace(const Instances::Namespace& ns)
     {
@@ -2657,11 +2656,11 @@ namespace Instances { namespace fl
         if (p.IsEmpty() && Ns->GetUri().IsEmpty())
             return;
 
-        ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
         UPInt match = SF_MAX_UPINT;
-        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        const UPInt n = Namespaces.Namespaces.GetSize();
+        for (UPInt i = 0; i < n; ++i)
         {
-            if (StrictEqual(prefix, nss[i]->GetPrefix()))
+            if (StrictEqual(prefix, Namespaces.Namespaces[i]->GetPrefix()))
             {
                 match = i;
                 break;
@@ -2669,9 +2668,9 @@ namespace Instances { namespace fl
         }
 
         SPtr<Instances::Namespace> nns = GetVM().MakeNamespace(Abc::NS_Public, ns.GetUri(), prefix);
-        if (match != SF_MAX_UPINT && nss[match]->GetUri().GetNode() != ns.GetUri().GetNode())
-            nss.RemoveAt(match);
-        nss.PushBack(nns);
+        if (match != SF_MAX_UPINT && Namespaces.Namespaces[match]->GetUri().GetNode() != ns.GetUri().GetNode())
+            Namespaces.Namespaces.RemoveAt(match);
+        Namespaces.Namespaces.PushBack(nns);
 
         // the element's own and its attributes' prefixes are shadowed by the new declaration
         if (StrictEqual(Ns->GetPrefix(), prefix))
