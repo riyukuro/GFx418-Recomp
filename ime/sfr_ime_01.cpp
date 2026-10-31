@@ -983,7 +983,7 @@ void FUN_1423ca1c0(GFxIMEManagerWin32* self)
 unsigned FUN_1423ca1e0(GFxIMEManagerWin32* self, void* a, unsigned b, unsigned c, bool d)
 {
     if (self->p70)
-        return BarCall<unsigned>(self->p70, 0x68, a, b, c, d);
+        return BarCall<unsigned>(self->p70, 0x68, a, (UPInt)b, (UPInt)c, d);
     return 0;
 }
 
