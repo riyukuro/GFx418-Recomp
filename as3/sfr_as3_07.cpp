@@ -7,6 +7,8 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
+void FUN_142423b90(Scaleform::GFx::AS3::Value* v);   // Value::SetUndefined, out of line in the exe
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // thunk 0x142455e90: Instances::fl_events::KeyboardEvent::keyCodeGet
@@ -4115,8 +4117,7 @@ namespace Instances { namespace fl_display
         }
     }
 
-    // MS2-FUNCTIONAL: exe tail-calls the out-of-line Value::SetUndefined (0x142423b90) and Assign(Object*); ours inlines
-    // SetUndefined and shrink-wraps the rdi save. Same checks and calls.
+    // The exe calls Value::SetUndefined out of line here.
     // @0x142451dc0
     SF_NOINLINE void DisplayObjectContainer::removeChild(Value& result, unsigned argc, const Value* argv)
     {
@@ -4130,7 +4131,8 @@ namespace Instances { namespace fl_display
         if (object)
         {
             const Traits& tr = object->GetTraits();
-            if (tr.GetTraitsType() >= Traits_DisplayObject_Begin && tr.GetTraitsType() < Traits_DisplayObject_End &&
+            if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
+                    (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
                 tr.IsInstanceTraits())
             {
                 Instances::fl_display::DisplayObject* child = static_cast<Instances::fl_display::DisplayObject*>(object);
@@ -4143,7 +4145,7 @@ namespace Instances { namespace fl_display
                 return;
             }
         }
-        result.SetUndefined();
+        FUN_142423b90(&result);
     }
 
     // @0x14244cde0
