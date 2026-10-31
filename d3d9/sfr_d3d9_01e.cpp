@@ -1687,12 +1687,30 @@ void FUN_14272e5e0(RenderBuffer* p)
     p->RenderBuffer::~RenderBuffer();
 }
 
-// Render::HAL::~HAL, the base's member destruction the D3D9 dtor calls
-// MS2-FUNCTIONAL: written from the decompile
+template<class T> inline void Sfr01eDestroy(T& x) { x.~T(); }
+// an ArrayLH's destruction written out (the exe inlines these three)
+template<class A> inline void Sfr01eDestroyArray(A& a)
+{
+    A::AllocatorType::DestructArray(a.GetDataPtr(), a.GetSize());
+    A::AllocatorType::Free(a.GetDataPtr());
+}
+
+// Render::HAL::~HAL (implicit), the base's member destruction the D3D9 dtor calls: the members in reverse
+// declaration order, then the RefCountBase base
 // @0x14272e730
 void FUN_14272e730(Render::HAL* hal)
 {
-    hal->Render::HAL::~HAL();
+    Sfr01eDestroy(hal->BeginDisplayDataList);
+    Sfr01eDestroyArray(hal->FilterStack);
+    Sfr01eDestroyArray(hal->RenderTargetStack);
+    Sfr01eDestroyArray(hal->MaskStack);
+    Sfr01eDestroy(hal->BlendModeStack);
+    Sfr01eDestroy(hal->ProjectionMatrix3DStack);
+    Sfr01eDestroy(hal->ViewMatrix3DStack);
+    Sfr01eDestroy(hal->QueueProcessor);
+    Sfr01eDestroy(hal->pRenderBufferManager);
+    Sfr01eDestroy(hal->Queue);
+    hal->RefCountBase<Render::HAL, StatRender_Mem>::~RefCountBase();
 }
 
 // RenderBuffer::~RenderBuffer, a second copy
@@ -1753,20 +1771,25 @@ void* FUN_14272f090(DepthStencilBuffer* p, unsigned flags)
     return p;
 }
 
-// ConstructorMov<RenderTargetEntry>::Construct: the render target stack's copy construction
-// MS2-FUNCTIONAL: written from the decompile
+// ConstructorMov<RenderTargetEntry>::Construct: the render target stack's copy construction, member by member
 // @0x14272f730
 void FUN_14272f730(void* p, const Render::HAL::RenderTargetEntry& source)
 {
-    ::new (p) Render::HAL::RenderTargetEntry(source);
+    Render::HAL::RenderTargetEntry* d = (Render::HAL::RenderTargetEntry*)p;
+    ::new (&d->pRenderTarget) Ptr<RenderTarget>(source.pRenderTarget);
+    ::new (&d->OldMatrixState) MatrixState(source.OldMatrixState);
+    ::new (&d->OldViewRect) Rect<int>(source.OldViewRect);
+    ::new (&d->OldViewport) Viewport(source.OldViewport);
 }
 
-// Color::GetRGBAFloat
-// MS2-FUNCTIONAL: written from the decompile
+// Color::GetRGBAFloat, out of line
 // @0x142732050
 void FUN_142732050(const Color* c, float* r, float* g, float* b, float* a)
 {
-    c->GetRGBAFloat(r, g, b, a);
+    *r = (c->Channels.Red   == 0) ? 0.0f : c->Channels.Red   / 255.0f;
+    *g = (c->Channels.Green == 0) ? 0.0f : c->Channels.Green / 255.0f;
+    *b = (c->Channels.Blue  == 0) ? 0.0f : c->Channels.Blue  / 255.0f;
+    *a = (c->Channels.Alpha == 0) ? 0.0f : c->Channels.Alpha / 255.0f;
 }
 
 typedef ArrayDataBase<Render::HAL::FilterStackEntry, AllocatorLH<Render::HAL::FilterStackEntry, Stat_Default_Mem>,
@@ -1776,12 +1799,22 @@ typedef ArrayData<Render::HAL::MaskStackEntry, AllocatorLH<Render::HAL::MaskStac
                   ArrayConstPolicy<0, 8, true> >
     MaskStackData;
 
-// FilterStack's ArrayDataBase::ResizeNoConstruct
-// MS2-FUNCTIONAL: written from the decompile
+// FilterStack's ArrayDataBase::ResizeNoConstruct, out of line (Reserve stays a call)
 // @0x142733fd0
-void FUN_142733fd0(FilterStackData* a, const void* pheapAddr, UPInt newSize)
+SF_NOINLINE void FUN_142733fd0(FilterStackData* a, const void* pheapAddr, UPInt newSize)
 {
-    a->ResizeNoConstruct(pheapAddr, newSize);
+    UPInt oldSize = a->Size;
+    if (newSize < oldSize)
+    {
+        FilterStackData::AllocatorType::DestructArray(a->Data + newSize, oldSize - newSize);
+        if (newSize < (a->Policy.GetCapacity() >> 1))
+            a->Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= a->Policy.GetCapacity())
+    {
+        a->Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    a->Size = newSize;
 }
 
 // FilterStack's PushBack
@@ -1793,12 +1826,24 @@ void FUN_142732e40(FilterStackData* a, const Render::HAL::FilterStackEntry& e)
     ::new (&a->Data[a->Size - 1]) Render::HAL::FilterStackEntry(e);
 }
 
-// MaskStack's ArrayData::Resize
-// MS2-FUNCTIONAL: written from the decompile
+// MaskStack's ArrayData::Resize, out of line with ResizeNoConstruct inlined (Reserve stays a call)
 // @0x142733ef0
 void FUN_142733ef0(MaskStackData* a, UPInt newSize)
 {
-    a->Resize(newSize);
+    UPInt oldSize = a->Size;
+    if (newSize < oldSize)
+    {
+        MaskStackData::AllocatorType::DestructArray(a->Data + newSize, oldSize - newSize);
+        if (newSize < (a->Policy.GetCapacity() >> 1))
+            a->MaskStackData::BaseType::Reserve(a, newSize);
+    }
+    else if (newSize >= a->Policy.GetCapacity())
+    {
+        a->MaskStackData::BaseType::Reserve(a, newSize + (newSize >> 2));
+    }
+    a->Size = newSize;
+    if (newSize > oldSize)
+        MaskStackData::AllocatorType::ConstructArray(a->Data + oldSize, newSize - oldSize);
 }
 
 // StaticShaderManager::SetPrimitiveFill: picks the shader of a batch and sets its meshes' uniforms
