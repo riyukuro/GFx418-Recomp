@@ -164,6 +164,10 @@ struct ProcessFocusKeyInfo
 static_assert(sizeof(ProcessFocusKeyInfo) == 0x40, "ProcessFocusKeyInfo size");
 static_assert(offsetof(ProcessFocusKeyInfo, PrevKeyCode) == 0x30, "ProcessFocusKeyInfo::PrevKeyCode");
 #endif
+#if !defined(SF_GFX_PLAYERIMPL) && defined(SF_GFX_FOCUSKEY_MEMBERS)
+// (sfr_as3_15) A unit without the player view that calls the focus-key members (opt-in; include gfx_input.h first).
+struct ProcessFocusKeyInfo;
+#endif
 
 class MovieImpl
 #ifdef SF_GFX_PLAYERIMPL
@@ -590,6 +594,14 @@ protected:
     // Collects the tab order of the key's focus group (exe 0x14256e9a0).
     void FillTabableArray(const ProcessFocusKeyInfo* pfocusInfo);
 public:
+#endif
+#if !defined(SF_GFX_PLAYERIMPL) && defined(SF_GFX_FOCUSKEY_MEMBERS)
+    // (sfr_as3_15) the focus-key members above, for moveFocus/findFocus (exe 0x142570d80, 0x142572050, 0x14256eae0).
+    void InitFocusKeyInfo(ProcessFocusKeyInfo* pfocusInfo, const InputEventsQueueEntry::KeyEntry& keyEntry,
+                          bool inclFocusEnabled, FocusGroupDescr* pfocusGroup = 0);
+    void ProcessFocusKey(Event::EventType event, const InputEventsQueueEntry::KeyEntry& keyEntry,
+                         ProcessFocusKeyInfo* pfocusInfo);
+    void FinalizeProcessFocusKey(ProcessFocusKeyInfo* pfocusInfo);
 #endif
 
     // The object no longer stays on top of the levels (0x1425742c0).

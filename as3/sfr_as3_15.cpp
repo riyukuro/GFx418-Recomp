@@ -13,6 +13,7 @@
 // MS2-PIN: ??_7Traits@AS3@GFx@Scaleform@@6B@ 0x14317b210
 // MS2-PIN: ??_7Traits@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14317b288
 // MS2-PIN: ??_7Traits@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x14317b300
+#define SF_GFX_FOCUSKEY_MEMBERS   // MovieImpl::InitFocusKeyInfo/ProcessFocusKey/FinalizeProcessFocusKey (gfx_movieimpl.h)
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_xml.h"
@@ -161,11 +162,8 @@ public:
     virtual Render::Image* CreateImage(const ImageCreateInfo& info, Render::ImageSource* source);
 };
 }}
-// MovieImpl's focus-key processing (moveFocus/findFocus): pinfo is a ProcessFocusKeyInfo (MS2_FocusKeyInfo).
-void FUN_142570d80(Scaleform::GFx::MovieImpl* pmovie, void* pinfo, const void* pkeyEntry, bool inclFocusEnabled,
-                   void* pfocusGroup);                                                  // MovieImpl::InitFocusKeyInfo
-void FUN_142572050(Scaleform::GFx::MovieImpl* pmovie, int eventType, const void* pkeyEntry, void* pinfo); // ProcessFocusKey
-void FUN_14256eae0(Scaleform::GFx::MovieImpl* pmovie, void* pinfo);                     // FinalizeProcessFocusKey
+// MovieImpl's focus-key processing (moveFocus/findFocus): the local MS2_FocusKeyInfo is the layout of a ProcessFocusKeyInfo.
+#define MS2_FOCUSINFO(p) reinterpret_cast<Scaleform::GFx::ProcessFocusKeyInfo*>(p)
 // The exe keeps one out-of-line copy of storing a raw pointer into a namespace slot (0x1424e0710).
 namespace Scaleform { namespace GFx { namespace AS3 {
 template <> SPtr<GASRefCountBase>& SPtr<GASRefCountBase>::SetPtr(GASRefCountBase* p);
@@ -928,11 +926,11 @@ namespace Classes { namespace fl_gfx
         ke.KeysState = shift ? 1 : 0;
         ke.KeyboardIndex = (UInt8)controllerIdx;
         MS2_FocusKeyInfo info;
-        FUN_142570d80(proot, &info, &ke, includeFocusEnabledChars, NULL);
+        proot->InitFocusKeyInfo(MS2_FOCUSINFO(&info), ke, includeFocusEnabledChars, NULL);
         info.CurFocused = startCh;
         info.ManualFocus() = true;
-        FUN_142572050(proot, 5, &ke, &info);
-        FUN_14256eae0(proot, &info);
+        proot->ProcessFocusKey((Event::EventType)5, ke, MS2_FOCUSINFO(&info));
+        proot->FinalizeProcessFocusKey(MS2_FOCUSINFO(&info));
         if (info.CurFocused)
             result = static_cast<Instances::fl_display::InteractiveObject*>(
                 ToAvmInteractiveObj15(info.CurFocused)->GetAS3Obj());
@@ -1013,9 +1011,10 @@ namespace Classes { namespace fl_gfx
         if (modal)
             group.ModalClip = modal->GetCharacterHandle();
         group.LastFocused = startCh;
-        FUN_142570d80(proot, &info, &ke, includeFocusEnabledChars, &group);
+        proot->InitFocusKeyInfo(MS2_FOCUSINFO(&info), ke, includeFocusEnabledChars,
+                                reinterpret_cast<FocusGroupDescr*>(&group));
         info.ManualFocus() = true;
-        FUN_142572050(proot, 5, &ke, &info);
+        proot->ProcessFocusKey((Event::EventType)5, ke, MS2_FOCUSINFO(&info));
 
         if (info.CurFocused && info.CurFocused != startCh)
             result = static_cast<Instances::fl_display::InteractiveObject*>(
