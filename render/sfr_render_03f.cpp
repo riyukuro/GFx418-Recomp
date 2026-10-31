@@ -553,7 +553,6 @@ unsigned TreeCacheShapeLayer::calcMeshKey(const ShapeMeshProvider* provider, con
 
 // Points pMeshKey at a key (and mesh) for viewMatrix, creating them as needed; true if the key changed.
 // @0x1426358f0
-// MS2-FUNCTIONAL: code layout of the key/mesh creation differs
 bool TreeCacheShapeLayer::updateMeshKey(Renderer2DImpl* r2D, ShapeMeshProvider* provider, float morphRatio,
                                         const Matrix2F& viewMatrix, unsigned meshGenFlags, unsigned* meshKeyFlags)
 {
@@ -592,6 +591,7 @@ bool TreeCacheShapeLayer::updateMeshKey(Renderer2DImpl* r2D, ShapeMeshProvider* 
 
     if (!newKey->pMesh)
     {
+        Ptr<MeshBase> pmesh; // unused, as in the SDK
         if (ComplexShape)
         {
             newKey->pMesh = *SF_HEAP_AUTO_NEW(this) ComplexMesh(r2D, newKey->GetKeySet(),
