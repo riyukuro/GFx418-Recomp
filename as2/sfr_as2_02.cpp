@@ -63,6 +63,7 @@
 // MS2-PINS-END tplpin
 
 // (the TextSnapshotObject ctor, 0x1429231e0, is defined in sfr_as2_03)
+#define MS2_SF_STRING_SDK_GETDATA            // String::GetData in the SDK union form (register allocation)
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"

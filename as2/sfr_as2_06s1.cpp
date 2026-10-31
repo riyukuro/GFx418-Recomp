@@ -14,6 +14,7 @@
 // MS2-RANGE: 0x142962410-0x142962420 .text$mn
 // MS2-RANGE: 0x142965490-0x1429654a0 .text$mn
 
+#define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe's setRawCapacity calls it
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"

@@ -15,6 +15,7 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
+#define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe's setRawCapacity calls it
 #include "../include/gfx/gfx_loaderimpl.h"
 
 namespace Scaleform {
