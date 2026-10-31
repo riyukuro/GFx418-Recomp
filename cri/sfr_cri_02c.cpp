@@ -3679,14 +3679,14 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
     return 1;
 }
 
-// MS2-FUNCTIONAL: allocate the cue-point event table from the selected heap and clear all records.
+// allocate the cue-point event table from the selected heap and clear all records.
 // @0x140031da0
 CriBool FUN_140031da0(void* player, void* heap)
 {
     struct EventConfigView
     {
         CriUint8 Reserved0[0x898];
-        CriSint32 Enabled;
+        CriUint32 Enabled;
         CriUint8 Reserved89C[0x8ac - 0x89c];
         CriUint32 Count;
         CriUint8 Reserved8B0[0xde8 - 0x8b0];
@@ -3696,13 +3696,21 @@ CriBool FUN_140031da0(void* player, void* heap)
         CriUint8 ReservedEC8[0x40];
         void* ReleaseTable;
     };
-    if (((EventConfigView*)player)->Enabled == 0)
+    CriUint32 size;
+    void* allocation;
+    if (((EventConfigView*)player)->Enabled <= 0)
     {
         ((EventConfigView*)player)->Table = NULL;
         return 1;
     }
 
-    if (!heap)
+    if (heap)
+    {
+        ((EventConfigView*)player)->Table = FUN_140027ed8(((EventConfigView*)player)->Heap,
+                                     (CriSint32)(((EventConfigView*)player)->Count * (size_t)0x38),
+                                     "CriMvPly: EventTable", 4);
+    }
+    else
     {
         struct AllocatorView
         {
@@ -3711,23 +3719,20 @@ CriBool FUN_140031da0(void* player, void* heap)
             CriUint8 ReservedEF0[8];
             void* Context;
         };
-        ((EventConfigView*)player)->Table = ((AllocatorView*)player)->Allocate(((AllocatorView*)player)->Context, ((EventConfigView*)player)->Count * 0x38 + 4);
-        ((EventConfigView*)player)->ReleaseTable = ((EventConfigView*)player)->Table;
-        if (!((EventConfigView*)player)->Table)
+        size = (CriUint32)(((EventConfigView*)player)->Count * (size_t)0x38 + 4);
+        allocation = ((AllocatorView*)player)->Allocate(((AllocatorView*)player)->Context, size);
+        if (!allocation)
         {
             FUN_140037950(player, "E10052103M : NULL pointer is paased from the MetaWorkCallback by app.", 0);
             return 0;
         }
+        ((EventConfigView*)player)->Table = allocation;
+        ((EventConfigView*)player)->ReleaseTable = allocation;
     }
-    else
+    if (!((EventConfigView*)player)->Table)
     {
-        ((EventConfigView*)player)->Table = FUN_140027ed8(((EventConfigView*)player)->Heap, (CriSint32)(((EventConfigView*)player)->Count * 0x38),
-                                     "CriMvPly: EventTable", 4);
-        if (!((EventConfigView*)player)->Table)
-        {
-            FUN_140037950(player, "E09011601M : Can't allocate EventTable Memory.", 0);
-            return 0;
-        }
+        FUN_140037950(player, "E09011601M : Can't allocate EventTable Memory.", 0);
+        return 0;
     }
     memset(((EventConfigView*)player)->Table, 0, (size_t)((EventConfigView*)player)->Count * 0x38);
     return 1;
