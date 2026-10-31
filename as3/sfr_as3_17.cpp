@@ -311,22 +311,21 @@ MovieRoot* AvmDisplayObj::GetAS3Root() const
     return static_cast<MovieRoot*>(pDispObj->GetASMovieRoot());
 }
 
-// MS2-FUNCTIONAL: same three-way class name choice; the String assignments are emitted differently.
 // @0x142505f20
 String& AvmDisplayObj::GetASClassName(String* className) const
 {
-    const char* name = pClassName;
-    if (!name)
+    if (pClassName)
     {
-        const String* exportName = pDispObj->GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(pDispObj->Id));
-        if (exportName)
-        {
-            *className = *exportName;
-            return *className;
-        }
-        name = GetDefaultASClassName();
+        *className = pClassName;
     }
-    *className = name;
+    else
+    {
+        const String* psymbolName = pDispObj->GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(pDispObj->Id));
+        if (!psymbolName)
+            *className = GetDefaultASClassName();
+        else
+            *className = *psymbolName;
+    }
     return *className;
 }
 
@@ -338,15 +337,16 @@ ASVM* AvmDisplayObj::GetAVM()
     return GetAS3Root()->pAVM;
 }
 
-// MS2-FUNCTIONAL: same path building; the temporary ASString release is inlined differently.
 // @0x142506e10
 const char* AvmDisplayObj::GetAbsolutePath(String* ppath) const
 {
-    if (pDispObj->GetParent())
+    InteractiveObject* pparent = pDispObj->GetParent();
+    if (pparent)
     {
-        pDispObj->GetParent()->GetAbsolutePath(ppath);
+        pparent->GetAbsolutePath(ppath);
         ppath->AppendString(".");
-        ppath->AppendString(pDispObj->GetName().ToCStr());
+        ASString name = pDispObj->GetName();
+        ppath->AppendString(name.ToCStr());
     }
     return ppath->ToCStr();
 }
@@ -1060,17 +1060,6 @@ void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t); 
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The timeline sprite shared by CreateMovieClip and CreateSprite: the AS support's character of type ctype.
-static inline Sprite* Sfr33CreateTimelineSprite(MovieRoot* self, CharacterDef* pdef, MovieDefImpl* pdefImpl,
-                                                InteractiveObject* parent, ResourceId id,
-                                                CharacterDef::CharacterDefType ctype)
-{
-    ASSupport* psupport = self->pASSupport;
-    CharacterCreateInfo ccinfo = { pdef, pdefImpl, NULL };
-    return static_cast<Sprite*>(static_cast<DisplayObjectBase*>(
-        psupport->CreateCharacterInstance(self->GetMovieImpl(), ccinfo, parent, id, ctype)));
-}
-
 // MovieRoot stand-in for the virtuals whose register use depends on being members.
 struct Sfr33MovieRoot
 {
@@ -1082,24 +1071,28 @@ struct Sfr33MovieRoot
 };
 
 // MovieRoot::CreateMovieClip (virtual): a sprite of type MovieClip, flagged as a movie clip at +0x6a.
-// MS2-FUNCTIONAL 0x1424f38a0: the MovieRoot and ASSupport pointers trade registers (r10/rcx); same calls and stores.
 // @0x1424f38a0
 Sprite* Sfr33MovieRoot::CreateMovieClip(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
                                         ResourceId id, bool loadedSeparately)
 {
-    Sprite* pspr = Sfr33CreateTimelineSprite(Root(), pdef, pdefImpl, parent, id, static_cast<CharacterDef::CharacterDefType>(3));
+    CharacterCreateInfo ccinfo = { pdef, pdefImpl, NULL };
+    DisplayObjectBase* pdo = Root()->pASSupport->CreateCharacterInstance
+        (Root()->GetMovieImpl(), ccinfo, parent, id, static_cast<CharacterDef::CharacterDefType>(3));
+    Sprite* pspr = static_cast<Sprite*>(pdo);
     pspr->SetLoadedSeparately(loadedSeparately);
     *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pspr) + 0x6a) |= 0x800;
     return pspr;
 }
 
 // MovieRoot::CreateSprite (virtual)
-// MS2-FUNCTIONAL 0x1424f3f90: the MovieRoot and ASSupport pointers trade registers (r10/rcx); same calls and stores.
 // @0x1424f3f90
 Sprite* Sfr33MovieRoot::CreateSprite(CharacterDef* pdef, MovieDefImpl* pdefImpl, InteractiveObject* parent,
                                      ResourceId id, bool loadedSeparately)
 {
-    Sprite* pspr = Sfr33CreateTimelineSprite(Root(), pdef, pdefImpl, parent, id, static_cast<CharacterDef::CharacterDefType>(9));
+    CharacterCreateInfo ccinfo = { pdef, pdefImpl, NULL };
+    DisplayObjectBase* pdo = Root()->pASSupport->CreateCharacterInstance
+        (Root()->GetMovieImpl(), ccinfo, parent, id, static_cast<CharacterDef::CharacterDefType>(9));
+    Sprite* pspr = static_cast<Sprite*>(pdo);
     pspr->SetLoadedSeparately(loadedSeparately);
     return pspr;
 }
@@ -1667,6 +1660,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 static inline void Sfr33ThrowTypeError(VM& vm, const VM::Error& e)
 {
     FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+}
+
+// VM::ThrowReferenceError, inlined.
+static inline void Sfr33ThrowReferenceError(VM& vm, const VM::Error& e)
+{
+    FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
 }
 
 // VM::ThrowMemoryError, inlined.
@@ -4544,8 +4543,7 @@ bool Sfr33GetClassValue(VM& vm, const StringDataPtr& gname, Value& result)
     }
     if (!vm.IsException())
     {
-        VM::Error e(VM::eUndefinedVarError, vm, gname.ToCStr());
-        FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
+        Sfr33ThrowReferenceError(vm, VM::Error(VM::eUndefinedVarError, vm, gname.ToCStr()));
     }
     return false;
 }
