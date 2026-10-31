@@ -33,6 +33,28 @@ public:
     {
         PConstruct(pchar, -1);
     }
+    // The same entries with the LoadQueueEntry ctor inlined (the AS2 Add*LoadQueueEntry forms in sfr_as2_04/04j).
+    __forceinline GFxAS2LoadQueueEntry(const String& url, LoadMethod method, bool loadingVars, bool quietOpen,
+                                       InlineCtorTag)
+        : LoadQueueEntry(url, method, loadingVars, quietOpen, InlineCtorTag())
+    {
+        pCharacter = 0;
+        Level      = -1;
+    }
+    __forceinline GFxAS2LoadQueueEntry(CharacterHandle* pchar, const String& url, LoadMethod method, bool loadingVars,
+                                       bool quietOpen, InlineCtorTag)
+        : LoadQueueEntry(url, method, loadingVars, quietOpen, InlineCtorTag())
+    {
+        PConstruct(pchar, -1);
+    }
+    __forceinline GFxAS2LoadQueueEntry(int level, const String& url, LoadMethod method, bool loadingVars,
+                                       bool quietOpen, InlineCtorTag)
+        : LoadQueueEntry(url, method, loadingVars, quietOpen, InlineCtorTag())
+    {
+        pCharacter = 0;
+        Level      = level;
+        Type = LoadType((loadingVars ? LT_LoadText : (url.ToCStr() ? LT_LoadMovie : LT_UnloadMovie)) | LTF_LevelFlag);
+    }
     // A load into _level<level> (exe 0x14291c320).
     GFxAS2LoadQueueEntry(int level, const String& url, LoadMethod method, bool loadingVars = false,
                          bool quietOpen = false);

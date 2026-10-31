@@ -1085,7 +1085,6 @@ GFxAS2LoadQueueEntry::GFxAS2LoadQueueEntry(int level, const String& url, LoadMet
     Type = LoadType((loadingVars ? LT_LoadText : (url.ToCStr() ? LT_LoadMovie : LT_UnloadMovie)) | LTF_LevelFlag);
 }
 
-// MS2-FUNCTIONAL the exe inlines the LoadQueueEntry ctor (out of line elsewhere) into the clip entry
 // @0x14292f740
 void MovieRoot::AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl, LoadQueueEntry::LoadMethod method,
                                   MovieClipLoader* pmovieClipLoader)
@@ -1096,10 +1095,12 @@ void MovieRoot::AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl, 
     int                   level   = -1;
     Sprite*               psprite = ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0;
     if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
-        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method);
-    else
+        ptarget = 0;
+    if (ptarget)
         pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method);
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), purl, method, false, false, LoadQueueEntry::InlineCtorTag());
+    else if (level != -1)
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, purl, method);
     if (pentry)
     {
         pentry->MovieClipLoaderHolder.SetAsObject(pmovieClipLoader);
@@ -1107,7 +1108,6 @@ void MovieRoot::AddLoadQueueEntry(InteractiveObject* ptarget, const char* purl, 
     }
 }
 
-// MS2-FUNCTIONAL the exe inlines the LoadQueueEntry ctor (out of line elsewhere) into the clip entry
 // @0x142930a10
 void MovieRoot::AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* purl, LoadQueueEntry::LoadMethod method)
 {
@@ -1117,10 +1117,12 @@ void MovieRoot::AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* pur
     int                   level   = -1;
     Sprite*               psprite = ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0;
     if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
-        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method, true);
-    else
+        ptarget = 0;
+    if (ptarget)
         pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method, true);
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), purl, method, true, false, LoadQueueEntry::InlineCtorTag());
+    else if (level != -1)
+        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, purl, method, true);
     if (pentry)
     {
         if (Ptr<State>(*pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)))

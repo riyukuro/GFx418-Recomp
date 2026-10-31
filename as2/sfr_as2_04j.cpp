@@ -303,109 +303,101 @@ void MovieRoot::AddLoadQueueEntryMT(LoadQueueEntry* pentry)
         delete pentry;
 }
 
-// Appends the load to the queue of the movie, or hands it to the loader thread when the movie has a task manager.
-static SF_FORCEINLINE void QueueLoad(MovieRoot* proot, MovieImpl* pmovie, LoadQueueEntry* pentry)
+// MovieRoot::GetLevelMovie, inlined in the exe.
+static SF_FORCEINLINE InteractiveObject* LoadLevelMovie(const MovieRoot* proot, int level)
 {
-    if (Ptr<State>(*pmovie->GetStateBag()->GetStateAddRef(State::State_TaskManager)))
+    MovieImpl* pmovie = proot->pMovieImpl;
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return pmovie->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
+// Appends the load to the queue of the movie, or hands it to the loader thread when the movie has a task manager.
+static SF_FORCEINLINE void QueueLoad(MovieRoot* proot, LoadQueueEntry* pentry)
+{
+    if (Ptr<State>(*proot->pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)))
         proot->AddLoadQueueEntryMT(pentry);
     else
-        pmovie->AddLoadQueueEntry(pentry);
+        proot->pMovieImpl->AddLoadQueueEntry(pentry);
 }
 
 // Queues a style sheet load of purl into pstyleSheet, read by ploader.
-// MS2-FUNCTIONAL: the exe inlines the LoadQueueEntry constructor
 // @0x14292e880
 void MovieRoot::AddCssLoadQueueEntry(Object* pstyleSheet, ASCSSFileLoader* ploader, const char* purl,
                                      LoadQueueEntry::LoadMethod method)
 {
     GFxAS2LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-        GFxAS2LoadQueueEntry(static_cast<CharacterHandle*>(0), String(purl), method);
+        GFxAS2LoadQueueEntry(purl, method, false, false, LoadQueueEntry::InlineCtorTag());
     if (pentry)
     {
         pentry->Type = LoadQueueEntry::LT_LoadCSS;
         pentry->CSSHolder.ASObj.SetAsObject(pstyleSheet);
         pentry->CSSHolder.Loader = reinterpret_cast<RefCountImpl*>(ploader);
-        QueueLoad(this, pMovieImpl, pentry);
+        QueueLoad(this, pentry);
     }
 }
 
 // Queues an XML load of purl into pxml, read by ploader.
-// MS2-FUNCTIONAL: the exe inlines the LoadQueueEntry constructor
 // @0x142931140
 void MovieRoot::AddXmlLoadQueueEntry(Object* pxml, XMLFileLoader* ploader, const char* purl,
                                      LoadQueueEntry::LoadMethod method)
 {
     GFxAS2LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-        GFxAS2LoadQueueEntry(static_cast<CharacterHandle*>(0), String(purl), method);
+        GFxAS2LoadQueueEntry(purl, method, false, false, LoadQueueEntry::InlineCtorTag());
     if (pentry)
     {
         pentry->Type = LoadQueueEntry::LT_LoadXML;
         pentry->XMLHolder.ASObj.SetAsObject(pxml);
         pentry->XMLHolder.Loader = reinterpret_cast<RefCountImpl*>(ploader);
-        QueueLoad(this, pMovieImpl, pentry);
+        QueueLoad(this, pentry);
     }
 }
 
 // Queues a variables load of purl into a LoadVars object.
-// MS2-FUNCTIONAL: the exe inlines the LoadQueueEntry constructor
 // @0x142930c30
 void MovieRoot::AddVarLoadQueueEntry(LoadVarsObject* ploadVars, const char* purl, LoadQueueEntry::LoadMethod method)
 {
     GFxAS2LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-        GFxAS2LoadQueueEntry(static_cast<CharacterHandle*>(0), String(purl), method, true);
+        GFxAS2LoadQueueEntry(purl, method, true, false, LoadQueueEntry::InlineCtorTag());
     if (pentry)
     {
         pentry->LoadVarsHolder.SetAsObject(reinterpret_cast<Object*>(ploadVars));
-        QueueLoad(this, pMovieImpl, pentry);
+        QueueLoad(this, pentry);
     }
-}
-
-// The target of a name for a load: the clip it names, else the level its _level<n> name gives (-1 if neither).
-// MS2-FUNCTIONAL: pure helper shared by the two named AddLoadQueueEntry forms
-static DisplayObject* ResolveLoadTarget(MovieRoot* proot, const char* ptargetName, Environment* penv, int* plevel,
-                                        bool* pvalid)
-{
-    ASString       name   = proot->BuiltinsMgr.CreateString(ptargetName);
-    DisplayObject* ptarget = penv ? penv->FindTarget(name, 0) : proot->FindTarget(name);
-    *plevel                = -1;
-    *pvalid                = true;
-    if (!ptarget)
-    {
-        const char*        ptail = "";
-        InteractiveObject* plevel0 = proot->GetLevelMovie(0);
-        *plevel = MovieRoot::ParseLevelName(ptargetName, &ptail, plevel0 && plevel0->GetVersion() > 6);
-        if (*ptail != '\0' || *plevel == -1)
-            *pvalid = false;
-    }
-    else
-    {
-        // The clip is a level root itself when it carries the level flag.
-        DisplayObject* proottarget = (ptarget->Flags & 0x400) ? ptarget : 0;
-        if (proottarget)
-            *plevel = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(static_cast<Sprite*>(proottarget))).GetLevel();
-    }
-    return ptarget;
 }
 
 // Queues a load of purl into the clip or level named ptargetName.
-// MS2-FUNCTIONAL: the exe inlines the LoadQueueEntry constructor
+// MS2-FUNCTIONAL: register allocation (the exe calls CreateString in each arm of the penv test, ours hoists it)
 // @0x14292f960
 void MovieRoot::AddLoadQueueEntry(const char* ptargetName, const char* purl, Environment* penv,
                                   LoadQueueEntry::LoadMethod method, MovieClipLoader* pmovieClipLoader)
 {
-    int            level;
-    bool           valid;
-    DisplayObject* ptarget = ResolveLoadTarget(this, ptargetName, penv, &level, &valid);
-    if (!valid)
-        return;
-    GFxAS2LoadQueueEntry* pentry;
-    if (ptarget && level == -1)
-    {
+    GFxAS2LoadQueueEntry* pentry  = 0;
+    int                   level   = -1;
+    InteractiveObject*    ptarget = penv ? penv->FindTarget(BuiltinsMgr.CreateString(ptargetName), 0)
+                                         : FindTarget(BuiltinsMgr.CreateString(ptargetName));
+    Sprite*               psprite = ptarget ? (ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0) : 0;
+    if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
+        ptarget = 0;
+    if (ptarget)
         pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method);
-    }
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), purl, method, false, false,
+                                 LoadQueueEntry::InlineCtorTag());
     else
-        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method);
+    {
+        if (level == -1)
+        {
+            const char* ptail = "";
+            level = ParseLevelName(ptargetName, &ptail, LoadLevelMovie(this, 0)->GetVersion() > 6);
+            if (*ptail != 0)
+                level = -1;
+        }
+        if (level != -1)
+            pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, purl, method);
+    }
     if (pentry)
     {
         pentry->MovieClipLoaderHolder.SetAsObject(reinterpret_cast<Object*>(pmovieClipLoader));
@@ -414,23 +406,34 @@ void MovieRoot::AddLoadQueueEntry(const char* ptargetName, const char* purl, Env
 }
 
 // Queues a variables load of purl into the clip or level named ptargetName.
-// MS2-FUNCTIONAL: the exe inlines the LoadQueueEntry constructor
 // @0x142930dc0
 void MovieRoot::AddVarLoadQueueEntry(const char* ptargetName, const char* purl, LoadQueueEntry::LoadMethod method)
 {
-    int            level;
-    bool           valid;
-    DisplayObject* ptarget = ResolveLoadTarget(this, ptargetName, 0, &level, &valid);
-    if (!valid)
-        return;
-    GFxAS2LoadQueueEntry* pentry;
-    if (ptarget && level == -1)
+    GFxAS2LoadQueueEntry* pentry  = 0;
+    int                   level   = -1;
+    InteractiveObject*    ptarget = FindTarget(BuiltinsMgr.CreateString(ptargetName));
+    Sprite*               psprite = ptarget ? (ptarget->IsSprite() ? static_cast<Sprite*>(ptarget) : 0) : 0;
+    if (psprite && (level = static_cast<AvmSpriteBase&>(*AvmSprite::FromSprite(psprite)).GetLevel()) != -1)
+        ptarget = 0;
+    if (ptarget)
         pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
-            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), String(purl), method, true);
+            GFxAS2LoadQueueEntry(ptarget->GetCharacterHandle(), purl, method, true, false,
+                                 LoadQueueEntry::InlineCtorTag());
     else
-        pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) GFxAS2LoadQueueEntry(level, String(purl), method, true);
+    {
+        if (level == -1)
+        {
+            const char* ptail = "";
+            level = ParseLevelName(ptargetName, &ptail, LoadLevelMovie(this, 0)->GetVersion() > 6);
+            if (*ptail != 0)
+                level = -1;
+        }
+        if (level != -1)
+            pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap())
+                GFxAS2LoadQueueEntry(level, purl, method, true, false, LoadQueueEntry::InlineCtorTag());
+    }
     if (pentry)
-        QueueLoad(this, pMovieImpl, pentry);
+        QueueLoad(this, pentry);
 }
 
 // A movie load goes to the image decoder at once when its url is a synchronous protocol image, to the loader

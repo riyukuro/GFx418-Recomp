@@ -711,13 +711,12 @@ bool Prototype<XmlNodeObject>::GetMemberRaw(ASStringContext* psc, const ASString
 }
 
 // The member id of a standard-member name (M_InvalidMember for anything else).
-// MS2-FUNCTIONAL: the exe tests the standard-member flag with shr+test
 // @0x14299e190
 XmlNodeObject::StandardMember XmlNodeObject::GetStandardMemberConstant(Environment* penv,
                                                                        const ASString& memberName) const
 {
     char memberConstant = (char)M_InvalidMember;
-    if ((memberName.GetHashFlags() >> 29) & 1) // Flag_StandardMember
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1) // Flag_StandardMember
     {
         XmlNodeProto* proto = static_cast<XmlNodeProto*>(penv->GetPrototype(ASBuiltin_XMLNode));
         proto->XMLNodeMemberMap.GetCaseCheck(memberName, &memberConstant, true);

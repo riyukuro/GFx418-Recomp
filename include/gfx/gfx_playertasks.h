@@ -63,6 +63,18 @@ public:
 
     // A load of url (an unload when it is empty), or a variables load (exe 0x14291dcf0).
     LoadQueueEntry(const String& url, LoadMethod method, bool loadingVars, bool quietOpen);
+    // The same ctor inline: the AS2 Add*LoadQueueEntry forms (sfr_as2_04j) inline it into their entry.
+    struct InlineCtorTag {};
+    __forceinline LoadQueueEntry(const String& url, LoadMethod method, bool loadingVars, bool quietOpen, InlineCtorTag)
+    {
+        Type      = loadingVars ? LT_LoadText : (url.ToCStr() ? LT_LoadMovie : LT_UnloadMovie);
+        Method    = method;
+        pNext     = 0;
+        URL       = url;
+        EntryTime = ~0u;
+        QuietOpen = quietOpen;
+        Canceled  = false;
+    }
     virtual ~LoadQueueEntry() {}
 
     LoadQueueEntry* GetNext() const { return pNext; }
