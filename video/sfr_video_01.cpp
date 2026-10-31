@@ -1135,15 +1135,16 @@ void* FUN_140002bb0(void* object, unsigned flags)
     return object;
 }
 
-// The exe's own (0x1431b4be0) and base (0x1431b4b80) vftable stores are dead: ~RefCountNTSImplCore overwrites them.
-// MS2-FUNCTIONAL: tears down the sound stream's channel link before its base object.
+// tears down the sound stream's channel link before its base object. The exe's inline dtors store the own (0x1431b4be0)
+// and base (0x1431b4b80) vftables, and clear the channel's back link with no null test.
 // @0x140002c10
 void* FUN_140002c10(void* object, unsigned flags)
 {
     void** fields = static_cast<void**>(object);
-    void* channel = fields[2];
-    if (channel) *reinterpret_cast<void**>(static_cast<unsigned char*>(channel) + 0x10) = 0;
-    if (channel) FUN_14257dcb0(channel);
+    fields[0] = &VideoSoundStreamVtable;
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(fields[2]) + 0x10) = 0;
+    if (fields[2]) FUN_14257dcb0(fields[2]);
+    fields[0] = &VideoSoundVtable;
     FUN_14257db50(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
@@ -2343,12 +2344,15 @@ void* FUN_14000d630(void** proxy, unsigned flags)
     return proxy;
 }
 
-// The exe re-stores the own vftables (0x1431b59f0/0x1431b5940/0x1431b5938) first; nothing virtual runs before ~Object's.
-// MS2-FUNCTIONAL: destroys the video prototype extension and its AS2 Object base.
+// destroys the video prototype extension and its AS2 Object base. The exe's inline Prototype<VideoObject> dtor stores
+// its three vftables first.
 // @0x14000d680
 void FUN_14000d680(Scaleform::GFx::AS2::Object* object)
 {
     unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
+    *reinterpret_cast<void**>(bytes) = &VideoProtoGCVtable;
+    *reinterpret_cast<void**>(bytes + 0x20) = &VideoProtoInterfaceVtable;
+    *reinterpret_cast<void**>(bytes + 0x70) = &VideoProtoBaseVtable;
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();
     void** slot = reinterpret_cast<void**>(bytes + 0x68);
     if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release();
@@ -2491,7 +2495,7 @@ void* FUN_14000de80(Scaleform::GFx::AS2::Object* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: destroys the video prototype and AS2 Object base, optionally releasing storage.
+// destroys the video prototype and AS2 Object base, optionally releasing storage
 // @0x14000d940
 void* FUN_14000d940(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {

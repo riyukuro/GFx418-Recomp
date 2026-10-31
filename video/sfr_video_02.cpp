@@ -62,6 +62,9 @@ extern void* PTR_LAB_1431b6540;
 extern void* PTR_FUN_1431b64f0;
 extern void* PTR_LAB_1431b6440;
 extern void* PTR_LAB_1431b6430;
+extern void* DAT_1431b59f0;   // Prototype<VideoObject> vftables
+extern void* DAT_1431b5940;
+extern void* DAT_1431b5938;
 extern void* PTR_FUN_1431b7360;
 extern void* PTR_FUN_1431b6060;
 extern void* PTR_LAB_1431b63f8;
@@ -1454,11 +1457,13 @@ void FUN_14000fed0(void* object)
 }
 #pragma optimize("", on)
 
+// Render::StateData destructor: releases a non-empty bag. destroyBag_NotEmpty (0x142626160) takes the bag itself.
+// BEHAVIOUR FIX: this passed the bag's interface pointer (*object) as the bag.
 // @0x14000f060
 void FUN_14000f060(void** object)
 {
     if (*object)
-        FUN_142626160(*object);
+        FUN_142626160(object);
 }
 
 // @0x14000ef80
@@ -1671,11 +1676,12 @@ void FUN_140010d70(void* destination, const void* source)
     if (*static_cast<const unsigned __int64*>(source)) FUN_142625ee0(destination);
 }
 
-// MS2-FUNCTIONAL: assigns the bag only when either side contains state data.
+// MS2-FUNCTIONAL: assigns the bag only when either side contains state data. Only the or's operand order differs (the
+// exe loads source and ors destination); cl picks destination first for every source order tried.
 // @0x140010da0
 void FUN_140010da0(void* destination, const void* source)
 {
-    if (*static_cast<const unsigned __int64*>(source) || *static_cast<const unsigned __int64*>(destination))
+    if ((*static_cast<const unsigned __int64*>(source) | *static_cast<const unsigned __int64*>(destination)) != 0)
         FUN_142626070(destination, source);
 }
 
@@ -2012,7 +2018,7 @@ void FUN_14000e840(void* object)
     static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::~AvmCharacter();
 }
 
-// MS2-FUNCTIONAL: invokes the video character destructor. The exe's copy has no free path and ignores the
+// invokes the video character destructor. The exe's copy has no free path and ignores the
 // flag (the Avm part lives inside the display object's allocation).
 // @0x14000e8a0
 __declspec(noinline) void* FUN_14000e8a0(void* object, unsigned __int64)
@@ -2984,17 +2990,21 @@ void FUN_140016ac0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b275b8, DAT_143b275c0);
 }
 
-// MS2-FUNCTIONAL: finalizes the prototype subobject and then destroys Object.
+// finalizes the prototype subobject and then destroys Object. The exe's inline Prototype dtor stores its three vftables
+// first.
 // @0x140011b40
 void FUN_140011b40(Scaleform::GFx::AS2::Object* object)
 {
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
+    *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
     Scaleform::GFx::AS2::GASPrototypeBase* prototype = reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(
         reinterpret_cast<char*>(object) + 0x68);
     prototype->Scaleform::GFx::AS2::GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     object->Object::~Object();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
-// MS2-FUNCTIONAL: scalar deleting form of the prototype and Object destruction.
+// scalar deleting form of the prototype and Object destruction
 // @0x140011c00
 Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
@@ -3003,13 +3013,15 @@ Scaleform::GFx::AS2::Object* FUN_140011c00(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
-// The exe re-stores the own vftables (+0, +0x20, +0x70) here and in FUN_14000ec40 first; nothing virtual runs on the
-// object before ~Object's own store, so those stores are dead.
-// MS2-FUNCTIONAL: destroys the GASPrototypeBase subobject, releases its retained object, then destroys Object.
+// destroys the GASPrototypeBase subobject, releases its retained object, then destroys Object. The exe's inline
+// Prototype<VideoObject> dtor stores its three vftables (+0, +0x20, +0x70) first.
 // @0x14000ebe0
 void FUN_14000ebe0(Scaleform::GFx::AS2::Object* object)
 {
     char* bytes = reinterpret_cast<char*>(object);
+    *reinterpret_cast<void**>(bytes) = &DAT_1431b59f0;
+    *reinterpret_cast<void**>(bytes + 0x20) = &DAT_1431b5940;
+    *reinterpret_cast<void**>(bytes + 0x70) = &DAT_1431b5938;
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x70)->GASPrototypeBase::~GASPrototypeBase();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
     int* refs = *reinterpret_cast<int**>(bytes + 0x68);
     if (refs && --*refs == 0) Scaleform::Memory::Free(refs);
@@ -3087,17 +3099,21 @@ void FUN_140010cd0(void** buffer, unsigned __int64 requested)
         size + reinterpret_cast<unsigned __int64*>(state)[0];
 }
 
-// MS2-FUNCTIONAL: destroys the retained GASPrototypeBase subobject before the AS2 object base.
+// destroys the retained GASPrototypeBase subobject before the AS2 object base. The exe's inline Prototype dtor stores
+// its three vftables first, as in FUN_140011b40.
 // @0x1400125a0
 void FUN_1400125a0(Scaleform::GFx::AS2::Object* object)
 {
     unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
+    *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b64f0;
+    *reinterpret_cast<void**>(bytes + 0x20) = &PTR_LAB_1431b6440;
+    *reinterpret_cast<void**>(bytes + 0x68) = &PTR_LAB_1431b6430;
     reinterpret_cast<Scaleform::GFx::AS2::GASPrototypeBase*>(bytes + 0x68)->GASPrototypeBase::~GASPrototypeBase();
     object->Object::~Object();
 }
 
-// The exe re-stores the own vftables (+0, +0x20, +0x68) first: dead stores, as in FUN_14000ebe0.
-// MS2-FUNCTIONAL: applies the prototype destructor and conditionally frees the object storage.
+// applies the prototype destructor (whose inline body stores the own vftables first) and conditionally frees the
+// object storage
 // @0x1400125e0
 Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
@@ -3533,24 +3549,30 @@ void FUN_1400120a0(Scaleform::GFx::AS2::Object* object,
     VisitAS2PrototypeChildren<AS2ObjectGCTraversal::ReleaseFunctor>(object, collector);
 }
 
-// MS2-FUNCTIONAL: dispatches a collector pass to the matching prototype child traversal.
+// dispatches a collector pass to the matching prototype child traversal
 // @0x1400122a0
 void FUN_1400122a0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector, int operation)
 {
-    if (operation == 0) FUN_1400120a0(object, collector);
-    else if (operation == 1) FUN_140011ef0(object, collector);
-    else if (operation == 2) FUN_140011fc0(object, collector);
+    switch (operation)
+    {
+    case 0: FUN_1400120a0(object, collector); break;
+    case 1: FUN_140011ef0(object, collector); break;
+    case 2: FUN_140011fc0(object, collector); break;
+    }
 }
 
-// MS2-FUNCTIONAL: dispatches a collector pass to the matching prototype child traversal.
+// dispatches a collector pass to the matching prototype child traversal
 // @0x140012400
 void FUN_140012400(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector, int operation)
 {
-    if (operation == 0) FUN_1400120a0(object, collector);
-    else if (operation == 1) FUN_140011ef0(object, collector);
-    else if (operation == 2) FUN_140011fc0(object, collector);
+    switch (operation)
+    {
+    case 0: FUN_1400120a0(object, collector); break;
+    case 1: FUN_140011ef0(object, collector); break;
+    case 2: FUN_140011fc0(object, collector); break;
+    }
 }
 
 // @0x140011ac0
