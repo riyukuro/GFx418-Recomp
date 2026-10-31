@@ -3893,9 +3893,9 @@ Pickable<Traits> Math::MakeClassTraits(VM& vm)
 }}}}} // namespace Scaleform::GFx::AS3::ClassTraits::fl
 
 // ---- AS3 display instance set-up ----
-// AvmDisplayObj::GetAS3Root, MovieRoot::AddScriptableMovieClip.
-Scaleform::GFx::AS3::MovieRoot* FUN_142505ee0(const Scaleform::GFx::AS3::AvmDisplayObj* pavm);
-void FUN_1424e9380(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::DisplayObject* pcont);
+// MovieRoot::AddScriptableMovieClip.
+// MovieRoot derives from ASMovieRootBase at offset 0; this unit only sees the as3_support.h stub.
+void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
 // A script-created shape gets its stage object right away.
 // @0x1424447c0
@@ -3920,7 +3920,7 @@ void Sprite::InitInstance(bool extCall)
     if (!extCall)
     {
         CreateStageObject();
-        FUN_1424e9380(FUN_142505ee0(ToAvmDisplayObj(pDispObj)), pDispObj);
+        FUN_1424e9380(reinterpret_cast<GFx::ASMovieRootBase*>(ToAvmDisplayObj(pDispObj)->GetAS3Root()), pDispObj);
     }
     if (IsMovieClip())
         pDispObj->GFx::DisplayObjectBase::Flags |= GFx::DisplayObjectBase::Mask_MovieClip;

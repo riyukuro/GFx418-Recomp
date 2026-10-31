@@ -42,7 +42,7 @@ bool FUN_142531f40(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scalef
 // AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
 void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
 // MovieRoot::AddScriptableMovieClip.
-void FUN_1424e9380(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::DisplayObject* pcont);
+void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
