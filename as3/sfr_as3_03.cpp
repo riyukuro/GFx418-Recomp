@@ -1027,7 +1027,7 @@ namespace InstanceTraits { namespace fl
     }
 
     // Number.prototype.toLocaleString thunk (the "toLocaleString" entry of Number's method table): toString.
-    // MS2-FUNCTIONAL: no member declared for it (the class header lists AS3toString only); the exe body is a tail jump.
+    // No member declared for it (the class header lists AS3toString only); the exe body is a tail jump.
     // @0x142402060
     void FUN_142402060(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
