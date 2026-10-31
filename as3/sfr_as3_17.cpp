@@ -24,6 +24,7 @@
 // MS2-RANGE: 0x1425078e0-0x142507910 .text$mn
 // MS2-RANGE: 0x142507a40-0x1425094e0 .text$mn
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
+#define SF_AS3_AVMBUTTON_MODEL
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/kernel/sf_simd.h"
@@ -6516,18 +6517,6 @@ void FUN_1424f1f50(Scaleform::UPInt) {}
 // @0x1424f1f80
 void FUN_1424f1f80(Scaleform::UPInt) {}
 
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424efde4
-void FUN_1424efde4(Scaleform::UPInt self) { FUN_1424efde0(self - 0x10); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424efe24
-void FUN_1424efe24(Scaleform::UPInt self) { FUN_1424efe20(self - 0x10); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424f1f54
-void FUN_1424f1f54(Scaleform::UPInt self) { FUN_1424f1f50(self - 0x10); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1424f1f84
-void FUN_1424f1f84(Scaleform::UPInt self) { FUN_1424f1f80(self - 0x10); }
 
 // MS2-FUNCTIONAL: vftable leaf returning 0
 // @0x142502cf0
@@ -6538,9 +6527,41 @@ Scaleform::UPInt FUN_142507b30(Scaleform::UPInt) { return 0; }
 // MS2-FUNCTIONAL: vftable leaf returning 0
 // @0x142508550
 unsigned FUN_142508550(Scaleform::UPInt) { return 0; }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142508554
-unsigned FUN_142508554(Scaleform::UPInt self) { return FUN_142508550(self - 0x10); }
+
+// AvmButton / AvmTextField come from the SDK MI layout (SF_AS3_AVMBUTTON_MODEL), as in sfr_as3_18. Copy-constructing
+// them stores the vptrs, so cl emits their vftables and with them its own adjustor thunks (sub rcx,N; jmp member),
+// which are the exe ones in this range. The thunk targets stay the leaves above at their exe VAs.
+namespace Scaleform { namespace GFx { namespace AS3 {
+void Sfr17EmitAvmVftables(void* p, const AvmButton* pbtn, void* q, const AvmTextField* ptxt)
+{
+    new (p) AvmButton(*pbtn);
+    new (q) AvmTextField(*ptxt);
+}
+}}} // namespace Scaleform::GFx::AS3
+
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmButtonBase@GFx@Scaleform@@6B@ 0x14317db08
+// MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317dbe0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317dcb0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6B@ 0x14317dd68
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ea80
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317eb50
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6B@ 0x14317ec08
+// MS2-PIN: ?CloneInternalData@AvmButton@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x1424efde4
+// MS2-PIN: ?CloneInternalData@AvmTextField@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x1424efe24
+// MS2-PIN: ?CopyPhysicalProperties@AvmButton@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x1424f1f54
+// MS2-PIN: ?CopyPhysicalProperties@AvmTextField@AS3@GFx@Scaleform@@WBA@EAAXPEBVInteractiveObject@34@@Z 0x1424f1f84
+// MS2-PIN: ?GetAbsolutePath@AvmButton@AS3@GFx@Scaleform@@WDA@EBAPEBDPEAVString@4@@Z 0x142506df8
+// MS2-PIN: ?GetAbsolutePath@AvmButton@AS3@GFx@Scaleform@@WEA@EBAPEBDPEAVString@4@@Z 0x142506e04
+// MS2-PIN: ?GetAbsolutePath@AvmTextField@AS3@GFx@Scaleform@@WDA@EBAPEBDPEAVString@4@@Z 0x142506ed8
+// MS2-PIN: ?GetAbsolutePath@AvmTextField@AS3@GFx@Scaleform@@WEA@EBAPEBDPEAVString@4@@Z 0x142506ee4
+// MS2-PIN: ?GetCursorType@AvmButton@AS3@GFx@Scaleform@@WBA@EBAIXZ 0x142508514
+// MS2-PIN: ?GetCursorType@AvmTextField@AS3@GFx@Scaleform@@WBA@EBAIXZ 0x142508554
 
 // Queues the object's +0x10 owner's +0x30 counted reference on the +0x40 VM's collector (+0x20).
 // MS2-FUNCTIONAL: raw-offset vftable slot
@@ -6571,12 +6592,6 @@ const char* FUN_142506df0(Scaleform::UPInt self, Scaleform::String* ppath)
     return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(self)
         ->Scaleform::GFx::AS3::AvmInteractiveObj::GetAbsolutePath(ppath);
 }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142506df8
-const char* FUN_142506df8(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506df0(self - 0x30, ppath); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142506e04
-const char* FUN_142506e04(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506df0(self - 0x40, ppath); }
 
 // MS2-FUNCTIONAL: tail call into AvmInteractiveObj::GetAbsolutePath
 // @0x142506ed0
@@ -6585,12 +6600,6 @@ const char* FUN_142506ed0(Scaleform::UPInt self, Scaleform::String* ppath)
     return reinterpret_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(self)
         ->Scaleform::GFx::AS3::AvmInteractiveObj::GetAbsolutePath(ppath);
 }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142506ed8
-const char* FUN_142506ed8(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506ed0(self - 0x30, ppath); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142506ee4
-const char* FUN_142506ee4(Scaleform::UPInt self, Scaleform::String* ppath) { return FUN_142506ed0(self - 0x40, ppath); }
 
 // MS2-FUNCTIONAL: raw getter
 // @0x142507b70
@@ -6603,9 +6612,6 @@ unsigned FUN_142508500(Scaleform::UPInt self)
 {
     return static_cast<Scaleform::UByte>((*reinterpret_cast<Scaleform::GFx::InteractiveObject* const*>(self - 0x18))->Flags >> 4) & 1;
 }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142508514
-unsigned FUN_142508514(Scaleform::UPInt self) { return FUN_142508500(self - 0x10); }
 
 // MS2-FUNCTIONAL: the exe returns its .rdata copy
 // @0x1425088f0
