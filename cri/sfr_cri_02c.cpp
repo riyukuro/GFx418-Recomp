@@ -1170,17 +1170,43 @@ void criMvPly_SetMetaDataWorkAllocator(void* player, void* work, void* allocate,
     ((CriMvMetadataAllocatorFields*)player)->Free = freeFn;
 }
 
-// MS2-FUNCTIONAL: the work-size helper combines the CRI RBF, demux, and two universal-jump-buffer requirements.
+// the work-size helper combines the CRI RBF, demux, and two universal-jump-buffer requirements.
+// the local names place them in the exe's stack slots (cl 15 orders /Od locals by name hash).
 // @0x14002e9e0
 CriSint32 FUN_14002e9e0(void)
 {
-    CriUint32 rbfConfig[6] = { 1, 0x2800, 0, 0x40, 0, 0 };
-    CriSint32 total = 0x376c + 4 + criSjRbf_CalculateWorkSize((const CriSint32*)rbfConfig);
-    total += 4 + FUN_140044eb0(8);
-    CriUint32 uniConfig[3] = { 1, 0, 0x40 };
-    total += criSjUni_CalculateWorkSize((const CriSint32*)uniConfig);
-    uniConfig[2] = 4;
-    return total + criSjUni_CalculateWorkSize((const CriSint32*)uniConfig);
+    struct RbfConfig { CriUint32 Mode; CriUint32 Size; CriUint32 Reserved8; CriUint32 Alignment; CriUint64 Reserved10; };
+    struct UniConfig { CriUint32 Mode; CriUint32 Reserved4; CriUint32 Alignment; };
+    CriSint32 rbfSize;
+    RbfConfig rbfParam;
+    CriSint32 total;
+    UniConfig uniConfigB;
+    CriSint32 demuxLen;
+    total = 0;
+    total += 0xf1c;
+    total += 0x4c;
+    total += 0x2804;
+    memset(&rbfParam, 0, sizeof(rbfParam));
+    rbfParam.Mode = 1;
+    rbfParam.Reserved10 = 0;
+    rbfParam.Size = 0x2800;
+    rbfParam.Reserved8 = 0;
+    rbfParam.Alignment = 0x40;
+    rbfSize = criSjRbf_CalculateWorkSize((const CriSint32*)&rbfParam);
+    total = total + rbfSize + 4;
+    demuxLen = FUN_140044eb0(8);
+    total = total + demuxLen + 4;
+    memset(&uniConfigB, 0, sizeof(uniConfigB));
+    uniConfigB.Mode = 1;
+    uniConfigB.Reserved4 = 0;
+    uniConfigB.Alignment = 0x40;
+    total += criSjUni_CalculateWorkSize((const CriSint32*)&uniConfigB);
+    memset(&uniConfigB, 0, sizeof(uniConfigB));
+    uniConfigB.Mode = 1;
+    uniConfigB.Reserved4 = 0;
+    uniConfigB.Alignment = 4;
+    total += criSjUni_CalculateWorkSize((const CriSint32*)&uniConfigB);
+    return total;
 }
 #pragma optimize("", on)
 
