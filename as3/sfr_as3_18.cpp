@@ -151,13 +151,12 @@ Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const St
     return GetInternedNamespace(kind, GetStringManager().CreateString(uri.ToCStr(), uri.GetSize()));
 }
 
-// A null C string is taken as empty before interning (SDK AS3_VM.cpp form).
-// MS2-FUNCTIONAL scheduling only: the exe loads the string manager ahead of the null test
+// A null C string is taken as empty before interning. The string manager is read before the null test.
 // @0x14250ab50
 Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const char* name) const
 {
-    if (!name) name = "";
-    return GetInternedNamespace(kind, GetStringManager().CreateString(name));
+    ASStringManager* sm = GetStringManager().GetStringManager();
+    return GetInternedNamespace(kind, sm->CreateString(name ? name : ""));
 }
 
 // MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
