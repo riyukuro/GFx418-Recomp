@@ -83,7 +83,11 @@
 #include <vector>
 #undef GetObject   // windows.h
 
+SF_NOINLINE void FUN_1424dc9f0(void* self);
 namespace Scaleform {
+// LoadQueueEntry's mBytes destructor is the out-of-line 0x1424dc9f0 in the exe.
+namespace GFx { template<> inline AutoPtr<ArrayPOD<UByte> >::~AutoPtr() { FUN_1424dc9f0(this); } }
+
 // The Multiname array destructor stays out of line in the exe (CTraits::~CTraits calls it).
 // @0x1424dc870
 template<> SF_NOINLINE ArrayDataBase<GFx::AS3::Multiname, AllocatorLH<GFx::AS3::Multiname, 2>, ArrayDefaultPolicy>::~ArrayDataBase()
@@ -1704,11 +1708,11 @@ MovieRoot::ActionQueueType::~ActionQueueType()
     FreeEntriesCount = 0;
 }
 
-// MS2-FUNCTIONAL 0x1424de310: releases NotifyLoadInitCInterface, bytes and request references, then the GFx queue base; cl's EH/member cleanup differs.
 // @0x1424de310
 LoadQueueEntry::~LoadQueueEntry()
 {
-    NotifyLoadInitCInterface = NULL;
+    if (NotifyLoadInitCInterface)
+        NotifyLoadInitCInterface = 0;
 }
 
 // Inlined into MovieRoot::AddLoadQueueEntryMT in the exe.
@@ -2322,9 +2326,13 @@ StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
 }} // namespace Scaleform::Render
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// MS2-FUNCTIONAL ~MovieDefRootNode@AS3@GFx@Scaleform@@UEAA@XZ: destroys the ABC file array and then lets C++ run the GFx root-node base destructor in order.
+// The ABC files are released last-loaded first, then the array and the GFx root-node base go.
 // @0x1424de580
-MovieDefRootNode::~MovieDefRootNode() = default;
+MovieDefRootNode::~MovieDefRootNode()
+{
+    for (SPInt i = (SPInt)AbcFiles.GetSize() - 1; i >= 0; --i)
+        AbcFiles[i] = NULL;
+}
 }}} // namespace Scaleform::GFx::AS3
 
 Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStringAssign)(
