@@ -654,20 +654,23 @@ bool FUN_14000e9f0(void* pvbase, Environment* penv, const ASString& name, Value*
     return true;
 }
 
+#pragma function(memcpy)   // the exe's state copy-assigns call memcpy out of line and return dst themselves
 // @0x14000fc90
-void* FUN_14000fc90(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
+void* FUN_14000fc90(void* dst, const void* src) { memcpy(dst, src, 0x30); return dst; }
 
 // @0x14000fcb0
-void* FUN_14000fcb0(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
+void* FUN_14000fcb0(void* dst, const void* src) { memcpy(dst, src, 0x30); return dst; }
 
 // @0x14000fcd0
-void* FUN_14000fcd0(void* dst, const void* src) { return memcpy(dst, src, 0x40); }
+void* FUN_14000fcd0(void* dst, const void* src) { memcpy(dst, src, 0x40); return dst; }
 
 // @0x14000fcf0
-void* FUN_14000fcf0(void* dst, const void* src) { return memcpy(dst, src, 0x40); }
+void* FUN_14000fcf0(void* dst, const void* src) { memcpy(dst, src, 0x40); return dst; }
+#pragma intrinsic(memcpy)
 
 // The Render state data follows the state refcount and storage pointer in both states.
-// MS2-FUNCTIONAL: stack copy elided; copies the same 0x30-byte state payload.
+// copies the 0x30-byte state payload out through a stack copy
+#pragma function(memcpy)
 // @0x14000ff10
 bool FUN_14000ff10(const void* node, void* out)
 {
@@ -675,11 +678,15 @@ bool FUN_14000ff10(const void* node, void* out)
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
-    memcpy(out, data + 0x10, 0x30);
+    unsigned __int64 state_copy[6];   // the exe copies the payload through a stack copy
+    memcpy(state_copy, data + 0x10, 0x30);
+    memcpy(out, state_copy, 0x30);
     return true;
 }
+#pragma intrinsic(memcpy)
 
-// MS2-FUNCTIONAL: stack copy elided; copies the same 0x40-byte state payload.
+// copies the 0x40-byte state payload out through a stack copy
+#pragma function(memcpy)
 // @0x14000ff70
 bool FUN_14000ff70(const void* node, void* out)
 {
@@ -687,12 +694,17 @@ bool FUN_14000ff70(const void* node, void* out)
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
-    memcpy(out, data + 0x10, 0x40);
+    unsigned __int64 state_copy[8];   // the exe copies the payload through a stack copy
+    memcpy(state_copy, data + 0x10, 0x40);
+    memcpy(out, state_copy, 0x40);
     return true;
 }
+#pragma intrinsic(memcpy)
 
+#pragma function(memcpy)   // called out of line here too
 // @0x140010eb0
-void* FUN_140010eb0(void* dst, const void* src) { return memcpy(dst, src, 0x30); }
+void* FUN_140010eb0(void* dst, const void* src) { memcpy(dst, src, 0x30); return dst; }
+#pragma intrinsic(memcpy)
 
 // Append one retained 16-byte item (four-byte tag plus refcounted payload).
 // MS2-FUNCTIONAL: uses the executable's Array reserve helper; element copy/refcount behavior recovered.
@@ -1440,10 +1452,9 @@ long long* FUN_14000fd70(long long* dst, const long long* src)
 UInt32* FUN_14000fe90(UInt32* dst, const UInt32* src)
 {
     *dst = *src;
-    void* payload = *reinterpret_cast<void* const*>(src + 2);
-    if (payload)
-        FUN_14257dc30(payload);
-    *reinterpret_cast<void**>(dst + 2) = payload;
+    if (*reinterpret_cast<void* const*>(src + 2))
+        FUN_14257dc30(*reinterpret_cast<void* const*>(src + 2));
+    *reinterpret_cast<void**>(dst + 2) = *reinterpret_cast<void* const*>(src + 2);
     return dst;
 }
 
@@ -1516,27 +1527,44 @@ void FUN_14000f270(void* node)
 // @0x14000fdb0
 void** FUN_14000fdb0(void** dst, void* next)
 {
-    if (*dst)
-        FUN_14257dcb0(*dst);
+    // the weak proxy's Release, inline: free it from the global heap when its count drops to zero
+    void* old = *dst;
+    if (old && --*static_cast<int*>(old) == 0)
+    {
+        Scaleform::MemoryHeap* heap = Scaleform::Memory::pGlobalHeap;
+        reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(heap))[0x60 / sizeof(void*)])(heap, old);
+    }
     *dst = next;
     return dst;
 }
 
-// MS2-FUNCTIONAL: raw weak-proxy lock follows the exe's proxy/object offsets and returns a live target.
+// locks a weak proxy: the live target, or 0 (a proxy whose object is gone is released and cleared)
+// MS2-FUNCTIONAL: the exe tests the proxy's object field in memory (cmp [rdx+8],0) and loads it again; cl loads it
+// once (tried volatile and an integer view)
 // @0x14000fe00
 void* FUN_14000fe00(void** weakProxy)
 {
     void* proxy = *weakProxy;
-    if (!proxy)
-        return 0;
-    void* object = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
-    if (!object)
+    if (proxy)
     {
-        FUN_14257dcb0(proxy);
-        *weakProxy = 0;
-        return 0;
+        if (*reinterpret_cast<void**>(static_cast<char*>(proxy) + 8))
+        {
+            void* object = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
+            if (*reinterpret_cast<int*>(static_cast<char*>(object) + 8))
+                return object;
+        }
+        else
+        {
+            // the dead proxy's Release, inline (as in FUN_14000fdb0)
+            if (--*static_cast<int*>(proxy) == 0)
+            {
+                Scaleform::MemoryHeap* heap = Scaleform::Memory::pGlobalHeap;
+                reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(heap))[0x60 / sizeof(void*)])(heap, proxy);
+            }
+            *weakProxy = 0;
+        }
     }
-    return *reinterpret_cast<int*>(static_cast<char*>(object) + 8) ? object : 0;
+    return 0;
 }
 
 // MS2-FUNCTIONAL: locks a weak proxy using the executable's proxy and target refcount fields.
@@ -1571,13 +1599,15 @@ void** FUN_1400102c0(void** weakProxy, void** strongTarget)
 // @0x140010340
 void FUN_140010340(void* begin, size_t count)
 {
+    if (!count)
+        return;
     char* cursor = static_cast<char*>(begin) - 8 + count * 16;
-    while (count--)
+    do
     {
         void* weakProxy = *reinterpret_cast<void**>(cursor);
         if (weakProxy) FUN_14257dcb0(weakProxy);
         cursor -= 16;
-    }
+    } while (--count);
 }
 
 // @0x1400103f0
@@ -1585,9 +1615,8 @@ void FUN_1400103f0(UInt32* dst, const UInt32* src)
 {
     if (!dst) return;
     *dst = *src;
-    void* payload = *reinterpret_cast<void* const*>(src + 2);
-    if (payload) FUN_14257dc30(payload);
-    *reinterpret_cast<void**>(dst + 2) = payload;
+    if (*reinterpret_cast<void* const*>(src + 2)) FUN_14257dc30(*reinterpret_cast<void* const*>(src + 2));
+    *reinterpret_cast<void**>(dst + 2) = *reinterpret_cast<void* const*>(src + 2);
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
