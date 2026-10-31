@@ -22,6 +22,7 @@
 template <class T> struct ExeDecl { typedef T type; };
 
 extern ExeDecl<void*>::type DAT_1431b59f0;
+extern ExeDecl<void*>::type DAT_14317bf80;   // AvmDisplayObjBase vftable
 #define VideoProtoGCVtable DAT_1431b59f0
 extern ExeDecl<void*>::type DAT_1431b5940;
 #define VideoProtoInterfaceVtable DAT_1431b5940
@@ -304,36 +305,65 @@ void FUN_140003580(void* player, bool ready)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forwards playback start to the active player implementation.
+// a view of the player wrapper's active implementation (+0x48) and its vftable slots
+struct VideoPlayerImplView
+{
+    virtual void Slot0(); virtual void Slot1(); virtual void Slot2(); virtual void Slot3(); virtual void Slot4();
+    virtual void Slot5(); virtual void Slot6(); virtual void Slot7(); virtual void Slot8(); virtual void Slot9();
+    virtual void Slot10(); virtual void Slot11(); virtual void Slot12(); virtual void Slot13(); virtual void Slot14();
+    virtual void Slot15(); virtual void Slot16(); virtual void Slot17(); virtual void Slot18(); virtual void Slot19();
+    virtual void Slot20();
+};
+struct VideoPlayerOwnerView
+{
+    unsigned char Pad[0x48];
+    VideoPlayerImplView* pImpl;
+};
+// a view of a NetStream's video provider (+0x68), whose player sits at +0x48 as in the wrapper above
+struct VideoStreamProviderView
+{
+    unsigned char Pad[0x68];
+    VideoPlayerOwnerView* pProvider;
+};
+// the same object with its member table (+0x110), as FUN_14000a3a0 finalizes it
+struct VideoFinalizeView
+{
+    unsigned char Pad[0x68];
+    VideoPlayerOwnerView* pProvider;
+    unsigned char Pad2[0x110 - 0x70];
+    void** pTable;
+};
+
+// forwards playback start to the active player implementation.
 // @0x1400035b0
 void FUN_1400035b0(void* player)
 {
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[18])(impl);
+    VideoPlayerOwnerView* owner = static_cast<VideoPlayerOwnerView*>(player);
+    if (owner->pImpl) owner->pImpl->Slot18();
 }
 
-// MS2-FUNCTIONAL: forwards playback stop to the active player implementation.
+// forwards playback stop to the active player implementation.
 // @0x1400035d0
 void FUN_1400035d0(void* player)
 {
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[19])(impl);
+    VideoPlayerOwnerView* owner = static_cast<VideoPlayerOwnerView*>(player);
+    if (owner->pImpl) owner->pImpl->Slot19();
 }
 
-// MS2-FUNCTIONAL: forwards seek to the active player implementation.
+// forwards seek to the active player implementation.
 // @0x1400035f0
 void FUN_1400035f0(void* player)
 {
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[20])(impl);
+    VideoPlayerOwnerView* owner = static_cast<VideoPlayerOwnerView*>(player);
+    if (owner->pImpl) owner->pImpl->Slot20();
 }
 
-// MS2-FUNCTIONAL: forwards the frame-ready request to the active player implementation.
+// forwards the frame-ready request to the active player implementation.
 // @0x140003610
 void FUN_140003610(void* player)
 {
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[7])(impl);
+    VideoPlayerOwnerView* owner = static_cast<VideoPlayerOwnerView*>(player);
+    if (owner->pImpl) owner->pImpl->Slot7();
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
@@ -386,13 +416,14 @@ void FUN_1400036e0(void* player, float timeout)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forwards video information retrieval into the active player.
+// forwards video information retrieval into the active player.
 // @0x140003710
 void FUN_140003710(void* player)
 {
-    void* impl = *reinterpret_cast<void**>(static_cast<unsigned char*>(player) + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl,
-        static_cast<unsigned char*>(player) + 0xf0);
+    VideoPlayerOwnerView* owner = static_cast<VideoPlayerOwnerView*>(player);
+    if (owner->pImpl)
+        reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(owner->pImpl))[28])(owner->pImpl,
+            static_cast<unsigned char*>(player) + 0xf0);
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
@@ -585,7 +616,9 @@ void FUN_140003d10(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 void FUN_140003da0(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: creates and retains a display object's character handle on first use.
+// MS2-FUNCTIONAL: creates and retains a display object's character handle on first use. The exe returns the handle
+// (or the created one) in rax; this keeps the void signature that sfr_sf_hooks names. Nothing in the exe calls or
+// references 0x140004310, so no caller reads the result.
 // @0x140004310
 void FUN_140004310(void* object)
 {
@@ -608,13 +641,12 @@ void** FUN_140004350(void** character, void** result)
     return result;
 }
 
-// MS2-FUNCTIONAL: forwards the action to refresh the active player implementation.
+// forwards the action to refresh the active player implementation.
 // @0x140004600
 void FUN_140004600(void* object)
 {
-    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
-    void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(impl))[14])(impl);
+    VideoPlayerOwnerView* owner = *reinterpret_cast<VideoPlayerOwnerView**>(static_cast<unsigned char*>(object) + 0x68);
+    if (owner->pImpl) owner->pImpl->Slot14();
 }
 
 #pragma optimize("t", off)   // the exe builds these favouring size: frame + call, no tail call
@@ -665,22 +697,23 @@ void FUN_1400046e0(void* object, double timeout)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forwards a seek position to the active player implementation.
+// forwards a seek position to the active player implementation.
 // @0x140004710
 void FUN_140004710(void* object, double position)
 {
-    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
-    void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*, int)>((*reinterpret_cast<void***>(impl))[7])(impl, static_cast<int>(position));
+    VideoPlayerOwnerView* owner = *reinterpret_cast<VideoPlayerOwnerView**>(static_cast<unsigned char*>(object) + 0x68);
+    if (owner->pImpl)
+        reinterpret_cast<void (*)(void*, int)>((*reinterpret_cast<void***>(owner->pImpl))[7])(owner->pImpl, static_cast<int>(position));
 }
 
-// MS2-FUNCTIONAL: forwards the video-info request to the active player with the stored output buffer.
+// forwards the video-info request to the active player with the stored output buffer.
 // @0x140004770
 void FUN_140004770(void* object)
 {
-    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(object) + 0x68);
-    void* impl = *reinterpret_cast<void**>(owner + 0x48);
-    if (impl) reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(impl))[28])(impl, owner + 0xf0);
+    VideoPlayerOwnerView* owner = *reinterpret_cast<VideoPlayerOwnerView**>(static_cast<unsigned char*>(object) + 0x68);
+    if (owner->pImpl)
+        reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(owner->pImpl))[28])(owner->pImpl,
+            reinterpret_cast<unsigned char*>(owner) + 0xf0);
 }
 
 // builds the three-field URL location value using owned copies of the two strings.
@@ -850,15 +883,15 @@ void FUN_140005480(Scaleform::GFx::CharacterHandle* handle)
 // @0x140005660
 void FUN_140005660(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
-// MS2-FUNCTIONAL: clears the provider's pending notification and requests the active player to stop.
+// clears the provider's pending notification and requests the active player to stop.
 // @0x140005690
 void FUN_140005690(void* stream)
 {
-    unsigned char* provider = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(stream) + 0x68);
-    if (provider) {
-        *reinterpret_cast<void**>(provider + 0x18) = 0;
-        void* player = *reinterpret_cast<void**>(provider + 0x48);
-        if (player) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(player))[14])(player);
+    VideoStreamProviderView* view = static_cast<VideoStreamProviderView*>(stream);
+    if (view->pProvider) {
+        *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(view->pProvider) + 0x18) = 0;
+        VideoPlayerOwnerView* provider = view->pProvider;
+        if (provider->pImpl) provider->pImpl->Slot14();
     }
 }
 
@@ -1758,11 +1791,12 @@ void* FUN_140007c80(Scaleform::GFx::AS2::GASPrototypeBase* prototype, unsigned f
     return prototype;
 }
 
-// MS2-FUNCTIONAL: resolves the lowercase node for an ActionScript string when needed.
+// resolves the lowercase node for an ActionScript string when needed (SDK ASString::ResolveLowercase: the node is
+// never null, so there is no null test).
 // @0x140009ec0
 void FUN_140009ec0(Scaleform::GFx::ASStringNode** nodeSlot)
 {
-    if (*nodeSlot && !(*nodeSlot)->pLower) (*nodeSlot)->ResolveLowercase_Impl();
+    if (!(*nodeSlot)->pLower) (*nodeSlot)->ResolveLowercase_Impl();
 }
 
 // the exe inlines the body into FUN_14000a090.
@@ -2280,11 +2314,12 @@ Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
 // @0x14000d570
 void FUN_14000d570(void** proxy) { if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release(); }
 
-// The exe stores the interface vftable 0x14317bf80 just before the delete: a dead store.
-// MS2-FUNCTIONAL: optionally deletes a small polymorphic helper object.
+// optionally deletes a small polymorphic helper object. The exe stores the AvmDisplayObjBase vftable (0x14317bf80)
+// first, as its inline dtor does: a dead store before the delete.
 // @0x14000d5c0
 void* FUN_14000d5c0(void* object, unsigned flags)
 {
+    *static_cast<void***>(object) = &DAT_14317bf80;
     if (flags & 1) ::operator delete(object);
     return object;
 }
@@ -2501,15 +2536,14 @@ void FUN_14000dbc0(void* object)
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
-// MS2-FUNCTIONAL: Video.clear (the Video prototype table at 0x1431b5800): drops the held VideoCharacter's image.
+// Video.clear (the Video prototype table at 0x1431b5800): drops the held VideoCharacter's image.
 // @0x14000d330
 void FUN_14000d330(void* wrapper)
 {
     // wrapper is the FnCall; ThisPtr (+0x10) is the Video object's ObjectInterface at +8.
     unsigned char* bytes = static_cast<unsigned char*>(wrapper);
-    void* object = *reinterpret_cast<void**>(bytes + 0x10);
-    if (object) object = static_cast<unsigned char*>(object) - 8;
-    if (!object) return;
+    void* thisPtr = *reinterpret_cast<void**>(bytes + 0x10);
+    void* object = thisPtr ? static_cast<unsigned char*>(thisPtr) - 8 : 0;   // static_cast, no null test after it
     // The exe passes the character held at +0x20, not the AS2 object.
     void* character = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20);
     if (character)
@@ -2527,26 +2561,22 @@ void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
-// MS2-FUNCTIONAL: releases the prototype's member table and weak provider, then finalizes the AS2 object base.
+// releases the prototype's member table and weak provider, then finalizes the AS2 object base. As in the exe, the
+// table's data is freed without a null test and neither field is cleared (the object is being finalized).
 // @0x14000a3a0
 void FUN_14000a3a0(void* object)
 {
-    unsigned char* bytes = static_cast<unsigned char*>(object);
-    void** table = reinterpret_cast<void**>(bytes + 0x110);
-    if (*table) {
-        if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
-        Scaleform::Memory::Free(*table);
-        *table = 0;
+    VideoFinalizeView* view = static_cast<VideoFinalizeView*>(object);
+    if (view->pTable) {
+        Scaleform::Memory::Free(*view->pTable);
+        Scaleform::Memory::Free(view->pTable);
     }
-    void** proxy = reinterpret_cast<void**>(bytes + 0x68);
-    if (*proxy) {
-        unsigned char* proxyBytes = static_cast<unsigned char*>(*proxy);
-        *reinterpret_cast<void**>(proxyBytes + 0x18) = 0;
-        void* listener = *reinterpret_cast<void**>(proxyBytes + 0x48);
-        if (listener) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(listener))[14])(listener);
-        FUN_14257dcd0(*proxy);
-        *proxy = 0;
+    if (view->pProvider) {
+        *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(view->pProvider) + 0x18) = 0;
+        VideoPlayerOwnerView* provider = view->pProvider;
+        if (provider->pImpl) provider->pImpl->Slot14();
     }
+    if (view->pProvider) FUN_14257dcd0(view->pProvider);
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
