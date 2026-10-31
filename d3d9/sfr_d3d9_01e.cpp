@@ -1052,14 +1052,15 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     AccumulatedStats.Filters += filters->GetFilterCount();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
 // @0x142737550
 void HAL::drawCachedFilter(FilterPrimitive* primitive)
 {
     setLinearStreamSource(PrimitiveBatch::DP_Batch);
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
 
-    if (primitive->GetCacheState() == FilterPrimitive::Cache_PreTarget)
+    switch (primitive->GetCacheState())
+    {
+    case FilterPrimitive::Cache_PreTarget:
     {
         // one pass short of the result: draw the last pass into a new target, cache that, then draw it
         const FilterSet* filters = primitive->GetFilters();
@@ -1068,6 +1069,7 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         unsigned         passes = SManager.GetFilterPasses(filter, DeviceFlags, shaders);
 
         Ptr<RenderTarget> temporaries[3];
+        memset(temporaries, 0, sizeof temporaries);
         RenderTarget*     cacheResults[2];
         primitive->GetCacheResults(cacheResults, 2);
         temporaries[0] = cacheResults[0];
@@ -1080,18 +1082,22 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         mvp.M[0][0] = 2.0f;
         mvp.M[0][1] = 0.0f;
         mvp.M[0][2] = 0.0f;
-        mvp.M[0][3] = -1.0f - 1.0f / (float)size.Width;
+        mvp.M[0][3] = -1.0f;
         mvp.M[1][0] = 0.0f;
         mvp.M[1][1] = -2.0f;
         mvp.M[1][2] = 0.0f;
-        mvp.M[1][3] = 1.0f / (float)size.Height + 1.0f;
+        mvp.M[1][3] = 1.0f;
         const MatrixPoolImpl::HMatrix& area = primitive->GetFilterAreaMatrix();
-        const Cxform* cx = &Cxform::Identity;
-        if (area.pHandle->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform))
+        const Cxform* cx;
+        if (!area.pHandle->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform))
+            cx = &Cxform::Identity;
+        else
             cx = area.pHandle->GetCxformPtr();
+        mvp.Tx() -= 1.0f / size.Width;
+        mvp.Ty() += 1.0f / size.Height;
         FUN_142734e10(&SManager, mvp, *cx, filter, temporaries, shaders, passes - 1, passes,
                       MappedXY16iAlphaTexture[0], &ShaderData);
-        applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true, true);
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
         pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
         pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
         pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
@@ -1116,50 +1122,52 @@ void HAL::drawCachedFilter(FilterPrimitive* primitive)
         for (unsigned t = 0; t < 3; t++)
             if (temporaries[t])
                 temporaries[t]->SetInUse(false);
-        return;
+        break;
     }
 
-    // Cache_Target: the result as a textured quad over the filtered area
-    unsigned shader = 1 | ((DeviceFlags & 4) << 2);
-    if (DeviceFlags & 1)
-        shader += 1;
-    if (DeviceFlags & 8)
-        shader += 8;
-    setDrawableShader(&ShaderData, shader, MappedXY16iAlphaTexture[0]);
-    ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
+    case FilterPrimitive::Cache_Target:
+    {
+        // Cache_Target: the result as a textured quad over the filtered area
+        unsigned fillFlags = DeviceFlags;
+        unsigned shader = 1 | ((fillFlags & 4) << 2);
+        if (fillFlags & 1)
+            shader += 1;
+        if (fillFlags & 8)
+            shader += 8;
+        ShaderInterface* psi = &ShaderData;
+        setDrawableShader(psi, shader, MappedXY16iAlphaTexture[0]);
+        ShaderInterfaceAccess::BeginPrimitive(psi);
+        const ShaderPair& pso = psi->GetCurrentShaders();
 
-    RenderTarget* results;
-    primitive->GetCacheResults(&results, 1);
-    Render::Texture* ptexture = results->GetTexture();
-    Matrix2F mvp = Matrices.UserView * primitive->GetFilterAreaMatrix().GetMatrix2D();
+        RenderTarget* results;
+        primitive->GetCacheResults(&results, 1);
+        Render::Texture* ptexture = results->GetTexture();
+        Matrix2F mvp = Matrices.UserView * primitive->GetFilterAreaMatrix().GetMatrix2D();
 
-    // the result's rectangle within its texture
-    const Rect<int>& srect = results->GetRect();
-    float    sx = (float)srect.Width() / (float)ptexture->ImgSize.Width;
-    float    sy = (float)srect.Height() / (float)ptexture->ImgSize.Height;
-    Matrix2F texgen;
-    texgen.M[0][0] = sx;
-    texgen.M[0][1] = 0.0f * sx;
-    texgen.M[0][2] = 0.0f * sx;
-    texgen.M[0][3] = ((float)srect.x1 + 0.0f) * sx;
-    texgen.M[1][0] = 0.0f * sy;
-    texgen.M[1][1] = sy;
-    texgen.M[1][2] = 0.0f * sy;
-    texgen.M[1][3] = ((float)srect.y1 + 0.0f) * sy;
+        // the result's rectangle within its texture
+        const Rect<int>& srect = results->GetRect();
+        Matrix2F texgen;
+        texgen.AppendTranslation((float)srect.x1, (float)srect.y1);
+        texgen.AppendScaling((float)srect.Width() / ptexture->ImgSize.Width, (float)srect.Height() / ptexture->ImgSize.Height);
 
-    const ShaderPair& cur = ShaderData.GetCurrentShaders();
-    ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
-    ShaderData.SetUniform(cur, Uniform::SU_texgen, &texgen.M[0][0], 8);
-    ShaderData.SetTexture(cur, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
-    ShaderData.Finish(1);
+        psi->SetUniform(pso, Uniform::SU_mvp, &mvp.M[0][0], 8);
+        psi->SetUniform(pso, Uniform::SU_texgen, &texgen.M[0][0], 8);
+        psi->SetTexture(pso, Uniform::SU_tex, ptexture, ImageFillMode(Wrap_Clamp, Sample_Linear));
+        psi->Finish(1);
 
-    applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, true, true);
-    pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
-    applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, false,
-                   (HALState & HS_InRenderTarget) != 0);
-    pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
-    pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
-    results->SetInUse(false);
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
+        pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
+        applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false,
+                       (HALState & HS_InRenderTarget) != 0);
+        pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
+        pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
+        results->SetInUse(false);
+        break;
+    }
+
+    default:
+        break;
+    }
 }
 
 // MS2-FUNCTIONAL: written from the decompile
