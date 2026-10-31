@@ -71,24 +71,22 @@ static inline void StringAddRef(void* node) { RawField<int>(node, 0x18)++; }
 
 static inline void StringRelease(void* node)
 {
-    if (--RawField<int>(node, 0x18) == 0)
+    if (--RawField<unsigned>(node, 0x18) == 0)
         FUN_1425c14e0(node);
 }
 
 // A {key, Register, Ptr} payload copied into a blank slot.
 static inline void CopyPayload(char* d, const char* s)
 {
-    void* key = RawField<void*>(s, 0);
-    StringAddRef(key);
-    RawField<void*>(d, 0) = key;
+    RawField<void*>(d, 0) = RawField<void*>(s, 0);
+    StringAddRef(RawField<void*>(d, 0));
     RawField<U>(d, 8) = RawField<U>(s, 8);
-    void* p = RawField<void*>(s, 0x10);
-    if (p)
-        GCAddRef(p);
-    RawField<void*>(d, 0x10) = p ? RawField<void*>(s, 0x10) : 0;
+    if (RawField<void*>(s, 0x10))
+        GCAddRef(RawField<void*>(s, 0x10));
+    RawField<void*>(d, 0x10) = RawField<void*>(s, 0x10);
 }
 
-static inline void AssignNode(void* self, const void* src)
+static __forceinline void AssignNode(void* self, const void* src)
 {
     void* key = RawField<void*>(src, 0);
     StringAddRef(key);
@@ -102,7 +100,7 @@ static inline void AssignNode(void* self, const void* src)
     RawField<void*>(self, 0x10) = RawField<void*>(src, 0x10);
 }
 
-static inline void AssignRef(void* self, const void* ref)
+static __forceinline void AssignRef(void* self, const void* ref)
 {
     void* key = *RawField<void**>(ref, 0);
     StringAddRef(key);
@@ -134,70 +132,91 @@ void FUN_142591d80(void* self, const void* ref)
     AssignRef(self, ref);
 }
 
+// the two key forms of the hash add: a HashNode {key, Register, Ptr} and a NodeRef {&key, &{Register, Ptr}}; the add
+// reads the source when it builds the entry and calls the node assignments out of line
+struct NodeSrc
+{
+    static __forceinline void* Key(const void* s) { return RawField<void*>(s, 0); }
+    static __forceinline U Fn(const void* s) { return RawField<U>(s, 8); }
+    static __forceinline void* Ptr(const void* s) { return RawField<void*>(s, 0x10); }
+    static __forceinline void Assign(void* self, const void* s) { FUN_142591cf0(self, s); }
+};
+struct RefSrc
+{
+    static __forceinline void* Key(const void* s) { return *RawField<void**>(s, 0); }
+    static __forceinline U Fn(const void* s) { return RawField<U*>(s, 8)[0]; }
+    static __forceinline void* Ptr(const void* s) { return (void*)RawField<U*>(s, 8)[1]; }
+    static __forceinline void Assign(void* self, const void* s) { FUN_142591d80(self, s); }
+};
+
 // The entry at index i of a table {count, mask, entries}; the payload is at +8.
 static inline char* ClassEntry(U* table, U i) { return (char*)table + 0x10 + i * 0x20; }
 
 // HashSetBase::add after the table has room: the entry goes to its home slot, a squatter is moved out first.
-template<void (*Assign)(void*, const void*)>
-static inline void ClassAdd(U** self, void* key, U fn, void* ptr, const void* src, U hash)
+template<class Src>
+static __forceinline void ClassAdd(U** self, const void* src, U hash)
 {
-    U* table = *self;
-    U home = hash & table[1];
-    table[0]++;
-    table = *self;
-    char* e = ClassEntry(table, home);
+    hash &= (*self)[1];
+    (*self)[0]++;
+    SPInt index = hash;
+    char* e = ClassEntry(*self, index);
     if (*(SPInt*)e == -2)
     {
         *(SPInt*)e = -1;
-        StringAddRef(key);
-        RawField<void*>(e, 8) = key;
-        RawField<U>(e, 0x10) = fn;
-        if (ptr)
-            GCAddRef(ptr);
-        RawField<void*>(e, 0x18) = ptr ? ptr : 0;
+        RawField<void*>(e, 8) = Src::Key(src);
+        StringAddRef(RawField<void*>(e, 8));
+        RawField<U>(e, 0x10) = Src::Fn(src);
+        if (Src::Ptr(src))
+            GCAddRef(Src::Ptr(src));
+        RawField<void*>(e, 0x18) = Src::Ptr(src);
     }
     else
     {
-        U blank = home;
+        SPInt blank = index;
         do
-            blank = (blank + 1) & table[1];
-        while (*(SPInt*)ClassEntry(table, blank) != -2);
-        char* b = ClassEntry(table, blank);
-        U squatterHome = NodeHash(RawField<void*>(e, 8)) & table[1];
-        if (squatterHome == home)
+            blank = (blank + 1) & (*self)[1];
+        while (*(SPInt*)ClassEntry(*self, blank) != -2);
+        char* b = ClassEntry(*self, blank);
+        if ((SPInt)(NodeHash(RawField<void*>(e, 8)) & (*self)[1]) == index)
         {
             *(SPInt*)b = *(SPInt*)e;
             CopyPayload(b + 8, e + 8);
-            Assign(e + 8, src);
-            *(U*)e = blank;
+            Src::Assign(e + 8, src);
+            *(SPInt*)e = blank;
         }
         else
         {
-            U* link = (U*)ClassEntry(table, squatterHome);
-            U next = *link;
-            while (next != home)
+            SPInt collided = NodeHash(RawField<void*>(e, 8)) & (*self)[1];
+            for (;;)
             {
-                link = (U*)ClassEntry(table, next);
-                next = *link;
+                SPInt* link = (SPInt*)ClassEntry(*self, collided);
+                if (*link == index)
+                {
+                    *(SPInt*)b = *(SPInt*)e;
+                    CopyPayload(b + 8, e + 8);
+                    *link = blank;
+                    break;
+                }
+                collided = *link;
             }
-            *(SPInt*)b = *(SPInt*)e;
-            CopyPayload(b + 8, e + 8);
-            *link = blank;
-            Assign(e + 8, src);
+            Src::Assign(e + 8, src);
             *(SPInt*)e = -1;
         }
     }
 }
 
 // HashSetBase<HashNode<ASString, ClassRegEntry>>::add<HashNode>
+// MS2-FUNCTIONAL 0x142591860: register allocation only (the exe keeps the hash in rdi and the source in r14); the
+// same loads, stores and calls in the same order.
 // @0x142591860
 void FUN_142591860(U** self, void* ctx, const void* node, U hash)
 {
     FUN_1425921b0(self, ctx);
-    ClassAdd<AssignNode>(self, RawField<void*>(node, 0), RawField<U>(node, 8), RawField<void*>(node, 0x10), node, hash);
+    ClassAdd<NodeSrc>(self, node, hash);
 }
 
 // The same for a NodeRef {&key, &{Register, Ptr}}, with the table growth inline.
+// MS2-FUNCTIONAL 0x142591a00: register allocation only, as 0x142591860.
 // @0x142591a00
 void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
 {
@@ -206,8 +225,7 @@ void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
         FUN_142592a10(self, ctx, 8);
     else if (table[0] * 5 > table[1] * 4 + 4)
         FUN_142592a10(self, ctx, table[1] * 2 + 2);
-    U* value = RawField<U*>(ref, 8);
-    ClassAdd<AssignRef>(self, *RawField<void**>(ref, 0), value[0], (void*)value[1], ref, hash);
+    ClassAdd<RefSrc>(self, ref, hash);
 }
 
 // The builtin class registry entry of "Sound": registered on first use, then the class is published as a member.
