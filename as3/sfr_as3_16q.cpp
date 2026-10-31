@@ -21,7 +21,7 @@ void Sfr31ShutdownRegistered(Scaleform::UPInt self)
 Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj()
 {
     Memory::Free(const_cast<char*>(pClassName));
-    if (UPInt p = reinterpret_cast<UPInt>(pAS3CollectiblePtr))
+    if (UPInt p = reinterpret_cast<UPInt>(pAS3CollectiblePtr.pObject))
     {
         if (p & 1)
             pAS3CollectiblePtr = reinterpret_cast<Instances::fl_display::DisplayObject*>(p - 1);

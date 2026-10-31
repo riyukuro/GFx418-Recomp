@@ -2024,7 +2024,8 @@ extern void* const ShapeObject_vftable_90[];
 // drawing context of the AS3 Graphics API (+0xc8, made on first use).
 // MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c210
 // ShapeObject is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
-// MS2-FUNCTIONAL: same code; the exe orders the inlined AvmDisplayObj member stores differently (scheduling)
+// MS2-FUNCTIONAL: same code but for a dead store of ShapeObject's own vptr ahead of the base call (the opaque class
+// has a vftable but no declared base, so cl stores it on entry)
 // @0x1424d98a0
 ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
 {
@@ -2047,7 +2048,6 @@ extern void* const AvmBitmap_vftable_90[];
 // A bitmap on the display list: +0xc0 the image resource, +0xc8 the movie that binds it. The image comes from the
 // character's resource, or, for a valid id, from the movie's resource binding; only image resources are kept.
 // AvmBitmap is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
-// MS2-FUNCTIONAL: same code; the exe orders the inlined AvmDisplayObj member stores differently (scheduling)
 // @0x1424d6270
 AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id)
 {

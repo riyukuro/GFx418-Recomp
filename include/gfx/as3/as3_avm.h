@@ -34,6 +34,18 @@ namespace Instances { namespace fl_display { class DisplayObject; } }
 class AvmInteractiveObj;    // (appended, sfr19)
 namespace Instances { namespace fl_events { class Event; } }
 
+// The SDK's SPtr<Instances::fl_display::DisplayObject> member of AvmDisplayObj as far as its layout and ctor go: it
+// nulls itself in its own ctor, ahead of the other members (the exe's store order). No dtor: the class is opaque
+// here, so ~AvmDisplayObj (0x1424ddb80) releases it by hand.
+struct AvmAS3CollectiblePtr
+{
+    AvmAS3CollectiblePtr() : pObject(NULL) {}
+    operator Instances::fl_display::DisplayObject*() const { return pObject; }
+    AvmAS3CollectiblePtr& operator=(Instances::fl_display::DisplayObject* p) { pObject = p; return *this; }
+
+    Instances::fl_display::DisplayObject* pObject;
+};
+
 // AS3 part of every display object. 0x30 bytes; vftable 0x14317c160 (22 slots), ctor inlined into its subclasses'.
 class AvmDisplayObj : public AvmDisplayObjBase
 {
@@ -45,8 +57,9 @@ public:
     };
 
     AvmDisplayObj(DisplayObject* pdispObj)
-        : pAS3CollectiblePtr(NULL), pDispObj(pdispObj), pClassName(NULL), Flags(0)
+        : pDispObj(pdispObj), Flags(0)
     {
+        pClassName = NULL;
         pdispObj->BindAvmObj(this);
         pAS3RawPtr = NULL;
     }
@@ -85,7 +98,7 @@ public:
     virtual bool        GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray, const Render::PointF& pt) const;
     virtual bool        DetachChild(DisplayObjectBase*);                // false 0x1424f7180
 
-    Instances::fl_display::DisplayObject*   pAS3CollectiblePtr; // +0x08 SPtr<>; bit 0 set while the GC tears it down
+    AvmAS3CollectiblePtr                    pAS3CollectiblePtr; // +0x08 SPtr<>; bit 0 set while the GC tears it down
     Instances::fl_display::DisplayObject*   pAS3RawPtr;         // +0x10
     DisplayObject*                          pDispObj;           // +0x18
     const char*                             pClassName;         // +0x20 copy owned by the global heap

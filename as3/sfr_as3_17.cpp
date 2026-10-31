@@ -60,6 +60,9 @@ extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsig
 namespace Scaleform {
 template<> SF_NOINLINE void ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, Stat_Default_Mem>,
     ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+// Defined in sfr_as3_16 (0x1424e0340) as an explicit specialization; declared here so this unit calls it.
+template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
+AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
 }
 
 // The definitions (here and in sfr_as3_19) of exe functions called through FUN_ forwarders, by their real names.
