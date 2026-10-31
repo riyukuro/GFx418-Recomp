@@ -50,8 +50,6 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_14257db40(void* pthis);
-void FUN_14257db50(void* pthis);
 void FUN_142609070(void* pthis);
 void FUN_1429250a0(void* pthis);
 void FUN_142925750(void* pthis);
@@ -121,7 +119,7 @@ void* DeleteAs2_142928800(void* p, unsigned flags)
 // @0x142928aa0
 void* DeleteAs2_142928aa0(void* p, unsigned flags)
 {
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -135,7 +133,7 @@ void* DeleteAs2_142928aa0(void* p, unsigned flags)
 // @0x142928b00
 void* DeleteAs2_142928b00(void* p, unsigned flags)
 {
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -149,7 +147,7 @@ void* DeleteAs2_142928b00(void* p, unsigned flags)
 // @0x142928bb0
 void* DeleteAs2_142928bb0(void* p, unsigned flags)
 {
-    FUN_14257db50(p);
+    static_cast<RefCountNTSImplCore*>(p)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -163,7 +161,7 @@ void* DeleteAs2_142928bb0(void* p, unsigned flags)
 // @0x142928c10
 void* DeleteAs2_142928c10(void* p, unsigned flags)
 {
-    FUN_14257db50(p);
+    static_cast<RefCountNTSImplCore*>(p)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -192,7 +190,7 @@ void* DeleteAs2_142928d00(void* p, unsigned flags)
 void* DeleteAs2_142928d50(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432172f0;
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
