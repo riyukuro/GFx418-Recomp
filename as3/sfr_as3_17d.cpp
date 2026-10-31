@@ -84,7 +84,8 @@ struct Sfr17dCollectorEntry
     Scaleform::Ptr<Scaleform::RefCountImpl> pObject;
     void*                                   pExtra;
 };
-void FUN_142504630(void* gc, void* stats);   // ASRefCountCollector: queues a collection with the AMP stats
+// ASRefCountCollector: queues a collection with the AMP stats (0x142504630, sfr_as3_17)
+namespace Scaleform { class RefCountImpl; namespace GFx { namespace AS3 { void Sfr33CollectorQueue(Scaleform::UByte* gc, Scaleform::RefCountImpl* stats); } } }
 
 namespace Scaleform {
 
@@ -481,7 +482,7 @@ void FUN_1424f03f0(UByte* self, MemoryHeap* heap)
             gc[0xb0] = 1;
         else
         {
-            FUN_142504630(gc, stats);
+            AS3::Sfr33CollectorQueue(gc, static_cast<RefCountImpl*>(stats));
             if (!(gc[0x78] & 2) && *reinterpret_cast<UPInt*>(gc + 0x18) == 0)
                 reinterpret_cast<AS3::ASRefCountCollector*>(gc)->Roots.ClearAndRelease();
             *reinterpret_cast<unsigned*>(gc + 0x90) = 0;
