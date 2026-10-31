@@ -5,7 +5,7 @@
 // MS2-UNIT: sfr_cri_05b
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14004e5a0-0x140054170 .text$mn
+// MS2-RANGE: 0x14004e5a0-0x140052fa0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include <windows.h>
@@ -2544,7 +2544,6 @@ long FUN_140051210(longlong *a1,cri_u64 *a2)
   return FUN_140053000(ck->Data);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140051270
 int FUN_140051270(longlong a1,int *a2)
 {
@@ -2556,14 +2555,14 @@ int FUN_140051270(longlong a1,int *a2)
   if (i_v1 == 0) {
     l_v3 = FUN_1400530c0(*(cri_u64 *)a2,a2[2],0x40);
     if (l_v3 != 0) {
-      l_v3 = FUN_1400530c0(l_v3 + 4,(*a2 - (int)(l_v3 + 4)) + a2[2],0xffffffff);
+      l_v3 = l_v3 + 4;
+      l_v3 = FUN_1400530c0(l_v3,(*a2 - (int)l_v3) + a2[2],0xffffffff);
       if (l_v3 != 0) {
         u_v2 = FUN_140053000(l_v3);
         if ((u_v2 & 0x10) != 0) {
           CriAt<cri_u32>(a1, 0x17b8) = 2;
-          return CriAt<int>(a1, 0x17b8);
         }
-        if (u_v2 != 0) {
+        else if (u_v2 != 0) {
           CriAt<cri_u32>(a1, 0x17b8) = 1;
         }
       }
@@ -3687,272 +3686,50 @@ void FUN_140052ef0(cri_u8 *a1)
   }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140052fa0
-int FUN_140052fa0(void)
-{
-  cri_u8 table[256];
-  FUN_140052ef0(table);
-  if (memcmp(table,&DAT_1431ba800,0x100) != 0) {
-    return -1;
-  }
-  return 0;
-}
+int FUN_140052fa0(void);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053000
-// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
-// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
-__declspec(noinline) inline long FUN_140053000(cri_u8 *a1)
-{
-  if (((((cri_u32)a1[0] << 8) | a1[1]) << 8 | a1[2]) != 1) {
-    return 0;
-  }
-  return (&DAT_1431ba800)[a1[3]];
-}
+long FUN_140053000(cri_u8 *a1);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053030
-longlong FUN_140053030(longlong a1,int a2,int a3)
-{
-  cri_u8 *start = (cri_u8 *)a1 - 1;
-  cri_u32 code = 0xffffff00;
-  cri_u32 next;
-  int i;
-  for (i = 0; i < a2; i++) {
-    code |= start[-i];
-    next = code << 8;
-    if (next == 0x1000000 && ((&DAT_1431ba800)[code >> 24] & a3) != 0) {
-      return (longlong)(start - i);
-    }
-    code = next;
-  }
-  return 0;
-}
+longlong FUN_140053030(longlong a1,int a2,int a3);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400530c0
-// The exe calls this from another obj, so its callers save and reload registers around the call. noinline inline keeps
-// VC9 from using its actual register usage at the same-TU call sites; the code and mangling stay the same.
-__declspec(noinline) inline longlong FUN_1400530c0(longlong a1,int a2,int a3)
-{
-  cri_u8 *buf = (cri_u8 *)a1;
-  cri_u32 code = 0xffffff00;
-  cri_u32 b;
-  int i;
-  for (i = 0; i < a2; i++) {
-    b = buf[i];
-    if (code == 0x100 && ((&DAT_1431ba800)[b] & a3) != 0) {
-      return (longlong)(buf + i - 3);
-    }
-    code = (code | b) << 8;
-  }
-  return 0;
-}
+longlong FUN_1400530c0(longlong a1,int a2,int a3);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053140
-longlong FUN_140053140(byte *a1,longlong a2,int a3,int a4)
-{
-  cri_u8 *src = (cri_u8 *)a2;
-  cri_u32 code = 0xffffff00;
-  cri_u8 b;
-  int i;
-  for (i = 0; i < a3; i++) {
-    b = src[i];
-    a1[i] = b;
-    if (code == 0x100 && ((&DAT_1431ba800)[b] & a4) != 0) {
-      return (longlong)(src + i + 1);
-    }
-    code = (code | b) << 8;
-  }
-  return (longlong)(src + i);
-}
+longlong FUN_140053140(byte *a1,longlong a2,int a3,int a4);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400531e0
-cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4)
-{
-  cri_u32 result;
+cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4);
 
-  result = 0;
-  *a4 = 0;
-  if (FUN_140039180(a1,0,a4) != 1) {
-    return result;
-  }
-  result = (cri_u32)FUN_140069270((*(cri_u64*)((char*)(a1) + 0x8)),a2,a3);
-  return result;
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053260
-long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5)
-{
-  *a5 = 0;
-  FUN_140069480((*(cri_u64*)((char*)(a1) + 0x8)),a2,a3,a4);
-  return 1;
-}
+long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400532b0
-void FUN_1400532b0(void)
-{
-  _DAT_143c494e0 = cri_conv("\ncriAdec/PCx64 Ver.1.09 Build:Jan 20 2012 18:13:27\n");
-  return;
-}
+void FUN_1400532b0(void);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400532d0
-void FUN_1400532d0(void)
-{
-  return;
-}
+void FUN_1400532d0(void);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400532e0
-int FUN_1400532e0(int a1)
-{
-  int size;
-  int base;
-  int sjo;
-
-  size = 0;
-  base = 0x190;
-  size += base;
-  sjo = (int)((cri_u32)a1 * sizeof(cri_u64)) + 8;
-  size += sjo;
-  size += sizeof(cri_u8[0x44]);
-  return size;
-}
+int FUN_1400532e0(int a1);
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053340
-cri_u64 * FUN_140053340(cri_u64 a1,uint a2,cri_u32 a3)
-{
-  cri_u64 *adec;
-
-  adec = (cri_u64 *)criHeap_AllocFix((void *)a1,0x188,"CriAdec",0);
-  if (adec == NULL) {
-    return NULL;
-  }
-  memset(adec,0,0x188);
-  *adec = a1;
-  adec[4] = (cri_u64)criHeap_AllocFix((void *)a1,(int)(a2 * sizeof(cri_u64)),"CriAdecSjo",0);
-  if (adec[4] == 0) {
-    FUN_140053470(adec);
-    return NULL;
-  }
-  memset((void *)adec[4],0,a2 * sizeof(cri_u64));
-  (*(cri_u32*)((char*)(adec) + 0xc)) = 0;
-  (*(cri_u32*)((char*)(adec) + 0x168)) = a3;
-  if ((*(int*)((char*)(adec) + 0x168)) == 0) {
-    (*(cri_u32*)((char*)(adec) + 0x16c)) = 2;
-  }
-  else {
-    (*(cri_u32*)((char*)(adec) + 0x16c)) = 4;
-  }
-  FUN_140054040((longlong)adec,0,0);
-  return adec;
-}
+cri_u64 * FUN_140053340(cri_u64 a1,uint a2,cri_u32 a3);
 #pragma intrinsic(memset)
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053470
-void FUN_140053470(cri_u64 *a1)
-{
-  cri_u64 heap;
+void FUN_140053470(cri_u64 *a1);
 
-  if (a1 != NULL) {
-    heap = *a1;
-    if (a1[4] != 0) {
-      criHeap_Free((void *)heap,(void *)a1[4]);
-    }
-    criHeap_Free((void *)heap,a1);
-  }
-}
+void FUN_1400534d0(void* a1);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400534d0
-void FUN_1400534d0(void* a1)
-{
-  a1 = a1;
-}
+void FUN_1400534f0(longlong a1,cri_u64 a2);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400534f0
-void FUN_1400534f0(longlong a1,cri_u64 a2)
-{
-  (*(cri_u64*)((char*)(a1) + 0x18)) = a2;
-  return;
-}
+void FUN_140053510(longlong a1,uint a2,cri_u64 a3);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053510
-void FUN_140053510(longlong a1,uint a2,cri_u64 a3)
-{
-  *(cri_u64 *)((*(longlong*)((char*)(a1) + 0x20)) + (ulonglong)a2 * 8) = a3;
-  return;
-}
+void FUN_140053540(longlong a1);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053540
-void FUN_140053540(longlong a1)
-{
-  (*(cri_u8*)((char*)(a1) + 0x10)) = 1;
-  (*(cri_u32*)((char*)(a1) + 0xc)) = 0;
-  return;
-}
+void FUN_140053570(longlong a1);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053570
-void FUN_140053570(longlong a1)
-{
-  (*(cri_u8*)((char*)(a1) + 0x10)) = 0;
-  return;
-}
+void FUN_1400535b0(longlong a1,int *a2);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400535b0
-void FUN_1400535b0(longlong a1,int *a2)
-{
-  struct AdecFormat { cri_u8 Reserved00[5]; char Channels; cri_u8 Reserved06[2]; int SamplingRate; int Bits; };
-  AdecFormat *format;
+long FUN_140053630(void* a1);
 
-  format = (AdecFormat *)((char*)(a1) + 0x28);
-  *a2 = format->SamplingRate * (int)format->Channels * 0x12 / 32;
-  a2[4] = (*(int*)((char*)(a1) + 0x168));
-  a2[3] = format->Bits;
-  a2[1] = format->SamplingRate;
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053630
-long FUN_140053630(void* a1)
-{
-  return (*(cri_u8*)((char*)(a1) + 0x10));
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053650
-cri_u64 FUN_140053650(longlong a1)
-{
-  if ((*(int*)((char*)(a1) + 0xc)) == 1) {
-    if (FUN_1400467b8((*(void**)((char*)(a1) + 0x18)),1) == 0) {
-      (*(cri_u8*)((char*)(a1) + 0x10)) = 3;
-    }
-  }
-  if ((*(cri_u8*)((char*)(a1) + 0x10)) == 1) {
-    FUN_1400536d0(a1);
-  }
-  if ((*(cri_u8*)((char*)(a1) + 0x10)) == 2) {
-    FUN_140053880(a1);
-  }
-  return 0;
-}
+cri_u64 FUN_140053650(longlong a1);
 
 // The 0x74-byte ADX header at player+0x28 (layout from the stores in 0x140053e60).
 struct AdxHdr {
@@ -3968,244 +3745,22 @@ struct AdxHdr {
   cri_u8 Rest[0x74 - 0x3e];
 };
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400536d0
-void FUN_1400536d0(longlong a1)
-{
-  struct Chunk { const cri_u8* Data; unsigned long Size; };
-  struct UsfHdr { cri_u32 W0, W4, W8; cri_u8 Bc, Bd, Be, Flag; cri_u32 W10[5]; };   // CriUsfStandardHeader, 0x24 bytes
-  uint i;
-  AdxHdr* sj;
-  long len;
-  Chunk usfh;
-  void* data;
-  longlong hdr;
-  UsfHdr usf;
+void FUN_1400536d0(longlong a1);
 
-  data = *(void**)((char*)a1 + 0x18);
-  sj = (AdxHdr*)((char*)a1 + 0x28);
-  hdr = a1 + 0x9c;
-  FUN_1400467a0(data,1,0xffffffff,&usfh);
-  if (usfh.Size == 0) {
-    return;
-  }
-  // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
-  if (criUsfCmn_ParseUsfHeaderStd(usfh.Data,usfh.Size,(CriUsfStandardHeader*)&usf), usf.Flag != 0) {
-    FUN_1400467b0(data,0,&usfh);
-    return;
-  }
-  {
-  const cri_u8* contents = criUsfCmn_GetContents(usfh.Data,usfh.Size,&len);
-  FUN_14006a7f8((cri_u64)contents,len,a1 + 0x28);
-  FUN_140069e44(hdr);
-  FUN_140069e54(hdr,(int)(char)sj->Bytes[5]);
-  FUN_140069e5c(hdr,0,0,0);
-  FUN_140069ef4(hdr,(int)(short)sj->Hp,sj->Rate);
-  for (i = 0; i < (uint)(int)(char)sj->Bytes[5]; i = i + 1) {
-    FUN_140069e98(hdr,i,sj->HistA[i],sj->HistB[i]);
-  }
-  FUN_1400467b0(data,0,&usfh);
-  *(cri_u32*)((char*)a1 + 0x170) = 0;
-  *((cri_u8*)a1 + 0x10) = 2;
-  }
-}
+void FUN_140053880(longlong a1);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053880
-void FUN_140053880(longlong a1)
-{
-  struct Chunk { const cri_u8* Data; unsigned long Size; };
-  struct UsfHdr { cri_u32 W0, W4, W8; cri_u8 Bc, Bd, Be, Flag; cri_u32 W10[5]; };   // CriUsfStandardHeader, 0x24 bytes
-  typedef void (*ChunkCallback)(Chunk*, void*);
-  // cl 15 /Od places the locals by a hash of their names (ascending bucket, then the reverse of the declaration order
-  // within a bucket); these names and this declaration order give the exe's slots.
-  Chunk sfx;
-  Chunk pfx;
-  uint cutLen;
-  uint nchans;
-  uint samples;
-  UsfHdr hdrStd;
-  longlong ctx;
-  void* sj;
-  Chunk chunk;
-  const cri_u8* pdata;
-  void** chans;
-  uint nsamp;
-  Chunk bufs[8];
-  cri_u16 code;
-  long nLen;
-  uint room;
-  uint i;
-  int x;
-  longlong dst16A[8];
-  longlong dst32[8];
+void FUN_140053e40(longlong a1);
 
-  sj = *(void**)((char*)a1 + 0x18);
-  chans = *(void***)((char*)a1 + 0x20);
-  nchans = (int)*(char*)((char*)a1 + 0x2d);
-  ctx = a1 + 0x9c;
-  nsamp = 0;
-  FUN_1400467a0(sj,1,0xffffffff,&chunk);
-  if (chunk.Size == 0) {
-    return;
-  }
-  // One comma expression: cl then tests the flag in r11d, as the exe does (a separate statement uses eax).
-  if (criUsfCmn_ParseUsfHeaderStd(chunk.Data,chunk.Size,(CriUsfStandardHeader*)&hdrStd), hdrStd.Flag != 0) {
-    FUN_1400467b0(sj,0,&chunk);
-    return;
-  }
-  pdata = criUsfCmn_GetContents(chunk.Data,chunk.Size,&nLen);
-  code = (cri_u16)((pdata[0] << 8) | pdata[1]);
-  if (code == 0x8001) {
-    FUN_1400467b0(sj,0,&chunk);
-    *((cri_u8*)a1 + 0x10) = 1;
-    return;
-  }
-  samples = (uint)nLen / 0x12 / nchans * 0x20;
-  room = samples * *(uint*)((char*)a1 + 0x16c);
-  for (i = 0; i < nchans; i = i + 1) {
-    if ((uint)FUN_1400467b8(chans[i],0) < room) {
-      FUN_1400467a8(sj,1,&chunk);
-      return;
-    }
-  }
-  for (i = 0; i < nchans; i = i + 1) {
-    FUN_1400467a0(chans[i],0,room,&bufs[i]);
-    if (bufs[i].Size < room) {
-      FUN_1400467a8(chans[i],0,&bufs[i]);
-      FUN_1400467a8(sj,1,&chunk);
-      return;
-    }
-    dst16A[i] = (longlong)bufs[i].Data;
-    dst32[i] = (longlong)bufs[i].Data;
-    nsamp = bufs[i].Size / *(uint*)((char*)a1 + 0x16c);
-  }
-  if (*(ChunkCallback*)((char*)a1 + 0x178) != 0) {
-    (*(ChunkCallback*)((char*)a1 + 0x178))(&chunk,*(void**)((char*)a1 + 0x180));
-  }
-  if (*(int*)((char*)a1 + 0x168) == 0) {
-    samples = FUN_140069844(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst16A,nsamp);
-  }
-  else {
-    samples = FUN_140069ac4(ctx,nsamp,(byte*)pdata,nLen,&x,nchans,dst32,nsamp);
-  }
-  if (samples > (uint)(*(int*)((char*)a1 + 0x34) - *(int*)((char*)a1 + 0x170))) {
-    samples = *(int*)((char*)a1 + 0x34) - *(int*)((char*)a1 + 0x170);
-  }
-  *(uint*)((char*)a1 + 0x170) = *(int*)((char*)a1 + 0x170) + samples;
-  for (i = 0; i < nchans; i = i + 1) {
-    if (*(int*)((char*)a1 + 0x168) == 0) {
-      cutLen = (uint)(samples * sizeof(short));
-    }
-    else {
-      cutLen = (uint)(samples * sizeof(int));
-    }
-    criSj_SplitChunk(&bufs[i],cutLen,&pfx,&sfx);
-    FUN_1400467b0(chans[i],1,&pfx);
-    FUN_1400467a8(chans[i],0,&sfx);
-  }
-  FUN_1400467b0(sj,0,&chunk);
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053e40
-void FUN_140053e40(longlong a1)
-{
-  (*(cri_u32*)((char*)(a1) + 0xc)) = 1;
-  return;
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140053e60
-// Declared as sfr_cri_03 calls it: the exe passes the channel count as a 32-bit value and stores its low byte.
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-void FUN_140053e60(void* a1, unsigned long a2, unsigned long a3, unsigned long a4)
-{
-  int i;
-  AdxHdr* hdr;
-  longlong adx;
-
-  hdr = (AdxHdr*)((cri_u8*)a1 + 0x28);
-  adx = (longlong)a1 + 0x9c;
-  if (*((cri_u8*)a1 + 0x10) != 1) {
-    return;
-  }
-  memset(hdr,0,0x74);
-  hdr->Bytes[0] = 4;
-  hdr->Bytes[2] = 3;
-  hdr->Bytes[3] = 4;
-  hdr->Bytes[4] = 0x12;
-  hdr->Bytes[5] = (cri_u8)a2;
-  hdr->Rate = a3;
-  hdr->Samples = a4;
-  hdr->BlockBits = 0x20;
-  hdr->Hp = 500;
-  for (i = 0; i < (char)hdr->Bytes[5]; i = i + 1) {
-    hdr->HistA[i] = 0;
-    hdr->HistB[i] = 0;
-  }
-  hdr->Flag3c = 1;
-  FUN_140069e44(adx);
-  FUN_140069e54(adx,(int)(char)hdr->Bytes[5]);
-  FUN_140069e5c(adx,0,0,0);
-  FUN_140069ef4(adx,(int)(short)hdr->Hp,hdr->Rate);
-  for (i = 0; i < (char)hdr->Bytes[5]; i = i + 1) {
-    FUN_140069e98(adx,i,hdr->HistA[i],hdr->HistB[i]);
-  }
-  *(cri_u32*)((char*)a1 + 0x170) = 0;
-  *((cri_u8*)a1 + 0x10) = 2;
-}
+void FUN_140053e60(void* a1, unsigned long a2, unsigned long a3, unsigned long a4);
 #pragma intrinsic(memset)
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140054040
-void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3)
-{
-  (*(cri_u64*)((char*)(a1) + 0x178)) = a2;
-  (*(cri_u64*)((char*)(a1) + 0x180)) = a3;
-  return;
-}
+void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x140054080
-void FUN_140054080(void)
-{
-  FUN_14006aa90();
-  FUN_140066320();
-  FUN_140066180(&DAT_143fe82e0);
-  FUN_1400659a0(&DAT_1431ba950,&DAT_143fe8420);
-  FUN_1400659a0(&DAT_1431ba990,&DAT_143fe83e0);
-  return;
-}
+void FUN_140054080(void);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
-// @0x1400540d0
-void FUN_1400540d0(void)
-{
-  return;
-}
+void FUN_1400540d0(void);
 
-// The DC rounding callback FUN_140054250 stores in the decoder (sfr_cri_06 keeps it as LAB_140054100; Ghidra made
-// no function here): when rounding is on, each enabled block's DC coefficient is divided by 8, rounded half away from 0.
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
-// @0x140054100
-void FUN_140054100(char *ctx)
-{
-  if (CriAt<int>(ctx, 0xd44) == 0) {
-    return;
-  }
-  for (int i = 0; i < 6; i++) {
-    if ((CriAt<cri_u32>(ctx, 0x71c) & (1u << i)) != 0) {
-      short *p = &CriAt<short>(ctx, 0x780 + i * 0x80);
-      int c = *p;
-      if (c >= 0) {
-        *p = (short)((c + 4) / 8);
-      }
-      else {
-        *p = (short)-((4 - c) / 8);
-      }
-    }
-  }
-}
+void FUN_140054100(char *ctx);
 
