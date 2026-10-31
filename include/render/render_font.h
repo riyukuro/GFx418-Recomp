@@ -59,6 +59,9 @@ public:
         FF_Style_Mask      = FF_Italic | FF_Bold,
         FF_DeviceFont      = 0x0010,
         FF_CodePage_Mask   = 0x0300,
+        FF_CodePage_Unicode = 0x0000,
+        FF_CodePage_Ansi   = 0x0100,
+        FF_CodePage_ShiftJis = 0x0200,
         FF_CreateFont_Mask = FF_Style_Mask | FF_CodePage_Mask,
         FF_NotResolved     = 0x0040, // a placeholder the font manager resolves through the font library / provider
         FF_HasLayout       = 0x2000,
@@ -113,6 +116,11 @@ public:
     bool     IsDeviceFont() const  { return (Flags & FF_DeviceFont) != 0; }
     bool     IsPixelAligned() const { return (Flags & FF_PixelAligned) != 0; }
     bool     AreWideCodes() const  { return (Flags & FF_WideCodes) != 0; }
+    FontFlags GetCodePage() const  { return (FontFlags)(Flags & FF_CodePage_Mask); }
+    void     SetItalic(bool v = true)        { (v) ? Flags |= FF_Italic : Flags &= ~FF_Italic; }
+    void     SetBold(bool v = true)          { (v) ? Flags |= FF_Bold : Flags &= ~FF_Bold; }
+    void     SetCodePage(FontFlags codePage) { Flags = (Flags & ~FF_CodePage_Mask) | (codePage & FF_CodePage_Mask); }
+    void     SetWideCodes(bool v = true)     { (v) ? Flags |= FF_WideCodes : Flags &= ~FF_WideCodes; }
     void     SetNotResolvedFlag()  { Flags |= FF_NotResolved; }
     bool     IsResolved() const    { return (Flags & FF_NotResolved) == 0; }
 

@@ -458,41 +458,49 @@ void FontData::ReadFontInfo(Stream* in, TagType tagType)
     if (Name)
     {
         SF_FREE(Name);
-        Name = 0;
+        Name = NULL;
     }
+
     Name = in->ReadStringWithLength(in->GetHeap());
 
-    UByte flags    = in->ReadU8();
-    UByte langCode = 0;
-    if (tagType == 0x3e) // DefineFontInfo2
-        langCode = in->ReadU8();
+    UByte flags = in->ReadU8();
 
-    Flags &= ~0x300u;
-    if (flags & 0x10)
-        Flags |= 0x200; // Shift-JIS
-    else if (flags & 0x8)
-        Flags |= 0x100; // ANSI
-    if (flags & 0x4)
-        Flags |= 0x1;
-    else
-        Flags &= ~0x1u;
-    if (flags & 0x2)
-        Flags |= 0x2;
-    else
-        Flags &= ~0x2u;
-    if (flags & 0x1)
-        Flags |= 0x4000;
-    else
-        Flags &= ~0x4000u;
+    UByte langCode = 0;
+    if (tagType == 0x3e) // Tag_DefineFontInfo2
+    {
+        langCode = in->ReadU8(); // Language code
+        langCode = langCode; // suppress warning
+    }
+
+    bool pixelAlignedChars  =  ((flags & 0x20) != 0);
+    bool shiftJisFlag        = ((flags & 0x10) != 0);
+    bool ansiFlag            = ((flags & 0x08) != 0);
+
+    if (shiftJisFlag)  SetCodePage(FF_CodePage_ShiftJis);
+    else if (ansiFlag) SetCodePage(FF_CodePage_Ansi);
+    else               SetCodePage(FF_CodePage_Unicode);
+    SF_UNUSED(pixelAlignedChars);
+
+    SetItalic       ((flags & 0x04) != 0);
+    SetBold         ((flags & 0x02) != 0);
+    SetWideCodes    ((flags & 0x01) != 0);
 
     if (in->IsVerboseParse())
     {
-        in->LogParse(tagType == 0xd ? "reading DefineFontInfo\n" : "reading DefineFontInfo2\n");
+        if (tagType == 0xd) // Tag_DefineFontInfo
+            in->LogParse("reading DefineFontInfo\n");
+        else
+            in->LogParse("reading DefineFontInfo2\n");
         in->LogParse("  Name = %s\n", Name ? Name : "(none)");
-        unsigned codePage = Flags & 0x300;
+
+        const char* pcodePage = "Unicode";
+        if (GetCodePage() == FF_CodePage_ShiftJis)
+            pcodePage = "ShiftJIS";
+        else if (GetCodePage() == FF_CodePage_Ansi)
+            pcodePage = "ANSI";
+
         in->LogParse("  CodePage = %s, Italic = %d, Bold = %d\n",
-                     codePage == 0x200 ? "ShiftJIS" : (codePage == 0x100 ? "ANSI" : "Unicode"), Flags & 1,
-                     (Flags >> 1) & 1);
+            pcodePage, IsItalic(), IsBold());
         if (tagType == 0x3e)
             in->LogParse("  LangCode = %d\n", langCode);
     }
