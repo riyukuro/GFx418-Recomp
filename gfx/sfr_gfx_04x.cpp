@@ -37,6 +37,7 @@
 // MS2-PIN: ??_7TextureGlyphData@GFx@Scaleform@@6B@ 0x14318a2c8
 // MS2-PIN: ??_7ExecuteTag@GFx@Scaleform@@6B@ 0x14313ba68
 
+#define MS2_SF_STRING_SDK_GETDATA            // String::GetData in the SDK union form (register allocation)
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/gfx_log.h"

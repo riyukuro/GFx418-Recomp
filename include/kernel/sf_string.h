@@ -164,7 +164,20 @@ public:
     static UPInt SF_STDCALL BernsteinHashFunctionCIS(const void* pdata, UPInt size, UPInt seed = 5381);
 
 private:
+#ifdef MS2_SF_STRING_SDK_GETDATA
+    // The SDK's union form. It changes register allocation where the String pointer is reloaded, so a unit whose
+    // exe bodies match it defines MS2_SF_STRING_SDK_GETDATA (sfr_gfx_04 and others).
+    typedef union { DataDesc* pData; UPInt HeapTypeBits; } DataDescUnion;
+    DataDesc* GetData() const
+    {
+        DataDescUnion u;
+        u.pData        = pData;
+        u.HeapTypeBits = (u.HeapTypeBits & ~(UPInt)HeapTypeMask);
+        return u.pData;
+    }
+#else
     DataDesc* GetData() const { return (DataDesc*)((UPInt)pData & ~(UPInt)HeapTypeMask); }
+#endif
 
     DataDesc* pData; // low bits carry the heap type
 

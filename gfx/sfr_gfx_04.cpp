@@ -50,6 +50,7 @@
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@I$01@2@V?$HashsetCachedNodeEntry@U?$StringLH_HashNode@IUNoCaseHashFunctor@String@Scaleform@@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425d48c0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@UFrameLabelInfo@MovieDataDef@GFx@Scaleform@@U?$AllocatorDH@UFrameLabelInfo@MovieDataDef@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1425d2560
 
+#define MS2_SF_STRING_SDK_GETDATA            // String::GetData in the SDK union form (register allocation)
 #include "../include/gfx/gfx_buttondef.h"
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_moviedef.h"

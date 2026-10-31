@@ -7,6 +7,7 @@
 //
 // The range stops before 0x1425ae790 (an AS2 StackMemPool placement new that the linker put here).
 
+#define MS2_SF_STRING_SDK_GETDATA            // String::GetData in the SDK union form (register allocation)
 #include "../include/gfx/gfx_fontlib.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 

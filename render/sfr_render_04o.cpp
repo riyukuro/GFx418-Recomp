@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x142647290-0x1426499b0 .text$mn
 // MS2-RANGE: 0x14264ba40-0x14264cb80 .text$mn
 
+#define MS2_SF_STRING_SDK_GETDATA            // String::GetData in the SDK union form (register allocation)
 #include "ms2/scaleform/include/render/render_fontprovider.h"
 #include "ms2/scaleform/include/render/render_glyphshape.h"
 #include "ms2/scaleform/kernel/sf_std.h"
