@@ -224,6 +224,9 @@
 // prototype table of GlobalContext here). Defined in sfr_video_01.
 void FUN_14000c280(void* owner, unsigned key, void** value);
 
+// The text field's style data (exe 0x1425b7e60).
+Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
+
 namespace Scaleform { namespace GFx {
 
 class FunctionHandler;
@@ -496,13 +499,14 @@ void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, un
     entry->FunctionParams = params;
 }
 
-// MS2-FUNCTIONAL: follows the exe's this adjustment and TextField style-sheet pointer tests at +0x108/+0x40.
+// Whether the text field (0x10 bytes before self) has a style data with a style sheet (+0x40).
 // @0x14295dbb0
 bool AvmTextFieldBase_HasStyleSheet(const void* self)
 {
-    const unsigned char* textField = static_cast<const unsigned char*>(self) - 0x10;
-    const void* styleData = *reinterpret_cast<void* const*>(textField + 0x108);
-    return styleData && *reinterpret_cast<void* const*>(static_cast<const unsigned char*>(styleData) + 0x40);
+    UPInt styleData = ::FUN_1425b7e60(*reinterpret_cast<const UPInt*>(static_cast<const UByte*>(self) - 0x10));
+    if (styleData && *reinterpret_cast<void* const*>(styleData + 0x40))
+        return true;
+    return false;
 }
 
 struct AvmSwfEvent
