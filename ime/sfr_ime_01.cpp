@@ -272,7 +272,6 @@ GFxIMEManagerWin32::GFxIMEManagerWin32(::HWND__* window)
 #endif
 }
 
-// MS2-FUNCTIONAL: the children at +0x70 and +0x78 are released through their vtable slot 0 (deleting dtor, flag 1).
 // @0x1423c8ac0
 GFxIMEManagerWin32::~GFxIMEManagerWin32()
 {
@@ -798,7 +797,7 @@ unsigned char FUN_1423cf570(void*, void* rawMovie)
 // @0x1423cf3e0
 unsigned long long FUN_1423cf3e0(void* self)
 {
-    HWND hwnd = *reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28);
+#define hwnd (*reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28))
     bool alreadyAssociated = true;
     HIMC context = cx18_ImmGetContext(hwnd);
     if (!context) {
@@ -807,10 +806,11 @@ unsigned long long FUN_1423cf3e0(void* self)
         context = cx18_ImmGetContext(hwnd);
         if (!context) return static_cast<unsigned long long>(cx18_ImmReleaseContext(hwnd, nullptr)) & ~0xffull;
     }
-    const BOOL open = ImmGetOpenStatus(context);
+    const bool open = ImmGetOpenStatus(context) != 0;
     if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
     cx18_ImmReleaseContext(hwnd, context);
-    return open != 0;
+#undef hwnd
+    return open;
 }
 
 // MS2-FUNCTIONAL: maps the active Windows keyboard layout to the IME display labels observed in the executable.
@@ -1150,7 +1150,6 @@ void* FUN_1423ce420(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: stores the abstract vptr, frees the member array, then runs the common IME base teardown.
 // @0x1423d1b50
 void FUN_1423d1b50(unsigned long long* object)
 {
@@ -1173,7 +1172,6 @@ void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes all non-vtable fields at the offsets observed in the executable constructor.
 // @0x1423da250
 void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
 {
@@ -1203,7 +1201,6 @@ void* FUN_1423da2c0(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: hash-table capacity growth threshold and requested capacities follow the executable; table allocation helper is exe-bound.
 // @0x1423d8d10
 void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
 {
@@ -1212,7 +1209,7 @@ void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
         FUN_1423d9090(table, reinterpret_cast<void*>(key), 8);
         return;
     }
-    if (data[1] * 4 + 4 < data[0] * 5)
+    if (data[0] * 5 > (data[1] + 1) * 4)
         FUN_1423d9090(table, reinterpret_cast<void*>(key), data[1] * 2 + 2);
 }
 
@@ -1226,7 +1223,6 @@ void* FUN_1423dbba0(Scaleform::GFx::AS3::DoAbc* self, unsigned flags)
     return self;
 }
 
-// MS2-FUNCTIONAL: constructs and assigns the executable-observed String member at +0x18; this anonymous base has no local class declaration.
 // @0x1423cdb60
 void* FUN_1423cdb60(unsigned long long* object, const char* text)
 {
@@ -1344,7 +1340,6 @@ __declspec(noinline) void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned 
     ConstructorMov<Scaleform::GFx::Value>::DestructArray(values, count);
 }
 
-// MS2-FUNCTIONAL: forwards the recovered formatting arguments through the executable's Log vtable slot.
 // @0x1423cd060
 void FUN_1423cd060(void* log, const char* format, ...)
 {
@@ -1360,9 +1355,9 @@ void FUN_1423cd060(void* log, const char* format, ...)
 // @0x1423db7f0
 void* FUN_1423db7f0(unsigned long long* object)
 {
-    object[0] = reinterpret_cast<unsigned long long>(DAT_14313bc60);
-    object[1] = 1;
     *reinterpret_cast<unsigned*>(object + 2) = 0x23;
+    new (object) Scaleform::RefCountImplCore;
+    object[0] = reinterpret_cast<unsigned long long>(DAT_14313bc60);
     Scaleform::GFx::RegisterTagLoader(0x4c, Scaleform::GFx::AS3::SymbolClassLoader);
     Scaleform::GFx::RegisterTagLoader(0x52, Scaleform::GFx::AS3::DoAbcLoader);
     return object;
@@ -1549,7 +1544,7 @@ void* FUN_1423dbcb0(unsigned long long* object, unsigned flags)
 }
 
 // @0x1423db000
-void FUN_1423db000(unsigned long long* object)
+__declspec(noinline) void FUN_1423db000(unsigned long long* object)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(object);
     if (*reinterpret_cast<DWORD*>(bytes + 0x1c) != 0xffffffff) {
@@ -1565,7 +1560,7 @@ void FUN_1423db000(unsigned long long* object)
 }
 
 // @0x1423db060
-void FUN_1423db060(unsigned long long* object)
+__declspec(noinline) void FUN_1423db060(unsigned long long* object)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(object);
     if (*reinterpret_cast<DWORD*>(bytes + 0x18) != 0xffffffff) {
@@ -1685,7 +1680,7 @@ struct ImeSinkOwnerView {
     unsigned char pad0[0x28]; Unknown* first; unsigned char pad30[0x10]; Unknown* second;
 };
 // @0x1423daef0
-void FUN_1423daef0(void* self)
+__declspec(noinline) void FUN_1423daef0(void* self)
 {
     auto* view = static_cast<ImeSinkOwnerView*>(self);
     if (view->first) view->first->Release();
@@ -1695,7 +1690,6 @@ void FUN_1423daef0(void* self)
     }
 }
 
-// MS2-FUNCTIONAL: tears down the event source, retained strings, and helper-owned state in executable order.
 // @0x1423cdee0
 void FUN_1423cdee0(unsigned long long* object)
 {
@@ -1708,7 +1702,6 @@ void FUN_1423cdee0(unsigned long long* object)
         reinterpret_cast<void(*)(void*)>(vtable[2])(reinterpret_cast<void*>(object[0x19]));
     }
     FUN_1423ca920(nullptr, &object[0x16]);
-    object[0x16] = 0;
     FUN_1423cdf60(object);
 }
 
@@ -1743,7 +1736,6 @@ void* FUN_1423ce160(unsigned long long* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the recovered IME interface destructor before scalar or sized deletion.
 // @0x1423ce2f0
 void* FUN_1423ce2f0(unsigned long long* object, unsigned flags)
 {
@@ -1841,7 +1833,6 @@ extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long lon
 
 __declspec(noinline) void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count);
 
-// MS2-FUNCTIONAL: resizes the executable's Value array, destructing removed entries before changing its capacity.
 // @0x1423d9730
 extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
 {
@@ -2213,7 +2204,6 @@ HRESULT FUN_1423dadd0(long long* object, const unsigned long long* iid, void** o
     return S_OK;
 }
 
-// MS2-FUNCTIONAL: emits the executable's four-part IME command log message when the state bag has a logger.
 // @0x1423ccfc0
 void FUN_1423ccfc0(void*, long long owner, const char* command, const char* value)
 {
@@ -2413,7 +2403,6 @@ __declspec(noinline) void FUN_1423d94f0(void*, void*);
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
 
 // MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
-// MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; the guard and calls follow the exe.
 // @0x1423d4690
 void FUN_1423d4690(void* self)
 {
@@ -2493,7 +2482,6 @@ void FUN_1423d1c90(void** self)
     }
 }
 
-// MS2-FUNCTIONAL: State destruction follows our shared class declaration; runtime heap release helper is recovered.
 // @0x1423db9d0
 void* FUN_1423db9d0(Scaleform::GFx::State* self, unsigned flags)
 {
@@ -3263,6 +3251,8 @@ void* FUN_1423dbb60(void* object, unsigned flags)
     return object;
 }
 
+__declspec(noinline) void FUN_1423cdda0(void** table);
+
 // MS2-FUNCTIONAL: releases the manager's shared values, command hash, and packed strings using the observed field offsets.
 // @0x1423cdf60
 void FUN_1423cdf60(unsigned long long* self)
@@ -3278,11 +3268,7 @@ void FUN_1423cdf60(unsigned long long* self)
     }
     FUN_1423ca920(nullptr, &self[0xf]);
     Scaleform::Memory::Free(reinterpret_cast<void*>(self[8]));
-    using Node = Scaleform::HashNode<int, Scaleform::StringDataPtr, Scaleform::FixedSizeHash<int>>;
-    using Entry = Scaleform::HashsetCachedNodeEntry<Node, typename Node::NodeHashF>;
-    using Table = Scaleform::HashSetBase<Node, typename Node::NodeHashF, typename Node::NodeAltHashF,
-        Scaleform::AllocatorGH<int, 2>, Entry>;
-    reinterpret_cast<Table*>(self + 7)->Clear();
+    FUN_1423cdda0(reinterpret_cast<void**>(self + 7));
     FUN_1423ca920(nullptr, &self[4]);
     FUN_1423ca920(nullptr, &self[3]);
     FUN_1423ca920(nullptr, &self[2]);
