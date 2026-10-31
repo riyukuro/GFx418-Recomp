@@ -1196,15 +1196,16 @@ CriSint32 FUN_14002e9e0(void)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: the CRI Movie sub-audio helper forwards the caller's sizing inputs with flags set to zero.
+// register the next output stream buffer with the demuxer, logging an error past the capacity
 // @0x1400345e0
 void FUN_1400345e0(void* player, void* value, CriUint32 type, CriUint32 flags)
 {
-    CriMovieOutputLogView* state = (CriMovieOutputLogView*)player;
-    if (state->Count >= state->Capacity)
-        FUN_140037910(player, "E05063025M : Can't entry output sj to demux more than limit.", state->Count);
-    FUN_140044fb0(state->Output, state->Count, value, type, flags);
-    ++state->Count;
+    void* output = ((CriMovieOutputLogView*)player)->Output;
+    CriUint32 count = ((CriMovieOutputLogView*)player)->Count;
+    if (count >= ((CriMovieOutputLogView*)player)->Capacity)
+        FUN_140037910(player, "E05063025M : Can't entry output sj to demux more than limit.", count);
+    FUN_140044fb0(output, count, value, type, flags);
+    ((CriMovieOutputLogView*)player)->Count++;
 }
 
 // MS2-FUNCTIONAL: detect terminal decoder errors and report them through the player error logger.
@@ -3135,25 +3136,24 @@ void FUN_140032a70(void* player, void* workInfo, CriUint32* output, const CriMov
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: parse channel and time-base metadata for a CRI Movie stream record.
+// parse channel and time-base metadata for a CRI Movie stream record.
 // @0x140032b70
 void FUN_140032b70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
     output[1] = FUN_14003a85c(document, 0, "num_channels");
-    CriUint32 timeUnit = FUN_14003a85c(document, 0, "time_unit");
-    ((CriUint64*)output)[1] = timeUnit;
+    ((CriUint64*)output)[1] = FUN_14003a85c(document, 0, "time_unit");
     output[4] = 0x400;
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
-    if (((WorkSizeView*)workInfo)->Size < suggestedSize)
-        ((WorkSizeView*)workInfo)->Size = suggestedSize;
-    if (output[1] != 0 && ((CriUint64*)output)[1] != 0 && output[4] != 0)
+    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    if (ixsize > ((WorkSizeView*)workInfo)->Size)
+        ((WorkSizeView*)workInfo)->Size = ixsize;
+    if (output[1] > 0 && ((CriUint64*)output)[1] > 0 && output[4] > 0)
         output[0] = 1;
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: parse the cue metadata header and raise the required working-buffer size.
+// parse the cue metadata header and raise the required working-buffer size.
 // @0x140032c70
 void FUN_140032c70(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
@@ -3162,33 +3162,34 @@ void FUN_140032c70(void* player, void* workInfo, CriUint32* output, const CriMov
     output[1] = FUN_14003a85c(document, 0, "metadata_count");
     output[2] = FUN_14003a85c(document, 0, "metadata_size");
     output[3] = FUN_14003a85c(document, 0, "total_points");
-    CriUint32 timeUnit = FUN_14003a85c(document, 0, "time_unit");
-    ((CriUint64*)output)[2] = timeUnit;
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
-    if (((WorkSizeView*)workInfo)->Size < suggestedSize)
-        ((WorkSizeView*)workInfo)->Size = suggestedSize;
-    if (output[1] == 1 && output[2] != 0 && output[3] != 0 && ((CriUint64*)output)[2] != 0)
+    ((CriUint64*)output)[2] = FUN_14003a85c(document, 0, "time_unit");
+    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    if (ixsize > ((WorkSizeView*)workInfo)->Size)
+        ((WorkSizeView*)workInfo)->Size = ixsize;
+    if (output[1] == 1 && output[2] > 0 && output[3] > 0 && ((CriUint64*)output)[2] > 0)
         output[0] = 1;
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: parse video dimensions, timing, codec, alpha, and metadata information.
+// parse video dimensions, timing, codec, alpha, and metadata information.
 // @0x140032db0
 void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    CriUint32 rateNumerator = FUN_14003a85c(document, 0, "framerate_n");
-    CriUint32 rateDenominator = FUN_14003a85c(document, 0, "framerate_d");
-    output[4] = (CriUint32)(((float)rateNumerator * 1000.0f) / (float)rateDenominator);
+    CriUint32 rateNum = FUN_14003a85c(document, 0, "framerate_n");
+    CriUint32 rateDenom = FUN_14003a85c(document, 0, "framerate_d");
+    output[4] = (CriUint32)(((float)rateNum * 1000.0f) / (float)rateDenom);
     output[5] = FUN_14003a85c(document, 0, "total_frames");
     output[0] = FUN_14003a85c(document, 0, "width");
     output[1] = FUN_14003a85c(document, 0, "height");
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, "ixsize");
-    if (((WorkSizeView*)workInfo)->Size < suggestedSize)
-        ((WorkSizeView*)workInfo)->Size = suggestedSize;
-    output[10] = FUN_14003a3e0(document, "pre_padding") < 1
-        ? 0x40 : FUN_14003a85c(document, 0, "pre_padding");
+    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    if (ixsize > ((WorkSizeView*)workInfo)->Size)
+        ((WorkSizeView*)workInfo)->Size = ixsize;
+    if (FUN_14003a3e0(document, "pre_padding") > 0)
+        output[10] = FUN_14003a85c(document, 0, "pre_padding\0");   // the exe obj has its own copy of the literal
+    else
+        output[10] = 0x40;
     output[6] = FUN_14003a85c(document, 0, "alpha_type");
     output[7] = FUN_14003a85c(document, 0, "mpeg_codec");
     output[8] = FUN_14003a85c(document, 0, "metadata_count");
@@ -3566,19 +3567,19 @@ static const CriChar8* s_apszVideoHeaderColumns[16][2] = {
 };
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: parse MPEG and legacy video metadata fields into the stream record.
+// parse MPEG and legacy video metadata fields into the stream record.
 // @0x140032650
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
     CriUint32 nLayout;
-    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][0]) >= 1)
+    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][0]) > 0)
     {
         output[9] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[0][0]);
         nLayout = 0;
     }
-    else if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][1]) >= 1)
+    else if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][1]) > 0)
     {
         output[9] = 3;
         nLayout = 1;
@@ -3589,17 +3590,19 @@ void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMov
         nLayout = 0;
     }
 
-    CriUint32 numerator = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[1][nLayout]);
-    CriUint32 denominator = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[2][nLayout]);
-    output[4] = (CriUint32)(((float)numerator * 1000.0f) / (float)denominator);
+    CriUint32 fpsNum = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[1][nLayout]);
+    CriUint32 fpsDenom = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[2][nLayout]);
+    output[4] = (CriUint32)(((float)fpsNum * 1000.0f) / (float)fpsDenom);
     output[5] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[3][nLayout]);
     output[0] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[4][nLayout]);
     output[1] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[5][nLayout]);
-    CriUint32 suggestedSize = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[6][nLayout]);
-    if (((WorkSizeView*)workInfo)->Size < suggestedSize)
-        ((WorkSizeView*)workInfo)->Size = suggestedSize;
-    output[13] = FUN_14003a3e0(document, s_apszVideoHeaderColumns[7][nLayout]) < 1
-        ? 0x40 : FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[7][nLayout]);
+    CriUint32 ixsize = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[6][nLayout]);
+    if (ixsize > ((WorkSizeView*)workInfo)->Size)
+        ((WorkSizeView*)workInfo)->Size = ixsize;
+    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[7][nLayout]) > 0)
+        output[13] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[7][nLayout]);
+    else
+        output[13] = 0x40;
     output[6] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[8][nLayout]);
     if (output[6] == 0)
         output[6] = output[0];
@@ -4696,45 +4699,48 @@ void FUN_140030c70(void* player)
     FUN_140037880(player);
 }
 
-// MS2-FUNCTIONAL: release every CRI Movie player subsystem and clear its owned state.
+// MS2-FUNCTIONAL: release every CRI Movie player subsystem and clear its owned state; the exe reloads player into r11
+// for the compare after memset, which only C (vc9c) emits
 // @0x140030cb0
 void FUN_140030cb0(void* player)
 {
-    void** fields = (void**)player;
-    void* heap = fields[0xdf0 / sizeof(void*)];
-    if (fields[0xe28 / sizeof(void*)])
+    void* heap = *(void**)((CriUint8*)player + 0xdf0);
+    if (*(void**)((CriUint8*)player + 0xe28))
     {
-        FUN_140046784(fields[0xe28 / sizeof(void*)]);
-        fields[0xe28 / sizeof(void*)] = 0;
+        FUN_140046784(*(void**)((CriUint8*)player + 0xe28));
+        *(void**)((CriUint8*)player + 0xe28) = 0;
     }
-    if (fields[0xe10 / sizeof(void*)])
+    if (*(void**)((CriUint8*)player + 0xe10))
     {
-        FUN_1400420b0(fields[0xe10 / sizeof(void*)], heap);
-        fields[0xe10 / sizeof(void*)] = 0;
+        FUN_1400420b0(*(void**)((CriUint8*)player + 0xe10), heap);
+        *(void**)((CriUint8*)player + 0xe10) = 0;
     }
-    if (fields[0xe40 / sizeof(void*)])
+    if (*(void**)((CriUint8*)player + 0xe40))
     {
-        FUN_140043be0(fields[0xe40 / sizeof(void*)]);
-        fields[0xe40 / sizeof(void*)] = 0;
+        FUN_140043be0(*(void**)((CriUint8*)player + 0xe40));
+        *(void**)((CriUint8*)player + 0xe40) = 0;
     }
-    if (fields[0xe08 / sizeof(void*)])
+    if (*(void**)((CriUint8*)player + 0xe08))
     {
-        FUN_140044560((CriUint64*)fields[0xe08 / sizeof(void*)]);
-        fields[0xe08 / sizeof(void*)] = 0;
+        FUN_140044560(*(CriUint64**)((CriUint8*)player + 0xe08));
+        *(void**)((CriUint8*)player + 0xe08) = 0;
     }
-    if (fields[0xd88 / sizeof(void*)])
+    void* handle = *(void**)((CriUint8*)player + 0xd88);
+    if (handle)
     {
-        FUN_140046784(fields[0xd88 / sizeof(void*)]);
-        memset(((CriUint8*)player) + 0xdf8, 0, 8);
-        fields[0xd88 / sizeof(void*)] = 0;
+        FUN_140046784(handle);
+        *(CriUint32*)((CriUint8*)player + 0xdf8) = 0;
+        *(CriUint32*)((CriUint8*)player + 0xdfc) = 0;
+        *(void**)((CriUint8*)player + 0xd88) = 0;
     }
-    memset(((CriUint8*)player) + 0xad8, 0, 0x288);
-    if (fields[0xee0 / sizeof(void*)])
+    CriUint8* dst = (CriUint8*)player + 0xad8;
+    memset(dst, 0, 0x288);
+    if (*(void**)((CriUint8*)player + 0xee0))
     {
-        FUN_140028074(fields[0xee0 / sizeof(void*)]);
-        fields[0xee0 / sizeof(void*)] = 0;
+        FUN_140028074(*(void**)((CriUint8*)player + 0xee0));
+        *(void**)((CriUint8*)player + 0xee0) = 0;
     }
-    memset(((CriUint8*)player) + 0xad4, 0, 4);
+    *(CriUint32*)((CriUint8*)player + 0xad4) = 0;
 }
 #pragma optimize("", on)
 
