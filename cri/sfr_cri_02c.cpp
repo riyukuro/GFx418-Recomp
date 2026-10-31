@@ -4927,19 +4927,22 @@ void CriMvEasyFileReaderMem::Close(void)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: copy up to the remaining file size and publish the byte count as the read result.
+#pragma function(memcpy)                        // this row calls memcpy; the small copies elsewhere stay inline
+// copy up to the remaining file size and publish the byte count as the read result.
 // @0x140038810
 void CriMvEasyFileReaderMem::Read(CriUint8* buffer, CriSint64 req_size)
 {
+    CriUint8* source;
     ReadState = ASYNC_STATUS_BUSY;
-    CriUint64 count = (CriUint64)req_size;
-    if (FileSize < Position + (CriSint64)count)
-        count = (CriUint64)(FileSize - Position);
-    memcpy(buffer, Data + Position, (size_t)count);
-    ReadSize = count;
-    Position += (CriSint64)count;
+    if (Position + req_size > FileSize)
+        req_size = FileSize - Position;
+    source = Data + Position;
+    memcpy(buffer, source, (size_t)req_size);
+    ReadSize = req_size;
+    Position = Position + req_size;
     ReadState = ASYNC_STATUS_COMPLETE;
 }
+#pragma intrinsic(memcpy)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
