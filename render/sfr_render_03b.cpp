@@ -1615,6 +1615,20 @@ float ParagraphFormatter::GetActualFontSize()
     return fontSize;
 }
 
+// the SDK ParagraphFormat::IsRightAlignment / IsCenterAlignment
+static inline bool IsRightAlignment(const ParagraphFormat* pf)
+{
+    return pf->IsAlignmentSet() && pf->GetAlignment() == ParagraphFormat::Align_Right;
+}
+static inline bool IsCenterAlignment(const ParagraphFormat* pf)
+{
+    return pf->IsAlignmentSet() && pf->GetAlignment() == ParagraphFormat::Align_Center;
+}
+static inline bool IsJustifyAlignment(const ParagraphFormat* pf)
+{
+    return pf->IsAlignmentSet() && pf->GetAlignment() == ParagraphFormat::Align_Justify;
+}
+
 // Copies the temporary line into a real one (Line8 when everything fits its narrow fields), justifies it,
 // places it and starts the next one.
 // @0x14260ebb0
@@ -1630,9 +1644,7 @@ void ParagraphFormatter::FinalizeLine()
     else
         LineCursor.LineWidth += lastAdvance;
 
-    // the exe tests IsAlignmentSet() first in both checks (0x14260ec64 and r9b,1; 0x14260ef28 test byte [rax+0x1a],1)
-    if (pParaFormat->IsAlignmentSet() && pParaFormat->GetAlignment() == ParagraphFormat::Align_Right ||
-        pParaFormat->IsAlignmentSet() && pParaFormat->GetAlignment() == ParagraphFormat::Align_Center)
+    if (IsRightAlignment(pParaFormat) || IsCenterAlignment(pParaFormat))
     {
         LineCursor.LineWidth += LineCursor.RightMargin;
         LineCursor.LineWidthWithoutTrailingSpaces += LineCursor.RightMargin;
@@ -1667,15 +1679,15 @@ void ParagraphFormatter::FinalizeLine()
 
     // justify: spread the free width over the inner spaces (not the last line of a paragraph)
     if (!LineCursor.LineHasNewLine && pDocView->IsWordWrap() &&
-        LineCursor.NumOfSpaces - LineCursor.NumOfTrailingSpaces > 0 && pParaFormat->IsAlignmentSet() &&
-        pParaFormat->GetAlignment() == ParagraphFormat::Align_Justify)
+        LineCursor.NumOfSpaces - LineCursor.NumOfTrailingSpaces > 0 && IsJustifyAlignment(pParaFormat))
     {
         int deltaW = (int(TextRectWidth - GFX_TEXT_JUSTIFY_CORRECTION) - LineCursor.RightMargin) -
                      (LineCursor.LineWidthWithoutTrailingSpaces + LineCursor.Indent + LineCursor.LeftMargin);
         if (deltaW > 0)
         {
             int perSpace = deltaW / (LineCursor.NumOfSpaces - LineCursor.NumOfTrailingSpaces);
-            for (LineBuffer::GlyphIterator git = pline->Begin(); !git.IsFinished(); ++git)
+            LineBuffer::GlyphIterator git = pline->Begin();
+            for (; !git.IsFinished(); ++git)
             {
                 LineBuffer::GlyphEntry& ge = git.GetGlyph();
                 if (ge.IsSpaceChar())

@@ -254,6 +254,7 @@ public:
 
         static unsigned GetLineStructSize() { return 0x26; }
         unsigned GetTextPos() const    { return TextPos; }
+        void     SetTextPos(unsigned tp) { TextPos = tp; }
         unsigned GetTextLength() const { return TextLength; }
         int GetNonNegLeading() const { return Leading > 0 ? int(Leading) : 0; }
         GlyphEntry* GetGlyphs() const { return reinterpret_cast<GlyphEntry*>(((UByte*)this) + GetLineStructSize()); }
@@ -357,13 +358,7 @@ public:
         bool IsLeftAlignment() const   { return GetAlignment() == Align_Left; }
 
         unsigned GetTextPos() const    { return IsData8() ? Data8.GetTextPos() : Data32.GetTextPos(); }
-        void SetTextPos(unsigned tp)
-        {
-            if (IsData8())
-                Data8.SetTextPos(tp);
-            else
-                Data32.TextPos = tp;
-        }
+        void SetTextPos(unsigned tp)   { IsData8() ? Data8.SetTextPos(tp) : Data32.SetTextPos(tp); }
         unsigned GetNumGlyphs() const  { return IsData8() ? Data8.GlyphsCount : Data32.GlyphsCount; }
         GlyphEntry* GetGlyphs() const  { return IsData8() ? Data8.GetGlyphs() : Data32.GetGlyphs(); }
         FormatDataEntry* GetFormatData() const;
