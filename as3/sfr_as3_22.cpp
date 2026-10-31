@@ -110,8 +110,6 @@ extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 inline void FUN_14257dcb0(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->Release(); }
 inline void FUN_14257dc30(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->AddRef(); }
 extern "C" void* FUN_142689640(void*, bool);
-int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
-int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -312,6 +310,13 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-PIN: ??$FormatD1@_K@MsgFormat@Scaleform@@QEAAXAEB_K@Z 0x142685ff0
 
 enum FMOD_RESULT : int {};
+enum FMOD_SOUND_FORMAT : int {};
+enum FMOD_SOUND_TYPE : int {};
+enum FMOD_DSP_RESAMPLER : int {};
+enum FMOD_DELAYTYPE : int {};
+enum FMOD_CHANNEL_CALLBACKTYPE : int {};
+struct FMOD_CHANNEL;
+typedef FMOD_RESULT (*FMOD_CHANNEL_CALLBACK)(FMOD_CHANNEL* channel, FMOD_CHANNEL_CALLBACKTYPE type, void* commandData1, void* commandData2);
 // FMOD 4.44 FMOD_CREATESOUNDEXINFO (fmod.h), enums and callbacks as their underlying types.
 struct FMOD_CREATESOUNDEXINFO
 {
@@ -360,12 +365,25 @@ public:
     ::FMOD_RESULT lock(unsigned offset, unsigned length, void** first, void** second,
                        unsigned* firstLength, unsigned* secondLength);
     ::FMOD_RESULT unlock(void* first, void* second, unsigned firstLength, unsigned secondLength);
+    ::FMOD_RESULT getDefaults(float* frequency, float* volume, float* pan, int* priority);
+    ::FMOD_RESULT getFormat(::FMOD_SOUND_TYPE* type, ::FMOD_SOUND_FORMAT* format, int* channels, int* bits);
+    ::FMOD_RESULT readData(void* buffer, unsigned lenBytes, unsigned* read);
+};
+class ChannelGroup
+{
+public:
+    ::FMOD_RESULT getVolume(float* volume);
+    ::FMOD_RESULT setMute(bool mute);
 };
 class System
 {
 public:
     ::FMOD_RESULT createSound(const char* path, unsigned mode, ::FMOD_CREATESOUNDEXINFO* info, Sound** sound);
     ::FMOD_RESULT createStream(const char* path, unsigned mode, ::FMOD_CREATESOUNDEXINFO* info, Sound** sound);
+    ::FMOD_RESULT getSoftwareFormat(int* sampleRate, ::FMOD_SOUND_FORMAT* format, int* numOutputChannels,
+                                    int* maxInputChannels, ::FMOD_DSP_RESAMPLER* resampleMethod, int* bits);
+    ::FMOD_RESULT getMasterChannelGroup(ChannelGroup** channelGroup);
+    ::FMOD_RESULT getDSPClock(unsigned* hi, unsigned* lo);
 };
 class Channel
 {
@@ -373,8 +391,40 @@ public:
     ::FMOD_RESULT isPlaying(bool* playing);
     ::FMOD_RESULT getPosition(unsigned* position, unsigned timeUnit);
     ::FMOD_RESULT stop();
+    ::FMOD_RESULT setPaused(bool paused);
+    ::FMOD_RESULT getVolume(float* volume);
+    ::FMOD_RESULT getPan(float* pan);
+    ::FMOD_RESULT setDelay(::FMOD_DELAYTYPE delayType, unsigned delayHi, unsigned delayLo);
+    ::FMOD_RESULT setPosition(unsigned position, unsigned posType);
+    ::FMOD_RESULT setCallback(::FMOD_CHANNEL_CALLBACK callback);
+    ::FMOD_RESULT setMode(unsigned mode);
+    ::FMOD_RESULT setLoopCount(int loopCount);
+    ::FMOD_RESULT setLoopPoints(unsigned loopStart, unsigned loopStartType, unsigned loopEnd, unsigned loopEndType);
+    ::FMOD_RESULT setUserData(void* userData);
 };
 }
+
+// The fmodex import thunks under their old raw signatures.
+inline int FUN_1428d8ea8(void* s, unsigned off, unsigned len, void** a, void** b, unsigned* la, unsigned* lb) { return static_cast<FMOD::Sound*>(s)->lock(off, len, a, b, la, lb); }
+inline int FUN_1428d8eae(void* s, void* a, void* b, unsigned la, unsigned lb) { return static_cast<FMOD::Sound*>(s)->unlock(a, b, la, lb); }
+inline int FUN_1428d8eb4(void* s, float* f, float* v, float* p, int* pr) { return static_cast<FMOD::Sound*>(s)->getDefaults(f, v, p, pr); }
+inline int FUN_1428d8eba(void* s, void* t, int* f, int* c, int* b) { return static_cast<FMOD::Sound*>(s)->getFormat(static_cast<FMOD_SOUND_TYPE*>(t), reinterpret_cast<FMOD_SOUND_FORMAT*>(f), c, b); }
+inline int FUN_1428d8ec0(void* s, void* buf, unsigned len, unsigned* read) { return static_cast<FMOD::Sound*>(s)->readData(buf, len, read); }
+inline int FUN_1428d8f26(void* g, float* v) { return static_cast<FMOD::ChannelGroup*>(g)->getVolume(v); }
+inline int FUN_1428d8f2c(void* g, bool m) { return static_cast<FMOD::ChannelGroup*>(g)->setMute(m); }
+inline int FUN_1428d8e96(void* sy, int* rate, int* f, int* oc, int* ic, int* rs, int* bits) { return static_cast<FMOD::System*>(sy)->getSoftwareFormat(rate, reinterpret_cast<FMOD_SOUND_FORMAT*>(f), oc, ic, reinterpret_cast<FMOD_DSP_RESAMPLER*>(rs), bits); }
+inline int FUN_1428d8e9c(void* sy, void** g) { return static_cast<FMOD::System*>(sy)->getMasterChannelGroup(reinterpret_cast<FMOD::ChannelGroup**>(g)); }
+inline int FUN_1428d8ea2(void* sy, unsigned* hi, unsigned* lo) { return static_cast<FMOD::System*>(sy)->getDSPClock(hi, lo); }
+inline int FUN_1428d8ed8(void* c, bool p) { return static_cast<FMOD::Channel*>(c)->setPaused(p); }
+inline int FUN_1428d8ede(void* c, float* v) { return static_cast<FMOD::Channel*>(c)->getVolume(v); }
+inline int FUN_1428d8eea(void* c, float* p) { return static_cast<FMOD::Channel*>(c)->getPan(p); }
+inline int FUN_1428d8ef0(void* c, unsigned t, unsigned hi, unsigned lo) { return static_cast<FMOD::Channel*>(c)->setDelay(static_cast<FMOD_DELAYTYPE>(t), hi, lo); }
+inline int FUN_1428d8ef6(void* c, unsigned pos, unsigned type) { return static_cast<FMOD::Channel*>(c)->setPosition(pos, type); }
+inline int FUN_1428d8efc(void* c, void* cb) { return static_cast<FMOD::Channel*>(c)->setCallback(reinterpret_cast<FMOD_CHANNEL_CALLBACK>(cb)); }
+inline int FUN_1428d8f02(void* c, unsigned m) { return static_cast<FMOD::Channel*>(c)->setMode(m); }
+inline int FUN_1428d8f08(void* c, int n) { return static_cast<FMOD::Channel*>(c)->setLoopCount(n); }
+inline int FUN_1428d8f0e(void* c, unsigned a, unsigned b, unsigned d, unsigned e) { return static_cast<FMOD::Channel*>(c)->setLoopPoints(a, b, d, e); }
+inline int FUN_1428d8f14(void* c, void* u) { return static_cast<FMOD::Channel*>(c)->setUserData(u); }
 
 namespace Scaleform {
 static FMOD::Sound* SoundForLength(void* soundSource)
@@ -496,29 +546,10 @@ bool QueryChannelPlaying(void* soundSource)
 }
 }
 
-int FUN_1428d8efc(void*, void*);
-int FUN_1428d8f14(void*, void*);
 void FUN_14257d390(void*, long long, unsigned, unsigned);
 void FUN_14257bf70(void*, void*, long long, unsigned);
 bool FUN_1427483a0(void*, int);   // AppendableSoundData::SetReadPosition (returns bool)
 unsigned long long FUN_142748160(void*, void*, unsigned);
-int FUN_1428d8ea8(void*, unsigned, unsigned, void**, void**, unsigned*, unsigned*);
-int FUN_1428d8eae(void*, void*, void*, unsigned, unsigned);
-int FUN_1428d8f2c(void*, bool);
-int FUN_1428d8e96(void*, int*, int*, int*, int*, int*, int*);
-int FUN_1428d8e9c(void*, void**);
-int FUN_1428d8f26(void*, float*);
-int FUN_1428d8ede(void*, float*);
-int FUN_1428d8eea(void*, float*);
-int FUN_1428d8ec0(void*, void*, unsigned, unsigned*);
-int FUN_1428d8eb4(void*, float*, float*, float*, int*);
-int FUN_1428d8eba(void*, void*, int*, int*, int*);
-int FUN_1428d8ea2(void*, unsigned*, unsigned*);
-int FUN_1428d8f02(void*, unsigned);
-int FUN_1428d8f08(void*, int);
-int FUN_1428d8ef6(void*, unsigned, unsigned);
-int FUN_1428d8f0e(void*, unsigned, unsigned, unsigned, unsigned);
-int FUN_1428d8ef0(void*, unsigned, unsigned, unsigned);
 void FUN_142742830(long long*, unsigned long long*);
 
 // The copy-style ops share the exe's clip: the op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
@@ -2305,7 +2336,6 @@ static void ResizeRawArray(void** array, void* heapOwner, std::size_t requested,
 }
 
 inline unsigned long long FUN_1425e3480() { return Scaleform::Timer::GetProfileTicks(); }
-int FUN_1428d8ed8(void*, bool);
 
 namespace Scaleform {
 
