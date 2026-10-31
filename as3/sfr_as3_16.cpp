@@ -871,7 +871,23 @@ public:
     }
 };
 
-// MS2-FUNCTIONAL: the exe calls WProxyHash.Get out of line (0x1425058c0); cl inlines it.
+// WProxyHash.Get is the out-of-line word-keyed Hash::Get instance (0x1425058c0, defined in sfr_as3_17);
+// its Remove is the GASRefCountBase*-keyed instance (0x1425221d0, sfr_as3_18).
+bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pvalue);
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform {
+typedef Hash<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*, FixedSizeHash<GFx::AS3::GASRefCountBase*>,
+             AllocatorGH<GFx::AS3::GASRefCountBase*, Stat_Default_Mem> > Sfr16WProxyHash;
+template<> SF_NOINLINE void Sfr16WProxyHash::Remove(GFx::AS3::GASRefCountBase* const& key);
+} // namespace Scaleform
+namespace Scaleform { namespace GFx { namespace AS3 {
+static inline bool Sfr16WProxyGet(const Sfr16WProxyHash& h, GASRefCountBase* const& key, WeakProxy** pvalue)
+{
+    return Sfr33WordHashGet(reinterpret_cast<const HashLH<UPInt, UPInt>&>(h), reinterpret_cast<const UPInt&>(key),
+                            reinterpret_cast<UPInt*>(pvalue));
+}
+
+// MS2-FUNCTIONAL: same calls as the exe; cl reloads wp after NotifyObjectDied and keys Remove from the Get key's slot.
 // @0x1424de190
 GASRefCountBase::~GASRefCountBase()
 {
@@ -879,11 +895,11 @@ GASRefCountBase::~GASRefCountBase()
     {
         Collector* rcc = GetCollector();
         WeakProxy* wp = NULL;
-        if (rcc->WProxyHash.Get(this, &wp) && wp)
+        if (Sfr16WProxyGet(reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash), this, &wp) && wp)
         {
             wp->NotifyObjectDied();
             wp->Release();
-            rcc->WProxyHash.Remove(this);
+            reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash).Remove(this);
         }
     }
 }
@@ -1836,7 +1852,7 @@ ReadMnObject::~ReadMnObject() {}
 
 // MS2-FUNCTIONAL 0x1424dedc0: releases ArgValue with Value's destructor; the compiler emits it as a leaf inline sequence.
 // @0x1424dedc0
-ReadValue::~ReadValue() {}
+SF_NOINLINE ReadValue::~ReadValue() {}
 
 // MS2-FUNCTIONAL 0x1424dee30: releases ArgObject before the ReadValueMn base and its ArgValue/multiname members; codegen differs.
 // @0x1424dee30
