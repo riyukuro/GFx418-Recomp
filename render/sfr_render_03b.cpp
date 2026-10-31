@@ -397,7 +397,7 @@ unsigned DocView::GetLinesCount()
 }
 
 // @0x142613060
-SF_NOINLINE unsigned DocView::GetMaxHScrollValue() const
+unsigned DocView::GetMaxHScrollValue() const
 {
     if (IsWordWrap())
         return 0;
@@ -543,7 +543,7 @@ void DocView::SetFontScaleFactor(float f)
 }
 
 // @0x142615390
-SF_NOINLINE bool DocView::SetHScrollOffset(unsigned hscroll)
+bool DocView::SetHScrollOffset(unsigned hscroll)
 {
     bool     rv         = false;
     unsigned maxHScroll = GetMaxHScroll();
@@ -2266,7 +2266,6 @@ void ParagraphFormatter::Format(const Paragraph& paragraph)
 // ones are dropped and re-laid out. Then auto size, text auto size (shrink / fit), scroll clamping, vertical
 // alignment and recentering of the lines, and the listener notifications.
 // @0x14260f920
-// MS2-FUNCTIONAL: the exe inlines SetHScrollOffset (out of line here for its other callers) -> different register allocation
 void DocView::Format()
 {
     RectF textRect = ViewRect;
