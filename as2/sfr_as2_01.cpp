@@ -3925,10 +3925,11 @@ template void LogBase<DisplayObjectBase>::LogScriptWarning(const char* pfmt, ...
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The last reference is gone: finalize and delete, or park the object in the collector for a cycle check.
-// @0x1423dfa20
 // An object still linked into the collector's work list (a collection is running) is only marked DelayedRelease,
 // finalizer or not: Collect frees it itself.
-// MS2-FUNCTIONAL register allocation differs
+// MS2-FUNCTIONAL tail merging differs (the exe gives the non-root RemoveFromList its own copy of the delete tail and
+// shares the root one with RootIndex = ~0u; cl joins ours the other way); the Roots.Resize branch is laid out inline
+// @0x1423dfa20
 template<int Stat>
 void RefCountBaseGC<Stat>::ReleaseInternal() const
 {
@@ -3942,7 +3943,12 @@ void RefCountBaseGC<Stat>::ReleaseInternal() const
             return;
         }
         RefCount &= ~(Mask_State << Shift_State);
-        if (IsInRootList())
+        if (!IsInRootList())
+        {
+            if (IsInList())
+                RemoveFromList();
+        }
+        else
         {
             if (!IsInList())
             {
@@ -3954,8 +3960,6 @@ void RefCountBaseGC<Stat>::ReleaseInternal() const
             else
                 RemoveFromList();
         }
-        else if (IsInList())
-            RemoveFromList();
         delete const_cast<RefCountBaseGC*>(this);
     }
     else if (GetState() != 3)
@@ -3968,8 +3972,9 @@ void RefCountBaseGC<Stat>::ReleaseInternal() const
 template void RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal() const;
 
 // @0x1423dfba0
+// noinline: ReleaseChildCall calls it in the exe.
 template<int Stat>
-void RefCountCollector<Stat>::RemoveRoot(const BaseType* p)
+__declspec(noinline) void RefCountCollector<Stat>::RemoveRoot(const BaseType* p)
 {
     if (!p->IsInRootList() || p->IsInList())
         return;
@@ -3986,13 +3991,14 @@ void RefCountCollector<Stat>::RemoveRoot(const BaseType* p)
         p->RootIndex = ~0u;
 }
 
+// MS2-FUNCTIONAL register allocation only (the exe keeps prcc in rbx and pchild in rdi; ours swaps them)
 // @0x1423df980
-// MS2-FUNCTIONAL same transitions; the exe reloads *pchild after the decrement instead of keeping the pointer in a register
 template<int Stat>
 void RefCountCollector<Stat>::ReleaseChildCall(RefCountCollector* prcc, const BaseType** pchild)
 {
-    --(*pchild)->RefCount;
-    if ((*pchild)->IsRefCntZero())
+    const BaseType* child = *pchild;
+    --child->RefCount;
+    if (child->IsRefCntZero())
     {
         prcc->RemoveRoot(*pchild);
         (*pchild)->RefCount |= BaseType::Flag_DelayedRelease;
