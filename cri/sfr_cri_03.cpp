@@ -4978,7 +4978,7 @@ void FUN_142cccb30(void* decoder, CriSint32 run)
     }
 }
 
-// MS2-FUNCTIONAL: decode the six 8x8 blocks of an intra macroblock and hand them to the block output function.
+// decode the six 8x8 blocks of an intra macroblock and hand them to the block output function
 // @0x142cccba0
 CriSint32 FUN_142cccba0(void* decoder)
 {
@@ -4991,26 +4991,27 @@ CriSint32 FUN_142cccba0(void* decoder)
     CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_LUMA);
     CriMpvField<void*>(context, 0x38) = base + MPV_DC;
     CriMpvField<void*>(context, 0x20) = base + MPV_COEF_LUMA;
-    CriMpvDecodeBlockFunc decode = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK);
-    CriSint32 counts[6];
-    counts[0] = decode(decoder, context);
+    CriSint32 count0 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0x980;
-    counts[1] = decode(decoder, context);
+    CriSint32 count1 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0xa00;
-    counts[2] = decode(decoder, context);
+    CriSint32 count2 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x20) = base + 0xa80;
-    counts[3] = decode(decoder, context);
+    CriSint32 count3 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x40) = CriMpvField<void*>(decoder, MPV_TABLE_CHROMA);
     CriMpvField<void*>(context, 0x38) = base + MPV_DC + 4;
     CriMpvField<void*>(context, 0x20) = base + 0xb00;
-    counts[4] = decode(decoder, context);
+    CriSint32 count4 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     CriMpvField<void*>(context, 0x38) = base + MPV_DC + 8;
     CriMpvField<void*>(context, 0x20) = base + 0xb80;
-    counts[5] = decode(decoder, context);
-    CriMpvBlockFunc emit = CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC);
+    CriSint32 count5 = CriMpvField<CriMpvDecodeBlockFunc>(decoder, MPV_DECODE_BLOCK)(decoder, context);
     void** slots = (void**)(base + MPV_BLOCK_SLOTS);
-    for (CriSint32 block = 0; block < 6; ++block)
-        emit(base + MPV_COEF_LUMA + (CriSint64)block * 0x80, slots[block], counts[block]);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + MPV_COEF_LUMA, slots[0], count0);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + 0x980, slots[1], count1);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + 0xa00, slots[2], count2);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + 0xa80, slots[3], count3);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + 0xb00, slots[4], count4);
+    CriMpvField<CriMpvBlockFunc>(decoder, MPV_BLOCK_FUNC)(base + 0xb80, slots[5], count5);
     return 0;
 }
 
