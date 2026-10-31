@@ -3340,15 +3340,14 @@ namespace Scaleform { namespace GFx { namespace AS3 {
         return false;
     }
 
-    // MS2-FUNCTIONAL: the exe compares the prefix Value's ASStringNode pointer and balances a temporary addref;
-    // this version uses ASString::operator==, preserving the prefix test while its frame differs.
     // @0x14240aed0
     bool NamespaceArray::FindByPrefix(const ASString& prefix) const
     {
         bool found = false;
+        const UPInt n = Namespaces.GetSize();
         for (UPInt i = 0; !found; ++i)
         {
-            if (i >= Namespaces.GetSize())
+            if (i >= n)
                 return found;
             const Value& p = Namespaces[i]->GetPrefix();
             if (!p.IsNullOrUndefined())
