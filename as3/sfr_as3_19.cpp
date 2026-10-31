@@ -33,9 +33,26 @@
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_tracer.h"
+#include "ms2/scaleform/include/kernel/sf_simd.h"
 #include <cmath>
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
+// Value::AssignUnsafe as the SDK writes it (prefetch, memcpy, AddRef); the exe expands it inline in the tracer.
+// ValueAssignCopies is the name as3_value.h befriends (sfr_as3_03 holds the other members).
+namespace Scaleform { namespace GFx { namespace AS3 {
+struct ValueAssignCopies
+{
+    static SF_INLINE void AssignUnsafeCopy(Value& v, const Value& other)
+    {
+        if (&other != &v)
+        {
+            SIMD::PrefetchObj(&other);
+            memcpy(&v, &other, sizeof(Value));
+            v.AddRef();
+        }
+    }
+};
+}}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425245c0(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_142524470(UPInt* a, UPInt n); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425247f0(UPInt* a, UPInt n); }}}
@@ -749,7 +766,7 @@ void Sfr27TraceDup2Check(State* st)
         reinterpret_cast<UInt64*>(ops[0])[ops[1] - 1] = 0x69;
     }
     s.OpStack().PushBack(Value::GetUndefined());
-    s.Top().Assign(s.Below());
+    ValueAssignCopies::AssignUnsafeCopy(s.OpStack().Back(), s.OpStack()[s.OpStack().GetSize() - 2]);
 }
 
 // Two operands popped, one value of a builtin type pushed.
