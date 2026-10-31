@@ -2033,13 +2033,30 @@ namespace Instances { namespace fl_text
     }
 
     // The display field's style sheet holder (TextField+0x108); the AS3 holder keeps the StyleSheet object at +0x40.
-    struct AvmCSSHolder
+    // TextField::CSSHolderBase's members and AvmTextField::CSSHolder (AvmTextFieldCSSHolder_vftable), which keeps
+    // the StyleSheet object at +0x40. The constructors are the SDK's inline ones (the holder is TextField+0x108).
+    struct AvmCSSUrlZones
     {
-        void* const*                         vfptr;
-        UByte                                Base[0x38];     // CSSHolderBase: url zones, styles flag
-        SPtr<Instances::fl_text::StyleSheet> pASStyleSheet;  // +0x40
+        void* Data; UPInt Size; UPInt Policy;
+        AvmCSSUrlZones() : Data(NULL), Size(0), Policy(0) {}
     };
-    static inline AvmCSSHolder*& CSSDataOf(void* ptf) { return *(AvmCSSHolder**)((UByte*)ptf + 0x108); }
+    struct AvmCSSMouseState
+    {
+        unsigned UrlZoneIndex; bool OverBit; bool HitBit;
+        AvmCSSMouseState() : UrlZoneIndex(0), OverBit(false), HitBit(false) {}
+    };
+    struct AvmCSSHolderBase : NewOverrideBase<StatMV_ActionScript_Mem>
+    {
+        void* const*     vfptr;
+        AvmCSSUrlZones   UrlZones;
+        AvmCSSMouseState MouseState[4];
+        AvmCSSHolderBase(void* const* vt) { vfptr = vt; }
+    };
+    struct AvmCSSHolder : AvmCSSHolderBase
+    {
+        SPtr<Instances::fl_text::StyleSheet> pASStyleSheet;  // +0x40
+        AvmCSSHolder() : AvmCSSHolderBase(AvmTextFieldCSSHolder_vftable) {}
+    };
 
     // The SDK's inline ToAvmTextField(InteractiveObject*) (the AvmTextField is reached as its AvmInteractiveObj part,
     // same address) and AvmTextField::GetCSSData(), whose TextField::GetCSSData is out of line in the exe.
@@ -2061,31 +2078,24 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b4a50
-    // MS2-FUNCTIONAL: written from the exe's control flow (the exe calls SPtr's assignment out of line)
     void TextField::styleSheetSet(const Value& result, Instances::fl_text::StyleSheet* value)
     {
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
+        AvmInteractiveObj* patf = ToAvmTextField(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()));
         if (value)
         {
-            if (!CSSDataOf(ptf))
-            {
-                AvmCSSHolder* pcss = (AvmCSSHolder*)Memory::Alloc(sizeof(AvmCSSHolder));
-                if (pcss)
-                {
-                    memset(pcss, 0, sizeof(AvmCSSHolder));
-                    pcss->vfptr = AvmTextFieldCSSHolder_vftable;
-                }
-                FUN_1425bbd10(ptf, pcss);
-            }
-            CSSDataOf(ptf)->pASStyleSheet = value;
+            if (!FUN_1425b7e60(reinterpret_cast<UPInt>(ptf)))
+                FUN_1425bbd10(ptf, new AvmCSSHolder);
+            GetCSSData(patf)->pASStyleSheet = value;
+            // Make the textfield read-only
             void* pkit = *(void**)((UByte*)DocViewOf(ptf) + 0xd8);
             if (pkit)
                 *(UInt16*)((UByte*)pkit + 0xa0) |= 1;
-            FUN_1425bc060(ptf);
+            FUN_1425bc060(patf->pDispObj);
         }
-        else if (CSSDataOf(ptf) && CSSDataOf(ptf)->pASStyleSheet)
-            CSSDataOf(ptf)->pASStyleSheet = NULL;
+        else if (GetCSSData(patf))
+            GetCSSData(patf)->pASStyleSheet = NULL;
         FUN_1425b72a0(ptf);
         FUN_1425bec30(ptf);
         FieldFlags(ptf) |= 0x10000;
