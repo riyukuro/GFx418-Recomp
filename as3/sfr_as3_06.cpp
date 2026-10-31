@@ -1741,10 +1741,14 @@ namespace Instances { namespace fl_display
     }
 
     // Takes over the reference of a freshly created display object and makes this its AS3 object.
-    static void AttachStageObject(DisplayObject* pthis, GFx::DisplayObject* pdisp)
+    static SF_INLINE void AttachStageObject(DisplayObject* pthis, GFx::DisplayObject* pdisp)
     {
-        pthis->pDispObj = Pickable<GFx::DisplayObject>(pdisp);
-        FUN_1424edca0(AvmOf(pdisp), pthis);
+        // The exe releases the old pointer and stores the new one without Pick's self-check.
+        GFx::DisplayObject*& raw = pthis->pDispObj.GetRawRef();
+        if (raw)
+            raw->Release();
+        raw = pdisp;
+        FUN_1424edca0(!pdisp ? NULL : ToAvmDisplayObj(pdisp), pthis);
     }
 
     // The definition (call frame's movie) a stage object created from script binds to.
@@ -1983,14 +1987,15 @@ namespace Instances { namespace fl_display
         if (!pDispObj)
         {
             ASMovieRootBase* proot = GetASRoot(GetVM());
-            MovieImpl* pmovie = proot->GetMovieImpl();
-            void* pmem = pmovie->pHeap->Alloc(0x158);
-            GFx::DisplayObject* pdisp = NULL;
+            void* pmem = proot->GetMovieImpl()->pHeap->Alloc(0x158);
+            GFx::DisplayObject* pdisp;
             if (pmem)
             {
                 ResourceId rid(ResourceId::InvalidId);
-                pdisp = FUN_1424d6500(pmem, proot, pmovie->pMainMovieDef, NULL, &rid);
+                pdisp = FUN_1424d6500(pmem, proot, proot->GetMovieImpl()->pMainMovieDef, NULL, &rid);
             }
+            else
+                pdisp = NULL;
             AttachStageObject(this, pdisp);
             FUN_1424e9380(proot, pDispObj);
         }
@@ -2004,9 +2009,11 @@ namespace Instances { namespace fl_display
         if (!pDispObj)
         {
             ASMovieRootBase* proot = GetASRoot(GetVM());
-            ResourceId emptyShapeId(0x10004);
             CharacterCreateInfo ccinfo;
-            FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
+            {
+                ResourceId emptyShapeId(0x10004);
+                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
+            }
             DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
                                                                                  ResourceId(0x10001), CharacterDef::Shape);
             AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
@@ -2054,18 +2061,17 @@ namespace Instances { namespace fl_display
         MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
         if (!pdefImpl)
             return pDispObj;
-        CharacterCreateInfo ccinfo;
+        CharacterCreateInfo ccinfo = {};
         FindLibrarySymbol(this, &ccinfo, pdefImpl);
         if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
         {
             ResourceId emptySpriteId(0x10001);
             CharacterCreateInfo def;
-            FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
-            ccinfo.pCharDef = def.pCharDef;
-            ccinfo.pResource = def.pResource;
-            ccinfo.pBindDefImpl = pdefImpl;
-            if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&vm) + 0x78) != 0)
-                ccinfo.pBindDefImpl = GetCallerDefImpl(vm);
+            ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
+            if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&GetVM()) + 0x78) != 0)
+                ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+            else
+                ccinfo.pBindDefImpl = pdefImpl;
         }
         DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
                                                                              ResourceId(ResourceId::InvalidId), CharacterDef::Sprite);
