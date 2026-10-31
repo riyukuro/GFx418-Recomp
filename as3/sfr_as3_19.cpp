@@ -2607,7 +2607,6 @@ void AS3ValueObjectInterface::SetUserData(void* pdata, ASUserData* puserdata, bo
 
 namespace AS3 {
 
-// MS2-FUNCTIONAL 0x142526610: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x142526610
 bool Sfr31ContainerSetChildIndex(UPInt self, DisplayObjectBase* ch, UInt32 index)
 {
@@ -2626,7 +2625,7 @@ bool Sfr31ContainerSetChildIndex(UPInt self, DisplayObjectBase* ch, UInt32 index
             reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(ch), 0), 0x188))(ch, 0);
             *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(ch) + 0x30) = 0;
             *reinterpret_cast<SInt32*>(reinterpret_cast<UPInt>(ch) + 0x2c) = -1;
-            *reinterpret_cast<UInt8*>(holder + 0x100) |= 3;
+            *(reinterpret_cast<UInt8*>(dl) + 0x28) |= 3;
             FUN_14257dcd0(ch);
             return true;
         }
@@ -2754,7 +2753,6 @@ const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
 }
 
 // A text assignment through the host interface: TextFields take it directly, anything else gets text/htmlText.
-// MS2-FUNCTIONAL 0x14252a360: behavior-equivalent recovery; codegen differs from exe
 // @0x14252a360
 bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html)
 {
@@ -2763,20 +2761,20 @@ bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html
     {
         TextField* tf = *reinterpret_cast<TextField**>(obj + 0x58);
         typedef SInt32 (*Kind)(void*);
-        if (reinterpret_cast<Kind>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(tf), 0), 0x258))(tf) == 4)
+        if ((*reinterpret_cast<Kind* const*>(tf))[0x258 / 8](tf) != 4)
         {
-            tf->SetText(text, html);
-            return true;
+            struct RawGfxValue { UPInt iface; UInt32 type; const wchar_t* str; } v = { 0, 7, text };
+            typedef bool (*Set)(void*, UPInt, const char*, void*, bool);
+            bool r = (*reinterpret_cast<Set* const*>(self))[0x28 / 8](self, obj, html ? "htmlText" : "text", &v, true);
+            if ((static_cast<UByte>(v.type >> 6) & 1) != 0)
+            {
+                typedef void (*Rel)(void*, void*, const wchar_t*);
+                (*reinterpret_cast<Rel* const*>(v.iface))[0x10 / 8](reinterpret_cast<void*>(v.iface), &v, v.str);
+            }
+            return r;
         }
-        struct RawGfxValue { UPInt iface; UInt32 type; const wchar_t* str; } v = { 0, 7, text };
-        typedef char (*Set)(void*, UPInt, const char*, void*, SInt32);
-        char r = reinterpret_cast<Set>(Sfr31Rd(self[0], 0x28))(self, obj, html ? "htmlText" : "text", &v, 1);
-        if ((v.type >> 6 & 1) != 0)
-        {
-            typedef void (*Rel)(void*, void*, const wchar_t*);
-            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(v.iface, 0), 0x10))(reinterpret_cast<void*>(v.iface), &v, v.str);
-        }
-        return r != 0;
+        tf->SetText(text, html);
+        return true;
     }
     return false;
 }
@@ -2898,7 +2896,6 @@ void* Sfr31LinearHeapAllocFromLastPage(UPInt self, UPInt n)
 }
 
 // SetSuperProperty: stores v through the parent traits' fixed slot for the multiname; false when there is no such slot.
-// MS2-FUNCTIONAL 0x14252a150: functional recovery; codegen differs from exe
 // @0x14252a150
 CheckResult SetSuperProperty(VM& vm, const Traits* tr, const Value& obj, const Multiname& mn, const Value& v)
 {
@@ -2909,13 +2906,8 @@ CheckResult SetSuperProperty(VM& vm, const Traits* tr, const Value& obj, const M
     {
         UPInt ind = 0;
         const SlotInfo* si = FindFixedSlot(vm, *parent, mn, ind, 0);
-        if (si != 0)
-        {
-            UByte res[16];
-            void* vt = FUN_14250fa80(parent);
-            if (*Sfr27SlotSetValueThis(si, reinterpret_cast<char*>(res), &vm, &v, &obj, static_cast<VTable*>(vt)) != 0)
-                return true;
-        }
+        char res;
+        return CheckResult(si != 0 && *Sfr27SlotSetValueThis(si, &res, &vm, &v, &obj, static_cast<VTable*>(FUN_14250fa80(parent))) != 0);
     }
     return false;
 }
@@ -3019,34 +3011,39 @@ void Sfr27ExecNextName(VM* vm) { Sfr31ExecNextCommon(vm, false); }
 void Sfr27ExecNextValue(VM* vm) { Sfr31ExecNextCommon(vm, true); }
 
 // As Sfr31SetTextOnObject, for a UTF-8 string; a TextField also has its html flag (+0xfc bit 1) synced to the request.
-// MS2-FUNCTIONAL 0x14252a230: behavior-equivalent recovery; codegen differs from exe
 // @0x14252a230
 bool Sfr31SetTextOnObjectUtf8(UPInt* self, UPInt obj, const char* text, bool html)
 {
     UPInt a = Sfr31Rd(obj, 0x20);
-    if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U >= 0xc) || ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) == 0))
-        return false;
-    TextField* tf = *reinterpret_cast<TextField**>(obj + 0x58);
-    typedef SInt32 (*Kind)(void*);
-    if (reinterpret_cast<Kind>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(tf), 0), 0x258))(tf) != 4)
+    if ((*reinterpret_cast<SInt32*>(a + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<UInt8*>(a + 0x68) >> 5)) & 1) != 0))
     {
-        struct RawGfxValue { UPInt iface; UInt32 type; const char* str; } v = { 0, 6, text };
-        typedef char (*Set)(void*, UPInt, const char*, void*, SInt32);
-        char r = reinterpret_cast<Set>(Sfr31Rd(self[0], 0x28))(self, obj, html ? "htmlText" : "text", &v, 1);
-        if ((v.type >> 6 & 1) != 0)
+        TextField* tf = *reinterpret_cast<TextField**>(obj + 0x58);
+        typedef SInt32 (*Kind)(void*);
+        if ((*reinterpret_cast<Kind* const*>(tf))[0x258 / 8](tf) != 4)
         {
-            typedef void (*Rel)(void*, void*, const char*);
-            reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(v.iface, 0), 0x10))(reinterpret_cast<void*>(v.iface), &v, v.str);
+            struct RawGfxValue { UPInt iface; UInt32 type; const char* str; } v = { 0, 6, text };
+            typedef bool (*Set)(void*, UPInt, const char*, void*, bool);
+            bool r = (*reinterpret_cast<Set* const*>(self))[0x28 / 8](self, obj, html ? "htmlText" : "text", &v, true);
+            if ((static_cast<UByte>(v.type >> 6) & 1) != 0)
+            {
+                typedef void (*Rel)(void*, void*, const char*);
+                (*reinterpret_cast<Rel* const*>(v.iface))[0x10 / 8](reinterpret_cast<void*>(v.iface), &v, v.str);
+            }
+            return r;
         }
-        return r != 0;
+        UInt32& flags = *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(tf) + 0xfc);
+        const bool cur = (static_cast<UByte>(flags >> 1) & 1) != 0;
+        if (html)
+        {
+            if (!cur)
+                flags |= 2;
+        }
+        else if (cur)
+            flags &= 0xfffffffd;
+        tf->SetTextValue(text, html, true);
+        return true;
     }
-    UInt32& flags = *reinterpret_cast<UInt32*>(reinterpret_cast<UPInt>(tf) + 0xfc);
-    if (!html)
-        flags &= 0xfffffffd;
-    else
-        flags |= 2;
-    tf->SetTextValue(text, html, true);
-    return true;
+    return false;
 }
 
 // newarray: a new Array filled from the n values on the operand stack, pushed.
