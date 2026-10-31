@@ -2947,21 +2947,21 @@ namespace Instances { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: exe shrink-wraps the rbx/rsi saves past the IsString check (chained unwind info)
     // @0x14240b630
     UInt32 XMLElement::ForEachAttr(const Multiname& prop_name, CallBack& cb)
     {
         UInt32 num = 0;
-        if (!prop_name.Name.IsString())
-            return num;
-        const UPInt size = Attrs.GetSize();
-        for (UPInt i = 0; i < size; ++i)
+        if (prop_name.Name.IsString())
         {
-            if (Attrs[i]->Matches(prop_name))
+            const UPInt size = Attrs.GetSize();
+            for (UPInt i = 0; i < size; ++i)
             {
-                ++num;
-                if (!cb.Call(i))
-                    return num;
+                if (Attrs[i]->Matches(prop_name))
+                {
+                    ++num;
+                    if (!cb.Call(i))
+                        break;
+                }
             }
         }
         return num;
