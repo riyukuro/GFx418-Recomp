@@ -92,6 +92,24 @@ public:
     void SetZScale(Double zscale)     { SetFlags(V_zscale); ZScale = zscale; }
     void SetFOV(Double fov)           { SetFlags(V_FOV); FOV = fov; }
     void SetEdgeAAMode(Render::EdgeAAMode mode) { SetFlags(V_edgeaaMode); EdgeAAMode = mode; }
+    // the SDK's full setter (GFx_Player.h): the fields in member order, then the flags
+    void Set(Double x, Double y, Double rotation, Double xscale, Double yscale, Double alpha, bool visible,
+             Double z, Double xrotation, Double yrotation, Double zscale)
+    {
+        X = x;
+        Y = y;
+        Rotation = rotation;
+        XScale = xscale;
+        YScale = yscale;
+        Alpha = alpha;
+        Visible = visible;
+        Z = z;
+        XRotation = xrotation;
+        YRotation = yrotation;
+        ZScale = zscale;
+        SetFlags(V_x | V_y | V_rotation | V_xscale | V_yscale | V_alpha | V_visible |
+                 V_z | V_zscale | V_xrotation | V_yrotation);
+    }
     void SetPosition(Double x, Double y)        { SetFlags(V_x | V_y); X = x; Y = y; }
     void SetScale(Double xscale, Double yscale) { SetFlags(V_xscale | V_yscale); XScale = xscale; YScale = yscale; }
     void SetProjectionMatrix3D(const Render::Matrix4F* pmat)

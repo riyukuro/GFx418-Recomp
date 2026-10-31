@@ -97,12 +97,13 @@ static inline Ptr<Translator> TranslatorOf(MovieImpl* proot)
     return *static_cast<Translator*>(proot->GetStateBag()->GetStateAddRef(State::State_Translator));
 }
 
-// MS2-FUNCTIONAL 0x1425b5290: same switch over the play-list states; the exe lays the case blocks out in another order
 // @0x1425b5290
 template<>
 void InteractiveObject::ModifyOptimizedPlayListLocal<TextField>()
 {
-    switch (static_cast<TextField*>(this)->TextField::CheckAdvanceStatus(IsInOptimizedPlayList()))
+    // the two flag bits are tested as shifted bytes (exe shr/test al), not one folded mask compare
+    switch (static_cast<TextField*>(this)->TextField::CheckAdvanceStatus(
+        ((UByte)(Flags >> 21) & 1) && !((UByte)(Flags >> 22) & 1)))
     {
     case 1:  AddToOptimizedPlayList(); break;
     case -1: MarkToRemoveFromOptimizedPlayList(); break;
@@ -479,7 +480,6 @@ void TextField::CreateCompositionString()
     }
 }
 
-// MS2-FUNCTIONAL 0x1425b75f0: same body; our frame reserves 0x10 more stack
 // @0x1425b75f0
 void TextField::CommitCompositionString(const wchar_t* pstr, UPInt len)
 {
@@ -497,17 +497,19 @@ void TextField::CommitCompositionString(const wchar_t* pstr, UPInt len)
             else if (len == SF_MAX_UPINT)
                 len = SFwcslen(pstr);
 
-            UPInt curLen = pDocument->GetStyledText()->GetLength();
-            UPInt maxLen = pDocument->GetMaxLength();
-            if (maxLen == 0)
+            // check for max length
+            UPInt docLen = pDocument->GetStyledText()->GetLength();
+            UPInt maxLen;
+            if (pDocument->HasMaxLength())
+                maxLen = pDocument->GetMaxLength();
+            else
                 maxLen = SF_MAX_UPINT;
+
             EditorOf(pDocument)->SetCursorPos(pcs->GetPosition(), false);
-            for (UPInt i = 0; i < len; ++i)
+            for (UPInt i = 0; i < len && docLen < maxLen; ++i)
             {
-                if (curLen >= maxLen)
-                    break;
                 if (EditorOf(pDocument)->OnChar(pstr[i]))
-                    ++curLen;
+                    ++docLen;
             }
             pcs->SetText(L"");
             pcs->SetPosition(EditorOf(pDocument)->GetCursorPos());
@@ -553,7 +555,6 @@ UPInt TextField::GetCompositionStringPosition() const
 
 // The field's editor, made on first use with the definition's read-only / selectable state and the movie's
 // clipboard and key map.
-// MS2-FUNCTIONAL 0x1425b7840: same logic; block layout differs (one branch distance)
 // @0x1425b7840
 Ptr<Text::EditorKit> TextField::CreateEditorKit()
 {
@@ -566,12 +567,12 @@ Ptr<Text::EditorKit> TextField::CreateEditorKit()
         if (pDef->IsSelectable())
             peditor->SetSelectable();
         Ptr<TextClipboard> pclipBoard =
-            *static_cast<TextClipboard*>(GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_TextClipboard));
+            *static_cast<TextClipboard*>(GetMovieImpl()->GetStateBag()->GetStateBagImpl()->GetStateAddRef(State::State_TextClipboard));
         peditor->SetClipboard(pclipBoard);
         Ptr<TextKeyMap> pkeymap =
-            *static_cast<TextKeyMap*>(GetMovieImpl()->GetStateBag()->GetStateAddRef(State::State_TextKeyMap));
+            *static_cast<TextKeyMap*>(GetMovieImpl()->GetStateBag()->GetStateBagImpl()->GetStateAddRef(State::State_TextKeyMap));
         peditor->SetKeyMap(pkeymap);
-        if (Flags & Flags_UseRichClipboard)
+        if ((UByte)(Flags >> 8) & 1)   // DoesUseRichClipboard, a shifted byte test
             peditor->SetUseRichClipboard();
         else
             peditor->ClearUseRichClipboard();
@@ -807,23 +808,30 @@ ASString TextField::GetShadowStyle() const
 
 // The text, or the HTML text when asked for and the field is HTML; with a style sheet the HTML is the original
 // source text.
-// MS2-FUNCTIONAL 0x1425b91e0: same text/html/original-text choice; the exe repeats the GetText tail per branch
 // @0x1425b91e0
 ASString TextField::GetText(bool reqHtml) const
 {
-    ASStringManager* psm = GetStringManager();
+    ASStringManager* pmgr = GetStringManager();
     if (reqHtml)
     {
         if (HasStyleSheet())
-            return psm->CreateString(OriginalTextValue.ToCStr(), OriginalTextValue.GetSize());
-        if (IsHtml())
         {
-            String html = pDocument->GetHtml();
-            return psm->CreateString(html.ToCStr(), html.GetSize());
+            // return original html if CSS is set
+            return pmgr->CreateString(OriginalTextValue);
+        }
+        else
+        {
+            // For non-HTML field, non-HTML text is returned.
+            if (IsHtml())
+                return pmgr->CreateString(pDocument->GetHtml());
+            else
+                return pmgr->CreateString(pDocument->GetText());
         }
     }
-    String text = pDocument->GetText();
-    return psm->CreateString(text.ToCStr(), text.GetSize());
+    else
+    {
+        return pmgr->CreateString(pDocument->GetText());
+    }
 }
 
 // The field takes the focus only from its own controller (any once none is set).
@@ -1031,6 +1039,13 @@ static inline Ptr<VirtualKeyboardInterface> GetVirtualKeyboardInterfaceOf(MovieI
         proot->GetStateBag()->GetStateAddRef(State::StateType(VirtualKeyboardInterface::State_VirtualKeyboardInterface)));
 }
 
+// TwipsToPixels(RectF) of GFx_Types.h
+static inline Render::RectF RectTwipsToPixels(const Render::RectF& r)
+{
+    return Render::RectF(Render::TwipsToPixels(r.x1), Render::TwipsToPixels(r.y1),
+                         Render::TwipsToPixels(r.x2), Render::TwipsToPixels(r.y2));
+}
+
 inline bool MovieImpl::IsFocused(const InteractiveObject* ch, unsigned controllerIdx) const
 {
     Ptr<InteractiveObject> focused = FocusGroups[FocusGroupIndexes[controllerIdx]].LastFocused;
@@ -1040,7 +1055,6 @@ inline bool MovieImpl::IsFocused(const InteractiveObject* ch, unsigned controlle
 // A selectable field selects all of its text when the keyboard moves the focus in (unless noAutoSelection) and
 // shows its cursor; losing the focus drops the selection (unless alwaysShowSelection). The on-screen keyboard
 // hears of it, and an editable field starts advancing to blink the cursor.
-// MS2-FUNCTIONAL 0x1425ba020: same selection, virtual keyboard and play list steps; the exe lays the focus rect out in a different frame
 // @0x1425ba020
 void TextField::OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh, unsigned controllerIdx,
                         FocusMovedType fmt)
@@ -1049,17 +1063,21 @@ void TextField::OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh
     {
         if (event == InteractiveObject::SetFocus)
         {
-            if (!(Flags & Flags_NoAutoSelection) && fmt == GFx_FocusMovedByKeyboard)
+            if (!((UByte)(Flags >> 10) & 1) && fmt == GFx_FocusMovedByKeyboard)   // !IsNoAutoSelection()
             {
-                SPInt len = (SPInt)pDocument->GetLength();
+                // SetSelection(0, len), inlined
+                SPInt beginIndex = 0;
+                SPInt endIndex = (SPInt)pDocument->GetLength();
                 if (!pDocument->GetEditorKit())
                     CreateEditorKit();
                 if (pDocument->GetEditorKit())
                 {
-                    SPInt docLen = (SPInt)pDocument->GetLength();
-                    SPInt endPos = len < 0 ? 0 : (len > docLen ? docLen : len);
-                    SPInt begPos = docLen < 0 ? docLen : 0;
-                    EditorOf(pDocument)->SetSelection(UPInt(begPos), UPInt(endPos));
+                    beginIndex = Alg::Max((SPInt)0, beginIndex);
+                    endIndex   = Alg::Max((SPInt)0, endIndex);
+                    UPInt len = pDocument->GetLength();
+                    beginIndex = Alg::Min((SPInt)len, beginIndex);
+                    endIndex   = Alg::Min((SPInt)len, endIndex);
+                    EditorOf(pDocument)->SetSelection((UPInt)beginIndex, (UPInt)endIndex);
                     SetDirtyFlag();
                 }
             }
@@ -1068,14 +1086,13 @@ void TextField::OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh
             {
                 EditorOf(pDocument)->OnSetFocus();
                 SetDirtyFlag();
-                Ptr<VirtualKeyboardInterface> vki = GetVirtualKeyboardInterfaceOf(GetMovieImpl());
+                // the SDK keeps a raw pointer: the state bag's reference is dropped at once
+                VirtualKeyboardInterface* vki = GetVirtualKeyboardInterfaceOf(GetMovieImpl()).GetPtr();
                 if (vki)
                 {
                     Matrix worldMat;
                     GetWorldMatrix(&worldMat);
-                    Render::RectF bounds = GetBounds(worldMat);
-                    Render::RectF worldRect(Render::TwipsToPixels(bounds.x1), Render::TwipsToPixels(bounds.y1),
-                                            Render::TwipsToPixels(bounds.x2), Render::TwipsToPixels(bounds.y2));
+                    Render::RectF worldRect = RectTwipsToPixels(GetBounds(worldMat));
                     vki->OnInputTextfieldFocusIn(pDocument->IsMultiline(), worldRect);
                 }
             }
@@ -1085,11 +1102,11 @@ void TextField::OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh
             FocusedControllerIdx = ~0u;
             if (pDocument->GetEditorKit())
             {
-                if (!(Flags & Flags_AlwaysShowSelection))
+                if (!((UByte)(Flags >> 9) & 1))   // !DoesAlwaysShowSelection()
                     EditorOf(pDocument)->ClearSelection();
                 EditorOf(pDocument)->OnKillFocus();
                 SetDirtyFlag();
-                Ptr<VirtualKeyboardInterface> vki = GetVirtualKeyboardInterfaceOf(GetMovieImpl());
+                VirtualKeyboardInterface* vki = GetVirtualKeyboardInterfaceOf(GetMovieImpl()).GetPtr();
                 if (vki)
                     vki->OnInputTextfieldFocusOut();
             }
@@ -1249,20 +1266,16 @@ void TextField::GetPosition(GFx::Value::DisplayInfo* pinfo)
     UpdateAndGetGeomData(&geomData, false);
     Double x = Render::TwipsToPixels(Double(geomData.X));
     Double y = Render::TwipsToPixels(Double(geomData.Y));
+    Double rotation = geomData.Rotation;
+    Double xscale = geomData.XScale;
+    Double yscale = geomData.YScale;
     Double alpha = GetCxform().M[0][3] * 100.f;
     bool visible = GetVisible();
-    pinfo->XRotation = geomData.XRotation;
-    pinfo->YRotation = geomData.YRotation;
-    pinfo->Visible   = visible;
-    pinfo->VarsSet  |= 0x7ff;   // x .. zscale
-    pinfo->ZScale    = geomData.ZScale;
-    pinfo->X         = x;
-    pinfo->Y         = y;
-    pinfo->Rotation  = geomData.Rotation;
-    pinfo->Alpha     = alpha;
-    pinfo->Z         = geomData.Z;
-    pinfo->XScale    = geomData.XScale;
-    pinfo->YScale    = geomData.YScale;
+    Double zscale = geomData.ZScale;
+    Double z = geomData.Z;
+    Double xrotation = geomData.XRotation;
+    Double yrotation = geomData.YRotation;
+    pinfo->Set(x, y, rotation, xscale, yscale, alpha, visible, z, xrotation, yrotation, zscale);
 }
 
 // Hit under the mouse: a selectable field (or any, when testing all) is the hit itself, as is a link of an HTML
