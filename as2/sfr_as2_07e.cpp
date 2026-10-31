@@ -24,19 +24,21 @@
 
 void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash);
 namespace Scaleform { namespace GFx { namespace AS2 { class FnCall; class Value; }}}
-Scaleform::GFx::AS2::Value* FUN_1429316c0(const Scaleform::GFx::AS2::FnCall* pfn, int n);
+// FnCall::ThisPtrError_Call (sfr_as2_07). The exe call sites also zero r8/r9, which the one-argument member call
+// does not (7 rows drop), so the four-argument form stays.
 void FUN_142990c40(const Scaleform::GFx::AS2::FnCall* pfn, const char* pclassName, const char*, int);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-bool CheckThisPtrCopy(const FnCall* pfn, unsigned type); // sfr_as2_04e
+bool   CheckThisPtrCopy(const FnCall* pfn, unsigned type); // sfr_as2_04e
+Value* ArgCopy(const FnCall* pfn, int n);                // sfr_as2_04e
 
 namespace {
 
 // fn.Arg(n) through the exe's out-of-line FnCall::Arg (sfr_as2_04e).
 SF_FORCEINLINE Value& XmlArg(const FnCall& fn, int n)
 {
-    return *::FUN_1429316c0(&fn, n);
+    return *ArgCopy(&fn, n);
 }
 
 // The methods only accept an XML object as this; anything else reports the error and returns false.
