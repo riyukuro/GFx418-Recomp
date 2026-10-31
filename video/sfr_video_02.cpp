@@ -3178,20 +3178,33 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010ed0(
     return destination;
 }
 
+namespace Scaleform { namespace Render {
+// the ContextImpl::ContextData_ImplMixin<TreeShape::NodeData, TreeNode::NodeData> vftable (0x14317bbf0)
+extern const void* const TreeShapeNodeDataMixinVTable[];
+} }
+
+// ContextData_ImplMixin<TreeShape::NodeData, TreeNode::NodeData>(EntryType): the base NodeData(type) ctor, then the
+// mixin vftable
 // @0x140010ca0
 Scaleform::Render::TreeNode::NodeData* FUN_140010ca0(
     Scaleform::Render::TreeNode::NodeData* destination,
     Scaleform::Render::TreeNode::NodeData::EntryType type)
 {
-    return new (destination) Scaleform::Render::TreeNode::NodeData(type);
+    destination->Scaleform::Render::TreeNode::NodeData::NodeData(type);
+    destination->pVTable = Scaleform::Render::TreeShapeNodeDataMixinVTable;
+    return destination;
 }
 
-// MS2-FUNCTIONAL: constructs the default tree node snapshot using its recovered base constructor.
+// BEHAVIOUR FIX: this is the mixin's copy constructor. The exe passes the source node data through to the
+// NodeData copy ctor (0x1424d9220); ours ignored it and default-constructed an ET_Base node, so every copy lost the
+// source's fields. It also stores the mixin vftable as the exe does.
 // @0x140010fe0
 Scaleform::Render::TreeNode::NodeData* FUN_140010fe0(
-    Scaleform::Render::TreeNode::NodeData* destination)
+    Scaleform::Render::TreeNode::NodeData* destination, const Scaleform::Render::TreeNode::NodeData* source)
 {
-    return new (destination) Scaleform::Render::TreeNode::NodeData();
+    destination->Scaleform::Render::TreeNode::NodeData::NodeData(*source);
+    destination->pVTable = Scaleform::Render::TreeShapeNodeDataMixinVTable;
+    return destination;
 }
 
 // @0x140010ef0
