@@ -2034,28 +2034,18 @@ void FUN_14001c170(void* owner, void* replacement)
     }
 }
 
-// MS2-FUNCTIONAL: adjust a Scaleform array size and grow or shrink capacity using the shared array helper.
+// adjust a Scaleform array size and grow or shrink capacity using the shared array helper (ArrayData::Resize).
 // @0x14001cab0
 void FUN_14001cab0(void* array, void* arrayArg, CriUint64 newSize)
 {
     CriUint64* fields = (CriUint64*)array;
-    CriUint64 oldSize = fields[1];
-    CriUint64 capacity = fields[2];
-    if (newSize < oldSize)
+    if (newSize < fields[1])
     {
-        if (newSize < capacity >> 1)
-        {
+        if (newSize < (fields[2] >> 1))
             FUN_14001c570(fields, arrayArg, newSize);
-            fields[1] = newSize;
-            return;
-        }
     }
-    else if (capacity <= newSize)
-    {
-        FUN_14001c570(fields, arrayArg, (newSize >> 2) + newSize);
-        fields[1] = newSize;
-        return;
-    }
+    else if (newSize >= fields[2])
+        FUN_14001c570(fields, arrayArg, newSize + (newSize >> 2));
     fields[1] = newSize;
 }
 
@@ -2160,16 +2150,15 @@ void* FUN_1400293d0(void* object)
     return object;
 }
 
-// MS2-FUNCTIONAL: initialize the two embedded Scaleform strings when the optional CRI value exists.
+// initialize the two embedded Scaleform strings when the optional CRI value exists.
 // @0x140029de0
-void* FUN_140029de0(void* object)
+void FUN_140029de0(void* object)
 {
     if (object)
     {
         FUN_142584ce0(object);
         FUN_142584ce0((CriUint8*)object + 8);
     }
-    return object;
 }
 
 // MS2-FUNCTIONAL: initialize the CRI system-timer callback object and retain its source.
