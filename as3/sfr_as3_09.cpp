@@ -1796,17 +1796,17 @@ namespace Instances { namespace fl_events {
     __forceinline TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
-        ScaleX = ScaleY = 1.0;
+        ScaleY = 1.0;
         OffsetX = OffsetY = LocalOffsetX = LocalOffsetY = 0;
         Rotation = 0;
         LocalOffsetInitialized = false;
+        ScaleX = 1.0;
     }
 
     __forceinline ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
         : Event(t)
-        , BytesLoaded(0)
-        , BytesTotal(0)
     {
+        BytesLoaded = BytesTotal = 0;
     }
 
     __forceinline FocusEvent::FocusEvent(InstanceTraits::Traits& t)
@@ -1947,7 +1947,6 @@ namespace InstanceTraits { namespace fl_events {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
     // @0x14246b1f0
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
     Pickable<ProgressEvent::InstanceType> ProgressEvent::MakeInstance(Traits& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
@@ -1976,7 +1975,6 @@ namespace InstanceTraits { namespace fl_events {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
     // @0x14246b5e0
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
     Pickable<TransformGestureEvent::InstanceType> TransformGestureEvent::MakeInstance(Traits& t)
     {
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
@@ -2059,7 +2057,6 @@ namespace InstanceTraits { namespace fl_events {
         result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
     // @0x14246bde0
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
     void ProgressEvent::MakeObject(Value& result, Traits& t)
     {
         result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
@@ -2088,7 +2085,6 @@ namespace InstanceTraits { namespace fl_events {
         result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
     }
     // @0x14246c190
-    // MS2-FUNCTIONAL: the exe inlines the instance constructor; cl calls it
     void TransformGestureEvent::MakeObject(Value& result, Traits& t)
     {
         result.Pick(Pickable<InstanceType>(new(t.Alloc()) InstanceType(t)));
@@ -2615,145 +2611,313 @@ namespace Instances { namespace fl_events {
         result.Assign(vm.GetStringManager().CreateString(buf.ToCStr()));
     }
 
-    // toString of the event classes: formatToString of the class name and the listed properties.
-    static void FormatEventString(Event& e, ASString& result, const char* className, const char* const* props,
-                                  unsigned count)
-    {
-        StringManager& sm = e.GetVM().GetStringManager();
-        Value argv[20];
-        argv[0].Assign(sm.CreateConstString(className));
-        for (unsigned i = 0; i < count; ++i)
-            argv[i + 1].Assign(sm.CreateConstString(props[i]));
-        Value r;
-        e.formatToString(r, count + 1, argv);
-        r.Convert2String(result).DoNotCheck();
-    }
-
     // @0x14246fc50
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     // Not inlined: TimerEvent::toString tail-calls it in the exe.
     SF_NOINLINE void Event::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase" };
-        FormatEventString(*this, result, GetEventName(), props, 4);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString(GetEventName()),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x14246f9e0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void AppLifecycleEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "status" };
-        FormatEventString(*this, result, "AppLifecycleEvent", props, 4);
+        //example: [AppLifecycleEvent type="sss" bubbles=false cancelable=false status=null]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("AppLifecycleEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("status")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x14246feb0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void FocusEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "relatedObject",
-                                             "shiftKey", "keyCode" };
-        FormatEventString(*this, result, "FocusEvent", props, 7);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("FocusEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("relatedObject"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("keyCode")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424701d0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void GestureEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY", "stageX",
-                                             "stageY", "ctrlKey", "altKey", "shiftKey", "commandKey", "controlKey" };
-        FormatEventString(*this, result, "GestureEvent", props, 13);
+        //example: [GestureEvent type="gestureZoom" bubbles=true cancelable=false phase=null localX=0 localY=0 
+        // stageX=0 stageY=0 ctrlKey=false altKey=false shiftKey=false commandKey=false controlKey=false]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("GestureEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("phase"),
+            vm.GetStringManager().CreateConstString("localX"),
+            vm.GetStringManager().CreateConstString("localY"),
+            vm.GetStringManager().CreateConstString("stageX"),
+            vm.GetStringManager().CreateConstString("stageY"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("commandKey"),
+            vm.GetStringManager().CreateConstString("controlKey")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424706a0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void IOErrorEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "text" };
-        FormatEventString(*this, result, "IOErrorEvent", props, 3);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("IOErrorEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("text")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x142470890
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void KeyboardEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "charCode", "keyCode",
-                                             "keyLocation", "ctrlKey", "altKey", "shiftKey" };
-        FormatEventString(*this, result, "KeyboardEvent", props, 10);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("KeyboardEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("charCode"),
+            vm.GetStringManager().CreateConstString("keyCode"),
+            vm.GetStringManager().CreateConstString("keyLocation"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
+        
     }
 
     // @0x142470c80
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void MouseEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "localX", "localY",
-                                             "stageX", "stageY", "relatedObject", "ctrlKey", "altKey", "shiftKey",
-                                             "delta" };
-        FormatEventString(*this, result, "MouseEvent", props, 13);
+        //example: [MouseEvent type="rollOver" bubbles=false cancelable=false eventPhase=2 localX=248 localY=47 
+        // stageX=369 stageY=152 relatedObject=null ctrlKey=false altKey=false shiftKey=false delta=0]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("MouseEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("localX"),
+            vm.GetStringManager().CreateConstString("localY"),
+            vm.GetStringManager().CreateConstString("stageX"),
+            vm.GetStringManager().CreateConstString("stageY"),
+            vm.GetStringManager().CreateConstString("relatedObject"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("delta")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x142471140
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void NetStatusEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "info", "target" };
-        FormatEventString(*this, result, GetEventName(), props, 5);
+        StringManager& sm = GetVM().GetStringManager();
+        Value params[] = {
+            sm.CreateConstString(GetEventName()),
+            sm.CreateConstString("type"),
+            sm.CreateConstString("bubbles"),
+            sm.CreateConstString("cancelable"),
+            sm.CreateConstString("info"),
+            sm.CreateConstString("target")
+        };
+        Value v;
+        formatToString(v, sizeof(params)/sizeof(params[0]), params);
+        v.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424713e0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void PressAndTapGestureEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY",
-                                             "tapLocalX", "tapLocalY", "ctrlKey", "altKey", "shiftKey", "commandKey",
-                                             "controlKey" };
-        FormatEventString(*this, result, "PressAndTapGestureEvent", props, 13);
+        //example: [PressAndTapGestureEvent type="gesturePressAndTap" bubbles=true cancelable=false phase=null 
+        // localX=0 localY=0 tapLocalX=0 tapLocalY=0 ctrlKey=false altKey=false shiftKey=false 
+        // commandKey=false controlKey=false]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("PressAndTapGestureEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("phase"),
+            vm.GetStringManager().CreateConstString("localX"),
+            vm.GetStringManager().CreateConstString("localY"),
+            vm.GetStringManager().CreateConstString("tapLocalX"),
+            vm.GetStringManager().CreateConstString("tapLocalY"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("commandKey"),
+            vm.GetStringManager().CreateConstString("controlKey")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424718a0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void ProgressEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "bytesLoaded",
-                                             "bytesTotal" };
-        FormatEventString(*this, result, "ProgressEvent", props, 6);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("ProgressEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("bytesLoaded"),
+            vm.GetStringManager().CreateConstString("bytesTotal")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x142471b70
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void StageOrientationEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "beforeOrientation",
-                                             "afterOrientation" };
-        FormatEventString(*this, result, "StageOrientationEvent", props, 5);
+        //example: [StageOrientationEvent type="sss" bubbles=false cancelable=false beforeOrientation=null afterOrientation=null]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("StageOrientationEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("beforeOrientation"),
+            vm.GetStringManager().CreateConstString("afterOrientation")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x142471e00
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void TextEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "text" };
-        FormatEventString(*this, result, "TextEvent", props, 5);
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("TextEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("text")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424720a0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void TouchEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "eventPhase", "touchPointID",
-                                             "isPrimaryTouchPoint", "localX", "localY", "stageX", "stageY", "sizeX",
-                                             "sizeY", "relatedObject", "ctrlKey", "altKey", "shiftKey", "commandKey",
-                                             "controlKey" };
-        FormatEventString(*this, result, "TouchEvent", props, 18);
+        //example: [TouchEvent type="touchTap" bubbles=true cancelable=false eventPhase=2 touchPointID=2 isPrimaryTouchPoint=true 
+        // localX=149.25 localY=188.85 stageX=157.25 stageY=198.85 sizeX=1.4600000381469727 sizeY=0.8199999928474426 pressure=1 
+        // relatedObject=null ctrlKey=false altKey=false shiftKey=false commandKey=false controlKey=false]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("TouchEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("touchPointID"),
+            vm.GetStringManager().CreateConstString("isPrimaryTouchPoint"),
+            vm.GetStringManager().CreateConstString("localX"),
+            vm.GetStringManager().CreateConstString("localY"),
+            vm.GetStringManager().CreateConstString("stageX"),
+            vm.GetStringManager().CreateConstString("stageY"),
+            vm.GetStringManager().CreateConstString("sizeX"),
+            vm.GetStringManager().CreateConstString("sizeY"),
+            vm.GetStringManager().CreateConstString("relatedObject"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("commandKey"),
+            vm.GetStringManager().CreateConstString("controlKey")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // @0x1424726d0
-    // MS2-FUNCTIONAL: the exe builds the argument array inline
     void TransformGestureEvent::toString(ASString& result)
     {
-        static const char* const props[] = { "type", "bubbles", "cancelable", "phase", "localX", "localY", "stageX",
-                                             "stageY", "scaleX", "scaleY", "rotation", "offsetX", "offsetY",
-                                             "ctrlKey", "altKey", "shiftKey", "commandKey", "controlKey" };
-        FormatEventString(*this, result, "TransformGestureEvent", props, 18);
+        //example: [TransformGestureEvent type="gestureZoom" bubbles=true cancelable=false phase="end" localX=-16.2 localY=35.1 
+        // stageX=153.75 stageY=143.6 scaleX=1 scaleY=1 rotation=0 offsetX=0 offsetY=0 ctrlKey=false 
+        // altKey=false shiftKey=false commandKey=false controlKey=false]
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("TransformGestureEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("phase"),
+            vm.GetStringManager().CreateConstString("localX"),
+            vm.GetStringManager().CreateConstString("localY"),
+            vm.GetStringManager().CreateConstString("stageX"),
+            vm.GetStringManager().CreateConstString("stageY"),
+			vm.GetStringManager().CreateConstString("scaleX"),
+			vm.GetStringManager().CreateConstString("scaleY"),
+            vm.GetStringManager().CreateConstString("rotation"),
+            vm.GetStringManager().CreateConstString("offsetX"),
+            vm.GetStringManager().CreateConstString("offsetY"),
+            vm.GetStringManager().CreateConstString("ctrlKey"),
+            vm.GetStringManager().CreateConstString("altKey"),
+            vm.GetStringManager().CreateConstString("shiftKey"),
+            vm.GetStringManager().CreateConstString("commandKey"),
+            vm.GetStringManager().CreateConstString("controlKey")
+        };
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 
     // A new Object {code, level}.
