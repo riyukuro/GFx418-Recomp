@@ -1369,15 +1369,14 @@ void FUN_140006e20(void** array)
     if (*array) Scaleform::Memory::Free(*array);
 }
 
-// MS2-FUNCTIONAL: copies the two shared strings in each 16-byte hash record.
+// copies the two shared strings in each 16-byte hash record
 // @0x140006940
 void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
                    const Scaleform::String* source)
 {
-    for (Scaleform::UPInt i = 0; i < count; ++i) {
-        new (destination + i * 2) Scaleform::String(source[i * 2]);
-        new (destination + i * 2 + 1) Scaleform::String(source[i * 2 + 1]);
-    }
+    // SDK ConstructArraySource: placement copies of each two-string record
+    for (Scaleform::UPInt i = 0; i < count; ++i, source += 2, destination += 2)
+        ::new (destination) Video01StringPair(*reinterpret_cast<const Video01StringPair*>(source));
 }
 
 // MS2-FUNCTIONAL: reserves the WeakPtrProxy pointer array on the global heap (ArrayDataBase<.., AllocatorGH>::Reserve).
@@ -1585,7 +1584,7 @@ void FUN_1400072f0(void** array, Scaleform::UPInt size)
     }
 }
 
-// MS2-FUNCTIONAL: appends copies of a sequence of two-string records.
+// appends copies of a sequence of two-string records
 // @0x140007370
 void FUN_140007370(void** array, const Scaleform::String* records, Scaleform::UPInt count)
 {
@@ -1593,11 +1592,11 @@ void FUN_140007370(void** array, const Scaleform::String* records, Scaleform::UP
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     const Scaleform::UPInt oldSize = fields[1];
     FUN_140006f50(array, array, oldSize + count);
-    Scaleform::String* destination = static_cast<Scaleform::String*>(*array) + oldSize * 2;
-    for (Scaleform::UPInt i = 0; i < count; ++i) {
-        new (destination + i * 2) Scaleform::String(records[i * 2]);
-        new (destination + i * 2 + 1) Scaleform::String(records[i * 2 + 1]);
-    }
+    // SDK ConstructArraySource(Data + oldSize, count, source): placement copies of each two-string record
+    Video01StringPair* destination = static_cast<Video01StringPair*>(*array) + oldSize;
+    const Video01StringPair* source = reinterpret_cast<const Video01StringPair*>(records);
+    for (Scaleform::UPInt i = 0; i < count; ++i, ++source, ++destination)
+        ::new (destination) Video01StringPair(*source);
 }
 
 // Appends an object value to the stack at the embedded current cursor.
