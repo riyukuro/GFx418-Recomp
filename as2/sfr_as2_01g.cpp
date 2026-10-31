@@ -7,7 +7,13 @@
 // MS2-RANGE: 0x142743db0-0x142744560 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include <windows.h>
+#include "fmod44464/api/inc/fmod.hpp"
+
+void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
+
+namespace Scaleform { class Event { public: virtual ~Event(); void PulseEvent(); }; }
 
 namespace Scaleform { namespace GFx {
 
@@ -21,9 +27,6 @@ extern "C" char DAT_1431bee50[];   // streamed sound
 extern "C" char DAT_1431bee68[];
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer
 
-void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
-void FUN_14015b310(void*, UPInt);           // sized operator delete (Scaleform heap)
-extern "C" void FUN_14257dcd0(void*);       // Ptr Release (sound renderer)
 extern "C" void FUN_142743730(void*);       // sound dtor
 extern "C" int FUN_142303a3b(void*);        // FMOD::Sound::release
 void* FUN_142745630(void** set, const unsigned char* key);                  // sync-point set: the value at key
@@ -31,11 +34,28 @@ U* FUN_142743900(U* self, const U* source);                                // Ar
 void FUN_142742d10(U** self, void* heap, const NodeRef* node, U hash);     // array-valued set add
 extern "C" void FUN_1427463e0(U*, void*, U); // ArrayData<VideoPlayerImpl*>::Reserve
 void* FUN_14258a490(void* mem, void* createParams);                         // Thread::Thread(const CreateParams&)
-void FUN_142583d50(void* event);                                            // Event::PulseEvent
 int FUN_142747310(void* thread, void* renderer);                            // the FMOD update thread's body
-int FUN_1428d8f1a(void* channel, void** puserdata);                         // FMOD::Channel::getUserData
-int FUN_1428d8ecc(void* sound, int index, void** ppoint);                   // FMOD::Sound::getSyncPoint
 void FUN_1427474d0(void* channel, void* syncinfo);                          // audio channel: sync point reached
+
+static inline void RawRefCountCoreDtor(void* p)
+{
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
+}
+
+static inline void RawRefCountAddRef(void* p)
+{
+    static_cast<RefCountImpl*>(p)->AddRef();
+}
+
+static inline void RawRefCountRelease(void* p)
+{
+    static_cast<RefCountImpl*>(p)->Release();
+}
+
+static inline void RawRefCountNTSRelease(void* p)
+{
+    static_cast<RefCountNTSImpl*>(p)->Release();
+}
 
 static inline void* RawDeleteTail(void* self, unsigned flags, UPInt size)
 {
@@ -44,7 +64,7 @@ static inline void* RawDeleteTail(void* self, unsigned flags, UPInt size)
         if (!(flags & 4))
             Memory::Free(self);
         else
-            FUN_14015b310(self, size);
+            __empty_global_delete(self, size);
     }
     return self;
 }
@@ -95,7 +115,7 @@ void* FUN_142743e60(void* self, unsigned flags)
     if (RawField<void*>(self, 0x58))
         Memory::Free(RawField<void*>(self, 0x58));
     if (RawField<void*>(self, 0x40))
-        FUN_14257dcb0(RawField<void*>(self, 0x40));
+        RawRefCountRelease(RawField<void*>(self, 0x40));
     FUN_142743730(self);
     return RawDeleteTail(self, flags, 0x78);
 }
@@ -124,10 +144,10 @@ void* FUN_142743fa0(void* self, unsigned flags)
     RawField<void*>(self, 0x30) = 0;
     RawUnlinkNode(self);
     if (RawField<void*>(self, 0x28))
-        FUN_14257dcd0(RawField<void*>(self, 0x28));
+        RawRefCountNTSRelease(RawField<void*>(self, 0x28));
     RawField<void*>(self, 0x10) = DAT_1431bec40;
     RawField<void*>(self, 0) = DAT_1431b80b8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x40);
 }
 
@@ -204,7 +224,7 @@ void FUN_142744070(char* self, void* psound)
         FUN_1427463e0(list, list, n + (n >> 2));
     list[1] = n;
     ((void**)list[0])[n - 1] = psound;
-    FUN_14257dc30(psound);
+    RawRefCountAddRef(psound);
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0x80));
 
     if (RawField<char>(self, 0xf1) && !RawField<void*>(self, 0x18))
@@ -214,7 +234,7 @@ void FUN_142744070(char* self, void* psound)
         void* mem = Memory::Alloc(0x60);
         void* pthread = mem ? FUN_14258a490(mem, &params) : NULL;
         if (RawField<void*>(self, 0x18))
-            FUN_14257dcb0(RawField<void*>(self, 0x18));
+            RawRefCountRelease(RawField<void*>(self, 0x18));
         RawField<void*>(self, 0x18) = pthread;
         // Thread::Start(Running), Thread::SetThreadName
         typedef bool (*StartFunc)(void*, int);
@@ -228,12 +248,12 @@ void FUN_142744070(char* self, void* psound)
         {
             RawField<char>(self, 0x78) = 1;
             if (RawField<void*>(self, 0x18))
-                FUN_14257dcb0(RawField<void*>(self, 0x18));
+                RawRefCountRelease(RawField<void*>(self, 0x18));
             RawField<void*>(self, 0x18) = 0;
             RawField<char>(self, 0xf1) = 0;
         }
     }
-    FUN_142583d50(self + 0x20);
+    reinterpret_cast<Event*>(self + 0x20)->PulseEvent();
 }
 
 // FMOD channel callback: at a sync point (type 2) of the channel's sound, a sync point the sound listens for
@@ -244,14 +264,14 @@ int FUN_1427443c0(void* channel, int type, void* commanddata1, void* commanddata
 {
     (void)commanddata2;
     char* owner = NULL;
-    FUN_1428d8f1a(channel, (void**)&owner);
+    static_cast<FMOD::Channel*>(channel)->getUserData((void**)&owner);
     if (!owner || type != 2)
         return 0;
     char* data = RawField<char*>(owner, 0x30);
     if (!data || !RawField<void*>(data, 0x30))
         return 0;
     U point;
-    if (FUN_1428d8ecc(RawField<void*>(data, 0x30), (int)(SPInt)commanddata1, (void**)&point) != 0)
+    if (RawField<FMOD::Sound*>(data, 0x30)->getSyncPoint((int)(SPInt)commanddata1, (FMOD_SYNCPOINT**)&point) != FMOD_OK)
         return 0;
     U* table = RawField<U*>(owner, 0x40);
     char* found = NULL;
