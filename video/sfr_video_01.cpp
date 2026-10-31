@@ -1836,16 +1836,20 @@ bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
     return Video01NodeEquals(left, right, caseSensitive);
 }
 
-// MS2-FUNCTIONAL: erases one retained object from the pointer array and compacts the tail.
+// erases one weak-pointer proxy from the pointer array and compacts the tail (SDK ArrayBase::RemoveAt)
 // @0x14000a800
 void FUN_14000a800(void** array, Scaleform::UPInt index)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    void** items = static_cast<void**>(*array);
-    if (fields[1] == 1) { FUN_140006e70(array, array, 0); return; }
-    ReleaseAs2GCObject(items[index]);
-    memmove(items + index, items + index + 1, (fields[1] - index - 1) * sizeof(void*));
-    --fields[1];
+    if (fields[1] == 1) {
+        FUN_140006e70(array, array, 0);
+    } else {
+        void* proxy = static_cast<void**>(*array)[index];
+        if (proxy) static_cast<Scaleform::WeakPtrProxy*>(proxy)->Release();
+        memmove(static_cast<void**>(*array) + index, static_cast<void**>(*array) + 1 + index,
+                sizeof(void*) * (fields[1] - 1 - index));
+        --fields[1];
+    }
 }
 
 // releases all weak pairs and the allocated pair array
