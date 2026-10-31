@@ -45,13 +45,13 @@
 namespace Scaleform {
 void LogDebugMessage(LogMessageId id, const char* fmt, ...);
 }
+void FUN_14257dcb0(void* pobj);   // RefCountBase release (a global, as defined)
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The text allocator of the movie a character belongs to (the exe reads it through the character's movie pointers).
 // Render::Text::DocView is built by address (a placement new would add the null test the exe does not have).
 void  FUN_14260cc10(void* pdoc, Render::Text::Allocator* palloc, Render::Text::FontManagerBase* pfontMgr, void* plog);  // DocView::DocView
-void  FUN_14257dcb0(void* pobj);                                  // RefCountBase release
 void* FUN_142936510(TextField* ptf);                  // TextField::CreateImageSubstitutor
 
 // The movie context the text allocator hangs off: the character's movie, +0x10 of its +0x20 member.
