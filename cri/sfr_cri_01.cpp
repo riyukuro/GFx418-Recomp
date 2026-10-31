@@ -1928,26 +1928,37 @@ void FUN_14001c570(CriUint64* array, void*, CriUint64 requestedCapacity)
     array[2] = capacity;
 }
 
-// MS2-FUNCTIONAL: release a RefCountImpl pointer stored in a Scaleform Ptr wrapper.
-// @0x14001d210
-void FUN_14001d210(CriUint64* pointer)
+// RefCountImpl::Release, inlined: the last reference deletes the object through its virtual destructor.
+class CriRefCountView : public Scaleform::RefCountImplCore
 {
-    void** object = (void**)(uintptr_t)pointer[0];
-    if (!object)
-        return;
-    LONG* references = (LONG*)(object + 1);
-    if (InterlockedDecrement((volatile LONG*)references) == 0)
-        ((void (*)(void*, CriUint32))object[0])(object, 1);
+public:
+    void Release()
+    {
+        if (InterlockedDecrement((volatile LONG*)&RefCount) == 0)
+            delete this;
+    }
+};
+
+static inline void CriRefCountRelease(Scaleform::RefCountImplCore* object)
+{
+    ((CriRefCountView*)object)->Release();
 }
 
-// MS2-FUNCTIONAL: replace a Scaleform Ptr wrapper target and release its prior reference.
-// @0x14001d240
-CriUint64* FUN_14001d240(CriUint64* pointer, void* replacement)
+// release a RefCountImpl pointer stored in a Scaleform Ptr wrapper (the Ptr destructor).
+// @0x14001d210
+void FUN_14001d210(Scaleform::RefCountImplCore** pointer)
 {
-    void** object = (void**)(uintptr_t)pointer[0];
-    if (object && InterlockedDecrement((volatile LONG*)(object + 1)) == 0)
-        ((void (*)(void*, CriUint32))object[0])(object, 1);
-    pointer[0] = (CriUint64)(uintptr_t)replacement;
+    if (*pointer)
+        CriRefCountRelease(*pointer);
+}
+
+// replace a Scaleform Ptr wrapper target and release its prior reference.
+// @0x14001d240
+Scaleform::RefCountImplCore** FUN_14001d240(Scaleform::RefCountImplCore** pointer, Scaleform::RefCountImplCore* replacement)
+{
+    if (*pointer)
+        CriRefCountRelease(*pointer);
+    *pointer = replacement;
     return pointer;
 }
 
@@ -2048,15 +2059,11 @@ void FUN_14001cab0(void* array, void* arrayArg, CriUint64 newSize)
     fields[1] = newSize;
 }
 
-// MS2-FUNCTIONAL: release the held object in a Scaleform reference-count wrapper.
+// RefCountImpl::Release on the object itself.
 // @0x14001cb10
-void FUN_14001cb10(CriUint64* pointer)
+void FUN_14001cb10(Scaleform::RefCountImplCore* object)
 {
-    void** object = (void**)(uintptr_t)pointer[0];
-    if (!object)
-        return;
-    if (InterlockedDecrement((volatile LONG*)(object + 1)) == 0)
-        ((void (*)(void*, CriUint32))object[0])(object, 1);
+    CriRefCountRelease(object);
 }
 
 // MS2-FUNCTIONAL: allocate and construct a VideoSoundRendererStream from the supplied heap state.
