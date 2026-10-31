@@ -49,29 +49,15 @@ void LogDebugMessage(LogMessageId id, const char* fmt, ...);
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The text allocator of the movie a character belongs to (the exe reads it through the character's movie pointers).
-// Render::Text::DocView by address (render/text_docview.h needs the full kernel array headers, not the ones of
-// this unit; see sfr_as2_02.cpp).
+// Render::Text::DocView is built by address (a placement new would add the null test the exe does not have).
 void  FUN_14260cc10(void* pdoc, Render::Text::Allocator* palloc, Render::Text::FontManagerBase* pfontMgr, void* plog);  // DocView::DocView
-void  FUN_14260f920(void* pdoc);                                  // DocView::Format
-float FUN_1426134d0(void* pdoc);                                  // DocView::GetTextHeight
-float FUN_142613510(void* pdoc);                                  // DocView::GetTextWidth
-void  FUN_1426150b0(void* pdoc);                                  // DocView::SetAutoSizeX
-void  FUN_1426150d0(void* pdoc);                                  // DocView::SetAutoSizeY
-void  FUN_1426155e0(void* pdoc, const char* putf8Str, unsigned long long size);  // DocView::SetText
-void  FUN_142615910(void* pdoc);                                  // DocView::SetWordWrap
-void  FUN_1426156d0(void* pdoc, const void* prect, int useType);  // DocView::SetViewRect
-void  FUN_14259c250(void* pst, const Render::Text::TextFormat& fmt);       // StyledText::SetDefaultTextFormat
-void  FUN_14259c170(void* pst, const Render::Text::ParagraphFormat& fmt);  // StyledText::SetDefaultParagraphFormat
 void  FUN_14257dcb0(void* pobj);                                  // RefCountBase release
-Render::Text::Allocator* FUN_14256fdd0(void* pmovieCtx);
-void FUN_142614e30(void* psubst, void* pimageDesc);  // ImageSubstitutor::RemoveImageDesc
 void* FUN_142936510(TextField* ptf);                  // TextField::CreateImageSubstitutor
-void  FUN_1425bb680(TextField* ptf, const char* pid); // TextField::RemoveIdImageDescAssoc
 
 // The movie context the text allocator hangs off: the character's movie, +0x10 of its +0x20 member.
-static inline void* MS2_AS2_TextAllocatorOwner(InteractiveObject* ptarget)
+static inline MovieImpl* MS2_AS2_TextAllocatorOwner(InteractiveObject* ptarget)
 {
-    return *(void**)(*(char**)((char*)ptarget + 0x20) + 0x10);
+    return *(MovieImpl**)(*(char**)((char*)ptarget + 0x20) + 0x10);
 }
 
 // The movie's image creator.
@@ -141,17 +127,17 @@ void TextFormatProto::GetTextExtent(const FnCall& fn)
     ASString    text = fn.Arg(0).ToString(fn.Env);
 
     void* pdoc = SF_HEAP_AUTO_ALLOC(ptarget, 0x150);
-    FUN_14260cc10(pdoc, FUN_14256fdd0(MS2_AS2_TextAllocatorOwner(ptarget)), reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), 0);
+    FUN_14260cc10(pdoc, MS2_AS2_TextAllocatorOwner(ptarget)->GetTextAllocator(), reinterpret_cast<Render::Text::FontManagerBase*>(ptarget->GetFontManager()), 0);
+    Render::Text::DocView* pdv = static_cast<Render::Text::DocView*>(pdoc);
     DocView_SetFlag(pdoc, 0x40, 2);
-    FUN_1426150b0(pdoc);
-    FUN_1426150d0(pdoc);
+    pdv->SetAutoSizeX();
+    pdv->SetAutoSizeY();
     if (fn.Env->CheckExtensions() && fn.NArgs > 1)
     {
         float width = float(fn.Arg(1).ToNumber(fn.Env));
         DocView_ClearMultiline(pdoc);
-        FUN_142615910(pdoc);
-        float rect[4] = {0, 0, width * 20.0f, 0};
-        FUN_1426156d0(pdoc, rect, 1);
+        pdv->SetWordWrap();
+        pdv->SetViewRect(Render::RectF(0, 0, width * 20.0f, 0));
     }
     DocView_SetMultiline(pdoc);
 
@@ -163,19 +149,19 @@ void TextFormatProto::GetTextExtent(const FnCall& fn)
     textFmt = textFmt.Merge(pfmtObj->GetTextFormat());
     paraFmt = paraFmt.Merge(pfmtObj->GetParagraphFormat());
     void* pstyled = DocView_GetStyledText(pdoc);
-    FUN_14259c250(pstyled, textFmt);
-    FUN_14259c170(pstyled, paraFmt);
-    FUN_1426155e0(pdoc, text.ToCStr(), ~0ull);
-    FUN_14260f920(pdoc);
+    static_cast<Render::Text::StyledText*>(pstyled)->SetDefaultTextFormat(textFmt);
+    static_cast<Render::Text::StyledText*>(pstyled)->SetDefaultParagraphFormat(paraFmt);
+    pdv->SetText(text.ToCStr(), ~0ull);
+    pdv->Format();
 
     const Double kGutter = 80.0;
     const Double kScale  = 0.05;
     pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("textFieldWidth"),
-                       Value((Double(FUN_142613510(pdoc)) + kGutter) * kScale));
+                       Value((Double(pdv->GetTextWidth()) + kGutter) * kScale));
     pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("textFieldHeight"),
-                       Value((Double(FUN_1426134d0(pdoc)) + kGutter) * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("width"), Value(Double(FUN_142613510(pdoc)) * kScale));
-    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("height"), Value(Double(FUN_1426134d0(pdoc)) * kScale));
+                       Value((Double(pdv->GetTextHeight()) + kGutter) * kScale));
+    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("width"), Value(Double(pdv->GetTextWidth()) * kScale));
+    pres->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("height"), Value(Double(pdv->GetTextHeight()) * kScale));
 
     // ascent and descent of the first font of the list, scaled by the font size
     Ptr<Render::Text::FontHandle> pfont = *DocView_GetFontManager(pdoc)->CreateFontHandle(
@@ -245,9 +231,9 @@ void AvmTextField::UpdateImageSubstitution(const FnCall& fn)
     void* psubst = FUN_142936510(ptf);
     if (psubst)
     {
-        FUN_142614e30(psubst, pdesc);
+        static_cast<Render::Text::DocView::ImageSubstitutor*>(psubst)->RemoveImageDesc(pdesc);
         DocView_SetReformatReq(ptf->GetDocument());
-        FUN_1425bb680(ptf, id.ToCStr());
+        ptf->RemoveIdImageDescAssoc(id.ToCStr());
         ptf->SetDirtyFlag();
     }
 }
