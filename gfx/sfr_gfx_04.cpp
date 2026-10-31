@@ -1339,24 +1339,32 @@ ResourceId MovieDefImpl::GetExportedResourceIdByName(const String& name) const
     return ResourceId();
 }
 
+// The SDK's StateBag helpers (GFx_Loader.h); GetASSupport calls them on the StateBag base.
+inline Ptr<ASSupport> StateBag::GetAS2Support() const
+{
+    return *(ASSupport*)GetStateAddRef(State::State_AS2Support);
+}
+inline Ptr<ASSupport> StateBag::GetAS3Support() const
+{
+    return *(ASSupport*)GetStateAddRef(State::State_AS3Support);
+}
+
 // @0x1425cf470
-// MS2-FUNCTIONAL: branch layout of the AS2/AS3 state selection
 Ptr<ASSupport> MovieDefImpl::GetASSupport() const
 {
     // AS3 files carry the FileAttributes flag; anything else is played by the AS2 support.
     int        asVersion = (GetDataDef()->GetFileAttributes() & LoadProcess::FileAttr_UseActionScript3) ? 3 : 2;
     ASSupport* pASSupport;
     if (asVersion <= 2)
-        pASSupport = Ptr<ASSupport>(*(ASSupport*)GetStateAddRef(State::State_AS2Support));
+        pASSupport = GetAS2Support();
     else
-        pASSupport = Ptr<ASSupport>(*(ASSupport*)GetStateAddRef(State::State_AS3Support));
+        pASSupport = GetAS3Support();
     if (!pASSupport)
         return 0;
     return pASSupport;
 }
 
 // @0x1425cea00
-// MS2-FUNCTIONAL: scheduling of the StateBag vftable load around the inlined AS version test
 MemoryContext* MovieDefImpl::CreateMemoryContext(const char* heapName, const MemoryParams& memParams, bool debugHeap)
 {
     ASSupport* pASSupport = GetASSupport();
@@ -1460,7 +1468,6 @@ public:
 };
 
 // @0x1425ce8d0
-// MS2-FUNCTIONAL: scheduling of the StateBag vftable load around the inlined AS version test
 Movie* MovieDefImpl::CreateInstance(MemoryContext* memContext, bool initFirstFrame, ActionControl* actionControl,
                                     Render::ThreadCommandQueue* queue)
 {

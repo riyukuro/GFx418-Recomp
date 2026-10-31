@@ -89,6 +89,9 @@ public:
     inline Ptr<FontLib>        GetFontLib() const;
     // Defined in video/video_statebag.h.
     inline Ptr<Video::VideoBase> GetVideo() const;
+    // Defined in sfr_gfx_04 (MovieDefImpl::GetASSupport).
+    inline Ptr<ASSupport>      GetAS2Support() const;
+    inline Ptr<ASSupport>      GetAS3Support() const;
     // (appended for the player, sfr_gfx_01i)
     Ptr<MultitouchInterface> GetMultitouchInterface() const
     {
