@@ -1444,7 +1444,6 @@ void Vector_String::AS3reverse(SPtr<Vector_String>& result)
 // VectorBase<T>::Concat/Filter/Map<I>: one body per element type, written once below and forced inline into each.
 // VM::GetValueTraits / VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
-Scaleform::GFx::AS3::ClassTraits::Traits& FUN_142507f60(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 
 namespace Scaleform {
@@ -1465,7 +1464,10 @@ namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec { struct 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Impl {
 int CompareFunct(VM& vm, const Value& funct, const Value& a, const Value& b);
 }}}}
-void FUN_1425615f0(Scaleform::ArrayDH<Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32> >& pairs, const Scaleform::Pair<Scaleform::GFx::ASString, Scaleform::UInt32>& v);
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayBase<ArrayDataDH<Pair<GFx::ASString, UInt32>, AllocatorDH<Pair<GFx::ASString, UInt32>, 2>,
+    ArrayDefaultPolicy> >::PushBack(const Pair<GFx::ASString, UInt32>& val);
+}
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
 
@@ -1529,7 +1531,7 @@ static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsig
     {
         const Value& value = argv[i];
         const Traits& argTraits = FUN_14250ffc0(vm, value);
-        const ClassTraits::Traits& argClassTR = FUN_142507f60(vm, value);
+        const ClassTraits::Traits& argClassTR = vm.GetClassTraits(value);
 
         if (argTraits.IsArrayLike())
         {
@@ -1546,7 +1548,7 @@ static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsig
             }
             Append(r, static_cast<I&>(*value.GetObject()));
         }
-        else if (FUN_1425149a0(currClassTR, FUN_142507f60(self.VMRef, value)))
+        else if (FUN_1425149a0(currClassTR, self.VMRef.GetClassTraits(value)))
             ConcatPush(r, value);
         else
         {
@@ -1811,7 +1813,7 @@ struct Value2StrCollector : public SortFunc<T>
         if (Value(v).Convert2String(str))
         {
             const StringPair p(str, ind);
-            FUN_1425615f0(Pairs, p);
+            Pairs.PushBack(p);
         }
     }
 
@@ -1826,14 +1828,14 @@ void Value2StrCollector<Value>::operator()(UInt32 ind, const Value& v)
     if (v.Convert2String(str))
     {
         const StringPair p(str, ind);
-        FUN_1425615f0(Pairs, p);
+        Pairs.PushBack(p);
     }
 }
 
 template <>
 void Value2StrCollector<Ptr<ASStringNode> >::operator()(UInt32 ind, const Ptr<ASStringNode>& v)
 {
-    FUN_1425615f0(Pairs, StringPair(ASString(v.GetPtr()), ind));
+    Pairs.PushBack(StringPair(ASString(v.GetPtr()), ind));
 }
 
 // pointers to the elements, for a compare function

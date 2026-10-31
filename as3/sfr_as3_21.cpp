@@ -297,7 +297,6 @@ void FUN_142554880(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scalef
 // ---------------------------------------------------------------- Vector
 
 // VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
-Scaleform::GFx::AS3::ClassTraits::Traits& FUN_142507f60(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 // GetValueTraits (sfr_as3_09)
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
@@ -417,7 +416,7 @@ CheckResult ArrayBase::CheckArgTypes(unsigned argc, const Value* argv, const Cla
 {
     for (unsigned i = 0; i < argc; ++i)
     {
-        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, argv[i])))
+        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(argv[i])))
         {
             VM& vm = VMRef;
             vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, "arguments", tr.GetName().ToCStr()));
@@ -1641,7 +1640,7 @@ CheckResult ArrayBase::OfCorrectType(const Instances::fl::Array& arr, const Clas
 {
     for (unsigned i = 0; i < arr.GetSize(); ++i)
     {
-        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, arr.At(i))))
+        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(arr.At(i))))
             return false;
     }
     return true;
@@ -1652,7 +1651,7 @@ CheckResult ArrayBase::OfCorrectType(unsigned argc, const Value* argv, const Cla
 {
     for (unsigned i = 0; i < argc; ++i)
     {
-        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, argv[i])))
+        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(argv[i])))
             return false;
     }
     return true;
@@ -2877,7 +2876,7 @@ CheckResult ArrayBase::CheckArgTypes(const Instances::fl::Array& arr, const Clas
 {
     for (UInt32 i = 0; i < arr.GetSize(); ++i)
     {
-        if (!FUN_1425149a0(tr, FUN_142507f60(VMRef, arr.At(i))))
+        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(arr.At(i))))
         {
             VM& vm = VMRef;
             vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, arr.GetTraits().GetName().ToCStr(),
@@ -3040,7 +3039,7 @@ void ArrayBase::AppendCoerce(const Instances::fl::Array& arr, const ClassTraits:
 bool ArrayBase::AppendCoerce(const Value& v, const ClassTraits::Traits& tr)
 {
     VM& vm = VMRef;
-    const ClassTraits::Traits& ctr = FUN_142507f60(vm, v);
+    const ClassTraits::Traits& ctr = vm.GetClassTraits(v);
     if (FUN_1425149a0(ctr, vm.GetClassTraitsArray()))
     {
         AppendCoerce(*static_cast<const Instances::fl::Array*>(v.GetObject()), tr);
