@@ -2046,7 +2046,8 @@ namespace Instances { namespace fl_net
                 for (AS3::Object::DynAttrsType::ConstIterator it = pmembers->Begin(); !it.IsEnd(); ++it)
                 {
                     const ASString& name = it->First.Name;
-                    Visit(String(name.ToCStr(), name.GetLength()), it->Second);
+                    const Value& v = it->Second;
+                    Visit(String(name.ToCStr(), name.GetLength()), v);
                 }
             }
         }
