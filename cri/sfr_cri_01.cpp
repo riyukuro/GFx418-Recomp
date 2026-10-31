@@ -1373,15 +1373,16 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 }
 
 // @0x140026080
-// MS2-FUNCTIONAL: other scheduling
 VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
 {
-    if (VideoCharacters.GetSize() == 0)
-        return NULL;
-    Ptr<VideoCharacter> pvideo = VideoCharacters[0];
-    VideoCharacters.RemoveAt(0);
-    pTextureImage = NULL;
-    return pvideo;
+    if (VideoCharacters.GetSize() > 0)
+    {
+        Ptr<VideoCharacter> pvideo = VideoCharacters[0];
+        VideoCharacters.RemoveAt(0);
+        pTextureImage = NULL;
+        return pvideo;
+    }
+    return NULL;
 }
 
 // @0x140026140
