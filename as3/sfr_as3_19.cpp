@@ -137,6 +137,7 @@ inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(void* globalObjec
 inline void FUN_14251ccc0(Scaleform::GFx::AS3::TR::State* state, Scaleform::UPInt n) { state->PopOp(n); }   // State::PopOp
 inline void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt regIndex) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->PushNewOpCodeArg(regIndex); }                    // Tracer: note register write
 inline bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut) { ::new (tmpNode) Scaleform::GFx::AS3::CheckResult(v->Convert2String(*static_cast<Scaleform::GFx::ASString*>(strOut))); return static_cast<bool*>(tmpNode); }   // Value::ToStringValue style conversion
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // Value::operator=(const ASString&), out of line in the exe
 unsigned long long* FUN_1424e0860(unsigned long long*, unsigned long long);
 inline void FUN_1424e0860(void* out, unsigned long long value) { ::FUN_1424e0860(static_cast<unsigned long long*>(out), value); }
 void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
@@ -388,15 +389,16 @@ CheckResult Value::ToUInt32Value()
     return ok;
 }
 
-// MS2-FUNCTIONAL 0x14252fe10: converts into an ASString and assigns it back; the exe routes allocation through the supplied StringManager.
 // @0x14252fe10
 CheckResult Value::ToStringValue(StringManager& stringManager)
 {
-    ASString string = stringManager.CreateString("", 0);
-    CheckResult converted = Convert2String(string);
-    if (converted)
-        Assign(string);
-    return converted;
+    CheckResult result(true);
+    ASString string = stringManager.CreateEmptyString();
+    if (Convert2String(string))
+        FUN_1424e0d40(*this, string);
+    else
+        result = false;
+    return result;
 }
 
 // MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
@@ -2267,27 +2269,17 @@ void Sfr31StateSwapOp(UPInt state)
 }
 
 // AvmDisplayObj::SwitchAS3ObjPtrType: type 1 makes the object reference strong, anything else weak.
-// MS2-FUNCTIONAL 0x14252e900: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14252e900
 void Sfr31SwitchAS3ObjPtrType(UPInt self, int type)
 {
     UPInt* strong = reinterpret_cast<UPInt*>(self + 8);
-    UPInt* weak = reinterpret_cast<UPInt*>(self + 0x10);
-    UPInt v = *weak;
+    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
     if (type == 1)
     {
-        if (v == 0)
-            v = *strong;
-        if (v & 1)
-            --v;
-        Sfr31SetGcRefClearNext(self, v);
+        Sfr31SetGcRefClearNext(self, reinterpret_cast<UPInt>(avm->GetAS3Obj()));
         return;
     }
-    if (v == 0)
-        v = *strong;
-    if (v & 1)
-        --v;
-    *weak = v;
+    avm->pAS3RawPtr = avm->GetAS3Obj();
     const UPInt s = *strong;
     if (s != 0)
     {
@@ -2302,14 +2294,15 @@ void Sfr31SwitchAS3ObjPtrType(UPInt self, int type)
 
 // AvmButton::SwitchState: unless the owner is being destroyed or already removed, the mouse state is
 // translated and handed to SwitchStateIntl.
-// MS2-FUNCTIONAL 0x14252e980: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14252e980
 void Sfr31ButtonSwitchState(UPInt self, int mouseState)
 {
-    const UPInt owner = *reinterpret_cast<UPInt*>(self - 0x28);
-    const UInt16 flags = *reinterpret_cast<UInt16*>(owner + 0x6a);
-    if (!((flags >> 4) & 1) && !(flags & 0x1000) && *reinterpret_cast<int*>(owner + 0x2c) > -2)
-        Sfr31ButtonSwitchStateIntl(self - 0x40, FUN_1425de200(mouseState));
+    const DisplayObjectBase* owner = *reinterpret_cast<DisplayObjectBase**>(self - 0x28);
+    if (!owner->IsUnloaded() && !owner->IsUnloading())
+    {
+        const int st = FUN_1425de200(mouseState);
+        Sfr31ButtonSwitchStateIntl(self - 0x40, st);
+    }
 }
 
 // AS3ValueObjectInterface::SetElement: stores the converted value at the array index.
@@ -2820,12 +2813,11 @@ Value* Sfr31ResolveInvokeAlias(UPInt root, const char* name)
     return 0;
 }
 
-// MS2-FUNCTIONAL 0x142528620: behavior-equivalent recovery; codegen differs from exe
 // @0x142528620
 void Sfr31SetMouseCursorType(UPInt self, const ASString* name, UInt32 mouse)
 {
     const char* s = name->ToCStr();
-    SInt32 v = -1;
+    UInt32 v = ~0u;
     if (strcmp(s, "arrow") == 0) v = 0;
     else if (strcmp(s, "button") == 0) v = 3;
     else if (strcmp(s, "hand") == 0) v = 1;
