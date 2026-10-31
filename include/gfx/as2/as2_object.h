@@ -410,6 +410,7 @@ public:
 protected:
     friend class FunctionProto;
     friend class FunctionCtorFunction;
+    friend struct CFunctionObjectInline; // the inlined Value(psc, func) in sfr_as2_05
 
     CFunctionObject(ASRefCountCollector* pcc);
     CFunctionObject(ASStringContext* psc); // exe 0x142919d70

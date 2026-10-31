@@ -2702,6 +2702,36 @@ static SF_FORCEINLINE void Value_SetNewFunction(Value* val, FunctionObject* pfun
     *val = v;
 }
 
+// The tag ctors as in sfr_as2_04: the exe inlines the CFunctionObject ctor and its FunctionObject base ctor.
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(0)
+{
+}
+
+// Value(ASStringContext*, CFunctionPtr) (sfr_as2_03 0x142923bf0) with the CFunctionObject(psc, func) ctor, both of
+// which the exe inlines into this unit's callers.
+struct CFunctionObjectInline
+{
+    static SF_FORCEINLINE void InitValue(Value& v, ASStringContext* psc, CFunctionPtr func)
+    {
+        v.T.Type = Value::FUNCTION;
+        CFunctionObject* pfunc = SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, ObjectInlineCtorTag());
+        if (pfunc)
+        {
+            pfunc->pFunction = func;
+            pfunc->Object::Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
+        }
+        v.V.FunctionValue.Flags       = 0;
+        v.V.FunctionValue.Function    = pfunc;
+        v.V.FunctionValue.pLocalFrame = 0;
+    }
+};
+
 // MS2-FUNCTIONAL the exe inlines CFunctionObject(psc, func) (defined out of line in sfr_as2_03) and calls an
 // out-of-line Value::SetNumber copy for all constants but LEFT
 // @0x14294f4f0
@@ -3316,13 +3346,14 @@ bool ColorMatrixFilterObject::GetMember(Environment* penv, const ASString& name,
     return GetMemberRaw(penv->GetSC(), name, val);
 }
 
-// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
 // @0x14294bd90
 bool AmpMarkerCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
 {
     if (strcmp(name.ToCStr(), "addMarker") == 0)
     {
-        *val = Value(penv->GetSC(), AddMarker);
+        Value func;
+        CFunctionObjectInline::InitValue(func, penv->GetSC(), AddMarker);
+        *val = func;
         return true;
     }
     return GetMemberRaw(penv->GetSC(), name, val);
@@ -3334,13 +3365,13 @@ static SF_FORCEINLINE void Selection_GetFlag(Value* val, unsigned bits)
     int v = (int)bits;
     if (v == 3)
         v = -1;
-    if (v == 0)
-        val->SetUndefined();
-    else
+    if (v != 0)
         val->SetBool(v == 1);
+    else
+        val->SetUndefined();
 }
 
-// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
+// MS2-FUNCTIONAL: register allocation (the exe keeps psc in rsi and the new CFunctionObject in r14, ours swaps them)
 // @0x14294fc20
 bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3351,7 +3382,9 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         const char* pname  = name.ToCStr();
         if (strcmp(pname, "captureFocus") == 0)
         {
-            *val = Value(psc, CaptureFocus);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, CaptureFocus);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "disableFocusAutoRelease") == 0)
@@ -3386,37 +3419,51 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         }
         else if (strcmp(pname, "moveFocus") == 0)
         {
-            *val = Value(psc, MoveFocus);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, MoveFocus);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "findFocus") == 0)
         {
-            *val = Value(psc, FindFocus);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, FindFocus);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "setModalClip") == 0)
         {
-            *val = Value(psc, SetModalClip);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, SetModalClip);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "getModalClip") == 0)
         {
-            *val = Value(psc, GetModalClip);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, GetModalClip);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "setControllerFocusGroup") == 0)
         {
-            *val = Value(psc, SetControllerFocusGroup);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, SetControllerFocusGroup);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "getControllerFocusGroup") == 0)
         {
-            *val = Value(psc, GetControllerFocusGroup);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, GetControllerFocusGroup);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "getFocusBitmask") == 0)
         {
-            *val = Value(psc, GetFocusBitmask);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, GetFocusBitmask);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "numFocusGroups") == 0)
@@ -3426,24 +3473,35 @@ bool SelectionCtorFunction::GetMember(Environment* penv, const ASString& name, V
         }
         else if (strcmp(pname, "getControllerMaskByFocusGroup") == 0)
         {
-            *val = Value(psc, GetControllerMaskByFocusGroup);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, GetControllerMaskByFocusGroup);
+            *val = func;
             return true;
         }
         else if (strcmp(pname, "getFocusArray") == 0)
         {
-            *val = Value(psc, GetFocusArray);
+            Value func;
+            CFunctionObjectInline::InitValue(func, psc, GetFocusArray);
+            *val = func;
             return true;
         }
     }
     return GetMemberRaw(psc, name, val);
 }
 
-// MS2-FUNCTIONAL the exe inlines Value(ASStringContext*, CFunctionPtr) and the CFunctionObject ctor (sfr_as2_03)
 // @0x14295da50
 bool MouseCtorFunction::HasOverloadedCursorTypeFunction(ASStringContext* psc) const
 {
-    Value func(psc, SetCursorType);
-    return SetCursorTypeFunc.GetObjectPtr() != func.V.FunctionValue.GetObjectPtr();
+    Value func;
+    CFunctionObjectInline::InitValue(func, psc, SetCursorType);
+    // ToFunction(NULL)'s counted copy, kept in registers as in the exe
+    FunctionObject* pcopy = func.V.FunctionValue.Function;
+    if (pcopy)
+        pcopy->AddRef();
+    bool overloaded = SetCursorTypeFunc.GetObjectPtr() != pcopy;
+    if (pcopy)
+        pcopy->Release();
+    return overloaded;
 }
 
 // MS2-FUNCTIONAL scheduling: the exe stores each matrix element right after the join, ours after the next name load
