@@ -150,11 +150,7 @@ struct VertexShader
 
 struct FragShader
 {
-    FragShader() : pDesc(0)   // 0x14272dbd0
-    {
-        pProg  = 0;
-        Offset = 0;
-    }
+    FragShader() { pDesc = 0; pProg = 0; Offset = 0; }   // 0x14272dbd0
     ~FragShader() { Shutdown(); }   // 0x14272e620
 
     const FragShaderDesc*         pDesc;

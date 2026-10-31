@@ -47,6 +47,12 @@ void FUN_142734e10(Scaleform::Render::D3D9::ShaderManager* sm, const Scaleform::
                    Scaleform::Ptr<Scaleform::Render::RenderTarget>* targets, unsigned* shaders, unsigned pass,
                    unsigned passCount, const Scaleform::Render::VertexFormat* format,
                    Scaleform::Render::D3D9::ShaderInterface* psi);
+// MaskStack's ArrayData::Resize (sfr_d3d9_01e, below); PushMask_BeginSubmit calls it out of line
+typedef Scaleform::ArrayData<Scaleform::Render::HAL::MaskStackEntry,
+                             Scaleform::AllocatorLH<Scaleform::Render::HAL::MaskStackEntry, Scaleform::Stat_Default_Mem>,
+                             Scaleform::ArrayConstPolicy<0, 8, true> >
+    MaskStackData;
+SF_NOINLINE void FUN_142733ef0(MaskStackData* a, Scaleform::UPInt newSize);
 
 namespace Scaleform { namespace Render {
 
@@ -78,7 +84,7 @@ static inline MeshCacheParams pcMeshCacheParams()
     return p;
 }
 
-// MS2-FUNCTIONAL: written from the decompile; the mesh cache params are built the same way, store order may differ
+// written from the decompile
 // @0x14272dc10
 HAL::HAL(ThreadCommandQueue* commandQueue)
     : Render::HAL(commandQueue),
@@ -94,11 +100,8 @@ HAL::HAL(ThreadCommandQueue* commandQueue)
       DepthBufferAvailable(false),
       StencilOpInc(D3DSTENCILOP_REPLACE)
 {
-    for (unsigned i = 0; i < PrimitiveBatch::DP_DrawableCount; i++)
-    {
-        MappedXY16iAlphaTexture[i] = 0;
-        MappedXY16iAlphaSolid[i]   = 0;
-    }
+    memset(MappedXY16iAlphaTexture, 0, sizeof(MappedXY16iAlphaTexture));
+    memset(MappedXY16iAlphaSolid, 0, sizeof(MappedXY16iAlphaSolid));
 }
 
 // written from the decompile
@@ -1345,7 +1348,7 @@ void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt
         AccumulatedStats.Primitives++;
     }
 }
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142733240
 void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
 {
@@ -1374,7 +1377,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
     bool viewportValid = (HALState & HS_ViewValid) != 0;
 
     // masks left above the top of the stack from an earlier pop are erased back to the top's depth
-    if (MaskStackTop && MaskStackTop < MaskStack.GetSize() && viewportValid && StencilAvailable && MultiBitStencil &&
+    if (MaskStackTop && MaskStack.GetSize() > MaskStackTop && viewportValid && StencilAvailable && MultiBitStencil &&
         StencilOpInc != D3DSTENCILOP_REPLACE)
     {
         pDevice->SetRenderState(D3DRS_STENCILREF, MaskStackTop);
@@ -1384,49 +1387,39 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
         drawMaskClearRectangles(old->GetMaskAreaMatrices(), old->GetMaskCount());
     }
 
-    MaskStack.Resize(MaskStackTop + 1);
+    FUN_142733ef0((MaskStackData*)&MaskStack, MaskStackTop + 1);
     MaskStackEntry& e  = MaskStack[MaskStackTop];
     e.pPrimitive       = prim;
     e.OldViewportValid = viewportValid;
     e.OldViewRect      = ViewRect;
-    HALState |= HS_DrawingMask;
     MaskStackTop++;
+
+    HALState |= HS_DrawingMask;
 
     if (prim->IsClipped() && viewportValid)
     {
         // a clipped mask narrows the view to its bounds
-        const Matrix2F& m = prim->GetMaskAreaMatrices()[0].GetMatrix2D();
-        RectF bounds;
+        Rect<int> boundClip;
         if (!Matrices.OrientationSet)
         {
             // clipped matrices are in view space, unrotated
-            bounds.x1 = m.Tx();
-            bounds.y1 = m.Ty();
-            bounds.x2 = m.Tx() + m.Sx();
-            bounds.y2 = m.Ty() + m.Sy();
+            const Matrix2F& m = prim->GetMaskAreaMatrices()[0].GetMatrix2D();
+            boundClip = Rect<int>(VP.Left + (int)m.Tx(), VP.Top + (int)m.Ty(),
+                                  VP.Left + (int)(m.Tx() + m.Sx()), VP.Top + (int)(m.Ty() + m.Sy()));
         }
         else
         {
-            Matrix2F om(m);
-            om.Append(Matrices.Orient2D);
-            om.EncloseTransform(&bounds, RectF(0, 0, 1, 1));
+            Matrix2F m = prim->GetMaskAreaMatrices()[0].GetMatrix2D();
+            m.Append(Matrices.Orient2D);
+            RectF rect = m.EncloseTransform(RectF(0, 0, 1, 1));
+            boundClip = Rect<int>(VP.Left + (int)rect.x1, VP.Top + (int)rect.y1,
+                                  VP.Left + (int)rect.x2, VP.Top + (int)rect.y2);
         }
-        int bx1 = (int)bounds.x1 + VP.Left;
-        int by1 = (int)bounds.y1 + VP.Top;
-        int bx2 = (int)bounds.x2 + VP.Left;
-        int by2 = (int)bounds.y2 + VP.Top;
-        if (ViewRect.y2 < by1 || by2 < ViewRect.y1 || bx2 < ViewRect.x1 || ViewRect.x2 < bx1)
+        if (!ViewRect.IntersectRect(&ViewRect, boundClip))
         {
-            ViewRect.x1 = ViewRect.y1 = ViewRect.x2 = ViewRect.y2 = 0;
+            ViewRect.Clear();
             HALState &= ~HS_ViewValid;
             viewportValid = false;
-        }
-        else
-        {
-            ViewRect.x1 = Alg::Max(ViewRect.x1, bx1);
-            ViewRect.x2 = Alg::Min(ViewRect.x2, bx2);
-            ViewRect.y1 = Alg::Max(ViewRect.y1, by1);
-            ViewRect.y2 = Alg::Min(ViewRect.y2, by2);
         }
         updateViewport();
 
@@ -1442,29 +1435,7 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
     else if (MaskStackTop == 1 && viewportValid)
     {
         // the first mask clears the areas it covers
-        if (!StencilAvailable)
-        {
-            UPInt count = prim->GetMaskCount();
-            for (UPInt i = 0; i < count; i++)
-            {
-                RectF bounds;
-                prim->GetMaskAreaMatrices()[i].GetMatrix2D().EncloseTransform(&bounds, RectF(0, 0, 1, 1));
-                int bx1 = (int)bounds.x1 + VP.Left;
-                int by1 = (int)bounds.y1 + VP.Top;
-                int bx2 = (int)bounds.x2 + VP.Left;
-                int by2 = (int)bounds.y2 + VP.Top;
-                if (ViewRect.y1 <= by2 && by1 <= ViewRect.y2 && bx1 <= ViewRect.x2 && ViewRect.x1 <= bx2)
-                {
-                    D3DRECT r;
-                    r.x1 = Alg::Max(ViewRect.x1, bx1);
-                    r.y1 = Alg::Max(ViewRect.y1, by1);
-                    r.x2 = Alg::Min(ViewRect.x2, bx2);
-                    r.y2 = Alg::Min(ViewRect.y2, by2);
-                    pDevice->Clear(1, &r, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
-                }
-            }
-        }
-        else
+        if (StencilAvailable)
         {
             pDevice->SetRenderState(D3DRS_STENCILZFAIL, D3DSTENCILOP_REPLACE);
             pDevice->SetRenderState(D3DRS_STENCILREF, 0);
@@ -1473,29 +1444,43 @@ void HAL::PushMask_BeginSubmit(MaskPrimitive* prim)
             drawMaskClearRectangles(prim->GetMaskAreaMatrices(), prim->GetMaskCount());
             pDevice->SetRenderState(D3DRS_STENCILFAIL, D3DSTENCILOP_KEEP);   // the exe resets STENCILFAIL here and leaves STENCILZFAIL at REPLACE
         }
+        else
+        {
+            UPInt maskCount = prim->GetMaskCount();
+            for (UPInt i = 0; i < maskCount; i++)
+            {
+                const Matrix2F& m = prim->GetMaskAreaMatrices()[i].GetMatrix2D();
+                RectF     bounds(m.EncloseTransform(RectF(0, 0, 1, 1)));
+                Rect<int> boundClip((int)bounds.x1, (int)bounds.y1, (int)bounds.x2, (int)bounds.y2);
+                boundClip.Offset(VP.Left, VP.Top);
+                if (boundClip.IntersectRect(&boundClip, ViewRect))
+                {
+                    D3DRECT r = { boundClip.x1, boundClip.y1, boundClip.x2, boundClip.y2 };
+                    pDevice->Clear(1, &r, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
+                }
+            }
+        }
     }
 
     if (StencilAvailable)
     {
-        if (!MultiBitStencil || StencilOpInc == D3DSTENCILOP_REPLACE)
-        {
-            // one stencil bit: only the first mask writes
-            if (MaskStackTop != 1)
-                pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
-            else
-            {
-                pDevice->SetRenderState(D3DRS_STENCILREF, 1);
-                pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
-                pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
-            }
-        }
-        else
+        bool canIncDec = (MultiBitStencil && (StencilOpInc != D3DSTENCILOP_REPLACE));
+        if (canIncDec)
         {
             // inside the masks below, count one up
             pDevice->SetRenderState(D3DRS_STENCILREF, MaskStackTop - 1);
             pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_EQUAL);
             pDevice->SetRenderState(D3DRS_STENCILPASS, StencilOpInc);
         }
+        else if (MaskStackTop == 1)
+        {
+            // one stencil bit: only the first mask writes
+            pDevice->SetRenderState(D3DRS_STENCILREF, 1);
+            pDevice->SetRenderState(D3DRS_STENCILFUNC, D3DCMP_ALWAYS);
+            pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_REPLACE);
+        }
+        else
+            pDevice->SetRenderState(D3DRS_STENCILPASS, D3DSTENCILOP_KEEP);
     }
     else if (DepthBufferAvailable)
     {
@@ -1806,9 +1791,6 @@ void FUN_142732050(const Color* c, float* r, float* g, float* b, float* a)
 typedef ArrayDataBase<Render::HAL::FilterStackEntry, AllocatorLH<Render::HAL::FilterStackEntry, Stat_Default_Mem>,
                       ArrayConstPolicy<0, 8, true> >
     FilterStackData;
-typedef ArrayData<Render::HAL::MaskStackEntry, AllocatorLH<Render::HAL::MaskStackEntry, Stat_Default_Mem>,
-                  ArrayConstPolicy<0, 8, true> >
-    MaskStackData;
 
 // FilterStack's ArrayDataBase::ResizeNoConstruct, out of line (Reserve stays a call)
 // @0x142733fd0
