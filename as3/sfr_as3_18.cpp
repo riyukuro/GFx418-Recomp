@@ -1391,18 +1391,23 @@ CheckResult PropRef::GetSlotValueUnsafe(VM& vm, Value& value, SlotInfo::ValTarge
 }
 
 // The same with the vtable to read methods from.
-// MS2-FUNCTIONAL 0x14250e130: the exe stores the result byte before the refcount store (a hidden CheckResult return slot); same code otherwise
+// A view for the member form: the exe returns the CheckResult through the hidden slot as PropRef::GetSlotValueUnsafe does.
+struct Sfr27PropRefView : PropRef
+{
+    CheckResult GetSlotValueVT(VM* vm, Value* value, VTable* vtable) const;
+};
+
 // @0x14250e130
-char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* value, VTable* vtable)
+CheckResult Sfr27PropRefView::GetSlotValueVT(VM* vm, Value* value, VTable* vtable) const
 {
     bool ok = true;
-    const UPInt w = reinterpret_cast<UPInt>(self->pValue);
+    const UPInt w = reinterpret_cast<UPInt>(pValue);
     switch (w & 3)
     {
     case 0:
     {
         char r;     // the callee's result slot
-        ok = *reinterpret_cast<const bool*>(FUN_14250e2d0(self->pSI, &r, vm, value, &self->This, vtable, 0));
+        ok = *reinterpret_cast<const bool*>(FUN_14250e2d0(pSI, &r, vm, value, &This, vtable, 0));
         break;
     }
     case 1:
@@ -1412,8 +1417,7 @@ char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* 
         ValueAssignCopies::AssignUnsafeInline18(*value, Value::kObject, reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
         break;
     }
-    *ret = ok;
-    return ret;
+    return CheckResult(ok);
 }
 
 }}} // namespace Scaleform::GFx::AS3
