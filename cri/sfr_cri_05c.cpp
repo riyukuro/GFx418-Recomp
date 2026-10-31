@@ -10,6 +10,8 @@
 // MS2-RANGE: 0x140052fa0-0x140054170 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+class CriMvEasyPlayer;
+struct _RTL_CRITICAL_SECTION;
 #include <windows.h>
 #include "../include/cri/cri_decomp.h"
 
@@ -151,7 +153,7 @@ cri_u64 FUN_140027fb4(Any a0,Any a1);
 // cri_movie.h's heap API (C linkage), called with its own types by the /Od criAdec code
 extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int align);
 extern "C" int criHeap_Free(void* heap, void* ptr);
-int FUN_140039180(longlong player,int updateTime,cri_u32 *output);
+long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
 uint FUN_14003b3fc(Any a0,Any a1,Any a2);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
 void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
@@ -276,44 +278,38 @@ void FUN_1400628d0();
 cri_u64 FUN_140062900(Any a0);
 void FUN_140062910(longlong a0);
 void FUN_140062920(longlong a0,int a1,cri_u32 a2);
-cri_u64 FUN_140062a40(Any a0,Any a1,Any a2);
-void FUN_140062ab0(Any a0);
-cri_u64 FUN_140062ae0(Any a0,Any a1);
+cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
+void FUN_140062ab0(cri_any);  // C3: the definition's signature
+unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
-void FUN_140064dd0(Any a0,Any a1,Any a2);
+void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
-void FUN_140064f70(Any a0,Any a1,Any a2);
+void FUN_140064f70(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
-void FUN_140064f70(void *dst,int value,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
-cri_u64 FUN_140065450(Any a0,Any a1);
-// Typed views of 0x140062a40 and 0x140065450 (sfr_cri_06 defines them with cri_any): 0x140050bd0 returns their 32-bit
-// results unchanged.
-cri_u32 FUN_140062a40(longlong a1,cri_u64 a2,void *a3);
-cri_u32 FUN_140065450(longlong a1,cri_u64 a2);
+cri_u64 FUN_140065450(cri_any,cri_any);  // C3: the definition's signature
+// sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
 void FUN_140065770();
 void FUN_140065790();
-void FUN_1400657a0(Any a0);
-void FUN_1400657e0(Any a0);
+void FUN_1400657a0(cri_any);  // C3: the definition's signature
+void FUN_1400657e0(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
-void FUN_1400659a0(Any a0,Any a1);
-void FUN_140066180(Any a0);
+void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
+void FUN_140066180(__int64);  // C3: the definition's signature
 void FUN_140066320();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
 void FUN_140066f60(Any a0);
-void FUN_140066f80(Any a0);
-void FUN_140067210(Any a0);
+void FUN_140066f80(__int64);  // C3: the definition's signature
+void FUN_140067210(__int64);  // C3: the definition's signature
 void FUN_140067370(Any a0);
-void FUN_140067420(Any a0);
-void FUN_140067470(Any a0);
-char * FUN_1400674d0(Any a0,Any a1,Any a2);
-char * FUN_140067590(Any a0,Any a1,Any a2);
-char * FUN_1400674d0(char *dst,int size,const char *src);
-char * FUN_140067590(char *dst,int size,const char *src);
+void FUN_140067420(__int64);  // C3: the definition's signature
+void FUN_140067470(__int64);  // C3: the definition's signature
+char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
+char * FUN_140067590(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 void FUN_1400674a0(const char *msg);
 void FUN_140067700();
 void FUN_140067750();
@@ -321,26 +317,26 @@ void FUN_140067790();
 void FUN_1400677c0();
 void FUN_1400677f0();
 void FUN_140067840();
-cri_u64 FUN_140067890(Any a0,Any a1);
-void FUN_140067a90(Any a0);
-cri_u32 FUN_140067c90(Any a0,Any a1,Any a2);
-void FUN_140067dd0(Any a0,Any a1);
-cri_u32 FUN_140067f40(Any a0);
-void FUN_140067fc0(Any a0,Any a1);
-void FUN_140068070(Any a0,Any a1);
-cri_u64 FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);    // sfr_cri_07
-cri_u64 FUN_140068380(cri_any = cri_any(), ...);    // sfr_cri_07
-cri_u32 FUN_1400683d0(Any a0);
-cri_u32 FUN_140068430(Any a0);
-void FUN_140068990(Any a0);
-void FUN_140068cc0(Any a0);
-void FUN_140068d50(Any a0);
-void FUN_140068db0(Any a0);
-void FUN_140068e70(Any a0);
-void FUN_140068f30(Any a0);
-void FUN_140069020(Any a0,Any a1,Any a2,Any a3);
-cri_u64 FUN_140069270(cri_u64 a0,cri_u64 a1,cri_u64 a2);
-cri_u64 FUN_140069480(cri_u64 a0,cri_u64 a1,cri_u64 a2,cri_u64 a3);
+unsigned __int64 FUN_140067890(unsigned __int64, unsigned int);  // C3: the definition's signature
+void FUN_140067a90(unsigned __int64);  // C3: the definition's signature
+unsigned int FUN_140067c90(unsigned __int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
+void FUN_140067dd0(unsigned __int64, unsigned int);  // C3: the definition's signature
+unsigned int FUN_140067f40(unsigned __int64);  // C3: the definition's signature
+void FUN_140067fc0(unsigned __int64, unsigned int);  // C3: the definition's signature
+void FUN_140068070(unsigned __int64, unsigned int);  // C3: the definition's signature
+unsigned __int64 FUN_1400682e0(__int64, int);  // C3: the definition's signature
+void FUN_140068380(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+unsigned int FUN_1400683d0(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+unsigned int FUN_140068430(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+void FUN_140068990(__int64);  // C3: the definition's signature
+void FUN_140068cc0(__int64, int);  // C3: the definition's signature
+void FUN_140068d50(__int64, int);  // C3: the definition's signature
+void FUN_140068db0(__int64);  // C3: the definition's signature
+void FUN_140068e70(__int64);  // C3: the definition's signature
+void FUN_140068f30(__int64);  // C3: the definition's signature
+void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
+unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
+unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
 int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 void FUN_140069e44(longlong);
@@ -350,11 +346,11 @@ void FUN_140069e98(longlong, uint, short, short);
 void FUN_140069ef4(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void FUN_14006aa90();
-/* unknown */ void FUN_142ccc860();
-/* unknown */ void FUN_142ccca50();
-/* unknown */ void FUN_142ccca90();
-/* unknown */ void FUN_142cccad0();
-/* unknown */ void FUN_142cccb30();
+void FUN_142ccc860(void *,long);  // C3: the definition's signature
+void FUN_142ccca50(void *);  // C3: the definition's signature
+void FUN_142ccca90(void *);  // C3: the definition's signature
+void FUN_142cccad0(void *);  // C3: the definition's signature
+void FUN_142cccb30(void *,long);  // C3: the definition's signature
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
@@ -796,10 +792,10 @@ cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4)
 
   result = 0;
   *a4 = 0;
-  if (FUN_140039180(a1,0,a4) != 1) {
+  if (FUN_140039180((CriMvEasyPlayer *)a1,0,(unsigned long *)a4) != 1) {
     return result;
   }
-  result = (cri_u32)FUN_140069270((*(cri_u64*)((char*)(a1) + 0x8)),a2,a3);
+  result = (cri_u32)FUN_140069270((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,a3);
   return result;
 }
 
@@ -808,7 +804,7 @@ cri_u32 FUN_1400531e0(longlong a1,cri_u64 a2,cri_u64 a3,cri_u32 *a4)
 long FUN_140053260(longlong a1,cri_u64 a2,cri_u64 a3,cri_u64 a4, cri_u32 *a5)
 {
   *a5 = 0;
-  FUN_140069480((*(cri_u64*)((char*)(a1) + 0x8)),a2,a3,a4);
+  FUN_140069480((*(cri_u64*)((char*)(a1) + 0x8)),(unsigned __int64 *)a2,(unsigned __int64 *)a3,(unsigned __int64 *)a4);
   return 1;
 }
 #pragma optimize("", on)
@@ -1191,9 +1187,9 @@ void FUN_140054080(void)
 {
   FUN_14006aa90();
   FUN_140066320();
-  FUN_140066180(&DAT_143fe82e0);
-  FUN_1400659a0(&DAT_1431ba950,&DAT_143fe8420);
-  FUN_1400659a0(&DAT_1431ba990,&DAT_143fe83e0);
+  FUN_140066180((__int64)&DAT_143fe82e0);
+  FUN_1400659a0((const unsigned char *)&DAT_1431ba950,(unsigned char *)&DAT_143fe8420);
+  FUN_1400659a0((const unsigned char *)&DAT_1431ba990,(unsigned char *)&DAT_143fe83e0);
   return;
 }
 

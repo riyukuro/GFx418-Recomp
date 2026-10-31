@@ -8,6 +8,8 @@
 // MS2-RANGE: 0x14004e5a0-0x140052fa0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+class CriMvEasyPlayer;
+struct _RTL_CRITICAL_SECTION;
 #include <windows.h>
 #include "../include/cri/cri_decomp.h"
 
@@ -149,7 +151,7 @@ cri_u64 FUN_140027fb4(Any a0,Any a1);
 // cri_movie.h's heap API (C linkage), called with its own types by the /Od criAdec code
 extern "C" void* criHeap_AllocFix(void* heap, int size, const char* name, int align);
 extern "C" int criHeap_Free(void* heap, void* ptr);
-int FUN_140039180(longlong player,int updateTime,cri_u32 *output);
+long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature
 uint FUN_14003b3fc(Any a0,Any a1,Any a2);
 longlong FUN_14003b674(Any a0,Any a1,Any a2);
 void FUN_1400467a0(Any a0,Any a1,Any a2,Any a3);
@@ -274,44 +276,38 @@ void FUN_1400628d0();
 cri_u64 FUN_140062900(Any a0);
 void FUN_140062910(longlong a0);
 void FUN_140062920(longlong a0,int a1,cri_u32 a2);
-cri_u64 FUN_140062a40(Any a0,Any a1,Any a2);
-void FUN_140062ab0(Any a0);
-cri_u64 FUN_140062ae0(Any a0,Any a1);
+cri_u64 FUN_140062a40(cri_any,cri_any,cri_any);  // C3: the definition's signature
+void FUN_140062ab0(cri_any);  // C3: the definition's signature
+unsigned __int64 FUN_140062ae0(cri_any, cri_any);  // C3: the definition's signature
 int FUN_140062bc0(Any a0,Any a1,Any a2);
 int FUN_1400630c0();
 void FUN_140064d90(Any a0,Any a1);
-void FUN_140064dd0(Any a0,Any a1,Any a2);
+void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(Any a0,Any a1,Any a2);
-void FUN_140064f70(Any a0,Any a1,Any a2);
+void FUN_140064f70(cri_any,cri_any,cri_any);  // C3: the definition's signature
 void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
-void FUN_140064f70(void *dst,int value,cri_u64 size);
 void FUN_140065000(Any a0);
 void FUN_140065030(longlong a0);
-cri_u64 FUN_140065450(Any a0,Any a1);
-// Typed views of 0x140062a40 and 0x140065450 (sfr_cri_06 defines them with cri_any): 0x140050bd0 returns their 32-bit
-// results unchanged.
-cri_u32 FUN_140062a40(longlong a1,cri_u64 a2,void *a3);
-cri_u32 FUN_140065450(longlong a1,cri_u64 a2);
+cri_u64 FUN_140065450(cri_any,cri_any);  // C3: the definition's signature
+// sfr_cri_06 defines 0x140062a40 and 0x140065450 with cri_any; 0x140050bd0 keeps only the low 32 bits of their results.
 void FUN_140065770();
 void FUN_140065790();
-void FUN_1400657a0(Any a0);
-void FUN_1400657e0(Any a0);
+void FUN_1400657a0(cri_any);  // C3: the definition's signature
+void FUN_1400657e0(void);  // C3: the definition's signature
 void FUN_140065900(Any a0);
-void FUN_1400659a0(Any a0,Any a1);
-void FUN_140066180(Any a0);
+void FUN_1400659a0(unsigned char const *, unsigned char *);  // C3: the definition's signature
+void FUN_140066180(__int64);  // C3: the definition's signature
 void FUN_140066320();
 void FUN_140066350(Any a0);
 void FUN_140066360(longlong a0);
 void FUN_140066f60(Any a0);
-void FUN_140066f80(Any a0);
-void FUN_140067210(Any a0);
+void FUN_140066f80(__int64);  // C3: the definition's signature
+void FUN_140067210(__int64);  // C3: the definition's signature
 void FUN_140067370(Any a0);
-void FUN_140067420(Any a0);
-void FUN_140067470(Any a0);
-char * FUN_1400674d0(Any a0,Any a1,Any a2);
-char * FUN_140067590(Any a0,Any a1,Any a2);
-char * FUN_1400674d0(char *dst,int size,const char *src);
-char * FUN_140067590(char *dst,int size,const char *src);
+void FUN_140067420(__int64);  // C3: the definition's signature
+void FUN_140067470(__int64);  // C3: the definition's signature
+char * FUN_1400674d0(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
+char * FUN_140067590(char *dst,cri_u64 size,const char *src);  // C3: the definition's signature
 void FUN_1400674a0(const char *msg);
 void FUN_140067700();
 void FUN_140067750();
@@ -319,26 +315,26 @@ void FUN_140067790();
 void FUN_1400677c0();
 void FUN_1400677f0();
 void FUN_140067840();
-cri_u64 FUN_140067890(Any a0,Any a1);
-void FUN_140067a90(Any a0);
-cri_u32 FUN_140067c90(Any a0,Any a1,Any a2);
-void FUN_140067dd0(Any a0,Any a1);
-cri_u32 FUN_140067f40(Any a0);
-void FUN_140067fc0(Any a0,Any a1);
-void FUN_140068070(Any a0,Any a1);
-cri_u64 FUN_1400682e0(cri_any = cri_any(), cri_any = cri_any(), ...);    // sfr_cri_07
-cri_u64 FUN_140068380(cri_any = cri_any(), ...);    // sfr_cri_07
-cri_u32 FUN_1400683d0(Any a0);
-cri_u32 FUN_140068430(Any a0);
-void FUN_140068990(Any a0);
-void FUN_140068cc0(Any a0);
-void FUN_140068d50(Any a0);
-void FUN_140068db0(Any a0);
-void FUN_140068e70(Any a0);
-void FUN_140068f30(Any a0);
-void FUN_140069020(Any a0,Any a1,Any a2,Any a3);
-cri_u64 FUN_140069270(cri_u64 a0,cri_u64 a1,cri_u64 a2);
-cri_u64 FUN_140069480(cri_u64 a0,cri_u64 a1,cri_u64 a2,cri_u64 a3);
+unsigned __int64 FUN_140067890(unsigned __int64, unsigned int);  // C3: the definition's signature
+void FUN_140067a90(unsigned __int64);  // C3: the definition's signature
+unsigned int FUN_140067c90(unsigned __int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
+void FUN_140067dd0(unsigned __int64, unsigned int);  // C3: the definition's signature
+unsigned int FUN_140067f40(unsigned __int64);  // C3: the definition's signature
+void FUN_140067fc0(unsigned __int64, unsigned int);  // C3: the definition's signature
+void FUN_140068070(unsigned __int64, unsigned int);  // C3: the definition's signature
+unsigned __int64 FUN_1400682e0(__int64, int);  // C3: the definition's signature
+void FUN_140068380(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+unsigned int FUN_1400683d0(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+unsigned int FUN_140068430(_RTL_CRITICAL_SECTION *);  // C3: the definition's signature
+void FUN_140068990(__int64);  // C3: the definition's signature
+void FUN_140068cc0(__int64, int);  // C3: the definition's signature
+void FUN_140068d50(__int64, int);  // C3: the definition's signature
+void FUN_140068db0(__int64);  // C3: the definition's signature
+void FUN_140068e70(__int64);  // C3: the definition's signature
+void FUN_140068f30(__int64);  // C3: the definition's signature
+void FUN_140069020(__int64 *, int, __int64 *, __int64 *);  // C3: the definition's signature
+unsigned __int64 FUN_140069270(__int64, unsigned __int64 *, unsigned __int64);  // C3: the definition's signature
+unsigned __int64 FUN_140069480(__int64, unsigned __int64 *, unsigned __int64 *, unsigned __int64 *);  // C3: the definition's signature
 int FUN_140069844(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 int FUN_140069ac4(longlong, int, byte *, uint, int *, uint, longlong *, uint);
 void FUN_140069e44(longlong);
@@ -348,11 +344,11 @@ void FUN_140069e98(longlong, uint, short, short);
 void FUN_140069ef4(longlong, uint, uint);
 uint FUN_14006a7f8(cri_u64, uint, longlong);
 void FUN_14006aa90();
-/* unknown */ void FUN_142ccc860();
-/* unknown */ void FUN_142ccca50();
-/* unknown */ void FUN_142ccca90();
-/* unknown */ void FUN_142cccad0();
-/* unknown */ void FUN_142cccb30();
+void FUN_142ccc860(void *,long);  // C3: the definition's signature
+void FUN_142ccca50(void *);  // C3: the definition's signature
+void FUN_142ccca90(void *);  // C3: the definition's signature
+void FUN_142cccad0(void *);  // C3: the definition's signature
+void FUN_142cccb30(void *,long);  // C3: the definition's signature
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
@@ -1783,18 +1779,18 @@ void FUN_140050100(void)
   struct Cfg { cri_u32 Value[3]; };
   int i;
   longlong h;
-  Any v(0);    // the exe loads each setting straight into the argument register
+  cri_u32 v;    // the exe loads each setting straight into the argument register
   for (i = 0; i < DAT_143c490e8; i++) {
     h = ((Ch *)DAT_143c490e0)[i].Handle;
     if (h != 0) {
-      v.v = ((Cfg *)&DAT_143badb60)[i].Value[0];
-      if ((cri_u32)v.v == 0x5a5a5a5a) {
-        v.v = ((Cfg *)&DAT_143badbb8)[i].Value[0];
+      v = ((Cfg *)&DAT_143badb60)[i].Value[0];
+      if (v == 0x5a5a5a5a) {
+        v = ((Cfg *)&DAT_143badbb8)[i].Value[0];
       }
       FUN_140068070(h,v);
-      v.v = ((Cfg *)&DAT_143badb60)[i].Value[1];
-      if ((cri_u32)v.v == 0x5a5a5a5a) {
-        v.v = ((Cfg *)&DAT_143badbb8)[i].Value[1];
+      v = ((Cfg *)&DAT_143badb60)[i].Value[1];
+      if (v == 0x5a5a5a5a) {
+        v = ((Cfg *)&DAT_143badbb8)[i].Value[1];
       }
       FUN_140067fc0(h,v);
     }
@@ -1805,7 +1801,7 @@ void FUN_140050100(void)
 // @0x1400501d0
 void FUN_1400501d0(void)
 {
-  FUN_1400683d0(DAT_143c490f8);
+  FUN_1400683d0((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
@@ -1813,7 +1809,7 @@ void FUN_1400501d0(void)
 // @0x1400501e0
 void FUN_1400501e0(void)
 {
-  FUN_140068430(DAT_143c490f8);
+  FUN_140068430((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
   return;
 }
 
@@ -2006,7 +2002,7 @@ void FUN_140050520(void)
   
   DAT_143c49100 = DAT_143c49100 + 1;
   if ((DAT_143c49100 == 1) && (1 < (int)FUN_1400501f0())) {
-    DAT_143c490f8 = (cri_u64)FUN_1400682e0(&DAT_143badb88,0x30);
+    DAT_143c490f8 = (cri_u64)FUN_1400682e0((__int64)&DAT_143badb88,0x30);
     // the exe rounds both work areas up to 0x80 ((addr + 0x5f) & ~0x7f)
     DAT_143c490f0 = ((cri_u64)&DAT_143badf80 + 0x5f) & ~(cri_u64)0x7f;
     memset((void *)DAT_143c490f0,0,0x9b100);
@@ -2017,7 +2013,7 @@ void FUN_140050520(void)
     DAT_143badb84 = DAT_143badbdc;
     for (i = 0; i < DAT_143badbdc; i++) {
       // per-thread work area at entry + 0x10
-      h = FUN_140067890(((Work *)DAT_143c490e0)[i].Area,0x7c);
+      h = FUN_140067890((unsigned __int64)(((Work *)DAT_143c490e0)[i].Area),0x7c);
       ((Work *)DAT_143c490e0)[i].Handle = h;
       if (h == 0) {
         FUN_14004ff50(0,0xff030602);
@@ -2044,7 +2040,7 @@ void FUN_140050670(void)
       return;
     }
     if (DAT_143c490f8 != 0) {
-      FUN_140068380(DAT_143c490f8);
+      FUN_140068380((_RTL_CRITICAL_SECTION *)DAT_143c490f8);
       DAT_143c490f8 = 0;
     }
     i = DAT_143badbdc - 1;
@@ -2197,8 +2193,8 @@ cri_u64 FUN_140050820(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
         pl_v10[-1] = a1;
         l_v7 = (*CriAt<code *>(l_v7, 0x8))(u_v1,i_v14);
         *pl_v10 = l_v7;
-        u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),FUN_140050770,
-                              loc_88 + (longlong)i_v14 * 2);
+        u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),(unsigned __int64)FUN_140050770,
+                              (unsigned __int64)(loc_88 + (longlong)i_v14 * 2));
         l_v7 = cri_conv(DAT_143c490e0);
         *(cri_u32 *)(DAT_143c490e0 + 8 + u_v9) = u_v4;
       }
@@ -2324,8 +2320,8 @@ cri_u32 FUN_140050bd0(longlong a1,cri_u64 a2,void *a3)
     FUN_140067470(a1);
     FUN_140066f80(a1);
     FUN_140067210(a1);
-    u_v7 = FUN_140065450(a1,a2);
-    FUN_1400657e0(a1);
+    u_v7 = ((cri_u32 (*)(longlong,cri_u64))FUN_140065450)(a1,a2);  // the exe uses only the low half of the cri_u64 result
+    ((void (*)(longlong))FUN_1400657e0)(a1);  // the exe still passes a1 to the void(void) definition
     memcpy(*(void **)((longlong)a3 + 0x60),(&CriAt<cri_u8>(a1, 0x1598)),0x80);
     if (CriAt<int>(a1, 0x1568) != 0) {
       **(int **)((longlong)a3 + 0x60) = (CriAt<int>(a1, 0x1598) + 7) / 8;
@@ -2675,8 +2671,8 @@ cri_u64 FUN_140051380(longlong a1,longlong *a2)
   else {
     i_v3 = i_v3 + 1;
   }
-  FUN_140069020(a1 + 0x1800,((i_v3 + 7 >> 3) - CriAt<int>(a1, 0x1800)) + -8 + i_v5,
-                a1 + 0x1800,loc_18);
+  FUN_140069020(&CriAt<__int64>(a1, 0x1800),((i_v3 + 7 >> 3) - CriAt<int>(a1, 0x1800)) + -8 + i_v5,
+                &CriAt<__int64>(a1, 0x1800),(__int64 *)loc_18);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,loc_18);
   return 0;
@@ -2900,7 +2896,7 @@ LAB_14005194d:
     i_v11 = i_v17 + -0x1f;
     i_v12 = i_v12 + 4;
   }
-  FUN_140069020(pu_v4,((i_v11 + 7 >> 3) - *(int *)pu_v4) + -8 + i_v12,pu_v4,loc_28);
+  FUN_140069020((__int64 *)pu_v4,((i_v11 + 7 >> 3) - *(int *)pu_v4) + -8 + i_v12,(__int64 *)pu_v4,(__int64 *)loc_28);
   (**(code **)(*a2 + 0x40))(a2,0,pu_v4);
   (**(code **)(*a2 + 0x38))(a2,1,loc_28);
   return 0;
@@ -2988,13 +2984,13 @@ cri_u32 FUN_140051d90(longlong *a1)
     }
     found = FUN_1400530c0(buf.Ptr,buf.Len,0xffffffff);
     if (found != 0) break;
-    FUN_140069020((void *)&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),(void *)&buf,(void *)&info);
+    ((void (*)(void *,cri_u64,void *,void *))FUN_140069020)((void *)&buf,(cri_u32)(*(volatile int *)&buf.Len + -3),(void *)&buf,(void *)&info);  // the exe zero-extends the length to 64 bits
     (**(code **)(*a1 + 0x40))(a1,0,&buf);
     (**(code **)(*a1 + 0x38))(a1,1,&info);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&buf);
   }
   result = FUN_140053000(found);
-  FUN_140069020((void *)&buf,(cri_u32)((int)found - (int)buf.Ptr),(void *)&buf,(void *)&info);
+  FUN_140069020((__int64 *)((void *)&buf),(cri_u32)((int)found - (int)buf.Ptr),(__int64 *)((void *)&buf),(__int64 *)((void *)&info));
   (**(code **)(*a1 + 0x40))(a1,0,&buf);
   (**(code **)(*a1 + 0x38))(a1,1,&info);
   return result;
@@ -3021,14 +3017,14 @@ cri_u32 FUN_140051ec0(longlong *a1,uint *a2)
     }
     l_v2 = FUN_1400530c0(CONCAT44(uStack_24,loc_28),loc_20,0xffffffff);
     if (l_v2 != 0) break;
-    FUN_140069020(&loc_28,loc_20 + -3,&loc_28,loc_18);
+    FUN_140069020((__int64 *)&loc_28,loc_20 + -3,(__int64 *)&loc_28,(__int64 *)loc_18);
     (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
     (**(code **)(*a1 + 0x38))(a1,1,loc_18);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
   }
   *a2 = CriAt<byte>(l_v2, 0x3) | 0x100;
   u_v1 = FUN_140053000(l_v2);
-  FUN_140069020(&loc_28,(int)l_v2 - loc_28,&loc_28,loc_18);
+  FUN_140069020((__int64 *)&loc_28,(int)l_v2 - loc_28,(__int64 *)&loc_28,(__int64 *)loc_18);
   (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
   (**(code **)(*a1 + 0x38))(a1,1,loc_18);
   return u_v1;
@@ -3341,9 +3337,9 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
   CriAt<cri_u32>(a1, 0x15e4) = CriAt<cri_u32>(a1, 0x16d8);
   CriAt<cri_u8>(a1, 0x15f1) = CriAt<cri_u8>(a1, 0x16d0);
   CriAt<cri_u8>(a1, 0x15f2) = CriAt<cri_u8>(a1, 0x16dc);
-  FUN_140069020(a1 + 0x1800,
+  FUN_140069020(&CriAt<__int64>(a1, 0x1800),
                 (((int)(u_v8 + 7) >> 3) - CriAt<int>(a1, 0x1800)) + -8 + (int)pu_v13,
-                a1 + 0x1800,loc_38);
+                &CriAt<__int64>(a1, 0x1800),(__int64 *)loc_38);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,loc_38);
   return 0;
@@ -3372,7 +3368,7 @@ cri_u64 FUN_140052720(longlong a1,longlong *a2,cri_u32 a3)
   s->Vt->Read(s,1,0x7fffffff,cur);
   aligned = *(ulonglong *)cur & 0xfffffffffffffffc;
   bits = (*(volatile int *)cur << 3) - ((int)aligned << 3); // the exe reads the low dword again here
-  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(void *)&info);
+  FUN_140069020((__int64 *)cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),(__int64 *)cur,(__int64 *)((void *)&info));
   s->Vt->Seek(s,0,cur);
   s->Vt->Write(s,1,&info);
   FUN_140051d90(a2);
@@ -3496,7 +3492,7 @@ cri_u32 FUN_140052a10(longlong a1,longlong *a2,cri_u32 a3)
   aligned = ptr & 0xfffffffffffffffc;
   bits = ((int)*cur << 3) - ((int)aligned << 3);
   result = FUN_1400527c0(a1,(void *)ptr,CriAt<int>(a1, 0x1808));
-  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(void *)&info);
+  FUN_140069020(cur,(cri_u32)(((bits + 7) >> 3) - *(int *)cur + 4 + (int)aligned),cur,(__int64 *)((void *)&info));
   (**(code **)(*a2 + 0x40))(a2,0,cur);
   (**(code **)(*a2 + 0x38))(a2,1,&info);
   FUN_140051d90(a2);
