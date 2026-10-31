@@ -1004,6 +1004,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         LoaderInfo(ClassTraits::Traits& t);
+        LoaderInfo(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424436b0
         virtual const char* GetAS3ObjectType() const { return "Classes::LoaderInfo"; }
 
@@ -1015,6 +1016,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         Stage(ClassTraits::Traits& t);
+        Stage(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443890
         virtual const char* GetAS3ObjectType() const { return "Classes::Stage"; }
 
@@ -1027,6 +1029,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         ActionScriptVersion(ClassTraits::Traits& t);
+        ActionScriptVersion(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443420
         virtual const char* GetAS3ObjectType() const { return "Classes::ActionScriptVersion"; }
 
@@ -1039,6 +1042,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         BitmapDataChannel(ClassTraits::Traits& t);
+        BitmapDataChannel(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424434a0
         virtual const char* GetAS3ObjectType() const { return "Classes::BitmapDataChannel"; }
 
@@ -1053,6 +1057,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         BlendMode(ClassTraits::Traits& t);
+        BlendMode(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424434c0
         virtual const char* GetAS3ObjectType() const { return "Classes::fl_display::BlendMode"; }
 
@@ -1080,6 +1085,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         CapsStyle(ClassTraits::Traits& t);
+        CapsStyle(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424434e0
         virtual const char* GetAS3ObjectType() const { return "Classes::CapsStyle"; }
 
@@ -1093,6 +1099,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         GradientType(ClassTraits::Traits& t);
+        GradientType(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443590
         virtual const char* GetAS3ObjectType() const { return "Classes::GradientType"; }
 
@@ -1105,6 +1112,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         InterpolationMethod(ClassTraits::Traits& t);
+        InterpolationMethod(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443620
         virtual const char* GetAS3ObjectType() const { return "Classes::InterpolationMethod"; }
 
@@ -1117,6 +1125,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         JointStyle(ClassTraits::Traits& t);
+        JointStyle(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443640
         virtual const char* GetAS3ObjectType() const { return "Classes::JointStyle"; }
 
@@ -1130,6 +1139,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         LineScaleMode(ClassTraits::Traits& t);
+        LineScaleMode(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443660
         virtual const char* GetAS3ObjectType() const { return "Classes::LineScaleMode"; }
 
@@ -1144,6 +1154,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         PixelSnapping(ClassTraits::Traits& t);
+        PixelSnapping(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443750
         virtual const char* GetAS3ObjectType() const { return "Classes::PixelSnapping"; }
 
@@ -1157,6 +1168,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         SWFVersion(ClassTraits::Traits& t);
+        SWFVersion(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443770
         virtual const char* GetAS3ObjectType() const { return "Classes::SWFVersion"; }
 
@@ -1177,6 +1189,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         SpreadMethod(ClassTraits::Traits& t);
+        SpreadMethod(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443840
         virtual const char* GetAS3ObjectType() const { return "Classes::SpreadMethod"; }
 
@@ -1190,6 +1203,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         StageAlign(ClassTraits::Traits& t);
+        StageAlign(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424438d0
         virtual const char* GetAS3ObjectType() const { return "Classes::StageAlign"; }
 
@@ -1208,6 +1222,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         StageDisplayState(ClassTraits::Traits& t);
+        StageDisplayState(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x1424438f0
         virtual const char* GetAS3ObjectType() const { return "Classes::StageDisplayState"; }
 
@@ -1221,6 +1236,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         StageQuality(ClassTraits::Traits& t);
+        StageQuality(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443910
         virtual const char* GetAS3ObjectType() const { return "Classes::StageQuality"; }
 
@@ -1235,6 +1251,7 @@ namespace Classes { namespace fl_display {
     {
     public:
         StageScaleMode(ClassTraits::Traits& t);
+        StageScaleMode(ClassTraits::Traits& t, Instances::fl::InlineCtor);
         // @0x142443930
         virtual const char* GetAS3ObjectType() const { return "Classes::StageScaleMode"; }
 
@@ -1253,6 +1270,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::AVM1Movie InstanceType;
 
         AVM1Movie(VM& vm, const ClassInfo& ci);
+        AVM1Movie(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424433f0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::AVM1Movie"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445480
@@ -1265,6 +1283,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Bitmap InstanceType;
 
         Bitmap(VM& vm, const ClassInfo& ci);
+        Bitmap(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443440
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Bitmap"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424454e0
@@ -1301,6 +1320,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::DisplayObjectContainer InstanceType;
 
         DisplayObjectContainer(VM& vm, const ClassInfo& ci);
+        DisplayObjectContainer(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443530
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::DisplayObjectContainer"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445610
@@ -1313,6 +1333,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::FrameLabel InstanceType;
 
         FrameLabel(VM& vm, const ClassInfo& ci);
+        FrameLabel(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443560
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::FrameLabel"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445670
@@ -1325,6 +1346,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Graphics InstanceType;
 
         Graphics(VM& vm, const ClassInfo& ci);
+        Graphics(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424435b0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Graphics"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424456f0
@@ -1337,6 +1359,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::InteractiveObject InstanceType;
 
         InteractiveObject(VM& vm, const ClassInfo& ci);
+        InteractiveObject(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424435f0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::InteractiveObject"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445760
@@ -1349,6 +1372,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Loader InstanceType;
 
         Loader(VM& vm, const ClassInfo& ci);
+        Loader(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443680
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Loader"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424457c0
@@ -1361,6 +1385,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::LoaderInfo InstanceType;
 
         LoaderInfo(VM& vm, const ClassInfo& ci);
+        LoaderInfo(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424436c0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::LoaderInfo"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445830
@@ -1373,6 +1398,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::MorphShape InstanceType;
 
         MorphShape(VM& vm, const ClassInfo& ci);
+        MorphShape(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424436f0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MorphShape"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424458a0
@@ -1385,6 +1411,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::MovieClip InstanceType;
 
         MovieClip(VM& vm, const ClassInfo& ci);
+        MovieClip(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443720
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::MovieClip"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445900
@@ -1397,6 +1424,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Scene InstanceType;
 
         Scene(VM& vm, const ClassInfo& ci);
+        Scene(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443790
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Scene"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445970
@@ -1409,6 +1437,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Shape InstanceType;
 
         Shape(VM& vm, const ClassInfo& ci);
+        Shape(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424437e0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Shape"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x1424459e0
@@ -1421,6 +1450,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::SimpleButton InstanceType;
 
         SimpleButton(VM& vm, const ClassInfo& ci);
+        SimpleButton(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443810
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::SimpleButton"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445a40
@@ -1433,6 +1463,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Sprite InstanceType;
 
         Sprite(VM& vm, const ClassInfo& ci);
+        Sprite(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x142443860
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Sprite"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445aa0
@@ -1445,6 +1476,7 @@ namespace InstanceTraits { namespace fl_display {
         typedef Instances::fl_display::Stage InstanceType;
 
         Stage(VM& vm, const ClassInfo& ci);
+        Stage(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);
         // @0x1424438a0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Stage"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x142445b10
@@ -1458,6 +1490,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         AVM1Movie(VM& vm);
+        AVM1Movie(VM& vm, Instances::fl::InlineCtor);
         // @0x1424433e0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::AVM1Movie"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1467,6 +1500,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         ActionScriptVersion(VM& vm);
+        ActionScriptVersion(VM& vm, Instances::fl::InlineCtor);
         // @0x142443410
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::ActionScriptVersion"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1476,6 +1510,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Bitmap(VM& vm);
+        Bitmap(VM& vm, Instances::fl::InlineCtor);
         // @0x142443430
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Bitmap"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1494,6 +1529,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         BitmapDataChannel(VM& vm);
+        BitmapDataChannel(VM& vm, Instances::fl::InlineCtor);
         // @0x142443490
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::BitmapDataChannel"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1503,6 +1539,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         BlendMode(VM& vm);
+        BlendMode(VM& vm, Instances::fl::InlineCtor);
         // @0x1424434b0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::BlendMode"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1512,6 +1549,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         CapsStyle(VM& vm);
+        CapsStyle(VM& vm, Instances::fl::InlineCtor);
         // @0x1424434d0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::CapsStyle"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1530,6 +1568,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         DisplayObjectContainer(VM& vm);
+        DisplayObjectContainer(VM& vm, Instances::fl::InlineCtor);
         // @0x142443520
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::DisplayObjectContainer"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1539,6 +1578,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         FrameLabel(VM& vm);
+        FrameLabel(VM& vm, Instances::fl::InlineCtor);
         // @0x142443550
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::FrameLabel"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1548,6 +1588,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         GradientType(VM& vm);
+        GradientType(VM& vm, Instances::fl::InlineCtor);
         // @0x142443580
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::GradientType"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1557,6 +1598,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Graphics(VM& vm);
+        Graphics(VM& vm, Instances::fl::InlineCtor);
         // @0x1424435a0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Graphics"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1566,6 +1608,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         IBitmapDrawable(VM& vm);
+        IBitmapDrawable(VM& vm, Instances::fl::InlineCtor);
         // @0x1424435d0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::IBitmapDrawable"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1575,6 +1618,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         InteractiveObject(VM& vm);
+        InteractiveObject(VM& vm, Instances::fl::InlineCtor);
         // @0x1424435e0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::InteractiveObject"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1584,6 +1628,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         InterpolationMethod(VM& vm);
+        InterpolationMethod(VM& vm, Instances::fl::InlineCtor);
         // @0x142443610
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::InterpolationMethod"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1593,6 +1638,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         JointStyle(VM& vm);
+        JointStyle(VM& vm, Instances::fl::InlineCtor);
         // @0x142443630
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::JointStyle"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1602,6 +1648,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         LineScaleMode(VM& vm);
+        LineScaleMode(VM& vm, Instances::fl::InlineCtor);
         // @0x142443650
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::LineScaleMode"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1611,6 +1658,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Loader(VM& vm);
+        Loader(VM& vm, Instances::fl::InlineCtor);
         // @0x142443670
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Loader"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1620,6 +1668,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         LoaderInfo(VM& vm);
+        LoaderInfo(VM& vm, Instances::fl::InlineCtor);
         // @0x1424436a0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::LoaderInfo"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1629,6 +1678,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         MorphShape(VM& vm);
+        MorphShape(VM& vm, Instances::fl::InlineCtor);
         // @0x1424436e0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::MorphShape"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1638,6 +1688,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         MovieClip(VM& vm);
+        MovieClip(VM& vm, Instances::fl::InlineCtor);
         // @0x142443710
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::MovieClip"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1647,6 +1698,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         PixelSnapping(VM& vm);
+        PixelSnapping(VM& vm, Instances::fl::InlineCtor);
         // @0x142443740
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::PixelSnapping"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1656,6 +1708,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         SWFVersion(VM& vm);
+        SWFVersion(VM& vm, Instances::fl::InlineCtor);
         // @0x142443760
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::SWFVersion"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1665,6 +1718,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Scene(VM& vm);
+        Scene(VM& vm, Instances::fl::InlineCtor);
         // @0x142443780
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Scene"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1674,6 +1728,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Shader(VM& vm);
+        Shader(VM& vm, Instances::fl::InlineCtor);
         // @0x1424437b0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Shader"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1683,6 +1738,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         ShaderData(VM& vm);
+        ShaderData(VM& vm, Instances::fl::InlineCtor);
         // @0x1424437c0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::ShaderData"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1692,6 +1748,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Shape(VM& vm);
+        Shape(VM& vm, Instances::fl::InlineCtor);
         // @0x1424437d0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Shape"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1701,6 +1758,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         SimpleButton(VM& vm);
+        SimpleButton(VM& vm, Instances::fl::InlineCtor);
         // @0x142443800
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::SimpleButton"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1710,6 +1768,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         SpreadMethod(VM& vm);
+        SpreadMethod(VM& vm, Instances::fl::InlineCtor);
         // @0x142443830
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::SpreadMethod"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1719,6 +1778,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Sprite(VM& vm);
+        Sprite(VM& vm, Instances::fl::InlineCtor);
         // @0x142443850
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Sprite"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1728,6 +1788,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         Stage(VM& vm);
+        Stage(VM& vm, Instances::fl::InlineCtor);
         // @0x142443880
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::Stage"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1737,6 +1798,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         StageAlign(VM& vm);
+        StageAlign(VM& vm, Instances::fl::InlineCtor);
         // @0x1424438c0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageAlign"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1746,6 +1808,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         StageDisplayState(VM& vm);
+        StageDisplayState(VM& vm, Instances::fl::InlineCtor);
         // @0x1424438e0
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageDisplayState"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1755,6 +1818,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         StageQuality(VM& vm);
+        StageQuality(VM& vm, Instances::fl::InlineCtor);
         // @0x142443900
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageQuality"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
@@ -1764,6 +1828,7 @@ namespace ClassTraits { namespace fl_display {
     {
     public:
         StageScaleMode(VM& vm);
+        StageScaleMode(VM& vm, Instances::fl::InlineCtor);
         // @0x142443920
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageScaleMode"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);

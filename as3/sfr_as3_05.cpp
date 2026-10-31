@@ -678,7 +678,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243caf0); the exe inlines it into MakeClassTraits.
-    __forceinline StageAlign::StageAlign(ClassTraits::Traits& t)
+    __forceinline StageAlign::StageAlign(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Bottom("B")
         , BottomLeft("BL")
@@ -695,13 +695,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c9b0); the exe inlines it into MakeClassTraits.
-    __forceinline StageAlign::StageAlign(VM& vm)
+    __forceinline StageAlign::StageAlign(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::StageAlignCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageAlignCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageAlign(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageAlign(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -710,7 +710,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242c7d0
     Pickable<Traits> StageAlign::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageAlign(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageAlign(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -718,7 +718,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243cc70); the exe inlines it into MakeClassTraits.
-    __forceinline StageDisplayState::StageDisplayState(ClassTraits::Traits& t)
+    __forceinline StageDisplayState::StageDisplayState(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , FullScreen("fullScreen")
         , FullScreenInteractive("fullScreenInteractive")
@@ -730,13 +730,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243cb70); the exe inlines it into MakeClassTraits.
-    __forceinline StageDisplayState::StageDisplayState(VM& vm)
+    __forceinline StageDisplayState::StageDisplayState(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::StageDisplayStateCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageDisplayStateCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageDisplayState(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageDisplayState(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -745,7 +745,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242d350
     Pickable<Traits> StageDisplayState::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageDisplayState(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageDisplayState(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -753,7 +753,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243ad40); the exe inlines it into MakeClassTraits.
-    __forceinline FrameLabel::FrameLabel(VM& vm, const ClassInfo& ci)
+    __forceinline FrameLabel::FrameLabel(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         SetMemSize(0x48);
@@ -763,11 +763,11 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243ac40); the exe inlines it into MakeClassTraits.
-    __forceinline FrameLabel::FrameLabel(VM& vm)
+    __forceinline FrameLabel::FrameLabel(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::FrameLabelCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::FrameLabel(vm, AS3::fl_display::FrameLabelCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::FrameLabel(vm, AS3::fl_display::FrameLabelCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -778,7 +778,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242d840
     Pickable<Traits> FrameLabel::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) FrameLabel(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FrameLabel(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -786,7 +786,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243cdd0); the exe inlines it into MakeClassTraits.
-    __forceinline StageQuality::StageQuality(ClassTraits::Traits& t)
+    __forceinline StageQuality::StageQuality(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Best("best")
         , High("high")
@@ -799,13 +799,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243ccc0); the exe inlines it into MakeClassTraits.
-    __forceinline StageQuality::StageQuality(VM& vm)
+    __forceinline StageQuality::StageQuality(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::StageQualityCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageQualityCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageQuality(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageQuality(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -814,7 +814,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242dbf0
     Pickable<Traits> StageQuality::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageQuality(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageQuality(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -822,7 +822,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243aec0); the exe inlines it into MakeClassTraits.
-    __forceinline GradientType::GradientType(ClassTraits::Traits& t)
+    __forceinline GradientType::GradientType(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Linear("linear")
         , Radial("radial")
@@ -833,13 +833,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243adc0); the exe inlines it into MakeClassTraits.
-    __forceinline GradientType::GradientType(VM& vm)
+    __forceinline GradientType::GradientType(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::GradientTypeCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::GradientTypeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::GradientType(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::GradientType(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -848,7 +848,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242dd60
     Pickable<Traits> GradientType::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientType(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GradientType(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -856,7 +856,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243cf30); the exe inlines it into MakeClassTraits.
-    __forceinline StageScaleMode::StageScaleMode(ClassTraits::Traits& t)
+    __forceinline StageScaleMode::StageScaleMode(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , ExactFit("exactFit")
         , NoBorder("noBorder")
@@ -869,13 +869,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243ce20); the exe inlines it into MakeClassTraits.
-    __forceinline StageScaleMode::StageScaleMode(VM& vm)
+    __forceinline StageScaleMode::StageScaleMode(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::StageScaleModeCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::StageScaleModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageScaleMode(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::StageScaleMode(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -884,7 +884,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242deb0
     Pickable<Traits> StageScaleMode::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageScaleMode(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageScaleMode(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -892,7 +892,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bf00); the exe inlines it into MakeClassTraits.
-    __forceinline SWFVersion::SWFVersion(ClassTraits::Traits& t)
+    __forceinline SWFVersion::SWFVersion(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Flash1(1)
         , Flash2(2)
@@ -910,13 +910,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bde0); the exe inlines it into MakeClassTraits.
-    __forceinline SWFVersion::SWFVersion(VM& vm)
+    __forceinline SWFVersion::SWFVersion(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::SWFVersionCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::SWFVersionCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SWFVersion(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SWFVersion(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -925,7 +925,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242e020
     Pickable<Traits> SWFVersion::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SWFVersion(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SWFVersion(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -933,7 +933,7 @@ namespace ClassTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c1a0); the exe inlines it into MakeClassTraits.
-    __forceinline ShaderData::ShaderData(VM& vm)
+    __forceinline ShaderData::ShaderData(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::ShaderDataCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
@@ -948,7 +948,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242e1a0
     Pickable<Traits> ShaderData::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ShaderData(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ShaderData(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -956,7 +956,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b000); the exe inlines it into MakeClassTraits.
-    __forceinline Graphics::Graphics(VM& vm, const ClassInfo& ci)
+    __forceinline Graphics::Graphics(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         SetMemSize(0x48);
@@ -966,11 +966,11 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243af00); the exe inlines it into MakeClassTraits.
-    __forceinline Graphics::Graphics(VM& vm)
+    __forceinline Graphics::Graphics(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::GraphicsCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Graphics(vm, AS3::fl_display::GraphicsCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Graphics(vm, AS3::fl_display::GraphicsCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -981,7 +981,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242e2c0
     Pickable<Traits> Graphics::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Graphics(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Graphics(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -989,7 +989,7 @@ namespace ClassTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c0c0); the exe inlines it into MakeClassTraits.
-    __forceinline Shader::Shader(VM& vm)
+    __forceinline Shader::Shader(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::ShaderCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
@@ -1004,7 +1004,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242e400
     Pickable<Traits> Shader::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shader(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shader(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1012,7 +1012,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bd90); the exe inlines it into MakeClassTraits.
-    __forceinline PixelSnapping::PixelSnapping(ClassTraits::Traits& t)
+    __forceinline PixelSnapping::PixelSnapping(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Always("always")
         , Auto("auto")
@@ -1024,13 +1024,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bc90); the exe inlines it into MakeClassTraits.
-    __forceinline PixelSnapping::PixelSnapping(VM& vm)
+    __forceinline PixelSnapping::PixelSnapping(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::PixelSnappingCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::PixelSnappingCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::PixelSnapping(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::PixelSnapping(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1039,7 +1039,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242eb30
     Pickable<Traits> PixelSnapping::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) PixelSnapping(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) PixelSnapping(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1047,7 +1047,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c380); the exe inlines it into MakeClassTraits.
-    __forceinline Shape::Shape(VM& vm, const ClassInfo& ci)
+    __forceinline Shape::Shape(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         SetMemSize(0x70);
@@ -1057,11 +1057,11 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c280); the exe inlines it into MakeClassTraits.
-    __forceinline Shape::Shape(VM& vm)
+    __forceinline Shape::Shape(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::ShapeCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Shape(vm, AS3::fl_display::ShapeCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Shape(vm, AS3::fl_display::ShapeCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1069,7 +1069,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242f3b0
     Pickable<Traits> Shape::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shape(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Shape(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1077,7 +1077,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a360); the exe inlines it into MakeClassTraits.
-    __forceinline BitmapDataChannel::BitmapDataChannel(ClassTraits::Traits& t)
+    __forceinline BitmapDataChannel::BitmapDataChannel(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Alpha(8)
         , Blue(4)
@@ -1090,13 +1090,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a260); the exe inlines it into MakeClassTraits.
-    __forceinline BitmapDataChannel::BitmapDataChannel(VM& vm)
+    __forceinline BitmapDataChannel::BitmapDataChannel(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::BitmapDataChannelCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::BitmapDataChannelCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BitmapDataChannel(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BitmapDataChannel(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1105,7 +1105,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242f5a0
     Pickable<Traits> BitmapDataChannel::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapDataChannel(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BitmapDataChannel(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1113,7 +1113,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a720); the exe inlines it into MakeClassTraits.
-    __forceinline CapsStyle::CapsStyle(ClassTraits::Traits& t)
+    __forceinline CapsStyle::CapsStyle(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , None("none")
         , Round("round")
@@ -1125,13 +1125,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a620); the exe inlines it into MakeClassTraits.
-    __forceinline CapsStyle::CapsStyle(VM& vm)
+    __forceinline CapsStyle::CapsStyle(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::CapsStyleCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::CapsStyleCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::CapsStyle(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::CapsStyle(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1140,7 +1140,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242f7f0
     Pickable<Traits> CapsStyle::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) CapsStyle(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) CapsStyle(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1148,7 +1148,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c4f0); the exe inlines it into MakeClassTraits.
-    __forceinline SimpleButton::SimpleButton(VM& vm, const ClassInfo& ci)
+    __forceinline SimpleButton::SimpleButton(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_SimpleButton;
@@ -1159,12 +1159,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c3e0); the exe inlines it into MakeClassTraits.
-    __forceinline SimpleButton::SimpleButton(VM& vm)
+    __forceinline SimpleButton::SimpleButton(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::SimpleButtonCI)
     {
         TraitsType = Traits_SimpleButton;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::SimpleButton(vm, AS3::fl_display::SimpleButtonCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::SimpleButton(vm, AS3::fl_display::SimpleButtonCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1175,7 +1175,7 @@ namespace ClassTraits { namespace fl_display
     // @0x14242fde0
     Pickable<Traits> SimpleButton::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SimpleButton(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SimpleButton(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1183,7 +1183,7 @@ namespace ClassTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b060); the exe inlines it into MakeClassTraits.
-    __forceinline IBitmapDrawable::IBitmapDrawable(VM& vm)
+    __forceinline IBitmapDrawable::IBitmapDrawable(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::IBitmapDrawableCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
@@ -1198,7 +1198,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430340
     Pickable<Traits> IBitmapDrawable::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) IBitmapDrawable(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IBitmapDrawable(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1206,7 +1206,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243abe0); the exe inlines it into MakeClassTraits.
-    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm, const ClassInfo& ci)
+    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_DisplayObjectContainer;
@@ -1217,12 +1217,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243aad0); the exe inlines it into MakeClassTraits.
-    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm)
+    __forceinline DisplayObjectContainer::DisplayObjectContainer(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::DisplayObjectContainerCI)
     {
         TraitsType = Traits_DisplayObjectContainer;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::DisplayObjectContainer(vm, AS3::fl_display::DisplayObjectContainerCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::DisplayObjectContainer(vm, AS3::fl_display::DisplayObjectContainerCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1233,7 +1233,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430460
     Pickable<Traits> DisplayObjectContainer::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObjectContainer(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) DisplayObjectContainer(vm, Instances::fl::InlineCtor()));
     }
 
     // @0x1424305a0
@@ -1247,7 +1247,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b3b0); the exe inlines it into MakeClassTraits.
-    __forceinline InterpolationMethod::InterpolationMethod(ClassTraits::Traits& t)
+    __forceinline InterpolationMethod::InterpolationMethod(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , LinearRgb("linearRGB")
         , Rgb("rgb")
@@ -1258,13 +1258,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b2b0); the exe inlines it into MakeClassTraits.
-    __forceinline InterpolationMethod::InterpolationMethod(VM& vm)
+    __forceinline InterpolationMethod::InterpolationMethod(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::InterpolationMethodCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::InterpolationMethodCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::InterpolationMethod(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::InterpolationMethod(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1273,7 +1273,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430600
     Pickable<Traits> InterpolationMethod::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) InterpolationMethod(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InterpolationMethod(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1281,7 +1281,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439d00); the exe inlines it into MakeClassTraits.
-    __forceinline AVM1Movie::AVM1Movie(VM& vm, const ClassInfo& ci)
+    __forceinline AVM1Movie::AVM1Movie(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_AVM1Movie;
@@ -1292,12 +1292,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439bf0); the exe inlines it into MakeClassTraits.
-    __forceinline AVM1Movie::AVM1Movie(VM& vm)
+    __forceinline AVM1Movie::AVM1Movie(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::AVM1MovieCI)
     {
         TraitsType = Traits_AVM1Movie;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::AVM1Movie(vm, AS3::fl_display::AVM1MovieCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::AVM1Movie(vm, AS3::fl_display::AVM1MovieCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1308,7 +1308,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430750
     Pickable<Traits> AVM1Movie::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) AVM1Movie(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AVM1Movie(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1316,7 +1316,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b4f0); the exe inlines it into MakeClassTraits.
-    __forceinline JointStyle::JointStyle(ClassTraits::Traits& t)
+    __forceinline JointStyle::JointStyle(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Bevel("bevel")
         , Miter("miter")
@@ -1328,13 +1328,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b3f0); the exe inlines it into MakeClassTraits.
-    __forceinline JointStyle::JointStyle(VM& vm)
+    __forceinline JointStyle::JointStyle(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::JointStyleCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::JointStyleCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::JointStyle(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::JointStyle(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1343,7 +1343,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430890
     Pickable<Traits> JointStyle::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) JointStyle(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) JointStyle(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1351,7 +1351,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b650); the exe inlines it into MakeClassTraits.
-    __forceinline LineScaleMode::LineScaleMode(ClassTraits::Traits& t)
+    __forceinline LineScaleMode::LineScaleMode(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Horizontal("horizontal")
         , None("none")
@@ -1364,13 +1364,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b540); the exe inlines it into MakeClassTraits.
-    __forceinline LineScaleMode::LineScaleMode(VM& vm)
+    __forceinline LineScaleMode::LineScaleMode(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::LineScaleModeCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::LineScaleModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LineScaleMode(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LineScaleMode(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1379,7 +1379,7 @@ namespace ClassTraits { namespace fl_display
     // @0x1424309f0
     Pickable<Traits> LineScaleMode::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) LineScaleMode(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LineScaleMode(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1387,7 +1387,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b7b0); the exe inlines it into MakeClassTraits.
-    __forceinline Loader::Loader(VM& vm, const ClassInfo& ci)
+    __forceinline Loader::Loader(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_Loader;
@@ -1398,12 +1398,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b6a0); the exe inlines it into MakeClassTraits.
-    __forceinline Loader::Loader(VM& vm)
+    __forceinline Loader::Loader(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::LoaderCI)
     {
         TraitsType = Traits_Loader;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Loader(vm, AS3::fl_display::LoaderCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Loader(vm, AS3::fl_display::LoaderCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1414,7 +1414,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430b60
     Pickable<Traits> Loader::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Loader(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Loader(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1422,7 +1422,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c950); the exe inlines it into MakeClassTraits.
-    __forceinline Stage::Stage(VM& vm, const ClassInfo& ci)
+    __forceinline Stage::Stage(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_Stage;
@@ -1433,7 +1433,7 @@ namespace InstanceTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c920); the exe inlines it into MakeClassTraits.
-    __forceinline Stage::Stage(ClassTraits::Traits& t)
+    __forceinline Stage::Stage(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
     {
     }
@@ -1442,14 +1442,14 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c810); the exe inlines it into MakeClassTraits.
-    __forceinline Stage::Stage(VM& vm)
+    __forceinline Stage::Stage(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::StageCI)
     {
         TraitsType = Traits_Stage;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Stage(vm, AS3::fl_display::StageCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Stage(vm, AS3::fl_display::StageCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::Stage(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::Stage(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1458,7 +1458,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430ca0
     Pickable<Traits> Stage::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Stage(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Stage(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1466,7 +1466,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b940); the exe inlines it into MakeClassTraits.
-    __forceinline LoaderInfo::LoaderInfo(VM& vm, const ClassInfo& ci)
+    __forceinline LoaderInfo::LoaderInfo(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         SetMemSize(0x68);
@@ -1476,7 +1476,7 @@ namespace InstanceTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b910); the exe inlines it into MakeClassTraits.
-    __forceinline LoaderInfo::LoaderInfo(ClassTraits::Traits& t)
+    __forceinline LoaderInfo::LoaderInfo(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
     {
     }
@@ -1485,13 +1485,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b810); the exe inlines it into MakeClassTraits.
-    __forceinline LoaderInfo::LoaderInfo(VM& vm)
+    __forceinline LoaderInfo::LoaderInfo(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::LoaderInfoCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::LoaderInfo(vm, AS3::fl_display::LoaderInfoCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::LoaderInfo(vm, AS3::fl_display::LoaderInfoCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LoaderInfo(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::LoaderInfo(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1500,7 +1500,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142430fd0
     Pickable<Traits> LoaderInfo::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderInfo(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) LoaderInfo(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1508,7 +1508,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c650); the exe inlines it into MakeClassTraits.
-    __forceinline SpreadMethod::SpreadMethod(ClassTraits::Traits& t)
+    __forceinline SpreadMethod::SpreadMethod(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Pad("pad")
         , Reflect("reflect")
@@ -1520,13 +1520,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c550); the exe inlines it into MakeClassTraits.
-    __forceinline SpreadMethod::SpreadMethod(VM& vm)
+    __forceinline SpreadMethod::SpreadMethod(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::SpreadMethodCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::SpreadMethodCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SpreadMethod(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::SpreadMethod(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1535,7 +1535,7 @@ namespace ClassTraits { namespace fl_display
     // @0x1424318e0
     Pickable<Traits> SpreadMethod::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SpreadMethod(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SpreadMethod(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1543,7 +1543,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439e50); the exe inlines it into MakeClassTraits.
-    __forceinline ActionScriptVersion::ActionScriptVersion(ClassTraits::Traits& t)
+    __forceinline ActionScriptVersion::ActionScriptVersion(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Actionscript2(2)
         , Actionscript3(3)
@@ -1554,13 +1554,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439d60); the exe inlines it into MakeClassTraits.
-    __forceinline ActionScriptVersion::ActionScriptVersion(VM& vm)
+    __forceinline ActionScriptVersion::ActionScriptVersion(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::ActionScriptVersionCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::ActionScriptVersionCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::ActionScriptVersion(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::ActionScriptVersion(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1569,7 +1569,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142431a40
     Pickable<Traits> ActionScriptVersion::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ActionScriptVersion(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ActionScriptVersion(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1577,7 +1577,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b250); the exe inlines it into MakeClassTraits.
-    __forceinline InteractiveObject::InteractiveObject(VM& vm, const ClassInfo& ci)
+    __forceinline InteractiveObject::InteractiveObject(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_InteractiveObject;
@@ -1588,12 +1588,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b140); the exe inlines it into MakeClassTraits.
-    __forceinline InteractiveObject::InteractiveObject(VM& vm)
+    __forceinline InteractiveObject::InteractiveObject(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::InteractiveObjectCI)
     {
         TraitsType = Traits_InteractiveObject;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::InteractiveObject(vm, AS3::fl_display::InteractiveObjectCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::InteractiveObject(vm, AS3::fl_display::InteractiveObjectCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1604,7 +1604,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142431b90
     Pickable<Traits> InteractiveObject::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObject(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) InteractiveObject(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1612,7 +1612,7 @@ namespace ClassTraits { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a540); the exe inlines it into MakeClassTraits.
-    __forceinline BlendMode::BlendMode(ClassTraits::Traits& t)
+    __forceinline BlendMode::BlendMode(ClassTraits::Traits& t, Instances::fl::InlineCtor)
         : Class(t)
         , Add("add")
         , Alpha("alpha")
@@ -1635,13 +1635,13 @@ namespace Classes { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243a3a0); the exe inlines it into MakeClassTraits.
-    __forceinline BlendMode::BlendMode(VM& vm)
+    __forceinline BlendMode::BlendMode(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::BlendModeCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
         InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_display::BlendModeCI);
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
-        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BlendMode(*this)));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_display::BlendMode(*this, Instances::fl::InlineCtor())));
     }
 }}
 
@@ -1650,7 +1650,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142432ad0
     Pickable<Traits> BlendMode::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) BlendMode(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) BlendMode(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1658,7 +1658,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bab0); the exe inlines it into MakeClassTraits.
-    __forceinline MorphShape::MorphShape(VM& vm, const ClassInfo& ci)
+    __forceinline MorphShape::MorphShape(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_MorphShape;
@@ -1669,12 +1669,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243b9a0); the exe inlines it into MakeClassTraits.
-    __forceinline MorphShape::MorphShape(VM& vm)
+    __forceinline MorphShape::MorphShape(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::MorphShapeCI)
     {
         TraitsType = Traits_MorphShape;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MorphShape(vm, AS3::fl_display::MorphShapeCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MorphShape(vm, AS3::fl_display::MorphShapeCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1685,7 +1685,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142434400
     Pickable<Traits> MorphShape::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) MorphShape(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MorphShape(vm, Instances::fl::InlineCtor()));
     }
 
     // @0x1424347d0
@@ -1699,7 +1699,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439f90); the exe inlines it into MakeClassTraits.
-    __forceinline Bitmap::Bitmap(VM& vm, const ClassInfo& ci)
+    __forceinline Bitmap::Bitmap(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_Bitmap;
@@ -1710,12 +1710,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x142439e80); the exe inlines it into MakeClassTraits.
-    __forceinline Bitmap::Bitmap(VM& vm)
+    __forceinline Bitmap::Bitmap(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::BitmapCI)
     {
         TraitsType = Traits_Bitmap;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Bitmap(vm, AS3::fl_display::BitmapCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Bitmap(vm, AS3::fl_display::BitmapCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1726,7 +1726,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142435180
     Pickable<Traits> Bitmap::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Bitmap(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Bitmap(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1734,7 +1734,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c7b0); the exe inlines it into MakeClassTraits.
-    __forceinline Sprite::Sprite(VM& vm, const ClassInfo& ci)
+    __forceinline Sprite::Sprite(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_Sprite;
@@ -1745,12 +1745,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c6a0); the exe inlines it into MakeClassTraits.
-    __forceinline Sprite::Sprite(VM& vm)
+    __forceinline Sprite::Sprite(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::SpriteCI)
     {
         TraitsType = Traits_Sprite;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Sprite(vm, AS3::fl_display::SpriteCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Sprite(vm, AS3::fl_display::SpriteCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1761,7 +1761,7 @@ namespace ClassTraits { namespace fl_display
     // @0x1424354d0
     Pickable<Traits> Sprite::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Sprite(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Sprite(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1769,7 +1769,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bc20); the exe inlines it into MakeClassTraits.
-    __forceinline MovieClip::MovieClip(VM& vm, const ClassInfo& ci)
+    __forceinline MovieClip::MovieClip(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         TraitsType = Traits_MovieClip;
@@ -1780,12 +1780,12 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bb10); the exe inlines it into MakeClassTraits.
-    __forceinline MovieClip::MovieClip(VM& vm)
+    __forceinline MovieClip::MovieClip(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::MovieClipCI)
     {
         TraitsType = Traits_MovieClip;
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MovieClip(vm, AS3::fl_display::MovieClipCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::MovieClip(vm, AS3::fl_display::MovieClipCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1796,7 +1796,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142437730
     Pickable<Traits> MovieClip::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) MovieClip(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) MovieClip(vm, Instances::fl::InlineCtor()));
     }
 
 }}
@@ -1804,7 +1804,7 @@ namespace ClassTraits { namespace fl_display
 namespace InstanceTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243c060); the exe inlines it into MakeClassTraits.
-    __forceinline Scene::Scene(VM& vm, const ClassInfo& ci)
+    __forceinline Scene::Scene(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
         : CTraits(vm, ci)
     {
         SetMemSize(0x48);
@@ -1814,11 +1814,11 @@ namespace InstanceTraits { namespace fl_display
 namespace ClassTraits { namespace fl_display
 {
     // Out of line in sfr_as3_06 (0x14243bf60); the exe inlines it into MakeClassTraits.
-    __forceinline Scene::Scene(VM& vm)
+    __forceinline Scene::Scene(VM& vm, Instances::fl::InlineCtor)
         : Traits(vm, AS3::fl_display::SceneCI)
     {
         MemoryHeap* mh = vm.GetMemoryHeap();
-        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Scene(vm, AS3::fl_display::SceneCI);
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_display::Scene(vm, AS3::fl_display::SceneCI, Instances::fl::InlineCtor());
         SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
         it->SetConstructor(Pickable<Class>(new(mh) Class(*this)));
     }
@@ -1829,7 +1829,7 @@ namespace ClassTraits { namespace fl_display
     // @0x142438130
     Pickable<Traits> Scene::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) Scene(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) Scene(vm, Instances::fl::InlineCtor()));
     }
 }}
 

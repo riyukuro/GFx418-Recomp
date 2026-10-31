@@ -138,6 +138,12 @@ private:
 
 namespace Instances { namespace fl
 {
+    // Tag of a unit's local inline copy of a constructor that the exe inlines into its factories (sfr_as3_02 XMLList,
+    // sfr_as3_05 fl_display traits/classes): a distinct signature, so the copy's COMDAT does not collide with the owner's
+    // out-of-line definition (sfr_as3_01c, sfr_as3_06) in the fullexe link. cl without /Zc:inline emits unreferenced
+    // inline functions, __forceinline or not (LNK2005, 2bf9e126f).
+    struct InlineCtor {};
+
     // 0xa0 bytes.
     class Array : public Instance
     {
@@ -600,6 +606,7 @@ namespace Instances { namespace fl
         // (appended, sfr33) member ABI: the exe passes the result slot in rdx. 0x14241b160
         Pickable<Instances::fl::XMLList> FUN_14241b160(AS3::Object& target_obj, const ASString& target_prop, Instances::Namespace& target_ns);   // a list of the same traits
         explicit XMLList(InstanceTraits::Traits& t);
+        XMLList(InstanceTraits::Traits& t, InlineCtor);
         // ??_G 0x1423f5070
         virtual ~XMLList();
         // @0x142415160

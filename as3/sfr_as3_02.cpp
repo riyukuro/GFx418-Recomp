@@ -1453,8 +1453,9 @@ namespace Instances { namespace fl
         return static_cast<InstanceTraits::fl::XMLList&>(vm.GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
     }
 
-    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) into MakeInstance here.
-    inline XMLList::XMLList(InstanceTraits::Traits& t)
+    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) into MakeInstance here; the tag
+    // keeps this copy's COMDAT apart from 01c's definition.
+    __forceinline XMLList::XMLList(InstanceTraits::Traits& t, InlineCtor)
         : Instance(t), TargetProperty(NULL)
     {
     }
@@ -1462,7 +1463,7 @@ namespace Instances { namespace fl
     // InstanceTraits::fl::XMLList::MakeInstance(itr), expanded in place as the exe does.
     static SF_INLINE Pickable<XMLList> newXMLList(InstanceTraits::fl::XMLList& itr)
     {
-        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr));
+        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr, InlineCtor()));
     }
 
     // A new list of the XMLList class whose target is name of obj.
