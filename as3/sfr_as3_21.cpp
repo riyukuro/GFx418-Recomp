@@ -2339,7 +2339,6 @@ bool Reader::Read(NamespaceSetInfo& obj)
 }
 
 // @0x142566e40
-// MS2-FUNCTIONAL: exe lowers the trait-kind switch to a jump table, this build to compare chains
 bool Reader::Read(TraitInfo& obj)
 {
     bool result = true;
@@ -2352,19 +2351,10 @@ bool Reader::Read(TraitInfo& obj)
     if (!result)
         return result;
 
-    switch (obj.GetType())
-    {
-    case TraitInfo::tMethod:
-    case TraitInfo::tGetter:
-    case TraitInfo::tSetter:
-    case TraitInfo::tClass:
-    case TraitInfo::tFunction:
-        result = result &&
-            Read(obj.SlotId) &&
-            Read(obj.Ind);
+    TraitInfo::Type type = obj.GetType();
 
-        result = result && (obj.SlotId >= 0) && (obj.Ind >= 0);
-        break;
+    switch (type)
+    {
     case TraitInfo::tSlot:
     case TraitInfo::tConst:
         {
@@ -2388,6 +2378,35 @@ bool Reader::Read(TraitInfo& obj)
 
                 obj.default_value = ValueDetail(vindex, static_cast<ValueKind>(kind));
             }
+        }
+        break;
+    case TraitInfo::tMethod:
+    case TraitInfo::tGetter:
+    case TraitInfo::tSetter:
+        {
+            result = result &&
+                Read(obj.SlotId) &&
+                Read(obj.Ind);
+
+            result = result && (obj.SlotId >= 0) && (obj.Ind >= 0);
+        }
+        break;
+    case TraitInfo::tClass:
+        {
+            result = result &&
+                Read(obj.SlotId) &&
+                Read(obj.Ind);
+
+            result = result && (obj.SlotId >= 0) && (obj.Ind >= 0);
+        }
+        break;
+    case TraitInfo::tFunction:
+        {
+            result = result &&
+                Read(obj.SlotId) &&
+                Read(obj.Ind);
+
+            result = result && (obj.SlotId >= 0) && (obj.Ind >= 0);
         }
         break;
     default:
