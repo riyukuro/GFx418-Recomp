@@ -2976,8 +2976,8 @@ void AvmDisplayObj::PropagateEvent(const Instances::fl_events::Event& evt, bool 
     }
 }
 
-// The container's own copy, then (inclChildren) every child's branch.
-// MS2-FUNCTIONAL same length; the exe lays out the child's null-AvmDisplayObj branch the other way round
+// The container's own copy, then (inclChildren) every child's branch. The child's AVM part is written as
+// !sch ? NULL : ..., which lays out the NULL branch first as in the exe.
 // @0x14251f430
 void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& evt, bool inclChildren)
 {
@@ -2997,7 +2997,7 @@ void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& e
         {
             DisplayObjectBase* ch  = cont->mDisplayList.GetDisplayObject(i);
             DisplayObjectBase* sch = ch->IsScriptableObject() ? ch : NULL;
-            AvmDisplayObj*     pavm = sch ? ToAvmDisplayObj(sch) : NULL;
+            AvmDisplayObj*     pavm = !sch ? NULL : ToAvmDisplayObj(sch);
             pavm->PropagateEvent(evt, true);
         }
     }
