@@ -23,6 +23,7 @@
 #include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/gfx_sprite.h"
 #include "../include/gfx/gfx_movieimpl.h"
+#include "../include/gfx/gfx_types.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_drawingcontext.h"
 #include "../include/gfx/gfx_asutils.h"
@@ -79,7 +80,6 @@ DisplayObject::DisplayObject(ASMovieRootBase* pasRoot, InteractiveObject* pparen
 }
 
 // @0x1425f0880
-// MS2-FUNCTIONAL: the exe ctor is a leaf (member ctors inlined differently), same stores
 DisplayObjectBase::DisplayObjectBase(ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
     : pASRoot(pasRoot), Id(id.GetIdValue()), Depth(-1), CreateFrame(0), pParent(pparent), pGeomData(0),
       pPerspectiveData(0), pIndXFormData(0), ClipDepth(0), Flags(0), BlendMode(Render::Blend_None), AvmObjOffset(0)
@@ -451,7 +451,7 @@ void DisplayObjectBase::GetLevelMatrix(Matrix* pmat) const
 Log* DisplayObjectBase::GetLog() const
 {
     MovieImpl* proot = FindMovieImpl();
-    if (!(proot->Flags & 2))
+    if (!G_IsFlagSet<MovieImpl::Flag_CachedLogFlag>(proot->Flags))
         proot->pCachedLog = proot->GetStateBag()->GetLog();
     return proot->pCachedLog;
 }
@@ -474,21 +474,23 @@ DisplayObject* DisplayObject::GetMaskOwner() const
 
 
 // The mouse position in local coordinates, in pixels.
+// MS2-FUNCTIONAL 0x1425f22e0: scheduling of the inlined SetNormalizedScreenCoords (as in sfr_gfx_01i HitTest)
 // @0x1425f22e0
 Double DisplayObject::GetMouseX() const
 {
     PointF a = GetMovieImpl()->MouseLastPosition;
-    PointF b;
+    PointF b(PointF::NoInit);
     GetMovieImpl()->SetNormalizedScreenCoords(a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.x + 0.5));
 }
 
+// MS2-FUNCTIONAL 0x1425f23e0: scheduling of the inlined SetNormalizedScreenCoords (as in sfr_gfx_01i HitTest)
 // @0x1425f23e0
 Double DisplayObject::GetMouseY() const
 {
     PointF a = GetMovieImpl()->MouseLastPosition;
-    PointF b;
+    PointF b(PointF::NoInit);
     GetMovieImpl()->SetNormalizedScreenCoords(a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.y + 0.5));
@@ -557,7 +559,7 @@ InteractiveObject* DisplayObjectBase::GetTopMostMouseEntityDef(CharacterDef* pde
     if (!GetVisible())
         return 0;
 
-    PointF p;
+    PointF p(PointF::NoInit);
     TransformPointToLocal(&p, pt);
 
     if (ClipDepth == 0 && pdef->DefPointTestLocal(p, 1, this))
@@ -694,10 +696,11 @@ Point3F DisplayObjectBase::GlobalToLocal3D(const PointF& ptIn) const
 }
 
 // A stage point (twips) in local coordinates; the window position feeds the 3D screen-to-world mapping.
+// MS2-FUNCTIONAL 0x1425f3150: scheduling of the inlined SetNormalizedScreenCoords loads (same operations)
 // @0x1425f3150
 PointF DisplayObjectBase::GlobalToLocal(const PointF& ptIn) const
 {
-    PointF     ptOut;
+    PointF     ptOut(PointF::NoInit);
     MovieImpl* proot = GetMovieImpl();
     if (proot)
     {

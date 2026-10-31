@@ -28,6 +28,19 @@ public:
     bool IsFalse() const   { return Value == B3W_False; }
 };
 
+// Utility functions
+template <UInt32 mask>
+inline void G_SetFlag(UInt32& pvalue, bool state)
+{
+    (state) ? (pvalue |= mask) : (pvalue &= (~mask));
+}
+
+template <UInt32 mask>
+inline bool G_IsFlagSet(UInt32 value)
+{
+    return (value & mask) != 0;
+}
+
 }} // namespace Scaleform::GFx
 
 #endif
