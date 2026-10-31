@@ -887,13 +887,8 @@ void** FUN_1400159f0(void** result, void* context)
 // @0x1400151a0
 long long* FUN_1400151a0(long long* dst, const long long* src)
 {
-    typedef void (*RefFn)(void*);
-    if (*src)
-        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(*src) + 1))(
-            reinterpret_cast<void*>(*src));
-    if (*dst)
-        reinterpret_cast<RefFn>(*reinterpret_cast<void**>(*reinterpret_cast<void***>(*dst) + 2))(
-            reinterpret_cast<void*>(*dst));
+    if (*src) FUN_14257dc30(reinterpret_cast<void*>(*src));
+    if (*dst) FUN_14257dcb0(reinterpret_cast<void*>(*dst));
     *dst = *src;
     return dst;
 }
