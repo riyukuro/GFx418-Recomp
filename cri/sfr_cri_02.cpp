@@ -493,41 +493,32 @@ namespace Scaleform { namespace GFx { namespace Video {
 
 // ==== VideoDecoderThrd ===============================================================================================
 
-// MS2-FUNCTIONAL: register allocation and block order differ
-// @0x14002a160
-void VideoDecoderThrd::StopDecoding(VideoPlayer* pplayer)
+// VideoDecoderSmp::FindPlayer, inlined at every use.
+static inline int FindPlayer(Array<VideoPlayerImpl*>& players, VideoPlayerImpl* pplayer)
 {
-    DecodeLock.DoLock();
-    int idx = -1;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
+    for (UPInt i = 0; i < players.GetSize(); ++i)
     {
-        if (Players[i] == pplayer)
-        {
-            idx = (int)i;
-            break;
-        }
+        if (players[i] == pplayer)
+            return (int)i;
     }
-    if (idx != -1)
-        static_cast<VideoPlayerImpl*>(pplayer)->pPlayer->Stop();
-    DecodeLock.Unlock();
+    return -1;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
-// @0x14002a1e0
-bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pplayer)
+// @0x14002a160
+void VideoDecoderThrd::StopDecoding(VideoPlayer* pp)
 {
-    DecodeLock.DoLock();
-    int idx = -1;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
-    {
-        if (Players[i] == pplayer)
-        {
-            idx = (int)i;
-            break;
-        }
-    }
-    DecodeLock.Unlock();
-    return idx == -1;
+    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
+    Lock::Locker lock(&DecodeLock);
+    if (FindPlayer(Players, pplayer) != -1)
+        pplayer->pPlayer->Stop();
+}
+
+// @0x14002a1e0
+bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
+{
+    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
+    Lock::Locker lock(&DecodeLock);
+    return FindPlayer(Players, pplayer) == -1;
 }
 
 // ==== VideoPlayerImpl: texture ======================================================================================
@@ -569,56 +560,38 @@ void VideoDecoderSmp::GetReadBufferInfo(void* pinfo)
     }
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002beb0
-bool VideoDecoderSmp::ExecuteDecode(VideoPlayer* pplayer)
+bool VideoDecoderSmp::ExecuteDecode(VideoPlayer* pp)
 {
-    int idx = -1;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
-    {
-        if (Players[i] == pplayer)
-        {
-            idx = (int)i;
-            break;
-        }
-    }
+    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
+    int idx = FindPlayer(Players, pplayer);
     if (idx == -1)
         return false;
-    if (static_cast<VideoPlayerImpl*>(pplayer)->pPlayer->ExecuteDecode(SF_VIDEO_ERR))
-        return true;
-    Players.RemoveAt(idx);
-    return false;
+    if (!pplayer->pPlayer->ExecuteDecode(SF_VIDEO_ERR))
+    {
+        Players.RemoveAt(idx);
+        return false;
+    }
+    return true;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002bf70
 void VideoDecoderSmp::PauseDecoding(bool pause)
 {
     if (Paused && pause)
         return;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
+    for (UPInt i = 0; i < Players.GetSize(); ++i)
     {
         VideoPlayerImpl* pplayer = Players[i];
-        if (pause)
+        // Players the application paused itself stay paused when decoding resumes.
+        if (pause && pplayer->PauseFlag)
         {
-            // Players the application paused itself stay paused when decoding resumes.
-            if (pplayer->PauseFlag)
-            {
-                PausedPlayers.PushBack(pplayer);
-                continue;
-            }
+            PausedPlayers.PushBack(pplayer);
+            continue;
         }
-        else
+        if (!pause)
         {
-            int idx = -1;
-            for (UPInt j = 0; j < PausedPlayers.GetSize(); j++)
-            {
-                if (PausedPlayers[j] == pplayer)
-                {
-                    idx = (int)j;
-                    break;
-                }
-            }
+            int idx = FindPlayer(PausedPlayers, pplayer);
             if (idx != -1)
             {
                 PausedPlayers.RemoveAt(idx);
@@ -649,12 +622,11 @@ __declspec(noinline) VideoDecoderThrd::~VideoDecoderThrd()
         FUN_14257dcb0(pDecodeThread);
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002bb00
 int VideoDecoderThrd::DecodeFunc(Thread*, void* obj)
 {
     VideoDecoderThrd* pdecoder = (VideoDecoderThrd*)obj;
-    for (;;)
+    while (1)
     {
         pdecoder->DecodeLock.DoLock();
         if (pdecoder->Players.GetSize() == 1)
@@ -663,48 +635,45 @@ int VideoDecoderThrd::DecodeFunc(Thread*, void* obj)
             pdecoder->DecodeLock.Unlock();
             if (!pplayer->pPlayer->ExecuteDecode(SF_VIDEO_ERR))
             {
-                pdecoder->DecodeLock.DoLock();
+                Lock::Locker lock(&pdecoder->DecodeLock);
                 pdecoder->Players.RemoveAt(0);
                 if (pdecoder->Players.GetSize() == 0)
                 {
                     if (pdecoder->pDecodeThread)
                         FUN_14257dcb0(pdecoder->pDecodeThread);
                     pdecoder->pDecodeThread = NULL;
-                    pdecoder->DecodeLock.Unlock();
-                    return 0;
+                    break;
                 }
-                pdecoder->DecodeLock.Unlock();
             }
         }
         else
         {
             Array<VideoPlayerImpl*> players(pdecoder->Players);
             pdecoder->DecodeLock.Unlock();
-
             Array<UPInt> finished;
-            for (UPInt i = 0; i < players.GetSize(); i++)
+            for (UPInt i = 0; i < players.GetSize(); ++i)
             {
-                if (!players[i]->pPlayer->ExecuteDecode(SF_VIDEO_ERR))
+                CriMvEasyPlayer* pcriPlayer = players[i]->pPlayer;
+                if (!pcriPlayer->ExecuteDecode(SF_VIDEO_ERR))
                     finished.PushBack(i);
             }
-            if (finished.GetSize())
+            if (finished.GetSize() > 0)
             {
-                pdecoder->DecodeLock.DoLock();
-                for (UPInt j = 0; j < finished.GetSize(); j++)
+                Lock::Locker lock(&pdecoder->DecodeLock);
+                for (UPInt j = 0; j < finished.GetSize(); ++j)
                     pdecoder->Players.RemoveAt(finished[j] - j);
                 if (pdecoder->Players.GetSize() == 0)
                 {
                     if (pdecoder->pDecodeThread)
                         FUN_14257dcb0(pdecoder->pDecodeThread);
                     pdecoder->pDecodeThread = NULL;
-                    pdecoder->DecodeLock.Unlock();
-                    return 0;
+                    break;
                 }
-                pdecoder->DecodeLock.Unlock();
             }
         }
         FUN_14258b240(1);
     }
+    return 0;
 }
 
 // The thread creation parameters (Thread::CreateParams).
@@ -718,27 +687,17 @@ struct VideoThreadCreateParams
     int       Priority;
 };
 
-// MS2-FUNCTIONAL: register allocation and block order differ
+// MS2-FUNCTIONAL: the Thread::Start call loads its arguments in the other order
 // @0x14002c0e0
-void VideoDecoderThrd::StartDecoding(VideoPlayer* pplayer)
+void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
 {
-    DecodeLock.DoLock();
-    int idx = -1;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
+    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
     {
-        if (Players[i] == pplayer)
-        {
-            idx = (int)i;
-            break;
-        }
+        Lock::Locker lock(&DecodeLock);
+        if (FindPlayer(Players, pplayer) != -1)
+            return;
+        Players.PushBack(pplayer);
     }
-    if (idx != -1)
-    {
-        DecodeLock.Unlock();
-        return;
-    }
-    Players.PushBack(static_cast<VideoPlayerImpl*>(pplayer));
-    DecodeLock.Unlock();
 
     if (!pDecodeThread)
     {
