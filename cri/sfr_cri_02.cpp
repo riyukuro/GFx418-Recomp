@@ -487,11 +487,11 @@ namespace Scaleform { namespace GFx { namespace Video {
 
 #define SF_VIDEO_ERR CriMv::ErrorContainer
 
-// The VideoPlayer methods below are the Video add-on lib (prebuilt with VS2012), so none of them can be exact.
+// The VideoPlayer methods below are the Video add-on lib (VS2008 SP1 code, built with vc9v).
 
 // ==== VideoDecoderThrd ===============================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002a160
 void VideoDecoderThrd::StopDecoding(VideoPlayer* pplayer)
 {
@@ -510,7 +510,7 @@ void VideoDecoderThrd::StopDecoding(VideoPlayer* pplayer)
     DecodeLock.Unlock();
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002a1e0
 bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pplayer)
 {
@@ -530,7 +530,7 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pplayer)
 
 // ==== VideoPlayerImpl: texture ======================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); the VideoImage constructor is inlined there
+// MS2-FUNCTIONAL: the VideoImage constructor is inlined there
 // @0x14002ad80
 VideoImage* VideoPlayerImpl::CreateTexture(Render::TextureManager* ptexman)
 {
@@ -547,14 +547,13 @@ VideoImage* VideoPlayerImpl::CreateTexture(Render::TextureManager* ptexman)
 
 // ==== VideoDecoderSmp ================================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002b3d0
 void VideoDecoderSmp::StartDecoding(VideoPlayer* pplayer)
 {
     Players.PushBack(static_cast<VideoPlayerImpl*>(pplayer));
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002b450
 void VideoDecoderSmp::GetReadBufferInfo(void* pinfo)
 {
@@ -568,7 +567,7 @@ void VideoDecoderSmp::GetReadBufferInfo(void* pinfo)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002beb0
 bool VideoDecoderSmp::ExecuteDecode(VideoPlayer* pplayer)
 {
@@ -589,7 +588,7 @@ bool VideoDecoderSmp::ExecuteDecode(VideoPlayer* pplayer)
     return false;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002bf70
 void VideoDecoderSmp::PauseDecoding(bool pause)
 {
@@ -631,7 +630,7 @@ void VideoDecoderSmp::PauseDecoding(bool pause)
 
 // ==== VideoDecoderThrd ===============================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002b270
 VideoDecoderThrd::VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority priority)
     : pHeap(pheap), pDecodeThread(NULL), ThreadPriority(priority), DecodeLock(0)
@@ -640,7 +639,7 @@ VideoDecoderThrd::VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority pri
 
 // The implicit ~VideoDecoderSmp skips the exe's store of its vftable 0x1431b9170 before the two player arrays are freed:
 // nothing virtual runs between it and ~RefCountNTSImplCore, so the store is dead.
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002b2e0
 VideoDecoderThrd::~VideoDecoderThrd()
 {
@@ -648,7 +647,7 @@ VideoDecoderThrd::~VideoDecoderThrd()
         FUN_14257dcb0(pDecodeThread);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002bb00
 int VideoDecoderThrd::DecodeFunc(Thread*, void* obj)
 {
@@ -717,7 +716,7 @@ struct VideoThreadCreateParams
     int       Priority;
 };
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c0e0
 void VideoDecoderThrd::StartDecoding(VideoPlayer* pplayer)
 {
@@ -757,7 +756,7 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pplayer)
 
 // ==== VideoPlayerImpl ================================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); the owned objects' constructors are inlined there
+// MS2-FUNCTIONAL: the owned objects' constructors are inlined there
 // @0x14002b530
 bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpener, Log* plog)
 {
@@ -834,7 +833,7 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
 }
 
 // The cue point a CRI event point describes: "name=value,name=value" parameters.
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); a constructor of CuePoint there
+// MS2-FUNCTIONAL: a constructor of CuePoint there
 // @0x14002c2b0
 static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, const CriMvEventPoint* pevent)
 {
@@ -875,7 +874,6 @@ static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, con
     return pcue;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002c5f0
 VideoPlayerImpl::~VideoPlayerImpl()
 {
@@ -896,21 +894,21 @@ VideoPlayerImpl::~VideoPlayerImpl()
         pDecoder->Release();
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c730
 VideoPlayer::Status VideoPlayerImpl::GetStatus()
 {
     return Stat;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c740
 bool VideoPlayerImpl::IsTextureReady()
 {
     return UpdateTextureCalled && FrameOnTime;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c7a0
 void VideoPlayerImpl::CuePointCallback(CriMvEasyPlayer*, CriMvEventPoint* eventinfo, void* usrobj)
 {
@@ -921,7 +919,6 @@ void VideoPlayerImpl::CuePointCallback(CriMvEasyPlayer*, CriMvEventPoint* eventi
     pplayer->CurrentCuePoints.PushBack(*ConstructCuePoint(&cue, eventinfo));
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002c810
 VideoPlayerImpl::VideoPlayerImpl(MemoryHeap* pheap)
     : pPlayer(NULL), Stat(NotInitialized), pTimer(), pReader(), pSound(), pSubSound(),
@@ -950,7 +947,6 @@ static __forceinline void ResetForOpen(VideoPlayerImpl* p)
     memset(&p->FrameInfo, 0, sizeof(p->FrameInfo));
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002c930
 void VideoPlayerImpl::Open(const char* url)
 {
@@ -963,7 +959,7 @@ void VideoPlayerImpl::Open(const char* url)
     OpenTicks = FUN_1425e3590();
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002ca30
 void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
 {
@@ -1010,7 +1006,7 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002cd40
 void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
 {
@@ -1054,7 +1050,6 @@ void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002cfe0
 void VideoPlayerImpl::GetCurrentCuePoints(Array<CuePoint>* cuePoints)
 {
@@ -1065,7 +1060,7 @@ void VideoPlayerImpl::GetCurrentCuePoints(Array<CuePoint>* cuePoints)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d020
 bool VideoPlayer::LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBase* pfileOpener)
 {
@@ -1094,7 +1089,7 @@ bool VideoPlayer::LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBas
 // The reader's file: a Scaleform File held as a thread-safe reference.
 static inline File* ReaderFile(RefCountImpl* pfile) { return (File*)pfile; }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d230
 CriSint64 VideoReader::Seek(CriSint64 size, SeekOrigin offset)
 {
@@ -1108,7 +1103,7 @@ CriSint64 VideoReader::Seek(CriSint64 size, SeekOrigin offset)
     return Position;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d4f0
 void VideoReader::OpenFile(const char* fname)
 {
@@ -1130,7 +1125,6 @@ void VideoReader::OpenFile(const char* fname)
     }
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002d590
 void VideoReader::CloseFile()
 {
@@ -1143,7 +1137,6 @@ void VideoReader::CloseFile()
     pFile = NULL;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002d5e0
 void VideoReader::ReadFile(UByte* buffer, SInt64 size)
 {
@@ -1178,7 +1171,7 @@ void VideoReader::ReadFile(UByte* buffer, SInt64 size)
     ReadStatus = ASYNC_STATUS_ERROR;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002ddd0
 void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
 {
@@ -1277,7 +1270,7 @@ void* FUN_14002e450(void* object, void* heap, void* opener)
     return object;
 }
 
-// MS2-FUNCTIONAL: release the threaded reader config's sync state, live readers and retained CRI opener.
+// Release the threaded reader config's sync state, live readers and retained CRI opener.
 // @0x14002e2a0
 void FUN_14002e2a0(void* object)
 {
@@ -1306,7 +1299,7 @@ void FUN_14002e2a0(void* object)
 
 // VideoReader's primary vftable (no RTTI in this build): the constructor stores it at +0, 0x1431b9360 at +0x10
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6B?$RefCountBaseNTS@VVideoReader@Video@GFx@Scaleform@@$01@3@@ 0x1431b93b0
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d970
 VideoReader::VideoReader(VideoReaderConfig* pconfig)
     : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
@@ -1326,7 +1319,6 @@ __forceinline VideoReader::VideoReader(VideoReaderConfig* pconfig, InlineCtorTag
     CloseStatus = ASYNC_STATUS_STOP;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002d430
 VideoReader::~VideoReader()
 {
@@ -1335,14 +1327,14 @@ VideoReader::~VideoReader()
         pFile->Release();
 }
 
-// MS2-FUNCTIONAL: run the VideoReader destructor body and its multiple-inheritance base cleanup.
+// Run the VideoReader destructor body and its multiple-inheritance base cleanup.
 // @0x14002de60
 void FUN_14002de60(VideoReader* reader)
 {
     reader->VideoReader::~VideoReader();  // non-virtual: a virtual call re-enters this deleting dtor
 }
 
-// MS2-FUNCTIONAL: destroy the VideoReader and optionally return its allocation to the global heap.
+// Destroy the VideoReader and optionally return its allocation to the global heap.
 // @0x14002d9e0
 void* FUN_14002d9e0(VideoReader* reader, CriUint32 flags)
 {
@@ -1352,7 +1344,7 @@ void* FUN_14002d9e0(VideoReader* reader, CriUint32 flags)
     return reader;
 }
 
-// MS2-FUNCTIONAL: destroy the alternate VideoReader interface view with the same delete flag semantics.
+// Destroy the alternate VideoReader interface view with the same delete flag semantics.
 // @0x14002dec0
 void* FUN_14002dec0(VideoReader* reader, CriUint32 flags)
 {
@@ -1362,7 +1354,7 @@ void* FUN_14002dec0(VideoReader* reader, CriUint32 flags)
     return reader;
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
+// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002da70
 void VideoReader::Open(CriChar8* fname)
 {
@@ -1373,14 +1365,12 @@ void VideoReader::Open(CriChar8* fname)
     OpenFile((const char*)fname);
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002da90
 void VideoReader::Close(void)
 {
     CloseFile();
 }
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002dae0
 void VideoReader::Read(CriUint8* buffer, CriSint64 req_size)
 {
@@ -1391,7 +1381,6 @@ void VideoReader::Read(CriUint8* buffer, CriSint64 req_size)
 
 // ==== VideoReaderConfigSmp ===========================================================================================
 
-// MS2-FUNCTIONAL: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501); register allocation and block order differ
 // @0x14002df50
 VideoReader* VideoReaderConfigSmp::CreateReader()
 {
@@ -1421,7 +1410,7 @@ void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, voi
     FUN_142583d50(queueView->Event);
 }
 
-// MS2-FUNCTIONAL: initialize the reader request state and enqueue its open operation.
+// Initialize the reader request state and enqueue its open operation.
 // @0x14002e1e0
 void FUN_14002e1e0(void* object, void* input)
 {
@@ -1445,7 +1434,7 @@ void FUN_14002e230(void* object)
     FUN_14002e140(state->Queue, 2, (CriUint8*)object - 0x10, NULL, NULL, NULL);
 }
 
-// MS2-FUNCTIONAL: mark the request as pending and enqueue the selected reader operation.
+// Mark the request as pending and enqueue the selected reader operation.
 // @0x14002e260
 void FUN_14002e260(void* object, void* first, void* second)
 {
@@ -1582,7 +1571,7 @@ void FUN_14002a9b0(void* array, CriUint64 length)
     fields[1] = length;
 }
 
-// MS2-FUNCTIONAL: erase one eight-byte vector entry and shift the remaining entries down.
+// Erase one eight-byte vector entry and shift the remaining entries down.
 // @0x14002b9e0
 void FUN_14002b9e0(CriUint64* array, CriUint64 index)
 {
@@ -1632,7 +1621,7 @@ void FUN_14002aa30(CriUint64* array, CriUint64 length)
     }
 }
 
-// MS2-FUNCTIONAL: release the owned opener and heap blocks before destroying the reference-count base.
+// Release the owned opener and heap blocks before destroying the reference-count base.
 // @0x14002ab90
 void FUN_14002ab90(void* object)
 {
@@ -1660,7 +1649,7 @@ void* FUN_14002aab0(void* object, void* first, void* second)
     return object;
 }
 
-// MS2-FUNCTIONAL: tear down the video player reference core and optionally free the object storage.
+// Tear down the video player reference core and optionally free the object storage.
 // @0x14002a0e0
 void* FUN_14002a0e0(void* object, CriUint32 flags)
 {
@@ -1727,7 +1716,7 @@ void FUN_14002aec0(CriUint64* array)
     array[1] = 0;
 }
 
-// MS2-FUNCTIONAL: destroy the same owned fields and optionally free the containing allocation.
+// Destroy the same owned fields and optionally free the containing allocation.
 // @0x14002b0f0
 void* FUN_14002b0f0(void* object, CriUint32 flags)
 {
@@ -1869,7 +1858,7 @@ CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: copy the descriptor fields and nested string vector of a video record.
+// Copy the descriptor fields and nested string vector of a video record.
 // @0x14002c260
 CriUint32* FUN_14002c260(CriUint32* destination, const CriUint32* source)
 {
@@ -1927,7 +1916,7 @@ void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
     }
 }
 
-// MS2-FUNCTIONAL: append a pair of retained strings to the first fixed-width string vector.
+// Append a pair of retained strings to the first fixed-width string vector.
 // @0x14002af50
 void FUN_14002af50(CriUint64* array, const CriUint64* value)
 {
@@ -1940,7 +1929,7 @@ void FUN_14002af50(CriUint64* array, const CriUint64* value)
     }
 }
 
-// MS2-FUNCTIONAL: append a pair of retained strings to the second fixed-width string vector.
+// Append a pair of retained strings to the second fixed-width string vector.
 // @0x14002b950
 void FUN_14002b950(CriUint64* array, const CriUint64* value)
 {
@@ -1953,7 +1942,7 @@ void FUN_14002b950(CriUint64* array, const CriUint64* value)
     }
 }
 
-// MS2-FUNCTIONAL: initialize a lock guard's stored lock pointer and acquire the lock.
+// Initialize a lock guard's stored lock pointer and acquire the lock.
 // @0x14002d1a0
 void* FUN_14002d1a0(void* guard, void* lock)
 {
@@ -1962,7 +1951,7 @@ void* FUN_14002d1a0(void* guard, void* lock)
     return guard;
 }
 
-// MS2-FUNCTIONAL: restore the abstract reader interface vtable and run its scalar delete path when requested.
+// Restore the abstract reader interface vtable and run its scalar delete path when requested.
 // @0x14002d170
 void* FUN_14002d170(CriMvFileReaderInterface* reader, CriUint8 flags)
 {
@@ -1972,7 +1961,7 @@ void* FUN_14002d170(CriMvFileReaderInterface* reader, CriUint8 flags)
     return reader;
 }
 
-// MS2-FUNCTIONAL: replace the held reference, releasing the previous object when non-null.
+// Replace the held reference, releasing the previous object when non-null.
 // @0x14002d280
 void* FUN_14002d280(void** slot, void* replacement)
 {
@@ -2000,7 +1989,7 @@ void* FUN_14002d3c0(void*, size_t size)
 #pragma optimize("s", on)
 #endif
 
-// MS2-FUNCTIONAL: return a non-null allocation to the global Scaleform heap.
+// Return a non-null allocation to the global Scaleform heap.
 // @0x14002d3f0
 void FUN_14002d3f0(void* allocation)
 {
@@ -2013,7 +2002,7 @@ void FUN_14002d3f0(void* allocation)
     }
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a250
 void FUN_14002a250(const void* slot)
 {
@@ -2021,7 +2010,7 @@ void FUN_14002a250(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a270
 void FUN_14002a270(const void* slot)
 {
@@ -2029,7 +2018,7 @@ void FUN_14002a270(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a620
 void FUN_14002a620(const void* slot)
 {
@@ -2037,7 +2026,7 @@ void FUN_14002a620(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a640
 void FUN_14002a640(const void* slot)
 {
@@ -2045,7 +2034,7 @@ void FUN_14002a640(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002a660
 void FUN_14002a660(const void* slot)
 {
@@ -2053,7 +2042,7 @@ void FUN_14002a660(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002ab70
 void FUN_14002ab70(const void* slot)
 {
@@ -2061,7 +2050,7 @@ void FUN_14002ab70(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002acb0
 void FUN_14002acb0(const void* slot)
 {
@@ -2069,7 +2058,7 @@ void FUN_14002acb0(const void* slot)
         FUN_14002d3f0(*(void* const*)slot);
 }
 
-// MS2-FUNCTIONAL: release the pointed-to block through the global Scaleform heap when non-null.
+// Release the pointed-to block through the global Scaleform heap when non-null.
 // @0x14002acd0
 void FUN_14002acd0(const void* slot)
 {
@@ -2130,7 +2119,7 @@ void FUN_14002afe0(CriUint64* array)
     array[1] = 0;
 }
 
-// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// Clear the destination vector before cloning its two-word source state.
 // @0x14002a980
 CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
 {
@@ -2141,7 +2130,7 @@ CriUint64* FUN_14002a980(CriUint64* destination, const CriUint64* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// Clear the destination vector before cloning its two-word source state.
 // @0x14002afb0
 CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
 {
@@ -2152,7 +2141,7 @@ CriUint64* FUN_14002afb0(CriUint64* destination, const CriUint64* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: clear the destination vector before cloning its two-word source state.
+// Clear the destination vector before cloning its two-word source state.
 // @0x14002b9b0
 CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
 {
@@ -2163,7 +2152,7 @@ CriUint64* FUN_14002b9b0(CriUint64* destination, const CriUint64* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
+// Run the matching vector helper and preserve the original object pointer.
 // @0x14002c0c0
 void* FUN_14002c0c0(void* object, void* source)
 {
@@ -2171,7 +2160,7 @@ void* FUN_14002c0c0(void* object, void* source)
     return object;
 }
 
-// MS2-FUNCTIONAL: run the matching vector helper and preserve the original object pointer.
+// Run the matching vector helper and preserve the original object pointer.
 // @0x14002c780
 void* FUN_14002c780(void* object, void* source)
 {
