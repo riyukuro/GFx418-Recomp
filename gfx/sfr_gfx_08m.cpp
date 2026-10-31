@@ -31,13 +31,14 @@ using namespace Render;
 const float FontPackParams::GlyphBoundBox = 1536.0f;
 
 // djb2 over the bytes of buf, last byte first
-static inline UInt32 hashBytesBackward(const void* buf, unsigned size, UInt32 hash)
+static UInt32 ComputeBernsteinHash(const void* buf, unsigned size, UInt32 seed = 5381)
 {
-    const UByte* bytes = (const UByte*)buf;
+    const UByte*    data    = (const UByte*) buf;
+    UInt32          hash    = seed;
     while (size)
     {
         size--;
-        hash = (hash * 33) ^ (unsigned)bytes[size];
+        hash = ((hash << 5) + hash) ^ (unsigned)data[size];
     }
     return hash;
 }
@@ -45,75 +46,101 @@ static inline UInt32 hashBytesBackward(const void* buf, unsigned size, UInt32 ha
 // @0x142661610
 bool IsEqualGeometry(const ShapeDataInterface& a, const ShapeDataInterface& b)
 {
-    bool emptyA = a.IsEmpty();
-    bool emptyB = b.IsEmpty();
-    if (emptyA || emptyB)
-        return emptyA == emptyB;
+    bool e1 = a.IsEmpty();
+    bool e2 = b.IsEmpty();
+    if (e1 || e2)
+        return e1 == e2;
 
-    ShapePosInfo posA(a.GetStartingPos());
-    ShapePosInfo posB(b.GetStartingPos());
-    float        coordA[Edge_MaxCoord];
-    float        coordB[Edge_MaxCoord];
-    unsigned     stylesA[3];
-    unsigned     stylesB[3];
-    bool         firstPath = true;
+    unsigned startPos1 = a.GetStartingPos();
+    unsigned startPos2 = b.GetStartingPos();
+    ShapePosInfo posInfo1(startPos1);
+    ShapePosInfo posInfo2(startPos2);
 
-    for (;;)
+    ShapePathType pathType1;
+    ShapePathType pathType2;
+    PathEdgeType  edgeType1;
+    PathEdgeType  edgeType2;
+    float coord1[Edge_MaxCoord];
+    float coord2[Edge_MaxCoord];
+    unsigned styles1[3];
+    unsigned styles2[3];
+
+    bool done = false;
+    bool first = true;
+    while(!done)
     {
-        ShapePathType pathA = a.ReadPathInfo(&posA, coordA, stylesA);
-        ShapePathType pathB = b.ReadPathInfo(&posB, coordB, stylesB);
-        if (pathA != pathB)
-            return false;
-        if (pathA == Shape_EndShape)
-            return true;
-        if (pathA == Shape_NewLayer || firstPath)
-            firstPath = false;
-        if (memcmp(stylesA, stylesB, sizeof(stylesA)) != 0 || memcmp(coordA, coordB, 2 * sizeof(float)) != 0)
+        pathType1 = a.ReadPathInfo(&posInfo1, coord1, styles1);
+        pathType2 = b.ReadPathInfo(&posInfo2, coord2, styles2);
+
+        if (pathType1 != pathType2)
             return false;
 
-        for (;;)
+        if (pathType1 == Shape_EndShape)
+            break;
+
+        if (pathType1 == Shape_NewLayer || first)
+            first = false;
+
+        if (memcmp(styles1, styles2, 3 * sizeof(unsigned)) != 0)
+            return false;
+
+        if (memcmp(coord1, coord2, 2 * sizeof(float)) != 0)
+            return false;
+
+        for(;;)
         {
-            PathEdgeType edgeA = a.ReadEdge(&posA, coordA);
-            PathEdgeType edgeB = b.ReadEdge(&posB, coordB);
-            if (edgeA != edgeB)
+            edgeType1 = a.ReadEdge(&posInfo1, coord1);
+            edgeType2 = b.ReadEdge(&posInfo2, coord2);
+
+            if (edgeType1 != edgeType2)
                 return false;
-            if (edgeA == Edge_EndPath)
+
+            if (edgeType1 == Edge_EndPath)
                 break;
-            if (memcmp(coordA, coordB, ((edgeA == Edge_QuadTo) ? 4 : 2) * sizeof(float)) != 0)
+
+            if (memcmp(coord1, coord2, sizeof(float) * ((edgeType1 == Edge_QuadTo) ? 4 : 2)) != 0)
                 return false;
         }
     }
+    return true;
 }
 
 // @0x142661000
-UInt32 ComputeGeometryHash(const ShapeDataInterface& shape)
+UInt32 ComputeGeometryHash(const ShapeDataInterface& sh)
 {
-    if (shape.IsEmpty())
+    if (sh.IsEmpty())
         return 0;
 
-    UInt32        hash = 5381;
-    ShapePosInfo  pos(shape.GetStartingPos());
-    float         coord[Edge_MaxCoord];
-    unsigned      styles[3];
-    bool          firstPath = true;
+    UInt32 hash = 5381;
+    ShapePosInfo pos(sh.GetStartingPos());
     ShapePathType pathType;
-
-    while ((pathType = shape.ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    PathEdgeType pathEdge;
+    float coord[Edge_MaxCoord];
+    unsigned styles[3];
+    bool first = true;
+    while((pathType = sh.ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
     {
-        if (!firstPath && pathType == Shape_NewLayer)
+        if (!first && pathType == Shape_NewLayer)
             break;
-        firstPath = false;
+        first = false;
 
-        hash = hashBytesBackward(styles, sizeof(styles), hash);
-        if (styles[0] == styles[1])
+        hash = ComputeBernsteinHash(&styles, sizeof(styles), hash);
+
+        if (styles[0] != styles[1])
         {
-            shape.SkipPathData(&pos);
-            continue;
+            hash = ComputeBernsteinHash(&coord, 2 * sizeof(float), hash);
+            while((pathEdge = sh.ReadEdge(&pos, coord)) != Edge_EndPath)
+            {
+                if (pathEdge == Edge_LineTo)
+                    hash = ComputeBernsteinHash(&coord, 2 * sizeof(float), hash);
+                else
+                    hash = ComputeBernsteinHash(&coord, 4 * sizeof(float), hash);
+            }
         }
-        hash = hashBytesBackward(coord, 2 * sizeof(float), hash);
-        PathEdgeType edge;
-        while ((edge = shape.ReadEdge(&pos, coord)) != Edge_EndPath)
-            hash = hashBytesBackward(coord, ((edge == Edge_LineTo) ? 2 : 4) * sizeof(float), hash);
+        else
+        {
+            sh.SkipPathData(&pos);
+        }
     }
     return hash;
 }
