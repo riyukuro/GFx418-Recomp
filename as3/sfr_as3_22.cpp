@@ -122,7 +122,7 @@ extern ExeDecl<void*> DAT_1431921c0;
 extern "C" void FUN_1426240f0(void*, void*, std::size_t);
 inline void FUN_14257dcb0(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->Release(); }
 inline void FUN_14257dc30(void* p) { static_cast<Scaleform::RefCountImpl*>(p)->AddRef(); }
-extern "C" void* FUN_142689640(void*, bool);
+namespace Scaleform { namespace GFx { void* FUN_142689640(void*, bool); } }
 
 static void CopyFixedHashPayload(std::uint64_t* destination, const std::uint64_t* source)
 {
@@ -575,8 +575,18 @@ inline bool FUN_1427483a0(void* stream, int pos)
 {
     return static_cast<Scaleform::Sound::AppendableSoundData*>(stream)->SetReadPosition(static_cast<unsigned>(pos));
 }
-unsigned long long FUN_142748160(void*, void*, unsigned);
-void FUN_142742830(long long*, unsigned long long*);
+namespace Scaleform { namespace GFx {
+unsigned long FUN_142748160(void*, void*, unsigned long);
+void FUN_142742830(unsigned long long**, const unsigned long long*);
+} }
+inline unsigned long long FUN_142748160(void* stream, void* buffer, unsigned bytes)
+{
+    return Scaleform::GFx::FUN_142748160(stream, buffer, bytes);
+}
+inline void FUN_142742830(long long* set, unsigned long long* key)
+{
+    Scaleform::GFx::FUN_142742830(reinterpret_cast<unsigned long long**>(set), key);
+}
 
 // The copy-style ops share the exe's clip: the op rect (+0x18..+0x24) is in source space and +0x28/+0x2c is the
 // destination point. The span is clipped against the source and then the destination, in destination space; the
@@ -4152,7 +4162,7 @@ void FUN_142746220(void*)
 
 }} // namespace Scaleform::GFx
 
-void FUN_142747b30(void*);
+extern "C" void FUN_142747b30(void*);
 
 namespace Scaleform { namespace GFx {
 
