@@ -8,6 +8,7 @@
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
+// MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400358d0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
@@ -26,6 +27,16 @@ typedef CriSint32 CriBool;
 struct CriMvFrameInfo;
 struct CriMvAlphaDecoderFrameInfo;
 typedef struct CriMvDecoderHandleFields { CriUint8 Reserved00[0xe40]; void* AlphaDecoder; } CriMvDecoderHandleFields;
+typedef struct CriMvPlyStateView
+{
+    CriUint8  Reserved0[4];
+    CriSint32 Status;                       // 0x04
+    CriUint32 InternalFlags;                // 0x08
+    CriUint8  Reserved0C[0xe10 - 0x0c];
+    void*     AudioManager;                 // 0xe10
+    CriUint8  ReservedE18[0xf10 - 0xe18];
+    CriUint8  StopState;                    // 0xf10
+} CriMvPlyStateView;
 typedef struct CriMvSubtitleFields
 {
     CriUint8 Reserved[0xe28];
@@ -41,6 +52,15 @@ typedef struct CriMvSubtitleChunk
 } CriMvSubtitleChunk;
 
 void FUN_140028074(void* heap);
+CriBool FUN_1400314d0(void* player);
+void FUN_140031570(void* player);
+void FUN_140033810(void* player);
+void FUN_1400344f0(void* player);
+void FUN_140034690(void* player);
+void FUN_140034730(void* player);
+void FUN_1400428e0(void* audioManager, void* player);
+CriSint32 getInternalStatus(void* player);
+CriBool isLockedInputChunk(const void* player);
 void FUN_1400420b0(void* manager, void* heap);
 void FUN_140043be0(void* decoder);
 void FUN_140044560(CriUint64* adapter);
@@ -61,6 +81,9 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 // definitions (sfr_cri_02c, sfr_cri_07) bind to the plain C names the same way
 #ifndef MS2_HOOK_DLL
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
+#pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
+#pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
 #pragma comment(linker, "/alternatename:?criMvPly_GetSubtitle@@YAXPEAX0K0@Z=criMvPly_GetSubtitle")
 #pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
 #pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
@@ -114,6 +137,54 @@ void FUN_140030cb0(void* player)
         *(void**)((CriUint8*)player + 0xee0) = 0;
     }
     *(CriUint32*)((CriUint8*)player + 0xad4) = 0;
+}
+
+// advance decoder and audio processing according to the CRI Movie state machine
+// @0x140031290
+void FUN_140031290(void* player)
+{
+    CriSint32 status;
+    status = getInternalStatus(player);
+    if (status == 0 || status == 9 || status == 7 || status == 6)
+        return;
+
+    if (((CriMvPlyStateView*)player)->Status != 1)
+        FUN_140034730(player);
+    FUN_140034690(player);
+
+    if (((CriMvPlyStateView*)player)->Status == 8)
+    {
+        if (FUN_1400314d0(player) == 1)
+        {
+            if (isLockedInputChunk(player) == 1)
+            {
+                ((CriMvPlyStateView*)player)->StopState = 3;
+                return;
+            }
+            FUN_140031570(player);
+            ((CriMvPlyStateView*)player)->Status = 9;
+            ((CriMvPlyStateView*)player)->StopState = 5;
+            ((CriMvPlyStateView*)player)->InternalFlags = 0;
+        }
+        return;
+    }
+
+    if (((CriMvPlyStateView*)player)->AudioManager)
+        FUN_1400428e0(((CriMvPlyStateView*)player)->AudioManager, player);
+    status = getInternalStatus(player);
+    switch (status)
+    {
+    case 1:
+        break;
+    case 2:
+        break;
+    case 3:
+        FUN_140033810(player);
+        break;
+    case 5:
+        FUN_1400344f0(player);
+        break;
+    }
 }
 
 // copy the decoded frame metadata and add the alpha frame metadata when available

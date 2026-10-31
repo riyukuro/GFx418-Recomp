@@ -8,7 +8,8 @@
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
-// MS2-RANGE: 0x140030e50-0x1400356a0 .text$mn
+// MS2-RANGE: 0x140030e50-0x140031290 .text$mn
+// MS2-RANGE: 0x1400313d0-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
 // MS2-RANGE: 0x1400358d0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140039ea8 .text$mn
@@ -4320,44 +4321,6 @@ void FUN_140031140(void* player)
         ((CriMvPlyStateTransitionFields*)player)->Status = 0;
         ((CriMvPlyStateTransitionFields*)player)->StopState = 0;
     }
-}
-
-// MS2-FUNCTIONAL: advance decoder and audio processing according to the CRI Movie state machine.
-// @0x140031290
-void FUN_140031290(void* player)
-{
-    CriSint32 status = getInternalStatus(player);
-    if (status == 0 || status == 9 || status == 7 || status == 6)
-        return;
-
-    if (status != 1)
-        FUN_140034730(player);
-    FUN_140034690(player);
-
-    if (getInternalStatus(player) == 8)
-    {
-        if (FUN_1400314d0(player) == 1)
-        {
-            if (isLockedInputChunk(player) == 1)
-                ((CriMvPlyStateTransitionFields*)player)->StopState = 3;
-            else
-            {
-                FUN_140031570(player);
-                ((CriMvPlyStateTransitionFields*)player)->Status = 9;
-                ((CriMvPlyStateTransitionFields*)player)->StopState = 5;
-                ((CriMvPlyStateTransitionFields*)player)->InternalFlags = 0;
-            }
-        }
-        return;
-    }
-
-    if (((CriMvDecoderHandleFields*)player)->AudioManager)
-        FUN_1400428e0(((CriMvDecoderHandleFields*)player)->AudioManager, player);
-    status = getInternalStatus(player);
-    if (status == 3)
-        FUN_140033810(player);
-    else if (status == 5)
-        FUN_1400344f0(player);
 }
 
 // MS2-FUNCTIONAL: run the CRI movie player once under its per-player critical section.
