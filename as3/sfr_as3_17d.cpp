@@ -77,16 +77,14 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self);   // AvmBitmap: the image shape of the render node
 void FUN_142524990(void* arr, void* policy, Scaleform::UPInt n);   // ArrayDH<Ptr<InteractiveObject> >::Resize, out of line
 namespace Scaleform { namespace GFx { void* FUN_14261e310(); } }   // the AMP server (AmpServer::GetInstance)
-// A collector record: a counted object and a second word.
+// RefCountCollector::Stats as Collect() gets it here: no observer and both counters zeroed by one qword store.
 struct Sfr17dCollectorEntry
 {
     Sfr17dCollectorEntry() : pExtra(NULL) {}
     Scaleform::Ptr<Scaleform::RefCountImpl> pObject;
     void*                                   pExtra;
 };
-void FUN_1423de770(void* self, const Sfr17dCollectorEntry& e);   // the collector's queue: adds a record
 void FUN_142504630(void* gc, void* stats);   // ASRefCountCollector: queues a collection with the AMP stats
-void FUN_1424efab0(void* pages);   // ArrayPagedLH_POD<RefCountBaseGC*>::ClearAndRelease
 
 namespace Scaleform {
 
@@ -448,7 +446,7 @@ static SF_INLINE void Sfr17dEmergencyCollect(UByte* gc)
     const unsigned count = *reinterpret_cast<unsigned*>(gc + 0x18);
     {
         Sfr17dCollectorEntry e;
-        FUN_1423de770(gc, e);
+        reinterpret_cast<AS3::ASRefCountCollector*>(gc)->Collect(reinterpret_cast<AS3::ASRefCountCollector::Stats*>(&e));
         *reinterpret_cast<unsigned*>(gc + 0x88) = 0;
         *reinterpret_cast<unsigned*>(gc + 0x94) = count;
         *reinterpret_cast<unsigned*>(gc + 0x90) = Alg::Max(*reinterpret_cast<unsigned*>(gc + 0x90), count);
@@ -456,7 +454,7 @@ static SF_INLINE void Sfr17dEmergencyCollect(UByte* gc)
             gc[0xb0] = 1;
     }
     if (!(gc[0x78] & 2) && *reinterpret_cast<UPInt*>(gc + 0x18) == 0)
-        FUN_1424efab0(gc + 0x10);
+        reinterpret_cast<AS3::ASRefCountCollector*>(gc)->Roots.ClearAndRelease();
     *reinterpret_cast<unsigned*>(gc + 0x8c) = *reinterpret_cast<unsigned*>(gc + 0xa8);
     *reinterpret_cast<unsigned*>(gc + 0x90) = 0;
 }
@@ -485,7 +483,7 @@ void FUN_1424f03f0(UByte* self, MemoryHeap* heap)
         {
             FUN_142504630(gc, stats);
             if (!(gc[0x78] & 2) && *reinterpret_cast<UPInt*>(gc + 0x18) == 0)
-                FUN_1424efab0(gc + 0x10);
+                reinterpret_cast<AS3::ASRefCountCollector*>(gc)->Roots.ClearAndRelease();
             *reinterpret_cast<unsigned*>(gc + 0x90) = 0;
             *reinterpret_cast<unsigned*>(gc + 0x8c) = *reinterpret_cast<unsigned*>(gc + 0xa8);
         }
