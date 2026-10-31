@@ -144,7 +144,7 @@ void FUN_140019470(void* self, uint64_t* output); // defined below (external: ot
 void FUN_140019660(void* self, uint64_t* output);
 ExeDecl<void*(void*, void*)>::type FUN_1400199e0;
 ExeDecl<void*(void*, void*)>::type FUN_14001ad20;
-ExeDecl<void()>::type FUN_14257e080;
+ExeDecl<void*()>::type FUN_14257e080;
 ExeDecl<void(void*, void*, void*)>::type FUN_1425cd370;   // LoadTaskData::AddResource(ResourceId, Resource*)
 ExeDecl<int(void*, void*)>::type FUN_1428d8f14;
 ExeDecl<int(void*, void*)>::type FUN_1428d8efc;
@@ -621,17 +621,16 @@ uint64_t* FUN_140019120(uint64_t* destination, const uint64_t* source)
     if (source != destination) { ReleaseVideoAtom(destination); RetainVideoAtom(*source); *destination = *source; }
     return destination;
 }
-// MS2-FUNCTIONAL: assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
+// assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
 // @0x1400191d0
 void FUN_1400191d0(Scaleform::GFx::AS3::Value* destination, const uint64_t* source)
 {
-    Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(*source);
-    RetainVideoAtom(*source);
-    destination->AssignUnsafe(object);
     uint64_t temp = *source;
+    RetainVideoAtom(temp);
+    destination->AssignUnsafe(reinterpret_cast<Scaleform::GFx::AS3::Object*>(temp));
     ReleaseVideoAtom(&temp);
 }
-// MS2-FUNCTIONAL: assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
+// assigns an object atom to an unsafe AS3 Value and releases the temporary reference.
 // @0x140019220
 void FUN_140019220(Scaleform::GFx::AS3::Value* destination, const uint64_t* source)
 {
@@ -653,6 +652,7 @@ void FUN_14001a1e0(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Objec
 // the AS3 Value payload union: the int goes into a stack copy and all 16 bytes are stored.
 union VideoValueUnion {
     int32_t VInt;
+    uint8_t VBool;
     uint64_t Raw[2];
 };
 // initializes an AS3 numeric Value with a 32-bit integer payload.
@@ -1017,10 +1017,10 @@ void FUN_14001a800(uint64_t* object, uint8_t update)
 }
 
 
-// MS2-FUNCTIONAL: destroys the AS3 DisplayObject subobject and conditionally frees the allocation. The exe takes the flags
-// as an unsigned int (mov ebx,edx); that changes the mangled name sfr_sf_hooks and data_rdata_sf_video bind to.
+// destroys the AS3 DisplayObject subobject and conditionally frees the allocation (unsigned flags, as the exe's
+// mov ebx,edx).
 // @0x14001a2f0
-void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, uint64_t flags)
+void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, unsigned flags)
 {
     object->Scaleform::GFx::AS3::Instances::fl_display::DisplayObject::~DisplayObject();  // MS2: exe 0x14001a2ff calls ~DisplayObject (0x14243d0b0) directly; the virtual call recursed
     if (flags & 1) {
@@ -1030,58 +1030,74 @@ void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* o
     return object;
 }
 
-// MS2-FUNCTIONAL: fetches the video width integer and writes it to the callback Value.
+// Value::SetBool: the Boolean kind and the byte payload (all 16 bytes stored from a stack copy).
+inline void SetVideoBoolValue(uint32_t* value, uint8_t b)
+{
+    value[0] = (value[0] & 0xffffffe1) | 1;
+    VideoValueUnion u;
+    u.VBool = b;
+    *reinterpret_cast<VideoValueUnion*>(value + 4) = u;
+}
+// the SDK thunk's UnboxArgV0<T>: {vm, result, value}; the getter writes the value through its address.
+template <class T, class R = uint32_t*> struct VideoUnboxArgs {
+    void* Vm;
+    R Result;
+    T Value;
+};
+// fetches the video width integer and writes it to the callback Value.
 // @0x14001a9b0
 void FUN_14001a9b0(void*, void* vm, void* context, uint32_t* output)
 {
-    uint32_t number = 0;
-    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetA)(*reinterpret_cast<const int*>(&VideoPropBaseA) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
+    VideoUnboxArgs<uint32_t> args = { vm, output, 0 };
+    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetA)(*reinterpret_cast<const int*>(&VideoPropBaseA) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &args.Value);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(args.Vm) + 0x180) == 0) FUN_14001a260(args.Result, args.Value);
 }
-// MS2-FUNCTIONAL: converts the input to an integer and writes it through the video property setter thunk.
+// converts the input to an integer and writes it through the video property setter thunk.
 // @0x14001aa20
-void FUN_14001aa20(void*, void* vm, void* context, uint64_t value, int count, void* input)
+void FUN_14001aa20(void*, void* vm, void* context, uint64_t result, unsigned argc, void* argv)
 {
-    int converted = 0; uint32_t number = 0;
-    if (count) ConvertAS3ValueToInt32(input, &converted, reinterpret_cast<int*>(&number), static_cast<int>(value), vm);
+    uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10);
+    VideoUnboxArgs<int32_t, uint64_t> args = { vm, result, 0 };
+    if (argc > 0) {
+        bool ok;
+        reinterpret_cast<void(*)(const void*, bool*, int32_t*)>(ConvertAS3ValueToInt32)(argv, &ok, &args.Value);
+    }
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(uintptr_t, uint64_t, uint32_t)>(VideoPropSetA)(*reinterpret_cast<const int*>(&VideoPropBaseSetA) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, number);
+        reinterpret_cast<void(*)(uintptr_t, uint64_t, int32_t)>(VideoPropSetA)(*reinterpret_cast<const int*>(&VideoPropBaseSetA) + root, args.Result, args.Value);
 }
-// MS2-FUNCTIONAL: fetches the video playback boolean and writes it to the callback Value.
+// fetches the video playback boolean and writes it to the callback Value.
 // @0x14001aa90
 void FUN_14001aa90(void*, void* vm, void* context, uint32_t* output)
 {
-    uint8_t value = 0;
-    reinterpret_cast<void(*)(uintptr_t, uint8_t*)>(VideoPropGetB)(*reinterpret_cast<const int*>(&VideoPropBaseB) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &value);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        *output = (*output & 0xffffffe1) | 1;
-        *reinterpret_cast<uint64_t*>(output + 4) = value;
-        *reinterpret_cast<uint64_t*>(output + 6) = 0;
-    }
+    VideoUnboxArgs<uint8_t> args = { vm, output, 0 };
+    reinterpret_cast<void(*)(uintptr_t, uint8_t*)>(VideoPropGetB)(*reinterpret_cast<const int*>(&VideoPropBaseB) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &args.Value);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(args.Vm) + 0x180) == 0) SetVideoBoolValue(args.Result, args.Value);
 }
-// MS2-FUNCTIONAL: converts the input to a boolean and writes it through the video property setter thunk.
+// converts the input to a boolean and writes it through the video property setter thunk.
 // @0x14001ab00
-void FUN_14001ab00(void*, void* vm, void* context, uint64_t value, int count, void* input)
+void FUN_14001ab00(void*, void* vm, void* context, uint64_t result, unsigned argc, void* argv)
 {
-    int converted = count ? ConvertAS3ValueToBool(input) : 0;
+    uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10);
+    bool converted = false;
+    if (argc > 0) converted = ConvertAS3ValueToBool(argv);
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
-        reinterpret_cast<void(*)(uintptr_t, uint64_t, uint8_t)>(VideoPropSetB)(*reinterpret_cast<const int*>(&VideoPropBaseSetB) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), value, converted);
+        reinterpret_cast<void(*)(uintptr_t, uint64_t, bool)>(VideoPropSetB)(*reinterpret_cast<const int*>(&VideoPropBaseSetB) + root, result, converted);
 }
-// MS2-FUNCTIONAL: fetches the video volume integer and writes it to the callback Value.
+// fetches the video volume integer and writes it to the callback Value.
 // @0x14001ab60
 void FUN_14001ab60(void*, void* vm, void* context, uint32_t* output)
 {
-    uint32_t number = 0;
-    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetC)(*reinterpret_cast<const int*>(&VideoPropBaseC) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
+    VideoUnboxArgs<uint32_t> args = { vm, output, 0 };
+    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetC)(*reinterpret_cast<const int*>(&VideoPropBaseC) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &args.Value);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(args.Vm) + 0x180) == 0) FUN_14001a260(args.Result, args.Value);
 }
-// MS2-FUNCTIONAL: fetches the video pan integer and writes it to the callback Value.
+// fetches the video pan integer and writes it to the callback Value.
 // @0x14001abd0
 void FUN_14001abd0(void*, void* vm, void* context, uint32_t* output)
 {
-    uint32_t number = 0;
-    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetD)(*reinterpret_cast<const int*>(&VideoPropBaseD) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &number);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) FUN_14001a260(output, number);
+    VideoUnboxArgs<uint32_t> args = { vm, output, 0 };
+    reinterpret_cast<void(*)(uintptr_t, uint32_t*)>(VideoPropGetD)(*reinterpret_cast<const int*>(&VideoPropBaseD) + *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10), &args.Value);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(args.Vm) + 0x180) == 0) FUN_14001a260(args.Result, args.Value);
 }
 
 // forwards an object atom to the corresponding video property setter.
@@ -1253,11 +1269,12 @@ void FUN_14001bb80(void** holder) { if (*holder) FUN_14257dcb0(*holder); }
 // releases the Scaleform resource stored in the holder.
 // @0x14001bd20
 void FUN_14001bd20(void** holder) { if (*holder) static_cast<Scaleform::GFx::Resource*>(*holder)->Release(); }
-// MS2-FUNCTIONAL: requests the global Scaleform log when no video log is installed.
+// LogState::GetLog: the installed log (+0x20), else the global Scaleform log (Log::GetGlobalLog).
 // @0x14001bf90
-void FUN_14001bf90(void* object)
+void* FUN_14001bf90(void* object)
 {
-    if (!*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20)) FUN_14257e080();
+    void* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20);
+    return log ? log : FUN_14257e080();
 }
 // adds the resource (id, resource) to the movie load task while no failure is present. The exe passes its
 // incoming r8 (the Resource*) through untouched.
@@ -1473,23 +1490,21 @@ uint64_t* FUN_140019870(void* self, uint64_t* result)
     *result = 0; FUN_140019660(self, result); return result;
 }
 } // MS2: the two class-info factories at global scope (data_rdata_sf_video binds them)
-// MS2-FUNCTIONAL: allocates a Video instance-traits object and constructs it for the supplied class traits.
+// allocates a Video instance-traits object and constructs it for the supplied class traits.
 // @0x140019bd0
 void** FUN_140019bd0(void** result, void* classTraits)
 {
-    void** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
-    void* (*allocate)(void*, size_t, unsigned) = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
-    void* object = allocate(heap, 200, 0);
+    Scaleform::MemoryHeap* heap = *reinterpret_cast<Scaleform::MemoryHeap**>(static_cast<unsigned char*>(classTraits) + 0x38);
+    void* object = heap->Alloc(200);
     *result = object ? FUN_1400199e0(object, classTraits) : 0;
     return result;
 }
-// MS2-FUNCTIONAL: allocates a Video traits object and constructs it for the supplied class traits.
+// allocates a Video traits object and constructs it for the supplied class traits.
 // @0x14001af10
 void** FUN_14001af10(void** result, void* classTraits)
 {
-    void** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(classTraits) + 0x38);
-    void* (*allocate)(void*, size_t, unsigned) = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
-    void* object = allocate(heap, 200, 0);
+    Scaleform::MemoryHeap* heap = *reinterpret_cast<Scaleform::MemoryHeap**>(static_cast<unsigned char*>(classTraits) + 0x38);
+    void* object = heap->Alloc(200);
     *result = object ? FUN_14001ad20(object, classTraits) : 0;
     return result;
 }
