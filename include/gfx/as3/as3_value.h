@@ -814,11 +814,16 @@ private:
     // shape; the bodies are in as3_gc.h after WeakProxy.
     SF_INLINE void AddRefWeakRefSCU() const;
     SF_INLINE void ReleaseWeakRefSCU();
+    // (sfb) AS3_Value.cpp's AddRefInternal likewise (the body is in as3_obj.h after Object); ReleaseInternal is
+    // still called out of line there.
+    SF_INLINE void AddRefInternalSCU() const;
 #define MS2_AS3_ADDREF_WEAK AddRefWeakRefSCU
 #define MS2_AS3_RELEASE_WEAK ReleaseWeakRefSCU
+#define MS2_AS3_ADDREF_STRONG AddRefInternalSCU
 #else
 #define MS2_AS3_ADDREF_WEAK AddRefWeakRef
 #define MS2_AS3_RELEASE_WEAK ReleaseWeakRef
+#define MS2_AS3_ADDREF_STRONG AddRefInternal
 #endif
     SF_INLINE void AddRef() const
     {
@@ -827,7 +832,7 @@ private:
             if (IsWeakRef())
                 MS2_AS3_ADDREF_WEAK();
             else
-                AddRefInternal();
+                MS2_AS3_ADDREF_STRONG();
         }
     }
     SF_INLINE void Release()

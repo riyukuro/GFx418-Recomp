@@ -26,35 +26,23 @@ public:
     virtual ~Stage();                                                       // 0x1424defe0, ??_G 0x1424e3950
 
     virtual void        ForceShutdown();                                    // 54 0x142504860
-    virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const // 62 0x14250f870
-    {
-        if (!pParent)
-            return const_cast<Stage*>(this);
-        return pParent->GetTopParent(ignoreLockRoot);
-    }
+    // (sfb) GetTopParent, IsFocusEnabled, GetLabeledFrame, GetFrameLabel, GotoFrame and GetLoadingFrame are defined
+    // out of line in sfr_as3_18, which owns their VAs; in-class bodies here clash with them (LNK2005) in any unit
+    // that emits the vftable (sfr_as3_16 defines ~Stage).
+    virtual InteractiveObject* GetTopParent(bool ignoreLockRoot = false) const; // 62 0x14250f870
 protected:
     virtual ASString    CreateNewInstanceName() const;                      // 76 0x1424f3980
 public:
-    virtual bool        IsFocusEnabled(FocusMovedType = GFx_FocusMovedByKeyboard) const { return false; } // 83 0x142514310
+    virtual bool        IsFocusEnabled(FocusMovedType = GFx_FocusMovedByKeyboard) const; // 83 0x142514310
     virtual void        PropagateMouseEvent(const EventId& id);             // 93 0x14251f570
     virtual unsigned    GetCurrentFrame() const                             // 101 0x1425084e0
     {
         return pRoot ? pRoot->GetCurrentFrame() : 0;
     }
-    virtual bool        GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers = true) // 102 0x14250b370
-    {
-        return pRoot ? pRoot->GetLabeledFrame(plabel, frameNumber, translateNumbers) : false;
-    }
-    virtual const String* GetFrameLabel(unsigned frame, unsigned* exactFrame = NULL) // 103 0x142509dd0
-    {
-        return pRoot ? pRoot->GetFrameLabel(frame, exactFrame) : NULL;
-    }
-    virtual void        GotoFrame(unsigned targetFrameNumber)               // 104 0x142510d20
-    {
-        if (pRoot)
-            pRoot->GotoFrame(targetFrameNumber);
-    }
-    virtual unsigned    GetLoadingFrame() const { return 1; }               // 105 0x14250b3b0
+    virtual bool        GetLabeledFrame(const char* plabel, unsigned* frameNumber, bool translateNumbers = true); // 102 0x14250b370
+    virtual const String* GetFrameLabel(unsigned frame, unsigned* exactFrame = NULL); // 103 0x142509dd0
+    virtual void        GotoFrame(unsigned targetFrameNumber);              // 104 0x142510d20
+    virtual unsigned    GetLoadingFrame() const;                            // 105 0x14250b3b0
     virtual void        ExecuteFrame0Events();                              // 106 0x1424fe620
     virtual void        OnInsertionAsLevel(int level);                      // 119 0x14251a110
     // (new in Stage) the stage has no frame tags of its own.

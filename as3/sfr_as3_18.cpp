@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as3_18
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include <math.h>
 #include <stdlib.h>
 #include "ms2/scaleform/include/kernel/sf_std.h"

@@ -24,6 +24,7 @@
 // MS2-RANGE: 0x1425078e0-0x142507910 .text$mn
 // MS2-RANGE: 0x142507a40-0x1425094e0 .text$mn
 // MS2-RANGE: 0x142509850-0x142509d40 .text$mn
+#define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/kernel/sf_autoptr.h"

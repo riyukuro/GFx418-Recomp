@@ -828,6 +828,34 @@ SF_INLINE void Value::AddRefClosure() const
         value.VS._2.VObj->AddRef();
 }
 
+#ifdef MS2_AS3_SCU
+// (sfb) AS3_Value.cpp's Value::AddRefInternal (0x1424e9330), inlined into the SCU (see Value::AddRef).
+SF_INLINE void Value::AddRefInternalSCU() const
+{
+    switch (GetKind())
+    {
+    case kString:
+        AddRefString();
+        break;
+    case kNamespace:
+    case kObject:
+    case kClass:
+    case kFunction:
+    case kThunkFunction:
+        if (value.VS._1.VObj)
+            value.VS._1.VObj->AddRef();
+        break;
+    case kThunkClosure:
+    case kVTableIndClosure:
+        if (value.VS._2.VObj)
+            value.VS._2.VObj->AddRef();
+        break;
+    default:
+        break;
+    }
+}
+#endif
+
 // Instance of an AS3 class. 0x38 bytes.
 class Instance : public Object
 {
