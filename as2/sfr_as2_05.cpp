@@ -237,13 +237,6 @@
 // MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
 
-// MovieImpl::TransferFocus (exe 0x142577060).
-void FUN_142577060(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::InteractiveObject* pnewFocus,
-                   unsigned controllerIdx, Scaleform::GFx::FocusMovedType fmt);
-
-// MovieImpl::GetModalClip (exe 0x14256f820).
-Scaleform::GFx::Sprite* FUN_14256f820(Scaleform::GFx::MovieImpl* pmovie, unsigned controllerIdx);
-
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
@@ -2493,7 +2486,7 @@ void SelectionCtorFunction::GetModalClip(const FnCall& fn)
 {
     fn.Result->SetUndefined();
     MovieImpl* proot         = fn.Env->GetTarget()->GetMovieImpl();
-    Sprite*    pmodal = FUN_14256f820(proot, fn.NArgs >= 1 ? fn.Arg(0).ToUInt32(fn.Env) : 0);
+    Sprite*    pmodal = proot->GetModalClip(fn.NArgs >= 1 ? fn.Arg(0).ToUInt32(fn.Env) : 0);
     Value*  presult = fn.Result;
     CharacterHandle* phandle = pmodal ? pmodal->GetCharacterHandle() : 0;
     if (presult->T.Type != Value::CHARACTER || presult->V.pCharHandle != phandle)
@@ -2641,7 +2634,7 @@ void Selection::DoTransferFocus(const FnCall& fn)
     MovieImpl*     proot         = fn.Env->GetTarget()->GetMovieImpl();
     FocusMovedType fmt           = (FocusMovedType)(int)fn.Arg(1).ToNumber(fn.Env);
     unsigned       controllerIdx = fn.Arg(2).ToUInt32(fn.Env);
-    FUN_142577060(proot, Value_ToCharacterInl(fn.Arg(0), fn.Env), controllerIdx, fmt);
+    proot->TransferFocus(Value_ToCharacterInl(fn.Arg(0), fn.Env), controllerIdx, fmt);
 }
 
 // MS2-FUNCTIONAL the exe keeps the resolve handler copy in registers (no frame pointer); ours builds it on the frame
