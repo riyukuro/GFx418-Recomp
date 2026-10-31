@@ -153,7 +153,6 @@ extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
-extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
 void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
@@ -1812,6 +1811,49 @@ void FUN_1423d0f10(void* self, char* text)
     FUN_1423d97d0(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x30), text);
 }
 
+// The SDK's out-of-line ArrayDataBase::Reserve, one explicit instantiation per array type (pinned at the end of
+// the file). The exe compiles one copy per element size; Ime01Pod stands in for element types with no recovered
+// class. The FUN_ names are kept as inline forwarders for the callers.
+template <unsigned long long ElementSize>
+struct Ime01Pod { unsigned char bytes[ElementSize]; };
+template <unsigned long long ElementSize>
+using Ime01ArrayGH = ArrayDataBase<Ime01Pod<ElementSize>, AllocatorGH_POD<Ime01Pod<ElementSize>>, ArrayDefaultPolicy>;
+// The candidate list's Value array (ArrayData<Value, AllocatorGH<Value, 2>>).
+typedef ArrayDataBase<Scaleform::GFx::Value, AllocatorGH<Scaleform::GFx::Value, 2>, ArrayDefaultPolicy> ValueArrayBase;
+typedef ArrayDataBase<void*, AllocatorLH_POD<void*>, ArrayDefaultPolicy> Ime01PtrArrayLH;
+// The wide-string arrays: wchar_t storage with the 0x201 wide-string stat, and the parallel IME text array.
+typedef ArrayDataBase<wchar_t, AllocatorLH_POD<wchar_t, 0x201>, ArrayDefaultPolicy> Ime01WideArrayLH;
+typedef ArrayDataBase<wchar_t, AllocatorLH_POD<wchar_t, 2>, ArrayDefaultPolicy> Ime01TextArrayLH;
+}}}
+namespace Scaleform {
+template void ArrayDataBase<GFx::IME::Ime01Pod<0xc>, AllocatorGH_POD<GFx::IME::Ime01Pod<0xc>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::IME::Ime01Pod<0x10>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x10>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::IME::Ime01Pod<0x18>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x18>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void ArrayDataBase<GFx::IME::Ime01Pod<0x20>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x20>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+template void GFx::IME::ValueArrayBase::Reserve(const void*, UPInt);
+template void GFx::IME::Ime01PtrArrayLH::Reserve(const void*, UPInt);
+template void GFx::IME::Ime01WideArrayLH::Reserve(const void*, UPInt);
+template void GFx::IME::Ime01TextArrayLH::Reserve(const void*, UPInt);
+}
+namespace Scaleform { namespace GFx { namespace IME {
+
+static __forceinline void FUN_1423d95f0(void* array, void* allocator, unsigned long long requested)
+{ static_cast<Ime01PtrArrayLH*>(array)->Reserve(allocator, requested); }
+static __forceinline void FUN_1423d1240(unsigned long long* array, void* heapAddr, unsigned long long count)
+{ reinterpret_cast<Ime01ArrayGH<0xc>*>(array)->Reserve(heapAddr, count); }
+static __forceinline void FUN_1423d12e0(unsigned long long* array, void* heapAddr, unsigned long long count)
+{ reinterpret_cast<Ime01ArrayGH<0x20>*>(array)->Reserve(heapAddr, count); }
+static __forceinline void FUN_1423d7370(unsigned long long* array, void* heapAddr, unsigned long long count)
+{ reinterpret_cast<ValueArrayBase*>(array)->Reserve(heapAddr, count); }
+static __forceinline void FUN_1423d1380(unsigned long long* array, void* allocator, unsigned long long count)
+{ reinterpret_cast<Ime01WideArrayLH*>(array)->Reserve(allocator, count); }
+static __forceinline void FUN_1423d5340(unsigned long long* array, void* allocator, unsigned long long count)
+{ reinterpret_cast<Ime01TextArrayLH*>(array)->Reserve(allocator, count); }
+static __forceinline void FUN_1423cc680(unsigned long long* array, void* heapAddr, unsigned long long requested)
+{ reinterpret_cast<Ime01ArrayGH<0x18>*>(array)->Reserve(heapAddr, requested); }
+static __forceinline void FUN_1423cc720(unsigned long long* array, void* heapAddr, unsigned long long requested)
+{ reinterpret_cast<Ime01ArrayGH<0x10>*>(array)->Reserve(heapAddr, requested); }
+
 // MS2-FUNCTIONAL: trims retained array items, grows through the executable's reserve helper, and stores the new length.
 // @0x1423d9690
 extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long long length)
@@ -1831,8 +1873,6 @@ extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
-__declspec(noinline) void FUN_1423d12e0(unsigned long long* array, void*, unsigned long long count);
-
 // @0x1423d9730
 extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
 {
@@ -1846,21 +1886,6 @@ extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long lon
     array[1] = length;
 }
 
-// MS2-FUNCTIONAL: ArrayDataBase<void*, AllocatorLH_POD<void*>, ArrayDefaultPolicy>::Reserve, allocating in the heap that owns
-// `allocator`; the AllocInfo slot differs (see Ime01ArrayGH).
-// @0x1423d95f0
-extern "C" void FUN_1423d95f0(void* rawArray, void* allocator, unsigned long long requested)
-{
-    static_cast<ArrayDataBase<void*, AllocatorLH_POD<void*>, ArrayDefaultPolicy>*>(rawArray)->Reserve(allocator, requested);
-}
-
-// ArrayDataBase<T, AllocatorGH_POD, ArrayDefaultPolicy>::Reserve for an element of ElementSize bytes.
-// The exe compiles one copy per element size; each puts the AllocInfo in the r9 home slot (rsp+0x48), where cl 19.16
-// uses the r8 one (rsp+0x40). That slot is the only difference.
-template <unsigned long long ElementSize>
-struct Ime01Pod { unsigned char bytes[ElementSize]; };
-template <unsigned long long ElementSize>
-using Ime01ArrayGH = ArrayDataBase<Ime01Pod<ElementSize>, AllocatorGH_POD<Ime01Pod<ElementSize>>, ArrayDefaultPolicy>;
 
 static void cx18_ReserveGH(unsigned long long* array, unsigned long long requested, unsigned long long stride)
 {
@@ -1882,52 +1907,7 @@ static void cx18_ReserveGH(unsigned long long* array, unsigned long long request
     array[2] = capacity;
 }
 
-// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 12-byte ReadBufferInfo/transform elements; the AllocInfo slot differs (see Ime01ArrayGH).
-// @0x1423d1240
-void FUN_1423d1240(unsigned long long* array, void* heapAddr, unsigned long long count)
-{ reinterpret_cast<Ime01ArrayGH<0xc>*>(array)->Reserve(heapAddr, count); }
 
-// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 32-byte Value elements; the AllocInfo slot differs (see Ime01ArrayGH).
-// @0x1423d12e0
-void FUN_1423d12e0(unsigned long long* array, void* heapAddr, unsigned long long count)
-{ reinterpret_cast<Ime01ArrayGH<0x20>*>(array)->Reserve(heapAddr, count); }
-
-// The candidate list's Value array (ArrayData<Value, AllocatorGH<Value, 2>>).
-typedef ArrayDataBase<Scaleform::GFx::Value, AllocatorGH<Scaleform::GFx::Value, 2>, ArrayDefaultPolicy> ValueArrayBase;
-
-// MS2-FUNCTIONAL: the AllocInfo temp sits in the r9 home slot in the exe, the r8 home slot here.
-// ArrayDataBase<Value>::Reserve: four-entry-rounded 32-byte Value storage.
-// @0x1423d7370
-void FUN_1423d7370(unsigned long long* array, void* heapAddr, unsigned long long count)
-{
-    reinterpret_cast<ValueArrayBase*>(array)->Reserve(heapAddr, count);
-}
-
-static void cx18_ReserveWide(unsigned long long* array, void* allocator, unsigned long long requested, unsigned flags)
-{
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    if (!requested) {
-        if (array[0]) reinterpret_cast<void(*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, reinterpret_cast<void*>(array[0]));
-        array[0] = array[2] = 0;
-        return;
-    }
-    const unsigned long long capacity = (requested + 3) & ~3ull;
-    if (array[0]) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
-        DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * 2));
-    else array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long, unsigned*)>(heapVtable[14])(
-        DAT_143b15f60, allocator, capacity * 2, &flags));
-    array[2] = capacity;
-}
-
-// MS2-FUNCTIONAL: reserves four-entry-rounded wchar_t storage with the executable's wide-string allocation tag.
-// @0x1423d1380
-void FUN_1423d1380(unsigned long long* array, void* allocator, unsigned long long count)
-{ cx18_ReserveWide(array, allocator, count, 0x201); }
-
-// MS2-FUNCTIONAL: reserves four-entry-rounded wchar_t storage for the parallel IME text array.
-// @0x1423d5340
-void FUN_1423d5340(unsigned long long* array, void* allocator, unsigned long long count)
-{ cx18_ReserveWide(array, allocator, count, 2); }
 
 // MS2-FUNCTIONAL: walks the source's command array (0x10-byte {key, name} entries, ended by a null name) and
 // inserts each name -> {key, source} by Bernstein hash.
@@ -2261,15 +2241,6 @@ void FUN_1423cc2d0(unsigned long long* object)
     }
 }
 
-// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 0x18-byte elements; the AllocInfo slot differs (see Ime01ArrayGH).
-// @0x1423cc680
-void FUN_1423cc680(unsigned long long* array, void* heapAddr, unsigned long long requested)
-{ reinterpret_cast<Ime01ArrayGH<0x18>*>(array)->Reserve(heapAddr, requested); }
-
-// MS2-FUNCTIONAL: ArrayDataBase::Reserve for 0x10-byte elements; the AllocInfo slot differs (see Ime01ArrayGH).
-// @0x1423cc720
-void FUN_1423cc720(unsigned long long* array, void* heapAddr, unsigned long long requested)
-{ reinterpret_cast<Ime01ArrayGH<0x10>*>(array)->Reserve(heapAddr, requested); }
 
 // The IME module's reading-string entry points (exe 0x143b103d0 / 0x143b103d8), kept by FUN_1423cb660 only.
 static FARPROC s_imeGetReadingString;
@@ -6566,3 +6537,11 @@ void* FUN_1423db898(void* self, unsigned flags)
 // MS2-PIN: ??_7MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c0a8
 // MS2-PIN: ??_7HeapLimit@MemoryContextImpl@AS3@GFx@Scaleform@@6B@ 0x14313c090
 // MS2-PIN: ??_7MemoryContext@GFx@Scaleform@@6B@ 0x14313ba60
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Ime01Pod@$0M@@IME@GFx@Scaleform@@U?$AllocatorGH_POD@U?$Ime01Pod@$0M@@IME@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1423d1240
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Ime01Pod@$0BA@@IME@GFx@Scaleform@@U?$AllocatorGH_POD@U?$Ime01Pod@$0BA@@IME@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1423cc720
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Ime01Pod@$0BI@@IME@GFx@Scaleform@@U?$AllocatorGH_POD@U?$Ime01Pod@$0BI@@IME@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1423cc680
+// MS2-PIN: ?Reserve@?$ArrayDataBase@U?$Ime01Pod@$0CA@@IME@GFx@Scaleform@@U?$AllocatorGH_POD@U?$Ime01Pod@$0CA@@IME@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x1423d12e0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@VValue@GFx@Scaleform@@U?$AllocatorGH@VValue@GFx@Scaleform@@$01@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x1423d7370
+// MS2-PIN: ?Reserve@?$ArrayDataBase@PEAXU?$AllocatorLH_POD@PEAX$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d95f0
+// MS2-PIN: ?Reserve@?$ArrayDataBase@_WU?$AllocatorLH_POD@_W$0CAB@@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d1380
+// MS2-PIN: ?Reserve@?$ArrayDataBase@_WU?$AllocatorLH_POD@_W$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d5340
