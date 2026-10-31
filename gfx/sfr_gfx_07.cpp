@@ -125,8 +125,9 @@ void EditorKit::SetCursorPos(UPInt pos, bool selectionAllowed)
 
 // The exe's out-of-line copy of DocView::GetAllocator (the document creates its allocator on first use).
 // MS2-FUNCTIONAL StyledText::GetAllocator stays a call here; the exe inlines it
+// Out of line, as in the exe: CompositionString's constructor calls it twice.
 // @0x142617880
-Render::Text::Allocator* DocView_GetAllocator_Call(DocView* pdocView)
+__declspec(noinline) Render::Text::Allocator* DocView_GetAllocator_Call(DocView* pdocView)
 {
     return pdocView->GetAllocator();
 }
@@ -1278,11 +1279,10 @@ void EditorKit::ClearRestrict()
 // CompositionString
 
 // Copies the document's default text format and reserves the highlighters it will need.
-// MS2-FUNCTIONAL the exe calls DocView::GetAllocator out of line (0x142617880, StyledText::GetAllocator inlined into it); here the inlining is the other way round
 // @0x142615c70
 CompositionString::CompositionString(EditorKit* const peditorKit)
-    : pEditorKit(peditorKit), pAllocator(peditorKit->GetDocument()->GetAllocator()),
-      String(peditorKit->GetDocument()->GetAllocator()), CursorPos(0), HasHighlightingFlag(false),
+    : pEditorKit(peditorKit), pAllocator(DocView_GetAllocator_Call(peditorKit->GetDocument())),
+      String(DocView_GetAllocator_Call(peditorKit->GetDocument())), CursorPos(0), HasHighlightingFlag(false),
       HighlightIdsUsed(0)
 {
     TextFormat        emptyFormat(pAllocator->GetHeap());
