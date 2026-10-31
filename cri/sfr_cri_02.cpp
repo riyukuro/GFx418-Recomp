@@ -972,14 +972,13 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
     {
         for (int i = 0; i < CRIMV_MAX_AUDIO_NUM; i++)
         {
-            const CriMvAudioParameters& aprm = StmPrm.audio_prm[i];
-            if (aprm.num_channel)
+            if (StmPrm.audio_prm[i].num_channel != 0)
             {
                 AudioTrackInfo track;
                 track.Index          = i;
-                track.SampleRate     = aprm.sampling_rate;
-                track.ChannelsNumber = aprm.num_channel;
-                track.TotalSamples   = aprm.total_samples;
+                track.ChannelsNumber = StmPrm.audio_prm[i].num_channel;
+                track.SampleRate     = StmPrm.audio_prm[i].sampling_rate;
+                track.TotalSamples   = StmPrm.audio_prm[i].total_samples;
                 info->AudioTracks.PushBack(track);
             }
         }
@@ -999,11 +998,28 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
     }
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002cd40
 void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
 {
-    if (Stat == Opening || Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking || Stat == Stopping)
+    if (Stat != Opening && Stat != Ready && Stat != Starting && Stat != Playing && Stat != Seeking && Stat != Stopping)
+    {
+        if (!psyncObj && !pTimer->pSyncObj)
+        {
+            void* mem = pHeap->Alloc(0x48);
+            Ptr<SyncObject> ps = *(mem ? (SyncObject*)FUN_140041c00(mem) : NULL);
+            pTimer->SetSyncObject(ps);
+            if (pSound && UseAudioTimer)
+                pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO, SF_VIDEO_ERR);
+            else
+                pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
+        }
+        else if (psyncObj && pTimer->pSyncObj != psyncObj)
+        {
+            pTimer->SetSyncObject(psyncObj);
+            pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
+        }
+    }
+    else
     {
         // Switching clocks while a movie is open restarts it from its header.
         ResetForOpen(this);
@@ -1011,9 +1027,11 @@ void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
         {
             void* mem = pHeap->Alloc(0x48);
             Ptr<SyncObject> ps = *(mem ? (SyncObject*)FUN_140041c00(mem) : NULL);
-            pTimer->pSyncObj = ps;
-            pPlayer->SetMasterTimer(pSound && UseAudioTimer ? CriMvEasyPlayer::MVEASY_TIMER_AUDIO
-                                                             : CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
+            pTimer->pSyncObj = ps.GetPtr();
+            if (pSound && UseAudioTimer)
+                pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_AUDIO, SF_VIDEO_ERR);
+            else
+                pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
         }
         else
         {
@@ -1023,23 +1041,6 @@ void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
         pPlayer->DecodeHeader(SF_VIDEO_ERR);
         pDecoder->StartDecoding(this);
         OpenTicks = FUN_1425e3590();
-        return;
-    }
-
-    if (!psyncObj)
-    {
-        if (pTimer->pSyncObj)
-            return;
-        void* mem = pHeap->Alloc(0x48);
-        Ptr<SyncObject> ps = *(mem ? (SyncObject*)FUN_140041c00(mem) : NULL);
-        pTimer->SetSyncObject(ps);
-        pPlayer->SetMasterTimer(pSound && UseAudioTimer ? CriMvEasyPlayer::MVEASY_TIMER_AUDIO
-                                                         : CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
-    }
-    else if (pTimer->pSyncObj != psyncObj)
-    {
-        pTimer->SetSyncObject(psyncObj);
-        pPlayer->SetMasterTimer(CriMvEasyPlayer::MVEASY_TIMER_SYSTEM, SF_VIDEO_ERR);
     }
 }
 
@@ -2165,10 +2166,12 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
         }
         FUN_14258bb70(config->Lock);
 
-        FUN_14258aca0(config->Lock);
         CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
-        while (config->Tail != sentinel)
+        for (;;)
         {
+            FUN_14258aca0(config->Lock);
+            if (sentinel->Previous == sentinel)
+                break;
             CriMvRequestNode* request = config->Tail;
             request->Next->Previous = request->Previous;
             request->Previous->Next = request->Next;
@@ -2188,21 +2191,20 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 if (state->Resource)
                     FUN_14257dcb0(state->Resource);
                 state->Resource = resource;
-                void** resourceVtable = resource ? *(void***)resource : NULL;
                 typedef bool (__fastcall* IsReady)(void*);   // the exe tests al: the reader resource returns bool
-                if (!resource || !((IsReady)resourceVtable[2])(resource))
-                {
-                    state->State2c = 3;
-                    state->State30 = 3;
-                    state->State34 = 3;
-                }
-                else
+                if (resource && ((IsReady)(*(void***)resource)[2])(resource))
                 {
                     typedef CriSint32 (__fastcall* GetSize)(void*);
                     // the exe takes the length first, then marks the open complete, then stores the size
-                    CriSint32 length = ((GetSize)resourceVtable[6])(resource);
+                    CriSint32 length = ((GetSize)(*(void***)state->Resource)[6])(state->Resource);
                     state->State2c = 2;
                     state->ResultSize = length;
+                }
+                else
+                {
+                    state->State2c = 3;
+                    state->State34 = 3;
+                    state->State30 = 3;
                 }
                 break;
             }
@@ -2214,12 +2216,13 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             case 2:
             {
                 ReaderMemoryView* state = (ReaderMemoryView*)request->Request;
-                void* resource = state->Resource;
-                void** vtable = resource ? *(void***)resource : NULL;
                 typedef bool (__fastcall* IsFinished)(void*);   // returns bool (test al)
-                state->State30 = (!resource || ((IsFinished)vtable[0x98 / sizeof(void*)])(resource)) ? 2 : 3;
-                if (resource)
-                    FUN_14257dcb0(resource);
+                if (state->Resource && !((IsFinished)(*(void***)state->Resource)[0x98 / sizeof(void*)])(state->Resource))
+                    state->State30 = 3;
+                else
+                    state->State30 = 2;
+                if (state->Resource)
+                    FUN_14257dcb0(state->Resource);
                 state->Resource = NULL;
                 break;
             }
@@ -2234,7 +2237,6 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             request->Next = pool->FreeList;
             pool->FreeList = request;
             FUN_14258bb70(config->Lock);
-            FUN_14258aca0(config->Lock);
         }
         FUN_14258bb70(config->Lock);
 
