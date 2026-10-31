@@ -2576,7 +2576,7 @@ void FUN_14002e6e0(const CriMvCodecRegistrationEntry* registration)
         ++DAT_143b2794c;
 }
 
-// MS2-FUNCTIONAL: parse an MFS:<hex-address>.<hex-size> memory-file path into its two values.
+// Parse an MFS:<hex-address>.<hex-size> memory-file path into its two values.
 // @0x1400389f0
 CriBool FUN_1400389f0(void* reader, const char* path, CriUint64* size, CriUint64* offset)
 {
