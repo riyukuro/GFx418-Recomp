@@ -217,16 +217,12 @@
 #include "../include/gfx/gfx_input.h"
 #include "../include/render/render_twips.h"
 #include "../include/gfx/gfx_stream.h"
+#include "../include/gfx/text_stylesheet.h"
+#include "../include/render/text_core.h"
 
 // Stores *value under key in the hash at owner+0x10 and releases the passed reference (a folded hash set; the
 // prototype table of GlobalContext here). Defined in sfr_video_01.
 void FUN_14000c280(void* owner, unsigned key, void** value);
-bool FUN_14260b7f0(void* styleManager, const char* text, unsigned __int64 length);
-bool FUN_14260b870(void* styleManager, const wchar_t* text, unsigned __int64 length);
-bool FUN_142606410(void* allocator, bool noAllocationsAllowed);
-bool FUN_142606150(void* allocator, bool noAllocationsAllowed);
-void FUN_1425bd9a0(void* textField, const char* text, bool html, bool notifyVariable);
-void FUN_14257dcb0(void* file);
 
 namespace Scaleform { namespace GFx {
 
@@ -2080,7 +2076,7 @@ void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener
                 BufferLen = 0;
         }
     }
-    FUN_14257dcb0(file);
+    static_cast<RefCountImpl*>(file)->Release();
 }
 
 // MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
@@ -2173,8 +2169,8 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
 
         void* styles = reinterpret_cast<UByte*>(sheet) + 0x68;
         success = *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(this) + 0x10) == 1
-                      ? FUN_14260b870(styles, data, UPInt(length))
-                      : FUN_14260b7f0(styles, reinterpret_cast<const char*>(data), UPInt(length));
+                      ? static_cast<Text::StyleManager*>(styles)->ParseCSS(data, UPInt(length))
+                      : static_cast<Text::StyleManager*>(styles)->ParseCSS(reinterpret_cast<const char*>(data), UPInt(length));
         Memory::GetGlobalHeap()->Free(Buffer);
         Buffer = 0;
     }
@@ -2188,8 +2184,8 @@ void MemoryContextImpl::HeapLimit::Reset(MemoryHeap* heap)
     MemoryContextImpl* context = MemContext;
     if (context->TextAllocator)
     {
-        FUN_142606410(context->TextAllocator.GetPtr(), true);
-        FUN_142606150(context->TextAllocator.GetPtr(), true);
+        context->TextAllocator->FlushTextFormatCache(true);
+        context->TextAllocator->FlushParagraphFormatCache(true);
     }
     context->ASGC->ForceEmergencyCollect();
     CurrentLimit = heap->GetFootprint();
@@ -2210,8 +2206,8 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
         MemoryContextImpl* context = MemContext;
         if (context->TextAllocator)
         {
-            FUN_142606410(context->TextAllocator.GetPtr(), true);
-            FUN_142606150(context->TextAllocator.GetPtr(), true);
+            context->TextAllocator->FlushTextFormatCache(true);
+            context->TextAllocator->FlushParagraphFormatCache(true);
         }
         context->ASGC->ForceEmergencyCollect();
         const UPInt collectedFootprint = heap->GetFootprint();
@@ -2337,7 +2333,7 @@ void AvmTextField::OnEventLoad()
     const StringLH& defaultText = textField->pDef->DefaultText;
     if (defaultText.GetLength() == 0)
     {
-        FUN_1425bd9a0(textField, "", (textField->GetFlags418() & 0x2) != 0, false);
+        textField->SetTextValue("", (textField->GetFlags418() & 0x2) != 0, false);
     }
     else
     {
@@ -2354,7 +2350,7 @@ void AvmTextField::OnEventLoad()
                 }
             }
         }
-        FUN_1425bd9a0(textField, defaultText.ToCStr(), (textField->GetFlags418() & 0x2) != 0, true);
+        textField->SetTextValue(defaultText.ToCStr(), (textField->GetFlags418() & 0x2) != 0, true);
         UpdateVariable();
     }
     UpdateTextFromVariable();
