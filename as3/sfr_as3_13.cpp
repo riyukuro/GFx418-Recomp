@@ -20,6 +20,9 @@
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 #include "ms2/scaleform/include/gfx/gfx_fontprovider.h"
 #include "ms2/scaleform/include/kernel/sf_stringhash.h"
+#include "ms2/scaleform/include/render/text_docview.h"
+#include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/text_editorkit.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -968,8 +971,7 @@ namespace Classes { namespace fl_ui
 // The movie whose library an AS3 object's class came from.
 Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
 // MovieImpl::FindExportedResource.
-bool FUN_14256ec50(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::ResourceBindData* pdata,
-                   const Scaleform::String& symbol);
+static inline bool FUN_14256ec50(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::ResourceBindData * p2, Scaleform::String const & p3) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->FindExportedResource(p1, p2, p3)); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1124,7 +1126,7 @@ void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3:
 Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
                                                    const Scaleform::GFx::ResourceId* prid);
 // TextField::SetText(text, html, notify).
-void FUN_1425bd9a0(Scaleform::GFx::DisplayObject* ptf, const char* ptext, bool html, bool notify);
+static inline void FUN_1425bd9a0(Scaleform::GFx::DisplayObject* ptf, const char* ptext, bool html, bool notify) { static_cast<Scaleform::GFx::TextField*>(ptf)->SetTextValue(ptext, html, notify); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1190,35 +1192,35 @@ namespace Instances { namespace fl_text
 // ---- fl_text: TextField / TextSnapshot natives forwarding to the display side ----
 // Bodies of the exe called here (not recovered yet), by their addresses. The display TextField, its document view
 // (TextField+0xe0) and the static text snapshot data (TextSnapshot+0x38) are opaque here.
-int      FUN_1425b7e70(void* ptf);                      // TextField::GetCaretIndex
-bool     FUN_1425b9b50(void* ptf);                      // TextField::IsSelectable
-int      FUN_1425b7df0(void* ptf);                      // TextField::GetBeginIndex
-int      FUN_1425b8220(void* ptf);                      // TextField::GetEndIndex
-Scaleform::UInt32 FUN_1425b9360(void* ptf);                      // TextField::GetTextColor32
-double   FUN_1425b93d0(void* ptf);                      // TextField::GetTextHeight
-double   FUN_1425b9400(void* ptf);                      // TextField::GetTextWidth
-void     FUN_1425bc060(void* ptf);                      // TextField::SetDirtyFlag
-unsigned FUN_142611f40(void* pdoc);                     // DocView::GetBottomVScroll
-unsigned FUN_1426130f0(void* pdoc);                     // DocView::GetMaxVScroll
-unsigned FUN_142613550(void* pdoc);                     // DocView::GetVScrollOffset
-unsigned FUN_142613000(void* pdoc);                     // DocView::GetLinesCount
-unsigned FUN_142613030(void* pdoc);                     // DocView::GetMaxHScroll (twips)
-unsigned FUN_142612b50(void* pdoc);                     // DocView::GetHScrollOffset (twips)
-bool     FUN_142615390(void* pdoc, unsigned long long twips);  // DocView::SetHScrollOffset
-bool     FUN_142615670(void* pdoc, unsigned line);      // DocView::SetVScrollOffset
-unsigned long long FUN_142613290(void* pdoc, unsigned long long pos);       // DocView::GetParagraphLength
-unsigned long long FUN_142612af0(void* pdoc, unsigned long long pos);       // DocView::GetFirstCharInParagraph
-unsigned FUN_142612c50(void* pdoc, unsigned long long pos);                 // DocView::GetLineIndexOfChar
-unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine);  // DocView::GetLineLength
-unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // DocView::GetLineOffset
-unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
-unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
-bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
-unsigned long long FUN_142598a50(void* ptext);          // StyledText::GetLength
-unsigned long long FUN_1425e1360(void* psnap);          // StaticTextSnapshotData::GetCharCount
-bool     FUN_1425e1bc0(void* psnap, unsigned long long start, unsigned long long end);  // ::IsSelected
-int      FUN_1425e1840(void* psnap, float x, float y, float closeDist);              // ::HitTestTextNearPos
-void     FUN_1425e2b40(void* psnap, const Scaleform::UInt32* pcolor);                         // ::SetSelectColor
+static inline int FUN_1425b7e70(void * p0) { return (int)(((const Scaleform::GFx::TextField*)(p0))->GetCaretIndex()); }                      // TextField::GetCaretIndex
+static inline bool FUN_1425b9b50(void * p0) { return (bool)(((const Scaleform::GFx::TextField*)(p0))->IsSelectable()); }                      // TextField::IsSelectable
+static inline int FUN_1425b7df0(void * p0) { return (int)(((const Scaleform::GFx::TextField*)(p0))->GetBeginIndex()); }                      // TextField::GetBeginIndex
+static inline int FUN_1425b8220(void * p0) { return (int)(((const Scaleform::GFx::TextField*)(p0))->GetEndIndex()); }                      // TextField::GetEndIndex
+static inline unsigned long FUN_1425b9360(void * p0) { return (unsigned long)(((const Scaleform::GFx::TextField*)(p0))->GetTextColor32()); }                      // TextField::GetTextColor32
+static inline double FUN_1425b93d0(void * p0) { return (double)(((const Scaleform::GFx::TextField*)(p0))->GetTextHeight()); }                      // TextField::GetTextHeight
+static inline double FUN_1425b9400(void * p0) { return (double)(((const Scaleform::GFx::TextField*)(p0))->GetTextWidth()); }                      // TextField::GetTextWidth
+static inline void FUN_1425bc060(void * p0) { ((Scaleform::GFx::TextField*)(p0))->SetDirtyFlag(); }                      // TextField::SetDirtyFlag
+static inline unsigned int FUN_142611f40(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetBottomVScroll()); }                     // DocView::GetBottomVScroll
+static inline unsigned int FUN_1426130f0(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetMaxVScroll()); }                     // DocView::GetMaxVScroll
+static inline unsigned int FUN_142613550(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetVScrollOffset()); }                     // DocView::GetVScrollOffset
+static inline unsigned int FUN_142613000(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetLinesCount()); }                     // DocView::GetLinesCount
+static inline unsigned int FUN_142613030(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetMaxHScroll()); }                     // DocView::GetMaxHScroll (twips)
+static inline unsigned int FUN_142612b50(void * p0) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetHScrollOffset()); }                     // DocView::GetHScrollOffset (twips)
+static inline bool FUN_142615390(void * p0, unsigned __int64 p1) { return (bool)(((Scaleform::Render::Text::DocView*)(p0))->SetHScrollOffset((unsigned int)(p1))); }  // DocView::SetHScrollOffset
+static inline bool FUN_142615670(void * p0, unsigned int p1) { return (bool)(((Scaleform::Render::Text::DocView*)(p0))->SetVScrollOffset(p1)); }      // DocView::SetVScrollOffset
+static inline unsigned __int64 FUN_142613290(void * p0, unsigned __int64 p1) { return (unsigned __int64)(((Scaleform::Render::Text::DocView*)(p0))->GetParagraphLength(p1)); }       // DocView::GetParagraphLength
+static inline unsigned __int64 FUN_142612af0(void * p0, unsigned __int64 p1) { return (unsigned __int64)(((Scaleform::Render::Text::DocView*)(p0))->GetFirstCharInParagraph(p1)); }       // DocView::GetFirstCharInParagraph
+static inline unsigned int FUN_142612c50(void * p0, unsigned __int64 p1) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetLineIndexOfChar(p1)); }                 // DocView::GetLineIndexOfChar
+static inline unsigned __int64 FUN_142612cb0(void * p0, unsigned int p1, bool * p2) { return (unsigned __int64)(((Scaleform::Render::Text::DocView*)(p0))->GetLineLength(p1, p2)); }  // DocView::GetLineLength
+static inline unsigned __int64 FUN_142612e80(void * p0, unsigned int p1) { return (unsigned __int64)(((Scaleform::Render::Text::DocView*)(p0))->GetLineOffset(p1)); }                // DocView::GetLineOffset
+static inline unsigned __int64 FUN_142612240(void * p0, float p1, float p2) { return (unsigned __int64)(((Scaleform::Render::Text::DocView*)(p0))->GetCharIndexAtPoint(p1, p2)); }             // DocView::GetCharIndexAtPoint
+static inline unsigned int FUN_142612bd0(void * p0, float p1, float p2) { return (unsigned int)(((Scaleform::Render::Text::DocView*)(p0))->GetLineIndexAtPoint(p1, p2)); }                       // DocView::GetLineIndexAtPoint
+static inline bool FUN_142611ff0(void * p0, Scaleform::Render::Rect<float> * p1, unsigned __int64 p2) { return (bool)(((Scaleform::Render::Text::DocView*)(p0))->GetCharBoundaries(p1, p2)); }  // DocView::GetCharBoundaries
+static inline unsigned __int64 FUN_142598a50(void * p0) { return (unsigned __int64)(((const Scaleform::Render::Text::StyledText*)(p0))->GetLength()); }          // StyledText::GetLength
+static inline unsigned __int64 FUN_1425e1360(void * p0) { return (unsigned __int64)(((const Scaleform::GFx::StaticTextSnapshotData*)(p0))->GetCharCount()); }          // StaticTextSnapshotData::GetCharCount
+static inline bool FUN_1425e1bc0(void * p0, unsigned __int64 p1, unsigned __int64 p2) { return (bool)(((const Scaleform::GFx::StaticTextSnapshotData*)(p0))->IsSelected(p1, p2)); }  // ::IsSelected
+static inline int FUN_1425e1840(void * p0, float p1, float p2, float p3) { return (int)(((const Scaleform::GFx::StaticTextSnapshotData*)(p0))->HitTestTextNearPos(p1, p2, p3)); }              // ::HitTestTextNearPos
+static inline void FUN_1425e2b40(void * p0, unsigned long const * p1) { ((Scaleform::GFx::StaticTextSnapshotData*)(p0))->SetSelectColor(*(Scaleform::Render::Color const*)(p1)); }                         // ::SetSelectColor
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1485,40 +1487,40 @@ namespace Instances { namespace fl_text
 
 // ---- fl_text: TextFormat string properties, TextField text and settings ----
 void* FUN_1425b91e0(void* ptf, void* ptext, bool html);    // TextField::GetText (builds an ASString in *ptext)
-void  FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable);  // TextField::SetTextValue
+static inline void FUN_1425bd9a0(void* ptf, const char* ptext, bool html, bool notifyVariable) { static_cast<Scaleform::GFx::TextField*>(ptf)->SetTextValue(ptext, html, notifyVariable); }  // TextField::SetTextValue
 bool  FUN_1425b9b10(void* ptf);                             // TextField::IsReadOnly
-bool  FUN_1425b9730(void* ptf);                             // TextField::HasStyleSheet
-const Scaleform::String& FUN_142606750(const void* pfmt);              // Render::Text::TextFormat::GetFontList
-const unsigned* FUN_142606b20(const void* ppara, unsigned* pcount);    // Render::Text::ParagraphFormat::GetTabStops
-void  FUN_142607d90(void* pfmt, bool v);                               // Render::Text::TextFormat::SetBold
-void  FUN_1426082a0(void* pfmt, bool v);                               // Render::Text::TextFormat::SetItalic
-void  FUN_1426084d0(void* pfmt, bool v);                               // Render::Text::TextFormat::SetUnderline
-void  FUN_142608330(void* pfmt, bool v);                               // Render::Text::TextFormat::SetKerning
-void  FUN_142607f40(void* pfmt, const char* pstr, unsigned long long len);  // Render::Text::TextFormat::SetFontList
-void  FUN_142608530(void* pfmt, const char* pstr, unsigned long long len);  // Render::Text::TextFormat::SetUrl
+static inline bool FUN_1425b9730(void * p0) { return (bool)(((const Scaleform::GFx::TextField*)(p0))->HasStyleSheet()); }                             // TextField::HasStyleSheet
+static inline Scaleform::String const & FUN_142606750(void const * p0) { return (Scaleform::String const &)(((const Scaleform::Render::Text::TextFormat*)(p0))->GetFontList()); }              // Render::Text::TextFormat::GetFontList
+static inline unsigned int const * FUN_142606b20(void const * p0, unsigned int * p1) { return (unsigned int const *)(((const Scaleform::Render::Text::ParagraphFormat*)(p0))->GetTabStops(p1)); }    // Render::Text::ParagraphFormat::GetTabStops
+static inline void FUN_142607d90(void * p0, bool p1) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetBold(p1); }                               // Render::Text::TextFormat::SetBold
+static inline void FUN_1426082a0(void * p0, bool p1) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetItalic(p1); }                               // Render::Text::TextFormat::SetItalic
+static inline void FUN_1426084d0(void * p0, bool p1) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetUnderline(p1); }                               // Render::Text::TextFormat::SetUnderline
+static inline void FUN_142608330(void * p0, bool p1) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetKerning(p1); }                               // Render::Text::TextFormat::SetKerning
+static inline void FUN_142607f40(void * p0, char const * p1, unsigned __int64 p2) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetFontList(p1, p2); }  // Render::Text::TextFormat::SetFontList
+static inline void FUN_142608530(void * p0, char const * p1, unsigned __int64 p2) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetUrl(p1, p2); }  // Render::Text::TextFormat::SetUrl
 void  FUN_142605c10(void* ppara, unsigned n);                          // Render::Text::ParagraphFormat::AllocTabStops
-void  FUN_1426084b0(void* ppara, unsigned i, unsigned v);              // Render::Text::ParagraphFormat::SetTabStopsElement
+static inline void FUN_1426084b0(void * p0, unsigned int p1, unsigned int p2) { ((Scaleform::Render::Text::ParagraphFormat*)(p0))->SetTabStopsElement(p1, p2); }              // Render::Text::ParagraphFormat::SetTabStopsElement
 void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
 void  FUN_1424aa0f0(void* pfmt);                                       // Render::Text::TextFormat destructor
 void  FUN_142606690(void* ppara);                                      // Render::Text::ParagraphFormat destructor (FreeTabStops)
 void* FUN_142607870(const void* pfmt, void* presult, const void* pother);   // Render::Text::TextFormat::Merge
 void* FUN_1426076a0(const void* ppara, void* presult, const void* pother);  // Render::Text::ParagraphFormat::Merge
-void  FUN_14259c250(void* pdoc, const void* pfmt);                     // StyledText::SetDefaultTextFormat
-void  FUN_14259c170(void* pdoc, const void* ppara);                    // StyledText::SetDefaultParagraphFormat
-bool  FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);       // DocView::GetLineMetrics (LineMetrics in twips)
-const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);  // DocView::GetLineText
-void  FUN_1425bbd10(void* ptf, void* pcss);                            // TextField::SetCSSData
-void  FUN_1425b72a0(void* ptf);                                        // TextField: rebuilds the style sheet's url zones
-void  FUN_1425bec30(void* ptf);                                        // TextField::UpdateUrlStyles
+static inline void FUN_14259c250(void * p0, void const * p1) { ((Scaleform::Render::Text::StyledText*)(p0))->SetDefaultTextFormat(*(Scaleform::Render::Text::TextFormat const*)(p1)); }                     // StyledText::SetDefaultTextFormat
+static inline void FUN_14259c170(void * p0, void const * p1) { ((Scaleform::Render::Text::StyledText*)(p0))->SetDefaultParagraphFormat(*(Scaleform::Render::Text::ParagraphFormat const*)(p1)); }                    // StyledText::SetDefaultParagraphFormat
+static inline bool FUN_142612d50(void * p0, unsigned int p1, void * p2) { return (bool)(((Scaleform::Render::Text::DocView*)(p0))->GetLineMetrics(p1, (Scaleform::Render::Text::DocView::LineMetrics *)(p2))); }       // DocView::GetLineMetrics (LineMetrics in twips)
+static inline wchar_t const * FUN_142612f00(void * p0, unsigned int p1, unsigned __int64 * p2) { return (wchar_t const *)(((Scaleform::Render::Text::DocView*)(p0))->GetLineText(p1, p2)); }  // DocView::GetLineText
+static inline void FUN_1425bbd10(void * p0, void * p1) { ((Scaleform::GFx::TextField*)(p0))->SetCSSData((Scaleform::GFx::TextField::CSSHolderBase *)(p1)); }                            // TextField::SetCSSData
+static inline void FUN_1425b72a0(void * p0) { ((Scaleform::GFx::TextField*)(p0))->CollectUrlZones(); }                                        // TextField: rebuilds the style sheet's url zones
+static inline void FUN_1425bec30(void * p0) { ((Scaleform::GFx::TextField*)(p0))->UpdateUrlStyles(); }                                        // TextField::UpdateUrlStyles
 namespace Scaleform { namespace GFx { namespace AS3 {
 // vftable of AvmTextField::CSSHolder (the AS3 side's style sheet holder; deleting destructor exe 0x1424aa770)
 extern void* const AvmTextFieldCSSHolder_vftable[];
 }}}
-void  FUN_14260df50(void* pdoc, const char* ptext, unsigned long long length);      // DocView::AppendText
-void  FUN_1426150b0(void* pdoc);                            // DocView::SetAutoSizeX
-void  FUN_1426150d0(void* pdoc);                            // DocView::SetAutoSizeY
-void  FUN_142615910(void* pdoc);                            // DocView::SetWordWrap
-void  FUN_14260e350(void* pdoc);                            // DocView::ClearWordWrap
+static inline void FUN_14260df50(void * p0, char const * p1, unsigned __int64 p2) { ((Scaleform::Render::Text::DocView*)(p0))->AppendText(p1, p2); }      // DocView::AppendText
+static inline void FUN_1426150b0(void * p0) { ((Scaleform::Render::Text::DocView*)(p0))->SetAutoSizeX(); }                            // DocView::SetAutoSizeX
+static inline void FUN_1426150d0(void * p0) { ((Scaleform::Render::Text::DocView*)(p0))->SetAutoSizeY(); }                            // DocView::SetAutoSizeY
+static inline void FUN_142615910(void * p0) { ((Scaleform::Render::Text::DocView*)(p0))->SetWordWrap(); }                            // DocView::SetWordWrap
+static inline void FUN_14260e350(void * p0) { ((Scaleform::Render::Text::DocView*)(p0))->ClearWordWrap(); }                            // DocView::ClearWordWrap
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2210,9 +2212,9 @@ namespace Instances { namespace fl_text
 
 
 // ---- fl_text: TextField / TextSnapshot string queries ----
-const void* FUN_1425b90a0(void* ptf);                       // TextField::GetRestrict (its first member is the String)
+static inline void const * FUN_1425b90a0(void * p0) { return (void const *)(((const Scaleform::GFx::TextField*)(p0))->GetRestrict()); }                       // TextField::GetRestrict (its first member is the String)
 void FUN_1425e1570(void* psnap, void* ptext, bool includeLineEndings);           // StaticTextSnapshotData::GetSelectedText (builds a String)
-int  FUN_1425e1020(void* psnap, unsigned long long start, const char* ptext, bool caseSensitive);  // ::FindText
+static inline int FUN_1425e1020(void * p0, unsigned __int64 p1, char const * p2, bool p3) { return (int)(((const Scaleform::GFx::StaticTextSnapshotData*)(p0))->FindTextA(p1, p2, p3)); }  // ::FindText
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2285,10 +2287,10 @@ namespace Instances { namespace fl_text
 
 
 // ---- fl_text: StyleSheet::parseCSS, TextFormat::tabStopsSet, TextSnapshot::getText ----
-bool FUN_14260b7f0(void* pstyles, const char* pcss, unsigned length);   // Text::StyleManager::ParseCSS
+static inline bool FUN_14260b7f0(void * p0, char const * p1, unsigned int p2) { return (bool)(((Scaleform::GFx::Text::StyleManager*)(p0))->ParseCSS(p1, (unsigned __int64)(p2))); }   // Text::StyleManager::ParseCSS
 void FUN_1425e1740(void* psnap, void* ptext, unsigned long long start, unsigned long long end, bool includeLineEndings);  // ::GetSubString (builds a String)
 void* FUN_1425e0400(void* psnap);                           // StaticTextSnapshotData::StaticTextSnapshotData (0x28 bytes)
-void  FUN_1425e0720(void* psnap, void* pstatic);            // StaticTextSnapshotData::Add (a StaticTextCharacter)
+static inline void FUN_1425e0720(void * p0, void * p1) { ((Scaleform::GFx::StaticTextSnapshotData*)(p0))->Add((Scaleform::GFx::StaticTextCharacter *)(p1)); }            // StaticTextSnapshotData::Add (a StaticTextCharacter)
 void  FUN_1424aa050(void* psnap);                           // StaticTextSnapshotData::~StaticTextSnapshotData
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2519,7 +2521,7 @@ namespace Instances { namespace fl_text
 
 // ---- fl_text: TextField::autoSizeSet, typeSet ----
 void* FUN_1425b7840(void* ptf, void** pkit);                // TextField::CreateEditorKit (returns a Ptr in *pkit)
-void  FUN_14257dcb0(void* pkit);                            // drops a reference to the editor kit
+static inline void FUN_14257dcb0(void * p0) { ((Scaleform::RefCountImpl*)(p0))->Release(); }                            // drops a reference to the editor kit
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2600,21 +2602,15 @@ namespace Instances { namespace fl_text
 // ---- fl_text: TextField::replaceSelectedText, replaceText ----
 unsigned long long FUN_1425bb810(void* ptf, const wchar_t* pstr, unsigned long long start, unsigned long long end,
                                  unsigned long long len);                       // TextField::ReplaceText
-bool  FUN_1425996b0(void* ptext, const Scaleform::Render::Text::TextFormat** ppfmt,
-                    const Scaleform::Render::Text::ParagraphFormat** pppara, unsigned long long pos);  // StyledText::GetTextAndParagraphFormat
-void  FUN_142615410(void* pdoc, const Scaleform::Render::Text::ParagraphFormat* ppara,
-                    unsigned long long start, unsigned long long end);          // DocView::SetParagraphFormat
-void  FUN_142615640(void* pdoc, const Scaleform::Render::Text::TextFormat* pfmt,
-                    unsigned long long start, unsigned long long end);          // DocView::SetTextFormat
-unsigned long long FUN_142617990(void* pek);                                    // EditorKit::GetCursorPos
-void  FUN_142619b80(void* pek, unsigned long long pos, bool selectionChange);   // EditorKit::SetCursorPos
+static inline bool FUN_1425996b0(void * p0, Scaleform::Render::Text::TextFormat const ** p1, Scaleform::Render::Text::ParagraphFormat const ** p2, unsigned __int64 p3) { return (bool)(((Scaleform::Render::Text::StyledText*)(p0))->GetTextAndParagraphFormat(p1, p2, p3)); }  // StyledText::GetTextAndParagraphFormat
+static inline void FUN_142615410(void * p0, Scaleform::Render::Text::ParagraphFormat const * p1, unsigned __int64 p2, unsigned __int64 p3) { ((Scaleform::Render::Text::DocView*)(p0))->SetParagraphFormat(*(Scaleform::Render::Text::ParagraphFormat const*)(p1), p2, p3); }          // DocView::SetParagraphFormat
+static inline void FUN_142615640(void * p0, Scaleform::Render::Text::TextFormat const * p1, unsigned __int64 p2, unsigned __int64 p3) { ((Scaleform::Render::Text::DocView*)(p0))->SetTextFormat(*(Scaleform::Render::Text::TextFormat const*)(p1), p2, p3); }          // DocView::SetTextFormat
+static inline unsigned __int64 FUN_142617990(void * p0) { return (unsigned __int64)(((const Scaleform::GFx::Text::EditorKit*)(p0))->GetCursorPos()); }                                    // EditorKit::GetCursorPos
+static inline void FUN_142619b80(void * p0, unsigned __int64 p1, bool p2) { ((Scaleform::GFx::Text::EditorKit*)(p0))->SetCursorPos(p1, p2); }   // EditorKit::SetCursorPos
 bool  FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& base,
                     const Scaleform::GFx::AS3::ClassTraits::Traits& t);       // ClassTraits: t is base or derives from it
-bool  FUN_142573d60(Scaleform::GFx::MovieImpl* pmovie, Scaleform::GFx::MovieDefImpl* pdef,
-                    Scaleform::GFx::FontResource* pfont);                      // MovieImpl::RegisterFont
-void  FUN_1425990d0(void* ptext, Scaleform::Render::Text::TextFormat* pdestFmt,
-                    Scaleform::Render::Text::ParagraphFormat* pdestPara, unsigned long long start,
-                    unsigned long long end);                                    // StyledText::GetTextAndParagraphFormat (range, merged)
+static inline bool FUN_142573d60(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::FontResource * p2) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->RegisterFont((Scaleform::GFx::MovieDef *)(p1), p2)); }                      // MovieImpl::RegisterFont
+static inline void FUN_1425990d0(void * p0, Scaleform::Render::Text::TextFormat * p1, Scaleform::Render::Text::ParagraphFormat * p2, unsigned __int64 p3, unsigned __int64 p4) { ((Scaleform::Render::Text::StyledText*)(p0))->GetTextAndParagraphFormat(p1, p2, p3, p4); }                                    // StyledText::GetTextAndParagraphFormat (range, merged)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3028,7 +3024,7 @@ namespace Instances { namespace fl_text
 // ---- fl_text: Font.enumerateFonts and its font resource visitor ----
 
 // MovieImpl::LoadRegisteredFonts: adds the fonts registered with Font.registerFont.
-void FUN_1425711a0(Scaleform::GFx::MovieImpl* pmovie, Scaleform::HashSet<Scaleform::Ptr<Scaleform::Render::Font> >& fonts);
+static inline void FUN_1425711a0(Scaleform::GFx::MovieImpl * p0, Scaleform::HashSet<Scaleform::Ptr<Scaleform::Render::Font>, Scaleform::FixedSizeHash<Scaleform::Ptr<Scaleform::Render::Font>>, Scaleform::FixedSizeHash<Scaleform::Ptr<Scaleform::Render::Font>>, Scaleform::AllocatorGH<Scaleform::Ptr<Scaleform::Render::Font>, 2>, Scaleform::HashsetCachedEntry<Scaleform::Ptr<Scaleform::Render::Font>, Scaleform::FixedSizeHash<Scaleform::Ptr<Scaleform::Render::Font>>>> & p1) { ((Scaleform::GFx::MovieImpl*)(p0))->LoadRegisteredFonts(p1); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3282,17 +3278,17 @@ namespace Instances { namespace fl_text {
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- full-exe fl_text / fl_ui accessors: display-side bodies of the exe called here, by their addresses ----
-void FUN_1425bbc10(void* ptf, Scaleform::UInt32 c);          // TextField::SetBackgroundColor
-void FUN_1425bbb90(void* ptf, bool b);                       // TextField::SetBackground
-void FUN_1425bbcd0(void* ptf, Scaleform::UInt32 c);          // TextField::SetBorderColor
-void FUN_1425bbc50(void* ptf, bool b);                       // TextField::SetBorder
-void FUN_1425bd630(void* ptf, Scaleform::UInt32 c);          // TextField::SetTextColor
-void FUN_1425bcf10(void* ptf, bool f);                       // TextField::SetSelectable
-void FUN_1425bcfc0(void* ptf, Scaleform::SPInt beginIndex, Scaleform::SPInt endIndex);  // TextField::SetSelection
-bool FUN_1425bce30(void* ptf, const Scaleform::GFx::ASString& restrStr);                 // TextField::SetRestrict
+static inline void FUN_1425bbc10(void * p0, unsigned long p1) { ((Scaleform::GFx::TextField*)(p0))->SetBackgroundColor(p1); }          // TextField::SetBackgroundColor
+static inline void FUN_1425bbb90(void * p0, bool p1) { ((Scaleform::GFx::TextField*)(p0))->SetBackground(p1); }                       // TextField::SetBackground
+static inline void FUN_1425bbcd0(void * p0, unsigned long p1) { ((Scaleform::GFx::TextField*)(p0))->SetBorderColor(p1); }          // TextField::SetBorderColor
+static inline void FUN_1425bbc50(void * p0, bool p1) { ((Scaleform::GFx::TextField*)(p0))->SetBorder(p1); }                       // TextField::SetBorder
+static inline void FUN_1425bd630(void * p0, unsigned long p1) { ((Scaleform::GFx::TextField*)(p0))->SetTextColor(p1); }          // TextField::SetTextColor
+static inline void FUN_1425bcf10(void * p0, bool p1) { ((Scaleform::GFx::TextField*)(p0))->SetSelectable(p1); }                       // TextField::SetSelectable
+static inline void FUN_1425bcfc0(void * p0, __int64 p1, __int64 p2) { ((Scaleform::GFx::TextField*)(p0))->SetSelection(p1, p2); }  // TextField::SetSelection
+static inline bool FUN_1425bce30(void * p0, Scaleform::GFx::ASString const & p1) { return (bool)(((Scaleform::GFx::TextField*)(p0))->SetRestrict(p1)); }                 // TextField::SetRestrict
 void FUN_1425b7280(void* ptf);                               // TextField::ClearRestrict
 void FUN_142609630(void* pstyleManager);                     // Text::StyleManager::Clear
-void FUN_1425e2bb0(const void* psnap, Scaleform::UPInt start, Scaleform::UPInt end, bool selected);  // StaticTextSnapshotData::SetSelected
+static inline void FUN_1425e2bb0(void const * p0, unsigned __int64 p1, unsigned __int64 p2, bool p3) { ((const Scaleform::GFx::StaticTextSnapshotData*)(p0))->SetSelected(p1, p2, p3); }  // StaticTextSnapshotData::SetSelected
 void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UInt32 mouseIndex);     // MovieRoot::GetMouseCursorType
 
 namespace Scaleform { namespace GFx { namespace AS3 {
