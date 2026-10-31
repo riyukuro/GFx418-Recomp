@@ -593,7 +593,6 @@ RectF Sprite::GetBounds(const Matrix& t) const
 }
 
 // The hit area's focus rect mapped by its matrix, else the clip's own bounds.
-// MS2-FUNCTIONAL: the exe frame carries a /GS cookie that cl does not add for these locals
 // @0x1425daf80
 RectF Sprite::GetFocusRect() const
 {
@@ -603,11 +602,9 @@ RectF Sprite::GetFocusRect() const
     {
         m = phitArea->GetMatrix();
         RectF r = phitArea->GetFocusRect();
-        RectF result(RectF::NoInit);
-        m.EncloseTransform(&result, r);
-        return result;
+        return m.EncloseTransform(r);
     }
-    return GetBounds(Matrix());
+    return GetBounds(Matrix());   // DisplayObjContainer::GetFocusRect, inline in the SDK
 }
 
 // hitTestMask: 1 tests the shapes instead of the bounds, 2 skips invisible clips.
