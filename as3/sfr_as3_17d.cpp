@@ -232,7 +232,7 @@ InteractiveObject* AvmDisplayObjContainer::FindInsertToPlayList(InteractiveObjec
     return afterCh;
 }
 
-// MS2-FUNCTIONAL 0x1424f6f50: the exe inlines GetRenderNode differently and re-reads the array data pointer
+// MS2-FUNCTIONAL 0x1424f6f50: the exe recomputes the parent NodeData page index for GetAt instead of sharing it with the child count
 // @0x1424f6f50
 bool AvmButton::DetachChild(DisplayObjectBase* ch)
 {
@@ -240,11 +240,11 @@ bool AvmButton::DetachChild(DisplayObjectBase* ch)
     Button* pbtn = GetButton();
     for (unsigned state = 0; state < 3; ++state)
     {
-        auto& chars = pbtn->GetCharacters((Button::ButtonState)state);
-        Ptr<Render::TreeContainer> prenNode = chars.pRenNode;
-        for (UPInt i = 0, n = chars.Characters.GetSize(); i < n; ++i)
+        Ptr<Render::TreeContainer> prenNode = pbtn->GetStateRenderContainer((Button::ButtonState)state);
+        auto& chars = pbtn->GetCharacters((Button::ButtonState)state).Characters;
+        for (UPInt i = 0, n = chars.GetSize(); i < n; ++i)
         {
-            if (chars.Characters[i].Char != ch)
+            if (chars[i].Char != ch)
                 continue;
             ch->pParent = NULL;
             if (ch->GetRenderNode())
@@ -252,7 +252,7 @@ bool AvmButton::DetachChild(DisplayObjectBase* ch)
                 Render::TreeContainer* pparent = static_cast<Render::TreeContainer*>(ch->GetRenderNode()->GetParent());
                 if (pparent)
                 {
-                    for (UPInt j = 0, cnt = pparent->GetSize(); j < cnt; ++j)
+                    for (UPInt j = 0, cnt = pparent->GetReadOnlyData()->Children.GetSize(); j < cnt; ++j)
                     {
                         if (pparent->GetAt(j) == ch->GetRenderNode())
                         {
