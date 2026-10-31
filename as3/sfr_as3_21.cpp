@@ -2691,7 +2691,6 @@ bool Reader::Read(const ConstPool& cp, Multiname& obj)
 }
 
 // @0x142567c60
-// MS2-FUNCTIONAL: uri string view copies through an extra stack temporary (sf_string.h StringDataPtr lacks the SDK copy ctor)
 bool Reader::Read(const ConstPool& cp, NamespaceInfo& obj)
 {
     bool result = true;
@@ -2733,7 +2732,7 @@ bool Reader::Read(const ConstPool& cp, NamespaceInfo& obj)
 }
 
 // @0x142567df0
-// MS2-FUNCTIONAL: the exe copies the converted string view through one more stack temporary (sf_string.h StringDataPtr lacks the SDK's user copy ctor)
+// The string is rebuilt from its pointer and size, which gives the exe's member-wise copy of the SDK copy ctor.
 bool Reader::Read(const ConstPool& cp, StringDataPtr& obj, const StringDataPtr& zero_val)
 {
     UInt32 ind;
@@ -2742,7 +2741,10 @@ bool Reader::Read(const ConstPool& cp, StringDataPtr& obj, const StringDataPtr& 
     if (ind == 0)
         obj = zero_val;
     else
-        obj = cp.GetString(ind);
+    {
+        StringDataPtr s = cp.GetString(ind);
+        obj = StringDataPtr(s.ToCStr(), s.GetSize());
+    }
 
     return true;
 }
