@@ -1142,7 +1142,7 @@ namespace Instances { namespace fl_display
                     {
                         SPtr<Instances::fl_display::FrameLabel> label;
                         asvm.ConstructInstance(label, labelClass);
-                        ASString name = asvm.GetStringManager().CreateString(names[j].ToCStr());
+                        ASString name = asvm.GetStringManager().GetStringManager()->CreateString(names[j].ToCStr());
                         label->FrameNumber = i + 1;
                         label->FrameName = name;
                         result->SA.PushBack(Value(label));
@@ -2420,7 +2420,6 @@ namespace Instances { namespace fl_display
     }
 #pragma strict_gs_check(pop)
 
-    // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
     // @0x1424496d0
     void MovieClip::currentFrameLabelGet(ASString& result)
     {
@@ -2429,12 +2428,11 @@ namespace Instances { namespace fl_display
         unsigned frame = psprite->GetCurrentFrame(), labelFrame;
         const String* plabel = psprite->pDef->GetFrameLabel(frame, &labelFrame);
         if (plabel && frame == labelFrame)
-            result = vm.GetStringManager().CreateString(plabel->ToCStr());
+            result = vm.GetStringManager().GetStringManager()->CreateString(plabel->ToCStr());
         else
             result.SetNull();
     }
 
-    // MS2-FUNCTIONAL: string manager load uses a different temp register (rcx vs rax); logic identical
     // @0x1424497a0
     void MovieClip::currentLabelGet(ASString& result)
     {
@@ -2443,7 +2441,7 @@ namespace Instances { namespace fl_display
         unsigned frame = psprite->GetCurrentFrame();
         const String* plabel = psprite->pDef->GetFrameLabel(frame, &frame);
         if (plabel)
-            result = vm.GetStringManager().CreateString(plabel->ToCStr());
+            result = vm.GetStringManager().GetStringManager()->CreateString(plabel->ToCStr());
         else
             result.SetNull();
     }
