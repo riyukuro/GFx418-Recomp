@@ -1534,92 +1534,94 @@ bool ShaderManager::HasInstancingSupport() const
     return InstancingSupport;
 }
 
-// MS2-FUNCTIONAL: frame / save order differs
 // @0x142741620
 bool VertexShader::Init(HAL* phal, const VertexShaderDesc* pd)
 {
     if (!phal || !pd)
         return false;
+    IDirect3DDevice9* pdevice = phal->pDevice;
+
     pDesc = pd;
-    if (FAILED(phal->pDevice->CreateVertexShader(pd->pBinary, &pProg.GetRawRef())))
+
+    if (FAILED(pdevice->CreateVertexShader(pDesc->pBinary, &pProg.GetRawRef())))
         return false;
 
-    bool ok = false;
-    ID3DXConstantTable* table = 0;
-    if (SUCCEEDED(D3DXGetShaderConstantTableEx(pDesc->pBinary, D3DXCONSTTABLE_LARGEADDRESSAWARE, &table)))
+    Ptr<ID3DXConstantTable> constantTable = 0;
+    if (FAILED(D3DXGetShaderConstantTableEx(pDesc->pBinary, D3DXCONSTTABLE_LARGEADDRESSAWARE, &constantTable.GetRawRef())))
+        return false;
+
+    for (unsigned i = 0; i < Uniform::SU_Count; i++)
     {
-        ok = true;
-        for (unsigned i = 0; i < Uniform::SU_Count; i++)
+        const UINT MaxDescs = 8;
+        D3DXCONSTANT_DESC descs[MaxDescs];
+        if (!(pDesc->Uniforms[i].Location >= 0))
         {
-            if (pDesc->Uniforms[i].Location < 0)
-            {
-                Uniforms[i] = -1;
-                continue;
-            }
-            D3DXHANDLE h = table->GetConstantByName(0, ShaderUniformNames[i]);
-            D3DXCONSTANT_DESC cdesc[8];
-            UINT count = 8;
-            if (!h || FAILED(table->GetConstantDesc(h, cdesc, &count)))
-            {
-                ok = false;
-                break;
-            }
-            Uniforms[i] = cdesc[0].RegisterIndex;
+            Uniforms[i] = -1;
+            continue;
         }
+
+        D3DXHANDLE hconstant = constantTable->GetConstantByName(0, ShaderUniformNames[i]);
+        UINT descCount = MaxDescs;
+        if (!hconstant || FAILED(constantTable->GetConstantDesc(hconstant, descs, &descCount)))
+            return false;
+
+        Uniforms[i] = descs[0].RegisterIndex;
     }
-    if (table)
-        table->Release();
-    return ok;
+
+    return true;
 }
 
-// MS2-FUNCTIONAL: frame / save order differs
+// MS2-FUNCTIONAL: the Location test addresses [rax + rdi] where the exe has [rdi + rax]
 // @0x142741430
 bool FragShader::Init(HAL* phal, const FragShaderDesc* pd)
 {
     if (!phal || !pd)
         return false;
+    IDirect3DDevice9* pdevice = phal->pDevice;
+
     pDesc = pd;
-    if (FAILED(phal->pDevice->CreatePixelShader(pd->pBinary, &pProg.GetRawRef())))
+
+    if (FAILED(pdevice->CreatePixelShader(pDesc->pBinary, &pProg.GetRawRef())))
         return false;
 
-    bool ok = false;
-    ID3DXConstantTable* table = 0;
-    if (SUCCEEDED(D3DXGetShaderConstantTableEx(pDesc->pBinary, D3DXCONSTTABLE_LARGEADDRESSAWARE, &table)))
+    Ptr<ID3DXConstantTable> constantTable = 0;
+    if (FAILED(D3DXGetShaderConstantTableEx(pDesc->pBinary, D3DXCONSTTABLE_LARGEADDRESSAWARE, &constantTable.GetRawRef())))
+        return false;
+
+    for (unsigned i = 0; i < Uniform::SU_Count; i++)
     {
-        ok = true;
-        for (unsigned i = 0; i < Uniform::SU_Count; i++)
+        const UINT MaxDescs = 8;
+        D3DXCONSTANT_DESC descs[MaxDescs];
+        if (!(pDesc->Uniforms[i].Location >= 0))
         {
-            if (pDesc->Uniforms[i].Location < 0)
-            {
-                Uniforms[i] = -1;
-                continue;
-            }
-            D3DXHANDLE h = table->GetConstantByName(0, ShaderUniformNames[i]);
-            D3DXCONSTANT_DESC cdesc[8];
-            UINT count = 8;
-            if (!h || FAILED(table->GetConstantDesc(h, cdesc, &count)))
-            {
-                // walk the table's constants (the debug build prints them here)
-                D3DXCONSTANTTABLE_DESC tdesc;
-                if (SUCCEEDED(table->GetDesc(&tdesc)))
-                {
-                    for (unsigned c = 0; c < tdesc.Constants; c++)
-                    {
-                        D3DXCONSTANT_DESC one;
-                        UINT n = 1;
-                        table->GetConstantDesc(table->GetConstant(0, c), &one, &n);
-                    }
-                }
-                table->GetConstant(0, 0);
-                ok = false;
-                break;
-            }
-            Uniforms[i] = cdesc[0].RegisterIndex;
+            Uniforms[i] = -1;
+            continue;
         }
+
+        D3DXHANDLE hconstant = constantTable->GetConstantByName(0, ShaderUniformNames[i]);
+        UINT descCount = MaxDescs;
+        if (!hconstant || FAILED(constantTable->GetConstantDesc(hconstant, descs, &descCount)))
+        {
+            // walk the table's constants (the debug build prints them here)
+            D3DXCONSTANTTABLE_DESC tdesc;
+            if (SUCCEEDED(constantTable->GetDesc(&tdesc)))
+            {
+                for (unsigned c = 0; c < tdesc.Constants; c++)
+                {
+                    D3DXCONSTANT_DESC one;
+                    UINT n = 1;
+                    D3DXHANDLE hc = constantTable->GetConstant(0, c);
+                    constantTable->GetConstantDesc(hc, &one, &n);
+                }
+            }
+            constantTable->GetConstant(0, 0);
+            return false;
+        }
+
+        Uniforms[i] = descs[0].RegisterIndex;
     }
-    if (table)
-        table->Release();
-    return ok;
+
+    return true;
 }
 
 // MS2-FUNCTIONAL: the caps test is laid out differently
