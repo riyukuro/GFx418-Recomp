@@ -3850,34 +3850,27 @@ static void Sfr31ThrowIfNotObject(VM& vm, const UInt32* v)
 }
 
 // Constructs the named class into a scratch value; a non-null object result is moved into *out, else *out is cleared.
-// MS2-FUNCTIONAL 0x142532130: raw-offset model; codegen differs from the exe
+static __forceinline CheckResult Sfr31ConstructOrClearImpl(UPInt self, UPInt* out, const char* gname, UInt32 argc, const Value* argv)
+{
+    VM& vm = *reinterpret_cast<VM*>(self);
+    Value tmp;
+    vm.Construct(gname, tmp, argc, argv, true);
+    if (!vm.IsException() && !tmp.IsNullOrUndefined())
+    {
+        FUN_1424e0860(out, Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10));
+        return true;
+    }
+    *reinterpret_cast<SPtr<Object>*>(out) = static_cast<Object*>(NULL);
+    if (vm.IsException())
+        vm.HandleException = false;
+    return false;
+}
+
+// The exe returns the CheckResult by value; each path destroys the scratch value before its own return.
 // @0x142532130
 UInt8* Sfr31ConstructOrClear(UPInt self, UInt8* ret, UPInt* out, const char* gname, UInt32 argc, const Value* argv)
 {
-    Value tmp;
-    reinterpret_cast<VM*>(self)->Construct(gname, tmp, argc, argv, true);
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(&tmp) & 0x1f;
-    if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 &&
-        (kind - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10) != 0))
-    {
-        FUN_1424e0860(out, Sfr31Rd(reinterpret_cast<UPInt>(&tmp), 0x10));
-        *ret = 1;
-    }
-    else
-    {
-        UPInt old = *out;
-        if (old != 0)
-        {
-            if ((old & 1) == 0 && (*reinterpret_cast<UInt32*>(old + 0x10) & 0x3fffff) != 0)
-            {
-                *reinterpret_cast<UInt32*>(old + 0x10) -= 1;
-                FUN_1423dfa20(reinterpret_cast<void*>(old));
-            }
-            *out = 0;
-        }
-        *reinterpret_cast<UInt8*>(self + 0x180) = 0;
-        *ret = 0;
-    }
+    new (ret) CheckResult(Sfr31ConstructOrClearImpl(self, out, gname, argc, argv));
     return ret;
 }
 
