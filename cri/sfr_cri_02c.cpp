@@ -10,7 +10,8 @@
 // MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
-// MS2-RANGE: 0x140031aa0-0x140034d40 .text$mn
+// MS2-RANGE: 0x140031aa0-0x140034330 .text$mn
+// MS2-RANGE: 0x1400344f0-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
 // MS2-RANGE: 0x1400359e0-0x140036470 .text$mn
@@ -2969,45 +2970,6 @@ void FUN_140031100(void* player)
     FUN_140037850(player);
     FUN_140031140(player);
     FUN_140037880(player);
-}
-
-// MS2-FUNCTIONAL: drain the two CRI input streams into the decoder read queue and return consumed tails.
-// @0x140034330
-void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue)
-{
-    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
-    if (((ReadModeView*)player)->Mode != 0)
-        return;
-
-    struct ChunkView { void* Data; CriUint32 Size; } chunk = {};
-    struct BufferView { void* Data; CriUint32 Capacity; } buffer = {};
-    CriSint32 copied = 0;
-    while (FUN_1400467b8(readBuffer, 2) != 0)
-        FUN_1400467a0(readBuffer, 2, -1, &chunk);
-
-    while (FUN_1400467b8(readBuffer, 1) != 0)
-    {
-        FUN_140046804(dataQueue, &buffer);
-        FUN_1400467a0(readBuffer, 1, -1, &chunk);
-        if (buffer.Capacity < chunk.Size)
-            FUN_140037910(player, "E08120301M : Illigal data size of analize header against demux data line.", buffer.Capacity);
-        memcpy(buffer.Data, chunk.Data, chunk.Size);
-        copied += chunk.Size;
-        FUN_140046814(dataQueue, &buffer, chunk.Size);
-    }
-
-    while (FUN_1400467b8(source, 1) != 0)
-    {
-        FUN_140046804(dataQueue, &buffer);
-        FUN_1400467a0(source, 1, -1, &chunk);
-        if (buffer.Capacity < chunk.Size)
-            FUN_140037910(player, "E08120302M : Illigal data size in read buffer data line of analize header.", buffer.Capacity);
-        memcpy(buffer.Data, chunk.Data, chunk.Size);
-        copied += chunk.Size;
-        FUN_140046814(dataQueue, &buffer, chunk.Size);
-        FUN_1400467b0(source, 0, &chunk);
-    }
-    (void)copied;
 }
 
 // MS2-FUNCTIONAL: validate the CRI Movie signature, reset the demux, and start ready decoders.

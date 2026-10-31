@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
+// MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
@@ -100,6 +101,8 @@ typedef struct CriMovieChunkQueueRecord
     CriUint32 Type;
     CriUint32 Reserved;
 } CriMovieChunkQueueRecord;
+typedef struct CriMvReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; } CriMvReadModeView;
+typedef struct CriMvWriteBufferView { void* Data; CriUint32 Capacity; } CriMvWriteBufferView;
 typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
 {
     CriUint32 Reserved0[3];
@@ -128,6 +131,10 @@ void FUN_140046798(void* streamJoint);
 void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded);
 void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
 void FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
+CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
+void FUN_140046804(void* object, void* value);
+void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
+void FUN_140037910(void* owner, const char* message, CriSint32 value);
 void FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input);
@@ -162,6 +169,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
 #pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
 #pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
@@ -291,6 +299,42 @@ CriBool FUN_140031990(void* player)
     FUN_140044f9c(demux);
     FUN_1400458b8(demux);
     return 1;
+}
+
+// Drain the two CRI input streams into the decoder read queue.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): dst, written, chunk.
+// @0x140034330
+void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue)
+{
+    CriMovieChunkQueueRecord chunk;
+    CriSint32 written;
+    CriMvWriteBufferView dst;
+    written = 0;
+    if (((CriMvReadModeView*)player)->Mode != 0)
+        return;
+    while ((CriUint32)FUN_1400467b8(readBuffer, 2) > 0)
+        FUN_1400467a0(readBuffer, 2, -1, &chunk);
+    while ((CriUint32)FUN_1400467b8(readBuffer, 1) > 0)
+    {
+        FUN_140046804(dataQueue, &dst);
+        FUN_1400467a0(readBuffer, 1, -1, &chunk);
+        if (chunk.Type > dst.Capacity)
+            FUN_140037910(player, "E08120301M : Illigal data size of analize header against demux data line.", dst.Capacity);
+        memcpy(dst.Data, chunk.Chunk, chunk.Type);
+        written += chunk.Type;
+        FUN_140046814(dataQueue, &dst, chunk.Type);
+    }
+    while ((CriUint32)FUN_1400467b8(source, 1) > 0)
+    {
+        FUN_140046804(dataQueue, &dst);
+        FUN_1400467a0(source, 1, -1, &chunk);
+        if (chunk.Type > dst.Capacity)
+            FUN_140037910(player, "E08120302M : Illigal data size in read buffer data line of analize header.", dst.Capacity);
+        memcpy(dst.Data, chunk.Chunk, chunk.Type);
+        written += chunk.Type;
+        FUN_140046814(dataQueue, &dst, chunk.Type);
+        FUN_1400467b0(source, 0, &chunk);
+    }
 }
 
 // expose the next decoded file-read record when the movie state permits a read
