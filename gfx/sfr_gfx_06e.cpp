@@ -374,21 +374,22 @@ void DrawingContext::CurveTo(float cx, float cy, float ax, float ay)
 }
 
 // @0x1425ff270
-// MS2-FUNCTIONAL: the exe guards the frame with a /GS cookie
 bool DrawingContext::DefPointTestLocal(const PointF& pt, bool testShape, const DisplayObjectBase*) const
 {
     UpdateRenderNode();
-    UPInt n = pTreeContainer->GetSize();
-    for (UPInt i = 0; i < n; ++i)
+    for (UPInt i = 0, n = pTreeContainer->GetSize(); i < n; ++i)
     {
-        TreeShape*                 tsh       = (TreeShape*)pTreeContainer->GetAt(i);
-        Render::ShapeMeshProvider* pmeshProv = tsh->GetShape();
-        RectF                      b         = pmeshProv->GetIdentityBounds();
+        TreeShape*                 tsh      = static_cast<TreeShape*>(pTreeContainer->GetAt(i));
+        Render::ShapeMeshProvider* meshProv = tsh->GetShape();
+        RectF                      b        = meshProv->GetIdentityBounds();
         if (b.Contains(pt))
         {
             if (testShape)
-                return Render::HitTestFill<Matrix2F>(*pmeshProv->GetShapeData(), Matrix2F::Identity, pt.x, pt.y);
-            return true;
+            {
+                return Render::HitTestFill<Matrix2F>(*meshProv->GetShapeData(), Matrix2F::Identity, pt.x, pt.y);
+            }
+            else
+                return true;
         }
     }
     return false;
