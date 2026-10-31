@@ -27,23 +27,19 @@
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_object.h"
+#include "../include/gfx/as2/as2_objectproto.h"
+#include "../include/gfx/gfx_displayobject.h"
+#include "../include/gfx/gfx_asstring.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_142925cf0(void*);
-void FUN_142925750(void*);
-void FUN_142925dd0(void*);
-void FUN_14257db40(void*);
-void FUN_14257db50(void*);
-void FUN_14257dcb0(void*);
-void FUN_1425c14e0(void*);
 void FUN_1425925f0(void*);
-void FUN_1425f0900(void*);
 
 static inline void rs(void* n) // ASString release
 {
     unsigned* c = (unsigned*)((char*)n + 0x18);
-    if (--*c == 0) FUN_1425c14e0(n);
+    if (--*c == 0) static_cast<ASStringNode*>(n)->ReleaseNode();
 }
 static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 {
@@ -53,7 +49,7 @@ static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 static inline void rc(void* h) // Ptr<CharacterHandle> release
 {
     int* c = (int*)h;
-    if (h && --*c <= 0) { FUN_1425f0900(h); Memory::Free(h); }
+    if (h && --*c <= 0) { static_cast<CharacterHandle*>(h)->~CharacterHandle(); Memory::Free(h); }
 }
 static inline void ra(unsigned long long tagged) // atomic shared string-data release
 {
@@ -91,7 +87,7 @@ void* DeleteAs2_142928f30(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153b8;
     if (*(void**)((char*)p+0x10)) Memory::Free(*(void**)((char*)p+0x10));
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -106,7 +102,7 @@ void* DeleteAs2_142928f30(void* p, unsigned flags)
 void* DeleteAs2_142929ec0(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -121,7 +117,7 @@ void* DeleteAs2_142929ec0(void* p, unsigned flags)
 void* DeleteAs2_14292a400(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -136,7 +132,7 @@ void* DeleteAs2_14292a400(void* p, unsigned flags)
 void* DeleteAs2_14292c2c0(void* p, unsigned flags)
 {
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -153,9 +149,9 @@ void* DeleteAs2_142929f40(void* p, unsigned flags)
     *(const void**)p = DAT_143217d38;
     *(const void**)((char*)p+0x20) = DAT_143217d80;
     *(const void**)((char*)p+0x70) = DAT_143217e28;
-    FUN_142925750((char*)p+0x70);
+    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -172,9 +168,9 @@ void* DeleteAs2_14292a480(void* p, unsigned flags)
     *(const void**)p = DAT_143218990;
     *(const void**)((char*)p+0x20) = DAT_1432189d8;
     *(const void**)((char*)p+0x70) = DAT_143218a80;
-    FUN_142925750((char*)p+0x70);
+    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -191,9 +187,9 @@ void* DeleteAs2_14292c340(void* p, unsigned flags)
     *(const void**)p = DAT_143216730;
     *(const void**)((char*)p+0x20) = DAT_143216778;
     *(const void**)((char*)p+0x78) = DAT_143216820;
-    FUN_142925750((char*)p+0x78);
+    static_cast<GASPrototypeBase*>((void*)((char*)p+0x78))->GASPrototypeBase::~GASPrototypeBase();
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -210,9 +206,9 @@ void* DeleteAs2_14292d120(void* p, unsigned flags)
     *(const void**)p = DAT_14321aa10;
     *(const void**)((char*)p+0x20) = DAT_14321aa58;
     *(const void**)((char*)p+0x70) = DAT_14321ab00;
-    FUN_142925750((char*)p+0x70);
+    static_cast<GASPrototypeBase*>((void*)((char*)p+0x70))->GASPrototypeBase::~GASPrototypeBase();
     rs(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -227,7 +223,7 @@ void* DeleteAs2_14292d120(void* p, unsigned flags)
 void* DeleteAs2_14292d0b0(void* p, unsigned flags)
 {
     rs(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -244,7 +240,7 @@ void* DeleteAs2_14292a050(void* p, unsigned flags)
     *(const void**)p = DAT_143222848;
     if (*(void**)((char*)p+0x18)) Memory::Free(*(void**)((char*)p+0x18));
     *(const void**)p = DAT_1432172f0;
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -259,7 +255,7 @@ void* DeleteAs2_14292a050(void* p, unsigned flags)
 void* DeleteAs2_14292af30(void* p, unsigned flags)
 {
     if (*(void**)((char*)p+0x20)) Memory::Free(*(void**)((char*)p+0x20));
-    FUN_14257db50(p);
+    static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -277,7 +273,7 @@ void* DeleteAs2_14292d4b0(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_1432184d8;
     Memory::Free(*(void**)((char*)p+0x70));
     { int* r=*(int**)((char*)p+0x68); if (r && --*r==0) Memory::Free(r); }
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -292,7 +288,7 @@ void* DeleteAs2_14292d4b0(void* p, unsigned flags)
 void* DeleteAs2_14292c5a0(void* p, unsigned flags)
 {
     ra(*(unsigned long long*)((char*)p+0x70));
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -306,12 +302,12 @@ void* DeleteAs2_14292c5a0(void* p, unsigned flags)
 // @0x14292afe0
 void* DeleteAs2_14292afe0(void* p, unsigned flags)
 {
-    if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
+    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
     ((String*)((char*)p+0x28))->~String();
     ((String*)((char*)p+0x20))->~String();
-    if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
+    if (*(void**)((char*)p+0x18)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x18))->Release();
     *(const void**)p = DAT_143188d98;
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -325,12 +321,12 @@ void* DeleteAs2_14292afe0(void* p, unsigned flags)
 // @0x14292b390
 void* DeleteAs2_14292b390(void* p, unsigned flags)
 {
-    if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
+    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
     ((String*)((char*)p+0x28))->~String();
     ((String*)((char*)p+0x20))->~String();
-    if (*(void**)((char*)p+0x18)) FUN_14257dcb0(*(void**)((char*)p+0x18));
+    if (*(void**)((char*)p+0x18)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x18))->Release();
     *(const void**)p = DAT_143188d98;
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -342,7 +338,7 @@ void* DeleteAs2_14292b390(void* p, unsigned flags)
 }
 
 // +0x78 and +0xa0 are {Value, Ptr} pairs: their own inlined dtor is what puts the type test before the lea.
-struct VP14292b0c0 { Value V; void* P; ~VP14292b0c0() { if (P) FUN_14257dcb0(P); } };
+struct VP14292b0c0 { Value V; void* P; ~VP14292b0c0() { if (P) static_cast<RefCountImpl*>(P)->Release(); } };
 
 // @0x14292b0c0
 void* DeleteAs2_14292b0c0(void* p, unsigned flags)
@@ -373,7 +369,7 @@ void* DeleteAs2_14292beb0(void* p, unsigned flags)
     *(const void**)((char*)p+0x70) = DAT_143217718;
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -390,7 +386,7 @@ void* DeleteAs2_14292d330(void* p, unsigned flags)
     ((FunctionRefBase*)((char*)p+0x80))->DropRefs();
     rg(*(void**)((char*)p+0x70));
     rg(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -429,7 +425,7 @@ void* DeleteAs2_14292ad40(void* p, unsigned flags)
 // @0x14292c750
 void* DeleteAs2_14292c750(void* p, unsigned flags)
 {
-    FUN_142925dd0(p);
+    static_cast<ObjectInterface*>((void*)(p))->ObjectInterface::~ObjectInterface();
     if (flags & 1)
         ::operator delete(p, 0x18);
     return p;

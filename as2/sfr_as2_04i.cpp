@@ -11,21 +11,17 @@
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_object.h"
+#include "../include/gfx/as2/as2_objectproto.h"
+#include "../include/gfx/gfx_displayobject.h"
+#include "../include/gfx/gfx_asstring.h"
+#include "../include/gfx/gfx_playertasks.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_142925cf0(void*);
-void FUN_142925750(void*);
-void FUN_142925dd0(void*);
 void FUN_142939780(void*);
-void FUN_14257db40(void*);
-void FUN_14257db50(void*);
-void FUN_14257dcb0(void*);
-void FUN_1425c14e0(void*);
 void FUN_1425925f0(void*);
-void FUN_1425f0900(void*);
 void FUN_142592200(void*, void*);
-void FUN_142639d10(void*);
 void FUN_1429343f0(void*);
 void FUN_14256a8e0(void*);
 void FUN_142924180(void*);
@@ -45,7 +41,7 @@ void FUN_142581700(void*);
 static inline void rs(void* n) // ASString release
 {
     int* c = (int*)((char*)n + 0x18);
-    if (--*c == 0) FUN_1425c14e0(n);
+    if (--*c == 0) static_cast<ASStringNode*>(n)->ReleaseNode();
 }
 static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 {
@@ -55,7 +51,7 @@ static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 static inline void rc(void* h) // Ptr<CharacterHandle> release
 {
     int* c = (int*)h;
-    if (h && --*c < 1) { FUN_1425f0900(h); Memory::Free(h); }
+    if (h && --*c < 1) { static_cast<CharacterHandle*>(h)->~CharacterHandle(); Memory::Free(h); }
 }
 static inline void ra(unsigned long long tagged) // atomic shared string-data release
 {
@@ -126,9 +122,9 @@ void* DeleteAs2_142928fb0(void* p, unsigned flags)
 void DtorAs2_142925850(void* p)
 {
     *(const void**)p = DAT_1432177b0;
-    if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
-    if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
-    FUN_142639d10(p);
+    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
+    if (*(void**)((char*)p+0x28)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x28))->Release();
+    static_cast<LoadQueueEntryMT*>((void*)(p))->LoadQueueEntryMT::~LoadQueueEntryMT();
 }
 
 // GFxAS2LoadQueueEntryMT_LoadXML::~GFxAS2LoadQueueEntryMT_LoadXML: pLoadStates, pTask, then ~LoadQueueEntryMT.
@@ -136,9 +132,9 @@ void DtorAs2_142925850(void* p)
 void DtorAs2_1429258e0(void* p)
 {
     *(const void**)p = DAT_143217780;
-    if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
-    if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
-    FUN_142639d10(p);
+    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
+    if (*(void**)((char*)p+0x28)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x28))->Release();
+    static_cast<LoadQueueEntryMT*>((void*)(p))->LoadQueueEntryMT::~LoadQueueEntryMT();
 }
 
 }}} // namespace

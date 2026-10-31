@@ -17,6 +17,10 @@
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_object.h"
+#include "../include/gfx/as2/as2_objectproto.h"
+#include "../include/gfx/gfx_displayobject.h"
+#include "../include/gfx/gfx_asstring.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/kernel/sf_arraypaged.h"
@@ -26,15 +30,7 @@ void FUN_14000b080(void** table);  // global, defined in sfr_video_01
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_142925cf0(void*);
-void FUN_142925750(void*);
-void FUN_142925dd0(void*);
-void FUN_14257db40(void*);
-void FUN_14257db50(void*);
-void FUN_14257dcb0(void*);
-void FUN_1425c14e0(void*);
 void FUN_1425925f0(void*);
-void FUN_1425f0900(void*);
 void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
 void FUN_14256a8e0(void*);
 void FUN_142924180(void*);
@@ -50,7 +46,7 @@ void FUN_142581700(void*);
 static inline void rs(void* n) // ASString release
 {
     unsigned* c = (unsigned*)((char*)n + 0x18);
-    if (--*c == 0) FUN_1425c14e0(n);
+    if (--*c == 0) static_cast<ASStringNode*>(n)->ReleaseNode();
 }
 static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 {
@@ -60,7 +56,7 @@ static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 static inline void rc(void* h) // Ptr<CharacterHandle> release
 {
     int* c = (int*)h;
-    if (h && --*c <= 0) { FUN_1425f0900(h); Memory::Free(h); }
+    if (h && --*c <= 0) { static_cast<CharacterHandle*>(h)->~CharacterHandle(); Memory::Free(h); }
 }
 static inline void ra(unsigned long long tagged) // atomic shared string-data release
 {
@@ -93,7 +89,7 @@ void* DeleteAs2_142928c70(void* p, unsigned flags)
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
     FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -111,7 +107,7 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
     FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -130,8 +126,8 @@ void* DeleteAs2_142928e90(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153c8;
     ((DCC142928e90*)((char*)p+0x18))->~DCC142928e90();
-    if (*(void**)((char*)p+0x10)) FUN_14257dcb0(*(void**)((char*)p+0x10));
-    FUN_14257db50(p);
+    if (*(void**)((char*)p+0x10)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x10))->Release();
+    static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -152,7 +148,7 @@ void* DeleteAs2_142929400(void* p, unsigned flags)
     rc(*(void**)((char*)p+0x70));
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>((void*)(p))->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -171,7 +167,7 @@ void* DeleteAs2_1429294f0(void* p, unsigned flags)
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     FUN_142924a20((char*)p+0x28);
-    FUN_142925dd0((char*)p+0x8);
+    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
         ::operator delete(p, 0x40);
@@ -184,7 +180,7 @@ void* DeleteAs2_142929590(void* p, unsigned flags)
     *(const void**)p = DAT_143215b00;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     FUN_142924a20((char*)p+0x28);
-    FUN_142925dd0((char*)p+0x8);
+    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
         ::operator delete(p, 0x30);
@@ -204,7 +200,7 @@ void* DeleteAs2_142929600(void* p, unsigned flags)
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     FUN_142924a20((char*)p+0x28);
-    FUN_142925dd0((char*)p+0x8);
+    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
         ::operator delete(p, 0x200);
@@ -221,7 +217,7 @@ void* DeleteAs2_1429296e0(void* p, unsigned flags)
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
     FUN_142924a20((char*)p+0x28);
-    FUN_142925dd0((char*)p+0x8);
+    static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
         ::operator delete(p, 0x68);
@@ -253,7 +249,7 @@ void* DeleteAs2_14292b4e0(void* p, unsigned flags)
     FUN_140001f40((char*)p+0x20);
     FUN_142924770((char*)p+0x18);
     ::FUN_14000b080((void**)((char*)p+0x10));
-    FUN_14257db50(p);
+    static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -283,7 +279,7 @@ void* DeleteAs2_14292ba00(void* p, unsigned flags)
     return p;
 }
 
-struct Q14292c3e0 { void* P; ~Q14292c3e0() { if (P) FUN_14257dcb0(P); } };
+struct Q14292c3e0 { void* P; ~Q14292c3e0() { if (P) static_cast<RefCountImpl*>(P)->Release(); } };
 struct B14292c3e0 { void* vp; void* rc; void* x10; Q14292c3e0 q; ~B14292c3e0() { vp = (void*)DAT_14317bde0; } };
 struct P14292c3e0 { void* P; ~P14292c3e0() { if (P) FUN_14257dcd0(P); } };
 // @0x14292c3e0
@@ -295,11 +291,11 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
     ((MovieRoot::ActionQueueType*)((char*)p+0x80))->~ActionQueueType();
     ((Value*)((char*)p+0x58))->~Value();
     if (*(void**)((char*)p+0x50)) FUN_14257dcd0(*(void**)((char*)p+0x50));
-    if (*(void**)((char*)p+0x38)) FUN_14257dcb0(*(void**)((char*)p+0x38));
-    if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
+    if (*(void**)((char*)p+0x38)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x38))->Release();
+    if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
     { char* e=*(char**)((char*)p+0x28); if (e && --*(long long*)(e+8)==0) FUN_142581700(e); }
     ((B14292c3e0*)p)->~B14292c3e0();
-    FUN_14257db40(p);
+    static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
