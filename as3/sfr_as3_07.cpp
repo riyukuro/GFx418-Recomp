@@ -2333,24 +2333,20 @@ namespace Instances { namespace fl_display
     }
 
 #pragma strict_gs_check(push, on)
-    // MS2-FUNCTIONAL: exe loads pDispObj before the null test and keeps the twips constant in xmm2 (ours xmm3); same rect
     // @0x142452c90
     void DisplayObject::scrollRectSet(const Value& result, Instances::fl_geom::Rectangle* value)
     {
         SF_UNUSED(result);
-        Render::RectD r(Render::RectD::NoInit);
-        Render::RectD* pr;
         if (value)
         {
-            r.x1 = value->x * 20.0;
-            r.y1 = value->y * 20.0;
-            r.x2 = value->width * 20.0 + r.x1;
-            r.y2 = value->height * 20.0 + r.y1;
-            pr = &r;
+            Render::RectD r(Render::PixelsToTwips(value->x),
+                            Render::PixelsToTwips(value->y),
+                            Render::Size<double>(Render::PixelsToTwips(value->width),
+                                                 Render::PixelsToTwips(value->height)));
+            pDispObj->SetScrollRect(&r);
         }
         else
-            pr = NULL;
-        pDispObj->SetScrollRect(pr);
+            pDispObj->SetScrollRect(NULL);
     }
 #pragma strict_gs_check(pop)
 
