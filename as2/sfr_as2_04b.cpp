@@ -88,24 +88,24 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/text_core.h"
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
+#include "../include/gfx/as2/as2_intervaltimer.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// The prototype destructors stay out of line.
+template<> SF_NOINLINE Prototype<BevelFilterObject, Environment>::~Prototype();  // 0x142924d20
+template<> SF_NOINLINE Prototype<BitmapData, Environment>::~Prototype();  // 0x142924d90
+template<> SF_NOINLINE Prototype<BitmapFilterObject, Environment>::~Prototype();  // 0x142924e00
+template<> SF_NOINLINE Prototype<BlurFilterObject, Environment>::~Prototype();  // 0x142924e70
+template<> SF_NOINLINE Prototype<ColorMatrixFilterObject, Environment>::~Prototype();  // 0x142924ee0
+template<> SF_NOINLINE Prototype<DropShadowFilterObject, Environment>::~Prototype();  // 0x142924f50
+template<> SF_NOINLINE Prototype<GlowFilterObject, Environment>::~Prototype();  // 0x142924fc0
+
 void FUN_14257dcb0(void* pthis);
 void FUN_14257dcd0(void* pthis);
-void FUN_1425a4030(void* pthis);
-void FUN_1425f0a60(void* pthis);
 void FUN_142639d10(void* pthis);
-void FUN_142924d20(void* pthis);
-void FUN_142924d90(void* pthis);
-void FUN_142924e00(void* pthis);
-void FUN_142924e70(void* pthis);
-void FUN_142924ee0(void* pthis);
-void FUN_142924f50(void* pthis);
-void FUN_142924fc0(void* pthis);
 void FUN_142925680(void* pthis);
 void FUN_142925750(void* pthis);
-void FUN_1429259d0(void* pthis);
 void FUN_142925cf0(void* pthis);
 
 // The base vftables the inlined destructors store.
@@ -173,7 +173,7 @@ void* DeleteAs2_142929810(void* p, unsigned flags)
 // @0x142929890
 void* DeleteAs2_142929890(void* p, unsigned flags)
 {
-    FUN_142924d20(p);
+    static_cast<Prototype<BevelFilterObject, Environment>*>(p)->Prototype<BevelFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -189,8 +189,8 @@ void* DeleteAs2_1429298f0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143219cf0;
     *(const void**)((char*)p+0x20) = DAT_143219d38;
-    if (*(void**)((char*)p+0x70)) FUN_1425a4030(*(void**)((char*)p+0x70));
-    if (*(void**)((char*)p+0x68)) FUN_1425a4030(*(void**)((char*)p+0x68));
+    if (*(void**)((char*)p+0x70)) static_cast<Resource*>(*(void**)((char*)p+0x70))->Release();
+    if (*(void**)((char*)p+0x68)) static_cast<Resource*>(*(void**)((char*)p+0x68))->Release();
     FUN_142925cf0(p);
     if (flags & 1)
     {
@@ -221,7 +221,7 @@ void* DeleteAs2_142929980(void* p, unsigned flags)
 // @0x1429299f0
 void* DeleteAs2_1429299f0(void* p, unsigned flags)
 {
-    FUN_142924d90(p);
+    static_cast<Prototype<BitmapData, Environment>*>(p)->Prototype<BitmapData, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -268,7 +268,7 @@ void* DeleteAs2_142929ac0(void* p, unsigned flags)
 // @0x142929b40
 void* DeleteAs2_142929b40(void* p, unsigned flags)
 {
-    FUN_142924e00(p);
+    static_cast<Prototype<BitmapFilterObject, Environment>*>(p)->Prototype<BitmapFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -315,7 +315,7 @@ void* DeleteAs2_142929c10(void* p, unsigned flags)
 // @0x142929c90
 void* DeleteAs2_142929c90(void* p, unsigned flags)
 {
-    FUN_142924e70(p);
+    static_cast<Prototype<BlurFilterObject, Environment>*>(p)->Prototype<BlurFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -474,7 +474,7 @@ void* DeleteAs2_14292a320(void* p, unsigned flags)
 // @0x14292a3a0
 void* DeleteAs2_14292a3a0(void* p, unsigned flags)
 {
-    FUN_142924ee0(p);
+    static_cast<Prototype<ColorMatrixFilterObject, Environment>*>(p)->Prototype<ColorMatrixFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -617,7 +617,7 @@ void* DeleteAs2_14292a8d0(void* p, unsigned flags)
 // @0x14292a950
 void* DeleteAs2_14292a950(void* p, unsigned flags)
 {
-    FUN_142924f50(p);
+    static_cast<Prototype<DropShadowFilterObject, Environment>*>(p)->Prototype<DropShadowFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -844,8 +844,8 @@ void* DeleteAs2_14292b300(void* p, unsigned flags)
 // @0x14292b470
 void* DeleteAs2_14292b470(void* p, unsigned flags)
 {
-    if (*(void**)((char*)p+0x70)) FUN_1425a4030(*(void**)((char*)p+0x70));
-    FUN_1425f0a60(p);
+    if (*(void**)((char*)p+0x70)) static_cast<Resource*>(*(void**)((char*)p+0x70))->Release();
+    static_cast<DisplayObjectBase*>(p)->DisplayObjectBase::~DisplayObjectBase();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -892,7 +892,7 @@ void* DeleteAs2_14292b600(void* p, unsigned flags)
 // @0x14292b680
 void* DeleteAs2_14292b680(void* p, unsigned flags)
 {
-    FUN_142924fc0(p);
+    static_cast<Prototype<GlowFilterObject, Environment>*>(p)->Prototype<GlowFilterObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -906,7 +906,7 @@ void* DeleteAs2_14292b680(void* p, unsigned flags)
 // @0x14292b710
 void* DeleteAs2_14292b710(void* p, unsigned flags)
 {
-    FUN_1429259d0(p);
+    static_cast<IntervalTimer*>(p)->IntervalTimer::~IntervalTimer();
     if (flags & 1)
     {
         if (!(flags & 4))
