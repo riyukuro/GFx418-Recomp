@@ -2259,30 +2259,43 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
     return NULL;
 }
 
-// MS2-FUNCTIONAL: enable or disable reader IO, wake the thread, and wait for its queued work to drain.
+// List::IsEmpty over the request list root.
+struct CriMvRequestListRoot
+{
+    CriMvRequestNode* pFirst;
+    CriMvRequestNode* pLast;
+    bool IsEmpty() const { return pLast == (const CriMvRequestNode*)this; }
+};
+
+// Mutex::Locker over the reader config's CmdListLock.
+struct CriMutexLocker
+{
+    void* pMutex;
+    CriMutexLocker(void* m) { pMutex = m; FUN_14258aca0(pMutex); }
+    ~CriMutexLocker() { FUN_14258bb70(pMutex); }
+};
+
+// Enable or disable reader IO, wake the thread, and wait for its queued work to drain.
 // @0x14002d6d0
 void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
 {
     config->IOEnabled = enable;
     FUN_142583d50(config->Event);
-    FUN_14258aca0(config->Lock);
-    CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
-    while (sentinel->Previous != sentinel)
+    CriMutexLocker lock(config->Lock);
+    while (!((CriMvRequestListRoot*)&config->Head)->IsEmpty())
         FUN_14258bc20(config->Condition, config->Lock, -1);
-    FUN_14258bb70(config->Lock);
 }
 
-// MS2-FUNCTIONAL: replace the configured reader with reference balancing while holding its lock.
+// Replace the configured reader with reference balancing while holding its lock.
 // @0x14002d750
 void FUN_14002d750(CriMvReaderThreadConfigView* config, void* reader)
 {
-    FUN_14258aca0(config->Lock);
+    CriMutexLocker lock(config->Lock);
     if (reader)
         FUN_14257dc30(reader);
     if (config->Reader)
         FUN_14257dcb0(config->Reader);
     config->Reader = reader;
-    FUN_14258bb70(config->Lock);
 }
 
 // @0x14002d7b0
