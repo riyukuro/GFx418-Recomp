@@ -95,6 +95,25 @@ template<> SF_NOINLINE ArrayDataBase<GFx::AS3::Multiname, AllocatorLH<GFx::AS3::
     AllocatorType::DestructArray(Data, Size);
     AllocatorType::Free(Data);
 }
+
+// The weak display-object array destructor is the out-of-line 0x1424dc730 (instantiated in sfr_as3_15).
+template<> SF_NOINLINE ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>,
+                                     ArrayDefaultPolicy>::~ArrayDataBase();
+// The display-object list assignment is the SDK 4.3 one: the source keeps its pointer and only loses the ownership.
+// BEHAVIOUR FIX: the header's copy assignment also clears the source pointer; the exe's 0x1424e0340 does not.
+template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
+AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p)
+{
+    if (this != &p)
+    {
+        bool owner = p.Owner;
+        AutoPtr& src = const_cast<AutoPtr&>(p);
+        src.Owner = false;
+        Reset(src.pObject);
+        Owner = owner;
+    }
+    return *this;
+}
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
