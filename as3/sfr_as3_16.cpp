@@ -272,7 +272,6 @@ extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* v
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
-void* DeleteAs3_1424e4190(void* self, unsigned flags);
 }}}
 
 // VMAbcFile's non-deleting teardown follows the same member cleanup sequence as its scalar deleting dtor.
@@ -287,11 +286,15 @@ extern "C" void FUN_1424dfa30(void* self)
 // @0x1424defe0
 Scaleform::GFx::AS3::Stage::~Stage() {}
 
-// MS2-FUNCTIONAL 0x1424e0290: reuses the XMLSupportImpl member/base teardown with the free flag clear.
-// @0x1424e0290
-extern "C" void FUN_1424e0290(void* self)
+// XMLSupport's dtor has no out-of-line copy in the exe: it is inlined here and in the scalar deleting dtors.
+Scaleform::GFx::AS3::XMLSupport::~XMLSupport()
 {
-    Scaleform::GFx::AS3::DeleteAs3_1424e4190(self, 0);
+}
+
+// The members release themselves, then XMLSupport's and GASRefCountBase's dtors.
+// @0x1424e0290
+Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
+{
 }
 
 

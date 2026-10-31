@@ -3081,16 +3081,6 @@ VMAbcFile::~VMAbcFile()
     reinterpret_cast<Sfr34AbsObjectSet*>(&AbsObjectsTable)->~Sfr34AbsObjectSet();
 }
 
-// MS2-FUNCTIONAL: inlined in the scalar deleting destructors 0x1424e4120 and 0x1424e4190; the members release
-// themselves.
-XMLSupport::~XMLSupport()
-{
-}
-
-XMLSupportImpl::~XMLSupportImpl()
-{
-}
-
 namespace fl { extern const char* NS_AS3; extern const char* NS_XML; extern const ClassInfo FunctionCI; }
 namespace fl_vec { extern const char* NS_Vector; }
 
