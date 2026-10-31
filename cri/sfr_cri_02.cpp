@@ -1128,27 +1128,11 @@ void VideoReader::ReadFile(UByte* buffer, SInt64 size)
     ReadStatus = ASYNC_STATUS_ERROR;
 }
 
-// MS2-FUNCTIONAL: the exe AddRefs the config inline (non-atomic inc [config+8]), not via RefCountImpl::AddRef
-// @0x14002ddd0
-void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
+// VideoReaderThrd (0x50 bytes, vftables 0x1431b9410 / 0x1431b93c0): only its constructor is here.
+struct __declspec(novtable) VideoReaderThrdView : VideoReader
 {
-    void** fields = (void**)object;
-    *((CriUint32*)object + 2) = 1;
-    fields[0] = (void*)DAT_1431b93b0;
-    fields[2] = (void*)DAT_1431b9360;
-    if (config)
-        FUN_14257dc30(config);
-    fields[3] = config;
-    fields[4] = NULL;
-    *((CriUint32*)object + 10) = 0;
-    FUN_14001d650(config, object);
-    *((CriUint32*)object + 11) = 0;
-    fields[0] = (void*)DAT_1431b9410;
-    *((CriUint32*)object + 13) = 0;
-    fields[2] = (void*)DAT_1431b93c0;
-    *((CriUint32*)object + 12) = 0;
-    return object;
-}
+    VideoReaderThrdView(VideoReaderConfig* config);
+};
 
 // Lazily start the threaded reader service and allocate a reader on the configured heap. As in the exe, the new thread
 // is started without a null check.
@@ -1172,7 +1156,7 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
             (*(SetNameFunc**)config[31])[7](config[31], "Scaleform Video Reader");
     }
     void* memory = (*(AllocFunc*)(*(CriUint8**)config[2] + 0x50))(config[2], 0x50, NULL);
-    return memory ? (VideoReader*)FUN_14002ddd0(memory, this) : NULL;
+    return memory ? ::new (memory) VideoReaderThrdView(this) : NULL;
 }
 
 // @0x14002e450
@@ -1259,6 +1243,15 @@ __forceinline VideoReader::VideoReader(VideoReaderConfig* pconfig, InlineCtorTag
     OpenStatus  = ASYNC_STATUS_STOP;
     ReadStatus  = ASYNC_STATUS_STOP;
     CloseStatus = ASYNC_STATUS_STOP;
+}
+
+// VideoReaderThrd's constructor: the VideoReader constructor inlined, then its own vftables.
+// @0x14002ddd0
+__declspec(noinline) VideoReaderThrdView::VideoReaderThrdView(VideoReaderConfig* config)
+    : VideoReader(config, InlineCtor)
+{
+    ((void**)this)[0] = (void*)DAT_1431b9410;
+    ((void**)this)[2] = (void*)DAT_1431b93c0;
 }
 
 // @0x14002d430
