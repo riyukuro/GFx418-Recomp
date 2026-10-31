@@ -928,6 +928,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::AsyncErrorEvent InstanceType;
 
         AsyncErrorEvent(VM& vm, const ClassInfo& ci);                         // 0x14245ea50
+        AsyncErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::AsyncErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b780
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -941,6 +942,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::ErrorEvent InstanceType;
 
         ErrorEvent(VM& vm, const ClassInfo& ci);                              // 0x14245ee90
+        ErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b7e0
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -954,6 +956,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::Event InstanceType;
 
         Event(VM& vm, const ClassInfo& ci);                                   // 0x14245f420
+        Event(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Event"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b840
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -967,6 +970,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::FocusEvent InstanceType;
 
         FocusEvent(VM& vm, const ClassInfo& ci);                              // 0x14245fa90
+        FocusEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::FocusEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b950
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -980,6 +984,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::GestureEvent InstanceType;
 
         GestureEvent(VM& vm, const ClassInfo& ci);                            // 0x14245fdb0
+        GestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::GestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246b9f0
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1006,6 +1011,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::IOErrorEvent InstanceType;
 
         IOErrorEvent(VM& vm, const ClassInfo& ci);                            // 0x1424604e0
+        IOErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::IOErrorEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246ba90
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1019,6 +1025,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::KeyboardEvent InstanceType;
 
         KeyboardEvent(VM& vm, const ClassInfo& ci);                           // 0x1424606a0
+        KeyboardEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::KeyboardEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bb00
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1045,6 +1052,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::NetStatusEvent InstanceType;
 
         NetStatusEvent(VM& vm, const ClassInfo& ci);                          // 0x142460c30
+        NetStatusEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::NetStatusEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bc80
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1058,6 +1066,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::PressAndTapGestureEvent InstanceType;
 
         PressAndTapGestureEvent(VM& vm, const ClassInfo& ci);                 // 0x142460e40
+        PressAndTapGestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::PressAndTapGestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bd60
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1071,6 +1080,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::ProgressEvent InstanceType;
 
         ProgressEvent(VM& vm, const ClassInfo& ci);                           // 0x142461010
+        ProgressEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::ProgressEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bde0
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1097,6 +1107,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::TextEvent InstanceType;
 
         TextEvent(VM& vm, const ClassInfo& ci);                               // 0x1424619d0
+        TextEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TextEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246bfc0
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1136,6 +1147,7 @@ namespace InstanceTraits { namespace fl_events {
         typedef Instances::fl_events::TransformGestureEvent InstanceType;
 
         TransformGestureEvent(VM& vm, const ClassInfo& ci);                   // 0x1424620a0
+        TransformGestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::TransformGestureEvent"; }
         virtual void MakeObject(Value& result, Traits& t);      // 0x14246c190
         // (appended, sfr_as3_09) a new instance (the exe's MakeObject inlines it)
@@ -1171,6 +1183,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         AsyncErrorEvent(ClassTraits::Traits& t);                         // 0x14245ea20
+        AsyncErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::AsyncErrorEvent"; }
 
         const char* AsyncError;             // +0x50
@@ -1181,6 +1194,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         ContextMenuEvent(ClassTraits::Traits& t);                        // 0x14245ebc0
+        ContextMenuEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::ContextMenuEvent"; }
 
         const char* MenuItemSelect;         // +0x50
@@ -1203,6 +1217,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         ErrorEvent(ClassTraits::Traits& t);                              // 0x14245ee60
+        ErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::ErrorEvent"; }
 
         const char* Error;                  // +0x50
@@ -1301,6 +1316,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         FocusEvent(ClassTraits::Traits& t);                              // 0x14245fa40
+        FocusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::FocusEvent"; }
 
         const char* FocusIn;                // +0x50
@@ -1324,6 +1340,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         GestureEvent(ClassTraits::Traits& t);                            // 0x14245fd80
+        GestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::GestureEvent"; }
 
         const char* GestureTwoFingerTap;    // +0x50
@@ -1368,6 +1385,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         IOErrorEvent(ClassTraits::Traits& t);                            // 0x1424604b0
+        IOErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::IOErrorEvent"; }
 
         const char* IoError;                // +0x50
@@ -1378,6 +1396,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         KeyboardEvent(ClassTraits::Traits& t);                           // 0x142460660
+        KeyboardEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::KeyboardEvent"; }
 
         const char* KeyDown;                // +0x50
@@ -1415,6 +1434,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         NetStatusEvent(ClassTraits::Traits& t);                          // 0x142460c00
+        NetStatusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::NetStatusEvent"; }
 
         const char* NetStatus;              // +0x50
@@ -1425,6 +1445,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         PressAndTapGestureEvent(ClassTraits::Traits& t);                 // 0x142460e10
+        PressAndTapGestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::PressAndTapGestureEvent"; }
 
         const char* GesturePressAndTap;     // +0x50
@@ -1435,6 +1456,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         ProgressEvent(ClassTraits::Traits& t);                           // 0x142460fd0
+        ProgressEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::ProgressEvent"; }
 
         const char* Progress;               // +0x50
@@ -1446,6 +1468,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         SecurityErrorEvent(ClassTraits::Traits& t);                      // 0x1424611c0
+        SecurityErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::SecurityErrorEvent"; }
 
         const char* SecurityError;          // +0x50
@@ -1456,6 +1479,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         StageOrientation(ClassTraits::Traits& t);                        // 0x142461310
+        StageOrientation(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::StageOrientation"; }
 
         const char* Default;                // +0x50
@@ -1481,6 +1505,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         StatusEvent(ClassTraits::Traits& t);                             // 0x142461710
+        StatusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::StatusEvent"; }
 
         const char* Status;                 // +0x50
@@ -1491,6 +1516,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         SyncEvent(ClassTraits::Traits& t);                               // 0x142461850
+        SyncEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::SyncEvent"; }
 
         const char* Sync;                   // +0x50
@@ -1501,6 +1527,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         TextEvent(ClassTraits::Traits& t);                               // 0x142461990
+        TextEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::TextEvent"; }
 
         const char* Link;                   // +0x50
@@ -1540,6 +1567,7 @@ namespace Classes { namespace fl_events {
     {
     public:
         TransformGestureEvent(ClassTraits::Traits& t);                   // 0x142462050
+        TransformGestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "Classes::TransformGestureEvent"; }
 
         const char* GesturePan;             // +0x50
@@ -1571,6 +1599,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         AsyncErrorEvent(VM& vm);                                 // 0x14245e910
+        AsyncErrorEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::AsyncErrorEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1579,6 +1608,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         ContextMenuEvent(VM& vm);                                // 0x14245eab0
+        ContextMenuEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::ContextMenuEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1595,6 +1625,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         ErrorEvent(VM& vm);                                      // 0x14245ed50
+        ErrorEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::ErrorEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1627,6 +1658,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         FocusEvent(VM& vm);                                      // 0x14245f910
+        FocusEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::FocusEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1643,6 +1675,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         GestureEvent(VM& vm);                                    // 0x14245fc70
+        GestureEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::GestureEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1683,6 +1716,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         IOErrorEvent(VM& vm);                                    // 0x1424603a0
+        IOErrorEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::IOErrorEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1691,6 +1725,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         KeyboardEvent(VM& vm);                                   // 0x142460550
+        KeyboardEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::KeyboardEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1707,6 +1742,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         NetStatusEvent(VM& vm);                                  // 0x142460af0
+        NetStatusEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::NetStatusEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1715,6 +1751,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         PressAndTapGestureEvent(VM& vm);                         // 0x142460d00
+        PressAndTapGestureEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::PressAndTapGestureEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1723,6 +1760,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         ProgressEvent(VM& vm);                                   // 0x142460ec0
+        ProgressEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::ProgressEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1731,6 +1769,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         SecurityErrorEvent(VM& vm);                              // 0x1424610b0
+        SecurityErrorEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::SecurityErrorEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1739,6 +1778,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         StageOrientation(VM& vm);                                // 0x1424611f0
+        StageOrientation(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StageOrientation"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1755,6 +1795,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         StatusEvent(VM& vm);                                     // 0x142461600
+        StatusEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::StatusEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1763,6 +1804,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         SyncEvent(VM& vm);                                       // 0x142461740
+        SyncEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::SyncEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1771,6 +1813,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         TextEvent(VM& vm);                                       // 0x142461880
+        TextEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::TextEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };
@@ -1795,6 +1838,7 @@ namespace ClassTraits { namespace fl_events {
     {
     public:
         TransformGestureEvent(VM& vm);                           // 0x142461f20
+        TransformGestureEvent(VM& vm, Instances::fl::InlineCtor);   // inlined by MakeClassTraits (sfr_as3_07)
         virtual const char* GetAS3ObjectType() const { return "ClassTraits::TransformGestureEvent"; }
         static Pickable<Traits> MakeClassTraits(VM& vm);
     };

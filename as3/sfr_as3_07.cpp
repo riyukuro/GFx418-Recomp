@@ -408,120 +408,463 @@ namespace ClassTraits { namespace fl_errors
     }
 }}
 
+// The exe builds each flash.events class traits object below with its ClassTraits, InstanceTraits and Classes
+// constructors (sfr_as3_08) inlined. The __forceinline copies repeat the sfr_as3_08 bodies so cl expands them the
+// same way; keep the two in step.
+
+namespace fl_events
+{
+    extern const ClassInfo AsyncErrorEventCI;
+    extern const ClassInfo ContextMenuEventCI;
+    extern const ClassInfo ErrorEventCI;
+    extern const ClassInfo FocusEventCI;
+    extern const ClassInfo GestureEventCI;
+    extern const ClassInfo IOErrorEventCI;
+    extern const ClassInfo KeyboardEventCI;
+    extern const ClassInfo NetStatusEventCI;
+    extern const ClassInfo PressAndTapGestureEventCI;
+    extern const ClassInfo ProgressEventCI;
+    extern const ClassInfo SecurityErrorEventCI;
+    extern const ClassInfo StageOrientationCI;
+    extern const ClassInfo StatusEventCI;
+    extern const ClassInfo SyncEventCI;
+    extern const ClassInfo TextEventCI;
+    extern const ClassInfo TransformGestureEventCI;
+}
+
+namespace Classes { namespace fl_events
+{
+    __forceinline GestureEvent::GestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , GestureTwoFingerTap("gestureTwoFingerTap")
+    {
+    }
+
+    __forceinline PressAndTapGestureEvent::PressAndTapGestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , GesturePressAndTap("gesturePressAndTap")
+    {
+    }
+
+    __forceinline IOErrorEvent::IOErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , IoError("ioError")
+    {
+    }
+
+    __forceinline ErrorEvent::ErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Error("error")
+    {
+    }
+
+    __forceinline NetStatusEvent::NetStatusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , NetStatus("netStatus")
+    {
+    }
+
+    __forceinline SecurityErrorEvent::SecurityErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , SecurityError("securityError")
+    {
+    }
+
+    __forceinline AsyncErrorEvent::AsyncErrorEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , AsyncError("asyncError")
+    {
+    }
+
+    __forceinline StatusEvent::StatusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Status("status")
+    {
+    }
+
+    __forceinline SyncEvent::SyncEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Sync("sync")
+    {
+    }
+
+    __forceinline KeyboardEvent::KeyboardEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , KeyDown("keyDown")
+        , KeyUp("keyUp")
+    {
+    }
+
+    __forceinline ProgressEvent::ProgressEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Progress("progress")
+        , SocketData("socketData")
+    {
+    }
+
+    __forceinline TextEvent::TextEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Link("link")
+        , TextInput("textInput")
+    {
+    }
+
+    __forceinline ContextMenuEvent::ContextMenuEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , MenuItemSelect("menuItemSelect")
+        , MenuSelect("menuSelect")
+    {
+    }
+
+    __forceinline StageOrientation::StageOrientation(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , Default("default")
+        , RotatedLeft("rotatedLeft")
+        , RotatedRight("rotatedRight")
+        , Unknown("unknown")
+        , UpsideDown("upsideDown")
+    {
+    }
+
+    __forceinline TransformGestureEvent::TransformGestureEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , GesturePan("gesturePan")
+        , GestureRotate("gestureRotate")
+        , GestureSwipe("gestureSwipe")
+        , GestureZoom("gestureZoom")
+    {
+    }
+
+    __forceinline FocusEvent::FocusEvent(ClassTraits::Traits& t, Instances::fl::InlineCtor)
+        : Class(t)
+        , FocusIn("focusIn")
+        , FocusOut("focusOut")
+        , KeyFocusChange("keyFocusChange")
+        , MouseFocusChange("mouseFocusChange")
+    {
+    }
+}}
+
+namespace InstanceTraits { namespace fl_events
+{
+    __forceinline Event::Event(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x58);
+    }
+
+    __forceinline GestureEvent::GestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x88);
+    }
+
+    __forceinline PressAndTapGestureEvent::PressAndTapGestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0xb0);
+    }
+
+    __forceinline IOErrorEvent::IOErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+
+    __forceinline ErrorEvent::ErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+
+    __forceinline NetStatusEvent::NetStatusEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+
+    __forceinline AsyncErrorEvent::AsyncErrorEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+
+    __forceinline KeyboardEvent::KeyboardEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x70);
+    }
+
+    __forceinline ProgressEvent::ProgressEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+
+    __forceinline TextEvent::TextEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x60);
+    }
+
+    __forceinline TransformGestureEvent::TransformGestureEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0xc8);
+    }
+
+    __forceinline FocusEvent::FocusEvent(VM& vm, const ClassInfo& ci, Instances::fl::InlineCtor)
+        : CTraits(vm, ci)
+    {
+        SetMemSize(0x68);
+    }
+}}
+
+namespace ClassTraits { namespace fl_events
+{
+    __forceinline GestureEvent::GestureEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::GestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::GestureEvent(vm, AS3::fl_events::GestureEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::GestureEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline PressAndTapGestureEvent::PressAndTapGestureEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::PressAndTapGestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::PressAndTapGestureEvent(vm, AS3::fl_events::PressAndTapGestureEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::PressAndTapGestureEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline IOErrorEvent::IOErrorEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::IOErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::IOErrorEvent(vm, AS3::fl_events::IOErrorEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::IOErrorEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline ErrorEvent::ErrorEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::ErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ErrorEvent(vm, AS3::fl_events::ErrorEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ErrorEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline NetStatusEvent::NetStatusEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::NetStatusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::NetStatusEvent(vm, AS3::fl_events::NetStatusEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::NetStatusEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline SecurityErrorEvent::SecurityErrorEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::SecurityErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ErrorEvent(vm, AS3::fl_events::SecurityErrorEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::SecurityErrorEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline AsyncErrorEvent::AsyncErrorEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::AsyncErrorEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::AsyncErrorEvent(vm, AS3::fl_events::AsyncErrorEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::AsyncErrorEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline StatusEvent::StatusEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::StatusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::StatusEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::StatusEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline SyncEvent::SyncEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::SyncEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::SyncEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::SyncEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline KeyboardEvent::KeyboardEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::KeyboardEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::KeyboardEvent(vm, AS3::fl_events::KeyboardEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::KeyboardEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline ProgressEvent::ProgressEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::ProgressEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::ProgressEvent(vm, AS3::fl_events::ProgressEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ProgressEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline TextEvent::TextEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::TextEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TextEvent(vm, AS3::fl_events::TextEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TextEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline ContextMenuEvent::ContextMenuEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::ContextMenuEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::Event(vm, AS3::fl_events::ContextMenuEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::ContextMenuEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline StageOrientation::StageOrientation(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::StageOrientationCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl::Object(vm, AS3::fl_events::StageOrientationCI);
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::StageOrientation(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline TransformGestureEvent::TransformGestureEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::TransformGestureEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::TransformGestureEvent(vm, AS3::fl_events::TransformGestureEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::TransformGestureEvent(*this, Instances::fl::InlineCtor())));
+    }
+
+    __forceinline FocusEvent::FocusEvent(VM& vm, Instances::fl::InlineCtor)
+        : Traits(vm, AS3::fl_events::FocusEventCI)
+    {
+        MemoryHeap* mh = vm.GetMemoryHeap();
+        InstanceTraits::Traits* it = new(mh) InstanceTraits::fl_events::FocusEvent(vm, AS3::fl_events::FocusEventCI, Instances::fl::InlineCtor());
+        SetInstanceTraits(Pickable<InstanceTraits::Traits>(it));
+        it->SetConstructor(Pickable<Class>(new(mh) Classes::fl_events::FocusEvent(*this, Instances::fl::InlineCtor())));
+    }
+}}
+
 // ---- flash.events: class traits factories (the ClassTraits ctors are in sfr_as3_08) ----
 
 namespace ClassTraits { namespace fl_events
 {
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x1424560f0
     Pickable<Traits> GestureEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) GestureEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) GestureEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142456300
     Pickable<Traits> StageOrientation::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageOrientation(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StageOrientation(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142456500
     Pickable<Traits> TransformGestureEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) TransformGestureEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TransformGestureEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x1424568c0
     Pickable<Traits> PressAndTapGestureEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) PressAndTapGestureEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) PressAndTapGestureEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142456ed0
     Pickable<Traits> KeyboardEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) KeyboardEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) KeyboardEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142458820
     Pickable<Traits> ContextMenuEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ContextMenuEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ContextMenuEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x1424573e0
     Pickable<Traits> ProgressEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ProgressEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ProgressEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142457560
     Pickable<Traits> FocusEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) FocusEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) FocusEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142457990
     Pickable<Traits> TextEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) TextEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142457af0
     Pickable<Traits> IOErrorEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) IOErrorEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) IOErrorEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142457cc0
     Pickable<Traits> ErrorEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) ErrorEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) ErrorEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142457e20
     Pickable<Traits> NetStatusEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) NetStatusEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) NetStatusEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x1424582a0
     Pickable<Traits> SecurityErrorEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SecurityErrorEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SecurityErrorEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142458400
     Pickable<Traits> AsyncErrorEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) AsyncErrorEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) AsyncErrorEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x142458560
     Pickable<Traits> StatusEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) StatusEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) StatusEvent(vm, Instances::fl::InlineCtor()));
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the ClassTraits/InstanceTraits/Classes ctors, which live in sfr_as3_08
     // @0x1424586c0
     Pickable<Traits> SyncEvent::MakeClassTraits(VM& vm)
     {
-        return Pickable<Traits>(new(vm.GetMemoryHeap()) SyncEvent(vm));
+        return Pickable<Traits>(new(vm.GetMemoryHeap()) SyncEvent(vm, Instances::fl::InlineCtor()));
     }
 }}
 
@@ -5389,3 +5732,48 @@ namespace Classes { namespace fl_display
 // MS2-PIN: ??_7DIPixelProvider@Render@Scaleform@@6B@ 0x143149c28
 // MS2-PIN: ??_7ByteArrayPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a930
 // MS2-PIN: ??_7VectorPixelProvider@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a950
+// vftables of the fl_events classes whose ctors MakeClassTraits inlines (pins copied from sfr_as3_08)
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154068
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143153fd0
+// MS2-PIN: ??_7AsyncErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153f28
+// MS2-PIN: ??_7ContextMenuEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143154200
+// MS2-PIN: ??_7ContextMenuEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143154168
+// MS2-PIN: ??_7ErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143153d58
+// MS2-PIN: ??_7ErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143153cc8
+// MS2-PIN: ??_7ErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153c20
+// MS2-PIN: ??_7Event@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153498
+// MS2-PIN: ??_7FocusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156250
+// MS2-PIN: ??_7FocusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431561c0
+// MS2-PIN: ??_7FocusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156118
+// MS2-PIN: ??_7GestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431552c0
+// MS2-PIN: ??_7GestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155228
+// MS2-PIN: ??_7GestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155180
+// MS2-PIN: ??_7IOErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156560
+// MS2-PIN: ??_7IOErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431564c8
+// MS2-PIN: ??_7IOErrorEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156420
+// MS2-PIN: ??_7KeyboardEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155c38
+// MS2-PIN: ??_7KeyboardEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155ba0
+// MS2-PIN: ??_7KeyboardEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155af8
+// MS2-PIN: ??_7NetStatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143156870
+// MS2-PIN: ??_7NetStatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431567d8
+// MS2-PIN: ??_7NetStatusEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143156730
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155918
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155878
+// MS2-PIN: ??_7PressAndTapGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431557c8
+// MS2-PIN: ??_7ProgressEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143155f48
+// MS2-PIN: ??_7ProgressEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155eb0
+// MS2-PIN: ??_7ProgressEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155e08
+// MS2-PIN: ??_7SecurityErrorEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431575b8
+// MS2-PIN: ??_7SecurityErrorEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157520
+// MS2-PIN: ??_7StageOrientation@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143158778
+// MS2-PIN: ??_7StageOrientation@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431586e0
+// MS2-PIN: ??_7StatusEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143157750
+// MS2-PIN: ??_7StatusEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431576b8
+// MS2-PIN: ??_7SyncEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431578c8
+// MS2-PIN: ??_7SyncEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143157838
+// MS2-PIN: ??_7TextEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x143153a50
+// MS2-PIN: ??_7TextEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x1431539c0
+// MS2-PIN: ??_7TextEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143153918
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@Classes@AS3@GFx@Scaleform@@6B@ 0x1431555e8
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143155548
+// MS2-PIN: ??_7TransformGestureEvent@fl_events@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x143155498
