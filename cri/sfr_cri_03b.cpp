@@ -61,20 +61,17 @@ CriBool criCsWin_InitializeCriticalSection(LPCRITICAL_SECTION);
 CriBool criCsWin_DeleteCriticalSection(LPCRITICAL_SECTION);
 CriBool FUN_140039e24(LPCRITICAL_SECTION);
 CriBool FUN_140039e4c(LPCRITICAL_SECTION);
-void FUN_140038ddc(CriSint32, const CriChar8*);
 void* FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
-void FUN_140027fb4(void*, void*);
 void FUN_14004e2a0(void*);
 void FUN_140046784(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void FUN_14003cae0(void*);
 CriSint32 FUN_14003cff0(void*);
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
-void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
@@ -91,7 +88,6 @@ CriBool FUN_140043750(void*, const void*);
 CriUint32 FUN_140042f40(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 CriUint32 FUN_1400431a0(void*, void*, CriUint32, void*, CriUint32, CriUint32*);
 void criSj_SplitChunk(const void*, CriUint32, void*, void*);
-CriSint32 FUN_140027dd0(CriSint32);
 CriSint32 criVmpv_GetStatus(const void*);
 void FUN_14003e180(void*, const void*);
 const void** FUN_14003bed0(void);
@@ -127,7 +123,6 @@ void FUN_14004eb50(void);
 int FUN_14004e3b0(unsigned int size, CriUint64 base);   // sfr_cri_05: int(cri_u32, cri_u64)
 void* FUN_14003da40(void*, void*);
 void* FUN_14003dd50(void*, void*);
-void* FUN_140027ed8(void*, CriSint32, const CriChar8*, ...);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
@@ -155,13 +150,14 @@ struct CriUsfHeaderFields
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 CriSint32 FUN_140045910(const CriSint32*);
 CriSint32 FUN_140045ed0(const CriSint32*);
+void criErr_Notify(CriSint32 category, const CriChar8* message);
 void* FUN_1400459ec(const void*, void*, CriSint32);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void* FUN_140045eec(const void*, void*, CriSint32);
 void FUN_140045998(void*);
 void FUN_140045fdc(void*);
 void FUN_140045474(void*);
-void FUN_14029dd60(void*, const CriChar8*, const void*);
+int FUN_14029dd60(const char*, const char*, ...);   // game code's legacy inline sscanf
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 void FUN_1400410d0(void* owner, const CriChar8* message, CriUint32 value);
@@ -193,7 +189,7 @@ void FUN_140043680(void* object);
 void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
 {
     CriSint32 size = FUN_140045910((const CriSint32*)config) + 8; // criSjUni_CalculateWorkSize, called as the external
-    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjUni", 8, (CriSint32)allocationMode);
+    void** allocation = (void**)criHeap_Alloc((CriHeap)heap, size, "CriSjUni", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
         FUN_140038e24(0, "E09021217B", -3);
@@ -203,7 +199,7 @@ void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
     void* object = FUN_1400459ec(config, allocation + 1, size - 8);
     if (!object)
     {
-        FUN_140027fb4(heap, allocation);
+        criHeap_Free((CriHeap)heap, allocation);
         return NULL;
     }
     *(const void**)object = &PTR_FUN_143a48638;
@@ -215,7 +211,7 @@ void* FUN_140046324(const void* config, void* heap, CriUint32 allocationMode)
 void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
 {
     CriSint32 size = FUN_140045ed0((const CriSint32*)config) + 8; // criSjRbf_CalculateWorkSize, called as the external
-    void** allocation = (void**)FUN_140027f7c(heap, size, "CriSjRbf", 8, (CriSint32)allocationMode);
+    void** allocation = (void**)criHeap_Alloc((CriHeap)heap, size, "CriSjRbf", 8, (CriSint32)allocationMode);
     if (!allocation)
     {
         FUN_140038e24(0, "E09021703B", -3);
@@ -225,7 +221,7 @@ void* FUN_1400464f4(const void* config, void* heap, CriUint32 allocationMode)
     void* object = FUN_140045eec(config, allocation + 1, size - 8);
     if (!object)
     {
-        FUN_140027fb4(heap, allocation);
+        criHeap_Free((CriHeap)heap, allocation);
         return NULL;
     }
     *(const void**)object = &PTR_FUN_143a48668;
@@ -279,7 +275,7 @@ void FUN_1400463c8(void* object)
     Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
     void* heap = storage->Heap;
     FUN_140045998(object);
-    FUN_140027fb4(heap, storage);
+    criHeap_Free((CriHeap)heap, storage);
 }
 
 // MS2-FUNCTIONAL: destroy the ring-buffer stream-joint lock and free its heap-prefixed allocation.
@@ -290,7 +286,7 @@ void FUN_140046598(void* object)
     Storage* storage = CONTAINING_RECORD((CriUint8*)object, Storage, Payload);
     void* heap = storage->Heap;
     FUN_140045fdc(object);
-    FUN_140027fb4(heap, storage);
+    criHeap_Free((CriHeap)heap, storage);
 }
 #pragma optimize("", on)
 
@@ -351,7 +347,7 @@ CriUint32 FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32
 // @0x140046420
 CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const CriUint32* settings)
 {
-    CriSint32 headerBytes = FUN_140027dd0(8);
+    CriSint32 headerBytes = criHeap_DebugGetWorstExtraSize(8);
     CriUint32 config[3] = { settings[0], first, second };
     return FUN_140045910((const CriSint32*)config) + headerBytes * 2;
 }
@@ -417,7 +413,7 @@ void FUN_1400469c4(void* string, const CriChar8* format, ...)
 {
     va_list args;
     va_start(args, format);
-    FUN_14029dd60(string, format, args);
+    FUN_14029dd60((const char*)string, format, args);
 }
 #pragma optimize("", on)
 
@@ -1484,7 +1480,7 @@ CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 third,
                         const CriUint32* settings)
 {
     struct Setup { CriUint32 Flags, First, Second, Third; CriUint64 Reserved; };
-    CriSint32 overhead = FUN_140027dd0(8);
+    CriSint32 overhead = criHeap_DebugGetWorstExtraSize(8);
     Setup setup = { settings[0], first, second, third, 0 };
     return FUN_140045ed0((const CriSint32*)&setup) + overhead * 2;
 }
@@ -1616,13 +1612,13 @@ void FUN_140044f28(void* object)
         return;
     void* heap = owner->Heap;
     if (heap && owner->DecoderBuffer)
-        FUN_140027fb4(heap, owner->DecoderBuffer);
+        criHeap_Free((CriHeap)heap, owner->DecoderBuffer);
     if (owner->InputJoint)
         FUN_140046784(owner->InputJoint);
     if (owner->OutputJoint)
         FUN_140046784(owner->OutputJoint);
     if (heap)
-        FUN_140027fb4(heap, owner);
+        criHeap_Free((CriHeap)heap, owner);
 }
 #pragma optimize("", on)
 
@@ -1801,7 +1797,7 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
         void* OutputQueue;
         CriUint8 Reserved30[0x10];
     };
-    UsfState* state = (UsfState*)FUN_140027ed8(heap, 0x40, "CriUsfDmx", 0);
+    UsfState* state = (UsfState*)criHeap_AllocFix((CriHeap)heap, 0x40, "CriUsfDmx", 0);
     if (!state)
         return NULL;
     memset(state, 0, sizeof(*state));
@@ -1809,7 +1805,7 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount)
     state->Heap = heap;
     state->Initialized = 0;
     state->OutputCount = outputCount;
-    state->Outputs = (OutputEntry*)FUN_140027ed8(heap, ((CriUint32)outputCount + 1) * 0x10,
+    state->Outputs = (OutputEntry*)criHeap_AllocFix((CriHeap)heap, ((CriUint32)outputCount + 1) * 0x10,
                                                  "CriUsfDmxOut", 0);
     if (!state->Outputs)
     {
@@ -1952,10 +1948,7 @@ void FUN_140044fe4(void* stream)
 
 extern "C" const void* PTR_FUN_143a485d8;
 extern "C" const void* PTR_FUN_143a48608;
-void FUN_14002e6b0(void*, CriUint32, CriMvWorkAllocator*);
-void* FUN_14002e6c0(CriMvWorkAllocator*, CriUint32, CriUint32);
-void FUN_14002e6bc(CriMvWorkAllocator*);
-void FUN_140038ddc(CriSint32, const CriChar8*);
+void FUN_14002e6bc(CriFixedAllocator*);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 // MS2-FUNCTIONAL: lay out a CRI ring-buffer stream joint inside the supplied work area.
@@ -1963,19 +1956,19 @@ void FUN_140038ddc(CriSint32, const CriChar8*);
 void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
 {
     const CriSint32* settings = (const CriSint32*)config;
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    void** object = (void**)FUN_14002e6c0(&allocator, 0x50, 8);
+    CriFixedAllocator allocator;
+    criFixedAllocator_Create(work, (CriUint32)workSize, &allocator);
+    void** object = (void**)criFixedAllocator_Allocate(&allocator, 0x50, 8);
     memset(object, 0, 0x50);
     object[0] = (void*)&PTR_FUN_143a48608;
     object[1] = (void*)"CriSjRbf";
     if (settings[0] == 1)
     {
-        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
+        void* csWork = criFixedAllocator_Allocate(&allocator, 0x48, 1);
         object[2] = criCs_Create(csWork, 0x48);
         if (!object[2])
         {
-            FUN_140038ddc(0, "E09021620B:Failed in criCs_Create().");
+            criErr_Notify(0, "E09021620B:Failed in criCs_Create().");
             return NULL;
         }
     }
@@ -1984,7 +1977,7 @@ void* FUN_140045eec(const void* config, void* work, CriSint32 workSize)
         object[2] = NULL;
     }
     object[3] = *(void* const*)(settings + 4);
-    object[6] = FUN_14002e6c0(&allocator, (CriUint32)(settings[1] + settings[2]), (CriUint32)settings[3]);
+    object[6] = criFixedAllocator_Allocate(&allocator, (CriUint32)(settings[1] + settings[2]), (CriUint32)settings[3]);
     *(CriSint32*)(object + 7) = settings[1];
     *(CriSint32*)((CriUint8*)object + 0x3c) = settings[2];
     FUN_140046798(object);
@@ -2009,19 +2002,19 @@ void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
     };
     struct Config { CriUint32 Locked; CriUint32 Mode; CriUint32 NumChunks; };
     const Config* settings = (const Config*)config;
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    StreamJoint* object = (StreamJoint*)FUN_14002e6c0(&allocator, 0x50, 8);
+    CriFixedAllocator allocator;
+    criFixedAllocator_Create(work, (CriUint32)workSize, &allocator);
+    StreamJoint* object = (StreamJoint*)criFixedAllocator_Allocate(&allocator, 0x50, 8);
     memset(object, 0, 0x50);
     object->Vtable = &PTR_FUN_143a485d8;
     object->Name = "CriSjUni";
     if (settings->Locked == 1)
     {
-        void* csWork = FUN_14002e6c0(&allocator, 0x48, 1);
+        void* csWork = criFixedAllocator_Allocate(&allocator, 0x48, 1);
         object->Lock = (LPCRITICAL_SECTION)criCs_Create(csWork, 0x48);
         if (!object->Lock)
         {
-            FUN_140038ddc(0, "E09021213:Failed in criCs_Create().");
+            criErr_Notify(0, "E09021213:Failed in criCs_Create().");
             return NULL;
         }
     }
@@ -2034,7 +2027,7 @@ void* FUN_1400459ec(const void* config, void* work, CriSint32 workSize)
     object->Lists[1] = NULL;
     object->Lists[2] = NULL;
     object->Lists[3] = NULL;
-    object->Chunks = (Chunk*)FUN_14002e6c0(&allocator, settings->NumChunks << 5, 8);
+    object->Chunks = (Chunk*)criFixedAllocator_Allocate(&allocator, settings->NumChunks << 5, 8);
     object->FreeChunk = NULL;
     for (CriUint32 index = 0; index < settings->NumChunks; ++index)
     {
@@ -2303,9 +2296,9 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     };
     static_assert(sizeof(Demux) == 0x40, "layout");
     memset(work, 0, (size_t)workSize);
-    CriMvWorkAllocator allocator;
-    FUN_14002e6b0(work, (CriUint32)workSize, &allocator);
-    Demux* demux = (Demux*)FUN_14002e6c0(&allocator, 0x40, 8);
+    CriFixedAllocator allocator;
+    criFixedAllocator_Create(work, (CriUint32)workSize, &allocator);
+    Demux* demux = (Demux*)criFixedAllocator_Allocate(&allocator, 0x40, 8);
     if (demux == NULL)
         return NULL;
     demux->Reserved00 = NULL;
@@ -2313,7 +2306,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     demux->Reserved09 = 0;
     demux->Count = count;
     demux->Reserved0a = 0;
-    demux->Tracks = (Track*)FUN_14002e6c0(&allocator, (CriUint32)(count + 1) * 0x10, 8);
+    demux->Tracks = (Track*)criFixedAllocator_Allocate(&allocator, (CriUint32)(count + 1) * 0x10, 8);
     if (demux->Tracks == NULL)
     {
         FUN_140044f28(demux);
@@ -2321,7 +2314,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     }
     CriUint32 config[3] = { 1, 0, 0x80 };
     CriUint32 size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-    demux->Input = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+    demux->Input = FUN_1400459ec(config, criFixedAllocator_Allocate(&allocator, size, 8), (CriSint32)size);
     if (demux->Input == NULL)
     {
         FUN_140044f28(demux);
@@ -2329,7 +2322,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize)
     }
     config[2] = 0x80;
     size = (CriUint32)criSjUni_CalculateWorkSize((const CriSint32*)config);
-    demux->Output = FUN_1400459ec(config, FUN_14002e6c0(&allocator, size, 8), (CriSint32)size);
+    demux->Output = FUN_1400459ec(config, criFixedAllocator_Allocate(&allocator, size, 8), (CriSint32)size);
     if (demux->Output == NULL)
     {
         FUN_140044f28(demux);
