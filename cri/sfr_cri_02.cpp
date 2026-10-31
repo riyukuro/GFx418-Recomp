@@ -790,7 +790,6 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
 }
 
 // The cue point a CRI event point describes: "name=value,name=value" parameters.
-// MS2-FUNCTIONAL: a constructor of CuePoint there
 // @0x14002c2b0
 static VideoPlayer::CuePoint ConstructCuePoint(const CriMvEventPoint& event)
 {
@@ -798,33 +797,36 @@ static VideoPlayer::CuePoint ConstructCuePoint(const CriMvEventPoint& event)
     cue.Name = event.cue_name;
     cue.Type = event.type == 0 ? VideoPlayer::NavigationCuePoint : VideoPlayer::EventCuePoint;
     cue.Time = (UInt32)event.time;
-    const char* p = event.param_string;
-    if (p)
+    if (event.param_string)
     {
+        const char* p1 = event.param_string;
         VideoPlayer::CuePointParam param;
-        while (p)
+        while (p1)
         {
-            const char* peq = strchr(p, '=');
-            if (!peq)
+            const char* p2 = strchr(p1, '=');
+            if (!p2)
             {
-                param.Name = p;
+                param.Name = p1;
                 cue.Params.PushBack(param);
                 break;
             }
-            FUN_142586530(&param.Name, p, peq - p);
-            p = peq + 1;
-            const char* pcomma = strchr(p, ',');
-            if (!pcomma)
+            FUN_142586530(&param.Name, p1, p2 - p1);
+            p1 = p2 + 1;
+            p2 = strchr(p1, ',');
+            if (!p2)
             {
-                param.Value = p;
+                param.Value = p1;
                 cue.Params.PushBack(param);
                 break;
             }
-            FUN_142586530(&param.Value, p, pcomma - p);
-            cue.Params.PushBack(param);
-            param.Name.Clear();
-            param.Value.Clear();
-            p = pcomma + 1;
+            else
+            {
+                FUN_142586530(&param.Value, p1, p2 - p1);
+                cue.Params.PushBack(param);
+                param.Name.Clear();
+                param.Value.Clear();
+            }
+            p1 = p2 + 1;
         }
     }
     return cue;
