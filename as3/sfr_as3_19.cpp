@@ -2773,42 +2773,56 @@ bool Sfr31SetTextOnObject(UPInt* self, UPInt obj, const wchar_t* text, bool html
     return false;
 }
 
-// MS2-FUNCTIONAL 0x142525400: behavior-equivalent recovery; codegen differs from exe
+// The alias table is a HashSet of (ASString, Value) pairs; the lookup is the SDK's findIndexCore.
+struct Sfr31AliasEntry
+{
+    SPInt NextInChain;
+    ASStringNode* Key;
+    UPInt Rest[4];
+};
+struct Sfr31AliasTable
+{
+    UPInt EntryCount;
+    UPInt SizeMask;
+    Sfr31AliasEntry& E(UPInt index) { return reinterpret_cast<Sfr31AliasEntry*>(this + 1)[index]; }
+};
+
+static inline SPInt Sfr31AliasFindIndexCore(const Sfr31AliasTable* pTable, ASStringNode* const& key, UPInt hashValue)
+{
+    UPInt index = hashValue;
+    const Sfr31AliasEntry* e = &const_cast<Sfr31AliasTable*>(pTable)->E(index);
+    if (e->NextInChain == -2 || (e->Key->HashFlags & pTable->SizeMask) != index)
+        return -1;
+    for (;;)
+    {
+        if ((e->Key->HashFlags & pTable->SizeMask) == hashValue && e->Key == key)
+            return index;
+        index = e->NextInChain;
+        if (index == UPInt(-1))
+            break;
+        e = &const_cast<Sfr31AliasTable*>(pTable)->E(index);
+    }
+    return -1;
+}
+
+static inline SPInt Sfr31AliasFindIndex(Sfr31AliasTable* pTable, ASStringNode* const& key)
+{
+    if (!pTable)
+        return -1;
+    const UPInt hashValue = key->HashFlags & pTable->SizeMask;
+    return Sfr31AliasFindIndexCore(pTable, key, hashValue);
+}
+
 // @0x142525400
 Value* Sfr31ResolveInvokeAlias(UPInt root, const char* name)
 {
     if (Sfr31Rd(root, 0x80) != 0)
     {
-        ASStringNode* node = reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name);
-        Value* res = 0;
-        const SInt32 rc = node->RefCount;
-        node->RefCount = rc + 1;
-        UPInt tbl = *reinterpret_cast<UPInt*>(Sfr31Rd(root, 0x80));
-        UPInt ent = 0;
-        if (tbl != 0)
-        {
-            const UPInt mask = Sfr31Rd(tbl, 8);
-            UPInt idx = node->HashFlags & mask;
-            UPInt* e = reinterpret_cast<UPInt*>(tbl + 0x10 + idx * 0x30);
-            if (e[0] != ~UPInt(1) && (reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) == idx)
-            {
-                UPInt at = idx;
-                while ((reinterpret_cast<ASStringNode*>(e[1])->HashFlags & mask) != idx || reinterpret_cast<ASStringNode*>(e[1]) != node)
-                {
-                    at = e[0];
-                    if (at == ~UPInt(0)) { ent = 0; goto done; }
-                    e = reinterpret_cast<UPInt*>(tbl + 0x10 + at * 0x30);
-                }
-                if (static_cast<SPInt>(at) >= 0)
-                    ent = tbl + 0x18 + at * 0x30;
-            }
-        }
-    done:
-        node->RefCount = rc;
-        res = ent != 0 ? reinterpret_cast<Value*>(ent + 8) : 0;
-        if (rc == 0)
-            node->ReleaseNode();
-        return res;
+        ASString key(reinterpret_cast<ASStringManager*>(Sfr31Rd(root, 0x348))->CreateStringNode(name));
+        Sfr31AliasTable* const tbl = *reinterpret_cast<Sfr31AliasTable**>(Sfr31Rd(root, 0x80));
+        const SPInt index = Sfr31AliasFindIndex(tbl, key.GetNode());
+        const UPInt ent = index >= 0 ? reinterpret_cast<UPInt>(&tbl->E(index).Key) : 0;
+        return ent != 0 ? reinterpret_cast<Value*>(ent + 8) : 0;
     }
     return 0;
 }
