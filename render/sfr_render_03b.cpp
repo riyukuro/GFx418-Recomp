@@ -2235,8 +2235,8 @@ void ParagraphFormatter::Format(const Paragraph& paragraph)
             else
             {
                 // default stops, close to what Flash does (it measures from the stage, we from the text)
-                float tabStopSize = PixelsToFixp(floorf((FontSize * 2 + 8) / 8) * 8);
-                float nextTabStop = floorf((NewLineWidth + tabStopSize) / tabStopSize) * tabStopSize;
+                float tabStopSize = PixelsToFixp(floor((FontSize * 2 + 8) / 8) * 8);
+                float nextTabStop = floor((NewLineWidth + tabStopSize) / tabStopSize) * tabStopSize;
                 GlyphAdvance = nextTabStop - NewLineWidth;
             }
         }
