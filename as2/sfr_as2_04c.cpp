@@ -89,6 +89,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
 #include "../include/gfx/gfx_textsnapshot.h"
+#include "../include/gfx/text_stylesheet.h"
 
 void FUN_1424aa0f0(void* pthis);  // Render::Text::TextFormat destructor (global, as in sfr_as3_13/16z)
 
@@ -96,12 +97,25 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The NumberObject prototype destructor stays out of line (0x142925030).
 template<> SF_NOINLINE Prototype<NumberObject, Environment>::~Prototype();
+template<> SF_NOINLINE Prototype<TextFieldObject, Environment>::~Prototype();  // 0x1429250a0
+}}}
+
+namespace Scaleform {
+// Out of line in the exe as well; the explicit-specialization declarations keep the dtors uninlined.
+typedef HashNode<GFx::ASString, GFx::AS2::SharedObjectPtr, GFx::ASStringHashFunctor> Sfr04cHN1;
+typedef HashSetBase<Sfr04cHN1, Sfr04cHN1::NodeHashF, Sfr04cHN1::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
+    GFx::HashsetNodeEntry_GC<Sfr04cHN1, Sfr04cHN1::NodeHashF> > Sfr04cHashShared;
+typedef StringLH_HashNode<GFx::AS2::MovieClipLoader::ProgressDesc, String::NoCaseHashFunctor> Sfr04cHN2;
+typedef HashSetBase<Sfr04cHN2, Sfr04cHN2::NodeHashF, Sfr04cHN2::NodeAltHashF,
+    AllocatorLH<GFx::AS2::MovieClipLoader::ProgressDesc, 2>, HashsetCachedNodeEntry<Sfr04cHN2, Sfr04cHN2::NodeHashF> >
+    Sfr04cHashProgress;
+template<> SF_NOINLINE Sfr04cHashShared::~HashSetBase();    // 0x1429248c0
+template<> SF_NOINLINE Sfr04cHashProgress::~HashSetBase();  // 0x142924ab0
+}
+
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 void FUN_142606690(void* pthis);
-void FUN_142609070(void* pthis);
-void FUN_1429248c0(void* pthis);
-void FUN_142924ab0(void* pthis);
-void FUN_1429250a0(void* pthis);
 void FUN_142925e70(void* pthis);
 void FUN_142925fb0(void* pthis);
 
@@ -354,7 +368,7 @@ void* DeleteAs2_14292c0e0(void* p, unsigned flags)
 // @0x14292c150
 void* DeleteAs2_14292c150(void* p, unsigned flags)
 {
-    FUN_142924ab0((void*)((char*)p+0x68));
+    reinterpret_cast<Sfr04cHashProgress*>((char*)p+0x68)->~Sfr04cHashProgress();
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
@@ -389,7 +403,7 @@ void* DeleteAs2_14292c230(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_143216bd8;
     *(const void**)((char*)p+0x70) = DAT_143216c80;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0x70)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142924ab0((void*)((char*)p+0x68));
+    reinterpret_cast<Sfr04cHashProgress*>((char*)p+0x68)->~Sfr04cHashProgress();
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
@@ -640,7 +654,7 @@ void* DeleteAs2_14292cc90(void* p, unsigned flags)
 // @0x14292ccf0
 void* DeleteAs2_14292ccf0(void* p, unsigned flags)
 {
-    FUN_1429248c0((void*)((char*)p+0x70));
+    reinterpret_cast<Sfr04cHashShared*>((char*)p+0x70)->~Sfr04cHashShared();
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
     static_cast<Object*>(p)->Object::~Object();
@@ -755,7 +769,7 @@ void* DeleteAs2_14292d1c0(void* p, unsigned flags)
 // @0x14292d230
 void* DeleteAs2_14292d230(void* p, unsigned flags)
 {
-    FUN_142609070((void*)((char*)p+0x68));
+    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
@@ -774,7 +788,7 @@ void* DeleteAs2_14292d2a0(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_143217440;
     *(const void**)((char*)p+0x98) = DAT_1432174e8;
     reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
-    FUN_142609070((void*)((char*)p+0x68));
+    reinterpret_cast<Text::StyleManager*>((char*)p+0x68)->Text::StyleManager::~StyleManager();
     static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
@@ -805,7 +819,7 @@ void* DeleteAs2_14292d440(void* p, unsigned flags)
 // @0x14292d550
 void* DeleteAs2_14292d550(void* p, unsigned flags)
 {
-    FUN_1429250a0(p);
+    static_cast<Prototype<TextFieldObject, Environment>*>(p)->Prototype<TextFieldObject, Environment>::~Prototype();
     if (flags & 1)
     {
         if (!(flags & 4))
