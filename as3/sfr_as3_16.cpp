@@ -1696,16 +1696,12 @@ ValueStack::Page* ValueStack::AllocPage(UInt16 pageSize)
 MovieRoot::ActionQueueType::~ActionQueueType()
 {
     Clear();
-    ActionEntry* entry = pFreeEntry;
-    while (entry)
+    for (ActionEntry* pcur = pFreeEntry; pcur; )
     {
-        ActionEntry* next = entry->pNextEntry;
-        entry->ClearAction();
-        Memory::Free(entry);
-        entry = next;
+        ActionEntry* pnext = pcur->pNextEntry;
+        delete pcur;
+        pcur = pnext;
     }
-    pFreeEntry = NULL;
-    FreeEntriesCount = 0;
 }
 
 // @0x1424de310
