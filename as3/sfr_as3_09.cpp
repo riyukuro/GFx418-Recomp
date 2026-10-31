@@ -31,9 +31,6 @@ template struct ThunkFunc2<Classes::fl_external::ExternalInterface, 5, Value, un
 
 // Is a value of type `className` (its class looked up by name in the VM; 0x1425145d0).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
-// Object::FindProperty: the slot or dynamic value of this object named mn (0x142502360).
-void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRef& result,
-                   const Scaleform::GFx::AS3::Multiname& mn, int attr);
 // The gesture phase names, by GestureEvent::Phase (0: none).
 extern const char* const DAT_143a2d158[];
 // SPtr<Instances::fl::Object>::operator=, out of line (0x14243d870).
@@ -2592,7 +2589,7 @@ namespace Instances { namespace fl_events {
             argv[i].Convert2String(name).DoNotCheck();
             Multiname mn(vm.GetPublicNamespace(), Value(name));
             PropRef prop;
-            FUN_142502360(this, prop, mn, 0);
+            FindProperty(prop, mn, 0);
             if (!PropRefFound(prop))
             {
                 SFsprintf(tmp, sizeof(tmp),
