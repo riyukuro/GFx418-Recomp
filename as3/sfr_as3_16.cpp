@@ -633,13 +633,12 @@ unsigned char* FUN_1424e0940(unsigned char* dst, const unsigned char* src)
     return dst;
 }
 
-extern "C" void FUN_14257db40(void* self);   // RefCountImplCore::~RefCountImplCore: stores its vptr through self
 extern "C" void FUN_14015b310(void*, Scaleform::UPInt);
 
 namespace {
 void* Sfr16ScalarDeletingDtor(void* self, unsigned int flags)
 {
-    FUN_14257db40(self);
+    static_cast<Scaleform::RefCountImplCore*>(self)->Scaleform::RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if ((flags & 4) == 0)
@@ -655,12 +654,11 @@ void* Sfr16ScalarDeletingDtor(void* self, unsigned int flags)
     return self;
 }
 
-extern "C" void FUN_14257db50(void* self);   // RefCountNTSImplCore::~RefCountNTSImplCore: stores its vptr through self
 
 // Same as Sfr16ScalarDeletingDtor for the classes whose base is RefCountNTSImplCore.
 void* Sfr16ScalarDeletingDtorNts(void* self, unsigned int flags)
 {
-    FUN_14257db50(self);
+    static_cast<Scaleform::RefCountNTSImplCore*>(self)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
     {
         if ((flags & 4) == 0)
@@ -703,8 +701,12 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flag
 
 extern "C" void FUN_142521f00(void*);
 extern void FUN_142626160(void*);
-void FUN_14241e430(void* arr, const Scaleform::GFx::AS3::Value* v);   // ArrayDH<Value>::PushBack (sfr_as3_04)
 extern void FUN_14257eb30(void*);
+namespace Scaleform {
+// out of line in the exe (0x14241e430, sfr_as3_04)
+typedef ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> Sfr16ValueDataDH;
+template<> SF_NOINLINE void ArrayBase<Sfr16ValueDataDH>::PushBack(const GFx::AS3::Value& val);
+} // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
     // The executable keeps ModifyOptimizedPlayList out of line at 0x142517e70; its body is recovered in sfr_as3_18.
@@ -1263,9 +1265,9 @@ static Pickable<const Instances::Namespace> GetMethodNamespace(VM& vm, const Cla
 // @0x1424e5500
 void Traits::Add2StoredScopeStack(const Value& o)
 {
-    // The exe tail-calls the out-of-line ArrayDH<Value>::PushBack (sfr_as3_04). Under MS2_AS3_SCU the Value copy is
-    // inline, and cl then inlines PushBack too, so call it through its address.
-    FUN_14241e430(&InitScope, &o);
+    // The exe tail-calls the out-of-line ArrayDH<Value>::PushBack (sfr_as3_04); the SF_NOINLINE specialization
+    // declaration above keeps it out of line (under MS2_AS3_SCU cl would otherwise inline it).
+    InitScope.PushBack(o);
 }
 
 // MS2-FUNCTIONAL: our TU inlines VTable::AddMethod (0x1424e8ed0, defined below), which the exe calls; the get/set
