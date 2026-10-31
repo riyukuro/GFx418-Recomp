@@ -23,6 +23,9 @@
 #include "ms2/scaleform/include/gfx/amp/amp_profileframe.h"
 #include "ms2/scaleform/include/render/render_perlin.h"
 #include "ms2/scaleform/include/render/render_color.h"
+#include "ms2/scaleform/include/render/render_image.h"
+#include "ms2/scaleform/include/sound/sound_sound.h"
+#include "ms2/scaleform/include/kernel/sf_memory.h"
 #include "hook/ms2hook.h"
 #include <cstdint>
 #include <cstring>
@@ -30,6 +33,9 @@
 #include <new>
 #include <random>
 #include <vector>
+
+// Memory::pGlobalHeap (DAT_143b15f60), read through the real static.
+#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
@@ -39,7 +45,6 @@ extern "C" void FUN_1426906b0(void*, void*, std::size_t);
 extern "C" void FUN_142747530(void*, void*, std::size_t);
 extern "C" void FUN_1427478c0(void*, void*, std::size_t);
 extern "C" void FUN_142585f70(void*, int);
-extern "C" void* DAT_143b15f60;
 // The vftables below are the tables themselves: their users store the table's address (the exe's lea), not its slot 0.
 extern ExeDecl<void*> DAT_1431921e0;
 extern ExeDecl<void*> DAT_1431921b0;
@@ -546,9 +551,22 @@ bool QueryChannelPlaying(void* soundSource)
 }
 }
 
-void FUN_14257d390(void*, long long, unsigned, unsigned);
-void FUN_14257bf70(void*, void*, long long, unsigned);
-bool FUN_1427483a0(void*, int);   // AppendableSoundData::SetReadPosition (returns bool)
+// ImageData::SetPixelInScanline / GetPixelInScanline (hidden Color return) and
+// AppendableSoundData::SetReadPosition, called through the real members.
+inline void FUN_14257d390(void* image, long long line, unsigned x, unsigned color)
+{
+    static_cast<Scaleform::Render::ImageData*>(image)->SetPixelInScanline(
+        reinterpret_cast<Scaleform::UByte*>(line), x, color);
+}
+inline void FUN_14257bf70(void* image, void* ret, long long line, unsigned x)
+{
+    ::new (ret) Scaleform::Render::Color(static_cast<Scaleform::Render::ImageData*>(image)->GetPixelInScanline(
+        reinterpret_cast<const Scaleform::UByte*>(line), x));
+}
+inline bool FUN_1427483a0(void* stream, int pos)
+{
+    return static_cast<Scaleform::Sound::AppendableSoundData*>(stream)->SetReadPosition(static_cast<unsigned>(pos));
+}
 unsigned long long FUN_142748160(void*, void*, unsigned);
 void FUN_142742830(long long*, unsigned long long*);
 
@@ -2277,7 +2295,6 @@ FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound
 }
 }
 
-extern "C" void* DAT_143b15f60;
 
 namespace Scaleform {
 static void ReserveHeapArray(void** array, void* heapOwner, std::size_t requested,
