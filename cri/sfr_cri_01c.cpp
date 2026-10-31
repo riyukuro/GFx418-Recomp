@@ -210,7 +210,6 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
     return mveasy;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001dba0
 CRIMVEASY_SAFEBUFFERS CriSint32 CriMvEasyPlayer::CalcPlaybackWorkSize(const CriMvStreamingParameters* stmprm, CriError& err)
 {
@@ -340,7 +339,6 @@ CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface*
     return mveasy;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001ddd0
 void CriMvEasyPlayer::SetMetaDataWorkAllocator(void* (*allocfunc)(void* obj, CriUint32 size),
                                                void (*freefunc)(void* obj, void* mem), void* obj,
@@ -362,7 +360,6 @@ void CriMvEasyPlayer::ResetAllParameters(CriError& err)
     resetPlayback();
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001e1c0
 void CriMvEasyPlayer::resetPlayback(void)
 {
@@ -420,7 +417,6 @@ void CriMvEasyPlayer::resetPlayback(void)
     initializeCompareFrameParameters();
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001e500
 void CriMvEasyPlayer::resetHandleParameters(void)
 {
@@ -452,7 +448,6 @@ void CriMvEasyPlayer::resetHandleParameters(void)
     memset(playback_info, 0, sizeof(playback_info));
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001e680
 void CriMvEasyPlayer::initializeCompareFrameParameters(void)
 {
@@ -464,7 +459,6 @@ void CriMvEasyPlayer::initializeCompareFrameParameters(void)
     compare_frame_prm3 = 1.0f;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001e720
 void CriMvEasyPlayer::Destroy(CriError& err)
 {
@@ -527,7 +521,6 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od lowers the switch with its own jump-table layout
 // @0x14001e940
 CriMvEasyPlayer::Status CriMvEasyPlayer::GetStatus(CriError& err)
 {
@@ -571,7 +564,6 @@ CriMvEasyPlayer::Status CriMvEasyPlayer::GetStatus(CriError& err)
     return stat;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001ea50
 CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataByFloat32(void* obj, CriUint32 nch, CriFloat32* sample[],
                                                            CriUint32 nsmpl)
@@ -600,7 +592,6 @@ CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataByFloat32(void* obj, CriUint32
     return n;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001eb20
 CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataBySint16(void* obj, CriUint32 nch, CriSint16* sample[],
                                                           CriUint32 nsmpl)
@@ -629,7 +620,6 @@ CriUint32 CriMvEasyPlayer::crimveasy_SupplyPcmDataBySint16(void* obj, CriUint32 
     return n;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001ebe0
 CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mveasy)
 {
@@ -666,7 +656,6 @@ CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mvea
     return n;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001ecc0
 CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPlayer* mveasy, CriUint32 nch, CriSint16* sample[],
                                               CriUint32 nsmpl)
@@ -764,7 +753,6 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPl
     return nsmpl_out_;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f060
 CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPlayer* mveasy, CriUint32 nch, CriFloat32* sample[],
                                               CriUint32 nsmpl)
@@ -862,7 +850,6 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPl
     return nsmpl_out_;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f400
 CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataByFloat32(void* obj, CriUint32 nch, CriFloat32* sample[],
                                                                 CriUint32 nsmpl)
@@ -886,7 +873,6 @@ CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataByFloat32(void* obj, CriU
     return n;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f4b0
 CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave32(CriMvEasyPlayer* mveasy, CriUint32 nch, CriFloat32* sample[],
                                                       CriUint32 nsmpl)
@@ -941,7 +927,6 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave32(Cri
     return nsmpl_out;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f660
 CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataBySint16(void* obj, CriUint32 nch, CriSint16* sample[],
                                                                CriUint32 nsmpl)
@@ -966,7 +951,6 @@ CriUint32 CriMvEasyPlayer::crimveasy_SupplySubAudioDataBySint16(void* obj, CriUi
 }
 
 // The 16-bit sub audio path tests the main sound and track like the CRI build does.
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f700
 CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave16(CriMvEasyPlayer* mveasy, CriUint32 nch, CriSint16* sample[],
                                                       CriUint32 nsmpl)
@@ -1021,7 +1005,6 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave16(Cri
     return nsmpl_out;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f8b0
 void CriMvEasyPlayer::Update(CriError& err)
 {
@@ -1035,7 +1018,6 @@ void CriMvEasyPlayer::Update(CriError& err)
     criAtomic_TestAndSet((unsigned long *)&update_lock, 0);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001f920
 void CriMvEasyPlayer::executeUpdate(CriError& err)
 {
@@ -1095,7 +1077,6 @@ void CriMvEasyPlayer::executeUpdate(CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001fb00
 void CriMvEasyPlayer::updateStatus(CriError& err)
 {
@@ -1181,7 +1162,6 @@ void CriMvEasyPlayer::updateStatus(CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x14001fdc0
 void CriMvEasyPlayer::setupSeekPosition(void)
 {
@@ -1248,7 +1228,6 @@ void CriMvEasyPlayer::setupSeekPosition(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140020140
 CRIMVEASY_SAFEBUFFERS CriBool CriMvEasyPlayer::setupPlayback(void)
 {
@@ -1429,7 +1408,6 @@ void CriMvEasyPlayer::requestStopModules(void)
     modules_stopped = 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400209a0
 CriBool CriMvEasyPlayer::isFileReaderIdle(void)
 {
@@ -1530,7 +1508,6 @@ CriBool CriMvEasyPlayer::detachOutputs(void)
     return 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140020db0
 void CriMvEasyPlayer::completeStop(CriSint32 ply_status)
 {
@@ -1563,7 +1540,6 @@ void CriMvEasyPlayer::completeStop(CriSint32 ply_status)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140020eb0
 void CriMvEasyPlayer::releasePlaybackResources(void)
 {
@@ -1597,7 +1573,6 @@ void CriMvEasyPlayer::releasePlaybackResources(void)
     unk3c8 = 0;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
 // @0x140021000
 void CriMvEasyPlayer::SyncMasterTimer(CriError& err)
 {
@@ -1649,7 +1624,6 @@ void CriMvEasyPlayer::SyncMasterTimer(CriError& err)
     time0_unit = sys_unit;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
 // @0x1400211d0
 void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64 sys_count, CriUint64 sys_unit)
 {
@@ -1696,7 +1670,6 @@ void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64
     time2_unit = snd_unitVal;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, uint64/float conversion sequence)
 // @0x140021450
 CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
 {
@@ -1733,7 +1706,6 @@ void CriMvEasyPlayer::SetFile(CriChar8* fname, CriError& err)
     SetFileRange(fname, 0, -1);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
 // @0x140021580
 void CriMvEasyPlayer::SetData(CriUint8* dataptr, CriUint32 datasize, CriError& err)
 {
@@ -1770,7 +1742,6 @@ void CriMvEasyPlayer::SetData(CriUint8* dataptr, CriUint32 datasize, CriError& e
     file_request_state = 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
 // @0x140021720
 void CriMvEasyPlayer::SetFileRange(CriChar8* fname, CriUint64 offset, CriSint64 range, CriError& err)
 {
@@ -1861,7 +1832,6 @@ void CriMvEasyPlayer::Start(CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
 // @0x140021a30
 CriBool CriMvEasyPlayer::startInputAndDecoding(void)
 {
@@ -1902,7 +1872,6 @@ CriBool CriMvEasyPlayer::startInputAndDecoding(void)
     return 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140021bf0
 void CriMvEasyPlayer::Stop(CriError& err)
 {
@@ -1923,7 +1892,6 @@ void CriMvEasyPlayer::Stop(CriError& err)
     resetHandleParameters();
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140021c90
 void CriMvEasyPlayer::Pause(CriBool sw, CriError& err)
 {
@@ -1950,7 +1918,6 @@ CriBool CriMvEasyPlayer::IsPaused(CriError& err)
     return pause_flag;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140021da0
 void CriMvEasyPlayer::SetMasterTimer(TimerType type, CriError& err)
 {
@@ -2004,7 +1971,6 @@ CriMvEasyPlayer::TimerType CriMvEasyPlayer::GetMasterTimer(CriError& err)
     return type;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140021ef0
 void CriMvEasyPlayer::SetNumberOfFramePools(CriUint32 npools, CriError& err)
 {
@@ -2067,7 +2033,6 @@ void CriMvEasyPlayer::SetReadBufferSize(CriSint32 size, CriError& err)
     read_buffer_size = size;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400220d0
 void CriMvEasyPlayer::SetAudioTrack(CriSint32 track, CriError& err)
 {
@@ -2080,7 +2045,6 @@ void CriMvEasyPlayer::SetAudioTrack(CriSint32 track, CriError& err)
     criMvPly_SetAudioTrack(mvply, track);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140022130
 void CriMvEasyPlayer::SetLoopFlag(CriBool flag, CriError& err)
 {
@@ -2095,7 +2059,6 @@ CriBool CriMvEasyPlayer::GetLoopFlag(CriError& err)
     return loop_flag;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice for int stores, stack slot order, float conversion sequence)
 // @0x140022190
 void CriMvEasyPlayer::GetTime(CriUint64& count, CriUint64& unit, CriError& err)
 {
@@ -2125,7 +2088,6 @@ void CriMvEasyPlayer::GetTime(CriUint64& count, CriUint64& unit, CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
 // @0x140022310
 CriBool CriMvEasyPlayer::GetHeaderInfo(CriMvStreamingParameters* stmprm, CriError& err)
 {
@@ -2154,7 +2116,6 @@ CriBool CriMvEasyPlayer::GetHeaderInfo(CriMvStreamingParameters* stmprm, CriErro
     return ok;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order)
 // @0x140022420
 CriBool CriMvEasyPlayer::GetMovieInfo(CriMvStreamingParameters& stmprm, CriError& err)
 {
@@ -2189,7 +2150,6 @@ CriBool CriMvEasyPlayer::GetMovieInfo(CriMvStreamingParameters& stmprm, CriError
     return 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140022540
 void CriMvEasyPlayer::SetStreamingParameters(CriMvStreamingParameters* stmprm, CriError& err)
 {
@@ -2198,7 +2158,6 @@ void CriMvEasyPlayer::SetStreamingParameters(CriMvStreamingParameters* stmprm, C
     stmprm_flag = 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400225b0
 void CriMvEasyPlayer::SetSubtitleChannel(CriSint32 channel, CriError& err)
 {
@@ -2210,7 +2169,6 @@ void CriMvEasyPlayer::SetSubtitleChannel(CriSint32 channel, CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, dead jumps after returns)
 // @0x140022610
 CriUint32 CriMvEasyPlayer::GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize, CriError& err)
 {
@@ -2308,7 +2266,6 @@ CriUint32 CriMvEasyPlayer::GetSubtitleOnTime(CriUint8* bufptr, CriUint32 bufsize
     return sizec;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x140022d00
 void CriMvEasyPlayer::supplyDataFromStreamer(void)
 {
@@ -2364,7 +2321,6 @@ void CriMvEasyPlayer::supplyDataFromStreamer(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x140022f20
 void CriMvEasyPlayer::executeFileReadServer(void)
 {
@@ -2407,7 +2363,6 @@ void CriMvEasyPlayer::executeFileReadServer(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400230a0
 void CriMvEasyPlayer::reinputDataForLooping(void)
 {
@@ -2435,7 +2390,6 @@ void CriMvEasyPlayer::reinputDataForLooping(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, vcall operand order)
 // @0x1400231d0
 void CriMvEasyPlayer::surveilTerminationInput(void)
 {
@@ -2491,7 +2445,6 @@ void CriMvEasyPlayer::surveilTerminationInput(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023330
 CriBool CriMvEasyPlayer::isEndReadFile(void)
 {
@@ -2634,7 +2587,6 @@ void CriMvEasyPlayer::executeFileOpenServer(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400238f0
 void CriMvEasyPlayer::ReplaceCenterVoice(CriSint32 track, CriError& err)
 {
@@ -2646,7 +2598,6 @@ void CriMvEasyPlayer::ReplaceCenterVoice(CriSint32 track, CriError& err)
     center_voice_track = track;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023940
 CriBool CriMvEasyPlayer::isAvailableCenterVoice(const CriMvStreamingParameters* stmprm)
 {
@@ -2669,7 +2620,6 @@ CriBool CriMvEasyPlayer::isAvailableCenterVoice(const CriMvStreamingParameters* 
     return 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400239e0
 CriBool CriMvEasyPlayer::isAvailableSubAudio(const CriMvStreamingParameters* stmprm)
 {
@@ -2692,7 +2642,6 @@ CriBool CriMvEasyPlayer::isAvailableSubAudio(const CriMvStreamingParameters* stm
     return 1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023a70
 CriBool CriMvEasyPlayer::attachCenterVoice(void)
 {
@@ -2704,7 +2653,6 @@ CriBool CriMvEasyPlayer::attachCenterVoice(void)
     return ok;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023ad0
 void CriMvEasyPlayer::detachCenterVoice(void)
 {
@@ -2752,7 +2700,6 @@ void CriMvEasyPlayer::DetachSubAudioInterface(CriError& err)
     subaudio = NULL;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023c20
 void CriMvEasyPlayer::SetSubAudioTrack(CriSint32 track, CriError& err)
 {
@@ -2760,7 +2707,6 @@ void CriMvEasyPlayer::SetSubAudioTrack(CriSint32 track, CriError& err)
     subaudio_track = track;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023c50
 CriSint32 CriMvEasyPlayer::GetSubAudioTrack(CriError& err)
 {
@@ -2785,7 +2731,6 @@ CriSint32 CriMvEasyPlayer::GetSubAudioTrack(CriError& err)
     return subaudio_track;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023d20
 CriBool CriMvEasyPlayer::attachSubAudioHandle(CriHeap heap)
 {
@@ -2797,7 +2742,6 @@ CriBool CriMvEasyPlayer::attachSubAudioHandle(CriHeap heap)
     return ok;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023d80
 void CriMvEasyPlayer::detachSubAudioHandle(void)
 {
@@ -2805,7 +2749,6 @@ void CriMvEasyPlayer::detachSubAudioHandle(void)
     attached_subaudio_track = -1;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023dc0
 void CriMvEasyPlayer::SetFileRequestCallback(void (*func)(CriMvEasyPlayer* mveasy, void* usrobj),
                                              void* usrobj, CriError& err)
@@ -2821,7 +2764,6 @@ void CriMvEasyPlayer::SetSeekPosition(CriSint32 frame_id, CriError& err)
     SetSeekFrameAndOffset(frame_id, 0, err);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023e50
 void CriMvEasyPlayer::SetSeekFrameAndOffset(CriSint32 frame_id, CriUint64 offset, CriError& err)
 {
@@ -2830,7 +2772,6 @@ void CriMvEasyPlayer::SetSeekFrameAndOffset(CriSint32 frame_id, CriUint64 offset
     seek_offset = offset;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023ea0
 void CriMvEasyPlayer::GetPlaybackInfo(void* info, CriError& err)
 {
@@ -2845,7 +2786,6 @@ CriSint32 CriMvEasyPlayer::GetLastFrameResult(CriError& err)
     return last_frame_result;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140023f20
 void CriMvEasyPlayer::SetNumberOfFramesForPrep(CriUint32 nframes, CriError& err)
 {
@@ -2856,7 +2796,6 @@ void CriMvEasyPlayer::SetNumberOfFramesForPrep(CriUint32 nframes, CriError& err)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 converts the unsigned 64-bit operands to float with its own sequence
 // @0x140023f70
 CriSint32 CriMvEasyPlayer::CalcFrameIdFromTime(CriUint64 count, CriUint64 unit, CriError& err)
 {
@@ -2876,7 +2815,6 @@ CriSint32 CriMvEasyPlayer::CalcFrameIdFromTime(CriUint64 count, CriUint64 unit, 
     return frame_id;
 }
 
-// MS2-FUNCTIONAL: VS2008 converts the unsigned 64-bit operands to and from float with its own sequence
 // @0x140024040
 CriUint64 CriMvEasyPlayer::CalcTimeFromFrameId(CriSint32 frame_id, CriUint64 unit, CriError& err)
 {
@@ -2994,7 +2932,6 @@ CriSint32 CriMvEasyPlayer::SearchPrevEventPointByTime(CriUint64 count, CriUint64
     return frame_id;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x1400245b0
 CriMvCuePointInfo* CriMvEasyPlayer::GetCuePointInfo(CriError& err)
 {
@@ -3006,7 +2943,6 @@ CriMvCuePointInfo* CriMvEasyPlayer::GetCuePointInfo(CriError& err)
     return &mvply->cuepoint;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024610
 void CriMvEasyPlayer::SetCuePointCallback(void (*func)(CriMvEasyPlayer* mveasy, CriMvEventPoint* eventinfo, void* usrobj),
                                           void* usrobj,
@@ -3145,7 +3081,6 @@ void CriMvEasyPlayer::executeCuePointServer(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024bf0
 void CriMvEasyPlayer::SetStopCompleteCallback(void (*func)(CriMvEasyPlayer* mveasy, void* usrobj), void* usrobj,
                                               CriError& err)
@@ -3155,7 +3090,6 @@ void CriMvEasyPlayer::SetStopCompleteCallback(void (*func)(CriMvEasyPlayer* mvea
     stopcmpl_usrobj = usrobj;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024c40
 void CriMvEasyPlayer::SetUsableProcessors_PC(int num_threads, const unsigned long* affinity_masks, int priority,
                                              CriError& err)
@@ -3195,7 +3129,6 @@ void CriMvEasyPlayer::notifyErrorB(void* obj, const CriChar8* msg, CriSint32 p1)
     FUN_140038ce4(0, msg, p1, 0, obj);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024de0
 void CriMvEasyPlayer::setErrorMessage(const CriChar8* msg, const CriChar8* detail)
 {
@@ -3208,13 +3141,11 @@ void CriMvEasyPlayer::setErrorMessage(const CriChar8* msg, const CriChar8* detai
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024e80
 CriMvEasyPlayer::CriMvEasyPlayer()
 {
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024ea0
 CriMvEasyPlayer::~CriMvEasyPlayer()
 {
@@ -3243,7 +3174,6 @@ void CriMvEasyPlayer::DeferFileRequest(CriError& err)
 
 namespace CriMv {
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024f80
 void Initialize_Common(void)
 {
@@ -3254,7 +3184,6 @@ void Initialize_Common(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140024fb0
 void Finalize(CriError& err)
 {
@@ -3279,7 +3208,6 @@ CriBool IsLibraryInitialized(void)
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140025010
 CriSint32 CalcHandleWorkSize(CriError& err)
 {
@@ -3313,7 +3241,6 @@ void InitializeFrame32bitARGB(void)
 
 } // namespace CriMv
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026dd0
 CriBool CriMvEasyPlayer::GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize,
                                                    CriMvFrameInfo& frameinfo, CriError& err)
@@ -3328,7 +3255,6 @@ CriBool CriMvEasyPlayer::GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32
     return ret;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026e60
 CriSint32 CriMvEasyPlayer::CopyFrameToBufferARGB32(CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize,
                                                    const CriMvYuvBuffers* srcbufs, const CriMvFrameInfo* src_vinf,
@@ -3341,7 +3267,6 @@ CriSint32 CriMvEasyPlayer::CopyFrameToBufferARGB32(CriUint8* dstbuf, CriUint32 d
 
 namespace CriMv {
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026ed0
 void Initialize(CriError& err)
 {
@@ -3356,7 +3281,6 @@ void Initialize(CriError& err)
     InitializeMana(err);
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026f40
 void AttachSofdecDecoder(CriError& err)
 {
@@ -3369,7 +3293,6 @@ void FUN_140026f70(void)
 {
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026f80
 CriUint32 CalcMovieHandleWork(CriUint32 max_num, CriError& err)
 {
@@ -3378,7 +3301,6 @@ CriUint32 CalcMovieHandleWork(CriUint32 max_num, CriError& err)
     return size;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140026fc0
 void SetupMovieHandleWork(CriUint32 max_num, void* work, CriUint32 work_size, CriError& err)
 {
@@ -3390,7 +3312,6 @@ void SetupMovieHandleWork(CriUint32 max_num, void* work, CriUint32 work_size, Cr
     }
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, add/sub vs inc/dec)
 // @0x140027020
 CriUint32 GetMaxNumberOfHandles(CriError& err)
 {

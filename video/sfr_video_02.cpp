@@ -2047,30 +2047,30 @@ static inline void NetStreamNotImplemented(Scaleform::GFx::AS3::Object* self, co
     self->GetVM().GetUI().Output(Scaleform::GFx::AS3::FlashUI::Output_Warning, msg);
 }
 
-// MS2-FUNCTIONAL: NetStream.bufferTime getter.
+// NetStream.bufferTime getter.
 // @0x140012d90
 void FUN_140012d90(void* self, double* result) { *result = *(float*)((Scaleform::UByte*)self + 0x64); }
-// MS2-FUNCTIONAL: NetStream.loop getter.
+// NetStream.loop getter.
 // @0x140012da0
 void FUN_140012da0(void* self, bool* result) { *result = *(bool*)((Scaleform::UByte*)self + 0x74); }
-// MS2-FUNCTIONAL: NetStream.audioTrack getter.
+// NetStream.audioTrack getter.
 // @0x140012db0
 void FUN_140012db0(void* self, double* result) { *result = *(int*)((Scaleform::UByte*)self + 0x78); }
-// MS2-FUNCTIONAL: NetStream.subAudioTrack getter.
+// NetStream.subAudioTrack getter.
 // @0x140012dc0
 void FUN_140012dc0(void* self, double* result) { *result = *(int*)((Scaleform::UByte*)self + 0x7c); }
-// MS2-FUNCTIONAL: NetStream.voiceTrack getter.
+// NetStream.voiceTrack getter.
 // @0x140012dd0
 void FUN_140012dd0(void* self, double* result) { *result = *(int*)((Scaleform::UByte*)self + 0x80); }
-// MS2-FUNCTIONAL: NetStream.subtitleTrack getter.
+// NetStream.subtitleTrack getter.
 // @0x140012df0
 void FUN_140012df0(void* self, double* result) { *result = *(int*)((Scaleform::UByte*)self + 0x84); }
 
-// MS2-FUNCTIONAL: NetStream.bufferLength getter (unsupported).
+// NetStream.bufferLength getter (unsupported).
 // @0x1400141b0
 void FUN_1400141b0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::bufferLengthGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.bufferTime setter.
+// NetStream.bufferTime setter.
 // @0x1400141d0
 void FUN_1400141d0(void* self, const void* result, double value)
 {
@@ -2078,75 +2078,75 @@ void FUN_1400141d0(void* self, const void* result, double value)
     *(float*)((Scaleform::UByte*)self + 0x64) = (float)value;
     NetStreamProvider(self)->SetBufferTime((float)value);
 }
-// MS2-FUNCTIONAL: NetStream.bytesLoaded getter (unsupported).
+// NetStream.bytesLoaded getter (unsupported).
 // @0x1400141f0
 void FUN_1400141f0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::bytesLoadedGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.bytesTotal getter (unsupported).
+// NetStream.bytesTotal getter (unsupported).
 // @0x140014210
 void FUN_140014210(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::bytesTotalGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.checkPolicyFile getter (unsupported).
+// NetStream.checkPolicyFile getter (unsupported).
 // @0x140014230
 void FUN_140014230(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::checkPolicyFileGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.checkPolicyFile setter (unsupported).
+// NetStream.checkPolicyFile setter (unsupported).
 // @0x140014250
 void FUN_140014250(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::checkPolicyFileSet() is not implemented\n"); }
-// MS2-FUNCTIONAL: the stream's total length in seconds (the provider keeps milliseconds at +0x58).
+// the stream's total length in seconds (the provider keeps milliseconds at +0x58).
 // @0x140014270
 void FUN_140014270(void* self, double* result)
 {
     *result = (float)*(unsigned*)((Scaleform::UByte*)NetStreamProvider(self) + 0x58) / 1000.0f;
 }
-// MS2-FUNCTIONAL: NetStream.liveDelay getter (unsupported).
+// NetStream.liveDelay getter (unsupported).
 // @0x1400142a0
 void FUN_1400142a0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::liveDelayGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.objectEncoding getter (unsupported).
+// NetStream.objectEncoding getter (unsupported).
 // @0x1400142c0
 void FUN_1400142c0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::objectEncodingGet() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.attachAudio (unsupported).
+// NetStream.attachAudio (unsupported).
 // @0x1400143c0
 void FUN_1400143c0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::attachAudio() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.attachCamera (unsupported).
+// NetStream.attachCamera (unsupported).
 // @0x1400143e0
 void FUN_1400143e0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::attachCamera() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.pause.
+// NetStream.pause.
 // @0x140014440
 void FUN_140014440(void* self)
 {
     *(bool*)((Scaleform::UByte*)self + 0x60) = true;
     NetStreamProvider(self)->Pause(true);
 }
-// MS2-FUNCTIONAL: NetStream.publish (unsupported).
+// NetStream.publish (unsupported).
 // @0x140014580
 void FUN_140014580(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::publish() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.receiveAudio (unsupported).
+// NetStream.receiveAudio (unsupported).
 // @0x1400145a0
 void FUN_1400145a0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::receiveAudio() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.receiveVideo (unsupported).
+// NetStream.receiveVideo (unsupported).
 // @0x1400145c0
 void FUN_1400145c0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::receiveVideo() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.receiveVideoFPS (unsupported).
+// NetStream.receiveVideoFPS (unsupported).
 // @0x1400145e0
 void FUN_1400145e0(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::receiveVideoFPS() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.resume.
+// NetStream.resume.
 // @0x140014600
 void FUN_140014600(void* self)
 {
     *(bool*)((Scaleform::UByte*)self + 0x60) = false;
     NetStreamProvider(self)->Pause(false);
 }
-// MS2-FUNCTIONAL: NetStream.seek(offset) against the movie the VM runs.
+// NetStream.seek(offset) against the movie the VM runs.
 // @0x140014620
 void FUN_140014620(Scaleform::GFx::AS3::Object* self, const void* result, double offset)
 {
@@ -2154,15 +2154,15 @@ void FUN_140014620(Scaleform::GFx::AS3::Object* self, const void* result, double
     NetStreamProvider(self)->Seek((float)offset,
         static_cast<Scaleform::GFx::AS3::ASVM&>(self->GetVM()).GetMovieImpl());
 }
-// MS2-FUNCTIONAL: NetStream.send (unsupported).
+// NetStream.send (unsupported).
 // @0x140014640
 void FUN_140014640(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::send() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.setDRMAuthenticationCredentials (unsupported).
+// NetStream.setDRMAuthenticationCredentials (unsupported).
 // @0x140014660
 void FUN_140014660(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method NetStream::setDRMAuthenticationCredentials() is not implemented\n"); }
-// MS2-FUNCTIONAL: NetStream.togglePause.
+// NetStream.togglePause.
 // @0x140014680
 void FUN_140014680(void* self)
 {
@@ -2170,7 +2170,7 @@ void FUN_140014680(void* self)
     paused = !paused;
     NetStreamProvider(self)->Pause(paused);
 }
-// MS2-FUNCTIONAL: NetStream.loop setter.
+// NetStream.loop setter.
 // @0x1400146a0
 void FUN_1400146a0(void* self, const void* result, bool value)
 {
@@ -2178,7 +2178,7 @@ void FUN_1400146a0(void* self, const void* result, bool value)
     *(bool*)((Scaleform::UByte*)self + 0x74) = value;
     NetStreamProvider(self)->SetLoopFlag(value);
 }
-// MS2-FUNCTIONAL: NetStream.audioTrack setter.
+// NetStream.audioTrack setter.
 // @0x1400146f0
 void FUN_1400146f0(void* self, const void* result, double value)
 {
@@ -2186,7 +2186,7 @@ void FUN_1400146f0(void* self, const void* result, double value)
     *(int*)((Scaleform::UByte*)self + 0x78) = (int)value;
     NetStreamProvider(self)->SetAudioTrack((int)value);
 }
-// MS2-FUNCTIONAL: NetStream.subAudioTrack setter.
+// NetStream.subAudioTrack setter.
 // @0x140014700
 void FUN_140014700(void* self, const void* result, double value)
 {
@@ -2194,7 +2194,7 @@ void FUN_140014700(void* self, const void* result, double value)
     *(int*)((Scaleform::UByte*)self + 0x7c) = (int)value;
     NetStreamProvider(self)->SetSubAudioTrack((int)value);
 }
-// MS2-FUNCTIONAL: NetStream.voiceTrack setter.
+// NetStream.voiceTrack setter.
 // @0x140014710
 void FUN_140014710(void* self, const void* result, double value)
 {
@@ -2202,7 +2202,7 @@ void FUN_140014710(void* self, const void* result, double value)
     *(int*)((Scaleform::UByte*)self + 0x80) = (int)value;
     NetStreamProvider(self)->ReplaceCenterVoice((int)value);
 }
-// MS2-FUNCTIONAL: NetStream.reloadThresholdTime setter.
+// NetStream.reloadThresholdTime setter.
 // @0x1400147d0
 void FUN_1400147d0(void* self, const void* result, double value)
 {
@@ -2210,7 +2210,7 @@ void FUN_1400147d0(void* self, const void* result, double value)
     *(float*)((Scaleform::UByte*)self + 0x68) = (float)value;
     NetStreamProvider(self)->SetReloadThresholdTime((float)value);
 }
-// MS2-FUNCTIONAL: NetStream.numberOfFramePools setter.
+// NetStream.numberOfFramePools setter.
 // @0x1400147f0
 void FUN_1400147f0(void* self, const void* result, double value)
 {
@@ -2219,7 +2219,7 @@ void FUN_1400147f0(void* self, const void* result, double value)
     *(unsigned*)((Scaleform::UByte*)self + 0x6c) = pools;
     NetStreamProvider(self)->SetNumberOfFramePools(pools);
 }
-// MS2-FUNCTIONAL: NetStream.openTimeout setter.
+// NetStream.openTimeout setter.
 // @0x140014810
 void FUN_140014810(void* self, const void* result, double value)
 {
@@ -2227,7 +2227,7 @@ void FUN_140014810(void* self, const void* result, double value)
     *(float*)((Scaleform::UByte*)self + 0x70) = (float)value;
     NetStreamProvider(self)->SetOpenURLTimeout((float)value);
 }
-// MS2-FUNCTIONAL: NetStream.resetDRMVouchers class method (unsupported).
+// NetStream.resetDRMVouchers class method (unsupported).
 // @0x140014b50
 void FUN_140014b50(Scaleform::GFx::AS3::Object* self)
 { NetStreamNotImplemented(self, "The method class_::NetStream::resetDRMVouchers() is not implemented\n"); }
@@ -3649,19 +3649,19 @@ static void* Video02ThunkThis(const void* thisValue, int adjust)
     return *reinterpret_cast<char* const*>(static_cast<const char*>(thisValue) + 0x10) + adjust;
 }
 
-// MS2-FUNCTIONAL: returns the pointer member at +0xf0.
+// returns the pointer member at +0xf0.
 // @0x140010130
 void* FUN_140010130(void* self) { return *reinterpret_cast<void**>(static_cast<char*>(self) + 0xf0); }
 
-// MS2-FUNCTIONAL: object type tag 7.
+// object type tag 7.
 // @0x140010140
 int FUN_140010140(void*) { return 7; }
 
-// MS2-FUNCTIONAL: object type tag 0x21.
+// object type tag 0x21.
 // @0x140011b80
 int FUN_140011b80(void*) { return 0x21; }
 
-// MS2-FUNCTIONAL: forwards to virtual slot 11 with the member block at +0xe8 of the second argument.
+// forwards to virtual slot 11 with the member block at +0xe8 of the second argument.
 // @0x140011b90
 void* FUN_140011b90(void* self, void* owner, void* a2, void* a3)
 {
@@ -3669,14 +3669,14 @@ void* FUN_140011b90(void* self, void* owner, void* a2, void* a3)
     return (*reinterpret_cast<Slot**>(self))[11](self, static_cast<char*>(owner) + 0xe8, a2, a3);
 }
 
-// MS2-FUNCTIONAL: GASPrototypeBase::AddInterface on the prototype base at +0x48.
+// GASPrototypeBase::AddInterface on the prototype base at +0x48.
 // @0x140011ba0
 bool FUN_140011ba0(void* self, void* context, void* index, void* function)
 {
     return FUN_14292f250(static_cast<char*>(self) + 0x48, context, index, function);
 }
 
-// MS2-FUNCTIONAL: InstanceOf: the object itself, else GASPrototypeBase::DoesImplement on the base at +0x68.
+// InstanceOf: the object itself, else GASPrototypeBase::DoesImplement on the base at +0x68.
 // @0x140011bb0
 bool FUN_140011bb0(void* self, void* env, void* prototype)
 {
@@ -3685,60 +3685,60 @@ bool FUN_140011bb0(void* self, void* env, void* prototype)
     return FUN_1429396a0(static_cast<char*>(self) + 0x68, env, prototype);
 }
 
-// MS2-FUNCTIONAL: always true.
+// always true.
 // @0x140011bd0
 bool FUN_140011bd0(void*) { return true; }
 
-// MS2-FUNCTIONAL: instance traits name.
+// instance traits name.
 // @0x140012ef0
 const char* FUN_140012ef0(void*) { return "InstanceTraits::NetStream"; }
 
-// MS2-FUNCTIONAL: class traits name.
+// class traits name.
 // @0x140012f40
 const char* FUN_140012f40(void*) { return "Classes::NetStream"; }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b276f8.
+// AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b276f8.
 // @0x140013230
 void FUN_140013230(void*, void*, const void* thisValue, void* result, unsigned argc, const void* argv)
 {
     reinterpret_cast<Video02ArgsNative>(DAT_143b276f8)(Video02ThunkThis(thisValue, DAT_143b27700), result, argc, argv);
 }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b274a8.
+// AS3 thunk, native (this, result, argc, argv) through the member pointer at 0x143b274a8.
 // @0x140013250
 void FUN_140013250(void*, void*, const void* thisValue, void* result, unsigned argc, const void* argv)
 {
     reinterpret_cast<Video02ArgsNative>(DAT_143b274a8)(Video02ThunkThis(thisValue, DAT_143b274b0), result, argc, argv);
 }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27558.
+// AS3 thunk, native (this, result) through the member pointer at 0x143b27558.
 // @0x1400133e0
 void FUN_1400133e0(void*, void*, const void* thisValue, void* result, unsigned, const void*)
 {
     reinterpret_cast<Video02ResultNative>(DAT_143b27558)(Video02ThunkThis(thisValue, DAT_143b27560), result);
 }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27498.
+// AS3 thunk, native (this, result) through the member pointer at 0x143b27498.
 // @0x140013400
 void FUN_140013400(void*, void*, const void* thisValue, void* result, unsigned, const void*)
 {
     reinterpret_cast<Video02ResultNative>(DAT_143b27498)(Video02ThunkThis(thisValue, DAT_143b274a0), result);
 }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b275d8.
+// AS3 thunk, native (this, result) through the member pointer at 0x143b275d8.
 // @0x140013420
 void FUN_140013420(void*, void*, const void* thisValue, void* result, unsigned, const void*)
 {
     reinterpret_cast<Video02ResultNative>(DAT_143b275d8)(Video02ThunkThis(thisValue, DAT_143b275e0), result);
 }
 
-// MS2-FUNCTIONAL: AS3 thunk, native (this, result) through the member pointer at 0x143b27668.
+// AS3 thunk, native (this, result) through the member pointer at 0x143b27668.
 // @0x140013440
 void FUN_140013440(void*, void*, const void* thisValue, void* result, unsigned, const void*)
 {
     reinterpret_cast<Video02ResultNative>(DAT_143b27668)(Video02ThunkThis(thisValue, DAT_143b27670), result);
 }
 
-// MS2-FUNCTIONAL: instance name.
+// instance name.
 // @0x1400141a0
 const char* FUN_1400141a0(void*) { return "Instances::fl_net::NetStream"; }

@@ -929,20 +929,20 @@ void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3
 }
 
 namespace Scaleform { namespace GFx { namespace Video { class VideoCharacter; }}}
-// MS2-FUNCTIONAL: Video.videoHeight getter (the display height kept as a double at +0x70).
+// Video.videoHeight getter (the display height kept as a double at +0x70).
 // @0x14001a060
 void FUN_14001a060(void* self, int* result) { *result = (int)*(double*)((Scaleform::UByte*)self + 0x70); }
-// MS2-FUNCTIONAL: Video.videoWidth getter (the display width kept as a double at +0x68).
+// Video.videoWidth getter (the display width kept as a double at +0x68).
 // @0x14001a070
 void FUN_14001a070(void* self, int* result) { *result = (int)*(double*)((Scaleform::UByte*)self + 0x68); }
-// MS2-FUNCTIONAL: Video.attachCamera (unsupported).
+// Video.attachCamera (unsupported).
 // @0x14001a3f0
 void FUN_14001a3f0(Scaleform::GFx::AS3::Object* self)
 {
     self->GetVM().GetUI().Output(Scaleform::GFx::AS3::FlashUI::Output_Warning,
                                  "The method Video::attachCamera() is not implemented\n");
 }
-// MS2-FUNCTIONAL: Video.clear: releases the character's current image (sfr_video_02).
+// Video.clear: releases the character's current image (sfr_video_02).
 // @0x14001a460
 void FUN_14001a460(void* self)
 {

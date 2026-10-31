@@ -174,21 +174,21 @@ void FUN_140045474(void*);
 void FUN_14029dd60(void*, const CriChar8*, const void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: send the supplied CRI diagnostic through the movie error dispatcher.
+// send the supplied CRI diagnostic through the movie error dispatcher.
 // @0x1400410d0
 void FUN_1400410d0(void* owner, const CriChar8* message, CriUint32 value)
 {
     FUN_140038ce4(0, message, (CriSint32)value, 0, owner);
 }
 
-// MS2-FUNCTIONAL: the second CRI diagnostic entry point forwards the same tuple to the shared dispatcher.
+// the second CRI diagnostic entry point forwards the same tuple to the shared dispatcher.
 // @0x140041110
 void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value)
 {
     FUN_140038ce4(0, message, (CriSint32)value, 0, owner);
 }
 
-// MS2-FUNCTIONAL: report the picture decode failure through the generic CRI error callback.
+// report the picture decode failure through the generic CRI error callback.
 // @0x140041190
 void FUN_140041190(void* object, CriSint32 value)
 {
@@ -197,7 +197,7 @@ void FUN_140041190(void* object, CriSint32 value)
     FUN_1400410d0(NULL, "E07111401M : An error occurred while decoding picture data in MPV module.", 0);
 }
 
-// MS2-FUNCTIONAL: forward the contained synchronization object to its release helper when present.
+// forward the contained synchronization object to its release helper when present.
 // @0x1400435d0
 void FUN_1400435d0(void* object)
 {
@@ -208,7 +208,7 @@ void FUN_1400435d0(void* object)
         FUN_140053570((__int64)(((SyncHolder*)object)->Sync));
 }
 
-// MS2-FUNCTIONAL: increment the movie player's paired audio and video progress counters.
+// increment the movie player's paired audio and video progress counters.
 // @0x14003ebe0
 void FUN_14003ebe0(void* object)
 {
@@ -218,7 +218,7 @@ void FUN_14003ebe0(void* object)
     ++state->Video;
 }
 
-// MS2-FUNCTIONAL: accept only USF chunks whose parsed standard header has no special record flag.
+// accept only USF chunks whose parsed standard header has no special record flag.
 // @0x14003eeb0
 CriBool FUN_14003eeb0(const void* input)
 {
@@ -232,7 +232,7 @@ CriBool FUN_14003eeb0(const void* input)
         return 1;
 }
 
-// MS2-FUNCTIONAL: mark the input object active and release its retained work buffer when present.
+// mark the input object active and release its retained work buffer when present.
 // @0x14003d8f0
 void FUN_14003d8f0(void* object)
 {
@@ -244,7 +244,7 @@ void FUN_14003d8f0(void* object)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: initialize the CRI timer record from the system clock and clear its elapsed state.
+// initialize the CRI timer record from the system clock and clear its elapsed state.
 // @0x140041a60
 void FUN_140041a60(void* object)
 {
@@ -270,7 +270,7 @@ void FUN_140041a60(void* object)
     state->Active = 1;
 }
 
-// MS2-FUNCTIONAL: translate the reader interface's three states into the movie's public status values.
+// translate the reader interface's three states into the movie's public status values.
 // @0x140041300
 CriUint32 FUN_140041300(void* object)
 {
@@ -294,7 +294,7 @@ CriUint32 FUN_140041300(void* object)
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: flag the video player and notify its retained work object.
+// flag the video player and notify its retained work object.
 // @0x140043680
 void FUN_140043680(void* object)
 {
@@ -334,7 +334,7 @@ void FUN_140046598(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: report whether a stream-joint has completed its terminal audio transition.
+// report whether a stream-joint has completed its terminal audio transition.
 // @0x140043810
 CriBool FUN_140043810(void* object, void* owner)
 {
@@ -359,7 +359,7 @@ CriBool FUN_140043810(void* object, void* owner)
     return 1;
 }
 
-// MS2-FUNCTIONAL: check one selected audio decoder, treating a missing list as ready.
+// check one selected audio decoder, treating a missing list as ready.
 // @0x140042df0
 CriBool FUN_140042df0(void* decoders, void* owner, CriSint32 index)
 {
@@ -368,7 +368,7 @@ CriBool FUN_140042df0(void* decoders, void* owner, CriSint32 index)
     return FUN_140043810(((void**)decoders)[index], owner);
 }
 
-// MS2-FUNCTIONAL: forward a selected audio decoder's channel query.
+// forward a selected audio decoder's channel query.
 // @0x140042f00
 CriUint32 FUN_140042f00(void* decoders, CriSint32 index, void* player, CriUint32 channel)
 {
@@ -383,7 +383,7 @@ void FUN_1400469a4(CriChar8* buffer, size_t capacity, const CriChar8* format, ..
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: return the selected decoder's available sample count in player time units.
+// return the selected decoder's available sample count in player time units.
 // @0x14003d9d0
 CriUint32 FUN_14003d9d0(void* object)
 {
@@ -403,7 +403,7 @@ CriUint32 FUN_14003d9d0(void* object)
     return samples;
 }
 
-// MS2-FUNCTIONAL: return ready when every stored audio decoder has completed its terminal transition.
+// return ready when every stored audio decoder has completed its terminal transition.
 // @0x140042d70
 CriBool FUN_140042d70(void* decoderList, void* owner)
 {
@@ -421,7 +421,7 @@ CriBool FUN_140042d70(void* decoderList, void* owner)
     return 1;
 }
 
-// MS2-FUNCTIONAL: forward one decoder's interleaved output request.
+// forward one decoder's interleaved output request.
 // @0x140042e40
 CriUint32 FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32 channels,
                         void* output, CriUint32 flags, CriUint32* result)
@@ -429,7 +429,7 @@ CriUint32 FUN_140042e40(void* decoders, CriSint32 index, void* player, CriUint32
     return FUN_140042f40(((void**)decoders)[index], player, channels, output, flags, result);
 }
 
-// MS2-FUNCTIONAL: forward one decoder's planar output request.
+// forward one decoder's planar output request.
 // @0x140042ea0
 CriUint32 FUN_140042ea0(void* decoders, CriSint32 index, void* player, CriUint32 channels,
                         void* output, CriUint32 flags, CriUint32* result)
@@ -445,7 +445,7 @@ void FUN_1400464a8(CriUint32 first, CriUint32 second);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: test stream readiness after the active decoder state and buffered input are checked.
+// test stream readiness after the active decoder state and buffered input are checked.
 // @0x140040de0
 CriBool FUN_140040de0(void* object)
 {
@@ -465,7 +465,7 @@ CriBool FUN_140040de0(void* object)
     return 1;
 }
 
-// MS2-FUNCTIONAL: determine whether a USF chunk contains payload beyond its declared standard-header extent.
+// determine whether a USF chunk contains payload beyond its declared standard-header extent.
 // @0x14003d6c0
 CriBool FUN_14003d6c0(const void* input)
 {
@@ -480,7 +480,7 @@ CriBool FUN_14003d6c0(const void* input)
 }
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-// MS2-FUNCTIONAL: copy the stream-joint setup header into a zeroed 0xb0-byte local work record.
+// copy the stream-joint setup header into a zeroed 0xb0-byte local work record.
 // @0x14003e6a0
 void FUN_14003e6a0(void* target, const CriUint64* settings)
 {
@@ -493,7 +493,7 @@ void FUN_14003e6a0(void* target, const CriUint64* settings)
 }
 #pragma intrinsic(memset)
 
-// MS2-FUNCTIONAL: release the pending synchronization object for each member of the audio decoder list.
+// release the pending synchronization object for each member of the audio decoder list.
 // @0x1400427b0
 void FUN_1400427b0(void* decoderList)
 {
@@ -502,7 +502,7 @@ void FUN_1400427b0(void* decoderList)
         FUN_1400435d0(((DecoderList*)decoderList)->Decoders[index]);
 }
 
-// MS2-FUNCTIONAL: notify every decoder in the audio list that its player is active.
+// notify every decoder in the audio list that its player is active.
 // @0x140042880
 void FUN_140042880(void* decoderList)
 {
@@ -513,7 +513,7 @@ void FUN_140042880(void* decoderList)
         FUN_140043680(((DecoderList*)decoderList)->Decoders[index]);
 }
 
-// MS2-FUNCTIONAL: release each non-null stream joint owned by the audio track set.
+// release each non-null stream joint owned by the audio track set.
 // @0x140043610
 void FUN_140043610(void* trackSet)
 {
@@ -540,7 +540,7 @@ void FUN_1400458b8(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: release the manager's input joint and all child audio decoder track sets.
+// release the manager's input joint and all child audio decoder track sets.
 // @0x140042800
 void FUN_140042800(void* manager)
 {
@@ -649,7 +649,7 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: retains CRI's conditional decoder attachment followed by common Movie initialization.
+// retains CRI's conditional decoder attachment followed by common Movie initialization.
 // @0x14003bea0
 void CriMv::InitializeMana(CriError& error)
 {
@@ -766,7 +766,7 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: CRI Movie computes the caller's decoder work size from the requested handle count.
+// CRI Movie computes the caller's decoder work size from the requested handle count.
 // @0x14003bf30
 CriSint32 criVmpv_CalcMovieHandleWork(CriSint32 count)
 {
@@ -776,7 +776,7 @@ CriSint32 criVmpv_CalcMovieHandleWork(CriSint32 count)
     return work;
 }
 
-// MS2-FUNCTIONAL: install the caller's VMPV work buffer after validating its size and global handle state.
+// install the caller's VMPV work buffer after validating its size and global handle state.
 // @0x14003bf80
 CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
 {
@@ -804,14 +804,14 @@ CriBool FUN_14003bf80(CriUint32 count, void* work, CriUint32 workSize)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: return the configured movie handle limit or the default limit of sixteen.
+// return the configured movie handle limit or the default limit of sixteen.
 // @0x14003c030
 CriUint32 criVmpv_GetMaxNumberOfHandles(void)
 {
     return DAT_143b27c70 == 0 ? 0x10 : DAT_143b27c6c;
 }
 
-// MS2-FUNCTIONAL: expose the configured movie handle count and work buffer.
+// expose the configured movie handle count and work buffer.
 // @0x14003c060
 void* FUN_14003c060(CriUint32* count)
 {
@@ -821,14 +821,14 @@ void* FUN_14003c060(CriUint32* count)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: include the configured internal frame pool in the requested count.
+// include the configured internal frame pool in the requested count.
 // @0x14003c350
 CriSint32 decideInternalFramePoolNum(CriSint32 count)
 {
     return count == 0 ? (CriSint32)DAT_143b27c60 : count - 1 + (CriSint32)DAT_143b27c60;
 }
 
-// MS2-FUNCTIONAL: set the VMPV handle's processor-mask condition on its MPV instance.
+// set the VMPV handle's processor-mask condition on its MPV instance.
 // @0x14003c9a0
 void criVmpv_SetProcessorMask(void* handle, CriUint32 mask)
 {
@@ -849,7 +849,7 @@ struct CriPostParameter
     CriSint32 Magic;
 };
 
-// MS2-FUNCTIONAL: pack up to three horizontal and vertical DLG parameters for the MPV core.
+// pack up to three horizontal and vertical DLG parameters for the MPV core.
 // @0x14003ca00
 void FUN_14003ca00(void* context, CriSint32 count, const CriSint32* horizontal,
                    const CriSint32* vertical)
@@ -886,7 +886,7 @@ struct CriVmpvHnFields
     CriUint32 FrameRate;                    // 0x38
 };
 
-// MS2-FUNCTIONAL: return the VMPV handle's current status field.
+// return the VMPV handle's current status field.
 // @0x14003cc70
 CriSint32 criVmpv_GetStatus(const void* handle)
 {
@@ -894,7 +894,7 @@ CriSint32 criVmpv_GetStatus(const void* handle)
     return hn->Status;
 }
 
-// MS2-FUNCTIONAL: create and configure the MPV instance owned by a VMPV handle.
+// create and configure the MPV instance owned by a VMPV handle.
 // @0x14003c8d0
 CriBool createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height, CriUint32 frames)
 {
@@ -1027,7 +1027,7 @@ void* FUN_14003c390(void* heap, const CriUint32* config)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: release MPV and stream-memory subsystems when the final initializer reference ends.
+// release MPV and stream-memory subsystems when the final initializer reference ends.
 // @0x14003c130
 void FUN_14003c130(void)
 {
@@ -1042,7 +1042,7 @@ void FUN_14003c130(void)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: size the VMPV frame pool, output records, and its two stream-joint work areas.
+// size the VMPV frame pool, output records, and its two stream-joint work areas.
 // @0x14003c190
 CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFrames)
 {
@@ -1088,7 +1088,7 @@ CriSint32 FUN_14003c190(CriSint32 width, CriSint32 height, CriSint32 requestedFr
     return work;
 }
 
-// MS2-FUNCTIONAL: release the MPV handle, stream joints, frame buffers, and owning VMPV allocation.
+// release the MPV handle, stream joints, frame buffers, and owning VMPV allocation.
 // @0x14003cae0
 void FUN_14003cae0(void* handle)
 {
@@ -1141,7 +1141,7 @@ void FUN_14003cae0(void* handle)
 }
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
-// MS2-FUNCTIONAL: drain pending VMPV input, reset frame records, and restore the ready handle state.
+// drain pending VMPV input, reset frame records, and restore the ready handle state.
 // @0x14003cdd0
 void FUN_14003cdd0(void* handle)
 {
@@ -1198,7 +1198,7 @@ void FUN_14003cdd0(void* handle)
 }
 #pragma intrinsic(memset)
 
-// MS2-FUNCTIONAL: advance VMPV input consumption and move the handle through decode and ready states.
+// advance VMPV input consumption and move the handle through decode and ready states.
 // @0x14003cca0
 void FUN_14003cca0(void* handle)
 {
@@ -1246,7 +1246,7 @@ void FUN_14003cca0(void* handle)
     }
 }
 
-// MS2-FUNCTIONAL: append a decoded-frame timestamp to the bounded history ring.
+// append a decoded-frame timestamp to the bounded history ring.
 // @0x14003d550
 void FUN_14003d550(void* handle)
 {
@@ -1301,7 +1301,7 @@ void FUN_14003d550(void* handle)
         base[slot].End = ((PlayerTimeline*)handle)->Frame + ((PlayerTimeline*)handle)->Offset;
 }
 
-// MS2-FUNCTIONAL: publish the primary video and alpha output buffers on a movie handle.
+// publish the primary video and alpha output buffers on a movie handle.
 // @0x14003d4b0
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
 {
@@ -1311,7 +1311,7 @@ void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer)
     hn->AlphaBuffer = alphaBuffer;
 }
 
-// MS2-FUNCTIONAL: publish the secondary video and alpha output buffers on a movie handle.
+// publish the secondary video and alpha output buffers on a movie handle.
 // @0x14003d500
 void FUN_14003d500(void* handle, void* videoBuffer, void* alphaBuffer)
 {
@@ -1321,7 +1321,7 @@ void FUN_14003d500(void* handle, void* videoBuffer, void* alphaBuffer)
     hn->AlphaBuffer = alphaBuffer;
 }
 
-// MS2-FUNCTIONAL: return the frame pointer currently stored in a CRI VMPV handle.
+// return the frame pointer currently stored in a CRI VMPV handle.
 // @0x14003d940
 void* FUN_14003d940(void* handle)
 {
@@ -1329,7 +1329,7 @@ void* FUN_14003d940(void* handle)
     return fields[0x180 / sizeof(void*)];
 }
 
-// MS2-FUNCTIONAL: mark the VMPV handle's frame-ready flag.
+// mark the VMPV handle's frame-ready flag.
 // @0x14003d970
 void FUN_14003d970(void* handle)
 {
@@ -1337,7 +1337,7 @@ void FUN_14003d970(void* handle)
     hn->FrameReady = 1;
 }
 
-// MS2-FUNCTIONAL: return the number of picture records held by a video decoder.
+// return the number of picture records held by a video decoder.
 // @0x14003d9a0
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
 {
@@ -1349,7 +1349,7 @@ CriUint32 criVdecCmn_GetNumPictureData(const void* decoder)
 int FUN_1400532e0(int);  // C3: the definition's signature
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: size the CRI decoder's rolling output records and per-channel stream buffers.
+// size the CRI decoder's rolling output records and per-channel stream buffers.
 // @0x140042150
 CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
 {
@@ -1385,7 +1385,7 @@ CriSint32 FUN_140042150(const void* decoder, const CriUint32* config)
 
 void FUN_14257da20(void*, void*);
 
-// MS2-FUNCTIONAL: resolve and cache the decoder instance from its media interface and owner state.
+// resolve and cache the decoder instance from its media interface and owner state.
 // @0x140041910
 void* FUN_140041910(void** decoderObject, void** mediaInterface)
 {
@@ -1443,7 +1443,7 @@ struct CriDecoderWrapper
 };
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: query the status callback in the alpha decoder interface.
+// query the status callback in the alpha decoder interface.
 // @0x140043cb0
 CriSint32 FUN_140043cb0(void* decoder)
 {
@@ -1454,7 +1454,7 @@ CriSint32 FUN_140043cb0(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: execute the alpha decoder when it has an execution callback.
+// execute the alpha decoder when it has an execution callback.
 // @0x140043d00
 void FUN_140043d00(void* decoder)
 {
@@ -1463,7 +1463,7 @@ void FUN_140043d00(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x38 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: decode one alpha frame and return the decoder's result.
+// decode one alpha frame and return the decoder's result.
 // @0x140043d40
 CriBool FUN_140043d40(void* decoder)
 {
@@ -1474,7 +1474,7 @@ CriBool FUN_140043d40(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: request the alpha decoder to skip its current frame.
+// request the alpha decoder to skip its current frame.
 // @0x140043d90
 void FUN_140043d90(void* decoder)
 {
@@ -1483,7 +1483,7 @@ void FUN_140043d90(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x50 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: request the alpha decoder to stop.
+// request the alpha decoder to stop.
 // @0x140043dd0
 void FUN_140043dd0(void* decoder)
 {
@@ -1492,7 +1492,7 @@ void FUN_140043dd0(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x58 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: run the alpha decoder's completion callback.
+// run the alpha decoder's completion callback.
 // @0x140043e20
 void FUN_140043e20(void* decoder)
 {
@@ -1501,7 +1501,7 @@ void FUN_140043e20(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x60 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: retrieve the alpha decoder's completion state.
+// retrieve the alpha decoder's completion state.
 // @0x140043e60
 CriSint32 FUN_140043e60(void* decoder)
 {
@@ -1512,7 +1512,7 @@ CriSint32 FUN_140043e60(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: query the number of alpha decoder frame pools.
+// query the number of alpha decoder frame pools.
 // @0x140043eb0
 CriUint32 criAlphaDec_GetNumDecPool(void* decoder)
 {
@@ -1528,7 +1528,7 @@ CriUint32 criAlphaDec_GetNumDecPool(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: retrieve the next alpha frame metadata record.
+// retrieve the next alpha frame metadata record.
 // @0x140043f10
 void* FUN_140043f10(void* decoder, void* frameInfo)
 {
@@ -1539,7 +1539,7 @@ void* FUN_140043f10(void* decoder, void* frameInfo)
     return result;
 }
 
-// MS2-FUNCTIONAL: ask the alpha decoder to copy a frame into the requested output buffers.
+// ask the alpha decoder to copy a frame into the requested output buffers.
 // @0x140043f70
 CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* frameInfo)
 {
@@ -1550,7 +1550,7 @@ CriBool criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* fra
     return result;
 }
 
-// MS2-FUNCTIONAL: destroy an alpha decoder, clear its wrapper, and release the wrapper allocation.
+// destroy an alpha decoder, clear its wrapper, and release the wrapper allocation.
 // @0x140043be0
 void FUN_140043be0(void* decoder)
 {
@@ -1566,7 +1566,7 @@ void FUN_140043be0(void* decoder)
     }
 }
 
-// MS2-FUNCTIONAL: retrieve an alpha decoder frame pointer through its callback table.
+// retrieve an alpha decoder frame pointer through its callback table.
 // @0x140043fe0
 void* FUN_140043fe0(void* decoder, void* frameInfo)
 {
@@ -1577,7 +1577,7 @@ void* FUN_140043fe0(void* decoder, void* frameInfo)
     return result;
 }
 
-// MS2-FUNCTIONAL: query the video decoder's current status.
+// query the video decoder's current status.
 // @0x140044630
 CriSint32 FUN_140044630(void* decoder)
 {
@@ -1588,7 +1588,7 @@ CriSint32 FUN_140044630(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: decode one frame through the video decoder interface.
+// decode one frame through the video decoder interface.
 // @0x1400446c0
 CriBool FUN_1400446c0(void* decoder)
 {
@@ -1599,7 +1599,7 @@ CriBool FUN_1400446c0(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: invoke the video decoder's frame skip callback.
+// invoke the video decoder's frame skip callback.
 // @0x140044710
 void FUN_140044710(void* decoder)
 {
@@ -1608,7 +1608,7 @@ void FUN_140044710(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x50 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: request the video decoder to stop.
+// request the video decoder to stop.
 // @0x140044750
 void FUN_140044750(void* decoder)
 {
@@ -1617,7 +1617,7 @@ void FUN_140044750(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x58 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: invoke the video decoder's completion callback.
+// invoke the video decoder's completion callback.
 // @0x140044790
 void FUN_140044790(void* decoder)
 {
@@ -1626,7 +1626,7 @@ void FUN_140044790(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x60 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: query the video decoder's completion state.
+// query the video decoder's completion state.
 // @0x1400447d0
 CriSint32 FUN_1400447d0(void* decoder)
 {
@@ -1637,7 +1637,7 @@ CriSint32 FUN_1400447d0(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: query the video decoder's frame-pool count.
+// query the video decoder's frame-pool count.
 // @0x140044820
 CriUint32 criVdec_GetNumDecPool(void* decoder)
 {
@@ -1648,7 +1648,7 @@ CriUint32 criVdec_GetNumDecPool(void* decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: retrieve the next video frame metadata record.
+// retrieve the next video frame metadata record.
 // @0x140044870
 void* criVdec_GetNextFrameInfo(void* decoder, void* frameInfo)
 {
@@ -1659,7 +1659,7 @@ void* criVdec_GetNextFrameInfo(void* decoder, void* frameInfo)
     return result;
 }
 
-// MS2-FUNCTIONAL: request a video decoder frame buffer using the supplied format and output data.
+// request a video decoder frame buffer using the supplied format and output data.
 // @0x1400448d0
 CriBool criVdec_GetFrameBuffer(void* decoder, void* format, CriUint32 mode, void* output)
 {
@@ -1670,7 +1670,7 @@ CriBool criVdec_GetFrameBuffer(void* decoder, void* format, CriUint32 mode, void
     return result;
 }
 
-// MS2-FUNCTIONAL: copy video decoder frame planes to the caller's output buffers.
+// copy video decoder frame planes to the caller's output buffers.
 // @0x140044950
 CriBool criVdec_CopyFrameYuvBuffers(void* decoder, void* output, void* frameInfo)
 {
@@ -1681,7 +1681,7 @@ CriBool criVdec_CopyFrameYuvBuffers(void* decoder, void* output, void* frameInfo
     return result;
 }
 
-// MS2-FUNCTIONAL: retrieve a decoded video frame pointer.
+// retrieve a decoded video frame pointer.
 // @0x1400449c0
 void* FUN_1400449c0(void* decoder, void* frameInfo)
 {
@@ -1692,7 +1692,7 @@ void* FUN_1400449c0(void* decoder, void* frameInfo)
     return result;
 }
 
-// MS2-FUNCTIONAL: release a video decoder frame pointer.
+// release a video decoder frame pointer.
 // @0x140044a30
 void FUN_140044a30(void* decoder, void* frameInfo)
 {
@@ -1703,7 +1703,7 @@ void FUN_140044a30(void* decoder, void* frameInfo)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x98 / 8])(((CriDecoderWrapper*)decoder)->Object, frameInfo);
 }
 
-// MS2-FUNCTIONAL: retrieve the decoder's video parameters.
+// retrieve the decoder's video parameters.
 // @0x140044a90
 void criVdec_GetVideoParameter(void* decoder, void* parameters)
 {
@@ -1712,7 +1712,7 @@ void criVdec_GetVideoParameter(void* decoder, void* parameters)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xa0 / 8])(((CriDecoderWrapper*)decoder)->Object, parameters);
 }
 
-// MS2-FUNCTIONAL: ask the decoder to skip its current frame.
+// ask the decoder to skip its current frame.
 // @0x140044ae0
 void FUN_140044ae0(void* decoder)
 {
@@ -1721,7 +1721,7 @@ void FUN_140044ae0(void* decoder)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0x48 / 8])(((CriDecoderWrapper*)decoder)->Object);
 }
 
-// MS2-FUNCTIONAL: query the decoder's concatenated stream offset.
+// query the decoder's concatenated stream offset.
 // @0x140044b20
 void FUN_140044b20(void* decoder, CriUint32 stream, void* offset, void* timestamp)
 {
@@ -1730,7 +1730,7 @@ void FUN_140044b20(void* decoder, CriUint32 stream, void* offset, void* timestam
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xa8 / 8])(((CriDecoderWrapper*)decoder)->Object, stream, offset, timestamp);
 }
 
-// MS2-FUNCTIONAL: retrieve decoder frame-pool metadata through the interface callback.
+// retrieve decoder frame-pool metadata through the interface callback.
 // @0x140044b90
 void FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e)
 {
@@ -1739,7 +1739,7 @@ void FUN_140044b90(void* decoder, void* a, void* b, void* c, void* d, void* e)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xb0 / 8])(((CriDecoderWrapper*)decoder)->Object, a, b, c, d, e);
 }
 
-// MS2-FUNCTIONAL: configure the alpha decoder processor mask.
+// configure the alpha decoder processor mask.
 // @0x140044c10
 void FUN_140044c10(void* decoder, CriUint32 mask)
 {
@@ -1748,7 +1748,7 @@ void FUN_140044c10(void* decoder, CriUint32 mask)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xb8 / 8])(((CriDecoderWrapper*)decoder)->Object, mask);
 }
 
-// MS2-FUNCTIONAL: configure the video decoder seek position and mode.
+// configure the video decoder seek position and mode.
 // @0x140044c60
 void FUN_140044c60(void* decoder, CriUint32 position, CriUint32 mode)
 {
@@ -1757,7 +1757,7 @@ void FUN_140044c60(void* decoder, CriUint32 position, CriUint32 mode)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xc0 / 8])(((CriDecoderWrapper*)decoder)->Object, position, mode);
 }
 
-// MS2-FUNCTIONAL: set the video decoder's notification callback and user data.
+// set the video decoder's notification callback and user data.
 // @0x140044cc0
 void FUN_140044cc0(void* decoder, void* callback, void* userData)
 {
@@ -1766,7 +1766,7 @@ void FUN_140044cc0(void* decoder, void* callback, void* userData)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xc8 / 8])(((CriDecoderWrapper*)decoder)->Object, callback, userData);
 }
 
-// MS2-FUNCTIONAL: configure the video decoder processor mask.
+// configure the video decoder processor mask.
 // @0x140044d20
 void criVdec_SetProcessorMask(void* decoder, CriUint32 mask)
 {
@@ -1775,7 +1775,7 @@ void criVdec_SetProcessorMask(void* decoder, CriUint32 mask)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xd0 / 8])(((CriDecoderWrapper*)decoder)->Object, mask);
 }
 
-// MS2-FUNCTIONAL: call the decoder interface's initialize entry point.
+// call the decoder interface's initialize entry point.
 // @0x140044390
 void FUN_140044390(const void* decoderInterface)
 {
@@ -1785,7 +1785,7 @@ void FUN_140044390(const void* decoderInterface)
         (*(Callback const*)decoderInterface)();
 }
 
-// MS2-FUNCTIONAL: call the decoder interface's finalize entry point.
+// call the decoder interface's finalize entry point.
 // @0x1400443d0
 void FUN_1400443d0(void* decoderInterface)
 {
@@ -1794,7 +1794,7 @@ void FUN_1400443d0(void* decoderInterface)
         (*(Callback*)((CriUint8*)decoderInterface + 8))();
 }
 
-// MS2-FUNCTIONAL: set the VDEC DLG parameters through its decoder interface.
+// set the VDEC DLG parameters through its decoder interface.
 // @0x140044d70
 void criVdec_SetDlgPara(void* decoder, CriUint32 mode, void* first, void* second)
 {
@@ -1803,7 +1803,7 @@ void criVdec_SetDlgPara(void* decoder, CriUint32 mode, void* first, void* second
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xd8 / 8])(((CriDecoderWrapper*)decoder)->Object, mode, first, second);
 }
 
-// MS2-FUNCTIONAL: invoke the decoder's auxiliary callback with its two caller arguments.
+// invoke the decoder's auxiliary callback with its two caller arguments.
 // @0x140044de0
 void FUN_140044de0(void* decoder, void* first, void* second)
 {
@@ -1812,7 +1812,7 @@ void FUN_140044de0(void* decoder, void* first, void* second)
         ((Callback)((CriDecoderWrapper*)decoder)->Table[0xe0 / 8])(((CriDecoderWrapper*)decoder)->Object, first, second);
 }
 
-// MS2-FUNCTIONAL: retrieve the decoder core interface through the interface table's final slot.
+// retrieve the decoder core interface through the interface table's final slot.
 // @0x140044e40
 void* FUN_140044e40(void* decoder)
 {
@@ -1870,14 +1870,14 @@ static __forceinline void criTimer_GetTime(const void* state, CriSint64* elapsed
         *elapsed = timer->Stop - timer->Start;
 }
 
-// MS2-FUNCTIONAL: return the current tick delta and timestamp for a CRI timer record.
+// return the current tick delta and timestamp for a CRI timer record.
 // @0x140041a10
 void FUN_140041a10(const void* state, CriSint64* elapsed, CriUint64* timestamp)
 {
     criTimer_GetTime(state, elapsed, timestamp);
 }
 
-// MS2-FUNCTIONAL: toggle the timer record's paused state and accumulate elapsed ticks.
+// toggle the timer record's paused state and accumulate elapsed ticks.
 // @0x140041ad0
 void FUN_140041ad0(void* state, CriUint8 paused)
 {
@@ -1911,7 +1911,7 @@ void FUN_140041ad0(void* state, CriUint8 paused)
     timer->Paused = paused;
 }
 
-// MS2-FUNCTIONAL: report the accumulated pause duration or the active timer delta and timestamp.
+// report the accumulated pause duration or the active timer delta and timestamp.
 // @0x140041b50
 void FUN_140041b50(void* state, CriSint64* elapsed, CriUint64* timestamp)
 {
@@ -1936,7 +1936,7 @@ void FUN_140041b50(void* state, CriSint64* elapsed, CriUint64* timestamp)
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: install the notification callback and its user data on a player manager.
+// install the notification callback and its user data on a player manager.
 // @0x140041df0
 void FUN_140041df0(void* manager, void* callback, void* userData)
 {
@@ -1946,7 +1946,7 @@ void FUN_140041df0(void* manager, void* callback, void* userData)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: route a decrypt callback to the selected active audio decoder.
+// route a decrypt callback to the selected active audio decoder.
 // @0x140041e30
 void FUN_140041e30(void* manager, void* callback, void* userData, CriSint32 stream)
 {
@@ -1959,7 +1959,7 @@ void FUN_140041e30(void* manager, void* callback, void* userData, CriSint32 stre
     FUN_140054040((__int64)decoder->Decrypt, (unsigned __int64)callback, (unsigned __int64)userData);
 }
 
-// MS2-FUNCTIONAL: store the two frame dimensions on a CRI video handle.
+// store the two frame dimensions on a CRI video handle.
 // @0x140041030
 void FUN_140041030(void* handle, CriUint32 width, CriUint32 height)
 {
@@ -1969,7 +1969,7 @@ void FUN_140041030(void* handle, CriUint32 width, CriUint32 height)
     hn->Height = height;
 }
 
-// MS2-FUNCTIONAL: publish the two caller-provided buffer pointers on the CRI video handle.
+// publish the two caller-provided buffer pointers on the CRI video handle.
 // @0x140041080
 void FUN_140041080(void* handle, void* first, void* second)
 {
@@ -1979,7 +1979,7 @@ void FUN_140041080(void* handle, void* first, void* second)
     hn->Second = second;
 }
 
-// MS2-FUNCTIONAL: mark the CRI handle's error state when a handle is supplied.
+// mark the CRI handle's error state when a handle is supplied.
 // @0x140041150
 void FUN_140041150(void* handle, void* unused)
 {
@@ -1990,7 +1990,7 @@ void FUN_140041150(void* handle, void* unused)
         hn->State = 4;
 }
 
-// MS2-FUNCTIONAL: invoke the Initialize entry in the decoder interface table.
+// invoke the Initialize entry in the decoder interface table.
 // @0x140043a20
 void FUN_140043a20(const void* decoder)
 {
@@ -1999,7 +1999,7 @@ void FUN_140043a20(const void* decoder)
         (*(VoidFunction*)decoder)();
 }
 
-// MS2-FUNCTIONAL: invoke the decoder interface's finalize entry when present.
+// invoke the decoder interface's finalize entry when present.
 // @0x140043a50
 void FUN_140043a50(void* decoder)
 {
@@ -2008,7 +2008,7 @@ void FUN_140043a50(void* decoder)
         (*(VoidFunction*)((CriUint8*)decoder + 8))();
 }
 
-// MS2-FUNCTIONAL: query the decoder work size and include the executable's 0x2e-byte wrapper.
+// query the decoder work size and include the executable's 0x2e-byte wrapper.
 // @0x140043a80
 CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
 {
@@ -2023,7 +2023,7 @@ CriSint32 FUN_140043a80(void* decoder, CriSint32 a, CriSint32 b, CriSint32 c)
     return result;
 }
 
-// MS2-FUNCTIONAL: invoke the alpha decoder interface's frame-info query when available.
+// invoke the alpha decoder interface's frame-info query when available.
 // @0x140043c50
 void* FUN_140043c50(void** decoder)
 {
@@ -2034,7 +2034,7 @@ void* FUN_140043c50(void** decoder)
     return result;
 }
 
-// MS2-FUNCTIONAL: copy an RFB frame only while the VMPV handle is not stopped and data is present.
+// copy an RFB frame only while the VMPV handle is not stopped and data is present.
 // @0x14003e110
 CriBool FUN_14003e110(void* handle, void* output, void** frame)
 {
@@ -2050,7 +2050,7 @@ CriBool FUN_14003e110(void* handle, void* output, void** frame)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: clear the two per-frame dimensions stored in a VMPV output record.
+// clear the two per-frame dimensions stored in a VMPV output record.
 // @0x14003e710
 void FUN_14003e710(void* unused, void* output)
 {
@@ -2062,7 +2062,7 @@ void FUN_14003e710(void* unused, void* output)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: store the current frame rate on the VMPV handle.
+// store the current frame rate on the VMPV handle.
 // @0x14003e820
 void FUN_14003e820(void* handle, CriUint32 frameRate)
 {
@@ -2070,7 +2070,7 @@ void FUN_14003e820(void* handle, CriUint32 frameRate)
     hn->FrameRate = frameRate;
 }
 
-// MS2-FUNCTIONAL: return the frame timestamp and selected concatenation offset in milliseconds.
+// return the frame timestamp and selected concatenation offset in milliseconds.
 // @0x14003e750
 void FUN_14003e750(void* handle, CriSint32 frame, CriUint64* timestamp, CriUint64* offset)
 {
@@ -2128,14 +2128,14 @@ CriUint32 criUtfRtv_SearchRecNoByStr(const CriUtfRtvView* table, CriUint32 field
 #pragma intrinsic(strcmp)
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: these state initializers clear the decoder's four motion-vector components.
+// these state initializers clear the decoder's four motion-vector components.
 // @0x142ccb4f0
 void MPVDEC_ResetMv(CriMpvDecoderState* state)
 {
     memset(state->MotionVectors, 0, sizeof(state->MotionVectors));
 }
 
-// MS2-FUNCTIONAL: reset the three MPEG DC predictors to the executable's midpoint value.
+// reset the three MPEG DC predictors to the executable's midpoint value.
 // @0x142ccb500
 void MPVDEC_ResetDc(CriMpvDecoderState* state)
 {
@@ -2157,7 +2157,7 @@ void mpvumc_SubMbadr(CriMpvDecoderState* state, CriSint32 run)
     }
 }
 
-// MS2-FUNCTIONAL: advance the macroblock column, wrapping to the next row at the row width.
+// advance the macroblock column, wrapping to the next row at the row width.
 // @0x142ccc5c0
 void mpvumc_IncreMbadr(CriMpvDecoderState* state)
 {
@@ -2182,7 +2182,7 @@ void FUN_140044fdc(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: forward the opaque argument through the Vdec callback at table offset 0x98.
+// forward the opaque argument through the Vdec callback at table offset 0x98.
 // @0x140044050
 void FUN_140044050(CriUint64* pair, void* value)
 {
@@ -2190,7 +2190,7 @@ void FUN_140044050(CriUint64* pair, void* value)
         (*(void (**)(CriUint64, void*))((CriUint8*)pair[1] + 0x98))(pair[0], value);
 }
 
-// MS2-FUNCTIONAL: call the Vdec callback at table offset 0x88 and add its fixed status bias.
+// call the Vdec callback at table offset 0x88 and add its fixed status bias.
 // @0x1400440a0
 CriUint32 FUN_1400440a0(CriUint64* pair, void* first, CriUint32 second, void* third)
 {
@@ -2201,7 +2201,7 @@ CriUint32 FUN_1400440a0(CriUint64* pair, void* first, CriUint32 second, void* th
     return result;
 }
 
-// MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x48 when provided.
+// invoke the Vdec callback at table offset 0x48 when provided.
 // @0x140044120
 void FUN_140044120(CriUint64* pair)
 {
@@ -2209,7 +2209,7 @@ void FUN_140044120(CriUint64* pair)
         (*(void (**)(CriUint64))((CriUint8*)pair[1] + 0x48))(pair[0]);
 }
 
-// MS2-FUNCTIONAL: pass the 32-bit option to the Vdec callback at table offset 0xa0.
+// pass the 32-bit option to the Vdec callback at table offset 0xa0.
 // @0x140044160
 void FUN_140044160(CriUint64* pair, CriUint32 option)
 {
@@ -2217,7 +2217,7 @@ void FUN_140044160(CriUint64* pair, CriUint32 option)
         (*(void (**)(CriUint64, CriUint32))((CriUint8*)pair[1] + 0xa0))(pair[0], option);
 }
 
-// MS2-FUNCTIONAL: pass both 32-bit options to the Vdec callback at table offset 0xa8.
+// pass both 32-bit options to the Vdec callback at table offset 0xa8.
 // @0x1400441b0
 void FUN_1400441b0(CriUint64* pair, CriUint32 first, CriUint32 second)
 {
@@ -2225,7 +2225,7 @@ void FUN_1400441b0(CriUint64* pair, CriUint32 first, CriUint32 second)
         (*(void (**)(CriUint64, CriUint32, CriUint32))((CriUint8*)pair[1] + 0xa8))(pair[0], first, second);
 }
 
-// MS2-FUNCTIONAL: pass the two opaque values to the Vdec callback at table offset 0xb0.
+// pass the two opaque values to the Vdec callback at table offset 0xb0.
 // @0x140044210
 void FUN_140044210(CriUint64* pair, void* first, void* second)
 {
@@ -2233,7 +2233,7 @@ void FUN_140044210(CriUint64* pair, void* first, void* second)
         (*(void (**)(CriUint64, void*, void*))((CriUint8*)pair[1] + 0xb0))(pair[0], first, second);
 }
 
-// MS2-FUNCTIONAL: pass the 32-bit option to the Vdec callback at table offset 0xb8.
+// pass the 32-bit option to the Vdec callback at table offset 0xb8.
 // @0x140044270
 void FUN_140044270(CriUint64* pair, CriUint32 option)
 {
@@ -2241,7 +2241,7 @@ void FUN_140044270(CriUint64* pair, CriUint32 option)
         (*(void (**)(CriUint64, CriUint32))((CriUint8*)pair[1] + 0xb8))(pair[0], option);
 }
 
-// MS2-FUNCTIONAL: forward three arguments to the Vdec callback at table offset 0xc0.
+// forward three arguments to the Vdec callback at table offset 0xc0.
 // @0x1400442c0
 void FUN_1400442c0(CriUint64* pair, CriUint32 option, void* first, void* second)
 {
@@ -2250,7 +2250,7 @@ void FUN_1400442c0(CriUint64* pair, CriUint32 option, void* first, void* second)
             pair[0], option, first, second);
 }
 
-// MS2-FUNCTIONAL: pass the two opaque values to the Vdec callback at table offset 0xc8.
+// pass the two opaque values to the Vdec callback at table offset 0xc8.
 // @0x140044330
 void FUN_140044330(CriUint64* pair, void* first, void* second)
 {
@@ -2258,7 +2258,7 @@ void FUN_140044330(CriUint64* pair, void* first, void* second)
         (*(void (**)(CriUint64, void*, void*))((CriUint8*)pair[1] + 0xc8))(pair[0], first, second);
 }
 
-// MS2-FUNCTIONAL: call the encoded callback and preserve its 0x3e status adjustment.
+// call the encoded callback and preserve its 0x3e status adjustment.
 // @0x140044400
 CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, CriUint32 third)
 {
@@ -2273,7 +2273,7 @@ CriSint32 FUN_140044400(void* callbackPair, CriUint32 first, CriUint32 second, C
     return result;
 }
 
-// MS2-FUNCTIONAL: obtain the value from the Vdec callback at table offset 0x28, defaulting to zero.
+// obtain the value from the Vdec callback at table offset 0x28, defaulting to zero.
 // @0x1400445d0
 CriUint64 FUN_1400445d0(CriUint64* pair)
 {
@@ -2284,7 +2284,7 @@ CriUint64 FUN_1400445d0(CriUint64* pair)
     return result;
 }
 
-// MS2-FUNCTIONAL: invoke the Vdec callback at table offset 0x38 when provided.
+// invoke the Vdec callback at table offset 0x38 when provided.
 // @0x140044680
 void FUN_140044680(CriUint64* pair)
 {
@@ -2332,14 +2332,14 @@ char* FUN_14004698c(char* dst, size_t size, const char* src);
 void* FUN_1400469f0(void* dst, size_t size, const void* src, size_t count);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: execute the CRI Movie Player manager initialization hook.
+// execute the CRI Movie Player manager initialization hook.
 // @0x140041ea0
 void criMvPlyAmng_Initialize(void)
 {
     FUN_1400532b0();
 }
 
-// MS2-FUNCTIONAL: execute the CRI Movie Player manager finalization hook.
+// execute the CRI Movie Player manager finalization hook.
 // @0x140041ec0
 void criMvPlyAmng_Finalize(void)
 {
@@ -2347,7 +2347,7 @@ void criMvPlyAmng_Finalize(void)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: initialize the timer snapshot with the current CRI clock and its live-state flag.
+// initialize the timer snapshot with the current CRI clock and its live-state flag.
 // @0x1400419d0
 void FUN_1400419d0(void* snapshot)
 {
@@ -2355,7 +2355,7 @@ void FUN_1400419d0(void* snapshot)
     *((CriUint8*)snapshot + 0x10) = 1;
 }
 
-// MS2-FUNCTIONAL: initialize an elapsed-time accumulator with a stopped flag and current clock.
+// initialize an elapsed-time accumulator with a stopped flag and current clock.
 // @0x1400419f0
 void FUN_1400419f0(void* timer)
 {
@@ -2363,7 +2363,7 @@ void FUN_1400419f0(void* timer)
     *((CriUint8*)timer + 0x10) = 0;
 }
 
-// MS2-FUNCTIONAL: initialize the alternate timer snapshot layout with a running flag.
+// initialize the alternate timer snapshot layout with a running flag.
 // @0x140041bd0
 void* FUN_140041bd0(void* snapshot)
 {
@@ -2372,7 +2372,7 @@ void* FUN_140041bd0(void* snapshot)
     return snapshot;
 }
 
-// MS2-FUNCTIONAL: reset the timer's accumulated duration and capture a fresh stopped-time origin.
+// reset the timer's accumulated duration and capture a fresh stopped-time origin.
 // @0x140041aa0
 void FUN_140041aa0(void* timer)
 {
@@ -2381,7 +2381,7 @@ void FUN_140041aa0(void* timer)
     *(CriUint64*)((CriUint8*)timer + 0x40) = 0;
 }
 
-// MS2-FUNCTIONAL: forward the requested state to the attached player interface when present.
+// forward the requested state to the attached player interface when present.
 // @0x1400412e0
 void FUN_1400412e0(void* player, CriSint32 state)
 {
@@ -2390,7 +2390,7 @@ void FUN_1400412e0(void* player, CriSint32 state)
         (*(void (**)(void*, CriUint8))((CriUint8*)*(void**)target + 0x30))(target, state == 1);
 }
 
-// MS2-FUNCTIONAL: forward the supplied output pointer to the attached player's slot-four callback.
+// forward the supplied output pointer to the attached player's slot-four callback.
 // @0x1400412a0
 void FUN_1400412a0(void* player)
 {
@@ -2399,7 +2399,7 @@ void FUN_1400412a0(void* player)
         (*(void (**)(void*, void*))((CriUint8*)*(void**)target + 0x20))(target, (CriUint8*)player + 0x18);
 }
 
-// MS2-FUNCTIONAL: report whether the attached player callback returns the active state value.
+// report whether the attached player callback returns the active state value.
 // @0x140041270
 CriBool FUN_140041270(void* player)
 {
@@ -2407,7 +2407,7 @@ CriBool FUN_140041270(void* player)
     return target && (*(CriSint32 (**)(void*))((CriUint8*)*(void**)target + 0x18))(target) != 1;
 }
 
-// MS2-FUNCTIONAL: forward the two supplied values to the attached player's slot-one callback.
+// forward the two supplied values to the attached player's slot-one callback.
 // @0x140041220
 CriBool FUN_140041220(void* player, void*, CriUint32 first, CriUint32 second)
 {
@@ -2416,7 +2416,7 @@ CriBool FUN_140041220(void* player, void*, CriUint32 first, CriUint32 second)
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: return the player's shared work-memory size and default alignment.
+// return the player's shared work-memory size and default alignment.
 // @0x1400411e0
 void* FUN_1400411e0(CriUint32* size)
 {
@@ -2426,7 +2426,7 @@ void* FUN_1400411e0(CriUint32* size)
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
-// MS2-FUNCTIONAL: publish CRI Base's runtime banner string.
+// publish CRI Base's runtime banner string.
 // @0x1400411f8
 void FUN_1400411f8(void)
 {
@@ -2434,7 +2434,7 @@ void FUN_1400411f8(void)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: forward to the attached object's virtual stop operation when present.
+// forward to the attached object's virtual stop operation when present.
 // @0x140041250
 void FUN_140041250(void* object)
 {
@@ -2443,7 +2443,7 @@ void FUN_140041250(void* object)
         ((void (*)(void*))*(void**)((CriUint8*)*target + 0x10))(target);
 }
 
-// MS2-FUNCTIONAL: forward to the attached object's virtual operation at slot five when present.
+// forward to the attached object's virtual operation at slot five when present.
 // @0x1400412c0
 void FUN_1400412c0(void* object)
 {
@@ -2452,7 +2452,7 @@ void FUN_1400412c0(void* object)
         ((void (*)(void*))*(void**)((CriUint8*)*target + 0x28))(target);
 }
 
-// MS2-FUNCTIONAL: forward to the attached object's virtual destroy operation when present.
+// forward to the attached object's virtual destroy operation when present.
 // @0x140041340
 void FUN_140041340(void* object)
 {
@@ -2461,7 +2461,7 @@ void FUN_140041340(void* object)
         ((void (*)(void*))*(void**)((CriUint8*)*target + 0x40))(target);
 }
 
-// MS2-FUNCTIONAL: invoke the global heap manager's work-size operation.
+// invoke the global heap manager's work-size operation.
 // @0x140041d20
 CriUint64 FUN_140041d20(void)
 {
@@ -2470,7 +2470,7 @@ CriUint64 FUN_140041d20(void)
     return 0;
 }
 
-// MS2-FUNCTIONAL: release the supplied CRI heap through the global heap manager.
+// release the supplied CRI heap through the global heap manager.
 // @0x140041dd0
 void FUN_140041dd0(void* heap)
 {
@@ -2482,7 +2482,7 @@ void FUN_140041dd0(void* heap)
 void FUN_140044e84(void);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: initialize the CRI timer context and its default interval/counter fields.
+// initialize the CRI timer context and its default interval/counter fields.
 // @0x140041c00
 void* FUN_140041c00(void* context)
 {
@@ -2513,7 +2513,7 @@ void* FUN_140041c00(void* context)
     return context;
 }
 
-// MS2-FUNCTIONAL: destroy the global heap manager and optionally free its owning object.
+// destroy the global heap manager and optionally free its owning object.
 // @0x140041c60
 void* FUN_140041c60(void* manager, CriUint32 flags)
 {
@@ -2532,7 +2532,7 @@ CriSint32 FUN_140045c08(void* object, CriSint32 lane);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: dispatch the EasyFileReader free operation and release its heap-owned adapter.
+// dispatch the EasyFileReader free operation and release its heap-owned adapter.
 // @0x140044560
 void FUN_140044560(CriUint64* adapter)
 {
@@ -2546,7 +2546,7 @@ void FUN_140044560(CriUint64* adapter)
     }
 }
 
-// MS2-FUNCTIONAL: clear the current Sofdec input state and reset its attached audio decoder.
+// clear the current Sofdec input state and reset its attached audio decoder.
 // @0x140043550
 void FUN_140043550(CriSint32* state, void* input)
 {
@@ -2571,7 +2571,7 @@ void FUN_140043550(CriSint32* state, void* input)
     }
 }
 
-// MS2-FUNCTIONAL: compute the audio player work area from its configured channel count.
+// compute the audio player work area from its configured channel count.
 // @0x140041ee0
 CriSint32 FUN_140041ee0(const void* player)
 {
@@ -2593,7 +2593,7 @@ CriSint32 FUN_140041ee0(const void* player)
     return total;
 }
 
-// MS2-FUNCTIONAL: report whether an audio decoder has enough queued samples for the requested operation.
+// report whether an audio decoder has enough queued samples for the requested operation.
 // @0x140043750
 CriBool FUN_140043750(void* decoder, const void* operation)
 {
@@ -2623,7 +2623,7 @@ CriBool FUN_140043750(void* decoder, const void* operation)
     return 1;
 }
 
-// MS2-FUNCTIONAL: release all audio decoder entries and the owning stream joint from a player manager.
+// release all audio decoder entries and the owning stream joint from a player manager.
 // @0x1400420b0
 void FUN_1400420b0(void* manager, void* heap)
 {
@@ -2789,7 +2789,7 @@ void FUN_1400453c4(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: detect the encoded CSC flag in a CRI movie packet header.
+// detect the encoded CSC flag in a CRI movie packet header.
 // @0x140040f80
 CriBool FUN_140040f80(const void* packet, CriSint32 size)
 {
@@ -2832,7 +2832,7 @@ void* FUN_140046760(void* heap, CriUint32 first, CriUint32 second, CriUint32 thi
 void FUN_140046170(void* ring, CriSint32 mode, CriUint64* span);
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: create the named CRI video heap and attach its allocator to the returned adapter.
+// create the named CRI video heap and attach its allocator to the returned adapter.
 // @0x140041d40
 void* FUN_140041d40(void* manager)
 {
@@ -2851,7 +2851,7 @@ void* FUN_140041d40(void* manager)
 }
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: map the current CRI movie frame into its segment and update presentation time.
+// map the current CRI movie frame into its segment and update presentation time.
 // @0x140040c00
 void FUN_140040c00(void* player, void* context)
 {
@@ -2891,7 +2891,7 @@ void FUN_140040c00(void* player, void* context)
         (CriUint64)(CriUint32)(adjusted + ((PlayerTimeline*)player)->TimestampBase) * 1000;
 }
 
-// MS2-FUNCTIONAL: locate a frame among eight media segments and return its index and end-relative offset.
+// locate a frame among eight media segments and return its index and end-relative offset.
 // @0x140040cc0
 void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSint32* deltaOut)
 {
@@ -2936,7 +2936,7 @@ void FUN_140040cc0(void* player, CriUint32 frame, CriSint32* segmentIndex, CriSi
     *deltaOut = delta;
 }
 
-// MS2-FUNCTIONAL: execute one audio decoder operation unless its status is already an error.
+// execute one audio decoder operation unless its status is already an error.
 // @0x1400436d0
 void FUN_1400436d0(void* state)
 {
@@ -2963,7 +2963,7 @@ void FUN_140044f28(void* object);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: return a bounded channel's available audio bytes when its decoder is ready.
+// return a bounded channel's available audio bytes when its decoder is ready.
 // @0x140043890
 CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 maximum)
 {
@@ -2998,7 +2998,7 @@ CriUint32 FUN_140043890(void* track, void* player, CriUint32 channel, CriUint32 
     return available;
 }
 
-// MS2-FUNCTIONAL: apply the selected channel's three decoder parameters to its audio decoder.
+// apply the selected channel's three decoder parameters to its audio decoder.
 // @0x140043970
 void FUN_140043970(void* track, void* player)
 {
@@ -3095,7 +3095,7 @@ void FUN_14003c080(void)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: drain one pending movie ring chunk after its sample count reaches a full block.
+// drain one pending movie ring chunk after its sample count reaches a full block.
 // @0x14003ef00
 void FUN_14003ef00(void* object)
 {
@@ -3132,7 +3132,7 @@ void FUN_14003ef00(void* object)
     }
 }
 
-// MS2-FUNCTIONAL: obtain a CRI video descriptor and publish its packed playback fields.
+// obtain a CRI video descriptor and publish its packed playback fields.
 // @0x14003e2a0
 void* FUN_14003e2a0(void* source, void* destination)
 {
@@ -3167,7 +3167,7 @@ void* FUN_14003e2a0(void* source, void* destination)
     return ((DescriptorOutput*)destination)->Value;
 }
 
-// MS2-FUNCTIONAL: obtain an alternate CRI video descriptor and publish its packed playback fields.
+// obtain an alternate CRI video descriptor and publish its packed playback fields.
 // @0x14003e5d0
 void* FUN_14003e5d0(void* source, void* destination)
 {
@@ -3202,7 +3202,7 @@ void* FUN_14003e5d0(void* source, void* destination)
     return ((DescriptorOutput*)destination)->Value;
 }
 
-// MS2-FUNCTIONAL: release the matching decoded frame from the pending ring and report if none matched.
+// release the matching decoded frame from the pending ring and report if none matched.
 // @0x14003e180
 void FUN_14003e180(void* object, const void* frame)
 {
@@ -3252,7 +3252,7 @@ void FUN_14003e180(void* object, const void* frame)
         FUN_140041110(0, "E11120202M : Failed criVdec_ReleaseFramePointer().", 0);
 }
 
-// MS2-FUNCTIONAL: destroy one audio decoder track set and clear its player-manager table entry.
+// destroy one audio decoder track set and clear its player-manager table entry.
 // @0x140042600
 void FUN_140042600(void* manager, void* heap, CriSint32 index)
 {
@@ -3297,7 +3297,7 @@ void* FUN_1400452b4(void* heap, CriSint32 outputCount);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: copy the active input descriptor into the stream joint and advance its input count.
+// copy the active input descriptor into the stream joint and advance its input count.
 // @0x140040a20
 void FUN_140040a20(void* player, void** inputDescriptor)
 {
@@ -3317,7 +3317,7 @@ void FUN_140040a20(void* player, void** inputDescriptor)
     ++((PlayerState*)player)->InputCount;
 }
 
-// MS2-FUNCTIONAL: verify each decoder entry in a CRI track set accepts the supplied operation.
+// verify each decoder entry in a CRI track set accepts the supplied operation.
 // @0x140042cf0
 CriBool FUN_140042cf0(void* trackSet, void* operation)
 {
@@ -3344,7 +3344,7 @@ void FUN_14004624c(void* joint, CriSint32 lane, void* chunkPtr);
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: create the CRI alpha decoder handle object around a decoder-implementation interface.
+// create the CRI alpha decoder handle object around a decoder-implementation interface.
 // @0x140043af0
 void* FUN_140043af0(void* implementation, void* heap, void* parameter)
 {
@@ -3373,7 +3373,7 @@ void* FUN_140043af0(void* implementation, void* heap, void* parameter)
     return object_;
 }
 
-// MS2-FUNCTIONAL: create the CRI video decoder handle object around a decoder-implementation interface.
+// create the CRI video decoder handle object around a decoder-implementation interface.
 // @0x140044470
 void* FUN_140044470(void* implementation, void* heap, void* parameter)
 {
@@ -3467,7 +3467,7 @@ static_assert(offsetof(CriVideoQueueFields, Queue) == 0x58 && offsetof(CriVideoQ
 // 0x14003ed40 FUN_14003ed40 is in sfr_cri_03d: its exe obj was compiled as C (/TC).
 CriSint32 FUN_14003ed40(void* player);
 
-// MS2-FUNCTIONAL: flush the pending reference-picture input of a VMPV player into its stream joint.
+// flush the pending reference-picture input of a VMPV player into its stream joint.
 // @0x140040a90
 void FUN_140040a90(void* player)
 {
@@ -3536,7 +3536,7 @@ void FUN_140040e40(void* player, CriUint32* total, CriUint32* first, CriSint32* 
     *fourth = (CriUint32)FUN_1400467b8(state->Queue, 0) / state->UnitSize;
 }
 
-// MS2-FUNCTIONAL: return the smallest per-channel count of whole audio frames buffered in a sound decoder.
+// return the smallest per-channel count of whole audio frames buffered in a sound decoder.
 // @0x140043420
 CriUint32 FUN_140043420(void* decoder, void* player, CriUint32 channels)
 {
@@ -3576,7 +3576,7 @@ CriUint32 FUN_140043420(void* decoder, void* player, CriUint32 channels)
     return result;
 }
 
-// MS2-FUNCTIONAL: run a video player's decode step once the demuxer has queued data.
+// run a video player's decode step once the demuxer has queued data.
 // @0x14003ec30
 CriSint32 FUN_14003ec30(void* player)
 {
@@ -4280,7 +4280,7 @@ __int64 FUN_1400530c0(__int64, int, int);  // C3: the definition's signature
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
-// MS2-FUNCTIONAL: look for a start-code signature across the tail of one chunk and the head of the next.
+// look for a start-code signature across the tail of one chunk and the head of the next.
 // @0x1400405d0
 CriBool FUN_1400405d0(void* firstChunk, void* secondChunk, CriUint32 offset)
 {
@@ -4370,7 +4370,7 @@ CriBool FUN_1400405d0(void* firstChunk, void* secondChunk, CriUint32 offset)
 void FUN_1400436d0(void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: route one stream chunk to the decoder owning the given id and report whether all decoders are fed.
+// route one stream chunk to the decoder owning the given id and report whether all decoders are fed.
 // @0x140042ba0
 CriUint32 FUN_140042ba0(void* trackSet, void* chunk, CriSint32 id, CriSint32* counts)
 {
@@ -4411,7 +4411,7 @@ CriUint32 FUN_140043890(void*, void*, CriUint32, CriUint32);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 #pragma function(memcpy, memset)              // the exe calls memcpy/memset here rather than expanding them
-// MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 16-bit output buffers.
+// drain buffered audio frames of every channel queue into per-channel 16-bit output buffers.
 // @0x140042f40
 CriUint32 FUN_140042f40(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
 {
@@ -4458,7 +4458,7 @@ CriUint32 FUN_140042f40(void* decoder, void* player, CriUint32 channels, void* o
     return res;
 }
 
-// MS2-FUNCTIONAL: drain buffered audio frames of every channel queue into per-channel 32-bit output buffers.
+// drain buffered audio frames of every channel queue into per-channel 32-bit output buffers.
 // @0x1400431a0
 CriUint32 FUN_1400431a0(void* decoder, void* player, CriUint32 channels, void* outputs, CriUint32 mode, CriUint32* info)
 {
@@ -4605,7 +4605,7 @@ void* FUN_140045144(CriSint32 count, void* work, CriSint32 workSize);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: route queued USF chunks to the matching track decoders until a track set needs more data.
+// route queued USF chunks to the matching track decoders until a track set needs more data.
 // @0x1400428e0
 void FUN_1400428e0(void* trackSet, void* player)
 {
@@ -4761,7 +4761,7 @@ typedef void (*CriMpvEmitFunc)(void*);
 typedef void (*CriMpvSkipFunc)(void*);
 }
 
-// MS2-FUNCTIONAL: predict one block from a reference plane at an integer plus half-pel motion offset.
+// predict one block from a reference plane at an integer plus half-pel motion offset.
 // @0x142ccc5f0
 void FUN_142ccc5f0(CriUint8* reference, CriUint8* destination, CriSint32 stride, CriSint32 stride2, CriSint32 width,
                    CriSint32 height, CriSint32 x, CriSint32 y, CriSint32 mvx, CriSint32 mvy, CriSint32 flags)
@@ -4848,7 +4848,7 @@ void FUN_142ccc850(void* decoder)
     FUN_142ccc6c0(decoder, (CriSint32)0xff000000, 0);
 }
 
-// MS2-FUNCTIONAL: run the skipped-macroblock callback for each address stepped back over, then resume reconstruction.
+// run the skipped-macroblock callback for each address stepped back over, then resume reconstruction.
 // @0x142ccc860
 void FUN_142ccc860(void* decoder, CriSint32 run)
 {
@@ -4924,7 +4924,7 @@ void FUN_142ccc8c0(void* decoder, void* referenceFrame, void* motion, CriSint32 
                   chromaX, chromaY, halfX, halfY, flags);
 }
 
-// MS2-FUNCTIONAL: forward-predicted macroblock: compensate from the first reference and add the residual.
+// forward-predicted macroblock: compensate from the first reference and add the residual.
 // @0x142ccca50
 void FUN_142ccca50(void* decoder)
 {
@@ -4932,7 +4932,7 @@ void FUN_142ccca50(void* decoder)
     FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
 }
 
-// MS2-FUNCTIONAL: backward-predicted macroblock: compensate from the second reference and add the residual.
+// backward-predicted macroblock: compensate from the second reference and add the residual.
 // @0x142ccca90
 void FUN_142ccca90(void* decoder)
 {
@@ -4940,7 +4940,7 @@ void FUN_142ccca90(void* decoder)
     FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
 }
 
-// MS2-FUNCTIONAL: bidirectional macroblock: average both reference predictions and add the residual.
+// bidirectional macroblock: average both reference predictions and add the residual.
 // @0x142cccad0
 void FUN_142cccad0(void* decoder)
 {
@@ -4949,7 +4949,7 @@ void FUN_142cccad0(void* decoder)
     FUN_142ccc6c0(decoder, CriMpvField<CriSint32>(decoder, MPV_CODED), 1);
 }
 
-// MS2-FUNCTIONAL: copy skipped macroblocks from the first reference with a zero motion vector.
+// copy skipped macroblocks from the first reference with a zero motion vector.
 // @0x142cccb30
 void FUN_142cccb30(void* decoder, CriSint32 run)
 {
@@ -5572,7 +5572,7 @@ unsigned int FUN_140052c80(unsigned __int64, unsigned __int64 *, int *);  // C3:
 unsigned int FUN_140052d00(__int64, int *);  // C3: the definition's signature
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: decode one picture's slices into the supplied frame set through the MPEG video decoder.
+// decode one picture's slices into the supplied frame set through the MPEG video decoder.
 // @0x140040850
 CriSint32 FUN_140040850(void* player, void* stream, void* second, CriSint32* consumed, void* frames)
 {
@@ -5937,7 +5937,7 @@ struct cri03_stream { virtual void v0() = 0; virtual void v1() = 0; virtual void
                       virtual void v8() = 0; virtual void* Call9(long long a, long long b, long long c) = 0; };
 
 struct cri03_host20 { void* vtbl; void* _08[3]; cri03_stream* stream; };
-// MS2-FUNCTIONAL: forwards to slot 9 (+0x48) of the object at +0x20; 0 without one.
+// forwards to slot 9 (+0x48) of the object at +0x20; 0 without one.
 // @0x140041360
 void* FUN_140041360(cri03_host20* self, long long a, long long b, long long c)
 {
@@ -5945,12 +5945,12 @@ void* FUN_140041360(cri03_host20* self, long long a, long long b, long long c)
     return o ? o->Call9(a, b, c) : NULL;
 }
 
-// MS2-FUNCTIONAL: empty interface slot.
+// empty interface slot.
 // @0x140041c50
 void FUN_140041c50(void*) {}
 
 struct cri03_host08 { void* vtbl; cri03_stream* stream; };
-// MS2-FUNCTIONAL: slot 9 (+0x48) of the object at +8 with (a, d, 0), both ints sign-extended.
+// slot 9 (+0x48) of the object at +8 with (a, d, 0), both ints sign-extended.
 // @0x140041d00
 void* FUN_140041d00(cri03_host08* self, CriSint32 a, void*, CriSint32 d)
 {
