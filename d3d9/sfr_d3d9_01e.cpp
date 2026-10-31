@@ -713,14 +713,13 @@ static const BlendModeDescAlpha BlendModeTableAlpha[Blend_Count] = {
 #undef SFR_BM
 #undef SFR_BMA
 
-// MS2-FUNCTIONAL: written from the decompile
 // @0x142736ac0
 void HAL::applyBlendMode(BlendMode mode, bool sourceAc, bool forceAc)
 {
     ScopedRenderEvent evt(GetEvent(Event_ApplyBlend), __FUNCTION__);
     if (!pDevice)
         return;
-    unsigned m = ((unsigned)mode < Blend_Count) ? (unsigned)mode : 0;
+    int m = ((unsigned)mode < Blend_Count) ? (int)mode : 0;
 
     // device flag bit 1: multiply / darken draw through the multiply shaders
     if (m == Blend_Multiply || m == Blend_Darken)
@@ -729,13 +728,14 @@ void HAL::applyBlendMode(BlendMode mode, bool sourceAc, bool forceAc)
         DeviceFlags &= ~1;
 
     // (the exe reads the source argument from the alpha table in both branches)
-    D3DBLEND src = (sourceAc && BlendModeTableAlpha[m].SrcArg == D3DBLEND_SRCALPHA) ? D3DBLEND_ONE
-                                                                                     : BlendModeTableAlpha[m].SrcArg;
     if (!(VP.Flags & Viewport::View_AlphaComposite) && !forceAc)
     {
         pDevice->SetRenderState(D3DRS_BLENDOP, BlendModeTable[m].Op);
         pDevice->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, FALSE);
-        pDevice->SetRenderState(D3DRS_SRCBLEND, src);
+        if (sourceAc && BlendModeTableAlpha[m].SrcArg == D3DBLEND_SRCALPHA)
+            pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+        else
+            pDevice->SetRenderState(D3DRS_SRCBLEND, BlendModeTableAlpha[m].SrcArg);
         pDevice->SetRenderState(D3DRS_DESTBLEND, BlendModeTable[m].DestArg);
     }
     else
@@ -743,7 +743,9 @@ void HAL::applyBlendMode(BlendMode mode, bool sourceAc, bool forceAc)
         pDevice->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, TRUE);
         pDevice->SetRenderState(D3DRS_BLENDOP, BlendModeTableAlpha[m].Op);
         pDevice->SetRenderState(D3DRS_BLENDOPALPHA, BlendModeTableAlpha[m].Op);
-        pDevice->SetRenderState(D3DRS_SRCBLEND, src);
+        pDevice->SetRenderState(D3DRS_SRCBLEND, (sourceAc && BlendModeTableAlpha[m].SrcArg == D3DBLEND_SRCALPHA)
+                                                    ? D3DBLEND_ONE
+                                                    : BlendModeTableAlpha[m].SrcArg);
         pDevice->SetRenderState(D3DRS_DESTBLEND, BlendModeTableAlpha[m].DestArg);
         pDevice->SetRenderState(D3DRS_SRCBLENDALPHA, BlendModeTableAlpha[m].SrcAlphaArg);
         pDevice->SetRenderState(D3DRS_DESTBLENDALPHA, BlendModeTableAlpha[m].DestAlphaArg);
