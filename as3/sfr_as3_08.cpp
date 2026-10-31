@@ -6,6 +6,12 @@
 // MS2-RANGE: 0x142458c10-0x1424653f0 .text$mn
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 
+#if defined(__clang__)
+#define SFR08_INSTANCE_CTOR
+#else
+#define SFR08_INSTANCE_CTOR inline
+#endif
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -346,8 +352,12 @@ namespace ClassTraits { namespace fl_events
 
 namespace Instances { namespace fl_events
 {
+    // The Instances::fl_events ctors that take InstanceTraits::Traits& (except GestureEvent and TextEvent) are `inline`
+    // under cl, so their out-of-line copies here are COMDAT-any and the inline copies sfr_as3_09 carries (cl emits
+    // them) no longer clash with them in the fullexe link (LNK2005). MS2_Sfr08EmitInstanceCtors at the end of the unit
+    // keeps them emitted. clang-cl ignores inline_depth, so the hook DLL build keeps them as plain definitions.
     // @0x14245e850
-    AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR AppLifecycleEvent::AppLifecycleEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
         Status.SetNull();
@@ -399,7 +409,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x14245ea80
-    AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR AsyncErrorEvent::AsyncErrorEvent(InstanceTraits::Traits& t)
         : ErrorEvent(t)
     {
     }
@@ -508,7 +518,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x14245eec0
-    ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR ErrorEvent::ErrorEvent(InstanceTraits::Traits& t)
         : TextEvent(t)
     {
     }
@@ -553,7 +563,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x14245f450
-    Event::Event(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR Event::Event(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , Type(GetVM().GetStringManager().CreateEmptyString())
         , CurrentTarget(NULL)
@@ -720,7 +730,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x14245fac0
-    FocusEvent::FocusEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR FocusEvent::FocusEvent(InstanceTraits::Traits& t)
         : Event(t)
         , ShiftKey(false)
         , KeyCode(0)
@@ -939,7 +949,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142460370
-    IMEEvent::IMEEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR IMEEvent::IMEEvent(InstanceTraits::Traits& t)
         : TextEvent(t)
     {
     }
@@ -989,7 +999,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142460510
-    IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR IOErrorEvent::IOErrorEvent(InstanceTraits::Traits& t)
         : ErrorEvent(t)
         , ErrorText(GetVM().GetStringManager().GetBuiltin(AS3Builtin_empty_))
     {
@@ -1035,7 +1045,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x1424606d0
-    KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR KeyboardEvent::KeyboardEvent(InstanceTraits::Traits& t)
         : Event(t)
         , KeyLocation(-1)
     {
@@ -1082,7 +1092,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142460a60
-    MouseEvent::MouseEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR MouseEvent::MouseEvent(InstanceTraits::Traits& t)
         : Event(t)
         , RelatedObj(NULL)
     {
@@ -1155,7 +1165,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142460c60
-    NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR NetStatusEvent::NetStatusEvent(InstanceTraits::Traits& t)
         : Event(t)
         , Code(GetVM().GetStringManager().CreateEmptyString())
         , Level(GetVM().GetStringManager().CreateEmptyString())
@@ -1202,7 +1212,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142460e70
-    PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR PressAndTapGestureEvent::PressAndTapGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
         TapLocalX = TapLocalY = 0;
@@ -1250,7 +1260,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142461040
-    ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR ProgressEvent::ProgressEvent(InstanceTraits::Traits& t)
         : Event(t)
         , BytesLoaded(0)
         , BytesTotal(0)
@@ -1354,7 +1364,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x1424614f0
-    StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR StageOrientationEvent::StageOrientationEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
         BeforeOrientation.SetNull();
@@ -1506,7 +1516,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142461c00
-    TimerEvent::TimerEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR TimerEvent::TimerEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
     }
@@ -1557,7 +1567,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x142461e70
-    TouchEvent::TouchEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR TouchEvent::TouchEvent(InstanceTraits::Traits& t)
         : Event(t)
         , RelatedObj(NULL)
     {
@@ -1621,7 +1631,7 @@ namespace ClassTraits { namespace fl_events
 namespace Instances { namespace fl_events
 {
     // @0x1424620d0
-    TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR TransformGestureEvent::TransformGestureEvent(InstanceTraits::Traits& t)
         : GestureEvent(t)
     {
         ScaleX = ScaleY = 1.0;
@@ -1686,7 +1696,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl_events
 {
     // @0x14245f780
-    EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
+    SFR08_INSTANCE_CTOR EventDispatcher::EventDispatcher(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , pVM(&t.GetVM())
         , pImpl()
@@ -1709,6 +1719,32 @@ namespace InstanceTraits { namespace fl_events
         ImplementsInterfaces.PushBack(Multiname(GetVM(), StringDataPtr("flash.events.IEventDispatcher")));
     }
 }}
+
+// Calls each inline Instances::fl_events ctor above out of line (inline_depth 0), so cl emits their bodies (and with
+// them the vftables and deleting dtors) in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr08EmitInstanceCtors(void* p, InstanceTraits::Traits& t)
+{
+    using namespace Instances::fl_events;
+    new(p) AppLifecycleEvent(t);
+    new(p) AsyncErrorEvent(t);
+    new(p) ErrorEvent(t);
+    new(p) Event(t);
+    new(p) EventDispatcher(t);
+    new(p) FocusEvent(t);
+    new(p) IMEEvent(t);
+    new(p) IOErrorEvent(t);
+    new(p) KeyboardEvent(t);
+    new(p) MouseEvent(t);
+    new(p) NetStatusEvent(t);
+    new(p) PressAndTapGestureEvent(t);
+    new(p) ProgressEvent(t);
+    new(p) StageOrientationEvent(t);
+    new(p) TimerEvent(t);
+    new(p) TouchEvent(t);
+    new(p) TransformGestureEvent(t);
+}
+#pragma inline_depth()
 
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END

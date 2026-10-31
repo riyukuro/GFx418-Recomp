@@ -2191,6 +2191,7 @@ public:
     unsigned                 MouseCursorEventCnt;     // +0x128
 
     Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
+    virtual ~Stage();                                 // 0x1424defe0 (sfr_as3_16); implicit here, cl emitted a clashing copy
 
     // The container overrides (bodies in other units; same declarations as as3_stage.h).
     virtual void        ForceShutdown();                                    // 54 0x142504860
