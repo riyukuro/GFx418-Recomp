@@ -96,6 +96,7 @@
 #include "../include/gfx/gfx_imemanager.h"
 #include "../include/render/text_highlight.h"
 #include "../include/gfx/gfx_imecandidateliststyle.h"
+#include "../include/gfx/gfx_button.h"
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -3679,7 +3680,6 @@ Pickable<BitmapData::InstanceType> BitmapData::MakeInstance(BitmapData& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x142444db0
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<DisplayObject::InstanceType> DisplayObject::MakeInstance(DisplayObject& t)
 {
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
@@ -3793,7 +3793,6 @@ Pickable<Font::InstanceType> Font::MakeInstance(Font& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad200
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<StaticText::InstanceType> StaticText::MakeInstance(StaticText& t)
 {
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
@@ -3809,7 +3808,6 @@ Pickable<TextField::InstanceType> TextField::MakeInstance(TextField& t)
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t, Instances::fl::InlineCtor()));
 }
 // @0x1424ad370
-// MS2-FUNCTIONAL the exe inlines the instance constructor; cl calls it
 Pickable<TextFormat::InstanceType> TextFormat::MakeInstance(TextFormat& t)
 {
     return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
@@ -4032,31 +4030,143 @@ Pickable<Traits> Math::MakeClassTraits(VM& vm)
 // MovieRoot::AddScriptableMovieClip.
 // MovieRoot derives from ASMovieRootBase at offset 0; this unit only sees the as3_support.h stub.
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
+// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as3_06).
+Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
+                                                   const Scaleform::GFx::ResourceId* prid);
+// AvmDisplayObj::AssignAS3Obj (sfr_as3_17's Sfr33SetValueDropObject).
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* self, void* value); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
-// A script-created shape gets its stage object right away.
+// A script-created shape gets its stage object right away. The SDK calls Shape::CreateStageObject() qualified, and
+// the exe inlines its body (sfr_as3_06 0x142441da0), written out here.
 // @0x1424447c0
-// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
 void Shape::InitInstance(bool extCall)
 {
     if (!extCall)
-        CreateStageObject();
+    {
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = *reinterpret_cast<ASMovieRootBase**>(reinterpret_cast<UByte*>(&GetVM()) + 0x2d8);
+            CharacterCreateInfo ccinfo;
+            {
+                ResourceId emptyShapeId(0x10004);
+                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
+            }
+            DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                 ResourceId(0x10001), CharacterDef::Shape);
+            GFx::DisplayObject* pdisp = static_cast<GFx::DisplayObject*>(pch);
+            GFx::DisplayObject*& raw = pDispObj.GetRawRef();
+            if (raw)
+                raw->Release();
+            raw = pdisp;
+            Sfr33SetValueDropObject((UByte*)(!pdisp ? NULL : ToAvmDisplayObj(pdisp)), this);
+        }
+    }
 }
+// The movie whose library an AS3 object's class came from.
+}}}}}
+Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
+// sfr_as3_06: the class's exported library symbol.
+bool FindLibrarySymbol(const DisplayObject* pobj, CharacterCreateInfo* pinfo, MovieDefImpl* pdefImpl);
+// As Shape: the exe inlines SimpleButton::CreateStageObject (sfr_as3_06 0x142441e60).
 // @0x142444890
-// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
 void SimpleButton::InitInstance(bool extCall)
 {
     if (!extCall)
-        CreateStageObject();
+    {
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = *reinterpret_cast<ASMovieRootBase**>(reinterpret_cast<UByte*>(&GetVM()) + 0x2d8);
+            MovieDefImpl* pdefImpl = FUN_14250d8f0(GetVM(), this);
+            if (pdefImpl)
+            {
+                // the SDK's ctor zeroes all three, then pCharDef again
+                CharacterCreateInfo ccinfo;
+                ccinfo.pCharDef = NULL;
+                ccinfo.pBindDefImpl = NULL;
+                ccinfo.pResource = NULL;
+                ccinfo.pCharDef = NULL;
+                FindLibrarySymbol(this, &ccinfo, pdefImpl);
+                if (!ccinfo.pCharDef)
+                {
+                    ResourceId emptyButtonId(0x10003);
+                    CharacterCreateInfo def;
+                    ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptyButtonId);
+                    const UByte* pvm = reinterpret_cast<const UByte*>(&GetVM());
+                    UPInt n = *reinterpret_cast<const UPInt*>(pvm + 0x78) - 1;
+                    const UByte* ppage = (*reinterpret_cast<UByte* const* const*>(pvm + 0x90))[n >> 6];
+                    const UByte* pframe = ppage + (n & 0x3f) * 0xa8;
+                    const UByte* pfile = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(pframe + 0x28) + 0x28);
+                    ccinfo.pBindDefImpl = *reinterpret_cast<MovieDefImpl* const*>(pfile + 0x188);
+                }
+                DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                     ResourceId(ResourceId::InvalidId), CharacterDef::Button);
+                GFx::DisplayObject* pdisp = static_cast<GFx::DisplayObject*>(pch);
+                GFx::DisplayObject*& raw = pDispObj.GetRawRef();
+                if (raw)
+                    raw->Release();
+                raw = pdisp;
+                Sfr33SetValueDropObject((UByte*)(!pdisp ? NULL : ToAvmDisplayObj(pdisp)), this);
+                static_cast<GFx::Button*>(pDispObj.GetPtr())->CreateCharacters();
+            }
+        }
+    }
 }
 // A script-created sprite also registers as scriptable; a movie clip always marks its display object.
+}}}}}
+// MovieRoot::FindLibrarySymbolInAllABCs.
+bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx::AS3::Instances::fl::Object* pobj,
+                   Scaleform::GFx::CharacterCreateInfo* pinfo);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
+// The exe inlines Sprite::CreateStageObject here too (sfr_as3_06 0x142441ff0).
 // @0x142444a00
-// MS2-FUNCTIONAL the exe inlines CreateStageObject; cl calls the virtual
 void Sprite::InitInstance(bool extCall)
 {
     if (!extCall)
     {
-        CreateStageObject();
-        FUN_1424e9380(reinterpret_cast<GFx::ASMovieRootBase*>(ToAvmDisplayObj(pDispObj)->GetAS3Root()), pDispObj);
+        if (!pDispObj)
+        {
+            ASMovieRootBase* proot = *reinterpret_cast<ASMovieRootBase**>(reinterpret_cast<UByte*>(&GetVM()) + 0x2d8);
+            MovieDefImpl* pdefImpl = FUN_14250d8f0(GetVM(), this);
+            if (pdefImpl)
+            {
+                CharacterCreateInfo ccinfo;
+                ccinfo.pCharDef = NULL;
+                ccinfo.pBindDefImpl = NULL;
+                ccinfo.pResource = NULL;
+                ccinfo.pCharDef = NULL;
+                FindLibrarySymbol(this, &ccinfo, pdefImpl);
+                if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
+                {
+                    ResourceId emptySpriteId(0x10001);
+                    CharacterCreateInfo def;
+                    ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
+                    const UByte* pvm = reinterpret_cast<const UByte*>(&GetVM());
+                    UPInt size = *reinterpret_cast<const UPInt*>(pvm + 0x78);
+                    if (size != 0)
+                    {
+                        UPInt n = size - 1;
+                        const UByte* ppage = (*reinterpret_cast<UByte* const* const*>(pvm + 0x90))[n >> 6];
+                        const UByte* pframe = ppage + (n & 0x3f) * 0xa8;
+                        const UByte* pfile = *reinterpret_cast<UByte* const*>(*reinterpret_cast<UByte* const*>(pframe + 0x28) + 0x28);
+                        ccinfo.pBindDefImpl = *reinterpret_cast<MovieDefImpl* const*>(pfile + 0x188);
+                    }
+                    else
+                        ccinfo.pBindDefImpl = pdefImpl;
+                }
+                DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                     ResourceId(ResourceId::InvalidId), CharacterDef::Sprite);
+                GFx::DisplayObject* pdisp = static_cast<GFx::DisplayObject*>(pch);
+                GFx::DisplayObject*& raw = pDispObj.GetRawRef();
+                if (raw)
+                    raw->Release();
+                raw = pdisp;
+                Sfr33SetValueDropObject((UByte*)(!pdisp ? NULL : ToAvmDisplayObj(pdisp)), this);
+            }
+        }
+        GFx::DisplayObject* pspr = pDispObj;
+        MovieRoot* as3root = ToAvmDisplayObj(pspr)->GetAS3Root();
+        FUN_1424e9380(reinterpret_cast<GFx::ASMovieRootBase*>(as3root), pspr);
     }
     if (IsMovieClip())
         pDispObj->GFx::DisplayObjectBase::Flags |= GFx::DisplayObjectBase::Mask_MovieClip;
