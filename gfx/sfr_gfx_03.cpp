@@ -38,11 +38,14 @@ Stream::Stream(File* pinput, MemoryHeap* pheap, Log* plog, ParseControl* pparseC
 Stream::Stream(const UByte* pbuffer, unsigned bufSize, MemoryHeap* pheap, Log* plog, ParseControl* pparseControl)
     : FileName(pheap)
 {
-    pBuffer = (UByte*)pbuffer;
-    if (!pbuffer)
-        bufSize = 0;
-    BufferSize = bufSize;
-    Initialize(0, plog, pparseControl);
+    pBuffer = const_cast<UByte*>(pbuffer);
+    if (pBuffer)
+        BufferSize = bufSize;
+    else
+        BufferSize = 0;
+
+    Initialize(NULL, plog, pparseControl);
+
     DataSize = BufferSize;
     FilePos  = BufferSize;
 }
@@ -116,53 +119,73 @@ bool Stream::IsVerboseParseMorphShape() const
 // Moves the unread bytes to the front and fills the rest of the buffer; returns whether size bytes are now
 // available. With no file (memory block) the buffer is reset to zeroes.
 // @0x1425c27a0
-// MS2-FUNCTIONAL: the exe stores Pos = 0 before loading pInput; this build loads pInput first (same effect)
 bool Stream::PopulateBuffer(int size)
 {
-    if (DataSize == 0 && pInput)
+    if (DataSize == 0)
     {
-        FilePos    = pInput->Tell();
-        ResyncFile = false;
+        // In case the underlying file position was changed.
+        if (pInput)
+        {
+            FilePos    = pInput->Tell();
+            ResyncFile = false;
+        }
     }
+
+    // Move the data to the front.
     if (Pos < DataSize)
     {
         memmove(pBuffer, pBuffer + Pos, DataSize - Pos);
-        DataSize -= Pos;
+        DataSize = DataSize - Pos;
+        Pos      = 0;
     }
-    else
+    else if (Pos >= DataSize)
+    {
         DataSize = 0;
-    Pos = 0;
-
+        Pos      = 0;
+    }
+    bool rv;
     if (pInput)
     {
-        int toRead    = BufferSize - DataSize;
-        int readBytes = pInput->Read(pBuffer + DataSize, toRead);
-        if (readBytes < toRead)
-        {
-            if (readBytes > 0)
-            {
-                DataSize += readBytes;
-                FilePos += readBytes;
-            }
-            memset(pBuffer + DataSize, 0, BufferSize - DataSize);
-            // Short read: pretend the zero fill is data so the caller can go on.
-            bool result = size <= (int)(DataSize - Pos);
-            if (!result)
-                DataSize = Pos + size;
-            return result;
-        }
-        DataSize += readBytes;
-        FilePos += readBytes;
-        return true;
-    }
+        int readSize = BufferSize - (int)DataSize;
+        int bytes    = pInput->Read(pBuffer + DataSize, readSize);
 
-    pBuffer    = BuiltinBuffer;
-    BufferSize = sizeof(BuiltinBuffer);
-    memset(pBuffer, 0, BufferSize);
-    FilePos += BufferSize;
-    DataSize = BufferSize;
-    Pos      = 0;
-    return false;
+        if (bytes < readSize)
+        {
+            if (bytes > 0)
+            {
+                DataSize += (unsigned)bytes;
+                FilePos += (unsigned)bytes;
+            }
+            // Did not read enough: zero fill, the error case.
+            memset(pBuffer + DataSize, 0, BufferSize - DataSize);
+
+            rv = (size <= (int)(DataSize - Pos));
+            if ((int)(DataSize - Pos) < size)
+            {
+                // A read past the end of the file reads zeroes.
+                int extraBytes = size - (int)(DataSize - Pos);
+                DataSize += (unsigned)extraBytes;
+            }
+        }
+        else
+        {
+            DataSize += (unsigned)bytes;
+            FilePos += (unsigned)bytes;
+            rv = true;
+        }
+    }
+    else
+    {
+        // No file: a memory block stream reads zeroes past its end.
+        pBuffer    = BuiltinBuffer;
+        BufferSize = sizeof(BuiltinBuffer);
+        memset(pBuffer, 0, BufferSize);
+        Pos      = 0;
+        DataSize = BufferSize;
+        FilePos += DataSize;
+        rv = false;
+    }
+    return rv;
 }
 
 // @0x1425c2790
@@ -302,27 +325,25 @@ long Stream::ReadVS32()
 }
 
 // @0x1425c3010
-// MS2-FUNCTIONAL: same loads and shift/or chain; register allocation of the eight bytes differs
 double Stream::ReadDouble()
 {
     Align();
-    if ((int)(DataSize - Pos) < 8)
-        PopulateBuffer(8);
-    UByte b0 = pBuffer[Pos++];
-    UByte b1 = pBuffer[Pos++];
-    UByte b2 = pBuffer[Pos++];
-    UByte b3 = pBuffer[Pos++];
-    UByte b4 = pBuffer[Pos++];
-    UByte b5 = pBuffer[Pos++];
-    UByte b6 = pBuffer[Pos++];
-    UByte b7 = pBuffer[Pos++];
+    if (((int)DataSize - (int)Pos) < (int)sizeof(double))
+        PopulateBuffer(sizeof(double));
+    // Go through a union to avoid pointer strict aliasing problems.
     union
     {
-        UInt64 I;
-        double D;
-    } u;
-    u.I = ((((((((UInt64)b7 << 8 | b6) << 8 | b5) << 8 | b4) << 8 | b3) << 8 | b2) << 8 | b1) << 8) | b0;
-    return u.D;
+        UInt64 ival;
+        double dval;
+    };
+    ival = 0;
+    int shift = 0;
+    for (size_t i = 0; i < sizeof(double); ++i)
+    {
+        ival |= (UInt64(pBuffer[Pos++]) << shift);
+        shift += 8;
+    }
+    return dval;
 }
 
 // @0x1425c1f10
@@ -519,40 +540,36 @@ void Stream::ReadMatrix(Render::Matrix2x4<float>* pm)
 }
 
 // @0x1425c28c0
-// MS2-FUNCTIONAL: same reads and stores; this build keeps one more callee-saved register (r13)
 void Stream::ReadCxformRgb(Render::Cxform* pcxform)
 {
     Align();
-    unsigned hasAdd  = ReadUInt1();
+    unsigned hasAdd = ReadUInt1();
     unsigned hasMult = ReadUInt1();
-    unsigned nbits   = ReadUInt(4);
+    unsigned nbits = ReadUInt(4);
+
     if (hasMult)
     {
+        // The divisor value must be 256,
+        // since multiply factor 1.0 has value 0x100, not 0xFF
         pcxform->M[0][0] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][1] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][2] = ReadSInt(nbits) / 256.0f;
+        pcxform->M[0][3] = 1.0f;
     }
     else
     {
-        pcxform->M[0][0] = 1.0f;
-        pcxform->M[0][1] = 1.0f;
-        pcxform->M[0][2] = 1.0f;
+        for (unsigned i = 0; i < 4; i++) { pcxform->M[0][i] = 1.0f; }
     }
-    pcxform->M[0][3] = 1.0f;
-    // The alpha offset ends up 1 (before Normalize) when the add terms are present.
     if (hasAdd)
     {
-        pcxform->M[1][0] = (float)ReadSInt(nbits);
-        pcxform->M[1][1] = (float)ReadSInt(nbits);
-        pcxform->M[1][2] = (float)ReadSInt(nbits);
+        pcxform->M[1][0] = (float) ReadSInt(nbits);
+        pcxform->M[1][1] = (float) ReadSInt(nbits);
+        pcxform->M[1][2] = (float) ReadSInt(nbits);
         pcxform->M[1][3] = 1.0f;
     }
     else
     {
-        pcxform->M[1][0] = 0.0f;
-        pcxform->M[1][1] = 0.0f;
-        pcxform->M[1][2] = 0.0f;
-        pcxform->M[1][3] = 0.0f;
+        for (unsigned i = 0; i < 4; i++) { pcxform->M[1][i] = 0.0f; }
     }
     pcxform->Normalize();
 }
@@ -696,89 +713,122 @@ void Stream::LogParseClass(const Render::Matrix2x4<float>& matrix)
 //
 
 // Bit reads straight from the memory block: the bytes a read touches are gathered (big endian) and the excess
-// low bits shifted out.
+// low bits shifted out. The SDK body, verbatim.
 // @0x1425c3e70
-// MS2-FUNCTIONAL: same switch and tail; the exe reuses the constant-1 register for the byte advances
 unsigned StreamContext::ReadUInt(unsigned bitcount)
 {
-    // Bytes spanned by bitcount bits.
-    static const UByte BytesForBits[33] = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2,
-                                            3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 };
-
-    unsigned totalBits = CurBitIndex + bitcount;
-    unsigned mask      = (1 << (8 - CurBitIndex)) - 1;
-    unsigned value;
-    int      shift;
-    switch (BytesForBits[bitcount])
+    static const UInt8 bytesInBits[] = { 0,1,1,1,1,1,1,1,1, 
+        2,2,2,2,2,2,2,2,
+        3,3,3,3,3,3,3,3,
+        4,4,4,4,4,4,4,4 };
+    unsigned v;
+    unsigned mask = ((1 << (8 - CurBitIndex)) - 1);
+    unsigned rshift;
+    unsigned lastBitIndex = CurBitIndex + bitcount;
+    SF_ASSERT(bitcount < sizeof(bytesInBits)/sizeof(bytesInBits[0]));
+    switch(bytesInBits[bitcount])
     {
-    case 0:
-        return 0;
-    case 1:
-        value = pData[CurByteIndex] & mask;
-        if (totalBits <= 8)
+    case 0: return 0;
+    case 1: // 1 octet 1..8 bits
+        if (lastBitIndex <= 8) // whole value fits in 1 bytes
         {
-            shift = 8 - totalBits;
-            break;
+            v = pData[CurByteIndex] & mask;
+            rshift = (8 - lastBitIndex);
         }
-        value = (value << 8) | pData[CurByteIndex + 1];
-        CurByteIndex += 1;
-        shift = 16 - totalBits;
-        break;
-    case 2:
-        value = ((pData[CurByteIndex] & mask) << 8) | pData[CurByteIndex + 1];
-        if (totalBits <= 16)
+        else
         {
-            CurByteIndex += 1;
-            shift = 16 - totalBits;
-            break;
+            // assemble a preliminary value using 2 bytes
+            // and init rshift accordingly
+            v = (unsigned(pData[CurByteIndex] & mask) << 8) | 
+                 unsigned(pData[CurByteIndex + 1]);
+            ++CurByteIndex;
+            rshift = (16 - lastBitIndex);
         }
-        value = (value << 8) | pData[CurByteIndex + 2];
-        CurByteIndex += 2;
-        shift = 24 - totalBits;
         break;
-    case 3:
-        value = ((((pData[CurByteIndex] & mask) << 8) | pData[CurByteIndex + 1]) << 8) | pData[CurByteIndex + 2];
-        if (totalBits <= 24)
+    case 2: // 2 octets 9..16 bits
+        if (lastBitIndex <= 16) // whole value fits in 2 bytes
         {
+            v = ((unsigned(pData[CurByteIndex]) & mask) << 8) | unsigned(pData[CurByteIndex + 1]);
+            ++CurByteIndex;
+            rshift = (16 - lastBitIndex);
+        }
+        else
+        {
+            // assemble a preliminary value using 3 bytes
+            // and init rshift accordingly
+            v = (unsigned(pData[CurByteIndex] & mask) << 16) | 
+                (unsigned(pData[CurByteIndex + 1]) << 8) | 
+                 unsigned(pData[CurByteIndex + 2]);
             CurByteIndex += 2;
-            shift = 24 - totalBits;
-            break;
+            rshift = (24 - lastBitIndex);
         }
-        value = (value << 8) | pData[CurByteIndex + 3];
-        CurByteIndex += 3;
-        shift = 32 - totalBits;
         break;
-    case 4:
-        value = ((((((pData[CurByteIndex] & mask) << 8) | pData[CurByteIndex + 1]) << 8) | pData[CurByteIndex + 2])
-                 << 8) |
-                pData[CurByteIndex + 3];
-        if (totalBits <= 32)
+    case 3: // 3 octets 17..24 bits
+        if (lastBitIndex <= 24) // whole value fits in 3 bytes 
         {
+            v = (unsigned(pData[CurByteIndex] & mask) << 16) | 
+                (unsigned(pData[CurByteIndex + 1]) << 8) | 
+                 unsigned(pData[CurByteIndex + 2]);
+            CurByteIndex += 2;
+            rshift = (24 - lastBitIndex);
+        }
+        else
+        {
+            // assemble a preliminary value using 4 bytes
+            // and init rshift accordingly
+            v = (unsigned(pData[CurByteIndex] & mask) << 24) | 
+                (unsigned(pData[CurByteIndex + 1]) << 16) | 
+                (unsigned(pData[CurByteIndex + 2]) << 8) | 
+                 unsigned(pData[CurByteIndex + 3]);
             CurByteIndex += 3;
-            shift = 32 - totalBits;
-            break;
+            rshift = (32 - lastBitIndex);
         }
-        {
-            // More than 32 bits spanned: the top bits of a fifth byte complete the value.
-            unsigned extra = totalBits - 32;
-            CurByteIndex += 4;
-            CurBitIndex = extra;
-            return (pData[CurByteIndex] >> (8 - extra)) | (value << extra);
-        }
-    default:
-        value = 0;
-        shift = 0;
         break;
-    }
+    case 4: // 4 octets 25..32 bits
+        if (lastBitIndex <= 32) // whole value fits in 4 bytes 
+        {
+            v = (unsigned(pData[CurByteIndex] & mask) << 24) | 
+                (unsigned(pData[CurByteIndex + 1]) << 16) | 
+                (unsigned(pData[CurByteIndex + 2]) << 8) | 
+                 unsigned(pData[CurByteIndex + 3]);
+            CurByteIndex += 3;
+            rshift = (32 - lastBitIndex);
+        }
+        else
+        {
+            // assemble a preliminary value using 4 bytes
+            v = (unsigned(pData[CurByteIndex] & mask) << 24) | 
+                (unsigned(pData[CurByteIndex + 1]) << 16) | 
+                (unsigned(pData[CurByteIndex + 2]) << 8) | 
+                 unsigned(pData[CurByteIndex + 3]);
+            CurByteIndex += 4;
 
-    if (shift)
-    {
-        CurBitIndex = 8 - shift;
-        return value >> shift;
+            // need to read 5th byte and take "extraBits" bits from it
+            unsigned extraBits = (lastBitIndex - 32);
+            v <<= extraBits;
+            v |= unsigned(pData[CurByteIndex]) >> (8 - extraBits);
+
+            // value is already shifted correctly.
+            // just modify CurBitIndex and return
+            CurBitIndex = extraBits;
+            SF_ASSERT(CurBitIndex < 8);
+            return v;
+        }
+        break;
+    default: SF_ASSERT(0); v = 0; rshift = 0; // only up to 32-bits values supported
     }
-    CurByteIndex++;
-    CurBitIndex = 0;
-    return value;
+    if (rshift)
+    {
+        v >>= rshift;
+        CurBitIndex = 8 - rshift;
+    }
+    else
+    {
+        ++CurByteIndex;
+        CurBitIndex = 0;
+    }
+    SF_ASSERT(CurBitIndex < 8);
+    return v;
 }
 
 // @0x1425c32b0
@@ -788,60 +838,60 @@ void StreamContext::ReadMatrix(Render::Matrix2x4<float>* pm)
     Align();
     pm->SetIdentity();
 
-    if (ReadUInt1())
+    int hasScale = ReadUInt1();
+    if (hasScale)
     {
-        int scaleBits = ReadUInt(5);
-        pm->M[0][0]   = ReadSInt(scaleBits) / 65536.0f;
-        pm->M[1][1]   = ReadSInt(scaleBits) / 65536.0f;
+        unsigned ScaleNbits = ReadUInt(5);
+        pm->Sx() = ReadSInt(ScaleNbits) / 65536.0f;
+        pm->Sy() = ReadSInt(ScaleNbits) / 65536.0f;
     }
-    if (ReadUInt1())
+    int hasRotate = ReadUInt1();
+    if (hasRotate)
     {
-        int rotateBits = ReadUInt(5);
-        pm->M[1][0]    = ReadSInt(rotateBits) / 65536.0f;
-        pm->M[0][1]    = ReadSInt(rotateBits) / 65536.0f;
+        unsigned rotateNbits = ReadUInt(5);
+        pm->Shy() = ReadSInt(rotateNbits) / 65536.0f;
+        pm->Shx() = ReadSInt(rotateNbits) / 65536.0f;
     }
-    int translateBits = ReadUInt(5);
-    if (translateBits > 0)
+
+    int translateNbits = ReadUInt(5);
+    if (translateNbits > 0)
     {
-        pm->M[0][3] = (float)ReadSInt(translateBits);
-        pm->M[1][3] = (float)ReadSInt(translateBits);
+        pm->Tx() = (float) ReadSInt(translateNbits);
+        pm->Ty() = (float) ReadSInt(translateNbits);
     }
 }
 
 // @0x1425c2a60
-// MS2-FUNCTIONAL: same reads and stores; this build keeps one more callee-saved register (r13)
 void StreamContext::ReadCxformRgb(Render::Cxform* pcxform)
 {
     Align();
-    unsigned hasAdd  = ReadUInt1();
+    unsigned hasAdd = ReadUInt1();
     unsigned hasMult = ReadUInt1();
-    unsigned nbits   = ReadUInt(4);
+    unsigned nbits = ReadUInt(4);
+
     if (hasMult)
     {
+        // The divisor value must be 256,
+        // since multiply factor 1.0 has value 0x100, not 0xFF
         pcxform->M[0][0] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][1] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][2] = ReadSInt(nbits) / 256.0f;
+        pcxform->M[0][3] = 1.0f;
     }
     else
     {
-        pcxform->M[0][0] = 1.0f;
-        pcxform->M[0][1] = 1.0f;
-        pcxform->M[0][2] = 1.0f;
+        for (unsigned i = 0; i < 4; i++) { pcxform->M[0][i] = 1.0f; }
     }
-    pcxform->M[0][3] = 1.0f;
     if (hasAdd)
     {
-        pcxform->M[1][0] = (float)ReadSInt(nbits);
-        pcxform->M[1][1] = (float)ReadSInt(nbits);
-        pcxform->M[1][2] = (float)ReadSInt(nbits);
+        pcxform->M[1][0] = (float) ReadSInt(nbits);
+        pcxform->M[1][1] = (float) ReadSInt(nbits);
+        pcxform->M[1][2] = (float) ReadSInt(nbits);
         pcxform->M[1][3] = 1.0f;
     }
     else
     {
-        pcxform->M[1][0] = 0.0f;
-        pcxform->M[1][1] = 0.0f;
-        pcxform->M[1][2] = 0.0f;
-        pcxform->M[1][3] = 0.0f;
+        for (unsigned i = 0; i < 4; i++) { pcxform->M[1][i] = 0.0f; }
     }
     pcxform->Normalize();
 }
@@ -851,11 +901,15 @@ void StreamContext::ReadCxformRgb(Render::Cxform* pcxform)
 void StreamContext::ReadCxformRgba(Render::Cxform* pcxform)
 {
     Align();
-    unsigned hasAdd  = ReadUInt1();
+
+    unsigned hasAdd = ReadUInt1();
     unsigned hasMult = ReadUInt1();
-    unsigned nbits   = ReadUInt(4);
+    unsigned nbits = ReadUInt(4);
+
     if (hasMult)
     {
+        // The divisor value must be 256,
+        // since multiply factor 1.0 has value 0x100, not 0xFF
         pcxform->M[0][0] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][1] = ReadSInt(nbits) / 256.0f;
         pcxform->M[0][2] = ReadSInt(nbits) / 256.0f;
@@ -863,25 +917,19 @@ void StreamContext::ReadCxformRgba(Render::Cxform* pcxform)
     }
     else
     {
-        pcxform->M[0][0] = 1.0f;
-        pcxform->M[0][1] = 1.0f;
-        pcxform->M[0][2] = 1.0f;
-        pcxform->M[0][3] = 1.0f;
+        for (int i = 0; i < 4; i++) { pcxform->M[0][i] = 1.0f; }
     }
     if (hasAdd)
     {
-        pcxform->M[1][0] = (float)ReadSInt(nbits);
-        pcxform->M[1][1] = (float)ReadSInt(nbits);
-        pcxform->M[1][2] = (float)ReadSInt(nbits);
-        pcxform->M[1][3] = (float)ReadSInt(nbits);
+        pcxform->M[1][0] = (float) ReadSInt(nbits);
+        pcxform->M[1][1] = (float) ReadSInt(nbits);
+        pcxform->M[1][2] = (float) ReadSInt(nbits);
+        pcxform->M[1][3] = (float) ReadSInt(nbits);
     }
     else
     {
-        pcxform->M[1][0] = 0.0f;
-        pcxform->M[1][1] = 0.0f;
-        pcxform->M[1][2] = 0.0f;
-        pcxform->M[1][3] = 0.0f;
-    }
+        for (int i = 0; i < 4; i++) { pcxform->M[1][i] = 0.0f; }
+    }       
     pcxform->Normalize();
 }
 
