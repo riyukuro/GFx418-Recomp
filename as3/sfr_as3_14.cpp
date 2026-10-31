@@ -16,6 +16,9 @@
 #define SFR14_INSTANCE_CTOR inline
 #endif
 
+// Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
+
 namespace Scaleform {
 // The ByteArray storage grows through this out of line (0x1424beea0) in the exe.
 template <> inline SF_NOINLINE void ArrayBase<ArrayData<UInt8, AllocatorLH_POD<UInt8>, ArrayDefaultPolicy> >::Resize(UPInt newSize)
@@ -488,7 +491,6 @@ namespace InstanceTraits { namespace fl_utils
         return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: MakeObject: Pickable/Value assignment scheduling differs
     // @0x1424beae0
     void ByteArray::MakeObject(Value& result, Traits& t)
     {
@@ -902,12 +904,20 @@ namespace Instances { namespace fl_utils
 
     // ---- ByteArray ----
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line constructor getter 0x142508460; ours inlines Traits::GetConstructor
+    // The SDK's ByteArray::GetDefaultEndian.
+    static inline ByteArray::EndianType Sfr14DefaultEndian() { return ByteArray::endianBig; }
+    // The SDK's Classes::fl_utils::ByteArray::GetDefEncoding.
+    static inline ByteArray::EncodingType Sfr14DefEncoding(const Classes::fl_utils::ByteArray& c)
+    {
+        return (ByteArray::EncodingType)c.DefaultObjectEncoding;
+    }
+
+    // The constructor getter is the exe's out-of-line Traits::GetConstructor (0x142508460).
     // @0x1424bc460
     ByteArray::ByteArray(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
-        , Encoding((EncodingType)static_cast<Classes::fl_utils::ByteArray&>(t.GetConstructor()).DefaultObjectEncoding)
-        , Endian(endianBig)
+        , Encoding(Sfr14DefEncoding(static_cast<Classes::fl_utils::ByteArray&>(FUN_142508460(&t))))
+        , Endian(Sfr14DefaultEndian())
         , Position(0)
         , Length(0)
     {
@@ -1260,26 +1270,23 @@ namespace Instances { namespace fl_utils
     }
 
     // Reads length bytes (all that is left when 0) into bytes at offset.
-    // MS2-FUNCTIONAL: bounds checks / Resize call scheduling differ
     // @0x1424bf900
     void ByteArray::readBytes(const Value& result, Instances::fl_utils::ByteArray* bytes, UInt32 offset, UInt32 length)
     {
         SF_UNUSED(result);
-        UInt32 avail = (UInt32)(Data.GetSize() - Position);
-        if (length == 0 || length <= avail)
-        {
-            UInt32 n = length ? length : avail;
-            UInt32 end = offset + n;
-            if (bytes->Data.GetSize() <= end)
-                bytes->Resize(end);
-            if ((UPInt)(Position + n) <= Data.GetSize())
-            {
-                memcpy(bytes->Data.GetDataPtr() + offset, Data.GetDataPtr() + Position, n);
-                Position += n;
-                return;
-            }
-        }
-        ThrowEOFError();
+
+        const UInt32 available_num = (UInt32)Data.GetSize() - Position;
+
+        if (length == 0)
+            length = available_num;
+
+        if (length > available_num)
+            return ThrowEOFError();
+
+        if (offset + length >= bytes->Data.GetSize())
+            bytes->Resize(offset + length);
+
+        Read(bytes->Data.GetDataPtr() + offset, length);
     }
 
     // @0x1424bf9e0
@@ -1302,7 +1309,6 @@ namespace Instances { namespace fl_utils
         ReadValue(reinterpret_cast<UInt32&>(result));
     }
 
-    // MS2-FUNCTIONAL: charset lookup + string creation scheduling differs
     // @0x1424bfaf0
     void ByteArray::readMultiByte(ASString& result, UInt32 length, const ASString& charSet)
     {
@@ -1315,7 +1321,19 @@ namespace Instances { namespace fl_utils
         }
         if (IsCharSet(CharSetUTF8, charSet))
         {
-            ReadUTFBytes(result, length);
+            // ReadUTFBytes, inlined in the exe.
+            if (!(Position + length <= Data.GetSize()))
+            {
+                ThrowEOFError();
+                return;
+            }
+            if (length > 2 && IsUTF8BOM(reinterpret_cast<char*>(Data.GetDataPtr() + Position)))
+            {
+                length -= 3;
+                Position += 3;
+            }
+            result = GetVM().GetStringManager().CreateString(reinterpret_cast<char*>(Data.GetDataPtr() + Position), length);
+            Position += length;
             return;
         }
         if (IsCharSet(CharSetUnicode, charSet))
@@ -1556,7 +1574,6 @@ namespace Instances { namespace fl_utils
     }
 
     // A 16-bit length, then the UTF-8 bytes.
-    // MS2-FUNCTIONAL: the exe calls Write(const void*, UInt32) out of line twice; cl inlines both here
     // @0x1424c0b90
     void ByteArray::writeUTF(const Value& result, const ASString& value)
     {
@@ -1566,12 +1583,14 @@ namespace Instances { namespace fl_utils
             VM& vm = GetVM();
             return vm.ThrowRangeError(VM::Error(VM::eNotImplementedError, vm, "ByteArray::writeUTF"));
         }
+        // Write(const void*, UInt32) is called out of line here; through the member pointer cl does not inline it.
+        void (ByteArray::*Sfr14WriteOutOfLine)(const void*, UInt32) = &ByteArray::Write;
         const UInt16 size = static_cast<UInt16>(value.GetSize());
         UInt16 len = size;
         if (Endian != endianLittle)
             len = SwapBytes(len);
-        Write(&len, sizeof(len));
-        Write(value.ToCStr(), size);
+        (this->*Sfr14WriteOutOfLine)(&len, sizeof(len));
+        (this->*Sfr14WriteOutOfLine)(value.ToCStr(), size);
     }
 
     // @0x1424c0c50
