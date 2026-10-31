@@ -229,45 +229,56 @@ public:
     // the fragment shaders of a filter's passes, the last one last; the pass count
     unsigned GetFilterPasses(const Filter* filter, unsigned fillFlags, unsigned* passes) const   // 0x142731f10
     {
-        if (filter->GetFilterType() > Filter_Blur_End)
+        unsigned passCount;
+        if (filter->GetFilterType() <= Filter_Blur_End)
         {
+            const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
+            bool box1 = false;
+            // large blurs take two 1D passes
+            if (params.BlurX * params.BlurY >= 12800.0f)
+            {
+                passCount = 2 * params.Passes;
+                box1      = true;
+            }
+            else
+                passCount = params.Passes;
+
+            unsigned pass;
+            for (pass = 0; pass < passCount - 1; ++pass)
+                passes[pass] = box1 ? 0xa249 : 0xa449;
+
+            switch (params.Mode & BlurFilterParams::Mode_FilterMask)
+            {
+            case Filter_Shadow:
+            case Filter_Glow:
+            case Filter_Bevel:
+                if (params.Mode & BlurFilterParams::Mode_Inner)
+                    passes[pass] = 0xae4b;
+                else if ((params.Mode & (BlurFilterParams::Mode_Knockout | BlurFilterParams::Mode_HideObject)) ==
+                         BlurFilterParams::Mode_HideObject)
+                    passes[pass] = 0xb64b;
+                else
+                    passes[pass] = 0xa64b;
+                if (fillFlags & 1)
+                    passes[pass]++;
+                if (params.Mode & BlurFilterParams::Mode_Knockout)
+                    passes[pass] += 0x100;
+                if (params.Mode & BlurFilterParams::Mode_Highlight)
+                    passes[pass] += 0x400;
+                break;
+            default:
+                passes[pass] = 0xa249 + (box1 ? 0 : 0x200);
+                if (fillFlags & 1)
+                    passes[pass]++;
+                break;
+            }
+        }
+        else
+        {
+            passCount = 1;
             passes[0] = 0xa207;
             if (fillFlags & 1)
                 passes[0]++;
-            return 1;
-        }
-
-        const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
-        bool     box2      = params.BlurY * params.BlurX < 12800.0f;   // small blurs take one 2D pass
-        unsigned passCount = box2 ? params.Passes : params.Passes * 2;
-        unsigned last      = passCount - 1;
-        for (unsigned i = 0; i < last; i++)
-            passes[i] = box2 ? 0xa449 : 0xa249;
-
-        switch (params.Mode & BlurFilterParams::Mode_FilterMask)
-        {
-        case Filter_Shadow:
-        case Filter_Glow:
-        case Filter_Bevel:
-            if (params.Mode & BlurFilterParams::Mode_Inner)
-                passes[last] = 0xae4b;
-            else if ((params.Mode & (BlurFilterParams::Mode_Knockout | BlurFilterParams::Mode_HideObject)) ==
-                     BlurFilterParams::Mode_HideObject)
-                passes[last] = 0xb64b;
-            else
-                passes[last] = 0xa64b;
-            if (fillFlags & 1)
-                passes[last]++;
-            if (params.Mode & BlurFilterParams::Mode_Knockout)
-                passes[last] += 0x100;
-            if (params.Mode & BlurFilterParams::Mode_Highlight)
-                passes[last] += 0x400;
-            break;
-        default:
-            passes[last] = box2 ? 0xa449 : 0xa249;
-            if (fillFlags & 1)
-                passes[last]++;
-            break;
         }
         return passCount;
     }
