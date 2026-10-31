@@ -20,6 +20,11 @@ class DepthStencilBuffer;
 class RenderTargetData : public NewOverrideBase<StatRender_TextureManager_Mem>
 {
 public:
+    // (inline: the exe expands it into D3D9::RenderTargetData's ctor)
+    RenderTargetData(RenderBuffer* buffer, DepthStencilBuffer* pdsb)
+        : pBuffer(buffer), pDepthStencilBuffer(pdsb), CacheID(0)
+    {
+    }
     virtual ~RenderTargetData();
 
     // (appended for sfr_render_06g) the buffer this data belongs to and the depth stencil drawn with it

@@ -53,15 +53,12 @@ public:
 
 private:
     RenderTargetData(RenderBuffer* buffer, IDirect3DSurface9* prt, DepthStencilBuffer* pdsb, IDirect3DSurface9* pdss)
-        : pRenderSurface(prt), pDSSurface(pdss)
+        : Render::RenderTargetData(buffer, pdsb), pRenderSurface(prt), pDSSurface(pdss)
     {
-        pBuffer             = buffer;
-        pDepthStencilBuffer = pdsb;
-        CacheID             = 0;
-        if (prt)
-            prt->AddRef();
-        if (pdss)
-            pdss->AddRef();
+        if (pRenderSurface)
+            pRenderSurface->AddRef();
+        if (pDSSurface)
+            pDSSurface->AddRef();
     }
 };
 

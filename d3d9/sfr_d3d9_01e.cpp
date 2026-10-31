@@ -294,7 +294,7 @@ static DepthStencilBuffer* createTargetDepthStencil(RenderBufferManager* manager
     return pdsb;
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// SDK form: the surface reference is released unconditionally, the depth stencil buffer is a Ptr
 // @0x14272fab0
 RenderTarget* HAL::CreateRenderTarget(Render::Texture* texture, bool needsStencil)
 {
@@ -302,22 +302,27 @@ RenderTarget* HAL::CreateRenderTarget(Render::Texture* texture, bool needsStenci
     if (!pt || pt->TextureCount != 1)
         return 0;
 
-    ImageSize     size = pt->ImgSize;
-    RenderTarget* prt  = pRenderBufferManager->CreateRenderTarget(size, RBuffer_Texture, pt->GetFormat(), texture);
+    IDirect3DSurface9 *prenderSurface = 0, *pdsSurface = 0;
+    RenderTarget* prt = pRenderBufferManager->CreateRenderTarget(texture->GetSize(), RBuffer_Texture,
+                                                                 texture->GetFormat(), texture);
     if (!prt)
         return 0;
+    pt->pTextures[0].pTexture->GetSurfaceLevel(0, &prenderSurface);
 
-    IDirect3DSurface9* surf = 0;
-    pt->pTextures[0].pTexture->GetSurfaceLevel(0, &surf);
-    DepthStencilBuffer* pdsb = 0;
-    IDirect3DSurface9*  pdss = 0;
+    Ptr<DepthStencilBuffer> pdsb;
     if (needsStencil)
-        pdsb = createTargetDepthStencil(pRenderBufferManager, size, &pdss);
-    RenderTargetData::UpdateData(prt, surf, pdsb, pdss);
-    if (surf)
-        surf->Release();
-    if (pdsb)
-        pdsb->Release();
+    {
+        pdsb = *pRenderBufferManager->CreateDepthStencilBuffer(texture->GetSize());
+        if (pdsb)
+        {
+            DepthStencilSurface* surf = (DepthStencilSurface*)pdsb->GetSurface();
+            if (surf)
+                pdsSurface = surf->pDepthStencilSurface;
+        }
+    }
+    RenderTargetData::UpdateData(prt, prenderSurface, pdsb, pdsSurface);
+    prenderSurface->Release();
+
     return prt;
 }
 
@@ -419,7 +424,7 @@ void HAL::PopRenderTarget()
     updateViewport();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// SDK form; the base ctor (buffer, pdsb) expands in place
 // @0x142736970
 void RenderTargetData::UpdateData(RenderBuffer* buffer, IDirect3DSurface9* prt, DepthStencilBuffer* pdsb,
                                   IDirect3DSurface9* pdss)
