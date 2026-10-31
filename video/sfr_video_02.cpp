@@ -1,12 +1,10 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64: Scaleform GFx 4.1.18 Video glue, AS3 half.
 // Source is written from the executable; leaked SDK copies are naming/layout reference only.
-// The Video add-on lib was built with VS2012 Update 4, and so is this unit (MS2-TOOLSET: vc11,
-// cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or variadic templates.
-// clang-cl compiles it as before.
-// Keep it C++03 too (no auto, nullptr, range-for, std:: C functions): cl 15.00.30729 with the vc11 options matches
-// 56 more of its rows (this range is VS2008 code), and a toolset for that is pending.
+// This part of the Video add-on lib is VS2008 SP1 code, so the unit builds with cl 15.00.30729 and the vc11
+// options (MS2-TOOLSET: vc9v, cmake/ms2-unit-profiles.cmake). Keep it C++03: no auto, nullptr, range-for, std:: C
+// functions, alias `using`, explicit conversion operators or variadic templates. clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_02
-// MS2-TOOLSET: vc11
+// MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14000e470-0x140016b50 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -180,7 +178,6 @@ public:
 
 }}} // namespace Scaleform::GFx::Video
 
-// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140013350
 void* FUN_140013350(void* object, unsigned int flags)
 {
@@ -189,7 +186,6 @@ void* FUN_140013350(void* object, unsigned int flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140014bb0
 void* FUN_140014bb0(void* object, unsigned int flags)
 {
@@ -198,7 +194,6 @@ void* FUN_140014bb0(void* object, unsigned int flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140015550
 void* FUN_140015550(void* object, unsigned int flags)
 {
@@ -216,7 +211,6 @@ void* FUN_140015590(void* object, unsigned __int64 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: calls CTraits' executable destructor and frees through the global heap when requested.
 // @0x140014a80
 Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_140014a80(
     Scaleform::GFx::AS3::InstanceTraits::CTraits* object, unsigned flags)
@@ -226,7 +220,6 @@ Scaleform::GFx::AS3::InstanceTraits::CTraits* FUN_140014a80(
     return object;
 }
 
-// MS2-FUNCTIONAL: calls Class' executable destructor and frees through the global heap when requested.
 // @0x140014b10
 Scaleform::GFx::AS3::Class* FUN_140014b10(Scaleform::GFx::AS3::Class* object, unsigned flags)
 {
@@ -235,7 +228,6 @@ Scaleform::GFx::AS3::Class* FUN_140014b10(Scaleform::GFx::AS3::Class* object, un
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the weak reference counter and frees its allocation when the count reaches zero.
 // @0x140013db0
 void FUN_140013db0(int* refCount)
 {
@@ -251,7 +243,6 @@ void* FUN_140015c00(void* object, unsigned __int64 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: clears the event-side state and optionally invokes the listener object's first callback.
 // @0x140014400
 void FUN_140014400(void* object, void*, char invoke)
 {
@@ -264,7 +255,6 @@ void FUN_140014400(void* object, void*, char invoke)
     }
 }
 
-// MS2-FUNCTIONAL: returns the unsigned result of the object's count query plus one, through float, as a double.
 // BEHAVIOUR FIX: the exe converts the unsigned count to float first (cvtsi2ss of the zero-extended value), then to
 // double. It used to convert the signed int straight to double.
 // @0x1400146c0
@@ -287,7 +277,6 @@ void FUN_140014730(void* object, void*, double value)
         ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(bytes + 0x50)))->SetSubtitleChannel(static_cast<int>(value) - 1);
 }
 
-// MS2-FUNCTIONAL: restores the InteractiveObject base tables, releases its provider and weak proxy, then destroys the base.
 // @0x1400104d0
 void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
 {
@@ -311,7 +300,6 @@ Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObje
     return object;
 }
 
-// MS2-FUNCTIONAL: invokes the recovered CFunctionObject destructor and conditionally frees its storage.
 // @0x14000ed20
 Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed20(
     Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
@@ -339,7 +327,6 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
 
 // Locks the weak provider (a dead proxy is released and the WeakPtr cleared), takes the active provider's texture into
 // +0x100 with its extent, then refreshes the render tree. Same calls and stores as the exe.
-// MS2-FUNCTIONAL: VS2012 codegen (cl 17.00.61030 emits dec where the exe's build 65501 has add [r],-1; register order).
 // @0x140010a70
 void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
@@ -393,7 +380,6 @@ void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
 
 // 0x140010250 is the out-of-line copy of this SF_INLINE operator; cl 17.00 inlines every call, so instantiate it
 // MS2-PIN: ??4?$WeakPtr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@QEAAXPEAVVideoProvider@Video@GFx@1@@Z 0x140010250
-// MS2-FUNCTIONAL 0x140010250: the exe's copy releases the old proxy with `add [rdx],-1`, cl 17.00.61030 emits `dec`
 template void Scaleform::WeakPtr<Scaleform::GFx::Video::VideoProvider>::operator=(Scaleform::GFx::Video::VideoProvider*);
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -403,7 +389,6 @@ namespace Scaleform { namespace GFx { namespace Video {
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // AvmVideoCharacter::OnUnloading: detach this clip from the frame advance list.
-// MS2-FUNCTIONAL: recovered behavior; standalone body is used while AvmVideoCharacter's full vtable is pending.
 // @0x14000e5e0
 __declspec(noinline) bool AvmVideoCharacter_OnUnloading(AvmCharacter* pavm)
 {
@@ -456,7 +441,6 @@ void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 // @0x14000e5d0
 __declspec(noinline) void FUN_14000e5d0(void*) { FUN_14296bba0(); }
 
-// MS2-FUNCTIONAL: sends EventId(1) through the object's vtable slot 8 (the exe's 0x14-byte EventId: ControllerIndex -1 at +0x11).
 // @0x14000e590
 __declspec(noinline) void FUN_14000e590(void** object)
 {
@@ -466,7 +450,6 @@ __declspec(noinline) void FUN_14000e590(void** object)
         object, &payload);
 }
 
-// MS2-FUNCTIONAL: the exe tail-calls AvmCharacter::GetAbsolutePath (0x1429494d0) on pavm. Going through
 // pDispObj->GetAbsolutePath would dispatch back here via GetAvmObjImpl() (thunk 0x14000e750) and recurse.
 // @0x14000e570
 __declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
@@ -474,14 +457,12 @@ __declspec(noinline) const char* FUN_14000e570(AvmCharacter* pavm, String* path)
     return pavm->AvmCharacter::GetAbsolutePath(path);
 }
 
-// MS2-FUNCTIONAL: the CloneInternalData slot; the exe tail-calls AvmCharacter::CloneInternalData (0x142934870).
 // @0x14000e630
 __declspec(noinline) void FUN_14000e630(AvmCharacter* pavm, const InteractiveObject* oldCharacter)
 {
     pavm->AvmCharacter::CloneInternalData(oldCharacter);
 }
 
-// MS2-FUNCTIONAL: the exe tail-calls AvmCharacter::CopyPhysicalProperties (0x142935cc0) on pavm. The
 // display object's InteractiveObject::CopyPhysicalProperties ends in GetAvmIntObj()->CopyPhysicalProperties,
 // i.e. this slot, so forwarding through pDispObj recursed.
 // @0x14000e640
@@ -490,7 +471,6 @@ __declspec(noinline) void FUN_14000e640(AvmCharacter* pavm, const InteractiveObj
     pavm->AvmCharacter::CopyPhysicalProperties(oldCharacter);
 }
 
-// MS2-FUNCTIONAL: forwards the focus callback to the AvmCharacter base implementation. The exe calls
 // AvmCharacter::OnFocus (0x14296bd60) directly, not through the vtable.
 // @0x14000e650
 __declspec(noinline) void FUN_14000e650(AvmCharacter* pavm, InteractiveObject::FocusEventType event,
@@ -772,7 +752,6 @@ void FUN_140010f60(unsigned __int64* array, const UByte* value)
     if (slot) *slot = *value;
 }
 
-// MS2-FUNCTIONAL: resizes the executable's byte array and preserves its observed quarter-growth policy.
 // BEHAVIOUR FIX: the exe reserves through ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70). This called
 // FUN_1425eec50, ArrayDataBase<FillStyleType, AllocatorLH>::ResizeNoConstruct, which sizes the buffer for 16-byte
 // elements and adds its own quarter growth, so every byte array grown here took about 25 times the memory.
@@ -789,7 +768,6 @@ void FUN_140010390(unsigned __int64* array, void* reserveSource, unsigned __int6
     array[1] = newSize;
 }
 
-// MS2-FUNCTIONAL: creates an AS string from the encoded string payload and retains the new node.
 // @0x1400128e0
 void** FUN_1400128e0(ASStringManager* manager, void** result, const unsigned __int64* encoded)
 {
@@ -805,7 +783,6 @@ void** FUN_1400128e0(ASStringManager* manager, void** result, const unsigned __i
 // @0x140012940
 void FUN_140012940(ASString* string) { string->SetNull(); }
 
-// MS2-FUNCTIONAL: creates a const node through the owning context's manager and retains it for the destination.
 // @0x140012f60
 void** FUN_140012f60(void* context, void** result, const char* text)
 {
@@ -816,7 +793,6 @@ void** FUN_140012f60(void* context, void** result, const char* text)
     return result;
 }
 
-// MS2-FUNCTIONAL: creates a string node through the context manager and retains it for the destination.
 // @0x140012fb0
 void** FUN_140012fb0(void* context, void** result, const char* text)
 {
@@ -827,7 +803,6 @@ void** FUN_140012fb0(void* context, void** result, const char* text)
     return result;
 }
 
-// MS2-FUNCTIONAL: decodes the executable's tagged string payload through the context manager.
 // @0x140012fe0
 void** FUN_140012fe0(void* context, void** result, const unsigned __int64* encoded)
 {
@@ -991,7 +966,6 @@ void FUN_140013a00(void*, Scaleform::GFx::AS3::Value* input)
     input->Convert2NumberInline(number);
 }
 
-// MS2-FUNCTIONAL: converts the AS3 Value to a signed 32-bit result through the recovered executable method.
 // @0x140012d00
 uintptr_t FUN_140012d00(uintptr_t self, SInt32* result, const Scaleform::GFx::AS3::Value* input)
 {
@@ -999,14 +973,12 @@ uintptr_t FUN_140012d00(uintptr_t self, SInt32* result, const Scaleform::GFx::AS
     return self;
 }
 
-// MS2-FUNCTIONAL: converts the AS3 Value to a signed 32-bit result through the recovered executable method.
 // @0x140013a40
 void FUN_140013a40(SInt32* result, const Scaleform::GFx::AS3::Value* input)
 {
     input->Convert2Int32(*result);
 }
 
-// MS2-FUNCTIONAL: converts the indexed AS3 Value to a signed 32-bit result when the index is in range.
 // @0x140015170
 void FUN_140015170(UInt32 index, SInt32* result, UInt32 length, const void* values)
 {
@@ -1031,7 +1003,6 @@ void FUN_1400150b0(UInt32 index, void*, UInt32 length, const void* values)
     }
 }
 
-// MS2-FUNCTIONAL: ThunkReadArg(ASString&): a null object gives the null string, else Convert2String. Only the
 // VC9 `add [m],-1` release and register choice differ (cl15 object).
 // @0x140013f20
 uintptr_t FUN_140013f20(uintptr_t self, Scaleform::GFx::ASString* result,
@@ -1044,7 +1015,6 @@ uintptr_t FUN_140013f20(uintptr_t self, Scaleform::GFx::ASString* result,
     return self;
 }
 
-// MS2-FUNCTIONAL: ThunkReadArg(ASString&): a null object gives the null string, else Convert2String. Only the
 // VC9 `add [m],-1` release and register choice differ (cl15 object).
 // @0x140015420
 void FUN_140015420(Scaleform::GFx::ASString* result, const Scaleform::GFx::AS3::Value* input)
@@ -1065,7 +1035,6 @@ void FUN_140014c50(Scaleform::GFx::AS3::Value* value)
     }
 }
 
-// MS2-FUNCTIONAL: assigns a Pickable object into the AS3 Value through the recovered Pick operation.
 // @0x140014c30
 Scaleform::GFx::AS3::Value* FUN_140014c30(Scaleform::GFx::AS3::Value* value,
                                           Scaleform::GFx::AS3::Object* object)
@@ -1074,7 +1043,6 @@ Scaleform::GFx::AS3::Value* FUN_140014c30(Scaleform::GFx::AS3::Value* value,
     return value;
 }
 
-// MS2-FUNCTIONAL: releases the two string nodes through the recovered ASStringNode ownership method.
 // @0x140014c90
 void FUN_140014c90(ASStringNode** strings)
 {
@@ -1082,7 +1050,6 @@ void FUN_140014c90(ASStringNode** strings)
     strings[0]->Release();
 }
 
-// MS2-FUNCTIONAL: releases the two string nodes at the executable's object offsets.
 // @0x140014cc0
 void FUN_140014cc0(void* object)
 {
@@ -1091,7 +1058,6 @@ void FUN_140014cc0(void* object)
     reinterpret_cast<ASStringNode**>(bytes + 0x10)[0]->Release();
 }
 
-// MS2-FUNCTIONAL: releases the three string nodes through the recovered ownership method.
 // @0x140014cf0
 void FUN_140014cf0(ASStringNode** strings)
 {
@@ -1100,7 +1066,6 @@ void FUN_140014cf0(ASStringNode** strings)
     strings[0]->Release();
 }
 
-// MS2-FUNCTIONAL: releases the three string nodes at the executable's object offsets.
 // @0x140014d30
 void FUN_140014d30(void* object)
 {
@@ -1140,7 +1105,6 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     dispatcher->EventDispatcher::~EventDispatcher();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
-// MS2-FUNCTIONAL: reads the supplied SoundTransform's volume into the first stored volume and passes both, as percent,
 // to SetSoundVolume.
 // @0x1400142e0
 void FUN_1400142e0(void* object, void*, void* soundTransform)
@@ -1153,7 +1117,6 @@ void FUN_1400142e0(void* object, void*, void* soundTransform)
                   static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 100.0));
 }
 
-// MS2-FUNCTIONAL: reads the supplied SoundTransform's volume into the second stored volume and passes both, as percent,
 // to SetSoundVolume.
 // @0x140014770
 void FUN_140014770(void* object, void*, void* soundTransform)
@@ -1173,38 +1136,27 @@ static void* NumberNaNBits()
     return value.pointer;
 }
 
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014e80
 void** FUN_140014e80(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014ee0
 void** FUN_140014ee0(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014f00
 void** FUN_140014f00(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014f90
 void** FUN_140014f90(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014fb0
 void** FUN_140014fb0(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014fd0
 void** FUN_140014fd0(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140014ff0
 void** FUN_140014ff0(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140015010
 void** FUN_140015010(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140015030
 void** FUN_140015030(void** value) { *value = NumberNaNBits(); return value; }
-// MS2-FUNCTIONAL: initializes the numeric payload to the executable's NaN value.
 // @0x140015050
 void** FUN_140015050(void** value) { *value = NumberNaNBits(); return value; }
 
-// MS2-FUNCTIONAL: uses the recovered AS3 Value assignment implementation for the executable's copy entry.
 // @0x1400129d0
 Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
                                           const Scaleform::GFx::AS3::Value* src)
@@ -1246,7 +1198,6 @@ UInt32* FUN_140015340(UInt32* dst)
     return dst;
 }
 
-// MS2-FUNCTIONAL: returns the manager's retained built-in null string node.
 // @0x140014060
 void** FUN_140014060(void** result, void* context)
 {
@@ -1257,7 +1208,6 @@ void** FUN_140014060(void** result, void* context)
     return result;
 }
 
-// MS2-FUNCTIONAL: duplicate entry for the manager's retained built-in null string node.
 // @0x1400140a0
 void** FUN_1400140a0(void** result, void* context)
 {
@@ -1268,7 +1218,6 @@ void** FUN_1400140a0(void** result, void* context)
     return result;
 }
 
-// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
 // @0x140012cd0
 uintptr_t FUN_140012cd0(uintptr_t self, UByte* result, Scaleform::GFx::AS3::Value* input)
 {
@@ -1285,7 +1234,6 @@ void FUN_140012c30(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Value
     vm->ExecuteInternalUnsafe(function, thisValue, result, argc, argv, discardResult);
 }
 
-// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
 // @0x140013a20
 void FUN_140013a20(UByte* result, Scaleform::GFx::AS3::Value* input)
 {
@@ -1299,7 +1247,6 @@ void FUN_140013790(Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Objec
     value->Pick(object);
 }
 
-// MS2-FUNCTIONAL: computes the truth value from the executable's AS3 Value argument.
 // @0x140015140
 void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::AS3::Value* values)
 {
@@ -1671,7 +1618,6 @@ void** FUN_140012250(void** slot, void* value)
 }
 
 
-// MS2-FUNCTIONAL: encloses the object's cached local bounds with the supplied matrix, as observed in the executable.
 // @0x140010200
 Scaleform::Render::RectF* FUN_140010200(void* object, Scaleform::Render::RectF* result,
                                         const Scaleform::Render::Matrix2F* matrix)
@@ -1681,7 +1627,6 @@ Scaleform::Render::RectF* FUN_140010200(void* object, Scaleform::Render::RectF* 
     return result;
 }
 
-// MS2-FUNCTIONAL: wrapper recovered as the executable's direct EncloseTransform call.
 // @0x1400101e0
 Scaleform::Render::RectF* FUN_1400101e0(const Scaleform::Render::Matrix2F* matrix,
                                         Scaleform::Render::RectF* result,
@@ -1700,7 +1645,6 @@ void FUN_14000ffd0(void** object)
 
 }}} // namespace Scaleform::GFx::AS2
 
-// MS2-FUNCTIONAL: releases the two owned members and invokes the recovered base destructor.
 // @0x140010490
 void FUN_140010490(void* object)
 {
@@ -1729,7 +1673,6 @@ void FUN_140010da0(void* destination, const void* source)
         FUN_142626070(destination, source);
 }
 
-// MS2-FUNCTIONAL: adds a reference through the owned object's interface vtable.
 // @0x140010de0
 void* FUN_140010de0(void** destination, void* const* source)
 {
@@ -1743,7 +1686,6 @@ void* FUN_140010de0(void** destination, void* const* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: retains the replacement, releases the old value, then stores the replacement.
 // @0x140010e60
 void* FUN_140010e60(void** destination, void* const* source)
 {
@@ -1763,7 +1705,6 @@ void* FUN_140010e60(void** destination, void* const* source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: runs Object's executable destructor and frees the allocation when requested.
 // @0x140011d10
 Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, unsigned flags)
 {
@@ -1772,7 +1713,6 @@ Scaleform::GFx::AS2::Object* FUN_140011d10(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
-// MS2-FUNCTIONAL: appends the saved endpoint to a shape path when it differs from the last point.
 // @0x140011410
 void FUN_140011410(void* path)
 {
@@ -1797,14 +1737,12 @@ void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
     FUN_1424f96c0(path);
 }
 
-// MS2-FUNCTIONAL: appends the saved endpoint to the nested shape path when it differs from its last point.
 // @0x1400115c0
 void FUN_1400115c0(void* object)
 {
     FUN_140011410(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88));
 }
 
-// MS2-FUNCTIONAL: constructs a NetConnection Object (vtables 0x1431b65f0/0x1431b6540) and installs the
 // environment's builtin prototype type 0x22.
 // @0x140011c90
 Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
@@ -1820,7 +1758,6 @@ Scaleform::GFx::AS2::Object* FUN_140011c90(Scaleform::GFx::AS2::Object* object,
     return object;
 }
 
-// MS2-FUNCTIONAL: allocates the observed 0x68-byte prototype object and initializes its environment links.
 // BEHAVIOUR FIX: allocates from the movie's heap (Environment::GetHeap), as the exe does and as the constructor
 // path at 0x140012340 already did; it used the global heap.
 // @0x140011d50
@@ -1845,7 +1782,6 @@ void FUN_140011d90(void* object)
     FUN_142942e70(object);
 }
 
-// MS2-FUNCTIONAL: forwards prototype function-member initialization with the observed +0x68 base subobject.
 // @0x140011b10
 void FUN_140011b10(void* object, void* stringContext, void* functions, const void* flags)
 {
@@ -1854,7 +1790,6 @@ void FUN_140011b10(void* object, void* stringContext, void* functions, const voi
 
 // The exe copies Value::GetUndefined() into a temp, copy-constructs the fresh result storage from it (no release of the
 // old contents) and destroys the temp.
-// MS2-FUNCTIONAL: VS2012 codegen (register and block order differ).
 // @0x1400158e0
 Scaleform::GFx::AS3::Value* FUN_1400158e0(Scaleform::GFx::AS3::Value* result)
 {
@@ -1889,7 +1824,6 @@ void FUN_140015830(void* object)
     }
 }
 
-// MS2-FUNCTIONAL: runs the executable invocation helper and reports a nonempty result when no exception is pending.
 // @0x140013e00
 unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
                              void* receiver, unsigned flags, void* argument)
@@ -1915,7 +1849,6 @@ unsigned char* FUN_140013e00(void* vm, unsigned char* result, unsigned* value,
     return result;
 }
 
-// MS2-FUNCTIONAL: constructs a Value from the supplied strong object pointer.
 // BEHAVIOUR FIX: the exe constructs the Value with Flags = 0 and a null Bonus (weak proxy) before the assign. The
 // SetUndefinedUnsafe here only cleared the kind bits of the uninitialised slot, which left stray flag bits and a
 // garbage weak-proxy pointer in the new Value.
@@ -1929,7 +1862,6 @@ Scaleform::GFx::AS3::Value* FUN_1400156a0(Scaleform::GFx::AS3::Value* result,
     return result;
 }
 
-// MS2-FUNCTIONAL: creates the requested AS3 instance when traits are valid and stores it as a picked Value.
 // @0x1400155d0
 void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
 {
@@ -1988,7 +1920,6 @@ void FUN_140015790(void** frame)
             static_cast<unsigned char>(reinterpret_cast<uintptr_t>(frame[2])) != 0);
 }
 
-// MS2-FUNCTIONAL: stores the callback context and converts the optional value to a boolean.
 // @0x1400157d0
 void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
                      uintptr_t value, const unsigned char* extra)
@@ -2005,7 +1936,6 @@ void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
     return frame;
 }
 
-// MS2-FUNCTIONAL: creates an instance through the supplied traits and writes the resulting pointer.
 // @0x140014ac0
 void** FUN_140014ac0(void*, void** result, void* traits)
 {
@@ -2016,7 +1946,6 @@ void** FUN_140014ac0(void*, void** result, void* traits)
     return result;
 }
 
-// MS2-FUNCTIONAL: grows the executable pointer array in five-slot chunks and appends a fresh payload block.
 // BEHAVIOUR FIX: the table grows only when the index reaches the capacity (+0x18), as the exe does; ours compared
 // the page count (+0x10), so every append reallocated the table and added five more slots. The table and the
 // 0x2000-byte page come from the array's own heap (AllocAutoHeap on the array, stat 2), not the global heap.
@@ -2094,7 +2023,6 @@ void* FUN_140015250(void* array)
     return static_cast<char*>(pages[page]) + (index & 0x3ff) * sizeof(void*);
 }
 
-// MS2-FUNCTIONAL: converts the decoded frame index to seconds using the stream's millisecond duration.
 // @0x140014340
 void FUN_140014340(void* object, double* result)
 {
@@ -2336,7 +2264,6 @@ void* FUN_140012ec0(void* object, void* vm, void* classInfo)
     return object;
 }
 
-// MS2-FUNCTIONAL: runs the base traits constructor and installs the executable's derived traits vtable.
 // @0x140012f10
 void* FUN_140012f10(void* object, void* traits)
 {
@@ -2425,7 +2352,6 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
     return object;
 }
 
-// MS2-FUNCTIONAL: forwards the lookup through the executable's global heap vtable.
 // @0x14000f470
 void FUN_14000f470(void* object, void* value)
 {
@@ -2436,7 +2362,6 @@ void FUN_14000f470(void* object, void* value)
         heap, value, object, &flags);
 }
 
-// MS2-FUNCTIONAL: intercepts constructor aliases with the prototype base and delegates other names to Object.
 // @0x140011de0
 void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
                    Scaleform::GFx::ASString* name, Scaleform::GFx::AS2::Value* value)
@@ -2495,7 +2420,6 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
     }
 }
 
-// MS2-FUNCTIONAL: releases the embedded stack resource and conditionally deletes the TaskStack allocation.
 // @0x14000fe50
 void* FUN_14000fe50(void* object, unsigned flags)
 {
@@ -2845,105 +2769,90 @@ static __forceinline void Video02TraitSet(void* instance, void* traits, void* co
     reinterpret_cast<void (*)(char*, void*, A0)>(method)(self + *reinterpret_cast<int*>(&adjust), &args.r, args.a0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015d20
 void FUN_140015d20(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b274d8, DAT_143b274e0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015da0
 void FUN_140015da0(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27518, DAT_143b27520);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015eb0
 void FUN_140015eb0(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b27698, DAT_143b276a0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015f20
 void FUN_140015f20(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b27458, DAT_143b27460);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140015f90
 void FUN_140015f90(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<bool>(instance, traits, output, DAT_143b27478, DAT_143b27480);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016100
 void FUN_140016100(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b274f8, DAT_143b27500);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016180
 void FUN_140016180(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27448, DAT_143b27450);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016200
 void FUN_140016200(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<Scaleform::UInt32>(instance, traits, output, DAT_143b274c8, DAT_143b274d0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016270
 void FUN_140016270(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b274b8, DAT_143b274c0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016530
 void FUN_140016530(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<bool>(instance, traits, output, DAT_143b276e8, DAT_143b276f0);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016600
 void FUN_140016600(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27578, DAT_143b27580);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016680
 void FUN_140016680(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27568, DAT_143b27570);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x140016790
 void FUN_140016790(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27468, DAT_143b27470);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x1400168a0
 void FUN_1400168a0(void*, void* instance, void* traits, unsigned* output)
 {
     Video02TraitGet<double>(instance, traits, output, DAT_143b27508, DAT_143b27510);
 }
 
-// MS2-FUNCTIONAL: invokes the executable's trait accessor and copies its typed Value payload.
 // @0x1400169b0
 void FUN_1400169b0(void*, void* instance, void* traits, unsigned* output)
 {
@@ -2958,7 +2867,6 @@ void FUN_140015e20(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b276a8, DAT_143b276b0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
 // @0x140016000
 void FUN_140016000(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2966,7 +2874,6 @@ void FUN_140016000(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b276c8, DAT_143b276d0);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
 // @0x1400162f0
 void FUN_1400162f0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2974,7 +2881,6 @@ void FUN_1400162f0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27628, DAT_143b27630);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
 // @0x140016350
 void FUN_140016350(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -2982,7 +2888,6 @@ void FUN_140016350(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<bool>(instance, traits, context, hasValue, value, DAT_143b27648, DAT_143b27650);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
 // @0x1400163b0
 void FUN_1400163b0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -3006,7 +2911,6 @@ void FUN_1400164a0(void*, void* instance, void* traits, void* context, int hasVa
     Video02TraitSet<double>(instance, traits, context, hasValue, value, DAT_143b27688, DAT_143b27690);
 }
 
-// MS2-FUNCTIONAL: converts the optional trait value and forwards it to the executable setter.
 // @0x1400165a0
 void FUN_1400165a0(void*, void* instance, void* traits, void* context, int hasValue,
                   Scaleform::GFx::AS3::Value* value)
@@ -3109,7 +3013,6 @@ Scaleform::GFx::AS2::Object* FUN_14000ec40(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
-// MS2-FUNCTIONAL: appends a copied reference entry and increments its intrusive reference count.
 // @0x1400113a0
 unsigned FUN_1400113a0(void* array, const unsigned* source)
 {
@@ -3191,7 +3094,6 @@ Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, 
     return object;
 }
 
-// MS2-FUNCTIONAL: destroys the AS2 callable and conditionally frees its storage.
 // @0x1400126b0
 Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
     Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
@@ -3224,7 +3126,6 @@ void FUN_1400152b0(unsigned __int64* object)
         reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: delegates the common render-tree snapshot copy to TreeNode::NodeData.
 // @0x140010ed0
 Scaleform::Render::TreeNode::NodeData* FUN_140010ed0(
     Scaleform::Render::TreeNode::NodeData* destination,
@@ -3250,7 +3151,6 @@ Scaleform::Render::TreeNode::NodeData* FUN_140010fe0(
     return new (destination) Scaleform::Render::TreeNode::NodeData();
 }
 
-// MS2-FUNCTIONAL: copies the base node snapshot, then retains the shape provider and copies its morph ratio.
 // @0x140010ef0
 Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
     Scaleform::Render::TreeShape::NodeData* destination,
@@ -3279,7 +3179,6 @@ Scaleform::Render::TreeShape::NodeData* FUN_140010ef0(
     return destination;
 }
 
-// MS2-FUNCTIONAL: constructs a TreeShape snapshot and retains its provider and morph ratio.
 // @0x140011170
 Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     Scaleform::Render::TreeShape::NodeData* destination,
@@ -3303,7 +3202,6 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011170(
     return destination;
 }
 
-// MS2-FUNCTIONAL: conditionally constructs and initializes a TreeShape snapshot with a retained provider.
 // @0x140011330
 Scaleform::Render::TreeShape::NodeData* FUN_140011330(
     Scaleform::Render::TreeShape::NodeData* destination,
@@ -3602,7 +3500,6 @@ __forceinline void VisitAS2PrototypeChildren(Scaleform::GFx::AS2::Object* object
 }
 }
 
-// MS2-FUNCTIONAL: traverses object and prototype children during the collector's cycle marking pass.
 // @0x140011ef0
 void FUN_140011ef0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
@@ -3610,7 +3507,6 @@ void FUN_140011ef0(Scaleform::GFx::AS2::Object* object,
     VisitAS2PrototypeChildren<AS2ObjectGCTraversal::MarkInCycleFunctor>(object, collector);
 }
 
-// MS2-FUNCTIONAL: traverses object and prototype children during the collector's in-use scan.
 // @0x140011fc0
 void FUN_140011fc0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
@@ -3618,7 +3514,6 @@ void FUN_140011fc0(Scaleform::GFx::AS2::Object* object,
     VisitAS2PrototypeChildren<AS2ObjectGCTraversal::ScanInUseFunctor>(object, collector);
 }
 
-// MS2-FUNCTIONAL: releases object and prototype child references before collector destruction.
 // @0x1400120a0
 void FUN_1400120a0(Scaleform::GFx::AS2::Object* object,
                    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
@@ -3646,7 +3541,6 @@ void FUN_140012400(Scaleform::GFx::AS2::Object* object,
     else if (operation == 2) FUN_140011fc0(object, collector);
 }
 
-// MS2-FUNCTIONAL: assigns the AS2 Object builtin prototype through its ObjectInterface subobject.
 // @0x140011ac0
 void FUN_140011ac0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::Environment* environment)
 {

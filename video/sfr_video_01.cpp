@@ -1,14 +1,12 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Video, the AS2 side: the video sound
 // stream helpers, then NetStream (script object, prototype methods, constructor) with its media provider, and the AS2
 // Video object. Our own source, written from the exe; the leaked SDK copies were only used to name things.
-// The Video add-on lib was prebuilt with VS2012 Update 4 (Rich 0xce build 65501), and so is this unit (MS2-TOOLSET:
-// vc11, cmake/ms2-unit-profiles.cmake): no alias `using` (so ExeDecl is a struct), explicit conversion operators or
-// variadic templates, and no hook/ms2hook.h (its hook registrations are in sfr_video_hooks.cpp). clang-cl compiles it
-// as before.
-// Keep it C++03 too (no auto, nullptr, range-for, std:: C functions): cl 15.00.30729 with the vc11 options matches
-// 43 more of its rows (part of this range is VS2008 code), and a toolset for that is pending.
+// This part of the Video add-on lib is VS2008 SP1 code, so the unit builds with cl 15.00.30729 and the vc11
+// options (MS2-TOOLSET: vc9v, cmake/ms2-unit-profiles.cmake). Keep it C++03: no auto, nullptr, range-for, std:: C
+// functions, alias `using` (so ExeDecl is a struct), explicit conversion operators or variadic templates, and no
+// hook/ms2hook.h (its hook registrations are in sfr_video_hooks.cpp). clang-cl compiles it as before.
 // MS2-UNIT: sfr_video_01
-// MS2-TOOLSET: vc11
+// MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140002930-0x14000e470 .text$mn
 #include "../include/video/video_as2netstream.h"
@@ -201,7 +199,6 @@ struct VideoSoundStreamState
 };
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
-// MS2-FUNCTIONAL: the exe tests the member in memory (cmp [rcx+10h],0) and loads it again for the call
 // forwards the video sound stream's channel attachment callback when a channel is present.
 // @0x140002930
 void FUN_140002930(void* object)
@@ -221,7 +218,6 @@ void FUN_140002960(void* object, float volume)
     if (channel) channel->SetVolume(volume);
 }
 
-// MS2-FUNCTIONAL: the exe tests the member in memory (cmp [rcx+10h],0) and loads it again for the call
 // forwards the stop notification when the stream has an attached channel.
 // @0x140002980
 void FUN_140002980(void* object)
@@ -722,7 +718,6 @@ void** FUN_1400045c0(void** proxy, unsigned flags)
     return proxy;
 }
 
-// MS2-FUNCTIONAL: releases a non-null intrusive reference stored in the slot.
 // @0x140004dd0
 void FUN_140004dd0(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
@@ -850,7 +845,6 @@ void FUN_140005480(Scaleform::GFx::CharacterHandle* handle)
     }
 }
 
-// MS2-FUNCTIONAL: releases a retained object pointer when the slot is populated.
 // @0x140005660
 void FUN_140005660(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
@@ -878,7 +872,6 @@ void FUN_140005760(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 void FUN_140005830(void** value) { if (*value) Scaleform::Memory::Free(*value); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the owned intrusive reference stored in the slot.
 // @0x140005870
 void FUN_140005870(void** value) { if (*value) static_cast<Scaleform::WeakPtrProxy*>(*value)->Release(); }
 
@@ -933,7 +926,6 @@ void** FUN_1400059b0(void** weakSlot, void** result)
     return result;
 }
 
-// MS2-FUNCTIONAL: releases the weak proxy and optionally frees the wrapper object.
 // @0x140005a70
 void** FUN_140005a70(void** weakSlot, unsigned flags)
 {
@@ -1503,7 +1495,6 @@ void* FUN_140007230(void** destination, const void** source)
     return FUN_140006db0(destination, source);
 }
 
-// MS2-FUNCTIONAL: the exe forms the last slot as `lea rcx,[rax+r11*8-8]`; cl 17.00.61030 emits dec + lea for every
 // source form tried (work/p5h/tmp/pb1.cpp)
 // @0x140007270
 void FUN_140007270(void** array, void** value)
@@ -1600,7 +1591,6 @@ void FUN_1400074a0(Scaleform::UPInt* object)
     pair->pSecond = 0;
 }
 
-// MS2-FUNCTIONAL: releases the owned AS2 object reference stored in the slot.
 // @0x140007570
 void FUN_140007570(void** slot) { ReleaseAs2GCObject(*slot); }
 
@@ -1617,7 +1607,6 @@ void** FUN_1400075a0(void** destination, void** source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases the owned AS2 object reference in the slot.
 // @0x1400076d0
 void FUN_1400076d0(void** slot) { ReleaseAs2GCObject(*slot); }
 
@@ -1643,7 +1632,6 @@ void** FUN_140007760(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: releases the owned AS2 object reference in the slot.
 // @0x1400077b0
 void FUN_1400077b0(void** slot) { ReleaseAs2GCObject(*slot); }
 
@@ -1671,7 +1659,6 @@ void** FUN_140007600(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: the exe forms the last slot as `lea rcx,[rax+r11*8-8]`; cl 17.00.61030 emits dec + lea for every
 // source form tried (work/p5h/tmp/pb1.cpp)
 // @0x140007680
 void FUN_140007680(void** array, void** value)
@@ -1720,7 +1707,6 @@ void FUN_140007870(unsigned* destination, void** source)
     *reinterpret_cast<void**>(destination + 2) = replacement;
 }
 
-// MS2-FUNCTIONAL: releases the object reference in the second pointer-sized field.
 // @0x1400078d0
 void FUN_1400078d0(void** value)
 {
@@ -2119,7 +2105,6 @@ void FUN_14000b680(void** table, void* owner)
         FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, fields[1] * 2 + 2);
 }
 
-// MS2-FUNCTIONAL: adjusts the 48-byte track-record array with the observed shrink/growth policy.
 // @0x14000bc40
 void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
 {
@@ -2214,7 +2199,6 @@ void* FUN_14000b1c0(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: sets a value's numeric payload after dropping any held reference.
 // @0x14000d250
 void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number)
 {
@@ -2291,7 +2275,6 @@ Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
     return result;
 }
 
-// MS2-FUNCTIONAL: releases the weak proxy reference in this slot.
 // @0x14000d570
 void FUN_14000d570(void** proxy) { if (*proxy) static_cast<Scaleform::WeakPtrProxy*>(*proxy)->Release(); }
 
@@ -2304,7 +2287,6 @@ void* FUN_14000d5c0(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the owned object pointer and destroys the AS2 Object base.
 // BEHAVIOUR FIX (latent): tail-jumps to Object::~Object (0x142925cf0) as in the exe. Through the exe vftable a virtual
 // object->~Object() reaches slot 2 (FUN_14000de80 on a Video) and releases the proxy again.
 // The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
@@ -2316,7 +2298,6 @@ void FUN_14000d5f0(Scaleform::GFx::AS2::Object* object)
     object->Object::~Object();
 }
 
-// MS2-FUNCTIONAL: releases a weak proxy and optionally deletes its wrapper.
 // @0x14000d630
 void* FUN_14000d630(void** proxy, unsigned flags)
 {
@@ -2426,7 +2407,6 @@ static __forceinline void Video01DispatchGc(void* object, Scaleform::GFx::AS2::A
     }
 }
 
-// MS2-FUNCTIONAL: dispatches the video object's release, mark, and scan collector passes.
 // @0x14000e1a0
 void FUN_14000e1a0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
@@ -2442,7 +2422,6 @@ void FUN_140007f70(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
-// MS2-FUNCTIONAL: releases one retained AS2 reference in the slot.
 // @0x14000dd50
 void FUN_14000dd50(void** slot) { ReleaseAs2GCObject(*slot); }
 
@@ -2455,7 +2434,6 @@ void** FUN_14000dd80(void** slot, void* replacement)
     return slot;
 }
 
-// MS2-FUNCTIONAL: dispatches release, mark, and scan passes for the AS2 video object.
 // @0x14000ddd0
 void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
@@ -2463,7 +2441,6 @@ void FUN_14000ddd0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     Video01DispatchGc(object, collector, operation, FUN_14000dc30, FUN_14000d870, FUN_14000d9c0);
 }
 
-// MS2-FUNCTIONAL: destroys the Video object and optionally frees its allocation.
 // BEHAVIOUR FIX (latent): the base destructor is called directly (call 0x142925cf0) as in the exe. A virtual
 // object->~Object() would recurse through exe vftable 0x1431b5af0 slot 2 (this function).
 // The fullexe's own vftables put the compiler ??_G in slot 2, so it does not trigger there.
@@ -2486,7 +2463,6 @@ void* FUN_14000d940(Scaleform::GFx::AS2::Object* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: sends EventId(1) through the receiver vtable (the exe's 0x14-byte EventId: ControllerIndex -1 at +0x11).
 // @0x14000e390
 void FUN_14000e390(void* receiver)
 {
@@ -2542,7 +2518,6 @@ void FUN_14000d330(void* wrapper)
 // @0x14000d320
 unsigned FUN_14000d320(void*) { return 0x7027cf; }
 
-// MS2-FUNCTIONAL: dispatches the video prototype's release, cycle-mark, and scan collector passes.
 // @0x14000a730
 void FUN_14000a730(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
@@ -2573,7 +2548,6 @@ void FUN_14000a3a0(void* object)
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
-// MS2-FUNCTIONAL: dispatches the companion video prototype's collector passes.
 // @0x14000a770
 void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector,
                    int operation)
@@ -2649,7 +2623,6 @@ void FUN_1400066f0(void** array, const unsigned* record)
     memcpy(static_cast<unsigned char*>(*array) + (size - 1) * 12, record, 12);
 }
 
-// MS2-FUNCTIONAL: releases one retained Scaleform reference in the slot.
 // @0x140006770
 void FUN_140006770(void** slot) { if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release(); }
 
@@ -2809,7 +2782,6 @@ static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
     return NULL;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000ca90
 VideoProviderNetStream::VideoProviderNetStream(NetStream* pnetstream)
     : pNetStream(pnetstream)
@@ -2833,14 +2805,12 @@ VideoProviderNetStream::VideoProviderNetStream(NetStream* pnetstream)
     pSubtitleMsg             = NULL;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000c370
 VideoProviderNetStream::~VideoProviderNetStream()
 {
     Close();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140003490
 bool VideoProviderNetStream::IsActive()
 {
@@ -2851,7 +2821,6 @@ bool VideoProviderNetStream::IsActive()
            status == VideoPlayer::Playing || status == VideoPlayer::Seeking || status == VideoPlayer::Stopping;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 // @0x140003520
 void VideoProviderNetStream::Stop()
 {
@@ -2859,7 +2828,6 @@ void VideoProviderNetStream::Stop()
         pVideoPlayer->Stop();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): no tail calls
 // @0x140003540
 void VideoProviderNetStream::Pause(bool pause)
 {
@@ -2867,7 +2835,6 @@ void VideoProviderNetStream::Pause(bool pause)
         pVideoPlayer->Pause(pause);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140004b50
 void VideoProviderNetStream::Close()
 {
@@ -2889,7 +2856,7 @@ void VideoProviderNetStream::Close()
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140004bf0
 void VideoProviderNetStream::InitSoundChannel()
 {
@@ -2911,7 +2878,6 @@ void VideoProviderNetStream::InitSoundChannel()
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140004cf0
 void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
 {
@@ -2931,7 +2897,7 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140005fc0
 void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
 {
@@ -2979,14 +2945,12 @@ private:
     float           FrameTime;    // +0x1c
 };
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140006120
 SwfVideoSyncObject::SwfVideoSyncObject(Sprite* ptarget)
     : pTarget(ptarget), StartFrame(ptarget->GetCurrentFrame()), FrameTime(ptarget->GetMovieImpl()->FrameTime)
 {
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x1400063d0
 void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
 {
@@ -3005,7 +2969,6 @@ void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
     *unit  = 1000;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x1400064f0
 void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
 {
@@ -3017,7 +2980,7 @@ void VideoProviderNetStream::SetSwfSync(bool flag, Sprite* ptarget)
         pVideoPlayer->SetSyncObject(pSyncObj);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): member reloaded after the test
+// MS2-FUNCTIONAL: member reloaded after the test
 // @0x140004da0
 VideoImage* VideoProviderNetStream::GetTexture(int* width, int* height)
 {
@@ -3038,7 +3001,7 @@ protected:
     Render::TextureManager* pTexManager;   // +0x18
 };
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling; the movie heap
+// MS2-FUNCTIONAL: other scheduling; the movie heap
 // read directly where the exe calls the virtual Movie::GetHeap, the audio target taken from _level0 where the exe
 // asks the AS2 root for the root movie (the same object)
 // @0x14000c4b0
@@ -3110,7 +3073,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501)
+// MS2-FUNCTIONAL: still differs under cl 15
 // @0x14000c4a0
 float VideoProviderNetStream::GetFrameTime()
 {
@@ -3119,7 +3082,6 @@ float VideoProviderNetStream::GetFrameTime()
 
 // ==== NetStream ======================================================================================================
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000cc10
 void NetStream::commonInit(Environment* penv)
 {
@@ -3127,7 +3089,6 @@ void NetStream::commonInit(Environment* penv)
     pVideoProvider = *SF_HEAP_NEW(penv->GetHeap()) VideoProviderNetStream(this);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000cc90
 NetStream::NetStream(Environment* penv)
     : Object(penv), Paused(false)
@@ -3135,7 +3096,6 @@ NetStream::NetStream(Environment* penv)
     commonInit(penv);
 }
 
-// MS2-FUNCTIONAL: constructs a NetStream against an existing prototype context.
 // @0x140007ce0
 NetStream::NetStream(ASStringContext* psc, Object* pprototype)
     : Object(psc), Paused(false)
@@ -3153,14 +3113,14 @@ inline void NetStream::ReleaseVideoProvider()
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140008070
 NetStream::~NetStream()
 {
     ReleaseVideoProvider();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x1400056d0
 void NetStream::Finalize_GC()
 {
@@ -3170,7 +3130,7 @@ void NetStream::Finalize_GC()
 }
 
 // The exe keeps the three instantiations out of line (pinned at the end of the file).
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 template<class Functor>
 SF_NOINLINE void NetStream::ForEachChild_GC(Collector* prcc) const
 {
@@ -3181,14 +3141,13 @@ SF_NOINLINE void NetStream::ForEachChild_GC(Collector* prcc) const
     OnCuePointCallback.template ForEachChild_GC<Functor>(prcc);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140007fb0
 void NetStream::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) const
 {
     ASRefCountBaseType::CallForEachChild<NetStream>(prcc, operation);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140008250
 bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -3253,7 +3212,7 @@ bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& 
     return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000aab0
 bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3331,7 +3290,7 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
     return Object::GetMember(penv, name, val);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140005720
 void NetStream::Seek(Number pos, Environment* penv)
 {
@@ -3340,7 +3299,7 @@ void NetStream::Seek(Number pos, Environment* penv)
 
 // ---- NetStream.prototype
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x1400047a0
 void NetStreamProto::Close(const FnCall& fn)
 {
@@ -3353,7 +3312,7 @@ void NetStreamProto::Close(const FnCall& fn)
         pnetstream->GetVideoProvider()->Close();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140004810
 void NetStreamProto::Pause(const FnCall& fn)
 {
@@ -3366,7 +3325,7 @@ void NetStreamProto::Pause(const FnCall& fn)
         pnetstream->Pause();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140004880
 void NetStreamProto::SetBufferTime(const FnCall& fn)
 {
@@ -3381,7 +3340,7 @@ void NetStreamProto::SetBufferTime(const FnCall& fn)
     pnetstream->SetBufferTime(fn.Arg(0).ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140004920
 void NetStreamProto::SetNumberOfFramePools(const FnCall& fn)
 {
@@ -3396,7 +3355,7 @@ void NetStreamProto::SetNumberOfFramePools(const FnCall& fn)
     pnetstream->SetNumberOfFramePools(fn.Arg(0).ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x1400049c0
 void NetStreamProto::SetReloadThresholdTime(const FnCall& fn)
 {
@@ -3411,7 +3370,7 @@ void NetStreamProto::SetReloadThresholdTime(const FnCall& fn)
     pnetstream->SetReloadThresholdTime(fn.Arg(0).ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140004a60
 void NetStreamProto::SetOpenURLTimeout(const FnCall& fn)
 {
@@ -3427,7 +3386,6 @@ void NetStreamProto::SetOpenURLTimeout(const FnCall& fn)
 }
 
 // Reads an array of numbers as (x, y, z) triples.
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140007080
 static SF_NOINLINE void ReadVectorArray(Environment* penv, const Value& val, Array<Sound::SoundChannel::Vector>& vecs)
 {
@@ -3444,7 +3402,7 @@ static SF_NOINLINE void ReadVectorArray(Environment* penv, const Value& val, Arr
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x1400085c0
 void NetStreamProto::SetSoundSpatial(const FnCall& fn)
 {
@@ -3476,7 +3434,7 @@ void NetStreamProto::SetSoundSpatial(const FnCall& fn)
     pnetstream->GetVideoProvider()->ApplySpatialInfo();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140005780
 void NetStreamProto::Seek(const FnCall& fn)
 {
@@ -3491,7 +3449,7 @@ void NetStreamProto::Seek(const FnCall& fn)
     pnetstream->Seek(fn.Arg(0).ToNumber(fn.Env), fn.Env);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000c9f0
 void NetStreamProto::Play(const FnCall& fn)
 {
@@ -3506,7 +3464,7 @@ void NetStreamProto::Play(const FnCall& fn)
         pnetstream->OpenUrl(url.ToCStr(), fn.Env);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140009cf0
 void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 {
@@ -3521,7 +3479,7 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
     VideoCharacters.PushBack(WeakPtr<VideoCharacter>(pvideo));
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000af10
 VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
 {
@@ -3533,7 +3491,6 @@ VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
     return pvideo;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140006580
 void VideoProviderNetStream::NotifyVideoCharacters()
 {
@@ -3555,7 +3512,7 @@ static inline Environment* GetTargetEnvironment(CharacterHandle* ptarget)
     return ToAvmCharacter(pchar)->GetASEnvironment();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140008860
 void VideoProviderNetStream::SendNotification(const char* note, bool error)
 {
@@ -3579,7 +3536,7 @@ void VideoProviderNetStream::SendNotification(const char* note, bool error)
 }
 
 // A cue point as a script object: name, time in seconds, type and its parameters.
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140008bb0
 static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* penv)
 {
@@ -3603,7 +3560,7 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
     return pobj;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140009140
 void VideoProviderNetStream::SendMetaInformation()
 {
@@ -3657,7 +3614,7 @@ void VideoProviderNetStream::SendMetaInformation()
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140009850
 void VideoProviderNetStream::SendCuePoints(const Array<VideoPlayer::CuePoint>& cuePoints)
 {
@@ -3677,7 +3634,7 @@ void VideoProviderNetStream::SendCuePoints(const Array<VideoPlayer::CuePoint>& c
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140009ad0
 void VideoProviderNetStream::SendSubtitleInformation()
 {
@@ -3693,7 +3650,7 @@ void VideoProviderNetStream::SendSubtitleInformation()
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000be60
 void VideoProviderNetStream::Advance()
 {
@@ -3794,7 +3751,7 @@ void VideoProviderNetStream::Advance()
     }
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x1400054b0
 bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
                                         const PropFlags& flags)
@@ -3802,7 +3759,6 @@ bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const char* name, 
     return SetMemberRaw(psc, psc->CreateConstString(name), val, flags);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x140007af0
 FnCall::~FnCall()
 {
@@ -3810,14 +3766,12 @@ FnCall::~FnCall()
 
 // ==== NetStream constructor function ================================================================================
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000cd30
 Object* NetStreamCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) NetStream(penv);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000cd70
 void NetStreamCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -3829,7 +3783,6 @@ void NetStreamCtorFunction::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(pnetstream.GetPtr());
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000ce30
 NetStreamCtorFunction::NetStreamCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
@@ -3845,7 +3798,7 @@ public:
     static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
 };
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000d400
 void VideoProto::AttachVideo(const FnCall& fn)
 {
@@ -3909,7 +3862,7 @@ public:
     static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
 };
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x140007ba0
 void Object::Set__proto__(ASStringContext* psc, Object* protoObj)
 {
@@ -3919,7 +3872,6 @@ void Object::Set__proto__(ASStringContext* psc, Object* protoObj)
     pProto = protoObj;
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000de10
 VideoObject::VideoObject(ASStringContext* psc, Object* pprototype)
     : Object(psc)
@@ -3927,7 +3879,7 @@ VideoObject::VideoObject(ASStringContext* psc, Object* pprototype)
     Set__proto__(psc, pprototype);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
+// MS2-FUNCTIONAL: other scheduling
 // @0x14000dee0
 VideoObject::VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter)
     : Object(gCtxt->GetGC()), pCharacter(pcharacter)
@@ -3936,7 +3888,6 @@ VideoObject::VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter)
     Set__proto__(penv->GetSC(), gCtxt->GetPrototype(ASBuiltin_Video));
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000dfb0
 VideoObject::VideoObject(Environment* penv)
     : Object(penv)
@@ -3998,7 +3949,6 @@ AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayO
     return character;
 }
 
-// MS2-FUNCTIONAL: resolves the weak character handle and returns the live clip without keeping a reference
 // (the exe's temporary strong pointers add and release two references, net zero).
 // @0x14000daa0
 InteractiveObject* VideoObject::GetASCharacter()
@@ -4007,7 +3957,6 @@ InteractiveObject* VideoObject::GetASCharacter()
     return strong.GetPtr();
 }
 
-// MS2-FUNCTIONAL: const overload of the weak character handle lookup.
 // @0x14000db10
 const InteractiveObject* VideoObject::GetASCharacter() const
 {
@@ -4015,7 +3964,6 @@ const InteractiveObject* VideoObject::GetASCharacter() const
     return strong.GetPtr();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000db80
 void VideoObject::Finalize_GC()
 {
@@ -4023,14 +3971,12 @@ void VideoObject::Finalize_GC()
     Object::Finalize_GC();
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000e0c0
 Object* VideoCtorFunction::CreateNewObject(Environment* penv) const
 {
     return SF_HEAP_NEW(penv->GetHeap()) VideoObject(penv);
 }
 
-// MS2-FUNCTIONAL Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): other scheduling
 // @0x14000e100
 void VideoCtorFunction::GlobalCtor(const FnCall& fn)
 {
