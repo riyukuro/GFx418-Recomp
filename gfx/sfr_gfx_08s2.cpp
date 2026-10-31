@@ -334,6 +334,9 @@ public:
     FillStyleType& FillStyle;
 
     FillStyleSwfReader(FillStyleType& fs) : FillStyle(fs) {}
+
+    bool HasTextureFill() const { return FillStyle.pFill && (FillStyle.pFill->pImage || FillStyle.pFill->BindIndex != ~0u); }
+    bool NeedsResolving() const { return FillStyle.pFill && FillStyle.pFill->BindIndex != ~0u; }
     void Read(LoadProcess* p, TagType tagType);
 
 private:
@@ -454,6 +457,9 @@ public:
     StrokeStyleType& StrokeStyle;
 
     StrokeStyleSwfReader(StrokeStyleType& ss) : StrokeStyle(ss) {}
+
+    bool HasTextureFill() const { return StrokeStyle.pFill && (StrokeStyle.pFill->pImage || StrokeStyle.pFill->BindIndex != ~0u); }
+    bool NeedsResolving() const { return StrokeStyle.pFill && StrokeStyle.pFill->BindIndex != ~0u; }
     void Read(LoadProcess* p, TagType tagType);
 
 private:
@@ -531,7 +537,6 @@ static SF_FORCEINLINE Stream* StyleStream(LoadProcess* p)
 
 // A FILLSTYLEARRAY appended to the fill styles; the shape notes image fills and fills still to be bound. Returns the
 // stream position after the count.
-// MS2-FUNCTIONAL: register allocation and the inlined Array::Resize differ; LoadProcess::ReadU16 is inline here.
 // @0x14265c730
 int ShapeSwfReader::ReadFillStyles(LoadProcess* p, TagType tagType)
 {
@@ -543,26 +548,21 @@ int ShapeSwfReader::ReadFillStyles(LoadProcess* p, TagType tagType)
 
     unsigned base = (unsigned)FillStyles.GetSize();
     if (count)
-    {
         FillStyles.Resize(base + count);
-        for (unsigned i = 0; i < count; i++)
-        {
-            StyleStream(p)->Align();
-            FillStyleSwfReader reader(FillStyles[base + i]);
-            reader.Read(p, tagType);
-            Render::ComplexFill* pfill = reader.FillStyle.pFill;
-            if (pfill && (pfill->pImage || pfill->BindIndex != ~0u))
-                Shape.Flags |= ShapeDataBase::Flags_TexturedFill;
-            pfill = reader.FillStyle.pFill;
-            if (pfill && pfill->BindIndex != ~0u)
-                Shape.Flags |= ShapeDataBase::Flags_NeedsResolving;
-        }
+    for (unsigned i = 0; i < count; i++)
+    {
+        StyleStream(p)->Align();
+        FillStyleSwfReader reader(FillStyles[base + i]);
+        reader.Read(p, tagType);
+        if (reader.HasTextureFill())
+            Shape.Flags |= ShapeDataBase::Flags_TexturedFill;
+        if (reader.NeedsResolving())
+            Shape.Flags |= ShapeDataBase::Flags_NeedsResolving;
     }
     return stylesPos;
 }
 
 // A LINESTYLEARRAY appended to the stroke styles, as ReadFillStyles.
-// MS2-FUNCTIONAL: register allocation and the inlined Array::Resize differ; LoadProcess::ReadU16 is inline here.
 // @0x14265d320
 int ShapeSwfReader::ReadStrokeStyles(LoadProcess* p, TagType tagType)
 {
@@ -582,11 +582,9 @@ int ShapeSwfReader::ReadStrokeStyles(LoadProcess* p, TagType tagType)
         StyleStream(p)->Align();
         StrokeStyleSwfReader reader(StrokeStyles[base + i]);
         reader.Read(p, tagType);
-        Render::ComplexFill* pfill = reader.StrokeStyle.pFill;
-        if (pfill && (pfill->pImage || pfill->BindIndex != ~0u))
+        if (reader.HasTextureFill())
             Shape.Flags |= ShapeDataBase::Flags_TexturedFill;
-        pfill = reader.StrokeStyle.pFill;
-        if (pfill && pfill->BindIndex != ~0u)
+        if (reader.NeedsResolving())
             Shape.Flags |= ShapeDataBase::Flags_NeedsResolving;
     }
     return stylesPos;
