@@ -104,7 +104,9 @@ U FUN_14261e300(void*) { return 0; }
 struct Sfr31StaticState
 {
     void* VTable;
-    Sfr31StaticState() { VTable = DAT_14318ee08; }
+    // noinline: cl folds an inline store into a constant-initialised static, an ADDR64 to the exe's DAT_14318ee08 in
+    // the hook DLL's .data (ms2symobj --check); the exe stores the vtable at run time too
+    __declspec(noinline) Sfr31StaticState() { VTable = DAT_14318ee08; }
     ~Sfr31StaticState() { VTable = DAT_14318ec30; }
 };
 
