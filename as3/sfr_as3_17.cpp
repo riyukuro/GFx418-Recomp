@@ -56,6 +56,12 @@ extern template Scaleform::String Scaleform::AsString<long>(const long&);
 extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
 #undef GetObject
 
+// The exe calls the event chains' ResizeNoConstruct out of line (explicitly instantiated in sfr_as3_19, 0x142524cd0).
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+}
+
 // The definitions (here and in sfr_as3_19) of exe functions called through FUN_ forwarders, by their real names.
 namespace Scaleform { namespace GFx { namespace AS3 {
 UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                                    // 0x142524f60
@@ -948,7 +954,6 @@ public:
 };
 
 // Fires the event code on every live object of its chain; dead entries are dropped on the way.
-// MS2-FUNCTIONAL 0x1424f71b0: the exe tests the weak pointer before taking the reference; same results
 // @0x1424f71b0
 void EventChains::Dispatch(EventId::IdCode code)
 {
@@ -958,13 +963,14 @@ void EventChains::Dispatch(EventId::IdCode code)
     ChainType& chain = **pchain;
     for (UPInt i = 0; i < chain.GetSize();)
     {
-        Ptr<DisplayObject> ch = chain[i];
-        if (!ch)
+        if (chain[i] == static_cast<DisplayObject*>(0))
         {
             chain.RemoveAt(i);
             continue;
         }
-        FUN_142502e70(ToAvmDisplayObj(ch), EventId(code));
+        EventId id(code);
+        Ptr<DisplayObject> ch = chain[i];
+        FUN_142502e70(ch ? ToAvmDisplayObj(ch) : 0, id);
         ++i;
     }
 }
