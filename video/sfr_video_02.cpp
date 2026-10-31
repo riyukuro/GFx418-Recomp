@@ -1270,25 +1270,31 @@ void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::A
                        reinterpret_cast<char*>(values) + static_cast<size_t>(index) * 0x20))->Convert2Boolean();
 }
 
-// MS2-FUNCTIONAL: copies the Value to execute its recovered strong AddRef path without changing the source fields.
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The exe's out-of-line copies of the private Value::AddRef/Release (0x140012a90, 0x140012ac0).
+struct Video02ValueRefs
+{
+    static SF_INLINE void AddRef(const Value* value) { value->AddRef(); }
+    static SF_INLINE void Release(Value* value) { value->Release(); }
+};
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// Value::AddRef: adds a weak or strong reference when the value is refcounted.
 // @0x140012a90
 void FUN_140012a90(Scaleform::GFx::AS3::Value* value)
 {
-    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
-    {
-        __declspec(align(8)) unsigned char storage[sizeof(Scaleform::GFx::AS3::Value)];
-        new (storage) Scaleform::GFx::AS3::Value(*value);
-    }
+    AS3::Video02ValueRefs::AddRef(value);
 }
 
-// MS2-FUNCTIONAL: drops one weak or strong reference through Value's recovered release path.
+// Value::Release: drops a weak or strong reference when the value is refcounted.
 // @0x140012ac0
 void FUN_140012ac0(Scaleform::GFx::AS3::Value* value)
 {
-    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
-    {
-        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
-    }
+    AS3::Video02ValueRefs::Release(value);
 }
 
 }}} // namespace Scaleform::GFx::AS2
