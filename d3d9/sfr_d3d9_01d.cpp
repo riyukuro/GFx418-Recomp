@@ -1440,58 +1440,75 @@ SysVertexFormat::SysVertexFormat(IDirect3DDevice9* device, const VertexFormat* f
     memcpy(VertexElements, builder.Elements, sizeof(VertexElements));
 }
 
-// MS2-FUNCTIONAL: the uniform walk is scheduled differently
 // @0x1427410e0
 void ShaderInterface::Finish(unsigned)
 {
     // Dirty uniforms are uploaded as one register range per stage: a uniform whose shadow slot does not continue the
-    // running range flushes it first.
-    struct Range
+    // running range flushes it first (and is dropped).
+    struct ShaderConstantRange
     {
-        int Lo, Hi, Shadow;
-        Range() : Lo(SF_MAX_SINT), Hi(-1), Shadow(0) { }
-        // false: the range was flushed and this uniform dropped
-        bool Add(const UniformVar& u, int& flushLo, int& flushCount, int& flushShadow)
+        ShaderConstantRange(IDirect3DDevice9* pdevice, float* data)
+            : Min(SF_MAX_SINT), Max(-1), ShadowLocation(0), UniformData(data), pDevice(pdevice) { }
+        bool Update(int location, int size, int shadowLocation, bool fragment)
         {
-            int first = u.Location * 4;
-            int shadow = u.ShadowOffset - first;
-            if (shadow != Shadow && Hi >= 0)
+            location *= 4;
+            if ((shadowLocation - location) != ShadowLocation && Max >= 0)
             {
-                flushLo = Lo; flushCount = Hi - Lo; flushShadow = Shadow;
-                Shadow = shadow;
-                Lo = SF_MAX_SINT;
-                Hi = -1;
-                return false;
+                if (fragment)
+                    pDevice->SetPixelShaderConstantF(Min, UniformData + ShadowLocation, Max - Min);
+                else
+                    pDevice->SetVertexShaderConstantF(Min, UniformData + ShadowLocation, Max - Min);
+                ShadowLocation = shadowLocation - location;
+                Min = SF_MAX_SINT;
+                Max = -1;
+                return true;
             }
-            Shadow = shadow;
-            Lo = Alg::Min(Lo, first / 4);
-            Hi = Alg::Max(Hi, (first + u.Size + 3) / 4);
+            ShadowLocation = shadowLocation - location;
+            Min = Alg::Min(Min, location / 4);
+            Max = Alg::Max(Max, (location + size + 3) / 4);
             return true;
         }
+        int                Min, Max, ShadowLocation;
+        float*             UniformData;
+        IDirect3DDevice9*  pDevice;
     };
 
     IDirect3DDevice9* device = pHal->pDevice;
-    Range fs, vs;
+    ShaderConstantRange shaderConstantRangeFS(device, UniformData);
+    ShaderConstantRange shaderConstantRangeVS(device, UniformData);
     for (int i = 0; i < Uniform::SU_Count; i++)
     {
-        if (!UniformSet[i])
-            continue;
-        int lo, count, shadow;
-        if (CurShaders.pFS->Uniforms[i] >= 0)
+        if (UniformSet[i])
         {
-            if (!fs.Add(CurShaders.pFDesc->Uniforms[i], lo, count, shadow))
-                device->SetPixelShaderConstantF(lo, UniformData + shadow, count);
-        }
-        else if (CurShaders.pVS->Uniforms[i] >= 0)
-        {
-            if (!vs.Add(CurShaders.pVDesc->Uniforms[i], lo, count, shadow))
-                device->SetVertexShaderConstantF(lo, UniformData + shadow, count);
+            if (CurShaders.pFS->Uniforms[i] >= 0)
+            {
+                shaderConstantRangeFS.Update(CurShaders.pFDesc->Uniforms[i].Location,
+                                             CurShaders.pFDesc->Uniforms[i].Size,
+                                             CurShaders.pFDesc->Uniforms[i].ShadowOffset,
+                                             true);
+            }
+            else if (CurShaders.pVS->Uniforms[i] >= 0)
+            {
+                shaderConstantRangeVS.Update(CurShaders.pVDesc->Uniforms[i].Location,
+                                             CurShaders.pVDesc->Uniforms[i].Size,
+                                             CurShaders.pVDesc->Uniforms[i].ShadowOffset,
+                                             false);
+            }
         }
     }
-    if (vs.Hi >= 0)
-        device->SetVertexShaderConstantF(vs.Lo, UniformData + vs.Shadow, vs.Hi - vs.Lo);
-    if (fs.Hi >= 0)
-        device->SetPixelShaderConstantF(fs.Lo, UniformData + fs.Shadow, fs.Hi - fs.Lo);
+
+    if (shaderConstantRangeVS.Max >= 0)
+    {
+        device->SetVertexShaderConstantF(shaderConstantRangeVS.Min,
+                                         UniformData + shaderConstantRangeVS.ShadowLocation,
+                                         shaderConstantRangeVS.Max - shaderConstantRangeVS.Min);
+    }
+    if (shaderConstantRangeFS.Max >= 0)
+    {
+        device->SetPixelShaderConstantF(shaderConstantRangeFS.Min,
+                                        UniformData + shaderConstantRangeFS.ShadowLocation,
+                                        shaderConstantRangeFS.Max - shaderConstantRangeFS.Min);
+    }
     memset(UniformSet, 0, sizeof(UniformSet));
 
     if (pLastVS != CurShaders.pVS->pProg)
