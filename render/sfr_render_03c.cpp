@@ -45,12 +45,11 @@ bool TreeNode::NodeData::expandByFilterBounds(RectF* bounds, bool boundsEmpty) c
 }
 
 // @0x14261ddb0
-// MS2-FUNCTIONAL: stack frame size and register allocation differ
-void TreeNode::NodeData::expandByFilterBounds(const Filter* filter, RectF* bounds)
+__declspec(noinline) void TreeNode::NodeData::expandByFilterBounds(const Filter* filter, RectF* bounds)
 {
     if (!filter)
         return;
-    if (filter->GetFilterType() > Filter_Bevel)
+    if ((unsigned)filter->GetFilterType() > Filter_Bevel)
         return;
 
     const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
@@ -60,15 +59,19 @@ void TreeNode::NodeData::expandByFilterBounds(const Filter* filter, RectF* bound
 
     if (filter->GetFilterType() == Filter_Shadow || filter->GetFilterType() == Filter_Bevel)
     {
-        float x = params.Offset.x;
-        float y = params.Offset.y;
-        bounds->HExpand(x > 0 ? 0 : filterOffset(x, scale), x > 0 ? filterOffset(x, scale) : 0);
-        bounds->VExpand(y > 0 ? 0 : filterOffset(y, scale), y > 0 ? filterOffset(y, scale) : 0);
+        PointF offset = params.Offset;
+        if (offset.x > 0)
+            bounds->HExpand(0, filterOffset(offset.x, scale));
+        else
+            bounds->HExpand(filterOffset(offset.x, scale), 0);
+        if (offset.y > 0)
+            bounds->VExpand(0, filterOffset(offset.y, scale));
+        else
+            bounds->VExpand(filterOffset(offset.y, scale), 0);
     }
 }
 
 // @0x14261daf0
-// MS2-FUNCTIONAL: stack frame size and register allocation differ
 void TreeNode::NodeData::contractByFilterBounds(RectF* bounds) const
 {
     const FilterState* state = GetState<FilterState>();
@@ -81,7 +84,7 @@ void TreeNode::NodeData::contractByFilterBounds(RectF* bounds) const
     for (unsigned i = 0; i < filters->GetFilterCount(); i++)
     {
         const Filter* filter = filters->GetFilter(filters->GetFilterCount() - i - 1);
-        if (filter->GetFilterType() > Filter_Bevel)
+        if ((unsigned)filter->GetFilterType() > Filter_Bevel)
             continue;
 
         const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
@@ -92,10 +95,15 @@ void TreeNode::NodeData::contractByFilterBounds(RectF* bounds) const
         if (filter->GetFilterType() == Filter_Shadow || filter->GetFilterType() == Filter_Bevel)
         {
             // both offsets contract horizontally
-            float x = params.Offset.x;
-            float y = params.Offset.y;
-            bounds->HContract(x > 0 ? 0 : filterOffset(x, scale), x > 0 ? filterOffset(x, scale) : 0);
-            bounds->HContract(y > 0 ? 0 : filterOffset(y, scale), y > 0 ? filterOffset(y, scale) : 0);
+            PointF offset = params.Offset;
+            if (offset.x > 0)
+                bounds->HContract(0, filterOffset(offset.x, scale));
+            else
+                bounds->HContract(filterOffset(offset.x, scale), 0);
+            if (offset.y > 0)
+                bounds->HContract(0, filterOffset(offset.y, scale));
+            else
+                bounds->HContract(filterOffset(offset.y, scale), 0);
         }
     }
 }
