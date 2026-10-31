@@ -920,22 +920,16 @@ void FUN_1425456e0(void* p);            // Abc::File::~File
 void FUN_1424aa0f0(void* p);            // Text::TextFormat::~TextFormat
 void FUN_1424dd300(void* p);
 void FUN_1424dd3b0(void* p);
-void FUN_1424ddd90(void* p);            // InstanceTraits::CTraits::~CTraits
-void FUN_1424ddb80(void* p);            // AvmDisplayObj::~AvmDisplayObj
-void FUN_1424ddce0(void* p);            // AvmSprite::~AvmSprite
-void FUN_1425f0950(void* p);            // DisplayObject::~DisplayObject
 void FUN_1425fbcf0(void* p);            // DisplayObjContainer::~DisplayObjContainer
 void FUN_14257eb30(void* p);
 void FUN_1424f6d50(void* begin, void* end); // Value array destruct
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
 void FUN_1423f0720(void* p);
-void FUN_1424de190(void* p);            // GASRefCountBase::~GASRefCountBase
 void FUN_142626160(void* p);
 void FUN_1424df070(void* p);            // Tracer::~Tracer
 void FUN_1424df220(void* p);            // ClassTraits::Traits::~Traits
 void FUN_1424f6de0(void* p, void* owner);
-void FUN_1424de0e0(void* p);            // Class::~Class
 void FUN_1424df380(void* p);            // VM::~VM
 void FUN_142522a60(void* vm, void* file);
 void FUN_1424dc800(void* p);
@@ -997,7 +991,7 @@ static void Sfr21GAvmInteractive(void* p)
     Sfr21GVft(p, 0x40, DAT_14317bf80);
     Sfr21GVft(p, 0x30, DAT_14317bf80);
     Sfr21GVft(p, 0, DAT_14317ca60);
-    FUN_1424ddb80(p);
+    static_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(p)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
 }
 // flags & 4 is a ::delete through the deleting dtor: the global sized delete, not the class's heap Free
 static void Sfr21GFree(void* p, unsigned flags, UPInt size)
@@ -1087,7 +1081,7 @@ void* DeleteAs3_1424e2520(void* p, unsigned flags)
 
 // InstanceTraits::Anonimous
 // @0x1424e25b0
-void* DeleteAs3_1424e25b0(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags, 0xe8); return p; }
+void* DeleteAs3_1424e25b0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(p)->Scaleform::GFx::AS3::InstanceTraits::CTraits::~CTraits(); Sfr21GFree(p, flags, 0xe8); return p; }
 
 // AvmBitmap
 // @0x1424e2610
@@ -1099,8 +1093,8 @@ void* DeleteAs3_1424e2610(void* p, unsigned flags)
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GRes(p, 0xc8);
     Sfr21GRes(p, 0xc0);
-    FUN_1424ddb80(Sfr21At(p, 0x90));
-    FUN_1425f0950(p);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(Sfr21At(p, 0x90))->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
+    static_cast<Scaleform::GFx::DisplayObject*>(p)->Scaleform::GFx::DisplayObject::~DisplayObject();
     Sfr21GFree(p, flags, 0xd0);
     return p;
 }
@@ -1111,14 +1105,14 @@ void* DeleteAs3_1424e2610(void* p, unsigned flags)
 void* DeleteAs3_1424e26d0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
 // @0x1424e2760
-void* DeleteAs3_1424e2760(void* p, unsigned flags) { FUN_1424ddb80(p); Sfr21GInPlaceFree(p, flags, 0x30); return p; }
+void* DeleteAs3_1424e2760(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(p)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj(); Sfr21GInPlaceFree(p, flags, 0x30); return p; }
 
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
 // @0x1424e27d0
 void* DeleteAs3_1424e27d0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
 // @0x1424e29a0
-void* DeleteAs3_1424e29a0(void* p, unsigned flags) { FUN_1424ddce0(p); Sfr21GInPlaceFree(p, flags, 0x68); return p; }
+void* DeleteAs3_1424e29a0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmSprite*>(p)->Scaleform::GFx::AS3::AvmSprite::~AvmSprite(); Sfr21GInPlaceFree(p, flags, 0x68); return p; }
 
 // MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
 // @0x1424e2a10
@@ -1130,7 +1124,7 @@ void* DeleteAs3_1424e2ac0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sf
 
 // InstanceTraits::CTraits
 // @0x1424e2b50
-void* DeleteAs3_1424e2b50(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags, 0xe8); return p; }
+void* DeleteAs3_1424e2b50(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(p)->Scaleform::GFx::AS3::InstanceTraits::CTraits::~CTraits(); Sfr21GFree(p, flags, 0xe8); return p; }
 
 // @0x1424e2c90
 void* DeleteAs3_1424e2c90(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317f848); Sfr21GFree(p, flags, 0x10); return p; }
@@ -1194,7 +1188,7 @@ void* DeleteAs3_1424e33f0(void* p, unsigned flags) { FUN_1424de650(p); Sfr21GFre
 void* DeleteAs3_1424e3450(void* p, unsigned flags)
 {
     FUN_1423f0720(Sfr21At(p, 0x20));
-    FUN_1424de190(p);
+    static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
     Sfr21GFree(p, flags, 0x38);
     return p;
 }
@@ -1224,7 +1218,7 @@ void* DeleteAs3_1424e3510(void* p, unsigned flags)
 
 // InstanceTraits::Prototype
 // @0x1424e3630
-void* DeleteAs3_1424e3630(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags, 0xe8); return p; }
+void* DeleteAs3_1424e3630(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(p)->Scaleform::GFx::AS3::InstanceTraits::CTraits::~CTraits(); Sfr21GFree(p, flags, 0xe8); return p; }
 
 // ShapeObject
 // @0x1424e3890
@@ -1236,8 +1230,8 @@ void* DeleteAs3_1424e3890(void* p, unsigned flags)
     *Sfr21At(p, 0x6d) = 0;
     Sfr21GPtrNTS(p, 0xc8);
     Sfr21GRes(p, 0xc0);
-    FUN_1424ddb80(Sfr21At(p, 0x90));
-    FUN_1425f0950(p);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(Sfr21At(p, 0x90))->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
+    static_cast<Scaleform::GFx::DisplayObject*>(p)->Scaleform::GFx::DisplayObject::~DisplayObject();
     Sfr21GFree(p, flags, 0xd0);
     return p;
 }
@@ -1288,7 +1282,7 @@ void* DeleteAs3_1424e3d60(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, DAT_14317f778);
     FUN_1424f6de0(reinterpret_cast<void*>(reinterpret_cast<UPInt>(Sfr21Mem(p, 0x20)) & ~UPInt(1)), p);
-    FUN_1424de0e0(p);
+    static_cast<Scaleform::GFx::AS3::Class*>(p)->Scaleform::GFx::AS3::Class::~Class();
     Sfr21GFree(p, flags, 0x50);
     return p;
 }
@@ -1312,7 +1306,7 @@ void* DeleteAs3_1424e3eb0(void* p, unsigned flags)
     FUN_1424ef5b0(Sfr21At(p, 0x30));
     FUN_1424dcf10(Sfr21At(p, 0x30));
     Sfr21GPtr(p, 0x28);
-    FUN_1424de190(p);
+    static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
     Sfr21GFree(p, flags, 0xe8);
     return p;
 }
@@ -1329,11 +1323,11 @@ void* DeleteAs3_1424e3fc0(void* p, unsigned flags)
 
 // InstanceTraits::Void
 // @0x1424e4040
-void* DeleteAs3_1424e4040(void* p, unsigned flags) { FUN_1424ddd90(p); Sfr21GFree(p, flags, 0xe8); return p; }
+void* DeleteAs3_1424e4040(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(p)->Scaleform::GFx::AS3::InstanceTraits::CTraits::~CTraits(); Sfr21GFree(p, flags, 0xe8); return p; }
 
 // XMLSupport
 // @0x1424e4120
-void* DeleteAs3_1424e4120(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b7b8); FUN_1424de190(p); Sfr21GFree(p, flags, 0x28); return p; }
+void* DeleteAs3_1424e4120(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317b7b8); static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase(); Sfr21GFree(p, flags, 0x28); return p; }
 
 // XMLSupportImpl
 // @0x1424e4190
@@ -1344,7 +1338,7 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
     Sfr21GSPtr(p, 0x38);
     Sfr21GSPtr(p, 0x30);
     Sfr21GVft(p, 0, DAT_14317b7b8);
-    FUN_1424de190(p);
+    static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
     Sfr21GFree(p, flags, 0x48);
     return p;
 }
