@@ -49,7 +49,6 @@
 #undef GetObject
 
 // VM: runs the queued code (unrecovered).
-extern "C" void FUN_1424fa5b0(void* vm, unsigned count);
 
 namespace Scaleform { namespace GFx {
 // The wide copy keeps its string node; the characters are decoded once. Inline like in sfr_as2_04, which is what
@@ -177,7 +176,7 @@ void FrameCounter::AdvanceFrame(bool nextFrame, float framePos)
     MovieRoot* proot = static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot);
     if (proot->ASFramesToExecute)
     {
-        FUN_1424fa5b0(proot->pAVM, proot->ASFramesToExecute);
+        proot->pAVM->ExecuteCode(proot->ASFramesToExecute);
         if (proot->pAVM->HandleException)
             proot->pAVM->HandleException = false;
         proot->ASFramesToExecute = 0;
@@ -909,14 +908,8 @@ void FUN_1424e6cf0(Tracer* self, UPInt from)
 // ---- scalar deleting destructors whose classes are not recovered (or whose destructors are inlined elsewhere) ----
 // The exe's destructor helpers, called through their addresses.
 extern "C" {
-void FUN_14257db40(void* p);            // RefCountImplCore::~RefCountImplCore
-void FUN_14257db50(void* p);            // RefCountNTSImplCore::~RefCountNTSImplCore
-void FUN_14257dcb0(void* p);            // RefCountImpl::Release
-void FUN_14257dcd0(void* p);            // RefCountNTSImpl::Release
 void FUN_1423dfa20(void* p);            // RefCountBaseGC::ReleaseInternal
 void FUN_142521f00(void* v);            // Value::ReleaseInternal
-void FUN_1425a4030(void* p);            // Resource::Release
-void FUN_1425c14e0(void* node);         // ASStringNode::ReleaseNode
 void FUN_1423de770(void* p, void* st);  // RefCountCollector<323>::Collect
 void FUN_1424dcce0(void* p);
 void FUN_1424efab0(void* p);
@@ -1023,9 +1016,9 @@ static void Sfr21GInPlaceFree(void* p, unsigned flags, UPInt size)
     if ((flags & 5) == 5)
         ::operator delete(p, size);
 }
-static void Sfr21GPtr(void* p, UPInt off)    { if (void* m = Sfr21Mem(p, off)) FUN_14257dcb0(m); }
-static void Sfr21GPtrNTS(void* p, UPInt off) { if (void* m = Sfr21Mem(p, off)) FUN_14257dcd0(m); }
-static void Sfr21GRes(void* p, UPInt off)    { if (void* m = Sfr21Mem(p, off)) FUN_1425a4030(m); }
+static void Sfr21GPtr(void* p, UPInt off)    { if (void* m = Sfr21Mem(p, off)) reinterpret_cast<Scaleform::RefCountImpl*>(m)->Release(); }
+static void Sfr21GPtrNTS(void* p, UPInt off) { if (void* m = Sfr21Mem(p, off)) reinterpret_cast<const Scaleform::RefCountNTSImpl*>(m)->Release(); }
+static void Sfr21GRes(void* p, UPInt off)    { if (void* m = Sfr21Mem(p, off)) reinterpret_cast<Scaleform::GFx::Resource*>(m)->Release(); }
 // virtual Release (slot 2) of an interface member
 static void Sfr21GVRel(void* p, UPInt off)
 {
@@ -1049,13 +1042,13 @@ static void Sfr21GCollector(void* p)
     FUN_1424dcce0(Sfr21At(p, 0x70));
     Sfr21GVft(p, 0x48, DAT_14313f368);
     FUN_1424efab0(Sfr21At(p, 0x10));
-    FUN_14257db40(p);
+    static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
 }
 static void Sfr21GShapeData(void* p)
 {
     FUN_1424dc350(Sfr21At(p, 0x30));
     FUN_1424dc260(Sfr21At(p, 0x18));
-    FUN_14257db40(p);
+    static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
 }
 static void Sfr21GNodeData(void* p)
 {
@@ -1087,7 +1080,7 @@ void* DeleteAs3_1424e2520(void* p, unsigned flags)
     FUN_1424aa0f0(Sfr21At(p, 0x38));
     FUN_1424dd300(Sfr21At(p, 0x18));
     FUN_1424dd3b0(Sfr21At(p, 0x10));
-    FUN_14257db50(p);
+    static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
     Sfr21GFree(p, flags, 0x88);
     return p;
 }
@@ -1164,7 +1157,7 @@ void* DeleteAs3_1424e2e70(void* p, unsigned flags) { Sfr21GVft(p, 0, DAT_14317af
 void* DeleteAs3_1424e2ea0(void* p, unsigned flags)
 {
     Sfr21GVRel(p, 0x10);
-    FUN_14257db50(p);
+    static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore();
     Sfr21GFree(p, flags, 0x50);
     return p;
 }
@@ -1178,7 +1171,7 @@ void* DeleteAs3_1424e2f10(void* p, unsigned flags)
     Sfr21GSPtr(p, 0x30);
     Sfr21GValue(p, 0x10);
     Sfr21GVft(p, 0, DAT_14317c9f8);
-    FUN_14257db40(p);
+    static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
     Sfr21GFree(p, flags, 0x70);
     return p;
 }
@@ -1258,7 +1251,7 @@ void* DeleteAs3_1424e3950(void* p, unsigned flags)
     Sfr21GVft(p, 0x18, DAT_14317d5f0);
     char* node = static_cast<char*>(Sfr21Mem(p, 0x120));
     if (--*reinterpret_cast<int*>(node + 0x18) == 0)
-        FUN_1425c14e0(node);
+        reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
     Sfr21GPtrNTS(p, 0x118);
     Sfr21GPtrNTS(p, 0x110);
     FUN_1425fbcf0(p);
@@ -1367,19 +1360,12 @@ void  FUN_142516210(void* log, const char* fmt, ...);                         //
 void* FUN_1425f9800(void* dlist, int depth, bool* markedForRemove);           // DisplayList::GetDisplayObjectAtDepth
 void  FUN_1425f2540(void* obj, ASStringNode** result);                        // DisplayObject::GetOriginalName
 void  FUN_1425f24e0(void* obj, ASStringNode** result);                        // DisplayObject::GetName
-void  FUN_14257dc30(void* p);                                                 // RefCountImpl::AddRef
 void* FUN_1425f1d00(void* obj);                                               // DisplayObjectBase::GetCxform
-bool  FUN_1425e5670(const void* cx);                                          // Render::Cxform::IsIdentity
-void  FUN_1425e57b0(void* cx);                                                // Render::Cxform::SetIdentity
 void  FUN_1425fcea0(void* sprite, const void* pos);                           // Sprite::MoveDisplayObject
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
-void  FUN_1425f54d0(void* obj, const ASString* name);                         // DisplayObject::SetOriginalName
 void  FUN_1425f8df0(void* dlist, void* sprite, const void* pos, void* ch, unsigned addFlags); // DisplayList::AddDisplayObject
-bool  FUN_1425f8730(void* io);                                                // InteractiveObject::IsInPlayList
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 void  FUN_142517e70(void* io);                                                // InteractiveObject::ModifyOptimizedPlayList
-void  FUN_1425da900(void* sprite);                                            // Sprite::DefaultOnEventLoad
-void  FUN_1425dcb00(void* sprite, void* hitArea);                             // Sprite::SetHitArea
 }
 
 template <class R> static inline R Sfr21VCall(void* obj, UPInt off)
@@ -1445,7 +1431,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                 cc.pBindDefImpl = Sfr21Mem(bind.pBinding, 0x48);
             }
             if (bind.pResource)
-                FUN_1425a4030(bind.pResource);
+                reinterpret_cast<Scaleform::GFx::Resource*>(bind.pResource)->Release();
         }
         if (!cc.pCharDef)
         {
@@ -1503,17 +1489,17 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                     char np[0x68];
                     memcpy(np, P, sizeof(np));
                     if (void* filters = Sfr21Mem(np, 0x40))
-                        FUN_14257dc30(filters);
+                        reinterpret_cast<Scaleform::RefCountImpl*>(filters)->AddRef();
                     UInt16& flags = *reinterpret_cast<UInt16*>(np + 0x62);
                     if (!(flags & 0x80) && Sfr21VCall<int>(ex, 0x68))   // GetBlendMode
                     {
                         np[0x64] = 0;
                         flags |= 0x80;
                     }
-                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !FUN_1425e5670(FUN_1425f1d00(ex)))
+                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !reinterpret_cast<const Scaleform::Render::Cxform*>(FUN_1425f1d00(ex))->IsIdentity())
                     {
                         flags |= 8;
-                        FUN_1425e57b0(np);
+                        reinterpret_cast<Scaleform::Render::Cxform*>(np)->SetIdentity();
                     }
                     FUN_1425fcea0(spr, np);
 
@@ -1535,7 +1521,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                         }
                     }
                     if (void* filters = Sfr21Mem(np, 0x40))
-                        FUN_14257dcb0(filters);
+                        reinterpret_cast<Scaleform::RefCountImpl*>(filters)->Release();
                     return NULL;
                 }
                 replace = true;
@@ -1554,7 +1540,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     {
         nameSet = name.GetSize() != 0;
         if (nameSet)
-            FUN_1425f54d0(io, &name);
+            reinterpret_cast<DisplayObject*>(io)->SetOriginalName(name);
         if (origChar)
             Sfr21VCall<void, InteractiveObject*>(io, 0x2c0, origChar);   // CloneInternalData
     }
@@ -1593,13 +1579,13 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
         {
             char* sp = static_cast<char*>(Sfr21Mem(a, 0x18));
             char* parent = static_cast<char*>(Sfr21Mem(sp, 0x38));
-            if (!FUN_1425f8730(sp) && parent && FUN_1425f8730(parent))
+            if (!reinterpret_cast<InteractiveObject*>(sp)->IsInPlayList() && parent && reinterpret_cast<InteractiveObject*>(parent)->IsInPlayList())
             {
                 avm->GetAvmParent()->InsertChildToPlayList(reinterpret_cast<InteractiveObject*>(sp));
                 FUN_142517e70(sp);
             }
             if (!(sp[0x140] & 8))
-                FUN_1425da900(sp);
+                reinterpret_cast<Sprite*>(sp)->DefaultOnEventLoad();
             if (*reinterpret_cast<UByte*>(sp + 0x6d))
             {
                 void* x = Sfr21VCall<void*>(Sfr21Avm(sp), 0x10);
@@ -1614,11 +1600,11 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     if (io)
     {
         if (nameSet && name.GetNode() == Sfr21Mem(root, 0x1c8))   // builtin "hitArea"
-            FUN_1425dcb00(spr, io);
+            reinterpret_cast<Sprite*>(spr)->SetHitArea(reinterpret_cast<Sprite*>(io));
         char* base = Sfr21VCall<char*>(Sfr21Avm(io), 8);         // ToAvmInteractiveObjBase
         Sfr21VCall<void, bool>(base ? base - 0x30 : NULL, 0x98, true);   // OnAdded
     }
-    FUN_14257dcd0(ch);
+    reinterpret_cast<const Scaleform::RefCountNTSImpl*>(ch)->Release();
     return reinterpret_cast<DisplayObjectBase*>(ch);
 }
 
