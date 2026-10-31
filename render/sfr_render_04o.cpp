@@ -197,7 +197,37 @@ bool ExternalFontWinAPI::decomposeGlyphOutline(const UByte* data, unsigned size,
     return true;
 }
 
+// bit reader over the GGO_BITMAP rows (SDK GFxBitsetIterator)
+class GFxBitsetIterator
+{
+public:
+    GFxBitsetIterator(const UByte* bits, unsigned offset = 0) :
+        Bits(bits + (offset >> 3)),
+        Mask(UByte(0x80 >> (offset & 7)))
+    {}
+
+    void operator ++ ()
+    {
+        Mask >>= 1;
+        if(Mask == 0)
+        {
+            ++Bits;
+            Mask = 0x80;
+        }
+    }
+
+    unsigned GetBit() const
+    {
+        return (*Bits) & Mask;
+    }
+
+private:
+    const UByte* Bits;
+    UByte        Mask;
+};
+
 // @0x14264ba40
+// MS2-FUNCTIONAL: regalloc: the exe copies Mask then ANDs the source byte from memory; same bits
 void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int height, int originX, int originY,
                                               GlyphRaster* raster)
 {
@@ -208,23 +238,21 @@ void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int 
     raster->Raster.Resize(width * height);
 
     // GGO_BITMAP rows are 1 bit per pixel, high bit first, padded to 4 bytes
-    UByte* dst   = &raster->Raster[0];
-    int    pitch = ((width + 31) >> 3) & ~3;
-    for (int y = 0; y < height; ++y)
+    int i;
+    int pitch = ((width + 31) >> 5) << 2;
+
+    const UByte* src = data;
+          UByte* dst = &raster->Raster[0];
+    for(i = 0; i < height; i++)
     {
-        const UByte* src  = data;
-        UByte        mask = 0x80;
-        for (int x = 0; x < width; ++x)
+        GFxBitsetIterator bits(src, 0);
+        int j;
+        for(j = 0; j < width; j++)
         {
-            *dst++ = (*src & mask) ? 255 : 0;
-            mask >>= 1;
-            if (mask == 0)
-            {
-                ++src;
-                mask = 0x80;
-            }
+            *dst++ = bits.GetBit() ? 255 : 0;
+            ++bits;
         }
-        data += pitch;
+        src += pitch;
     }
 }
 
@@ -496,24 +524,22 @@ Font::NativeHintingType* FontProviderWinAPI::findNativeHinting(const char* name)
 }
 
 // @0x142649880
-// MS2-FUNCTIONAL: frame: the exe shrink-wraps the rdi save into the not-found path and pins the args in rsi/rbp/r14/r15; same body
 void FontProviderWinAPI::SetHinting(const char* name, Font::NativeHintingRange vectorRange,
                                     Font::NativeHintingRange rasterRange, unsigned maxVectorHintedSize,
                                     unsigned maxRasterHintedSize)
 {
-    Font::NativeHintingType* nh = findNativeHinting(name);
-    if (!nh)
+    Font::NativeHintingType* pnh = findNativeHinting(name);
+    if (pnh == 0)
     {
-        // a new face starts from the default entry
-        Font::NativeHintingType newNh = NativeHinting[0];
-        newNh.Typeface                = name;
-        NativeHinting.PushBack(newNh);
-        nh = &NativeHinting.Back();
+        Font::NativeHintingType nh = NativeHinting[0];
+        nh.Typeface = name;
+        NativeHinting.PushBack(nh);
+        pnh = &NativeHinting[NativeHinting.GetSize()-1];
     }
-    nh->MaxVectorHintedSize = maxVectorHintedSize;
-    nh->MaxRasterHintedSize = maxRasterHintedSize;
-    nh->VectorRange         = vectorRange;
-    nh->RasterRange         = rasterRange;
+    pnh->VectorRange         = vectorRange;
+    pnh->RasterRange         = rasterRange;
+    pnh->MaxVectorHintedSize = maxVectorHintedSize;
+    pnh->MaxRasterHintedSize = maxRasterHintedSize;
 }
 
 // @0x142649970
