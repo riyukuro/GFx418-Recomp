@@ -432,24 +432,100 @@ void Value::PickUnsafe(Instances::ThunkFunction* v)
 
 // ---- XML 1.0 (5th ed.) name productions ----
 
-// MS2-FUNCTIONAL: range tests are ordered/merged differently by the compiler
 // @0x142419b10
 CheckResult IsNameStartChar(int c)
 {
-    return c == ':' || c == '_' ||
-        (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-        (c >= 0xC0 && c <= 0xD6) || (c >= 0xD8 && c <= 0xF6) || (c >= 0xF8 && c <= 0x2FF) ||
-        (c >= 0x370 && c <= 0x37D) || (c >= 0x37F && c <= 0x1FFF) || (c >= 0x200C && c <= 0x200D) ||
-        (c >= 0x2070 && c <= 0x218F) || (c >= 0x2C00 && c <= 0x2FEF) || (c >= 0x3001 && c <= 0xD7FF) ||
-        (c >= 0xF900 && c <= 0xFDCF) || (c >= 0xFDF0 && c <= 0xFFFD) || (c >= 0x10000 && c <= 0xEFFFF);
+    if (c == ':' || c == '_')
+    {
+        return true;
+    }
+    if (c >= 'A' && c <= 'Z')
+    {
+        return true;
+    }
+    if (c >= 'a' && c <= 'z')
+    {
+        return true;
+    }
+    if (c >= 0xC0 && c <= 0xD6)
+    {
+        return true;
+    }
+    if (c >= 0xD8 && c <= 0xF6)
+    {
+        return true;
+    }
+    if (c >= 0xF8 && c <= 0x2FF)
+    {
+        return true;
+    }
+    if (c >= 0x370 && c <= 0x37D)
+    {
+        return true;
+    }
+    if (c >= 0x37F && c <= 0x1FFF)
+    {
+        return true;
+    }
+    if (c >= 0x200C && c <= 0x200D)
+    {
+        return true;
+    }
+    if (c >= 0x2070 && c <= 0x218F)
+    {
+        return true;
+    }
+    if (c >= 0x2C00 && c <= 0x2FEF)
+    {
+        return true;
+    }
+    if (c >= 0x3001 && c <= 0xD7FF)
+    {
+        return true;
+    }
+    if (c >= 0xF900 && c <= 0xFDCF)
+    {
+        return true;
+    }
+    if (c >= 0xFDF0 && c <= 0xFFFD)
+    {
+        return true;
+    }
+    if (c >= 0x10000 && c <= 0xEFFFF)
+    {
+        return true;
+    }
+    return false;
 }
 
-// MS2-FUNCTIONAL: the '-', '.', digit range tests compile to a bit test
 // @0x142419aa0
 CheckResult IsNameChar(int c)
 {
-    return IsNameStartChar(c) || (c >= '-' && c <= '.') || (c >= '0' && c <= '9') || c == 0xB7 ||
-        (c >= 0x300 && c <= 0x36F) || (c >= 0x203F && c <= 0x2040);
+    if (IsNameStartChar(c))
+    {
+        return true;
+    }
+    if (c == '-' || c == '.')
+    {
+        return true;
+    }
+    if (c >= '0' && c <= '9')
+    {
+        return true;
+    }
+    if (c == 0xB7)
+    {
+        return true;
+    }
+    if (c >= 0x0300 && c <= 0x036F)
+    {
+        return true;
+    }
+    if (c >= 0x203F && c <= 0x2040)
+    {
+        return true;
+    }
+    return false;
 }
 
 // @0x142419a50
@@ -458,14 +534,12 @@ CheckResult IsNCNameStartChar(int c)
     return IsNameStartChar(c) && c != ':';
 }
 
-// MS2-FUNCTIONAL: the inlined '-', '.', digit range tests compile to a bit test
 // @0x1424199d0
 CheckResult IsNCNameChar(int c)
 {
     return IsNameChar(c) && c != ':';
 }
 
-// MS2-FUNCTIONAL: the inlined IsNameChar range tests compile differently
 // @0x142419bf0
 CheckResult IsValidName(const ASString& name)
 {
