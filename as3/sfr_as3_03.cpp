@@ -1779,15 +1779,15 @@ namespace Scaleform { namespace GFx { namespace AS3
         ++sa.Length;
     }
 
-    // MS2-FUNCTIONAL: argument setup scheduling around ExecuteInternalUnsafe differs (same instructions, reordered)
     // @0x142406e70
     int CompareValuePtr::Compare(const Value& a, const Value& b) const
     {
         Value result;
         Value argv[2] = {a, b};
         VM& vm = Vm;
+        const Value& _this = Value::GetUndefined();
 
-        vm.ExecuteInternalUnsafe(Func, Value::GetUndefined(), result, 2, argv, false);
+        vm.ExecuteInternalUnsafe(Func, _this, result, 2, argv, false);
         if (Vm.IsException())
             return 0;
 
@@ -2329,14 +2329,14 @@ static __forceinline Pickable<Instances::fl::XMLList> MS2_MakeXMLList(InstanceTr
 namespace Instances { namespace fl
 {
     // A new list of the text children.
-    // MS2-FUNCTIONAL: register allocation in the inlined SPtr pick (the old list in rdx, the exe uses rcx)
     // @0x1424018e0
     __declspec(noinline) void XML::AS3text(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
             GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
-        result = MS2_MakeXMLList(itr);
-        GetChildren(*result, kText);
+        XMLList* list = MS2_MakeXMLList(itr).GetPtr();
+        result.Pick(list);
+        GetChildren(*list, kText);
     }
 
     // @0x1424018c0
