@@ -51,7 +51,8 @@ struct ValueAssignCopies
             memcpy(&v, &other, sizeof(Value));
             v.AddRef();
         }
-    }
+    }    // Value::ReleaseInternal (0x142521f00) is private; the tracer calls it out of line.
+    static void ReleaseInternal(Value& v) { v.ReleaseInternal(); }
 };
 }}}
 namespace Scaleform { namespace GFx { namespace AS3 { extern "C" void FUN_1425245c0(UPInt* a, UPInt n); }}}
@@ -124,13 +125,13 @@ inline void FUN_14251fcd0(Scaleform::UPInt tracer, Scaleform::UPInt regIndex) { 
 inline bool* FUN_1424f1390(Scaleform::GFx::AS3::Value* v, void* tmpNode, void* strOut) { ::new (tmpNode) Scaleform::GFx::AS3::CheckResult(v->Convert2String(*static_cast<Scaleform::GFx::ASString*>(strOut))); return static_cast<bool*>(tmpNode); }   // Value::ToStringValue style conversion
 void FUN_1424e0860(void* out, unsigned long long value);                                                    // assign from the scratch value
 void FUN_1424201a0(void* arr, void* heap, Scaleform::UPInt n);                      // ArrayDH<Value>::Resize growth
-void FUN_142521f00(void* value);                                                    // Value::ReleaseInternal
+inline void FUN_142521f00(void* value) { Scaleform::GFx::AS3::ValueAssignCopies::ReleaseInternal(*static_cast<Scaleform::GFx::AS3::Value*>(value)); }                                                    // Value::ReleaseInternal
 inline Scaleform::SPInt FUN_1425f9200(void* list, void* obj) { return static_cast<const Scaleform::GFx::DisplayList*>(list)->FindDisplayIndex(static_cast<const Scaleform::GFx::DisplayObjectBase*>(obj)); }                          // DisplayList::FindDisplayIndex(const DisplayObjectBase*)
 inline bool FUN_1425fb480(void* list, void* owner, Scaleform::UPInt i1, Scaleform::UPInt i2) { return static_cast<Scaleform::GFx::DisplayList*>(list)->SwapEntriesAtIndexes(static_cast<Scaleform::GFx::DisplayObjectBase*>(owner), i1, i2); }   // DisplayList::SwapEntriesAtIndexes
 inline void FUN_142517ed0(void* avmInteractiveObj) { static_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(avmInteractiveObj)->MoveBranchInPlayList(); }                                     // AvmInteractiveObj::MoveBranchInPlayList
 int FUN_142520380(void* ctx, void* multiname);                                    // Tracer: number of run-time operands a multiname takes off the stack
 void FUN_1425201f0(void* ctx, void* multiname);                                      // exec: resolve runtime multiname operands from the stack
-unsigned char* FUN_14250ef80(unsigned char* ret, Scaleform::UPInt vm, Scaleform::UPInt traits, void* result, const void* obj, const void* multiname, int target); // GetSuperProperty
+inline unsigned char* FUN_14250ef80(unsigned char* ret, Scaleform::UPInt vm, Scaleform::UPInt traits, void* result, const void* obj, const void* multiname, int target) { ::new (static_cast<void*>(ret)) Scaleform::GFx::AS3::CheckResult(Scaleform::GFx::AS3::GetSuperProperty(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), reinterpret_cast<const Scaleform::GFx::AS3::Traits*>(traits), *static_cast<Scaleform::GFx::AS3::Value*>(result), *static_cast<const Scaleform::GFx::AS3::Value*>(obj), *static_cast<const Scaleform::GFx::AS3::Multiname*>(multiname), static_cast<Scaleform::GFx::AS3::SlotInfo::ValTarget>(target))); return ret; } // GetSuperProperty
 void FUN_142502570(Scaleform::UPInt vm, void* propRef, void* multiname);              // VM: resolve a multiname to a property reference
 void FUN_14252c640(Scaleform::UPInt tracer, Scaleform::UPInt* pos);                      // Tracer: advance over padding/labels at pos
 inline void FUN_1425212f0(Scaleform::UPInt tracer, Scaleform::UPInt pos) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->RegisterOrigOpCode(pos); }                                              // Tracer: per-opcode bookkeeping
@@ -177,7 +178,7 @@ Scaleform::UPInt FUN_142507b80(Scaleform::UPInt traitsOwner);   // factory for a
 void* FUN_14250f330(void* out, void* nameSlot, Scaleform::UPInt a, int b);   // type name for a class-kind value (releases the name)
 void* FUN_14250fc60(void* out, void* nameSlot, Scaleform::UPInt vt, Scaleform::UInt32 idx, int b);   // type name for a slot-kind value (releases the name)
 void* FUN_142416720(const void* self);   // InstanceTraits::Function: its VM-side owner
-void FUN_1424fef00(void* vm, void* callee, const void* thisVal, void* result, unsigned argc, const void* args, unsigned flag);
+inline void FUN_1424fef00(void* vm, void* callee, const void* thisVal, void* result, unsigned argc, const void* args, unsigned flag) { static_cast<Scaleform::GFx::AS3::VM*>(vm)->ExecuteInternalUnsafe(*static_cast<const Scaleform::GFx::AS3::Value*>(callee), *static_cast<const Scaleform::GFx::AS3::Value*>(thisVal), *static_cast<Scaleform::GFx::AS3::Value*>(result), argc, static_cast<const Scaleform::GFx::AS3::Value*>(args), flag != 0); }
 inline Scaleform::UPInt* FUN_1425ddd50(Scaleform::UPInt button, Scaleform::UPInt* out, int state) { ::new (static_cast<void*>(out)) Scaleform::Ptr<Scaleform::Render::TreeContainer>(reinterpret_cast<Scaleform::GFx::Button*>(button)->CreateStateRenderContainer(static_cast<Scaleform::GFx::Button::ButtonState>(state))); return out; }   // Button::CreateStateRenderContainer
 inline Scaleform::UPInt FUN_14250dbc0(Scaleform::UPInt container) { return reinterpret_cast<const Scaleform::Render::TreeContainer*>(container)->GetSize(); }   // TreeContainer::GetSize
 inline void FUN_14261cf50(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt count) { reinterpret_cast<Scaleform::Render::TreeContainer*>(container)->Remove(pos, count); }   // TreeContainer::Remove
@@ -190,7 +191,7 @@ void FUN_1424ef860(Scaleform::UPInt hash);   // hash Clear (stride 0x18, refcoun
 void FUN_1424ef5b0(Scaleform::UPInt hash);   // hash Clear
 void FUN_1424ef500(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcounted member at +0x28)
 void FUN_1424ef450(Scaleform::UPInt hash);   // hash Clear (stride 0x20, refcounted member at +0x28)
-char* FUN_1424ff910(char* ret, Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Value* obj, Scaleform::GFx::AS3::Value* result, unsigned argc, const void* args);   // ExecutePropertyUnsafe
+inline char* FUN_1424ff910(char* ret, Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Value* obj, Scaleform::GFx::AS3::Value* result, unsigned argc, const void* args) { ::new (static_cast<void*>(ret)) Scaleform::GFx::AS3::CheckResult(Scaleform::GFx::AS3::ExecutePropertyUnsafe(*vm, *mn, *obj, *result, argc, static_cast<const Scaleform::GFx::AS3::Value*>(args))); return ret; }   // ExecutePropertyUnsafe
 inline void FUN_142403310(Scaleform::UPInt obj, Scaleform::GFx::ASString* inout) { reinterpret_cast<Scaleform::GFx::AS3::Instances::fl::XMLList*>(obj)->AS3toXMLString(*inout); }   // XMLList-style toString
 inline void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg); }   // Tracer: record a rewritten opcode for a register
 unsigned char* FUN_14250e2d0(Scaleform::UPInt slotRef, void* ret, void* vm, Scaleform::GFx::AS3::Value* out, const Scaleform::GFx::AS3::Value* thisObj, const void* vt, unsigned b);   // read the value behind a slot reference (vt: VTable*, tested as 64 bits)
@@ -5314,7 +5315,8 @@ void Sfr31ExecCallSuper(UPInt vmAddr, UInt32 a, UInt32 n)
 }
 // ---- batch 46
 ASString FUN_14250bc60(const Traits& tr);
-const char* FUN_1424ed700(Abc::NamespaceKind kind);
+const char* AsString(Abc::NamespaceKind kind);   // 0x1424ed700
+inline const char* FUN_1424ed700(Abc::NamespaceKind kind) { return AsString(kind); }
 
 // The name a value's type shows under in messages: the builtin names, qualified class names or the kind-specific forms.
 // MS2-FUNCTIONAL 0x1425322c0: raw-offset model; codegen differs from the exe
