@@ -1040,14 +1040,17 @@ void ShapeMeshProvider::createDrawLayers(const TmpPathsArray& paths, UPInt i1, U
 
         for (i = i1; i < i2; ++i)
         {
-            if (paths[i].Styles[0] != paths[i].Styles[1] && styles[0] == 0)
+            if (paths[i].Styles[0] != paths[i].Styles[1])
             {
-                countComplexFills(paths, i1, i2, &layer);
-                layer.StartPos       = startPos;
-                layer.StrokeStyle    = 0;
-                layer.Image9GridType = I9gNone;
-                DrawLayers.PushBack(layer);
-                styles.Set(0);
+                if (styles[0] == 0)
+                {
+                    countComplexFills(paths, i1, i2, &layer);
+                    layer.StartPos       = startPos;
+                    layer.StrokeStyle    = 0;
+                    layer.Image9GridType = I9gNone;
+                    DrawLayers.PushBack(layer);
+                    styles.Set(0);
+                }
             }
             if (paths[i].Styles[2])
                 styles.Set(paths[i].Styles[2]);
@@ -1059,9 +1062,9 @@ void ShapeMeshProvider::createDrawLayers(const TmpPathsArray& paths, UPInt i1, U
             if (style && styles[style])
             {
                 // a stroke layer has its one fill computed from the stroke style
-                layer.StartPos       = startPos;
-                layer.StartFill      = 0;
                 layer.FillCount      = 1;
+                layer.StartFill      = 0;
+                layer.StartPos       = startPos;
                 layer.StrokeStyle    = style;
                 layer.Image9GridType = I9gNone;
                 DrawLayers.PushBack(layer);

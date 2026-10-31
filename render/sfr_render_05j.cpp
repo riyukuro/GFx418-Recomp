@@ -45,6 +45,28 @@ extern unsigned BuildPatternCount;
 
 namespace Scaleform { namespace Render {
 
+// The exe's GetPatternChain (vtable slot 10) takes only the range: the 4.2 flags argument is not passed, and r8 keeps
+// whatever it held. None of the implementations read the flags, so the calls go through this one-argument slot view.
+struct PatternChainSlotView
+{
+    virtual void Slot0();
+    virtual void Slot1();
+    virtual void Slot2();
+    virtual void Slot3();
+    virtual void Slot4();
+    virtual void Slot5();
+    virtual void Slot6();
+    virtual void Slot7();
+    virtual void Slot8();
+    virtual void Slot9();
+    virtual bool GetPatternChain(BundleEntryRange* range);
+};
+
+static inline bool GetPatternChainNoFlags(TreeCacheNode* node, BundleEntryRange* range)
+{
+    return reinterpret_cast<PatternChainSlotView*>(node)->GetPatternChain(range);
+}
+
 // ***** TreeCacheNode
 
 // @0x142680100
@@ -233,14 +255,13 @@ void TreeCacheNode::updateMaskTransform(TransformArgs& t, TransformFlags flags)
     }
 }
 
-// MS2-FUNCTIONAL: the exe passes no flags to the mask's GetPatternChain (r8 left holding the mask pointer)
 // @0x142685a10
 void TreeCacheNode::updateEffectChain(BundleEntryRange* contentChain)
 {
     if (HasMask())
     {
         BundleEntryRange maskPattern(Range_Empty);
-        GetMask()->GetPatternChain(&maskPattern, 0);
+        GetPatternChainNoFlags(GetMask(), &maskPattern);
         Effects.UpdateBundleChain(contentChain, &maskPattern);
     }
     else
@@ -1182,7 +1203,7 @@ void TreeCacheContainer::propagate3DFlag(unsigned parent3D)
     }
 }
 
-// MS2-FUNCTIONAL: the exe passes no flags to the children's GetPatternChain (dropped argument) and keeps the child bounds in registers
+// MS2-FUNCTIONAL: the exe keeps the child bounds in registers
 // the children's chains in order; runs of children whose patterns match (and do not overlap an earlier member of
 // the run) are merged so their entries chain into shared bundles
 // @0x142680440
@@ -1199,7 +1220,7 @@ void TreeCacheContainer::BuildChildPattern(BundleEntryRange* pattern)
     for (; !Children.IsNull(child); child = child->pNext)
     {
         BundleEntryRange childPattern(Range_Empty);
-        if (!child->GetPatternChain(&childPattern, 0))
+        if (!GetPatternChainNoFlags(child, &childPattern))
             continue;
 
         // long patterns are not matched
@@ -1695,7 +1716,6 @@ bool TreeCacheMeshBase::GetPatternChain(BundleEntryRange* range, unsigned)
     return true;
 }
 
-// MS2-FUNCTIONAL: the inlined updateEffectChain passes no flags to the mask's GetPatternChain in the exe
 // @0x1426829e0
 void TreeCacheMeshBase::UpdateBundlePattern(unsigned)
 {
