@@ -375,14 +375,14 @@ void FUN_140001e30(std::int64_t* slot)
 }
 
 // clears a hash with GC values: frees every used slot, then returns the table to the global heap.
-// (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1; cl 17 does not emit it)
+// The SDK form (i <= SizeMask) is what lets cl count down from SizeMask+1 with no zero test.
 __forceinline void Video04ClearHash(Video04Hash* hash)
 {
     Video04HashTable* table = *hash;
     if (table)
     {
-        std::int64_t count = (std::int64_t)table->SizeMask + 1;
-        for (std::int64_t i = 0; count != 0; ++i, --count)
+        UPInt n = table->SizeMask;
+        for (UPInt i = 0; i <= n; i++)
         {
             Video04HashEntry* entry = &(*hash)->Entries[i];
             if (entry->NextInChain != -2)
@@ -397,14 +397,14 @@ __forceinline void Video04ClearHash(Video04Hash* hash)
     }
 }
 
-// MS2-FUNCTIONAL: the clear above (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1).
+// clears the hash above.
 // @0x140001f40
 void FUN_140001f40(Video04Hash* hash)
 {
     Video04ClearHash(hash);
 }
 
-// MS2-FUNCTIONAL: same body as the above (the exe carries a second full copy). (exe codegen is cl 15: push rbp frame, sub rsi,1 count-down, add [m],-1; cl 17 does not emit it)
+// same body as the above (the exe carries a second full copy).
 // @0x140001ff0
 void FUN_140001ff0(Video04Hash* hash)
 {
