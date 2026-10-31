@@ -1131,37 +1131,57 @@ void TextField::OnFocus(FocusEventType event, InteractiveObject* oldOrNewFocusCh
     }
 }
 
+// TextField::IsOverwriteMode / SetOverwriteMode on the field's document (inline in the exe).
+static inline bool IsOverwriteModeOf(Render::Text::DocView* pdoc)
+{
+    if (pdoc->HasEditorKit())
+        return EditorOf(pdoc)->IsOverwriteMode();
+    return false;
+}
+
+static inline void SetOverwriteModeOf(Render::Text::DocView* pdoc, bool overwMode)
+{
+    if (pdoc->HasEditorKit())
+    {
+        if (overwMode)
+            EditorOf(pdoc)->SetOverwriteMode();
+        else
+            EditorOf(pdoc)->ClearOverwriteMode();
+    }
+}
+
 // A key for the focused field: the AVM side hears it first, then the editor of an editable or selectable field
 // (Insert toggles overwrite mode). The focus group's handled bit is set.
 // @0x1425ba3e0
 bool TextField::OnKeyEvent(const EventId& id, int* pkeyMask)
 {
     MovieImpl* proot = GetMovieImpl();
-    unsigned focusGroup = proot->FocusGroupIndexes[id.KeyboardIndex];
-    int groupBit = (1 << focusGroup) & 0xFFFF /* the focused-item-handled bits */;
-    if ((*pkeyMask & groupBit) || !proot || !proot->IsFocused(this, id.KeyboardIndex))
-        return false;
-    if (HasAvmObject())
-        GetAvmObjImpl()->ToAvmTextFieldBase()->OnKeyEvent(id, pkeyMask);
-    if (pDocument->GetEditorKit() && (!IsReadOnly() || IsSelectable()))
+    unsigned focusGroup = proot->FocusGroupIndexes[unsigned(id.KeyboardIndex)];
+    if (!((*pkeyMask) & ((1 << focusGroup) & 0xFFFF /* the focused-item-handled bits */)))
     {
-        if (id.Id == EventId::Event_KeyDown)
+        if (proot && proot->IsFocused(this, id.KeyboardIndex))
         {
-            EditorOf(pDocument)->OnKeyDown(int(id.KeyCode), KeyModifiers(id.KeysState));
-            if (id.KeyCode == Key::Insert && pDocument->GetEditorKit())
+            if (HasAvmObject())
+                GetAvmObjImpl()->ToAvmTextFieldBase()->OnKeyEvent(id, pkeyMask);
+            if (pDocument->HasEditorKit() && (!IsReadOnly() || IsSelectable()))
             {
-                Text::EditorKit* peditor = EditorOf(pDocument);
-                if (peditor->IsOverwriteMode())
-                    peditor->ClearOverwriteMode();
-                else
-                    peditor->SetOverwriteMode();
+                if (id.Id == EventId::Event_KeyDown)
+                {
+                    EditorOf(pDocument)->OnKeyDown(int(id.KeyCode), KeyModifiers(id.KeysState));
+                    // toggle overwrite/insert modes
+                    if (id.KeyCode == Key::Insert)
+                    {
+                        SetOverwriteModeOf(pDocument, !IsOverwriteModeOf(pDocument));
+                    }
+                }
+                else if (id.Id == EventId::Event_KeyUp)
+                    EditorOf(pDocument)->OnKeyUp(int(id.KeyCode), KeyModifiers(id.KeysState));
             }
+            (*pkeyMask) |= ((1 << focusGroup) & 0xFFFF);
+            return true;
         }
-        else if (id.Id == EventId::Event_KeyUp)
-            EditorOf(pDocument)->OnKeyUp(int(id.KeyCode), KeyModifiers(id.KeysState));
     }
-    *pkeyMask |= groupBit;
-    return true;
+    return false;
 }
 
 // @0x1425ba620
