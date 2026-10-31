@@ -439,7 +439,6 @@ bool DICommandQueue::isQueueEmpty_NTS() const
            Queues[DIQueue_Active].IsEmpty();
 }
 
-// MS2-FUNCTIONAL: cl calls IsImageCPUReadable for the second source image where the exe inlines both
 // @0x1426714c0
 bool DICommandQueue::isPageListCPURenderable_NTS(List<DIQueuePage>& pages)
 {
@@ -447,8 +446,39 @@ bool DICommandQueue::isPageListCPURenderable_NTS(List<DIQueuePage>& pages)
     {
         for (DICommand* cmd = page->getFirst(); cmd; cmd = page->getNext(cmd))
         {
-            if (!(cmd->GetRenderCaps() & DICommand::RC_CPU) || !cmd->IsCPUExecutable())
+            // cmd->IsCPUExecutable(), inlined with both source image checks.
+            if (!(cmd->GetRenderCaps() & DICommand::RC_CPU))
                 return false;
+            if (!(cmd->GetRenderCaps() & DICommand::RC_CPU))
+                return false;
+            if (!cmd->pImage->isMapped())
+                return false;
+            DISourceImages images;
+            if (cmd->GetSourceImages(&images))
+            {
+                if (Image* image = images[0])
+                {
+                    if (image->GetImageType() == ImageBase::Type_DrawableImage)
+                    {
+                        if (!((DrawableImage*)image)->isMappedWithEmptyQueue())
+                            return false;
+                    }
+                    else if (image->GetImageType() != ImageBase::Type_RawImage ||
+                             (image->GetFormat() != Image_B8G8R8A8 && image->GetFormat() != Image_R8G8B8A8))
+                        return false;
+                }
+                if (Image* image = images[1])
+                {
+                    if (image->GetImageType() == ImageBase::Type_DrawableImage)
+                    {
+                        if (!((DrawableImage*)image)->isMappedWithEmptyQueue())
+                            return false;
+                    }
+                    else if (image->GetImageType() != ImageBase::Type_RawImage ||
+                             (image->GetFormat() != Image_B8G8R8A8 && image->GetFormat() != Image_R8G8B8A8))
+                        return false;
+                }
+            }
         }
     }
     return true;

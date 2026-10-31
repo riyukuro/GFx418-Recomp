@@ -297,6 +297,7 @@ struct DISourceImages
 struct DICommand
 {
     friend class DICommandSet;
+    friend class DICommandQueue;
 
     DICommand(DrawableImage* image = 0) : pImage(image) {}
     virtual ~DICommand() {}
