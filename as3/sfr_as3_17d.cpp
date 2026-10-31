@@ -50,6 +50,7 @@
 #include "ms2/scaleform/include/gfx/as2/as2_object.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
+#include "ms2/scaleform/include/gfx/gfx_valueinfo.h"
 #include "ms2/scaleform/include/video/video_statebag.h"
 #include "ms2/scaleform/include/gfx/as3/as3_loadqueue.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net.h"
@@ -995,28 +996,6 @@ public:
                      const MemberValueSet* initArgs);
 };
 
-// GFx::Value::DisplayInfo as this build lays it out (the class is opaque in gfx_value.h).
-struct Sfr17dDisplayInfo
-{
-    Double   X, Y;            // +0x00 pixels
-    Double   Rotation;        // +0x10
-    Double   XScale, YScale;  // +0x18
-    Double   Alpha;           // +0x28 percent
-    bool     Visible;         // +0x30
-    Double   Z;               // +0x38 pixels
-    Double   XRotation;       // +0x40
-    Double   YRotation;       // +0x48
-    Double   ZScale;          // +0x50
-    Double   FOV;             // +0x58
-    Matrix3F ViewMatrix3D;    // +0x60
-    Matrix4F ProjectionMatrix3D; // +0x90
-    UInt32   EdgeAAMode;      // +0xd0
-    UInt16   VarsSet;         // +0xd4 V_* bits of the fields set
-};
-static_assert(offsetof(Sfr17dDisplayInfo, ViewMatrix3D) == 0x60, "DisplayInfo::ViewMatrix3D");
-static_assert(offsetof(Sfr17dDisplayInfo, ProjectionMatrix3D) == 0x90, "DisplayInfo::ProjectionMatrix3D");
-static_assert(offsetof(Sfr17dDisplayInfo, VarsSet) == 0xd4, "DisplayInfo::VarsSet");
-
 // A MemberValueSet element: the member name and its value.
 struct Sfr17dMemberValue
 {
@@ -1049,7 +1028,7 @@ static inline AvmDisplayObjContainer* Sfr17d_ToAvmContainer(DisplayObject* p)
 
 // Position, scales, rotations (pixels / percent / degrees), alpha, visibility, the field of view, the 3D matrices
 // and the edge AA mode of a display object; a text field gives its own position fields.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); DisplayInfo written through a layout view
+// member of a view over the AS3 value object interface (the class is sfr_as3_17's)
 // @0x1425094e0
 bool Sfr34d_ValueObjIfc::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pinfo) const
 {
@@ -1058,47 +1037,39 @@ bool Sfr34d_ValueObjIfc::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pi
     DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
     if (!pdisp)
         return false;
-    Sfr17dDisplayInfo* info = reinterpret_cast<Sfr17dDisplayInfo*>(pinfo);
-    DisplayObjectBase::GeomDataType geom;
-    pdisp->GetGeomData(geom);
+    DisplayObjectBase::GeomDataType geomData;
+    pdisp->GetGeomData(geomData);
     if (pdisp->GetType() == CharacterDef::TextField)
+    {
         static_cast<TextField*>(pdisp)->GetPosition(pinfo);
+    }
     else
     {
-        const Double x = Double(geom.X) * 0.05;
-        const Double y = Double(geom.Y) * 0.05;
-        const float  alpha = reinterpret_cast<const float*>(&pdisp->GetCxform())[3] * 100.0f;
-        info->Visible   = pdisp->GetVisible();
-        info->VarsSet  |= 0x7ff;
-        info->X         = x;
-        info->Z         = geom.Z * 0.05;
-        info->XRotation = geom.XRotation;
-        info->YRotation = geom.YRotation;
-        info->Y         = y;
-        info->Rotation  = geom.Rotation;
-        info->Alpha     = Double(alpha);
-        info->XScale    = geom.XScale;
-        info->YScale    = geom.YScale;
-        info->ZScale    = geom.ZScale;
+        Double x = Double(geomData.X) * 0.05;
+        Double y = Double(geomData.Y) * 0.05;
+        Double rotation = geomData.Rotation;
+        Double xscale = geomData.XScale;
+        Double yscale = geomData.YScale;
+        Double alpha = reinterpret_cast<const float*>(&pdisp->GetCxform())[3] * 100.0f;
+        bool visible = pdisp->GetVisible();
+        Double xrotation = geomData.XRotation;
+        Double yrotation = geomData.YRotation;
+        Double zscale = geomData.ZScale;
+        Double z = geomData.Z * 0.05;
+        pinfo->Set(x, y, rotation, xscale, yscale, alpha, visible, z, xrotation, yrotation, zscale);
     }
-    const Double fov = pdisp->GetFOV();
-    info->VarsSet |= 0x800;
-    info->FOV = fov;
-    Matrix4F proj;
-    if (pdisp->GetProjectionMatrix3D(&proj, false))
-    {
-        info->VarsSet |= 0x1000;
-        info->ProjectionMatrix3D = proj;
-    }
-    Matrix3F view;
-    if (pdisp->GetViewMatrix3D(&view, false))
-    {
-        info->VarsSet |= 0x2000;
-        info->ViewMatrix3D = view;
-    }
-    const unsigned edgeAA = pdisp->GetRenderNode()->GetEdgeAAMode();
-    info->VarsSet |= 0x4000;
-    info->EdgeAAMode = edgeAA;
+
+    pinfo->SetFOV(pdisp->GetFOV());
+    Matrix4F matProj;
+    if (pdisp->GetProjectionMatrix3D(&matProj))
+        pinfo->SetProjectionMatrix3D(&matProj);
+    Matrix3F matView;
+    if (pdisp->GetViewMatrix3D(&matView))
+        pinfo->SetViewMatrix3D(&matView);
+
+    Render::EdgeAAMode edgeaaMode = pdisp->GetRenderNode()->GetEdgeAAMode();
+    pinfo->SetEdgeAAMode(edgeaaMode);
+
     return true;
 }
 
