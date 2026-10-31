@@ -2175,15 +2175,20 @@ void FUN_14000bc40(void** array, void* owner, Scaleform::UPInt size)
 // @0x14000bd10
 void FUN_14000bd10(void** array) { FUN_14000b8f0(array); }
 
-// MS2-FUNCTIONAL: resizes the track array and initializes every new cue record.
+// resizes the track array and initializes every new cue record
 // @0x14000bd60
 void FUN_14000bd60(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     const Scaleform::UPInt oldSize = fields[1];
     FUN_14000bc40(array, array, size);
-    if (oldSize < size && *array)
-        FUN_14000b2a0(static_cast<unsigned char*>(*array) + oldSize * 0x30, size - oldSize);
+    if (size > oldSize) {
+        // SDK ConstructArray(Data + oldSize, size - oldSize), inlined
+        Video01CueRecord* record = static_cast<Video01CueRecord*>(*array) + oldSize;
+        Scaleform::UPInt count = size - oldSize;
+        for (Scaleform::UPInt i = 0; i < count; ++i, ++record)
+            ::new (record) Video01CueRecord();
+    }
 }
 
 // destroys all track records and releases the array buffer
