@@ -32,27 +32,33 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
 
 // The _global functions (sfr_as2_01; setInterval / setTimeout and updateAfterEvent are not recovered as names).
-void FUN_1428f6de0(const FnCall& fn); // trace
-void FUN_1428f70b0(const FnCall& fn); // parseInt
-void FUN_1428f73b0(const FnCall& fn); // parseFloat
-void FUN_1428f74a0(const FnCall& fn); // ifFrameLoaded
-void FUN_1428f7580(const FnCall& fn); // isNaN
-void FUN_1428f7650(const FnCall& fn); // isFinite
-void FUN_1428f7ed0(const FnCall& fn); // escape
-void FUN_1428f8020(const FnCall& fn); // unescape
-void FUN_1428f8170(const FnCall& fn); // escapeSpecialHTML
-void FUN_1428f83d0(const FnCall& fn); // unescapeSpecialHTML
+void GAS_GlobalTrace(const FnCall& fn); // trace
+void GAS_GlobalParseInt(const FnCall& fn); // parseInt
+void GAS_GlobalParseFloat(const FnCall& fn); // parseFloat
+void GAS_GlobalIfFrameLoaded(const FnCall& fn); // ifFrameLoaded
+void GAS_GlobalIsNaN(const FnCall& fn); // isNaN
+void GAS_GlobalIsFinite(const FnCall& fn); // isFinite
+void GAS_GlobalEscape(const FnCall& fn); // escape
+void GAS_GlobalUnescape(const FnCall& fn); // unescape
+void GAS_GlobalEscapeSpecialHTML(const FnCall& fn); // escapeSpecialHTML
+void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn); // unescapeSpecialHTML
 void FUN_1428f8530(const FnCall& fn); // updateAfterEvent (does nothing)
 void FUN_1428fbb70(const FnCall& fn); // setInterval
-void FUN_1428fbb80(const FnCall& fn); // clearInterval
 void FUN_1428fbc40(const FnCall& fn); // setTimeout
-void FUN_1428fbc50(const FnCall& fn); // clearTimeout
-void FUN_1428f8540(const FnCall& fn); // imecommand
-void FUN_1428f9f50(const FnCall& fn); // setIMECandidateListStyle
-void FUN_1428fafd0(const FnCall& fn); // getInputLanguage
-void FUN_1428fa7a0(const FnCall& fn); // getIMECandidateListStyle
-void FUN_1428f7740(const FnCall& fn); // ASSetPropFlags
-void FUN_1428f7d30(const FnCall& fn); // ASnative
+void GAS_GlobalIMECommand(const FnCall& fn); // imecommand
+void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn); // setIMECandidateListStyle
+void GAS_GlobalGetInputLanguage(const FnCall& fn); // getInputLanguage
+void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn); // getIMECandidateListStyle
+void GAS_GlobalASSetPropFlags(const FnCall& fn); // ASSetPropFlags
+void GAS_GlobalASnative(const FnCall& fn); // ASnative
+
+// clearInterval / clearTimeout (sfr_as2_01): only the static members are named here.
+class IntervalTimer
+{
+public:
+    static void ClearInterval(const FnCall& fn);
+    static void ClearTimeout(const FnCall& fn);
+};
 
 // System.capabilities (defined in sfr_as2_03h): only its registration is referenced here.
 class CapabilitiesCtorFunction : public CFunctionObject
@@ -74,27 +80,27 @@ namespace {
 // The functions of _global (exe 0x143a51180).
 const NameFunction GlobalStaticFunctions[] =
 {
-    { "trace",                    FUN_1428f6de0 },
-    { "parseInt",                 FUN_1428f70b0 },
-    { "parseFloat",               FUN_1428f73b0 },
-    { "ifFrameLoaded",            FUN_1428f74a0 },
-    { "isNaN",                    FUN_1428f7580 },
-    { "isFinite",                 FUN_1428f7650 },
-    { "escape",                   FUN_1428f7ed0 },
-    { "unescape",                 FUN_1428f8020 },
-    { "escapeSpecialHTML",        FUN_1428f8170 },
-    { "unescapeSpecialHTML",      FUN_1428f83d0 },
+    { "trace",                    GAS_GlobalTrace },
+    { "parseInt",                 GAS_GlobalParseInt },
+    { "parseFloat",               GAS_GlobalParseFloat },
+    { "ifFrameLoaded",            GAS_GlobalIfFrameLoaded },
+    { "isNaN",                    GAS_GlobalIsNaN },
+    { "isFinite",                 GAS_GlobalIsFinite },
+    { "escape",                   GAS_GlobalEscape },
+    { "unescape",                 GAS_GlobalUnescape },
+    { "escapeSpecialHTML",        GAS_GlobalEscapeSpecialHTML },
+    { "unescapeSpecialHTML",      GAS_GlobalUnescapeSpecialHTML },
     { "updateAfterEvent",         FUN_1428f8530 },
     { "setInterval",              FUN_1428fbb70 },
-    { "clearInterval",            FUN_1428fbb80 },
+    { "clearInterval",            IntervalTimer::ClearInterval },
     { "setTimeout",               FUN_1428fbc40 },
-    { "clearTimeout",             FUN_1428fbc50 },
-    { "imecommand",               FUN_1428f8540 },
-    { "setIMECandidateListStyle", FUN_1428f9f50 },
-    { "getInputLanguage",         FUN_1428fafd0 },
-    { "getIMECandidateListStyle", FUN_1428fa7a0 },
-    { "ASSetPropFlags",          FUN_1428f7740 },
-    { "ASnative",                 FUN_1428f7d30 },
+    { "clearTimeout",             IntervalTimer::ClearTimeout },
+    { "imecommand",               GAS_GlobalIMECommand },
+    { "setIMECandidateListStyle", GAS_GlobalSetIMECandidateListStyle },
+    { "getInputLanguage",         GAS_GlobalGetInputLanguage },
+    { "getIMECandidateListStyle", GAS_GlobalGetIMECandidateListStyle },
+    { "ASSetPropFlags",          GAS_GlobalASSetPropFlags },
+    { "ASnative",                 GAS_GlobalASnative },
     { 0, 0 }
 };
 
@@ -179,10 +185,10 @@ void GlobalContext::Init(MovieImpl* proot)
 
     NameFunction::AddConstMembers(pGlobal, &sc, GlobalStaticFunctions);
 
-    pGlobal->SetConstMemberRaw(&sc, "imecommand", Value(&sc, FUN_1428f8540));
-    pGlobal->SetConstMemberRaw(&sc, "setIMECandidateListStyle", Value(&sc, FUN_1428f9f50));
-    pGlobal->SetConstMemberRaw(&sc, "getInputLanguage", Value(&sc, FUN_1428fafd0));
-    pGlobal->SetConstMemberRaw(&sc, "getIMECandidateListStyle", Value(&sc, FUN_1428fa7a0));
+    pGlobal->SetConstMemberRaw(&sc, "imecommand", Value(&sc, GAS_GlobalIMECommand));
+    pGlobal->SetConstMemberRaw(&sc, "setIMECandidateListStyle", Value(&sc, GAS_GlobalSetIMECandidateListStyle));
+    pGlobal->SetConstMemberRaw(&sc, "getInputLanguage", Value(&sc, GAS_GlobalGetInputLanguage));
+    pGlobal->SetConstMemberRaw(&sc, "getIMECandidateListStyle", Value(&sc, GAS_GlobalGetIMECandidateListStyle));
 
     pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Object), Value(objCtor));
     pGlobal->SetMemberRaw(&sc, sc.GetBuiltin(ASBuiltin_Function), Value(functionCtor));
