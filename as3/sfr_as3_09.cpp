@@ -8,6 +8,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -862,7 +863,6 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246ded0
-    // MS2-FUNCTIONAL: register allocation of the display object test
     void EventDispatcher::dispatchEvent(bool& result, Instances::fl_events::Event* e)
     {
         if (!e)
@@ -872,38 +872,53 @@ namespace Instances { namespace fl_events {
             return;
         }
         e->Target = this;
-        GFx::DisplayObject* dobj = NULL;
-        if (IsDisplayObjectInstance(GetTraits()))
-            dobj = static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj;
-        Dispatch(e, dobj);
+        BuiltinTraitsType tt = GetTraits().GetTraitsType();
+        if (tt >= Traits_DisplayObject_Begin && tt <= Traits_DisplayObject_End && GetTraits().IsInstanceTraits())
+        {
+            Instances::fl_display::DisplayObject* dobj = static_cast<Instances::fl_display::DisplayObject*>(this);
+            Dispatch(e, dobj->pDispObj);
+        }
+        else
+            Dispatch(e, NULL);
+
         result = !e->DefaultPrevented;
     }
 
     // @0x14246e490
-    // MS2-FUNCTIONAL: the exe copies the type string around the two inlined lookups
     void EventDispatcher::hasEventListener(bool& result, const ASString& type)
     {
-        result = HasEventHandler(type, true);
+        result = HasEventHandler(ASString(type), false);
         if (!result)
-            result = HasEventHandler(type, false);
+            result = HasEventHandler(ASString(type), true); // check capture events
     }
 
     // @0x142472e00
-    // MS2-FUNCTIONAL: cl lays out the inlined listener lookups differently
     void EventDispatcher::willTrigger(bool& result, const ASString& type)
     {
         result = HasEventHandler(type, true);
         if (!result)
             result = HasEventHandler(type, false);
-        if (result || !IsDisplayObjectInstance(GetTraits()))
-            return;
-        ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> chain(GetVM().GetMemoryHeap());
-        GetParentChain(static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj, chain);
-        for (UPInt i = 0; i < chain.GetSize(); ++i)
+        if (!result)
         {
-            result = chain[i]->HasEventHandler(type, true) || chain[i]->HasEventHandler(type, false);
-            if (result)
-                break;
+            BuiltinTraitsType tt = GetTraits().GetTraitsType();
+            if (tt >= Traits_DisplayObject_Begin && tt <= Traits_DisplayObject_End &&
+                GetTraits().IsInstanceTraits())
+            {
+                Instances::fl_display::DisplayObject* dobj = static_cast<Instances::fl_display::DisplayObject*>(this);
+                ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32> captureArray(GetVM().GetMemoryHeap());
+                GetParentChain(dobj->pDispObj, captureArray);
+
+                // traverse through event flow array
+                for (UPInt i = 0, n = captureArray.GetSize(); i < n; ++i)
+                {
+                    if (captureArray[i]->HasEventHandler(type, true))
+                        result = true;
+                    else
+                        result = captureArray[i]->HasEventHandler(type, false);
+                    if (result)
+                        break;
+                }
+            }
         }
     }
 
@@ -1079,25 +1094,31 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246f1c0
-    // MS2-FUNCTIONAL: cl keeps the listener array in a different register and frame
     void EventDispatcher::removeEventListener(const Value& result, const ASString& type, const Value& listener,
                                               bool useCapture)
     {
         SF_UNUSED(result);
         if (!pImpl)
             return;
-        ListenersHash& hash = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
-        ArrayLH<Listener>** pa = hash.Get(type);
-        if (!pa)
-            return;
-        ArrayLH<Listener>* listeners = *pa;
-        for (UPInt i = 0, n = listeners->GetSize(); i < n; ++i)
+        ListenersHash& listeners = (useCapture) ? pImpl->CaptureListeners : pImpl->Listeners;
+        ArrayLH<Listener>** pplistenersArr = listeners.Get(type);
+        if (pplistenersArr)
         {
-            if ((*listeners)[i].Function.IsValidWeakRef() && StrictEqual((*listeners)[i].Function, listener))
+            ArrayLH<Listener>* plistenersArr = *pplistenersArr;
+            for (UPInt i = 0, n = plistenersArr->GetSize(); i < n; ++i)
             {
-                listeners->RemoveAt(i);
-                OnListenerRemoved(this, type, useCapture, listeners->GetSize());
-                return;
+                const Value& func = (*plistenersArr)[i].Function;
+
+                if (!func.IsValidWeakRef())
+                    continue;
+
+                if (StrictEqual(func, listener))
+                {
+                    plistenersArr->RemoveAt(i);
+                    OnListenerRemoved(this, type, useCapture, plistenersArr->GetSize());
+
+                    break;
+                }
             }
         }
     }
@@ -1341,7 +1362,7 @@ namespace Instances { namespace fl_events {
     void StageOrientationEvent::afterOrientationGet(ASString& result)
     {
         ASStringNode* node = AfterOrientation.AsStringNode();
-        if (AfterOrientation.IsNull())
+        if (AfterOrientation.IsObject() && node == NULL)
             node = result.GetManager()->GetNullStringNode();
         result.AssignNode(node);
     }
@@ -1351,7 +1372,7 @@ namespace Instances { namespace fl_events {
     void StageOrientationEvent::beforeOrientationGet(ASString& result)
     {
         ASStringNode* node = BeforeOrientation.AsStringNode();
-        if (BeforeOrientation.IsNull())
+        if (BeforeOrientation.IsObject() && node == NULL)
             node = result.GetManager()->GetNullStringNode();
         result.AssignNode(node);
     }
@@ -1359,9 +1380,31 @@ namespace Instances { namespace fl_events {
     // ---- clone -------------------------------------------------------------------------------------------------------
     // The natives hand back a Clone() of the event; the result-returning forms are the call-style wrappers.
 
+    // SPtr::Set inlined, as the exe has it here; as3_value.h's copy is not inlined into clone.
+    static SF_INLINE void SetEventSPtr(SPtr<Instances::fl_events::Event>& dst, const SPtr<Instances::fl_events::Event>& src)
+    {
+        if (&src != &dst)
+        {
+            Instances::fl_events::Event*& p = dst.GetRawRef();
+            if (p)
+            {
+                if ((UPInt)p & 1)
+                    p = (Instances::fl_events::Event*)((UPInt)p - 1);
+                else
+                    p->Release();
+            }
+            if (src.GetPtr())
+                src->AddRef();
+            p = src.GetPtr();
+        }
+    }
+
     // @0x14246d330
-    // MS2-FUNCTIONAL: the exe re-reads the temporary through its stack slot and adds the reference in two memory steps
-    __declspec(noinline) void Event::clone(SPtr<Instances::fl_events::Event>& result) { result = Clone(); }
+    __declspec(noinline) void Event::clone(SPtr<Instances::fl_events::Event>& result) 
+    {
+        SPtr<Instances::fl_events::Event> e = Clone();
+        SetEventSPtr(result, e);
+    }
     // @0x14246d240
     __declspec(noinline) void AppLifecycleEvent::clone(SPtr<Instances::fl_events::Event>& result)        { result = Clone().GetPtr(); }
     // @0x14246d310
@@ -2453,7 +2496,6 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x142468e60
-    // MS2-FUNCTIONAL: cl keeps the new event in another register; the same calls and tests
     bool EventDispatcher::DispatchTypeToTarget(const ASString& type, Instances::fl::Object* target, bool inCapturePhase,
                                                GFx::DisplayObject* dobj)
     {
@@ -2466,7 +2508,8 @@ namespace Instances { namespace fl_events {
                 GetVMLogState(vm)->LogScriptError("Can't dispatch '%s' - exception is not cleared", type.ToCStr());
             return true;
         }
-        SPtr<Instances::fl_events::Event> evt = GetDispatcherClass(*this).CreateEventObject(type, false, false);
+        Classes::fl_events::EventDispatcher& evtDispClass = GetDispatcherClass(*this);
+        SPtr<Instances::fl_events::Event> evt = evtDispClass.CreateEventObject(type, false, false);
         evt->Target = target;
         evt->CurrentTarget = target;
         if (!DispatchSingleEvent(evt.GetPtr(), inCapturePhase) && dobj)
@@ -2922,42 +2965,38 @@ namespace Instances { namespace fl_events {
 
     // A new Object {code, level}.
     // @0x14246e560
-    // MS2-FUNCTIONAL: written from behaviour
     void NetStatusEvent::infoGet(SPtr<Instances::fl::Object>& result)
     {
-        VM& vm = GetVM();
-        SPtr<Instances::fl::Object> o;
-        FUN_142516600(vm, o);
-        StringManager& sm = vm.GetStringManager();
-        o->AddDynamicSlotValuePair(sm.CreateString("code"), Value(Code));
-        o->AddDynamicSlotValuePair(sm.CreateString("level"), Value(Level));
-        result = o;
+        SPtr<Instances::fl::Object> pobj = GetVM().MakeObject();
+        StringManager& sm = GetVM().GetStringManager();
+        pobj->AddDynamicSlotValuePair(sm.CreateString("code"),  Code);
+        pobj->AddDynamicSlotValuePair(sm.CreateString("level"), Level);
+        result = pobj;
     }
 
     // Code and level from the object's properties of those names, when it has them.
     // @0x14246e710
-    // MS2-FUNCTIONAL: written from behaviour
     void NetStatusEvent::infoSet(const Value& result, const Value& value)
     {
         SF_UNUSED(result);
-        AS3::Object* o = value.GetObject();
-        VM& vm = GetVM();
-        StringManager& sm = vm.GetStringManager();
-        Multiname mnCode(vm.GetPublicNamespace(), Value(sm.CreateString("code")));
-        Multiname mnLevel(vm.GetPublicNamespace(), Value(sm.CreateString("level")));
-        Value v;
-        if (o->GetProperty(mnCode, v))
-            v.Convert2String(Code).DoNotCheck();
-        if (o->GetProperty(mnLevel, v))
-            v.Convert2String(Level).DoNotCheck();
+        AS3::Object* pobj = value.GetObject();
+        StringManager& sm = GetVM().GetStringManager();
+
+        Multiname mnCode( GetVM().GetPublicNamespace(), sm.CreateString("code"));
+        Multiname mnLevel(GetVM().GetPublicNamespace(), sm.CreateString("level"));
+        Value prop;
+        if (pobj->GetProperty(mnCode, prop))
+            prop.Convert2String(Code).DoNotCheck();
+        if (pobj->GetProperty(mnLevel, prop))
+            prop.Convert2String(Level).DoNotCheck();
     }
 
     // @0x14246edd0
     void GestureEvent::phaseGet(ASString& result)
     {
-        const char* name = DAT_143a2d158[Phase];
-        if (name)
-            result = GetVM().GetStringManager().CreateConstString(name);
+        // The exe's Phase is the SDK's signed enum (movsxd index); the shared header has UInt32.
+        if (DAT_143a2d158[(int)Phase])
+            result = GetVM().GetStringManager().CreateConstString(DAT_143a2d158[(int)Phase]);
         else
             result.SetNull();
     }
@@ -3018,25 +3057,38 @@ namespace Instances { namespace fl_events {
         Text = ASString(GetVM().GetStringManager().GetStringManager()->CreateStringNode(&ch, 1));
     }
 
+    // The SDK's ToAvmInteractiveObj (AS3_AvmInteractiveObj.h): a plain static_cast, no second null test.
+    static SF_INLINE AvmInteractiveObj* WtToAvmInteractiveObj(GFx::InteractiveObject* po)
+    {
+        if (!po)
+            return NULL;
+        return static_cast<AvmInteractiveObj*>(po->GetAvmObjImpl()->ToAvmInteractiveObjBase());
+    }
+
     // @0x14246c9a0
-    // MS2-FUNCTIONAL: the inlined HasEventHandler picks the listener table with a cmov, and the parent loop differs
+    // MS2-FUNCTIONAL: the inlined HasEventHandler picks the listener table with a cmov (the exe branches)
     bool EventDispatcher::WillTrigger(const ASString& type, bool useCapture) const
     {
         if (HasEventHandler(type, useCapture))
             return true;
-        if (!IsDisplayObjectInstance(GetTraits()))
-            return false;
-        GFx::DisplayObject* dobj = static_cast<const Instances::fl_display::DisplayObject*>(this)->pDispObj;
-        if (!dobj)
-            return false;
-        for (InteractiveObject* p = dobj->GetParent(); p; p = p->GetParent())
+        BuiltinTraitsType tt = GetTraits().GetTraitsType();
+        if (tt >= Traits_DisplayObject_Begin && tt <= Traits_DisplayObject_End &&
+            GetTraits().IsInstanceTraits())
         {
-            // the AS3 object of the parent, as in GetParentChain
-            const UPInt* avm = reinterpret_cast<const UPInt*>(p->GetAvmObjImpl());
-            UPInt raw = avm[2] ? avm[2] : avm[1];
-            const EventDispatcher* o = reinterpret_cast<const EventDispatcher*>(raw & ~UPInt(1));
-            if (o && o->HasEventHandler(type, useCapture))
-                return true;
+            const Instances::fl_display::DisplayObject* dispObject = static_cast<const Instances::fl_display::DisplayObject*>(this);
+
+            if (dispObject->pDispObj)
+            {
+                for (GFx::InteractiveObject* p = dispObject->pDispObj->GetParent(); p; p = p->GetParent())
+                {
+                    Instances::fl_display::DisplayObject* as3p = WtToAvmInteractiveObj(p)->GetAS3Obj();
+                    if (as3p)
+                    {
+                        if (as3p->HasEventHandler(type, useCapture))
+                            return true;
+                    }
+                }
+            }
         }
         return false;
     }
