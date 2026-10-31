@@ -284,18 +284,21 @@ void Traits::SetConstructor(Class& c)
     pConstructor = &c;
 }
 
-// MS2-FUNCTIONAL: the exe loads the Pattern size mask after the VM chain (instruction scheduling)
+static SF_INLINE ASString Sfr04SourceGet(Instances::fl::RegExp& re)
+{
+    ASString result(re.GetVM().GetStringManager().CreateEmptyString());
+    result = re.GetVM().GetStringManager().CreateString(re.Pattern);
+    return result;
+}
+
 // @0x142425890
 ASString Instances::fl::RegExp::ToString()
 {
     StringManager& sm = GetVM().GetStringManager();
-    ASString slash = sm.CreateConstString("/");
-    ASString pattern = GetVM().GetStringManager().CreateEmptyString();
-    pattern = GetVM().GetStringManager().CreateString(Pattern.ToCStr(), Pattern.GetSize());
-    return sm.CreateConstString("/") + pattern + slash + GetFlags();
+    return sm.CreateConstString("/") + Sfr04SourceGet(*this) +
+           sm.CreateConstString("/") + GetFlags();
 }
 
-// MS2-FUNCTIONAL: the exe tests the m/s/x option bits with shr+test instead of test-byte masks
 // @0x142429920
 __declspec(noinline) ASString Instances::fl::RegExp::GetFlags()
 {
@@ -304,11 +307,11 @@ __declspec(noinline) ASString Instances::fl::RegExp::GetFlags()
     result.Append(s, strlen(s));
     s = (OptionFlags & 1) ? "i" : "";
     result.Append(s, strlen(s));
-    s = (OptionFlags & 2) ? "m" : "";
+    s = ((UByte)((UInt32)OptionFlags >> 1) & 1) ? "m" : "";
     result.Append(s, strlen(s));
-    s = (OptionFlags & 4) ? "s" : "";
+    s = ((UByte)((UInt32)OptionFlags >> 2) & 1) ? "s" : "";
     result.Append(s, strlen(s));
-    s = (OptionFlags & 8) ? "x" : "";
+    s = ((UByte)((UInt32)OptionFlags >> 3) & 1) ? "x" : "";
     result.Append(s, strlen(s));
     return result;
 }
@@ -956,7 +959,6 @@ namespace Instances { namespace fl
         value.Assign(ElementAt(SA, ind.Get()));
     }
 
-    // MS2-FUNCTIONAL: the SetUndefined/SetUInt32 releases inline with different block layout
     // @0x142416200
     void Array::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
     {
@@ -966,7 +968,7 @@ namespace Instances { namespace fl
             return;
         }
         if (ind.Get() <= SA.GetSize())
-            name.SetUInt32(ind.Get() - 1);
+            name.SetUInt32(static_cast<UInt32>(AbsoluteIndex(ind.Get() - 1).Get()));
         else
             Object::GetNextPropertyName(name, GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize())));
     }
@@ -1724,7 +1726,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
     // @0x142427cf0
     void GlobalObjectCPP::decodeURI(ASString& result, const ASString& uri)
     {
@@ -1734,10 +1735,9 @@ namespace Instances { namespace fl
             GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
             return;
         }
-        result = GetVM().GetStringManager().CreateString(out);
+        result = GetVM().GetStringManager().CreateString(out.ToCStr(), out.GetSize());
     }
 
-    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
     // @0x142427e00
     void GlobalObjectCPP::decodeURIComponent(ASString& result, const ASString& uri)
     {
@@ -1747,7 +1747,7 @@ namespace Instances { namespace fl
             GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
             return;
         }
-        result = GetVM().GetStringManager().CreateString(out);
+        result = GetVM().GetStringManager().CreateString(out.ToCStr(), out.GetSize());
     }
 
     // @0x142428140
@@ -1766,7 +1766,6 @@ namespace Instances { namespace fl
         result = GetVM().GetStringManager().CreateString(out);
     }
 
-    // MS2-FUNCTIONAL: same code; the size-mask constant is loaded at a different point and the null return is not a tail call
     // @0x1424282f0
     void GlobalObjectCPP::escape(Value& result, unsigned argc, const Value* argv)
     {
@@ -1777,12 +1776,14 @@ namespace Instances { namespace fl
                 result.Assign(GetVM().GetStringManager().GetBuiltin(AS3Builtin_null));
                 return;
             }
-            ASString str = GetVM().GetStringManager().CreateEmptyString();
-            if (argv[0].Convert2String(str))
             {
-                String out;
-                ASUtils::AS3::Escape(str.ToCStr(), str.GetSize(), out);
-                result.Assign(GetVM().GetStringManager().CreateString(out));
+                ASString str = GetVM().GetStringManager().CreateEmptyString();
+                if (argv[0].Convert2String(str))
+                {
+                    String out;
+                    ASUtils::AS3::Escape(str.ToCStr(), str.GetSize(), out);
+                    result.Assign(GetVM().GetStringManager().CreateString(out.ToCStr(), out.GetSize()));
+                }
             }
         }
         else
