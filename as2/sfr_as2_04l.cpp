@@ -47,7 +47,13 @@ void MemoryContextImpl::HeapLimit::Collect(MemoryHeap* pheap)
 }
 
 // The field's document view creates its image substitutor on first use (0x18 bytes, empty).
-// MS2-FUNCTIONAL: the document view is reached by address
+// The empty image substitutor (three zeroed words).
+struct Sfr04lImageSubstitutor
+{
+    UPInt Words[3];
+    Sfr04lImageSubstitutor() { Words[0] = 0; Words[1] = 0; Words[2] = 0; }
+};
+
 // @0x142936510
 void* FUN_142936510(TextField* ptf)
 {
@@ -55,12 +61,8 @@ void* FUN_142936510(TextField* ptf)
     void*  psubst = *reinterpret_cast<void**>(pdoc + 0x30);
     if (!psubst)
     {
-        psubst = Memory::pGlobalHeap->Alloc(0x18);
-        if (psubst)
-        {
-            UPInt* w = static_cast<UPInt*>(psubst);
-            w[0] = w[1] = w[2] = 0;
-        }
+        void* mem = Memory::pGlobalHeap->Alloc(0x18);
+        psubst = mem ? new (mem) Sfr04lImageSubstitutor : 0;
         *reinterpret_cast<void**>(pdoc + 0x30) = psubst;
     }
     return psubst;
@@ -70,13 +72,13 @@ void* FUN_142936510(TextField* ptf)
 // callbacks on it and on the result.
 void FUN_1425dcaf0(void* pobj);
 
-// MS2-FUNCTIONAL: raw words
+// The target (+0x20) is re-read after every call, as the exe does.
 // @0x142936570
 void FUN_142936570(void* self)
 {
-    void* ptarget = *reinterpret_cast<void**>(static_cast<UByte*>(self) + 0x20);
+    void* const& ptarget = *reinterpret_cast<void**>(static_cast<UByte*>(self) + 0x20);
     typedef void* (*Slot77)(void*);
-    void* presult = reinterpret_cast<Slot77>((*static_cast<void***>(ptarget))[0x268 / 8])(ptarget);
+    void* presult = reinterpret_cast<Slot77>((*static_cast<void* const* const*>(ptarget))[0x268 / 8])(ptarget);
     FUN_1425dcaf0(ptarget);
     static_cast<DisplayObjectBase*>(ptarget)->InvalidateHitResult();
     static_cast<DrawingContext*>(presult)->AcquirePath(true);
