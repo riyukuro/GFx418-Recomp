@@ -9,8 +9,16 @@
 // MS2-RANGE: 0x14274397c-0x1427439d0 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include <windows.h>
 #include <intrin.h>
+#include "fmod44464/api/inc/fmod.hpp"
+
+namespace Scaleform {
+// The kernel's Lock and Event, as far as these destructors call them.
+class Lock { public: ~Lock(); };
+class Event { public: virtual ~Event(); };
+}
 
 namespace Scaleform { namespace GFx {
 
@@ -35,16 +43,25 @@ extern "C" char DAT_1431bee50[];   // streamed sound
 extern "C" char DAT_1431bee68[];
 extern "C" char DAT_1431b80b8[];
 
-void FUN_14257db40(void*);                  // RefCountImplCore::~RefCountImplCore
-extern "C" void FUN_14257dcd0(void*);       // Ptr Release (sound renderer)
-extern "C" void FUN_14258d0b0(void*);       // Lock::~Lock
-extern "C" void FUN_142582530(void*);       // Event::~Event
 extern "C" void FUN_142746d70(void*);       // audio channel: stop
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
 extern "C" void FUN_1427463e0(U*, void*, U); // ArrayData<VideoPlayerImpl*>::Reserve
-extern "C" int FUN_1428d8efc(void*, void*); // FMOD::Channel::setCallback
-extern "C" int FUN_1428d8f14(void*, void*); // FMOD::Channel::setUserData
-extern "C" int FUN_142303a3b(void*);        // FMOD::Sound::release
+
+// The RefCount base calls, made directly as the exe makes them.
+static inline void RawRefCountCoreDtor(void* p)
+{
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
+}
+
+static inline void RawRefCountRelease(void* p)
+{
+    static_cast<RefCountImpl*>(p)->Release();
+}
+
+static inline void RawRefCountNTSRelease(void* p)
+{
+    static_cast<RefCountNTSImpl*>(p)->Release();
+}
 
 static inline void RawSetVtables(void* self, void* primary, void* node)
 {
@@ -114,15 +131,15 @@ void FUN_142743580(void* self)
     if (RawField<void*>(self, 0x38))
     {
         FUN_142746d70(self);
-        FUN_1428d8efc(RawField<void*>(self, 0x38), 0);
-        FUN_1428d8f14(RawField<void*>(self, 0x38), 0);
+        RawField<FMOD::Channel*>(self, 0x38)->setCallback(0);
+        RawField<FMOD::Channel*>(self, 0x38)->setUserData(0);
         RawField<void*>(self, 0x38) = 0;
     }
     FUN_142743470(RawFieldPtr<U*>(self, 0x40));
     RawSetVtables(self, DAT_1431bec90, DAT_1431bed08);
     RawUnlinkNode(self);
     RawField<void*>(self, 0x10) = DAT_1431bec40;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
 }
 
 // Audio stream: drops its sound (+0x30, refcount at +8, deleted through slot 0) and its lock +0x70.
@@ -133,7 +150,7 @@ void FUN_142743630(void* self)
     char* sound = RawField<char*>(self, 0x30);
     if (_InterlockedExchangeAdd((volatile long*)(sound + 8), -1) == 1 && sound)
         (*(void (**)(void*, unsigned))*(void**)sound)(sound, 1);
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0x70));
+    RawFieldPtr<Lock>(self, 0x70)->Lock::~Lock();
     FUN_142743580(self);
 }
 
@@ -143,15 +160,15 @@ void FUN_1427436a0(void* self)
 {
     RawField<void*>(self, 0) = DAT_1431bede8;
     FUN_142747b30(self);
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0xc8));
+    RawFieldPtr<Lock>(self, 0xc8)->Lock::~Lock();
     RawField<void*>(self, 0xb0) = DAT_1431bec40;
     FUN_1427434d0(RawFieldPtr<U*>(self, 0xa8));
-    FUN_14258d0b0(RawFieldPtr<void>(self, 0x80));
-    FUN_142582530(RawFieldPtr<void>(self, 0x20));
+    RawFieldPtr<Lock>(self, 0x80)->Lock::~Lock();
+    RawFieldPtr<Event>(self, 0x20)->Event::~Event();
     if (RawField<void*>(self, 0x18))
-        FUN_14257dcb0(RawField<void*>(self, 0x18));
+        RawRefCountRelease(RawField<void*>(self, 0x18));
     RawField<void*>(self, 0) = DAT_1431bcbe8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
 }
 
 // Sound: releases its FMOD sound (+0x30), leaves the renderer's list under the renderer's lock (+0x28, +0xc8) and
@@ -161,7 +178,7 @@ void FUN_142743730(void* self)
 {
     RawSetVtables(self, DAT_1431bed18, DAT_1431bed50);
     if (RawField<void*>(self, 0x30))
-        FUN_142303a3b(RawField<void*>(self, 0x30));
+        RawField<FMOD::Sound*>(self, 0x30)->release();
     char* renderer = RawField<char*>(self, 0x28);
     RawField<void*>(self, 0x30) = 0;
     if (renderer)
@@ -171,7 +188,7 @@ void FUN_142743730(void* self)
         LeaveCriticalSection((LPCRITICAL_SECTION)(renderer + 0xc8));
     }
     if (RawField<void*>(self, 0x38))
-        FUN_14257dcd0(RawField<void*>(self, 0x38));
+        RawRefCountNTSRelease(RawField<void*>(self, 0x38));
     RawSetVtables(self, DAT_1431bec50, DAT_1431bec80);
     RawUnlinkNode(self);
     RawField<void*>(self, 0x10) = DAT_1431bec40;
@@ -186,7 +203,7 @@ void FUN_142743820(void* self)
     if (RawField<void*>(self, 0x58))
         Memory::Free(RawField<void*>(self, 0x58));
     if (RawField<void*>(self, 0x40))
-        FUN_14257dcb0(RawField<void*>(self, 0x40));
+        RawRefCountRelease(RawField<void*>(self, 0x40));
     FUN_142743730(self);
 }
 
@@ -196,14 +213,14 @@ void FUN_142743870(void* self)
 {
     RawSetVtables(self, DAT_1431bee50, DAT_1431bee68);
     if (RawField<void*>(self, 0x30))
-        FUN_142303a3b(RawField<void*>(self, 0x30));
+        RawField<FMOD::Sound*>(self, 0x30)->release();
     RawField<void*>(self, 0x30) = 0;
     RawUnlinkNode(self);
     if (RawField<void*>(self, 0x28))
-        FUN_14257dcd0(RawField<void*>(self, 0x28));
+        RawRefCountNTSRelease(RawField<void*>(self, 0x28));
     RawField<void*>(self, 0x10) = DAT_1431bec40;
     RawField<void*>(self, 0) = DAT_1431b80b8;
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
 }
 
 // ArrayBase<ArrayData<VideoPlayerImpl*>>::operator=: shrinks below half capacity, grows by a quarter, then copies.

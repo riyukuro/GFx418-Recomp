@@ -9,16 +9,17 @@
 // MS2-RANGE: 0x142688f50-0x1426899e0 .text$mn
 
 #include "../gfx/sfr_gfx_07raw.h"
+#include "ms2/scaleform/include/kernel/sf_refcount.h"
 #include <intrin.h>
+
+void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
 
 namespace Scaleform { namespace GFx {
 
 extern "C" void* const DAT_143192190[1];   // vftable of the summary object (defined below its deleting destructor)
 
-void FUN_14257db40(void*);          // RefCountImplCore::~RefCountImplCore
-void FUN_14015b310(void*, UPInt);   // sized operator delete
-extern "C" void FUN_14261f8b0(void*);               // Hash<key8, 0x20-byte value>::Clear
-extern "C" void FUN_14261f940(void*);               // Hash<ResourceId, StringLH>::Clear
+void FUN_14261f8b0(U*);                             // Hash<key8, 0x20-byte value>::Clear
+void FUN_14261f940(U*);                             // Hash<ResourceId, StringLH>::Clear
 extern "C" void FUN_142687170(void*);               // ~ the record's hash at +0x40
 extern "C" void FUN_142689aa0(void*, void*, const void*);       // Hash copy (dst, heap ctx, src)
 extern "C" void FUN_14268a450(void*, void*, const void*);       // Hash find (hash, iterator out, key)
@@ -27,6 +28,17 @@ extern "C" void FUN_142686440(void*, void*);                    // visits a chil
 extern "C" void FUN_142623bc0(U*, void*, U);                     // ArrayData<0x20-byte entry>::Reserve
 extern "C" void FUN_1426871f0(void*);                           // ~ the grouping hash
 
+// The RefCount base calls, made directly as the exe makes them.
+static inline void RawRefCountCoreDtor(void* p)
+{
+    static_cast<RefCountImplCore*>(p)->RefCountImplCore::~RefCountImplCore();
+}
+
+static inline void RawRefCountRelease(void* p)
+{
+    static_cast<RefCountImpl*>(p)->Release();
+}
+
 static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 {
     if (flags & 1)
@@ -34,7 +46,7 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
         if (!(flags & 4))
             Memory::Free(self);
         else
-            FUN_14015b310(self, size);
+            __empty_global_delete(self, size);
     }
 }
 
@@ -47,7 +59,7 @@ static inline void RawReleasePtrArray(void* self, UPInt off)
     {
         --p;
         if (*p)
-            FUN_14257dcb0(*p);
+            RawRefCountRelease(*p);
     }
     Memory::Free(RawField<void*>(self, off));
 }
@@ -55,7 +67,7 @@ static inline void RawReleasePtrArray(void* self, UPInt off)
 static inline void RawReleasePtr(void* self, UPInt off)
 {
     if (RawField<void*>(self, off))
-        FUN_14257dcb0(RawField<void*>(self, off));
+        RawRefCountRelease(RawField<void*>(self, off));
 }
 
 // String/StringLH at off: counted buffer (low two bits are tag bits, count at +8 of the buffer).
@@ -73,7 +85,7 @@ void* FUN_142688f50(void* self, unsigned flags)
     RawReleasePtrArray(self, 0x30);
     RawReleasePtr(self, 0x28);
     RawReleaseString(self, 0x10);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x48);
     return self;
 }
@@ -82,9 +94,9 @@ void* FUN_142688f50(void* self, unsigned flags)
 // @0x142689030
 void* FUN_142689030(void* self, unsigned flags)
 {
-    FUN_14261f8b0(RawFieldPtr<void>(self, 0x28));
+    FUN_14261f8b0(RawFieldPtr<U>(self, 0x28));
     Memory::Free(RawField<void*>(self, 0x10));
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x30);
     return self;
 }
@@ -97,10 +109,10 @@ extern "C" void* const DAT_143192190[1] = { (void*)&FUN_142689030 };
 // @0x1426890b0
 void* FUN_1426890b0(void* self, unsigned flags)
 {
-    FUN_14261f8b0(RawFieldPtr<void>(self, 0x30));
+    FUN_14261f8b0(RawFieldPtr<U>(self, 0x30));
     RawReleasePtrArray(self, 0x18);
     RawReleaseString(self, 0x10);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x38);
     return self;
 }
@@ -110,7 +122,7 @@ void* FUN_1426890b0(void* self, unsigned flags)
 void* FUN_142689180(void* self, unsigned flags)
 {
     RawReleasePtrArray(self, 0x10);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x28);
     return self;
 }
@@ -125,7 +137,7 @@ void* FUN_142689230(void* self, unsigned flags)
     RawReleasePtr(self, 0x58);
     RawReleasePtrArray(self, 0x40);
     RawReleaseString(self, 0x20);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x78);
     return self;
 }
@@ -134,9 +146,9 @@ void* FUN_142689230(void* self, unsigned flags)
 // @0x142689330
 void* FUN_142689330(void* self, unsigned flags)
 {
-    FUN_14261f940(RawFieldPtr<void>(self, 0x28));
+    FUN_14261f940(RawFieldPtr<U>(self, 0x28));
     Memory::Free(RawField<void*>(self, 0x10));
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x30);
     return self;
 }
@@ -154,7 +166,7 @@ void* FUN_1426893b0(void* self, unsigned flags)
     RawReleasePtr(self, 0xf0);
     RawReleasePtr(self, 0xe8);
     RawReleasePtrArray(self, 0xd0);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x158);
     return self;
 }
@@ -169,7 +181,7 @@ void* FUN_142689520(void* self, unsigned flags)
     RawReleaseString(self, 0x28);
     RawReleaseString(self, 0x20);
     RawReleaseString(self, 0x18);
-    FUN_14257db40(self);
+    RawRefCountCoreDtor(self);
     RawDeleteBranch(self, flags, 0x78);
     return self;
 }
