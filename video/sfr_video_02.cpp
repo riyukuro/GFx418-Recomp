@@ -269,14 +269,14 @@ void FUN_1400146c0(void* object, double* result)
     *result = count;
 }
 
-// MS2-FUNCTIONAL: updates the stored track index and releases the old AS3 value when its tag requires it.
+// Updates the stored track index and selects that subtitle channel unless the track value is undefined or null.
 // @0x140014730
 void FUN_140014730(void* object, void*, double value)
 {
     char* bytes = static_cast<char*>(object);
     *reinterpret_cast<int*>(bytes + 0x84) = static_cast<int>(value) - 1;
-    unsigned tag = *reinterpret_cast<unsigned*>(bytes + 0xd8) & 0x1f;
-    if (tag && (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(bytes + 0xe8)))
+    const ::Scaleform::GFx::AS3::Value& track = *reinterpret_cast<const ::Scaleform::GFx::AS3::Value*>(bytes + 0xd8);
+    if (!track.IsUndefined() && !track.IsNull())
         ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(bytes + 0x50)))->SetSubtitleChannel(static_cast<int>(value) - 1);
 }
 
