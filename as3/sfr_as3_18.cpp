@@ -300,8 +300,8 @@ bool Value::MakeStrongRef()
 void Value::ReleaseWeakRef()
 {
     Bonus.pWeakProxy->Release();
-    Flags &= ~(kindMask | weakRefMask);
     Bonus.pWeakProxy = NULL;
+    Flags &= ~(kindMask | weakRefMask);
     value.VS._1.VObj = NULL;
     value.VS._2.VObj = NULL;
 }
