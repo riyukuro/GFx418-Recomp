@@ -165,6 +165,14 @@ static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     /
 namespace Scaleform { namespace GFx { namespace AS2 {
 void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*); // defined below, in the AS2 block
 }}}
+namespace Scaleform { namespace GFx { namespace AS3 {
+// The exe's out-of-line copies of the private Value::AddRef/Release (0x140012a90, 0x140012ac0, 0x140014c50).
+struct Video02ValueRefs
+{
+    static SF_INLINE void AddRef(const Value* value) { value->AddRef(); }
+    static SF_INLINE void Release(Value* value) { value->Release(); }
+};
+}}} // namespace Scaleform::GFx::AS3
 extern void FUN_142469440(void*, void*, void*);
 extern void FUN_142504530(void*, void*, void*, void*);
 extern void FUN_1425925f0(void*);
@@ -1037,14 +1045,11 @@ void FUN_140015420(Scaleform::GFx::ASString* result, const Scaleform::GFx::AS3::
         input->Convert2String(*result);
 }
 
-// MS2-FUNCTIONAL: drops a retained AS3 object value using its executable release path.
+// Value::Release: drops a weak or strong reference when the value is refcounted.
 // @0x140014c50
 void FUN_140014c50(Scaleform::GFx::AS3::Value* value)
 {
-    if (value->GetKind() > Scaleform::GFx::AS3::Value::kNumber)
-    {
-        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
-    }
+    Scaleform::GFx::AS3::Video02ValueRefs::Release(value);
 }
 
 // @0x140014c30
@@ -1269,19 +1274,6 @@ void FUN_140015140(UInt32 index, UByte* result, UInt32 length, Scaleform::GFx::A
         *result = (reinterpret_cast<Scaleform::GFx::AS3::Value*>(
                        reinterpret_cast<char*>(values) + static_cast<size_t>(index) * 0x20))->Convert2Boolean();
 }
-
-}}} // namespace Scaleform::GFx::AS2
-
-namespace Scaleform { namespace GFx { namespace AS3 {
-// The exe's out-of-line copies of the private Value::AddRef/Release (0x140012a90, 0x140012ac0).
-struct Video02ValueRefs
-{
-    static SF_INLINE void AddRef(const Value* value) { value->AddRef(); }
-    static SF_INLINE void Release(Value* value) { value->Release(); }
-};
-}}} // namespace Scaleform::GFx::AS3
-
-namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Value::AddRef: adds a weak or strong reference when the value is refcounted.
 // @0x140012a90
@@ -2018,20 +2010,31 @@ void FUN_140013600(void* array, unsigned __int64 index)
     ++*reinterpret_cast<unsigned __int64*>(bytes + 0x10);
 }
 
-// MS2-FUNCTIONAL: follows the executable's EventDispatcher GC traversal and visits its three strong Value fields.
+// AS3 ForEachChild_GC for a Value, inline as in the SDK.
+static SF_INLINE void Video02ForEachChildGC(
+    Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc,
+    const Scaleform::GFx::AS3::Value& v, Scaleform::GFx::AS3::ASRefCountBaseType::GcOp op,
+    const Scaleform::GFx::AS3::ASRefCountBaseType& owner)
+{
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        Scaleform::GFx::AS3::ForEachChild_GC_Internal(prcc, v, op, owner);
+}
+
+// Follows the executable's EventDispatcher GC traversal and visits its three Value fields.
 // @0x140012e10
 void FUN_140012e10(void* dispatcher, void* collector, void* operation)
 {
     char* fields = static_cast<char*>(dispatcher);
     FUN_142469440(dispatcher, collector, operation);
-    const unsigned offsets[] = {0x98u, 0xb8u, 0xd8u};
-    for (const unsigned *it = offsets, *end = offsets + 3; it != end; ++it)
-    {
-        unsigned offset = *it;
-        unsigned tag = *reinterpret_cast<unsigned*>(fields + offset);
-        if ((tag & 0x1f) > 10 && (tag & 0x200) == 0)
-            FUN_142504530(collector, fields + offset, operation, dispatcher);
-    }
+    Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc =
+        static_cast<Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(collector);
+    Scaleform::GFx::AS3::ASRefCountBaseType::GcOp op =
+        reinterpret_cast<Scaleform::GFx::AS3::ASRefCountBaseType::GcOp>(operation);
+    const Scaleform::GFx::AS3::ASRefCountBaseType& owner =
+        *static_cast<const Scaleform::GFx::AS3::ASRefCountBaseType*>(dispatcher);
+    Video02ForEachChildGC(prcc, *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(fields + 0x98), op, owner);
+    Video02ForEachChildGC(prcc, *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(fields + 0xb8), op, owner);
+    Video02ForEachChildGC(prcc, *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(fields + 0xd8), op, owner);
 }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
