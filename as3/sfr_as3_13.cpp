@@ -830,13 +830,13 @@ namespace Instances { namespace fl_ui
     }
 
     // @0x1424b9270
-    void ContextMenu::customItemsGet(SPtr<Instances::fl::Array>& result)
+    __declspec(noinline) void ContextMenu::customItemsGet(SPtr<Instances::fl::Array>& result)
     {
         result = GetVM().MakeArray();
         GetVM().GetUI().Output(FlashUI::Output_Warning, "The method instance::ContextMenu::customItemsGet() is not implemented\n");
     }
 
-    // MS2-FUNCTIONAL: our compiler inlines the native into this wrapper; the exe calls it
+    // noinline on the native: the exe calls it from this wrapper
     // @0x1424b9250
     SPtr<Instances::fl::Array> ContextMenu::customItemsGet()
     {
@@ -2040,7 +2040,7 @@ namespace Instances { namespace fl_text
 
     // @0x1424b49a0
     // MS2-FUNCTIONAL: the exe reaches the field through its AvmTextField (same object)
-    void TextField::styleSheetGet(SPtr<Instances::fl_text::StyleSheet>& result)
+    __declspec(noinline) void TextField::styleSheetGet(SPtr<Instances::fl_text::StyleSheet>& result)
     {
         void* ptf = DisplayTextField(this);
         if (CSSDataOf(ptf) && CSSDataOf(ptf)->pASStyleSheet)
@@ -3191,7 +3191,7 @@ namespace Instances { namespace fl_text
         return result;
     }
 
-    // MS2-FUNCTIONAL: our styleSheetGet(result) is smaller than the exe's and gets inlined here; the exe calls it
+    // noinline on the native: the exe calls it from this wrapper
     // @0x1424b4980
     SPtr<Instances::fl_text::StyleSheet> TextField::styleSheetGet()
     {
