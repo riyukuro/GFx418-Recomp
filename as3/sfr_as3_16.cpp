@@ -2093,6 +2093,8 @@ using SfrCx18DisplayObjectNode = HashNode<int, SfrCx18DisplayObjectList, Identit
 using SfrCx18DisplayObjectSet = HashSetBase<SfrCx18DisplayObjectNode,
     SfrCx18DisplayObjectNode::NodeHashF, SfrCx18DisplayObjectNode::NodeAltHashF,
     AllocatorLH<int, 2>, HashsetNodeEntry<SfrCx18DisplayObjectNode, SfrCx18DisplayObjectNode::NodeHashF> >;
+// The entry Clear stays out of line in the exe (0x1424ef970, instantiated in sfr_as3_17).
+template<> SF_NOINLINE void HashsetNodeEntry<SfrCx18DisplayObjectNode, SfrCx18DisplayObjectNode::NodeHashF>::Clear();
 using SfrCx18DynAttrsNode = HashNode<GFx::AS3::Object::DynAttrsKey, GFx::AS3::Value,
     GFx::AS3::Object::DynAttrsKeyHashFunctor>;
 using SfrCx18DynAttrsSet = HashSetBase<SfrCx18DynAttrsNode, SfrCx18DynAttrsNode::NodeHashF,
@@ -2134,7 +2136,6 @@ using SfrCx18ClassTraitsCopyAssignment = SfrCx18ClassTraitsNode& (SfrCx18ClassTr
     const SfrCx18ClassTraitsNode&);
 static SfrCx18ClassTraitsCopyAssignment SfrCx18ForceClassTraitsCopyAssignment =
     static_cast<SfrCx18ClassTraitsCopyAssignment>(&SfrCx18ClassTraitsNode::operator=);
-// MS2-FUNCTIONAL: destroys every occupied node and frees the table; the template expansion has different frame/unwind codegen.
 // @0x1424dcbb0
 template SfrCx18DisplayObjectSet::~HashSetBase();
 void DestroyMovieRootDisplayObjects(void* set)
