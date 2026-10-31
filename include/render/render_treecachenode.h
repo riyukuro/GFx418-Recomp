@@ -535,6 +535,10 @@ __declspec(noinline) inline void TreeCacheNode::addParentToDepthPatternUpdate()
 
 // A leaf drawn through a bundle: its bundle entry and pooled matrix. 0xb8 bytes; ctor 0x142680040, dtor
 // 0x1426801d0, ComputeFinalMatrix 0x142681200, UpdateBundlePattern 0x1426829e0, GetPatternChain 0x142681710.
+// Declared under pack 8: the SF profile's /Zp8 makes cl lay a derived class's first member in the tail padding of
+// this 16-aligned base (TreeCacheText::pNextNoBatch at +0xb8). clang-cl gets no profile options and would start it
+// at +0xc0, so the packing is pinned here; cl is at pack 8 already.
+#pragma pack(push, 8)
 class TreeCacheMeshBase : public TreeCacheNode
 {
 protected:
@@ -566,6 +570,7 @@ public:
     // (appended for sfr_render_05j)
     virtual void HandleChanges(unsigned changeBits);
 };
+#pragma pack(pop)
 
 }} // namespace Scaleform::Render
 
