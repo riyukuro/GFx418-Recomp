@@ -49,10 +49,9 @@ static inline void RawDeleteBranch(void* self, unsigned flags, UPInt size)
 static inline void RawReleasePtrArray(void* self, UPInt off)
 {
     U n = RawField<U>(self, off + 8);
-    void** p = RawField<void**>(self, off) + n;
-    for (; n; n--)
+    void** p = RawField<void**>(self, off) + n - 1;
+    for (U i = 0; i < n; ++i, --p)
     {
-        --p;
         if (*p)
             RawRefCountRelease(*p);
     }
@@ -213,8 +212,9 @@ struct Sfr21ImageGroup
 // Groups the records of a movie (array +0x18, each with a key at +0x10, data [+0x18, +0x20) and children +0x30) by
 // key, counting them and summing their sizes; records whose key's high word is not 1 count only when `all` is set.
 // Returns a new summary object (vftable 0x143192190) holding the groups and a copy of the movie's hash +0x30.
+// MS2-FUNCTIONAL: same calls and loop; the exe saves its registers late (166-byte prolog) and its frame is larger.
 // @0x142689640
-void* FUN_142689640(void* movie, bool all)
+__declspec(noinline) void* FUN_142689640(void* movie, bool all)
 {
     AllocInfo info(0x242, 0, 0);
     char* summary = (char*)Memory::AllocAutoHeap(movie, 0x30, info);
