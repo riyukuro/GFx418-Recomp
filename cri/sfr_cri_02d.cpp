@@ -9,6 +9,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
+// MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400358d0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
@@ -37,6 +38,20 @@ typedef struct CriMvPlyStateView
     CriUint8  ReservedE18[0xf10 - 0xe18];
     CriUint8  StopState;                    // 0xf10
 } CriMvPlyStateView;
+typedef struct CriMvPlyDemuxFields
+{
+    CriUint8 Reserved0[0xd60];
+    CriSint32 ReadMode;                     // 0xd60
+    CriUint8 ReservedD64[0xd68 - 0xd64];
+    void* Demux;                            // 0xd68
+    CriUint8 ReservedD70[0xd78 - 0xd70];
+    void* InputBuffer;                      // 0xd78
+    void* ReadBuffer;                       // 0xd80
+    CriUint8 ReservedD88[0xda0 - 0xd88];
+    void* MemoryInput;                      // 0xda0
+    CriUint8 ReservedDA8[0xe78 - 0xda8];
+    void* HeaderBuffer;                     // 0xe78
+} CriMvPlyDemuxFields;
 typedef struct CriMvSubtitleFields
 {
     CriUint8 Reserved[0xe28];
@@ -52,6 +67,15 @@ typedef struct CriMvSubtitleChunk
 } CriMvSubtitleChunk;
 
 void FUN_140028074(void* heap);
+CriBool FUN_140031aa0(void* player);
+void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
+void FUN_1400453c4(void* demux);
+void FUN_1400458b8(void* demux);
+void FUN_140044f9c(void* demux);
+void FUN_140044fa8(void* demux, void* value);
+void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
+void FUN_140044fd8(void* demux, CriUint8 value);
+void FUN_140046798(void* streamJoint);
 CriBool FUN_1400314d0(void* player);
 void FUN_140031570(void* player);
 void FUN_140033810(void* player);
@@ -82,6 +106,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #ifndef MS2_HOOK_DLL
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
+#pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
 #pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
 #pragma comment(linker, "/alternatename:?criMvPly_GetSubtitle@@YAXPEAX0K0@Z=criMvPly_GetSubtitle")
@@ -185,6 +210,29 @@ void FUN_140031290(void* player)
         FUN_1400344f0(player);
         break;
     }
+}
+
+// reset the demux and its output stream after the player update completes
+// @0x140031990
+CriBool FUN_140031990(void* player)
+{
+    void* demux;
+    demux = ((CriMvPlyDemuxFields*)player)->Demux;
+    if (FUN_140031aa0(player) != 1)
+        return 0;
+    FUN_140034330(player, ((CriMvPlyDemuxFields*)player)->InputBuffer, ((CriMvPlyDemuxFields*)player)->ReadBuffer,
+                  ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
+    FUN_1400453c4(demux);
+    FUN_140046798(((CriMvPlyDemuxFields*)player)->ReadBuffer);
+    if (((CriMvPlyDemuxFields*)player)->ReadMode == 0)
+        FUN_140044fa8(demux, ((CriMvPlyDemuxFields*)player)->HeaderBuffer);
+    else
+        FUN_140044fa8(demux, ((CriMvPlyDemuxFields*)player)->MemoryInput);
+    FUN_140044fb0(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
+    FUN_140044fd8(demux, 0);
+    FUN_140044f9c(demux);
+    FUN_1400458b8(demux);
+    return 1;
 }
 
 // copy the decoded frame metadata and add the alpha frame metadata when available

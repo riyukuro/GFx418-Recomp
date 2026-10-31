@@ -9,7 +9,8 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
-// MS2-RANGE: 0x1400313d0-0x1400356a0 .text$mn
+// MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
+// MS2-RANGE: 0x140031aa0-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
 // MS2-RANGE: 0x1400358d0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140039ea8 .text$mn
@@ -150,6 +151,7 @@ void     FUN_140031290(void* player);
 CriBool  FUN_140031f40(void* player);
 CriBool  FUN_1400318f0(void* player);
 CriBool  FUN_140032040(void* player);
+CriBool  FUN_140031990(void* player);
 CriBool  FUN_140031aa0(void* player);
 CriBool  FUN_1400314d0(void* player);
 CriSint32 FUN_140042d70(void* decoder, void* player);
@@ -3616,24 +3618,32 @@ void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMov
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: select the last seek-table entry whose frame id does not exceed the requested frame.
+// select the last seek-table entry whose frame id does not exceed the requested frame.
 // @0x140033700
 void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 targetFrame,
                    void** outputData, CriSint32* outputFrame)
 {
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, data, size);
-    CriSint32 count = FUN_14003a45c(document);
-    CriSint32 index = 0;
-    CriSint32 frame = 0;
-    void* selectedData = NULL;
-    while (index < count &&
-           (frame = FUN_14003a894(document, index, "ofs_frmid")) <= targetFrame)
+    CriSint32 current;
+    CriSint32 count;
+    void* document;
+    CriSint32 frameId;
+    CriSint32 entry = 0;
+    void* out = NULL;
+    document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, data, size);
+    count = FUN_14003a45c(document);
+    for (current = 0; current < count; current++)
     {
-        selectedData = FUN_14003a648(document, index, 0);
-        ++index;
+        frameId = FUN_14003a894(document, current, "ofs_frmid");
+        if (targetFrame >= frameId)
+        {
+            entry = current;
+            out = FUN_14003a648(document, current, 0);
+        }
+        else
+            break;
     }
-    *outputData = selectedData;
-    *outputFrame = FUN_14003a894(document, index == 0 ? 0 : index - 1, "ofs_frmid");
+    *outputData = out;
+    *outputFrame = FUN_14003a894(document, entry, "ofs_frmid\0");   // the exe keeps a second copy (0x143a47438)
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
@@ -4146,28 +4156,6 @@ CriBool FUN_140034960(void* player)
     state->InputCount2 = 0;
     state->OpenLock = 0;
     state->Status = 1;
-    return 1;
-}
-
-// MS2-FUNCTIONAL: reset the demux and its output stream after the player update completes.
-// @0x140031990
-CriBool FUN_140031990(void* player)
-{
-    if (FUN_140031aa0(player) != 1)
-        return 0;
-    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
-    struct MemoryInputView { CriUint8 Reserved[0xda0]; void* Input; };
-    FUN_140034330(player, ((CriMvPlyInputQueueFields*)player)->InputBuffer, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, ((CriMvPlyInputQueueFields*)player)->HeaderBuffer);
-    FUN_1400453c4(((CriMvPlyStateTransitionFields*)player)->Demux);
-    FUN_140046798(((CriMvPlyInputQueueFields*)player)->ReadBuffer);
-    if (((ReadModeView*)player)->Mode == 0)
-        FUN_140044fa8(((CriMvPlyStateTransitionFields*)player)->Demux, ((CriMvPlyInputQueueFields*)player)->HeaderBuffer);
-    else
-        FUN_140044fa8(((CriMvPlyStateTransitionFields*)player)->Demux, ((MemoryInputView*)player)->Input);
-    FUN_140044fb0(((CriMvPlyStateTransitionFields*)player)->Demux, 0, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, 0, (CriUint32)-1);
-    FUN_140044fd8(((CriMvPlyStateTransitionFields*)player)->Demux, 0);
-    FUN_140044f9c(((CriMvPlyStateTransitionFields*)player)->Demux);
-    FUN_1400458b8(((CriMvPlyStateTransitionFields*)player)->Demux);
     return 1;
 }
 
