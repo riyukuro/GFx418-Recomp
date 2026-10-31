@@ -555,43 +555,37 @@ VM::~VM()
 }
 }}} // namespace Scaleform::GFx::AS3
 
-// ASRefCountCollector::ForceCollect inlined through the movie root's collector pointer.
-// MS2-FUNCTIONAL 0x1424de240: same stores; the exe keeps the zero in esi across Collect (FrameCnt = 0 from it) and tail-calls the Stats observer release.
-// @0x1424de240
-void FUN_1424de240(long long* state)
+// ASRefCountCollector::ForceCollect (no stats observer, no flags), inlined into both callers below.
+static __forceinline void Sfr16ForceCollect(Scaleform::GFx::AS3::ASRefCountCollector* gc)
 {
     using namespace Scaleform::GFx::AS3;
-    auto* gc = reinterpret_cast<ASRefCountCollector*>(*state);
     if (gc->SuspendCnt > 0)
         return;
 
     const unsigned roots = static_cast<unsigned>(gc->GetRootsCount());
-    ASRefCountCollector::Stats stats = {};
+    ASRefCountCollector::Stats stats;
+    stats.RootsNumber = stats.RootsFreedTotal = 0;
     gc->Collect(&stats);
     gc->FrameCnt = 0;
-    gc->LastRootCount = roots;
     gc->PeakRootCount = Scaleform::Alg::Max(gc->PeakRootCount, roots);
+    gc->LastRootCount = roots;
     if (gc->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
         gc->CollectionScheduledFlags = 1;
 }
 
-// MS2-FUNCTIONAL 0x1424de460: applies the same root range reset to the nested MovieRoot and releases the owning reference.
+// ForceCollect through the movie root's collector pointer.
+// MS2-FUNCTIONAL 0x1424de240: same code, but the exe tail-calls the Stats observer release.
+// @0x1424de240
+void FUN_1424de240(long long* state)
+{
+    Sfr16ForceCollect(reinterpret_cast<Scaleform::GFx::AS3::ASRefCountCollector*>(*state));
+}
+
+// ForceCollect on the nested MovieRoot's collector, then the owning reference is released.
 // @0x1424de460
 void FUN_1424de460(long long* owner)
 {
-    using namespace Scaleform::GFx::AS3;
-    auto* gc = *reinterpret_cast<ASRefCountCollector**>(*owner + 0x20);
-    if (gc->SuspendCnt == 0)
-    {
-        const unsigned roots = static_cast<unsigned>(gc->GetRootsCount());
-        ASRefCountCollector::Stats stats = {};
-        gc->Collect(&stats);
-        gc->FrameCnt = 0;
-        gc->LastRootCount = roots;
-        gc->PeakRootCount = Scaleform::Alg::Max(gc->PeakRootCount, roots);
-        if (gc->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
-            gc->CollectionScheduledFlags = 1;
-    }
+    Sfr16ForceCollect(*reinterpret_cast<Scaleform::GFx::AS3::ASRefCountCollector**>(*owner + 0x20));
     if (*owner != 0)
         reinterpret_cast<Scaleform::RefCountImpl*>(*owner)->Release();
 }
