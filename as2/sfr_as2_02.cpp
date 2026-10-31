@@ -111,16 +111,17 @@ void     FUN_14260de50(void* pdoc, const char* phtml, unsigned long long htmlSiz
 void     FUN_1425ba7d0(void* ptf, void* pimgInfoArr);                                       // TextField::ProcessImageTags
 bool     FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);                          // DocView::GetLineMetrics
 const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);         // DocView::GetLineText
+void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number);         // Value::SetNumber, out of line (sfr_video_01)
 // The DocView / EditorKit fields the clipboard natives read.
 inline void* DocView_GetEditorKit(void* pdoc) { return *(void**)((char*)pdoc + 0xd8); }
 inline unsigned long long DocView_SelectionPos(void* pdoc, int i) { return ((unsigned long long*)((char*)pdoc + 0x38))[i]; }
 inline unsigned long long DocView_GetBeginSelection(void* pdoc)
 {
-    return DocView_SelectionPos(pdoc, 0) < DocView_SelectionPos(pdoc, 1) ? DocView_SelectionPos(pdoc, 0) : DocView_SelectionPos(pdoc, 1);
+    return Scaleform::Alg::PMin(DocView_SelectionPos(pdoc, 0), DocView_SelectionPos(pdoc, 1));
 }
 inline unsigned long long DocView_GetEndSelection(void* pdoc)
 {
-    return DocView_SelectionPos(pdoc, 0) > DocView_SelectionPos(pdoc, 1) ? DocView_SelectionPos(pdoc, 0) : DocView_SelectionPos(pdoc, 1);
+    return Scaleform::Alg::PMax(DocView_SelectionPos(pdoc, 0), DocView_SelectionPos(pdoc, 1));
 }
 inline void* EditorKit_GetDocView(void* pek) { return *(void**)((char*)pek + 0x10); }
 inline bool  EditorKit_DoesUseRichClipboard(void* pek) { return (*((unsigned char*)pek + 0xa0) & 4) != 0; }
@@ -1014,7 +1015,7 @@ void AvmSprite::SpriteGetNextHighestDepth(const FnCall& fn)
     Sprite* psprite = SpriteGetTarget(fn);
     if (psprite)
     {
-        int depth = Alg::Max(psprite->mDisplayList.GetLargestDepthInUse() - 16383, 0);
+        int depth = Alg::Max(0, psprite->mDisplayList.GetLargestDepthInUse() - 16383);
         fn.Result->SetInt(depth);
     }
 }
@@ -2509,17 +2510,19 @@ void AvmTextField::GetCharBoundaries(const FnCall& fn)
 }
 
 // getCharIndexAtPoint(x, y): -1 if there is no character there.
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL scheduling: the exe loads fn.Result right after the lookup call, before the -1 compare
 // @0x14290a350
 void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 2)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 2)
+        return;
     Number x   = fn.Arg(0).ToNumber(fn.Env);
     Number y   = fn.Arg(1).ToNumber(fn.Env);
     UPInt  pos = FUN_142612240(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
-    fn.Result->SetNumber(pos == SF_MAX_UPINT ? -1 : Number(pos));
+    FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
 }
 
 // getExactCharBoundaries(charIndex)
@@ -2527,9 +2530,11 @@ void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
 // @0x14290a4b0
 void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
     RectF    rect(0);
     bool     found = ptf->GetDocument()->GetExactCharBoundaries(&rect, idx);
@@ -2537,89 +2542,99 @@ void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
 }
 
 // getLineIndexAtPoint(x, y): -1 if there is no line there.
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL scheduling: the exe loads fn.Result right after the lookup call, before the -1 compare
 // @0x14290a680
 void AvmTextField::GetLineIndexAtPoint(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 2)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 2)
+        return;
     Number   x    = fn.Arg(0).ToNumber(fn.Env);
     Number   y    = fn.Arg(1).ToNumber(fn.Env);
     unsigned line = FUN_142612bd0(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
-    fn.Result->SetNumber(line == ~0u ? -1 : Number(line));
+    FUN_14000d250(fn.Result, line != ~0u ? Number(line) : -1);
 }
 
 // getLineIndexOfChar(charIndex)
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a7d0
 void AvmTextField::GetLineIndexOfChar(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     int idx = int(fn.Arg(0).ToNumber(fn.Env));
     if (idx < 0)
     {
-        fn.Result->SetNumber(-1);
+        FUN_14000d250(fn.Result, -1);
         return;
     }
     unsigned line = FUN_142612c50(ptf->GetDocument(), unsigned(idx));
-    fn.Result->SetNumber(line == ~0u ? -1 : Number(line));
+    FUN_14000d250(fn.Result, line == ~0u ? -1 : Number(line));
 }
 
 // getLineOffset(lineIndex): the index of its first character.
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a8c0
 void AvmTextField::GetLineOffset(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     int line = int(fn.Arg(0).ToNumber(fn.Env));
     if (line < 0)
     {
-        fn.Result->SetNumber(-1);
+        FUN_14000d250(fn.Result, -1);
         return;
     }
     UPInt off = FUN_142612e80(ptf->GetDocument(), unsigned(line));
-    fn.Result->SetNumber(off == SF_MAX_UPINT ? -1 : Number(off));
+    FUN_14000d250(fn.Result, off == SF_MAX_UPINT ? -1 : Number(off));
 }
 
 // getLineLength(lineIndex)
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a9c0
 void AvmTextField::GetLineLength(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     int line = int(fn.Arg(0).ToNumber(fn.Env));
     if (line < 0)
     {
-        fn.Result->SetNumber(-1);
+        FUN_14000d250(fn.Result, -1);
         return;
     }
     UPInt len = FUN_142612cb0(ptf->GetDocument(), unsigned(line), 0);
-    fn.Result->SetNumber(len == SF_MAX_UPINT ? -1 : Number(len));
+    FUN_14000d250(fn.Result, len != SF_MAX_UPINT ? Number(len) : -1);
 }
 
 // getFirstCharInParagraph(charIndex)
-// MS2-FUNCTIONAL the exe calls Value::SetNumber out of line (0x14000d250)
+// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290b1c0
 void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     int idx = int(fn.Arg(0).ToNumber(fn.Env));
     if (idx < 0)
     {
-        fn.Result->SetNumber(-1);
+        FUN_14000d250(fn.Result, -1);
         return;
     }
     UPInt pos = FUN_142612af0(ptf->GetDocument(), unsigned(idx));
-    fn.Result->SetNumber(pos == SF_MAX_UPINT ? -1 : Number(pos));
+    FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
 }
 
 // appendText(text): not for a field with a style sheet.
