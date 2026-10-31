@@ -27,8 +27,7 @@ template struct ThunkFunc0<Instances::fl_net::URLRequest, 4, ASString>;
 // thunk 0x1424916d0: Instances::fl_net::URLRequest::contentTypeSet
 template struct ThunkFunc1<Instances::fl_net::URLRequest, 5, const Value, const ASString&>;
 // thunk 0x1424917d0: Instances::fl_net::URLRequest::dataGet
-// MS2-FUNCTIONAL: not matched: the Value-result getter with no arguments is laid out differently by the exe (same calls)
-template struct ThunkFunc0<Instances::fl_net::URLRequest, 6, Value>;
+template struct ThunkFunc0<Instances::fl_net::URLRequest, 6, SPtr<Instances::fl::Object>>;
 // thunk 0x142491880: Instances::fl_net::URLRequest::dataSet
 template struct ThunkFunc1<Instances::fl_net::URLRequest, 7, const Value, const Value&>;
 // thunk 0x1424919d0: Instances::fl_net::URLRequest::digestGet
@@ -3042,7 +3041,7 @@ void Ms2EmitSharedObjectLoader(void* ploader, VM* pvm)
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$02$$CBVValue@456@_N@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142491600
 // MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$03VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142491660
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$04$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424916d0
-// MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$05VValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424917d0
+// MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$05V?$SPtr@VObject@fl@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424917d0
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$06$$CBVValue@456@AEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142491880
 // MS2-PIN: ?Func@?$ThunkFunc0@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$07VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424919d0
 // MS2-PIN: ?Func@?$ThunkFunc1@VURLRequest@fl_net@Instances@AS3@GFx@Scaleform@@$08$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142491a40

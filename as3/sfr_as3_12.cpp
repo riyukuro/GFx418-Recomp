@@ -2740,10 +2740,9 @@ namespace Instances { namespace fl_net
     }
 
     // @0x14249b030
-    void URLRequest::dataGet(Value& result)
+    void URLRequest::dataGet(SPtr<Instances::fl::Object>& result)
     {
-        // The exe assigns the data object through the result as if it were an SPtr<Object>.
-        reinterpret_cast<SPtr<Instances::fl::Object>&>(result) = Data;
+        result = Data;
     }
 
     // @0x14249bcb0

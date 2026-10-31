@@ -169,7 +169,7 @@ namespace Instances { namespace fl_net {
         // @0x14249b000
         void contentTypeSet(const Value& result, const ASString&);
         // @0x14249b030
-        void dataGet(Value& result);
+        void dataGet(SPtr<Instances::fl::Object>& result);
         // @0x14249b040
         void dataSet(const Value& result, const Value&);
         // @0x14249b4b0

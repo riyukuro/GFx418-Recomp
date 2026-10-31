@@ -135,7 +135,7 @@ template <> const TFunc_Instances_fl_net_URLRequest_cacheResponseGet::TMethod TF
 typedef ThunkFunc0<Instances::fl_net::URLRequest, 4, ASString> TFunc_Instances_fl_net_URLRequest_contentTypeGet;
 // @0x140146900
 template <> const TFunc_Instances_fl_net_URLRequest_contentTypeGet::TMethod TFunc_Instances_fl_net_URLRequest_contentTypeGet::Method = &Instances::fl_net::URLRequest::contentTypeGet;
-typedef ThunkFunc0<Instances::fl_net::URLRequest, 6, Value> TFunc_Instances_fl_net_URLRequest_dataGet;
+typedef ThunkFunc0<Instances::fl_net::URLRequest, 6, SPtr<Instances::fl::Object>> TFunc_Instances_fl_net_URLRequest_dataGet;
 // @0x140146930
 template <> const TFunc_Instances_fl_net_URLRequest_dataGet::TMethod TFunc_Instances_fl_net_URLRequest_dataGet::Method = &Instances::fl_net::URLRequest::dataGet;
 typedef ThunkFunc0<Instances::fl_net::URLRequest, 8, ASString> TFunc_Instances_fl_net_URLRequest_digestGet;
