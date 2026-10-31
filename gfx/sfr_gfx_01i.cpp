@@ -1166,21 +1166,26 @@ void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* p
 UInt64 MovieImpl::GetASTimerMs() const
 {
     TestStream* ptest = GetTestStream();
+    UInt64 timerMs;
     if (ptest)
     {
         if (ptest->TestStatus == TestStream::Record)
         {
-            UInt64 t = Timer::GetTicks() / 1000 - StartTickMs;
-            LongFormatter f(t);
+            timerMs = Timer::GetTicks() / 1000 - StartTickMs;
+            LongFormatter f(timerMs);
             f.Convert();
             ptest->SetParameter("timer", f.ToCStr());
-            return t;
         }
-        String tstr;
-        ptest->GetParameter("timer", &tstr);
-        return _strtoui64(tstr.ToCStr(), NULL, 10);
+        else
+        {
+            String tstr;
+            ptest->GetParameter("timer", &tstr);
+            timerMs = _strtoui64(tstr.ToCStr(), NULL, 10);
+        }
     }
-    return Timer::GetTicks() / 1000 - StartTickMs;
+    else
+        timerMs = Timer::GetTicks() / 1000 - StartTickMs;
+    return timerMs;
 }
 
 // Freezes or resumes the movie: the AS clock stops while paused, the advancing objects and the videos are told.
