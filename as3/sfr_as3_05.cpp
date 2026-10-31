@@ -1857,12 +1857,11 @@ namespace Instances { namespace fl
     }
 
     // @0x14242b130
-    // MS2-FUNCTIONAL: the exe also builds an undefined Value it never uses around the call
     void Date::timeSet(const Value& result, Value::Number t)
     {
         SF_UNUSED(result);
-        Value::Number r;
-        AS3setTime(r, t);
+        Value r;
+        AS3setTime(r.AsNumber(), t);
     }
 
     // The offset in minutes, local time behind UTC positive; NaN stays NaN.
@@ -1910,7 +1909,6 @@ namespace Instances { namespace fl
     }
 
     // @0x14242ae30
-    // MS2-FUNCTIONAL: written from behaviour (a one-shot interval timer registered with the movie)
     void GlobalObjectCPP::setTimeout(Value& result, unsigned argc, const Value* argv)
     {
         if (argc < 2)
@@ -1918,7 +1916,7 @@ namespace Instances { namespace fl
             GetVM().ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, GetVM(), "GlobalObjectCPP::setTimeout", 2, 1023, argc));
             return;
         }
-        UInt32 delay = 0;
+        UInt32 delay;
         if (!argv[1].Convert2UInt32(delay))
             return;
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
@@ -1926,8 +1924,7 @@ namespace Instances { namespace fl
         if (argc > 2)
             FUN_1425264b0(ptimer, argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
-        int id = proot->AddIntervalTimer(ptimer);
-        result.Assign(Value(UInt32(id)));
+        result.Assign(Value(UInt32(proot->AddIntervalTimer(ptimer))));
         ptimer->Start(proot);
         ptimer->Release();
     }

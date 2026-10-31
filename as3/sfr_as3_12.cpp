@@ -1980,11 +1980,10 @@ namespace Instances { namespace fl_net
         }
     }
 
-    // MS2-FUNCTIONAL: register choice for the VM load and argument order differ
     // @0x14249a3d0
     void URLLoader::SetTextString(const char* pdata)
     {
-        Data.Assign(Value(GetVM().GetStringManager().CreateString(pdata)));
+        Data = Value(GetVM().GetStringManager().CreateString(pdata));
     }
 
     // @0x14249a450
