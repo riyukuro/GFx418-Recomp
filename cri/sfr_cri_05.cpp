@@ -155,7 +155,7 @@ void FUN_1400467b0(void* object, long operation, void* chunk);
 long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 void FUN_14004c370();
-void FUN_14004c7c0(Any a0,Any a1);
+void FUN_14004c7c0(double *, double *);  // C3: the definition's signature
 void FUN_14004da40(void);
 cri_u32 FUN_14004dd30(void);
 cri_u64 FUN_14004ddb0(cri_u64 a1);
@@ -257,37 +257,35 @@ void FUN_1400536d0(longlong a1);
 void FUN_140053880(longlong a1);
 void FUN_140054040(longlong a1,cri_u64 a2,cri_u64 a3);
 void FUN_1400628d0();
-cri_u64 FUN_140062900(Any a0);
+unsigned __int64 FUN_140062900(__int64);  // C3: the definition's signature
 void FUN_140062910(longlong a0);
-void FUN_140062920(longlong a0,int a1,cri_u32 a2);
+void FUN_140062920(__int64);  // C3: the definition's signature
 cri_u64 FUN_140062a40(Any a0,Any a1,Any a2);
 void FUN_140062ab0(Any a0);
 cri_u64 FUN_140062ae0(Any a0,Any a1);
-int FUN_140062bc0(Any a0,Any a1,Any a2);
-int FUN_1400630c0();
-void FUN_140064d90(Any a0,Any a1);
-void FUN_140064dd0(Any a0,Any a1,Any a2);
-void * FUN_140064eb0(Any a0,Any a1,Any a2);
-void FUN_140064f70(Any a0,Any a1,Any a2);
-void * FUN_140064eb0(void *dst,const void *src,cri_u64 size);
-void FUN_140064f70(void *dst,int value,cri_u64 size);
-void FUN_140065000(Any a0);
-void FUN_140065030(longlong a0);
+int FUN_140062bc0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+unsigned __int64 FUN_1400630c0(void);  // C3: the definition's signature
+void FUN_140064d90(cri_any);  // C3: the definition's signature
+void FUN_140064dd0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void * FUN_140064eb0(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void FUN_140064f70(cri_any, cri_any, cri_any);  // C3: the definition's signature
+void FUN_140065000(cri_any);  // C3: the definition's signature
+void FUN_140065030(cri_any);  // C3: the definition's signature
 cri_u64 FUN_140065450(Any a0,Any a1);
 void FUN_140065770();
 void FUN_140065790();
 void FUN_1400657a0(Any a0);
 void FUN_1400657e0(Any a0);
-void FUN_140065900(Any a0);
+void FUN_140065900(void *);  // C3: the definition's signature
 void FUN_1400659a0(Any a0,Any a1);
 void FUN_140066180(Any a0);
 void FUN_140066320();
-void FUN_140066350(Any a0);
-void FUN_140066360(longlong a0);
-void FUN_140066f60(Any a0);
+void FUN_140066350(__int64);  // C3: the definition's signature
+void FUN_140066360(void);  // C3: the definition's signature
+void FUN_140066f60(__int64);  // C3: the definition's signature
 void FUN_140066f80(Any a0);
 void FUN_140067210(Any a0);
-void FUN_140067370(Any a0);
+void FUN_140067370(unsigned __int64);  // C3: the definition's signature
 void FUN_140067420(Any a0);
 void FUN_140067470(Any a0);
 char * FUN_1400674d0(Any a0,Any a1,Any a2);
@@ -338,8 +336,8 @@ void FUN_14006aa90();
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
-void thunk_FUN_14005b0b0();
-void thunk_FUN_140067390(Any a0);
+void thunk_FUN_14005b0b0(cri_any, ...);  // C3: the definition's signature
+void thunk_FUN_140067390(__int64);  // C3: the definition's signature
 void thunk_FUN_1400afe60(Any a0);
 
 static __forceinline cri_u64 FUN_14004ddb0(Any a0) { return FUN_14004ddb0((cri_u64)a0.v); }
@@ -436,7 +434,7 @@ void FUN_14004da40(void)
   Ent *tv;
   int i;
 
-  FUN_14004c7c0(&DAT_143a48740,DAT_143bac640);
+  FUN_14004c7c0((double *)&DAT_143a48740,DAT_143bac640);
   tv = (Ent *)DAT_143babde0;
   ty = (Ent *)DAT_143babdd0;
   tu = (Ent *)DAT_143babdd8;
@@ -501,7 +499,7 @@ uint FUN_14004dc90(cri_u64 a1,int a2)
 // @0x14004dd30
 cri_u32 FUN_14004dd30(void)
 {
-  if (FUN_1400630c0() != 0) {
+  if ((int)FUN_1400630c0() != 0) {  // C3: the exe tests only the low 32 bits of the u64 result
     return FUN_14004ff50(0,0xff03ff03);
   }
   if (FUN_140062bc0(&DAT_1431ba2e0,0x1900,0x80) != 0) {
@@ -747,7 +745,7 @@ void FUN_14004e250(void)
 {
   FUN_140065790();
   thunk_FUN_140050670();
-  thunk_FUN_14005b0b0();
+  ((void (*)())thunk_FUN_14005b0b0)();  // C3: called with no arguments, like the exe
   return;
 }
 
@@ -755,7 +753,7 @@ void FUN_14004e250(void)
 // @0x14004e270
 void FUN_14004e270(longlong a1)
 {
-  FUN_140065900(a1 + 0x1350);
+  FUN_140065900((void *)((char *)a1 + 0x1350));
   FUN_14004dfc0(a1);
   return;
 }
@@ -769,7 +767,7 @@ cri_u32 FUN_14004e2a0(longlong a1)
   }
   FUN_140062910(a1);
   FUN_140065030(a1);
-  FUN_140066360(a1);
+  ((void (*)(longlong))FUN_140066360)(a1);  // C3: the exe passes a1 to the argument-less definition (C call)
   *(cri_u32 *)((char *)(a1) + 0x1538) = 1;
   return 0;
 }
@@ -790,7 +788,7 @@ cri_u32 FUN_14004e2f0(longlong a1,int a2,cri_u32 a3)
     table = (cri_u32 *)((char *)(a1) + 0x1540);
   }
   table[a2] = a3;
-  FUN_140062920(a1,a2,a3);
+  ((void (*)(longlong, int, cri_u32))FUN_140062920)(a1,a2,a3);  // C3: the exe passes three arguments to the one-argument definition (C call)
   return 0;
 }
 
@@ -836,7 +834,7 @@ int FUN_14004e3b0(cri_u32 a1,cri_u64 a2)
   FUN_140050fc0();
   FUN_140050bc0();
   thunk_FUN_140050520();
-  FUN_140064d90(l_v1 + 0x1320,l_v1);
+  ((void (*)(longlong, longlong))FUN_140064d90)(l_v1 + 0x1320,l_v1);  // C3: two arguments to the one-argument definition (C call)
   FUN_140067370(l_v1);
   FUN_140065770();
   FUN_140066f60(l_v1);
