@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as3_18
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
+#define SF_AS3_AVMBUTTON_MODEL
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include <math.h>
 #include <stdlib.h>
@@ -8107,8 +8108,6 @@ bool AvmSprite::OnUnloading(bool mayRemove)
 
 // @0x142510da0
 bool FUN_142510da0(UPInt) { return false; }
-// @0x142510df0
-bool FUN_142510df0(UPInt) { return false; }
 // @0x14251a330
 bool FUN_14251a330(UPInt) { return false; }
 // @0x14251ac90
@@ -8279,83 +8278,9 @@ void FUN_14251bda0(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 
 // -- adjustor thunks (this of a secondary base part back to the object) --
 
+// AvmSprite-side thunks (their targets are not AvmButton/AvmTextField slots)
 #define SFR21_THUNK(name, off, target) \
     void name(UPInt self) { target(self - off); }
-#define SFR21_THUNKB(name, off, target) \
-    bool name(UPInt self) { return target(self - off); }
-
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142510da4
-SFR21_THUNKB(FUN_142510da4, 0x30, FUN_142510da0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142510db0
-SFR21_THUNKB(FUN_142510db0, 0x40, FUN_142510da0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142510df4
-SFR21_THUNKB(FUN_142510df4, 0x30, FUN_142510df0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142510e00
-SFR21_THUNKB(FUN_142510e00, 0x40, FUN_142510df0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142514284
-SFR21_THUNKB(FUN_142514284, 0x10, FUN_142514280)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142514efc
-SFR21_THUNKB(FUN_142514efc, 0x10, AvmButton_IsTabable)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425150b0
-SFR21_THUNKB(FUN_1425150b0, 0x10, AvmTextField_IsTabable)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142518ffc
-SFR21_THUNK(FUN_142518ffc, 0x30, FUN_142518fe0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142519008
-SFR21_THUNK(FUN_142519008, 0x40, FUN_142518fe0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425191bc
-SFR21_THUNK(FUN_1425191bc, 0x30, AvmTextField_OnEventLoad)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425191c8
-SFR21_THUNK(FUN_1425191c8, 0x40, AvmTextField_OnEventLoad)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425191e8
-SFR21_THUNK(FUN_1425191e8, 0x30, FUN_1425191e0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425191f4
-SFR21_THUNK(FUN_1425191f4, 0x40, FUN_1425191e0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425198b8
-SFR21_THUNK(FUN_1425198b8, 0x30, FUN_1425198b0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x1425198c4
-SFR21_THUNK(FUN_1425198c4, 0x40, FUN_1425198b0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a0d4
-SFR21_THUNK(FUN_14251a0d4, 0x10, FUN_14251a0d0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a0f4
-SFR21_THUNK(FUN_14251a0f4, 0x10, FUN_14251a0f0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a334
-SFR21_THUNKB(FUN_14251a334, 0x10, FUN_14251a330)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a7f4
-SFR21_THUNKB(FUN_14251a7f4, 0x10, FUN_14251a7f0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a814
-SFR21_THUNKB(FUN_14251a814, 0x10, FUN_14251a810)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251af24
-SFR21_THUNKB(FUN_14251af24, 0x30, FUN_14251af20)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251af30
-SFR21_THUNKB(FUN_14251af30, 0x40, FUN_14251af20)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251b0f4
-SFR21_THUNKB(FUN_14251b0f4, 0x30, FUN_14251b0f0)
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251b100
-SFR21_THUNKB(FUN_14251b100, 0x40, FUN_14251b0f0)
 
 // MS2-FUNCTIONAL: adjustor thunk
 // @0x1425190d4
@@ -8371,40 +8296,6 @@ SFR21_THUNK(FUN_142519898, 0x30, FUN_142519890)
 SFR21_THUNK(FUN_1425198a4, 0x40, FUN_142519890)
 
 #undef SFR21_THUNK
-#undef SFR21_THUNKB
-
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142514304
-bool FUN_142514304(UPInt self, UInt32 mode) { return Sfr27TextFieldTabCheck(self - 0x10, mode); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142518a18
-bool FUN_142518a18(UPInt self, const EventId& id) { return FUN_142518a10(self - 0x30, id); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142518a24
-bool FUN_142518a24(UPInt self, const EventId& id) { return FUN_142518a10(self - 0x40, id); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142518fc8
-bool FUN_142518fc8(UPInt self, const EventId& id) { return FUN_142518fc0(self - 0x30, id); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142518fd4
-bool FUN_142518fd4(UPInt self, const EventId& id) { return FUN_142518fc0(self - 0x40, id); }
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142519d18
-void FUN_142519d18(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
-                   FocusMovedType fmt)
-{
-    FUN_142519d10(self - 0x10, event, ch, controllerIdx, fmt);
-}
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x142519ec8
-void FUN_142519ec8(UPInt self, InteractiveObject::FocusEventType event, InteractiveObject* ch, unsigned controllerIdx,
-                   FocusMovedType fmt)
-{
-    FUN_142519ec0(self - 0x10, event, ch, controllerIdx, fmt);
-}
-// MS2-FUNCTIONAL: adjustor thunk
-// @0x14251a388
-bool FUN_14251a388(UPInt self, const EventId& id, int* pkeyMask) { return AvmTextField_OnKeyEvent(self - 0x10, id, pkeyMask); }
 
 }}} // namespace Scaleform::GFx::AS3
 
@@ -8431,3 +8322,62 @@ void FUN_14250bad0(void* proot, Scaleform::GFx::ASString& result, Scaleform::UIn
     const UInt32 type = *reinterpret_cast<const volatile UInt32*>(st + 0x40);
     (static_cast<const MovieRoot*>(proot)->*&Access::GetMouseCursorTypeString)(result, type);
 }
+
+// AvmButton / AvmTextField come from the SDK MI layout (SF_AS3_AVMBUTTON_MODEL). Copy-constructing them stores
+// the vptrs, so cl emits their vftables and with them its own adjustor thunks (sub rcx,N; jmp member), which are
+// the exe ones. The thunk targets stay the leaves above at their exe VAs.
+namespace Scaleform { namespace GFx { namespace AS3 {
+void Sfr18EmitAvmVftables(void* p, const AvmButton* pbtn, void* q, const AvmTextField* ptxt)
+{
+    new (p) AvmButton(*pbtn);
+    new (q) AvmTextField(*ptxt);
+}
+}}} // namespace Scaleform::GFx::AS3
+
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmButtonBase@GFx@Scaleform@@6B@ 0x14317db08
+// MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317dbe0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317dcb0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6B@ 0x14317dd68
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ea80
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317eb50
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6B@ 0x14317ec08
+// MS2-PIN: ?IsLogNotNull@?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@GFx@Scaleform@@IEBA_NXZ 0x142510dc0
+// MS2-PIN: ?HasEventHandler@AvmButton@AS3@GFx@Scaleform@@WDA@EBA_NAEBVEventId@34@@Z 0x142510da4
+// MS2-PIN: ?HasEventHandler@AvmButton@AS3@GFx@Scaleform@@WEA@EBA_NAEBVEventId@34@@Z 0x142510db0
+// MS2-PIN: ?HasEventHandler@AvmTextField@AS3@GFx@Scaleform@@UEBA_NAEBVEventId@34@@Z 0x142510df0
+// MS2-PIN: ?HasEventHandler@AvmTextField@AS3@GFx@Scaleform@@WDA@EBA_NAEBVEventId@34@@Z 0x142510df4
+// MS2-PIN: ?HasEventHandler@AvmTextField@AS3@GFx@Scaleform@@WEA@EBA_NAEBVEventId@34@@Z 0x142510e00
+// MS2-PIN: ?IsFocusEnabled@AvmButton@AS3@GFx@Scaleform@@WBA@EBA_NW4FocusMovedType@34@@Z 0x142514284
+// MS2-PIN: ?IsFocusEnabled@AvmTextField@AS3@GFx@Scaleform@@WBA@EBA_NW4FocusMovedType@34@@Z 0x142514304
+// MS2-PIN: ?IsTabable@AvmButton@AS3@GFx@Scaleform@@WBA@EBA_NXZ 0x142514efc
+// MS2-PIN: ?IsTabable@AvmTextField@AS3@GFx@Scaleform@@WBA@EBA_NXZ 0x1425150b0
+// MS2-PIN: ?OnEvent@AvmButton@AS3@GFx@Scaleform@@WDA@EAA_NAEBVEventId@34@@Z 0x142518a18
+// MS2-PIN: ?OnEvent@AvmButton@AS3@GFx@Scaleform@@WEA@EAA_NAEBVEventId@34@@Z 0x142518a24
+// MS2-PIN: ?OnEvent@AvmTextField@AS3@GFx@Scaleform@@WDA@EAA_NAEBVEventId@34@@Z 0x142518fc8
+// MS2-PIN: ?OnEvent@AvmTextField@AS3@GFx@Scaleform@@WEA@EAA_NAEBVEventId@34@@Z 0x142518fd4
+// MS2-PIN: ?OnEventLoad@AvmButton@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x142518ffc
+// MS2-PIN: ?OnEventLoad@AvmButton@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x142519008
+// MS2-PIN: ?OnEventLoad@AvmTextField@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x1425191bc
+// MS2-PIN: ?OnEventLoad@AvmTextField@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x1425191c8
+// MS2-PIN: ?OnEventUnload@AvmButton@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x1425191e8
+// MS2-PIN: ?OnEventUnload@AvmButton@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x1425191f4
+// MS2-PIN: ?OnEventUnload@AvmTextField@AS3@GFx@Scaleform@@WDA@EAAXXZ 0x1425198b8
+// MS2-PIN: ?OnEventUnload@AvmTextField@AS3@GFx@Scaleform@@WEA@EAAXXZ 0x1425198c4
+// MS2-PIN: ?OnFocus@AvmButton@AS3@GFx@Scaleform@@WBA@EAAXW4FocusEventType@InteractiveObject@34@PEAV634@IW4FocusMovedType@34@@Z 0x142519d18
+// MS2-PIN: ?OnFocus@AvmTextField@AS3@GFx@Scaleform@@WBA@EAAXW4FocusEventType@InteractiveObject@34@PEAV634@IW4FocusMovedType@34@@Z 0x142519ec8
+// MS2-PIN: ?OnGettingKeyboardFocus@AvmButton@AS3@GFx@Scaleform@@WBA@EAAXIW4FocusMovedType@34@@Z 0x14251a0d4
+// MS2-PIN: ?OnGettingKeyboardFocus@AvmTextField@AS3@GFx@Scaleform@@WBA@EAAXIW4FocusMovedType@34@@Z 0x14251a0f4
+// MS2-PIN: ?OnKeyEvent@AvmButton@AS3@GFx@Scaleform@@WBA@EAA_NAEBVEventId@34@PEAH@Z 0x14251a334
+// MS2-PIN: ?OnKeyEvent@AvmTextField@AS3@GFx@Scaleform@@WBA@EAA_NAEBVEventId@34@PEAH@Z 0x14251a388
+// MS2-PIN: ?OnLosingKeyboardFocus@AvmButton@AS3@GFx@Scaleform@@WBA@EAA_NPEAVInteractiveObject@34@IW4FocusMovedType@34@@Z 0x14251a7f4
+// MS2-PIN: ?OnLosingKeyboardFocus@AvmTextField@AS3@GFx@Scaleform@@WBA@EAA_NPEAVInteractiveObject@34@IW4FocusMovedType@34@@Z 0x14251a814
+// MS2-PIN: ?OnUnloading@AvmButton@AS3@GFx@Scaleform@@WDA@EAA_N_N@Z 0x14251af24
+// MS2-PIN: ?OnUnloading@AvmButton@AS3@GFx@Scaleform@@WEA@EAA_N_N@Z 0x14251af30
+// MS2-PIN: ?OnUnloading@AvmTextField@AS3@GFx@Scaleform@@WDA@EAA_N_N@Z 0x14251b0f4
+// MS2-PIN: ?OnUnloading@AvmTextField@AS3@GFx@Scaleform@@WEA@EAA_N_N@Z 0x14251b100
