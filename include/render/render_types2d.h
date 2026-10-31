@@ -164,7 +164,7 @@ public:
         return *this;
     }
     // not inverted (an empty bound box starts out inverted)
-    bool IsNormal() const { return x1 <= x2 && y1 <= y2; }
+    bool IsNormal() const { return x2 >= x1 && y2 >= y1; }
 
     // (appended for the display list, sfr_gfx_06c) grows this to cover the other rect
     Rect& Union(T left, T top, T right, T bottom)

@@ -175,9 +175,8 @@ public:
     // length of the image of the unit diagonal
     T GetScale() const
     {
-        const T d = (T)0.707106781f;
-        T x = Sx() * d + Shx() * d;
-        T y = Shy() * d + Sy() * d;
+        T x = 0.707106781f * M[0][0] + 0.707106781f * M[0][1];
+        T y = 0.707106781f * M[1][0] + 0.707106781f * M[1][1];
         return sqrtf(x * x + y * y);
     }
     static Matrix2x4 Scaling(T s) { return Matrix2x4(s, 0, 0, 0, s, 0); }
