@@ -3623,7 +3623,7 @@ void FUN_140033700(void* player, const void* data, CriUint32 size, CriSint32 tar
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
-// MS2-FUNCTIONAL: allocate and initialize the metadata stream using either the caller or CRI heap.
+// allocate and initialize the metadata stream using either the caller or CRI heap.
 // @0x140031c40
 CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignment)
 {
@@ -3634,7 +3634,7 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
         CriUint32 Reserved8;
         CriUint32 Alignment;
         CriUint64 Reserved10;
-    } config = { 1, size, 0, alignment, 0 };
+    };
     struct MetadataView
     {
         CriUint8 Reserved0[0xe78];
@@ -3645,26 +3645,36 @@ CriBool FUN_140031c40(void* player, void* heap, CriUint32 size, CriUint32 alignm
         void* Context;
         void* Allocation;
     };
-    if (!heap)
+    CriSint32 workSize;
+    void* allocation;
+    MetaConfig param;
+    if (heap)
     {
-        CriSint32 workSize = criSjRbf_CalculateWorkSize((const CriSint32*)&config);
-        void* allocation = ((MetadataView*)player)->Allocate(((MetadataView*)player)->Context, workSize);
+        ((MetadataView*)player)->Stream = FUN_140046730(heap, (CriSint32)size, 0, (CriSint32)alignment,
+                                      "CriMvPly: MetaInput");
+        if (!((MetadataView*)player)->Stream)
+        {
+            FUN_140037950(player, "E08120201M : Can't create meta SJ.", 0);
+            return 0;
+        }
+    }
+    else
+    {
+        memset(&param, 0, sizeof(param));
+        param.Mode = 1;
+        param.Reserved10 = 0;
+        param.Size = size;
+        param.Reserved8 = 0;
+        param.Alignment = alignment;
+        workSize = criSjRbf_CalculateWorkSize((const CriSint32*)&param);
+        allocation = ((MetadataView*)player)->Allocate(((MetadataView*)player)->Context, workSize);
         if (!allocation)
         {
             FUN_140037950(player, "E10052103M : NULL pointer is paased from the MetaWorkCallback by app.", 0);
             return 0;
         }
-        ((MetadataView*)player)->Stream = FUN_140045eec(&config, allocation, workSize);
+        ((MetadataView*)player)->Stream = FUN_140045eec(&param, allocation, workSize);
         ((MetadataView*)player)->Allocation = allocation;
-        return 1;
-    }
-
-    ((MetadataView*)player)->Stream = FUN_140046730(heap, (CriSint32)size, 0, (CriSint32)alignment,
-                                  "CriMvPly: MetaInput");
-    if (!((MetadataView*)player)->Stream)
-    {
-        FUN_140037950(player, "E08120201M : Can't create meta SJ.", 0);
-        return 0;
     }
     return 1;
 }
@@ -3723,37 +3733,36 @@ CriBool FUN_140031da0(void* player, void* heap)
     return 1;
 }
 
-// MS2-FUNCTIONAL: size and allocate the CRI Movie metadata and event work areas.
+// size and allocate the CRI Movie metadata and event work areas.
 // @0x140031ae0
 CriBool FUN_140031ae0(void* player)
 {
     struct BaseSizeView { CriUint8 Reserved[0x63c]; CriSint32 Size; };
-    struct FeatureSizeA { CriUint8 Reserved[0x868]; CriSint32 Enabled; };
+    struct FeatureSizeA { CriUint8 Reserved[0x868]; CriUint32 Enabled; };
     struct FeatureBytesA { CriUint8 Reserved[0x890]; CriSint32 Size; };
-    struct FeatureSizeB { CriUint8 Reserved[0x898]; CriSint32 Enabled; };
+    struct FeatureSizeB { CriUint8 Reserved[0x898]; CriUint32 Enabled; };
     struct FeatureBytesB { CriUint8 Reserved[0x8a8]; CriSint32 Size; };
-    struct WorkSizeView { CriUint8 Reserved[0xe74]; CriUint32 Size; };
+    struct WorkSizeView { CriUint8 Reserved[0xe74]; CriSint32 Size; };
     struct WorkHeapView { CriUint8 Reserved[0xde8]; void* Heap; };
     struct QueueView { CriUint8 Reserved[0xd78]; void* Input; void* Read; };
     struct MetaStreamView { CriUint8 Reserved[0xe78]; void* Stream; };
+    CriSint32 queued;
     if (((MetaStreamView*)player)->Stream)
         FUN_140031f00(player);
 
-    CriSint32 workSize = ((BaseSizeView*)player)->Size + 0x800;
-    if (((FeatureSizeA*)player)->Enabled != 0)
-        workSize += ((FeatureBytesA*)player)->Size;
-    if (((FeatureSizeB*)player)->Enabled != 0)
-        workSize += ((FeatureBytesB*)player)->Size;
-    CriSint32 queued = FUN_1400467b8(((QueueView*)player)->Read, 1) +
-                       FUN_1400467b8(((QueueView*)player)->Input, 1);
-    if (workSize < queued)
-        workSize = queued;
-    ((WorkSizeView*)player)->Size = (CriUint32)workSize;
+    ((WorkSizeView*)player)->Size = ((BaseSizeView*)player)->Size + 0x800;
+    if (((FeatureSizeA*)player)->Enabled > 0)
+        ((WorkSizeView*)player)->Size += ((FeatureBytesA*)player)->Size;
+    if (((FeatureSizeB*)player)->Enabled > 0)
+        ((WorkSizeView*)player)->Size += ((FeatureBytesB*)player)->Size;
+    queued = FUN_1400467b8(((QueueView*)player)->Read, 1) +
+             FUN_1400467b8(((QueueView*)player)->Input, 1);
+    if (((WorkSizeView*)player)->Size < queued)
+        ((WorkSizeView*)player)->Size = queued;
 
-    void* heap = ((WorkHeapView*)player)->Heap;
-    if (!FUN_140031c40(player, heap, (CriUint32)workSize, 0x40))
+    if (!FUN_140031c40(player, ((WorkHeapView*)player)->Heap, (CriUint32)((WorkSizeView*)player)->Size, 0x40))
         return 0;
-    if (!FUN_140031da0(player, heap))
+    if (!FUN_140031da0(player, ((WorkHeapView*)player)->Heap))
     {
         FUN_140031f00(player);
         return 0;
