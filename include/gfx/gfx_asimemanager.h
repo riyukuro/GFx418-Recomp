@@ -54,7 +54,14 @@ public:
         IMEManagerBase* pimeManager;
     };
 
-    ASIMEManager() : pMovie(NULL), pLangContext2(NULL), pStatusContext2(NULL), pTextField(NULL) {}
+    // Assigned in the body, as in the SDK: the stores come after the member constructors.
+    ASIMEManager()
+    {
+        pMovie          = 0;
+        pTextField      = 0;
+        pLangContext2   = 0;
+        pStatusContext2 = 0;
+    }
     virtual ~ASIMEManager() {}                                                          // 0
 
     virtual void ShutDown() {}                                                          // 1

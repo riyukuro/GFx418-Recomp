@@ -99,7 +99,8 @@ class NotifyLoadInitCandidateList : public NotifyLoadInitC
 public:
     NotifyLoadInitCandidateList(MovieRoot* proot, Instances::fl_display::Loader* ploader, IMEManager* pimeManager)
         : pMovieRoot(proot), pLoader(ploader), pIMEManager(pimeManager) {}
-    virtual ~NotifyLoadInitCandidateList();
+    // The destructor is implicit: 0x1425430b0, the scalar deleting destructor (pinned at the end of the file), has
+    // no vftable store of its own.
 
     // @0x142545160
     virtual void OpenEventCallback() {}
@@ -113,12 +114,6 @@ public:
     SPtr<Instances::fl_display::Loader>     pLoader;        // +0x18
     Ptr<IMEManager>                         pIMEManager;    // +0x20
 };
-
-// The exe has no out-of-line copy: 0x1425430b0 is the scalar deleting destructor (pinned at the end of the file),
-// which inlines this body, ~RefCountImplCore and the Memory::Free.
-NotifyLoadInitCandidateList::~NotifyLoadInitCandidateList()
-{
-}
 
 // MS2-FUNCTIONAL: register allocation and local order (the exe keeps two unused host values)
 // @0x1425445d0
@@ -152,15 +147,16 @@ void NotifyLoadInitCandidateList::InitEventCallback()
     pIMEManager->CandListVal.Invoke("Init", NULL, NULL, 0);
 }
 
-// MS2-FUNCTIONAL: the base constructor and member stores in another order
 // @0x142542bd0
 IMEManager::IMEManager()
-    : UnsupportedIMEWindowsFlag(3), CandidateListState(0)
 {
+    UnsupportedIMEWindowsFlag = 3;
+    pTextField = 0;
+    pMovie = 0;
+    CandidateListState = 0;
     CandListVal.SetNull();
 }
 
-// MS2-FUNCTIONAL: register allocation only
 // @0x142542da0
 IMEManager::~IMEManager()
 {
@@ -272,24 +268,26 @@ void IMEManager::DispatchEvent(const char* message, const char* messageType, con
     pdispatcher->DispatchEventObject(pevt, pdispatcher->pDispObj);
 }
 
-// MS2-FUNCTIONAL: register allocation only
 // @0x142543e70
 DisplayObject* IMEManager::GetCandidateListSprite() const
 {
     if (CandListVal.IsNull() || !pMovie)
         return NULL;
-    DisplayObject* psprite = NULL;
-    Value v;
-    GetAS3Root(pMovie)->GFxValue2ASValue(CandListVal, &v);
-    if (v.IsObject())
+
+    MovieRoot* pmovieRoot = GetAS3Root(pMovie);
+    Value pdestVal;
+    pmovieRoot->GFxValue2ASValue(CandListVal, &pdestVal);
+    if (pdestVal.IsObject())
     {
-        const Traits& tr = v.GetObject()->GetTraits();
-        if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
+        const Traits& tr = pdestVal.GetObject()->GetTraits();
+        if (!((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
                 (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
-            tr.IsInstanceTraits())
-            psprite = static_cast<Instances::fl_display::DisplayObject*>(v.GetObject())->pDispObj;
+            tr.IsInstanceTraits()))
+            return 0;
+        DisplayObject* parentDispObj = static_cast<Instances::fl_display::DisplayObject*>(pdestVal.GetObject())->pDispObj;
+        return parentDispObj;
     }
-    return psprite;
+    return NULL;
 }
 
 // The candidate list movie has set _global.gfx_ime_candidate_list_state.
@@ -312,20 +310,21 @@ bool IMEManager::IsTextFieldFocused(InteractiveObject* pfocusedChar) const
     if (pMovie)
     {
         Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
-        return pfocused && IsTextField(pfocused) && ToTextField(pfocused)->IsIMEEnabled() &&
-               pfocused.GetPtr() == pfocusedChar;
+        return (pfocused && IsTextField(pfocused) && ToTextField(pfocused)->IsIMEEnabled() &&
+                pfocused == pfocusedChar);
     }
     return false;
 }
 
-// MS2-FUNCTIONAL: register allocation only
 // @0x142544ef0
 bool IMEManager::IsTextFieldFocused() const
 {
-    if (!pMovie)
-        return false;
-    Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
-    return IsTextFieldFocused(pfocused);
+    if (pMovie)
+    {
+        Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
+        return IsTextFieldFocused(pfocused);
+    }
+    return false;
 }
 
 // Calls the candidate list's method at the dotted path pmethodName (the object path walked member by member).
@@ -406,7 +405,6 @@ InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* pol
     return pnewFocus;
 }
 
-// MS2-FUNCTIONAL: register allocation only
 // @0x142545060
 void IMEManager::OnOpenCandidateList()
 {
@@ -416,11 +414,16 @@ void IMEManager::OnOpenCandidateList()
     if (!ptextField)
     {
         Ptr<InteractiveObject> pfocused = GetFocusedChar(pMovie);
-        if (!pfocused || !IsTextField(pfocused))
+        if (pfocused && IsTextField(pfocused))
+        {
+            ptextField = ToTextField(pfocused);
+        }
+        if (!ptextField)
             return;
-        ptextField = ToTextField(pfocused);
     }
-    if (DisplayObject* plist = GetCandidateListSprite())
+
+    DisplayObject* plist = GetCandidateListSprite();
+    if (plist)
         ptextField->SetCandidateListFont(plist);
 }
 
@@ -633,27 +636,43 @@ UInt8 ReadU8(const T* data, UPInt& pos)
 template <typename T>
 SF_NOINLINE int ReadU30(const T*& p)
 {
-    UInt8 b = ReadU8(p);
-    int result = b & 0x7f;
-    for (UInt32 shift = 7; (b & 0x80) && shift < 32; shift += 7)
+    UInt32 shift = 0;
+    UInt32 s = 0;
+    int nr = 0;
+
+    while (true)
     {
-        b = ReadU8(p);
-        result |= (b & 0x7f) << shift;
+        UInt8 b = ReadU8(p);
+        ++nr;
+        s |= (b & 127) << shift;
+        shift += 7;
+
+        if (!(b & 128) || shift >= 32)
+            break;
     }
-    return result;
+
+    return s;
 }
 
 template <typename T>
 SF_NOINLINE int ReadU30(const T* data, UPInt& pos)
 {
-    UInt8 b = ReadU8(data, pos);
-    int result = b & 0x7f;
-    for (UInt32 shift = 7; (b & 0x80) && shift < 32; shift += 7)
+    UInt32 shift = 0;
+    UInt32 s = 0;
+    int nr = 0;
+
+    while (true)
     {
-        b = ReadU8(data, pos);
-        result |= (b & 0x7f) << shift;
+        UInt8 b = ReadU8(data, pos);
+        ++nr;
+        s |= (b & 127) << shift;
+        shift += 7;
+
+        if (!(b & 128) || shift >= 32)
+            break;
     }
-    return result;
+
+    return s;
 }
 
 template <typename T>
@@ -1336,18 +1355,21 @@ void Vector_uint::AS3map(SPtr<Vector_uint>& result, const Value& callback, const
 
 // ---- pop: RangeError on a fixed vector; nothing on an empty one
 
-// MS2-FUNCTIONAL: the exe calls ArrayDataBase::ResizeNoConstruct out of line for the pop; ours inlines it
 // @0x142557cd0
 void Vector_String::AS3pop(ASString& result)
 {
-    if (V.CheckFixed() && V.V.GetSize() != 0)
+    if (!V.CheckFixed())
+        return;
+    if ((UInt32)V.V.GetSize() > 0)
     {
         Ptr<ASStringNode> node = V.V.Pop();
-        result.AssignNode(node ? node.GetPtr() : result.GetManager()->GetNullStringNode());
+        if (node)
+            result.AssignNode(node.GetPtr());
+        else
+            result.AssignNode(result.GetManager()->GetNullStringNode());
     }
 }
 
-// MS2-FUNCTIONAL: the exe calls ArrayDataDH<double>::Resize out of line for the pop; ours inlines it
 // @0x142557e00
 void Vector_double::AS3pop(Value::Number& result)
 {
@@ -1357,7 +1379,6 @@ void Vector_double::AS3pop(Value::Number& result)
         result = V.V.Pop();
 }
 
-// MS2-FUNCTIONAL: the exe calls ArrayDataDH<SInt32>::Resize out of line for the pop; ours inlines it
 // @0x142557ea0
 void Vector_int::AS3pop(SInt32& result)
 {
@@ -1367,15 +1388,15 @@ void Vector_int::AS3pop(SInt32& result)
         result = V.V.Pop();
 }
 
-// MS2-FUNCTIONAL: the exe calls ArrayDataBase::ResizeNoConstruct out of line for the pop; ours inlines it
 // @0x142557f30
 void Vector_object::AS3pop(Value& result)
 {
-    if (V.CheckFixed() && V.V.GetSize() != 0)
+    if (!V.CheckFixed())
+        return;
+    if ((UInt32)V.V.GetSize() > 0)
         result.Assign(V.V.Pop());
 }
 
-// MS2-FUNCTIONAL: the exe calls ArrayDataDH<UInt32>::Resize out of line for the pop; ours inlines it
 // @0x142558090
 void Vector_uint::AS3pop(UInt32& result)
 {
