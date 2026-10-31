@@ -268,7 +268,6 @@ bool AvmButton::DetachChild(DisplayObjectBase* ch)
     return found;
 }
 
-// MS2-FUNCTIONAL 0x142507730: the exe calls Matrix2F::EncloseTransform (0x1425e52d0) out of line
 // @0x142507730
 RectF AvmBitmap::GetBounds(const Matrix& t) const
 {
@@ -277,23 +276,34 @@ RectF AvmBitmap::GetBounds(const Matrix& t) const
     {
         Render::ImageRect irect = pImage->GetImage()->GetRect();
         Render::Matrix2F m;
-        RectF twips(float(UInt32(irect.x1 * 20)), float(UInt32(irect.y1 * 20)), float(UInt32(irect.x2 * 20)),
-                    float(UInt32(irect.y2 * 20)));
         if (Render::Image* pimg = pImage->GetImage()->GetAsImage())
         {
             pimg->GetMatrix(&m);
-            m.EncloseTransform(&r, twips);
+            m.EncloseTransform(&r, RectF(float(UInt32(irect.x1 * 20)), float(UInt32(irect.y1 * 20)),
+                                         float(UInt32(irect.x2 * 20)), float(UInt32(irect.y2 * 20))));
         }
         else
-            r = twips;
+            r = RectF(float(UInt32(irect.x1 * 20)), float(UInt32(irect.y1 * 20)), float(UInt32(irect.x2 * 20)),
+                      float(UInt32(irect.y2 * 20)));
     }
-    RectF result;
+    RectF result(RectF::NoInit);
     t.EncloseTransform(&result, RectF(0, 0, r.GetSize()));
     return result;
 }
 
-// MS2-FUNCTIONAL 0x142507910: one instruction short: the exe does not load the morph ratio (xmm2) for the GetBoundsLocal
-// virtual call; ours passes the default 0
+// The exe calls the definition's GetBoundsLocal (slot 7) without loading a morph ratio into xmm2.
+struct Sfr17dBoundsLocalView
+{
+    virtual void Slot0() = 0;
+    virtual void Slot1() = 0;
+    virtual void Slot2() = 0;
+    virtual void Slot3() = 0;
+    virtual void Slot4() = 0;
+    virtual void Slot5() = 0;
+    virtual void Slot6() = 0;
+    virtual RectF GetBoundsLocal() const = 0;
+};
+
 // @0x142507910
 RectF ShapeObject::GetBounds(const Matrix& t) const
 {
@@ -313,7 +323,7 @@ RectF ShapeObject::GetBounds(const Matrix& t) const
     }
     else
     {
-        r = t.EncloseTransform(pDef->GetBoundsLocal());
+        r = t.EncloseTransform(reinterpret_cast<const Sfr17dBoundsLocalView*>(pDef.GetPtr())->GetBoundsLocal());
     }
     return r;
 }
