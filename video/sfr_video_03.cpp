@@ -363,15 +363,15 @@ uint64_t* FUN_140016e30(uint64_t* out, uint64_t type, uint64_t flags,
     return out;
 }
 
-// MS2-FUNCTIONAL: cl15 shape, the exe calls [rax] where cl 17 /O2 tail-jumps (and /Os reschedules the tag ops).
-// normalizes the AS3 value tag and visits it through its ForEachChild slot with the VideoNative1 op.
+// normalizes the AS3 value tag (stored back before the visit) and visits it through its ForEachChild slot with the
+// VideoNative1 op.
 // @0x140016ed0
 void FUN_140016ed0(uint64_t* value, void* object)
 {
     uint32_t tag = *reinterpret_cast<uint32_t*>(value + 2);
     if ((tag & 0x70000000) != 0x10000000) {
         void** vtable = *reinterpret_cast<void***>(value);
-        tag = (tag & 0x9fffffff) | 0x10000000;
+        *reinterpret_cast<uint32_t*>(value + 2) = (tag & 0x9fffffff) | 0x10000000;
         reinterpret_cast<void(*)(void*, void*, void*)>(vtable[0])(
             value, object, reinterpret_cast<void*>(&VideoNative1));
     }
@@ -892,23 +892,26 @@ void FUN_14001a6f0(uint32_t* value, const uint32_t* number)
 {
     FUN_14001a260(value, *number);
 }
-// MS2-FUNCTIONAL: writes the callback's integer result to its output Value unless the VM has an exception.
+// writes the callback's integer result to its output Value unless the VM has an exception.
 // @0x14001a8e0
 void FUN_14001a8e0(uint64_t* closure)
 {
     if (*reinterpret_cast<unsigned char*>(closure[0] + 0x180) == 0)
-        FUN_14001a260(reinterpret_cast<uint32_t*>(closure[1]), static_cast<uint32_t>(closure[2]));
+    {
+        uint32_t* output = reinterpret_cast<uint32_t*>(closure[1]);
+        FUN_14001a260(output, static_cast<uint32_t>(closure[2]));
+    }
 }
 
-// MS2-FUNCTIONAL: constructs a Video AS3 DisplayObject with the executable's default dimensions and vtable.
+// constructs a Video AS3 DisplayObject with the executable's default dimensions and vtable.
 // @0x14001a000
 Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* FUN_14001a000(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
     typedef Scaleform::GFx::AS3::Instances::fl_display::DisplayObject DisplayObject;
-    new (object) Scaleform::GFx::AS3::Instances::fl_display::DisplayObject(*traits);
+    object->DisplayObject::DisplayObject(*traits);   // MSVC explicit ctor call: no placement-new null test (the exe has none)
+    *reinterpret_cast<void***>(object) = &VideoDisplayVtable;
     *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x68) = 320.0;
     *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x70) = 240.0;
-    *reinterpret_cast<void***>(object) = &VideoDisplayVtable;
     return object;
 }
 // MS2-FUNCTIONAL: allocates and constructs the Video AS3 DisplayObject into the caller's result slot.
@@ -919,12 +922,12 @@ void* FUN_14001a600(void*, void** result, Scaleform::GFx::AS3::InstanceTraits::T
     *result = object ? FUN_14001a000(object, traits) : 0;
     return result;
 }
-// MS2-FUNCTIONAL: allocates and constructs a Video AS3 DisplayObject, then transfers it into a Value.
+// allocates and constructs a Video AS3 DisplayObject, then transfers it into a Value.
 // @0x14001a860
 void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
     Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
-    if (object) FUN_14001a000(object, traits);
+    object = object ? FUN_14001a000(object, traits) : 0;
     value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
 }
 
@@ -949,11 +952,12 @@ void FUN_14001a460(void* self)
     extern void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter*);
     FUN_140010a30(*(Scaleform::GFx::Video::VideoCharacter**)((Scaleform::UByte*)self + 0x58));
 }
-// MS2-FUNCTIONAL: attaches the supplied AS3 NetStream's VideoPlayer to this Video's display object and adds its reference.
+// attaches the supplied AS3 NetStream's VideoPlayer to this Video's display object and adds its reference.
 // @0x14001a410
 void FUN_14001a410(void* self, void*, void* netStream)
 {
-    void* player = netStream ? *reinterpret_cast<void**>(static_cast<unsigned char*>(netStream) + 0x50) : 0;
+    void* player = 0;
+    if (netStream) player = *reinterpret_cast<void**>(static_cast<unsigned char*>(netStream) + 0x50);
     void* display = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     if (display) {
         FUN_140010b80(display, player);
@@ -1013,7 +1017,8 @@ void FUN_14001a800(uint64_t* object, uint8_t update)
 }
 
 
-// MS2-FUNCTIONAL: destroys the AS3 DisplayObject subobject and conditionally frees the allocation.
+// MS2-FUNCTIONAL: destroys the AS3 DisplayObject subobject and conditionally frees the allocation. The exe takes the flags
+// as an unsigned int (mov ebx,edx); that changes the mangled name sfr_sf_hooks and data_rdata_sf_video bind to.
 // @0x14001a2f0
 void* FUN_14001a2f0(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object, uint64_t flags)
 {
@@ -1404,14 +1409,13 @@ uint64_t* FUN_142742f70(uint64_t* destination, const uint64_t* source)
 
 namespace {
 
-// MS2-FUNCTIONAL: cl15 shape, the vtable goes through r11 and the size store is scheduled before it.
 // forwards VM and ClassInfo to the CTraits ctor and installs the Video traits vtable and object size (+0x60).
 // @0x14001a080
 void* FUN_14001a080(void* traits, void* vm, const void* classInfo)
 {
     FUN_1424d6750(traits, vm, classInfo);
-    *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(traits) + 0x60) = 0x78;
     *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
+    *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(traits) + 0x60) = 0x78;
     return traits;
 }
 // releases an old reference and stores the supplied pointer.
@@ -1421,7 +1425,7 @@ uint64_t* FUN_14001a0e0(uint64_t* holder, uint64_t replacement)
     if (*holder) FUN_14257dcd0(reinterpret_cast<void*>(*holder));
     *holder = replacement; return holder;
 }
-// MS2-FUNCTIONAL: initializes a native callback record with its VM, property and integer payload (the default, then the
+// initializes a native callback record with its VM, property and integer payload (the default, then the
 // first AS3 argument through Value::Convert2Int32 when one is supplied).
 // @0x14001a920
 uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int count, uint64_t args, const uint32_t* value)
@@ -1431,7 +1435,7 @@ uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int co
     *payload = static_cast<int>(*value);
     if (count) {
         int converted;   // CheckResult scratch
-        ConvertAS3ValueToInt32(reinterpret_cast<void*>(args), &converted, payload, count, 0);
+        reinterpret_cast<void(*)(const void*, int*, int*)>(ConvertAS3ValueToInt32)(reinterpret_cast<void*>(args), &converted, payload);
     }
     return record;
 }
@@ -1491,14 +1495,23 @@ void** FUN_14001af10(void** result, void* classTraits)
 }
 namespace {
 
-// MS2-FUNCTIONAL: initializes the AS3 callback record and captures the optional first atom argument.
+// initializes the AS3 callback record: captures the optional first atom argument and converts the optional second one
+// to its integer payload (Value::Convert2UInt32) unless the VM has an exception pending.
 // @0x1400170c0
 uint64_t* FUN_1400170c0(uint64_t* record, uint64_t vm, uint64_t property, unsigned count, const uint8_t* args, const uint64_t* defaults)
 {
     record[0] = vm; record[1] = property;
     record[2] = defaults[0];
-    if (count) record[2] = ((*args & 0x1f) != 0) ? *reinterpret_cast<const uint64_t*>(args + 0x10) : 0;
-    record[3] = defaults[1];
+    if (count) {
+        if ((*args & 0x1f) == 0) record[2] = 0;
+        else record[2] = *reinterpret_cast<const uint64_t*>(args + 0x10);
+    }
+    uint32_t* payload = reinterpret_cast<uint32_t*>(record + 3);
+    *payload = *reinterpret_cast<const uint32_t*>(defaults + 1);
+    if (*reinterpret_cast<const uint8_t*>(vm + 0x180) == 0 && count > 1) {
+        int checkResult;   // the CheckResult return slot
+        reinterpret_cast<void(*)(const void*, int*, uint32_t*)>(ConvertAS3ValueToInt32)(args + 0x20, &checkResult, payload);
+    }
     return record;
 }
 // MS2-FUNCTIONAL: removes the hashed atom key from its chained Scaleform table.
