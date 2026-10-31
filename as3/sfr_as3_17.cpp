@@ -3090,6 +3090,7 @@ struct Sfr33TracerStorage
 {
     UPInt Q00, Q01, Q02, Q03, Q04, Q05, Q06, Q07, Q08, Q09, Q0a, Q0b, Q0c, Q0d, Q0e, Q0f, Q10, Q11, Q12, Q13;
     UPInt Q14, Q15, Q16, Q17, Q18, Q19, Q1a, Q1b, Q1c, Q1d, Q1e, Q1f, Q20, Q21, Q22, Q23, Q24, Q25, Q26, Q27;
+    Sfr33TracerStorage() {}   // a user ctor keeps cl from treating the local as a /GS buffer (the exe frame has no cookie)
 };
 
 UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer
@@ -3184,26 +3185,26 @@ void Tracer::EmitCode()
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 
 // The interpreter code of the frame's method body, traced from its bytecode on first use.
-// MS2-FUNCTIONAL 0x142508330: the local Tracer gets a /GS cookie here (the exe has none) and the frame fields load in another order.
 // @0x142508330
 const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame& cf)
 {
     typedef ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem> CodeType;
     VMAbcFile& file = *cf.pFile;
     UByte* const pf = reinterpret_cast<UByte*>(&file);
-    CodeType& code = (*reinterpret_cast<ArrayLH<CodeType, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xb8))[cf.MBIIndex];   // OpCodeArray
+    const SInt32 ind = cf.MBIIndex;
+    CodeType& code = (*reinterpret_cast<ArrayLH<CodeType, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xb8))[ind];   // OpCodeArray
     if (code.GetSize() == 0)
     {
         VM& vm = file.GetVM();
         Sfr33TracerStorage tr;
         FUN_1424d9f30(&tr.Q00, reinterpret_cast<UPInt>(vm.GetMemoryHeap()), reinterpret_cast<UPInt>(&cf),
                       reinterpret_cast<UPInt>(&code), reinterpret_cast<UPInt>(&(*reinterpret_cast<ArrayLH<Abc::MethodBodyInfo::Exception,
-                          StatMV_VM_VMAbcFile_Mem>*>(pf + 0xd0))[cf.MBIIndex]));   // Exceptions
+                          StatMV_VM_VMAbcFile_Mem>*>(pf + 0xd0))[ind]));   // Exceptions
         if (!vm.IsException())
             reinterpret_cast<Tracer*>(&tr)->EmitCode();
         FUN_1424df070(&tr);
     }
-    return (*reinterpret_cast<ArrayLH<CodeType, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xb8))[cf.MBIIndex];
+    return (*reinterpret_cast<ArrayLH<CodeType, StatMV_VM_VMAbcFile_Mem>*>(pf + 0xb8))[ind];
 }
 
 // MovieRoot::ExecuteActionQueue: runs (and frees) the actions queued on level lvl.
