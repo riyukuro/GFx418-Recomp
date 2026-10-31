@@ -844,65 +844,69 @@ Array<String>* MovieDataDef::LoadTaskData::GetFrameLabels(unsigned frameNumber, 
 }
 
 // @0x1425d2f70
-// MS2-FUNCTIONAL: findIndexAlt inlined here, out of line in the exe
 bool MovieDataDef::TranslateFrameString(const StringHashLH<unsigned>& namedFrames, const char* label,
                                         unsigned* frameNumber, bool translateNumbers)
 {
     if (!label || !label[0])
-        return false;
+        return 0;
 
     if (translateNumbers)
     {
         // A label made of digits (with an optional sign and blanks) is a 1-based frame number.
-        bool digitFound = false;
-        const char* p;
-        for (p = label; *p; p++)
+        bool digitFound = 0;
+        int  i;
+
+        for (i = 0; label[i] != 0; i++)
         {
-            char c = *p;
-            if (c >= '0' && c <= '9')
+            UByte ch = label[i];
+            if ((ch >= '0') && (ch <= '9'))
             {
-                digitFound = true;
+                digitFound = 1;
                 continue;
             }
-            if ((c == '+' || c == '-') && !digitFound)
+            if (ch == '+' || ch == '-')
+            {
+                if (!digitFound)
+                    continue;
+            }
+            if (ch == ' ' || ch == '\t')
                 continue;
-            if (c == ' ' || c == '\t')
-                continue;
-            break;
+            // Any other character makes it a label.
+            goto translate_frame_label;
         }
-        if (!*p)
-        {
-            char*    tail = 0;
-            unsigned num  = (unsigned)SFstrtod(label, &tail);
-            if (tail == label || *tail)
-                return false;
-            *frameNumber = num - 1;
-            return true;
-        }
+
+        char*    tail   = 0;
+        unsigned number = (unsigned)SFstrtod(label, &tail);
+        if (tail == label || *tail != 0)
+            return 0;
+
+        *frameNumber = number - 1;
+        return 1;
     }
+
+translate_frame_label:
     return namedFrames.GetCaseInsensitive(String(label), frameNumber);
 }
 
 // @0x1425d30b0
-// MS2-FUNCTIONAL: hash iterator loop shaped differently
 const String* MovieDataDef::TranslateNumberToFrameString(const StringHashLH<unsigned>& namedFrames,
                                                          unsigned frameNumber, unsigned* exactFrameNumberForLabel)
 {
     // The closest label at or before the frame.
-    const String* plabel     = 0;
-    unsigned      labelFrame = 0;
-    for (StringHashLH<unsigned>::ConstIterator it = namedFrames.Begin(); it != namedFrames.End(); ++it)
+    StringHashLH<unsigned>::ConstIterator it = namedFrames.Begin();
+    unsigned      exctFrame = 0;
+    const String* frameName = NULL;
+    for (; it != namedFrames.End(); ++it)
     {
-        unsigned f = it->Second;
-        if (f <= frameNumber && f >= labelFrame)
+        if (frameNumber >= it->Second && it->Second >= exctFrame)
         {
-            labelFrame = f;
-            plabel     = &it->First;
+            exctFrame = it->Second;
+            frameName = &it->First;
         }
     }
     if (exactFrameNumberForLabel)
-        *exactFrameNumberForLabel = labelFrame;
-    return plabel;
+        *exactFrameNumberForLabel = exctFrame;
+    return frameName;
 }
 
 
