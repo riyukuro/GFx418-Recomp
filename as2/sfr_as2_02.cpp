@@ -94,9 +94,10 @@
 #include "../include/render/render_screentoworld.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_core.h"
+#include "../include/gfx/text_editorkit.h"
 
-// Render::Text::DocView (render/text_docview.h needs the full kernel array headers, not the ones of this unit): the
-// document view calls of the TextField natives, by address.
+// Render::Text::DocView calls of the TextField natives still taken by address (the names are shared with
+// sfr_as3_13/15).
 unsigned long long FUN_142612af0(void* pdoc, unsigned long long pos);       // DocView::GetFirstCharInParagraph
 unsigned FUN_142612c50(void* pdoc, unsigned long long pos);                 // DocView::GetLineIndexOfChar
 unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine);  // DocView::GetLineLength
@@ -104,17 +105,12 @@ unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // D
 unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
 unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
 bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
-bool     FUN_142612740(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetExactCharBoundaries
 void     FUN_14260df50(void* pdoc, const char* putf8Str, unsigned long long utf8Len);        // DocView::AppendText
 void     FUN_14260de50(void* pdoc, const char* phtml, unsigned long long htmlSize, bool condenseWhite,
                        void* pimgInfoArr);                                                 // DocView::AppendHtml
 void     FUN_1425ba7d0(void* ptf, void* pimgInfoArr);                                       // TextField::ProcessImageTags
 bool     FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);                          // DocView::GetLineMetrics
 const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);         // DocView::GetLineText
-void     FUN_142617440(void* pek, unsigned long long startPos, unsigned long long endPos, bool useRichClipboard);  // EditorKit::CopyToClipboard
-void     FUN_1426175b0(void* pek, unsigned long long startPos, unsigned long long endPos, bool useRichClipboard);  // EditorKit::CutToClipboard
-unsigned long long FUN_142619270(void* pek, unsigned long long startPos, unsigned long long endPos,
-                                 bool useRichClipboard);                                   // EditorKit::PasteFromClipboard
 // The DocView / EditorKit fields the clipboard natives read.
 inline void* DocView_GetEditorKit(void* pdoc) { return *(void**)((char*)pdoc + 0xd8); }
 inline unsigned long long DocView_SelectionPos(void* pdoc, int i) { return ((unsigned long long*)((char*)pdoc + 0x38))[i]; }
@@ -132,17 +128,10 @@ inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 
 inline const void* StyledText_GetDefaultParagraphFormat(void* pst) { return *(const void**)((char*)pst + 0x30); }
 inline const void* StyledText_GetDefaultTextFormat(void* pst) { return *(const void**)((char*)pst + 0x38); }
 unsigned long long FUN_142598a50(void* pst);                                               // StyledText::GetLength
-bool     FUN_1425996b0(void* pst, const void** pptextFmt, const void** ppparaFmt, unsigned long long pos);  // StyledText::GetTextAndParagraphFormat
 unsigned long long FUN_142617990(void* pek);                                               // EditorKit::GetCursorPos
 void     FUN_142619b80(void* pek, unsigned long long pos, bool updateSelection);            // EditorKit::SetCursorPos
-void     FUN_142615410(void* pdoc, const void* pparaFmt, unsigned long long startPos, unsigned long long endPos);  // DocView::SetParagraphFormat
-void     FUN_142615640(void* pdoc, const void* ptextFmt, unsigned long long startPos, unsigned long long endPos);  // DocView::SetTextFormat
-void     FUN_1424ae680(const void* ptextFmt);                                               // TextFormat::Release
-void     FUN_1424ae650(const void* pparaFmt);                                               // ParagraphFormat::Release
 void     FUN_1425990d0(void* pst, Scaleform::Render::Text::TextFormat* ptextFmt, Scaleform::Render::Text::ParagraphFormat* pparaFmt,
                        unsigned long long startPos, unsigned long long endPos);            // StyledText::GetTextAndParagraphFormat
-void     FUN_14259c250(void* pst, const Scaleform::Render::Text::TextFormat& fmt);                     // StyledText::SetDefaultTextFormat
-void     FUN_14259c170(void* pst, const Scaleform::Render::Text::ParagraphFormat& fmt);                // StyledText::SetDefaultParagraphFormat
 void     FUN_1425b7220(void* ptf);                                                          // TextField::ClearIdImageDescAssoc
 void     FUN_1424c7090(void* psubst);                                                       // ImageSubstitutor element array dtor
 inline void* DocView_GetImageSubstitutor(void* pdoc) { return *(void**)((char*)pdoc + 0x30); }
@@ -2546,7 +2535,7 @@ void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
     RectF    rect(0);
-    bool     found = FUN_142612740(ptf->GetDocument(), &rect, idx);
+    bool     found = ptf->GetDocument()->GetExactCharBoundaries(&rect, idx);
     SetCharBoundariesResult(fn, found, rect);
 }
 
@@ -2745,7 +2734,7 @@ void AvmTextField::CopyToClipboard(const FnCall& fn)
         startPos = fn.Arg(1).ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
         endPos = fn.Arg(2).ToUInt32(fn.Env);
-    FUN_142617440(pek, startPos, endPos, richClipboard);
+    static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->CopyToClipboard(startPos, endPos, richClipboard);
 }
 
 // cutToClipboard([richClipboard, startIndex, endIndex])
@@ -2768,7 +2757,7 @@ void AvmTextField::CutToClipboard(const FnCall& fn)
         startPos = fn.Arg(1).ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
         endPos = fn.Arg(2).ToUInt32(fn.Env);
-    FUN_1426175b0(pek, startPos, endPos, richClipboard);
+    static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->CutToClipboard(startPos, endPos, richClipboard);
     ptf->SetDirtyFlag();
 }
 
@@ -2792,7 +2781,7 @@ void AvmTextField::PasteFromClipboard(const FnCall& fn)
         startPos = fn.Arg(1).ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
         endPos = fn.Arg(2).ToUInt32(fn.Env);
-    FUN_142619270(pek, startPos, endPos, richClipboard);
+    static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->PasteFromClipboard(startPos, endPos, richClipboard);
     ptf->SetDirtyFlag();
 }
 
@@ -2829,9 +2818,9 @@ void AvmTextField::ReplaceSel(const FnCall& fn)
     UPInt newEnd = startPos + len;
     FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newEnd, false);
     if (pparaFmt)
-        FUN_142615410(ptf->GetDocument(), pparaFmt, startPos, newEnd);
+        ptf->GetDocument()->SetParagraphFormat(*(const Render::Text::ParagraphFormat*)pparaFmt, startPos, newEnd);
     if (ptextFmt)
-        FUN_142615640(ptf->GetDocument(), ptextFmt, startPos, newEnd);
+        ptf->GetDocument()->SetTextFormat(*(const Render::Text::TextFormat*)ptextFmt, startPos, newEnd);
     ptf->SetDirtyFlag();
 }
 
@@ -2858,7 +2847,7 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     const void* ptextFmt = 0;
     const void* pparaFmt = 0;
     if (startPos < textLen)
-        FUN_1425996b0(DocView_GetStyledText(ptf->GetDocument()), &ptextFmt, &pparaFmt, startPos);
+        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat((const Render::Text::TextFormat**)&ptextFmt, (const Render::Text::ParagraphFormat**)&pparaFmt, startPos);
     else
     {
         ptextFmt = StyledText_GetDefaultTextFormat(DocView_GetStyledText(ptf->GetDocument()));
@@ -2887,14 +2876,14 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
         FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newLen, false);
     unsigned newEnd = startPos + len;
     if (pparaFmt)
-        FUN_142615410(ptf->GetDocument(), pparaFmt, startPos, newEnd);
+        ptf->GetDocument()->SetParagraphFormat(*(const Render::Text::ParagraphFormat*)pparaFmt, startPos, newEnd);
     if (ptextFmt)
     {
-        FUN_142615640(ptf->GetDocument(), ptextFmt, startPos, newEnd);
-        FUN_1424ae680(ptextFmt);
+        ptf->GetDocument()->SetTextFormat(*(const Render::Text::TextFormat*)ptextFmt, startPos, newEnd);
+        ((const Render::Text::TextFormat*)ptextFmt)->Release();
     }
     if (pparaFmt)
-        FUN_1424ae650(pparaFmt);
+        ((const Render::Text::ParagraphFormat*)pparaFmt)->Release();
     ptf->SetDirtyFlag();
 }
 
@@ -2914,8 +2903,8 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
         if (pobj && pobj->GetObjectType() == Object_TextFormat)
         {
             TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
-            FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), 0, SF_MAX_UPINT);
-            FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), 0, SF_MAX_UPINT);
+            ptf->GetDocument()->SetTextFormat(pfmtObj->GetTextFormat(), 0, SF_MAX_UPINT);
+            ptf->GetDocument()->SetParagraphFormat(pfmtObj->GetParagraphFormat(), 0, SF_MAX_UPINT);
             ptf->SetDirtyFlag();
         }
     }
@@ -2929,8 +2918,8 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
             {
                 TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
                 unsigned          upos    = unsigned(pos);
-                FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), upos, upos + 1);
-                FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), upos, upos + 1);
+                ptf->GetDocument()->SetTextFormat(pfmtObj->GetTextFormat(), upos, upos + 1);
+                ptf->GetDocument()->SetParagraphFormat(pfmtObj->GetParagraphFormat(), upos, upos + 1);
                 ptf->SetDirtyFlag();
             }
         }
@@ -2947,8 +2936,8 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
                 TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
                 unsigned          ustart  = unsigned(start);
                 unsigned          uend    = unsigned(end);
-                FUN_142615640(ptf->GetDocument(), &pfmtObj->GetTextFormat(), ustart, uend);
-                FUN_142615410(ptf->GetDocument(), &pfmtObj->GetParagraphFormat(), ustart, uend);
+                ptf->GetDocument()->SetTextFormat(pfmtObj->GetTextFormat(), ustart, uend);
+                ptf->GetDocument()->SetParagraphFormat(pfmtObj->GetParagraphFormat(), ustart, uend);
                 ptf->SetDirtyFlag();
             }
         }
@@ -2974,9 +2963,9 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
             (const Render::Text::TextFormat*)StyledText_GetDefaultTextFormat(pstyledText);
         const Render::Text::ParagraphFormat* pparaFmt =
             (const Render::Text::ParagraphFormat*)StyledText_GetDefaultParagraphFormat(pstyledText);
-        FUN_14259c250(DocView_GetStyledText(ptf->GetDocument()), ptextFmt->Merge(pfmtObj->GetTextFormat()));
+        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->SetDefaultTextFormat(ptextFmt->Merge(pfmtObj->GetTextFormat()));
         ptf->SetCompleteReformatReq();
-        FUN_14259c170(DocView_GetStyledText(ptf->GetDocument()), pparaFmt->Merge(pfmtObj->GetParagraphFormat()));
+        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->SetDefaultParagraphFormat(pparaFmt->Merge(pfmtObj->GetParagraphFormat()));
         ptf->SetCompleteReformatReq();
     }
 }
