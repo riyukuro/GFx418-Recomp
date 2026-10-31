@@ -2,11 +2,14 @@
 // and reader glue, 0x14002e548-0x140039ea8). Our own source, written from the exe; the leaked SDK copies were only used
 // to name things. The Scaleform GFx Video code before it stays in sfr_cri_02 (VS2012). The CRI library was built with
 // VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake): keep it C++03 (no auto,
-// decltype, variadic templates, brace-init or nullptr).
+// decltype, variadic templates, brace-init or nullptr). 0x1400356a0 and 0x140035800 are in sfr_cri_02d: they only
+// byte-match compiled as C (/TC), as the exe's criMvPly objs were.
 // MS2-UNIT: sfr_cri_02c
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002e548-0x140039ea8 .text$mn
+// MS2-RANGE: 0x14002e548-0x1400356a0 .text$mn
+// MS2-RANGE: 0x140035710-0x140035800 .text$mn
+// MS2-RANGE: 0x1400358d0-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // VS2008's <new> (use_ansi.h) adds /DEFAULTLIB:libcpmt under /MT. That static C++ library then wins over the hook DLL's
@@ -1853,28 +1856,6 @@ void FUN_140035bf0(void* player)
         FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
         frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
     }
-}
-
-// MS2-FUNCTIONAL: get the current alpha frame only while the movie is in a frame-producing state.
-// @0x140035800
-CriBool FUN_140035800(void* player, void* movieYuvState, void* outputInfo)
-{
-    CriBool result = 0;
-    crimvply_clearAlphaFrameInfoMembers(outputInfo);
-    if (!((CriMvDecoderHandleFields*)player)->AlphaDecoder)
-        return 0;
-    if (!crimvply_isUnderGetFrameCondition(player))
-        return 0;
-    CriUint64 frameInfo[10];
-    void* frame = FUN_140043fe0(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
-    if (frame != NULL)
-    {
-        FUN_140035480(player, outputInfo, frameInfo);
-        crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(movieYuvState,
-            (const CriMvAlphaDecoderFrameInfo*)frameInfo);
-        result = 1;
-    }
-    return result;
 }
 
 // MS2-FUNCTIONAL: forward the player's video decoder and all five caller outputs to its frame-pool query.
@@ -4705,17 +4686,6 @@ CriBool FUN_140034920(void* player)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: copy the decoded frame metadata and add the alpha frame metadata when available.
-// @0x1400356a0
-void FUN_1400356a0(void* player, void* output, void* alphaOutput,
-                   const CriMvFrameInfo* frameInfo, const void* alphaInfo)
-{
-    FUN_140035260(player, output, frameInfo, *(const CriUint64*)frameInfo,
-                  *(const CriUint32*)((const CriUint8*)frameInfo + 0x0c));
-    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
-        FUN_140035480(player, alphaOutput, alphaInfo);
-}
-
 // MS2-FUNCTIONAL: destroy player-owned decoders and queues under the player's handle lock.
 // @0x140030c70
 void FUN_140030c70(void* player)
