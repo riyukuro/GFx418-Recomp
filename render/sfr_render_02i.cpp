@@ -304,13 +304,15 @@ MS2_SF_NOINL bool DrawableImage::MapImageSource(ImageData* data, ImageBase* imag
     return mapImageSourceInline(data, image, rtMap);
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425eaff0
+#pragma strict_gs_check(push, on)
 void DrawableImage::ApplyFilter(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                                 Filter* filter)
 {
-    addCommand(DICommand_ApplyFilter(this, source, sourceRect, destPoint, filter));
+    DICommand_ApplyFilter cmd(this, source, sourceRect, destPoint, filter);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // @0x1425eb180
 void DrawableImage::CalcFilterRect(RectF* result, const Rect<SInt32>& sourceRect, Filter* filter)
@@ -327,28 +329,35 @@ void DrawableImage::ColorTransform(const Rect<SInt32>& rect, const Cxform& cxfor
     addCommand(DICommand_ColorTransform(this, rect, cxform));
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
+// MS2-FUNCTIONAL: the exe gives the GetSize temporary its own stack slot (ours shares the source-images slot), one lea differs
 // @0x1425eb390
+#pragma strict_gs_check(push, on)
 void DrawableImage::Compare(DrawableImage* image0, DrawableImage* image1)
 {
-    addCommand(DICommand_Compare(this, image0, image1));
+    DICommand_Compare cmd(this, image0, image1);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425eb570
+#pragma strict_gs_check(push, on)
 void DrawableImage::CopyChannel(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                                 ChannelBits sourceChannel, ChannelBits destChannel)
 {
-    addCommand(DICommand_CopyChannel(this, source, sourceRect, destPoint, sourceChannel, destChannel));
+    DICommand_CopyChannel cmd(this, source, sourceRect, destPoint, sourceChannel, destChannel);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425eb700
+#pragma strict_gs_check(push, on)
 void DrawableImage::CopyPixels(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                                DrawableImage* alphaSource, const Point<SInt32>* alphaPoint, bool mergeAlpha)
 {
-    addCommand(DICommand_CopyPixels(this, source, sourceRect, destPoint, alphaSource, alphaPoint, mergeAlpha));
+    DICommand_CopyPixels cmd(this, source, sourceRect, destPoint, alphaSource, alphaPoint, mergeAlpha);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // The viewport of a Draw root: the clip rectangle (or the whole image) of a render target the image's size.
 static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, const ImageSize& size, unsigned flags)
@@ -449,12 +458,14 @@ void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform
 }
 
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425ec860
+#pragma strict_gs_check(push, on)
 void DrawableImage::FillRect(const Rect<SInt32>& rect, Color color)
 {
-    addCommand(DICommand_FillRect(this, rect, color));
+    DICommand_FillRect cmd(this, rect, color);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // @0x1425ec9e0
 void DrawableImage::FloodFill(const Point<SInt32>& pt, Color color)
@@ -507,15 +518,17 @@ Color DrawableImage::GetPixel32(SInt32 x, SInt32 y)
     return MappedData.GetPixelInScanline(MappedData.GetScanline(y), x);
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425edc00
+#pragma strict_gs_check(push, on)
 void DrawableImage::Merge(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                           unsigned redMultiplier, unsigned greenMultiplier, unsigned blueMultiplier,
                           unsigned alphaMultiplier)
 {
-    addCommand(DICommand_Merge(this, source, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier,
-                               alphaMultiplier));
+    DICommand_Merge cmd(this, source, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier,
+                           alphaMultiplier);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // @0x1425eddc0
 void DrawableImage::Noise(unsigned randomSeed, unsigned low, unsigned high, unsigned channelMask, bool grayScale)
@@ -523,13 +536,15 @@ void DrawableImage::Noise(unsigned randomSeed, unsigned low, unsigned high, unsi
     addCommand(DICommand_Noise(this, randomSeed, low, high, channelMask, grayScale));
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425ee140
+#pragma strict_gs_check(push, on)
 void DrawableImage::PaletteMap(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
                                UInt32** channels)
 {
-    addCommand(DICommand_PaletteMap(this, source, sourceRect, destPoint, channels));
+    DICommand_PaletteMap cmd(this, source, sourceRect, destPoint, channels);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // @0x1425ee4d0
 void DrawableImage::PerlinNoise(float frequencyX, float frequencyY, unsigned numOctaves, unsigned randomSeed,
@@ -617,12 +632,15 @@ unsigned DrawableImage::PixelDissolve(DrawableImage* source, const Rect<SInt32>&
     return seed;
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
+// MS2-FUNCTIONAL: the exe gives each of the three GetSize temporaries its own stack slot (frame 0x10 larger); ours shares them
 // @0x1425eed00
+#pragma strict_gs_check(push, on)
 void DrawableImage::Scroll(int x, int y)
 {
-    addCommand(DICommand_Scroll(this, x, y));
+    DICommand_Scroll cmd(this, x, y);
+    addCommand(cmd);
 }
+#pragma strict_gs_check(pop)
 
 // @0x1425ef560
 void DrawableImage::addToGPUModifiedListRT()
