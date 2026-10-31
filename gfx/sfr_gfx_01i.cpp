@@ -57,6 +57,7 @@
 #include "../include/kernel/sf_simd.h"
 #include "../include/gfx/gfx_asutils.h"
 #include "../include/render/render_shapedatafloatmp.h"
+#include "../include/gfx/gfx_types.h"
 #include <stdlib.h>
 
 namespace Scaleform {
@@ -1635,7 +1636,15 @@ Movie::~Movie()
 namespace Scaleform { namespace Render {
 
 // The root's node data: a container's, plus the viewport it is drawn into and the color the frame is cleared to.
-class TreeRoot::NodeData : public TreeContainer::NodeData
+// The SDK's ContextData_ImplMixin step: the root's vftable goes in once the container part is built, before the
+// viewport is constructed.
+struct TreeRootNodeDataBase : public TreeContainer::NodeData
+{
+    TreeRootNodeDataBase() : TreeContainer::NodeData(ET_Root) { pVTable = TreeRootNodeDataVTable; }
+    TreeRootNodeDataBase(const TreeContainer::NodeData& src) : TreeContainer::NodeData(src) {}
+};
+
+class TreeRoot::NodeData : public TreeRootNodeDataBase
 {
 public:
     NodeData();
@@ -1646,16 +1655,15 @@ public:
 };
 
 // @0x14256a710
-// MS2-FUNCTIONAL: the node-data vtable store is scheduled after the viewport stores (the exe stores it first)
-SF_NOINLINE TreeRoot::NodeData::NodeData() : TreeContainer::NodeData(ET_Root), BGColor(0)
+SF_NOINLINE TreeRoot::NodeData::NodeData()
+    : BGColor(0)
 {
-    pVTable = TreeRootNodeDataVTable;
 }
 
 // The copy a snapshot clones: the root's vftable goes in before the viewport is copied.
 // @0x14256a630
 SF_NOINLINE TreeRoot::NodeData::NodeData(const NodeData& src)
-    : TreeContainer::NodeData(src), VP((pVTable = TreeRootNodeDataVTable, src.VP)), BGColor(src.BGColor)
+    : TreeRootNodeDataBase(src), VP((pVTable = TreeRootNodeDataVTable, src.VP)), BGColor(src.BGColor)
 {
 }
 
@@ -2735,13 +2743,12 @@ void MovieImpl::SetKeyboardFocusTo(InteractiveObject* ch, unsigned controllerIdx
     if (SetFocusTo(ch, controllerIdx, fmt) && focusGroup.FocusRectShown)
     {
         // The rect stays up only while the character and all its parents are visible.
-        InteractiveObject* p = ch;
-        while (p && p->GetVisible())
-            p = p->GetParent();
-        bool show = (p == NULL);
-        if (focusGroup.FocusRectShown != show)
+        InteractiveObject* cur = ch;
+        for (; cur && cur->GetVisible(); cur = cur->GetParent())
+            ;
+        if (focusGroup.FocusRectShown != (!cur))
             FocusRectChanged = true;
-        focusGroup.FocusRectShown = show;
+        focusGroup.FocusRectShown = !cur;
     }
 }
 
@@ -2922,43 +2929,59 @@ void MovieImpl::CheckMouseCursorType(unsigned mouseIdx, InteractiveObject* ptopM
 // URL-decoded.
 bool SF_STDCALL MovieImpl::ReadTextData(String* pdata, File* pfile, int* pfileLen, bool urlEncoded)
 {
-    *pfileLen = pfile->GetLength();
-    if (*pfileLen == 0)
+    if ((*pfileLen = pfile->GetLength()) == 0)
         return false;
-    String str;
-    UByte* ptextData = (UByte*)SF_ALLOC(*pfileLen, Stat_Default_Mem);
-    pfile->Read(ptextData, *pfileLen);
 
-    UInt16 bom = *(UInt16*)ptextData;
-    UByte  bomHi = UByte(bom >> 8);
-    if (bom == 0xFEFF)
+    String str;
+
+    UByte* td = (UByte*)SF_ALLOC(*pfileLen, Stat_Default_Mem);
+    pfile->Read(td, *pfileLen);
+
+    wchar_t* wcsptr     = NULL;
+    UByte*   ptextData  = td;
+    int      textLength = *pfileLen;
+
+    // UTF-16 in either byte order is brought to the system's
+    UInt16* prefix16 = (UInt16*)td;
+    if (prefix16[0] == Alg::ByteUtil::BEToSystem((UInt16)0xFFFE)) // little endian
     {
-        // little endian UTF-16
-        str.AppendString((const wchar_t*)(ptextData + 2), *pfileLen / 2 - 1);
+        prefix16++;
+        ptextData  = (UByte*)prefix16;
+        textLength = (*pfileLen / 2) - 1;
+        for (int i = 0; i < textLength; i++)
+            prefix16[i] = (wchar_t)Alg::ByteUtil::LEToSystem(prefix16[i]);
+        str.AppendString((const wchar_t*)ptextData, textLength);
     }
-    else if (bom == 0xFFFE)
+    else if (prefix16[0] == Alg::ByteUtil::BEToSystem((UInt16)0xFEFF)) // big endian
     {
-        // big endian UTF-16: swap the bytes first
-        wchar_t* pchars = (wchar_t*)(ptextData + 2);
-        int      len    = *pfileLen / 2 - 1;
-        for (int i = 0; i < len; ++i)
-            pchars[i] = (wchar_t)((pchars[i] << 8) | (pchars[i] >> 8));
-        str.AppendString(pchars, len);
+        prefix16++;
+        ptextData  = (UByte*)prefix16;
+        textLength = (*pfileLen / 2) - 1;
+        for (int i = 0; i < textLength; i++)
+            prefix16[i] = Alg::ByteUtil::BEToSystem(prefix16[i]);
+        str.AppendString((const wchar_t*)ptextData, textLength);
     }
-    else if (*pfileLen > 2 && UByte(bom) == 0xEF && bomHi == 0xBB && ptextData[2] == 0xBF)
+    else if (*pfileLen > 2 && td[0] == 0xEF && td[1] == 0xBB && td[2] == 0xBF)
     {
-        str.AppendString((const char*)(ptextData + 3), *pfileLen - 3);
+        // UTF-8 with explicit BOM
+        ptextData  += 3;
+        textLength -= 3;
+        str.AppendString((const char*)ptextData, textLength);
     }
     else
     {
-        str.AppendString((const char*)ptextData, *pfileLen);
+        str.AppendString((const char*)ptextData, textLength);
     }
+
+    if (wcsptr)
+        SF_FREE(wcsptr);
 
     if (urlEncoded)
         ASUtils::Unescape(str.ToCStr(), str.GetSize(), pdata);
     else
         *pdata = str;
-    SF_FREE(ptextData);
+
+    SF_FREE(td);
     return true;
 }
 
@@ -3198,9 +3221,9 @@ bool MovieImpl::ReleaseLevelMovie(int level)
             plevel->ForceShutdown();
             RemoveLevelAtInline(MovieLevels, MovieLevels.GetSize() - 1);
         }
-        FrameTime = 1.0f / 12;
         pMainMovie = NULL;
-        Flags |= 0x100;   // the level clips changed
+        FrameTime  = 1.0f / 12.0f;
+        G_SetFlag<Flag_LevelClipsChanged>(Flags, true);
         return true;
     }
     for (unsigned i = 0; i < MovieLevels.GetSize(); i++)
