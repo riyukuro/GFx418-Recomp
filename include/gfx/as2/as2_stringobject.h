@@ -17,6 +17,7 @@ public:
     ASString sValue; // +0x68
 
     StringObject(Environment* penv);                     // exe 0x142920ea0: ""
+    StringObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     StringObject(Environment* penv, const ASString& val); // exe 0x142920f30
     // The prototype instance starts out as "".
     StringObject(ASStringContext* psc, Object* pprototype) : Object(psc), sValue(psc->GetBuiltin(ASBuiltin_empty_))

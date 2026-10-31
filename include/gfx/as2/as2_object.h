@@ -270,6 +270,10 @@ public:
     }
 };
 
+// The CreateNewObject natives (sfr_as2_04) inline some object ctors; the tag overloads
+// give them that inline body without a second copy of the out-of-line ctor.
+struct ObjectInlineCtorTag {};
+
 // Script object: GC base at +0, ObjectInterface at +0x20. 0x68 bytes.
 class Object : public ASRefCountBase<Object>, public ObjectInterface
 {
@@ -383,6 +387,7 @@ public:
 protected:
     FunctionObject(ASRefCountCollector* pcc);
     FunctionObject(ASStringContext* psc); // exe 0x14291c090
+    FunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
     FunctionObject(Environment* penv); // exe 0x14291c0c0
 };
 
@@ -408,6 +413,7 @@ protected:
 
     CFunctionObject(ASRefCountCollector* pcc);
     CFunctionObject(ASStringContext* psc); // exe 0x142919d70
+    CFunctionObject(ASStringContext* psc, ObjectInlineCtorTag); // inline in sfr_as2_04
     // A function object without a native (new Function()).
     CFunctionObject(Environment* penv); // exe 0x142919db0
 

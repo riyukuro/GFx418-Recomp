@@ -76,6 +76,7 @@ public:
     static bool InitializeInstance(ASStringContext* psc, ObjectInterface* pobj);
 
     AsBroadcaster(Environment* penv); // exe 0x142918470
+    AsBroadcaster(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     AsBroadcaster(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
         Set__proto__(psc, pprototype);
@@ -101,6 +102,7 @@ class ExternalInterface : public Object
 {
 public:
     ExternalInterface(Environment* penv); // exe 0x14291bbd0
+    ExternalInterface(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     ExternalInterface(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
         Set__proto__(psc, pprototype);
@@ -228,6 +230,7 @@ public:
     bool BValue; // +0x68
 
     BooleanObject(Environment* penv);         // exe 0x142919a00: false
+    BooleanObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     BooleanObject(Environment* penv, bool v); // exe 0x142919a70
     BooleanObject(ASStringContext* psc, Object* pprototype) : Object(psc), BValue(false)
     {
@@ -284,6 +287,7 @@ public:
     WeakPtr<InteractiveObject> pCharacter; // +0x68
 
     ColorObject(Environment* penv, InteractiveObject* ptarget); // exe 0x14291ad30
+    ColorObject(Environment* penv, InteractiveObject* ptarget, ObjectInlineCtorTag); // inline in sfr_as2_04
     // The prototype instance has no target.
     ColorObject(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
@@ -324,6 +328,7 @@ public:
     StringHashLH<ProgressDesc> ProgressInfo; // +0x68 by URL
 
     MovieClipLoader(Environment* penv); // exe 0x14291eca0
+    MovieClipLoader(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     // The prototype instance tracks nothing.
     MovieClipLoader(ASStringContext* psc, Object* pprototype) : Object(psc) { Set__proto__(psc, pprototype); }
 
@@ -523,6 +528,7 @@ public:
     StringLH StringValue; // +0x70 text of the last ToString
 
     NumberObject(Environment* penv);           // exe 0x14291f430: 0
+    NumberObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     NumberObject(Environment* penv, Number v); // exe 0x14291f4b0
     // The prototype instance holds 0.
     NumberObject(ASStringContext* psc, Object* pprototype) : Object(psc), NumberValue(0) { Set__proto__(psc, pprototype); }
@@ -642,6 +648,7 @@ protected:
     template<class BaseClass, class GASEnvironment> friend class Prototype;
     TextFieldObject(ASStringContext* psc, Object* pprototype); // exe 0x142921520
     TextFieldObject(Environment* penv);                        // exe 0x142921580
+    TextFieldObject(Environment* penv, ObjectInlineCtorTag); // inline in sfr_as2_04
     TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField); // exe 0x1429215f0
 
     virtual void Finalize_GC(); // exe 0x1429430b0

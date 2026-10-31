@@ -66,6 +66,7 @@ class BevelFilterObject : public BitmapFilterObject
 public:
     BevelFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
     BevelFilterObject(Environment* penv); // exe 0x142918d90
+    BevelFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Bevel) {}
 
     virtual ObjectType GetObjectType() const; // exe 0x142954190
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -80,6 +81,7 @@ class BlurFilterObject : public BitmapFilterObject
 public:
     BlurFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
     BlurFilterObject(Environment* penv); // exe 0x142919830
+    BlurFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Blur) {}
 
     virtual ObjectType GetObjectType() const; // exe 0x1429541c0
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -108,6 +110,7 @@ class DropShadowFilterObject : public BitmapFilterObject
 public:
     DropShadowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
     DropShadowFilterObject(Environment* penv); // exe 0x14291b7d0
+    DropShadowFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Shadow) {}
 
     virtual ObjectType GetObjectType() const; // exe 0x142954230
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,
@@ -122,6 +125,7 @@ class GlowFilterObject : public BitmapFilterObject
 public:
     GlowFilterObject(ASStringContext* psc, Object* pprototype) : BitmapFilterObject(psc, pprototype) {}
     GlowFilterObject(Environment* penv); // exe 0x14291cde0
+    GlowFilterObject(Environment* penv, ObjectInlineCtorTag) : BitmapFilterObject(penv, Render::Filter_Glow) {}
 
     virtual ObjectType GetObjectType() const; // exe 0x142954250
     virtual bool SetMember(Environment* penv, const ASString& name, const Value& val,

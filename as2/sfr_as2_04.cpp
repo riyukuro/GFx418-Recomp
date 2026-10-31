@@ -393,11 +393,17 @@ Object* ArrayCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the AsBroadcaster(Environment*) ctor (sfr_as2_03)
+// The exe inlines the AsBroadcaster ctor here.
+inline AsBroadcaster::AsBroadcaster(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_AsBroadcaster));
+}
+
 // @0x1429367e0
 Object* AsBroadcasterCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) AsBroadcaster(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) AsBroadcaster(penv, ObjectInlineCtorTag());
 }
 
 // @0x142936880
@@ -406,11 +412,10 @@ Object* AsFunctionObject::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) Object(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the BevelFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x1429368c0
 Object* BevelFilterCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) BevelFilterObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) BevelFilterObject(penv, ObjectInlineCtorTag());
 }
 
 // "new BitmapData" without arguments makes no object.
@@ -420,18 +425,23 @@ Object* BitmapDataCtorFunction::CreateNewObject(Environment*) const
     return 0;
 }
 
-// MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x142936940
 Object* BlurFilterCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) BlurFilterObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) BlurFilterObject(penv, ObjectInlineCtorTag());
 }
 
-// MS2-FUNCTIONAL the exe inlines the BooleanObject(Environment*) ctor (sfr_as2_03)
+// The exe inlines the BooleanObject ctor here.
+inline BooleanObject::BooleanObject(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv), BValue(false)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Boolean));
+}
+
 // @0x1429369b0
 Object* BooleanCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) BooleanObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) BooleanObject(penv, ObjectInlineCtorTag());
 }
 
 // @0x142936a50
@@ -440,11 +450,17 @@ Object* ButtonCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) ButtonObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the ColorObject(Environment*) ctor (sfr_as2_03)
+// The exe inlines the ColorObject ctor here.
+inline ColorObject::ColorObject(Environment* penv, InteractiveObject* ptarget, ObjectInlineCtorTag)
+    : Object(penv), pCharacter(ptarget)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Color));
+}
+
 // @0x142936b10
 Object* ColorCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) ColorObject(penv, 0);
+    return SF_HEAP_NEW(penv->GetHeap()) ColorObject(penv, 0, ObjectInlineCtorTag());
 }
 
 // @0x142936bc0
@@ -465,25 +481,40 @@ Object* DateCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) DateObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the DropShadowFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x142936c80
 Object* DropShadowFilterCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) DropShadowFilterObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) DropShadowFilterObject(penv, ObjectInlineCtorTag());
 }
 
-// MS2-FUNCTIONAL the exe inlines the ExternalInterface(Environment*) ctor (sfr_as2_03)
+// The exe inlines the ExternalInterface ctor here.
+inline ExternalInterface::ExternalInterface(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_ExternalInterface));
+}
+
 // @0x142936cf0
 Object* ExternalInterfaceCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) ExternalInterface(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) ExternalInterface(penv, ObjectInlineCtorTag());
 }
 
-// MS2-FUNCTIONAL the exe inlines the CFunctionObject(ASStringContext*) ctor (sfr_as2_03)
+// The exe inlines the CFunctionObject ctor, and its FunctionObject base ctor, here.
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(0)
+{
+}
+
 // @0x142936d90
 Object* FunctionCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) CFunctionObject(penv->GetSC());
+    return SF_HEAP_NEW(penv->GetHeap()) CFunctionObject(penv->GetSC(), ObjectInlineCtorTag());
 }
 
 // @0x142936e00
@@ -504,11 +535,10 @@ Object* GASMatrixCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) MatrixObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the GlowFilterObject(Environment*) ctor (sfr_as2_03)
 // @0x142936e90
 Object* GlowFilterCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) GlowFilterObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) GlowFilterObject(penv, ObjectInlineCtorTag());
 }
 
 // @0x142936f30
@@ -517,18 +547,35 @@ Object* MovieClipCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) MovieClipObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the MovieClipLoader(Environment*) ctor (sfr_as2_03)
+// The exe inlines the MovieClipLoader ctor here.
+inline MovieClipLoader::MovieClipLoader(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv)
+{
+    ASStringContext* psc = penv->GetSC();
+    static_cast<ObjectInterface*>(this)->Set__proto__(psc, penv->GetPrototype(ASBuiltin_MovieClipLoader));
+    ObjectInterface* pobj = this;
+    if (pobj)
+        NameFunction::AddConstMembers(pobj, psc, AsBroadcasterProto::FunctionTable, PropFlags::PropFlag_DontEnum);
+    AsBroadcaster::InitializeInstance(psc, pobj);
+}
+
 // @0x142936ff0
 Object* MovieClipLoaderCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) MovieClipLoader(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) MovieClipLoader(penv, ObjectInlineCtorTag());
 }
 
-// MS2-FUNCTIONAL the exe inlines the NumberObject(Environment*) ctor (sfr_as2_03)
+// The exe inlines the NumberObject ctor here.
+inline NumberObject::NumberObject(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv), NumberValue(0)
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Number));
+}
+
 // @0x1429370c0
 Object* NumberCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) NumberObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) NumberObject(penv, ObjectInlineCtorTag());
 }
 
 // @0x142937170
@@ -555,11 +602,17 @@ Object* SharedObjectCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) SharedObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the StringObject(Environment*) ctor (sfr_as2_03)
+// The exe inlines the StringObject ctor here.
+inline StringObject::StringObject(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv), sValue(penv->GetBuiltin(ASBuiltin_empty_))
+{
+    static_cast<ObjectInterface*>(this)->Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_String));
+}
+
 // @0x142937290
 Object* StringCtorFunction::CreateNewObject(Environment* penv) const
 {
-    StringObject* pobj = SF_HEAP_NEW(penv->GetHeap()) StringObject(penv);
+    StringObject* pobj = SF_HEAP_NEW(penv->GetHeap()) StringObject(penv, ObjectInlineCtorTag());
     // length is computed by GetMemberRaw; the unset member only keeps its slot
     ASStringContext* psc = penv->GetSC();
     pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_length), Value(Value::UNSET), PropFlags());
@@ -572,11 +625,17 @@ Object* StyleSheetCtorFunction::CreateNewObject(Environment* penv) const
     return SF_HEAP_NEW(penv->GetHeap()) StyleSheetObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe inlines the TextFieldObject(Environment*) ctor (sfr_as2_03)
+// The exe inlines the TextFieldObject ctor here.
+inline TextFieldObject::TextFieldObject(Environment* penv, ObjectInlineCtorTag)
+    : Object(penv), pIMECompositionStringStyles(0)
+{
+    Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_TextField));
+}
+
 // @0x1429373c0
 Object* TextFieldCtorFunction::CreateNewObject(Environment* penv) const
 {
-    return SF_HEAP_NEW(penv->GetHeap()) TextFieldObject(penv);
+    return SF_HEAP_NEW(penv->GetHeap()) TextFieldObject(penv, ObjectInlineCtorTag());
 }
 
 // @0x142937470
@@ -1313,7 +1372,7 @@ protected:
 
 public:
     UserDefinedFunctionObject(ASStringContext* psc, FunctionHandler* pfc, void* puserData)
-        : FunctionObject(psc), pContext(pfc), pUserData(puserData)
+        : FunctionObject(psc, ObjectInlineCtorTag()), pContext(pfc), pUserData(puserData)
     {
         Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
     }
@@ -1629,3 +1688,34 @@ bool IntervalTimer::ClearFor(MovieImpl*, MovieDefImpl*)
 // MS2-PIN: ??_GUserDefinedFunctionObject@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292da40
 // MS2-PIN: ??_7LoadQueueEntry@GFx@Scaleform@@6B@ 0x14317c9d8
 // MS2-PIN: ??_7GFxAS2LoadQueueEntry@AS2@GFx@Scaleform@@6B@ 0x143217748
+// The vftables of the objects whose ctors CreateNewObject inlines (out of line in sfr_as2_03).
+// MS2-PIN: ??_7AsBroadcaster@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321bdc8
+// MS2-PIN: ??_7AsBroadcaster@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321be10
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f848
+// MS2-PIN: ??_7BevelFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f890
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f438
+// MS2-PIN: ??_7BlurFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f480
+// MS2-PIN: ??_7BooleanObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b550
+// MS2-PIN: ??_7BooleanObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b598
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
+// MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432188a0
+// MS2-PIN: ??_7ColorObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432188e8
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ec18
+// MS2-PIN: ??_7DropShadowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ec60
+// MS2-PIN: ??_7ExternalInterface@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321ce68
+// MS2-PIN: ??_7ExternalInterface@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321ceb0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321f028
+// MS2-PIN: ??_7GlowFilterObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321f070
+// MS2-PIN: ??_7MovieClipLoader@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143216a50
+// MS2-PIN: ??_7MovieClipLoader@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143216ac0
+// MS2-PIN: ??_7NumberObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321b140
+// MS2-PIN: ??_7NumberObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321b188
+// MS2-PIN: ??_7RefCountImpl@Scaleform@@6B@ 0x142dc9d58
+// MS2-PIN: ??_7RefCountImplCore@Scaleform@@6B@ 0x142dc9d48
+// MS2-PIN: ??_7StringObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x14321a920
+// MS2-PIN: ??_7StringObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x14321a968
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8
