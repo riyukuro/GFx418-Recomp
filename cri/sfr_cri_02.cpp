@@ -73,7 +73,7 @@ unsigned __int64 FUN_1425e3590(void);                                   // Timer
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
 void     FUN_14257dcd0(void* p);
-void     FUN_14258a350(void* lock, CriSint32 spinCount, CriSint32 flags);
+void     FUN_14258a350(void* lock, bool recursive, bool lockNow);   // Mutex::Mutex
 void     FUN_142582300(void* queue, CriSint32 count, CriSint32 flags);
 void     FUN_14258a620(void* sync);
 void     FUN_14258a810(void* sync);
@@ -1173,7 +1173,7 @@ void VideoReader::ReadFile(UByte* buffer, SInt64 size)
     ReadStatus = ASYNC_STATUS_ERROR;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
+// MS2-FUNCTIONAL: the exe AddRefs the config inline (non-atomic inc [config+8]), not via RefCountImpl::AddRef
 // @0x14002ddd0
 void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
 {
@@ -1239,7 +1239,6 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
     return memory ? (VideoReader*)FUN_14002ddd0(memory, this) : NULL;
 }
 
-// MS2-FUNCTIONAL: initialize the threaded reader configuration, intrusive reader list and synchronization objects.
 // @0x14002e450
 void* FUN_14002e450(void* object, void* heap, void* opener)
 {
@@ -1251,23 +1250,29 @@ void* FUN_14002e450(void* object, void* heap, void* opener)
     if (opener)
         FUN_14257dc30(opener);
     fields[3] = opener;
-    fields[4] = NULL;
-    fields[5] = NULL;
-    fields[6] = NULL;
+    _ReadWriteBarrier();   // the member initializers run in order: Ptr<FileOpenerBase>, then Readers
+    CriUint64* readers = (CriUint64*)(fields + 4);   // Array<VideoReader*>
+    readers[0] = 0;
+    readers[1] = 0;
+    readers[2] = 0;
     fields[0] = (void*)DAT_1431b9430;
+    _ReadWriteBarrier();   // the vftable is stored before IOEnabled and the pool
     *((CriUint8*)object + 0x38) = 1;
-    fields[8] = NULL;
-    fields[9] = NULL;
-    words[20] = 0x7f;
-    fields[11] = NULL;
-    fields[12] = fields + 8;
+    _ReadWriteBarrier();
+    void** pool = fields + 8;   // request node pool
+    pool[0] = NULL;
+    pool[1] = NULL;
+    *(CriUint32*)(pool + 2) = 0x7f;
+    pool[3] = NULL;
+    pool[4] = pool;
+    _ReadWriteBarrier();
     void** sentinel = fields + 13;
     sentinel[0] = sentinel;
     sentinel[1] = sentinel;
-    FUN_14258a350(fields + 15, 1, 0);
+    FUN_14258a350(fields + 15, true, false);
     FUN_142582300(fields + 20, 0, 0);
-    FUN_14258a620(fields + 32);
     fields[31] = NULL;
+    FUN_14258a620(fields + 32);
     fields[33] = NULL;
     return object;
 }
@@ -1819,35 +1824,29 @@ void FUN_14002c4b0(CriUint64* array, const CriUint32* value)
     FUN_140007370(inner, *(const CriUint64*)(value + 6), *(const CriUint64*)(value + 8));
 }
 
-// MS2-FUNCTIONAL: copy a vector of paired strings after resizing its destination.
 // @0x14002ba30
-CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source)
+__declspec(noinline) CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source)
 {
+    // Array::operator=: Resize, then assign each string pair; Data is reloaded after every assignment
     FUN_14002aa30(destination, source[1]);
-    CriUint8* out = (CriUint8*)destination[0];
-    const CriUint8* in = (const CriUint8*)source[0];
     for (CriUint64 i = 0; i < destination[1]; ++i)
     {
+        const CriUint8* in = (const CriUint8*)source[0] + i * 0x10;
+        CriUint8* out = (CriUint8*)destination[0] + i * 0x10;
         FUN_142585580(out, in);
         FUN_142585580(out + 8, in + 8);
-        out += 0x10;
-        in += 0x10;
     }
     return destination;
 }
 
-// MS2-FUNCTIONAL: copy the 0x30-byte video records and their nested paired-string vectors.
 // @0x14002c550
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
 {
     FUN_14000bd60(destination, source[1]);
-    CriUint8* out = (CriUint8*)destination[0];
-    const CriUint8* in = (const CriUint8*)source[0];
     for (CriUint64 i = 0; i < destination[1]; ++i)
     {
-        CriVideoRecordCopyView* record = (CriVideoRecordCopyView*)(out + i * sizeof(CriVideoRecordCopyView));
-        const CriVideoRecordCopyView* sourceRecord =
-            (const CriVideoRecordCopyView*)(in + i * sizeof(CriVideoRecordCopyView));
+        const CriVideoRecordCopyView* sourceRecord = (const CriVideoRecordCopyView*)source[0] + i;
+        CriVideoRecordCopyView* record = (CriVideoRecordCopyView*)destination[0] + i;
         record->Type = sourceRecord->Type;
         FUN_142585580(&record->Name, &sourceRecord->Name);
         record->Flags = sourceRecord->Flags;
