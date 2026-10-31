@@ -3670,9 +3670,9 @@ void FuncTreeItem::ResetTreeIds(FuncTreeItem* other)
 void* CreateAudioEventManager()
 {
     auto** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    unsigned flags[2] = { 2, 0 };
+    // The exe allocates it with no AllocInfo (r8 = 0), so it lands in the default memory stat.
     auto* object = static_cast<unsigned char*>(reinterpret_cast<void* (*)(void*, std::size_t, const void*)>(heapVtable[10])(
-        DAT_143b15f60, 0xf8, flags));
+        DAT_143b15f60, 0xf8, nullptr));
     if (!object)
         return nullptr;
     *reinterpret_cast<void***>(object) = &AS3AudioEventVtable;
