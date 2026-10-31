@@ -1274,14 +1274,13 @@ void VideoProviderNetStream::SendNotification(NetStreamInterface::Notification n
 }
 
 // @0x140025990
-// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SendSubtitle()
 {
     if (strncmp(pSubtitle, pSubtitleTmp, VInfo.MaxSubtitleLen) != 0)
     {
         strncpy_s(pSubtitle, VInfo.MaxSubtitleLen, pSubtitleTmp, VInfo.MaxSubtitleLen);
         if (pNetStreamInterface)
-            pNetStreamInterface->ExecuteOnSubtitle(String(pSubtitle));
+            pNetStreamInterface->ExecuteOnSubtitle(pSubtitle);
     }
 }
 
@@ -1670,23 +1669,25 @@ void CriMvSystemTimer::SetSyncObject(VideoPlayer::SyncObject* psync)
     pSyncObj = psync;
 }
 
-// MS2-FUNCTIONAL: ; register allocation and block order differ
-// @0x1400292f0
-void VideoDecoderSmp::StopDecoding(VideoPlayer* pplayer)
+// VideoDecoderSmp::FindPlayer, inlined at every use.
+static inline int FindPlayer(Array<VideoPlayerImpl*>& players, VideoPlayerImpl* pplayer)
 {
-    int idx = -1;
-    for (UPInt i = 0; i < Players.GetSize(); i++)
+    for (UPInt i = 0; i < players.GetSize(); ++i)
     {
-        if (Players[i] == pplayer)
-        {
-            idx = (int)i;
-            break;
-        }
+        if (players[i] == pplayer)
+            return (int)i;
     }
-    if (idx != -1)
+    return -1;
+}
+
+// @0x1400292f0
+void VideoDecoderSmp::StopDecoding(VideoPlayer* pp)
+{
+    VideoPlayerImpl* pplayer = (VideoPlayerImpl*)pp;
+    if (FindPlayer(Players, pplayer) != -1)
     {
-        static_cast<VideoPlayerImpl*>(pplayer)->pPlayer->Stop();
-        ExecuteDecode(pplayer);
+        pplayer->pPlayer->Stop();
+        ExecuteDecode(pp);
     }
 }
 
