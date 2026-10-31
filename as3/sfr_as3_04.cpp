@@ -5575,39 +5575,42 @@ namespace InstanceTraits
         result.SetUInt32(n);
     }
 
-    // the parameter count of ABC method ind of the file of tr
-    static bool GetAbcParamCount(const Traits& tr, SInt32 ind, UInt32& count)
-    {
-        VMAbcFile* file = tr.GetFilePtr();
-        if (!file)
-            return false;
-        count = (UInt32)file->GetAbcFile().Methods.Info[ind]->ParamTypes.GetSize();
-        return true;
-    }
-
-    // MS2-FUNCTIONAL: written on the value kinds (kMethodInd: index + traits; a closure: its object's traits)
+    // MethodInd::lengthGet: the parameter count of the ABC method (a closure: through its object's traits)
     // @0x1424292c0
     void FUN_1424292c0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
                        const Value* argv)
     {
         SF_UNUSED4(ti, vm, argc, argv);
+        const SInt32 ind = _this.GetMethodInd();
         const Traits& tr = _this.GetKind() == Value::kMethodInd ? _this.GetTraits() : _this.GetClosure()->GetTraits();
-        UInt32 count;
-        if (GetAbcParamCount(tr, _this.GetMethodInd(), count))
-            result.SetUInt32(count);
+
+        if (tr.GetFilePtr() == NULL)
+            return;
+
+        const VMAbcFile& file = *tr.GetFilePtr();
+        const UPInt count = file.GetAbcFile().Methods.Info[ind]->ParamTypes.GetSize();
+
+        result.SetUInt32(static_cast<UInt32>(count));
     }
 
-    // MS2-FUNCTIONAL: written on the value kinds (kVTableInd: slot + traits; a closure: its object's traits)
+    // VTableInd::lengthGet: the parameter count of the ABC method in the vtable slot
     // @0x1424293d0
     void FUN_1424293d0(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
                        const Value* argv)
     {
         SF_UNUSED4(ti, vm, argc, argv);
+        const SInt32 vt_ind = _this.GetVTableInd();
         const Traits& tr = _this.GetKind() == Value::kVTableInd ? _this.GetTraits() : _this.GetClosure()->GetTraits();
-        const SInt32 ind = tr.GetVT().VTMethods[(UPInt)(UInt32)_this.GetVTableInd()].GetMethodInd();
-        UInt32 count;
-        if (GetAbcParamCount(tr, ind, count))
-            result.SetUInt32(count);
+        const Value& real_value = tr.GetVT().VTMethods[(UPInt)(UInt32)vt_ind];
+        const SInt32 ind = real_value.GetMethodInd();
+
+        if (tr.GetFilePtr() == NULL)
+            return;
+
+        const VMAbcFile& file = *tr.GetFilePtr();
+        const UPInt count = file.GetAbcFile().Methods.Info[ind]->ParamTypes.GetSize();
+
+        result.SetUInt32(static_cast<UInt32>(count));
     }
 
 namespace Instances { namespace fl
