@@ -36,8 +36,7 @@ template<class Char> struct SGMLStackElemDesc
     TextFormat TextFmt;
     ParagraphFormat ParaFmt;
     SGMLStackElemDesc()
-        : pElemName(0), ElemNameSize(0), pElemDesc(0), StartPos(0),
-          TextFmt(Memory::GetHeapByAddress(&pElemName)), ParaFmt()
+        : pElemName(0), ElemNameSize(0), pElemDesc(0), TextFmt(Memory::GetHeapByAddress(&pElemName))
     {
     }
     explicit SGMLStackElemDesc(MemoryHeap* pheap)
