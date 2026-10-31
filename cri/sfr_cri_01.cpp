@@ -1896,7 +1896,7 @@ extern "C" void* DAT_143b15f60;
 
 // MS2-FUNCTIONAL: resize a Scaleform heap-backed pointer array, keeping capacity four-element aligned.
 // @0x14001c570
-void FUN_14001c570(CriUint64* array, void*, CriUint64 requestedCapacity)
+__declspec(noinline) void FUN_14001c570(CriUint64* array, void*, CriUint64 requestedCapacity)
 {
     void* oldData = (void*)(uintptr_t)array[0];
     CriUint64 capacity = requestedCapacity == 0 ? 0 : (requestedCapacity + 3) & ~(CriUint64)3;
@@ -1962,48 +1962,40 @@ Scaleform::RefCountImplCore** FUN_14001d240(Scaleform::RefCountImplCore** pointe
     return pointer;
 }
 
-// MS2-FUNCTIONAL: append a pointer to a Scaleform array and grow the heap allocation when needed.
+// ArrayData::Resize inlined into PushBack; the separate inline scope makes cl reload the size.
+static __forceinline void CriPointerArrayResize(CriUint64* array, CriUint64 newSize)
+{
+    if (newSize < array[1])
+    {
+        if (newSize < (array[2] >> 1))
+            FUN_14001c570(array, array, newSize);
+    }
+    else if (newSize >= array[2])
+        FUN_14001c570(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
+}
+
+// append a pointer to a Scaleform array and grow the heap allocation when needed (ArrayData::PushBack).
 // @0x14001d290
 void FUN_14001d290(CriUint64* array, const CriUint64* value)
 {
-    CriUint64 newSize = array[1] + 1;
-    CriUint64 capacity = array[2];
-    CriUint64 grown = capacity;
-    if (newSize < array[1])
-    {
-        grown = newSize;
-        if ((capacity >> 1) <= newSize)
-            grown = (newSize >> 2) + newSize;
-    }
-    else if (newSize >= capacity)
-        grown = (newSize >> 2) + newSize;
-    if (grown != capacity)
-        FUN_14001c570(array, array, grown);
-    array[1] = newSize;
-    if (array[0])
-        ((CriUint64*)(uintptr_t)array[0])[newSize - 1] = *value;
+    CriPointerArrayResize(array, array[1] + 1);
+    CriUint64* slot = (CriUint64*)(uintptr_t)array[0] + array[1] - 1;
+    if (slot)
+        *slot = *value;
 }
 
-// MS2-FUNCTIONAL: resize a Scaleform array and adjust its logical element count.
+// resize a Scaleform array and adjust its logical element count (ArrayData::Resize).
 // @0x14001d310
 void FUN_14001d310(CriUint64* array, CriUint64 newSize)
 {
-    CriUint64 capacity = array[2];
     if (newSize < array[1])
     {
-        if (newSize < capacity >> 1)
-        {
+        if (newSize < (array[2] >> 1))
             FUN_14001c570(array, array, newSize);
-            array[1] = newSize;
-            return;
-        }
     }
-    else if (capacity <= newSize)
-    {
-        FUN_14001c570(array, array, (newSize >> 2) + newSize);
-        array[1] = newSize;
-        return;
-    }
+    else if (newSize >= array[2])
+        FUN_14001c570(array, array, newSize + (newSize >> 2));
     array[1] = newSize;
 }
 
@@ -2067,34 +2059,25 @@ void* FUN_14001d1d0(void* state)
         fields[0], (Scaleform::Sound::SoundRenderer*)fields[1]);
 }
 
-// MS2-FUNCTIONAL: clear a Scaleform pointer array and release oversized storage.
+// clear a Scaleform pointer array and release oversized storage (ArrayData::Resize(0)).
 // @0x14001d5d0
 void FUN_14001d5d0(CriUint64* array)
 {
-    CriUint64 size = array[1];
-    CriUint64 capacity = array[2];
-    if (size == 0)
+    if (0 < array[1])
     {
-        if (capacity == 0)
+        if (0 < (array[2] >> 1))
         {
-            FUN_14001c570(array, array, 0);
-            array[1] = 0;
-            return;
+            if (array[0])
+            {
+                void* heap = DAT_143b15f60;
+                ((void (*)(void*, void*))(*(void***)heap)[12])(heap, (void*)(uintptr_t)array[0]);
+                array[0] = 0;
+            }
+            array[2] = 0;
         }
     }
-    else if ((capacity & ~(CriUint64)1) != 0)
-    {
-        if (array[0])
-        {
-            void* heap = DAT_143b15f60;
-            void** vtable = *(void***)heap;
-            ((void (*)(void*, void*))vtable[12])(heap, (void*)(uintptr_t)array[0]);
-            array[0] = 0;
-        }
-        array[2] = 0;
-        array[1] = 0;
-        return;
-    }
+    else if (0 >= array[2])
+        FUN_14001c570(array, array, 0);
     array[1] = 0;
 }
 
