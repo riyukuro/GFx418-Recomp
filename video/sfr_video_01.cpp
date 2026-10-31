@@ -2540,19 +2540,19 @@ void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
     (void)a;
 }
 
-// MS2-FUNCTIONAL: releases the VideoObject prototype table and retained script object before base finalization.
+// releases the VideoObject prototype table and the weak-pointer proxy at +0x68 before base finalization
 // @0x14000dbc0
 void FUN_14000dbc0(void* object)
 {
     unsigned char* bytes = static_cast<unsigned char*>(object);
-    void** table = reinterpret_cast<void**>(bytes + 0xa8);
-    if (*table) {
-        if (*reinterpret_cast<void**>(*table)) Scaleform::Memory::Free(*reinterpret_cast<void**>(*table));
-        Scaleform::Memory::Free(*table);
-        *table = 0;
+    // the exe frees the table's buffer and the table without null-testing the buffer, and stores nothing back
+    if (*reinterpret_cast<void***>(bytes + 0xa8)) {
+        Scaleform::Memory::Free(**reinterpret_cast<void***>(bytes + 0xa8));
+        Scaleform::Memory::Free(*reinterpret_cast<void**>(bytes + 0xa8));
     }
-    ReleaseAs2GCObject(*reinterpret_cast<void**>(bytes + 0x68));
-    *reinterpret_cast<void**>(bytes + 0x68) = 0;
+    // the +0x68 member is a weak-pointer proxy
+    if (void* proxy = *reinterpret_cast<void**>(bytes + 0x68))
+        static_cast<Scaleform::WeakPtrProxy*>(proxy)->Release();
     reinterpret_cast<VideoFinalizeAccess*>(object)->VideoFinalizeAccess::Finalize_GC();   // qualified = direct, as the exe (0x142942e70)
 }
 
