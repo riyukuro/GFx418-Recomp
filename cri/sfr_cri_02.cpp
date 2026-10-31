@@ -1,11 +1,12 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): the rest of the Scaleform GFx 4.1.18 Video player glue
 // (VideoPlayerImpl, the decoders and readers over CRI, 0x14002a0e0-0x14002e548). Our own source, written from the exe;
-// the leaked SDK copies were only used to name things. The Video add-on lib was built with VS2012 Update 4, and so is
-// this unit (MS2-TOOLSET: vc11, cmake/ms2-unit-profiles.cmake): no alias `using`, explicit conversion operators or
-// variadic templates. clang-cl compiles it as before. The CRI Movie 3.07.01 internals after it (VS2008 SP1) are
+// the leaked SDK copies were only used to name things. This part of the Video add-on lib is VS2008 SP1 code, so the
+// unit builds with cl 15.00.30729 and the vc11 options (MS2-TOOLSET: vc9v, cmake/ms2-unit-profiles.cmake). Keep it
+// C++03: no auto, nullptr, range-for, __declspec(safebuffers), alias `using`, explicit conversion operators or variadic
+// templates. clang-cl compiles it as before. The CRI Movie 3.07.01 internals after it (VS2008 SP1) are
 // sfr_cri_02c.
 // MS2-UNIT: sfr_cri_02
-// MS2-TOOLSET: vc11
+// MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14002a0e0-0x14002e548 .text$mn
 // MS2-PINS-BEGIN tplpin
