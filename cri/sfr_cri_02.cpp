@@ -792,14 +792,13 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
 // The cue point a CRI event point describes: "name=value,name=value" parameters.
 // MS2-FUNCTIONAL: a constructor of CuePoint there
 // @0x14002c2b0
-static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, const CriMvEventPoint* pevent)
+static VideoPlayer::CuePoint ConstructCuePoint(const CriMvEventPoint& event)
 {
-    ::new(&pcue->Name) String();
-    ::new(&pcue->Params) Array<VideoPlayer::CuePointParam>();
-    pcue->Name = pevent->cue_name;
-    pcue->Type = pevent->type == 0 ? VideoPlayer::NavigationCuePoint : VideoPlayer::EventCuePoint;
-    pcue->Time = (UInt32)pevent->time;
-    const char* p = pevent->param_string;
+    VideoPlayer::CuePoint cue;
+    cue.Name = event.cue_name;
+    cue.Type = event.type == 0 ? VideoPlayer::NavigationCuePoint : VideoPlayer::EventCuePoint;
+    cue.Time = (UInt32)event.time;
+    const char* p = event.param_string;
     if (p)
     {
         VideoPlayer::CuePointParam param;
@@ -809,7 +808,7 @@ static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, con
             if (!peq)
             {
                 param.Name = p;
-                pcue->Params.PushBack(param);
+                cue.Params.PushBack(param);
                 break;
             }
             FUN_142586530(&param.Name, p, peq - p);
@@ -818,17 +817,17 @@ static VideoPlayer::CuePoint* ConstructCuePoint(VideoPlayer::CuePoint* pcue, con
             if (!pcomma)
             {
                 param.Value = p;
-                pcue->Params.PushBack(param);
+                cue.Params.PushBack(param);
                 break;
             }
             FUN_142586530(&param.Value, p, pcomma - p);
-            pcue->Params.PushBack(param);
+            cue.Params.PushBack(param);
             param.Name.Clear();
             param.Value.Clear();
             p = pcomma + 1;
         }
     }
-    return pcue;
+    return cue;
 }
 
 // @0x14002c5f0
@@ -865,15 +864,13 @@ bool VideoPlayerImpl::IsTextureReady()
     return UpdateTextureCalled && FrameOnTime;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002c7a0
 void VideoPlayerImpl::CuePointCallback(CriMvEasyPlayer*, CriMvEventPoint* eventinfo, void* usrobj)
 {
     if (!usrobj)
         return;
     VideoPlayerImpl* pplayer = (VideoPlayerImpl*)usrobj;
-    VideoPlayer::CuePoint cue;
-    pplayer->CurrentCuePoints.PushBack(*ConstructCuePoint(&cue, eventinfo));
+    pplayer->CurrentCuePoints.PushBack(ConstructCuePoint(*eventinfo));
 }
 
 // @0x14002c810
@@ -955,8 +952,7 @@ void VideoPlayerImpl::GetVideoInfo(VideoInfo* info)
         {
             for (unsigned i = 0; i < pcueinfo->num_eventpoint; i++)
             {
-                CuePoint cue;
-                info->CuePoints.PushBack(*ConstructCuePoint(&cue, &pcueinfo->eventtable[i]));
+                info->CuePoints.PushBack(ConstructCuePoint(pcueinfo->eventtable[i]));
             }
             pPlayer->SetCuePointCallback(CuePointCallback, this, SF_VIDEO_ERR);
         }
