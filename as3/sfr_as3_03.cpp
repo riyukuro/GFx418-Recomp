@@ -22,6 +22,9 @@ template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Na
     AllocatorDH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
 template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
     AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+// and the namespace array's RemoveAt (0x14241e8b0)
+template<> SF_NOINLINE void ArrayBase<ArrayData<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
+    AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt index);
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -2643,7 +2646,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: exe stores the new namespace raw after an out-of-line resize 0x14241ffc0; ours pushes an SPtr
+    // MS2-FUNCTIONAL: register allocation; exe keeps ns in r13 and the hoisted size in rsi (555 vs 571 bytes)
     // @0x142403ff0
     void XMLElement::AddInScopeNamespace(const Instances::Namespace& ns)
     {
@@ -3147,18 +3150,11 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
     }
 
-    // MS2-FUNCTIONAL: exe clears through the out-of-line ArrayLH ResizeNoConstruct 0x142420060
     // @0x142408f50
     void XMLElement::DeleteChildren(XML* child)
     {
         const UPInt size = Children.GetSize();
-        if (child == NULL)
-        {
-            for (UPInt i = 0; i < size; ++i)
-                Children[i]->Parent = NULL;
-            Children.Clear();
-        }
-        else
+        if (child)
         {
             for (UPInt i = 0; i < size; ++i)
             {
@@ -3169,6 +3165,12 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                     return;
                 }
             }
+        }
+        else
+        {
+            for (UPInt i = 0; i < size; ++i)
+                Children[i]->Parent = NULL;
+            Children.Clear();
         }
     }
 
