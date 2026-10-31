@@ -604,7 +604,7 @@ UPInt TreeText::GetFilters(Filter* buffer, UPInt bufferCount)
 // @0x14264e6f0
 void TreeText::ClearFilters()
 {
-    Filter none;
+    Filter none(Filter_Unknown);
     SetFilters(&none, 1);
 }
 
