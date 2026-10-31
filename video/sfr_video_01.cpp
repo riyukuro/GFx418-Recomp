@@ -430,7 +430,7 @@ void** FUN_140003ab0(void** destination, void* replacement)
     return destination;
 }
 
-// MS2-FUNCTIONAL: initializes the player, timing, pool, timeout, and notification defaults observed in the constructor.
+// Initializes the player, timing, pool, timeout, and notification defaults observed in the constructor.
 // @0x1400033f0
 void FUN_1400033f0(void* player)
 {
@@ -445,11 +445,13 @@ void FUN_1400033f0(void* player)
     *reinterpret_cast<float*>(bytes + 0xcc) = 0.8f;
     *reinterpret_cast<float*>(bytes + 0xd0) = 5.0f;
     *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
-    bytes[0xd8] = bytes[0xd9] = bytes[0xda] = 0;
+    bytes[0xd8] = 0;
+    bytes[0xd9] = 0;
+    bytes[0xda] = 0;
     bytes[0xdb] = 1;
     bytes[0xdc] = 0;
-    *reinterpret_cast<void**>(bytes + 0xe0) = 0;
     *reinterpret_cast<void**>(bytes + 0xe8) = 0;
+    *reinterpret_cast<void**>(bytes + 0xe0) = 0;
 }
 
 // MS2-FUNCTIONAL: creates a managed AS2 string and stores its retained node in the return object.
@@ -835,11 +837,11 @@ void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
     array[2] = reinterpret_cast<void*>(capacity);
 }
 
-// MS2-FUNCTIONAL: releases a character handle when its intrusive reference count reaches zero.
+// Releases a character handle when its intrusive reference count reaches zero.
 // @0x140005480
 void FUN_140005480(Scaleform::GFx::CharacterHandle* handle)
 {
-    if (--*reinterpret_cast<int*>(handle) < 1) {
+    if (--*reinterpret_cast<int*>(handle) <= 0) {
         handle->~CharacterHandle();
         Scaleform::Memory::Free(handle);
     }
@@ -1464,12 +1466,12 @@ void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: appends an object value to the current paged stack block.
+// Appends an object value to the current paged stack block.
 // @0x140006ff0
 void FUN_140006ff0(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
 {
     *stack += 0x20;
-    if (stack[2] <= *stack) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (*stack >= stack[2]) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
     if (*stack) ::new (reinterpret_cast<void*>(*stack)) Scaleform::GFx::AS2::Value(*value);
 }
 
@@ -1552,7 +1554,7 @@ void FUN_140007370(void** array, const Scaleform::String* records, Scaleform::UP
     }
 }
 
-// MS2-FUNCTIONAL: appends an object value to the stack at the embedded current cursor.
+// Appends an object value to the stack at the embedded current cursor.
 // @0x140007400
 void FUN_140007400(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
 {
@@ -3464,7 +3466,6 @@ void NetStreamProto::Play(const FnCall& fn)
         pnetstream->OpenUrl(url.ToCStr(), fn.Env);
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140009cf0
 void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 {
@@ -3473,7 +3474,7 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
     for (UPInt i = 0; i < VideoCharacters.GetSize(); ++i)
     {
         Ptr<VideoCharacter> pchar = VideoCharacters[i];
-        if (pchar == pvideo)
+        if (pvideo == pchar)
             return;
     }
     VideoCharacters.PushBack(WeakPtr<VideoCharacter>(pvideo));
