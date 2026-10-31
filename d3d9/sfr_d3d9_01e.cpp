@@ -540,32 +540,45 @@ bool HAL::SetRenderTarget(RenderTarget* target, bool setState)
 // @0x1427372c0
 bool HAL::createDefaultRenderBuffer()
 {
-    ImageSize screenSize;
+    ImageSize rtSize;
+
     if (GetDefaultRenderTarget())
-        screenSize = GetDefaultRenderTarget()->GetSize();
+    {
+        RenderTarget* prt = GetDefaultRenderTarget();
+        rtSize = prt->GetSize();
+    }
     else
     {
         // wrap the device's current color / depth stencil surfaces in the default target
-        IDirect3DSurface9* colorSurface = 0;
-        D3DSURFACE_DESC    desc;
-        if (FAILED(pDevice->GetRenderTarget(0, &colorSurface)) || FAILED(colorSurface->GetDesc(&desc)))
+        IDirect3DSurface9* prenderTarget;
+        IDirect3DSurface9* pdsTarget;
+        D3DSURFACE_DESC    rtDesc;
+        if (FAILED(pDevice->GetRenderTarget(0, &prenderTarget)) || FAILED(prenderTarget->GetDesc(&rtDesc)))
+        {
             return false;
-        screenSize.SetSize(desc.Width, desc.Height);
+        }
+        rtSize = ImageSize(rtDesc.Width, rtDesc.Height);
 
-        IDirect3DSurface9*      depthSurface = 0;
-        Ptr<DepthStencilBuffer> pdsb;
-        if (SUCCEEDED(pDevice->GetDepthStencilSurface(&depthSurface)) && SUCCEEDED(depthSurface->GetDesc(&desc)))
-            pdsb = *SF_HEAP_AUTO_NEW(this) DepthStencilBuffer(0, ImageSize(desc.Width, desc.Height));
-        Ptr<RenderTarget> ptarget = *SF_HEAP_AUTO_NEW(this) RenderTarget(0, RBuffer_Default, screenSize);
-        RenderTargetData::UpdateData(ptarget, colorSurface, pdsb, depthSurface);
-        if (depthSurface)
-            depthSurface->Release();
-        colorSurface->Release();
+        Ptr<DepthStencilBuffer> pdsb = 0;
+        D3DSURFACE_DESC         dsDesc;
+        ImageSize               dsSize(0);
+        if (SUCCEEDED(pDevice->GetDepthStencilSurface(&pdsTarget)) && SUCCEEDED(pdsTarget->GetDesc(&dsDesc)))
+        {
+            dsSize.SetSize(dsDesc.Width, dsDesc.Height);
+            pdsb = *SF_HEAP_AUTO_NEW(this) DepthStencilBuffer(0, dsSize);
+        }
+        Ptr<RenderTarget> ptarget = *SF_HEAP_AUTO_NEW(this) RenderTarget(0, RBuffer_Default, rtSize);
+        RenderTargetData::UpdateData(ptarget, prenderTarget, pdsb, pdsTarget);
+
+        if (pdsTarget)
+            pdsTarget->Release();
+        prenderTarget->Release();
+
         if (!SetRenderTarget(ptarget, true))
             return false;
     }
-    pRenderBufferManager->Initialize(pTextureManager, Image_B8G8R8A8, screenSize);
-    return true;
+
+    return pRenderBufferManager->Initialize(pTextureManager, Image_B8G8R8A8, rtSize);
 }
 
 // written from the decompile
