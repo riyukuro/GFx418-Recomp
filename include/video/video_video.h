@@ -217,13 +217,7 @@ public:
     };
 
     // Lets the player follow an external clock (the SWF timeline when SetSwfSync is on).
-#ifdef MS2_VIDEO_SYNCOBJECT_NOVTABLE
-    // sfr_cri_01 only builds the SWF adapter: the exe's constructor there inlines SyncObject and stores only the adapter's
-    // vftable (sfr_video_01's adapter dtor also stores SyncObject's own table 0x1431b4f78, so this is opt-in per unit).
-    class __declspec(novtable) SyncObject : public RefCountBaseNTS<SyncObjectTag, Stat_Default_Mem>
-#else
     class SyncObject : public RefCountBaseNTS<SyncObjectTag, Stat_Default_Mem>
-#endif
     {
     public:
         // Pure: the exe's own SyncObject table (0x1431b4f78, stored by ~SyncObject 0x140005610) is the dtor and five

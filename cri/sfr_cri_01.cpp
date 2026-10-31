@@ -14,7 +14,6 @@
 // MS2-RANGE: 0x140028360-0x14002a0e0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
-#define MS2_VIDEO_SYNCOBJECT_NOVTABLE
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
@@ -2603,6 +2602,7 @@ void* FUN_140029ab0(void* object, unsigned flags) { return CriRefCountDeletingDt
 // MS2-PIN: ??_7VideoSound@Video@GFx@Scaleform@@6B@ 0x1431b4b80
 // MS2-PIN: ??_7VideoProviderNetStream@AS3@GFx@Scaleform@@6B@ 0x1431b8a90
 // MS2-PIN: ??_7VideoProvider@Video@GFx@Scaleform@@6B@ 0x1431b4f30
+// MS2-PIN: ??_7SyncObject@VideoPlayer@Video@GFx@Scaleform@@6B@ 0x1431b4f78
 // MS2-FUNCTIONAL ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
 // MS2-PIN: ??_GVideo@0GFx@Scaleform@@UEAAPEAXI@Z 0x14001c720
 // MS2-FUNCTIONAL ??_GAuxStreamer@SoundRenderer@Sound@Scaleform@@UEAAPEAXI@Z: Video add-on lib, prebuilt with VS2012 (Rich 0xce build 65501): the exe's copy calls the out-of-line dtor and has no sized-delete flag-4 path; ours inlines the dtor and adds it, same effect
