@@ -2041,6 +2041,8 @@ struct Video01CueRecord
         Scaleform::UPInt Capacity;
         Array() : Data(0), Size(0), Capacity(0) {}
     } Nested;
+    Video01CueRecord() {}
+    Video01CueRecord(const Video01CueRecord& source);
 };
 
 // initializes each cue-point record with an empty string and zeroed metadata (SDK ConstructArray)
@@ -2052,35 +2054,20 @@ void FUN_14000b2a0(void* records, Scaleform::UPInt count)
         ::new (record) Video01CueRecord();
 }
 
-// the exe inlines the body into FUN_14000b620.
-static __forceinline unsigned* Video01CopyCuePoint(unsigned* destination, const unsigned* source)
-{
-    *destination = *source;
-    new (destination + 2) Scaleform::String(
-        *reinterpret_cast<const Scaleform::String*>(source + 2));
-    destination[4] = source[4];
-    void** targetArray = reinterpret_cast<void**>(destination + 6);
-    *targetArray = 0;
-    targetArray[1] = 0;
-    targetArray[2] = 0;
-    FUN_140007370(targetArray,
-        *reinterpret_cast<const Scaleform::String* const*>(source + 6),
-        *reinterpret_cast<const Scaleform::UPInt*>(source + 8));
-    return destination;
-}
-
-// MS2-FUNCTIONAL: copies the cue-point kind, label, metadata, and nested record array.
+// the cue record's copy constructor: kind, label, metadata, and a copy of the nested record array
 // @0x14000b350
-unsigned* FUN_14000b350(unsigned* destination, const unsigned* source)
+Video01CueRecord::Video01CueRecord(const Video01CueRecord& source)
+    : Kind(source.Kind), Label(source.Label), Meta(source.Meta)
 {
-    return Video01CopyCuePoint(destination, source);
+    FUN_140007370(reinterpret_cast<void**>(&Nested),
+        static_cast<const Scaleform::String*>(source.Nested.Data), source.Nested.Size);
 }
 
-// MS2-FUNCTIONAL: copies the cue-point kind, label, metadata, and nested record array if non-null.
+// copy-constructs a cue record in place if the destination is non-null (the exe inlines the copy ctor)
 // @0x14000b620
 void FUN_14000b620(unsigned* destination, const unsigned* source)
 {
-    if (destination) Video01CopyCuePoint(destination, source);
+    ::new (destination) Video01CueRecord(*reinterpret_cast<const Video01CueRecord*>(source));
 }
 
 // MS2-FUNCTIONAL: releases the nested String pair arrays and the String member of each 48-byte record, last record
