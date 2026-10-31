@@ -424,6 +424,11 @@ public:
         : TreeCacheNode(node, renderer2D, flags), CachedChildPattern(Range_Invalid)
     {
     }
+    // TreeCacheRoot's: the exe stores the root's HAL with the base members, ahead of DepthUpdates' heap lookup.
+    TreeCacheContainer(TreeNode* node, Renderer2DImpl* renderer2D, unsigned flags, HAL* hal)
+        : TreeCacheNode(node, renderer2D, flags), CachedChildPattern(Range_Invalid), Reserved98((UPInt)hal)
+    {
+    }
     ~TreeCacheContainer();
 
     virtual void HandleChanges(unsigned changeBits);
@@ -464,11 +469,10 @@ public:
     // (appended for sfr_render_04p) built by Renderer2DImpl::Draw (vftable 0x14318fb70); the HAL goes in the
     // container's +0x98 slot
     TreeCacheRoot(Renderer2DImpl* renderer2D, HAL* hal, unsigned flags, TreeNode* node)
-        : TreeCacheContainer(node, renderer2D, flags), pUpdateList(0), DepthUpdatesChained(false),
+        : TreeCacheContainer(node, renderer2D, flags, hal), pUpdateList(0), DepthUpdatesChained(false),
           DepthUpdates(Memory::GetHeapByAddress(getThis()), 0)
     {
-        Reserved98 = (UPInt)hal;
-        pRoot      = this;
+        pRoot = this;
         CachedChildPattern.Clear(Range_Empty);
     }
     ~TreeCacheRoot()

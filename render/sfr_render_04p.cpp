@@ -134,7 +134,6 @@ bool Renderer2DImpl::BeginFrame()
 
 // draws a root's cache tree, building it on first use; a root with its own viewport also sets the HAL's full view
 // @0x14263ee90
-// MS2-FUNCTIONAL regalloc (r13/r14/r15 permuted) and the orientation swap block placed inline instead of after the function body
 void Renderer2DImpl::Draw(TreeRoot* node)
 {
     TreeCacheRoot*            rootCache = (TreeCacheRoot*)node->GetRenderData();
@@ -144,18 +143,27 @@ void Renderer2DImpl::Draw(TreeRoot* node)
 
     if (hasVP)
     {
-        HAL* hal = pHal;
         switch (vp.Flags & Viewport::View_Orientation_Mask)
         {
         default:
-            hal->Matrices.ViewRectOriginal.SetRect(vp.Left, vp.Top, vp.Left + vp.Width, vp.Top + vp.Height);
-            break;
-        case Viewport::View_Orientation_L90:
-        case Viewport::View_Orientation_R90:
-            hal->Matrices.ViewRectOriginal.SetRect(vp.Left, vp.Top, vp.Left + vp.Height, vp.Top + vp.Width);
+        {
+            Rect<int> viewRect(vp.Left, vp.Top, vp.Left + vp.Width, vp.Top + vp.Height);
+            // GetHAL()->SetFullViewRect(viewRect)
+            HAL* hal                       = pHal;
+            hal->Matrices.ViewRectOriginal = viewRect;
+            hal->Matrices.UVPOChanged      = 1;
             break;
         }
-        hal->Matrices.UVPOChanged = 1;
+        case Viewport::View_Orientation_L90:
+        case Viewport::View_Orientation_R90:
+        {
+            Rect<int> viewRect(vp.Left, vp.Top, vp.Left + vp.Height, vp.Top + vp.Width);
+            HAL*      hal                  = pHal;
+            hal->Matrices.ViewRectOriginal = viewRect;
+            hal->Matrices.UVPOChanged      = 1;
+            break;
+        }
+        }
     }
 
     RectF viewCullRect;
