@@ -383,7 +383,6 @@ void HAL::EndMaskSubmit()
     }
 }
 
-// MS2-FUNCTIONAL: written from the decompile
 // @0x142732ba0
 void HAL::PopRenderTarget()
 {
@@ -410,7 +409,7 @@ void HAL::PopRenderTarget()
     Matrices.ViewRectOriginal.Offset(entry.OldViewport.Left, entry.OldViewport.Top);
     Matrices.UVPOChanged = true;
 
-    RenderTargetStack.Pop();
+    RenderTargetStack.PopBack();
     RenderTargetData* phd = 0;
     if (RenderTargetStack.GetSize() > 0)
         phd = (RenderTargetData*)RenderTargetStack.Back().pRenderTarget->GetRenderTargetData();
@@ -420,7 +419,10 @@ void HAL::PopRenderTarget()
     pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
     pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
     pDevice->SetRenderTarget(0, phd->pRenderSurface);
-    pDevice->SetDepthStencilSurface(phd->pDSSurface);
+    if (phd->pDSSurface)
+        pDevice->SetDepthStencilSurface(phd->pDSSurface);
+    else
+        pDevice->SetDepthStencilSurface(0);
 
     ++AccumulatedStats.RTChanges;
     HALState |= HS_ViewValid;
