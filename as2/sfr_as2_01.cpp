@@ -776,18 +776,25 @@ void ColorProto::SetTransform(const FnCall& fn)
 
 // ---- LoadVars ----
 
+// SDK FnCall::CheckThisPtr form (if / return false / return true), which the exe inlines as a bool.
+static inline bool Sfr01CheckThisPtr(const FnCall& fn, unsigned type)
+{
+    if (!fn.ThisPtr || fn.ThisPtr->GetObjectType() != (int)type)
+        return false;
+    return true;
+}
+
 // @0x1428ec0b0
-// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
 void LoadVarsProto::AddRequestHeader(const FnCall& fn)
 {
-    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
-        fn.ThisPtrError("LoadVars");
-    else
+    if (!Sfr01CheckThisPtr(fn, ObjectInterface::Object_LoadVars))
     {
-        Log* plog = fn.Env->GetTarget()->GetLog();
-        if (plog)
-            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.addRequestHeader is not implemented.");
+        fn.ThisPtrError("LoadVars");
+        return;
     }
+    Log* plog = fn.Env->GetTarget()->GetLog();
+    if (plog)
+        plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.addRequestHeader is not implemented.");
 }
 
 // LoadVars.decode(string): unescapes the string and loads its name=value pairs into the object.
@@ -849,31 +856,29 @@ void LoadVarsProto::Load(const FnCall& fn)
 }
 
 // @0x1428ec510
-// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
 void LoadVarsProto::Send(const FnCall& fn)
 {
-    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
-        fn.ThisPtrError("LoadVars");
-    else
+    if (!Sfr01CheckThisPtr(fn, ObjectInterface::Object_LoadVars))
     {
-        Log* plog = fn.Env->GetTarget()->GetLog();
-        if (plog)
-            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.send is not implemented.");
+        fn.ThisPtrError("LoadVars");
+        return;
     }
+    Log* plog = fn.Env->GetTarget()->GetLog();
+    if (plog)
+        plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.send is not implemented.");
 }
 
 // @0x1428ec590
-// MS2-FUNCTIONAL the exe tests the this-class check after loading the environment and tail-calls the error path (branch layout)
 void LoadVarsProto::SendAndLoad(const FnCall& fn)
 {
-    if (!fn.CheckThisPtr(ObjectInterface::Object_LoadVars))
-        fn.ThisPtrError("LoadVars");
-    else
+    if (!Sfr01CheckThisPtr(fn, ObjectInterface::Object_LoadVars))
     {
-        Log* plog = fn.Env->GetTarget()->GetLog();
-        if (plog)
-            plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.sendAndLoad is not implemented.");
+        fn.ThisPtrError("LoadVars");
+        return;
     }
+    Log* plog = fn.Env->GetTarget()->GetLog();
+    if (plog)
+        plog->LogMessageById(LogChannel_Script | LogMessage_Error, "LoadVars.sendAndLoad is not implemented.");
 }
 
 // LoadVars.toString's member visitor (namespace scope so the exe's vftable slot can name its Visit).
