@@ -578,7 +578,7 @@ void FUN_140069e98(longlong, uint, short, short);
 void FUN_140069ef4(longlong, uint, uint);
 int FUN_14006a090(cri_u1 *, uint);
 int FUN_14006a110(short *, uint, cri_u1 *, cri_u1 *);
-cri_u8 FUN_14006a16c(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
+int FUN_14006a16c(cri_u1 *, uint, short *, cri_u1 *, char *, char *, cri_u1 *, cri_u4 *, cri_u4 *, int *);
 uint FUN_14006a260(longlong, uint, ushort *, ushort *);
 uint FUN_14006a388(longlong, uint, uint *, ushort *, ushort *, uint *, uint *, uint *, uint *);
 uint FUN_14006a598(longlong, uint, uint *, void *, ushort *, ushort *);
@@ -3180,23 +3180,24 @@ int FUN_14006a110(short *arg1, uint arg2, cri_u1 *arg3, cri_u1 *arg4)
   return i_v1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// read the ADX header: 0x8000 magic, data offset, encoding, block size, sample bits, channels, rate, sample count,
+// and the samples per block
 // @0x14006a16c
-cri_u8 FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5, char *arg6, cri_u1 *arg7, cri_u4 *arg8, cri_u4 *arg9, int *arg10)
+int FUN_14006a16c(cri_u1 *arg1, uint arg2, short *arg3, cri_u1 *arg4, char *arg5, char *arg6, cri_u1 *arg7, cri_u4 *arg8, cri_u4 *arg9, int *arg10)
 {
   if (arg2 < 0x10) {
-    return 0xffffffff;
+    return -1;
   }
-  if (CONCAT11(*arg1,arg1[1]) != -0x8000) {
-    return 0xfffffffe;
+  if ((ushort)(arg1[0] << 8 | arg1[1]) != 0x8000) {
+    return -2;
   }
-  *arg3 = CONCAT11(arg1[2],arg1[3]) + 4;
+  *arg3 = (short)(arg1[2] << 8 | arg1[3]) + 4;
   *arg4 = arg1[4];
   *arg6 = arg1[5];
   *arg5 = arg1[6];
   *arg7 = arg1[7];
-  *arg8 = CONCAT31(CONCAT21(CONCAT11(arg1[8],arg1[9]),arg1[10]),arg1[0xb]);
-  *arg9 = CONCAT31(CONCAT21(CONCAT11(arg1[0xc],arg1[0xd]),arg1[0xe]),arg1[0xf]);
+  *arg8 = ((arg1[8] << 8 | arg1[9]) << 8 | arg1[10]) << 8 | arg1[0xb];
+  *arg9 = ((arg1[0xc] << 8 | arg1[0xd]) << 8 | arg1[0xe]) << 8 | arg1[0xf];
   if (*arg5 == '\0') {
     *arg10 = 0;
   }
@@ -3413,7 +3414,7 @@ uint FUN_14006a7f8(cri_u8 arg1, uint arg2, longlong arg3)
   if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
     return 0;
   }
-  if ((int)FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+  if (FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
                     (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
                     (int *)((char *)arg3 + 0x10)) < 0) {
     return 0;
@@ -3444,7 +3445,7 @@ uint FUN_14006a928(cri_u8 arg1, cri_u4 arg2, longlong arg3)
   if (FUN_14006a110((short *)arg1,arg2,(cri_u1 *)arg3,(cri_u1 *)((char *)arg3 + 1)) < 0) {
     return 0;
   }
-  if ((int)FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
+  if (FUN_14006a16c((cri_u1 *)arg1,arg2,(short *)&ofs,(cri_u1 *)((char *)arg3 + 2),(char *)arg3 + 3,(char *)arg3 + 4,
                          (cri_u1 *)((char *)arg3 + 5),(cri_u4 *)((char *)arg3 + 8),(cri_u4 *)((char *)arg3 + 0xc),
                          (int *)((char *)arg3 + 0x10)) < 0) {
     return 0;
@@ -25839,39 +25840,49 @@ void FUN_14008a180(longlong arg1, cri_u8 arg2, int *arg3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// the decoder's source plane block at +0x1b28 (three plane-pointer triples, then the picture height and width)
+struct CriSrcPlanes {
+  cri_u8 a[3];                                  // +0x00
+  cri_u8 pad18;
+  cri_u8 b[3];                                  // +0x20
+  cri_u8 pad38[8];
+  cri_u8 c[3];                                  // +0x78
+  short height;                                 // +0x90
+  short width;                                  // +0x92
+};
+
+// copy the decoder's source rectangle and plane pointers into the output block (the 0x1b28 fields are read through
+// their own pointer, so cl reloads each one as the exe does)
 // @0x14008a2b0
 void FUN_14008a2b0(longlong arg1)
 {
+  CriSrcPlanes *src = (CriSrcPlanes *)((char *)arg1 + 0x1b28);
   cri_u8 u_v1;
   
-  *(int *)((char *)arg1 + 0xc60) = (int)*(short *)((char *)arg1 + 0x1bba);
-  *(int *)((char *)arg1 + 0xc64) = (int)*(short *)((char *)arg1 + 0x1bb8);
-  *(int *)((char *)arg1 + 0xc68) = (int)*(short *)((char *)arg1 + 0x1bb8);
-  *(cri_u8 *)((char *)arg1 + 0xc48) = *(cri_u8 *)((char *)arg1 + 0x1bb0);
-  *(cri_u8 *)((char *)arg1 + 0xc50) = *(cri_u8 *)((char *)arg1 + 0x1ba0);
-  *(cri_u8 *)((char *)arg1 + 0xc58) = *(cri_u8 *)((char *)arg1 + 0x1ba8);
-  *(cri_u8 *)((char *)arg1 + 0xc30) = *(cri_u8 *)((char *)arg1 + 0x1b38);
-  *(cri_u8 *)((char *)arg1 + 0xc38) = *(cri_u8 *)((char *)arg1 + 0x1b28);
-  *(cri_u8 *)((char *)arg1 + 0xc40) = *(cri_u8 *)((char *)arg1 + 0x1b30);
+  *(int *)((char *)arg1 + 0xc60) = (int)src->width;
+  *(int *)((char *)arg1 + 0xc64) = (int)src->height;
+  *(int *)((char *)arg1 + 0xc68) = (int)src->height;
+  *(cri_u8 *)((char *)arg1 + 0xc48) = src->c[2];
+  *(cri_u8 *)((char *)arg1 + 0xc50) = src->c[0];
+  *(cri_u8 *)((char *)arg1 + 0xc58) = src->c[1];
+  *(cri_u8 *)((char *)arg1 + 0xc30) = src->a[2];
+  *(cri_u8 *)((char *)arg1 + 0xc38) = src->a[0];
+  *(cri_u8 *)((char *)arg1 + 0xc40) = src->a[1];
   if (*(int *)((char *)arg1 + 0x2e0) == 3) {
-    *(cri_u8 *)((char *)arg1 + 0xc18) = *(cri_u8 *)(arg1 + 7000);
-    *(cri_u8 *)((char *)arg1 + 0xc20) = *(cri_u8 *)((char *)arg1 + 0x1b48);
-    u_v1 = *(cri_u8 *)((char *)arg1 + 0x1b50);
+    *(cri_u8 *)((char *)arg1 + 0xc18) = src->b[2];
+    *(cri_u8 *)((char *)arg1 + 0xc20) = src->b[0];
+    u_v1 = src->b[1];
   }
   else {
-    *(cri_u8 *)((char *)arg1 + 0xc18) = *(cri_u8 *)((char *)arg1 + 0x1bb0);
-    *(cri_u8 *)((char *)arg1 + 0xc20) = *(cri_u8 *)((char *)arg1 + 0x1ba0);
-    u_v1 = *(cri_u8 *)((char *)arg1 + 0x1ba8);
+    *(cri_u8 *)((char *)arg1 + 0xc18) = src->c[2];
+    *(cri_u8 *)((char *)arg1 + 0xc20) = src->c[0];
+    u_v1 = src->c[1];
   }
   *(cri_u8 *)((char *)arg1 + 0xc28) = u_v1;
   if (*(int *)((char *)arg1 + 0x318) == 2) {
-    *(longlong *)((char *)arg1 + 0xc48) =
-         *(longlong *)((char *)arg1 + 0xc48) + (longlong)*(int *)((char *)arg1 + 0xc60);
-    *(longlong *)((char *)arg1 + 0xc50) =
-         *(longlong *)((char *)arg1 + 0xc50) + (longlong)*(int *)((char *)arg1 + 0xc64);
-    *(longlong *)((char *)arg1 + 0xc58) =
-         *(longlong *)((char *)arg1 + 0xc58) + (longlong)*(int *)((char *)arg1 + 0xc68);
+    *(longlong *)((char *)arg1 + 0xc48) += (longlong)*(int *)((char *)arg1 + 0xc60);
+    *(longlong *)((char *)arg1 + 0xc50) += (longlong)*(int *)((char *)arg1 + 0xc64);
+    *(longlong *)((char *)arg1 + 0xc58) += (longlong)*(int *)((char *)arg1 + 0xc68);
   }
   return;
 }
@@ -26121,7 +26132,8 @@ void FUN_14008a830(longlong arg1, int *arg2, int *arg3, int arg4, int arg5)
   }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: code identical except one scheduling slot: the exe masks flag bit 2 before the loop counter's inc,
+// ours after (for/while/hoisted-increment forms tried).
 // @0x14008a970
 void FUN_14008a970(longlong arg1, uint arg2)
 {
@@ -35828,134 +35840,54 @@ void FUN_140095810(void *arg1, void *arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// inverse-DCT an 8x8 block of coefficients through doubles (FUN_140095800) and store it rounded and clamped to -0x800..0x7ff
 // @0x140095820
 void FUN_140095820(longlong arg1, cri_u2 *arg2)
 {
-  short s_v1;
-  short s_v2;
-  short s_v3;
-  int i_v4;
-  short *ps_v5;
-  double *pd_v6;
-  longlong l_v7;
-  cri_u2 *pu_v8;
-  longlong l_v9;
-  double d_v10;
-  double loc_228 [66];
-  
-  l_v9 = 8;
-  ps_v5 = (short *)(arg1 + 4);
-  pd_v6 = loc_228 + 1;
-  do {
-    l_v9 = l_v9 + -1;
-    s_v1 = ps_v5[-1];
-    s_v2 = *ps_v5;
-    pd_v6[-1] = (double)(int)ps_v5[-2];
-    s_v3 = ps_v5[1];
-    *pd_v6 = (double)(int)s_v1;
-    s_v1 = ps_v5[2];
-    pd_v6[1] = (double)(int)s_v2;
-    s_v2 = ps_v5[3];
-    pd_v6[2] = (double)(int)s_v3;
-    s_v3 = ps_v5[4];
-    pd_v6[3] = (double)(int)s_v1;
-    s_v1 = ps_v5[5];
-    pd_v6[4] = (double)(int)s_v2;
-    pd_v6[5] = (double)(int)s_v3;
-    pd_v6[6] = (double)(int)s_v1;
-    ps_v5 = ps_v5 + 8;
-    pd_v6 = pd_v6 + 8;
-  } while (l_v9 != 0);
-  FUN_140095800(loc_228,loc_228);
-  pd_v6 = loc_228;
-  l_v9 = 8;
-  do {
-    l_v7 = 8;
-    pu_v8 = arg2;
-    do {
-      d_v10 = floor(*pd_v6 + 0.5);
-      i_v4 = (int)d_v10;
-      if (0x7ff < i_v4) {
-        i_v4 = 0x7ff;
-      }
-      if (i_v4 < -0x800) {
-        i_v4 = -0x800;
-      }
-      arg2 = pu_v8 + 1;
-      pd_v6 = pd_v6 + 1;
-      l_v7 = l_v7 + -1;
-      *pu_v8 = (short)i_v4;
-      pu_v8 = arg2;
-    } while (l_v7 != 0);
-    l_v9 = l_v9 + -1;
-  } while (l_v9 != 0);
-  return;
+  double blk[64];
+  int i;
+  int j;
+  int v;
+
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      blk[i * 8 + j] = (double)((short *)arg1)[i * 8 + j];
+    }
+  }
+  FUN_140095800(blk,blk);
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      v = (int)floor(blk[i * 8 + j] + 0.5);
+      v = v > 0x7ff ? 0x7ff : v;
+      if (v < -0x800) v = -0x800;
+      arg2[i * 8 + j] = (cri_u2)v;
+    }
+  }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// inverse-DCT an 8x8 block of coefficients through doubles (FUN_140095810) and store it rounded and clamped to -0x100..0xff
 // @0x1400959a0
 void FUN_1400959a0(longlong arg1, cri_u2 *arg2)
 {
-  short s_v1;
-  short s_v2;
-  short s_v3;
-  int i_v4;
-  short *ps_v5;
-  double *pd_v6;
-  longlong l_v7;
-  cri_u2 *pu_v8;
-  longlong l_v9;
-  double d_v10;
-  double loc_228 [66];
-  
-  l_v9 = 8;
-  ps_v5 = (short *)(arg1 + 4);
-  pd_v6 = loc_228 + 1;
-  do {
-    l_v9 = l_v9 + -1;
-    s_v1 = ps_v5[-1];
-    s_v2 = *ps_v5;
-    pd_v6[-1] = (double)(int)ps_v5[-2];
-    s_v3 = ps_v5[1];
-    *pd_v6 = (double)(int)s_v1;
-    s_v1 = ps_v5[2];
-    pd_v6[1] = (double)(int)s_v2;
-    s_v2 = ps_v5[3];
-    pd_v6[2] = (double)(int)s_v3;
-    s_v3 = ps_v5[4];
-    pd_v6[3] = (double)(int)s_v1;
-    s_v1 = ps_v5[5];
-    pd_v6[4] = (double)(int)s_v2;
-    pd_v6[5] = (double)(int)s_v3;
-    pd_v6[6] = (double)(int)s_v1;
-    ps_v5 = ps_v5 + 8;
-    pd_v6 = pd_v6 + 8;
-  } while (l_v9 != 0);
-  FUN_140095810(loc_228,loc_228);
-  pd_v6 = loc_228;
-  l_v9 = 8;
-  do {
-    l_v7 = 8;
-    pu_v8 = arg2;
-    do {
-      d_v10 = floor(*pd_v6 + 0.5);
-      i_v4 = (int)d_v10;
-      if (0xff < i_v4) {
-        i_v4 = 0xff;
-      }
-      if (i_v4 < -0x100) {
-        i_v4 = -0x100;
-      }
-      arg2 = pu_v8 + 1;
-      pd_v6 = pd_v6 + 1;
-      l_v7 = l_v7 + -1;
-      *pu_v8 = (short)i_v4;
-      pu_v8 = arg2;
-    } while (l_v7 != 0);
-    l_v9 = l_v9 + -1;
-  } while (l_v9 != 0);
-  return;
+  double blk[64];
+  int i;
+  int j;
+  int v;
+
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      blk[i * 8 + j] = (double)((short *)arg1)[i * 8 + j];
+    }
+  }
+  FUN_140095810(blk,blk);
+  for (i = 0; i < 8; i++) {
+    for (j = 0; j < 8; j++) {
+      v = (int)floor(blk[i * 8 + j] + 0.5);
+      v = v > 0xff ? 0xff : v;
+      if (v < -0x100) v = -0x100;
+      arg2[i * 8 + j] = (cri_u2)v;
+    }
+  }
 }
 
 // Sets the two CRI hook tables (no .pdata in the exe: a leaf); FUN_1400afd20 is a jmp to it.
