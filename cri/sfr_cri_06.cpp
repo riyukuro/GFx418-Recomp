@@ -763,7 +763,6 @@ void FUN_140054250(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054320
 void FUN_140054320(cri_any cri_p0)
 {
@@ -802,7 +801,6 @@ void FUN_140054320(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054490
 void FUN_140054490(cri_u8 arg1)
 {
@@ -811,7 +809,6 @@ void FUN_140054490(cri_u8 arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400544b0
 void FUN_1400544b0()
 {
@@ -829,7 +826,6 @@ void FUN_1400544b0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400544e0
 void FUN_1400544e0(cri_any cri_p0)
 {
@@ -860,7 +856,6 @@ void FUN_1400544e0(cri_any cri_p0)
 // The decoder table entries unit_140047430's FUN_1400478a0 stores by address (LAB_140054590/5c0/5d0; Ghidra made no
 // functions here): set callback slot nIndex (0x18 bytes from +0x1be8), set the +0x1c48 pointer and count, and read
 // the +0x1c48 pointer and the +0x1c54 count back.
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
 // @0x140054590
 void FUN_140054590(void* pCtx, int nIndex, cri_u8 a3, cri_u8 a4, cri_u8 a5)
 {
@@ -870,7 +865,6 @@ void FUN_140054590(void* pCtx, int nIndex, cri_u8 a3, cri_u8 a4, cri_u8 a5)
   pSlot[1] = a4;
 }
 
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
 // @0x1400545c0
 void FUN_1400545c0(void* pCtx, cri_u8 a2, cri_u4 a3)
 {
@@ -878,7 +872,6 @@ void FUN_1400545c0(void* pCtx, cri_u8 a2, cri_u4 a3)
   *(cri_u4*)((cri_u1*)pCtx + 0x1c50) = a3;
 }
 
-// MS2-FUNCTIONAL: written from the exe (VS2008 build, our toolset differs).
 // @0x1400545d0
 void FUN_1400545d0(void* pCtx, cri_u8* pOut, cri_u4* pCount)
 {
@@ -1013,7 +1006,6 @@ void FUN_1400549b0(cri_any cri_p0)
   *(int *)((char *)arg1 + 0xc04) = (int)(mbw << 4) >> 1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054a40
 void FUN_140054a40(cri_any cri_p0)
 {
@@ -1027,7 +1019,6 @@ void FUN_140054a40(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054a80
 void FUN_140054a80(cri_any cri_p0)
 {
@@ -1457,7 +1448,6 @@ longlong FUN_140055410(cri_any cri_p0, cri_any cri_p1)
   return (longlong)((int)(i_v1 + (i_v1 >> 0x1f & 7U)) >> 3) + arg2;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140055510
 void FUN_140055510(longlong arg1, void *arg2, int arg3)
 {
@@ -4035,7 +4025,6 @@ LAB_140058f60:
   return -(uint)(*(int *)((char *)arg1 + 0xd0c) != 0) & 0xfffffffe;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140059030
 cri_u4 FUN_140059030(cri_u8 arg1, cri_u8 arg2)
 {
@@ -4053,7 +4042,6 @@ cri_u4 FUN_140059030(cri_u8 arg1, cri_u8 arg2)
   return u_v2;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140059090
 void FUN_140059090()
 {
@@ -4088,7 +4076,6 @@ void FUN_140059170(cri_any cri_p0)
   } while (rec->coef);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140059290
 void FUN_140059290()
 {
@@ -6566,7 +6553,6 @@ joined_r0x00014005adc8:
   } while( true );
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005ae00
 void FUN_14005ae00(cri_any cri_p0)
 {
@@ -6593,7 +6579,6 @@ void FUN_14005ae00(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005aea0
 void FUN_14005aea0()
 {
@@ -6609,7 +6594,6 @@ void FUN_14005aea0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005aee0
 void FUN_14005aee0(cri_any cri_p0)
 {
@@ -6622,7 +6606,6 @@ void FUN_14005aee0(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005af00
 void FUN_14005af00(cri_u8 *arg1, int arg2)
 {
@@ -6633,7 +6616,6 @@ void FUN_14005af00(cri_u8 *arg1, int arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005af20
 void FUN_14005af20()
 {
@@ -6641,7 +6623,6 @@ void FUN_14005af20()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005af30
 cri_u4 FUN_14005af30(longlong arg1, cri_u4 arg2)
 {
@@ -6653,7 +6634,6 @@ cri_u4 FUN_14005af30(longlong arg1, cri_u4 arg2)
   return arg2;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005af70
 void FUN_14005af70(longlong arg1, cri_u8 arg2, cri_u8 arg3)
 {
@@ -6669,7 +6649,6 @@ void FUN_14005af70(longlong arg1, cri_u8 arg2, cri_u8 arg3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005afd0
 void FUN_14005afd0(longlong arg1, cri_u8 *arg2)
 {
@@ -6687,14 +6666,12 @@ void FUN_14005afd0(longlong arg1, cri_u8 *arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b040
 cri_u4 FUN_14005b040()
 {
   return DAT_143e64b88;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b090
 void FUN_14005b090(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -6704,7 +6681,6 @@ void FUN_14005b090(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0b0
 void FUN_14005b0b0()
 {
@@ -6714,7 +6690,6 @@ void FUN_14005b0b0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0d0
 // The exe tail-jumps to the hook (jmp rax) with rcx untouched: the hook gets the argument and its rax is the result.
 ulonglong FUN_14005b0d0(ulonglong arg1)
@@ -6725,7 +6700,6 @@ ulonglong FUN_14005b0d0(ulonglong arg1)
   return 0;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b0f0
 void FUN_14005b0f0(cri_any cri_p0)
 {
@@ -6735,7 +6709,6 @@ void FUN_14005b0f0(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b110
 void FUN_14005b110(cri_any cri_p0)
 {
@@ -6745,7 +6718,6 @@ void FUN_14005b110(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b130
 void FUN_14005b130(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
 {
@@ -6755,7 +6727,6 @@ void FUN_14005b130(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b150
 void FUN_14005b150(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
 {
@@ -6765,7 +6736,6 @@ void FUN_14005b150(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b170
 void FUN_14005b170(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
 {
@@ -6775,7 +6745,6 @@ void FUN_14005b170(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b190
 void FUN_14005b190(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -6785,7 +6754,6 @@ void FUN_14005b190(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b1b0
 void FUN_14005b1b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
 {
@@ -6795,7 +6763,6 @@ void FUN_14005b1b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b1d0
 void FUN_14005b1d0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3, cri_any cri_p4)
 {
@@ -6805,7 +6772,6 @@ void FUN_14005b1d0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b200
 void FUN_14005b200(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -6815,7 +6781,6 @@ void FUN_14005b200(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b220
 void FUN_14005b220(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -6825,7 +6790,6 @@ void FUN_14005b220(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b240
 cri_u8 FUN_14005b240(cri_u8 arg1, cri_u8 arg2)
 {
@@ -6835,7 +6799,6 @@ cri_u8 FUN_14005b240(cri_u8 arg1, cri_u8 arg2)
   return 0;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b260
 void FUN_14005b260(cri_any cri_p0, cri_any cri_p1)
 {
@@ -6845,7 +6808,6 @@ void FUN_14005b260(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b280
 void FUN_14005b280(cri_any cri_p0, cri_any cri_p1)
 {
@@ -6855,7 +6817,6 @@ void FUN_14005b280(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2a0
 void FUN_14005b2a0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
 {
@@ -6865,7 +6826,6 @@ void FUN_14005b2a0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2c0
 void FUN_14005b2c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -6875,7 +6835,6 @@ void FUN_14005b2c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b2e0
 void FUN_14005b2e0(cri_any cri_p0)
 {
@@ -6885,7 +6844,6 @@ void FUN_14005b2e0(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b300
 void FUN_14005b300(cri_u8 arg1, cri_u8 arg2)
 {
@@ -6967,7 +6925,6 @@ void FUN_14005b390(longlong arg1, cri_u8 arg2, void *arg3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b560
 void FUN_14005b560(cri_any cri_p0)
 {
@@ -6981,7 +6938,6 @@ void FUN_14005b560(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b580
 void FUN_14005b580(cri_any cri_p0)
 {
@@ -7136,7 +7092,6 @@ void FUN_14005b810(cri_any cri_p0)
   }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b860
 void FUN_14005b860(longlong arg1)
 {
@@ -7151,7 +7106,6 @@ void FUN_14005b860(longlong arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b8a0
 void FUN_14005b8a0(longlong arg1)
 {
@@ -8977,7 +8931,6 @@ void FUN_14005dc70(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005e5b0
 void FUN_14005e5b0(longlong arg1, void *arg2)
 {
@@ -8992,7 +8945,6 @@ void FUN_14005e5b0(longlong arg1, void *arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005e600
 void FUN_14005e600(longlong arg1, cri_u4 *arg2)
 {
@@ -9007,7 +8959,6 @@ void FUN_14005e600(longlong arg1, cri_u4 *arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005e650
 void FUN_14005e650(longlong arg1, int *arg2, cri_u4 *arg3, cri_u4 *arg4)
 {
@@ -9025,7 +8976,6 @@ void FUN_14005e650(longlong arg1, int *arg2, cri_u4 *arg3, cri_u4 *arg4)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005e6c0
 void FUN_14005e6c0(longlong arg1, cri_u4 *arg2, cri_u4 *arg3)
 {
@@ -9259,7 +9209,6 @@ void FUN_14005e720()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005ebc0
 void FUN_14005ebc0()
 {
@@ -10910,7 +10859,6 @@ void FUN_140061ce0(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400622f0
 void FUN_1400622f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -10952,7 +10900,6 @@ void FUN_1400622f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400623f0
 void FUN_1400623f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -10989,7 +10936,6 @@ void FUN_1400623f0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400624c0
 void FUN_1400624c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -11031,7 +10977,6 @@ void FUN_1400624c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400625c0
 void FUN_1400625c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -11068,7 +11013,6 @@ void FUN_1400625c0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062690
 void FUN_140062690(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -11299,7 +11243,6 @@ void FUN_140062c10(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400630c0
 cri_u8 FUN_1400630c0()
 {
@@ -11446,7 +11389,6 @@ void FUN_1400633e0()
   for (k = 0; k < 8; k++) *p++ = (short)0xa812;
   return;
 }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140063730
 void FUN_140063730()
 {
@@ -11524,7 +11466,6 @@ void FUN_140063730()
   for (k = 0; k < 4; k++) *p++ = (short)0xb813;
   return;
 }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140063aa0
 void FUN_140063aa0()
 {
@@ -11555,7 +11496,6 @@ void FUN_140063aa0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140063b60
 void FUN_140063b60()
 {
@@ -11607,7 +11547,6 @@ void FUN_140063b60()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140063cb0
 void FUN_140063cb0()
 {
@@ -11660,7 +11599,6 @@ void FUN_140063cb0()
   }
   return;
 }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140063eb0
 cri_u8 FUN_140063eb0(cri_any cri_p0)
 {
@@ -11732,7 +11670,6 @@ cri_u8 FUN_140063eb0(cri_any cri_p0)
   return (cri_u8)(arg1 + 0x40);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064070
 cri_u2 * FUN_140064070(cri_any cri_p0)
 {
@@ -11892,7 +11829,6 @@ cri_u2 * FUN_140064070(cri_any cri_p0)
   return (cri_u2 *)&arg1[0x1c0];
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064360
 void FUN_140064360()
 {
@@ -11927,7 +11863,6 @@ void FUN_140064360()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064440
 void FUN_140064440()
 {
@@ -11959,7 +11894,6 @@ void FUN_140064440()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064510
 void FUN_140064510()
 {
@@ -12003,7 +11937,6 @@ void FUN_140064510()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064640
 void FUN_140064640()
 {
@@ -12044,7 +11977,6 @@ void FUN_140064640()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064760
 void FUN_140064760()
 {
@@ -12114,14 +12046,12 @@ void FUN_140064760()
   }
   return;
 }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064990
 void thunk_FUN_140064760()
 {
   FUN_140064760();   // the exe's thunk is a jmp to FUN_140064760
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400649a0
 void FUN_1400649a0()
 {
@@ -12150,7 +12080,6 @@ void FUN_1400649a0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ae0
 longlong FUN_140064ae0(cri_any cri_p0)
 {
@@ -12179,7 +12108,6 @@ longlong FUN_140064ae0(cri_any cri_p0)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064be0
 longlong FUN_140064be0(cri_any cri_p0)
 {
@@ -12193,7 +12121,6 @@ longlong FUN_140064be0(cri_any cri_p0)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064c30
 longlong FUN_140064c30(cri_any cri_p0)
 {
@@ -12207,7 +12134,6 @@ longlong FUN_140064c30(cri_any cri_p0)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064c90
 longlong FUN_140064c90(cri_any cri_p0)
 {
@@ -12221,7 +12147,6 @@ longlong FUN_140064c90(cri_any cri_p0)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ce0
 void FUN_140064ce0()
 {
@@ -12231,7 +12156,6 @@ void FUN_140064ce0()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064d00
 void FUN_140064d00()
 {
@@ -12240,7 +12164,6 @@ void FUN_140064d00()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064d20
 void FUN_140064d20()
 {
@@ -12251,7 +12174,6 @@ void FUN_140064d20()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064d40
 void FUN_140064d40()
 {
@@ -12262,7 +12184,6 @@ void FUN_140064d40()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064d60
 void FUN_140064d60(longlong arg1)
 {
@@ -12275,7 +12196,6 @@ void FUN_140064d60(longlong arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064d90
 void FUN_140064d90(cri_any cri_p0)
 {
@@ -12347,7 +12267,6 @@ void FUN_140064dd0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   }
   return;
 }
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064eb0
 void * FUN_140064eb0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12358,7 +12277,6 @@ void * FUN_140064eb0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ed0
 void * FUN_140064ed0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12369,7 +12287,6 @@ void * FUN_140064ed0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ef0
 void * FUN_140064ef0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12380,7 +12297,6 @@ void * FUN_140064ef0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064f10
 void * FUN_140064f10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12391,7 +12307,6 @@ void * FUN_140064f10(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return arg1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064f70
 void FUN_140064f70(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12431,21 +12346,18 @@ void FUN_140064f70(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064fe0
 void thunk_FUN_140050520()
 {
   FUN_140050520();   // the exe's thunk is a jmp to FUN_140050520 (sfr_cri_05b)
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140064ff0
 void thunk_FUN_140050670()
 {
   FUN_140050670();   // the exe's thunk is a jmp to FUN_140050670 (sfr_cri_05b)
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065000
 void FUN_140065000(cri_any cri_p0)
 {
@@ -12460,7 +12372,6 @@ void FUN_140065000(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065030
 void FUN_140065030(cri_any cri_p0)
 {
@@ -12593,7 +12504,6 @@ void FUN_140065060(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400653b0
 void * FUN_1400653b0(cri_any cri_p0, cri_any cri_p1)
 {
@@ -12608,7 +12518,6 @@ void * FUN_1400653b0(cri_any cri_p0, cri_any cri_p1)
   return _Dst;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400653f0
 void FUN_1400653f0(cri_any cri_p0)
 {
@@ -12619,7 +12528,6 @@ void FUN_1400653f0(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065410
 void FUN_140065410(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
@@ -12778,7 +12686,6 @@ LAB_140065742:
   } while( true );
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065770
 void FUN_140065770()
 {
@@ -12787,14 +12694,12 @@ void FUN_140065770()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065790
 void FUN_140065790()
 {
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400657a0
 void FUN_1400657a0(cri_any cri_p0)
 {
@@ -12806,7 +12711,6 @@ void FUN_1400657a0(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400657e0
 void FUN_1400657e0()
 {
@@ -12841,7 +12745,6 @@ void FUN_140065800()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065900
 void FUN_140065900(void *arg1)
 {
@@ -12849,7 +12752,6 @@ void FUN_140065900(void *arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140065940
 int FUN_140065940(int arg1)
 {
@@ -12864,7 +12766,6 @@ int FUN_140065940(int arg1)
   return i_v1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400659a0
 void FUN_1400659a0(const cri_u1 *arg1, cri_u1 *arg2)
 {
@@ -12883,7 +12784,6 @@ void FUN_1400659a0(const cri_u1 *arg1, cri_u1 *arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400659f0
 void FUN_1400659f0()
 {
