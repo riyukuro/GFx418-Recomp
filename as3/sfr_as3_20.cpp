@@ -115,36 +115,45 @@ public:
     Ptr<IMEManager>                         pIMEManager;    // +0x20
 };
 
-// MS2-FUNCTIONAL: register allocation and local order (the exe keeps two unused host values)
+// MS2-FUNCTIONAL: register allocation (the second CreateString loads pMovieRoot into rcx, the exe into rax)
+// The SDK's inline ToAvmDisplayObjContainer (AS3_AvmDisplayObjContainer.h).
+static inline AvmDisplayObjContainer* ToAvmDisplayObjContainer(GFx::DisplayObject* pobj)
+{
+    return pobj ? AvmDisplayObjContainer::FromBase(pobj->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
+}
+
 // @0x1425445d0
 void NotifyLoadInitCandidateList::InitEventCallback()
 {
     if (!pMovieRoot)
         return;
-    GFx::Value unused1, unused2;
-    Value loaderInfo, content;
-    Multiname loaderInfoName(pMovieRoot->pAVM->GetPublicNamespace(),
-                             Value(pMovieRoot->BuiltinsMgr.CreateString("contentLoaderInfo")));
-    if (!pLoader->GetProperty(loaderInfoName, loaderInfo) || !pIMEManager->CandListVal.IsNull())
-        return;
-    Multiname contentName(pMovieRoot->pAVM->GetPublicNamespace(),
-                          Value(pMovieRoot->BuiltinsMgr.CreateString("content")));
-    if (!loaderInfo.GetObject()->GetProperty(contentName, content))
-        return;
-    pMovieRoot->ASValue2GFxValue(content, &pIMEManager->CandListVal);
-    if (pIMEManager->CandListVal.IsNull())
-        return;
+    GFx::Value result;
+    GFx::Value args;
+    Value val;
+    Value val2;
 
-    GFx::Value func;
-    pIMEManager->pMovie->CreateFunction(&func, pIMEManager->CustomFuncCandList);
-    pIMEManager->CandListVal.SetMember("SendIMEMessage", func);
-    pIMEManager->CandidateListState = 2;
-    GFx::DisplayObject* pstage = pMovieRoot->pStage;
-    AvmDisplayObjContainer* pstageAvm = pstage
-        ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
-    pstageAvm->AddChild(pLoader->pDispObj);
-    pIMEManager->OnOpenCandidateList();
-    pIMEManager->CandListVal.Invoke("Init", NULL, NULL, 0);
+    Multiname mn(pMovieRoot->pAVM->GetPublicNamespace(),
+                 pMovieRoot->BuiltinsMgr.CreateString("contentLoaderInfo"));
+    if (pLoader->GetProperty(mn, val) && pIMEManager->CandListVal.IsNull())
+    {
+        Multiname mn2(pMovieRoot->pAVM->GetPublicNamespace(),
+                      pMovieRoot->BuiltinsMgr.CreateString("content"));
+        if (val.GetObject()->GetProperty(mn2, val2))
+        {
+            pMovieRoot->ASValue2GFxValue(val2, &pIMEManager->CandListVal);
+            if (!pIMEManager->CandListVal.IsNull())
+            {
+                GFx::Value func;
+                pIMEManager->pMovie->CreateFunction(&func, pIMEManager->CustomFuncCandList);
+                pIMEManager->CandListVal.SetMember("SendIMEMessage", func);
+                pIMEManager->CandidateListState = 2;
+                GFx::DisplayObject* pstage = pMovieRoot->pStage;
+                ToAvmDisplayObjContainer(pstage)->AddChild(pLoader->pDispObj);
+                pIMEManager->OnOpenCandidateList();
+                pIMEManager->CandListVal.Invoke("Init", NULL, NULL, 0);
+            }
+        }
+    }
 }
 
 // @0x142542bd0
@@ -548,11 +557,13 @@ void IMEManager::OnShutdown()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // The class object's string form uses the VM's canonical name for its traits.
-// MS2-FUNCTIONAL: the executable builds the same value through a lower-level string-node path.
+// MS2-FUNCTIONAL: evaluation order (the exe loads the string manager after building the String, we before)
+// The SDK's inline operator+(const char*, const ASString&) (Abc/AS3_Abc_Type.h), which the exe inlines here.
+static inline String ConcatASString(const char* l, const ASString& r) { return String(l) + String(r.ToCStr(), r.GetSize()); }
 // @0x142542a60
 void ClassToString(Object* pobj, ASString* presult)
 {
-    *presult = pobj->GetVM().GetStringManager().CreateConstString("[class ") + pobj->GetTraits().GetName() + "]";
+    *presult = pobj->GetVM().GetStringManager().CreateString(ConcatASString("[class ", pobj->GetTraits().GetName()) + "]");
 }
 }}}
 
