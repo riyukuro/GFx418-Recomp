@@ -605,21 +605,17 @@ void VideoDecoderSmp::PauseDecoding(bool pause)
 
 // ==== VideoDecoderThrd ===============================================================================================
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002b270
 VideoDecoderThrd::VideoDecoderThrd(MemoryHeap* pheap, Thread::ThreadPriority priority)
     : pHeap(pheap), pDecodeThread(NULL), ThreadPriority(priority), DecodeLock(0)
 {
 }
 
-// The implicit ~VideoDecoderSmp skips the exe's store of its vftable 0x1431b9170 before the two player arrays are freed:
-// nothing virtual runs between it and ~RefCountNTSImplCore, so the store is dead.
-// MS2-FUNCTIONAL: register allocation and block order differ
+// The body is empty: DecodeLock and then the pDecodeThread Ptr are destroyed as members, then the inline ~VideoDecoderSmp
+// stores its vftable 0x1431b9170 before the two player arrays are freed.
 // @0x14002b2e0
 __declspec(noinline) VideoDecoderThrd::~VideoDecoderThrd()
 {
-    if (pDecodeThread)
-        FUN_14257dcb0(pDecodeThread);
 }
 
 // @0x14002bb00
@@ -711,7 +707,7 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
         typedef bool (*StartFunc)(RefCountImpl*, int);
         typedef void (*SetNameFunc)(RefCountImpl*, const char*);
         if ((*reinterpret_cast<StartFunc**>(pthread))[5](pthread, 1) && pDecodeThread)
-            (*reinterpret_cast<SetNameFunc**>(pDecodeThread))[7](pDecodeThread, "Scaleform Video Decoder");
+            (*(SetNameFunc**)(void*)pDecodeThread)[7]((RefCountImpl*)(void*)pDecodeThread, "Scaleform Video Decoder");
     }
 }
 

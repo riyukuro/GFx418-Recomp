@@ -154,6 +154,7 @@ class VideoDecoderSmp : public VideoDecoder
 {
 public:
     VideoDecoderSmp() : Paused(false) {}
+    ~VideoDecoderSmp() {}
 
     virtual void StartDecoding(VideoPlayer* pplayer);               // 1
     virtual void StopDecoding(VideoPlayer* pplayer);                // 2
@@ -166,6 +167,16 @@ public:
     bool                        Paused;         // +0x10
     Array<VideoPlayerImpl*>     Players;        // +0x18
     Array<VideoPlayerImpl*>     PausedPlayers;  // +0x30 players kept paused by PauseDecoding(true)
+};
+
+// Ptr<Thread>: the decode thread is released as a member, after ~VideoDecoderThrd's empty body.
+struct VideoThreadPtr
+{
+    void* pObject;
+    explicit VideoThreadPtr(void* p) : pObject(p) {}
+    ~VideoThreadPtr() { if (pObject) ((RefCountImpl*)pObject)->Release(); }
+    VideoThreadPtr& operator=(void* p) { pObject = p; return *this; }
+    operator void*() const { return pObject; }
 };
 
 // Decodes the players on its own thread, started on demand (0x88 bytes).
@@ -183,7 +194,7 @@ public:
     static int   DecodeFunc(Thread* pthread, void* obj);
 
     MemoryHeap*                 pHeap;          // +0x48
-    RefCountImpl*               pDecodeThread;  // +0x50 Ptr<Thread>
+    VideoThreadPtr              pDecodeThread;  // +0x50 Ptr<Thread>
     Thread::ThreadPriority      ThreadPriority; // +0x58
     Lock                        DecodeLock;     // +0x60
 };
