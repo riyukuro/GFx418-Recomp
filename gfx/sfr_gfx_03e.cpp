@@ -395,7 +395,7 @@ CharacterDef* TextField::GetCharacterDef() const
 // @0x1425b81c0
 unsigned TextField::GetCursorType() const
 {
-    if (Flags & Flags_HandCursor)
+    if ((UByte)(Flags >> 5) & 1)   // Flags_HandCursor
         return MouseCursorEvent::HAND;
     if (IsSelectable())
         return MouseCursorEvent::IBEAM;
