@@ -2068,7 +2068,6 @@ const void* FUN_142546050(const void* method_info, const void* const_pool);   //
 
 // Coerces value to the return type of the method the current call frame runs (result may be value): TypeError
 // 1014 when the type is not found, 1034 when the value does not convert.
-// MS2-FUNCTIONAL 0x1424efe30: written on raw offsets (VM call stack +0x78 size / +0x90 pages, Abc::File tables)
 // @0x1424efe30
 void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::Value* result)
 {
@@ -2077,27 +2076,28 @@ void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* valu
     const Scaleform::UPInt i = *reinterpret_cast<const Scaleform::UPInt*>(v + 0x78) - 1;
     const char* frame = (i & 0x3f) * 0xa8 + *reinterpret_cast<const char* const*>(
         *reinterpret_cast<const char* const*>(v + 0x90) + (i >> 6) * 8);
-    const char* file = *reinterpret_cast<const char* const*>(frame + 0x28);
-    const char* abc = *reinterpret_cast<const char* const*>(file + 0x28);
+    const char* abc = *reinterpret_cast<const char* const*>(*reinterpret_cast<const char* const*>(frame + 0x28) + 0x28);
     const char* const* bodies = *reinterpret_cast<const char* const* const*>(abc + 0x170);
-    const char* const* methods = *reinterpret_cast<const char* const* const*>(abc + 0xf8);
     const char* body = bodies[*reinterpret_cast<const int*>(frame + 0x30)];
-    const char* mn = static_cast<const char*>(FUN_142546050(methods[*reinterpret_cast<const int*>(body + 0x18)],
-                                                            abc + 0x30));
-    const ClassTraits::Traits* ctr = static_cast<const ClassTraits::Traits*>(FUN_142524f60(vm, file, mn));
-    if (!ctr)
+    const char* const* methods = *reinterpret_cast<const char* const* const*>(abc + 0xf8);
+    const char* method = methods[*reinterpret_cast<const int*>(body + 0x18)];
+    const char* mn = static_cast<const char*>(FUN_142546050(method, abc + 0x30));
+    const ClassTraits::Traits* ctr = static_cast<const ClassTraits::Traits*>(
+        FUN_142524f60(vm, *reinterpret_cast<const char* const*>(frame + 0x28), mn));
+    if (ctr)
     {
-        const char* strings = *reinterpret_cast<const char* const*>(abc + 0x70);
+        if (!ctr->Coerce(*value, *result))
+            Sfr33ThrowTypeError(*vm, VM::Error(VM::ErrorID(1034) /* eCheckTypeFailedError */, *vm, *value, ctr->GetName().ToCStr()));
+    }
+    else
+    {
+        const char* strings = *reinterpret_cast<const char* const*>(
+            *reinterpret_cast<const char* const*>(*reinterpret_cast<const char* const*>(frame + 0x28) + 0x28) + 0x70);
         const Abc::StringView& name = *reinterpret_cast<const Abc::StringView*>(
             strings + static_cast<Scaleform::UPInt>(*reinterpret_cast<const unsigned*>(mn + 8)) * 8);
-        const VM::Error e(VM::ErrorID(1014) /* eClassNotFoundError */, *vm, name.ToStringDataPtr().ToCStr());
-        FUN_14252ecb0(vm, &e, &fl::TypeErrorCI);
-        return;
+        const Scaleform::StringDataPtr str = name.ToStringDataPtr();
+        Sfr33ThrowTypeError(*vm, VM::Error(VM::ErrorID(1014) /* eClassNotFoundError */, *vm, str.ToCStr()));
     }
-    if (ctr->Coerce(*value, *result))
-        return;
-    const VM::Error e(VM::ErrorID(1034) /* eCheckTypeFailedError */, *vm, *value, ctr->GetName().ToCStr());
-    FUN_14252ecb0(vm, &e, &fl::TypeErrorCI);
 }
 
 void FUN_1424d29d0(void* set, void* pheapAddr, const Scaleform::UPInt* key, Scaleform::UPInt hash);   // HashSetLH<SPtr>::add
@@ -4720,7 +4720,10 @@ Value* Sfr33GetDefaultValueOfType(VM* vm, Value* result, const UByte* file, cons
     {
         const ClassTraits::Traits* ctr = static_cast<const ClassTraits::Traits*>(FUN_142524f60(vm, file, mn));
         if (ctr)
-            return Sfr33GetDefaultValue(vm, result, *ctr);
+        {
+            Sfr33GetDefaultValue(vm, result, *ctr);
+            return result;
+        }
     }
     ::new (result) Value(Value::GetUndefined());
     return result;
