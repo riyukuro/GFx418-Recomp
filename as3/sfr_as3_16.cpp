@@ -1913,7 +1913,7 @@ bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
 // @0x1424ddc40
 Scaleform::GFx::AS3::AvmLoader::~AvmLoader()
 {
-    reinterpret_cast<Scaleform::UInt8*>(this)[0x6d] = 0;
+    AvmObjOffset = 0;
 }
 
 // Invokes an object-like value with no arguments and an undefined receiver.

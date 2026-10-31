@@ -92,6 +92,9 @@ template<> SF_NOINLINE SfrHsGc::~HashSetBase();      // 0x1424dd1a0
 template<> SF_NOINLINE SfrHsGos::~HashSetBase();      // 0x1424dd250
 template<> SF_NOINLINE SfrHsPf::~HashSetBase();      // 0x1424dd300
 template<> SF_NOINLINE SfrHsTf::~HashSetBase();      // 0x1424dd3b0
+// The display-object list assignment is sfr_as3_16's specialization (0x1424e0340).
+template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
+AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx {
