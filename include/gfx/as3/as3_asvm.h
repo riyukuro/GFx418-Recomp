@@ -166,7 +166,8 @@ public:
         ActionEntry*     pLastEntry;     // +0x20
         ActionLevel      Level;          // +0x28
 
-        // (sfr33) assigned in the body, in the exe's store order (ActionQueueType::Clear 0x1424ef9e0).
+        // (sfr33) assigned in the body, in the exe's store order (ActionQueueType::Clear 0x1424ef9e0); pCurEntry
+        // reads the fields back, as the SDK does (MovieRoot::ExecuteActionQueue 0x1424fa320).
         ActionQueueIterator(ActionLevel lvl, ActionQueueType* pactionQueue, ActionEntry* rootEntry = NULL)
         {
             pActionQueue = pactionQueue;
@@ -174,13 +175,16 @@ public:
             ModId        = 0;
             pLastEntry   = NULL;
             pRootEntry   = rootEntry;
-            pCurEntry    = rootEntry ? rootEntry->pNextEntry : pactionQueue->Entries[lvl].pActionRoot;
+            pCurEntry    = pRootEntry ? pRootEntry->pNextEntry : pActionQueue->Entries[Level].pActionRoot;
         }
         ~ActionQueueIterator()
         {
             if (pLastEntry)
                 pActionQueue->AddToFreeList(pLastEntry);
         }
+#ifdef MS2_AS3_ASSIGN_NOALIAS
+        __declspec(noalias)   // (sfm) LTCG escape knowledge, see Value::Assign
+#endif
         const ActionEntry* getNext();   // 0x142540a90
     };
 

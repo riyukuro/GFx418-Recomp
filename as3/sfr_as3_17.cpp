@@ -433,7 +433,6 @@ unsigned AvmSprite::GetCursorType() const
     return SprFlags & Flag_ButtonMode;
 }
 
-// MS2-FUNCTIONAL: same queue walk; the iterator construction and free-list release are scheduled differently.
 // @0x1424fa450
 void MovieRoot::ExecuteActionQueues()
 {
@@ -3197,7 +3196,6 @@ const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame
 }
 
 // MovieRoot::ExecuteActionQueue: runs (and frees) the actions queued on level lvl.
-// MS2-FUNCTIONAL 0x1424fa320: iterator fields stored in another order; the exe tail-calls AddToFreeList from the inlined dtor.
 // @0x1424fa320
 void Sfr33ExecuteActionQueue(MovieRoot* self, MovieRoot::ActionLevel lvl)
 {
@@ -3208,7 +3206,6 @@ void Sfr33ExecuteActionQueue(MovieRoot* self, MovieRoot::ActionLevel lvl)
 }
 
 // The same for the actions queued after insertAfter (from the level's start without one).
-// MS2-FUNCTIONAL 0x1424fa3b0: iterator fields stored in another order; the exe tail-calls AddToFreeList from the inlined dtor.
 // @0x1424fa3b0
 void Sfr33ExecuteActionQueueAfter(MovieRoot* self, MovieRoot::ActionLevel lvl, MovieRoot::ActionEntry* insertAfter)
 {
