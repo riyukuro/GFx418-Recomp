@@ -2189,7 +2189,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                     FUN_14257dcb0(state->Resource);
                 state->Resource = resource;
                 void** resourceVtable = resource ? *(void***)resource : NULL;
-                typedef CriBool (__fastcall* IsReady)(void*);
+                typedef bool (__fastcall* IsReady)(void*);   // the exe tests al: the reader resource returns bool
                 if (!resource || !((IsReady)resourceVtable[2])(resource))
                 {
                     state->State2c = 3;
@@ -2216,7 +2216,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 ReaderMemoryView* state = (ReaderMemoryView*)request->Request;
                 void* resource = state->Resource;
                 void** vtable = resource ? *(void***)resource : NULL;
-                typedef CriBool (__fastcall* IsFinished)(void*);
+                typedef bool (__fastcall* IsFinished)(void*);   // returns bool (test al)
                 state->State30 = (!resource || ((IsFinished)vtable[0x98 / sizeof(void*)])(resource)) ? 2 : 3;
                 if (resource)
                     FUN_14257dcb0(resource);
