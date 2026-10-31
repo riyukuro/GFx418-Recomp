@@ -115,7 +115,6 @@ public:
     Ptr<IMEManager>                         pIMEManager;    // +0x20
 };
 
-// MS2-FUNCTIONAL: register allocation (the second CreateString loads pMovieRoot into rcx, the exe into rax)
 // The SDK's inline ToAvmDisplayObjContainer (AS3_AvmDisplayObjContainer.h).
 static inline AvmDisplayObjContainer* ToAvmDisplayObjContainer(GFx::DisplayObject* pobj)
 {

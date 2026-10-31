@@ -1987,7 +1987,6 @@ namespace Instances { namespace fl_net
         Data.Assign(Value(GetVM().GetStringManager().CreateString(pdata)));
     }
 
-    // MS2-FUNCTIONAL: register allocation of this/vm differs
     // @0x14249a450
     void URLLoader::SetVariablesDataString(const char* pdata)
     {

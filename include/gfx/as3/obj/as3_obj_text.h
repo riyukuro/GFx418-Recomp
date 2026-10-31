@@ -674,7 +674,7 @@ namespace InstanceTraits { namespace fl_text {
         // @0x1424ad540
         virtual void MakeObject(Value& result, Traits& t)
         {
-            result.Pick(new(t.Alloc()) InstanceType(t));
+            result = Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
         }
     };
 

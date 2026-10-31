@@ -2181,7 +2181,6 @@ namespace Classes { namespace fl_events {
     }
 
     // @0x142466ff0
-    // MS2-FUNCTIONAL: register allocation only (the exe loads the second string manager through rax, ours through rcx)
     SPtr<Instances::fl_events::Event> EventDispatcher::CreateIOErrorEventObject(const char* errText)
     {
         ASVM& asvm = static_cast<ASVM&>(GetVM());
@@ -2313,7 +2312,6 @@ namespace Instances { namespace fl_events {
         return GetDispatcherClass(*this).CreateFocusEventObject(type, relatedObj, controllerIdx, shiftKey, keyCode);
     }
     // @0x142467190
-    // MS2-FUNCTIONAL: register allocation only, as in the Classes factory it inlines (0x142466ff0)
     SPtr<Instances::fl_events::Event> EventDispatcher::CreateIOErrorEventObject(const char* errText)
     {
         return GetDispatcherClass(*this).CreateIOErrorEventObject(errText);

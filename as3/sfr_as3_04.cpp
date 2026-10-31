@@ -1750,7 +1750,6 @@ namespace Instances { namespace fl
         result = GetVM().GetStringManager().CreateString(out);
     }
 
-    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
     // @0x142428140
     void GlobalObjectCPP::encodeURI(ASString& result, const ASString& uri)
     {
@@ -1759,7 +1758,6 @@ namespace Instances { namespace fl
         result = GetVM().GetStringManager().CreateString(out);
     }
 
-    // MS2-FUNCTIONAL: same code; the 0x7fffffffffffffff size-mask constant is loaded at a different point
     // @0x142428210
     void GlobalObjectCPP::encodeURIComponent(ASString& result, const ASString& uri)
     {

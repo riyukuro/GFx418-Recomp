@@ -175,12 +175,11 @@ public:
     ASStringManager* GetStringManager() const   { return pStringManager; }
     MemoryHeap*      GetHeap() const            { return pStringManager->GetHeap(); }
     ASString CreateConstString(const char* pstr) const { return pStringManager->CreateConstString(pstr); }
-    ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
+    ASString CreateString(const char* pstr) const { return pStringManager->CreateString(pstr); }
     ASString CreateString(const char* pstr, UPInt length) const { return pStringManager->CreateString(pstr, length); }
-    ASString CreateString(const String& str) const
-    {
-        return ASString(pStringManager->CreateStringNode(str.ToCStr(), str.GetSize()));
-    }
+    // These two forward to ASStringManager as the SDK does; building the node here gives other registers for the
+    // VM -> StringManager -> pStringManager loads (encodeURI, SetVariablesDataString).
+    ASString CreateString(const String& str) const { return pStringManager->CreateString(str); }
     ASStringNode* GetEmptyStringNode() const    { return pStringManager->GetEmptyStringNode(); }
     ASString      CreateEmptyString() const     { return ASString(pStringManager->GetEmptyStringNode()); }
     ASStringNode* GetNullStringNode() const     { return pStringManager->GetNullStringNode(); }
