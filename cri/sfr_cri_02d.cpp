@@ -14,6 +14,7 @@
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
+// MS2-RANGE: 0x140036b80-0x140036d50 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -93,6 +94,26 @@ typedef struct CriMvSubtitleChunk
     CriUint32 Size;
     CriUint32 Reserved;
 } CriMvSubtitleChunk;
+typedef struct CriMovieChunkQueueRecord
+{
+    void* Chunk;
+    CriUint32 Type;
+    CriUint32 Reserved;
+} CriMovieChunkQueueRecord;
+typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
+{
+    CriUint32 Reserved0[3];
+    CriUint8  Reserved0C, Reserved0D, Reserved0E;
+    CriUint8  Type;                         // 0x0f
+    CriUint32 Reserved10[5];
+} CriUsfChunkHeader;
+typedef struct CriMvSubtitleItemInfo        // FUN_140036f40 fills 0x38 bytes
+{
+    CriUint32 Reserved0[3];
+    CriSint32 Channel;                      // 0x0c
+    CriUint64 Reserved10[5];
+} CriMvSubtitleItemInfo;
+typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; } CriMvSubtitleFrameCounter;
 
 void FUN_140028074(void* heap);
 CriBool FUN_140031aa0(void* player);
@@ -106,6 +127,10 @@ void FUN_140044fd8(void* demux, CriUint8 value);
 void FUN_140046798(void* streamJoint);
 void* FUN_140037050(void* player, CriUint32* available, CriUint32* bounded);
 void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
+void FUN_1400467a8(void* queue, CriSint32 operation, void* chunk);
+void FUN_1400467b0(void* queue, CriSint32 operation, void* chunk);
+CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
+CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input);
 CriBool FUN_1400314d0(void* player);
 void FUN_140031570(void* player);
 void FUN_140033810(void* player);
@@ -144,6 +169,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
 #pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
 #pragma comment(linker, "/alternatename:?FUN_1400358d0@@YAKPEAXPEBX@Z=FUN_1400358d0")
+#pragma comment(linker, "/alternatename:?FUN_140036b80@@YAJPEAXPEAUCriMvSubtitleChunk@@J@Z=FUN_140036b80")
 #pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_isUnderGetFrameCondition=?crimvply_isUnderGetFrameCondition@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_updateMvPlyYuvBuffersFromAlphadecInfo=?crimvply_updateMvPlyYuvBuffersFromAlphadecInfo@@YAXPEAXPEBUCriMvAlphaDecoderFrameInfo@@@Z")
@@ -399,5 +425,63 @@ void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, v
         count = ((CriUint32*)outputInfo)[2];
     memcpy(destination, *(void**)outputInfo, count);
     FUN_140036e30(player, &chunk);
+}
+
+// Select the next subtitle chunk matching a channel while consuming decoder control records.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): count, sj, record, headerInfo, accepted, item.
+// @0x140036b80
+CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 channel)
+{
+    CriSint32 count;
+    CriMovieChunkQueueRecord record;
+    void* sj;
+    CriUsfChunkHeader headerInfo;
+    CriMvSubtitleItemInfo item;
+    CriBool accepted;
+    count = 0;
+    memset(output, 0, sizeof(*output));
+    if (player == NULL)
+        return 0;
+    if (((CriMvSubtitleFields*)player)->Queue == NULL)
+        return 0;
+    sj = ((CriMvSubtitleFields*)player)->Queue;
+    for (;;)
+    {
+        FUN_1400467a0(sj, 1, -1, &record);
+        if (record.Chunk == NULL || record.Type < 0x20)
+            break;
+        FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, &headerInfo);
+        if (headerInfo.Type == 1 || headerInfo.Type == 2)
+        {
+            if (headerInfo.Type == 1)
+            {
+                accepted = FUN_140036d50(player, (const CriMovieInputChunk*)&record);
+                if (accepted == 0)
+                {
+                    FUN_1400467a8(sj, 1, &record);
+                    return 0;
+                }
+                ++((CriMvSubtitleFrameCounter*)player)->Value;
+            }
+            FUN_1400467b0(sj, 0, &record);
+            ++count;
+        }
+        else
+        {
+            FUN_140036f40(player, (CriMvSubtitleChunk*)&record, &item);
+            if (channel != item.Channel)
+            {
+                FUN_1400467b0(sj, 0, &record);
+                ++count;
+            }
+            else
+            {
+                output->Data = (const CriUint8*)record.Chunk;
+                output->Size = record.Type;
+                break;
+            }
+        }
+    }
+    return count;
 }
 #pragma optimize("", on)
