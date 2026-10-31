@@ -435,6 +435,10 @@ public:
     SF_INLINE Value(const ThunkInfo& v) : Flags(kThunk), value(v) { }
     Value(const ASString& v);
     Value(ASStringNode* v);
+    // (appended, sfm) Value(const ASString&) where the exe inlines it; the inline body is defined by the unit that
+    // uses it (sfr_as3_18), the out-of-line one (0x1424dbf70) stays the default.
+    enum InlineStrType { InlineStr };
+    Value(const ASString& v, InlineStrType);
 
     template <typename OT> explicit Value(const SPtr<OT>& v) : Flags(kUndefined) { AssignUnsafe(v); }
     template <typename OT> Value(SPtr<OT>& v, PickType) : Flags(kUndefined) { PickUnsafe(v); }

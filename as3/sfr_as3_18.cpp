@@ -2380,6 +2380,20 @@ bool AvmTextField_IsTabable(UPInt self)
     return !static_cast<const TextField*>(avm->pDispObj)->IsReadOnly();
 }
 
+// Value(const ASString&) as the exe inlines it here (its out-of-line copy is sfr_as3_15's 0x1424dbf70).
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
 // The SDK's AvmDisplayObj::HasAS3Obj: either pointer set.
 static SF_FORCEINLINE bool Sfr34HasAS3Obj(const AvmDisplayObj* avm)
 {
@@ -2399,24 +2413,21 @@ bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
     return false;
 }
 
-// AvmButton::OnMouseEvent; self is the AvmButtonBase part (+0x40). A press becomes a click, the rest goes to
-// OnEvent.
-// MS2-FUNCTIONAL free function on the subobject this: fields are read off the AvmDisplayObj base, not off self
+// A press becomes a click, the rest goes to OnEvent. (The virtual comes from AvmButtonBase, so this is that part.)
 // @0x14251a830
-bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
+bool AvmButton::OnMouseEvent(const EventId& id)
 {
-    AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self - 0x40);
     if (id.Id == EventId::Event_Press)
     {
-        if (Sfr34HasAS3Obj(avm))
+        if (Sfr34HasAS3Obj(this))
         {
             EventId click(id);
             click.Id = AS3Event_Click;
-            avm->GetAS3Obj()->Dispatch(click, avm->pDispObj);
+            GetAS3Obj()->Dispatch(click, pDispObj);
         }
         return true;
     }
-    return avm->OnEvent(id);
+    return OnEvent(id);
 }
 
 // AvmTextField::OnEventLoad: the field joins the play list after its place in the parent, and the optimized
@@ -6245,11 +6256,7 @@ static inline bool Sfr34_MayHaveUrl(Render::Text::DocView* doc)
     return (*(static_cast<const UInt8*>(Sfr34_StyledTextOf(doc)) + 0x40) & 1) != 0;
 }
 
-// The AvmTextField of its AvmTextFieldBase part (+0x40), and the text field it is the AVM part of.
-static inline AvmDisplayObj* Sfr34_TextFieldAvm(UPInt self)
-{
-    return reinterpret_cast<AvmDisplayObj*>(self - 0x40);
-}
+// The text field an AvmTextField is the AVM part of.
 static inline TextField* Sfr34_TextFieldOf(const AvmDisplayObj* avm)
 {
     return reinterpret_cast<TextField*>(avm->pDispObj);
@@ -6257,7 +6264,7 @@ static inline TextField* Sfr34_TextFieldOf(const AvmDisplayObj* avm)
 
 // The event (TextEventEx with the extensions on, else TextEvent) of the type name, bubbling and cancelable, with
 // obj as target.
-static inline SPtr<Instances::fl_events::TextEvent> Sfr34_CreateTextEvent(ASVM* asvm, const ASString& name,
+static SF_FORCEINLINE SPtr<Instances::fl_events::TextEvent> Sfr34_CreateTextEvent(ASVM* asvm, const ASString& name,
                                                                          Instances::fl_display::DisplayObject* obj,
                                                                          bool ex)
 {
@@ -6270,11 +6277,11 @@ static inline SPtr<Instances::fl_events::TextEvent> Sfr34_CreateTextEvent(ASVM* 
 
 // AvmTextField::OnLinkEventEx: with the extensions on, the rolling over (or out of) a link gives a
 // "linkMouseOver" ("linkMouseOut") TextEventEx with the link's URL to the AS3 object when it listens for it.
-// MS2-FUNCTIONAL free function on the subobject this (AvmTextField is opaque in the shared header)
+// MS2-FUNCTIONAL the exe inlines the TextEvent creation with Value(const ASString&); CreateStringNode/ReleaseNode bind differently
 // @0x14251a500
-void FUN_14251a500(UPInt self, TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
+void AvmTextField::OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
 {
-    AvmDisplayObj* avm  = Sfr34_TextFieldAvm(self);
+    AvmDisplayObj* avm  = this;
     MovieRoot*     root = AS3RootOf(avm->pDispObj);
     Sfr34_CheckAvm(root);
     const Render::Text::TextFormat* fmt;
@@ -6304,11 +6311,11 @@ void FUN_14251a500(UPInt self, TextField::LinkEvent event, unsigned pos, unsigne
 
 // AvmTextField::OnMouseEvent: a click (not ending a selection) on an "event:" link of an HTML field gives a "link"
 // TextEvent with the rest of the URL to the AS3 object when it listens for it; true for any click.
-// MS2-FUNCTIONAL free function on the subobject this (AvmTextField is opaque in the shared header)
+// MS2-FUNCTIONAL the exe inlines the TextEvent creation with Value(const ASString&); CreateStringNode/ReleaseNode bind differently
 // @0x14251a8a0
-bool FUN_14251a8a0(UPInt self, const EventId& event)
+bool AvmTextField::OnMouseEvent(const EventId& event)
 {
-    AvmDisplayObj* avm = Sfr34_TextFieldAvm(self);
+    AvmDisplayObj* avm = this;
     static_cast<AvmInteractiveObj*>(avm)->AvmInteractiveObj::OnEvent(event);
     if (event.Id != AS3Event_Click)
         return false;
@@ -6347,22 +6354,26 @@ bool FUN_14251a8a0(UPInt self, const EventId& event)
 
 // AvmTextField::OnCharEvent: a "textInput" TextEvent of the character to the AS3 object when it listens for it;
 // false when the event's default action was prevented.
-// MS2-FUNCTIONAL free function on the subobject this (AvmTextField is opaque in the shared header)
+// MS2-FUNCTIONAL register allocation: the exe keeps one more callee-saved register and a 0x10 larger frame
 // @0x142518750
-bool FUN_142518750(UPInt self, wchar_t wcharCode, unsigned controllerIdx)
+bool AvmTextField::OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
 {
-    AvmDisplayObj*                        avm  = Sfr34_TextFieldAvm(self);
-    MovieRoot*                            root = AS3RootOf(avm->pDispObj);
-    Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
-    const ASString&                       name = root->BuiltinsMgr.GetBuiltin(AS3Builtin_textInput);
-    if (!obj->WillTrigger(name, false))
-        return true;
-    ASVM*                                 asvm = root->pAVM;
-    SPtr<Instances::fl_events::TextEvent> evt  = Sfr34_CreateTextEvent(asvm, name, obj, asvm->ExtensionsEnabled);
-    evt->SetText(wcharCode);
-    if (asvm->ExtensionsEnabled)
-        static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr())->controllerIdx = controllerIdx;
-    return obj->DispatchEventObject(evt, avm->pDispObj);
+    bool rv = true;
+    const ASString&                       name   = AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_textInput);
+    Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
+    if (as3obj->WillTrigger(name, false))
+    {
+        SPtr<Instances::fl_events::TextEvent> evt;
+        Value params[] = { Value(name, Value::InlineStr), Value(true), Value(true) };
+        ASVM* asvm = AS3RootOf(pDispObj)->pAVM;
+        asvm->ConstructInstance(evt, asvm->ExtensionsEnabled ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
+        FUN_14243d870(&evt->Target, as3obj);
+        evt->SetText(wcharCode);
+        if (asvm->ExtensionsEnabled)
+            static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr())->controllerIdx = controllerIdx;
+        rv = as3obj->DispatchEventObject(evt, pDispObj);
+    }
+    return rv;
 }
 
 // sfr34 batch AE: the firing of an interval timer.
