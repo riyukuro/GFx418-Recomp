@@ -24,7 +24,6 @@ enum { MaximumDrawableSources = 3 };
 
 // ***** The source-rect commands
 
-// MS2-FUNCTIONAL: in the texture matrix loop cl steps the matrix pointer before the image index (the exe the other way)
 // @0x142671f40
 template<class D>
 void DICommand_SourceRectImpl<D>::ExecuteHW(DICommandContext& context) const
@@ -65,8 +64,9 @@ void DICommand_SourceRectImpl<D>::ExecuteHW(DICommandContext& context) const
             texgen[i].AppendScaling(Size<float>((float)ClippedSourceRect.Width() / (float)targets[i]->GetBufferSize().Width,
                                                 (float)ClippedSourceRect.Height() / (float)targets[i]->GetBufferSize().Height));
             ImageSize buffer = targets[i]->GetBufferSize();
-            texgen[i].Tx() += readOffsets[i].Width / (float)buffer.Width;
-            texgen[i].Ty() += readOffsets[i].Height / (float)buffer.Height;
+            Size<float> offset(readOffsets[i].Width / (float)buffer.Width, readOffsets[i].Height / (float)buffer.Height);
+            texgen[i].Tx() += offset.Width;
+            texgen[i].Ty() += offset.Height;
         }
     }
 
