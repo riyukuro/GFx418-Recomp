@@ -2300,35 +2300,35 @@ namespace Instances { namespace fl_display
     }
 #pragma strict_gs_check(pop)
 
-    // The Graphics object of a sprite or shape, made on first use and bound to the display object's drawing.
-    static SF_FORCEINLINE void MakeGraphics(VM& vm, SPtr<Instances::fl_display::Graphics>& pgraphics, GFx::DisplayObject* pdobj)
-    {
-        ASVM& asvm = static_cast<ASVM&>(vm);
-        if (asvm.ConstructInstance(pgraphics, asvm.GraphicsClass))
-        {
-            Instances::fl_display::Graphics* pg = pgraphics;
-            pg->pDrawing = pdobj->GetDrawingContext();
-            pgraphics->pDispObj = pdobj;
-        }
-    }
-
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Graphics>::operator= instance (0x14243d720); ours inlines it
     // @0x14244e3c0
     SF_NOINLINE void Sprite::graphicsGet(SPtr<Instances::fl_display::Graphics>& result)
     {
         if (!pGraphics)
-            MakeGraphics(GetVM(), pGraphics, pDispObj);
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            if (asvm.ConstructInstance(pGraphics, asvm.GraphicsClass))
+            {
+                pGraphics->pDrawing = pDispObj->GetDrawingContext();
+                pGraphics->pDispObj = pDispObj;
+            }
+        }
         result = pGraphics;
     }
 
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Graphics>::operator= instance (0x14243d720); ours inlines it
     // @0x14244e2e0
     SF_NOINLINE void Shape::graphicsGet(SPtr<Instances::fl_display::Graphics>& result)
     {
         if (!pDispObj)
             CreateStageObject();
         if (!pGraphics)
-            MakeGraphics(GetVM(), pGraphics, pDispObj);
+        {
+            ASVM& asvm = static_cast<ASVM&>(GetVM());
+            if (asvm.ConstructInstance(pGraphics, asvm.GraphicsClass))
+            {
+                pGraphics->pDrawing = pDispObj->GetDrawingContext();
+                pGraphics->pDispObj = pDispObj;
+            }
+        }
         result = pGraphics;
     }
 
@@ -2361,11 +2361,13 @@ namespace Instances { namespace fl_display
                 p = Content->pDispObj;
                 pdisp = p.GetPtr();
             }
-            MovieDataDef::MovieDataType type = pdisp->GetResourceMovieDef()->pBindData->GetDataDef()->MovieType;
-            if (type == MovieDataDef::MT_Flash)
+            MovieDefImpl* def = pdisp->GetResourceMovieDef();
+            if (def->pBindData->GetDataDef()->MovieType == MovieDataDef::MT_Flash)
                 result = "application/x-shockwave-flash";
+            else if (def->pBindData->GetDataDef()->MovieType == MovieDataDef::MT_Image)
+                result = "image";
             else
-                result = (type == MovieDataDef::MT_Image) ? "image" : "unknown";
+                result = "unknown";
         }
         else
             result = "unknown";
@@ -3315,20 +3317,20 @@ public:
 
 namespace Instances { namespace fl_display
 {
-    // MS2-FUNCTIONAL: exe calls the out-of-line SPtr<Stage>::operator= instance (0x14243d9c0) and strips the collectible tag with a branch; ours inlines both
+    // MS2-FUNCTIONAL: the exe copies the stage pointer to rcx before the null test (3 bytes); logic identical
     // @0x142453490
     SF_NOINLINE void DisplayObject::stageGet(SPtr<Instances::fl_display::Stage>& result)
     {
-        if (!ToAvmDisplayObj(pDispObj)->IsStageAccessible())
+        if (ToAvmDisplayObj(pDispObj)->IsStageAccessible())
         {
-            result = NULL;
-            return;
+            GFx::DisplayObject* pstage = FUN_14250edf0(ToAvmDisplayObj(pDispObj));
+            AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(
+                pstage ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL);
+            pavm->CreateASInstance(true);
+            result = static_cast<Instances::fl_display::Stage*>(pavm->GetAS3Obj());
         }
-        GFx::DisplayObject* pstage = FUN_14250edf0(ToAvmDisplayObj(pDispObj));
-        AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(
-            pstage ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL);
-        pavm->CreateASInstance(true);
-        result = static_cast<Instances::fl_display::Stage*>(pavm->GetAS3Obj());
+        else
+            result = NULL;
     }
 
     // Uninitialized room for a RectF that a callee fills in
