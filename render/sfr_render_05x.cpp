@@ -38,13 +38,13 @@ struct QuickSortSlicedInst
 template<class ArrayT, class Less>
 void (*const QuickSortSlicedInst<ArrayT, Less>::Fn)(ArrayT&, Scaleform::UPInt, Scaleform::UPInt, Less) =
     &Scaleform::Alg::QuickSortSliced<ArrayT, Less>;
-} // namespace
 
 // @0x1426978d0
 template struct QuickSortSlicedInst<
     Scaleform::Render::ArrayPaged<Scaleform::Render::Tessellator::StrokerEdgeType, 4, 16>,
     bool (*)(const Scaleform::Render::Tessellator::StrokerEdgeType&,
              const Scaleform::Render::Tessellator::StrokerEdgeType&)>;
+} // namespace
 
 // MS2-PIN: ?SmoothNoise@PerlinGenerator@Render@Scaleform@@AEAAMHH@Z 0x142678210
 // MS2-PIN: ??$QuickSortSliced@V?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@Scaleform@@P6A_NAEBUStrokerEdgeType@Tessellator@23@0@Z@Alg@Scaleform@@YAXAEAV?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@1@_K1P6A_NAEBUStrokerEdgeType@Tessellator@31@2@Z@Z 0x1426978d0
