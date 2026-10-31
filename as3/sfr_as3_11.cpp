@@ -11,6 +11,12 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_net_soloader.h"
 
+#if defined(__clang__)
+#define SFR11_INSTANCE_CTOR
+#else
+#define SFR11_INSTANCE_CTOR inline
+#endif
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2559,7 +2565,11 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x142496150
-    NetConnection::NetConnection(InstanceTraits::Traits& t)
+    // The Instances::fl_net ctors that take InstanceTraits::Traits& are `inline` under cl, so their out-of-line copies
+    // here are COMDAT-any and the inline copies sfr_as3_12 carries (cl emits them) no longer clash with them in the
+    // fullexe link (LNK2005). MS2_Sfr11EmitInstanceCtors at the end of the unit keeps them emitted. clang-cl ignores
+    // inline_depth, so the hook DLL build keeps them as plain definitions.
+    SFR11_INSTANCE_CTOR NetConnection::NetConnection(InstanceTraits::Traits& t)
         : Instances::fl_events::EventDispatcher(t)
     {
     }
@@ -2653,7 +2663,7 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x142496510
-    SharedObject::SharedObject(InstanceTraits::Traits& t)
+    SFR11_INSTANCE_CTOR SharedObject::SharedObject(InstanceTraits::Traits& t)
         : Instances::fl_events::EventDispatcher(t)
     {
     }
@@ -2755,7 +2765,7 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x1424968a0
-    URLLoader::URLLoader(InstanceTraits::Traits& t)
+    SFR11_INSTANCE_CTOR URLLoader::URLLoader(InstanceTraits::Traits& t)
         : Instances::fl_events::EventDispatcher(t)
         , pLoadQueue(NULL)
         , DataFormat(GetVM().GetStringManager().CreateEmptyString())
@@ -2831,7 +2841,7 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x142496b80
-    URLRequest::URLRequest(InstanceTraits::Traits& t)
+    SFR11_INSTANCE_CTOR URLRequest::URLRequest(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , Url(GetVM().GetStringManager().CreateEmptyString())
     {
@@ -2872,7 +2882,7 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x142496d00
-    URLRequestHeader::URLRequestHeader(InstanceTraits::Traits& t)
+    SFR11_INSTANCE_CTOR URLRequestHeader::URLRequestHeader(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , HeaderName(GetVM().GetStringManager().CreateEmptyString())
         , HeaderValue(GetVM().GetStringManager().CreateEmptyString())
@@ -2971,7 +2981,7 @@ namespace InstanceTraits { namespace fl_net
 namespace Instances { namespace fl_net
 {
     // @0x142497110
-    URLVariables::URLVariables(InstanceTraits::Traits& t)
+    SFR11_INSTANCE_CTOR URLVariables::URLVariables(InstanceTraits::Traits& t)
         : Instances::fl::Object(t)
         , Source(GetVM().GetStringManager().CreateEmptyString())
     {
@@ -3032,6 +3042,21 @@ void Ms2EmitSharedObjectLoader(void* ploader, VM* pvm)
 {
     ::new (ploader) ASSharedObjectLoader(pvm, NULL);
 }
+
+// Calls each inline Instances::fl_net ctor above out of line (inline_depth 0), so cl emits their bodies (and with them the
+// vftables and deleting dtors) in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr11EmitInstanceCtors(void* p, InstanceTraits::Traits& t)
+{
+    using namespace Instances::fl_net;
+    new(p) NetConnection(t);
+    new(p) SharedObject(t);
+    new(p) URLLoader(t);
+    new(p) URLRequest(t);
+    new(p) URLRequestHeader(t);
+    new(p) URLVariables(t);
+}
+#pragma inline_depth()
 
 }}} // namespace Scaleform::GFx::AS3
 

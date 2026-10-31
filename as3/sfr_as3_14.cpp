@@ -10,6 +10,12 @@
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/kernel/sf_wstring.h"
 
+#if defined(__clang__)
+#define SFR14_INSTANCE_CTOR
+#else
+#define SFR14_INSTANCE_CTOR inline
+#endif
+
 namespace Scaleform {
 // The ByteArray storage grows through this out of line (0x1424beea0) in the exe.
 template <> inline SF_NOINLINE void ArrayBase<ArrayData<UInt8, AllocatorLH_POD<UInt8>, ArrayDefaultPolicy> >::Resize(UPInt newSize)
@@ -1633,7 +1639,11 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c6060
-    GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
+    // The Instances::fl_gfx ctors that take InstanceTraits::Traits& are `inline` under cl, so their out-of-line copies
+    // here are COMDAT-any and the inline copies sfr_as3_15 carries (cl emits them) no longer clash with them in the
+    // fullexe link (LNK2005). MS2_Sfr14EmitInstanceCtors at the end of the unit keeps them emitted. clang-cl ignores
+    // inline_depth, so the hook DLL build keeps them as plain definitions.
+    SFR14_INSTANCE_CTOR GamePadAnalogEvent::GamePadAnalogEvent(InstanceTraits::Traits& t)
         : Event(t)
     {
     }
@@ -1686,7 +1696,7 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c61c0
-    IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR IMECandidateListStyle::IMECandidateListStyle(InstanceTraits::Traits& t)
         : Object(t)
         , textColor(-1), selectedTextColor(-1), fontSize(-1), backgroundColor(-1), selectedBackgroundColor(-1)
         , indexBackgroundColor(-1), selectedIndexBackgroundColor(-1), readingWindowTextColor(-1)
@@ -1695,14 +1705,14 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c6420
-    IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR IMEEventEx::IMEEventEx(InstanceTraits::Traits& t)
         : Event(t)
         , message(GetVM().GetStringManager().CreateEmptyString())
     {
     }
 
     // @0x1424c67b0
-    KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR KeyboardEventEx::KeyboardEventEx(InstanceTraits::Traits& t)
         : KeyboardEvent(t)
         , controllerIdx(0)
     {
@@ -1733,7 +1743,7 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c6950
-    MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR MouseCursorEvent::MouseCursorEvent(InstanceTraits::Traits& t)
         : Event(t)
         , cursor(GetVM().GetStringManager().CreateEmptyString())
     {
@@ -1743,7 +1753,7 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c6b20
-    MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR MouseEventEx::MouseEventEx(InstanceTraits::Traits& t)
         : MouseEvent(t)
         , mouseIdx(0), buttonIdx(0), nestingIdx(0)
     {
@@ -1776,7 +1786,7 @@ namespace Instances { namespace fl_gfx
     }
 
     // @0x1424c6e10
-    TextEventEx::TextEventEx(InstanceTraits::Traits& t)
+    SFR14_INSTANCE_CTOR TextEventEx::TextEventEx(InstanceTraits::Traits& t)
         : TextEvent(t)
         , controllerIdx(0), buttonIdx(0)
     {
@@ -2297,6 +2307,26 @@ template ArrayDataBase<GFx::AS3::SPtr<MS2_VMAbcFile>, AllocatorGH<GFx::AS3::SPtr
                        ArrayDefaultPolicy>::~ArrayDataBase();
 
 } // namespace Scaleform
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+
+// Calls each inline Instances::fl_gfx ctor above out of line (inline_depth 0), so cl emits their bodies (and with them the
+// vftables and deleting dtors) in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr14EmitInstanceCtors(void* p, InstanceTraits::Traits& t)
+{
+    using namespace Instances::fl_gfx;
+    new(p) GamePadAnalogEvent(t);
+    new(p) IMECandidateListStyle(t);
+    new(p) IMEEventEx(t);
+    new(p) KeyboardEventEx(t);
+    new(p) MouseCursorEvent(t);
+    new(p) MouseEventEx(t);
+    new(p) TextEventEx(t);
+}
+#pragma inline_depth()
+
+}}} // namespace Scaleform::GFx::AS3
 
 // MS2-PIN: ??_7Dictionary@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171980
 // MS2-PIN: ??_7Endian@fl_utils@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x143171a10
