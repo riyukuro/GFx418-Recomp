@@ -1039,26 +1039,22 @@ void FUN_140005f60(void** allocation) { if (*allocation) Scaleform::Memory::Free
 void FUN_140005fa0(void** allocation) { if (*allocation) Scaleform::Memory::Free(*allocation); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the two Scaleform::String data references, then optionally frees the pair.
+// releases the two Scaleform::String data references, then optionally frees the pair
 // @0x140005d30
 void* FUN_140005d30(Scaleform::UPInt* pair, unsigned flags)
 {
-    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
-    if (second) second->Release();
-    if (first) first->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3))->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3))->Release();
     if (flags & 1) ::operator delete(pair);
     return pair;
 }
 
-// MS2-FUNCTIONAL: releases the two Scaleform::String data references held by this pair.
+// releases the two Scaleform::String data references held by this pair
 // @0x140005df0
 void FUN_140005df0(Scaleform::UPInt* pair)
 {
-    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
-    if (second) second->Release();
-    if (first) first->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3))->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3))->Release();
 }
 
 // MS2-FUNCTIONAL: copies both shared string members when a destination pair is supplied.
@@ -1223,14 +1219,12 @@ void FUN_140003a50(void** interfaceSlot)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: releases the String data pair in reverse field order.
+// releases the String data pair in reverse field order
 // @0x140004b00
 void FUN_140004b00(Scaleform::UPInt* pair)
 {
-    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[2] & ~Scaleform::UPInt(3));
-    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    if (second) second->Release();
-    if (first) first->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[2] & ~Scaleform::UPInt(3))->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3))->Release();
 }
 
 // destroys the base object and releases its allocation when requested.
@@ -1251,14 +1245,12 @@ void* FUN_140004fb0(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases the two Scaleform::String data references stored in this small pair.
+// releases the two Scaleform::String data references stored in this small pair
 // @0x140005300
 void FUN_140005300(Scaleform::UPInt* pair)
 {
-    Scaleform::String::DataDesc* second = reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3));
-    Scaleform::String::DataDesc* first = reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3));
-    if (second) second->Release();
-    if (first) first->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[1] & ~Scaleform::UPInt(3))->Release();
+    reinterpret_cast<Scaleform::String::DataDesc*>(pair[0] & ~Scaleform::UPInt(3))->Release();
 }
 
 // MS2-FUNCTIONAL: tears down weak-reference support state and optionally frees its allocation.
