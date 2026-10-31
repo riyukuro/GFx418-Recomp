@@ -23,6 +23,10 @@
 #include "ms2/scaleform/include/render/text_docview.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/text_editorkit.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+
+// TextField::GetCSSData, out of line in the exe (sfr_gfx_03e).
+Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1059,26 +1063,26 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b2e80
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Font::hasGlyphs(bool& result, const ASString& str)
     {
-        if (!pFont)
+        if (pFont)
         {
-            result = false;
-            return;
-        }
-        const char* p = str.ToCStr();
-        const char* pend = p + str.GetSize();
-        result = true;
-        while (p < pend)
-        {
-            UInt32 ch = UTF8Util::DecodeNextChar(&p);
-            if (pFont->GetGlyphIndex((UInt16)ch) < 0)
+            const char* pbuf = str.ToCStr();
+            const char* pebuf = pbuf + str.GetSize();
+            UInt32 c;
+            result = true;
+            while (pbuf < pebuf)
             {
-                result = false;
-                return;
+                c = UTF8Util::DecodeNextChar(&pbuf);
+                if (pFont->GetGlyphIndex((UInt16)c) < 0)
+                {
+                    result = false;
+                    break;
+                }
             }
         }
+        else
+            result = false;
     }
 
     // The exe converts the arguments and drops them: the metrics stay zero.
@@ -2037,13 +2041,23 @@ namespace Instances { namespace fl_text
     };
     static inline AvmCSSHolder*& CSSDataOf(void* ptf) { return *(AvmCSSHolder**)((UByte*)ptf + 0x108); }
 
+    // The SDK's inline ToAvmTextField(InteractiveObject*) (the AvmTextField is reached as its AvmInteractiveObj part,
+    // same address) and AvmTextField::GetCSSData(), whose TextField::GetCSSData is out of line in the exe.
+    static SF_INLINE AvmInteractiveObj* ToAvmTextField(GFx::InteractiveObject* po)
+    {
+        return static_cast<AvmInteractiveObj*>(po->GetAvmIntObj());
+    }
+    static SF_INLINE AvmCSSHolder* GetCSSData(AvmInteractiveObj* patf)
+    {
+        return reinterpret_cast<AvmCSSHolder*>(FUN_1425b7e60(reinterpret_cast<UPInt>(patf->pDispObj)));
+    }
+
     // @0x1424b49a0
-    // MS2-FUNCTIONAL: the exe reaches the field through its AvmTextField (same object)
     __declspec(noinline) void TextField::styleSheetGet(SPtr<Instances::fl_text::StyleSheet>& result)
     {
-        void* ptf = DisplayTextField(this);
-        if (CSSDataOf(ptf) && CSSDataOf(ptf)->pASStyleSheet)
-            result = CSSDataOf(ptf)->pASStyleSheet;
+        AvmInteractiveObj* patf = ToAvmTextField(static_cast<GFx::InteractiveObject*>(pDispObj.GetPtr()));
+        if (GetCSSData(patf) && GetCSSData(patf)->pASStyleSheet.GetPtr())
+            result = GetCSSData(patf)->pASStyleSheet;
     }
 
     // @0x1424b4a50
@@ -2094,21 +2108,20 @@ namespace Instances { namespace fl_text
     // Re-applies the auto-size mode to the document view after a layout setting changed; horizontal auto-sizing is
     // off while the text wraps.
     // @0x1424af5f0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     SF_NOINLINE void TextFieldUpdateAutoSize(TextField* pthis)
     {
         void* ptf = DisplayTextField(pthis);
-        bool autoSize = (FieldFlags(ptf) & 1) != 0;
-        void* pdoc = DocViewOf(ptf);
-        if (autoSize && !(ViewFlags(pdoc) & 8))
-            FUN_1426150b0(pdoc);
+        // The SDK's IsAutoSize()/IsWordWrap() bools; the exe reads the autosize bit as a byte.
+        const bool autoSizeByX = ((*(UByte*)&FieldFlags(ptf) & 1) != 0 && !((ViewFlags(DocViewOf(ptf)) & 8) != 0));
+        const bool autoSizeByY = ((*(UByte*)&FieldFlags(ptf) & 1) != 0);
+        if (autoSizeByX)
+            FUN_1426150b0(DocViewOf(ptf));
         else
-            ViewFlags(pdoc) &= ~1;
-        pdoc = DocViewOf(ptf);
-        if (autoSize)
-            FUN_1426150d0(pdoc);
+            ViewFlags(DocViewOf(ptf)) &= ~1;
+        if (autoSizeByY)
+            FUN_1426150d0(DocViewOf(ptf));
         else
-            ViewFlags(pdoc) &= ~2;
+            ViewFlags(DocViewOf(ptf)) &= ~2;
         FieldFlags(ptf) |= 0x2000;
         FUN_1425bc060(ptf);
     }
