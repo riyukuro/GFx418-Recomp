@@ -838,7 +838,10 @@ namespace GFx {
 FontDataBound::FontDataBound(Render::Font* pfont, ResourceBinding* pbinding)
     : Render::Font(*pfont), pFont(pfont), pTGData()
 {
-    pTGData = *SF_HEAP_AUTO_NEW(this) TextureGlyphData(*(TextureGlyphData*)pfont->GetTextureGlyphData());
+    // make a copy of TextureGlyphData and resolve image resources in it.
+    const TextureGlyphData* srcTGData = static_cast<const TextureGlyphData*>(pfont->GetTextureGlyphData());
+    pTGData = *SF_HEAP_AUTO_NEW(this) TextureGlyphData(*srcTGData);
+
     TextureGlyphBinder binder(pbinding);
     pTGData->VisitTextureGlyphs(&binder);
 }
@@ -985,7 +988,6 @@ FontResource* FontResource::CreateFontResource(const char* pfontName, unsigned f
     return pfontRes;
 }
 
-// MS2-FUNCTIONAL 0x142657940: different nonvolatile register (rbp vs r15) and branch layout; same resolve loop
 // @0x142657940
 void FontResource::ResolveTextureGlyphs()
 {
