@@ -7,9 +7,11 @@
 // MS2-UNIT: sfr_cri_02c
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002e548-0x1400356a0 .text$mn
+// MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
+// MS2-RANGE: 0x140030e50-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
-// MS2-RANGE: 0x1400358d0-0x140039ea8 .text$mn
+// MS2-RANGE: 0x1400358d0-0x140036470 .text$mn
+// MS2-RANGE: 0x140036590-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // VS2008's <new> (use_ansi.h) adds /DEFAULTLIB:libcpmt under /MT. That static C++ library then wins over the hook DLL's
@@ -1990,40 +1992,17 @@ void FUN_140036f40(void* player, CriMvSubtitleChunk* chunk, void* outputInfo)
                                                + ((CriMvSubtitleInfo*)outputInfo)->in_time_per_data;
 }
 
-// MS2-FUNCTIONAL: read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage.
-// @0x140036470
-void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, void* outputInfo)
-{
-    memset(outputInfo, 0, 0x38);
-    ((CriUint64*)outputInfo)[2] = 1;
-    if (!player || !((CriMvSubtitleFields*)player)->Queue)
-        return;
-    CriMvSubtitleChunk chunk = {};
-    FUN_140036b80(player, &chunk, ((CriMvSubtitleFields*)player)->SubtitleChannel);
-    if (!chunk.Data || chunk.Size < 0x20)
-    {
-        FUN_140036e80(player, &chunk);
-        return;
-    }
-    FUN_140036f40(player, &chunk, outputInfo);
-    FUN_140037a10();
-    memset(destination, 0, capacity);
-    CriUint32 bytes = *(CriUint32*)((CriUint8*)outputInfo + 8);
-    if (bytes > capacity)
-        bytes = capacity;
-    memcpy(destination, *(void**)outputInfo, bytes);
-    FUN_140036e30(player, &chunk);
-}
-
-// MS2-FUNCTIONAL: obtain the next valid subtitle's decoded metadata and return its chunk to the queue afterward.
+// obtain the next valid subtitle's decoded metadata and return its chunk to the queue afterward.
 // @0x140036590
 void criMvPly_GetNextSubtitleInfo(void* player, void* outputInfo)
 {
     memset(outputInfo, 0, 0x38);
     *(CriUint64*)((CriUint8*)outputInfo + 0x10) = 1;
-    if (!player || !((CriMvSubtitleFields*)player)->Queue)
+    if (!player)
         return;
-    CriMvSubtitleChunk chunk = {};
+    if (!((CriMvSubtitleFields*)player)->Queue)
+        return;
+    CriMvSubtitleChunk chunk;  // FUN_140036b80 clears it
     FUN_140036b80(player, &chunk, ((CriMvSubtitleFields*)player)->SubtitleChannel);
     if (!chunk.Data || chunk.Size < 0x20)
     {
@@ -4697,50 +4676,6 @@ void FUN_140030c70(void* player)
     FUN_140037850(player);
     FUN_140030cb0(player);
     FUN_140037880(player);
-}
-
-// MS2-FUNCTIONAL: release every CRI Movie player subsystem and clear its owned state; the exe reloads player into r11
-// for the compare after memset, which only C (vc9c) emits
-// @0x140030cb0
-void FUN_140030cb0(void* player)
-{
-    void* heap = *(void**)((CriUint8*)player + 0xdf0);
-    if (*(void**)((CriUint8*)player + 0xe28))
-    {
-        FUN_140046784(*(void**)((CriUint8*)player + 0xe28));
-        *(void**)((CriUint8*)player + 0xe28) = 0;
-    }
-    if (*(void**)((CriUint8*)player + 0xe10))
-    {
-        FUN_1400420b0(*(void**)((CriUint8*)player + 0xe10), heap);
-        *(void**)((CriUint8*)player + 0xe10) = 0;
-    }
-    if (*(void**)((CriUint8*)player + 0xe40))
-    {
-        FUN_140043be0(*(void**)((CriUint8*)player + 0xe40));
-        *(void**)((CriUint8*)player + 0xe40) = 0;
-    }
-    if (*(void**)((CriUint8*)player + 0xe08))
-    {
-        FUN_140044560(*(CriUint64**)((CriUint8*)player + 0xe08));
-        *(void**)((CriUint8*)player + 0xe08) = 0;
-    }
-    void* handle = *(void**)((CriUint8*)player + 0xd88);
-    if (handle)
-    {
-        FUN_140046784(handle);
-        *(CriUint32*)((CriUint8*)player + 0xdf8) = 0;
-        *(CriUint32*)((CriUint8*)player + 0xdfc) = 0;
-        *(void**)((CriUint8*)player + 0xd88) = 0;
-    }
-    CriUint8* dst = (CriUint8*)player + 0xad8;
-    memset(dst, 0, 0x288);
-    if (*(void**)((CriUint8*)player + 0xee0))
-    {
-        FUN_140028074(*(void**)((CriUint8*)player + 0xee0));
-        *(void**)((CriUint8*)player + 0xee0) = 0;
-    }
-    *(CriUint32*)((CriUint8*)player + 0xad4) = 0;
 }
 #pragma optimize("", on)
 
