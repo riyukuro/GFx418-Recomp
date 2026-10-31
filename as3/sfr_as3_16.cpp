@@ -296,6 +296,8 @@ Scaleform::GFx::AS3::XMLSupport::~XMLSupport()
 Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
 {
 }
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
+// MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
 
 
 // A copied frame gives back what its constructor reserved: the operand stack reservation (an emptied page with a

@@ -2228,6 +2228,10 @@ void InteractiveObject::ModifyOptimizedPlayListLocal<Sprite>()
 }
 } // namespace GFx
 
+// Defined in sfr_as3_16 (0x1424e0340) as an explicit specialization; declared here so this unit calls it.
+template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
+AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
+
 // HashSetBase::add instances: the node type N with its own hash functors, allocator A and entry E.
 template<class N, class A, class E>
 struct MS2_HashSetOf
