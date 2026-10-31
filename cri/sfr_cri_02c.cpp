@@ -3936,29 +3936,40 @@ CriSint32 FUN_140032090(void* player)
     return 1;
 }
 
-// MS2-FUNCTIONAL: return a partially consumed input chunk to its source queue after playback uses it.
+// return a partially consumed input chunk to its source queue after playback uses it.
 // @0x140034e70
 void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maximum)
 {
     struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
-    struct ReadCurrentView { CriUint8 Reserved[0xd90]; CriMovieInputChunk Current; };
-    if (((ReadModeView*)player)->Mode == 1 || !input->Data || input->Size == 0)
+    CriMovieInputChunk* current;
+    CriMovieInputChunk leftChunk;
+    CriSint32 status;
+    void* source;
+    if (((ReadModeView*)player)->Mode == 1)
         return;
-    CriSint32 status = getInternalStatus(player);
-    if (status == 0 || status == 2 || status == 8)
+    if (!input->Data || input->Size == 0)
+        return;
+    status = getInternalStatus(player);
+    switch (status)
     {
-        ((ReadCurrentView*)player)->Current.Data = NULL;
-        ((ReadCurrentView*)player)->Current.Size = 0;
+    case 0:
+    case 2:
+    case 8:
+        current = (CriMovieInputChunk*)((CriUint8*)player + 0xd90);
+        current->Data = NULL;
+        current->Size = 0;
         return;
     }
 
-    void* source = FUN_140037050(player, NULL, NULL);
+    source = FUN_140037050(player, NULL, NULL);
     if (!source)
     {
         FUN_140037950(player, "E05063026M : Can't exec criMvPly_PutInputChunk() before AllocateWorkBuffer.", 0);
         return;
     }
-    CriMovieInputChunk* current = &((ReadCurrentView*)player)->Current;
+    if (input->Size == 0)
+        return;
+    current = (CriMovieInputChunk*)((CriUint8*)player + 0xd90);
     if (current->Data != input->Data || current->Size != input->Size)
     {
         FUN_140037950(player, "E05063027M : Chunk is not same to one by criMvPly_GetInputChunk().",
@@ -3966,9 +3977,8 @@ void FUN_140034e70(void* player, const CriMovieInputChunk* input, CriUint32 maxi
         return;
     }
 
-    CriMovieInputChunk suffix = {};
-    criSj_SplitChunk(current, maximum, current, &suffix);
-    FUN_1400467a8(source, 0, &suffix);
+    criSj_SplitChunk(current, maximum, current, &leftChunk);
+    FUN_1400467a8(source, 0, &leftChunk);
     FUN_1400467b0(source, 1, current);
     current->Data = NULL;
     current->Size = 0;
