@@ -222,7 +222,6 @@ void* DataAllocator::OverflowAlloc(UPInt bytes)
     if (bytes > (BlockSize - sizeof(Block)) / 2)
         return AllocIndividual(bytes);
 
-    UByte* pmem;
     if (bytes > BytesLeft)
     {
         Block* pblock = (Block*)SF_HEAP_ALLOC(pHeap, BlockSize, StatMD_Other_Mem);
@@ -230,12 +229,12 @@ void* DataAllocator::OverflowAlloc(UPInt bytes)
             return 0;
         pblock->pNext = pAllocations;
         pAllocations  = pblock;
-        pmem          = (UByte*)(pblock + 1);
+        pCurrent      = (UByte*)(pblock + 1);
         BytesLeft     = BlockSize - sizeof(Block);
     }
-    else
-        pmem = pCurrent;
-    pCurrent = pmem + bytes;
+
+    void* pmem = pCurrent;
+    pCurrent += bytes;
     BytesLeft -= bytes;
     return pmem;
 }
@@ -303,13 +302,13 @@ MovieDataDef::DefBindingData::~DefBindingData()
     while (pImports)
     {
         ImportData* pimport = pImports;
-        pImports = pImports->pNext;
+        pImports = pImports->pNext.Value;   // the raw volatile read, as the font list does
         pimport->~ImportData();
     }
     while (pResourceNodes)
     {
         ResourceDataNode* pnode = pResourceNodes;
-        pResourceNodes = pResourceNodes->pNext;
+        pResourceNodes = pResourceNodes->pNext.Value;
         pnode->~ResourceDataNode();
     }
     while (pFonts)
@@ -1677,11 +1676,11 @@ Resource* MovieDefImpl::GetResource(const char* pexportName) const
     String str(pexportName);
     MovieDataDef::LoadTaskData::ResourceLocker lock(GetDataDef()->pData);
 
-    StringHashLH<ResourceHandle>&          exports = GetDataDef()->pData->Exports;
-    StringHashLH<ResourceHandle>::Iterator iexport = exports.FindCaseInsensitive(str);
-    if (iexport == exports.End())
+    StringHashLH<ResourceHandle>::ConstIterator iexport = GetDataDef()->pData->Exports.FindCaseInsensitive(str);
+    if (iexport == GetDataDef()->pData->Exports.End())
         return 0;
-    return iexport->Second.GetResource(&pBindData->ResourceBinding);
+    Resource* pres = iexport->Second.GetResource(&pBindData->ResourceBinding);
+    return pres;
 }
 
 // @0x1425cfbd0
