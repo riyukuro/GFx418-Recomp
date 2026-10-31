@@ -3470,25 +3470,46 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
     Message = vm.GetStringManager().CreateString(result);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03) and ArrayPOD::Resize
+// (sfi) AutoPtr::Reset written out, which the exe inlines into the ByteArray LoadQueueEntry ctor below.
+struct Sfr15AutoPtrView
+{
+    ArrayPOD<UByte>* pObject;
+    bool             Owner;
+
+    __forceinline ArrayPOD<UByte>* Release()
+    {
+        Owner = false;
+        return pObject;
+    }
+    __forceinline void Reset(ArrayPOD<UByte>* p, bool owner = true)
+    {
+        if (pObject != p)
+        {
+            if (pObject && Owner)
+                delete Release();
+            pObject = p;
+        }
+        Owner = p != 0 && owner;
+    }
+};
+
 // @0x1424d7f90
 LoadQueueEntry::LoadQueueEntry(Instances::fl_utils::ByteArray* bytes, Instances::fl_display::Loader* loader,
                                LoadMethod method)
-    : GFx::LoadQueueEntry(String(""), method, false, false)
+    : GFx::LoadQueueEntry("", method, false, false, GFx::LoadQueueEntry::InlineCtorTag())
 {
     mLoader = loader;
     FirstExec = true;
     NotifyLoadInitCInterface = NULL;
-    mBytes = SF_HEAP_AUTO_NEW(this) ArrayPOD<UByte>();
+    reinterpret_cast<Sfr15AutoPtrView&>(mBytes).Reset(SF_HEAP_AUTO_NEW(this) ArrayPOD<UByte>());
     mBytes->Resize(bytes->GetLength());
     memcpy(mBytes->GetDataPtr(), bytes->Data.GetDataPtr(), mBytes->GetSize());
 }
 
-// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03)
 // @0x1424d81a0
 LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances::fl_display::Loader* loader,
                                LoadMethod method, bool quietOpen)
-    : GFx::LoadQueueEntry(String(request ? request->GetUrl().ToCStr() : ""), method, false, quietOpen)
+    : GFx::LoadQueueEntry(request ? request->GetUrl().ToCStr() : "", method, false, quietOpen, GFx::LoadQueueEntry::InlineCtorTag())
 {
     mLoader = loader;
     mURLRequest = request;
@@ -3496,11 +3517,10 @@ LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances
     NotifyLoadInitCInterface = NULL;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the GFx::LoadQueueEntry ctor (out of line in sfr_as2_03)
 // @0x1424d8350
 LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances::fl_net::URLLoader* loader,
                                LoadMethod method, bool quietOpen)
-    : GFx::LoadQueueEntry(String(request ? request->GetUrl().ToCStr() : ""), method, true, quietOpen)
+    : GFx::LoadQueueEntry(request ? request->GetUrl().ToCStr() : "", method, true, quietOpen, GFx::LoadQueueEntry::InlineCtorTag())
 {
     mURLLoader = loader;
     mURLRequest = request;
