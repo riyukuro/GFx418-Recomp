@@ -492,8 +492,26 @@ Object& Class::GetPrototype()
     return *pPrototype;
 }
 
+// The exe's Value::Assign/AssignUnsafe copies (sfr_as3_03 defines the out-of-line ones).
+struct ValueAssignCopies
+{
+    static void AssignUnsafeFunction(Value& v, Instances::Function* p);    // 0x1424053f0
+    static void AssignUnsafeNamespace(Value& v, Instances::Namespace* p);  // 0x142405420
+    // Value::AssignUnsafe(Object*/Class*), which the exe inlines here.
+    template <typename T>
+    static SF_INLINE void AssignUnsafeInline18(Value& v, Value::KindType kind, T* p)
+    {
+        v.SetKind(kind);
+        v.value = p;
+        if (p)
+            p->AddRef();
+    }
+};
+}}} // namespace Scaleform::GFx::AS3
+void FUN_142421ed0(Scaleform::GFx::AS3::Value& v);   // Value::SetNull, out of line in the exe
+namespace Scaleform { namespace GFx { namespace AS3 {
+
 // The value of a traced pointer: a null object when it is empty.
-// MS2-FUNCTIONAL: the exe inlines AssignUnsafe(Object*/Class*) and calls Value::SetNull; ours the reverse
 // @0x1425100f0
 void STPtr::GetValueUnsafe(Value& v)
 {
@@ -503,22 +521,22 @@ void STPtr::GetValueUnsafe(Value& v)
         switch (AS3::GetObjectTag(reinterpret_cast<UPInt>(pObject)))
         {
         case Value::otObject:
-            v.AssignUnsafe(static_cast<Object*>(p));
+            ValueAssignCopies::AssignUnsafeInline18(v, Value::kObject, static_cast<Object*>(p));
             return;
         case Value::otClass:
-            v.AssignUnsafe(static_cast<Class*>(p));
+            ValueAssignCopies::AssignUnsafeInline18(v, Value::kClass, static_cast<Class*>(p));
             return;
         case Value::otFunction:
-            v.AssignUnsafe(reinterpret_cast<Instances::Function*>(p));   // (not modeled; its counted base is first)
+            ValueAssignCopies::AssignUnsafeFunction(v, reinterpret_cast<Instances::Function*>(p));   // (not modeled; its counted base is first)
             return;
         case Value::otNamespace:
-            v.AssignUnsafe(static_cast<Instances::Namespace*>(p));
+            ValueAssignCopies::AssignUnsafeNamespace(v, static_cast<Instances::Namespace*>(p));
             return;
         default:
             break;
         }
     }
-    v.SetNull();
+    FUN_142421ed0(v);
 }
 
 // ==== vector indices ====
@@ -1349,7 +1367,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The found property's value, getters not run for valGet. The three tags of the reference: a slot, a dynamic value
 // (tagged pointer) or a closure object.
-// MS2-FUNCTIONAL 0x14250e200: exe inlines the value assign and refcount bumps with a different frame (AssignUnsafe is out-of-line here).
 // @0x14250e200
 CheckResult PropRef::GetSlotValueUnsafe(VM& vm, Value& value, SlotInfo::ValTarget vt) const
 {
@@ -1359,21 +1376,22 @@ CheckResult PropRef::GetSlotValueUnsafe(VM& vm, Value& value, SlotInfo::ValTarge
     {
     case 0:
     {
-        CheckResult r(false);
-        ok = *FUN_14250e2d0(pSI, &r, &vm, &value, &This, NULL, vt);
+        char r;     // the callee's result slot
+        ok = *reinterpret_cast<const bool*>(FUN_14250e2d0(pSI, &r, &vm, &value, &This, NULL, vt));
         break;
     }
     case 1:
         value.AssignUnsafe(*reinterpret_cast<const Value*>(w & ~static_cast<UPInt>(1)));
-        return CheckResult(true);
+        break;
     case 2:
-        value.AssignUnsafe(reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
-        return CheckResult(true);
+        ValueAssignCopies::AssignUnsafeInline18(value, Value::kObject, reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
+        break;
     }
     return CheckResult(ok);
 }
 
 // The same with the vtable to read methods from.
+// MS2-FUNCTIONAL 0x14250e130: the exe stores the result byte before the refcount store (a hidden CheckResult return slot); same code otherwise
 // @0x14250e130
 char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* value, VTable* vtable)
 {
@@ -1383,18 +1401,16 @@ char* Sfr27PropRefGetSlotValueVT(const PropRef* self, char* ret, VM* vm, Value* 
     {
     case 0:
     {
-        CheckResult r(false);
-        ok = *FUN_14250e2d0(self->pSI, &r, vm, value, &self->This, vtable, 0);
+        char r;     // the callee's result slot
+        ok = *reinterpret_cast<const bool*>(FUN_14250e2d0(self->pSI, &r, vm, value, &self->This, vtable, 0));
         break;
     }
     case 1:
         value->AssignUnsafe(*reinterpret_cast<const Value*>(w & ~static_cast<UPInt>(1)));
-        *ret = 1;
-        return ret;
+        break;
     case 2:
-        value->AssignUnsafe(reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
-        *ret = 1;
-        return ret;
+        ValueAssignCopies::AssignUnsafeInline18(*value, Value::kObject, reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
+        break;
     }
     *ret = ok;
     return ret;
