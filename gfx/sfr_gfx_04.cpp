@@ -215,7 +215,6 @@ DataAllocator::~DataAllocator()
 }
 
 // @0x1425d1c00
-// MS2-FUNCTIONAL: block list linking scheduled differently
 void* DataAllocator::OverflowAlloc(UPInt bytes)
 {
     // Big requests get a block of their own; the current block keeps serving the small ones.
@@ -1106,14 +1105,14 @@ MovieDefImpl::BindTaskData::BindTaskData(MemoryHeap* pheap, MovieDataDef* pdataD
 }
 
 // @0x1425cbb60
-// MS2-FUNCTIONAL: register allocation around the lock and the member destructors
 MovieDefImpl::BindTaskData::~BindTaskData()
 {
     // Bound resources go before the import movies: sprite tags still reference the movies they came from. The lock
     // waits for a reader still in the binding.
-    pBindUpdate->GetMutex().DoLock();
+    Mutex& mutex = pBindUpdate->GetMutex();
+    mutex.DoLock();
     ResourceBinding.Destroy();
-    pBindUpdate->GetMutex().Unlock();
+    mutex.Unlock();
 }
 
 // @0x1425d1b60
@@ -2434,16 +2433,15 @@ void MovieBindProcess::FinishBinding()
 
 // Compares the file names at the end of two paths, ignoring case (the font library import check).
 // @0x1425d1a00
-// MS2-FUNCTIONAL: load scheduling in the compare loop
 bool MatchFileNames(const String& path1, const String& path2)
 {
-    for (SPInt i1 = (int)path1.GetSize() - 1, i2 = (int)path2.GetSize() - 1; i1 >= 0 && i2 >= 0; --i1, --i2)
+    int i1 = (int)path1.GetSize() - 1;
+    int i2 = (int)path2.GetSize() - 1;
+    for (; i1 >= 0 && i2 >= 0; --i1, --i2)
     {
-        char c1 = path1.ToCStr()[i1];
-        char c2 = path2.ToCStr()[i2];
-        if ((c1 == '\\' || c1 == '/') && (c2 == '\\' || c2 == '/'))
+        if ((path1.ToCStr()[i1] == '\\' || path1.ToCStr()[i1] == '/') && (path2.ToCStr()[i2] == '\\' || path2.ToCStr()[i2] == '/'))
             return true;
-        if (SFtolower(c1) != SFtolower(c2))
+        if (SFtolower(path1.ToCStr()[i1]) != SFtolower(path2.ToCStr()[i2]))
             return false;
     }
     return true;
