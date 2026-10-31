@@ -1219,8 +1219,9 @@ void TextMeshProvider::setMeshData(TessBase* tess, VertexOutput* verOut, const U
         verCount.VStart += n;
     }
 
+    unsigned start = 0;
     unsigned triCount = tess->GetMeshTriangleCount(0);
-    for (unsigned start = 0; start < triCount;)
+    while (start < triCount)
     {
         unsigned num = Chunk;
         if (start + num > triCount)
