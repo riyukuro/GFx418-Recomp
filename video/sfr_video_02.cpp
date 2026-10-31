@@ -205,9 +205,9 @@ void* FUN_140015550(void* object, unsigned int flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: dispatches the recovered EventDispatcher destructor, then conditionally frees the allocation.
+// dispatches the recovered EventDispatcher destructor, then conditionally frees the allocation.
 // @0x140015590
-void* FUN_140015590(void* object, unsigned __int64 flags)
+void* FUN_140015590(void* object, unsigned flags)
 {
     Scaleform::GFx::AS2::FUN_140014830(static_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(object));
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -237,9 +237,9 @@ void FUN_140013db0(int* refCount)
     if (--*refCount == 0) Scaleform::Memory::Free(refCount);
 }
 
-// MS2-FUNCTIONAL: reproduces the base destructor followed by the conditional global-heap delete.
+// reproduces the base destructor followed by the conditional global-heap delete.
 // @0x140015c00
-void* FUN_140015c00(void* object, unsigned __int64 flags)
+void* FUN_140015c00(void* object, unsigned flags)
 {
     RawRefCountNTSCoreDtor(object);
     if (flags & 1) Scaleform::Memory::Free(object);
@@ -293,10 +293,9 @@ void FUN_1400104d0(Scaleform::GFx::InteractiveObject* object)
     object->InteractiveObject::~InteractiveObject();  // MS2: non-virtual, as the exe (a virtual call from the deleting dtor recurses)
 }
 
-// MS2-FUNCTIONAL: scalar deleting form of the recovered VideoCharacter base destruction.
+// scalar deleting form of the recovered VideoCharacter base destruction.
 // @0x140010530
-Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObject* object,
-                                                  unsigned __int64 flags)
+Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObject* object, unsigned flags)
 {
     FUN_1400104d0(object);
     if (flags & 1) Scaleform::Memory::Free(object);
