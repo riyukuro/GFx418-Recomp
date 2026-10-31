@@ -720,12 +720,15 @@ namespace
 
         Instances::fl_display::DisplayObject* GetAS3Obj() const
         {
-            Instances::fl_display::DisplayObject* p = pAS3RawPtr;
-            if (!p)
-                p = pAS3CollectiblePtr;
-            if (reinterpret_cast<UPInt>(p) & 1)
-                p = reinterpret_cast<Instances::fl_display::DisplayObject*>(reinterpret_cast<UByte*>(p) - 1);
-            return p;
+            union
+            {
+                UPInt v;
+                Instances::fl_display::DisplayObject* p;
+            } u;
+            u.p = (pAS3RawPtr) ? pAS3RawPtr : pAS3CollectiblePtr;
+            if (u.v & 1)
+                u.v -= 1;
+            return u.p;
         }
 
         Instances::fl_display::DisplayObject*   pAS3CollectiblePtr; // +0x08 SPtr<>
@@ -753,7 +756,6 @@ namespace
 
 namespace Classes { namespace fl_gfx
 {
-    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x1424cae10
     void Extensions::getMouseTopMostEntity(SPtr<Instances::fl_display::DisplayObject>& result, bool testAll,
                                            UInt32 mouseIndex)
@@ -762,9 +764,9 @@ namespace Classes { namespace fl_gfx
         if (mouseIndex >= AsMovieSlots(proot)->GetMouseCursorCount())
             return;
         // MouseState[mouseIndex].LastPosition (the states are 0x50 apart; no state past the fourth)
-        const Render::PointF* plast = (mouseIndex < 4)
-            ? reinterpret_cast<const Render::PointF*>(reinterpret_cast<UByte*>(proot) + 0x1298 + mouseIndex * (UPInt)0x50)
-            : reinterpret_cast<const Render::PointF*>((UPInt)0x38);
+        const Render::PointF* plast = (mouseIndex >= 4)
+            ? reinterpret_cast<const Render::PointF*>((UPInt)0x38)
+            : reinterpret_cast<const Render::PointF*>(reinterpret_cast<UByte*>(proot) + 0x1298 + mouseIndex * (UPInt)0x50);
         Render::PointF mousePos = *plast;
         GFx::InteractiveObject* ptop = proot->GetTopMostEntity(mousePos, mouseIndex, testAll, NULL);
         if (ptop)
@@ -777,7 +779,7 @@ namespace Classes { namespace fl_gfx
             result = NULL;
     }
 
-    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch, ours with cmov; xmm2/xmm3 swapped in the point transform
+    // MS2-FUNCTIONAL: xmm2/xmm3 swapped in the point transform; the exe's no-main-movie path clears result through rdx
     // @0x1424cb000
     void Extensions::getTopMostEntity(SPtr<Instances::fl_display::DisplayObject>& result, Value::Number x,
                                       Value::Number y, bool testAll)
@@ -787,9 +789,7 @@ namespace Classes { namespace fl_gfx
         {
             Render::Matrix2F m;
             proot->pMainMovie->GetWorldMatrix(&m);
-            Render::PointF p((float)(x * 20.0), (float)(y * 20.0));
-            Render::PointF pt(m.M[0][0] * p.x + m.M[0][1] * p.y + m.M[0][3],
-                              m.M[1][0] * p.x + m.M[1][1] * p.y + m.M[1][3]);
+            Render::PointF pt = m.Transform(Render::PointF((float)(x * 20.0), (float)(y * 20.0)));
             GFx::InteractiveObject* ptop = proot->GetTopMostEntity(pt, 0, testAll, NULL);
             if (ptop)
             {
@@ -802,7 +802,6 @@ namespace Classes { namespace fl_gfx
         result = NULL;
     }
 
-    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x1424cad40
     void FocusManager::getModalClip(SPtr<Instances::fl_display::Sprite>& result, UInt32 controllerIdx)
     {
@@ -817,7 +816,6 @@ namespace Classes { namespace fl_gfx
         if (tt == Traits_Sprite || tt == Traits_MovieClip)
             result = static_cast<Instances::fl_display::Sprite*>(ido);
     }
-    // MS2-FUNCTIONAL: exe strips the AS3 pointer collectible tag with a branch (test/je/dec), ours with cmov; same loads and calls
     // @0x1424ca9b0
     void FocusManager::getFocus(SPtr<Instances::fl_display::InteractiveObject>& result, UInt32 controllerIdx)
     {
@@ -825,14 +823,7 @@ namespace Classes { namespace fl_gfx
         Ptr<GFx::InteractiveObject> focused = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
         if (focused)
         {
-            AvmInteractiveObjBase* pavm = focused->GetAvmIntObj();
-            const UPInt* pas3 = pavm ? reinterpret_cast<const UPInt*>(reinterpret_cast<UByte*>(pavm) - 0x30) : NULL;
-            UPInt raw = pas3[2];
-            if (!raw)
-                raw = pas3[1];
-            if (raw & 1)
-                raw -= 1;
-            Instances::fl_display::DisplayObject* ido = reinterpret_cast<Instances::fl_display::DisplayObject*>(raw);
+            Instances::fl_display::DisplayObject* ido = ToAvmInteractiveObj15(focused)->GetAS3Obj();
             if (ido)
             {
                 BuiltinTraitsType tt = ido->GetTraits().GetTraitsType();
@@ -1103,7 +1094,6 @@ namespace Classes { namespace fl_gfx
             pime->SendLangBarMessage(mc->pDispObj.GetPtr(), command, message);
     }
 
-    // MS2-FUNCTIONAL: identical but for the encoding of one shift (the exe's shr al, 1 takes an imm8)
     // @0x1424cab90
     void IMEEx::getIMECandidateListStyle(SPtr<Instances::fl_gfx::IMECandidateListStyle>& result)
     {
@@ -1650,7 +1640,6 @@ namespace InstanceTraits { namespace fl_media
         result.Pick(new(t.Alloc()) InstanceType(t));
     }
 
-    // MS2-FUNCTIONAL: same source; the exe schedules the vftable store and the empty-string loads of the inlined ID3Info ctor differently
     // @0x1424d1280
     Pickable<Instances::fl_media::ID3Info> ID3Info::MakeInstance(ID3Info& t)
     {
@@ -2089,7 +2078,6 @@ AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo
 }
 
 // A button takes part in tab navigation by default.
-// MS2-FUNCTIONAL: AvmButton is opaque; its AvmInteractiveObj part is built in place and the exe's vftables stored
 // @0x1424d63e0
 AvmButton::AvmButton(Button* pbtn)
 {
@@ -2109,7 +2097,6 @@ AvmStaticText::AvmStaticText(StaticTextCharacter* ptxt)
 }
 
 // An AS3 text field starts with the caret at 0.
-// MS2-FUNCTIONAL: AvmTextField is opaque; its AvmInteractiveObj part is built in place and the exe's vftables stored
 // @0x1424d66b0
 AvmTextField::AvmTextField(TextField* ptxt)
 {
@@ -2306,7 +2293,6 @@ template void MS2_StringIndexSet::add<MS2_StringIndexNode::NodeRef>(void*, const
 typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> MS2_GCRootPtr;
 typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<MS2_GCRootPtr>, AllocatorLH<MS2_GCRootPtr, 2>,
                     HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
-// MS2-FUNCTIONAL: same template body; the exe calls CheckExpand out of line, here it is inlined
 // @0x1424d5020
 template void MS2_GCRootSet::add<MS2_GCRootPtr>(void*, const MS2_GCRootPtr&, UPInt);
 // Adding by raw pointer: the entry is built from a temporary SPtr.
@@ -2545,7 +2531,6 @@ CallFrame::CallFrame(const CallFrame& o)
 
 // A strong copy: copies other with its reference, then trades a weak reference for a strong one to the object, or
 // for undefined if the object is gone.
-// MS2-FUNCTIONAL: same code; the exe stores the undefined kind before the shared tail clears the weak flag in memory
 // @0x1424dbe60
 Value::Value(const Value& other, StrongRefType)
 {
@@ -2566,14 +2551,15 @@ Value::Value(const Value& other, StrongRefType)
         {
             MS2_StrongAddRef(*this);
             Bonus.pWeakProxy->Release();
+            Bonus.pWeakProxy = NULL;
         }
         else
         {
-            SetKind(kUndefined);
             value.VS._1.VObj = NULL;
+            SetKind(kUndefined);
             value.VS._2.VObj = NULL;
+            Bonus.pWeakProxy = NULL;
         }
-        Bonus.pWeakProxy = NULL;
         Flags &= ~weakRefMask;
     }
 }
