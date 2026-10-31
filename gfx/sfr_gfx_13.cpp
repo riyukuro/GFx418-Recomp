@@ -77,117 +77,124 @@ const Value Rectangle_NaNParams[Rectangle_NumProperties] = { Value(NumberUtil::N
 static AtexitRegistration s_atexit_143a51b50(&Scaleform::GFx::FUN_142cca4d0);
 
 // The video AS3 natives' member-pointer statics: one 16-byte (multiple-inheritance) member pointer per native, each
-// converted from the native's own class (exe 0x143b27438..0x143b27798, set by one initialiser each). The natives'
-// class is not recovered; they are reached through a stand-in class whose members are the exe addresses.
+// built (exe 0x143b27438..0x143b27798, set by one initialiser each). The natives'
+// class is not recovered; each holds the code pointer of the free native (sfr_video_02) with a zero adjustor.
 #pragma pointers_to_members(full_generality, multiple_inheritance)
 class VideoNativesOwner;
-class VideoNatives
-{
-public:
-    void m_1400141b0();
-    void m_140012d90();
-    void m_1400141d0();
-    void m_1400141f0();
-    void m_140014210();
-    void m_140014230();
-    void m_140014250();
-    void m_1400192e0();
-    void m_140017f20();
-    void m_140014270();
-    void m_1400142a0();
-    void m_1400142c0();
-    void m_140019470();
-    void m_1400142e0();
-    void m_140014340();
-    void m_1400143c0();
-    void m_1400143e0();
-    void m_140014400();
-    void m_140014440();
-    void m_140014460();
-    void m_140014580();
-    void m_1400145a0();
-    void m_1400145c0();
-    void m_1400145e0();
-    void m_140014600();
-    void m_140014620();
-    void m_140014640();
-    void m_140014660();
-    void m_140014680();
-    void m_140012da0();
-    void m_1400146a0();
-    void m_1400146c0();
-    void m_140012db0();
-    void m_1400146f0();
-    void m_140012dc0();
-    void m_140014700();
-    void m_140012dd0();
-    void m_140014710();
-    void m_140012df0();
-    void m_140014730();
-    void m_140019660();
-    void m_140014770();
-    void m_1400147d0();
-    void m_1400147f0();
-    void m_140014810();
-    void m_140014b50();
-    void m_14001a330();
-    void m_14001a360();
-    void m_14001a390();
-    void m_14001a3c0();
-    void m_14001a060();
-    void m_14001a070();
-    void m_14001a3f0();
-    void m_14001a410();
-    void m_14001a460();
-};
+namespace Scaleform { namespace GFx { namespace AS3 { class Object; class Value; }}}
+// the natives themselves (sfr_video_02)
+void FUN_140012d90(void*, double*);
+void FUN_140012da0(void*, bool*);
+void FUN_140012db0(void*, double*);
+void FUN_140012dc0(void*, double*);
+void FUN_140012dd0(void*, double*);
+void FUN_140012df0(void*, double*);
+void FUN_1400141b0(Scaleform::GFx::AS3::Object*);
+void FUN_1400141d0(void*, const void*, double);
+void FUN_1400141f0(Scaleform::GFx::AS3::Object*);
+void FUN_140014210(Scaleform::GFx::AS3::Object*);
+void FUN_140014230(Scaleform::GFx::AS3::Object*);
+void FUN_140014250(Scaleform::GFx::AS3::Object*);
+void FUN_140014270(void*, double*);
+void FUN_1400142a0(Scaleform::GFx::AS3::Object*);
+void FUN_1400142c0(Scaleform::GFx::AS3::Object*);
+void FUN_140014340(void*, double*);
+void FUN_1400143c0(Scaleform::GFx::AS3::Object*);
+void FUN_1400143e0(Scaleform::GFx::AS3::Object*);
+void FUN_140014400(void*, void*, char);
+void FUN_140014440(void*);
+void FUN_140014460(void*, void*, int, const Scaleform::GFx::AS3::Value*);
+void FUN_140014580(Scaleform::GFx::AS3::Object*);
+void FUN_1400145a0(Scaleform::GFx::AS3::Object*);
+void FUN_1400145c0(Scaleform::GFx::AS3::Object*);
+void FUN_1400145e0(Scaleform::GFx::AS3::Object*);
+void FUN_140014600(void*);
+void FUN_140014620(Scaleform::GFx::AS3::Object*, const void*, double);
+void FUN_140014640(Scaleform::GFx::AS3::Object*);
+void FUN_140014660(Scaleform::GFx::AS3::Object*);
+void FUN_140014680(void*);
+void FUN_1400146a0(void*, const void*, bool);
+void FUN_1400146c0(void*, double*);
+void FUN_1400146f0(void*, const void*, double);
+void FUN_140014700(void*, const void*, double);
+void FUN_140014710(void*, const void*, double);
+void FUN_140014730(void*, void*, double);
+void FUN_1400147d0(void*, const void*, double);
+void FUN_1400147f0(void*, const void*, double);
+void FUN_140014810(void*, const void*, double);
+void FUN_140014b50(Scaleform::GFx::AS3::Object*);
+void FUN_140017f20(void*, void*, void*);
+void FUN_1400192e0(void*, unsigned __int64*);
+void FUN_140019470(void*, unsigned __int64*);
+void FUN_140019660(void*, unsigned __int64*);
+void FUN_14001a060(void*, int*);
+void FUN_14001a070(void*, int*);
+void FUN_14001a330(void*, unsigned*);
+void FUN_14001a360(void*, void*, unsigned);
+void FUN_14001a390(void*, unsigned char*);
+void FUN_14001a3c0(void*, void*, unsigned char);
+void FUN_14001a3f0(Scaleform::GFx::AS3::Object*);
+void FUN_14001a410(void*, void*, void*);
+void FUN_14001a460(void*);
+namespace Scaleform { namespace GFx { namespace AS2 {
+void FUN_1400142e0(void*, void*, void*);
+void FUN_140014770(void*, void*, void*);
+}}}
 typedef void (VideoNativesOwner::*NativePmf)();
+// a member pointer to a free native: code pointer and a zero adjustor
+struct NativePmfBits { void* fn; int adjust; };
+template <class F> static __forceinline NativePmf MakeNativePmf(F fn)
+{
+    NativePmfBits bits = { reinterpret_cast<void*>(fn), 0 };
+    return *reinterpret_cast<const NativePmf*>(&bits);
+}
 
-static NativePmf s_pmf_143b274d8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400141b0);
-static NativePmf s_pmf_143b27518 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012d90);
-static NativePmf s_pmf_143b276a8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400141d0);
-static NativePmf s_pmf_143b27698 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400141f0);
-static NativePmf s_pmf_143b27458 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014210);
-static NativePmf s_pmf_143b27478 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014230);
-static NativePmf s_pmf_143b276c8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014250);
-static NativePmf s_pmf_143b27528 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400192e0);
-static NativePmf s_pmf_143b27678 = reinterpret_cast<NativePmf>(&VideoNatives::m_140017f20);
-static NativePmf s_pmf_143b274f8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014270);
-static NativePmf s_pmf_143b27448 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400142a0);
-static NativePmf s_pmf_143b274c8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400142c0);
-static NativePmf s_pmf_143b27548 = reinterpret_cast<NativePmf>(&VideoNatives::m_140019470);
-static NativePmf s_pmf_143b27708 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400142e0);
-static NativePmf s_pmf_143b274b8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014340);
-static NativePmf s_pmf_143b275f8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400143c0);
-static NativePmf s_pmf_143b27488 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400143e0);
-static NativePmf s_pmf_143b27628 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014400);
-static NativePmf s_pmf_143b27558 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014440);
-static NativePmf s_pmf_143b276f8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014460);
-static NativePmf s_pmf_143b276d8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014580);
-static NativePmf s_pmf_143b27648 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400145a0);
-static NativePmf s_pmf_143b27538 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400145c0);
-static NativePmf s_pmf_143b27618 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400145e0);
-static NativePmf s_pmf_143b27498 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014600);
-static NativePmf s_pmf_143b27688 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014620);
-static NativePmf s_pmf_143b274a8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014640);
-static NativePmf s_pmf_143b27598 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014660);
-static NativePmf s_pmf_143b275d8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014680);
-static NativePmf s_pmf_143b276e8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012da0);
-static NativePmf s_pmf_143b276b8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400146a0);
-static NativePmf s_pmf_143b27578 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400146c0);
-static NativePmf s_pmf_143b27568 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012db0);
-static NativePmf s_pmf_143b275c8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400146f0);
-static NativePmf s_pmf_143b27468 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012dc0);
-static NativePmf s_pmf_143b275a8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014700);
-static NativePmf s_pmf_143b27508 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012dd0);
-static NativePmf s_pmf_143b27658 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014710);
-static NativePmf s_pmf_143b274e8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140012df0);
-static NativePmf s_pmf_143b27438 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014730);
-static NativePmf s_pmf_143b275e8 = reinterpret_cast<NativePmf>(&VideoNatives::m_140019660);
-static NativePmf s_pmf_143b27638 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014770);
-static NativePmf s_pmf_143b275b8 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400147d0);
-static NativePmf s_pmf_143b27608 = reinterpret_cast<NativePmf>(&VideoNatives::m_1400147f0);
-static NativePmf s_pmf_143b27588 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014810);
-static NativePmf s_pmf_143b27668 = reinterpret_cast<NativePmf>(&VideoNatives::m_140014b50);
+static NativePmf s_pmf_143b274d8 = MakeNativePmf(&FUN_1400141b0);
+static NativePmf s_pmf_143b27518 = MakeNativePmf(&FUN_140012d90);
+static NativePmf s_pmf_143b276a8 = MakeNativePmf(&FUN_1400141d0);
+static NativePmf s_pmf_143b27698 = MakeNativePmf(&FUN_1400141f0);
+static NativePmf s_pmf_143b27458 = MakeNativePmf(&FUN_140014210);
+static NativePmf s_pmf_143b27478 = MakeNativePmf(&FUN_140014230);
+static NativePmf s_pmf_143b276c8 = MakeNativePmf(&FUN_140014250);
+static NativePmf s_pmf_143b27528 = MakeNativePmf(&FUN_1400192e0);
+static NativePmf s_pmf_143b27678 = MakeNativePmf(&FUN_140017f20);
+static NativePmf s_pmf_143b274f8 = MakeNativePmf(&FUN_140014270);
+static NativePmf s_pmf_143b27448 = MakeNativePmf(&FUN_1400142a0);
+static NativePmf s_pmf_143b274c8 = MakeNativePmf(&FUN_1400142c0);
+static NativePmf s_pmf_143b27548 = MakeNativePmf(&FUN_140019470);
+static NativePmf s_pmf_143b27708 = MakeNativePmf(&Scaleform::GFx::AS2::FUN_1400142e0);
+static NativePmf s_pmf_143b274b8 = MakeNativePmf(&FUN_140014340);
+static NativePmf s_pmf_143b275f8 = MakeNativePmf(&FUN_1400143c0);
+static NativePmf s_pmf_143b27488 = MakeNativePmf(&FUN_1400143e0);
+static NativePmf s_pmf_143b27628 = MakeNativePmf(&FUN_140014400);
+static NativePmf s_pmf_143b27558 = MakeNativePmf(&FUN_140014440);
+static NativePmf s_pmf_143b276f8 = MakeNativePmf(&FUN_140014460);
+static NativePmf s_pmf_143b276d8 = MakeNativePmf(&FUN_140014580);
+static NativePmf s_pmf_143b27648 = MakeNativePmf(&FUN_1400145a0);
+static NativePmf s_pmf_143b27538 = MakeNativePmf(&FUN_1400145c0);
+static NativePmf s_pmf_143b27618 = MakeNativePmf(&FUN_1400145e0);
+static NativePmf s_pmf_143b27498 = MakeNativePmf(&FUN_140014600);
+static NativePmf s_pmf_143b27688 = MakeNativePmf(&FUN_140014620);
+static NativePmf s_pmf_143b274a8 = MakeNativePmf(&FUN_140014640);
+static NativePmf s_pmf_143b27598 = MakeNativePmf(&FUN_140014660);
+static NativePmf s_pmf_143b275d8 = MakeNativePmf(&FUN_140014680);
+static NativePmf s_pmf_143b276e8 = MakeNativePmf(&FUN_140012da0);
+static NativePmf s_pmf_143b276b8 = MakeNativePmf(&FUN_1400146a0);
+static NativePmf s_pmf_143b27578 = MakeNativePmf(&FUN_1400146c0);
+static NativePmf s_pmf_143b27568 = MakeNativePmf(&FUN_140012db0);
+static NativePmf s_pmf_143b275c8 = MakeNativePmf(&FUN_1400146f0);
+static NativePmf s_pmf_143b27468 = MakeNativePmf(&FUN_140012dc0);
+static NativePmf s_pmf_143b275a8 = MakeNativePmf(&FUN_140014700);
+static NativePmf s_pmf_143b27508 = MakeNativePmf(&FUN_140012dd0);
+static NativePmf s_pmf_143b27658 = MakeNativePmf(&FUN_140014710);
+static NativePmf s_pmf_143b274e8 = MakeNativePmf(&FUN_140012df0);
+static NativePmf s_pmf_143b27438 = MakeNativePmf(&FUN_140014730);
+static NativePmf s_pmf_143b275e8 = MakeNativePmf(&FUN_140019660);
+static NativePmf s_pmf_143b27638 = MakeNativePmf(&Scaleform::GFx::AS2::FUN_140014770);
+static NativePmf s_pmf_143b275b8 = MakeNativePmf(&FUN_1400147d0);
+static NativePmf s_pmf_143b27608 = MakeNativePmf(&FUN_1400147f0);
+static NativePmf s_pmf_143b27588 = MakeNativePmf(&FUN_140014810);
+static NativePmf s_pmf_143b27668 = MakeNativePmf(&FUN_140014b50);
 namespace Scaleform { namespace Render {
 // this unit's dynamic initialisers of the identity matrices construct Matrix3x4<float>::Identity / Matrix4x4<float>::Identity
 // (0x143aee540 / 0x143aee570) in place: the matrices themselves are the template statics, so each initialiser is an empty object
@@ -197,20 +204,20 @@ struct Identity4x4Init { Identity4x4Init() { new (&Matrix4x4<float>::Identity) M
 Identity3x4Init g_identity3x4;   // 0x142c99a90
 Identity4x4Init g_identity4x4;   // 0x142c99ad0
 }}
-static NativePmf s_pmf_143b27798 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a330);
-static NativePmf s_pmf_143b27778 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a360);
-static NativePmf s_pmf_143b27758 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a390);
-static NativePmf s_pmf_143b27728 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a3c0);
-static NativePmf s_pmf_143b27738 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a060);
-static NativePmf s_pmf_143b27748 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a070);
-static NativePmf s_pmf_143b27768 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a3f0);
-static NativePmf s_pmf_143b27718 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a410);
-static NativePmf s_pmf_143b27788 = reinterpret_cast<NativePmf>(&VideoNatives::m_14001a460);
+static NativePmf s_pmf_143b27798 = MakeNativePmf(&FUN_14001a330);
+static NativePmf s_pmf_143b27778 = MakeNativePmf(&FUN_14001a360);
+static NativePmf s_pmf_143b27758 = MakeNativePmf(&FUN_14001a390);
+static NativePmf s_pmf_143b27728 = MakeNativePmf(&FUN_14001a3c0);
+static NativePmf s_pmf_143b27738 = MakeNativePmf(&FUN_14001a060);
+static NativePmf s_pmf_143b27748 = MakeNativePmf(&FUN_14001a070);
+static NativePmf s_pmf_143b27768 = MakeNativePmf(&FUN_14001a3f0);
+static NativePmf s_pmf_143b27718 = MakeNativePmf(&FUN_14001a410);
+static NativePmf s_pmf_143b27788 = MakeNativePmf(&FUN_14001a460);
 // MS2-FUNCTIONAL: the exe builds each member-pointer static through a temporary copied as two qwords, ours copies it as one movups (no source form found that reproduces the two-qword copy); the Matrix3x4/4x4 Identity initialisers are constant-folded by our optimiser unless built unoptimised, so they call SetIdentity instead of the exe inline stores
 
-// the CRT's per-thread error-mode toggle, run once at start-up (exe 0x140157f94; result kept for later queries)
-extern "C" bool FUN_1429a8910(int mode, int flags);
-static bool s_crtStartup = FUN_1429a8910(0, 0xe00);
+// MFC appmodul's _afxInitAppState = (char)AfxInitialize(FALSE, _MFC_VER), run once at start-up (exe 0x140157f94)
+int AfxInitialize(int bDLL, unsigned long dwVersion);
+static char s_crtStartup = (char)AfxInitialize(0, 0xe00);
 
 // MS2-PIN: ??__Es_emptyInit@@YAXXZ 0x14014cc40
 // MS2-PIN: ??__Es_atexit_143a2f430@@YAXXZ 0x14014cc50
