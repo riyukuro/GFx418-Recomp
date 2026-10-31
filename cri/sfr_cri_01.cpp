@@ -83,6 +83,7 @@ class ResourceId
 public:
     UInt32 Id;
     ResourceId(UInt32 id) : Id(id) {}
+    ResourceId(const ResourceId& src) : Id(src.Id) {}   // SDK: user copy ctor, so a by-value ResourceId goes by address
 };
 
 class MovieDataDef
@@ -100,14 +101,18 @@ class Stream
 {
 public:
     void Align() { UnusedBits = 0; }
-    UInt16 ReadU16()
+    bool EnsureBufferSize(int size)
     {
         Align();
-        if (DataSize - Pos < 2)
-            PopulateBuffer(2);
-        unsigned pos = Pos;
-        UInt16 val = (UInt16)(pBuffer[pos] | (pBuffer[pos + 1] << 8));
-        Pos = pos + 2;
+        if (((int)DataSize - (int)Pos) < size)
+            return PopulateBuffer(size);
+        return true;
+    }
+    UInt16 ReadU16()
+    {
+        EnsureBufferSize(sizeof(UInt16));
+        UInt16 val = (UInt16(pBuffer[Pos])) | (UInt16(pBuffer[Pos + 1] << 8));
+        Pos += sizeof(UInt16);
         return val;
     }
 
@@ -117,8 +122,8 @@ private:
     UByte        Unrecovered0[0x29];
     UByte        UnusedBits;            // +0x29
     UByte        Unrecovered2a[0x4c - 0x2a];
-    int          Pos;                   // +0x4c
-    int          DataSize;              // +0x50
+    unsigned     Pos;                   // +0x4c
+    unsigned     DataSize;              // +0x50
     UByte        Unrecovered54[0x60 - 0x54];
     const UByte* pBuffer;               // +0x60
 };
@@ -186,8 +191,9 @@ struct VideoCharacterDef
     UByte              Deblocking;
     UByte              Codec;
 
-    // the inline construction (a member, not a ctor: sfr_gfx_04 defines the real VideoCharacterDef ctor)
-    void Init()
+    // the inline construction (a tagged ctor: sfr_gfx_04 defines the real VideoCharacterDef ctor)
+    enum InlineCtorTag { InlineCtor };
+    __forceinline VideoCharacterDef(InlineCtorTag)
     {
         vfptr     = MS2_SF_Resource_vftable;
         RefCount  = 1;
@@ -276,14 +282,12 @@ void Video::Finalize()
 }
 
 // @0x14001c760
-// MS2-FUNCTIONAL: no tail calls, other scheduling
+// MS2-FUNCTIONAL: the inline VideoCharacterDef ctor stores Id before the Resource vtable (stand-in, not the real CharacterDef bases)
 void Video::ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo)
 {
-    UInt32 characterId = p->ReadU16();
+    int characterId = p->ReadU16();
     p->LogParse("  video = %d\n", characterId);
-    VideoCharacterDef* ch = new VideoCharacterDef;
-    if (ch)
-        ch->Init();
+    VideoCharacterDef* ch = new VideoCharacterDef(VideoCharacterDef::InlineCtor);
     ch->Read(p, tagInfo.TagType);
     p->AddResource(ResourceId(characterId), ch->GetResource());
     if (ch)
@@ -1358,7 +1362,6 @@ void VideoProviderNetStream::NotifyVideoCharacters()
 }
 
 // @0x140025f50
-// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
 {
     if (!pvideo)
@@ -1366,7 +1369,7 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
     for (UPInt i = 0; i < VideoCharacters.GetSize(); ++i)
     {
         Ptr<VideoCharacter> pchar = VideoCharacters[i];
-        if (pchar == pvideo)
+        if (pvideo == pchar.GetPtr())
             return;
     }
     VideoCharacters.PushBack(WeakPtr<VideoCharacter>(pvideo));
@@ -1410,6 +1413,14 @@ void VideoProviderNetStream::Advance()
     VideoPlayer::Status status = pVideoPlayer->GetStatus();
     switch (status)
     {
+    case VideoPlayer::Playing:
+        if (!SeekNotificationSent && FrameIsReady)
+        {
+            SeekNotificationSent = true;
+            SendNotification(NetStreamInterface::SeekNotify);
+        }
+        break;
+
     case VideoPlayer::Ready:
         if (!pTextureImage)
         {
@@ -1428,14 +1439,6 @@ void VideoProviderNetStream::Advance()
         SendNotification(NetStreamInterface::PlayStart);
         SendMetaData();
         pVideoPlayer->Play();
-        break;
-
-    case VideoPlayer::Playing:
-        if (!SeekNotificationSent && FrameIsReady)
-        {
-            SeekNotificationSent = true;
-            SendNotification(NetStreamInterface::SeekNotify);
-        }
         break;
 
     case VideoPlayer::Finished:
