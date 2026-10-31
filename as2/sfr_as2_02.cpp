@@ -128,11 +128,8 @@ inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 
 inline const void* StyledText_GetDefaultParagraphFormat(void* pst) { return *(const void**)((char*)pst + 0x30); }
 inline const void* StyledText_GetDefaultTextFormat(void* pst) { return *(const void**)((char*)pst + 0x38); }
 unsigned long long FUN_142598a50(void* pst);                                               // StyledText::GetLength
-unsigned long long FUN_142617990(void* pek);                                               // EditorKit::GetCursorPos
-void     FUN_142619b80(void* pek, unsigned long long pos, bool updateSelection);            // EditorKit::SetCursorPos
 void     FUN_1425990d0(void* pst, Scaleform::Render::Text::TextFormat* ptextFmt, Scaleform::Render::Text::ParagraphFormat* pparaFmt,
                        unsigned long long startPos, unsigned long long endPos);            // StyledText::GetTextAndParagraphFormat
-void     FUN_1425b7220(void* ptf);                                                          // TextField::ClearIdImageDescAssoc
 void     FUN_1424c7090(void* psubst);                                                       // ImageSubstitutor element array dtor
 inline void* DocView_GetImageSubstitutor(void* pdoc) { return *(void**)((char*)pdoc + 0x30); }
 inline void  DocView_SetImageSubstitutor(void* pdoc, void* psubst) { *(void**)((char*)pdoc + 0x30) = psubst; }
@@ -2816,7 +2813,7 @@ void AvmTextField::ReplaceSel(const FnCall& fn)
         SF_FREE(pwbuf);
     }
     UPInt newEnd = startPos + len;
-    FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newEnd, false);
+    ((::Scaleform::GFx::Text::EditorKit*)(DocView_GetEditorKit(ptf->GetDocument())))->SetCursorPos(newEnd, false);
     if (pparaFmt)
         ptf->GetDocument()->SetParagraphFormat(*(const Render::Text::ParagraphFormat*)pparaFmt, startPos, newEnd);
     if (ptextFmt)
@@ -2872,8 +2869,8 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
         SF_FREE(pwbuf);
     }
     void* pek = DocView_GetEditorKit(ptf->GetDocument());
-    if (pek && FUN_142617990(pek) > newLen)
-        FUN_142619b80(DocView_GetEditorKit(ptf->GetDocument()), newLen, false);
+    if (pek && ((::Scaleform::GFx::Text::EditorKit*)(pek))->GetCursorPos() > newLen)
+        ((::Scaleform::GFx::Text::EditorKit*)(DocView_GetEditorKit(ptf->GetDocument())))->SetCursorPos(newLen, false);
     unsigned newEnd = startPos + len;
     if (pparaFmt)
         ptf->GetDocument()->SetParagraphFormat(*(const Render::Text::ParagraphFormat*)pparaFmt, startPos, newEnd);
@@ -3047,7 +3044,7 @@ void AvmTextField::SetImageSubstitutions(const FnCall& fn)
         return;
     if (fn.Arg(0).IsNull())
     {
-        FUN_1425b7220(ptf);
+        ((::Scaleform::GFx::TextField*)(ptf))->ClearIdImageDescAssoc();
         void* pdoc   = ptf->GetDocument();
         void* psubst = DocView_GetImageSubstitutor(pdoc);
         if (psubst)

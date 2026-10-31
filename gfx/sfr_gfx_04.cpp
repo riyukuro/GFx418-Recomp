@@ -493,7 +493,7 @@ public:
 };
 }} // namespace Scaleform::GFx
 
-Scaleform::GFx::AmpServer* FUN_14261e310();
+namespace Scaleform { namespace GFx { void* FUN_14261e310(); } }   // AmpServer::GetInstance (declared as in the exe's symbols)
 
 namespace Scaleform { namespace GFx {
 
@@ -516,7 +516,7 @@ void MovieDataDef::LoadTaskData::Read(LoadProcess* plp, MovieBindProcess* pbp)
 
     TagCount = 0;
 
-    plp->SetSwdHandle(FUN_14261e310()->GetNextSwdHandle());
+    plp->SetSwdHandle(static_cast<AmpServer*>(FUN_14261e310())->GetNextSwdHandle());
 
     // The binding thread is woken now and then rather than every frame: about thirty times over the file, and
     // before a big tag.
@@ -1390,7 +1390,7 @@ class AdvanceStats;
 }} // namespace Scaleform::GFx
 
 // Hands the movie definition to the movie's advance statistics (exe 0x1426245c0).
-void FUN_1426245c0(Scaleform::GFx::AdvanceStats* pstats, Scaleform::GFx::MovieDef* pmovieDef);
+namespace Scaleform { namespace GFx { void FUN_1426245c0(char* pstats, void** pmovieDef); } }   // as in the exe's symbols
 
 namespace Scaleform { namespace GFx {
 
@@ -1484,7 +1484,7 @@ Movie* MovieDefImpl::CreateInstance(MemoryContext* memContext, bool initFirstFra
     }
 
     if (AdvanceStats* pstats = proot->pAdvanceStats)
-        FUN_1426245c0(pstats, proot->GetMovieDef());
+        FUN_1426245c0(reinterpret_cast<char*>(pstats), reinterpret_cast<void**>(proot->GetMovieDef()));
 
     // The render queue is set before the first advance.
     proot->pRenderQueue = queue;
