@@ -353,6 +353,7 @@ public:
 };
 
 // StyleSheet.prototype.load(url): queues the CSS load; true once queued, false without an argument.
+// MS2-FUNCTIONAL: register allocation differs (the exe keeps the zero in rbx and needs no r14/r15 saves).
 // @0x1428f99f0
 void StyleSheetProto::Load(const FnCall& fn)
 {
@@ -380,6 +381,8 @@ void StyleSheetProto::Load(const FnCall& fn)
 
 // StyleSheet.prototype.setStyle(name, style): replaces the style with the object's properties as CSS, or removes it
 // when the style is missing or null.
+// MS2-FUNCTIONAL: register allocation differs (zero register r14 vs ours rbp, -1 in rdi vs rsi); the exe also
+// makes one more call (callee count 16 vs 15).
 // @0x1428f9cf0
 void StyleSheetProto::SetStyle(const FnCall& fn)
 {
