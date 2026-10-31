@@ -910,9 +910,7 @@ void FUN_1424e6cf0(Tracer* self, UPInt from)
 extern "C" {
 void FUN_1423dfa20(void* p);            // RefCountBaseGC::ReleaseInternal
 void FUN_142521f00(void* v);            // Value::ReleaseInternal
-void FUN_1423de770(void* p, void* st);  // RefCountCollector<323>::Collect
 void FUN_1424dcce0(void* p);
-void FUN_1424efab0(void* p);
 void FUN_1424dc350(void* p);
 void FUN_1424dc260(void* p);
 void FUN_1424dd500(void* p);            // ASVM::~ASVM
@@ -920,7 +918,6 @@ void FUN_1425456e0(void* p);            // Abc::File::~File
 void FUN_1424aa0f0(void* p);            // Text::TextFormat::~TextFormat
 void FUN_1424dd300(void* p);
 void FUN_1424dd3b0(void* p);
-void FUN_1425fbcf0(void* p);            // DisplayObjContainer::~DisplayObjContainer
 void FUN_14257eb30(void* p);
 void FUN_1424f6d50(void* begin, void* end); // Value array destruct
 void FUN_1424dc630(void* p);
@@ -929,7 +926,6 @@ void FUN_1423f0720(void* p);
 void FUN_142626160(void* p);
 void FUN_1424df070(void* p);            // Tracer::~Tracer
 void FUN_1424df220(void* p);            // ClassTraits::Traits::~Traits
-void FUN_1424f6de0(void* p, void* owner);
 void FUN_1424df380(void* p);            // VM::~VM
 void FUN_142522a60(void* vm, void* file);
 void FUN_1424dc800(void* p);
@@ -1031,11 +1027,11 @@ static void Sfr21GValue(void* p, UPInt off)
 }
 static void Sfr21GCollector(void* p)
 {
-    FUN_1423de770(p, 0);
+    static_cast<Scaleform::GFx::AS3::ASRefCountCollector*>(p)->Collect(0);
     Sfr21GPtr(p, 0x80);
     FUN_1424dcce0(Sfr21At(p, 0x70));
     Sfr21GVft(p, 0x48, DAT_14313f368);
-    FUN_1424efab0(Sfr21At(p, 0x10));
+    static_cast<Scaleform::GFx::AS3::ASRefCountCollector*>(p)->Roots.ClearAndRelease();
     static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore();
 }
 static void Sfr21GShapeData(void* p)
@@ -1248,7 +1244,7 @@ void* DeleteAs3_1424e3950(void* p, unsigned flags)
         reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
     Sfr21GPtrNTS(p, 0x118);
     Sfr21GPtrNTS(p, 0x110);
-    FUN_1425fbcf0(p);
+    static_cast<Scaleform::GFx::DisplayObjContainer*>(p)->Scaleform::GFx::DisplayObjContainer::~DisplayObjContainer();
     Sfr21GFree(p, flags, 0x130);
     return p;
 }
@@ -1281,7 +1277,7 @@ void* DeleteAs3_1424e3c30(void* p, unsigned flags)
 void* DeleteAs3_1424e3d60(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, DAT_14317f778);
-    FUN_1424f6de0(reinterpret_cast<void*>(reinterpret_cast<UPInt>(Sfr21Mem(p, 0x20)) & ~UPInt(1)), p);
+    reinterpret_cast<const Scaleform::GFx::AS3::Traits*>(reinterpret_cast<UPInt>(Sfr21Mem(p, 0x20)) & ~UPInt(1))->DestructTail(*static_cast<Scaleform::GFx::AS3::Object*>(p));
     static_cast<Scaleform::GFx::AS3::Class*>(p)->Scaleform::GFx::AS3::Class::~Class();
     Sfr21GFree(p, flags, 0x50);
     return p;
@@ -1350,10 +1346,8 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 extern "C" {
 extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
 void  FUN_142516210(void* log, const char* fmt, ...);                         // LogBase<DisplayObjectBase>::LogError
-void* FUN_1425f9800(void* dlist, int depth, bool* markedForRemove);           // DisplayList::GetDisplayObjectAtDepth
 void  FUN_1425f2540(void* obj, ASStringNode** result);                        // DisplayObject::GetOriginalName
 void  FUN_1425f24e0(void* obj, ASStringNode** result);                        // DisplayObject::GetName
-void  FUN_1425fcea0(void* sprite, const void* pos);                           // Sprite::MoveDisplayObject
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 void  FUN_142517e70(void* io);                                                // InteractiveObject::ModifyOptimizedPlayList
@@ -1439,7 +1433,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
     }
 
     bool  markedForRemove = false;
-    char* ex = static_cast<char*>(FUN_1425f9800(spr + 0xd8, *reinterpret_cast<const int*>(P + 0x4c), &markedForRemove));
+    char* ex = reinterpret_cast<char*>(reinterpret_cast<Scaleform::GFx::DisplayList*>(spr + 0xd8)->GetDisplayObjectAtDepth(*reinterpret_cast<const int*>(P + 0x4c), &markedForRemove));
     if (createFrame == ~0u)
         createFrame = Sfr21VCall<unsigned>(spr, 0x328);   // GetCurrentFrame
 
@@ -1492,7 +1486,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                         flags |= 8;
                         reinterpret_cast<Scaleform::Render::Cxform*>(np)->SetIdentity();
                     }
-                    FUN_1425fcea0(spr, np);
+                    reinterpret_cast<Scaleform::GFx::DisplayObjContainer*>(spr)->MoveDisplayObject(*reinterpret_cast<const Scaleform::GFx::CharPosInfo*>(np));
 
                     // The object is reused: its name property on the AS3 parent is set again.
                     if (*reinterpret_cast<UByte*>(ex + 0x6b) & 1)
