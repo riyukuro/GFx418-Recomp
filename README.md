@@ -28,6 +28,9 @@ Two lines in a unit's header comment select its flags and compiler. The flag set
   - vc9 uses `/O2 /Ob1 /Gy /GF /EHsc`, and the source must be C++03 (no `auto`, `decltype`, brace-init or variadic
     templates). `/Ob1` means one function is never inlined into another unless it is marked `inline`, because the
     library's functions came from separate objs.
+  - vc9v is the vc9 cl with the vc11 options, for the parts of the Video add-on that the exe links from VS2008 objs
+    (sfr_video_01/02 match about 50 more rows each with it). The source must be C++03; tools/msvc9v/compat.h defines
+    away the C++11 keywords in the shared headers.
   - vc11 uses `/O2 /Gy /GF /GR- /EHs-c-`, with C++11 only as far as VS2012 goes (no alias `using`, explicit conversion
     operators or variadic templates). Functions that the exe inlines need `inline`.
 - A unit with neither line (for example `gfx/sfr_gfx_10`, the game's own GFx logger) is game code and builds with
