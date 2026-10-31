@@ -881,20 +881,22 @@ cri_u64 FUN_14004eea0(cri_u64 a1,cri_u32 a2)
 
 // The SJRBF error callback (FUN_14004f8f0 stores it as LAB_14004eee0; Ghidra made no function here): the error code
 // picks the message.
-// MS2-FUNCTIONAL: written from the exe; the messages are literals, not the exe's .rdata copies at 0x1431ba508-0x1431ba548.
+// Written from the exe; the messages are literals, not the exe's .rdata copies at 0x1431ba508-0x1431ba548.
 // @0x14004eee0
 void FUN_14004eee0(cri_u64 a1, int a2)
 {
   (void)a1;
-  if (a2 == -3) {
+  switch (a2) {
+  case -3:
     thunk_FUN_1400afe60("SJRBF Parameter Error");
-    return;
-  }
-  if (a2 == -2) {
+    break;
+  case -2:
     thunk_FUN_1400afe60("SJRBF Internal Error");
-    return;
+    break;
+  default:
+    thunk_FUN_1400afe60(a2 == -1 ? "SJRBF Fatal Error" : "SJRBF Error");
+    break;
   }
-  thunk_FUN_1400afe60(a2 == -1 ? "SJRBF Fatal Error" : "SJRBF Error");
 }
 
 // @0x14004ef20
