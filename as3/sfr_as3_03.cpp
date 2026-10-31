@@ -2318,14 +2318,13 @@ namespace Instances { namespace fl
 
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// Inline copy of the XMLList MakeInstance (out of line in sfr_as3_04); the exe inlines it into AS3text.
-namespace InstanceTraits { namespace fl
+// The body of the XMLList MakeInstance (out of line in sfr_as3_04), which the exe inlines into AS3text. A free
+// function, not an inline MakeInstance definition: cl emits some unit-local inline copies even when every call is
+// inlined, and an emitted MakeInstance clashes with sfr_as3_04's in the fullexe link (LNK2005).
+static __forceinline Pickable<Instances::fl::XMLList> MS2_MakeXMLList(InstanceTraits::fl::XMLList& t)
 {
-    inline Pickable<Instances::fl::XMLList> XMLList::MakeInstance(XMLList& t)
-    {
-        return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
-    }
-}}
+    return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
+}
 
 namespace Instances { namespace fl
 {
@@ -2336,7 +2335,7 @@ namespace Instances { namespace fl
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
             GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
-        result = itr.MakeInstance(itr);
+        result = MS2_MakeXMLList(itr);
         GetChildren(*result, kText);
     }
 
@@ -2357,7 +2356,7 @@ namespace Instances { namespace fl
         if (TargetNamespace && TargetObject && TargetProperty)
             result = itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
         else
-            result = itr.MakeInstance(itr);
+            result = MS2_MakeXMLList(itr);
         for (UPInt i = 0; i < List.GetSize(); ++i)
             List[i]->GetChildren(*result, XML::kText);
     }
@@ -3494,14 +3493,13 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
-// Inline copy of the XML MakeInstanceComment (out of line in sfr_as3_04); the exe inlines it into CommentExpatCallback.
-namespace InstanceTraits { namespace fl
+// The body of the XML MakeInstanceComment (out of line in sfr_as3_04), which the exe inlines into
+// CommentExpatCallback; a free function for the reason given at MS2_MakeXMLList.
+static __forceinline Pickable<Instances::fl::XMLComment> MS2_MakeXMLComment(InstanceTraits::fl::XML& t, const ASString& str,
+                                                                             Instances::fl::XML* parent)
 {
-    inline Pickable<Instances::fl::XMLComment> XML::MakeInstanceComment(XML& t, const ASString& str, Instances::fl::XML* parent)
-    {
-        return Pickable<Instances::fl::XMLComment>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLComment(t, str, parent));
-    }
-}}
+    return Pickable<Instances::fl::XMLComment>(new(t.GetVM().GetMemoryHeap()) Instances::fl::XMLComment(t, str, parent));
+}
 
     // @0x142405ef0
     void XMLParser::CharacterDataExpatCallback(void* userData, const char* s, int len)
@@ -3518,7 +3516,7 @@ namespace InstanceTraits { namespace fl
         InstanceTraits::fl::XML& itr = p->ITr;
         StringManager& sm = itr.GetVM().GetStringManager();
         p->SetNodeKind(kComment);
-        Pickable<Instances::fl::XMLComment> comment = itr.MakeInstanceComment(itr, sm.CreateString(data), p->CurrElement);
+        Pickable<Instances::fl::XMLComment> comment = MS2_MakeXMLComment(itr, sm.CreateString(data), p->CurrElement);
         SPtr<Instances::fl::XML> el(comment);
         if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
             p->CurrElement->AppendChild(el);

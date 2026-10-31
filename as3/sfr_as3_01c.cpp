@@ -26,6 +26,12 @@
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
+#if defined(__clang__)
+#define SFR01C_INSTANCE_CTOR
+#else
+#define SFR01C_INSTANCE_CTOR inline
+#endif
+
 // The exe calls this ResizeNoConstruct instance out of line (explicitly instantiated in sfr_as3_04).
 namespace Scaleform {
 template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>,
@@ -573,8 +579,12 @@ namespace InstanceTraits { namespace fl
 
 namespace Instances { namespace fl
 {
+    // The Instances::fl ctors that take InstanceTraits::Traits& are `inline` under cl, so their out-of-line copies
+    // here are COMDAT-any and the inline copies that sfr_as3_02/03/04 carry (cl emits some of them) no longer clash
+    // with them in the fullexe link (LNK2005). MS2_Sfr01cEmitInstanceCtors at the end of the unit keeps them
+    // emitted. clang-cl ignores inline_depth, so the hook DLL build keeps them as plain definitions.
     // @0x1423ebcb0
-    Array::Array(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR Array::Array(InstanceTraits::Traits& t)
         : Instance(t), SA(t.GetVM().GetMemoryHeap())
     {
     }
@@ -650,7 +660,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423ec100
-    Catch::Catch(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR Catch::Catch(InstanceTraits::Traits& t)
         : Instance(t)
     {
     }
@@ -741,7 +751,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423ec3d0
-    Date::Date(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR Date::Date(InstanceTraits::Traits& t)
         : Instance(t), TimeValue(0), LocalTZA(0)
     {
     }
@@ -828,7 +838,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423ec7a0
-    Error::Error(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR Error::Error(InstanceTraits::Traits& t)
         : Instance(t)
         , message(GetVM().GetStringManager().CreateEmptyString())
         , name(GetVM().GetStringManager().CreateEmptyString())
@@ -840,7 +850,7 @@ namespace Instances { namespace fl
     }
 
     // @0x1423ec890
-    Error::Error(InstanceTraits::Traits& t, int id, const ASString& msg)
+    SFR01C_INSTANCE_CTOR Error::Error(InstanceTraits::Traits& t, int id, const ASString& msg)
         : Instance(t)
         , message(msg)
         , name(GetVM().GetStringManager().CreateConstString("Error"))
@@ -1388,7 +1398,7 @@ namespace Instances { namespace fl
     }
 
     // @0x1423ee1c0
-    Object::Object(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR Object::Object(InstanceTraits::Traits& t)
         : Instance(t)
     {
     }
@@ -1431,7 +1441,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423ee9b0
-    QName::QName(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR QName::QName(InstanceTraits::Traits& t)
         : Instance(t)
         , LocalName(GetVM().GetStringManager().CreateEmptyString())
         , Ns(&t.GetVM().GetPublicNamespace())
@@ -1439,7 +1449,7 @@ namespace Instances { namespace fl
     }
 
     // @0x1423eea20
-    QName::QName(InstanceTraits::Traits& t, const ASString& local, Instances::Namespace* ns)
+    SFR01C_INSTANCE_CTOR QName::QName(InstanceTraits::Traits& t, const ASString& local, Instances::Namespace* ns)
         : Instance(t), LocalName(local), Ns(ns)
     {
     }
@@ -1500,7 +1510,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423eede0
-    RegExp::RegExp(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR RegExp::RegExp(InstanceTraits::Traits& t)
         : Instance(t)
         , CompRegExp(NULL)
         , MatchOffset(-1)
@@ -1955,7 +1965,7 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423f00f0
-    XMLList::XMLList(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR XMLList::XMLList(InstanceTraits::Traits& t)
         : Instance(t), TargetProperty(NULL)
     {
     }
@@ -1971,19 +1981,19 @@ namespace Instances { namespace fl
 namespace Instances { namespace fl
 {
     // @0x1423efc90
-    XML::XML(InstanceTraits::Traits& t)
+    SFR01C_INSTANCE_CTOR XML::XML(InstanceTraits::Traits& t)
         : Object(t), Text(t.GetVM().GetStringManager().CreateEmptyString())
     {
     }
 
     // @0x1423efce0
-    XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+    SFR01C_INSTANCE_CTOR XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : Object(t), Text(text), Parent(parent)
     {
     }
 
     // @0x1423efd40
-    XMLAttr::XMLAttr(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+    SFR01C_INSTANCE_CTOR XMLAttr::XMLAttr(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
                      const ASString& value, XML* parent)
         : XML(t, name, parent), Data(value)
     {
@@ -1991,13 +2001,13 @@ namespace Instances { namespace fl
     }
 
     // @0x1423efe10
-    XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+    SFR01C_INSTANCE_CTOR XMLComment::XMLComment(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : XML(t, text, parent)
     {
     }
 
     // @0x1423efe80
-    XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
+    SFR01C_INSTANCE_CTOR XMLElement::XMLElement(InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& name,
                            XML* parent)
         : XML(t, name, parent)
     {
@@ -2005,13 +2015,13 @@ namespace Instances { namespace fl
     }
 
     // @0x1423f0260
-    XMLProcInstr::XMLProcInstr(InstanceTraits::Traits& t, const ASString& name, const ASString& data, XML* parent)
+    SFR01C_INSTANCE_CTOR XMLProcInstr::XMLProcInstr(InstanceTraits::Traits& t, const ASString& name, const ASString& data, XML* parent)
         : XML(t, name, parent), Data(data)
     {
     }
 
     // @0x1423f02e0
-    XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
+    SFR01C_INSTANCE_CTOR XMLText::XMLText(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : XML(t, text, parent)
     {
     }
@@ -3257,6 +3267,32 @@ void FUN_1423e4920(const ThunkInfo&, VM&, const Value& _this, Value& result, uns
 {
     result.Assign(_this);
 }
+// Calls each inline Instances::fl ctor above out of line (inline_depth 0), so cl emits their bodies (and with them
+// the vftables and deleting dtors) in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr01cEmitInstanceCtors(void* p, InstanceTraits::Traits& t, const Instances::Namespace& ns, const ASString& s,
+                                 Instances::Namespace* pns, Instances::fl::XML* parent)
+{
+    using namespace Instances::fl;
+    new(p) Array(t);
+    new(p) Catch(t);
+    new(p) Date(t);
+    new(p) Error(t);
+    new(p) Error(t, 0, s);
+    new(p) Instances::fl::Object(t);
+    new(p) QName(t);
+    new(p) QName(t, s, pns);
+    new(p) RegExp(t);
+    new(p) XMLList(t);
+    new(p) XML(t);
+    new(p) XML(t, s, parent);
+    new(p) XMLAttr(t, ns, s, s, parent);
+    new(p) XMLComment(t, s, parent);
+    new(p) XMLElement(t, ns, s, parent);
+    new(p) XMLProcInstr(t, s, s, parent);
+    new(p) XMLText(t, s, parent);
+}
+#pragma inline_depth()
 }}}
 
 // MS2-PINS-BEGIN tplpin
