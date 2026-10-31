@@ -417,12 +417,16 @@ namespace Instances { namespace fl
         applyTimeArgs(result, argc, argv, Time_Second, 0.0);
     }
 
-    // MS2-FUNCTIONAL: the exe tail-calls RefCountBaseGC::ReleaseInternal from the SPtr release
+    // The result is moved out of an inner scope so the final release can be a tail call.
     // @0x142401860
     void RegExp::AS3test(bool& result, const ASString& str)
     {
         SPtr<Instances::fl::Object> r;
-        AS3exec(r, str);
+        {
+            SPtr<Instances::fl::Object> t;
+            AS3exec(t, str);
+            r.Pick(t);
+        }
         result = r.GetPtr() != NULL;
     }
 

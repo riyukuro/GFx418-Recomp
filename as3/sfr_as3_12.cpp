@@ -2241,13 +2241,16 @@ namespace Classes { namespace fl_net
 
 // ASSharedObjectLoader: as3_obj_net_soloader.h (sfr_as3_11 emits its deleting dtor).
 
-// MS2-FUNCTIONAL: cl inlines the object stack PushBack the exe tail-calls
+// The exe calls Resize and tail-calls PushBack out of line here only.
+#pragma inline_depth(0)
 // @0x142498cb0
 void ASSharedObjectLoader::Begin()
 {
     ObjectStack.Resize(0);
-    ObjectStack.PushBack(pData);
+    // pData is an Object* at offset 0 of the same object; the exe passes the member itself, with no converted copy.
+    ObjectStack.PushBack(reinterpret_cast<AS3::Object* const&>(pData));
 }
+#pragma inline_depth()
 
 // MS2-FUNCTIONAL: register allocation of the name length/data around String::GetLength differs
 // @0x142499e80
