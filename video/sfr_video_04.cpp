@@ -32,8 +32,11 @@ using namespace Scaleform::GFx::Video;
 // ---- exe callees outside this unit ----
 ExeDecl<void(void*)>::type FUN_1425925f0;                       // GC object: release tail
 ExeDecl<char(void*, std::uint64_t)>::type FUN_142592950;        // ArrayPaged: grow to hold a page index
-ExeDecl<void(void*, void*, void*, unsigned)>::type FUN_142591a00;   // hash: add {key, value} at a hash code
-ExeDecl<void(void*, void*, void*)>::type FUN_1425916c0;        // registers the first builtin
+namespace Scaleform { namespace GFx {
+void FUN_142591a00(UPInt** table, void* heapOwner, const void* keyValue, UPInt hashCode);   // hash: add {key, value} at a hash code
+void FUN_1425916c0(void* context, void* sc, void* global);       // registers the first builtin
+namespace AS3 { class VM; struct ClassInfo; void FUN_1425210d0(VM& vm, const ClassInfo* table[]); }   // AS3 class registration
+} }
 ExeDecl<char*(void*)>::type FUN_1429561c0;                          // GlobalContext::GetStringManager(this = context): the builtin name table
 ExeDecl<void(void*)>::type FUN_1429260b0;                       // AS2 value destructor
 ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)>::type FUN_140010000;   // the video character constructor
@@ -47,7 +50,6 @@ ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSup
 #ifndef MS2_HOOK_DLL   // the hook DLL's ms2sym.obj already maps this name to the exe address (alternatename conflict)
 #pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
 #endif
-ExeDecl<void(void*, void*)>::type FUN_1425210d0;                   // AS3 class registration
 extern ExeDecl<void*>::type DAT_1431b7b50;                             // AS3 ClassInfo (data_rdata_sf_video)
 extern ExeDecl<void*>::type DAT_1431b7160;                             // AS3 ClassInfo (data_rdata_sf_video)
 // The module's null-terminated AS3 class info table the VM registers (exe .data 0x143a462f0: { &DAT_1431b7b50,
@@ -214,7 +216,7 @@ void AS3VideoSupportImpl::RegisterASClasses(AS3::VM* pvm)
 {
     DAT_143a462f0[0] = &DAT_1431b7b50;
     DAT_143a462f0[1] = &DAT_1431b7160;
-    FUN_1425210d0(pvm, (void*)DAT_143a462f0);
+    AS3::FUN_1425210d0(*pvm, (const AS3::ClassInfo**)DAT_143a462f0);
 }
 
 // MS2-FUNCTIONAL: AttachAudio is the exe's 0x140001270 (forwards to the video object).
@@ -415,7 +417,7 @@ void FUN_1400020d0(void* hash, ASStringNode** key, void* value)
     struct { ASStringNode** Key; void* Value; } pair;
     pair.Value = value;
     pair.Key = key;
-    FUN_142591a00(hash, hash, &pair, (*key)->HashFlags);
+    FUN_142591a00((UPInt**)hash, hash, &pair, (*key)->HashFlags);
 }
 
 // registers one builtin: looks the builtin's name up in the context's class hash and, when it is not
@@ -454,7 +456,7 @@ __forceinline void Video04RegisterBuiltin(Video04Context* context, void* sc, Vid
     {
         struct { void* Builder; Video04GcObject* Value; } proto = {(void*)builder, 0};
         struct { ASStringNode** Key; void* Value; } keyValue = {VIDEO04_NAME(context, nameOffset), &proto};
-        FUN_142591a00(&context->Classes, &context->Classes, &keyValue, (*keyValue.Key)->HashFlags);
+        FUN_142591a00((UPInt**)&context->Classes, &context->Classes, &keyValue, (*keyValue.Key)->HashFlags);
         Video04GcRelease(proto.Value);
     }
     unsigned char flags = 0;

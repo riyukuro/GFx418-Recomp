@@ -2781,7 +2781,6 @@ class VideoCharacter : public RefCountBaseWeakSupport<VideoCharacter, Stat_Defau
 }}} // namespace Scaleform::GFx::Video
 
 // MovieImpl member that registers a provider for advancing (unnamed in the exe's symbols).
-void FUN_14256c520(Scaleform::GFx::MovieImpl* proot, Scaleform::GFx::Video::VideoProvider* pprovider);
 // Wakes a video display object up when its provider has a first frame (sfr_video_02).
 void FUN_140010a70(Scaleform::GFx::Video::VideoCharacter* pvideo);
 // Points a video display object at a provider, or at none (sfr_video_02).
@@ -2924,7 +2923,7 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
         {
             pVideoPlayer->Seek((UInt32)((float)VInfo.FrameRate / 1000.0f * SeekPos));
             if (status == VideoPlayer::Finished && proot)
-                FUN_14256c520(proot, this);
+                ((Scaleform::GFx::MovieImpl*)(void*)(proot))->AddVideoProvider(this);
         }
         InitSoundChannel();
     }
@@ -3089,7 +3088,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, Environment* penv)
     {
         pVideoPlayer->Open(fileName.ToCStr());
         pTarget = penv->GetTarget()->GetCharacterHandle();
-        FUN_14256c520(proot, this);
+        ((Scaleform::GFx::MovieImpl*)(void*)(proot))->AddVideoProvider(this);
         pVideoPlayer->SetLoopFlag(LoopFlag);
         StartNotificationSent    = false;
         NotFoundNotificationSent = false;

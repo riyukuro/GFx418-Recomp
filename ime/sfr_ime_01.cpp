@@ -14,6 +14,7 @@
 #include <vector>
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_memory.h"
+#include "../include/kernel/sf_refcount.h"
 #include "../include/kernel/sf_hash.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/kernel/sf_utf8util.h"
@@ -32,7 +33,12 @@ namespace Scaleform { namespace UTF8Util { SPInt SF_STDCALL GetEncodeStringSize(
 namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeStringSafe(char* buff, UPInt buffSize, const wchar_t* chars, SPInt length); } }
 
 namespace Scaleform { int SF_CDECL SFstricmp(const char* a, const char* b); }
-namespace Scaleform { namespace GFx { class Movie { public: void Release(); }; } }
+namespace Scaleform { namespace GFx { class Movie { public:
+    void Release();
+    enum SetVarType { SV_Normal, SV_Sticky, SV_Permanent };
+    int GetAVMVersion() const;
+    bool SetVariable(const char* ppathToVar, const Value& value, SetVarType setType);
+}; } }
 namespace Scaleform { namespace GFx { namespace IME {
 
 void FUN_1423d9090(void*, void*, unsigned long long);
@@ -40,7 +46,6 @@ void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
 void FUN_1423d9b40(void*);
     unsigned char FUN_1423da320(void*);
     __declspec(noinline) void FUN_1423d9500(void*);
-    void FUN_1425b43c0(void*);
     void FUN_1423d5fd0(void*);
     void FUN_1423c8bb0(unsigned long long*);
     class GFxIMEManagerWin32;
@@ -55,7 +60,7 @@ void FUN_1423d9b40(void*);
     void FUN_1423cc570(unsigned long long*);
 } } }
 namespace Scaleform { namespace GFx { namespace AS3 { void SF_STDCALL DoAbcLoader(LoadProcess*, const TagInfo&); } } }
-extern "C" void FUN_1425c8cf0(unsigned, void*);
+namespace Scaleform { namespace GFx { bool RegisterTagLoader(unsigned tagType, void (*plf)(LoadProcess*, const TagInfo&)); } }
 
 static __forceinline HIMC cx18_ImmGetContext(HWND hwnd)
 {
@@ -131,7 +136,9 @@ static __forceinline BOOL cx18_ImmSetCompositionStringW(HIMC context, DWORD inde
 
 extern "C" void FUN_14015b310(void*, unsigned long long);
 extern "C" void FUN_1424ddcb0(void* self);   // the in-place AvmDisplayObj destructor (sfr_as3_16)
-extern "C" void FUN_14257db50(void*);
+// The RefCount base destructors, called directly as the exe calls them.
+static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
+static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
@@ -148,10 +155,9 @@ extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
 extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
 extern "C" void FUN_1423d95f0(void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
-extern "C" void FUN_14257dcd0(void*);
+void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
 extern bool FUN_1425b9b10(void*);
-extern "C" void FUN_14257db40(void*);
 extern "C" void FUN_1422fd480(void*, void*);
 extern "C" unsigned long long* FUN_1423cabb0(unsigned long long*, unsigned long long);
 extern "C" const unsigned long long DAT_14313b410;
@@ -191,15 +197,10 @@ extern "C" const unsigned char DAT_143a293e0[];
 extern "C" const int DAT_143a2a6b4;
 extern "C" const char DAT_14305cd3c[];
 extern "C" const unsigned long long DAT_1431c4ef0;
-extern "C" void* DAT_143b15f60;
+#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 extern "C" const void* DAT_14313bc60[];
-extern "C" void FUN_1423dd1c0();
-extern "C" void FUN_1423dc7b0();
 extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
-extern "C" void FUN_142576820(void*, const char*, const Scaleform::GFx::Value*, int);
-extern "C" void FUN_1425b49b0();
-extern "C" void FUN_14257dc30(void*);
-extern "C" int FUN_14256eff0(void*);           // Movie::GetAVMVersion
+void FUN_14257dc30(void*);
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
 namespace Scaleform { namespace GFx { void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity); } }
 extern "C" void FUN_1422fbf60(void*);
@@ -318,7 +319,7 @@ void FUN_1423d2f00(void* self)
         input.ki.wVk = VK_ESCAPE;
         input.ki.wScan = static_cast<WORD>(MapVirtualKeyW(VK_ESCAPE, 0));
         SendInput(1, &input, sizeof(input));
-        FUN_1425b43c0(value);
+        static_cast<Scaleform::GFx::IMEManagerBase*>(value)->ClearComposition();
         FUN_1423d9500(*reinterpret_cast<void**>(bytes + 0x30));
         void* movie = *reinterpret_cast<void**>(bytes + 0xa8);
         {
@@ -1143,7 +1144,7 @@ void* FUN_1423dbc80(void* object, unsigned long long flags)
 // @0x1423ce420
 void* FUN_1423ce420(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1)
         ::operator delete(object, 0x10);   // the CRT sized delete (0x142749444)
     return object;
@@ -1273,7 +1274,7 @@ void* FUN_1423ce3c0(void* object, unsigned flags)
 // @0x1423db8b0
 void* FUN_1423db8b0(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1285,7 +1286,7 @@ void* FUN_1423db8b0(void* object, unsigned flags)
 // @0x1423db910
 void* FUN_1423db910(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1297,7 +1298,7 @@ void* FUN_1423db910(void* object, unsigned flags)
 // @0x1423db970
 void* FUN_1423db970(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1310,7 +1311,7 @@ void* FUN_1423db970(void* object, unsigned flags)
 void* FUN_1423ce250(unsigned long long* object, unsigned flags)
 {
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313a200);
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1362,8 +1363,8 @@ void* FUN_1423db7f0(unsigned long long* object)
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313bc60);
     object[1] = 1;
     *reinterpret_cast<unsigned*>(object + 2) = 0x23;
-    FUN_1425c8cf0(0x4c, reinterpret_cast<void*>(&FUN_1423dd1c0));
-    FUN_1425c8cf0(0x52, reinterpret_cast<void*>(&FUN_1423dc7b0));
+    Scaleform::GFx::RegisterTagLoader(0x4c, Scaleform::GFx::AS3::SymbolClassLoader);
+    Scaleform::GFx::RegisterTagLoader(0x52, Scaleform::GFx::AS3::DoAbcLoader);
     return object;
 }
 
@@ -1373,8 +1374,8 @@ void FUN_1423ca350(void* self)
 {
     {
         Scaleform::GFx::Value value("Hello World");
-        FUN_142576820(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
-                      "_root.Edit_MLine1.textBox.text", &value, 1 /* Movie::SV_Sticky */);
+        (*reinterpret_cast<Scaleform::GFx::Movie**>(static_cast<unsigned char*>(self) + 0xa0))->SetVariable(
+            "_root.Edit_MLine1.textBox.text", value, Scaleform::GFx::Movie::SV_Sticky);
     }
     FUN_1423ca030(*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0xa0),
                   "Selection.setSelection", "%d %d", 5, 5);
@@ -1387,7 +1388,8 @@ void FUN_1423ca350(void* self)
 void FUN_1423ca410(void* self, void* movie)
 {
     // IMEManagerBase::SetActiveMovie(self, movie)
-    reinterpret_cast<void(*)(void*, void*)>(&FUN_1425b49b0)(self, movie);
+    static_cast<Scaleform::GFx::IMEManagerBase*>(self)->Scaleform::GFx::IMEManagerBase::SetActiveMovie(
+        static_cast<Scaleform::GFx::Movie*>(movie));
     if (!movie) return;
     unsigned char* p = static_cast<unsigned char*>(self);
     void* obj = *reinterpret_cast<void**>(p + 0x18);
@@ -1408,9 +1410,9 @@ void FUN_1423ca410(void* self, void* movie)
         value.SetString("XP");
     else
         value.SetString("Undetermined");
-    if (FUN_14256eff0(movie) == 1)
-        FUN_142576820(*reinterpret_cast<void**>(p + 0xa0), "_global.gfx_ime_os_version", &value,
-                      1 /* Movie::SV_Sticky */);
+    if (static_cast<Scaleform::GFx::Movie*>(movie)->GetAVMVersion() == 1)
+        (*reinterpret_cast<Scaleform::GFx::Movie**>(p + 0xa0))->SetVariable("_global.gfx_ime_os_version", value,
+                                                                         Scaleform::GFx::Movie::SV_Sticky);
 }
 
 // MS2-FUNCTIONAL: stores the manager vftable, destroys the XML node chain, then releases the arrays, the packed string, the
@@ -1538,7 +1540,7 @@ void FUN_1423cdda0(void** table)
 void* FUN_1423dbcb0(unsigned long long* object, unsigned flags)
 {
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313ba60);
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1582,7 +1584,7 @@ void FUN_1423db060(unsigned long long* object)
 // @0x1423ce040
 void* FUN_1423ce040(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1594,7 +1596,7 @@ void* FUN_1423ce040(void* object, unsigned flags)
 // @0x1423ce0a0
 void* FUN_1423ce0a0(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x10);
@@ -1733,7 +1735,7 @@ void* FUN_1423ce160(unsigned long long* object, unsigned flags)
 {
     Sfr33ReleasePacked(object[3]);
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313a200);
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x20);
@@ -1758,7 +1760,7 @@ void* FUN_1423ce2f0(unsigned long long* object, unsigned flags)
 void* FUN_1423dba40(void* object, unsigned flags)
 {
     *static_cast<void**>(object) = DAT_143109420;   // State vftable
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x18);
@@ -1772,7 +1774,7 @@ void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
 {
     Sfr33ReleasePacked(object[5]);
     Sfr33ReleasePacked(object[2]);
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
         else FUN_14015b310(object, 0x38);
@@ -2409,8 +2411,6 @@ bool FUN_1423d15b0(void* self, int mode)
 __declspec(noinline) void FUN_1423d94f0(void*, void*);
 
 // MS2-FUNCTIONAL: Movie is declared only for its recovered Release call; surrounding window/movie manager layout is opaque.
-extern void FUN_1425b4ec0(void*, int);
-extern void FUN_1425b43c0(void*);
 
 // MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; recovered calls preserve offsets and order.
 // MS2-FUNCTIONAL: the factory interface and helper argument types remain opaque; the guard and calls follow the exe.
@@ -2422,8 +2422,8 @@ void FUN_1423d4690(void* self)
         void* factory = static_cast<unsigned char*>(base) + 0x10;
         void** vtable = *reinterpret_cast<void***>(factory);
         void* value = reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18);
-        FUN_1425b4ec0(value, 0);
-        FUN_1425b43c0(value);
+        static_cast<Scaleform::GFx::IMEManagerBase*>(value)->SetWideCursor(false);
+        static_cast<Scaleform::GFx::IMEManagerBase*>(value)->ClearComposition();
         if (value)
             reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
     }
@@ -2436,8 +2436,8 @@ void FUN_1423d07e0(void* self)
     void* factory = static_cast<unsigned char*>(base) + 0x10;
     void** vtable = *reinterpret_cast<void***>(factory);
     void* value = reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18);
-    FUN_1425b4ec0(value, 0);
-    FUN_1425b43c0(value);
+    static_cast<Scaleform::GFx::IMEManagerBase*>(value)->SetWideCursor(false);
+    static_cast<Scaleform::GFx::IMEManagerBase*>(value)->ClearComposition();
     *(static_cast<unsigned char*>(self) + 0xb8) = 0;
     if (value)
         reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();

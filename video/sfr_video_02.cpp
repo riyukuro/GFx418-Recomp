@@ -27,7 +27,6 @@
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
-extern char* FUN_1429561c0(void*);   // GlobalContext::GetStringManager: the builtin name table (out of line in the exe)
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
 extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
 extern const void* FUN_14261c640(const void*, int);
@@ -41,7 +40,7 @@ extern void FUN_14252c8b0(void*, unsigned, unsigned, unsigned);
 extern void FUN_1425ef130(void*);
 extern void FUN_1424d9310(void*, unsigned);
 extern void* FUN_142581520(void*, void*);
-extern "C" void* DAT_143b15f60;
+#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 // MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
 extern "C" void* DAT_14317b668;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
@@ -130,13 +129,11 @@ extern void* DAT_143b27678;
 extern void* DAT_143b27680;
 extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
 extern void FUN_1424d2140(void*, double*);
-extern void FUN_140025750(void*, int, int);
-extern void FUN_140025300(void*);
-extern void FUN_140025410(void*, int);
 extern void FUN_14296bba0();
 extern void* FUN_1400105b0(void*);
-extern void FUN_14257db50(void*);
-extern void FUN_14257db40(void*);
+// The RefCount base destructors, called directly as the exe calls them (0x14257db50 / 0x14257db40).
+static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
+static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
 extern void FUN_142625ee0(const void*);
 extern void FUN_142626070(void*, const void*);
 extern void FUN_1423dfba0(void*, void*);
@@ -167,7 +164,6 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*);
 }}}
 extern void FUN_142469440(void*, void*, void*);
 extern void FUN_142504530(void*, void*, void*, void*);
-extern void FUN_1429253d0(void*);
 extern void FUN_1425925f0(void*);
 
 namespace Scaleform { namespace GFx { namespace Video {
@@ -186,7 +182,7 @@ public:
 // @0x140013350
 void* FUN_140013350(void* object, unsigned int flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -195,7 +191,7 @@ void* FUN_140013350(void* object, unsigned int flags)
 // @0x140014bb0
 void* FUN_140014bb0(void* object, unsigned int flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -204,7 +200,7 @@ void* FUN_140014bb0(void* object, unsigned int flags)
 // @0x140015550
 void* FUN_140015550(void* object, unsigned int flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -248,7 +244,7 @@ void FUN_140013db0(int* refCount)
 // @0x140015c00
 void* FUN_140015c00(void* object, unsigned __int64 flags)
 {
-    FUN_14257db50(object);
+    RawRefCountNTSCoreDtor(object);
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -258,7 +254,7 @@ void* FUN_140015c00(void* object, unsigned __int64 flags)
 void FUN_140014400(void* object, void*, char invoke)
 {
     void*& target = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);   // re-read after the call
-    FUN_140025300(target);
+    ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(target))->Stop();
     if (invoke)
     {
         void** vtable = *reinterpret_cast<void***>(target);
@@ -286,7 +282,7 @@ void FUN_140014730(void* object, void*, double value)
     *reinterpret_cast<int*>(bytes + 0x84) = static_cast<int>(value) - 1;
     unsigned tag = *reinterpret_cast<unsigned*>(bytes + 0xd8) & 0x1f;
     if (tag && (tag < 0x0c || tag > 0x0f || *reinterpret_cast<void**>(bytes + 0xe8)))
-        FUN_140025410(*reinterpret_cast<void**>(bytes + 0x50), static_cast<int>(value) - 1);
+        ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(bytes + 0x50)))->SetSubtitleChannel(static_cast<int>(value) - 1);
 }
 
 // MS2-FUNCTIONAL: restores the InteractiveObject base tables, releases its provider and weak proxy, then destroys the base.
@@ -1133,7 +1129,7 @@ void FUN_140014830(Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher* d
     char* fields = reinterpret_cast<char*>(dispatcher);
     *reinterpret_cast<void**>(fields) = &PTR_FUN_1431b7360;
     *reinterpret_cast<void**>(*reinterpret_cast<char**>(fields + 0x50) + 0x18) = nullptr;
-    FUN_140025300(*reinterpret_cast<void**>(fields + 0x50));
+    ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->Stop();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xd8)->~Value();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0xb8)->~Value();
     reinterpret_cast<Scaleform::GFx::AS3::Value*>(fields + 0x98)->~Value();
@@ -1151,8 +1147,7 @@ void FUN_1400142e0(void* object, void*, void* soundTransform)
     char* fields = static_cast<char*>(object);
     double* x = reinterpret_cast<double*>(fields + 0x88);
     FUN_1424d2140(soundTransform, x);
-    FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
-                  static_cast<int>(x[0] * 100.0),
+    ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->SetSoundVolume(static_cast<int>(x[0] * 100.0),
                   static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 100.0));
 }
 
@@ -1165,8 +1160,7 @@ void FUN_140014770(void* object, void*, void* soundTransform)
     char* fields = static_cast<char*>(object);
     double* y = reinterpret_cast<double*>(fields + 0x90);
     FUN_1424d2140(soundTransform, y);
-    FUN_140025750(*reinterpret_cast<void**>(fields + 0x50),
-                  static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 100.0),
+    ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->SetSoundVolume(static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 100.0),
                   static_cast<int>(y[0] * 100.0));
 }
 
@@ -1712,7 +1706,7 @@ void FUN_140010490(void* object)
     if (*reinterpret_cast<void**>(bytes + 0x18)) FUN_14257dcb0(*reinterpret_cast<void**>(bytes + 0x18));
     void* fill = *reinterpret_cast<void**>(bytes + 0x10);
     if (fill) reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(fill))[2])(fill);
-    FUN_14257db40(object);
+    RawRefCountCoreDtor(object);
 }
 
 // MS2-FUNCTIONAL: copies both StateData words and retains the referenced bag when nonempty.
@@ -2004,8 +1998,7 @@ void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
     a0 = *extra;
     if (convert)
     {
-        extern unsigned char FUN_1424f0be0(uintptr_t);
-        a0 = FUN_1424f0be0(value);
+        a0 = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->Convert2Boolean();
     }
     return frame;
 }
@@ -2072,7 +2065,7 @@ void FUN_14000e840(void* object)
         --*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18);
         FUN_1425925f0(value);
     }
-    FUN_1429253d0(object);
+    static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::~AvmCharacter();
 }
 
 // MS2-FUNCTIONAL: invokes the video character destructor. The exe's copy has no free path and ignores the
@@ -2452,9 +2445,9 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
     // lowercase node is resolved before the case-insensitive compare (SWF <= 6). Ours resolved the builtin's and
     // read the name's pLower unresolved, so "constructor" spelled in another case could miss.
     typedef Scaleform::GFx::ASString Builtin;
-    const bool constructor2 = reinterpret_cast<const Builtin*>(FUN_1429561c0(context->pContext) + 0x280)
+    const bool constructor2 = reinterpret_cast<const Builtin*>(reinterpret_cast<char*>(context->pContext->GetStringManager()) + 0x280)
         ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
-    if (constructor2 || reinterpret_cast<const Builtin*>(FUN_1429561c0(context->pContext) + 0x278)
+    if (constructor2 || reinterpret_cast<const Builtin*>(reinterpret_cast<char*>(context->pContext->GetStringManager()) + 0x278)
         ->CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive()))
     {
         auto* owner = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(object) - 0x20);
@@ -2741,8 +2734,7 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
     *reinterpret_cast<unsigned char*>(self + 0x60) = 0;
     FUN_140026720(*reinterpret_cast<void**>(self + 0x50), const_cast<char*>(url),
                   *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78));
-    FUN_140025750(*reinterpret_cast<void**>(self + 0x50),
-        static_cast<int>(*reinterpret_cast<double*>(self + 0x88) * 100.0),
+    ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(self + 0x50)))->SetSoundVolume(static_cast<int>(*reinterpret_cast<double*>(self + 0x88) * 100.0),
         static_cast<int>(*reinterpret_cast<double*>(self + 0x90) * 100.0));
 }
 
