@@ -4010,7 +4010,7 @@ void VideoCtorFunction::GlobalCtor(const FnCall& fn)
 
 // MS2-FUNCTIONAL: constructs the NetStream prototype base and initializes its constructor links.
 // @0x140009e20
-Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototype,
+__declspec(noinline) Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
 {
     ::new (static_cast<void*>(object)) Prototype<NetStream>(context, prototype, constructor);
@@ -4022,7 +4022,7 @@ Object* FUN_140009e20(Object* object, ASStringContext* context, Object* prototyp
     return object;
 }
 
-// MS2-FUNCTIONAL: adds the public close method and installs the NetStreamProto virtual tables.
+// adds the public close method and installs the NetStreamProto virtual tables.
 // @0x14000ae30
 Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
