@@ -3609,25 +3609,23 @@ CriSint32 FUN_14003ec30(void* player)
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: ask the owner to stop when the playback clock has run ahead of the nominal frame rate.
+// ask the owner to stop when the playback clock has run ahead of the nominal frame rate (the state is read again
+// after the null test, as the exe does)
 // @0x1400414f0
 void FUN_1400414f0(void* handle)
 {
     struct Owner { CriUint8 Reserved00[8]; CriMvEasyPlayer* Player; CriUint8 Reserved10[0x2d0]; CriUint32 FrameRate;
                    CriUint32 Reserved2e4; CriUint64 FramesDone; CriUint64 FramesUnit; };
     struct Handle { CriUint8 Reserved00[0x40]; Owner* State; };
-    Owner* state = ((Handle*)handle)->State;
-    if (!state)
+    if (!((Handle*)handle)->State)
         return;
+    Owner* state = *(Owner* volatile*)&((Handle*)handle)->State;
     CriMvEasyPlayer* owner = state->Player;
     CriUint64 count;
     CriUint64 unit;
     owner->GetTime(count, unit);
-    float counts = (float)count;
-    float units = (float)unit;
-    float framesDone = (float)state->FramesDone;
-    float framesUnit = (float)state->FramesUnit;
-    if (1000.0f / ((float)state->FrameRate / 1000.0f) < (counts / units) * 1000.0f - (framesDone / framesUnit) * 1000.0f)
+    if ((float)count / (float)unit * 1000.0f - (float)state->FramesDone / (float)state->FramesUnit * 1000.0f
+        > 1000.0f / ((float)state->FrameRate / 1000.0f))
     {
         struct EasyFields { CriUint8 Reserved00[8]; void* Inner; };
         FUN_1400314a0(((EasyFields*)owner)->Inner);
@@ -5083,8 +5081,8 @@ CriSint32 FUN_142cccef0(void* decoder)
     return 0;
 }
 
-// MS2-FUNCTIONAL: decode the coded inter blocks of a macroblock into 16-bit coefficient planes and emit their counts.
-// Same length and instructions as the exe; only the register choice differs (decoder in rbx, the exe uses rdi).
+// Decode the coded inter blocks of a macroblock into 16-bit coefficient planes and emit their counts. The coded-block
+// mask is shifted (<<= 1, not mask += mask: cl 15 then keeps the decoder in rdi, as the exe does).
 // @0x142ccd080
 CriSint32 FUN_142ccd080(void* decoder)
 {
@@ -5102,7 +5100,7 @@ CriSint32 FUN_142ccd080(void* decoder)
             CriMpvField<void*>(context, 0x20) = base + MPV_COEF_INTRA + block * 0x100;
             base[0x1350 + block] = (CriUint8)CriMpvField<CriMpvDecodeBlockFunc>(base, MPV_DECODE_INTER)(base, context);
         }
-        mask += mask;
+        mask <<= 1;
     }
     CriMpvField<CriSint32>(decoder, 0x1380) = CriMpvField<CriSint32>(decoder, MPV_CODED) * 4;
     CriMpvField<CriMpvEmitFunc>(decoder, MPV_EMIT_FUNC)(base + 0x1350);
