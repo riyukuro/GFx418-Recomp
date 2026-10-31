@@ -2070,21 +2070,16 @@ void FUN_14000b620(unsigned* destination, const unsigned* source)
     ::new (destination) Video01CueRecord(*reinterpret_cast<const Video01CueRecord*>(source));
 }
 
-// MS2-FUNCTIONAL: releases the nested String pair arrays and the String member of each 48-byte record, last record
-// first. The code is identical; only the callee-saved registers differ (the exe pushes rbp, ours pushes rsi).
+// releases the nested String pair arrays and the String member of each 48-byte record, last record first
 // @0x14000b530
 void FUN_14000b530(void* records, Scaleform::UPInt count)
 {
-    unsigned char* record = static_cast<unsigned char*>(records) - 0x18 + count * 0x30;
-    if (count) {
-        do {
-            void** nested = reinterpret_cast<void**>(record);
-            FUN_1400068d0(*nested, *reinterpret_cast<Scaleform::UPInt*>(record + 8));
-            if (*nested) Scaleform::Memory::Free(*nested);
-            reinterpret_cast<Scaleform::String::DataDesc*>(
-                (*reinterpret_cast<Scaleform::UPInt*>(record - 0x10)) & ~Scaleform::UPInt(3))->Release();
-            record -= 0x30;
-        } while (--count);
+    // SDK DestructArray(records, count): last record first
+    Video01CueRecord* record = static_cast<Video01CueRecord*>(records) + count - 1;
+    for (Scaleform::UPInt i = 0; i < count; ++i, --record) {
+        FUN_1400068d0(record->Nested.Data, record->Nested.Size);
+        if (record->Nested.Data) Scaleform::Memory::Free(record->Nested.Data);
+        record->Label.~String();
     }
 }
 
