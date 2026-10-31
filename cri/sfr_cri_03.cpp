@@ -1406,33 +1406,46 @@ void* FUN_140041910(void** decoderObject, void** mediaInterface)
     return instance;
 }
 
-// MS2-FUNCTIONAL: clear the output buffers supplied for each available decoder picture plane.
+// The SDK ImagePlane (only declared here), whose ctor zeroes each field.
+struct CriImagePlane
+{
+    CriUint32 Width, Height;
+    CriUint64 Pitch;
+    CriUint64 DataSize;
+    CriUint8* pData;
+    CriImagePlane() : Width(0), Height(0), Pitch(0), DataSize(0), pData(0) {}
+};
+
+// clear the output buffers supplied for each available decoder picture plane
 // @0x140041390
 void FUN_140041390(void* owner, void* outputSet)
 {
     (void)owner;
-    struct OutputBuffer
+    const Scaleform::Render::ImageData* planes = (const Scaleform::Render::ImageData*)outputSet;
+    if (planes->GetPlaneCount() >= 3)
     {
-        CriUint32 Format;
-        CriUint32 Flags;
-        void* Reserved;
-        size_t Size;
-        void* Data;
-    } outputs[4] = {};
-    CriUint32 count = ((const Scaleform::Render::ImageData*)outputSet)->GetPlaneCount();
-    if (count >= 3)
-    {
-        for (CriUint32 i = 0; i < 3; ++i)
+        CriImagePlane luma;
+        CriImagePlane chromaU;
+        CriImagePlane chromaV;
+        CriImagePlane alpha;
+        planes->GetPlane(0, (Scaleform::Render::ImagePlane*)&luma);
+        planes->GetPlane(1, (Scaleform::Render::ImagePlane*)&chromaU);
+        planes->GetPlane(2, (Scaleform::Render::ImagePlane*)&chromaV);
+        memset(luma.pData, 0, luma.DataSize);
+        memset(chromaU.pData, 0, chromaU.DataSize);
+        memset(chromaV.pData, 0, chromaV.DataSize);
+        if (planes->GetPlaneCount() >= 4)
         {
-            ((const Scaleform::Render::ImageData*)outputSet)->GetPlane(i, (Scaleform::Render::ImagePlane*)&outputs[i]);
-            memset(outputs[i].Data, 0, outputs[i].Size);
+            planes->GetPlane(3, (Scaleform::Render::ImagePlane*)&alpha);
+            memset(alpha.pData, 0, alpha.DataSize);
         }
-        count = ((const Scaleform::Render::ImageData*)outputSet)->GetPlaneCount();
-        if (count < 4)
-            return;
     }
-    ((const Scaleform::Render::ImageData*)outputSet)->GetPlane(count < 3 ? 0 : 3, (Scaleform::Render::ImagePlane*)&outputs[3]);
-    memset(outputs[3].Data, 0, outputs[3].Size);
+    else
+    {
+        CriImagePlane alpha;
+        planes->GetPlane(0, (Scaleform::Render::ImagePlane*)&alpha);
+        memset(alpha.pData, 0, alpha.DataSize);
+    }
 }
 
 // A CRI decoder interface wrapper: the decoder object and its table of entry points.
