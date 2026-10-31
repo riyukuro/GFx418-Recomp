@@ -82,6 +82,12 @@
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
 
+// The object stack's PushBack stays out of line (0x142971a50).
+namespace Scaleform {
+template<> SF_NOINLINE void ArrayData<GFx::AS2::Object*, AllocatorGH<GFx::AS2::Object*, 2>, ArrayDefaultPolicy>::PushBack(
+    GFx::AS2::Object* const& val);
+}
+
 namespace Scaleform { namespace GFx {
 
 // @0x142935540
@@ -589,7 +595,7 @@ Object* TransformCtorFunction::CreateNewObject(Environment* penv) const
 void GASSharedObjectLoader::Begin()
 {
     ObjectPtrArray_Resize(&ObjectStack, 0);
-    ObjectPtrArray_PushBack(&ObjectStack, pData);
+    ObjectStack.PushBack(pData);
 }
 
 // @0x142932180
