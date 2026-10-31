@@ -504,66 +504,90 @@ bool TreeNodeArray::Insert(UPInt index, TreeNode* node)
 }
 
 // @0x14261d020
-// MS2-FUNCTIONAL: register allocation and block layout differ
 bool TreeNodeArray::Remove(UPInt index, UPInt count)
 {
-    if (!count)
+    if (count == 0)
         return true;
 
+    // two-slot fixed store
     if (!hasArrayData())
     {
-        if (!pNodes[1])
+        if (pNodes[1] == 0)
         {
             pNodes[0] = 0;
-            return true;
         }
-        if (count == 2)
+        else
         {
-            pNodes[0] = 0;
-            pNodes[1] = 0;
-            return true;
+            if (count == 2)
+            {
+                pNodes[0] = 0;
+                pNodes[1] = 0;
+            }
+            else
+            {
+                if (index == 0)
+                {
+                    pNodes[0] = pNodes[1];
+                    pNodes[1] = 0;
+                }
+                else
+                {
+                    pNodes[1] = 0;
+                }
+            }
         }
-        TreeNode* last = pNodes[1];
-        pNodes[1] = 0;
-        if (index == 0)
-            pNodes[0] = last;
         return true;
     }
 
     ArrayData* data    = getArrayData();
     UPInt      newSize = data->Size - count;
+
+    // back to the inline store at 0 or 1 items
     if (newSize <= 1)
     {
-        // back to the inline store
-        TreeNode* node = 0;
         if (newSize == 1)
-            node = index ? data->pNodes[0] : data->pNodes[count];
-        pNodes[0] = node;
+        {
+            if (index != 0)
+                pNodes[0] = data->pNodes[0];
+            else
+                pNodes[0] = data->pNodes[index + count];
+        }
+        else
+        {
+            pNodes[0] = 0;
+        }
         pNodes[1] = 0;
         data->Release();
         return true;
     }
 
-    UPInt capacity = getCapacity() ? calcRemoveCapacity(getCapacity(), newSize) : roundUpSize(newSize);
-    if (capacity != getCapacity())
+    UPInt newCapacity;
+    if (getCapacity())
+        newCapacity = calcRemoveCapacity(getCapacity(), newSize);
+    else
+        newCapacity = roundUpSize(newSize);
+
+    if (newCapacity != getCapacity())
     {
-        ArrayData* newData = allocByCapacity(capacity, newSize);
+        ArrayData* newData = allocByCapacity(newCapacity, newSize);
         if (!newData)
             return false;
-        if (index)
+
+        if (index > 0)
             memcpy(newData->pNodes, data->pNodes, index * sizeof(TreeNode*));
-        if (index + count < data->Size)
+        if ((index + count) < data->Size)
             memcpy(newData->pNodes + index, data->pNodes + index + count,
                    (data->Size - index - count) * sizeof(TreeNode*));
         data->Release();
-        setArrayData(newData, capacity);
-        return true;
+        setArrayData(newData, newCapacity);
     }
-
-    for (UPInt i = index; i < newSize; i++)
-        data->pNodes[i] = data->pNodes[i + count];
-    data->Size = newSize;
-    setCapacity(capacity);
+    else
+    {
+        for (UPInt j = index; j < newSize; j++)
+            data->pNodes[j] = data->pNodes[j + count];
+        data->Size = newSize;
+        setCapacity(newCapacity);
+    }
     return true;
 }
 
@@ -584,17 +608,19 @@ bool TreeContainer::Insert(UPInt index, TreeNode* node)
 }
 
 // @0x14261cf50
-// MS2-FUNCTIONAL: register allocation differs
 void TreeContainer::Remove(UPInt index, UPInt count)
 {
-    if (!count)
+    if (count == 0)
         return;
-    NodeData*        data  = GetWritableData(Change_ChildRemove);
-    TreeNode* const* nodes = data->Children.GetMultipleAt(index);
-    for (UPInt i = 0; i < count; i++)
+    NodeData* data = GetWritableData(Change_ChildRemove);
+
+    TreeNode* const* pn = data->Children.GetMultipleAt(index);
+    UPInt            c  = count;
+    while (c--)
     {
-        nodes[i]->SetParent(0);
-        nodes[i]->Release();
+        (*pn)->SetParent(0);
+        (*pn)->Release();
+        pn++;
     }
     AddToPropagate();
     data->Children.Remove(index, count);
@@ -671,7 +697,6 @@ bool TreeContainer::NodeData::PropagateUp(Entry* entry) const
 }
 
 // @0x14261e030
-// MS2-FUNCTIONAL: register allocation differs (push vs home-slot saves)
 TreeCacheNode* TreeContainer::NodeData::updateCache(TreeCacheNode* parent, TreeCacheNode* insert, TreeNode* node,
                                                     UInt16 depth) const
 {
@@ -680,9 +705,11 @@ TreeCacheNode* TreeContainer::NodeData::updateCache(TreeCacheNode* parent, TreeC
     {
         unsigned flags = (GetFlags() & NF_Visible) | TreeCacheNode::CalcEdgeAAMode(this, parent);
         if (IsMaskNode())
-            flags |= NF_PartOfMask | NF_MaskNode;
-        cache = SF_HEAP_AUTO_NEW(parent)
-            TreeCacheContainer(node, parent->pRenderer2D, Is3D() ? (flags | NF_3D) : flags);
+            flags |= NF_MaskNode | NF_PartOfMask;
+        if (Is3D())
+            flags |= NF_3D;
+
+        cache = SF_HEAP_AUTO_NEW(parent) TreeCacheContainer(node, parent->pRenderer2D, flags);
         node->SetRenderData(cache);
         if (!cache)
             return 0;
