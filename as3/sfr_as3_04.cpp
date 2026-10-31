@@ -1645,9 +1645,6 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
-bool FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);   // URI decode; false on a malformed escape
-void FUN_1425e3750(const char* pstr, unsigned len, Scaleform::String* presult);   // encodeURI escaping
-void FUN_1425e37c0(const char* pstr, unsigned len, Scaleform::String* presult);   // encodeURIComponent escaping
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1658,7 +1655,7 @@ namespace Instances { namespace fl
     void GlobalObjectCPP::decodeURI(ASString& result, const ASString& uri)
     {
         String out;
-        if (!FUN_1425e4ad0(uri.ToCStr(), uri.GetSize(), &out))
+        if (!ASUtils::AS3::Unescape(uri.ToCStr(), uri.GetSize(), out))
         {
             GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
             return;
@@ -1671,7 +1668,7 @@ namespace Instances { namespace fl
     void GlobalObjectCPP::decodeURIComponent(ASString& result, const ASString& uri)
     {
         String out;
-        if (!FUN_1425e4ad0(uri.ToCStr(), uri.GetSize(), &out))
+        if (!ASUtils::AS3::Unescape(uri.ToCStr(), uri.GetSize(), out))
         {
             GetVM().ThrowURIError(VM::Error(VM::eInvalidURIError, GetVM(), "decodeURI"));
             return;
@@ -1684,7 +1681,7 @@ namespace Instances { namespace fl
     void GlobalObjectCPP::encodeURI(ASString& result, const ASString& uri)
     {
         String out;
-        FUN_1425e3750(uri.ToCStr(), uri.GetSize(), &out);
+        ASUtils::AS3::EncodeURI(uri.ToCStr(), uri.GetSize(), out);
         result = GetVM().GetStringManager().CreateString(out);
     }
 
@@ -1693,7 +1690,7 @@ namespace Instances { namespace fl
     void GlobalObjectCPP::encodeURIComponent(ASString& result, const ASString& uri)
     {
         String out;
-        FUN_1425e37c0(uri.ToCStr(), uri.GetSize(), &out);
+        ASUtils::AS3::EncodeURIComponent(uri.ToCStr(), uri.GetSize(), out);
         result = GetVM().GetStringManager().CreateString(out);
     }
 
@@ -1807,8 +1804,6 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
-void FUN_1424e6f90(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // Class::AddConstructor: obj.constructor = cls
-void FUN_142511ac0(const Scaleform::GFx::AS3::Class* cls, Scaleform::GFx::AS3::Object& obj);  // adds the instance traits' vtable methods to the prototype
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);  // Traits::GetConstructor, out of line
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e3a0[7];   // Classes::fl::Object prototype methods
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e7f0[2];   // Classes::fl::Boolean prototype methods
@@ -1856,7 +1851,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313e3a0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142417a30
@@ -1865,7 +1860,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313e7f0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142417b40
@@ -1874,7 +1869,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313d6e8);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142417d40
@@ -1883,7 +1878,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313e690);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142417e50
@@ -1892,7 +1887,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313d850);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142418070
@@ -1901,7 +1896,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313d6a0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142418160
@@ -1909,7 +1904,7 @@ namespace Classes { namespace fl
     {
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
-        FUN_142511ac0(this, obj);
+        InitPrototypeFromVTableCheckType(obj);
         AddDynamicFuncs(obj, DAT_143a2d128);
         // (no constructor slot: RegExp's prototype keeps its own)
     }
@@ -1922,7 +1917,7 @@ namespace Classes { namespace fl
     {
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
-        FUN_142511ac0(this, obj);
+        InitPrototypeFromVTableCheckType(obj);
 
         const Classes::Function& cf =
             static_cast<const Classes::Function&>(FUN_142508460(&GetVM().GetClassTraitsFunction().GetInstanceTraits()));
@@ -1936,7 +1931,7 @@ namespace Classes { namespace fl
             obj.AddDynamicSlotValuePair(GetVM().GetStringManager().CreateConstString(s_ArrayProtoThunks[i].Name), f,
                                         SlotInfo::aDontEnum);
         }
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142418250
@@ -1946,7 +1941,7 @@ namespace Classes { namespace fl
             GetParentClass()->InitPrototype(obj);
         InitPrototypeFromVTable(obj, &Class::ConvertCopy);
         AddDynamicFuncs(obj, DAT_14313e840);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x142418390
@@ -1954,9 +1949,9 @@ namespace Classes { namespace fl
     {
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
-        FUN_142511ac0(this, obj);
+        InitPrototypeFromVTableCheckType(obj);
         AddDynamicFuncs(obj, DAT_14313e8e0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x1424184b0
@@ -1964,9 +1959,9 @@ namespace Classes { namespace fl
     {
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
-        FUN_142511ac0(this, obj);
+        InitPrototypeFromVTableCheckType(obj);
         AddDynamicFuncs(obj, DAT_14313d650);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x1424185d0
@@ -1975,7 +1970,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313e5a0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 
     // @0x1424186e0
@@ -1984,7 +1979,7 @@ namespace Classes { namespace fl
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         AddDynamicFuncs(obj, DAT_14313e700);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 }} // namespace Classes::fl
 
@@ -5016,12 +5011,11 @@ ASString FUN_1424252c0(Scaleform::GFx::AS3::StringManager& sm, const ASString& s
     return ASString(str.SubstringNode(start, start + length));
 }
 
-// XML_Parse, XML_GetCurrentByteIndex, XML_GetErrorCode (expat, sfr_gfx_12)
-extern "C++" int FUN_1423b2c20(void* parser, const char* s, int len, int isFinal);
-extern "C++" int FUN_1423b2a90(void* parser);
-extern "C++" int FUN_1423b2b70(void* parser);
-// XML_StopParser (expat, sfr_gfx_12)
-extern "C++" int FUN_1423b3570(void* parser, int resumable);
+// expat (sfr_gfx_12)
+extern "C" int XML_Parse(void* parser, const char* s, int len, int isFinal);
+extern "C" int XML_GetCurrentByteIndex(void* parser);
+extern "C" int XML_GetErrorCode(void* parser);
+extern "C" int XML_StopParser(void* parser, int resumable);
 
 // ArrayDH<SPtr<XML> >::PushBack, out of line
 // @0x14241e390
@@ -5124,16 +5118,16 @@ namespace Scaleform { namespace GFx { namespace AS3
     CheckResult XMLParser::Parse(const StringDataPtr& str, UPInt& pos, bool isList)
     {
         const UPInt start = pos;
-        bool result = FUN_1423b2c20(Parser, str.ToCStr() + start, (int)(str.GetSize() - start), 1) == 1;
+        bool result = XML_Parse(Parser, str.ToCStr() + start, (int)(str.GetSize() - start), 1) == 1;
         bool advance = true;
         if (result)
         {
-            pos += FUN_1423b2a90(Parser);
+            pos += XML_GetCurrentByteIndex(Parser);
             SetNodeKind(kNone);
             return result;
         }
 
-        const int code = FUN_1423b2b70(Parser);
+        const int code = XML_GetErrorCode(Parser);
         VM& vm = ITr.GetVM();
         const Kind kind = KindStack.GetSize() ? KindStack.Back() : kNone;
         VM::ErrorID err = VM::ErrorID(0x442);
@@ -5168,7 +5162,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         case 4:
             if (!CurrElement)
             {
-                pos += FUN_1423b2a90(Parser);
+                pos += XML_GetCurrentByteIndex(Parser);
                 SetNodeKind(kNone);
                 return false;
             }
@@ -5185,7 +5179,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         case 9:
             if (isList)
             {
-                pos += FUN_1423b2a90(Parser);
+                pos += XML_GetCurrentByteIndex(Parser);
                 SetNodeKind(kNone);
                 return true;
             }
@@ -5201,7 +5195,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         if (doThrow)
             vm.ThrowTypeError(VM::Error(err, vm));
         if (advance)
-            pos += FUN_1423b2a90(Parser);
+            pos += XML_GetCurrentByteIndex(Parser);
         SetNodeKind(kNone);
         return false;
     }
@@ -5225,7 +5219,7 @@ namespace Scaleform { namespace GFx { namespace AS3
             // a top-level processing instruction ends the parse
             p->CurrElement = el;
             p->RootElements.PushBack(el);
-            FUN_1423b3570(p->Parser, 1);
+            XML_StopParser(p->Parser, 1);
         }
     }
 
@@ -5276,7 +5270,7 @@ namespace Scaleform { namespace GFx { namespace AS3
             if (len != 0 && an[0] == p->NsSeparator)
             {
                 vm.ThrowTypeError(VM::Error(kXMLBadQName, vm, an));
-                FUN_1423b3570(p->Parser, 0);
+                XML_StopParser(p->Parser, 0);
                 return;
             }
             if (IsNsDeclAttr(len, an))
@@ -5294,7 +5288,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         if (delim == name)
         {
             vm.ThrowTypeError(VM::Error(kXMLBadQName, vm, name));
-            FUN_1423b3570(p->Parser, 0);
+            XML_StopParser(p->Parser, 0);
             return;
         }
         ASString ns_prefix = sm.CreateEmptyString();
@@ -5326,7 +5320,7 @@ namespace Scaleform { namespace GFx { namespace AS3
             if (ns_prefix.GetSize() != 0)
             {
                 vm.ThrowTypeError(VM::Error(kXMLPrefixNotBound, vm, Value(ns_prefix), name));
-                FUN_1423b3570(p->Parser, 0);
+                XML_StopParser(p->Parser, 0);
                 return;
             }
             ns = vm.GetDefXMLNamespace();
@@ -5615,7 +5609,7 @@ namespace Classes
         if (GetParentClass())
             GetParentClass()->InitPrototype(obj);
         fl::AddDynamicFuncs(obj, DAT_14313e4e0);
-        FUN_1424e6f90(this, obj);
+        AddConstructor(obj);
     }
 }
 }}} // namespace Scaleform::GFx::AS3
