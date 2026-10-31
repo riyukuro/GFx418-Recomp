@@ -78,6 +78,7 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_placeobject.h"
+#include "../include/gfx/gfx_playertasks.h"
 #include "../include/video/video_statebag.h"
 #include "../include/kernel/sf_alg.h"
 #include "../include/kernel/sf_msgformat.h"
@@ -103,10 +104,6 @@ template<> SF_NOINLINE Prototype<GlowFilterObject, Environment>::~Prototype();  
 
 void FUN_14257dcb0(void* pthis);
 void FUN_14257dcd0(void* pthis);
-void FUN_142639d10(void* pthis);
-void FUN_142925680(void* pthis);
-void FUN_142925750(void* pthis);
-void FUN_142925cf0(void* pthis);
 
 // The base vftables the inlined destructors store.
 extern const void* DAT_1432155c0[];
@@ -142,7 +139,7 @@ void* DeleteAs2_1429297a0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -159,7 +156,7 @@ void* DeleteAs2_142929810(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -191,7 +188,7 @@ void* DeleteAs2_1429298f0(void* p, unsigned flags)
     *(const void**)((char*)p+0x20) = DAT_143219d38;
     if (*(void**)((char*)p+0x70)) static_cast<Resource*>(*(void**)((char*)p+0x70))->Release();
     if (*(void**)((char*)p+0x68)) static_cast<Resource*>(*(void**)((char*)p+0x68))->Release();
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -207,7 +204,7 @@ void* DeleteAs2_142929980(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -237,7 +234,7 @@ void* DeleteAs2_142929a50(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -254,7 +251,7 @@ void* DeleteAs2_142929ac0(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -284,7 +281,7 @@ void* DeleteAs2_142929ba0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -301,7 +298,7 @@ void* DeleteAs2_142929c10(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -331,7 +328,7 @@ void* DeleteAs2_142929cf0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -345,7 +342,7 @@ void* DeleteAs2_142929cf0(void* p, unsigned flags)
 // @0x142929d60
 void* DeleteAs2_142929d60(void* p, unsigned flags)
 {
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -362,8 +359,8 @@ void* DeleteAs2_142929dc0(void* p, unsigned flags)
     *(const void**)p = DAT_14321b640;
     *(const void**)((char*)p+0x20) = DAT_14321b688;
     *(const void**)((char*)p+0x70) = DAT_14321b730;
-    FUN_142925750((void*)((char*)p+0x70));
-    FUN_142925cf0(p);
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0x70)->GASPrototypeBase::~GASPrototypeBase();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -379,7 +376,7 @@ void* DeleteAs2_142929e50(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -395,7 +392,7 @@ void* DeleteAs2_142929fe0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -411,7 +408,7 @@ void* DeleteAs2_14292a1d0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -427,7 +424,7 @@ void* DeleteAs2_14292a240(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -443,7 +440,7 @@ void* DeleteAs2_14292a2b0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -460,7 +457,7 @@ void* DeleteAs2_14292a320(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -490,7 +487,7 @@ void* DeleteAs2_14292a520(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -504,7 +501,7 @@ void* DeleteAs2_14292a520(void* p, unsigned flags)
 // @0x14292a590
 void* DeleteAs2_14292a590(void* p, unsigned flags)
 {
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -521,8 +518,8 @@ void* DeleteAs2_14292a5f0(void* p, unsigned flags)
     *(const void**)p = DAT_1432191b0;
     *(const void**)((char*)p+0x20) = DAT_1432191f8;
     *(const void**)((char*)p+0x90) = DAT_1432192a0;
-    FUN_142925750((void*)((char*)p+0x90));
-    FUN_142925cf0(p);
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0x90)->GASPrototypeBase::~GASPrototypeBase();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -538,7 +535,7 @@ void* DeleteAs2_14292a700(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -552,7 +549,7 @@ void* DeleteAs2_14292a700(void* p, unsigned flags)
 // @0x14292a770
 void* DeleteAs2_14292a770(void* p, unsigned flags)
 {
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -569,8 +566,8 @@ void* DeleteAs2_14292a7d0(void* p, unsigned flags)
     *(const void**)p = DAT_14321c2c8;
     *(const void**)((char*)p+0x20) = DAT_14321c310;
     *(const void**)((char*)p+0x98) = DAT_14321c3b8;
-    FUN_142925750((void*)((char*)p+0x98));
-    FUN_142925cf0(p);
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0x98)->GASPrototypeBase::~GASPrototypeBase();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -586,7 +583,7 @@ void* DeleteAs2_14292a860(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -603,7 +600,7 @@ void* DeleteAs2_14292a8d0(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -631,7 +628,7 @@ void* DeleteAs2_14292a950(void* p, unsigned flags)
 // @0x14292a9e0
 void* DeleteAs2_14292a9e0(void* p, unsigned flags)
 {
-    FUN_142925680(p);
+    static_cast<Environment*>(p)->Environment::~Environment();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -645,7 +642,7 @@ void* DeleteAs2_14292a9e0(void* p, unsigned flags)
 // @0x14292aa40
 void* DeleteAs2_14292aa40(void* p, unsigned flags)
 {
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -661,7 +658,7 @@ void* DeleteAs2_14292aaa0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -678,8 +675,8 @@ void* DeleteAs2_14292ab10(void* p, unsigned flags)
     *(const void**)p = DAT_14321cf58;
     *(const void**)((char*)p+0x20) = DAT_14321cfa0;
     *(const void**)((char*)p+0x68) = DAT_14321d048;
-    FUN_142925750((void*)((char*)p+0x68));
-    FUN_142925cf0(p);
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0x68)->GASPrototypeBase::~GASPrototypeBase();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -695,7 +692,7 @@ void* DeleteAs2_14292abd0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -711,7 +708,7 @@ void* DeleteAs2_14292ac40(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -729,8 +726,8 @@ void* DeleteAs2_14292acb0(void* p, unsigned flags)
     *(const void**)p = DAT_143215f60;
     *(const void**)((char*)p+0x20) = DAT_143215fa8;
     *(const void**)pmember = DAT_143216050;
-    FUN_142925750(pmember);
-    FUN_142925cf0(p);
+    static_cast<GASPrototypeBase*>(pmember)->GASPrototypeBase::~GASPrototypeBase();
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -746,7 +743,7 @@ void* DeleteAs2_14292ade0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143220278;
     *(const void**)((char*)p+0x20) = DAT_1432202c0;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -762,7 +759,7 @@ void* DeleteAs2_14292ae50(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -778,7 +775,7 @@ void* DeleteAs2_14292aec0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -795,7 +792,7 @@ void* DeleteAs2_14292b1e0(void* p, unsigned flags)
     *(const void**)p = DAT_1432177b0;
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
-    FUN_142639d10(p);
+    static_cast<LoadQueueEntryMT*>(p)->LoadQueueEntryMT::~LoadQueueEntryMT();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -813,7 +810,7 @@ void* DeleteAs2_14292b270(void* p, unsigned flags)
     if (*(void**)((char*)p+0x40)) FUN_14257dcd0(*(void**)((char*)p+0x40));
     if (*(void**)((char*)p+0x30)) FUN_14257dcd0(*(void**)((char*)p+0x30));
     if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
-    FUN_142639d10(p);
+    static_cast<LoadQueueEntryMT*>(p)->LoadQueueEntryMT::~LoadQueueEntryMT();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -830,7 +827,7 @@ void* DeleteAs2_14292b300(void* p, unsigned flags)
     *(const void**)p = DAT_143217780;
     if (*(void**)((char*)p+0x30)) FUN_14257dcb0(*(void**)((char*)p+0x30));
     if (*(void**)((char*)p+0x28)) FUN_14257dcb0(*(void**)((char*)p+0x28));
-    FUN_142639d10(p);
+    static_cast<LoadQueueEntryMT*>(p)->LoadQueueEntryMT::~LoadQueueEntryMT();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -861,7 +858,7 @@ void* DeleteAs2_14292b590(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -878,7 +875,7 @@ void* DeleteAs2_14292b600(void* p, unsigned flags)
     *(const void**)p = DAT_14321e808;
     *(const void**)((char*)p+0x20) = DAT_14321e850;
     if (*(void**)((char*)p+0x68)) FUN_14257dcb0(*(void**)((char*)p+0x68));
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -923,7 +920,7 @@ void* DeleteAs2_14292b7a0(void* p, unsigned flags)
     *(const void**)((char*)p+0x70) = DAT_14317afe8;
     *(const void**)p = DAT_1432155c0;
     *(const void**)((char*)p+0x20) = DAT_143215648;
-    FUN_142925cf0(p);
+    static_cast<Object*>(p)->Object::~Object();
     if (flags & 1)
     {
         if (!(flags & 4))

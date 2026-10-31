@@ -28,19 +28,37 @@
 void FUN_1424a9ed0(void*);   // global, defined in sfr_as3_12
 void FUN_14000b080(void** table);  // global, defined in sfr_video_01
 
+namespace Scaleform {
+// Out of line in the exe; the explicit-specialization declarations keep the dtors uninlined.
+typedef ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 327>, ArrayDefaultPolicy> Sfr04hArrStr;
+typedef ArrayDataBase<GFx::AS2::AsFunctionObject::ArgSpec, AllocatorLH<GFx::AS2::AsFunctionObject::ArgSpec, 323>,
+    ArrayDefaultPolicy> Sfr04hArrArg;
+typedef HashNode<GFx::ASString, char, GFx::ASStringHashFunctor> Sfr04hHN1;
+typedef HashSetBase<Sfr04hHN1, Sfr04hHN1::NodeHashF, Sfr04hHN1::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
+    HashsetNodeEntry<Sfr04hHN1, Sfr04hHN1::NodeHashF> > Sfr04hHashChar;
+typedef HashNode<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor> Sfr04hHN2;
+typedef HashSetBase<Sfr04hHN2, Sfr04hHN2::NodeHashF, Sfr04hHN2::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
+    HashsetNodeEntry<Sfr04hHN2, Sfr04hHN2::NodeHashF> > Sfr04hHashFn;
+typedef HashNode<GFx::ASString, GFx::AS2::Value, GFx::ASStringHashFunctor> Sfr04hHN3;
+typedef HashSetBase<Sfr04hHN3, Sfr04hHN3::NodeHashF, Sfr04hHN3::NodeAltHashF, AllocatorLH<GFx::ASString, 324>,
+    GFx::HashsetNodeEntry_GC<Sfr04hHN3, Sfr04hHN3::NodeHashF> > Sfr04hHashVal;
+typedef HashNode<GFx::EventId, ArrayLH<GFx::AS2::Value, 323, ArrayDefaultPolicy>, GFx::EventIdHashFunctor> Sfr04hHN4;
+typedef HashSetBase<Sfr04hHN4, Sfr04hHN4::NodeHashF, Sfr04hHN4::NodeAltHashF, AllocatorLH<GFx::EventId, 323>,
+    HashsetCachedNodeEntry<Sfr04hHN4, Sfr04hHN4::NodeHashF> > Sfr04hHashEv;
+template<> SF_NOINLINE Sfr04hArrStr::~ArrayDataBase();   // 0x14256a8e0
+template<> SF_NOINLINE Sfr04hArrArg::~ArrayDataBase();   // 0x142924180
+template<> SF_NOINLINE Sfr04hHashChar::~HashSetBase();   // 0x142924580
+template<> SF_NOINLINE Sfr04hHashFn::~HashSetBase();     // 0x142924770
+template<> SF_NOINLINE Sfr04hHashVal::~HashSetBase();    // 0x142924960
+template<> SF_NOINLINE Sfr04hHashEv::~HashSetBase();     // 0x142924a20
+}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 void FUN_1425925f0(void*);
 void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
-void FUN_14256a8e0(void*);
-void FUN_142924180(void*);
 void FUN_14257dcd0(void*);
-void FUN_142924a20(void*);
-void FUN_142925680(void*);
-void FUN_142924580(void*);
 void FUN_140001f40(void*);
-void FUN_142924770(void*);
-void FUN_142924960(void*);
 void FUN_142581700(void*);
 
 static inline void rs(void* n) // ASString release
@@ -119,7 +137,7 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
 }
 
 // ActionBuffer::Dictionary (an ArrayCC<ASString>): the DefaultValue release is inlined, the ArrayDataBase dtor is not.
-struct B142928e90 { void* D; UPInt S; UPInt C; ~B142928e90() { FUN_14256a8e0(this); } };
+struct B142928e90 { void* D; UPInt S; UPInt C; ~B142928e90() { reinterpret_cast<Sfr04hArrStr*>(this)->~Sfr04hArrStr(); } };
 struct DCC142928e90 : B142928e90 { ASString DefaultValue; };
 // @0x142928e90
 void* DeleteAs2_142928e90(void* p, unsigned flags)
@@ -142,7 +160,7 @@ void* DeleteAs2_142928e90(void* p, unsigned flags)
 void* DeleteAs2_142929400(void* p, unsigned flags)
 {
     rs(*(void**)((char*)p+0xc0));
-    FUN_142924180((char*)p+0xa0);
+    reinterpret_cast<Sfr04hArrArg*>((char*)p+0xa0)->~Sfr04hArrArg();
     Memory::Free(*(void**)((char*)p+0x80));
     if (*(void**)((char*)p+0x78)) FUN_14257dcd0(*(void**)((char*)p+0x78));
     rc(*(void**)((char*)p+0x70));
@@ -166,7 +184,7 @@ void* DeleteAs2_1429294f0(void* p, unsigned flags)
     *(const void**)p = DAT_143215b00;
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
-    FUN_142924a20((char*)p+0x28);
+    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
@@ -179,7 +197,7 @@ void* DeleteAs2_142929590(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143215b00;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
-    FUN_142924a20((char*)p+0x28);
+    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
@@ -195,11 +213,11 @@ void* DeleteAs2_142929600(void* p, unsigned flags)
     *(const void**)((char*)p+0x30) = DAT_143216528;
     ((ArrayLH<UInt32>*)((char*)p+0x1e0))->~ArrayLH(); // an array of POD elements (element type not recovered)
     rg(*(void**)((char*)p+0x1d8));
-    FUN_142925680((char*)p+0x38);
+    reinterpret_cast<Environment*>((char*)p+0x38)->Environment::~Environment();
     *(const void**)p = DAT_143215b00;
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
-    FUN_142924a20((char*)p+0x28);
+    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
@@ -216,7 +234,7 @@ void* DeleteAs2_1429296e0(void* p, unsigned flags)
     *(const void**)p = DAT_143215b00;
     *(const void**)((char*)p+0x30) = DAT_14317bf80;
     *(const void**)((char*)p+0x8) = DAT_143215c48;
-    FUN_142924a20((char*)p+0x28);
+    reinterpret_cast<Sfr04hHashEv*>((char*)p+0x28)->~Sfr04hHashEv();
     static_cast<ObjectInterface*>((void*)((char*)p+0x8))->ObjectInterface::~ObjectInterface();
     *(const void**)p = DAT_14317bf80;
     if ((flags & 5) == 5)
@@ -244,10 +262,10 @@ void* DeleteAs2_14292a0e0(void* p, unsigned flags)
 void* DeleteAs2_14292b4e0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_143215af8;
-    FUN_142924580((char*)p+0x70);
+    reinterpret_cast<Sfr04hHashChar*>((char*)p+0x70)->~Sfr04hHashChar();
     rg(*(void**)((char*)p+0x60));
     FUN_140001f40((char*)p+0x20);
-    FUN_142924770((char*)p+0x18);
+    reinterpret_cast<Sfr04hHashFn*>((char*)p+0x18)->~Sfr04hHashFn();
     ::FUN_14000b080((void**)((char*)p+0x10));
     static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
@@ -267,7 +285,7 @@ void* DeleteAs2_14292ba00(void* p, unsigned flags)
     ((Value*)((char*)p+0x68))->~Value();
     ((Value*)((char*)p+0x48))->~Value();
     rg(*(void**)((char*)p+0x28));
-    FUN_142924960((char*)p+0x20);
+    reinterpret_cast<Sfr04hHashVal*>((char*)p+0x20)->~Sfr04hHashVal();
     *(const void**)p = DAT_143215370;
     if (flags & 1)
     {

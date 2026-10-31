@@ -2985,10 +2985,6 @@ Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 // MultinameHash<ClassTraits::Traits*>::Get (sfr_as3_04)
 Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self,
     const Scaleform::GFx::ASString& name, const Scaleform::GFx::AS3::Instances::Namespace& ns);
-// GlobalObject::AddFixedSlotValuePair (sfr_as3_03): a fixed slot name/ns of type ctr holding v; index receives it
-const void* FUN_142403d70(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
-    Scaleform::Pickable<const Scaleform::GFx::AS3::Instances::Namespace> ns, const Scaleform::GFx::AS3::ClassTraits::Traits* ctr,
-    const Scaleform::GFx::AS3::Value& v, Scaleform::UPInt& index);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3119,7 +3115,7 @@ ClassTraits::Traits& Vector::Resolve2Vector(const ClassTraits::Traits& elem)
     {
         UPInt index = 0;
         Class& cl = FUN_142508460(&tr->GetInstanceTraits());
-        FUN_142403d70(vm.GlobalObject.GetPtr(), cl.GetClassTraits().GetName(),
+        vm.GlobalObject->AddFixedSlotValuePair(cl.GetClassTraits().GetName(),
             Pickable<const Instances::Namespace>(&vm.GetVectorNamespace(), PickValue), &cl.GetClassTraits(),
             Value(&cl), index);
     }
