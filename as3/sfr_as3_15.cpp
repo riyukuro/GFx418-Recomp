@@ -256,25 +256,26 @@ namespace Instances { namespace fl_gfx
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe reloads each temporary string node from the stack after the Value ctor, ours keeps it in rbx
+    // MS2-FUNCTIONAL: the exe reloads each temporary string node from the stack after the Value ctor, ours keeps it
+    // in rbx. Value(const ASString&) (0x1424dbf70) is defined in this unit, so cl sees that it does not write the temporary.
     // @0x1424cc0f0
     void GamePadAnalogEvent::toString(ASString& result)
     {
-        Value r;
-        VM& vm = GetVM();
-        Value argv[] = {
-            Value(vm.GetStringManager().CreateConstString("GamePadAnalogEvent")),
-            Value(vm.GetStringManager().CreateConstString("type")),
-            Value(vm.GetStringManager().CreateConstString("bubbles")),
-            Value(vm.GetStringManager().CreateConstString("cancelable")),
-            Value(vm.GetStringManager().CreateConstString("eventPhase")),
-            Value(vm.GetStringManager().CreateConstString("code")),
-            Value(vm.GetStringManager().CreateConstString("controllerIdx")),
-            Value(vm.GetStringManager().CreateConstString("xvalue")),
-            Value(vm.GetStringManager().CreateConstString("yvalue"))
+        Value res;
+        ASVM& vm = static_cast<ASVM&>(GetVM());
+        Value params[] = {
+            vm.GetStringManager().CreateConstString("GamePadAnalogEvent"),
+            vm.GetStringManager().CreateConstString("type"),
+            vm.GetStringManager().CreateConstString("bubbles"),
+            vm.GetStringManager().CreateConstString("cancelable"),
+            vm.GetStringManager().CreateConstString("eventPhase"),
+            vm.GetStringManager().CreateConstString("code"),
+            vm.GetStringManager().CreateConstString("controllerIdx"),
+            vm.GetStringManager().CreateConstString("xvalue"),
+            vm.GetStringManager().CreateConstString("yvalue")
         };
-        formatToString(r, sizeof(argv) / sizeof(argv[0]), argv);
-        r.Convert2String(result).DoNotCheck();
+        formatToString(res, sizeof(params)/sizeof(params[0]), params);
+        res.Convert2String(result).DoNotCheck();
     }
 }}
 

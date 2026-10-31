@@ -840,13 +840,13 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246a160
-    // MS2-FUNCTIONAL: cl inlines the listener table lookup (0x1424698c0) that the exe calls
+    // MS2-FUNCTIONAL: the exe picks the listener table with a branch, cl with a cmov (ternary and if/else alike)
     bool EventDispatcher::HasEventHandler(const ASString& type, bool useCapture) const
     {
         if (pImpl)
         {
-            const ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
-            ArrayLH<Listener>* const* pa = h.Get(type);
+            ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
+            ArrayLH<Listener>** pa = h.Get(type);
             if (pa && *pa && (*pa)->GetSize() > 0)
                 return true;
         }
@@ -3019,16 +3019,11 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246c9a0
-    // MS2-FUNCTIONAL: cl inlines the listener table lookup (0x1424698c0) that the exe calls
+    // MS2-FUNCTIONAL: the inlined HasEventHandler picks the listener table with a cmov, and the parent loop differs
     bool EventDispatcher::WillTrigger(const ASString& type, bool useCapture) const
     {
-        if (pImpl)
-        {
-            const ListenersHash& h = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
-            ArrayLH<Listener>* const* pa = h.Get(type);
-            if (pa && *pa && (*pa)->GetSize() != 0)
-                return true;
-        }
+        if (HasEventHandler(type, useCapture))
+            return true;
         if (!IsDisplayObjectInstance(GetTraits()))
             return false;
         GFx::DisplayObject* dobj = static_cast<const Instances::fl_display::DisplayObject*>(this)->pDispObj;
