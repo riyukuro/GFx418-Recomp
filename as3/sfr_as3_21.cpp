@@ -516,7 +516,6 @@ __declspec(noinline) CheckResult VectorBase<SInt32>::Set(UInt32 ind, const Value
 }
 
 // @0x142564390
-// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
 template <>
 void VectorBase<SInt32>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
 {
@@ -583,7 +582,6 @@ SF_NOINLINE CheckResult VectorBase<UInt32>::Resize(UPInt size)
 }
 
 // @0x1425644f0
-// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
 template <>
 void VectorBase<UInt32>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
 {
@@ -650,7 +648,6 @@ SF_NOINLINE CheckResult VectorBase<Value::Number>::Resize(UPInt size)
 }
 
 // @0x142564650
-// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
 template <>
 void VectorBase<Value::Number>::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
 {
@@ -736,7 +733,6 @@ __declspec(noinline) CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind,
 }
 
 // @0x142564860
-// MS2-FUNCTIONAL: exe inlines the array growth/memmove/zero fill; InsertMultipleAt is called here
 template <>
 void VectorBase<Ptr<ASStringNode> >::Unshift(unsigned argc, const Value* argv, const ClassTraits::Traits& tr)
 {
@@ -868,7 +864,6 @@ CheckResult Vector_String::GetProperty(const Multiname& prop_name, Value& value)
 }
 
 // @0x1425587a0
-// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
 void Vector_String::AS3shift(ASString& result)
 {
     if (V.CheckFixed() && V.V.GetSize() != 0)
@@ -1133,14 +1128,12 @@ CheckResult Vector_object::GetProperty(const Multiname& prop_name, Value& value)
 }
 
 // @0x142558630
-// MS2-FUNCTIONAL: Value::Swap inlined differently
 void Vector_object::AS3reverse(SPtr<Vector_object>& result)
 {
     ReverseT(V.V, result, this);
 }
 
 // @0x1425589d0
-// MS2-FUNCTIONAL: CheckFixed/RemoveAt inlining differs
 void Vector_object::AS3shift(Value& result)
 {
     if (V.CheckFixed() && V.V.GetSize() != 0)
@@ -1753,7 +1746,6 @@ inline DisplayObjContainer* GetMainTimeline(ASVM& asvm)
 } // namespace
 
 // @0x142564d80
-// MS2-FUNCTIONAL: exe inlines AttachToTarget into the ctor and keeps a smaller EH frame; same fields set, same sprite attach
 SoundObject::SoundObject(ASVM& asvm, Instances::fl_media::Sound* psound) : Volume(100), Pan(0)
 {
     pMovieRoot = asvm.GetMovieImpl();
