@@ -1046,24 +1046,30 @@ void FUN_140035090(void* record)
     }
 }
 
-// MS2-FUNCTIONAL: return the next decoded video frame and release its decoder-owned record afterward.
+// return the next decoded video frame and release its decoder-owned record afterward.
 // @0x1400355b0
 CriBool FUN_1400355b0(void* player, void* output)
 {
+    void* decoder;
+    CriBool result;
+    CriMvFrameInfo info;
+    void* handle;
+    result = 0;
+    decoder = ((CriMvDecoderHandleFields*)player)->VideoDecoder;
     FUN_140035090(output);
     if (!crimvply_isUnderGetFrameCondition(player))
         return 0;
 
-    CriMvFrameInfo frame = {};
-    void* frameToken = FUN_1400449c0(((CriMvDecoderHandleFields*)player)->VideoDecoder, &frame);
-    if (!frameToken)
-        return 0;
-
-    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
-    FUN_140044a30(((CriMvDecoderHandleFields*)player)->VideoDecoder, &frame);
-    // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
-    ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&frame + 0xa8);
-    return 1;
+    handle = FUN_1400449c0(decoder, &info);
+    if (handle)
+    {
+        FUN_140035260(player, output, &info, (CriUint64)(uintptr_t)handle, info.width);
+        FUN_140044a30(decoder, &info);
+        // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
+        ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&info + 0xa8);
+        result = 1;
+    }
+    return result;
 }
 
 // return decoded video metadata and copy the frame's plane descriptors into YUV buffers.
@@ -1236,21 +1242,23 @@ void FUN_140034690(void* player)
     }
 }
 
-// MS2-FUNCTIONAL: accept decoded primary-stream metadata and decrement its pending record count.
+// accept decoded primary-stream metadata and decrement its pending record count.
 // @0x1400340f0
 CriBool FUN_1400340f0(void* player, const CriMovieInputChunk* input)
 {
+    CriUint32* output;
+    CriMovieParsedChunk parsed;
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
     CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
     if (!slot->Active)
         return 0;
-    if (input->Size > 0x1f)
+    else if (input->Size >= 0x20)
     {
-        CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
-        FUN_140032650(player, slot, (CriUint32*)slot->PrimaryOutput, &parsed);
+        parsed.Data = criUsfCmn_GetContents(input->Data, input->Size, &parsed.Size);
+        output = (CriUint32*)slot->PrimaryOutput;
+        FUN_140032650(state, slot, output, &parsed);
         --slot->PendingPrimary;
-        FUN_140033e60(player, slot);
+        FUN_140033e60(state, slot);
     }
     return 1;
 }
@@ -3461,22 +3469,23 @@ CriBool FUN_140033030(void* player)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: parse one indexed CRI stream record and update its pending-record count.
+// parse one indexed CRI stream record and update its pending-record count.
 // @0x140033d70
 CriBool FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex)
 {
+    CriUint32* output;
+    CriMovieParsedChunk parsed;
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
     CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
     if (!slot->Active)
         return 0;
-    if (input->Size > 0x1f)
+    else if (input->Size >= 0x20)
     {
-        CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
-        CriUint32* streamOutput = (CriUint32*)((CriUint8*)slot + 0x50 + (size_t)outputIndex * 0x10);
-        FUN_140032a70(player, slot, streamOutput, &parsed);
+        parsed.Data = criUsfCmn_GetContents(input->Data, input->Size, &parsed.Size);
+        output = (CriUint32*)((CriUint8*)slot + 0x50 + (size_t)outputIndex * 0x10);
+        FUN_140032a70(state, slot, output, &parsed);
         --slot->Reserved2C4;
-        FUN_140033e60(player, slot);
+        FUN_140033e60(state, slot);
     }
     return 1;
 }
