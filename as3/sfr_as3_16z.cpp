@@ -162,11 +162,11 @@ void Sfr21AddStickyVariable(MovieRoot* self, const ASString& path, const ASStrin
 {
     if (name.GetSize() == 0)
         return;
-    MovieImpl* pmovie = self->pMovieImpl;
-    MovieRoot::StickyVarNode* pnode = SF_HEAP_NEW(pmovie->GetMovieHeap())
+    // the SDK reads pMovieImpl at each use (the exe keeps self, not the MovieImpl, in a register)
+    MovieRoot::StickyVarNode* pnode = SF_HEAP_NEW(self->pMovieImpl->GetMovieHeap())
         MovieRoot::StickyVarNode(name, val, setType == 2);
     if (pnode)
-        pmovie->AddStickyVariableNode(path, pnode);
+        self->pMovieImpl->AddStickyVariableNode(path, pnode);
 }
 
 // @0x1424eac70
