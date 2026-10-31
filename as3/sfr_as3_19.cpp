@@ -670,6 +670,16 @@ struct TrReadArgsRaw
     UInt8 buf[0x140];
 };
 
+// The tracer's ReadArgsObject: the call arguments, then the object they are called on.
+struct TrReadArgsObject : public TR::ReadArgs
+{
+    TrReadArgsObject(VM& vm, State& st, UInt32 argc) : TR::ReadArgs(vm, st, argc), ArgObject(st.PopOpValue())
+    {
+        ++ReadNum;
+    }
+    Value ArgObject;
+};
+
 // @0x14253af70
 void Sfr27TraceIfTrueFalse(State* st, UInt64* pos, int op)
 {
@@ -1615,12 +1625,13 @@ char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v
 
 
 // throw: the exception object is taken off the stack, then the frame's handler table is searched.
+// MS2-FUNCTIONAL 0x142540850: register order only: the exe holds the old exception Flags in edx, ours in r9d.
 // @0x142540850
 int Sfr27ExecThrow(VM* vm, UInt64* pc, CallFrame* frame)
 {
     vm->ExceptionObj.Pick(*reinterpret_cast<ValueStack*>(reinterpret_cast<UPInt>(vm) + 0x48));
-    const UPInt* code = reinterpret_cast<const UPInt*>(FUN_142508330(frame));
-    return FUN_142519a00(vm, (reinterpret_cast<UPInt>(pc) - *code) >> 3, frame);
+    const UInt64* const* code = reinterpret_cast<const UInt64* const*>(FUN_142508330(frame));
+    return FUN_142519a00(vm, pc - *code, frame);
 }
 
 // typeof: the value on top of the stack is replaced by the name of its type.
@@ -2660,17 +2671,14 @@ STPtr* Sfr31STPtrSetValue(STPtr* self, const Value& v)
 namespace Scaleform { namespace GFx { namespace AS3 {
 using namespace TR;
 
-// MS2-FUNCTIONAL 0x142537710: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142537710: the exe keeps the popped object's Flags in ebx across the weak-ref Free and stores them back;
+// ours clears them in memory (register order only).
 // @0x142537710
 void Sfr31TraceCallPop(State* st, UInt32 argc)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), argc);
-    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, argc);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    popped.Get().~Value();
+    TrReadArgsObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, argc);
 }
 
 // MS2-FUNCTIONAL 0x1425401a0: behavior-equivalent recovery; codegen differs from exe
@@ -4555,27 +4563,35 @@ void Sfr31ExecCallWithTraits(UPInt vmAddr, UInt32 a, UInt32 n)
 }
 
 // Tracer op: the first argument's type picks the class traits (null/undefined -> Object) that are pushed.
-// MS2-FUNCTIONAL 0x142532bd0: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142532bd0: register order only: the exe loads the GetClassTraits argument before the traits, and keeps
+// the popped object's Flags in ebx across the weak-ref Free.
 // @0x142532bd0
 void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), argc);
     const UPInt vm = TrVM(s.Tracer());
-    TrReadArgsRaw args(reinterpret_cast<VM*>(vm), st, argc);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    const UPInt bp = reinterpret_cast<UPInt>(args.buf);
+    TrReadArgsObject args(*reinterpret_cast<VM*>(vm), *st, argc);
+    const UPInt bp = reinterpret_cast<UPInt>(&args);
     const UPInt p = *reinterpret_cast<const UInt32*>(bp + 0x18) <= Sfr31Rd(bp, 0x128) ? Sfr31Rd(bp, 0x120) : bp + 0x20;
+    const Value& a = *reinterpret_cast<const Value*>(p);
     UPInt tr = 0;
-    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
-    if (k == 0 || (k == 0xc && Sfr31Rd(p, 0x10) == 0))
+    switch (a.GetKind())
+    {
+    case Value::kUndefined:
         tr = Sfr31Rd(vm, 0x1f8);
-    else if (k == 9)
+        break;
+    case Value::kClassTraits:
         tr = Sfr31Rd(p, 0x10);
-    else if (k == 0xd)
+        break;
+    case Value::kObject:
+        if (a.IsNull())
+            tr = Sfr31Rd(vm, 0x1f8);
+        break;
+    case Value::kClass:
         tr = Sfr31Rd(Sfr31Rd(p, 0x10), 0x20);
+        break;
+    }
     UPInt out = Sfr31Rd(vm, 0x1f8);
     if (tr != 0)
     {
@@ -4590,9 +4606,11 @@ void Sfr31TraceArgClassTraits(State* st, UInt32 argc)
         else
             out = FUN_142563380(FUN_1425081f0(vm), tr);
     }
-    Sfr31RawTraitsVal v = {9, 0, out, 0};
+    Sfr31RawTraitsVal v;
+    v.w1 = 0;
+    v.w2 = out;
+    v.w0 = 9;
     s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
-    popped.Get().~Value();
 }
 // ---- batch 37
 // Pops the operand stack top: a Namespace value becomes the target's namespace slot; anything else is converted to a string and a
