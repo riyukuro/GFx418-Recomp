@@ -31,6 +31,11 @@ CriSint32 FUN_14003d6c0(const void* input);
 void FUN_1400410d0(void* owner, const char* message, CriUint32 value);
 void FUN_140043550(CriSint32* state, void* input);
 void FUN_140043970(void* track, void* player);
+// the C name binds to sfr_cri_03a's C++ definition in the full exe (the FUN_<va> names above are aliased by their VA; this
+// one has none, so the link left it to a trap stub); the hook DLL's ms2sym.obj already maps it to the exe address
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:criUsfCmn_ParseUsfHeaderStd=?criUsfCmn_ParseUsfHeaderStd@@YAKPEBEKPEAUCriUsfStandardHeader@@@Z")
+#endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // drain the demuxed chunk queue of a video player, counting the chunks it consumes
