@@ -36,6 +36,16 @@ public:
     virtual Sound::SoundChannel* GetSoundChannel() = 0;   // 1
 };
 
+// Ptr<File>: null when constructed; the reader releases it itself when the file is closed or replaced.
+struct VideoFilePtr
+{
+    RefCountImpl* pObject;
+    VideoFilePtr() : pObject(NULL) {}
+    VideoFilePtr& operator=(RefCountImpl* p) { pObject = p; return *this; }
+    operator RefCountImpl*() const { return pObject; }
+    RefCountImpl* operator->() const { return pObject; }
+};
+
 // The file reader a player streams from (0x50 bytes, vftables 0x1431b93b0 / 0x1431b9360 for the CRI file reader
 // interface at +0x10). Opens, reads and seeks synchronously through the reader config's file opener.
 class VideoReader : public RefCountBaseNTS<VideoReader, Stat_Default_Mem>, public CriMvFileReaderInterface
@@ -62,7 +72,7 @@ public:
     void                ReadFile(UByte* buffer, SInt64 size);
 
     Ptr<VideoReaderConfig>   pReaderConfig;         // +0x18
-    RefCountImpl*            pFile;                 // +0x20 Ptr<File>
+    VideoFilePtr             pFile;                 // +0x20 Ptr<File>
     int                      ReadSize;              // +0x28
     AsyncStatus              OpenStatus;            // +0x2c
     AsyncStatus              CloseStatus;           // +0x30

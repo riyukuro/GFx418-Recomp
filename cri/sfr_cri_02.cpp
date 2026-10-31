@@ -1242,10 +1242,9 @@ void FUN_14002e2a0(void* object)
 
 // VideoReader's primary vftable (no RTTI in this build): the constructor stores it at +0, 0x1431b9360 at +0x10
 // MS2-PIN: ??_7VideoReader@Video@GFx@Scaleform@@6B?$RefCountBaseNTS@VVideoReader@Video@GFx@Scaleform@@$01@3@@ 0x1431b93b0
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d970
 VideoReader::VideoReader(VideoReaderConfig* pconfig)
-    : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
+    : pReaderConfig(pconfig), ReadSize(0)
 {
     FUN_14001d650(pconfig, this);
     OpenStatus  = ASYNC_STATUS_STOP;
@@ -1254,7 +1253,7 @@ VideoReader::VideoReader(VideoReaderConfig* pconfig)
 }
 
 __forceinline VideoReader::VideoReader(VideoReaderConfig* pconfig, InlineCtorTag)
-    : pReaderConfig(pconfig), pFile(NULL), ReadSize(0)
+    : pReaderConfig(pconfig), ReadSize(0)
 {
     FUN_14001d650(pconfig, this);
     OpenStatus  = ASYNC_STATUS_STOP;
