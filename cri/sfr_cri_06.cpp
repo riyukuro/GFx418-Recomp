@@ -6997,20 +6997,19 @@ void FUN_14005b580(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b5c0
 void FUN_14005b5c0(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  int mode;
+  unsigned int mode;
   
-  mode = *(int *)((char *)arg1 + 0x5f0);
+  mode = *(unsigned int *)((char *)arg1 + 0x5f0);
   switch (mode) {
   case 1:
     *(int *)((char *)arg1 + 0xb90) = 1;
     *(int *)((char *)arg1 + 0xb98) = 0;
     *(int *)((char *)arg1 + 0xb94) = 1;
-    *(int *)((char *)arg1 + 0xb8c) = (*(uint *)((char *)arg1 + 0xb84) < 2) + 1;
+    *(int *)((char *)arg1 + 0xb8c) = (*(uint *)((char *)arg1 + 0xb84) <= 1) + 1;
     break;
   case 2:
     *(int *)((char *)arg1 + 0xb8c) = 1;
@@ -7027,14 +7026,13 @@ void FUN_14005b5c0(cri_any cri_p0)
   }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b650
 void FUN_14005b650(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  int mode;
+  unsigned int mode;
   
-  mode = *(int *)((char *)arg1 + 0x5f4);
+  mode = *(unsigned int *)((char *)arg1 + 0x5f4);
   switch (mode) {
   case 1:
     *(int *)((char *)arg1 + 0xb90) = 1;
