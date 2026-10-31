@@ -2232,11 +2232,10 @@ namespace InstanceTraits
         return Pickable<Instances::fl::Array>(new(t.Alloc()) Instances::fl::Array(t));
     }
 
-    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241bd80
     void fl::Array::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) Instances::fl::Array(t));
+        result = MakeInstance(static_cast<fl::Array&>(t));
     }
 
     // @0x14241a620
@@ -2275,11 +2274,10 @@ namespace InstanceTraits
         result.Pick(new(t.Alloc()) Instances::fl::RegExp(t));
     }
 
-    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241c230
     void fl::XML::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) Instances::fl::XML(t));
+        result = Pickable<Instances::fl::XML>(new(t.Alloc()) Instances::fl::XML(t));
     }
 
     // @0x14241af80
@@ -3993,14 +3991,13 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     {
         for (UInt32 i = 0; i < s.GetSize(); ++i)
         {
-            if (!ASUtils::IsWhiteSpace(s.ToCStr()[i]))
+            if (!ASUtils::IsWhiteSpace(s[i]))
                 return false;
         }
         return true;
     }
 
     // Merge each run of adjacent text children into its first non-blank node; blank leading text goes.
-    // MS2-FUNCTIONAL: one register differs in the inlined white-space loop
     // @0x14241d580
     void XMLElement::Normalize()
     {
@@ -4525,11 +4522,10 @@ namespace Instances { namespace fl
 
 namespace InstanceTraits { namespace fl
 {
-    // MS2-FUNCTIONAL: inlined ctor; register allocation differs
     // @0x14241c0c0
     void QName::MakeObject(Value& result, Traits& t)
     {
-        result.Pick(new(t.Alloc()) Instances::fl::QName(t));
+        result = FUN_14241ace0(t);
     }
 
     // @0x14241b7a0
