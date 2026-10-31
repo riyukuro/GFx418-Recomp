@@ -124,6 +124,7 @@ inline void FUN_1425bc060(Scaleform::UPInt tf) { reinterpret_cast<Scaleform::GFx
 inline void FUN_142511b00(Scaleform::UPInt tracer, Scaleform::UPInt* now, Scaleform::UPInt* old) { reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->InitializeBlock(*reinterpret_cast<Scaleform::GFx::AS3::TR::Block*>(now), *reinterpret_cast<const Scaleform::GFx::AS3::TR::Block*>(old)); }   // Tracer: merge block states
 inline char* FUN_142516c40(Scaleform::UPInt tracer, void* buf, Scaleform::UPInt* now, Scaleform::UPInt* old) { ::new (buf) Scaleform::GFx::AS3::CheckResult(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer)->MergeBlock(*reinterpret_cast<Scaleform::GFx::AS3::TR::Block*>(now), *reinterpret_cast<const Scaleform::GFx::AS3::TR::Block*>(old))); return static_cast<char*>(buf); }   // Tracer: merge, result flag
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31ClassTraitsCleanup(unsigned long long); } } }
+namespace Scaleform { namespace GFx { void ASUserData_SetLastObjectValue(ASUserData* puserData, void* pobjIfc, void* pdata, bool isdobj); } }
 inline void FUN_1425303b0(Scaleform::UPInt entry) { Scaleform::GFx::AS3::Sfr31ClassTraitsCleanup(entry); }
 void FUN_1424ef2a0(Scaleform::UPInt array);   // ArrayDH::Clear
 inline int FUN_1425de200(int mouseState) { return Scaleform::GFx::Button::GetButtonState(static_cast<Scaleform::GFx::ButtonRecord::MouseState>(mouseState)); }   // MouseState -> ButtonState
@@ -2536,7 +2537,14 @@ bool Sfr31TracerHasTraits(UPInt self, UPInt tr)
 }
 
 // ASUserData view: SetLastObjectValue is a member call (exe 0x142575f10).
-struct Sfr31UserDataView { void FUN_142575f10(UPInt movie, UPInt owner, bool isdobj); };
+struct Sfr31UserDataView
+{
+    void FUN_142575f10(UPInt movie, UPInt owner, bool isdobj)
+    {
+        ::Scaleform::GFx::ASUserData_SetLastObjectValue(reinterpret_cast<::Scaleform::GFx::ASUserData*>(this),
+            reinterpret_cast<void*>(movie), reinterpret_cast<void*>(owner), isdobj);
+    }
+};
 
 // Instances::fl::Object view: pUserDataHolder at +0x30.
 struct Sfr31ObjectUserDataView
