@@ -522,7 +522,8 @@ void Sprite::SetIMECandidateListFont(FontResource* pfont)
     if (pfont->GetFont()->IsResolved())
     {
         MovieDef* pdef = pbinding ? pbinding->GetOwnerDefImpl() : 0;
-        pfontHandle = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap()) FontHandle(0, pfont->GetFont(), "", 0, pdef);
+        pfontHandle = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap())
+            FontHandle(0, pfont->GetFont(), "$IMECandidateListFont", 0, pdef);
     }
     else
     {
@@ -530,7 +531,8 @@ void Sprite::SetIMECandidateListFont(FontResource* pfont)
             pfontManager->CreateFontHandle(pfont->GetName(), pfont->GetFont()->GetFontFlags(), false));
         if (pfound)
             pfontHandle = *SF_HEAP_NEW(GetMovieImpl()->GetMovieHeap())
-                FontHandle(0, pfound->pFont, "", 0, static_cast<MovieDef*>(pfound->pSourceMovieDef.GetPtr()));
+                FontHandle(0, pfound->pFont, "$IMECandidateListFont", 0,
+                           static_cast<MovieDef*>(pfound->pSourceMovieDef.GetPtr()));
     }
     if (pfontHandle)
         pRootNode->pFontManager->SetIMECandidateFont(pfontHandle);
@@ -709,7 +711,7 @@ bool Sprite::HasLooped() const
 // MS2-FUNCTIONAL: no exe function row (the body sits in the padding of the GetLoadingFrame row)
 PlayState Sprite::GetPlayState() const
 {
-    return (DisplayObjectBase::Flags & Mask_MovieClip) ? PlayStatePriv : State_Stopped;
+    return ((UByte)(DisplayObjectBase::Flags >> 11) & 1) ? PlayStatePriv : State_Stopped; // Mask_MovieClip
 }
 
 // @0x1425dceb0
@@ -768,7 +770,6 @@ Sprite* Sprite::GetHitAreaHolder() const
     return pHitAreaHolder;
 }
 
-// MS2-FUNCTIONAL ?SetHitArea@Sprite@GFx@Scaleform@@QEAAXPEAV123@@Z: Ghidra confirms the exe takes Sprite*; its split .pdata extent understates the body, whose recovered pointer/refcount and notification sequence is preserved here.
 // @0x1425dcb00
 void Sprite::SetHitArea(Sprite* phitArea)
 {
@@ -777,7 +778,13 @@ void Sprite::SetHitArea(Sprite* phitArea)
         old->pHitAreaHolder = 0;
     if (phitArea)
     {
-        pHitAreaHandle           = phitArea->GetCharacterHandle();
+        // Ptr::operator=(C*), inlined in the exe
+        CharacterHandle* phandle = phitArea->GetCharacterHandle();
+        if (phandle)
+            phandle->AddRef();
+        if (pHitAreaHandle)
+            pHitAreaHandle->Release();
+        pHitAreaHandle.GetRawRef() = phandle;
         phitArea->pHitAreaHolder = this;
     }
     else
