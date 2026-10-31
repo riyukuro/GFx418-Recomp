@@ -37,7 +37,7 @@ bool FUN_142734410(Scaleform::Render::D3D9::ShaderManager* sm, Scaleform::Render
                    Scaleform::Render::D3D9::ShaderInterface* psi, unsigned flags);
 bool FUN_142734790(Scaleform::Render::D3D9::ShaderManager* sm, Scaleform::Render::Texture** tex,
                    const Scaleform::Render::Matrix2F* texgen, Scaleform::Render::Size<int> texsize,
-                   const Scaleform::Render::Matrix2F& mvp, unsigned op, Scaleform::UInt32 threshold,
+                   const Scaleform::Render::Matrix2F& mvp, int op, Scaleform::UInt32 threshold,
                    Scaleform::UInt32 color, Scaleform::UInt32 mask, bool copySource,
                    const Scaleform::Render::VertexFormat* format, Scaleform::Render::D3D9::ShaderInterface* psi,
                    unsigned flags);
@@ -822,7 +822,7 @@ void HAL::DrawableMerge(Render::Texture** tex, const Matrix2F* texgen, const Mat
     drawScreenQuad();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142730d10
 void HAL::DrawableCopyPixels(Render::Texture** tex, const Matrix2F* texgen, const Matrix2F& mvp, bool mergeAlpha,
                              bool destAlpha)
@@ -831,7 +831,9 @@ void HAL::DrawableCopyPixels(Render::Texture** tex, const Matrix2F* texgen, cons
     ShaderInterface* psi = &ShaderData;
     Size<int> size = drawableTargetSize(this);
     // a third texture is the alpha source
-    unsigned shader = tex[2] ? 0x12a4d : 0x1264d;
+    unsigned shader = 0x1264d;
+    if (tex[2])
+        shader = 0x12a4d;
     if (mergeAlpha)
         shader += 0x1000;
     if (!destAlpha)
@@ -2010,22 +2012,19 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
 }
 
 // StaticShaderManager::DrawableFinish: the uniforms every drawable shader takes, then the upload
-// MS2-FUNCTIONAL: written from the decompile
+// MS2-FUNCTIONAL: SDK form; the exe has a /GS cookie over mvp (frame 0xe0), ours has none even under strict_gs_check
 // @0x142731310
 bool FUN_142731310(D3D9::ShaderManager* sm, unsigned srcCount, Render::Texture** tex, const Matrix2F* texgen,
                    Size<int> texsize, const Matrix2F& mvpIn, D3D9::ShaderInterface* psi, unsigned flags)
 {
     SF_UNUSED(sm);
+    const D3D9::ShaderPair& pso = psi->GetCurrentShaders();
     Matrix2F mvp(mvpIn);
     // bit 1: the viewport is upside down
     if (flags & 2)
     {
-        mvp.M[0][3] += mvp.M[0][1];
-        mvp.M[0][1] = -mvp.M[0][1];
-        mvp.M[0][2] = 0.0f;
-        mvp.M[1][3] += mvp.M[1][1];
-        mvp.M[1][1] = -mvp.M[1][1];
-        mvp.M[1][2] = 0.0f;
+        mvp.PrependTranslation(0.0f, 1.0f);
+        mvp.PrependScaling(1.0f, -1.0f);
     }
     // bit 0: a pixel's offset (D3D9 samples pixel centers)
     if (flags & 1)
@@ -2033,19 +2032,19 @@ bool FUN_142731310(D3D9::ShaderManager* sm, unsigned srcCount, Render::Texture**
         mvp.M[0][3] -= 1.0f / (float)texsize.Width;
         mvp.M[1][3] += 1.0f / (float)texsize.Height;
     }
-    psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8);
+    psi->SetUniform(pso, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 8);
     for (unsigned i = 0; i < srcCount; i++)
     {
-        psi->SetTexture(psi->GetCurrentShaders(), D3D9::Uniform::SU_tex, tex[i],
+        psi->SetTexture(pso, D3D9::Uniform::SU_tex, tex[i],
                         ImageFillMode(Wrap_Clamp, Sample_Point), i);
-        psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_texgen, &texgen[i].M[0][0], 8, i * 2);
+        psi->SetUniform(pso, D3D9::Uniform::SU_texgen, &texgen[i].M[0][0], 8, i * 2);
     }
     psi->Finish(1);
     return true;
 }
 
 // StaticShaderManager::SetDrawableMergeFill
-// MS2-FUNCTIONAL: written from the decompile
+// written from the decompile
 // @0x142734410
 bool FUN_142734410(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2F* texgen, Size<int> texsize,
                    const Matrix4F* cxmul, const VertexFormat* format, D3D9::ShaderInterface* psi, unsigned flags)
@@ -2054,7 +2053,7 @@ bool FUN_142734410(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
                               format))
         return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
-    for (unsigned i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
         psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_cxmul, &cxmul[i].M[0][0], 16, i);
     Matrix2F mvp;
     mvp.M[0][0] = 2.0f; mvp.M[0][1] = 0.0f;  mvp.M[0][2] = 0.0f; mvp.M[0][3] = -1.0f;
@@ -2063,15 +2062,23 @@ bool FUN_142734410(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
 }
 
 // StaticShaderManager::SetDrawableThreshold: the comparison picks the shader variant
-// MS2-FUNCTIONAL: written from the decompile
+// SDK form (Render_Shader.h, the #else body)
 // @0x142734790
 bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2F* texgen, Size<int> texsize,
-                   const Matrix2F& mvp, unsigned op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource,
+                   const Matrix2F& mvp, int op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource,
                    const VertexFormat* format, D3D9::ShaderInterface* psi, unsigned flags)
 {
-    unsigned shader = copySource ? 0x1a696 : 0x1a655;
+    unsigned shader = 0x1a64d;
+    if (copySource)
+    {
+        shader += 0x40;
+        shader += 9;
+    }
+    else
+        shader += 8;
     switch (op)
     {
+    case 0: shader += 0; break;
     case 1: shader += 0x20; break;
     case 2: shader += 0x10; break;
     case 3: shader += 8; break;
@@ -2082,14 +2089,18 @@ bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
                               format))
         return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
+    const D3D9::ShaderPair& pso = psi->GetCurrentShaders();
 
+    Color maskedThreshold = threshold & mask;
     float rgba[4];
-    Color(threshold & mask).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_threshold, rgba, 4);
-    Color(mask).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_mask, rgba, 4);
-    Color(color).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_color, rgba, 4);
+    maskedThreshold.GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
+    psi->SetUniformInline(pso, D3D9::Uniform::SU_threshold, rgba, 4);
+    Color maskC = mask;
+    maskC.GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
+    psi->SetUniformInline(pso, D3D9::Uniform::SU_mask, rgba, 4);
+    Color col = color;
+    col.GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
+    psi->SetUniformInline(pso, D3D9::Uniform::SU_color, rgba, 4);
     return FUN_142731310(sm, copySource ? 2 : 1, tex, texgen, texsize, mvp, psi, flags);
 }
 
