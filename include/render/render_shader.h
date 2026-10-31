@@ -86,45 +86,54 @@ public:
         SetUniform(sd, U::SU_cxadd, cx.M[1], 4, index, batch);
     }
 
+    // the size a shader gives uniform i: a batched array's element count times the element size, else its own size
+    unsigned GetUniformSize(const Shader& sd, unsigned i)
+    {
+        unsigned size = 0;
+        if ((sd->pVDesc->BatchUniforms[i].Array) <= U::SU_Count - 1)   // (parenthesized: clang reads ".Array <" as a template)
+            size = sd->pVDesc->BatchUniforms[i].Size * sd->pVDesc->Uniforms[(int)sd->pVDesc->BatchUniforms[i].Array].ElementSize;
+        else if (sd->pVDesc->Uniforms[i].Location >= 0)
+            size = sd->pVDesc->Uniforms[i].Size;
+        else if ((sd->pFDesc->BatchUniforms[i].Array) <= U::SU_Count - 1)
+            size = sd->pFDesc->BatchUniforms[i].Size * sd->pFDesc->Uniforms[(int)sd->pFDesc->BatchUniforms[i].Array].ElementSize;
+        else if (sd->pFDesc->Uniforms[i].Location >= 0)
+            size = sd->pFDesc->Uniforms[i].Size;
+        return size;
+    }
+
+    static bool IsBuiltinUniform(unsigned var) { return (U::UniformFlags[var] & U::Uniform_Builtin) != 0; }
+
     // the uniforms a user shader reads, packed in the matrix's user data in uniform order; with the TexScale flag
     // a small uniform's first two components are given in pixels of the first texture
     void SetUserUniforms(const Shader& sd, const MatrixPoolImpl::HMatrix& m, int batch = 0)
     {
-        const float* pdata = (const float*)m.pHandle->GetUserDataPtr();
+        const float* pdata;
+        if (!m.pHandle->pHeader->HasElement(MatrixPoolImpl::HMatrixConstants::Element_UserData))
+            pdata = 0;
+        else
+            pdata = (const float*)m.pHandle->GetUserDataPtr();
         for (int i = 0; i < U::SU_Count; i++)
-        {
-            UByte flags = U::UniformFlags[i];
-            if (flags & U::Uniform_Builtin)
-                continue;
-
-            int size;
-            if ((sd->pVDesc->BatchUniforms[i].Array) < U::SU_Count)   // (parenthesized: clang reads ".Array <" as a template)
-                size = sd->pVDesc->BatchUniforms[i].Size * sd->pVDesc->Uniforms[sd->pVDesc->BatchUniforms[i].Array].ElementSize;
-            else if (sd->pVDesc->Uniforms[i].Location >= 0)
-                size = sd->pVDesc->Uniforms[i].Size;
-            else if ((sd->pFDesc->BatchUniforms[i].Array) < U::SU_Count)
-                size = sd->pFDesc->BatchUniforms[i].Size * sd->pFDesc->Uniforms[sd->pFDesc->BatchUniforms[i].Array].ElementSize;
-            else if (sd->pFDesc->Uniforms[i].Location >= 0)
-                size = sd->pFDesc->Uniforms[i].Size;
-            else
-                continue;
-            if (!size)
-                continue;
-
-            if ((flags & U::Uniform_TexScale) && size <= 4 && Textures[0])
+            if (!IsBuiltinUniform(i))
             {
-                ImageSize sz = Textures[0]->ImgSize;
-                float scaled[4];
-                scaled[0] = (1.0f / sz.Width) * pdata[0];
-                scaled[1] = (1.0f / sz.Height) * pdata[1];
-                scaled[2] = pdata[2];
-                scaled[3] = pdata[3];
-                SetUniform(sd, i, scaled, size, 0, batch);
+                unsigned size = GetUniformSize(sd, i);
+
+                if (size)
+                {
+                    if ((U::UniformFlags[i] & U::Uniform_TexScale) && size <= 4 && Textures[0])
+                    {
+                        ImageSize sz = Textures[0]->ImgSize;
+                        float scaled[4];
+                        scaled[0] = (1.0f / sz.Width) * pdata[0];
+                        scaled[1] = (1.0f / sz.Height) * pdata[1];
+                        scaled[2] = pdata[2];
+                        scaled[3] = pdata[3];
+                        SetUniform(sd, i, scaled, size, 0, batch);
+                    }
+                    else
+                        SetUniformInline(sd, i, pdata, size, 0, batch);
+                    pdata += size;
+                }
             }
-            else
-                SetUniformInline(sd, i, pdata, size, 0, batch);
-            pdata += size;
-        }
     }
 
 protected:
