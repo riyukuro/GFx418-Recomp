@@ -489,18 +489,19 @@ private:
 };
 
 // ViewStats::CollectTimingStats: visits every function root, the root's Visit inlined.
-// MS2-FUNCTIONAL 0x142621ed0: same visits and calls; the exe tail-jumps to LeaveCriticalSection, cl here calls it (22 bytes differ)
 // @0x142621ed0
 void FUN_142621ed0(char* self, U frameInfo)
 {
     RawLocker locker(self + 0xe0);
-    AmpFuncStatsVisitor visitor(frameInfo, self);
-    for (UPInt i = 0; i < RawField<U>(self, 0x50); ++i)
     {
-        AmpFuncTreeItem* rootItem = RawField<AmpFuncTreeItem**>(self, 0x48)[i];
-        visitor(rootItem);
-        for (UPInt j = 0; j < rootItem->ChildSize; ++j)
-            FUN_14261e730((char*)rootItem->ChildData[j], (U*)&visitor);
+        AmpFuncStatsVisitor visitor(frameInfo, self);
+        for (UPInt i = 0; i < RawField<U>(self, 0x50); ++i)
+        {
+            AmpFuncTreeItem* rootItem = RawField<AmpFuncTreeItem**>(self, 0x48)[i];
+            visitor(rootItem);
+            for (UPInt j = 0; j < rootItem->ChildSize; ++j)
+                FUN_14261e730((char*)rootItem->ChildData[j], (U*)&visitor);
+        }
     }
 }
 
@@ -618,30 +619,37 @@ float FUN_142622980(char* self) { return RawLocked<float, 0xe0, 0x120>(self); }
 // @0x142622670
 SPInt FUN_142622670(char* self, unsigned period)
 {
-    SPInt elapsed = 0;
+    U timeDiff = 0;
+
     if (period == 0)
     {
-        SPInt now = (SPInt)FUN_1425e3560();
-        SPInt prev = RawField<SPInt>(self, 0x160);
-        RawField<SPInt>(self, 0x160) = now;
-        return now - prev;
-    }
-    if (RawField<SPInt>(self, 0x160) != 0)
-        elapsed = ((SPInt)FUN_1425e3560() - RawField<SPInt>(self, 0x160)) * (SPInt)period;
-    int next;
-    if (RawField<int>(self, 0x158) == 0)
-    {
-        RawField<SPInt>(self, 0x160) = (SPInt)FUN_1425e3560();
-        U r = FUN_1425e5080(self + 0x130) & 0xffffffffULL;
-        next = (int)((r * (U)(unsigned)(period * 2)) / 0xffffffffULL);
+        U nextTimer = FUN_1425e3560();
+        timeDiff = nextTimer - RawField<U>(self, 0x160);
+        RawField<U>(self, 0x160) = nextTimer;
     }
     else
     {
-        RawField<SPInt>(self, 0x160) = 0;
-        next = RawField<int>(self, 0x158) - 1;
+        if (RawField<U>(self, 0x160) != 0)
+        {
+            timeDiff = (FUN_1425e3560() - RawField<U>(self, 0x160)) * period;
+        }
+
+        if (RawField<unsigned>(self, 0x158) == 0)
+        {
+            RawField<U>(self, 0x160) = FUN_1425e3560();
+            U random = (unsigned)FUN_1425e5080(self + 0x130);
+            random *= 2 * period;
+            random /= 0xFFFFFFFF;
+            RawField<unsigned>(self, 0x158) = static_cast<unsigned>(random);
+        }
+        else
+        {
+            RawField<U>(self, 0x160) = 0;
+            --RawField<unsigned>(self, 0x158);
+        }
     }
-    RawField<int>(self, 0x158) = next;
-    return elapsed;
+
+    return (SPInt)timeDiff;
 }
 
 // Snapshots the open scopes into a new stats record, optionally clearing the recorded scopes.
@@ -818,6 +826,7 @@ void FUN_142622c90(char* self, U arg)
 }
 
 // Opens a named scope: interns the name (assigning the next id) and pushes it.
+// MS2-FUNCTIONAL 0x142622d00: same interning and push; the exe inlines the name-hash insert (844 vs 741 bytes, frame differs).
 // @0x142622d00
 void FUN_142622d00(char* self, const char* name, unsigned id, U arg)
 {
@@ -947,6 +956,7 @@ void FUN_1426233e0(char* self, U hi, U lo, U arg)
 }
 
 // Adds `delta` to the byte counter kept per (scope, count) multiname key.
+// MS2-FUNCTIONAL 0x142623560: same counter update; the exe inlines the multiname-key find and insert (603 vs 437 bytes, frame differs).
 // @0x142623560
 void FUN_142623560(char* self, U delta)
 {
@@ -1091,29 +1101,25 @@ void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
 // @0x142623b10
 void FUN_142623b10(U* array, void* heapOwner, U n)
 {
-    if (array[2] <= n)
+    if (n < array[2])
+        return;
+    if (n == 0)
     {
-        if (n == 0)
-        {
-            if (array[0])
-            {
-                Memory::Free((void*)array[0]);
-                array[0] = 0;
-                array[2] = 0;
-                return;
-            }
-            array[2] = 0;
-            return;
-        }
-        U cap = (n + 3) & ~3ULL;
         if (array[0])
         {
-            array[0] = (U)Memory::Realloc((void*)array[0], cap * 0x18);
-            array[2] = cap;
-            return;
+            Memory::Free((void*)array[0]);
+            array[0] = 0;
         }
-        array[0] = (U)Memory::AllocAutoHeap(heapOwner, cap * 0x18, AllocInfo(0x245, 0, 0));
-        array[2] = cap;
+        array[2] = 0;
+    }
+    else
+    {
+        n = (n + 3) / 4 * 4;
+        if (array[0])
+            array[0] = (U)Memory::Realloc((void*)array[0], 0x18 * n);
+        else
+            array[0] = (U)Memory::AllocAutoHeap(heapOwner, 0x18 * n, AllocInfo(0x245, 0, 0));
+        array[2] = n;
     }
 }
 
@@ -1126,21 +1132,18 @@ void FUN_142623bc0(U* array, void* heapOwner, U n)
         {
             Memory::Free((void*)array[0]);
             array[0] = 0;
-            array[2] = 0;
-            return;
         }
         array[2] = 0;
-        return;
     }
-    U cap = ((U)n + 3) & ~3ULL;
-    if (array[0])
+    else
     {
-        array[0] = (U)Memory::Realloc((void*)array[0], cap << 5);
-        array[2] = cap;
-        return;
+        n = (n + 3) / 4 * 4;
+        if (array[0])
+            array[0] = (U)Memory::Realloc((void*)array[0], 0x20 * n);
+        else
+            array[0] = (U)Memory::AllocAutoHeap(heapOwner, 0x20 * n, AllocInfo(2, 0, 0));
+        array[2] = n;
     }
-    array[0] = (U)Memory::AllocAutoHeap(heapOwner, cap << 5, AllocInfo(2, 0, 0));
-    array[2] = cap;
 }
 
 }} // namespace Scaleform::GFx
