@@ -251,46 +251,92 @@ void FUN_142744070(char* self, void* psound)
     reinterpret_cast<Event*>(self + 0x20)->PulseEvent();
 }
 
+// FixedSizeHash::SDBM_Hash.
+static inline U Sfr01gSdbmHash(const void* data_in, U size, U seed = 5381)
+{
+    const unsigned char* data = (const unsigned char*)data_in;
+    U h = seed;
+    while (size > 0)
+    {
+        size--;
+        h = (h << 16) + (h << 6) - h + (U)data[size];
+    }
+    return h;
+}
+
+struct Sfr01gFixedSizeHash
+{
+    U operator()(const U& data) const
+    {
+        unsigned char* p = (unsigned char*)&data;
+        int size = sizeof(U);
+        return Sfr01gSdbmHash(p, size);
+    }
+};
+
+// HashSet::FindIndex + Get over a raw table (entries of stride bytes: next, hash, key at +0x10): the entry's pair or NULL.
+static inline SPInt Sfr01gFindIndexCore(U* table, const U& key, U hashValue, U stride)
+{
+    U index = hashValue;
+    char* e = RawEntry(table, index, stride);
+    if (RawField<U>(e, 0) == (U)-2 || RawField<U>(e, 8) != index)
+        return -1;
+    for (;;)
+    {
+        if (RawField<U>(e, 8) == hashValue && RawField<U>(e, 0x10) == key)
+            return (SPInt)index;
+        index = RawField<U>(e, 0);
+        if (index == (U)-1)
+            break;
+        e = RawEntry(table, index, stride);
+    }
+    return -1;
+}
+
+static inline SPInt Sfr01gFindIndex(U* table, const U& key, U stride)
+{
+    if (!table)
+        return -1;
+    U hashValue = Sfr01gFixedSizeHash()(key) & table[1];
+    return Sfr01gFindIndexCore(table, key, hashValue, stride);
+}
+
+static inline char* Sfr01gFindPair(U* table, const U& key, U stride)
+{
+    SPInt index = Sfr01gFindIndex(table, key, stride);
+    if (index >= 0)
+        return RawEntry(table, (U)index, stride) + 0x10;
+    return NULL;
+}
+
 // FMOD channel callback: at a sync point (type 2) of the channel's sound, a sync point the sound listens for
 // (the set at +0x40 of the channel's owner) goes to the owner's audio channel (+0x38).
-// MS2-FUNCTIONAL raw-offset model; the key's hash is computed in a loop here
+// MS2-FUNCTIONAL scheduling only: the exe loads the hash's folded seed constant early into rdx (ours late, into rax)
 // @0x1427443c0
 int FUN_1427443c0(void* channel, int type, void* commanddata1, void* commanddata2)
 {
     (void)commanddata2;
-    char* owner = NULL;
-    static_cast<FMOD::Channel*>(channel)->getUserData((void**)&owner);
-    if (!owner || type != 2)
+    void* vp;
+    static_cast<FMOD::Channel*>(channel)->getUserData(&vp);
+    if (!vp)
         return 0;
-    char* data = RawField<char*>(owner, 0x30);
-    if (!data || !RawField<void*>(data, 0x30))
-        return 0;
-    U point;
-    if (RawField<FMOD::Sound*>(data, 0x30)->getSyncPoint((int)(SPInt)commanddata1, (FMOD_SYNCPOINT**)&point) != FMOD_OK)
-        return 0;
-    U* table = RawField<U*>(owner, 0x40);
-    char* found = NULL;
-    if (table)
+    char* owner = (char*)vp;
+    if (type == 2)
     {
-        U index = table[1] & RawHashWord((const unsigned char*)&point);
-        const U home = index;
-        char* e = RawEntry(table, index, 0x28);
-        if (RawField<U>(e, 0) != (U)-2 && RawField<U>(e, 8) == home)
+        char* data = RawField<char*>(owner, 0x30);
+        if (owner && data && RawField<void*>(data, 0x30))
         {
-            while (RawField<U>(e, 8) != home || RawField<U>(e, 0x10) != point)
+            U point;
+            if (RawField<FMOD::Sound*>(data, 0x30)->getSyncPoint((int)(SPInt)commanddata1, (FMOD_SYNCPOINT**)&point) == FMOD_OK)
             {
-                index = RawField<U>(e, 0);
-                if (index == (U)-1)
-                    break;
-                e = RawEntry(table, index, 0x28);
+                U* table = RawField<U*>(owner, 0x40);
+                char* found = Sfr01gFindPair(table, point, 0x28);
+                char* value = found ? found + 8 : NULL;
+                if (value)
+                    FUN_1427474d0(RawField<void*>(owner, 0x38), value);
             }
-            if (index != (U)-1 && (SPInt)index >= 0)
-                found = e + 0x10;
         }
     }
-    char* value = found ? found + 8 : NULL;
-    if (value)
-        FUN_1427474d0(RawField<void*>(owner, 0x38), value);
     return 0;
 }
 
