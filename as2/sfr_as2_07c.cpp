@@ -19,16 +19,17 @@
 
 void FUN_14000c280(void* owner, unsigned key, void** value);
 namespace Scaleform { namespace GFx { namespace AS2 { class FnCall; class Value; }}}
-Scaleform::GFx::AS2::Value* FUN_1429316c0(const Scaleform::GFx::AS2::FnCall* pfn, int n);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
+
+Value* ArgCopy(const FnCall* pfn, int n); // sfr_as2_04e
 
 namespace {
 
 // fn.Arg(n) through the exe's out-of-line FnCall::Arg (sfr_as2_04e): the exe calls it without seeing its body.
 SF_FORCEINLINE Value& ImeArg(const FnCall& fn, int n)
 {
-    return *::FUN_1429316c0(&fn, n);
+    return *ArgCopy(&fn, n);
 }
 
 static SF_FORCEINLINE void SetBuiltinPrototype(GlobalContext* pgc, ASBuiltinType type, Object* proto)
