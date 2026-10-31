@@ -76,9 +76,10 @@ static inline void RawUnlinkNode(void* self)
     }
 }
 
-// HashSet<HashNode<int, StringDataPtr>>::Clear (0x28-byte entries, nothing to release).
+// HashSet<HashNode<int, StringDataPtr>>::Clear (0x28-byte entries, nothing to release). Out of line: the
+// destructors below call it, as in the exe.
 // @0x142743470
-void FUN_142743470(U** self)
+__declspec(noinline) void FUN_142743470(U** self)
 {
     if (*self)
     {
@@ -97,7 +98,7 @@ void FUN_142743470(U** self)
 
 // Clear of a set whose 0x30-byte entries hold an array (buffer at entry +0x28).
 // @0x1427434d0
-void FUN_1427434d0(U** self)
+__declspec(noinline) void FUN_1427434d0(U** self)
 {
     if (*self)
     {
@@ -120,7 +121,7 @@ void FUN_1427434d0(U** self)
 
 // Audio channel: detaches from its FMOD channel (+0x38), clears its hash +0x40 and leaves the player's list.
 // @0x142743580
-void FUN_142743580(void* self)
+__declspec(noinline) void FUN_142743580(void* self)
 {
     RawSetVtables(self, DAT_1431bed60, DAT_1431bedd8);
     if (RawField<void*>(self, 0x38))
@@ -169,7 +170,7 @@ void FUN_1427436a0(void* self)
 // Sound: releases its FMOD sound (+0x30), leaves the renderer's list under the renderer's lock (+0x28, +0xc8) and
 // drops the renderer (+0x38).
 // @0x142743730
-void FUN_142743730(void* self)
+__declspec(noinline) void FUN_142743730(void* self)
 {
     RawSetVtables(self, DAT_1431bed18, DAT_1431bed50);
     if (RawField<void*>(self, 0x30))
@@ -255,6 +256,7 @@ void* FUN_14274397c(void* self, unsigned flags)
 }
 
 // audio stream
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x142743988
 void* FUN_142743988(void* self, unsigned flags)
 {
@@ -262,6 +264,7 @@ void* FUN_142743988(void* self, unsigned flags)
 }
 
 // listed sound object
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x142743994
 void* FUN_142743994(void* self, unsigned flags)
 {
@@ -269,6 +272,7 @@ void* FUN_142743994(void* self, unsigned flags)
 }
 
 // sound
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x1427439a0
 void* FUN_1427439a0(void* self, unsigned flags)
 {
@@ -276,6 +280,7 @@ void* FUN_1427439a0(void* self, unsigned flags)
 }
 
 // buffered sound
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x1427439ac
 void* FUN_1427439ac(void* self, unsigned flags)
 {
@@ -283,6 +288,7 @@ void* FUN_1427439ac(void* self, unsigned flags)
 }
 
 // listed sound
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x1427439b8
 void* FUN_1427439b8(void* self, unsigned flags)
 {
@@ -290,6 +296,7 @@ void* FUN_1427439b8(void* self, unsigned flags)
 }
 
 // streamed sound
+// MS2-FUNCTIONAL: same `sub rcx, 10h` vs `add rcx, -10h` adjustor as above.
 // @0x1427439c4
 void* FUN_1427439c4(void* self, unsigned flags)
 {
