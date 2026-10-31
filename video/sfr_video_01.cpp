@@ -1532,11 +1532,12 @@ void FUN_140007030(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
     }
 }
 
-// MS2-FUNCTIONAL: assigns the source 12-byte record array into the destination descriptor.
+// assigns the source 12-byte record array into the destination descriptor and returns the destination
 // @0x140007230
 void* FUN_140007230(void** destination, const void** source)
 {
-    return FUN_140006db0(destination, source);
+    FUN_140006db0(destination, source);
+    return destination;
 }
 
 // source form tried (work/p5h/tmp/pb1.cpp)
@@ -3133,19 +3134,16 @@ inline void NetStream::ReleaseVideoProvider()
     if (pVideoProvider)
     {
         pVideoProvider->NotifyNetStreamRemoved();
-        if (pVideoProvider->GetPlayer())
-            pVideoProvider->GetPlayer()->Stop();
+        pVideoProvider->Stop();
     }
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140008070
 NetStream::~NetStream()
 {
     ReleaseVideoProvider();
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x1400056d0
 void NetStream::Finalize_GC()
 {
