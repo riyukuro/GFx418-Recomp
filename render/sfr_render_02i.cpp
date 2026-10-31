@@ -463,20 +463,19 @@ void DrawableImage::FloodFill(const Point<SInt32>& pt, Color color)
 }
 
 // Scans the mapped pixels on the calling thread; an opaque image ignores the alpha bits of the mask.
-// MS2-FUNCTIONAL: the exe stores found=false before the first GetSize call and keeps the match test as two branches
 // @0x1425ecb50
 Rect<SInt32> DrawableImage::GetColorBoundsRect(UInt32 mask, UInt32 color, bool findColor)
 {
     internalMapAndFlush();
-    UInt32 useMask = Transparent ? mask : (mask & 0x00FFFFFF);
-    Rect<SInt32> bounds(GetSize().Width, GetSize().Height, 0, 0);
     bool found = false;
+    UInt32 useMask = !Transparent ? (mask & 0x00FFFFFF) : mask;
+    Rect<SInt32> bounds(GetSize().Width, GetSize().Height, 0, 0);
     for (unsigned y = 0; y < GetSize().Height; ++y)
     {
         for (unsigned x = 0; x < GetSize().Width; ++x)
         {
             Color c = GetPixel32(x, y);
-            if (findColor ? ((c.ToColor32() & useMask) == color) : ((c.ToColor32() & useMask) != color))
+            if ((findColor && (c.ToColor32() & useMask) == color) || (!findColor && (c.ToColor32() & useMask) != color))
             {
                 found = true;
                 bounds.x1 = Alg::Min<SInt32>(bounds.x1, x);
