@@ -1355,15 +1355,12 @@ void* DeleteAs3_1424e4190(void* p, unsigned flags)
 
 extern "C" {
 extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);         // MovieDefImpl::GetCharacterCreateInfo
-bool  FUN_14256ec50(void* movieImpl, void* defImpl, void* bindData, const String* symbol); // MovieImpl::FindExportedResource
 void  FUN_142516210(void* log, const char* fmt, ...);                         // LogBase<DisplayObjectBase>::LogError
 void* FUN_1425f9800(void* dlist, int depth, bool* markedForRemove);           // DisplayList::GetDisplayObjectAtDepth
 void  FUN_1425f2540(void* obj, ASStringNode** result);                        // DisplayObject::GetOriginalName
 void  FUN_1425f24e0(void* obj, ASStringNode** result);                        // DisplayObject::GetName
-void* FUN_1425f1d00(void* obj);                                               // DisplayObjectBase::GetCxform
 void  FUN_1425fcea0(void* sprite, const void* pos);                           // Sprite::MoveDisplayObject
 void  FUN_1425dcaf0(void* sprite);                                            // Sprite::SetDirtyFlag (empty)
-void  FUN_1425f8df0(void* dlist, void* sprite, const void* pos, void* ch, unsigned addFlags); // DisplayList::AddDisplayObject
 void  FUN_1425f7f70(void* io);                                                // InteractiveObject::AddToPlayList
 void  FUN_142517e70(void* io);                                                // InteractiveObject::ModifyOptimizedPlayList
 }
@@ -1419,7 +1416,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
             bool found;
             {
                 String symbol(className);
-                found = FUN_14256ec50(Sfr21Mem(root, 0x10), defImpl, &bind, &symbol);
+                found = static_cast<MovieImpl*>(Sfr21Mem(root, 0x10))->FindExportedResource(static_cast<MovieDefImpl*>(defImpl), reinterpret_cast<ResourceBindData*>(&bind), symbol);
             }
             if (found)
             {
@@ -1496,7 +1493,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
                         np[0x64] = 0;
                         flags |= 0x80;
                     }
-                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !reinterpret_cast<const Scaleform::Render::Cxform*>(FUN_1425f1d00(ex))->IsIdentity())
+                    if (!(*reinterpret_cast<const UInt16*>(P + 0x62) & 8) && !reinterpret_cast<DisplayObjectBase*>(ex)->GetCxform().IsIdentity())
                     {
                         flags |= 8;
                         reinterpret_cast<Scaleform::Render::Cxform*>(np)->SetIdentity();
@@ -1554,7 +1551,7 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
         listFlags |= 1;
     if (hasClassName)
         reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch))->InitClassName(className);
-    FUN_1425f8df0(spr + 0xd8, spr, P, ch, listFlags);
+    reinterpret_cast<DisplayList*>(spr + 0xd8)->AddDisplayObject(reinterpret_cast<DisplayObjectBase*>(spr), pos, reinterpret_cast<DisplayObjectBase*>(ch), listFlags);
 
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(Sfr21Avm(ch));
     if (avm->CreateASInstanceNoCtor(false))
