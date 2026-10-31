@@ -1293,7 +1293,7 @@ void HAL::clearSolidRectangle(const Rect<int>& r, Color color)
     ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
     const ShaderPair& cur = ShaderData.GetCurrentShaders();
     ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8);
-    ShaderData.SetUniform(cur, Uniform::SU_cxmul, colorf, 4);
+    ShaderData.SetUniformInline(cur, Uniform::SU_cxmul, colorf, 4);
     ShaderData.Finish(1);
     setLinearStreamSource(PrimitiveBatch::DP_Batch);
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
@@ -1311,34 +1311,38 @@ void HAL::drawMaskClearRectangles(const MatrixPoolImpl::HMatrix* matrices, UPInt
     pDevice->SetStreamSource(0, Cache.pMaskEraseBatchVertexBuffer.GetPtr(), 0, 8);
 
     // the erase buffer holds 30 quads
-    for (UPInt i = 0; i < count;)
+    unsigned drawRangeCount = 0;
+    for (UPInt i = 0; i < count; i += (UPInt)drawRangeCount)
     {
-        unsigned batch = (unsigned)Alg::Min<UPInt>(count - i, 30);
-        for (unsigned j = 0; j < batch; j++)
+        drawRangeCount = Alg::Min<unsigned>((unsigned)count - (unsigned)i, 30);
+        for (unsigned j = 0; j < drawRangeCount; j++)
         {
             const MatrixPoolImpl::HMatrix& m = matrices[i + j];
-            const ShaderPair& cur = ShaderData.GetCurrentShaders();
-            if (!m.Has3D())
+            Matrix2F mvp2(Matrix2F::NoInit);
+            Matrix4F mvp4(Matrix4F::NoInit);
+            const float* mvp;
+            unsigned size;
+            if (m.Has3D())
             {
-                Matrix2F mvp;
-                mvp.SetToAppend(Matrix2F::Identity, m.GetMatrix2D(), Matrices.UserView);
-                ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 8, 0, j);
+                Matrix3F t(Matrix3F::NoInit);
+                t.MultiplyMatrix(m.GetMatrix3D(), Matrix2F::Identity);
+                mvp4.MultiplyMatrix(Matrices.GetUVPO(), t);
+                mvp = &mvp4.M[0][0];
+                size = 16;
             }
             else
             {
-                Matrix3F t;
-                t.MultiplyMatrix(m.GetMatrix3D(), Matrix2F::Identity);
-                Matrix4F mvp;
-                mvp.MultiplyMatrix(Matrices.GetUVPO(), t);
-                ShaderData.SetUniform(cur, Uniform::SU_mvp, &mvp.M[0][0], 16, 0, j);
+                mvp2.SetToAppend(Matrix2F::Identity, m.GetMatrix2D(), Matrices.UserView);
+                mvp = &mvp2.M[0][0];
+                size = 8;
             }
+            ShaderData.SetUniform(ShaderData.GetCurrentShaders(), Uniform::SU_mvp, mvp, size, 0, j);
         }
-        ShaderData.Finish(batch);
-        pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, batch * 2);
-        AccumulatedStats.Meshes += batch;
-        AccumulatedStats.Triangles += batch * 2;
+        ShaderData.Finish(drawRangeCount);
+        pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, drawRangeCount * 2);
+        AccumulatedStats.Meshes += drawRangeCount;
+        AccumulatedStats.Triangles += drawRangeCount * 2;
         AccumulatedStats.Primitives++;
-        i += batch;
     }
 }
 // MS2-FUNCTIONAL: written from the decompile
@@ -1606,7 +1610,7 @@ void HAL::DrawProcessedComplexMeshes(ComplexMesh* complexMesh, const StrideArray
                 t.MultiplyMatrix(hm.GetMatrix3D(), complexMesh->VertexMatrix);
                 Matrix4F m;
                 m.MultiplyMatrix(Matrices.GetUVPO(), t);
-                ShaderData.SetUniform(cur, Uniform::SU_mvp, &m.M[0][0], 16, 0, drawIndex);
+                ShaderData.SetUniformInline(cur, Uniform::SU_mvp, &m.M[0][0], 16, 0, drawIndex);
             }
 
             if (fillType <= PrimFill_SolidColor)
@@ -1989,7 +1993,7 @@ const D3D9::ShaderPair* FUN_1427359d0(D3D9::ShaderManager* sm, PrimitiveFill* fi
             t.MultiplyMatrix(m.GetMatrix3D(), vertex);
             Matrix4F mvp;
             mvp.MultiplyMatrix(matrices->GetUVPO(), t);
-            psi->SetUniform(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 16, 0, i);
+            psi->SetUniformInline(cur, D3D9::Uniform::SU_mvp, &mvp.M[0][0], 16, 0, i);
         }
 
         if (type == PrimFill_Mask)
@@ -2064,7 +2068,7 @@ bool FUN_142734410(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
         return false;
     D3D9::ShaderInterfaceAccess::BeginPrimitive(psi);
     for (unsigned i = 0; i < 2; i++)
-        psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_cxmul, &cxmul[i].M[0][0], 16, i);
+        psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_cxmul, &cxmul[i].M[0][0], 16, i);
     Matrix2F mvp;
     mvp.M[0][0] = 2.0f; mvp.M[0][1] = 0.0f;  mvp.M[0][2] = 0.0f; mvp.M[0][3] = -1.0f;
     mvp.M[1][0] = 0.0f; mvp.M[1][1] = -2.0f; mvp.M[1][2] = 0.0f; mvp.M[1][3] = 1.0f;
@@ -2094,11 +2098,11 @@ bool FUN_142734790(D3D9::ShaderManager* sm, Render::Texture** tex, const Matrix2
 
     float rgba[4];
     Color(threshold & mask).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_threshold, rgba, 4);
+    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_threshold, rgba, 4);
     Color(mask).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_mask, rgba, 4);
+    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_mask, rgba, 4);
     Color(color).GetRGBAFloat(&rgba[0], &rgba[1], &rgba[2], &rgba[3]);
-    psi->SetUniform(psi->GetCurrentShaders(), D3D9::Uniform::SU_color, rgba, 4);
+    psi->SetUniformInline(psi->GetCurrentShaders(), D3D9::Uniform::SU_color, rgba, 4);
     return FUN_142731310(sm, copySource ? 2 : 1, tex, texgen, texsize, mvp, psi, flags);
 }
 
@@ -2133,7 +2137,8 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
     if (filter->GetFilterType() <= Filter_Blur_End)
     {
         const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
-        psi->SetCxform(cur, cx);
+        psi->SetUniformInline(cur, D3D9::Uniform::SU_cxmul, cx.M[0], 4);
+        psi->SetUniformInline(cur, D3D9::Uniform::SU_cxadd, cx.M[1], 4);
 
         float texscale[2] = { 1.0f / (float)ptex->ImgSize.Width, 1.0f / (float)ptex->ImgSize.Height };
         float blurx       = floorf(params.BlurX * 0.05f);
@@ -2177,8 +2182,8 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
         }
         fsize[2] = (pass == passCount - 1) ? params.Strength : 1.0f;
         fsize[3] = 1.0f / samples;
-        psi->SetUniform(cur, D3D9::Uniform::SU_fsize, fsize, 4);
-        psi->SetUniform(cur, D3D9::Uniform::SU_texscale, texscale, 2);
+        psi->SetUniformInline(cur, D3D9::Uniform::SU_fsize, fsize, 4);
+        psi->SetUniformInline(cur, D3D9::Uniform::SU_texscale, texscale, 2);
 
         // the shadow shaders
         if (shader - 0xa64b > 0x4501)
@@ -2204,9 +2209,9 @@ void FUN_142734e10(D3D9::ShaderManager* sm, const Matrix2F& mvp, const Cxform& c
             psi->SetTexture(cur, D3D9::Uniform::SU_srctex, psrc, ImageFillMode(Wrap_Clamp, Sample_Linear));
         }
         psi->SetUniform(cur, D3D9::Uniform::SU_scolor, scolor, 4);
-        psi->SetUniform(cur, D3D9::Uniform::SU_offset, offset, 2);
+        psi->SetUniformInline(cur, D3D9::Uniform::SU_offset, offset, 2);
         if (params.Mode & BlurFilterParams::Mode_Highlight)
-            psi->SetUniform(cur, D3D9::Uniform::SU_scolor2, scolor2, 4);
+            psi->SetUniformInline(cur, D3D9::Uniform::SU_scolor2, scolor2, 4);
     }
     else
     {

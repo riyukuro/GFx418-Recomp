@@ -46,8 +46,8 @@ public:
         UniformSet[var] = true;
     }
 
-    void SetUniform(const Shader& sd, unsigned var, const float* v, unsigned n, unsigned index = 0,
-                    unsigned batch = 0)
+    __forceinline void SetUniformInline(const Shader& sd, unsigned var, const float* v, unsigned n, unsigned index = 0,
+                                         unsigned batch = 0)
     {
         if (sd->pVDesc->BatchUniforms[var].Offset >= 0)
         {
@@ -65,12 +65,19 @@ public:
             SetUniform0(sd, var, v, n, index, batch);
     }
 
+    // the exe keeps SetUniform out of line (0x142736560) except in SetColor and SetUserUniforms' unscaled case
+    SF_NOINLINE void SetUniform(const Shader& sd, unsigned var, const float* v, unsigned n, unsigned index = 0,
+                                unsigned batch = 0)
+    {
+        SetUniformInline(sd, var, v, n, index, batch);
+    }
+
     // a Color stores B, G, R, A; the shaders take R, G, B, A in 0..1
     void SetColor(const Shader& sd, unsigned var, Color c, unsigned index = 0, unsigned batch = 0)
     {
         const float mult = 1.0f / 255.0f;
         float rgba[4] = { c.GetRed() * mult, c.GetGreen() * mult, c.GetBlue() * mult, c.GetAlpha() * mult };
-        SetUniform(sd, var, rgba, 4, index, batch);
+        SetUniformInline(sd, var, rgba, 4, index, batch);
     }
 
     void SetCxform(const Shader& sd, const Cxform& cx, unsigned index = 0, unsigned batch = 0)
@@ -115,7 +122,7 @@ public:
                 SetUniform(sd, i, scaled, size, 0, batch);
             }
             else
-                SetUniform(sd, i, pdata, size, 0, batch);
+                SetUniformInline(sd, i, pdata, size, 0, batch);
             pdata += size;
         }
     }
