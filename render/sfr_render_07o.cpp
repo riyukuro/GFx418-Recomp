@@ -148,12 +148,11 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
 {
     const GlyphVectorEnt& vec = ent.EntryData.VectorData;
 
-    MatrixPoolImpl::DataHeader* matrixData = m.pHandle->pHeader;
     if (m.Has3D())
     {
         Matrix2F m2d = Matrix2F::Scaling(sizeScale);
         m2d.AppendTranslation(vec.x, vec.y);
-        Matrix3F m3d = matrix3DDirect(m);
+        Matrix3F m3d = m.GetMatrix3D();
         m3d.Prepend(m2d);
         if (layer.M.IsNull())
             layer.M = ren->GetMatrixPool().CreateMatrix(m3d);
@@ -162,7 +161,7 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     }
     else
     {
-        Matrix2F m2d = matrix2DDirect(m);
+        Matrix2F m2d = m.GetMatrix2D();
         m2d.PrependTranslation(vec.x, vec.y);
         m2d.PrependScaling(sizeScale, sizeScale);
         if (layer.M.IsNull())
@@ -181,6 +180,7 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     // Cxform is the first optional element in a matrix block, so when present
     // it begins at the data start. Avoid the absolute lookup table here: its
     // ADDR32NB reference cannot be represented by the hook DLL linker.
+    MatrixPoolImpl::DataHeader* matrixData = m.pHandle->pHeader;
     const Cxform* matrixCxform = matrixData->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform)
         ? reinterpret_cast<const Cxform*>(matrixData->GetDataStart()) : &Cxform::Identity;
     colorCx.Append(*matrixCxform);
@@ -853,18 +853,18 @@ HMatrix TextMeshProvider::UpdateMaskClearBounds(HMatrix viewMat)
     m.SetRectToRect(0, 0, 1, 1, ClearBox.x1, ClearBox.y1, ClearBox.x2, ClearBox.y2);
     if (viewMat.Has3D())
     {
-        Matrix3F m3(matrix3DDirect(viewMat));
+        Matrix3F m3 = viewMat.GetMatrix3D();
         m3.Prepend(m);
         if (ClearBounds.IsNull())
-            ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m3, HMatrix::Has_3D);
+            ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m3);
         else
             ClearBounds.SetMatrix3D(m3);
     }
     else
     {
-        m.Append(matrix2DDirect(viewMat));
+        m.Append(viewMat.GetMatrix2D());
         if (ClearBounds.IsNull())
-            ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m, 0);
+            ClearBounds = pRenderer->GetMatrixPool().CreateMatrix(m);
         else
             ClearBounds.SetMatrix2D(m);
     }
