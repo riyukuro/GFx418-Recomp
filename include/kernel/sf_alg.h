@@ -302,6 +302,13 @@ void QuickSortSliced(ArrayT& arr, UPInt start, UPInt end, Less less)
     }
 }
 
+// (appended, sfh) SDK SF_Alg.h
+template<class ArrayT, class Less>
+void QuickSort(ArrayT& arr, Less less)
+{
+    QuickSortSliced(arr, 0, arr.GetSize(), less);
+}
+
 // (appended for the font config reader, sfr_gfx_11; exe SwapOrder 0x1422fe410, LEToSystem 0x1422fd400,
 // BEToSystem 0x1422fc7e0) 16-bit byte order helpers.
 namespace ByteUtil {

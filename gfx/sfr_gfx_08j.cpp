@@ -158,60 +158,56 @@ void* FUN_142654d90(TextureGlyphData::TextureGlyphVisitor* p, unsigned flags)
 
 namespace {
 
-struct Range
-{
-    UInt16 First, Last;
-};
-
-struct RangeLess
-{
-    bool operator()(const Range& a, const Range& b) const { return a.First < b.First; }
-};
-
+    struct Range { UInt16 start,end; };
+    struct RangeLess  { bool operator()(const Range& r1, const Range& r2) const { return r1.start < r2.start; } };
 } // namespace
 
-// "0x41-0x5a, 0x61-0x7a, ...": at most five pieces, then " (truncated)".
 // @0x142654f20
 static String BuildStringFromRanges(const Array<Range>& ranges)
 {
-    String result;
-    UInt16 first  = 0;
-    bool   none   = true;
-    int    pieces = 0;
-    UPInt  i;
-    for (i = 0; i < ranges.GetSize(); ++i)
+    String ret;
+    char buff[512];
+    int countPrinted = 0;
+    bool lastPrinted = true;
+    UInt16 start = 0;
+    UPInt i = 0;
+    for(; i < ranges.GetSize(); ++i)
     {
         if (i == 0)
         {
-            first = ranges[0].First;
-            none  = false;
+            start = ranges[i].start;
+            lastPrinted = false;
         }
-        else if ((unsigned)ranges[i - 1].Last + 1 < ranges[i].First)
+        else
         {
-            char buf[512];
-            if (first == ranges[i - 1].Last)
-                Format(StringDataPtr(buf, sizeof(buf)), "0x{0:x}", first);
-            else
-                Format(StringDataPtr(buf, sizeof(buf)), "0x{0:x}-0x{1:x}", first, ranges[i - 1].Last);
-            if (pieces)
-                result += ", ";
-            result += buf;
-            if (++pieces >= 5)
-                break;
-            first = ranges[i].First;
+            if (ranges[i].start > ranges[i-1].end + 1)
+            {
+                if (start == ranges[i-1].end)
+                    Format(StringDataPtr(buff, sizeof(buff)), "0x{0:x}", start);
+                else
+                    Format(StringDataPtr(buff, sizeof(buff)), "0x{0:x}-0x{1:x}", start, ranges[i-1].end);
+                lastPrinted = true;
+                if (countPrinted)
+                    ret += ", ";
+                ret += buff;
+                countPrinted++;
+                if (countPrinted > 4)
+                    break;
+                start = ranges[i].start;
+                lastPrinted = false;
+            }
         }
     }
-    if (i >= ranges.GetSize() && !none)
+    if (!lastPrinted)
     {
-        char buf[512];
-        Format(StringDataPtr(buf, sizeof(buf)), "0x{0:x}-0x{1:x}", first, ranges[ranges.GetSize() - 1].Last);
-        if (pieces)
-            result += ", ";
-        result += buf;
+        Format(StringDataPtr(buff, sizeof(buff)), "0x{0:x}-0x{1:x}", start, ranges[ranges.GetSize()-1].end);
+        if (countPrinted)
+            ret += ", ";
+        ret += buff;
     }
-    if (i < ranges.GetSize())
-        result += " (truncated)";
-    return result;
+    if ( i < ranges.GetSize() )
+        ret += " (truncated)";
+    return ret;
 }
 
 // ---- FontData ----
@@ -399,36 +395,43 @@ unsigned FontData::GetGlyphShapeCount() const { return (unsigned)Glyphs.GetSize(
 // @0x142655f90
 bool FontData::HasVectorOrRasterGlyphs() const { return CodeTable.GetSize() != 0; }
 
-// MS2-FUNCTIONAL 0x142655690: our compiler splits the function into chunks with a different frame (0x68 vs 0x50); same range building
 // @0x142655690
 String FontData::GetCharRanges() const
 {
     Array<Range> ranges;
-    bool         inRange = false;
-    UInt16       first = 0, last = 0;
-    for (HashIdentityLH<UInt16, UInt16, 0x105>::ConstIterator it = CodeTable.Begin(); it != CodeTable.End(); ++it)
+    CodeTableType::ConstIterator it = CodeTable.Begin();
+    UInt16 rangeStart = 0, prevValue = 0;
+    bool rangeStarted = false;
+    while( it != CodeTable.End() )
     {
-        UInt16 code = it->First;
-        if (!inRange)
+        if (!rangeStarted)
         {
-            first = last = code;
-            inRange      = true;
+            rangeStart = it->First;
+            rangeStarted = true;
         }
-        else if (code == last + 1)
-            last = code;
         else
         {
-            Range r = { first, last };
-            ranges.PushBack(r);
-            first = last = code;
+            if (prevValue != it->First-1)
+            {
+                Range range;
+                range.start = rangeStart;
+                range.end = prevValue;
+                ranges.PushBack(range);
+                rangeStarted = false;
+                continue;
+            }
         }
+        prevValue = it->First;
+        ++it;
     }
-    if (inRange)
+    if (rangeStarted)
     {
-        Range r = { first, last };
-        ranges.PushBack(r);
+        Range range;
+        range.start = rangeStart;
+        range.end = prevValue;
+        ranges.PushBack(range);
     }
-    Alg::QuickSortSliced(ranges, 0, ranges.GetSize(), RangeLess());
+    Alg::QuickSort(ranges, RangeLess());
     return BuildStringFromRanges(ranges);
 }
 

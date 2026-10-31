@@ -173,7 +173,8 @@ private:
     char*                                         Name;          // +0x38 own copy
     Ptr<TextureGlyphData>                         pTGData;       // +0x40 texture glyphs loaded with the font
     ArrayLH<Ptr<ShapeDataBase>, 0x105>            Glyphs;        // +0x48 the glyph shapes (StatMD_Fonts_Mem)
-    HashIdentityLH<UInt16, UInt16, 0x105>         CodeTable;     // +0x60 character code -> glyph index
+    typedef HashIdentityLH<UInt16, UInt16, 0x105> CodeTableType;
+    CodeTableType                                 CodeTable;     // +0x60 character code -> glyph index
     ArrayLH<AdvanceEntry, 0x105>                  AdvanceTable;  // +0x68 per glyph
     HashLH<KerningPair, float, FixedSizeHash<KerningPair>, 0x105> KerningPairs; // +0x80
 };
