@@ -38,14 +38,36 @@
 #include "ms2/scaleform/include/gfx/gfx_imagecreator.h"
 #undef GetObject   // windows.h
 
+// The definitions in sfr_as3_17 and sfr_as3_19 of exe functions called here, by their real names.
+namespace Scaleform { namespace GFx { namespace AS3 {
+const char* AsString(Abc::NamespaceKind kind);                                                    // 0x1424ed700
+void Sfr33CheckObject(VM* const* reader, const Value& v);                                         // 0x1424ef180
+void Sfr33ExecuteActionQueue(MovieRoot* proot, MovieRoot::ActionLevel lvl);                       // 0x1424fa320
+void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr);   // 0x142501b00
+void Sfr33CollectorQueue(UByte* gc, RefCountImpl* stats);                                         // 0x142504630
+void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key);                                    // 0x1425059f0
+ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* cache, const Multiname& mn);    // 0x142505aa0
+ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm);                             // 0x1425085b0
+UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                                    // 0x142524f60
+UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
+Value* Sfr31ResolveInvokeAlias(UPInt proot, const char* pname);                                   // 0x142525400
+ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt info);                               // 0x142525ca0
+void Sfr31SetGcRefClearNext(UPInt avm, UPInt as3obj);                                             // 0x142526340
+void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);                                  // 0x1425273b0
+void Sfr31SetResource(UPInt bitmap, Resource* pimage);                                            // 0x1425274b0
+void Sfr31SetGcRefClearFlags(unsigned long* mn, UPInt ns);                                        // 0x142528d20
+void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);                    // 0x14252ecb0
+void Sfr31RaiseNameConflict(UPInt tracer, UPInt a, UPInt b);                                      // 0x14252efe0
+void Sfr31UnregisterClassTraits(UPInt file);                                                      // 0x142530de0
+}}} // namespace Scaleform::GFx::AS3
+
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
 void FUN_1425f9ba0(Scaleform::UPInt self, char* ret, const void* matrix);
-Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b);
-bool FUN_1425b9b10(Scaleform::UPInt textField);
+static inline Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b) { return reinterpret_cast<Scaleform::UPInt>(::Scaleform::GFx::AS3::Sfr31GetClassTraitsByInfo(reinterpret_cast<Scaleform::GFx::AS3::VM*>(a), b)); }
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
 void* FUN_14243d870(void* self, void* p);   // SPtr<Instances::fl::Object>::operator=, out of line
-void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level);   // MovieRoot::ExecuteActionQueue(ActionLevel)
+static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { ::Scaleform::GFx::AS3::Sfr33ExecuteActionQueue(proot, static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
 void FUN_142524870(void* arr, Scaleform::UPInt n);   // ArrayDH_POD<UPInt>::Resize, out of line
@@ -1576,7 +1598,7 @@ __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& t
 }}}} // namespace Scaleform::GFx::AS3::TR
 
 // ---- Tracer merging of the block entry states ----
-void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b);   // raises verify error 0x42c (sfr_as3_19)
+static inline void FUN_14252efe0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::UPInt b) { ::Scaleform::GFx::AS3::Sfr31RaiseNameConflict(tracer, a, b); }   // raises verify error 0x42c (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 
 
@@ -1834,10 +1856,10 @@ __declspec(safebuffers) int FUN_142520380(void* ctx, void* multiname)
 
 // ---- Block entry states: the slot type of a property, joining a block's state into its successor's ----
 namespace Scaleform { namespace GFx { namespace AS3 {
-ClassTraits::Traits* FUN_1425085b0(const SlotInfo* psi, VM* pvm);   // SlotInfo::GetDataType (sfr_as3_17)
-void FUN_142508720(const SlotInfo* psi, ASString* name, VM* pvm);   // SlotInfo::GetDataTypeName (sfr_as3_17)
+static inline ClassTraits::Traits* FUN_1425085b0(const SlotInfo* psi, VM* pvm) { return ::Scaleform::GFx::AS3::Sfr33SlotDataType(psi, pvm); }   // SlotInfo::GetDataType (sfr_as3_17)
+static inline void FUN_142508720(const SlotInfo* psi, ASString* name, VM* pvm) { ::new (static_cast<void*>(name)) ASString(psi->GetDataTypeName(*pvm)); }   // SlotInfo::GetDataTypeName (sfr_as3_17)
 InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v);       // VM::GetFunctReturnType
-void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+static inline void FUN_14252ecb0(void* vm, const void* error, const void* classInfo) { ::Scaleform::GFx::AS3::Sfr31VMRaiseError(reinterpret_cast<Scaleform::UPInt>(vm), static_cast<const unsigned long*>(error), reinterpret_cast<Scaleform::UPInt>(classInfo)); }   // VM: raise the error as an instance of the class
 }}} // namespace Scaleform::GFx::AS3
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2031,7 +2053,7 @@ UPInt Sfr27NamespaceInstanceTraits(UPInt a, UPInt b)
 bool Sfr27TextFieldTabCheck(UPInt self, UInt32 mode)
 {
     if (mode == 2)
-        return !FUN_1425b9b10(AccRd(self - 0x18, 0));
+        return !reinterpret_cast<const TextField*>(AccRd(self - 0x18, 0))->IsReadOnly();
     return true;
 }
 
@@ -2143,10 +2165,7 @@ Instances::Namespace& VMAbcFile::GetInternedNamespace(const Abc::Multiname& mn)
 
 }}} // namespace Scaleform::GFx::AS3
 
-bool FUN_142467ec0(void* dispatcher, const Scaleform::GFx::EventId* id, void* dispObj);   // EventDispatcher::Dispatch(const EventId&, DisplayObject*)
-bool FUN_14246a160(const void* dispatcher, const void* type, bool useCapture);           // EventDispatcher::HasEventHandler
-void FUN_142526340(void* avm, void* as3obj);                                             // AvmDisplayObj::SetAS3ObjCollectible
-bool FUN_1425db970(void* sprite, const char* label, int offset);                         // Sprite::GotoLabeledFrame
+static inline void FUN_142526340(void* avm, void* as3obj) { ::Scaleform::GFx::AS3::Sfr31SetGcRefClearNext(reinterpret_cast<Scaleform::UPInt>(avm), reinterpret_cast<Scaleform::UPInt>(as3obj)); }                                             // AvmDisplayObj::SetAS3ObjCollectible
 void FUN_1425f7e30(void* intObj);                                                        // InteractiveObject::AddToOptimizedPlayList
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2210,8 +2229,8 @@ bool AvmDisplayObj::OnUnloading(bool mayRemove)
     if (obj)
     {
         MovieRoot* root = AS3RootOf(pDispObj);
-        if (FUN_14246a160(obj, &root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) ||
-            FUN_14246a160(obj, &AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false))
+        if (obj->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) ||
+            obj->HasEventHandler(AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false))
         {
             QueueEvent(pDispObj, MovieRoot::AL_EnterFrame, EventId(AS3Event_Removed));
             pDispObj->Depth = -2;
@@ -2236,7 +2255,7 @@ bool AvmInteractiveObj::OnEvent(const EventId& id)
     case EventId::Event_RollOut:
     case 0x100000a: case 0x100000b: case AS3Event_Click: case 0x100000d: case 0x100000e:
         if (Instances::fl_display::DisplayObject* obj = GetAS3Obj())
-            FUN_142467ec0(obj, &id, pDispObj);
+            obj->Dispatch(id, pDispObj);
         return true;
     case AS3Event_Controller:
         QueueEvent(pDispObj, MovieRoot::AL_ControllerEvents, id);
@@ -2298,7 +2317,7 @@ bool AvmSprite::OnEvent(const EventId& id)
                 break;
             }
             if (label)
-                FUN_1425db970(spr, label, 0);
+                spr->GotoLabeledFrame(label, 0);
         }
         if (id.Id == EventId::Event_Press)
         {
@@ -2306,7 +2325,7 @@ bool AvmSprite::OnEvent(const EventId& id)
             {
                 EventId click(id);
                 click.Id = AS3Event_Click;
-                FUN_142467ec0(obj, &click, pDispObj);
+                obj->Dispatch(click, pDispObj);
             }
             return true;
         }
@@ -2363,7 +2382,7 @@ bool AvmTextField_IsTabable(UPInt self)
         return (io->Flags & InteractiveObject::Mask_TabEnabled) == InteractiveObject::Mask_TabEnabled;
     else if (io->TabIndex > 0)
         return true;
-    return !FUN_1425b9b10(reinterpret_cast<UPInt>(avm->pDispObj));
+    return !static_cast<const TextField*>(avm->pDispObj)->IsReadOnly();
 }
 
 // The SDK's AvmDisplayObj::HasAS3Obj: either pointer set.
@@ -2380,7 +2399,7 @@ bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
     if (Sfr34HasAS3Obj(avm))
     {
         DisplayObject* dobj = avm->pDispObj;
-        FUN_142467ec0(avm->GetAS3Obj(), &id, dobj);
+        avm->GetAS3Obj()->Dispatch(id, dobj);
     }
     return false;
 }
@@ -2398,7 +2417,7 @@ bool AvmButton_OnMouseEvent(UPInt self, const EventId& id)
         {
             EventId click(id);
             click.Id = AS3Event_Click;
-            FUN_142467ec0(avm->GetAS3Obj(), &click, avm->pDispObj);
+            avm->GetAS3Obj()->Dispatch(click, avm->pDispObj);
         }
         return true;
     }
@@ -2450,7 +2469,6 @@ void Value::PickUnsafe(Object* v)
 
 }}} // namespace Scaleform::GFx::AS3
 
-void FUN_1424dde10(void* frame);                                                       // CallFrame::~CallFrame
 
 namespace Scaleform {
 template void ArrayDataBase<UByte, AllocatorGH<UByte, 2>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
@@ -2501,7 +2519,7 @@ void Sfr34_CallFramePagedArray_PopBack(Sfr34_CallFramePagedArray* self)
     if (self->Size)
     {
         UPInt i = self->Size - 1;
-        FUN_1424dde10(self->Pages[i >> 6] + (i & 0x3f) * 0xa8);
+        reinterpret_cast<Scaleform::GFx::AS3::CallFrame*>(self->Pages[i >> 6] + (i & 0x3f) * 0xa8)->~CallFrame();
         self->Size--;
     }
 }
@@ -3276,10 +3294,8 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
 // sfr34 batch I: the interpreter's exception handlers.
 
 } } } // namespace Scaleform::GFx::AS3
-void FUN_1424efcd0(Scaleform::GFx::AS3::CallFrame* cf);    // CallFrame::ClearOpStack
-void FUN_1424efd80(Scaleform::GFx::AS3::CallFrame* cf);    // CallFrame::ClearScopeStack
-Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142524f60(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::VMAbcFile* file,
-                                                        const void* abc_multiname);   // VM::Resolve2ClassTraits
+static inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142524f60(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::VMAbcFile* file, const void* abc_multiname)
+{ return reinterpret_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31ResolveClassTraits(reinterpret_cast<Scaleform::UPInt>(vm), reinterpret_cast<Scaleform::UPInt>(file), reinterpret_cast<Scaleform::UPInt>(abc_multiname))); }   // VM::Resolve2ClassTraits
 
 // VM::OnException: the handler of the frame's method body for the pending exception thrown at code offset. A
 // handler covering offset catches it when it has no type or the exception's class is (or derives from, or
@@ -3320,11 +3336,11 @@ int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt offset, void* fr
         }
         if (caught)
         {
-            FUN_1424efcd0(&cf);
+            cf.ClearOpStack();
             Value*& top = reinterpret_cast<Value**>(&vm->OpStack)[1];     // ValueStack::pCurrent
             new (++top) Value(vm->ExceptionObj);
             vm->ExceptionObj.Clean();
-            FUN_1424efd80(&cf);
+            cf.ClearScopeStack();
             result = info.target;
             break;
         }
@@ -3706,7 +3722,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 } } } // namespace Scaleform::GFx::AS3
 
-bool FUN_1424445f0(const Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pobj);  // DisplayObject::HasLoaderInfo
 
 // MovieRoot::GetRootMovie (slot 14): the nearest display object up from dobj whose AS3 object has loader info,
 // else the root of the stage dobj's movie sits on. When that is no container, its parent's root movie is
@@ -3765,7 +3780,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 } } } // namespace Scaleform::GFx::AS3
 
-Scaleform::GFx::AS3::Value* FUN_142525400(const Scaleform::GFx::AS3::MovieRoot* proot, const char* pname);  // MovieRoot::ResolveInvokeAlias
+static inline Scaleform::GFx::AS3::Value* FUN_142525400(const Scaleform::GFx::AS3::MovieRoot* proot, const char* pname) { return ::Scaleform::GFx::AS3::Sfr31ResolveInvokeAlias(reinterpret_cast<Scaleform::UPInt>(proot), pname); }  // MovieRoot::ResolveInvokeAlias
 
 // MovieRoot::Invoke with a format: InvokeArgs (slot 48) with the variable arguments.
 // MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function
@@ -4147,7 +4162,7 @@ bool FUN_142514560(const InstanceTraits::Traits* cur, const InstanceTraits::Trai
 }
 
 const SlotInfo& FUN_14250dca0(const Traits* pthis, AbsoluteIndex ind);
-ClassTraits::Traits* FUN_1425085b0(const SlotInfo* psi, VM* pvm);  // SlotInfo::GetDataType (sfr_as3_17)
+// (forwarder above)  // SlotInfo::GetDataType (sfr_as3_17)
 
 // The declared type of the slot with the 1-based own index ind.
 // MS2-FUNCTIONAL no caller or reference is left in the exe, so a free function; the exe keeps the parent test in a flag
@@ -4256,7 +4271,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // sfr34 batch R: the verbose output of VM values to the UI (values, unsigned numbers, value arrays, the operand
 // stack and the register file), and the validity test of a 2D matrix.
 
-const char* FUN_1424ed700(Abc::NamespaceKind kind);    // the name of a namespace kind
+static inline const char* FUN_1424ed700(Abc::NamespaceKind kind) { return ::Scaleform::GFx::AS3::AsString(kind); }    // the name of a namespace kind
 
 void FUN_14251b350(const VM* vm, FlashUI* ui, const Value* v);
 
@@ -4575,7 +4590,7 @@ void ClassTraits::Traits::RegisterSlots()
 DisplayObject* AvmDisplayObj::GetRoot()
 {
     AvmDisplayObj* cur = this;
-    while (cur && (!cur->GetAS3Obj() || !FUN_1424445f0(cur->GetAS3Obj())))
+    while (cur && (!cur->GetAS3Obj() || !cur->GetAS3Obj()->HasLoaderInfo()))
     {
         AvmInteractiveObj* parent = ToAvmInteractiveObj(cur->pDispObj->GetParent());
         cur = parent;
@@ -4640,7 +4655,7 @@ void MovieRoot::ProcessLoadBinaryMT(GFx::LoadQueueEntry* pentry, LoadStates* pls
     entry->mURLLoader->ExecuteCompleteEvent();
 }
 
-ClassTraits::Traits** FUN_142505aa0(TClassTraitsCache* cache, const Multiname& mn);   // MultinameHash::Get
+static inline ClassTraits::Traits** FUN_142505aa0(TClassTraitsCache* cache, const Multiname& mn) { return ::Scaleform::GFx::AS3::Sfr33ClassTraitsCacheGet(cache, mn); }   // MultinameHash::Get
 
 // The class traits of the class mn names: Class for the any type, else from the VM's class traits cache.
 // SDK AS3_VM.cpp form with Multiname::IsAnyType inlined.
@@ -4808,7 +4823,7 @@ SPtr<VMAbcFile> VM::FUN_142515b90(const Ptr<Abc::File>& file, bool to_execute)
 // sfr34 batch V: the run-time name of a multiname off the operand stack, the class traits of an ABC class, and
 // the public namespace test of an ABC multiname.
 
-void FUN_1425273b0(Multiname& mn, const Value& qname);     // the name and namespace of a QName object (sfr_as3_15)
+static inline void FUN_1425273b0(Multiname& mn, const Value& qname) { ::Scaleform::GFx::AS3::Sfr27MultinameFromQName(&mn, &qname); }     // the name and namespace of a QName object (sfr_as3_15)
 
 // Moves the top value of the stack into this one and pops it; this one is not released. Only inlined.
 SF_INLINE void Value::PickUnsafe(ValueStack& v)
@@ -4849,7 +4864,8 @@ void FUN_14251c8a0(Multiname& mn, ValueStack& vs)
 }
 
 ClassTraits::Traits** FUN_142414ac0(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns);
-ClassTraits::Traits*  FUN_142524f60(VM& vm, VMAbcFile& file, const Abc::Multiname& mn);  // a scaleform.gfx class
+static inline ClassTraits::Traits* FUN_142524f60(VM& vm, VMAbcFile& file, const Abc::Multiname& mn)
+{ return reinterpret_cast<ClassTraits::Traits*>(Sfr31ResolveClassTraits(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&file), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // a scaleform.gfx class
 
 // The class traits of an ABC class by the name of its instance info: from the VM's class traits cache, else (for
 // the scaleform.gfx package) made for it.
@@ -5073,8 +5089,8 @@ bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr)
 
 } } } // namespace Scaleform::GFx::AS3
 
-const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm,
-                                                               const Scaleform::GFx::AS3::Multiname& mn);  // Resolve2ClassTraits
+static inline const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn)
+{ return reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31FindClassTraitsByMn(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // Resolve2ClassTraits
 
 // Whether v is of the class named className (a qualified name, "a.b::C" or "a.b.C").
 // @0x1425145d0
@@ -5284,7 +5300,7 @@ void MovieRoot::ProcessLoadVarsMT(GFx::LoadQueueEntry* pentry, LoadStates* pls, 
     entry->mURLLoader->ExecuteCompleteEvent();
 }
 
-void* FUN_1425059f0(const void* self, const UPInt& key);   // the value an identity-hashed word key maps to
+static inline void* FUN_1425059f0(const void* self, const UPInt& key) { return ::Scaleform::GFx::AS3::Sfr33IdWordHashGet(static_cast<const UByte*>(self), key); }   // the value an identity-hashed word key maps to
 
 // MovieRoot::RemoveLoadedMovieDef: one use less of a loaded movie definition; at the last its entry leaves the
 // root's loaded movie definitions (+0x6e8). True when the entry was removed.
@@ -5520,7 +5536,7 @@ void Traits::CopyParentTraits()
     }
 }
 
-void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+// (forwarder above)   // VM: raise the error as an instance of the class
 
 } } } // namespace Scaleform::GFx::AS3
 
@@ -5688,9 +5704,8 @@ void FUN_142521150(VM& vm, ClassTraits::Traits& tr)
 
 } } } // namespace Scaleform::GFx::AS3
 
-void FUN_142501b00(Scaleform::GFx::AS3::PropRef& result, Scaleform::GFx::AS3::VM& vm,
-                   const Scaleform::GFx::AS3::Value& value, const Scaleform::GFx::AS3::Multiname& mn,
-                   int attr);   // FindObjProperty
+static inline void FUN_142501b00(Scaleform::GFx::AS3::PropRef& result, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& value, const Scaleform::GFx::AS3::Multiname& mn, int attr)
+{ ::Scaleform::GFx::AS3::Sfr33FindObjProperty(result, vm, value, mn, attr); }   // FindObjProperty
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -6008,8 +6023,8 @@ UInt8 FUN_14250c990(const void* self, UPInt pos)
 
 } } } // namespace Scaleform::GFx::AS3
 
-void FUN_1424ef180(void* reader, const Scaleform::GFx::AS3::Value& v);    // StackReader::CheckObject
-void FUN_142528d20(Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Instances::Namespace* ns);   // Multiname::SetRTNamespace
+static inline void FUN_1424ef180(void* reader, const Scaleform::GFx::AS3::Value& v) { ::Scaleform::GFx::AS3::Sfr33CheckObject(static_cast<Scaleform::GFx::AS3::VM* const*>(reader), v); }    // StackReader::CheckObject
+static inline void FUN_142528d20(Scaleform::GFx::AS3::Multiname* mn, const Scaleform::GFx::AS3::Instances::Namespace* ns) { ::Scaleform::GFx::AS3::Sfr31SetGcRefClearFlags(reinterpret_cast<unsigned long*>(mn), reinterpret_cast<Scaleform::UPInt>(ns)); }   // Multiname::SetRTNamespace
 
 // StackReader::Read(Multiname&): the run-time parts of a multiname off the operand stack: the name (of the late
 // kinds), then the namespace (of the run-time qualified ones; an error unless it is an object). ctx is the reader
@@ -6150,7 +6165,7 @@ bool VMAbcFile::RegisterScrips(bool to_execute)
     return !vm.IsException();
 }
 
-void FUN_142530de0(VMAbcFile* file);   // VMAbcFile: the loaded classes' traits unregistered (a failed load)
+static inline void FUN_142530de0(VMAbcFile* file) { ::Scaleform::GFx::AS3::Sfr31UnregisterClassTraits(reinterpret_cast<Scaleform::UPInt>(file)); }   // VMAbcFile: the loaded classes' traits unregistered (a failed load)
 
 // VMAbcFile::RegisterUserDefinedClassTraits: the class traits of the file's classes (except the scaleform.gfx
 // package's): ones known to the VM (cached, or from the global object, then cached) only add their file to the
@@ -6230,8 +6245,6 @@ bool VMAbcFile::RegisterUserDefinedClassTraits()
 
 // The document of a text field's DocView (+0x10), its URL flag (RTFlags +0x40 bit 0), the formats at a position and
 // the character at a point, bound to the exe (the text headers do not fit this unit's partial models).
-bool  FUN_1425996b0(void* styledText, const Render::Text::TextFormat** ppfmt, const void** pppara, UPInt pos);
-UPInt FUN_142612240(Render::Text::DocView* doc, float x, float y);   // DocView::GetCharIndexAtPoint
 static inline void* Sfr34_StyledTextOf(Render::Text::DocView* doc)
 {
     return *reinterpret_cast<void**>(reinterpret_cast<char*>(doc) + 0x10);
@@ -6275,7 +6288,7 @@ void FUN_14251a500(UPInt self, TextField::LinkEvent event, unsigned pos, unsigne
     Sfr34_CheckAvm(root);
     const Render::Text::TextFormat* fmt;
     if (!root->pAVM->ExtensionsEnabled ||
-        !FUN_1425996b0(Sfr34_StyledTextOf(Sfr34_TextFieldOf(avm)->GetDocument()), &fmt, NULL, pos) ||
+        !static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(Sfr34_TextFieldOf(avm)->GetDocument()))->GetTextAndParagraphFormat(&fmt, NULL, pos) ||
         !fmt->IsUrlSet())
         return;
     const char* url = fmt->GetUrl().ToCStr();
@@ -6297,7 +6310,6 @@ void FUN_14251a500(UPInt self, TextField::LinkEvent event, unsigned pos, unsigne
     }
 }
 
-int FUN_142586720(const char* a, const char* b, SPInt len);   // String::CompareNoCase(a, b, len)
 
 // AvmTextField::OnMouseEvent: a click (not ending a selection) on an "event:" link of an HTML field gives a "link"
 // TextEvent with the rest of the URL to the AS3 object when it listens for it; true for any click.
@@ -6317,12 +6329,12 @@ bool FUN_14251a8a0(UPInt self, const EventId& event)
     Render::Text::DocView*          doc = ptf->GetDocument();
     if (!ptf->IsHtml() || !Sfr34_MayHaveUrl(doc) || !ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
         return true;
-    const UPInt pos = FUN_142612240(doc, p.x, p.y);
-    if (pos == SF_MAX_UPINT || !FUN_1425996b0(Sfr34_StyledTextOf(doc), &fmt, NULL, pos) || !fmt->IsUrlSet())
+    const UPInt pos = doc->GetCharIndexAtPoint(p.x, p.y);
+    if (pos == SF_MAX_UPINT || !static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(doc))->GetTextAndParagraphFormat(&fmt, NULL, pos) || !fmt->IsUrlSet())
         return true;
     const char* url  = fmt->GetUrl().ToCStr();
     MovieRoot*  root = AS3RootOf(avm->pDispObj);
-    if (!avm->GetMovieImpl() || FUN_142586720(url, "event:", 6) != 0)
+    if (!avm->GetMovieImpl() || String::CompareNoCase(url, "event:", 6) != 0)
         return true;
     const ASString                        name(root->GetStringManager418()->CreateStringNode("link"));
     Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
@@ -6431,9 +6443,7 @@ bool IntervalTimer::Invoke(MovieImpl* proot, float frameTime)
 
 } } } // namespace Scaleform::GFx::AS3
 
-void FUN_142501b00(Scaleform::GFx::AS3::PropRef& result, Scaleform::GFx::AS3::VM& vm,
-                   const Scaleform::GFx::AS3::Value& value, const Scaleform::GFx::AS3::Multiname& mn,
-                   int attr);   // FindObjProperty
+// (forwarder above)   // FindObjProperty
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -6982,16 +6992,15 @@ bool Sfr34_ValueObjIfc::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* pr
     return true;
 }
 
-void FUN_142504630(ASRefCountCollector* gc, void* stats);          // ASRefCountCollector::ForceCollect
-void FUN_142446e00(Instances::fl_display::DisplayObject* obj, Instances::fl_display::Loader* loader);  // SetLoaderInfo
-void FUN_1425274b0(DisplayObjectBase* bitmap, Resource* pimage);   // AvmBitmap::SetImage
+static inline void FUN_142504630(ASRefCountCollector* gc, void* stats) { ::Scaleform::GFx::AS3::Sfr33CollectorQueue(reinterpret_cast<UByte*>(gc), static_cast<RefCountImpl*>(stats)); }          // ASRefCountCollector::ForceCollect
+static inline void FUN_1425274b0(DisplayObjectBase* bitmap, Resource* pimage) { ::Scaleform::GFx::AS3::Sfr31SetResource(reinterpret_cast<Scaleform::UPInt>(bitmap), pimage); }   // AvmBitmap::SetImage
 
 // The new character's AS3 object, made (with the loader's info) and constructed when it has none yet.
 static inline void Sfr34_LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::Loader* loader)
 {
     if (!avm->GetAS3Obj() && avm->CreateASInstanceNoCtor(true))
     {
-        FUN_142446e00(avm->GetAS3Obj(), loader);
+        avm->GetAS3Obj()->SetLoaderInfo(*loader);
         avm->CallCtor(true);
     }
 }
@@ -7384,8 +7393,6 @@ struct Sfr34_ImageSubstitutor : public Scaleform::NewOverrideBase<Scaleform::Sta
 {
     Scaleform::ArrayLH<Sfr34_ImageSubstElement> Elements;
 };
-void FUN_14260dcc0(Sfr34_ImageSubstitutor* self, const Sfr34_ImageSubstElement& elem);   // ImageSubstitutor::AddImageDesc
-void FUN_1425b65e0(void* ptf, const char* id, Sfr34_TextImageDesc* pdesc);               // TextField::AddIdImageDescAssoc
 
 // The value of the public property name of pobj in v; false when pobj has none.
 static bool Sfr34_GetPublicProperty(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Object* pobj, const char* name,
@@ -7518,11 +7525,11 @@ void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, cons
     pdesc->ScreenWidth  = screenWidth;
     pdesc->ScreenHeight = screenHeight;
     if (pid)
-        FUN_1425b65e0(ptf, pid, pdesc);
+        ptf->AddIdImageDescAssoc(pid, reinterpret_cast<Render::Text::ImageDesc*>(pdesc));
     pdesc->Matrix.Tx() += -pdesc->BaseLineX;
     pdesc->Matrix.Ty() += -pdesc->BaseLineY;
     pdesc->Matrix.AppendScaling(pdesc->ScreenWidth / origWidth, pdesc->ScreenHeight / origHeight);
-    FUN_14260dcc0(psubst, elem);
+    reinterpret_cast<Render::Text::DocView::ImageSubstitutor*>(psubst)->AddImageDesc(reinterpret_cast<const Render::Text::DocView::ImageSubstitutor::Element&>(elem));
     pdoc[0x14b] |= 2;   // DocView: reformat
     ptf->SetDirtyFlag();
 }
