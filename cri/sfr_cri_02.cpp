@@ -1154,47 +1154,28 @@ void* FUN_14002ddd0(void* object, VideoReaderConfig* config)
     return object;
 }
 
-// MS2-FUNCTIONAL: lazily start the threaded reader service and allocate a reader on its configured heap.
+// Lazily start the threaded reader service and allocate a reader on the configured heap. As in the exe, the new thread
+// is started without a null check.
+// MS2-FUNCTIONAL: the Thread::Start call loads its arguments in the other order, as in StartDecoding
 // @0x14002e050
 VideoReader* VideoReaderConfigThrd::CreateReader()
 {
+    typedef void* (*AllocFunc)(void*, size_t, const void*);
+    typedef bool (*StartFunc)(void*, int);   // Thread::Start(Running)
+    typedef void (*SetNameFunc)(void*, const char*);
     void** config = (void**)this;
-    void* heap = config[2];
     if (!config[31])
     {
-        struct ThreadParams
-        {
-            void* (*Entry)(void*, void*);
-            void* UserData;
-            CriUint64 StackSize;
-            CriSint32 Processor;
-            CriSint32 Priority;
-            CriSint32 Flags;
-            CriSint32 Reserved;
-        } params = { FUN_14002db40, this, 0x10000, -1, 0, 1, 0 };
-        void* heapVtable = *(void**)heap;
-        void* (__fastcall *allocateThread)(void*, size_t, const void*) =
-            (void* (__fastcall *)(void*, size_t, const void*))(*(void**)((CriUint8*)heapVtable + 0x50));
-        void* memory = allocateThread(heap, 0x60, NULL);
+        VideoThreadCreateParams params = { (int (*)(Thread*, void*))FUN_14002db40, this, 0x10000, -1, 0, 1 };
+        void* memory = (*(AllocFunc*)(*(CriUint8**)config[2] + 0x50))(config[2], 0x60, NULL);
         void* thread = memory ? FUN_14258a490(memory, &params) : NULL;
         if (config[31])
             FUN_14257dcb0(config[31]);
         config[31] = thread;
-        if (thread)
-        {
-            void** vtable = *(void***)thread;
-            bool (__fastcall *start)(void*, int) = (bool (__fastcall *)(void*, int))vtable[5];
-            if (start(thread, 1))
-            {
-                void (__fastcall *setName)(void*, const char*) = (void (__fastcall *)(void*, const char*))vtable[7];
-                setName(thread, "Scaleform Video Reader");
-            }
-        }
+        if ((*(StartFunc**)config[31])[5](config[31], 1))
+            (*(SetNameFunc**)config[31])[7](config[31], "Scaleform Video Reader");
     }
-    void* heapVtable = *(void**)heap;
-    void* (__fastcall *allocateReader)(void*, size_t, const void*) =
-        (void* (__fastcall *)(void*, size_t, const void*))(*(void**)((CriUint8*)heapVtable + 0x50));
-    void* memory = allocateReader(heap, 0x50, NULL);
+    void* memory = (*(AllocFunc*)(*(CriUint8**)config[2] + 0x50))(config[2], 0x50, NULL);
     return memory ? (VideoReader*)FUN_14002ddd0(memory, this) : NULL;
 }
 
@@ -1410,14 +1391,14 @@ void FUN_14002e260(void* object, void* first, void* second)
     FUN_14002e140(state->Queue, 1, (CriUint8*)object - 0x10, NULL, first, second);
 }
 
-// MS2-FUNCTIONAL: remove all requests for a detached reader, return their nodes, then stop an idle worker.
+// VideoReaderConfigThrd::DetachReader: remove all requests for a detached reader, return their nodes, then stop an idle
+// worker.
 // @0x14002e370
 void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
 {
     FUN_14258aca0(manager->Lock);
-    CriMvRequestNode* sentinel = (CriMvRequestNode*)&manager->Head;
     CriMvRequestNode* node = manager->Tail;
-    while (node != sentinel)
+    while (node != (CriMvRequestNode*)&manager->Head)
     {
         CriMvRequestNode* previous = node->Previous;
         if (node->Request == reader)
@@ -1435,7 +1416,8 @@ void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
     {
         FUN_14002e140(manager, 3, NULL, NULL, NULL, NULL);
         FUN_1425845e0(manager->StopEvent, -1);
-        FUN_14257dcb0(manager->StopEvent);
+        if (manager->StopEvent)
+            FUN_14257dcb0(manager->StopEvent);
         manager->StopEvent = NULL;
     }
 }
