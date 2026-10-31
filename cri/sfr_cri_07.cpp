@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x1400b0a10-0x1400b21a0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+struct CriMvFrameInfo;
 #include "../include/cri/cri_vendor_shim.h"
 // The exe reads some data_cri tables with a plain lea; only clang needs the launder, so it cannot bound the access by
 // the scalar declaration.
@@ -443,27 +444,27 @@ extern "C" void* _DAT_143d74970;
 extern "C" void* _DAT_143d749b0;
 void FUN_14006aa60(short *src, short *dst);
 
-void FUN_140035090(cri_any = cri_any());
-void FUN_1400351c0(cri_any = cri_any());
-void FUN_140035260(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u8 FUN_140035560(cri_any = cri_any());
-void FUN_1400356a0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_140037910(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_140037950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void FUN_140038ce4(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u4 FUN_140043f70(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u8 FUN_140043fe0(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140044050(cri_any = cri_any(), cri_any = cri_any());
-cri_u4 FUN_140044950(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-cri_u8 FUN_1400449c0(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140044a30(cri_any = cri_any(), cri_any = cri_any());
-void FUN_140050210(cri_any = cri_any(), cri_any = cri_any());
-cri_u8 FUN_140050820(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void FUN_140035090(void *);  // C3: the definition's signature
+void crimvply_clearAlphaFrameInfoMembers(void *);  // C3: sfr_cri_02c's definition (0x1400351c0)
+void FUN_140035260(void *, void *, void const *, unsigned __int64, unsigned long);  // C3: the definition's signature
+long crimvply_isUnderGetFrameCondition(void *);  // C3: sfr_cri_02c's definition (0x140035560)
+void FUN_1400356a0(void *, void *, void *, CriMvFrameInfo const *, void const *);  // C3: the definition's signature
+void FUN_140037910(void *, char const *, long);  // C3: the definition's signature
+void FUN_140037950(void *, char const *, long);  // C3: the definition's signature
+void FUN_140038ce4(long, char const *, long, long, void *);  // C3: the definition's signature
+long criAlphaDec_CopyAlphaFrameBuffer(void *, void *, void *);  // C3: the definition (0x140043f70)
+void * FUN_140043fe0(void *, void *);  // C3: the definition's signature
+void FUN_140044050(unsigned __int64 *, void *);  // C3: the definition's signature
+long criVdec_CopyFrameYuvBuffers(void *, void *, void *);  // C3: the definition (0x140044950)
+void * FUN_1400449c0(void *, void *);  // C3: the definition's signature
+void FUN_140044a30(void *, void *);  // C3: the definition's signature
+void FUN_140050210(__int64, unsigned int);  // C3: the definition's signature
+unsigned __int64 FUN_140050820(__int64, unsigned __int64, unsigned __int64, unsigned __int64 *);  // C3: the definition's signature
 cri_u4 FUN_140051ec0(longlong *, uint *);
 void FUN_140054320(cri_any = cri_any());
 void FUN_14005dc70(cri_any = cri_any(), cri_any = cri_any());
 void FUN_1400627f0(cri_any = cri_any());
-cri_u8 FUN_140062830();
+int FUN_140062830(void);  // C3: the definition's signature
 int FUN_140062860();
 void FUN_140064dd0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_140065800();
@@ -2760,36 +2761,36 @@ cri_u8 FUN_140069270(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
   cri_u4 &loc_c0 = *(cri_u4 *)(frame_ + 312);
   cri_u1 *loc_b8 = frame_ + 320;
   
-  FUN_140035090(arg3);
-  i_v1 = FUN_140035560(arg1);
+  FUN_140035090((void *)arg3);
+  i_v1 = crimvply_isUnderGetFrameCondition((void *)arg1);
   if (i_v1 == 0) {
     u_v2 = 0;
   }
   else {
     memset(loc_1f8,0,0x50);
-    FUN_1400351c0(loc_1a8);
-    FUN_1400449c0(*(cri_u8 *)((char *)arg1 + 0xe08),loc_168);
+    crimvply_clearAlphaFrameInfoMembers(loc_1a8);
+    FUN_1400449c0((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
     if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-      FUN_140043fe0(*(cri_u8 *)((char *)arg1 + 0xe40),loc_1f8);
+      FUN_140043fe0((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
     }
     pu_v3 = loc_1f8;
-    FUN_1400356a0(arg1,loc_b8,loc_1a8,loc_168,pu_v3);
+    FUN_1400356a0((void *)arg1,loc_b8,loc_1a8,(const CriMvFrameInfo *)loc_168,pu_v3);
     u_v4 = (cri_u4)((ulonglong)pu_v3 >> 0x20);
     i_v1 = FUN_140069480(arg1,arg2,(cri_u8 *)loc_b8,(cri_u8 *)loc_1a8);
     if (i_v1 == 0) {
-      FUN_140044a30(*(cri_u8 *)((char *)arg1 + 0xe08),loc_168);
+      FUN_140044a30((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-        FUN_140044050(*(cri_u8 *)((char *)arg1 + 0xe40),loc_1f8);
+        FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
-      FUN_140037950(arg1,"E10053101M : Cannot copy the video frame buffer to user\x27""s buffer.",0);
+      FUN_140037950((void *)arg1,"E10053101M : Cannot copy the video frame buffer to user\x27""s buffer.",0);
       u_v2 = 0;
     }
     else {
-      FUN_140044a30(*(cri_u8 *)((char *)arg1 + 0xe08),loc_168);
+      FUN_140044a30((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),loc_168);
       if (*(longlong *)((char *)arg1 + 0xe40) != 0) {
-        FUN_140044050(*(cri_u8 *)((char *)arg1 + 0xe40),loc_1f8);
+        FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_1f8);
       }
-      FUN_140035260(arg1,arg3,loc_168,*arg2,
+      FUN_140035260((void *)arg1,(void *)arg3,loc_168,*arg2,
                     CONCAT44(u_v4,*(cri_u4 *)((longlong)arg2 + 0xc)));
       *(cri_u4 *)((char *)arg1 + 0x5f0) = loc_c0;
       u_v2 = 1;
@@ -2849,19 +2850,19 @@ cri_u8 FUN_140069480(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
     loc_1c = *(int *)((char *)arg1 + 0x878);
     loc_18 = *(cri_u4 *)((longlong)arg2 + 0x3c);
     if (*(uint *)(arg2 + 7) < (uint)(loc_20 * loc_1c)) {
-      FUN_140037950(arg1,"E09012804M : Yuv buffers is too small.",0);
+      FUN_140037950((void *)arg1,"E09012804M : Yuv buffers is too small.",0);
       return 0;
     }
   }
   if (((*(uint *)(arg2 + 1) < (uint)(loc_170 * loc_16c)) ||
       (*(uint *)(arg2 + 3) < loc_158 * loc_154)) ||
      (*(uint *)(arg2 + 5) < loc_140 * loc_13c)) {
-    FUN_140037950(arg1,"E09012801M : Yuv buffers is too small.",0);
+    FUN_140037950((void *)arg1,"E09012801M : Yuv buffers is too small.",0);
     u_v4 = 0;
   }
   else {
     loc_d8[0] = *arg3;
-    i_v2 = FUN_140044950(*(cri_u8 *)((char *)arg1 + 0xe08),&loc_178,loc_d8);
+    i_v2 = criVdec_CopyFrameYuvBuffers((void *)(*(cri_u8 *)((char *)arg1 + 0xe08)),&loc_178,loc_d8);
     if (i_v2 == 0) {
       FUN_140037910(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
       u_v4 = 0;
@@ -2869,16 +2870,16 @@ cri_u8 FUN_140069480(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, cri_u8 *arg4)
     else {
       if (u_v1 == 1) {
         if (arg2[6] == 0) {
-          l_v3 = FUN_140043fe0(*(cri_u8 *)((char *)arg1 + 0xe40),loc_128);
+          l_v3 = (longlong)FUN_140043fe0((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           if (l_v3 != 0) {
-            FUN_140044050(*(cri_u8 *)((char *)arg1 + 0xe40),loc_128);
+            FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
           }
         }
         else {
           loc_128[0] = *arg4;
-          i_v2 = FUN_140043f70(*(cri_u8 *)((char *)arg1 + 0xe40),&loc_28,loc_128);
+          i_v2 = criAlphaDec_CopyAlphaFrameBuffer((void *)(*(cri_u8 *)((char *)arg1 + 0xe40)),&loc_28,loc_128);
           if (i_v2 == 0) {
-            FUN_140044050(*(cri_u8 *)((char *)arg1 + 0xe40),loc_128);
+            FUN_140044050((unsigned __int64 *)(*(cri_u8 *)((char *)arg1 + 0xe40)),loc_128);
             FUN_140037910(0,"E08082101M : Cannot copy the alpha frame buffer to user\x27""s buffer.",0);
             return 0;
           }
@@ -25901,7 +25902,7 @@ void FUN_140089fe0(longlong arg1, cri_u8 arg2)
     loc_28 = 2;
     loc_20 = *(cri_u4 *)((char *)arg1 + 0x6c8);
     loc_38 = arg1;
-    FUN_140050820(*(cri_u8 *)((char *)arg1 + 0x1c58),arg2,arg1 + 0x1b28,&loc_38);
+    FUN_140050820(*(cri_u8 *)((char *)arg1 + 0x1c58),arg2,arg1 + 0x1b28,(unsigned __int64 *)&loc_38);
     if (loc_1c != 0) {
       *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + loc_18;
       *(int *)((char *)arg1 + 0x1a48) = *(int *)((char *)arg1 + 0x1a48) + loc_14;
