@@ -53,6 +53,16 @@ extern template Scaleform::String Scaleform::AsString<long>(const long&);
 extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
 #undef GetObject
 
+// The definitions (here and in sfr_as3_19) of exe functions called through FUN_ forwarders, by their real names.
+namespace Scaleform { namespace GFx { namespace AS3 {
+UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                                    // 0x142524f60
+UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn);                                               // 0x142525270
+SInt64 Sfr31NumberToChars(char* buffer, int bufflen, double val);                                 // 0x142525f20
+void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);                    // 0x14252ecb0
+void Sfr31TraceBlock(UPInt tracer, UPInt pos, UPInt block);                                       // 0x142530220
+void Sfr31ClassTraitsCleanup(UPInt entry);                                                        // 0x1425303b0
+}}} // namespace Scaleform::GFx::AS3
+
 // The AS3 object's +0x50 counted reference set to p (unrecovered).
 void FUN_142446e70(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* obj, void* p);
 void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id);   // AvmDisplayObj: fire the event
@@ -1248,7 +1258,8 @@ Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TC
 void** FUN_142508330(void* self);
 Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
                                                      const Scaleform::GFx::AS3::Instances::Namespace& ns);   // GlobalObjectCPP: builtin class traits by name
-const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);  // VM::Resolve2ClassTraits
+static inline const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn)
+{ return reinterpret_cast<const Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31FindClassTraitsByMn(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // VM::Resolve2ClassTraits
 extern "C" Scaleform::StringDataPtr DAT_143a2dd50;   // "Vector.<", the generic Vector prefix
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1604,12 +1615,12 @@ void Sfr33CollectorQueueAndReset(UByte* self, RefCountImpl* p)
 }
 }}}
 
-void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
+static inline void FUN_14252ecb0(void* vm, const void* error, const void* classInfo) { ::Scaleform::GFx::AS3::Sfr31VMRaiseError(reinterpret_cast<Scaleform::UPInt>(vm), static_cast<const unsigned long*>(error), reinterpret_cast<Scaleform::UPInt>(classInfo)); }   // VM: raise the error as an instance of the class
 void FUN_14241de40(void* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 namespace Scaleform { namespace GFx { namespace AS3 { namespace fl_errors { extern const ClassInfo MemoryErrorCI; } } } }
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
-Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val);
+static inline Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val) { return static_cast<Scaleform::UPInt>(::Scaleform::GFx::AS3::Sfr31NumberToChars(buffer, bufflen, val)); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1950,10 +1961,10 @@ bool FUN_142468740(void* target, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::
 void FUN_142541a60(void* self, void* pheapAddr, Scaleform::UPInt newSize);   // HashSetBase::setRawCapacity copy
 void FUN_142524870(void* arr, Scaleform::UPInt n);   // Resize of a POD array with its heap at +0x18
 void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // Resize of a POD array
-void FUN_14251f930(void* tr, int op);                // Tracer: emit opcode op
-void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg);   // Tracer: emit opcode op with one argument
+static inline void FUN_14251f930(void* tr, int op) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op)); }                // Tracer: emit opcode op
+static inline void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg); }   // Tracer: emit opcode op with one argument
 bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop);   // Tracer: push the object constant v
-void* FUN_142524f60(void* vm, const void* file, const void* mn);   // VM: the class traits the ABC multiname mn of file names (NULL if unresolved)
+static inline void* FUN_142524f60(void* vm, const void* file, const void* mn) { return reinterpret_cast<void*>(::Scaleform::GFx::AS3::Sfr31ResolveClassTraits(reinterpret_cast<Scaleform::UPInt>(vm), reinterpret_cast<Scaleform::UPInt>(file), reinterpret_cast<Scaleform::UPInt>(mn))); }   // VM: the class traits the ABC multiname mn of file names (NULL if unresolved)
 const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const void* abc);   // the type name of a multiname
 extern "C" const int DAT_143a2d640[];           // the AS3 error ids, sorted
 extern "C" const char* const DAT_143a2d890[];   // the AS3 error messages, by id position
@@ -2117,7 +2128,7 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
     return true;
 }
 
-void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2);   // Tracer: emit opcode op with two arguments
+static inline void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg1, arg2); }   // Tracer: emit opcode op with two arguments
 
 // Tracer: emits the property op (op: 0x66 get / 0x68 init / 0x61 set / 5 ...) on a name that resolves to a fixed
 // slot of the traits t as a slot access: a plain data slot by index (0xb7/0xb8), a method or getter slot (bind types
@@ -3033,7 +3044,7 @@ struct Sfr33TracerStorage
 
 UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer
 UByte* FUN_1424e6aa0(void* tracer, void* blocks, UPInt pos, int a, bool b);   // Tracer: the block starting at pos
-void FUN_142530220(void* tracer, UPInt pos, void* block);   // Tracer::TraceBlock
+static inline void FUN_142530220(void* tracer, UPInt pos, void* block) { ::Scaleform::GFx::AS3::Sfr31TraceBlock(reinterpret_cast<Scaleform::UPInt>(tracer), pos, reinterpret_cast<Scaleform::UPInt>(block)); }   // Tracer::TraceBlock
 
 // The head of a TR::Block (unrecovered): its flags and its entry state.
 struct Sfr33TrBlockView
@@ -6081,7 +6092,7 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
 }
 
 // ---- (sfr24) bodies of virtuals the full exe links by name (work/sfr35/outside-units.tsv) ----
-void FUN_1425303b0(Scaleform::UPInt entry);   // shutdown of a registered entry (sfr_as3_19)
+static inline void FUN_1425303b0(Scaleform::UPInt entry) { ::Scaleform::GFx::AS3::Sfr31ClassTraitsCleanup(entry); }   // shutdown of a registered entry (sfr_as3_19)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
