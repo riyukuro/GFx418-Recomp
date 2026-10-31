@@ -111,7 +111,7 @@ public:
             FontHandle* pnode     = other.pNode;
             const char* pfontName = pnode->GetFontName();
             return FontKey::CalcHashCode(pfontName, SFstrlen(pfontName),
-                                         pnode->GetFont()->GetFontFlags() | pnode->GetFontStyle());
+                                         pnode->GetFontStyle() | pnode->GetFont()->GetFontFlags());
         }
         UPInt operator()(const FontHandle* pnode) const
         {
