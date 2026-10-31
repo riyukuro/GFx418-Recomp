@@ -3047,23 +3047,17 @@ MovieDefImpl* MovieImpl::CreateImageMovieDef(ImageResource* pimageRes, bool bili
         MemoryHeap*  pheap   = pHeap;
         Ptr<MovieDataDef> pdataDef =
             *new (pheap ? pheap : Memory::GetGlobalHeap()) MovieDataDef(fileKey, MovieDataDef::MT_Image, purl, pheap);
-        if (pdataDef)
-        {
-            Log* plog = pls->GetLog();
-            bool ok;
-            {
-                // ImageCreator is a State at offset 0 (incomplete here).
-                Ptr<State> pimageCreator = *GetStateAddRef(State::State_ImageCreator);
-                ok = pdataDef->InitImageFileMovieDef(0, pimageRes, reinterpret_cast<ImageCreator*>(pimageCreator.GetPtr()),
-                                                     plog, bilinear);
-            }
-            if (ok)
-            {
-                pls->SetRelativePathForDataDef(pdataDef);
-                pdefImpl = new (pheap) MovieDefImpl(pdataDef, pls->pBindStates, pls->pLoaderImpl, 0,
-                                                    pStateBag->GetDelegate(), pheap, true);
-            }
-        }
+        if (!pdataDef)
+            return NULL;
+        Log* plog = pls->GetLog();
+        // ImageCreator is a State at offset 0 (incomplete here).
+        if (!pdataDef->InitImageFileMovieDef(0, pimageRes,
+                                             reinterpret_cast<ImageCreator*>(Ptr<State>(*GetStateAddRef(State::State_ImageCreator)).GetPtr()),
+                                             plog, bilinear))
+            return NULL;
+        pls->SetRelativePathForDataDef(pdataDef);
+        pdefImpl = new (pheap) MovieDefImpl(pdataDef, pls->pBindStates, pls->pLoaderImpl, 0,
+                                            pStateBag->GetDelegate(), pheap, true);
     }
     return pdefImpl;
 }
@@ -3106,8 +3100,8 @@ void MovieImpl::ProcessInput()
         return;
     bool     avm2 = pASMovieRoot->AVMVersion == 2;
     ProcessFocusKeyInfo focusKeyInfo;
-    unsigned miceSupportedMask = (1u << MouseCursorCount) - 1;
     UInt32   miceProceededMask = 0;
+    UInt32   miceSupportedMask = ((1U << MouseCursorCount) - 1);
     while (!InputEventsQueue.IsQueueEmpty())
     {
         const InputEventsQueueEntry* qe = InputEventsQueue.GetEntry();
@@ -3117,23 +3111,19 @@ void MovieImpl::ProcessInput()
             ProcessMouse(qe, &miceProceededMask, avm2);
     }
     // The mice without an event still see what moved under them.
-    if (IsFlagSet<Flag_NeedMouseUpdate>(Flags))
+    if (IsFlagSet<Flag_NeedMouseUpdate>(Flags) && (miceProceededMask & miceSupportedMask) != miceSupportedMask)
     {
-        UInt32 proceeded = miceProceededMask;
-        if ((proceeded & miceSupportedMask) != miceSupportedMask)
+        unsigned mask = 1;
+        for (unsigned mi = 0; mi < MouseCursorCount; ++mi, mask <<= 1)
         {
-            unsigned mask = 1;
-            for (unsigned mi = 0; mi < MouseCursorCount; ++mi, mask <<= 1)
+            if (!(miceProceededMask & mask) && mMouseState[mi].IsActivated())
             {
-                if (!(proceeded & mask) && mMouseState[mi].IsActivated())
-                {
-                    mMouseState[mi].ResetPrevButtonsState();
-                    Render::PointF mousePos = mMouseState[mi].GetLastPosition();
-                    Ptr<InteractiveObject> ptop = GetTopMostEntity(mousePos, mi, avm2, 0);
-                    mMouseState[mi].SetTopmostEntity(ptop);
-                    CheckMouseCursorType(mi, ptop);
-                    AsRootSlots(pASMovieRoot)->GenerateMouseEvents(mi);
-                }
+                mMouseState[mi].ResetPrevButtonsState();
+                Render::PointF mousePos = mMouseState[mi].GetLastPosition();
+                Ptr<InteractiveObject> ptop = GetTopMostEntity(mousePos, mi, avm2, 0);
+                mMouseState[mi].SetTopmostEntity(ptop);
+                CheckMouseCursorType(mi, ptop);
+                AsRootSlots(pASMovieRoot)->GenerateMouseEvents(mi);
             }
         }
     }
@@ -4299,38 +4289,40 @@ void MovieImpl::AddTopmostLevelCharacter(InteractiveObject* pch)
 // The image a linkage id names: a protocol url ("img://...") goes to the image creator state, anything else is
 // looked up among the exports of md and of the movies that import from it.
 // @0x14256f370
-// MS2-FUNCTIONAL: rsi/r14 swapped, the url String temp and its vtable load scheduled differently, one tail not merged
+// MS2-FUNCTIONAL: rsi/r14 swapped and the url String temp in another stack slot
 Ptr<ImageResource> MovieImpl::GetImageResourceByLinkageId(MovieDefImpl* md, const char* linkageId)
 {
     Ptr<ImageResource> pimageRes;
-    if (!md)
-        return pimageRes;
-    if (LoaderImpl::IsProtocolImage(String(linkageId)))
+    if (md)
     {
-        StateBag* pstates = pStateBag;
-        MemoryHeap* pheap = pHeap;
-        ImageCreator* pcreator =
-            (ImageCreator*)Ptr<State>(*pstates->GetStateAddRef(State::State_ImageCreator)).GetPtr();
-        if (!pcreator)
-            return NULL;
-        ImageCreateInfo cinfo(ImageCreateInfo::Create_ProtocolImage, pheap, Render::ImageUse_Wrap,
-                              Resource::Use_Bitmap);
-        cinfo.SetStates(pstates->GetLog(), Ptr<State>(*pstates->GetStateAddRef(State::State_FileOpener)),
-                        (ImageFileHandlerRegistry*)Ptr<State>(
-                            *pstates->GetStateAddRef(State::State_ImageFileHandlerRegistry)).GetPtr());
-        cinfo.pMovie = this;
-        Ptr<Render::Image> pimage = *pcreator->LoadProtocolImage(cinfo, String(linkageId));
-        if (!pimage)
-            return NULL;
-        pimageRes = *SF_HEAP_NEW(pheap) ImageResource(pimage, Resource::Use_Bitmap);
-    }
-    else
-    {
-        ResourceBindData resBindData;
-        if (!FindExportedResource(md, &resBindData, linkageId))
-            return NULL;
-        if (resBindData.pResource->GetResourceType() == Resource::RT_Image)
-            pimageRes = static_cast<ImageResource*>(resBindData.pResource.GetPtr());
+        bool userImageProtocol = LoaderImpl::IsProtocolImage(String(linkageId));
+        if (userImageProtocol)
+        {
+            StateBag* pss = pStateBag;
+            MemoryHeap* pheap = pHeap;
+            ImageCreator* pimageCreator =
+                (ImageCreator*)Ptr<State>(*pss->GetStateAddRef(State::State_ImageCreator)).GetPtr();
+            if (pimageCreator)
+            {
+                ImageCreateInfo icinfo(ImageCreateInfo::Create_ProtocolImage, pheap, Render::ImageUse_Wrap,
+                                       Resource::Use_Bitmap);
+                icinfo.SetStates(pss->GetLog(), Ptr<State>(*pss->GetStateAddRef(State::State_FileOpener)),
+                                 (ImageFileHandlerRegistry*)Ptr<State>(
+                                     *pss->GetStateAddRef(State::State_ImageFileHandlerRegistry)).GetPtr());
+                icinfo.pMovie = this;
+                Ptr<Render::Image> pimg = *pimageCreator->LoadProtocolImage(icinfo, String(linkageId));
+                if (pimg)
+                    pimageRes = *SF_HEAP_NEW(pheap) ImageResource(pimg, Resource::Use_Bitmap);
+            }
+        }
+        else
+        {
+            ResourceBindData resBindData;
+            if (!FindExportedResource(md, &resBindData, linkageId))
+                return NULL;
+            if (resBindData.pResource->GetResourceType() == Resource::RT_Image)
+                pimageRes = (ImageResource*)resBindData.pResource.GetPtr();
+        }
     }
     return pimageRes;
 }
@@ -4593,8 +4585,6 @@ template class Scaleform::RefCountBaseStatImpl<Scaleform::RefCountNTSImpl, 0x143
 // MS2-FUNCTIONAL ?InitCenterDelta@DragState@MovieImpl@GFx@Scaleform@@QEAAX_N@Z: the two matrices' stack slots are swapped and the mouse point's halves load in the other order; same operations
 // MS2-FUNCTIONAL ?SetKeyboardFocusTo@MovieImpl@GFx@Scaleform@@QEAAXPEAVInteractiveObject@23@IW4FocusMovedType@23@@Z: the exe keeps 0 in a callee-saved register (one more saved register, 0x50 frame); same operations
 // MS2-FUNCTIONAL ?ReadTextData@MovieImpl@GFx@Scaleform@@SA_NPEAVString@3@PEAVFile@3@PEAH_N@Z: the exe tests the BOM high byte in the other register and keeps rbp in a different home slot; same operations
-// MS2-FUNCTIONAL ?CreateImageMovieDef@MovieImpl@GFx@Scaleform@@QEAAPEAVMovieDefImpl@23@PEAVImageResource@23@_NPEBDPEAVLoadStates@23@@Z: the image resource and the load states sit in swapped callee-saved registers; same operations
-// MS2-FUNCTIONAL ?ProcessInput@MovieImpl@GFx@Scaleform@@QEAAXXZ: the exe gives the mouse position the stack slot of the spent mice mask; same operations
 // MS2-FUNCTIONAL ?HandleEvent@MovieImpl@GFx@Scaleform@@UEAAIAEBVEvent@23@@Z: the SetFocus loop walks the keyboard states with a stepped pointer and picks NULL past 4 with a cmov (0 kept in r15: one more saved register, 0x48 frame); this build indexes and branches; same calls
 // MS2-PIN: ??1?$HashSetBase@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@V32@U?$AllocatorGH@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@$01@2@V?$HashsetCachedEntry@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@V?$FixedSizeHash@V?$Ptr@VVideoProvider@Video@GFx@Scaleform@@@Scaleform@@@2@@2@@Scaleform@@QEAA@XZ 0x14256aa60
 // MS2-PIN: ?Reserve@?$ArrayDataBase@UMDKillListEntry@MovieImpl@GFx@Scaleform@@U?$AllocatorGH@UMDKillListEntry@MovieImpl@GFx@Scaleform@@$0BEH@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142574640
