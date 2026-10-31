@@ -118,18 +118,17 @@ UInt32 SkipWhiteSpace(const String& str)
 }
 
 // @0x1425e40f0
-// MS2-FUNCTIONAL: decode pointer kept in a different register
 const char* SkipWhiteSpace(const char* str, UPInt len)
 {
     const char* end = str + len;
-    while (str < end)
+    const char* cur = str;
+    while (cur < end)
     {
-        const char* next = str;
-        if (!IsWhiteSpace(UTF8Util::DecodeNextChar_Advance0(&next)))
+        if (!IsWhiteSpace(UTF8Util::DecodeNextChar_Advance0(&str)))
             break;
-        str = next;
+        cur = str;
     }
-    return str;
+    return cur;
 }
 
 namespace AS3 {
