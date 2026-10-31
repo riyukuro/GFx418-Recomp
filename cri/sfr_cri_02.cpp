@@ -90,7 +90,6 @@ void*    FUN_140041c00(void* mem);                                      // Syste
 void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
-void*    FUN_14002abd0(void* mem, CriUint32 format, const CriUint32* psize, const void* ptexman, void* pplayer); // VideoImage ctor
 void     FUN_140037950(void* player, const char* message, CriSint32 severity);
 void     FUN_140044fdc(void* inputBuffer);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
@@ -523,19 +522,61 @@ bool VideoDecoderThrd::IsDecodingStopped(VideoPlayer* pp)
 
 // ==== VideoPlayerImpl: texture ======================================================================================
 
-// MS2-FUNCTIONAL: the VideoImage constructor is inlined there
+// VideoImage (0x48 bytes) is a Render::TextureImage with the player back-pointer at +0x40. The exe inlines the
+// TextureImage constructor here, so these views derive from Render::Image and store the two vftables themselves:
+// TextureImageHead ends with TextureImage's vftable store, before the rest of TextureImage's members are set.
+class __declspec(novtable) TextureImageHead : public Render::Image
+{
+public:
+    Render::ImageFormat Format;        // +0x28
+    UInt32              Size[2];       // +0x2c  a Render::ImageSize, set by the derived constructor
+    unsigned            Use;           // +0x34
+    UInt32              ImageId;       // +0x38
+
+    TextureImageHead(Render::ImageFormat format, Render::ImageUpdateSync* sync) : Render::Image(0, sync), Format(format)
+    {
+        *(void* volatile*)this = (void*)DAT_143183b28;   // TextureImage
+    }
+};
+
+class __declspec(novtable) VideoImageView : public TextureImageHead
+{
+public:
+    VideoPlayerImpl*    pVideoPlayer;  // +0x40
+
+    VideoImageView(Render::ImageFormat format, const Render::ImageSize& size, Render::TextureManager* ptexman,
+                   VideoPlayerImpl* pplayer);
+
+    virtual Render::ImageFormat GetFormat() const;
+    virtual unsigned            GetUse() const;
+    virtual Render::ImageSize   GetSize() const;
+    virtual unsigned            GetMipmapCount() const;
+    virtual Render::Image*      GetAsImage();
+};
+
+// @0x14002abd0
+VideoImageView::VideoImageView(Render::ImageFormat format, const Render::ImageSize& size,
+                               Render::TextureManager* ptexman, VideoPlayerImpl* pplayer)
+    : TextureImageHead(format, ptexman)
+{
+    *(Render::ImageSize*)Size = size;
+    Use     = Render::ImageUse_Update;
+    ImageId = Render::ImageBase::GetNextImageId();
+    *(void**)this = (void*)DAT_1431b9080;            // VideoImage
+    pVideoPlayer = pplayer;
+}
+
 // @0x14002ad80
 VideoImage* VideoPlayerImpl::CreateTexture(Render::TextureManager* ptexman)
 {
-    if ((Stat == Ready || Stat == Starting || Stat == Playing || Stat == Seeking) && ptexman)
-    {
-        unsigned size[2] = { Width, Height };
-        PauseLocked = true;
-        void* mem = pHeap->Alloc(0x48);
-        if (mem)
-            return (VideoImage*)FUN_14002abd0(mem, 0xc9 /* Image_Y8_U2_V2 */, (const CriUint32*)size, ptexman, this);
-    }
-    return NULL;
+    if (Stat != Ready && Stat != Starting && Stat != Playing && Stat != Seeking)
+        return NULL;
+    if (!ptexman)
+        return NULL;
+    PauseLocked = true;
+    Render::ImageSize size(Width, Height);
+    VideoImage* pimage = (VideoImage*)::new (pHeap->Alloc(0x48)) VideoImageView(Render::Image_Y8_U2_V2_A8, size, ptexman, this);
+    return pimage;
 }
 
 // ==== VideoDecoderSmp ================================================================================================
@@ -1015,14 +1056,12 @@ void VideoPlayerImpl::GetCurrentCuePoints(Array<CuePoint>* cuePoints)
     }
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d020
 bool VideoPlayer::LoadVideoInfo(const char* url, VideoInfo* pinfo, FileOpenerBase* pfileOpener)
 {
     bool ok = false;
-    struct { unsigned Flags; UPInt MinAlign, Granularity, Reserve, Threshold, Limit, HeapId, Arena; } desc =
-        { 0, 16, 16 * 1024, 16 * 1024, ~UPInt(0), 0, 8 /* HeapId_Video */, 0 };
-    MemoryHeap* pheap = Memory::GetGlobalHeap()->CreateHeap("_VideoInfo_Heap", *(const HeapDesc*)&desc);
+    MemoryHeap* pheap = Memory::GetGlobalHeap()->CreateHeap("_VideoInfo_Heap", 0, 16, 16 * 1024, 16 * 1024, ~UPInt(0), 0,
+                                                            8 /* HeapId_Video */);
     void* mem = pheap->Alloc(sizeof(VideoPlayerImpl));
     VideoPlayerImpl* pplayer = mem ? ::new(mem) VideoPlayerImpl(pheap) : NULL;
     pplayer->Init(NULL, NULL, pfileOpener, NULL);
@@ -1600,29 +1639,6 @@ void* FUN_14002a0e0(void* object, CriUint32 flags)
     FUN_14257db50(object);
     if (flags & 1)
         FUN_14002d3f0(object);
-    return object;
-}
-
-// MS2-FUNCTIONAL: initialize the extended reference core and its embedded allocator metadata.
-// @0x14002abd0
-void* FUN_14002abd0(void* object, CriUint32 tag, const CriUint32* sizePair,
-                    const void* source, void* owner)
-{
-    CriUint32* words = (CriUint32*)object;
-    void** fields = (void**)object;
-    fields[0] = (void*)DAT_143149940;
-    words[2] = 1;
-    fields[2] = NULL;
-    fields[3] = source ? (CriUint8*)source + 0x10 : NULL;
-    fields[4] = NULL;
-    words[10] = tag;
-    fields[0] = (void*)DAT_143183b28;
-    words[11] = sizePair[0];
-    words[12] = sizePair[1];
-    words[13] = 0x10;
-    words[14] = FUN_14257bdc0();
-    fields[0] = (void*)DAT_1431b9080;
-    fields[8] = owner;
     return object;
 }
 
@@ -2390,3 +2406,8 @@ void* FUN_14002de50(char* self, CriUint32 flags)
     return FUN_14002dec0(reinterpret_cast<VideoReader*>(self - 0x10), flags);
 }
 }}}
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
