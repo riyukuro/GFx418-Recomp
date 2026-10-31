@@ -742,10 +742,10 @@ bool TreeContainer::NodeData::CloneInit(TreeNode* node, Context* context) const
     UPInt          count     = Children.GetSize();
     for (UPInt i = 0; i < count; i++)
     {
-        TreeNode* child = Children.GetAt(i)->Clone(context);
-        container->Add(child);
-        if (child)
-            child->Release();
+        TreeNode*     child        = Children[i];
+        Ptr<TreeNode> newChildNode = *child->Clone(context);
+        // Add, with the out-of-line GetSize written inline
+        container->Insert(container->GetReadOnlyData()->Children.GetSize(), newChildNode);
     }
     return true;
 }
@@ -767,7 +767,6 @@ void TreeRoot::SetViewport(const Viewport& vp)
 // @0x14261b450 TreeContainer::NodeData(NonlocalCloneArg) comes from the header; @0x14261b730..0x14261b970 are the deleting destructors of the ref-counted state payloads
 // and of TreeCacheContainer.
 // MS2-FUNCTIONAL 0x14261b310: the exe inlines the TreeNode::NodeData copy (vptr stores, member copies, Ptr AddRef); ours calls it out of line (0x1424d9220)
-// MS2-FUNCTIONAL 0x14261bc40: same calls in the same order; the exe uses a 0x30 frame with shrink-wrapped saves, ours 0x20
 // MS2-PIN: ??0NodeData@TreeContainer@Render@Scaleform@@QEAA@AEBV0123@@Z 0x14261b310
 // MS2-PIN: ??_7NodeData@TreeContainer@Render@Scaleform@@6B@ 0x143183280
 // MS2-PIN: ??_7NodeData@TreeNode@Render@Scaleform@@6B@ 0x14317b700
