@@ -979,8 +979,6 @@ static inline char* Sfr21At(void* p, UPInt off) { return static_cast<char*>(p) +
 static inline void* Sfr21Mem(void* p, UPInt off) { return *reinterpret_cast<void**>(Sfr21At(p, off)); }
 // The base vftables the inlined base destructors store before the out-of-line base destructor runs.
 extern const void* DAT_14313f368[];     // RefCountBaseGC<323>
-extern const void* DAT_14317bf80[];     // AvmDisplayObjBase
-extern const void* DAT_14317ca60[];     // AvmInteractiveObj
 extern const void* DAT_14317c9f8[];     // RefCountBase<ASIntervalTimerIntf, 323>
 extern const void* DAT_14317b798[];     // FileLoader
 extern const void* DAT_14317c9e0[];     // GFx::MovieDefRootNode
@@ -1008,14 +1006,6 @@ extern const void* DAT_14317f9e0[];     // XMLSupportImpl
 static inline void Sfr21GVft(void* p, UPInt off, const void* const* vft)
 {
     *reinterpret_cast<const void* const**>(Sfr21At(p, off)) = vft;
-}
-// the AvmInteractiveObj part's inlined destructor in front of ~AvmDisplayObj
-static void Sfr21GAvmInteractive(void* p)
-{
-    Sfr21GVft(p, 0x40, DAT_14317bf80);
-    Sfr21GVft(p, 0x30, DAT_14317bf80);
-    Sfr21GVft(p, 0, DAT_14317ca60);
-    static_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(p)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj();
 }
 // flags & 4 is a ::delete through the deleting dtor: the global sized delete, not the class's heap Free
 static void Sfr21GFree(void* p, unsigned flags, UPInt size)
@@ -1123,28 +1113,24 @@ void* DeleteAs3_1424e2610(void* p, unsigned flags)
     return p;
 }
 
-// AvmInteractiveObj-family wrappers: never heap-freed (the sized-delete path only)
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
+// AvmInteractiveObj-family wrappers: never heap-freed (the sized-delete path only); the implicit destructors inline
 // @0x1424e26d0
-void* DeleteAs3_1424e26d0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
+void* DeleteAs3_1424e26d0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmButton*>(p)->Scaleform::GFx::AS3::AvmButton::~AvmButton(); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
 // @0x1424e2760
 void* DeleteAs3_1424e2760(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(p)->Scaleform::GFx::AS3::AvmDisplayObj::~AvmDisplayObj(); Sfr21GInPlaceFree(p, flags, 0x30); return p; }
 
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
 // @0x1424e27d0
-void* DeleteAs3_1424e27d0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
+void* DeleteAs3_1424e27d0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmDisplayObjContainer*>(p)->Scaleform::GFx::AS3::AvmDisplayObjContainer::~AvmDisplayObjContainer(); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
 // @0x1424e29a0
 void* DeleteAs3_1424e29a0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmSprite*>(p)->Scaleform::GFx::AS3::AvmSprite::~AvmSprite(); Sfr21GInPlaceFree(p, flags, 0x68); return p; }
 
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
 // @0x1424e2a10
-void* DeleteAs3_1424e2a10(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
+void* DeleteAs3_1424e2a10(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmDisplayObjContainer*>(p)->Scaleform::GFx::AS3::AvmDisplayObjContainer::~AvmDisplayObjContainer(); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
-// MS2-FUNCTIONAL: scalar deleting destructor calling the exe's out-of-line ~AvmDisplayObj through its address
 // @0x1424e2ac0
-void* DeleteAs3_1424e2ac0(void* p, unsigned flags) { Sfr21GAvmInteractive(p); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
+void* DeleteAs3_1424e2ac0(void* p, unsigned flags) { static_cast<Scaleform::GFx::AS3::AvmTextField*>(p)->Scaleform::GFx::AS3::AvmTextField::~AvmTextField(); Sfr21GInPlaceFree(p, flags, 0x48); return p; }
 
 // InstanceTraits::CTraits
 // @0x1424e2b50
