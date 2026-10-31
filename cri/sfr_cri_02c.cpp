@@ -1066,24 +1066,26 @@ CriBool FUN_1400355b0(void* player, void* output)
     return 1;
 }
 
-// MS2-FUNCTIONAL: return decoded video metadata and copy the frame's plane descriptors into YUV buffers.
+// return decoded video metadata and copy the frame's plane descriptors into YUV buffers.
 // @0x140035710
 CriBool FUN_140035710(void* player, void* yuvBuffers, void* output)
 {
+    CriBool result = 0;
     FUN_140035090(output);
     if (!crimvply_isUnderGetFrameCondition(player))
         return 0;
 
-    CriMvFrameInfo frame = {};
-    void* frameToken = FUN_1400449c0(((CriMvDecoderHandleFields*)player)->VideoDecoder, &frame);
-    if (!frameToken)
-        return 0;
-
-    FUN_140035260(player, output, &frame, (CriUint64)(uintptr_t)frameToken, frame.width);
-    // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
-    ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&frame + 0xa8);
-    FUN_1400358d0(yuvBuffers, &frame);
-    return 1;
+    CriMvFrameInfo frameInfo;
+    void* handle = FUN_1400449c0(((CriMvDecoderHandleFields*)player)->VideoDecoder, &frameInfo);
+    if (handle)
+    {
+        FUN_140035260(player, output, &frameInfo, (CriUint64)(uintptr_t)handle, frameInfo.width);
+        // the decoder frame's concatenated-movie index (+0xa8), not the frame id: it selects the stream slot
+        ((CriMvPlyObj*)player)->num_audio_out = *(CriUint32*)((CriUint8*)&frameInfo + 0xa8);
+        FUN_1400358d0(yuvBuffers, &frameInfo);
+        result = 1;
+    }
+    return result;
 }
 #pragma optimize("", on)
 
@@ -1253,38 +1255,41 @@ CriBool FUN_1400340f0(void* player, const CriMovieInputChunk* input)
     return 1;
 }
 
-// MS2-FUNCTIONAL: accept decoded subtitle-stream metadata and decrement its pending record count.
+// accept decoded subtitle-stream metadata and decrement its pending record count.
 // @0x1400341d0
 CriBool FUN_1400341d0(void* player, const CriMovieInputChunk* input)
 {
+    CriMovieParsedChunk parsed;
     CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
     CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
     if (!slot->Active)
         return 0;
-    if (input->Size > 0x1f)
+    else if (input->Size >= 0x20)
     {
-        CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
-        FUN_140032db0(player, slot, (CriUint32*)slot->SubtitleOutput, &parsed);
+        parsed.Data = criUsfCmn_GetContents(input->Data, input->Size, &parsed.Size);
+        CriUint32* output = (CriUint32*)slot->SubtitleOutput;
+        FUN_140032db0(state, slot, output, &parsed);
         --slot->PendingAlpha;
-        FUN_140033e60(player, slot);
+        FUN_140033e60(state, slot);
     }
     return 1;
 }
 
-// MS2-FUNCTIONAL: accept decoded alpha-stream metadata and decrement its pending record count.
+// accept decoded alpha-stream metadata and decrement its pending record count.
 // @0x140036d50
 CriBool FUN_140036d50(void* player, const CriMovieInputChunk* input)
 {
-    CriMovieStreamSlotsView* state = (CriMovieStreamSlotsView*)player;
-    CriMovieStreamSlotView* slot = &state->Ring.Slots[state->Selector.Current];
+    CriUint32* dst;
+    CriMovieParsedChunk meta;
+    CriMovieStreamSlotView* slot =
+        &((CriMovieStreamSlotsView*)player)->Ring.Slots[((CriMovieStreamSlotsView*)player)->Selector.Current];
     if (!slot->Active)
         return 0;
-    if (input->Size > 0x1f)
+    else if (input->Size >= 0x20)
     {
-        CriSint32 size = 0;
-        CriMovieParsedChunk parsed = { criUsfCmn_GetContents(input->Data, input->Size, &size), size, 0 };
-        FUN_140032b70(player, slot, (CriUint32*)slot->AlphaOutput, &parsed);
+        meta.Data = criUsfCmn_GetContents(input->Data, input->Size, &meta.Size);
+        dst = (CriUint32*)slot->AlphaOutput;
+        FUN_140032b70(player, slot, dst, &meta);
         --slot->PendingSubtitle;
         FUN_140033e60(player, slot);
     }
@@ -3784,7 +3789,7 @@ void FUN_140034d40(void* player, CriMovieInputChunk* output)
         *output = current->Record;
 }
 
-// MS2-FUNCTIONAL: refresh the player's pending byte counts from the selected input stream.
+// refresh the player's pending byte counts from the selected input stream.
 // @0x140034c20
 void FUN_140034c20(void* player)
 {
@@ -3800,22 +3805,27 @@ void FUN_140034c20(void* player)
     ((InputStatsView*)player)->Available = 0;
     ((InputStatsView*)player)->Remaining = 0;
     ((InputStatsView*)player)->Mode = 0;
-    CriSint32 status = getInternalStatus(player);
-    if (status >= 0 && status <= 1)
+    // FUN_140037050 always writes both counts
+    CriSint32 playStatus = getInternalStatus(player);
+    switch (playStatus)
+    {
+    case 0:
+    case 1:
         return;
-    CriUint32 available = 0;
-    CriUint32 mode = 0;
-    void* source = FUN_140037050(player, &available, &mode);
+    }
+    CriUint32 dataSize;
+    CriUint32 limit;
+    void* source = FUN_140037050(player, &dataSize, &limit);
     if (!source)
         return;
-    CriSint32 remaining;
+    CriSint32 leftBytes;
     if (((ReadModeView*)player)->Mode == 1)
-        remaining = ((ReadProgressView*)player)->StreamBytes - FUN_1400467b8(source, 0);
+        leftBytes = ((ReadProgressView*)player)->StreamBytes - FUN_1400467b8(source, 0);
     else
-        remaining = available - FUN_1400467b8(source, 0) - ((ReadProgressView*)player)->BufferedBytes;
-    ((InputStatsView*)player)->Available = available;
-    ((InputStatsView*)player)->Remaining = remaining;
-    ((InputStatsView*)player)->Mode = mode;
+        leftBytes = dataSize - FUN_1400467b8(source, 0) - ((ReadProgressView*)player)->BufferedBytes;
+    ((InputStatsView*)player)->Available = dataSize;
+    ((InputStatsView*)player)->Remaining = leftBytes;
+    ((InputStatsView*)player)->Mode = limit;
 }
 
 // MS2-FUNCTIONAL: initialize analyzed stream counts from the CRI Movie file header.
