@@ -1,12 +1,15 @@
 // Recovered CRI Movie decoder and timing helpers from MapleStory2.exe, written from the executable's behavior: the /Od
 // criMvPly, criVmpv, criVdecCmn, Amng/Adec, criAlphaDec and criVdec objs (with the small /O2 objs between them) and the
 // mpvumc code. The /Os criCs/criUtf objs below are sfr_cri_03a, the /Os criUsfDmx/criSj objs above are sfr_cri_03b.
+// 0x14003ed40 and 0x140042700 are in sfr_cri_03d: their exe objs were compiled as C (/TC).
 // The CRI Movie 3.07 library was built with VS2008 SP1, and so is this unit (MS2-TOOLSET: vc9, cmake/ms2-unit-profiles.cmake):
 // keep it C++03 (no auto, decltype, variadic templates, brace-init or nullptr). clang-cl compiles it as before.
 // MS2-UNIT: sfr_cri_03
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14003b6e0-0x140044e84 .text$mn
+// MS2-RANGE: 0x14003b6e0-0x14003ed40 .text$mn
+// MS2-RANGE: 0x14003eeb0-0x140042700 .text$mn
+// MS2-RANGE: 0x1400427b0-0x140044e84 .text$mn
 // MS2-RANGE: 0x142ccb000-0x142ccd143 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -3023,25 +3026,7 @@ void FUN_140043970(void* track, void* player)
     FUN_140053e60(((AudioTrack*)track)->Decoder, value2, value1, value3);
 }
 
-// MS2-FUNCTIONAL: reset every audio track in a player and apply updated decoder parameters when enabled.
-// @0x140042700
-void FUN_140042700(void* trackSet, void* player)
-{
-    struct AudioTrackSet { void* Tracks[2]; CriSint32 Count; void* Configuration; };
-    struct TrackControl { CriUint32 Reserved; CriUint32 Control; };
-    struct PlayerState { CriUint8 Reserved00[0xe58]; CriSint32 ParameterUpdateEnabled; };
-    if (((AudioTrackSet*)trackSet)->Tracks[0])
-    {
-        FUN_1400345e0(player, ((AudioTrackSet*)trackSet)->Configuration,
-                      ((TrackControl*)((AudioTrackSet*)trackSet)->Tracks[0])->Control, -1);
-    }
-    for (CriSint32 index = 0; index < ((AudioTrackSet*)trackSet)->Count; ++index)
-    {
-        FUN_140043550((CriSint32*)((AudioTrackSet*)trackSet)->Tracks[index], player);
-        if (((PlayerState*)player)->ParameterUpdateEnabled > 0)
-            FUN_140043970(((AudioTrackSet*)trackSet)->Tracks[index], player);
-    }
-}
+// 0x140042700 FUN_140042700 is in sfr_cri_03d: its exe obj was compiled as C (/TC).
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
@@ -3478,53 +3463,8 @@ static_assert(offsetof(CriVideoQueueFields, Queue) == 0x58 && offsetof(CriVideoQ
               offsetof(CriVideoQueueFields, Decoded) == 0x190 && offsetof(CriVideoQueueFields, UnitSize) == 0x50, "layout");
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: drain the demuxed chunk queue of a video player, counting the chunks it consumes.
-// @0x14003ed40
-CriSint32 FUN_14003ed40(void* player)
-{
-    struct Chunk { const CriUint8* Data; CriUint32 Size; CriSint32 Reserved; };
-    // C-style locals at function scope, named so vc9's name-hash slot order matches the exe's
-    CriSint32 count;
-    CriUsfHeaderFields uhdr;
-    void* stream;
-    Chunk cur;
-    Chunk second;
-    count = 0;
-    stream = ((CriVideoQueueFields*)player)->InputQueue;
-    while ((CriUint32)FUN_1400467b8(stream, 2) > 0)
-    {
-        second.Data = NULL;
-        FUN_1400467a0(stream, 2, 0xffffffff, &cur);
-        if (FUN_14003eeb0(&cur) == 0)
-        {
-            if (FUN_14003d6c0(&cur) != 0)
-            {
-                if ((CriUint32)FUN_1400467b8(stream, 2) > 0)
-                {
-                    FUN_1400467a0(stream, 2, 0xffffffff, &second);
-                    criUsfCmn_ParseUsfHeaderStd(cur.Data, cur.Size, (CriUsfStandardHeader*)&uhdr);
-                    if (cur.Size + second.Size < uhdr.Size + 8)
-                        FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
-                }
-                else
-                {
-                    FUN_1400467a8(stream, 2, &cur);
-                    break;
-                }
-            }
-            FUN_1400467b0(stream, 0, &cur);
-            if (second.Data != NULL)
-                FUN_1400467b0(stream, 0, &second);
-            count = count + 1;
-        }
-        else
-        {
-            FUN_1400467a8(stream, 2, &cur);
-            break;
-        }
-    }
-    return count;
-}
+// 0x14003ed40 FUN_14003ed40 is in sfr_cri_03d: its exe obj was compiled as C (/TC).
+CriSint32 FUN_14003ed40(void* player);
 
 // MS2-FUNCTIONAL: flush the pending reference-picture input of a VMPV player into its stream joint.
 // @0x140040a90
