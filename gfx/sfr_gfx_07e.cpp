@@ -73,64 +73,76 @@ PathAllocator::~PathAllocator()
 }
 
 // @0x142636200
-// MS2-FUNCTIONAL: register allocation of the page size (the exe compares in ecx, cmovbe)
 UByte* PathAllocator::AllocMemoryBlock(UInt32 sizeForCurrentPage, UInt32 sizeInNewPage)
 {
-    UInt32 freeBytes = FreeBytes;
-    UInt32 size      = sizeInNewPage;
-    if (pLastPage && freeBytes >= sizeForCurrentPage)
-        size = sizeForCurrentPage;
-    else
+    unsigned size      = sizeInNewPage;
+    unsigned freeBytes = FreeBytes;
+    if (pLastPage == NULL || FreeBytes < sizeForCurrentPage)
     {
-        UInt32 pageSize = (sizeInNewPage > DefaultPageSize) ? sizeInNewPage : DefaultPageSize;
-        Page* pnewPage = (Page*)SF_HEAP_AUTO_ALLOC(this, pageSize + sizeof(Page));
+        unsigned pageSize = DefaultPageSize;
+        Page*    pnewPage;
+        if (size > pageSize)
+        {
+            pageSize = size;
+        }
+        freeBytes = pageSize;
+        pnewPage  = (Page*)SF_HEAP_AUTO_ALLOC(this, sizeof(Page) + pageSize);
         if (!pnewPage)
-            return 0;
-        pnewPage->pNext    = 0;
+            return NULL;
+        pnewPage->pNext    = NULL;
         pnewPage->PageSize = pageSize;
         if (pLastPage)
         {
-            pLastPage->pNext = pnewPage;
-            pLastPage->PageSize -= FreeBytes;
+            pLastPage->pNext    = pnewPage;
+            pLastPage->PageSize = pLastPage->PageSize - FreeBytes;
         }
         pLastPage = pnewPage;
         if (!pFirstPage)
             pFirstPage = pnewPage;
-        freeBytes = pageSize;
     }
-    UByte* ptr = pLastPage->Buffer + pLastPage->PageSize - freeBytes;
-    FreeBytes  = UInt16(freeBytes - size);
+    else
+    {
+        size = sizeForCurrentPage;
+    }
+
+    UByte* ptr = pLastPage->GetBufferPtr(freeBytes);
+    FreeBytes  = (UInt16)(freeBytes - size);
+
     return ptr;
 }
 
 // @0x1426362c0
-// MS2-FUNCTIONAL: register allocation and block order (the exe shares one tail call for the edge-less path)
 UByte* PathAllocator::AllocPath(unsigned edgesDataSize, unsigned pathSize, unsigned edgeSize)
 {
-    unsigned size = edgesDataSize + 1 + pathSize * 3;
+    unsigned freeBytes          = FreeBytes;
+    unsigned size               = 1 + pathSize * 3 + edgesDataSize;
     unsigned sizeForCurrentPage = size;
-    unsigned pad = 0;
-    if (edgesDataSize)
+    if (edgesDataSize > 0)
     {
+        unsigned delta = 0;
         if (pLastPage)
         {
-            // the record starts at the next free byte of the current page
-            UInt32 pos   = UInt32(UPInt(pLastPage->Buffer + (pLastPage->PageSize - FreeBytes))) + 1;
-            UInt32 a     = pos & (pathSize - 1);
-            pad          = ((a + pathSize - 1) & ~(pathSize - 1)) - a;
-            UInt32 epos  = (pos + pathSize * 3 + pad) & (edgeSize - 1);
-            pad         += ((epos + edgeSize - 1) & ~(edgeSize - 1)) - epos;
+            UByte* ptr = pLastPage->GetBufferPtr(freeBytes) + 1; // +1 is for the flag byte
+
+            delta = (unsigned)(((UPInt)ptr) & (pathSize - 1));
+            delta = ((delta + pathSize - 1) & (~(pathSize - 1))) - delta;
+
+            unsigned delta2 = (unsigned)((UPInt)ptr + delta + pathSize * 3) & (edgeSize - 1);
+            delta2          = ((delta2 + edgeSize - 1) & (~(edgeSize - 1))) - delta2;
+
+            delta += delta2;
         }
-        sizeForCurrentPage = size + pad;
+        sizeForCurrentPage += delta;
         if (!pLastPage || FreeBytes < sizeForCurrentPage)
         {
             // a new page: the record starts at its (aligned) data
-            UInt32 pathPos  = (1 + pathSize - 1) & ~(pathSize - 1);
-            UInt32 edgesPos = (pathPos + pathSize * 3 + edgeSize - 1) & ~(edgeSize - 1);
-            pad             = edgesPos - (1 + pathSize * 3);
+            delta = (1 + (pathSize - 1)) & (~(pathSize - 1));
+            delta = ((delta + pathSize * 3 + (edgeSize - 1)) & (~(edgeSize - 1))) + edgesDataSize - size;
         }
+        size += delta;
     }
-    return AllocMemoryBlock(sizeForCurrentPage, size + pad);
+    UByte* ptr = AllocMemoryBlock(sizeForCurrentPage, size);
+    return ptr;
 }
 
 // @0x1426363b0
@@ -183,17 +195,16 @@ Ptr<Render::TreeNode> ShapeBaseCharacterDef::CreateTreeShape(Render::Context& co
 
 // Only the last block of the page can shrink; the freed bytes go back to the page. (4.1.18 reports false either way.)
 // @0x142636580
-// MS2-FUNCTIONAL: the exe computes the block offset twice (keeping this in rbx)
 bool PathAllocator::ReallocLastBlock(UByte* ptr, UInt32 oldSize, UInt32 newSize)
 {
-    if (newSize < oldSize && pLastPage)
+    if (newSize < oldSize && pLastPage && IsInPage(pLastPage, ptr))
     {
-        SPInt off = ptr - pLastPage->Buffer;
-        if (off < SPInt(SInt32(pLastPage->PageSize)) && UPInt(pLastPage->PageSize) - oldSize - off == FreeBytes)
+        UPInt off = ptr - pLastPage->GetBufferPtr();
+        if (pLastPage->PageSize - (off + oldSize) == FreeBytes)
         {
-            UPInt newFree = UPInt(pLastPage->PageSize) - newSize - off;
-            if (newFree < 0x10000)
-                FreeBytes = UInt16(newFree);
+            UPInt newFreeBytes = pLastPage->PageSize - (off + newSize);
+            if (newFreeBytes < 65536)
+                FreeBytes = UInt16(newFreeBytes);
         }
     }
     return false;

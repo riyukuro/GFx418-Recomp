@@ -17,7 +17,16 @@ class PathAllocator : public NewOverrideBase<0x104> // StatMD_ShapeData_Mem
         Page*  pNext;
         UInt32 PageSize;
         UByte  Buffer[4]; // the page data starts at +0xc
+
+        UByte* GetBufferPtr() { return ((UByte*)(&PageSize + 1)); }
+        UByte* GetBufferPtr(unsigned freeBytes) { return ((UByte*)(&PageSize + 1)) + PageSize - freeBytes; }
     };
+
+    static bool IsInPage(const void* ppage, const UByte* ptr)
+    {
+        const Page* p = (const Page*)ppage;
+        return (ptr - (const UByte*)(&p->PageSize + 1)) < (int)p->PageSize;
+    }
 
     Page*  pFirstPage;      // +0
     Page*  pLastPage;       // +8
