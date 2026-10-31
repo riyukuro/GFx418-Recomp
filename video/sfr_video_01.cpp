@@ -2028,15 +2028,28 @@ void* FUN_14000b230(void* owner, unsigned flags)
     return owner;
 }
 
-// MS2-FUNCTIONAL: initializes each cue-point record with an empty string and zeroed metadata.
+// the 0x30-byte cue-point record's default constructor: an empty label and an empty nested array
+struct Video01CueRecord
+{
+    unsigned Kind;
+    Scaleform::String Label;
+    unsigned Meta;
+    struct Array
+    {
+        void* Data;
+        Scaleform::UPInt Size;
+        Scaleform::UPInt Capacity;
+        Array() : Data(0), Size(0), Capacity(0) {}
+    } Nested;
+};
+
+// initializes each cue-point record with an empty string and zeroed metadata (SDK ConstructArray)
 // @0x14000b2a0
 void FUN_14000b2a0(void* records, Scaleform::UPInt count)
 {
-    unsigned char* bytes = static_cast<unsigned char*>(records);
-    for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x30) {
-        new (bytes + 8) Scaleform::String();
-        memset(bytes + 0x18, 0, 0x18);
-    }
+    Video01CueRecord* record = static_cast<Video01CueRecord*>(records);
+    for (Scaleform::UPInt i = 0; i < count; ++i, ++record)
+        ::new (record) Video01CueRecord();
 }
 
 // the exe inlines the body into FUN_14000b620.
