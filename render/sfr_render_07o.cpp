@@ -1396,7 +1396,6 @@ bool TextMeshProvider::generateRasterMesh(VertexOutput* verOut, const TextMeshLa
     return true;
 }
 
-// MS2-FUNCTIONAL 0x1426e74d0: the exe zeroes eax afresh for the Fill tail and the VertexCount test (cl reuses r14); code otherwise identical
 // @0x1426e74d0
 bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verOut, const Matrix2F& mtx,
                                          const float* coord, UInt32 fillColor, UInt32 borderColor,
@@ -1456,7 +1455,7 @@ bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verO
     Matrix2F toMesh = gen->mTess.StretchTo(-32768 + 4, -32768 + 4, 32768 - 4, 32768 - 4);
 
     VertexOutput::Fill fill = { gen->mTess.GetMeshVertexCount(0), gen->mTess.GetMeshTriangleCount(0) * 3,
-                                &VertexXY16iCF32::Format, 0, 0, 0, 0 };
+                                &VertexXY16iCF32::Format, 0, 0 };
     if (fill.VertexCount == 0)
         return generateNullVectorMesh(verOut);
 
@@ -1471,7 +1470,7 @@ bool TextMeshProvider::generateRectangle(Renderer2DImpl* ren, VertexOutput* verO
     return ok;
 }
 
-// MS2-FUNCTIONAL: frame 0x10 smaller than the exe (unused stack slot), code otherwise identical
+// MS2-FUNCTIONAL: frame 0x10 smaller than the exe, and the rect corners take other xmm registers through Intersect/IsEmpty/Transform
 // @0x1426e7a60
 bool TextMeshProvider::generateSelection(Renderer2DImpl* ren, VertexOutput* verOut, const TextMeshLayer& layer,
                                          const Matrix2F& mtx, unsigned meshGenFlags)
