@@ -3662,17 +3662,22 @@ public:
 
 namespace Instances { namespace fl_display
 {
-    // MS2-FUNCTIONAL: the exe copies the stage pointer to rcx before the null test (3 bytes); logic identical
+    // AvmDisplayObjContainer as the natives use it (the SDK's ToAvmDisplayObjContainer); NULL in, NULL out
+    static inline AvmDisplayObj* ToAvmDisplayObjContainer(GFx::DisplayObject* p)
+    {
+        if (!p)
+            return NULL;
+        return reinterpret_cast<AvmDisplayObj*>(AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()));
+    }
+
     // @0x142453490
     SF_NOINLINE void DisplayObject::stageGet(SPtr<Instances::fl_display::Stage>& result)
     {
         if (ToAvmDisplayObj(pDispObj)->IsStageAccessible())
         {
-            GFx::DisplayObject* pstage = FUN_14250edf0(ToAvmDisplayObj(pDispObj));
-            AvmDisplayObj* pavm = reinterpret_cast<AvmDisplayObj*>(
-                pstage ? AvmDisplayObjContainer::FromBase(pstage->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL);
-            pavm->CreateASInstance(true);
-            result = static_cast<Instances::fl_display::Stage*>(pavm->GetAS3Obj());
+            AvmDisplayObj* pcontObj = ToAvmDisplayObjContainer(FUN_14250edf0(ToAvmDisplayObj(pDispObj)));
+            pcontObj->CreateASInstance(true);
+            result = static_cast<Instances::fl_display::Stage*>(pcontObj->GetAS3Obj());
         }
         else
             result = NULL;
