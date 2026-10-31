@@ -100,6 +100,7 @@ struct GlyphParam
         Flags |= (outline & 0xF) << 12;
     }
     // (appended for sfr_render_06d) hinting / readability stretch of the rasterized glyph
+    bool  IsOptRead() const  { return (Flags & OptRead) != 0; }
     bool  IsAutoFit() const  { return (Flags & AutoFit) != 0; }
     float GetStretch() const { return (Flags & Stretch) ? 2.5f : 1.0f; }
     bool  IsKnockOut() const { return (Flags & KnockOut) != 0; }
