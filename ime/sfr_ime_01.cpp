@@ -2496,46 +2496,29 @@ void FUN_1423d94f0(void* self, void* value)
     *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8) = value;
 }
 
-// MS2-FUNCTIONAL: instantiates our XML string hash set insertion path from the shared hash implementation; compiler codegen differs from the exe.
-// @0x1423ca950
-void FUN_1423ca950(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
-                   Scaleform::GFx::XML::DOMStringNode* const* value)
+// The XML DOM string set's out-of-line HashSetBase members (pinned at the end of the file): Add at 0x1423ca950,
+// add (with the hash value) at 0x1423caa80 and setRawCapacity at 0x1423cce50. The exe keeps copies of these apart
+// from the XML unit's (0x1429a4ad0/0x1429a4c00/0x1429a63b0); the unit-local hash functor gives them their own names.
+// The set's nodes keep their 32-bit hash at +0x20, not at DOMStringNode::HashFlags (+0x10).
+struct Ime01NodeHash
 {
-    using Node = Scaleform::GFx::XML::DOMStringNode;
-    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
-    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
-    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
-    static_cast<Base*>(set)->Add(heap, *value);
+    UPInt operator()(Scaleform::GFx::XML::DOMStringNode* const& node) const
+    { return *reinterpret_cast<const UInt32*>(reinterpret_cast<const char*>(node) + 0x20); }
+};
+typedef Scaleform::HashSetBase<Scaleform::GFx::XML::DOMStringNode*, Ime01NodeHash, Ime01NodeHash,
+    Scaleform::AllocatorLH<Scaleform::GFx::XML::DOMStringNode*, 0x201>,
+    Scaleform::HashsetEntry<Scaleform::GFx::XML::DOMStringNode*, Ime01NodeHash>> Ime01StringSetBase;
+}}}
+namespace Scaleform {
+template void GFx::IME::Ime01StringSetBase::Add<GFx::XML::DOMStringNode*>(void*, GFx::XML::DOMStringNode* const&);
+template void GFx::IME::Ime01StringSetBase::add<GFx::XML::DOMStringNode*>(void*, GFx::XML::DOMStringNode* const&, UPInt);
+template void GFx::IME::Ime01StringSetBase::setRawCapacity(void*, UPInt);
 }
+namespace Scaleform { namespace GFx { namespace IME {
 
-// MS2-FUNCTIONAL: inserts the supplied DOM string through our recovered hash-set implementation; it recomputes the node's cached hash.
-// @0x1423caa80
-void FUN_1423caa80(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
-                   Scaleform::GFx::XML::DOMStringNode* const* value, unsigned long long)
-{
-    using Node = Scaleform::GFx::XML::DOMStringNode;
-    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
-    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
-    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
-    static_cast<Base*>(set)->Add(heap, *value);
-}
-
-// MS2-FUNCTIONAL: delegates capacity replacement to the typed XML hash set; this preserves entries but emits different helper code.
-// @0x1423cce50
-void FUN_1423cce50(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
-                   unsigned long long capacity)
-{
-    using Node = Scaleform::GFx::XML::DOMStringNode;
-    using Hash = Scaleform::GFx::XML::DOMStringNodeHashFunc<Node*>;
-    using Entry = Scaleform::HashsetEntry<Node*, Hash>;
-    using Base = Scaleform::HashSetBase<Node*, Hash, Hash, Scaleform::AllocatorLH<Node*, 326>, Entry>;
-    auto* base = static_cast<Base*>(set);
-    if (!capacity) {
-        base->Clear();
-        return;
-    }
-    base->SetCapacity(heap, capacity - capacity / 5);
-}
+static __forceinline void FUN_1423ca950(Scaleform::GFx::XML::XMLDOMStringNodeHash* set, void* heap,
+                                        Scaleform::GFx::XML::DOMStringNode* const* value)
+{ reinterpret_cast<Ime01StringSetBase*>(set)->Add(heap, *value); }
 
 // Queries the +0x28 manager for the provider (IID 0x14313b8a8), gets the context for the +0x50 id (slot 6), and from it
 // the text interface (IID 0x14313b8c8), then calls slot 15 (+0x78) with the +0x60 base plus `offset`. As in the exe,
@@ -6545,3 +6528,6 @@ void* FUN_1423db898(void* self, unsigned flags)
 // MS2-PIN: ?Reserve@?$ArrayDataBase@PEAXU?$AllocatorLH_POD@PEAX$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d95f0
 // MS2-PIN: ?Reserve@?$ArrayDataBase@_WU?$AllocatorLH_POD@_W$0CAB@@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d1380
 // MS2-PIN: ?Reserve@?$ArrayDataBase@_WU?$AllocatorLH_POD@_W$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1423d5340
+// MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@AEAAXPEAX_K@Z 0x1423cce50
+// MS2-PIN: ??$Add@PEAUDOMStringNode@XML@GFx@Scaleform@@@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@QEAAXPEAXAEBQEAUDOMStringNode@XML@GFx@1@@Z 0x1423ca950
+// MS2-PIN: ??$add@PEAUDOMStringNode@XML@GFx@Scaleform@@@?$HashSetBase@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@U5634@U?$AllocatorLH@PEAUDOMStringNode@XML@GFx@Scaleform@@$0CAB@@4@V?$HashsetEntry@PEAUDOMStringNode@XML@GFx@Scaleform@@UIme01NodeHash@IME@34@@4@@Scaleform@@AEAAXPEAXAEBQEAUDOMStringNode@XML@GFx@1@_K@Z 0x1423caa80
