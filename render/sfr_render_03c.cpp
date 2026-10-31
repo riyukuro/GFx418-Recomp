@@ -152,30 +152,36 @@ TreeNode* TreeNode::NodeData::CloneCreate(Context*) const
 }
 
 // @0x14261bdf0
-// MS2-FUNCTIONAL: exe splits the body into separate .pdata chunks; same calls and stores
 bool TreeNode::NodeData::CloneInit(TreeNode* node, Context* context) const
 {
     NodeData* data = node->GetWritableData(Change_State_Mask);
 
-    // the mask is cloned along; the mask owner link is rebuilt by SetMaskNode
+    UPInt stateCount = States.GetSize();
+    UPInt i;
     bool  hasMask = false;
-    UPInt count   = States.GetSize();
-    for (UPInt i = 0; i < count; i++)
+
+    for (i = 0; i < stateCount; i++)
     {
-        const State& state = States.GetAt(i);
-        StateType    type  = state.GetType();
-        if (type == State_MaskNode)
+        const State& s = States.GetAt(i);
+        StateType    t = s.GetType();
+        if (t != State_MaskNode)
+        {
+            if (t != State_Internal_MaskOwner)
+                data->States.SetState(s);
+        }
+        else
+        {
             hasMask = true;
-        else if (type != State_Internal_MaskOwner)
-            data->States.SetState(state);
+        }
     }
 
+    // the mask is cloned separately; SetMaskNode rebuilds the owner link
     if (hasMask)
     {
-        TreeNode* mask = GetState<MaskNodeState>()->GetNode()->Clone(context);
-        node->SetMaskNode(mask);
-        if (mask)
-            mask->Release();
+        const MaskNodeState* state      = GetState<MaskNodeState>();
+        TreeNode*            sourceNode = state->GetNode();
+        Ptr<TreeNode>        newNode    = *sourceNode->Clone(context);
+        node->SetMaskNode(newNode.GetPtr());
     }
     return true;
 }
@@ -354,25 +360,24 @@ void TreeNode::SetMaskNode(TreeNode* node)
 }
 
 // @0x14261d2e0
-// MS2-FUNCTIONAL: exe splits the body into separate .pdata chunks; same calls and stores
 void TreeNode::SetFilters(const FilterSet* filters)
 {
     if (filters && filters->GetFilterCount() > 0)
     {
-        FilterSet* copy = filters->Clone(true, 0);
-        NodeData*  data = GetWritableData(Change_State_Filter);
-        data->States.SetStateVoid(&FilterState::InterfaceImpl, copy);
+        Ptr<FilterSet> copy = *filters->Clone(true, 0);
+        NodeData*      data = GetWritableData(Change_State_Filter);
+        data->States.SetStateVoid(&FilterState::InterfaceImpl, copy.GetPtr());
         data->Flags |= NF_HasFilter;
-        if (copy)
-            copy->Release();
     }
-    else
+    else if (HasFilter())
     {
-        if (!HasFilter())
-            return;
         NodeData* data = GetWritableData(Change_State_Filter);
         data->States.RemoveState(State_Filter);
         data->Flags &= ~NF_HasFilter;
+    }
+    else
+    {
+        return;
     }
     AddToPropagate();
 }
