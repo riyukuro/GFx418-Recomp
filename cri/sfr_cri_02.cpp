@@ -19,6 +19,7 @@
 #include <new>
 #include <cstring>
 #include <cstdlib>
+#include <intrin.h>
 
 extern "C" {
 extern void* DAT_143b15f60;
@@ -1589,19 +1590,17 @@ void FUN_14002b9e0(CriUint64* array, CriUint64 index)
     --array[1];
 }
 
-// MS2-FUNCTIONAL: destroy the two string members in each fixed-size vector element.
 // @0x14002a550
 void FUN_14002a550(void* items, CriSint64 count)
 {
     CriUint8* current = (CriUint8*)items;
-    while (count-- > 0)
+    for (CriUint64 i = (CriUint64)count; i != 0; --i, current += 0x10)
     {
         if (current)
         {
             FUN_142584ce0(current);
             FUN_142584ce0(current + 8);
         }
-        current += 0x10;
     }
 }
 
@@ -1735,7 +1734,6 @@ void* FUN_14002b0f0(void* object, CriUint32 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: construct the reader configuration base and retain its file opener.
 // @0x14002b070
 void* FUN_14002b070(void* object, void* heap, void* opener)
 {
@@ -1746,19 +1744,21 @@ void* FUN_14002b070(void* object, void* heap, void* opener)
     if (opener)
         FUN_14257dc30(opener);
     fields[3] = opener;
+    _ReadWriteBarrier();   // the member initializers run in order: Ptr<FileOpenerBase>, then Readers
     fields[4] = NULL;
     fields[5] = NULL;
     fields[6] = NULL;
+    _ReadWriteBarrier();   // IOEnabled is set after the inlined Array ctor
     *((CriUint8*)object + 0x38) = 1;
     return object;
 }
 
-// MS2-FUNCTIONAL: finalize the sampled reader configuration and release its two owned members.
 // @0x14002b1b0
 void FUN_14002b1b0(void* object)
 {
     void** fields = (void**)object;
     fields[0] = (void*)DAT_1431b91d8;
+    _ReadWriteBarrier();   // a dtor's vftable store is not moved past the member reads
     if (fields[4])
         FUN_14002d3f0(fields[4]);
     if (fields[3])
@@ -1766,7 +1766,6 @@ void FUN_14002b1b0(void* object)
     FUN_14257db50(object);
 }
 
-// MS2-FUNCTIONAL: construct the sampled reader configuration from its base state and opener.
 // @0x14002b150
 void* FUN_14002b150(void* object, void* heap, void* opener)
 {
@@ -1775,7 +1774,6 @@ void* FUN_14002b150(void* object, void* heap, void* opener)
     return object;
 }
 
-// MS2-FUNCTIONAL: destroy the sampled reader configuration and conditionally release its allocation.
 // @0x14002b200
 void* FUN_14002b200(void* object, CriUint32 flags)
 {
@@ -1785,12 +1783,12 @@ void* FUN_14002b200(void* object, CriUint32 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: release both player arrays and restore the synchronous decoder's base state.
 // @0x14002ad30
 void FUN_14002ad30(void* object)
 {
     void** fields = (void**)object;
     fields[0] = (void*)DAT_1431b9170;
+    _ReadWriteBarrier();   // a dtor's vftable store is not moved past the member reads
     if (fields[6])
         FUN_14002d3f0(fields[6]);
     if (fields[3])
@@ -1798,7 +1796,6 @@ void FUN_14002ad30(void* object)
     FUN_14257db50(object);
 }
 
-// MS2-FUNCTIONAL: destroy the synchronous decoder and optionally return its storage to the global heap.
 // @0x14002b350
 void* FUN_14002b350(void* object, CriUint32 flags)
 {
@@ -1808,7 +1805,6 @@ void* FUN_14002b350(void* object, CriUint32 flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: append one 0x30-byte video record and retain its two string fields.
 // @0x14002c4b0
 void FUN_14002c4b0(CriUint64* array, const CriUint32* value)
 {
@@ -1819,10 +1815,11 @@ void FUN_14002c4b0(CriUint64* array, const CriUint32* value)
     destination[0] = value[0];
     FUN_142584950(destination + 2, value + 2);
     destination[4] = value[4];
-    *(CriUint64*)(destination + 6) = 0;
-    *(CriUint64*)(destination + 8) = 0;
-    *(CriUint64*)(destination + 10) = 0;
-    FUN_140007370(destination + 6, *(const CriUint64*)(value + 6), *(const CriUint64*)(value + 8));
+    CriUint64* inner = (CriUint64*)(destination + 6);
+    inner[0] = 0;
+    inner[1] = 0;
+    inner[2] = 0;
+    FUN_140007370(inner, *(const CriUint64*)(value + 6), *(const CriUint64*)(value + 8));
 }
 
 // MS2-FUNCTIONAL: copy a vector of paired strings after resizing its destination.
@@ -1886,21 +1883,11 @@ void FUN_14002a900(CriUint64* array, const CriUint32* value)
     }
 }
 
-// MS2-FUNCTIONAL: append a four-word record using the vector's sixteen-byte element stride.
 // @0x14002a6f0
 void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
 {
-    CriUint64 length = array[1] + 1;
-    CriUint64 capacity = array[2];
-    if (length < array[1])
-    {
-        if ((capacity >> 1) <= length)
-            FUN_1400051c0(array, array, length);
-    }
-    else if (length >= capacity)
-        FUN_1400051c0(array, array, (length >> 2) + length);
-    array[1] = length;
-    CriUint32* destination = (CriUint32*)(array[0] - 16 + length * 16);
+    CriArrayResizeNoConstruct(array, FUN_1400051c0, array[1] + 1);
+    CriUint32* destination = (CriUint32*)(array[0] - 16 + array[1] * 16);
     if (destination)
     {
         destination[0] = value[0];
@@ -2071,7 +2058,15 @@ void FUN_14002acd0(const void* slot)
 #pragma optimize("", on)
 #endif
 
-// MS2-FUNCTIONAL: append a run of pointer values, growing backing storage by the observed quarter margin.
+// Allocator::ConstructArray(p, count, source) for eight-byte elements, inlined into the Append below.
+static inline void CriConstructArray8(void* p, CriUint64 count, const CriUint64* source)
+{
+    CriUint8* data = (CriUint8*)p;
+    for (CriUint64 i = 0; i < count; ++i, ++source, data += sizeof(CriUint64))
+        if (data)
+            *(CriUint64*)data = *source;
+}
+
 // @0x14002a4a0
 void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
 {
@@ -2084,13 +2079,10 @@ void FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count)
         if (newLength < (array[2] >> 1))
             FUN_140029bf0(array, array, newLength);
     }
-    else if (array[2] <= newLength)
-        FUN_140029bf0(array, array, (newLength >> 2) + newLength);
+    else if (newLength >= array[2])
+        FUN_140029bf0(array, array, newLength + (newLength >> 2));
     array[1] = newLength;
-    CriUint64* destination = (CriUint64*)array[0] + oldLength;
-    for (CriUint64 i = 0; i < count; ++i)
-        if (destination)
-            destination[i] = source[i];
+    CriConstructArray8((CriUint64*)array[0] + oldLength, count, source);
 }
 
 // MS2-FUNCTIONAL: clear a vector while preserving its one-element inline-capacity sentinel.
