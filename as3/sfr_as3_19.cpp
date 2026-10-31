@@ -319,7 +319,6 @@ struct Sfr31Err
 };
 
 
-// MS2-FUNCTIONAL 0x14252a460: header inline Value::SetUInt32; the exe inlines Release (weak-ref free) where ours calls the out-of-line ReleaseWeakRef.
 // Out-of-line copies of header inlines that the exe emits as COMDATs; taking the address forces ours (pinned below).
 void (Value::* volatile sfr27KeepSetUInt32)(UInt32) = &Value::SetUInt32;
 
@@ -2119,7 +2118,7 @@ void Sfr31BitmapSetMovieDef(UPInt self, Resource* def)
     cur = def;
 }
 
-// MS2-FUNCTIONAL 0x142528f20: the copy/rename helpers are shared out-of-line code.
+// The copy/rename helpers are shared out-of-line code.
 // @0x142528f20
 void Slots::SetSlotInfo(AbsoluteIndex ind, const ASString& k, const SlotInfo& v)
 {
@@ -2314,7 +2313,7 @@ void Sfr31ButtonSwitchState(UPInt self, int mouseState)
 }
 
 // AS3ValueObjectInterface::SetElement: stores the converted value at the array index.
-// MS2-FUNCTIONAL 0x142527300: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// Raw-offset model.
 // @0x142527300
 bool Sfr31SetElement(UPInt self, UPInt array, UInt32 ind, const void* gfxValue)
 {
@@ -2326,7 +2325,7 @@ bool Sfr31SetElement(UPInt self, UPInt array, UInt32 ind, const void* gfxValue)
 }
 
 // AS3ValueObjectInterface::ToString: the value's string form is copied into out.
-// MS2-FUNCTIONAL 0x14252fd40: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// Raw-offset model.
 // @0x14252fd40
 void Sfr31ToString(UPInt self, String* out, const void* gfxValue)
 {
@@ -2696,7 +2695,6 @@ void Sfr31TracePop2Note(State* st, UInt32 arg)
 
 // setInterval/setTimeout: appends the extra call arguments to the IntervalTimer's Params (ArrayLH<Value> at +0x38).
 // The callers (0x14242a1a4, 0x14242af14) pass the new IntervalTimer, not a tracer State.
-// MS2-FUNCTIONAL 0x1425264b0: behavior-equivalent recovery; codegen differs from exe
 // @0x1425264b0
 void Sfr31StatePushValues(State* st, UInt32 n, const Value* vals)
 {
@@ -3222,7 +3220,7 @@ void Sfr31TreeShapeEntry::SetShape(UPInt pshape)
 }
 
 // ShapeObject::SetRatio: only when its render node is a shape node.
-// MS2-FUNCTIONAL 0x142528da0: raw-offset model; codegen differs from the exe
+// Raw-offset model.
 // @0x142528da0
 void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
 {
