@@ -890,6 +890,9 @@ namespace ClassTraits
     }
 }
 
+// InstanceTraits::Function::RegisterSlots: the "prototype" slot and the Function methods (defined in sfr_as3_04)
+void FUN_14241e5d0(Traits* tr);
+
 namespace InstanceTraits
 {
     // @0x1423ecf50
@@ -899,7 +902,7 @@ namespace InstanceTraits
     {
         TraitsType = Traits_Function;
         SetMemSize(sizeof(Instances::Function));
-        RegisterSlots();
+        FUN_14241e5d0(this);
     }
 
     // @0x1423ecfa0
@@ -917,7 +920,7 @@ namespace InstanceTraits
         const Abc::File& abc = file.GetAbcFile();
         const Abc::MethodBodyInfo& mbi = *abc.MethodBodies.Info[abc.Methods.Info[MethodInfoInd]->MethodBodyInfoInd];
         if (AddSlots(mbi, file, sizeof(Instances::Function)))
-            RegisterSlots();
+            FUN_14241e5d0(this);
     }
 }
 
@@ -1131,10 +1134,10 @@ namespace Instances { namespace fl
 }}
 
 // Traits::StoreScopeStack (private in the header): the scope the traits' methods run in, the VM scope stack above
-// base_ind
-void FUN_14252cad0(Traits* t, UPInt base_ind, const ArrayDH<Value>& ss);
-// Traits: the slots of the interfaces an ABC class implements
-void FUN_1424e80f0(Traits* t, VMAbcFile& file, const Abc::ClassInfo& info);
+// base_ind (sfr_as3_19's raw-offset model)
+void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src);
+// Traits: the slots of the interfaces an ABC class implements (sfr_as3_16z)
+void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo& info);
 
 // The scope stack base of the running call frame (0 outside of any); the call stack is paged, 64 frames of 0xa8
 // bytes to a page.
@@ -1177,7 +1180,8 @@ namespace Classes
         if (t.SetupSlotValues(*this))
         {
             VM& vm = GetVM();
-            FUN_14252cad0(&GetTraits(), GetCurrScopeStackBaseInd(vm), vm.ScopeStack);
+            Sfr31StoreScopeStack(reinterpret_cast<UPInt>(&GetTraits()), GetCurrScopeStackBaseInd(vm),
+                reinterpret_cast<UPInt*>(&vm.ScopeStack));
         }
     }
 }
@@ -1198,7 +1202,7 @@ namespace InstanceTraits
         Flags |= IsAbcObjectMask;
         Flags ^= (-(SPInt)info.inst_info.IsInterface() ^ Flags) & IsInterfaceMask;
         if (AddSlots(info.inst_info, file, pt ? pt->GetMemSize() : GetFixedMemSize()))
-            FUN_1424e80f0(this, file, info);
+            Sfr21AddInterfaceSlots(this, file, info);
     }
 }
 
