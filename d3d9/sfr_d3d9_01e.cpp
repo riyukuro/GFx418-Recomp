@@ -919,7 +919,7 @@ void HAL::DrawableCopyback(Render::Texture* tex, const Matrix2F& mvpIn, const Ma
     drawScreenQuad();
 }
 
-// MS2-FUNCTIONAL: written from the decompile
+// MS2-FUNCTIONAL: SDK form; the exe keeps the area matrix's Format byte in a register across operator* (10 diff lines)
 // @0x142737f70
 void HAL::drawUncachedFilter(const FilterStackEntry& e)
 {
@@ -948,45 +948,15 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     {
         filter = filters->GetFilter(i);
         FilterType type = filter->GetFilterType();
-        if (type <= Filter_Blur_End)
-        {
-            const BlurFilterParams& params = ((const BlurFilterImpl*)filter)->GetParams();
-            float area   = params.BlurX * params.BlurY;
-            bool  box    = area < 12800.0f;
-            passes = box ? params.Passes : params.Passes * 2;
-            for (unsigned j = 0; j + 1 < passes; j++)
-                shaders[j] = box ? 0xa449 : 0xa249;
-            unsigned last;
-            unsigned mode = params.Mode;
-            if ((mode & 7) - 1 < 3)
-            {
-                if (mode & 0x20)
-                    last = 0xae4b;
-                else
-                    last = ((mode & 0x50) != 0x40) ? 0xa64b : 0xb64b;
-                if (DeviceFlags & 1)
-                    last += 1;
-                if (mode & 0x10)
-                    last += 0x100;
-                if (mode & 0x80)
-                    last += 0x400;
-            }
-            else
-                last = (box ? 0xa449 : 0xa249) + (DeviceFlags & 1);
-            shaders[passes - 1] = last;
-        }
-        else
-        {
-            passes     = 1;
-            shaders[0] = 0xa207 + (DeviceFlags & 1);
-        }
+        passes = SManager.GetFilterPasses(filter, DeviceFlags, shaders);
 
         // shadows and glows not hiding the object draw it over their result: keep the source
         bool requireSource = false;
-        if ((unsigned)type - 1 < 5 && !(((const BlurFilterImpl*)filter)->GetParams().Mode & 0x40))
+        if (type >= Filter_Shadow && type <= Filter_Blur_End &&
+            !(((const BlurFilterImpl*)filter)->GetParams().Mode & 0x40))
         {
-            requireSource  = true;
             temporaries[2] = temporaries[0];
+            requireSource  = true;
         }
 
         for (pass = 0; pass < passes; pass++)
@@ -1003,8 +973,11 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
             pDevice->Clear(0, 0, D3DCLEAR_TARGET, 0, 1.0f, 0);
             ++AccumulatedStats.RTChanges;
 
-            VP       = Viewport(temporaries[1]->GetBufferSize(), temporaries[1]->GetRect());
-            ViewRect = temporaries[1]->GetRect();
+            RenderTarget*    prt      = temporaries[1];
+            const Rect<int>& viewRect = prt->GetRect();
+            const ImageSize& bs       = prt->GetBufferSize();
+            VP       = Viewport(bs.Width, bs.Height, viewRect.x1, viewRect.y1, viewRect.Width(), viewRect.Height());
+            ViewRect = Rect<int>(viewRect.x1, viewRect.y1, viewRect.x2, viewRect.y2);
             HALState |= HS_ViewValid;
             updateViewport();
 
@@ -1054,19 +1027,19 @@ void HAL::drawUncachedFilter(const FilterStackEntry& e)
     }
 
     // the last pass draws the filtered area into the target below
-    const MatrixPoolImpl::HMatrix& area = e.pPrimitive->GetFilterAreaMatrix();
-    Matrix2F       mvp = Matrices.UserView * area.GetMatrix2D();
-    const Cxform*  cx  = &Cxform::Identity;
-    if (area.pHandle->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform))
-        cx = area.pHandle->GetCxformPtr();
-    FUN_142734e10(&SManager, mvp, *cx, filter, temporaries, shaders, pass, passes, MappedXY16iAlphaTexture[0],
-                  &ShaderData);
-
-    BlendMode blend = BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal;
-    applyBlendMode(blend, true, true);
+    {
+        const MatrixPoolImpl::HMatrix& area = e.pPrimitive->GetFilterAreaMatrix();
+        MatrixPoolImpl::DataHeader*    header = area.pHandle->pHeader;
+        Matrix2F       mvp = Matrices.UserView * *header->GetMatrixPtr();
+        const Cxform*  cx  = &Cxform::Identity;
+        if (header->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform))
+            cx = header->GetCxformPtr();
+        FUN_142734e10(&SManager, mvp, *cx, filter, temporaries, shaders, pass, passes,
+                      MappedXY16iAlphaTexture[0], &ShaderData);
+    }
+    applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, true, true);
     pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
-    blend = BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal;
-    applyBlendMode(blend, false, (HALState & HS_InRenderTarget) != 0);
+    applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false, (HALState & HS_InRenderTarget) != 0);
     if (HALState & HS_DrawingMask)
         pDevice->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
 
