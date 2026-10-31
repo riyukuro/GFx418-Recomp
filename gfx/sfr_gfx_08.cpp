@@ -339,27 +339,37 @@ SInt64 ZLibFile::LSeek(SInt64 offset, int origin)
 }
 
 // @0x142645d10
-// MS2-FUNCTIONAL: same code, the Seek_Cur case branches to the pImpl reload of Seek_End instead of past it
 int ZLibFile::Seek(int offset, int origin)
 {
-    if (!pImpl)
-        return -1;
+    if (!pImpl) return -1;
+
+    //If there us an error, bail
     if (pImpl->ErrorCode)
         return pImpl->UserPos;
 
-    switch (origin)
+    switch(origin)
     {
-    case Seek_End:
-        pImpl->SetPosition(0x7fffffff);
-        if (!offset)
+        case Seek_Cur:
+            // Adjust offset and fall through
+            offset += pImpl->UserPos;
+
+        case Seek_Set:
+        zlib_seek_set:
+            pImpl->SetPosition(offset);
+            // Return new location
             break;
-        // relative to the end: fall through
-    case Seek_Cur:
-        offset += pImpl->UserPos;
-        // fall through
-    case Seek_Set:
-        pImpl->SetPosition(offset);
-        break;
+
+        case Seek_End:
+            // Seek forward as far as possible (till end).
+            pImpl->SetPosition(0x7FFFFFFF);
+
+            // If offset is not at the end (i.e. usually negative), seek back
+            if (offset != 0)
+            {
+                offset = pImpl->UserPos + offset;
+                goto zlib_seek_set;
+            }
+            break;
     }
     return pImpl->UserPos;
 }
