@@ -57,8 +57,8 @@ public:
     virtual void LogMessageVarg(LogMessageId messageId, const char* fmt, va_list argList);
 };
 
-// The global interface object (the heap of the CRI/GFx allocator) and its slot 12.
-extern "C" void* DAT_143b15f60;
+// The global interface object (Scaleform's global heap, Memory::pGlobalHeap) and its slot 12.
+#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 
 // MS2-FUNCTIONAL: the log wrapper (FMT_VARIADIC over CLogString::FUN_1406530d0) for two CStringW arguments.
 // @0x140a5bdd0
