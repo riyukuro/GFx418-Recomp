@@ -1374,7 +1374,8 @@ namespace InstanceTraits { namespace fl
             Alg::Swap(start, end);
         if (start < 0)
             start = 0;
-        result = StringSubstring(sm, str, start, end - start);
+        const SInt32 length = end - start;
+        result = StringSubstring(sm, str, start, length);
     }
 }} // namespace InstanceTraits::fl
 
@@ -1444,23 +1445,34 @@ namespace Scaleform { namespace GFx { namespace AS3
     // HashDH<UPInt, Value>::Get with the exe's out-of-line GetAlt.
     static SF_INLINE const Value* SparseHashGet(const HashDH<UPInt, Value>& h, const UPInt& key)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = h.mHash.GetAlt(key);
-        return p ? &p->Second : 0;
+        typedef HashNode<UPInt, Value, FixedSizeHash<UPInt> > NodeT;
+        typedef decltype(h.mHash) ContT;
+        // The exe calls GetAlt out of line (0x1423e87e0); going through a member pointer keeps cl from inlining it.
+        const NodeT* (ContT::*getAlt)(const UPInt&) const = &ContT::GetAlt<UPInt>;
+        const NodeT* p = (h.mHash.*getAlt)(key);
+        if (p)
+            return &p->Second;
+        return 0;
     }
 
-    // MS2-FUNCTIONAL: exe keeps the node->value null select as a cmove before the test; ours folds it into the branch
+    // MS2-FUNCTIONAL: the exe keeps the node->value null select as a cmove before the test; ours folds it into the branch
+    // (GetAlt is out of line in both now)
     // @0x142405480
     const Value& SparseArray::At(UPInt ind) const
     {
         if (ind < ValueA.GetSize())
             return ValueA[ind];
-        if (ind >= ValueHLowInd && ind <= ValueHHighInd)
+        else if (ind < ValueHLowInd || ind > ValueHHighInd)
+            return DefaultValue;
+        else
         {
-            const Value* v = SparseHashGet(ValueH, ind);
-            if (v)
-                return *v;
+            const Value* vp;
+
+            if ((vp = SparseHashGet(ValueH, ind)) != NULL)
+                return *vp;
+            else
+                return DefaultValue;
         }
-        return DefaultValue;
     }
 
     // @0x1424051b0
@@ -1667,50 +1679,71 @@ namespace Scaleform { namespace GFx { namespace AS3
 namespace Scaleform { namespace GFx { namespace AS3
 {
     // MS2-FUNCTIONAL: exe reads CaseInsensitive before the Desc branch (register/scheduling only)
+    // The SDK's inline ASString::LocaleCompare_CaseCheck(const ASString&, bool) (GFx_ASString.h).
+    static SF_INLINE int LocaleCompare_CaseCheck(const ASString& self, const ASString& str, bool caseSensitive)
+    {
+        return self.LocaleCompare_CaseCheck(str.ToCStr(), str.GetLength(), caseSensitive);
+    }
+
     // @0x1424066d0
     int CompareAsString::Compare(const ASString& a, const ASString& b) const
     {
         if (UseLocale)
         {
-            const bool ci = CaseInsensitive;
             if (Desc)
-                return b.LocaleCompare_CaseCheck(a.ToCStr(), a.GetLength(), !ci);
-            return a.LocaleCompare_CaseCheck(b.ToCStr(), b.GetLength(), !ci);
+                return LocaleCompare_CaseCheck(b, a, !CaseInsensitive);
+
+            return LocaleCompare_CaseCheck(a, b, !CaseInsensitive);
         }
 
-        int r;
+        int result = 0;
         if (CaseInsensitive)
-            r = String::CompareNoCase(a.ToCStr(), b.ToCStr());
+            result = String::CompareNoCase(a.ToCStr(), b.ToCStr());
         else
-            r = strcmp(a.ToCStr(), b.ToCStr());
-        return Desc ? -r : r;
+            result = strcmp(a.ToCStr(), b.ToCStr());
+
+        if (Desc)
+            result = -result;
+
+        return result;
     }
 
     namespace InstanceTraits { namespace fl
     {
-        // MS2-FUNCTIONAL: loop register allocation and shrink-wrapping differ
         // @0x142407090
         SInt32 String::Compare(ASString& l, ASString& r)
         {
-            SInt32 diff = 0;
+            SInt32 result = 0;
+
             if (l == r)
                 return 0;
 
-            const char* lp = l.ToCStr();
-            const char* rp = r.ToCStr();
-            UInt32 lc = UTF8Util::DecodeNextChar(&lp);
-            UInt32 rc = UTF8Util::DecodeNextChar(&rp);
-            while (lc != 0 && rc != 0)
+            const char* l_str = l.ToCStr();
+            const char* r_str = r.ToCStr();
+
+            UInt32 l_char = UTF8Util::DecodeNextChar(&l_str);
+            UInt32 r_char = UTF8Util::DecodeNextChar(&r_str);
+
+            while (!result && l_char && r_char)
             {
-                diff = rc - lc;
-                if (diff != 0)
-                    return diff;
-                lc = UTF8Util::DecodeNextChar(&lp);
-                rc = UTF8Util::DecodeNextChar(&rp);
+                result = r_char - l_char;
+
+                if (!result)
+                {
+                    l_char = UTF8Util::DecodeNextChar(&l_str);
+                    r_char = UTF8Util::DecodeNextChar(&r_str);
+                }
             }
-            if (lc != rc)
-                diff = rc == 0 ? -1 : 1;
-            return diff;
+
+            if (!result && l_char != r_char)
+            {
+                if (r_char == 0)
+                    result = -1;
+                else
+                    result = 1;
+            }
+
+            return result;
         }
     }}
 }}}
@@ -2477,29 +2510,34 @@ namespace Instances { namespace fl
     }
 
     // Simple content: the text of every item but comments and processing instructions; else toXMLString.
-    // MS2-FUNCTIONAL: stack frame differs (the exe keeps the bool result in a home slot)
+    // MS2-FUNCTIONAL: the exe tail-calls AS3toXMLString (simple's address does not escape under LTCG)
     // @0x142402c20
     void XMLList::AS3toString(ASString& result)
     {
         bool simple;
-        AS3hasSimpleContent(simple);
-        if (!simple)
-        {
-            AS3toXMLString(result);
-            return;
-        }
 
-        VM& vm = GetVM();
-        StringBuffer buf(vm.GetMemoryHeap());
-        const UPInt size = List.GetSize();
-        for (UPInt i = 0; i < size; ++i)
+        AS3hasSimpleContent(simple);
+        if (simple)
         {
-            XML* x = List[i];
-            const XML::Kind k = x->GetKind();
-            if (k != XML::kComment && k != XML::kInstruction)
-                x->ToString(buf, 0);
+            VM& vm = GetVM();
+            StringBuffer buf(vm.GetMemoryHeap());
+            const UPInt size = List.GetSize();
+
+            for (UPInt i = 0; i < size; ++i)
+            {
+                XML* xml = List[i];
+                const XML::Kind k = xml->GetKind();
+
+                if (k == XML::kInstruction || k == XML::kComment)
+                    continue;
+
+                xml->ToString(buf, 0);
+            }
+
+            result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
         }
-        result = vm.GetStringManager().CreateString(buf.ToCStr(), buf.GetSize());
+        else
+            AS3toXMLString(result);
     }
 
     // @0x142403250
@@ -2750,7 +2788,7 @@ namespace Instances { namespace fl
     {
         XML::ForEachChild_GC(prcc, op);
         AS3::ForEachChild_GC(prcc, Ns, op, *this);
-        AS3::ForEachChild_GC(prcc, Value(Data), op, *this);
+        AS3::ForEachChild_GC(prcc, Data, op, *this);
     }
 
     // @0x14240c340
@@ -2893,33 +2931,55 @@ namespace Instances { namespace fl
     // @0x14240b260
     Instances::Namespace* XMLElement::FindNamespaceByPrefix(const ASString& prefix, XML* lp) const
     {
-        const ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
-        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        Instances::Namespace* result = NULL;
+        const SPtr<Instances::Namespace>* r = NULL;
+        const UPInt nsize = Namespaces.Namespaces.GetSize();
+        for (UPInt i = 0; i < nsize; ++i)
         {
-            const Value& p = nss[i]->GetPrefix();
-            if (p.IsString() && p.AsString() == prefix)
-                return nss[i].GetPtr();
+            const Instances::Namespace& ns = *Namespaces.Namespaces[i];
+            const Value& pref = ns.GetPrefix();
+
+            if (pref.IsString() && pref.AsString() == prefix)
+            {
+                r = &Namespaces.Namespaces[i];
+                break;
+            }
         }
-        return XML::FindNamespaceByPrefix(prefix, lp);
+
+        if (r)
+            result = *r;
+        else
+            result = XML::FindNamespaceByPrefix(prefix, lp);
+
+        return result;
     }
 
-    // MS2-FUNCTIONAL: exe tail-jumps through the parent vslot; ours keeps a frame for the string compare
+    // The SDK falls back to the prefix lookup (XML::FindNamespaceByPrefix) with the uri, not to a uri lookup.
     // @0x14240b3e0
     Instances::Namespace* XMLElement::FindNamespaceByURI(const ASString& uri, XML* lp) const
     {
-        const ArrayLH<SPtr<Instances::Namespace> >& nss = Namespaces.Namespaces;
-        for (UPInt i = 0; i < nss.GetSize(); ++i)
+        Instances::Namespace* result = NULL;
+        const SPtr<Instances::Namespace>* r = NULL;
+        const UPInt nsize = Namespaces.Namespaces.GetSize();
+
+        for (UPInt i = 0; i < nsize; ++i)
         {
-            if (nss[i]->GetUri() == uri)
-                return nss[i].GetPtr();
+            const Instances::Namespace& ns = *Namespaces.Namespaces[i];
+            const ASString& cur_uri = ns.GetUri();
+
+            if (cur_uri == uri)
+            {
+                r = &Namespaces.Namespaces[i];
+                break;
+            }
         }
-        // the exe falls back to the prefix lookup (Parent's vtable +0x188, FindNamespaceByPrefix) and tests the uri
-        // against the "xml" prefix, not against NS_XML
-        if (Parent.GetPtr() != lp)
-            return Parent->FindNamespaceByPrefix(uri, lp);
-        if (strcmp(uri.ToCStr(), "xml") == 0)
-            return GetVM().XMLNamespace.GetPtr();
-        return NULL;
+
+        if (r)
+            result = *r;
+        else
+            result = XML::FindNamespaceByPrefix(uri, lp);
+
+        return result;
     }
 
     // @0x14240b490
@@ -3191,10 +3251,9 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     // @0x142409120
     CheckResult XMLElement::DeleteProperty(const Multiname& prop_name)
     {
-        UPInt i = 0;
         if (prop_name.IsAttr())
         {
-            while (i < Attrs.GetSize())
+            for (UPInt i = 0; i < Attrs.GetSize();)
             {
                 XMLAttr* attr = Attrs[i];
                 if (attr->Matches(prop_name))
@@ -3205,20 +3264,19 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 else
                     ++i;
             }
+            return true;
         }
-        else
+
+        for (UPInt i = 0; i < Children.GetSize();)
         {
-            while (i < Children.GetSize())
+            XML* child = Children[i];
+            if (child->Matches(prop_name))
             {
-                XML* child = Children[i];
-                if (child->Matches(prop_name))
-                {
-                    child->Parent = NULL;
-                    Children.RemoveAt(i);
-                }
-                else
-                    ++i;
+                child->Parent = NULL;
+                Children.RemoveAt(i);
             }
+            else
+                ++i;
         }
         return true;
     }
@@ -3296,10 +3354,10 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             case '\t':  buf.AppendString("&#x9;", 5); break;
             case '\n':  buf.AppendString("&#xA;", 5); break;
             case '\r':  buf.AppendString("&#xD;", 5); break;
-            case '"':   buf.AppendString("&quot;", 6); break;
-            case '&':   buf.AppendString("&amp;", 5); break;
-            case '\'':  buf.AppendString("&apos;", 6); break;
             case '<':   buf.AppendString("&lt;", 4); break;
+            case '"':   buf.AppendString("&quot;", 6); break;
+            case '\'':  buf.AppendString("&apos;", 6); break;
+            case '&':   buf.AppendString("&amp;", 5); break;
             default:    buf.AppendChar(ch); break;
             }
         }
@@ -3455,35 +3513,36 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     // @0x142409890
     CheckResult XMLList::Equals(bool& result, const Value& v)
     {
-        if (v.IsUndefined())
+        if (v.IsUndefined() && List.GetSize() == 0)
         {
-            if (List.GetSize() == 0)
-            {
-                result = true;
-                return true;
-            }
-        }
-        else if (IsXMLListObject(v))
-        {
-            const XMLList& other = static_cast<const XMLList&>(*v.GetObject());
-            const UPInt size = List.GetSize();
-            if (other.List.GetSize() != size)
-            {
-                result = false;
-                return true;
-            }
-            for (UPInt i = 0; i < size; ++i)
-            {
-                if (!AbstractEqual(result, Value(List[i]), Value(other.List[i])))
-                    return false;
-                if (!result)
-                    break;
-            }
+            result = true;
             return true;
         }
 
-        if (List.GetSize() == 1)
+        if (IsXMLListObject(v))
+        {
+            XMLList* other = static_cast<XMLList*>(v.GetObject());
+
+            if (other->List.GetSize() == List.GetSize())
+            {
+                const UPInt size = List.GetSize();
+                for (UPInt i = 0; i < size; ++i)
+                {
+                    if (!AbstractEqual(result, Value(List[i]), Value(other->List[i])))
+                        return false;
+
+                    if (result == false)
+                        break;
+                }
+
+                return true;
+            }
+        }
+        else if (List.GetSize() == 1)
+        {
             return AbstractEqual(result, Value(List[0]), v);
+        }
+
         result = false;
         return true;
     }
@@ -3525,7 +3584,6 @@ static __forceinline Pickable<Instances::fl::XMLComment> MS2_MakeXMLComment(Inst
         }
     }
 
-    // MS2-FUNCTIONAL: register allocation of the climb loop differs (obj 342 / exe 350 bytes)
     // @0x142409730
     void XMLParser::EndElementExpatCallback(void* userData, const char* name)
     {
@@ -3533,14 +3591,19 @@ static __forceinline Pickable<Instances::fl::XMLComment> MS2_MakeXMLComment(Inst
         p->SetNodeKind(kElement);
         p->PopNodeKind();
         // climb to the parent of the element being closed
-        Instances::fl::XML* el = p->CurrElement;
-        while (el && el->Parent)
+        while (p->CurrElement)
         {
-            SPtr<Instances::fl::XML> parent = el->Parent;
-            p->CurrElement = parent;
-            if (el->Text == name)
+            Instances::fl::XML* el = p->CurrElement;
+            Instances::fl::XML* parentRaw = el->Parent;
+            if (parentRaw)
+            {
+                SPtr<Instances::fl::XML> parent(parentRaw);
+                p->CurrElement = parent;
+                if (el->Text == name)
+                    break;
+            }
+            else
                 break;
-            el = p->CurrElement;
         }
     }
 
