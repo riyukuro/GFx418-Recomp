@@ -1291,15 +1291,23 @@ void FUN_140012ac0(Scaleform::GFx::AS3::Value* value)
     }
 }
 
-// MS2-FUNCTIONAL: drops one strong object reference from a Value when its tag is collectable and not weak.
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Visits the collectable a value holds (0x142504530, sfr_as3_06).
+void ForEachChild_GC_Internal(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const Value& v,
+                              ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner);
+}}} // namespace Scaleform::GFx::AS3
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// AS3 ForEachChild_GC for a Value: visits it when it is collectable and not a weak reference.
 // @0x140012b80
-void FUN_140012b80(void*, const UInt32* flags)
+void FUN_140012b80(AS3::RefCountCollector<StatMV_ActionScript_Mem>* prcc, const AS3::Value& v,
+                   AS3::ASRefCountBaseType::GcOp op, const AS3::ASRefCountBaseType& owner)
 {
-    if ((*flags & 0x1f) > 10 && (*flags & 0x200) == 0)
-    {
-        const Scaleform::GFx::AS3::Value* value = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(flags);
-        Scaleform::GFx::AS3::Value released(*value, Scaleform::GFx::AS3::Value::NotRefCounted);
-    }
+    if (v.IsGarbageCollectable() && !v.IsWeakRef())
+        AS3::ForEachChild_GC_Internal(prcc, v, op, owner);
 }
 
 // @0x14000f830
@@ -1681,14 +1689,15 @@ void FUN_140010490(void* object)
     RawRefCountCoreDtor(object);
 }
 
-// MS2-FUNCTIONAL: copies both StateData words and retains the referenced bag when nonempty.
+// Copies both StateData words and retains the referenced bag when nonempty.
 // @0x140010d70
-void FUN_140010d70(void* destination, const void* source)
+void* FUN_140010d70(void* destination, const void* source)
 {
     *static_cast<unsigned __int64*>(destination) = *static_cast<const unsigned __int64*>(source);
     *reinterpret_cast<unsigned __int64*>(static_cast<char*>(destination) + 8) =
         *reinterpret_cast<const unsigned __int64*>(static_cast<const char*>(source) + 8);
     if (*static_cast<const unsigned __int64*>(source)) FUN_142625ee0(destination);
+    return destination;
 }
 
 // MS2-FUNCTIONAL: assigns the bag only when either side contains state data. Only the or's operand order differs (the
