@@ -1261,8 +1261,6 @@ void GAS_GlobalASSetPropFlags(const FnCall& fn)
 // ---- Global IME candidate list style ----
 }}} // namespace Scaleform::GFx::AS2
 // Bodies of the exe called here, by their addresses.
-bool FUN_1425b4570(void* pime, Scaleform::GFx::IMECandidateListStyle* pstyle);       // IMEManagerBase::GetCandidateListStyle
-bool FUN_1425b4de0(void* pime, const Scaleform::GFx::IMECandidateListStyle& style);  // IMEManagerBase::SetCandidateListStyle
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Global getIMECandidateListStyle(): an object with the style members that are set.
@@ -1274,7 +1272,7 @@ void GAS_GlobalGetIMECandidateListStyle(const FnCall& fn)
     if (!pime)
         return;
     IMECandidateListStyle style;
-    if (!FUN_1425b4570(pime, &style))
+    if (!pime->GetCandidateListStyle(&style))
         return;
     // Adopt the new object: the exe takes no extra reference (0x1428fa82f Object ctor, no AddRef)
     Ptr<Object>      pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
@@ -1380,14 +1378,12 @@ void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
         if (!NumberUtil::IsNaNOrInfinity(n))
             style.SetReadingWindowFontSize((UInt32)(SInt64)n);
     }
-    FUN_1425b4de0(pime, style);
+    pime->SetCandidateListStyle(style);
 }
 
 // ---- TextField IME composition string styles ----
 }}} // namespace Scaleform::GFx::AS2
 // Bodies of the exe called here (not recovered yet), by their addresses.
-Scaleform::GFx::AS2::TextFieldObject* FUN_142956410(Scaleform::GFx::AS2::AvmTextField* ptextField);   // AvmTextField::GetTextFieldASObject
-void FUN_142981750(Scaleform::GFx::AS2::TextFieldObject* pobj, const Scaleform::GFx::Text::IMEStyle* pstyle); // TextFieldObject::SetIMECompositionStringStyles
 Scaleform::Render::Text::HighlightInfo FUN_14296e9f0(const Scaleform::GFx::AS2::FnCall& fn, unsigned index,
                                                      const Scaleform::Render::Text::HighlightInfo& base);   // TextFieldProto::ParseStyle
 void FUN_142968610(const Scaleform::GFx::AS2::FnCall& fn, const Scaleform::Render::Text::HighlightInfo& info); // TextFieldProto::MakeStyle
@@ -1412,7 +1408,7 @@ static Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
     if (!fn.ThisPtr)
         return 0;
     if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextField)
-        return FUN_142956410((AvmTextField*)fn.ThisPtr);
+        return ((AvmTextField*)fn.ThisPtr)->GetTextFieldASObject();
     if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_TextFieldASObject)
         return (TextFieldObject*)fn.ThisPtr;
     return 0;
@@ -1436,7 +1432,7 @@ void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
             newStyle = *pold;
         newStyle.HighlightStyles[cat] = FUN_14296e9f0(fn, 1, newStyle.HighlightStyles[cat]);
         newStyle.PresenceMask |= (UByte)(1 << cat);
-        FUN_142981750(ptf, (const Text::IMEStyle*)&newStyle);
+        ptf->SetIMECompositionStringStyles(*(const Text::IMEStyle*)&newStyle);
     }
 }
 
@@ -1519,7 +1515,7 @@ void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
 // Bodies of the exe called here (not recovered yet), by their addresses; the style manager is opaque.
 }}} // namespace Scaleform::GFx::AS2
 void FUN_142609630(void* pstyleManager);                              // Text::StyleManager::Clear
-bool FUN_14260b7f0(void* pstyleManager, const char* pcss, unsigned size); // Text::StyleManager::ParseCSS
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // StyleSheet.clear()
@@ -1548,7 +1544,7 @@ void StyleSheetProto::ParseCSS(const FnCall& fn)
         }
         Value    arg(fn.Arg(0));
         ASString css = arg.ToString(fn.Env);
-        fn.Result->SetBool(FUN_14260b7f0(pthis->Data68, css.ToCStr(), css.GetSize()));
+        fn.Result->SetBool(reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), css.GetSize()));
     }
     else
         fn.ThisPtrError("StyleSheet");
