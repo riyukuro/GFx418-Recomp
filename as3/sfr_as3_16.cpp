@@ -83,6 +83,16 @@
 #include <vector>
 #undef GetObject   // windows.h
 
+namespace Scaleform {
+// The Multiname array destructor stays out of line in the exe (CTraits::~CTraits calls it).
+// @0x1424dc870
+template<> SF_NOINLINE ArrayDataBase<GFx::AS3::Multiname, AllocatorLH<GFx::AS3::Multiname, 2>, ArrayDefaultPolicy>::~ArrayDataBase()
+{
+    AllocatorType::DestructArray(Data, Size);
+    AllocatorType::Free(Data);
+}
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 // (sfg) the call readers' implicit destructors (AS3_VMRead.h; 4.1 layout: ReadArgsMn also derives from MnReader).
 class Sfr16MnReader
@@ -913,7 +923,6 @@ namespace InstanceTraits
     {
     }
 
-    // MS2-FUNCTIONAL: the exe calls the ArrayDataBase<Multiname> dtor out of line (0x1424dc870); cl inlines it.
     // @0x1424ddd90
     CTraits::~CTraits()
     {
@@ -1921,13 +1930,6 @@ void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase*, Scaleform::GFx::DisplayObje
         Scaleform::GFx::AS3::Sfr34_ModifyOptimizedPlayList(interactive);
     }
 }
-
-// The VM and call-frame code keeps this array destructor out of line in the executable.
-// MS2-FUNCTIONAL 0x1424dc870: destroys each Multiname and releases the same AllocatorLH buffer; cl emits a longer inline cleanup sequence.
-// @0x1424dc870
-template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Multiname,
-                                  Scaleform::AllocatorLH<Scaleform::GFx::AS3::Multiname, 2>,
-                                  Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
 
 // Out-of-line SPtr copy and raw-pointer assignments from the surrounding AS3 cache and trait code.
 // @0x1424e0550
