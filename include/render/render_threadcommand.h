@@ -31,6 +31,12 @@ struct Interfaces
         : pTextureManager(textureManager), pHAL(hal), pRenderer2D(r2d), RenderThreadID(tid)
     {
     }
+    // member-wise, as in the SDK: the exe copies with four qword moves
+    Interfaces(const Interfaces& other)
+        : pTextureManager(other.pTextureManager), pHAL(other.pHAL), pRenderer2D(other.pRenderer2D),
+          RenderThreadID(other.RenderThreadID)
+    {
+    }
     void Clear()
     {
         pTextureManager = 0;

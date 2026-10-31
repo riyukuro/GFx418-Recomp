@@ -922,7 +922,6 @@ void DrawableImage::updateStagingTargetRT()
 // ---------------------------------------------------------------------------------------------------------------
 // DrawableImageContext
 
-// MS2-FUNCTIONAL: the exe copies Interfaces member-wise (four qword moves) where our compiler uses two movups
 // @0x1425e9b10
 DrawableImageContext::DrawableImageContext(Context* controlContext, ThreadCommandQueue* queue,
                                            const Interfaces& defaults)

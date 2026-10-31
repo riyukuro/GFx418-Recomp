@@ -29,6 +29,10 @@
 #include "ms2/scaleform/kernel/sf_alg.h"
 #include "ms2/scaleform/kernel/sf_log.h"
 
+namespace Scaleform { namespace GFx { namespace AS2 {
+void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src);
+}}}
+
 namespace Scaleform { namespace Render {
 
 typedef ArrayLH_POD<UByte>                MorphContainer;
@@ -1999,7 +2003,7 @@ bool ShapeMeshProvider::createNullMesh(VertexOutput* pout, unsigned layer, unsig
     return true;
 }
 
-// MS2-FUNCTIONAL: ours inlines Matrix2F::SetInverse into the Invert (the exe calls 0x142446cb0 on a stack copy)
+// MS2-FUNCTIONAL: same code, the exe puts the path position, the inverse copy and the grid matrix in other stack slots
 // @0x14262f720
 void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsigned layer, unsigned imgFillStyle,
                                                Matrix2F* mtx)
@@ -2035,7 +2039,8 @@ void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsign
         float src[6] = { bounds.x1, bounds.y1, bounds.x2, bounds.y1, bounds.x2, bounds.y2 };
         mtx->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
         Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
-        mtx->Invert();
+        // mtx->Invert(), with the inverse the exe keeps out of line
+        GFx::AS2::Matrix2F_SetInverse(mtx, Matrix2F(*mtx));
         mtx->Append(d);
     }
 }
