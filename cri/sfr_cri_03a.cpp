@@ -9,6 +9,10 @@
 // MS2-RANGE: 0x140039ea8-0x14003b6e0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+struct Unk_CriUtfColumn;
+struct Unk_CriUtfInit;
+struct Unk_CriUtfSortTable;
+struct Unk_CriUtfTable;
 #include "../include/cri/cri_movie.h"
 #include <windows.h>
 #include <cstring>
@@ -61,20 +65,18 @@ CriBool criCsWin_InitializeCriticalSection(LPCRITICAL_SECTION);
 CriBool criCsWin_DeleteCriticalSection(LPCRITICAL_SECTION);
 CriBool FUN_140039e24(LPCRITICAL_SECTION);
 CriBool FUN_140039e4c(LPCRITICAL_SECTION);
-void FUN_140038ddc(CriSint32, const CriChar8*);
+void criErr_Notify(CriSint32 category, const CriChar8* message);
 void* FUN_14003b2ac(void*, CriSint32, const void*, CriUint32);
 void FUN_14003e850(void*, void*, void*);
 void FUN_14004e250(void);
 void FUN_14004eb70(void);
 void FUN_14004f8d0(void);
-void FUN_140027fb4(void*, void*);
 void FUN_14004e2a0(void*);
 void FUN_140046784(void*);
 void* FUN_14004fe20(void*, CriUint32, CriUint32);
 void FUN_14003cae0(void*);
 CriSint32 FUN_14003cff0(void*);
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
-void* FUN_140027f7c(void*, CriSint32, const CriChar8*, CriSint32, CriSint32);
 void* FUN_14003a1a0(void*, CriUint32, const void*, CriUint32);
 CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
@@ -132,12 +134,12 @@ void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void FUN_140038e24(CriSint32, const char*, CriSint32);
 void FUN_140038ce4(CriSint32, const char*, CriSint32, CriSint32, void*);
 void FUN_140041110(void*, const char*, CriUint32);
-void FUN_140046d50(void*, CriSint32);
+void FUN_140046d50(Unk_CriUtfSortTable *, unsigned int);  // C3: the definition's signature
 void FUN_140053570(void*);
 void FUN_140050e90(void*);
 void FUN_140053e40(void*);
-CriUint32 FUN_1400472c0(const CriUint8*, CriUint32);
-void* FUN_140046e04(void*, void*, CriUint32, void*, void*, const void*, CriUint32, void*, CriUint32);
+unsigned int FUN_1400472c0(unsigned char const *, unsigned int);  // C3: the definition's signature
+Unk_CriUtfTable * FUN_140046e04(Unk_CriUtfTable *, void *, void *, Unk_CriUtfColumn *, void *, unsigned char const *, unsigned int, Unk_CriUtfInit const *, unsigned int);  // C3: the definition's signature
 const CriChar8* criUtfRtv_GetDataStr(const CriUtfRtvView*, CriUint32, CriUint32);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8*, CriUint32, CriUsfStandardHeader*);
 // CriUsfStandardHeader read through its parsed fields. The exe's header local is not a byte buffer (no /GS cookie).
@@ -299,7 +301,7 @@ void* criCs_Create(void* work, CriSint32 size)
     LPCRITICAL_SECTION section = (LPCRITICAL_SECTION)aligned;
     if (!criCsWin_InitializeCriticalSection(section))
     {
-        FUN_140038ddc(0, "E2006081802:InitializeCriticalSection function has failed.");
+        criErr_Notify(0, "E2006081802:InitializeCriticalSection function has failed.");
         return NULL;
     }
     return section;
@@ -311,10 +313,10 @@ void criCs_Destroy(LPCRITICAL_SECTION section)
 {
     CriLockFields* lock = (CriLockFields*)section;
     if (lock->Depth > 0)
-        FUN_140038ddc(0, "E2010062902:Critical section object will be deleted while some process is still in the section.");
+        criErr_Notify(0, "E2010062902:Critical section object will be deleted while some process is still in the section.");
     if (!criCsWin_DeleteCriticalSection(section))
     {
-        FUN_140038ddc(0, "E2006081803:DeleteCriticalSection function has failed.");
+        criErr_Notify(0, "E2006081803:DeleteCriticalSection function has failed.");
         return;
     }
     memset(section, 0, 0x30);
@@ -328,7 +330,7 @@ void FUN_140039f50(LPCRITICAL_SECTION section)
     CriLockFields* lock = (CriLockFields*)section;
     if (!FUN_140039e24(section))
     {
-        FUN_140038ddc(0, "E2006081804:EnterCriticalSection function has failed.");
+        criErr_Notify(0, "E2006081804:EnterCriticalSection function has failed.");
         return;
     }
     lock->Depth++;
@@ -346,9 +348,9 @@ void FUN_140039f8c(LPCRITICAL_SECTION section)
     if (lock->Depth == 0)
         lock->OwnerThread = 0;
     if (lock->Depth < 0)
-        FUN_140038ddc(0, "E2010062901:Mismatch of the number of entering and leaving to critical section.");
+        criErr_Notify(0, "E2010062901:Mismatch of the number of entering and leaving to critical section.");
     else if (!FUN_140039e4c(section))
-        FUN_140038ddc(0, "E2006081805:EnterCriticalSection function has failed.");
+        criErr_Notify(0, "E2006081805:EnterCriticalSection function has failed.");
 }
 
 // MS2-FUNCTIONAL: preserves CRI's null diagnostic and serializes the old-value/store operation with its shared lock.
@@ -411,7 +413,7 @@ void criUtfRtv_Destroy(CriUint64* table)
         ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x16]);
     for (CriUint32 index = 0; index < 4; ++index)
         if (table[0xe + index * 2] != 0)
-            FUN_140046d50(table, index);
+            FUN_140046d50((Unk_CriUtfSortTable *)table, index);
     ((FreeFn)heap[1])((void*)heap[2], (void*)table[0x15]);
 }
 #pragma optimize("", on)
@@ -446,13 +448,13 @@ void* FUN_14003b20c(void* heap, CriSint32 size, const CriChar8* name, CriSint32 
         FUN_140038e24(0, "E08092651B", -3);
         break;
     }
-    return FUN_140027f7c(heap, size, name, alignment, type);
+    return criHeap_Alloc((CriHeap)heap, size, name, alignment, type);
 }
 
 // @0x14003b2a4
 void FUN_14003b2a4(void* heap, void* memory)
 {
-    FUN_140027fb4(heap, memory);
+    criHeap_Free((CriHeap)heap, memory);
 }
 
 // MS2-FUNCTIONAL: adapt the four CRI heap modes and callbacks before constructing a UTF runtime table.
@@ -546,8 +548,9 @@ void* FUN_14003a1a0(void* callbackBlock, CriUint32 allocationMode, const void* d
         void* recordsMemory = rawRecords;
         size_t recordsSpace = recordsSize;
         void* records = std::align(0x10, recordsSize, recordsMemory, recordsSpace);
-        if (FUN_140046e04(table, rawTable, fieldCount, records, rawRecords, data, size,
-                          callbackBlock, allocationMode))
+        if (FUN_140046e04((Unk_CriUtfTable *)table, rawTable, (void*)(size_t)fieldCount, (Unk_CriUtfColumn*)records, rawRecords,
+                          (const unsigned char*)data, size,
+                          (const Unk_CriUtfInit*)callbackBlock, allocationMode))
             return table;
         criUtfRtv_Destroy((CriUint64*)table);
         return NULL;
@@ -1725,7 +1728,6 @@ extern "C" const void* PTR_FUN_143a48608;
 void FUN_14002e6b0(void*, CriUint32, CriMvWorkAllocator*);
 void* FUN_14002e6c0(CriMvWorkAllocator*, CriUint32, CriUint32);
 void FUN_14002e6bc(CriMvWorkAllocator*);
-void FUN_140038ddc(CriSint32, const CriChar8*);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 void* FUN_140045eec(const void* config, void* work, CriSint32 workSize);
