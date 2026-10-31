@@ -2007,31 +2007,33 @@ void FUN_14001d310(CriUint64* array, CriUint64 newSize)
     array[1] = newSize;
 }
 
-// MS2-FUNCTIONAL: replace a reference-counted Video interface and apply the stored sound mode.
+// the sound-channel holder FUN_14001c170 updates: channel at +0x10, volume at +0x18, a dirty byte at +0x20.
+struct CriSoundChannelHolder
+{
+    CriUint8 Header[0x10];
+    void* Channel;
+    float Volume;
+    CriUint32 Reserved;
+    CriUint8 Dirty;
+};
+
+// replace a reference-counted sound channel and apply the stored volume.
 // @0x14001c170
 void FUN_14001c170(void* owner, void* replacement)
 {
-    CriUint8* bytes = (CriUint8*)owner;
-    void* current;
-    memcpy(&current, bytes + 0x10, sizeof(current));
-    if (current)
-    {
-        void** vtable = *(void***)current;
-        ((void (*)(void*))vtable[3])(current);
-    }
+    CriSoundChannelHolder* holder = (CriSoundChannelHolder*)owner;
+    void** slot = &holder->Channel;
+    if (*slot)
+        ((void (*)(void*))(*(void***)*slot)[3])(*slot);
     if (replacement)
         FUN_14257dc30(replacement);
-    if (current)
-        FUN_14257dcb0(current);
-    memcpy(bytes + 0x10, &replacement, sizeof(replacement));
-    bytes[0x20] = 0;
-    if (replacement)
-    {
-        void** vtable = *(void***)replacement;
-        CriUint32 mode;
-        memcpy(&mode, bytes + 0x18, sizeof(mode));
-        ((void (*)(void*, CriUint32))vtable[10])(replacement, mode);
-    }
+    if (*slot)
+        FUN_14257dcb0(*slot);
+    *slot = replacement;
+    void* channel = *(void* volatile*)slot;   // the exe reloads the slot here
+    holder->Dirty = 0;
+    if (channel)
+        ((void (*)(void*, float))(*(void***)channel)[10])(channel, holder->Volume);
 }
 
 // adjust a Scaleform array size and grow or shrink capacity using the shared array helper (ArrayData::Resize).
@@ -2056,23 +2058,13 @@ void FUN_14001cb10(Scaleform::RefCountImplCore* object)
     CriRefCountRelease(object);
 }
 
-// MS2-FUNCTIONAL: allocate and construct a VideoSoundRendererStream from the supplied heap state.
+// allocate and construct a VideoSoundRendererStream from the supplied heap state.
 // @0x14001d1d0
 void* FUN_14001d1d0(void* state)
 {
-    void* heap;
-    void* soundPlayer;
-    memcpy(&heap, (CriUint8*)state + 0x10, sizeof(heap));
-    memcpy(&soundPlayer, (CriUint8*)state + 0x18, sizeof(soundPlayer));
-    if (!heap)
-        return NULL;
-    void** vtable = *(void***)heap;
-    void* storage = ((void* (*)(void*, size_t, CriUint32))vtable[10])(heap, 0x90, 0);
-    if (!storage)
-        return NULL;
-    return ::new (storage) Scaleform::GFx::Video::VideoSoundRendererStream(
-        (Scaleform::MemoryHeap*)heap,
-        (Scaleform::Sound::SoundRenderer*)soundPlayer);
+    Scaleform::MemoryHeap** fields = (Scaleform::MemoryHeap**)((CriUint8*)state + 0x10);
+    return ::new (fields[0]->Alloc(0x90)) Scaleform::GFx::Video::VideoSoundRendererStream(
+        fields[0], (Scaleform::Sound::SoundRenderer*)fields[1]);
 }
 
 // MS2-FUNCTIONAL: clear a Scaleform pointer array and release oversized storage.
