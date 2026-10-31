@@ -4213,37 +4213,38 @@ void FUN_1400317b0(void* player)
     ((LockView*)player)->Value = 0;
 }
 
-// MS2-FUNCTIONAL: advance a completed video or alpha decoder through the metadata and stop phases.
+// advance a completed video decoder (and its alpha decoder) through the metadata and stop phases
 // @0x1400344f0
 void FUN_1400344f0(void* player)
 {
-    if (((CriMvDecoderHandleFields*)player)->VideoDecoder && FUN_140044630(((CriMvDecoderHandleFields*)player)->VideoDecoder) != 3)
-        return;
-
-    if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+    if (((CriMvDecoderHandleFields*)player)->VideoDecoder)
     {
-        FUN_140035bf0(player);
-        if (FUN_140043cb0(((CriMvDecoderHandleFields*)player)->AlphaDecoder) != 3)
-        {
-            ((CriMvPlyStateTransitionFields*)player)->StopState = 2;
+        if (FUN_140044630(((CriMvDecoderHandleFields*)player)->VideoDecoder) != 3)
             return;
+        if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+        {
+            FUN_140035bf0(player);
+            if (FUN_140043cb0(((CriMvDecoderHandleFields*)player)->AlphaDecoder) != 3)
+            {
+                ((CriMvPlyStateTransitionFields*)player)->StopState = 2;
+                return;
+            }
         }
     }
 
-    CriSint32 result = FUN_140042d70(((CriMvDecoderHandleFields*)player)->AudioManager, player);
-    if (result == 1)
+    if (FUN_140042d70(((CriMvDecoderHandleFields*)player)->AudioManager, player) != 1)
     {
-        if (isLockedInputChunk(player) == 1)
-            ((CriMvPlyStateTransitionFields*)player)->StopState = 3;
-        else
-        {
-            FUN_140031570(player);
-            ((CriMvPlyStateTransitionFields*)player)->Status = 6;
-            ((CriMvPlyStateTransitionFields*)player)->StopState = 5;
-        }
-    }
-    else
         ((CriMvPlyStateTransitionFields*)player)->StopState = 4;
+        return;
+    }
+    if (isLockedInputChunk(player) == 1)
+        ((CriMvPlyStateTransitionFields*)player)->StopState = 3;
+    else
+    {
+        FUN_140031570(player);
+        ((CriMvPlyStateTransitionFields*)player)->Status = 6;
+        ((CriMvPlyStateTransitionFields*)player)->StopState = 5;
+    }
 }
 
 // MS2-FUNCTIONAL: copy the selected analyzed-header or input-buffer remainder into the read queue.
