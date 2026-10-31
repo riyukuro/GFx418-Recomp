@@ -174,24 +174,28 @@ static inline Rect<SInt32> sizeRect(const ImageSize& size)
 }
 
 // Per-channel population counts over rect (the whole image when null), clipped to the image.
-// MS2-FUNCTIONAL: the exe keeps the GetSize/pixel temporaries in the caller's home area (0x20 smaller frame), shifting registers
 // @0x1425ed440
 void DrawableImage::Histogram(Rect<SInt32>* rect, unsigned colors[4][256])
 {
     internalMapAndFlush();
     memset(colors, 0, sizeof(unsigned) * 4 * 256);
-    Rect<SInt32> hrect = rect ? *rect : sizeRect(GetSize());
+    Rect<SInt32> hrect;
+    if (rect)
+        hrect = *rect;
+    else
+        hrect = Rect<SInt32>(GetSize());
     for (SInt32 y = Alg::Max<SInt32>(0, hrect.y1); y < Alg::Min<SInt32>(GetSize().Height, hrect.y2); ++y)
     {
         for (SInt32 x = Alg::Max<SInt32>(0, hrect.x1); x < Alg::Min<SInt32>(GetSize().Width, hrect.x2); ++x)
         {
             UInt32 c = GetPixel32(x, y).ToColor32();
-            colors[2][(UByte)c]++;
+            colors[2][c & 0xFF]++;
             c >>= 8;
-            colors[1][(UByte)c]++;
+            colors[1][c & 0xFF]++;
             c >>= 8;
-            colors[0][(UByte)c]++;
-            colors[3][c >> 8]++;
+            colors[0][c & 0xFF]++;
+            c >>= 8;
+            colors[3][c & 0xFF]++;
         }
     }
 }
