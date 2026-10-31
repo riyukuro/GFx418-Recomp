@@ -168,11 +168,6 @@ Texture* DrawableImage::GetTexture(TextureManager* manager)
     return pTexture;
 }
 
-static inline Rect<SInt32> sizeRect(const ImageSize& size)
-{
-    return Rect<SInt32>(0, 0, size.Width, size.Height);
-}
-
 // Per-channel population counts over rect (the whole image when null), clipped to the image.
 // @0x1425ed440
 void DrawableImage::Histogram(Rect<SInt32>* rect, unsigned colors[4][256])
@@ -363,21 +358,6 @@ void DrawableImage::CopyPixels(DrawableImage* source, const Rect<SInt32>& source
 }
 #pragma strict_gs_check(pop)
 
-// The viewport of a Draw root: the clip rectangle (or the whole image) of a render target the image's size.
-static inline void setTargetViewport(TreeRoot* root, const Rect<SInt32>& area, const ImageSize& size, unsigned flags)
-{
-    Viewport vp;
-    vp.BufferWidth   = size.Width;
-    vp.BufferHeight  = size.Height;
-    vp.Left          = area.x1;
-    vp.Top           = area.y1;
-    vp.Width         = area.Width();
-    vp.Height        = area.Height();
-    vp.ScissorLeft   = vp.ScissorTop = vp.ScissorWidth = vp.ScissorHeight = 0;
-    vp.Flags         = flags;
-    root->SetViewport(vp);
-}
-
 // TreeContainer::Add as the exe keeps it out of line for Draw: the size of the children is read inline here (the
 // container's own GetSize stays out of line elsewhere).
 // @0x1425eae70
@@ -386,8 +366,9 @@ __declspec(noinline) bool FUN_1425eae70(TreeContainer* container, TreeNode* node
     return container->Insert(container->GetReadOnlyData()->Children.GetSize(), node);
 }
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie and keeps TreeContainer::Add, StartLayer, LineTo and EndPath out of line; the rectangle's closing edge is an explicit test (the exe compares the start and last points)
+// MS2-FUNCTIONAL: the exe keeps TreeContainer::Add, StartLayer, LineTo and EndPath out of line; the rectangle's closing edge is an explicit test (the exe compares the start and last points)
 // @0x1425eb8c0
+#pragma strict_gs_check(push, on)
 void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
                          const Rect<SInt32>* clipRect, bool smoothing)
 {
@@ -419,7 +400,9 @@ void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cx
     data->pMeshProvider       = shapeData;
     shape->AddToPropagate();
 
-    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize(), 0);
+    Rect<SInt32> clip = clipRect ? *clipRect : Rect<SInt32>(GetSize());
+    Viewport     vp(GetSize(), clip);
+    root->SetViewport(vp);
     root->SetMatrix(matrix);
     shape->SetMatrix(Matrix2F::Identity);
     shape->SetCxform(cxform);
@@ -431,9 +414,11 @@ void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cx
     pContext->OnCapture();
     addCommand(DICommand_Draw(this, root, clipRect));
 }
+#pragma strict_gs_check(pop)
 
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie and keeps TreeContainer::Add out of line (our build inlines it)
+// MS2-FUNCTIONAL: stack slots (the exe places the Viewport at the frame bottom and the DICommand_Draw temporary next to the cookie; ours swaps them)
 // @0x1425ebf70
+#pragma strict_gs_check(push, on)
 void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,
                          const Rect<SInt32>* clipRect)
 {
@@ -447,7 +432,9 @@ void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform
     Ptr<TreeNode> child = *subtree->Clone(pContext->RContext);
     FUN_1425eae70(root, child);
 
-    setTargetViewport(root, clipRect ? *clipRect : sizeRect(GetSize()), GetSize(), Viewport::View_IsRenderTexture);
+    Rect<SInt32> clip = clipRect ? *clipRect : Rect<SInt32>(GetSize());
+    Viewport     vp(GetSize(), clip, Viewport::View_IsRenderTexture);
+    root->SetViewport(vp);
     root->SetMatrix(matrix);
     child->SetMatrix(Matrix2F::Identity);
     child->SetCxform(cxform);
@@ -460,6 +447,7 @@ void DrawableImage::Draw(TreeNode* subtree, const Matrix2F& matrix, const Cxform
     pContext->OnCapture();
     addCommand(DICommand_Draw(this, root, clipRect));
 }
+#pragma strict_gs_check(pop)
 
 
 // @0x1425ec860
@@ -690,9 +678,14 @@ bool DrawableImage::createTextureFromManager(HAL* phal, TextureManager* manager)
     return true;
 }
 
+// The SDK's header-inline Matrix2x4 operator*, which the exe inlines here (our header declares the out-of-line copy)
+static __forceinline const Matrix2F mulInline(const Matrix2F& m1, const Matrix2F& m2)
+{
+    return Matrix2F(m1).Prepend(m2);
+}
+
 // Gives the image a render target: recreated on the existing texture after a device loss, or the delegate image is
 // replaced by a texture of our own, its contents drawn (or decoded) into it.
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
 // @0x1425ef770
 bool DrawableImage::ensureRenderableRT()
 {
@@ -726,13 +719,12 @@ bool DrawableImage::ensureRenderableRT()
 
     if (delegateTexture)
     {
-        ImageSize rtSize = pRT->GetSize();
-        rifs.pHAL->PushRenderTarget(RectF(0, 0, (float)rtSize.Width, (float)rtSize.Height), pRT);
-        Matrix2F mvp = Matrix2F::Scaling(2, -2);
-        mvp.Prepend(Matrix2F::Translation(-0.5f, -0.5f));
+        rifs.pHAL->PushRenderTarget(RectF(pRT->GetSize()), pRT);
+        Matrix2F mvp = mulInline(Matrix2F::Scaling(2, -2), Matrix2F::Translation(-0.5f, -0.5f));
         Matrix2F texgen;
-        texgen.AppendScaling((float)pRT->GetSize().Width / (float)pRT->GetBufferSize().Width,
-                             (float)pRT->GetSize().Height / (float)pRT->GetBufferSize().Height);
+        Size<float> rtSize((float)pRT->GetSize().Width, (float)pRT->GetSize().Height);
+        Size<float> bufSize((float)pRT->GetBufferSize().Width, (float)pRT->GetBufferSize().Height);
+        texgen.AppendScaling(Size<float>(rtSize.Width / bufSize.Width, rtSize.Height / bufSize.Height));
         rifs.pHAL->DrawableCopyback(delegateTexture, mvp, texgen);
         rifs.pHAL->PopRenderTarget();
     }
