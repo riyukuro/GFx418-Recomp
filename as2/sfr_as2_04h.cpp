@@ -17,6 +17,12 @@
 
 #include <intrin.h>
 #include "../include/gfx/as2/as2_action.h"
+#include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_refcountcollector.h"
+#include "../include/kernel/sf_arraypaged.h"
+
+void FUN_1424a9ed0(void*);   // global, defined in sfr_as3_12
+void FUN_14000b080(void** table);  // global, defined in sfr_video_01
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -29,21 +35,16 @@ void FUN_14257dcb0(void*);
 void FUN_1425c14e0(void*);
 void FUN_1425925f0(void*);
 void FUN_1425f0900(void*);
-void FUN_142592200(void*, void*);
-void FUN_1429343f0(void*);
+void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
 void FUN_14256a8e0(void*);
 void FUN_142924180(void*);
 void FUN_14257dcd0(void*);
 void FUN_142924a20(void*);
 void FUN_142925680(void*);
-void FUN_1424a9ed0(void*);
 void FUN_142924580(void*);
 void FUN_140001f40(void*);
 void FUN_142924770(void*);
-void FUN_14000b080(void*);
 void FUN_142924960(void*);
-void FUN_1425c1350(void*, void*, int);
-void FUN_142925250(void*);
 void FUN_142581700(void*);
 
 static inline void rs(void* n) // ASString release
@@ -89,9 +90,9 @@ extern const void* DAT_1432153a0[];
 void* DeleteAs2_142928c70(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153a0;
-    FUN_142592200(p, 0);
+    static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
-    FUN_1429343f0((char*)p+0x10);
+    FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
     FUN_14257db40(p);
     if (flags & 1)
     {
@@ -107,9 +108,9 @@ void* DeleteAs2_142928c70(void* p, unsigned flags)
 void* DeleteAs2_142928dc0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432153a0;
-    FUN_142592200(p, 0);
+    static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
-    FUN_1429343f0((char*)p+0x10);
+    FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
     FUN_14257db40(p);
     if (flags & 1)
     {
@@ -232,7 +233,7 @@ void* DeleteAs2_14292a0e0(void* p, unsigned flags)
 {
     rg(*(void**)((char*)p+0x40));
     *(const void**)p = DAT_14316afc0;
-    FUN_1424a9ed0((char*)p+0x8);
+    ::FUN_1424a9ed0((char*)p+0x8);
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -251,7 +252,7 @@ void* DeleteAs2_14292b4e0(void* p, unsigned flags)
     rg(*(void**)((char*)p+0x60));
     FUN_140001f40((char*)p+0x20);
     FUN_142924770((char*)p+0x18);
-    FUN_14000b080((char*)p+0x10);
+    ::FUN_14000b080((void**)((char*)p+0x10));
     FUN_14257db50(p);
     if (flags & 1)
     {
@@ -290,8 +291,8 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
 {
     *(const void**)p = DAT_1432177d8;
     ((ArrayLH<P14292c3e0>*)((char*)p+0x628))->~ArrayLH();
-    FUN_1425c1350(*(void**)((char*)p+0x618), (char*)p+0x138, 0x9c);
-    FUN_142925250((char*)p+0x80);
+    (*(ASStringManager**)((char*)p+0x618))->ReleaseBuiltinArray((ASStringNodeHolder*)((char*)p+0x138), 0x9c);
+    ((MovieRoot::ActionQueueType*)((char*)p+0x80))->~ActionQueueType();
     ((Value*)((char*)p+0x58))->~Value();
     if (*(void**)((char*)p+0x50)) FUN_14257dcd0(*(void**)((char*)p+0x50));
     if (*(void**)((char*)p+0x38)) FUN_14257dcb0(*(void**)((char*)p+0x38));
