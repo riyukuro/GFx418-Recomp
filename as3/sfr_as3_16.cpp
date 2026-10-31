@@ -743,6 +743,17 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // ==== slots ==========================================================================================================
 
+// The exe keeps these two SPtr assignments out of line; SlotInfo::operator= calls them.
+template<> SF_NOINLINE inline SPtr<const Instances::Namespace>& SPtr<const Instances::Namespace>::operator=(
+    const SPtr<const Instances::Namespace>& other)
+{
+    return Set(other);
+}
+template<> SF_NOINLINE inline SPtr<VMAbcFile>& SPtr<VMAbcFile>::operator=(const SPtr<VMAbcFile>& other)
+{
+    return Set(other);
+}
+
 // @0x1424def30
 SlotInfo::~SlotInfo()
 {
@@ -761,8 +772,7 @@ void* FUN_1424e1bd0(void* node, unsigned int flags)
     return node;
 }
 
-// MS2-FUNCTIONAL: the exe calls the SPtr<Namespace>/SPtr<VMAbcFile> assignments out of line (0x1424e0550,
-// 0x1424e08d0) and inlines the SPtr<Traits> one; ours inlines all three.
+// The SPtr<Namespace>/SPtr<VMAbcFile> assignments are the out-of-line specializations above; SPtr<Traits> inlines.
 // @0x1424e0b80
 SlotInfo& SlotInfo::operator=(const SlotInfo& other)
 {
@@ -2456,10 +2466,9 @@ bool AvmDisplayObjContainer::ActsAsButton() const { return false; }
 // @0x1424e5480
 bool AvmInteractiveObj::ActsAsButton() const
 {
-    Instances::fl_display::DisplayObject* obj = GetAS3Obj();
-    if (!obj)
+    if (!pAS3RawPtr && !pAS3CollectiblePtr)
         return true;
-    return obj->HasButtonHandlers();
+    return GetAS3Obj()->HasButtonHandlers();
 }
 
 // @0x1424e54b0
@@ -2467,7 +2476,7 @@ bool AvmSprite::ActsAsButton() const
 {
     if (SprFlags & Flag_ButtonMode)
         return true;
-    if (!GetAS3Obj())
+    if (!pAS3RawPtr && !pAS3CollectiblePtr)
         return false;
     return AvmInteractiveObj::ActsAsButton();
 }

@@ -1250,15 +1250,13 @@ void* DeleteAs3_1424e3890(void* p, unsigned flags)
 }
 
 // Stage
-// MS2-FUNCTIONAL: scalar deleting destructor written out against raw member offsets; the class is not recovered
+// Scalar deleting destructor written out against raw member offsets; the class is not recovered.
 // @0x1424e3950
 void* DeleteAs3_1424e3950(void* p, unsigned flags)
 {
     Sfr21GVft(p, 0, DAT_14317d220);
     Sfr21GVft(p, 0x18, DAT_14317d5f0);
-    char* node = static_cast<char*>(Sfr21Mem(p, 0x120));
-    if (--*reinterpret_cast<int*>(node + 0x18) == 0)
-        reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
+    static_cast<Scaleform::GFx::ASStringNode*>(Sfr21Mem(p, 0x120))->Release();
     Sfr21GPtrNTS(p, 0x118);
     Sfr21GPtrNTS(p, 0x110);
     static_cast<Scaleform::GFx::DisplayObjContainer*>(p)->Scaleform::GFx::DisplayObjContainer::~DisplayObjContainer();
