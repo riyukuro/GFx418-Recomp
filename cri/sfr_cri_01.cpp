@@ -20,6 +20,7 @@
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
+#include "../include/gfx/gfx_movieimpl.h"
 
 void FUN_14257dc30(void* object);
 void FUN_14257dcb0(void* object);
@@ -34,11 +35,9 @@ extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
 extern const void* const DAT_1431b8f30[];
 extern "C" const void* const DAT_1431b8e30[];
-void FUN_14256c520(Scaleform::GFx::MovieImpl* movie, Scaleform::GFx::Video::VideoProvider* provider);
-// LoadStates / URLBuilder / MovieImpl entry points OpenUrl uses (their headers are not shared with this unit).
+// LoadStates / URLBuilder entry points OpenUrl uses (their headers are not shared with this unit).
 void* FUN_142636ed0(void* self, void* loader, void* states, void* bindStates);   // LoadStates::LoadStates
 void  FUN_142638170(const void* self, Scaleform::String* ppath, const void* loc); // LoadStates::BuildURL
-bool  FUN_14256f730(const void* movie, Scaleform::String* ppath);                // MovieImpl::GetMainMoviePath
 void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
 
 CriMvSoundInterface::~CriMvSoundInterface() {}
@@ -1007,7 +1006,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
         pls = FUN_142636ed0(pls, loaderImpl, stateBagImpl ? stateBagImpl + 0x10 : NULL, NULL);
 
     String level0Path;
-    FUN_14256f730(proot, &level0Path);
+    reinterpret_cast<MovieImpl*>(proot)->GetMainMoviePath(&level0Path);
     OpenUrlLocationInfo loc = { 0, String(url), level0Path };   // URLBuilder::File_Regular
     String fileName;
     FUN_142638170(pls, &fileName, &loc);
@@ -1070,7 +1069,7 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
     {
         pVideoPlayer->Open(fileName.ToCStr());
         pTarget = ptarget;
-        ::FUN_14256c520(reinterpret_cast<MovieImpl*>(proot), this);
+        reinterpret_cast<MovieImpl*>(proot)->AddVideoProvider(this);
         pVideoPlayer->SetLoopFlag(LoopFlag);
         ReleaseSubtitleBuffers();
         StartNotificationSent    = false;
@@ -1238,8 +1237,6 @@ void VideoProviderNetStream::SetSoundVolume(int volume, int subVolume)
 
 }}} // namespace Scaleform::GFx::AS3
 
-// MovieImpl member that registers a provider for advancing (unnamed in the exe's symbols).
-void FUN_14256c520(Scaleform::GFx::MovieImpl* proot, Scaleform::GFx::Video::VideoProvider* pprovider);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1259,7 +1256,7 @@ void VideoProviderNetStream::Seek(float pos, MovieImpl* proot)
         {
             pVideoPlayer->Seek((UInt32)((float)VInfo.FrameRate / 1000.0f * SeekPos));
             if (status == VideoPlayer::Finished && proot)
-                FUN_14256c520(proot, this);
+                proot->AddVideoProvider(this);
         }
         InitSoundChannel();
     }
