@@ -14,6 +14,10 @@
 void __empty_global_delete(void*, size_t);   // the sized operator delete the compiler pairs with ::new
 
 namespace Scaleform { class Event { public: virtual ~Event(); void PulseEvent(); }; }
+namespace Scaleform {
+void* FindAudioRequestEntry(void** set, const unsigned char* key);                  // sfr_as3_22.cpp; sync-point set: the value at key
+void ReserveVideoPlayerArray(void** array, void* heap, std::size_t requested);     // sfr_as3_22.cpp; ArrayData<VideoPlayerImpl*>::Reserve
+}
 
 namespace Scaleform { namespace GFx {
 
@@ -27,15 +31,13 @@ extern "C" char DAT_1431bee50[];   // streamed sound
 extern "C" char DAT_1431bee68[];
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer
 
-extern "C" void FUN_142743730(void*);       // sound dtor
+void FUN_142743730(void* self);             // sound dtor
 extern "C" int FUN_142303a3b(void*);        // FMOD::Sound::release
-void* FUN_142745630(void** set, const unsigned char* key);                  // sync-point set: the value at key
 U* FUN_142743900(U* self, const U* source);                                // ArrayPOD<VideoPlayerImpl*> assign
 void FUN_142742d10(U** self, void* heap, const NodeRef* node, U hash);     // array-valued set add
-extern "C" void FUN_1427463e0(U*, void*, U); // ArrayData<VideoPlayerImpl*>::Reserve
 void* FUN_14258a490(void* mem, void* createParams);                         // Thread::Thread(const CreateParams&)
 int FUN_142747310(void* thread, void* renderer);                            // the FMOD update thread's body
-void FUN_1427474d0(void* channel, void* syncinfo);                          // audio channel: sync point reached
+void FUN_1427474d0(void* channel, const void* syncinfo);                          // audio channel: sync point reached
 
 static inline void RawRefCountAddRef(void* p)
 {
@@ -171,7 +173,7 @@ void FUN_142744070(char* self, void* psound)
         return;
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0x80));
     U key = RawField<U>(data, 0x40);
-    U* list = (U*)FUN_142745630(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&key);
+    U* list = (U*)FindAudioRequestEntry(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&key);
     if (!list)
     {
         U nkey = key;
@@ -207,16 +209,16 @@ void FUN_142744070(char* self, void* psound)
         if (empty[0])
             Memory::Free((void*)empty[0]);
         U again = RawField<U>(data, 0x40);
-        list = (U*)FUN_142745630(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&again);
+        list = (U*)FindAudioRequestEntry(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&again);
     }
     const U n = list[1] + 1;
     if (n < list[1])
     {
         if (n < (list[2] >> 1))
-            FUN_1427463e0(list, list, n);
+            ReserveVideoPlayerArray((void**)list, list, n);
     }
     else if (n > list[2])
-        FUN_1427463e0(list, list, n + (n >> 2));
+        ReserveVideoPlayerArray((void**)list, list, n + (n >> 2));
     list[1] = n;
     ((void**)list[0])[n - 1] = psound;
     RawRefCountAddRef(psound);
