@@ -15,18 +15,16 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/video/video_video.h"
+#include "../include/kernel/sf_timer.h"
+#include "../kernel/sf_log.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
 
-void FUN_14257db50(void* object);
-void FUN_14257db40(void* object);
 void FUN_14257dc30(void* object);
 void FUN_14257dcb0(void* object);
 void FUN_14257dcd0(void* object);
 void* FUN_14257dc50(void* object);
-void FUN_142584ce0(void* object);
-void FUN_142585580(void* object, const void* source);
 extern const void* const DAT_1431b8fc8[];
 extern const void* const DAT_1431b8fa0[];
 extern const void* const DAT_1431b8e08[];
@@ -1495,9 +1493,6 @@ void VideoProviderNetStream::Advance()
 // VideoPlayerImpl drives one CriMvEasyPlayer through the VideoPlayer status machine; the decoder object (pDecoder)
 // starts/stops it. The Status member is re-read at every compare in the exe (volatile).
 
-void     FUN_14258b240(unsigned ms);        // Thread::MSleep
-unsigned __int64 FUN_1425e3590(void);               // Timer::GetTicks
-void     FUN_1423dce40(void* plog, const char* pfmt, ...);   // Log::LogError
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -1723,7 +1718,7 @@ void VideoPlayerImpl::StopAndWait()
         while (!pDecoder->IsDecodingStopped(this))
         {
             Decode();
-            FUN_14258b240(1);
+            Scaleform::Thread::MSleep(1);
         }
     }
 }
@@ -1764,13 +1759,13 @@ void VideoPlayerImpl::DecodeHeader()
     }
     else
     {
-        if (DecodeHeaderTimeout > 0 && FUN_1425e3590() - OpenTicks > DecodeHeaderTimeout)
+        if (DecodeHeaderTimeout > 0 && Scaleform::Timer::GetTicks() - OpenTicks > DecodeHeaderTimeout)
         {
             Stat            = Stopping;
             StatusAfterStop = InternalError;
             pDecoder->StopDecoding(this);
             if (pLog)
-                FUN_1423dce40(pLog, "Decode USM header timeout. Video file could be broken.\n");
+                reinterpret_cast<Scaleform::Log*>(pLog)->LogError("Decode USM header timeout. Video file could be broken.\n");
             return;
         }
         if (pPlayer->GetStatus() != CriMvEasyPlayer::MVEASY_STATUS_ERROR)
@@ -1896,7 +1891,6 @@ void VideoPlayerImpl::SetSoundSpatialInfo(Array<Sound::SoundChannel::Vector> spa
 
 void FUN_14257dc30(void*);
 void FUN_14257dcb0(void*);
-extern "C" void* DAT_143b15f60;
 
 // Video::Readers (Array<VideoReader*>) reserve: the SDK's out-of-line ArrayDataBase::Reserve.
 typedef Scaleform::ArrayDataBase<Scaleform::GFx::Video::VideoReader*,
@@ -2063,7 +2057,7 @@ void FUN_140029a10(void** value)
 {
     if (*value)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
@@ -2073,16 +2067,16 @@ void FUN_140029a10(void** value)
 // @0x140029070
 void* FUN_140029070(void* destination, const void* source)
 {
-    FUN_142585580(destination, source);
-    FUN_142585580((CriUint8*)destination + 8, (const CriUint8*)source + 8);
+    *reinterpret_cast<Scaleform::String*>(destination) = *reinterpret_cast<const Scaleform::String*>(source);
+    *reinterpret_cast<Scaleform::String*>((CriUint8*)destination + 8) = *reinterpret_cast<const Scaleform::String*>((const CriUint8*)source + 8);
     return destination;
 }
 
 // @0x1400293d0
 void* FUN_1400293d0(void* object)
 {
-    FUN_142584ce0(object);
-    FUN_142584ce0((CriUint8*)object + 8);
+    reinterpret_cast<Scaleform::String*>(object)->String::String();
+    reinterpret_cast<Scaleform::String*>((CriUint8*)object + 8)->String::String();
     return object;
 }
 
@@ -2092,8 +2086,8 @@ void FUN_140029de0(void* object)
 {
     if (object)
     {
-        FUN_142584ce0(object);
-        FUN_142584ce0((CriUint8*)object + 8);
+        reinterpret_cast<Scaleform::String*>(object)->String::String();
+        reinterpret_cast<Scaleform::String*>((CriUint8*)object + 8)->String::String();
     }
 }
 
@@ -2121,7 +2115,7 @@ void FUN_140029ed0(void* object)
     if (*(void**)((CriUint8*)object + 0x18))
         FUN_14257dcd0(*(void**)((CriUint8*)object + 0x18));
     *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8e08;
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // MS2-FUNCTIONAL: perform the callback teardown and free the object when scalar-delete is requested.
@@ -2131,7 +2125,7 @@ __declspec(noinline) void* FUN_140029fa0(void* object, unsigned flags)
     FUN_140029ed0(object);
     if (flags & 1)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, object);
     }
@@ -2168,7 +2162,7 @@ void FUN_14002a090(void* object)
     if (*(void**)((CriUint8*)object + 0x20))
         FUN_14257dcd0(*(void**)((CriUint8*)object + 0x20));
     *(const void***)((CriUint8*)object + 0x10) = (const void**)DAT_1431b8db0;
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // @0x140028360
@@ -2208,7 +2202,7 @@ void* FUN_140029160(void* object, unsigned flags)
     *(const void***)object = (const void**)DAT_1431b8e30;
     if (flags & 1)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, object);
     }
@@ -2227,10 +2221,10 @@ void* FUN_140029280(void* object, CriUint8 flags)
 // @0x14001ca70
 void* FUN_14001ca70(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, object);
     }
@@ -2394,7 +2388,7 @@ void FUN_140029af0(void** value)
 {
     if (*value)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
@@ -2408,7 +2402,7 @@ void FUN_140029b10(void** value)
 {
     if (*value)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
@@ -2422,7 +2416,7 @@ void FUN_140029e20(void** value)
 {
     if (*value)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, *value);
     }
@@ -2488,10 +2482,10 @@ template void CriReadBufferInfoArrayBase::Reserve(const void*, Scaleform::UPInt)
 
 static void* CriRefCountDeletingDtor(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if ((flags & 1) != 0)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         void** vtable = *(void***)heap;
         ((void (*)(void*, void*))vtable[12])(heap, object);
     }
