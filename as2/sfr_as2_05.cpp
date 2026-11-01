@@ -1519,9 +1519,7 @@ bool Object::FindMember(ASStringContext* psc, const ASString& name, Member* pmem
 
 typedef ASStringHash_GC<Member>::SetType   MemberSet;
 typedef ASStringHash_GC<Member>::EntryType MemberEntry;
-// The slot Clear and copy constructor of the member table, out of line in the exe (COMDATs 0x142934350 /
-// 0x142917730).
-void MemberEntry_Clear(MemberEntry* e);
+// The slot copy constructor of the member table, out of line in the exe (COMDAT 0x142917730).
 void MemberEntry_CopyConstruct(MemberEntry* e, const MemberEntry& src);
 
 // Find / FindCaseInsensitive / FindCaseCheck of the member table.
@@ -1582,14 +1580,14 @@ static SF_FORCEINLINE void MemberHash_Remove(ASStringHash_GC<Member>* phash, con
         if (!e->IsEndOfChain())
         {
             MemberEntry* next = &pTable->E(e->NextInChain);
-            MemberEntry_Clear(e);
+            (e->*&MemberEntry::Clear)();
             MemberEntry_CopyConstruct(e, *next);
             e = next;
         }
     }
     else
         pTable->E(prev).NextInChain = e->NextInChain;
-    MemberEntry_Clear(e);
+    (e->*&MemberEntry::Clear)();
     pTable->EntryCount--;
 }
 

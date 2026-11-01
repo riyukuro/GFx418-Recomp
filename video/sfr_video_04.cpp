@@ -41,13 +41,19 @@ struct Video04GcAccess : AS2::RefCountBaseGC<323> { using AS2::RefCountBaseGC<32
 InteractiveObject* FUN_140010000(InteractiveObject*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*);   // the video display object constructor
 AS2::FunctionRef* FUN_1400126f0(AS2::FunctionRef* result, AS2::GlobalContext* context);
 AS2::FunctionRef* FUN_14000ed60(AS2::FunctionRef* result, AS2::GlobalContext* context);
-ExeDecl<char(void*, std::uint64_t)>::type FUN_142592950;        // ArrayPaged: grow to hold a page index
 namespace Scaleform { namespace GFx {
 void FUN_142591a00(UPInt** table, void* heapOwner, const void* keyValue, UPInt hashCode);   // hash: add {key, value} at a hash code
 void FUN_1425916c0(void* context, void* sc, void* global);       // registers the first builtin
 namespace AS3 { class VM; struct ClassInfo; void FUN_1425210d0(VM& vm, const ClassInfo* table[]); }   // AS3 class registration
 } }
-namespace Scaleform { namespace GFx { namespace AS2 { class Value { public: ~Value(); }; } } }
+namespace Scaleform { namespace GFx { namespace AS2 {
+class Value { public: ~Value(); };
+template <int Stat> class RefCountCollector
+{
+public:
+    struct RootArray { bool allocatePageSafe(UPInt index); };
+};
+} } }
 ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
 #define FUN_14001af70_ctor FUN_14001af70
 ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSupport::AttachAudio
@@ -238,7 +244,7 @@ void* FUN_140001870(Video04ArrayPaged* array)
     std::uint64_t index = array->Size >> 10;
     if (index >= array->PageCount)
     {
-        if (!FUN_142592950(array, index))
+        if (!reinterpret_cast<Scaleform::GFx::AS2::RefCountCollector<323>::RootArray*>(array)->allocatePageSafe(index))
             return 0;
     }
     return (char*)array->Pages[index] + (std::uint64_t)(array->Size & 0x3ff) * 8;
