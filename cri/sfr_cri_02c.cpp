@@ -90,7 +90,6 @@ void     FUN_14258a720(void* lock);
 void     FUN_14257db50(void* p);
 CriUint32 FUN_14257bdc0(void);
 void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
-void*    FUN_140027f7c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
 void     FUN_14001d650(void* config, void* reader);                     // VideoReaderConfig::AttachReader
 void*    FUN_140041d40(void* pheap);                                    // CriHeap over a MemoryHeap: create
 void     FUN_140041dd0(void* criheap);                                  //   and destroy
@@ -102,14 +101,12 @@ void     crimvply_occurUserError(void* player, const char* message, CriSint32 se
 void     criUsfDmx_TerminateSupply(void* inputBuffer);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void*    criSjRbf_Create(const void* config, void* work, CriSint32 workSize);
-void*    FUN_140046730(void* heap, CriSint32 size, CriSint32 flags, CriSint32 align, const char* name);
-void*    FUN_140027ed8(void* heap, CriSint32 size, const char* name, CriSint32 align);
-CriSint32 FUN_140044eb0(CriSint32 workCount);
-CriSint32 FUN_140046604(CriUint32 first, CriUint32 second, CriUint32 alignment, const void* flags);
+void*    criSj_CreateNamedRingBuffer(void* heap, CriUint32 size, CriUint32 flags, CriUint32 align, CriUint64 name);
+CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 workCount);
+CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32 first, CriUint32 second, CriUint32 alignment, const CriUint32* flags);
 CriSint32 FUN_140044400(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
-CriSint32 FUN_140043a80(void* decoder, CriUint32 first, CriUint32 second, CriUint32 third);
 CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* params);
-CriSint32 FUN_140046420(CriUint32 first, CriUint32 second, const void* flags);
+CriSint32 criSjUni_GetRequiredMemorySizeWithConfig(CriUint32 first, CriUint32 second, const CriUint32* flags);
 void* crimvply_findAlphadecIfIF(CriSint32 codecId);
 CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config);
 void*    criUsfDmx_CreateWithWork(CriSint32 count, void* work, CriSint32 workSize);
@@ -121,27 +118,25 @@ struct CriMovieInputChunk;
 CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work);
 CriUint32 decideReadBufferExtSize(void* player);
 void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player);
-void*    FUN_140041f70(void* player, void* heap, const CriMvStreamingParameters* params);
-void*    FUN_140043af0(void* decoderInterface, void* heap, const void* config);
-void*    FUN_140044470(void* decoderInterface, void* heap, const void* config);
+void*    criMvPlyAmng_Create(void* player, void* heap, const void* params);
+void*    criAlphaDec_Create(void* decoderInterface, void* heap, void* config);
+void*    criVdec_Create(void* decoderInterface, void* heap, void* config);
 void     FUN_140044de0(void* decoder, void* callback, void* context);
-void     FUN_140044330(void* decoder, void* callback, void* context);
 void     FUN_140044c10(void* decoder, CriUint32 mask);
-CriHeap  FUN_140027fec(void* memory, CriSint32 size);
 void*    FUN_140039ea8(void* work, CriSint32 workSize);
 void*    FUN_1400385c8(void* work, CriSint32 workSize);
-void*    FUN_1400452b4(CriHeap heap, CriSint32 count);
-void*    FUN_1400464c8(CriHeap heap, CriSint32 kind, CriSint32 alignment);
+void*    criUsfDmx_Create(void* heap, CriSint32 count);
+void*    criSj_CreateUniversal(void* heap, CriUint32 kind, CriUint32 alignment);
 void     criMvPly_Destroy(CriUint32* player);
 void     initializeHandleParameters(void* player);
 void*    crimvply_findVdecIF(CriSint32 codecId);
 void*    criVdec_GetVdecCoreIf(void* decoderInterface);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void criSj_GetInputChunk(void* object, void* value);
-void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
+void     criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
-void     FUN_140039f50(void* section);
-void     FUN_140039f8c(void* section);
+void     criCs_Enter(_RTL_CRITICAL_SECTION* section);
+void     criCs_Leave(_RTL_CRITICAL_SECTION* section);
 void     criBaseVersion_ImplantVersionInformation(void);
 char*    FUN_140046944(char* dst, size_t size, const char* src);
 char*    FUN_14004698c(char* dst, size_t size, const char* src);
@@ -159,14 +154,16 @@ CriUint32 FUN_1400358d0(void* output, const void* info);
 void     FUN_140034d40(void* player, CriMovieInputChunk* output);
 CriBool  allocateMetaWork(void* player);
 CriBool  isEndStopProcessingProc(void* player);
-CriSint32 FUN_140042d70(void* decoder, void* player);
+CriSint32 criMvPlyAmng_IsEndAudioPlayback(void* decoder, void* player);
 void     criMvPlyAmng_ExecuteAudioServer(void* audioManager, void* player);
 void     resetHandle(void* player);
 void     executeUsfServer(void* player);
 void     executeMvPlyPrepServer(void* player);
 CriBool  FUN_140033d70(void* player, const CriMovieInputChunk* input, CriUint8 outputIndex);
 void     FUN_140041df0(void* manager, void* callback, void* userData);
-void     FUN_140042700(void* trackSet, void* player);
+extern "C" void FUN_140042700(void* trackSet, void* player);
+void     FUN_140044330(CriUint64* decoder, void* callback, void* context);
+CriSint32 FUN_140043a80(void* decoder, CriSint32 first, CriSint32 second, CriSint32 third);
 CriBool  criMvPlyAmng_IsReadyAudioPlayback(void* trackSet, void* operation);
 void     FUN_140044cc0(void* decoder, void* callback, void* userData);
 void     FUN_140044c60(void* decoder, CriUint32 position, CriUint32 mode);
@@ -181,15 +178,15 @@ void     executeUsfServer(void* player);
 void     FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void     criUsfDmx_Stop(void* demux);
 void     criUsfDmx_Execute(void* demux);
-void*    FUN_14003b348(void* heap, const void* data, CriUint32 size);
-CriUint32 FUN_14003a85c(void* object, CriSint32 index, const char* key);
-CriSint32 FUN_14003a3e0(void* object, const char* key);
-CriSint32 FUN_14003a45c(void* object);
-CriSint32 FUN_14003a894(void* object, CriSint32 index, const char* key);
-void*    FUN_14003a648(void* object, CriSint32 index, CriSint32 value);
-void     FUN_14003af50(void* object, CriSint32 row, CriSint32 field, CriUtfRtvCell* cell);
+void*    criUtfRtv_Create(void* heap, void* data, CriUint32 size);
+CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* object, CriUint32 index, const char* key);
+CriUint32 criUtfRtv_ConvFieldNameToNo(const CriUtfRtvView* object, const char* key);
+CriUint32 criUtfRtv_GetNumRecord(const CriUtfRtvView* object);
+CriUint32 criUtfRtv_GetDataSint32Fn(const CriUtfRtvView* object, CriUint32 index, const char* key);
+CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* object, CriUint32 index, CriUint32 value);
+CriSint32 criUtfRtv_GetCellVal(const CriUtfRtvView* object, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
 void     criUtfRtv_Destroy(CriUint64* table);
-CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
+CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* output);
 CriBool  criAlphaDec_DecodeFrame(void* decoder);
 CriBool  criVdec_DecodeFrame(void* decoder);
 void     FUN_140044ae0(void* decoder);
@@ -207,8 +204,8 @@ CriSint32 criVdec_GetStatus(void* decoder);
 CriSint32 criUsfDmx_GetStatus(void* demux);
 CriSint32 criVdec_GetNumPictureData(void* decoder);
 CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
-CriUint32 FUN_140044820(void* decoder);
-CriUint32 FUN_140043eb0(void* decoder);
+CriUint32 criVdec_GetNumDecPool(void* decoder);
+CriUint32 criAlphaDec_GetNumDecPool(void* decoder);
 void FUN_140044710(void* decoder);
 void FUN_140043d90(void* decoder);
 void     criMvPlyAmng_TerminateSupply(void* audioManager);
@@ -234,39 +231,39 @@ CriUint32 executeSubtitleServer(void* player);
 void     executeHeaderServer(void* player);
 void     executeDiscardFrameServer(void* player);
 void     updateInputBufferInfo(void* player);
-CriUint32 FUN_140042e40(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                          void* output, CriUint32 sampleCount, void* result);
-CriUint32 FUN_140042ea0(void* manager, CriSint32 stream, void* player, CriUint32 format,
-                          void* output, CriUint32 sampleCount, void* result);
+CriUint32 criMvPlyAmng_GetWave16(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, CriUint32* result);
+CriUint32 criMvPlyAmng_GetWave32(void* manager, CriSint32 stream, void* player, CriUint32 format,
+                          void* output, CriUint32 sampleCount, CriUint32* result);
 void*    criAlphaDec_GetNextAlphaFrameInfo(void* decoder, void* frameInfo);
 void*    criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
-void*    FUN_140044870(void* decoder, void* frameInfo);
+void*    criVdec_GetNextFrameInfo(void* decoder, void* frameInfo);
 void     criUsfDmx_Initialize(void);
-void     FUN_140039fc8(void);
-void     FUN_14003a010(void);
-void     FUN_140041ea0(void);
-void     FUN_140041ec0(void);
+void     criAtomic_Initialize(void);
+void     criAtomic_Finalize(void);
+void     criMvPlyAmng_Initialize(void);
+void     criMvPlyAmng_Finalize(void);
 void     criAlphaDec_Initialize(const void* decoderInterface);
 void     criAlphaDec_Finalize(void* decoderInterface);
 void     criVdec_Initialize(const void* decoderInterface);
 void     criVdec_Finalize(void* decoderInterface);
 void     criUsfDmx_Finalize(void);
-void     FUN_140039f00(void* section);
+void     criCs_Destroy(_RTL_CRITICAL_SECTION* section);
 void*    criVdec_GetFramePointer(void* decoder, void* frameInfo);
-void     FUN_140044050(void* decoder, void* frameInfo);
+void     criAlphaDec_ReleaseAlphaFramePointer(CriUint64* decoder, void* frameInfo);
 void     criVdec_ReleaseFramePointer(void* decoder, void* frameInfo);
-void     FUN_140044b20(void* decoder, CriUint32 frameId, CriUint64* count, CriUint64* unit);
-CriBool  FUN_140043f70(void* decoder, void* buffers, void* frameInfo);
+void     criVdec_GetOffsetConcatenated(void* decoder, CriUint32 frameId, void* count, void* unit);
+CriSint32 criAlphaDec_CopyAlphaFrameBuffer(void* decoder, void* buffers, void* frameInfo);
 void     criVdec_GetFramePoolInfo(void* decoder, void* a, void* b, void* c, void* d, void* e);
-void     FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
-void     FUN_140044680(void* decoder);
+void     criUsfDmx_SetOutputSj(void* output, CriUint32 index, void* value, CriUint32 type, CriSint32 flags);
+void     criVdec_Execute(CriUint64* decoder);
 void     criAlphaDec_Execute(void* decoder);
 CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
-void     FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
-void     FUN_140044d20(void* decoder, CriUint32 count);
-void     FUN_140044270(void* decoder, CriUint32 count);
-void     FUN_140044d70(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
-void     FUN_1400442c0(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
+void     criSj_GetChunk(void* queue, CriSint32 operation, CriUint32 timeout, void* item);
+void     criVdec_SetProcessorMask(void* decoder, CriUint32 count);
+void     criAlphaDec_SetProcessorMask(CriUint64* decoder, CriUint32 count);
+void     criVdec_SetDlgPara(void* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
+void     criAlphaDec_SetDlgPara(CriUint64* decoder, CriUint32 count, void* streamInfo, void* outputInfo);
 void     FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 void     retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
 void     FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed);
@@ -274,13 +271,13 @@ void     retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output,
 struct CriMovieStreamSlotView;
 void     prepareNextHeaderIfCompleted(void* player, CriMovieStreamSlotView* slot);
 void*    FUN_14002db40(void* thread, void* config);
-CriBool  FUN_140042270(void* manager, void* player, void* source, void* streamInfo,
-                       CriUint32 stream, CriBool enable);
-void     FUN_140041e30(void* manager, void (*callback)(void**, void*), void* player, CriBool enable);
+CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* player, void* source, const CriUint32* streamInfo,
+                       CriUint32 stream, CriSint32 enable);
+void     criMvPlyAmng_SetDecryptCallback(void* manager, void* callback, void* player, CriSint32 enable);
 CriBool  criMvPly_IsSetDefaultDecryptionKey(void);
 void     crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 CriUint32 criMvPlyAmng_GetDataSizeWave(void* manager, CriSint32 stream, void* player, CriUint32 channels);
-void     FUN_140042df0(void* manager, void* player, CriSint32 stream);
+CriSint32 criMvPlyAmng_IsEndAudioPlaybackById(void* manager, void* player, CriSint32 stream);
 void     criMvPlyAmng_DestroyAudioDecoder(void* manager, void* decoder, CriSint32 stream);
 CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* chunk, CriSint32 channel);
 void     releaseSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
@@ -288,7 +285,6 @@ void     criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
 void     ungetSubtitleChunk(void* player, CriMvSubtitleChunk* chunk);
 void     analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputInfo);
 void     criSj_Destroy(void* streamJoint);
-void     FUN_140027fb4(void* heap, void* memory);
 void     criUsfDmx_SetInputSj(void* demux, void* value);
 void     criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);
 void     criUsfDmx_Destroy(void* demux);
@@ -299,7 +295,6 @@ void     criSj_Reset(void* streamJoint);
 void     criMvPlyAmng_Destroy(void* manager, void* heap);
 void     criAlphaDec_Destroy(void* decoder);
 void     criVdec_Destroy(CriUint64* adapter);
-void     FUN_140028074(void* heap);
 void     FUN_142584540(void* event, CriSint32 timeout);
 void     FUN_14258b260(void* event);
 void     FUN_14258aca0(void* lock);
@@ -553,7 +548,7 @@ void FUN_1400380d0(void** record, void* userData)
 void* CriAllocator::operator new(size_t size, CriHeap heap, CriHeapType type, const CriChar8* name, CriUint32 align)
 {
     CriUint32 allocationSize = (CriUint32)size + sizeof(CriHeap);
-    void* memory = FUN_140027f7c(heap, (CriSint32)allocationSize, name, (CriSint32)align, (CriSint32)type);
+    void* memory = criHeap_Alloc(heap, (CriSint32)allocationSize, name, (CriSint32)align, (CriSint32)type);
     if (memory)
     {
         memset(memory, 0, allocationSize);
@@ -573,7 +568,7 @@ void CriAllocator::operator delete(void* memory, size_t size)
 // @0x14002e608
 void CriAllocator::operator delete(void* memory, CriHeap heap)
 {
-    criHeap_Free(heap, memory);
+    criHeap_Free((CriHeap)heap, memory);
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
@@ -1196,7 +1191,7 @@ CriSint32 criMvPly_CalcHandleWorkSize(void)
     rbfParam.Alignment = 0x40;
     rbfSize = criSjRbf_CalculateWorkSize((const CriSint32*)&rbfParam);
     total = total + rbfSize + 4;
-    demuxLen = FUN_140044eb0(8);
+    demuxLen = criUsfDmx_CalculateWorkSizeWithWork(8);
     total = total + demuxLen + 4;
     memset(&uniConfigB, 0, sizeof(uniConfigB));
     uniConfigB.Mode = 1;
@@ -1221,7 +1216,7 @@ void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUin
     CriUint32 count = ((CriMovieOutputLogView*)player)->Count;
     if (count >= ((CriMovieOutputLogView*)player)->Capacity)
         crimvply_occurFatalError(player, "E05063025M : Can't entry output sj to demux more than limit.", count);
-    FUN_140044fb0(output, count, value, type, flags);
+    criUsfDmx_SetOutputSj(output, count, value, type, flags);
     ((CriMovieOutputLogView*)player)->Count++;
 }
 
@@ -1232,7 +1227,7 @@ void executeVideoServer(void* player)
     void* videoDec = ((CriMvDecoderHandleFields*)player)->VideoDecoder;
     if (videoDec)
     {
-        FUN_140044680(videoDec);
+        criVdec_Execute((CriUint64*)videoDec);
         if (criVdec_GetStatus(videoDec) == 4)
         {
             crimvply_transitErrorState(player, (void*)"The internal status of Vdec is ERROR.");
@@ -1351,7 +1346,7 @@ void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSi
     ((StartResetView*)player)->HeaderSize = 0;
     memset(((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader, 0, sizeof(((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader));
     criUsfDmx_SetInputSj(state->Demux, ((CriMvPlyInputQueueFields*)player)->InputBuffer);
-    FUN_140044fb0(state->Demux, 0, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, 0, (CriUint32)-1);
+    criUsfDmx_SetOutputSj(state->Demux, 0, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, 0, (CriUint32)-1);
     criUsfDmx_SetThrououtSwitch(state->Demux, 0);
     criUsfDmx_Start(state->Demux);
 
@@ -1360,7 +1355,7 @@ void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSi
     CriUint32 copySize = inputSize < buffer.Capacity ? inputSize : buffer.Capacity;
     if (copySize != 0)
         memcpy(buffer.Data, inputData, copySize);
-    FUN_140046814(((CriMvPlyInputQueueFields*)player)->InputBuffer, &buffer, copySize);
+    criSj_PutInputChunk(((CriMvPlyInputQueueFields*)player)->InputBuffer, &buffer, copySize);
     criMvPly_AddInputMemory(player, (void*)inputData, inputSize);
 
     ((CriMvReadBufferState*)player)->Mode = 1;
@@ -1381,7 +1376,7 @@ void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type)
     CriMovieChunkQueueRecord item;
     CriMovieChunkQueueRecord stale;          // the replaced chunk is popped into its own record
     if ((CriUint32)FUN_1400467b8(((CriMovieQueueView*)player)->Queue, 0) > 0)
-        FUN_1400467a0(((CriMovieQueueView*)player)->Queue, 0, -1, &stale);
+        criSj_GetChunk(((CriMovieQueueView*)player)->Queue, 0, -1, &stale);
     item.Chunk = chunk;
     item.Type = type;
     criSj_PutChunk(((CriMovieQueueView*)player)->Queue, 1, &item);
@@ -1392,11 +1387,11 @@ void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type)
 // @0x1400377a0
 void setProcessorParams(void* player, void* videoDecoder, void* alphaDecoder)
 {
-    FUN_140044d20(videoDecoder, ((CriUint32*)player)[0x8d0 / 4]);
-    FUN_140044270(alphaDecoder, ((CriUint32*)player)[0x8d0 / 4]);
-    FUN_140044d70(videoDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
+    criVdec_SetProcessorMask(videoDecoder, ((CriUint32*)player)[0x8d0 / 4]);
+    criAlphaDec_SetProcessorMask((CriUint64*)alphaDecoder, ((CriUint32*)player)[0x8d0 / 4]);
+    criVdec_SetDlgPara(videoDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
                   (CriUint32*)player + 0x9d4 / 4);
-    FUN_1400442c0(alphaDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
+    criAlphaDec_SetDlgPara((CriUint64*)alphaDecoder, ((CriUint32*)player)[0x8cc / 4], (CriUint32*)player + 0x8d4 / 4,
                   (CriUint32*)player + 0x9d4 / 4);
 }
 
@@ -1406,13 +1401,13 @@ CriBool criMvPly_AttachSubAudio(void* player, void* source, CriUint32 stream)
 {
     // The exe passes the stream's 16-byte entry at +0xb2c and reloads the source from the player.
     ((CriMovieAttachView*)player)->AttachedSource = source;
-    CriBool attached = FUN_140042270(((CriMovieAttachView*)player)->Manager, player,
+    CriBool attached = criMvPlyAmng_CreateAudioDecoder(((CriMovieAttachView*)player)->Manager, player,
                                      ((CriMovieAttachView*)player)->AttachedSource,
-                                     &((CriMovieAttachView*)player)->Streams[stream], stream, 1);
+                                     (const CriUint32*)(&((CriMovieAttachView*)player)->Streams[stream]), stream, 1);
     if (!attached)
         return 0;
     if (criMvPly_IsSetDefaultDecryptionKey() == 1)
-        FUN_140041e30(((CriMovieAttachView*)player)->Manager, FUN_140038000, player, 1);
+        criMvPlyAmng_SetDecryptCallback(((CriMovieAttachView*)player)->Manager, (void*)FUN_140038000, player, 1);
     return 1;
 }
 
@@ -1470,8 +1465,8 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
         readExtension = decideReadBufferExtSize((void*)((const CriMvStreamingParameters*)work));
         memcpy((CriUint8*)player + 0xdf8, &readSize, sizeof(readSize));
         memcpy((CriUint8*)player + 0xdfc, &readExtension, sizeof(readExtension));
-        void* readBuffer = FUN_140046730(heap, (CriSint32)readSize, (CriSint32)readExtension,
-                                         0x40, "CriMvPly: ReadBuf");
+        void* readBuffer = criSj_CreateNamedRingBuffer(heap, (CriSint32)readSize, (CriSint32)readExtension,
+                                         0x40, (CriUint64)"CriMvPly: ReadBuf");
         memcpy((CriUint8*)player + 0xd88, &readBuffer, sizeof(readBuffer));
         if (!readBuffer)
         {
@@ -1495,7 +1490,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
         CriMovieInputChunk chunk = {};
         void* readBuffer = NULL;
         memcpy(&readBuffer, (CriUint8*)player + 0xd88, sizeof(readBuffer));
-        FUN_1400467a0(readBuffer, 0, -1, &chunk);
+        criSj_GetChunk(readBuffer, 0, -1, &chunk);
         memcpy((CriUint8*)player + 0xe50, &chunk.Data, sizeof(chunk.Data));
         criSj_UngetChunk(readBuffer, 0, &chunk);
     }
@@ -1533,7 +1528,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
             memcpy(&videoConfig.BufferSize, (CriUint8*)player + 0xe48, sizeof(CriUint32));
             memcpy(&videoConfig.BufferExtension, (CriUint8*)player + 0xe4c, sizeof(CriUint32));
         }
-        void* videoDecoder = FUN_140043af0(decoderInterface, heap, &videoConfig);
+        void* videoDecoder = criAlphaDec_Create(decoderInterface, heap, (void*)(&videoConfig));
         memcpy((CriUint8*)player + 0xe08, &videoDecoder, sizeof(videoDecoder));
         if (!videoDecoder)
         {
@@ -1572,7 +1567,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
             memcpy(&alphaConfig.OutputBuffer, (CriUint8*)player + 0xe50, sizeof(void*));
             memcpy(&alphaConfig.BufferSize, (CriUint8*)player + 0xe48, sizeof(CriUint32));
             memcpy(&alphaConfig.BufferExtension, (CriUint8*)player + 0xe4c, sizeof(CriUint32));
-            void* alphaDecoder = FUN_140044470(alphaInterface, heap, &alphaConfig);
+            void* alphaDecoder = criVdec_Create(alphaInterface, heap, (void*)(&alphaConfig));
             memcpy((CriUint8*)player + 0xe40, &alphaDecoder, sizeof(alphaDecoder));
             if (!alphaDecoder)
             {
@@ -1581,14 +1576,14 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
                 return 0;
             }
             if (criMvPly_IsSetDefaultDecryptionKey() == 1)
-                FUN_140044330(alphaDecoder, (void*)FUN_140037a40, player);
+                FUN_140044330((CriUint64*)alphaDecoder, (void*)FUN_140037a40, player);
         }
         void* alphaDecoder = NULL;
         memcpy(&alphaDecoder, (CriUint8*)player + 0xe40, sizeof(alphaDecoder));
         setProcessorParams(player, videoDecoder, alphaDecoder);
     }
 
-    void* manager = FUN_140041f70(player, heap, ((const CriMvStreamingParameters*)work));
+    void* manager = criMvPlyAmng_Create(player, heap, ((const CriMvStreamingParameters*)work));
     memcpy((CriUint8*)player + 0xe10, &manager, sizeof(manager));
     if (!manager)
     {
@@ -1600,16 +1595,16 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
     {
         const CriUint8* audioInfo = (const CriUint8*)((const CriMvStreamingParameters*)work) + 0x54 +
             (size_t)((const CriMvStreamingParameters*)work)->track_play_audio * 0x10;
-        if (!FUN_140042270(manager, player, heap, (void*)audioInfo,
+        if (!criMvPlyAmng_CreateAudioDecoder(manager, player, heap, (const CriUint32*)audioInfo,
                            (CriUint32)((const CriMvStreamingParameters*)work)->track_play_audio, 0))
         {
             FUN_140030c70(player);
             return 0;
         }
         if (criMvPly_IsSetDefaultDecryptionKey() == 1)
-            FUN_140041e30(manager, FUN_140038000, player, 0);
+            criMvPlyAmng_SetDecryptCallback(manager, (void*)FUN_140038000, player, 0);
     }
-    void* output = FUN_1400464c8((CriHeap)heap, 0, 0x40);
+    void* output = criSj_CreateUniversal((CriHeap)heap, 0, 0x40);
     memcpy((CriUint8*)player + 0xe28, &output, sizeof(output));
     if (!output)
     {
@@ -1627,7 +1622,7 @@ CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
 CriUint32 criMvPly_AllocateWorkBufferWithWork(void* player, void* memory, CriSint32 size, void* work)
 {
     enterHandleCs(player);
-    ((CriMvHeapWorkState*)player)->Heap = FUN_140027fec(memory, size);
+    ((CriMvHeapWorkState*)player)->Heap = criHeap_Create(memory, size);
     CriUint32 result = crimvply_AllocateWorkBufferInCs(player, ((CriMvHeapWorkState*)player)->Heap, work);
     leaveHandleCs(player);
     return result;
@@ -1757,14 +1752,14 @@ CriSint32 criMvPly_PeekInputBufferData(void* player)
 // @0x140037850
 void enterHandleCs(void* player)
 {
-    FUN_140039f50(*(void**)((CriUint8*)player + 0x20));
+    criCs_Enter((_RTL_CRITICAL_SECTION*)(*(void**)((CriUint8*)player + 0x20)));
 }
 
 // MS2-FUNCTIONAL: leave the player's lock through the CRI critical-section wrapper.
 // @0x140037880
 void leaveHandleCs(void* player)
 {
-    FUN_140039f8c(*(void**)((CriUint8*)player + 0x20));
+    criCs_Leave((_RTL_CRITICAL_SECTION*)(*(void**)((CriUint8*)player + 0x20)));
 }
 
 // MS2-FUNCTIONAL: forward CRI's non-state-changing diagnostic through the shared error notifier.
@@ -1835,7 +1830,7 @@ CriBool criMvPly_GetAlphaFrame(void* player, void* buffer, CriUint32 format, voi
     buf.Width = ((DimensionsView*)player)->Width;
     buf.Height = ((DimensionsView*)player)->Height;
     buf.Format = format;
-    ret = FUN_140043f70(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &buf, frameInfo);
+    ret = criAlphaDec_CopyAlphaFrameBuffer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &buf, frameInfo);
     if (ret == 0)
     {
         crimvply_occurFatalError(NULL, "E08082104M : Cannot copy the alpha frame buffer to user's buffer.", 0);
@@ -1853,7 +1848,7 @@ CriBool criMvPly_UnlockAlphaFrameBuffer(void* player, const CriUint64* frameInfo
         return 0;
     CriUint64 local[10];                     // only the first word is set, as in the exe (0x50-byte frame record)
     local[0] = *frameInfo;
-    FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, local);
+    criAlphaDec_ReleaseAlphaFramePointer((CriUint64*)((CriMvDecoderHandleFields*)player)->AlphaDecoder, local);
     return 1;
 }
 
@@ -1876,7 +1871,7 @@ void flushAlphaFrame(void* player)
     frame = criAlphaDec_GetAlphaFramePointer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
     while (frame != NULL)
     {
-        FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+        criAlphaDec_ReleaseAlphaFramePointer((CriUint64*)((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
         frame = criAlphaDec_GetAlphaFramePointer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
     }
 }
@@ -1910,14 +1905,14 @@ CriUint32 criMvPly_GetDataSizeSubAudio(void* player, CriUint32 channels)
 // @0x140036140
 void criMvPly_IsEndMainAudioPlayback(void* player)
 {
-    FUN_140042df0(((CriMvSubAudioHandles*)player)->Manager, player, 0);
+    criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 0);
 }
 
 // MS2-FUNCTIONAL: query the secondary audio stream's playback-complete state.
 // @0x140036170
 void criMvPly_IsEndSubAudioPlayback(void* player)
 {
-    FUN_140042df0(((CriMvSubAudioHandles*)player)->Manager, player, 1);
+    criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 1);
 }
 
 // MS2-FUNCTIONAL: detach and clear the secondary audio decoder handle.
@@ -1947,7 +1942,7 @@ void analyzeSubtitleInfo(void* player, CriMvSubtitleChunk* chunk, void* outputIn
     ((CriMvSubtitleInfo*)outputInfo)->data_size = ptr[4];
     ((CriMvSubtitleInfo*)outputInfo)->dataptr = (CriUint8*)(ptr + 5);
     ((CriMvSubtitleInfo*)outputInfo)->cnt_concatenated_movie = ((CriMvSubtitleFields*)player)->SubtitleIndex;
-    FUN_140044b20(((CriMvDecoderHandleFields*)player)->VideoDecoder,
+    criVdec_GetOffsetConcatenated(((CriMvDecoderHandleFields*)player)->VideoDecoder,
                   ((CriMvSubtitleInfo*)outputInfo)->cnt_concatenated_movie, &curTime, &tunit);
     ((CriMvSubtitleInfo*)outputInfo)->in_time = curTime / tunit * ((CriMvSubtitleInfo*)outputInfo)->time_unit
                                                + ((CriMvSubtitleInfo*)outputInfo)->in_time_per_data;
@@ -2013,7 +2008,7 @@ void FUN_140038e10(CriSint32 category, const CriChar8* message, CriSint32 value,
 void enterCriticalSection(void* player)
 {
     if (player == player) {}                 // the CRI unused-argument idiom: /Od loads player (the exe's dead load)
-    FUN_140039f50(DAT_143ffd550);
+    criCs_Enter((_RTL_CRITICAL_SECTION*)DAT_143ffd550);
 }
 
 // MS2-FUNCTIONAL: leave the movie player's shared handle critical section.
@@ -2021,7 +2016,7 @@ void enterCriticalSection(void* player)
 void leaveCriticalSection(void* player)
 {
     if (player == player) {}                 // the CRI unused-argument idiom: /Od loads player (the exe's dead load)
-    FUN_140039f8c(DAT_143ffd550);
+    criCs_Leave((_RTL_CRITICAL_SECTION*)DAT_143ffd550);
 }
 #pragma optimize("", on)
 
@@ -2153,7 +2148,7 @@ void* criMvPly_CreateWithWork(void* work, CriSint32 workSize)
         crimvply_occurUserError(NULL, "E10051207M : Can't allocate internal heap memory.", 0x2800);
         return NULL;
     }
-    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, 0x2800);
+    heapFields->HeapHandle = (void*)criHeap_Create(localBuffer, 0x2800);
     if (!heapFields->HeapHandle)
     {
         criMvPly_Destroy(words);
@@ -2180,7 +2175,7 @@ void* criMvPly_CreateWithWork(void* work, CriSint32 workSize)
     }
 
     words[0x35c] = 8;
-    CriSint32 demuxSize = FUN_140044eb0(words[0x35c]);
+    CriSint32 demuxSize = criUsfDmx_CalculateWorkSizeWithWork(words[0x35c]);
     void* demuxWork = criFixedAllocator_Allocate(&allocator, demuxSize, 4);
     if (!demuxWork)
     {
@@ -2261,7 +2256,7 @@ CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamingParame
     inputSize = (padded / 0x800) * 0x800;
     CriUint32 tail = decideReadBufferExtSize((void*)params);
     CriUint32 flags[2] = { 1, 1 };
-    CriSint32 blockSize = FUN_140046604(inputSize, tail, 0x40, flags);
+    CriSint32 blockSize = criSjRbf_GetRequiredMemorySizeWithConfig(inputSize, tail, 0x40, (const CriUint32*)flags);
     total += blockSize;
 
     if (params->num_video != 0)
@@ -2293,7 +2288,7 @@ CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamingParame
         total += criMvPlyAmng_CalcAudioDecoderWorkSize(player, (const CriUint32*)audio);
     }
     flags[0] = flags[1] = 1;
-    return total + FUN_140046420(0, 0x40, flags);
+    return total + criSjUni_GetRequiredMemorySizeWithConfig(0, 0x40, (const CriUint32*)flags);
 }
 
 // MS2-FUNCTIONAL: copies the CRI decoded frame planes and stream dimensions into the public frame record.
@@ -2675,7 +2670,7 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
         crimvply_occurUserError(NULL, "E09031803M : criMvPly_Create was called without Initialization.", 0);
         return NULL;
     }
-    CriUint32* words = (CriUint32*)FUN_140027ed8(heap, 0xf18, "CriMvPly: HnObj", 4);
+    CriUint32* words = (CriUint32*)criHeap_AllocFix((CriHeap)heap, 0xf18, "CriMvPly: HnObj", 4);
     if (!words)
     {
         crimvply_occurUserError(NULL, "E05063001M : Can't allocate handle object memory.", 0xf18);
@@ -2698,24 +2693,24 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
     heapFields->Heap = heap;
     *(CriHeap*)((CriUint8*)words + 0xde8) = heap;
 
-    workFields->CriticalWork = FUN_140027ed8(heap, 0x48, "CriMvPly: CriCsWork", 4);
+    workFields->CriticalWork = criHeap_AllocFix((CriHeap)heap, 0x48, "CriMvPly: CriCsWork", 4);
     if (!workFields->CriticalWork)
     {
-        FUN_140027fb4(heap, words);
+        criHeap_Free((CriHeap)heap, words);
         crimvply_occurUserError(NULL, "E08102001M : Can't allocate cs handle memory.", 0x48);
         return NULL;
     }
     workFields->CriticalSection = FUN_1400385c8(workFields->CriticalWork, 0x48);
     if (!workFields->CriticalSection)
     {
-        FUN_140027fb4(heap, workFields->CriticalWork);
-        FUN_140027fb4(heap, words);
+        criHeap_Free((CriHeap)heap, workFields->CriticalWork);
+        criHeap_Free((CriHeap)heap, words);
         crimvply_occurUserError(NULL, "E05081501M : Can't create CriticalSection for CRI Movie.", 0);
         return NULL;
     }
 
     words[0x376] = 0x2800;
-    void* localBuffer = FUN_140027ed8(heap, 0x2800, "CriMvPly: LocalHeapBuf", 4);
+    void* localBuffer = criHeap_AllocFix((CriHeap)heap, 0x2800, "CriMvPly: LocalHeapBuf", 4);
     *(void**)((CriUint8*)words + 0xde0) = localBuffer;
     if (!localBuffer)
     {
@@ -2723,7 +2718,7 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
         crimvply_occurUserError(NULL, "E05063002M : Can't allocate internal heap memory.", 0x2800);
         return NULL;
     }
-    heapFields->HeapHandle = (void*)FUN_140027fec(localBuffer, words[0x376]);
+    heapFields->HeapHandle = (void*)criHeap_Create(localBuffer, words[0x376]);
     if (!heapFields->HeapHandle)
     {
         criMvPly_Destroy(words);
@@ -2732,7 +2727,7 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
     }
     words[0x372] = 0x2800;
     CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
-    queues->InputBuffer = FUN_140046730(heap, words[0x372], 0, 0x40, "CriMvPly: HeadAnalyInput");
+    queues->InputBuffer = criSj_CreateNamedRingBuffer(heap, words[0x372], 0, 0x40, (CriUint64)"CriMvPly: HeadAnalyInput");
     if (!queues->InputBuffer)
     {
         criMvPly_Destroy(words);
@@ -2741,14 +2736,14 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
     }
     words[0x35c] = 8;
     CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
-    state->Demux = FUN_1400452b4(heap, words[0x35c]);
+    state->Demux = criUsfDmx_Create(heap, words[0x35c]);
     if (!state->Demux)
     {
         criMvPly_Destroy(words);
         crimvply_occurUserError(NULL, "E05063007M : Can't create UsfDemux Handle.", 0);
         return NULL;
     }
-    queues->ReadBuffer = FUN_1400464c8(heap, 0, 0x40);
+    queues->ReadBuffer = criSj_CreateUniversal(heap, 0, 0x40);
     if (!queues->ReadBuffer)
     {
         criMvPly_Destroy(words);
@@ -2758,7 +2753,7 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
     words[0x35d] = 0;
     struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
     MemoryQueueView* memoryQueue = (MemoryQueueView*)words;
-    memoryQueue->Queue = FUN_1400464c8(heap, 1, 4);
+    memoryQueue->Queue = criSj_CreateUniversal(heap, 1, 4);
     if (!memoryQueue->Queue)
     {
         criMvPly_Destroy(words);
@@ -2823,7 +2818,7 @@ void criMvPly_Destroy(CriUint32* object)
     OwnedHeapFields* heapFields = (OwnedHeapFields*)object;
     if (heapFields->HeapHandle)
     {
-        FUN_140028074(heapFields->HeapHandle);
+        criHeap_Destroy((CriHeap)heapFields->HeapHandle);
         heapFields->HeapHandle = NULL;
     }
     ObjectFields* owned = (ObjectFields*)object;
@@ -2831,22 +2826,22 @@ void criMvPly_Destroy(CriUint32* object)
     {
         void* reader = owned->Reader;
         owned->Reader = NULL;
-        FUN_140039f00(reader);
+        criCs_Destroy((_RTL_CRITICAL_SECTION*)reader);
     }
     if (heapFields->Heap && heapFields->Work)
     {
         void* work = heapFields->Work;
         heapFields->Work = NULL;
-        FUN_140027fb4(heapFields->Heap, work);
+        criHeap_Free((CriHeap)heapFields->Heap, work);
     }
     if (heapFields->Heap && owned->Work)
     {
         void* work = owned->Work;
         owned->Work = NULL;
-        FUN_140027fb4(heapFields->Heap, work);
+        criHeap_Free((CriHeap)heapFields->Heap, work);
     }
     if (heapFields->Heap)
-        FUN_140027fb4(heapFields->Heap, object);
+        criHeap_Free((CriHeap)heapFields->Heap, object);
 }
 #pragma optimize("", on)
 
@@ -2861,13 +2856,13 @@ void criMvPly_Initialize(void)
         CriSint32 i;
         memset(&DAT_143ffd500, 0, 0x58);
         criUsfDmx_Initialize();
-        FUN_140039fc8();
+        criAtomic_Initialize();
         for (i = 0; i < DAT_143b2794c; ++i)
         {
             criVdec_Initialize(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].VideoDecoderInterface);
             criAlphaDec_Initialize(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface);
         }
-        FUN_140041ea0();
+        criMvPlyAmng_Initialize();
         DAT_143ffd550 = FUN_1400385c8(DAT_143ffd504, 0x48);
         if (!DAT_143ffd550)
             crimvply_occurFatalError(NULL, "E07020200M : Can't create critical section handle for library work.", 0);
@@ -2883,7 +2878,7 @@ void criMvPly_Finalize(void)
     if (DAT_143ffd500 == 0)
     {
         CriSint32 i;
-        FUN_140041ec0();
+        criMvPlyAmng_Finalize();
         for (i = 0; i < DAT_143b2794c; ++i)
         {
             criAlphaDec_Finalize(((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface);
@@ -2893,12 +2888,12 @@ void criMvPly_Finalize(void)
             ((CriMvCodecRegistrationEntry*)DAT_143b27950)[i].AlphaDecoderInterface = NULL;
         }
         DAT_143b2794c = 0;
-        FUN_14003a010();
+        criAtomic_Finalize();
         criUsfDmx_Finalize();
         if (DAT_143ffd550 != NULL)
         {
             void* lock = DAT_143ffd550;
-            FUN_140039f00(lock);
+            criCs_Destroy((_RTL_CRITICAL_SECTION*)lock);
             DAT_143ffd550 = NULL;
         }
     }
@@ -2993,7 +2988,7 @@ void executeUsfServer(void* player)
             ((HeaderSizeView*)player)->Size == 0)
         {
             CriMovieChunkQueueRecord record = {};
-            FUN_1400467a0(((CriMvPlyInputQueueFields*)player)->InputBuffer, 1, -1, &record);
+            criSj_GetChunk(((CriMvPlyInputQueueFields*)player)->InputBuffer, 1, -1, &record);
             if (!record.Chunk || record.Type < 4)
             {
                 criSj_UngetChunk(((CriMvPlyInputQueueFields*)player)->InputBuffer, 1, &record);
@@ -3031,12 +3026,12 @@ void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const 
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
     CriUint32 suggestedSize4;
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    output[0] = FUN_14003a85c(document, 0, "sampling_rate");
-    output[1] = FUN_14003a85c(document, 0, "num_channels");
-    output[2] = FUN_14003a85c(document, 0, "total_samples");
-    output[3] = FUN_14003a85c(document, 0, "ixsize");
-    suggestedSize4 = FUN_14003a85c(document, 0, "ixsize\0");   // the same name; the exe keeps a second copy (0x143a47288)
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
+    output[0] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "sampling_rate");
+    output[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "num_channels");
+    output[2] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "total_samples");
+    output[3] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "ixsize");
+    suggestedSize4 = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "ixsize\0");   // the same name; the exe keeps a second copy (0x143a47288)
     if (suggestedSize4 > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = suggestedSize4;
     criUtfRtv_Destroy((CriUint64*)document);
@@ -3047,11 +3042,11 @@ void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const 
 void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    output[1] = FUN_14003a85c(document, 0, "num_channels");
-    ((CriUint64*)output)[1] = FUN_14003a85c(document, 0, "time_unit");
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
+    output[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "num_channels");
+    ((CriUint64*)output)[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "time_unit");
     output[4] = 0x400;
-    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    CriUint32 ixsize = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "ixsize");
     if (ixsize > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = ixsize;
     if (output[1] > 0 && ((CriUint64*)output)[1] > 0 && output[4] > 0)
@@ -3064,12 +3059,12 @@ void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, con
 void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    output[1] = FUN_14003a85c(document, 0, "metadata_count");
-    output[2] = FUN_14003a85c(document, 0, "metadata_size");
-    output[3] = FUN_14003a85c(document, 0, "total_points");
-    ((CriUint64*)output)[2] = FUN_14003a85c(document, 0, "time_unit");
-    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
+    output[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "metadata_count");
+    output[2] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "metadata_size");
+    output[3] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "total_points");
+    ((CriUint64*)output)[2] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "time_unit");
+    CriUint32 ixsize = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "ixsize");
     if (ixsize > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = ixsize;
     if (output[1] == 1 && output[2] > 0 && output[3] > 0 && ((CriUint64*)output)[2] > 0)
@@ -3082,28 +3077,28 @@ void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, con
 void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
-    CriUint32 rateNum = FUN_14003a85c(document, 0, "framerate_n");
-    CriUint32 rateDenom = FUN_14003a85c(document, 0, "framerate_d");
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
+    CriUint32 rateNum = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "framerate_n");
+    CriUint32 rateDenom = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "framerate_d");
     output[4] = (CriUint32)(((float)rateNum * 1000.0f) / (float)rateDenom);
-    output[5] = FUN_14003a85c(document, 0, "total_frames");
-    output[0] = FUN_14003a85c(document, 0, "width");
-    output[1] = FUN_14003a85c(document, 0, "height");
-    CriUint32 ixsize = FUN_14003a85c(document, 0, "ixsize");
+    output[5] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "total_frames");
+    output[0] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "width");
+    output[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "height");
+    CriUint32 ixsize = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "ixsize");
     if (ixsize > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = ixsize;
-    if (FUN_14003a3e0(document, "pre_padding") > 0)
-        output[10] = FUN_14003a85c(document, 0, "pre_padding\0");   // the exe obj has its own copy of the literal
+    if ((CriSint32)criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)document, "pre_padding") > 0)
+        output[10] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "pre_padding\0");   // the exe obj has its own copy of the literal
     else
         output[10] = 0x40;
-    output[6] = FUN_14003a85c(document, 0, "alpha_type");
-    output[7] = FUN_14003a85c(document, 0, "mpeg_codec");
-    output[8] = FUN_14003a85c(document, 0, "metadata_count");
-    output[9] = FUN_14003a85c(document, 0, "metadata_size");
-    output[2] = FUN_14003a85c(document, 0, "disp_width");
+    output[6] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "alpha_type");
+    output[7] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "mpeg_codec");
+    output[8] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "metadata_count");
+    output[9] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "metadata_size");
+    output[2] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "disp_width");
     if (output[2] == 0)
         output[2] = output[0];
-    output[3] = FUN_14003a85c(document, 0, "disp_height");
+    output[3] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "disp_height");
     if (output[3] == 0)
         output[3] = output[1];
     criUtfRtv_Destroy((CriUint64*)document);
@@ -3137,7 +3132,7 @@ void executeMvPlyPrepServer(void* player)
             criSj_Reset(memoryInput);
             criSj_PutChunk(memoryInput, 1, state + 0xda8);
             CriMovieInputChunk chunk;
-            FUN_1400467a0(memoryInput, 1, (CriSint32)cri02c_Get32(state, 0xdb8), &chunk);
+            criSj_GetChunk(memoryInput, 1, (CriSint32)cri02c_Get32(state, 0xdb8), &chunk);
             criSj_PutChunk(memoryInput, 0, &chunk);
         }
         criUsfDmx_SetInputSj(demux, output);
@@ -3182,7 +3177,7 @@ void executeMvPlyPrepServer(void* player)
         if (status == 1 || status == 0)
             return;
         CriUint32 required = cri02c_Get32(state, 0xed8) != 0xffffffff ? cri02c_Get32(state, 0xed8) : cri02c_Get32(state, 0xb04);
-        if (FUN_140044820(videoDecoder) < required && criVdec_GetNumPictureData(videoDecoder) > 0)
+        if (criVdec_GetNumDecPool(videoDecoder) < required && criVdec_GetNumPictureData(videoDecoder) > 0)
             return;
         if ((CriSint32)cri02c_Get32(state, 0xe58) > 0 && cri02c_Get32(state, 0xe64) != 1)
             return;
@@ -3191,7 +3186,7 @@ void executeMvPlyPrepServer(void* player)
             CriSint32 alphaStatus = criAlphaDec_GetStatus(cri02c_GetPtr(state, 0xe40));
             if (alphaStatus == 1 || alphaStatus == 0)
                 return;
-            if (FUN_140043eb0(cri02c_GetPtr(state, 0xe40)) < required && criAlphaDec_GetNumPictureData(cri02c_GetPtr(state, 0xe40)) > 0)
+            if (criAlphaDec_GetNumDecPool(cri02c_GetPtr(state, 0xe40)) < required && criAlphaDec_GetNumPictureData(cri02c_GetPtr(state, 0xe40)) > 0)
                 return;
         }
     }
@@ -3206,7 +3201,7 @@ void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* 
     if (!current || !current->Data || current->Size < 0x40)
         return;
     CriUsfStandardHeader header = {};
-    FUN_14003b3fc(current->Data, current->Size, &header);
+    criUsfCmn_ParseUsfHeaderStd(current->Data, current->Size, (CriUsfStandardHeader*)(&header));
     CriSint32 contentSize = 0;
     const CriUint8* contents = criUsfCmn_GetContents(current->Data, current->Size, &contentSize);
     if (!contents || contentSize <= 0)
@@ -3277,7 +3272,7 @@ CriBool decodeMetaData(void* player)
         if (FUN_1400467b8(queue, 1) == 0)
             return foundEnd;
         chunk = CriMovieInputChunk();
-        FUN_1400467a0(queue, 1, -1, &chunk);
+        criSj_GetChunk(queue, 1, -1, &chunk);
         if (chunk.Size < 0x20)
         {
             criSj_UngetChunk(queue, 1, &chunk);
@@ -3285,7 +3280,7 @@ CriBool decodeMetaData(void* player)
         }
 
         CriUsfStandardHeader header = {};
-        FUN_14003b3fc(chunk.Data, chunk.Size, &header);
+        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)(&header));
         CriSint32 contentSize = 0;
         const CriUint8* contents = criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize);
         CriUint32 tableId = 0;
@@ -3304,8 +3299,8 @@ CriBool decodeMetaData(void* player)
             {
                 memcpy((CriUint8*)player + 0xe98, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xea0, &contentSize, sizeof(contentSize));
-                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
-                CriUint32 count = (CriUint32)FUN_14003a45c(table);
+                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
+                CriUint32 count = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
                 memcpy((CriUint8*)player + 0xea4, &count, sizeof(count));
                 criUtfRtv_Destroy((CriUint64*)table);
             }
@@ -3316,17 +3311,17 @@ CriBool decodeMetaData(void* player)
                 struct EventLimitView { CriUint8 Reserved[0x8ac]; CriUint32 Count; CriUint64 TimeUnit; };
                 memcpy((CriUint8*)player + 0xea8, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xeb0, &contentSize, sizeof(contentSize));
-                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
-                movie->cuepoint.num_eventpoint = (CriUint32)FUN_14003a45c(table);
+                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
+                movie->cuepoint.num_eventpoint = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
                 if (movie->cuepoint.num_eventpoint < ((const EventLimitView*)player)->Count)
                     for (;;) {}
-                CriSint32 nameField = FUN_14003a3e0(table, "name");
-                CriSint32 paramField = FUN_14003a3e0(table, "parameter");
-                CriSint32 timeField = FUN_14003a3e0(table, "time");
+                CriSint32 nameField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "name");
+                CriSint32 paramField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "parameter");
+                CriSint32 timeField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "time");
                 for (CriUint32 i = 0; i < movie->cuepoint.num_eventpoint; ++i)
                 {
                     CriUtfRtvCell cell;
-                    FUN_14003af50(table, i, nameField, &cell);
+                    criUtfRtv_GetCellVal((const CriUtfRtvView*)table, i, nameField, &cell);
                     CriMvEventPoint* event = &movie->cuepoint.eventtable[i];
                     CriChar8* data = NULL;
                     CriUint32 size = 0;
@@ -3334,10 +3329,10 @@ CriBool decodeMetaData(void* player)
                     memcpy(&size, cell.Value + 8, sizeof(size));
                     event->size_name = size;
                     event->cue_name = size ? data : NULL;
-                    event->time = (CriUint64)FUN_14003a648(table, i, timeField);
+                    event->time = criUtfRtv_GetDataUint64((const CriUtfRtvView*)table, i, timeField);
                     event->tunit = ((const EventLimitView*)player)->TimeUnit;
-                    event->type = FUN_14003a894(table, i, "cue_type");
-                    FUN_14003af50(table, i, paramField, &cell);
+                    event->type = criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)table, i, "cue_type");
+                    criUtfRtv_GetCellVal((const CriUtfRtvView*)table, i, paramField, &cell);
                     memcpy(&data, cell.Value, sizeof(data));
                     memcpy(&size, cell.Value + 8, sizeof(size));
                     event->size_param = size;
@@ -3350,8 +3345,8 @@ CriBool decodeMetaData(void* player)
             {
                 memcpy((CriUint8*)player + 0xe88, &contents, sizeof(contents));
                 memcpy((CriUint8*)player + 0xe90, &contentSize, sizeof(contentSize));
-                void* table = FUN_14003b348(movie->utf_heap, contents, (CriUint32)contentSize);
-                CriUint32 count = (CriUint32)FUN_14003a45c(table);
+                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
+                CriUint32 count = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
                 memcpy((CriUint8*)player + 0xe94, &count, sizeof(count));
                 criUtfRtv_Destroy((CriUint64*)table);
             }
@@ -3479,14 +3474,14 @@ static const CriChar8* s_apszVideoHeaderColumns[16][2] = {
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMovieParsedChunk* parsed)
 {
     struct WorkSizeView { CriUint32 Reserved; CriUint32 Size; };
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
     CriUint32 nLayout;
-    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][0]) > 0)
+    if ((CriSint32)criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)document, s_apszVideoHeaderColumns[0][0]) > 0)
     {
-        output[9] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[0][0]);
+        output[9] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[0][0]);
         nLayout = 0;
     }
-    else if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[0][1]) > 0)
+    else if ((CriSint32)criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)document, s_apszVideoHeaderColumns[0][1]) > 0)
     {
         output[9] = 3;
         nLayout = 1;
@@ -3497,33 +3492,33 @@ void FUN_140032650(void* player, void* workInfo, CriUint32* output, const CriMov
         nLayout = 0;
     }
 
-    CriUint32 fpsNum = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[1][nLayout]);
-    CriUint32 fpsDenom = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[2][nLayout]);
+    CriUint32 fpsNum = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[1][nLayout]);
+    CriUint32 fpsDenom = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[2][nLayout]);
     output[4] = (CriUint32)(((float)fpsNum * 1000.0f) / (float)fpsDenom);
-    output[5] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[3][nLayout]);
-    output[0] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[4][nLayout]);
-    output[1] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[5][nLayout]);
-    CriUint32 ixsize = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[6][nLayout]);
+    output[5] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[3][nLayout]);
+    output[0] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[4][nLayout]);
+    output[1] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[5][nLayout]);
+    CriUint32 ixsize = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[6][nLayout]);
     if (ixsize > ((WorkSizeView*)workInfo)->Size)
         ((WorkSizeView*)workInfo)->Size = ixsize;
-    if (FUN_14003a3e0(document, s_apszVideoHeaderColumns[7][nLayout]) > 0)
-        output[13] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[7][nLayout]);
+    if ((CriSint32)criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)document, s_apszVideoHeaderColumns[7][nLayout]) > 0)
+        output[13] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[7][nLayout]);
     else
         output[13] = 0x40;
-    output[6] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[8][nLayout]);
+    output[6] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[8][nLayout]);
     if (output[6] == 0)
         output[6] = output[0];
-    output[7] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[9][nLayout]);
+    output[7] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[9][nLayout]);
     if (output[7] == 0)
         output[7] = output[1];
-    output[8] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[10][nLayout]);
-    output[10] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[11][nLayout]);
-    output[11] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[12][nLayout]);
-    output[12] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[13][nLayout]);
-    output[2] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[14][nLayout]);
+    output[8] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[10][nLayout]);
+    output[10] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[11][nLayout]);
+    output[11] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[12][nLayout]);
+    output[12] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[13][nLayout]);
+    output[2] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[14][nLayout]);
     if (output[2] == 0)
         output[2] = output[0];
-    output[3] = FUN_14003a85c(document, 0, s_apszVideoHeaderColumns[15][nLayout]);
+    output[3] = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, s_apszVideoHeaderColumns[15][nLayout]);
     if (output[3] == 0)
         output[3] = output[1];
     criUtfRtv_Destroy((CriUint64*)document);
@@ -3540,21 +3535,21 @@ void criMvPly_CalcSeekPosition(void* player, const void* data, CriUint32 size, C
     CriSint32 frameId;
     CriSint32 entry = 0;
     void* out = NULL;
-    document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, data, size);
-    count = FUN_14003a45c(document);
+    document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)data, size);
+    count = criUtfRtv_GetNumRecord((const CriUtfRtvView*)document);
     for (current = 0; current < count; current++)
     {
-        frameId = FUN_14003a894(document, current, "ofs_frmid");
+        frameId = criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, current, "ofs_frmid");
         if (targetFrame >= frameId)
         {
             entry = current;
-            out = FUN_14003a648(document, current, 0);
+            out = (void*)criUtfRtv_GetDataUint64((const CriUtfRtvView*)document, current, 0);
         }
         else
             break;
     }
     *outputData = out;
-    *outputFrame = FUN_14003a894(document, entry, "ofs_frmid\0");   // the exe keeps a second copy (0x143a47438)
+    *outputFrame = criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, entry, "ofs_frmid\0");   // the exe keeps a second copy (0x143a47438)
     criUtfRtv_Destroy((CriUint64*)document);
 }
 
@@ -3585,8 +3580,8 @@ CriBool allocateMetaSjiInCs(void* player, void* heap, CriUint32 size, CriUint32 
     MetaConfig param;
     if (heap)
     {
-        ((MetadataView*)player)->Stream = FUN_140046730(heap, (CriSint32)size, 0, (CriSint32)alignment,
-                                      "CriMvPly: MetaInput");
+        ((MetadataView*)player)->Stream = criSj_CreateNamedRingBuffer(heap, (CriSint32)size, 0, (CriSint32)alignment,
+                                      (CriUint64)"CriMvPly: MetaInput");
         if (!((MetadataView*)player)->Stream)
         {
             crimvply_occurUserError(player, "E08120201M : Can't create meta SJ.", 0);
@@ -3641,7 +3636,7 @@ CriBool allocateMetaCueTableInCs(void* player, void* heap)
 
     if (heap)
     {
-        ((EventConfigView*)player)->Table = FUN_140027ed8(((EventConfigView*)player)->Heap,
+        ((EventConfigView*)player)->Table = criHeap_AllocFix((CriHeap)((EventConfigView*)player)->Heap,
                                      (CriSint32)(((EventConfigView*)player)->Count * (size_t)0x38),
                                      "CriMvPly: EventTable", 4);
     }
@@ -3770,15 +3765,15 @@ void retrieveHeaderInfo(void* player, void* streamInfo, const CriMovieParsedChun
         CriUint32 CueCount;
     };
     struct TrackModeView { CriUint8 Reserved[0xe38]; CriUint32 Type; CriUint32 SubType; };
-    void* document = FUN_14003b348(((CriMvPlyObj*)player)->utf_heap, parsed->Data, parsed->Size);
+    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
     memset(streamInfo, 0, 0x2c0);
     StreamInfoView* info = (StreamInfoView*)streamInfo;
-    info->MinimumBuffer = FUN_14003a85c(document, 0, "minbuf");
-    info->AverageBitrate = FUN_14003a85c(document, 0, "avbps");
-    CriSint32 count = FUN_14003a45c(document);
+    info->MinimumBuffer = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "minbuf");
+    info->AverageBitrate = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "avbps");
+    CriSint32 count = criUtfRtv_GetNumRecord((const CriUtfRtvView*)document);
     for (CriSint32 i = 0; i < count; ++i)
     {
-        CriSint32 streamId = FUN_14003a85c(document, i, "stmid");
+        CriSint32 streamId = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, i, "stmid");
         if (streamId == 0x40414c50)
         {
             if (++info->AlphaCount > 1)
@@ -3823,7 +3818,7 @@ CriSint32 FUN_140032090(void* player)
     {
         if (FUN_1400467b8(queue, 1) == 0)
             return completed;
-        FUN_1400467a0(queue, 1, -1, &record);
+        criSj_GetChunk(queue, 1, -1, &record);
         if (record.Type < 0x20)
         {
             criSj_UngetChunk(queue, 1, &record);
@@ -3831,7 +3826,7 @@ CriSint32 FUN_140032090(void* player)
         }
 
         memset(parsedHeader, 0, sizeof(parsedHeader));
-        FUN_14003b3fc((const CriUint8*)record.Chunk, record.Type, parsedHeader);
+        criUsfCmn_ParseUsfHeaderStd((const CriUint8*)record.Chunk, record.Type, (CriUsfStandardHeader*)parsedHeader);
         const CriUint8* contents = criUsfCmn_GetContents((const CriUint8*)record.Chunk,
                                                   record.Type, &contentSize);
         CriUint32 streamId = 0;
@@ -3949,10 +3944,10 @@ void discardMetaData(void* player)
     work = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
     while ((CriUint32)FUN_1400467b8(work, 1) > 0)
     {
-        FUN_1400467a0(work, 1, -1, &chunk);
+        criSj_GetChunk(work, 1, -1, &chunk);
         if (chunk.Size >= 0x20)
         {
-            FUN_14003b3fc((const CriUint8*)chunk.Data, chunk.Size, &header);
+            criUsfCmn_ParseUsfHeaderStd((const CriUint8*)chunk.Data, chunk.Size, (CriUsfStandardHeader*)(&header));
             p = criUsfCmn_GetContents((const CriUint8*)chunk.Data, chunk.Size, &length);
             if (((CriUint8*)&header)[0xf] != 2 && ((CriUint8*)&header)[0xf] != 3)
             {
@@ -3999,7 +3994,7 @@ CriBool freeMetaWorkInCs(void* player)
         if (((CleanupView*)player)->WorkReleaseBuffer)
             ((CleanupView*)player)->Release(((CleanupView*)player)->ReleaseContext, ((CleanupView*)player)->WorkReleaseBuffer);
         else if (((CleanupView*)player)->Heap)
-            FUN_140027fb4(((CleanupView*)player)->Heap, ((CleanupView*)player)->Work);
+            criHeap_Free((CriHeap)((CleanupView*)player)->Heap, ((CleanupView*)player)->Work);
         ((CleanupView*)player)->Work = NULL;
     }
     return 1;
@@ -4061,7 +4056,7 @@ CriBool crimvply_StartInCs(void* player)
     memset(((PlayerResetView*)player)->AnalyzedHeader, 0, sizeof(((PlayerResetView*)player)->AnalyzedHeader));
     ((PlayerResetView*)player)->ReadMode = 0;
     criUsfDmx_SetInputSj(demux, ((PlayerResetView*)player)->InputStream);
-    FUN_140044fb0(demux, 0, ((PlayerResetView*)player)->OutputStream, 0, (CriUint32)-1);
+    criUsfDmx_SetOutputSj(demux, 0, ((PlayerResetView*)player)->OutputStream, 0, (CriUint32)-1);
     criUsfDmx_SetThrououtSwitch(demux, 0);
     criUsfDmx_Start(demux);
     memset(((PlayerResetView*)player)->Headers, 0, sizeof(((PlayerResetView*)player)->Headers));
@@ -4141,7 +4136,7 @@ void executeMvPlyPlayingServer(void* player)
         }
     }
 
-    if (FUN_140042d70(((CriMvDecoderHandleFields*)player)->AudioManager, player) != 1)
+    if (criMvPlyAmng_IsEndAudioPlayback(((CriMvDecoderHandleFields*)player)->AudioManager, player) != 1)
     {
         ((CriMvPlyStateTransitionFields*)player)->StopState = 4;
         return;
@@ -4367,10 +4362,10 @@ void executeHeaderServer(void* player)
         return;
 
     CriMovieInputChunk chunk = {};
-    if (FUN_1400467b8(queue, 1) && (FUN_1400467a0(queue, 1, -1, &chunk), chunk.Size > 0x1f))
+    if (FUN_1400467b8(queue, 1) && (criSj_GetChunk(queue, 1, -1, &chunk), chunk.Size > 0x1f))
     {
         CriUint32 parsed[14] = {};
-        FUN_14003b3fc(chunk.Data, chunk.Size, parsed);
+        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)parsed);
         if (parsed[0] == 0x43524944)
         {
             CriSint32 contentSize = 0;
@@ -4439,7 +4434,7 @@ void executeDiscardFrameServer(void* player)
 
     if (((SubtitleEndState*)player)->VideoDone != 1)
     {
-        while (FUN_140044870(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame))
+        while (criVdec_GetNextFrameInfo(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame))
         {
             if (videoFrame.frame_id >= ((SubtitleEndState*)player)->Count)
             {
@@ -4466,7 +4461,7 @@ void executeDiscardFrameServer(void* player)
             else
             {
                 criAlphaDec_GetAlphaFramePointer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha);
-                FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha);
+                criAlphaDec_ReleaseAlphaFramePointer((CriUint64*)((CriMvDecoderHandleFields*)player)->AlphaDecoder, &alpha);
             }
         }
     }
@@ -4631,8 +4626,8 @@ void criMvPly_Stop(void* player)
 // @0x140035f00
 CriUint32 criMvPly_GetWave16(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    CriUint32 count = FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
-                                    format, output, sampleCount, result);
+    CriUint32 count = criMvPlyAmng_GetWave16(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                                    format, output, sampleCount, (CriUint32*)result);
     return count;
 }
 
@@ -4640,8 +4635,8 @@ CriUint32 criMvPly_GetWave16(void* player, CriUint32 format, void* output, CriUi
 // @0x140035f70
 CriUint32 criMvPly_GetWave32(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    CriUint32 count = FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
-                                    format, output, sampleCount, result);
+    CriUint32 count = criMvPlyAmng_GetWave32(((CriMvDecoderHandleFields*)player)->AudioManager, 0, player,
+                                    format, output, sampleCount, (CriUint32*)result);
     return count;
 }
 
@@ -4649,8 +4644,8 @@ CriUint32 criMvPly_GetWave32(void* player, CriUint32 format, void* output, CriUi
 // @0x140035fe0
 CriUint32 criMvPly_GetSubAudioWave16(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    CriUint32 count = FUN_140042e40(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
-                                    format, output, sampleCount, result);
+    CriUint32 count = criMvPlyAmng_GetWave16(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                                    format, output, sampleCount, (CriUint32*)result);
     return count;
 }
 
@@ -4658,8 +4653,8 @@ CriUint32 criMvPly_GetSubAudioWave16(void* player, CriUint32 format, void* outpu
 // @0x140036050
 CriUint32 criMvPly_GetSubAudioWave32(void* player, CriUint32 format, void* output, CriUint32 sampleCount, void* result)
 {
-    CriUint32 count = FUN_140042ea0(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
-                                    format, output, sampleCount, result);
+    CriUint32 count = criMvPlyAmng_GetWave32(((CriMvDecoderHandleFields*)player)->AudioManager, 1, player,
+                                    format, output, sampleCount, (CriUint32*)result);
     return count;
 }
 
@@ -4688,7 +4683,7 @@ CriBool syncAlphaFrameWithVideo(void* player, CriSint32 targetFrame, void* frame
     {
         alpha = criAlphaDec_GetAlphaFramePointer(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
         if (alpha != NULL)
-            FUN_140044050(((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
+            criAlphaDec_ReleaseAlphaFramePointer((CriUint64*)((CriMvDecoderHandleFields*)player)->AlphaDecoder, frameInfo);
         else
             return 0;
         // the decoder rewrote frameInfo: compare the frame it now holds, not the one read above
@@ -4715,7 +4710,7 @@ void* criMvPly_GetNextFrameInfo(void* player, void* output)
     crimvply_clearFrameInfoMembers(output);
     if (!crimvply_isUnderGetFrameCondition(player))
         return NULL;
-    videoToken = FUN_140044870(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame);
+    videoToken = criVdec_GetNextFrameInfo(((CriMvDecoderHandleFields*)player)->VideoDecoder, &videoFrame);
     if (videoToken != NULL)
     {
         if (((CriMvDecoderHandleFields*)player)->AlphaDecoder != NULL
