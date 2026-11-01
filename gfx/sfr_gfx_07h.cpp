@@ -15,6 +15,8 @@
 #define MS2_RAW_INLINE __forceinline
 #include "sfr_gfx_07raw.h"
 #include "../include/kernel/sf_hash.h"
+#include "ms2/scaleform/kernel/sf_threads.h"
+#include "ms2/scaleform/kernel/sf_random.h"
 
 #include <new>
 #include <string.h>
@@ -30,7 +32,6 @@ extern char DAT_14318f030[];
 extern char DAT_14318efe8[];
 extern int DAT_143a2f428;
 
-void FUN_14257db40(void*);
 void FUN_14015b310(void*, UPInt);
 void FUN_142624700(U, U, int, int, U);
 void FUN_142624840(U**, void*, U);
@@ -38,16 +39,8 @@ void FUN_142624d70(U**, void*, U);
 void FUN_142624f80(U**, void*, U);
 void FUN_1426251d0(U**, void*, U);
 void FUN_1426255e0(U**, void*, U);
-void FUN_14258d030(void*, unsigned);              // Lock::Lock(spinCount)
-void FUN_14258d0b0(void*);                        // Lock::~Lock
-void FUN_14258a350(void*, bool, bool);            // Mutex::Mutex(recursive, lockNow)
-void FUN_14258a720(void*);                        // Mutex::~Mutex
-void FUN_1425e4f80(void*);                        // Alg::Random::Generator::Generator
-void FUN_142582300(void*, bool, bool);            // Event::Event(manualReset, initialState)
-void FUN_142582530(void*);                        // Event::~Event
-void FUN_1425842b0(void*);                        // Event::SetEvent
-void FUN_142622160(void*, U*, const U*);          // Hash::Find(iterator out, key)
-void FUN_142624190(void*, const U*, void*);       // Hash::Set(key, Ptr)
+U* FUN_142622160(U**, U*, const U*);              // Hash::Find(iterator out, key)
+void FUN_142624190(U**, const U*, void* const*);  // Hash::Set(key, Ptr)
 void FUN_1426206a0(U**, void*);
 void FUN_1426206f0(U**, void*);
 
@@ -529,7 +522,7 @@ U FUN_14261fd80(void*, const unsigned char* key) { return RawMultinameKeyHash(ke
 // Scalar deleting destructors of 0x10-byte ref-counted bases.
 static __forceinline void* RawDeletingDtor(void* self, unsigned flags)
 {
-    FUN_14257db40(self);
+    reinterpret_cast<RefCountImplCore*>(self)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
         if (!(flags & 4))
@@ -569,31 +562,31 @@ void* FUN_14261f4a0(char* self)
     RawField<int>(self, 0x64) = -1;
     RawField<U>(self, 0x68) = 0;
     RawField<int>(self, 0x70) = 0;
-    FUN_14258d030(self + 0x78, 0);
+    ::new (self + 0x78) Lock(0);
     RawField<U>(self, 0xa0) = 0;
-    FUN_14258a350(self + 0xa8, true, false);
+    ::new (self + 0xa8) Mutex(true, false);
     RawField<U>(self, 0xd0) = 0;
     RawField<U>(self, 0xd8) = 0;
-    FUN_14258d030(self + 0xe0, 0);
+    ::new (self + 0xe0) Lock(0);
     RawField<int>(self, 0x108) = 0;
     new (self + 0x110) StringLH();
     RawField<U>(self, 0x118) = 0;
     RawField<U>(self, 0x120) = 0;
     RawField<U>(self, 0x128) = 0;
-    FUN_1425e4f80(self + 0x130);
+    ::new (self + 0x130) Alg::Random::Generator();
     RawField<int>(self, 0x158) = 0;
     RawField<U>(self, 0x160) = 0;
     RawField<U>(self, 0x168) = 0;
     RawField<U>(self, 0x170) = 0;
-    FUN_142582300(self + 0x178, false, false);
+    ::new (self + 0x178) Event(false, false);
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
     RawField<int>(self, 0x108) = DAT_143a2f428;
     DAT_143a2f428 = DAT_143a2f428 + 1;
-    FUN_1425842b0(self + 0x178);
+    reinterpret_cast<Event*>(self + 0x178)->SetEvent();
 
     U key = 0x10000000eULL;
     U found[2];
-    FUN_142622160(self + 0x18, found, &key);
+    FUN_142622160(RawFieldPtr<U*>(self, 0x18), found, &key);
     U* hash = (U*)found[0];
     if (hash && *(U**)hash && (*(U**)hash)[1] >= found[1])
     {
@@ -615,7 +608,7 @@ void* FUN_14261f4a0(char* self)
         RawField<U>(type, 0x28) = 0;
         RawField<U>(type, 0x20) = 0;
         void* ref = type;
-        FUN_142624190(self + 0x18, &key, &ref);
+        FUN_142624190(RawFieldPtr<U*>(self, 0x18), &key, &ref);
         if (ref)
             FUN_14257dcb0(ref);
     }
@@ -633,15 +626,15 @@ void* FUN_14261f4a0(char* self)
 // @0x14261fa90
 void FUN_14261fa90(char* self)
 {
-    FUN_142582530(self + 0x178);
+    reinterpret_cast<Event*>(self + 0x178)->Event::~Event();
     FUN_14261f9e0(RawFieldPtr<U>(self, 0x168));
     (RawFieldPtr<String>(self, 0x110))->~String();
-    FUN_14258d0b0(self + 0xe0);
+    reinterpret_cast<Lock*>(self + 0xe0)->Lock::~Lock();
     FUN_14261f940(RawFieldPtr<U>(self, 0xd8));
     RawClearPlainSet(RawFieldPtr<U>(self, 0xd0), 0x28);
-    FUN_14258a720(self + 0xa8);
+    reinterpret_cast<Mutex*>(self + 0xa8)->Mutex::~Mutex();
     FUN_14261f820(RawFieldPtr<U>(self, 0xa0));
-    FUN_14258d0b0(self + 0x78);
+    reinterpret_cast<Lock*>(self + 0x78)->Lock::~Lock();
     U count = RawField<U>(self, 0x50);
     void** e = RawField<void**>(self, 0x48) + (count - 1);
     for (U i = 0; i < count; i++, e--)
@@ -655,7 +648,7 @@ void FUN_14261fa90(char* self)
     FUN_14261f8b0(RawFieldPtr<U>(self, 0x18));
     RawClearPlainSet(RawFieldPtr<U>(self, 0x10), 0x30);
     *(void**)self = DAT_14318efe8;
-    FUN_14257db40(self);
+    reinterpret_cast<RefCountImplCore*>(self)->RefCountImplCore::~RefCountImplCore();
 }
 
 }} // namespace Scaleform::GFx
