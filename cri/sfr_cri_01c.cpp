@@ -61,46 +61,46 @@ void criMvPly_Initialize(void);
 void criMvPly_Finalize(void);
 long criMvPly_CalcHandleWorkSize(void);
 void * criMvPly_CreateWithWork(void *, long);
-void * FUN_14002f1f0(struct _criheap_struct *);
-void FUN_14002f610(unsigned long *);
+void * criMvPly_CreateWithConfig(struct _criheap_struct *);
+void criMvPly_Destroy(unsigned long *);
 void criMvPly_Update(void *);
 void criMvPly_GetStreamingParameters(void *, struct CriMvStreamingParameters *);
 void FUN_140030c70(void *);
-long FUN_140030f10(void *, void *, unsigned long);
+long criMvPly_AttachSubAudio(void *, void *, unsigned long);
 void FUN_140031020(void *, unsigned long);
 void criMvPly_SetNumberOfFramesForPrep(void *, long);
 void FUN_140031100(void *);
 void criMvPly_Execute(void *);
-long FUN_1400313d0(void *);
+long criMvPly_DecodeVideo(void *);
 void criMvPly_DecodeHeader(void *);
-void FUN_140033700(void *, void const *, unsigned long, long, void **, long *);
-long FUN_140034920(void *);
+void criMvPly_CalcSeekPosition(void *, void const *, unsigned long, long, void **, long *);
+long criMvPly_Start(void *);
 void criMvPly_Stop(void *);
 void FUN_140034d40(void *, struct CriMovieInputChunk *);
-void FUN_140034e70(void *, struct CriMovieInputChunk const *, unsigned long);
-unsigned long FUN_140035f00(void *, unsigned long, void *, unsigned long, void *);
-unsigned long FUN_140035f70(void *, unsigned long, void *, unsigned long, void *);
-unsigned long FUN_140035fe0(void *, unsigned long, void *, unsigned long, void *);
-unsigned long FUN_140036050(void *, unsigned long, void *, unsigned long, void *);
-void FUN_1400361a0(void *, void const *, unsigned long);
-void FUN_1400363b0(void *, void *, unsigned long);
-long FUN_140037400(void *, struct CriMvStreamingParameters const *);
-void FUN_140037740(void *, unsigned long, unsigned long);
-void FUN_140037780(void *, unsigned long);
+void criMvPly_PutInputChunk(void *, struct CriMovieInputChunk const *, unsigned long);
+unsigned long criMvPly_GetWave16(void *, unsigned long, void *, unsigned long, void *);
+unsigned long criMvPly_GetWave32(void *, unsigned long, void *, unsigned long, void *);
+unsigned long criMvPly_GetSubAudioWave16(void *, unsigned long, void *, unsigned long, void *);
+unsigned long criMvPly_GetSubAudioWave32(void *, unsigned long, void *, unsigned long, void *);
+void criMvPly_StartMemory(void *, void const *, unsigned long);
+void criMvPly_AddInputMemory(void *, void *, unsigned long);
+long criMvPly_CalcPlaybackWorkSize(void *, struct CriMvStreamingParameters const *);
+void criMvPly_SetSeekPosition(void *, unsigned long, unsigned long);
+void criMvPly_SetSeekAlphaPosition(void *, unsigned long);
 void criMvPly_SetDefaultDecryptionKey(void const *);
-void FUN_140039f50(struct _RTL_CRITICAL_SECTION *);
-void FUN_140039f8c(struct _RTL_CRITICAL_SECTION *);
+void criCs_Enter(struct _RTL_CRITICAL_SECTION *);
+void criCs_Leave(struct _RTL_CRITICAL_SECTION *);
 void criMvPly_AttachSofdecDecoder(void);
 void FUN_14003b720(struct CriMvSubAudioTrackState *, long, long const *, long const *);
 void criMvPly_InitializeFrameARGB8888(void);
-long FUN_14003b8b0(void *, unsigned char *, unsigned long, unsigned long, void *);
-void FUN_14003bb60(void *, unsigned char *, unsigned long, unsigned long, void const *, void const *, void const *);
-long FUN_14003bf80(unsigned long, void *, unsigned long);
-void * FUN_14003c060(unsigned long *);
-void * FUN_1400411e0(unsigned long *);
+long criMvPly_GetFrameARGB8888(void *, unsigned char *, unsigned long, unsigned long, void *);
+void criMvPly_CopyFrameARGB8888Buffer(void *, unsigned char *, unsigned long, unsigned long, void const *, void const *, void const *);
+long criVmpv_SetupMovieHandleWork(unsigned long, void *, unsigned long);
+void * criVmpv_GetUserLibWork(unsigned long *);
+void * criVmpv_GetStaticLibWork(unsigned long *);
 void criBaseVersion_ImplantVersionInformation(void);
 extern "C" {
-void*     FUN_140038ce4(CriSint32 level, const CriChar8* msg, CriSint32 p1, CriSint32 p2, void* p3);
+extern "C++" void criErr_NotifyPrmArray(CriSint32 level, const CriChar8* msg, CriSint32 p1, CriSint32 p2, void* p3);
 int       sprintf_s(char* buf, size_t size, const char* fmt, ...);
 void*     FUN_1400385c8(void* work, CriUint32 work_size);
 CriBool   FUN_140036140(CriMvPly mvply);
@@ -136,7 +136,7 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
     err = CRIERR_OK;
     if (CriMv::IsLibraryInitialized() == 0)
     {
-        FUN_140038ce4(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
+        criErr_NotifyPrmArray(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
                       NULL);
         err = CRIERR_NG;
         return NULL;
@@ -235,7 +235,7 @@ CRIMVEASY_SAFEBUFFERS CriSint32 CriMvEasyPlayer::CalcPlaybackWorkSize(const CriM
     }
     subtitle_size4 = prm.max_subtitle_size + 4;
     size += subtitle_size4;
-    ply_size = FUN_140037400(mvply, &prm) + 4;
+    ply_size = criMvPly_CalcPlaybackWorkSize(mvply, &prm) + 4;
     size += ply_size;
     if (this->stmprm.track_play_audio != -1 && sound != NULL)
     {
@@ -276,7 +276,7 @@ CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface*
     err = CRIERR_OK;
     if (CriMv::IsLibraryInitialized() == 0)
     {
-        FUN_140038ce4(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
+        criErr_NotifyPrmArray(0, "E09031802M: Need to call CriMv::Initialize() before CriMvEasyPlayer::Create().", 0, 0,
                       NULL);
         err = CRIERR_NG;
         return NULL;
@@ -306,7 +306,7 @@ CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface*
         mveasy->Destroy();
         return NULL;
     }
-    mveasy->mvply = (CriMvPly)FUN_14002f1f0(heap);
+    mveasy->mvply = (CriMvPly)criMvPly_CreateWithConfig(heap);
     if (mveasy->mvply == NULL)
     {
         err = CRIERR_NG;
@@ -488,11 +488,11 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     }
     if (cs != NULL)
     {
-        FUN_140039f50((_RTL_CRITICAL_SECTION *)cs);
+        criCs_Enter((_RTL_CRITICAL_SECTION *)cs);
     }
     ply1 = mvply;
     mvply = NULL;
-    FUN_14002f610((unsigned long *)ply1);
+    criMvPly_Destroy((unsigned long *)ply1);
     if (work_heap != NULL)
     {
         criHeap_Destroy(work_heap);
@@ -500,7 +500,7 @@ void CriMvEasyPlayer::Destroy(CriError& err)
     }
     if (cs != NULL)
     {
-        FUN_140039f8c((_RTL_CRITICAL_SECTION *)cs);
+        criCs_Leave((_RTL_CRITICAL_SECTION *)cs);
     }
     cs_tmp = cs;
     if (cs_tmp != NULL)
@@ -723,7 +723,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPl
     nsmpl = (nsmpl > availb) ? availb : nsmpl;
     if (main_end2 == 0)
     {
-        nsmpl_out_ = FUN_140035f00(mveasy->mvply, mveasy->num_audio_channel, buf2, nsmpl, &time3);
+        nsmpl_out_ = criMvPly_GetWave16(mveasy->mvply, mveasy->num_audio_channel, buf2, nsmpl, &time3);
     }
     else
     {
@@ -739,7 +739,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPl
     {
         if (cv_end0 == 0)
         {
-            nsmpl_out_ = FUN_140035fe0(mveasy->mvply, 1, &cvbuf, nsmpl, &time3);
+            nsmpl_out_ = criMvPly_GetSubAudioWave16(mveasy->mvply, 1, &cvbuf, nsmpl, &time3);
         }
         else
         {
@@ -820,7 +820,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPl
     nsmpl = (nsmpl > availb) ? availb : nsmpl;
     if (main_end2 == 0)
     {
-        nsmpl_out_ = FUN_140035f70(mveasy->mvply, mveasy->num_audio_channel, buf2, nsmpl, &time3);
+        nsmpl_out_ = criMvPly_GetWave32(mveasy->mvply, mveasy->num_audio_channel, buf2, nsmpl, &time3);
     }
     else
     {
@@ -836,7 +836,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPl
     {
         if (cv_end0 == 0)
         {
-            nsmpl_out_ = FUN_140036050(mveasy->mvply, 1, &cvbuf, nsmpl, &time3);
+            nsmpl_out_ = criMvPly_GetSubAudioWave32(mveasy->mvply, 1, &cvbuf, nsmpl, &time3);
         }
         else
         {
@@ -923,7 +923,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave32(Cri
     {
         return 0;
     }
-    nsmpl_out = FUN_140036050(mveasy->mvply, sub_nch3, buf, nsmpl, &time2);
+    nsmpl_out = criMvPly_GetSubAudioWave32(mveasy->mvply, sub_nch3, buf, nsmpl, &time2);
     return nsmpl_out;
 }
 
@@ -1001,7 +1001,7 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetSubAudioWave16(Cri
     {
         return 0;
     }
-    nsmpl_out = FUN_140035fe0(mveasy->mvply, sub_nch3, buf, nsmpl, &time2);
+    nsmpl_out = criMvPly_GetSubAudioWave16(mveasy->mvply, sub_nch3, buf, nsmpl, &time2);
     return nsmpl_out;
 }
 
@@ -1174,31 +1174,31 @@ void CriMvEasyPlayer::setupSeekPosition(void)
     {
         if (mvply->seek_mode == 3)
         {
-            FUN_140037740(mvply, seek_frame_id, seek_frame_id);
-            FUN_140037780(mvply, seek_frame_id);
+            criMvPly_SetSeekPosition(mvply, seek_frame_id, seek_frame_id);
+            criMvPly_SetSeekAlphaPosition(mvply, seek_frame_id);
         }
         else
         {
             seek_frame_id = 0;
-            FUN_140037740(mvply, seek_frame_id, 0);
+            criMvPly_SetSeekPosition(mvply, seek_frame_id, 0);
         }
     }
     else if (seek_offset == 0 && seek_frame_id <= 0)
     {
         seek_frame_id = 0;
-        FUN_140037740(mvply, seek_frame_id, 0);
+        criMvPly_SetSeekPosition(mvply, seek_frame_id, 0);
     }
     else if (seek_frame_id >= mvply->total_frames)
     {
         seek_frame_id = 0;
         seek_offset = 0;
-        FUN_140037740(mvply, seek_frame_id, 0);
+        criMvPly_SetSeekPosition(mvply, seek_frame_id, 0);
     }
     else if (seek_offset != 0)
     {
         freader->Seek(seek_offset + file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
         file_read_pos = seek_offset;
-        FUN_140037740(mvply, seek_frame_id, seek_frame_id);
+        criMvPly_SetSeekPosition(mvply, seek_frame_id, seek_frame_id);
     }
     else
     {
@@ -1207,11 +1207,11 @@ void CriMvEasyPlayer::setupSeekPosition(void)
         alpha_frame_id4 = 0;
         alpha_offset = 0;
         seek_offset = 0;
-        FUN_140033700(mvply, mvply->seektbl, mvply->num_seektbl, seek_frame_id, (void **)&offset, &frame_id);
+        criMvPly_CalcSeekPosition(mvply, mvply->seektbl, mvply->num_seektbl, seek_frame_id, (void **)&offset, &frame_id);
         seek_offset = offset;
         if (mvply->seektbl_alpha != NULL)
         {
-            FUN_140033700(mvply, mvply->seektbl_alpha, mvply->num_seektbl_alpha, seek_frame_id, (void **)&alpha_offset,
+            criMvPly_CalcSeekPosition(mvply, mvply->seektbl_alpha, mvply->num_seektbl_alpha, seek_frame_id, (void **)&alpha_offset,
                           &alpha_frame_id4);
             if (alpha_offset < offset)
             {
@@ -1223,8 +1223,8 @@ void CriMvEasyPlayer::setupSeekPosition(void)
             freader->Seek(seek_offset + file_offset, CriMvFileReaderInterface::SEEK_FROM_BEGIN);
             file_read_pos = seek_offset;
         }
-        FUN_140037740(mvply, seek_frame_id, frame_id);
-        FUN_140037780(mvply, alpha_frame_id4);
+        criMvPly_SetSeekPosition(mvply, seek_frame_id, frame_id);
+        criMvPly_SetSeekAlphaPosition(mvply, alpha_frame_id4);
     }
 }
 
@@ -1276,7 +1276,7 @@ CRIMVEASY_SAFEBUFFERS CriBool CriMvEasyPlayer::setupPlayback(void)
     }
     if (use_heap2 == 0)
     {
-        ply_work_size9 = FUN_140037400(mvply, &stmprm);
+        ply_work_size9 = criMvPly_CalcPlaybackWorkSize(mvply, &stmprm);
         ply_work = criFixedAllocator_Allocate((CriFixedAllocator *)&walloc, ply_work_size9, 4);
         if (criMvPly_AllocateWorkBufferWithWork(mvply, ply_work, ply_work_size9, &stmprm) != 1)
         {
@@ -1688,13 +1688,13 @@ CriBool CriMvEasyPlayer::ExecuteDecode(CriError& err)
     {
         return res;
     }
-    FUN_140039f50((_RTL_CRITICAL_SECTION *)cs);
+    criCs_Enter((_RTL_CRITICAL_SECTION *)cs);
     if (mvply != NULL)
     {
         criMvPly_Execute(mvply);
-        FUN_1400313d0(mvply);
+        criMvPly_DecodeVideo(mvply);
     }
-    FUN_140039f8c((_RTL_CRITICAL_SECTION *)cs);
+    criCs_Leave((_RTL_CRITICAL_SECTION *)cs);
     criAtomic_TestAndSet((unsigned long *)&destroy_lock, 0);
     return res;
 }
@@ -1856,13 +1856,13 @@ CriBool CriMvEasyPlayer::startInputAndDecoding(void)
     }
     if (data_type == 2)
     {
-        FUN_1400361a0(mvply, data_ptr, data_size);
+        criMvPly_StartMemory(mvply, data_ptr, data_size);
     }
     else if (data_type == 1)
     {
         unk4c4 = 1;
         unk4c0 = 1;
-        ok = FUN_140034920(mvply);
+        ok = criMvPly_Start(mvply);
         if (ok == 0)
         {
             return 0;
@@ -2291,7 +2291,7 @@ void CriMvEasyPlayer::supplyDataFromStreamer(void)
             rsize = freader->GetReadSize();
             file_read_pos += rsize;
             file_reading = 0;
-            FUN_140034e70(mvply, (const CriMovieInputChunk *)&readck, (CriUint32)rsize);
+            criMvPly_PutInputChunk(mvply, (const CriMovieInputChunk *)&readck, (CriUint32)rsize);
             if (isEndReadFile() == 1)
             {
                 return;
@@ -2302,7 +2302,7 @@ void CriMvEasyPlayer::supplyDataFromStreamer(void)
             file_reading = 0;
             if (readck.data != NULL)
             {
-                FUN_140034e70(mvply, (const CriMovieInputChunk *)&readck, 0);
+                criMvPly_PutInputChunk(mvply, (const CriMovieInputChunk *)&readck, 0);
                 readck.data = NULL;
             }
             if (error_flag != 1)
@@ -2316,7 +2316,7 @@ void CriMvEasyPlayer::supplyDataFromStreamer(void)
         else if (file_opened == 0 && file_closing == 0)
         {
             file_reading = 0;
-            FUN_140034e70(mvply, (const CriMovieInputChunk *)&readck, 0);
+            criMvPly_PutInputChunk(mvply, (const CriMovieInputChunk *)&readck, 0);
         }
     }
 }
@@ -2358,7 +2358,7 @@ void CriMvEasyPlayer::executeFileReadServer(void)
         }
         else
         {
-            FUN_140034e70(mvply, (const CriMovieInputChunk *)&readck, 0);
+            criMvPly_PutInputChunk(mvply, (const CriMovieInputChunk *)&readck, 0);
         }
     }
 }
@@ -2384,7 +2384,7 @@ void CriMvEasyPlayer::reinputDataForLooping(void)
         CriBool empty = criMvPly_PeekInputBufferData(mvply);
         if (empty == 0)
         {
-            FUN_1400363b0(mvply, data_ptr, data_size);
+            criMvPly_AddInputMemory(mvply, data_ptr, data_size);
             unk5e8 = unk5e8 + 1;
         }
     }
@@ -2430,7 +2430,7 @@ void CriMvEasyPlayer::surveilTerminationInput(void)
     {
         if (data_type == 2)
         {
-            FUN_1400363b0(mvply, data_ptr, data_size);
+            criMvPly_AddInputMemory(mvply, data_ptr, data_size);
         }
         else
         {
@@ -2645,7 +2645,7 @@ CriBool CriMvEasyPlayer::isAvailableSubAudio(const CriMvStreamingParameters* stm
 // @0x140023a70
 CriBool CriMvEasyPlayer::attachCenterVoice(void)
 {
-    CriBool ok = FUN_140030f10(mvply, heap, center_voice_track);
+    CriBool ok = criMvPly_AttachSubAudio(mvply, heap, center_voice_track);
     if (ok == 1)
     {
         attached_center_voice_track = center_voice_track;
@@ -2734,7 +2734,7 @@ CriSint32 CriMvEasyPlayer::GetSubAudioTrack(CriError& err)
 // @0x140023d20
 CriBool CriMvEasyPlayer::attachSubAudioHandle(CriHeap heap)
 {
-    CriBool ok = FUN_140030f10(mvply, heap, subaudio_track);
+    CriBool ok = criMvPly_AttachSubAudio(mvply, heap, subaudio_track);
     if (ok == 1)
     {
         attached_subaudio_track = subaudio_track;
@@ -3120,13 +3120,13 @@ void CriMvEasyPlayer::setNormalErrorStatus(const CriChar8* msg)
 // @0x140024d40
 void CriMvEasyPlayer::notifyErrorA(void* obj, const CriChar8* msg, CriSint32 p1)
 {
-    FUN_140038ce4(0, msg, p1, 0, obj);
+    criErr_NotifyPrmArray(0, msg, p1, 0, obj);
 }
 
 // @0x140024d90
 void CriMvEasyPlayer::notifyErrorB(void* obj, const CriChar8* msg, CriSint32 p1)
 {
-    FUN_140038ce4(0, msg, p1, 0, obj);
+    criErr_NotifyPrmArray(0, msg, p1, 0, obj);
 }
 
 // @0x140024de0
@@ -3251,7 +3251,7 @@ CriBool CriMvEasyPlayer::GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32
     {
         return ret;
     }
-    ret = FUN_14003b8b0(mvply, imagebuf, pitch, bufsize, &frameinfo);
+    ret = criMvPly_GetFrameARGB8888(mvply, imagebuf, pitch, bufsize, &frameinfo);
     return ret;
 }
 
@@ -3261,7 +3261,7 @@ CriSint32 CriMvEasyPlayer::CopyFrameToBufferARGB32(CriUint8* dstbuf, CriUint32 d
                                                    const CriMvAlphaFrameInfo* src_ainf, CriError& err)
 {
     err = CRIERR_OK;
-    FUN_14003bb60(mvply, dstbuf, dstpitch, dstbufsize, srcbufs, src_vinf, src_ainf);
+    criMvPly_CopyFrameARGB8888Buffer(mvply, dstbuf, dstpitch, dstbufsize, srcbufs, src_vinf, src_ainf);
     return 0;
 }
 
@@ -3271,10 +3271,10 @@ namespace CriMv {
 void Initialize(CriError& err)
 {
     CriUint32 max_num;
-    void* work = FUN_14003c060(&max_num);
+    void* work = criVmpv_GetUserLibWork(&max_num);
     if (work == NULL)
     {
-        work = FUN_1400411e0(&max_num);
+        work = criVmpv_GetStaticLibWork(&max_num);
         CriUint32 work_size = criVmpv_CalcMovieHandleWork(max_num);
         SetupMovieHandleWork(max_num, work, work_size, err);
     }
@@ -3305,7 +3305,7 @@ CriUint32 CalcMovieHandleWork(CriUint32 max_num, CriError& err)
 void SetupMovieHandleWork(CriUint32 max_num, void* work, CriUint32 work_size, CriError& err)
 {
     err = CRIERR_OK;
-    CriBool ok = FUN_14003bf80(max_num, work, work_size);
+    CriBool ok = criVmpv_SetupMovieHandleWork(max_num, work, work_size);
     if (ok != 1)
     {
         err = CRIERR_NG;
@@ -3833,7 +3833,7 @@ CriSint32 CRIAPI criHeap_EnterCriticalSection(void)
         criErr_Notify(0, "E08052300H:CRI Heap is not initialized.");
         return -1;
     }
-    FUN_140039f50((_RTL_CRITICAL_SECTION *)DAT_143b278e0);
+    criCs_Enter((_RTL_CRITICAL_SECTION *)DAT_143b278e0);
     return 0;
 }
 
@@ -3845,7 +3845,7 @@ CriSint32 CRIAPI criHeap_LeaveCriticalSection(void)
         criErr_Notify(0, "E08052301H:CRI Heap is not initialized.");
         return -1;
     }
-    FUN_140039f8c((_RTL_CRITICAL_SECTION *)DAT_143b278e0);
+    criCs_Leave((_RTL_CRITICAL_SECTION *)DAT_143b278e0);
     return 0;
 }
 
@@ -3862,7 +3862,8 @@ CriSint32 CRIAPI criHeap_DebugGetWorstExtraSize(CriSint32 alignment)
 // @0x140027de0
 void* FUN_140027de0(void* obj, const CriChar8* msg, CriSint32 p1)
 {
-    return FUN_140038ce4(0, msg, p1, 0, obj);
+    typedef void* (*NotifyFn)(CriSint32, const CriChar8*, CriSint32, CriSint32, void*);
+    return reinterpret_cast<NotifyFn>(criErr_NotifyPrmArray)(0, msg, p1, 0, obj);
 }
 
 // @0x140027df8
@@ -3909,7 +3910,7 @@ void* CRIAPI criHeap_AllocFix(CriHeap heap, CriSint32 size, const CriChar8* name
     {
         return heap->vtbl->AllocFix(heap, size, name, align);
     }
-    FUN_140038ce4(0, "E05063002H", 0, 0, NULL);
+    criErr_NotifyPrmArray(0, "E05063002H", 0, 0, NULL);
     return NULL;
 }
 
@@ -3920,7 +3921,7 @@ void* CRIAPI criHeap_AllocTemporary(CriHeap heap, CriSint32 size, const CriChar8
     {
         return heap->vtbl->AllocTemporary(heap, size, name, align);
     }
-    FUN_140038ce4(0, "E05063003H", 0, 0, NULL);
+    criErr_NotifyPrmArray(0, "E05063003H", 0, 0, NULL);
     return NULL;
 }
 
@@ -3931,7 +3932,7 @@ void* CRIAPI criHeap_AllocDynamic(CriHeap heap, CriSint32 size, const CriChar8* 
     {
         return heap->vtbl->AllocDynamic(heap, size, name, align);
     }
-    FUN_140038ce4(0, "E05063004H", 0, 0, NULL);
+    criErr_NotifyPrmArray(0, "E05063004H", 0, 0, NULL);
     return NULL;
 }
 
@@ -3957,7 +3958,7 @@ CriSint32 CRIAPI criHeap_Free(CriHeap heap, void* ptr)
     {
         return heap->vtbl->Free(heap, ptr);
     }
-    FUN_140038ce4(0, "E05063005H", 0, 0, NULL);
+    criErr_NotifyPrmArray(0, "E05063005H", 0, 0, NULL);
     return 0;
 }
 
