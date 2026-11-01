@@ -9,6 +9,7 @@
 // MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140002930-0x14000e470 .text$mn
+#define MS2_AS2_VALUE_DTOR_CALL
 #include "../include/video/video_as2netstream.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_sprite.h"
@@ -23,7 +24,6 @@ template <class T> struct ExeDecl { typedef T type; };
 
 extern ExeDecl<void*>::type DAT_1431b59f0;
 extern ExeDecl<void*>::type DAT_14317bf80;   // AvmDisplayObjBase vftable
-ExeDecl<void(void*)>::type FUN_1429260b0;    // AS2 Value destructor, called out of line
 #define VideoProtoGCVtable DAT_1431b59f0
 extern ExeDecl<void*>::type DAT_1431b5940;
 #define VideoProtoInterfaceVtable DAT_1431b5940
@@ -1245,7 +1245,7 @@ void FUN_140004b00(Scaleform::UPInt* pair)
 // @0x140003df0
 void* FUN_140003df0(void* object, unsigned flags)
 {
-    FUN_1429260b0(object);   // ~Value
+    static_cast<Scaleform::GFx::AS2::Value*>(object)->~Value();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1567,7 +1567,7 @@ void FUN_1400072c0(void** array)
 // @0x140007200
 void FUN_140007200(Scaleform::UPInt* stack)
 {
-    FUN_1429260b0(reinterpret_cast<void*>(*stack));   // ~Value
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(*stack)->~Value();
     *stack -= 0x20;
     if (*stack < stack[1]) reinterpret_cast<Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>*>(stack)->PopPage();
 }

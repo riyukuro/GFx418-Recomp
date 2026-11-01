@@ -47,7 +47,7 @@ void FUN_142591a00(UPInt** table, void* heapOwner, const void* keyValue, UPInt h
 void FUN_1425916c0(void* context, void* sc, void* global);       // registers the first builtin
 namespace AS3 { class VM; struct ClassInfo; void FUN_1425210d0(VM& vm, const ClassInfo* table[]); }   // AS3 class registration
 } }
-ExeDecl<void(void*)>::type FUN_1429260b0;                       // AS2 value destructor
+namespace Scaleform { namespace GFx { namespace AS2 { class Value { public: ~Value(); }; } } }
 ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
 #define FUN_14001af70_ctor FUN_14001af70
 ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSupport::AttachAudio
@@ -468,7 +468,7 @@ __forceinline void Video04RegisterBuiltin(Video04Context* context, void* sc, Vid
     Video04StringValue member(VIDEO04_NAME(context, nameOffset));
     void** vtable = global->Members.VTable;
     ((void (*)(void*, void*, void*, void*, void*))vtable[10])(&global->Members, sc, VIDEO04_NAME(context, nameOffset), &member, &flags);
-    FUN_1429260b0(&member);
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&member)->~Value();
 }
 
 // MS2-FUNCTIONAL: registers the video builtin (exe codegen is cl 15: r12 for sc, null-tested &Entries[at], shared

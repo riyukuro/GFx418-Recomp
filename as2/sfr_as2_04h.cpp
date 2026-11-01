@@ -55,12 +55,20 @@ template<> SF_NOINLINE Sfr04hHashVal::~HashSetBase();    // 0x142924960
 template<> SF_NOINLINE Sfr04hHashEv::~HashSetBase();     // 0x142924a20
 }
 
+namespace Scaleform { namespace Render { namespace ContextImpl {
+class Entry
+{
+protected:
+    void destroyHelper();
+};
+struct EntryAccess : Entry { using Entry::destroyHelper; };
+} } }
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 struct GcAccess : RefCountBaseGC<StatMV_ActionScript_Mem> { using RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal; };
 void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
 void FUN_140001f40(void*);
-void FUN_142581700(void*);
 
 static inline void rs(void* n) // ASString release
 {
@@ -312,7 +320,7 @@ void* DeleteAs2_14292c3e0(void* p, unsigned flags)
     if (*(void**)((char*)p+0x50)) FUN_14257dcd0(*(void**)((char*)p+0x50));
     if (*(void**)((char*)p+0x38)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x38))->Release();
     if (*(void**)((char*)p+0x30)) static_cast<RefCountImpl*>(*(void**)((char*)p+0x30))->Release();
-    { char* e=*(char**)((char*)p+0x28); if (e && --*(long long*)(e+8)==0) FUN_142581700(e); }
+    { char* e=*(char**)((char*)p+0x28); if (e && --*(long long*)(e+8)==0) reinterpret_cast<Render::ContextImpl::EntryAccess*>(e)->destroyHelper(); }
     ((B14292c3e0*)p)->~B14292c3e0();
     static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
