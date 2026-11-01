@@ -72,7 +72,7 @@ inline void FUN_1424e6aa0(Scaleform::UPInt tracer, void* state, Scaleform::UInt6
 inline void FUN_1424d6cf0(void* err, int id, void* vm, const void* a1, const void* a2) { ::new (err) Scaleform::GFx::AS3::VM::Error(static_cast<Scaleform::GFx::AS3::VM::ErrorID>(id), *static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(a1), *static_cast<const Scaleform::GFx::AS3::Value*>(a2)); }   // VM::Error::Error(id, vm, Value, Value)
 inline void FUN_1424d6f40(void* err, int id, void* vm, const void* a1) { ::new (err) Scaleform::GFx::AS3::VM::Error(static_cast<Scaleform::GFx::AS3::VM::ErrorID>(id), *static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::Value*>(a1)); }   // VM::Error::Error(id, vm, Value)
 inline void FUN_1424d79f0(void* err, int id, void* vm, const char* a1, const void* a2) { ::new (err) Scaleform::GFx::AS3::VM::Error(static_cast<Scaleform::GFx::AS3::VM::ErrorID>(id), *static_cast<Scaleform::GFx::AS3::VM*>(vm), a1, *static_cast<const Scaleform::GFx::AS3::Value*>(a2)); }   // VM::Error::Error(id, vm, char*, Value)
-void FUN_142529f70(void* button, int state, void* obj);   // AvmButton::SetStateObject
+namespace Scaleform { namespace GFx { namespace AS3 { __declspec(noinline) void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj); } } }   // AvmButton::SetStateObject
 void FUN_1424ffc10(Scaleform::UPInt a, Scaleform::UPInt b, Scaleform::UPInt c, int d, const Scaleform::GFx::AS3::Value* e);
 void FUN_1424f03f0(unsigned char*, Scaleform::MemoryHeap*);
 inline void FUN_1424f03f0(unsigned char* self, void* heap) { ::FUN_1424f03f0(self, static_cast<Scaleform::MemoryHeap*>(heap)); }
@@ -204,8 +204,8 @@ namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_142514560; } }
 inline void FUN_14250b240(Scaleform::UPInt link, Scaleform::UPInt* out, Scaleform::SPInt idx) { ::new (static_cast<void*>(out)) Scaleform::GFx::ASString(reinterpret_cast<Scaleform::GFx::AS3::VMAbcFile*>(link)->GetInternedString(static_cast<Scaleform::UPInt>(idx))); }   // VMAbcFile::GetInternedString (hidden return)
 namespace Scaleform { namespace GFx { namespace AS3 { void* Sfr33LazyGet80a(void**); } } }
 inline Scaleform::UPInt FUN_142507b80(Scaleform::UPInt traitsOwner) { return reinterpret_cast<Scaleform::UPInt>(Scaleform::GFx::AS3::Sfr33LazyGet80a(reinterpret_cast<void**>(traitsOwner))); }
-void* FUN_14250f330(void* out, void* nameSlot, Scaleform::UPInt a, int b);   // type name for a class-kind value (releases the name)
-void* FUN_14250fc60(void* out, void* nameSlot, Scaleform::UPInt vt, Scaleform::UInt32 idx, int b);   // type name for a slot-kind value (releases the name)
+namespace Scaleform { namespace GFx { namespace AS3 { ASString FUN_14250f330(ASString name, const ThunkInfo& ti, bool closure); } } }   // type name for a thunk value
+namespace Scaleform { namespace GFx { namespace AS3 { ASString FUN_14250fc60(ASString name, const VTable& vt, UInt32 ind, bool closure); } } }   // type name for a vtable-method value
 void* FUN_142416720(const void* self);   // InstanceTraits::Function: its VM-side owner
 inline void FUN_1424fef00(void* vm, void* callee, const void* thisVal, void* result, unsigned argc, const void* args, unsigned flag) { static_cast<Scaleform::GFx::AS3::VM*>(vm)->ExecuteInternalUnsafe(*static_cast<const Scaleform::GFx::AS3::Value*>(callee), *static_cast<const Scaleform::GFx::AS3::Value*>(thisVal), *static_cast<Scaleform::GFx::AS3::Value*>(result), argc, static_cast<const Scaleform::GFx::AS3::Value*>(args), flag != 0); }
 inline Scaleform::UPInt* FUN_1425ddd50(Scaleform::UPInt button, Scaleform::UPInt* out, int state) { ::new (static_cast<void*>(out)) Scaleform::Ptr<Scaleform::Render::TreeContainer>(reinterpret_cast<Scaleform::GFx::Button*>(button)->CreateStateRenderContainer(static_cast<Scaleform::GFx::Button::ButtonState>(state))); return out; }   // Button::CreateStateRenderContainer
@@ -213,7 +213,13 @@ inline Scaleform::UPInt FUN_14250dbc0(Scaleform::UPInt container) { return reint
 inline void FUN_14261cf50(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt count) { reinterpret_cast<Scaleform::Render::TreeContainer*>(container)->Remove(pos, count); }   // TreeContainer::Remove
 inline unsigned char FUN_14261c690(Scaleform::UPInt container, Scaleform::UPInt pos, Scaleform::UPInt node) { return reinterpret_cast<Scaleform::Render::TreeContainer*>(container)->Insert(pos, reinterpret_cast<Scaleform::Render::TreeNode*>(node)); }   // TreeContainer::Insert
 inline Scaleform::UPInt FUN_1425f26c0(Scaleform::UPInt displayObject) { return reinterpret_cast<Scaleform::UPInt>(reinterpret_cast<const Scaleform::GFx::DisplayObjectBase*>(displayObject)->GetRenderNode()); }   // DisplayObjectBase::GetRenderNode
-void FUN_142581700(Scaleform::UPInt entry);   // ContextImpl::Entry::destroyHelper
+// Access view: the render Entry helpers are protected.
+struct Sfr31EntryAccess : Scaleform::Render::ContextImpl::Entry
+{
+    using Entry::destroyHelper;
+    using Entry::addToPropagateImpl;
+    using Entry::getWritableData;
+};
 bool FUN_142522a60(Scaleform::GFx::AS3::VM*, void*);
 inline char FUN_142522a60(Scaleform::UPInt owner, Scaleform::UPInt traits) { return ::FUN_142522a60(reinterpret_cast<Scaleform::GFx::AS3::VM*>(owner), reinterpret_cast<void*>(traits)); }
 void FUN_1424ef7b0(Scaleform::UPInt hash);   // hash Clear (stride 0x18, refcounted member at +0x20)
@@ -267,8 +273,6 @@ void FUN_142520f30(Scaleform::UPInt state, Scaleform::UPInt traits, int op);   /
 void FUN_142520d80(Scaleform::UPInt state, Scaleform::UPInt traits, int op, unsigned int idx);   // TR::State: typed op on a register
 inline void FUN_1424f1ed0(Scaleform::UPInt state, unsigned int ind, Scaleform::UPInt traits, int nullType) { reinterpret_cast<Scaleform::GFx::AS3::TR::State*>(state)->ConvertRegisterTo(ind, *reinterpret_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(traits), static_cast<Scaleform::GFx::AS3::Value::TraceNullType>(nullType)); }   // TR::State::ConvertRegisterTo
 inline void FUN_14251bdc0(Scaleform::UPInt vm, void* value) { reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->OutputError(*static_cast<const Scaleform::GFx::AS3::Value*>(value)); }   // VM: flush a pending value
-void* FUN_142581a40(void* entry, unsigned changeBits);   // ContextImpl::Entry::getWritableData
-void FUN_142581430(void* entry);                         // ContextImpl::Entry::addToPropagateImpl
 inline Scaleform::UPInt FUN_1425f26c0(void* displayObjectBase) { return reinterpret_cast<Scaleform::UPInt>(static_cast<const Scaleform::GFx::DisplayObjectBase*>(displayObjectBase)->GetRenderNode()); } // DisplayObjectBase::GetRenderNode
 inline void FUN_1424d7850(void* err, int id, void* vm, const char* s) { ::new (err) Scaleform::GFx::AS3::VM::Error(static_cast<Scaleform::GFx::AS3::VM::ErrorID>(id), *static_cast<Scaleform::GFx::AS3::VM*>(vm), s); }   // VM::Error::Error(id, vm, char*)
 inline void FUN_1424e42c0(Scaleform::UPInt root, const Scaleform::GFx::AS3::Value* v, void* gfxValue) { reinterpret_cast<const Scaleform::GFx::AS3::MovieRoot*>(root)->ASValue2GFxValue(*v, static_cast<Scaleform::GFx::Value*>(gfxValue)); }   // MovieRoot::ASValue2GFxValue
@@ -1980,19 +1984,19 @@ void STPtr::Release() const
 
 // The button's up state receives obj.
 // @0x14252a4e0
-void Sfr31ButtonSetUpState(void* button, void* obj) { FUN_142529f70(button, 0, obj); }
+void Sfr31ButtonSetUpState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 0, reinterpret_cast<Scaleform::UPInt>(obj)); }
 
 // The same for the over state.
 // @0x1425287b0
-void Sfr31ButtonSetOverState(void* button, void* obj) { FUN_142529f70(button, 1, obj); }
+void Sfr31ButtonSetOverState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 1, reinterpret_cast<Scaleform::UPInt>(obj)); }
 
 // The same for the down state.
 // @0x1425272f0
-void Sfr31ButtonSetDownState(void* button, void* obj) { FUN_142529f70(button, 2, obj); }
+void Sfr31ButtonSetDownState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 2, reinterpret_cast<Scaleform::UPInt>(obj)); }
 
 // The same for the hit-test state.
 // @0x142527490
-void Sfr31ButtonSetHitTestState(void* button, void* obj) { FUN_142529f70(button, 3, obj); }
+void Sfr31ButtonSetHitTestState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 3, reinterpret_cast<Scaleform::UPInt>(obj)); }
 
 // Two bounds with -1 meaning the default (0 and 1000); the second is stored twice.
 // @0x1425287c0
@@ -3224,10 +3228,10 @@ struct Sfr31TreeShapeEntry
 // @0x142528eb0
 void Sfr31TreeShapeEntry::SetShape(UPInt pshape)
 {
-    Sfr31TreeShapeNodeData* pdata = static_cast<Sfr31TreeShapeNodeData*>(FUN_142581a40(this, 0x400));
+    Sfr31TreeShapeNodeData* pdata = reinterpret_cast<Sfr31TreeShapeNodeData*>(reinterpret_cast<Sfr31EntryAccess*>(this)->getWritableData(0x400));
     pdata->pShape = pshape;
     if (!hasPropagate())
-        FUN_142581430(this);
+        reinterpret_cast<Sfr31EntryAccess*>(this)->addToPropagateImpl();
 }
 
 // ShapeObject::SetRatio: only when its render node is a shape node.
@@ -3243,7 +3247,7 @@ void Sfr31ShapeObjectSetRatio(UPInt self, float ratio)
     const UPInt info = Sfr31Rd(Sfr31Rd(page, 0x20), 0x28 + static_cast<UPInt>(idx) * 8);
     if (*reinterpret_cast<const SInt16*>(info + 8) == 3)
     {
-        UPInt data = reinterpret_cast<UPInt>(FUN_142581a40(reinterpret_cast<void*>(Sfr31Rd(self, 0x48)), 0x10));
+        UPInt data = reinterpret_cast<UPInt>(reinterpret_cast<Sfr31EntryAccess*>(Sfr31Rd(self, 0x48))->getWritableData(0x10));
         *reinterpret_cast<float*>(data + 0x98) = ratio;
     }
 }
@@ -5459,16 +5463,12 @@ ASString* Sfr31ValueTypeName(UPInt vmAddr, ASString* out, const UInt32* v)
     case 4: node = Sfr31Rd(helper, 0x38); break;
     case 5:
     {
-        UPInt slot = Sfr31Rd(helper, 0);
-        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
-        FUN_14250f330(out, &slot, obj, 0);
+        new (out) ASString(FUN_14250f330(ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0))), *reinterpret_cast<const ThunkInfo*>(obj), false));
         return out;
     }
     case 7:
     {
-        UPInt slot = Sfr31Rd(helper, 0);
-        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
-        FUN_14250fc60(out, &slot, FUN_14250fa80(aux), v[4], 0);
+        new (out) ASString(FUN_14250fc60(ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(helper, 0))), *reinterpret_cast<const VTable*>(FUN_14250fa80(aux)), v[4], false));
         return out;
     }
     case 10: node = Sfr31Rd(helper, obj != 0 ? 0x40 : 0x10); break;
@@ -5517,25 +5517,19 @@ ASString* Sfr31ValueTypeName(UPInt vmAddr, ASString* out, const UInt32* v)
     case 0xf:
     {
         ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(obj, 0x48)));
-        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
-        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
-        FUN_14250f330(out, &slot, Sfr31Rd(obj, 0x40), 0);
+        new (out) ASString(FUN_14250f330(n, *reinterpret_cast<const ThunkInfo*>(Sfr31Rd(obj, 0x40)), false));
         return out;
     }
     case 0x10:
     {
         ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
-        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
-        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
-        FUN_14250f330(out, &slot, obj, 1);
+        new (out) ASString(FUN_14250f330(n, *reinterpret_cast<const ThunkInfo*>(obj), true));
         return out;
     }
     case 0x11:
     {
         ASString n = FUN_14250bc60(*reinterpret_cast<const Traits*>(Sfr31Rd(aux, 0x20)));
-        UPInt slot = reinterpret_cast<UPInt>(n.GetNode());
-        *reinterpret_cast<SInt32*>(slot + 0x18) += 1;
-        FUN_14250fc60(out, &slot, FUN_14250fa80(Sfr31Rd(aux, 0x20)), v[4], 1);
+        new (out) ASString(FUN_14250fc60(n, *reinterpret_cast<const VTable*>(FUN_14250fa80(Sfr31Rd(aux, 0x20))), v[4], true));
         return out;
     }
     default: node = Sfr31Rd(helper, 0); break;
@@ -5705,7 +5699,7 @@ void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
                 ++*reinterpret_cast<UPInt*>(cont + 8);
             cont = *p;
             if (out != 0 && --*reinterpret_cast<UPInt*>(out + 8) == 0)
-                FUN_142581700(out);
+                reinterpret_cast<Sfr31EntryAccess*>(out)->destroyHelper();
         }
         const UPInt owner = Sfr31Rd(obj, 0x38);
         if (owner != 0 && (owner != btn || Sfr31Rd(FUN_1425f26c0(obj), 0x20) != cont))
@@ -5718,7 +5712,7 @@ void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
         if (Sfr31Rd(FUN_1425f26c0(obj), 0x20) == 0)
             FUN_14261c690(cont, FUN_14250dbc0(cont), FUN_1425f26c0(obj));
         if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
-            FUN_142581700(cont);
+            reinterpret_cast<Sfr31EntryAccess*>(cont)->destroyHelper();
     }
     UPInt* arr = reinterpret_cast<UPInt*>(btn + static_cast<UPInt>(state) * 0x20 + 0xe8);
     if (obj == 0)
@@ -5825,6 +5819,17 @@ void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
 // ---- batch 53
 // Tears down a class traits' member tables: unregisters it, empties its arrays and hashes, and takes every traits recorded in the
 // slot-name hash out of the owner's registration list.
+typedef SPtr<GASRefCountBase> Sfr31GcPtr;
+typedef HashSetBase<Sfr31GcPtr, FixedSizeHash<Sfr31GcPtr>, FixedSizeHash<Sfr31GcPtr>, AllocatorLH<Sfr31GcPtr, 2>,
+                    HashsetCachedEntry<Sfr31GcPtr, FixedSizeHash<Sfr31GcPtr> > > Sfr31GcPtrSet;
+typedef AbcMultinameHash<SPtr<Instances::Namespace>, 340>::Key Sfr31NsKey;
+typedef HashNode<Sfr31NsKey, SPtr<Instances::Namespace>, FixedSizeHash<Sfr31NsKey> > Sfr31NsNode;
+typedef HashSetBase<Sfr31NsNode, Sfr31NsNode::NodeHashF, Sfr31NsNode::NodeAltHashF, AllocatorLH<Sfr31NsKey, 340>,
+                    HashsetCachedNodeEntry<Sfr31NsNode, Sfr31NsNode::NodeHashF> > Sfr31NsSet;
+typedef HashNode<unsigned long, SPtr<InstanceTraits::Function>, FixedSizeHash<unsigned long> > Sfr31FnNode;
+typedef HashSetBase<Sfr31FnNode, Sfr31FnNode::NodeHashF, Sfr31FnNode::NodeAltHashF, AllocatorLH<unsigned long, 340>,
+                    HashsetCachedNodeEntry<Sfr31FnNode, Sfr31FnNode::NodeHashF> > Sfr31FnSet;
+
 // MS2-FUNCTIONAL 0x1425303b0: raw-offset model; codegen differs from the exe
 // @0x1425303b0
 void Sfr31ClassTraitsCleanup(UPInt self)
@@ -5834,9 +5839,9 @@ void Sfr31ClassTraitsCleanup(UPInt self)
         return;
     Sfr31UnregisterClassTraits(self);
     for (UPInt i = Sfr31Rd(self, 0xc0); i != 0; --i)
-        FUN_1425247f0(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3, 0);
-    FUN_1425244e0(reinterpret_cast<UPInt*>(self + 0xb8), 0);
-    FUN_1424ef7b0(self + 0x38);
+        reinterpret_cast<ArrayData<UInt64, AllocatorLH_POD<UInt64, 338>, ArrayDefaultPolicy>*>(reinterpret_cast<UPInt*>(Sfr31Rd(self, 0xb8)) + (Sfr31Rd(self, 0xc0) - i) * 3)->Resize(0);
+    reinterpret_cast<ArrayData<Abc::MethodBodyInfo::Exception, AllocatorLH<Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy>*>(self + 0xb8)->Resize(0);
+    reinterpret_cast<Sfr31GcPtrSet*>(self + 0x38)->~Sfr31GcPtrSet();
     const UPInt table = Sfr31Rd(self, 0x70);
     if (table != 0)
     {
@@ -5878,14 +5883,14 @@ void Sfr31ClassTraitsCleanup(UPInt self)
             }
         }
     }
-    FUN_1424ef860(self + 0x70);
-    FUN_142524c30(reinterpret_cast<UPInt*>(self + 0x78), reinterpret_cast<const void*>(self + 0x78), 0);
-    FUN_1424ef5b0(self + 0x30);
-    FUN_142524680(reinterpret_cast<UPInt*>(self + 0x40), 0);
-    FUN_142524a30(reinterpret_cast<UPInt*>(self + 0x58), reinterpret_cast<const void*>(self + 0x58), 0);
-    FUN_1424ef500(self + 0x90);
-    FUN_1424ef450(self + 0x98);
-    FUN_142524710(reinterpret_cast<UPInt*>(self + 0xd0), 0);
+    reinterpret_cast<Sfr31GcPtrSet*>(self + 0x70)->Clear();
+    reinterpret_cast<ArrayDataBase<SPtr<VMAbcFile>, AllocatorLH<SPtr<VMAbcFile>, 340>, ArrayDefaultPolicy>*>(self + 0x78)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0x78), 0);
+    reinterpret_cast<Sfr31NsSet*>(self + 0x30)->~Sfr31NsSet();
+    reinterpret_cast<ArrayData<SPtr<NamespaceSet>, AllocatorLH<SPtr<NamespaceSet>, 2>, ArrayDefaultPolicy>*>(self + 0x40)->Resize(0);
+    reinterpret_cast<ArrayDataBase<SPtr<ASStringNode>, AllocatorLH<SPtr<ASStringNode>, 2>, ArrayDefaultPolicy>*>(self + 0x58)->ResizeNoConstruct(reinterpret_cast<const void*>(self + 0x58), 0);
+    reinterpret_cast<Sfr31FnSet*>(self + 0x90)->Clear();
+    reinterpret_cast<Sfr31FnSet*>(self + 0x98)->~Sfr31FnSet();
+    reinterpret_cast<ArrayData<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UInt64, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy>*>(self + 0xd0)->Resize(0);
 }
 // ---- batch 54
 static inline UPInt Sfr31SubObj(UPInt o) { return o + *reinterpret_cast<const UInt8*>(o + 0x6d) * 4; }
@@ -5975,7 +5980,7 @@ void Sfr31ButtonSwitchStateIntl(UPInt self, int state)
     const UPInt own = Sfr31VCall0(btn, 0x1f8);
     FUN_14261c690(own, FUN_14250dbc0(own), cont);
     if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
-        FUN_142581700(cont);
+        reinterpret_cast<Sfr31EntryAccess*>(cont)->destroyHelper();
 }
 // ---- batch 55
 // Raises an error: instantiates the error class named by the ClassInfo (resolved through the class traits cache), constructs it
