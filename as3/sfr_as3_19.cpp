@@ -3452,20 +3452,24 @@ void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c)
 // Evaluates a virtual getter into a scratch Value; a non-null result is handed to FUN_1424e0860, else the out slot is cleared.
 // MS2-FUNCTIONAL 0x142531f40: raw-offset model; codegen differs from the exe
 // @0x142531f40
-UPInt Sfr31FetchOrClear(UPInt self, UPInt* out, UPInt src, UInt32 arg, UPInt arg2)
+bool ASVM::_constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned arg, const Value* argv)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    UPInt* out = reinterpret_cast<UPInt*>(&pobj);
+    const UPInt src = reinterpret_cast<UPInt>(classObj);
+    const UPInt arg2 = reinterpret_cast<UPInt>(argv);
     // the AS3 Value is 0x20 bytes (its value union holds two pointers): Construct writes all of it, so a 0x18-byte
     // buffer let the second value word overwrite the /GS cookie the array got (the exe's frame has no cookie)
     struct { UInt32 flags, pad; UPInt bonus, v0, v1; } val = {};
     UInt32* tmp = &val.flags;
     typedef void (*Fn)(UPInt, void*, UInt32, UPInt, int);
     reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(src, 0), 0x60))(src, &val, arg, arg2, 1);
-    UPInt result;
+    bool result;
     const UInt32 kind = tmp[0] & 0x1f;
     if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 && (kind - 0xc > 3 || *reinterpret_cast<UPInt*>(&tmp[4]) != 0))
     {
         FUN_1424e0860(out, *reinterpret_cast<UPInt*>(&tmp[4]));
-        result = 1;
+        result = true;
     }
     else
     {
@@ -3480,7 +3484,7 @@ UPInt Sfr31FetchOrClear(UPInt self, UPInt* out, UPInt src, UInt32 arg, UPInt arg
             *out = 0;
         }
         *reinterpret_cast<UInt8*>(self + 0x180) = 0;
-        result = 0;
+        result = false;
     }
     if (kind > 9)
     {
@@ -3884,10 +3888,9 @@ static __forceinline CheckResult Sfr31ConstructOrClearImpl(UPInt self, UPInt* ou
 
 // The exe returns the CheckResult by value; each path destroys the scratch value before its own return.
 // @0x142532130
-UInt8* Sfr31ConstructOrClear(UPInt self, UInt8* ret, UPInt* out, const char* gname, UInt32 argc, const Value* argv)
+CheckResult VM::constructBuiltinObject(SPtr<Object>& pobj, const char* gname, unsigned argc, const Value* argv)
 {
-    new (ret) CheckResult(Sfr31ConstructOrClearImpl(self, out, gname, argc, argv));
-    return ret;
+    return Sfr31ConstructOrClearImpl(reinterpret_cast<UPInt>(this), reinterpret_cast<UPInt*>(&pobj), gname, argc, argv);
 }
 
 // pushscope: the (non-null) object on top of the operand stack moves onto the scope stack. An undefined or null
@@ -7676,8 +7679,10 @@ static void Sfr31DropDispOfDef(UPInt* arr, UPInt def)
 // text format caches are flushed.
 // MS2-FUNCTIONAL 0x1425305f0: raw-offset model; codegen differs from the exe
 // @0x1425305f0
-void Sfr31UnloadLoaderContent(UPInt root, UPInt loader, bool dropAll, bool flagRoot)
+void MovieRoot::UnloadMovie(Instances::fl_display::Loader* ploader, bool dropAll, bool flagRoot)
 {
+    const UPInt root = reinterpret_cast<UPInt>(this);
+    const UPInt loader = reinterpret_cast<UPInt>(ploader);
     typedef Instances::fl_display::LoaderInfo LoaderInfo;
     LoaderInfo* li = reinterpret_cast<LoaderInfo*>(FUN_142443d90(loader));
     if (li)
