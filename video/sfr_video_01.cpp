@@ -58,8 +58,6 @@ extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80;
 
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
-extern void FUN_14257db40(void*);
-extern void FUN_14257db50(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
 extern void FUN_14000b3b0(Scaleform::UPInt*, void*, Scaleform::UPInt);
 extern void FUN_1425925f0(void*);
@@ -72,15 +70,12 @@ extern void FUN_14000b9e0(Scaleform::UPInt*, void*, void**, Scaleform::UPInt);
 extern unsigned* FUN_1400079b0(unsigned*, const unsigned*);
 extern void FUN_140007870(unsigned*, void**);
 extern void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter*);
-extern Scaleform::GFx::AS2::AvmCharacter* FUN_142918930(
-    Scaleform::GFx::AS2::AvmCharacter*, Scaleform::GFx::InteractiveObject*);
 
 struct NetStreamPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
 {
     using GASPrototypeBase::InitFunctionMembers;
 };
 extern void* FUN_1425f1910(void*);
-extern "C" void* DAT_143b15f60;
 
 static void ReleaseAs2GCObject(void* object)
 {
@@ -266,7 +261,7 @@ void FUN_140002ab0(void* stream)
     *reinterpret_cast<void**>(static_cast<unsigned char*>(*channelSlot) + 0x10) = 0;
     if (*channelSlot) FUN_14257dcb0(*channelSlot);
     *reinterpret_cast<void***>(bytes) = &VideoSoundVtable;
-    FUN_14257db50(stream);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(stream)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // MS2-FUNCTIONAL: initializes the refcounted stream and allocates its SoundChannelSystem back-reference.
@@ -279,8 +274,8 @@ void* FUN_140002e80(void* stream)
     void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
     *channelSlot = 0;
     void* channel = 0;
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(DAT_143b15f60, 0x20, 0);
+    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
+    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(Scaleform::Memory::pGlobalHeap, 0x20, 0);
     if (channel) {
         unsigned char* channelBytes = static_cast<unsigned char*>(channel);
         *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
@@ -788,10 +783,10 @@ void* FUN_140005000(void** weakSlot)
 // @0x1400050c0
 void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
 {
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     unsigned char* data = static_cast<unsigned char*>(array[0]);
     if (requested == 0) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, data);
+        if (data) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, data);
         array[0] = 0;
         array[2] = 0;
         return;
@@ -799,11 +794,11 @@ void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
     const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
     if (data) {
         array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(heapVtable[11])(
-            DAT_143b15f60, data, capacity * sizeof(void*));
+            Scaleform::Memory::pGlobalHeap, data, capacity * sizeof(void*));
     } else {
         __declspec(align(8)) unsigned flags[2] = { 2, 0 };
         array[0] = reinterpret_cast<void* (*)(void*, void*, size_t, const void*)>(heapVtable[14])(
-            DAT_143b15f60, heapOwner, capacity * sizeof(void*), flags);
+            Scaleform::Memory::pGlobalHeap, heapOwner, capacity * sizeof(void*), flags);
     }
     array[2] = reinterpret_cast<void*>(capacity);
 }
@@ -822,19 +817,19 @@ void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
 // the exe inlines the body into FUN_1400069a0.
 static __forceinline void Video01ResizeRecords(void** array, Scaleform::UPInt requested)
 {
-    void** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** vtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     void* data = array[0];
     if (!requested) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(Scaleform::Memory::pGlobalHeap, data);
         array[0] = 0; array[2] = 0; return;
     }
     const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
     if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
-        DAT_143b15f60, data, capacity * 16);
+        Scaleform::Memory::pGlobalHeap, data, capacity * 16);
     else {
         unsigned flags[2] = { 2, 0 };
         array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
-            DAT_143b15f60, capacity * 16, flags);
+            Scaleform::Memory::pGlobalHeap, capacity * 16, flags);
     }
     array[2] = reinterpret_cast<void*>(capacity);
 }
@@ -850,19 +845,19 @@ void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
 // @0x140005260
 void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
 {
-    void** vtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** vtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     void* data = array[0];
     if (!requested) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(DAT_143b15f60, data);
+        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(Scaleform::Memory::pGlobalHeap, data);
         array[0] = 0; array[2] = 0; return;
     }
     const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
     if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
-        DAT_143b15f60, data, capacity * 12);
+        Scaleform::Memory::pGlobalHeap, data, capacity * 12);
     else {
         unsigned flags[2] = { 2, 0 };
         array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
-            DAT_143b15f60, capacity * 12, flags);
+            Scaleform::Memory::pGlobalHeap, capacity * 12, flags);
     }
     array[2] = reinterpret_cast<void*>(capacity);
 }
@@ -1121,7 +1116,7 @@ void* FUN_140006240(void** weakSlot)
 void* FUN_140002a60(void* object, unsigned flags)
 {
     *static_cast<void***>(object) = &VideoSoundVtable;
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1130,7 +1125,7 @@ void* FUN_140002a60(void* object, unsigned flags)
 // @0x140002b30
 void* FUN_140002b30(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1139,7 +1134,7 @@ void* FUN_140002b30(void* object, unsigned flags)
 // @0x140002bb0
 void* FUN_140002bb0(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1154,7 +1149,7 @@ void* FUN_140002c10(void* object, unsigned flags)
     *reinterpret_cast<void**>(static_cast<unsigned char*>(fields[2]) + 0x10) = 0;
     if (fields[2]) FUN_14257dcb0(fields[2]);
     fields[0] = &VideoSoundVtable;
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1163,7 +1158,7 @@ void* FUN_140002c10(void* object, unsigned flags)
 // @0x140002cc0
 void* FUN_140002cc0(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1172,7 +1167,7 @@ void* FUN_140002cc0(void* object, unsigned flags)
 // @0x140002d20
 void* FUN_140002d20(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1181,7 +1176,7 @@ void* FUN_140002d20(void* object, unsigned flags)
 // @0x140002e40
 void* FUN_140002e40(void* object, unsigned flags)
 {
-    FUN_14257db40(object);
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->RefCountImplCore::~RefCountImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1278,7 +1273,7 @@ void* FUN_140005430(Scaleform::RefCountWeakSupportImpl* object, unsigned flags)
 // @0x140004f30
 void* FUN_140004f30(void* object, unsigned flags)
 {
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -1435,9 +1430,9 @@ void FUN_140006a40(Scaleform::UPInt* stack)
         page = freePage;
         stack[7] = *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400);
     } else {
-        void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+        void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
         page = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned)>(heapVtable[14])(
-            DAT_143b15f60, stack, 0x408, 0);
+            Scaleform::Memory::pGlobalHeap, stack, 0x408, 0);
     }
     if (!page) { stack[0] -= 0x20; return; }
     // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
@@ -1958,9 +1953,9 @@ void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt req
     Scaleform::UPInt capacity = 8;
     while (capacity < requested) capacity <<= 1;
     unsigned stat = 2;
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     Scaleform::UPInt* fresh = static_cast<Scaleform::UPInt*>(reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
-        DAT_143b15f60, owner, capacity * 0x18 + 0x10, &stat));
+        Scaleform::Memory::pGlobalHeap, owner, capacity * 0x18 + 0x10, &stat));
     fresh[0] = 0;
     fresh[1] = capacity - 1;
     Scaleform::UPInt* freshEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(fresh) + 0x10);
@@ -1977,7 +1972,7 @@ void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt req
             ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
             entry[0] = ~Scaleform::UPInt(1);
         }
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, old);
+        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, old);
     }
     *slot = fresh;
 }
@@ -2131,9 +2126,9 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
 void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     if (!capacity) {
-        if (*array) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(DAT_143b15f60, *array);
+        if (*array) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, *array);
         *array = 0;
         fields[2] = 0;
         return;
@@ -2141,11 +2136,11 @@ void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
     capacity = (capacity + 3) & ~Scaleform::UPInt(3);
     if (*array) {
         *array = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt)>(heapVtable[11])(
-            DAT_143b15f60, *array, capacity * 0x30);
+            Scaleform::Memory::pGlobalHeap, *array, capacity * 0x30);
     } else {
         unsigned flags = 2;
         *array = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, unsigned*)>(heapVtable[10])(
-            DAT_143b15f60, capacity * 0x30, &flags);
+            Scaleform::Memory::pGlobalHeap, capacity * 0x30, &flags);
     }
     fields[2] = capacity;
     (void)owner;
@@ -2278,9 +2273,9 @@ void FUN_14000d2a0(Scaleform::GFx::AS2::Value* value, bool boolean)
 void* FUN_14000d360(Scaleform::UPInt size, void* owner)
 {
     unsigned stat = 0x143;
-    void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
+    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
     return reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
-        DAT_143b15f60, owner, size, &stat);
+        Scaleform::Memory::pGlobalHeap, owner, size, &stat);
 }
 
 struct VideoPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
@@ -3956,7 +3951,7 @@ VideoObject* FUN_14000e020(AvmCharacter* character)
 // @0x14000e2b0
 AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject)
 {
-    FUN_142918930(character, displayObject);
+    character->AvmCharacter::AvmCharacter(displayObject);
     unsigned char* bytes = reinterpret_cast<unsigned char*>(character);
     *reinterpret_cast<unsigned*>(bytes + 0x38) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x3c) = 0;
