@@ -27,6 +27,7 @@
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_stage.h"
 #include "ms2/scaleform/include/gfx/gfx_textfield.h"
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #include "ms2/scaleform/include/gfx/gfx_button.h"
@@ -1984,19 +1985,19 @@ void STPtr::Release() const
 
 // The button's up state receives obj.
 // @0x14252a4e0
-void Sfr31ButtonSetUpState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 0, reinterpret_cast<Scaleform::UPInt>(obj)); }
+void AvmButton::SetUpStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(this), 0, reinterpret_cast<Scaleform::UPInt>(ch)); }
 
 // The same for the over state.
 // @0x1425287b0
-void Sfr31ButtonSetOverState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 1, reinterpret_cast<Scaleform::UPInt>(obj)); }
+void AvmButton::SetOverStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(this), 1, reinterpret_cast<Scaleform::UPInt>(ch)); }
 
 // The same for the down state.
 // @0x1425272f0
-void Sfr31ButtonSetDownState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 2, reinterpret_cast<Scaleform::UPInt>(obj)); }
+void AvmButton::SetDownStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(this), 2, reinterpret_cast<Scaleform::UPInt>(ch)); }
 
 // The same for the hit-test state.
 // @0x142527490
-void Sfr31ButtonSetHitTestState(void* button, void* obj) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(button), 3, reinterpret_cast<Scaleform::UPInt>(obj)); }
+void AvmButton::SetHitStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr31ButtonSetStateObject(reinterpret_cast<Scaleform::UPInt>(this), 3, reinterpret_cast<Scaleform::UPInt>(ch)); }
 
 // Two bounds with -1 meaning the default (0 and 1000); the second is stored twice.
 // @0x1425287c0
@@ -2042,9 +2043,9 @@ void Sfr31FlagAndCacheField(UPInt self, UPInt* obj)
 
 // Stage::SetOrientation: the orientation string (+0x120) is replaced.
 // @0x142528770
-void Sfr31StageSetOrientation(char* self, const ASString& orientation)
+void Stage::SetOrientation(const ASString& orientation)
 {
-    *reinterpret_cast<ASString*>(self + 0x120) = orientation;
+    *reinterpret_cast<ASString*>(reinterpret_cast<char*>(this) + 0x120) = orientation;
 }
 
 // ShapeDataInterface::SkipPathData: reads (virtual 0x48) until it reports the end.
@@ -2125,8 +2126,10 @@ void Sfr31SetResource(UPInt self, Resource* res)
 
 // AvmBitmap::SetResourceMovieDef: the movie def (a resource) at +0xc8 is replaced.
 // @0x142528e70
-void Sfr31BitmapSetMovieDef(UPInt self, Resource* def)
+void AvmBitmap::SetResourceMovieDef(MovieDefImpl* pdefImpl)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    Resource* def = reinterpret_cast<Resource*>(pdefImpl);
     if (def)
         def->AddRef();
     Resource*& cur = *reinterpret_cast<Resource**>(self + 0xc8);
@@ -2612,8 +2615,9 @@ void AS3ValueObjectInterface::SetUserData(void* pdata, ASUserData* puserdata, bo
 namespace AS3 {
 
 // @0x142526610
-bool Sfr31ContainerSetChildIndex(UPInt self, DisplayObjectBase* ch, UInt32 index)
+bool AvmDisplayObjContainer::SetChildIndex(DisplayObjectBase* ch, unsigned index)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
     const UPInt holder = Sfr31Rd(self, 0x18);
     if (index < *reinterpret_cast<const UInt32*>(holder + 0xe0))
     {
@@ -3681,8 +3685,11 @@ static bool Sfr31SwapChildrenTail(UPInt owner, UPInt i1, UPInt i2)
 // AvmDisplayObjContainer::SwapChildren: swaps two children of the display list.
 // MS2-FUNCTIONAL 0x14252e590: raw-offset model; codegen differs from the exe
 // @0x14252e590
-bool Sfr31SwapChildren(UPInt self, UPInt ch1, UPInt ch2)
+bool AvmDisplayObjContainer::SwapChildren(DisplayObjectBase* pch1, DisplayObjectBase* pch2)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const UPInt ch1 = reinterpret_cast<UPInt>(pch1);
+    const UPInt ch2 = reinterpret_cast<UPInt>(pch2);
     const UPInt owner = Sfr31Rd(self, 0x18);
     const UPInt list = owner + 0xd8;
     const UInt32 i1 = static_cast<UInt32>(FUN_1425f9200(reinterpret_cast<void*>(Sfr31Rd(self, 0x18) + 0xd8), reinterpret_cast<void*>(ch1)));
@@ -3693,9 +3700,9 @@ bool Sfr31SwapChildren(UPInt self, UPInt ch1, UPInt ch2)
 // AvmDisplayObjContainer::SwapChildrenAt
 // MS2-FUNCTIONAL 0x14252e6d0: raw-offset model; codegen differs from the exe
 // @0x14252e6d0
-bool Sfr31SwapChildrenAt(UPInt self, UInt32 i1, UInt32 i2)
+bool AvmDisplayObjContainer::SwapChildrenAt(unsigned i1, unsigned i2)
 {
-    return Sfr31SwapChildrenTail(Sfr31Rd(self, 0x18), i1, i2);
+    return Sfr31SwapChildrenTail(Sfr31Rd(reinterpret_cast<UPInt>(this), 0x18), i1, i2);
 }
 // ---- batch 25
 // Strict equality of two values (same kind: payload compare; mixed Int/UInt/Number: numeric compare).

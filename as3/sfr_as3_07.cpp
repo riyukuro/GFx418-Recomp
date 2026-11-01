@@ -144,7 +144,9 @@ static inline Scaleform::GFx::DisplayObject* FUN_14250a600(Scaleform::GFx::AS3::
 static inline Scaleform::GFx::DisplayObject* FUN_14250cbe0(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27AccFirst108((Scaleform::UPInt)pavm); }
 static inline Scaleform::GFx::DisplayObject* FUN_14250f960(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27AccFirstE8((Scaleform::UPInt)pavm); }
 // AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
-void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
+namespace Scaleform { namespace GFx { namespace AS3 {
+class AvmBitmap { public: void SetResourceMovieDef(MovieDefImpl* pdefImpl); };   // as3_avm.h
+}}}
 // MovieImpl::UpdateAllRenderNodes (exe body).
 static inline void FUN_142577c60(Scaleform::GFx::MovieImpl * p0) { ((Scaleform::GFx::MovieImpl*)(p0))->UpdateAllRenderNodes(); }
 // AvmDisplayObj heap getter (exe body): the memory heap of the object's movie.
@@ -264,13 +266,18 @@ static inline void FUN_1425eb200(Scaleform::Render::ImageBase * p0, Scaleform::R
 static inline void FUN_1425eddc0(Scaleform::Render::ImageBase * p0, long p1, unsigned long p2, unsigned long p3, unsigned long p4, bool p5) { ((Scaleform::Render::DrawableImage*)(p0))->Noise((unsigned int)(p1), (unsigned int)(p2), (unsigned int)(p3), (unsigned int)(p4), p5); }
 
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
-// AS3::Stage::SetOrientation.
-void FUN_142528770(Scaleform::GFx::DisplayObject* pstage, const Scaleform::GFx::ASString& orientation);
-// AvmButton state setters (sfr_as3_19).
-void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
+// AS3::Stage::SetOrientation (as3_stage.h) and the AvmButton state setters (as3_avm.h), defined in sfr_as3_19.
+namespace Scaleform { namespace GFx { namespace AS3 {
+class Stage { public: void SetOrientation(const ASString& orientation); };
+class AvmButton
+{
+public:
+    void SetUpStateObject(DisplayObject* ch);
+    void SetOverStateObject(DisplayObject* ch);
+    void SetDownStateObject(DisplayObject* ch);
+    void SetHitStateObject(DisplayObject* ch);
+};
+}}}
 // MovieImpl::GetDrawableImageContext (made on first use).
 static inline void * FUN_14256f220(Scaleform::GFx::MovieImpl * p0) { return (void *)(((Scaleform::GFx::MovieImpl*)(p0))->GetDrawableImageContext()); }
 
@@ -3620,9 +3627,9 @@ namespace Instances { namespace fl_display
         if (pDispObj)
         {
             if (pBitmapData)
-                FUN_142528e70(pDispObj, pBitmapData->pDefImpl);
+                reinterpret_cast<AS3::AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData->pDefImpl);
             else
-                FUN_142528e70(pDispObj, NULL);
+                reinterpret_cast<AS3::AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(NULL);
         }
         if (pDispObj)
             FUN_142520b20(pDispObj);
@@ -3645,9 +3652,9 @@ public:
     {
         return p ? reinterpret_cast<AvmDisplayObjContainer*>(reinterpret_cast<UByte*>(p) - 0x40) : NULL;
     }
-    void SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
-    void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
-    void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
+    bool SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
+    bool SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
+    bool SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
     DisplayObjectBase* RemoveChild(DisplayObjectBase* ch);      // 0x142522570
     void RemoveChildAt(unsigned index);                         // 0x1425226a0
     void AddChild(DisplayObjectBase* ch);                       // 0x1424e6d90
@@ -5048,28 +5055,28 @@ namespace Instances { namespace fl_display
     void SimpleButton::downStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_1425272f0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
+        reinterpret_cast<AS3::AvmButton*>(ToAvmDisplayObjOrNull(pDispObj))->SetDownStateObject(v->pDispObj);
     }
 
     // @0x14244f520
     void SimpleButton::hitTestStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_142527490(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
+        reinterpret_cast<AS3::AvmButton*>(ToAvmDisplayObjOrNull(pDispObj))->SetHitStateObject(v->pDispObj);
     }
 
     // @0x142450ed0
     void SimpleButton::overStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_1425287b0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
+        reinterpret_cast<AS3::AvmButton*>(ToAvmDisplayObjOrNull(pDispObj))->SetOverStateObject(v->pDispObj);
     }
 
     // @0x142454780
     void SimpleButton::upStateSet(const Value& result, Instances::fl_display::DisplayObject* v)
     {
         SF_UNUSED(result);
-        FUN_14252a4e0(ToAvmDisplayObjOrNull(pDispObj), v->pDispObj);
+        reinterpret_cast<AS3::AvmButton*>(ToAvmDisplayObjOrNull(pDispObj))->SetUpStateObject(v->pDispObj);
     }
 
     // @0x14244b970
@@ -5286,7 +5293,7 @@ namespace Instances { namespace fl_display
     void Stage::setOrientation(const Value& result, const ASString& v)
     {
         SF_UNUSED(result);
-        FUN_142528770(pDispObj, v);
+        reinterpret_cast<AS3::Stage*>(pDispObj.GetPtr())->SetOrientation(v);
     }
 
     // @0x1424532f0

@@ -270,9 +270,9 @@ public:
         return reinterpret_cast<DisplayObjContainer*>(pDispObj);
     }
 
-    void SetChildIndex(DisplayObjectBase* ch, unsigned index);          // 0x142526610
-    void SwapChildrenAt(unsigned i1, unsigned i2);                      // 0x14252e6d0
-    void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);  // 0x14252e590
+    bool SetChildIndex(DisplayObjectBase* ch, unsigned index);          // 0x142526610
+    bool SwapChildrenAt(unsigned i1, unsigned i2);                      // 0x14252e6d0
+    bool SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);  // 0x14252e590
     DisplayObjectBase* RemoveChild(DisplayObjectBase* ch);              // the child removed, or NULL. 0x142522570
     void RemoveChildAt(unsigned index);                                 // 0x1425226a0
     void AddChild(DisplayObjectBase* ch);                               // 0x1424e6d90
@@ -393,6 +393,7 @@ class AvmBitmap
 {
 public:
     AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id);
+    void SetResourceMovieDef(MovieDefImpl* pdefImpl); // 0x142528e70
     UByte Data[0xd0];
 };
 #else
@@ -505,6 +506,10 @@ class AvmButton
 {
 public:
     AvmButton(Button* pbtn);
+    void SetUpStateObject(DisplayObject* ch);       // 0x14252a4e0
+    void SetOverStateObject(DisplayObject* ch);     // 0x1425287b0
+    void SetDownStateObject(DisplayObject* ch);     // 0x1425272f0
+    void SetHitStateObject(DisplayObject* ch);      // 0x142527490
     UByte Data[0x48];
 };
 #endif
@@ -567,6 +572,10 @@ public:
     Button*     GetButton() const { return reinterpret_cast<Button*>(pDispObj); }
     // Puts the character of a state (up / over / down / hit) in place.  0x142529f70
     void        SetStateObject(Button::ButtonState state, Instances::fl_display::DisplayObject* pobj);
+    void        SetUpStateObject(DisplayObject* ch);    // 0x14252a4e0
+    void        SetOverStateObject(DisplayObject* ch);  // 0x1425287b0
+    void        SetDownStateObject(DisplayObject* ch);  // 0x1425272f0
+    void        SetHitStateObject(DisplayObject* ch);   // 0x142527490
 
 private:
     void        SwitchStateIntl(Button::ButtonState);               // 0x14252e9d0
