@@ -2379,6 +2379,10 @@ void AvmInteractiveObj::OnEventLoad()
     FUN_142526340(this, GetAS3Obj());
 }
 
+// data_rdata_sf_b's two IsTabable vtable slots name the free forms these were; a data slot cannot name the members.
+#pragma comment(linker, "/alternatename:?AvmButton_IsTabable@AS3@GFx@Scaleform@@YA_N_K@Z=?IsTabable@AvmButton@AS3@GFx@Scaleform@@UEBA_NXZ")
+#pragma comment(linker, "/alternatename:?AvmTextField_IsTabable@AS3@GFx@Scaleform@@YA_N_K@Z=?IsTabable@AvmTextField@AS3@GFx@Scaleform@@UEBA_NXZ")
+
 // AvmButton::IsTabable; self is the AvmInteractiveObjBase part (+0x30) of the button.
 // @0x142514eb0
 bool AvmButton::IsTabable() const
