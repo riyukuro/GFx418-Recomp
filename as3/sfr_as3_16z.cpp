@@ -92,6 +92,10 @@ template<> SF_NOINLINE SfrHsGc::~HashSetBase();      // 0x1424dd1a0
 template<> SF_NOINLINE SfrHsGos::~HashSetBase();      // 0x1424dd250
 template<> SF_NOINLINE SfrHsPf::~HashSetBase();      // 0x1424dd300
 template<> SF_NOINLINE SfrHsTf::~HashSetBase();      // 0x1424dd3b0
+template<> SF_NOINLINE void ConstructorMov<GFx::AS3::Value>::DestructArray(GFx::AS3::Value* p, UPInt count);      // 0x1424f6d50
+typedef decltype(static_cast<GFx::AS3::AbcMultinameHash<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace> >::TContainer*>(0)->mHash)::BaseType SfrHsNs;
+template<> SF_NOINLINE SfrHsNs::~HashSetBase();      // 0x1424dcf10
+template<> SF_NOINLINE void SfrHsNs::Clear();      // 0x1424ef5b0
 // The display-object list assignment is sfr_as3_16's specialization (0x1424e0340).
 template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
 AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
@@ -672,7 +676,7 @@ const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn);          
 }}} // namespace Scaleform::GFx::AS3
 void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn); // class traits of mn on one scope
 namespace Scaleform { namespace GFx { namespace AS3 {
-void FUN_14252ecb0(VM* vm, const VM::Error* error, const void* classInfo);            // raise as an instance of the class
+void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);      // 0x14252ecb0, raise as an instance of the class
 namespace fl { extern const ClassInfo VerifyErrorCI; }
 
 // A slot namespace sns answers to ns: same kind, protected ones by kind alone, private ones by identity, the rest by
@@ -741,7 +745,8 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
         if (!itr)
         {
             VM::Error err(static_cast<VM::ErrorID>(1014), vm, mn.Name);
-            FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
+            Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&err),
+                              reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
             return;
         }
 
@@ -766,7 +771,8 @@ void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo&
             if (!info.inst_info.IsInterface())
             {
                 VM::Error err(static_cast<VM::ErrorID>(1122), vm, name.ToCStr());
-                FUN_14252ecb0(&vm, &err, &fl::VerifyErrorCI);
+                Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&err),
+                                  reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
                 return;
             }
 
@@ -966,16 +972,12 @@ void FUN_1424dc260(void* p);
 void FUN_1424dd500(void* p);            // ASVM::~ASVM
 void FUN_1425456e0(void* p);            // Abc::File::~File
 void FUN_14257eb30(void* p);
-void FUN_1424f6d50(void* begin, void* end); // Value array destruct
 void FUN_1424dc630(void* p);
 void FUN_1424de650(void* p);            // MovieRoot::~MovieRoot
-void FUN_1423f0720(void* p);            // ArrayDataBase<SPtr<Namespace>,..,2> dtor (already instantiated here)
 void FUN_142626160(void* p);
+void FUN_1423f0720(void* p);            // ArrayDataBase<SPtr<Namespace>,..,2> dtor (already instantiated here)
 void FUN_1424df070(void* p);            // Tracer::~Tracer
-void FUN_1424df220(void* p);            // ClassTraits::Traits::~Traits
 void FUN_1424df380(void* p);            // VM::~VM
-void FUN_1424ef5b0(void* p);
-void FUN_1424dcf10(void* p);
 }
 
 static inline char* Sfr21At(void* p, UPInt off) { return static_cast<char*>(p) + off; }
@@ -1173,7 +1175,7 @@ void* DeleteAs3_1424e2ea0(void* p, unsigned flags)
 // @0x1424e2f10
 void* DeleteAs3_1424e2f10(void* p, unsigned flags)
 {
-    FUN_1424f6d50(Sfr21Mem(p, 0x38), Sfr21Mem(p, 0x40));
+    ConstructorMov<Value>::DestructArray(static_cast<Value*>(Sfr21Mem(p, 0x38)), reinterpret_cast<UPInt>(Sfr21Mem(p, 0x40)));
     Memory::pGlobalHeap->Free(Sfr21Mem(p, 0x38));
     Sfr21GSPtr(p, 0x30);
     Sfr21GValue(p, 0x10);
@@ -1282,7 +1284,7 @@ void* DeleteAs3_1424e3b90(void* p, unsigned flags)
 void* DeleteAs3_1424e3c30(void* p, unsigned flags)
 {
     Sfr21GSPtr(p, 0xc0);
-    FUN_1424df220(p);
+    static_cast<Scaleform::GFx::AS3::Traits*>(p)->Scaleform::GFx::AS3::Traits::~Traits();
     Sfr21GFree(p, flags, 0xc8);
     return p;
 }
@@ -1314,8 +1316,8 @@ void* DeleteAs3_1424e3eb0(void* p, unsigned flags)
     reinterpret_cast<Scaleform::SfrAdbStr*>(Sfr21At(p, 0x58))->~ArrayDataBase();
     reinterpret_cast<Scaleform::SfrAdbNsSet*>(Sfr21At(p, 0x40))->~ArrayDataBase();
     reinterpret_cast<Scaleform::SfrHsGc*>(Sfr21At(p, 0x38))->~HashSetBase();
-    FUN_1424ef5b0(Sfr21At(p, 0x30));
-    FUN_1424dcf10(Sfr21At(p, 0x30));
+    reinterpret_cast<Scaleform::SfrHsNs*>(Sfr21At(p, 0x30))->Clear();
+    reinterpret_cast<Scaleform::SfrHsNs*>(Sfr21At(p, 0x30))->~HashSetBase();
     Sfr21GPtr(p, 0x28);
     static_cast<Scaleform::GFx::AS3::GASRefCountBase*>(p)->Scaleform::GFx::AS3::GASRefCountBase::~GASRefCountBase();
     Sfr21GFree(p, flags, 0xe8);
@@ -1614,7 +1616,11 @@ DisplayObjectBase* AvmSprite::AddDisplayObject(const CharPosInfo& pos, const ASS
 
 namespace Scaleform { namespace Render {
 
-void* FUN_142532060(void* self, UPInt n);   // LinearHeap::allocFromLastPage
+}} // namespace Scaleform::Render
+namespace Scaleform { namespace GFx { namespace AS3 {
+void* Sfr31LinearHeapAllocFromLastPage(UPInt self, UPInt n);   // 0x142532060, LinearHeap::allocFromLastPage
+}}} // namespace Scaleform::GFx::AS3
+namespace Scaleform { namespace Render {
 
 // LinearHeap::Alloc (header inline, an exe COMDAT): rounds size up to pointer size and bump-allocates from the last
 // page; past it, moves to the next page slot, creating the 64-slot pool on first use and doubling it when full.
@@ -1628,7 +1634,7 @@ void* Sfr21LinearHeapAlloc(void* self, UPInt size)
     size = (size + sizeof(UPInt) - 1) & ~(sizeof(UPInt) - 1);
     if (h->pLastPage)
     {
-        void* p = FUN_142532060(self, size);
+        void* p = GFx::AS3::Sfr31LinearHeapAllocFromLastPage(reinterpret_cast<UPInt>(self), size);
         if (p)
             return p;
         ++h->pLastPage;
@@ -1652,7 +1658,7 @@ void* Sfr21LinearHeapAlloc(void* self, UPInt size)
         h->MaxPages *= 2;
         h->pLastPage = h->pPagePool + used;
     }
-    return FUN_142532060(self, size);
+    return GFx::AS3::Sfr31LinearHeapAllocFromLastPage(reinterpret_cast<UPInt>(self), size);
 }
 
 }} // namespace Scaleform::Render
