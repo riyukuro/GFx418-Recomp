@@ -501,9 +501,10 @@ void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, un
 
 // Whether the text field (0x10 bytes before self) has a style data with a style sheet (+0x40).
 // @0x14295dbb0
-bool AvmTextFieldBase_HasStyleSheet(const void* self)
+bool AvmTextField::HasStyleSheet() const
 {
-    UPInt styleData = ::FUN_1425b7e60(*reinterpret_cast<const UPInt*>(static_cast<const UByte*>(self) - 0x10));
+    const UByte* self = reinterpret_cast<const UByte*>(this) + 0x30;
+    UPInt styleData = ::FUN_1425b7e60(*reinterpret_cast<const UPInt*>(self - 0x10));
     if (styleData && *reinterpret_cast<void* const*>(styleData + 0x40))
         return true;
     return false;

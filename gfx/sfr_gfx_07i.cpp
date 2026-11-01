@@ -145,11 +145,21 @@ void FUN_1426204c0(char* self, int delta) { RawField<int>(self, 0x174) += delta;
 // @0x1426204d0
 void FUN_1426204d0(char* self, int delta) { RawField<int>(self, 0x170) += delta; }
 
+namespace AMP {
+class ViewStats
+{
+public:
+    void AddMarker(const char* name);
+    void GetStats(StatBag* bag, bool clear);
+};
+}
+
 // Counts a named marker: bumps an existing entry or adds {name, 1}.
 // MS2-FUNCTIONAL: the exe holds the found iterator in rax/rdx (rcx/rax here); same blocks
 // @0x1426204e0
-void FUN_1426204e0(char* self, const char* name)
+void AMP::ViewStats::AddMarker(const char* name)
 {
+    char* self = reinterpret_cast<char*>(this);
     U found[2];
     {
         String key(name);
@@ -653,9 +663,12 @@ SPInt FUN_142622670(char* self, unsigned period)
 }
 
 // Snapshots the open scopes into a new stats record, optionally clearing the recorded scopes.
+// MS2-FUNCTIONAL: stack frame differs from the exe (418 of its 434 bytes); same calls and locking
 // @0x142622740
-void FUN_142622740(char* self, char* target, char clear)
+void AMP::ViewStats::GetStats(StatBag* bag, bool clear)
 {
+    char* self = reinterpret_cast<char*>(this);
+    char* target = reinterpret_cast<char*>(bag);
     if (target)
     {
         void* raw = Memory::AllocAutoHeap(self, 0x158, AllocInfo(0x242, 0, 0));

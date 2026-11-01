@@ -501,7 +501,6 @@ public:
     virtual void ClearDisplayList();                                                                   // 5  0x142934480
     virtual MovieDefRootNode* CreateMovieDefRootNode(MemoryHeap* pheap, MovieDefImpl* pdefImpl,
                                                      bool importFlag = false);                         // 6  0x1429365c0
-    // sfr_as2_05 has these two as the free functions MovieRoot_FindTarget / MovieRoot_ForceCollect.
     virtual InteractiveObject* FindTarget(const ASString& path) const;                                 // 8  0x142944e90
     virtual void ForceCollect(unsigned gcFlags);                                                       // 9  0x142945cb0
     virtual void ForceEmergencyCollect();                                                              // 10 0x142945d70

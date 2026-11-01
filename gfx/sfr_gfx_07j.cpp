@@ -314,10 +314,19 @@ void FUN_1426245c0(char* self, void** obj)
     }
 }
 
+namespace AMP {
+class ViewStats
+{
+public:
+    void SetName(const char* name);
+};
+}
+
 // ViewStats::SetName: stores the movie path, reduced to the part after the last path separator.
 // @0x142624660
-void FUN_142624660(char* self, const char* name)
+void AMP::ViewStats::SetName(const char* name)
 {
+    char* self = reinterpret_cast<char*>(this);
     String& viewName = RawField<String>(self, 0x110);
     viewName = name;
 

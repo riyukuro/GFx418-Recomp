@@ -2322,21 +2322,16 @@ void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
 
 // MS2-FUNCTIONAL: looks up the object's constructor member and copies it into the output function reference.
 // @0x140007ff0
-Scaleform::GFx::AS2::FunctionRef* FUN_140007ff0(
-    Scaleform::GFx::AS2::ObjectInterface* object,
-    Scaleform::GFx::AS2::FunctionRef* result,
+Scaleform::GFx::AS2::FunctionRef Scaleform::GFx::AS2::ObjectInterface::Get__constructor__(
     Scaleform::GFx::AS2::ASStringContext* context)
 {
     Scaleform::GFx::AS2::Value member;
     Scaleform::GFx::AS2::StringManager* strings = context->pContext->GetStringManager();
     const Scaleform::GFx::ASString name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
         reinterpret_cast<const unsigned char*>(strings) + 0x280);
-    // result is the caller's uninitialized return slot (by-value FunctionRef): construct it, never assign.
-    if (object->GetMemberRaw(context, name, &member))
-        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef(member.ToFunction(0));
-    else
-        ::new (static_cast<void*>(result)) Scaleform::GFx::AS2::FunctionRef();
-    return result;
+    if (GetMemberRaw(context, name, &member))
+        return member.ToFunction(0);
+    return Scaleform::GFx::AS2::FunctionRef();
 }
 
 // @0x14000d570
@@ -2524,8 +2519,9 @@ void* FUN_14000d940(Scaleform::GFx::AS2::Object* object, unsigned flags)
 }
 
 // @0x14000e390
-void FUN_14000e390(void* receiver)
+void Scaleform::GFx::AS2::AvmCharacter::OnEventLoad()
 {
+    void* receiver = this;
     Scaleform::GFx::EventId payload(1);
     reinterpret_cast<void (*)(void*, const Scaleform::GFx::EventId*)>((*reinterpret_cast<void***>(receiver))[8])(
         receiver, &payload);

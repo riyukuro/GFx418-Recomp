@@ -157,8 +157,9 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 // _root is the target's top parent (its own level, or the _lockroot clip), like the exe's virtual call.
 // MS2-FUNCTIONAL
 // @0x142933bd0
-UByte* FUN_142933bd0(Environment* penv, UByte* pout, const Environment::GetVarParams& params)
+Bool3W Environment::CheckGlobalAndLevels(const GetVarParams& params) const
 {
+    Environment* penv = const_cast<Environment*>(this);
     const ASString& name   = params.VarName;
     bool            cs     = penv->IsCaseSensitive();
     ASStringContext* psc   = penv->GetSC();
@@ -168,38 +169,36 @@ UByte* FUN_142933bd0(Environment* penv, UByte* pout, const Environment::GetVarPa
     else if (psc->GetBuiltin(63).CompareBuiltIn_CaseCheck(name, cs)) // _global
     {
         params.pResult->SetAsObject(penv->StringContext.pContext->pGlobal);
-        *pout = 1;
-        return pout;
+        return Bool3W(true);
     }
     else
     {
         const char* ptail = 0;
         int level = MovieRoot::ParseLevelName(name.ToCStr(), &ptail, cs);
         if (level == -1 || *ptail != '\0')
-        {
-            *pout = 0;
-            return pout;
-        }
+            return Bool3W();
         pch = penv->GetAS2Root()->GetLevelMovie(level);
         if (!pch)
-        {
-            *pout = 2;
-            return pout;
-        }
+            return Bool3W(false);
     }
     params.pResult->SetAsCharacter(pch);
-    *pout = 1;
-    return pout;
+    return Bool3W(true);
 }
+
+class InvokeContext
+{
+public:
+    void Cleanup();
+};
 
 // The invoked function's frame is left: the alternate prototype of a super call is dropped, this and super become
 // undefined again in the caller's frame when the function did not take them, the locals and the call stack are
 // back where they were.
 // MS2-FUNCTIONAL: the context is not modelled, its fields are read by address
 // @0x142933e20
-void FUN_142933e20(void* pctx)
+void InvokeContext::Cleanup()
 {
-    UByte*       pc    = static_cast<UByte*>(pctx);
+    UByte*       pc    = reinterpret_cast<UByte*>(this);
     UByte*       pfunc = *reinterpret_cast<UByte**>(pc);
     Environment* penv  = *reinterpret_cast<Environment**>(pc + 8);
     Object*      pobj  = *reinterpret_cast<Object**>(pc + 0x40);

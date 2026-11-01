@@ -1680,11 +1680,11 @@ static SF_FORCEINLINE InteractiveObject* GetLevelMovie(const MovieImpl* pmovieIm
 
 // A target path resolved from _level0, 0 without a _level0 or for an empty path.
 // @0x142944e90
-InteractiveObject* MovieRoot_FindTarget(const MovieRoot* proot, const ASString& path)
+InteractiveObject* MovieRoot::FindTarget(const ASString& path) const
 {
-    if (!GetLevelMovie(proot->pMovieImpl, 0) || path.GetSize() == 0)
+    if (!AS2::GetLevelMovie(pMovieImpl, 0) || path.GetSize() == 0)
         return 0;
-    AvmDisplayObjBase* pavm = GetLevelMovie(proot->pMovieImpl, 0)->GetAvmObjImpl();
+    AvmDisplayObjBase* pavm = AS2::GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl();
     return static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pavm))->GetASEnvironment()->FindTarget(path);
 }
 
@@ -1731,9 +1731,9 @@ void ASRefCountCollector::ForceCollect()
 
 // The movie's collector runs now; the generation argument is not used by AS2.
 // @0x142945cb0
-void MovieRoot_ForceCollect(MovieRoot* proot, unsigned)
+void MovieRoot::ForceCollect(unsigned)
 {
-    proot->GetASGC()->ForceCollect();
+    GetASGC()->ForceCollect();
 }
 
 // @0x142945d00
