@@ -1814,7 +1814,7 @@ void MatrixProto::CreateBox(const FnCall& fn)
                     ty = (float)fn.Arg(4).ToNumber(fn.Env);
             }
         }
-        Matrix2F_AppendRotation(&m, r);
+        (m.*&Render::Matrix2F::AppendRotation)(r);
         m.AppendScaling(sx, sy);
         Matrix2F_AppendTranslation(m, tx, ty);
         pthis->SetMatrix(fn.Env, m);
@@ -1849,7 +1849,7 @@ void MatrixProto::CreateGradientBox(const FnCall& fn)
         }
         w *= GASGradientBoxMagicNumber;
         h *= GASGradientBoxMagicNumber;
-        Matrix2F_AppendRotation(&m, r);
+        (m.*&Render::Matrix2F::AppendRotation)(r);
         m.AppendScaling(w, h);
         Matrix2F_AppendTranslation(m, tx, ty);
         pthis->SetMatrix(fn.Env, m);
@@ -1920,7 +1920,7 @@ void MatrixProto::Rotate(const FnCall& fn)
     {
         float            r = (float)fn.Arg(0).ToNumber(fn.Env);
         Render::Matrix2F m(pthis->GetMatrix(fn.Env));
-        Matrix2F_AppendRotation(&m, r);
+        (m.*&Render::Matrix2F::AppendRotation)(r);
         pthis->SetMatrix(fn.Env, m);
     }
 }
