@@ -57,7 +57,7 @@ template<> SF_NOINLINE Sfr04hHashEv::~HashSetBase();     // 0x142924a20
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void FUN_1425925f0(void*);
+struct GcAccess : RefCountBaseGC<StatMV_ActionScript_Mem> { using RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal; };
 void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
 void FUN_140001f40(void*);
 void FUN_142581700(void*);
@@ -70,7 +70,7 @@ static inline void rs(void* n) // ASString release
 static inline void rg(void* n) // Ptr<RefCountBaseGC> release
 {
     unsigned* c = (unsigned*)((char*)n + 0x18);
-    if (n && (*c & 0x3ffffff)) { --*c; FUN_1425925f0(n); }
+    if (n && (*c & 0x3ffffff)) { --*c; static_cast<GcAccess*>(n)->ReleaseInternal(); }
 }
 static inline void rc(void* h) // Ptr<CharacterHandle> release
 {

@@ -11,7 +11,6 @@
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 void FUN_1424dd110(void* paliases);                                       // ~ASStringHash<Value> (the invoke aliases)
-void FUN_142423b90(Scaleform::GFx::AS3::Value* v);                        // Value::SetUndefined
 void FUN_1424ef380(void** pchains);                                       // EventChains::Clear
 // ArrayLH<SPtr<DisplayObject>>::Resize 0x1425245c0 (sfr_as3_19)
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -49,7 +48,7 @@ void MovieRoot::Shutdown()
         Memory::pGlobalHeap->Free(p);
     }
     pInvokeAliases = NULL;
-    FUN_142423b90(&ExternalIntfRetVal);
+    (ExternalIntfRetVal.*&Scaleform::GFx::AS3::Value::SetUndefined)();
     FUN_1424ef380(&mEventChains);
     for (unsigned i = 0; i < 4; ++i)
     {
