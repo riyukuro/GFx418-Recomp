@@ -12,20 +12,20 @@
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fntraits.h"
 #include "ms2/scaleform/include/gfx/as3/as3_callframe.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/as3/as3_udbase.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 // the registered class traits of a multiname (VM, 0x14250d760)
-const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_14250d760(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);
+namespace Scaleform { namespace GFx { namespace AS3 { const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn); }}}
+using Scaleform::GFx::AS3::FUN_14250d760;
 // VM: the class traits registered for name/ns (loaded ones first, then the builtin table).
-Scaleform::GFx::AS3::ClassTraits::Traits* FUN_1425251e0(Scaleform::GFx::AS3::VM* vm, const Scaleform::GFx::ASString& name,
-    const Scaleform::GFx::AS3::Instances::Namespace& ns);
+namespace Scaleform { namespace GFx { namespace AS3 {
+ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, const Instances::Namespace* ns);
+}}}
 // Traits::GetConstructor, out of line in the exe (the InstanceTraits copy).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
-// GlobalObject::AddFixedSlotValuePair (sfr_as3_03): a fixed slot name/ns of type ctr holding v; index receives it
-const void* FUN_142403d70(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
-    Scaleform::Pickable<const Scaleform::GFx::AS3::Instances::Namespace> ns, const Scaleform::GFx::AS3::ClassTraits::Traits* ctr,
-    const Scaleform::GFx::AS3::Value& v, Scaleform::UPInt& index);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -267,12 +267,12 @@ const SlotInfo* Instances::fl::GlobalObjectCPP::InitializeOnDemand(const SlotInf
 {
     if (si == NULL && ns.GetKind() == Abc::NS_Public)
     {
-        ClassTraits::Traits* ctr = FUN_1425251e0(&GetVM(), name, ns);
+        ClassTraits::Traits* ctr = ::Scaleform::GFx::AS3::Sfr27GetClassTraitsByName(&GetVM(), &name, &ns);
         if (ctr)
         {
             Class& cl = FUN_142508460(&ctr->GetInstanceTraits());
-            si = static_cast<const SlotInfo*>(FUN_142403d70(this, cl.GetClassTraits().GetName(),
-                Pickable<const Instances::Namespace>(&ns, PickValue), &cl.GetClassTraits(), Value(&cl), index));
+            si = &AddFixedSlotValuePair(cl.GetClassTraits().GetName(),
+                Pickable<const Instances::Namespace>(&ns, PickValue), &cl.GetClassTraits(), Value(&cl), index);
         }
     }
     return si;
@@ -2699,7 +2699,7 @@ bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
 
 // ---- global functions ----
 void* FUN_1424d7e50(void* pmem, const Scaleform::GFx::AS3::Value& function, unsigned delay, bool timeout);   // IntervalTimer ctor
-void  FUN_1425264b0(void* ptimer, unsigned argc, const Scaleform::GFx::AS3::Value* argv);                   // IntervalTimer: the extra call arguments
+namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } void Sfr31StatePushValues(TR::State* st, UInt32 n, const Value* vals); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
 {
     // A repeating interval timer registered with the movie; returns its id.
@@ -2717,7 +2717,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
         ASIntervalTimerIntf* ptimer = pmem ? (ASIntervalTimerIntf*)FUN_1424d7e50(pmem, argv[0], delay, false) : NULL;
         if (argc > 2)
-            FUN_1425264b0(ptimer, argc - 2, argv + 2);
+            Sfr31StatePushValues(reinterpret_cast<TR::State*>(ptimer), argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         result.Assign(Value(UInt32(proot->AddIntervalTimer(ptimer))));
         ptimer->Start(proot);
@@ -4314,7 +4314,10 @@ namespace ClassTraits = Scaleform::GFx::AS3::ClassTraits;
 namespace AS3 = Scaleform::GFx::AS3;
 
 // VMAbcFile::GetFunctionInstanceTraits: the traits of method method_ind of a script
-InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObjectScript& gos, Scaleform::UInt32 method_ind);
+namespace Scaleform { namespace GFx { namespace AS3 {
+InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObjectScript& gos, UInt32 method_ind);
+}}}
+using Scaleform::GFx::AS3::FUN_14250a250;
 
 // GlobalObjectCPP: the class traits of a builtin class by name, made through its ClassInfo factory and kept in CTraits
 // MS2-FUNCTIONAL: the exe inlines the hash lookup and the CTraits push
@@ -4538,15 +4541,11 @@ namespace InstanceTraits { namespace fl
 // ---- the namespace, script and class-traits helpers
 extern const Scaleform::GFx::AS3::ThunkInfo DAT_14313e4e0[4];   // Classes::Function prototype methods
 // VM: the class traits a multiname of file names (NULL when unresolved)
-ClassTraits::Traits* FUN_142524f60(VM* vm, VMAbcFile* file, const void* abc_multiname);
-// Abc::TraitInfo::GetName: the multiname a trait is named by
-const void* FUN_142546050(const void* trait_info, const void* const_pool);
+namespace Scaleform { namespace GFx { namespace AS3 { UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn); }}}
 // IsScaleformGFx: whether ns is the "scaleform.gfx" namespace
 bool FUN_142514cd0(const Instances::Namespace& ns);
-// InstanceTraits::UserDefined ctor (0xe0 bytes)
-InstanceTraits::Traits* FUN_1423ef790(void* mem, VMAbcFile* file, InstanceTraits::Traits* parent, const void* class_info);
 // Traits: the interface slots of an interface class (class_info: its Abc::ClassInfo)
-void FUN_1424e80f0(ClassTraits::Traits* self, VMAbcFile* file, const void* class_info);
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr21AddInterfaceSlots(Traits* self, VMAbcFile& file, const Abc::ClassInfo& info); }}}
 
 // InstanceTraits::fl::Namespace: the interned namespace of {kind, uri}, else the public one (NULL once the traits are
 // gone)
@@ -4574,7 +4573,7 @@ const void* FUN_142416e70(const char* self)
     const char* const* bodies = *(const char* const* const*)(abc + 0x170);
     const char* mi = methods[*(const int*)(self + 0xe8)];
     const char* body = bodies[*(const int*)(mi + 8)];
-    return FUN_142546050(methods[*(const int*)(body + 0x18)], abc + 0x30);
+    return &reinterpret_cast<const AS3::Abc::TraitInfo*>(methods[*(const int*)(body + 0x18)])->GetName(*reinterpret_cast<const AS3::Abc::ConstPool*>(abc + 0x30));
 }
 
 // the class traits of a class's super class; an unresolved name throws VerifyError 1001
@@ -4588,7 +4587,7 @@ ClassTraits::Traits* FUN_142417000(VMAbcFile* self, const char* class_info)
     const char* abc = *(const char* const*)((const char*)self + 0x28);
     const char* mn = *(const char* const*)(abc + 0xb8) + (SPInt)ind * 0x10;
     VM* vm = *(VM* const*)((const char*)self + 0x20);
-    ClassTraits::Traits* ctr = FUN_142524f60(vm, self, mn);
+    ClassTraits::Traits* ctr = reinterpret_cast<ClassTraits::Traits*>(AS3::Sfr31ResolveClassTraits(reinterpret_cast<UPInt>(vm), reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(mn)));
     if (!ctr)
     {
         const Scaleform::GFx::AS3::Abc::StringView& sv =
@@ -4689,14 +4688,14 @@ CheckResult ClassTraits::Traits::FUN_142418970()
         parent_itr = *(InstanceTraits::Traits**)((char*)parent + 0xc0);
     }
     void* mem = vm.GetMemoryHeap()->Alloc(0xe0);
-    InstanceTraits::Traits* itr = mem ? FUN_1423ef790(mem, file, parent_itr, ci) : NULL;
+    InstanceTraits::Traits* itr = mem ? (static_cast<InstanceTraits::UserDefined*>(mem)->UserDefined::UserDefined(*file, parent_itr, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci)), static_cast<InstanceTraits::Traits*>(mem)) : NULL;
     self->SetInstanceTraits(Pickable<InstanceTraits::Traits>(itr));
     if (vm.IsException())
         return false;
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
     if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        FUN_1424e80f0(self, file, ci);
+        AS3::Sfr21AddInterfaceSlots(self, *file, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci));
     return true;
 }
 // ClassTraits::UserDefined::RegisterSlots: the class's static slots (after the Classes::UserDefined object), then the
@@ -4711,7 +4710,7 @@ CheckResult ClassTraits::UserDefined::FUN_14241e6b0()
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
     if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        FUN_1424e80f0(self, file, ci);
+        AS3::Sfr21AddInterfaceSlots(self, *file, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci));
     return true;
 }
 
@@ -4734,10 +4733,8 @@ void FUN_142420770(AS3::Object* self, Scaleform::GFx::AS3::Value& v)
 // ---- objects made by traits: script classes, functions, global objects, catch scopes
 extern const void* const DAT_143144040[];   // Classes::UserDefined vftable
 extern const ClassInfo DAT_14313dd00;       // the "Catch" ClassInfo
-// Class(ClassTraits::Traits&)
-void FUN_1424dadb0(void* mem, ClassTraits::Traits& t);
 // Traits::StoreScopeStack: the scope the traits' methods run in, from the VM scope stack above base
-void FUN_14252cad0(Scaleform::GFx::AS3::Traits* t, UPInt base, const Scaleform::ArrayDH<AS3::Value>& ss);
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src); }}}
 
 // the VM's current call frame (0xa8 bytes, 64 to a page)
 static const char* FUN_CurrCallFrame(const VM* vm)
@@ -4763,20 +4760,20 @@ SPtr<Class> ClassTraits::Traits::FUN_142419e50()
     Class* cls = NULL;
     if (mem)
     {
-        FUN_1424dadb0(mem, *self);
+        static_cast<AS3::Classes::UDBase*>(mem)->UDBase::UDBase(*self);
         *(const void* const**)mem = DAT_143144040;
         cls = (Class*)mem;
         if (self->SetupSlotValues(*cls))
         {
             VM* vm = self->pVM;
-            FUN_14252cad0(self, FUN_CurrScopeBase(vm), vm->ScopeStack);
+            AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(static_cast<AS3::Traits*>(self)), FUN_CurrScopeBase(vm), reinterpret_cast<UPInt*>(&vm->ScopeStack));
         }
     }
     SPtr<Class> result(cls);
     InstanceTraits::Traits& itr = self->GetInstanceTraits();
     itr.SetConstructor(Pickable<Class>(cls));
     VM* vm = self->pVM;
-    FUN_14252cad0(&itr, FUN_CurrScopeBase(vm), vm->ScopeStack);
+    AS3::Sfr31StoreScopeStack(reinterpret_cast<UPInt>(static_cast<AS3::Traits*>(&itr)), FUN_CurrScopeBase(vm), reinterpret_cast<UPInt*>(&vm->ScopeStack));
     itr.Add2StoredScopeStack(AS3::Value(cls));
     static_cast<Scaleform::GFx::AS3::Classes::UserDefined*>(cls)->CallStaticConstructor();
     return result;
