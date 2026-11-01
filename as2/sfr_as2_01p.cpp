@@ -18,8 +18,12 @@ UPInt  Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt mn);                 
 void   Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);        // VM: raise as class ci
 Value* Sfr33GetDefaultValue(VM* vm, Value* result, const ClassTraits::Traits& tr);     // VM: default of tr
 char*  Sfr27SlotSetValueObj(const SlotInfo* si, char* ok, VM* vm, const Value* v, Object* obj);  // set slot
-Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
-                                    const Value& prefix);  // the interned namespace {kind, uri}
+}}}
+Scaleform::GFx::AS3::Instances::Namespace* FUN_142415c20(Scaleform::GFx::AS3::InstanceTraits::fl::Namespace* self,
+                                                         Scaleform::GFx::AS3::Abc::NamespaceKind kind,
+                                                         const Scaleform::GFx::ASString& uri,
+                                                         const Scaleform::GFx::AS3::Value& prefix);  // the interned namespace {kind, uri}
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace {
 

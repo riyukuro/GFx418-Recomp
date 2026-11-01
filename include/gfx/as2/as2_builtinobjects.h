@@ -600,8 +600,7 @@ public:
     static void GetSize(const FnCall& fn); // exe 0x142901280
 };
 
-// The out-of-line Resize / PushBack of the loader's object stack (exe COMDATs the exe calls where cl inlines them).
-void ObjectPtrArray_Resize(Array<Object*>* parray, UPInt newSize);            // exe 0x14297e230
+// The out-of-line PushBack of the loader's object stack (exe COMDAT the exe calls where cl inlines it).
 void ObjectPtrArray_PushBack(Array<Object*>* parray, Object* const& pobj);     // exe 0x142971a50
 
 // Rebuilds a shared object's data from the visits of the shared object manager. 0x40 bytes.

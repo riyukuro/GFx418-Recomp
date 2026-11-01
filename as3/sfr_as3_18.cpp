@@ -70,6 +70,20 @@ template<> Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>::operator=(Scaleform::GFx::AS3::Instances::fl::Object* p);
 // Value::operator=(const ASString&), out of line in the exe
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
+// The AS3 global-object lookups (sfr_as3_04).
+Scaleform::GFx::AS3::Instances::Namespace* FUN_142415c20(Scaleform::GFx::AS3::InstanceTraits::fl::Namespace* self,
+                                                         Scaleform::GFx::AS3::Abc::NamespaceKind kind,
+                                                         const Scaleform::GFx::ASString& uri,
+                                                         const Scaleform::GFx::AS3::Value& prefix);
+Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self,
+                                                         const Scaleform::GFx::ASString& name,
+                                                         const Scaleform::GFx::AS3::Instances::Namespace& ns);
+Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self,
+                                                        const Scaleform::GFx::ASString& name,
+                                                        const Scaleform::GFx::AS3::Instances::Namespace& ns);   // class traits by name
+const void* FUN_142416e70(const char* self);   // the return type of a function's method
+void FUN_1424187f0(Scaleform::GFx::AS3::Instances::fl::GlobalObjectScript* self);   // its classes' instance traits
+void FUN_14241e540(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::AS3::ClassInfo* table[]);
 template<> void Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_POD<Scaleform::UPInt, 328>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayData<Scaleform::UPInt, Scaleform::AllocatorLH_POD<Scaleform::UPInt, 338>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);
@@ -130,8 +144,6 @@ const Value& Value::GetUndefined()
 }
 
 // The interned namespace {kind, uri}, else the public one (prefix unused here).
-Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
-                                    const Value& prefix);
 
 // The exe tail-calls the lookup-only 0x142415c20, which falls back to the public namespace and never creates one.
 // @0x14250aa50
@@ -508,9 +520,6 @@ struct ValueAssignCopies
             p->AddRef();
     }
 };
-}}} // namespace Scaleform::GFx::AS3
-void FUN_142421ed0(Scaleform::GFx::AS3::Value& v);   // Value::SetNull, out of line in the exe
-namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The value of a traced pointer: a null object when it is empty.
 // @0x1425100f0
@@ -537,7 +546,7 @@ void STPtr::GetValueUnsafe(Value& v)
             break;
         }
     }
-    FUN_142421ed0(v);
+    (v.*&Value::SetNull)();
 }
 
 // ==== vector indices ====
@@ -1805,10 +1814,9 @@ __declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::
 }}} // namespace Scaleform::GFx::AS3
 
 // ---- VMAbcFile::GetOpCode (traces a method body on first use) ----
-Scaleform::UPInt* FUN_1424d9f30(Scaleform::UPInt* self, Scaleform::UPInt heap, Scaleform::UPInt body, Scaleform::UPInt ops,
-                                Scaleform::UPInt extra);   // Tracer::Tracer (sfr_as3_15)
 extern "C" void FUN_1424df070(void* tracer);   // Tracer::~Tracer (sfr_as3_16, C linkage)
 namespace Scaleform { namespace GFx { namespace AS3 {
+UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer (sfr_as3_15)
 
 // MS2-FUNCTIONAL 0x14250c860: the exe splits the shrink-wrapped slow path into a chained unwind fragment
 // @0x14250c860
@@ -3264,7 +3272,7 @@ void AvmDisplayObj::OnEventUnload()
 // sfr34 batch H: the AS3 heap limit.
 
 } } } // namespace Scaleform::GFx::AS3
-void FUN_1424f03f0(Scaleform::GFx::AS3::MemoryContextImpl::HeapLimit* self, Scaleform::MemoryHeap* heap);  // HeapLimit::Collect
+void FUN_1424f03f0(Scaleform::UByte* self, Scaleform::MemoryHeap* heap);  // HeapLimit::Collect
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // MemoryHeap::GetLimit (Limit at +0x60 of the heap).
@@ -3292,7 +3300,7 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
             MemContext->ASGC->CollectionScheduledFlags = 1;
             return true;
         }
-        FUN_1424f03f0(this, heap);
+        FUN_1424f03f0(reinterpret_cast<UByte*>(this), heap);
 
         if (UserLevelLimit != 0 && newLimit > UserLevelLimit)
         {
@@ -4892,7 +4900,6 @@ void FUN_14251c8a0(Multiname& mn, ValueStack& vs)
     mn.PostProcessName(false);
 }
 
-ClassTraits::Traits** FUN_142414ac0(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns);
 static inline ClassTraits::Traits* FUN_142524f60(VM& vm, VMAbcFile& file, const Abc::Multiname& mn)
 { return reinterpret_cast<ClassTraits::Traits*>(Sfr31ResolveClassTraits(reinterpret_cast<Scaleform::UPInt>(&vm), reinterpret_cast<Scaleform::UPInt>(&file), reinterpret_cast<Scaleform::UPInt>(&mn))); }  // a scaleform.gfx class
 
@@ -4964,11 +4971,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // sfr34 batch X: the instance traits of the type a function returns (of a thunk, and of a function value).
 
 // The interned namespace {kind, uri} (prefix unused here).
-Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::NamespaceKind kind, const ASString& uri,
-                                    const Value& prefix);
-ClassTraits::Traits*  FUN_142415520(Instances::fl::GlobalObjectCPP* self, const ASString& name,
-                                    const Instances::Namespace& ns);      // GlobalObjectCPP: class traits by name
-const Abc::Multiname& FUN_142416e70(const Traits& ftr);             // the return type of a function's method
 
 // VM::GetFunctReturnType(const ThunkInfo&): the instance traits of the class a thunk's result type names (in its
 // package's public namespace), found in the class traits cache or else in the global object (then cached); Object
@@ -5037,7 +5039,7 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
     case Value::kFunction:
     {
         const Traits& ftr = v.AsFunction().GetTraits();
-        mn   = &FUN_142416e70(ftr);
+        mn   = static_cast<const Abc::Multiname*>(FUN_142416e70(reinterpret_cast<const char*>(&ftr)));
         file = *reinterpret_cast<VMAbcFile* const*>(reinterpret_cast<const char*>(&ftr) + 0xf0);
         break;
     }
@@ -5763,7 +5765,8 @@ char* FUN_14250d2f0(char* ret, VM& vm, const Value& _this, const Multiname& prop
     return ret;
 }
 
-void FUN_1424e6cf0(void* self, UPInt offset);   // the code position offset as the start of a block
+class Tracer;
+void FUN_1424e6cf0(Tracer* self, UPInt offset);   // the code position offset as the start of a block
 
 // The starts of the byte code's blocks: the labels, the targets of the branches and the positions after them, and
 // the targets of the lookupswitches (relative to their opcodes).
@@ -5787,25 +5790,25 @@ void FUN_142516960(void* self)
         {
         case 0x09:
             // label
-            FUN_1424e6cf0(self, pos - 1);
+            FUN_1424e6cf0(static_cast<Tracer*>(self), pos - 1);
             break;
         case 0x0c: case 0x0d: case 0x0e: case 0x0f: case 0x10: case 0x11: case 0x12: case 0x13:
         case 0x14: case 0x15: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
         {
             // the branches
             const int offset = Abc::ReadS24(c->data, pos);
-            FUN_1424e6cf0(self, pos);
-            FUN_1424e6cf0(self, pos + offset);
+            FUN_1424e6cf0(static_cast<Tracer*>(self), pos);
+            FUN_1424e6cf0(static_cast<Tracer*>(self), pos + offset);
             break;
         }
         case 0x1b:
         {
             // lookupswitch: the default offset, the case count - 1 and the case offsets
             const UPInt base = pos - 1;
-            FUN_1424e6cf0(self, base + Abc::ReadS24(c->data, pos));
+            FUN_1424e6cf0(static_cast<Tracer*>(self), base + Abc::ReadS24(c->data, pos));
             const int n = Abc::ReadU30(c->data, pos);
             for (int i = 0; i <= n; ++i)
-                FUN_1424e6cf0(self, base + Abc::ReadS24(c->data, pos));
+                FUN_1424e6cf0(static_cast<Tracer*>(self), base + Abc::ReadS24(c->data, pos));
             break;
         }
         case 0x24:
@@ -6160,7 +6163,6 @@ void VM::OutputError(const Value& e)
     }
 }
 
-void FUN_1424187f0(Instances::fl::GlobalObjectScript* self);   // GlobalObjectScript: its classes' instance traits
 
 // VMAbcFile::RegisterScrips: the traits and global object of each script of the file; the global objects are listed
 // in the VM (unowned) and kept in the file's set, and the last script is run when to_execute.
@@ -8184,7 +8186,6 @@ void FUN_1425190d0(UPInt) {}
 // @0x142514d10
 bool FUN_142514d10(UPInt) { return true; }
 
-void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[]);
 // Registers a class table with the VM's global object (+0x298).
 // Raw-layout VM field
 // @0x1425210d0

@@ -192,7 +192,6 @@ void EventChains::AddToChain(EventId::IdCode evtId, DisplayObject* obj)
         chain->PushBack(WeakPtr<DisplayObject>(obj));
 }
 
-void FUN_142423b90(Value* v);   // Value::SetUndefined, out of line in the exe
 __declspec(noinline) void* DeleteAs3_1424e2420(void* p, unsigned flags);   // ActionEntry's deleting dtor (below)
 
 // @0x1424eae40
@@ -203,7 +202,7 @@ void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
     pentry->pCharacter   = NULL;
     pentry->pAS3Obj      = NULL;
     pentry->CFunction    = NULL;
-    FUN_142423b90(&pentry->Function);
+    (pentry->Function.*&Value::SetUndefined)();
     pentry->pNLoadInitCL = NULL;
     if (FreeEntriesCount < 50)
     {

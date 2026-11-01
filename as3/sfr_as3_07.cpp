@@ -7,7 +7,6 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
-void FUN_142423b90(Scaleform::GFx::AS3::Value* v);   // Value::SetUndefined, out of line in the exe
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3650,7 +3649,7 @@ public:
     void SetChildIndex(DisplayObjectBase* ch, unsigned index);  // 0x142526610
     void SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
     void SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
-    void RemoveChild(DisplayObjectBase* ch);                    // 0x142522570
+    DisplayObjectBase* RemoveChild(DisplayObjectBase* ch);      // 0x142522570
     void RemoveChildAt(unsigned index);                         // 0x1425226a0
     void AddChild(DisplayObjectBase* ch);                       // 0x1424e6d90
     void AddChildAt(DisplayObjectBase* ch, unsigned index);     // 0x1424e6e90
@@ -4141,7 +4140,7 @@ namespace Instances { namespace fl_display
                 return;
             }
         }
-        FUN_142423b90(&result);
+        (result.*&Value::SetUndefined)();
     }
 
     // @0x14244cde0
