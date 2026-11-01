@@ -13,11 +13,16 @@
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/gfx_resource.h"
+#include "../include/gfx/gfx_moviedef.h"
 #include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_obj.h"
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/obj/as3_obj_display.h"
+#include "../include/gfx/as3/as3_avm.h"
+#include "../include/gfx/as3/obj/as3_obj_media.h"
+#include "ms2/scaleform/kernel/sf_log.h"
+#include "../../../../third_party/fmod44464/api/inc/fmod.hpp"
 #include <cstring>
 #include <cstdint>
 #include <new>
@@ -126,7 +131,7 @@ ExeDecl<void(void*)>::type FUN_14257dc30;
 ExeDecl<void(void*)>::type FUN_14257dcd0;
 ExeDecl<void(void*)>::type FUN_14257dcb0;
 ExeDecl<bool(void*, void*)>::type FUN_142518c70;
-ExeDecl<void(void*, uint64_t)>::type FUN_142526340;
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr31SetGcRefClearNext(uint64_t value, uint64_t atom); }}}
 ExeDecl<void(void*)>::type FUN_142519860;
 ExeDecl<bool(const void*, const void*)>::type FUN_142510dc0;
 ExeDecl<void(void*, const void*)>::type FUN_1424efe00;
@@ -151,13 +156,17 @@ ExeDecl<int(void*, void*)>::type FUN_1428d8efc;
 ExeDecl<void(void*)>::type FUN_1427443c0;
 ExeDecl<uint64_t()>::type FUN_1425e3480;
 ExeDecl<int(void*, bool*)>::type FUN_142303a6b;
-ExeDecl<void(void*)>::type FUN_142745f50;
+namespace Scaleform { unsigned FUN_142745f50(void*); }
 ExeDecl<int(void*, const char*, unsigned, void*, void**)>::type FUN_142303a29;
 ExeDecl<int(void*, uint32_t*, unsigned)>::type FUN_142303a4d;
 ExeDecl<void*(void*, void*)>::type FUN_142516600;
-ExeDecl<void*(void*, void*)>::type FUN_14250d8f0;
-ExeDecl<void(void*, void*, void*)>::type FUN_142442c30;
-ExeDecl<void(void*, void*)>::type FUN_1424edca0;
+namespace Scaleform { namespace GFx { class MovieDefImpl; namespace AS3 { class VM; namespace Instances { namespace fl { class Object; }}}}}
+Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* obj);
+namespace Scaleform { namespace GFx { struct CharacterCreateInfo; namespace AS3 { namespace Instances { namespace fl_display {
+class DisplayObject;
+bool FindLibrarySymbol(const DisplayObject* dobj, CharacterCreateInfo* pccinfo, MovieDefImpl* pdefImpl);
+}}}}}
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* frame, void* object); }}}
 ExeDecl<void(void*, void*, void*, void*)>::type FUN_142467b50;
 ExeDecl<void(void*, void*, int)>::type FUN_1424687d0;
 ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type FUN_1424fef00;
@@ -205,7 +214,8 @@ extern ExeDecl<void*>::type DAT_1431b7c70;
 #define VideoInstanceVtableB DAT_1431b7c70
 ExeDecl<void(void*)>::type FUN_1424df220;
 ExeDecl<void*(void*)>::type FUN_1424eb610;
-ExeDecl<void(void*, void*)>::type FUN_140010b80;
+namespace Scaleform { namespace GFx { namespace Video { class VideoCharacter; class VideoProvider; }}}
+void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* character, Scaleform::GFx::Video::VideoProvider* provider);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 
 namespace {
@@ -747,7 +757,7 @@ __declspec(noinline) bool FUN_14001b120(void*) { return true; }
 __declspec(noinline) bool FUN_14001b130(void*) { return true; }
 // AvmInteractiveObj::IsTabable
 // @0x14001b140
-__declspec(noinline) bool FUN_14001b140(const void* object) { return FUN_142514f70(object); }
+__declspec(noinline) bool FUN_14001b140(const void* object) { return static_cast<const Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::IsTabable(); }
 // The traits' debug class names (slot 2 of each traits vtable; 0x1431b7f60 [16] for the display object).
 // @0x140019af0
 const char* FUN_140019af0(const void*) { return "ClassTraits::NetStream"; }
@@ -765,7 +775,7 @@ const char* FUN_14001aff0(const void*) { return "flash.media.Video"; }
 void FUN_140019060(void* object)
 {
     ReleaseVideoAtom(reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
-    FUN_1424df220(object);
+    static_cast<Scaleform::GFx::AS3::Traits*>(object)->Scaleform::GFx::AS3::Traits::~Traits();
 }
 // releases the retained atom field and runs the inherited AS3 cleanup.
 // @0x140019b00
@@ -776,7 +786,7 @@ void FUN_140019b00(void* object)
 __forceinline void* VideoAtomHolderDestroy(void* object, unsigned flags)
 {
     ReleaseVideoAtom(reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(object) + 0xc0));
-    FUN_1424df220(object);
+    static_cast<Scaleform::GFx::AS3::Traits*>(object)->Scaleform::GFx::AS3::Traits::~Traits();
     if (flags & 1) {
         void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, object);
@@ -918,7 +928,7 @@ Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* FUN_14001a000(Scalefo
 // @0x14001a600
 void* FUN_14001a600(void*, void** result, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
-    Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
+    Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(traits->Alloc());
     *result = object ? FUN_14001a000(object, traits) : 0;
     return result;
 }
@@ -926,7 +936,7 @@ void* FUN_14001a600(void*, void** result, Scaleform::GFx::AS3::InstanceTraits::T
 // @0x14001a860
 void FUN_14001a860(void*, Scaleform::GFx::AS3::Value* value, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
-    Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(FUN_1424eb610(traits));
+    Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(traits->Alloc());
     object = object ? FUN_14001a000(object, traits) : 0;
     value->Pick(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
 }
@@ -960,7 +970,7 @@ void FUN_14001a410(void* self, void*, void* netStream)
     if (netStream) player = *reinterpret_cast<void**>(static_cast<unsigned char*>(netStream) + 0x50);
     void* display = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     if (display) {
-        FUN_140010b80(display, player);
+        FUN_140010b80(static_cast<Scaleform::GFx::Video::VideoCharacter*>(display), static_cast<Scaleform::GFx::Video::VideoProvider*>(player));
         if (player) { void** vtable = *reinterpret_cast<void***>(player); reinterpret_cast<void(*)(void*, void*)>(vtable[7])(player, display); }
     }
 }
@@ -1223,7 +1233,7 @@ uint64_t* FUN_14001be50(uint64_t* holder, uint64_t replacement)
 
 // forwards event dispatch to the common AS3 interactive object handler.
 // @0x14001b040
-__declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return FUN_142518c70(object, event); }
+__declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEvent(*static_cast<const Scaleform::GFx::EventId*>(event)); }
 // MS2-FUNCTIONAL: normalizes a tagged atom and dispatches it through the recovered AS3 helper.
 // @0x14001b050
 __declspec(noinline) void thunk_FUN_142519080(void* value)
@@ -1231,14 +1241,14 @@ __declspec(noinline) void thunk_FUN_142519080(void* value)
     uint64_t atom = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(value) + 0x10);
     if (!atom) atom = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(value) + 8);
     if (atom & 1) --atom;
-    FUN_142526340(value, atom);
+    Scaleform::GFx::AS3::Sfr31SetGcRefClearNext(reinterpret_cast<uint64_t>(value), atom);
 }
 // AvmInteractiveObj::OnEventUnload.
 // @0x14001b060
-__declspec(noinline) void thunk_FUN_142519860(void* object) { FUN_142519860(object); }
+__declspec(noinline) void thunk_FUN_142519860(void* object) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEventUnload(); }
 // forwards absolute path formatting to the AS3 display object helper.
 // @0x14001b0a0
-__declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) { return FUN_142506e10(object, path); }
+__declspec(noinline) const char* thunk_FUN_142506e10(void* object, void* path) { return reinterpret_cast<Scaleform::GFx::AS3::AvmDisplayObj*>(object)->Scaleform::GFx::AS3::AvmDisplayObj::GetAbsolutePath(static_cast<Scaleform::String*>(path)); }
 // forwards focus changes to the shared AS3 interactive object handler.
 // @0x14001b0e0
 __declspec(noinline) void FUN_14001b0e0(void* object, uint32_t event, void* target, uint32_t controller, uint32_t moved)
@@ -1274,7 +1284,7 @@ void FUN_14001bd20(void** holder) { if (*holder) static_cast<Scaleform::GFx::Res
 void* FUN_14001bf90(void* object)
 {
     void* log = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x20);
-    return log ? log : FUN_14257e080();
+    return log ? log : static_cast<void*>(Scaleform::Log::GetGlobalLog());
 }
 // adds the resource (id, resource) to the movie load task while no failure is present. The exe passes its
 // incoming r8 (the Resource*) through untouched.
@@ -1282,8 +1292,8 @@ void* FUN_14001bf90(void* object)
 void FUN_14001bfd0(void* object, const uint32_t* id, void* pResource)
 {
     if (*reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(object) + 0x3b8) == 0) {
-        uint32_t value = *id;
-        FUN_1425cd370(*reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x38), &value, pResource);
+        (*reinterpret_cast<Scaleform::GFx::MovieDataDef::LoadTaskData**>(static_cast<unsigned char*>(object) + 0x38))->AddResource(
+            Scaleform::GFx::ResourceId(*id), static_cast<Scaleform::GFx::Resource*>(pResource));
     }
 }
 
@@ -1430,7 +1440,7 @@ namespace {
 // @0x14001a080
 void* FUN_14001a080(void* traits, void* vm, const void* classInfo)
 {
-    FUN_1424d6750(traits, vm, classInfo);
+    static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(traits)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
     *reinterpret_cast<void***>(traits) = &VideoTraitsVtable;
     *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(traits) + 0x60) = 0x78;
     return traits;
@@ -1464,7 +1474,7 @@ uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int co
 void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
 {
     uint64_t* traits = static_cast<uint64_t*>(self);
-    FUN_1424d6480(traits, object);
+    reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(traits)->Scaleform::GFx::AS3::AvmInteractiveObj::AvmInteractiveObj(object);
     reinterpret_cast<uint32_t*>(traits)[20] = 0;
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(traits) + 0x4c) = 0;
     reinterpret_cast<uint32_t*>(traits)[18] = 0;
@@ -1547,8 +1557,8 @@ void FUN_14001b460(uint8_t optional)
         void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         VideoCriWork = reinterpret_cast<void*(*)(void*, size_t, unsigned)>(heap[10])(DAT_143b15f60, VideoCriWorkSize, 0);
         CriMv::SetupMovieHandleWork(8, VideoCriWork, VideoCriWorkSize, CriMv::ErrorContainer);
-        FUN_140026ed0(&CriMv::ErrorContainer);
-        if (optional) FUN_140026db0();
+        CriMv::Initialize(CriMv::ErrorContainer);
+        if (optional) CriMv::InitializeFrame32bitARGB();
     }
 }
 // finalizes CRI movie work and its heap on the final reference release.
@@ -1688,13 +1698,13 @@ uint64_t* FUN_140017250(uint64_t* record, uint64_t vm, uint64_t property, unsign
 namespace {
 void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, uint32_t instanceFlags, void** classObjectVtable)
 {
-    FUN_1424dabd0(classTraits, vm, classInfo);
+    static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits)->Scaleform::GFx::AS3::ClassTraits::Traits::Traits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
     *reinterpret_cast<void***>(classTraits) = classVtable;
     void** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(vm) + 0x38);
     void* (*allocate)(void*, size_t, unsigned) = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
     void* instance = allocate(heap, 0xe8, 0);
     if (instance) {
-        FUN_1424d6750(instance, vm, classInfo);
+        static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(instance)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
         *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(instance) + 0x60) = instanceFlags;
         *reinterpret_cast<void***>(instance) = instanceVtable;
     }
@@ -1703,7 +1713,7 @@ void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void*
     typedTraits->SetInstanceTraits(Scaleform::Pickable<Scaleform::GFx::AS3::InstanceTraits::Traits>(typedInstance));
     void* ctraits = allocate(heap, 0x50, 0);
     if (ctraits) {
-        FUN_1424d6ac0(ctraits, classTraits);
+        static_cast<Scaleform::GFx::AS3::Class*>(ctraits)->Scaleform::GFx::AS3::Class::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
         // only the first class overrides the Class vftable; the second keeps the ctor's
         if (classObjectVtable)
             *reinterpret_cast<void***>(ctraits) = classObjectVtable;
@@ -1837,7 +1847,7 @@ __forceinline void GetVideoSoundTransform(void* self, uint64_t* output, size_t f
     Scaleform::GFx::AS3::Object* soundClass = classValue.GetObject();
     const Scaleform::GFx::AS3::Value::KindType kind = classValue.GetKind();
     if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kObject || kind > Scaleform::GFx::AS3::Value::kThunkFunction || soundClass)) {
-        FUN_1424d2150(soundClass, &transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
+        reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_media::SoundTransform*>(soundClass)->volumeSet(transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
         uintptr_t atom = reinterpret_cast<uintptr_t>(soundClass);
         ReleaseVideoAtom(output);
         RetainVideoAtom(atom);
@@ -1962,7 +1972,7 @@ void FUN_1400182f0(void* callback, const uint32_t* info)
         VideoAddSigned(manager, object, "subtitleTracksCount", info[0xc]); VideoAddInt(manager, object, "audioTracksCount", info[0x10]); VideoAddInt(manager, object, "cuePointsCount", info[8]);
         Scaleform::GFx::AS3::Value objectValue(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
         Scaleform::GFx::AS3::Value result;
-        FUN_1424fef00(vmRoot, callbackValue, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &objectValue, 0);
+        reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot)->ExecuteInternalUnsafe(*callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &objectValue, false);
         Scaleform::GFx::AS3::VM* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot);
         if (vmObject->HandleException) {
             vmObject->HandleException = false;
@@ -1986,10 +1996,11 @@ void* FUN_14001a470(void* self)
         return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     unsigned char* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
     unsigned char* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
-    void* movieDef = FUN_14250d8f0(root, self);
+    void* movieDef = FUN_14250d8f0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(root), static_cast<const Scaleform::GFx::AS3::Instances::fl::Object*>(self));
     if (!movieDef) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
     __declspec(align(8)) uint64_t createInfo[3] = { 0 };
-    FUN_142442c30(self, createInfo, movieDef);
+    Scaleform::GFx::AS3::Instances::fl_display::FindLibrarySymbol(static_cast<const Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(self), reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(createInfo),
+        static_cast<Scaleform::GFx::MovieDefImpl*>(movieDef));
     if (!createInfo[0]) {
         // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
         const unsigned emptyVideoId = 0x10005;
@@ -2006,7 +2017,7 @@ void* FUN_14001a470(void* self)
     *slot = display;
     if (display) {
         unsigned char* frame = static_cast<unsigned char*>(display) + static_cast<unsigned char>(static_cast<unsigned char*>(display)[0x6d]) * 4;
-        FUN_1424edca0(frame, self);
+        Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
     }
     return display;
 }
@@ -2041,7 +2052,7 @@ void FUN_140019890(void* self, const uint64_t* firstAtom, const uint64_t* second
         RetainVideoAtom(currentVm);
         *reinterpret_cast<uint64_t*>(owner) = currentVm;
     }
-    FUN_1424687d0(vm, object, 0);
+    reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(vm)->DispatchSingleEvent(reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::Event*>(object), false);
     uint64_t temporary = result;
     ReleaseVideoAtom(&temporary);
 }
@@ -2115,7 +2126,7 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     }
     Scaleform::GFx::AS3::Value selfValue(eventObject);
     Scaleform::GFx::AS3::Value result;
-    FUN_1424fef00(vm, callbackValue, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &selfValue, 0);
+    reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->ExecuteInternalUnsafe(*callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &selfValue, false);
     Scaleform::GFx::AS3::VM* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm);
     if (vmObject->HandleException) {
         vmObject->HandleException = false;
@@ -2143,9 +2154,9 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
     object[0xb] = 0; object[0xc] = 0;
     // The channel's paused state lands in the member at +0x68, which SetAudioPaused and QueryAudioElapsedSeconds read.
     bool* paused = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(object) + 0x68);
-    FUN_142303a6b(reinterpret_cast<void*>(object[7]), paused);
+    reinterpret_cast<FMOD::Channel*>(object[7])->getPaused(paused);
     if (*paused) { object[10] = object[9]; return object; }
-    FUN_142745f50(streamState);
+    Scaleform::FUN_142745f50(streamState);
     object[9] = FUN_1425e3480();
     const uint32_t a = *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(streamState) + 0x70);
     const uint32_t b = *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(streamState) + 0x50);
@@ -2193,10 +2204,10 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     *reinterpret_cast<uint32_t*>(info + 0x10) = channels;
     *reinterpret_cast<uint32_t*>(info + 0x14) = format;
     void* system = *reinterpret_cast<void**>(static_cast<unsigned char*>(owner) + 0x10);
-    int result = FUN_142303a29(system, 0, 0x442, info, reinterpret_cast<void**>(object + 6));
+    int result = static_cast<FMOD::System*>(system)->createSound(0, 0x442, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), reinterpret_cast<FMOD::Sound**>(object + 6));
     if (result == 0) {
         uint32_t length = 0;
-        FUN_142303a4d(reinterpret_cast<void*>(object[6]), &length, 4);
+        reinterpret_cast<FMOD::Sound*>(object[6])->getLength(&length, 4);
     } else object[6] = 0;
     return object;
 }
