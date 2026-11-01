@@ -11,6 +11,7 @@
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_avm.h"
+#include "ms2/scaleform/include/gfx/as3/as3_avmloader.h"
 #include "ms2/scaleform/include/gfx/gfx_displayobjcontainer.h"
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
@@ -1688,9 +1689,6 @@ static inline void FUN_1424edca0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scale
 Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* pobj);
 // VM::IsOfType(v, class name).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
-// MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out.
-Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
-                                                   const Scaleform::GFx::ResourceId* prid);
 // MovieImpl::FindExportedResource.
 static inline bool FUN_14256ec50(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::ResourceBindData * p2, Scaleform::String const & p3) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->FindExportedResource(p1, p2, p3)); }
 // AS3::MovieRoot::FindLibrarySymbolInAllABCs (sfr_as3_17 view), AddScriptableMovieClip.
@@ -1702,26 +1700,24 @@ struct Sfr33MovieRootFind
 }}} // namespace Scaleform::GFx::AS3
 static inline bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase * p0, Scaleform::GFx::AS3::Instances::fl::Object const * p1, Scaleform::GFx::CharacterCreateInfo * p2) { return (bool)(((Scaleform::GFx::AS3::Sfr33MovieRootFind*)(p0))->FindLibrarySymbolInAllABCs((void const *)(p1), (void *)(p2))); }
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
-// AvmLoader constructor (returns this).
-Scaleform::GFx::DisplayObject* FUN_1424d6500(void* pmem, Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::MovieDefImpl* pdef,
-                                             Scaleform::GFx::InteractiveObject* pparent, const Scaleform::GFx::ResourceId* prid);
-// AvmBitmap::SetResourceMovieDef, RecreateRenderNode.
-void FUN_142528e70(Scaleform::GFx::DisplayObject* pbitmap, Scaleform::GFx::MovieDefImpl* pdef);
+// AvmBitmap::RecreateRenderNode.
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
-// AvmButton: set the up / over / down / hit test state character.
-void FUN_14252a4e0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_1425287b0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_1425272f0(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
-void FUN_142527490(Scaleform::GFx::AS3::AvmDisplayObj* pavm, Scaleform::GFx::DisplayObject* pch);
 // AvmButton set-up after its creation from AS3.
 static inline void FUN_1425ddd20(Scaleform::GFx::DisplayObject * p0) { ((Scaleform::GFx::Button*)(p0))->CreateCharacters(); }
 // MovieImpl::GetDrawableImageContext (made on first use).
 static inline void * FUN_14256f220(Scaleform::GFx::MovieImpl * p0) { return (void *)(((Scaleform::GFx::MovieImpl*)(p0))->GetDrawableImageContext()); }
-// Render::DrawableImage constructors (format, size, transparent, fill color) and (transparent, delegate image),
-// with the by-address size and color spelled out.
-Scaleform::Render::ImageBase* FUN_1425e9810(void* pmem, Scaleform::UInt32 format, const Scaleform::UInt32* psize, bool transparent,
-                                           const Scaleform::UInt32* pfillColor, void* pcontext);
-Scaleform::Render::ImageBase* FUN_1425e9a00(void* pmem, bool transparent, Scaleform::Render::ImageBase* pdelegate, void* pcontext);
+// Render::DrawableImage constructors (format, size, transparent, fill color) and (transparent, delegate image).
+// render_drawableimage.h is built on the other kernel headers, so this unit sees the class opaque.
+namespace Scaleform { namespace Render {
+class DrawableImageContext;
+class DrawableImage
+{
+public:
+    DrawableImage(bool transparent, ImageBase* delegateImage, DrawableImageContext* context);   // 0x1425e9a00
+    DrawableImage(ImageFormat format, ImageSize size, bool transparent, Color fillColor,
+                  DrawableImageContext* context);                                              // 0x1425e9810
+};
+}} // namespace Scaleform::Render
 // AvmSprite: the AS3 constructor of a sprite created from script.
 static inline void FUN_1424f3320(Scaleform::GFx::AS3::AvmDisplayObj * p0) { ((Scaleform::GFx::AS3::AvmSprite*)(p0))->CreateChildren(); }
 
@@ -1812,7 +1808,7 @@ namespace Instances { namespace fl_display
         {
             pBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
             if (pDispObj)
-                FUN_142528e70(pDispObj, pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
+                reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
         }
         if (argc > 1)
         {
@@ -1867,12 +1863,14 @@ namespace Instances { namespace fl_display
                 // TextureManager::GetDrawableImageFormat.
                 typedef UInt32 (*GetFormatFn)(void*);
                 UInt32 format = (*reinterpret_cast<GetFormatFn* const*>(ifs[0]))[12](ifs[0]);
-                UInt32 size[2] = { (UInt32)Width, (UInt32)Height };
-                pnew = FUN_1425e9810(pmem, format, size, Transparent, &fillColor, pcontext);
+                pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(static_cast<Render::ImageFormat>(format),
+                    Render::ImageSize((UInt32)Width, (UInt32)Height), Transparent, Render::Color(fillColor),
+                    reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
             }
         }
         else if (pmem)
-            pnew = FUN_1425e9a00(pmem, true, pImageResource->GetImage(), pcontext);
+            pnew = reinterpret_cast<Render::ImageBase*>(new(pmem) Render::DrawableImage(true, pImageResource->GetImage(),
+                reinterpret_cast<Render::DrawableImageContext*>(pcontext)));
         pImage = Pickable<Render::ImageBase>(pnew);
     }
 
@@ -1883,13 +1881,13 @@ namespace Instances { namespace fl_display
     {
         VM& vm = GetVM();
         if (argc > 0 && FUN_1425145d0(vm, argv[0], "flash.display.DisplayObject"))
-            FUN_14252a4e0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[0].GetObject())->pDispObj);
+            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetUpStateObject(static_cast<DisplayObject*>(argv[0].GetObject())->pDispObj);
         if (argc > 1 && FUN_1425145d0(vm, argv[1], "flash.display.DisplayObject"))
-            FUN_1425287b0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[1].GetObject())->pDispObj);
+            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetOverStateObject(static_cast<DisplayObject*>(argv[1].GetObject())->pDispObj);
         if (argc > 2 && FUN_1425145d0(vm, argv[2], "flash.display.DisplayObject"))
-            FUN_1425272f0(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[2].GetObject())->pDispObj);
+            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetDownStateObject(static_cast<DisplayObject*>(argv[2].GetObject())->pDispObj);
         if (argc > 3 && FUN_1425145d0(vm, argv[3], "flash.display.DisplayObject"))
-            FUN_142527490(AvmOf(pDispObj), static_cast<DisplayObject*>(argv[3].GetObject())->pDispObj);
+            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetHitStateObject(static_cast<DisplayObject*>(argv[3].GetObject())->pDispObj);
     }
 
     // @0x142440d70
@@ -1972,7 +1970,7 @@ namespace Instances { namespace fl_display
             {
                 pBitmapData = pbd;
                 if (pDispObj)
-                    FUN_142528e70(pDispObj, pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
+                    reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
                 if (pDispObj)
                     FUN_142520b20(pDispObj);
             }
@@ -1991,8 +1989,7 @@ namespace Instances { namespace fl_display
             GFx::DisplayObject* pdisp;
             if (pmem)
             {
-                ResourceId rid(ResourceId::InvalidId);
-                pdisp = FUN_1424d6500(pmem, proot, proot->GetMovieImpl()->pMainMovieDef, NULL, &rid);
+                pdisp = new(pmem) AvmLoader(proot, proot->GetMovieImpl()->pMainMovieDef, NULL, ResourceId(ResourceId::InvalidId));
             }
             else
                 pdisp = NULL;
@@ -2009,11 +2006,7 @@ namespace Instances { namespace fl_display
         if (!pDispObj)
         {
             ASMovieRootBase* proot = GetASRoot(GetVM());
-            CharacterCreateInfo ccinfo;
-            {
-                ResourceId emptyShapeId(0x10004);
-                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
-            }
+            CharacterCreateInfo ccinfo = proot->GetMovieImpl()->pMainMovieDef->GetCharacterCreateInfo(ResourceId(0x10004));
             DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
                                                                                  ResourceId(0x10001), CharacterDef::Shape);
             AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
@@ -2036,9 +2029,7 @@ namespace Instances { namespace fl_display
         FindLibrarySymbol(this, &ccinfo, pdefImpl);
         if (!ccinfo.pCharDef)
         {
-            ResourceId emptyButtonId(0x10003);
-            CharacterCreateInfo def;
-            FUN_1425cf500(pdefImpl, &def, &emptyButtonId);
+            CharacterCreateInfo def = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10003));
             ccinfo.pCharDef = def.pCharDef;
             ccinfo.pResource = def.pResource;
             ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
@@ -2065,9 +2056,7 @@ namespace Instances { namespace fl_display
         FindLibrarySymbol(this, &ccinfo, pdefImpl);
         if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
         {
-            ResourceId emptySpriteId(0x10001);
-            CharacterCreateInfo def;
-            ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
+            ccinfo = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10001));
             if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&GetVM()) + 0x78) != 0)
                 ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
             else
@@ -2544,9 +2533,14 @@ void FUN_142440e50(Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameS
     Scaleform::GFx::AS3::Instances::fl_display::ClearFrameScript(pthis);
 }
 
-// ASVM::_constructInstance (exe body; as3_asvm.h clashes with as3_support.h's MovieRoot in this unit).
-bool FUN_142531f40(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& pobj,
-                   Scaleform::GFx::AS3::Object* classObj, unsigned argc, const Scaleform::GFx::AS3::Value* argv);
+// ASVM::_constructInstance, through a reduced view: as3_asvm.h clashes with as3_support.h's MovieRoot in this unit.
+namespace Scaleform { namespace GFx { namespace AS3 {
+class ASVM
+{
+public:
+    bool _constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned argc, const Value* argv);   // 0x142531f40
+};
+}}} // namespace Scaleform::GFx::AS3
 
 // A Scene object standing for the whole clip (no scene table): an unreferenced MovieClip helper.
 // MS2-FUNCTIONAL: written from the exe's control flow
@@ -2561,7 +2555,7 @@ Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FUN_142440f80()
     VM& vm = pthis->GetVM();
     Class* pclass = vm.GetClass(StringDataPtr("flash.display.Scene"));
     SPtr<Instances::fl_display::Scene> scene;
-    FUN_142531f40(vm, reinterpret_cast<SPtr<AS3::Object>&>(scene), pclass, 0, NULL);
+    reinterpret_cast<ASVM&>(vm)._constructInstance(reinterpret_cast<SPtr<AS3::Object>&>(scene), pclass, 0, NULL);
     scene->SpriteObj = static_cast<GFx::Sprite*>(pthis->pDispObj.GetPtr());
     return scene;
 }
