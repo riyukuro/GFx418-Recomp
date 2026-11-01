@@ -951,6 +951,11 @@ public:
 
     void Dispatch(EventId::IdCode code);
 
+private:
+    UPInt FindObjectIndexInChain(ChainType* chain, DisplayObject* obj);
+
+public:
+
     ChainsType Chains;
 };
 
@@ -1489,12 +1494,13 @@ void* Sfr33FirstEntry(const UByte* self)
 
 // Virtual slot 9 of the object at +0x88, 0x38 without one.
 // @0x142509d10
-UPInt Sfr33Slot9Or38(const UByte* self)
+unsigned InstanceTraits::RTraits::GetFixedMemSize() const
 {
+    const UByte* self = reinterpret_cast<const UByte*>(this);
     void** p = *reinterpret_cast<void** const*>(self + 0x88);
     if (p)
     {
-        typedef UPInt (*Fn)(void*);
+        typedef unsigned (*Fn)(void*);
         return reinterpret_cast<Fn*>(*p)[9](p);
     }
     return 0x38;
@@ -1518,8 +1524,10 @@ typedef void (*Sfr33GcOp)(void* prcc, void* pchild, void* powner);
 
 // ForEachChild_GC (virtual) of an object with collectable children at +0x38 and +0x48.
 // @0x142503800
-void Sfr33ForEachChildGC_38_48(UByte* self, void* prcc, Sfr33GcOp op)
+void Class::ForEachChild_GC(Collector* prcc, GcOp gcop) const
 {
+    UByte* self = reinterpret_cast<UByte*>(const_cast<Class*>(this));
+    const Sfr33GcOp op = reinterpret_cast<Sfr33GcOp>(gcop);
     reinterpret_cast<Object*>(self)->Object::ForEachChild_GC(reinterpret_cast<RefCountCollector<323>*>(prcc), reinterpret_cast<void (*)(RefCountCollector<323>*, const RefCountBaseGC<323>**)>(op));
     if (*reinterpret_cast<void**>(self + 0x38))
         op(prcc, self + 0x38, self);
@@ -1536,9 +1544,15 @@ static inline void Sfr33ForEachChildGC_c0(UByte* self, void* prcc, Sfr33GcOp op)
         op(prcc, pchild, self);
 }
 // @0x142503f50
-void Sfr33ForEachChildGC_c0a(UByte* self, void* prcc, Sfr33GcOp op) { Sfr33ForEachChildGC_c0(self, prcc, op); }
+void ClassTraits::Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
+{
+    Sfr33ForEachChildGC_c0(reinterpret_cast<UByte*>(const_cast<Traits*>(this)), prcc, reinterpret_cast<Sfr33GcOp>(op));
+}
 // @0x142503fa0
-void Sfr33ForEachChildGC_c0b(UByte* self, void* prcc, Sfr33GcOp op) { Sfr33ForEachChildGC_c0(self, prcc, op); }
+void InstanceTraits::Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
+{
+    Sfr33ForEachChildGC_c0(reinterpret_cast<UByte*>(const_cast<Traits*>(this)), prcc, reinterpret_cast<Sfr33GcOp>(op));
+}
 
 // A third Traits::GetConstructor copy.
 struct Sfr33LazyTraits
@@ -1948,8 +1962,9 @@ bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value*
 
 // Throws "not a constructor" in the VM of the file at +0x20.
 // @0x1424f0700
-void Sfr33ThrowNotConstructor(const UByte* self)
+void Instance::Construct(Value&, unsigned, const Value*, bool)
 {
+    const UByte* self = reinterpret_cast<const UByte*>(this);
     VM& vm = **reinterpret_cast<VM* const*>(*reinterpret_cast<const UByte* const*>(self + 0x20) + 0x78);
     Sfr33ThrowTypeError(vm, VM::Error(VM::eNotConstructorError, vm));
 }
@@ -3205,12 +3220,12 @@ const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame
 
 // MovieRoot::ExecuteActionQueue: runs (and frees) the actions queued on level lvl.
 // @0x1424fa320
-void Sfr33ExecuteActionQueue(MovieRoot* self, MovieRoot::ActionLevel lvl)
+void MovieRoot::ExecuteActionQueue(ActionLevel lvl)
 {
-    MovieRoot::ActionQueueIterator iter(lvl, &self->ActionQueue);
-    const MovieRoot::ActionEntry* paction;
+    ActionQueueIterator iter(lvl, &ActionQueue);
+    const ActionEntry* paction;
     while ((paction = iter.getNext()) != NULL)
-        paction->Execute(self);
+        paction->Execute(this);
 }
 
 // The same for the actions queued after insertAfter (from the level's start without one).
@@ -4445,9 +4460,9 @@ void MovieRoot::ActionEntry::Execute(MovieRoot* proot) const
 // UserDefinedFunction::Execute (virtual): runs the function on _this; the result goes on the caller's operand
 // stack unless discarded.
 // @0x1424f9ce0
-void Sfr33UserDefinedFunctionExecute(void* self, const Value& _this, unsigned argc, const Value* argv,
-                                     bool discard_result)
+void UserDefinedFunction::Execute(const Value& _this, unsigned argc, const Value* argv, bool discard_result)
 {
+    void* self = this;
     Value result;
     FUN_1424feb00(self, _this, result, argc, argv);
     if (!discard_result)
@@ -4505,7 +4520,7 @@ void Sfr33MovieRootDoActions(MovieRoot* self)
 {
     Sfr33MovieRootExecuteCtors(reinterpret_cast<UByte*>(self));
     for (unsigned lvl = MovieRoot::AL_Highest; lvl < MovieRoot::AL_Count_; ++lvl)
-        Sfr33ExecuteActionQueue(self, static_cast<MovieRoot::ActionLevel>(lvl));
+        self->ExecuteActionQueue(static_cast<MovieRoot::ActionLevel>(lvl));
     UByte* vm = reinterpret_cast<UByte*>(self->pAVM);
     if (vm[0x180])
         vm[0x180] = 0;
@@ -4833,7 +4848,7 @@ ArrayLH<WeakPtr<DisplayObject> >* Sfr33EventChainsGetChain(const UByte* self, in
 
 // EventChains::FindObjectIndexInChain: the index of obj in chain (-1 when it is not there).
 // @0x142501dc0
-UPInt Sfr33FindObjectIndexInChain(void*, ArrayLH<WeakPtr<DisplayObject> >* chain, DisplayObject* obj)
+UPInt EventChains::FindObjectIndexInChain(ChainType* chain, DisplayObject* obj)
 {
     for (UPInt i = 0, n = chain->GetSize(); i < n; ++i)
         if ((*chain)[i] == obj)
@@ -5229,8 +5244,11 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Cancels cb when its function (unless null) or its object comes from the ABC file whose +0x188 is key.
 // @0x1424efc30
-bool Sfr33CancelIfFromFile(Sfr33FileCallback* cb, const UByte* owner, const void* key)
+bool IntervalTimer::ClearFor(MovieImpl* proot, MovieDefImpl* pdefImpl)
 {
+    Sfr33FileCallback* cb = reinterpret_cast<Sfr33FileCallback*>(this);
+    const UByte* owner = reinterpret_cast<const UByte*>(proot);
+    const void* key = pdefImpl;
     const Value& f = cb->Function;
     if (!f.IsNull())
     {

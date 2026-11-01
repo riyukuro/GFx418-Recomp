@@ -43,7 +43,6 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 const char* AsString(Abc::NamespaceKind kind);                                                    // 0x1424ed700
 void Sfr33CheckObject(VM* const* reader, const Value& v);                                         // 0x1424ef180
-void Sfr33ExecuteActionQueue(MovieRoot* proot, MovieRoot::ActionLevel lvl);                       // 0x1424fa320
 void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr);   // 0x142501b00
 void Sfr33CollectorQueue(UByte* gc, RefCountImpl* stats);                                         // 0x142504630
 void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key);                                    // 0x1425059f0
@@ -68,7 +67,7 @@ static inline Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPIn
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
 void* FUN_14243d870(void* self, void* p);   // SPtr<Instances::fl::Object>::operator=, out of line
-static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { ::Scaleform::GFx::AS3::Sfr33ExecuteActionQueue(proot, static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
+static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
 void FUN_142524870(void* arr, Scaleform::UPInt n);   // ArrayDH_POD<UPInt>::Resize, out of line

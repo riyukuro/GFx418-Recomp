@@ -139,7 +139,6 @@ UPInt Sfr27AccFirst108(UPInt self);
 UPInt Sfr27AccFirstE8(UPInt self);
 UPInt Sfr27Acc14250edf0(UPInt self);
 UPInt Sfr27Acc14250a5c0(UPInt self);
-void  Sfr33ExecuteActionQueue(MovieRoot* proot, MovieRoot::ActionLevel lvl);
 }}} // namespace Scaleform::GFx::AS3
 // AvmButton::GetDownStateObject / GetHitStateObject / GetOverStateObject / GetUpStateObject (exe bodies).
 static inline Scaleform::GFx::DisplayObject* FUN_142509970(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr33FirstEntry((const Scaleform::UByte*)pavm); }
@@ -155,7 +154,7 @@ static inline Scaleform::MemoryHeap* FUN_14250a5c0(Scaleform::GFx::AS3::AvmDispl
 // MovieRoot::RemoveActionQueueEntriesFor, QueueFrameActions, ExecuteActionQueue.
 void FUN_142522490(Scaleform::GFx::AS3::MovieRoot* proot, int level, Scaleform::GFx::DisplayObject* pdobj);
 void FUN_142520080(Scaleform::GFx::AS3::MovieRoot* proot);
-static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { ::Scaleform::GFx::AS3::Sfr33ExecuteActionQueue(proot, static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }
+static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }
 // AvmDisplayObj::GetStage (exe body): the stage display object of this object's movie.
 static inline Scaleform::GFx::DisplayObject* FUN_14250edf0(Scaleform::GFx::AS3::AvmDisplayObj* pavm) { return (Scaleform::GFx::DisplayObject*)::Scaleform::GFx::AS3::Sfr27Acc14250edf0((Scaleform::UPInt)pavm); }
 // Sprite::GetTextSnapshot (exe body): fills a StaticTextSnapshotData from the sprite's static text fields.
