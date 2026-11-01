@@ -57,9 +57,7 @@ Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dc60;
 extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dcb0;
 // Out-of-line Traits::GetConstructor, second copy.
-Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* t);
 // Out-of-line Value::SetBool copy (sfr_as3_04 0x142421710) that some natives call instead of inlining it.
-void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);
 // VM::GetGlobalObject (sfr_as3_18): the global object of the running frame's script, else of the top frame's 'this'.
 Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);
 
@@ -2207,14 +2205,14 @@ namespace InstanceTraits { namespace fl
             const AS3::Object* proto = _this.GetObject();
             for (const AS3::Traits* tr = &vm.GetValueTraits(argv[0]); tr; tr = tr->GetParent())
             {
-                if (&FUN_142508490(tr).GetPrototype() == proto)
+                if (&(tr->*&Scaleform::GFx::AS3::Traits::GetConstructor)().GetPrototype() == proto)
                 {
                     r = true;
                     break;
                 }
             }
         }
-        FUN_142421710(result, r);
+        (result.*&Scaleform::GFx::AS3::Value::SetBool)(r);
     }
 
     // MS2-FUNCTIONAL: inlines AS3isPrototypeOf, same differences
@@ -2743,7 +2741,7 @@ namespace InstanceTraits { namespace fl
             const bool rc = XMLListHasProperty(*list, prop_name);
             if (rc)
             {
-                FUN_142421710(result, rc);
+                (result.*&Scaleform::GFx::AS3::Value::SetBool)(rc);
                 return;
             }
         }
@@ -2813,7 +2811,7 @@ namespace InstanceTraits { namespace fl
 
         bool r;
         obj->AS3hasOwnProperty(r, argv[0].AsString());
-        FUN_142421710(result, r);
+        (result.*&Scaleform::GFx::AS3::Value::SetBool)(r);
     }
 }}
 

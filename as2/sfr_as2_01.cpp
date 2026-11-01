@@ -1520,7 +1520,6 @@ void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
 // ---- StyleSheet ----
 // Bodies of the exe called here (not recovered yet), by their addresses; the style manager is opaque.
 }}} // namespace Scaleform::GFx::AS2
-void FUN_142609630(void* pstyleManager);                              // Text::StyleManager::Clear
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1531,7 +1530,7 @@ void StyleSheetProto::Clear(const FnCall& fn)
     MS2_AS2_CHECK_THIS(fn, StyleSheet);
     StyleSheetObject* pthis = (StyleSheetObject*)fn.ThisPtr;
     if (pthis)
-        FUN_142609630(pthis->Data68);
+        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyles();
 }
 
 // StyleSheet.parseCSS(text): false without a text or a parse error.
@@ -4031,8 +4030,8 @@ Pickable<Traits> Math::MakeClassTraits(VM& vm)
 // MovieRoot derives from ASMovieRootBase at offset 0; this unit only sees the as3_support.h stub.
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 // MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out (as in sfr_as3_06).
-Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
-                                                   const Scaleform::GFx::ResourceId* prid);
+typedef Scaleform::GFx::CharacterCreateInfo* (Scaleform::GFx::MovieDefImpl::*MS2_GetCreateInfoFn)(
+    Scaleform::GFx::CharacterCreateInfo* pret, const Scaleform::GFx::ResourceId* prid);
 // AvmDisplayObj::AssignAS3Obj (sfr_as3_17's Sfr33SetValueDropObject).
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* self, void* value); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
@@ -4049,7 +4048,7 @@ void Shape::InitInstance(bool extCall)
             CharacterCreateInfo ccinfo;
             {
                 ResourceId emptyShapeId(0x10004);
-                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyShapeId);
+                (proot->GetMovieImpl()->pMainMovieDef->*reinterpret_cast<MS2_GetCreateInfoFn>(&MovieDefImpl::GetCharacterCreateInfo))(&ccinfo, &emptyShapeId);
             }
             DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
                                                                                  ResourceId(0x10001), CharacterDef::Shape);
@@ -4091,7 +4090,7 @@ void SimpleButton::InitInstance(bool extCall)
                 {
                     ResourceId emptyButtonId(0x10003);
                     CharacterCreateInfo def;
-                    ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptyButtonId);
+                    ccinfo = *(pdefImpl->*reinterpret_cast<MS2_GetCreateInfoFn>(&MovieDefImpl::GetCharacterCreateInfo))(&def, &emptyButtonId);
                     const UByte* pvm = reinterpret_cast<const UByte*>(&GetVM());
                     UPInt n = *reinterpret_cast<const UPInt*>(pvm + 0x78) - 1;
                     const UByte* ppage = (*reinterpret_cast<UByte* const* const*>(pvm + 0x90))[n >> 6];
@@ -4140,7 +4139,7 @@ void Sprite::InitInstance(bool extCall)
                 {
                     ResourceId emptySpriteId(0x10001);
                     CharacterCreateInfo def;
-                    ccinfo = *FUN_1425cf500(pdefImpl, &def, &emptySpriteId);
+                    ccinfo = *(pdefImpl->*reinterpret_cast<MS2_GetCreateInfoFn>(&MovieDefImpl::GetCharacterCreateInfo))(&def, &emptySpriteId);
                     const UByte* pvm = reinterpret_cast<const UByte*>(&GetVM());
                     UPInt size = *reinterpret_cast<const UPInt*>(pvm + 0x78);
                     if (size != 0)

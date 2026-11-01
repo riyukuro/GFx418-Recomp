@@ -11,7 +11,6 @@
 // The event dispatch proper (AvmCharacter::ExecuteEvent, a gap function of this unit's family): the exe passes the
 // event through in rdx.
 namespace Scaleform { namespace GFx { class EventId; } }
-Scaleform::UPInt FUN_142940160(void* pavmsprite, const Scaleform::GFx::EventId& id);
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -31,7 +30,7 @@ bool AvmSprite::ExecuteEvent(const EventId& id)
         if (!(psprite->DisplayObject::Flags & DisplayObject::Mask_AcceptAnimMoves) && !(psprite->Sprite::Flags & Sprite::Flags_OnLoadReqd))
             return false;
     }
-    result = FUN_142940160(this, id) & 0xff;
+    result = AvmCharacter::ExecuteEvent(id);
     if (id.Id == EventId::Event_Unload)
     {
         MovieImpl* pmovie = static_cast<MovieImpl*>(GetSprite()->pASRoot->GetMovieImpl());

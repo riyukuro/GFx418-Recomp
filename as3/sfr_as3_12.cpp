@@ -579,7 +579,6 @@ template struct ThunkFunc0<Instances::fl_text::TextField, 14, SInt32>;
 
 
 const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn);  // VM::Resolve2ClassTraits
-const Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* tr);  // Traits::GetConstructor
 
 // ==== flash.system: natives of the class objects ====================================================================
 
@@ -645,7 +644,7 @@ void escapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
     Multiname mn(vm, StringDataPtr("flash.utils.System"));
     const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
     if (ctr && ctr->ITraits)
-        useCodePage = static_cast<const Classes::fl_system::System&>(FUN_142508490(ctr)).useCodePage;
+        useCodePage = static_cast<const Classes::fl_system::System&>((ctr->*&Scaleform::GFx::AS3::Traits::GetConstructor)()).useCodePage;
     String str;
     if (useCodePage)
         ASUtils::Escape(value.ToCStr(), value.GetSize(), &str);
@@ -696,7 +695,7 @@ void unescapeMultiByteInternal(VM& vm, ASString& result, const ASString& value)
     Multiname mn(vm, StringDataPtr("flash.utils.System"));
     const ClassTraits::Traits* ctr = FUN_142525270(vm, mn);
     if (ctr && ctr->ITraits)
-        useCodePage = static_cast<const Classes::fl_system::System&>(FUN_142508490(ctr)).useCodePage;
+        useCodePage = static_cast<const Classes::fl_system::System&>((ctr->*&Scaleform::GFx::AS3::Traits::GetConstructor)()).useCodePage;
     String str;
     if (useCodePage)
         ASUtils::Unescape(value.ToCStr(), value.GetSize(), &str);

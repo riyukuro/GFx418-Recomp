@@ -41,7 +41,6 @@
 #include "../include/gfx/gfx_button.h"
 #include "../include/gfx/as2/as2_keyobject.h"
 
-void FUN_1425b8e60(void* ptf, void* pinfo); // TextField: the display info of a text field (its text rect space)
 
 namespace Scaleform { namespace GFx {
 
@@ -86,7 +85,7 @@ bool AS2ValueObjectInterface::GetDisplayInfo(void* pdata, Value::DisplayInfo* pi
     DisplayObjectBase::GeomDataType geomData;
     pd->GetGeomData(geomData);
     if (pd->GetType() == CharacterDef::TextField)
-        FUN_1425b8e60(pd, pinfo);
+        reinterpret_cast<TextField*>(pd)->GetPosition(reinterpret_cast<Scaleform::GFx::Value::DisplayInfo*>(pinfo));
     else
     {
         const Double x     = Double(geomData.X) * 0.05;

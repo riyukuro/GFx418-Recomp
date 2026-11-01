@@ -35,11 +35,9 @@
 #include "../include/gfx/gfx_fontprovider.h"
 #include "../include/kernel/sf_std.h"
 #include "../include/render/text_styledtext.h"
+#include "../include/gfx/text_stylesheet.h"
 
 // Text::StyleManager bodies (text_stylesheet.h does not mix with the AS2 headers).
-const void* FUN_142609e60(const void* pstyleManager);                                // StyleManager::GetStyles
-void FUN_1426095a0(void* pstyleManager, int type, const char* name, Scaleform::UPInt len); // StyleManager::ClearStyle
-bool FUN_14260b7f0(void* pstyleManager, const char* pcss, unsigned size);            // StyleManager::ParseCSS
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -320,7 +318,7 @@ void StyleSheetProto::GetStyleNames(const FnCall& fn)
 
     Ptr<ArrayObject> parr = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
     String           name;
-    const StyleHashTableView* ptable = *(const StyleHashTableView* const*)FUN_142609e60(pthis->Data68);
+    const StyleHashTableView* ptable = *(const StyleHashTableView* const*)&reinterpret_cast<const Text::StyleManager*>(pthis->Data68)->GetStyles();
     if (ptable)
     {
         for (UPInt i = 0; i <= ptable->SizeMask; ++i)
@@ -399,7 +397,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
     {
         ASString name = fn.Arg(0).ToString(fn.Env);
         if (name.GetSize() != 0)
-            FUN_1426095a0(pthis->Data68, name.ToCStr()[0] == '.', name.ToCStr(), SF_MAX_UPINT);
+            reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ClearStyle(static_cast<Text::StyleManager::KeyType>(name.ToCStr()[0] == '.'), name.ToCStr(), SF_MAX_UPINT);
         return;
     }
 
@@ -413,7 +411,7 @@ void StyleSheetProto::SetStyle(const FnCall& fn)
         CSSStringBuilder builder(fn.Env, &css);
         pstyle->VisitMembers(fn.Env->GetSC(), &builder, 0, 0);
         css.AppendChar('}');
-        FUN_14260b7f0(pthis->Data68, css.ToCStr(), (unsigned)css.GetSize());
+        reinterpret_cast<Text::StyleManager*>(pthis->Data68)->ParseCSS(css.ToCStr(), (unsigned)css.GetSize());
     }
 }
 

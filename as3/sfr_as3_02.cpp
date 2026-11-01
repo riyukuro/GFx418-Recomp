@@ -1183,12 +1183,8 @@ namespace Instances
 // SPtr<Namespace>::operator=(Namespace*) and operator=(Pickable) (0x1423f1840, 0x1423f18b0) and
 // ASString::operator= (0x1423f1a30), out of line in the exe here.
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
-FUN_1423f1840(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>* self,
-              Scaleform::GFx::AS3::Instances::Namespace* p);
-Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>&
 FUN_1423f18b0(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>* self,
               Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Namespace> p);
-void FUN_1423f1a30(Scaleform::GFx::ASString* self, const Scaleform::GFx::ASString& src);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1225,7 +1221,7 @@ namespace Instances { namespace fl
             if (!argv[0].IsNull())
             {
                 if (IsNamespaceObject(argv[0]))
-                    FUN_1423f1840(&Ns, const_cast<Instances::Namespace*>(&argv[0].AsNamespace()));
+                    (Ns.*static_cast<SPtr<Instances::Namespace>& (SPtr<Instances::Namespace>::*)(Instances::Namespace*)>(&SPtr<Instances::Namespace>::operator=))(const_cast<Instances::Namespace*>(&argv[0].AsNamespace()));
                 else if (IsQNameObject(argv[0]))
                 {
                     QName* other = static_cast<QName*>(argv[0].GetObject());
@@ -1249,7 +1245,7 @@ namespace Instances { namespace fl
             else if (IsQNameObject(argv[1]))
             {
                 QName* other = static_cast<QName*>(argv[1].GetObject());
-                FUN_1423f1a30(&LocalName, other->LocalName);
+                (LocalName.*static_cast<void (Scaleform::GFx::ASString::*)(const Scaleform::GFx::ASString&)>(&Scaleform::GFx::ASString::operator=))(other->LocalName);
             }
             else if (argv[1].IsUndefined())
                 LocalName = sm.CreateEmptyString();

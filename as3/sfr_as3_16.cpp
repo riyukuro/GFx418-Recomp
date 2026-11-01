@@ -749,8 +749,11 @@ extern "C" void* Sfr16ScalarDeletingDtor_1424e1f80(void* self, unsigned int flag
 extern "C" void* Sfr16ScalarDeletingDtor_1424e1fe0(void* self, unsigned int flags) { return Sfr16ScalarDeletingDtorNts(self, flags); }
 
 extern "C" void FUN_142521f00(void*);
-extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
+struct Sfr36StateAccess : Scaleform::Render::StateData
+{
+    using StateData::destroyBag_NotEmpty;
+};
 namespace Scaleform {
 // out of line in the exe (0x14241e430, sfr_as3_04)
 typedef ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> Sfr16ValueDataDH;
@@ -785,7 +788,7 @@ SlotInfo::~SlotInfo()
 void* FUN_1424e1bd0(void* node, unsigned int flags)
 {
     if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
-        FUN_142626160(static_cast<char*>(node) + 0x40);
+        reinterpret_cast<Sfr36StateAccess*>(static_cast<char*>(node) + 0x40)->destroyBag_NotEmpty();
     FUN_14257eb30(node);
     if (flags & 1)
         ::operator delete(node, 0x90);

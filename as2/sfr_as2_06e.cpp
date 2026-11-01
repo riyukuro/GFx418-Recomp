@@ -27,12 +27,6 @@
 #include "../include/render/text_core.h"
 #include <string.h>
 
-// Render::Text::DocView and StyledText (render/text_docview.h needs the full kernel array headers, not the ones of
-// this unit), by address as in sfr_as2_02.
-unsigned long long FUN_142612240(void* pdoc, float x, float y); // DocView::GetCharIndexAtPoint
-bool FUN_1425996b0(void* ptext, const Scaleform::Render::Text::TextFormat** ppdestTextFmt,
-                   const Scaleform::Render::Text::ParagraphFormat** pdestParaFmt,
-                   unsigned long long pos);                    // StyledText::GetTextAndParagraphFormat
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -325,11 +319,11 @@ bool AvmTextField::OnMouseEvent(const EventId& event)
         Render::PointF p;
         if (ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
         {
-            UPInt pos = (UPInt)FUN_142612240(ptf->GetDocument(), p.x, p.y);
+            UPInt pos = ptf->GetDocument()->GetCharIndexAtPoint(p.x, p.y);
             if (pos != SF_MAX_UPINT)
             {
                 const Render::Text::TextFormat* ptextFmt;
-                if (FUN_1425996b0(LeStyledText(ptf->GetDocument()), &ptextFmt, NULL, pos) && ptextFmt->IsUrlSet())
+                if (reinterpret_cast<Render::Text::StyledText*>(LeStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&ptextFmt, NULL, pos) && ptextFmt->IsUrlSet())
                 {
                     const String& url    = ptextFmt->GetUrl();
                     MovieImpl*    pmovie = pDispObj->GetMovieImpl();
