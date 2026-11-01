@@ -812,7 +812,7 @@ namespace InstanceTraits { namespace fl_ui
 // ==== flash.ui natives ================================================================================================
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // VM: the instance traits of Vector.<String>.
-Scaleform::GFx::AS3::InstanceTraits::fl_vec::Vector_String& FUN_14250a6c0(Scaleform::GFx::AS3::VM& vm);
+namespace Scaleform { namespace GFx { namespace AS3 { UPInt Sfr27AccVectorStringITraits(UPInt vm); }}}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -937,7 +937,7 @@ namespace Classes { namespace fl_ui
     {
         ASVM& vm = static_cast<ASVM&>(GetVM());
         UInt32 mask = vm.GetMovieImpl()->GetSupportedGesturesMask();
-        InstanceTraits::fl_vec::Vector_String& itr = FUN_14250a6c0(vm);
+        InstanceTraits::fl_vec::Vector_String& itr = *reinterpret_cast<InstanceTraits::fl_vec::Vector_String*>(Sfr27AccVectorStringITraits(reinterpret_cast<UPInt>(&vm)));
         SPtr<Instances::fl_vec::Vector_String> v(itr.MakeInstanceS(itr));
         result.Pick(v.GetPtr());
         *v.GetRawPtr() = NULL;
@@ -1125,7 +1125,7 @@ namespace Instances { namespace fl_text
 // ---- fl_text: TextField stage object ----
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // AvmDisplayObj::AssignAS3Obj: makes pinst the AS3 object of pavm.
-void FUN_1424edca0(Scaleform::GFx::AvmDisplayObjBase* pavm, Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* pinst);
+namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* self, void* value); }}}
 // MovieDefImpl::GetCharacterCreateInfo(rid) with its hidden return slot spelled out.
 Scaleform::GFx::CharacterCreateInfo* FUN_1425cf500(Scaleform::GFx::MovieDefImpl* pdef, Scaleform::GFx::CharacterCreateInfo* pret,
                                                    const Scaleform::GFx::ResourceId* prid);
@@ -1170,7 +1170,7 @@ namespace Instances { namespace fl_text
             if (pDispObj)
                 pDispObj->Release();
             pDispObj.GetRawRef() = static_cast<GFx::DisplayObject*>(pch);
-            FUN_1424edca0(pDispObj ? pDispObj->GetAvmObjImpl() : NULL, this);
+            Sfr33SetValueDropObject(reinterpret_cast<UByte*>(pDispObj ? pDispObj->GetAvmObjImpl() : NULL), this);
         }
         return pDispObj;
     }
@@ -1502,7 +1502,11 @@ static inline void FUN_1426084d0(void * p0, bool p1) { ((Scaleform::Render::Text
 static inline void FUN_142608330(void * p0, bool p1) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetKerning(p1); }                               // Render::Text::TextFormat::SetKerning
 static inline void FUN_142607f40(void * p0, char const * p1, unsigned __int64 p2) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetFontList(p1, p2); }  // Render::Text::TextFormat::SetFontList
 static inline void FUN_142608530(void * p0, char const * p1, unsigned __int64 p2) { ((Scaleform::Render::Text::TextFormat*)(p0))->SetUrl(p1, p2); }  // Render::Text::TextFormat::SetUrl
-void  FUN_142605c10(void* ppara, unsigned n);                          // Render::Text::ParagraphFormat::AllocTabStops
+// Access view: ParagraphFormat::AllocTabStops is protected.
+struct Sfr33ParaFmtAccess : Scaleform::Render::Text::ParagraphFormat
+{
+    using ParagraphFormat::AllocTabStops;
+};
 static inline void FUN_1426084b0(void * p0, unsigned int p1, unsigned int p2) { ((Scaleform::Render::Text::ParagraphFormat*)(p0))->SetTabStopsElement(p1, p2); }              // Render::Text::ParagraphFormat::SetTabStopsElement
 void  FUN_142584fc0(void* pstr, void* pheap);                          // StringDH::StringDH(MemoryHeap*)
 void  FUN_1424aa0f0(void* pfmt);                                       // Render::Text::TextFormat destructor
@@ -1610,8 +1614,8 @@ namespace Instances { namespace fl_text
     static inline void InitTextFormat(TextFormatStorage& f, MemoryHeap* pheap)
     {
         f.RefCount = 1;
-        FUN_142584fc0(&f.FontList, pheap);
-        FUN_142584fc0(&f.Url, pheap);
+        reinterpret_cast<StringDH*>(&f.FontList)->StringDH::StringDH(pheap);
+        reinterpret_cast<StringDH*>(&f.Url)->StringDH::StringDH(pheap);
         f.pImageDesc = NULL;
         f.pFontHandle = NULL;
         f.ColorV = 0xFF000000u;
@@ -1864,7 +1868,7 @@ namespace Instances { namespace fl_text
         else
         {
             UPInt n = tabStops->GetSize();
-            FUN_142605c10(parafmt, (unsigned)n);
+            reinterpret_cast<Sfr33ParaFmtAccess*>(parafmt)->AllocTabStops((unsigned)n);
             para.PresentMask |= Para_TabStops;
             for (UPInt i = 0; i < n; ++i)
             {
@@ -1971,7 +1975,7 @@ namespace Instances { namespace fl_text
                              reinterpret_cast<Render::Text::TextFormat*>(&fmt));
 
         TextFormatStorage mergedFmt;
-        FUN_14259c250(DocumentOf(ptf), FUN_142607870(DefaultTextFormat(DocumentOf(ptf)), &mergedFmt, &fmt));
+        FUN_14259c250(DocumentOf(ptf), ::new (&mergedFmt) Render::Text::TextFormat(reinterpret_cast<const Render::Text::TextFormat*>(DefaultTextFormat(DocumentOf(ptf)))->Merge(*reinterpret_cast<const Render::Text::TextFormat*>(&fmt))));
         FieldFlags(ptf) |= 0x10000;
         FUN_1424aa0f0(&mergedFmt);
 
@@ -2165,7 +2169,7 @@ namespace Instances { namespace fl_text
     void TextField::htmlTextGet(ASString& result)
     {
         void* text;
-        result = *reinterpret_cast<ASString*>(FUN_1425b91e0(DisplayTextField(this), &text, true));
+        result = *new (&text) ASString(reinterpret_cast<Scaleform::GFx::TextField*>(DisplayTextField(this))->GetText(true));
         reinterpret_cast<ASString*>(&text)->~ASString();
     }
 
@@ -2190,7 +2194,7 @@ namespace Instances { namespace fl_text
     void TextField::textGet(ASString& result)
     {
         void* text;
-        result = *reinterpret_cast<ASString*>(FUN_1425b91e0(DisplayTextField(this), &text, false));
+        result = *new (&text) ASString(reinterpret_cast<Scaleform::GFx::TextField*>(DisplayTextField(this))->GetText(false));
         reinterpret_cast<ASString*>(&text)->~ASString();
     }
 
@@ -2217,7 +2221,7 @@ namespace Instances { namespace fl_text
     // @0x1424b51a0
     void TextField::typeGet(ASString& result)
     {
-        result = GetVM().GetStringManager().CreateConstString(FUN_1425b9b10(DisplayTextField(this)) ? "dynamic" : "input");
+        result = GetVM().GetStringManager().CreateConstString(reinterpret_cast<Scaleform::GFx::TextField*>(DisplayTextField(this))->IsReadOnly() ? "dynamic" : "input");
     }
 
     // @0x1424b5440
@@ -2306,7 +2310,7 @@ namespace Instances { namespace fl_text
     void TextSnapshot::getSelectedText(ASString& result, bool includeLineEndings)
     {
         void* buf;
-        FUN_1425e1570(&SnapshotData, &buf, includeLineEndings);
+        new (&buf) String(SnapshotData.GetSelectedText(includeLineEndings));
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().CreateString(text.ToCStr(), text.GetSize());
         text.~String();
@@ -2519,7 +2523,7 @@ namespace Instances { namespace fl_text
         if (endIndex <= beginIndex)
             endIndex = beginIndex + 1;
         void* buf;
-        FUN_1425e1740(&SnapshotData, &buf, (SPInt)beginIndex, (SPInt)endIndex, includeLineEndings);
+        new (&buf) String(SnapshotData.GetSubString((SPInt)beginIndex, (SPInt)endIndex, includeLineEndings));
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
         text.~String();
@@ -2531,16 +2535,16 @@ namespace Instances { namespace fl_text
     {
         void* pdispObj = pDispObj.GetPtr();
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x28, (const AllocInfo*)0);
-        void* psnap = pmem ? FUN_1425e0400(pmem) : NULL;
+        void* psnap = pmem ? (reinterpret_cast<StaticTextSnapshotData*>(pmem)->StaticTextSnapshotData::StaticTextSnapshotData(), pmem) : NULL;
         FUN_1425e0720(psnap, pdispObj);
         void* buf;
-        FUN_1425e1740(psnap, &buf, 0, FUN_1425e1360(psnap), true);
+        new (&buf) String(reinterpret_cast<StaticTextSnapshotData*>(psnap)->GetSubString(0, FUN_1425e1360(psnap), true));
         String& text = *reinterpret_cast<String*>(&buf);
         result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
         text.~String();
         if (psnap)
         {
-            FUN_1424aa050(psnap);
+            reinterpret_cast<StaticTextSnapshotData*>(psnap)->~StaticTextSnapshotData();
             Memory::Free(psnap);
         }
     }
@@ -2551,7 +2555,6 @@ namespace Instances { namespace fl_text
 
 // ---- fl_text: TextField::autoSizeSet, typeSet ----
 void* FUN_1425b7840(void* ptf, void** pkit);                // TextField::CreateEditorKit (returns a Ptr in *pkit)
-static inline void FUN_14257dcb0(void * p0) { ((Scaleform::RefCountImpl*)(p0))->Release(); }                            // drops a reference to the editor kit
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2617,10 +2620,7 @@ namespace Instances { namespace fl_text
         }
         else if (value == "input" && !FUN_1425b9730(ptf))
         {
-            void* ptmp;
-            void* pkit = *(void**)FUN_1425b7840(ptf, &ptmp);
-            if (ptmp)
-                FUN_14257dcb0(ptmp);
+            void* pkit = reinterpret_cast<Scaleform::GFx::TextField*>(ptf)->CreateEditorKit().GetPtr();
             *(UInt16*)((UByte*)pkit + 0xa0) &= ~1;
         }
         RequestReformat(DocViewOf(ptf));
@@ -2657,13 +2657,13 @@ namespace Instances { namespace fl_text
         if (len < 0x400)
         {
             UTF8Util::DecodeString(buf, str.ToCStr());
-            FUN_1425bb810(ptf, buf, begin, end, SF_MAX_UPINT);
+            reinterpret_cast<Scaleform::GFx::TextField*>(ptf)->ReplaceTextA(buf, begin, end, SF_MAX_UPINT);
         }
         else
         {
             wchar_t* pbuf = (wchar_t*)Memory::Alloc((len + 1) * sizeof(wchar_t));
             UTF8Util::DecodeString(pbuf, str.ToCStr());
-            FUN_1425bb810(ptf, pbuf, begin, end, SF_MAX_UPINT);
+            reinterpret_cast<Scaleform::GFx::TextField*>(ptf)->ReplaceTextA(pbuf, begin, end, SF_MAX_UPINT);
             Memory::Free(pbuf);
         }
     }
