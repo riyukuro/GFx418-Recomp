@@ -17,6 +17,7 @@
 #include "../include/render/render_font.h"
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_asstring.h"
+#include "../include/gfx/as2/as2_actiontypes.h"
 #include "../include/gfx/gfx_resource.h"
 #include <cstdint>
 #include <new>
@@ -30,22 +31,25 @@ using namespace Scaleform::GFx;
 using namespace Scaleform::GFx::Video;
 
 // ---- exe callees outside this unit ----
-ExeDecl<void(void*)>::type FUN_1425925f0;                       // GC object: release tail
+namespace Scaleform { namespace GFx { namespace AS2 {
+class AvmCharacter; class FunctionRef; class StringManager;
+class GlobalContext { public: StringManager* GetStringManager() const; };
+AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject);
+FunctionRef FUN_14000cf20(GlobalContext* global);
+} } }
+struct Video04GcAccess : AS2::RefCountBaseGC<323> { using AS2::RefCountBaseGC<323>::ReleaseInternal; };
+InteractiveObject* FUN_140010000(InteractiveObject*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*);   // the video display object constructor
+AS2::FunctionRef* FUN_1400126f0(AS2::FunctionRef* result, AS2::GlobalContext* context);
+AS2::FunctionRef* FUN_14000ed60(AS2::FunctionRef* result, AS2::GlobalContext* context);
 ExeDecl<char(void*, std::uint64_t)>::type FUN_142592950;        // ArrayPaged: grow to hold a page index
 namespace Scaleform { namespace GFx {
 void FUN_142591a00(UPInt** table, void* heapOwner, const void* keyValue, UPInt hashCode);   // hash: add {key, value} at a hash code
 void FUN_1425916c0(void* context, void* sc, void* global);       // registers the first builtin
 namespace AS3 { class VM; struct ClassInfo; void FUN_1425210d0(VM& vm, const ClassInfo* table[]); }   // AS3 class registration
 } }
-ExeDecl<char*(void*)>::type FUN_1429561c0;                          // GlobalContext::GetStringManager(this = context): the builtin name table
 ExeDecl<void(void*)>::type FUN_1429260b0;                       // AS2 value destructor
-ExeDecl<InteractiveObject*(void*, void*, MovieDefImpl*, ASMovieRootBase*, InteractiveObject*, const ResourceId*)>::type FUN_140010000;   // the video character constructor
-ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14000e2b0;          // the AVM video character constructor
 ExeDecl<void*(void*, InteractiveObject*)>::type FUN_14001af70;     // the AS3 AVM video character constructor
 #define FUN_14001af70_ctor FUN_14001af70
-ExeDecl<void*(void*, void*)>::type FUN_1400126f0;
-ExeDecl<void*(void*, void*)>::type FUN_14000cf20;
-ExeDecl<void*(void*, void*)>::type FUN_14000ed60;
 ExeDecl<void(void*, void*, void*)>::type FUN_140001270;           // AS2VideoSupport::AttachAudio
 #ifndef MS2_HOOK_DLL   // the hook DLL's ms2sym.obj already maps this name to the exe address (alternatename conflict)
 #pragma comment(linker, "/alternatename:?FUN_140001270@@YAXPEAX00@Z=?AttachAudio@AS2VideoSupportImpl@@UEAAXPEAVObject@AS2@GFx@Scaleform@@PEAVSprite@45@@Z")   // sfr36: full-exe link
@@ -76,7 +80,7 @@ inline void Video04GcRelease(Video04GcObject* p)
     if (p && (p->RefCount & 0x3ffffff) != 0)
     {
         p->RefCount = p->RefCount - 1;
-        FUN_1425925f0(p);
+        reinterpret_cast<Video04GcAccess*>(p)->ReleaseInternal();
     }
 }
 
@@ -181,12 +185,12 @@ DisplayObjectBase* AS2VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     if (pmem)
     {
         ResourceId localId = rid;
-        pobj = FUN_140010000(pmem, pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
+        pobj = FUN_140010000(reinterpret_cast<InteractiveObject*>(pmem), pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
     }
     else
         pobj = 0;
     if (pmem + 0x110 != 0)
-        FUN_14000e2b0(pmem + 0x110, pobj);
+        AS2::FUN_14000e2b0(reinterpret_cast<AS2::AvmCharacter*>(pmem + 0x110), pobj);
     return (DisplayObjectBase*)pobj;
 }
 
@@ -201,7 +205,7 @@ DisplayObjectBase* AS3VideoSupportImpl::CreateASCharacter(MovieImpl* proot, Char
     if (pmem)
     {
         ResourceId localId = rid;
-        pobj = FUN_140010000(pmem, pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
+        pobj = FUN_140010000(reinterpret_cast<InteractiveObject*>(pmem), pcharDef, pbindDefImpl, proot->pASMovieRoot, pparent, &localId);
     }
     else
         pobj = 0;
@@ -423,8 +427,8 @@ void FUN_1400020d0(void* hash, ASStringNode** key, void* value)
 
 // registers one builtin: looks the builtin's name up in the context's class hash and, when it is not
 // registered yet, builds its prototype with the supplied callback and stores it on the global object.
-// The builtin name is fetched again at every use (FUN_1429561c0 is the context's builtin table getter).
-#define VIDEO04_NAME(context, nameOffset) ((ASStringNode**)(FUN_1429561c0(context) + (nameOffset)))
+// The builtin name is fetched again at every use (GetStringManager is the context's builtin table getter).
+#define VIDEO04_NAME(context, nameOffset) ((ASStringNode**)((char*)reinterpret_cast<AS2::GlobalContext*>(context)->GetStringManager() + (nameOffset)))
 
 // A Value holding a string (tag byte 0xb, the node at +8).
 struct Video04StringValue
@@ -472,21 +476,21 @@ __forceinline void Video04RegisterBuiltin(Video04Context* context, void* sc, Vid
 // @0x140002100
 void FUN_140002100(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x110, &FUN_1400126f0);
+    Video04RegisterBuiltin(context, sc, global, 0x110, reinterpret_cast<void*(*)(void*, void*)>(&FUN_1400126f0));
 }
 
 // MS2-FUNCTIONAL: as 0x140002100 for the next builtin.
 // @0x140002240
 void FUN_140002240(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x118, &FUN_14000cf20);
+    Video04RegisterBuiltin(context, sc, global, 0x118, reinterpret_cast<void*(*)(void*, void*)>(&AS2::FUN_14000cf20));
 }
 
 // MS2-FUNCTIONAL: as 0x140002100 for the next builtin.
 // @0x140002380
 void FUN_140002380(Video04Context* context, void* sc, Video04Global* global)
 {
-    Video04RegisterBuiltin(context, sc, global, 0x120, &FUN_14000ed60);
+    Video04RegisterBuiltin(context, sc, global, 0x120, reinterpret_cast<void*(*)(void*, void*)>(&FUN_14000ed60));
 }
 
 // the AS2 registration: the base builtin and the three video builtins on the global object (gc.Global reread for each).
