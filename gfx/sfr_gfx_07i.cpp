@@ -8,6 +8,8 @@
 // MS2-FUNCTIONAL: raw-layout transcriptions of the exe's template instances; the algorithms and effects match.
 
 #include "sfr_gfx_07raw.h"
+#include "ms2/scaleform/kernel/sf_threads.h"
+#include "ms2/scaleform/kernel/sf_random.h"
 
 #include <new>
 #include <string.h>
@@ -38,8 +40,6 @@ extern char DAT_14318f040[];
 extern char DAT_14318f030[];
 
 void FUN_14015b310(void*, UPInt);
-bool FUN_14258bb00(void*);   // Mutex::TryLock
-void FUN_14258bb70(void*);   // Mutex::Unlock
 void FUN_14261fa90(char*);
 void FUN_142624840(U**, void*, U);
 void FUN_142624af0(U**, void*, U);
@@ -63,12 +63,9 @@ void FUN_14261f220(U**, void*, StringKeyOps::Ref*, U);
 void FUN_14261ec70(U**, void*, NodeRef*, U);
 void FUN_14261eae0(U**, void*, WordsRefOps::Ref*, U);
 U FUN_14261fc40(void*, const unsigned char*);   // multiname key hash
-void FUN_14258aca0(void*);                      // Mutex::DoLock
-void FUN_142584260(void*);                      // Event::ResetEvent
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-U FUN_1425e5080(void*);                         // Alg::Random::Generator::NextRandom
 void* FUN_142686d30(void*);                     // snapshot struct constructor
 void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
@@ -210,10 +207,10 @@ void FUN_142620970(char* self)
 // @0x142620a10
 void FUN_142620a10(char* self)
 {
-    if (FUN_14258bb00(self + 0xa8))
+    if (reinterpret_cast<Mutex*>(self + 0xa8)->TryLock())
     {
         FUN_142620840(RawFieldPtr<U>(self, 0xa0));
-        FUN_14258bb70(self + 0xa8);
+        reinterpret_cast<Mutex*>(self + 0xa8)->Unlock();
     }
 }
 
@@ -340,7 +337,7 @@ void FUN_142620b50(char* self, char* snap)
 // @0x1426214b0
 void FUN_1426214b0(char* self, char* snap)
 {
-    if (!FUN_14258bb00(self + 0xa8))
+    if (!reinterpret_cast<Mutex*>(self + 0xa8)->TryLock())
         return;
     U* table = RawField<U*>(self, 0xa0);
     if (table)
@@ -396,7 +393,7 @@ void FUN_1426214b0(char* self, char* snap)
             FUN_14257dcb0(obj);
         }
     }
-    FUN_14258bb70(self + 0xa8);
+    reinterpret_cast<Mutex*>(self + 0xa8)->Unlock();
 }
 
 // Copies the running per-name values (scaled to microseconds) into the snapshot.
@@ -647,7 +644,7 @@ SPInt FUN_142622670(char* self, unsigned period)
         if (RawField<unsigned>(self, 0x158) == 0)
         {
             RawField<U>(self, 0x160) = FUN_1425e3560();
-            U random = (unsigned)FUN_1425e5080(self + 0x130);
+            U random = (unsigned)reinterpret_cast<Alg::Random::Generator*>(self + 0x130)->NextRandom();
             random *= 2 * period;
             random /= 0xFFFFFFFF;
             RawField<unsigned>(self, 0x158) = static_cast<unsigned>(random);
@@ -707,7 +704,7 @@ bool FUN_1426229d0(char* self)
 // @0x1426229f0
 char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
 {
-    FUN_14258aca0(self + 0xa8);
+    reinterpret_cast<Mutex*>(self + 0xa8)->DoLock();
     U** set = RawFieldPtr<U*>(self, 0xa0);
     U key = ((U)a << 32) + (b & 0xffffffffULL);
     U it[2];
@@ -951,7 +948,7 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
         filed:
             if (*(int*)(self + 100) >= 0 && (SPInt)*(int*)(self + 100) <= (SPInt)(int)scopes[1])
             {
-                FUN_142584260(self + 0x178);
+                reinterpret_cast<Event*>(self + 0x178)->ResetEvent();
                 *(int*)(self + 100) = -1;
             }
             FUN_14257dcb0(done);
