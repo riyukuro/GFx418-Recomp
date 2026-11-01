@@ -2532,8 +2532,6 @@ void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::G
 // @0x142423bd0
 void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
 { const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = uri; }
-// VM::GetValueTraits.
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // The parts of str split at each delim (at most limit of them), as a new Array: no delim gives str itself, an empty
 // delim each character. A delim that ends str adds a trailing empty part.
 // MS2-FUNCTIONAL: the exe inlines SparseArray::PushBack at each push
@@ -2668,7 +2666,7 @@ void FUN_142423c10(Scaleform::GFx::AS3::Instances::Namespace* self, const Scalef
 {
     using namespace Scaleform::GFx::AS3;
     VM& vm = self->GetVM();
-    const Traits& tr = FUN_14250ffc0(vm, v);
+    const Traits& tr = vm.GetValueTraits(v);
     if (tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits())
     {
         const Instances::fl::QName* qn = static_cast<const Instances::fl::QName*>(v.GetObject());

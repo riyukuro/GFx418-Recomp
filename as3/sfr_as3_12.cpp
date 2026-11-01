@@ -1747,8 +1747,6 @@ StaticTextSnapshotData::~StaticTextSnapshotData()
 
 // ==== flash.net: instance helpers, constructors and object factories ===============================================
 
-// VM::GetValueTraits: the traits of a value (0x14250ffc0).
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1790,7 +1788,7 @@ namespace Instances { namespace fl_net
     // @0x14249b040
     void URLRequest::dataSet(const Value& /*result*/, const Value& value)
     {
-        if (value.IsObject() && FUN_14250ffc0(GetVM(), value).IsInstanceTraits())
+        if (value.IsObject() && GetVM().GetValueTraits(value).IsInstanceTraits())
             Data = static_cast<Instances::fl::Object*>(value.GetObject());
     }
 

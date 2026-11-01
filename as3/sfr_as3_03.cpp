@@ -553,8 +553,6 @@ void ValueAssignCopies::AssignUnsafeThunkFunction(Value& v, Instances::ThunkFunc
 
 }}} // namespace Scaleform::GFx::AS3
 
-// VM::GetValueTraits: the traits of a value (0x14250ffc0).
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // ValueStack::PopBack: pops (and releases) the top n values (0x14241de40).
 void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
@@ -625,7 +623,7 @@ namespace Classes { namespace fl
         {
             // new Namespace(ns) gives ns itself.
             const Value& v = argv[0];
-            const Traits& tr = FUN_14250ffc0(vm, v);
+            const Traits& tr = vm.GetValueTraits(v);
             if (tr.GetTraitsType() == Traits_Namespace && tr.IsInstanceTraits())
             {
                 _this.Assign(v);
@@ -671,7 +669,7 @@ namespace Classes { namespace fl
     {
         if (argc == 1)
         {
-            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            const Traits& tr = GetVM().GetValueTraits(argv[0]);
             if (tr.GetTraitsType() == Traits_QName && tr.IsInstanceTraits())
             {
                 _this = argv[0];
@@ -705,7 +703,7 @@ namespace Classes { namespace fl
         if (argc > 0)
         {
             const Value& v = argv[0];
-            const Traits& tr = FUN_14250ffc0(vm, v);
+            const Traits& tr = vm.GetValueTraits(v);
             const BuiltinTraitsType tt = tr.GetTraitsType();
 
             if (tr.IsClassTraits())
@@ -788,7 +786,7 @@ namespace Classes { namespace fl
     {
         if (argc == 1)
         {
-            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            const Traits& tr = GetVM().GetValueTraits(argv[0]);
             if (tr.GetTraitsType() == Traits_XMLList && tr.IsInstanceTraits())
             {
                 _this = argv[0];
@@ -803,7 +801,7 @@ namespace Classes { namespace fl
     {
         if (argc > 0)
         {
-            const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+            const Traits& tr = GetVM().GetValueTraits(argv[0]);
             if (tr.IsInstanceTraits() && tr.GetTraitsType() == Traits_XML)
             {
                 result = argv[0];
@@ -1170,8 +1168,6 @@ namespace InstanceTraits { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
-// VM::GetValueTraits.
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // ClassTraits::Traits::IsParentTypeOf: t is base or derives from it.
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& base, const Scaleform::GFx::AS3::ClassTraits::Traits& t);
 // VM::IsOfType(v, class name).
@@ -2019,7 +2015,7 @@ namespace Scaleform { namespace GFx { namespace AS3
     void Instances::fl::GlobalObject::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
     {
         GetVM().ThrowTypeError(VM::Error(VM::eCallOfNonFunctionError, GetVM(),
-                                         FUN_14250ffc0(GetVM(), _this).GetName().ToCStr()));
+                                         GetVM().GetValueTraits(_this).GetName().ToCStr()));
     }
 
     // @0x1424072a0
@@ -2258,7 +2254,7 @@ namespace Instances { namespace fl
         ArrayDH<Value> names(vm.GetMemoryHeap());
         ArrayDH<UInt32> flags(vm.GetMemoryHeap());
 
-        const Traits& ntr = FUN_14250ffc0(vm, fieldName);
+        const Traits& ntr = vm.GetValueTraits(fieldName);
         if (ntr.GetTraitsType() == Traits_Array && ntr.IsInstanceTraits())
         {
             const SparseArray& sa = static_cast<Array*>(fieldName.GetObject())->SA;
@@ -2282,7 +2278,7 @@ namespace Instances { namespace fl
 
         if (!options.IsNullOrUndefined())
         {
-            const Traits& otr = FUN_14250ffc0(vm, options);
+            const Traits& otr = vm.GetValueTraits(options);
             if (otr.GetTraitsType() == Traits_Array && otr.IsInstanceTraits())
             {
                 const SparseArray& sa = static_cast<Array*>(options.GetObject())->SA;
@@ -2462,7 +2458,7 @@ namespace InstanceTraits { namespace fl
         else if (_this.IsNullOrUndefined())
             vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
         else
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), "String"));
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), "String"));
     }
 
     // MS2-FUNCTIONAL: written from behaviour
@@ -2474,7 +2470,7 @@ namespace InstanceTraits { namespace fl
         else if (_this.IsNullOrUndefined())
             vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
         else
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), "String"));
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), "String"));
     }
 
     // @0x1424026a0

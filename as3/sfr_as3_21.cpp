@@ -301,7 +301,6 @@ void FUN_142554880(Scaleform::GFx::AS3::VectorBase<Scaleform::UInt32>& v, Scalef
 // VM::GetClassTraits(const Value&) / ClassTraits::Traits::IsParentTypeOf
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 // GetValueTraits (sfr_as3_09)
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -345,7 +344,7 @@ CheckResult ArrayBase::CheckCallable(const Value& v) const
     if (v.IsCallable())
         return true;
     VM& vm = VMRef;
-    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(), "callable"));
+    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(v).GetName().ToCStr(), "callable"));
     return false;
 }
 
@@ -435,7 +434,7 @@ CheckResult ArrayBase::CheckCoerce(const ClassTraits::Traits& tr, const Value& v
     if (!tr.Coerce(v, result))
     {
         VM& vm = VMRef;
-        const Traits& vtr = FUN_14250ffc0(vm, v);
+        const Traits& vtr = vm.GetValueTraits(v);
         vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vtr.GetName().ToCStr(), tr.GetName().ToCStr()));
         return false;
     }
@@ -1585,7 +1584,7 @@ void TYPE::AS3sort(Value& result, unsigned argc, const Value* argv)             
     }                                                                                                       \
     VM& vm = GetVM();                                                                                       \
     vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,                                              \
-        argc ? FUN_14250ffc0(vm, argv[0]).GetName().ToCStr() : "undefined",                                 \
+        argc ? vm.GetValueTraits(argv[0]).GetName().ToCStr() : "undefined",                                 \
         GetVM().GetClassTraits##ELEM().GetName().ToCStr()));                                               \
 }
 
@@ -1607,7 +1606,7 @@ void Vector_object::AS3sort(Value& result, unsigned argc, const Value* argv)
     }
     VM& vm = GetVM();
     vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm,
-        argc ? FUN_14250ffc0(vm, argv[0]).GetName().ToCStr() : "undefined",
+        argc ? vm.GetValueTraits(argv[0]).GetName().ToCStr() : "undefined",
         (*reinterpret_cast<ClassTraits::Traits* const*>(
             reinterpret_cast<const char*>(&FUN_142508490(&GetTraits()).GetClassTraits()) + 0xc8))
             ->GetName().ToCStr()));
@@ -3016,7 +3015,7 @@ void ArrayBase::AppendCoerce(const ArrayBase& arr, const ClassTraits::Traits& tr
         if (!tr.Coerce(v, r))
         {
             VM& vm = VMRef;
-            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(),
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(v).GetName().ToCStr(),
                 tr.GetName().ToCStr()));
             break;
         }
@@ -3037,7 +3036,7 @@ void ArrayBase::AppendCoerce(const Instances::fl::Array& arr, const ClassTraits:
         if (!tr.Coerce(v, r))
         {
             VM& vm = VMRef;
-            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, v).GetName().ToCStr(),
+            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(v).GetName().ToCStr(),
                 tr.GetName().ToCStr()));
             break;
         }
@@ -3145,7 +3144,7 @@ void TYPE::Call(const Value& /*_this*/, Value& result, unsigned argc, const Valu
     {                                                                                                       \
         const Value& v = argv[0];                                                                           \
         InstanceTraits::fl_vec::TYPE& itr = static_cast<InstanceTraits::fl_vec::TYPE&>(GetInstanceTraits());\
-        if (v.IsNullOrUndefined() || &FUN_14250ffc0(GetVM(), v) == &itr)                                    \
+        if (v.IsNullOrUndefined() || &GetVM().GetValueTraits(v) == &itr)                                    \
             result = v;                                                                                     \
         else                                                                                                \
         {                                                                                                   \

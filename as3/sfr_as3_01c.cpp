@@ -60,8 +60,6 @@ extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dcb0;
 Scaleform::GFx::AS3::Class& FUN_142508490(const Scaleform::GFx::AS3::Traits* t);
 // Out-of-line Value::SetBool copy (sfr_as3_04 0x142421710) that some natives call instead of inlining it.
 void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);
-// VM::GetValueTraits.
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 // VM::GetGlobalObject (sfr_as3_18): the global object of the running frame's script, else of the top frame's 'this'.
 Scaleform::GFx::AS3::Object* FUN_14250a550(Scaleform::GFx::AS3::VM& vm);
 
@@ -2207,7 +2205,7 @@ namespace InstanceTraits { namespace fl
         if (!argv[0].IsNullOrUndefined())
         {
             const AS3::Object* proto = _this.GetObject();
-            for (const AS3::Traits* tr = &FUN_14250ffc0(vm, argv[0]); tr; tr = tr->GetParent())
+            for (const AS3::Traits* tr = &vm.GetValueTraits(argv[0]); tr; tr = tr->GetParent())
             {
                 if (&FUN_142508490(tr).GetPrototype() == proto)
                 {
@@ -2245,7 +2243,7 @@ namespace InstanceTraits { namespace fl
             {
                 AS3::Object::DynAttrsType::ConstIterator it = da->Find(str_name);
                 if (it.IsEnd())
-                    return vm.ThrowReferenceError(VM::Error(VM::eWriteSealedError, vm, str_name.ToCStr(), FUN_14250ffc0(vm, _this).GetName().ToCStr()));
+                    return vm.ThrowReferenceError(VM::Error(VM::eWriteSealedError, vm, str_name.ToCStr(), vm.GetValueTraits(_this).GetName().ToCStr()));
                 it->First.SetDoNotEnum(!isEnum);
             }
         }
@@ -2267,7 +2265,7 @@ namespace InstanceTraits { namespace fl
     // @0x1423e45d0
     void Object::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        const AS3::Traits& vtr = FUN_14250ffc0(vm, _this);
+        const AS3::Traits& vtr = vm.GetValueTraits(_this);
         const ClassTraits::Function& ftr = static_cast<const ClassTraits::Function&>(vm.GetClassTraitsFunction());
         ASString name = vm.GetStringManager().GetBuiltin(AS3Builtin_objectPrefix_);
 
@@ -2403,7 +2401,7 @@ namespace InstanceTraits { namespace fl
     #define MS2_AS3_COERCED_PROTO(cls, method, coerce, traits) \
         Value coerced_this; \
         if (!coerce(_this, coerced_this)) \
-            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), \
+            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), \
                 vm.traits().GetName().ToCStr())); \
         cls::method(ti, vm, coerced_this, result, argc, argv)
 
@@ -2456,7 +2454,7 @@ namespace InstanceTraits { namespace fl
     #define MS2_AS3_EXPONENTIAL_PROTO(coerce, traits, method) \
         Value coerced_this; \
         if (!coerce(_this, coerced_this)) \
-            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, FUN_14250ffc0(vm, _this).GetName().ToCStr(), \
+            return vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), \
                 vm.traits().GetName().ToCStr())); \
         method(ti, vm, coerced_this, result, argc, argv)
 
@@ -2641,7 +2639,7 @@ namespace InstanceTraits { namespace fl
             result = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
         else
         {
-            const AS3::Traits& tr = FUN_14250ffc0(vm, _this);
+            const AS3::Traits& tr = vm.GetValueTraits(_this);
             if (tr.GetTraitsType() != Traits_QName || tr.IsClassTraits())
                 return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm));
 

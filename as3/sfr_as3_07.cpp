@@ -128,7 +128,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::IsOfType by class name (exe body).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // VM::GetValueTraits (exe body).
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 namespace Scaleform { namespace GFx { namespace AS3 {
 bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr);   // VM::IsOfType against class traits (sfr_as3_18)
 // The AvmButton state / stage / heap getters fold into these sfr_as3_17/18 accessors; MovieRoot::ExecuteActionQueue.
@@ -3339,12 +3338,12 @@ namespace Instances { namespace fl_display
     void InteractiveObject::contextMenuSet(const Value& result, const Value& value)
     {
         SF_UNUSED(result);
-        if (value.IsObject() && FUN_14250ffc0(GetVM(), value).IsInstanceTraits())
+        if (value.IsObject() && GetVM().GetValueTraits(value).IsInstanceTraits())
         {
             pContextMenu = static_cast<Instances::fl::Object*>(value.GetObject());
             return;
         }
-        GetVM().ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, GetVM(), FUN_14250ffc0(GetVM(), value).GetName().ToCStr(),
+        GetVM().ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, GetVM(), GetVM().GetValueTraits(value).GetName().ToCStr(),
             "flash.ui.ContextMenu"));
     }
 

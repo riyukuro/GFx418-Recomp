@@ -64,7 +64,6 @@ void Sfr31UnregisterClassTraits(UPInt file);                                    
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
 static inline Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b) { return reinterpret_cast<Scaleform::UPInt>(::Scaleform::GFx::AS3::Sfr31GetClassTraitsByInfo(reinterpret_cast<Scaleform::GFx::AS3::VM*>(a), b)); }
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
 // out of line in the exe
 template<> Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>&
 Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>::operator=(Scaleform::GFx::AS3::Instances::fl::Object* p);
@@ -1208,7 +1207,7 @@ static SF_FORCEINLINE const Traits* TraceValueTraits(const Tracer& tr, const Val
         t = &v.GetClassTraits();
         break;
     default:
-        t = &FUN_14250ffc0(tr.GetVM(), v);
+        t = &tr.GetVM().GetValueTraits(v);
     }
     if (t && t == &tr.GetVM().GetClassTraitsClassClass())
         t = &tr.GetVM().GetClassTraitsObject();
@@ -3710,10 +3709,11 @@ Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const S
 
 // VM::GetValueTraits: the instance traits of v's type (the traits themselves for traits values).
 // @0x14250ffc0
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v)
+const Scaleform::GFx::AS3::Traits& Scaleform::GFx::AS3::VM::GetValueTraits(const Value& v) const
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
+    VM& vm = const_cast<VM&>(*this);
     // the Function class traits keep two more instance traits: +0xc8 for thunks, +0xe0 for method table entries
     switch (v.GetKind())
     {
@@ -5631,7 +5631,7 @@ char* FUN_14250e2d0(const void* psi, void* ret, Scaleform::GFx::AS3::VM* pvm, Sc
         break;
     case SlotInfo::BT_Code:
         if (!vt)
-            vt = &FUN_14250ffc0(vm, _this).GetVT();
+            vt = &vm.GetValueTraits(_this).GetVT();
         if (_this.IsObject() && vtt == SlotInfo::valGet)
             FUN_14250ba10(vt, value, AbsoluteIndex(ind), _this.GetObject());
         else
@@ -5641,7 +5641,7 @@ char* FUN_14250e2d0(const void* psi, void* ret, Scaleform::GFx::AS3::VM* pvm, Sc
     case SlotInfo::BT_GetSet:
     {
         if (!vt)
-            vt = &FUN_14250ffc0(vm, _this).GetVT();
+            vt = &vm.GetValueTraits(_this).GetVT();
         const Value getter = vt->GetValue(AbsoluteIndex(ind));
         if (!getter.IsCallable())
         {
@@ -5696,7 +5696,7 @@ CheckResult GetSuperProperty(VM& vm, const Traits* ot, Value& result, const Valu
                              SlotInfo::ValTarget vtt)
 {
     if (!ot)
-        ot = &FUN_14250ffc0(vm, _this);
+        ot = &vm.GetValueTraits(_this);
     if (const Traits* parent = ot->pParent.GetPtr())
     {
         UPInt index = 0;

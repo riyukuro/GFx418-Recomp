@@ -290,8 +290,6 @@ namespace Instances { namespace fl
 
 // Value::operator=(Namespace*) out of line (sfr_as3_01c).
 Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self, Scaleform::GFx::AS3::Instances::Namespace* ns);
-// VM::GetValueTraits: the traits of a value (0x14250ffc0).
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -337,7 +335,7 @@ namespace Instances { namespace fl
         if (arr != this)
             arr->SA.Assign(SA);
 
-        const Traits& tr = FUN_14250ffc0(GetVM(), argv[0]);
+        const Traits& tr = GetVM().GetValueTraits(argv[0]);
         if (argc == 1 && tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
         {
             const SparseArray& other = static_cast<Array*>(argv[0].GetObject())->SA;
@@ -977,7 +975,7 @@ namespace InstanceTraits { namespace fl
             if (!argv[0].Convert2String(name))
                 return;
             UPInt index = 0;
-            result.SetBool(FindFixedSlot(FUN_14250ffc0(vm, _this), name, vm.GetPublicNamespace(), index, NULL) != NULL);
+            result.SetBool(FindFixedSlot(vm.GetValueTraits(_this), name, vm.GetPublicNamespace(), index, NULL) != NULL);
         }
     }
 
@@ -991,7 +989,7 @@ namespace InstanceTraits { namespace fl
         if (_this.IsObject() && !_this.IsNull())
         {
             UInt32 ind = 0;
-            const AS3::Traits& tr = FUN_14250ffc0(vm, _this);
+            const AS3::Traits& tr = vm.GetValueTraits(_this);
             if (tr.GetTraitsType() == Traits_Array && tr.IsInstanceTraits())
             {
                 const Value& name = argv[0];
@@ -2374,7 +2372,7 @@ namespace Instances { namespace fl
             return;
 
         bool isXmlValue = false;
-        if (FUN_14250ffc0(GetVM(), value).GetTraitsType() == Traits_String)
+        if (GetVM().GetValueTraits(value).GetTraitsType() == Traits_String)
         {
             Value xmlValue;
             FUN_142508460(&GetTraits()).Construct(xmlValue, 1, &value, false);

@@ -1003,7 +1003,6 @@ void Object::ForEachChild_GC(Collector* prcc, GcOp op) const
 
 // ---- sfr33: MovieRoot / Stage helpers ----
 // AS3 Event class's object factory (unrecovered).
-void FUN_142466be0(void* eventClass, void* ret, const Scaleform::GFx::ASString& type, bool bubbles, bool cancelable);
 // the AS3 MovieDefRootNode vftable
 extern "C" const void* DAT_14317d8c0;
 
@@ -1067,8 +1066,9 @@ void* Sfr33MovieRootCreateEventObject(MovieRoot* self, void* ret, const ASString
 {
     typedef void (*Fn)(MovieRoot*);
     (*reinterpret_cast<Fn const* const*>(self))[4](self);
-    FUN_142466be0(*reinterpret_cast<void* const*>(reinterpret_cast<const UByte*>(self->pAVM) + 0x390), ret, type,
-                  bubbles, cancelable);
+    ::new (ret) SPtr<Instances::fl_events::Event>(
+        (*reinterpret_cast<Classes::fl_events::EventDispatcher* const*>(reinterpret_cast<const UByte*>(self->pAVM) + 0x390))
+            ->CreateEventObject(type, bubbles, cancelable));
     return ret;
 }
 }}}
@@ -1258,7 +1258,10 @@ CheckResult Object::DeleteProperty(const Multiname& prop_name)
 }
 }}}
 
-bool FUN_142442c30(const void* name, void* pccinfo, void* pdefImpl);
+namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_display {
+class DisplayObject;
+bool FindLibrarySymbol(const DisplayObject* name, CharacterCreateInfo* pccinfo, MovieDefImpl* pdefImpl);
+} } } } }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1300,7 +1303,8 @@ bool Sfr33MovieRootFind::FindLibrarySymbolInAllABCs(const void* name, void* pcci
         MovieDefRootNodeLinks* proot = &self->pMovieImpl->RootMovieDefNodes;
         if (p == static_cast<MovieDefRootNode*>(proot))
             return false;
-        if (FUN_142442c30(name, pccinfo, p->pDefImpl))
+        if (Instances::fl_display::FindLibrarySymbol(reinterpret_cast<const Instances::fl_display::DisplayObject*>(name),
+                                                     reinterpret_cast<CharacterCreateInfo*>(pccinfo), p->pDefImpl))
             return true;
         p = p->pNext;
     }
@@ -1679,7 +1683,6 @@ static inline void FUN_14252ecb0(void* vm, const void* error, const void* classI
 void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 namespace Scaleform { namespace GFx { namespace AS3 { namespace fl_errors { extern const ClassInfo MemoryErrorCI; } } } }
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 static inline Scaleform::UPInt FUN_142525f20(char* buffer, int bufflen, double val) { return static_cast<Scaleform::UPInt>(::Scaleform::GFx::AS3::Sfr31NumberToChars(buffer, bufflen, val)); }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -2030,7 +2033,6 @@ static inline void* FUN_142524f60(void* vm, const void* file, const void* mn) { 
 const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const void* abc);   // the type name of a multiname
 extern "C" const int DAT_143a2d640[];           // the AS3 error ids, sorted
 extern "C" const char* const DAT_143a2d890[];   // the AS3 error messages, by id position
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
 void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hint);   // Object::GetDefaultValueUnsafe (as sfr_as3_19 declares it)
 // Object: the property name of namespace ns (FindObjProperty, then its value); the member's hidden CheckResult
 // slot is ret.
@@ -2139,7 +2141,7 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
     UByte* const self = static_cast<UByte*>(tr);
     UByte* file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
     VM& vm = **reinterpret_cast<VM**>(file + 0x20);
-    const Traits& t = FUN_14250ffc0(vm, v);
+    const Traits& t = vm.GetValueTraits(v);
     if (static_cast<int>(v.GetKind()) != 13 && !t.IsGlobal())
         return false;
     UPInt tag;
@@ -2568,7 +2570,7 @@ static const Scaleform::UByte* Sfr33TracerThisTraits(Scaleform::UByte* vm, const
     else if (k == 8 || k == 9)
         t = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
     else
-        t = reinterpret_cast<const UByte*>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), v));
+        t = reinterpret_cast<const UByte*>(&(*reinterpret_cast<VM*>(vm)).GetValueTraits(v));
     if (t && t == *reinterpret_cast<UByte* const*>(vm + 0x1f0))
         t = *reinterpret_cast<UByte* const*>(vm + 0x1f8);
     return t;
@@ -3457,7 +3459,7 @@ void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Mu
 {
     const unsigned kind = scope.GetKind();
     const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
-    const Traits& tr = FUN_14250ffc0(vm, scope);
+    const Traits& tr = vm.GetValueTraits(scope);
     Object* obj = isObj ? scope.GetObject() : NULL;
     UPInt index = 0;
     const SlotInfo* si = FindFixedSlot(vm, tr, mn, index, obj);
@@ -3524,7 +3526,7 @@ Value::TraceNullType Tracer::CanBeNull(const Value& v) const
         tr = &v.GetClassTraits();
         break;
     default:
-        tr = &FUN_14250ffc0(GetVM(), v);
+        tr = &GetVM().GetValueTraits(v);
         break;
     }
     if (tr)
@@ -3736,7 +3738,7 @@ CheckResult Value::Convert2String(ASString& result) const
             if (!v.IsPrimitive())
             {
                 VM& vm = v.GetObject()->GetVM();
-                const VM::Error e(VM::ErrorID(1050), vm, FUN_14250ffc0(vm, v).GetName().ToCStr());   // eConvertToPrimitiveError
+                const VM::Error e(VM::ErrorID(1050), vm, vm.GetValueTraits(v).GetName().ToCStr());   // eConvertToPrimitiveError
                 FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
                 return false;
             }
@@ -3873,7 +3875,7 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
 {
     const unsigned kind = value.GetKind();
     const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
-    const Traits* tr = &FUN_14250ffc0(vm, value);
+    const Traits* tr = &vm.GetValueTraits(value);
     Object* obj = isObj ? value.GetObject() : NULL;
     UPInt index = 0;
     const SlotInfo* si = FindFixedSlot(vm, *tr, mn, index, obj);
@@ -3973,7 +3975,7 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
     const ASString strTrue = sm.GetBuiltin(AS3Builtin_true);
     const ASString strFalse = sm.GetBuiltin(AS3Builtin_false);
     const ASString strType = sm.CreateConstString("type");
-    const Traits& tr = FUN_14250ffc0(vm, value);
+    const Traits& tr = vm.GetValueTraits(value);
     const Value::KindType kind = value.GetKind();
     const bool isClass = kind == Value::kClass;
     const Traits* parent = isClass ? static_cast<const Traits*>(&vm.GetClassTraitsClassClass()) : tr.GetParent();
@@ -4275,7 +4277,7 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
         else if (kind == 8 || kind == 9)
             tr = *reinterpret_cast<Traits* const*>(reinterpret_cast<const UByte*>(&v) + 0x10);
         else
-            tr = &FUN_14250ffc0(vm, v);
+            tr = &vm.GetValueTraits(v);
         if (tr && tr == *reinterpret_cast<Traits* const*>(vmb + 0x1f0))
             tr = *reinterpret_cast<Traits* const*>(vmb + 0x1f8);
         if (v.GetWith())
@@ -4300,7 +4302,7 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
         {
             scope_index = --i;
             const Value& v = sv[i];
-            const Traits& tr = FUN_14250ffc0(vm, v);
+            const Traits& tr = vm.GetValueTraits(v);
             if (v.GetWith())
                 return;
             if (const SlotInfo* si = FindFixedSlot(vm, tr, mn, index, NULL))
@@ -5253,7 +5255,7 @@ bool IntervalTimer::ClearFor(MovieImpl* proot, MovieDefImpl* pdefImpl)
     if (!f.IsNull())
     {
         if (Sfr33TraitsFromFile(
-                FUN_14250ffc0(**reinterpret_cast<VM* const*>(*reinterpret_cast<const UByte* const*>(owner + 0x18) + 0x48), f),
+                (**reinterpret_cast<VM* const*>(*reinterpret_cast<const UByte* const*>(owner + 0x18) + 0x48)).GetValueTraits(f),
                 key))
         {
             cb->Cancel();

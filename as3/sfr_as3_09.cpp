@@ -40,8 +40,6 @@ void* FUN_14243d870(void* self, void* p);
 void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 // Traits::GetConstructor, out of line (0x142508460).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
-// VM::GetValueTraits: the traits of a value (0x14250ffc0).
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
 
 namespace Scaleform { namespace GFx {
 
@@ -3119,7 +3117,7 @@ namespace Instances { namespace fl_events {
                     else if (f.GetKind() == Value::kVTableIndClosure)
                         tr = &f.GetClosure()->GetTraits();
                     else
-                        tr = &FUN_14250ffc0(d.GetVM(), f);
+                        tr = &d.GetVM().GetValueTraits(f);
                     VMAbcFile* file = tr->GetFilePtr();
                     if (file && GetFileMovieDef(file) == pdef)
                     {
