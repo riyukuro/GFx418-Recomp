@@ -11,29 +11,10 @@
 #include <cstdint>
 #include <string.h>
 #include <math.h>
+#include "fmod44464/api/inc/fmod.hpp"
+#include "ms2/scaleform/include/kernel/sf_threads.h"
+#include "ms2/scaleform/include/kernel/sf_alg.h"
 
-// FMOD (the exe's statically linked fmodex, called through its import thunks)
-extern "C" int FUN_1428d8e9c(void* system, void** group);                                  // System::getMasterChannelGroup
-extern "C" int FUN_1428d8f20(void* group, float volume);                                   // ChannelGroup::setVolume
-extern "C" int FUN_1428d8ee4(void* channel, float pan);                                    // Channel::setPan
-extern "C" int FUN_1428d8ef6(void* channel, unsigned position, unsigned unit);             // Channel::setPosition
-extern "C" int FUN_1428d8eb4(void* sound, float* frequency, float* volume, float* pan, int* priority); // Sound::getDefaults
-extern "C" int FUN_1428d8ec6(void* sound, unsigned pcm);                                   // Sound::seekData
-extern "C" int FUN_1428d8efc(void* channel, void* callback);                               // Channel::setCallback
-extern "C" int FUN_1428d8ed2(void* sound, unsigned offset, unsigned unit, const char* name, void** point); // Sound::addSyncPoint
-extern "C" int FUN_1428d8ea2(void* system, unsigned* hi, unsigned* lo);                    // System::getDSPClock
-extern "C" int FUN_1428d8ef0(void* channel, int type, unsigned hi, unsigned lo);           // Channel::setDelay
-extern "C" int FUN_1428d8ed8(void* channel, bool paused);                                  // Channel::setPaused
-extern "C" int FUN_1428d8ea8(void* sound, unsigned offset, unsigned length, void** p1, void** p2, unsigned* l1,
-                             unsigned* l2);                                                // Sound::lock
-extern "C" int FUN_1428d8eae(void* sound, void* p1, void* p2, unsigned l1, unsigned l2);  // Sound::unlock
-extern "C" int FUN_142303a35(void* system, int index, void* sound, bool paused, void** channel); // System::playSound
-extern "C" int FUN_142303a4d(void* sound, unsigned* length, unsigned unit);                // Sound::getLength
-extern "C" int FUN_142303a65(void* channel);                                               // Channel::stop
-extern "C" int FUN_142303a6b(void* channel, bool* paused);                                 // Channel::getPaused
-extern "C" int FUN_142303a71(void* channel, float volume);                                 // Channel::setVolume
-extern "C" int FUN_142303a83(void* channel, unsigned* position, unsigned unit);            // Channel::getPosition
-extern "C" int FUN_142303a11(void* system);                                                // System::update
 
 extern "C" char DAT_1431bee78[];   // aux-streamer channel vftable
 extern "C" char DAT_1431beef0[];   // its second base
@@ -45,18 +26,14 @@ extern "C" void FUN_142747530(Scaleform::GFx::U** self, void* heap, Scaleform::G
 extern "C" void FUN_1427478c0(Scaleform::GFx::U** self, void* heap, Scaleform::GFx::U n);
 extern "C" void FUN_142747b30(void* self);
 
+unsigned __int64 FUN_1425e3480();  // Timer::GetProfileTicks
+
 namespace Scaleform {
+void* FindAudioRequestEntry(void** set, const unsigned char* key);  // sync-point set: the value at key
 unsigned FUN_142745f50(void* streamer);   // AuxStreamer ReadAndFill: bytes queued
-char FUN_1422fe440(UPInt v);              // Alg::UpperBit
 
 namespace GFx {
 
-UInt64 FUN_1425e3480();                                     // Timer::GetProfileTicks
-void FUN_14258d030(void* lock, unsigned spinCount);         // Lock::Lock
-void FUN_142583d50(void* event);                            // Event::PulseEvent
-bool FUN_142584540(void* event, unsigned ms);               // Event::Wait
-bool FUN_1425845e0(void* waitable, unsigned ms);            // Waitable::Wait
-void* FUN_142745630(void** set, const unsigned char* key);  // sync-point set: the value at key
 void FUN_142744070(char* self, void* psound);               // renderer: attach a channel
 int FUN_1427443c0(void* channel, int type, void* commanddata1, void* commanddata2); // channel callback
 void FUN_142742830(U** self, const U* key);                 // array-valued set: remove key
@@ -156,8 +133,8 @@ bool FUN_142746480(void* self, float seconds)
 void FUN_1427464c0(void* self, float volume)
 {
     void* group;
-    if (FUN_1428d8e9c(RawField<void*>(self, 0x10), &group) == 0)
-        FUN_1428d8f20(group, volume);
+    if (reinterpret_cast<FMOD::System*>(RawField<void*>(self, 0x10))->getMasterChannelGroup(reinterpret_cast<FMOD::ChannelGroup**>(&group)) == 0)
+        reinterpret_cast<FMOD::ChannelGroup*>(group)->setVolume(volume);
 }
 
 // Channel: pan.
@@ -166,7 +143,7 @@ void FUN_142746500(void* self, float pan)
 {
     void* channel = RawField<void*>(self, 0x38);
     if (channel)
-        FUN_1428d8ee4(channel, pan);
+        reinterpret_cast<FMOD::Channel*>(channel)->setPan(pan);
 }
 
 // Channel: seek to a time, past the sample's leading latency.
@@ -189,7 +166,7 @@ void FUN_142746510(void* self, float seconds)
     void* channel = RawField<void*>(self, 0x38);
     if (!channel)
         return;
-    FUN_1428d8ef6(channel, SampleLatencyMs(RawField<void*>(self, 0x30)) + ms, 1);
+    reinterpret_cast<FMOD::Channel*>(channel)->setPosition(SampleLatencyMs(RawField<void*>(self, 0x30)) + ms, 1);
 }
 
 // Aux channel: seek, then refill the stream from the new position.
@@ -206,7 +183,7 @@ void FUN_142746560(void* self, float seconds)
         RawField<U>(self, 0x48) = FUN_1425e3480();
         unsigned fill = RawField<unsigned>(sample, 0x6c);
         FUN_142745f50(sample);
-        FUN_1428d8ef6(RawField<void*>(self, 0x38), fill, 4);
+        reinterpret_cast<FMOD::Channel*>(RawField<void*>(self, 0x38))->setPosition(fill, 4);
         RawField<char>(self, 0x69) = 0;
         RawField<U>(self, 0x60) = FilledMicros(sample);
     }
@@ -221,8 +198,8 @@ bool FUN_142746640(void* self, float seconds)
         return false;
     unsigned seek = RawField<unsigned>(data, 0x1c);
     float frequency;
-    FUN_1428d8eb4(RawField<void*>(self, 0x30), &frequency, 0, 0, 0);
-    return FUN_1428d8ec6(RawField<void*>(self, 0x30), (unsigned)(long long)(frequency * seconds) + seek) == 0;
+    reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30))->getDefaults(&frequency, 0, 0, 0);
+    return reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30))->seekData((unsigned)(long long)(frequency * seconds) + seek) == 0;
 }
 
 // Channel: SetTransforms for channels with no envelope support.
@@ -241,7 +218,7 @@ void FUN_1427466d0(void* self, const U* transforms)
     if (!size || !sample || !RawField<void*>(sample, 0x30))
         return;
     void* channel = RawField<void*>(self, 0x38);
-    FUN_1428d8efc(channel, (void*)&FUN_1427443c0);
+    reinterpret_cast<FMOD::Channel*>(channel)->setCallback(reinterpret_cast<FMOD_CHANNEL_CALLBACK>((void*)&FUN_1427443c0));
     for (U i = 0; i < size; i++)
     {
         if (i == 0)
@@ -273,8 +250,7 @@ void FUN_1427466d0(void* self, const U* transforms)
                 point.Right = pos * rightSlope + rightBase;
             }
             void* sync = 0;
-            if (FUN_1428d8ed2(RawField<void*>(sample, 0x30), (unsigned)(long long)(point.Position * 1000.0f), 1, "",
-                              &sync) == 0)
+            if (reinterpret_cast<FMOD::Sound*>(RawField<void*>(sample, 0x30))->addSyncPoint((unsigned)(long long)(point.Position * 1000.0f), 1, "", reinterpret_cast<FMOD_SYNCPOINT**>(&sync)) == 0)
             {
                 U key = (U)sync;
                 NodeRef node = {&key, (void* const*)&point};
@@ -290,7 +266,7 @@ void FUN_142746a30(void* self, float volume)
 {
     void* channel = RawField<void*>(self, 0x38);
     if (channel)
-        FUN_142303a71(channel, volume);
+        reinterpret_cast<FMOD::Channel*>(channel)->setVolume(volume);
 }
 
 // Sample: Start. Plays the sound paused, delays it past the player's latency on the DSP clock, applies the seek,
@@ -305,28 +281,28 @@ void* FUN_142746a40(void* self, bool paused)
         unsigned latency = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x1c) : 0;
         unsigned scount = RawField<void*>(self, 0x38) ? RawField<unsigned>(RawField<void*>(self, 0x38), 0x18) : 0;
         if (scount == 0)
-            FUN_142303a4d(RawField<void*>(self, 0x30), &scount, 2);
+            reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30))->getLength(&scount, 2);
 
         float sample_rate;
-        FUN_1428d8eb4(RawField<void*>(self, 0x30), &sample_rate, 0, 0, 0);
+        reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30))->getDefaults(&sample_rate, 0, 0, 0);
 
         void* pchan;
         int r;
-        r = FUN_142303a35(RawField<void*>(RawField<char*>(self, 0x28), 0x10), -1, RawField<void*>(self, 0x30), true, &pchan);
+        r = reinterpret_cast<FMOD::System*>(RawField<void*>(RawField<char*>(self, 0x28), 0x10))->playSound(static_cast<FMOD_CHANNELINDEX>(-1), reinterpret_cast<FMOD::Sound*>(RawField<void*>(self, 0x30)), true, reinterpret_cast<FMOD::Channel**>(&pchan));
         if (r == 0)
         {
             unsigned hi = 0;
             unsigned lo = 0;
-            r = FUN_1428d8ea2(RawField<void*>(RawField<char*>(self, 0x28), 0x10), &hi, &lo);
+            r = reinterpret_cast<FMOD::System*>(RawField<void*>(RawField<char*>(self, 0x28), 0x10))->getDSPClock(&hi, &lo);
             scount = unsigned(scount * RawField<float>(RawField<char*>(self, 0x28), 0xf4) / sample_rate);
             lo += scount; // FMOD_64BIT_ADD
             hi += 0 + (lo < scount);
-            r = FUN_1428d8ef0(pchan, 2, hi, lo);
+            r = reinterpret_cast<FMOD::Channel*>(pchan)->setDelay(static_cast<FMOD_DELAYTYPE>(2), hi, lo);
             if (latency > 0)
             {
-                r = FUN_1428d8ef6(pchan, latency, 2);
+                r = reinterpret_cast<FMOD::Channel*>(pchan)->setPosition(latency, 2);
                 if (r == 0)
-                    r = FUN_1428d8ed8(pchan, paused);
+                    r = reinterpret_cast<FMOD::Channel*>(pchan)->setPaused(paused);
             }
         }
         if (r != 0)
@@ -349,7 +325,7 @@ void* FUN_142746bd0(void* self, bool paused)
         return 0;
     char* player = RawField<char*>(self, 0x28);
     void* channel = 0;
-    if (FUN_142303a35(RawField<void*>(player, 0x10), -2, sound, paused, &channel))
+    if (reinterpret_cast<FMOD::System*>(RawField<void*>(player, 0x10))->playSound(static_cast<FMOD_CHANNELINDEX>(-2), reinterpret_cast<FMOD::Sound*>(sound), paused, reinterpret_cast<FMOD::Channel**>(&channel)))
         return 0;
     RawField<unsigned>(self, 0x60) = RawField<unsigned>(self, 0x4c) * 300 / 1000 * (RawField<unsigned>(self, 0x50) >> 3) *
                                      RawField<unsigned>(self, 0x48);
@@ -364,12 +340,12 @@ void* FUN_142746bd0(void* self, bool paused)
         RawField<void*>(c, 0x10) = DAT_1431beef0;
         RawField<U>(c, 0x48) = FUN_1425e3480();
         RawField<char>(c, 0x69) = 0;
-        FUN_14258d030(c + 0x70, 0);
+        reinterpret_cast<Scaleform::Lock*>(c + 0x70)->Lock::Lock(0);
         RawField<unsigned>(c, 0x98) = 0;
         _InterlockedExchangeAdd(RawFieldPtr<volatile long>(self, 8), 1);
         RawField<U>(c, 0x58) = 0;
         RawField<U>(c, 0x60) = 0;
-        FUN_142303a6b(RawField<void*>(c, 0x38), RawFieldPtr<bool>(c, 0x68));
+        reinterpret_cast<FMOD::Channel*>(RawField<void*>(c, 0x38))->getPaused(RawFieldPtr<bool>(c, 0x68));
         if (RawField<char>(c, 0x68))
             RawField<U>(c, 0x50) = RawField<U>(c, 0x48);
         else
@@ -396,7 +372,7 @@ extern "C" void FUN_142746d70(void* self)
     void* channel = RawField<void*>(self, 0x38);
     if (channel)
     {
-        FUN_142303a65(channel);
+        reinterpret_cast<FMOD::Channel*>(channel)->stop();
         RawField<void*>(self, 0x38) = 0;
     }
 }
@@ -416,7 +392,7 @@ static __forceinline void DetachAuxStreamer(char* player, void* pchan)
 
     EnterCriticalSection(RawLock(player, 0x80));
     U key = RawField<U>(psample, 0x40);
-    U* pcont = (U*)FUN_142745630(RawFieldPtr<void*>(player, 0xa8), (const unsigned char*)&key);
+    U* pcont = (U*)FindAudioRequestEntry(RawFieldPtr<void*>(player, 0xa8), (const unsigned char*)&key);
     bool found = false;
     if (pcont)
     {
@@ -444,7 +420,7 @@ static __forceinline void DetachAuxStreamer(char* player, void* pchan)
             if (void* thread = *(void* volatile*)(player + 0x18))
                 FUN_14257dcb0(thread);
             RawField<void*>(player, 0x18) = 0;
-            FUN_142583d50(player + 0x20);
+            reinterpret_cast<Scaleform::Event*>(player + 0x20)->PulseEvent();
         }
     }
     if (!found)
@@ -453,7 +429,7 @@ static __forceinline void DetachAuxStreamer(char* player, void* pchan)
     LeaveCriticalSection(RawLock(player, 0x80));
     if (pchan)
     {
-        FUN_142303a65(RawField<void*>(pchan, 0x38));
+        reinterpret_cast<FMOD::Channel*>(RawField<void*>(pchan, 0x38))->stop();
         FUN_14257dcb0(pchan);
     }
 }
@@ -493,7 +469,7 @@ float FUN_142746f10(void* channel)
     if (!starving)
     {
         unsigned fmodpos = 0;
-        if (FUN_142303a83(RawField<void*>(self, 0x38), &fmodpos, 4))
+        if (reinterpret_cast<FMOD::Channel*>(RawField<void*>(self, 0x38))->getPosition(&fmodpos, 4))
             return 0;
         unsigned fill = RawField<unsigned>(s, 0x6c);
         dist = fmodpos > fill ? RawField<unsigned>(s, 0x64) - fmodpos + fill : fill - fmodpos;
@@ -507,7 +483,7 @@ float FUN_142746f10(void* channel)
             got = FUN_142745f50(s);
             if (got > 0)
             {
-                FUN_1428d8ef6(RawField<void*>(self, 0x38), 0, 4);
+                reinterpret_cast<FMOD::Channel*>(RawField<void*>(self, 0x38))->setPosition(0, 4);
                 RawField<char>(self, 0x69) = 0;
                 RawField<U>(self, 0x48) = FUN_1425e3480();
                 pos = RawField<U>(self, 0x58);
@@ -517,10 +493,10 @@ float FUN_142746f10(void* channel)
                 // ClearSoundBuffer
                 void *p1, *p2;
                 unsigned l1, l2;
-                if (FUN_1428d8ea8(RawField<void*>(s, 0x30), 0, RawField<unsigned>(s, 0x64), &p1, &p2, &l1, &l2) == 0)
+                if (reinterpret_cast<FMOD::Sound*>(RawField<void*>(s, 0x30))->lock(0, RawField<unsigned>(s, 0x64), &p1, &p2, &l1, &l2) == 0)
                 {
                     memset(p1, 0, l1);
-                    FUN_1428d8eae(RawField<void*>(s, 0x30), p1, p2, l1, l2);
+                    reinterpret_cast<FMOD::Sound*>(RawField<void*>(s, 0x30))->unlock(p1, p2, l1, l2);
                 }
                 return 0.02f;
             }
@@ -550,7 +526,7 @@ float FUN_1427471a0(void* self)
     if (!RawField<void*>(self, 0x18))
         wait = FUN_1427471f0(self);
     if (RawField<char>(self, 0xf0))
-        FUN_142303a11(RawField<void*>(self, 0x10));
+        reinterpret_cast<FMOD::System*>(RawField<void*>(self, 0x10))->update();
     return wait;
 }
 
@@ -590,7 +566,7 @@ int FUN_142747310(void* thread, void* h)
     unsigned wait_time = 2000;
     while (1)
     {
-        FUN_142584540(pRenderer + 0x20, wait_time);
+        reinterpret_cast<Scaleform::Event*>(pRenderer + 0x20)->Wait(wait_time);
         if (*(volatile bool*)(pRenderer + 0x78)) // StopThread
             break;
         ChannelLocker lock(RawLock(pRenderer, 0x80));
@@ -607,12 +583,12 @@ void FUN_1427474d0(void* channel, const void* transform)
     // The sum is built in place: (Left + Right) / 2 has cl load Right first.
     float sum = t->Left;
     sum += t->Right;
-    FUN_142303a71(channel, sum / 2);
+    reinterpret_cast<FMOD::Channel*>(channel)->setVolume(sum / 2);
     float diff = t->Left - t->Right;
     float pan  = (diff >= 0) ? diff : -diff; // Alg::Abs
     if (t->Left > t->Right)
         pan *= -1;
-    FUN_1428d8ee4(channel, pan);
+    reinterpret_cast<FMOD::Channel*>(channel)->setPan(pan);
 }
 
 } // namespace GFx
@@ -628,7 +604,7 @@ extern "C" void FUN_142747530(U** self, void* heap, U n)
         RawClearPlainSet((U*)self, 0x28);
         return;
     }
-    U size = n < 8 ? 8 : (U)1 << (FUN_1422fe440(n - 1) + 1);
+    U size = n < 8 ? 8 : (U)1 << (Alg::UpperBit(n - 1) + 1);
     U* table = (U*)Memory::Alloc(size * 0x28 + 0x10, AllocInfo(2, 0, 0));
     table[0] = 0;
     table[1] = size - 1;
@@ -674,7 +650,7 @@ extern "C" void FUN_1427478c0(U** self, void* heap, U n)
         *self = 0;
         return;
     }
-    U size = n < 8 ? 8 : (U)1 << (FUN_1422fe440(n - 1) + 1);
+    U size = n < 8 ? 8 : (U)1 << (Alg::UpperBit(n - 1) + 1);
     U* table = (U*)Memory::Alloc(size * 0x30 + 0x10, AllocInfo(2, 0, 0));
     table[0] = 0;
     table[1] = size - 1;
@@ -707,8 +683,8 @@ extern "C" void FUN_142747b30(void* self)
     if (RawField<void*>(r, 0x18))
     {
         RawField<char>(r, 0x78) = 1;
-        FUN_142583d50(r + 0x20);
-        FUN_1425845e0(RawField<void*>(r, 0x18), 0xffffffff);
+        reinterpret_cast<Scaleform::Event*>(r + 0x20)->PulseEvent();
+        reinterpret_cast<Scaleform::Waitable*>(RawField<void*>(r, 0x18))->Wait(0xffffffff);
     }
     EnterCriticalSection(RawLock(r, 0xc8));
     while (RawField<char*>(r, 0xc0) != r + 0xb0)
