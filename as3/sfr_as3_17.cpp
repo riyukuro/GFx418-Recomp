@@ -2013,10 +2013,6 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
         root->GFxValue2ASValue(retVal, &result);
 }
 void FUN_14241e4f0(void* self, Scaleform::GFx::AS3::Value& result);   // UserDefined function: keep the result
-void FUN_1424674c0(void* cls, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& result,
-                   const Scaleform::GFx::ASString& name, unsigned mouseIdx);   // MouseCursorEvent class: make the event
-bool FUN_142468740(void* target, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Object>& evt,
-                   Scaleform::GFx::DisplayObject* stage);   // dispatch evt on the stage (false: default prevented)
 void FUN_142541a60(void* self, void* pheapAddr, Scaleform::UPInt newSize);   // HashSetBase::setRawCapacity copy
 void FUN_142524870(void* arr, Scaleform::UPInt n);   // Resize of a POD array with its heap at +0x18
 void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // Resize of a POD array
@@ -4481,13 +4477,12 @@ void Sfr33MovieRootCursor::ChangeMouseCursorType(unsigned mouseIdx, unsigned new
     if (pStage && avm && avm[0x3a0] && *reinterpret_cast<const int*>(reinterpret_cast<UByte*>(pStage) + 0x128))
     {
         ASString name(BuiltinsMgr.GetBuiltin(AS3Builtin_empty_));
-        void* cls = *reinterpret_cast<void**>(avm + 0x390);
+        Classes::fl_events::EventDispatcher* cls = *reinterpret_cast<Classes::fl_events::EventDispatcher**>(avm + 0x390);
         GetMouseCursorTypeString(name, newCursorType);
-        SPtr<Object> evt;
-        FUN_1424674c0(cls, evt, name, mouseIdx);
+        SPtr<Instances::fl_events::Event> evt = cls->CreateMouseCursorEventObject(name, mouseIdx);
         Instances::fl_display::DisplayObject* stage =
             ToAvmInteractiveObj(static_cast<InteractiveObject*>(pStage))->GetAS3Obj();
-        if (stage && !FUN_142468740(stage, evt, pStage))
+        if (stage && !stage->DispatchEventObject(evt.GetPtr(), pStage))
             return;
     }
     UserEventHandler* handler = pMovieImpl->pUserEventHandler;
