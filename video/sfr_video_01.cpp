@@ -60,7 +60,6 @@ extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_140006a40(Scaleform::UPInt*);
 extern void FUN_14000b3b0(Scaleform::UPInt*, void*, Scaleform::UPInt);
-extern void FUN_1425925f0(void*);
 extern void FUN_14000a5d0(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a230(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a420(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
@@ -71,11 +70,20 @@ extern unsigned* FUN_1400079b0(unsigned*, const unsigned*);
 extern void FUN_140007870(unsigned*, void**);
 extern void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter*);
 
+struct Video01GcAccess : Scaleform::GFx::AS2::RefCountBaseGC<323>
+{
+    using Scaleform::GFx::AS2::RefCountBaseGC<323>::ReleaseInternal;
+};
+
+struct Video01HandleAccess : Scaleform::GFx::DisplayObject
+{
+    using Scaleform::GFx::DisplayObject::CreateCharacterHandle;
+};
+
 struct NetStreamPrototypeInitAccess : Scaleform::GFx::AS2::GASPrototypeBase
 {
     using GASPrototypeBase::InitFunctionMembers;
 };
-extern void* FUN_1425f1910(void*);
 
 static void ReleaseAs2GCObject(void* object)
 {
@@ -84,7 +92,7 @@ static void ReleaseAs2GCObject(void* object)
     const unsigned value = *count;
     if ((value & 0x03ffffff) != 0) {
         *count = value - 1;
-        FUN_1425925f0(object);
+        reinterpret_cast<Video01GcAccess*>(object)->ReleaseInternal();
     }
 }
 
@@ -616,7 +624,7 @@ void FUN_140003da0(void** proxy) { if (*proxy) FUN_14257dcd0(*proxy); }
 void* FUN_140004310(void* object)
 {
     void* handle = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x70);
-    if (!handle) handle = FUN_1425f1910(object);
+    if (!handle) handle = reinterpret_cast<Video01HandleAccess*>(object)->CreateCharacterHandle();
     return handle;
 }
 
