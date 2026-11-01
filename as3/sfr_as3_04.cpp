@@ -158,6 +158,7 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2698,7 +2699,6 @@ bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
 }
 
 // ---- global functions ----
-void* FUN_1424d7e50(void* pmem, const Scaleform::GFx::AS3::Value& function, unsigned delay, bool timeout);   // IntervalTimer ctor
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } void Sfr31StatePushValues(TR::State* st, UInt32 n, const Value* vals); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
 {
@@ -2715,7 +2715,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         if (!argv[1].Convert2UInt32(delay))
             return;
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
-        ASIntervalTimerIntf* ptimer = pmem ? (ASIntervalTimerIntf*)FUN_1424d7e50(pmem, argv[0], delay, false) : NULL;
+        ASIntervalTimerIntf* ptimer = pmem ? ::new (pmem) IntervalTimer(argv[0], delay, false) : NULL;
         if (argc > 2)
             Sfr31StatePushValues(reinterpret_cast<TR::State*>(ptimer), argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();

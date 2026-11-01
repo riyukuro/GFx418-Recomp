@@ -62,18 +62,20 @@ void Sfr31UnregisterClassTraits(UPInt file);                                    
 }}} // namespace Scaleform::GFx::AS3
 
 char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
-void FUN_1425f9ba0(Scaleform::UPInt self, char* ret, const void* matrix);
 static inline Scaleform::UPInt FUN_142525ca0(Scaleform::UPInt a, Scaleform::UPInt b) { return reinterpret_cast<Scaleform::UPInt>(::Scaleform::GFx::AS3::Sfr31GetClassTraitsByInfo(reinterpret_cast<Scaleform::GFx::AS3::VM*>(a), b)); }
 Scaleform::UPInt FUN_1425b7e60(Scaleform::UPInt textField);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);   // the traits of a value
-void* FUN_14243d870(void* self, void* p);   // SPtr<Instances::fl::Object>::operator=, out of line
+// out of line in the exe
+template<> Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>&
+Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>::operator=(Scaleform::GFx::AS3::Instances::fl::Object* p);
+// Value::operator=(const ASString&), out of line in the exe
+Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
+template<> void Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_POD<Scaleform::UPInt, 328>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+template<> void Scaleform::ArrayData<Scaleform::UPInt, Scaleform::AllocatorLH_POD<Scaleform::UPInt, 338>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
+template<> void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);
 static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
-void FUN_142524870(void* arr, Scaleform::UPInt n);   // ArrayDH_POD<UPInt>::Resize, out of line
-void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // ArrayLH_POD<UPInt>::Resize (the word code), out of line
-// Value::operator=(const ASString&), out of line in the exe
-Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1504,8 +1506,8 @@ void Tracer::PopNewOpCode()
 {
     ArrayDH_POD<UPInt, StatMV_VM>& pos = NewOpcodePos;
     const UPInt top = pos.Back();
-    FUN_142524870(&pos, pos.GetSize() - 1);
-    FUN_1425247f0(&WCode, top);
+    pos.Resize(pos.GetSize() - 1);
+    WCode.Resize(top);
 }
 
 // Tracer::RegisterOrigOpCode: a byte code position inside the code becomes the current one, is noted in
@@ -2029,22 +2031,21 @@ UPInt Sfr27AccFirstE8(UPInt self)
 UPInt Sfr27AccVectorStringITraits(UPInt vm) { return AccRd(AccRd(vm, 0x268), 0xc0); }
 
 // @0x14250bce0
-UPInt Sfr27AccField8(UPInt self) { return AccRd(self, 8); }
+Instances::Namespace& Multiname::GetNamespace() const { return *reinterpret_cast<Instances::Namespace*>(AccRd(reinterpret_cast<UPInt>(this), 8)); }
 
 // @0x14250edf0
 UPInt Sfr27Acc14250edf0(UPInt self) { return AccRd(AccRd(AccRd(self, 0x18), 0x20), 0x158); }
 
 }}} // namespace Scaleform::GFx::AS3
 
-namespace Scaleform { namespace GFx { namespace AS3 {
-
-// The bounds of the display list of the object under the given matrix (returned in the result passed after this).
+// The bounds of the display list of the object under the given matrix.
 // @0x14250d6d0
-char* Sfr27DisplayListBounds(UPInt self, char* ret, const void* matrix)
+Scaleform::GFx::RectF Scaleform::GFx::DisplayObjContainer::GetRectBounds(const Matrix& t) const
 {
-    FUN_1425f9ba0(self + 0xd8, ret, matrix);
-    return ret;
+    return mDisplayList.GetRectBounds(t);
 }
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 
 // A virtual that returns its value through the hidden result pointer, passed straight on.
 // @0x14250d6b0
@@ -2086,13 +2087,11 @@ bool AvmTextField::HasStyleSheet() const
 // ==== VMAbcFile: interned strings and namespaces ====
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-void FUN_142524a30(void* self, const void* pheapAddr, UPInt newSize);   // IntStrings' ResizeNoConstruct
-
 // ArrayData::Resize of IntStrings, with the exe's out-of-line ResizeNoConstruct.
 static SF_INLINE void Sfr18ResizeIntStrings(ArrayLH<SPtr<ASStringNode> >& a, UPInt newSize)
 {
     const UPInt oldSize = a.GetSize();
-    FUN_142524a30(&a, &a, newSize);
+    reinterpret_cast<ArrayDataBase<SPtr<ASStringNode>, AllocatorLH<SPtr<ASStringNode>, 2>, ArrayDefaultPolicy>*>(&a)->ResizeNoConstruct(&a, newSize);
     if (newSize > oldSize)
         ConstructArray<SPtr<ASStringNode> >(a.GetDataPtr() + oldSize, newSize - oldSize);
 }
@@ -2947,7 +2946,7 @@ void AvmDisplayObj::OnAdded(bool byTimeline)
     if (obj)
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(added, true, false);
-        FUN_14243d870(&evt->Target, obj);
+        evt->Target = obj;
         obj->DispatchEventObject(evt, pDispObj);
     }
     if (IsStageAccessible())
@@ -2973,7 +2972,7 @@ void AvmDisplayObj::OnRemoved(bool byTimeline)
     if (obj)
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(removed, true, false);
-        FUN_14243d870(&evt->Target, obj);
+        evt->Target = obj;
         obj->DispatchEventObject(evt, pDispObj);
     }
     if (IsStageAccessible())
@@ -3000,7 +2999,7 @@ void AvmDisplayObj::PropagateEvent(const Instances::fl_events::Event& evt, bool 
     Instances::fl_display::DisplayObject* obj = GetAS3Obj();
     if (obj)
     {
-        FUN_14243d870(&e->Target, obj);
+        e->Target = obj;
         obj->DispatchEventObject(e, pDispObj);
     }
 }
@@ -3015,7 +3014,7 @@ void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& e
         Instances::fl_display::DisplayObject* obj = GetAS3Obj();
         if (obj)
         {
-            FUN_14243d870(&e->Target, obj);
+            e->Target = obj;
             obj->DispatchEventObject(e, pDispObj);
         }
     }
@@ -4640,7 +4639,7 @@ static SF_FORCEINLINE void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
     if (obj && obj->HasEventHandler(root->BuiltinsMgr.GetBuiltin(type), false))
     {
         SPtr<Instances::fl_events::Event> evt = obj->CreateEventObject(root->BuiltinsMgr.GetBuiltin(type), true, false);
-        FUN_14243d870(&evt->Target, obj);
+        evt->Target = obj;
         obj->DispatchEventObject(evt, avm->pDispObj);
     }
 }
@@ -4969,7 +4968,6 @@ Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Abc::Na
                                     const Value& prefix);
 ClassTraits::Traits*  FUN_142415520(Instances::fl::GlobalObjectCPP* self, const ASString& name,
                                     const Instances::Namespace& ns);      // GlobalObjectCPP: class traits by name
-const Abc::Multiname& FUN_142546050(const Abc::MethodInfo& mi, const Abc::ConstPool& cp);   // the return type
 const Abc::Multiname& FUN_142416e70(const Traits& ftr);             // the return type of a function's method
 
 // VM::GetFunctReturnType(const ThunkInfo&): the instance traits of the class a thunk's result type names (in its
@@ -5033,7 +5031,7 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
         const SInt32 ind = m->GetMethodInd();
         file = m->GetTraits().GetFilePtr();
         const Abc::File& abc = file->GetAbcFile();
-        mn = &FUN_142546050(*abc.Methods.Info[ind], abc.Const_Pool);
+        mn = &reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
         break;
     }
     case Value::kFunction:
@@ -6298,7 +6296,7 @@ static SF_FORCEINLINE SPtr<Instances::fl_events::TextEvent> Sfr34_CreateTextEven
     SPtr<Instances::fl_events::TextEvent> evt;
     const Value params[] = { Value(name), Value(true), Value(true) };
     asvm->ConstructInstance(evt, ex ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
-    FUN_14243d870(&evt->Target, obj);
+    evt->Target = obj;
     return evt;
 }
 
@@ -6394,7 +6392,7 @@ bool AvmTextField::OnCharEvent(wchar_t wcharCode, unsigned controllerIdx)
         Value params[] = { Value(name, Value::InlineStr), Value(true), Value(true) };
         ASVM* asvm = AS3RootOf(pDispObj)->pAVM;
         asvm->ConstructInstance(evt, asvm->ExtensionsEnabled ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
-        FUN_14243d870(&evt->Target, as3obj);
+        evt->Target = as3obj;
         evt->SetText(wcharCode);
         if (asvm->ExtensionsEnabled)
             static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr())->controllerIdx = controllerIdx;
