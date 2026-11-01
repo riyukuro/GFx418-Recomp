@@ -723,10 +723,6 @@ extern "C" int pcre_fullinfo(const void* code, const void* extra, int what, void
 // Is v of the class named className (looked up in the VM). 0x1425145d0
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 
-// Object::FindProperty: the slot or dynamic value of obj named mn. 0x142502360
-void FUN_142502360(Scaleform::GFx::AS3::Object* obj, Scaleform::GFx::AS3::PropRef& result,
-                   const Scaleform::GFx::AS3::Multiname& mn, int attr);
-
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The fixed slot of tr named name in ns (index receives its slot index). 0x1425011c0
@@ -972,7 +968,7 @@ namespace InstanceTraits { namespace fl
         {
             AS3::Object* obj = _this.GetObject();
             PropRef prop;
-            FUN_142502360(obj, prop, Multiname(vm.GetPublicNamespace(), argv[0]), 1);
+            obj->FindProperty(prop, Multiname(vm.GetPublicNamespace(), argv[0]), 1);
             result.SetBool(propFound(prop));
         }
         else
