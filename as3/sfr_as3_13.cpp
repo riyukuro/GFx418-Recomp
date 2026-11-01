@@ -1161,8 +1161,7 @@ namespace Instances { namespace fl_text
             ASMovieRootBase* proot = GetASRoot(GetVM());
             CharacterCreateInfo ccinfo;
             {
-                ResourceId emptyTextId(0x10002);
-                FUN_1425cf500(proot->GetMovieImpl()->pMainMovieDef, &ccinfo, &emptyTextId);
+                ::new (&ccinfo) CharacterCreateInfo(proot->GetMovieImpl()->pMainMovieDef->GetCharacterCreateInfo(ResourceId(0x10002)));
             }
             ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
             DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
@@ -1980,7 +1979,7 @@ namespace Instances { namespace fl_text
         FUN_1424aa0f0(&mergedFmt);
 
         ParagraphFormatStorage mergedPara;
-        FUN_14259c170(DocumentOf(ptf), FUN_1426076a0(DefaultParaFormat(DocumentOf(ptf)), &mergedPara, &para));
+        FUN_14259c170(DocumentOf(ptf), ::new (&mergedPara) Render::Text::ParagraphFormat(reinterpret_cast<const Render::Text::ParagraphFormat*>(DefaultParaFormat(DocumentOf(ptf)))->Merge(reinterpret_cast<const Render::Text::ParagraphFormat&>(para))));
         FieldFlags(ptf) |= 0x10000;
         FUN_142606690(&mergedPara);
         FUN_142606690(&para);
@@ -3233,7 +3232,9 @@ namespace Instances { namespace fl_text
     // At 0x1424b4bd0 (not in the function list).
     void TextFormat::tabStopsGet(SPtr<Instances::fl::Array>& result)
     {
-        FUN_1424aa450(result, tabStops);
+#pragma inline_depth(0)
+        reinterpret_cast<SPtr<Instances::fl::Object>&>(result).Set(reinterpret_cast<const SPtr<Instances::fl::Object>&>(tabStops));
+#pragma inline_depth()
     }
 
     // @0x1424b4ba0
@@ -3467,7 +3468,7 @@ namespace Instances { namespace fl_text
     void StyleSheet::clear(const Value& result)
     {
         SF_UNUSED(result);
-        FUN_142609630(&CSS);
+        CSS.ClearStyles();
     }
 
     // @0x1424afeb0

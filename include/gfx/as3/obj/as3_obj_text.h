@@ -58,6 +58,7 @@ public:
     typedef HashUncachedLH<StyleKey, Render::Text::Style*, StyleHashFunc, 0x145> StyleHash;
 
     const StyleHash& GetStyles() const;                                                     // 0x142609e60
+    void ClearStyles();
 
 private:
     StyleHash   Styles;         // +0x08
