@@ -237,25 +237,31 @@
 // MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
 
+// The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType::~HashSetBase();                // exe 0x142924800
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::SharedObjectPtr>::SetType::~HashSetBase();       // exe 0x1429248c0
+
+// The text format destructor (the exe calls it; cl inlines the empty ~TextFormat).
+void FUN_1424aa0f0(void* pformat);                                                 // exe 0x1424aa0f0
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
-void MemberHash_Destruct(ASStringHash_GC<Member>* phash);                         // exe 0x142924800
-void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash);         // exe 0x1429246b0
-void SharedObjectHash_Destruct(ASStringHash_GC<SharedObjectPtr>* phash);          // exe 0x1429248c0
 void ProgressInfoHash_Destruct(StringHashLH<MovieClipLoader::ProgressDesc>* phash); // exe 0x142924ab0
-// The out-of-line destructors of the text formats (the exe calls them; cl inlines the empty ~TextFormat).
-void TextFormat_Destruct(Render::Text::TextFormat* pformat);                       // exe 0x1424aa0f0
-void ParagraphFormat_Destruct(Render::Text::ParagraphFormat* pformat);             // exe 0x142606690
+
+// The hash table of a table object, for its out-of-line destructor.
+typedef ASStringHash_GC<Member>::SetType                 MemberHashSet;
+typedef ASStringHash_GC<Object::Watchpoint>::SetType     WatchpointHashSet;
+typedef ASStringHash_GC<SharedObjectPtr>::SetType        SharedObjectHashSet;
 
 // @0x142942e70
 void Object::Finalize_GC()
 {
-    MemberHash_Destruct(&Members);
+    reinterpret_cast<MemberHashSet*>(&Members)->~HashSetBase();
     ResolveHandler.Finalize_GC();
     if (pWatchpoints)
     {
-        WatchpointHash_Destruct(pWatchpoints);
+        reinterpret_cast<WatchpointHashSet*>(pWatchpoints)->~HashSetBase();
         SF_FREE(pWatchpoints);
     }
     if (pUserDataHolder)
@@ -342,7 +348,7 @@ void SharedObject::Finalize_GC()
 // @0x142942f80
 void SharedObjectCtorFunction::Finalize_GC()
 {
-    SharedObjectHash_Destruct(&SharedObjects);
+    reinterpret_cast<SharedObjectHashSet*>(&SharedObjects)->~HashSetBase();
     Object::Finalize_GC();
 }
 
@@ -426,8 +432,8 @@ void TextFieldObject::Finalize_GC()
 // @0x142943100
 void TextFormatObject::Finalize_GC()
 {
-    TextFormat_Destruct(&GetTextFormat());
-    ParagraphFormat_Destruct(&GetParagraphFormat());
+    ::FUN_1424aa0f0(&GetTextFormat());
+    GetParagraphFormat().~ParagraphFormat();
     Object::Finalize_GC();
 }
 

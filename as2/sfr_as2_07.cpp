@@ -83,13 +83,14 @@
 #include <string.h>
 #include <stdlib.h>
 
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The script number of a string: hex "0x..", octal "0..", else decimal; false unless the whole string was used.
 SF_NOINLINE bool StringToNumber(Number* result, const char* str);
 
 // The out-of-line watchpoint table helpers the exe calls (COMDATs of other units).
-void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash); // exe 0x1429246b0
 // GetCaseCheck / RemoveCaseCheck of the watchpoint table (exe 0x142949eb0 / 0x14297cae0).
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                                       bool caseSensitive);
@@ -1224,7 +1225,7 @@ bool Object::Unwatch(ASStringContext* psc, const ASString& prop)
         {
             if (pwatchpoints)
             {
-                WatchpointHash_Destruct(pwatchpoints);
+                reinterpret_cast<ASStringHash_GC<Object::Watchpoint>::SetType*>(pwatchpoints)->~HashSetBase();
                 SF_FREE(pwatchpoints);
             }
             pWatchpoints = 0;

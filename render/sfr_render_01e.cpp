@@ -13,6 +13,8 @@
 
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/gfx/gfx_fontlib.h"
+#include "ms2/scaleform/include/gfx/as2/as2_action.h"
+#include "ms2/scaleform/include/gfx/as2/as2_soundobject.h"
 
 namespace Scaleform { namespace GFx {
 
@@ -21,13 +23,16 @@ extern char DAT_143109420[];
 extern char DAT_143184be8[];
 extern char DAT_143184c18[];
 
-char* FUN_1429561c0(void*);          // GlobalContext::GetStringManager
-void  FUN_1429260b0(void*);          // Value::~Value
-void  FUN_1425c14e0(void*);          // ASStringNode::ReleaseNode
-void  FUN_1425925f0(void*);          // RefCountBaseGC<323>::ReleaseInternal
-void  FUN_1425921b0(U**, void*);     // HashSetBase::CheckExpand
-void  FUN_142592a10(U**, void*, U);  // HashSetBase::setRawCapacity
-void* FUN_142998b50(void*);          // SoundCtorFunction::Register
+
+// ReleaseInternal is protected in RefCountBaseGC.
+struct RefCountBaseGCAccess : AS2::RefCountBaseGC<323>
+{
+    using AS2::RefCountBaseGC<323>::ReleaseInternal;
+};
+
+typedef HashNode<ASString, AS2::GlobalContext::ClassRegEntry, ASStringHashFunctor> ClassRegNode;
+typedef HashSetBase<ClassRegNode, ClassRegNode::NodeHashF, ClassRegNode::NodeAltHashF, AllocatorLH<ASString, 324>,
+                    HashsetNodeEntry<ClassRegNode, ClassRegNode::NodeHashF> > ClassRegSet;
 
 // The script object interface at +0x20 of an AS2 Object; slot 10 (+0x50) is SetMember.
 struct RawObjectInterface
@@ -63,7 +68,7 @@ static inline void GCRelease(void* p)
     if (p && (RawField<unsigned>(p, 0x18) & 0x3ffffff) != 0)
     {
         RawField<unsigned>(p, 0x18)--;
-        FUN_1425925f0(p);
+        reinterpret_cast<RefCountBaseGCAccess*>(p)->ReleaseInternal();
     }
 }
 
@@ -72,7 +77,7 @@ static inline void StringAddRef(void* node) { RawField<int>(node, 0x18)++; }
 static inline void StringRelease(void* node)
 {
     if (--RawField<unsigned>(node, 0x18) == 0)
-        FUN_1425c14e0(node);
+        reinterpret_cast<ASStringNode*>(node)->ReleaseNode();
 }
 
 // A {key, Register, Ptr} payload copied into a blank slot.
@@ -209,22 +214,20 @@ static __forceinline void ClassAdd(U** self, const void* src, U hash)
 // MS2-FUNCTIONAL 0x142591860: register allocation only (the exe keeps the hash in rdi and the source in r14); the
 // same loads, stores and calls in the same order.
 // @0x142591860
+#pragma inline_depth(0)
 void FUN_142591860(U** self, void* ctx, const void* node, U hash)
 {
-    FUN_1425921b0(self, ctx);
+    reinterpret_cast<ClassRegSet*>(self)->CheckExpand(ctx);
     ClassAdd<NodeSrc>(self, node, hash);
 }
+#pragma inline_depth()
 
 // The same for a NodeRef {&key, &{Register, Ptr}}, with the table growth inline.
 // MS2-FUNCTIONAL 0x142591a00: register allocation only, as 0x142591860.
 // @0x142591a00
 void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
 {
-    U* table = *self;
-    if (!table)
-        FUN_142592a10(self, ctx, 8);
-    else if (table[0] * 5 > table[1] * 4 + 4)
-        FUN_142592a10(self, ctx, table[1] * 2 + 2);
+    reinterpret_cast<ClassRegSet*>(self)->CheckExpand(ctx);
     ClassAdd<RefSrc>(self, ref, hash);
 }
 
@@ -234,7 +237,7 @@ void FUN_142591a00(U** self, void* ctx, const void* ref, U hash)
 // @0x1425916c0
 void FUN_1425916c0(void* self, void* psc, void* object)
 {
-    char* sm = FUN_1429561c0(self);
+    char* sm = reinterpret_cast<char*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager());
     U* table = RawField<U*>(self, 0x20);
     void* key = RawField<void*>(sm, 0x40);
     char* found = 0;
@@ -263,21 +266,21 @@ notFound:
     {
         struct { void* Key; U* Value; } ref;
         U entry[2];
-        entry[0] = (U)&FUN_142998b50;
+        entry[0] = (U)&AS2::SoundCtorFunction::Register;
         entry[1] = 0;
-        ref.Key = &RawField<void*>(FUN_1429561c0(self), 0x40);
+        ref.Key = &RawField<void*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager(), 0x40);
         ref.Value = entry;
         FUN_142591a00(RawFieldPtr<U*>(self, 0x20), RawFieldPtr<void>(self, 0x20), &ref, NodeHash(*(void**)ref.Key));
         GCRelease((void*)entry[1]);
 
         char flags = 0;
-        sm = FUN_1429561c0(self);
+        sm = reinterpret_cast<char*>(reinterpret_cast<AS2::GlobalContext*>(self)->GetStringManager());
         U value[2];
         value[0] = 0xb;
         value[1] = RawField<U>(sm, 0x40);
         StringAddRef((void*)value[1]);
         RawFieldPtr<RawObjectInterface>(object, 0x20)->SetMember(psc, sm + 0x40, value, &flags);
-        FUN_1429260b0(value);
+        reinterpret_cast<AS2::Value*>(value)->~Value();
     }
 }
 

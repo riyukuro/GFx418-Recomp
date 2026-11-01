@@ -258,8 +258,6 @@ static inline DrawableImage* AsDrawableImage(ImageBase* pimage) { return reinter
 
 // Scrolls the pixels of a bitmap image by (x, y) (exe body).
 static inline void FUN_1425eed00(Scaleform::Render::ImageBase * p0, int p1, int p2) { ((Scaleform::Render::DrawableImage*)(p0))->Scroll(p1, p2); }
-// Flood fills a bitmap image from a point (exe body).
-void FUN_1425ec9e0(Scaleform::Render::ImageBase* pimage, const Scaleform::Render::Point<Scaleform::SInt32>& pt, const Scaleform::Render::Color& color);
 // Fills a rect of a bitmap image with one color (exe body).
 static inline void FUN_1425ec860(Scaleform::Render::ImageBase * p0, Scaleform::Render::Rect<long> const & p1, Scaleform::Render::Color const & p2) { ((Scaleform::Render::DrawableImage*)(p0))->FillRect(p1, (Scaleform::Render::Color)(p2)); }
 // Applies a color transform to a rect of a bitmap image (exe body).
@@ -267,7 +265,6 @@ static inline void FUN_1425eb200(Scaleform::Render::ImageBase * p0, Scaleform::R
 // Fills a bitmap image with random noise (exe body).
 static inline void FUN_1425eddc0(Scaleform::Render::ImageBase * p0, long p1, unsigned long p2, unsigned long p3, unsigned long p4, bool p5) { ((Scaleform::Render::DrawableImage*)(p0))->Noise((unsigned int)(p1), (unsigned int)(p2), (unsigned int)(p3), (unsigned int)(p4), p5); }
 
-Scaleform::SInt32 FUN_142446f30(Scaleform::GFx::AS3::Instances::fl_display::Bitmap* pbitmap, const char* pname);
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);
 // AS3::Stage::SetOrientation.
 void FUN_142528770(Scaleform::GFx::DisplayObject* pstage, const Scaleform::GFx::ASString& orientation);
@@ -2440,7 +2437,7 @@ namespace Instances { namespace fl_display
             vm.ThrowArgumentError(VM::Error(VM::eInvalidBitmapData, vm, "Invalid BitmapData"));
             return;
         }
-        FUN_1425ec9e0(pImage, Render::Point<SInt32>(x, y), Render::Color(color));
+        Render::AsDrawableImage(pImage)->FloodFill(Render::Point<SInt32>(x, y), Render::Color(color));
     }
 
     // @0x142450cb0
@@ -2800,7 +2797,7 @@ namespace Instances { namespace fl_display
     void Bitmap::pixelSnappingSet(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
-        PixelSnapping = FUN_142446f30(this, value.ToCStr());
+        PixelSnapping = String2PixelSnapping(value.ToCStr());
         if (pDispObj)
             FUN_142520b20(pDispObj);
     }

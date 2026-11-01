@@ -204,11 +204,11 @@
 #include "../include/gfx/as2/as2_object.h"
 #include "../include/gfx/as2/as2_value.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
-
 // The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
-void MemberHash_Destruct(ASStringHash_GC<Member>* phash);                 // exe 0x142924800
-void WatchpointHash_Destruct(ASStringHash_GC<Object::Watchpoint>* phash); // exe 0x1429246b0
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType::~HashSetBase();                // exe 0x142924800
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // @0x14291c090
 FunctionObject::FunctionObject(ASStringContext* psc)
@@ -1333,10 +1333,10 @@ Object::~Object()
 {
     if (pWatchpoints)
     {
-        WatchpointHash_Destruct(pWatchpoints);
+        reinterpret_cast<ASStringHash_GC<Object::Watchpoint>::SetType*>(pWatchpoints)->~HashSetBase();
         SF_FREE(pWatchpoints);
     }
-    MemberHash_Destruct(&Members);
+    reinterpret_cast<ASStringHash_GC<Member>::SetType*>(&Members)->~HashSetBase();
 }
 
 // Inlined in the exe: no out-of-line copy.
