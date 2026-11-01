@@ -18,34 +18,74 @@
 #include "../include/gfx/as3/as3_vm.h"
 #include "../include/gfx/as3/as3_asvm.h"
 #include "../include/gfx/as3/obj/as3_obj_events.h"
+#include "../include/gfx/as3/obj/as3_obj_media.h"
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/gfx_rendertree.h"
+#include "../include/render/render_shapedatafloatmp.h"
 #include <cstring>
 #include <cstdint>
 #include <new>
+
+namespace Scaleform { namespace Render {
+struct Video02StateDataAccess : StateData
+{
+    using StateData::addRefBag_NotEmpty;
+    using StateData::destroyBag_NotEmpty;
+    using StateData::assignBag;
+};
+struct Video02EntryAccess : ContextImpl::Entry { using ContextImpl::Entry::destroyHelper; };
+}}
+namespace Scaleform { namespace GFx { namespace AS2 {
+struct Video02GCAccess : RefCountBaseGC<323> { using RefCountBaseGC<323>::ReleaseInternal; };
+}}}
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+// Unit-local classes of sfr_video_01, declared here for their native callbacks.
+class VideoProto
+{
+public:
+    static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
+};
+class VideoCtorFunction
+{
+public:
+    static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
+};
+Object* FUN_14000e1e0(Object* pthis, ASStringContext* psc, Object* prototype, const FunctionRef& constructor);   // sfr_video_01
+}}}
+namespace Scaleform { namespace GFx { namespace AS3 {
+void Sfr33PathEndRun(UByte* self);                            // sfr_as3_17
+void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c);   // sfr_as3_19
+}}}
+struct Video02DispatcherAccess : Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher
+{
+    using EventDispatcher::ForEachChild_GC;
+};
+
+// The protected GASPrototypeBase / Object members the exe calls directly.
+struct Video02PrototypeAccess : Scaleform::GFx::AS2::GASPrototypeBase
+{
+    using GASPrototypeBase::Init;
+    using GASPrototypeBase::InitFunctionMembers;
+    using GASPrototypeBase::DoesImplement;
+};
+struct Video02FinalizeAccess : Scaleform::GFx::AS2::Object
+{
+    using Object::Finalize_GC;
+};
 
 extern void FUN_14257dc30(void*);
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
 extern void FUN_1425eec50(void*, void*, unsigned __int64);
 extern void FUN_142522c70(void*, const void*, unsigned __int64);   // ArrayDataBase<UByte, AllocatorGH>::Reserve
-extern const void* FUN_14261c640(const void*, int);
-extern void FUN_142581700(void*);
-extern void FUN_142626160(void*);
 extern void FUN_14257eb30(void*);
-extern void FUN_1425925f0(void*);
-extern void FUN_142678490(void*);
-extern void FUN_1426786e0(void*);
-extern void FUN_14252c8b0(void*, unsigned, unsigned, unsigned);
 extern void FUN_1425ef130(void*);
-extern void FUN_1424d9310(void*, unsigned);
 extern void* FUN_142581520(void*, void*);
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
 // MS2's ComplexFill vtable is referenced by the reconstructed temporary video fill object below.
 extern "C" void* DAT_14317b668;
 extern bool FUN_1423dfe30(void*, unsigned __int64);
-extern void FUN_1424d6750(void*, void*, void*);   // CTraits ctor (this, VM&, const ClassInfo&)
-extern void FUN_1424d6ac0(void*, void*);          // Class ctor (this, Traits&)
 extern void* PTR_FUN_1431b71b0;
 extern void* PTR_FUN_1431b7260;
 extern void* PTR_LAB_1431b5fb0;
@@ -130,21 +170,12 @@ extern void* DAT_143b275b8;
 extern void* DAT_143b275c0;
 extern void* DAT_143b27678;
 extern void* DAT_143b27680;
-extern void FUN_14000e100(const Scaleform::GFx::AS2::FnCall&);
-extern void FUN_1424d2140(void*, double*);
-extern void FUN_14296bba0();
 extern void* FUN_1400105b0(void*);
 // The RefCount base destructors, called directly as the exe calls them (0x14257db50 / 0x14257db40).
 static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
 static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
-extern void FUN_142625ee0(const void*);
-extern void FUN_142626070(void*, const void*);
-extern void FUN_1423dfba0(void*, void*);
 extern void FUN_142518040(void*, float, float);
 extern void FUN_142515a20(void*, float, float);
-extern void FUN_1424f96c0(void*);
-extern void FUN_142961830(void*, void*, void*, void*, const void*);
-extern void FUN_14000d400(const Scaleform::GFx::AS2::FnCall&);   // VideoProto::AttachVideo (sfr_video_01)
 extern void FUN_14000d330(void*);                                  // Video.clear (sfr_video_01)
 
 // NetConnection.connect (exe 0x140011b00) is an empty native method.
@@ -158,7 +189,7 @@ static const Scaleform::GFx::AS2::NameFunction Video02ConnectFunctions[] = {   /
     {0, 0},
 };
 static const Scaleform::GFx::AS2::NameFunction Video02VideoFunctions[] = {     // 0x1431b5800
-    {"attachVideo", FUN_14000d400},
+    {"attachVideo", Scaleform::GFx::AS2::VideoProto::AttachVideo},
     {"clear", reinterpret_cast<Scaleform::GFx::AS2::CFunctionPtr>(&FUN_14000d330)},
     {0, 0},
 };
@@ -173,9 +204,7 @@ struct Video02ValueRefs
     static SF_INLINE void Release(Value* value) { value->Release(); }
 };
 }}} // namespace Scaleform::GFx::AS3
-extern void FUN_142469440(void*, void*, void*);
 extern void FUN_142504530(void*, void*, void*, void*);
-extern void FUN_1425925f0(void*);
 
 namespace Scaleform { namespace GFx { namespace Video {
 
@@ -271,9 +300,8 @@ void FUN_140014400(void* object, void*, char invoke)
 // @0x1400146c0
 void FUN_1400146c0(void* object, double* result)
 {
-    extern int FUN_140025360(void*);
     const float count = static_cast<float>(
-        static_cast<unsigned>(FUN_140025360(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x50))) + 1u);
+        static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x50))->GetPosition() + 1u);
     *result = count;
 }
 
@@ -314,8 +342,7 @@ Scaleform::GFx::InteractiveObject* FUN_140010530(Scaleform::GFx::InteractiveObje
 Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed20(
     Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
 {
-    extern void FUN_1429255a0(void*);
-    FUN_1429255a0(object);
+    object->Scaleform::GFx::AS2::CFunctionObject::~CFunctionObject();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -449,7 +476,7 @@ void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 }
 
 // @0x14000e5d0
-__declspec(noinline) void FUN_14000e5d0(void*) { FUN_14296bba0(); }
+__declspec(noinline) void FUN_14000e5d0(void* object) { static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::OnEventUnload(); }
 
 // @0x14000e590
 __declspec(noinline) void FUN_14000e590(void** object)
@@ -681,7 +708,7 @@ void* FUN_14000fcf0(void* dst, const void* src) { memcpy(dst, src, 0x40); return
 // @0x14000ff10
 bool FUN_14000ff10(const void* node, void* out)
 {
-    const void* state = FUN_14261c640(node, 5);
+    const void* state = static_cast<const Scaleform::Render::TreeNode*>(node)->GetState(static_cast<Scaleform::Render::StateType>(5));
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
@@ -697,7 +724,7 @@ bool FUN_14000ff10(const void* node, void* out)
 // @0x14000ff70
 bool FUN_14000ff70(const void* node, void* out)
 {
-    const void* state = FUN_14261c640(node, 6);
+    const void* state = static_cast<const Scaleform::Render::TreeNode*>(node)->GetState(static_cast<Scaleform::Render::StateType>(6));
     if (!state)
         return false;
     const char* data = *reinterpret_cast<const char* const*>(static_cast<const char*>(state) + 8);
@@ -1124,7 +1151,7 @@ void FUN_1400142e0(void* object, void*, void* soundTransform)
     if (!soundTransform) return;
     char* fields = static_cast<char*>(object);
     double* x = reinterpret_cast<double*>(fields + 0x88);
-    FUN_1424d2140(soundTransform, x);
+    static_cast<Scaleform::GFx::AS3::Instances::fl_media::SoundTransform*>(soundTransform)->volumeGet(*x);
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->SetSoundVolume(static_cast<int>(x[0] * 100.0),
                   static_cast<int>(*reinterpret_cast<double*>(fields + 0x90) * 100.0));
 }
@@ -1136,7 +1163,7 @@ void FUN_140014770(void* object, void*, void* soundTransform)
     if (!soundTransform) return;
     char* fields = static_cast<char*>(object);
     double* y = reinterpret_cast<double*>(fields + 0x90);
-    FUN_1424d2140(soundTransform, y);
+    static_cast<Scaleform::GFx::AS3::Instances::fl_media::SoundTransform*>(soundTransform)->volumeGet(*y);
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(fields + 0x50)))->SetSoundVolume(static_cast<int>(*reinterpret_cast<double*>(fields + 0x88) * 100.0),
                   static_cast<int>(y[0] * 100.0));
 }
@@ -1376,7 +1403,7 @@ static void ReleaseRenderEntry(void* entry)
 {
     if (!entry) return;
     long long* count = reinterpret_cast<long long*>(static_cast<char*>(entry) + 8);
-    if (--*count == 0) FUN_142581700(entry);
+    if (--*count == 0) static_cast<Scaleform::Render::Video02EntryAccess*>(entry)->Scaleform::Render::Video02EntryAccess::destroyHelper();
 }
 
 // @0x14000f5c0
@@ -1463,7 +1490,7 @@ void FUN_14000fed0(void* object)
 void FUN_14000f060(void** object)
 {
     if (*object)
-        FUN_142626160(object);
+        static_cast<Scaleform::Render::Video02StateDataAccess*>(static_cast<void*>(object))->destroyBag_NotEmpty();
 }
 
 // @0x14000ef80
@@ -1494,14 +1521,14 @@ void FUN_14000f0e0(void* entry)
 {
     long long* ref = reinterpret_cast<long long*>(static_cast<char*>(entry) + 8);
     if (--*ref == 0)
-        FUN_142581700(entry);
+        static_cast<Scaleform::Render::Video02EntryAccess*>(entry)->Scaleform::Render::Video02EntryAccess::destroyHelper();
 }
 
 // @0x14000f1a0
 void FUN_14000f1a0(void* node)
 {
     if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
-        FUN_142626160(static_cast<char*>(node) + 0x40);
+        static_cast<Scaleform::Render::Video02StateDataAccess*>(static_cast<void*>(static_cast<char*>(node) + 0x40))->destroyBag_NotEmpty();
     FUN_14257eb30(node);
 }
 
@@ -1509,7 +1536,7 @@ void FUN_14000f1a0(void* node)
 void FUN_14000f270(void* node)
 {
     if (*reinterpret_cast<void**>(static_cast<char*>(node) + 0x40))
-        FUN_142626160(static_cast<char*>(node) + 0x40);
+        static_cast<Scaleform::Render::Video02StateDataAccess*>(static_cast<void*>(static_cast<char*>(node) + 0x40))->destroyBag_NotEmpty();
     FUN_14257eb30(node);
 }
 
@@ -1567,7 +1594,7 @@ void** FUN_1400102c0(void** weakProxy, void** strongTarget)
         if (!target)
         {
             int* refs = static_cast<int*>(proxy);
-            if (--*refs == 0) FUN_142626160(proxy);
+            if (--*refs == 0) static_cast<Scaleform::Render::Video02StateDataAccess*>(proxy)->destroyBag_NotEmpty();
             *weakProxy = 0;
         }
         else
@@ -1615,7 +1642,7 @@ void FUN_1400121c0(void** slot)
     if (object && (*reinterpret_cast<UInt32*>(object + 0x18) & 0x03ffffff) != 0)
     {
         --*reinterpret_cast<UInt32*>(object + 0x18);
-        FUN_1425925f0(object);
+        reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(object)->ReleaseInternal();
     }
 }
 
@@ -1689,7 +1716,7 @@ void* FUN_140010d70(void* destination, const void* source)
     *static_cast<unsigned __int64*>(destination) = *static_cast<const unsigned __int64*>(source);
     *reinterpret_cast<unsigned __int64*>(static_cast<char*>(destination) + 8) =
         *reinterpret_cast<const unsigned __int64*>(static_cast<const char*>(source) + 8);
-    if (*static_cast<const unsigned __int64*>(source)) FUN_142625ee0(destination);
+    if (*static_cast<const unsigned __int64*>(source)) static_cast<const Scaleform::Render::Video02StateDataAccess*>(static_cast<const void*>(destination))->addRefBag_NotEmpty();
     return destination;
 }
 
@@ -1699,7 +1726,7 @@ void* FUN_140010d70(void* destination, const void* source)
 void FUN_140010da0(void* destination, const void* source)
 {
     if ((*static_cast<const unsigned __int64*>(source) | *static_cast<const unsigned __int64*>(destination)) != 0)
-        FUN_142626070(destination, source);
+        static_cast<Scaleform::Render::Video02StateDataAccess*>(destination)->assignBag(*static_cast<const Scaleform::Render::StateData*>(source));
 }
 
 // @0x140010de0
@@ -1763,7 +1790,7 @@ void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
     FUN_142515a20(path, x2, y2);
     FUN_142515a20(path, x1, y2);
     FUN_140011410(path);
-    FUN_1424f96c0(path);
+    Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(path));
 }
 
 // @0x1400115c0
@@ -1807,14 +1834,15 @@ void FUN_140011d90(void* object)
         if (interfaces[0]) Scaleform::Memory::Free(interfaces[0]);
         Scaleform::Memory::Free(interfaces);
     }
-    extern void FUN_142942e70(void*);
-    FUN_142942e70(object);
+    static_cast<Video02FinalizeAccess*>(object)->Video02FinalizeAccess::Finalize_GC();
 }
 
 // @0x140011b10
 void FUN_140011b10(void* object, void* stringContext, void* functions, const void* flags)
 {
-    FUN_142961830(static_cast<char*>(object) + 0x68, object, stringContext, functions, flags);
+    reinterpret_cast<Video02PrototypeAccess*>(static_cast<char*>(object) + 0x68)->InitFunctionMembers(
+        static_cast<Scaleform::GFx::AS2::Object*>(object), static_cast<Scaleform::GFx::AS2::ASStringContext*>(stringContext),
+        static_cast<const Scaleform::GFx::AS2::NameFunction*>(functions), *static_cast<const Scaleform::GFx::AS2::PropFlags*>(flags));
 }
 
 // The exe copies Value::GetUndefined() into a temp, copy-constructs the fresh result storage from it (no release of the
@@ -1894,9 +1922,8 @@ Scaleform::GFx::AS3::Value* FUN_1400156a0(Scaleform::GFx::AS3::Value* result,
 // @0x1400155d0
 void FUN_1400155d0(void*, Scaleform::GFx::AS3::Value* result, void* traits)
 {
-    extern void* FUN_1424eb610(void*);
     extern void* FUN_1400140e0(void*, void*);
-    void* instanceTraits = FUN_1424eb610(traits);
+    void* instanceTraits = static_cast<const Scaleform::GFx::AS3::Traits*>(traits)->Alloc();
     Scaleform::GFx::AS3::Object* instance = instanceTraits
         ? static_cast<Scaleform::GFx::AS3::Object*>(FUN_1400140e0(instanceTraits, traits))
         : 0;
@@ -1974,9 +2001,8 @@ void** FUN_1400157d0(void** frame, void* vm, void* receiver, int convert,
 // @0x140014ac0
 void** FUN_140014ac0(void*, void** result, void* traits)
 {
-    extern void* FUN_1424eb610(void*);
     extern void* FUN_1400140e0(void*, void*);
-    void* instanceTraits = FUN_1424eb610(traits);
+    void* instanceTraits = static_cast<const Scaleform::GFx::AS3::Traits*>(traits)->Alloc();
     *result = instanceTraits ? FUN_1400140e0(instanceTraits, traits) : 0;
     return result;
 }
@@ -2020,7 +2046,9 @@ static SF_INLINE void Video02ForEachChildGC(
 void FUN_140012e10(void* dispatcher, void* collector, void* operation)
 {
     char* fields = static_cast<char*>(dispatcher);
-    FUN_142469440(dispatcher, collector, operation);
+    static_cast<Video02DispatcherAccess*>(dispatcher)->Video02DispatcherAccess::ForEachChild_GC(
+        static_cast<Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(collector),
+        reinterpret_cast<Scaleform::GFx::AS3::RefCountBaseGC<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>::GcOp>(operation));
     Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>* prcc =
         static_cast<Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(collector);
     Scaleform::GFx::AS3::ASRefCountBaseType::GcOp op =
@@ -2046,7 +2074,7 @@ void FUN_14000e840(void* object)
     if (value && (*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18) & 0x03ffffff))
     {
         --*reinterpret_cast<unsigned*>(static_cast<char*>(value) + 0x18);
-        FUN_1425925f0(value);
+        reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(value)->ReleaseInternal();
     }
     *reinterpret_cast<const void**>(bytes + 0x30) = Scaleform::GFx::AS2::DAT_14317bf80;
     static_cast<Scaleform::GFx::AS2::AvmCharacter*>(object)->Scaleform::GFx::AS2::AvmCharacter::~AvmCharacter();
@@ -2078,9 +2106,8 @@ void* FUN_140015250(void* array)
 // @0x140014340
 void FUN_140014340(void* object, double* result)
 {
-    extern int FUN_140025360(void*);
     void*& stream = *reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);   // re-read after the call
-    const unsigned frame = static_cast<unsigned>(FUN_140025360(stream));   // the exe asks for the frame first
+    const unsigned frame = static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(stream)->GetPosition();   // the exe asks for the frame first
     const unsigned duration = *reinterpret_cast<unsigned*>(static_cast<char*>(stream) + 0x58);
     const float seconds = duration ? static_cast<float>(frame) / (static_cast<float>(duration) / 1000.0f) : 0.0f;
     *result = seconds;
@@ -2310,7 +2337,8 @@ void FUN_140015af0(unsigned index, Scaleform::GFx::ASString* result, unsigned co
 // @0x140012ec0
 void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 {
-    FUN_1424d6750(object, vm, classInfo);
+    static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(object)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(
+        *static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b71b0;
     *reinterpret_cast<unsigned*>(static_cast<char*>(object) + 0x60) = 0xf8;
     return object;
@@ -2319,7 +2347,8 @@ void* FUN_140012ec0(void* object, void* vm, void* classInfo)
 // @0x140012f10
 void* FUN_140012f10(void* object, void* traits)
 {
-    FUN_1424d6ac0(object, traits);
+    static_cast<Scaleform::GFx::AS3::Class*>(object)->Scaleform::GFx::AS3::Class::Class(
+        *static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(traits));
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b7260;
     return object;
 }
@@ -2329,8 +2358,7 @@ void* FUN_140012f10(void* object, void* traits)
 Scaleform::GFx::AS2::CFunctionObject* FUN_14000ecc0(
     Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
 {
-    extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
-    FUN_142919df0(object, context, FUN_14000e100);
+    object->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(context, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor);
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b5f20;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5fb0;
     return object;
@@ -2342,8 +2370,7 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_140012650(
     Scaleform::GFx::AS2::CFunctionObject* object, Scaleform::GFx::AS2::ASStringContext* context)
 {
     extern void FUN_140012340(const Scaleform::GFx::AS2::FnCall&);
-    extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
-    FUN_142919df0(object, context, FUN_140012340);
+    object->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(context, FUN_140012340);
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b6740;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b67d0;
     return object;
@@ -2356,12 +2383,10 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
 {
     // the exe runs Object(ASStringContext*) (0x14291f6f0), not the prototype overload (0x14291f790), and sets the
     // prototype once below, after the vtables are stored
-    extern void FUN_14291f6f0(void*, void*);
-    FUN_14291f6f0(object, context);
+    object->Scaleform::GFx::AS2::Object::Object(context);
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
-    extern void FUN_140007ba0(void*, void*, void*);
-    FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
+    object->Scaleform::GFx::AS2::Object::Set__proto__(context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
     return object;
 }
 
@@ -2371,15 +2396,14 @@ Scaleform::GFx::AS2::Object* FUN_14000eb50(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
     Scaleform::GFx::AS2::Object* prototype, const void* constructor)
 {
-    extern void FUN_14000e1e0(void*, void*, void*, const void*);
-    extern void FUN_142961830(void*, void*, void*, const void*, const void*);
-    FUN_14000e1e0(object, context, prototype, constructor);
+    Scaleform::GFx::AS2::FUN_14000e1e0(object, context, prototype,
+        *static_cast<const Scaleform::GFx::AS2::FunctionRef*>(constructor));
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5e70;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = &PTR_LAB_1431b5e18;
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
-    const unsigned char flags = 1;
-    FUN_142961830(reinterpret_cast<char*>(object) + 0x70, object, context,
-                  Video02VideoFunctions, &flags);
+    const Scaleform::GFx::AS2::PropFlags flags(1);
+    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x70)->InitFunctionMembers(
+        object, context, Video02VideoFunctions, flags);
     return object;
 }
 
@@ -2389,18 +2413,15 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
     void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
 {
-    extern void FUN_14291f6f0(void*, void*);
-    FUN_14291f6f0(object, context);
+    object->Scaleform::GFx::AS2::Object::Object(context);
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
-    extern void FUN_140007ba0(void*, void*, void*);
-    FUN_140007ba0(reinterpret_cast<char*>(object) + 0x20, context, prototype);
+    object->Scaleform::GFx::AS2::Object::Set__proto__(context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
     memset(reinterpret_cast<char*>(object) + 0x70, 0, 0x38);
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
-    extern void FUN_14295e1b0(void*, void*, void*, const void*);
-    FUN_14295e1b0(reinterpret_cast<char*>(object) + 0x68, object, context, constructor);
+    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x68)->Init(object, context, *constructor);
     return object;
 }
 
@@ -2467,7 +2488,7 @@ void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
-            FUN_1425925f0(object);
+            reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(object)->ReleaseInternal();
         }
     }
 }
@@ -2486,8 +2507,9 @@ void* FUN_14000fe50(void* object, unsigned flags)
 // @0x1400140e0
 void* FUN_1400140e0(void* object, void* traits)
 {
-    extern void FUN_14245f780(void*, void*);
-    FUN_14245f780(object, traits);
+    static_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(object)->
+        Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher::EventDispatcher(
+            *static_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(traits));
     unsigned char* bytes = static_cast<unsigned char*>(object);
     *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b7360;
     *reinterpret_cast<void**>(bytes + 0x50) = 0;
@@ -2546,9 +2568,9 @@ static __forceinline Scaleform::GFx::AS2::Object* Video02ConnectProtoInit(
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6690;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6638;
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
-    unsigned char flags = 1;
-    FUN_142961830(reinterpret_cast<char*>(object) + 0x68, object, context,
-                  const_cast<Scaleform::GFx::AS2::NameFunction*>(Video02ConnectFunctions), &flags);
+    Scaleform::GFx::AS2::PropFlags flags(1);
+    reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x68)->InitFunctionMembers(
+        object, context, Video02ConnectFunctions, flags);
     return object;
 }
 
@@ -2565,7 +2587,6 @@ Scaleform::GFx::AS2::Object* FUN_140012510(
 namespace Scaleform { namespace GFx { namespace AS2 {
 Value* FUN_142923b90(Value* pthis, const FunctionRef& func);
 }}}
-extern void FUN_1429260b0(void*);
 struct Video02ValueStorage
 {
     Video02ValueStorage() {}
@@ -2581,8 +2602,7 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     Scaleform::GFx::AS2::CFunctionObject* function = static_cast<Scaleform::GFx::AS2::CFunctionObject*>(context->pHeap->Alloc(0x70));
     if (function)
     {
-        extern void FUN_142919df0(void*, void*, Scaleform::GFx::AS2::CFunctionPtr);
-        FUN_142919df0(function, &stringContext, callback);
+        function->Scaleform::GFx::AS2::CFunctionObject::CFunctionObject(&stringContext, callback);
         *reinterpret_cast<void**>(function) = functionVtable;
         *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = functionInterfaceVtable;
     }
@@ -2596,17 +2616,14 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
                 context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
         else
         {
-            extern Scaleform::GFx::AS2::Object* FUN_14000e1e0(
-                Scaleform::GFx::AS2::Object*, Scaleform::GFx::AS2::ASStringContext*, void*,
-                Scaleform::GFx::AS2::FunctionRef*);
-            FUN_14000e1e0(prototype, &stringContext,
-                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), result);
+            Scaleform::GFx::AS2::FUN_14000e1e0(prototype, &stringContext,
+                context->GetPrototype(Scaleform::GFx::AS2::ASBuiltin_Object), *result);
             *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x20) = &PTR_LAB_1431b5e70;
             *reinterpret_cast<void**>(reinterpret_cast<char*>(prototype) + 0x70) = &PTR_LAB_1431b5e18;
             *reinterpret_cast<void**>(prototype) = &PTR_FUN_1431b5e20;
-            const unsigned char flags = 1;
-            FUN_142961830(reinterpret_cast<char*>(prototype) + 0x70, prototype, &stringContext,
-                          const_cast<Scaleform::GFx::AS2::NameFunction*>(Video02VideoFunctions), &flags);
+            const Scaleform::GFx::AS2::PropFlags flags(1);
+            reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(prototype) + 0x70)->InitFunctionMembers(
+                prototype, &stringContext, Video02VideoFunctions, flags);
         }
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
@@ -2627,14 +2644,14 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
     Scaleform::GFx::AS2::Value* value = Scaleform::GFx::AS2::FUN_142923b90(
         reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result);
     global->SetMemberRaw(&stringContext, name, *value, flags);
-    FUN_1429260b0(&valueStorage);
+    reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
     if (prototype)
     {
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         if ((*count & 0x03ffffffu) != 0)
         {
             --*count;
-            FUN_1425925f0(prototype);
+            reinterpret_cast<Scaleform::GFx::AS2::Video02GCAccess*>(prototype)->ReleaseInternal();
         }
     }
     return result;
@@ -2646,7 +2663,7 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
 Scaleform::GFx::AS2::FunctionRef* FUN_14000ed60(
     Scaleform::GFx::AS2::FunctionRef* result, Scaleform::GFx::AS2::GlobalContext* context)
 {
-    return CreateVideo02Builtin(result, context, FUN_14000e100, &PTR_LAB_1431b5f20,
+    return CreateVideo02Builtin(result, context, Scaleform::GFx::AS2::VideoCtorFunction::GlobalCtor, &PTR_LAB_1431b5f20,
         &PTR_LAB_1431b5fb0, 0xb0, 0x24, 0x120, false);
 }
 
@@ -2688,8 +2705,9 @@ void FUN_140015c40(void* object)
         heap, 0x108, 0);
     if (state)
     {
-        extern void FUN_140026c60(void*, void*);
-        FUN_140026c60(state, relay);
+        static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(state)->
+            Scaleform::GFx::AS3::VideoProviderNetStream::VideoProviderNetStream(
+                static_cast<Scaleform::GFx::AS3::NetStreamInterface*>(relay));
     }
     void** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
     if (*oldState)
@@ -2709,10 +2727,9 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
     text.ToStringValue((*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78))->GetStringManager());
     // OpenUrl takes the url chars, read through a temp ASString (inc/dec of the node refcount at 0x1400144de)
     const char* url = text.AsString().ToCStr();
-    extern void FUN_140026720(void*, void*, void*);
     *reinterpret_cast<unsigned char*>(self + 0x60) = 0;
-    FUN_140026720(*reinterpret_cast<void**>(self + 0x50), const_cast<char*>(url),
-                  *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78));
+    static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(*reinterpret_cast<void**>(self + 0x50))->OpenUrl(url,
+        *static_cast<Scaleform::GFx::AS3::ASVM*>(*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78)));
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(self + 0x50)))->SetSoundVolume(static_cast<int>(*reinterpret_cast<double*>(self + 0x88) * 100.0),
         static_cast<int>(*reinterpret_cast<double*>(self + 0x90) * 100.0));
 }
@@ -2735,8 +2752,8 @@ void FUN_140014900(void* object, const unsigned long long* encodedName)
         *reinterpret_cast<const unsigned long long*>(desc) & 0x7fffffffffffffffull));
     Scaleform::GFx::AS3::Value propertyName(name);
     Scaleform::GFx::AS3::Value result;
-    extern void FUN_1424fef00(void*, void*, const void*, void*, int, const void*, int);
-    FUN_1424fef00(vm, traits + 0xd8, &Scaleform::GFx::AS3::Value::GetUndefined(), &result, 1, &propertyName, 0);
+    vm->ExecuteInternalUnsafe(*reinterpret_cast<const Scaleform::GFx::AS3::Value*>(traits + 0xd8),
+        Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &propertyName, false);
     if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(vm) + 0x180) != 0)
         vm->OutputAndIgnoreException();
 }
@@ -3160,8 +3177,7 @@ Scaleform::GFx::AS2::Object* FUN_1400125e0(Scaleform::GFx::AS2::Object* object, 
 Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
     Scaleform::GFx::AS2::CFunctionObject* object, unsigned flags)
 {
-    extern void FUN_1429255a0(void*);
-    FUN_1429255a0(object);
+    object->Scaleform::GFx::AS2::CFunctionObject::~CFunctionObject();
     if (flags & 1) Scaleform::Memory::Free(object);
     return object;
 }
@@ -3175,7 +3191,8 @@ void FUN_1400152b0(unsigned __int64* object)
     const unsigned flags = words[4] >> 24;
     if (static_cast<int>(words[4]) < 0) {
         if ((flags & 1) == 0)
-            FUN_1423dfba0(reinterpret_cast<void*>(object[1]), object);
+            reinterpret_cast<Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(object[1])->RemoveRoot(
+                reinterpret_cast<const Scaleform::GFx::AS3::RefCountBaseGC<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(object));
     } else if ((flags & 1) == 0) {
         return;
     }
@@ -3450,15 +3467,15 @@ void* FUN_140011610(void* object, void** result, void* context)
     Allocate allocate = reinterpret_cast<Allocate>(heapVtable[14]);
     unsigned char* shape = static_cast<unsigned char*>(allocate(DAT_143b15f60, object, 0x90, allocInfo));
     if (!shape) { *result = 0; return result; }
-    FUN_142678490(shape);
+    reinterpret_cast<Scaleform::Render::ShapeDataFloatMP*>(shape)->Scaleform::Render::ShapeDataFloatMP::ShapeDataFloatMP();
     void* path = *reinterpret_cast<void**>(shape + 0x88);
     void* provider = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x100);
     if (!provider) {
-        FUN_14252c8b0(path, 0, 0, 0);
+        Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), 0, 0, 0);
         FUN_142518040(path, 0.0f, 0.0f);
         FUN_142515a20(path, 1.0f, 1.0f);
         FUN_140011410(path);
-        FUN_1424f96c0(path);
+        Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(path));
     } else {
         void** transform = static_cast<void**>(allocate(DAT_143b15f60, object, 0x50, allocInfo));
         if (transform) {
@@ -3497,11 +3514,11 @@ void* FUN_140011610(void* object, void** result, void* context)
             FUN_1425ef130(path);
             void** pathVtable = *reinterpret_cast<void***>(path);
             unsigned fillStyles = reinterpret_cast<unsigned (*)(void*)>(pathVtable[2])(path);
-            FUN_14252c8b0(path, fillStyles, 0, 0);
+            Scaleform::GFx::AS3::Sfr31WriteRecord3(reinterpret_cast<Scaleform::UPInt>(path), fillStyles, 0, 0);
             // the rectangle is the frame's size at the origin (0x140011943), not its bounds
             FUN_140011500(shape, 0.0f, 0.0f, right - left, bottom - top);
             FUN_140011410(path);
-            FUN_1426786e0(shape);
+            reinterpret_cast<Scaleform::Render::ShapeDataFloatMP*>(shape)->CountLayers();
             // The closing reference drop is RefCountImpl::Release (exe 0x140011982 -> 0x14257dcb0), not vftable slot 2:
             // slot 2 of ??_7ComplexFill (0x1424e3830) is a deleting dtor, which freed the fill while the path still
             // held it (refcount 2); the path's later Release then decremented +8 of the freed (reused) block.
@@ -3517,7 +3534,7 @@ void* FUN_140011610(void* object, void** result, void* context)
         *result = 0;
         return result;
     }
-    FUN_1424d9310(nodeData, 3);
+    reinterpret_cast<Scaleform::Render::TreeNode::NodeData*>(nodeData)->Scaleform::Render::TreeNode::NodeData::NodeData(static_cast<Scaleform::Render::ContextImpl::EntryData::EntryType>(3));
     *reinterpret_cast<const void* const**>(nodeData) = Scaleform::Render::TreeShapeNodeDataVTable;
     typedef void (*AddRef)(void*);
     unsigned char* providerBase = shape + 0x10;
@@ -3530,7 +3547,7 @@ void* FUN_140011610(void* object, void** result, void* context)
     reinterpret_cast<void (*)(void*)>((*reinterpret_cast<void***>(providerBase))[2])(providerBase);
     if (entry) {
         int* refs = reinterpret_cast<int*>(static_cast<unsigned char*>(entry) + 8);
-        if (--*refs == 0) FUN_142581700(entry);
+        if (--*refs == 0) static_cast<Scaleform::Render::Video02EntryAccess*>(entry)->Scaleform::Render::Video02EntryAccess::destroyHelper();
     }
     return result;
 }
@@ -3720,7 +3737,6 @@ extern int DAT_143b275e0;
 extern void* DAT_143b27668;
 extern int DAT_143b27670;
 extern bool FUN_14292f250(void*, void*, void*, void*);
-extern bool FUN_1429396a0(void*, void*, void*);
 
 typedef void (*Video02ArgsNative)(void*, void*, unsigned, const void*);
 typedef void (*Video02ResultNative)(void*, void*);
@@ -3763,7 +3779,8 @@ bool FUN_140011bb0(void* self, void* env, void* prototype)
 {
     if (self == prototype)
         return true;
-    return FUN_1429396a0(static_cast<char*>(self) + 0x68, env, prototype);
+    return reinterpret_cast<Video02PrototypeAccess*>(static_cast<char*>(self) + 0x68)->DoesImplement(
+        static_cast<Scaleform::GFx::AS2::Environment*>(env), static_cast<const Scaleform::GFx::AS2::Object*>(prototype));
 }
 
 // always true.
