@@ -97,21 +97,6 @@
 #include "../include/render/text_core.h"
 #include "../include/gfx/text_editorkit.h"
 
-// Render::Text::DocView calls of the TextField natives still taken by address (the names are shared with
-// sfr_as3_13/15).
-unsigned long long FUN_142612af0(void* pdoc, unsigned long long pos);       // DocView::GetFirstCharInParagraph
-unsigned FUN_142612c50(void* pdoc, unsigned long long pos);                 // DocView::GetLineIndexOfChar
-unsigned long long FUN_142612cb0(void* pdoc, unsigned line, bool* phasNewLine);  // DocView::GetLineLength
-unsigned long long FUN_142612e80(void* pdoc, unsigned line);                // DocView::GetLineOffset
-unsigned long long FUN_142612240(void* pdoc, float x, float y);             // DocView::GetCharIndexAtPoint
-unsigned FUN_142612bd0(void* pdoc, float x, float y);                       // DocView::GetLineIndexAtPoint
-bool     FUN_142611ff0(void* pdoc, Scaleform::Render::RectF* prect, unsigned long long pos);  // DocView::GetCharBoundaries
-void     FUN_14260df50(void* pdoc, const char* putf8Str, unsigned long long utf8Len);        // DocView::AppendText
-void     FUN_14260de50(void* pdoc, const char* phtml, unsigned long long htmlSize, bool condenseWhite,
-                       void* pimgInfoArr);                                                 // DocView::AppendHtml
-void     FUN_1425ba7d0(void* ptf, void* pimgInfoArr);                                       // TextField::ProcessImageTags
-bool     FUN_142612d50(void* pdoc, unsigned line, void* pmetrics);                          // DocView::GetLineMetrics
-const wchar_t* FUN_142612f00(void* pdoc, unsigned line, unsigned long long* plen);         // DocView::GetLineText
 void FUN_14000d250(Scaleform::GFx::AS2::Value* value, double number);         // Value::SetNumber, out of line (sfr_video_01)
 // The DocView / EditorKit fields the clipboard natives read.
 inline void* DocView_GetEditorKit(void* pdoc) { return *(void**)((char*)pdoc + 0xd8); }
@@ -129,9 +114,6 @@ inline bool  EditorKit_DoesUseRichClipboard(void* pek) { return (*((unsigned cha
 inline void* DocView_GetStyledText(void* pdoc) { return *(void**)((char*)pdoc + 0x10); }
 inline const void* StyledText_GetDefaultParagraphFormat(void* pst) { return *(const void**)((char*)pst + 0x30); }
 inline const void* StyledText_GetDefaultTextFormat(void* pst) { return *(const void**)((char*)pst + 0x38); }
-unsigned long long FUN_142598a50(void* pst);                                               // StyledText::GetLength
-void     FUN_1425990d0(void* pst, Scaleform::Render::Text::TextFormat* ptextFmt, Scaleform::Render::Text::ParagraphFormat* pparaFmt,
-                       unsigned long long startPos, unsigned long long endPos);            // StyledText::GetTextAndParagraphFormat
 void     FUN_1424c7090(void* psubst);                                                       // ImageSubstitutor element array dtor
 inline void* DocView_GetImageSubstitutor(void* pdoc) { return *(void**)((char*)pdoc + 0x30); }
 inline void  DocView_SetImageSubstitutor(void* pdoc, void* psubst) { *(void**)((char*)pdoc + 0x30) = psubst; }
@@ -2506,7 +2488,7 @@ void AvmTextField::GetCharBoundaries(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
     RectF    rect(0);
-    bool     found = FUN_142611ff0(ptf->GetDocument(), &rect, idx);
+    bool     found = ptf->GetDocument()->GetCharBoundaries(&rect, idx);
     SetCharBoundariesResult(fn, found, rect);
 }
 
@@ -2522,7 +2504,7 @@ void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
         return;
     Number x   = fn.Arg(0).ToNumber(fn.Env);
     Number y   = fn.Arg(1).ToNumber(fn.Env);
-    UPInt  pos = FUN_142612240(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
+    UPInt  pos = ptf->GetDocument()->GetCharIndexAtPoint(float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
     FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
 }
 
@@ -2554,7 +2536,7 @@ void AvmTextField::GetLineIndexAtPoint(const FnCall& fn)
         return;
     Number   x    = fn.Arg(0).ToNumber(fn.Env);
     Number   y    = fn.Arg(1).ToNumber(fn.Env);
-    unsigned line = FUN_142612bd0(ptf->GetDocument(), float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
+    unsigned line = ptf->GetDocument()->GetLineIndexAtPoint(float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
     FUN_14000d250(fn.Result, line != ~0u ? Number(line) : -1);
 }
 
@@ -2574,7 +2556,7 @@ void AvmTextField::GetLineIndexOfChar(const FnCall& fn)
         FUN_14000d250(fn.Result, -1);
         return;
     }
-    unsigned line = FUN_142612c50(ptf->GetDocument(), unsigned(idx));
+    unsigned line = ptf->GetDocument()->GetLineIndexOfChar(unsigned(idx));
     FUN_14000d250(fn.Result, line == ~0u ? -1 : Number(line));
 }
 
@@ -2594,7 +2576,7 @@ void AvmTextField::GetLineOffset(const FnCall& fn)
         FUN_14000d250(fn.Result, -1);
         return;
     }
-    UPInt off = FUN_142612e80(ptf->GetDocument(), unsigned(line));
+    UPInt off = ptf->GetDocument()->GetLineOffset(unsigned(line));
     FUN_14000d250(fn.Result, off == SF_MAX_UPINT ? -1 : Number(off));
 }
 
@@ -2614,7 +2596,7 @@ void AvmTextField::GetLineLength(const FnCall& fn)
         FUN_14000d250(fn.Result, -1);
         return;
     }
-    UPInt len = FUN_142612cb0(ptf->GetDocument(), unsigned(line), 0);
+    UPInt len = ptf->GetDocument()->GetLineLength(unsigned(line), 0);
     FUN_14000d250(fn.Result, len != SF_MAX_UPINT ? Number(len) : -1);
 }
 
@@ -2634,7 +2616,7 @@ void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
         FUN_14000d250(fn.Result, -1);
         return;
     }
-    UPInt pos = FUN_142612af0(ptf->GetDocument(), unsigned(idx));
+    UPInt pos = ptf->GetDocument()->GetFirstCharInParagraph(unsigned(idx));
     FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
 }
 
@@ -2649,7 +2631,7 @@ void AvmTextField::AppendText(const FnCall& fn)
     if (ptf->HasStyleSheet() || fn.NArgs < 1)
         return;
     ASString str = fn.Arg(0).ToString(fn.Env);
-    FUN_14260df50(ptf->GetDocument(), str.ToCStr(), SF_MAX_UPINT);
+    ptf->GetDocument()->AppendText(str.ToCStr(), SF_MAX_UPINT);
     ptf->SetCompleteReformatReq();
     ptf->SetDirtyFlag();
 }
@@ -2666,7 +2648,7 @@ void AvmTextField::GetLineMetrics(const FnCall& fn)
         return;
     int             line = int(fn.Arg(0).ToNumber(fn.Env));
     MS2_LineMetrics metrics;
-    if (line < 0 || !FUN_142612d50(ptf->GetDocument(), unsigned(line), &metrics))
+    if (line < 0 || !ptf->GetDocument()->GetLineMetrics(unsigned(line), reinterpret_cast<Render::Text::DocView::LineMetrics*>(&metrics)))
     {
         fn.Result->SetUndefined();
         return;
@@ -2697,7 +2679,7 @@ void AvmTextField::GetLineText(const FnCall& fn)
         return;
     }
     UPInt          len   = 0;
-    const wchar_t* ptext = FUN_142612f00(ptf->GetDocument(), unsigned(line), &len);
+    const wchar_t* ptext = ptf->GetDocument()->GetLineText(unsigned(line), &len);
     if (ptext)
     {
         String str;
@@ -2720,10 +2702,10 @@ void AvmTextField::AppendHtml(const FnCall& fn)
         return;
     ASString                      str = fn.Arg(0).ToString(fn.Env);
     ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
-    FUN_14260de50(ptf->GetDocument(), str.ToCStr(), SF_MAX_UPINT, false, &imageInfoArray);
+    ptf->GetDocument()->AppendHtml(str.ToCStr(), SF_MAX_UPINT, false, reinterpret_cast<Render::Text::StyledText::HTMLImageTagInfoArray*>(&imageInfoArray));
     ptf->SetCompleteReformatReq();
     if (imageInfoArray.GetSize() > 0)
-        FUN_1425ba7d0(ptf, &imageInfoArray);
+        ptf->ProcessImageTags(*reinterpret_cast<Render::Text::StyledText::HTMLImageTagInfoArray*>(&imageInfoArray));
     ptf->SetDirtyFlag();
 }
 
@@ -2855,7 +2837,7 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     unsigned endPos   = unsigned(end);
     if (start < 0 || end < 0 || startPos > endPos)
         return;
-    UPInt       textLen  = FUN_142598a50(DocView_GetStyledText(ptf->GetDocument()));
+    UPInt       textLen  = reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetLength();
     UPInt       newLen   = UPInt(len) - UPInt(endPos - startPos) + textLen;
     const void* ptextFmt = 0;
     const void* pparaFmt = 0;
@@ -3017,7 +2999,7 @@ void AvmTextField::GetTextFormat(const FnCall& fn)
     }
     Render::Text::TextFormat      textFmt(fn.Env->GetHeap());
     Render::Text::ParagraphFormat paraFmt;
-    FUN_1425990d0(DocView_GetStyledText(ptf->GetDocument()), &textFmt, &paraFmt, beginIndex, endIndex);
+    reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&textFmt, &paraFmt, beginIndex, endIndex);
     Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
     pfmtObj->SetTextFormat(fn.Env->GetSC(), textFmt);
     pfmtObj->SetParagraphFormat(fn.Env->GetSC(), paraFmt);
