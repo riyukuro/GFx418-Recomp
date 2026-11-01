@@ -44,6 +44,47 @@
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
 #include "ms2/scaleform/include/gfx/gfx_movieimpl.h"
 #include "ms2/scaleform/include/gfx/gfx_player.h"
+#include "ms2/scaleform/include/render/text_docview.h"
+
+// Bodies of the exe called here under the names of the units that define them.
+void FUN_142545310(Scaleform::UPInt sv, void* ret);    // StringView::ToStringDataPtr
+namespace Scaleform { namespace GFx { namespace AS3 {
+namespace TR { class State; }
+namespace Instances { namespace fl { class Namespace; } }
+namespace InstanceTraits { class Activation { friend class AS3::VM; private: Activation(VM& vm); }; }
+const char* Sfr33GetErrorMsg(int id);                  // the text of error id ("... {0} ...")
+ASString* Sfr31ValueTypeName(UPInt vm, ASString* result, const unsigned long* v);
+bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr);
+void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);
+ClassTraits::Traits* Sfr31GetClassTraitsByInfo(VM* vm, UPInt ci);   // the parent class traits of a ClassInfo, or NULL
+UPInt Sfr31ResolveClassTraits(UPInt vm, UPInt file, UPInt multiname);   // VM: class traits of a multiname (0 if unresolved)
+void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);   // VM: raise the error as an instance of the class
+void FUN_142423d00(Class* cl);                         // Class::InitPrototype-like: the class Class's set-up
+}}}
+// Array members that stay out of line in the exe: declared specialized so they are called, not inlined here.
+namespace Scaleform {
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, 2>, ArrayDefaultPolicy> Sfr34NodeArray;
+typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl::Namespace>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::Namespace>, 2>, ArrayDefaultPolicy> Sfr34NsArray;
+typedef ArrayData<GFx::AS3::Abc::MethodBodyInfo::Exception, AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, 340>, ArrayDefaultPolicy> Sfr34ExcArray;
+typedef ArrayData<ArrayLH_POD<UPInt, 338, ArrayDefaultPolicy>, AllocatorLH<ArrayLH_POD<UPInt, 338, ArrayDefaultPolicy>, 340>, ArrayDefaultPolicy> Sfr34WordsArray;
+typedef ArrayDataBase<GFx::AS3::Value, AllocatorLH<GFx::AS3::Value, 331>, ArrayDefaultPolicy> Sfr34ValueArray;
+typedef ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, 331>, ArrayDefaultPolicy> Sfr34StringArray;
+typedef ArrayDataBase<GFx::AS3::TR::State*, AllocatorDH<GFx::AS3::TR::State*, 328>, ArrayDefaultPolicy> Sfr34StateArray;
+typedef ArrayDataBase<UPInt, AllocatorLH_POD<UPInt, 338>, ArrayDefaultPolicy> Sfr34OpBase;
+typedef ArrayData<UPInt, AllocatorLH_POD<UPInt, 338>, ArrayDefaultPolicy> Sfr34OpArray;
+typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, 328>, ArrayDefaultPolicy> Sfr34OpArrayDH;
+template<> void Sfr34NodeArray::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+template<> void Sfr34NsArray::Reserve(const void* pheapAddr, UPInt newCapacity);
+template<> void Sfr34ExcArray::Resize(UPInt newSize);
+template<> void Sfr34WordsArray::Resize(UPInt newSize);
+template<> void Sfr34ValueArray::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+template<> void Sfr34StringArray::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+template<> void Sfr34StateArray::Reserve(const void* pheapAddr, UPInt newCapacity);
+template<> void Sfr34OpBase::Reserve(const void* pheapAddr, UPInt newCapacity);
+template<> void Sfr34OpArray::Resize(UPInt newSize);
+template<> void Sfr34OpArrayDH::Resize(UPInt newSize);
+template<> void ConstructorMov<GFx::AS3::Value>::ConstructArray(void* p, UPInt count, const GFx::AS3::Value* psource);
+}
 
 // Bodies of the exe called here (not recovered yet), by their addresses.
 // The movie whose library an AS3 object's class came from.
@@ -51,32 +92,21 @@ Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const S
 // VM::IsOfType(v, class name).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // VM::describeTypeEx (returns the ASString through a hidden pointer)
-Scaleform::GFx::ASString* FUN_1425322c0(Scaleform::GFx::AS3::VM* vm, void* result, const Scaleform::GFx::AS3::Value& v);
 // DocView::AppendHtml (the image tags it meets go to *pimgInfoArr)
-void FUN_14260de50(void* pdoc, const char* phtml, Scaleform::UPInt htmlSize, bool multiline, void* pimgInfoArr);
-void FUN_1425ba7d0(void* ptf, void* pimgInfoArr);       // TextField::ProcessImageTags
 // VM::IsOfType(v, class traits)
-bool FUN_1425146d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v,
-                   const Scaleform::GFx::AS3::ClassTraits::Traits& ctr);
-void FUN_142614e30(void* psubst, void* pimgDesc);        // DocView::ImageSubstitutor::RemoveImageDesc
-const char* FUN_142509b60(int id);                     // the text of error id ("... {0} ...")
 // AvmTextField: one image substitution element (an object of the script's array) at index idx
 void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
 // Value::operator=(const ASString&), out of line in the exe
 Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 // AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
-void FUN_1424d6480(void* self, Scaleform::GFx::InteractiveObject* pdispObj);
 // ArrayDataBase::ResizeNoConstruct(pheapAddr, newSize) of VMAbcFile::IntStrings, and ArrayData::Resize of its
 // OpCodeArray and Exceptions: out of line in the exe
-void FUN_142524a30(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
-void FUN_1425244e0(void* self, Scaleform::UPInt newSize);
 // VM::UnregisterAbcFile: drops file from VMAbcFilesWeak unless the VM is being destroyed
 bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
 // the clear-and-free of the VMAbcFile hash sets not modeled (activation and function traits caches), each passed the
 // address of its table pointer
 void FUN_1424dcdd0(void* table);
 void FUN_1424dcc30(void* table);
-void FUN_142524710(void* self, Scaleform::UPInt newSize);
 // The abs objects and global objects sets of a VMAbcFile (+0x38, +0x70): their destructors 0x1424dd1a0 and
 // 0x1424dd250 are instantiated in sfr_as3_16.
 namespace Scaleform {
@@ -94,8 +124,6 @@ extern template Sfr34GlobalObjectSet::~HashSetBase();
 // ResourceHandle::GetResource, the exe's out-of-line copy (the header's is inline)
 Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self, Scaleform::GFx::ResourceBinding* pbinding);
 // DisplayObject::DisplayObject (protected; ShapeObject is opaque here, so its ctor reaches it by address)
-void FUN_1425f07e0(void* self, Scaleform::GFx::ASMovieRootBase* pasRoot, Scaleform::GFx::InteractiveObject* pparent,
-                   Scaleform::GFx::ResourceId id);
 namespace Scaleform {
 // DocView::ImageSubstitutor::Element, the same stand-in as sfr_as3_14 (ArrayDataBase destructor = exe 0x1424c7090),
 // and the substitutor itself (the DocView's +0x30).
@@ -318,7 +346,6 @@ namespace Classes { namespace fl_gfx
     }
 }}
 
-UPInt FUN_142507210(VM& vm, Array<SPtr<VMAbcFile> >& files);
 
 // SystemEx / TextFieldEx natives. The display TextField is opaque here (its flags word is at +0xfc), and so is its
 // Text::DocView (TextField+0xe0), whose header does not build with the AS3 kernel headers: AlignProps is at +0x148
@@ -341,7 +368,7 @@ namespace Classes { namespace fl_gfx
     {
         // VM::GetAllLoadedAbcFiles: fills files with every loaded ABC file, returns the count.
         Array<SPtr<VMAbcFile> > files;
-        const UPInt n = FUN_142507210(GetVM(), files);
+        const UPInt n = GetVM().GetAllLoadedAbcFiles(&files);
         SPtr<Instances::fl::Array> arr = GetVM().MakeArray();
         for (UPInt i = 0; i < n; ++i)
         {
@@ -355,7 +382,8 @@ namespace Classes { namespace fl_gfx
     void SystemEx::describeType(ASString& result, const Value& v)
     {
         struct { ASStringNode* pNode; } tmp;
-        result = *FUN_1425322c0(&GetVM(), &tmp, v);
+        result = *Sfr31ValueTypeName(reinterpret_cast<UPInt>(&GetVM()), reinterpret_cast<ASString*>(&tmp),
+            reinterpret_cast<const unsigned long*>(&v));
         reinterpret_cast<ASString*>(&tmp)->~ASString();
     }
 
@@ -605,7 +633,8 @@ namespace Classes { namespace fl_gfx
                 psubst = new MS2_ImageSubstitutor;
             if (psubst)
             {
-                FUN_142614e30(psubst, pimgDesc);
+                reinterpret_cast<Render::Text::DocView::ImageSubstitutor*>(psubst)->RemoveImageDesc(
+                    reinterpret_cast<Render::Text::ImageDesc*>(pimgDesc));
                 TextDocView(ptf)[0x14b] |= 2;   // DocView: reformat
                 static_cast<GFx::TextField*>(ptf)->RemoveIdImageDescAssoc(id.ToCStr());
                 static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
@@ -653,11 +682,13 @@ namespace Classes { namespace fl_gfx
         if (static_cast<GFx::TextField*>(ptf)->HasStyleSheet())
             return;
         ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
-        FUN_14260de50(TextDocView(ptf), newHtml.ToCStr(), SF_MAX_UPINT, false, &imageInfoArray);
+        reinterpret_cast<Render::Text::DocView*>(TextDocView(ptf))->AppendHtml(newHtml.ToCStr(), SF_MAX_UPINT, false,
+            reinterpret_cast<Render::Text::StyledText::HTMLImageTagInfoArray*>(&imageInfoArray));
         // TextField: the text was set from script (flags word bit 16)
         *(UInt32*)((UByte*)ptf + 0xfc) |= 0x10000;
         if (imageInfoArray.GetSize() > 0)
-            FUN_1425ba7d0(ptf, &imageInfoArray);
+            static_cast<GFx::TextField*>(ptf)->ProcessImageTags(
+                reinterpret_cast<Render::Text::StyledText::HTMLImageTagInfoArray&>(imageInfoArray));
         static_cast<GFx::TextField*>(ptf)->SetDirtyFlag();
     }
 }}
@@ -2030,7 +2061,7 @@ extern void* const ShapeObject_vftable_90[];
 ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
 {
     UByte* const self = reinterpret_cast<UByte*>(this);   // Data is at +8 behind the vptr of the opaque class
-    FUN_1425f07e0(this, pasRoot, pparent, id);
+    reinterpret_cast<DisplayObject*>(this)->DisplayObject::DisplayObject(pasRoot, pparent, id);
     new (self + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
     *reinterpret_cast<void* const**>(self + 0x00) = ShapeObject_vftable;
     *reinterpret_cast<void* const**>(self + 0x18) = ShapeObject_vftable_18;
@@ -2051,7 +2082,7 @@ extern void* const AvmBitmap_vftable_90[];
 // @0x1424d6270
 AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo, InteractiveObject* pparent, ResourceId id)
 {
-    FUN_1425f07e0(this, pasRoot, pparent, id);
+    reinterpret_cast<DisplayObject*>(this)->DisplayObject::DisplayObject(pasRoot, pparent, id);
     new (Data + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
     *reinterpret_cast<void* const**>(Data + 0x00) = AvmBitmap_vftable;
     *reinterpret_cast<void* const**>(Data + 0x18) = AvmBitmap_vftable_18;
@@ -2083,7 +2114,7 @@ AvmBitmap::AvmBitmap(ASMovieRootBase* pasRoot, const CharacterCreateInfo& ccinfo
 // @0x1424d63e0
 AvmButton::AvmButton(Button* pbtn)
 {
-    FUN_1424d6480(this, reinterpret_cast<InteractiveObject*>(pbtn));
+    new (this) AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(pbtn));
     *reinterpret_cast<void* const**>(Data + 0x00) = AvmButton_vftable;
     *reinterpret_cast<void* const**>(Data + 0x30) = AvmButton_vftable_30;
     *reinterpret_cast<void* const**>(Data + 0x40) = AvmButton_vftable_40;
@@ -2102,7 +2133,7 @@ AvmStaticText::AvmStaticText(StaticTextCharacter* ptxt)
 // @0x1424d66b0
 AvmTextField::AvmTextField(TextField* ptxt)
 {
-    FUN_1424d6480(this, reinterpret_cast<InteractiveObject*>(ptxt));
+    new (this) AvmInteractiveObj(reinterpret_cast<InteractiveObject*>(ptxt));
     *reinterpret_cast<void* const**>(Data + 0x00) = AvmTextField_vftable;
     *reinterpret_cast<void* const**>(Data + 0x30) = AvmTextField_vftable_30;
     *reinterpret_cast<void* const**>(Data + 0x40) = AvmTextField_vftable_40;
@@ -2616,8 +2647,6 @@ Value::Value(Object* v)
         v->AddRef();
 }
 
-// The class traits of a ClassInfo's parent class, NULL for none (0x142525ca0).
-const ClassTraits::Traits* RetrieveParentClassTraits(VM& vm, const ClassInfo& ci);
 
 // @0x1424daa20
 // noinline: the derived ctors call it out of line.
@@ -2688,7 +2717,7 @@ namespace InstanceTraits
 
     static const Traits* GetParentInstanceTraits(VM& vm, const ClassInfo& ci)
     {
-        const ClassTraits::Traits* ctr = RetrieveParentClassTraits(vm, ci);
+        const ClassTraits::Traits* ctr = Sfr31GetClassTraitsByInfo(&vm, reinterpret_cast<UPInt>(&ci));
         const Traits* itr = NULL;
         if (ctr)
             itr = &ctr->GetInstanceTraits();
@@ -2716,7 +2745,7 @@ namespace ClassTraits
     // Class objects are dynamic and not final.
     // @0x1424dabd0
     Traits::Traits(VM& vm, const ClassInfo& ci)
-        : AS3::Traits(vm, RetrieveParentClassTraits(vm, ci), true, false)
+        : AS3::Traits(vm, Sfr31GetClassTraitsByInfo(&vm, reinterpret_cast<UPInt>(&ci)), true, false)
     {
         SetConstructor(vm.GetClassTraitsClassClass().GetInstanceTraits().GetConstructor());
         Flags |= IsClassMask;
@@ -2764,7 +2793,6 @@ Multiname::Multiname(const Multiname& other)
 }
 
 // Sets mn from a QName object (sfr_as3_03).
-void FUN_1425273b0(Multiname& mn, const Value& qname);
 
 // @0x1424d8a90
 Multiname::Multiname(Instances::Namespace& ns, const Value& name)
@@ -2776,7 +2804,7 @@ Multiname::Multiname(Instances::Namespace& ns, const Value& name)
         Object* obj = name.GetObject();
         if (obj && obj->GetTraits().GetTraitsType() == Traits_QName && obj->GetTraits().IsInstanceTraits())
         {
-            FUN_1425273b0(*this, name);
+            Sfr27MultinameFromQName(this, &name);
             return;
         }
     }
@@ -2916,7 +2944,6 @@ ReadArgs::ReadArgs(VM& vm, State& s, UInt32 argCount)
 } // namespace TR
 
 // Multiname = QName object (the QName's local name and namespace); XML is not modeled yet.
-void FUN_1425273b0(Multiname& mn, const Value& qname);
 
 // The default xml namespace of the running call frame (frames are 0xa8 bytes, 64 to a page).
 static inline GASRefCountBase* CurrentDefXMLNamespace(const VM& vm)
@@ -2941,7 +2968,7 @@ Multiname::Multiname(VM& vm, const Value& name)
             Object* obj = name.GetObject();
             if (obj && obj->GetTraits().GetTraitsType() == Traits_QName && obj->GetTraits().IsInstanceTraits())
             {
-                FUN_1425273b0(*this, name);
+                Sfr27MultinameFromQName(this, &name);
                 return;
             }
         }
@@ -3057,13 +3084,13 @@ VMAbcFile::VMAbcFile(VM& vm, const Ptr<Abc::File>& file)
     {
         // PushBack, with the exe's out-of-line ResizeNoConstruct
         SPtr<ASStringNode> empty(vm.GetStringManager().GetEmptyStringNode());
-        FUN_142524a30(&IntStrings, &IntStrings, IntStrings.GetSize() + 1);
+        reinterpret_cast<Sfr34NodeArray*>(&IntStrings)->ResizeNoConstruct(&IntStrings, IntStrings.GetSize() + 1);
         new (&IntStrings[IntStrings.GetSize() - 1]) SPtr<ASStringNode>(empty);
     }
     const UPInt n = file->MethodBodies.Info.GetSize();
     // OpCodeArray.Resize(n) and Exceptions.Resize(n), out of line in the exe
-    FUN_1425244e0(&OpCodeArray, n);
-    FUN_142524710(&Exceptions, n);
+    reinterpret_cast<Sfr34ExcArray*>(&OpCodeArray)->Resize(n);
+    reinterpret_cast<Sfr34WordsArray*>(&Exceptions)->Resize(n);
     if (!vm.InDestructor)
         vm.VMAbcFilesWeak.PushBack(this);
 }
@@ -3122,16 +3149,6 @@ Void::~Void()
 }}} // namespace Scaleform::GFx::AS3
 
 extern const Scaleform::GFx::AS3::ClassInfo DAT_14313dc60;     // the CInfo of the plain function traits (VM +0x280)
-// ClassTraits::Function(VM&, const ClassInfo&) (0xe8 bytes)
-void* FUN_1423eca40(void* self, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::ClassInfo& ci);
-// InstanceTraits::Function(VM&, const ClassInfo&) (0x100 bytes)
-void* FUN_1423ecf50(void* self, Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::ClassInfo& ci);
-void* FUN_1423eb860(void* self, Scaleform::GFx::AS3::VM& vm);  // InstanceTraits::Activation(VM&) (0xd0 bytes)
-void* FUN_1423ed1c0(void* self, Scaleform::GFx::AS3::VM& vm);  // InstanceTraits::fl::GlobalObject(VM&) (0xe8 bytes)
-// Instances::fl::GlobalObjectCPP(VM&, InstanceTraits::fl::GlobalObject&) (0xd8 bytes)
-void* FUN_1423ed260(void* self, Scaleform::GFx::AS3::VM& vm, void* itr);
-void FUN_142423d00(Scaleform::GFx::AS3::Class* cl);            // Class::InitPrototype-like: the class Class's set-up
-void FUN_142522db0(void* arr, void* heapAddr, Scaleform::UPInt newCap);    // ArrayLH<GlobalObject*> Reserve
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -3172,7 +3189,7 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
     // the five constructors called through their addresses run only on a non-null allocation (new-expression)
     void* pmem = MS2_VMAlloc(MHeap, 0xe8);
     TraitsFunction = MS2_PrepareClassTraits(*this, static_cast<ClassTraits::Traits*>(
-        pmem ? FUN_1423eca40(pmem, *this, fl::FunctionCI) : 0));
+        pmem ? ::new (pmem) ClassTraits::Function(*this, fl::FunctionCI) : 0));
     TraitsBoolean = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Boolean(*this));
     TraitsNumber = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::Number(*this));
     TraitsInt = MS2_PrepareClassTraits(*this, SF_HEAP_NEW(MHeap) ClassTraits::fl::int_(*this));
@@ -3192,16 +3209,16 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
         reinterpret_cast<ClassTraits::Traits*>(SF_HEAP_NEW(MHeap) InstanceTraits::Void(*this)));
     pmem = MS2_VMAlloc(MHeap, 0x100);
     NoFunctionTraits = Pickable<InstanceTraits::Traits>(
-        static_cast<InstanceTraits::Traits*>(pmem ? FUN_1423ecf50(pmem, *this, DAT_14313dc60) : 0));
+        static_cast<InstanceTraits::Traits*>(pmem ? ::new (pmem) InstanceTraits::Function(*this, DAT_14313dc60) : 0));
     pmem = MS2_VMAlloc(MHeap, 0xd0);
     ActivationTraits = Pickable<InstanceTraits::Traits>(
-        static_cast<InstanceTraits::Traits*>(pmem ? FUN_1423eb860(pmem, *this) : 0));
+        reinterpret_cast<InstanceTraits::Traits*>(pmem ? ::new (pmem) InstanceTraits::Activation(*this) : 0));
     pmem = MS2_VMAlloc(MHeap, 0xe8);
     TraitaGlobalObject = Pickable<InstanceTraits::fl::GlobalObject>(
-        static_cast<InstanceTraits::fl::GlobalObject*>(pmem ? FUN_1423ed1c0(pmem, *this) : 0));
+        static_cast<InstanceTraits::fl::GlobalObject*>(pmem ? ::new (pmem) InstanceTraits::fl::GlobalObject(*this) : 0));
     pmem = MS2_VMAlloc(MHeap, 0xd8);
     GlobalObject = Pickable<Instances::fl::GlobalObjectCPP>(static_cast<Instances::fl::GlobalObjectCPP*>(
-        pmem ? FUN_1423ed260(pmem, *this, TraitaGlobalObject.GetPtr()) : 0));
+        pmem ? ::new (pmem) Instances::fl::GlobalObjectCPP(*this, *TraitaGlobalObject) : 0));
     GlobalObjectValue = Value(reinterpret_cast<Object*>(GlobalObject.GetPtr()));
 
     XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(MHeap) XMLSupportImpl(*this));
@@ -3221,10 +3238,10 @@ VM::VM(FlashUI& ui, FileLoader& loader, StringManager& string_manager, ASRefCoun
         if (size < a.Size)
         {
             if (size < (a.Capacity >> 1))
-                FUN_142522db0(&a, &a, size);
+                reinterpret_cast<Sfr34NsArray*>(&a)->Reserve(&a, size);
         }
         else if (size >= a.Capacity)
-            FUN_142522db0(&a, &a, size + (size >> 2));
+            reinterpret_cast<Sfr34NsArray*>(&a)->Reserve(&a, size + (size >> 2));
         a.Size = size;
         a.Data[size - 1] = reinterpret_cast<Instances::fl::GlobalObject*>(GlobalObject.GetPtr());
     }
@@ -3328,7 +3345,7 @@ VM::Error::Error(ErrorID id, VM& vm)
 {
     String result;
     const int num = id;
-    const char* msg = FUN_142509b60(id);
+    const char* msg = Sfr33GetErrorMsg(id);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
 }
@@ -3346,7 +3363,7 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const Value& arg2)
     arg1.Convert2String(s1);
     ASString s2 = sm.CreateEmptyString();
     arg2.Convert2String(s2);
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, s1.ToCStr(), s2.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3362,7 +3379,7 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1)
     const int num = id;
     ASString s1 = vm.GetStringManager().CreateEmptyString();
     arg1.Convert2String(s1);
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, s1.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3378,7 +3395,7 @@ VM::Error::Error(ErrorID id, VM& vm, const Value& arg1, const char* arg2)
     const int num = id;
     ASString s1 = vm.GetStringManager().CreateEmptyString();
     arg1.Convert2String(s1);
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, s1.ToCStr(), arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3392,7 +3409,7 @@ VM::Error::Error(ErrorID id, VM& vm, int arg1)
     String result;
     String msg;
     const int num = id;
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3406,7 +3423,7 @@ VM::Error::Error(ErrorID id, VM& vm, int arg1, int arg2)
     String result;
     String msg;
     const int num = id;
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1, arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3420,7 +3437,7 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const char* arg2)
     String result;
     String msg;
     const int num = id;
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1, arg2);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3434,7 +3451,7 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1)
     String result;
     String msg;
     const int num = id;
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3450,7 +3467,7 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, const Value& arg2)
     const int num = id;
     ASString s2 = vm.GetStringManager().CreateEmptyString();
     arg2.Convert2String(s2);
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1, s2.ToCStr());
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3464,7 +3481,7 @@ VM::Error::Error(ErrorID id, VM& vm, const char* arg1, int arg2, int arg3, int a
     String result;
     String msg;
     const int num = id;
-    const char* fmt = FUN_142509b60(id);
+    const char* fmt = Sfr33GetErrorMsg(id);
     Scaleform::Format(msg, fmt, arg1, arg2, arg3, arg4);
     Scaleform::Format(result, "Error #{0}: {1}", num, msg);
     Message = vm.GetStringManager().CreateString(result);
@@ -3531,9 +3548,6 @@ LoadQueueEntry::LoadQueueEntry(Instances::fl_net::URLRequest* request, Instances
 // ---- Tracer helper objects (the Tracer is not modeled: raw words, like the Sfr27Tracer* helpers of sfr_as3_18) ----
 extern const char* DAT_143a2d3d0[];      // the AS3 builtin string table (61 entries)
 extern const void* DAT_14317f860[];      // vftable of the 0x10-byte counted dummy owner
-void FUN_142524ec0(void* arr, void* heapOwner, UPInt newSize);   // ArrayData<Value>::ResizeNoConstruct
-void FUN_142524d80(void* arr, void* heapOwner, UPInt newSize);   // ArrayData<pointer>::ResizeNoConstruct
-void FUN_1424f08d0(void* dst, UPInt n, const Value* src);        // ConstructorMov<Value>::ConstructArray
 
 namespace
 {
@@ -3660,8 +3674,8 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
     const Value* values = reinterpret_cast<const Value*>(src[1]);
     if (n)
     {
-        FUN_142524ec0(self + 1, self + 1, n);
-        FUN_1424f08d0(reinterpret_cast<Value*>(self[1]), n, values);
+        reinterpret_cast<Sfr34ValueArray*>(self + 1)->ResizeNoConstruct(self + 1, n);
+        ConstructorMov<Value>::ConstructArray(reinterpret_cast<Value*>(self[1]), n, values);
     }
     self[4] = 0;
     self[5] = 0;
@@ -3674,7 +3688,7 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
     if (m)
     {
         UPInt old = self[5];
-        FUN_142524d80(self + 4, self + 4, old + m);
+        reinterpret_cast<Sfr34StringArray*>(self + 4)->ResizeNoConstruct(self + 4, old + m);
         UPInt* to = reinterpret_cast<UPInt*>(self[4]) + old;
         for (; m; --m, ++from, ++to)
         {
@@ -3687,7 +3701,6 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 
 // ---- LoadQueueEntryMT_LoadMovie constructor (out of line in the exe; sfr_as3_16 inlines its own copy) ----
 extern const void* DAT_14317d890[];      // LoadQueueEntryMT_LoadMovie vftable
-void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie);   // LoadQueueEntryMT::LoadQueueEntryMT
 
 // Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager.
 // MS2-FUNCTIONAL: raw words over the entry (its members are private to the class, whose inline constructor lives in
@@ -3696,7 +3709,7 @@ void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie);   // 
 void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 {
     UPInt* w = static_cast<UPInt*>(self);
-    FUN_1426396b0(self, pentry, pmovie);
+    static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, pmovie);
     w[0] = reinterpret_cast<UPInt>(DAT_14317d890);
     w[5] = 0;
     *reinterpret_cast<UByte*>(w + 6) = 0;
@@ -3812,13 +3825,6 @@ void* FUN_1424d8640(void* self, MemoryContextImpl* pctx, MovieImpl* pmovie, ASSu
 }
 // ---- Tracer constructor ----
 extern const void* DAT_14317b938[];      // Tracer vftable
-void FUN_142545310(const void* sv, UPInt* ret);                  // StringView::ToStringDataPtr
-void FUN_1425247f0(void* arr, UPInt n);                          // array: resize
-void FUN_142524040(void* arr, void* owner, UPInt n);             // array: reserve
-void FUN_142524870(void* arr, UPInt n);                          // array: resize
-void FUN_142522e50(void* arr, UPInt heap, UPInt cap);            // array: reserve (heap-owned)
-void FUN_14252ecb0(void* vm, const void* error, const void* classInfo);   // VM: raise the error as an instance of the class
-UPInt FUN_142524f60(UPInt vm, UPInt file, UPInt multiname);      // VM: class traits of a multiname (0 if unresolved)
 
 namespace
 {
@@ -3853,7 +3859,7 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
     const UPInt abc = Sfr30Rd(file, 0x28);
     const UPInt methodInfo = reinterpret_cast<UPInt*>(Sfr30Rd(abc, 0x170))[*reinterpret_cast<int*>(body + 0x30)];
     UPInt sv = Sfr30Rd(methodInfo, 0x38);
-    FUN_142545310(&sv, self + 8);
+    ::FUN_142545310(reinterpret_cast<UPInt>(&sv), self + 8);
     self[10] = self[8];
     self[11] = self[9];
     self[0xc] = 0;
@@ -3880,10 +3886,10 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
     self[0xc] = Sfr30Rd(vm, 0x78);
     if (self[0xc])
         --self[0xc];
-    FUN_1425247f0(reinterpret_cast<void*>(ops), 0);
+    reinterpret_cast<Sfr34OpArray*>(ops)->Resize(0);
     if (self[9] > Sfr30Rd(ops, 0x10))
-        FUN_142524040(reinterpret_cast<void*>(ops), reinterpret_cast<void*>(ops), self[9]);
-    FUN_142524870(self + 0x1a, self[9]);
+        reinterpret_cast<Sfr34OpBase*>(ops)->Reserve(reinterpret_cast<void*>(ops), self[9]);
+    reinterpret_cast<Sfr34OpArrayDH*>(self + 0x1a)->Resize(self[9]);
 
     // The entry State: owner, three Value-or-byte arrays and the register bit set.
     UPInt* state = static_cast<UPInt*>(reinterpret_cast<MemoryHeap*>(heap)->Alloc(0x88));
@@ -3912,7 +3918,7 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
     {
         UPInt n = states[1] + 1;
         if (n >= states[2])
-            FUN_142522e50(states, states[3], n + (n >> 2));
+            reinterpret_cast<Sfr34StateArray*>(states)->Reserve(reinterpret_cast<const void*>(states[3]), n + (n >> 2));
         states[1] = n;
         reinterpret_cast<UPInt*>(states[0])[n - 1] = reinterpret_cast<UPInt>(state);
     }
@@ -3944,13 +3950,13 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
     {
         const unsigned id = ids[i];
         const UPInt mn = id ? Sfr30Rd(abc, 0xb8) + UPInt(id) * 16 : abc + 0xe8;
-        const UPInt cls = FUN_142524f60(vm, file, mn);
+        const UPInt cls = Sfr31ResolveClassTraits(vm, file, mn);
         if (!cls)
         {
             ASString name = reinterpret_cast<VMAbcFile*>(file)->GetInternedString(*reinterpret_cast<int*>(mn + 8));
             Value arg(name);
             VM::Error err(static_cast<VM::ErrorID>(0x3f6), *reinterpret_cast<VM*>(vm), arg);
-            FUN_14252ecb0(reinterpret_cast<void*>(vm), &err, &fl::VerifyErrorCI);
+            Sfr31VMRaiseError(vm, reinterpret_cast<const unsigned long*>(&err), reinterpret_cast<UPInt>(&fl::VerifyErrorCI));
             return self;
         }
         const UPInt t = Sfr30Rd(cls, 0xc0);
