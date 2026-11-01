@@ -15,6 +15,7 @@
 #include <string.h>
 #include <windows.h>
 #include "../include/kernel/sf_timer.h"
+#include "../include/gfx/amp/amp_profileframe.h"
 
 unsigned long long FUN_1425e3560();             // performance counter
 
@@ -57,7 +58,6 @@ void FUN_142623da0(U*, void*, U);             // Array<Ptr>::Reserve
 void FUN_142624190(U**, const U*, void* const*);   // Hash<key, Ptr>::Set
 void FUN_142624300(U**, const U*, const String*);   // Hash<key, Ptr>::Set (second value type)
 void FUN_142624700(U, U, int, int, U);
-void FUN_14268a570(void*, U*);                // fills a set with the keys reachable from an object
 void FUN_14261e730(char*, U*);
 void FUN_14261f220(U**, void*, StringKeyOps::Ref*, U);
 void FUN_14261ec70(U**, void*, NodeRef*, U);
@@ -66,7 +66,6 @@ U FUN_14261fc40(void*, const unsigned char*);   // multiname key hash
 void FUN_142624020(U*, void*, U);               // Array<0x18-byte record>::Resize
 void FUN_142623f80(U*, void*, U);               // Array<8-byte>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
-void* FUN_142686d30(void*);                     // snapshot struct constructor
 void FUN_142623820(char*, unsigned, U, const char*, int, int, char);
 void FUN_142623050(char*, int, int, U);
 void FUN_1426237c0(char*);
@@ -309,7 +308,7 @@ void FUN_142620b50(char* self, char* snap)
         if (p)
             FUN_14257dc30(p);
         ((void**)array[0])[array[1] - 1] = *src;
-        FUN_14268a570(((void**)objects[0])[i], &keys);
+        reinterpret_cast<AMP::FuncTreeItem*>(((void**)objects[0])[i])->GetAllFunctions(reinterpret_cast<HashSet<UInt64>*>(&keys));
     }
     U* keySet = (U*)keys;
     if (keySet)
@@ -669,7 +668,7 @@ void AMP::ViewStats::GetStats(StatBag* bag, bool clear)
     if (target)
     {
         void* raw = Memory::AllocAutoHeap(self, 0x158, AllocInfo(0x242, 0, 0));
-        char* snap = raw ? (char*)FUN_142686d30(raw) : 0;
+        char* snap = raw ? (char*)::new (raw) AMP::ProfileFrame() : 0;
         EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
         U ctx[2] = { (U)snap, (U)self };
         for (U i = 0; i < RawField<U>(self, 0x50); i++)

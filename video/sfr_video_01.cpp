@@ -58,7 +58,6 @@ extern ExeDecl<Scaleform::GFx::AS2::NameFunction>::type DAT_1431b4d80;
 
 extern void FUN_14257dcb0(void*);
 extern void FUN_14257dcd0(void*);
-extern void FUN_140006a40(Scaleform::UPInt*);
 extern void FUN_14000b3b0(Scaleform::UPInt*, void*, Scaleform::UPInt);
 extern void FUN_14000a5d0(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
 extern void FUN_14000a230(void*, Scaleform::GFx::AS2::ASRefCountBaseType::Collector*);
@@ -1430,8 +1429,9 @@ void FUN_140006bf0(void** array)
 
 // MS2-FUNCTIONAL: obtains a 0x400-byte value page, records it, and updates the current stack cursors.
 // @0x140006a40
-void FUN_140006a40(Scaleform::UPInt* stack)
+template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>::PushPage()
 {
+    Scaleform::UPInt* stack = reinterpret_cast<Scaleform::UPInt*>(this);
     void** freePage = reinterpret_cast<void**>(stack[7]);
     void* page = 0;
     if (freePage) {
@@ -1456,8 +1456,9 @@ void FUN_140006a40(Scaleform::UPInt* stack)
 
 // MS2-FUNCTIONAL: returns the last page to the free list and restores the preceding stack page.
 // @0x140006cf0
-void FUN_140006cf0(Scaleform::UPInt* stack)
+template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>::PopPage()
 {
+    Scaleform::UPInt* stack = reinterpret_cast<Scaleform::UPInt*>(this);
     if (stack[5] < 2) {
         stack[0] += 0x20;
         if (stack[0]) *reinterpret_cast<unsigned char*>(stack[0]) = 0;
@@ -1514,7 +1515,7 @@ void FUN_140006f50(void** array, void* owner, Scaleform::UPInt size)
 void FUN_140006ff0(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
 {
     *stack += 0x20;
-    if (*stack >= stack[2]) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (*stack >= stack[2]) reinterpret_cast<Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>*>(stack)->PushPage();
     if (*stack) ::new (reinterpret_cast<void*>(*stack)) Scaleform::GFx::AS2::Value(*value);
 }
 
@@ -1523,7 +1524,7 @@ void FUN_140006ff0(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
 void FUN_140007030(Scaleform::UPInt* stack, Scaleform::GFx::AS2::Object** value)
 {
     *stack += 0x20;
-    if (*stack >= stack[2]) FUN_140006a40(reinterpret_cast<Scaleform::UPInt*>(stack));
+    if (*stack >= stack[2]) reinterpret_cast<Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>*>(stack)->PushPage();
     if (unsigned char* bytes = reinterpret_cast<unsigned char*>(*stack)) {
         // placement Value(const ASString&): type 5 holds the string node and bumps its plain refcount (+0x18)
         bytes[0] = 5;
@@ -1568,7 +1569,7 @@ void FUN_140007200(Scaleform::UPInt* stack)
 {
     FUN_1429260b0(reinterpret_cast<void*>(*stack));   // ~Value
     *stack -= 0x20;
-    if (*stack < stack[1]) FUN_140006cf0(stack);
+    if (*stack < stack[1]) reinterpret_cast<Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>*>(stack)->PopPage();
 }
 
 // resizes the retained pointer array and initializes newly added slots to null
