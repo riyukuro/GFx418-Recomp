@@ -57,6 +57,14 @@ extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsig
 #undef GetObject
 
 // The exe calls the event chains' ResizeNoConstruct out of line (explicitly instantiated in sfr_as3_19, 0x142524cd0).
+void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t);   // FunctionBase(InstanceTraits::Traits&)
+namespace Scaleform {
+typedef ArrayData<UPInt, AllocatorLH_POD<UPInt, 338>, ArrayDefaultPolicy> Sfr17WordArray;
+typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, 328>, ArrayDefaultPolicy> Sfr17WordArrayDH;
+typedef ArrayPagedBase<const GFx::AS3::RefCountBaseGC<323>*, 10, 5, AllocatorPagedLH_POD<const GFx::AS3::RefCountBaseGC<323>*, 2> > Sfr17GcPages;
+template<> void Sfr17WordArray::Resize(UPInt);
+template<> void Sfr17WordArrayDH::Resize(UPInt);
+}
 namespace Scaleform {
 template<> SF_NOINLINE void ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, Stat_Default_Mem>,
     ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
@@ -76,18 +84,8 @@ void Sfr31ClassTraitsCleanup(UPInt entry);                                      
 }}} // namespace Scaleform::GFx::AS3
 
 // The AS3 object's +0x50 counted reference set to p (unrecovered).
-void FUN_142446e70(Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* obj, void* p);
 void FUN_142502e70(void* pavm, const Scaleform::GFx::EventId& id);   // AvmDisplayObj: fire the event
 // The Value setters, out of line in the exe (GFxValue2ASValue tail-calls them).
-void FUN_142423b90(Scaleform::GFx::AS3::Value* v);                                        // SetUndefined
-void FUN_142421ed0(Scaleform::GFx::AS3::Value& v);                                        // SetNull
-void FUN_142421710(Scaleform::GFx::AS3::Value& v, bool b);                                // SetBool
-void FUN_142423a90(Scaleform::GFx::AS3::Value& v, Scaleform::SInt32 i);                   // SetSInt32
-void FUN_14252a460(Scaleform::GFx::AS3::Value& v, Scaleform::UInt32 u);                   // SetUInt32
-void FUN_142421f20(Scaleform::GFx::AS3::Value& v, double n);                              // SetNumber
-Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);   // operator=(const ASString&)
-void FUN_1424edab0(Scaleform::GFx::AS3::Value& v, Scaleform::GFx::ASStringNode* node);   // Assign(ASStringNode*)
-void FUN_1424edc10(Scaleform::GFx::AS3::Value& v, Scaleform::GFx::AS3::Object* obj);     // Assign(Object*)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // Trace values for the four built-in scalar traits are definitely non-null; user classes may have
@@ -414,7 +412,7 @@ static SF_FORCEINLINE bool Sfr33HasAS3Obj(const AvmDisplayObj* avm)
 void AvmSprite::ForceShutdown()
 {
     if (Sfr33HasAS3Obj(this))
-        FUN_142446e70(GetAS3Obj(), NULL);
+        GetAS3Obj()->SetLoaderInfo(static_cast<Scaleform::GFx::AS3::Instances::fl_display::LoaderInfo*>(NULL));
 }
 
 // The frame runs in the next ExecuteFrame: the sprite moves to the optimized playlist.
@@ -1076,7 +1074,6 @@ extern "C" const void* DAT_14317eff8;
 
 extern "C" const void* DAT_14317ef38[];      // UserDefinedFunction vftable
 int FUN_140ccaae0(const char* fmt, ...);   // log printf
-void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t);   // FunctionBase(InstanceTraits::Traits&)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1307,7 +1304,7 @@ bool Sfr33MovieRootFind::FindLibrarySymbolInAllABCs(const void* name, void* pcci
 
 Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self, const Scaleform::GFx::ASString& name,
                                                        const Scaleform::GFx::AS3::Instances::Namespace& ns);   // TClassTraitsCache::Get(name, ns)
-void** FUN_142508330(void* self);
+namespace Scaleform { namespace GFx { namespace AS3 { __declspec(noinline) const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& Sfr33CallFrameGetCode(CallFrame& cf); }}}
 Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142415520(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, const Scaleform::GFx::ASString& name,
                                                      const Scaleform::GFx::AS3::Instances::Namespace& ns);   // GlobalObjectCPP: builtin class traits by name
 static inline const Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142525270(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Multiname& mn)
@@ -1453,13 +1450,13 @@ ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
     return const_cast<ClassTraits::Traits*>(FUN_142525270(*vm, mn));
 }
 
-// The value at +0x10, made by FUN_142508330 on first use.
+// The value at +0x10, made by Sfr33CallFrameGetCode on first use.
 // @0x142507a40
 void* Sfr33CacheValue(UByte* self)
 {
     void*& pvalue = *reinterpret_cast<void**>(self + 0x10);
     if (pvalue == NULL)
-        pvalue = *FUN_142508330(self);
+        pvalue = *reinterpret_cast<void* const*>(&Scaleform::GFx::AS3::Sfr33CallFrameGetCode(*reinterpret_cast<Scaleform::GFx::AS3::CallFrame*>(self)));
     return pvalue;
 }
 
@@ -1504,8 +1501,6 @@ UPInt Sfr33Slot9Or38(const UByte* self)
 }
 }}}
 
-void FUN_1425038d0(void* self, void* prcc, void (*op)(void*, void*, void*));
-void FUN_142503d90(void* self, void* prcc, void (*op)(void*, void*, void*));
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1525,7 +1520,7 @@ typedef void (*Sfr33GcOp)(void* prcc, void* pchild, void* powner);
 // @0x142503800
 void Sfr33ForEachChildGC_38_48(UByte* self, void* prcc, Sfr33GcOp op)
 {
-    FUN_1425038d0(self, prcc, op);
+    reinterpret_cast<Object*>(self)->Object::ForEachChild_GC(reinterpret_cast<RefCountCollector<323>*>(prcc), reinterpret_cast<void (*)(RefCountCollector<323>*, const RefCountBaseGC<323>**)>(op));
     if (*reinterpret_cast<void**>(self + 0x38))
         op(prcc, self + 0x38, self);
     if (*reinterpret_cast<void**>(self + 0x48))
@@ -1535,7 +1530,7 @@ void Sfr33ForEachChildGC_38_48(UByte* self, void* prcc, Sfr33GcOp op)
 // Two ForEachChild_GC (virtual) copies of objects with a collectable child at +0xc0.
 static inline void Sfr33ForEachChildGC_c0(UByte* self, void* prcc, Sfr33GcOp op)
 {
-    FUN_142503d90(self, prcc, op);
+    reinterpret_cast<Traits*>(self)->Traits::ForEachChild_GC(reinterpret_cast<RefCountCollector<323>*>(prcc), reinterpret_cast<void (*)(RefCountCollector<323>*, const RefCountBaseGC<323>**)>(op));
     void** pchild = reinterpret_cast<void**>(self + 0xc0);
     if (*pchild)
         op(prcc, pchild, self);
@@ -1621,7 +1616,6 @@ struct Sfr33CollectorEntry
     void*                                   pExtra;
 };
 void FUN_1423de770(void* self, const Sfr33CollectorEntry& e);
-void FUN_1424efab0(void* pages);   // ArrayPagedLH_POD<unsigned,6,64,2> ClearAndRelease
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1655,7 +1649,7 @@ static SF_INLINE void Sfr33QueueAndResetImpl(UByte* self, RefCountImpl* p)
     }
     Sfr33CollectorQueue(self, p);
     if (!(self[0x78] & 2) && *reinterpret_cast<UPInt*>(self + 0x18) == 0)
-        FUN_1424efab0(self + 0x10);
+        reinterpret_cast<Scaleform::Sfr17GcPages*>(self + 0x10)->ClearAndRelease();
     *reinterpret_cast<unsigned*>(self + 0x8c) = *reinterpret_cast<unsigned*>(self + 0xa8);
     *reinterpret_cast<unsigned*>(self + 0x90) = 0;
 }
@@ -1668,7 +1662,7 @@ void Sfr33CollectorQueueAndReset(UByte* self, RefCountImpl* p)
 }}}
 
 static inline void FUN_14252ecb0(void* vm, const void* error, const void* classInfo) { ::Scaleform::GFx::AS3::Sfr31VMRaiseError(reinterpret_cast<Scaleform::UPInt>(vm), static_cast<const unsigned long*>(error), reinterpret_cast<Scaleform::UPInt>(classInfo)); }   // VM: raise the error as an instance of the class
-void FUN_14241de40(void* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
+void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n);   // ValueStack::PopBack: pops (and releases) the top n values
 namespace Scaleform { namespace GFx { namespace AS3 { namespace fl_errors { extern const ClassInfo MemoryErrorCI; } } } }
 bool FUN_1425149a0(const Scaleform::GFx::AS3::ClassTraits::Traits& tr, const Scaleform::GFx::AS3::ClassTraits::Traits& other);
 const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v);
@@ -1921,7 +1915,7 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
         PostInit(_this, argc, argv);
     }
     else if (!extCall)
-        FUN_14241de40(vm.OpStack, argc);
+        FUN_14241de40(reinterpret_cast<ValueStack*>(&vm.OpStack), argc);
 }
 
 // MS2-FUNCTIONAL 0x1424f0750: same steps; returns whether a constructor frame was pushed (the call stack at +0x78 grew),
@@ -2012,10 +2006,8 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
     if (!retVal.IsUndefined())
         root->GFxValue2ASValue(retVal, &result);
 }
-void FUN_14241e4f0(void* self, Scaleform::GFx::AS3::Value& result);   // UserDefined function: keep the result
+void FUN_14241e4f0(Scaleform::GFx::AS3::Object* self, const Scaleform::GFx::AS3::Value& v);   // UserDefined function: keep the result
 void FUN_142541a60(void* self, void* pheapAddr, Scaleform::UPInt newSize);   // HashSetBase::setRawCapacity copy
-void FUN_142524870(void* arr, Scaleform::UPInt n);   // Resize of a POD array with its heap at +0x18
-void FUN_1425247f0(void* arr, Scaleform::UPInt n);   // Resize of a POD array
 static inline void FUN_14251f930(void* tr, int op) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op)); }                // Tracer: emit opcode op
 static inline void FUN_14251fb90(void* tr, int op, Scaleform::UPInt arg) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg); }   // Tracer: emit opcode op with one argument
 bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop);   // Tracer: push the object constant v
@@ -2079,9 +2071,7 @@ void FUN_142508bd0(Scaleform::UPInt objAddr, void* out, int hint)
         return;
     Sfr33CallDefaultMethod(obj, str ? valueOf : toStr, result);
 }
-const Scaleform::GFx::AS3::Traits* FUN_14250d760(Scaleform::GFx::AS3::VM& vm,
-                                                 const Scaleform::GFx::AS3::Multiname& mn);   // the traits that define mn
-const void* FUN_142546050(const void* method_info, const void* const_pool);   // the return type multiname of a method
+namespace Scaleform { namespace GFx { namespace AS3 { const ClassTraits::Traits* FUN_14250d760(VM& vm, const Multiname& mn); }}}   // the traits that define mn
 
 // Coerces value to the return type of the method the current call frame runs (result may be value): TypeError
 // 1014 when the type is not found, 1034 when the value does not convert.
@@ -2098,7 +2088,8 @@ void FUN_1424efe30(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* valu
     const char* body = bodies[*reinterpret_cast<const int*>(frame + 0x30)];
     const char* const* methods = *reinterpret_cast<const char* const* const*>(abc + 0xf8);
     const char* method = methods[*reinterpret_cast<const int*>(body + 0x18)];
-    const char* mn = static_cast<const char*>(FUN_142546050(method, abc + 0x30));
+    const char* mn = reinterpret_cast<const char*>(
+        &reinterpret_cast<const Abc::TraitInfo*>(method)->GetName(*reinterpret_cast<const Abc::ConstPool*>(abc + 0x30)));
     const ClassTraits::Traits* ctr = static_cast<const ClassTraits::Traits*>(
         FUN_142524f60(vm, *reinterpret_cast<const char* const*>(frame + 0x28), mn));
     if (ctr)
@@ -2547,7 +2538,7 @@ object_result:
     return true;
 }
 
-void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, void* scopeIndexOut);   // State::FindProp
+namespace Scaleform { namespace GFx { namespace AS3 { void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, void* scopeIndexOut); }}}   // State::FindProp
 
 // The traits a found property's receiver is traced as: a traits value is its own, the class of Class objects stands
 // for the class traits.
@@ -3099,7 +3090,7 @@ struct Sfr33TracerStorage
 };
 
 UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra);   // Tracer::Tracer
-UByte* FUN_1424e6aa0(void* tracer, void* blocks, UPInt pos, int a, bool b);   // Tracer: the block starting at pos
+void* FUN_1424e6aa0(Tracer* tracer, const void* blocks, UPInt pos, int a, bool b);   // Tracer: the block starting at pos
 static inline void FUN_142530220(void* tracer, UPInt pos, void* block) { ::Scaleform::GFx::AS3::Sfr31TraceBlock(reinterpret_cast<Scaleform::UPInt>(tracer), pos, reinterpret_cast<Scaleform::UPInt>(block)); }   // Tracer::TraceBlock
 
 // The head of a TR::Block (unrecovered): its flags and its entry state.
@@ -4310,7 +4301,7 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
     const unsigned nameKind = mn.Name.GetKind();
     if (nameKind == 8 || nameKind == 9)
         return;
-    const Traits* ct = ::FUN_14250d760(vm, mn);
+    const Traits* ct = FUN_14250d760(vm, mn);
     if (ct)
     {
         if (const UByte* itr = *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(ct) + 0xc0))
@@ -4460,7 +4451,7 @@ void Sfr33UserDefinedFunctionExecute(void* self, const Value& _this, unsigned ar
     Value result;
     FUN_1424feb00(self, _this, result, argc, argv);
     if (!discard_result)
-        FUN_14241e4f0(self, result);
+        FUN_14241e4f0(static_cast<Object*>(self), result);
 }
 
 // MovieRoot::ChangeMouseCursorType (virtual): with the GFx extensions on and a stage, a mouseCursorChange event
@@ -4877,8 +4868,8 @@ SF_NOINLINE void Tracer::PopPrevValue()
     case 0xd0: case 0xd1: case 0xd2: case 0xd3:
     {
         const UPInt pos = positions[n - 1];
-        FUN_142524870(&positions, n - 1);
-        FUN_1425247f0(&WCode, pos);
+        reinterpret_cast<Scaleform::Sfr17WordArrayDH*>(&positions)->Resize(n - 1);
+        reinterpret_cast<Scaleform::Sfr17WordArray*>(&WCode)->Resize(pos);
         return;
     }
     default:
@@ -5125,8 +5116,7 @@ bool Sfr33DeleteNamedProperty(void* self, Object* obj, const char* name)
     return obj->DeleteProperty(mn);
 }
 
-InstanceTraits::Traits* FUN_1423eb8f0(void* mem, VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo* mbi,
-                                      void* p);   // InstanceTraits::Activation::Activation
+namespace InstanceTraits { class Activation { public: Activation(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo& mbi, const ASString& name); }; }
 void FUN_1424d4430(void* set, void* pheapAddr, const void* noderef,
                    UPInt hash);   // HashLH<const MethodBodyInfo*, SPtr<InstanceTraits::Traits>>::add
 
@@ -5162,7 +5152,7 @@ InstanceTraits::Traits* Sfr33GetActivationInstanceTraits(VMAbcFile& file, const 
         }
     }
     void* mem = vm.GetMemoryHeap()->Alloc(0xd0);
-    InstanceTraits::Traits* tr = mem ? FUN_1423eb8f0(mem, file, vm, mbi, p) : NULL;
+    InstanceTraits::Traits* tr = mem ? reinterpret_cast<InstanceTraits::Traits*>(::new (mem) InstanceTraits::Activation(file, vm, *mbi, *reinterpret_cast<const ASString*>(p))) : NULL;
     SPtr<InstanceTraits::Traits> ref = Pickable<InstanceTraits::Traits>(tr);
     const void* noderef[2] = { &mbi, &ref };
     FUN_1424d4430(cache, cache, noderef, hash);
@@ -5597,11 +5587,12 @@ static SF_INLINE void Sfr17AssignNode(Value& v, ASStringNode* node)
 {
     {
         ASStringNode* str = node;
-        FUN_1424e0d40(v, reinterpret_cast<const ASString&>(str));
+        v = reinterpret_cast<const ASString&>(str);
     }
     node->Release();
 }
 // The exe calls the Value setters out of line here.
+#pragma inline_depth(0)
 // MS2-FUNCTIONAL 0x1425048d0: rbx and rdi swapped (the destination and the string node); same code otherwise
 // @0x1425048d0
 void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
@@ -5610,26 +5601,26 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
     switch (int(gv.Type & 0x8f))
     {
     case 0:     // VT_Undefined
-        FUN_142423b90(pdestVal);
+        pdestVal->SetUndefined();
         break;
     case 2:     // VT_Boolean
-        FUN_142421710(*pdestVal, *reinterpret_cast<const bool*>(&gv.pData));
+        pdestVal->SetBool(*reinterpret_cast<const bool*>(&gv.pData));
         break;
     case 1:     // VT_Null
-        FUN_142421ed0(*pdestVal);
+        pdestVal->SetNull();
         break;
     case 3:     // VT_Int
-        FUN_142423a90(*pdestVal, *reinterpret_cast<const SInt32*>(&gv.pData));
+        pdestVal->SetSInt32(*reinterpret_cast<const SInt32*>(&gv.pData));
         break;
     case 4:     // VT_UInt
-        FUN_14252a460(*pdestVal, *reinterpret_cast<const UInt32*>(&gv.pData));
+        pdestVal->SetUInt32(*reinterpret_cast<const UInt32*>(&gv.pData));
         break;
     case 5:     // VT_Number
-        FUN_142421f20(*pdestVal, *reinterpret_cast<const Double*>(&gv.pData));
+        pdestVal->SetNumber(*reinterpret_cast<const Double*>(&gv.pData));
         break;
     case 6:     // VT_String
         if ((UByte)(gv.Type >> 6) & 1)
-            FUN_1424edab0(*pdestVal, static_cast<ASStringNode*>(gv.pData));   // pData is the node's first field
+            pdestVal->Assign(static_cast<ASStringNode*>(gv.pData));   // pData is the node's first field
         else
         {
             ASStringNode* node = sm(this)->CreateStringNode(static_cast<const char*>(gv.pData));
@@ -5669,7 +5660,7 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
                     break;
                 }
             }
-            FUN_1424edc10(*pdestVal, obj);
+            pdestVal->Assign(obj);
         }
         break;
     case 11:    // VT_Closure
@@ -5685,6 +5676,7 @@ void MovieRoot::GFxValue2ASValue(const GFx::Value& gfxVal, Value* pdestVal)
         break;
     }
 }
+#pragma inline_depth()
 // The protected state of a GFx::MouseState, read and written by GenerateMouseEvents.
 struct Sfr33MouseStateAccess : public GFx::MouseState
 {
@@ -6628,7 +6620,7 @@ void FUN_1425047c0(Scaleform::UPInt self)
 {
     const Scaleform::GFx::AS3::AvmDisplayObj& avm = *reinterpret_cast<const Scaleform::GFx::AS3::AvmDisplayObj*>(self + 0x90);
     if (Scaleform::GFx::AS3::Sfr33HasAS3Obj(&avm))
-        FUN_142446e70(avm.GetAS3Obj(), NULL);
+        avm.GetAS3Obj()->SetLoaderInfo(static_cast<Scaleform::GFx::AS3::Instances::fl_display::LoaderInfo*>(NULL));
 }
 
 // MS2-FUNCTIONAL: the exe returns its .rdata copy
