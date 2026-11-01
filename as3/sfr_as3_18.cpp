@@ -2074,8 +2074,9 @@ bool Sfr27TextFieldTabCheck(UPInt self, UInt32 mode)
 
 // Whether the text field's style sheet resource is set.
 // @0x1425113d0
-bool Sfr27TextFieldHasStyleSheet(UPInt self)
+bool AvmTextField::HasStyleSheet() const
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x40;
     const UPInt sheet = FUN_1425b7e60(AccRd(self - 0x28, 0));
     return sheet != 0 && AccRd(sheet, 0x40) != 0;
 }
@@ -2374,8 +2375,9 @@ void AvmInteractiveObj::OnEventLoad()
 
 // AvmButton::IsTabable; self is the AvmInteractiveObjBase part (+0x30) of the button.
 // @0x142514eb0
-bool AvmButton_IsTabable(UPInt self)
+bool AvmButton::IsTabable() const
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x30;
     const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
     if (!avm->pDispObj->GetVisible())
         return false;
@@ -2387,8 +2389,9 @@ bool AvmButton_IsTabable(UPInt self)
 
 // AvmTextField::IsTabable; as the button, and an editable field is tabable by default.
 // @0x142515050
-bool AvmTextField_IsTabable(UPInt self)
+bool AvmTextField::IsTabable() const
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x30;
     const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
     if (!avm->pDispObj->GetVisible())
         return false;
@@ -2422,8 +2425,9 @@ static SF_FORCEINLINE bool Sfr34HasAS3Obj(const AvmDisplayObj* avm)
 
 // AvmTextField::OnKeyEvent; self is the AvmInteractiveObjBase part (+0x30).
 // @0x14251a350
-bool AvmTextField_OnKeyEvent(UPInt self, const EventId& id, int*)
+bool AvmTextField::OnKeyEvent(const EventId& id, int*)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x30;
     const AvmDisplayObj* avm = reinterpret_cast<const AvmDisplayObj*>(self - 0x30);
     if (Sfr34HasAS3Obj(avm))
     {
@@ -2453,8 +2457,9 @@ bool AvmButton::OnMouseEvent(const EventId& id)
 // AvmTextField::OnEventLoad: the field joins the play list after its place in the parent, and the optimized
 // advance list when it asks to.
 // @0x1425190f0
-void AvmTextField_OnEventLoad(UPInt self)
+void AvmTextField::OnEventLoad()
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
     InteractiveObject* t = static_cast<InteractiveObject*>(avm->pDispObj);
     if (InteractiveObject* pafter = ToAvmInteractiveObj(t->GetParent())->FindInsertToPlayList(t))
@@ -2468,11 +2473,12 @@ void AvmTextField_OnEventLoad(UPInt self)
 // AvmTextField::GetStyleSheet; self is the AvmTextFieldBase part (+0x40). The style manager of the field's
 // style sheet when the field uses one.
 // @0x14250ef30
-UPInt AvmTextField_GetStyleSheet(UPInt self)
+const Text::StyleManager* AvmTextField::GetStyleSheet() const
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x40;
     const UPInt sheet = FUN_1425b7e60(AccRd(self - 0x28, 0));
     if (reinterpret_cast<const AvmTextFieldBase*>(self)->HasStyleSheet())
-        return AccRd(sheet, 0x40) + 0x50;
+        return reinterpret_cast<const Text::StyleManager*>(AccRd(sheet, 0x40) + 0x50);
     return 0;
 }
 
@@ -4643,16 +4649,18 @@ static SF_FORCEINLINE void Sfr34_TextFieldNotify(UPInt self, BuiltinType type)
 // AvmTextField::NotifyChanged.
 // Free function on the subobject this (AvmTextField is opaque in the shared header)
 // @0x142518360
-void FUN_142518360(UPInt self)
+void AvmTextField::NotifyChanged()
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x40;
     Sfr34_TextFieldNotify(self, AS3Builtin_change);
 }
 
 // AvmTextField::OnScroll.
 // Free function on the subobject this (AvmTextField is opaque in the shared header)
 // @0x14251ae60
-void FUN_14251ae60(UPInt self)
+void AvmTextField::OnScroll()
 {
+    const UPInt self = reinterpret_cast<UPInt>(this) + 0x40;
     Sfr34_TextFieldNotify(self, AS3Builtin_scroll);
 }
 
@@ -8230,8 +8238,9 @@ bool FUN_142518fc0(UPInt self, const EventId& id)
 }
 // Free-function form of the AS3 object's load (AvmDisplayObj::OnEventLoad's body)
 // @0x142518fe0
-void FUN_142518fe0(UPInt self)
+void AvmButton::OnEventLoad()
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
     AvmDisplayObj* avm = reinterpret_cast<AvmDisplayObj*>(self);
     avm->SetAS3ObjCollectible(avm->GetAS3Obj());
 }
