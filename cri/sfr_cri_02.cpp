@@ -15,6 +15,7 @@
 #include "../include/cri/cri_movie.h"
 #include "../include/video/video_videoplayerimpl.h"
 #include "../include/kernel/sf_file.h"
+#include "../include/kernel/sf_timer.h"
 #include "../include/gfx/gfx_loaderimpl.h"
 #include <new>
 #include <cstring>
@@ -22,7 +23,6 @@
 #include <intrin.h>
 
 extern "C" {
-extern void* DAT_143b15f60;
 extern CriUint8 DAT_143b27a48[0x20];
 extern CriUint8 DAT_143b27a68[0x20];
 extern CriUint8 DAT_143b27a88[];
@@ -68,28 +68,16 @@ struct CriMovieParsedChunk;
 
 // ---- exe helpers this part calls (bound by address until their units are recovered)
 
-void     FUN_14258b240(unsigned ms);                                    // Thread::MSleep
-unsigned __int64 FUN_1425e3590(void);                                   // Timer::GetTicks
 void     FUN_14257dc30(void* p);                                        // RefCountImpl::AddRef
 void     FUN_14257dcb0(void* p);                                        // RefCountImpl::Release
 void     FUN_14257dcd0(void* p);
-void     FUN_14258a350(void* lock, bool recursive, bool lockNow);   // Mutex::Mutex
-void     FUN_142582300(void* queue, CriSint32 count, CriSint32 flags);
-void     FUN_14258a620(void* sync);
-void     FUN_14258a810(void* sync);
-void     FUN_142582530(void* queue);
-void     FUN_14258a720(void* lock);
-void     FUN_14257db50(void* p);
 CriUint32 FUN_14257bdc0(void);
-void*    FUN_14258a490(void* mem, void* createParams);                  // Thread::Thread(const CreateParams&)
 void*    FUN_140027f7c(CriHeap heap, CriSint32 size, const CriChar8* name, CriSint32 align, CriSint32 type);
-void     FUN_14001d650(void* config, void* reader);                     // VideoReaderConfig::AttachReader
 void*    FUN_140041d40(void* pheap);                                    // CriHeap over a MemoryHeap: create
 void     FUN_140041dd0(void* criheap);                                  //   and destroy
 void*    FUN_140041c00(void* mem);                                      // SystemTimerSyncObject::SystemTimerSyncObject
 void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
-void     FUN_142586530(void* pstr, const char* p, Scaleform::UPInt size); // String::AssignString
 void     crimvply_occurUserError(void* player, const char* message, CriSint32 severity);
 void     criUsfDmx_TerminateSupply(void* inputBuffer);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
@@ -288,12 +276,6 @@ void     criMvPlyAmng_Destroy(void* manager, void* heap);
 void     criAlphaDec_Destroy(void* decoder);
 void     criVdec_Destroy(CriUint64* adapter);
 void     FUN_140028074(void* heap);
-void     FUN_142584540(void* event, CriSint32 timeout);
-void     FUN_14258b260(void* event);
-void     FUN_14258aca0(void* lock);
-void     FUN_14258bb70(void* lock);
-void     FUN_142583d50(void* event);
-CriSint32 FUN_14258bc20(void* condition, void* lock, CriSint32 timeout);
 struct CriMvRequestNode;
 struct CriMvRequestPoolView;
 CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool);
@@ -301,21 +283,15 @@ void     FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a,
 void     FUN_14002afe0(CriUint64* array);
 void     FUN_14002d3f0(void* allocation);
 void     FUN_14002a4a0(CriUint64* array, const CriUint64* source, CriUint64 count);
-void     FUN_140006f50(void* array, void* source, CriUint64 capacity);
-void     FUN_1400051c0(void* array, void* source, CriUint64 capacity);
-void     FUN_142584950(void* destination, const void* source);
+void     FUN_140006f50(void** array, void* source, CriUint64 capacity);
+void     FUN_1400051c0(void** array, void* source, CriUint64 capacity);
 CriUint64* FUN_14002ba30(CriUint64* destination, const CriUint64* source);
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source);
 void     FUN_14002aa30(CriUint64* array, CriUint64 length);
-void     FUN_14000bd60(void* array, CriUint64 length);
-void     FUN_14001d720(void* manager, void* reader);
-void     FUN_1425845e0(void* event, CriSint32 timeout);
+void     FUN_14000bd60(void** array, CriUint64 length);
 namespace Scaleform { namespace GFx { namespace Video { void FUN_14002e2a0(void* object); }}}
-void     FUN_142579470(void* object);
-void     FUN_142585580(void* destination, const void* source);
-void     FUN_142584ce0(void* string);
-void     FUN_14000bc40(void* destination, void* source, CriUint64 capacity);
-void     FUN_140007370(void* destination, CriUint64 first, CriUint64 second);
+void     FUN_14000bc40(void** destination, void* source, CriUint64 capacity);
+void     FUN_140007370(void** destination, const Scaleform::String* first, CriUint64 second);
 
 struct CriMvRequestNode
 {
@@ -705,7 +681,7 @@ int VideoDecoderThrd::DecodeFunc(Thread*, void* obj)
                 }
             }
         }
-        FUN_14258b240(1);
+        Scaleform::Thread::MSleep(1);
     }
     return 0;
 }
@@ -737,7 +713,7 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
     {
         VideoThreadCreateParams params = { DecodeFunc, this, 0x10000, -1, 0, ThreadPriority };
         void* mem = pHeap->Alloc(0x60);
-        RefCountImpl* pthread = mem ? (RefCountImpl*)FUN_14258a490(mem, &params) : NULL;
+        RefCountImpl* pthread = mem ? (RefCountImpl*)reinterpret_cast<void*>(::new (mem) Scaleform::Thread(*reinterpret_cast<const Scaleform::Thread::CreateParams*>(&params))) : NULL;
         if (pDecodeThread)
             FUN_14257dcb0(pDecodeThread);
         pDecodeThread = pthread;
@@ -848,7 +824,7 @@ static VideoPlayer::CuePoint ConstructCuePoint(const CriMvEventPoint& event)
                 cue.Params.PushBack(param);
                 break;
             }
-            FUN_142586530(&param.Name, p1, p2 - p1);
+            reinterpret_cast<Scaleform::String*>(&param.Name)->AssignString(p1, p2 - p1);
             p1 = p2 + 1;
             p2 = strchr(p1, ',');
             if (!p2)
@@ -859,7 +835,7 @@ static VideoPlayer::CuePoint ConstructCuePoint(const CriMvEventPoint& event)
             }
             else
             {
-                FUN_142586530(&param.Value, p1, p2 - p1);
+                reinterpret_cast<Scaleform::String*>(&param.Value)->AssignString(p1, p2 - p1);
                 cue.Params.PushBack(param);
                 param.Name.Clear();
                 param.Value.Clear();
@@ -950,7 +926,7 @@ void VideoPlayerImpl::Open(const char* url)
     pDecoder->StartDecoding(this);
     if (pSubSound)
         pPlayer->AttachSubAudioInterface((CriMvSoundInterface*)((UByte*)pSubSound.GetPtr() + 0x10), SF_VIDEO_ERR);
-    OpenTicks = FUN_1425e3590();
+    OpenTicks = Scaleform::Timer::GetTicks();
 }
 
 // MS2-FUNCTIONAL: register allocation and block order differ
@@ -1040,7 +1016,7 @@ void VideoPlayerImpl::SetSyncObject(SyncObject* psyncObj)
         }
         pPlayer->DecodeHeader(SF_VIDEO_ERR);
         pDecoder->StartDecoding(this);
-        OpenTicks = FUN_1425e3590();
+        OpenTicks = Scaleform::Timer::GetTicks();
     }
 }
 
@@ -1183,7 +1159,7 @@ VideoReader* VideoReaderConfigThrd::CreateReader()
     {
         VideoThreadCreateParams params = { (int (*)(Thread*, void*))FUN_14002db40, this, 0x10000, -1, 0, 1 };
         void* memory = (*(AllocFunc*)(*(CriUint8**)config[2] + 0x50))(config[2], 0x60, NULL);
-        void* thread = memory ? FUN_14258a490(memory, &params) : NULL;
+        void* thread = memory ? reinterpret_cast<void*>(::new (memory) Scaleform::Thread(*reinterpret_cast<const Scaleform::Thread::CreateParams*>(&params))) : NULL;
         if (config[31])
             FUN_14257dcb0(config[31]);
         config[31] = thread;
@@ -1224,10 +1200,10 @@ void* FUN_14002e450(void* object, void* heap, void* opener)
     void** sentinel = fields + 13;
     sentinel[0] = sentinel;
     sentinel[1] = sentinel;
-    FUN_14258a350(fields + 15, true, false);
-    FUN_142582300(fields + 20, 0, 0);
+    reinterpret_cast<Scaleform::Mutex*>(fields + 15)->Mutex::Mutex(true, false);
+    reinterpret_cast<Scaleform::Event*>(fields + 20)->Event::Event(false, false);
     fields[31] = NULL;
-    FUN_14258a620(fields + 32);
+    reinterpret_cast<Scaleform::WaitCondition*>(fields + 32)->WaitCondition::WaitCondition();
     fields[33] = NULL;
     return object;
 }
@@ -1240,11 +1216,11 @@ void FUN_14002e2a0(void* object)
     fields[0] = (void*)DAT_1431b9430;
     if (fields[33])
         FUN_14257dcb0(fields[33]);
-    FUN_14258a810(fields + 32);
+    reinterpret_cast<Scaleform::WaitCondition*>(fields + 32)->WaitCondition::~WaitCondition();
     if (fields[31])
         FUN_14257dcb0(fields[31]);
-    FUN_142582530(fields + 20);
-    FUN_14258a720(fields + 15);
+    reinterpret_cast<Scaleform::Event*>(fields + 20)->Event::~Event();
+    reinterpret_cast<Scaleform::Mutex*>(fields + 15)->Mutex::~Mutex();
     void* reader = fields[8];
     while (reader)
     {
@@ -1256,7 +1232,7 @@ void FUN_14002e2a0(void* object)
         FUN_14002d3f0(fields[4]);
     if (fields[3])
         FUN_14257dcb0(fields[3]);
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // VideoReader's primary vftable (no RTTI in this build): the constructor stores it at +0, 0x1431b9360 at +0x10
@@ -1265,7 +1241,7 @@ void FUN_14002e2a0(void* object)
 VideoReader::VideoReader(VideoReaderConfig* pconfig)
     : pReaderConfig(pconfig), ReadSize(0)
 {
-    FUN_14001d650(pconfig, this);
+    reinterpret_cast<Scaleform::GFx::Video::VideoReaderConfig*>(pconfig)->AttachReader(reinterpret_cast<Scaleform::GFx::Video::VideoReader*>(this));
     OpenStatus  = ASYNC_STATUS_STOP;
     ReadStatus  = ASYNC_STATUS_STOP;
     CloseStatus = ASYNC_STATUS_STOP;
@@ -1274,7 +1250,7 @@ VideoReader::VideoReader(VideoReaderConfig* pconfig)
 __forceinline VideoReader::VideoReader(VideoReaderConfig* pconfig, InlineCtorTag)
     : pReaderConfig(pconfig), ReadSize(0)
 {
-    FUN_14001d650(pconfig, this);
+    reinterpret_cast<Scaleform::GFx::Video::VideoReaderConfig*>(pconfig)->AttachReader(reinterpret_cast<Scaleform::GFx::Video::VideoReader*>(this));
     OpenStatus  = ASYNC_STATUS_STOP;
     ReadStatus  = ASYNC_STATUS_STOP;
     CloseStatus = ASYNC_STATUS_STOP;
@@ -1345,7 +1321,7 @@ void VideoReader::Close(void)
 void VideoReader::Read(CriUint8* buffer, CriSint64 req_size)
 {
     while (!pReaderConfig->IOEnabled)
-        FUN_14258b240(50);
+        Scaleform::Thread::MSleep(50);
     ReadFile(buffer, req_size);
 }
 
@@ -1366,7 +1342,7 @@ VideoReader* VideoReaderConfigSmp::CreateReader()
 __declspec(noinline) void FUN_14002e140(void* queue, CriUint32 operation, void* request, void* a, void* b, void* c)
 {
     CriMvRequestQueueView* queueView = (CriMvRequestQueueView*)queue;
-    FUN_14258aca0(queueView->Lock);
+    reinterpret_cast<Scaleform::Mutex*>(queueView->Lock)->DoLock();
     CriMvRequestNode* node = FUN_14002d890((CriMvRequestPoolView*)&queueView->Reserved0[0x40]);
     node->Operation = operation;
     node->Request = request;
@@ -1377,8 +1353,8 @@ __declspec(noinline) void FUN_14002e140(void* queue, CriUint32 operation, void* 
     node->Previous = (CriMvRequestNode*)&queueView->Head;
     queueView->Head->Previous = node;
     queueView->Head = node;
-    FUN_14258bb70(queueView->Lock);
-    FUN_142583d50(queueView->Event);
+    reinterpret_cast<Scaleform::Mutex*>(queueView->Lock)->Unlock();
+    reinterpret_cast<Scaleform::Event*>(queueView->Event)->PulseEvent();
 }
 
 // Initialize the reader request state and enqueue its open operation.
@@ -1419,7 +1395,7 @@ void FUN_14002e260(void* object, void* first, void* second)
 // @0x14002e370
 void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
 {
-    FUN_14258aca0(manager->Lock);
+    reinterpret_cast<Scaleform::Mutex*>(manager->Lock)->DoLock();
     CriMvRequestNode* node = manager->Tail;
     while (node != (CriMvRequestNode*)&manager->Head)
     {
@@ -1433,12 +1409,12 @@ void FUN_14002e370(CriMvRequestManagerView* manager, void* reader)
         }
         node = previous;
     }
-    FUN_14258bb70(manager->Lock);
-    FUN_14001d720(manager, reader);
+    reinterpret_cast<Scaleform::Mutex*>(manager->Lock)->Unlock();
+    reinterpret_cast<Scaleform::GFx::Video::VideoReaderConfig*>(manager)->VideoReaderConfig::DetachReader(reinterpret_cast<Scaleform::GFx::Video::VideoReader*>(reader));
     if (!manager->ActiveReader && manager->StopEvent)
     {
         FUN_14002e140(manager, 3, NULL, NULL, NULL, NULL);
-        FUN_1425845e0(manager->StopEvent, -1);
+        reinterpret_cast<Scaleform::Waitable*>(manager->StopEvent)->Waitable::Wait(-1);
         if (manager->StopEvent)
             FUN_14257dcb0(manager->StopEvent);
         manager->StopEvent = NULL;
@@ -1593,8 +1569,8 @@ void FUN_14002a550(void* items, CriSint64 count)
     {
         if (current)
         {
-            FUN_142584ce0(current);
-            FUN_142584ce0(current + 8);
+            reinterpret_cast<Scaleform::String*>(current)->String::String();
+            reinterpret_cast<Scaleform::String*>(current + 8)->String::String();
         }
     }
 }
@@ -1603,7 +1579,7 @@ void FUN_14002a550(void* items, CriSint64 count)
 void FUN_14002aa30(CriUint64* array, CriUint64 length)
 {
     CriUint64 oldLength = array[1];
-    FUN_140006f50(array, array, length);
+    FUN_140006f50((void**)array, array, length);
     if (length > oldLength)
     {
         CriUint8* item = (CriUint8*)array[0] + oldLength * 0x10;
@@ -1611,8 +1587,8 @@ void FUN_14002aa30(CriUint64* array, CriUint64 length)
         {
             if (item)
             {
-                FUN_142584ce0(item);
-                FUN_142584ce0(item + 8);
+                reinterpret_cast<Scaleform::String*>(item)->String::String();
+                reinterpret_cast<Scaleform::String*>(item + 8)->String::String();
             }
         }
     }
@@ -1627,7 +1603,7 @@ void FUN_14002ab90(void* object)
         FUN_14002d3f0(fields[4]);
     if (fields[3])
         FUN_14257dcb0(fields[3]);
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // @0x14002aab0
@@ -1658,7 +1634,7 @@ void* FUN_14002a0e0(void* object, CriUint32 flags)
     if (fields[4])
         FUN_14257dcd0(fields[4]);
     fields[2] = (void*)DAT_1431b8db0;
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -1679,7 +1655,7 @@ void* FUN_14002b0f0(void* object, CriUint32 flags)
         FUN_14002d3f0(fields[4]);
     if (fields[3])
         FUN_14257dcb0(fields[3]);
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
         FUN_14002d3f0(object);
     return object;
@@ -1714,7 +1690,7 @@ void FUN_14002b1b0(void* object)
         FUN_14002d3f0(fields[4]);
     if (fields[3])
         FUN_14257dcb0(fields[3]);
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // @0x14002b150
@@ -1744,7 +1720,7 @@ void FUN_14002ad30(void* object)
         FUN_14002d3f0(fields[6]);
     if (fields[3])
         FUN_14002d3f0(fields[3]);
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
 // @0x14002b350
@@ -1759,18 +1735,18 @@ void* FUN_14002b350(void* object, CriUint32 flags)
 // @0x14002c4b0
 void FUN_14002c4b0(CriUint64* array, const CriUint32* value)
 {
-    FUN_14000bc40(array, array, array[1] + 1);
+    FUN_14000bc40((void**)array, array, array[1] + 1);
     CriUint32* destination = (CriUint32*)(array[0] - 0x30 + array[1] * 0x30);
     if (!destination)
         return;
     destination[0] = value[0];
-    FUN_142584950(destination + 2, value + 2);
+    reinterpret_cast<Scaleform::String*>(destination + 2)->String::String(*reinterpret_cast<const Scaleform::String*>(value + 2));
     destination[4] = value[4];
     CriUint64* inner = (CriUint64*)(destination + 6);
     inner[0] = 0;
     inner[1] = 0;
     inner[2] = 0;
-    FUN_140007370(inner, *(const CriUint64*)(value + 6), *(const CriUint64*)(value + 8));
+    FUN_140007370((void**)inner, *(const Scaleform::String* const*)(value + 6), *(const CriUint64*)(value + 8));
 }
 
 // @0x14002ba30
@@ -1782,8 +1758,8 @@ __declspec(noinline) CriUint64* FUN_14002ba30(CriUint64* destination, const CriU
     {
         const CriUint8* in = (const CriUint8*)source[0] + i * 0x10;
         CriUint8* out = (CriUint8*)destination[0] + i * 0x10;
-        FUN_142585580(out, in);
-        FUN_142585580(out + 8, in + 8);
+        *reinterpret_cast<Scaleform::String*>(out) = *reinterpret_cast<const Scaleform::String*>(in);
+        *reinterpret_cast<Scaleform::String*>(out + 8) = *reinterpret_cast<const Scaleform::String*>(in + 8);
     }
     return destination;
 }
@@ -1791,13 +1767,13 @@ __declspec(noinline) CriUint64* FUN_14002ba30(CriUint64* destination, const CriU
 // @0x14002c550
 CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
 {
-    FUN_14000bd60(destination, source[1]);
+    FUN_14000bd60((void**)destination, source[1]);
     for (CriUint64 i = 0; i < destination[1]; ++i)
     {
         const CriVideoRecordCopyView* sourceRecord = (const CriVideoRecordCopyView*)source[0] + i;
         CriVideoRecordCopyView* record = (CriVideoRecordCopyView*)destination[0] + i;
         record->Type = sourceRecord->Type;
-        FUN_142585580(&record->Name, &sourceRecord->Name);
+        *reinterpret_cast<Scaleform::String*>(&record->Name) = *reinterpret_cast<const Scaleform::String*>(&sourceRecord->Name);
         record->Flags = sourceRecord->Flags;
         FUN_14002ba30(record->NestedStrings, sourceRecord->NestedStrings);
     }
@@ -1809,7 +1785,7 @@ CriUint64* FUN_14002c550(CriUint64* destination, const CriUint64* source)
 CriUint32* FUN_14002c260(CriUint32* destination, const CriUint32* source)
 {
     destination[0] = source[0];
-    FUN_142585580(destination + 2, source + 2);
+    *reinterpret_cast<Scaleform::String*>(destination + 2) = *reinterpret_cast<const Scaleform::String*>(source + 2);
     destination[4] = source[4];
     FUN_14002ba30((CriUint64*)(destination + 6), (const CriUint64*)(source + 6));
     return destination;
@@ -1831,7 +1807,7 @@ void FUN_14002a900(CriUint64* array, const CriUint32* value)
 // @0x14002a6f0
 void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
 {
-    CriArrayResizeNoConstruct(array, FUN_1400051c0, array[1] + 1);
+    CriArrayResizeNoConstruct(array, (void (*)(void*, void*, CriUint64))FUN_1400051c0, array[1] + 1);
     CriUint32* destination = (CriUint32*)(array[0] - 16 + array[1] * 16);
     if (destination)
     {
@@ -1846,12 +1822,12 @@ void FUN_14002a6f0(CriUint64* array, const CriUint32* value)
 // @0x14002af50
 void FUN_14002af50(CriUint64* array, const CriUint64* value)
 {
-    FUN_140006f50(array, array, array[1] + 1);
+    FUN_140006f50((void**)array, array, array[1] + 1);
     CriUint64* destination = (CriUint64*)(array[0] - 0x10 + array[1] * 0x10);
     if (destination)
     {
-        FUN_142584950(destination, value);
-        FUN_142584950(destination + 1, value + 1);
+        reinterpret_cast<Scaleform::String*>(destination)->String::String(*reinterpret_cast<const Scaleform::String*>(value));
+        reinterpret_cast<Scaleform::String*>(destination + 1)->String::String(*reinterpret_cast<const Scaleform::String*>(value + 1));
     }
 }
 
@@ -1859,12 +1835,12 @@ void FUN_14002af50(CriUint64* array, const CriUint64* value)
 // @0x14002b950
 void FUN_14002b950(CriUint64* array, const CriUint64* value)
 {
-    FUN_140006f50(array, array, array[1] + 1);
+    FUN_140006f50((void**)array, array, array[1] + 1);
     CriUint64* destination = (CriUint64*)(array[0] - 0x10 + array[1] * 0x10);
     if (destination)
     {
-        FUN_142584950(destination, value);
-        FUN_142584950(destination + 1, value + 1);
+        reinterpret_cast<Scaleform::String*>(destination)->String::String(*reinterpret_cast<const Scaleform::String*>(value));
+        reinterpret_cast<Scaleform::String*>(destination + 1)->String::String(*reinterpret_cast<const Scaleform::String*>(value + 1));
     }
 }
 
@@ -1873,7 +1849,7 @@ void FUN_14002b950(CriUint64* array, const CriUint64* value)
 void* FUN_14002d1a0(void* guard, void* lock)
 {
     *(void**)guard = lock;
-    FUN_14258aca0(lock);
+    reinterpret_cast<Scaleform::Mutex*>(lock)->DoLock();
     return guard;
 }
 
@@ -1902,7 +1878,7 @@ void* FUN_14002d3c0(void*, size_t size)
 {
     CriUint32 info[4];   // AllocInfo: only the stat id is set
     info[0] = 6;
-    void* heap = DAT_143b15f60;
+    void* heap = Scaleform::Memory::pGlobalHeap;
     return (*(void* (__fastcall **)(void*, size_t, CriUint32*))(*(CriUint8**)heap + 0x50))(heap, size, info);
 }
 
@@ -1918,7 +1894,7 @@ void FUN_14002d3f0(void* allocation)
 {
     if (allocation)
     {
-        void* heap = DAT_143b15f60;
+        void* heap = Scaleform::Memory::pGlobalHeap;
         CriUint8* vtable = (CriUint8*)*(void**)heap;
         void (__fastcall *release)(void*, void*) = *(void (__fastcall **)(void*, void*))(vtable + 0x60);
         release(heap, allocation);
@@ -1928,7 +1904,7 @@ void FUN_14002d3f0(void* allocation)
 // The global heap's Free, inlined without the null test (the deleting dtors and the request pools).
 static inline void CriHeapFreeRaw(void* allocation)
 {
-    void* heap = DAT_143b15f60;
+    void* heap = Scaleform::Memory::pGlobalHeap;
     (*(void (__fastcall **)(void*, void*))(*(CriUint8**)heap + 0x60))(heap, allocation);
 }
 
@@ -2085,7 +2061,7 @@ void* FUN_14002c780(void* object, void* source)
 // @0x14002a2b0
 void* FUN_14002a2b0(void* object, CriUint32 flags)
 {
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
         CriHeapFreeRaw(object);
     return object;
@@ -2094,7 +2070,7 @@ void* FUN_14002a2b0(void* object, CriUint32 flags)
 // @0x14002ac70
 void* FUN_14002ac70(void* object, CriUint32 flags)
 {
-    FUN_142579470(object);
+    reinterpret_cast<Scaleform::Render::Image*>(object)->Image::~Image();
     if (flags & 1)
         CriHeapFreeRaw(object);
     return object;
@@ -2130,7 +2106,7 @@ void* FUN_14002e510(void* object, CriUint32 flags)
 // @0x14002d840
 void* FUN_14002d840(void* object, CriUint32 flags)
 {
-    FUN_14257db50(object);
+    reinterpret_cast<Scaleform::RefCountNTSImplCore*>(object)->RefCountNTSImplCore::~RefCountNTSImplCore();
     if (flags & 1)
         CriHeapFreeRaw(object);
     return object;
@@ -2157,26 +2133,26 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
     bool keepRunning = true;
     do
     {
-        FUN_142584540(config->Event, -1);
-        FUN_14258aca0(config->Lock);
+        reinterpret_cast<Scaleform::Event*>(config->Event)->Wait(-1);
+        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
         if (config->Reader)
         {
             void** vtable = *(void***)config->Reader;
             ((void(__fastcall*)(void*))vtable[1])(config->Reader);
         }
-        FUN_14258bb70(config->Lock);
+        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
 
         CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
         for (;;)
         {
-            FUN_14258aca0(config->Lock);
+            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
             if (sentinel->Previous == sentinel)
                 break;
             CriMvRequestNode* request = config->Tail;
             request->Next->Previous = request->Previous;
             request->Previous->Next = request->Next;
             // the exe runs the operation outside the lock (0x14002dbdd) and retakes it to free the node
-            FUN_14258bb70(config->Lock);
+            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
             switch (request->Operation)
             {
             case 0:
@@ -2232,22 +2208,22 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             default:
                 break;
             }
-            FUN_14258aca0(config->Lock);
+            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
             RequestPoolHead* pool = (RequestPoolHead*)config;
             request->Next = pool->FreeList;
             pool->FreeList = request;
-            FUN_14258bb70(config->Lock);
+            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
         }
-        FUN_14258bb70(config->Lock);
+        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
 
-        FUN_14258aca0(config->Lock);
+        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
         if (config->Reader)
         {
             void** vtable = *(void***)config->Reader;
             ((void(__fastcall*)(void*))vtable[2])(config->Reader);
         }
-        FUN_14258b260(config->Condition);
-        FUN_14258bb70(config->Lock);
+        reinterpret_cast<Scaleform::WaitCondition*>(config->Condition)->Notify();
+        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
     } while (keepRunning);
     return NULL;
 }
@@ -2264,8 +2240,8 @@ struct CriMvRequestListRoot
 struct CriMutexLocker
 {
     void* pMutex;
-    CriMutexLocker(void* m) { pMutex = m; FUN_14258aca0(pMutex); }
-    ~CriMutexLocker() { FUN_14258bb70(pMutex); }
+    CriMutexLocker(void* m) { pMutex = m; reinterpret_cast<Scaleform::Mutex*>(pMutex)->DoLock(); }
+    ~CriMutexLocker() { reinterpret_cast<Scaleform::Mutex*>(pMutex)->Unlock(); }
 };
 
 // Enable or disable reader IO, wake the thread, and wait for its queued work to drain.
@@ -2273,10 +2249,10 @@ struct CriMutexLocker
 void FUN_14002d6d0(CriMvReaderThreadConfigView* config, CriUint8 enable)
 {
     config->IOEnabled = enable;
-    FUN_142583d50(config->Event);
+    reinterpret_cast<Scaleform::Event*>(config->Event)->PulseEvent();
     CriMutexLocker lock(config->Lock);
     while (!((CriMvRequestListRoot*)&config->Head)->IsEmpty())
-        FUN_14258bc20(config->Condition, config->Lock, -1);
+        reinterpret_cast<Scaleform::WaitCondition*>(config->Condition)->Wait(reinterpret_cast<Scaleform::Mutex*>(config->Lock), -1);
 }
 
 // Replace the configured reader with reference balancing while holding its lock.
@@ -2295,7 +2271,7 @@ void FUN_14002d750(CriMvReaderThreadConfigView* config, void* reader)
 CriUint64 FUN_14002d7b0(void* request, CriSint64 offset, CriSint32 origin)
 {
     CriMvReaderRequestView* view = (CriMvReaderRequestView*)request;
-    FUN_14258aca0(((CriMvReaderThreadConfigView*)view->Queue)->Lock);
+    reinterpret_cast<Scaleform::Mutex*>(((CriMvReaderThreadConfigView*)view->Queue)->Lock)->DoLock();
     switch (origin)
     {
     case 1:
@@ -2311,7 +2287,7 @@ CriUint64 FUN_14002d7b0(void* request, CriSint64 offset, CriSint32 origin)
     view->ReadSize += (CriUint64)offset;
     _ReadWriteBarrier();   // the seek is stored before the Lock::Locker dtor reads the queue
     CriUint64 result = view->ReadSize;
-    FUN_14258bb70(((CriMvReaderThreadConfigView*)view->Queue)->Lock);
+    reinterpret_cast<Scaleform::Mutex*>(((CriMvReaderThreadConfigView*)view->Queue)->Lock)->Unlock();
     return result;
 }
 
@@ -2328,7 +2304,7 @@ CriMvRequestNode* FUN_14002d890(CriMvRequestPoolView* pool)
         return &pool->LastBlock->Nodes[pool->NodesInLastBlock++];
     CriUint32 info;   // AllocInfo: stat id 6
     info = 6;
-    void* heap = DAT_143b15f60;
+    void* heap = Scaleform::Memory::pGlobalHeap;
     CriMvRequestBlock* block = (CriMvRequestBlock*)(*(void* (__fastcall **)(void*, size_t, CriUint32*))(
         *(CriUint8**)heap + 0x50))(heap, sizeof(CriMvRequestBlock), &info);
     block->NextBlock = NULL;
