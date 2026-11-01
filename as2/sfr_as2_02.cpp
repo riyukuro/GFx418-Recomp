@@ -145,6 +145,9 @@ struct MS2_HTMLImageTagInfo // 0x40 bytes
 namespace Scaleform { namespace GFx {
 template<> void LogBase<AS2::FnCall>::LogScriptWarning(const char* pfmt, ...) const;   // sfr_as2_06 @0x142968210
 extern template void LogBase<DisplayObjectBase>::LogScriptWarning(const char* pfmt, ...) const;
+template<> AS2::FunctionRef*
+ASStringHashBase<AS2::FunctionRef, HashUncachedLH<ASString, AS2::FunctionRef, ASStringHashFunctor, StatMV_ASString_Mem> >::GetCaseCheck(
+    const ASString& key, bool caseSensitive);    // sfr_as2_05 @0x142949f60
 }}
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -2084,8 +2087,7 @@ void SharedObjectProto::GetSize(const FnCall& fn)
     fn.Result->SetInt((int)pthis->ComputeSizeInBytes(fn.Env));
 }
 
-// GetCaseCheck / RemoveCaseCheck of the registered class table (exe 0x142949f60 / 0x14297cd20).
-FunctionRef* ClassHash_GetCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
+// RemoveCaseCheck of the registered class table (exe 0x14297cd20).
 void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
 
 // Object.registerClass(name, ctor) binds the constructor to the linkage name; null removes the binding.
@@ -2109,7 +2111,7 @@ void ObjectCtorFunction::RegisterClassA(const FnCall& fn)
     else if (fn.Arg(1).IsNull())
     {
         bool rv = false;
-        if (ClassHash_GetCaseCheck(&pgc->RegisteredClasses, classname, fn.Env->IsCaseSensitive()))
+        if (pgc->RegisteredClasses.GetCaseCheck(classname, fn.Env->IsCaseSensitive()))
         {
             ClassHash_RemoveCaseCheck(&pgc->RegisteredClasses, classname, fn.Env->IsCaseSensitive());
             rv = true;

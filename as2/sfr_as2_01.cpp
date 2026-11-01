@@ -1605,7 +1605,7 @@ void ArrayObject::ArraySort(const FnCall& fn)
     if (duplicate)
     {
         fn.Result->SetInt(0);
-        ArrayObjectElements_Resize(&pnew->Elements, 0);
+        (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(0);
     }
     else if (flags & SortFlags_ReturnIndexedArray)
     {
@@ -1615,7 +1615,7 @@ void ArrayObject::ArraySort(const FnCall& fn)
     else
     {
         pthis->ShallowCopyFrom(*pnew);
-        ArrayObjectElements_Resize(&pnew->Elements, 0);
+        (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(0);
         fn.Result->SetAsObject(pthis);
     }
 }
@@ -1680,7 +1680,7 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
     }
 
     Ptr<ArrayObject> pnew = *static_cast<ArrayObject*>(fn.Env->OperatorNew(fn.Env->GetBuiltin(ASBuiltin_Array)));
-    ArrayObjectElements_Resize(&pnew->Elements, pthis->Elements.GetSize());
+    (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(pthis->Elements.GetSize());
     for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
         pnew->Elements[i] = pthis->Elements[i];
 
@@ -1712,10 +1712,10 @@ void ArrayObject::ArraySortOn(const FnCall& fn)
     }
     else
     {
-        ArrayObjectElements_Resize(&pthis->Elements, pnew->Elements.GetSize());
+        (reinterpret_cast<ArrayObjectElementsData*>(&pthis->Elements)->*&ArrayObjectElementsData::Resize)(pnew->Elements.GetSize());
         for (UPInt i = 0; i < pnew->Elements.GetSize(); i++)
             pthis->Elements[i] = pnew->Elements[i];
-        ArrayObjectElements_Resize(&pnew->Elements, 0);
+        (reinterpret_cast<ArrayObjectElementsData*>(&pnew->Elements)->*&ArrayObjectElementsData::Resize)(0);
         fn.Result->SetAsObject(pthis);
     }
     delete pfields;

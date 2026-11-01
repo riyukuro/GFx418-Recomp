@@ -24,6 +24,8 @@
 #include "../include/gfx/gfx_movieimpl.h"
 #include "../include/gfx/gfx_value.h"
 
+template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Value>::SetType::~HashSetBase();    // exe 0x142924960
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The script side of a button (partial local copy; the other units carry their own).
@@ -92,14 +94,11 @@ void FUN_142941190(const LocalFrame* pframe, ASRefCountBaseType::Collector* prcc
     }
 }
 
-// The variables' hash destructor (0x142924960, shared by ICF).
-void FUN_142924960(ASStringHash_GC<Value>* phash);
-
 // Finalize_GC: the variables go before collection (the exe jumps to the hash's destructor).
 // @0x142942db0
 void FUN_142942db0(LocalFrame* pframe)
 {
-    FUN_142924960(&pframe->Variables);
+    reinterpret_cast<ASStringHash_GC<Value>::SetType*>(&pframe->Variables)->~HashSetBase();
 }
 
 // The base character finds no member; the sprite, button and text field characters override it.

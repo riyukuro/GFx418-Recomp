@@ -435,8 +435,8 @@ struct Environment::TryDescr
     unsigned GetTrySize() const { return pTryBlock[1] | (((UInt16)pTryBlock[2]) << 8); }
 };
 
-// The out-of-line Resize of the try block array (exe 0x14297e060, a COMDAT the exe calls where cl inlines it).
-void TryBlocks_Resize(ArrayLH<Environment::TryDescr, Stat_Default_Mem>* ptryBlocks, UPInt newSize);
+// The try block array's Resize (exe 0x14297e060) is a COMDAT the exe calls where cl inlines it: call it through a member pointer.
+typedef ArrayData<Environment::TryDescr, AllocatorLH<Environment::TryDescr, Stat_Default_Mem>, ArrayDefaultPolicy> TryBlocksData;
 
 // Arguments, this and result slot of a native call. 0x40 bytes.
 class FnCall : public LogBase<FnCall>

@@ -284,7 +284,7 @@ void Environment::CheckTryBlocks(int pc, int* plocalTryBlockCount)
             if ((unsigned)pc < tryDescr.TryBeginPC || (unsigned)pc >= tryDescr.TryBeginPC + tryDescr.GetTrySize())
             {
                 --(*plocalTryBlockCount);
-                TryBlocks_Resize(&TryBlocks, TryBlocks.GetSize() - 1);
+                (reinterpret_cast<TryBlocksData*>(&TryBlocks)->*&TryBlocksData::Resize)(TryBlocks.GetSize() - 1);
             }
             else
                 break;
@@ -653,7 +653,7 @@ Object* TransformCtorFunction::CreateNewObject(Environment* penv) const
 // @0x142932010
 void GASSharedObjectLoader::Begin()
 {
-    ObjectPtrArray_Resize(&ObjectStack, 0);
+    (reinterpret_cast<ArrayData<Object*, AllocatorGH<Object*, 2>, ArrayDefaultPolicy>*>(&ObjectStack)->*&ArrayData<Object*, AllocatorGH<Object*, 2>, ArrayDefaultPolicy>::Resize)(0);
     ObjectStack.PushBack(pData);
 }
 

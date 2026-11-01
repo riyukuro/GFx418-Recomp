@@ -83,6 +83,11 @@
 #include <string.h>
 #include <stdlib.h>
 
+namespace Scaleform { namespace GFx {
+template<> AS2::FunctionRef*
+ASStringHashBase<AS2::FunctionRef, HashUncachedLH<ASString, AS2::FunctionRef, ASStringHashFunctor, StatMV_ASString_Mem> >::GetCaseCheck(
+    const ASString& key, bool caseSensitive);    // sfr_as2_05 @0x142949f60
+}}
 template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -128,8 +133,7 @@ inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* pha
 void WatchpointHash_RemoveCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                     bool caseSensitive);
 
-// GetCaseCheck / RemoveCaseCheck of the registered class table (exe 0x142949f60 / 0x14297cd20).
-FunctionRef* ClassHash_GetCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
+// RemoveCaseCheck of the registered class table (exe 0x14297cd20).
 void         ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString& key, bool caseSensitive);
 
 // The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
@@ -328,7 +332,7 @@ void AsBroadcaster::commonInit(Environment* penv)
 // @0x142992680
 bool GlobalContext::UnregisterClassA(ASStringContext* psc, const ASString& className)
 {
-    if (!ClassHash_GetCaseCheck(&RegisteredClasses, className, psc->IsCaseSensitive()))
+    if (!RegisteredClasses.GetCaseCheck(className, psc->IsCaseSensitive()))
         return false;
     ClassHash_RemoveCaseCheck(&RegisteredClasses, className, psc->IsCaseSensitive());
     return true;
@@ -1500,7 +1504,7 @@ void ArrayObject::SetElementSafe(int i, const Value& val)
 // @0x14298ee10
 void ArrayObject::ShallowCopyFrom(const ArrayObject& ao)
 {
-    ArrayObjectElements_Resize(&Elements, ao.Elements.GetSize());
+    (reinterpret_cast<ArrayObjectElementsData*>(&Elements)->*&ArrayObjectElementsData::Resize)(ao.Elements.GetSize());
     for (UPInt i = 0, n = Elements.GetSize(); i < n; i++)
         Elements[i] = ao.Elements[i];
 }

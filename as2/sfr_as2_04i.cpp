@@ -33,7 +33,6 @@ void FUN_142924580(void*);
 void FUN_140001f40(void*);
 void FUN_142924770(void*);
 void FUN_14000b080(void*);
-void FUN_142924960(void*);
 void FUN_1425c1350(void*, void*, int);
 void FUN_142925250(void*);
 void FUN_142581700(void*);

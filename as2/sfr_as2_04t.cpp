@@ -31,7 +31,7 @@ int Environment::CheckExceptions(ActionBuffer* pactBuf, int pc, int* plocalTryBl
             if (rerun)
                 break;
             TryDescr descr = TryBlocks[TryBlocks.GetSize() - 1];
-            TryBlocks_Resize(&TryBlocks, TryBlocks.GetSize() - 1);
+            (reinterpret_cast<TryBlocksData*>(&TryBlocks)->*&TryBlocksData::Resize)(TryBlocks.GetSize() - 1);
             --*plocalTryBlockCount;
             unsigned topIndex = (unsigned)GetTopIndex();
             if (descr.TopStackIndex < topIndex)

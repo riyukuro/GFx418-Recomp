@@ -685,9 +685,6 @@ __declspec(noinline) bool AsBroadcaster::InitializeInstance(ASStringContext* psc
     return true;
 }
 
-// The out-of-line copy of Value::ToObjectInterface (exe 0x142991810), which the header inlines.
-ObjectInterface* Value_ToObjectInterface(const Value* pval, const Environment* penv);
-
 // @0x14297d1e0
 bool AsBroadcaster::RemoveListener(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener)
 {
@@ -704,7 +701,7 @@ bool AsBroadcaster::RemoveListener(Environment* penv, ObjectInterface* pthis, Ob
             for (int i = (int)parray->GetSize() - 1; i >= 0; --i)
             {
                 Value* pelem = parray->GetElementPtr(i);
-                if (pelem && Value_ToObjectInterface(pelem, penv) == plistener)
+                if (pelem && (pelem->*&Value::ToObjectInterface)(penv) == plistener)
                 {
                     parray->RemoveElements(i, 1);
                     return true;
@@ -1567,9 +1564,9 @@ bool AvmCharacter::InvokeClipEventHandlers(Environment* penv, const EventId& id)
 
 // The out-of-line resizes Reset calls (COMDATs where cl inlines them): the register array (exe 0x14297e0e0) and
 // the frame array's shrink (exe 0x14297e450).
-void LocalRegister_Resize(ArrayLH<Value, Stat_Default_Mem>* pregs, UPInt newSize);
-void LocalFrames_ResizeNoConstruct(ArrayLH<Ptr<LocalFrame>, Stat_Default_Mem>* pframes, const void* pheapAddr,
-                                   UPInt newSize);
+typedef ArrayData<Value, AllocatorLH<Value, Stat_Default_Mem>, ArrayDefaultPolicy> LocalRegisterData;
+typedef ArrayBase<LocalRegisterData> LocalRegisterBase;
+typedef ArrayDataBase<Ptr<LocalFrame>, AllocatorLH<Ptr<LocalFrame>, Stat_Default_Mem>, ArrayDefaultPolicy> LocalFramesData;
 
 // @0x14297dd70
 void Environment::Reset()
@@ -1577,13 +1574,13 @@ void Environment::Reset()
     Stack.Reset();
     for (unsigned i = 0; i < 4; i++)
         GlobalRegister[i].SetUndefined();
-    LocalRegister_Resize(&LocalRegister, 0);
+    (LocalRegister.*&LocalRegisterBase::Resize)(0);
     Unrolling       = false;
     IsInvalidTarget = false;
     CallStack.Reset();
-    LocalFrames_ResizeNoConstruct(&LocalFrames, &LocalFrames, 0);
+    (reinterpret_cast<LocalFramesData*>(&LocalFrames)->*&LocalFramesData::ResizeNoConstruct)(&LocalFrames, 0);
     FuncCallNestingLevel = 0;
-    TryBlocks_Resize(&TryBlocks, 0);
+    (reinterpret_cast<TryBlocksData*>(&TryBlocks)->*&TryBlocksData::Resize)(0);
     ThrowingValue.SetUndefined();
 }
 
@@ -2023,7 +2020,7 @@ void GASSharedObjectLoader::PushObject(const String& name)
 // @0x14296f260
 void GASSharedObjectLoader::PopObject()
 {
-    ObjectPtrArray_Resize(&ObjectStack, ObjectStack.GetSize() - 1);
+    (reinterpret_cast<ArrayData<Object*, AllocatorGH<Object*, 2>, ArrayDefaultPolicy>*>(&ObjectStack)->*&ArrayData<Object*, AllocatorGH<Object*, 2>, ArrayDefaultPolicy>::Resize)(ObjectStack.GetSize() - 1);
     bArrayIsTop = ObjectStack[ObjectStack.GetSize() - 1]->GetObjectType() == ObjectInterface::Object_Array;
 }
 

@@ -11,8 +11,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 typedef ArrayLH<Value*, StatMV_ActionScript_Mem> ArrayObjectElements;
 
-// The out-of-line Resize of the element array (exe 0x14297e2b0, a COMDAT the exe calls where cl inlines it).
-void ArrayObjectElements_Resize(ArrayObjectElements* pelements, UPInt newSize);
+// The element array's Resize (exe 0x14297e2b0) is a COMDAT the exe calls where cl inlines it: call it through a member pointer.
+typedef ArrayData<Value*, AllocatorLH<Value*, StatMV_ActionScript_Mem>, ArrayDefaultPolicy> ArrayObjectElementsData;
 
 template<class T>
 inline void ArrayObject_Swap(T& a, T& b)
@@ -106,7 +106,7 @@ public:
             for (unsigned i = 1; i < Elements.GetSize(); i++)
                 Elements[i - 1] = Elements[i];
             Elements[Elements.GetSize() - 1] = 0;
-            ArrayObjectElements_Resize(&Elements, Elements.GetSize() - 1);
+            (reinterpret_cast<ArrayObjectElementsData*>(&Elements)->*&ArrayObjectElementsData::Resize)(Elements.GetSize() - 1);
         }
     }
     void Reverse()
