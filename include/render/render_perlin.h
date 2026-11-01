@@ -8,15 +8,12 @@
 
 namespace Scaleform { namespace Render { class ImageData; } }
 
-// DICommand_PerlinNoise::ExecuteSW (sfr_as3_22).
-extern "C" void FUN_142677740(void* operation, void*, Scaleform::Render::ImageData* image);
-
 namespace Scaleform { namespace Render {
 
 // The lattice hash: row stride and the three polynomial coefficients.
 class PerlinGenerator
 {
-    friend void ::FUN_142677740(void*, void*, ImageData*);
+    friend struct DICommand_PerlinNoise; // ExecuteSW (sfr_as3_22)
 
     int Stride; // +0x0
     int A;      // +0x4

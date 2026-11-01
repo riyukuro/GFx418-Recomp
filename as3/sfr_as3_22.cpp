@@ -629,10 +629,72 @@ static bool BitmapHasAlpha(const unsigned char* op, unsigned offset)
     return *(static_cast<const unsigned char*>(*reinterpret_cast<void* const*>(op + offset)) + 0x48) != 0;
 }
 
+namespace Scaleform { namespace Render {
+struct DICommandContext; class Texture;
+struct DICommand_Compare
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_Threshold
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+};
+struct DICommand_Merge
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_Scroll
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+};
+struct DICommand_CopyChannel
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_PaletteMap
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+    virtual void ExecuteHWCopyAction(DICommandContext& context, Texture** tex, const Matrix2F* texgen) const;
+};
+struct DICommand_CopyPixels
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_ColorTransform
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_FloodFill
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_PerlinNoise
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_FillRect
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_Clear
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+struct DICommand_Noise
+{
+    virtual void ExecuteSW(DICommandContext& context, ImageData& dest, ImageData** src = 0) const;
+};
+} }
+
 // MS2-FUNCTIONAL: reproduces the executable's per-pixel difference image, including optional alpha comparison.
 // @0x142676190
-extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
+void Scaleform::Render::DICommand_Compare::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& outputRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_Compare*>(this);
+    Scaleform::Render::ImageData* output = &outputRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* reference = static_cast<ImageData*>(inputs[0]);
@@ -681,8 +743,11 @@ extern "C" void FUN_142676190(void* operation, void*, Scaleform::Render::ImageDa
 // MS2-FUNCTIONAL: threshold. The masked pixel is compared with the masked reference using the op at +0x40 (six
 // unsigned comparisons, anything else selects nothing) and selected pixels take the colour at +0x48.
 // @0x142677ea0
-extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageData* output, void** inputs)
+void Scaleform::Render::DICommand_Threshold::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& outputRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_Threshold*>(this);
+    Scaleform::Render::ImageData* output = &outputRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -725,8 +790,11 @@ extern "C" void FUN_142677ea0(void* operation, void*, Scaleform::Render::ImageDa
 // MS2-FUNCTIONAL: merge. Each RGBA channel is (dest * (256 - w) + source * w) >> 8 with the weights at +0x40..+0x4c
 // in red, green, blue, alpha order.
 // @0x142676ef0
-extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageData* image, void** inputs)
+void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_Merge*>(this);
+    Scaleform::Render::ImageData* image = &imageRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* overlay = static_cast<ImageData*>(inputs[0]);
@@ -767,8 +835,11 @@ extern "C" void FUN_142676ef0(void* operation, void*, Scaleform::Render::ImageDa
 // MS2-FUNCTIONAL: copyPixels without mergeAlpha. Copies back to front (so an overlapping self-copy works) and forces
 // opaque alpha when either side lacks alpha.
 // @0x142677c70
-extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_Scroll*>(this);
+    Scaleform::Render::ImageData* destination = &destinationRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -793,8 +864,11 @@ extern "C" void FUN_142677c70(void* operation, void*, Scaleform::Render::ImageDa
 // MS2-FUNCTIONAL: copyChannel. The source and destination channels at +0x40/+0x44 go through the selector table to
 // RGBA indices; an unknown channel copies nothing.
 // @0x142676380
-extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+void Scaleform::Render::DICommand_CopyChannel::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_CopyChannel*>(this);
+    Scaleform::Render::ImageData* destination = &destinationRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -832,8 +906,11 @@ extern "C" void FUN_142676380(void* operation, void*, Scaleform::Render::ImageDa
 // channel selected in the mask at +0x48 contributes its table entry, the others their own bits, and the four
 // contributions are summed.
 // @0x142677460
-extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+void Scaleform::Render::DICommand_PaletteMap::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_PaletteMap*>(this);
+    Scaleform::Render::ImageData* destination = &destinationRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -868,8 +945,11 @@ extern "C" void FUN_142677460(void* operation, void*, Scaleform::Render::ImageDa
 // destination point; the dest span is clipped against the source (or, with an alpha bitmap, against the mask rect at
 // +0x48/+0x4c) and then against the destination. Source alpha is scaled by the mask alpha and blended over the dest.
 // @0x142676660
-extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+void Scaleform::Render::DICommand_CopyPixels::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_CopyPixels*>(this);
+    Scaleform::Render::ImageData* destination = &destinationRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::Color;
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
@@ -951,8 +1031,11 @@ extern "C" void FUN_142676660(void* operation, void*, Scaleform::Render::ImageDa
 // multipliers at +0x40 and offsets at +0x50 in red, green, blue, alpha order. When the destination has no alpha the
 // colour terms are scaled by (alphaMul + alphaAdd) and the alpha is written opaque.
 // @0x142675d30
-extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageData* destination, void** inputs)
+void Scaleform::Render::DICommand_ColorTransform::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_ColorTransform*>(this);
+    Scaleform::Render::ImageData* destination = &destinationRef;
+    void** inputs = reinterpret_cast<void**>(inputsRef);
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     auto* source = static_cast<ImageData*>(inputs[0]);
@@ -1001,8 +1084,10 @@ extern "C" void FUN_142675d30(void* operation, void*, Scaleform::Render::ImageDa
 
 // MS2-FUNCTIONAL: flood-fills the executable's clipped pixel region from its seed using 4-connected equal-color spans.
 // @0x142676bd0
-extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageData* image)
+void Scaleform::Render::DICommand_FloodFill::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_FloodFill*>(this);
+    Scaleform::Render::ImageData* image = &imageRef;
     using Scaleform::Render::ImageData;
     using Scaleform::Render::ImagePlane;
     ImagePlane plane;
@@ -1048,8 +1133,10 @@ extern "C" void FUN_142676bd0(void* operation, void*, Scaleform::Render::ImageDa
 // amplitude halves per octave, the sum is normalised by the total amplitude.
 // MS2-FUNCTIONAL: (corrected, sfr36) reads the plane once instead of per pixel; the generator parameters are our table
 // @0x142677740
-extern "C" void FUN_142677740(void* operation, void*, Scaleform::Render::ImageData* image)
+void Scaleform::Render::DICommand_PerlinNoise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
 {
+    void* operation = const_cast<Scaleform::Render::DICommand_PerlinNoise*>(this);
+    Scaleform::Render::ImageData* image = &imageRef;
     using namespace Scaleform;
     using Scaleform::Render::ImagePlane;
     using Scaleform::Render::PerlinGenerator;
@@ -2061,8 +2148,12 @@ void ClearSoundBuffer(void* player)
 namespace Scaleform {
 // MS2-FUNCTIONAL: prepares the image viewport transform and dispatches the fill and blend operations through the render context.
 // @0x142675790
-void DrawImageViewport(void* command, void* contextOwner, void** image, void* state)
+void Scaleform::Render::DICommand_Scroll::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextOwnerRef, Scaleform::Render::Texture** imageRef, const Scaleform::Render::Matrix2F* stateRef) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_Scroll*>(this);
+    void* contextOwner = &contextOwnerRef;
+    void** image = reinterpret_cast<void**>(imageRef);
+    void* state = const_cast<Scaleform::Render::Matrix2F*>(stateRef);
     auto* owner = static_cast<unsigned char*>(contextOwner);
     void* context = *reinterpret_cast<void**>(owner + 8);
     auto** vtable = *reinterpret_cast<void***>(context);
@@ -2084,8 +2175,10 @@ void DrawImageViewport(void* command, void* contextOwner, void** image, void* st
 
 // DICommand_FillRect::ExecuteSW: clips ApplyRect to the image and fills it, opaque unless the image is transparent.
 // @0x142676ac0
-void FillClippedImageRect(void* command, void*, void* image)
+void Scaleform::Render::DICommand_FillRect::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_FillRect*>(this);
+    void* image = &imageRef;
     // DICommand_FillRect::ExecuteSW: ApplyRect at +0x10, FillColor at +0x20, pImage at +8.
     auto* bytes = static_cast<unsigned char*>(command);
     Render::ImageData& dest = *static_cast<Render::ImageData*>(image);
@@ -2111,8 +2204,10 @@ void FillClippedImageRect(void* command, void*, void* image)
 
 // DICommand_Clear::ExecuteSW: fills every pixel through the image write helper with the stored color.
 // @0x142675ca0
-void FillImageData(void* command, void*, void* image)
+void Scaleform::Render::DICommand_Clear::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageRef, Scaleform::Render::ImageData**) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_Clear*>(this);
+    void* image = &imageRef;
     Render::ImageData* data = static_cast<Render::ImageData*>(image);
     const unsigned color = *reinterpret_cast<unsigned*>(static_cast<char*>(command) + 0x10);
     for (unsigned y = 0; y < data->GetHeight(); ++y) {
@@ -3957,8 +4052,10 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
 // MS2-FUNCTIONAL: fills every destination pixel with seeded grayscale or masked-channel noise from a seeded
 // Alg::Random::Generator, column by column as the exe does.
 // @0x142677260
-void FUN_142677260(void* command, void*, void* imageData)
+void Scaleform::Render::DICommand_Noise::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& imageDataRef, Scaleform::Render::ImageData**) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_Noise*>(this);
+    void* imageData = &imageDataRef;
     auto* settings = static_cast<unsigned char*>(command);
     Scaleform::Alg::Random::Generator random;
     random.SeedRandom(*reinterpret_cast<unsigned*>(settings + 0x10));
@@ -3996,8 +4093,12 @@ void FUN_142677260(void* command, void*, void* imageData)
 
 // MS2-FUNCTIONAL: rebuilds the threshold draw transform and forwards the operation, threshold, color, mask, and copy-source flag to the renderer.
 // @0x142675870
-void FUN_142675870(void* command, void* context, void* textures, const void* texgen)
+void Scaleform::Render::DICommand_Threshold::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextRef, Scaleform::Render::Texture** texturesRef, const Scaleform::Render::Matrix2F* texgenRef) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_Threshold*>(this);
+    void* context = &contextRef;
+    void* textures = reinterpret_cast<void*>(texturesRef);
+    const void* texgen = texgenRef;
     auto* bytes = static_cast<unsigned char*>(command);
     float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
                            ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
@@ -4036,8 +4137,12 @@ void FUN_142675870(void* command, void* context, void* textures, const void* tex
 
 // MS2-FUNCTIONAL: scales the palette-map texture transform for the destination image and submits its channel table and mask to the HAL.
 // @0x142675560
-void FUN_142675560(void* command, void* context, void* textures, const void* texgen)
+void Scaleform::Render::DICommand_PaletteMap::ExecuteHWCopyAction(Scaleform::Render::DICommandContext& contextRef, Scaleform::Render::Texture** texturesRef, const Scaleform::Render::Matrix2F* texgenRef) const
 {
+    void* command = const_cast<Scaleform::Render::DICommand_PaletteMap*>(this);
+    void* context = &contextRef;
+    void* textures = reinterpret_cast<void*>(texturesRef);
+    const void* texgen = texgenRef;
     auto* bytes = static_cast<unsigned char*>(command);
     float transform[8] = { ThresholdTransformX[0], ThresholdTransformX[1], ThresholdTransformX[2], ThresholdTransformX[3],
                            ThresholdTransformY[0], ThresholdTransformY[1], ThresholdTransformY[2], ThresholdTransformY[3] };
