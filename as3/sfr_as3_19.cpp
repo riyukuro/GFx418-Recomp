@@ -3864,45 +3864,109 @@ static inline const Abc::Multiname& Sfr31MnEntry(UPInt abcLink, UInt32 idx)
     return *reinterpret_cast<const Abc::Multiname*>(idx == 0 ? file + 0xe8 : static_cast<UPInt>(idx) * 0x10 + TrRd(file, 0xb8));
 }
 
+// Holds a Multiname whose destructor runs through the exe's out-of-line copy.
+struct Sfr31MnSlot
+{
+    union { Multiname mn; };
+    Sfr31MnSlot(VMAbcFile& file, const Abc::Multiname& e) : mn(file, e) {}
+    ~Sfr31MnSlot() { FUN_1423f1060(&mn); }
+};
+
+// The multiname reader's context with its ABC file.
+struct Sfr31MnCtx4
+{
+    UPInt vm;
+    State* st;
+    int pops;
+    UPInt file;
+};
+
+// A Multiname in raw storage, destroyed through the exe's out-of-line ~Multiname.
+struct Sfr31MnRaw
+{
+    Sfr31MnRaw(VMAbcFile& file, const Abc::Multiname& e) { ::new (&w0) Multiname(file, e); }
+    ~Sfr31MnRaw() { FUN_1423f1060(&Get()); }
+    Multiname& Get() { return *reinterpret_cast<Multiname*>(&w0); }
+    UPInt w0, w1, w2, w3, w4, w5;
+};
+
+// The multiname entry for a 64-bit index (the exe tests the zero-extended index as a quadword).
+static inline const Abc::Multiname& Sfr31MnEntryW(UPInt abcLink, UPInt idx)
+{
+    const UPInt file = TrRd(abcLink, 0x28);
+    return *reinterpret_cast<const Abc::Multiname*>(idx == 0 ? file + 0xe8 : idx * 0x10 + TrRd(file, 0xb8));
+}
+
+// TR::ReadMnObject with its destructor inlined (the header's is the exe's out-of-line 0x1424ded40): the reader
+// fields, the multiname read off the stack, then the popped object.
+struct Sfr31ReadMn
+{
+    __forceinline Sfr31ReadMn(State* st, UPInt link, UPInt idx)
+        : ctx{TrRd(link, 0x20), st, 0, link}, mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntryW(link, idx))
+    {
+        ctx.pops += FUN_142520380(&ctx, &mn.Get());
+    }
+    Sfr31MnCtx4 ctx;    // +0x00
+    Sfr31MnRaw mn;      // +0x20
+};
+struct Sfr31ReadMnObject : Sfr31ReadMn
+{
+    __forceinline Sfr31ReadMnObject(State* st, UPInt link, UPInt idx) : Sfr31ReadMn(st, link, idx), obj(st->PopOpValue())
+    {
+        ++ctx.pops;
+    }
+    Value obj;          // +0x50
+};
+
 // Tracer op with a multiname: notes the name operand(s), pops the object and pushes an object value.
-// MS2-FUNCTIONAL 0x142537f00: behavior-equivalent recovery; codegen differs from exe
 // @0x142537f00
 void Sfr31TraceMnPopPush(State* st, UInt32 idx)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), idx);
-    const UPInt link = TrAbcLink(s.Tracer());
-    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
-    ctx.pops += FUN_142520380(&ctx, &mn);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++ctx.pops;
+    Sfr31ReadMnObject args(st, TrAbcLink(s.Tracer()), idx);
     TrTraitsScratch t;
     t.SetTraits(TrITraits(s.Tracer(), 0x210));
     s.OpStack().PushBack(t.Get());
-    popped.Get().~Value();
 }
 
 // Tracer op with a multiname that pops the object and the value without pushing.
-// MS2-FUNCTIONAL 0x14253b640: behavior-equivalent recovery; codegen differs from exe
+// TR::ReadValueMnObject likewise (the header's destructor is the exe's out-of-line 0x1424dee30): the reader fields
+// and the popped value, the file and the multiname read off the stack, then the popped object.
+struct Sfr31ReadValue
+{
+    __forceinline Sfr31ReadValue(State* st, UPInt vm) : ctx{vm, st, 0}, val(st->PopOpValue())
+    {
+        ++ctx.pops;
+    }
+    Sfr31MnCtx ctx;     // +0x00
+    Value val;          // +0x18
+};
+struct Sfr31ReadValueMn : Sfr31ReadValue
+{
+    __forceinline Sfr31ReadValueMn(State* st, UPInt link, UPInt idx)
+        : Sfr31ReadValue(st, TrRd(link, 0x20)), file(link), mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntryW(link, idx))
+    {
+        ctx.pops += FUN_142520380(&ctx, &mn.Get());
+    }
+    UPInt file;         // +0x38
+    Sfr31MnRaw mn;      // +0x40
+};
+struct Sfr31ReadValueMnObject : Sfr31ReadValueMn
+{
+    __forceinline Sfr31ReadValueMnObject(State* st, UPInt link, UPInt idx) : Sfr31ReadValueMn(st, link, idx), obj(st->PopOpValue())
+    {
+        ++ctx.pops;
+    }
+    Value obj;          // +0x70
+};
+
 // @0x14253b640
 void Sfr31TraceMnPop2(State* st, UInt32 idx)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), idx);
-    const UPInt link = TrAbcLink(s.Tracer());
-    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
-    TrPopped first;
-    FUN_14251cd30(st, &first.Get());
-    ++ctx.pops;
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
-    ctx.pops += FUN_142520380(&ctx, &mn);
-    TrPopped second;
-    FUN_14251cd30(st, &second.Get());
-    ++ctx.pops;
-    second.Get().~Value();
-    first.Get().~Value();
+    Sfr31ReadValueMnObject args(st, TrAbcLink(s.Tracer()), idx);
 }
 // ---- batch 26
 static void Sfr31ThrowIfNotObject(VM& vm, const UInt32* v)
@@ -4026,23 +4090,6 @@ struct Sfr31RawTraitsVal
     UPInt w1, w2, w3;
 };
 
-// Holds a Multiname whose destructor runs through the exe's out-of-line copy.
-struct Sfr31MnSlot
-{
-    union { Multiname mn; };
-    Sfr31MnSlot(VMAbcFile& file, const Abc::Multiname& e) : mn(file, e) {}
-    ~Sfr31MnSlot() { FUN_1423f1060(&mn); }
-};
-
-// The multiname reader's context with its ABC file.
-struct Sfr31MnCtx4
-{
-    UPInt vm;
-    State* st;
-    int pops;
-    UPInt file;
-};
-
 struct Sfr31TracePropRef
 {
     UPInt f, x;
@@ -4050,42 +4097,36 @@ struct Sfr31TracePropRef
     Sfr31TracePropRef() : f(0), x(0) {}
 };
 
+// PropRef::IsAsValue / IsAsObject: the tag bit as a bool (as in PropRef::operator bool, 0x1424e0e20)
+static inline bool Sfr31PRTag(UPInt p, UPInt mask) { return (p & mask) != 0; }
+
 // Tracer find-property core: resolves the multiname and pushes the property value, or the Object traits when unresolved.
-static __forceinline void Sfr31TraceFindProp(State* st, UInt32 idx, UInt32 fallbackTag)
+static __forceinline void Sfr31TraceFindProp(State* st, UInt32 idx, Value::TraceNullType nt)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), idx);
-    const UPInt link = TrAbcLink(s.Tracer());
-    Sfr31RawTraitsVal fb;
-    Sfr31MnCtx4 ctx = {TrRd(link, 0x20), st, 0, link};
-    const UPInt file = TrRd(link, 0x28);
-    const UPInt mi = idx;
-    Sfr31MnSlot slot(*reinterpret_cast<VMAbcFile*>(link), *reinterpret_cast<const Abc::Multiname*>(mi == 0 ? file + 0xe8 : mi * 0x10 + TrRd(file, 0xb8)));
-    Multiname& mn = slot.mn;
-    ctx.pops += FUN_142520380(&ctx, &mn);
+    Sfr31ReadMn args(st, TrAbcLink(s.Tracer()), idx);
+    Multiname& mn = args.mn.Get();
     Sfr31TracePropRef pr;
-    UPInt t1, t2;
+    UInt32 t1;
+    UPInt t2;
     FUN_142501e80(st, &pr, &mn, &t1, &t2);
     Value& res = pr.v;
     const UPInt f = pr.f;
-    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || (f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0)
-    {
-        fb.w1 = 0;
-        fb.w0 = fallbackTag;
-        fb.w2 = Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0);
-        s.OpStack().PushBack(*reinterpret_cast<const Value*>(&fb));
-    }
-    else
+    if (!((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || (Sfr31PRTag(f, 1) && (f & ~static_cast<UPInt>(1)) == 0) ||
+          (Sfr31PRTag(f, 2) && (f & ~static_cast<UPInt>(2)) == 0)))
         s.OpStack().PushBack(res);
+    else
+        s.OpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0)), nt));
 }
 
-// MS2-FUNCTIONAL 0x142538840: Multiname's destructor is called out of line as in the exe; two frame slots and the flag-bit test differ
+// MS2-FUNCTIONAL 0x142538840: same lookup and branches; only the not-found Value's lea rdx is scheduled before its stores (exe: after)
 // @0x142538840
-void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 0x48); }
+void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Value::NullOrNot); }
 
-// MS2-FUNCTIONAL 0x142538bc0: Multiname's destructor is called out of line as in the exe; two frame slots and the flag-bit test differ
+// MS2-FUNCTIONAL 0x142538bc0: same lookup and branches; only the not-found Value's lea rdx is scheduled before its stores (exe: after)
 // @0x142538bc0
-void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 8); }
+void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Value::NotNull); }
 
 // Tracer op: an operand of a type-describing kind becomes its instance traits, anything else is pushed back as it was.
 // MS2-FUNCTIONAL 0x142536dd0: behavior-equivalent recovery; codegen differs from exe
@@ -4382,7 +4423,6 @@ void Sfr31TraceBlock(UPInt tr, UPInt pos, UPInt block)
 typedef UPInt (*Sfr31VFnGet)(UPInt self);
 
 // Tracer getdescendants: raises a verify error when XML support is absent, else the object operand becomes an XMLList-typed value.
-// MS2-FUNCTIONAL 0x1425390a0: raw-offset model; codegen differs from the exe
 // @0x1425390a0
 void Sfr31TraceGetDescendants(State* st, UInt32 idx)
 {
@@ -4396,17 +4436,10 @@ void Sfr31TraceGetDescendants(State* st, UInt32 idx)
         return;
     }
     FUN_14251fcd0(s.Tracer(), idx);
-    const UPInt link = TrAbcLink(s.Tracer());
-    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
-    ctx.pops += FUN_142520380(&ctx, &mn);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++ctx.pops;
-    Sfr31VFnGet fn = *reinterpret_cast<Sfr31VFnGet*>(Sfr31Rd(helper, 0) + 0x98);
-    Sfr31RawTraitsVal v = {8, 0, fn(helper), 0};
-    s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
-    popped.Get().~Value();
+    Sfr31ReadMnObject args(st, TrAbcLink(s.Tracer()), idx);
+    const UPInt xml = Sfr31Rd(TrVM(s.Tracer()), 0x40);
+    InstanceTraits::Traits& tr = *reinterpret_cast<InstanceTraits::Traits*>((*reinterpret_cast<Sfr31VFnGet*>(Sfr31Rd(xml, 0) + 0x98))(xml));
+    s.OpStack().PushBack(Value(tr, Value::NotNull));
 }
 // ---- batch 32
 // istype-style op: replaces the top value with whether it is an instance of the named class; names resolved at compile time are rejected.
