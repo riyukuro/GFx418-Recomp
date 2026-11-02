@@ -134,116 +134,117 @@ void SGMLCharIter<Char>::operator++()
 
 // Reads the entity reference at the cursor: the named ones Flash knows, or a decimal / hex character code. An
 // unknown or malformed one is left as a plain '&'.
-// MS2-FUNCTIONAL: branch layout of the entity chain and register allocation differ
 // @0x14267df60
 template<class Char>
 UInt32 SGMLCharIter<Char>::DecodeEscapedChar()
 {
-    if (pCurChar >= pEnd)
-        return 0;
-    pNextChar = pCurChar;
-    if (*pNextChar != '&')
-        return CurChar;
-
-    CurChar = *pNextChar;
-    ++pNextChar;
-    do
+    if (pCurChar < pEnd)
     {
-        if (pNextChar + 5 <= pEnd)
+        pNextChar = pCurChar;
+        if (*pNextChar == '&')
         {
-            if (StrCompare(pNextChar, "quot;", 5) == 0)
+            CurChar = *pNextChar;
+            ++pNextChar;
+            do
             {
-                CurChar = '\"';
-                pNextChar += 5;
-                break;
-            }
-            else if (StrCompare(pNextChar, "apos;", 5) == 0)
-            {
-                CurChar = '\'';
-                pNextChar += 5;
-                break;
-            }
-            else if (StrCompare(pNextChar, "nbsp;", 5) == 0)
-            {
-                CurChar = 0xa0;
-                pNextChar += 5;
-                break;
-            }
-        }
-        if (pNextChar + 4 <= pEnd && StrCompare(pNextChar, "amp;", 4) == 0)
-        {
-            CurChar = '&';
-            pNextChar += 4;
-            break;
-        }
-        if (pNextChar + 3 <= pEnd)
-        {
-            if (StrCompare(pNextChar, "lt;", 3) == 0)
-            {
-                CurChar = '<';
-                pNextChar += 3;
-                break;
-            }
-            if (StrCompare(pNextChar, "gt;", 3) == 0)
-            {
-                CurChar = '>';
-                pNextChar += 3;
-                break;
-            }
-        }
-        if (pNextChar + 2 <= pEnd)
-        {
-            if (*pNextChar == '#')
-            {
-                const Char* hash = pNextChar;
-                ++pNextChar;
-                UInt32 code = 0;
-                // (the shipped code lowers the result of the comparison, not the character)
-                if (ToLower(*pNextChar == 'x'))
+                if (pNextChar + 5 <= pEnd)
                 {
-                    for (++pNextChar; pNextChar < pEnd && *pNextChar != ';'; ++pNextChar)
+                    if (StrCompare(pNextChar, "quot;", 5) == 0)
                     {
-                        if (!IsXDigit(*pNextChar))
-                        {
-                            code = ~0u;
-                            break;
-                        }
-                        code <<= 4;
-                        Char c = (Char)ToLower(*pNextChar);
-                        if (c >= '0' && c <= '9')
-                            code |= (c - '0') & 0xF;
-                        else if (c >= 'a' && c <= 'f')
-                            code |= ((c - 'a') & 0xF) + 10;
+                        CurChar = '\"';
+                        pNextChar += 5;
+                        break;
                     }
-                    if (code != ~0u && *pNextChar == ';')
-                        ++pNextChar;
+                    else if (StrCompare(pNextChar, "apos;", 5) == 0)
+                    {
+                        CurChar = '\'';
+                        pNextChar += 5;
+                        break;
+                    }
+                    else if (StrCompare(pNextChar, "nbsp;", 5) == 0)
+                    {
+                        CurChar = 0xa0;
+                        pNextChar += 5;
+                        break;
+                    }
                 }
-                else if (IsDigit(*pNextChar))
+                if (pNextChar + 4 <= pEnd && StrCompare(pNextChar, "amp;", 4) == 0)
                 {
-                    for (; pNextChar < pEnd && *pNextChar != ';'; ++pNextChar)
-                    {
-                        if (!IsDigit(*pNextChar))
-                        {
-                            code = ~0u;
-                            break;
-                        }
-                        code = code * 10 + (*pNextChar - '0');
-                    }
-                    if (code != ~0u && *pNextChar == ';')
-                        ++pNextChar;
+                    CurChar = '&';
+                    pNextChar += 4;
+                    break;
                 }
-                else
-                    code = ~0u;
+                if (pNextChar + 3 <= pEnd)
+                {
+                    if (StrCompare(pNextChar, "lt;", 3) == 0)
+                    {
+                        CurChar = '<';
+                        pNextChar += 3;
+                        break;
+                    }
+                    if (StrCompare(pNextChar, "gt;", 3) == 0)
+                    {
+                        CurChar = '>';
+                        pNextChar += 3;
+                        break;
+                    }
+                }
+                if (pNextChar + 2 <= pEnd)
+                {
+                    if (*pNextChar == '#')
+                    {
+                        const Char* hash = pNextChar;
+                        ++pNextChar;
+                        UInt32 code = 0;
+                        // (the shipped code lowers the result of the comparison, not the character)
+                        if (ToLower(*pNextChar == 'x'))
+                        {
+                            for (++pNextChar; pNextChar < pEnd && *pNextChar != ';'; ++pNextChar)
+                            {
+                                if (!IsXDigit(*pNextChar))
+                                {
+                                    code = ~0u;
+                                    break;
+                                }
+                                code <<= 4;
+                                Char c = (Char)ToLower(*pNextChar);
+                                if (c >= '0' && c <= '9')
+                                    code |= (c - '0') & 0xF;
+                                else if (c >= 'a' && c <= 'f')
+                                    code |= ((c - 'a') & 0xF) + 10;
+                            }
+                            if (code != ~0u && *pNextChar == ';')
+                                ++pNextChar;
+                        }
+                        else if (IsDigit(*pNextChar))
+                        {
+                            for (; pNextChar < pEnd && *pNextChar != ';'; ++pNextChar)
+                            {
+                                if (!IsDigit(*pNextChar))
+                                {
+                                    code = ~0u;
+                                    break;
+                                }
+                                code = code * 10 + (*pNextChar - '0');
+                            }
+                            if (code != ~0u && *pNextChar == ';')
+                                ++pNextChar;
+                        }
+                        else
+                            code = ~0u;
 
-                if (code != ~0u)
-                    CurChar = code;
-                else
-                    pNextChar = hash;
-            }
-            break;
+                        if (code != ~0u)
+                            CurChar = code;
+                        else
+                            pNextChar = hash;
+                    }
+                    break;
+                }
+            } while (0);
         }
-    } while (0);
-    return CurChar;
+        return CurChar;
+    }
+    return 0;
 }
 
 // @0x14267eca0
@@ -1393,18 +1394,16 @@ bool StyledText::ParseHtml(const wchar_t* phtml, UPInt htmlSize, HTMLImageTagInf
                          pstyleMgr, txtFmt, paraFmt);
 }
 
-// MS2-FUNCTIONAL: decodes UTF-8 to the same UTF-16 buffer and forwards the same parser arguments; compiler frame differs.
 // @0x14267eff0
 bool StyledText::ParseHtml(const char* phtml, UPInt htmlSize, HTMLImageTagInfoArray* pimgInfoArr,
                            bool multiline, bool condenseWhite, const StyleManagerBase* pstyleMgr,
                            const TextFormat* txtFmt, const ParagraphFormat* paraFmt)
 {
-    MemoryHeap* heap = Memory::GetGlobalHeap();
-    wchar_t* wide = static_cast<wchar_t*>(heap->Alloc(htmlSize * sizeof(wchar_t) + sizeof(wchar_t)));
+    wchar_t* wide = static_cast<wchar_t*>(Memory::GetGlobalHeap()->Alloc(htmlSize * sizeof(wchar_t) + sizeof(wchar_t)));
     const UPInt wideSize = UTF8Util::DecodeString(wide, phtml, static_cast<SPInt>(htmlSize));
     const bool result = FUN_14267b1c0(this, wide, wideSize, pimgInfoArr, multiline, condenseWhite,
                                       pstyleMgr, txtFmt, paraFmt);
-    heap->Free(wide);
+    Memory::GetGlobalHeap()->Free(wide);
     return result;
 }
 
