@@ -9,6 +9,7 @@
 // MS2-RANGE: 0x14000e470-0x140016b50 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
+#define MS2_AS2_VALUE_DTOR_CALL
 #include "../include/video/video_video.h"
 #include "../include/video/video_as3providernetstream.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
@@ -1831,8 +1832,8 @@ void FUN_140011d90(void* object)
     void** interfaces = *reinterpret_cast<void***>(static_cast<char*>(object) + 0xa0);
     if (interfaces)
     {
-        if (interfaces[0]) Scaleform::Memory::Free(interfaces[0]);
-        Scaleform::Memory::Free(interfaces);
+        Scaleform::Memory::Free(interfaces[0]);
+        Scaleform::Memory::Free(*reinterpret_cast<void**>(static_cast<char*>(object) + 0xa0));
     }
     static_cast<Video02FinalizeAccess*>(object)->Video02FinalizeAccess::Finalize_GC();
 }
@@ -2112,13 +2113,12 @@ __declspec(noinline) void* FUN_14000e8a0(void* object, unsigned __int64)
 void* FUN_140015250(void* array)
 {
     char* bytes = static_cast<char*>(array);
-    const unsigned __int64 index = *reinterpret_cast<unsigned __int64*>(bytes + 8);
-    const unsigned __int64 page = index >> 10;
-    if (*reinterpret_cast<unsigned __int64*>(bytes + 0x10) <= page &&
+    const unsigned __int64 page = *reinterpret_cast<unsigned __int64*>(bytes + 8) >> 10;
+    if (page >= *reinterpret_cast<unsigned __int64*>(bytes + 0x10) &&
         !FUN_1423dfe30(array, page))
         return 0;
     void** pages = *reinterpret_cast<void***>(bytes + 0x20);
-    return static_cast<char*>(pages[page]) + (index & 0x3ff) * sizeof(void*);
+    return static_cast<char*>(pages[page]) + (*reinterpret_cast<unsigned*>(bytes + 8) & 0x3ff) * sizeof(void*);
 }
 
 // @0x140014340
@@ -2618,7 +2618,7 @@ Value* FUN_142923b90(Value* pthis, const FunctionRef& func);
 struct Video02ValueStorage
 {
     Video02ValueStorage() {}
-    std::uint64_t Raw0, Raw1;
+    std::uint64_t Raw0, Raw1, Raw2, Raw3;
 };
 
 static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
@@ -2634,6 +2634,8 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         *reinterpret_cast<void**>(function) = functionVtable;
         *reinterpret_cast<void**>(reinterpret_cast<char*>(function) + 0x20) = functionInterfaceVtable;
     }
+    else
+        function = 0;
     result->Init(*function);   // adopts the new function's reference
 
     Scaleform::GFx::AS2::Object* prototype = static_cast<Scaleform::GFx::AS2::Object*>(context->pHeap->Alloc(prototypeSize));
@@ -2656,6 +2658,8 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         unsigned* count = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(prototype) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
+    else
+        prototype = 0;
     extern void FUN_14000c280(void*, unsigned, void**);
     {
         void* prototypeSlot = prototype;
@@ -2669,9 +2673,9 @@ static __forceinline Scaleform::GFx::AS2::FunctionRef* CreateVideo02Builtin(
         reinterpret_cast<char*>(manager) + stringOffset);
     // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
     Video02ValueStorage valueStorage;
-    Scaleform::GFx::AS2::Value* value = Scaleform::GFx::AS2::FUN_142923b90(
-        reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result);
-    global->SetMemberRaw(&stringContext, name, *value, flags);
+    global->SetMemberRaw(&stringContext, name,
+        *Scaleform::GFx::AS2::FUN_142923b90(reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage), *result),
+        flags);
     reinterpret_cast<Scaleform::GFx::AS2::Value*>(&valueStorage)->Scaleform::GFx::AS2::Value::~Value();
     if (prototype)
     {
@@ -2716,6 +2720,7 @@ void FUN_140015c40(void* object)
     void** ownerVtable = *reinterpret_cast<void***>(owner);
     void* heap = reinterpret_cast<void*(*)(void*)>(ownerVtable[0x178 / sizeof(void*)])(owner);
     void** heapVtable = *reinterpret_cast<void***>(heap);
+    void* state = 0;
     void* relay = reinterpret_cast<void*(*)(void*, size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
         heap, 0x18, 0);
     if (relay)
@@ -2724,18 +2729,23 @@ void FUN_140015c40(void* object)
         *reinterpret_cast<void**>(static_cast<char*>(relay) + 0x10) = object;
         *reinterpret_cast<void**>(relay) = &PTR_FUN_1431b7858;
     }
+    else
+        relay = state;
     void** oldRelay = reinterpret_cast<void**>(static_cast<char*>(object) + 0x58);
     if (*oldRelay)
         FUN_14257dcd0(*oldRelay);
     *oldRelay = relay;
 
-    void* state = reinterpret_cast<void*(*)(void*, size_t, void*)>(heapVtable[0x50 / sizeof(void*)])(
+    manager = *reinterpret_cast<void**>(static_cast<char*>(vm) + 0x2d8);
+    owner = *reinterpret_cast<void**>(static_cast<char*>(manager) + 0x10);
+    heap = reinterpret_cast<void*(*)(void*)>((*reinterpret_cast<void***>(owner))[0x178 / sizeof(void*)])(owner);
+    state = reinterpret_cast<void*(*)(void*, size_t, void*)>((*reinterpret_cast<void***>(heap))[0x50 / sizeof(void*)])(
         heap, 0x108, 0);
     if (state)
     {
         static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(state)->
             Scaleform::GFx::AS3::VideoProviderNetStream::VideoProviderNetStream(
-                static_cast<Scaleform::GFx::AS3::NetStreamInterface*>(relay));
+                static_cast<Scaleform::GFx::AS3::NetStreamInterface*>(*oldRelay));
     }
     void** oldState = reinterpret_cast<void**>(static_cast<char*>(object) + 0x50);
     if (*oldState)
@@ -3053,12 +3063,16 @@ void FUN_140016a30(void*, void* instance, void* traits, void* context, int hasVa
 void FUN_140016060(void*, void* instance, void* traits, void* context, int hasValue,
                    Scaleform::GFx::AS3::Value* value)
 {
+    typedef Scaleform::GFx::AS3::Value Value;
+    intptr_t offset = *reinterpret_cast<intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
+    Video02ValueStorage storage;
+    const Value* undefinedValue = reinterpret_cast<Value* (*)(void*, void*)>(FUN_1400158e0)(
+        &storage, *reinterpret_cast<void**>(reinterpret_cast<char*>(instance) + 0x10));
+    const Value* stored = static_cast<unsigned>(hasValue) > 0 ? value : undefinedValue;
+    reinterpret_cast<Value*>(&storage)->~Value();
     if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(instance) + 0x180) != 0)
         return;
-    intptr_t offset = *reinterpret_cast<intptr_t*>(reinterpret_cast<char*>(traits) + 0x10);
-    Scaleform::GFx::AS3::Value undefinedValue;
-    const Scaleform::GFx::AS3::Value* stored = hasValue ? value : &undefinedValue;
-    reinterpret_cast<void(*)(char*, void*, const Scaleform::GFx::AS3::Value*)>(DAT_143b27678)(
+    reinterpret_cast<void(*)(char*, void*, const Value*)>(DAT_143b27678)(
         *reinterpret_cast<int*>(&DAT_143b27680) + reinterpret_cast<char*>(offset), context, stored);
 }
 
@@ -3160,23 +3174,23 @@ unsigned FUN_140011450(void* object, const unsigned* source)
 // @0x140010cd0
 void FUN_140010cd0(void** buffer, unsigned __int64 requested)
 {
-    unsigned char* state = static_cast<unsigned char*>(buffer[3]);
-    void* object = buffer[0];
-    void** vtable = *reinterpret_cast<void***>(object);
-    if (*reinterpret_cast<void**>(state)) {
-        void (*release)(void*, void*) = reinterpret_cast<void (*)(void*, void*)>(
-            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x60));
-        release(object, *reinterpret_cast<void**>(state));
+    struct Page { void* First; char* End; void* Block; };
+    if (static_cast<Page*>(buffer[3])->First) {
+        void** object = static_cast<void**>(buffer[0]);
+        void** vtable = *reinterpret_cast<void***>(object);
+        reinterpret_cast<void (*)(void*, void*)>(vtable[0x60 / sizeof(void*)])(
+            object, static_cast<Page*>(buffer[3])->First);
     }
 
     const unsigned __int64 alignment = reinterpret_cast<unsigned __int64*>(buffer)[1];
+    void** object = static_cast<void**>(buffer[0]);
+    void** vtable = *reinterpret_cast<void***>(object);
     const unsigned __int64 size = ((alignment - 1 + requested) / alignment) * alignment;
-    void* (*allocate)(void*, unsigned __int64, unsigned) = reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(
-        *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(vtable) + 0x50));
-    *reinterpret_cast<void**>(state + 0x10) = allocate(object, size, 0);
-    *reinterpret_cast<void**>(state) = reinterpret_cast<void**>(state)[2];
-    reinterpret_cast<unsigned __int64*>(state)[1] =
-        size + reinterpret_cast<unsigned __int64*>(state)[0];
+    static_cast<Page*>(buffer[3])->Block =
+        reinterpret_cast<void* (*)(void*, unsigned __int64, unsigned)>(vtable[0x50 / sizeof(void*)])(object, size, 0);
+    static_cast<Page*>(buffer[3])->First = static_cast<Page*>(buffer[3])->Block;
+    static_cast<Page*>(buffer[3])->End =
+        static_cast<char*>(static_cast<Page*>(buffer[3])->First) + size;
 }
 
 // destroys the retained GASPrototypeBase subobject before the AS2 object base. The exe's inline Prototype dtor stores
@@ -3211,27 +3225,27 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
     return object;
 }
 
-// MS2-FUNCTIONAL: unlinks a tracked AS2 reference from its collector list and resets its flags.
+// MS2-FUNCTIONAL: unlinks a tracked AS2 reference from its collector list and deletes it; exe keeps the root-list case cold after the tail jmp.
 // @0x1400152b0
 void FUN_1400152b0(unsigned __int64* object)
 {
+    enum { GcStat = Scaleform::GFx::AS3::StatMV_ActionScript_Mem };
     unsigned* words = reinterpret_cast<unsigned*>(object);
     words[4] &= 0x8fffffff;
-    const unsigned flags = words[4] >> 24;
-    if (static_cast<int>(words[4]) < 0) {
-        if ((flags & 1) == 0)
-            reinterpret_cast<Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(object[1])->RemoveRoot(
-                reinterpret_cast<const Scaleform::GFx::AS3::RefCountBaseGC<Scaleform::GFx::AS3::StatMV_ActionScript_Mem>*>(object));
-    } else if ((flags & 1) == 0) {
-        return;
+    const unsigned state = words[4];
+    const unsigned flags = state >> 24;
+    if ((static_cast<unsigned char>(state >> 31) & 1) && (flags & 1) == 0) {
+        reinterpret_cast<Scaleform::GFx::AS3::RefCountCollector<GcStat>*>(object[1])->RemoveRoot(
+            reinterpret_cast<const Scaleform::GFx::AS3::RefCountBaseGC<GcStat>*>(object));
+    } else if (flags & 1) {
+        *reinterpret_cast<unsigned __int64*>(object[3] + 8) = object[1];
+        *reinterpret_cast<unsigned __int64*>(object[1] + 0x18) = object[3];
+        words[4] &= 0x7effffff;
+        object[1] = 0;
+        if ((static_cast<unsigned char>(words[4] >> 24) & 1) == 0)
+            reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
     }
-
-    *reinterpret_cast<unsigned __int64*>(object[3] + 8) = object[1];
-    *reinterpret_cast<unsigned __int64*>(object[1] + 0x18) = object[3];
-    words[4] &= 0x7effffff;
-    object[1] = 0;
-    if ((words[4] >> 24 & 1) == 0)
-        reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
+    (*reinterpret_cast<void (***)(void*, int)>(object))[4](object, 1);
 }
 
 // @0x140010ed0
