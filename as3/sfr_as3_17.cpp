@@ -1441,52 +1441,51 @@ ClassTraits::Traits* Sfr33LookupHash1c8(VM* self, const ASString& name, const In
 
 // MultinameHash<ClassTraits::Traits*>::Get(const Multiname&): the first namespace of a namespace set
 // with an entry, else the entry under the multiname's single namespace.
-// MS2-FUNCTIONAL 0x142505aa0: the exe inlines the hash probe of each namespace; same results
+// MS2-FUNCTIONAL 0x142505aa0: the exe keeps the namespace set and its size in registers; same results
 // @0x142505aa0
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Multiname& mn)
 {
-    if ((static_cast<UInt32>(mn.Kind) & 3) == Abc::MNF_NS_Multi)
+    if ((static_cast<UInt32>(mn.Kind) & 3) != Abc::MNF_NS_Multi)
+        return FUN_142414ac0(self, mn.Name.AsString(), static_cast<const Instances::Namespace&>(*mn.Obj));
+    const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
+    const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
+    for (UPInt i = 0; i < nsa.GetSize(); ++i)
     {
-        const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
-        const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
-        for (UPInt i = 0; i < nsa.GetSize(); ++i)
-        {
-            ClassTraits::Traits** p = self->Entries.Get(TClassTraitsCache::Key(mn.Name.AsString(), nsa[i].GetPtr()));
-            if (p)
-                return p;
-        }
-        return NULL;
+        ASString name = mn.Name.AsString();
+        ClassTraits::Traits** p = self->Entries.Get(TClassTraitsCache::Key(name, nsa[i].GetPtr()));
+        if (p)
+            return p;
     }
-    return FUN_142414ac0(self, mn.Name.AsString(), static_cast<const Instances::Namespace&>(*mn.Obj));
+    return NULL;
 }
 
 // The class traits mn names. A namespace set takes the first namespace with cached or builtin class traits
 // (a builtin hit is cached); a single namespace goes through VM::Resolve2ClassTraits.
-// MS2-FUNCTIONAL 0x142500a60: the exe inlines the cache add; same results
+// MS2-FUNCTIONAL 0x142500a60: the exe allocates registers and save slots differently (rbp/rsi pushed); same results
 // @0x142500a60
 ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
 {
-    if ((static_cast<UInt32>(mn.Kind) & 3) > Abc::MNF_NS_Runtime)
+    if ((static_cast<UInt32>(mn.Kind) & 3) <= Abc::MNF_NS_Runtime)
+        return const_cast<ClassTraits::Traits*>(FUN_142525270(*vm, mn));
+    const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
+    const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
+    const UPInt n = nsa.GetSize();
+    for (UPInt i = 0; i < n; ++i)
     {
-        const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
-        const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
-        ClassTraits::Traits* ct = NULL;
-        for (UPInt i = 0; ct == NULL && i < nsa.GetSize(); ++i)
+        ASString name = mn.Name.AsString();
+        const Instances::Namespace& ns = *nsa[i];
+        ClassTraits::Traits** found = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
+        ClassTraits::Traits* ct = found != NULL ? *found : NULL;
+        if (ct == NULL)
         {
-            ASString name = mn.Name.AsString();
-            const Instances::Namespace& ns = *nsa[i];
-            ClassTraits::Traits** found = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
-            ct = found != NULL ? *found : NULL;
-            if (ct == NULL)
-            {
-                ct = FUN_142415520(vm->GlobalObject.GetPtr(), name, ns);
-                if (ct != NULL)
-                    vm->ClassTraitsSet.Add(name, ns, ct);
-            }
+            ct = FUN_142415520(vm->GlobalObject.GetPtr(), name, ns);
+            if (ct != NULL)
+                vm->ClassTraitsSet.Add(name, ns, ct);
         }
-        return ct;
+        if (ct != NULL)
+            return ct;
     }
-    return const_cast<ClassTraits::Traits*>(FUN_142525270(*vm, mn));
+    return NULL;
 }
 
 // The value at +0x10, made by Sfr33CallFrameGetCode on first use.

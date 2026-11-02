@@ -24,7 +24,7 @@ public:
         Key(const Key& other) : Name(other.Name), pNs(other.pNs) {}
 
         bool operator==(const Key& other) const
-        { return (Name == other.Name) && (pNs->GetKind() == other.pNs->GetKind()) && (pNs->GetUri() == other.pNs->GetUri()); }
+        { return (Name == other.Name) && (*pNs == *other.pNs); }
 
         struct HashFunctor
         {
