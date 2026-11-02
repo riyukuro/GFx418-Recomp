@@ -4252,8 +4252,23 @@ CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& prop_name, const Valu
     return !vm.IsException();
 }
 
+// A Value(Object*) with its ctor expanded in place (AddRef on construction); the caller releases the object.
+struct Sfr33TempObjectValue
+{
+    UInt32 Flags;
+    void* pWeakProxy;
+    Object* pObj;
+    void* pRest;
+    explicit Sfr33TempObjectValue(Object* p) : Flags(Value::kObject), pWeakProxy(NULL), pObj(p)
+    {
+        if (p)
+            p->AddRef();
+    }
+    const Value& Get() const { return *reinterpret_cast<const Value*>(this); }
+};
+
 // The property named mn of the first global object (of the ABC file of tr, when given) that has one.
-// MS2-FUNCTIONAL 0x142501750: the exe releases the object value through its tagged pointer, not ~Value.
+// MS2-FUNCTIONAL 0x142501750: result and the array size swap rbp and r14; the code is otherwise the exe's.
 // @0x142501750
 void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::GlobalObject*>& go, const Multiname& mn,
                          const Traits* tr)
@@ -4265,9 +4280,14 @@ void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::G
     for (UPInt i = 0; i < size; ++i)
     {
         Object* obj = reinterpret_cast<Object*>(go[i]);
-        if (tr && obj->GetTraits().GetFilePtr() != file)
+        if (tr && file != obj->GetTraits().GetFilePtr())
             continue;
-        Sfr33FindPropertyWith(result, vm, Value(obj), mn, 0);
+        {
+            const Sfr33TempObjectValue v(obj);
+            Sfr33FindPropertyWith(result, vm, v.Get(), mn, 0);
+        }
+        if (!(reinterpret_cast<UPInt>(obj) & 1) && obj)
+            obj->Release();
         if (result)
             return;
     }
