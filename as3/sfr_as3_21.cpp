@@ -24,6 +24,11 @@ template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<UInt32, Alloc
 template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<double, AllocatorDH<double, 2>, ArrayDefaultPolicy> >::Clear() { Data.Resize(0); }
 // VectorBase<Value>::Resize calls this out of line (0x14241fdd0); InsertAt and RemoveAt inline ArrayDataDH::Resize.
 template <> inline __declspec(noinline) void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::Resize(UPInt newSize) { Data.Resize(newSize); }
+// The ABC pointer arrays keep Resize out of line (sfr_as3_22).
+template <> void ArrayData<GFx::AS3::Abc::MethodBodyInfo*, AllocatorLH_POD<GFx::AS3::Abc::MethodBodyInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);
+template <> void ArrayData<GFx::AS3::Abc::MethodInfo*, AllocatorLH_POD<GFx::AS3::Abc::MethodInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);
+template <> void ArrayData<GFx::AS3::Abc::ScriptInfo*, AllocatorLH_POD<GFx::AS3::Abc::ScriptInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);
+template <> void ArrayData<GFx::AS3::Abc::TraitInfo*, AllocatorLH_POD<GFx::AS3::Abc::TraitInfo*, GFx::AS3::StatMV_VM_AbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -727,7 +732,13 @@ __declspec(noinline) CheckResult VectorBase<Ptr<ASStringNode> >::Set(UInt32 ind,
     Value r;
     if (!CheckCoerce(tr, v, r))
         return false;
-    V[ind] = r.GetStringNode();
+    Ptr<ASStringNode>& slot = V[ind];
+    ASStringNode* p = r.GetStringNode();
+    if (p)
+        p->AddRef();
+    if (slot)
+        slot->Release();
+    slot.GetRawRef() = p;
     return true;
 }
 
