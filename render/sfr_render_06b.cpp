@@ -152,15 +152,18 @@ void HMatrix::SetCxform(const Cxform& cx)
     *pHandle->GetCxformPtr() = cx;
 }
 
-// MS2-FUNCTIONAL: register allocation (mask / format / handle).
+// MS2-FUNCTIONAL: 1 byte: the format test comes out as test bpl,dil, the exe has test dil,bpl.
 void HMatrix::SetTextureMatrix(const Matrix2F& m, unsigned index)
 {
     ElementIndex e = (ElementIndex)(Element_T0 + index);
-    if (!pHandle->pHeader->HasElement(e))
+    EntryHandle* handle = pHandle;
+    unsigned mask = 1 << e;
+    UByte format = handle->pHeader->Format;
+    if (!(format & (UByte)mask))
     {
         if (SameMatrix(m, Matrix2F::Identity))
             return;
-        pHandle->ChangeFormat(pHandle->pHeader->Format | (1 << e));
+        handle->ChangeFormat(format | mask);
     }
     *pHandle->pHeader->GetTextureMatrixPtr(e) = m;
 }
