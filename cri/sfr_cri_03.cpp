@@ -4783,21 +4783,21 @@ void FUN_142ccc5f0(CriUint8* reference, CriUint8* destination, CriSint32 stride,
     DAT_143fe8248[index](source, target, stride, stride2, height);
 }
 
-// MS2-FUNCTIONAL: dispatch the inverse-transform add for each coded block of the current macroblock.
+// Dispatch the inverse-transform add for each coded block of the current macroblock.
 // @0x142ccc6c0
 void addBlocksFrame420(void* decoder, CriSint32 codedBlocks, CriSint32 mode)
 {
-    CriUint32 coded = (CriUint32)(codedBlocks >> 0x18) & 0xff;
+    CriSint32 coded = codedBlocks >> 0x18;
+    CriMpvBlockEntry entries[7], *out = entries;   // up to six coded blocks and the NULL terminator
     if ((coded & 0x3f) == 0)
         return;
-    CriMpvBlockEntry entries[8];
-    CriMpvBlockEntry* out = entries;
-    CriSint32 y = CriMpvField<CriSint32>(decoder, MPV_ROW) << 4;
     CriSint32 x = CriMpvField<CriSint32>(decoder, MPV_COLUMN) << 4;
+    CriSint32 y = CriMpvField<CriSint32>(decoder, MPV_ROW) << 4;
     void** slots = (void**)((CriUint8*)decoder + MPV_BLOCK_SLOTS);
     if (coded & 0x3c)
     {
-        CriSint32 stride = CriMpvField<CriSint16>(decoder, MPV_LUMA_STRIDE);
+        CriSint16 stride = CriMpvField<CriSint16>(decoder, MPV_LUMA_STRIDE);
+        CriSint32 stride8 = stride * 8;
         CriUint8* base = CriMpvField<CriUint8*>(decoder, MPV_LUMA_BASE) + (CriSint64)(stride * y) + x;
         if (coded & 0x20)
         {
@@ -4816,14 +4816,14 @@ void addBlocksFrame420(void* decoder, CriSint32 codedBlocks, CriSint32 mode)
         if (coded & 8)
         {
             out->Function = slots[2];
-            out->Data = base + (CriSint64)(stride * 8);
+            out->Data = base + stride8;
             out->Stride = stride;
             ++out;
         }
         if (coded & 4)
         {
             out->Function = slots[3];
-            out->Data = base + (CriSint64)(stride * 8) + 8;
+            out->Data = base + stride8 + 8;
             out->Stride = stride;
             ++out;
         }
