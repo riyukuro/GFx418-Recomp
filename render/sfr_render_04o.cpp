@@ -256,27 +256,32 @@ void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int 
     }
 }
 
+// Selects obj into dc for the guard's scope (SDK GFxGdiSelectObjectGuard).
+struct GdiSelectObjectGuard
+{
+    HDC     WinDC;
+    HGDIOBJ WinObj;
+    GdiSelectObjectGuard(HDC dc, HGDIOBJ obj) : WinDC(dc), WinObj(::SelectObject(dc, obj)) {}
+    ~GdiSelectObjectGuard() { ::SelectObject(WinDC, WinObj); }
+};
+
 // @0x142648570
 int ExternalFontWinAPI::GetGlyphIndex(UInt16 code)
 {
-    if (!MasterFont)
-        return -1;
-
-    Lock::Locker lock(pFontLock);
-    const unsigned* pindex = CodeTable.Get(code);
-    if (pindex)
-        return *pindex;
-
-    HDC     dc      = pSysData->WinHDC;
-    HGDIOBJ oldFont = ::SelectObject(dc, MasterFont);
-
-    GLYPHMETRICS gm;
-    MAT2         mat = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
-    int          index;
-    if (::GetGlyphOutlineW(pSysData->WinHDC, code, GGO_METRICS, &gm, 0, 0, &mat) == GDI_ERROR)
-        index = -1;
-    else
+    if (MasterFont)
     {
+        Lock::Locker lock(pFontLock);
+        const unsigned* pindex = CodeTable.Get(code);
+        if (pindex)
+            return *pindex;
+
+        GdiSelectObjectGuard g(pSysData->WinHDC, MasterFont);
+
+        GLYPHMETRICS gm;
+        MAT2         mat = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
+        if (::GetGlyphOutlineW(pSysData->WinHDC, code, GGO_METRICS, &gm, 0, 0, &mat) == GDI_ERROR)
+            return -1;
+
         GlyphType glyph;
         glyph.Code      = code;
         glyph.Advance   = float(gm.gmCellIncX) * Scale1024;
@@ -286,10 +291,9 @@ int ExternalFontWinAPI::GetGlyphIndex(UInt16 code)
         glyph.Bounds.y2 = glyph.Bounds.y1 + float(gm.gmBlackBoxY) * Scale1024;
         Glyphs.PushBack(glyph);
         CodeTable.Add(code, unsigned(Glyphs.GetSize() - 1));
-        index = int(Glyphs.GetSize() - 1);
+        return int(Glyphs.GetSize() - 1);
     }
-    ::SelectObject(dc, oldFont);
-    return index;
+    return -1;
 }
 
 // @0x1426491c0
@@ -319,15 +323,6 @@ bool ExternalFontWinAPI::IsHintedRasterGlyph(unsigned glyphIndex, unsigned hinte
 }
 
 // MS2-FUNCTIONAL: register allocation only (exe keeps the shape pointer in r12, ours in r13; 6 bytes longer)
-// Selects obj into dc for the guard's scope (SDK GFxGdiSelectObjectGuard).
-struct GdiSelectObjectGuard
-{
-    HDC     WinDC;
-    HGDIOBJ WinObj;
-    GdiSelectObjectGuard(HDC dc, HGDIOBJ obj) : WinDC(dc), WinObj(::SelectObject(dc, obj)) {}
-    ~GdiSelectObjectGuard() { ::SelectObject(WinDC, WinObj); }
-};
-
 // @0x142648de0
 bool ExternalFontWinAPI::GetTemporaryGlyphShape(unsigned glyphIndex, unsigned hintedSize, GlyphShape* shape)
 {

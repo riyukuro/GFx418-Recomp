@@ -103,8 +103,7 @@ private:
     {
         unsigned Code;          // +0x00
         float    Advance;       // +0x04
-        UInt32   Reserved[2];   // +0x08, never written
-        RectF    Bounds;        // +0x10
+        __declspec(align(16)) RectF Bounds;   // +0x10 (the 8 bytes before it are padding)
     };
     struct KerningPairType
     {
