@@ -230,25 +230,12 @@ __forceinline void Video::Initialize()
 }
 
 // @0x14001cbb0
-// MS2-FUNCTIONAL: no tail calls, other scheduling
 Video::Video(const VideoVMSupport& vmSupport, Thread::ThreadPriority priority, bool autoInit)
     : DecodeThreadPriority(priority)
 {
     pAS2VSupport = vmSupport.pAS2VSupport;
     pAS3VSupport = vmSupport.pAS3VSupport;
-    // MemoryHeap::CreateHeap(name, flags, minAlign, granularity, reserve, threshold, limit, heapId, arena)
-    struct VideoHeapDesc
-    {
-        unsigned Flags;
-        UPInt    MinAlign, Granularity, Reserve, Threshold, Limit, HeapId, Arena;
-        VideoHeapDesc(unsigned flags, UPInt minAlign, UPInt granularity, UPInt reserve, UPInt threshold, UPInt limit,
-                      UPInt heapId, UPInt arena)
-            : Flags(flags), MinAlign(minAlign), Granularity(granularity), Reserve(reserve), Threshold(threshold),
-              Limit(limit), HeapId(heapId), Arena(arena)
-        {
-        }
-    } desc(0, 64, 128 * 1024, 0, ~UPInt(0), 0, 8 /* HeapId_Video */, 0);
-    pHeap = *Memory::GetGlobalHeap()->CreateHeap("_Video_Heap", *(const HeapDesc*)&desc);
+    pHeap = *Memory::GetGlobalHeap()->CreateHeap("_Video_Heap", 0, 64, 128 * 1024, 0, ~UPInt(0), 0, 8 /* HeapId_Video */);
     if (autoInit)
         Initialize();
 }
@@ -1296,11 +1283,23 @@ void VideoProviderNetStream::SendSubtitle()
     }
 }
 
+// The exe inlines Ptr<CharacterHandle>::operator=(C*) here; cl keeps the operator out of line, so its body is written
+// out in a forced-inline local.
+static __forceinline void AssignHandle(Ptr<CharacterHandle>& dst, CharacterHandle* src)
+{
+    CharacterHandle*& pobj = dst.GetRawRef();
+    if (src) src->AddRef();
+    if (pobj) pobj->Release();
+    pobj = src;
+}
+
 // @0x140025ad0
-// MS2-FUNCTIONAL: other scheduling
+// MS2-FUNCTIONAL: register allocation (this/ptarget in rsi/rbp, exe rbp/r12)
 void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
 {
-    Sprite* pold = pAudioTarget ? GetAudioTargetSprite(pAudioTarget) : NULL;
+    Sprite* pold = NULL;
+    if (pAudioTarget)
+        pold = GetAudioTargetSprite(pAudioTarget);
     if (pold == ptarget)
         return;
     if (pold && pVideoPlayer)
@@ -1311,7 +1310,8 @@ void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
             Sprite::ActiveSoundItem* pitem = pold->ReleaseActiveSound(pchan);
             if (pitem)
             {
-                pitem->pChannel->SetVolume(ptarget->GetRealSoundVolume());
+                Sound::SoundChannel* pitemchan = pitem->pChannel;
+                pitemchan->SetVolume(ptarget->GetRealSoundVolume());
                 ptarget->AttachActiveSound(pitem);
                 pitem->Release();
             }
@@ -1322,7 +1322,7 @@ void VideoProviderNetStream::SetAudioTarget(Sprite* ptarget)
             }
         }
     }
-    pAudioTarget = ptarget->GetCharacterHandle();
+    AssignHandle(pAudioTarget, ptarget->GetCharacterHandle());
 }
 
 }}} // namespace Scaleform::GFx::AS3
@@ -1408,8 +1408,13 @@ void VideoProviderNetStream::SendCuePoints()
     }
 }
 
+// The exe inlines Ptr<VideoImage>::operator=(C&) here; cl's /O2 budget for Advance does not, so force it locally.
+static __forceinline void AssignTexture(Ptr<VideoImage>& dst, VideoImage& src)
+{
+    dst = src;
+}
+
 // @0x140026450
-// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::Advance()
 {
     if (!pVideoPlayer)
@@ -1432,7 +1437,7 @@ void VideoProviderNetStream::Advance()
     case VideoPlayer::Ready:
         if (!pTextureImage)
         {
-            pTextureImage = *pVideoPlayer->CreateTexture(pTextureManager);
+            AssignTexture(pTextureImage, *pVideoPlayer->CreateTexture(pTextureManager));
             if (pTextureImage)
             {
                 pVideoPlayer->GetVideoInfo(&VInfo);
