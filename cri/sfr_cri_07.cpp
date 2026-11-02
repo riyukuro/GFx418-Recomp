@@ -1917,39 +1917,39 @@ void CRIDLG_SetAffinityMask(cri_u8 arg1, cri_u4 arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400680a0
 void cridlg_SetAffinityMask(int *arg1, uint arg2)
 {
-  BOOL BVar1;
+  ULONG_PTR allbits = 0xffffffffffffffff;
   HANDLE hProcess;
-  ulonglong dwThreadAffinityMask;
-  DWORD_PTR DVar2;
-  ULONG_PTR loc_20;
-  ULONG_PTR loc_18;
-  longlong loc_10;
-  
+  ulonglong mask;
+  ULONG_PTR process_mask;
+  ULONG_PTR sysMask;
+  longlong result;
+
   if (arg1 == (int *)0x0) {
     cridlg_assert("NULL pointer is passed.");
+    return;
   }
-  else if (*arg1 == 0) {
+  if (*arg1 == 0) {
     cridlg_assert("Invalid handle is passed.");
+    return;
   }
-  else if (*(ulonglong *)((char *)arg1 + 0x70) != (ulonglong)arg2) {
-    hProcess = GetCurrentProcess();
-    BVar1 = GetProcessAffinityMask(hProcess,&loc_20,&loc_18);
-    loc_10 = (longlong)BVar1;
-    if (loc_10 != 0) {
-      loc_20 = 0xffffffffffffffff;
-    }
-    dwThreadAffinityMask = loc_20 & arg2;
-    if ((dwThreadAffinityMask != 0) &&
-       (DVar2 = SetThreadAffinityMask(*(HANDLE *)(arg1 + 2),dwThreadAffinityMask),
-       (DVar2 & 0xffffffff) != 0)) {
-      *(ulonglong *)((char *)arg1 + 0x70) = dwThreadAffinityMask;
+  if (*(ulonglong *)((char *)arg1 + 0x70) == (ulonglong)arg2) {
+    return;
+  }
+  hProcess = GetCurrentProcess();
+  result = GetProcessAffinityMask(hProcess,&process_mask,&sysMask);
+  if (result != 0) {
+    process_mask = allbits;
+  }
+  mask = process_mask & arg2;
+  if (mask != 0) {
+    result = (uint)SetThreadAffinityMask(*(HANDLE *)(arg1 + 2),mask);
+    if (result != 0) {
+      *(ulonglong *)((char *)arg1 + 0x70) = (uint)mask;
     }
   }
-  return;
 }
 
 // @0x140068280
@@ -3407,8 +3407,8 @@ int criAdxDec_DecodeInfoExADPCM2(short *arg1, int arg2, ushort *arg3)
 // @0x14006a7f8
 uint criAdxDec_DecodeHeader(cri_u8 arg1, uint arg2, longlong arg3)
 {
+  cri_u2 ofs;
   uint size;
-  ushort ofs;
 
   ofs = 0;
   _DAT_143d4ef40 = "\nCRI ADX Decoder/PCx64 Ver.1.00.08 Build:Jan 13 2012 19:02:05\n";
@@ -54200,49 +54200,35 @@ void SVM_Unlock()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b03a0
 uint svm_SetCbSvr(uint arg1, longlong arg2, longlong arg3, char *arg4)
 {
-  char *pc_v1;
-  uint u_v2;
-  ulonglong u_v3;
+  int i;
+  longlong n;
   longlong *pl_v4;
-  ulonglong u_v5;
-  
+
   if (arg1 <= 7) {
     svm_enterCriticalSection(arg1);
-    u_v3 = 0;
+    i = 0;
+    n = i;
     pl_v4 = (longlong *)(&DAT_143d683d0 + (longlong)(int)arg1 * 0x90);
-    u_v5 = u_v3;
-    do {
-      u_v2 = (uint)u_v3;
+    for (; n < 6; n++, i++, pl_v4 += 3) {
       if (*pl_v4 == 0) {
         *pl_v4 = arg2;
-        pc_v1 = "Unknown";
-        if (arg4 != (char *)0x0) {
-          pc_v1 = arg4;
-        }
         pl_v4[1] = arg3;
-        pl_v4[2] = (longlong)pc_v1;
+        pl_v4[2] = (longlong)(arg4 != (char *)0x0 ? arg4 : "Unknown");
         break;
       }
-      u_v5 = u_v5 + 1;
-      u_v2 = u_v2 + 1;
-      u_v3 = (ulonglong)u_v2;
-      pl_v4 = pl_v4 + 3;
-    } while ((longlong)u_v5 < 6);
-    svm_leaveCriticalSection(arg1);
-    if (u_v2 == 6) {
-      SVM_CallErr1("1051001:SVM_SetCbSvr:too many server function");
-      u_v2 = 0xffffffff;
     }
+    svm_leaveCriticalSection(arg1);
+    if (i == 6) {
+      SVM_CallErr1("1051001:SVM_SetCbSvr:too many server function");
+      return 0xffffffff;
+    }
+    return i;
   }
-  else {
-    SVM_CallErr1("1071205:SVM_SetCbSvrId:illegal svtype");
-    u_v2 = 0xffffffff;
-  }
-  return u_v2;
+  SVM_CallErr1("1071205:SVM_SetCbSvrId:illegal svtype");
+  return 0xffffffff;
 }
 
 // @0x1400b0470
