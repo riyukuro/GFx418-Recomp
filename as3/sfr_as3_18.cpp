@@ -5701,32 +5701,40 @@ struct Sfr34_SlotsAccess : Slots
 // Traits::RegisterWithVT: method v (named name in nsi's namespace) overrides the slot of that name and namespace
 // (a getter added to a setter, or the reverse, gets a slot of its own), or gets a new one. False when that slot is
 // not a method.
-// MS2-FUNCTIONAL free function (not declared in the shared Traits class)
+// MS2-FUNCTIONAL free function (not declared in the shared Traits class): the exe is the member, so its this is in
+// rcx and the CheckResult return slot in rdx, where ours has them swapped
 // @0x142521d20
 CheckResult FUN_142521d20(Traits* self, const ASString& name, const SlotInfo& nsi, const Value& v,
                           SlotInfo::BindingType bt)
 {
     const Instances::Namespace& ns  = *nsi.pNs;
     const AbsoluteIndex         ind = Sfr34_SlotsAccess::Find(*self, name, ns);
-    if (!ind.IsValid())
+    bool                        result = false;
+    if (ind.IsValid())
     {
-        self->Add2VT(name, ns, nsi, v, bt);
-        return true;
-    }
-    const SlotInfo&       si     = self->GetSlotInfo(ind);
-    SlotInfo::BindingType new_bt = static_cast<SlotInfo::BindingType>(si.BindType);
-    if (new_bt != SlotInfo::BT_Unknown && (new_bt < SlotInfo::BT_Code || new_bt > SlotInfo::BT_GetSet))
-        return false;
-    if ((new_bt == SlotInfo::BT_Get && bt == SlotInfo::BT_Set) || (new_bt == SlotInfo::BT_Set && bt == SlotInfo::BT_Get))
-        new_bt = SlotInfo::BT_GetSet;
-    if (new_bt == bt)
-    {
-        self->UpdateVT4IM(name, ns, v, bt);
-        self->UpdateVT(si, v, bt);
+        const SlotInfo&             si     = Sfr18TraitsSlotInfo(self, ind);
+        const SlotInfo::BindingType cur_bt = static_cast<SlotInfo::BindingType>(si.BindType);
+        if (cur_bt == SlotInfo::BT_Unknown || (cur_bt >= SlotInfo::BT_Code && cur_bt <= SlotInfo::BT_GetSet))
+        {
+            SlotInfo::BindingType new_bt = cur_bt;
+            if ((cur_bt == SlotInfo::BT_Get && bt == SlotInfo::BT_Set) || (cur_bt == SlotInfo::BT_Set && bt == SlotInfo::BT_Get))
+                new_bt = SlotInfo::BT_GetSet;
+            if (new_bt != bt)
+                self->Add2VT(name, ns, si, v, bt);
+            else
+            {
+                self->UpdateVT4IM(name, ns, v, bt);
+                self->UpdateVT(si, v, bt);
+            }
+            result = true;
+        }
     }
     else
-        self->Add2VT(name, ns, si, v, bt);
-    return true;
+    {
+        self->Add2VT(name, ns, nsi, v, bt);
+        result = true;
+    }
+    return result;
 }
 
 } } } // namespace Scaleform::GFx::AS3
@@ -5759,19 +5767,23 @@ UPInt FUN_14250c080(const void* self, UPInt& pos)
     {
         const UPInt op_pos = pos;
         const UInt8 op     = c->data[pos++];
-        if (DAT_14317fea0[op].pop_mn)
-            Abc::ReadU30(c->data, pos);
-        if (DAT_14317fea0[op].pop_args)
-            Abc::ReadU30(c->data, pos);
-        if (DAT_14317fea0[op].pop_mn || DAT_14317fea0[op].pop_args)
-            continue;
-        if (op >= 0x0c && op <= 0x1a)
         {
+            const Sfr34_OpCodeInfo& oi = DAT_14317fea0[op];
+            if (oi.pop_mn)
+                Abc::ReadU30(c->data, pos);
+            if (oi.pop_args)
+                Abc::ReadU30(c->data, pos);
+            if (oi.pop_args | oi.pop_mn)
+                continue;
+        }
+        switch (op)
+        {
+        case 0x0c: case 0x0d: case 0x0e: case 0x0f: case 0x10: case 0x11: case 0x12: case 0x13:
+        case 0x14: case 0x15: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
             // the branches
             Abc::ReadS24(c->data, pos);
-            continue;
-        }
-        if (op == 0x1b)
+            break;
+        case 0x1b:
         {
             // lookupswitch: the default offset, the case count - 1 and the case offsets
             Abc::ReadS24(c->data, pos);
@@ -5780,30 +5792,29 @@ UPInt FUN_14250c080(const void* self, UPInt& pos)
                 Abc::ReadS24(c->data, pos);
             return op_pos;
         }
-        if (op == 0x24)
-        {
+        case 0x24:
             // pushbyte
             ++pos;
-            continue;
-        }
-        if (op == 0xef)
-        {
+            break;
+        case 0xef:
             // debug: a byte, a u30, a byte and a u30
             ++pos;
             Abc::ReadU30(c->data, pos);
             ++pos;
             Abc::ReadU30(c->data, pos);
-            continue;
-        }
-        switch (DAT_14317fea0[op].operandCount)
-        {
-        case 2:
-            Abc::ReadU30(c->data, pos);
-            // fall through
-        case 1:
-            Abc::ReadU30(c->data, pos);
             break;
         default:
+            switch (DAT_14317fea0[op].operandCount)
+            {
+            case 2:
+                Abc::ReadU30(c->data, pos);
+                // fall through
+            case 1:
+                Abc::ReadU30(c->data, pos);
+                break;
+            default:
+                break;
+            }
             break;
         }
     }
