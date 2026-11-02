@@ -2128,8 +2128,8 @@ void RectangleProto::ContainsPoint(const FnCall& fn)
                 return;
             GASPoint pt(GASPoint::NoInit);
             ((PointObject*)p)->GetProperties(fn.Env, pt);
-            Number x = pt.x, y = pt.y;
-            if (NumberUtil_IsNaN(x) || NumberUtil_IsNaN(y))
+            Number x = pt.x, y;
+            if (NumberUtil_IsNaN(x) || NumberUtil_IsNaN(y = pt.y))
             {
                 fn.Result->SetBool(false);
                 return;

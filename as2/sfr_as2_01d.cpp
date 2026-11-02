@@ -6,6 +6,7 @@
 // MS2-RANGE: 0x1424eb7b0-0x1424ed770 .text$mn
 // MS2-RANGE: 0x1424ed7b0-0x1424ed840 .text$mn
 
+#define MS2_SF_STRING_FROM_BUFFER
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
@@ -396,6 +397,11 @@ String AsString(const Abc::NamespaceInfo& ns, NamespaceText nt)
     return String(empty);
 }
 
+static inline void Sfr01dAppend(StringBuffer& buf, const String& text)
+{
+    buf.AppendString(text.ToCStr(), text.GetSize());
+}
+
 // The namespaces of a VM set, "[ab]": their uris (or access words), no separator.
 // @0x1424ed150
 String AsString(const NamespaceSet& nss)
@@ -406,13 +412,10 @@ String AsString(const NamespaceSet& nss)
     buf.AppendChar('[');
     for (UPInt i = 0; i < count; ++i)
     {
-        String text = AsString(*list[i].GetPtr(), nsUriOnly);
-        buf.AppendString(text.ToCStr(), text.GetSize());
+        Sfr01dAppend(buf, AsString(*list[i].GetPtr(), nsUriOnly));
     }
     buf.AppendChar(']');
-    String result;
-    result = buf;
-    return result;
+    return String(buf);
 }
 
 // The value as debug text: strings quoted, objects and classes by their type name.

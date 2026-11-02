@@ -77,6 +77,10 @@ public:
     String(const char* pdata, UPInt size);
     // (appended, sfr15) size characters produced by src.InitString (exe 0x1425848c0)
     String(const InitStruct& src, UPInt size);
+#ifdef MS2_SF_STRING_FROM_BUFFER
+    // The SDK copy of a StringBuffer (exe 0x142584a00). Opt-in: other units' String(buf) go through operator const char*.
+    explicit String(const StringBuffer& src);
+#endif
     ~String() { GetData()->Release(); }
 
     void operator=(const char* pstr);
