@@ -4,6 +4,7 @@
 // the view's TextFilter.
 // MS2-UNIT: sfr_render_04l
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1424d9220-0x1424d93a0 .text$mn
 // MS2-RANGE: 0x14264e460-0x1426519d0 .text$mn
 
 #include "ms2/scaleform/include/render/render_treetext.h"
@@ -15,6 +16,22 @@
 #include <math.h>
 
 namespace Scaleform { namespace Render {
+
+// ***** TreeNode::NodeData
+
+// @0x1424d9310
+TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type) : ContextImpl::EntryData(type, NF_Visible)
+{
+    AproxLocalBounds.Clear();
+    AproxParentBounds.Clear();
+}
+
+// @0x1424d9220
+TreeNode::NodeData::NodeData(const NodeData& src)
+    : ContextImpl::EntryData(src), M34(src.M34), States(src.States), Cx(src.Cx),
+      AproxLocalBounds(src.AproxLocalBounds), AproxParentBounds(src.AproxParentBounds)
+{
+}
 
 // ***** TreeText::NodeData
 

@@ -3,7 +3,8 @@
 // as3_marshalling.h; they call through ThunkFuncN<...>::Method, defined in the sfr_as3di_* units.
 // MS2-UNIT: sfr_as3_15
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1424c9700-0x1424dc870 .text$mn
+// MS2-RANGE: 0x1424c9700-0x1424d9220 .text$mn
+// MS2-RANGE: 0x1424d93a0-0x1424dc870 .text$mn
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7Class@AS3@GFx@Scaleform@@6B@ 0x14317b140
@@ -2246,12 +2247,11 @@ Stage::Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, Interactiv
 namespace Scaleform {
 
 namespace GFx {
-// MS2-FUNCTIONAL: cl folds the two flag-bit tests into one mask compare; the exe tests the bits separately
 // @0x1424d2820
 template<>
 void InteractiveObject::ModifyOptimizedPlayListLocal<Sprite>()
 {
-    switch (static_cast<Sprite*>(this)->Sprite::CheckAdvanceStatus(IsInOptimizedPlayList()))
+    switch (static_cast<Sprite*>(this)->Sprite::CheckAdvanceStatus(((UByte)(Flags >> 21) & 1) && !((UByte)(Flags >> 22) & 1)))
     {
     case 1:  AddToOptimizedPlayList(); break;
     case -1: MarkToRemoveFromOptimizedPlayList(); break;
@@ -2262,6 +2262,15 @@ void InteractiveObject::ModifyOptimizedPlayListLocal<Sprite>()
 // Defined in sfr_as3_16 (0x1424e0340) as an explicit specialization; declared here so this unit calls it.
 template<> AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >&
 AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::operator=(const AutoPtr& p);
+// The exe clears the pointer first, then takes the source's ownership over.
+template<> __forceinline
+AutoPtr<ArrayLH<WeakPtr<GFx::DisplayObject>, 2, ArrayDefaultPolicy> >::AutoPtr(const AutoPtr& src)
+    : pObject(0), Owner(src.Owner)
+{
+    AutoPtr& mutableSrc = const_cast<AutoPtr&>(src);
+    mutableSrc.Owner = false;
+    pObject = mutableSrc.pObject;
+}
 
 // HashSetBase::add instances: the node type N with its own hash functors, allocator A and entry E.
 template<class N, class A, class E>
@@ -2279,16 +2288,21 @@ typedef HashNode<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*, FixedSizeHash
 typedef MS2_HashSetOf<MS2_WeakProxyNode, AllocatorGH<GFx::AS3::GASRefCountBase*, 2>,
                       HashsetCachedNodeEntry<MS2_WeakProxyNode, MS2_WeakProxyNode::NodeHashF> >::Type MS2_WeakProxySet;
 typedef HashNode<Ptr<GFx::ASStringNode>, UInt32, GFx::AS3::ASStringNodePtrHashFunc> MS2_SlotNameNode;
-// MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity and the entry copy, here they are calls
 // @0x1424d2be0
 template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode>(void*, const MS2_DepthToObjsNode&, UPInt);
-// MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity, here it is a call
+// The exe inlines CheckExpand into both add instances of this set.
+template<> __forceinline void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::CheckExpand(void* pheapAddr)
+{
+    if (pTable == 0)
+        setRawCapacity(pheapAddr, HashMinSize);
+    else if (pTable->EntryCount * 5 > (pTable->SizeMask + 1) * 4)
+        setRawCapacity(pheapAddr, (pTable->SizeMask + 1) * 2);
+}
 // @0x1424d3530
 template void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::add<MS2_SlotNameNode>(
     void*, const MS2_SlotNameNode&, UPInt);
 // @0x1424d3870
 template void MS2_StringValueSet::add<MS2_StringValueNode>(void*, const MS2_StringValueNode&, UPInt);
-// MS2-FUNCTIONAL: same template body; the exe inlines CheckExpand/setRawCapacity and the entry copy, here they are calls
 // @0x1424d39f0
 template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode::NodeRef>(void*, const MS2_DepthToObjsNode::NodeRef&, UPInt);
 // @0x1424d40a0
@@ -2540,8 +2554,33 @@ static SF_INLINE void MS2_StrongAddRef(const Value& v)
         obj->AddRef();
 }
 
+// The same with the object AddRef kept per case, as CallFrame's copy expands it.
+static SF_INLINE void MS2_StrongAddRefPerCase(const Value& v)
+{
+    switch (v.GetKind())
+    {
+    case Value::kString:
+        v.GetStringNode()->AddRef();
+        return;
+    case Value::kNamespace:
+    case Value::kObject:
+    case Value::kClass:
+    case Value::kFunction:
+    case Value::kThunkFunction:
+        if (Object* obj = v.GetObject())
+            obj->AddRef();
+        return;
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        if (Object* obj = v.GetClosure())
+            obj->AddRef();
+        return;
+    default:
+        return;
+    }
+}
+
 // A copied call frame is marked as a copy; its debug file/line position starts over.
-// MS2-FUNCTIONAL: same code; the exe duplicates the object AddRef tail per closure/object case where ours jumps to one
 // @0x1424d6900
 CallFrame::CallFrame(const CallFrame& o)
     : DiscardResult(o.DiscardResult), ACopy(true), RegisteredFunction(o.RegisteredFunction), ScopeStackBaseInd(o.ScopeStackBaseInd), CP(o.CP)
@@ -2555,7 +2594,7 @@ CallFrame::CallFrame(const CallFrame& o)
         if (o.Invoker.IsWeakRef())
             ++(*reinterpret_cast<WeakProxy* const*>(reinterpret_cast<const char*>(&o.Invoker) + 8))->RefCount;
         else
-            MS2_StrongAddRef(o.Invoker);
+            MS2_StrongAddRefPerCase(o.Invoker);
     }
 }
 
@@ -2915,7 +2954,6 @@ SlotInfo::SlotInfo(const SlotInfo& other)
 // The top argCount values of the tracer state's operand stack, copied into the argument slots and popped.
 namespace TR {
 
-// MS2-FUNCTIONAL: same code; the exe inlines the Value copy's AddRef where our Value header calls it out of line
 // @0x1424d9640
 ReadArgs::ReadArgs(VM& vm, State& s, UInt32 argCount)
     : VMRef(vm), StateRef(s), ReadNum(0), ArgNum(argCount), CallArgs(VMRef.MHeap)
@@ -2926,7 +2964,8 @@ ReadArgs::ReadArgs(VM& vm, State& s, UInt32 argCount)
         const UPInt first = size - argCount;
         if (argCount <= 8)
         {
-            for (UPInt i = first, j = 0; i < size; ++i, ++j)
+            UInt32 j = 0;
+            for (UPInt i = first; i < size; ++i, ++j)
                 FixedArgs[j].Assign(StateRef.GetOpStack()[i]);
         }
         else
@@ -3991,29 +4030,6 @@ UPInt* FUN_1424d9f30(UPInt* self, UPInt heap, UPInt body, UPInt ops, UPInt extra
 }} // namespace GFx::AS3
 
 namespace Render {
-// The TreeNode::NodeData vftable (0x14317b700), stored the way TreeContainer's and TreeShape's node data store theirs.
-extern const void* const TreeNodeNodeDataVTable[];
-
-// MS2-FUNCTIONAL: the exe sets Type, Flags and pVTable in an EntryData base constructor ahead of the members;
-// EntryData has none here, so they are stored after them
-// @0x1424d9310
-TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type)
-{
-    Type = (UInt16)type;
-    Flags = NF_Visible;
-    pVTable = TreeNodeNodeDataVTable;
-    AproxLocalBounds.Clear();
-    AproxParentBounds.Clear();
-}
-
-// MS2-FUNCTIONAL: member-wise copy; the exe stores the EntryData vftable before the NodeData one
-// @0x1424d9220
-TreeNode::NodeData::NodeData(const NodeData& src)
-    : ContextImpl::EntryData(src), M34(src.M34), States(src.States), Cx(src.Cx),
-      AproxLocalBounds(src.AproxLocalBounds), AproxParentBounds(src.AproxParentBounds)
-{
-}
-
 // The per-document text allocator constructor, out of line in the exe (inline in text_core.h), called with the
 // storage of an Allocator already allocated.
 // @0x1424d61c0
