@@ -4611,25 +4611,6 @@ addToLists:
     return result;
 }
 
-// Moves the candidate window of the IMM IME object to the composition cursor at offset: RepositionCandWindow(x1, y2,
-// y2 - y1) of the cursor rect IMEManagerBase::GetMetrics reports.
-// MS2-FUNCTIONAL: the exe builds the three arguments in a heap Value array
-// @0x1423d5060
-void FUN_1423d5060(void* raw, int offset)
-{
-    auto* self = static_cast<unsigned char*>(raw);
-    void* owner = *reinterpret_cast<void**>(self + 8);
-    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
-        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
-    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
-    ime->GetMetrics(&viewRect, &cursorRect, offset);
-    Scaleform::GFx::Value args[3];
-    args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1));
-    cx18_InvokeInputWindow(self, "RepositionCandWindow", args, 3);
-}
-
 // A local ArrayData<Value> built with plain member initialisers.
 struct Ime01ArgArray
 {
@@ -4656,6 +4637,30 @@ static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value
     }
     args.size = newLength;
     ::new (static_cast<void*>(args.data + newLength - 1)) Scaleform::GFx::Value(value);
+}
+
+// Moves the candidate window of the IMM IME object to the composition cursor at offset: RepositionCandWindow(x1, y2,
+// y2 - y1) of the cursor rect IMEManagerBase::GetMetrics reports.
+// MS2-FUNCTIONAL: the arguments go through the inlined Value array (Ime01ArgArray). Same size as the exe; only the
+// array zeroing differs (the exe stores data/size with one movdqu).
+// @0x1423d5060
+void FUN_1423d5060(void* raw, int offset)
+{
+    auto* self = static_cast<unsigned char*>(raw);
+    void* owner = *reinterpret_cast<void**>(self + 8);
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+    ime->GetMetrics(&viewRect, &cursorRect, offset);
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
+    Ime01ArgArray args;
+    Scaleform::GFx::Value result;
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1)));
+    if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+        reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+            bridge, "RepositionCandWindow", &result, args.data, 3);
 }
 
 // MS2-FUNCTIONAL: composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
@@ -5006,7 +5011,8 @@ void FUN_1423cc7c0(void* raw, unsigned conversion)
 }
 
 // MS2-FUNCTIONAL: asks the IME manager for the cursor rect at the given offset and calls
-// RepositionCandWindow(cursor.x1, cursor.y2, cursor.y2 - cursor.y1) on the movie's external interface.
+// RepositionCandWindow(cursor.x1, cursor.y2, cursor.y2 - cursor.y1) on the movie's external interface. The arguments
+// go through the inlined Value array (Ime01ArgArray); only its zeroing differs from the exe (one movdqu there).
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
 {
@@ -5016,14 +5022,15 @@ void FUN_1423d0f60(void* manager, int mode)
         reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
     Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
     ime->GetMetrics(&viewRect, &cursorRect, mode);
-    Scaleform::GFx::Value args[3];
-    args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1));
+    Ime01ArgArray args;
     Scaleform::GFx::Value result;
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+    Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1)));
     if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
-            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result, args, 3);
+            (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result,
+                                                                        args.data, 3);
 }
 
 struct Ime01CandidateProps
