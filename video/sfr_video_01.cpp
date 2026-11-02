@@ -847,27 +847,26 @@ void* FUN_140005000(void** weakSlot)
 }
 
 // MS2-FUNCTIONAL: grows, resizes, or releases the four-byte-rounded backing array through the Scaleform heap.
+// Only the AllocInfo slot differs: the exe keeps it in the r9 home slot (rsp+0x48), ours in the r8 home slot.
 // @0x1400050c0
 void FUN_1400050c0(void** array, void* heapOwner, Scaleform::UPInt requested)
 {
-    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    unsigned char* data = static_cast<unsigned char*>(array[0]);
+    // SDK ArrayDataBase::Reserve (AllocatorLH, granularity 4)
+    typedef Scaleform::AllocatorBaseLH<Scaleform::Stat_Default_Mem> Allocator;
     if (requested == 0) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, data);
-        array[0] = 0;
+        if (array[0]) {
+            Allocator::Free(array[0]);
+            array[0] = 0;
+        }
         array[2] = 0;
-        return;
-    }
-    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
-    if (data) {
-        array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(heapVtable[11])(
-            Scaleform::Memory::pGlobalHeap, data, capacity * sizeof(void*));
     } else {
-        __declspec(align(8)) unsigned flags[2] = { 2, 0 };
-        array[0] = reinterpret_cast<void* (*)(void*, void*, size_t, const void*)>(heapVtable[14])(
-            Scaleform::Memory::pGlobalHeap, heapOwner, capacity * sizeof(void*), flags);
+        requested = (requested + 3) / 4 * 4;
+        if (array[0])
+            array[0] = Allocator::Realloc(array[0], requested * sizeof(void*), __FILE__, __LINE__);
+        else
+            array[0] = Allocator::Alloc(heapOwner, requested * sizeof(void*), __FILE__, __LINE__);
+        array[2] = reinterpret_cast<void*>(requested);
     }
-    array[2] = reinterpret_cast<void*>(capacity);
 }
 
 // @0x140005160
