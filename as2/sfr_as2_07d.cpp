@@ -7,6 +7,8 @@
 
 // The exe calls Value::~Value out of line throughout this file.
 #define MS2_AS2_VALUE_DTOR_CALL
+// XML and IME come before AS2_Value in the exe's AS2_All order, so their callers do not see its noalias.
+#define MS2_AS2_SCU
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -728,7 +730,6 @@ XmlNodeObject::StandardMember XmlNodeObject::GetStandardMemberConstant(Environme
 
 // new XMLNode(type, value): an element (value "prefix:name" or "name"), a text node, or a node of another type
 // with an empty value.
-// MS2-FUNCTIONAL: register allocation and block layout differ
 // @0x14299e270
 void XmlNodeCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -983,7 +984,6 @@ void SetupShadow(Environment* penv, XML::Node* preal, XmlNodeObject* asobj)
     asobj->pRealNode                                    = preal;
 }
 
-// MS2-FUNCTIONAL: the exe tail-calls AppendString differently
 // @0x14299f370
 void XMLAttributeStringBuilder::Visit(const ASString& name, const Value& val, UByte)
 {
@@ -994,7 +994,6 @@ void XMLAttributeStringBuilder::Visit(const ASString& name, const Value& val, UB
     Dest.AppendString("\"");
 }
 
-// MS2-FUNCTIONAL: register allocation differs
 // @0x14299f440
 void XMLPrefixQuerier::Visit(const ASString& name, const Value& val, UByte)
 {

@@ -15,7 +15,10 @@
 // Value::ToStringImpl is known not to keep the address of its result, and the caller folds the reference count
 // traffic on the returned string. Split into units we tell the compiler the same through noalias. Only put this on
 // declarations whose exe call sites show the effect (byte-matched callers).
+// Units the exe compiles ahead of AS2_Value in AS2_All define it empty first.
+#ifndef MS2_AS2_SCU
 #define MS2_AS2_SCU __declspec(noalias)
+#endif
 
 namespace Scaleform { namespace GFx {
 

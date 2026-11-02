@@ -7,6 +7,8 @@
 
 // The exe calls Value::~Value out of line throughout this file.
 #define MS2_AS2_VALUE_DTOR_CALL
+// XML and IME come before AS2_Value in the exe's AS2_All order, so their callers do not see its noalias.
+#define MS2_AS2_SCU
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/gfx_interactiveobject.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
