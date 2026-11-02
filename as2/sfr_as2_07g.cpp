@@ -15,7 +15,10 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The exe's out-of-line Hash::Get of the builtin class registry (folded with other tables of 0x10-byte values).
-GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
+}}} // namespace Scaleform::GFx::AS2
+// ASStringHash<GlobalContext::ClassRegEntry>::Get, defined with plain pointer parameters in sfr_video_04.
+void* FUN_140001bd0(void* phash, void* pkey);
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
 
@@ -47,7 +50,7 @@ SF_FORCEINLINE InteractiveObject* LevelMovieOf(const MovieImpl* pmovie, int leve
 // GlobalContext::GetBuiltinClassRegistrar as the exe has it inline (the name copied, the folded Hash::Get).
 SF_FORCEINLINE GlobalContext::ClassRegEntry* BuiltinRegistrarOf(GlobalContext* pgc, ASString className)
 {
-    GlobalContext::ClassRegEntry* pentry = FUN_140001bd0(&pgc->BuiltinClassesRegistry, className);
+    GlobalContext::ClassRegEntry* pentry = static_cast<GlobalContext::ClassRegEntry*>(::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&className));
     if (pentry)
         return pentry;
     return 0;

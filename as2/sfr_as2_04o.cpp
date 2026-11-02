@@ -22,6 +22,7 @@
 #include "../include/gfx/gfx_moviedef.h"
 #include "../include/gfx/gfx_event.h"
 #include "../include/kernel/sf_arraypaged.h"
+#include "../include/gfx/as2/as2_refcountcollector.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_movieimpl.h"
 
@@ -284,11 +285,13 @@ void AvmButton::ConstructCharacter(InteractiveObject* pchar, const ButtonRecord*
     }
 }
 
-// The destructor of a paged array of unsigned (the exe folds the identical instantiations into one).
+// RootArray::ClearAndRelease: frees the pages and the page table (the exe folds the identical paged-array
+// destructors into this one body).
 // @0x1429343f0
-void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* parray)
+template<>
+void RefCountCollector<StatMV_ActionScript_Mem>::RootArray::ClearAndRelease()
 {
-    parray->~ArrayPagedLH_POD();
+    reinterpret_cast<ArrayPagedLH_POD<unsigned, 6, 64, 2>*>(this)->~ArrayPagedLH_POD();
 }
 
 }}} // namespace Scaleform::GFx::AS2

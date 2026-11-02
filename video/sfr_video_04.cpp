@@ -407,11 +407,12 @@ __forceinline void Video04ClearHash(Video04Hash* hash)
     }
 }
 
-// clears the hash above.
+// clears the hash above. The parameter is a plain pointer so the definition has external linkage: the AS2 units
+// call it on their own hash members.
 // @0x140001f40
-void FUN_140001f40(Video04Hash* hash)
+void FUN_140001f40(void* phash)
 {
-    Video04ClearHash(hash);
+    Video04ClearHash(static_cast<Video04Hash*>(phash));
 }
 
 // same body as the above (the exe carries a second full copy).

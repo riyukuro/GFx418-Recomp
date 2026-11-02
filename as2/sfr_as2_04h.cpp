@@ -64,11 +64,12 @@ protected:
 struct EntryAccess : Entry { using Entry::destroyHelper; };
 } } }
 
+// Clears a hash, defined with a plain pointer parameter in sfr_video_04.
+void FUN_140001f40(void* phash);
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 struct GcAccess : RefCountBaseGC<StatMV_ActionScript_Mem> { using RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal; };
-void FUN_1429343f0(ArrayPagedLH_POD<unsigned, 6, 64, 2>* proots);
-void FUN_140001f40(void*);
 
 static inline void rs(void* n) // ASString release
 {
@@ -115,7 +116,7 @@ void* DeleteAs2_142928c70(void* p, unsigned flags)
     *(const void**)p = DAT_1432153a0;
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
-    FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
+    static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Roots.ClearAndRelease();
     static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
@@ -133,7 +134,7 @@ void* DeleteAs2_142928dc0(void* p, unsigned flags)
     *(const void**)p = DAT_1432153a0;
     static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Collect(0);
     *(const void**)((char*)p+0x40) = DAT_143215370;
-    FUN_1429343f0((ArrayPagedLH_POD<unsigned, 6, 64, 2>*)((char*)p+0x10));
+    static_cast<RefCountCollector<StatMV_ActionScript_Mem>*>(p)->Roots.ClearAndRelease();
     static_cast<RefCountImplCore*>((void*)(p))->RefCountImplCore::~RefCountImplCore();
     if (flags & 1)
     {
@@ -273,7 +274,7 @@ void* DeleteAs2_14292b4e0(void* p, unsigned flags)
     *(const void**)p = DAT_143215af8;
     reinterpret_cast<Sfr04hHashChar*>((char*)p+0x70)->~Sfr04hHashChar();
     rg(*(void**)((char*)p+0x60));
-    FUN_140001f40((char*)p+0x20);
+    ::FUN_140001f40((char*)p+0x20);
     reinterpret_cast<Sfr04hHashFn*>((char*)p+0x18)->~Sfr04hHashFn();
     ::FUN_14000b080((void**)((char*)p+0x10));
     static_cast<RefCountNTSImplCore*>((void*)(p))->RefCountNTSImplCore::~RefCountNTSImplCore();

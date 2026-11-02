@@ -2160,12 +2160,15 @@ AvmCharacter* AvmCharacter::GetAvmTopParent(bool ignoreLockRoot) const
 
 // The registration entry of a built-in class, 0 when the name is not one (the name is taken by value).
 // The exe's out-of-line Hash::Get the registry lookup calls (folded with other tables of 0x10-byte values).
-GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
+}}} // namespace Scaleform::GFx::AS2
+// ASStringHash<GlobalContext::ClassRegEntry>::Get, defined with plain pointer parameters in sfr_video_04.
+void* FUN_140001bd0(void* phash, void* pkey);
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // @0x142949900
 GlobalContext::ClassRegEntry* GlobalContext::GetBuiltinClassRegistrar(ASString className)
 {
-    ClassRegEntry* pentry = FUN_140001bd0(&BuiltinClassesRegistry, className);
+    ClassRegEntry* pentry = static_cast<GlobalContext::ClassRegEntry*>(::FUN_140001bd0(&BuiltinClassesRegistry, (void*)&className));
     if (pentry)
         return pentry;
     return 0;

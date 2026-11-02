@@ -29,7 +29,10 @@ void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scalefo
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The folded ASStringHash<ClassRegEntry>::Get (exe 0x140001bd0).
-GlobalContext::ClassRegEntry* FUN_140001bd0(ASStringHash<GlobalContext::ClassRegEntry>* phash, const ASString& key);
+}}} // namespace Scaleform::GFx::AS2
+// ASStringHash<GlobalContext::ClassRegEntry>::Get, defined with plain pointer parameters in sfr_video_04.
+void* FUN_140001bd0(void* phash, void* pkey);
+namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The _global functions (sfr_as2_01; setInterval / setTimeout and updateAfterEvent are not recovered as names).
 void GAS_GlobalTrace(const FnCall& fn); // trace
@@ -120,7 +123,7 @@ SF_FORCEINLINE void AddBuiltinClassRegistry(GlobalContext* pgc, ASStringContext*
                                             ASBuiltinType type, GlobalContext::ClassRegEntry::RegisterFunc func)
 {
     const ASString& name = psc->GetBuiltin(type);
-    if (FUN_140001bd0(&pgc->BuiltinClassesRegistry, name))
+    if (::FUN_140001bd0(&pgc->BuiltinClassesRegistry, (void*)&name))
         return;
     {
         GlobalContext::ClassRegEntry entry;

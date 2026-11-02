@@ -22,7 +22,6 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 void FUN_142939780(void*);
 struct GcAccess : RefCountBaseGC<StatMV_ActionScript_Mem> { using RefCountBaseGC<StatMV_ActionScript_Mem>::ReleaseInternal; };
 void FUN_142592200(void*, void*);
-void FUN_1429343f0(void*);
 void FUN_14256a8e0(void*);
 void FUN_142924180(void*);
 void FUN_14257dcd0(void*);
@@ -30,7 +29,6 @@ void FUN_142924a20(void*);
 void FUN_142925680(void*);
 void FUN_1424a9ed0(void*);
 void FUN_142924580(void*);
-void FUN_140001f40(void*);
 void FUN_142924770(void*);
 void FUN_14000b080(void*);
 void FUN_1425c1350(void*, void*, int);
