@@ -83,37 +83,40 @@ void MovieRoot::StickyVarNode::Assign(const GFx::MovieImpl::StickyVarNode& node)
     mValue = static_cast<const StickyVarNode&>(node).mValue;
 }
 
-// MS2-FUNCTIONAL: the string handling is recovered from the decompile; the builtins 66 and 67 are "_level0" and "_level0."
+// The builtins 66 and 67 are "_level0" and "_level0."
+// MS2-FUNCTIONAL: the exe keeps the MovieRoot in rdi and saves rsi only around the _root rewrite; register choice
+// differs
 // @0x1429306a0
-void MovieRoot::AddStickyVariable(const ASString& path, const Value& val, SetVarTypeArg setType)
+void MovieRoot::AddStickyVariable(const ASString& fullPath, const Value& val, SetVarTypeArg setType)
 {
     ASStringContext sc(pGlobalContext, 8);
-    ASString        base(sc.GetBuiltin(ASBuiltin_empty_));
+    ASString        path(sc.GetBuiltin(ASBuiltin_empty_));
     ASString        name(sc.GetBuiltin(ASBuiltin_empty_));
-    ASString        key(sc.GetBuiltin(ASBuiltin_empty_));
-    if (Environment::ParsePath(&sc, path, &base, &name))
+    if (!Environment::ParsePath(&sc, fullPath, &path, &name))
     {
-        if (base.GetLength() > 4)
-        {
-            if (!strncmp(base.ToCStr(), "_root", 5))
-                base = sc.GetBuiltin(66) + ASString(base.SubstringNode(5, base.GetLength()));
-            if (!strncmp(base.ToCStr(), "_level", 6))
-            {
-                key = base;
-                goto create;
-            }
-        }
-        key = sc.GetBuiltin(67) + base;
+        if (name.IsEmpty())
+            return;
+        // a sticky variable without a path is taken as _level0
+        path = sc.GetBuiltin(ASBuiltin__level0);
     }
     else
     {
-        if (name.GetLength() == 0)
-            return;
-        key = sc.GetBuiltin(66);
+        bool needLevelPrefix = 0;
+        if (path.GetSize() >= 5)
+        {
+            if (!memcmp(path.ToCStr(), "_root", 5))
+                path = sc.GetBuiltin(ASBuiltin__level0) + ASString(path.SubstringNode(5, path.GetLength()));
+            if (memcmp(path.ToCStr(), "_level", 6) != 0)
+                needLevelPrefix = 1;
+        }
+        else
+            needLevelPrefix = 1;
+        if (needLevelPrefix)
+            path = sc.GetBuiltin(ASBuiltin__level0dot_) + path;
     }
-create:
-    StickyVarNode* pnode = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) StickyVarNode(name, val, (int)setType == 2);
-    pMovieImpl->AddStickyVariableNode(key, pnode);
+    StickyVarNode* pnode;
+    if ((pnode = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) StickyVarNode(name, val, (int)setType == 2)) != 0)
+        pMovieImpl->AddStickyVariableNode(path, pnode);
 }
 
 // The ExternalInterface callbacks of a movie (ASStringHash<InvokeAliasInfo>), the pointer at +0x78.
