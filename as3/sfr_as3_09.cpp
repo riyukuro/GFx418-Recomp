@@ -410,18 +410,14 @@ namespace Instances { namespace fl_events {
     // ---- Dispatch: the listeners of this dispatcher, and the capture/target/bubble walk ---------------------------------
 
     // @0x142466270
-    // MS2-FUNCTIONAL: the exe reaches the AS3 part through the AvmInteractiveObjBase slot (vslot 1) and the PushBack
-    // growth is laid out inline; the same chain
+    // MS2-FUNCTIONAL: the exe computes both AS3 pointer addresses before the null-checked cast and keeps
+    // the PushBack size in a different register; the same chain
     void EventDispatcher::GetParentChain(GFx::DisplayObject* dobj,
                                          ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain)
     {
         for (InteractiveObject* p = dobj->GetParent(); p; p = p->GetParent())
         {
-            // the AS3 part (AS3::AvmDisplayObj, as3_avm.h) keeps the object raw at +0x10 or as a tagged SPtr at +0x08
-            const UPInt* avm = reinterpret_cast<const UPInt*>(p->GetAvmObjImpl());
-            UPInt raw = avm[2] ? avm[2] : avm[1];
-            Instances::fl_display::DisplayObject* o =
-                reinterpret_cast<Instances::fl_display::DisplayObject*>(raw & ~UPInt(1));
+            Instances::fl_display::DisplayObject* o = ToAvmInteractiveObj(p)->GetAS3Obj();
             SPtr<Instances::fl_display::DisplayObject> s(o);
             if (s)
                 chain.PushBack(s);
@@ -507,7 +503,8 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x142468fa0
-    // MS2-FUNCTIONAL: the exe keeps this in rbp (rsi here); same blocks and dispatch order
+    // MS2-FUNCTIONAL: the exe keeps this in rbp (rsi here) and lays the no-display-object call out before the
+    // epilogue; same blocks and dispatch order
     void EventDispatcher::Dispatch(Instances::fl_events::Event* evt, GFx::DisplayObject* dobj)
     {
         if (dobj)
@@ -543,16 +540,16 @@ namespace Instances { namespace fl_events {
 
             // bubble: from the parent up to the root
             evt->Phase = 3;
-            for (UPInt i = 0; i < chain.GetSize(); ++i)
+            for (UPInt i = 0, n = chain.GetSize(); i < n; ++i)
             {
                 if (!chain[i]->DispatchSingleEvent(evt, false))
                 {
                     if (chain[i]->pDispObj)
                         chain[i]->pDispObj->Flags |= GFx::DisplayObject::Mask_ExecutionAborted;
-                    return;
+                    break;
                 }
                 if (evt->PropagationStopped || evt->ImmPropagationStopped)
-                    return;
+                    break;
             }
         }
         else
@@ -948,6 +945,15 @@ namespace Instances { namespace fl_events {
                    type == sm.GetBuiltin(BuiltinType(BI_mouseOver)) || type == sm.GetBuiltin(BuiltinType(BI_mouseOut)) ||
                    type == sm.GetBuiltin(BuiltinType(BI_rollOver)) || type == sm.GetBuiltin(BuiltinType(BI_rollOut));
         }
+
+        // IsButtonEvent as OnListenerRemoved inlines it (builtin on the left).
+        __forceinline bool IsButtonEventInl(const StringManager& sm, const ASString& type)
+        {
+            return sm.GetBuiltin(BuiltinType(BI_mouseDown)) == type || sm.GetBuiltin(BuiltinType(BI_mouseUp)) == type ||
+                   sm.GetBuiltin(BuiltinType(BI_click)) == type || sm.GetBuiltin(BuiltinType(BI_doubleClick)) == type ||
+                   sm.GetBuiltin(BuiltinType(BI_mouseOver)) == type || sm.GetBuiltin(BuiltinType(BI_mouseOut)) == type ||
+                   sm.GetBuiltin(BuiltinType(BI_rollOver)) == type || sm.GetBuiltin(BuiltinType(BI_rollOut)) == type;
+        }
     }
 
     // @0x14246caa0
@@ -1050,7 +1056,7 @@ namespace Instances { namespace fl_events {
 
     // The event chain and the button listener count after the last listener of a type was removed (0x14246c2f0).
     // @0x14246c2f0
-    // MS2-FUNCTIONAL: cl lays out the builtin compares differently
+    // MS2-FUNCTIONAL: the traits-type range check is add eax,-0x11 in the exe (sub here); otherwise identical
     static __declspec(noinline) void OnListenerRemoved(EventDispatcher* d, const ASString& type, bool useCapture,
                                                        UPInt remaining)
     {
@@ -1077,11 +1083,15 @@ namespace Instances { namespace fl_events {
             code = EventId::IdCode(EV_Render);
         else
         {
-            if (IsButtonEvent(vm.GetMovieRoot()->BuiltinsMgr, type))
+            if (IsButtonEventInl(vm.GetMovieRoot()->BuiltinsMgr, type))
             {
-                UInt8& cnt = useCapture ? d->pImpl->CaptureButtonHandlersCnt : d->pImpl->ButtonHandlersCnt;
-                if (cnt != 0xff)
-                    --cnt;
+                if (useCapture)
+                {
+                    if (d->pImpl->CaptureButtonHandlersCnt < 255)
+                        --d->pImpl->CaptureButtonHandlersCnt;
+                }
+                else if (d->pImpl->ButtonHandlersCnt < 255)
+                    --d->pImpl->ButtonHandlersCnt;
             }
             return;
         }
