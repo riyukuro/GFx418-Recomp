@@ -219,8 +219,7 @@ public:
 
     unsigned GetBit() const
     {
-        unsigned b = *Bits;
-        return b & Mask;
+        return (*Bits & Mask) != 0;
     }
 
 private:
@@ -229,7 +228,6 @@ private:
 };
 
 // @0x14264ba40
-// MS2-FUNCTIONAL: regalloc: the exe copies Mask then ANDs the source byte from memory here, but its inlined copy in GetGlyphRaster loads the byte first; GetBit follows the GetGlyphRaster form
 void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int height, int originX, int originY,
                                               GlyphRaster* raster)
 {
