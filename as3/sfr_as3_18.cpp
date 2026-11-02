@@ -5634,22 +5634,40 @@ bool FUN_142515580(const VM& vm, const InstanceTraits::Traits* itr)
     return result;
 }
 
+// The event id copy of the exe's ActionEntry::operator=: member by member, the first union member only.
+static __forceinline void Sfr18CopyEventId(EventId& d, const EventId& s)
+{
+    d.Id              = s.Id;
+    d.WcharCode       = s.WcharCode;
+    d.KeyCode         = s.KeyCode;
+    d.AsciiCode       = s.AsciiCode;
+    d.RollOverCnt     = s.RollOverCnt;
+    d.ControllerIndex = s.ControllerIndex;
+    d.KeysState       = s.KeysState;
+    d.MouseWheelDelta = s.MouseWheelDelta;
+}
+
+// The exe calls the SPtr<DisplayObject> assignment out of line (instantiated in sfr_as3_06).
+template <> SPtr<Instances::fl_display::DisplayObject>&
+SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_display::DisplayObject>& other);
+
 // The actions of level srclvl moved to the end of level dstlvl's queue, in order. The copy of an entry leaves out
 // its function value (4.1.18 copies the event, the character and objects, the C function and the load notifier).
-// MS2-FUNCTIONAL the exe copies the event id field by field and keeps the queue root in a register
+// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the iterator destructor
 // @0x142522ae0
 void MovieRoot::RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl)
 {
     if (ActionQueue.Entries[srclvl].pActionRoot)
     {
         ActionQueueIterator iter(srclvl, &ActionQueue);
-        while (const ActionEntry* src = iter.getNext())
+        const ActionEntry* src;
+        while ((src = iter.getNext()) != NULL)
         {
             ActionEntry* dst  = InsertEmptyAction(dstlvl);
             dst->Type         = src->Type;
             dst->pCharacter   = src->pCharacter;
             dst->pAS3Obj      = src->pAS3Obj;
-            dst->mEventId     = src->mEventId;
+            Sfr18CopyEventId(dst->mEventId, src->mEventId);
             dst->CFunction    = src->CFunction;
             dst->pNLoadInitCL = src->pNLoadInitCL;
         }
