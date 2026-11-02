@@ -820,7 +820,17 @@ void SparseArray::Resize(UPInt newLength)
     ValueHHighInd = 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines ValueA.PushBack inside the dense-merge loop
+// HashDH<UPInt, Value>'s node lookup through the exe's out-of-line GetAlt.
+static SF_INLINE const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* saHashGetNode(const HashDH<UPInt, Value>& h,
+                                                                                   const UPInt& key)
+{
+    typedef HashNode<UPInt, Value, FixedSizeHash<UPInt> > NodeT;
+    typedef decltype(h.mHash) ContT;
+    // The exe calls GetAlt out of line (0x1423e87e0); going through a member pointer keeps cl from inlining it.
+    const NodeT* (ContT::*getAlt)(const UPInt&) const = &ContT::GetAlt<UPInt>;
+    return (h.mHash.*getAlt)(key);
+}
+
 // @0x1424213b0
 void SparseArray::Set(UPInt ind, const Value& v)
 {
@@ -837,20 +847,20 @@ void SparseArray::Set(UPInt ind, const Value& v)
         Value hv;
         while (ValueA.GetSize() == ValueHLowInd)
         {
-            const Value* p = ValueH.Get(ValueHLowInd);
+            const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = saHashGetNode(ValueH, ValueHLowInd);
             if (!p)
                 break;
-            hv.Assign(*p);
+            hv.Assign(p->Second);
             ValueH.Remove(ValueHLowInd);
             ValueA.PushBack(hv);
-            if (ValueH.IsEmpty())
+            if (ValueH.GetSize() > 0)
+                ValueHLowInd = (*ValueH.Begin()).First;
+            else
             {
                 ValueH.Clear();
                 ValueHHighInd = 0;
                 ValueHLowInd = 0;
             }
-            else
-                ValueHLowInd = (*ValueH.Begin()).First;
         }
     }
     else
@@ -1843,7 +1853,8 @@ namespace Instances { namespace fl
     void Error::getStackTrace(ASString& result)
     {
         toStringProto(result);
-        result += (String("\n") + String(StackTrace.ToCStr(), StackTrace.GetSize())).ToCStr();
+        const String trace = String("\n") + String(StackTrace.ToCStr(), StackTrace.GetSize());
+        result += trace.ToCStr();
     }
 }} // namespace Instances::fl
 
@@ -5624,10 +5635,9 @@ namespace Scaleform { namespace GFx { namespace AS3
     // @0x14241e5d0
     void FUN_14241e5d0(Traits* tr)
     {
-        VM& vm = tr->GetVM();
-        tr->AddSlotCPP(vm.GetStringManager().CreateConstString("prototype"),
-                       Pickable<const Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue),
-                       vm.TraitsObject.GetPtr(), SlotInfo::BT_ObjectCpp, AbsoluteIndex(0x38), false);
+        tr->AddSlotCPP(tr->GetVM().GetStringManager().CreateConstString("prototype"),
+                       Pickable<const Instances::Namespace>(tr->GetVM().PublicNamespace.GetPtr(), PickValue),
+                       tr->GetVM().TraitsObject.GetPtr(), SlotInfo::BT_ObjectCpp, AbsoluteIndex(0x38), false);
         for (unsigned i = 0; i < 3; ++i)
             tr->Add2VT(AS3::fl::FunctionCI, DAT_143a2aab0[i]);
     }
