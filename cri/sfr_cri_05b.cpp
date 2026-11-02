@@ -1215,7 +1215,6 @@ void FUN_14004f490(longlong a1,int a2,longlong *a3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x14004f620
 int FUN_14004f620(longlong a1,int a2,int a3,int *a4)
 {
@@ -1226,37 +1225,28 @@ int FUN_14004f620(longlong a1,int a2,int a3,int *a4)
     FUN_14004ef20("E2004090217"," : NULL pointer is passed.");
     return 0;
   }
-  if (CriAt<int>(a1, 0x8) != 0) {
-    i_v2 = a3;
-    if (a2 == 0) {
-      i_v1 = (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x20)) + CriAt<int>(a1, 0x30);
-      if (CriAt<int>(a1, 0x1c) < i_v1) {
-        i_v1 = CriAt<int>(a1, 0x1c);
-      }
-      if (i_v1 < a3) {
-        i_v2 = i_v1;
-      }
-    }
-    else if (a2 == 1) {
-      i_v1 = (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x24)) + CriAt<int>(a1, 0x30);
-      if (CriAt<int>(a1, 0x18) < i_v1) {
-        i_v1 = CriAt<int>(a1, 0x18);
-      }
-      if (i_v1 < a3) {
-        i_v2 = i_v1;
-      }
-    }
-    else {
-      i_v2 = 0;
-      if (CriAt<code *>(a1, 0x48) != (code *)0x0) {
-        (*CriAt<code *>(a1, 0x48))(CriAt<cri_u64>(a1, 0x50),0xfffffffd);
-      }
-    }
-    *a4 = i_v2;
-    return i_v2 == a3;
+  if (CriAt<int>(a1, 0x8) == 0) {
+    FUN_14004ef20("E2004090218"," : Specified handle is invalid.");
+    return 0;
   }
-  FUN_14004ef20("E2004090218"," : Specified handle is invalid.");
-  return 0;
+  if (a2 == 0) {
+    // MIN(limit, free space)
+    i_v1 = (CriAt<int>(a1, 0x1c) < ((CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x20)) + CriAt<int>(a1, 0x30))) ? CriAt<int>(a1, 0x1c) : ((CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x20)) + CriAt<int>(a1, 0x30));
+    i_v2 = (i_v1 < a3) ? i_v1 : a3;
+  }
+  else if (a2 == 1) {
+    // MIN(limit, free space)
+    i_v1 = (CriAt<int>(a1, 0x18) < ((CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x24)) + CriAt<int>(a1, 0x30))) ? CriAt<int>(a1, 0x18) : ((CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x24)) + CriAt<int>(a1, 0x30));
+    i_v2 = (i_v1 < a3) ? i_v1 : a3;
+  }
+  else {
+    i_v2 = 0;
+    if (CriAt<code *>(a1, 0x48) != (code *)0x0) {
+      (*CriAt<code *>(a1, 0x48))(CriAt<cri_u64>(a1, 0x50),0xfffffffd);
+    }
+  }
+  *a4 = i_v2;
+  return i_v2 == a3;
 }
 
 // @0x14004f700
@@ -1747,41 +1737,39 @@ DWORD mpvmulti_GetNumberOfProcessors(void)
   return loc_38.dwNumberOfProcessors;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: op-identical apart from register allocation (VS2008 build, our toolset differs).
 // @0x140050210
 void MPVMULTI_SetProcessorMask(longlong a1,uint a2)
 {
-  int i_v1;
-  uint u_v2;
-  int i_v3;
-  uint *pu_v4;
-  ulonglong u_v5;
-  
+  struct Ch { cri_u8 Reserved00[0xc]; cri_u32 Processor; cri_u8 Reserved10[0xf0]; };
+  int last;
+  int used;
+  int count;
+  ulonglong n;
+  Ch *ch;
+  uint bit;
+
   if (CriAt<uint>(a1, 0x10) != a2) {
     CriAt<uint>(a1, 0x10) = a2;
-    i_v1 = mpvmulti_GetNumberOfProcessors();
-    u_v5 = (ulonglong)DAT_143badbdc;
-    i_v3 = 0;
-    u_v2 = 0;
-    if (0 < (int)DAT_143badbdc) {
-      pu_v4 = (&CriAt<uint>(DAT_143c490e0, 0xc));
-joined_r0x00014005024e:
-      do {
-        if (u_v2 < 0x20) {
-          if (((a2 >> (u_v2 & 0x1f) & 1) == 0) || (i_v1 + -1 <= i_v3)) {
-            u_v2 = u_v2 + 1;
-            goto joined_r0x00014005024e;
+    last = mpvmulti_GetNumberOfProcessors() - 1;
+    count = DAT_143badbdc;
+    used = 0;
+    bit = 0;
+    // each channel takes the next processor in the mask, until all but one are taken
+    if (count > 0) {
+      ch = (Ch *)DAT_143c490e0;
+      for (n = (cri_u32)count; n != 0; n--, ch++) {
+        for (; bit < 0x20; bit++) {
+          if ((a2 & (1u << bit)) != 0 && used < last) {
+            used++;
+            break;
           }
-          i_v3 = i_v3 + 1;
         }
-        *pu_v4 = u_v2;
-        pu_v4 = pu_v4 + 0x40;
-        u_v2 = u_v2 + 1;
-        u_v5 = u_v5 - 1;
-      } while (u_v5 != 0);
+        ch->Processor = bit;
+        bit++;
+      }
     }
   }
-  return;
 }
 
 // @0x140050280
@@ -2027,7 +2015,7 @@ void mpvmulti_DecServer(longlong *a1)
   }
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: register allocation differs (esi/edi, r14/r15), the chunk id is read from a3's home slot as a qword, and the last loop compares the count in memory (VS2008 build, our toolset differs).
 // @0x140050820
 cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 {
@@ -2043,6 +2031,7 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   longlong k;
   int i;
   Arg args[4];
+  typedef int (*TellFn)(longlong *,int);
   
   nthreads = DAT_143badb84;
   CriAt<cri_u32>(a4, 0x20) = 0;
@@ -2058,7 +2047,7 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
   CriAt<cri_u32>(a1, 0x108) = 0x96;
   CriAt<cri_u32>(a1, 0x10c) = 0;
   stream = (longlong *)FUN_140050320(a1,(void *)a2);
-  startPos = (**(code **)(*stream + 0x48))(stream,1);
+  startPos = (*(TellFn *)(*stream + 0x48))(stream,1);
   CriAt<cri_u16>(a4, 0x28) = 0;
   lastId = 0;
   for (;;) {
@@ -2070,7 +2059,7 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
     CriAt<short>(a4, 0x28) = CriAt<short>(a4, 0x28) + 1;
     if (lastId != *(uint *)&a3) {
       lastId = *(uint *)&a3;
-      if (FUN_140050380(a1,(cri_u64)stream,startPos - (**(code **)(*stream + 0x48))(stream,1)) != 0) {
+      if (FUN_140050380(a1,(cri_u64)stream,startPos - (*(TellFn *)(*stream + 0x48))(stream,1)) != 0) {
         CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + 1;
         break;
       }
@@ -2115,11 +2104,11 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
     }
   }
   for (k = 0; k < n; k++) {
-    if (-1 < ((Worker *)DAT_143c490e0)[k].Thread) {
+    if (((Worker *)DAT_143c490e0)[k].Thread >= 0) {
       FUN_140067dd0(((Worker *)DAT_143c490e0)[k].Handle,((Worker *)DAT_143c490e0)[k].Thread);
     }
   }
-  FUN_140052050((longlong *)a2,1,startPos - (**(code **)(*stream + 0x48))(stream,1));
+  FUN_140052050((longlong *)a2,1,startPos - (*(TellFn *)(*stream + 0x48))(stream,1));
   FUN_140050480(a1,CriAt<cri_u32>(a4, 0x14),*a4);
   for (i = 0; i < CriAt<int>(a1, 0x108); i++) {
     CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + CriAt<int>(a1, 0x2b0 + i * 0x80);
