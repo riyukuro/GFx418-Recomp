@@ -3497,33 +3497,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return ForEachChild(prop_name, cb) != 0;
     }
 
-    // The attributes (for an attribute name) or elements prop_name matches, at any depth, in document order.
-    // MS2-FUNCTIONAL: the exe inlines ForEachAttr (sfr_as3_03)
-    // @0x1424157d0
-    void XMLElement::GetDescendants(XMLList& list, const Multiname& prop_name)
-    {
-        if (prop_name.IsAttr())
-        {
-            AttrGet cb(*this, list);
-            ForEachAttr(prop_name, cb);
-        }
-
-        const UPInt size = Children.GetSize();
-        for (UPInt i = 0; i < size; ++i)
-        {
-            XML* child = Children[i];
-
-            if (!prop_name.IsAttr())
-            {
-                if (child->Matches(prop_name))
-                    list.Append(child);
-            }
-
-            child->GetDescendants(list, prop_name);
-        }
-    }
-
-    // p names an attribute ("@x") or a child of this element.
     // XMLElement::ForEachAttr (sfr_as3_03), expanded in place as the exe does
     static __forceinline UInt32 Sfr04ForEachAttr(ArrayLH<SPtr<XMLAttr> >& attrs, const Multiname& prop_name, XMLElement::CallBack& cb)
     {
@@ -3544,6 +3517,32 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return num;
     }
 
+    // The attributes (for an attribute name) or elements prop_name matches, at any depth, in document order.
+    // @0x1424157d0
+    void XMLElement::GetDescendants(XMLList& list, const Multiname& prop_name)
+    {
+        if (prop_name.IsAttr())
+        {
+            AttrGet cb(*this, list);
+            Sfr04ForEachAttr(Attrs, prop_name, cb);
+        }
+
+        const UPInt size = Children.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            XML* child = Children[i];
+
+            if (!prop_name.IsAttr())
+            {
+                if (child->Matches(prop_name))
+                    list.List.PushBack(SPtr<XML>(child));   // XMLList::Append, inlined
+            }
+
+            child->GetDescendants(list, prop_name);
+        }
+    }
+
+    // p names an attribute ("@x") or a child of this element.
     // @0x142417330
     bool XMLElement::HasOwnProperty(const ASString& p)
     {
