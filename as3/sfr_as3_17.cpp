@@ -3393,7 +3393,6 @@ static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Slots& slots, const 
 
 // The fixed slot of tr named name in ns, own or a parent's, or NULL; index receives its slot index. Object obj
 // may initialize it on demand.
-// MS2-FUNCTIONAL 0x1425011c0: the exe keeps the parent-slot test as a bool (mov eax,1 / setb al) before branching.
 // @0x1425011c0
 const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Instances::Namespace& ns, UPInt& index,
                               Object* obj)
@@ -3408,7 +3407,7 @@ const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Inst
         {
             index = ind;
             const SlotInfo* si;
-            if (ind < 0 || static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+            if (AbsoluteIndex(ind) < slots.FirstOwnSlotNum)
                 si = &slots.Parent->GetSlotInfo(AbsoluteIndex(ind));
             else
                 si = &slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
