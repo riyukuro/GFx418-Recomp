@@ -2284,33 +2284,27 @@ namespace Scaleform {
 FMOD_RESULT CreateAudioSoundFromRequest(void* player, void* request, FMOD::Sound** sound)
 {
     auto* requestBytes = static_cast<unsigned char*>(request);
+    FMOD_CREATESOUNDEXINFO info;
+    memset(&info, 0, sizeof(info));
     const unsigned format = *reinterpret_cast<unsigned*>(requestBytes + 0x10);
+    info.cbsize = sizeof(info);
     unsigned flags;
-    unsigned channels = 0;
-    unsigned defaultFrequency = 0;
-    unsigned soundFormat;
-    if ((format & 0x700) == 0x100) {
+    switch (format & 0x700) {
+    case 0x100:
         flags = 0x1a001040;
-        defaultFrequency = *reinterpret_cast<unsigned*>(requestBytes + 0x14);
-        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
-        soundFormat = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
-    } else if ((format & 0x700) == 0x200) {
+        info.format = ((format & 7) == 2) + 1;       // Sample_16: FMOD PCM16, else PCM8
+        info.defaultfrequency = *reinterpret_cast<int*>(requestBytes + 0x14);
+        info.numchannels = (format & 8) ? 2 : 1;  // Sample_Stereo
+        break;
+    case 0x200:
         flags = 0x1a000240;
-        soundFormat = 0xb;
-    } else {
+        info.format = 0xb;
+        break;
+    default:
         return static_cast<FMOD_RESULT>(0x19);
     }
-
-    unsigned char info[0xd8] = {};
-    *reinterpret_cast<unsigned*>(info) = sizeof(info);
-    *reinterpret_cast<unsigned*>(info + 4) = *reinterpret_cast<unsigned*>(requestBytes + 0x28);
-    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
-    *reinterpret_cast<unsigned*>(info + 0x10) = defaultFrequency;
-    *reinterpret_cast<unsigned*>(info + 0x14) = soundFormat;
-    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
-    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
-    return system->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags,
-                               reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+    info.length = *reinterpret_cast<unsigned*>(requestBytes + 0x28);
+    return reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(*reinterpret_cast<char**>(static_cast<char*>(player) + 0x28) + 0x10))->createSound(*reinterpret_cast<char**>(requestBytes + 0x20), flags, &info, sound);
 }
 }
 
@@ -2320,39 +2314,31 @@ namespace Scaleform {
 // @0x1427450b0
 FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Sound** sound)
 {
+    FMOD_CREATESOUNDEXINFO info;
+    memset(&info, 0, sizeof(info));
     const unsigned format = *reinterpret_cast<const unsigned*>(path + 0x10);
-    unsigned mode;
-    unsigned channels = 0;
-    unsigned frequency = 0;
-    unsigned soundFormat;
-    if ((format & 0x700) == 0x100) {
+    unsigned mode = 0x2002040;
+    info.cbsize = sizeof(info);
+    info.length = 0x0fffffff;
+    switch (format & 0x700) {
+    case 0x100:
         mode = 0x2003040;
-        frequency = *reinterpret_cast<const unsigned*>(path + 0x14);
-        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
-        soundFormat = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
-    } else if ((format & 0x700) == 0x200) {
-        mode = 0x2002040;
-        soundFormat = 0xb;
-    } else {
+        info.format = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
+        info.defaultfrequency = *reinterpret_cast<const int*>(path + 0x14);
+        info.numchannels = (format & 8) ? 2 : 1;  // Sample_Stereo
+        break;
+    case 0x200:
+        info.format = 0xb;
+        break;
+    default:
         return static_cast<FMOD_RESULT>(0x19);
     }
-
-    unsigned char info[0xd8] = {};
-    *reinterpret_cast<unsigned*>(info) = sizeof(info);
-    *reinterpret_cast<unsigned*>(info + 4) = 0x0fffffff;
-    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
-    *reinterpret_cast<unsigned*>(info + 0x10) = frequency;
-    *reinterpret_cast<unsigned*>(info + 0x14) = soundFormat;
-    *reinterpret_cast<unsigned*>(info + 0x18) = 0x2000;
-    using Callback = void (*)();
-    *reinterpret_cast<Callback*>(info + 0x78) = reinterpret_cast<Callback>(&OpenAudioStream);
-    *reinterpret_cast<Callback*>(info + 0x80) = reinterpret_cast<Callback>(&CloseAudioStream);
-    *reinterpret_cast<Callback*>(info + 0x88) = reinterpret_cast<Callback>(&ReadAudioCallback);
-    *reinterpret_cast<Callback*>(info + 0x90) = reinterpret_cast<Callback>(&ValidateAudioStream);
-
-    auto* playerBytes = static_cast<char*>(player);
-    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(playerBytes + 0x10));
-    return system->createStream(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+    info.decodebuffersize = 0x2000;
+    info.useropen = reinterpret_cast<void*>(&OpenAudioStream);
+    info.userclose = reinterpret_cast<void*>(&CloseAudioStream);
+    info.userread = reinterpret_cast<void*>(&ReadAudioCallback);
+    info.userseek = reinterpret_cast<void*>(&ValidateAudioStream);
+    return reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(player) + 0x10))->createStream(path, mode, &info, sound);
 }
 
 // MS2-FUNCTIONAL: resolves the stream owner and writes the created FMOD stream into the request record.
@@ -2375,33 +2361,32 @@ namespace Scaleform {
 // @0x1427451c0
 FMOD_RESULT CreateMetadataAudioSound(void* player, const char* path, FMOD::Sound** sound)
 {
+    FMOD_CREATESOUNDEXINFO info;
+    memset(&info, 0, sizeof(info));
     const unsigned format = *reinterpret_cast<const unsigned*>(path + 0x10);
+    info.cbsize = sizeof(info);
+    info.useropen = reinterpret_cast<void*>(&OpenAudioStream);
+    info.userclose = reinterpret_cast<void*>(&CloseAudioStream);
+    info.userread = reinterpret_cast<void*>(&ReadAudioCallback);
+    info.userseek = reinterpret_cast<void*>(&ValidateAudioStream);
+    info.decodebuffersize = 0x1000;
     unsigned mode = 0xa0000c0;
-    unsigned channels = 0;
-    if ((format & 0x700) == 0x100) {
+    switch (format & 0x700) {
+    case 0x100:
+        info.format = ((format & 7) == 2) + 1;  // Sample_16: FMOD PCM16, else PCM8
+        info.numchannels = (format & 8) ? 2 : 1;  // Sample_Stereo
         mode = 0xa0010c0;
-        channels = ((format & 8) != 0) + 1;     // Sample_Stereo
-    } else if ((format & 0x700) != 0x200) {
+        break;
+    case 0x200:
+        info.format = 0xb;
+        break;
+    default:
         return static_cast<FMOD_RESULT>(0x19);
     }
-
-    unsigned char info[0xd8] = {};
-    *reinterpret_cast<unsigned*>(info) = sizeof(info);
-    *reinterpret_cast<unsigned*>(info + 0x0c) = channels;
-    *reinterpret_cast<unsigned*>(info + 0x10) = *reinterpret_cast<const unsigned*>(path + 0x14);
-    *reinterpret_cast<unsigned*>(info + 0x14) = (format & 0x700) == 0x200 ? 0xbu : (((format & 7) == 2) + 1);
-    *reinterpret_cast<unsigned*>(info + 0x18) = 0x1000;
-    *reinterpret_cast<unsigned*>(info + 0xb8) = *reinterpret_cast<const unsigned*>(path + 0x1c);
-    *reinterpret_cast<unsigned*>(info + 0xbc) = 2;
-    using Callback = void (*)();
-    *reinterpret_cast<Callback*>(info + 0x78) = reinterpret_cast<Callback>(&OpenAudioStream);
-    *reinterpret_cast<Callback*>(info + 0x80) = reinterpret_cast<Callback>(&CloseAudioStream);
-    *reinterpret_cast<Callback*>(info + 0x88) = reinterpret_cast<Callback>(&ReadAudioCallback);
-    *reinterpret_cast<Callback*>(info + 0x90) = reinterpret_cast<Callback>(&ValidateAudioStream);
-
-    void* owner = *reinterpret_cast<void**>(static_cast<char*>(player) + 0x28);
-    auto* system = reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(static_cast<char*>(owner) + 0x10));
-    return system->createSound(path, mode, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), sound);
+    info.defaultfrequency = *reinterpret_cast<const int*>(path + 0x14);
+    info.initialseekposition = *reinterpret_cast<const unsigned*>(path + 0x1c);
+    info.initialseekpostype = 2;
+    return reinterpret_cast<FMOD::System*>(*reinterpret_cast<void**>(*reinterpret_cast<char**>(static_cast<char*>(player) + 0x28) + 0x10))->createSound(path, mode, &info, sound);
 }
 }
 
