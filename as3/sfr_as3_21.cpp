@@ -1664,33 +1664,33 @@ CheckResult ArrayBase::OfCorrectType(unsigned argc, const Value* argv, const Cla
 namespace InstanceTraits { namespace fl_vec {
 
 // @0x142560ef0
-__declspec(noinline) SPtr<Vector_String::InstanceType> Vector_String::MakeInstanceS(Vector_String& t)
+__declspec(noinline) Pickable<Vector_String::InstanceType> Vector_String::MakeInstanceS(Vector_String& t)
 {
-    return MakeInstance(t);
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 
 // @0x142560f90
-__declspec(noinline) SPtr<Vector_double::InstanceType> Vector_double::MakeInstanceS(Vector_double& t)
+__declspec(noinline) Pickable<Vector_double::InstanceType> Vector_double::MakeInstanceS(Vector_double& t)
 {
-    return MakeInstance(t);
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 
 // @0x142561030
-__declspec(noinline) SPtr<Vector_int::InstanceType> Vector_int::MakeInstanceS(Vector_int& t)
+__declspec(noinline) Pickable<Vector_int::InstanceType> Vector_int::MakeInstanceS(Vector_int& t)
 {
-    return MakeInstance(t);
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 
 // @0x1425610d0
-__declspec(noinline) SPtr<Vector_object::InstanceType> Vector_object::MakeInstanceS(Vector_object& t)
+__declspec(noinline) Pickable<Vector_object::InstanceType> Vector_object::MakeInstanceS(Vector_object& t)
 {
-    return MakeInstance(t);
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 
 // @0x142561170
-__declspec(noinline) SPtr<Vector_uint::InstanceType> Vector_uint::MakeInstanceS(Vector_uint& t)
+__declspec(noinline) Pickable<Vector_uint::InstanceType> Vector_uint::MakeInstanceS(Vector_uint& t)
 {
-    return MakeInstance(t);
+    return Pickable<InstanceType>(new(t.Alloc()) InstanceType(t));
 }
 
 // @0x142561210

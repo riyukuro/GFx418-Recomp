@@ -932,16 +932,14 @@ namespace Classes { namespace fl_ui
 
     // A Vector.<String> of the gestures the movie supports: only panning is reported.
     // @0x1424b96b0
-    // MS2-FUNCTIONAL: the exe's MakeInstanceS result is a Pickable (no temporary SPtr nulled or released) and the two
-    // AddRefs on the "pan" node are separate incs; CheckFixed is called out of line as in the exe
+    // MS2-FUNCTIONAL: the two AddRefs on the "pan" node are separate incs, and the exe calls the PushBack resize
+    // (0x1424b9030) out of line; CheckFixed is called out of line as in the exe
     void Multitouch::supportedGesturesGet(SPtr<Instances::fl_vec::Vector_String>& result)
     {
         ASVM& vm = static_cast<ASVM&>(GetVM());
         UInt32 mask = vm.GetMovieImpl()->GetSupportedGesturesMask();
         InstanceTraits::fl_vec::Vector_String& itr = *reinterpret_cast<InstanceTraits::fl_vec::Vector_String*>(Sfr27AccVectorStringITraits(reinterpret_cast<UPInt>(&vm)));
-        SPtr<Instances::fl_vec::Vector_String> v(itr.MakeInstanceS(itr));
-        result.Pick(v.GetPtr());
-        *v.GetRawPtr() = NULL;
+        result = itr.MakeInstanceS(itr);
         if (mask & 1)
         {
             ASString pan = vm.GetStringManager().CreateConstString("pan");

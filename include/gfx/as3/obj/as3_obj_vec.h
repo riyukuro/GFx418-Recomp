@@ -401,7 +401,7 @@ namespace InstanceTraits { namespace fl_vec {
         }
         // @0x142560100
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_String"; }
-        SPtr<InstanceType> MakeInstanceS(Vector_String& t);
+        Pickable<InstanceType> MakeInstanceS(Vector_String& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
@@ -418,7 +418,7 @@ namespace InstanceTraits { namespace fl_vec {
         }
         // @0x142560140
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_double"; }
-        SPtr<InstanceType> MakeInstanceS(Vector_double& t);
+        Pickable<InstanceType> MakeInstanceS(Vector_double& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
@@ -435,7 +435,7 @@ namespace InstanceTraits { namespace fl_vec {
         }
         // @0x142560180
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::fl_vec::Vector_int"; }
-        SPtr<InstanceType> MakeInstanceS(Vector_int& t);
+        Pickable<InstanceType> MakeInstanceS(Vector_int& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
@@ -454,7 +454,7 @@ namespace InstanceTraits { namespace fl_vec {
         }
         // @0x1425601c0
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Vector_object"; }
-        SPtr<InstanceType> MakeInstanceS(Vector_object& t);
+        Pickable<InstanceType> MakeInstanceS(Vector_object& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 
@@ -471,7 +471,7 @@ namespace InstanceTraits { namespace fl_vec {
         }
         // @0x142560200
         virtual const char* GetAS3ObjectType() const { return "InstanceTraits::Vector_uint"; }
-        SPtr<InstanceType> MakeInstanceS(Vector_uint& t);
+        Pickable<InstanceType> MakeInstanceS(Vector_uint& t);
         virtual void MakeObject(Value& result, Traits& t);
     };
 }}
