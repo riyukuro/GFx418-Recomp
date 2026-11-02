@@ -369,15 +369,17 @@ String AsString(const Abc::NamespaceInfo& ns, NamespaceText nt)
 {
     static String empty;
 
-    if (nt == nsKindAndUri)
+    switch (nt)
     {
-        if (ns.NameURI.GetSize() != 0)
-            return String(AsString(ns.Kind)) + String(" ", String(ns.NameURI.ToCStr(), ns.NameURI.GetSize()).ToCStr(), NULL);
-        return String(AsString(ns.Kind)) + String();
-    }
-
-    if (nt == nsUriOrAccess)
-    {
+    case nsUriOnly:
+        if (ns.Kind != Abc::NS_Undefined)
+        {
+            if (ns.Kind == Abc::NS_Public || ns.Kind == Abc::NS_Explicit)
+                return String(ns.NameURI.ToCStr(), ns.NameURI.GetSize());
+            break;
+        }
+        return String("noname");
+    case nsUriOrAccess:
         switch (ns.Kind)
         {
         case Abc::NS_Protected:         return String("protected");
@@ -386,15 +388,13 @@ String AsString(const Abc::NamespaceInfo& ns, NamespaceText nt)
         case Abc::NS_PackageInternal:   return String("internal");
         default:                        return String(ns.NameURI.ToCStr(), ns.NameURI.GetSize());
         }
+    case nsKindAndUri:
+        return String(AsString(ns.Kind)) + (ns.NameURI.GetSize() == 0 ? String()
+                                            : " " + String(ns.NameURI.ToCStr(), ns.NameURI.GetSize()));
     }
 
-    if (nt == nsUriOnly)
-    {
-        if (ns.Kind == Abc::NS_Undefined)
-            return String("noname");
-        if (ns.Kind == Abc::NS_Public || ns.Kind == Abc::NS_Explicit)
-            return String(ns.NameURI.ToCStr(), ns.NameURI.GetSize());
-    }
+
+
     return String(empty);
 }
 
