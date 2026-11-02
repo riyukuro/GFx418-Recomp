@@ -14,6 +14,17 @@
 #include <math.h>
 #include <string.h>
 
+// The exe calls this set's dtor (0x1423f0ba0, in sfr_as3_01c) out of line at the end of setRawCapacity.
+template <> Scaleform::HashSetBase<Scaleform::GFx::AS3::Value, Scaleform::GFx::AS3::Value::HashFunctor,
+    Scaleform::GFx::AS3::Value::HashFunctor, Scaleform::AllocatorGH<Scaleform::GFx::AS3::Value, 2>,
+    Scaleform::HashsetCachedEntry<Scaleform::GFx::AS3::Value, Scaleform::GFx::AS3::Value::HashFunctor> >::~HashSetBase();
+// The ASString set's rehash calls its hash (0x1423f1c20) and add (0x1423eb420, both in sfr_as3_01c) out of line.
+template <> Scaleform::UPInt Scaleform::FixedSizeHash<Scaleform::GFx::ASString>::operator()(const Scaleform::GFx::ASString& v) const;
+template <> template <> void Scaleform::HashSetBase<Scaleform::GFx::ASString, Scaleform::FixedSizeHash<Scaleform::GFx::ASString>,
+    Scaleform::FixedSizeHash<Scaleform::GFx::ASString>, Scaleform::AllocatorDH<Scaleform::GFx::ASString, 2>,
+    Scaleform::HashsetCachedEntry<Scaleform::GFx::ASString, Scaleform::FixedSizeHash<Scaleform::GFx::ASString> > >::add<Scaleform::GFx::ASString>(
+    void* pheapAddr, const Scaleform::GFx::ASString& key, Scaleform::UPInt hashValue);
+
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -2033,17 +2044,16 @@ template void Ms2ClassTraitsCacheSet::BaseType::setRawCapacity(void* pheapAddr, 
 
 // Array's sparse part (HashDH<UPInt, Value>) rehash.
 typedef decltype(Scaleform::HashDH<Scaleform::UPInt, Scaleform::GFx::AS3::Value>::mHash) Ms2SparseValueSet;
-// MS2-FUNCTIONAL: same code; the exe calls Clear (0x142405fd0) out of line for a zero size, ours inlines it
+// The exe calls Clear (0x142405fd0, in sfr_as3_03) out of line for a zero size.
+template <> void Ms2SparseValueSet::BaseType::Clear();
 // @0x14242a870
 template void Ms2SparseValueSet::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 
 // The XML namespace-resolution string set (HashSetDH<ASString>) rehash.
-// MS2-FUNCTIONAL: same code; the exe allocates and saves registers differently
 // @0x14242aaa0
 template void Scaleform::HashSetDH<Scaleform::GFx::ASString>::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 
 // The XML duplicate check set (HashSet<Value, Value::HashFunctor>) rehash.
-// MS2-FUNCTIONAL: same code; the exe allocates and saves registers differently
 // @0x14242ac40
 template void Scaleform::HashSet<Scaleform::GFx::AS3::Value, Scaleform::GFx::AS3::Value::HashFunctor>::BaseType::setRawCapacity(void* pheapAddr, Scaleform::UPInt n);
 
