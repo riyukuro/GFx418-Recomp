@@ -1172,10 +1172,64 @@ void Sfr33MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, vo
     Root()->ASValue2GFxValue(asval, pvalue);
 }
 
+// Storage for a Value whose dtor expands Value::ReleaseInternal (out of line in sfr_as3_18) in place.
+struct Sfr33InlineReleaseValue
+{
+    union
+    {
+        UPInt Align;
+        UByte Buf[sizeof(Value)];
+    };
+    Value& Get() { return *reinterpret_cast<Value*>(Buf); }
+    static void ReleaseGC(Object* p)
+    {
+        if (!(reinterpret_cast<UPInt>(p) & 1) && p)
+            p->Release();
+    }
+    __forceinline ~Sfr33InlineReleaseValue()
+    {
+        Value& v = Get();
+        if (!v.IsRefCounted())
+            return;
+        if (v.IsWeakRef())
+        {
+            (*reinterpret_cast<WeakProxy**>(Buf + 0x08))->Release();
+            return;
+        }
+        switch (v.GetKind())
+        {
+        case Value::kString:
+            (*reinterpret_cast<ASStringNode**>(Buf + 0x10))->Release();
+            break;
+        case Value::kNamespace:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kObject:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kClass:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkFunction:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x10));
+            break;
+        case Value::kThunkClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        case Value::kVTableIndClosure:
+            ReleaseGC(*reinterpret_cast<Object**>(Buf + 0x18));
+            break;
+        default:
+            break;
+        }
+    }
+};
+
 // MovieRoot::CreateObject (virtual): a new instance of the global class className ("Object" when none), constructed
 // with the host values pargs; a pending exception is printed and dropped. Up to 10 arguments live on the stack.
-// MS2-FUNCTIONAL 0x1424f39c0: the exe inlines Value::ReleaseInternal (out of line in sfr_as3_18) at the destructor
-// of result, and keeps result 8 bytes lower in the frame.
 // @0x1424f39c0
 void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, const GFx::Value* pargs, unsigned nargs)
 {
@@ -1187,7 +1241,8 @@ void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, con
         Value* pv = new (&args[i]) Value();
         Root()->GFxValue2ASValue(pargs[i], pv);
     }
-    Value result;
+    Sfr33InlineReleaseValue res;
+    Value& result = *::new (res.Buf) Value();
     const bool ok = (*reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48))
                         ->Construct(className ? className : "Object", result, nargs, args, false);
     VM* pvm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
