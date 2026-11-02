@@ -636,7 +636,17 @@ void TreeContainer::Remove(UPInt index, UPInt count)
 
 // @0x14261b570
 // MS2-FUNCTIONAL: member copy scheduled differently (statebag test operand order)
-TreeContainer::NodeData& TreeContainer::NodeData::operator=(const NodeData& src) = default;
+TreeContainer::NodeData& TreeContainer::NodeData::operator=(const NodeData& src)
+{
+    ContextImpl::EntryData::operator=(src);
+    M3D() = src.M3D();
+    States = src.States;
+    Cx = src.Cx;
+    AproxLocalBounds = src.AproxLocalBounds;
+    AproxParentBounds = src.AproxParentBounds;
+    Children = src.Children;
+    return *this;
+}
 
 // @0x14261ce60
 void TreeContainer::NodeData::ReleaseNodes() const
