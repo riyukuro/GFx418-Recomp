@@ -7,6 +7,7 @@
 // MS2-UNIT: sfr_cri_02d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14002fbe0-0x1400301d0 .text$mn
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
@@ -182,22 +183,66 @@ typedef struct CriMvHeaderPlayerView
     CriUint32 TrackType;                    // 0xe38
     CriUint32 TrackSubType;                 // 0xe3c
 } CriMvHeaderPlayerView;
-typedef struct CriMvAnalyzedVideo { CriUint8 Bytes[0x38]; } CriMvAnalyzedVideo;
-typedef struct CriMvAnalyzedAudio { CriUint8 Bytes[0x10]; } CriMvAnalyzedAudio;
-typedef struct CriMvAnalyzedAlpha { CriUint8 Bytes[0x2c]; } CriMvAnalyzedAlpha;
+typedef struct CriMvAnalyzedVideo { CriUint32 Words[0x38 / 4]; } CriMvAnalyzedVideo;
+typedef struct CriMvAnalyzedAudio { CriUint32 Words[0x10 / 4]; } CriMvAnalyzedAudio;
+typedef struct CriMvAnalyzedAlpha { CriUint32 Words[0x2c / 4]; } CriMvAnalyzedAlpha;
 typedef struct CriMvAnalyzedHeader
 {
     CriUint32          Present;             // 0x00
-    CriUint8           Reserved04[0x10];
+    CriUint32          Field04;             // 0x04
+    CriUint32          Field08;             // 0x08
+    CriUint32          Field0c;             // 0x0c
+    CriUint32          Field10;             // 0x10
     CriMvAnalyzedVideo Video[1];            // 0x14
-    CriUint8           Reserved4c[4];
+    CriUint32          AudioCount;          // 0x4c
     CriMvAnalyzedAudio Audio[0x20];         // 0x50
-    CriUint8           Reserved250[8];
-    CriUint8           Subtitle[0x1c];      // 0x258
+    CriUint32          SubtitleCount;       // 0x250
+    CriUint8           Reserved254[4];
+    CriUint32          Subtitle[0x18 / 4];  // 0x258
+    CriUint32          AlphaCount;          // 0x270
     CriMvAnalyzedAlpha Alpha[1];            // 0x274
     CriUint8           Reserved2a0[8];
     CriUint8           CuePoint[0x18];      // 0x2a8
 } CriMvAnalyzedHeader;
+typedef struct CriMvStreamSlotView
+{
+    CriMvAnalyzedHeader Header;
+    CriUint8            Reserved2c0[0x2e0 - 0x2c0];
+} CriMvStreamSlotView;
+typedef struct CriMvStreamParamsPlayerView
+{
+    CriUint32           Reserved0;
+    CriUint32           Status;             // 0x04
+    CriUint8            Reserved8[0x20];
+    CriMvStreamSlotView Slots[2];           // 0x28
+    CriUint8            Reserved5e8[4];
+    CriUint32           SlotCount;          // 0x5ec
+    CriUint32           SlotIndex;          // 0x5f0
+    CriUint8            Reserved5f4[4];
+    CriMvAnalyzedHeader Header;             // 0x5f8
+    CriUint8            Reserved8b8[4];
+    float               FrameRate;          // 0x8bc
+    CriUint8            Reserved8c0[4];
+    CriUint32           AudioOutput;        // 0x8c4
+    CriSint32           AudioTrack;         // 0x8c8
+} CriMvStreamParamsPlayerView;
+typedef struct CriMvParamAudioView { CriUint32 Words[0x10 / 4]; } CriMvParamAudioView;
+typedef struct CriMvStreamParamsView        // the public CriMvStreamingParameters record (0x288)
+{
+    CriUint32           Playable;           // 0x00
+    float               BufferingTime;      // 0x04
+    CriUint32           Head[5];            // 0x08
+    CriUint32           Video[0x30 / 4];    // 0x1c
+    CriUint32           NumAudio;           // 0x4c
+    CriSint32           TrackPlayAudio;     // 0x50
+    CriMvParamAudioView Audio[0x20];        // 0x54
+    CriUint32           NumSubtitle;        // 0x254
+    CriSint32           ChannelPlaySubtitle;// 0x258
+    CriUint32           MaxSubtitleSize;    // 0x25c
+    CriUint32           NumAlpha;           // 0x260
+    CriUint32           Alpha[8];           // 0x264
+    CriUint32           AlphaPlane;         // 0x284
+} CriMvStreamParamsView;
 typedef struct CriMvHeaderAnalysisView
 {
     CriUint8  Reserved0[0x5f8];
@@ -253,6 +298,8 @@ CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
 struct CriUtfRtvView;
+struct CriMvStreamingParameters;
+extern CriSint32 DAT_143b27948;
 void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
 CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
 CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
@@ -294,6 +341,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?criMvPly_GetStreamingParameters@@YAXPEAXPEAUCriMvStreamingParameters@@@Z=criMvPly_GetStreamingParameters")
 #pragma comment(linker, "/alternatename:?retrieveHeaderInfo@@YAXPEAX0PEBUCriMovieParsedChunk@@@Z=retrieveHeaderInfo")
 #pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
 #pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
@@ -314,6 +362,132 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+// translate the active CRI stream slot into the public streaming-parameter record
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sti, oaud, i, vinfo, vprm, track, defTrack,
+// oalph, info, alph, sno.
+// @0x14002fbe0
+void criMvPly_GetStreamingParameters(void* player, struct CriMvStreamingParameters* output)
+{
+    CriMvAnalyzedHeader* info;
+    CriUint32* vinfo;
+    CriUint32* vprm;
+    CriUint32 i;
+    CriUint32 defTrack;
+    CriUint32* track;
+    CriUint32* oaud;
+    CriUint32* sti;
+    CriUint32* alph;
+    CriUint32* oalph;
+    CriUint32 sno;
+    memset(output, 0, 0x288);
+    if (((CriMvStreamParamsPlayerView*)player)->Status == 0 || ((CriMvStreamParamsPlayerView*)player)->Status == 1 ||
+        ((CriMvStreamParamsPlayerView*)player)->Status == 8 || ((CriMvStreamParamsPlayerView*)player)->Status == 9 ||
+        ((CriMvStreamParamsPlayerView*)player)->Status == 10)
+        return;
+    if (((CriMvStreamParamsPlayerView*)player)->SlotCount == 0)
+        info = &((CriMvStreamParamsPlayerView*)player)->Header;
+    else {
+        sno = ((CriMvStreamParamsPlayerView*)player)->SlotIndex % 2;
+        info = &((CriMvStreamParamsPlayerView*)player)->Slots[sno].Header;
+    }
+    ((CriMvStreamParamsView*)output)->BufferingTime = ((CriMvStreamParamsPlayerView*)player)->FrameRate;
+    ((CriMvStreamParamsView*)output)->Head[0] = info->Field0c;
+    ((CriMvStreamParamsView*)output)->Head[1] = info->Field04;
+    ((CriMvStreamParamsView*)output)->Head[2] = info->Field08;
+    ((CriMvStreamParamsView*)output)->Head[3] = 0xffffffff;
+    ((CriMvStreamParamsView*)output)->Head[4] = info->Field10;
+    vinfo = info->Video[0].Words;
+    vprm = ((CriMvStreamParamsView*)output)->Video;
+    if (vinfo[0] > 0)
+    {
+        vprm[0] = vinfo[0];
+        vprm[1] = vinfo[1];
+        vprm[2] = vinfo[2];
+        vprm[3] = vinfo[3];
+        vprm[4] = 0;
+        vprm[5] = vinfo[4];
+        vprm[6] = vinfo[5];
+        vprm[7] = vinfo[6];
+        vprm[8] = vinfo[7];
+        vprm[9] = vinfo[8];
+        vprm[10] = vinfo[9];
+        vprm[11] = vinfo[10];
+    }
+    else
+    {
+        vprm[0] = 0;
+        vprm[1] = 0;
+        vprm[4] = 0;
+        vprm[5] = 0;
+        vprm[6] = 0;
+        vprm[7] = 0;
+        vprm[8] = 0;
+        vprm[9] = 0;
+        vprm[10] = 0;
+        vprm[11] = 0;
+    }
+    if (vinfo[11] > 0)
+        ((CriMvStreamParamsView*)output)->AlphaPlane = 1;
+    else
+        ((CriMvStreamParamsView*)output)->AlphaPlane = 0;
+    defTrack = 0xffffffff;
+    for (i = 0; i < 0x20; i++)
+    {
+        track = info->Audio[i].Words;
+        oaud = ((CriMvStreamParamsView*)output)->Audio[i].Words;
+        if (track[1] > 0)
+        {
+            oaud[0] = track[0];
+            oaud[1] = track[1];
+            oaud[2] = track[2];
+            oaud[3] = ((CriMvStreamParamsPlayerView*)player)->AudioOutput;
+            if (defTrack == 0xffffffff)
+                defTrack = i;
+        }
+        else
+        {
+            oaud[0] = 0;
+            oaud[1] = 0;
+            oaud[2] = 0;
+            oaud[3] = 0;
+        }
+    }
+    ((CriMvStreamParamsView*)output)->NumAudio = info->AudioCount;
+    ((CriMvStreamParamsView*)output)->TrackPlayAudio = -1;
+    if (((CriMvStreamParamsView*)output)->NumAudio > 0)
+    {
+        if (((CriMvStreamParamsPlayerView*)player)->AudioTrack == 100)
+            ((CriMvStreamParamsView*)output)->TrackPlayAudio = defTrack;
+        else if (((CriMvStreamParamsPlayerView*)player)->AudioTrack >= 0 && ((CriMvStreamParamsPlayerView*)player)->AudioTrack < 0x20)
+        {
+            track = info->Audio[((CriMvStreamParamsPlayerView*)player)->AudioTrack].Words;
+            if (track[1] > 0)
+                ((CriMvStreamParamsView*)output)->TrackPlayAudio = ((CriMvStreamParamsPlayerView*)player)->AudioTrack;
+        }
+    }
+    sti = info->Subtitle;
+    if (info->SubtitleCount > 0 && sti[0] == 1)
+    {
+        ((CriMvStreamParamsView*)output)->NumSubtitle = sti[1];
+        ((CriMvStreamParamsView*)output)->MaxSubtitleSize = sti[4];
+    }
+    ((CriMvStreamParamsView*)output)->ChannelPlaySubtitle = -1;
+    ((CriMvStreamParamsView*)output)->Playable = 1;
+    if (vprm[10] == 2 && DAT_143b27948 == 0)
+        ((CriMvStreamParamsView*)output)->Playable = 0;
+    ((CriMvStreamParamsView*)output)->NumAlpha = info->AlphaCount;
+    alph = info->Alpha[0].Words;
+    oalph = ((CriMvStreamParamsView*)output)->Alpha;
+    oalph[0] = alph[0];
+    oalph[1] = alph[1];
+    oalph[2] = alph[2];
+    oalph[3] = alph[3];
+    oalph[4] = alph[4];
+    oalph[5] = alph[5];
+    oalph[6] = alph[6];
+    oalph[7] = alph[7];
+}
+
 // release every CRI Movie player subsystem and clear its owned state
 // @0x140030cb0
 void FUN_140030cb0(void* player)

@@ -7,7 +7,8 @@
 // MS2-UNIT: sfr_cri_02c
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
+// MS2-RANGE: 0x14002e548-0x14002fbe0 .text$mn
+// MS2-RANGE: 0x1400301d0-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
 // MS2-RANGE: 0x140031aa0-0x140032090 .text$mn
@@ -2331,103 +2332,6 @@ void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFra
         if (dropped != 0)
             player->last_frame_result = 3;
     }
-}
-
-// MS2-FUNCTIONAL: translate the active CRI stream slot into the public streaming-parameter record.
-// @0x14002fbe0
-void criMvPly_GetStreamingParameters(void* player, CriMvStreamingParameters* output)
-{
-    memset(output, 0, sizeof(*output));
-    if (((CriMvPlyStateTransitionFields*)player)->Status == 0 || ((CriMvPlyStateTransitionFields*)player)->Status == 1 || ((CriMvPlyStateTransitionFields*)player)->Status == 8 ||
-        ((CriMvPlyStateTransitionFields*)player)->Status == 9 || ((CriMvPlyStateTransitionFields*)player)->Status == 10)
-        return;
-
-    CriMovieStreamSlotsView* slots = (CriMovieStreamSlotsView*)player;
-    CriUint32* stream = NULL;
-    if (*(CriUint32*)((CriUint8*)player + 0x5ec) == 0)
-        stream = (CriUint32*)((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader;
-    else
-        stream = (CriUint32*)&slots->Ring.Slots[(*(CriUint32*)((CriUint8*)player + 0x5f0) % 2)];
-
-    ((CriUint32*)output)[1] = *(CriUint32*)((CriUint8*)player + 0x8bc);
-    ((CriUint32*)output)[2] = stream[0x0c / 4];
-    ((CriUint32*)output)[3] = stream[0x04 / 4];
-    ((CriUint32*)output)[4] = stream[0x08 / 4];
-    ((CriUint32*)output)[5] = 0xffffffff;
-    ((CriUint32*)output)[6] = stream[0x10 / 4];
-    if (stream[0x14 / 4] == 0)
-    {
-        for (CriUint32 i = 7; i <= 0x12; ++i)
-            ((CriUint32*)output)[i] = 0;
-    }
-    else
-    {
-        ((CriUint32*)output)[7] = stream[0x14 / 4];
-        ((CriUint32*)output)[8] = stream[0x18 / 4];
-        ((CriUint32*)output)[9] = stream[0x1c / 4];
-        ((CriUint32*)output)[10] = stream[0x20 / 4];
-        ((CriUint32*)output)[11] = 0;
-        ((CriUint32*)output)[12] = stream[0x24 / 4];
-        ((CriUint32*)output)[13] = stream[0x28 / 4];
-        ((CriUint32*)output)[14] = stream[0x2c / 4];
-        ((CriUint32*)output)[15] = stream[0x30 / 4];
-        ((CriUint32*)output)[16] = stream[0x34 / 4];
-        ((CriUint32*)output)[17] = stream[0x38 / 4];
-        ((CriUint32*)output)[18] = stream[0x3c / 4];
-    }
-
-    CriUint32 firstAudio = 0xffffffff;
-    for (CriUint32 i = 0; i < 0x20; ++i)
-    {
-        CriUint32* sourceAudio = stream + 0x50 / 4 + i * 4;
-        CriUint32* outputAudio = ((CriUint32*)output) + 0x54 / 4 + i * 4;
-        if (sourceAudio[1] == 0)
-        {
-            outputAudio[0] = outputAudio[1] = outputAudio[2] = outputAudio[3] = 0;
-        }
-        else
-        {
-            outputAudio[0] = sourceAudio[0];
-            outputAudio[1] = sourceAudio[1];
-            outputAudio[2] = sourceAudio[2];
-            outputAudio[3] = *(CriUint32*)((CriUint8*)player + 0x8c4);
-            if (firstAudio == 0xffffffff)
-                firstAudio = i;
-        }
-    }
-    output->num_audio = stream[0x4c / 4];
-    output->track_play_audio = -1;
-    if (output->num_audio != 0)
-    {
-        CriSint32 selected = *(CriSint32*)((CriUint8*)player + 0x8c8);
-        if (selected == 100)
-            output->track_play_audio = (CriSint32)firstAudio;
-        else if (selected >= 0 && selected < 0x20 &&
-                 stream[(0x54 + selected * 0x10) / 4] != 0)
-            output->track_play_audio = selected;
-    }
-
-    ((CriUint32*)output)[0xa1] = stream[0x40 / 4] != 0;
-    if (stream[0x250 / 4] != 0 && stream[0x258 / 4] == 1)
-    {
-        output->num_subtitle = stream[0x25c / 4];
-        output->max_subtitle_size = stream[0x268 / 4];
-    }
-    output->channel_play_subtitle = -1;
-    output->num_alpha = stream[0x270 / 4];
-    output->alpha_prm[0].max_width = stream[0x274 / 4];
-    output->alpha_prm[0].max_height = stream[0x278 / 4];
-    output->alpha_prm[0].disp_width = stream[0x27c / 4];
-    output->alpha_prm[0].disp_height = stream[0x280 / 4];
-    output->alpha_prm[0].framerate = stream[0x284 / 4];
-    output->alpha_prm[0].total_frames = stream[0x288 / 4];
-    output->alpha_prm[0].alpha_type = stream[0x28c / 4];
-    output->is_playable = 1;
-    if (((CriUint32*)output)[0x11] == 2 && DAT_143b27948 == 0)
-        output->is_playable = 0;
-    // The exe copies eight alpha dwords (0x274-0x290) to +0x264, so the last lands at +0x280; +0x284 keeps the
-    // stream[0x40] flag stored above.
-    ((CriUint32*)output)[0xa0] = stream[0x290 / 4];
 }
 
 // MS2-FUNCTIONAL: derive the 32-byte CRI USM key bytes, their inverted copy and the byte mask from the key seed.
