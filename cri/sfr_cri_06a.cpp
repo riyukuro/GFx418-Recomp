@@ -975,7 +975,7 @@ cri_u4 thunk_FUN_14005b040();
 
 void MPVM2V_Init();
 
-void thunk_FUN_14005b0b0(cri_any cri_unused, ...);
+void thunk_FUN_14005b0b0();
 
 ulonglong MPVM2V_Create(longlong arg1);
 

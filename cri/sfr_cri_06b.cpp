@@ -617,7 +617,7 @@ ulonglong MPVM2V_Create(longlong);
 void MPVM2V_Destroy(longlong);
 void MPVM2V_SetCond(longlong);
 void mpvm2v_CopyPicAtr(cri_any = cri_any());
-cri_u8 MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+int MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVM2V_RequestStop(cri_any = cri_any());
 cri_u8 MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
 int MPVDEC_CheckVersion(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
@@ -998,9 +998,8 @@ void MPVM2V_Init()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400628f0
-void thunk_FUN_14005b0b0(cri_any cri_unused, ...)
+void thunk_FUN_14005b0b0()
 {
   M2V_Finish();
   return;
@@ -1038,37 +1037,33 @@ void MPVM2V_SetCond(longlong arg1)
 void mpvm2v_CopyPicAtr(cri_any cri_p0)
 {
   longlong arg1 = cri_p0;
-  cri_u1 auStack_d8 [32];
   cri_u4 loc_b8;
   cri_u4 loc_b4;
   cri_u4 loc_b0;
   cri_u4 loc_ac;
   int loc_a8;
-  cri_u1 loc_a4 [12];
+  cri_u4 loc_a4;
   cri_u1 loc_98 [128];
-  ulonglong loc_18;
   
-  loc_18 = DAT_143a4a5e8 ^ (ulonglong)auStack_d8;
   M2V_GetPicAtr(*(cri_u8 *)((char *)arg1 + 0x1848),loc_98);
   M2V_GetBitRate(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_b4);
-  M2V_GetVbvBufSiz(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_a8,&loc_ac,loc_a4);
+  M2V_GetVbvBufSiz(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_a8,&loc_ac,&loc_a4);
   M2V_GetLinkFlg(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_b8,&loc_b0);
   memcpy((void *)((char *)arg1 + 0x1598),loc_98,0x80);
   *(cri_u4 *)((char *)arg1 + 0x16d4) = loc_b4;
-  *(int *)((char *)arg1 + 0x16d8) = (int)(loc_a8 + (loc_a8 >> 0x1f & 0x7ffU)) >> 0xb;
+  *(int *)((char *)arg1 + 0x16d8) = loc_a8 / 0x800;
   *(cri_u4 *)((char *)arg1 + 0x16e8) = loc_ac;
   *(cri_u4 *)((char *)arg1 + 0x16e0) = loc_b8;
   *(cri_u4 *)((char *)arg1 + 0x16e4) = loc_b0;
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062a40
-cri_u8 MPVM2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+int MPVM2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
   longlong arg1 = cri_p0;
-  cri_u8 arg2 = cri_p1;
   cri_u8 arg3 = cri_p2;
+  cri_u8 arg2 = cri_p1;
   int i_v1;
   
   i_v1 = M2V_IsSetup();

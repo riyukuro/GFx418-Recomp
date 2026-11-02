@@ -336,7 +336,7 @@ void DCT_Isse2Init();
 void thunk_FUN_140050520();
 void thunk_FUN_140050670();
 cri_u32 thunk_FUN_14005b040();
-void thunk_FUN_14005b0b0(cri_any, ...);  // C3: the definition's signature
+void thunk_FUN_14005b0b0();
 void thunk_FUN_140067390(__int64);  // C3: the definition's signature
 void thunk_FUN_1400afe60(Any a0);
 
@@ -745,7 +745,7 @@ void MPV_Finish(void)
 {
   MPVUMC_Finish();
   thunk_FUN_140050670();
-  ((void (*)())thunk_FUN_14005b0b0)();  // C3: called with no arguments, like the exe
+  thunk_FUN_14005b0b0();
   return;
 }
 
