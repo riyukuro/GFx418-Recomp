@@ -1125,11 +1125,8 @@ void StrokerAA::FinalizePath(unsigned, unsigned, bool, bool)
             UPInt startTri = Triangles.GetSize();
             for (i = 0; i < Path.GetVertexCount(); i++)
             {
-                // the vertex two ahead, wrapping round the closed path
-                UPInt forw = i + 2;
-                if (forw >= Path.GetVertexCount())
-                    forw -= Path.GetVertexCount();
-                calcJoin(Path.GetVertex(i), Path.GetVertexNext(i), Path.GetVertex(forw), widths, joinParam);
+                // the next two vertices, wrapping round the closed path
+                calcJoin(Path.GetVertex(i), Path.GetVertexNext(i), Path.GetVertexNext(i + 1), widths, joinParam);
             }
             // only the first joins can refer to the edge vertices of the last one
             for (i = 0; i < 6 && startTri + i < Triangles.GetSize(); i++)
