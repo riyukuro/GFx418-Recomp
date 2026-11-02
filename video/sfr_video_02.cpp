@@ -740,45 +740,34 @@ bool FUN_14000ff70(const void* node, void* out)
 void* FUN_140010eb0(void* dst, const void* src) { memcpy(dst, src, 0x30); return dst; }
 #pragma intrinsic(memcpy)
 
+// The 16-byte item: a four-byte tag, then a payload retained by its copy.
+struct Video02RetainedItem
+{
+    UInt32 Tag;
+    void* pPayload;
+    Video02RetainedItem(const Video02RetainedItem& source) : Tag(source.Tag)
+    {
+        if (source.pPayload)
+            FUN_14257dc30(source.pPayload);
+        pPayload = source.pPayload;
+    }
+};
+
 // Append one retained 16-byte item (four-byte tag plus refcounted payload).
-// MS2-FUNCTIONAL: uses the executable's Array reserve helper; element copy/refcount behavior recovered.
 // @0x1400110c0
 void FUN_1400110c0(unsigned __int64* array, const UInt32* item)
 {
     FUN_1425eec50(array, array, array[1] + 1);
-    UInt32* dst = reinterpret_cast<UInt32*>(array[0] - 0x10 + array[1] * 0x10);
-    *dst = *item;
-    void* payload = *reinterpret_cast<void* const*>(item + 2);
-    if (payload)
-        FUN_14257dc30(payload);
-    *reinterpret_cast<void**>(dst + 2) = payload;
+    ::new (reinterpret_cast<void*>(array[0] - 0x10 + array[1] * 0x10))
+        Video02RetainedItem(*reinterpret_cast<const Video02RetainedItem*>(item));
 }
 
 // @0x140011240
 void FUN_140011240(unsigned __int64* array, const UInt32* item)
 {
     FUN_1425eec50(array, array, array[1] + 1);
-    UInt32* dst = reinterpret_cast<UInt32*>(array[0] - 0x10 + array[1] * 0x10);
-    *dst = *item;
-    void* payload = *reinterpret_cast<void* const*>(item + 2);
-    if (payload)
-        FUN_14257dc30(payload);
-    *reinterpret_cast<void**>(dst + 2) = payload;
-}
-
-// Four-byte transform data is appended as four byte elements by the exe.
-// MS2-FUNCTIONAL: same four-byte append sequence; Array growth policy is handled by the executable reserve helper.
-// @0x140011120
-void FUN_140011120(void** parray, UInt32 value)
-{
-    const UByte* bytes = reinterpret_cast<const UByte*>(&value);
-    for (unsigned i = 0; i != 4; ++i)
-    {
-        unsigned __int64* array = reinterpret_cast<unsigned __int64*>(parray);
-        FUN_1425eec50(array, array, array[1] + 1);
-        reinterpret_cast<UByte*>(array[0] - 1 + array[1])[0] = bytes[i];
-        ++array[1];
-    }
+    ::new (reinterpret_cast<void*>(array[0] - 0x10 + array[1] * 0x10))
+        Video02RetainedItem(*reinterpret_cast<const Video02RetainedItem*>(item));
 }
 
 // MS2-FUNCTIONAL: appends one byte with the executable's growth thresholds and reserve call.
@@ -804,6 +793,17 @@ void FUN_140010f60(unsigned __int64* array, const UByte* value)
     Video02ResizeBytes(array, array[1] + 1);
     UByte* slot = reinterpret_cast<UByte*>(array[0]) + array[1] - 1;   // placement construction of the new last byte
     if (slot) *slot = *value;
+}
+
+// Four-byte transform data is appended as four byte elements by the exe.
+// @0x140011120
+void FUN_140011120(void** parray, float value)
+{
+    const UByte* bytes = reinterpret_cast<const UByte*>(&value);
+    FUN_140010f60(static_cast<unsigned __int64*>(*parray), bytes);
+    FUN_140010f60(static_cast<unsigned __int64*>(*parray), bytes + 1);
+    FUN_140010f60(static_cast<unsigned __int64*>(*parray), bytes + 2);
+    FUN_140010f60(static_cast<unsigned __int64*>(*parray), bytes + 3);
 }
 
 // BEHAVIOUR FIX: the exe reserves through ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70). This called
@@ -2407,7 +2407,16 @@ Scaleform::GFx::AS2::Object* FUN_14000eb50(
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes the AS2 prototype Object, constructor references, and interface array.
+// The members of GASPrototypeBase behind its vptr, as its inlined ctor builds them.
+struct Video02PrototypeFields
+{
+    void* vtable;
+    Scaleform::GFx::AS2::FunctionRef Constructor;
+    Scaleform::GFx::AS2::FunctionRef ConstructorInternal;
+    void* pInterfaces;
+    Video02PrototypeFields() : pInterfaces(0) {}
+};
+
 // @0x140012440
 Scaleform::GFx::AS2::Object* FUN_140012440(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
@@ -2417,7 +2426,7 @@ Scaleform::GFx::AS2::Object* FUN_140012440(
     *reinterpret_cast<void**>(object) = &PTR_LAB_1431b65f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6540;
     object->Scaleform::GFx::AS2::Object::Set__proto__(context, static_cast<Scaleform::GFx::AS2::Object*>(prototype));
-    memset(reinterpret_cast<char*>(object) + 0x70, 0, 0x38);
+    reinterpret_cast<Video02PrototypeFields*>(reinterpret_cast<char*>(object) + 0x68)->Video02PrototypeFields::Video02PrototypeFields();
     *reinterpret_cast<void**>(object) = &PTR_FUN_1431b64f0;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6440;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6430;
@@ -3303,26 +3312,6 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011330(
     return destination ? FUN_140011170(destination, source) : 0;
 }
 
-// MS2-FUNCTIONAL: constructs a TreeShape snapshot with a retained provider and zero morph ratio.
-// @0x1400111d0
-Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
-    Scaleform::Render::TreeShape::NodeData* destination, const void* const* providerRef)
-{
-    if (!destination) return 0;
-    new (destination) Scaleform::Render::TreeShape::NodeData();
-    void* provider = const_cast<void*>(*providerRef);
-    if (provider) {
-        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
-            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
-        addRef(refBase);
-    }
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
-    *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) = 0.0f;
-    return destination;
-}
-
-// MS2-FUNCTIONAL: constructs a shape snapshot from a provider pointer and initializes its morph ratio.
 // @0x140011010
 Scaleform::Render::TreeShape::NodeData* FUN_140011010(
     Scaleform::Render::TreeShape::NodeData* destination, void* provider)
@@ -3331,47 +3320,40 @@ Scaleform::Render::TreeShape::NodeData* FUN_140011010(
     // vftable, then the provider and morph ratio.
     destination->Scaleform::Render::TreeNode::NodeData::NodeData(Scaleform::Render::ContextImpl::EntryData::ET_Shape);
     destination->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
-    if (provider) {
-        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
-            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
-        addRef(refBase);
-    }
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(destination) + 0x90) = provider;
+    typedef Scaleform::Ptr<Scaleform::Render::ShapeMeshProvider> ProviderPtr;
+    reinterpret_cast<ProviderPtr*>(reinterpret_cast<unsigned char*>(destination) + 0x90)->ProviderPtr::Ptr(
+        static_cast<Scaleform::Render::ShapeMeshProvider*>(provider));
     *reinterpret_cast<float*>(reinterpret_cast<unsigned char*>(destination) + 0x98) = 0.0f;
     return destination;
+}
+
+// @0x1400111d0
+Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
+    Scaleform::Render::TreeShape::NodeData* destination, const void* const* providerRef)
+{
+    return destination ? FUN_140011010(destination, const_cast<void*>(*providerRef)) : 0;
 }
 
 // MS2-FUNCTIONAL: releases the shape provider before destroying the base node snapshot.
 // @0x140011070
 void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
 {
-    void* provider = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(node) + 0x90);
-    if (provider) {
-        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        void (*release)(void*) = reinterpret_cast<void (*)(void*)>(
-            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 0x10));
-        release(refBase);
-    }
+    typedef Scaleform::Ptr<Scaleform::Render::ShapeMeshProvider> ProviderPtr;
+    node->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
+    reinterpret_cast<ProviderPtr*>(reinterpret_cast<unsigned char*>(node) + 0x90)->~ProviderPtr();
     node->Scaleform::Render::TreeNode::NodeData::~NodeData();
 }
 
-// MS2-FUNCTIONAL: creates a TreeShape entry whose snapshot retains the supplied mesh provider.
 // @0x1400112a0
 void FUN_1400112a0(
     Scaleform::Render::Context* context, const void* const* providerRef)
 {
-    Scaleform::Render::TreeShape* shape = context->CreateEntry<Scaleform::Render::TreeShape>();
-    if (!shape) return;
-    Scaleform::Render::TreeShape::NodeData* data = shape->GetWritableData(sizeof(Scaleform::Render::TreeShape::NodeData));
-    void* provider = const_cast<void*>(*providerRef);
-    if (provider) {
-        void* refBase = static_cast<unsigned char*>(provider) + 0x10;
-        void (*addRef)(void*) = reinterpret_cast<void (*)(void*)>(
-            *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(*reinterpret_cast<void***>(refBase)) + 8));
-        addRef(refBase);
-    }
-    *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(data) + 0x90) = provider;
+    // Context::CreateEntry<TreeShape>(provider), with the NodeData(provider) ctor inlined
+    Scaleform::Render::TreeShape::NodeData* data = static_cast<Scaleform::Render::TreeShape::NodeData*>(
+        (*reinterpret_cast<Scaleform::MemoryHeap**>(context))->Alloc(0xa0));
+    if (data)
+        FUN_140011010(data, const_cast<void*>(*providerRef));
+    FUN_142581520(context, data);
 }
 
 // MS2-FUNCTIONAL: recreates the video render node after its provider changes, retaining the parent slot and transform.
