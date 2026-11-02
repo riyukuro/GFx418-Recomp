@@ -889,7 +889,7 @@ Image* ImageSource::CreateCompatibleImage(const ImageCreateArgs& args)
 // ---------------------------------------------------------------- RawImage
 
 // @0x142579550
-RawImage::~RawImage()
+__forceinline RawImage::~RawImage()
 {
     // also runs for the half-built image of a failed Create
     freeData();
@@ -1283,17 +1283,17 @@ void* FUN_142579ac0(ImageUpdate* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: calls the recovered RawImage destructor and preserves the original allocator delete branches.
+// The exe inlines ~RawImage here (it stays out of line at 0x142579550 for the vftable).
 // @0x142579b60
 void* FUN_142579b60(RawImage* object, unsigned flags)
 {
     object->RawImage::~RawImage();
     if (flags & 1)
     {
-        if (flags & 4)
-            FUN_14015b310(object, sizeof(RawImage));
-        else
+        if (!(flags & 4))
             Memory::Free(object);
+        else
+            FUN_14015b310(object, sizeof(RawImage));
     }
     return object;
 }
