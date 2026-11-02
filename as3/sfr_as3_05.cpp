@@ -1949,27 +1949,25 @@ namespace Instances { namespace fl
     }
 
     // @0x14242b590
-    // MS2-FUNCTIONAL: written from behaviour
     void GlobalObjectCPP::unescape(Value& result, unsigned argc, const Value* argv)
     {
-        StringManager& sm = GetVM().GetStringManager();
-        if (argc == 0)
+        if (argc > 0)
         {
-            result.Assign(sm.GetBuiltin(AS3Builtin_undefined));
-            return;
+            if (!argv[0].IsNullOrUndefined())
+            {
+                ASString str = GetVM().GetStringManager().CreateEmptyString();
+                if (argv[0].Convert2String(str))
+                {
+                    String out;
+                    ASUtils::AS3::Unescape(str.ToCStr(), str.GetSize(), out);
+                    result.Assign(GetVM().GetStringManager().CreateString(out.ToCStr(), out.GetSize()));
+                }
+            }
+            else
+                result.Assign(GetVM().GetStringManager().GetBuiltin(AS3Builtin_null));
         }
-        if (argv[0].IsNullOrUndefined())
-        {
-            result.Assign(sm.GetBuiltin(AS3Builtin_null));
-            return;
-        }
-        ASString str = sm.CreateEmptyString();
-        if (argv[0].Convert2String(str))
-        {
-            String out;
-            ASUtils::AS3::Unescape(str.ToCStr(), str.GetSize(), out);
-            result.Assign(sm.CreateString(out));
-        }
+        else
+            result.Assign(GetVM().GetStringManager().GetBuiltin(AS3Builtin_undefined));
     }
 }}
 
