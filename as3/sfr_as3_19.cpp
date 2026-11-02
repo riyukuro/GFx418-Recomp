@@ -145,7 +145,7 @@ inline void FUN_14241a500(Scaleform::UPInt traits, Scaleform::UPInt* ret, Scalef
 void FUN_14241d980(Scaleform::GFx::AS3::SparseArray*, Scaleform::GFx::AS3::ValueStack*, unsigned long long);
 inline void FUN_14241d980(Scaleform::UPInt arr, Scaleform::UPInt stack, Scaleform::UInt32 n) { ::FUN_14241d980(reinterpret_cast<Scaleform::GFx::AS3::SparseArray*>(arr), reinterpret_cast<Scaleform::GFx::AS3::ValueStack*>(stack), n); }
 void FUN_14241b920(Scaleform::UPInt tbl, void* ret, Scaleform::UPInt a, Scaleform::UPInt b);   // class table: find interface traits
-const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& obj);   // Value traits
+__declspec(noalias) const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& obj);   // Value traits
 inline void* FUN_14250fa80(const Scaleform::GFx::AS3::Traits* tr) { return &tr->GetVT(); }   // Traits::GetVT
 inline void FUN_1424e6aa0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::SPInt idx, int b, int c) { Scaleform::GFx::AS3::FUN_1424e6aa0(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer), reinterpret_cast<const void*>(a), static_cast<unsigned long long>(idx), b, c != 0); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_1424e6aa0; } } }
@@ -4368,38 +4368,41 @@ void Sfr31ExecInitProperty(UPInt vmAddr, UPInt file, UInt32 idx)
 // ---- batch 30
 // Tracer op: the popped operand becomes the traits describing its class: the Object traits for a null value, otherwise the
 // traits of its dynamic class (or its instance traits when it is a class/function traits holder).
-// MS2-FUNCTIONAL 0x14253d160: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14253d160: the exe keeps st in r14, the popped Value's kind in esi and its Flags in ebx across the
+// GetValueTraits call (0x14250ffc0), so it knew that callee does not write v (mod/ref). Ours reloads the Flags after the
+// call and derives the kind from them. The exe also stores each pushed traits value in its own arm.
 // @0x14253d160
 void Sfr31TraceOperandClassTraits(State* st)
 {
     StV s(st);
     FUN_14251ccc0(st, 1);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    const UPInt vm = TrVM(s.Tracer());
-    const UPInt pv = reinterpret_cast<UPInt>(&popped.Get());
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(pv) & 0x1f;
-    UPInt tr = 0;
-    if (kind == 0)
-        tr = Sfr31Rd(vm, 0x278);
-    else if (kind == 8 || kind == 9)
-        tr = Sfr31Rd(pv, 0x10);
-    else
-        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), popped.Get()));
-    if (tr != 0 && tr == Sfr31Rd(vm, 0x1f0))
-        tr = Sfr31Rd(vm, 0x1f8);
-    Sfr31RawTraitsVal v = {0x48, 0, 0, 0};
-    if (*reinterpret_cast<const UInt32*>(tr + 0x70) == 10 && ((*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1) == 0)
-        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x1f8), 0xc0);
-    else if ((*reinterpret_cast<const UInt8*>(tr + 0x68) & 1) != 0)
+    const Value v(st->PopOpValue());
+    const UPInt tracer = s.Tracer();
+    UPInt tr;
+    switch (v.GetKind())
     {
-        v.w0 = 8;
-        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0);
+    case Value::kUndefined:
+        tr = Sfr31Rd(TrVM(tracer), 0x278);
+        break;
+    case Value::kInstanceTraits:
+        tr = Sfr31Rd(reinterpret_cast<UPInt>(&v), 0x10);
+        break;
+    case Value::kClassTraits:
+        tr = Sfr31Rd(reinterpret_cast<UPInt>(&v), 0x10);
+        break;
+    default:
+        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(TrVM(tracer)), v));
+        break;
     }
+    if (tr != 0 && tr == Sfr31Rd(TrVM(tracer), 0x1f0))
+        tr = Sfr31Rd(TrVM(tracer), 0x1f8);
+    const Traits& t = *reinterpret_cast<const Traits*>(tr);
+    if (t.GetTraitsType() == Traits_Dictionary && t.IsInstanceTraits())
+        s.OpStack().PushBack(Value(TrITraits(tracer, 0x1f8), Value::NullOrNot));
+    else if (t.IsArrayLike())
+        s.OpStack().PushBack(Value(TrITraits(tracer, 0x228), Value::NotNull));
     else
-        v.w2 = Sfr31Rd(Sfr31Rd(vm, 0x230), 0xc0);
-    s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
-    popped.Get().~Value();
+        s.OpStack().PushBack(Value(TrITraits(tracer, 0x230), Value::NullOrNot));
 }
 
 // Traces the code of the block containing pos, merging block states, and keeps tracing opcodes until the code ends or a halt is raised.
