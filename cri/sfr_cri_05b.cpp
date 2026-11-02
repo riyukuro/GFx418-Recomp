@@ -1355,35 +1355,33 @@ void SJRBF_Finish(void)
 // @0x14004f8f0
 cri_u64 * FUN_14004f8f0(cri_u64 a1,cri_u32 a2,cri_u32 a3)
 {
-  longlong l_v1;
-  cri_u64 *pu_v2;
-  int *pi_v3;
-  int i_v4;
-  
-  i_v4 = 0;
-  pi_v3 = cri_conv(&DAT_143fe84e8);
-  do {
-    if (*pi_v3 == 0) break;
-    pi_v3 = pi_v3 + 0x1a;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)pi_v3 < (longlong)&DAT_143ffbce8);
-  if (i_v4 == 0x300) {
+  struct Entry { void *Vtbl; int Used; void *Name; cri_u8 Reserved18[0x10]; cri_u64 Arg; cri_u32 Param1; cri_u32 Param2;
+                 cri_u8 Reserved38[0x10]; void *Fn; Entry *Self; cri_u64 Reserved58; cri_u64 Reserved60; };
+  Entry *pool = (Entry *)&DAT_143fe84e0;
+  Entry *e;
+  int i;
+  int *used;
+  i = 0;
+  for (used = &pool[0].Used; (longlong)used < (longlong)&pool[0x300].Used; used += 0x1a) {
+    if (*used == 0) break;
+    i++;
+  }
+  if (i == 0x300) {
     return (cri_u64 *)0x0;
   }
-  l_v1 = (longlong)i_v4 * 0x68;
-  pu_v2 = (cri_u64 *)(&DAT_143fe84e0 + l_v1);
-  *pu_v2 = cri_conv(&DAT_143a48840);
-  *(cri_u64 *)(&DAT_143fe8508 + l_v1) = a1;
-  *(cri_u8 **)(&DAT_143fe84f0 + l_v1) = cri_conv(&DAT_1431ba4f8);
-  (&DAT_143fe84e8)[(longlong)i_v4 * 0x1a] = 1;
-  *(cri_u32 *)(&DAT_143fe8510 + l_v1) = a2;
-  *(cri_u32 *)(&DAT_143fe8514 + l_v1) = a3;
-  *(cri_u8 **)(&DAT_143fe8528 + l_v1) = cri_conv(&FUN_14004eee0);
-  *(cri_u64 **)(&DAT_143fe8530 + l_v1) = pu_v2;
-  *(cri_u64 *)(&DAT_143fe8538 + l_v1) = 0;
-  *(cri_u64 *)(&DAT_143fe8540 + l_v1) = 0;
-  FUN_14004f150(pu_v2);
-  return pu_v2;
+  e = &pool[i];
+  e->Vtbl = &DAT_143a48840;
+  e->Arg = a1;
+  e->Name = &DAT_1431ba4f8;
+  e->Used = 1;
+  e->Param1 = a2;
+  e->Param2 = a3;
+  e->Fn = (void *)&FUN_14004eee0;
+  e->Self = e;
+  e->Reserved58 = 0;
+  e->Reserved60 = 0;
+  FUN_14004f150((longlong)e);
+  return (cri_u64 *)e;
 }
 
 // @0x14004f9a0
@@ -2033,26 +2031,20 @@ void mpvmulti_DecServer(longlong *a1)
 // @0x140050820
 cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
 {
-  cri_u64 u_v1;
-  int i_v2;
-  int i_v3;
-  cri_u32 u_v4;
-  longlong *pl_v5;
-  ulonglong u_v6;
-  longlong l_v7;
-  int *pi_v8;
-  ulonglong u_v9;
-  longlong *pl_v10;
-  uint u_v11;
-  ulonglong u_v12;
-  longlong l_v13;
-  int i_v14;
-  ulonglong local_res18;
-  longlong local_res20;
-  longlong loc_88 [9];
+  // One decoder thread: its handle, the thread id from FUN_140067c90, and its state.
+  struct Worker { cri_u64 Handle; int Thread; cri_u32 State; cri_u8 Reserved10[0xf0]; };
+  // The argument block handed to each mpvmulti_DecServer: the decoder and its work area.
+  struct Arg { longlong Dec; longlong Work; };
+  longlong *stream;
+  int nthreads;
+  int startPos;
+  uint lastId;
+  longlong n;
+  longlong k;
+  int i;
+  Arg args[4];
   
-  i_v14 = cri_conv(DAT_143badb84);
-  u_v12 = 0;
+  nthreads = DAT_143badb84;
   CriAt<cri_u32>(a4, 0x20) = 0;
   CriAt<cri_u32>(a4, 0x24) = 0;
   CriAt<cri_u32>(a4, 0x1c) = 0;
@@ -2060,104 +2052,78 @@ cri_u64 MPVMULTI_DecPicture(longlong a1,cri_u64 a2,ulonglong a3,cri_u64 *a4)
     return 0;
   }
   CriAt<cri_u32>(a4, 0x1c) = 1;
-  local_res18 = a3;
   mpvmulti_SetDlgPara();
   CriAt<cri_u64>(a1, 0x8) = a4[1];
   CriAt<cri_u32>(a1, 0x88) = 0;
   CriAt<cri_u32>(a1, 0x108) = 0x96;
   CriAt<cri_u32>(a1, 0x10c) = 0;
-  pl_v5 = (longlong *)FUN_140050320(a1,a2);
-  i_v2 = (**(code **)(*pl_v5 + 0x48))(pl_v5,1);
+  stream = (longlong *)FUN_140050320(a1,(void *)a2);
+  startPos = (**(code **)(*stream + 0x48))(stream,1);
   CriAt<cri_u16>(a4, 0x28) = 0;
-  i_v3 = CriAt<int>(a1, 0x14);
-  u_v9 = u_v12;
-  while( true ) {
-    if (i_v3 != 0) {
+  lastId = 0;
+  for (;;) {
+    if (CriAt<int>(a1, 0x14) != 0) {
       return 0;
     }
-    u_v6 = FUN_140051ec0(pl_v5,&local_res18);
-    if ((u_v6 & 1) == 0) break;
+    // the chunk id lands in a3's home slot (the exe reuses the parameter)
+    if ((FUN_140051ec0(stream,(uint *)&a3) & 1) == 0) break;
     CriAt<short>(a4, 0x28) = CriAt<short>(a4, 0x28) + 1;
-    if ((int)u_v9 != (int)local_res18) {
-      u_v9 = local_res18 & 0xffffffff;
-      i_v3 = (**(code **)(*pl_v5 + 0x48))(pl_v5,1);
-      i_v3 = FUN_140050380(a1,pl_v5,i_v2 - i_v3);
-      if (i_v3 != 0) {
+    if (lastId != *(uint *)&a3) {
+      lastId = *(uint *)&a3;
+      if (FUN_140050380(a1,(cri_u64)stream,startPos - (**(code **)(*stream + 0x48))(stream,1)) != 0) {
         CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + 1;
         break;
       }
     }
-    FUN_140052010(pl_v5,1,4);
-    i_v3 = CriAt<int>(a1, 0x14);
+    FUN_140052010(stream,1,4);
   }
   CriAt<cri_u32>(a1, 0x108) = CriAt<cri_u32>(a1, 0x10c);
-  if (DAT_143badbdc < i_v14) {
-    i_v14 = cri_conv(DAT_143badbdc);
+  if (DAT_143badbdc < nthreads) {
+    nthreads = DAT_143badbdc;
   }
-  l_v13 = (longlong)i_v14;
-  if (0 < l_v13) {
-    i_v14 = 1;
-    pl_v10 = loc_88 + 3;
-    local_res20 = l_v13;
-    l_v7 = cri_conv(DAT_143c490e0);
-    u_v9 = u_v12;
+  n = nthreads;
+  if (0 < n) {
+    Arg *slot = &args[1];
+    longlong w = 0;
+    Worker *tbl = (Worker *)DAT_143c490e0;
+    i = 1;
+    k = n;
     do {
-      if (*(uint *)(l_v7 + 0xc + u_v9) < 0x20) {
-        l_v7 = CriAt<longlong>(a1, 0x8);
-        u_v1 = *a4;
-        pl_v10[-1] = a1;
-        l_v7 = (*CriAt<code *>(l_v7, 0x8))(u_v1,i_v14);
-        *pl_v10 = l_v7;
-        u_v4 = FUN_140067c90(*(cri_u64 *)(DAT_143c490e0 + u_v9),(unsigned __int64)mpvmulti_DecServer,
-                              (unsigned __int64)(loc_88 + (longlong)i_v14 * 2));
-        l_v7 = cri_conv(DAT_143c490e0);
-        *(cri_u32 *)(DAT_143c490e0 + 8 + u_v9) = u_v4;
+      if (tbl[w].State < 0x20) {
+        slot->Dec = a1;
+        slot->Work = (*CriAt<code *>(CriAt<longlong>(a1, 0x8), 0x8))(*a4,i);
+        int thread = FUN_140067c90(((Worker *)DAT_143c490e0)[w].Handle,(unsigned __int64)mpvmulti_DecServer,
+                                   (unsigned __int64)&args[i]);
+        tbl = (Worker *)DAT_143c490e0;
+        tbl[w].Thread = thread;
       }
       else {
-        *pl_v10 = 0;
-        *(cri_u32 *)(l_v7 + 8 + u_v9) = 0xffffffff;
+        slot->Work = 0;
+        tbl[w].Thread = -1;
       }
-      i_v14 = i_v14 + 1;
-      pl_v10 = pl_v10 + 2;
-      u_v9 = u_v9 + 0x100;
-      local_res20 = local_res20 + -1;
-    } while (local_res20 != 0);
-    local_res20 = 0;
+      i++;
+      slot++;
+      w++;
+    } while (--k != 0);
   }
-  loc_88[1] = *a4;
-  loc_88[0] = a1;
-  mpvmulti_DecServer(loc_88);
-  if ((CriAt<int>(a1, 0x14) != 0) && (0 < l_v13)) {
-    pl_v10 = loc_88 + 3;
-    l_v7 = l_v13;
-    do {
-      (**(code **)(CriAt<longlong>(a1, 0x8) + 0x10))(*pl_v10);
-      pl_v10 = pl_v10 + 2;
-      l_v7 = l_v7 + -1;
-    } while (l_v7 != 0);
+  args[0].Dec = a1;
+  args[0].Work = *a4;
+  mpvmulti_DecServer((longlong *)args);
+  if ((CriAt<int>(a1, 0x14) != 0) && (0 < n)) {
+    for (k = 0; k < n; k++) {
+      (**(code **)(CriAt<longlong>(a1, 0x8) + 0x10))(args[k + 1].Work);
+    }
   }
-  u_v9 = u_v12;
-  if (0 < l_v13) {
-    do {
-      if (-1 < *(int *)(DAT_143c490e0 + 8 + u_v9)) {
-        FUN_140067dd0(*(cri_u64 *)(DAT_143c490e0 + u_v9),*(int *)(DAT_143c490e0 + 8 + u_v9));
-      }
-      l_v13 = l_v13 + -1;
-      u_v9 = u_v9 + 0x100;
-    } while (l_v13 != 0);
+  for (k = 0; k < n; k++) {
+    if (-1 < ((Worker *)DAT_143c490e0)[k].Thread) {
+      FUN_140067dd0(((Worker *)DAT_143c490e0)[k].Handle,((Worker *)DAT_143c490e0)[k].Thread);
+    }
   }
-  i_v14 = (**(code **)(*pl_v5 + 0x48))(pl_v5,1);
-  FUN_140052050(a2,1,i_v2 - i_v14);
+  FUN_140052050((longlong *)a2,1,startPos - (**(code **)(*stream + 0x48))(stream,1));
   FUN_140050480(a1,CriAt<cri_u32>(a4, 0x14),*a4);
-  if (0 < CriAt<int>(a1, 0x108)) {
-    pi_v8 = (&CriAt<int>(a1, 0x2b4));
-    do {
-      u_v11 = (int)u_v12 + 1;
-      u_v12 = (ulonglong)u_v11;
-      CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + pi_v8[-1];
-      CriAt<int>(a4, 0x24) = CriAt<int>(a4, 0x24) + *pi_v8;
-      pi_v8 = pi_v8 + 0x20;
-    } while ((int)u_v11 < CriAt<int>(a1, 0x108));
+  for (i = 0; i < CriAt<int>(a1, 0x108); i++) {
+    CriAt<int>(a4, 0x20) = CriAt<int>(a4, 0x20) + CriAt<int>(a1, 0x2b0 + i * 0x80);
+    CriAt<int>(a4, 0x24) = CriAt<int>(a4, 0x24) + CriAt<int>(a1, 0x2b4 + i * 0x80);
   }
   return 0;
 }
@@ -2808,16 +2774,17 @@ cri_u32 FUN_140051c10(longlong a1,longlong a2,int a3)
   int i_v1;
   int i_v2;
   char *_Str1;
+  char *base = (char *)a2 + 4;
+  int count = a3 - 4;
   cri_u32 u_v3;
-  
+
   i_v2 = 0;
-  if (0 < a3 + -4) {
+  if (0 < count) {
     do {
-      _Str1 = (char *)((longlong)i_v2 + a2 + 4);
+      _Str1 = base + i_v2;
       i_v1 = strncmp(_Str1,"IDCPREC",7);
       if (i_v1 == 0) {
-        i_v1 = atoi(_Str1 + 0x10);
-        CriAt<uint>(a1, 0x1814) = -(uint)(i_v1 != 0) & 3;
+        CriAt<uint>(a1, 0x1814) = atoi(_Str1 + 0x10) ? 3 : 0;
       }
       i_v1 = strncmp(_Str1,"STCCODE",7);
       if (i_v1 == 0) {
@@ -2829,7 +2796,7 @@ cri_u32 FUN_140051c10(longlong a1,longlong a2,int a3)
         CriAt<int>(a1, 0x17c4) = i_v1;
       }
       i_v1 = FUN_140053000(_Str1);
-    } while ((i_v1 == 0) && (i_v2 = i_v2 + 1, i_v2 < a3 + -4));
+    } while ((i_v1 == 0) && (i_v2 = i_v2 + 1, i_v2 < count));
   }
   u_v3 = 0;
   if (CriAt<int>(a1, 0x17bc) == 8) {
@@ -2898,33 +2865,32 @@ cri_u32 FUN_140051d90(longlong *a1)
 // @0x140051ec0
 cri_u32 FUN_140051ec0(longlong *a1,uint *a2)
 {
+  // An SJ chunk: data pointer and byte count (16 bytes with padding).
+  struct Chunk { cri_u8 *Data; int Size; int Pad; };
   cri_u32 u_v1;
   longlong l_v2;
-  __declspec(align(16)) cri_u8 frame_[32];
-  int &loc_28 = *(int *)(frame_ + 0);
-  cri_u32 &uStack_24 = *(cri_u32 *)(frame_ + 4);
-  int &loc_20 = *(int *)(frame_ + 8);
-  cri_u8 (&loc_18)[16] = *(cri_u8 (*)[16])(frame_ + 16);
+  Chunk loc_28;
+  Chunk loc_18;
   
   (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
   while( true ) {
-    if (loc_20 < 4) {
+    if (loc_28.Size < 4) {
       (**(code **)(*a1 + 0x38))(a1,1,&loc_28);
       *a2 = 0;
       return 0;
     }
-    l_v2 = FUN_1400530c0(CONCAT44(uStack_24,loc_28),loc_20,0xffffffff);
+    l_v2 = FUN_1400530c0((longlong)loc_28.Data,loc_28.Size,0xffffffff);
     if (l_v2 != 0) break;
-    FUN_140069020((__int64 *)&loc_28,loc_20 + -3,(__int64 *)&loc_28,(__int64 *)loc_18);
+    FUN_140069020((__int64 *)&loc_28,loc_28.Size + -3,(__int64 *)&loc_28,(__int64 *)&loc_18);
     (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
-    (**(code **)(*a1 + 0x38))(a1,1,loc_18);
+    (**(code **)(*a1 + 0x38))(a1,1,&loc_18);
     (**(code **)(*a1 + 0x30))(a1,1,0x7fffffff,&loc_28);
   }
   *a2 = CriAt<byte>(l_v2, 0x3) | 0x100;
   u_v1 = FUN_140053000(l_v2);
-  FUN_140069020((__int64 *)&loc_28,(int)l_v2 - loc_28,(__int64 *)&loc_28,(__int64 *)loc_18);
+  FUN_140069020((__int64 *)&loc_28,(int)l_v2 - (int)(longlong)loc_28.Data,(__int64 *)&loc_28,(__int64 *)&loc_18);
   (**(code **)(*a1 + 0x40))(a1,0,&loc_28);
-  (**(code **)(*a1 + 0x38))(a1,1,loc_18);
+  (**(code **)(*a1 + 0x38))(a1,1,&loc_18);
   return u_v1;
 }
 
