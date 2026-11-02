@@ -1176,25 +1176,23 @@ void Sfr33MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, vo
 
 // MovieRoot::CreateObject (virtual): a new instance of the global class className ("Object" when none), constructed
 // with the host values pargs; a pending exception is printed and dropped. Up to 10 arguments live on the stack.
-// MS2-FUNCTIONAL 0x1424f39c0: our Value code builds and frees the arguments; the frame test of VM::Construct is inline
+// MS2-FUNCTIONAL 0x1424f39c0: the exe inlines Value::ReleaseInternal (out of line in sfr_as3_18) at the destructor
+// of result, and keeps result 8 bytes lower in the frame.
 // @0x1424f39c0
 void Sfr33MovieRoot::CreateObject(GFx::Value* pvalue, const char* className, const GFx::Value* pargs, unsigned nargs)
 {
     UByte buf[0x140 + 0x50];
-    Value* args = nargs < 11 ? reinterpret_cast<Value*>(buf)
-                             : static_cast<Value*>(Memory::AllocAutoHeap(this, UPInt(nargs) << 5));
+    Value* args = nargs > 10 ? static_cast<Value*>(Memory::AllocAutoHeap(this, UPInt(nargs) << 5))
+                             : reinterpret_cast<Value*>(buf);
     for (unsigned i = 0; i < nargs; ++i)
     {
         Value* pv = new (&args[i]) Value();
         Root()->GFxValue2ASValue(pargs[i], pv);
     }
     Value result;
+    const bool ok = (*reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48))
+                        ->Construct(className ? className : "Object", result, nargs, args, false);
     VM* pvm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
-    // VM::Construct 0x1424f0750 as the exe has it returns whether a constructor frame was queued (+0x78 grew)
-    const UPInt frames = pvm->Unk070[1];
-    pvm->Construct(className ? className : "Object", result, nargs, args, false);
-    const bool ok = !pvm->HandleException && pvm->Unk070[1] > frames;
-    pvm = *reinterpret_cast<VM**>(reinterpret_cast<UByte*>(this) + 0x48);
     if (!pvm->HandleException)
     {
         if (ok)
@@ -1959,7 +1957,7 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
 // MS2-FUNCTIONAL 0x1424f0750: same steps; returns whether a constructor frame was pushed (the call stack at +0x78 grew),
 // which CreateObject (0x1424f3acd) and the symbol constructor in sfr_as3_17d read to decide on ExecuteCode(1)
 // @0x1424f0750
-bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
+__declspec(noinline) bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
 {
     const UPInt size = Unk070[1];   // call stack size
     Value _class;
