@@ -1684,6 +1684,19 @@ AutoPtr<GFx::AS3::Instances::fl_events::EventDispatcher::EventDispatcherImpl>::~
 {
     Reset();
 }
+
+// The exe's ImplementsInterfaces.PushBack copies the Multiname inline (kind, namespace AddRef, name), where our
+// Multiname copy ctor is out of line.
+template <>
+void ArrayData<GFx::AS3::Multiname, AllocatorLH<GFx::AS3::Multiname, Stat_Default_Mem>, ArrayDefaultPolicy>::PushBack(
+    const GFx::AS3::Multiname& val)
+{
+    BaseType::ResizeNoConstruct(this, this->Size + 1);
+    GFx::AS3::Multiname* p = this->Data + this->Size - 1;
+    p->Kind = val.Kind;
+    ::new (&p->Obj) GFx::AS3::SPtr<GFx::AS3::GASRefCountBase>(val.Obj);
+    ::new (&p->Name) GFx::AS3::Value(val.Name);
+}
 }
 namespace Scaleform { namespace GFx { namespace AS3 {
 
