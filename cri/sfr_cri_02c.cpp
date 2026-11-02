@@ -11,7 +11,7 @@
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
 // MS2-RANGE: 0x140031aa0-0x140032090 .text$mn
-// MS2-RANGE: 0x140032420-0x140034330 .text$mn
+// MS2-RANGE: 0x140032650-0x140034330 .text$mn
 // MS2-RANGE: 0x1400344f0-0x140034730 .text$mn
 // MS2-RANGE: 0x140034920-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
@@ -3632,61 +3632,6 @@ void updateInputBufferInfo(void* player)
     ((InputStatsView*)player)->Available = dataSize;
     ((InputStatsView*)player)->Remaining = leftBytes;
     ((InputStatsView*)player)->Mode = limit;
-}
-
-// MS2-FUNCTIONAL: initialize analyzed stream counts from the CRI Movie file header.
-// @0x140032420
-void retrieveHeaderInfo(void* player, void* streamInfo, const CriMovieParsedChunk* parsed)
-{
-    struct StreamInfoView
-    {
-        CriUint32 HeaderType;
-        CriUint32 Field4;
-        CriUint32 MinimumBuffer;
-        CriUint32 AverageBitrate;
-        CriUint32 VideoCount;
-        CriUint8 Reserved14[0x4c - 0x14];
-        CriUint32 IndexedAudioCount;
-        CriUint8 Reserved50[0x200];
-        CriUint32 SubtitleCount;
-        CriUint8 Reserved254[0x1c];
-        CriUint32 AlphaCount;
-        CriUint8 Reserved274[0x2c];
-        CriUint32 CueCount;
-    };
-    struct TrackModeView { CriUint8 Reserved[0xe38]; CriUint32 Type; CriUint32 SubType; };
-    void* document = criUtfRtv_Create(((CriMvPlyObj*)player)->utf_heap, (void*)parsed->Data, parsed->Size);
-    memset(streamInfo, 0, 0x2c0);
-    StreamInfoView* info = (StreamInfoView*)streamInfo;
-    info->MinimumBuffer = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "minbuf");
-    info->AverageBitrate = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, 0, "avbps");
-    CriSint32 count = criUtfRtv_GetNumRecord((const CriUtfRtvView*)document);
-    for (CriSint32 i = 0; i < count; ++i)
-    {
-        CriSint32 streamId = FID_conflict_criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)document, i, "stmid");
-        if (streamId == 0x40414c50)
-        {
-            if (++info->AlphaCount > 1)
-                info->AlphaCount = 1;
-            ((TrackModeView*)player)->Type = 0x40414c50;
-            ((TrackModeView*)player)->SubType = 0;
-        }
-        else if (streamId == 0x40435545)
-            ++info->CueCount;
-        else if (streamId == 0x40534254)
-            ++info->SubtitleCount;
-        else if (streamId == 0x40534641)
-        {
-            if (++info->IndexedAudioCount > 0x20)
-                info->IndexedAudioCount = 0x20;
-        }
-        else if (streamId == 0x40534656)
-        {
-            if (++info->VideoCount > 1)
-                info->VideoCount = 1;
-        }
-    }
-    criUtfRtv_Destroy((CriUint64*)document);
 }
 
 // return a partially consumed input chunk to its source queue after playback uses it.

@@ -10,7 +10,7 @@
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
-// MS2-RANGE: 0x140032090-0x140032420 .text$mn
+// MS2-RANGE: 0x140032090-0x140032650 .text$mn
 // MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
 // MS2-RANGE: 0x140034730-0x140034920 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
@@ -158,6 +158,30 @@ typedef struct CriMvStartMemoryView
     CriUint8  AnalyzedHeader[0x2c0];        // 0x5f8
     CriUint32 HeaderSize;                   // 0x8b8
 } CriMvStartMemoryView;
+typedef struct CriMvHeaderCountsView
+{
+    CriUint32 HeaderType;                   // 0x00
+    CriUint32 Field4;                       // 0x04
+    CriUint32 MinimumBuffer;                // 0x08
+    CriUint32 AverageBitrate;               // 0x0c
+    CriUint32 VideoCount;                   // 0x10
+    CriUint8  Reserved14[0x4c - 0x14];
+    CriUint32 AudioCount;                   // 0x4c
+    CriUint8  Reserved50[0x200];
+    CriUint32 SubtitleCount;                // 0x250
+    CriUint8  Reserved254[0x1c];
+    CriUint32 AlphaCount;                   // 0x270
+    CriUint8  Reserved274[0x2c];
+    CriUint32 CueCount;                     // 0x2a0
+} CriMvHeaderCountsView;
+typedef struct CriMvHeaderPlayerView
+{
+    CriUint8  Reserved0[0xdd0];
+    void*     UtfHeap;                      // 0xdd0
+    CriUint8  Reserveddd8[0xe38 - 0xdd8];
+    CriUint32 TrackType;                    // 0xe38
+    CriUint32 TrackSubType;                 // 0xe3c
+} CriMvHeaderPlayerView;
 typedef struct CriMvAnalyzedVideo { CriUint8 Bytes[0x38]; } CriMvAnalyzedVideo;
 typedef struct CriMvAnalyzedAudio { CriUint8 Bytes[0x10]; } CriMvAnalyzedAudio;
 typedef struct CriMvAnalyzedAlpha { CriUint8 Bytes[0x2c]; } CriMvAnalyzedAlpha;
@@ -228,6 +252,11 @@ void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
+struct CriUtfRtvView;
+void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
+CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
+CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
+void      criUtfRtv_Destroy(CriUint64* table);                                                         /* 14003a108 */
 void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
@@ -265,6 +294,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?retrieveHeaderInfo@@YAXPEAX0PEBUCriMovieParsedChunk@@@Z=retrieveHeaderInfo")
 #pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
 #pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
 #pragma comment(linker, "/alternatename:?executeUsfServer@@YAXPEAX@Z=executeUsfServer")
@@ -488,6 +518,54 @@ CriSint32 FUN_140032090(void* player)
         }
     }
     return completed;
+}
+
+// initialize analyzed stream counts from the CRI Movie file header
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): count, recPos, records, streamId.
+// @0x140032420
+void retrieveHeaderInfo(void* player, void* streamInfo, const struct CriMovieParsedChunk* parsed)
+{
+    CriUint32 streamId;
+    void* records;
+    CriUint32 recPos;
+    CriUint32 count;
+    records = criUtfRtv_Create(((CriMvHeaderPlayerView*)player)->UtfHeap, (void*)parsed->Data, parsed->Size);
+    memset(streamInfo, 0, 0x2c0);
+    ((CriMvHeaderCountsView*)streamInfo)->Field4 = 0;
+    ((CriMvHeaderCountsView*)streamInfo)->MinimumBuffer = FID_conflict_criUtfRtv_GetDataSint32Fn((const struct CriUtfRtvView*)records, 0, "minbuf");
+    ((CriMvHeaderCountsView*)streamInfo)->AverageBitrate = FID_conflict_criUtfRtv_GetDataSint32Fn((const struct CriUtfRtvView*)records, 0, "avbps");
+    count = criUtfRtv_GetNumRecord((const struct CriUtfRtvView*)records);
+    for (recPos = 0; recPos < count; recPos++)
+    {
+        streamId = FID_conflict_criUtfRtv_GetDataSint32Fn((const struct CriUtfRtvView*)records, recPos, "stmid");
+        switch (streamId)
+        {
+        case 0x40534641:
+            ((CriMvHeaderCountsView*)streamInfo)->AudioCount++;
+            if (((CriMvHeaderCountsView*)streamInfo)->AudioCount > 0x20)
+                ((CriMvHeaderCountsView*)streamInfo)->AudioCount = 0x20;
+            break;
+        case 0x40534656:
+            ((CriMvHeaderCountsView*)streamInfo)->VideoCount++;
+            if (((CriMvHeaderCountsView*)streamInfo)->VideoCount > 1)
+                ((CriMvHeaderCountsView*)streamInfo)->VideoCount = 1;
+            break;
+        case 0x40534254:
+            ((CriMvHeaderCountsView*)streamInfo)->SubtitleCount++;
+            break;
+        case 0x40414c50:
+            ((CriMvHeaderCountsView*)streamInfo)->AlphaCount++;
+            if (((CriMvHeaderCountsView*)streamInfo)->AlphaCount > 1)
+                ((CriMvHeaderCountsView*)streamInfo)->AlphaCount = 1;
+            ((CriMvHeaderPlayerView*)player)->TrackType = 0x40414c50;
+            ((CriMvHeaderPlayerView*)player)->TrackSubType = 0;
+            break;
+        case 0x40435545:
+            ((CriMvHeaderCountsView*)streamInfo)->CueCount++;
+            break;
+        }
+    }
+    criUtfRtv_Destroy((CriUint64*)records);
 }
 
 // Drain the two CRI input streams into the decoder read queue.
