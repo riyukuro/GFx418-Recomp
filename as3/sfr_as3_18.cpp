@@ -5370,6 +5370,8 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
     return ctr && FUN_1425146d0(vm, v, *ctr);
 }
 
+void FUN_1424d54f0(void* dst, void* src);   // hash entry copy construction (key, value ref, count)
+
 namespace Scaleform {
 // @0x14251f660
 template void ArrayBase<ArrayData<GFx::AS3::Value, AllocatorGH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PushBack(
@@ -5594,7 +5596,7 @@ bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
     struct Table { UPInt EntryCount; UPInt SizeMask; Entry E[1]; };
     Table**     ptable = reinterpret_cast<Table**>(&self->LoadedMovieDefs);
     const UPInt key    = reinterpret_cast<UPInt>(def);
-    unsigned*   pcnt   = static_cast<unsigned*>(FUN_1425059f0(ptable, key));
+    unsigned*   pcnt   = static_cast<unsigned*>(FUN_1425059f0(ptable, reinterpret_cast<const UPInt&>(def)));
     if (!pcnt || --pcnt[2] != 0)
         return false;
     Table* t = *ptable;
@@ -5607,11 +5609,11 @@ bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
     SPInt idx = SPInt(home), prev = -1;
     while ((e->Key & t->SizeMask) != home || e->Key != key)
     {
-        if (e->Next == -1)
-            return true;
         prev = idx;
         idx  = e->Next;
-        e    = &t->E[idx];
+        if (idx == -1)
+            return true;
+        e = &t->E[idx];
     }
     if (idx == SPInt(home))
     {
@@ -5619,19 +5621,17 @@ bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
         {
             // the next one in the chain moves into the home slot
             Entry* n = &t->E[e->Next];
-            e->pMovieDef.Clear();
-            e->Next      = n->Next;
-            e->Key       = n->Key;
-            e->pMovieDef = n->pMovieDef;
-            e->UseCnt    = n->UseCnt;
-            e            = n;
+            e->pMovieDef.~Ptr();
+            e->Next = -2;
+            ::FUN_1424d54f0(e, n);
+            e = n;
         }
     }
     else
         t->E[prev].Next = e->Next;
-    e->pMovieDef.Clear();
+    e->pMovieDef.~Ptr();
     e->Next = -2;
-    --t->EntryCount;
+    --(*ptable)->EntryCount;
     return true;
 }
 
