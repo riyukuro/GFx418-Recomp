@@ -2200,16 +2200,18 @@ namespace Instances { namespace fl_text
     }
 
     // GFx::TextField::SetText(ptext, false) as inlined: drops the html flag again, then sets the text
-    static SF_INLINE bool IsHtmlField(void* ptf) { return ((FieldFlags(ptf) >> 1) & 1) != 0; }
-    static SF_INLINE void SetPlainFieldText(void* ptf, const char* ptext)
+    static SF_INLINE bool IsHtmlField(void* ptf) { return (FieldFlags(ptf) & 2u) != 0; }
+    static SF_INLINE void SetHtmlField(void* ptf, bool v) { (v) ? FieldFlags(ptf) |= 2u : FieldFlags(ptf) &= ~2u; }
+    // GFx::TextField::SetText(const char*, bool reqHtml) with reqHtml false.
+    static SF_INLINE void SetPlainFieldText(void* ptf, const char* ptext, bool reqHtml = false)
     {
-        if (IsHtmlField(ptf))
-            FieldFlags(ptf) &= ~2u;
+        bool currHtml = IsHtmlField(ptf);
+        if (reqHtml && !currHtml)        { SetHtmlField(ptf, true); }
+        else if (!reqHtml && currHtml)   { SetHtmlField(ptf, false); }
         FUN_1425bd9a0(ptf, ptext, false, true);
     }
 
     // @0x1424b4ea0
-    // MS2-FUNCTIONAL: one byte off, the exe tests the html bit with and al,1 (ours test al,1)
     void TextField::textSet(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
