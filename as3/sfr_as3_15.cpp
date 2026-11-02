@@ -266,8 +266,46 @@ template struct ThunkFunc0<Instances::fl_media::SoundChannel, 5, const Value>;
 template struct ThunkFunc0<Class, 0, Value>;
 // thunk 0x1424d2180: Class::lengthGet
 template struct ThunkFunc0<Class, 1, SInt32>;
+// Unit-local friend of Value (as3_value.h) for an inlined copy of a private-member assign.
+struct ValueAssignCopies
+{
+    // Value::AssignUnsafe(const ASString&) (out of line in sfr_as3_17), which the exe inlines into Class::toString.
+    static SF_INLINE void AssignUnsafeString15(Value& to, const ASString& v)
+    {
+        if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
+        {
+            to.value = (ASStringNode*)NULL;
+            to.SetKind(Value::kObject);
+        }
+        else
+        {
+            to.SetKind(Value::kString);
+            to.value = v.GetNode();
+            to.AddRefString();
+        }
+    }
+};
+
+// ThunkArgs0<ASString> with the result store inlined.
+struct ThunkArgs15String
+{
+    SF_INLINE ThunkArgs15String(VM& vm, Value& result)
+        : vm(vm), result(result), r(ThunkDefault<ASString>::Get(this->vm.GetStringManager())) {}
+    SF_INLINE ~ThunkArgs15String() { if (!vm.IsException()) ValueAssignCopies::AssignUnsafeString15(result, r); }
+
+    VM&      vm;
+    Value&   result;
+    ASString r;
+};
+
 // thunk 0x1424d21e0: Class::toString
-// MS2-FUNCTIONAL: inlining only: the exe inlines the string result store (Value::AssignUnsafe(const ASString&))
+template <>
+void ThunkFunc0<Class, 2, ASString>::Func(const ThunkInfo&, VM& vm, const Value& obj, Value& result, unsigned, const Value*)
+{
+    Class& self = static_cast<Class&>(*obj.GetObject());
+    ThunkArgs15String args(vm, result);
+    (self.*Method)(args.r);
+}
 template struct ThunkFunc0<Class, 2, ASString>;
 
 
