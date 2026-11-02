@@ -1728,31 +1728,45 @@ int Sfr27ExecThrow(VM* vm, UInt64* pc, CallFrame* frame)
     return FUN_142519a00(vm, pc - *code, frame);
 }
 
+// Value(const ASString&) as the exe inlines it (the out-of-line one is 0x1424dbf70); same body as sfr_as3_18's.
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
 // typeof: the value on top of the stack is replaced by the name of its type.
-// MS2-FUNCTIONAL 0x142540910: same kind switch and string-manager index; register allocation and Value temporaries differ from the exe (frame differs, same helper calls).
 // @0x142540910
 void Sfr27ExecTypeOf(VM* vm)
 {
     Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
     SPInt idx;
-    switch (static_cast<UInt32>(top->GetKind()))
+    switch (top->GetKind())
     {
     case 0: idx = 1; break;
     case 1: idx = 6; break;
     case 2: case 3: case 4: idx = 7; break;
-    case 5: case 7: case 0xe: case 0xf: case 0x10: case 0x11: idx = 9; break;
     case 10:
         idx = top->GetGASRefCountBase() == NULL ? 10 : 8;
         break;
+    case 5: case 7: case 0xe: case 0xf: case 0x10: case 0x11: idx = 9; break;
     case 0xb: case 0xc:
     {
         const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(*vm, *top));
-        idx = static_cast<UInt32>(*reinterpret_cast<const int*>(traits + 0x70) - 0xd) < 2 ? 11 : 10;
+        const int tt = *reinterpret_cast<const int*>(traits + 0x70);
+        idx = (tt == 0xd || tt == 0xe) ? 11 : 10;
         break;
     }
     default: idx = 0xc; break;
     }
-    top->Assign(reinterpret_cast<ASStringNode**>(&vm->GetStringManager())[idx]);
+    top->Assign(Value(vm->GetStringManager().GetBuiltin(static_cast<BuiltinType>(idx)), Value::InlineStr));
 }
 
 
@@ -2005,7 +2019,7 @@ ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, con
 
 // The traits' slot ind receives v for obj.
 // @0x142529eb0
-char* Sfr27TraitsSetSlotValue(Traits* tr, char* ret, SPInt ind, Value* v, Object* obj)
+__declspec(noinline) char* Sfr27TraitsSetSlotValue(Traits* tr, char* ret, SPInt ind, Value* v, Object* obj)
 {
     Sfr27SlotSetValueObj(&tr->GetSlotInfo(AbsoluteIndex(ind)), ret, &tr->GetVM(), v, obj);
     return ret;
@@ -2016,7 +2030,8 @@ char* Sfr27TraitsSetSlotValue(Traits* tr, char* ret, SPInt ind, Value* v, Object
 char* Sfr27ObjectSetSlotValue(Object* obj, char* ret, UInt32 slot, Value* v)
 {
     Traits& tr = obj->GetTraits();
-    return Sfr27TraitsSetSlotValue(&tr, ret, static_cast<SPInt>(slot) - 1 + tr.FirstOwnSlotInd.Get(), v, obj);
+    Sfr27TraitsSetSlotValue(&tr, ret, static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(tr.FirstOwnSlotInd.Get()), v, obj);
+    return ret;
 }
 
 // AS3 Array object: sets its length (GFx::Value::ObjectInterface::SetArraySize).
@@ -3415,36 +3430,24 @@ void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int c
     }
 }
 
+// VMAbcFile::GetInternedString: the pool string through the VM's StringManager (the exe reloads the tracer from
+// the State for each chain).
+static __forceinline ASString TrInternedString(State* st, UInt32 index)
+{
+    const Abc::ConstPool* pool = reinterpret_cast<const Abc::ConstPool*>(TrFile(StV(st).Tracer()) + 0x30);
+    const StringDataPtr sd = pool->GetString(index);
+    return reinterpret_cast<VM*>(TrVM(StV(st).Tracer()))->GetStringManager().CreateString(sd.ToCStr(), sd.GetSize());
+}
+
 // Tracer: push the constant-pool string index as a String value (the empty string becomes a null object).
-// MS2-FUNCTIONAL 0x14253f690: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x14253f690: same instructions and order; the exe puts the null-object temp of the inlined
+// Value(ASString) in the StringDataPtr's slot (frame 0x50 vs 0x60, the Value 0x10 lower).
 // @0x14253f690
 void Sfr31TracePushString(State* st, UInt32 index)
 {
-    const UPInt tracer = Sfr31Rd(reinterpret_cast<UPInt>(st), 0);
-    FUN_14251fcd0(tracer, index);
-    UPInt lit[2];
-    FUN_142545310(Sfr31Rd(TrFile(tracer), 0x70) + static_cast<UPInt>(index) * 8, lit);
-    ASStringManager* mgr = reinterpret_cast<ASStringManager*>(Sfr31Rd(Sfr31Rd(TrVM(tracer), 0x10), 0x1e8));
-    ASStringNode* node = mgr->CreateStringNode(reinterpret_cast<const char*>(lit[0]), lit[1]);
-    UPInt raw[4] = { 10, 0, 0, 0 };
-    UInt32* kind = reinterpret_cast<UInt32*>(raw);
-    int* rc = reinterpret_cast<int*>(reinterpret_cast<UPInt>(node) + 0x18);
-    const int base = *rc;
-    *rc = base + 1;
-    if (reinterpret_cast<UPInt>(node) == Sfr31Rd(reinterpret_cast<UPInt>(node), 8) + 0x68)
-    {
-        *kind = 0xc;
-        raw[2] = 0;
-        raw[3] = lit[1];
-    }
-    else
-    {
-        *rc = base + 2;
-        raw[2] = reinterpret_cast<UPInt>(node);
-    }
-    StV(st).OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
-    reinterpret_cast<Value*>(raw)->~Value();
-    Sfr31ReleaseStr(reinterpret_cast<UPInt>(node));
+    FUN_14251fcd0(StV(st).Tracer(), index);
+    const ASString str = TrInternedString(st, index);
+    StV(st).OpStack().PushBack(Value(str, Value::InlineStr));
 }
 
 // Set the owned object of a holder {obj, ownsFlag}: destroy the previous owned object (a value array plus its names).
