@@ -2706,7 +2706,6 @@ bool AvmInteractiveObj::OnFocusChange(InteractiveObject* ptoBeFocused, unsigned 
 
 // Takes the object and its branch (the play list entries before it that descend from it) out of the play list and
 // puts them back where the parent wants the object now.
-// MS2-FUNCTIONAL block layout of the branch reinsertion
 // @0x142517ed0
 void AvmInteractiveObj::MoveBranchInPlayList()
 {
@@ -2716,11 +2715,16 @@ void AvmInteractiveObj::MoveBranchInPlayList()
     InteractiveObject* pafter = NULL;
 
     // the first entry before the branch: the first one p is not an ancestor of
-    for (InteractiveObject* pcur = p->pPlayPrev; pcur; pcur = pcur->pPlayPrev)
+    InteractiveObject* pcur = p->pPlayPrev;
+    InteractiveObject* parpar = p;
+    for (; pcur; pcur = pcur->pPlayPrev)
     {
         InteractiveObject* c = pcur;
-        while (c && c != p)
-            c = c->GetParent();
+        for (; c; c = c->GetParent())
+        {
+            if (c == parpar)
+                break;
+        }
         if (!c)
         {
             pafter = pcur;
@@ -2732,10 +2736,15 @@ void AvmInteractiveObj::MoveBranchInPlayList()
         pend = pafter->pPlayNext;
         pafter->pPlayNext = pbefore;
     }
-    else if (pbefore)
+    else
     {
-        pend = GetMovieImpl()->pPlayList;
-        GetMovieImpl()->pPlayList = pbefore;
+        if (pbefore)
+        {
+            pend = GetMovieImpl()->pPlayList;
+            GetMovieImpl()->pPlayList = pbefore;
+        }
+        else
+            pend = p;
     }
     if (pbefore)
         pbefore->pPlayPrev = pafter;
@@ -2750,20 +2759,24 @@ void AvmInteractiveObj::MoveBranchInPlayList()
         if (pins)
         {
             p->pPlayNext = pins->pPlayNext;
-            if (pins->pPlayNext)
-                pins->pPlayNext->pPlayPrev = p;
+            if (p->pPlayNext)
+                p->pPlayNext->pPlayPrev = p;
             pins->pPlayNext = pend;
             pend->pPlayPrev = pins;
-            GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
-            return;
         }
+        else
+            parent = NULL;
     }
-    if (GetMovieImpl()->pPlayList)
+    if (!parent)
     {
-        p->pPlayNext = GetMovieImpl()->pPlayList;
-        GetMovieImpl()->pPlayList->pPlayPrev = p;
+        InteractiveObject* phead = GetMovieImpl()->pPlayList;
+        if (phead)
+        {
+            p->pPlayNext = phead;
+            phead->pPlayPrev = p;
+        }
+        GetMovieImpl()->pPlayList = pend;
     }
-    GetMovieImpl()->pPlayList = pend;
     GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
 }
 
@@ -5448,19 +5461,25 @@ void FUN_14251a3b0(UPInt self, InteractiveObject* pmovie, const EventId& evt, in
     Sfr34_OnKey(self, evt, keyMask);
 }
 
+// MovieImpl::GetCachedLog.
+static __forceinline Log* Sfr18GetCachedLog(MovieImpl* movie)
+{
+    if (!((UByte)(movie->Flags >> 1) & 1))     // Flag_CachedLogFlag
+        movie->pCachedLog = movie->GetStateBag()->GetLog();
+    return movie->pCachedLog;
+}
+
 // MovieRoot's FlashUI::Output: an AVM message to the movie's log (cached for the frame) by type, cut to 1999
 // characters. self is the FlashUI part (+0x28) of the root.
-// MS2-FUNCTIONAL free function on the FlashUI subobject this (MovieRoot's FlashUI base is not modeled)
+// A free function on the FlashUI subobject this (MovieRoot's FlashUI base is not modeled).
 // @0x14251bc40
 void FUN_14251bc40(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 {
     MovieImpl* movie = reinterpret_cast<MovieRoot*>(self - 0x28)->GetMovieImpl();
-    if (!((movie->Flags >> 1) & 1))     // Flag_CachedLogFlag
-        movie->pCachedLog = movie->GetStateBag()->GetLog();
-    Log* log = movie->pCachedLog;
+    Log* log = Sfr18GetCachedLog(movie);
     if (!log)
         return;
-    int logId;
+    LogMessageId logId;
     switch (type)
     {
     case FlashUI::Output_Error:   logId = LogChannel_Script | LogMessage_Error; break;
@@ -5473,7 +5492,10 @@ void FUN_14251bc40(UPInt self, FlashUI::OutputMessageType type, const char* msg)
     const size_t copy = len < sizeof(buf) ? len : sizeof(buf) - 1;
     strncpy_s(buf, sizeof(buf), msg, copy);
     buf[copy] = '\0';
-    log->LogMessageById(logId, len < sizeof(buf) ? "%s" : "%s ...<truncated>", buf);
+    if (len < sizeof(buf))
+        log->LogMessageById(logId, "%s", buf);
+    else
+        log->LogMessageById(logId, "%s ...<truncated>", buf);
 }
 
 // sfr34 batch AA: the mouse hit test of an AS3 bitmap.
