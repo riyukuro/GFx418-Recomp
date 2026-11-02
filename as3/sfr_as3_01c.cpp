@@ -3210,13 +3210,27 @@ Scaleform::GFx::AS3::Instances::Namespace& FUN_1423f1b00(Scaleform::GFx::AS3::In
 {
     return *self = other;
 }
-// MS2-FUNCTIONAL: the exe stores the namespace through a whole VU and inlines its AddRef; the header's
-// AssignUnsafe sets the pointer alone and calls AddRefInternal.
+// Unit-local friend of Value (as3_value.h): the exe stores the namespace through a whole VU and inlines its AddRef,
+// where the header's AssignUnsafe sets the pointer alone and calls AddRefInternal.
+namespace Scaleform { namespace GFx { namespace AS3 {
+struct ValueAssignCopies
+{
+    static __forceinline void AssignNamespace01c(Value& v, Instances::Namespace* p)
+    {
+        v.Release();
+        v.SetKind(Value::kNamespace);
+        v.value = p;
+        if (p)
+            p->AddRef();
+    }
+};
+}}} // namespace Scaleform::GFx::AS3
 // @0x1423f1b90
 Scaleform::GFx::AS3::Value& FUN_1423f1b90(Scaleform::GFx::AS3::Value* self,
                                           Scaleform::GFx::AS3::Instances::Namespace* ns)
 {
-    return *self = ns;
+    Scaleform::GFx::AS3::ValueAssignCopies::AssignNamespace01c(*self, ns);
+    return *self;
 }
 
 // Native method thunks without pdata that only the ThunkInfo tables of data_rdata_sf_a / data_data_game reach: they
