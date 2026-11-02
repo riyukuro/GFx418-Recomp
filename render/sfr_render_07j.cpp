@@ -126,7 +126,8 @@ void RenderQueueProcessor::BeginFrame()
 void RenderQueueProcessor::Flush()
 {
     ProcessQueue(QPM_All);
-    resetBufferItems();
+    PrepareItemBuffer.ClearItem();
+    EmitItemBuffer.ClearItem();
 }
 
 // @0x1426e02b0
