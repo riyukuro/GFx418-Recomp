@@ -353,7 +353,7 @@ namespace Instances { namespace fl_geom
             {
                 Value e;
                 if ((UInt32)i < (UInt32)v->V.V.GetSize())
-                    e = Value(v->V.V[i]);
+                    e.SetNumber(v->V.V[i]);
                 mat4.Data()[i] = e.AsNumber();
             }
             mat4.Transpose();
@@ -815,12 +815,15 @@ namespace Instances { namespace fl_geom
         result = r;
     }
 
+    static inline String Cat(const char* a, const ASString& b) { return String(a) + String(b.ToCStr(), b.GetSize()); }
+    static inline String Cat(const String& a, const ASString& b) { return a + String(b.ToCStr(), b.GetSize()); }
+
     // "(x=1, y=2, z=3)"; w is not shown. Built as a String, unlike Point's ASString chain.
     // @0x142490150
     void Vector3D::toString(ASString& result)
     {
         VM& vm = GetVM();
-        result += "(x=" + vm.AsString(Value(x)) + ", y=" + vm.AsString(Value(y)) + ", z=" + vm.AsString(Value(z)) + ")";
+        result += (Cat(Cat(Cat("(x=", vm.AsString(Value(x))) + ", y=", vm.AsString(Value(y))) + ", z=", vm.AsString(Value(z))) + ")").ToCStr();
     }
 }}
 
@@ -1145,7 +1148,7 @@ namespace Instances { namespace fl_geom
     }
 
     // The bounding box of both; an empty side yields a copy of the other.
-    // MS2-FUNCTIONAL: the exe materialises the inlined toUnion->isEmpty() as a bool in al and lays the copy-of-this block out inline
+    // MS2-FUNCTIONAL: the exe materialises the inlined isEmpty() results as a bool in al (and shares the first two arg arrays); same min/max flow
     // @0x142490fb0
     void Rectangle::union_(SPtr<Instances::fl_geom::Rectangle>& result, Instances::fl_geom::Rectangle* toUnion)
     {
@@ -1165,19 +1168,10 @@ namespace Instances { namespace fl_geom
             Value args[] = { Value(toUnion->x), Value(toUnion->y), Value(toUnion->width), Value(toUnion->height) };
             return GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck();
         }
-        const Value::Number left1 = x;
-        const Value::Number top1 = y;
-        const Value::Number right1 = x + width;
-        const Value::Number bottom1 = y + height;
-        const Value::Number left2 = toUnion->x;
-        const Value::Number top2 = toUnion->y;
-        const Value::Number right2 = left2 + toUnion->width;
-        const Value::Number bottom2 = top2 + toUnion->height;
-        Value::Number left, top, right, bottom;
-        left = left1 > left2 ? left2 : left1;
-        right = right1 > right2 ? right1 : right2;
-        top = top1 > top2 ? top2 : top1;
-        bottom = bottom1 > bottom2 ? bottom1 : bottom2;
+        const Value::Number left = Alg::Min(toUnion->x, x);
+        const Value::Number top = Alg::Min(toUnion->y, y);
+        const Value::Number right = Alg::Max(x + width, toUnion->x + toUnion->width);
+        const Value::Number bottom = Alg::Max(y + height, toUnion->y + toUnion->height);
         Value args[] = { Value(left), Value(top), Value(right - left), Value(bottom - top) };
         GetVM().ConstructBuiltinObject(result, "flash.geom.Rectangle", 4, args).DoNotCheck();
     }
@@ -2224,7 +2218,6 @@ namespace Instances { namespace fl_geom
     }
 
     // The 16 elements column-major (the transpose of mat4), the translation in pixels.
-    // MS2-FUNCTIONAL: the matrix copy and the loop's Value temporaries scheduled differently
     // @0x14248da70
     __declspec(noinline) void Matrix3D::rawDataGet(SPtr<Instances::fl_vec::Vector_double>& result)
     {
@@ -2233,12 +2226,14 @@ namespace Instances { namespace fl_geom
         m.Ty() = TwipsToPixels(m.Ty());
         m.Tz() = TwipsToPixels(m.Tz());
         m.Transpose();
+        Value argv[] = { Value(0.0) };
         ASVM& asvm = static_cast<ASVM&>(GetVM());
-        Value argv(0.0);
-        asvm.ConstructInstance(result, &asvm.GetClassVectorNumber(), 1, &argv);
+        asvm.ConstructInstance(result, &asvm.GetClassVectorNumber(), 1, argv);
         for (int i = 0; i < 16; i++)
         {
-            if (!result->V.Set(i, Value(m.Data()[i]), result->GetVM().GetClassTraitsNumber()))
+            Value e(m.Data()[i]);
+            CheckResult ok = result->V.Set(i, e, result->GetVM().GetClassTraitsNumber());
+            if (!ok)
                 break;
         }
     }
@@ -2252,7 +2247,6 @@ namespace Instances { namespace fl_geom
     }
 
     // v holds the elements column-major with the translation in pixels; missing elements read as undefined's 0 bits.
-    // MS2-FUNCTIONAL: the element Value temporaries and the Matrix3F conversion scheduled differently
     // @0x14248dc60
     void Matrix3D::rawDataSet(const Value& result, Instances::fl_vec::Vector_double* v)
     {
@@ -2263,7 +2257,7 @@ namespace Instances { namespace fl_geom
         {
             Value e;
             if ((UInt32)i < (UInt32)v->V.V.GetSize())
-                e = Value(v->V.V[i]);
+                e.SetNumber(v->V.V[i]);
             mat4.Data()[i] = e.AsNumber();
         }
         mat4.Transpose();
