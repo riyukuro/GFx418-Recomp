@@ -3714,8 +3714,10 @@ bool AvmDisplayObjContainer::SwapChildrenAt(unsigned i1, unsigned i2)
 // Strict equality of two values (same kind: payload compare; mixed Int/UInt/Number: numeric compare).
 // MS2-FUNCTIONAL 0x14252cbf0: behavior-equivalent recovery; codegen differs from exe
 // @0x14252cbf0
-bool Sfr31StrictEquals(const UInt32* a, const UInt32* b)
+bool StrictEqual(const Value& x, const Value& y)
 {
+    const UInt32* a = reinterpret_cast<const UInt32*>(&x);
+    const UInt32* b = reinterpret_cast<const UInt32*>(&y);
     const UInt32 ka = a[0] & 0x1f;
     const UInt32 kb = b[0] & 0x1f;
     const UPInt pa = reinterpret_cast<UPInt>(a);

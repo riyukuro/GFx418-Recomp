@@ -48,7 +48,6 @@ void Sfr31ExecEscXAttr(UPInt vm);
 void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc);
 void Sfr31ExecIndexedQuery(UPInt vm);
 void Sfr31ValueToBool(Value* v);
-bool Sfr31StrictEquals(const UInt32* a, const UInt32* b);
 void Sfr31ExecSetProperty(UPInt vmAddr, UPInt file, UInt32 idx);
 void Sfr31ExecGetSuper(UPInt vmAddr, UPInt file, UInt32 idx);
 void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx);
@@ -278,7 +277,7 @@ Sfr33ExecExit Sfr33ExecFrame(VM& vm, CallFrame& cf, const UPInt* pc, UPInt sizeA
         case 0x19:
         case 0x1a:
         {
-            const bool eq = Sfr31StrictEquals(reinterpret_cast<const UInt32*>(sp - 1), reinterpret_cast<const UInt32*>(sp));
+            const bool eq = StrictEqual(*(sp - 1), *sp);
             sp->~Value();
             --sp;
             sp->~Value();
