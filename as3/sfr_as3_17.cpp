@@ -3842,7 +3842,6 @@ CheckResult Value::Convert2String(StringBuffer& result) const
 }
 
 // ToInt32: undefined, thunks and null are 0; strings go through ToNumber, objects through their primitive value.
-// MS2-FUNCTIONAL 0x1424f0d30: the exe duplicates the release of the primitive temporary on each exit; same results
 // @0x1424f0d30
 CheckResult Value::Convert2Int32(SInt32& result) const
 {
@@ -3853,13 +3852,13 @@ CheckResult Value::Convert2Int32(SInt32& result) const
     case kThunkFunction:
         result = 0;
         break;
-    case kBoolean:
-        result = AsBool() ? 1 : 0;
-        break;
     case kInt:
     case kUInt:
     case kVTableInd:
         result = value.VS._1.VInt;
+        break;
+    case kBoolean:
+        result = AsBool() ? 1 : 0;
         break;
     case kNumber:
         result = ConvertDouble2SInt32(AsNumber());
@@ -3883,7 +3882,8 @@ CheckResult Value::Convert2Int32(SInt32& result) const
             Value v;
             if (!Convert2PrimitiveValueUnsafe(v))
                 return false;
-            return v.Convert2Int32(result);
+            if (!v.Convert2Int32(result))
+                return false;
         }
         break;
     }
@@ -4712,7 +4712,6 @@ CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
 }
 
 // ToUInt32 (undefined, thunks and null give 0).
-// MS2-FUNCTIONAL 0x1424f1a30: the exe inlines the string-to-number tail differently; same results
 // @0x1424f1a30
 CheckResult Value::Convert2UInt32(UInt32& result) const
 {
@@ -4721,38 +4720,42 @@ CheckResult Value::Convert2UInt32(UInt32& result) const
     case kUndefined:
     case kThunk:
     case kThunkFunction:
+        result = 0;
         break;
-    case kBoolean:
-        result = value.VS._1.VBool;
-        return true;
     case kInt:
     case kUInt:
         result = value.VS._1.VUInt;
-        return true;
+        break;
+    case kBoolean:
+        result = AsBool() ? 1 : 0;
+        break;
     case kNumber:
-        result = ConvertDouble2SInt32(value.VNumber);
-        return true;
+        result = ConvertDouble2SInt32(AsNumber());
+        break;
     case kString:
-        if (value.VS._1.VStr)
+        if (GetStringNode())
         {
             Number n;
-            if (!Convert2NumberInternal(n, kString))
+            if (!Convert2NumberInline(n))
                 return false;
             result = ConvertDouble2SInt32(n);
-            return true;
         }
+        else
+            result = 0;
         break;
     default:
-        if (!IsNull())
+        if (IsNull())
+            result = 0;
+        else
         {
             Value v;
             if (!Convert2PrimitiveValueUnsafe(v))
                 return false;
-            return v.Convert2UInt32(result);
+            if (!v.Convert2UInt32(result))
+                return false;
         }
         break;
     }
-    result = 0;
     return true;
 }
 
