@@ -484,9 +484,10 @@ DisplayObject* DisplayObject::GetMaskOwner() const
 // @0x1425f22e0
 Double DisplayObject::GetMouseX() const
 {
-    PointF a = GetMovieImpl()->MouseLastPosition;
+    MovieImpl* pMovie = GetMovieImpl();
+    PointF a = pMovie->MouseLastPosition;
     PointF b(PointF::NoInit);
-    GetMovieImpl()->SetNormalizedScreenCoords(a);
+    pMovie->SetNormalizedScreenCoords(a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.x + 0.5));
 }
@@ -495,9 +496,10 @@ Double DisplayObject::GetMouseX() const
 // @0x1425f23e0
 Double DisplayObject::GetMouseY() const
 {
-    PointF a = GetMovieImpl()->MouseLastPosition;
+    MovieImpl* pMovie = GetMovieImpl();
+    PointF a = pMovie->MouseLastPosition;
     PointF b(PointF::NoInit);
-    GetMovieImpl()->SetNormalizedScreenCoords(a);
+    pMovie->SetNormalizedScreenCoords(a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.y + 0.5));
 }
