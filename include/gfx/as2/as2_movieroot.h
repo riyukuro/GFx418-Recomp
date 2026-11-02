@@ -218,7 +218,7 @@ public:
     }
     // The string manager is loaded before the String's data and size (exe 0x1428f7ed0).
     ASString CreateString(const String& str) const { return pStringManager->CreateString(str); }
-    ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
+    ASString CreateString(const char* pstr) const { return pStringManager->CreateString(pstr); }
     ASString CreateString(const wchar_t* pwstr) const { return ASString(pStringManager->CreateStringNode(pwstr)); }
     // A string over the literal itself (not copied).
     ASString CreateConstString(const char* pstr) const

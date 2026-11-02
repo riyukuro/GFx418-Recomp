@@ -1146,7 +1146,6 @@ InteractiveObject* AvmCharacter::CloneDisplayObject(const ASString& newname, int
     return (pnewch && pnewch->IsInteractiveObject()) ? static_cast<InteractiveObject*>(pnewch) : 0;
 }
 
-// MS2-FUNCTIONAL regalloc: the exe loads the string manager through r9, not rcx
 // @0x142937d60
 void MovieRoot::CreateString(GFx::Value* pvalue, const char* pstring)
 {
