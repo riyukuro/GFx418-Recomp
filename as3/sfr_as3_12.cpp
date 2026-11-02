@@ -1864,18 +1864,15 @@ namespace Instances { namespace fl_net
         ASString n = sm.CreateString(name.ToCStr());
         Value nv(n);
         ASString v = sm.CreateString(value.ToCStr());
-        Value vv(v);
-        Multiname mn(pthis->GetVM().GetPublicNamespace(), nv);
-        pthis->SetProperty(mn, vv).DoNotCheck();
+        pthis->SetProperty(Multiname(pthis->GetVM().GetPublicNamespace(), nv), Value(v)).DoNotCheck();
     }
 
-    // MS2-FUNCTIONAL: same parse and calls; the exe allocates the loop registers differently (r12/r15 vs r14/rsi)
     // @0x14249b0a0
     void URLVariables::decode(const Value& /*result*/, const ASString& source)
     {
+        bool inName = true;
         StringBuffer name;
         StringBuffer value;
-        bool inName = true;
         const char* p;
         for (UInt32 c = source.GetFirstCharAt(0, &p); c; c = source.GetNextChar(&p))
         {
