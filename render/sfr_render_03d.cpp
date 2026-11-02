@@ -29,10 +29,6 @@
 #include "ms2/scaleform/kernel/sf_alg.h"
 #include "ms2/scaleform/kernel/sf_log.h"
 
-namespace Scaleform { namespace GFx { namespace AS2 {
-void Matrix2F_SetInverse(Render::Matrix2F* m, const Render::Matrix2F& src);
-}}}
-
 namespace Scaleform { namespace Render {
 
 typedef ArrayLH_POD<UByte>                MorphContainer;
@@ -2016,7 +2012,20 @@ bool ShapeMeshProvider::createNullMesh(VertexOutput* pout, unsigned layer, unsig
     return true;
 }
 
-// MS2-FUNCTIONAL: same code, the exe puts the path position, the inverse copy and the grid matrix in other stack slots
+// Matrix2x4<float>::SetInverse (0x142446cb0) seen with its source matrix by value: the caller's copy is then an
+// argument temporary, which the exe places at the bottom of the frame
+void FUN_142446cb0(Matrix2F* m, Matrix2F src);
+
+// Matrix2x4::SetRectToParl as the exe inlines it into computeImgAdjustMatrix, with the inverse kept out of line
+static SF_INLINE void Sfr03dSetRectToParl(Matrix2F* m, float x1, float y1, float x2, float y2, const float* parl)
+{
+    float src[6] = { x1, y1, x2, y1, x2, y2 };
+    m->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+    Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
+    FUN_142446cb0(m, *m);
+    m->Append(d);
+}
+
 // @0x14262f720
 void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsigned layer, unsigned imgFillStyle,
                                                Matrix2F* mtx)
@@ -2048,13 +2057,7 @@ void ShapeMeshProvider::computeImgAdjustMatrix(const Scale9GridData* s9g, unsign
         grid.Transform(&parl[0], &parl[1]);
         grid.Transform(&parl[2], &parl[3]);
         grid.Transform(&parl[4], &parl[5]);
-        // SetRectToParl; the exe expands the parallelogram mapping in this function
-        float src[6] = { bounds.x1, bounds.y1, bounds.x2, bounds.y1, bounds.x2, bounds.y2 };
-        mtx->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
-        Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
-        // mtx->Invert(), with the inverse the exe keeps out of line
-        GFx::AS2::Matrix2F_SetInverse(mtx, Matrix2F(*mtx));
-        mtx->Append(d);
+        Sfr03dSetRectToParl(mtx, bounds.x1, bounds.y1, bounds.x2, bounds.y2, parl);
     }
 }
 
