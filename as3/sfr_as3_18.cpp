@@ -1679,20 +1679,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace TR {
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace {
-// a state's operand stack, scope stack or register file
-SF_FORCEINLINE ArrayDH<Value>& TrMergeList(TR::State& st, TR::MergeSet ms)
-{
-    switch (ms)
-    {
-    case TR::msOpStack:     return st.GetOpStack();
-    case TR::msScopeStack:  return st.GetScopeStack();
-    default:                return st.GetRegisters();
-    }
-}
-SF_FORCEINLINE const ArrayDH<Value>& TrMergeList(const TR::State& st, TR::MergeSet ms)
-{
-    return TrMergeList(const_cast<TR::State&>(st), ms);
-}
 // Tracer::IsNumericType / IsNotNullableType, which the exe inlines here
 SF_FORCEINLINE bool TrIsNumericType(const Tracer& t, const Traits* tr)
 {
@@ -1740,15 +1726,31 @@ __declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(V
 
 // Merges entry ind of from's operand stack / scope stack / register file into to's; a type conflict raises the
 // verify error and fails.
-// MS2-FUNCTIONAL 0x1425178e0: register allocation and block layout of the traits-join cases differ
+// The lists are picked by two NULL-start switches (the exe's sub/cmp/lea prologue). The common-base search is a
+// lambda so the found flag is set once before the class/instance join, as in the exe.
+// MS2-FUNCTIONAL 0x1425178e0: register naming (rbp/r12/r13/r15 swapped) and the ID-bit test order in the
+// register-file case differ; ops and layout otherwise match (1413 vs 1414 bytes)
 // @0x1425178e0
 __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to, const TR::State& from, TR::MergeSet ms)
 {
-    Value& tv = TrMergeList(to, ms)[ind];
-    const Value& fv = TrMergeList(from, ms)[ind];
+    ArrayDH<Value>* to_list = NULL;
+    switch (ms)
+    {
+    case TR::msOpStack:      to_list = &to.GetOpStack(); break;
+    case TR::msScopeStack:   to_list = &to.GetScopeStack(); break;
+    case TR::msRegisterFile: to_list = &to.GetRegisters(); break;
+    }
+    const ArrayDH<Value>* from_list = NULL;
+    switch (ms)
+    {
+    case TR::msOpStack:      from_list = &from.GetOpStack(); break;
+    case TR::msScopeStack:   from_list = &from.GetScopeStack(); break;
+    case TR::msRegisterFile: from_list = &from.GetRegisters(); break;
+    }
+    Value& tv = (*to_list)[ind];
+    const Value& fv = (*from_list)[ind];
     const Traits* t1 = TR::TraceValueTraits(*this, tv);
     const Traits* t2 = TR::TraceValueTraits(*this, fv);
-    const Traits* nullTr = &GetVM().GetITraitsNull();
 
     if (ms == TR::msScopeStack)
     {
@@ -1782,16 +1784,16 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
                 const bool num1 = IsNumericType(t1);
                 if (num1 && IsNumericType(t2))
                     JoinSNodesUpdateType(tv, fv, GetNumberType());
-                else if (tv.IsNull() || t1 == nullTr)
+                else if (tv.IsNull() || t1 == &GetVM().GetITraitsNull())
                 {
-                    if (fv.IsNull() || t2 == nullTr)
+                    if (fv.IsNull() || t2 == &GetVM().GetITraitsNull())
                         ;
                     else if (t2 != &GetStringType() && IsNumericType(t2))
                         goto fail;
                     else
                         tv.Assign(fv);
                 }
-                else if (fv.IsNull() || t2 == nullTr)
+                else if (fv.IsNull() || t2 == &GetVM().GetITraitsNull())
                 {
                     if (t1 != &GetStringType() && num1)
                         goto fail;
@@ -1801,21 +1803,25 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
                     // the nearest common base: mark t1's chain, find the first marked one on t2's
                     for (const Traits* t = t1; t != NULL; t = t->GetParent())
                         t->Flags |= Traits::TmpBitMask;
-                    bool found = false;
-                    for (const Traits* t = t2; t != NULL; t = t->GetParent())
-                    {
-                        if (t->Flags & Traits::TmpBitMask)
+                    // bit 7 = TmpBitMask, bit 5 = IsClassTraits(); the unsigned byte shifts give the exe's shr
+                    bool found;
+                    [&] {
+                        for (const Traits* t = t2; t != NULL; t = t->GetParent())
                         {
-                            found = true;
-                            if (t->IsClassTraits())
-                                JoinSNodesUpdateType(tv, fv, const_cast<ClassTraits::Traits&>(
-                                                                 static_cast<const ClassTraits::Traits&>(*t)));
-                            else
-                                JoinSNodesUpdateType(tv, fv, const_cast<InstanceTraits::Traits&>(
-                                                                 static_cast<const InstanceTraits::Traits&>(*t)));
-                            break;
+                            if ((UByte)((UPInt)t->Flags >> 7) & 1)
+                            {
+                                found = true;
+                                if ((UByte)((UPInt)t->Flags >> 5) & 1)
+                                    JoinSNodesUpdateType(tv, fv, const_cast<ClassTraits::Traits&>(
+                                                                     static_cast<const ClassTraits::Traits&>(*t)));
+                                else
+                                    JoinSNodesUpdateType(tv, fv, const_cast<InstanceTraits::Traits&>(
+                                                                     static_cast<const InstanceTraits::Traits&>(*t)));
+                                return;
+                            }
                         }
-                    }
+                        found = false;
+                    }();
                     for (const Traits* t = t1; t != NULL; t = t->GetParent())
                         t->Flags &= ~static_cast<SPInt>(Traits::TmpBitMask);
                     if (!found)
@@ -1839,23 +1845,31 @@ fail:
 
 // Merges from's operand stack / scope stack / register file into to's, entry by entry; to grows to from's size
 // unless sizes must agree (update).
-// MS2-FUNCTIONAL 0x142517740: CheckResult zero-init and AddRef ordering differ from the exe
 // @0x142517740
 __declspec(safebuffers) CheckResult Tracer::MergeLists(TR::State& to, const TR::State& from, bool update, TR::MergeSet ms)
 {
-    ArrayDH<Value>& tl = TrMergeList(to, ms);
-    const ArrayDH<Value>& fl = TrMergeList(from, ms);
-    if (update && tl.GetSize() != fl.GetSize())
-        return false;
-    for (UPInt i = 0; i < fl.GetSize(); ++i)
+    ArrayDH<Value>* to_list = NULL;
+    switch (ms)
     {
-        if (i < tl.GetSize())
-        {
-            if (!MergeValues(i, to, from, ms))
-                return false;
-        }
-        else
-            tl.PushBack(fl[i]);
+    case TR::msOpStack:      to_list = &to.GetOpStack(); break;
+    case TR::msScopeStack:   to_list = &to.GetScopeStack(); break;
+    case TR::msRegisterFile: to_list = &to.GetRegisters(); break;
+    }
+    const ArrayDH<Value>* from_list = NULL;
+    switch (ms)
+    {
+    case TR::msOpStack:      from_list = &from.GetOpStack(); break;
+    case TR::msScopeStack:   from_list = &from.GetScopeStack(); break;
+    case TR::msRegisterFile: from_list = &from.GetRegisters(); break;
+    }
+    if (update && to_list->GetSize() != from_list->GetSize())
+        return false;
+    for (UPInt i = 0; i < from_list->GetSize(); ++i)
+    {
+        if (i >= to_list->GetSize())
+            to_list->PushBack((*from_list)[i]);
+        else if (!MergeValues(i, to, from, ms))
+            return false;
     }
     return true;
 }
