@@ -21,14 +21,13 @@ extern "C" void FUN_14015b310(void*, unsigned long long);
 
 namespace Scaleform {
 
-// The exe calls these two out of line from the deleting destructors below (they come from the Kernel TU there).
+// The exe calls the first out of line from the deleting destructors below (it comes from the Kernel TU there); the second inlines into ~RefCountWeakSupportImpl.
 // @0x14257db40
 __declspec(noinline) RefCountImplCore::~RefCountImplCore() {}
 
 // @0x14257db50
-__declspec(noinline) RefCountNTSImplCore::~RefCountNTSImplCore() {}
+inline RefCountNTSImplCore::~RefCountNTSImplCore() {}
 
-// MS2-FUNCTIONAL: the exe inlines ~RefCountImplCore here (its Kernel TU); ours calls it, since it is noinline for the deleting dtors
 // @0x14257db60
 RefCountWeakSupportImpl::~RefCountWeakSupportImpl()
 {
@@ -40,13 +39,12 @@ RefCountWeakSupportImpl::~RefCountWeakSupportImpl()
 }
 
 // The deleting form of the destructor above, which the exe keeps as a separate copy.
-// MS2-FUNCTIONAL: same teardown and delete branch; register allocation differs.
 // @0x14257dbc0
 void* FUN_14257dbc0(RefCountWeakSupportImpl* object, unsigned flags)
 {
     object->RefCountWeakSupportImpl::~RefCountWeakSupportImpl();
     if (flags & 1)
-        ::operator delete(object);
+        ::operator delete(object, 0x18);
     return object;
 }
 
