@@ -461,7 +461,7 @@ void Sfr21AddInvokeAlias(MovieRoot* self, const ASString& alias, const Value& cl
 // collection restarts its count; one behind the collector's frame count just counts. Otherwise the collector advances
 // and collects when the roots outgrow the limit (or, every MaxFramesBetweenCollections frames, the preset count), then
 // sets the next limit from the roots left (at least 0.7 of them, at least the peak).
-// MS2-FUNCTIONAL: free function in place of the ASRefCountCollector member (not declared in as3_gc.h)
+// A free function in place of the ASRefCountCollector member (not declared in as3_gc.h).
 // @0x1424eaf80
 void Sfr21ASGCAdvanceFrame(ASRefCountCollector* gc, unsigned* movieFrameCnt, unsigned* movieLastCollectFrame,
                            ASRefCountCollector::StatsObserver* statsObserver)
@@ -478,50 +478,32 @@ void Sfr21ASGCAdvanceFrame(ASRefCountCollector* gc, unsigned* movieFrameCnt, uns
         return;
     }
     ++gc->TotalFramesCount;
-    unsigned frames = ++gc->FrameCnt;
+    ++gc->FrameCnt;
     const unsigned roots = (unsigned)gc->GetRootsCount();
-    unsigned peak = roots;
-    if (peak < gc->PeakRootCount)
-        peak = gc->PeakRootCount;
-    gc->PeakRootCount = peak;
-    if (!gc->SuspendCnt &&
+    gc->PeakRootCount = Alg::Max(gc->PeakRootCount, roots);
+    if (!(gc->SuspendCnt > 0) &&
         ((gc->PresetMaxRootCount != 0 && roots > gc->MaxRootCount) ||
-         (gc->MaxFramesBetweenCollections != 0 && frames >= gc->MaxFramesBetweenCollections &&
+         (gc->MaxFramesBetweenCollections != 0 && gc->FrameCnt >= gc->MaxFramesBetweenCollections &&
           roots > gc->PresetMaxRootCount)))
     {
-        frames = 0;
-        ASRefCountCollector::Stats stats;
-        stats.pObserver = statsObserver;
-        stats.RootsNumber = 0;
-        stats.RootsFreedTotal = 0;
+        ASRefCountCollector::Stats stats = { statsObserver, 0, 0 };
         gc->Collect(&stats);
-        unsigned limit;
-        if (gc->PresetMaxRootCount < stats.RootsFreedTotal)
+        if (stats.RootsFreedTotal > gc->PresetMaxRootCount)
         {
             gc->PeakRootCount = roots;
-            limit = gc->PresetMaxRootCount;
-            peak = roots;
-        }
-        else
-        {
-            limit = gc->MaxRootCount;
-            peak = gc->PeakRootCount;
+            gc->MaxRootCount  = gc->PresetMaxRootCount;
         }
         gc->FrameCnt = 0;
-        gc->LastPeakRootCount = peak;
+        gc->LastPeakRootCount = gc->PeakRootCount;
         gc->LastCollectedRoots = stats.RootsFreedTotal;
-        unsigned left = roots - stats.RootsFreedTotal;
-        if (left < limit)
-            left = limit;
-        const unsigned scaled = (unsigned)(SInt64)((double)left * 0.7);
-        if (peak < scaled)
-            left = scaled;
-        gc->MaxRootCount = left;
+        gc->MaxRootCount = Alg::Max(gc->MaxRootCount, roots - stats.RootsFreedTotal);
+        const unsigned scaled = (unsigned)(SInt64)((double)gc->MaxRootCount * 0.7);
+        if (gc->PeakRootCount < scaled)
+            gc->MaxRootCount = scaled;
         gc->LastCollectionFrameNum = gc->TotalFramesCount;
-        frames = gc->FrameCnt;
     }
     gc->LastRootCount = roots;
-    *movieFrameCnt = frames;
+    *movieFrameCnt = gc->FrameCnt;
     *movieLastCollectFrame = gc->LastCollectionFrameNum;
 }
 
