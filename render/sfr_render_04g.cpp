@@ -99,15 +99,15 @@ static __forceinline RectF DIImageRect(const ImageSize& size)
     return RectF(0.0f, 0.0f, (float)size.Width, (float)size.Height);
 }
 
-// the viewport over that rectangle.
-static __forceinline Viewport DIViewport(const ImageSize& size, const Rect<int>& view, unsigned flags)
+// the viewport over that rectangle (the buffer size taken as a Size<int> by value, as in the SDK's Viewport(Size<int>,
+// Rect<int>, flags), which loads the height first).
+static __forceinline Viewport DIViewport(Size<int> size, const Rect<int>& view, unsigned flags)
 {
     return Viewport(size.Width, size.Height, view.x1, view.y1, view.Width(), view.Height(), flags);
 }
 
 // Render thread: commands that draw into their image get it pushed as the HAL's render target (kept while the
 // following commands share it), each page inside its own frame / scene bracket.
-// MS2-FUNCTIONAL: only the buffer size stores differ, the exe keeps height first
 // @0x142670440
 void DICommandSet::ExecuteCommandsRT(DICommandContext& context)
 {
