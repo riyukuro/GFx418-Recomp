@@ -9,6 +9,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x14002eb20-0x14002f850 .text$mn
 // MS2-RANGE: 0x14002fbe0-0x1400301d0 .text$mn
+// MS2-RANGE: 0x140030280-0x140030b50 .text$mn
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
@@ -526,6 +527,19 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAmngWorkSize=?criMvPlyAmng_CalcAmngWorkSize@@YAJPEBX@Z")
 #pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAudioDecoderWorkSize=?criMvPlyAmng_CalcAudioDecoderWorkSize@@YAJPEBXPEBK@Z")
 #pragma comment(linker, "/alternatename:criSjUni_GetRequiredMemorySizeWithConfig=?criSjUni_GetRequiredMemorySizeWithConfig@@YAJKKPEBK@Z")
+#pragma comment(linker, "/alternatename:?crimvply_AllocateWorkBufferInCs@@YAKPEAX00@Z=crimvply_AllocateWorkBufferInCs")
+#pragma comment(linker, "/alternatename:criSj_GetChunk=?criSj_GetChunk@@YAXPEAXJK0@Z")
+#pragma comment(linker, "/alternatename:criAlphaDec_Create=?criAlphaDec_Create@@YAPEAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:criVdec_Create=?criVdec_Create@@YAPEAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:FUN_140044de0=?FUN_140044de0@@YAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:FUN_140044c10=?FUN_140044c10@@YAXPEAXK@Z")
+#pragma comment(linker, "/alternatename:FUN_140044330=?FUN_140044330@@YAXPEA_KPEAX1@Z")
+#pragma comment(linker, "/alternatename:setProcessorParams=?setProcessorParams@@YAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:FUN_140037a40=?FUN_140037a40@@YAXPEBUCriMovieInputChunk@@0PEAX@Z")
+#pragma comment(linker, "/alternatename:FUN_140038000=?FUN_140038000@@YAXPEAPEAXPEAX@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_Create=?criMvPlyAmng_Create@@YAPEAXPEAX0PEBX@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_CreateAudioDecoder=?criMvPlyAmng_CreateAudioDecoder@@YAJPEAX00PEBKKJ@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_SetDecryptCallback=?criMvPlyAmng_SetDecryptCallback@@YAXPEAX00J@Z")
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -931,6 +945,240 @@ void criMvPly_GetStreamingParameters(void* player, struct CriMvStreamingParamete
     oalph[5] = alph[5];
     oalph[6] = alph[6];
     oalph[7] = alph[7];
+}
+
+// The player fields that crimvply_AllocateWorkBufferInCs fills in.
+typedef struct CriMvAllocWorkView
+{
+    CriUint8 Reserved0[0x640];
+    CriUint32 VideoPitch;                    // 0x640
+    CriUint8 Reserved644[0x894 - 0x644];
+    CriUint32 AlphaPitch;                    // 0x894
+    CriUint8 Reserved898[0xad4 - 0x898];
+    CriSint32 StartReady;                    // 0xad4
+    CriMvStreamParamsView Params;            // 0xad8
+    CriSint32 InputMode;                     // 0xd60: 0 = read buffer, otherwise memory input
+    CriUint8 ReservedD64[0xd88 - 0xd64];
+    void* ReadBuffer;                        // 0xd88
+    CriUint8 ReservedD90[0xdf0 - 0xd90];
+    void* Heap;                              // 0xdf0
+    CriUint32 ReadSize;                      // 0xdf8
+    CriUint32 ReadExtension;                 // 0xdfc
+    CriUint32 VideoTag;                      // 0xe00
+    CriUint32 VideoTagHigh;                  // 0xe04
+    void* VideoDecoder;                      // 0xe08
+    void* AudioManager;                      // 0xe10
+    CriUint8 ReservedE18[0xe28 - 0xe18];
+    void* SubtitleSj;                        // 0xe28
+    CriUint8 ReservedE30[4];
+    CriSint32 SubtitleChannel;               // 0xe34
+    CriUint8 ReservedE38[8];
+    void* AlphaDecoder;                      // 0xe40
+    CriUint32 ChunkSize;                     // 0xe48
+    CriUint32 ChunkExtension;                // 0xe4c
+    const CriUint8* ChunkData;               // 0xe50
+} CriMvAllocWorkView;
+// The decoder configuration passed to the video and alpha decoder Create calls.
+typedef struct CriMvDecoderConfig
+{
+    CriUint32 Width, Height, PlayerFormat, PlayerPitch, StreamFormat;
+    CriUint32 Reserved;
+    const CriUint8* OutputBuffer;
+    CriUint32 BufferSize, BufferExtension;
+} CriMvDecoderConfig;
+// CriMvVideoParameters (0x30) and CriMvAlphaParameters (0x1c)
+typedef struct CriMvAllocVideoView { CriUint32 MaxWidth, MaxHeight, DispWidth, DispHeight, NumFramePools, Framerate, TotalFrames, Unk1c[5]; } CriMvAllocVideoView;
+typedef struct CriMvAllocAlphaView { CriUint32 MaxWidth, MaxHeight, DispWidth, DispHeight, Framerate, TotalFrames, AlphaType; } CriMvAllocAlphaView;
+void criSj_GetChunk(void* object, CriSint32 operation, CriUint32 limit, void* output);
+void* criAlphaDec_Create(void* implementation, void* heap, void* parameter);
+void* criVdec_Create(void* implementation, void* heap, void* parameter);
+CriSint32 criMvPly_IsSetDefaultDecryptionKey(void);
+void FUN_140044de0(void* decoder, void* first, void* second);
+void FUN_140044c10(void* decoder, CriUint32 mask);
+void FUN_140044330(CriUint64* pair, void* first, void* second);
+void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player);
+void FUN_140038000(void** record, void* userData);
+void setProcessorParams(void* player, void* videoDecoder, void* alphaDecoder);
+void* criMvPlyAmng_Create(void* owner, void* heap, const void* config);
+CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* player, void* source, const CriUint32* streamInfo,
+    CriUint32 track, CriSint32 flags);
+void criMvPlyAmng_SetDecryptCallback(void* manager, void* callback, void* userData, CriSint32 stream);
+
+// Configure the movie's read queue, decoder interfaces, audio manager, and output stream.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): aprm, inp (video parameters), mode (status),
+// bound (read extension), fsize (read size), chunk, load (video interface), fmt (video config),
+// lane (alpha interface), fill (alpha config), done.
+// @0x140030280
+CriUint32 crimvply_AllocateWorkBufferInCs(void* player, void* heap, void* work)
+{
+    const CriMvAllocAlphaView* aprm;
+    const CriMvAllocVideoView* inp;
+    CriSint32 mode;
+    CriUint32 bound;
+    CriUint32 fsize;
+    CriMovieInputChunk chunk;
+    void* load;
+    CriMvDecoderConfig fmt;
+    void* lane;
+    CriMvDecoderConfig fill;
+    CriSint32 done;
+#define MS2_ALLOC_PLAYER ((CriMvAllocWorkView*)player)
+#define MS2_ALLOC_WORK ((const CriMvStreamParamsView*)work)
+    mode = getInternalStatus(player);
+    if (mode != 0 && mode != 2)
+    {
+        crimvply_occurUserError(player, "E05063010M : Don't call criMvPly_AllocateWorkBuffer() at illigal status.", mode);
+        return 0;
+    }
+    if (MS2_ALLOC_PLAYER->StartReady == 1)
+        FUN_140030c70(player);
+    MS2_ALLOC_PLAYER->Params = *MS2_ALLOC_WORK;
+    MS2_ALLOC_PLAYER->Heap = heap;
+    if (MS2_ALLOC_PLAYER->InputMode == 0)
+    {
+        if (MS2_ALLOC_WORK->Head[3] == 0xffffffff)
+        {
+            fsize = (CriUint32)((float)(MS2_ALLOC_WORK->Head[0] / 8) * MS2_ALLOC_WORK->BufferingTime);
+            if (fsize < MS2_ALLOC_WORK->Head[2])
+                fsize = MS2_ALLOC_WORK->Head[2];
+        }
+        else
+            fsize = MS2_ALLOC_WORK->Head[3];
+        fsize = (fsize + 0x800) / 0x800 * 0x800;
+        bound = decideReadBufferExtSize(work);
+        MS2_ALLOC_PLAYER->ReadSize = fsize;
+        MS2_ALLOC_PLAYER->ReadExtension = bound;
+        MS2_ALLOC_PLAYER->ReadBuffer = criSj_CreateNamedRingBuffer(heap, fsize, bound, 0x40, (CriUint64)"CriMvPly: ReadBuf");
+        if (MS2_ALLOC_PLAYER->ReadBuffer == NULL)
+        {
+            crimvply_occurUserError(player, "E05063012M : Can't create SJ for read buffer.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+    }
+    else
+    {
+        fsize = 0;
+        bound = 0;
+        MS2_ALLOC_PLAYER->ReadSize = 0;
+        MS2_ALLOC_PLAYER->ReadExtension = 0;
+        MS2_ALLOC_PLAYER->ReadBuffer = NULL;
+    }
+    if (MS2_ALLOC_PLAYER->InputMode == 0)
+    {
+        MS2_ALLOC_PLAYER->ChunkSize = fsize;
+        MS2_ALLOC_PLAYER->ChunkExtension = bound;
+        criSj_GetChunk(MS2_ALLOC_PLAYER->ReadBuffer, 0, 0xffffffff, &chunk);
+        MS2_ALLOC_PLAYER->ChunkData = chunk.Data;
+        criSj_UngetChunk(MS2_ALLOC_PLAYER->ReadBuffer, 0, &chunk);
+    }
+    if (MS2_ALLOC_WORK->Head[4] > 0)
+    {
+        load = NULL;
+        inp = (const CriMvAllocVideoView*)MS2_ALLOC_WORK->Video;
+        load = crimvply_findVdecIF((CriSint32)inp->Unk1c[3]);
+        if (load == NULL)
+        {
+            crimvply_occurUserError(player, "E11030201M : Not found any avilable codec for the video stream. Attach a codec module before the Initialize function.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+        MS2_ALLOC_PLAYER->VideoTag = 0x40534656;
+        MS2_ALLOC_PLAYER->VideoTagHigh = 0;
+        memset(&fmt, 0, sizeof(fmt));
+        fmt.Width = inp->MaxWidth;
+        fmt.Height = inp->MaxHeight;
+        fmt.StreamFormat = inp->NumFramePools;
+        fmt.PlayerFormat = MS2_ALLOC_PLAYER->Params.Head[1];
+        fmt.PlayerPitch = MS2_ALLOC_PLAYER->VideoPitch;
+        if (MS2_ALLOC_PLAYER->InputMode == 0)
+        {
+            fmt.OutputBuffer = MS2_ALLOC_PLAYER->ChunkData;
+            fmt.BufferSize = MS2_ALLOC_PLAYER->ChunkSize;
+            fmt.BufferExtension = MS2_ALLOC_PLAYER->ChunkExtension;
+        }
+        else
+        {
+            fmt.OutputBuffer = NULL;
+            fmt.BufferSize = 0;
+            fmt.BufferExtension = 0;
+        }
+        MS2_ALLOC_PLAYER->VideoDecoder = criAlphaDec_Create(load, heap, &fmt);
+        if (MS2_ALLOC_PLAYER->VideoDecoder == NULL)
+        {
+            crimvply_occurUserError(player, "E05063013M : Can't create Video decoder.", 0);
+            FUN_140030c70(player);
+            return 0;
+        }
+        if (criMvPly_IsSetDefaultDecryptionKey() == 1)
+            FUN_140044de0(MS2_ALLOC_PLAYER->VideoDecoder, (void*)FUN_140037a40, player);
+        FUN_140044c10(MS2_ALLOC_PLAYER->VideoDecoder, MS2_ALLOC_WORK->Video[5]);
+        if (MS2_ALLOC_WORK->NumAlpha > 0)
+        {
+            lane = NULL;
+            aprm = (const CriMvAllocAlphaView*)MS2_ALLOC_WORK->Alpha;
+            lane = crimvply_findAlphadecIfIF(*(const CriSint32*)((const CriUint8*)aprm + 0x1c));
+            if (lane == NULL)
+            {
+                crimvply_occurUserError(player, "E11030701M : Not found any avilable codec for the alpha stream. Attach a codec module before the Initialize function", 0);
+                FUN_140030c70(player);
+                return 0;
+            }
+            memset(&fill, 0, sizeof(fill));
+            fill.Width = aprm->MaxWidth;
+            fill.Height = aprm->MaxHeight;
+            fill.StreamFormat = inp->NumFramePools;
+            fill.PlayerFormat = MS2_ALLOC_PLAYER->Params.Head[1];
+            fill.PlayerPitch = MS2_ALLOC_PLAYER->AlphaPitch;
+            fill.OutputBuffer = MS2_ALLOC_PLAYER->ChunkData;
+            fill.BufferSize = MS2_ALLOC_PLAYER->ChunkSize;
+            fill.BufferExtension = MS2_ALLOC_PLAYER->ChunkExtension;
+            MS2_ALLOC_PLAYER->AlphaDecoder = criVdec_Create(lane, heap, &fill);
+            if (MS2_ALLOC_PLAYER->AlphaDecoder == NULL)
+            {
+                crimvply_occurUserError(player, "E08082100M : Can't create Alpha decoder.", 0);
+                FUN_140030c70(player);
+                return 0;
+            }
+            if (criMvPly_IsSetDefaultDecryptionKey() == 1)
+                FUN_140044330((CriUint64*)MS2_ALLOC_PLAYER->AlphaDecoder, (void*)FUN_140037a40, player);
+        }
+        else
+            MS2_ALLOC_PLAYER->AlphaDecoder = NULL;
+        setProcessorParams(player, MS2_ALLOC_PLAYER->VideoDecoder, MS2_ALLOC_PLAYER->AlphaDecoder);
+    }
+    MS2_ALLOC_PLAYER->AudioManager = criMvPlyAmng_Create(player, heap, work);
+    if (MS2_ALLOC_PLAYER->AudioManager == NULL)
+    {
+        crimvply_occurFatalError(player, "E07090703M : Can't create CriMvPlyAmng handle", 0);
+        FUN_140030c70(player);
+        return 0;
+    }
+    if (MS2_ALLOC_WORK->TrackPlayAudio >= 0)
+    {
+        done = criMvPlyAmng_CreateAudioDecoder(MS2_ALLOC_PLAYER->AudioManager, player, heap,
+            MS2_ALLOC_WORK->Audio[MS2_ALLOC_WORK->TrackPlayAudio].Words,
+            MS2_ALLOC_WORK->TrackPlayAudio, 0);
+        if (done == 0)
+        {
+            FUN_140030c70(player);
+            return 0;
+        }
+        if (criMvPly_IsSetDefaultDecryptionKey() == 1)
+            criMvPlyAmng_SetDecryptCallback(MS2_ALLOC_PLAYER->AudioManager, (void*)FUN_140038000, player, 0);
+    }
+    MS2_ALLOC_PLAYER->SubtitleSj = criSj_CreateUniversal(heap, 0, 0x40);
+    if (MS2_ALLOC_PLAYER->SubtitleSj == NULL)
+    {
+        crimvply_occurUserError(player, "E06102501M : Can't create Sj for subtitle data.", 0);
+        FUN_140030c70(player);
+        return 0;
+    }
+    MS2_ALLOC_PLAYER->SubtitleChannel = MS2_ALLOC_WORK->ChannelPlaySubtitle;
+    MS2_ALLOC_PLAYER->StartReady = 1;
+    return 1;
+#undef MS2_ALLOC_WORK
+#undef MS2_ALLOC_PLAYER
 }
 
 // release every CRI Movie player subsystem and clear its owned state
