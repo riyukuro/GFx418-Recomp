@@ -92,6 +92,7 @@ void FUN_14241e540(Scaleform::GFx::AS3::Instances::fl::GlobalObjectCPP* self, co
 template<> void Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_POD<Scaleform::UPInt, 328>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayData<Scaleform::UPInt, Scaleform::AllocatorLH_POD<Scaleform::UPInt, 338>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);
+template<> void Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);   // 0x142524680
 static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
@@ -6446,7 +6447,7 @@ extern const void* const DAT_14317b058;
 
 // VMAbcFile::GetInternedNamespaceSet: the namespace set at constant pool index ind, made on first use from the
 // interned namespaces its entry lists.
-// MS2-FUNCTIONAL the set is built over a layout view (its constructor and virtuals are not in the shared header)
+// The set is built over a layout view (its constructor and virtuals are not in the shared header).
 // @0x14250aff0
 NamespaceSet& VMAbcFile::GetInternedNamespaceSet(UPInt ind)
 {
@@ -6461,24 +6462,28 @@ NamespaceSet& VMAbcFile::GetInternedNamespaceSet(UPInt ind)
     };
     if (ind >= IntNamespaceSets.GetSize())
         IntNamespaceSets.Resize(ind + 1);
-    if (NamespaceSet* p = IntNamespaceSets[ind].GetPtr())
-        return *p;
-    View* v = static_cast<View*>(SF_HEAP_ALLOC(GetVM().GetMemoryHeap(), sizeof(View), StatMV_ActionScript_Mem));
-    if (v)
+    if (IntNamespaceSets[ind].GetPtr() == NULL)
     {
-        v->vptr     = &DAT_14317b058;
-        v->gc       = &GetVM().GetGC();
-        v->RefCount = 1;
-        ::new (&v->Namespaces) ArrayLH<SPtr<Instances::Namespace> >();
-    }
-    NamespaceSet* set = reinterpret_cast<NamespaceSet*>(v);
-    IntNamespaceSets[ind] = Pickable<NamespaceSet>(set);
-    const UInt8* data = GetAbcFile().Const_Pool.const_ns_set[ind].Data;
-    const int    n    = Abc::ReadU30(data);
-    for (int i = 0; i < n; ++i)
-    {
-        const int ns_ind = Abc::ReadU30(data);
-        v->Namespaces.PushBack(SPtr<Instances::Namespace>(&GetInternedNamespace(ns_ind)));
+        View* v = static_cast<View*>(SF_HEAP_ALLOC(GetVM().GetMemoryHeap(), sizeof(View), StatMV_ActionScript_Mem));
+        if (v)
+        {
+            ASRefCountCollector* gc = &GetVM().GetGC();
+            v->vptr     = &DAT_14317b058;
+            v->gc       = gc;
+            v->RefCount = 1;
+            ::new (&v->Namespaces) ArrayLH<SPtr<Instances::Namespace> >();
+        }
+        else
+            v = NULL;
+        NamespaceSet* set = reinterpret_cast<NamespaceSet*>(v);
+        IntNamespaceSets[ind] = Pickable<NamespaceSet>(set);
+        const UInt8* data = GetAbcFile().Const_Pool.const_ns_set[ind].Data;
+        const UInt32 n    = Abc::ReadU30(data);
+        for (UInt32 i = 0; i < n; ++i)
+        {
+            const UInt32 ns_ind = Abc::ReadU30(data);
+            v->Namespaces.PushBack(SPtr<Instances::Namespace>(&GetInternedNamespace(ns_ind)));
+        }
     }
     return *IntNamespaceSets[ind];
 }
