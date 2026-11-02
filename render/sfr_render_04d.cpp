@@ -475,7 +475,7 @@ static TextUnderlineStyle ConvertUnderlineStyle(HighlightInfo::UnderlineStyle st
 // Emits the records of every visible line: a new-line record at the first glyph drawn, colour / font switches,
 // images, and the underline and selection runs merged across glyphs of the same colour and style. Glyphs left
 // of the view are skipped and the line ends at the right edge; a clip box is set once something is cut.
-// MS2-FUNCTIONAL: the exe guards this frame with a /GS security cookie our build does not emit (frame layout and register saves shift with it)
+// MS2-FUNCTIONAL: same code; the exe loads VisibleRect.y1 later and keeps the selection offset (-x, -0) in registers
 // @0x1426680e0
 void LineBuffer::CreateVisibleTextLayout(TextLayout::Builder& bld, const Highlighter* phighlighter,
                                          const TextFieldParam& textFieldParam)

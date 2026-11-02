@@ -40,13 +40,13 @@ private:
 
 // Attaches the exported movie clip symbol to the clip in pdata at depth (a free one above the used ones when negative),
 // with the initial members in an object, and hands the new clip back in *pmc (for AS2 movies above version 5).
-// MS2-FUNCTIONAL: the resource bind data and the character create info are filled by their members
+// MS2-FUNCTIONAL: same code; the exe puts the bind data and the instance name spill in other stack slots and allocates registers differently
 // @0x1429318d0
 bool AS2ValueObjectInterface::AttachMovie(void* pdata, Value* pmc, const char* symbolName, const char* instanceName,
                                           SInt32 depth, const MemberValueSet* initArgs)
 {
     DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-    if (!pdobj || !(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pdobj) + 0x6a) & 0x400))
+    if (!pdobj || !((UByte)(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pdobj) + 0x6a) >> 10) & 1))
         return false;
     AS2::MovieRoot*    proot = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
     AvmDisplayObjBase* pmain = proot->pMovieImpl->pMainMovie->GetAvmObjImpl();
@@ -54,9 +54,12 @@ bool AS2ValueObjectInterface::AttachMovie(void* pdata, Value* pmc, const char* s
         static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmain))->GetASEnvironment();
 
     ResourceBindData bind;
-    String           symbol(symbolName);
-    bool found = pdobj->GetMovieImpl()->FindExportedResource(pdobj->GetResourceMovieDef(), &bind, symbol);
-    if (!found)
+    bool             missing;
+    {
+        String symbol(symbolName);
+        missing = !pdobj->GetMovieImpl()->FindExportedResource(pdobj->GetResourceMovieDef(), &bind, symbol);
+    }
+    if (missing)
     {
         pdobj->LogScriptWarning("%s.attachMovie() failed - export name \"%s\" is not found.",
                                 pdobj->GetCharacterHandle()->NamePath.ToCStr(), symbolName);
@@ -70,9 +73,9 @@ bool AS2ValueObjectInterface::AttachMovie(void* pdata, Value* pmc, const char* s
     }
 
     CharacterCreateInfo ccinfo;
+    ccinfo.pResource    = 0;
     ccinfo.pCharDef     = reinterpret_cast<CharacterDef*>(bind.pResource.GetPtr());
     ccinfo.pBindDefImpl = *reinterpret_cast<MovieDefImpl**>(reinterpret_cast<UByte*>(bind.pBinding) + 0x48);
-    ccinfo.pResource    = 0;
     if (depth < 0)
     {
         depth = static_cast<Sprite*>(pdobj)->mDisplayList.GetLargestDepthInUse() - 16383;
@@ -92,16 +95,17 @@ bool AS2ValueObjectInterface::AttachMovie(void* pdata, Value* pmc, const char* s
     if (initArgs)
     {
         pinit = *penv->OperatorNew(penv->GetBuiltin(AS2::ASBuiltin_Object));
-        for (UPInt i = 0; i < initArgs->Count; ++i)
+        for (unsigned i = 0; i < initArgs->Count; ++i)
         {
-            ASString     name = penv->CreateString(initArgs->pMembers[i].Name.ToCStr());
+            const MemberValueSet::Member& member = initArgs->pMembers[i];
+            ASString     name = penv->CreateString(member.Name);
             AS2::Value    val;
-            proot->Value2ASValue(initArgs->pMembers[i].Val, &val);
+            proot->Value2ASValue(member.Val, &val);
             pinit->SetMember(penv, name, val);
         }
     }
     Ptr<DisplayObjectBase> newch = static_cast<Sprite*>(pdobj)->AddDisplayObject(
-        pos, penv->CreateString(instanceName), 0, pinit ? static_cast<AS2::ObjectInterface*>(pinit.GetPtr()) : 0, ~0u,
+        pos, penv->CreateString(instanceName), 0, static_cast<AS2::ObjectInterface*>(pinit.GetPtr()), ~0u,
         1, &ccinfo, 0);
     if (newch)
     {
