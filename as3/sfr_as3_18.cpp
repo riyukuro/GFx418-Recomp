@@ -93,6 +93,7 @@ template<> void Scaleform::ArrayDataDH<Scaleform::UPInt, Scaleform::AllocatorDH_
 template<> void Scaleform::ArrayData<Scaleform::UPInt, Scaleform::AllocatorLH_POD<Scaleform::UPInt, 338>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);   // 0x142524680
+template<> Scaleform::String Scaleform::AsString<Scaleform::UInt32>(const Scaleform::UInt32& v);   // 0x1423e8390
 static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
@@ -6227,34 +6228,42 @@ bool Value::MakeWeakRef()
     return rc;
 }
 
+// CallFrame::GetCurrFileName / GetCurrLineNumber: by-value returns
+static __forceinline ASString CallFrameFileName(const CallFrame& cf)
+{
+    return cf.pFile->GetInternedString(cf.CurrFileInd);
+}
+
+static __forceinline UInt32 CallFrameLineNumber(const CallFrame& cf)
+{
+    return cf.CurrLineNumber;
+}
+
 // The call stack as text, the innermost frame first, one per line: line_pref, "at " and the function's name with
 // "()", then "[file:line]" when the frame has a source file.
-// MS2-FUNCTIONAL the call frames are read through a layout view of the VM's paged call stack (+0x78 size, +0x90 pages)
+// The call frames are read through a layout view of the VM's paged call stack (+0x78 size, +0x90 pages).
 // @0x14250ec00
 void VM::GetStackTraceASString(ASString& result, const char* line_pref)
 {
-    const UByte*  self  = reinterpret_cast<const UByte*>(this);
-    const UPInt   size  = *reinterpret_cast<const UPInt*>(self + 0x78);
-    const UByte** pages = *reinterpret_cast<const UByte** const*>(self + 0x90);
-    UPInt         ind   = size;
-    for (UPInt n = 0; n < size; ++n)
+    const UByte* self = reinterpret_cast<const UByte*>(this);
+    const UPInt  size = *reinterpret_cast<const UPInt*>(self + 0x78);
+    for (UPInt i = size, j = 0; i > 0; ++j, --i)
     {
-        --ind;
-        const CallFrame& cf = *reinterpret_cast<const CallFrame*>(pages[ind >> 6] + (ind & 0x3f) * 0xa8);
-        if (n != 0)
-            result.Append("\n", 1);
-        result.Append(line_pref, strlen(line_pref));
-        result.Append("at ", 3);
-        result.Append(ASString(cf.Name.GetPtr()));
-        result.Append("()", 2);
+        const UByte* const* pages = *reinterpret_cast<const UByte* const* const*>(self + 0x90);
+        const CallFrame& cf = *reinterpret_cast<const CallFrame*>(pages[(i - 1) >> 6] + ((i - 1) & 0x3f) * 0xa8);
+        if (j > 0)
+            result += "\n";
+        result += line_pref;
+        result += "at ";
+        result += ASString(cf.Name.GetPtr());
+        result += "()";
         if (cf.CurrFileInd != 0)
         {
-            result.Append("[", 1);
-            result.Append(cf.pFile->GetInternedString(cf.CurrFileInd));
-            result.Append(":", 1);
-            const String line = Scaleform::AsString(cf.CurrLineNumber);
-            result.Append(line.ToCStr(), strlen(line.ToCStr()));
-            result.Append("]", 1);
+            result += "[";
+            result += CallFrameFileName(cf);
+            result += ":";
+            result += Scaleform::AsString(CallFrameLineNumber(cf)).ToCStr();
+            result += "]";
         }
     }
 }
