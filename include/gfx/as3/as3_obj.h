@@ -1140,7 +1140,12 @@ namespace Instances
 
     public:
         // (appended, sfr22) user-declared: the derived dtors re-store this vftable before releasing Prototype
+#if defined(MS2_SF_FUNCTIONBASE_DTOR_OUTLINE)
+        // (ug1) out of line in the exe outside the AS3 SCU (UserDefinedFunction's ??_G 0x1424e3de0 calls 0x1423f0f50)
+        virtual ~FunctionBase();
+#else
         virtual ~FunctionBase() {}
+#endif
         // (appended, sfr19) Call runs slot 21 into a temporary (body in sfr_as3_03).
         virtual void Call(const Value& _this, Value& result, unsigned argc, const Value* const argv);
         // (appended, sfr19) slot 12: new f() (body in sfr_as3_03). 0x142407230

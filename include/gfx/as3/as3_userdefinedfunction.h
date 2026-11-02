@@ -21,8 +21,7 @@ public:
         pHandler  = pfc;
         pUserData = puserData;
     }
-    // MS2-FUNCTIONAL 0x1424e3de0: our ??_G inlines ~FunctionBase, the exe calls it (0x1423f0f50).
-    virtual ~UserDefinedFunction() {}                                                        // 4  0x1424e3de0 (??_G)
+    // Implicit destructor (as in the SDK; the exe's has no vftable store): the ??_G 0x1424e3de0 is slot 4.
 
     // Hands the receiver and the arguments to pHandler as GFx values (the receiver first in the argument array);
     // a defined return value comes back in result.

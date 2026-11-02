@@ -28,6 +28,7 @@
 #define SF_AS3_AVM_INPLACE_DELETE
 #define SF_AS3_AVMBUTTON_MODEL
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
+#define MS2_SF_FUNCTIONBASE_DTOR_OUTLINE   // UserDefinedFunction is outside the SCU: its ??_G calls ~FunctionBase (as3_obj.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/as3_readargs.h"
@@ -47,7 +48,6 @@
 #include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
 #include "ms2/scaleform/include/gfx/as3/as3_support.h"
 #undef GetObject
-
 // VM: runs the queued code (unrecovered).
 
 // vftables of the data_rdata unit (Sd_ structs there)
@@ -253,7 +253,6 @@ void Unk_As3_16zDestroyAvmParts(AvmInteractiveObj* pio, AvmButton* pbtn, AvmText
     ptxt->AvmTextField::~AvmTextField();
     pst->AvmStaticText::~AvmStaticText();
 }
-
 // Not exe code: the same for interfaces whose objects are built inline or in other units.
 void Unk_As3_16zDestroyInterfaces(AS3ValueObjectInterface* pvoi, GFx::Value::ObjectInterface* poi, FlashUI* pui,
                                   UserDefinedFunction* pudf)
@@ -263,6 +262,7 @@ void Unk_As3_16zDestroyInterfaces(AS3ValueObjectInterface* pvoi, GFx::Value::Obj
     poi->GFx::Value::ObjectInterface::~ObjectInterface();
     pui->FlashUI::~FlashUI();
     pudf->UserDefinedFunction::~UserDefinedFunction();
+    ::new (pudf) UserDefinedFunction(pudf->GetInstanceTraits(), NULL, NULL);
 }
 
 // GFx::Value as the exe lays it out (the members are private to the value).
