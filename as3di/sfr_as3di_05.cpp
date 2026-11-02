@@ -12,11 +12,11 @@
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The namespace initializers store the URI into each entry in turn, as the exe's dynamic initializers of the
-// const tables do. Each is an empty object whose inline constructor makes the stores. The Proxy and ObjectClass
-// tables are declared const here, so stores into them would be dropped; those two keep SetThunkNamespaces.
+// const tables do. Each is an empty object whose inline constructor makes the stores. The stores are volatile,
+// as in sfr_as3di_01, so those into the tables declared const (Proxy, ObjectClass) are kept.
 template <unsigned N> struct ThunkNamespaceFill
 {
-    static __forceinline void Do(ThunkInfo* ti, const char* ns)
+    static __forceinline void Do(volatile ThunkInfo* ti, const char* ns)
     {
         ThunkNamespaceFill<N - 1>::Do(ti, ns);
         ti[N - 1].NamespaceName = ns;
@@ -24,13 +24,13 @@ template <unsigned N> struct ThunkNamespaceFill
 };
 template <> struct ThunkNamespaceFill<0>
 {
-    static __forceinline void Do(ThunkInfo*, const char*) {}
+    static __forceinline void Do(volatile ThunkInfo*, const char*) {}
 };
 template <unsigned N> struct ThunkNamespaces
 {
     __forceinline ThunkNamespaces(const void* table, UPInt offset, const char* ns)
     {
-        ThunkNamespaceFill<N>::Do((ThunkInfo*)((UByte*)table + offset), ns);
+        ThunkNamespaceFill<N>::Do((volatile ThunkInfo*)((UByte*)table + offset), ns);
     }
 };
 
@@ -155,9 +155,8 @@ typedef ThunkFunc3<Instances::fl_utils::ByteArray, 12, const Value, Instances::f
 // @0x14014a0e0
 template <> const TFunc_Instances_fl_utils_ByteArray_readBytes::TMethod TFunc_Instances_fl_utils_ByteArray_readBytes::Method = &Instances::fl_utils::ByteArray::readBytes;
 // Proxy (10 entries: callProperty, deleteProperty, getDescendants, getProperty, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014a110
-static const bool NamespacesOf_Proxy = SetThunkNamespaces(DAT_143a2d158, 0xc8, 10, fl::NS_flash_proxy);
+static ThunkNamespaces<10> NamespacesOf_Proxy(DAT_143a2d158, 0xc8, fl::NS_flash_proxy);
 typedef ThunkFunc0<Classes::fl_gfx::Extensions, 1, bool> TFunc_Classes_fl_gfx_Extensions_enabledGet;
 // @0x14014a160
 template <> const TFunc_Classes_fl_gfx_Extensions_enabledGet::TMethod TFunc_Classes_fl_gfx_Extensions_enabledGet::Method = &Classes::fl_gfx::Extensions::enabledGet;
@@ -444,9 +443,8 @@ typedef ThunkFunc0<Class, 2, ASString> TFunc_Class_toString;
 // @0x14014b300
 template <> const TFunc_Class_toString::TMethod TFunc_Class_toString::Method = &Class::toString;
 // ObjectClass (3 entries: isPrototypeOf, hasOwnProperty, propertyIsEnumerable)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014b330
-static const bool NamespacesOf_ObjectClass = SetThunkNamespaces(DAT_143a2d5c0, 0x0, 3, fl::NS_AS3);
+static ThunkNamespaces<3> NamespacesOf_ObjectClass(DAT_143a2d5c0, 0x0, fl::NS_AS3);
 typedef ThunkFunc0<Instances::fl_vec::Vector_String, 3, bool> TFunc_Instances_fl_vec_Vector_String_fixedGet;
 // @0x14014b350
 template <> const TFunc_Instances_fl_vec_Vector_String_fixedGet::TMethod TFunc_Instances_fl_vec_Vector_String_fixedGet::Method = &Instances::fl_vec::Vector_String::fixedGet;
