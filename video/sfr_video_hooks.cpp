@@ -41,8 +41,8 @@ extern "C" void ms2_video_hook_10(void);
 #pragma comment(linker, "/alternatename:ms2_video_hook_10=?FUN_14000cee0@@YAPEAVCFunctionObject@AS2@GFx@Scaleform@@PEAV1234@I@Z")
 MS2_REPLACE_IMPL(0x14000CEE0, (void (*)())&ms2_video_hook_10, "FUN_14000cee0", 55, 0xD65AF946);
 extern "C" void ms2_video_hook_11(void);
-#pragma comment(linker, "/alternatename:ms2_video_hook_11=?FUN_140007ff0@@YAPEAVFunctionRef@AS2@GFx@Scaleform@@PEAVObjectInterface@234@PEAV1234@PEAVASStringContext@234@@Z")
-MS2_REPLACE_IMPL(0x140007FF0, (void (*)())&ms2_video_hook_11, "FUN_140007ff0", 126, 0x9AAB9CE7);
+#pragma comment(linker, "/alternatename:ms2_video_hook_11=?Get__constructor__@ObjectInterface@AS2@GFx@Scaleform@@UEAA?AVFunctionRef@234@PEAVASStringContext@234@@Z")
+MS2_REPLACE_IMPL(0x140007FF0, (void (*)())&ms2_video_hook_11, "ObjectInterface::Get__constructor__", 126, 0x9AAB9CE7);
 extern "C" void ms2_video_hook_12(void);
 #pragma comment(linker, "/alternatename:ms2_video_hook_12=?FUN_14000e1e0@AS2@GFx@Scaleform@@YAPEAVObject@123@PEAV4123@PEAVASStringContext@123@0AEBVFunctionRef@123@@Z")
 MS2_REPLACE_IMPL(0x14000E1E0, (void (*)())&ms2_video_hook_12, "FUN_14000e1e0", 196, 0x4DBA2484);
