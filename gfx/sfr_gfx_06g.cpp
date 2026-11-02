@@ -100,7 +100,6 @@ int CSSTokenizer<wchar_t>::IsDigit(wchar_t c)
 }
 
 // @0x1426097a0
-// MS2-FUNCTIONAL: the exe keeps the quoted-string counters in memory and reloads pEnd in that loop; ours keeps them in registers
 template<class T>
 CSSToken<T> CSSTokenizer<T>::GetNextToken()
 {
@@ -200,9 +199,9 @@ CSSToken<T> CSSTokenizer<T>::GetNextToken()
             CurrentToken.Length++;
         }
         // the closing quote belongs to the token
+        CurrentToken.Type = CSSToken<T>::TT_QString;
         ColDev++;
         CurrentToken.Length++;
-        CurrentToken.Type = CSSToken<T>::TT_QString;
     }
     else if (IsDigit(*pstr))
     {
