@@ -135,12 +135,19 @@ SPInt Slots::GetPrevSlotIndex(SPInt ind) const
     return slots->VArray[static_cast<UPInt>(ind - static_cast<SPInt>(slots->FirstOwnSlotNum))].Prev;
 }
 
-// MS2-FUNCTIONAL 0x14250c230: the SDK form; the exe constant-initializes v (its Value(Object*) is inline there),
-// ours calls the out-of-line ctor (sfr_as3_15) inside the guard.
+// Value(Object*) as the exe inlines it here (its out-of-line copy is sfr_as3_15's 0x1424dc050).
+SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
+    : Flags(kObject)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
 // @0x14250c230
 const Value& Value::GetNull()
 {
-    static const Value v((Object*)NULL);
+    static const Value v((Object*)NULL, Value::InlineObj);
     return v;
 }
 
@@ -2954,17 +2961,17 @@ public:
     void QueueFrameActions();
 };
 
-// MS2-FUNCTIONAL the exe inlines QueueFrameScript in one of the play list loops
+// MS2-FUNCTIONAL the exe leaves a dead lea of the AvmDisplayObj after the Flags or and does not align its loop heads
 // @0x14251ff60
 void FrameCounter::QueueFrameActions()
 {
     MovieRoot* proot = static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot);
     EventChains& chains = reinterpret_cast<Sfr34_MovieRootChainsView*>(proot)->Chains;
     chains.QueueEvents(EventId::IdCode(Sfr34_Event_FrameConstructed));
-    // the play list backwards from the stage, the optimized one while it is valid
-    if (!GetMovieImpl()->IsOptAdvListInvalid())
+    // the play list backwards from the stage, the full one while the optimized one is invalid
+    if (GetMovieImpl()->IsOptAdvListInvalid())
     {
-        for (InteractiveObject* cur = pPlayPrevOpt; cur; cur = cur->pPlayPrevOpt)
+        for (InteractiveObject* cur = pPlayPrev; cur; cur = cur->pPlayPrev)
         {
             ToAvmDisplayObj(cur)->Flags |= AvmDisplayObj::Flag_Loaded;
             if (cur->IsSprite())
@@ -2980,7 +2987,7 @@ void FrameCounter::QueueFrameActions()
     }
     else
     {
-        for (InteractiveObject* cur = pPlayPrev; cur; cur = cur->pPlayPrev)
+        for (InteractiveObject* cur = pPlayPrevOpt; cur; cur = cur->pPlayPrevOpt)
         {
             ToAvmDisplayObj(cur)->Flags |= AvmDisplayObj::Flag_Loaded;
             if (cur->IsSprite())
@@ -4312,8 +4319,8 @@ void Stage::PropagateMouseEvent(const EventId& id)
 } } } // namespace Scaleform::GFx::AS3
 
 // Abc::TraitInfo: the multiname of a slot's or constant's type, or of a class trait's class (the any type for 0).
-// MS2-FUNCTIONAL declared over void pointers by its caller (sfr_as3_17); SDK GetTypeName shape, the exe slot path
-// has an extra 32-bit zero test before the shared AnyType check
+// Declared over void pointers by its caller (sfr_as3_17). The slot path tests its 32-bit index for 0 before the
+// shared AnyType check.
 // @0x14250f8a0
 const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const void* abc)
 {
@@ -4322,7 +4329,11 @@ const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const 
     const File&      file = *static_cast<const File*>(abc);
     TraitInfo::Type  type = t.GetType();
     if (type == TraitInfo::tSlot || type == TraitInfo::tConst)
+    {
+        if (t.Ind == 0)
+            return file.Const_Pool.GetMultiname(0);
         return file.Const_Pool.GetMultiname(t.Ind);
+    }
     return file.Const_Pool.GetMultiname(file.AS3_Classes.Info[t.Ind]->inst_info.name_ind);
 }
 
@@ -4337,12 +4348,25 @@ bool FUN_142513e50(const DisplayObjectBase* pobj)
     return pobj->Is3D();
 }
 
+// 4.1.18's CharacterDef::GetRectBoundsLocal (vftable slot 8, +0x40) takes no morph ratio: the caller passes no xmm2.
+struct Sfr34_CharDefBoundsSlots
+{
+    virtual void  Slot0() = 0;
+    virtual void  Slot1() = 0;
+    virtual void  Slot2() = 0;
+    virtual void  Slot3() = 0;
+    virtual void  Slot4() = 0;
+    virtual void  Slot5() = 0;
+    virtual void  Slot6() = 0;
+    virtual void  Slot7() = 0;
+    virtual RectF GetRectBoundsLocal() const = 0;
+};
+
 // The definition's rect bounds through t.
-// MS2-FUNCTIONAL member of a layout view; the exe's definition slot takes no float argument (no xmm2 zeroing)
 // @0x14250d700
 RectF Sfr34_ShapeObjectView::GetRectBounds(const Render::Matrix2F& t) const
 {
-    return t.EncloseTransform(pDef->GetRectBoundsLocal());
+    return t.EncloseTransform(reinterpret_cast<const Sfr34_CharDefBoundsSlots*>(pDef.GetPtr())->GetRectBoundsLocal());
 }
 
 // Whether other is self or derives from it or implements it: up other's parents, each asked whether it supports
@@ -5074,7 +5098,7 @@ ASString FUN_14250fc60(ASString name, const VTable& vt, UInt32 ind, bool closure
 }
 
 // "*" is the any name; "@x" an attribute name x (unless the name is already an attribute's), "@*" any attribute.
-// MS2-FUNCTIONAL the exe splits the function into separate code chunks
+// MS2-FUNCTIONAL the exe keeps the temporary's node in rbx across Value::operator= (its SCU sees that body); ours reloads it
 // @0x14251cef0
 __declspec(noinline) void Multiname::PostProcessName(bool isAttr)
 {
@@ -5084,14 +5108,14 @@ __declspec(noinline) void Multiname::PostProcessName(bool isAttr)
     if (n.GetSize() == 0)
         return;
     if (n[0] == '*')
-        Name = ASString(n.GetManager()->GetEmptyStringNode());
+        FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
     else if (n[0] == '@' && !isAttr)
     {
         Kind = static_cast<Abc::MultinameKind>(Kind | 8);
         if (n.GetSize() == 2 && n[1] == '*')
-            Name = ASString(n.GetManager()->GetEmptyStringNode());
+            FUN_1424e0d40(Name, ASString(n.GetManager()->GetEmptyStringNode()));
         else
-            Name = ASString(n.SubstringNode(1, n.GetSize()));
+            FUN_1424e0d40(Name, ASString(n.SubstringNode(1, n.GetSize())));
     }
 }
 
@@ -5733,26 +5757,22 @@ void MovieRoot::RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl)
 
 // sfr34 batch AB: the registration of a method in the virtual table of traits.
 
-// Slots::FindSlotInfoIndex is protected; its member pointer is taken through a derived class.
-struct Sfr34_SlotsAccess : Slots
-{
-    static AbsoluteIndex Find(const Slots& s, const ASString& k, const Instances::Namespace& ns)
-    {
-        return (s.*(&Sfr34_SlotsAccess::FindSlotInfoIndex))(k, ns);
-    }
-};
-
 // Traits::RegisterWithVT: method v (named name in nsi's namespace) overrides the slot of that name and namespace
 // (a getter added to a setter, or the reverse, gets a slot of its own), or gets a new one. False when that slot is
 // not a method.
-// MS2-FUNCTIONAL free function (not declared in the shared Traits class): the exe is the member, so its this is in
-// rcx and the CheckResult return slot in rdx, where ours has them swapped
-// @0x142521d20
-CheckResult FUN_142521d20(Traits* self, const ASString& name, const SlotInfo& nsi, const Value& v,
-                          SlotInfo::BindingType bt)
+// A Traits member in the exe (this in rcx, the CheckResult return slot in rdx); it is not declared in the shared
+// Traits class, so a unit-local view declares it.
+struct Sfr34_TraitsAddSlotView : Traits
 {
+    CheckResult FUN_142521d20(const ASString& name, const SlotInfo& nsi, const Value& v, SlotInfo::BindingType bt);
+};
+// @0x142521d20
+CheckResult Sfr34_TraitsAddSlotView::FUN_142521d20(const ASString& name, const SlotInfo& nsi, const Value& v,
+                                                    SlotInfo::BindingType bt)
+{
+    Traits* self = this;
     const Instances::Namespace& ns  = *nsi.pNs;
-    const AbsoluteIndex         ind = Sfr34_SlotsAccess::Find(*self, name, ns);
+    const AbsoluteIndex         ind = FindSlotInfoIndex(name, ns);
     bool                        result = false;
     if (ind.IsValid())
     {
