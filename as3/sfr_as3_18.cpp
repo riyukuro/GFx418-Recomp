@@ -37,6 +37,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include "ms2/scaleform/include/gfx/gfx_imageresource.h"
 #include "ms2/scaleform/include/gfx/gfx_imagecreator.h"
+#include "ms2/scaleform/include/gfx/gfx_spritedef.h"
 #undef GetObject   // windows.h
 
 // The definitions in sfr_as3_17 and sfr_as3_19 of exe functions called here, by their real names.
@@ -2265,7 +2266,7 @@ bool AvmDisplayObj::OnUnloading(bool mayRemove)
 // Mouse events go straight to the AS3 object, controller events are queued.
 // MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
 // @0x142518c70
-bool AvmInteractiveObj::OnEvent(const EventId& id)
+SF_NOINLINE bool AvmInteractiveObj::OnEvent(const EventId& id)
 {
     switch (id.Id)
     {
@@ -2286,67 +2287,107 @@ bool AvmInteractiveObj::OnEvent(const EventId& id)
 }
 
 // A sprite in button mode shows its _up/_over/_down frames; a press becomes a click.
-// MS2-FUNCTIONAL label choice written as a switch; block order and string reloc order differ
+// MovieImpl::mMouseState (0x50 bytes each at +0x1260), the part read here.
+struct Sfr34_MouseStateView
+{
+    UInt32 Pad[12];
+    UInt32 ButtonsState;      // +0x30
+    UInt32 PrevButtonsState;  // +0x34
+    UInt32 Rest[6];
+
+    unsigned GetButtonsState() const     { return ButtonsState; }
+    unsigned GetPrevButtonsState() const { return PrevButtonsState; }
+};
+
+struct Sfr34_MovieImplMiceView
+{
+    void*                Pad[0x1260 / 8];
+    Sfr34_MouseStateView mMouseState[4];   // +0x1260
+};
+
+static __forceinline Sfr34_MouseStateView* Sfr34_GetMouseState(MovieImpl* movie, unsigned mouseIndex)
+{
+    if (mouseIndex >= 4)
+        return NULL;
+    return &reinterpret_cast<Sfr34_MovieImplMiceView*>(movie)->mMouseState[mouseIndex];
+}
+
+static __forceinline SpriteDef* Sfr34_GetSpriteDef(Sprite* spr)
+{
+    return (spr->Flags & Sprite::Flags_SpriteDef) ? static_cast<SpriteDef*>(spr->pDef.GetPtr()) : NULL;
+}
+
+static __forceinline bool Sfr34_IsTrackAsMenu(Sprite* spr)
+{
+    return (UByte)(*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(spr) + 0xb8) >> 14) & 1;
+}
+
+// MS2-FUNCTIONAL 0x142518df0: SDK shape; only the mouse-state field address registers differ (exe rdx/rcx, and 0x30/0x34 on the NULL path).
 // @0x142518df0
 bool AvmSprite::OnEvent(const EventId& id)
 {
     if (SprFlags & Flag_ButtonMode)
     {
-        Sprite* spr = static_cast<Sprite*>(pDispObj);
-        const UPInt def = (spr->Flags & Sprite::Flags_SpriteDef) ? reinterpret_cast<const UPInt&>(spr->pDef) : 0;
-        const UByte frames = def ? *reinterpret_cast<const UByte*>(def + 0x60) : 0;   // SpriteDef: 1 _up, 2 _down, 4 _over
-        if (frames & 7)
+        // Check if the sprite has special frames, such as _up, _down, _over.
+        // Go to these frames if event is Release, Press or RollOver.
+        Sprite*    spr = static_cast<Sprite*>(pDispObj);
+        SpriteDef* sp;
+        if ((sp = Sfr34_GetSpriteDef(spr)) != NULL)
         {
-            const bool trackAsMenu = (*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(spr) + 0xb8) & 0x4000) != 0;
-            const char* label = NULL;
-            switch (id.Id)
+            if (sp->Flags & SpriteDef::Flags_HasSpecialFrames)
             {
-            case EventId::Event_RollOver:
-                if (frames & 4)
+                switch (id.Id)
                 {
-                    // MovieImpl::mMouseState[i] (0x50 bytes at +0x1260): +0x30 and +0x34 button states
-                    const unsigned mi = (unsigned)(int)id.MouseIndex;
-                    const UPInt ms = mi < 4 ? reinterpret_cast<UPInt>(spr->GetMovieImpl()) + 0x1260 + mi * 0x50 : 0;
-                    if (trackAsMenu && (*reinterpret_cast<const UByte*>(ms + 0x34) & 1))
-                        label = "_down";
-                    else if (!(*reinterpret_cast<const UByte*>(ms + 0x30) & 1))
-                        label = "_over";
-                }
-                break;
-            case EventId::Event_MouseDown:
-            case EventId::Event_DragOver:
-                if (frames & 2)
-                    label = "_down";
-                break;
-            case EventId::Event_DragOut:
-                if (!trackAsMenu)
-                {
-                    if (frames & 4)
-                        label = "_over";
+                case EventId::Event_MouseUp:
+                case EventId::Event_Release:
+                    if (sp->Flags & SpriteDef::Flags_Has_Frame_over)
+                        spr->GotoLabeledFrame("_over", 0);
                     break;
+                case EventId::Event_RollOver:
+                    if (sp->Flags & SpriteDef::Flags_Has_Frame_over)
+                    {
+                        Sfr34_MouseStateView& ms = *Sfr34_GetMouseState(spr->GetMovieImpl(), id.MouseIndex);
+                        if (Sfr34_IsTrackAsMenu(spr) && (ms.GetPrevButtonsState() & 1))
+                            spr->GotoLabeledFrame("_down", 0);
+                        // prevent button from changing state if left mouse button is pressed (like in Flash)
+                        else if (!(ms.GetButtonsState() & 1))
+                            spr->GotoLabeledFrame("_over", 0);
+                    }
+                    break;
+                case EventId::Event_DragOut:
+                    if (Sfr34_IsTrackAsMenu(spr))
+                    {
+                        if (sp->Flags & SpriteDef::Flags_Has_Frame_up)
+                            spr->GotoLabeledFrame("_up", 0);
+                    }
+                    else
+                    {
+                        if (sp->Flags & SpriteDef::Flags_Has_Frame_over)
+                            spr->GotoLabeledFrame("_over", 0);
+                    }
+                    break;
+                case EventId::Event_MouseDown:
+                case EventId::Event_DragOver:
+                    if (sp->Flags & SpriteDef::Flags_Has_Frame_down)
+                        spr->GotoLabeledFrame("_down", 0);
+                    break;
+                case EventId::Event_RollOut:
+                case EventId::Event_ReleaseOutside:
+                    if (sp->Flags & SpriteDef::Flags_Has_Frame_up)
+                        spr->GotoLabeledFrame("_up", 0);
+                    break;
+                default:;
                 }
-                // fall through
-            case EventId::Event_ReleaseOutside:
-            case EventId::Event_RollOut:
-                if (frames & 1)
-                    label = "_up";
-                break;
-            case EventId::Event_MouseUp:
-            case EventId::Event_Release:
-                if (frames & 4)
-                    label = "_over";
-                break;
             }
-            if (label)
-                spr->GotoLabeledFrame(label, 0);
         }
         if (id.Id == EventId::Event_Press)
         {
-            if (Instances::fl_display::DisplayObject* obj = GetAS3Obj())
+            if (pAS3RawPtr || pAS3CollectiblePtr)
             {
-                EventId click(id);
-                click.Id = AS3Event_Click;
-                obj->Dispatch(click, pDispObj);
+                // simulate the Click event
+                EventId e(id);
+                e.Id = AS3Event_Click;
+                GetAS3Obj()->Dispatch(e, pDispObj);
             }
             return true;
         }
