@@ -688,12 +688,19 @@ void State::PushFunction(UInt32 arg)
     { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x208)); OpStack.PushBack(t.Get()); }
 }
 
+// State::PushOp (OpStack.PushBack). Through the inline call the exe takes the OpStack address before it builds the
+// pushed Value.
+static inline void TrPushOp(State* st, const Value& v)
+{
+    st->GetOpStack().PushBack(v);
+}
+
 // @0x14253a630
 void State::PushBoolean2(UInt32 a, UInt32 b)
 {
     FUN_14251fcd0(reinterpret_cast<UPInt>(pTracer), static_cast<UInt32>(a));
     FUN_14251fcd0(reinterpret_cast<UPInt>(pTracer), static_cast<UInt32>(b));
-    { TrTraitsScratch t; t.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x210)); OpStack.PushBack(t.Get()); }
+    TrPushOp(this, Value(TrITraits(reinterpret_cast<UPInt>(pTracer), 0x210), Value::NotNull));
 }
 
 // @0x142538f20
@@ -776,6 +783,14 @@ void Sfr27TraceIfTrueFalse(State* st, UInt64* pos, int op)
     Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), off, -1);
 }
 
+// The second operand's index is s.NumOps() reduced in place, so cl emits sub rdx,2 (ops[NumOps() - 2] gives
+// add rdx,-2).
+static inline Value& TrOpBelow(Value* ops, UPInt size)
+{
+    size -= 2;
+    return ops[size];
+}
+
 // @0x14253ad00
 void Sfr27TraceIfCompare(State* st, UInt64* pos, UInt32 op)
 {
@@ -784,7 +799,7 @@ void Sfr27TraceIfCompare(State* st, UInt64* pos, UInt32 op)
     int code = static_cast<int>(op);
     Value* const ops = s.Ops();
     const UPInt n = s.NumOps();
-    if (FUN_142514c30(tracer, &ops[n - 1]) && FUN_142514c30(tracer, &ops[s.NumOps() - 1 - 1]))
+    if (FUN_142514c30(tracer, &ops[n - 1]) && FUN_142514c30(tracer, &TrOpBelow(ops, s.NumOps())))
     {
         switch (code)
         {
@@ -802,7 +817,7 @@ void Sfr27TraceIfCompare(State* st, UInt64* pos, UInt32 op)
         UPInt* opArr = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
         reinterpret_cast<UInt64*>(opArr[0])[opArr[1] - 1] = static_cast<UInt32>(code);
     }
-    else if (FUN_142514470(tracer, &ops[n - 1]) && FUN_142514470(tracer, &ops[s.NumOps() - 1 - 1]))
+    else if (FUN_142514470(tracer, &ops[n - 1]) && FUN_142514470(tracer, &TrOpBelow(ops, s.NumOps())))
     {
         switch (code)
         {
@@ -2487,13 +2502,17 @@ bool Sfr31SetCxform(UPInt self, UPInt obj, const Render::Cxform* cx)
     return false;
 }
 
-// MS2-FUNCTIONAL 0x142539420: same logic; Value init/release and register allocation differ
+// TR::State::PushOp (OpStack.PushBack). Going through the inline call puts the OpStack address in rcx before the
+// pushed value's in rdx, as in the exe.
+static inline void Sfr31StatePushOp(UPInt st, const Value& v)
+{
+    reinterpret_cast<ArrayDH<Value>*>(st + 0x38)->PushBack(v);
+}
+
 // @0x142539420
 void Sfr31StatePushTyped(UPInt st)
 {
-    Value v;
-    const Value* r = FUN_14250a490(Sfr31Rd(st, 0), &v, st);
-    reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(*r);
+    Sfr31StatePushOp(st, reinterpret_cast<const Tracer*>(Sfr31Rd(st, 0))->GetGlobalObject(*reinterpret_cast<const TR::State*>(st)));
 }
 
 // The syncing object: vtable slot 1 returns the render-side object it mirrors to (or null).
@@ -2594,13 +2613,12 @@ void Sfr31StatePushNs(UPInt st)
     reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(t.Get());
 }
 
-// MS2-FUNCTIONAL 0x14253f410: scheduling only: the exe loads the stack address before moving the pushed value into rdx.
 // @0x14253f410
 void Sfr31StatePushPool(UPInt st, UInt32 ind)
 {
     FUN_14251fcd0(Sfr31Rd(st, 0), ind);
     Instances::Namespace* ns = reinterpret_cast<Instances::Namespace*>(FUN_14250ae60(Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0), 0x20), 0x28), ind));
-    reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(Value(ns));
+    Sfr31StatePushOp(st, Value(ns));
 }
 
 // Instance traits seen through their vtable: slot 16 (+0x80) is the subtype test.
