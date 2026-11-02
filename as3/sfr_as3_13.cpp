@@ -2565,43 +2565,59 @@ namespace Instances { namespace fl_text
     static inline UByte& ViewAlign(void* pdoc)    { return *((UByte*)pdoc + 0x148); }
     static inline void   RequestReformat(void* pdoc) { *((UByte*)pdoc + 0x14b) |= 1; }
 
+    // UpdateAutosizeSettings, which the exe inlines into autoSizeSet (out of line at 0x1424af5f0).
+    static __forceinline void Sfr13UpdateAutoSizeInl(TextField* pthis)
+    {
+        void* ptf = DisplayTextField(pthis);
+        const bool autoSizeByX = ((*(UByte*)&FieldFlags(ptf) & 1) != 0 && !((ViewFlags(DocViewOf(ptf)) & 8) != 0));
+        const bool autoSizeByY = ((*(UByte*)&FieldFlags(ptf) & 1) != 0);
+        if (autoSizeByX)
+            FUN_1426150b0(DocViewOf(ptf));
+        else
+            ViewFlags(DocViewOf(ptf)) &= ~1;
+        if (autoSizeByY)
+            FUN_1426150d0(DocViewOf(ptf));
+        else
+            ViewFlags(DocViewOf(ptf)) &= ~2;
+        FieldFlags(ptf) |= 0x2000;
+        FUN_1425bc060(ptf);
+    }
+    // DocView::GetAlignment / SetAlignment and TextField::IsAutoSize on the opaque display objects.
+    static __forceinline unsigned Sfr13GetAlign(void* ptf) { return ViewAlign(DocViewOf(ptf)) & 3; }
+    static __forceinline void Sfr13SetAlign(void* pdoc, unsigned a)
+    {
+        ViewAlign(pdoc) = (UByte)((ViewAlign(pdoc) & ~3) | a);
+        RequestReformat(pdoc);
+    }
+    static __forceinline bool Sfr13IsAutoSize(void* ptf) { return (*(UByte*)&FieldFlags(ptf) & 1) != 0; }
+
     // An unknown mode turns auto-sizing on and keeps the alignment.
     // @0x1424afb10
-    // MS2-FUNCTIONAL: written from the exe's control flow
+    // MS2-FUNCTIONAL: register allocation (the exe keeps the doc view in r9 and the flags in r8d; ours rdx/r9d)
     void TextField::autoSizeSet(const Value& result, const ASString& value)
     {
         SF_UNUSED(result);
         void* ptf = DisplayTextField(this);
         void* pdoc = DocViewOf(ptf);
-        UInt32 oldFlags = FieldFlags(ptf);
-        UByte oldAlign = ViewAlign(pdoc);
+        unsigned oldAlignment = ViewAlign(pdoc) & 3;
+        bool oldAutoSize = Sfr13IsAutoSize(ptf);
         if (value == "none")
         {
             FieldFlags(ptf) &= ~1u;
-            ViewAlign(pdoc) &= ~3;
-            RequestReformat(pdoc);
+            Sfr13SetAlign(pdoc, 0);
         }
         else
         {
             FieldFlags(ptf) |= 1;
             if (value == "left")
-            {
-                ViewAlign(pdoc) &= ~3;
-                RequestReformat(pdoc);
-            }
+                Sfr13SetAlign(pdoc, 0);
             else if (value == "right")
-            {
-                ViewAlign(pdoc) = (ViewAlign(pdoc) & ~2) | 1;
-                RequestReformat(pdoc);
-            }
+                Sfr13SetAlign(pdoc, 1);
             else if (value == "center")
-            {
-                ViewAlign(pdoc) = (ViewAlign(pdoc) & ~1) | 2;
-                RequestReformat(pdoc);
-            }
+                Sfr13SetAlign(pdoc, 2);
         }
-        if ((oldAlign & 3) != (ViewAlign(DocViewOf(ptf)) & 3) || (oldFlags & 1) != (FieldFlags(ptf) & 1))
-            TextFieldUpdateAutoSize(this);
+        if ((oldAlignment != Sfr13GetAlign(ptf)) || (oldAutoSize != Sfr13IsAutoSize(ptf)))
+            Sfr13UpdateAutoSizeInl(this);
         FUN_1425bc060(ptf);
     }
 
