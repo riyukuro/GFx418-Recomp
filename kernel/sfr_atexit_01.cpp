@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x142cca370-0x142cca4a4 .text$yd
 // MS2-RANGE: 0x142cca4d0-0x142cca4e6 .text$yd
 
+#include <emmintrin.h>
 #include "../gfx/sfr_gfx_07raw.h"
 #include "ms2/scaleform/include/render/render_primitive.h"
 #include "ms2/scaleform/include/render/render_scale9grid.h"
@@ -126,14 +127,13 @@ static inline void RawAs3ValueDtor(char* v)
     UInt32 flags = RawField<UInt32>(v, 0);
     if ((flags & 0x1f) > 9)
     {
-        if ((flags >> 9) & 1)
+        if ((UByte)(flags >> 9) & 1)
         {
             int* proxy = RawField<int*>(v, 8);
             if (--*proxy == 0)
                 Memory::Free(proxy);
             RawField<UInt32>(v, 0) &= ~0x21fu;
-            RawField<U>(v, 8) = 0;
-            RawField<U>(v, 0x10) = 0;
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(v + 8), _mm_setzero_si128());
             RawField<U>(v, 0x18) = 0;
         }
         else
@@ -167,7 +167,6 @@ static inline char* As2ArrayEnd(const AS2::Value (&a)[N])
 }
 
 // static AS3::Value at 0x143a2dd20.
-// MS2-FUNCTIONAL: the inlined weak-reference release is laid out differently.
 // @0x142cc9300
 void FUN_142cc9300()
 {
@@ -175,7 +174,6 @@ void FUN_142cc9300()
 }
 
 // static AS3::Value at 0x143b15780.
-// MS2-FUNCTIONAL: the inlined weak-reference release is laid out differently.
 // @0x142cc9370
 void FUN_142cc9370()
 {
