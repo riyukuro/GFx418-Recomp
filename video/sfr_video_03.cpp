@@ -1452,10 +1452,10 @@ void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
 {
     uint64_t* traits = static_cast<uint64_t*>(self);
     reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(traits)->Scaleform::GFx::AS3::AvmInteractiveObj::AvmInteractiveObj(object);
+    *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(traits) + 0x54) = 1;
     reinterpret_cast<uint32_t*>(traits)[20] = 0;
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(traits) + 0x4c) = 0;
     reinterpret_cast<uint32_t*>(traits)[18] = 0;
-    *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(traits) + 0x54) = 1;
     *reinterpret_cast<void***>(traits) = &VideoTraitsBaseVtable;
     reinterpret_cast<void***>(traits)[6] = &VideoTraitsSubVtableA;
     reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
@@ -1647,7 +1647,7 @@ void ConvertVideoStringArg(const uint64_t* value, uint64_t* slot)
 }
 // MS2-FUNCTIONAL: captures two string callback parameters, retaining defaults and converting supplied AS3 values.
 // @0x140017130
-uint64_t* FUN_140017130(uint64_t* record, uint64_t vm, uint64_t property, unsigned count, const uint64_t* args, const uint64_t* defaults)
+__declspec(noinline) uint64_t* FUN_140017130(uint64_t* record, uint64_t vm, uint64_t property, unsigned count, const uint64_t* args, const uint64_t* defaults)
 {
     record[0] = vm; record[1] = property;
     record[2] = defaults[0];
@@ -1763,25 +1763,47 @@ void FUN_140017520(void*, void* vm, void* frame, uint64_t property, unsigned cou
 namespace {
 
 } // namespace: externally referenced Video native
+namespace {
+// the three default ASStrings of the subtitle thunk, laid out as FUN_140017130 reads them
+struct VideoStringDefaults3
+{
+    Scaleform::GFx::ASString a, b, c;
+    VideoStringDefaults3(const Scaleform::GFx::ASString& x, const Scaleform::GFx::ASString& y, const Scaleform::GFx::ASString& z) : a(x), b(y), c(z) {}
+};
+}
 // MS2-FUNCTIONAL: dispatches the subtitle callback with converted AS3 string parameters.
 // @0x140017670
 void FUN_140017670(void*, void* vm, void* frame, uint64_t property, unsigned count, const uint64_t* args)
 {
-    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
-    Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
-    Scaleform::GFx::ASStringNode* first = MakeVideoEmptyString(manager); Scaleform::GFx::ASStringNode* second = MakeVideoEmptyString(manager); Scaleform::GFx::ASStringNode* third = MakeVideoEmptyString(manager);
-    uint64_t defaults[3] = {reinterpret_cast<uintptr_t>(third), reinterpret_cast<uintptr_t>(second), reinterpret_cast<uintptr_t>(first)};
+    using Scaleform::GFx::ASString;
+    const uint64_t object = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(frame) + 0x10);
+    const Scaleform::GFx::AS3::StringManager& strings = **reinterpret_cast<Scaleform::GFx::AS3::StringManager**>(static_cast<unsigned char*>(vm) + 0x10);
+    VideoStringDefaults3 defaults(strings.CreateEmptyString(), strings.CreateEmptyString(), strings.CreateEmptyString());
     uint64_t record[5];
-    FUN_140017250(record, reinterpret_cast<uintptr_t>(vm), property, count, args, defaults);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        void (*thunk)(uintptr_t, uint64_t, uint64_t*, uint64_t*, uint64_t*) = reinterpret_cast<void(*)(uintptr_t, uint64_t, uint64_t*, uint64_t*, uint64_t*)>(VideoStringCallbackB);
-        thunk(*reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(frame) + 0x10) + *reinterpret_cast<const int*>(&VideoStringCallbackBaseB),
-              record[1], &record[2], &record[3], &record[4]);
+    FUN_140017130(record, reinterpret_cast<uintptr_t>(vm), property, count, args, reinterpret_cast<const uint64_t*>(&defaults));
+    ASString& third = *::new (&record[4]) ASString(defaults.c);
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0 && count > 2) {
+        const Scaleform::GFx::AS3::Value& arg = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args)[2];
+        if (arg.IsNull())
+            third.SetNull();
+        else
+            arg.Convert2String(third);
     }
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[4]));
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
-    ReleaseVideoString(first); ReleaseVideoString(second); ReleaseVideoString(third);
+    // the record's three strings die at every return, as the exe's Args3 destructor does
+    struct Strings
+    {
+        uint64_t* r;
+        ~Strings()
+        {
+            reinterpret_cast<ASString*>(&r[4])->~ASString();
+            reinterpret_cast<ASString*>(&r[3])->~ASString();
+            reinterpret_cast<ASString*>(&r[2])->~ASString();
+        }
+    } owner = {record};
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) != 0)
+        return;
+    void (*thunk)(uintptr_t, uint64_t, uint64_t*, uint64_t*, uint64_t*) = reinterpret_cast<void(*)(uintptr_t, uint64_t, uint64_t*, uint64_t*, uint64_t*)>(VideoStringCallbackB);
+    thunk(object + *reinterpret_cast<const int*>(&VideoStringCallbackBaseB), record[1], &record[2], &record[3], &record[4]);
 }
 namespace {
 
@@ -1794,41 +1816,38 @@ void FUN_1400192e0(void* callback, uint64_t* output)
     // the VM comes from the instance itself (0x1400192f4: [[rcx+0x20]+0x78]), not from callback+0x10
     unsigned char* callFrame = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x20);
     unsigned char* as3vm = *reinterpret_cast<unsigned char**>(callFrame + 0x78);
-    uint64_t objectResult = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(as3vm)->MakeObject().GetPtr());
-    Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
-    Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(as3vm + 0x10) + 0x1e8);
-    const char* names[] = {"onMetaData", "onCuePoint", "onSubtitle"};
-    const size_t offsets[] = {0x98, 0xb8, 0xd8};
-    for (unsigned i = 0; i < 3; ++i) {
-        Scaleform::GFx::ASString name(manager->CreateStringNode(names[i]));
-        object->AddDynamicSlotValuePair(name, *reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + offsets[i]));
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object> result = reinterpret_cast<Scaleform::GFx::AS3::VM*>(as3vm)->MakeObject();
+    Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(result.GetPtr());
+    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x20) + 0x78) + 0x10);
+    {
+        Scaleform::GFx::ASString name((*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8))->CreateStringNode("onMetaData"));
+        object->AddDynamicSlotValuePair(name, *reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0x98));
     }
-    if (output && *output != objectResult) {
-        ReleaseVideoAtom(output);
-        RetainVideoAtom(objectResult);
-        *output = objectResult;
+    {
+        Scaleform::GFx::ASString name((*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8))->CreateStringNode("onCuePoint"));
+        object->AddDynamicSlotValuePair(name, *reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0xb8));
     }
-    uint64_t temporary = objectResult;
-    ReleaseVideoAtom(&temporary);
+    {
+        Scaleform::GFx::ASString name((*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8))->CreateStringNode("onSubtitle"));
+        object->AddDynamicSlotValuePair(name, *reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(callback) + 0xd8));
+    }
+    *reinterpret_cast<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>*>(output) = result;
 }
 namespace {
 
 namespace {
 __forceinline void GetVideoSoundTransform(void* self, uint64_t* output, size_t fieldOffset)
 {
-    unsigned char* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
-    Scaleform::GFx::AS3::Value classValue;
-    Scaleform::GFx::AS3::Value transform;
-    reinterpret_cast<Scaleform::GFx::AS3::VM*>(root)->Construct("flash.media.SoundTransform", classValue, 0, 0, true);
-    Scaleform::GFx::AS3::Object* soundClass = classValue.GetObject();
-    const Scaleform::GFx::AS3::Value::KindType kind = classValue.GetKind();
-    if (*reinterpret_cast<unsigned char*>(root + 0x180) == 0 && kind != 0 && (kind < Scaleform::GFx::AS3::Value::kObject || kind > Scaleform::GFx::AS3::Value::kThunkFunction || soundClass)) {
-        reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_media::SoundTransform*>(soundClass)->volumeSet(transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
-        uintptr_t atom = reinterpret_cast<uintptr_t>(soundClass);
-        ReleaseVideoAtom(output);
-        RetainVideoAtom(atom);
-        *output = atom;
-    }
+    using namespace Scaleform::GFx::AS3;
+    Value classValue;
+    Value transform;
+    VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+    vm->Construct("flash.media.SoundTransform", classValue, 0, 0, true);
+    if (vm->IsException() || classValue.IsNullOrUndefined())
+        return;
+    SPtr<Instances::fl_media::SoundTransform> sound = static_cast<Instances::fl_media::SoundTransform*>(classValue.GetObject());
+    sound->volumeSet(transform, *reinterpret_cast<double*>(static_cast<unsigned char*>(self) + fieldOffset));
+    *reinterpret_cast<SPtr<Instances::fl_media::SoundTransform>*>(output) = sound;
 }
 }
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
@@ -1881,25 +1900,33 @@ uint64_t* FUN_142743130(uint64_t* object)
 }
 
 } // namespace (sfr36: the natives below have external linkage, other units take their addresses)
+namespace {
+// the instance's VM, [[self+0x20]+0x78]
+__forceinline unsigned char* VideoSelfVM(void* self)
+{
+    return *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+}
+}
 // MS2-FUNCTIONAL: reads the three event handler properties from the attached AS3 stream object.
 // @0x140017f20
 void FUN_140017f20(void* self, void*, void* frame)
 {
-    unsigned char* vm = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
-    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
-    Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
-    Scaleform::GFx::AS3::Instances::Namespace* ns = *reinterpret_cast<Scaleform::GFx::AS3::Instances::Namespace**>(vm + 0x1d0);
-    Scaleform::GFx::AS3::Object* source = reinterpret_cast<Scaleform::GFx::AS3::Object*>(*reinterpret_cast<void**>(static_cast<unsigned char*>(frame) + 0x10));
-    const char* names[] = {"onMetaData", "onCuePoint", "onSubtitle"};
-    const size_t offsets[] = {0x98, 0xb8, 0xd8};
-    for (unsigned i = 0; i < 3; ++i) {
-        Scaleform::GFx::ASString name(manager->CreateStringNode(names[i]));
-        Scaleform::GFx::AS3::Value nameValue(name);
-        Scaleform::GFx::AS3::Multiname property(*ns, nameValue);
-        Scaleform::GFx::AS3::Value value;
-        if (source->GetProperty(property, value))
-            reinterpret_cast<Scaleform::GFx::AS3::Value*>(static_cast<unsigned char*>(self) + offsets[i])->Assign(value);
-    }
+    using namespace Scaleform::GFx::AS3;
+    Object* source = *reinterpret_cast<Object**>(static_cast<unsigned char*>(frame) + 0x10);
+    const StringManager& strings = **reinterpret_cast<StringManager**>(VideoSelfVM(self) + 0x10);
+    Value value;
+    Multiname metaData(static_cast<Object*>(self)->GetVM().GetPublicNamespace(),
+                       Scaleform::GFx::ASString(strings.GetStringManager()->CreateStringNode("onMetaData")));
+    Multiname cuePoint(static_cast<Object*>(self)->GetVM().GetPublicNamespace(),
+                       Scaleform::GFx::ASString(strings.GetStringManager()->CreateStringNode("onCuePoint")));
+    Multiname subtitle(static_cast<Object*>(self)->GetVM().GetPublicNamespace(),
+                       Scaleform::GFx::ASString(strings.GetStringManager()->CreateStringNode("onSubtitle")));
+    if (source->GetProperty(metaData, value))
+        reinterpret_cast<Value*>(static_cast<unsigned char*>(self) + 0x98)->Assign(value);
+    if (source->GetProperty(cuePoint, value))
+        reinterpret_cast<Value*>(static_cast<unsigned char*>(self) + 0xb8)->Assign(value);
+    if (source->GetProperty(subtitle, value))
+        reinterpret_cast<Value*>(static_cast<unsigned char*>(self) + 0xd8)->Assign(value);
 }
 namespace {
 
