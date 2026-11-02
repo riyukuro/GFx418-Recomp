@@ -15,12 +15,11 @@
 
 namespace Scaleform { namespace Render {
 
-// MS2-FUNCTIONAL: the exe schedules the nine lattice evaluations differently (same sums and weights)
 // @0x142678210
 float PerlinGenerator::SmoothNoise(int x, int y)
 {
-    float corners = noise(x + 1, y - 1) + noise(x - 1, y - 1) + noise(x - 1, y + 1) + noise(x + 1, y + 1);
-    float sides   = noise(x + 1, y) + noise(x - 1, y) + noise(x, y - 1) + noise(x, y + 1);
+    float corners = noise(x - 1, y - 1) + noise(x + 1, y - 1) + noise(x - 1, y + 1) + noise(x + 1, y + 1);
+    float sides   = noise(x - 1, y) + noise(x + 1, y) + noise(x, y - 1) + noise(x, y + 1);
     float center  = noise(x, y);
     return sides * 0.125f + corners * 0.0625f + center * 0.25f;
 }

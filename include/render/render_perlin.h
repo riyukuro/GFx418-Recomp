@@ -24,7 +24,7 @@ class PerlinGenerator
     {
         int n = y * Stride + x;
         n = (n << 13) ^ n;
-        return 1.0f - (float)(((A * n * n + B) * n + C) & 0x7fffffff) * (1.0f / 1073741824.0f);
+        return 1.0f - (float)(unsigned)(((A * n * n + B) * n + C) & 0x7fffffff) * (1.0f / 1073741824.0f);
     }
 
     float SmoothNoise(int x, int y);
