@@ -443,6 +443,10 @@ public:
     template <typename OT> Value(SPtr<OT>& v, PickType) : Flags(kUndefined) { PickUnsafe(v); }
     explicit Value(Object* v);
     explicit Value(Class* v);
+    // Value(Object*) where the exe inlines it; the inline body is defined by the unit that uses it (sfr_as3_17), the
+    // out-of-line one (0x1424dc050) stays the default.
+    enum InlineObjType { InlineObj };
+    Value(Object* v, InlineObjType);
     explicit Value(Instances::Function* v);
     explicit Value(Instances::ThunkFunction* v);
     explicit Value(Instances::Namespace* v);

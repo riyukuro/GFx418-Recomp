@@ -1026,6 +1026,8 @@ public:
     PropRef() : pValue(0), SlotIndex(0) { }
     // A dynamic value of obj (the pointer is tagged with bit 0).
     PropRef(Object* obj, Value* v) : pValue(reinterpret_cast<Value*>(reinterpret_cast<UPInt>(v) | 1)), This(obj) { }
+    // the same, with This built by the inlined Value(Object*) (defined by the unit that uses it, sfr_as3_17)
+    PropRef(Object* obj, Value* v, Value::InlineObjType);
     // (appended, mt11) an XML node of obj (the pointer is tagged with bit 1; the slot index is left unset).
     PropRef(Object* obj, Instances::fl::XML* node)
         : pObject(reinterpret_cast<Object*>(reinterpret_cast<UPInt>(node) | 2)), This(obj) { }

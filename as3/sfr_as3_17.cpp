@@ -4655,15 +4655,29 @@ CheckResult Object::DeleteDynamicSlotValuePair(const Multiname& prop_name)
     return result;
 }
 
+// Value(Object*) as the exe inlines it here (its out-of-line copy is sfr_as3_15's 0x1424dc050)
+SF_FORCEINLINE Value::Value(Object* v, InlineObjType)
+    : Flags(kObject)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
+SF_FORCEINLINE PropRef::PropRef(Object* obj, Value* v, Value::InlineObjType)
+    : pValue(reinterpret_cast<Value*>(reinterpret_cast<UPInt>(v) | 1))
+    , This(obj, Value::InlineObj)
+{
+}
+
 // The dynamic value of this object that mn names (namespaces are not looked at).
-// MS2-FUNCTIONAL 0x142500e50: the exe inlines Value(Object*) for the PropRef's This (Flags 0xc, Bonus 0, AddRef without a null test); ours calls it out of line.
 // @0x142500e50
 PropRef Object::FindDynamicSlot(const Multiname& mn)
 {
     ASString name = GetVM().GetStringManager().CreateEmptyString();
     if (!mn.Name.Convert2String(name))
         return PropRef();
-    return PropRef(this, DynAttrs.Get(DynAttrsKey(name)));
+    return PropRef(this, DynAttrs.Get(DynAttrsKey(name)), Value::InlineObj);
 }
 
 // The call frame on top of the VM's paged frame stack.
@@ -4752,13 +4766,12 @@ void MovieRoot::ActionEntry::Execute(MovieRoot* proot) const
         break;
     case Entry_Function:
     {
-        Value _this(reinterpret_cast<Object*>(ToAvmDisplayObj(pCharacter)->GetAS3Obj()));
+        Value _this(reinterpret_cast<Object*>(ToAvmDisplayObj(pCharacter)->GetAS3Obj()), Value::InlineObj);
         Value result;
-        VM* vm = proot->pAVM;
-        vm->ExecuteInternalUnsafe(Function, _this, result, 0, NULL, false);
-        if (vm->IsException())
+        proot->pAVM->ExecuteInternalUnsafe(Function, _this, result, 0, NULL, false);
+        if (proot->pAVM->IsException())
         {
-            vm->OutputAndIgnoreException();
+            proot->pAVM->OutputAndIgnoreException();
             *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pCharacter.GetPtr()) + 0x88) |= 0x20;
         }
         break;
