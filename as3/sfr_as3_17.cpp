@@ -2972,12 +2972,12 @@ bool Sfr33ArrayGetElement(const UByte* self, UByte* pdata, unsigned idx, GFx::Va
 }
 
 // The message of AS3 error id (NULL when it has none).
-// MS2-FUNCTIONAL 0x142509b60: our build peels the first search step (constant midpoint); same search and result.
+// MS2-FUNCTIONAL 0x142509b60: id and hi swap r10d and r11d; the code is otherwise the exe's.
 // @0x142509b60
 const char* Sfr33GetErrorMsg(int id)
 {
     int lo = 0, hi = 0x91;
-    do
+    while (lo <= hi)
     {
         const int mid = (hi + lo) >> 1;
         const int v = DAT_143a2d640[mid];
@@ -2986,11 +2986,11 @@ const char* Sfr33GetErrorMsg(int id)
             lo = mid;
             break;
         }
-        if (v > id)
+        if (id < v)
             hi = mid - 1;
         else
             lo = mid + 1;
-    } while (lo <= hi);
+    }
     return DAT_143a2d640[lo] == id ? DAT_143a2d890[lo] : NULL;
 }
 
