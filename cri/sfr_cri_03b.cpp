@@ -1985,7 +1985,8 @@ void* criSjRbf_Create(const void* config, void* work, CriSint32 workSize)
     return object;
 }
 
-// MS2-FUNCTIONAL: lay out a CRI universal stream joint and its free list of 0x20-byte chunk records.
+// Lays out a CRI universal stream joint and its free list of 0x20-byte chunk records. The four list heads are
+// cleared in a loop: VC9 unrolls it and schedules the allocator arguments ahead of the stores, as in the exe.
 // @0x1400459ec
 void* criSjUni_Create(const void* config, void* work, CriSint32 workSize)
 {
@@ -2023,10 +2024,9 @@ void* criSjUni_Create(const void* config, void* work, CriSint32 workSize)
         object->Lock = NULL;
     }
     object->Mode = settings->Mode;
-    object->Lists[0] = NULL;
-    object->Lists[1] = NULL;
-    object->Lists[2] = NULL;
-    object->Lists[3] = NULL;
+    CriUint32 lane;
+    for (lane = 0; lane < 4; ++lane)
+        object->Lists[lane] = NULL;
     object->Chunks = (Chunk*)criFixedAllocator_Allocate(&allocator, settings->NumChunks << 5, 8);
     object->FreeChunk = NULL;
     for (CriUint32 index = 0; index < settings->NumChunks; ++index)
