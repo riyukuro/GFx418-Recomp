@@ -160,6 +160,10 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 #include "ms2/scaleform/include/gfx/gfx_movieslots.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 
+// MsgFormat::FormatD1 instances are out-of-line calls in the exe (exe 0x1423e8500 / 0x1423e85f0, defined in sfr_as3_01c).
+template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
+template<> void Scaleform::MsgFormat::FormatD1<const char*>(const char* const& v);
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // HashDH<UPInt, Value>'s node lookup through the exe's out-of-line GetAlt.
@@ -1148,45 +1152,49 @@ namespace Instances { namespace fl
         return lo;
     }
 
-    // MS2-FUNCTIONAL: exe unrolls the month-table scan by six; ours is a plain loop
+    // MS2-FUNCTIONAL: unrolled table pointer is biased by one int in the exe, two in ours
     // @0x14241cdc0
-    SInt32 Date::MonthFromYearDay(SInt32 year, SInt32 day)
+    __declspec(noinline) SInt32 Date::MonthFromYearDay(SInt32 year, SInt32 day)
     {
-        const SInt32* tbl = IsLeapYear(year) ? MonthEndDay + 12 : MonthEndDay;
+        const SInt32* tbl;
+        if ((year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0))
+            tbl = MonthEndDay + 12;
+        else
+            tbl = MonthEndDay;
         SInt32 m = 0;
         for (; m < 12; ++m)
         {
-            if (day < tbl[m])
+            if (tbl[m] > day)
                 break;
         }
         return m;
     }
 
-    // MS2-FUNCTIONAL: DayFromYear term order/constant loads differ
     // @0x14241ccf0
     __declspec(noinline) SInt32 Date::MonthFromTime(Value::Number t)
     {
         const Value::Number y = YearFromTime(t);
-        return MonthFromYearDay(static_cast<SInt32>(y), static_cast<SInt32>(::floor(t / msPerDay) - DayFromYear(y)));
+        return MonthFromYearDay(static_cast<SInt32>(y), static_cast<SInt32>(::floor(t / msPerDay) - fl::DayFromYear(y)));
     }
 
-    // MS2-FUNCTIONAL: month/leap index arithmetic schedules differently
     // @0x14241a230
     Value::Number Date::MakeDay(Value::Number year, Value::Number month, Value::Number date)
     {
         if (NumberUtil::IsNaNOrInfinity(year + month + date))
             return NumberUtil::NaN();
 
-        const SInt32 m = static_cast<SInt32>(month);
+        const Value::Number m = static_cast<SInt32>(month);
+        const Value::Number dt = static_cast<SInt32>(date);
         const Value::Number ym = static_cast<SInt32>(year) + ::floor(m / 12.0);
-        Value::Number mn = fmod(static_cast<Value::Number>(m), 12.0);
+        Value::Number mn = fmod(m, 12.0);
         if (mn < 0)
             mn += 12.0;
-        const Value::Number day = ::floor(DayFromYear(ym));
-        const SInt32 leap = IsLeapYear(static_cast<SInt32>(ym)) ? 12 : 0;
+        const Value::Number day = ::floor(fl::DayFromYear(ym));   // the file-local copy, inlined
+        const SInt32 y = static_cast<SInt32>(ym);
+        const SPInt leap = (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0) ? 12 : 0;
         const SInt32 im = static_cast<SInt32>(mn);
-        const SInt32 monthDay = im != 0 ? MonthEndDay[im - 1 + leap] : 0;
-        return monthDay + day + static_cast<SInt32>(date) - 1.0;
+        const SInt32 monthDay = im != 0 ? MonthEndDay[leap + im - 1] : 0;
+        return monthDay + day + dt - 1.0;
     }
 
     static SF_INLINE Value::Number ToInteger(Value::Number v)
@@ -1392,7 +1400,7 @@ namespace Instances { namespace fl
         return String_Invalid;
     }
 
-    // MS2-FUNCTIONAL: MsgFormat::FormatD1 instances are out-of-line calls in the exe
+    // MS2-FUNCTIONAL: the exe indexes the day / month name tables off __ImageBase (SF_EXE_DATA here) and calls the DateHolder ctor
     // @0x1424284c0
     UPInt Date::formatDateTimeString(char* buffer, UPInt bufferSize, Value::Number t, int tza,
                                      bool needDate, bool needTime, bool utc)
@@ -3563,7 +3571,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // The children become value: a node, a list's items, or a text node of value's string.
-    // MS2-FUNCTIONAL: the exe calls SetParent out of line and inlines the XMLText constructor
     // @0x142421780
     void XMLElement::SetChildren(const Value& value)
     {
@@ -3607,12 +3614,15 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         {
             ASString txt = vm.GetStringManager().CreateEmptyString();
             if (value.Convert2String(txt))
-                Children.PushBack(Pickable<XML>(new(GetVM().GetMemoryHeap()) XMLText(GetInstanceTraits(), txt, this)));
+            {
+                InstanceTraits::Traits& itr = GetInstanceTraits();
+                Children.PushBack(Pickable<XML>(new(itr.GetVM().GetMemoryHeap()) XMLText(itr, txt, this)));
+            }
         }
     }
 
     // @0x142421f80
-    void XML::SetParent(XML* p)
+    __declspec(noinline) void XML::SetParent(XML* p)
     {
         Parent = p;
     }
@@ -4194,6 +4204,35 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             name.Assign(sm.GetBuiltin(AS3Builtin_null));
     }
 
+    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) here; the tag keeps this
+    // copy's COMDAT apart from 01c's definition (same copy as sfr_as3_02).
+    __forceinline XMLList::XMLList(InstanceTraits::Traits& t, InlineCtor)
+        : Instance(t), TargetProperty(NULL)
+    {
+    }
+
+    // InstanceTraits::fl::XMLList::MakeInstance(itr), expanded in place as the exe does.
+    static SF_INLINE Pickable<XMLList> Sfr04NewXMLList(InstanceTraits::fl::XMLList& itr)
+    {
+        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr, InlineCtor()));
+    }
+
+    // XMLList::MakeXMLListInstance(), expanded in place as the exe does.
+    static __forceinline Pickable<XMLList> Sfr04NewXMLListLike(XMLList& self)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self.GetInstanceTraits());
+        if (self.TargetNamespace && self.TargetObject && self.TargetProperty)
+            return itr.MakeInstance(itr, *self.TargetObject, ASString(self.TargetProperty), *self.TargetNamespace);
+        return Sfr04NewXMLList(itr);
+    }
+
+    // InstanceTraits::fl::XMLList::MakeInstance(itr, obj, name, ns) on this list's traits.
+    static __forceinline Pickable<XMLList> Sfr04NewTargetList(XMLList& self, const ASString& name, Instances::Namespace& ns)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self.GetInstanceTraits());
+        return itr.MakeInstance(itr, self, name, ns);
+    }
+
     // register allocation of the target fields differs
     // @0x14241b350
     Pickable<XMLList> XMLList::MakeXMLListInstance()
@@ -4204,7 +4243,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return itr.MakeInstance(itr);
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x14241b190
     Pickable<XMLList> XMLList::MakeXMLListInstance(const Multiname& mn)
     {
@@ -4236,19 +4274,17 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                 }
             }
             const ASString name = mn.Name.AsString();
-            InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
-            result = itr.MakeInstance(itr, *this, name, *ns);
+            result = Sfr04NewTargetList(*this, name, *ns);
         }
         else
-            result = MakeXMLListInstance();
+            result = Sfr04NewXMLListLike(*this);
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
     // @0x142429ea0
     void XMLList::prototypeGet(SPtr<XMLList>& result)
     {
-        result = MakeXMLListInstance();
+        result = Sfr04NewXMLListLike(*this);
     }
 
     // @0x142423e50
@@ -4500,7 +4536,28 @@ namespace Instances { namespace fl
     }
 
     // Whether str is an XML name: a letter or '_', then letters, digits, '-', '.' or '_'.
-    // MS2-FUNCTIONAL: the exe inlines the UnicodeCharIs table lookups and frames the string temporaries differently
+    // MS2-FUNCTIONAL: register allocation only: the exe tests the name size through rcx and enters the shared false tail past the rcx reload
+    // a letter or '_', then letters, digits, '-', '.' or '_'
+    static __forceinline bool Sfr04IsXMLName(const ASString& name)
+    {
+        if (name.GetSize() != 0)
+        {
+            wchar_t ch = (wchar_t)name.GetCharAt(0);
+            if (UnicodeCharIs(DAT_143186050, ch) || ch == '_')
+            {
+                for (unsigned i = 1; i < name.GetLength(); ++i)
+                {
+                    ch = (wchar_t)name.GetCharAt(i);
+                    if (!UnicodeCharIs(DAT_1431866f0, ch) && !UnicodeCharIs(DAT_143186050, ch) &&
+                        ch != '-' && ch != '.' && ch != '_')
+                        return false;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
     // @0x142428fa0
     void GlobalObjectCPP::isXMLName(bool& result, const Value& str)
     {
@@ -4509,30 +4566,10 @@ namespace Instances { namespace fl
             result = false;
             return;
         }
-        VM& vm = GetVM();
-        ASString name = vm.GetStringManager().CreateEmptyString();
+        ASString name = GetVM().GetStringManager().CreateEmptyString();
         if (!str.Convert2String(name))
-            vm.ThrowArgumentError(VM::Error(VM::ErrorID(1050), vm));   // eConvertToPrimitiveError
-        bool ok = false;
-        if (name.GetSize() != 0)
-        {
-            UInt32 ch = name.GetCharAt(0);
-            if (UnicodeCharIs(DAT_143186050, (wchar_t)ch) || ch == '_')
-            {
-                ok = true;
-                for (UPInt i = 1; i < name.GetLength(); ++i)
-                {
-                    ch = name.GetCharAt(i);
-                    if (!UnicodeCharIs(DAT_1431866f0, (wchar_t)ch) && !UnicodeCharIs(DAT_143186050, (wchar_t)ch) &&
-                        ch != '-' && ch != '.' && ch != '_')
-                    {
-                        ok = false;
-                        break;
-                    }
-                }
-            }
-        }
-        result = ok;
+            GetVM().ThrowArgumentError(VM::Error(VM::ErrorID(1050), GetVM()));   // eConvertToPrimitiveError
+        result = Sfr04IsXMLName(name);
     }
 }} // namespace Instances::fl
 
@@ -4596,46 +4633,55 @@ const void* FUN_142416e70(const char* self)
 ClassTraits::Traits* FUN_142417000(VMAbcFile* self, const char* class_info)
 {
     const int ind = *(const int*)(class_info + 0x28);
-    if (ind == 0)
-        return NULL;
-    const char* abc = *(const char* const*)((const char*)self + 0x28);
-    const char* mn = *(const char* const*)(abc + 0xb8) + (SPInt)ind * 0x10;
-    VM* vm = *(VM* const*)((const char*)self + 0x20);
-    ClassTraits::Traits* ctr = reinterpret_cast<ClassTraits::Traits*>(AS3::Sfr31ResolveClassTraits(reinterpret_cast<UPInt>(vm), reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(mn)));
-    if (!ctr)
+    if (ind != 0)
     {
-        const Scaleform::GFx::AS3::Abc::StringView& sv =
-            (*(const Scaleform::GFx::AS3::Abc::StringView* const*)(abc + 0x70))[*(const unsigned*)(mn + 8)];
-        Scaleform::StringDataPtr sd = sv.ToStringDataPtr();
-        String name(sd.ToCStr(), sd.GetSize());
-        vm->ThrowVerifyError(VM::Error(VM::ErrorID(0x3e9), *vm, name.ToCStr()));
+        // the abc file (+0x28) and the VM (+0x20) are read at each use
+        const char* mn = *(const char* const*)(*(const char* const*)((const char*)self + 0x28) + 0xb8) + (SPInt)ind * 0x10;
+        ClassTraits::Traits* ctr = reinterpret_cast<ClassTraits::Traits*>(AS3::Sfr31ResolveClassTraits(*(const UPInt*)((const char*)self + 0x20), reinterpret_cast<UPInt>(self), reinterpret_cast<UPInt>(mn)));
+        if (!ctr)
+        {
+            const unsigned ni = *(const unsigned*)(mn + 8);
+            const Scaleform::GFx::AS3::Abc::StringView& sv =
+                (*(const Scaleform::GFx::AS3::Abc::StringView* const*)(*(const char* const*)((const char*)self + 0x28) + 0x70))[ni];
+            Scaleform::StringDataPtr sd = sv.ToStringDataPtr();
+            String name(sd.ToCStr(), sd.GetSize());
+            VM* vm = *(VM* const*)((const char*)self + 0x20);
+            vm->ThrowVerifyError(VM::Error(VM::ErrorID(0x3e9), *vm, name.ToCStr()));
+        }
+        return ctr;
     }
-    return ctr;
+    return NULL;
+}
+
+// XMLElement::HasProperty, inlined into the list's
+static SF_INLINE bool Sfr04XmlElementHasProperty(Instances::fl::XMLElement* el, const Multiname& prop_name)
+{
+    Scaleform::UInt32 ind;
+    if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
+        return ind == 0;
+    Instances::fl::EmptyCallBack cb(*el);
+    if ((prop_name.IsAttr() ? el->ForEachAttr(prop_name, cb) : el->ForEachChild(prop_name, cb)) != 0)
+        return true;
+    return false;
 }
 
 // XMLList::HasProperty: an index within the list, or a matching child / attribute of an element item
-// MS2-FUNCTIONAL: the exe inlines XMLElement::HasProperty
+// MS2-FUNCTIONAL: exe tests the empty list before saving rdi/r12/r15 and duplicates the return-true epilogue
 // @0x142417560
 bool FUN_142417560(Instances::fl::XMLList* self, const Multiname& prop_name)
 {
     Scaleform::UInt32 ind;
     if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
         return ind < self->List.GetSize();
-    for (UPInt i = 0; i < self->List.GetSize(); ++i)
+    const UPInt size = self->List.GetSize();
+    for (UPInt i = 0; i < size; ++i)
     {
         Instances::fl::XML* x = self->List[i];
-        if (x->GetKind() != Instances::fl::XML::kElement)
-            continue;
-        Instances::fl::XMLElement* el = static_cast<Instances::fl::XMLElement*>(x);
-        if (Scaleform::GFx::AS3::GetVectorInd(prop_name, ind))
+        if (x->GetKind() == Instances::fl::XML::kElement)
         {
-            if (ind == 0)
+            if (Sfr04XmlElementHasProperty(static_cast<Instances::fl::XMLElement*>(x), prop_name))
                 return true;
-            continue;
         }
-        Instances::fl::EmptyCallBack cb(*el);
-        if ((prop_name.IsAttr() ? el->ForEachAttr(prop_name, cb) : el->ForEachChild(prop_name, cb)) != 0)
-            return true;
     }
     return false;
 }
@@ -4679,10 +4725,10 @@ void FUN_1424187f0(Instances::fl::GlobalObjectScript* self)
 CheckResult ClassTraits::Traits::FUN_142418970()
 {
     ClassTraits::Traits* self = this;
+    ClassTraits::Traits* parent = FUN_142417000(*(VMAbcFile**)((char*)self + 0xc8), *(const char**)((char*)self + 0xd0));
     VMAbcFile* file = *(VMAbcFile**)((char*)self + 0xc8);
     const char* ci = *(const char**)((char*)self + 0xd0);
     VM& vm = self->GetVM();
-    ClassTraits::Traits* parent = FUN_142417000(file, ci);
     if (vm.IsException())
         return false;
     SPtr<const Scaleform::GFx::AS3::Traits>& pparent = *(SPtr<const Scaleform::GFx::AS3::Traits>*)((char*)self + 0x88);
@@ -5105,7 +5151,7 @@ ASString FUN_1424252c0(Scaleform::GFx::AS3::StringManager& sm, const ASString& s
 extern "C" int XML_Parse(void* parser, const char* s, int len, int isFinal);
 extern "C" int XML_GetCurrentByteIndex(void* parser);
 extern "C" int XML_GetErrorCode(void* parser);
-extern "C" int XML_StopParser(void* parser, int resumable);
+extern "C" int XML_StopParser(void* parser, unsigned char resumable);   // XML_Bool
 
 // ArrayDH<SPtr<XML> >::PushBack, out of line
 // @0x14241e390
@@ -5128,27 +5174,29 @@ void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n)
 }
 
 // SparseArray: appends the top n values of the operand stack, moving them off it
-// MS2-FUNCTIONAL: the exe inlines Hash::Set; the dense path moves the values raw as here
 // @0x14241d980
 void FUN_14241d980(Scaleform::GFx::AS3::SparseArray* sa, Scaleform::GFx::AS3::ValueStack* stack, Scaleform::UPInt n)
 {
     using namespace Scaleform::GFx::AS3;
     if (n == 0)
         return;
-    if (sa->Length == sa->ValueA.GetSize())
+    const Scaleform::UPInt len = sa->Length;
+    const Scaleform::UPInt old = sa->ValueA.GetSize();
+    if (len == old)
     {
-        const Scaleform::UPInt old = sa->ValueA.GetSize();
         sa->ValueA.Resize(old + n);
-        memcpy(&sa->ValueA[old], stack->GetTopPtr() - (n - 1), n * sizeof(Value));
+        memcpy(&sa->ValueA[old], stack->GetTopPtr() - static_cast<Scaleform::UInt16>(n - 1), n * sizeof(Value));
         stack->Release(n);
+        sa->Length = sa->ValueA.GetSize();
+        return;
     }
     else
     {
         Scaleform::UPInt ind = sa->ValueHHighInd + n;
-        for (Scaleform::UPInt i = n; i; --i, --ind)
+        for (Scaleform::UPInt i = 0; i < n; ++i, --ind)
         {
             sa->ValueH.Set(ind, *stack->GetTopPtr());
-            stack->GetTopPtr()->SetUndefined();
+            stack->GetTopPtr()->~Value();
             stack->Release(1);
         }
         sa->ValueHHighInd += n;
@@ -5289,18 +5337,22 @@ namespace Scaleform { namespace GFx { namespace AS3
         return false;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLProcInstr constructor
+    // InstanceTraits::fl::XML::MakeInstanceProcInstr (0x14241b6e0), inlined here
+    static __forceinline Pickable<Instances::fl::XMLProcInstr> Sfr04MakeProcInstr(InstanceTraits::fl::XML& t, const ASString& name,
+                                                                                  const ASString& data, Instances::fl::XML* parent)
+    {
+        return Pickable<Instances::fl::XMLProcInstr>(new(t.GetVM().GetMemoryHeap()) Instances::fl::XMLProcInstr(t, name, data, parent));
+    }
+
     // @0x14241e160
     void XMLParser::ProcessingInstructionExpatCallback(void* userData, const char* target, const char* data)
     {
         XMLParser* p = static_cast<XMLParser*>(userData);
-        InstanceTraits::fl::XML& itr = p->ITr;
-        VM& vm = itr.GetVM();
         p->SetNodeKind(kProcInstr);
-        StringManager& sm = vm.GetStringManager();
-        SPtr<Instances::fl::XML> el;
-        el.Pick(SF_HEAP_NEW(vm.GetMemoryHeap()) Instances::fl::XMLProcInstr(itr, sm.CreateString(target),
-                                                                           sm.CreateString(data), p->CurrElement));
+        InstanceTraits::fl::XML& itr = p->ITr;
+        StringManager& sm = itr.GetVM().GetStringManager();
+        Pickable<Instances::fl::XMLProcInstr> pi = Sfr04MakeProcInstr(itr, sm.CreateString(target), sm.CreateString(data), p->CurrElement);
+        SPtr<Instances::fl::XML> el(pi);
         if (p->CurrElement && p->CurrElement->GetKind() == Instances::fl::XML::kElement)
             p->CurrElement->AppendChild(el);
         else
