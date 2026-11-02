@@ -95,6 +95,9 @@ template<> void Scaleform::ArrayData<Scaleform::UPInt, Scaleform::AllocatorLH_PO
 template<> void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::ASStringNode>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);
 template<> void Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::NamespaceSet>, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt newSize);   // 0x142524680
 template<> Scaleform::String Scaleform::AsString<Scaleform::UInt32>(const Scaleform::UInt32& v);   // 0x1423e8390
+// The VTable copy's out-of-line pieces (sfr_as3_17, sfr_as3_19); the ASString element copy stays inline as in the exe.
+template<> void Scaleform::ConstructorMov<Scaleform::GFx::AS3::Value>::ConstructArray(void* p, Scaleform::UPInt count, const Scaleform::GFx::AS3::Value* psource);   // 0x1424f08d0
+template<> void Scaleform::ArrayDataBase<Scaleform::GFx::ASString, Scaleform::AllocatorLH<Scaleform::GFx::ASString, 331>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, Scaleform::UPInt newSize);   // 0x142524d80
 static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
 Scaleform::GFx::AS3::AvmInteractiveObj* FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
@@ -857,13 +860,13 @@ SF_INLINE VTable::VTable(Traits& tr)
 {
 }
 
-SF_INLINE VTable::VTable(Traits& tr, const VTable& parent)
+// Plain inline, not SF_INLINE: cl then inlines the two array copies into this ctor and the ctor into GetVT, as the exe
+// does. Under __forceinline the array copy ctors stay out of line.
+inline VTable::VTable(Traits& tr, const VTable& parent)
     : pTraits(&tr), VTMethods(parent.VTMethods), Names(parent.Names)
 {
 }
 
-// MS2-FUNCTIONAL: the exe inlines the Value/ASString array copies (its ArrayData::ResizeNoConstruct is out of line);
-// here the array copy ctors stay out of line
 // @0x14250fa80
 VTable& Traits::GetVT() const
 {
@@ -2410,7 +2413,8 @@ static __forceinline bool Sfr34_IsTrackAsMenu(Sprite* spr)
     return (UByte)(*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(spr) + 0xb8) >> 14) & 1;
 }
 
-// MS2-FUNCTIONAL 0x142518df0: SDK shape; only the mouse-state field address registers differ (exe rdx/rcx, and 0x30/0x34 on the NULL path).
+// SDK shape. The mouse state comes from AvmDisplayObj::GetMovieImpl() (this), not spr->GetMovieImpl(): the
+// latter swaps the registers of its two field addresses.
 // @0x142518df0
 bool AvmSprite::OnEvent(const EventId& id)
 {
@@ -2434,7 +2438,7 @@ bool AvmSprite::OnEvent(const EventId& id)
                 case EventId::Event_RollOver:
                     if (sp->Flags & SpriteDef::Flags_Has_Frame_over)
                     {
-                        Sfr34_MouseStateView& ms = *Sfr34_GetMouseState(spr->GetMovieImpl(), id.MouseIndex);
+                        Sfr34_MouseStateView& ms = *Sfr34_GetMouseState(GetMovieImpl(), id.MouseIndex);
                         if (Sfr34_IsTrackAsMenu(spr) && (ms.GetPrevButtonsState() & 1))
                             spr->GotoLabeledFrame("_down", 0);
                         // prevent button from changing state if left mouse button is pressed (like in Flash)
@@ -2914,11 +2918,12 @@ private:
     ChainHash Chains;
 };
 
-// MS2-FUNCTIONAL Hash::Get of the chain hash is not inlined here
+// The lookup goes through GetAlt here and Get in QueueEvents: cl inlines each of the two only at a single call site,
+// and the exe inlines the lookup in both.
 // @0x142522830
 void EventChains::RemoveFromChain(EventId::IdCode evtId, DisplayObject* obj)
 {
-    AutoPtr<Chain>* ppchain = Chains.Get(evtId);
+    AutoPtr<Chain>* ppchain = Chains.GetAlt(evtId);
     if (ppchain)
     {
         Chain* chain = ppchain->GetPtr();
@@ -2928,7 +2933,6 @@ void EventChains::RemoveFromChain(EventId::IdCode evtId, DisplayObject* obj)
     }
 }
 
-// MS2-FUNCTIONAL Hash::Get of the chain hash is not inlined here
 // @0x14251fd40
 void EventChains::QueueEvents(EventId::IdCode evtId)
 {
@@ -2945,7 +2949,7 @@ void EventChains::QueueEvents(EventId::IdCode evtId)
             }
             EventId evt(evtId);
             Ptr<DisplayObject> dobj = (*chain)[i];
-            ToAvmDisplayObj(dobj)->OnEvent(evt);
+            (dobj ? ToAvmDisplayObj(dobj) : 0)->OnEvent(evt);
             ++i;
         }
     }
@@ -6218,13 +6222,15 @@ static __forceinline WeakProxy* Sfr18CreateWeakProxy(GASRefCountBase* wb)
         if (!wp)
             return NULL;
         *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(wb) + 0x10) |= GASRefCountBase::Flag_HasWeakRef;
-        rcc->WProxyHash.Add(wb, wp);
+        // a named key of the hash's key type: the exe gives it its own slot (+0x58), apart from the Get key
+        const ASRefCountBaseType* key = wb;
+        rcc->WProxyHash.Add(key, wp);
     }
     wp->AddRef();
     return wp;
 }
 
-// MS2-FUNCTIONAL only register allocation (this/wb/zero rotated) and the wp slot differ
+// MS2-FUNCTIONAL only register allocation differs (this/wb/zero in rbx/rdi/rsi, the exe's rdi/rsi/rbx)
 // @0x142516720
 bool Value::MakeWeakRef()
 {
