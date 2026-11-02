@@ -905,7 +905,6 @@ SF_INLINE void Sfr33GcPtr(RefCountCollector<StatMV_ActionScript_Mem>* prcc, cons
 
 // Traits::ForEachChild_GC: the file, namespace and class of every own slot, the class object, the parent, the
 // method table's values and the stored scope.
-// MS2-FUNCTIONAL 0x142503d90: the inlined value visits are laid out differently; same visits
 // @0x142503d90
 void Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
 {
@@ -925,8 +924,7 @@ void Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
         for (UPInt i = 0; i < m; ++i)
             AS3::ForEachChild_GC(prcc, vt->VTMethods[i], op, vt->GetTraits());
     }
-    const UPInt ss = InitScope.GetSize();
-    for (UPInt i = 0; i < ss; ++i)
+    for (UPInt i = 0; i < InitScope.GetSize(); ++i)
         AS3::ForEachChild_GC(prcc, InitScope[i], op, *this);
 }
 
