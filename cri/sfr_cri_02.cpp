@@ -59,6 +59,7 @@ extern const void* DAT_1431b9080[];
 extern const void* DAT_1431b9028[];
 extern const void* DAT_1431b8fd0[];
 extern const void* DAT_1431b8f18[];
+extern const void* DAT_1431b8f30[];
 extern const void* DAT_1431b8db0[];
 extern const void* DAT_1431b9430[];
 }
@@ -727,7 +728,26 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
 
 // ==== VideoPlayerImpl ================================================================================================
 
-// MS2-FUNCTIONAL: the owned objects' constructors are inlined there
+// CriMvSound::CriMvSound(MemoryHeap*, VideoSound*) (0x14002a010) as Init inlines it.
+static __forceinline void* CriMvSoundCtor02(void* mem, void* pheap, void* psound)
+{
+    *(int*)((CriUint8*)mem + 8) = 1;
+    *(const void***)mem = (const void**)DAT_1431b9028;
+    *(void**)((CriUint8*)mem + 0x18) = pheap;
+    *(const void***)((CriUint8*)mem + 0x10) = (const void**)DAT_1431b8fd0;
+    if (psound)
+        ++*(int*)((CriUint8*)psound + 8);
+    *(void**)((CriUint8*)mem + 0x20) = psound;
+    *(const void***)((CriUint8*)mem + 0x28) = (const void**)DAT_1431b8f30;
+    *(void**)((CriUint8*)mem + 0x30) = 0;
+    *(void**)((CriUint8*)mem + 0x38) = 0;
+    *(void**)((CriUint8*)mem + 0x40) = 0;
+    *(void**)((CriUint8*)mem + 0x48) = 0;
+    return mem;
+}
+
+// MS2-FUNCTIONAL: the first CriMvSound's null test and vtable loads are scheduled differently, and the exe tests the
+// new decoder with cmp against its zero register; logic identical
 // @0x14002b530
 bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpener, Log* plog)
 {
@@ -746,24 +766,28 @@ bool VideoPlayerImpl::Init(Video* pvideo, TaskManager*, FileOpenerBase* pfileOpe
             Ptr<VideoSound> psubinterface = *psoundSystem->Create();
 
             void* mem = pHeap->Alloc(0x50);
-            VideoPlayerSound* psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, pinterface) : NULL;
+            VideoPlayerSound* psound = mem ? (VideoPlayerSound*)CriMvSoundCtor02(mem, pHeap, pinterface) : NULL;
             pSound = *psound;
 
             mem = pHeap->Alloc(0x50);
-            psound = mem ? (VideoPlayerSound*)FUN_14002a010(mem, pHeap, psubinterface) : NULL;
+            psound = mem ? (VideoPlayerSound*)CriMvSoundCtor02(mem, pHeap, psubinterface) : NULL;
             pSubSound = *psound;
         }
     }
 
-    VideoDecoder* pdecoder = pvideo ? pvideo->pDecoder.GetPtr() : NULL;
+    VideoDecoder* pdecoder = pvideo && pvideo->pDecoder ? pvideo->pDecoder.GetPtr() : NULL;
     if (pdecoder)
         pdecoder->AddRef();
     if (pDecoder)
         pDecoder->Release();
     pDecoder = pdecoder;
-    if (!pDecoder)
+    if (!pdecoder)
     {
-        pDecoder = SF_HEAP_NEW(pHeap) VideoDecoderSmp;
+        // A Ptr adopt of the new decoder: the (null) old one is released first.
+        VideoDecoder* pnew = SF_HEAP_NEW(pHeap) VideoDecoderSmp;
+        if (pDecoder)
+            pDecoder->Release();
+        pDecoder = pnew;
     }
 
     if (pvideo)
