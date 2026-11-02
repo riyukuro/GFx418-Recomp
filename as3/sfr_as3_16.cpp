@@ -495,28 +495,25 @@ Scaleform::UPInt Scaleform::GFx::AS3::Value::HashFunctor::operator()(const Scale
 }
 
 // ValueRegisterFile teardown: free the reserved pages, release the register values, then free the current page.
-// The exe's UInt16 index steps by 0xffff (0x1424dfba0 add si,r14w with r14d = 0xffff), so the loop ends after
-// register 0: only that one is released.
-// MS2-FUNCTIONAL 0x1424dfaf0: uses the Value destructor and the VM heap's free slot; iteration lowering differs.
+// The UInt16 index counts down (--i wraps to 0xffff), so the loop ends after register 0: only that one is released.
 // @0x1424dfaf0
 extern "C" void FUN_1424dfaf0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
-    auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    while (void* page = *reinterpret_cast<void**>(bytes + 0x18))
+    while (*reinterpret_cast<void**>(bytes + 0x18))
     {
+        void* page = *reinterpret_cast<void**>(bytes + 0x18);
         *reinterpret_cast<void**>(bytes + 0x18) = *reinterpret_cast<void**>(static_cast<unsigned char*>(page) + 0x10);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, page);
+        reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap))[12])(
+            Scaleform::Memory::pGlobalHeap, page);
     }
 
-    auto count = *reinterpret_cast<const Scaleform::UInt16*>(bytes);
-    auto* values = *reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8);
-    if (count != 0)
-        values[0].~Value();
+    for (Scaleform::UInt16 i = 0; i < *reinterpret_cast<const Scaleform::UInt16*>(bytes); --i)
+        (*reinterpret_cast<Scaleform::GFx::AS3::Value**>(bytes + 8))[i].~Value();
 
-    void* page = *reinterpret_cast<void**>(bytes + 0x10);
-    if (page)
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, page);
+    if (void* page = *reinterpret_cast<void**>(bytes + 0x10))
+        reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap))[12])(
+            Scaleform::Memory::pGlobalHeap, page);
 }
 
 // ValueStack teardown: release live values and free each distinct current or reserved page once.
