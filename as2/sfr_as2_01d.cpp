@@ -42,7 +42,6 @@ String AsStringFlag(const Abc::Instance& inst);
 
 // The value as an ActionScript string: the primitives and strings converted, the rest a description.
 // @0x1424eb7b0
-// MS2-FUNCTIONAL the exe copies the converted node into the result before releasing the local (no NRVO)
 ASString AsString(const Value& v, StringManager& sm)
 {
     switch (v.GetKind())
@@ -56,39 +55,40 @@ ASString AsString(const Value& v, StringManager& sm)
     {
         ASString result = sm.CreateEmptyString();
         v.Convert2String(result);
-        return result;
+        return ASString(result);
     }
     case Value::kThunk:
         return sm.GetStringManager()->CreateConstString("thunk", 5);
+    case Value::kThunkFunction:
+        return sm.GetStringManager()->CreateConstString("thunk function", 14);
     case Value::kVTableInd:
-        return sm.CreateString(String("VTable ind: ", Scaleform::AsString(v.GetVTableInd()).ToCStr(), NULL));
+        return sm.CreateString("VTable ind: " + Scaleform::AsString(v.GetVTableInd()));
+    case Value::kVTableIndClosure:
+        return sm.GetStringManager()->CreateConstString("VTableIndClosure", 16);
+    case Value::kFunction:
+        return sm.GetStringManager()->CreateConstString("function Function() {}", 22);
+    case Value::kObject:
+        if (v.GetObject() != NULL)
+            return sm.GetStringManager()->CreateConstString("[object ", 8) + v.GetObject()->GetTraits().GetName() + "]";
+        return sm.GetBuiltin(AS3Builtin_null);
+    case Value::kClass:
+        if (v.GetObject() != NULL)
+            return sm.GetStringManager()->CreateConstString("[class ", 7) + v.GetObject()->GetTraits().GetName() + "]";
+        return sm.GetBuiltin(AS3Builtin_null);
     case Value::kNamespace:
     {
         const Instances::Namespace& ns = v.AsNamespace();
-        ASString result = sm.CreateConstString(AsString(ns.GetKind()));
+        const char* kind = AsString(ns.GetKind());
+        ASString result = sm.GetStringManager()->CreateConstString(kind, strlen(kind));
         if (ns.GetUri().GetSize() != 0)
         {
             result.Append(" ", 1);
             result.Append(ns.GetUri());
         }
-        return result;
+        return ASString(result);
     }
-    case Value::kObject:
-        if (v.GetObject() == NULL)
-            return sm.GetBuiltin(AS3Builtin_null);
-        return sm.GetStringManager()->CreateConstString("[object ", 8) + v.GetObject()->GetTraits().GetName() + "]";
-    case Value::kClass:
-        if (v.GetObject() == NULL)
-            return sm.GetBuiltin(AS3Builtin_null);
-        return sm.GetStringManager()->CreateConstString("[class ", 7) + v.GetObject()->GetTraits().GetName() + "]";
-    case Value::kFunction:
-        return sm.GetStringManager()->CreateConstString("function Function() {}", 22);
-    case Value::kThunkFunction:
-        return sm.GetStringManager()->CreateConstString("thunk function", 14);
     case Value::kThunkClosure:
         return sm.GetStringManager()->CreateConstString("ThunkClosure", 12);
-    case Value::kVTableIndClosure:
-        return sm.GetStringManager()->CreateConstString("VTableIndClosure", 16);
     default:
         return sm.CreateEmptyString();
     }
