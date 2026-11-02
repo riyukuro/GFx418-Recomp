@@ -57,10 +57,7 @@ public:
     virtual void LogMessageVarg(LogMessageId messageId, const char* fmt, va_list argList);
 };
 
-// The global interface object (Scaleform's global heap, Memory::pGlobalHeap) and its slot 12.
-#define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
-
-// MS2-FUNCTIONAL: the log wrapper (FMT_VARIADIC over CLogString::FUN_1406530d0) for two CStringW arguments.
+// The log wrapper (FMT_VARIADIC over CLogString::FUN_1406530d0) for two CStringW arguments.
 // @0x140a5bdd0
 template <class A, class B> inline void Unk_GfxLog(CLogString* log, int level, int line, const wchar_t* format,
                                                     const A& a, const B& b)
@@ -87,9 +84,8 @@ void FUN_140a5bb80(Log* pLog)
     Log::SetGlobalLog(pLog);
 }
 
-// MS2-FUNCTIONAL: clears the process-wide GFx log.
 // @0x140a5bba0
-void FUN_140a5bba0()
+void FUN_140a5bba0(void*)
 {
     Log::SetGlobalLog(0);
 }
@@ -103,42 +99,53 @@ void GFxLogger::LogMessageVarg(LogMessageId messageId, const char* fmt, va_list 
     if (CLogString::GetInstance() != 0)
     {
         int nLevel = 0;
-        int nType = messageId.GetMessageType();
-        if (nType == 0)
+        switch (messageId.GetMessageType())
+        {
+        case 0:
             nLevel = 0xb;
-        else if (nType == LogMessage_Warning)
+            break;
+        case LogMessage_Warning:
             nLevel = 2;
-        else if (nType == LogMessage_Error)
+            break;
+        case LogMessage_Error:
             nLevel = 1;
-        else if (nType == LogMessage_Assert)
+            break;
+        case LogMessage_Assert:
             nLevel = 0xc;
+            break;
+        }
         CStringW strChannel(L"[Unknown]");
-        int nChannel = messageId.GetChannel();
-        if (nChannel == LogChannel_General)
+        switch (messageId.GetChannel())
+        {
+        case LogChannel_General:
             strChannel = L"";
-        else if (nChannel == LogChannel_Debug)
+            break;
+        case LogChannel_Debug:
             strChannel = L"[Debug]";
-        else if (nChannel == LogChannel_Render)
+            break;
+        case LogChannel_Render:
             strChannel = L"[Render]";
-        else if (nChannel == LogChannel_Script)
+            break;
+        case LogChannel_Script:
             strChannel = L"[Script]";
-        else if (nChannel == LogChannel_Parse)
+            break;
+        case LogChannel_Parse:
             strChannel = L"[Parse]";
-        CStringW strMessage = FUN_14016a730((const char*)strText, 0);
-        Unk_GfxLog(CLogString::GetInstance(), nLevel, 0x1a, L"[Gfx]{0} {1}", strChannel, strMessage);
+            break;
+        }
+        Unk_GfxLog(CLogString::GetInstance(), nLevel, 0x1a, L"[Gfx]{0} {1}", strChannel,
+                   static_cast<const CStringW&>(FUN_14016a730((const char*)strText, 0)));
     }
 }
 
-// MS2-FUNCTIONAL: forwards a block to the global interface object's slot 12 (its release/free entry).
 // @0x140a5c4c0
 void FUN_140a5c4c0(void* p)
 {
-    void** pVtbl = *(void***)DAT_143b15f60;
-    ((void (*)(void*, void*))pVtbl[12])(DAT_143b15f60, p);
+    Scaleform::Memory::pGlobalHeap->Free(p);
 }
 
 // @0x140a5c220
-void FUN_140a5c220(void* p)
+void FUN_140a5c220(void* p) noexcept
 {
     FUN_140a5c4c0(p);
 }
