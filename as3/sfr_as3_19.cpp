@@ -4088,7 +4088,7 @@ void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
 }
 
 // Tracer op: replaces the popped value with the instance traits it denotes (primitives collapse to the Object traits).
-// MS2-FUNCTIONAL 0x1425331a0: same code as the exe except the traits Value null type: ours NotNull (8), the exe NullOrNot (0x48).
+// The traits value may be null (NullOrNot), as in the exe.
 // @0x1425331a0
 void Sfr31TraceTopInstanceTraits(State* st)
 {
@@ -4116,7 +4116,7 @@ void Sfr31TraceTopInstanceTraits(State* st)
         const UPInt tracer = s.Tracer();
         if (FUN_142514a80(tracer, reinterpret_cast<void*>(tr)))
             tr = Sfr31Rd(Sfr31Rd(TrVM(tracer), 0x1f8), 0xc0);
-        s.Top().Assign(Value(*reinterpret_cast<InstanceTraits::Traits*>(tr), Value::NotNull));
+        s.Top().Assign(Value(*reinterpret_cast<InstanceTraits::Traits*>(tr), Value::NullOrNot));
     }
 }
 // ---- batch 27
