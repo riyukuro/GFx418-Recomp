@@ -1927,7 +1927,7 @@ struct CompareAsStringInd
 struct CompareAsNumberInd
 {
     CompareAsNumberInd(bool desc) : Desc(desc) {}
-    bool operator()(const NumberPair& a, const NumberPair& b) const { return Desc ? a.First > b.First : b.First > a.First; }
+    bool operator()(const NumberPair& a, const NumberPair& b) const { if (Desc) return b.First < a.First; return a.First < b.First; }
 
     bool Desc;
 };
@@ -2629,7 +2629,7 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_G?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556640
 // MS2-PIN: ??_G?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556670
 // MS2-PIN: ??_G?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425566a0
-// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z: the swaps now match; ours zeroes eax ahead of each inlined compare where the exe sets al after it
+// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z: only the insertion-sort swap differs, where ours addresses the pairs as [data + j*16] and the exe as [j*16 + data]
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f400
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f740
 // MS2-PIN: ??_7?$SortFunc@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182d88
