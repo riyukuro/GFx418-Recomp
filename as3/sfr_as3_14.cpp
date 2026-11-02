@@ -434,7 +434,6 @@ Value::Number SwapBytes(Value::Number v)
 
 namespace ClassTraits { namespace fl_utils
 {
-    // MS2-FUNCTIONAL: ctor: Pickable/traits setup register allocation and inlined Multiname temporaries differ
     // @0x1424bc0e0
     ByteArray::ByteArray(VM& vm)
         : Traits(vm, AS3::fl_utils::ByteArrayCI)
@@ -473,15 +472,14 @@ namespace Classes { namespace fl_utils
 
 namespace InstanceTraits { namespace fl_utils
 {
-    // MS2-FUNCTIONAL: ctor: inlined traits-base construction scheduling differs
     // @0x1424bc330
     ByteArray::ByteArray(VM& vm, const ClassInfo& ci)
         : CTraits(vm, ci)
     {
         Flags |= ArrayLikeMask;
         SetMemSize(0x60);
-        RegisterImplementedInterface(Multiname(vm, StringDataPtr("flash.utils.IDataInput")));
-        RegisterImplementedInterface(Multiname(vm, StringDataPtr("flash.utils.IDataOutput")));
+        RegisterImplementedInterface(Multiname(GetVM(), StringDataPtr("flash.utils.IDataInput")));
+        RegisterImplementedInterface(Multiname(GetVM(), StringDataPtr("flash.utils.IDataOutput")));
     }
 
     // MS2-FUNCTIONAL: Pickable construction: allocation + ctor inlining differs
