@@ -7,7 +7,7 @@
 // MS2-UNIT: sfr_cri_02c
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002e548-0x14002f610 .text$mn
+// MS2-RANGE: 0x14002e548-0x14002f1f0 .text$mn
 // MS2-RANGE: 0x14002f850-0x14002fbe0 .text$mn
 // MS2-RANGE: 0x1400301d0-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
@@ -2502,112 +2502,6 @@ void initializeHandleParameters(void* player)
     *(CriUint64*)((CriUint8*)player + 0xf08) = 0;
     ((CriUint32*)player)[0xed8 / 4] = 0xffffffff;
     *(CriUint8*)((CriUint8*)player + 0xf10) = 0;
-}
-
-// MS2-FUNCTIONAL: allocate and initialize a CRI Movie player from the caller's Scaleform heap.
-// @0x14002f1f0
-void* criMvPly_CreateWithConfig(CriHeap heap)
-{
-    if (!DAT_143ffd500 || !heap)
-    {
-        crimvply_occurUserError(NULL, "E09031803M : criMvPly_Create was called without Initialization.", 0);
-        return NULL;
-    }
-    CriUint32* words = (CriUint32*)criHeap_AllocFix((CriHeap)heap, 0xf18, "CriMvPly: HnObj", 4);
-    if (!words)
-    {
-        crimvply_occurUserError(NULL, "E05063001M : Can't allocate handle object memory.", 0xf18);
-        return NULL;
-    }
-    memset(words, 0, 0xf18);
-    words[0] = 1;
-    struct HeapFields
-    {
-        CriUint8 Reserved0[0xdc0];
-        CriHeap Heap;
-        CriUint8 ReservedD28[8];
-        void* HeapHandle;
-        CriUint8 ReservedD38[8];
-        void* LocalWork;
-    };
-    struct WorkFields { CriUint8 Reserved0[0x18]; void* CriticalWork; void* CriticalSection; };
-    HeapFields* heapFields = (HeapFields*)words;
-    WorkFields* workFields = (WorkFields*)words;
-    heapFields->Heap = heap;
-    *(CriHeap*)((CriUint8*)words + 0xde8) = heap;
-
-    workFields->CriticalWork = criHeap_AllocFix((CriHeap)heap, 0x48, "CriMvPly: CriCsWork", 4);
-    if (!workFields->CriticalWork)
-    {
-        criHeap_Free((CriHeap)heap, words);
-        crimvply_occurUserError(NULL, "E08102001M : Can't allocate cs handle memory.", 0x48);
-        return NULL;
-    }
-    workFields->CriticalSection = FUN_1400385c8(workFields->CriticalWork, 0x48);
-    if (!workFields->CriticalSection)
-    {
-        criHeap_Free((CriHeap)heap, workFields->CriticalWork);
-        criHeap_Free((CriHeap)heap, words);
-        crimvply_occurUserError(NULL, "E05081501M : Can't create CriticalSection for CRI Movie.", 0);
-        return NULL;
-    }
-
-    words[0x376] = 0x2800;
-    void* localBuffer = criHeap_AllocFix((CriHeap)heap, 0x2800, "CriMvPly: LocalHeapBuf", 4);
-    *(void**)((CriUint8*)words + 0xde0) = localBuffer;
-    if (!localBuffer)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurUserError(NULL, "E05063002M : Can't allocate internal heap memory.", 0x2800);
-        return NULL;
-    }
-    heapFields->HeapHandle = (void*)criHeap_Create(localBuffer, words[0x376]);
-    if (!heapFields->HeapHandle)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurFatalError(NULL, "E05063005M : Can't create internal heap handle.", 0);
-        return NULL;
-    }
-    words[0x372] = 0x2800;
-    CriMvPlyInputQueueFields* queues = (CriMvPlyInputQueueFields*)words;
-    queues->InputBuffer = criSj_CreateNamedRingBuffer(heap, words[0x372], 0, 0x40, (CriUint64)"CriMvPly: HeadAnalyInput");
-    if (!queues->InputBuffer)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurUserError(NULL, "E05063006M : Can't create input SJ for header analyze input.", 0);
-        return NULL;
-    }
-    words[0x35c] = 8;
-    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)words;
-    state->Demux = criUsfDmx_Create(heap, words[0x35c]);
-    if (!state->Demux)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurUserError(NULL, "E05063007M : Can't create UsfDemux Handle.", 0);
-        return NULL;
-    }
-    queues->ReadBuffer = criSj_CreateUniversal(heap, 0, 0x40);
-    if (!queues->ReadBuffer)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurUserError(NULL, "E05063008M : Can't create output SJ for analyze header output.", 0);
-        return NULL;
-    }
-    words[0x35d] = 0;
-    struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
-    MemoryQueueView* memoryQueue = (MemoryQueueView*)words;
-    memoryQueue->Queue = criSj_CreateUniversal(heap, 1, 4);
-    if (!memoryQueue->Queue)
-    {
-        criMvPly_Destroy(words);
-        crimvply_occurUserError(NULL, "E05070601M : Can't create SJ for memory playback.", 0);
-        return NULL;
-    }
-    ((CriMvReadBufferState*)words)->Mode = 0;
-    initializeHandleParameters(words);
-    words[0] = 1;
-    criMvPly_SetPcmFormat(words, 0);
-    return words;
 }
 
 #pragma optimize("", on)

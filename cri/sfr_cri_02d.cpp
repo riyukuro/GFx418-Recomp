@@ -7,7 +7,7 @@
 // MS2-UNIT: sfr_cri_02d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002f610-0x14002f850 .text$mn
+// MS2-RANGE: 0x14002f1f0-0x14002f850 .text$mn
 // MS2-RANGE: 0x14002fbe0-0x1400301d0 .text$mn
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
@@ -119,19 +119,25 @@ typedef struct CriMvOwnedResourceView
     CriUint8 Reserved008[0x10];
     void* Work;                                 /* 0x018 */
     struct _RTL_CRITICAL_SECTION* Lock;         /* 0x020 */
-    CriUint8 Reserved028[0xd40];
+    CriUint8 Reserved028[0xd38];
+    CriSint32 ReadMode;                         /* 0xd60 */
+    CriUint8 Reservedd64[4];
     void* Demux;                                /* 0xd68 */
-    CriUint8 Reservedd70[8];
+    CriUint32 DemuxStreams;                     /* 0xd70 */
+    CriUint32 Fieldd74;                         /* 0xd74 */
     void* InputBuffer;                          /* 0xd78 */
     void* ReadBuffer;                           /* 0xd80 */
     CriUint8 Reservedd88[0x18];
     void* MemoryQueue;                          /* 0xda0 */
     CriUint8 Reservedda8[0x18];
     CriHeap Heap;                               /* 0xdc0 */
-    CriUint8 Reserveddc8[8];
+    CriUint32 InputBufferSize;                  /* 0xdc8 */
+    CriUint8 Reserveddcc[4];
     CriHeap HeapHandle;                         /* 0xdd0 */
-    CriUint8 Reserveddd8[8];
+    CriUint32 LocalHeapSize;                    /* 0xdd8 */
+    CriUint8 Reservedddc[4];
     void* MetaWork;                             /* 0xde0 */
+    CriHeap UserHeap;                           /* 0xde8 */
 } CriMvOwnedResourceView;
 typedef struct CriMovieParsedChunk
 {
@@ -327,9 +333,19 @@ void FUN_140030c70(void* player);
 CriBool freeMetaWork(void* player);
 void criUsfDmx_Destroy(void* demux);
 void criCs_Destroy(struct _RTL_CRITICAL_SECTION* section);
+void* FUN_1400385c8(void* work, CriSint32 size);
+void* criSj_CreateNamedRingBuffer(void* heap, CriUint32 size, CriUint32 flags, CriUint32 align, CriUint64 name);
+void* criUsfDmx_Create(void* heap, CriSint32 streams);
+void* criSj_CreateUniversal(void* heap, CriUint32 mode, CriUint32 count);
+void initializeHandleParameters(void* player);
+void criMvPly_SetPcmFormat(void* player, CriSint32 format);
+void criMvPly_Destroy(CriUint32* object);
+extern CriSint32 DAT_143ffd500;
 #ifdef __cplusplus
 extern "C" {
 #endif
+CriHeap criHeap_Create(void* ptr, CriSint32 size);
+void* criHeap_AllocFix(CriHeap heap, CriSint32 size, const char* name, CriSint32 align);
 void criHeap_Destroy(CriHeap heap);
 CriSint32 criHeap_Free(CriHeap heap, void* ptr);
 #ifdef __cplusplus
@@ -377,7 +393,14 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?criMvPly_CreateWithConfig@@YAPEAXPEAU_criheap_struct@@@Z=criMvPly_CreateWithConfig")
 #pragma comment(linker, "/alternatename:?criMvPly_Destroy@@YAXPEAK@Z=criMvPly_Destroy")
+#pragma comment(linker, "/alternatename:FUN_1400385c8=?FUN_1400385c8@@YAPEAXPEAXJ@Z")
+#pragma comment(linker, "/alternatename:criSj_CreateNamedRingBuffer=?criSj_CreateNamedRingBuffer@@YAPEAXPEAXKKK_K@Z")
+#pragma comment(linker, "/alternatename:criUsfDmx_Create=?criUsfDmx_Create@@YAPEAXPEAXJ@Z")
+#pragma comment(linker, "/alternatename:criSj_CreateUniversal=?criSj_CreateUniversal@@YAPEAXPEAXKK@Z")
+#pragma comment(linker, "/alternatename:initializeHandleParameters=?initializeHandleParameters@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:criMvPly_SetPcmFormat=?criMvPly_SetPcmFormat@@YAXPEAXJ@Z")
 #pragma comment(linker, "/alternatename:FUN_140030c70=?FUN_140030c70@@YAXPEAX@Z")
 #pragma comment(linker, "/alternatename:freeMetaWork=?freeMetaWork@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:criUsfDmx_Destroy=?criUsfDmx_Destroy@@YAXPEAX@Z")
@@ -403,6 +426,86 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+// allocate and initialize a CRI Movie player from the caller's heap
+// @0x14002f1f0
+void* criMvPly_CreateWithConfig(CriHeap heap)
+{
+    CriMvOwnedResourceView* ply;
+    if (DAT_143ffd500 <= 0) {
+        crimvply_occurUserError(NULL, "E09031803M : criMvPly_Create was called without Initialization.", 0);
+        return NULL;
+    }
+    if (heap == NULL)
+        return NULL;
+    ply = (CriMvOwnedResourceView*)criHeap_AllocFix(heap, 0xf18, "CriMvPly: HnObj", 4);
+    if (ply == NULL) {
+        crimvply_occurUserError(NULL, "E05063001M : Can't allocate handle object memory.", 0xf18);
+        return NULL;
+    }
+    memset(ply, 0, 0xf18);
+    ply->Status = 0;
+    ply->Heap = heap;
+    ply->UserHeap = heap;
+    ply->Work = criHeap_AllocFix(heap, 0x48, "CriMvPly: CriCsWork", 4);
+    if (ply->Work == NULL) {
+        criHeap_Free(heap, ply);
+        crimvply_occurUserError(NULL, "E08102001M : Can't allocate cs handle memory.", 0x48);
+        return NULL;
+    }
+    ply->Lock = (struct _RTL_CRITICAL_SECTION*)FUN_1400385c8(ply->Work, 0x48);
+    if (ply->Lock == NULL) {
+        criHeap_Free(heap, ply->Work);
+        criHeap_Free(heap, ply);
+        crimvply_occurUserError(NULL, "E05081501M : Can't create CriticalSection for CRI Movie.", 0);
+        return NULL;
+    }
+    ply->LocalHeapSize = 0x2800;
+    ply->MetaWork = criHeap_AllocFix(heap, 0x2800, "CriMvPly: LocalHeapBuf", 4);
+    if (ply->MetaWork == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurUserError(NULL, "E05063002M : Can't allocate internal heap memory.", 0x2800);
+        return NULL;
+    }
+    ply->HeapHandle = criHeap_Create(ply->MetaWork, ply->LocalHeapSize);
+    if (ply->HeapHandle == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurFatalError(NULL, "E05063005M : Can't create internal heap handle.", 0);
+        return NULL;
+    }
+    ply->InputBufferSize = 0x2800;
+    ply->InputBuffer = criSj_CreateNamedRingBuffer(heap, ply->InputBufferSize, 0, 0x40, (CriUint64)"CriMvPly: HeadAnalyInput");
+    if (ply->InputBuffer == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurUserError(NULL, "E05063006M : Can't create input SJ for header analyze input.", 0);
+        return NULL;
+    }
+    ply->DemuxStreams = 8;
+    ply->Demux = criUsfDmx_Create(heap, ply->DemuxStreams);
+    if (ply->Demux == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurUserError(NULL, "E05063007M : Can't create UsfDemux Handle.", 0);
+        return NULL;
+    }
+    ply->ReadBuffer = criSj_CreateUniversal(heap, 0, 0x40);
+    if (ply->ReadBuffer == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurUserError(NULL, "E05063008M : Can't create output SJ for analyze header output.", 0);
+        return NULL;
+    }
+    ply->Fieldd74 = 0;
+    ply->MemoryQueue = criSj_CreateUniversal(heap, 1, 4);
+    if (ply->MemoryQueue == NULL) {
+        criMvPly_Destroy((CriUint32*)ply);
+        crimvply_occurUserError(NULL, "E05070601M : Can't create SJ for memory playback.", 0);
+        return NULL;
+    }
+    ply->ReadMode = 0;
+    initializeHandleParameters(ply);
+    ply->State = 1;
+    criMvPly_SetPcmFormat(ply, 0);
+    return ply;
+}
+
 // release decoder queues, demux state, and heap-owned CRI Movie work areas
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sjrb, insj, cs, sjmemory, heap, objwork.
 // @0x14002f610
