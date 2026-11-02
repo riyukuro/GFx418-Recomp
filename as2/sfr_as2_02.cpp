@@ -2488,7 +2488,6 @@ void AvmTextField::GetCharBoundaries(const FnCall& fn)
 }
 
 // getCharIndexAtPoint(x, y): -1 if there is no character there.
-// MS2-FUNCTIONAL scheduling: the exe loads fn.Result right after the lookup call, before the -1 compare
 // @0x14290a350
 void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
 {
@@ -2500,7 +2499,10 @@ void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
     Number x   = fn.Arg(0).ToNumber(fn.Env);
     Number y   = fn.Arg(1).ToNumber(fn.Env);
     UPInt  pos = ptf->GetDocument()->GetCharIndexAtPoint(float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
-    FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
+    if (pos != SF_MAX_UPINT)
+        FUN_14000d250(fn.Result, Number(pos));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // getExactCharBoundaries(charIndex)
@@ -2520,7 +2522,6 @@ void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
 }
 
 // getLineIndexAtPoint(x, y): -1 if there is no line there.
-// MS2-FUNCTIONAL scheduling: the exe loads fn.Result right after the lookup call, before the -1 compare
 // @0x14290a680
 void AvmTextField::GetLineIndexAtPoint(const FnCall& fn)
 {
@@ -2532,11 +2533,13 @@ void AvmTextField::GetLineIndexAtPoint(const FnCall& fn)
     Number   x    = fn.Arg(0).ToNumber(fn.Env);
     Number   y    = fn.Arg(1).ToNumber(fn.Env);
     unsigned line = ptf->GetDocument()->GetLineIndexAtPoint(float(Render::PixelsToTwips(x)), float(Render::PixelsToTwips(y)));
-    FUN_14000d250(fn.Result, line != ~0u ? Number(line) : -1);
+    if (line != ~0u)
+        FUN_14000d250(fn.Result, Number(line));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // getLineIndexOfChar(charIndex)
-// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a7d0
 void AvmTextField::GetLineIndexOfChar(const FnCall& fn)
 {
@@ -2552,11 +2555,13 @@ void AvmTextField::GetLineIndexOfChar(const FnCall& fn)
         return;
     }
     unsigned line = ptf->GetDocument()->GetLineIndexOfChar(unsigned(idx));
-    FUN_14000d250(fn.Result, line == ~0u ? -1 : Number(line));
+    if (line != ~0u)
+        FUN_14000d250(fn.Result, Number(line));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // getLineOffset(lineIndex): the index of its first character.
-// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a8c0
 void AvmTextField::GetLineOffset(const FnCall& fn)
 {
@@ -2572,11 +2577,13 @@ void AvmTextField::GetLineOffset(const FnCall& fn)
         return;
     }
     UPInt off = ptf->GetDocument()->GetLineOffset(unsigned(line));
-    FUN_14000d250(fn.Result, off == SF_MAX_UPINT ? -1 : Number(off));
+    if (off != SF_MAX_UPINT)
+        FUN_14000d250(fn.Result, Number(off));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // getLineLength(lineIndex)
-// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290a9c0
 void AvmTextField::GetLineLength(const FnCall& fn)
 {
@@ -2592,11 +2599,13 @@ void AvmTextField::GetLineLength(const FnCall& fn)
         return;
     }
     UPInt len = ptf->GetDocument()->GetLineLength(unsigned(line), 0);
-    FUN_14000d250(fn.Result, len != SF_MAX_UPINT ? Number(len) : -1);
+    if (len != SF_MAX_UPINT)
+        FUN_14000d250(fn.Result, Number(len));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // getFirstCharInParagraph(charIndex)
-// MS2-FUNCTIONAL block layout: the exe shares one SetNumber(-1) call between the line < 0 and not-found paths
 // @0x14290b1c0
 void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
 {
@@ -2612,7 +2621,10 @@ void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
         return;
     }
     UPInt pos = ptf->GetDocument()->GetFirstCharInParagraph(unsigned(idx));
-    FUN_14000d250(fn.Result, pos != SF_MAX_UPINT ? Number(pos) : -1);
+    if (pos != SF_MAX_UPINT)
+        FUN_14000d250(fn.Result, Number(pos));
+    else
+        FUN_14000d250(fn.Result, -1);
 }
 
 // appendText(text): not for a field with a style sheet.
