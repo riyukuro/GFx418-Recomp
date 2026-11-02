@@ -1530,8 +1530,7 @@ void FUN_14001b460(uint8_t optional)
     if (previous == 0) {
         criHeap_Initialize();
         VideoCriWorkSize = CriMv::CalcMovieHandleWork(8, CriMv::ErrorContainer);
-        void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-        VideoCriWork = reinterpret_cast<void*(*)(void*, size_t, unsigned)>(heap[10])(DAT_143b15f60, VideoCriWorkSize, 0);
+        VideoCriWork = Scaleform::Memory::Alloc(VideoCriWorkSize);
         CriMv::SetupMovieHandleWork(8, VideoCriWork, VideoCriWorkSize, CriMv::ErrorContainer);
         CriMv::Initialize(CriMv::ErrorContainer);
         if (optional) CriMv::InitializeFrame32bitARGB();
@@ -1595,36 +1594,37 @@ void FUN_14001b620(void* state)
 // @0x14001b6b0
 int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
 {
-    unsigned char* state = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(player) + 0x10);
-    const uint32_t channels = *reinterpret_cast<uint32_t*>(state + 0x38);
-    uint64_t remaining = static_cast<uint64_t>((requestedBytes & 0x1fffffff) >> 2) / channels;
-    uint64_t samples = 0;
-    void* reader = *reinterpret_cast<void**>(state + 0x30);
-    if (reader) {
-        void** vtable = *reinterpret_cast<void***>(reader);
-        uint32_t (*read)(void*, uint32_t, void*, uint64_t) = reinterpret_cast<uint32_t(*)(void*, uint32_t, void*, uint64_t)>(vtable[2]);
+    // the stream state is reread through the player after every reader call: [player+0x10]
+#define VIDEO_PCM_STATE (*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(player) + 0x10))
+    typedef uint32_t (*ReadFn)(void*, uint32_t, void*, uint32_t);
+    uint32_t samples = 0;
+    uint32_t remaining = requestedBytes * 8 / 32 / *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38);
+    if (*reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30)) {
         // the reader takes an array of per-channel plane pointers: mono passes &output (0x14001b6f2), and the
         // multi-channel reads are capped at the 0x1000-sample (0x4000-byte) staging buffers (0x14001b749)
-        if (channels == 1) {
-            samples = read(reader, 1, &output, remaining);
+        if (*reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38) == 1) {
+            void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
+            samples = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(reader, 1, &output, remaining);
         } else {
             while (remaining) {
-                uint32_t received = read(reader, channels, state + 0x50, remaining > 0x1000 ? 0x1000 : remaining);
-                if (!received) break;
-                uint32_t* destination = output;
-                void** buffers = reinterpret_cast<void**>(state + 0x50);
+                void* reader = *reinterpret_cast<void**>(VIDEO_PCM_STATE + 0x30);
+                const uint32_t received = reinterpret_cast<ReadFn>((*reinterpret_cast<void***>(reader))[2])(
+                    reader, *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38), VIDEO_PCM_STATE + 0x50, remaining > 0x1000 ? 0x1000 : remaining);
+                if (!received)
+                    break;
+                unsigned char* state = VIDEO_PCM_STATE;
                 for (uint32_t frame = 0; frame < received; ++frame) {
-                    for (uint32_t channel = 0; channel < channels; ++channel)
-                        *destination++ = *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(buffers[channel]) + frame * 4);
+                    for (uint32_t channel = 0; channel < *reinterpret_cast<uint32_t*>(state + 0x38); ++channel)
+                        *output++ = reinterpret_cast<uint32_t*>(reinterpret_cast<void**>(state + 0x50)[channel])[frame];
                 }
-                output = destination;
                 samples += received;
                 remaining -= received;
             }
         }
     }
-    *reinterpret_cast<uint64_t*>(state + 0x48) += samples;
-    return static_cast<int>((channels * static_cast<uint32_t>(samples) & 0x7ffffff) << 2);
+    *reinterpret_cast<uint64_t*>(VIDEO_PCM_STATE + 0x48) += samples;
+    return *reinterpret_cast<uint32_t*>(VIDEO_PCM_STATE + 0x38) * samples * 32 / 8;
+#undef VIDEO_PCM_STATE
 }
 
 namespace {
@@ -2067,74 +2067,55 @@ static __forceinline Scaleform::GFx::ASStringNode* VideoCopyString(Scaleform::GF
     return manager->CreateStringNode(reinterpret_cast<const char*>(desc + 0xc),
                                      *reinterpret_cast<const uint64_t*>(desc) & 0x7fffffffffffffffull);
 }
+namespace {
+// the cue callback owner's VM, [[[callback+0x10]+0x20]+0x78]
+__forceinline Scaleform::GFx::AS3::VM& VideoSelfVMRef(void* callback)
+{
+    return *reinterpret_cast<Scaleform::GFx::AS3::VM*>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)));
+}
+}
 // MS2-FUNCTIONAL: builds a CRI subtitle/cue event object with its name, timestamp, type and parameter map.
 // @0x140018930
 void FUN_140018930(void* callback, const uint32_t* eventData)
 {
+    using namespace Scaleform::GFx::AS3;
+    using Scaleform::GFx::ASString;
     // The handler Value lives in the AS3 object at callback+0x10 (exe: mov rdx,[rcx+0x10]; [rdx+0xb8]), not in callback.
-    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
-    unsigned char* root = *reinterpret_cast<unsigned char**>(owner + 0x20);
-    unsigned char* vm = *reinterpret_cast<unsigned char**>(root + 0x78);
-    Scaleform::GFx::AS3::Value* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0xb8);
-    if (callbackValue->IsUndefined() || callbackValue->IsNull()) return;
-    uint64_t eventAtom = 0, parametersAtom = 0;
-    eventAtom = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->MakeObject().GetPtr());
-    Scaleform::GFx::AS3::Object* eventObject = reinterpret_cast<Scaleform::GFx::AS3::Object*>(eventAtom);
-    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
-    Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    if (reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0xb8)->IsNullOrUndefined())
+        return;
+    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)) + 0x10);
+    SPtr<Instances::fl::Object> event = reinterpret_cast<VM*>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)))->MakeObject();
+    Scaleform::GFx::ASStringManager* const& manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
     // The cue strings are Scaleform::String data pointers (low 2 bits are flags): size at +0 (top bit is a flag),
     // chars at +0xc. The exe copies each into a new ASString node (0x1425c0a80); they are not ASStringNodes.
-    {
-        Scaleform::GFx::ASString string(VideoCopyString(manager, *reinterpret_cast<const uint64_t*>(eventData + 2)));
-        Scaleform::GFx::ASString property(manager->CreateStringNode("name"));
-        Scaleform::GFx::AS3::Value value(string);
-        eventObject->AddDynamicSlotValuePair(property, value);
-    }
-    {
-        Scaleform::GFx::ASString key(manager->CreateStringNode("time"));
-        Scaleform::GFx::AS3::Value value(static_cast<double>(static_cast<float>(eventData[4]) / VideoDurationScale));
-        eventObject->AddDynamicSlotValuePair(key, value);
-    }
-    {
-        Scaleform::GFx::ASString key(manager->CreateStringNode("type"));
-        Scaleform::GFx::ASString type(manager->CreateStringNode(eventData[0] == 1 ? "navigation" : "event"));
-        Scaleform::GFx::AS3::Value value(type);
-        eventObject->AddDynamicSlotValuePair(key, value);
-    }
+    event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("name")), ASString(VideoCopyString(manager, *reinterpret_cast<const uint64_t*>(eventData + 2))));
+    event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("time")), Value(static_cast<double>(static_cast<float>(eventData[4]) / VideoDurationScale)));
+    event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("type")),
+                                   eventData[0] == 1 ? ASString(manager->CreateStringNode("navigation")) : ASString(manager->CreateStringNode("event")));
     {
         // The exe always adds "parameters" as an empty string; a non-empty cue point then replaces it with an object.
-        Scaleform::GFx::ASString empty(manager->GetEmptyStringNode());
-        Scaleform::GFx::ASString key(manager->CreateStringNode("parameters"));
-        Scaleform::GFx::AS3::Value value(empty);
-        eventObject->AddDynamicSlotValuePair(key, value);
+        ASString empty(manager->GetEmptyStringNode());
+        event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("parameters")), empty);
     }
-    const uint64_t count = *reinterpret_cast<const uint64_t*>(eventData + 8);
-    if (count) {
-        parametersAtom = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->MakeObject().GetPtr());
-        Scaleform::GFx::AS3::Object* parameters = reinterpret_cast<Scaleform::GFx::AS3::Object*>(parametersAtom);
-        const uint64_t* const entries = *reinterpret_cast<const uint64_t* const*>(eventData + 6);
-        for (uint64_t i = 0; i < count; ++i) {
-            const uint64_t* pair = reinterpret_cast<const uint64_t*>(reinterpret_cast<const unsigned char*>(entries) + i * 0x10);
-            Scaleform::GFx::ASString text(VideoCopyString(manager, pair[1]));
-            Scaleform::GFx::ASString property(VideoCopyString(manager, pair[0]));
-            Scaleform::GFx::AS3::Value value(text);
-            parameters->AddDynamicSlotValuePair(property, value);
+    if (*reinterpret_cast<const uint64_t*>(eventData + 8) > 0) {
+        SPtr<Instances::fl::Object> parameters = reinterpret_cast<VM*>(VideoSelfVM(*reinterpret_cast<void**>(static_cast<unsigned char*>(callback) + 0x10)))->MakeObject();
+        for (uint64_t i = 0; i < *reinterpret_cast<const uint64_t*>(eventData + 8); ++i) {
+            const uint64_t* pair = reinterpret_cast<const uint64_t*>(*reinterpret_cast<const unsigned char* const*>(eventData + 6) + i * 0x10);
+            ASString text(VideoCopyString(manager, pair[1]));
+            parameters->AddDynamicSlotValuePair(ASString(VideoCopyString(manager, pair[0])), text);
         }
-        Scaleform::GFx::ASString key(manager->CreateStringNode("parameters"));
-        Scaleform::GFx::AS3::Value value(parameters);
-        eventObject->AddDynamicSlotValuePair(key, value);
+        event->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("parameters")), Value(parameters));
     }
-    Scaleform::GFx::AS3::Value selfValue(eventObject);
-    Scaleform::GFx::AS3::Value result;
-    reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->ExecuteInternalUnsafe(*callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &selfValue, false);
-    Scaleform::GFx::AS3::VM* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm);
-    if (vmObject->HandleException) {
-        vmObject->HandleException = false;
-        vmObject->OutputError(vmObject->ExceptionObj);
-        vmObject->ExceptionObj.SetUndefined();
+    Value result;
+    Value argument(event);
+    VideoSelfVMRef(callback).ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0xb8),
+                                                   Value::GetUndefined(), result, 1, &argument, false);
+    VM& vm = VideoSelfVMRef(callback);
+    if (vm.IsException()) {
+        vm.HandleException = false;
+        vm.OutputError(vm.ExceptionObj);
+        vm.ExceptionObj.SetUndefined();
     }
-    ReleaseVideoAtom(&parametersAtom);
-    ReleaseVideoAtom(&eventAtom);
 }
 namespace {
 
