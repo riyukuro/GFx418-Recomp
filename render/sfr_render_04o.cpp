@@ -219,7 +219,8 @@ public:
 
     unsigned GetBit() const
     {
-        return (*Bits) & Mask;
+        unsigned b = *Bits;
+        return b & Mask;
     }
 
 private:
@@ -228,7 +229,7 @@ private:
 };
 
 // @0x14264ba40
-// MS2-FUNCTIONAL: regalloc: the exe copies Mask then ANDs the source byte from memory; same bits
+// MS2-FUNCTIONAL: regalloc: the exe copies Mask then ANDs the source byte from memory here, but its inlined copy in GetGlyphRaster loads the byte first; GetBit follows the GetGlyphRaster form
 void ExternalFontWinAPI::decomposeGlyphBitmap(const UByte* data, int width, int height, int originX, int originY,
                                               GlyphRaster* raster)
 {
@@ -320,17 +321,27 @@ bool ExternalFontWinAPI::IsHintedRasterGlyph(unsigned glyphIndex, unsigned hinte
 }
 
 // MS2-FUNCTIONAL: register allocation only (exe keeps the shape pointer in r12, ours in r13; 6 bytes longer)
+// Selects obj into dc for the guard's scope (SDK GFxGdiSelectObjectGuard).
+struct GdiSelectObjectGuard
+{
+    HDC     WinDC;
+    HGDIOBJ WinObj;
+    GdiSelectObjectGuard(HDC dc, HGDIOBJ obj) : WinDC(dc), WinObj(::SelectObject(dc, obj)) {}
+    ~GdiSelectObjectGuard() { ::SelectObject(WinDC, WinObj); }
+};
+
 // @0x142648de0
 bool ExternalFontWinAPI::GetTemporaryGlyphShape(unsigned glyphIndex, unsigned hintedSize, GlyphShape* shape)
 {
     if ((glyphIndex & 0xFFFF) == 0xFFFF)
-        return false;
+        return 0;
     if (!IsHintedVectorGlyph(glyphIndex, hintedSize))
         hintedSize = 0;
 
-    Lock::Locker     lock(pFontLock);
-    HFONT            font  = MasterFont;
-    const GlyphType& glyph = Glyphs[glyphIndex];
+    Lock::Locker locker(pFontLock);
+    GlyphType&   glyph = Glyphs[glyphIndex];
+
+    HFONT hFont = MasterFont;
     if (hintedSize)
     {
         if (hintedSize != LastHintedFontSize)
@@ -342,46 +353,50 @@ bool ExternalFontWinAPI::GetTemporaryGlyphShape(unsigned glyphIndex, unsigned hi
                                        DEFAULT_PITCH, &NameW[0]);
             LastHintedFontSize = hintedSize;
         }
-        font = HintedFont;
+        hFont = HintedFont;
     }
 
-    HDC     dc      = pSysData->WinHDC;
-    HGDIOBJ oldFont = ::SelectObject(dc, font);
+    GdiSelectObjectGuard g1(pSysData->WinHDC, hFont);
+
     if (pSysData->GlyphBuffer.GetSize() == 0)
         pSysData->GlyphBuffer.Resize(FontSysDataWinAPI::BufSizeInc);
 
     // a too small buffer is grown to what GDI asks for and the outline read again
     GLYPHMETRICS gm;
-    MAT2         mat  = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
-    int          size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm,
-                                           (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &mat);
-    if (size == GDI_ERROR || size > (int)pSysData->GlyphBuffer.GetSize())
+    int          totalSize = 0;
+    MAT2         im        = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
+    totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm,
+                                   (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &im);
+    if (totalSize == GDI_ERROR || totalSize > (int)pSysData->GlyphBuffer.GetSize())
     {
-        size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm, 0, 0, &mat);
-        if (size != GDI_ERROR)
-        {
-            pSysData->GlyphBuffer.Resize(size + FontSysDataWinAPI::BufSizeInc);
-            size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm,
-                                      (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &mat);
-        }
+        totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm, 0, 0, &im);
+        if (totalSize == GDI_ERROR)
+            return 0;
+        pSysData->GlyphBuffer.Resize(totalSize + FontSysDataWinAPI::BufSizeInc);
+        totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_NATIVE, &gm,
+                                       (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &im);
+        if (totalSize == GDI_ERROR || totalSize > (int)pSysData->GlyphBuffer.GetSize())
+            return 0;
     }
-    bool ret = false;
-    if (size != GDI_ERROR && size <= (int)pSysData->GlyphBuffer.GetSize() &&
-        (size == 0 || decomposeGlyphOutline(&pSysData->GlyphBuffer[0], size, shape, hintedSize)))
-        ret = true;
 
-    ::SelectObject(dc, oldFont);
-    return ret;
+    if (totalSize)
+    {
+        if (!decomposeGlyphOutline(&pSysData->GlyphBuffer[0], totalSize, shape, hintedSize))
+            return false;
+    }
+    return true;
 }
 
 // @0x1426488b0
 bool ExternalFontWinAPI::GetGlyphRaster(unsigned glyphIndex, unsigned hintedSize, GlyphRaster* raster)
 {
-    if ((glyphIndex & 0xFFFF) == 0xFFFF || !IsHintedRasterGlyph(glyphIndex, hintedSize))
+    if ((glyphIndex & 0xFFFF) == 0xFFFF)
         return false;
+    if (!IsHintedRasterGlyph(glyphIndex, hintedSize))
+        return 0;
 
-    Lock::Locker     lock(pFontLock);
-    const GlyphType& glyph = Glyphs[glyphIndex];
+    Lock::Locker locker(pFontLock);
+    GlyphType&   glyph = Glyphs[glyphIndex];
     if (hintedSize != LastHintedFontSize)
     {
         if (HintedFont)
@@ -392,47 +407,43 @@ bool ExternalFontWinAPI::GetGlyphRaster(unsigned glyphIndex, unsigned hintedSize
         LastHintedFontSize = hintedSize;
     }
 
-    HDC     dc      = pSysData->WinHDC;
-    HGDIOBJ oldFont = ::SelectObject(dc, HintedFont);
+    GdiSelectObjectGuard g1(pSysData->WinHDC, HintedFont);
+
     if (pSysData->GlyphBuffer.GetSize() == 0)
         pSysData->GlyphBuffer.Resize(FontSysDataWinAPI::BufSizeInc);
 
     GLYPHMETRICS gm;
-    MAT2         mat  = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
-    bool         ok   = true;
-    int          size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm,
-                                           (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &mat);
-    if (size == GDI_ERROR || size > (int)pSysData->GlyphBuffer.GetSize())
+    int          totalSize = 0;
+    MAT2         im        = { { 0, 1 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
+    totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm,
+                                   (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &im);
+    if (totalSize == GDI_ERROR || totalSize > (int)pSysData->GlyphBuffer.GetSize())
     {
-        size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm, 0, 0, &mat);
-        if (size == GDI_ERROR)
-            ok = false;
-        else
-        {
-            pSysData->GlyphBuffer.Resize(size + FontSysDataWinAPI::BufSizeInc);
-            size = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm,
-                                      (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &mat);
-            if (size == GDI_ERROR || size > (int)pSysData->GlyphBuffer.GetSize())
-                ok = false;
-        }
-    }
-    if (ok)
-    {
-        if (size)
-            decomposeGlyphBitmap(&pSysData->GlyphBuffer[0], gm.gmBlackBoxX, gm.gmBlackBoxY, gm.gmptGlyphOrigin.x,
-                                 gm.gmptGlyphOrigin.y, raster);
-        else
-        {
-            // a blank glyph (space): one empty pixel
-            raster->Width  = 1;
-            raster->Height = 1;
-            raster->Raster.Resize(1);
-            raster->Raster[0] = 0;
-        }
+        totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm, 0, 0, &im);
+        if (totalSize == GDI_ERROR)
+            return 0;
+        pSysData->GlyphBuffer.Resize(totalSize + FontSysDataWinAPI::BufSizeInc);
+        totalSize = ::GetGlyphOutlineW(pSysData->WinHDC, glyph.Code, GGO_BITMAP, &gm,
+                                       (DWORD)pSysData->GlyphBuffer.GetSize(), &pSysData->GlyphBuffer[0], &im);
+        if (totalSize == GDI_ERROR || totalSize > (int)pSysData->GlyphBuffer.GetSize())
+            return 0;
     }
 
-    ::SelectObject(dc, oldFont);
-    return ok;
+    if (totalSize)
+    {
+        decomposeGlyphBitmap(&pSysData->GlyphBuffer[0], gm.gmBlackBoxX, gm.gmBlackBoxY, gm.gmptGlyphOrigin.x,
+                             gm.gmptGlyphOrigin.y, raster);
+        return true;
+    }
+    else
+    {
+        // a blank glyph (space): one empty pixel
+        raster->Width  = 1;
+        raster->Height = 1;
+        raster->Raster.Resize(1);
+        raster->Raster[0] = 0;
+    }
+    return true;
 }
 
 // @0x142648360
