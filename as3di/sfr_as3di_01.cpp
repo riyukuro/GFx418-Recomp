@@ -756,40 +756,48 @@ typedef ThunkFunc2<Instances::fl::XMLList, 14, Value, unsigned, const Value*> TF
 // @0x14013e060
 template <> const TFunc_Instances_fl_XMLList_AS3descendants::TMethod TFunc_Instances_fl_XMLList_AS3descendants::Method = &Instances::fl::XMLList::AS3descendants;
 typedef ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Value*> TFunc_Instances_fl_XMLList_AS3elements;
+// A two-entry table: the initializer stores the namespace into both entries inline, with no flag to keep. The
+// table is a data-unit image, so its namespace fields are set through the table address.
+namespace {
+struct ThunkNamespaces2
+{
+    ThunkNamespaces2(const void* table, UPInt offset, const char* ns)
+    {
+        // Volatile: the tables are declared const, so plain stores would be dropped.
+        volatile ThunkInfo* ti = (volatile ThunkInfo*)((UByte*)table + offset);
+        ti[0].NamespaceName = ns;
+        ti[1].NamespaceName = ns;
+    }
+};
+} // namespace
 // @0x14013e090
 template <> const TFunc_Instances_fl_XMLList_AS3elements::TMethod TFunc_Instances_fl_XMLList_AS3elements::Method = &Instances::fl::XMLList::AS3elements;
 // FunctionProto (2 entries: apply, call)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e0c0
-static const bool NamespacesOf_FunctionProto = SetThunkNamespaces(DAT_143a2aab0, 0x0, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_FunctionProto(DAT_143a2aab0, 0x0, fl::NS_AS3);
 // MethodInd (2 entries: apply, call)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e0e0
-static const bool NamespacesOf_MethodInd = SetThunkNamespaces(InstanceTraits::MethodInd::f, 0x0, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_MethodInd(InstanceTraits::MethodInd::f, 0x0, fl::NS_AS3);
 // Thunk (2 entries: apply, call)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e100
-static const bool NamespacesOf_Thunk = SetThunkNamespaces(InstanceTraits::Thunk::f, 0x0, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_Thunk(InstanceTraits::Thunk::f, 0x0, fl::NS_AS3);
 // VTableInd (2 entries: apply, call)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e120
-static const bool NamespacesOf_VTableInd = SetThunkNamespaces(InstanceTraits::VTableInd::f, 0x0, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_VTableInd(InstanceTraits::VTableInd::f, 0x0, fl::NS_AS3);
 // Array (18 entries: join, pop, push, reverse, ...)
 // MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e140
 static const bool NamespacesOf_Array = SetThunkNamespaces(DAT_143a2aab0, 0x860, 18, fl::NS_AS3);
 // Boolean (2 entries: toString, valueOf)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e1d0
-static const bool NamespacesOf_Boolean = SetThunkNamespaces(DAT_143a2aab0, 0x450, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_Boolean(DAT_143a2aab0, 0x450, fl::NS_AS3);
 // Date (41 entries: valueOf, setTime, toString, toDateString, ...)
 // MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e1f0
 static const bool NamespacesOf_Date = SetThunkNamespaces(DAT_143a2aab0, 0xcc0, 41, fl::NS_AS3);
 // Namespace (2 entries: valueOf, toString)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e320
-static const bool NamespacesOf_Namespace = SetThunkNamespaces(DAT_143a2aab0, 0xd0, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_Namespace(DAT_143a2aab0, 0xd0, fl::NS_AS3);
 // Number (6 entries: toExponential, toFixed, toPrecision, toString, ...)
 // MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e340
@@ -799,13 +807,11 @@ static const bool NamespacesOf_Number = SetThunkNamespaces(DAT_143a2aab0, 0x1c0,
 // @0x14013e380
 static const bool NamespacesOf_Object = SetThunkNamespaces(Instances::fl::DateMonthNames, 0x60, 3, fl::NS_AS3);
 // QName (2 entries: valueOf, toString)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e3a0
-static const bool NamespacesOf_QName = SetThunkNamespaces(DAT_143a2aab0, 0x170, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_QName(DAT_143a2aab0, 0x170, fl::NS_AS3);
 // RegExp (2 entries: exec, test)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e3c0
-static const bool NamespacesOf_RegExp = SetThunkNamespaces(DAT_143a2aab0, 0xc70, 2, fl::NS_AS3);
+static const ThunkNamespaces2 NamespacesOf_RegExp(DAT_143a2aab0, 0xc70, fl::NS_AS3);
 // StringClass (1 entries: fromCharCode)
 // MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14013e3e0
