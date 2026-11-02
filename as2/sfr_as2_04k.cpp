@@ -64,38 +64,37 @@ void ASRefCountCollector::AdvanceFrame(unsigned* pframeCnt, unsigned* pseenCount
 }
 
 // A frame of the clip: mouse drag, the next frame of a playing clip with its frame tags, the enterFrame event.
-// MS2-FUNCTIONAL: the event is built member by member in both paths as in the exe, the rest follows its order
 // @0x142931430
 void AvmSprite::AdvanceFrame(bool nextFrame, float framePos)
 {
     Ptr<Sprite> psprite = GetSprite();
-    if (psprite->IsUnloading() ||
-        (psprite->InteractiveObject::Flags & (InteractiveObject::Mask_NoAdvanceLocal | InteractiveObject::Mask_NoAdvanceGlobal)))
+    if ((psprite->InteractiveObject::Flags & (InteractiveObject::Mask_NoAdvanceLocal | InteractiveObject::Mask_NoAdvanceGlobal)) ||
+        psprite->IsUnloading())
         return;
-    if (psprite->GetMovieImpl()->IsMouseSupportEnabled())
+    if (GetDispObj()->GetMovieImpl()->IsMouseSupportEnabled())
         psprite->DoMouseDrag();
     if (!nextFrame)
         return;
-    unsigned prevFrame = psprite->GetCurrentFrame();
-    unsigned frame     = prevFrame;
+    unsigned currentFrame = psprite->GetCurrentFrame();
     if (psprite->GetPlayState() == State_Playing)
     {
+        unsigned currentFrame0 = currentFrame;
         psprite->IncrementFrameAndCheckForLoop();
-        frame = psprite->GetCurrentFrame();
-        if (frame != prevFrame)
+        currentFrame = psprite->GetCurrentFrame();
+        if (currentFrame != currentFrame0)
         {
             // init action tags come before Event_EnterFrame, which comes before the frame's actions
-            ExecuteInitActionFrameTags(frame);
+            ExecuteInitActionFrameTags(currentFrame);
             OnEvent(EventId(EventId::Event_EnterFrame));
-            psprite->Sprite::ExecuteFrameTags(frame);
+            psprite->Sprite::ExecuteFrameTags(currentFrame);
         }
         else
             OnEvent(EventId(EventId::Event_EnterFrame));
     }
     else
         OnEvent(EventId(EventId::Event_EnterFrame));
-    if (frame == 0)
-        psprite->mDisplayList.UnloadMarkedObjects(psprite);
+    if (currentFrame == 0)
+        GetSprite()->mDisplayList.UnloadMarkedObjects(GetSprite());
 }
 
 // The movie's share of the collector's frame accounting (the exe inlines the collector's AdvanceFrame here).
