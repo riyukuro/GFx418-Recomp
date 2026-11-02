@@ -162,6 +162,24 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// HashDH<UPInt, Value>'s node lookup through the exe's out-of-line GetAlt.
+static SF_INLINE const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* saHashGetNode(const HashDH<UPInt, Value>& h,
+                                                                                   const UPInt& key)
+{
+    typedef HashNode<UPInt, Value, FixedSizeHash<UPInt> > NodeT;
+    typedef decltype(h.mHash) ContT;
+    // The exe calls GetAlt out of line (0x1423e87e0); going through a member pointer keeps cl from inlining it.
+    const NodeT* (ContT::*getAlt)(const UPInt&) const = &ContT::GetAlt<UPInt>;
+    return (h.mHash.*getAlt)(key);
+}
+
+// HashDH<UPInt, Value>::Get over saHashGetNode.
+static SF_INLINE const Value* saHashGet(const HashDH<UPInt, Value>& h, const UPInt& key)
+{
+    const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = saHashGetNode(h, key);
+    return p ? &p->Second : 0;
+}
+
 // The exe inlines SparseArray::At into the Array string helpers.
 static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
 {
@@ -174,6 +192,19 @@ static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
         if (v)
             return *v;
     }
+    return sa.DefaultValue;
+}
+
+// The same with the out-of-range hole returned on its own path.
+static SF_INLINE const Value& saAtRanged(const SparseArray& sa, UPInt ind)
+{
+    if (ind < sa.ValueA.GetSize())
+        return sa.ValueA[ind];
+    else if (ind < sa.ValueHLowInd || ind > sa.ValueHHighInd)
+        return sa.DefaultValue;
+    const Value* v = sa.ValueH.Get(ind);
+    if (v)
+        return *v;
     return sa.DefaultValue;
 }
 
@@ -560,27 +591,25 @@ CheckResult IsValidName(const ASString& name)
 
 // ---- SparseArray: dense ValueA, then sparse indices [ValueHLowInd, ValueHHighInd] in ValueH ----
 
-// MS2-FUNCTIONAL: the exe inlines the hash lookup with different loop layout
 // @0x142415de0
 UPInt SparseArray::GetLeftEqualInd(UPInt start_from) const
 {
     SPInt i = static_cast<SPInt>(start_from);
     for (; i >= 0; --i)
     {
-        if (ValueH.Get(i))
+        if (saHashGetNode(ValueH, i))
             break;
     }
     return static_cast<UPInt>(i);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the hash lookup with different loop layout
 // @0x142416eb0
 UPInt SparseArray::GetRightEqualInd(UPInt start_from, UPInt end_ind) const
 {
     UPInt i = start_from;
     for (; i <= end_ind; ++i)
     {
-        if (ValueH.Get(i))
+        if (saHashGetNode(ValueH, i))
             break;
     }
     return i;
@@ -612,7 +641,7 @@ SF_NOINLINE AbsoluteIndex SparseArray::GetNextArrayIndex(AbsoluteIndex ind) cons
         {
             for (UPInt j = static_cast<UInt32>(i + 1); j <= ValueHHighInd; ++j)
             {
-                if (ValueH.Get(j))
+                if (saHashGetNode(ValueH, j))
                     return AbsoluteIndex(j);
             }
         }
@@ -620,21 +649,13 @@ SF_NOINLINE AbsoluteIndex SparseArray::GetNextArrayIndex(AbsoluteIndex ind) cons
     return AbsoluteIndex(-1);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the hash lookup with different block layout
+#pragma inline_depth(2)
 // @0x142427180
 const Value& SparseArray::Top() const
 {
-    const UPInt ind = Length - 1;
-    if (ind < ValueA.GetSize())
-        return ValueA[ind];
-    if (ind >= ValueHLowInd && ind <= ValueHHighInd)
-    {
-        const Value* v = ValueH.Get(ind);
-        if (v)
-            return *v;
-    }
-    return DefaultValue;
+    return saAtRanged(*this, Length - 1);
 }
+#pragma inline_depth()
 
 // @0x14241e4b0
 void SparseArray::PushBack(const Value& v)
@@ -671,7 +692,7 @@ void SparseArray::RemoveHash(UPInt first_ind, UPInt num)
     for (UInt32 i = 0; i < num; ++i)
     {
         const UPInt ind = i + first_ind;
-        if (ValueH.Get(ind))
+        if (saHashGet(ValueH, ind))
             ValueH.Remove(ind);
     }
 }
@@ -820,17 +841,6 @@ void SparseArray::Resize(UPInt newLength)
     ValueHHighInd = 0;
 }
 
-// HashDH<UPInt, Value>'s node lookup through the exe's out-of-line GetAlt.
-static SF_INLINE const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* saHashGetNode(const HashDH<UPInt, Value>& h,
-                                                                                   const UPInt& key)
-{
-    typedef HashNode<UPInt, Value, FixedSizeHash<UPInt> > NodeT;
-    typedef decltype(h.mHash) ContT;
-    // The exe calls GetAlt out of line (0x1423e87e0); going through a member pointer keeps cl from inlining it.
-    const NodeT* (ContT::*getAlt)(const UPInt&) const = &ContT::GetAlt<UPInt>;
-    return (h.mHash.*getAlt)(key);
-}
-
 // @0x1424213b0
 void SparseArray::Set(UPInt ind, const Value& v)
 {
@@ -950,7 +960,7 @@ namespace Instances { namespace fl
         return Object::SetProperty(prop_name, value);
     }
 
-    // MS2-FUNCTIONAL: the exe tail-calls Value::Assign with the inlined element lookup laid out differently
+#pragma inline_depth(2)
     // @0x142416730
     CheckResult Array::GetProperty(const Multiname& prop_name, Value& value)
     {
@@ -963,13 +973,13 @@ namespace Instances { namespace fl
         return Object::GetProperty(prop_name, value);
     }
 
-    // MS2-FUNCTIONAL: the exe reads the index as 32 bits
     // @0x1424159a0
     void Array::GetDynamicProperty(AbsoluteIndex ind, Value& value)
     {
-        value.Assign(ElementAt(SA, ind.Get()));
+        value.Assign(saAtRanged(SA, static_cast<UInt32>(ind.Get())));
     }
 
+#pragma inline_depth()
     // @0x142416200
     void Array::GetNextPropertyName(Value& name, GlobalSlotIndex ind) const
     {
@@ -1003,7 +1013,6 @@ namespace Instances { namespace fl
         return GlobalSlotIndex(r.Get() + static_cast<UInt32>(SA.GetSize()));
     }
 
-    // MS2-FUNCTIONAL: the exe tail-calls Value::Assign from each branch
     // @0x142416520
     void Array::GetNextPropertyValue(Value& value, GlobalSlotIndex ind)
     {
@@ -1012,12 +1021,10 @@ namespace Instances { namespace fl
             value.SetUndefined();
             return;
         }
-        if (ind.Get() > SA.GetSize())
-        {
+        if (ind.Get() <= SA.GetSize())
+            value.Assign(saAtRanged(SA, ind.Get() - 1));
+        else
             Object::GetNextPropertyValue(value, GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize())));
-            return;
-        }
-        value.Assign(ElementAt(SA, ind.Get() - 1));
     }
 
     // @0x142429290
@@ -3416,7 +3423,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
     }
 
-    // MS2-FUNCTIONAL: the exe reloads the picked list through the returned Pickable
     // @0x142416910
     CheckResult XMLElement::GetProperty(const Multiname& prop_name, Value& value)
     {
@@ -3431,7 +3437,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             value.SetUndefined();
             return false;
         }
-        Pickable<XMLList> list = MakeXMLListInstance(prop_name);
+        XMLList* list = MakeXMLListInstance(prop_name).GetPtr();
         value.Pick(list);
         return GetProperty(prop_name, *list);
     }
