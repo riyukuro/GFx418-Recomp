@@ -3067,8 +3067,8 @@ void GAS_GlobalParseFloat(const FnCall& fn)
     ASString    text  = fn.Arg(0).ToString(fn.Env);
     const char* pstr  = text.ToCStr();
     char*       pend  = 0;
-    Number      val   = SFstrtod(pstr, &pend);
-    if (pend == pstr)
+    Number      val   = SFstrtod(text.ToCStr(), &pend);
+    if (pstr == pend)
         val = NumberUtil::NaN();
     fn.Result->SetNumber(val);
 }
