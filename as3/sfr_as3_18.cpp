@@ -176,37 +176,62 @@ Instances::Namespace& VM::GetInternedNamespace(Abc::NamespaceKind kind, const ch
     return GetInternedNamespace(kind, sm->CreateString(name ? name : ""));
 }
 
-// MS2-FUNCTIONAL 0x14250a900: tracer-only and class-traits tags still need exact edge-case matching.
 // @0x14250a900
-// The executable selects the boxed primitive traits from the value kind and takes the
-// instance traits directly from reference values. The remaining tracer-only tags are
-// deliberately mapped through their public Value accessors; their uncommon edge cases
-// still need byte-level comparison.
+// The traits a value's instances have: the boxed primitive's for primitives (Object's for a null string,
+// function, object or class), the value's own for tracer instance-traits tags, void otherwise.
 const InstanceTraits::Traits& VM::GetInstanceTraits(const Value& v) const
 {
-    switch (v.GetKind())
+    const Value::KindType k = v.GetKind();
+    switch (k)
     {
-    case Value::kBoolean: return GetClassTraitsBoolean().GetInstanceTraits();
-    case Value::kInt:     return GetClassTraitsSInt().GetInstanceTraits();
-    case Value::kUInt:    return GetClassTraitsUInt().GetInstanceTraits();
-    case Value::kNumber:  return GetClassTraitsNumber().GetInstanceTraits();
-    case Value::kString:  return GetClassTraitsString().GetInstanceTraits();
-    case Value::kNamespace: return GetClassTraitsNamespace().GetInstanceTraits();
-    case Value::kClass:   return v.AsClass().GetInstanceTraits();
-    case Value::kFunction:
-    case Value::kThunk:
-    case Value::kThunkFunction:
-        return GetClassTraitsFunction().GetInstanceTraits();
     case Value::kUndefined:
-    case Value::kMethodInd:
+        break;
+    case Value::kBoolean:
+        return GetClassTraitsBoolean().GetInstanceTraits();
+    case Value::kInt:
+        return GetClassTraitsSInt().GetInstanceTraits();
+    case Value::kUInt:
+        return GetClassTraitsUInt().GetInstanceTraits();
+    case Value::kNumber:
+        return GetClassTraitsNumber().GetInstanceTraits();
+    case Value::kString:
+        if (v.GetStringNode())
+            return GetClassTraitsString().GetInstanceTraits();
+        else
+            return GetClassTraitsObject().GetInstanceTraits();
+    case Value::kNamespace:
+        return GetClassTraitsNamespace().GetInstanceTraits();
+    case Value::kFunction:
+    case Value::kObject:
+    case Value::kThunkFunction:
+        if (v.IsNull())
+            return GetClassTraitsObject().GetInstanceTraits();
+        else
+            return static_cast<InstanceTraits::Traits&>(v.GetObject()->GetTraits());
+    case Value::kClass:
+        if (v.IsNull())
+            return GetClassTraitsObject().GetInstanceTraits();
+        else
+            return v.AsClass().GetClassTraits().GetInstanceTraits();
+    case Value::kThunk:
+    case Value::kThunkClosure:
+        return static_cast<ClassTraits::Function&>(GetClassTraitsFunction()).GetThunkTraits();
     case Value::kVTableInd:
     case Value::kVTableIndClosure:
-        return GetClassTraitsVoid().GetInstanceTraits();
-    default:
-        if (v.IsNull())
-            return GetClassTraitsNull().GetInstanceTraits();
+        return static_cast<ClassTraits::Function&>(GetClassTraitsFunction()).GetVTableTraits();
+    case Value::kInstanceTraits:
         return v.GetInstanceTraits();
+    case Value::kClassTraits:
+        {
+            const ClassTraits::Traits& ctr = v.GetClassTraits();
+            if (ctr.ITraits.GetPtr() != NULL)   // ctr.IsValid()
+                return ctr.GetInstanceTraits();
+        }
+    case Value::kMethodInd:
+        break;
     }
+
+    return GetITraitsVoid();
 }
 
 // @0x14250be40
