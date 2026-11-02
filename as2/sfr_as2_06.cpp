@@ -2651,21 +2651,22 @@ void ActionBufferData::Read(Stream* pin, unsigned length)
     if (pin->IsVerboseParseAction())
     {
         const UByte* pbuf = pBuffer;
-        UPInt pc = 0;
+        UPInt i = 0;
+        UPInt pc = i;
         UByte actionId;
         do
         {
-            actionId = pbuf[pc];
-            UPInt next = pc + 1;
+            actionId = pbuf[i];
+            i = pc + 1;
             if (actionId & 0x80)
             {
-                UPInt len = pbuf[next] | (UPInt(pbuf[next + 1]) << 8);
-                next += 2 + len;
+                UPInt len = pbuf[i] | (UPInt(pbuf[i + 1]) << 8);
+                i += 2 + len;
             }
             pin->LogParseAction("%4d\t", (int)pc);
             Disasm da(pin->GetLog(), Log_ParseAction);
             da.LogDisasm(pBuffer + pc);
-            pc = next;
+            pc = i;
         } while (actionId);
     }
 }
