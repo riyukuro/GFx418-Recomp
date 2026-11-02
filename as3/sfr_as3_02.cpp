@@ -1751,7 +1751,7 @@ namespace Instances { namespace fl
     }
 
     // A new list targeting this list of the comment children of the element items.
-    // MS2-FUNCTIONAL: the exe inlines XMLList::Append
+    // MS2-FUNCTIONAL: register allocation (the exe keeps the null-string node in rdi across MakeInstance)
     // @0x1423f7db0
     void XMLList::AS3comments(SPtr<XMLList>& result)
     {
@@ -1763,7 +1763,7 @@ namespace Instances { namespace fl
         {
             XML* x = List[i];
             if (x->GetKind() == XML::kElement)
-                result->Append(*x->AS3comments());
+                result->List.Append(x->AS3comments()->List);  // XMLList::Append (0x142404ec0), inlined
         }
     }
 
