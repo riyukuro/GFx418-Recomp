@@ -72,7 +72,6 @@ void DICommandQueue::ExecuteCommand::Execute()
 // ***** DICommandSet
 
 // Advance thread: every command on the CPU (the caller checked they all can run there).
-// MS2-FUNCTIONAL: the exe keeps the context in r12 and the page in r14 with a deferred register save; ours allocates them differently
 // @0x1426702e0
 void DICommandSet::ExecuteCommandsMT(DICommandContext& context)
 {
@@ -94,9 +93,21 @@ void DICommandSet::ExecuteCommandsMT(DICommandContext& context)
     QueueList.Clear();
 }
 
+// the render target's rectangle in float.
+static __forceinline RectF DIImageRect(const ImageSize& size)
+{
+    return RectF(0.0f, 0.0f, (float)size.Width, (float)size.Height);
+}
+
+// the viewport over that rectangle.
+static __forceinline Viewport DIViewport(const ImageSize& size, const Rect<int>& view, unsigned flags)
+{
+    return Viewport(size.Width, size.Height, view.x1, view.y1, view.Width(), view.Height(), flags);
+}
+
 // Render thread: commands that draw into their image get it pushed as the HAL's render target (kept while the
 // following commands share it), each page inside its own frame / scene bracket.
-// MS2-FUNCTIONAL: the exe frame is 0x10 larger with a /GS cookie and spills the arguments to other slots
+// MS2-FUNCTIONAL: only the buffer size stores differ, the exe keeps height first
 // @0x142670440
 void DICommandSet::ExecuteCommandsRT(DICommandContext& context)
 {
@@ -142,13 +153,11 @@ void DICommandSet::ExecuteCommandsRT(DICommandContext& context)
                     hal->EndScene();
                 }
 
-                ImageSize size = target->GetSize();
-                RectF     imageRect(0.0f, 0.0f, (float)size.Width, (float)size.Height);
+                RectF     imageRect = DIImageRect(target->GetSize());
                 hal->PushRenderTarget(imageRect, target->GetRenderTarget(), 1);
                 hal->BeginScene();
-                Viewport vp(target->GetSize(),
-                            Rect<int>((int)imageRect.x1, (int)imageRect.y1, (int)imageRect.x2, (int)imageRect.y2),
-                            Viewport::View_IsRenderTexture);
+                Rect<int> viewRect = imageRect;
+                Viewport  vp       = DIViewport(target->GetSize(), viewRect, Viewport::View_IsRenderTexture);
                 hal->BeginDisplay(Color(0), vp);
             }
             else if (target != image && needsTarget)
@@ -160,12 +169,11 @@ void DICommandSet::ExecuteCommandsRT(DICommandContext& context)
                 hal->GetEvent(Event_DrawableImage).End();
                 hal->GetEvent(Event_DrawableImage).Begin("Scaleform::Render::DrawableImage");
 
-                ImageSize size = target->GetSize();
-                RectF     imageRect(0.0f, 0.0f, (float)size.Width, (float)size.Height);
+                RectF     imageRect = DIImageRect(target->GetSize());
                 hal->PushRenderTarget(imageRect, target->GetRenderTarget(), 1);
                 hal->BeginScene();
-                Viewport vp(target->GetSize(),
-                            Rect<int>((int)imageRect.x1, (int)imageRect.y1, (int)imageRect.x2, (int)imageRect.y2));
+                Rect<int> viewRect = imageRect;
+                Viewport  vp       = DIViewport(target->GetSize(), viewRect, 0);
                 hal->BeginDisplay(Color(0), vp);
             }
 

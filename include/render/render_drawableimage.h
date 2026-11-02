@@ -817,9 +817,10 @@ struct DIQueuePage : public ListNode<DIQueuePage>, public NewOverrideBase<Stat_D
     }
     DICommand* destroyAndGetNext(DICommand* cmd)
     {
-        DICommand* next = getNext(cmd);
+        UByte* next = (UByte*)cmd + cmd->GetSize();
+        unsigned end = Offset;
         cmd->~DICommand();
-        return next;
+        return next < Buffer + end ? (DICommand*)next : 0;
     }
     bool  HasFreeSize(unsigned size) const { return size <= BufferSize - Offset; }
     void* AllocSize(unsigned size)
