@@ -7,6 +7,7 @@
 // MS2-RANGE: 0x1423ca1c0-0x1423ca2b0 .text$mn
 // MS2-RANGE: 0x1423ca350-0x1423dbde0 .text$mn
 #include <windows.h>
+#include <emmintrin.h>
 #include <imm.h>
 #pragma comment(lib, "imm32.lib")
 #include <oleauto.h>
@@ -42,7 +43,7 @@ namespace Scaleform { namespace GFx { class Movie { public:
 namespace Scaleform { namespace GFx { namespace IME {
 
 void FUN_1423d9090(void*, void*, unsigned long long);
-void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
+__declspec(noinline) void FUN_1423d8b80(unsigned long long*, void*, void**, unsigned long long);
 void FUN_1423d9b40(void*);
     unsigned char FUN_1423da320(void*);
     __declspec(noinline) void FUN_1423d9500(void*);
@@ -1881,7 +1882,7 @@ extern "C" __declspec(noinline) void FUN_1423d9690(void* rawArray, void* allocat
 }
 
 // @0x1423d9730
-extern "C" void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
+extern "C" __declspec(noinline) void FUN_1423d9730(void* rawArray, void* allocator, unsigned long long length)
 {
     auto* array = static_cast<unsigned long long*>(rawArray);
     if (length < array[1]) {
@@ -1916,22 +1917,46 @@ static void cx18_ReserveGH(unsigned long long* array, unsigned long long request
 
 
 
+struct Ime01CmdKey
+{
+    const char* Text;
+    Ime01CmdKey(const char* text) : Text(text) {}
+    bool operator==(const Ime01CmdKey& o) const { return std::strcmp(Text, o.Text) == 0; }
+};
+struct Ime01CmdKeyHash
+{
+    UPInt operator()(const Ime01CmdKey& key) const
+    {
+        return Scaleform::String::BernsteinHashFunction(key.Text, std::strlen(key.Text), 0x1505);
+    }
+};
+struct Ime01Cmd
+{
+    unsigned Type;
+    void* Handler;
+};
+typedef Scaleform::Hash<Ime01CmdKey, Ime01Cmd, Ime01CmdKeyHash> Ime01CmdMap;
+struct Ime01CmdRecord
+{
+    unsigned Type;
+    const char* Name;
+};
+
 // MS2-FUNCTIONAL: walks the source's command array (0x10-byte {key, name} entries, ended by a null name) and
 // inserts each name -> {key, source} by Bernstein hash.
 // @0x1423d8e80
 void FUN_1423d8e80(void* table, void* source)
 {
     void** sourceVtable = *reinterpret_cast<void***>(source);
-    auto* record = static_cast<unsigned char*>(reinterpret_cast<void*(*)(void*)>(sourceVtable[0])(source));
-    for (; *reinterpret_cast<const char**>(record + 8); record += 0x10) {
-        const unsigned key = *reinterpret_cast<unsigned*>(record);
-        const char* text = *reinterpret_cast<const char**>(record + 8);
-        const unsigned long long length = strlen(text);
-        const unsigned long long hash = String::BernsteinHashFunction(text, length, 0x1505);
-        void* keyStorage = const_cast<char*>(text);
-        unsigned long long value[2] = { key, reinterpret_cast<unsigned long long>(source) };
-        void* entry[2] = { &keyStorage, value };
-        FUN_1423d8b80(static_cast<unsigned long long*>(table), table, entry, hash);
+    auto* record = reinterpret_cast<Ime01CmdRecord*(*)(void*)>(sourceVtable[0])(source);
+    while (record->Name) {
+        const unsigned type = record->Type;
+        Ime01CmdKey key(record->Name);
+        Ime01Cmd value = { type, source };
+        Ime01CmdMap::NodeRef entry(key, value);
+        const unsigned long long hash = Ime01CmdKeyHash()(key);
+        FUN_1423d8b80(static_cast<unsigned long long*>(table), table, reinterpret_cast<void**>(&entry), hash);
+        ++record;
     }
 }
 
@@ -2796,6 +2821,25 @@ void FUN_1423d76f0(unsigned long long* manager, const char* name)
     }
 }
 
+// A local ArrayData<Value> the exe sizes through FUN_1423d9730.
+struct Ime01ValueArgs
+{
+    union {
+        struct {
+            Scaleform::GFx::Value* data;
+            unsigned long long size;
+        };
+        __m128i head;
+    };
+    unsigned long long capacity;
+    Ime01ValueArgs() : capacity(0) { _mm_storeu_si128(&head, _mm_setzero_si128()); }
+    ~Ime01ValueArgs()
+    {
+        FUN_1423ce6c0(data, size);
+        if (data) Memory::Free(data);
+    }
+};
+
 // MS2-FUNCTIONAL: stores the data item and issues the executable's SelectDataItem and SetList external calls.
 // @0x1423d97f0
 void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
@@ -2803,14 +2847,16 @@ void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
     auto* self = static_cast<unsigned char*>(raw);
     *reinterpret_cast<unsigned long long*>(self + 0x860) = item;
     if (!notify) return;
+    Scaleform::GFx::Value result;
+    Ime01ValueArgs args;
     char* command = reinterpret_cast<char*>(self + 0x410);
     strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
     strcat_s(command, 0x400, ".SelectDataItem");
-    Scaleform::GFx::Value argument;
-    Scaleform::GFx::Value result;
-    auto* argBytes = reinterpret_cast<unsigned char*>(&argument);
-    *reinterpret_cast<unsigned*>(argBytes + 8) = Scaleform::GFx::Value::VT_Number;
-    *reinterpret_cast<double*>(argBytes + 0x10) = static_cast<double>(static_cast<long long>(item));
+    {
+        Scaleform::GFx::Value argument(static_cast<double>(*reinterpret_cast<long long*>(self + 0x860)));
+        FUN_1423d9730(&args, &args, 1);
+        ::new (static_cast<void*>(args.data + args.size - 1)) Scaleform::GFx::Value(argument);
+    }
     using Invoke = void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned);
     // The exe rereads the bridge for each call and rebuilds ".SetList" even without one (0x1423d992f).
     auto bridgeOf = [self]() {
@@ -2820,7 +2866,7 @@ void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
     };
     if (void* bridge = bridgeOf())
         reinterpret_cast<Invoke>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-            bridge, command, &result, &argument, 1);
+            bridge, command, &result, args.data, 1);
     strcpy_s(command, 0x400, reinterpret_cast<const char*>(self + 0x10));
     strcat_s(command, 0x400, ".SetList");
     if (void* bridge = bridgeOf())
@@ -3035,26 +3081,6 @@ unsigned FUN_1423cb260()
 {
     return Ime01ImeVersion();
 }
-
-struct Ime01CmdKey
-{
-    const char* Text;
-    Ime01CmdKey(const char* text) : Text(text) {}
-    bool operator==(const Ime01CmdKey& o) const { return std::strcmp(Text, o.Text) == 0; }
-};
-struct Ime01CmdKeyHash
-{
-    UPInt operator()(const Ime01CmdKey& key) const
-    {
-        return Scaleform::String::BernsteinHashFunction(key.Text, std::strlen(key.Text), 0x1505);
-    }
-};
-struct Ime01Cmd
-{
-    unsigned Type;
-    void* Handler;
-};
-typedef Scaleform::Hash<Ime01CmdKey, Ime01Cmd, Ime01CmdKeyHash> Ime01CmdMap;
 
 // MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
 // @0x1423d8d60
@@ -3391,51 +3417,11 @@ unsigned long long* FUN_1423cabb0(unsigned long long* self, unsigned long long o
 // @0x1423d8f20
 void FUN_1423d8f20(unsigned long long* map, void* source)
 {
-    auto** sourceVtable = *reinterpret_cast<void***>(source);
-    auto* sequence = reinterpret_cast<unsigned char*(*)(void*)>(sourceVtable[0])(source);
-    auto* cursor = sequence ? reinterpret_cast<unsigned long long*>(sequence + sizeof(void*)) : nullptr;
-    while (cursor && cursor[0]) {
-        const char* key = reinterpret_cast<const char*>(cursor[0]);
-        auto* table = reinterpret_cast<unsigned char*>(map[0]);
-        if (table) {
-            const unsigned long long mask = *reinterpret_cast<unsigned long long*>(table + 8);
-            const unsigned long long hash = Scaleform::String::BernsteinHashFunction(
-                key, std::strlen(key), 0x1505);
-            const unsigned long long home = mask & hash;
-            auto* entry = reinterpret_cast<unsigned long long*>(table + 0x10 + home * 0x28);
-            if (static_cast<long long>(entry[0]) != -2 && entry[1] == home) {
-                unsigned long long previous = ~0ull;
-                unsigned long long current = home;
-                for (;;) {
-                    if (entry[1] == home && std::strcmp(reinterpret_cast<const char*>(entry[2]), key) == 0) {
-                        const unsigned long long next = entry[0];
-                        if (current == home) {
-                            if (next != ~0ull) {
-                                auto* successor = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
-                                entry[0] = successor[0];
-                                entry[1] = successor[1];
-                                entry[2] = successor[2];
-                                entry[3] = successor[3];
-                                entry[4] = successor[4];
-                                entry = successor;
-                            }
-                        } else {
-                            auto* prior = reinterpret_cast<unsigned long long*>(table + 0x10 + previous * 0x28);
-                            prior[0] = next;
-                        }
-                        entry[0] = ~1ull;
-                        --*reinterpret_cast<unsigned long long*>(table);
-                        break;
-                    }
-                    const unsigned long long next = entry[0];
-                    if (next == ~0ull) break;
-                    previous = current;
-                    current = next;
-                    entry = reinterpret_cast<unsigned long long*>(table + 0x10 + next * 0x28);
-                }
-            }
-        }
-        cursor += 2;
+    void** sourceVtable = *reinterpret_cast<void***>(source);
+    auto* record = reinterpret_cast<Ime01CmdRecord*(*)(void*)>(sourceVtable[0])(source);
+    while (record->Name) {
+        reinterpret_cast<Ime01CmdMap*>(map)->Remove(Ime01CmdKey(record->Name));
+        ++record;
     }
 }
 
@@ -5089,7 +5075,7 @@ void FUN_1423d9090(void* raw, void*, unsigned long long requested)
 
 // MS2-FUNCTIONAL: grows the executable's command hash table and inserts a key plus its two-word handler payload.
 // @0x1423d8b80
-void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long long hash)
+__declspec(noinline) void FUN_1423d8b80(unsigned long long* map, void*, void** item, unsigned long long hash)
 {
     auto* table = reinterpret_cast<unsigned long long*>(map[0]);
     if (!table) {
