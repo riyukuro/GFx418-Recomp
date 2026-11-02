@@ -94,7 +94,8 @@ void GASImeCtorFunction::GetConversionMode(const FnCall& fn)
     if (!fn.Env)
         return;
     Ptr<IMEManagerBase> pime   = fn.Env->GetMovieImpl()->GetIMEManager();
-    ASString            result = fn.Env->GetSC()->pContext->GetStringManager()->CreateConstString("UNKNOWN");
+    GlobalContext*      pgc    = fn.Env->GetSC()->pContext;
+    ASString            result = pgc->GetStringManager()->CreateConstString("UNKNOWN");
     if (pime)
         result = pime->GetConversionMode();
     fn.Result->SetString(result);

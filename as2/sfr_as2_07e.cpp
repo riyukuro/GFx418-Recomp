@@ -140,7 +140,6 @@ void XmlProto::AddRequestHeader(const FnCall& fn)
 }
 
 // createElement(name): new XMLNode(1, name).
-// MS2-FUNCTIONAL: register choice for the Env string-manager load
 // @0x14299f870
 void XmlProto::CreateElement(const FnCall& fn)
 {
@@ -151,14 +150,14 @@ void XmlProto::CreateElement(const FnCall& fn)
         return;
     fn.Env->Push(XmlArg(fn, 0));
     fn.Env->Push(1);
-    ASString    className = XmlConstString(fn.Env, "XMLNode");
-    Ptr<Object> pnode     = *fn.Env->OperatorNew(className, 2);
+    GlobalContext* pgc       = fn.Env->GetSC()->pContext;
+    ASString       className = pgc->GetStringManager()->CreateConstString("XMLNode");
+    Ptr<Object>    pnode     = *fn.Env->OperatorNew(className, 2);
     fn.Result->SetAsObject(pnode);
     fn.Env->Drop2();
 }
 
 // createTextNode(text): new XMLNode(3, text).
-// MS2-FUNCTIONAL: register choice for the Env string-manager load
 // @0x14299fa20
 void XmlProto::CreateTextNode(const FnCall& fn)
 {
@@ -169,8 +168,9 @@ void XmlProto::CreateTextNode(const FnCall& fn)
         return;
     fn.Env->Push(XmlArg(fn, 0));
     fn.Env->Push(3);
-    ASString    className = XmlConstString(fn.Env, "XMLNode");
-    Ptr<Object> pnode     = *fn.Env->OperatorNew(className, 2);
+    GlobalContext* pgc       = fn.Env->GetSC()->pContext;
+    ASString       className = pgc->GetStringManager()->CreateConstString("XMLNode");
+    Ptr<Object>    pnode     = *fn.Env->OperatorNew(className, 2);
     fn.Result->SetAsObject(pnode);
     fn.Env->Drop2();
 }

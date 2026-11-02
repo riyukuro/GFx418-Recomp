@@ -391,7 +391,6 @@ void XmlNodeProto::RemoveNode(const FnCall& fn)
 }
 
 // toString(): the markup of an element, the value of any other node.
-// MS2-FUNCTIONAL: instruction scheduling differs
 // @0x14299c450
 void XmlNodeProto::ToString(const FnCall& fn)
 {
@@ -407,7 +406,10 @@ void XmlNodeProto::ToString(const FnCall& fn)
             BuildXMLString(fn.Env, pthis->pRealNode, str);
         else
             str.AppendString(pthis->pRealNode->Value.ToCStr());
-        fn.Result->SetString(fn.Env->GetSC()->pContext->GetStringManager()->CreateString(str.ToCStr(), str.GetSize()));
+        const char*    pstr = str.ToCStr();
+        UPInt          len  = str.GetSize();
+        GlobalContext* pgc  = fn.Env->GetSC()->pContext;
+        fn.Result->SetString(pgc->GetStringManager()->CreateString(pstr, len));
     }
     else
         fn.Result->SetUndefined();
