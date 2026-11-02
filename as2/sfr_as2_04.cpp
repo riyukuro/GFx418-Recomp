@@ -1491,12 +1491,12 @@ void AvmTextField::CopyPhysicalProperties(const InteractiveObject* poldChar)
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.
 static inline bool MayBeStandardMember(const ASString& name)
 {
-    if ((name.GetHashFlags() >> 29) & 1)
+    if ((UByte)(name.GetHashFlags() >> 29) & 1)
         return true;
     if (name.GetLength() != 0 && name.GetCharAt(0) == '_')
     {
         ASString lower(name.ToLowerNode());
-        if ((lower.GetHashFlags() >> 28) & 1)
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
             return true;
     }
     return false;
@@ -1509,7 +1509,6 @@ unsigned AvmCharacter::GetStandardMemberBitMask() const
 }
 
 // A standard property only resets the clip's setting (useHandCursor); other names go to the AS object.
-// MS2-FUNCTIONAL the exe tests the string flags with shr/and byte and orders the member branches differently
 // @0x1429386e0
 SF_NOINLINE bool AvmCharacter::DeleteMember(ASStringContext* psc, const ASString& name)
 {
@@ -1530,7 +1529,7 @@ SF_NOINLINE bool AvmCharacter::DeleteMember(ASStringContext* psc, const ASString
         }
     }
     Ptr<Object> obj = GetASObject();
-    return obj ? obj->DeleteMember(psc, name) : false;
+    return obj && obj->DeleteMember(psc, name);
 }
 
 // @0x142937bc0

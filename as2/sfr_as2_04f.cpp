@@ -38,10 +38,10 @@ void NameFunction::AddConstMembers(ObjectInterface* pobj, ASStringContext* psc, 
 }
 
 // @0x14292e050
-// MS2-FUNCTIONAL: the prototype walk is recovered from MovieClipObject::ActsAsButton's loop shape
+// The prototype walk is recovered from MovieClipObject::ActsAsButton's loop shape.
 bool AvmSprite::ActsAsButton() const
 {
-    if (!static_cast<const AvmSpriteBase*>(this)->IsLevelMovie() && (pDispObj->Flags & InteractiveObject::Mask_Enabled))
+    if (!static_cast<const AvmSpriteBase&>(*this).IsLevelMovie() && pDispObj->IsEnabledFlagSet())
     {
         Object* pclipObj = pMovieClipObj.GetPtr();
         Object* pobj     = pclipObj ? pclipObj : Get__proto__();
