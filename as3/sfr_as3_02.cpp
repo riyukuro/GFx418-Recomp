@@ -1634,8 +1634,6 @@ namespace Instances { namespace fl
         GetAttributes(*list);
     }
 
-    // MS2-FUNCTIONAL: the exe sees the body of InstanceTraits::fl::XMLList::MakeInstance (0x14241b010, defined in sfr_as3_04)
-    // in the same TU, so cl keeps the ASString node and list in registers across the call; matches once it is visible here
     // @0x1423f71f0
     void XMLList::AS3attributes(SPtr<XMLList>& result)
     {
@@ -1672,7 +1670,6 @@ namespace Instances { namespace fl
     }
 
     // The children named propertyName (in the public namespace) of every item.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7710
     void XMLList::AS3child(SPtr<XMLList>& result, const Value& propertyName)
     {
@@ -1724,7 +1721,6 @@ namespace Instances { namespace fl
     }
 
     // The children of every item (GetProperty with the any-name, inlined).
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7ae0
     void XMLList::AS3children(SPtr<XMLList>& result)
     {
@@ -1753,7 +1749,6 @@ namespace Instances { namespace fl
     }
 
     // A new list targeting this node of its comment children.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU, so the null-string node is reloaded after it (see XMLList::AS3attributes)
     // @0x1423f7cd0
     __declspec(noinline) void XML::AS3comments(SPtr<XMLList>& result)
     {
@@ -1763,7 +1758,6 @@ namespace Instances { namespace fl
     }
 
     // A new list targeting this list of the comment children of the element items.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7db0
     void XMLList::AS3comments(SPtr<XMLList>& result)
     {
@@ -1834,7 +1828,6 @@ namespace Instances { namespace fl
     }
 
     // The descendants named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f8840
     void XMLList::AS3descendants(Value& result, unsigned argc, const Value* argv)
     {
@@ -1861,7 +1854,6 @@ namespace Instances { namespace fl
     }
 
     // The element children named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f8ce0
     void XMLList::AS3elements(Value& result, unsigned argc, const Value* argv)
     {
@@ -2326,7 +2318,6 @@ namespace Instances { namespace fl
     }
 
     // The processing-instruction children (named argv[0] if given) of every item.
-    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423fcfc0
     void XMLList::AS3processingInstructions(Value& result, unsigned argc, const Value* argv)
     {

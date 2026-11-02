@@ -1880,6 +1880,22 @@ static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::XMLList) == 0xe8, 
 static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::int_) == 0xe8, "int_ size");
 static_assert(sizeof(Scaleform::GFx::AS3::InstanceTraits::fl::uint) == 0xe8, "uint size");
 
+// The exe's callers of this MakeInstance (sfr_as3_02/03/04) saw its body: cl /O2 then knows the call writes none of
+// the caller's escaped slots and keeps the ASString node and the list in registers across it. Defined here (inline,
+// never inlined) so every caller TU sees it, as the exe's did.
+namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl {
+// @0x14241b010
+inline __declspec(noinline) Pickable<Instances::fl::XMLList> XMLList::MakeInstance(XMLList& t, AS3::Object& target_obj,
+                                                         const ASString& target_prop, Instances::Namespace& target_ns)
+{
+    Pickable<Instances::fl::XMLList> result(new(t.Alloc()) Instances::fl::XMLList(t));
+    result->TargetObject = &target_obj;
+    result->SetTargetProperty(target_prop.GetNode());
+    result->TargetNamespace = &target_ns;
+    return result;
+}
+}}}}} // namespace Scaleform::GFx::AS3::InstanceTraits::fl
+
 // SparseArray::ValueH's add<HashNode> is specialized out of line in sfr_as3_01c (@0x1423eacc0); declared so the
 // units holding a SparseArray don't instantiate the generic one.
 namespace Scaleform {

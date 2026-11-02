@@ -2321,16 +2321,8 @@ namespace InstanceTraits
         return Pickable<Instances::fl::XMLList>(new(t.Alloc()) Instances::fl::XMLList(t));
     }
 
-    // @0x14241b010
-    Pickable<Instances::fl::XMLList> fl::XMLList::MakeInstance(XMLList& t, AS3::Object& target_obj,
-                                                              const ASString& target_prop, Instances::Namespace& target_ns)
-    {
-        Pickable<Instances::fl::XMLList> result(new(t.Alloc()) Instances::fl::XMLList(t));
-        result->TargetObject = &target_obj;
-        result->SetTargetProperty(target_prop.GetNode());
-        result->TargetNamespace = &target_ns;
-        return result;
-    }
+    // 0x14241b010 fl::XMLList::MakeInstance(t, target_obj, target_prop, target_ns) is defined in as3_obj_core.h, so
+    // its callers in sfr_as3_02/03/04 see the body as the exe's did.
 
     // @0x14241b5b0
     Pickable<Instances::fl::XMLElement> fl::XML::MakeInstanceElement(XML& t, const Instances::Namespace& ns,
