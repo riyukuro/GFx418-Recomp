@@ -51,7 +51,6 @@ extern ExeDecl<void*>::type DAT_143b27638;
 #define VideoThunkE DAT_143b27638
 extern ExeDecl<void*>::type DAT_1431b7ba0;
 #define VideoDisplayVtable DAT_1431b7ba0
-static const float VideoTwipsScale = 20.0f;         // exe 0x142d692bc
 static const float VideoDurationScale = 1000.0f;    // exe 0x142d15c1c
 extern ExeDecl<void*>::type DAT_143b27640;
 #define VideoThunkBaseE DAT_143b27640
@@ -559,11 +558,11 @@ void FUN_140017bf0(uint64_t* value) { ReleaseVideoAtom(value); }
 // @0x140017c30
 void FUN_140017c30(uint64_t* value) { ReleaseVideoAtom(value); }
 
-// MS2-FUNCTIONAL: replaces an AS3 atom without taking a reference to the replacement.
+// replaces an AS3 atom without taking a reference to the replacement.
 // @0x140017c70
-uint64_t* FUN_140017c70(uint64_t* destination, uint64_t replacement)
+uint64_t* FUN_140017c70(uint64_t* destination, Scaleform::Pickable<Scaleform::GFx::AS3::Object> replacement)
 {
-    if (replacement != *destination) { ReleaseVideoAtom(destination); *destination = replacement; }
+    if (reinterpret_cast<uint64_t>(replacement.GetPtr()) != *destination) { ReleaseVideoAtom(destination); *destination = reinterpret_cast<uint64_t>(replacement.GetPtr()); }
     return destination;
 }
 
@@ -984,24 +983,23 @@ Scaleform::GFx::AS3::Value* FUN_14001a690(Scaleform::GFx::AS3::Value* value, Sca
     value->Pick(object);
     return value;
 }
-// MS2-FUNCTIONAL: converts the width/height arguments into the Video's +0x68/+0x70 and stores the rectangle in twips.
+// converts the width/height arguments into the Video's +0x68/+0x70 and stores the rectangle in twips.
 // @0x14001a760
 void FUN_14001a760(void* self, unsigned count, Scaleform::GFx::AS3::Value* args)
 {
-    if (count > 1) {
+    if (count >= 2) {
         // The exe converts into the members (0x14001a78f/0x14001a7a1: Convert2Number with r8 = self+0x68, self+0x70);
         // converting into a dropped local left new Video(w, h) at the 320x240 default, so the class-select video drew
         // at 320x240 in the top-left of its box.
         args[0].Convert2Number(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68));
         args[1].Convert2Number(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70));
         unsigned char* player = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x58);
-        *reinterpret_cast<uint32_t*>(player + 0xe0) = 0;
-        *reinterpret_cast<uint32_t*>(player + 0xe4) = 0;
-        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68)) * VideoTwipsScale;
-        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70)) * VideoTwipsScale;
+        *reinterpret_cast<Scaleform::Render::RectF*>(player + 0xe0) = Scaleform::Render::RectF(0.0f, 0.0f,
+            static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x68)) * 20.0f,
+            static_cast<float>(*reinterpret_cast<double*>(static_cast<unsigned char*>(self) + 0x70)) * 20.0f);
     }
 }
-// MS2-FUNCTIONAL: updates the player rectangle from the stored Video dimensions when resize is enabled.
+// updates the player rectangle from the stored Video dimensions when resize is enabled.
 // @0x14001a800
 void FUN_14001a800(uint64_t* object, uint8_t update)
 {
@@ -1009,10 +1007,9 @@ void FUN_14001a800(uint64_t* object, uint8_t update)
         void** vtable = *reinterpret_cast<void***>(object);
         reinterpret_cast<void(*)(void*)>(vtable[21])(object);
         unsigned char* player = reinterpret_cast<unsigned char*>(object[11]);
-        *reinterpret_cast<uint32_t*>(player + 0xe0) = 0;
-        *reinterpret_cast<uint32_t*>(player + 0xe4) = 0;
-        *reinterpret_cast<float*>(player + 0xe8) = static_cast<float>(*reinterpret_cast<double*>(object + 13)) * VideoTwipsScale;
-        *reinterpret_cast<float*>(player + 0xec) = static_cast<float>(*reinterpret_cast<double*>(object + 14)) * VideoTwipsScale;
+        *reinterpret_cast<Scaleform::Render::RectF*>(player + 0xe0) = Scaleform::Render::RectF(0.0f, 0.0f,
+            static_cast<float>(*reinterpret_cast<double*>(object + 13)) * 20.0f,
+            static_cast<float>(*reinterpret_cast<double*>(object + 14)) * 20.0f);
     }
 }
 
