@@ -2525,12 +2525,12 @@ cri_u8 criMvPly_GetFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 arg3)
   cri_u1 *pu_v3;
   cri_u4 u_v4;
   // One packed frame like the exe: the 0xb0-byte frame info at loc_168 ends with the loc_c0 field.
-  __declspec(align(16)) cri_u1 frame_[504];
-  cri_u1 *loc_1f8 = frame_;
-  cri_u1 *loc_1a8 = frame_ + 80;
-  cri_u1 *loc_168 = frame_ + 144;
-  cri_u4 &loc_c0 = *(cri_u4 *)(frame_ + 312);
-  cri_u1 *loc_b8 = frame_ + 320;
+  __declspec(align(16)) cri_u8 frameq_[63];
+  cri_u1 *loc_1f8 = ((cri_u1 *)frameq_);
+  cri_u1 *loc_1a8 = ((cri_u1 *)frameq_) + 80;
+  cri_u1 *loc_168 = ((cri_u1 *)frameq_) + 144;
+  cri_u4 &loc_c0 = *(cri_u4 *)(((cri_u1 *)frameq_) + 312);
+  cri_u1 *loc_b8 = ((cri_u1 *)frameq_) + 320;
   
   crimvply_clearFrameInfoMembers((void *)arg3);
   i_v1 = crimvply_isUnderGetFrameCondition((void *)arg1);
@@ -2579,26 +2579,26 @@ cri_u8 criMvPly_CopyFrameYUVBuffers(longlong arg1, cri_u8 *arg2, cri_u8 *arg3, c
   longlong l_v3;
   cri_u8 u_v4;
   // Three {ptr, w, h, stride} plane records at rsp+0x30 in the exe; FUN_140044950 gets their address.
-  __declspec(align(16)) cri_u1 frame_[0x48];
-  cri_u8 &loc_178 = *(cri_u8 *)(frame_ + 0);
-  int &loc_170 = *(int *)(frame_ + 8);
-  int &loc_16c = *(int *)(frame_ + 12);
-  cri_u4 &loc_168 = *(cri_u4 *)(frame_ + 16);
-  cri_u8 &loc_160 = *(cri_u8 *)(frame_ + 24);
-  uint &loc_158 = *(uint *)(frame_ + 32);
-  uint &loc_154 = *(uint *)(frame_ + 36);
-  cri_u4 &loc_150 = *(cri_u4 *)(frame_ + 40);
-  cri_u8 &loc_148 = *(cri_u8 *)(frame_ + 48);
-  uint &loc_140 = *(uint *)(frame_ + 56);
-  uint &loc_13c = *(uint *)(frame_ + 60);
-  cri_u4 &loc_138 = *(cri_u4 *)(frame_ + 64);
+  __declspec(align(16)) cri_u8 frameq_[9];
+  cri_u8 &loc_178 = *(cri_u8 *)(((cri_u1 *)frameq_) + 0);
+  int &loc_170 = *(int *)(((cri_u1 *)frameq_) + 8);
+  int &loc_16c = *(int *)(((cri_u1 *)frameq_) + 12);
+  cri_u4 &loc_168 = *(cri_u4 *)(((cri_u1 *)frameq_) + 16);
+  cri_u8 &loc_160 = *(cri_u8 *)(((cri_u1 *)frameq_) + 24);
+  uint &loc_158 = *(uint *)(((cri_u1 *)frameq_) + 32);
+  uint &loc_154 = *(uint *)(((cri_u1 *)frameq_) + 36);
+  cri_u4 &loc_150 = *(cri_u4 *)(((cri_u1 *)frameq_) + 40);
+  cri_u8 &loc_148 = *(cri_u8 *)(((cri_u1 *)frameq_) + 48);
+  uint &loc_140 = *(uint *)(((cri_u1 *)frameq_) + 56);
+  uint &loc_13c = *(uint *)(((cri_u1 *)frameq_) + 60);
+  cri_u4 &loc_138 = *(cri_u4 *)(((cri_u1 *)frameq_) + 64);
   cri_u8 loc_128 [10];
   cri_u8 loc_d8 [22];
-  __declspec(align(16)) cri_u1 frame_28[0x18];
-  cri_u8 &loc_28 = *(cri_u8 *)(frame_28 + 0);
-  int &loc_20 = *(int *)(frame_28 + 8);
-  int &loc_1c = *(int *)(frame_28 + 12);
-  cri_u4 &loc_18 = *(cri_u4 *)(frame_28 + 16);
+  __declspec(align(16)) cri_u8 frameq28_[3];
+  cri_u8 &loc_28 = *(cri_u8 *)(((cri_u1 *)frameq28_) + 0);
+  int &loc_20 = *(int *)(((cri_u1 *)frameq28_) + 8);
+  int &loc_1c = *(int *)(((cri_u1 *)frameq28_) + 12);
+  cri_u4 &loc_18 = *(cri_u4 *)(((cri_u1 *)frameq28_) + 16);
   uint loc_10;
   
   loc_10 = (uint)(*(longlong *)((char *)arg1 + 0xe40) != 0);
@@ -25655,16 +25655,16 @@ void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
   uint u_v4;
   uint local_res8 [2];
   // one frame: &loc_38 is the FUN_140050820 context struct (callback table at +8, results at +0x1c..+0x28)
-  __declspec(align(16)) cri_u1 frame_[0x30];
-  longlong &loc_38 = *(longlong *)(frame_ + 0);
-  cri_u1 **&loc_30 = *(cri_u1 ** *)(frame_ + 8);
-  cri_u4 &loc_28 = *(cri_u4 *)(frame_ + 16);
-  int &loc_24 = *(int *)(frame_ + 20);
-  cri_u4 &loc_20 = *(cri_u4 *)(frame_ + 24);
-  int &loc_1c = *(int *)(frame_ + 28);
-  int &loc_18 = *(int *)(frame_ + 32);
-  int &loc_14 = *(int *)(frame_ + 36);
-  cri_u2 &loc_10 = *(cri_u2 *)(frame_ + 40);
+  struct Ctx { longlong Owner; cri_u1 **Table; cri_u4 W10; int W14; cri_u4 W18; int W1c; int W20; int W24; cri_u2 H28; } frame_;
+  longlong &loc_38 = frame_.Owner;
+  cri_u1 **&loc_30 = frame_.Table;
+  cri_u4 &loc_28 = frame_.W10;
+  int &loc_24 = frame_.W14;
+  cri_u4 &loc_20 = frame_.W18;
+  int &loc_1c = frame_.W1c;
+  int &loc_18 = frame_.W20;
+  int &loc_14 = frame_.W24;
+  cri_u2 &loc_10 = frame_.H28;
   
   M2VCONCEAL_StartFrame(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x1c58) != 0) {
@@ -25843,11 +25843,11 @@ void FUN_14008a430(longlong arg1, int arg2, int arg3)
   longlong *pl_v7;
   longlong *pl_v8;
   // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  __declspec(align(16)) cri_u1 frame_[0xb0];
-  longlong &loc_b8 = *(longlong *)(frame_ + 0);
-  longlong &loc_b0 = *(longlong *)(frame_ + 8);
-  int &loc_a8 = *(int *)(frame_ + 16);
-  longlong (&loc_a0)[19] = *(longlong (*)[19])(frame_ + 24);
+  struct Tab { longlong P0; longlong P8; int Size; longlong Rest[19]; } frame_;
+  longlong &loc_b8 = frame_.P0;
+  longlong &loc_b0 = frame_.P8;
+  int &loc_a8 = frame_.Size;
+  longlong (&loc_a0)[19] = frame_.Rest;
   
   u_v1 = *(uint *)((char *)arg1 + 0x71c);
   pl_v8 = &loc_b8;
@@ -25926,11 +25926,11 @@ void FUN_14008a5b0(longlong arg1, int arg2, int arg3)
   longlong *pl_v6;
   longlong *pl_v7;
   // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  __declspec(align(16)) cri_u1 frame_[0xb0];
-  longlong &loc_b8 = *(longlong *)(frame_ + 0);
-  longlong &loc_b0 = *(longlong *)(frame_ + 8);
-  int &loc_a8 = *(int *)(frame_ + 16);
-  longlong (&loc_a0)[19] = *(longlong (*)[19])(frame_ + 24);
+  struct Tab { longlong P0; longlong P8; int Size; longlong Rest[19]; } frame_;
+  longlong &loc_b8 = frame_.P0;
+  longlong &loc_b0 = frame_.P8;
+  int &loc_a8 = frame_.Size;
+  longlong (&loc_a0)[19] = frame_.Rest;
   
   u_v1 = *(uint *)((char *)arg1 + 0x71c);
   pl_v6 = &loc_b8;
