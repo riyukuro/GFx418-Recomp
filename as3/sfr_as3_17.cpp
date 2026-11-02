@@ -1821,48 +1821,47 @@ SF_INLINE bool Sfr33CoerceClassValue(const ClassTraits::Traits& self, const Valu
 {
     VM& vm = self.GetVM();
     const BuiltinTraitsType tt = self.GetTraitsType();
-    const bool toObject = &self == &vm.GetClassTraitsObject();
     switch (value.GetKind())
     {
     case Value::kUndefined:
         result.SetNull();
-        break;
+        return true;
     case Value::kInt:
-        if (!toObject && tt != Traits_Number && tt != Traits_SInt)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_SInt)
             return false;
         result.SetNumber(value.AsInt());
-        break;
+        return true;
     case Value::kUInt:
-        if (!toObject && tt != Traits_Number && tt != Traits_UInt)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_UInt)
             return false;
         result.SetNumber(value.AsUInt());
-        break;
+        return true;
     case Value::kThunk:
     case Value::kVTableInd:
-        if (!toObject && tt != Traits_Function)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Function)
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kBoolean:
-        if (!toObject && tt != Traits_Boolean)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Boolean)
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kNumber:
-        if (!toObject && tt != Traits_Number)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number)
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kString:
-        if (!toObject && tt != Traits_String)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_String)
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kNamespace:
-        if (!toObject && tt != Traits_Namespace)
+        if (&self != &vm.GetClassTraitsObject() && tt != Traits_Namespace)
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kFunction:
     case Value::kObject:
     case Value::kThunkFunction:
@@ -1872,30 +1871,30 @@ SF_INLINE bool Sfr33CoerceClassValue(const ClassTraits::Traits& self, const Valu
                 return false;
         }
         result.Assign(value);
-        break;
+        return true;
     case Value::kClass:
         if (!FUN_1425149a0(self, value.AsClass().GetClassTraits()))
             return false;
         result.Assign(value);
-        break;
+        return true;
     case Value::kThunkClosure:
     case Value::kVTableIndClosure:
         result.Assign(value);
-        break;
+        return true;
     default:
-        break;
+        return true;
     }
     return true;
 }
 
-// MS2-FUNCTIONAL 0x1424effa0: the exe orders the switch blocks differently; same results
+// MS2-FUNCTIONAL 0x1424effa0: the exe assigns the saved registers differently and places the shared Assign tail last; same results
 // @0x1424effa0
 bool ClassTraits::Traits::Coerce(const Value& value, Value& result) const
 {
     return Sfr33CoerceClassValue(*this, value, result);
 }
 
-// MS2-FUNCTIONAL 0x1424f01c0: the exe orders the switch blocks differently; same results
+// MS2-FUNCTIONAL 0x1424f01c0: the exe assigns the saved registers differently (self/value/result in rbx/rdi/rsi); same results
 // @0x1424f01c0
 bool ClassTraits::Traits::CoerceValue(const Value& value, Value& result) const
 {
