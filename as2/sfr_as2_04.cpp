@@ -87,6 +87,8 @@
 namespace Scaleform {
 template<> SF_NOINLINE void ArrayData<GFx::AS2::Object*, AllocatorGH<GFx::AS2::Object*, 2>, ArrayDefaultPolicy>::PushBack(
     GFx::AS2::Object* const& val);
+// The event handler hash's Clear calls the Value array destructor out of line (0x142924420, sfr_as2_03).
+template<> ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, 323>, ArrayDefaultPolicy>::~ArrayDataBase();
 }
 
 namespace Scaleform { namespace GFx {
@@ -1623,7 +1625,6 @@ template void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::Clear();
 template void MS2_AS2_STRING_SET(GFx::AS2::FunctionRef, HashsetNodeEntry)::Clear();
 template void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::Clear();
 // @0x142934220
-// MS2-FUNCTIONAL cl inlines the ArrayDataBase<Value, LH 323> destructor that the exe calls out of line (0x142924420)
 template void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
                               GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::Clear();
 // @0x1429342b0
