@@ -4088,14 +4088,20 @@ struct Sfr33SlotPropRef
     const PropRef& Get() const { return *reinterpret_cast<const PropRef*>(this); }
 };
 
+// The exe releases the dynamic lookup's PropRef temporary in place: only its This Value is destroyed.
+static __forceinline void Sfr33AssignDynamicSlot(PropRef& result, Object* obj, const Multiname& mn)
+{
+    union Temp { PropRef ref; Temp() { } ~Temp() { } } t;
+    result = static_cast<PropRef&&>(*new (&t.ref) PropRef(obj->FindDynamicSlot(mn)));
+    t.ref.This.~Value();
+}
+
 // The property named mn of the object value stands for: its fixed slots, then (public names only) its dynamic
 // values and the prototypes of its traits; a function falls back to its saved scope.
-// MS2-FUNCTIONAL 0x142501b00: the exe expands the dynamic lookup temporary's PropRef dtor in place (ours is out of line, 0x1424de8f0) and tests the tagged null bit through a byte shift.
 // @0x142501b00
 void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr)
 {
-    const unsigned kind = value.GetKind();
-    const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
+    const bool isObj = value.GetKind() >= Value::kObject && value.GetKind() <= Value::kFunction;
     const Traits* tr = &vm.GetValueTraits(value);
     UPInt index = 0;
     const SlotInfo* si = FindFixedSlot(vm, *tr, mn, index, isObj ? value.GetObject() : NULL);
@@ -4107,12 +4113,13 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
     if (!mn.ContainsNamespace(vm.GetPublicNamespace()))
         return;
     if (isObj && tr->IsDynamic() && (attr != 2 || !IsXMLObject(value)))
-        result = value.GetObject()->FindDynamicSlot(mn);
+        Sfr33AssignDynamicSlot(result, value.GetObject(), mn);
     if (Sfr33PropFound(result) || attr == 1)
         return;
     for (; tr; tr = tr->GetParent())
     {
-        tr->GetConstructor().GetPrototype().FindProperty(result, mn, attr);
+        Object& proto = tr->GetConstructor().GetPrototype();
+        proto.FindProperty(result, mn, attr);
         if (result)
             break;
     }
