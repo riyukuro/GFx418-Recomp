@@ -4893,19 +4893,13 @@ SPtr<Class> ClassTraits::Traits::FUN_142419e50()
 }
 
 // a Function of method method_ind of file named "method id: <ind>"
-// MS2-FUNCTIONAL: the exe formats the id with MsgFormat
 // @0x14241a7d0
 Pickable<Instances::Function> Scaleform::GFx::AS3::Classes::Function::FUN_14241a7d0(VMAbcFile& file, Scaleform::UInt32 method_ind,
                                                                const ScopeStackType& ss, Instances::fl::GlobalObjectScript& gos) const
 {
     InstanceTraits::Traits& t = FUN_14250a250(&file, gos, method_ind);
-    void* mem = t.Alloc();
-    if (!mem)
-        return Pickable<Instances::Function>(NULL);
-    char buf[16];
-    Scaleform::SFsprintf(buf, sizeof(buf), "%u", method_ind);
-    ASString name = t.GetVM().GetStringManager().CreateConstString("method id: ") + buf;
-    return Pickable<Instances::Function>(new(mem) Instances::Function(t, ss, AS3::Value::GetUndefined(), name));
+    return Pickable<Instances::Function>(new(t.Alloc()) Instances::Function(t, ss, AS3::Value::GetUndefined(),
+        GetVM().GetStringManager().CreateConstString("method id: ") + Scaleform::AsString(method_ind).ToCStr()));
 }
 
 // InstanceTraits::fl::GlobalObjectScript: a new global object of the script
@@ -5302,91 +5296,90 @@ namespace Scaleform { namespace GFx { namespace AS3
         CurrKind = k;
     }
 
-    // MS2-FUNCTIONAL: switch lowering and the error temp differ
+    // MS2-FUNCTIONAL: /O2 order only: pos/start in r14/r15 swapped, and cases 3 and 4 thread doThrow through al where the exe jumps straight to the shared tails
     // @0x14241d6f0
     CheckResult XMLParser::Parse(const StringDataPtr& str, UPInt& pos, bool isList)
     {
         const UPInt start = pos;
         bool result = XML_Parse(Parser, str.ToCStr() + start, (int)(str.GetSize() - start), 1) == 1;
         bool advance = true;
-        if (result)
+        if (!result)
         {
-            pos += XML_GetCurrentByteIndex(Parser);
-            SetNodeKind(kNone);
-            return result;
-        }
-
-        const int code = XML_GetErrorCode(Parser);
-        VM& vm = ITr.GetVM();
-        const Kind kind = KindStack.GetSize() ? KindStack.Back() : kNone;
-        VM::ErrorID err = VM::ErrorID(0x442);
-        bool doThrow = true;
-        switch (code)
-        {
-        case 0:
-            // a processing instruction left open at the start: skip past its "?>"
-            if (pos == start && CurrElement && CurrElement->GetKind() == Instances::fl::XML::kInstruction)
+            const int code = XML_GetErrorCode(Parser);
+            VM& vm = ITr.GetVM();
+            Kind kind = kNone;
+            VM::ErrorID err = VM::ErrorID(0x442);
+            if (KindStack.GetSize())
+                kind = KindStack.Back();
+            bool doThrow = true;
+            switch (code)
             {
-                const UPInt left = str.GetSize() - start;
-                for (UPInt i = 0; i < left; ++i)
+            case 0:
+                // a processing instruction left open at the start: skip past its "?>"
+                if (pos == start && CurrElement && CurrElement->GetKind() == Instances::fl::XML::kInstruction)
                 {
-                    if (str.ToCStr()[i] == '?' && i + 1 < left && str.ToCStr()[i + 1] == '>')
+                    const UPInt left = str.GetSize() - start;
+                    for (UPInt i = 0; i < left; ++i)
                     {
-                        pos += i + 2;
-                        return true;
+                        if (str.ToCStr()[i] == '?' && i + 1 < left && str.ToCStr()[i + 1] == '>')
+                        {
+                            pos += i + 2;
+                            return true;
+                        }
                     }
                 }
-            }
-            break;
-        case 1:
-            err = VM::ErrorID(1000);
-            break;
-        case 3:
-            advance = !isList;
-            if (CurrElement && kind == kElement && advance)
-                err = VM::ErrorID(0x43d);
-            else
+                break;
+            case 9:
+                if (isList)
+                {
+                    result = true;
+                    doThrow = false;
+                }
+                else
+                    err = VM::ErrorID(CurrElement && kind == kElement ? 0x43d : 0x440);
+                break;
+            case 1:
+                err = VM::ErrorID(1000);
+                break;
+            case 7:
+                if (kind == kElement)
+                    err = VM::ErrorID(0x43d);
+                break;
+            case 3:
+                advance = !isList;
+                if (CurrElement && kind == kElement)
+                {
+                    err = VM::ErrorID(0x43d);
+                    doThrow = advance;
+                }
+                else
+                    doThrow = false;
+                break;
+            case 8:
+                err = VM::ErrorID(0x450);
+                break;
+            case 5:
+                err = VM::ErrorID(0x449);
+                break;
+            case 0x14:
+                err = VM::ErrorID(0x443);
+                break;
+            case 4:
+                if (!CurrElement)
+                    doThrow = false;
+                break;
+            case 0x23:
+                advance = false;
                 doThrow = false;
-            break;
-        case 4:
-            if (!CurrElement)
-            {
-                pos += XML_GetCurrentByteIndex(Parser);
-                SetNodeKind(kNone);
-                return false;
+                break;
             }
-            break;
-        case 5:
-            err = VM::ErrorID(0x449);
-            break;
-        case 7:
-            err = VM::ErrorID(kind == kElement ? 0x43d : 0x442);
-            break;
-        case 8:
-            err = VM::ErrorID(0x450);
-            break;
-        case 9:
-            if (isList)
-            {
-                pos += XML_GetCurrentByteIndex(Parser);
-                SetNodeKind(kNone);
-                return true;
-            }
-            err = VM::ErrorID(CurrElement && kind == kElement ? 0x43d : 0x440);
-            break;
-        case 0x14:
-            err = VM::ErrorID(0x443);
-            break;
-        case 0x23:
-            SetNodeKind(kNone);
-            return false;
+            if (doThrow)
+                vm.ThrowTypeError(VM::Error(err, vm));
         }
-        if (doThrow)
-            vm.ThrowTypeError(VM::Error(err, vm));
         if (advance)
             pos += XML_GetCurrentByteIndex(Parser);
         SetNodeKind(kNone);
-        return false;
+        return result;
     }
 
     // InstanceTraits::fl::XML::MakeInstanceProcInstr (0x14241b6e0), inlined here
