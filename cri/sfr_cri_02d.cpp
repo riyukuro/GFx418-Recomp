@@ -11,6 +11,7 @@
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
 // MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
+// MS2-RANGE: 0x140034730-0x140034920 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
@@ -103,6 +104,9 @@ typedef struct CriMovieChunkQueueRecord
 } CriMovieChunkQueueRecord;
 typedef struct CriMvReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; } CriMvReadModeView;
 typedef struct CriMvWriteBufferView { void* Data; CriUint32 Capacity; } CriMvWriteBufferView;
+typedef struct CriMvUsfHeaderGateView { CriUint8 Reserved[0xd64]; CriSint32 HeaderChecked; } CriMvUsfHeaderGateView;
+typedef struct CriMvUsfHeaderSizeView { CriUint8 Reserved[0x8b8]; CriUint32 Size; } CriMvUsfHeaderSizeView;
+typedef struct CriMvVideoDecoderView { CriUint8 Reserved[0xe08]; void* VideoDecoder; } CriMvVideoDecoderView;
 typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
 {
     CriUint32 Reserved0[3];
@@ -123,6 +127,12 @@ CriBool allocateMetaWork(void* player);
 void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void criUsfDmx_Stop(void* demux);
 void criUsfDmx_Execute(void* demux);
+CriSint32 criUsfDmx_GetStatus(void* demux);
+void crimvply_transitErrorState(void* player, void* message);
+void crimvply_occurUserError(void* owner, const char* message, CriSint32 value);
+void criMvPlyAmng_TerminateSupply(void* audioManager);
+void criVdec_TerminateSupply(void* decoder);
+void criAlphaDec_TerminateSupply(void* decoder);
 void criUsfDmx_Start(void* demux);
 void criUsfDmx_SetInputSj(void* demux, void* value);
 void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
@@ -170,6 +180,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
 #pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
+#pragma comment(linker, "/alternatename:?executeUsfServer@@YAXPEAX@Z=executeUsfServer")
 #pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
 #pragma comment(linker, "/alternatename:getInternalStatus=?getInternalStatus@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:isLockedInputChunk=?isLockedInputChunk@@YAJPEBX@Z")
@@ -334,6 +345,57 @@ void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue
         written += chunk.Type;
         FUN_140046814(dataQueue, &dst, chunk.Type);
         criSj_PutChunk(source, 0, &chunk);
+    }
+}
+
+// validate the CRI Movie signature, reset the demux, and start ready decoders
+// Local names pick the exe's VC9 /Od stack slots: dmx, record.
+// @0x140034730
+void executeUsfServer(void* player)
+{
+    CriMovieChunkQueueRecord record;
+    void* dmx;
+    dmx = ((CriMvPlyDemuxFields*)player)->Demux;
+    if (criUsfDmx_GetStatus(dmx) == 4)
+    {
+        crimvply_transitErrorState(player, (void*)"Status of demux is ERROR.");
+        return;
+    }
+    if (((CriMvPlyStateView*)player)->Status == 2)
+        return;
+    if (((CriMvUsfHeaderGateView*)player)->HeaderChecked == 0 && ((CriMvPlyStateView*)player)->Status == 1 &&
+        ((CriMvUsfHeaderSizeView*)player)->Size == 0)
+    {
+        FUN_1400467a0(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, -1, &record);
+        if (record.Chunk == 0 || record.Type < 4)
+        {
+            criSj_UngetChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, &record);
+            return;
+        }
+        else if (((CriUint8*)record.Chunk)[0] == 'C' && ((CriUint8*)record.Chunk)[1] == 'R' &&
+                 ((CriUint8*)record.Chunk)[2] == 'I' && ((CriUint8*)record.Chunk)[3] == 'D')
+        {
+            criSj_UngetChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, &record);
+            ((CriMvUsfHeaderGateView*)player)->HeaderChecked = 1;
+        }
+        else
+        {
+            criSj_UngetChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, 1, &record);
+            crimvply_occurUserError(player, "E07020701M: Input is not CRI Movie data.", 0);
+            return;
+        }
+    }
+    if (((CriMvUsfHeaderGateView*)player)->HeaderChecked == 1)
+        criUsfDmx_Execute(dmx);
+    if (criUsfDmx_GetStatus(dmx) == 2)
+    {
+        criMvPlyAmng_TerminateSupply(((CriMvPlyStateView*)player)->AudioManager);
+        if (((CriMvVideoDecoderView*)player)->VideoDecoder)
+        {
+            criVdec_TerminateSupply(((CriMvVideoDecoderView*)player)->VideoDecoder);
+            if (((CriMvDecoderHandleFields*)player)->AlphaDecoder)
+                criAlphaDec_TerminateSupply(((CriMvDecoderHandleFields*)player)->AlphaDecoder);
+        }
     }
 }
 
