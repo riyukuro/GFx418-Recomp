@@ -6976,9 +6976,17 @@ bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Valu
 
 namespace AS3 {
 
+// DisplayObjectBase::GetWorldMatrix() by value (the SDK's inline over the out-parameter form).
+static inline Render::Matrix2F Sfr18GetWorldMatrix(const DisplayObjectBase* pobj)
+{
+    Render::Matrix2F m;
+    pobj->GetWorldMatrix(&m);
+    return m;
+}
+
 // The scriptable visible children under pt (topmost first), each in its own coordinates; none when the
 // container is invisible or pt is outside its mask. True when any was added.
-// MS2-FUNCTIONAL the exe's frame is 0x10 smaller (it shares one world matrix temporary)
+// MS2-FUNCTIONAL the exe's frame is 0x10 smaller and saves no xmm13 (register allocation in the inlined SetInverse/Prepend)
 // @0x14250c360
 bool AvmDisplayObjContainer::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase> >* destArray,
                                                   const Render::PointF& pt) const
@@ -6992,11 +7000,9 @@ bool AvmDisplayObjContainer::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase>
     {
         if (pmask->IsUsedAsMask() && !pmask->IsUnloaded())
         {
-            Render::Matrix2F matrix, wm;
-            pmask->GetWorldMatrix(&wm);
-            matrix.SetInverse(wm);
-            dobjParent->GetWorldMatrix(&wm);
-            matrix.Prepend(wm);
+            Render::Matrix2F matrix;
+            matrix.SetInverse(Sfr18GetWorldMatrix(pmask));
+            matrix.Prepend(Sfr18GetWorldMatrix(dobjParent));   // operator*=
             const Render::PointF p = matrix.Transform(pt);
             if (!pmask->PointTestLocal(p, DisplayObjectBase::HitTest_TestShape | DisplayObjectBase::HitTest_IgnoreInvisible))
                 return false;
@@ -7004,16 +7010,17 @@ bool AvmDisplayObjContainer::GetObjectsUnderPoint(ArrayDH<Ptr<DisplayObjectBase>
     }
     Array<UByte> hitTest;
     dobjParent->CalcDisplayListHitTestMaskArray(&hitTest, pt, true);
-    Render::PointF p     = pt;
-    const UPInt    oldSz = destArray->GetSize();
+    Render::Matrix2F m;
+    Render::PointF   p     = pt;
+    const UPInt      oldSz = destArray->GetSize();
     for (SPInt i = n - 1; i >= 0; i--)
     {
         DisplayObjectBase* pch = dl.GetDisplayObject(UPInt(i));
         if (!pch->IsScriptableObject() || !pch->GetVisible())
             continue;
-        if (hitTest.GetSize() && (!hitTest[UPInt(i)] || pch->ClipDepth != 0))
+        if (hitTest.GetSize() && (!hitTest[UPInt(i)] || pch->ClipDepth > 0))
             continue;
-        const Render::Matrix2F& m = pch->GetMatrix();
+        m = pch->GetMatrix();
         p = m.TransformByInverse(pt);
         ToAvmDisplayObj(pch)->GetObjectsUnderPoint(destArray, p);
     }
