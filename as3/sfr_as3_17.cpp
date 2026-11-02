@@ -3027,7 +3027,6 @@ bool Sfr33ArrayGetElement(const UByte* self, UByte* pdata, unsigned idx, GFx::Va
 }
 
 // The message of AS3 error id (NULL when it has none).
-// MS2-FUNCTIONAL 0x142509b60: id and hi swap r10d and r11d; the code is otherwise the exe's.
 // @0x142509b60
 const char* Sfr33GetErrorMsg(int id)
 {
@@ -3046,7 +3045,9 @@ const char* Sfr33GetErrorMsg(int id)
         else
             lo = mid + 1;
     }
-    return DAT_143a2d640[lo] == id ? DAT_143a2d890[lo] : NULL;
+    if (DAT_143a2d640[lo] == id)
+        return DAT_143a2d890[lo];
+    return NULL;
 }
 
 // The file loader MovieRoot::CheckAvm hands the new VM: no files. vftable 0x14317f470.
