@@ -247,8 +247,6 @@ void FUN_1424aa0f0(void* pformat);                                              
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-void ProgressInfoHash_Destruct(StringHashLH<MovieClipLoader::ProgressDesc>* phash); // exe 0x142924ab0
-
 // The hash table of a table object, for its out-of-line destructor.
 typedef ASStringHash_GC<Member>::SetType                 MemberHashSet;
 typedef ASStringHash_GC<Object::Watchpoint>::SetType     WatchpointHashSet;
@@ -319,7 +317,7 @@ void ColorObject::Finalize_GC()
 // @0x142942dd0
 void MovieClipLoader::Finalize_GC()
 {
-    ProgressInfoHash_Destruct(&ProgressInfo);
+    ProgressInfo.~StringHashLH();
     Object::Finalize_GC();
 }
 
@@ -1519,8 +1517,6 @@ bool Object::FindMember(ASStringContext* psc, const ASString& name, Member* pmem
 
 typedef ASStringHash_GC<Member>::SetType   MemberSet;
 typedef ASStringHash_GC<Member>::EntryType MemberEntry;
-// The slot copy constructor of the member table, out of line in the exe (COMDAT 0x142917730).
-void MemberEntry_CopyConstruct(MemberEntry* e, const MemberEntry& src);
 
 // Find / FindCaseInsensitive / FindCaseCheck of the member table.
 inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
@@ -1581,7 +1577,7 @@ static SF_FORCEINLINE void MemberHash_Remove(ASStringHash_GC<Member>* phash, con
         {
             MemberEntry* next = &pTable->E(e->NextInChain);
             (e->*&MemberEntry::Clear)();
-            MemberEntry_CopyConstruct(e, *next);
+            ::new (e) MemberEntry(*next);
             e = next;
         }
     }

@@ -1291,15 +1291,17 @@ void Sfr33ShapeDataGetFillStyle(const UByte* self, unsigned idx, Render::FillSty
     *p = (*reinterpret_cast<Render::FillStyleType* const*>(self + 0x18))[idx - 1];
 }
 
-struct Sfr33MovieRootFind
-{
-    bool FindLibrarySymbolInAllABCs(const void* name, void* pccinfo);
-};
+}}} // namespace Scaleform::GFx::AS3
+
 // MovieRoot::FindLibrarySymbolInAllABCs: true when any loaded movie's ABCs define the library symbol.
 // @0x142501a80
-bool Sfr33MovieRootFind::FindLibrarySymbolInAllABCs(const void* name, void* pccinfo)
+bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx::AS3::Instances::fl::Object* name,
+                   Scaleform::GFx::CharacterCreateInfo* pccinfo)
 {
-    MovieRoot* self = reinterpret_cast<MovieRoot*>(this);
+    using namespace Scaleform;
+    using namespace Scaleform::GFx;
+    using namespace Scaleform::GFx::AS3;
+    MovieRoot* self = reinterpret_cast<MovieRoot*>(proot);
     MovieDefRootNode* p = self->pMovieImpl->RootMovieDefNodes.pNext;
     for (;;)
     {
@@ -1312,6 +1314,8 @@ bool Sfr33MovieRootFind::FindLibrarySymbolInAllABCs(const void* name, void* pcci
         p = p->pNext;
     }
 }
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 }}}
 
 Scaleform::GFx::AS3::ClassTraits::Traits** FUN_142414ac0(Scaleform::GFx::AS3::TClassTraitsCache* self, const Scaleform::GFx::ASString& name,
@@ -1561,15 +1565,13 @@ void InstanceTraits::Traits::ForEachChild_GC(Collector* prcc, GcOp op) const
     Sfr33ForEachChildGC_c0(reinterpret_cast<UByte*>(const_cast<Traits*>(this)), prcc, reinterpret_cast<Sfr33GcOp>(op));
 }
 
+}}}
+
 // A third Traits::GetConstructor copy.
-struct Sfr33LazyTraits
-{
-    void* GetConstructor();
-};
 // @0x142508460
-void* Sfr33LazyTraits::GetConstructor()
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t)
 {
-    void** self = reinterpret_cast<void**>(this);
+    void** self = const_cast<void**>(reinterpret_cast<void* const*>(t));
     void* p = self[0x10];
     if (!p)
     {
@@ -1577,9 +1579,8 @@ void* Sfr33LazyTraits::GetConstructor()
         reinterpret_cast<MakeFn*>(*self)[13](self);
         p = self[0x10];
     }
-    return p;
+    return *static_cast<Scaleform::GFx::AS3::Class*>(p);
 }
-}}}
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

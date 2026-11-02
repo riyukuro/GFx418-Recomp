@@ -1691,14 +1691,9 @@ Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const S
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // MovieImpl::FindExportedResource.
 static inline bool FUN_14256ec50(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::ResourceBindData * p2, Scaleform::String const & p3) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->FindExportedResource(p1, p2, p3)); }
-// AS3::MovieRoot::FindLibrarySymbolInAllABCs (sfr_as3_17 view), AddScriptableMovieClip.
-namespace Scaleform { namespace GFx { namespace AS3 {
-struct Sfr33MovieRootFind
-{
-    bool FindLibrarySymbolInAllABCs(const void* name, void* pccinfo);
-};
-}}} // namespace Scaleform::GFx::AS3
-static inline bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase * p0, Scaleform::GFx::AS3::Instances::fl::Object const * p1, Scaleform::GFx::CharacterCreateInfo * p2) { return (bool)(((Scaleform::GFx::AS3::Sfr33MovieRootFind*)(p0))->FindLibrarySymbolInAllABCs((void const *)(p1), (void *)(p2))); }
+// AS3::MovieRoot::FindLibrarySymbolInAllABCs (sfr_as3_17), AddScriptableMovieClip.
+bool FUN_142501a80(Scaleform::GFx::ASMovieRootBase* proot, const Scaleform::GFx::AS3::Instances::fl::Object* pobj,
+                  Scaleform::GFx::CharacterCreateInfo* pinfo);
 void FUN_1424e9380(Scaleform::GFx::ASMovieRootBase* proot, Scaleform::GFx::DisplayObject* pcont);
 // AvmBitmap::RecreateRenderNode.
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap);

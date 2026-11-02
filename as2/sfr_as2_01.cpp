@@ -1388,12 +1388,6 @@ void GAS_GlobalSetIMECandidateListStyle(const FnCall& fn)
 }
 
 // ---- TextField IME composition string styles ----
-}}} // namespace Scaleform::GFx::AS2
-// Bodies of the exe called here (not recovered yet), by their addresses.
-Scaleform::Render::Text::HighlightInfo FUN_14296e9f0(const Scaleform::GFx::AS2::FnCall& fn, unsigned index,
-                                                     const Scaleform::Render::Text::HighlightInfo& base);   // TextFieldProto::ParseStyle
-void FUN_142968610(const Scaleform::GFx::AS2::FnCall& fn, const Scaleform::Render::Text::HighlightInfo& info); // TextFieldProto::MakeStyle
-namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The category of an IME style name (exe 0x1429487e0).
 int GFx_StringToIMEStyleCategory(const ASString& name);
@@ -1436,7 +1430,7 @@ void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
         IMEStyleData* pold = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
         if (pold)
             newStyle = *pold;
-        newStyle.HighlightStyles[cat] = FUN_14296e9f0(fn, 1, newStyle.HighlightStyles[cat]);
+        newStyle.HighlightStyles[cat] = ParseStyle(fn, 1, newStyle.HighlightStyles[cat]);
         newStyle.PresenceMask |= (UByte)(1 << cat);
         ptf->SetIMECompositionStringStyles(*(const Text::IMEStyle*)&newStyle);
     }
@@ -1456,7 +1450,7 @@ void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
     int           cat = GFx_StringToIMEStyleCategory(name);
     // a category that was never set still gives its (default) highlight, as in the exe
     if (pstyles && cat < IMEStyleData::SC_MaxNum)
-        FUN_142968610(fn, pstyles->HighlightStyles[cat]);
+        MakeStyle(fn, pstyles->HighlightStyles[cat]);
 }
 
 // ---- Global escape functions ----
