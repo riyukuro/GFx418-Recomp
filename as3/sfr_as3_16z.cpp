@@ -274,17 +274,22 @@ struct Unk_As3_16zGFxValueRaw
     UPInt                        DataAux;            // +0x18 closures: the thunk or the vtable index
 };
 
+// GFx::Value::IsManagedValue: the VTC_ManagedBit flag.
+static inline bool IsManagedValue16z(const Unk_As3_16zGFxValueRaw* v)
+{
+    return (v->Type >> 6) & 1;
+}
+
 // v as a host value. A requested type (convert bit) wins; otherwise the kind decides: plain values keep their type,
 // objects, classes and functions become objects (display objects and arrays get their own type), closures stay
 // closures, a null reference is null and everything else is converted to a string. Strings, objects and closures
 // are managed through the movie's object interface; a failed conversion is reported and leaves NaN.
-// MS2-FUNCTIONAL: the exe builds the wide string storage inline and keeps the closure kind in a register flag
 // @0x1424e42c0
 void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
 {
     Unk_As3_16zGFxValueRaw* dest = reinterpret_cast<Unk_As3_16zGFxValueRaw*>(pdestVal);
-    unsigned toType;
-    bool vtableIndClosure = false;
+    int toType;
+    unsigned vtableIndClosure = 0;
     if (dest->Type & GFx::Value::VTC_ConvertBit)
         toType = dest->Type & 0xf;
     else
@@ -306,7 +311,7 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
             toType = v.GetClosure() ? GFx::Value::VT_Closure : GFx::Value::VT_Null;
             break;
         case Value::kVTableIndClosure:
-            vtableIndClosure = true;
+            vtableIndClosure = 1;
             toType = v.GetClosure() ? GFx::Value::VT_Closure : GFx::Value::VT_Null;
             break;
         default:
@@ -317,13 +322,12 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
             toType = GFx::Value::VT_Null;
     }
 
-    if ((dest->Type >> 6) & 1)   // VTC_ManagedBit: drop the old reference
+    if (IsManagedValue16z(dest))   // VTC_ManagedBit: drop the old reference
     {
         dest->pObjectInterface->ObjectRelease(pdestVal, dest->pData);
         dest->pObjectInterface = NULL;
     }
 
-    GFx::Value::ObjectInterface* iface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
     switch (toType)
     {
     case GFx::Value::VT_Undefined:
@@ -352,7 +356,7 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
         break;
     case GFx::Value::VT_Number:
         dest->Type = toType;
-        if (!v.Convert2NumberInline(*reinterpret_cast<Double*>(&dest->pData)))
+        if (!v.Convert2Number(*reinterpret_cast<Double*>(&dest->pData)))
         {
             pAVM->OutputAndIgnoreException();
             *reinterpret_cast<Double*>(&dest->pData) = NumberUtil::NaN();
@@ -366,8 +370,8 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
             // The node's text pointer is its first field, so the node is the managed string.
             dest->pData            = str.GetNode();
             dest->Type             = GFx::Value::VT_String | GFx::Value::VTC_ManagedBit;
-            dest->pObjectInterface = iface;
-            iface->ObjectAddRef(pdestVal, dest->pData);
+            dest->pObjectInterface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
+            static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, dest->pData);
         }
         break;
     case GFx::Value::VT_StringW:
@@ -382,8 +386,8 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
             dest->Type = GFx::Value::VT_StringW | GFx::Value::VTC_ManagedBit;
             Ptr<MovieImpl::WideStringStorage> pwstr = *::new (pmem) MovieImpl::WideStringStorage(pnode);
             dest->pData            = pwstr->pData;
-            dest->pObjectInterface = iface;
-            iface->ObjectAddRef(pdestVal, dest->pData);
+            dest->pObjectInterface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
+            static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, dest->pData);
         }
         break;
     case GFx::Value::VT_Object:
@@ -399,18 +403,19 @@ void MovieRoot::ASValue2GFxValue(const Value& v, GFx::Value* pdestVal) const
                 type = GFx::Value::VT_Array;
             dest->pData            = obj;
             dest->Type             = type | GFx::Value::VTC_ManagedBit;
-            dest->pObjectInterface = iface;
-            iface->ObjectAddRef(pdestVal, dest->pData);
+            dest->pObjectInterface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
+            static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, dest->pData);
         }
         break;
     case GFx::Value::VT_Closure:
         {
             // Bit 1 of the object pointer tells a vtable index closure from a thunk closure.
+            const UPInt closure = reinterpret_cast<UPInt>(v.GetClosure());
             dest->Type    = GFx::Value::VT_Closure | GFx::Value::VTC_ManagedBit;
-            dest->pData   = reinterpret_cast<void*>(reinterpret_cast<UPInt>(v.GetClosure()) | (vtableIndClosure ? 2 : 0));
+            dest->pData   = reinterpret_cast<void*>(closure | (vtableIndClosure ? 2 : 0));
             dest->DataAux = vtableIndClosure ? UPInt(SPInt(v.GetVTableInd())) : reinterpret_cast<UPInt>(&v.AsThunk());
-            dest->pObjectInterface = iface;
-            iface->ObjectAddRef(pdestVal, dest->pData);
+            dest->pObjectInterface = static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface);
+            static_cast<GFx::Value::ObjectInterface*>(pMovieImpl->pObjectInterface)->ObjectAddRef(pdestVal, dest->pData);
         }
         break;
     default:
