@@ -817,7 +817,7 @@ Classes::fl::uint& VM::GetClassUInt() const
 }
 
 // @0x1425081f0
-Class& VM::GetClassVector() const
+SF_NOINLINE Class& VM::GetClassVector() const
 {
     return TraitsVector->GetInstanceTraits().GetConstructor();
 }
@@ -1447,44 +1447,64 @@ String Sfr33NamedOwner::GetOwnerName() const
     return *reinterpret_cast<const String*>(powner + 0x18);
 }
 
+// A Value holding an object, with Value(Object*) or Value(Class*) expanded in place as the exe has it: kind kObject or kClass, no weak
+// proxy, the object word stored directly and the object AddRef'd.
+struct Sfr17ObjectValue
+{
+    UInt32 Flags;
+    void* pWeakProxy;
+    Object* pObj;
+    void* pRest;
+    explicit Sfr17ObjectValue(Object* p, UInt32 kind = Value::kObject)
+    {
+        Flags = kind;
+        pWeakProxy = NULL;
+        pObj = p;
+        if (p)
+            p->AddRef();
+    }
+    ~Sfr17ObjectValue() { Get().~Value(); }
+    Value& Get() { return *reinterpret_cast<Value*>(this); }
+};
+
+// StringDataPtr::GetTrimRight: the view without its last size bytes.
+static inline StringDataPtr Sfr17TrimRight(const StringDataPtr& s, UPInt size)
+{
+    size = s.GetSize() < size ? s.GetSize() : size;
+    return StringDataPtr(s.ToCStr(), s.GetSize() - size);
+}
+
 // "Vector.<T>" resolves T and applies it to Vector; any other name is looked up as a global class.
-// MS2-FUNCTIONAL 0x142507be0: the exe keeps the prefix length in a register across the trims; same results
+// MS2-FUNCTIONAL 0x142507be0: the exe computes the head trim before the pointer test and keeps the rest size in r10; same results
 // @0x142507be0
 Class* VM::GetClass(const StringDataPtr& gname)
 {
-    if (gname.IsEmpty())
-        return NULL;
-    const StringDataPtr& prefix = DAT_143a2dd50;
-    if (gname.GetSize() > prefix.GetSize())
-    {
-        UPInt cut = gname.GetSize() - prefix.GetSize();
-        if (gname.GetSize() < cut)
-            cut = gname.GetSize();
-        if (StringDataPtr(gname.ToCStr(), gname.GetSize() - cut) == prefix)
-        {
-            const SPInt pos = gname.FindLastChar('>');
-            if (pos <= 0)
-                return NULL;
-            const StringDataPtr rest = gname.GetTrimLeft(prefix.GetSize());
-            UPInt rcut = gname.GetSize() - pos;
-            if (rest.GetSize() < rcut)
-                rcut = rest.GetSize();
-            Class* elem = GetClass(StringDataPtr(rest.ToCStr(), rest.GetSize() - rcut));
-            if (elem == NULL)
-                return NULL;
-            const Value arg(elem);
-            return &GetClassVector().ApplyTypeArgs(1, &arg);
-        }
-    }
-
     Class* result = NULL;
-    Multiname mn(*this, gname);
-    ClassTraits::Traits* ctr = const_cast<ClassTraits::Traits*>(FUN_142525270(*this, mn));
-    if (ctr)
+    if (gname.IsEmpty())
+        return result;
+    const StringDataPtr& prefix = DAT_143a2dd50;
+    if (gname.GetSize() > prefix.GetSize() && Sfr17TrimRight(gname, gname.GetSize() - prefix.GetSize()) == prefix)
     {
-        ctr->InitOnDemand();
-        if (!IsException())
-            result = &ctr->GetInstanceTraits().GetConstructor();
+        const SPInt pos = gname.FindLastChar('>');
+        if (pos <= 0)
+            return result;
+        const StringDataPtr rest = gname.GetTrimLeft(prefix.GetSize());
+        Class* elem = GetClass(Sfr17TrimRight(rest, gname.GetSize() - pos));
+        if (elem == NULL)
+            return result;
+        Sfr17ObjectValue arg(elem, Value::kClass);
+        return &GetClassVector().ApplyTypeArgs(1, &arg.Get());
+    }
+    else
+    {
+        Multiname mn(*this, gname);
+        ClassTraits::Traits* ctr = const_cast<ClassTraits::Traits*>(FUN_142525270(*this, mn));
+        if (ctr)
+        {
+            ctr->InitOnDemand();
+            if (!IsException())
+                result = &ctr->GetInstanceTraits().GetConstructor();
+        }
     }
     return result;
 }
@@ -3113,25 +3133,6 @@ bool Sfr33CheckAvm(MovieRoot* self)
 }
 
 
-// A Value holding an object, with Value(Object*) expanded in place as the exe has it: kind kObject, no weak
-// proxy, the object word stored directly and the object AddRef'd.
-struct Sfr17ObjectValue
-{
-    UInt32 Flags;
-    void* pWeakProxy;
-    Object* pObj;
-    void* pRest;
-    explicit Sfr17ObjectValue(Object* p)
-    {
-        Flags = Value::kObject;
-        pWeakProxy = NULL;
-        pObj = p;
-        if (p)
-            p->AddRef();
-    }
-    ~Sfr17ObjectValue() { Get().~Value(); }
-    Value& Get() { return *reinterpret_cast<Value*>(this); }
-};
 
 // Runs the class PostInit of the AS3 object without arguments. When that pushed a call frame, it runs now (execute)
 // or stays queued (1); an exception is reported and flags the display object (+0x88).
