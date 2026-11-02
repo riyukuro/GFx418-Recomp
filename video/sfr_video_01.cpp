@@ -108,6 +108,17 @@ static Scaleform::UPInt VideoHashKey4(const void* key)
     return hash;
 }
 
+static __forceinline Scaleform::UPInt VideoHashKeyInline(const void* key, Scaleform::UPInt size)
+{
+    const unsigned char* bytes = static_cast<const unsigned char*>(key);
+    Scaleform::UPInt hash = 0x1505;
+    do {
+        --size;
+        hash = hash * 0x1003f + bytes[size];
+    } while (size);
+    return hash;
+}
+
 static void ConstructVideoHashValue(Scaleform::UPInt* destination, unsigned type, void* object)
 {
     if (object) {
@@ -970,22 +981,25 @@ void** FUN_140005a70(void** weakSlot, unsigned flags)
     return weakSlot;
 }
 
+// the ArrayData the rows below append to.
+struct Video01ArrayData { void* Data; Scaleform::UPInt Size; Scaleform::UPInt Capacity; };
+
 // the SDK ArrayData::Resize the append inlines.
 static __forceinline void Video01ResizePointers(void** array, Scaleform::UPInt size)
 {
-    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] >> 1) FUN_1400050c0(array, array, size); }
-    else if (size >= fields[2]) FUN_1400050c0(array, array, size + (size >> 2));
-    fields[1] = size;
+    Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
+    if (size < data->Size) { if (size < data->Capacity >> 1) FUN_1400050c0(array, array, size); }
+    else if (size >= data->Capacity) FUN_1400050c0(array, array, size + (size >> 2));
+    data->Size = size;
 }
 
 // MS2-FUNCTIONAL: appends one pointer value to the backing array, growing capacity when needed.
 // @0x140005ac0
 void FUN_140005ac0(void** array, const void** value)
 {
-    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    Video01ResizePointers(array, fields[1] + 1);
-    const void** slot = static_cast<const void**>(static_cast<void*>(*array)) + fields[1] - 1;
+    Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
+    Video01ResizePointers(array, data->Size + 1);
+    const void** slot = static_cast<const void**>(data->Data) + data->Size - 1;
     if (slot) *slot = *value;
 }
 
@@ -1412,23 +1426,20 @@ void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
 
 // MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
 // @0x140006bf0
+#pragma inline_depth(0)
 void FUN_140006bf0(void** array)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (fields[1] == 0) {
-        if (fields[2] == 0) FUN_1400051c0(array, array, 0);
-        fields[1] = 0;
-        return;
-    }
-    if ((fields[2] & ~Scaleform::UPInt(1)) != 0) {
-        if (*array) Scaleform::Memory::Free(*array);
-        *array = 0;
-        fields[2] = 0;
-        fields[1] = 0;
-        return;
-    }
+    if (0 < fields[1]) {
+        if (0 < fields[2] >> 1) {
+            if (*array) Scaleform::Memory::pGlobalHeap->Free(*array);
+            *array = 0;
+            fields[2] = 0;
+        }
+    } else if (0 >= fields[2]) FUN_1400051c0(array, array, 0);
     fields[1] = 0;
 }
+#pragma inline_depth()
 
 // MS2-FUNCTIONAL: obtains a 0x400-byte value page, records it, and updates the current stack cursors.
 // @0x140006a40
@@ -1445,39 +1456,38 @@ template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>:
         page = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned)>(heapVtable[14])(
             Scaleform::Memory::pGlobalHeap, stack, 0x408, 0);
     }
-    if (!page) { stack[0] -= 0x20; return; }
-    // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
-    Scaleform::UPInt size = stack[5] + 1;
-    if (size >= stack[6]) FUN_1400050c0(reinterpret_cast<void**>(stack + 4), stack + 4, size + (size >> 2));
-    stack[5] = size;
-    reinterpret_cast<void**>(stack[4])[size - 1] = page;
-    stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
-    stack[0] = stack[1];
-    stack[3] = stack[2] - 0x20;
-    stack[2] = stack[1] + 0x400;
+    if (page) {
+        // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
+        Scaleform::UPInt size = stack[5] + 1;
+        Video01ResizePointers(reinterpret_cast<void**>(stack + 4), size);
+        void** slot = reinterpret_cast<void**>(stack[4]) + size - 1;
+        if (slot) *slot = page;
+        stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
+        stack[0] = reinterpret_cast<Scaleform::UPInt>(page);
+        stack[3] = stack[2] - 0x20;
+        stack[2] = reinterpret_cast<Scaleform::UPInt>(page) + 0x400;
+    } else {
+        stack[0] -= 0x20;
+    }
 }
 
 // MS2-FUNCTIONAL: returns the last page to the free list and restores the preceding stack page.
 // @0x140006cf0
 template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>::PopPage()
 {
-    Scaleform::UPInt* stack = reinterpret_cast<Scaleform::UPInt*>(this);
-    if (stack[5] < 2) {
-        stack[0] += 0x20;
-        if (stack[0]) *reinterpret_cast<unsigned char*>(stack[0]) = 0;
-        return;
+    if (Pages.GetSize() > 1) {
+        Page* page = Pages.Back();
+        page->pNext = pReserved;
+        pReserved = page;
+        FUN_140005c20(reinterpret_cast<void**>(&Pages), Pages.GetSize() - 1);
+        pPageStart = Pages.Back()->Values;
+        pPageEnd = pPageStart + 32;
+        pCurrent = pPageEnd - 1;
+        pPrevPageTop = Pages.GetSize() > 1 ? Pages[Pages.GetSize() - 2]->Values + 31 : pPageStart;
+    } else {
+        pCurrent++;
+        if (pCurrent) *reinterpret_cast<unsigned char*>(pCurrent) = 0;
     }
-    // stack[4] is the page array's data pointer; reread after the resize, which may move it
-    void* page = reinterpret_cast<void**>(stack[4])[stack[5] - 1];
-    *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(page) + 0x400) = stack[7];
-    stack[7] = reinterpret_cast<Scaleform::UPInt>(page);
-    FUN_140005c20(reinterpret_cast<void**>(stack + 4), stack[5] - 1);
-    page = reinterpret_cast<void**>(stack[4])[stack[5] - 1];
-    stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
-    stack[2] = stack[1] + 0x400;
-    stack[0] = stack[1] + 0x3e0;
-    stack[3] = stack[5] < 2 ? stack[1] :
-        reinterpret_cast<Scaleform::UPInt>(reinterpret_cast<void**>(stack[4])[stack[5] - 2]) + 0x3e0;
 }
 
 // removes retained elements beyond the new size and adjusts pointer capacity
@@ -1613,7 +1623,7 @@ void FUN_140007400(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
     FUN_140006ff0(owner + 1, value);
 }
 
-// MS2-FUNCTIONAL: appends a retained object value to the embedded current cursor.
+// appends a retained object value to the embedded current cursor.
 // @0x140007450
 void FUN_140007450(Scaleform::UPInt* owner, Scaleform::GFx::AS2::Object** value)
 {
@@ -1923,29 +1933,29 @@ void* FUN_14000b050(void** destination, const void** source)
 // the exe inlines the body into FUN_14000b120.
 static __forceinline void Video01ReleaseValueTable(void** table)
 {
-    if (!*table) return;
-    unsigned char* data = static_cast<unsigned char*>(*table);
-    const Scaleform::UPInt count = *reinterpret_cast<Scaleform::UPInt*>(data + 8) + 1;
-    unsigned char* bytes = data + 0x10;
-    for (Scaleform::UPInt i = 0; i < count; ++i, bytes += 0x18) {
-        Scaleform::UPInt* entry = reinterpret_cast<Scaleform::UPInt*>(bytes);
-        if (entry[0] != ~Scaleform::UPInt(1)) {
-            ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
-            entry[0] = ~Scaleform::UPInt(1);
+    if (*table) {
+        const Scaleform::UPInt mask = *reinterpret_cast<Scaleform::UPInt*>(static_cast<unsigned char*>(*table) + 8);
+        for (Scaleform::UPInt i = 0; i <= mask; ++i) {
+            Scaleform::UPInt* entry = reinterpret_cast<Scaleform::UPInt*>(
+                static_cast<unsigned char*>(*table) + 0x10 + i * 0x18);
+            if (entry[0] != ~Scaleform::UPInt(1)) {
+                ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+                entry[0] = ~Scaleform::UPInt(1);
+            }
         }
+        Scaleform::Memory::Free(*table);
+        *table = 0;
     }
-    Scaleform::Memory::Free(*table);
-    *table = 0;
 }
 
-// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
+// releases AS2 values in an open-addressed hash table and frees its storage.
 // @0x14000b080
 void FUN_14000b080(void** table)
 {
     Video01ReleaseValueTable(table);
 }
 
-// MS2-FUNCTIONAL: releases AS2 values in an open-addressed hash table and frees its storage.
+// releases AS2 values in an open-addressed hash table and frees its storage.
 // @0x14000b120
 void FUN_14000b120(void** table) { Video01ReleaseValueTable(table); }
 
@@ -1992,7 +2002,7 @@ void FUN_14000b6e0(Scaleform::UPInt* tableRef, void* owner, const unsigned* keyV
 
 // MS2-FUNCTIONAL: inserts a 32-bit key and retained object from the table's pair record.
 // @0x14000b9e0
-void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash)
+__declspec(noinline) void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scaleform::UPInt hash)
 {
     InsertVideoHashEntry(tableRef, owner, pair, hash, ConstructVideoHashFromPair, CopyVideoHashPair);
 }
@@ -2002,16 +2012,16 @@ void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner, void** pair, Scalefo
 void FUN_14000c220(void* table, const unsigned* key, void* value)
 {
     void* pair[2] = {const_cast<unsigned*>(key), &value};
-    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKey4(key));
+    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKeyInline(key, 4));
 }
 
-// MS2-FUNCTIONAL: replaces the object for a 32-bit track id, releasing the caller's prior reference.
+// replaces the object for a 32-bit track id, releasing the caller's prior reference.
 // @0x14000c280
 void FUN_14000c280(void* owner, unsigned key, void** value)
 {
     void* pair[2] = {&key, value};
     unsigned char* table = reinterpret_cast<unsigned char*>(owner) + 0x10;
-    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKey4(&key));
+    FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKeyInline(&key, 4));
     ReleaseAs2GCObject(*value);
 }
 
@@ -2400,6 +2410,20 @@ public:
     typedef Scaleform::GFx::AS2::ASRefCountBaseType::ScanInUseFunctor Scan;
 };
 
+// the interface-table walk of the GC passes: size read once, the table reloaded per element.
+template<class Functor>
+static __forceinline void Video01VisitObjectTable(Scaleform::UPInt** table,
+    Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
+{
+    using namespace Scaleform::GFx::AS2;
+    if (*table) {
+        for (Scaleform::UPInt i = 0, count = (*table)[1]; i < count; ++i) {
+            Object* item = reinterpret_cast<Object**>((*table)[0])[i];
+            if (item) Functor::Call(collector, static_cast<ASRefCountBaseType*>(item));
+        }
+    }
+}
+
 template<class Functor>
 static __forceinline void ForEachVideoObjectChild(void* object,
     Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
@@ -2409,12 +2433,7 @@ static __forceinline void ForEachVideoObjectChild(void* object,
     unsigned char* bytes = static_cast<unsigned char*>(object);
     reinterpret_cast<FunctionRefBase*>(bytes + 0x78)->ForEachChild_GC<Functor>(collector);
     reinterpret_cast<FunctionRefBase*>(bytes + 0x90)->ForEachChild_GC<Functor>(collector);
-    void** values = reinterpret_cast<void**>(bytes + 0xa8);
-    if (!*values) return;
-    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*values);
-    Object** items = reinterpret_cast<Object**>(fields[0]);
-    for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
-        if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
+    Video01VisitObjectTable<Functor>(reinterpret_cast<Scaleform::UPInt**>(bytes + 0xa8), collector);
 }
 
 // MS2-FUNCTIONAL: marks all video object children as candidates in a cycle.
@@ -2424,14 +2443,14 @@ void FUN_14000d870(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     ForEachVideoObjectChild<VideoGcPassAccess::Mark>(object, collector);
 }
 
-// MS2-FUNCTIONAL: scans all video object children for live references.
+// scans all video object children for live references.
 // @0x14000d9c0
 void FUN_14000d9c0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     ForEachVideoObjectChild<VideoGcPassAccess::Scan>(object, collector);
 }
 
-// MS2-FUNCTIONAL: releases all video object child references through the cycle collector.
+// releases all video object child references through the cycle collector.
 // @0x14000dc30
 void FUN_14000dc30(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
@@ -2624,11 +2643,13 @@ void FUN_140006670(void** array, Scaleform::UPInt size)
 // @0x1400066f0
 void FUN_1400066f0(void** array, const unsigned* record)
 {
-    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt size = fields[1] + 1;
-    if (size >= fields[2]) FUN_140005260(array, array, size + (size >> 2));
-    fields[1] = size;
-    memcpy(static_cast<unsigned char*>(*array) + (size - 1) * 12, record, 12);
+    Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
+    const Scaleform::UPInt size = data->Size + 1;
+    if (size < data->Size) { if (size < data->Capacity >> 1) FUN_140005260(array, array, size); }
+    else if (size >= data->Capacity) FUN_140005260(array, array, size + (size >> 2));
+    data->Size = size;
+    unsigned* slot = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(data->Data) + (size - 1) * 12);
+    if (slot) { slot[0] = record[0]; slot[1] = record[1]; slot[2] = record[2]; }
 }
 
 // @0x140006770
@@ -2652,35 +2673,32 @@ static __forceinline void ForEachVideoPrototypeChild(void* object,
     Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     using namespace Scaleform::GFx::AS2;
-    NetStream* stream = static_cast<NetStream*>(object);
-    stream->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<VideoObjectGcAccess*>(object)->ForEachChild_GC<Functor>(collector);
     unsigned char* bytes = static_cast<unsigned char*>(object);
-    const Scaleform::UPInt callbackOffsets[] = { 0xe0, 0xf8 };
-    for (const Scaleform::UPInt *it = callbackOffsets, *end = callbackOffsets + 2; it != end; ++it)
-        reinterpret_cast<FunctionRefBase*>(bytes + *it)->ForEachChild_GC<Functor>(collector);
-    void** table = reinterpret_cast<void**>(bytes + 0x110);
-    if (!*table) return;
-    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*table);
-    Object** items = reinterpret_cast<Object**>(fields[0]);
-    for (Scaleform::UPInt i = 0; i < fields[1]; ++i)
-        if (items[i]) Functor::Call(collector, static_cast<ASRefCountBaseType*>(items[i]));
+    reinterpret_cast<FunctionRefBase*>(bytes + 0x78)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0x90)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0xa8)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0xc0)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0xe0)->ForEachChild_GC<Functor>(collector);
+    reinterpret_cast<FunctionRefBase*>(bytes + 0xf8)->ForEachChild_GC<Functor>(collector);
+    Video01VisitObjectTable<Functor>(reinterpret_cast<Scaleform::UPInt**>(bytes + 0x110), collector);
 }
 
-// MS2-FUNCTIONAL: visits prototype children with the collector's release pass.
+// visits prototype children with the collector's release pass.
 // @0x14000a5d0
 void FUN_14000a5d0(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     ForEachVideoPrototypeChild<VideoGcPassAccess::Release>(object, collector);
 }
 
-// MS2-FUNCTIONAL: visits prototype children with the collector's cycle-mark pass.
+// visits prototype children with the collector's cycle-mark pass.
 // @0x14000a230
 void FUN_14000a230(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
     ForEachVideoPrototypeChild<VideoGcPassAccess::Mark>(object, collector);
 }
 
-// MS2-FUNCTIONAL: visits prototype children with the collector's in-use scan pass.
+// visits prototype children with the collector's in-use scan pass.
 // @0x14000a420
 void FUN_14000a420(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
