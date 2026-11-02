@@ -3685,9 +3685,20 @@ CheckResult Value::Convert2Number(Number& result) const
     return Convert2NumberInline(result);
 }
 
+// ASString::AssignNode (inline in the exe at each use).
+static __forceinline void Sfr17AssignNode(ASString& result, ASStringNode* node)
+{
+    result.AssignNode(node);
+}
+
+// ASString = String: the String's bytes made into a node (inline in the exe at each use).
+static __forceinline void Sfr17AssignString(ASString& result, ASStringManager* sm, const String& str)
+{
+    result = sm->CreateString(str.ToCStr(), str.GetSize());
+}
+
 // ToString. Numbers use the ECMA formatting; an object goes through its primitive value (hint String), which must
 // come back primitive.
-// MS2-FUNCTIONAL 0x1424f1390: the exe shares the string-assign tails between cases; same results
 // @0x1424f1390
 CheckResult Value::Convert2String(ASString& result) const
 {
@@ -3695,48 +3706,32 @@ CheckResult Value::Convert2String(ASString& result) const
     switch (GetKind())
     {
     case kUndefined:
-        result.AssignNode(sm->CreateConstStringNode("undefined", 9, 0));
-        break;
-    case kBoolean:
-        {
-            const bool b = AsBool();
-            result.AssignNode(sm->CreateConstStringNode(b ? "true" : "false", b ? 4 : 5, 0));
-        }
-        break;
-    case kInt:
-        {
-            const String str = Scaleform::AsString(AsInt());
-            result = sm->CreateString(str.ToCStr(), str.GetSize());
-        }
-        break;
-    case kUInt:
-        {
-            const String str = Scaleform::AsString(AsUInt());
-            result = sm->CreateString(str.ToCStr(), str.GetSize());
-        }
-        break;
-    case kNumber:
-        {
-            char buffer[40];
-            const UPInt len = FUN_142525f20(buffer, sizeof(buffer), AsNumber());
-            result.AssignNode(sm->CreateStringNode(buffer, len));
-        }
+        Sfr17AssignNode(result, sm->CreateConstStringNode("undefined", 9, 0));
         break;
     case kThunk:
     case kVTableInd:
     case kThunkClosure:
     case kVTableIndClosure:
-        result.AssignNode(sm->CreateConstStringNode("function Function() {}", 22, 0));
+        Sfr17AssignNode(result, sm->CreateConstStringNode("function Function() {}", 22, 0));
         break;
-    case kInstanceTraits:
-    case kClassTraits:
-        result.AssignNode(sm->GetEmptyStringNode());
+    case kBoolean:
+        {
+            const bool b = AsBool();
+            Sfr17AssignNode(result, sm->CreateConstStringNode(b ? "true" : "false", b ? 4 : 5, 0));
+        }
         break;
-    case kString:
-        if (GetStringNode())
-            result.AssignNode(GetStringNode());
-        else
-            result.AssignNode(sm->CreateConstStringNode("null", 4, 0));
+    case kInt:
+        Sfr17AssignString(result, sm, Scaleform::AsString(AsInt()));
+        break;
+    case kUInt:
+        Sfr17AssignString(result, sm, Scaleform::AsString(AsUInt()));
+        break;
+    case kNumber:
+        {
+            char buffer[40];
+            const UPInt len = FUN_142525f20(buffer, sizeof(buffer), AsNumber());
+            Sfr17AssignNode(result, sm->CreateStringNode(buffer, len));
+        }
         break;
     case kNamespace:
         result = AsNamespace().GetUri();
@@ -3746,7 +3741,7 @@ CheckResult Value::Convert2String(ASString& result) const
     case kFunction:
     case kThunkFunction:
         if (IsNull())
-            result.AssignNode(sm->CreateConstStringNode("null", 4, 0));
+            Sfr17AssignNode(result, sm->CreateConstStringNode("null", 4, 0));
         else
         {
             Value v;
@@ -3755,17 +3750,33 @@ CheckResult Value::Convert2String(ASString& result) const
             if (!v.IsPrimitive())
             {
                 VM& vm = v.GetObject()->GetVM();
-                const VM::Error e(VM::ErrorID(1050), vm, vm.GetValueTraits(v).GetName().ToCStr());   // eConvertToPrimitiveError
-                FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+                Sfr33ThrowTypeError(vm, VM::Error(VM::ErrorID(1050), vm, vm.GetValueTraits(v).GetName().ToCStr()));   // eConvertToPrimitiveError
                 return false;
             }
-            return v.Convert2String(result);
+            if (!v.Convert2String(result))
+                return false;
         }
+        break;
+    case kInstanceTraits:
+    case kClassTraits:
+        Sfr17AssignNode(result, sm->GetEmptyStringNode());
+        break;
+    case kString:
+        if (GetStringNode())
+            Sfr17AssignNode(result, GetStringNode());
+        else
+            Sfr17AssignNode(result, sm->CreateConstStringNode("null", 4, 0));
         break;
     default:
         break;
     }
     return true;
+}
+
+// StringBuffer += String: the String's bytes appended (inline in the exe at each use).
+static inline void Sfr17AppendString(StringBuffer& buf, const String& str)
+{
+    buf.AppendString(str.ToCStr(), str.GetSize());
 }
 
 // ToString appended to a buffer; same cases as above, without the primitive check on an object's value.
@@ -3778,20 +3789,20 @@ CheckResult Value::Convert2String(StringBuffer& result) const
     case kUndefined:
         result.AppendString("undefined");
         break;
+    case kThunk:
+    case kVTableInd:
+    case kThunkClosure:
+    case kVTableIndClosure:
+        result.AppendString("function Function() {}");
+        break;
     case kBoolean:
         result.AppendString(AsBool() ? "true" : "false");
         break;
     case kInt:
-        {
-            const String str = Scaleform::AsString(AsInt());
-            result.AppendString(str.ToCStr(), str.GetSize());
-        }
+        Sfr17AppendString(result, Scaleform::AsString(AsInt()));
         break;
     case kUInt:
-        {
-            const String str = Scaleform::AsString(AsUInt());
-            result.AppendString(str.ToCStr(), str.GetSize());
-        }
+        Sfr17AppendString(result, Scaleform::AsString(AsUInt()));
         break;
     case kNumber:
         {
@@ -3799,18 +3810,6 @@ CheckResult Value::Convert2String(StringBuffer& result) const
             const UPInt len = FUN_142525f20(buffer, sizeof(buffer), AsNumber());
             result.AppendString(buffer, len);
         }
-        break;
-    case kThunk:
-    case kVTableInd:
-    case kThunkClosure:
-    case kVTableIndClosure:
-        result.AppendString("function Function() {}");
-        break;
-    case kString:
-        if (const ASStringNode* node = GetStringNode())
-            result.AppendString(node->pData, node->Size);
-        else
-            result.AppendString("null");
         break;
     case kNamespace:
         result.AppendString(AsNamespace().GetUri().ToCStr());
@@ -3826,8 +3825,15 @@ CheckResult Value::Convert2String(StringBuffer& result) const
             Value v;
             if (!Convert2PrimitiveValueUnsafe(v, hintString))
                 return false;
-            return v.Convert2String(result);
+            if (!v.Convert2String(result))
+                return false;
         }
+        break;
+    case kString:
+        if (const ASStringNode* node = GetStringNode())
+            result.AppendString(node->pData, node->Size);
+        else
+            result.AppendString("null");
         break;
     default:
         break;
@@ -4382,14 +4388,14 @@ CheckResult Object::DeleteDynamicSlotValuePair(const Multiname& prop_name)
 }
 
 // The dynamic value of this object that mn names (namespaces are not looked at).
-// MS2-FUNCTIONAL 0x142500e50: the exe inlines the dynamic-attribute hash probe and splits the unwind info into chained chunks.
+// MS2-FUNCTIONAL 0x142500e50: the exe inlines Value(Object*) for the PropRef's This (Flags 0xc, Bonus 0, AddRef without a null test); ours calls it out of line.
 // @0x142500e50
 PropRef Object::FindDynamicSlot(const Multiname& mn)
 {
     ASString name = GetVM().GetStringManager().CreateEmptyString();
-    if (mn.Name.Convert2String(name))
-        return PropRef(this, DynAttrs.Get(DynAttrsKey(name)));
-    return PropRef();
+    if (!mn.Name.Convert2String(name))
+        return PropRef();
+    return PropRef(this, DynAttrs.Get(DynAttrsKey(name)));
 }
 
 // The call frame on top of the VM's paged frame stack.
