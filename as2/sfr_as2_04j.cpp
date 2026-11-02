@@ -33,10 +33,12 @@ void FUN_14257dc30(void* p);  // RefCountImpl::AddRef (a global FUN_ in the exe)
 void FUN_14257dcb0(void* p);  // RefCountImpl::Release (a global FUN_ in the exe)
 
 extern "C" void __cdecl __report_rangecheckfailure(void);
+extern char DAT_142dc9d48[]; // RefCountImplCore vftable
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Vftables of the loader-thread entries and file tasks (their members are only reached as raw words here).
+extern const void* DAT_143188d98[]; // Task
 extern const void* DAT_143217750[]; // GFxAS2LoadQueueEntryMT_LoadMovie
 extern const void* DAT_143217768[]; // XML file task
 extern const void* DAT_143217780[]; // GFxAS2LoadQueueEntryMT_LoadXML
@@ -48,35 +50,36 @@ void FUN_1426396b0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie); // Lo
 typedef GFxAS2LoadQueueEntry::HolderType HolderType;
 
 // A file task: loader thread work of XML.load / StyleSheet.load. 0x40 bytes.
-static void* ConstructFileTask(void* self, const void** pvftable, LoadStates* pls, const String& level0Path,
-                               const String& url, HolderType holder)
+// The RefCountImplCore and Task constructors store their vftables before the task's own.
+static SF_FORCEINLINE void* ConstructFileTask(void* self, const void** pvftable, LoadStates* pls,
+                                              const String& level0Path, const String& url, const HolderType& holder)
 {
-    UPInt* w = static_cast<UPInt*>(self);
-    *reinterpret_cast<unsigned*>(w + 2) = 0x20001;
-    *reinterpret_cast<unsigned*>(w + 1) = 1;
-    w[0]                                = reinterpret_cast<UPInt>(pvftable);
-    *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(w) + 0x14) = 0;
+    UPInt*          w  = static_cast<UPInt*>(self);
+    volatile UPInt* vw = w;
+    vw[0]                                        = reinterpret_cast<UPInt>(DAT_142dc9d48);
+    vw[0]                                        = reinterpret_cast<UPInt>(DAT_143188d98);
+    *reinterpret_cast<volatile unsigned*>(w + 1) = 1; // RefCount
+    *reinterpret_cast<unsigned*>(w + 2)          = 0x20001;
+    vw[0]                                        = reinterpret_cast<UPInt>(pvftable);
+    *reinterpret_cast<volatile unsigned*>(reinterpret_cast<UByte*>(w) + 0x14) = 0; // CurrentState
     if (pls)
         FUN_14257dc30(pls);
     w[3] = reinterpret_cast<UPInt>(pls);
     new (w + 4) String(level0Path);
     new (w + 5) String(url);
-    RefCountImpl* ploader = holder.Loader;
-    if (ploader)
-        FUN_14257dc30(ploader);
-    w[6]                           = reinterpret_cast<UPInt>(ploader);
+    if (holder.Loader)
+        FUN_14257dc30(holder.Loader.GetPtr());
+    w[6]                           = reinterpret_cast<UPInt>(holder.Loader.GetPtr());
     *reinterpret_cast<unsigned*>(w + 7) = 0;
     return self;
 }
 
-// MS2-FUNCTIONAL: raw words over the task (its class has no recovered constructor)
 // @0x14291c240
 void* FUN_14291c240(void* self, LoadStates* pls, const String& level0Path, const String& url, HolderType holder)
 {
     return ConstructFileTask(self, DAT_143217798, pls, level0Path, url, holder);
 }
 
-// MS2-FUNCTIONAL: raw words over the task (its class has no recovered constructor)
 // @0x14291cbb0
 void* FUN_14291cbb0(void* self, LoadStates* pls, const String& level0Path, const String& url, HolderType holder)
 {
