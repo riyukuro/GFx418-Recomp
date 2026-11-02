@@ -3643,12 +3643,10 @@ void Sfr30DummyRelease(UPInt p)
 }
 
 // The AS3 builtin names: 61 string nodes, initialised from the static table.
-// MS2-FUNCTIONAL: the Tracer-side helper is written over raw words
 // @0x1424d9d70
 StringManager* FUN_1424d9d70(StringManager* self, ASStringManager* mgr)
 {
-    for (unsigned i = 0; i < AS3BuiltinConst_Count_; ++i)
-        reinterpret_cast<UPInt*>(self)[i] = 0;
+    ::new ((void*)self->Builtins) ASStringNodeHolder[AS3BuiltinConst_Count_];
     self->pStringManager = mgr;
     self->pStaticStrings = DAT_143a2d3d0;
     mgr->InitBuiltinArray(self->Builtins, DAT_143a2d3d0, AS3BuiltinConst_Count_);
