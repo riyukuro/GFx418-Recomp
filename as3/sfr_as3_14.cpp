@@ -25,6 +25,56 @@ template <> inline SF_NOINLINE void ArrayBase<ArrayData<UInt8, AllocatorLH_POD<U
 {
     Data.Resize(newSize);
 }
+
+// The Dictionary hash's Iterator::RemoveAlt (0x1424bbab0) stays out of line in every caller in the exe, including
+// the weak-key sweep of ForEachChild_GC; this is the SDK body.
+typedef HashNode<GFx::AS3::Value, GFx::AS3::Value, GFx::AS3::Value::HashFunctor> Sfr14DictNode;
+typedef HashsetCachedNodeEntry<Sfr14DictNode, Sfr14DictNode::NodeHashF> Sfr14DictEntry;
+typedef HashSetBase<Sfr14DictNode, Sfr14DictNode::NodeHashF, Sfr14DictNode::NodeAltHashF,
+                    AllocatorLH<GFx::AS3::Value, 2>, Sfr14DictEntry>
+    Sfr14DictSet;
+template <> template <> inline SF_NOINLINE void Sfr14DictSet::Iterator::RemoveAlt<Sfr14DictNode>(const Sfr14DictNode& key)
+{
+    Sfr14DictSet* hs = const_cast<Sfr14DictSet*>(ConstIterator::pHash);
+    UPInt h = Sfr14DictNode::NodeAltHashF()(key);
+    SPInt idx = h & hs->pTable->SizeMask;
+    Sfr14DictEntry* e = &hs->E(idx);
+
+    if (e->IsEmpty() || (e->GetCachedHash(hs->pTable->SizeMask) != (UPInt)idx))
+        return;
+
+    SPInt home = idx;
+    SPInt prev = -1;
+    while ((e->GetCachedHash(hs->pTable->SizeMask) != (UPInt)home) || !(e->Value == key))
+    {
+        prev = idx;
+        idx = e->NextInChain;
+        if (idx == -1)
+            return;
+        e = &hs->E(idx);
+    }
+
+    if (idx == (SPInt)ConstIterator::Index)
+    {
+        if (home == idx)
+        {
+            if (!e->IsEndOfChain())
+            {
+                Sfr14DictEntry* next = &hs->E(e->NextInChain);
+                e->Clear();
+                new (e) Sfr14DictEntry(*next);
+                e = next;
+                --ConstIterator::Index;
+            }
+        }
+        else
+        {
+            hs->E(prev).NextInChain = e->NextInChain;
+        }
+        e->Clear();
+        hs->pTable->EntryCount--;
+    }
+}
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -533,7 +583,6 @@ SF_INLINE void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
 
 // Children of a Dictionary hash. With weak keys, the marking pass first drops the entries whose key died; their
 // values are kept alive until the collection ends.
-// MS2-FUNCTIONAL: proxy allocation and the delayed-release chain are written plainly
 // @0x1424bdf90
 void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, bool weakKeys,
                      Instances::fl_utils::Dictionary::ContainerType& h, ASRefCountBaseType::GcOp op,
@@ -543,37 +592,47 @@ void ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc, bool weak
     typedef RefCountCollector<StatMV_ActionScript_Mem> CollectorType;
     typedef PtrReleaseProxy<StatMV_VM> ReleaseProxy;
 
+    ContainerType::Iterator it;
     if (weakKeys && op == &CollectorType::MarkInCycleCall)
     {
-        for (;;)
+    restart:
+        for (it = h.Begin(); !it.IsEnd(); ++it)
         {
-            ContainerType::Iterator it = h.Begin();
-            while (!it.IsEnd() && it->First.IsValidWeakRef())
-                ++it;
-            if (it.IsEnd())
-                break;
+            if (it->First.IsValidWeakRef())
+                continue;
 
-            const Value& v = it->Second;
             const ASRefCountBaseType* obj = 0;
-            const Value::KindType kind = v.GetKind();
-            if (kind >= Value::kThunkClosure)
-                obj = v.GetClosure();
-            else if (kind >= Value::kObject)
-                obj = v.GetObject();
+            const Value::KindType kind = it->Second.GetKind();
+            if (kind > Value::kThunkFunction)
+                obj = it->Second.GetClosure();
+            else if (Value::IsObject(kind))
+                obj = it->Second.GetObject();
             if (obj)
             {
                 // The proxy's destructor drops the value's reference once the collection is over.
                 Ptr<ReleaseProxy> proxy = *SF_HEAP_AUTO_NEW(&h) ReleaseProxy();
                 proxy->Data2 = const_cast<ASRefCountBaseType*>(obj);
-                Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(prcc->HeadDelayedPtrRelease);
-                proxy->pNext = head;
-                head = proxy;
+                if (proxy)
+                {
+                    Ptr<ReleaseProxy>& head = reinterpret_cast<Ptr<ReleaseProxy>&>(prcc->HeadDelayedPtrRelease);
+                    if (!head)
+                    {
+                        head = proxy;
+                        proxy->pNext = 0;
+                    }
+                    else
+                    {
+                        proxy->pNext = head;
+                        head = proxy;
+                    }
+                }
             }
             it.RemoveAlt(*it);
+            goto restart;
         }
     }
 
-    for (ContainerType::ConstIterator it = h.Begin(); !it.IsEnd(); ++it)
+    for (it = h.Begin(); !it.IsEnd(); ++it)
     {
         if (!weakKeys || it->First.IsValidWeakRef())
             ForEachChild_GC(prcc, it->First, op, owner);
