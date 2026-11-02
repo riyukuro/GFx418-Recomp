@@ -615,7 +615,7 @@ UPInt SparseArray::GetRightEqualInd(UPInt start_from, UPInt end_ind) const
     return i;
 }
 
-// MS2-FUNCTIONAL: branch order and the inlined hash lookups differ
+// MS2-FUNCTIONAL: the hash key sits in the third home slot in the exe (first in ours); instructions are the same
 // @0x142416000
 SF_NOINLINE AbsoluteIndex SparseArray::GetNextArrayIndex(AbsoluteIndex ind) const
 {
@@ -624,22 +624,24 @@ SF_NOINLINE AbsoluteIndex SparseArray::GetNextArrayIndex(AbsoluteIndex ind) cons
     {
         if (denseSize != 0)
             return AbsoluteIndex(0);
-        if (ValueH.GetSize() != 0)
+        if (ValueH.GetSize() > 0)
             return AbsoluteIndex(ValueHLowInd);
     }
     else
     {
-        const UPInt i = static_cast<UInt32>(ind.Get());
         if (static_cast<UPInt>(ind.Get()) < denseSize)
         {
-            if (i != denseSize - 1)
+            if (static_cast<UInt32>(ind.Get()) == denseSize - 1)
+            {
+                if (ValueH.GetSize() > 0)
+                    return AbsoluteIndex(ValueHLowInd);
+            }
+            else
                 return AbsoluteIndex(ind.Get() + 1);
-            if (ValueH.GetSize() != 0)
-                return AbsoluteIndex(ValueHLowInd);
         }
-        if (i >= ValueHLowInd && i <= ValueHHighInd)
+        if (static_cast<UInt32>(ind.Get()) >= ValueHLowInd && static_cast<UInt32>(ind.Get()) <= ValueHHighInd)
         {
-            for (UPInt j = static_cast<UInt32>(i + 1); j <= ValueHHighInd; ++j)
+            for (UPInt j = static_cast<UInt32>(ind.Get() + 1); j <= ValueHHighInd; ++j)
             {
                 if (saHashGetNode(ValueH, j))
                     return AbsoluteIndex(j);
@@ -994,23 +996,24 @@ namespace Instances { namespace fl
             Object::GetNextPropertyName(name, GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize())));
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the slot index in a callee-saved register across the Object call
     // @0x142416100
     GlobalSlotIndex Array::GetNextDynPropIndex(GlobalSlotIndex ind) const
     {
+        GlobalSlotIndex result(0);
         if (ind.Get() <= SA.GetSize())
         {
             const AbsoluteIndex next = SA.GetNextArrayIndex(AbsoluteIndex(static_cast<UPInt>(ind.Get()) - 1));
             if (next.IsValid())
-                return GlobalSlotIndex(static_cast<UInt32>(next.Get()) + 1);
+            {
+                result = GlobalSlotIndex(static_cast<UInt32>(next.Get()) + 1);
+                return result;
+            }
         }
-        UInt32 i = ind.Get();
-        if (i >= static_cast<UInt32>(SA.GetSize()))
-            i -= static_cast<UInt32>(SA.GetSize());
-        GlobalSlotIndex r = Object::GetNextDynPropIndex(GlobalSlotIndex(i));
-        if (!r.IsValid())
-            return r;
-        return GlobalSlotIndex(r.Get() + static_cast<UInt32>(SA.GetSize()));
+        ind = ind.Get() < static_cast<UInt32>(SA.GetSize()) ? ind : GlobalSlotIndex(ind.Get() - static_cast<UInt32>(SA.GetSize()));
+        result = Object::GetNextDynPropIndex(ind);
+        if (result.IsValid())
+            result = GlobalSlotIndex(result.Get() + static_cast<UInt32>(SA.GetSize()));
+        return result;
     }
 
     // @0x142416520
@@ -4721,8 +4724,9 @@ CheckResult ClassTraits::UserDefined::FUN_14241e6b0()
     const char* ci = (const char*)&self->GetClassInfo();
     if (!self->AddSlots(*(const Scaleform::GFx::AS3::Abc::HasTraits*)(ci + 0x48), *file, self->GetFixedMemSize()))
         return false;
-    if (*(const Scaleform::UInt8*)(ci + 0x20) & 4)
-        AS3::Sfr21AddInterfaceSlots(self, *file, *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci));
+    const char* ci2 = (const char*)&self->GetClassInfo();
+    if (*(const Scaleform::UInt8*)(ci2 + 0x20) & 4)
+        AS3::Sfr21AddInterfaceSlots(self, self->GetFile(), *reinterpret_cast<const AS3::Abc::ClassInfo*>(ci2));
     return true;
 }
 
@@ -5113,14 +5117,13 @@ void FUN_14241e390(Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::
 }
 
 // ValueStack::PopBack: pops (and releases) the top n values
-// MS2-FUNCTIONAL: the exe inlines Value::Release; ours goes through SetUndefined
 // @0x14241de40
 void FUN_14241de40(Scaleform::GFx::AS3::ValueStack* stack, unsigned n)
 {
     while (n)
     {
         --n;
-        stack->GetTopPtr()->SetUndefined();
+        stack->GetTopPtr()->~Value();
         stack->Release(1);
     }
 }
@@ -5651,20 +5654,19 @@ namespace Scaleform { namespace GFx { namespace AS3
         SparseArray* sa = this;
         if (sa->Length == 0)
             return;
-        if (sa->ValueA.GetSize() == 0)
+        if (sa->ValueA.GetSize() > 0)
         {
-            if (sa->ValueHLowInd == 0)
-            {
-                sa->ValueH.Remove(sa->ValueHLowInd);
-                if (!sa->ValueH.IsEmpty())
-                    sa->ValueHLowInd = sa->ValueH.Begin()->First;
-            }
-        }
-        else
             // The exe (0x142423ef0) inlines RemoveAt: release data[0], memmove the rest down, --Size. Resizing after
             // the memmove would destruct the duplicated tail Value and over-release the last element.
             sa->ValueA.RemoveAt(0);
-        if (!sa->ValueH.IsEmpty())
+        }
+        else if (sa->ValueHLowInd == 0)
+        {
+            sa->ValueH.Remove(sa->ValueHLowInd);
+            if (sa->ValueH.GetSize() > 0)
+                sa->ValueHLowInd = sa->ValueH.Begin()->First;
+        }
+        if (sa->ValueH.GetSize() > 0)
         {
             sa->MoveHashLeft(sa->ValueHLowInd, 1);
             --sa->ValueHLowInd;
