@@ -951,37 +951,28 @@ void Sfr27TraceConvertTopUInt(State* st)
 }
 
 
-// The same traits value as an owned temporary: the exe fills it like TrTraitsScratch and destroys it as a Value.
-// Top*/Reg* still differ: the exe tail-calls the weak-proxy free (jmp [rax+0x60]), which cl does not do while the
-// temporary's address is passed to Assign (likely a /GL effect); Reg* also interleave the two stores differently.
-struct TrTraitsValue : TrTraitsScratch
+// State::ConvertOpTo / ConvertRegisterTo inlined (the store order matches). Top* and Pop2* still differ: the exe
+// tail-calls the weak-proxy free (jmp [rax+0x60]), which cl does not do for an inlined temporary (likely a /GL effect).
+static inline void TrConvertOp(Value& v, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
-    ~TrTraitsValue() { const_cast<Value&>(Get()).~Value(); }
-};
+    v.Assign(Value(tr, isNull));
+}
 
-#define SFR27_TOP_OP(Name, Off) \
+#define SFR27_TOP_OP(Name, Off, Null) \
     void State::Name() \
     { \
-        TrTraitsValue tv; \
-        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
-        OpStack[OpStack.GetSize() - 1].Assign(tv.Get()); \
+        TrConvertOp(OpStack[OpStack.GetSize() - 1], TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Null); \
     }
 #define SFR27_POP2_OP(Name, Off) \
     void State::Name() \
     { \
-        TrPopped popped; \
-        FUN_14251cd30(this, &popped.Get()); \
-        TrTraitsValue tv; \
-        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
-        OpStack[OpStack.GetSize() - 1].Assign(tv.Get()); \
-        popped.Get().~Value(); \
+        Value popped(PopOpValue()); \
+        TrConvertOp(OpStack[OpStack.GetSize() - 1], TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
     }
 #define SFR27_REG_OP(Name, Off) \
     void State::Name(UInt32 ind) \
     { \
-        TrTraitsValue tv; \
-        tv.SetTraits(TrITraits(reinterpret_cast<UPInt>(pTracer), Off)); \
-        Registers[ind].Assign(tv.Get()); \
+        TrConvertOp(Registers[ind], TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
     }
 
 // dxns / dxnslate: the method must set the SETS_DXNS flag (and XML support must be enabled).
@@ -1013,11 +1004,11 @@ static inline void TraceCheckSetsDxns(State* st, const char* disabledName, UInt3
 }
 
 // @0x142532670
-SFR27_TOP_OP(TopNumber, 0x218)
+SFR27_TOP_OP(TopNumber, 0x218, Value::NotNull)
 // @0x142532710
-SFR27_TOP_OP(TopInt, 0x220)
+SFR27_TOP_OP(TopInt, 0x220, Value::NotNull)
 // @0x1425327b0
-SFR27_TOP_OP(TopString, 0x230)
+SFR27_TOP_OP(TopString, 0x230, Value::NullOrNot)
 // @0x142532850
 SFR27_POP2_OP(Pop2Boolean, 0x210)
 // @0x142532930
@@ -1774,11 +1765,9 @@ __declspec(noinline) void Sfr27MultinameFromQName(Multiname* mn, const Value* v)
     mn->Name.Assign(*reinterpret_cast<const ASString*>(q + 0x38));
     if (mn->Name.GetKind() == Value::kString)
     {
-        ASStringNode* node = reinterpret_cast<ASStringNode*>(mn->Name.GetGASRefCountBase());
-        node->AddRef();
-        if (node->Size != 0 && node->pData[0] == '*')
-            mn->Name.Assign(reinterpret_cast<ASStringNode*>(reinterpret_cast<UPInt>(node->pManager) + 0x40));
-        node->Release();
+        ASString name(mn->Name.AsString());
+        if (name.GetSize() != 0 && name.GetBuffer()[0] == '*')
+            mn->Name.Assign(name.GetManager()->CreateEmptyString());
     }
     mn->Obj = reinterpret_cast<GASRefCountBase*>(*reinterpret_cast<UPInt*>(q + 0x40));
     *reinterpret_cast<UInt32*>(mn) &= 0xfffffff9;
@@ -2003,11 +1992,8 @@ void AvmButton::SetHitStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr3
 // @0x1425287c0
 void Sfr31SetDefaultedBounds(char* self, int lo, int hi)
 {
-    if (lo == -1)
-        lo = 0;
-    *reinterpret_cast<int*>(self + 0xac) = lo;
-    if (hi == -1)
-        hi = 1000;
+    *reinterpret_cast<int*>(self + 0xac) = lo == -1 ? 0 : lo;
+    hi = hi == -1 ? 1000 : hi;
     *reinterpret_cast<int*>(self + 0x8c) = hi;
     *reinterpret_cast<int*>(self + 0xa8) = hi;
 }
@@ -2026,8 +2012,8 @@ void Sfr31CallHelperVirtual(UPInt self)
 {
     typedef void (*Fn)(UPInt helper, void* ret, UPInt owner, UPInt arg);
     UPInt helper = *reinterpret_cast<UPInt*>(self + 0x40);
-    char ret[32];
-    (*reinterpret_cast<Fn*>(*reinterpret_cast<UPInt*>(helper) + 0x58))(helper, ret, self, *reinterpret_cast<UPInt*>(self + 0x50));
+    UPInt ret;
+    (*reinterpret_cast<Fn*>(*reinterpret_cast<UPInt*>(helper) + 0x58))(helper, &ret, self, *reinterpret_cast<UPInt*>(self + 0x50));
 }
 
 // Flags the object (virtual 0x30 with 0x20000) after the global init helper, and caches its field 0x60.
@@ -2874,26 +2860,24 @@ const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPI
 // batch 18
 // LinearHeap::allocFromLastPage: bump-allocates from the last page, or (when that page is untouched) replaces it with one
 // big enough for the request.
-// MS2-FUNCTIONAL 0x142532060: functional recovery; codegen differs from exe
 // @0x142532060
 void* Sfr31LinearHeapAllocFromLastPage(UPInt self, UPInt n)
 {
     UPInt page = Sfr31Rd(self, 0x18);
     UPInt used = Sfr31Rd(page, 0x10);
-    if (static_cast<SPInt>(n) <= static_cast<SPInt>(Sfr31Rd(page, 8) - used))
+    if (static_cast<SPInt>(Sfr31Rd(page, 8) - used) >= static_cast<SPInt>(n))
     {
         Sfr31Wr(page, 0x10, used + n);
         return reinterpret_cast<void*>(Sfr31Rd(Sfr31Rd(self, 0x18), 0x10) - n);
     }
     if (used == Sfr31Rd(page, 0))
     {
-        MemoryHeap* heap = reinterpret_cast<MemoryHeap*>(Sfr31Rd(self, 0));
         if (Sfr31Rd(page, 0) != 0)
-            heap->Free(reinterpret_cast<void*>(Sfr31Rd(page, 0)));
+            reinterpret_cast<MemoryHeap*>(Sfr31Rd(self, 0))->Free(reinterpret_cast<void*>(Sfr31Rd(page, 0)));
         UPInt pageSize = Sfr31Rd(self, 8);
         UPInt total = n - 1 + pageSize;
         total -= total % pageSize;
-        UPInt p = reinterpret_cast<UPInt>(heap->Alloc(total, static_cast<const AllocInfo*>(0)));
+        UPInt p = reinterpret_cast<UPInt>(reinterpret_cast<MemoryHeap*>(Sfr31Rd(self, 0))->Alloc(total, static_cast<const AllocInfo*>(0)));
         UPInt cur = Sfr31Rd(self, 0x18);
         Sfr31Wr(cur, 0x10, p);
         Sfr31Wr(Sfr31Rd(self, 0x18), 0, p);
