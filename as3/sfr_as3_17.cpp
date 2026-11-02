@@ -4528,7 +4528,6 @@ void Sfr33MovieRootDoActions(MovieRoot* self)
 }
 
 // Releases the value the slot si binds in obj (a Value, an object pointer or a string node).
-// MS2-FUNCTIONAL 0x1424f6b30: the exe keeps the extra tag bits (1..2) of the object pointer when clearing its mark.
 // @0x1424f6b30
 void Sfr33SlotReleaseMember(const SlotInfo& si, Object& obj)
 {
@@ -4539,8 +4538,19 @@ void Sfr33SlotReleaseMember(const SlotInfo& si, Object& obj)
         reinterpret_cast<Value*>(p)->~Value();
         break;
     case SlotInfo::BT_ObjectAS:
-        reinterpret_cast<SPtr<Object>*>(p)->~SPtr();
+    {
+        // STPtr::~STPtr: the object tag (bits 1..2) is stripped before the release.
+        GASRefCountBase*& pobj = *reinterpret_cast<GASRefCountBase**>(p);
+        if (pobj)
+        {
+            GASRefCountBase* addr = (GASRefCountBase*)((UPInt)pobj & ~(UPInt)Value::ObjectTagMask);
+            if ((UPInt)addr & 1)
+                pobj = (GASRefCountBase*)((UPInt)addr - 1 + GetObjectTag((UPInt)pobj));
+            else
+                addr->Release();
+        }
         break;
+    }
     case SlotInfo::BT_String:
     {
         ASStringNode* node = *reinterpret_cast<ASStringNode**>(p);
