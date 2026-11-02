@@ -3431,6 +3431,7 @@ void CallFrame::ClearScopeStack()
 static SF_INLINE const SlotInfo* Sfr33FindDynamicSlotIn(const SlotContainerType& c, const ASString& name,
                                                         const Instances::Namespace& ns)
 {
+    const SlotInfo* result = NULL;
     const SPInt* values = c.FindValues(name);
     if (values)
     {
@@ -3438,21 +3439,25 @@ static SF_INLINE const SlotInfo* Sfr33FindDynamicSlotIn(const SlotContainerType&
         {
             const SlotInfo& si = c.VArray[static_cast<UInt32>(ind)].Value;
             if (*si.pNs == ns)
-                return &si;
+            {
+                result = &si;
+                break;
+            }
         }
     }
-    return NULL;
+    return result;
 }
 
 // The dynamic slot of c that mn names (the first namespace of a set that has one), or NULL.
-// MS2-FUNCTIONAL 0x142500c40: the exe re-tests the inlined lookup's non-null result (test rbx,rbx; jne) and resets si each
-// namespace; ours knows the slot pointer is non-null and leaves directly.
+// MS2-FUNCTIONAL 0x142500c40: the exe keeps the QName result in rbp and copies it to rbx, saves r15/rsi/rdi only
+// around the namespace-set loop (0x40 frame) and tests the kind as a byte.
 // @0x142500c40
 const SlotInfo* FindDynamicSlot(VM& vm, const SlotContainerType& c, const Multiname& mn)
 {
     ASString name = vm.GetStringManager().CreateEmptyString();
+    const bool ok = mn.Name.Convert2String(name);
     const SlotInfo* si = NULL;
-    if (mn.Name.Convert2String(name))
+    if (ok)
     {
         if (mn.IsQName())
             si = Sfr33FindDynamicSlotIn(c, name, *static_cast<const Instances::Namespace*>(mn.Obj.GetPtr()));
