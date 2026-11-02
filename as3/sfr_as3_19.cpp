@@ -963,15 +963,49 @@ void Sfr27TraceNewObject(State* st, UInt32 propCount)
     s.OpStack().PushBack(t.Get());
 }
 
+// A tracer reader of a compile-time multiname and a value (inlined): the reader fields, the file, the ABC
+// multiname entry, then the value popped off the operand stack.
+struct Sfr27ReadMnCt
+{
+    __forceinline Sfr27ReadMnCt(State* st, UPInt tracer, UPInt idx)
+    {
+        state = st;
+        pops = 0;
+        const UPInt link = TrAbcLink(tracer);
+        file = link;
+        vm = TrRd(link, 0x20);
+        const UPInt abc = TrRd(link, 0x28);
+        UPInt e;
+        if (idx == 0)
+            e = abc + 0xe8;
+        else
+            e = idx * 0x10 + TrRd(abc, 0xb8);
+        mn = reinterpret_cast<const Abc::Multiname*>(e);
+    }
+    UPInt vm;                   // +0x00
+    State* state;               // +0x08
+    int pops;                   // +0x10
+    UPInt file;                 // +0x18
+    const Abc::Multiname* mn;   // +0x20
+};
+struct Sfr27ReadMnCtValue : Sfr27ReadMnCt
+{
+    __forceinline Sfr27ReadMnCtValue(State* st, UPInt tracer, UPInt idx)
+        : Sfr27ReadMnCt(st, tracer, idx), val(st->PopOpValue())
+    {
+        ++pops;
+    }
+    Value val;                  // +0x28
+};
+
+// MS2-FUNCTIONAL 0x142532f20: exact once State::PopOpValue is declared __declspec(noalias) (as3_readargs.h:212); without it the weak-ref Free is a call where the exe tail-jumps.
 // The first operand popped and dropped after noting a register/operand read.
 // @0x142532f20
 void Sfr27TracePopNote(State* st, UInt32 arg)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), arg);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    popped.Get().~Value();
+    Sfr27ReadMnCtValue args(st, s.Tracer(), arg);
 }
 
 // @0x1425379f0
