@@ -1,6 +1,6 @@
-// Recovered CRI Movie helpers from MapleStory2.exe, written from the executable's behavior: the four functions of the
+// Recovered CRI Movie helpers from MapleStory2.exe, written from the executable's behavior: the five functions of the
 // /Od criMvPly objs whose exe objs were compiled as C. VS2008 /Od keeps a value loaded after a call in r11 when it
-// compiles C and in rax when it compiles C++ (FUN_14003cff0 also takes its switch temp through r11b), and these four
+// compiles C and in rax when it compiles C++ (FUN_14003cff0 also takes its switch temp through r11b), and these five
 // only byte-match as C. The rest of those objs is in sfr_cri_03, which
 // can't be C (cri_movie.h is C++). This unit is C (MS2-TOOLSET: vc9c, the VS2008 SP1 cl with /TC,
 // cmake/ms2-unit-profiles.cmake): no headers, C89 declarations at the top of each block, and the parameter types of
@@ -11,6 +11,7 @@
 // MS2-RANGE: 0x14003c390-0x14003c8d0 .text$mn
 // MS2-RANGE: 0x14003cff0-0x14003d4b0 .text$mn
 // MS2-RANGE: 0x14003ed40-0x14003eeb0 .text$mn
+// MS2-RANGE: 0x140042270-0x140042600 .text$mn
 // MS2-RANGE: 0x140042700-0x1400427b0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -404,5 +405,107 @@ void* criVmpv_Create(void* heap, const CriUint32* config)
     hn->Status = 0;
     hn->Active = 1;
     return hn;
+}
+#pragma optimize("", on)
+
+void criMvPlyAmng_DestroyAudioDecoder(void* manager, void* heap, CriSint32 decoderIndex);
+void* criSj_CreateNamedRingBuffer(void* heap, CriUint32 first, CriUint32 second, CriUint32 third, unsigned __int64 name);
+unsigned __int64* FUN_140053340(unsigned __int64 heap, unsigned int channels, unsigned int mode);
+void FUN_1400534d0(void* decoder);
+void FUN_1400534f0(__int64 decoder, unsigned __int64 input);
+void FUN_140053510(__int64 decoder, unsigned int channel, unsigned __int64 output);
+void FUN_140037910(void* owner, const char* message, CriSint32 value);
+void FUN_140037950(void* owner, const char* message, CriSint32 value);
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:criMvPlyAmng_DestroyAudioDecoder=?criMvPlyAmng_DestroyAudioDecoder@@YAXPEAX0J@Z")
+#pragma comment(linker, "/alternatename:criSj_CreateNamedRingBuffer=?criSj_CreateNamedRingBuffer@@YAPEAXPEAXKKK_K@Z")
+#pragma comment(linker, "/alternatename:?criMvPlyAmng_CreateAudioDecoder@@YAJPEAX00PEBKKJ@Z=criMvPlyAmng_CreateAudioDecoder")
+#endif
+
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+typedef struct AudioStreamFields { CriUint8 Reserved00[0x64c]; struct { CriUint32 Enabled; CriUint8 Reserved04[0xc]; } Streams[1]; } AudioStreamFields;
+typedef struct AudioOwnerFields { CriUint8 Reserved00[0xe18]; CriUint32 OutputMode; CriUint32 Width; } AudioOwnerFields;
+typedef struct AudioDecoderFields
+{
+    CriUint32 State;
+    CriUint32 Signature;
+    CriUint32 StreamIndex;
+    CriUint8 Reserved0C[4];
+    void* Decoder;
+    CriUint32 ChannelCount;
+    CriUint32 ChannelFormat;
+    CriUint32 WorkCount;
+    CriUint8 Reserved24[4];
+    void* InputJoint;
+    void* Outputs[8];
+    CriUint32 Sizes[8];
+    CriSint32 Word90;
+    CriUint8 Reserved94[4];
+} AudioDecoderFields;
+
+// allocate and wire one CRI audio decoder into the manager's channel table
+// @0x140042270
+CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap, const CriUint32* decoderConfig,
+                      CriUint32 streamIndex, CriSint32 decoderIndex)
+{
+    // locals named so vc9's name-hash slot order matches the exe's (names that share a bucket are declared in
+    // reverse slot order): the chunk bytes, the channel, the audio decoder, the per-channel samples, the handle and
+    // the stream bytes
+    CriUint32 chk;
+    CriUint32 i;
+    void* ptr;
+    AudioDecoderFields* hn;
+    CriUint32 size;
+    CriUint32 bytes;
+    if (((AudioStreamFields*)owner)->Streams[streamIndex].Enabled <= 0)
+        return 0;
+    hn = (AudioDecoderFields*)criHeap_AllocFix(heap, 0x98, "CriMvPly: CriMvPlyAdecObj", 4);
+    ((AudioTrackSet*)manager)->Tracks[decoderIndex] = hn;
+    if (hn == 0)
+    {
+        criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
+        FUN_140037950(owner, "E07090702M : Can't allocate CriMvPlyAdec handle.", 8);
+        return 0;
+    }
+    memset(hn, 0, 0x98);
+    hn->State = 1;
+    hn->Word90 = 0;
+    hn->Signature = 0x40534641;
+    hn->StreamIndex = streamIndex;
+    hn->ChannelCount = decoderConfig[1];
+    hn->ChannelFormat = decoderConfig[0];
+    hn->WorkCount = decoderConfig[3];
+    if (((AudioOwnerFields*)owner)->OutputMode == 0)
+        ptr = FUN_140053340((unsigned __int64)heap, hn->ChannelCount, 0);
+    else
+        ptr = FUN_140053340((unsigned __int64)heap, hn->ChannelCount, 1);
+    hn->Decoder = ptr;
+    if (ptr == 0)
+    {
+        criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
+        FUN_140037910(owner, "E05063014M : Can't create Audio decoder.", 0);
+        return 0;
+    }
+    FUN_1400534d0(ptr);
+    hn->InputJoint = ((AudioTrackSet*)manager)->Configuration;
+    for (i = 0; i < hn->ChannelCount; i++)
+    {
+        size = ((AudioOwnerFields*)owner)->Width * 0xc80 / decoderConfig[1];
+        bytes = decoderConfig[3] * ((AudioOwnerFields*)owner)->Width + size * ((AudioOwnerFields*)owner)->Width;
+        chk = ((AudioOwnerFields*)owner)->Width * 0x840;
+        hn->Sizes[i] = bytes + chk;
+        hn->Outputs[i] = criSj_CreateNamedRingBuffer(heap, bytes, chk, 4, (unsigned __int64)"CriMvPly: AoutBuf");
+        if (hn->Outputs[i] == 0)
+        {
+            criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
+            FUN_140037910(owner, "E05063018M : Can't create SJ for output audio.", 0);
+            return 0;
+        }
+    }
+    FUN_1400534f0((__int64)ptr, (unsigned __int64)hn->InputJoint);
+    for (i = 0; i < hn->ChannelCount; i++)
+        FUN_140053510((__int64)ptr, i, (unsigned __int64)hn->Outputs[i]);
+    ((AudioTrackSet*)manager)->Count = ((AudioTrackSet*)manager)->Count + 1;
+    return 1;
 }
 #pragma optimize("", on)

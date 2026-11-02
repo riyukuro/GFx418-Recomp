@@ -10,7 +10,8 @@
 // MS2-RANGE: 0x14003b6e0-0x14003c390 .text$mn
 // MS2-RANGE: 0x14003c8d0-0x14003cff0 .text$mn
 // MS2-RANGE: 0x14003d4b0-0x14003ed40 .text$mn
-// MS2-RANGE: 0x14003eeb0-0x140042700 .text$mn
+// MS2-RANGE: 0x14003eeb0-0x140042270 .text$mn
+// MS2-RANGE: 0x140042600-0x140042700 .text$mn
 // MS2-RANGE: 0x1400427b0-0x140044e84 .text$mn
 // MS2-RANGE: 0x142ccb000-0x142ccd143 .text$mn
 // MS2-PINS-BEGIN tplpin
@@ -2607,87 +2608,6 @@ void* criMvPlyAmng_Create(void* owner, void* heap, const void* config)
     return p;
 }
 #pragma intrinsic(memset)
-
-// MS2-FUNCTIONAL: allocate and wire one CRI audio decoder into the manager's channel table.
-// @0x140042270
-CriBool criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap, const CriUint32* decoderConfig,
-                      CriUint32 streamIndex, CriSint32 decoderIndex)
-{
-    CriUint32 enabled;
-    memcpy(&enabled, (CriUint8*)owner + 0x64c + (size_t)streamIndex * 0x10, sizeof(enabled));
-    if (!enabled)
-        return 0;
-    CriUint8* decoder = (CriUint8*)criHeap_AllocFix((CriHeap)heap, 0x98,
-                                                  "CriMvPly: CriMvPlyAdecObj", 4);
-    memcpy((CriUint8*)manager + (size_t)decoderIndex * sizeof(void*), &decoder, sizeof(decoder));
-    if (!decoder)
-    {
-        criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-        FUN_140037950(owner, "E07090702M : Can't allocate CriMvPlyAdec handle.", 8);
-        return 0;
-    }
-    memset(decoder, 0, 0x98);
-    CriUint32 state = 1;
-    CriUint32 signature = 0x40534641;
-    memcpy(decoder, &state, sizeof(state));
-    memcpy(decoder + 4, &signature, sizeof(signature));
-    memcpy(decoder + 8, &streamIndex, sizeof(streamIndex));
-    CriUint32 channelCount, channelFormat, workCount;
-    memcpy(&channelCount, decoderConfig + 1, sizeof(channelCount));
-    memcpy(&channelFormat, decoderConfig, sizeof(channelFormat));
-    memcpy(&workCount, decoderConfig + 3, sizeof(workCount));
-    memcpy(decoder + 0x18, &channelCount, sizeof(channelCount));
-    memcpy(decoder + 0x1c, &channelFormat, sizeof(channelFormat));
-    memcpy(decoder + 0x20, &workCount, sizeof(workCount));
-    CriUint32 outputMode;
-    memcpy(&outputMode, (CriUint8*)owner + 0xe18, sizeof(outputMode));
-    void* audioDecoder = FUN_140053340((unsigned __int64)heap, channelCount, outputMode == 0 ? 0 : 1);
-    memcpy(decoder + 0x10, &audioDecoder, sizeof(audioDecoder));
-    if (!audioDecoder)
-    {
-        criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-        FUN_140037910(owner, "E05063014M : Can't create Audio decoder.", 0);
-        return 0;
-    }
-    FUN_1400534d0(audioDecoder);
-    void* inputJoint;
-    memcpy(&inputJoint, (CriUint8*)manager + 0x18, sizeof(inputJoint));
-    memcpy(decoder + 0x28, &inputJoint, sizeof(inputJoint));
-    CriUint32 decoderWidth;
-    memcpy(&decoderWidth, (CriUint8*)owner + 0xe1c, sizeof(decoderWidth));
-    CriUint32 streamBytes = workCount * decoderWidth +
-                            (decoderWidth * 0xc80 / channelCount) * decoderWidth;
-    CriUint32 chunkBytes = decoderWidth * 0x840;
-    for (CriUint32 channel = 0; channel < channelCount; ++channel)
-    {
-        CriUint32 perChannelBytes = streamBytes + chunkBytes;
-        memcpy(decoder + 0x70 + (size_t)channel * sizeof(CriUint32),
-               &perChannelBytes, sizeof(perChannelBytes));
-        void* output = NULL;
-        output = ((void* (*)(void*, CriUint32, CriUint32, CriUint32, CriUint64))criSj_CreateNamedRingBuffer)(
-            heap, streamBytes, chunkBytes, 4,
-            (CriUint64)(uintptr_t)"CriMvPly: AoutBuf");
-        memcpy(decoder + 0x30 + (size_t)channel * sizeof(void*), &output, sizeof(output));
-        if (!output)
-        {
-            criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-            FUN_140037910(owner, "E05063018M : Can't create SJ for output audio.", 0);
-            return 0;
-        }
-    }
-    FUN_1400534f0((__int64)audioDecoder, (unsigned __int64)inputJoint);
-    for (CriUint32 channel = 0; channel < channelCount; ++channel)
-    {
-        void* output = NULL;
-        memcpy(&output, decoder + 0x30 + (size_t)channel * sizeof(void*), sizeof(output));
-        FUN_140053510((__int64)audioDecoder, channel, (unsigned __int64)output);
-    }
-    CriSint32 count;
-    memcpy(&count, (CriUint8*)manager + 0x10, sizeof(count));
-    ++count;
-    memcpy((CriUint8*)manager + 0x10, &count, sizeof(count));
-    return 1;
-}
 #pragma optimize("", on)
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
