@@ -1149,7 +1149,7 @@ MovieRoot::ActionEntry* MovieRoot::ActionQueueType::PrependEntry(ActionLevel lvl
 }
 
 // @0x1425189a0
-void AvmDisplayObj::OnDetachFromTimeline()
+SF_NOINLINE void AvmDisplayObj::OnDetachFromTimeline()
 {
     pAS3RawPtr = GetAS3Obj();
     reinterpret_cast<SPtr<Instances::fl_display::DisplayObject>&>(pAS3CollectiblePtr) = NULL;
@@ -2354,6 +2354,14 @@ bool AvmSprite::OnEvent(const EventId& id)
     return AvmInteractiveObj::OnEvent(id);
 }
 
+static __forceinline AvmInteractiveObj* Sfr34_AvmParent(const AvmDisplayObj* avm)
+{
+    InteractiveObject* parent = avm->pDispObj->GetParent();
+    if (!parent)
+        return NULL;
+    return static_cast<AvmInteractiveObj*>(parent->GetAvmIntObj());
+}
+
 // The object is the stage, or its topmost AS3 ancestor is.
 // MS2-FUNCTIONAL parent walk via ToAvmInteractiveObj; the exe re-reads the parent each step
 // @0x142514d20
@@ -2361,13 +2369,12 @@ bool AvmDisplayObj::IsStageAccessible() const
 {
     if (pDispObj->IsInteractiveObject() && ToAvmInteractiveObj(static_cast<InteractiveObject*>(pDispObj))->IsStage())
         return true;
-    AvmInteractiveObj* p = ToAvmInteractiveObj(pDispObj->GetParent());
-    while (p)
+    AvmInteractiveObj* p = Sfr34_AvmParent(this);
+    for (; p && Sfr34_AvmParent(p); p = Sfr34_AvmParent(p))
+        ;
+    if (p)
     {
-        AvmInteractiveObj* pp = ToAvmInteractiveObj(p->pDispObj->GetParent());
-        if (!pp)
-            return p->IsStage();
-        p = pp;
+        return p->IsStage();
     }
     return false;
 }
@@ -2523,8 +2530,22 @@ template void Hash<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*>::Remove(GFx
 template void HashDH<GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key, GFx::AS3::ClassTraits::Traits*,
     GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key::HashFunctor, 329>::BaseType::Remove(
     const GFx::AS3::MultinameHash<GFx::AS3::ClassTraits::Traits*, 329>::Key&);
-// MS2-FUNCTIONAL 0x1425224f0: codegen, the exe resizes to 0 through Resize when the last element goes
-template void ArrayBase<ArrayData<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt);
+// Clear goes through a member pointer: the exe tail-calls ResizeNoConstruct, which cl otherwise inlines.
+template <>
+__declspec(dllexport) void ArrayBase<ArrayData<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt index)
+{
+    if (Data.Size == 1)
+    {
+        typedef ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy> Base;
+        (Data.*&Base::ResizeNoConstruct)(&Data, 0);
+    }
+    else
+    {
+        AllocatorType::Destruct(Data.Data + index);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + 1, Data.Size - 1 - index);
+        --Data.Size;
+    }
+}
 template void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::PopBack(UPInt);
 template GFx::AS3::Value& ArrayBase<ArrayData<GFx::AS3::Value, AllocatorLH<GFx::AS3::Value, 331>, ArrayDefaultPolicy> >::PushDefault();
 template void ArrayData<char, AllocatorGH<char, 2>, ArrayDefaultPolicy>::PushBack(const char&);
@@ -3043,19 +3064,36 @@ void AvmDisplayObjContainer::PropagateEvent(const Instances::fl_events::Event& e
 
 // What follows the removal of ch from the display list: the AS3 side gets "removed", ch loses its parent and
 // leaves the play list branch, and a timeline child stops being one.
+static __forceinline AvmDisplayObj* Sfr34_ToAvmOrNull(DisplayObjectBase* p)
+{
+    if (!p)
+        return NULL;
+    return ToAvmDisplayObj(p);
+}
+
+static __forceinline bool Sfr34_IsTimelineObject(const DisplayObject* dobj)
+{
+    return (dobj->Flags & DisplayObject::Mask_TimelineObject) != 0;
+}
+
+static __forceinline void Sfr34_SetTimelineObject(DisplayObject* dobj, bool v)
+{
+    (v) ? dobj->Flags |= DisplayObject::Mask_TimelineObject : dobj->Flags &= (~DisplayObject::Mask_TimelineObject);
+}
+
 static __forceinline void Sfr34_AfterChildRemoved(DisplayObjectBase* ch)
 {
     InteractiveObject* pio  = ch->IsInteractiveObject() ? static_cast<InteractiveObject*>(ch) : NULL;
     DisplayObjectBase* sch  = ch->IsScriptableObject() ? ch : NULL;
-    AvmDisplayObj*     pavm = sch ? ToAvmDisplayObj(sch) : NULL;
+    AvmDisplayObj*     pavm = Sfr34_ToAvmOrNull(sch);
     pavm->OnRemoved(false);
     ch->pParent = NULL;
     if (pio && pio->IsInPlayList())
         ToAvmInteractiveObj(pio)->MoveBranchInPlayList();
     DisplayObject* dobj = static_cast<DisplayObject*>(ch);
-    if (dobj->Flags & DisplayObject::Mask_TimelineObject)
+    if (Sfr34_IsTimelineObject(dobj))
     {
-        dobj->Flags &= ~DisplayObject::Mask_TimelineObject;
+        Sfr34_SetTimelineObject(dobj, false);
         dobj->SetAcceptAnimMoves(false);
         ch->CreateFrame = 0;
         ch->Depth       = -1;
@@ -3063,17 +3101,17 @@ static __forceinline void Sfr34_AfterChildRemoved(DisplayObjectBase* ch)
     }
 }
 
-// MS2-FUNCTIONAL the exe merges the not-found return into the release of the held reference
 // @0x142522570
 DisplayObjectBase* AvmDisplayObjContainer::RemoveChild(DisplayObjectBase* ch)
 {
     Ptr<DisplayObjectBase> hold = ch;
-    DisplayObjContainer*   cont = GetDisplayObjContainer();
-    SPInt                  index = cont->mDisplayList.FindDisplayIndex(ch);
-    if (index < 0)
+    DisplayList&           displayList = GetDisplayObjContainer()->mDisplayList;
+    SPInt                  index = displayList.FindDisplayIndex(ch);
+    if (index >= 0)
+        displayList.RemoveEntryAtIndex(pDispObj, UPInt(index));
+    else
         return NULL;
-    cont->mDisplayList.RemoveEntryAtIndex(pDispObj, UPInt(index));
-    cont->mDisplayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
+    displayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
     Sfr34_AfterChildRemoved(ch);
     return ch;
 }
@@ -3082,12 +3120,12 @@ DisplayObjectBase* AvmDisplayObjContainer::RemoveChild(DisplayObjectBase* ch)
 // @0x1425226a0
 void AvmDisplayObjContainer::RemoveChildAt(unsigned index)
 {
-    DisplayObjContainer* cont = GetDisplayObjContainer();
-    if (index >= unsigned(cont->mDisplayList.GetCount()))
+    if (index >= unsigned(GetDisplayObjContainer()->mDisplayList.GetCount()))
         return;
-    Ptr<DisplayObjectBase> hold = cont->mDisplayList.GetDisplayObject(index);
-    cont->mDisplayList.RemoveEntryAtIndex(pDispObj, index);
-    cont->mDisplayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
+    DisplayList&           displayList = GetDisplayObjContainer()->mDisplayList;
+    Ptr<DisplayObjectBase> hold = displayList.GetDisplayObject(index);
+    displayList.RemoveEntryAtIndex(pDispObj, index);
+    displayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
     Sfr34_AfterChildRemoved(hold.GetPtr());
 }
 
@@ -3149,19 +3187,25 @@ DisplayObjectBase::TopMostResult Sfr34_ShapeObjectView::GetTopMostMouseEntity(co
 }
 
 // Inside the image's rect (in twips, from the origin).
-// MS2-FUNCTIONAL member of a layout view (AvmBitmap is opaque in the shared header)
+// Member of a layout view (AvmBitmap is opaque in the shared header)
 // @0x14251c9f0
+#pragma strict_gs_check(push, on)
 bool Sfr34_AvmBitmapView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) const
 {
     SF_UNUSED(hitTestMask);
-    if (!pImage)
-        return false;
-    Render::ImageRect r = pImage->GetImage()->GetRect();
-    RectF bounds(0.0f);
-    bounds.x2 = bounds.x1 + float(r.Width()) * 20.0f;
-    bounds.y2 = bounds.y1 + float(r.Height()) * 20.0f;
-    return bounds.Contains(pt);
+    if (pImage)
+    {
+        Render::ImageRect rect = pImage->GetImage()->GetRect();
+        RectF r(0, 0,
+            Render::Size<float>(PixelsToTwips((float)rect.Width()), PixelsToTwips((float)rect.Height())));
+        if (r.Contains(pt))
+        {
+            return true;
+        }
+    }
+    return false;
 }
+#pragma strict_gs_check(pop)
 
 } } } // namespace Scaleform::GFx::AS3
 
@@ -4309,8 +4353,26 @@ void FUN_14251b190(FlashUI* ui, SInt64 v)
 
 } } } // namespace Scaleform::GFx::AS3
 
+// Clear goes through a member pointer: the exe calls the out-of-line 0x1424ef2a0, which cl otherwise inlines.
+namespace Scaleform {
+template <>
+__forceinline void ArrayBase<ArrayData<GFx::AS3::VMAbcFile*, AllocatorLH_POD<GFx::AS3::VMAbcFile*, GFx::AS3::StatMV_VM_VM_Mem>,
+                                       ArrayDefaultPolicy> >::RemoveAt(UPInt index)
+{
+    if (Data.Size == 1)
+    {
+        (this->*&ArrayBase::Clear)();
+    }
+    else
+    {
+        AllocatorType::Destruct(Data.Data + index);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + 1, Data.Size - 1 - index);
+        --Data.Size;
+    }
+}
+}
+
 // VM::RemoveVMAbcFileWeak: forgets file unless the VM is being destroyed.
-// MS2-FUNCTIONAL declared over a void pointer by its caller (sfr_as3_15)
 // @0x142522a60
 bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file)
 {
@@ -4798,7 +4860,7 @@ static inline Value Sfr34_Closure(UInt32 kind, const void* p1, Object* obj)
 // @0x14250ba10
 void FUN_14250ba10(const VTable* vt, Value& result, AbsoluteIndex ind, Object* obj)
 {
-    const Value& m = vt->VTMethods[ind.Get()];
+    const Value& m = vt->VTMethods[static_cast<UInt32>(ind.Get())];
     switch (m.GetKind())
     {
     case Value::kThunk:
@@ -5042,49 +5104,81 @@ InstanceTraits::Traits& FUN_142509e30(VM& vm, const ThunkInfo& ti)
 // VM::GetFunctReturnType(const Value&): the return type of a thunk (or thunk closure / thunk function), of a method
 // by index (in its traits' ABC file), of a VTable slot (or VTable index closure) and of a function; Object for
 // other values and unknown classes.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class); the exe re-tests the kind after the VTable lookup
+// MS2-FUNCTIONAL free function (not declared in the shared VM class); same length, exe keeps v in rdi and the kind in ebx
 // @0x14250a060
 InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
 {
-    const Value*          m = &v;
-    VMAbcFile*            file;
-    const Abc::Multiname* mn;
-    switch (v.GetKind())
+    const Value::KindType kind = v.GetKind();
+
+    switch (kind)
     {
-    case Value::kThunk:
-    case Value::kThunkClosure:
-        return FUN_142509e30(vm, v.AsThunk());
-    case Value::kVTableInd:
-    case Value::kVTableIndClosure:
-        m = &v.GetTraits().GetVT().VTMethods[UInt32(v.GetVTableInd())];
-        if (m->GetKind() != Value::kMethodInd)
-            return FUN_142509e30(vm, m->AsThunk());
-        // fall through
-    case Value::kMethodInd:
-    {
-        const SInt32 ind = m->GetMethodInd();
-        file = m->GetTraits().GetFilePtr();
-        const Abc::File& abc = file->GetAbcFile();
-        mn = &reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
-        break;
-    }
     case Value::kFunction:
     {
-        const Traits& ftr = v.AsFunction().GetTraits();
-        mn   = static_cast<const Abc::Multiname*>(FUN_142416e70(reinterpret_cast<const char*>(&ftr)));
-        file = *reinterpret_cast<VMAbcFile* const*>(reinterpret_cast<const char*>(&ftr) + 0xf0);
-        break;
+        const Instances::Function& f = v.AsFunction();
+        const Abc::Multiname* rt = static_cast<const Abc::Multiname*>(
+            FUN_142416e70(reinterpret_cast<const char*>(&f.GetTraits())));
+        VMAbcFile* file = *reinterpret_cast<VMAbcFile* const*>(reinterpret_cast<const char*>(&f.GetTraits()) + 0xf0);
+        const ClassTraits::Traits* ctr = FUN_142524f60(vm, *file, *rt);
+
+        if (ctr)
+            return ctr->GetInstanceTraits();
     }
+    break;
+    case Value::kVTableInd:
+    case Value::kVTableIndClosure:
+    {
+        const Value& real_func = v.GetTraits().GetVT().VTMethods[UInt32(v.GetVTableInd())];
+
+        // The vtable stores a MethodInd or a thunk.
+        if (real_func.GetKind() == Value::kMethodInd)
+        {
+            const SInt32 ind = real_func.GetMethodInd();
+            VMAbcFile& file = *real_func.GetTraits().GetFilePtr();
+            const Abc::File& abc = file.GetAbcFile();
+            const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
+            const ClassTraits::Traits* ctr = FUN_142524f60(vm, file, rt);
+
+            if (ctr)
+                return ctr->GetInstanceTraits();
+        }
+        else
+        {
+            switch (kind)
+            {
+            case Value::kVTableInd:
+                return FUN_142509e30(vm, real_func.AsThunk());
+            case Value::kVTableIndClosure:
+                return FUN_142509e30(vm, real_func.AsThunk());
+            default:
+                break;
+            }
+        }
+    }
+    break;
+    case Value::kMethodInd:
+    {
+        const SInt32 ind = v.GetMethodInd();
+        VMAbcFile& file = *v.GetTraits().GetFilePtr();
+        const Abc::File& abc = file.GetAbcFile();
+        const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
+        const ClassTraits::Traits* ctr = FUN_142524f60(vm, file, rt);
+
+        if (ctr)
+            return ctr->GetInstanceTraits();
+    }
+    break;
+    case Value::kThunk:
+        return FUN_142509e30(vm, v.AsThunk());
     case Value::kThunkFunction:
         return FUN_142509e30(vm, **reinterpret_cast<const ThunkInfo* const*>(
                                      reinterpret_cast<const char*>(&v.AsThunkFunction()) + 0x40));
+    case Value::kThunkClosure:
+        return FUN_142509e30(vm, v.AsThunk());
     default:
-        return vm.GetClassTraitsObject().GetInstanceTraits();
+        break;
     }
-    ClassTraits::Traits* ct = FUN_142524f60(vm, *file, *mn);
-    if (!ct)
-        return vm.GetClassTraitsObject().GetInstanceTraits();
-    return ct->GetInstanceTraits();
+
+    return vm.GetClassTraitsObject().GetInstanceTraits();
 }
 
 // sfr34 batch Y: type tests of values (against class traits and by class name) and the push of a value onto an
