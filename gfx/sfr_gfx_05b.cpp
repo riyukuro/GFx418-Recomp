@@ -1323,48 +1323,58 @@ inline bool MovieImpl::IsFocused(const InteractiveObject* ch, unsigned controlle
 
 // After the children, the drawn shapes: they hit for a button-like clip (or its hit area holder) or when testing all;
 // a hit area then decides (in AS2 only when it is inside this clip).
-// MS2-FUNCTIONAL: cl shrink-wraps the frame (chained unwind) where the exe saves the registers up front
 // @0x1425db4b0
 Sprite::TopMostResult Sprite::GetTopMostMouseEntity(const PointF& pt, TopMostDescr* pdescr)
 {
     TopMostResult res = DisplayObjContainer::GetTopMostMouseEntity(pt, pdescr);
-    if (res != TopMost_Continue || !pDrawingAPI)
-        return res;
-
-    Sprite* phitAreaHolder = GetHitAreaHolder();
-    if (!(HasAvmObject() && GetAvmIntObj()->ActsAsButton()) && !pdescr->TestAll &&
-        !(phitAreaHolder && phitAreaHolder->HasAvmObject() && phitAreaHolder->GetAvmIntObj()->ActsAsButton()))
-        return res;
-    if (!pDrawingAPI->DefPointTestLocal(pdescr->LocalPt, true, this))
-        return res;
-    if (phitAreaHolder && phitAreaHolder->HasAvmObject() && phitAreaHolder->GetAvmIntObj()->ActsAsButton())
+    if (res == TopMost_Continue && pDrawingAPI)
     {
-        pdescr->pResult = phitAreaHolder;
-        return TopMost_Found;
-    }
-
-    Sprite* phitArea = GetHitArea();
-    if (!phitArea)
-    {
-        pdescr->pResult = this;
-        return TopMost_Found;
-    }
-    if (pASRoot->AVMVersion == 1)
-    {
-        for (InteractiveObject* p = phitArea->GetParent();; p = p->GetParent())
+        Sprite* phitAreaHolder = GetHitAreaHolder();
+        if ((HasAvmObject() && GetAvmIntObj()->ActsAsButton()) || pdescr->TestAll ||
+            (phitAreaHolder && phitAreaHolder->HasAvmObject() && phitAreaHolder->GetAvmIntObj()->ActsAsButton()))
         {
-            if (!p)
+            if (pDrawingAPI->DefPointTestLocal(pdescr->LocalPt, true, this))
             {
-                pdescr->pResult = 0;
-                return TopMost_FoundNothing;
+                if (phitAreaHolder && phitAreaHolder->HasAvmObject() && phitAreaHolder->GetAvmIntObj()->ActsAsButton())
+                {
+                    pdescr->pResult = phitAreaHolder;
+                    return TopMost_Found;
+                }
+
+                Sprite* phitArea = GetHitArea();
+                if (pASRoot->AVMVersion == 1)
+                {
+                    if (phitArea)
+                    {
+                        InteractiveObject* parent = phitArea;
+                        do
+                        {
+                            parent = parent->GetParent();
+                        } while (parent && parent != this);
+                        if (!parent)
+                        {
+                            pdescr->pResult = 0;
+                            return TopMost_FoundNothing;
+                        }
+                        return phitArea->GetTopMostMouseEntity(pdescr->LocalPt, pdescr);
+                    }
+                    pdescr->pResult = this;
+                    return TopMost_Found;
+                }
+                if (phitArea)
+                {
+                    if (!pdescr->pResult || pdescr->pResult == this || !pdescr->pResult->IsInteractiveObject())
+                        return phitArea->GetTopMostMouseEntity(pdescr->LocalPt, pdescr);
+                }
+                else
+                {
+                    pdescr->pResult = this;
+                    return TopMost_Found;
+                }
             }
-            if (p == this)
-                break;
         }
     }
-    else if (pdescr->pResult && pdescr->pResult != this && pdescr->pResult->IsInteractiveObject())
-        return res;
-    return phitArea->GetTopMostMouseEntity(pdescr->LocalPt, pdescr);
+    return res;
 }
 
 // Key down also fires the on(keyPress) handlers, once per key (pkeyMask bit 0x10000); Enter or Space on the
