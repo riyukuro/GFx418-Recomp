@@ -12,6 +12,16 @@
 #include "ms2/scaleform/include/kernel/sf_msgformat.h"
 #include <windows.h>
 #include <sys/timeb.h>
+
+// ValueH's GetAlt is out of line in the exe (0x1423e87e0, instantiated in sfr_as3_01c).
+namespace Scaleform {
+template <> template <>
+const MS2_SparseValueNode*
+HashSetBase<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF, MS2_SparseValueNode::NodeAltHashF,
+            AllocatorDH<MS2_SparseValueNode, Stat_Default_Mem>,
+            HashsetCachedNodeEntry<MS2_SparseValueNode, MS2_SparseValueNode::NodeHashF>>::
+    GetAlt<UPInt>(const UPInt& key) const;
+} // namespace Scaleform
 #undef GetObject
 
 // The exe calls these ResizeNoConstruct instances out of line (explicitly instantiated in sfr_as3_04).
@@ -1442,21 +1452,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
-    // HashDH<UPInt, Value>::Get with the exe's out-of-line GetAlt.
-    static SF_INLINE const Value* SparseHashGet(const HashDH<UPInt, Value>& h, const UPInt& key)
-    {
-        typedef HashNode<UPInt, Value, FixedSizeHash<UPInt> > NodeT;
-        typedef decltype(h.mHash) ContT;
-        // The exe calls GetAlt out of line (0x1423e87e0); going through a member pointer keeps cl from inlining it.
-        const NodeT* (ContT::*getAlt)(const UPInt&) const = &ContT::GetAlt<UPInt>;
-        const NodeT* p = (h.mHash.*getAlt)(key);
-        if (p)
-            return &p->Second;
-        return 0;
-    }
-
     // MS2-FUNCTIONAL: the exe keeps the node->value null select as a cmove before the test; ours folds it into the branch
-    // (GetAlt is out of line in both now)
     // @0x142405480
     const Value& SparseArray::At(UPInt ind) const
     {
@@ -1468,7 +1464,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         {
             const Value* vp;
 
-            if ((vp = SparseHashGet(ValueH, ind)) != NULL)
+            if ((vp = ValueH.Get(ind)) != NULL)
                 return *vp;
             else
                 return DefaultValue;
@@ -2056,9 +2052,7 @@ static SF_INLINE const Value& saAt03(const SparseArray& sa, UPInt ind)
         return sa.ValueA[ind];
     if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
     {
-        const HashNode<UPInt, Value, FixedSizeHash<UPInt> >* p = sa.ValueH.mHash.GetAlt(ind);
-        const Value* v = p ? &p->Second : 0;
-        if (v)
+        if (const Value* v = sa.ValueH.Get(ind))
             return *v;
     }
     return sa.DefaultValue;
@@ -2483,12 +2477,12 @@ namespace InstanceTraits { namespace fl
 namespace Instances { namespace fl
 {
     // "Invalid Date" for the prototype.
-    // MS2-FUNCTIONAL: stack frame differs (exe keeps the buffer cookie layout differently)
     // @0x1424025b0
     void Date::AS3toString(ASString& result)
     {
-        StringManager& sm = GetVM().GetStringManager();
-        if (this == &GetTraits().GetConstructor().GetPrototype())
+        const Traits& tr = GetTraits();
+        StringManager& sm = tr.GetVM().GetStringManager();
+        if (this == &FUN_142508460(&tr).GetPrototype())
         {
             result = sm.CreateConstString("Invalid Date");
             return;
