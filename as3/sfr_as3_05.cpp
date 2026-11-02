@@ -10,6 +10,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
 #include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
+#include "ms2/scaleform/include/gfx/gfx_asutils.h"
 #include <math.h>
 #include <string.h>
 
@@ -1840,7 +1841,6 @@ namespace ClassTraits { namespace fl_display
 // ---- core natives: Date, Error, QName, RegExp, Math, global functions ----
 
 
-void  FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);                            // URL-style unescape of a string
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -1966,7 +1966,7 @@ namespace Instances { namespace fl
         if (argv[0].Convert2String(str))
         {
             String out;
-            FUN_1425e4ad0(str.ToCStr(), str.GetSize(), &out);
+            ASUtils::AS3::Unescape(str.ToCStr(), str.GetSize(), out);
             result.Assign(sm.CreateString(out));
         }
     }
