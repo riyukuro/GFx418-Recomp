@@ -44,17 +44,18 @@ enum { Builtin_gfxExtensions = 71, Builtin_noInvisibleAdvance = 72, Builtin_cont
 // @0x142953210
 bool GASGlobalObject::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
 {
-    if (name.GetNode() != psc->GetBuiltin(Builtin_gfxExtensions).GetNode())
-        return Object::GetMemberRaw(psc, name, val);
-    UByte ext = pContext->GFxExtensions.Value;
-    val->DropRefs();
-    if (ext)
+    if (name.GetNode() == psc->GetBuiltin(Builtin_gfxExtensions).GetNode())
     {
-        val->SetBool(ext == Bool3W::B3W_True);
-        return true;
+        UByte ext = pContext->GFxExtensions.Value;
+        if (ext)
+        {
+            val->SetBool(ext == Bool3W::B3W_True);
+            return true;
+        }
+        val->SetUndefined();
+        return false;
     }
-    val->SetUndefined();
-    return false;
+    return Object::GetMemberRaw(psc, name, val);
 }
 
 // Assigning gfxExtensions switches the extensions (and the gfxVersion member) on or off; with them on,

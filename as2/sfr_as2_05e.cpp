@@ -61,16 +61,31 @@ TextFieldObject* AvmTextField::GetTextFieldASObject()
     return ASTextFieldObj;
 }
 
+// The exe calls the definition's GetBoundsLocal (slot 7) and GetRectBoundsLocal (slot 8) without loading a
+// morph ratio into xmm2.
+struct Sfr05eBoundsLocalView
+{
+    virtual void Slot0() = 0;
+    virtual void Slot1() = 0;
+    virtual void Slot2() = 0;
+    virtual void Slot3() = 0;
+    virtual void Slot4() = 0;
+    virtual void Slot5() = 0;
+    virtual void Slot6() = 0;
+    virtual RectF GetBoundsLocal() const = 0;
+    virtual RectF GetRectBoundsLocal() const = 0;
+};
+
 // @0x1429498a0
 RectF GenericDisplayObj::GetBounds(const Matrix& t) const
 {
-    return t.EncloseTransform(pDef->GetBoundsLocal());
+    return t.EncloseTransform(reinterpret_cast<const Sfr05eBoundsLocalView*>(pDef.GetPtr())->GetBoundsLocal());
 }
 
 // @0x142954cb0
 RectF GenericDisplayObj::GetRectBounds(const Matrix& t) const
 {
-    return t.EncloseTransform(pDef->GetRectBoundsLocal());
+    return t.EncloseTransform(reinterpret_cast<const Sfr05eBoundsLocalView*>(pDef.GetPtr())->GetRectBoundsLocal());
 }
 
 // @0x142956ad0

@@ -42,7 +42,7 @@ public:
 // @0x14294bea0
 bool AvmButton::GetMember(Environment* penv, const ASString& name, Value* pval)
 {
-    if (name.GetHashFlags() & ASConstString::Flag_StandardMember)
+    if ((UByte)(name.GetHashFlags() >> 29) & 1) // Flag_StandardMember
         if (GetStandardMember(GetStandardMemberConstant(name), pval, 0))
             return true;
 

@@ -2179,8 +2179,8 @@ unsigned AvmSprite::GetCursorType() const
     {
         const Environment* penv = GetASEnvironment();
         Value val;
-        if (const_cast<AvmSprite*>(this)->GetMember(const_cast<Environment*>(penv),
-                                                     penv->GetBuiltin(ASBuiltin_useHandCursor), &val) &&
+        ASStringContext* psc = const_cast<Environment*>(penv)->GetSC();
+        if (const_cast<AvmSprite*>(this)->GetMemberRaw(psc, psc->GetBuiltin(ASBuiltin_useHandCursor), &val) &&
             (val.IsUndefined() || !val.ToBool(penv)))
             return 0;
         return 1;

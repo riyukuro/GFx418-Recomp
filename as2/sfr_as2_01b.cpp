@@ -90,8 +90,10 @@ void CSSStringBuilder::Visit(const ASString& name, const Value& val, UByte flags
     else                                       pcss = pname;
     pCSS->AppendString(pcss);
     pCSS->AppendString(":");
-    ASString str = val.ToString(pEnv);
-    pCSS->AppendString(str.ToCStr());
+    {
+        ASString str = val.ToString(pEnv);
+        pCSS->AppendString(str.ToCStr());
+    }
     pCSS->AppendString(";");
 }
 
