@@ -393,8 +393,6 @@ String AsString(const Abc::NamespaceInfo& ns, NamespaceText nt)
                                             : " " + String(ns.NameURI.ToCStr(), ns.NameURI.GetSize()));
     }
 
-
-
     return String(empty);
 }
 
@@ -436,31 +434,39 @@ String AsString(const Value& v)
     case Value::kUInt:
         return Scaleform::AsString(v.AsUInt());
     case Value::kNumber:
-    {
-        const Value::Number d = v.AsNumber();
-        if (NumberUtil::IsNaN(d))
+        if (v.IsNaN())
             return String("NaN");
-        if (NumberUtil::IsPOSITIVE_ZERO(d) || NumberUtil::IsNEGATIVE_ZERO(d) ||
-            NumberUtil::IsPOSITIVE_INFINITY(d) || NumberUtil::IsNEGATIVE_INFINITY(d))
+        if (v.IsPOSITIVE_ZERO() || v.IsNEGATIVE_ZERO() || v.IsPOSITIVE_INFINITY() || v.IsNEGATIVE_INFINITY())
             return String("0");
-        return Scaleform::AsString(d);
+        return Scaleform::AsString(v.AsNumber());
+    case Value::kString:
+    {
+        if (v.GetStringNode() == NULL)
+            return String("null");
+        const ASString s(v.GetStringNode());
+        return ("\"" + String(s.ToCStr())) + "\"";
     }
     case Value::kThunk:
         return String("thunk");
+    case Value::kThunkFunction:
+        return String("thunk function");
     case Value::kVTableInd:
         return String("VTable ind: ", Scaleform::AsString(v.GetVTableInd()).ToCStr(), NULL);
-    case Value::kInstanceTraits:
-    case Value::kClassTraits:
-        if (v.GetTraceNullType() == Value::Null)
-            return String("null");
-        return String();
-    case Value::kString:
+    case Value::kVTableIndClosure:
+        return String("VTableIndClosure");
+    case Value::kFunction:
+        return String("function Function() {}");
+    case Value::kObject:
     {
-        ASStringNode* node = v.GetStringNode();
-        if (node == NULL)
-            return String("null");
-        const ASString s(node);
-        return String("\"", String(s.ToCStr()).ToCStr(), NULL) + "\"";
+        Object* obj = v.GetObject();
+        if (obj == NULL) return String("null");
+        return ("[object " + obj->GetTraits().GetName()) + "]";
+    }
+    case Value::kClass:
+    {
+        Object* obj = v.GetObject();
+        if (obj == NULL) return String("null");
+        return ("[class " + obj->GetTraits().GetName()) + "]";
     }
     case Value::kNamespace:
     {
@@ -473,18 +479,12 @@ String AsString(const Value& v)
         }
         return String(result);
     }
-    case Value::kObject:
-        return ("[object " + v.GetObject()->GetTraits().GetName()) + "]";
-    case Value::kClass:
-        return ("[class " + v.GetObject()->GetTraits().GetName()) + "]";
-    case Value::kFunction:
-        return String("function Function() {}");
-    case Value::kThunkFunction:
-        return String("thunk function");
     case Value::kThunkClosure:
         return String("ThunkClosure");
-    case Value::kVTableIndClosure:
-        return String("VTableIndClosure");
+    case Value::kInstanceTraits:
+    case Value::kClassTraits:
+        if (v.GetTraceNullType() == Value::Null)
+            return String("null");
     default:
         return String();
     }
