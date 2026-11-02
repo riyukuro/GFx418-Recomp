@@ -379,12 +379,12 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // An Error built by the exe's constructors (VM::Error::Error is functional in sfr_as3_15, so it is not linkable from here).
 struct Sfr31Err
 {
-    alignas(8) char Buf[sizeof(VM::Error)];
-    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a)               { FUN_1424d6f40(Buf, id, &vm, &a); }
-    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a, const Value& b) { FUN_1424d6cf0(Buf, id, &vm, &a, &b); }
-    Sfr31Err(VM::ErrorID id, VM& vm, const char* a, const Value& b) { FUN_1424d79f0(Buf, id, &vm, a, &b); }
+    UPInt Id, Message;    // VM::Error (0x10 bytes); an array would make every Sfr31Err local a /GS buffer
+    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a)               { FUN_1424d6f40(&Id, id, &vm, &a); }
+    Sfr31Err(VM::ErrorID id, VM& vm, const Value& a, const Value& b) { FUN_1424d6cf0(&Id, id, &vm, &a, &b); }
+    Sfr31Err(VM::ErrorID id, VM& vm, const char* a, const Value& b) { FUN_1424d79f0(&Id, id, &vm, a, &b); }
     ~Sfr31Err()                         { Get().~Error(); }
-    VM::Error& Get()                    { return *reinterpret_cast<VM::Error*>(Buf); }
+    VM::Error& Get()                    { return *reinterpret_cast<VM::Error*>(&Id); }
     operator const VM::Error&()         { return Get(); }
 };
 
@@ -1486,7 +1486,7 @@ struct RawASString
 
 // The value stored through a bound slot: one case per binding kind (the data lives at obj + ValueInd, or in the
 // global object's value array for BT_ValueArray). Returns false for unbound or read-only kinds.
-static bool SlotStoreBound(const SlotInfo& si, Object* obj, const Value& v)
+static __forceinline bool SlotStoreBound(const SlotInfo& si, Object* obj, const Value& v)
 {
     const UPInt base = reinterpret_cast<UPInt>(obj);
     const SInt32 ind = si.ValueInd;
@@ -1561,7 +1561,7 @@ static bool SlotStoreBound(const SlotInfo& si, Object* obj, const Value& v)
 
 // The bound class's traits, coerce the value to the slot's declared type (unless it is a class).
 // Returns false (after throwing) when the type is unknown or the value does not fit.
-static bool SlotCoerceForStore(const SlotInfo* si, VM* vm, const Value& v, Value& coerced)
+static __forceinline bool SlotCoerceForStore(const SlotInfo* si, VM* vm, const Value& v, Value& coerced)
 {
     if (v.GetKind() != Value::kClass && si->BindType <= 10)
     {
