@@ -85,6 +85,7 @@ SInt64 Sfr31NumberToChars(char* buffer, int bufflen, double val);               
 void Sfr31VMRaiseError(UPInt vm, const unsigned long* error, UPInt classInfo);                    // 0x14252ecb0
 void Sfr31TraceBlock(UPInt tracer, UPInt pos, UPInt block);                                       // 0x142530220
 void Sfr31ClassTraitsCleanup(UPInt entry);                                                        // 0x1425303b0
+void Sfr27MultinameFromQName(Multiname* mn, const Value* qname);                                  // sfr_as3_15
 }}} // namespace Scaleform::GFx::AS3
 
 // The AS3 object's +0x50 counted reference set to p (unrecovered).
@@ -5793,31 +5794,86 @@ void VM::ExecuteInternalUnsafe(const Value& func, const Value& _this, Value& res
         Sfr33PushResult(*this, result);
 }
 
+// Value(Object*) as the exe inlines it on a non-null object (no null test); released by ~Value.
+struct Sfr17ObjValue
+{
+    UInt32 Flags;
+    void* pWeakProxy;
+    Object* pObj;
+    void* pRest;
+    __forceinline explicit Sfr17ObjValue(Object* p) : Flags(Value::kObject), pWeakProxy(NULL), pObj(p) { p->AddRef(); }
+    __forceinline ~Sfr17ObjValue() { reinterpret_cast<Value*>(this)->~Value(); }
+    operator const Value&() const { return *reinterpret_cast<const Value*>(this); }
+};
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90, sfr_as3_15) with PostProcessName(false) (0x14251cef0), both
+// of which the exe inlines here. Same layout as Multiname; its implicit dtor is expanded in place.
+struct Sfr17InlineMultiname
+{
+    Abc::MultinameKind      Kind;
+    SPtr<GASRefCountBase>   Obj;
+    Value                   Name;
+    __forceinline Sfr17InlineMultiname(Instances::Namespace& ns, const Value& name)
+        : Kind(static_cast<Abc::MultinameKind>(0))
+        , Obj(&ns)
+    {
+        if (Value::IsObject(name.GetKind()))
+        {
+            Object* obj = name.GetObject();
+            if (obj && obj->GetTraits().GetTraitsType() == Traits_QName && obj->GetTraits().IsInstanceTraits())
+            {
+                Sfr27MultinameFromQName(&Get(), &name);
+                return;
+            }
+        }
+        Name.AssignUnsafe(name);
+        if (!Name.IsString())
+            return;
+        ASString n = Name.AsString();
+        if (n.GetSize() == 0)
+            return;
+        if (n[0] == '*')
+            Name = ASString(n.GetManager()->GetEmptyStringNode());
+        else if (n[0] == '@')
+        {
+            Kind = static_cast<Abc::MultinameKind>(Kind | 8);
+            if (n.GetSize() == 2 && n[1] == '*')
+                Name = ASString(n.GetManager()->GetEmptyStringNode());
+            else
+                Name = ASString(n.SubstringNode(1, n.GetSize()));
+        }
+    }
+    Multiname& Get() { return *reinterpret_cast<Multiname*>(this); }
+};
+
 }}}
 
 // Calls the property name (public namespace; "@" marks an attribute) of self with argc arguments: a missing property
 // is a ReferenceError, an undefined/null one a TypeError.
-// MS2-FUNCTIONAL 0x1424ffc10: PropRef::GetSlotValueUnsafe and the Multiname ctor called out of line (the exe inlines them)
+// MS2-FUNCTIONAL 0x1424ffc10: GetSlotValueUnsafe, the Multiname ctor and Value(obj) are inlined as in the exe;
+// the frame is 0x30 larger and the name Value / PropRef sit in other slots and registers
 // @0x1424ffc10
 void FUN_1424ffc10(Scaleform::UPInt self, Scaleform::UPInt name, Scaleform::UPInt result, int argc,
                    const Scaleform::GFx::AS3::Value* argv)
 {
     using namespace Scaleform::GFx::AS3;
     Object* obj = reinterpret_cast<Object*>(self);
+    const Scaleform::GFx::ASString& nameStr = *reinterpret_cast<const Scaleform::GFx::ASString*>(name);
+    Sfr17InlineMultiname m(obj->GetVM().GetPublicNamespace(), Value(nameStr, Value::InlineStr));
+    const Multiname& mn = m.Get();
+    Sfr17EmptyPropRef t;
+    PropRef& prop = t.Get();
+    Sfr33FindObjProperty(prop, obj->GetVM(), Sfr17ObjValue(obj), mn, 0);
     VM& vm = obj->GetVM();
-    const Value nameVal(*reinterpret_cast<const Scaleform::GFx::ASString*>(name));
-    const Multiname mn(vm.GetPublicNamespace(), nameVal);
-    PropRef prop;
-    Sfr33FindObjProperty(prop, vm, Value(obj), mn, 0);
     if (!Sfr33PropFound(prop))
     {
         // eReadSealedError (1069): "Property %s not found on %s and there is no default value."
-        const VM::Error e(static_cast<VM::ErrorID>(1069), vm, nameVal, Value(obj));
+        const VM::Error e(static_cast<VM::ErrorID>(1069), vm, m.Name, Sfr17ObjValue(obj));
         FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
         return;
     }
     Value func;
-    if (!prop.GetSlotValueUnsafe(vm, func))
+    if (!Sfr17GetSlotValueUnsafe(prop, vm, func))
         return;
     if (func.IsNullOrUndefined())
     {
@@ -5825,7 +5881,7 @@ void FUN_1424ffc10(Scaleform::UPInt self, Scaleform::UPInt name, Scaleform::UPIn
         FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
         return;
     }
-    vm.ExecuteInternalUnsafe(func, Value(obj), *reinterpret_cast<Value*>(result), static_cast<unsigned>(argc), argv, false);
+    vm.ExecuteInternalUnsafe(func, Sfr17ObjValue(obj), *reinterpret_cast<Value*>(result), static_cast<unsigned>(argc), argv, false);
 }
 
 // Calls the method in slot ind of tr's VTable on _this with the result on the operand stack: a method body gets a
