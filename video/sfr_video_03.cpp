@@ -908,13 +908,13 @@ Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* FUN_14001a000(Scalefo
     *reinterpret_cast<double*>(reinterpret_cast<unsigned char*>(object) + 0x70) = 240.0;
     return object;
 }
-// MS2-FUNCTIONAL: allocates and constructs the Video AS3 DisplayObject into the caller's result slot.
+struct Video03InstanceMaker { Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject> FUN_14001a600(Scaleform::GFx::AS3::InstanceTraits::Traits* traits); };
+// allocates and constructs the Video AS3 DisplayObject; the Pickable comes back through the hidden result slot (rdx).
 // @0x14001a600
-void* FUN_14001a600(void*, void** result, Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
+Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject> Video03InstanceMaker::FUN_14001a600(Scaleform::GFx::AS3::InstanceTraits::Traits* traits)
 {
     Scaleform::GFx::AS3::Instances::fl_display::DisplayObject* object = static_cast<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(traits->Alloc());
-    *result = object ? FUN_14001a000(object, traits) : 0;
-    return result;
+    return Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl_display::DisplayObject>(object ? FUN_14001a000(object, traits) : 0);
 }
 // allocates and constructs a Video AS3 DisplayObject, then transfers it into a Value.
 // @0x14001a860
