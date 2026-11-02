@@ -6640,45 +6640,61 @@ void AvmTextField::OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsig
 
 // AvmTextField::OnMouseEvent: a click (not ending a selection) on an "event:" link of an HTML field gives a "link"
 // TextEvent with the rest of the URL to the AS3 object when it listens for it; true for any click.
-// MS2-FUNCTIONAL the exe inlines the TextEvent creation with Value(const ASString&); CreateStringNode/ReleaseNode bind differently
+// MS2-FUNCTIONAL register allocation (exe keeps this in r15 and the event in rbx) and the Text assignment's refcount order differ
 // @0x14251a8a0
 bool AvmTextField::OnMouseEvent(const EventId& event)
 {
-    AvmDisplayObj* avm = this;
-    static_cast<AvmInteractiveObj*>(avm)->AvmInteractiveObj::OnEvent(event);
-    if (event.Id != AS3Event_Click)
-        return false;
-    TextField* ptf = Sfr34_TextFieldOf(avm);
-    if (ptf->GetBeginIndex() != ptf->GetEndIndex())
-        return false;
-    Render::PointF                  p;
-    const Render::Text::TextFormat* fmt;
-    Render::Text::DocView*          doc = ptf->GetDocument();
-    if (!ptf->IsHtml() || !Sfr34_MayHaveUrl(doc) || !ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
-        return true;
-    const UPInt pos = doc->GetCharIndexAtPoint(p.x, p.y);
-    if (pos == SF_MAX_UPINT || !static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(doc))->GetTextAndParagraphFormat(&fmt, NULL, pos) || !fmt->IsUrlSet())
-        return true;
-    const char* url  = fmt->GetUrl().ToCStr();
-    MovieRoot*  root = AS3RootOf(avm->pDispObj);
-    if (!avm->GetMovieImpl() || String::CompareNoCase(url, "event:", 6) != 0)
-        return true;
-    const ASString                        name(root->GetStringManager418()->CreateStringNode("link"));
-    Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
-    if (obj->WillTrigger(name, false))
+    AvmInteractiveObj::OnEvent(event);
+    if (event.Id == AS3Event_Click)
     {
-        ASVM*                                 asvm = root->pAVM;
-        SPtr<Instances::fl_events::TextEvent> evt  = Sfr34_CreateTextEvent(asvm, name, obj, asvm->ExtensionsEnabled);
-        evt->Text = ASString(root->GetStringManager418()->CreateStringNode(url + 6));
-        if (asvm->ExtensionsEnabled)
+        TextField* ptf = Sfr34_TextFieldOf(this);
+        if (ptf->GetBeginIndex() != ptf->GetEndIndex())
+            return false;
+        if (ptf->IsHtml() && Sfr34_MayHaveUrl(ptf->GetDocument()))
         {
-            Instances::fl_gfx::TextEventEx* ex = static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr());
-            ex->controllerIdx = event.ControllerIndex;
-            ex->buttonIdx     = event.ButtonId;
+            Render::PointF p(Render::PointF::NoInit);
+            if (ptf->IsUrlUnderMouseCursor(event.MouseIndex, &p))
+            {
+                UPInt pos = ptf->GetDocument()->GetCharIndexAtPoint(p.x, p.y);
+                if (pos != SF_MAX_UPINT)
+                {
+                    const Render::Text::TextFormat* fmt;
+                    if (static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(ptf->GetDocument()))->GetTextAndParagraphFormat(&fmt, NULL, pos))
+                    {
+                        if (fmt->IsUrlSet())
+                        {
+                            const char* url = fmt->GetUrl().ToCStr();
+                            if (GetMovieImpl() && String::CompareNoCase(url, "event:", 6) == 0)
+                            {
+                                url += 6;
+                                const ASString name(AS3RootOf(pDispObj)->BuiltinsMgr.GetStringManager()->CreateStringNode("link"));
+                                Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
+                                if (as3obj->WillTrigger(name, false))
+                                {
+                                    SPtr<Instances::fl_events::TextEvent> evt;
+                                    Value params[] = { Value(name, Value::InlineStr), Value(true), Value(true) };
+                                    ASVM* asvm = AS3RootOf(pDispObj)->pAVM;
+                                    asvm->ConstructInstance(evt, asvm->ExtensionsEnabled ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
+                                    Instances::fl_events::TextEvent* e = evt.GetPtr();
+                                    e->Target = as3obj;
+                                    e->Text = ASString(AS3RootOf(pDispObj)->BuiltinsMgr.GetStringManager()->CreateStringNode(url));
+                                    if (asvm->ExtensionsEnabled)
+                                    {
+                                        Instances::fl_gfx::TextEventEx* ex = static_cast<Instances::fl_gfx::TextEventEx*>(e);
+                                        ex->controllerIdx = event.ControllerIndex;
+                                        ex->buttonIdx     = event.ButtonId;
+                                    }
+                                    as3obj->DispatchEventObject(e, pDispObj);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        obj->DispatchEventObject(evt, avm->pDispObj);
+        return true;
     }
-    return true;
+    return false;
 }
 
 // AvmTextField::OnCharEvent: a "textInput" TextEvent of the character to the AS3 object when it listens for it;
