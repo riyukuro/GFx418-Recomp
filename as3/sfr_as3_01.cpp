@@ -45,26 +45,24 @@ static UByte* AllocWithAvm(MemoryHeap* pheap)
     return (UByte*)pheap->Alloc(((sizeof(D) + 3) & ~3) + sizeof(A), (const AllocInfo*)0);
 }
 
-// MS2-FUNCTIONAL: AvmMovieClip's constructor is inlined in the exe (AvmSprite constructor + 4 vftables); its vftables
-// are the exe's, stored through AS3::AvmMovieClip::InitVTables.
+// AvmMovieClip's constructor is inlined in the exe (AvmSprite constructor + 4 vftables); its vftables are the exe's,
+// stored through AS3::AvmMovieClip::Construct. The cases are in the exe's block order.
 // @0x1423dc160
 DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const CharacterCreateInfo& ccinfo,
                                                        InteractiveObject* pparent, ResourceId rid,
                                                        CharacterDef::CharacterDefType type)
 {
-    MemoryHeap* pheap = proot->GetMovieHeap();
     switch (type != CharacterDef::Unknown ? type : ccinfo.pCharDef->GetType())
     {
     case CharacterDef::Shape:
     {
-        void* pm = pheap->Alloc(sizeof(AS3::ShapeObject), (const AllocInfo*)0);
+        void* pm = proot->GetMovieHeap()->Alloc(sizeof(AS3::ShapeObject), (const AllocInfo*)0);
         return pm ? AS3::AsDisplayObject(new (pm) AS3::ShapeObject(ccinfo.pCharDef, proot->pASMovieRoot, pparent, rid))
                   : 0;
     }
-
     case CharacterDef::Sprite:
     {
-        UByte* pm = AllocWithAvm<Sprite, AS3::AvmMovieClip>(pheap);
+        UByte* pm = AllocWithAvm<Sprite, AS3::AvmMovieClip>(proot->GetMovieHeap());
         Sprite* pspr = pm ? new (pm) Sprite(static_cast<SpriteDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
                                             proot->pASMovieRoot, pparent, rid) : 0;
         AS3::AvmMovieClip* pavm = (AS3::AvmMovieClip*)(pm + ((sizeof(Sprite) + 3) & ~3));
@@ -72,9 +70,27 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
             AS3::AvmMovieClip::Construct(pavm, pspr);
         return pspr;
     }
+    case CharacterDef::EmptySprite:
+    {
+        UByte* pm = AllocWithAvm<Sprite, AS3::AvmSprite>(proot->GetMovieHeap());
+        Sprite* pspr = pm ? new (pm) Sprite(static_cast<SpriteDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
+                                            proot->pASMovieRoot, pparent, rid) : 0;
+        if (AS3::AvmSprite* pavm = (AS3::AvmSprite*)(pm + ((sizeof(Sprite) + 3) & ~3)))
+            new (pavm) AS3::AvmSprite(pspr);
+        return pspr;
+    }
+    case CharacterDef::Button:
+    {
+        UByte* pm = AllocWithAvm<Button, AS3::AvmButton>(proot->GetMovieHeap());
+        Button* pbtn = pm ? new (pm) Button(static_cast<ButtonDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
+                                            proot->pASMovieRoot, pparent, rid) : 0;
+        if (AS3::AvmButton* pavm = (AS3::AvmButton*)(pm + ((sizeof(Button) + 3) & ~3)))
+            new (pavm) AS3::AvmButton(pbtn);
+        return pbtn;
+    }
     case CharacterDef::TextField:
     {
-        UByte* pm = AllocWithAvm<TextField, AS3::AvmTextField>(pheap);
+        UByte* pm = AllocWithAvm<TextField, AS3::AvmTextField>(proot->GetMovieHeap());
         TextField* ptxt = pm ? new (pm) TextField(static_cast<TextFieldDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
                                                   proot->pASMovieRoot, pparent, rid) : 0;
         if (AS3::AvmTextField* pavm = (AS3::AvmTextField*)(pm + ((sizeof(TextField) + 3) & ~3)))
@@ -83,7 +99,7 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
     }
     case CharacterDef::StaticText:
     {
-        UByte* pm = AllocWithAvm<StaticTextCharacter, AS3::AvmStaticText>(pheap);
+        UByte* pm = AllocWithAvm<StaticTextCharacter, AS3::AvmStaticText>(proot->GetMovieHeap());
         StaticTextCharacter* ptxt = pm ? new (pm) StaticTextCharacter(static_cast<StaticTextDef*>(ccinfo.pCharDef),
                                                                       ccinfo.pBindDefImpl, proot->pASMovieRoot,
                                                                       pparent, rid) : 0;
@@ -91,14 +107,10 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
             new (pavm) AS3::AvmStaticText(ptxt);
         return AS3::AsDisplayObject(ptxt);
     }
-    case CharacterDef::Button:
+    case CharacterDef::Bitmap:
     {
-        UByte* pm = AllocWithAvm<Button, AS3::AvmButton>(pheap);
-        Button* pbtn = pm ? new (pm) Button(static_cast<ButtonDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
-                                            proot->pASMovieRoot, pparent, rid) : 0;
-        if (AS3::AvmButton* pavm = (AS3::AvmButton*)(pm + ((sizeof(Button) + 3) & ~3)))
-            new (pavm) AS3::AvmButton(pbtn);
-        return pbtn;
+        void* pm = proot->GetMovieHeap()->Alloc(sizeof(AS3::AvmBitmap), (const AllocInfo*)0);
+        return pm ? AS3::AsDisplayObject(new (pm) AS3::AvmBitmap(proot->pASMovieRoot, ccinfo, pparent, rid)) : 0;
     }
     case CharacterDef::Video:
     {
@@ -106,26 +118,12 @@ DisplayObjectBase* AS3Support::CreateCharacterInstance(MovieImpl* proot, const C
         if (pvideo && pvideo->GetAS3Support())
             return pvideo->GetAS3Support()->CreateASCharacter(proot, ccinfo.pCharDef, pparent, rid,
                                                               ccinfo.pBindDefImpl);
-        return 0;
-    }
-    case CharacterDef::Bitmap:
-    {
-        void* pm = pheap->Alloc(sizeof(AS3::AvmBitmap), (const AllocInfo*)0);
-        return pm ? AS3::AsDisplayObject(new (pm) AS3::AvmBitmap(proot->pASMovieRoot, ccinfo, pparent, rid)) : 0;
-    }
-
-    case CharacterDef::EmptySprite:
-    {
-        UByte* pm = AllocWithAvm<Sprite, AS3::AvmSprite>(pheap);
-        Sprite* pspr = pm ? new (pm) Sprite(static_cast<SpriteDef*>(ccinfo.pCharDef), ccinfo.pBindDefImpl,
-                                            proot->pASMovieRoot, pparent, rid) : 0;
-        if (AS3::AvmSprite* pavm = (AS3::AvmSprite*)(pm + ((sizeof(Sprite) + 3) & ~3)))
-            new (pavm) AS3::AvmSprite(pspr);
-        return pspr;
+        break;
     }
     default:
-        return 0;
+        break;
     }
+    return 0;
 }
 
 // @0x1423dc560
