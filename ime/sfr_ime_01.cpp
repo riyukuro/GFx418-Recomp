@@ -3485,41 +3485,52 @@ void FUN_1423d5b00(unsigned long long* manager, const unsigned long long* value,
     }
 }
 
+struct Ime01ModeRecord {
+    char* text;
+    unsigned long long reserved0;
+    unsigned mode;
+    unsigned reserved1;
+    unsigned long long language;
+};
+static __forceinline void Ime01PushModeRecord(unsigned long long* array, const Ime01ModeRecord& record)
+{
+    const unsigned long long size = array[1];
+    const unsigned long long newSize = size + 1;
+    if (newSize < size) {
+        if (newSize < (array[2] >> 1)) FUN_1423d7370(array, array, newSize);
+    } else if (newSize >= array[2])
+        FUN_1423d7370(array, array, newSize + (newSize >> 2));
+    array[1] = newSize;
+    reinterpret_cast<Ime01ModeRecord*>(array[0])[newSize - 1] = record;
+}
+
 // MS2-FUNCTIONAL: appends a wide composition update to the manager's UTF-8 log and records its language/mode tuple.
+// Code is exe-identical except the frame: the exe keeps the record below the two String temporaries.
 // @0x1423d5d80
 void FUN_1423d5d80(void* raw, const void* event, const wchar_t* text)
 {
     auto* bytes = static_cast<unsigned char*>(raw);
     Scaleform::String converted(text);
-    const size_t length = converted.GetSize();
-    char* copy = static_cast<char*>(Scaleform::Memory::Alloc(length + 1));
-    if (!copy) return;
-    std::memcpy(copy, converted.ToCStr(), length + 1);
-
+    char buffer[0x400];
+    strcpy_s(buffer, 0x400, converted.ToCStr());
     const unsigned short language = *reinterpret_cast<const unsigned short*>(
         static_cast<const unsigned char*>(event) + 4);
-    const unsigned id = language & 0xfff;
     unsigned mode = 0x01000000;
-    if (id == 0x409) mode = 0x10000000;
-    else if (id == 0x404) mode = 9;
-    else if (id == 0x804) mode = 0x80000;
-    else if (id == 0x412) mode = 0x2000;
-    else if (id == 0x411) mode = 0x400;
+    if ((language & 0xfff) == 0x409) mode = 0x10000000;
+    else if ((language & 0xfff) == 0x404) mode = 9;
+    else if ((language & 0xfff) == 0x804) mode = 0x80000;
+    else if ((language & 0xfff) == 0x412) mode = 0x2000;
+    else if ((language & 0xfff) == 0x411) mode = 0x400;
+    Ime01ModeRecord record;
+    record.language = language;
     *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
+    record.mode = mode;
+    record.text = static_cast<char*>(Scaleform::Memory::Alloc(converted.GetSize() + 1));
+    std::memcpy(record.text, buffer, converted.GetSize() + 1);
+    Ime01PushModeRecord(reinterpret_cast<unsigned long long*>(bytes + 0x90), record);
 
-    auto* array = reinterpret_cast<unsigned long long*>(bytes + 0x90);
-    const unsigned long long next = array[1] + 1;
-    if (next >= array[2]) cx18_ReserveGH(array, (next >> 2) + next, 0x20);
-    array[1] = next;
-    auto* record = reinterpret_cast<unsigned char*>(array[0]) + (next - 1) * 0x20;
-    *reinterpret_cast<void**>(record) = copy;
-    *reinterpret_cast<unsigned long long*>(record + 8) = 0;
-    *reinterpret_cast<unsigned*>(record + 0x10) = mode;
-    *reinterpret_cast<unsigned*>(record + 0x14) = 0;
-    *reinterpret_cast<unsigned long long*>(record + 0x18) = language;
-
-    *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
     *reinterpret_cast<Scaleform::String*>(bytes + 0x70) += Scaleform::String(text) + "@@";
+    *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
 }
 
 // MS2-FUNCTIONAL: records the alternate IME composition message, whose language identifier is 0x0c bytes past the common event field.
