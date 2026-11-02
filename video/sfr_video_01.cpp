@@ -821,52 +821,34 @@ void FUN_140005160(void** array, void* heapOwner, Scaleform::UPInt size)
     array[1] = reinterpret_cast<void*>(size);
 }
 
-// the exe inlines the body into FUN_1400069a0.
-static __forceinline void Video01ResizeRecords(void** array, Scaleform::UPInt requested)
+// ArrayDataBase<T, AllocatorGH<T, 2>, ArrayDefaultPolicy>::Reserve for a sizeof(T) of Size, inlined into each row.
+template<Scaleform::UPInt Size>
+static __forceinline void Video01Reserve(void** array, Scaleform::UPInt newCapacity)
 {
-    void** vtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    void* data = array[0];
-    if (!requested) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(Scaleform::Memory::pGlobalHeap, data);
-        array[0] = 0; array[2] = 0; return;
+    typedef Scaleform::AllocatorBaseGH<2> Allocator;
+    if (newCapacity == 0) {
+        if (array[0]) { Allocator::Free(array[0]); array[0] = 0; }
+        array[2] = 0;
+    } else {
+        newCapacity = (newCapacity + 3) / 4 * 4;
+        if (array[0]) array[0] = Allocator::Realloc(array[0], newCapacity * Size, 0, 0);
+        else array[0] = Allocator::Alloc(array, newCapacity * Size, 0, 0);
+        array[2] = reinterpret_cast<void*>(newCapacity);
     }
-    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
-    if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
-        Scaleform::Memory::pGlobalHeap, data, capacity * 16);
-    else {
-        unsigned flags[2] = { 2, 0 };
-        array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
-            Scaleform::Memory::pGlobalHeap, capacity * 16, flags);
-    }
-    array[2] = reinterpret_cast<void*>(capacity);
 }
 
 // MS2-FUNCTIONAL: resizes the array of 16-byte records with four-element capacity rounding.
 // @0x1400051c0
 void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
 {
-    Video01ResizeRecords(array, requested);
+    Video01Reserve<16>(array, requested);
 }
 
 // MS2-FUNCTIONAL: resizes the array of 12-byte records with four-element capacity rounding.
 // @0x140005260
 void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
 {
-    void** vtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    void* data = array[0];
-    if (!requested) {
-        if (data) reinterpret_cast<void (*)(void*, void*)>(vtable[12])(Scaleform::Memory::pGlobalHeap, data);
-        array[0] = 0; array[2] = 0; return;
-    }
-    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
-    if (data) array[0] = reinterpret_cast<void* (*)(void*, void*, size_t)>(vtable[11])(
-        Scaleform::Memory::pGlobalHeap, data, capacity * 12);
-    else {
-        unsigned flags[2] = { 2, 0 };
-        array[0] = reinterpret_cast<void* (*)(void*, size_t, const void*)>(vtable[10])(
-            Scaleform::Memory::pGlobalHeap, capacity * 12, flags);
-    }
-    array[2] = reinterpret_cast<void*>(capacity);
+    Video01Reserve<12>(array, requested);
 }
 
 // Releases a character handle when its intrusive reference count reaches zero.
@@ -1067,14 +1049,14 @@ void FUN_140005db0(Scaleform::String* destination, const Scaleform::String* sour
     new (destination) Video01StringPair(*reinterpret_cast<const Video01StringPair*>(source));
 }
 
-// MS2-FUNCTIONAL: initializes a FunctionRefBase from the source, including its frame ownership mode.
+// initializes a FunctionRefBase from the source, including its frame ownership mode.
 // @0x140005f00
 Scaleform::GFx::AS2::FunctionRefBase* FUN_140005f00(
     Scaleform::GFx::AS2::FunctionRefBase* destination,
     const Scaleform::GFx::AS2::FunctionRefBase* source)
 {
-    destination->Function = source->Function;
     destination->Flags = 0;
+    destination->Function = source->Function;
     if (destination->Function) destination->Function->AddRef();
     destination->pLocalFrame = 0;
     if (source->pLocalFrame)
@@ -1388,23 +1370,14 @@ void FUN_140006940(Scaleform::String* destination, Scaleform::UPInt count,
 void FUN_140006810(void** array, void* owner, Scaleform::UPInt requested)
 {
     (void)owner;
-    if (requested == 0) {
-        if (array[0]) Scaleform::Memory::Free(array[0]);
-        array[0] = 0;
-        array[2] = 0;
-        return;
-    }
-    const Scaleform::UPInt capacity = (requested + 3) & ~Scaleform::UPInt(3);
-    if (array[0]) array[0] = Scaleform::Memory::Realloc(array[0], capacity * sizeof(void*));
-    else array[0] = Scaleform::Memory::Alloc(capacity * sizeof(void*), Scaleform::AllocInfo(2, 0, 0));
-    array[2] = reinterpret_cast<void*>(capacity);
+    Video01Reserve<sizeof(void*)>(array, requested);
 }
 
 // MS2-FUNCTIONAL: reallocates storage for 16-byte records with four-element capacity rounding.
 // @0x1400069a0
 void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
 {
-    Video01ResizeRecords(array, capacity);
+    Video01Reserve<16>(array, capacity);
 }
 
 // MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
@@ -1773,19 +1746,17 @@ void* FUN_140007960(void* value, unsigned flags)
     return value;
 }
 
-// MS2-FUNCTIONAL: assigns a typed AS2 value while retaining the replacement and releasing the old object.
+// assigns a typed AS2 value while retaining the replacement and releasing the old object.
 // @0x1400079b0
 unsigned* FUN_1400079b0(unsigned* destination, const unsigned* source)
 {
-    const unsigned type = *source;
-    void* replacement = *reinterpret_cast<void* const*>(source + 2);
-    if (replacement) {
+    *destination = *source;
+    if (void* replacement = *reinterpret_cast<void* const*>(source + 2)) {
         unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
-    *destination = type;
-    *reinterpret_cast<void**>(destination + 2) = replacement;
+    *reinterpret_cast<void**>(destination + 2) = *reinterpret_cast<void* const*>(source + 2);
     return destination;
 }
 
@@ -2134,35 +2105,19 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000cee0(Scaleform::GFx::AS2::CFuncti
 // @0x14000b940
 void FUN_14000b940(void** array, void* owner, Scaleform::UPInt capacity)
 {
-    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    if (!capacity) {
-        if (*array) reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, *array);
-        *array = 0;
-        fields[2] = 0;
-        return;
-    }
-    capacity = (capacity + 3) & ~Scaleform::UPInt(3);
-    if (*array) {
-        *array = reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt)>(heapVtable[11])(
-            Scaleform::Memory::pGlobalHeap, *array, capacity * 0x30);
-    } else {
-        unsigned flags = 2;
-        *array = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, unsigned*)>(heapVtable[10])(
-            Scaleform::Memory::pGlobalHeap, capacity * 0x30, &flags);
-    }
-    fields[2] = capacity;
     (void)owner;
+    Video01Reserve<0x30>(array, capacity);
 }
 
-// MS2-FUNCTIONAL: initializes or grows the video-track hash table at its observed load threshold.
+// initializes or grows the video-track hash table at its observed load threshold.
 // @0x14000b680
 void FUN_14000b680(void** table, void* owner)
 {
-    if (!*table) { FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, 8); return; }
-    Scaleform::UPInt* fields = static_cast<Scaleform::UPInt*>(*table);
-    if (fields[1] * 4 + 4 < fields[0] * 5)
-        FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, fields[1] * 2 + 2);
+    Scaleform::UPInt** ptable = reinterpret_cast<Scaleform::UPInt**>(table);
+    if (*ptable == 0)
+        FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, 8);
+    else if ((*ptable)[0] * 5 > ((*ptable)[1] + 1) * 4)
+        FUN_14000b3b0(reinterpret_cast<Scaleform::UPInt*>(table), owner, ((*ptable)[1] + 1) * 2);
 }
 
 // @0x14000bc40
