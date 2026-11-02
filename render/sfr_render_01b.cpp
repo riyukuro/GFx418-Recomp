@@ -376,22 +376,24 @@ void Snapshot::Merge(Snapshot* older)
                 continue;
             EntryRef   ref(c.pNode);
             EntryData* oldData = ref.GetSnapshotPage()->pOlderSnapshotPage->pData[ref.GetIndex()];
-            if (ref.GetData() == oldData)
+            if (ref.GetData() != oldData)
+            {
+                if (!c.IsNewNode())
+                {
+                    if (ref.GetCleanData() == oldData)
+                    {
+                        oldData->CopyTo(c.pNode->GetNative());
+                        ref.SetData_KeepDestroyedBit(c.pNode->GetNative());
+                    }
+                    oldData->Destroy();
+                }
+                if (c.pNode->GetChange() && !ref.IsDestroyed())
+                    c.pNode->GetChange()->ChangeBits |= (c.ChangeBits & ~Change_Context_NewNode);
+            }
+            else
             {
                 AddChangeItem(c.pNode, c.ChangeBits);
-                continue;
             }
-            if (!c.IsNewNode())
-            {
-                if (ref.GetCleanData() == oldData)
-                {
-                    oldData->CopyTo(c.pNode->GetNative());
-                    ref.SetData_KeepDestroyedBit(c.pNode->GetNative());
-                }
-                oldData->Destroy();
-            }
-            if (c.pNode->GetChange() && !ref.IsDestroyed())
-                c.pNode->GetChange()->ChangeBits |= (c.ChangeBits & ~Change_Context_NewNode);
         }
     }
     if (older->ForceUpdateImagesFlag)
