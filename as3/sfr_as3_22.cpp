@@ -2346,12 +2346,9 @@ FMOD_RESULT CreateBufferedAudioStream(void* player, const char* path, FMOD::Soun
 bool CreateRequestAudioStream(void* request)
 {
     auto* bytes = static_cast<unsigned char*>(request);
-    auto* owner = *reinterpret_cast<void**>(bytes + 0x38);
-    if (!owner)
-        return false;
-    const char* path = *reinterpret_cast<const char**>(bytes + 0x28);
-    auto* sound = reinterpret_cast<FMOD::Sound**>(bytes + 0x30);
-    return CreateBufferedAudioStream(owner, path, sound) == 0;
+    if (void* owner = *reinterpret_cast<void**>(bytes + 0x38))
+        return CreateBufferedAudioStream(owner, *reinterpret_cast<const char**>(bytes + 0x28), reinterpret_cast<FMOD::Sound**>(bytes + 0x30)) == 0;
+    return false;
 }
 }
 
@@ -2527,7 +2524,7 @@ float QueryAudioElapsedSeconds(void* player)
 void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float endSeconds)
 {
     auto* bytes = static_cast<unsigned char*>(player);
-    auto* channel = *reinterpret_cast<FMOD::Channel**>(bytes + 0x38);
+    auto*& channel = *reinterpret_cast<FMOD::Channel**>(bytes + 0x38);
     if (!channel || loopCount == 0)
         return;
     if (loopCount > 1) {
@@ -2535,36 +2532,33 @@ void ConfigureAudioLoop(void* player, int loopCount, float startSeconds, float e
         FUN_1428d8f08(channel, loopCount);
     }
 
-    auto* request = *reinterpret_cast<unsigned char**>(bytes + 0x30);
+    auto*& request = *reinterpret_cast<unsigned char**>(bytes + 0x30);
     auto* metadata = *reinterpret_cast<unsigned char**>(request + 0x38);
-    unsigned start = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x18) : 0;
-    unsigned loopLength = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x1c) : 0;
-    auto* sound = *reinterpret_cast<FMOD::Sound**>(request + 0x30);
-    unsigned soundLength = 0;
-    sound->getLength(&soundLength, 2);
-    float defaults[10] = {};
-    FUN_1428d8eb4(sound, defaults, nullptr, nullptr, nullptr);
-    if (startSeconds > 0.0f)
-        start = static_cast<unsigned>(static_cast<long long>(defaults[0] * startSeconds));
-    unsigned end = static_cast<unsigned>(static_cast<long long>(defaults[0] * endSeconds));
-    if (end == 0 || soundLength - 1 < end) {
+    const unsigned loopStart = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x1c) : 0;
+    unsigned loopLength = metadata ? *reinterpret_cast<unsigned*>(metadata + 0x18) : 0;
+    unsigned length = 0;
+    (*reinterpret_cast<FMOD::Sound**>(request + 0x30))->getLength(&length, 2);
+    float frequency;
+    FUN_1428d8eb4(*reinterpret_cast<FMOD::Sound**>(request + 0x30), &frequency, nullptr, nullptr, nullptr);
+    const unsigned start = startSeconds > 0.0f ? static_cast<unsigned>(static_cast<long long>(frequency * startSeconds)) : loopStart;
+    unsigned end = static_cast<unsigned>(static_cast<long long>(frequency * endSeconds));
+    if (end == 0 || end > length - 1) {
         end = start + loopLength;
         if (loopLength == 0)
-            end = soundLength - 1;
+            end = length - 1;
     }
     FUN_1428d8ef6(channel, start, 2);
     FUN_1428d8f0e(channel, start, 2, end, 2);
 
-    auto* manager = *reinterpret_cast<unsigned char**>(bytes + 0x28);
-    auto* system = *reinterpret_cast<FMOD::System**>(manager + 0x10);
+    auto*& manager = *reinterpret_cast<unsigned char**>(bytes + 0x28);
     unsigned clockHigh = 0, clockLow = 0;
-    FUN_1428d8ea2(system, &clockHigh, &clockLow);
-    const float duration = static_cast<float>((end - start) * loopCount) *
-                           (*reinterpret_cast<float*>(manager + 0xf4) / defaults[0]);
-    const unsigned delay = static_cast<unsigned>(static_cast<long long>(duration));
-    const unsigned nextLow = clockLow + delay;
-    clockHigh += nextLow < clockLow;
-    FUN_1428d8ef0(channel, 2, clockHigh, nextLow);
+    FUN_1428d8ea2(*reinterpret_cast<FMOD::System**>(manager + 0x10), &clockHigh, &clockLow);
+    // the delay reuses the length local, as the exe stores it back to that slot
+    length = static_cast<unsigned>(static_cast<long long>(static_cast<float>((end - start) * loopCount) *
+                                                          (*reinterpret_cast<float*>(manager + 0xf4) / frequency)));
+    clockHigh += (clockLow + length) < clockLow;  // FMOD_64BIT_ADD
+    clockLow += length;
+    FUN_1428d8ef0(channel, 2, clockHigh, clockLow);
 }
 }
 
