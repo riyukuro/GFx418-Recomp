@@ -225,7 +225,7 @@ namespace Instances { namespace fl {
     // MS2-FUNCTIONAL: the registration hash at +0x38 is kept opaque (sfr22: the other members follow the exe's constructor
     // 0x1423ed260)
     // GlobalObjectCPP's builtin ClassInfo registry is keyed by a borrowed C string.
-    struct ConstStringKey { const char* pChar;     };
+    struct ConstStringKey { const char* pChar; };
     class ConstStringHashFn {
     public:
         UPInt operator()(const ConstStringKey& key) const
