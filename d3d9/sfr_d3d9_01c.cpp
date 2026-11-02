@@ -43,7 +43,7 @@ void MeshBufferSet::DestroyBuffers(AllocType type)
 // ==== RenderSync =====================================================================================================
 
 // @0x14273b070
-bool RenderSync::SetDevice(IDirect3DDevice9* device)
+SF_NOINLINE bool RenderSync::SetDevice(IDirect3DDevice9* device)
 {
     if (!device)
     {
@@ -148,7 +148,6 @@ MeshCache::~MeshCache()
     Reset();
 }
 
-// MS2-FUNCTIONAL: block layout of the failure paths
 // @0x14273a880
 bool MeshCache::Initialize(IDirect3DDevice9* device, bool dynamicBuffers)
 {
