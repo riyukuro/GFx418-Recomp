@@ -3488,22 +3488,62 @@ static SF_INLINE bool Sfr33PropFound(const PropRef& prop)
 void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const ScopeStackType& scope_stack,
                             const Multiname& mn);
 
-// MS2-FUNCTIONAL 0x142502360: the exe move-assigns the dynamic lookup result (0x1424e0b40) and allocates registers differently.
+// A Value(Object*) for an object known to be non-null, with its ctor expanded in place; released on destruction.
+struct Sfr33ThisValue
+{
+    UInt32 Flags;
+    void* pWeakProxy;
+    Object* pObj;
+    void* pRest;
+    explicit Sfr33ThisValue(Object* p) : Flags(Value::kObject), pWeakProxy(NULL), pObj(p) { p->AddRef(); }
+    ~Sfr33ThisValue() { Get().~Value(); }
+    Value& Get() { return *reinterpret_cast<Value*>(this); }
+};
+
+// A fixed-slot PropRef(si, index, Value(obj)) temporary, assigned field by field.
+struct Sfr33ThisPropRef
+{
+    const SlotInfo* pSI;
+    UPInt SlotIndex;
+    Sfr33ThisValue This;
+    Sfr33ThisPropRef(const SlotInfo* si, UPInt index, Object* obj) : pSI(si), SlotIndex(index), This(obj) { }
+};
+
+// Storage for a PropRef temporary whose dtor is expanded in place (only This needs releasing).
+struct Sfr33PropRefTemp
+{
+    union
+    {
+        UPInt Align;
+        UByte Buf[sizeof(PropRef)];
+    };
+    PropRef& Get() { return *reinterpret_cast<PropRef*>(Buf); }
+    ~Sfr33PropRefTemp() { Get().This.~Value(); }
+};
+
 // @0x142502360
 void Object::FindProperty(PropRef& result, const Multiname& mn, int attr)
 {
     UPInt index = 0;
-    Traits& tr = GetTraits();
-    const SlotInfo* si = FindFixedSlot(GetVM(), tr, mn, index, this);
+    const SlotInfo* si = FindFixedSlot(GetVM(), GetTraits(), mn, index, this);
     if (si)
     {
-        result.pSI = si;
-        result.SlotIndex = index;
-        result.This = Value(this);
+        Sfr33ThisPropRef t(si, index, this);
+        result.pSI = t.pSI;
+        result.SlotIndex = t.SlotIndex;
+        result.This.Assign(t.This.Get());
         return;
     }
-    if (tr.IsDynamic() && (attr != 2 || tr.GetTraitsType() != Traits_XML || tr.IsClassTraits()))
-        result = FindDynamicSlot(mn);
+    if (GetTraits().IsDynamic() && (attr != 2 || GetTraits().GetTraitsType() != Traits_XML || !GetTraits().IsInstanceTraits()))
+    {
+        Sfr33PropRefTemp t;
+        const PropRef& r = *::new (static_cast<void*>(t.Buf)) PropRef(FindDynamicSlot(mn));
+        result.pSI = r.pSI;
+        result.pValue = r.pValue;
+        result.pObject = r.pObject;
+        result.SlotIndex = r.SlotIndex;
+        result.This.Assign(r.This);
+    }
     if (Sfr33PropFound(result) || attr == 1)
         return;
     for (const Traits* t = &GetTraits(); t; t = t->GetParent())
@@ -3512,7 +3552,7 @@ void Object::FindProperty(PropRef& result, const Multiname& mn, int attr)
         if (proto == this)
             break;
         proto->FindProperty(result, mn, attr);
-        if (Sfr33PropFound(result))
+        if (result)
             return;
     }
 }
