@@ -155,35 +155,53 @@ void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 
 // _root, _global and _levelN before the scope chain's own lookup: 0 = not one of them, 1 = the value is set, 2 = a
 // level name whose level does not exist.
-// _root is the target's top parent (its own level, or the _lockroot clip), like the exe's virtual call.
-// MS2-FUNCTIONAL
+// MS2-FUNCTIONAL: ours shares the case-insensitive _global SetAsObject tail with the case-sensitive one (the exe
+// repeats it) and keeps the builtins in r15 where the exe uses rbp
 // @0x142933bd0
 Bool3W Environment::CheckGlobalAndLevels(const GetVarParams& params) const
 {
-    Environment* penv = const_cast<Environment*>(this);
-    const ASString& name   = params.VarName;
-    bool            cs     = penv->IsCaseSensitive();
-    ASStringContext* psc   = penv->GetSC();
-    InteractiveObject* pch = 0;
-    if (psc->GetBuiltin(ASBuiltin__root).CompareBuiltIn_CaseCheck(name, cs))
-        pch = penv->GetTarget()->GetTopParent();
-    else if (psc->GetBuiltin(63).CompareBuiltIn_CaseCheck(name, cs)) // _global
+    // Handle _root and _global.
+    if (IsCaseSensitive())
     {
-        params.pResult->SetAsObject(penv->StringContext.pContext->pGlobal);
-        return Bool3W(true);
+        if (GetBuiltin(ASBuiltin__root).CompareBuiltIn_CaseCheck(params.VarName, true))
+        {
+            params.pResult->SetAsCharacter(Target->GetTopParent());
+            return Bool3W(true);
+        }
+        else if (GetBuiltin(63).CompareBuiltIn_CaseCheck(params.VarName, true)) // _global
+        {
+            params.pResult->SetAsObject(StringContext.pContext->pGlobal);
+            return Bool3W(true);
+        }
     }
     else
     {
-        const char* ptail = 0;
-        int level = MovieRoot::ParseLevelName(name.ToCStr(), &ptail, cs);
-        if (level == -1 || *ptail != '\0')
-            return Bool3W();
-        pch = penv->GetAS2Root()->GetLevelMovie(level);
-        if (!pch)
-            return Bool3W(false);
+        if (GetBuiltin(ASBuiltin__root).CompareBuiltIn_CaseCheck(params.VarName, false))
+        {
+            params.pResult->SetAsCharacter(Target->GetTopParent());
+            return Bool3W(true);
+        }
+        else if (GetBuiltin(63).CompareBuiltIn_CaseCheck(params.VarName, false))
+        {
+            params.pResult->SetAsObject(StringContext.pContext->pGlobal);
+            return Bool3W(true);
+        }
     }
-    params.pResult->SetAsCharacter(pch);
-    return Bool3W(true);
+
+    // Check for _levelN.
+    const char* ptail = 0;
+    int         level = MovieRoot::ParseLevelName(params.VarName.ToCStr(), &ptail, IsCaseSensitive());
+    if ((level != -1) && !*ptail)
+    {
+        InteractiveObject* lm = static_cast<MovieRoot*>(Target->GetMovieImpl()->pASMovieRoot)->GetLevelMovie(level);
+        if (lm)
+        {
+            params.pResult->SetAsCharacter(lm);
+            return Bool3W(true);
+        }
+        return Bool3W(false);
+    }
+    return Bool3W();
 }
 
 class InvokeContext
