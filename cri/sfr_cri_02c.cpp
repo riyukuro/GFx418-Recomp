@@ -23,7 +23,8 @@
 // MS2-RANGE: 0x1400363b0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140036710 .text$mn
 // MS2-RANGE: 0x1400369e0-0x140036b80 .text$mn
-// MS2-RANGE: 0x140036d50-0x140039ea8 .text$mn
+// MS2-RANGE: 0x140036d50-0x140037400 .text$mn
+// MS2-RANGE: 0x140037740-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // VS2008's <new> (use_ansi.h) adds /DEFAULTLIB:libcpmt under /MT. That static C++ library then wins over the hook DLL's
@@ -2029,63 +2030,6 @@ void criErr_NotifyGeneric(CriSint32 category, const char* code, CriSint32 error)
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-
-// MS2-FUNCTIONAL: estimate CRI Movie work memory for stream buffers and the selected decoders.
-// @0x140037400
-CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamingParameters* params)
-{
-    const CriUint32* words = (const CriUint32*)params;
-    CriUint32 overhead = words[0x2c / 4] + 8 + (params->track_play_audio < 0 ? 0u : 0xdu);
-    CriUint32 total = overhead * 0x22 + 0x24;
-    CriUint32 inputSize;
-    if (params->track_play_audio == -1)
-    {
-        float estimate = ((float)(params->max_bitrate / 8)) * params->buffering_time;
-        inputSize = (CriUint32)estimate;
-        if (inputSize < params->min_buffer_size)
-            inputSize = params->min_buffer_size;
-    }
-    else
-        inputSize = params->read_buffer_size;
-
-    CriUint32 padded = inputSize + 0x800;
-    inputSize = (padded / 0x800) * 0x800;
-    CriUint32 tail = decideReadBufferExtSize((void*)params);
-    CriUint32 flags[2] = { 1, 1 };
-    CriSint32 blockSize = criSjRbf_GetRequiredMemorySizeWithConfig(inputSize, tail, 0x40, (const CriUint32*)flags);
-    total += blockSize;
-
-    if (params->num_video != 0)
-    {
-        CriUint32 codecId = words[0x44 / 4];
-        void* videoCodec = crimvply_findVdecIF((CriSint32)codecId);
-        if (!videoCodec)
-        {
-            crimvply_occurUserError(player, "E11030202M : No available decoder is attached for the video stream. Attach a decoder module before the Initialize function.", 0);
-            return -1;
-        }
-        total += FUN_140044400(videoCodec, words[0x1c / 4], words[0x20 / 4], words[0x28 / 4]);
-        if (params->num_alpha != 0)
-        {
-            void* alphaCodec = crimvply_findAlphadecIfIF((CriSint32)words[0x280 / 4]);
-            if (!alphaCodec)
-            {
-                crimvply_occurUserError(player, "E11030702M : Not found any avilable codec for the alpha stream. Attach a codec module before the Initialize function", 0);
-                return -1;
-            }
-            total += FUN_140043a80(alphaCodec, params->alpha_prm[0].max_width,
-                                   params->alpha_prm[0].max_height, params->video_prm[0].framerate);
-        }
-    }
-    total += criMvPlyAmng_CalcAmngWorkSize(params);
-    if (params->track_play_audio >= 0)
-    {
-        const CriUint8* audio = (const CriUint8*)params + 0x54 + (size_t)params->track_play_audio * 0x10;
-        total += criMvPlyAmng_CalcAudioDecoderWorkSize(player, (const CriUint32*)audio);
-    }
-    flags[0] = flags[1] = 1;
-    return total + criSjUni_GetRequiredMemorySizeWithConfig(0, 0x40, (const CriUint32*)flags);
-}
 
 // MS2-FUNCTIONAL: copies the CRI decoded frame planes and stream dimensions into the public frame record.
 // @0x140035260

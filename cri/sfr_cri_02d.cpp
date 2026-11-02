@@ -23,6 +23,7 @@
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
 // MS2-RANGE: 0x140036710-0x1400369e0 .text$mn
 // MS2-RANGE: 0x140036b80-0x140036d50 .text$mn
+// MS2-RANGE: 0x140037400-0x140037740 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -276,6 +277,15 @@ typedef struct CriMvStreamParamsView        // the public CriMvStreamingParamete
     CriUint32           Alpha[8];           // 0x264
     CriUint32           AlphaPlane;         // 0x284
 } CriMvStreamParamsView;
+CriUint32 decideReadBufferExtSize(void* params);
+CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 extSize, CriUint32 alignment, const CriUint32* config);
+void*     crimvply_findVdecIF(CriSint32 codecId);
+CriSint32 FUN_140044400(void* decoder, CriUint32 width, CriUint32 height, CriUint32 pools);
+void*     crimvply_findAlphadecIfIF(CriSint32 codecId);
+CriSint32 FUN_140043a80(void* decoder, CriSint32 width, CriSint32 height, CriSint32 pools);
+CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* params);
+CriSint32 criMvPlyAmng_CalcAudioDecoderWorkSize(const void* player, const CriUint32* audio);
+CriSint32 criSjUni_GetRequiredMemorySizeWithConfig(CriUint32 size, CriUint32 alignment, const CriUint32* config);
 typedef struct CriMvHeaderAnalysisView
 {
     CriUint8  Reserved0[0x5f8];
@@ -506,6 +516,16 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_isUnderGetFrameCondition=?crimvply_isUnderGetFrameCondition@@YAJPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_updateMvPlyYuvBuffersFromAlphadecInfo=?crimvply_updateMvPlyYuvBuffersFromAlphadecInfo@@YAXPEAXPEBUCriMvAlphaDecoderFrameInfo@@@Z")
+#pragma comment(linker, "/alternatename:?criMvPly_CalcPlaybackWorkSize@@YAJPEAXPEBUCriMvStreamingParameters@@@Z=criMvPly_CalcPlaybackWorkSize")
+#pragma comment(linker, "/alternatename:decideReadBufferExtSize=?decideReadBufferExtSize@@YAKPEAX@Z")
+#pragma comment(linker, "/alternatename:criSjRbf_GetRequiredMemorySizeWithConfig=?criSjRbf_GetRequiredMemorySizeWithConfig@@YAJKKKPEBK@Z")
+#pragma comment(linker, "/alternatename:crimvply_findVdecIF=?crimvply_findVdecIF@@YAPEAXJ@Z")
+#pragma comment(linker, "/alternatename:FUN_140044400=?FUN_140044400@@YAJPEAXKKK@Z")
+#pragma comment(linker, "/alternatename:crimvply_findAlphadecIfIF=?crimvply_findAlphadecIfIF@@YAPEAXJ@Z")
+#pragma comment(linker, "/alternatename:FUN_140043a80=?FUN_140043a80@@YAJPEAXJJJ@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAmngWorkSize=?criMvPlyAmng_CalcAmngWorkSize@@YAJPEBX@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_CalcAudioDecoderWorkSize=?criMvPlyAmng_CalcAudioDecoderWorkSize@@YAJPEBXPEBK@Z")
+#pragma comment(linker, "/alternatename:criSjUni_GetRequiredMemorySizeWithConfig=?criSjUni_GetRequiredMemorySizeWithConfig@@YAJKKPEBK@Z")
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -1640,5 +1660,86 @@ CriSint32 FUN_140036b80(void* player, CriMvSubtitleChunk* output, CriSint32 chan
         }
     }
     return count;
+}
+
+// Work memory for one playback: stream-joint ring buffers sized from the bitrate, the video and alpha decoders, audio and subtitles.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
+// @0x140037400
+CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamParamsView* params)
+{
+    CriSint32 sizes;
+    CriSint32 dec;
+    CriSint32 chk;
+    CriUint32 count2[2];
+    CriSint32 cur;
+    CriSint32 cnt;
+    CriSint32 idx;
+    CriUint32 tail;
+    CriUint32 size;
+    CriSint32 blocks;
+    CriSint32 bytes;
+    CriSint32 num1;
+    void* head;
+    const CriUint32* info;
+    const CriUint32* adx;
+    void* hinfo;
+
+    bytes = 0;
+    if (player == player) {}                 // VC9 folds the test but keeps the exe's dead load of player
+    num1 = params->Video[4] + (params->TrackPlayAudio >= 0 ? 0xd : 0) + 8;
+    sizes = 0x24;
+    sizes += num1 * (CriUint64)0x22;
+    bytes += sizes;
+    if (params->Head[3] == 0xffffffff)
+    {
+        size = (CriUint32)((float)(params->Head[0] / 8) * params->BufferingTime);
+        if (size < params->Head[2])
+            size = params->Head[2];
+    }
+    else
+        size = params->Head[3];
+    size = (size + 0x800) / 0x800 * 0x800;
+    tail = decideReadBufferExtSize((void*)params);
+    count2[0] = 1;
+    count2[1] = 1;
+    blocks = criSjRbf_GetRequiredMemorySizeWithConfig(size, tail, 0x40, count2);
+    bytes += blocks;
+    if (params->Head[4] > 0)
+    {
+        info = params->Video;
+        head = 0;
+        head = crimvply_findVdecIF((CriSint32)info[10]);
+        if (head == 0)
+        {
+            crimvply_occurUserError(player, "E11030202M : No available decoder is attached for the video stream. Attach a decoder module before the Initialize function.", 0);
+            return -1;
+        }
+        chk = FUN_140044400(head, info[0], info[1], info[4]);
+        bytes += chk;
+        if (params->NumAlpha > 0)
+        {
+            adx = params->Alpha;
+            hinfo = crimvply_findAlphadecIfIF((CriSint32)adx[7]);
+            if (hinfo == 0)
+            {
+                crimvply_occurUserError(player, "E11030702M : Not found any avilable codec for the alpha stream. Attach a codec module before the Initialize function", 0);
+                return -1;
+            }
+            cur = FUN_140043a80(hinfo, adx[0], adx[1], info[4]);
+            bytes += cur;
+        }
+    }
+    dec = criMvPlyAmng_CalcAmngWorkSize(params);
+    bytes += dec;
+    if (params->TrackPlayAudio >= 0)
+    {
+        idx = criMvPlyAmng_CalcAudioDecoderWorkSize(player, params->Audio[params->TrackPlayAudio].Words);
+        bytes += idx;
+    }
+    count2[0] = 1;
+    count2[1] = 1;
+    cnt = criSjUni_GetRequiredMemorySizeWithConfig(0, 0x40, count2);
+    bytes += cnt;
+    return bytes;
 }
 #pragma optimize("", on)
