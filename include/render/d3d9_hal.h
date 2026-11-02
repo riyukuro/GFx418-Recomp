@@ -139,6 +139,7 @@ protected:
 
 public:
     IDirect3DDevice9*        pDevice;                                       // +0x578
+    IDirect3DDevice9* GetDevice() const { return pDevice; }
     UInt16                   DeviceFlags;                                   // +0x580, this build only
     D3DPRESENT_PARAMETERS    PresentParams;                                 // +0x588
     MeshCache                Cache;                                         // +0x5c8

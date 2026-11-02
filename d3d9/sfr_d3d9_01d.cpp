@@ -1662,7 +1662,8 @@ void ShaderManager::Reset()
     pDevice = 0;
 }
 
-// MS2-FUNCTIONAL: the declaration is built inline and stored through the Ptr; scheduling differs
+// MS2-FUNCTIONAL: GetShaderIndex in this TU lets cl move the calls past the stores. With both moved to another
+// TU only 10 bytes differ: the exe holds pVS in rcx and reloads it at the end, ours keeps it in r9
 // @0x142741850
 bool ShaderInterface::SetStaticShader(VertexShaderDesc::ShaderType vshader, FragShaderDesc::ShaderType fshader,
                                       const VertexFormat* format)
@@ -1678,12 +1679,10 @@ bool ShaderInterface::SetStaticShader(VertexShaderDesc::ShaderType vshader, Frag
 
     if (format && !format->pSysFormat)
     {
-        SysVertexFormat* sys = SF_HEAP_NEW(Memory::pGlobalHeap)
-            SysVertexFormat(pHal->pDevice, format, CurShaders.pVS->pDesc);
-        const_cast<VertexFormat*>(format)->pSysFormat = Pickable<Render::SystemVertexFormat>(sys);
+        const_cast<VertexFormat*>(format)->pSysFormat = *SF_HEAP_NEW(Memory::pGlobalHeap)
+            SysVertexFormat(pHal->GetDevice(), format, CurShaders.pVS->pDesc);
     }
-    return CurShaders.pVS && CurShaders.pFS && CurShaders.pVS->pProg && CurShaders.pFS->pProg &&
-           CurShaders.pVFormat;
+    return (bool)CurShaders;
 }
 
 // MS2-FUNCTIONAL: the fill mode is forwarded by reference

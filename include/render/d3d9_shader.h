@@ -202,6 +202,7 @@ struct ShaderPair
 
     ShaderPair() : pVS(0), pVDesc(0), pFS(0), pFDesc(0), pVFormat(0) { }
     const ShaderPair* operator->() const { return this; }
+    operator bool() const { return pVS && pFS && pVS->pProg && pFS->pProg && pVFormat; }
 };
 
 class ShaderInterface : public ShaderInterfaceBase<Uniform, ShaderPair>
