@@ -1914,7 +1914,7 @@ namespace Instances { namespace fl_text
         if (tf.PresentMask & Fmt_FontList)
         {
             const String& fonts = FUN_142606750(fmt);
-            font = sm.CreateString(fonts.ToCStr(), fonts.GetSize());
+            font = sm.CreateString(fonts);
         }
         else
             font = nullStr;
@@ -1929,7 +1929,7 @@ namespace Instances { namespace fl_text
         target = nullStr;
         const String& purl = *reinterpret_cast<const String*>(&tf.Url);
         if ((tf.PresentMask & Fmt_Url) && purl.GetLength() != 0)
-            url = sm.CreateString(purl.ToCStr(), purl.GetSize());
+            url = sm.CreateString(purl);
         else
             url = nullStr;
 
@@ -2022,7 +2022,6 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b1380
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::getLineText(ASString& result, SInt32 lineIndex)
     {
         unsigned long long len = 0;
@@ -2031,7 +2030,7 @@ namespace Instances { namespace fl_text
         {
             String str;
             str.AppendString(ptext, (SPInt)len);
-            result = GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize());
+            result = GetVM().GetStringManager().CreateString(str);
         }
         else
             result = GetVM().GetStringManager().CreateConstString("");
@@ -2284,12 +2283,11 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b3e70
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextField::restrictGet(ASString& result)
     {
         const String* prestrict = (const String*)FUN_1425b90a0(DisplayTextField(this));
         if (prestrict)
-            result = GetVM().GetStringManager().CreateString(prestrict->ToCStr(), prestrict->GetSize());
+            result = GetVM().GetStringManager().CreateString(*prestrict);
         else
             result.SetNull();
     }
@@ -2302,14 +2300,10 @@ namespace Instances { namespace fl_text
     }
 
     // @0x1424b1530
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextSnapshot::getSelectedText(ASString& result, bool includeLineEndings)
     {
-        void* buf;
-        new (&buf) String(SnapshotData.GetSelectedText(includeLineEndings));
-        String& text = *reinterpret_cast<String*>(&buf);
-        result = GetVM().GetStringManager().CreateString(text.ToCStr(), text.GetSize());
-        text.~String();
+        String selectedText = SnapshotData.GetSelectedText(includeLineEndings);
+        result = GetVM().GetStringManager().CreateString(selectedText);
     }
 }}
 
@@ -2475,33 +2469,35 @@ namespace Instances { namespace fl_text
     }
 
     // A null style object removes the style; otherwise the object is written out as a CSS rule and parsed in.
-    // MS2-FUNCTIONAL: the exe tail-calls ClearStyle on two paths (ours selects the key type with sete); register allocation differs
     // @0x1424b43a0
     void StyleSheet::setStyle(const Value& result, const ASString& styleName, const Value& styleObject)
     {
         SF_UNUSED(result);
         if (styleName.IsEmpty())
             return;
-        if (styleObject.IsObject() && !styleObject.GetObject())
+        if (styleObject.IsNull())
         {
-            if (!styleName.IsEmpty())
+            if (styleName.GetSize() > 0)
             {
-                const char* pname = styleName.ToCStr();
-                if (pname[0] == '.')
-                    CSS.ClearStyle(Text::StyleManager::CSS_Class, pname);
+                if (styleName[0] == '.')
+                    CSS.ClearStyle(Text::StyleManager::CSS_Class, styleName.ToCStr());
                 else
-                    CSS.ClearStyle(Text::StyleManager::CSS_Tag, pname);
+                    CSS.ClearStyle(Text::StyleManager::CSS_Tag, styleName.ToCStr());
             }
             return;
         }
-        if (!styleObject.IsObject())
-            return;
-        String css;
-        css.AppendString(styleName.ToCStr());
-        css.AppendChar('{');
-        AppendCSSDeclarations(css, styleObject.GetObject());
-        css.AppendChar('}');
-        CSS.ParseCSS(css.ToCStr(), css.GetSize());
+        else
+        {
+            if (!styleObject.IsObject())
+                return;
+            AS3::Object* pobj = styleObject.GetObject();
+            String cssstr;
+            cssstr.AppendString(styleName.ToCStr());
+            cssstr.AppendChar('{');
+            AppendCSSDeclarations(cssstr, pobj);
+            cssstr.AppendChar('}');
+            CSS.ParseCSS(cssstr.ToCStr(), cssstr.GetSize());
+        }
     }
 
     // @0x1424b4bf0
@@ -2513,16 +2509,12 @@ namespace Instances { namespace fl_text
 
     // An empty or reversed range reads the single character at beginIndex.
     // @0x1424b29e0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void TextSnapshot::getText(ASString& result, SInt32 beginIndex, SInt32 endIndex, bool includeLineEndings)
     {
         if (endIndex <= beginIndex)
             endIndex = beginIndex + 1;
-        void* buf;
-        new (&buf) String(SnapshotData.GetSubString((SPInt)beginIndex, (SPInt)endIndex, includeLineEndings));
-        String& text = *reinterpret_cast<String*>(&buf);
-        result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
-        text.~String();
+        String subStr = SnapshotData.GetSubString((SPInt)beginIndex, (SPInt)endIndex, includeLineEndings);
+        result = GetVM().GetStringManager().CreateString(subStr);
     }
 
     // @0x1424b4d00
