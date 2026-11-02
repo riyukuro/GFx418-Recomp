@@ -31,11 +31,13 @@ bool ASString::operator<(const ASString& str) const
 {
     if (pNode == str.pNode)
         return false;
-    unsigned size   = GetSize() < str.GetSize() ? GetSize() : str.GetSize();
-    int      result = memcmp(ToCStr(), str.ToCStr(), size);
+    unsigned strSize  = str.GetSize();
+    unsigned thisSize = GetSize();
+    unsigned size     = thisSize < strSize ? thisSize : strSize;
+    int      result   = memcmp(ToCStr(), str.ToCStr(), size);
     if (result != 0)
         return result < 0;
-    return GetSize() < str.GetSize();
+    return thisSize < strSize;
 }
 
 // @0x1425c0e10

@@ -255,5 +255,6 @@ TextKeyMap* TextKeyMap::InitMacKeyMap()
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7?$RefCountBaseNTS@VAllocator@Text@Render@Scaleform@@$0EO@@Scaleform@@6B@ 0x143184c98
 // MS2-PIN: ??_7Allocator@Text@Render@Scaleform@@6B@ 0x14317c9d0
+// MS2-PIN: ??$LowerBoundSliced@V?$Array@UKeyMapEntry@TextKeyMap@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@Scaleform@@UKeyMapEntry@TextKeyMap@GFx@2@P6AHAEBU3452@0@Z@Alg@Scaleform@@YA_KAEBV?$Array@UKeyMapEntry@TextKeyMap@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@1@_K1AEBUKeyMapEntry@TextKeyMap@GFx@1@P6AH22@Z@Z 0x14258d470
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin

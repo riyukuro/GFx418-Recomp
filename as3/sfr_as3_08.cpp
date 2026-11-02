@@ -577,11 +577,6 @@ namespace Instances { namespace fl_events
         ImmPropagationStopped = false;
     }
 
-    // @0x142462440
-    // MS2-FUNCTIONAL: the exe's destructor does not store the Event vftable before releasing the members
-    Event::~Event()
-    {
-    }
 }}
 
 namespace InstanceTraits { namespace fl_events

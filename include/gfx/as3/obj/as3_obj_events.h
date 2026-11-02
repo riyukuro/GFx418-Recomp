@@ -23,7 +23,7 @@ namespace Instances { namespace fl_events {
     public:
         Event(InstanceTraits::Traits& t);                                   // 0x14245f450
         virtual const char* GetAS3ObjectType() const { return "Instances::fl_events::Event"; }
-        ~Event();                                                           // 0x142462440
+        // ~Event() is implicit: 0x142462440, no vftable store in the exe.
 
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;      // 0x142469380
         virtual void AS3Constructor(unsigned argc, const Value* argv);      // 0x142465470
