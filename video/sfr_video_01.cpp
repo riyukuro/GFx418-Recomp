@@ -487,39 +487,51 @@ void FUN_1400033f0(void* player)
     *reinterpret_cast<void**>(bytes + 0xe0) = 0;
 }
 
-// MS2-FUNCTIONAL: creates a managed AS2 string and stores its retained node in the return object.
+// creates a managed AS2 string and stores its retained node in the return object.
 // @0x140003000
 Scaleform::GFx::ASString* FUN_140003000(Scaleform::GFx::ASStringManager* manager,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(manager->CreateString(text, strlen(text)));
+    Scaleform::GFx::ASStringNode* node = manager->CreateStringNode(text);
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
+    node->AddRef();
     return result;
 }
 
-// MS2-FUNCTIONAL: creates a constant AS2 string node over the supplied terminated text.
+// creates a constant AS2 string node over the supplied terminated text.
 // @0x140003020
 Scaleform::GFx::ASString* FUN_140003020(Scaleform::GFx::ASStringManager* manager,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(manager->CreateConstString(text));
+    Scaleform::GFx::ASStringNode* node = manager->CreateConstStringNode(text, strlen(text), 0);
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
+    node->AddRef();
     return result;
 }
 
-// MS2-FUNCTIONAL: creates an owned AS2 string from the context's movie string manager.
+// creates an owned AS2 string from the context's movie string manager.
 // @0x1400038f0
 Scaleform::GFx::ASString* FUN_1400038f0(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateConstString(text));
+    Scaleform::GFx::ASStringManager* manager =
+        reinterpret_cast<Scaleform::GFx::AS2::StringManager*>(environment)->pStringManager;
+    Scaleform::GFx::ASStringNode* node = manager->CreateConstStringNode(text, strlen(text), 0);
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
+    node->AddRef();
     return result;
 }
 
-// MS2-FUNCTIONAL: creates an owned AS2 string from the context's movie string manager.
+// creates an owned AS2 string from the context's movie string manager.
 // @0x140003940
 Scaleform::GFx::ASString* FUN_140003940(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateString(text));
+    Scaleform::GFx::ASStringManager* manager =
+        reinterpret_cast<Scaleform::GFx::AS2::StringManager*>(environment)->pStringManager;
+    Scaleform::GFx::ASStringNode* node = manager->CreateStringNode(text);
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
+    node->AddRef();
     return result;
 }
 
@@ -539,21 +551,29 @@ Scaleform::GFx::ASStringNodeHolder* FUN_1400044e0(Scaleform::GFx::AS2::GlobalCon
     return &(*context)->GetStringManager()->Builtins[index];
 }
 
-// MS2-FUNCTIONAL: creates an owned AS2 string through the selected movie string manager.
+// creates an owned AS2 string through the selected movie string manager.
 // @0x140004400
 Scaleform::GFx::ASString* FUN_140004400(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateString(text));
+    Scaleform::GFx::ASStringManager* manager =
+        environment->StringContext.pContext->GetStringManager()->pStringManager;
+    Scaleform::GFx::ASStringNode* node = manager->CreateStringNode(text);
+    node->AddRef();
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
     return result;
 }
 
-// MS2-FUNCTIONAL: creates a constant AS2 string through the selected movie string manager.
+// creates a constant AS2 string through the selected movie string manager.
 // @0x140004440
 Scaleform::GFx::ASString* FUN_140004440(Scaleform::GFx::AS2::Environment* environment,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(environment->CreateConstString(text));
+    Scaleform::GFx::ASStringManager* manager =
+        environment->StringContext.pContext->GetStringManager()->pStringManager;
+    Scaleform::GFx::ASStringNode* node = manager->CreateConstStringNode(text, strlen(text), 0);
+    node->AddRef();
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
     return result;
 }
 
@@ -771,19 +791,22 @@ void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 #pragma optimize("", on)
 
 // MS2-FUNCTIONAL: obtains the live object behind a weak proxy, clearing an expired proxy slot.
+#undef GetObject // wingdi.h, and WeakPtrProxy::GetObject is what these rows read
 // @0x140005000
 void* FUN_140005000(void** weakSlot)
 {
-    unsigned char* proxy = static_cast<unsigned char*>(*weakSlot);
-    if (!proxy) return 0;
-    void* target = *reinterpret_cast<void**>(proxy + 8);
-    if (!target) {
-        static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
-        *weakSlot = 0;
-        return 0;
+    void* object = 0;
+    Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
+    if (proxy) {
+        if (proxy->IsAlive()) {
+            object = proxy->GetObject();
+            if (*reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8) == 0) object = 0;
+        } else {
+            proxy->Release();
+            *weakSlot = 0;
+        }
     }
-    if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) return target;
-    return 0;
+    return object;
 }
 
 // MS2-FUNCTIONAL: grows, resizes, or releases the four-byte-rounded backing array through the Scaleform heap.
@@ -947,15 +970,23 @@ void** FUN_140005a70(void** weakSlot, unsigned flags)
     return weakSlot;
 }
 
+// the SDK ArrayData::Resize the append inlines.
+static __forceinline void Video01ResizePointers(void** array, Scaleform::UPInt size)
+{
+    Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
+    if (size < fields[1]) { if (size < fields[2] >> 1) FUN_1400050c0(array, array, size); }
+    else if (size >= fields[2]) FUN_1400050c0(array, array, size + (size >> 2));
+    fields[1] = size;
+}
+
 // MS2-FUNCTIONAL: appends one pointer value to the backing array, growing capacity when needed.
 // @0x140005ac0
 void FUN_140005ac0(void** array, const void** value)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    const Scaleform::UPInt newSize = fields[1] + 1;
-    if (newSize >= fields[2]) FUN_1400050c0(array, array, newSize + (newSize >> 2));
-    fields[1] = newSize;
-    *reinterpret_cast<const void**>(static_cast<unsigned char*>(*array) + newSize * sizeof(void*) - sizeof(void*)) = *value;
+    Video01ResizePointers(array, fields[1] + 1);
+    const void** slot = static_cast<const void**>(static_cast<void*>(*array)) + fields[1] - 1;
+    if (slot) *slot = *value;
 }
 
 // adjusts the 16-byte record array using its quarter-growth and half-shrink thresholds.
@@ -1276,20 +1307,19 @@ void* FUN_140005610(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: constructs the function and local-frame references from the supplied fields.
+// constructs the function and local-frame references from the supplied fields.
 // @0x140005590
-Scaleform::GFx::AS2::FunctionRefBase* FUN_140005590(
+void FUN_140005590(
     Scaleform::GFx::AS2::FunctionRefBase* destination,
     const Scaleform::GFx::AS2::FunctionRefBase* source, unsigned char flags)
 {
     destination->Flags = flags;
     destination->Function = source->Function;
-    if (destination->Function && !(flags & Scaleform::GFx::AS2::FunctionRefBase::FuncRef_Internal))
+    if (!(flags & Scaleform::GFx::AS2::FunctionRefBase::FuncRef_Internal) && destination->Function)
         destination->Function->AddRef();
     destination->pLocalFrame = 0;
     if (source->pLocalFrame)
         destination->SetLocalFrame(source->pLocalFrame, (source->Flags & 1) != 0);
-    return destination;
 }
 
 #pragma optimize("t", off)   // the exe builds this one favouring size: frame + call, no tail call
@@ -1716,19 +1746,18 @@ void* FUN_140007840(void** destination, const void** source)
     return destination;
 }
 
-// MS2-FUNCTIONAL: copies the type field and retains the AS2 object pointer in the source value.
+// copies the type field and retains the AS2 object pointer in the source value.
 // @0x140007870
 void FUN_140007870(unsigned* destination, void** source)
 {
     *destination = *static_cast<unsigned*>(*source);
     void** sourceSlot = static_cast<void**>(source[1]);
-    void* replacement = sourceSlot ? *sourceSlot : 0;
-    if (replacement) {
-        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(replacement) + 0x18);
+    if (*sourceSlot) {
+        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*sourceSlot) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
     }
     ReleaseAs2GCObject(*reinterpret_cast<void**>(destination + 2));
-    *reinterpret_cast<void**>(destination + 2) = replacement;
+    *reinterpret_cast<void**>(destination + 2) = *sourceSlot;
 }
 
 // @0x1400078d0
@@ -1786,21 +1815,15 @@ void FUN_140009ec0(Scaleform::GFx::ASStringNode** nodeSlot)
     if (!(*nodeSlot)->pLower) (*nodeSlot)->ResolveLowercase_Impl();
 }
 
-// the exe inlines the body into FUN_14000a090.
-static __forceinline bool Video01NodeEquals(Scaleform::GFx::ASStringNode** left,
-                   Scaleform::GFx::ASStringNode** right, bool caseSensitive)
-{
-    if (caseSensitive) return *left == *right;
-    FUN_140009ec0(right);
-    return *left && *right && (*left)->pLower == (*right)->pLower;
-}
-
-// MS2-FUNCTIONAL: compares string node identity, using cached lowercase nodes for insensitive mode.
+// compares string node identity, using cached lowercase nodes for insensitive mode.
 // @0x14000a030
 bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
                    Scaleform::GFx::ASStringNode** right, bool caseSensitive)
 {
-    return Video01NodeEquals(left, right, caseSensitive);
+    if (caseSensitive) return *left == *right;
+    FUN_140009ec0(right);
+    Scaleform::GFx::ASStringNode* rightNode = *right;
+    return (*left)->pLower == rightNode->pLower;
 }
 
 // MS2-FUNCTIONAL: returns the equality result with the same case handling as the bool helper.
@@ -1808,7 +1831,9 @@ bool FUN_14000a030(Scaleform::GFx::ASStringNode** left,
 bool FUN_14000a090(Scaleform::GFx::ASStringNode** left,
                    Scaleform::GFx::ASStringNode** right, bool caseSensitive)
 {
-    return Video01NodeEquals(left, right, caseSensitive);
+    if (caseSensitive) return *left == *right;
+    FUN_140009ec0(right);
+    return (*left)->pLower == (*right)->pLower;
 }
 
 // erases one weak-pointer proxy from the pointer array and compacts the tail (SDK ArrayBase::RemoveAt)
@@ -2483,15 +2508,15 @@ void Scaleform::GFx::AS2::AvmCharacter::OnEventLoad()
         receiver, &payload);
 }
 
-// MS2-FUNCTIONAL: forwards the character's event through the containing video object.
+// forwards the character's event through the containing video object.
 // @0x14000e410
 void FUN_14000e410(void** subobject, void* a, void* b, void* c, void* d)
 {
+    void** interfaceVtable = reinterpret_cast<void**>(*subobject);
     void* object = subobject - 1;
     void** baseVtable = *reinterpret_cast<void***>(object);
-    void* character = reinterpret_cast<void* (*)(void*)>(baseVtable[31])(object);
-    reinterpret_cast<void (*)(void*, void*, void*, void*, void*)>(
-        (*reinterpret_cast<void***>(*subobject))[3])(subobject, character, b, c, d);
+    reinterpret_cast<void (*)(void*, void*, void*, void*, void*)>(interfaceVtable[3])(
+        subobject, reinterpret_cast<void* (*)(void*)>(baseVtable[31])(object), b, c, d);
     (void)a;
 }
 
@@ -2569,22 +2594,19 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
 // @0x140006350
 void** FUN_140006350(void** weakSlot, void** result)
 {
+    void* object = 0;
     Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
-        void* object = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(proxy) + 8);
-        if (object) {
-            int* count = reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
-            if (*count != 0) {
-                ++*count;
-                *result = object;
-                return result;
-            }
+        if (proxy->IsAlive()) {
+            object = proxy->GetObject();
+            if (*reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8) == 0) object = 0;
         } else {
             proxy->Release();
             *weakSlot = 0;
         }
     }
-    *result = 0;
+    if (object) ++*reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8);
+    *result = object;
     return result;
 }
 
@@ -2612,14 +2634,16 @@ void FUN_1400066f0(void** array, const unsigned* record)
 // @0x140006770
 void FUN_140006770(void** slot) { if (*slot) static_cast<Scaleform::WeakPtrProxy*>(*slot)->Release(); }
 
-// MS2-FUNCTIONAL: releases every retained Scaleform reference in the pointer array.
+// releases every retained Scaleform reference in the pointer array.
 // @0x1400067a0
 void FUN_1400067a0(void** values, Scaleform::UPInt count)
 {
-    void** items = static_cast<void**>(values);
+    void** cursor = values + count - 1;
     while (count) {
-        void* value = items[--count];
+        void* value = *cursor;
         if (value) static_cast<Scaleform::WeakPtrProxy*>(value)->Release();
+        --cursor;
+        --count;
     }
 }
 
