@@ -322,10 +322,10 @@ void TextPrepareBuffer::StartPrimitive(RenderQueueItem& item, TextPrimitiveBundl
     pHal                 = hal;
     pCache               = &hal->GetMeshCache();
     pBundle              = bundle;
+    pRemainingTextFields = remaining;
     ProcessingLayer      = 0;
     LayersPinned         = false;
     LayersFinished       = false;
-    pRemainingTextFields = remaining;
     PPBuffer.ClearItem();
     addTextFieldLayers(true);
 }
