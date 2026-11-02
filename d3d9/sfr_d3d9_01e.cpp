@@ -54,6 +54,13 @@ typedef Scaleform::ArrayData<Scaleform::Render::HAL::MaskStackEntry,
     MaskStackData;
 SF_NOINLINE void FUN_142733ef0(MaskStackData* a, Scaleform::UPInt newSize);
 
+namespace Scaleform {
+typedef ArrayDataBase<Render::HAL::FilterStackEntry, AllocatorLH<Render::HAL::FilterStackEntry, Stat_Default_Mem>,
+                      ArrayConstPolicy<0, 8, true> >
+    FilterStackData;
+}
+__declspec(noinline) void FUN_142732e40(Scaleform::FilterStackData* a, const Scaleform::Render::HAL::FilterStackEntry& e);
+
 namespace Scaleform { namespace Render {
 
 // the data's buffer and depth stencil reference go with it
@@ -470,7 +477,8 @@ void HAL::beginMaskDisplay()
 // @0x142733b90
 void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned flags)
 {
-    ScopedRenderEvent evt(GetEvent(Event_RenderTarget), __FUNCTION__);
+    // ended by the scope in PopRenderTarget
+    GetEvent(Event_RenderTarget).Begin(__FUNCTION__);
     HALState |= HS_InRenderTarget;
 
     RenderTargetEntry entry = { prt, Matrices, ViewRect, VP };
@@ -478,11 +486,15 @@ void HAL::PushRenderTarget(const RectF& frameRect, RenderTarget* prt, unsigned f
 
     if (prt)
     {
-        RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
         pTextureManager->SetSamplerState(0, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
         pTextureManager->SetSamplerState(1, 0, D3DTEXF_POINT, D3DTADDRESS_CLAMP);
+        RenderTargetData* phd = (RenderTargetData*)prt->GetRenderTargetData();
         pDevice->SetRenderTarget(0, phd->pRenderSurface);
-        pDevice->SetDepthStencilSurface(phd->pDSSurface);
+        IDirect3DSurface9* pds = phd->pDSSurface;
+        if (pds)
+            pDevice->SetDepthStencilSurface(pds);
+        else
+            pDevice->SetDepthStencilSurface(0);
         ++AccumulatedStats.RTChanges;
 
         // bit 0: keep the target's contents
@@ -870,30 +882,31 @@ void HAL::DrawablePaletteMap(Render::Texture** tex, const Matrix2F* texgen, cons
     ScopedRenderEvent evt(GetEvent(Event_DIPaletteMap), __FUNCTION__);
 
     // the palette: a 256x4 texture, one row per channel; a channel not mapped keeps its identity ramp
+    ImageData data;
     Ptr<Render::Texture> ptex =
         *pTextureManager->CreateTexture(Image_B8G8R8A8, 1, ImageSize(256, 4), ImageUse_Map_Mask, 0, 0);
-    ImageData data;
     if (ptex->Map(&data, 0, 1))
     {
-        for (unsigned c = 0; c < 4; c++)
+        for (int c = 0; c < 4; c++)
         {
             UInt32* row = (UInt32*)data.GetScanline(c);
             if (channelMask & (1u << c))
                 memcpy(row, values + c * 256, 256 * sizeof(UInt32));
             else
                 for (unsigned i = 0; i < 256; i++)
-                    row[i] = i << (c * 8);
+                    *row++ = i << (c * 8);
         }
         if (ptex->Unmap())
         {
             applyBlendMode(Blend_OverwriteAll, true, true);
             Size<int> size = drawableTargetSize(this);
-            if (setDrawableShader(&ShaderData, 0x1a653, MappedXY16iAlphaTexture[0]))
+            ShaderInterface* psi = &ShaderData;
+            if (setDrawableShader(psi, 0x1a653, MappedXY16iAlphaTexture[0]))
             {
-                ShaderInterfaceAccess::BeginPrimitive(&ShaderData);
-                ShaderData.SetTexture(ShaderData.GetCurrentShaders(), Uniform::SU_paletteMap, ptex,
+                ShaderInterfaceAccess::BeginPrimitive(psi);
+                psi->SetTexture(psi->GetCurrentShaders(), Uniform::SU_paletteMap, ptex,
                                       ImageFillMode(Wrap_Clamp, Sample_Point), 0);
-                FUN_142731310(&SManager, 1, tex, texgen, size, mvp, &ShaderData, 1);
+                FUN_142731310(&SManager, 1, tex, texgen, size, mvp, psi, 1);
             }
             drawScreenQuad();
         }
@@ -1197,51 +1210,55 @@ void HAL::PushFilters(FilterPrimitive* prim)
     FilterStackEntry e = { prim, 0 };
 
     // filters the profile cannot draw: the content draws unfiltered
-    if (!shouldRenderFilters(prim) || (HALState & HS_CachedFilter))
+    if (!shouldRenderFilters(prim))
     {
         FilterStack.PushBack(e);
         return;
     }
 
-    // masks of the target below do not apply inside a filter without its own
-    if (MaskStackTop != 0 && !prim->GetMaskPresent() && prim->GetCacheState() != FilterPrimitive::Cache_Target)
+    if (!(HALState & HS_CachedFilter))
     {
-        if (StencilAvailable)
-            pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
-        else if (DepthBufferAvailable)
-            pDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
-        pDevice->SetRenderState(D3DRS_COLORWRITEENABLE, 0xf);
-    }
-
-    HALState |= HS_DrawingFilter;
-
-    if (prim->GetCacheState() == FilterPrimitive::Cache_Uncached)
-    {
-        // draw the content into a target of the filtered area's size
-        const Matrix2F& m = prim->GetFilterAreaMatrix().GetMatrix2D();
-        e.pRenderTarget   = *CreateTempRenderTarget(ImageSize((UInt32)(SInt64)m.Sx(), (UInt32)(SInt64)m.Sy()),
-                                                  prim->GetMaskPresent());
-        RectF frameRect(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
-        PushRenderTarget(frameRect, e.pRenderTarget);
-        applyBlendMode(BlendModeStack.GetSize() ? BlendModeStack.Back() : Blend_Normal, false, true);
-
-        // the new depth stencil surface does not hold the mask: fill it with the current level
-        if (prim->GetMaskPresent())
+        // masks of the target below do not apply inside a filter without its own
+        if (MaskStackTop != 0 && !prim->GetMaskPresent() && prim->GetCacheState() != FilterPrimitive::Cache_Target)
         {
             if (StencilAvailable)
-                pDevice->Clear(0, 0, D3DCLEAR_STENCIL, 0, 0.0f, MaskStackTop);
+                pDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
             else if (DepthBufferAvailable)
-                pDevice->Clear(0, 0, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
+                pDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
+            pDevice->SetRenderState(D3DRS_COLORWRITEENABLE, 0xf);
+        }
+
+        HALState |= HS_DrawingFilter;
+
+        if (prim->GetCacheState() == FilterPrimitive::Cache_Uncached)
+        {
+            // draw the content into a target of the filtered area's size
+            const Matrix2F& m = prim->GetFilterAreaMatrix().GetMatrix2D();
+            e.pRenderTarget   = *CreateTempRenderTarget(ImageSize((UInt32)(SInt64)m.Sx(), (UInt32)(SInt64)m.Sy()),
+                                                      prim->GetMaskPresent());
+            RectF frameRect(m.Tx(), m.Ty(), m.Tx() + m.Sx(), m.Ty() + m.Sy());
+            PushRenderTarget(frameRect, e.pRenderTarget);
+            applyBlendMode(BlendModeStack.GetSize() >= 1 ? BlendModeStack.Back() : Blend_Normal, false, true);
+
+            // the new depth stencil surface does not hold the mask: fill it with the current level
+            if (prim->GetMaskPresent())
+            {
+                if (StencilAvailable)
+                    pDevice->Clear(0, 0, D3DCLEAR_STENCIL, 0, 0.0f, MaskStackTop);
+                else if (DepthBufferAvailable)
+                    pDevice->Clear(0, 0, D3DCLEAR_ZBUFFER, 0, 1.0f, 0);
+            }
+        }
+        else
+        {
+            // a cached result: skip what is queued up to the matching PopFilters
+            HALState |= HS_CachedFilter;
+            CachedFilterIndex = (int)FilterStack.GetSize();
+            GetRQProcessor().SetQueueEmitFilter(RenderQueueProcessor::QPF_Filters);
         }
     }
-    else
-    {
-        // a cached result: skip what is queued up to the matching PopFilters
-        HALState |= HS_CachedFilter;
-        CachedFilterIndex = (int)FilterStack.GetSize();
-        GetRQProcessor().SetQueueEmitFilter(RenderQueueProcessor::QPF_Filters);
-    }
-    FilterStack.PushBack(e);
+    // out of line here, inlined above; the exe keeps e in memory for this call
+    ::FUN_142732e40(reinterpret_cast<FilterStackData*>(&FilterStack), e);
 }
 
 // written from the decompile
@@ -1773,10 +1790,6 @@ void FUN_142732050(const Color* c, float* r, float* g, float* b, float* a)
     *b = (c->Channels.Blue  == 0) ? 0.0f : c->Channels.Blue  / 255.0f;
     *a = (c->Channels.Alpha == 0) ? 0.0f : c->Channels.Alpha / 255.0f;
 }
-
-typedef ArrayDataBase<Render::HAL::FilterStackEntry, AllocatorLH<Render::HAL::FilterStackEntry, Stat_Default_Mem>,
-                      ArrayConstPolicy<0, 8, true> >
-    FilterStackData;
 
 // FilterStack's ArrayDataBase::ResizeNoConstruct, out of line (Reserve stays a call)
 // @0x142733fd0
