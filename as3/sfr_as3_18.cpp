@@ -5206,17 +5206,16 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // VM::GetFunctReturnType(const ThunkInfo&): the instance traits of the class a thunk's result type names (in its
 // package's public namespace), found in the class traits cache or else in the global object (then cached); Object
 // when the thunk has no result type or the class is unknown.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class); ours returns early for no result type
+// Free function (not declared in the shared VM class).
 // @0x142509e30
 InstanceTraits::Traits& FUN_142509e30(VM& vm, const ThunkInfo& ti)
 {
     if (const TypeInfo* rt = ti.ResultType)
     {
-        StringManager& sm   = vm.GetStringManager();
-        ASString       name = sm.CreateConstString(rt->Name);
+        ASString name = vm.GetStringManager().CreateConstString(rt->Name);
         const Instances::Namespace* ns;
         {
-            ASString pkg = sm.CreateString(rt->PkgName ? rt->PkgName : "");
+            ASString pkg = vm.GetStringManager().CreateString(rt->PkgName ? rt->PkgName : "");
             if (pkg.IsEmpty())
                 ns = &vm.GetPublicNamespace();
             else
@@ -5224,16 +5223,17 @@ InstanceTraits::Traits& FUN_142509e30(VM& vm, const ThunkInfo& ti)
                                        vm.GetClassTraitsNamespace().GetInstanceTraits()),
                                    Abc::NS_Public, pkg, Value::GetUndefined());
         }
-        ClassTraits::Traits** p  = FUN_142414ac0(&vm.ClassTraitsSet, name, *ns);
-        ClassTraits::Traits*  ct = p ? *p : NULL;
-        if (!ct)
+        ClassTraits::Traits*  ct;
+        ClassTraits::Traits** p = FUN_142414ac0(&vm.ClassTraitsSet, name, *ns);
+        if (p == NULL || (ct = *p) == NULL)
         {
-            ct = FUN_142415520(vm.GlobalObject.GetPtr(), name, *ns);
-            if (!ct)
-                return vm.GetClassTraitsObject().GetInstanceTraits();
-            vm.ClassTraitsSet.Add(name, *ns, ct);
+            ClassTraits::Traits* gct = FUN_142415520(vm.GlobalObject.GetPtr(), name, *ns);
+            ct = gct;
+            if (gct)
+                vm.ClassTraitsSet.Add(name, *ns, gct);
         }
-        return ct->GetInstanceTraits();
+        if (ct)
+            return ct->GetInstanceTraits();
     }
     return vm.GetClassTraitsObject().GetInstanceTraits();
 }
