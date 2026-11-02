@@ -549,6 +549,13 @@ struct ValueAssignCopies
         if (p)
             p->AddRef();
     }
+    // The same for a pointer known to be non-null (Value(this)).
+    static SF_INLINE void AssignUnsafeObjectInline18(Value& v, Object* p)
+    {
+        v.SetKind(Value::kObject);
+        v.value.VS._1.VObj = p;
+        p->AddRef();
+    }
 };
 
 // The value of a traced pointer: a null object when it is empty.
@@ -6792,35 +6799,47 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The property prop_name of this object (its slot or dynamic value, getters run) swapped into value; false when
 // there is none or it could not be read.
-// MS2-FUNCTIONAL PropRef::GetSlotValueUnsafe written out (the exe inlines it; the shared header defines it out of line)
+// MS2-FUNCTIONAL PropRef::GetSlotValueUnsafe written out (the exe inlines it; the shared header defines it out of line);
+// the Value(this) temp and the case-2 object assign are inlined by hand; block layout after FindObjProperty differs
 // @0x14250cc60
 CheckResult Object::GetProperty(const Multiname& prop_name, Value& value)
 {
     VM&     vm = GetVM();
     PropRef prop;
-    FUN_142501b00(prop, vm, Value(this), prop_name, 0);
+    {
+        Value self;
+        ValueAssignCopies::AssignUnsafeObjectInline18(self, this);
+        FUN_142501b00(prop, vm, self, prop_name, 0);
+    }
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0))
-        return false;
-    Value v;
-    switch (bits & 3)
+    if (!(prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0)))
     {
-    case 0:
-    {
-        CheckResult r(false);
-        if (!*FUN_14250e2d0(prop.pSI, &r, &vm, &v, &prop.This, NULL, 0))
-            return false;
-        break;
+        Value v;
+        bool  result = true;
+        switch (bits & 3)
+        {
+        case 0:
+        {
+            CheckResult r(false);
+            result = *FUN_14250e2d0(prop.pSI, &r, &vm, &v, &prop.This, NULL, 0);
+            break;
+        }
+        case 1:
+            v.AssignUnsafe(*reinterpret_cast<const Value*>(bits & ~UPInt(1)));
+            break;
+        case 2:
+            ValueAssignCopies::AssignUnsafeInline18(v, Value::kObject, reinterpret_cast<Object*>(bits & ~UPInt(2)));
+            break;
+        default:
+            break;
+        }
+        if (result)
+        {
+            value.Swap(v);
+            return true;
+        }
     }
-    case 1:
-        v = *reinterpret_cast<const Value*>(bits & ~UPInt(1));
-        break;
-    case 2:
-        v = Value(reinterpret_cast<Object*>(bits & ~UPInt(2)));
-        break;
-    }
-    value.Swap(v);
-    return true;
+    return false;
 }
 
 } } } // namespace Scaleform::GFx::AS3
