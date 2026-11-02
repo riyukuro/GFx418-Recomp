@@ -2314,7 +2314,7 @@ void ASSharedObjectLoader::AddProperty(const String& name, const String& value, 
         v.SetNumber(atof(value.ToCStr()));
         break;
     case GFx::Value::VT_String:
-        v.Assign(pVM->GetStringManager().CreateString(value.ToCStr(), value.GetSize()));
+        v.Assign(pVM->GetStringManager().CreateString(value));
         break;
     case GFx::Value::VT_Boolean:
         v.SetBool(!strncmp(value.ToCStr(), "true", 4));
