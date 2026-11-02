@@ -35,6 +35,9 @@ template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::Na
 // and the namespace array's RemoveAt (0x14241e8b0)
 template<> SF_NOINLINE void ArrayBase<ArrayData<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>,
     AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::Namespace>, 2>, ArrayDefaultPolicy> >::RemoveAt(UPInt index);
+// and the Value array's RemoveMultipleAt (0x14241ebb0)
+template<> SF_NOINLINE void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::
+    RemoveMultipleAt(UPInt index, UPInt num);
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1618,7 +1621,7 @@ namespace Scaleform { namespace GFx { namespace AS3
     }
 
     // MS2-FUNCTIONAL: the exe re-reads the new low bound through a null hash iterator after CutHash (a fault when
-    // reached); ours keeps the first entry's key. Ours inlines ValueA.RemoveMultipleAt (0x14241ebb0), the exe calls it.
+    // reached); ours keeps the first entry's key.
     // @0x142408230
     void SparseArray::CutMultipleAt(UPInt pos, UPInt count, SparseArray* deleted)
     {
@@ -3021,7 +3024,76 @@ namespace Instances { namespace fl
         return num;
     }
 
-    // MS2-FUNCTIONAL: exe inlines XML::Matches into the loop; ours calls it
+    // XML::Matches (0x14241ca70, in sfr_as3_04) as the exe inlines it into ForEachChild.
+    static SF_INLINE bool saXMLMatches(const XML& x, const Multiname& prop_name)
+    {
+        bool result = false;
+        if (prop_name.Name.IsString())
+        {
+            const ASString name = prop_name.Name.AsString();
+            if (x.GetName() == name || prop_name.IsAnyType())
+            {
+                if (prop_name.IsQName())
+                {
+                    if (prop_name.IsAnyNamespace())
+                        result = true;
+                    else
+                    {
+                        const Instances::Namespace& ns = prop_name.GetNamespace();
+                        VM& vm = x.GetVM();
+                        Instances::Namespace* def_xml_ns = vm.GetDefXMLNamespace();
+                        const Instances::Namespace& def_ns = def_xml_ns ? *def_xml_ns : vm.GetPublicNamespace();
+                        const ASString& uri = ns.GetKind() == Abc::NS_Public &&
+                                              (prop_name.IsAttr() || !ns.GetUri().IsEmpty()) ? ns.GetUri()
+                                                                                              : def_ns.GetUri();
+                        if (uri == x.GetNamespace().GetUri())
+                            result = true;
+                    }
+                }
+                else if (prop_name.IsAnyType())
+                    result = true;
+                else
+                {
+                    VM& vm = x.GetVM();
+                    const Instances::Namespace& cur_ns = x.GetNamespace();
+                    Instances::Namespace* def_ns = NULL;
+                    if (!prop_name.IsAttr())
+                        def_ns = vm.GetDefXMLNamespace();
+                    if (def_ns == NULL)
+                        def_ns = &vm.GetPublicNamespace();
+
+                    if (prop_name.ContainsNamespace(vm.GetPublicNamespace()))
+                    {
+                        const ArrayLH<SPtr<Instances::Namespace> >& nss =
+                            static_cast<const NamespaceSet*>(prop_name.Obj.GetPtr())->GetNamespaces();
+                        for (UPInt i = 0; i < nss.GetSize(); ++i)
+                        {
+                            const Instances::Namespace& ns = *nss[i];
+                            if (ns.GetKind() != Abc::NS_Public)
+                                continue;
+                            if (ns.GetUri().IsEmpty())
+                            {
+                                if (def_ns->GetUri() == cur_ns.GetUri())
+                                {
+                                    result = true;
+                                    break;
+                                }
+                            }
+                            else if (ns.GetUri() == cur_ns.GetUri())
+                            {
+                                result = true;
+                                break;
+                            }
+                        }
+                    }
+                    else if (*def_ns == cur_ns)
+                        result = true;
+                }
+            }
+        }
+        return result;
+    }
+
     // @0x14240b6d0
     UInt32 XMLElement::ForEachChild(const Multiname& prop_name, CallBack& cb)
     {
@@ -3029,11 +3101,12 @@ namespace Instances { namespace fl
         const UPInt size = Children.GetSize();
         for (UPInt i = 0; i < size; ++i)
         {
-            if (Children[i]->Matches(prop_name))
+            XML* child = Children[i];
+            if (saXMLMatches(*child, prop_name))
             {
                 ++num;
                 if (!cb.Call(i))
-                    return num;
+                    break;
             }
         }
         return num;
