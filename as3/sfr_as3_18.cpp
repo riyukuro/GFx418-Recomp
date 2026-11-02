@@ -5,6 +5,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142509d40-0x142523170 .text$mn
 #define SF_AS3_AVMBUTTON_MODEL
+#define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp/AS3_Value.cpp AddRef bodies inline (as3_value.h)
 #include <math.h>
 #include <stdlib.h>
@@ -1709,7 +1710,6 @@ __declspec(noinline) bool Tracer::IsAnyType(const Traits* tr) const
            tr == &GetVM().GetClassTraitsClassClass().GetInstanceTraits();
 }
 
-// MS2-FUNCTIONAL 0x142515840: the exe tail-calls the weak-proxy free
 // @0x142515840
 __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from, ClassTraits::Traits& tr) const
 {
@@ -1720,7 +1720,6 @@ __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, c
     to_be_merged.Assign(Value(tr, null));
 }
 
-// MS2-FUNCTIONAL 0x142515930: the exe tail-calls the weak-proxy free
 // @0x142515930
 __declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from,
                                                                                InstanceTraits::Traits& tr) const
@@ -5007,8 +5006,7 @@ static inline Value Sfr34_Closure(UInt32 kind, const void* p1, Object* obj)
 
 // VTable::GetMethod: method slot ind of obj's traits as a value: a thunk becomes a thunk closure of obj, a method
 // index a VTable index closure of obj; other slots are copied.
-// MS2-FUNCTIONAL free function (the member is not declared in the shared VTable class); SDK form, the exe tail-calls the
-// temporary closure's release (jmp vs our call/ret)
+// A free function (the member is not declared in the shared VTable class); SDK form.
 // @0x14250ba10
 void FUN_14250ba10(const VTable* vt, Value& result, AbsoluteIndex ind, Object* obj)
 {
@@ -5713,7 +5711,6 @@ SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_d
 
 // The actions of level srclvl moved to the end of level dstlvl's queue, in order. The copy of an entry leaves out
 // its function value (4.1.18 copies the event, the character and objects, the C function and the load notifier).
-// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the iterator destructor
 // @0x142522ae0
 void MovieRoot::RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl)
 {
