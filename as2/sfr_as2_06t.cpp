@@ -205,7 +205,7 @@ bool MovieRoot::SetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
 }
 
 // Resizes the array at path; a missing or non-array variable becomes a new Array of that size.
-// MS2-FUNCTIONAL: the level lookups and the value releases are inlined differently
+// MS2-FUNCTIONAL: register allocation differs in the first level search, and the exe sets the SV_Normal flag in dil before the environment call.
 // @0x14298d760
 bool MovieRoot::SetVariableArraySize(const char* ppathToVar, unsigned count, SetVarTypeArg setType)
 {
@@ -213,24 +213,26 @@ bool MovieRoot::SetVariableArraySize(const char* ppathToVar, unsigned count, Set
         return false;
     Environment* penv = Level0Env(pMovieImpl);
     ASString     path(penv->CreateString(ppathToVar));
-    Value        cur;
-    Object*      pobj;
     ArrayObject* parray;
     bool         ok;
-    if (penv->GetVariable(path, &cur) && cur.IsObject() && (pobj = cur.ToObject(penv)) != 0 &&
-        pobj->GetObjectType() == Object::Object_Array)
     {
-        parray = static_cast<ArrayObject*>(pobj);
-        parray->AddRef();
-        if (count != (unsigned)parray->GetSize())
+        Value   cur;
+        Object* pobj;
+        if (penv->GetVariable(path, &cur) && cur.IsObject() && (pobj = cur.ToObject(penv)) != 0 &&
+            pobj->GetObjectType() == Object::Object_Array)
+        {
+            parray = static_cast<ArrayObject*>(pobj);
+            parray->AddRef();
+            if (count != (unsigned)parray->GetSize())
+                parray->Resize((int)count);
+            ok = true;
+        }
+        else
+        {
+            parray = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pMovieImpl));
             parray->Resize((int)count);
-        ok = true;
-    }
-    else
-    {
-        parray = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) ArrayObject(Level0Env(pMovieImpl));
-        parray->Resize((int)count);
-        ok = MovieRoot_StoreArray(this, path, parray, setType);
+            ok = MovieRoot_StoreArray(this, path, parray, setType);
+        }
     }
     if (parray)
         parray->Release();

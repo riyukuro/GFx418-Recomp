@@ -1214,21 +1214,22 @@ SInt32 Value::ToInt32(Environment* penv) const
     return (SInt32)uv;
 }
 
-// MS2-FUNCTIONAL the exe keeps the null test of the delete after the size check
+// The watchpoint hash as the SDK's Hash deletes it: its set destructor, then the global heap free.
+struct WatchpointHashDel : ASStringHash_GC<Object::Watchpoint>
+{
+    ~WatchpointHashDel() { reinterpret_cast<SetType*>(this)->~HashSetBase(); }
+    void operator delete(void* p) { SF_FREE(p); }
+};
+
 // @0x142992780
 bool Object::Unwatch(ASStringContext* psc, const ASString& prop)
 {
     if (pWatchpoints && WatchpointHash_GetCaseCheck(pWatchpoints, prop, psc->IsCaseSensitive()))
     {
         WatchpointHash_RemoveCaseCheck(pWatchpoints, prop, psc->IsCaseSensitive());
-        ASStringHash_GC<Watchpoint>* pwatchpoints = pWatchpoints;
-        if (pwatchpoints->GetSet().GetSize() == 0)
+        if (pWatchpoints->GetSet().GetSize() == 0)
         {
-            if (pwatchpoints)
-            {
-                reinterpret_cast<ASStringHash_GC<Object::Watchpoint>::SetType*>(pwatchpoints)->~HashSetBase();
-                SF_FREE(pwatchpoints);
-            }
+            delete static_cast<WatchpointHashDel*>(pWatchpoints);
             pWatchpoints = 0;
         }
         return true;

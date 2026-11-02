@@ -140,7 +140,7 @@ bool LoadVarsProto::LoadVariables(Environment* penv, ObjectInterface* pobj, cons
 }
 
 // A style sheet load done on the movie thread: the loader reads the file, then fills its object.
-// MS2-FUNCTIONAL: register allocation differs (the level search uses other registers).
+// MS2-FUNCTIONAL: register allocation differs in the inlined level search (the exe uses r8/r10/r11, ours rdx/r8/r10).
 // @0x142970450
 void MovieRoot::ProcessLoadCSS(GFx::LoadQueueEntry* pentry, LoadStates* pls)
 {
@@ -152,10 +152,10 @@ void MovieRoot::ProcessLoadCSS(GFx::LoadQueueEntry* pentry, LoadStates* pls)
         String                   url;
         pls->BuildURL(&url, loc);
         GFxAS2LoadQueueEntry* pas2entry = static_cast<GFxAS2LoadQueueEntry*>(pentry);
-        ASCSSFileLoader*      ploader   = static_cast<ASCSSFileLoader*>(pas2entry->CSSHolder.Loader.GetPtr());
-        ploader->Load(url.ToCStr(), static_cast<FileOpener*>(pls->GetBindStates()->pFileOpener.GetPtr()));
-        Environment* penv = LqCharEnv(LqLevelMovie(this, 0));
-        ploader = static_cast<ASCSSFileLoader*>(pas2entry->CSSHolder.Loader.GetPtr());
+        static_cast<ASCSSFileLoader*>(pas2entry->CSSHolder.Loader.GetPtr())
+            ->Load(url.ToCStr(), static_cast<FileOpener*>(pls->GetBindStates()->pFileOpener.GetPtr()));
+        Environment*     penv    = LqCharEnv(LqLevelMovie(this, 0));
+        ASCSSFileLoader* ploader = static_cast<ASCSSFileLoader*>(pas2entry->CSSHolder.Loader.GetPtr());
         ploader->Init(penv, pas2entry->CSSHolder.ASObj.ToObject(penv));
     }
 }
