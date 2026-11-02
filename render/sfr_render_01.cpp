@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x1425792d0-0x14257db40 .text$mn
 // MS2-RANGE: 0x14257db40-0x14257dc30 .text$mn
 // MS2-RANGE: 0x142579270-0x1425792cd .text$mn
+#define MS2_SF_SUBIMAGE_DTOR_FORCEINLINE
 
 #include "ms2/scaleform/include/render/render_image.h"
 #include "ms2/scaleform/include/render/render_drawableimage.h"
@@ -1298,17 +1299,18 @@ void* FUN_142579b60(RawImage* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: preserves SubImage member teardown and both allocator delete branches.
+// The exe inlines the implicit ~SubImage and ~Image here; MS2_SF_SUBIMAGE_DTOR_FORCEINLINE (render_image.h) declares
+// the dtor __forceinline and defaulted, so it is inlined without a SubImage vftable store.
 // @0x142579cc0
 void* FUN_142579cc0(SubImage* object, unsigned flags)
 {
     object->SubImage::~SubImage();
     if (flags & 1)
     {
-        if (flags & 4)
-            FUN_14015b310(object, sizeof(SubImage));
-        else
+        if (!(flags & 4))
             Memory::Free(object);
+        else
+            FUN_14015b310(object, sizeof(SubImage));
     }
     return object;
 }

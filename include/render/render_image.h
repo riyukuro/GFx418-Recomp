@@ -677,6 +677,10 @@ public:
     {
         ImageId = ImageBase::GetNextImageId();
     }
+#if defined(MS2_SF_SUBIMAGE_DTOR_FORCEINLINE)
+    // (rk16a) sfr_render_01 only: its ??_G 0x142579cc0 inlines the implicit dtor; defaulted, so no vftable store
+    __forceinline ~SubImage() = default;
+#endif
 
     virtual ImageType   GetImageType() const   { return Type_SubImage; }
     virtual ImageFormat GetFormat() const      { return pImage->GetFormat(); }
