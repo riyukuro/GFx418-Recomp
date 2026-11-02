@@ -222,10 +222,7 @@ __forceinline void ReleaseVideoAtom(uint64_t* value)
 
 __forceinline void RetainVideoAtom(uint64_t atom)
 {
-    if (atom) {
-        uint32_t* refs = reinterpret_cast<uint32_t*>(atom + 0x10);
-        *refs = (*refs + 1) & 0x8fbfffff;
-    }
+    if (atom) reinterpret_cast<Scaleform::GFx::AS3::Object*>(atom)->AddRef();
 }
 
 struct VideoAtomHashEntry { uint64_t NextInChain, HashValue, Key, Value; };
@@ -266,7 +263,7 @@ __forceinline void EraseVideoAtomHashEntry(void* tablePtr, const uint64_t* key)
         VideoAtomE(table, prevIndex).NextInChain = e->NextInChain;
     }
     e->NextInChain = ~uint64_t(1);
-    table->EntryCount--;
+    (*reinterpret_cast<VideoAtomHashTable**>(tablePtr))->EntryCount--;
 }
 
 } // namespace: externally referenced Video native
@@ -863,21 +860,18 @@ __forceinline void ConvertVideoCallback(void* vm, void* callback, const void* ba
     VideoCallbackToValue(&closure.Vm);
 }
 } // namespace
-// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
 // invokes the metadata callback and converts its object result to an AS3 Value.
 // @0x140019d70
 void FUN_140019d70(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
     ConvertVideoCallback(vm, VideoCallbackA, &VideoCallbackBaseA, context, output);
 }
-// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
 // invokes the cue point callback and converts its object result to an AS3 Value.
 // @0x140019e20
 void FUN_140019e20(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
 {
     ConvertVideoCallback(vm, VideoCallbackB, &VideoCallbackBaseB, context, output);
 }
-// MS2-FUNCTIONAL: cl15 shape, the exe retains with inc [m] / and [m] in memory.
 // invokes the subtitle callback and converts its object result to an AS3 Value.
 // @0x140019ed0
 void FUN_140019ed0(void*, void* vm, void* context, Scaleform::GFx::AS3::Value* output)
@@ -1523,7 +1517,7 @@ uint64_t* FUN_1400170c0(uint64_t* record, uint64_t vm, uint64_t property, unsign
     }
     return record;
 }
-// MS2-FUNCTIONAL: removes the hashed atom key from its chained Scaleform table.
+// removes the hashed atom key from its chained Scaleform table.
 // @0x140017320
 void FUN_140017320(uint64_t* table, const uint64_t* key)
 {
