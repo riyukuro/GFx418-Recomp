@@ -26,6 +26,7 @@
 // MS2-RANGE: 0x140036710-0x1400369e0 .text$mn
 // MS2-RANGE: 0x140036b80-0x140036d50 .text$mn
 // MS2-RANGE: 0x140037400-0x140037740 .text$mn
+// MS2-RANGE: 0x140037a40-0x140038000 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -33,6 +34,7 @@
 #pragma function(memset, memcpy)                // the exe CRI objs call memset and memcpy here
 
 typedef unsigned char CriUint8;
+typedef unsigned short CriUint16;
 typedef unsigned long CriUint32;
 typedef long CriSint32;
 typedef unsigned __int64 CriUint64;
@@ -345,6 +347,9 @@ void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value)
 void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+typedef struct CriUsfStandardHeader CriUsfStandardHeader;
+CriBool criMvPly_IsSetDefaultDecryptionKey(void);
+CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header);
 void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
 struct CriUtfRtvView;
 struct CriMvStreamingParameters;
@@ -381,6 +386,8 @@ CriSint32 criHeap_Free(CriHeap heap, void* ptr);
 }
 #endif
 extern CriSint32 DAT_143b27948;
+extern CriUint8 DAT_143b27a48[0x20];
+extern CriUint8 DAT_143b27a68[0x20];
 void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
 CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
 CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
@@ -605,7 +612,9 @@ CriSint32 FUN_1400341d0(void* player, const CriMovieInputChunk* chunk);
 #pragma comment(linker, "/alternatename:FUN_140044c10=?FUN_140044c10@@YAXPEAXK@Z")
 #pragma comment(linker, "/alternatename:FUN_140044330=?FUN_140044330@@YAXPEA_KPEAX1@Z")
 #pragma comment(linker, "/alternatename:setProcessorParams=?setProcessorParams@@YAXPEAX00@Z")
-#pragma comment(linker, "/alternatename:FUN_140037a40=?FUN_140037a40@@YAXPEBUCriMovieInputChunk@@0PEAX@Z")
+#pragma comment(linker, "/alternatename:?FUN_140037a40@@YAXPEBUCriMovieInputChunk@@0PEAX@Z=FUN_140037a40")
+#pragma comment(linker, "/alternatename:criMvPly_IsSetDefaultDecryptionKey=?criMvPly_IsSetDefaultDecryptionKey@@YAJXZ")
+#pragma comment(linker, "/alternatename:criUsfCmn_ParseUsfHeaderStd=?criUsfCmn_ParseUsfHeaderStd@@YAKPEBEKPEAUCriUsfStandardHeader@@@Z")
 #pragma comment(linker, "/alternatename:FUN_140038000=?FUN_140038000@@YAXPEAPEAXPEAX@Z")
 #pragma comment(linker, "/alternatename:criMvPlyAmng_Create=?criMvPlyAmng_Create@@YAPEAXPEAX0PEBX@Z")
 #pragma comment(linker, "/alternatename:criMvPlyAmng_CreateAudioDecoder=?criMvPlyAmng_CreateAudioDecoder@@YAJPEAX00PEBKKJ@Z")
@@ -2176,5 +2185,138 @@ CriSint32 criMvPly_CalcPlaybackWorkSize(void* player, const CriMvStreamParamsVie
     cnt = criSjUni_GetRequiredMemorySizeWithConfig(0, 0x40, count2);
     bytes += cnt;
     return bytes;
+}
+
+// apply the rolling CRI USM mask and its eight-block prefix transform to a chunk.
+// As C (VC9 /TC) the inner goto is one jmp, as in the exe; C++ adds a second. The local names pick the exe's VC9 /Od stack slots,
+// and the locals from 0x68 up sit in one nested block as in the exe. The mask local is named xor for its slot; the clang DLL build
+// compiles as C++, where xor is an operator keyword.
+#ifdef __cplusplus
+#define CRI02D_XOR xormask
+#else
+#define CRI02D_XOR xor
+#endif
+typedef struct Cri02dUsfChunkHeader
+{
+    CriUint32 Signature;
+    CriUint32 ChunkSize;
+    CriUint8 Reserved8;
+    CriUint8 DataOffset;
+    CriUint16 PaddingSize;
+    CriUint32 Reserved[6];
+} Cri02dUsfChunkHeader;
+// 0x20 mask bytes with no byte array, so /GS adds no cookie, as in the exe
+typedef struct Cri02dMaskBlock
+{
+    CriUint8 First;
+    CriUint8 Second;
+    CriUint16 Third;
+    CriUint32 Rest[7];
+} Cri02dMaskBlock;
+typedef struct Cri02dMaskPlayerView
+{
+    CriUint8 Reserved0[0xe48];
+    CriUint32 CarryOffset;
+    CriUint32 CarryLength;
+    CriUint8* CarryBuffer;
+} Cri02dMaskPlayerView;
+// @0x140037a40
+void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
+{
+    CriMovieInputChunk payload;
+    Cri02dUsfChunkHeader usfhdr;
+    Cri02dMaskPlayerView* mv = (Cri02dMaskPlayerView*)player;
+    CriUint32 begin = 0x40;
+    if (mv == mv) {}
+    if (!criMvPly_IsSetDefaultDecryptionKey)        // the exe tests the function's address, which is never null
+        return;
+    payload.Data = criUsfCmn_GetContents(current->Data, current->Size, (CriSint32*)&payload.Size);
+    criUsfCmn_ParseUsfHeaderStd(current->Data, current->Size, (CriUsfStandardHeader*)&usfhdr);
+    payload.Size = usfhdr.ChunkSize - begin - usfhdr.DataOffset;
+    if (previous != NULL)
+        payload.Size -= previous->Size;
+    else
+        payload.Size -= usfhdr.PaddingSize;
+    {
+    CriUint32 blkcnt;
+    CriMovieInputChunk pc;
+    CriUint32 unit;
+    CriMovieInputChunk body;
+    CriUint32 bsz = 0x20;
+    CriUint32 hsize = 0x100;
+    Cri02dMaskBlock CRI02D_XOR = {0};
+    Cri02dMaskBlock key = {0};
+    Cri02dMaskBlock xor2 = {0};
+    CriUint32 bidx = 0;
+    CriUint8* dptr = NULL;
+    CriUint8* data = NULL;
+    CriUint32 elen = usfhdr.ChunkSize - usfhdr.DataOffset - begin - usfhdr.PaddingSize;
+    CriUint32 ri;
+    CriUint32 boff;
+    CriUint32 ofs;
+    if (elen < 0x200)
+        return;
+    memcpy(&CRI02D_XOR, DAT_143b27a48, 0x20);
+    memcpy(&key, DAT_143b27a68, 0x20);
+    memcpy(&xor2, DAT_143b27a68, 0x20);
+    body = payload;
+    body.Data += begin;
+    if (previous != NULL)
+    {
+        pc.Data = previous->Data;
+        pc.Size = previous->Size - usfhdr.PaddingSize;
+    }
+    else
+    {
+        pc.Data = NULL;
+        pc.Size = 0;
+    }
+    dptr = (CriUint8*)body.Data;
+    data = dptr;
+    ofs = 0;
+    boff = ofs;
+    bidx = hsize;
+    blkcnt = (elen - hsize) / bsz + 1;
+    for (unit = 0; unit < blkcnt; unit++)
+    {
+        for (ri = 0; ri < bsz; ri++)
+        {
+            if (bidx >= elen)
+                goto done;
+            if (bidx >= body.Size)
+            {
+                data = (CriUint8*)pc.Data;
+                boff = bidx - body.Size;
+            }
+            else
+                boff = bidx;
+            data[boff] ^= ((CriUint8*)&key)[ri];
+            ((CriUint8*)&key)[ri] = data[boff] ^ ((CriUint8*)&xor2)[ri];
+            bidx++;
+        }
+    }
+done:
+    bidx = 0;
+    dptr = (CriUint8*)body.Data;
+    data = dptr;
+    ofs = 0;
+    boff = ofs;
+    for (unit = 0; unit < 8; unit++)
+    {
+        for (ri = 0; ri < bsz; ri++)
+        {
+            ofs = bidx + hsize + ri;
+            ((CriUint8*)&CRI02D_XOR)[ri] ^= dptr[ofs];
+        }
+        for (ri = 0; ri < bsz; ri++)
+        {
+            boff = bidx;
+            data[boff] ^= ((CriUint8*)&CRI02D_XOR)[ri];
+            bidx++;
+        }
+    }
+    if (previous != NULL)
+        memcpy(mv->CarryBuffer, mv->CarryBuffer + mv->CarryOffset, mv->CarryLength);
+    }
 }
 #pragma optimize("", on)

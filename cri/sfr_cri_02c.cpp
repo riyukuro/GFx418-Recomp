@@ -26,7 +26,8 @@
 // MS2-RANGE: 0x140036590-0x140036710 .text$mn
 // MS2-RANGE: 0x1400369e0-0x140036b80 .text$mn
 // MS2-RANGE: 0x140036d50-0x140037400 .text$mn
-// MS2-RANGE: 0x140037740-0x140039ea8 .text$mn
+// MS2-RANGE: 0x140037740-0x140037a40 .text$mn
+// MS2-RANGE: 0x140038000-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 // VS2008's <new> (use_ansi.h) adds /DEFAULTLIB:libcpmt under /MT. That static C++ library then wins over the hook DLL's
@@ -2377,72 +2378,6 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
 }
 #pragma optimize("", on)
 
-#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: apply the rolling CRI USM mask and its eight-block prefix transform to a chunk.
-// @0x140037a40
-void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
-{
-    if (!current || !current->Data || current->Size < 0x40)
-        return;
-    CriUsfStandardHeader header = {};
-    criUsfCmn_ParseUsfHeaderStd(current->Data, current->Size, (CriUsfStandardHeader*)(&header));
-    CriSint32 contentSize = 0;
-    const CriUint8* contents = criUsfCmn_GetContents(current->Data, current->Size, &contentSize);
-    if (!contents || contentSize <= 0)
-        return;
-
-    CriUint32 headerLength = header.Data[9];
-    CriUint16 carriedLength16 = 0;
-    memcpy(&carriedLength16, header.Data + 10, sizeof(carriedLength16));
-    CriUint32 carriedLength = carriedLength16;
-    CriUint32 previousLength = previous ? previous->Size : carriedLength;
-    CriSint32 dataLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)previousLength;
-    CriSint32 transformLength = (CriSint32)current->Size - 0x40 - (CriSint32)headerLength - (CriSint32)carriedLength;
-    if (transformLength <= 0x1ff || dataLength <= 0)
-        return;
-
-    CriUint8* data = (CriUint8*)contents + 0x40;
-    CriUint8 rolling[0x20];
-    CriUint8 prefixMask[0x20];
-    CriUint8 feedback[0x20];
-    memcpy(rolling, DAT_143b27a68, sizeof(rolling));
-    memcpy(prefixMask, DAT_143b27a48, sizeof(prefixMask));
-    memcpy(feedback, DAT_143b27a68, sizeof(feedback));
-
-    for (CriUint32 offset = 0x100; offset < (CriUint32)transformLength; offset += 0x20)
-    {
-        for (CriUint32 i = 0; i < 0x20 && offset + i < (CriUint32)transformLength; ++i)
-        {
-            CriUint8* byte = data + offset + i;
-            if (previous && offset + i >= (CriUint32)previousLength)
-                byte = (CriUint8*)previous->Data + offset + i - previousLength;
-            *byte ^= rolling[i];
-            rolling[i] = *byte ^ feedback[i];
-        }
-    }
-
-    for (CriUint32 round = 0; round < 8; ++round)
-    {
-        const CriUint8* block = data + 0x100 + round * 0x20;
-        for (CriUint32 i = 0; i < 0x20; ++i)
-            prefixMask[i] ^= block[i];
-        for (CriUint32 i = 0; i < 0x20; ++i)
-            data[round * 0x20 + i] ^= prefixMask[i];
-    }
-
-    if (previous)
-    {
-        CriUint8* buffer = NULL;
-        CriUint32 prefix = 0, copyLength = 0;
-        memcpy(&buffer, (CriUint8*)player + 0xe50, sizeof(buffer));
-        memcpy(&prefix, (CriUint8*)player + 0xe48, sizeof(prefix));
-        memcpy(&copyLength, (CriUint8*)player + 0xe4c, sizeof(copyLength));
-        if (buffer && copyLength)
-            memmove(buffer, buffer + prefix, copyLength);
-    }
-}
-
-#pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // parse one indexed CRI stream record and update its pending-record count.
