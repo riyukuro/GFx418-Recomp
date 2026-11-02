@@ -2299,9 +2299,18 @@ void FUN_1424dcdd0(void* self)
 template Scaleform::UPInt Scaleform::FixedSizeHash<Sfr16NamespaceHashKey>::operator()(
     const Sfr16NamespaceHashKey&) const;
 
+// `inline` under cl only: sfr_render_06d keeps the implicit operator= (MS2_SF_STROKESTYLE_IMPLICIT_ASSIGN) and cl emits
+// it there as a COMDAT-any copy with the same bytes, so this one must be COMDAT-any too (no LNK2005 in the fullexe).
+// clang-cl does not emit an unreferenced inline, so the hook DLL build keeps the plain definition.
+#if defined(__clang__)
+#define SFR16_STROKE_ASSIGN
+#else
+#define SFR16_STROKE_ASSIGN inline
+#endif
+
 namespace Scaleform { namespace Render {
 // @0x1424e0cb0
-StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
+SFR16_STROKE_ASSIGN StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
 {
     Width = other.Width;
     Units = other.Units;
@@ -2313,6 +2322,13 @@ StrokeStyleType& StrokeStyleType::operator=(const StrokeStyleType& other)
     return *this;
 }
 }} // namespace Scaleform::Render
+// Calls the inline operator= above out of line (inline_depth 0), so cl emits its body in this unit. Nothing calls it.
+#pragma inline_depth(0)
+void MS2_Sfr16EmitStrokeAssign(Scaleform::Render::StrokeStyleType* dst, const Scaleform::Render::StrokeStyleType* src)
+{
+    *dst = *src;
+}
+#pragma inline_depth()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // The ABC files are released last-loaded first, then the array and the GFx root-node base go.

@@ -14,6 +14,10 @@
 // MS2-PIN: ??_G?$RefCountBaseNTS@VGlyphRaster@Render@Scaleform@@$0EO@@Scaleform@@UEAAPEAXI@Z 0x1426c4930
 // MS2-PIN: ??_G?$RefCountBaseStatImpl@VRefCountNTSImpl@Scaleform@@$0EO@@Scaleform@@UEAAPEAXI@Z 0x1426c48d0
 
+// StrokeStyleType keeps its implicit operator= here (render_shapedata.h): ShapeDataPacked::GetStrokeStyle 0x1426c6470
+// inlines the member-wise copy.
+#define MS2_SF_STROKESTYLE_IMPLICIT_ASSIGN
+
 #include "ms2/scaleform/include/render/render_tessgen.h" // first: StrokeGenerator is a struct here, as 07o mangles it
 #include "ms2/scaleform/include/render/render_glyphcache.h"
 #include "ms2/scaleform/include/render/render_boundbox.h"
@@ -1955,7 +1959,6 @@ void GlyphCache::LogWarning(const char* fmt, ...)
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@EU?$AllocatorLH_POD@E$01@Scaleform@@UArrayDefaultPolicy@2@@Scaleform@@QEAAXPEBX_K@Z 0x1426c7da0
 // MS2-FUNCTIONAL ?ClosePath@?$ShapeDataPacked@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@QEAAXPEAUShapePosInfo@23@@Z: same shape (frame-only, encoder inlined); exe shrink-wraps rsi and keeps edi/ecx for the deltas, ours pushes rbx and spills differently
 // MS2-PIN: ?ClosePath@?$ShapeDataPacked@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@QEAAXPEAUShapePosInfo@23@@Z 0x1426c51f0
-// MS2-FUNCTIONAL 0x1426c6470: the exe inlines the member-wise StrokeStyleType copy; ours calls the out-of-line operator= (0x1424e0cb0)
 // MS2-PIN: ?GetStrokeStyle@?$ShapeDataPacked@V?$ArrayLH_POD@E$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@@Render@Scaleform@@UEBAXIPEAUStrokeStyleType@23@@Z 0x1426c6470
 // MS2-PIN: ??_7TessBase@Render@Scaleform@@6B@ 0x14318fbd8
 // MS2-PIN: ??_7VertexPath@Render@Scaleform@@6B@ 0x14318fc58

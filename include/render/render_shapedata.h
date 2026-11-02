@@ -73,7 +73,11 @@ struct StrokeStyleType
     Ptr<ComplexFill> pFill;
     Ptr<DashArray>   pDashes;
 
+// Default-off switch MS2_SF_STROKESTYLE_IMPLICIT_ASSIGN (defined only in sfr_render_06d): the SDK's implicit operator=,
+// which the exe inlines in ShapeDataPacked::GetStrokeStyle 0x1426c6470. Layout and vftables are unchanged.
+#if !defined(MS2_SF_STROKESTYLE_IMPLICIT_ASSIGN)
     StrokeStyleType& operator=(const StrokeStyleType& other);
+#endif
 };
 
 // Source of fill/stroke styles and path data for the tessellator.
