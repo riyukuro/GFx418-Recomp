@@ -118,12 +118,14 @@ public:
     void ReleaseInternal() const;   // out of line (shared with AS2, 0x1423dfa20)
 };
 
-// Weak reference target of a collectable object; told when the object dies.
-class WeakProxy : public NewOverrideBase<StatMV_ActionScript_Mem>
+// Weak reference target of a collectable object; told when the object dies (allocated with StatMV_VM, 0x148).
+class WeakProxy : public NewOverrideBase<StatMV_VM>
 {
 public:
     int         RefCount;   // +0x00
     const void* pObject;    // +0x08
+
+    WeakProxy(const void* pobj) : RefCount(1), pObject(pobj) {}
 
     void AddRef()               { ++RefCount; }
     void Release()              { if (--RefCount == 0) delete this; }

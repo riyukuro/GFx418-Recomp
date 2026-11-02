@@ -4949,7 +4949,8 @@ template SPtr<Instances::Namespace>* AbcMultinameHash<SPtr<Instances::Namespace>
 
 // Hash<UPInt, UPInt>::Get of a bytewise-hashed 8-byte key: *pvalue (unless NULL) receives its value.
 // @0x1425058c0
-bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pvalue)
+// noinline: CreateWeakProxy (0x1424f43c0) calls it for WProxyHash.Get.
+__declspec(noinline) bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pvalue)
 {
     return h.Get(key, pvalue);
 }
@@ -5054,25 +5055,24 @@ void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key)
 
 // GASRefCountBase::CreateWeakProxy: the object's weak proxy, made on first use (registered with the collector, the
 // object flagged as weakly referenced); returned with a new reference.
-// MS2-FUNCTIONAL 0x1424f43c0: free function taking the object, then the (uninitialized) Ptr<WeakProxy> slot it fills
+// A free function taking the object, then the (uninitialized) Ptr<WeakProxy> slot it fills.
 // @0x1424f43c0
 WeakProxy** Sfr33CreateWeakProxy(const GASRefCountBase* obj, WeakProxy** out)
 {
     GASRefCountBase::Collector* gc = obj->GetCollector();
     WeakProxy* proxy = NULL;
-    if (!gc->WProxyHash.Get(obj, &proxy))
+    if (!Sfr33WordHashGet(reinterpret_cast<const HashLH<UPInt, UPInt>&>(gc->WProxyHash),
+                          reinterpret_cast<UPInt>(obj), reinterpret_cast<UPInt*>(&proxy)))
     {
-        proxy = SF_HEAP_AUTO_NEW(obj) WeakProxy;
+        proxy = SF_HEAP_AUTO_NEW(obj) WeakProxy(obj);
         if (!proxy)
         {
             *out = NULL;
             return out;
         }
-        proxy->RefCount = 1;
-        proxy->pObject = obj;
         // RefCount (+0x10) is protected: set Flag_HasWeakRef through the raw word
         *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(const_cast<GASRefCountBase*>(obj)) + 0x10) |= GASRefCountBase::Flag_HasWeakRef;
-        gc->WProxyHash.Add(obj, proxy);
+        gc->WProxyHash.Add(static_cast<const GASRefCountBase*>(obj), proxy);
     }
     proxy->AddRef();
     *out = proxy;
