@@ -2007,11 +2007,11 @@ __declspec(noinline) void FUN_14000b9e0(Scaleform::UPInt* tableRef, void* owner,
     InsertVideoHashEntry(tableRef, owner, pair, hash, ConstructVideoHashFromPair, CopyVideoHashPair);
 }
 
-// MS2-FUNCTIONAL: hashes a 32-bit track key and inserts its value into the keyed table.
+// hashes a 32-bit track key and inserts the object the caller's slot holds into the keyed table.
 // @0x14000c220
-void FUN_14000c220(void* table, const unsigned* key, void* value)
+void FUN_14000c220(void* table, const unsigned* key, void** value)
 {
-    void* pair[2] = {const_cast<unsigned*>(key), &value};
+    void* pair[2] = {const_cast<unsigned*>(key), value};
     FUN_14000b9e0(reinterpret_cast<Scaleform::UPInt*>(table), table, pair, VideoHashKeyInline(key, 4));
 }
 
