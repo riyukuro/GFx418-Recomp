@@ -634,16 +634,23 @@ void TreeContainer::Remove(UPInt index, UPInt count)
     data->Children.Remove(index, count);
 }
 
+// the exe inlines TreeNode::NodeData's member-wise copy (out of line at 0x1424e0a70) into the container's, with its own
+// this / source pair (that is what makes cl test the destination's state bag first)
+static __forceinline TreeNode::NodeData& TreeNodeDataAssign(TreeNode::NodeData& d, const TreeNode::NodeData& s)
+{
+    d.ContextImpl::EntryData::operator=(s);
+    d.M3D() = s.M3D();
+    d.States = s.States;
+    d.Cx = s.Cx;
+    d.AproxLocalBounds = s.AproxLocalBounds;
+    d.AproxParentBounds = s.AproxParentBounds;
+    return d;
+}
+
 // @0x14261b570
-// MS2-FUNCTIONAL: member copy scheduled differently (statebag test operand order)
 TreeContainer::NodeData& TreeContainer::NodeData::operator=(const NodeData& src)
 {
-    ContextImpl::EntryData::operator=(src);
-    M3D() = src.M3D();
-    States = src.States;
-    Cx = src.Cx;
-    AproxLocalBounds = src.AproxLocalBounds;
-    AproxParentBounds = src.AproxParentBounds;
+    TreeNodeDataAssign(*this, src);
     Children = src.Children;
     return *this;
 }
