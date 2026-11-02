@@ -753,8 +753,8 @@ namespace Instances { namespace fl
 
         const SInt32 lastIndex = LastIndex;
         const SInt32 start = !IsGlobal ? 0 : lastIndex;
-        MatchOffset = 0;
         MatchLength = 0;
+        MatchOffset = 0;
         const char* s = str.ToCStr();
         const UInt32 length = str.GetLength();
 
@@ -791,7 +791,7 @@ namespace Instances { namespace fl
                     pcre_fullinfo(CompRegExp, NULL, 8, &count);
                     pcre_fullinfo(CompRegExp, NULL, 7, &entrySize);
                     pcre_fullinfo(CompRegExp, NULL, 9, &table);
-                    for (int i = 0; i < count; ++i)
+                    for (int i = 0; i < count; ++i, table += entrySize)
                     {
                         strncpy_s(name, sizeof(name), table + 2, strlen(table + 2));
                         const int n = (table[0] << 8) + table[1];
@@ -799,7 +799,6 @@ namespace Instances { namespace fl
                         const ASString group = sm.CreateString(value);
                         const Value v(group);
                         arr->AddDynamicSlotValuePair(sm.CreateString(name), v);
-                        table += entrySize;
                     }
                 }
 
