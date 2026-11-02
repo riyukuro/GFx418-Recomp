@@ -602,7 +602,8 @@ __declspec(noinline) AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, c
 }
 
 // @0x142502dc0
-const SPInt* SlotContainerType::FindValues(const ASString& k) const
+// noinline: FindDynamicSlot calls it in both of its loops.
+__declspec(noinline) const SPInt* SlotContainerType::FindValues(const ASString& k) const
 {
     return KVHashSet.Get(k.GetNode());
 }
@@ -1961,26 +1962,29 @@ void Class::Construct(Value& _this, unsigned argc, const Value* argv, bool extCa
 bool VM::Construct(const char* gname, Value& result, unsigned argc, const Value* argv, bool extCall)
 {
     const UPInt size = Unk070[1];   // call stack size
+    Value _class;
     const StringDataPtr name(gname);
     Class* cl = GetClass(name);
-    if (cl == NULL)
+    if (cl != NULL)
     {
-        if (!IsException())
+        _class.AssignUnsafe(cl);
+        if (_class.IsNull())
         {
-            const Error e(ErrorID(1065), *this, name.ToCStr());   // eClassNotFoundError
-            FUN_14252ecb0(this, &e, &fl::ReferenceErrorCI);
+            const Error e(ErrorID(1009), *this);   // eConvertNullToObjectError
+            FUN_14252ecb0(this, &e, &fl::TypeErrorCI);
+            return false;
         }
-        return false;
+        _class.GetObject()->Construct(result, argc, argv, extCall);
+        if (IsException())
+            return false;
+        return Unk070[1] > size;
     }
-    Value _class(cl);
-    if (_class.IsNull())
+    if (!IsException())
     {
-        const Error e(ErrorID(1009), *this);   // eConvertNullToObjectError
-        FUN_14252ecb0(this, &e, &fl::TypeErrorCI);
-        return false;
+        const Error e(ErrorID(1065), *this, name.ToCStr());   // eClassNotFoundError
+        FUN_14252ecb0(this, &e, &fl::ReferenceErrorCI);
     }
-    _class.GetObject()->Construct(result, argc, argv, extCall);
-    return !IsException() && Unk070[1] > size;
+    return false;
 }
 
 // Throws "not a constructor" in the VM of the file at +0x20.
@@ -3064,14 +3068,16 @@ bool Sfr33CheckAvm(MovieRoot* self)
 
 // Runs the class PostInit of the AS3 object without arguments. When that pushed a call frame, it runs now (execute)
 // or stays queued (1); an exception is reported and flags the display object (+0x88).
-// MS2-FUNCTIONAL 0x1424ee800: the exe inlines the object Value's ctor and dtor (out of line here).
+// MS2-FUNCTIONAL 0x1424ee800: the exe builds the Value in place through an inline Value(Object*) (out of line here,
+// so AssignUnsafe stands in and copies through a temporary).
 // @0x1424ee800
 SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
 {
     if (!pAS3RawPtr && !pAS3CollectiblePtr)
         return 0;
     Class& cls = reinterpret_cast<Object*>(GetAS3Obj())->GetTraits().GetConstructor();
-    Value v(reinterpret_cast<Object*>(GetAS3Obj()));
+    Value v;
+    v.AssignUnsafe(reinterpret_cast<Object*>(GetAS3Obj()));
     unsigned result = 0;
     UByte* const dobj = reinterpret_cast<UByte*>(pDispObj);
     VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(dobj + 0x20) + 0x48);
@@ -3401,7 +3407,8 @@ static SF_INLINE const SlotInfo* Sfr33FindDynamicSlotIn(const SlotContainerType&
 }
 
 // The dynamic slot of c that mn names (the first namespace of a set that has one), or NULL.
-// MS2-FUNCTIONAL 0x142500c40: the register assignment and frame layout differ and the exe splits the loops into chunks.
+// MS2-FUNCTIONAL 0x142500c40: the exe re-tests the inlined lookup's non-null result (test rbx,rbx; jne) and resets si each
+// namespace; ours knows the slot pointer is non-null and leaves directly.
 // @0x142500c40
 const SlotInfo* FindDynamicSlot(VM& vm, const SlotContainerType& c, const Multiname& mn)
 {
@@ -3680,7 +3687,7 @@ CheckResult Value::Convert2PrimitiveValueUnsafe(Value& result, Hint hint) const
 }
 
 // @0x1424f0f60
-CheckResult Value::Convert2Number(Number& result) const
+__declspec(noinline) CheckResult Value::Convert2Number(Number& result) const
 {
     return Convert2NumberInline(result);
 }
@@ -4660,9 +4667,10 @@ Value GetAbsObject(UPInt addr)
 }
 
 // The bytes of s (len long) left after its leading white space.
-static inline UInt32 Sfr33TrailingStart(const char* s, UInt32 len)
+static __forceinline UInt32 Sfr33TrailingStart(const char* s, UInt32 len, const UInt32& end)
 {
-    return static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(String(s)), s, len));
+    String str(s + end);
+    return static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(str), s + end, len - end));
 }
 
 // ToNumber of a string (kind is kString) or of an object through its primitive value.
@@ -4682,31 +4690,33 @@ CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
             if (NumberUtil::IsNaN(d) || d == 0.0)
             {
                 if (end == len)
-                {
-                    result = NumberUtil::POSITIVE_ZERO();
-                    return true;
-                }
-                if (d == 0.0 && end + Sfr33TrailingStart(s + end, len - end) >= len)
+                    goto zero;
+                if (d == 0.0 && end + Sfr33TrailingStart(s, len, end) >= len)
                 {
                     result = d;
                     return true;
                 }
                 d = NumberUtil::StringToInt(s, len, 0, &end);
             }
-            if (end + Sfr33TrailingStart(s + end, len - end) < len)
-                result = NumberUtil::NaN();
-            else
+            if (end + Sfr33TrailingStart(s, len, end) >= len)
                 result = d;
+            else
+                result = NumberUtil::NaN();
             return true;
         }
     }
     else if (!IsNull())
     {
-        Value v;
-        if (!Convert2PrimitiveValueUnsafe(v, hintNumber))
-            return false;
-        return v.Convert2NumberInline(result);
+        {
+            Value v;
+            if (!Convert2PrimitiveValueUnsafe(v, hintNumber))
+                return false;
+            if (!v.Convert2Number(result))
+                return false;
+        }
+        return true;
     }
+zero:
     result = NumberUtil::POSITIVE_ZERO();
     return true;
 }
@@ -5164,6 +5174,13 @@ ASString SlotInfo::GetDataTypeName(VM& vm) const
     return name;
 }
 
+// The constant-pool string ind, made through the string manager (the Utf8 case of GetDetailValue).
+static __forceinline ASString Sfr17CreateConstString(VMAbcFile& file, UInt32 ind)
+{
+    const StringDataPtr str = file.GetAbcFile().Const_Pool.GetString(ind);
+    return file.GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize());
+}
+
 // VMAbcFile::GetDetailValue: the constant (an optional parameter's or slot's default) a value detail names;
 // index 0 (or an unknown kind) is undefined. Kinds: 1 Utf8, 3 Int, 4 UInt, 5/8/0x16..0x1a namespaces,
 // 6 Double, 10 False, 11 True, 12 Null.
@@ -5174,28 +5191,26 @@ Value VMAbcFile::GetDetailValue(const Abc::ValueDetail& d)
     const SInt32 ind = d.ValueIndex;
     if (ind > 0)
     {
-        const Abc::ConstPool& cp = GetAbcFile().Const_Pool;
         switch (static_cast<int>(d.Kind))
         {
-        case 1:
-        {
-            const StringDataPtr str = cp.GetString(ind);
-            return Value(GetVM().GetStringManager().CreateString(str.ToCStr(), str.GetSize()));
-        }
         case 3:
-            return Value(cp.ConstInt[ind]);
+            return Value(GetAbcFile().Const_Pool.ConstInt[ind]);
         case 4:
-            return Value(cp.ConstUInt[ind]);
-        case 5: case 8: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
-            return Value(&GetInternedNamespace(ind));
+            return Value(GetAbcFile().Const_Pool.ConstUInt[ind]);
         case 6:
-            return Value(cp.GetDouble(ind));
-        case 10:
-            return Value(false);
+            return Value(GetAbcFile().Const_Pool.GetDouble(ind));
+        case 1:
+            return Value(Sfr17CreateConstString(*this, ind), Value::InlineStr);
         case 11:
             return Value(true);
+        case 10:
+            return Value(false);
         case 12:
             return Value::GetNull();
+        case 5: case 8: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
+            return Value(&GetInternedNamespace(ind));
+        case 0:
+            return Value::GetUndefined();
         }
     }
     return Value::GetUndefined();
