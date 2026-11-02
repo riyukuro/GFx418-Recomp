@@ -4289,7 +4289,6 @@ void MovieImpl::AddTopmostLevelCharacter(InteractiveObject* pch)
 // The image a linkage id names: a protocol url ("img://...") goes to the image creator state, anything else is
 // looked up among the exports of md and of the movies that import from it.
 // @0x14256f370
-// MS2-FUNCTIONAL: rsi/r14 swapped and the url String temp in another stack slot
 Ptr<ImageResource> MovieImpl::GetImageResourceByLinkageId(MovieDefImpl* md, const char* linkageId)
 {
     Ptr<ImageResource> pimageRes;
@@ -4310,7 +4309,7 @@ Ptr<ImageResource> MovieImpl::GetImageResourceByLinkageId(MovieDefImpl* md, cons
                                  (ImageFileHandlerRegistry*)Ptr<State>(
                                      *pss->GetStateAddRef(State::State_ImageFileHandlerRegistry)).GetPtr());
                 icinfo.pMovie = this;
-                Ptr<Render::Image> pimg = *pimageCreator->LoadProtocolImage(icinfo, String(linkageId));
+                Ptr<Render::Image> pimg = *pimageCreator->LoadProtocolImage(icinfo, linkageId);
                 if (pimg)
                     pimageRes = *SF_HEAP_NEW(pheap) ImageResource(pimg, Resource::Use_Bitmap);
             }
