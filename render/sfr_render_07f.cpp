@@ -589,9 +589,10 @@ void GlyphQueue::computeGlyphArea(const GlyphNode* glyph, unsigned* used) const
 unsigned GlyphQueue::ComputeUsedArea() const
 {
     unsigned total = 0;
+    unsigned used;
     for (const GlyphSlot* slot = SlotQueue.GetFirst(); !SlotQueue.IsNull(slot); slot = SlotQueue.GetNext(slot))
     {
-        unsigned used = 0;
+        used = 0;
         computeGlyphArea(slot->pRoot, &used);
         total += used;
     }
