@@ -2903,7 +2903,7 @@ static __forceinline void Sfr15SetPtrInline(SPtr<GASRefCountBase>& sp, GASRefCou
 }
 
 // The any-name "" in the running frame's default XML namespace, else the public one.
-// MS2-FUNCTIONAL: the exe reloads the empty string node from its slot after FUN_1424e0d40, ours keeps it in rbx
+// MS2-FUNCTIONAL: the exe keeps the empty string node in rbx across FUN_1424e0d40, ours reloads it from its slot
 // @0x1424d8bb0
 Multiname::Multiname(VM& vm)
     : Kind(static_cast<Abc::MultinameKind>(0))
@@ -3838,20 +3838,21 @@ UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 extern const void* DAT_14317d890[];      // LoadQueueEntryMT_LoadMovie vftable
 
 // Starts the preload task (stripped players try the .gfx name first) and hands it to the task manager.
-// MS2-FUNCTIONAL: raw words over the entry (its members are private to the class, whose inline constructor lives in
-// sfr_as3_16); the cancel loop of the inline copy is not part of this constructor
+// Raw words over the entry (its members are private to the class, whose inline constructor lives in sfr_as3_16);
+// the cancel loop of the inline copy is not part of this constructor
 // @0x1424d84e0
 void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 {
     UPInt* w = static_cast<UPInt*>(self);
     static_cast<LoadQueueEntryMT*>(self)->LoadQueueEntryMT::LoadQueueEntryMT(pentry, pmovie);
     w[0] = reinterpret_cast<UPInt>(DAT_14317d890);
-    w[5] = 0;
+    ::new (w + 5) Ptr<MoviePreloadTask>();
+    UPInt mi = w[3];
     *reinterpret_cast<UByte*>(w + 6) = 0;
     *reinterpret_cast<UByte*>(w + 7) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(w) + 0x34) = 0;
     bool stripped = false;
-    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(w[3] + 0x18) + 0x10) + 0x50);
+    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(mi + 0x18) + 0x10) + 0x50);
     if (main)
     {
         void* def = reinterpret_cast<void* (*)(UPInt)>((*reinterpret_cast<void***>(main))[0x1e0 / 8])(main);
@@ -3868,9 +3869,8 @@ void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
         reinterpret_cast<RefCountImpl*>(slot)->Release();
     slot = task;
     void* bag = reinterpret_cast<void*>(w[3] + 0x10);
-    void* tm = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14);
-    reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(tm))[1])(tm, reinterpret_cast<void*>(w[5]));
-    static_cast<RefCountImpl*>(tm)->Release();
+    Ptr<TaskManager> tm = *static_cast<TaskManager*>(reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14));
+    tm->AddTask(reinterpret_cast<Task*>(w[5]));
     return self;
 }
 // ---- MovieRoot constructor ----
