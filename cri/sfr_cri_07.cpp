@@ -26160,11 +26160,11 @@ void M2VPRD_FormPredictions(longlong arg1, cri_u4 arg2, int arg3)
   cri_u4 u_v10;
   int i_v11;
   // Dual_Prime_Arithmetic fills int[4] at rsp+0x70 in the exe (loc_58..loc_4c).
-  __declspec(align(16)) cri_u1 frame_[0x10];
-  cri_u4 &loc_58 = *(cri_u4 *)(frame_ + 0);
-  cri_u4 &loc_54 = *(cri_u4 *)(frame_ + 4);
-  cri_u4 &loc_50 = *(cri_u4 *)(frame_ + 8);
-  cri_u4 &loc_4c = *(cri_u4 *)(frame_ + 12);
+  struct DualPrime { cri_u4 W0, W4, W8, Wc; } frame_;
+  cri_u4 &loc_58 = frame_.W0;
+  cri_u4 &loc_54 = frame_.W4;
+  cri_u4 &loc_50 = frame_.W8;
+  cri_u4 &loc_4c = frame_.Wc;
   cri_u4 loc_48;
   int iStack_44;
   cri_u4 loc_40;
