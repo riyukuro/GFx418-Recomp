@@ -3206,7 +3206,6 @@ bool DropShadowFilterObject::GetMember(Environment* penv, const ASString& name, 
     return GetMemberRaw(penv->GetSC(), name, val);
 }
 
-// MS2-FUNCTIONAL the exe tests the inner bit for "type" after loading the string manager (shift + test cl); ours tests the byte first
 // @0x14294d800
 bool BevelFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3264,7 +3263,7 @@ bool BevelFilterObject::GetMember(Environment* penv, const ASString& name, Value
     }
     else if (strcmp(pname, "type") == 0)
     {
-        if (readonlyFilterParams().Mode & Render::BlurFilterParams::Mode_Inner)
+        if ((UByte)(readonlyFilterParams().Mode >> 5) & 1) // Mode_Inner
             val->SetString(penv->CreateString("inner"));
         else
             val->SetString(penv->CreateString("outer"));
