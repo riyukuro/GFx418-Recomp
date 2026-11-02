@@ -549,23 +549,39 @@ const UInt32* Slots::FindSlotValues(const ASString& k) const
     return Set.Get(Ptr<ASStringNode>(k.GetNode()));
 }
 
-// MS2-FUNCTIONAL: chain walk and namespace compares laid out differently
+// Slots::GetSlotInfo (sfr_as3_04 0x142416fb0), one level inline here as in the exe.
+static SF_INLINE const SlotInfo& Sfr17GetSlotInfo(const Slots& s, AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
 // @0x142502b20
 AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, const Instances::Namespace& ns) const
 {
     if (const UInt32* values = FindSlotValues(k))
     {
+        const Abc::NamespaceKind kind = ns.GetKind();
         SPInt ind = *values;
         do
         {
-            const Instances::Namespace& sns = *GetSlotInfo(AbsoluteIndex(ind)).pNs;
-            if (sns.GetKind() == ns.GetKind())
+            const Instances::Namespace& sns = *Sfr17GetSlotInfo(*this, AbsoluteIndex(ind)).pNs;
+            if (sns.GetKind() == kind)
             {
-                if (sns.GetKind() == Abc::NS_Protected)
+                switch (kind)
+                {
+                case Abc::NS_Protected:
                     return AbsoluteIndex(ind);
-                if (sns.GetKind() == Abc::NS_Private ? &sns == &ns
-                                                      : sns.GetUri().GetNode() == ns.GetUri().GetNode())
-                    return AbsoluteIndex(ind);
+                case Abc::NS_Private:
+                    if (&ns == &sns)
+                        return AbsoluteIndex(ind);
+                    break;
+                default:
+                    if (sns.GetUri().GetNode() == ns.GetUri().GetNode())
+                        return AbsoluteIndex(ind);
+                    break;
+                }
             }
             if (static_cast<UPInt>(ind) < FirstOwnSlotNum)
                 ind = Parent->GetPrevSlotIndex(ind);
@@ -595,23 +611,25 @@ const SPInt* SlotContainerType::FindValues(const ASString& k) const
 // @0x1425008e0
 AbsoluteIndex SlotContainerType::FindAdd(const ASString& k, const SlotInfo& v)
 {
+    AbsoluteIndex ind(-1);
     SetType::Iterator it = KVHashSet.Find(k.GetNode());
     if (!it.IsEnd())
-        return AbsoluteIndex(it->Second);
-    return Add(k, v);
+        ind = AbsoluteIndex(it->Second);
+    else
+        ind = Add(k, v);
+    return ind;
 }
 
-// MS2-FUNCTIONAL: FindValues inlined (the exe calls it) and the hash probe split into chunks
 // @0x142500dd0
 const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, const Instances::Namespace& ns)
 {
     const SPInt* values = c.FindValues(k);
     if (values)
     {
-        for (SPInt ind = *values; ind >= 0; ind = c.VArray[static_cast<UInt32>(ind)].Prev)
+        for (SPInt ind = *values; ind >= 0; ind = c.VArray[ind].Prev)
         {
             const SlotInfo& si = c.VArray[static_cast<UInt32>(ind)].Value;
-            if (si.pNs->GetUri().GetNode() == ns.GetUri().GetNode() && si.pNs->GetKind() == ns.GetKind())
+            if (*si.pNs == ns)
                 return &si;
         }
     }
@@ -3544,15 +3562,14 @@ Value::TraceNullType Tracer::CanBeNull(const Value& v) const
 }
 
 // Clears the slot memory of a new instance (Value slots undefined, object and string pointers null).
-// MS2-FUNCTIONAL 0x1424f0a50: the exe inlines the own-slot / parent-slot index split around Slots::GetSlotInfo.
 // @0x1424f0a50
 void Traits::ConstructTail(Object& obj) const
 {
     const UPInt size = GetSlotInfoNum();
     for (UPInt i = 0; i < size; ++i)
     {
-        const SlotInfo& si = GetSlotInfo(AbsoluteIndex(i));
-        if (si.CppBinding)
+        const SlotInfo& si = Sfr17GetSlotInfo(*this, AbsoluteIndex(i));
+        if (static_cast<bool>(si.CppBinding))
             continue;
         UByte* p = reinterpret_cast<UByte*>(&obj) + si.ValueInd;
         switch (si.BindType)
@@ -3585,14 +3602,13 @@ UPInt VM::GetAllLoadedAbcFiles(Scaleform::Array<SPtr<VMAbcFile> >* destArray) co
 }
 
 // Releases the slot memory of a dying instance, last slot first (Value slots, tagged object pointers, strings).
-// MS2-FUNCTIONAL 0x1424f6de0: the exe inlines the own-slot / parent-slot index split around Slots::GetSlotInfo.
 // @0x1424f6de0
 void Traits::DestructTail(Object& obj) const
 {
     for (UPInt i = GetSlotInfoNum(); i > 0; --i)
     {
-        const SlotInfo& si = GetSlotInfo(AbsoluteIndex(i - 1));
-        if (si.CppBinding)
+        const SlotInfo& si = Sfr17GetSlotInfo(*this, AbsoluteIndex(i - 1));
+        if (static_cast<bool>(si.CppBinding))
             continue;
         UByte* p = reinterpret_cast<UByte*>(&obj) + si.ValueInd;
         switch (si.BindType)
@@ -3607,10 +3623,11 @@ void Traits::DestructTail(Object& obj) const
                 const UPInt raw = ptr;
                 if (raw)
                 {
-                    if (raw & 1)
-                        ptr = raw - 1;
+                    const UPInt object = raw & ~UPInt(6);
+                    if (object & 1)
+                        ptr = (raw & 6) - 1 + object;
                     else
-                        reinterpret_cast<ASRefCountBaseType*>(raw & ~UPInt(6))->Release();
+                        reinterpret_cast<ASRefCountBaseType*>(object)->Release();
                 }
             }
             break;
