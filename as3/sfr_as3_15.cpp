@@ -2773,18 +2773,17 @@ namespace InstanceTraits
     }
 
     // The public namespace for an empty package name, else the interned public namespace of the package.
-    static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const char* name)
+    static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const ASString& uri)
     {
-        ASString uri = vm.GetStringManager().CreateString(name ? name : "");
         if (kind == Abc::NS_Public && uri.IsEmpty())
-        {
-            Pickable<Instances::Namespace> ns(vm.PublicNamespace.GetPtr());
-            if (ns.GetPtr())
-                ns.GetPtr()->AddRef();
-            return ns;
-        }
+            return Pickable<Instances::Namespace>(vm.PublicNamespace.GetPtr(), PickValue);
         return static_cast<fl::Namespace&>(vm.GetClassTraitsNamespace().GetInstanceTraits())
             .MakeInternedInstance(kind, uri, Value::GetUndefined());
+    }
+
+    static Pickable<Instances::Namespace> MakeInternedNamespace(VM& vm, Abc::NamespaceKind kind, const char* name)
+    {
+        return MakeInternedNamespace(vm, kind, vm.GetStringManager().CreateString(name ? name : ""));
     }
 
     static const Traits* GetParentInstanceTraits(VM& vm, const ClassInfo& ci)
@@ -2796,8 +2795,8 @@ namespace InstanceTraits
         return itr;
     }
 
-    // MS2-FUNCTIONAL: same code; the exe stores the public namespace result before the null test and loads the
-    // string manager after the package name select (scheduling)
+    // MS2-FUNCTIONAL: same code; the exe does the package name select before loading the string manager and keeps
+    // the uri node in rcx (register allocation)
     // @0x1424d6750
     CTraits::CTraits(VM& vm, const ClassInfo& ci)
         : Traits(MakeInternedNamespace(vm, Abc::NS_Public, ci.GetPkgName()), vm, GetParentInstanceTraits(vm, ci),
