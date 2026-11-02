@@ -28,10 +28,22 @@ void RectangleObject::SetProperties(Environment* penv, const ASRect& r)
 {
     ASStringContext* psc = penv->GetSC();
     ObjectInterface& oi = *this;
-    oi.SetMemberRaw(psc, psc->CreateConstString("x"), Value(r.x1), PropFlags());
-    oi.SetMemberRaw(psc, psc->CreateConstString("y"), Value(r.y1), PropFlags());
-    oi.SetMemberRaw(psc, psc->CreateConstString("width"), Value(r.x2 - r.x1), PropFlags());
-    oi.SetMemberRaw(psc, psc->CreateConstString("height"), Value(r.y2 - r.y1), PropFlags());
+    {
+        Value v(r.x1);
+        oi.SetMemberRaw(psc, psc->CreateConstString("x"), v, PropFlags());
+    }
+    {
+        Value v(r.y1);
+        oi.SetMemberRaw(psc, psc->CreateConstString("y"), v, PropFlags());
+    }
+    {
+        Value v(r.x2 - r.x1);
+        oi.SetMemberRaw(psc, psc->CreateConstString("width"), v, PropFlags());
+    }
+    {
+        Value v(r.y2 - r.y1);
+        oi.SetMemberRaw(psc, psc->CreateConstString("height"), v, PropFlags());
+    }
 }
 
 // MS2-FUNCTIONAL: the exe compares the names with inlined byte loops in a different order

@@ -1552,12 +1552,18 @@ void PointObject::SetProperties_Call(ASStringContext* psc, const Value params[Po
     SetProperties(psc, params);
 }
 
-// MS2-FUNCTIONAL the exe stores the number of the temporary value before its type
 // @0x142989db0
 void PointObject::SetProperties(Environment* penv, const GASPoint& pt)
 {
-    SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_x), Value(pt.x));
-    SetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_y), Value(pt.y));
+    ASStringContext* psc = penv->GetSC();
+    {
+        Value v(pt.x);
+        SetMemberRaw(psc, penv->GetBuiltin(ASBuiltin_x), v);
+    }
+    {
+        Value v(pt.y);
+        SetMemberRaw(psc, penv->GetBuiltin(ASBuiltin_y), v);
+    }
 }
 
 

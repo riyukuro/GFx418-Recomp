@@ -215,32 +215,66 @@ void AvmSprite::SetLevel(int level)
 }
 
 // The matrix as the a, b, c, d, tx, ty members of the Matrix object.
-// MS2-FUNCTIONAL: member-string temporaries codegen differs; same behavior
 // @0x142982370
 void MatrixObject::SetMatrix(Environment* penv, const Render::Matrix2F& m)
 {
     ASStringContext* psc = penv->GetSC();
     ObjectInterface& oi  = *this;
-    oi.SetMemberRaw(psc, psc->CreateConstString("a"), Value(Number(m.Sx())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("b"), Value(Number(m.Shy())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("c"), Value(Number(m.Shx())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("d"), Value(Number(m.Sy())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("tx"), Value(Number(m.Tx())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("ty"), Value(Number(m.Ty())));
+    {
+        Value v(Number(m.Sx()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("a"), v);
+    }
+    {
+        Value v(Number(m.Shy()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("b"), v);
+    }
+    {
+        Value v(Number(m.Shx()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("c"), v);
+    }
+    {
+        Value v(Number(m.Sy()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("d"), v);
+    }
+    {
+        Value v(Number(m.Tx()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("tx"), v);
+    }
+    {
+        Value v(Number(m.Ty()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("ty"), v);
+    }
 }
 
 // SetMatrix with the translation given in twips.
-// MS2-FUNCTIONAL: member-string temporaries codegen differs; same behavior
 // @0x142982690
 void MatrixObject::SetMatrixTwips(ASStringContext* psc, const Render::Matrix2F& m)
 {
     ObjectInterface& oi = *this;
-    oi.SetMemberRaw(psc, psc->CreateConstString("a"), Value(Number(m.Sx())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("b"), Value(Number(m.Shy())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("c"), Value(Number(m.Shx())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("d"), Value(Number(m.Sy())));
-    oi.SetMemberRaw(psc, psc->CreateConstString("tx"), Value(Number(m.Tx()) * 0.05));
-    oi.SetMemberRaw(psc, psc->CreateConstString("ty"), Value(Number(m.Ty()) * 0.05));
+    {
+        Value v(Number(m.Sx()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("a"), v);
+    }
+    {
+        Value v(Number(m.Shy()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("b"), v);
+    }
+    {
+        Value v(Number(m.Shx()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("c"), v);
+    }
+    {
+        Value v(Number(m.Sy()));
+        oi.SetMemberRaw(psc, psc->CreateConstString("d"), v);
+    }
+    {
+        Value v(Number(m.Tx()) * 0.05);
+        oi.SetMemberRaw(psc, psc->CreateConstString("tx"), v);
+    }
+    {
+        Value v(Number(m.Ty()) * 0.05);
+        oi.SetMemberRaw(psc, psc->CreateConstString("ty"), v);
+    }
 }
 
 // Amp.addMarker = name adds a profiler marker; everything else is an ordinary member.
