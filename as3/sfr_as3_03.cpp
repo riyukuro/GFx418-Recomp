@@ -2449,28 +2449,26 @@ namespace InstanceTraits { namespace fl
             result = ASString(str.ToUpperNode());
     }
 
-    // MS2-FUNCTIONAL: written from behaviour
     // @0x142402a90
     void String::AS3toString(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsString())
-            result.Assign(_this);
-        else if (_this.IsNullOrUndefined())
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
+        if (!_this.IsString())
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm,
+                                        _this.IsNullOrUndefined() ? "null" : vm.GetValueTraits(_this).GetName().ToCStr(),
+                                        "String"));
         else
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), "String"));
+            result.Assign(_this);
     }
 
-    // MS2-FUNCTIONAL: written from behaviour
     // @0x142403880
     void String::AS3valueOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
-        if (_this.IsString())
-            result.Assign(_this);
-        else if (_this.IsNullOrUndefined())
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, "null", "String"));
+        if (!_this.IsString())
+            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm,
+                                        _this.IsNullOrUndefined() ? "null" : vm.GetValueTraits(_this).GetName().ToCStr(),
+                                        "String"));
         else
-            vm.ThrowTypeError(VM::Error(VM::eInvalidEnumError, vm, vm.GetValueTraits(_this).GetName().ToCStr(), "String"));
+            result.Assign(_this);
     }
 
     // @0x1424026a0
