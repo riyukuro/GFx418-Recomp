@@ -2529,13 +2529,10 @@ namespace Instances { namespace fl_text
     {
         void* pdispObj = pDispObj.GetPtr();
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x28, (const AllocInfo*)0);
-        void* psnap = pmem ? (reinterpret_cast<StaticTextSnapshotData*>(pmem)->StaticTextSnapshotData::StaticTextSnapshotData(), pmem) : NULL;
+        void* psnap = pmem ? new (pmem) StaticTextSnapshotData() : NULL;
         FUN_1425e0720(psnap, pdispObj);
-        void* buf;
-        new (&buf) String(reinterpret_cast<StaticTextSnapshotData*>(psnap)->GetSubString(0, FUN_1425e1360(psnap), true));
-        String& text = *reinterpret_cast<String*>(&buf);
-        result = GetVM().GetStringManager().GetStringManager()->CreateString(text.ToCStr(), text.GetSize());
-        text.~String();
+        result = GetVM().GetStringManager().CreateString(
+            reinterpret_cast<StaticTextSnapshotData*>(psnap)->GetSubString(0, FUN_1425e1360(psnap), true));
         if (psnap)
         {
             reinterpret_cast<StaticTextSnapshotData*>(psnap)->~StaticTextSnapshotData();
