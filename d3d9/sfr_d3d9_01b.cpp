@@ -19,7 +19,6 @@ namespace Scaleform { namespace Render { namespace D3D9 {
 // ==== Texture ========================================================================================================
 
 // @0x14272a130
-// MS2-FUNCTIONAL: register allocation and scheduling of the plane-array setup
 Texture::Texture(TextureManagerLocks* plocks, const TextureFormat* pformat, unsigned mipLevels, const ImageSize& size,
                  unsigned use, ImageBase* pimage)
     : Render::Texture(plocks, size, (UByte)mipLevels, (UInt16)use, pimage), pFormat(pformat), Type(Type_Managed),
@@ -34,7 +33,6 @@ Texture::Texture(TextureManagerLocks* plocks, const TextureFormat* pformat, unsi
 }
 
 // @0x14272a090
-// MS2-FUNCTIONAL: the exe drops the Texture0.Size zeroing and allocates registers differently
 Texture::Texture(TextureManagerLocks* plocks, IDirect3DTexture9* ptexture, const ImageSize& size, ImageBase* pimage)
     : Render::Texture(plocks, size, 0, 0, pimage), pFormat(0), Type(Type_Normal), pMap(0)
 {
@@ -767,7 +765,6 @@ const Render::TextureFormat* TextureManager::getTextureFormat(ImageFormat format
 }
 
 // @0x14272d600
-// MS2-FUNCTIONAL: the exe inlines MappedTexture construction/destruction differently (234 vs 217 bytes)
 MappedTexture* TextureManager::mapTexture(Texture* ptexture, unsigned mipLevel, unsigned levelCount)
 {
     MappedTexture* pmap;
@@ -861,7 +858,6 @@ bool TextureManager::CanCreateTextureCurrentThread()
 }
 
 // @0x14272b300
-// MS2-FUNCTIONAL: inlined format ctor and lock sequence scheduled differently
 Render::Texture* TextureManager::CreateTexture(ImageFormat format, unsigned mipLevels, const ImageSize& size,
                                                unsigned use, ImageBase* pimage, MemoryManager*)
 {
@@ -934,7 +930,6 @@ void TextureManager::BeginScene()
 }
 
 // @0x14272b0f0
-// MS2-FUNCTIONAL: inlined user-texture ctor: the exe drops the Texture0.Size zeroing
 Render::Texture* TextureManager::CreateTexture(IDirect3DTexture9* pd3dtexture, ImageSize imgSize, Image* pimage)
 {
     if (!pd3dtexture)

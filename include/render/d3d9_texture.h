@@ -79,7 +79,8 @@ public:
 
     struct HWTextureDesc
     {
-        ImageSize          Size;
+        HWTextureDesc() {}
+        union { ImageSize Size; };
         IDirect3DTexture9* pTexture;
         IDirect3DTexture9* pStagingTexture;     // system memory copy of a staging backed render target
     };
@@ -153,9 +154,8 @@ public:
     bool IsMapped() const { return pTexture != 0; }
     bool Reserve()
     {
-        if (IsMapped())
-            return false;
-        return true;
+        InterlockedCompareExchange(reinterpret_cast<volatile LONG*>(&LevelCount), -1, 0);
+        return LevelCount == -1;
     }
     bool Map(Texture* ptexture, unsigned mipLevel, unsigned levelCount);
     void Unmap();
