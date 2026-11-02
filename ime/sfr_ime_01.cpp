@@ -814,22 +814,23 @@ unsigned long long FUN_1423cf3e0(void* self)
     return open;
 }
 
-// MS2-FUNCTIONAL: maps the active Windows keyboard layout to the IME display labels observed in the executable.
 // @0x1423cf4a0
 String* FUN_1423cf4a0(void* self, String* output)
 {
     const HKL layout = GetKeyboardLayout(0);
     *reinterpret_cast<HKL*>(static_cast<unsigned char*>(self) + 0x90) = layout;
-    const unsigned language = reinterpret_cast<unsigned long long>(layout) & 0xffff;
-    const char* label = "Unknown";
+    const unsigned long long language = reinterpret_cast<unsigned long long>(layout) & 0xffff;
+    const char* label;
     switch (language) {
     case 0x0419: label = "Russian"; break;
     case 0x0404: case 0x0804: label = "Chinese"; break;
     case 0x0409: case 0x0809: case 0x0c09: case 0x1009: label = "English"; break;
     case 0x0411: label = "Japanese"; break;
     case 0x0412: label = "Korean"; break;
+    default: label = "Unknown"; break;
     }
-    return new (output) String(label);
+    new (output) String(label);
+    return output;
 }
 
 // @0x1423da8b0
