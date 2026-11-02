@@ -2338,13 +2338,16 @@ bool FUN_1424f8910(void* tr, void* state, Scaleform::GFx::AS3::Multiname mn, boo
 }
 
 Scaleform::UPInt FUN_14250a060(Scaleform::UPInt vm, void* value);   // value -> traits
+namespace Scaleform { namespace GFx { namespace AS3 { InstanceTraits::Traits& FUN_14250a060(VM&, const Value&); } } }
 
 // Tracer: emits the call op (0x45 callsuper, 0x46 callproperty, 0x4e/0x4f the void forms, ...) of the call info
 // (+0x18 argc, +0x148 the name, +0x178 the receiver) and pushes the result type on the state's op stack (+0x38). A
 // name that resolves to a method slot of the receiver's traits becomes a call by vtable index (0x43 callmethod /
 // 0xb9 callsupermethod), a getter slot a getter call (0xba/0xbb); a name of a class a construct (0xce) when the
 // traits are flagged so.
-// MS2-FUNCTIONAL 0x1424f7540: written on raw offsets (tracer +0x20 state, call info, SlotInfo bitfields)
+// MS2-FUNCTIONAL 0x1424f7540: written on raw offsets (tracer +0x20 state, call info, SlotInfo bitfields); same
+// length as the exe, but the exe keeps an rbp frame, tests the Traits flags as movzx/shr/test (ours: test byte) and
+// repeats the (bt - 12) & ~2 test.
 // @0x1424f7540
 bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind)
 {
@@ -2352,95 +2355,80 @@ bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind)
     using namespace Scaleform::GFx::AS3;
     UByte* const self = static_cast<UByte*>(tr);
     UByte* const info = static_cast<UByte*>(pinfo);
-    ArrayDH<Value>& opstack = *reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38);
-    const bool super_call = op == 0x45 || op == 0x4e;
-    const UByte* t = reinterpret_cast<const UByte*>(
-        reinterpret_cast<const Tracer*>(self)->GetValueTraits(*reinterpret_cast<const Value*>(info + 0x178), super_call));
-    const int argc = *reinterpret_cast<const int*>(info + 0x18);
+    const UByte* t = reinterpret_cast<const UByte*>(reinterpret_cast<const Tracer*>(self)->GetValueTraits(
+        *reinterpret_cast<const Value*>(info + 0x178), op == 0x45 || op == 0x4e));
+    const UInt32 argc = *reinterpret_cast<const UInt32*>(info + 0x18);
     const Multiname& mn = *reinterpret_cast<const Multiname*>(info + 0x148);
     const unsigned mnw = *reinterpret_cast<const unsigned*>(&mn);
     const unsigned kind = mnw & 3;
-    unsigned flags;
-    const void* rt;
-    if (kind == 1 || (mnw & 4) || (kind == 0 && !*reinterpret_cast<const UPInt*>(info + 0x150)))
+    if (kind == 1 || (static_cast<UByte>(mnw >> 2) & 1) || (kind == 0 && !*reinterpret_cast<const UPInt*>(info + 0x150)))
         goto generic;
     {
-        VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
         UPInt index = 0;
+        VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
         const SlotInfo* si;
-        if (t && !((t[0x68] >> 2) & 1) &&
+        if (t && !(static_cast<UByte>(t[0x68] >> 2) & 1) &&
             (si = FindFixedSlot(*vm, *reinterpret_cast<const Traits*>(t), mn, index, NULL)) != NULL)
         {
             const int vind = (*reinterpret_cast<const int*>(si) << 5) >> 0xf;
             if (vind >= 0)
             {
                 const int bt = (*reinterpret_cast<const int*>(si) << 0x16) >> 0x1b;
-                bool fixed = true;
-                if (bt == 11)
+                if (bt == 11 || ((bt - 12) & ~2) == 0)
                 {
-                    FUN_14251fa10(self, super_call ? 0xb9 : 0x43, static_cast<UPInt>(static_cast<SPInt>(vind)), argc);
-                    if (static_cast<unsigned>(op - 0x4e) < 2)
+                    if (bt == 11)
                     {
-                        FUN_14251f930(self, 0x29);   // pop
-                        return true;
+                        FUN_14251fa10(self, op == 0x45 || op == 0x4e ? 0xb9 : 0x43,
+                                      static_cast<UPInt>(static_cast<SPInt>(vind)), argc);
+                        if (static_cast<unsigned>(op - 0x4e) <= 1)
+                        {
+                            FUN_14251f930(self, 0x29);   // pop
+                            return true;
+                        }
                     }
-                }
-                else if (((bt - 12) & ~2) == 0)
-                {
-                    int gop = op;
-                    if (op == 0x45)
-                        gop = 0xbb;
-                    else if (op == 0x46)
-                        gop = 0xba;
-                    FUN_14251fa10(self, gop, static_cast<UPInt>(static_cast<SPInt>(vind)), argc);
-                }
-                else
-                    fixed = false;
-                if (fixed)
-                {
-                    VM* vm2 = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
+                    else if (((bt - 12) & ~2) == 0)
+                    {
+                        switch (op)
+                        {
+                        case 0x45: op = 0xbb; break;
+                        case 0x46: op = 0xba; break;
+                        }
+                        FUN_14251fa10(self, op, static_cast<UPInt>(static_cast<SPInt>(vind)), argc);
+                    }
                     const AbsoluteIndex ai((*reinterpret_cast<const int*>(si) << 5) >> 0xf);
-                    const InstanceTraits::Traits* ret;
-                    {
-                        Value f = reinterpret_cast<const Traits*>(t)->GetVT().GetValue(ai);
-                        ret = reinterpret_cast<const InstanceTraits::Traits*>(
-                            FUN_14250a060(reinterpret_cast<UPInt>(vm2), &f));
-                    }
-                    flags = ((static_cast<unsigned>(reinterpret_cast<const Tracer*>(self)->CanBeNull(*ret)) & ~8u) << 5) | 8;
-                    rt = ret;
-                    goto push;
+                    VM* vm2 = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
+                    const InstanceTraits::Traits& ret =
+                        FUN_14250a060(*vm2, reinterpret_cast<const Traits*>(t)->GetVT().GetValue(ai));
+                    reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38)->PushBack(
+                        Value(const_cast<InstanceTraits::Traits&>(ret), reinterpret_cast<const Tracer*>(self)->CanBeNull(ret)));
+                    return true;
                 }
             }
         }
         const UByte* ct = reinterpret_cast<const UByte*>(Sfr33ResolveMnClassTraits(vm, mn));
         if (!ct)
             goto generic;
-        if (!((t[0x68] >> 5) & 1))
+        if (static_cast<UByte>(t[0x68] >> 5) & 1)
+            FUN_14251fb90(self, 0xce, argc);
+        else
         {
-            FUN_14251fa10(self, op, static_cast<UPInt>(static_cast<SPInt>(ind)), argc);
-            if (static_cast<unsigned>(op - 0x4e) < 2)
+            FUN_14251fa10(self, op, static_cast<UInt32>(ind), argc);
+            if (static_cast<unsigned>(op - 0x4e) <= 1)
                 return true;
         }
-        else
-            FUN_14251fb90(self, 0xce, static_cast<UPInt>(static_cast<SPInt>(argc)));
-        rt = *reinterpret_cast<void* const*>(ct + 0xc0);
-        flags = 8;
-        goto push;
+        reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38)->PushBack(
+            Value(**reinterpret_cast<InstanceTraits::Traits* const*>(ct + 0xc0), Value::NotNull));
+        return true;
     }
 generic:
-    FUN_14251fa10(self, op, static_cast<UPInt>(static_cast<SPInt>(ind)), argc);
-    if (static_cast<unsigned>(op - 0x4e) < 2)
+    FUN_14251fa10(self, op, static_cast<UInt32>(ind), argc);
+    if (static_cast<unsigned>(op - 0x4e) <= 1)
         return true;
     {
         const UByte* vm = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28) + 0x20);
-        rt = *reinterpret_cast<void* const*>(*reinterpret_cast<const UByte* const*>(vm + 0x1f8) + 0xc0);
-    }
-    flags = 0x48;
-push:
-    {
-        Value v;
-        Sfr33TracerValueSet(v, flags, const_cast<void*>(rt), false);
-        opstack.PushBack(v);
+        reinterpret_cast<ArrayDH<Value>*>(static_cast<UByte*>(state) + 0x38)->PushBack(Value(
+            **reinterpret_cast<InstanceTraits::Traits* const*>(*reinterpret_cast<const UByte* const*>(vm + 0x1f8) + 0xc0),
+            Value::NullOrNot));
     }
     return true;
 }
@@ -3477,7 +3465,8 @@ void Object::FindProperty(PropRef& result, const Multiname& mn, int attr)
 
 // The property named mn seen through scope value scope (a with scope or the global object also looks at its
 // dynamic values and prototypes; a function falls back to its saved scope).
-// MS2-FUNCTIONAL 0x142502690: the exe move-assigns the dynamic lookup result (0x1424e0b40), calls IsXMLObject out of line and allocates registers differently.
+// MS2-FUNCTIONAL 0x142502690: the exe inlines ~PropRef (out of line in as3_obj.h) at each PropRef temporary and calls
+// Sfr33FindScopeProperty (0x142502a80) instead of inlining it.
 // @0x142502690
 __declspec(noinline) void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Multiname& mn, int attr)
 {
