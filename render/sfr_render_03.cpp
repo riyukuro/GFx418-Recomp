@@ -13,6 +13,58 @@
 #include "ms2/scaleform/include/render/render_matrix2x4.h"
 #include "ms2/scaleform/include/render/text_core.h"
 
+// The exe inlines the format storages' chain walk into Get and Set (no out-of-line copy exists).
+namespace Scaleform {
+typedef HashSetLH<Render::Text::ParagraphFormatPtr, Render::Text::ParagraphFormatPtr::HashFunctor,
+                  Render::Text::ParagraphFormatPtr::HashFunctor, Render::StatRender_Text_Mem>::BaseType::BaseType
+    R03ParagraphFormatSet;
+typedef HashSetLH<Render::Text::TextFormatPtr, Render::Text::TextFormatPtr::HashFunctor,
+                  Render::Text::TextFormatPtr::HashFunctor, Render::StatRender_Text_Mem>::BaseType::BaseType
+    R03TextFormatSet;
+template<> template<>
+__forceinline SPInt R03ParagraphFormatSet::findIndexCore<Render::Text::ParagraphFormat*>(
+    Render::Text::ParagraphFormat* const& key, UPInt h) const
+{
+    UPInt        idx = h;
+    const auto*  e   = &E(idx);
+
+    if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != idx))
+        return -1;
+
+    while (1)
+    {
+        if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
+            return idx;
+        idx = e->NextInChain;
+        if (idx == (UPInt)-1)
+            break;
+        e = &E(idx);
+    }
+    return -1;
+}
+template<> template<>
+__forceinline SPInt R03TextFormatSet::findIndexCore<Render::Text::TextFormat*>(Render::Text::TextFormat* const& key,
+                                                                          UPInt h) const
+{
+    UPInt        idx = h;
+    const auto*  e   = &E(idx);
+
+    if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != idx))
+        return -1;
+
+    while (1)
+    {
+        if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
+            return idx;
+        idx = e->NextInChain;
+        if (idx == (UPInt)-1)
+            break;
+        e = &E(idx);
+    }
+    return -1;
+}
+} // namespace Scaleform
+
 namespace Scaleform { namespace Render {
 
 using namespace SIMD;
@@ -629,7 +681,6 @@ bool ParagraphFormat::TabStopsEqual(const unsigned* psrcTabStops) const
 // Allocator: formats are interned by value; a cache past its capacity first drops the formats only it holds.
 
 // @0x142605c70
-// MS2-FUNCTIONAL: the exe saves rbx / rbp in the home slots and tail-jumps to the shared epilogue; ours pushes them
 ParagraphFormat* Allocator::AllocateParagraphFormat(const ParagraphFormat& srcfmt)
 {
     ParagraphFormatPtr* ppfmt = ParagraphFormatStorage.Get(const_cast<ParagraphFormat*>(&srcfmt));
@@ -646,7 +697,6 @@ ParagraphFormat* Allocator::AllocateParagraphFormat(const ParagraphFormat& srcfm
 }
 
 // @0x142605e30
-// MS2-FUNCTIONAL: the exe saves rbx / rbp in the home slots and tail-jumps to the shared epilogue; ours pushes them
 TextFormat* Allocator::AllocateTextFormat(const TextFormat& srcfmt)
 {
     // formats carrying an image are never shared
