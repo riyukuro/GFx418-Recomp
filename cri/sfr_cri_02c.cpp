@@ -541,22 +541,20 @@ void FUN_1400380d0(void** record, void* userData)
 #pragma optimize("", on)
 
 // ==== CRI heap backed object allocation ============================================================================
-
+#pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os): the r11 prologue
 // The CRI allocator keeps its heap pointer in the eight bytes immediately after each object.
-// MS2-FUNCTIONAL: CRI's VS2008 build uses a different compiler toolset from our build.
 // @0x14002e548
 void* CriAllocator::operator new(size_t size, CriHeap heap, CriHeapType type, const CriChar8* name, CriUint32 align)
 {
     CriUint32 allocationSize = (CriUint32)size + sizeof(CriHeap);
     void* memory = criHeap_Alloc(heap, (CriSint32)allocationSize, name, (CriSint32)align, (CriSint32)type);
-    if (memory)
-    {
-        memset(memory, 0, allocationSize);
-        *(CriHeap*)((CriUint8*)memory + size) = heap;
-    }
+    if (memory == NULL)
+        return memory;                       // the null result goes straight back in rax (no separate return path)
+    memset(memory, 0, allocationSize);
+    *(CriHeap*)((CriUint8*)memory + size) = heap;
     return memory;
 }
-
+#pragma optimize("", on)
 // MS2-FUNCTIONAL: CRI's VS2008 compiler does not emit the sized-delete lowering used by our toolset.
 // @0x14002e5b0
 void CriAllocator::operator delete(void* memory, size_t size)
