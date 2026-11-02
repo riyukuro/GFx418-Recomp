@@ -61,6 +61,7 @@ extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsig
 
 // The exe calls the event chains' ResizeNoConstruct out of line (explicitly instantiated in sfr_as3_19, 0x142524cd0).
 void FUN_1423ed140(void* self, Scaleform::GFx::AS3::InstanceTraits::Traits* t);   // FunctionBase(InstanceTraits::Traits&)
+char* FUN_14250e2d0(const void* si, void* ret, Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::Value* value, const Scaleform::GFx::AS3::Value* thisValue, void* vtable, int valTarget);   // SlotInfo: read the slot into value
 namespace Scaleform {
 typedef ArrayData<UPInt, AllocatorLH_POD<UPInt, 338>, ArrayDefaultPolicy> Sfr17WordArray;
 typedef ArrayDataDH<UPInt, AllocatorDH_POD<UPInt, 328>, ArrayDefaultPolicy> Sfr17WordArrayDH;
@@ -4443,28 +4444,62 @@ CheckResult XMLSupportImpl::GetDescendants(Value& v, const Multiname& mn) const
     return result;
 }
 
+// A not-found PropRef() whose dtor is expanded in place (only This needs releasing).
+struct Sfr17EmptyPropRef
+{
+    const SlotInfo* pSI;
+    UPInt SlotIndex;
+    Value This;
+    Sfr17EmptyPropRef() : pSI(0), SlotIndex(0) {}
+    PropRef& Get() { return *reinterpret_cast<PropRef*>(this); }
+};
+
+// PropRef::GetSlotValueUnsafe (0x14250e200, sfr_as3_18), which the exe inlines here.
+static __forceinline CheckResult Sfr17GetSlotValueUnsafe(const PropRef& prop, VM& vm, Value& value)
+{
+    bool ok = true;
+    const UPInt w = reinterpret_cast<UPInt>(prop.pValue);
+    switch (w & 3)
+    {
+    case 0:
+    {
+        char r;     // the callee's result slot
+        ok = *reinterpret_cast<const bool*>(FUN_14250e2d0(prop.pSI, &r, &vm, &value, &prop.This, NULL, 0));
+        break;
+    }
+    case 1:
+        value.AssignUnsafe(*reinterpret_cast<const Value*>(w & ~static_cast<UPInt>(1)));
+        break;
+    case 2:
+        value.AssignUnsafe(reinterpret_cast<Object*>(w & ~static_cast<UPInt>(2)));
+        break;
+    }
+    return CheckResult(ok);
+}
+
 // VM::ExecutePropertyUnsafe: calls the property prop_name of _this with argv; a null or undefined property is a
 // TypeError (#1009). False when the property is missing or its value could not be read, or the call threw.
-// MS2-FUNCTIONAL 0x1424ff910: PropRef::GetSlotValueUnsafe called out of line (the exe inlines its dispatch)
 // @0x1424ff910
 CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& prop_name, const Value& _this, Value& result, unsigned argc,
                                   const Value* argv)
 {
-    PropRef prop;
+    Sfr17EmptyPropRef t;
+    PropRef& prop = t.Get();
     Sfr33FindObjProperty(prop, vm, _this, prop_name, 0);
-    if (!Sfr33PropFound(prop))
-        return false;
-    Value func;
-    if (!prop.GetSlotValueUnsafe(vm, func))
-        return false;
-    if (func.IsNullOrUndefined())
+    if (Sfr33PropFound(prop))
     {
-        const VM::Error e(VM::eConvertNullToObjectError, vm);
-        FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
-        return false;
+        Value func;
+        if (Sfr17GetSlotValueUnsafe(prop, vm, func))
+        {
+            if (!func.IsNullOrUndefined())
+            {
+                vm.ExecuteInternalUnsafe(func, _this, result, argc, argv, false);
+                return !vm.IsException();
+            }
+            Sfr33ThrowTypeError(vm, VM::Error(VM::eConvertNullToObjectError, vm));
+        }
     }
-    vm.ExecuteInternalUnsafe(func, _this, result, argc, argv, false);
-    return !vm.IsException();
+    return false;
 }
 
 // A Value(Object*) with its ctor expanded in place (AddRef on construction); the caller releases the object.
