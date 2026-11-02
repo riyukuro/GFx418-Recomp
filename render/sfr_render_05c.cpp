@@ -14,6 +14,7 @@
 // MS2-PIN: ??$LowerBoundSliced@V?$ArrayPaged@UOuterEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@Scaleform@@UOuterEdgeType@Tessellator@23@P6A_NAEBU4523@0@Z@Alg@Scaleform@@YA_KAEBV?$ArrayPaged@UOuterEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@1@_K1AEBUOuterEdgeType@Tessellator@31@P6A_N22@Z@Z 0x142696d30 ; order
 // MS2-PIN: ??$LowerBoundSliced@V?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@Scaleform@@IP6A_NAEBUStrokerEdgeType@Tessellator@23@I@Z@Alg@Scaleform@@YA_KAEBV?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@1@_K1AEBIP6A_NAEBUStrokerEdgeType@Tessellator@31@I@Z@Z 0x142696de0 ; order
 // MS2-PIN: ??$LowerBoundSliced@V?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@Scaleform@@UStrokerEdgeType@Tessellator@23@P6A_NAEBU4523@0@Z@Alg@Scaleform@@YA_KAEBV?$ArrayPaged@UStrokerEdgeType@Tessellator@Render@Scaleform@@$03$0BA@@Render@1@_K1AEBUStrokerEdgeType@Tessellator@31@P6A_N22@Z@Z 0x142696e90 ; order
+// MS2-PIN: ?PushBack@?$ArrayPaged@PEAUMonoVertexType@Tessellator@Render@Scaleform@@$03$01@Render@Scaleform@@QEAAXAEBQEAUMonoVertexType@Tessellator@23@@Z 0x142699d40 ; COMDAT: MonoStack <4,2>, not the <4,8> chain array
 // MS2-PINS-END tplpin
 
 #include "ms2/scaleform/include/render/render_tessellator.h"
