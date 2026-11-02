@@ -3308,7 +3308,6 @@ static SF_FORCEINLINE void ArrayObject_SetElement(ArrayObject* parr, int i, cons
     }
 }
 
-// MS2-FUNCTIONAL scheduling: the exe stores the number tag of the matrix element before loading the float, ours after
 // @0x14294e520
 bool ColorMatrixFilterObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3325,7 +3324,12 @@ bool ColorMatrixFilterObject::GetMember(Environment* penv, const ASString& name,
         Ptr<ArrayObject> parr = *SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
         parr->Resize(Render::ColorMatrixFilter::ColorMatrixEntries);
         for (int i = 0; i < Render::ColorMatrixFilter::ColorMatrixEntries; ++i)
-            ArrayObject_SetElement(parr, i, Value((*pcm)[order[i]]));
+        {
+            Value v;
+            v.T.Type         = Value::NUMBER;
+            v.NV.NumberValue = (*pcm)[order[i]];
+            ArrayObject_SetElement(parr, i, v);
+        }
         val->SetAsObject(parr);
         return true;
     }
