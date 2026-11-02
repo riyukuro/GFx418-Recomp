@@ -141,9 +141,7 @@ public:
 // The empty video definition uses VideoCharacterDef's recovered 0x30-byte interface and executable vtable.
 using EmptyVideoDefImage = Video::VideoCharacterDef;
 
-Video::VideoCharacterDef::VideoCharacterDef()
-    : CharacterDef(), Width(0), Height(0), NumFrames(0), Smoothing(0), Deblocking(0), Codec(2)
-{}
+Video::VideoCharacterDef::VideoCharacterDef() {}
 
 Video::VideoCharacterDef::~VideoCharacterDef() {}
 
@@ -358,6 +356,12 @@ MovieDataDef::LoadTaskData::LoadTaskData(MovieDataDef* pdataDef, const char* pur
     AddResource(ResourceId(CharId_EmptyShape), pshapeDef);
 
     EmptyVideoDefImage* pvideoDef = new (pHeap) EmptyVideoDefImage();
+    pvideoDef->Width      = 0;
+    pvideoDef->Height     = 0;
+    pvideoDef->NumFrames  = 0;
+    pvideoDef->Smoothing  = 0;
+    pvideoDef->Deblocking = 0;
+    pvideoDef->Codec      = 2;
     AddResource(ResourceId(CharId_EmptyVideo), pvideoDef->GetResource());
     pvideoDef->GetResource()->Release();
 }
@@ -830,10 +834,11 @@ Array<String>* MovieDataDef::LoadTaskData::GetFrameLabels(unsigned frameNumber, 
         PlaylistLock.DoLock();
         locked = true;
     }
+    StringHashLH<unsigned>::ConstIterator it = NamedFrames.Begin();
     unsigned n = 0;
-    for (StringHashLH<unsigned>::ConstIterator it = NamedFrames.Begin(); it != NamedFrames.End(); ++it)
+    for (; it != NamedFrames.End(); ++it)
     {
-        if (it->Second == frameNumber)
+        if (frameNumber == it->Second)
         {
             destArr->PushBack(it->First);
             ++n;
@@ -1588,7 +1593,6 @@ void MovieDefImpl::VisitImportedMovies(ImportVisitor* visitor)
 }
 
 // @0x1425d3600
-// MS2-FUNCTIONAL: register allocation in the inlined resource hash iteration
 void MovieDefImpl::VisitResources(ResourceVisitor* pvisitor, unsigned visitMask)
 {
     if (visitMask & (ResVisit_AllImages | ResVisit_Fonts | ResVisit_EditTextFields | ResVisit_Sounds |
@@ -1600,8 +1604,19 @@ void MovieDefImpl::VisitResources(ResourceVisitor* pvisitor, unsigned visitMask)
         MovieDataDef::ResourceHash::ConstIterator ihash     = resources.Begin();
         for (; ihash != resources.End(); ++ihash)
         {
-            Resource* pres          = ihash->Second.GetResource(&pBindData->ResourceBinding);
-            bool      resourceMatch = false;
+            // GetResource with the pointer case tested first.
+            ResourceBinding*      pbinding = &pBindData->ResourceBinding;
+            const ResourceHandle& rh       = ihash->Second;
+            Resource*             pres;
+            if (rh.GetHandleType() == ResourceHandle::RH_Pointer)
+                pres = rh.GetResourcePtr();
+            else
+            {
+                ResourceBindData rbd;
+                pbinding->GetResourceData(&rbd, rh.GetBindIndex());
+                pres = rbd.pResource;
+            }
+            bool resourceMatch = false;
 
             if (pres)
             {
