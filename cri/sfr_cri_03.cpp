@@ -3733,7 +3733,8 @@ void criVmpv_Start(void* player)
 #pragma intrinsic(memset)
 #pragma optimize("", on)
 
-extern "C" CriUint32 DAT_143b27c3c;
+// selects the ARGB converter below; the exe loads it into eax before the compare, as a volatile read does
+extern "C" volatile CriUint32 DAT_143b27c3c;
 void FUN_140049300(__int64, __int64, __int64 *);  // C3: the definition's signature
 void FUN_14004c0c0(__int64, __int64, unsigned __int64 *);  // C3: the definition's signature
 void FUN_14004cbb0(Unk_Frame *, Unk_Surface *, unsigned char **);  // C3: the definition's signature
@@ -3744,15 +3745,13 @@ CriUint32 FUN_1400358d0(void*, const void*);
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const CriMvAlphaDecoderFrameInfo* info);
 void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
 void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
-void criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
+CriBool criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: convert YUV (and optional alpha) planes into the caller's 32-bit ARGB buffer.
-// Stays DIFF: the exe returns 0/1 in eax, which neither caller (0x140026ebf, 0x14003bab3) reads; an int return
-// would change the mangled name used by sfr_cri_01c, 03a and the CRI hook table.
+// convert YUV (and optional alpha) planes into the caller's 32-bit ARGB buffer
 // @0x14003bb60
-void criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize, const void* srcbufs,
-                   const void* src_vinf, const void* src_ainf)
+CriBool criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize,
+                                         const void* srcbufs, const void* src_vinf, const void* src_ainf)
 {
     struct PlaneRef { CriUint8* Data; CriUint32 Reserved08; CriUint32 Pitch; };
     struct YuvBuffers { PlaneRef Planes[3]; };
@@ -3760,49 +3759,48 @@ void criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 
                        CriUint32 Reserved18; CriUint32 Pitch; };
     struct VideoInfo { CriUint8 Reserved00[0xc]; CriUint32 Width; CriUint32 Height; };
     struct PlaneDesc { CriUint8* Data; CriUint32 Width; CriUint32 Height; CriUint32 Pitch; CriUint32 Reserved; };
-    struct SourceDesc { CriUint32 Count; CriUint32 Reserved; PlaneDesc Planes[4]; };
-    struct DestDesc { CriUint32 Count; CriUint32 Reserved; CriUint8* Data; CriUint32 Width; CriUint32 Height; CriUint32 Pitch; };
+    struct SourceDesc { CriUint32 Count; CriUint32 Reserved; PlaneDesc Planes[6]; };
     struct PlayerSize { CriUint8 Reserved00[0x614]; CriUint32 Width; CriUint32 Height; };
-    (void)dstbufsize;
+    // locals named so vc9's name-hash slot order matches the exe's; none of them is cleared
+    SourceDesc dest;
+    CriUint64 options[6];
+    SourceDesc source;
+    if (dstbufsize == dstbufsize) {}
     if (DAT_143b27c40 != 1)
         FUN_140037950(NULL, "E10110401M : Please call initialization function for 32bit ARGB frame output.", 0);
-    if (!((const YuvBuffers*)srcbufs) || !((const AlphaInfo*)src_ainf) || !dstbuf)
+    if (!((const YuvBuffers*)srcbufs) || !((const AlphaInfo*)src_ainf) || !((const AlphaInfo*)src_ainf) || !dstbuf)
     {
         FUN_140037910(0, "E10060100M : NULL pointer is passed into criMvPly_CopyFrameARGB8888Buffer().", 0);
-        return;
+        return 0;
     }
     if (((const AlphaInfo*)src_ainf)->Data != NULL && (((const VideoInfo*)src_vinf)->Width != ((const AlphaInfo*)src_ainf)->Width || ((const VideoInfo*)src_vinf)->Height != ((const AlphaInfo*)src_ainf)->Height))
     {
         FUN_140037950(NULL, "E11012101M : The resolutions of alpha stream and video stream should be same in the frame format. Use YUV buffers format.", 0);
-        return;
+        return 0;
     }
-    CriUint32 halfWidth = (((const PlayerSize*)player)->Width + 1U) / 2;
-    CriUint32 halfHeight = (((const PlayerSize*)player)->Height + 1U) / 2;
-    SourceDesc source = {};
     source.Count = 3;
     source.Planes[0].Data = ((const YuvBuffers*)srcbufs)->Planes[0].Data;
     source.Planes[0].Width = ((const PlayerSize*)player)->Width;
     source.Planes[0].Height = ((const PlayerSize*)player)->Height;
     source.Planes[0].Pitch = ((const YuvBuffers*)srcbufs)->Planes[0].Pitch;
     source.Planes[1].Data = ((const YuvBuffers*)srcbufs)->Planes[1].Data;
-    source.Planes[1].Width = halfWidth;
-    source.Planes[1].Height = halfHeight;
+    source.Planes[1].Width = (((const PlayerSize*)player)->Width + 1) / 2;
+    source.Planes[1].Height = (((const PlayerSize*)player)->Height + 1) / 2;
     source.Planes[1].Pitch = ((const YuvBuffers*)srcbufs)->Planes[1].Pitch;
     source.Planes[2].Data = ((const YuvBuffers*)srcbufs)->Planes[2].Data;
-    source.Planes[2].Width = halfWidth;
-    source.Planes[2].Height = halfHeight;
+    source.Planes[2].Width = (((const PlayerSize*)player)->Width + 1) / 2;
+    source.Planes[2].Height = (((const PlayerSize*)player)->Height + 1) / 2;
     source.Planes[2].Pitch = ((const YuvBuffers*)srcbufs)->Planes[2].Pitch;
     source.Planes[3].Data = ((const AlphaInfo*)src_ainf)->Data;
     source.Planes[3].Width = ((const AlphaInfo*)src_ainf)->Width;
     source.Planes[3].Height = ((const AlphaInfo*)src_ainf)->Height;
     source.Planes[3].Pitch = ((const AlphaInfo*)src_ainf)->Pitch;
-    DestDesc dest = {};
     dest.Count = 1;
-    dest.Data = dstbuf;
-    dest.Width = ((const VideoInfo*)src_vinf)->Width;
-    dest.Height = ((const VideoInfo*)src_vinf)->Height;
-    dest.Pitch = dstpitch;
-    CriUint64 options[6] = {};
+    dest.Planes[0].Data = dstbuf;
+    dest.Planes[0].Width = ((const VideoInfo*)src_vinf)->Width;
+    dest.Planes[0].Height = ((const VideoInfo*)src_vinf)->Height;
+    dest.Planes[0].Pitch = dstpitch;
+    options[0] = 0;
     if (DAT_143b27c3c == 1)
         FUN_140049300((__int64)&source, (__int64)&dest, (__int64 *)options);
     else
@@ -3815,6 +3813,7 @@ void criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 
         options[0] = 0;
         FUN_14004cbb0((Unk_Frame *)&source, (Unk_Surface *)&dest, (unsigned char **)options);
     }
+    return 1;
 }
 #pragma optimize("", on)
 

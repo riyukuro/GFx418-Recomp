@@ -1830,10 +1830,10 @@ CriUint32 FUN_1400358d0(void*, const void*);
 void FUN_1400359e0(void*, const void*);
 void crimvply_makeFrameInfoMembers(void*, void*, const void*, CriUint64, CriUint32);
 void crimvply_makeAlphaFrameInfoMembers(void*, void*, const void*);
-void criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
+CriBool criMvPly_CopyFrameARGB8888Buffer(void*, CriUint8*, CriUint32, CriUint32, const void*, const void*, const void*);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-void criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize, const void* srcbufs,
+CriBool criMvPly_CopyFrameARGB8888Buffer(void* player, CriUint8* dstbuf, CriUint32 dstpitch, CriUint32 dstbufsize, const void* srcbufs,
                    const void* src_vinf, const void* src_ainf);
 #pragma optimize("", on)
 

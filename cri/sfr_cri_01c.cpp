@@ -94,7 +94,7 @@ void criMvPly_AttachSofdecDecoder(void);
 void FUN_14003b720(struct CriMvSubAudioTrackState *, long, long const *, long const *);
 void criMvPly_InitializeFrameARGB8888(void);
 long criMvPly_GetFrameARGB8888(void *, unsigned char *, unsigned long, unsigned long, void *);
-void criMvPly_CopyFrameARGB8888Buffer(void *, unsigned char *, unsigned long, unsigned long, void const *, void const *, void const *);
+long criMvPly_CopyFrameARGB8888Buffer(void *, unsigned char *, unsigned long, unsigned long, void const *, void const *, void const *);
 long criVmpv_SetupMovieHandleWork(unsigned long, void *, unsigned long);
 void * criVmpv_GetUserLibWork(unsigned long *);
 void * criVmpv_GetStaticLibWork(unsigned long *);
