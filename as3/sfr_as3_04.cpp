@@ -2482,10 +2482,53 @@ typedef HashSetBase<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHa
                     NamespaceInstanceFactory::NamespaceHashFunc, AllocatorLH<Instances::Namespace*, Stat_Default_Mem>,
                     HashsetEntry<Instances::Namespace*, NamespaceInstanceFactory::NamespaceHashFunc> >
     NamespaceInstanceSetBase;
+}}}
 
+// The exe inlines the namespace set's keyed lookup and chain walk into its callers (no out-of-line GetAlt exists).
+namespace Scaleform {
+template<> template<>
+__forceinline SPInt GFx::AS3::NamespaceInstanceSetBase::findIndexAlt<GFx::AS3::NamespaceInstanceFactory::Key>(
+    const GFx::AS3::NamespaceInstanceFactory::Key& key) const
+{
+    if (pTable == 0)
+        return -1;
+    UPInt h = GFx::AS3::NamespaceInstanceFactory::NamespaceHashFunc()(key) & pTable->SizeMask;
+    UPInt idx = h;
+    const auto* e = &E(idx);
+
+    if (e->IsEmpty() || (e->GetCachedHash(pTable->SizeMask) != idx))
+        return -1;
+
+    while (1)
+    {
+        if (e->GetCachedHash(pTable->SizeMask) == h && e->Value == key)
+            return idx;
+        idx = e->NextInChain;
+        if (idx == (UPInt)-1)
+            break;
+        e = &E(idx);
+    }
+    return -1;
+}
+template<> template<>
+__forceinline bool GFx::AS3::NamespaceInstanceSetBase::GetAlt<GFx::AS3::NamespaceInstanceFactory::Key>(
+    const GFx::AS3::NamespaceInstanceFactory::Key& key, GFx::AS3::Instances::Namespace** pout) const
+{
+    SPInt idx = findIndexAlt(key);
+    if (idx >= 0)
+    {
+        if (pout)
+            *pout = E(idx).Value;
+        return true;
+    }
+    return false;
+}
+} // namespace Scaleform
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 // MS2-FUNCTIONAL: the exe inlines the Namespace constructor
 // @0x14241ab60
-Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::NamespaceKind kind, const ASString& uri,
+__declspec(noinline) Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::NamespaceKind kind, const ASString& uri,
                                                                            const Value& prefix)
 {
     return Pickable<Instances::Namespace>(SF_HEAP_AUTO_NEW(this) Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix));
@@ -2499,18 +2542,21 @@ Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInternedInstan
     return InstanceFactory->MakeNamespace(kind, uri, prefix);
 }
 
-// MS2-FUNCTIONAL: the exe keeps the lookup key in other registers
 // @0x14241baa0
 __declspec(noinline) Pickable<Instances::Namespace> NamespaceInstanceFactory::MakeNamespace(Abc::NamespaceKind kind, const ASString& uri,
                                                                        const Value& prefix)
 {
-    Instances::Namespace** pns = NamespaceSet.GetAlt(Key(kind, uri));
-    if (pns)
-        return Pickable<Instances::Namespace>(*pns, PickValue);
+    Key key(kind, uri);
+    Instances::Namespace* ns = 0;
 
-    Pickable<Instances::Namespace> ns = pNamespaceInstanceTraits->MakeInstance(kind, uri, prefix);
-    NamespaceSet.Add(ns.GetPtr());
-    return ns;
+    if (!NamespaceSet.GetAlt(key, &ns))
+    {
+        Pickable<Instances::Namespace> result = pNamespaceInstanceTraits->MakeInstance(kind, uri, prefix);
+        NamespaceSet.Add(result.GetPtr());
+        return result;
+    }
+
+    return Pickable<Instances::Namespace>(ns, PickValue);
 }
 }}}
 // The namespace set's out-of-line rehash.
@@ -4643,18 +4689,26 @@ namespace Scaleform { namespace GFx { namespace AS3 { void Sfr21AddInterfaceSlot
 
 // InstanceTraits::fl::Namespace: the interned namespace of {kind, uri}, else the public one (NULL once the traits are
 // gone)
-// MS2-FUNCTIONAL: the exe inlines the hash lookup
+// NamespaceInstanceFactory::GetNamespace (SDK body), inlined into its caller.
+static __forceinline Instances::Namespace& As3_04GetNamespace(Scaleform::GFx::AS3::NamespaceInstanceFactory* f,
+                                                             Scaleform::GFx::AS3::Abc::NamespaceKind kind,
+                                                             const ASString& uri)
+{
+    Scaleform::GFx::AS3::NamespaceInstanceFactory::Key key(kind, uri);
+    Instances::Namespace* ns = 0;
+    if (!f->NamespaceSet.GetAlt(key, &ns))
+    {
+        if (f->pNamespaceInstanceTraits)
+            return f->pNamespaceInstanceTraits->GetVM().GetPublicNamespace();
+    }
+    return *ns;
+}
+
 // @0x142415c20
 Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Scaleform::GFx::AS3::Abc::NamespaceKind kind,
                                     const ASString& uri)
 {
-    Scaleform::GFx::AS3::NamespaceInstanceFactory* f = self->InstanceFactory;
-    Instances::Namespace** pns = f->NamespaceSet.GetAlt(Scaleform::GFx::AS3::NamespaceInstanceFactory::Key(kind, uri));
-    if (pns)
-        return *pns;
-    if (f->pNamespaceInstanceTraits)
-        return &f->pNamespaceInstanceTraits->GetVM().GetPublicNamespace();
-    return NULL;
+    return &As3_04GetNamespace(self->InstanceFactory, kind, uri);
 }
 
 // the name of the trait a method's body belongs to
