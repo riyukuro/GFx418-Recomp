@@ -1194,7 +1194,7 @@ namespace Classes
 
 namespace InstanceTraits
 {
-    // MS2-FUNCTIONAL: register allocation; the exe updates Flags in memory
+    // MS2-FUNCTIONAL: register allocation (the exe keeps the sealed and final flags in r13 and r12)
     // @0x1423ef790
     UserDefined::UserDefined(VMAbcFile& file, const AS3::Traits* pt, const Abc::ClassInfo& info)
         : RTraits(file.GetVM(),
@@ -1205,8 +1205,9 @@ namespace InstanceTraits
                   pt, !info.inst_info.IsSealed(), info.inst_info.IsFinal())
         , class_info(info)
     {
-        Flags |= IsAbcObjectMask;
-        Flags ^= (-(SPInt)info.inst_info.IsInterface() ^ Flags) & IsInterfaceMask;
+        Flags = (Flags & ~IsAbcObjectMask) | (-static_cast<SPInt>(true) & IsAbcObjectMask);
+        const Abc::Instance& ii = info.inst_info;
+        Flags = (Flags & ~IsInterfaceMask) | (-static_cast<SPInt>(ii.IsInterface()) & IsInterfaceMask);
         if (AddSlots(info.inst_info, file, pt ? pt->GetMemSize() : GetFixedMemSize()))
             Sfr21AddInterfaceSlots(this, file, info);
     }
@@ -2962,24 +2963,25 @@ namespace Instances {
         result.Swap(r);
     }
 
-    // MS2-FUNCTIONAL: matches the function-versus-thunk string semantics; local formatter and ASString codegen differs.
     // @0x1423e4a80
     void FunctionBase::toStringProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc,
                                     const Value* argv)
     {
-        StringManager& strings = vm.GetStringManager();
-        if (!_this.IsThunk())
+        if (_this.IsFunction())
+            result.Assign(vm.GetStringManager().CreateConstString("function Function() {}"));
+        else if (_this.IsThunk())
         {
-            result.Assign(strings.CreateConstString("function Function() {}"));
-            return;
-        }
+            LongFormatter f(static_cast<unsigned long>(reinterpret_cast<UPInt>(&_this.AsThunk())));
+            ASString s = vm.GetStringManager().CreateConstString("[object Function-");
 
-        LongFormatter formatter(static_cast<unsigned long>(reinterpret_cast<UPInt>(&_this.AsThunk())));
-        formatter.SetBase(16).Convert();
-        ASString text = strings.CreateConstString("[object Function-");
-        text.Append(formatter.ToCStr(), strlen(formatter.ToCStr()));
-        text.Append("]", 1);
-        result.Assign(text);
+            f.SetBase(16).Convert();
+            s.Append(f.ToCStr(), strlen(f.ToCStr()));
+            s.Append("]", 1);
+
+            result.Assign(s);
+        }
+        else
+            result.Assign(vm.GetStringManager().CreateConstString("function Function() {}"));
     }
 }
 
