@@ -335,27 +335,20 @@ void FUN_140016d10(void* object, void* value)
     reinterpret_cast<void(*)(void*, int)>((*reinterpret_cast<void***>(object))[4])(object, 1);
 }
 
-// MS2-FUNCTIONAL: constructs the recovered three-field AS3 value, retaining its managed payload.
+// constructs the recovered three-field AS3 value, retaining its managed payload.
 // @0x140016e30
 uint64_t* FUN_140016e30(uint64_t* out, uint64_t type, uint64_t flags,
                              int hasValue, uint32_t* sourceType, uint64_t* payload)
 {
     out[0] = type; out[1] = flags; out[2] = *payload;
-    uint32_t* count = reinterpret_cast<uint32_t*>(out[2] + 0x18);
-    ++*count;
+    reinterpret_cast<Scaleform::GFx::ASStringNode*>(out[2])->AddRef();
     if (hasValue) {
-        const uint32_t tag = *sourceType & 0x1f;
-        if (tag >= 0x0c && tag < 0x10 && *reinterpret_cast<uint64_t*>(sourceType + 4) == 0) {
-            unsigned char* node = reinterpret_cast<unsigned char*>(out[2]);
-            uint64_t shared = *reinterpret_cast<uint64_t*>(node + 8);
-            ++*reinterpret_cast<uint32_t*>(shared + 0x80);
-            uint32_t* refs = reinterpret_cast<uint32_t*>(node + 0x18);
-            if (--*refs == 0) reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
-            out[2] = shared + 0x68;
-        } else {
-            reinterpret_cast<const Scaleform::GFx::AS3::Value*>(sourceType)->Convert2String(
-                *reinterpret_cast<Scaleform::GFx::ASString*>(out + 2));
-        }
+        const Scaleform::GFx::AS3::Value& source = *reinterpret_cast<const Scaleform::GFx::AS3::Value*>(sourceType);
+        Scaleform::GFx::ASString& text = *reinterpret_cast<Scaleform::GFx::ASString*>(out + 2);
+        if (source.IsNull())
+            text.SetNull();
+        else
+            source.Convert2String(text);
     }
     return out;
 }
@@ -467,20 +460,28 @@ void* FUN_140017440(void* table, const uint64_t* key)
 }
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: normalizes a value argument and dispatches the recovered setter with its optional integer.
+// normalizes a value argument and dispatches the recovered setter with its optional integer.
 // @0x140017470
 void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned argc,
                    const uint8_t* args)
 {
-    uint64_t value = 0;
-    if (argc && (*args & 0x1f)) value = *reinterpret_cast<const uint64_t*>(args + 0x10);
-    int extra = -1;
+    struct {
+        void* object;
+        void* member;
+        uint64_t value;
+        int extra;
+    } call;
+    uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(callFrame) + 0x10);
+    call.object = object;
+    call.member = member;
+    call.value = 0;
+    if (argc) call.value = (*args & 0x1f) ? *reinterpret_cast<const uint64_t*>(args + 0x10) : 0;
+    call.extra = -1;
     if (*reinterpret_cast<uint8_t*>(static_cast<uint8_t*>(object) + 0x180) == 0) {
-        if (argc > 1) reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args + 0x20)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(&extra));
+        if (argc > 1) reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args + 0x20)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(&call.extra));
         if (*reinterpret_cast<uint8_t*>(static_cast<uint8_t*>(object) + 0x180) == 0) {
-            uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(callFrame) + 0x10);
             reinterpret_cast<void(*)(uint64_t, void*, uint64_t, int)>(VideoThunkF)(
-                *reinterpret_cast<const int*>(&VideoThunkBaseF) + root, member, value, extra);
+                *reinterpret_cast<const int*>(&VideoThunkBaseF) + root, call.member, call.value, call.extra);
         }
     }
 }
@@ -1866,16 +1867,17 @@ namespace {
 // @0x142743130
 uint64_t* FUN_142743130(uint64_t* object)
 {
+    reinterpret_cast<Scaleform::RefCountImpl*>(object)->Scaleform::RefCountImpl::RefCountImpl();
     *reinterpret_cast<void***>(object) = &VideoAudioEventVtable;
-    reinterpret_cast<uint32_t*>(object)[2] = 1;
     object[2] = 0; object[3] = 0;
-    ::new (reinterpret_cast<unsigned char*>(object) + 0x20) Scaleform::Event(false, false);
-    ::new (reinterpret_cast<unsigned char*>(object) + 0x80) Scaleform::Lock(0);
+    reinterpret_cast<Scaleform::Event*>(reinterpret_cast<unsigned char*>(object) + 0x20)->Scaleform::Event::Event(false, false);
+    reinterpret_cast<Scaleform::Lock*>(reinterpret_cast<unsigned char*>(object) + 0x80)->Scaleform::Lock::Lock(0);
     object[0x15] = 0;
-    object[0x17] = reinterpret_cast<uintptr_t>(object + 0x16);
-    *reinterpret_cast<void***>(object + 0x16) = &VideoAudioVtableB;
-    object[0x18] = reinterpret_cast<uintptr_t>(object + 0x16);
-    ::new (reinterpret_cast<unsigned char*>(object) + 0xc8) Scaleform::Lock(0);
+    uint64_t* listRoot = object + 0x16;
+    listRoot[1] = reinterpret_cast<uintptr_t>(listRoot);
+    *reinterpret_cast<void***>(listRoot) = &VideoAudioVtableB;
+    listRoot[2] = reinterpret_cast<uintptr_t>(listRoot);
+    reinterpret_cast<Scaleform::Lock*>(reinterpret_cast<unsigned char*>(object) + 0xc8)->Scaleform::Lock::Lock(0);
     *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0xf0) = 0;
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0xf4) = 0;
     *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x78) = 0;
@@ -2123,9 +2125,9 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
     *reinterpret_cast<void***>(object + 2) = &VideoAudioStreamSubVtable;
     object[9] = FUN_1425e3480();
     *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(object) + 0x69) = 0;
-    ::new (reinterpret_cast<unsigned char*>(object) + 0x70) Scaleform::Lock(0);
+    reinterpret_cast<Scaleform::Lock*>(reinterpret_cast<unsigned char*>(object) + 0x70)->Scaleform::Lock::Lock(0);
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x98) = 0;
-    if (streamState) _InterlockedIncrement(reinterpret_cast<volatile long*>(static_cast<unsigned char*>(streamState) + 8));
+    Scaleform::AtomicOps<int>::ExchangeAdd_NoSync(reinterpret_cast<volatile int*>(static_cast<unsigned char*>(streamState) + 8), 1);
     object[0xb] = 0; object[0xc] = 0;
     // The channel's paused state lands in the member at +0x68, which SetAudioPaused and QueryAudioElapsedSeconds read.
     bool* paused = reinterpret_cast<bool*>(reinterpret_cast<unsigned char*>(object) + 0x68);
