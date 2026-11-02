@@ -5898,9 +5898,15 @@ CheckResult GetSuperProperty(VM& vm, const Traits* ot, Value& result, const Valu
 
 // sfr34 batch AC: the registration of a Vector class, ...
 
-// VM::RegisterClassTraitsVector: tr in the VM's class set under the name of its class object's traits, in the
-// public namespace of the Vector package.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class)
+// The registry insert, inline here (the exe builds the key and calls HashSetBase::add 0x1423eb030 directly).
+static SF_FORCEINLINE void Sfr18AddClassTraitsInline(TClassTraitsCache& set, const ASString& name,
+                                                     const Instances::Namespace& ns, ClassTraits::Traits* const& v)
+{
+    set.Entries.Add(TClassTraitsCache::Key(name, &ns), v);
+}
+
+// MS2-FUNCTIONAL free function (not declared in the shared VM class); the name and the traits-pointer temporary
+// take each other's home slots (0x60/0x68)
 // @0x142521150
 void FUN_142521150(VM& vm, ClassTraits::Traits& tr)
 {
@@ -5914,7 +5920,8 @@ void FUN_142521150(VM& vm, ClassTraits::Traits& tr)
                                    vm.GetClassTraitsNamespace().GetInstanceTraits()),
                                Abc::NS_Public, uri, Value::GetUndefined());
     }
-    vm.ClassTraitsSet.Add(tr.GetInstanceTraits().GetConstructor().GetTraits().GetName(), *ns, &tr);
+    ASString name = tr.GetInstanceTraits().GetConstructor().GetTraits().GetName();
+    Sfr18AddClassTraitsInline(vm.ClassTraitsSet, name, *ns, &tr);
 }
 
 } } } // namespace Scaleform::GFx::AS3
@@ -5926,7 +5933,8 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // GetPropertyUnsafe: the property prop_name of _this into value: by the object itself when it is array-like or an
 // XML (list) instance, else by the found slot or dynamic value. False when there is none or it could not be read.
-// MS2-FUNCTIONAL free function returning its CheckResult through a pointer; the exe inlines the read of the found
+// MS2-FUNCTIONAL free function returning its CheckResult through a pointer; the exe inlines ~PropRef (out of line
+// in sfr_as3_16, declared in as3_obj.h)
 // @0x14250d2f0
 char* FUN_14250d2f0(char* ret, VM& vm, const Value& _this, const Multiname& prop_name, Value& value)
 {
@@ -5937,14 +5945,14 @@ char* FUN_14250d2f0(char* ret, VM& vm, const Value& _this, const Multiname& prop
         if (tr.IsArrayLike() ||
             ((tr.GetTraitsType() == Traits_XML || tr.GetTraitsType() == Traits_XMLList) && tr.IsInstanceTraits()))
         {
-            *ret = obj->GetProperty(prop_name, value);
+            ::new (ret) CheckResult(obj->GetProperty(prop_name, value));
             return ret;
         }
     }
     PropRef prop;
     FUN_142501b00(prop, vm, _this, prop_name, 0);
     const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0))
+    if (prop.This.IsUndefined() || bits == 1 || (((UByte)(bits >> 1) & 1) && (bits & ~UPInt(2)) == 0))
         *ret = false;
     else
         *ret = prop.GetSlotValueUnsafe(vm, value);
@@ -5956,7 +5964,6 @@ void FUN_1424e6cf0(Tracer* self, UPInt offset);   // the code position offset as
 
 // The starts of the byte code's blocks: the labels, the targets of the branches and the positions after them, and
 // the targets of the lookupswitches (relative to their opcodes).
-// MS2-FUNCTIONAL free function over a layout view of the byte code's holder (it has no caller in the exe)
 // @0x142516960
 void FUN_142516960(void* self)
 {
@@ -5965,12 +5972,13 @@ void FUN_142516960(void* self)
     UPInt       pos = 0;
     while (pos < c->size)
     {
-        const UInt8 op = c->data[pos++];
-        if (DAT_14317fea0[op].pop_mn)
+        const int op = c->data[pos++];
+        const Sfr34_OpCodeInfo& oi = DAT_14317fea0[op];
+        if (oi.pop_mn)
             Abc::ReadU30(c->data, pos);
-        if (DAT_14317fea0[op].pop_args)
+        if (oi.pop_args)
             Abc::ReadU30(c->data, pos);
-        if (DAT_14317fea0[op].pop_mn || DAT_14317fea0[op].pop_args)
+        if (oi.pop_args | oi.pop_mn)
             continue;
         switch (op)
         {
