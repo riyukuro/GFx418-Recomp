@@ -1088,6 +1088,7 @@ namespace Instances
     class Namespace : public GASRefCountBase
     {
         friend class InstanceTraits::fl::Namespace;
+        friend class AS3::VM;   // VM::MakeNamespace, where the exe inlines MakeInstance
     public:
         Namespace(VM& vm, Abc::NamespaceKind kind, const char* uri);
     protected:

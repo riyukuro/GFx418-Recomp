@@ -4877,14 +4877,15 @@ extern const Scaleform::GFx::AS3::ThunkInfo DAT_14317aeb0[3];   // the methods o
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 
-// A namespace instance of the namespace class (not interned).
-// MS2-FUNCTIONAL the exe inlines InstanceTraits::fl::Namespace::MakeInstance (the Namespace constructor is protected)
+// A namespace instance of the namespace class (not interned). The exe inlines
+// InstanceTraits::fl::Namespace::MakeInstance (0x14241ab60) here, but not the Namespace constructor (0x1423edb60).
 // @0x1425164c0
 Pickable<Instances::Namespace> VM::MakeNamespace(Abc::NamespaceKind kind, const ASString& uri, const Value& prefix) const
 {
     InstanceTraits::fl::Namespace& itr =
         static_cast<InstanceTraits::fl::Namespace&>(GetClassTraitsNamespace().GetInstanceTraits());
-    return itr.MakeInstance(kind, uri, prefix);
+    return Pickable<Instances::Namespace>(new((MemAddressPtr)((void*)&itr), StatMV_VM, __FILE__, __LINE__)
+                                          Instances::Namespace(itr.GetVM(), itr.InstanceFactory, kind, uri, prefix));
 }
 
 // The anonymous class info only has its names set
