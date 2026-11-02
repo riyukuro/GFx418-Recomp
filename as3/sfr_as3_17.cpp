@@ -3326,15 +3326,57 @@ static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Traits& tr, const UI
 
 // The fixed slot of tr named name in ns, own or a parent's, or NULL; index receives its slot index. Object obj
 // may initialize it on demand.
-// MS2-FUNCTIONAL 0x1425011c0: the prologue differs (exe also saves rsi) and the exe splits the loop into chunks.
+// MS2-FUNCTIONAL 0x1425011c0: the exe keeps the parent-slot test as a bool (mov eax,1 / setb al) before branching.
 // @0x1425011c0
 const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Instances::Namespace& ns, UPInt& index,
                               Object* obj)
 {
-    const SlotInfo* si = Sfr33FindSlotInChain(tr, tr.FindSlotValues(name), ns, index);
+    const Slots& slots = tr;
+    const SlotInfo* result = NULL;
+    const UInt32* values = slots.FindSlotValues(name);
+    if (values)
+    {
+        SPInt ind = *values;
+        do
+        {
+            index = ind;
+            const SlotInfo* si;
+            if (ind < 0 || static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+                si = &slots.Parent->GetSlotInfo(AbsoluteIndex(ind));
+            else
+                si = &slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
+            const Instances::Namespace& sns = *si->pNs;
+            const unsigned kind = ns.GetKind();
+            if (sns.GetKind() == kind)
+            {
+                bool same;
+                switch (kind)
+                {
+                case Abc::NS_Protected:
+                    same = true;
+                    break;
+                case Abc::NS_Private:
+                    same = &ns == &sns;
+                    break;
+                default:
+                    same = sns.GetUri().GetNode() == ns.GetUri().GetNode();
+                    break;
+                }
+                if (same)
+                {
+                    result = si;
+                    break;
+                }
+            }
+            if (static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+                ind = slots.Parent->GetPrevSlotIndex(ind);
+            else
+                ind = slots.VArray[ind - slots.FirstOwnSlotNum].Prev;
+        } while (ind >= 0);
+    }
     if (obj)
-        return obj->InitializeOnDemand(si, name, ns, index);
-    return si;
+        return obj->InitializeOnDemand(result, name, ns, index);
+    return result;
 }
 
 // The fixed slot of tr that mn names (the first namespace of a set that has one), or NULL.
