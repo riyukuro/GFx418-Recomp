@@ -723,7 +723,6 @@ int M2VIDCT_IsIsse2(cri_any cri_p0);
 
 int M2VIDCT_IsFsri(cri_any cri_p0);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140054250
 void m2vidct_SetFunctionPtr(cri_any cri_p0)
 {
@@ -735,30 +734,32 @@ void m2vidct_SetFunctionPtr(cri_any cri_p0)
     return;
   }
   *(cri_u8 *)((char *)arg1 + 0x1bc8) = 0;
-  if (*(int *)((char *)arg1 + 0x1a7c) == 1) {
+  switch (*(int *)((char *)arg1 + 0x1a7c)) {
+  case 1:
     i_v1 = UTY_SupportSse();
     if (i_v1 != 0) {
-      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
+      *(cri_u1 **)((char *)arg1 + 0x1bc8) = (cri_u1 *)&FUN_1400541f0;
     }
-  }
-  else if (*(int *)((char *)arg1 + 0x1a7c) == 2) {
+    break;
+  case 2:
     i_v1 = UTY_SupportSse2();
     if (i_v1 != 0) {
       *(cri_code **)((char *)arg1 + 0x1bc8) = (cri_code *)m2vidct_Isse2Trans;
     }
-  }
-  else {
+    break;
+  default:
     i_v1 = UTY_SupportSse();
     if (i_v1 != 0) {
-      *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
+      *(cri_u1 **)((char *)arg1 + 0x1bc8) = (cri_u1 *)&FUN_1400541f0;
     }
     i_v1 = UTY_SupportSse2();
     if ((i_v1 != 0) && (*(longlong *)((char *)arg1 + 0x1bc8) == 0)) {
       *(cri_code **)((char *)arg1 + 0x1bc8) = (cri_code *)m2vidct_Isse2Trans;
     }
+    break;
   }
   if (*(longlong *)((char *)arg1 + 0x1bc8) == 0) {
-    *(cri_u1 **)((char *)arg1 + 0x1bc8) = CRI_ADDR(FUN_1400541f0);
+    *(cri_u1 **)((char *)arg1 + 0x1bc8) = (cri_u1 *)&FUN_1400541f0;
   }
   return;
 }
