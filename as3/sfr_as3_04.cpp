@@ -2482,7 +2482,6 @@ Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::
     return Pickable<Instances::Namespace>(SF_HEAP_AUTO_NEW(this) Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix));
 }
 
-// MS2-FUNCTIONAL: cl inlines MakeNamespace here; the exe calls it
 // @0x14241ba70
 Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInternedInstance(Abc::NamespaceKind kind,
                                                                                    const ASString& uri,
@@ -2493,7 +2492,7 @@ Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInternedInstan
 
 // MS2-FUNCTIONAL: the exe keeps the lookup key in other registers
 // @0x14241baa0
-Pickable<Instances::Namespace> NamespaceInstanceFactory::MakeNamespace(Abc::NamespaceKind kind, const ASString& uri,
+__declspec(noinline) Pickable<Instances::Namespace> NamespaceInstanceFactory::MakeNamespace(Abc::NamespaceKind kind, const ASString& uri,
                                                                        const Value& prefix)
 {
     Instances::Namespace** pns = NamespaceSet.GetAlt(Key(kind, uri));
@@ -2548,7 +2547,7 @@ void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::G
 }
 // Namespace::SetUri.
 // @0x142423bd0
-void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
+__declspec(noinline) void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
 { const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = uri; }
 // The parts of str split at each delim (at most limit of them), as a new Array: no delim gives str itself, an empty
 // delim each character. A delim that ends str adds a trailing empty part.
@@ -2678,7 +2677,6 @@ Scaleform::Pickable<Scaleform::GFx::AS3::Instances::Namespace> FUN_142419d00(
     return result;
 }
 // Namespace::SetUri(Value): a QName gives its namespace's uri (or "*" without one), anything else its string.
-// MS2-FUNCTIONAL: the exe swaps the "*" node into Uri by hand (one more ReleaseNode)
 // @0x142423c10
 void FUN_142423c10(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::AS3::Value& v)
 {
@@ -2690,12 +2688,13 @@ void FUN_142423c10(Scaleform::GFx::AS3::Instances::Namespace* self, const Scalef
         const Instances::fl::QName* qn = static_cast<const Instances::fl::QName*>(v.GetObject());
         if (qn == NULL)
             return;
-        if (qn->Ns.GetPtr() != NULL)
+        if (qn->Ns.GetPtr() == NULL)
         {
-            FUN_142423bd0(self, qn->Ns->GetUri());
+            Scaleform::GFx::ASString any(vm.GetStringManager().CreateConstString("*"));
+            const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = any;
             return;
         }
-        const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = vm.GetStringManager().CreateConstString("*");
+        FUN_142423bd0(self, qn->Ns->GetUri());
     }
     else
         v.Convert2String(const_cast<Scaleform::GFx::ASString&>(self->GetUri()));
@@ -4146,7 +4145,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // @0x142416ad0
-    CheckResult XMLList::GetProperty(const Multiname& prop_name, XMLList& list)
+    __declspec(noinline) CheckResult XMLList::GetProperty(const Multiname& prop_name, XMLList& list)
     {
         if (prop_name.IsAttr())
         {
@@ -4159,7 +4158,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return ForEachChild(prop_name, cb) != 0;
     }
 
-    // MS2-FUNCTIONAL: frame layout and register allocation differ
     // @0x142416b90
     CheckResult XMLList::GetProperty(const Multiname& prop_name, Value& value)
     {
@@ -4846,7 +4844,6 @@ void FUN_14241b920(Scaleform::UPInt selfAddr, void* retp, Scaleform::UPInt fileA
 }
 
 // E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
-// MS2-FUNCTIONAL: written from the exe on raw offsets (call frame +0x58: default xml namespace)
 // @0x14241bc30
 void FUN_14241bc30(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
 {
@@ -4859,17 +4856,17 @@ void FUN_14241bc30(AS3::Object* self, Scaleform::StringBuffer& buf, const Instan
     }
     if (ns.GetPrefix().IsString())
     {
-        ASString prefix = ns.GetPrefix().AsString();
-        if (prefix.GetSize() != 0)
+        const Scaleform::GFx::ASStringNode* prefix = ns.GetPrefix().GetStringNode();
+        const unsigned size = prefix->Size;
+        if (size != 0)
         {
-            buf.AppendString(prefix.ToCStr(), prefix.GetSize());
+            buf.AppendString(prefix->pData, size);
             buf.AppendChar(':');
         }
     }
 }
 
 // E4X: the ":prefix" of a namespace in an XML string (attribute form), unless it is the default xml namespace
-// MS2-FUNCTIONAL: written from the exe on raw offsets (call frame +0x58: default xml namespace)
 // @0x14241bcd0
 void FUN_14241bcd0(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
 {
@@ -4882,11 +4879,11 @@ void FUN_14241bcd0(AS3::Object* self, Scaleform::StringBuffer& buf, const Instan
     }
     if (ns.GetPrefix().IsString())
     {
-        ASString prefix = ns.GetPrefix().AsString();
-        if (prefix.GetSize() != 0)
+        const Scaleform::GFx::ASStringNode* prefix = ns.GetPrefix().GetStringNode();
+        if (prefix->Size != 0)
         {
             buf.AppendChar(':');
-            buf.AppendString(prefix.ToCStr(), prefix.GetSize());
+            buf.AppendString(prefix->pData, prefix->Size);
         }
     }
 }
