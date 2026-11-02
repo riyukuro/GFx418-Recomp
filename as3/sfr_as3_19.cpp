@@ -2495,32 +2495,33 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 struct TrPtrScratch
 {
     TrPtrScratch(UInt32 kind) { w1 = 0; w0 = kind; }
+    TrPtrScratch(UInt32 kind, UPInt p) { w1 = 0; w2 = p; w0 = kind; }
     const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
     UInt32 w0;
     UPInt w1, w2, w3;
 };
 
-// MS2-FUNCTIONAL 0x14253be60: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x14253be60
 void Sfr31StatePushNs(UPInt st)
 {
-    const UPInt own = Sfr31Rd(Sfr31Rd(st, 0), 0x20);
-    ASString name(reinterpret_cast<ASStringNode*>(Sfr31Rd(own, 0x70)));
-    const UPInt link = Sfr31Rd(own, 0x28);
-    TrPtrScratch t(8);
-    t.w2 = FUN_142506f00(link, *reinterpret_cast<const UPInt*>(Sfr31Rd(Sfr31Rd(link, 0x28), 0x170) + static_cast<SPInt>(*reinterpret_cast<const SInt32*>(own + 0x30)) * 8), &name);
+    UPInt ns;
+    {
+        ASString name(reinterpret_cast<ASStringNode*>(Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0), 0x20), 0x70)));
+        const UPInt own = Sfr31Rd(Sfr31Rd(st, 0), 0x20);
+        const UPInt link = Sfr31Rd(own, 0x28);
+        ns = FUN_142506f00(link, *reinterpret_cast<const UPInt*>(Sfr31Rd(Sfr31Rd(link, 0x28), 0x170) + static_cast<SPInt>(*reinterpret_cast<const SInt32*>(own + 0x30)) * 8), &name);
+    }
+    TrPtrScratch t(8, ns);
     reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(t.Get());
 }
 
-// MS2-FUNCTIONAL 0x14253f410: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// MS2-FUNCTIONAL 0x14253f410: scheduling only: the exe loads the stack address before moving the pushed value into rdx.
 // @0x14253f410
 void Sfr31StatePushPool(UPInt st, UInt32 ind)
 {
-    const UPInt tr = Sfr31Rd(st, 0);
-    FUN_14251fcd0(tr, ind);
-    Value v;
-    const Value* r = FUN_1423ef9b0(&v, FUN_14250ae60(Sfr31Rd(Sfr31Rd(tr, 0x20), 0x28), ind));
-    reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(*r);
+    FUN_14251fcd0(Sfr31Rd(st, 0), ind);
+    Instances::Namespace* ns = reinterpret_cast<Instances::Namespace*>(FUN_14250ae60(Sfr31Rd(Sfr31Rd(Sfr31Rd(st, 0), 0x20), 0x28), ind));
+    reinterpret_cast<TR::State*>(st)->GetOpStack().PushBack(Value(ns));
 }
 
 // Instance traits seen through their vtable: slot 16 (+0x80) is the subtype test.
@@ -2680,17 +2681,32 @@ void Sfr31TraceCallPop(State* st, UInt32 argc)
     TrReadArgsObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, argc);
 }
 
-// MS2-FUNCTIONAL 0x1425401a0: behavior-equivalent recovery; codegen differs from exe
+// The tracer's ReadValue and ReadValueObject (inlined in the exe): each popped value bumps the read count.
+struct TrReadValue : public TR::StackReader
+{
+    TrReadValue(VM& vm, State& st) : TR::StackReader(vm, st), ArgValue(st.PopOpValue())
+    {
+        ++Num;
+    }
+    Value ArgValue;
+};
+
+struct TrReadValueObject : public TrReadValue
+{
+    TrReadValueObject(VM& vm, State& st) : TrReadValue(vm, st), ArgObject(st.PopOpValue())
+    {
+        ++Num;
+    }
+    Value ArgObject;
+};
+
+// MS2-FUNCTIONAL 0x1425401a0: register caching only: the exe keeps the second value's flags in ebx through the inlined weak release.
 // @0x1425401a0
 void Sfr31TracePop2Note(State* st, UInt32 arg)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), arg);
-    TrPopped a, b;
-    FUN_14251cd30(st, &a.Get());
-    FUN_14251cd30(st, &b.Get());
-    b.Get().~Value();
-    a.Get().~Value();
+    TrReadValueObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st);
 }
 
 // setInterval/setTimeout: appends the extra call arguments to the IntervalTimer's Params (ArrayLH<Value> at +0x38).
