@@ -1501,6 +1501,15 @@ struct Pair
     S Second;
 };
 namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec { struct CompareAsStringInd; } } } }
+namespace Alg {
+// the sorts swap a pair one member at a time
+template <typename F, typename S>
+inline void Swap(Pair<F, S>& a, Pair<F, S>& b)
+{
+    Swap(a.First, b.First);
+    Swap(a.Second, b.Second);
+}
+}
 }
 
 // Vector.sort helpers the exe keeps out of line (sfr_as3_21): CompareAsStringInd::Compare, Impl::CompareFunct
@@ -2620,9 +2629,8 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_G?$ValuePtrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556640
 // MS2-PIN: ??_G?$ValuePtrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556670
 // MS2-PIN: ??_G?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425566a0
-// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z: the exe swaps the (number, index) pairs member by member; ours moves the 16-byte pair with movups
+// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z: the swaps now match; ours zeroes eax ahead of each inlined compare where the exe sets al after it
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@NK@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsNumberInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f400
-// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z: the inlined (string, index) pair swaps and node releases get other registers and frame layout; same calls and order
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@UCompareAsStringInd@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@U?$Pair@VASString@GFx@Scaleform@@K@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1UCompareAsStringInd@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f740
 // MS2-PIN: ??_7?$SortFunc@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182d88
 // MS2-PIN: ??_7?$SortFunc@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@6B@ 0x143182da8
