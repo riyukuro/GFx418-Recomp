@@ -998,7 +998,6 @@ struct Sfr27ReadMnCtValue : Sfr27ReadMnCt
     Value val;                  // +0x28
 };
 
-// MS2-FUNCTIONAL 0x142532f20: exact once State::PopOpValue is declared __declspec(noalias) (as3_readargs.h:212); without it the weak-ref Free is a call where the exe tail-jumps.
 // The first operand popped and dropped after noting a register/operand read.
 // @0x142532f20
 void Sfr27TracePopNote(State* st, UInt32 arg)
@@ -2808,7 +2807,8 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 using namespace TR;
 
 // MS2-FUNCTIONAL 0x142537710: the exe keeps the popped object's Flags in ebx across the weak-ref Free and stores them back;
-// ours clears them in memory (register order only).
+// ours clears them in memory (register order only). The exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640,
+// 0x1424dea90; ours in sfr_as3_15) in this TU. A probe with same-TU noinline stand-in bodies for the two matched exactly.
 // @0x142537710
 void Sfr31TraceCallPop(State* st, UInt32 argc)
 {
@@ -4165,34 +4165,32 @@ void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Va
 void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, Value::NotNull); }
 
 // Tracer op: an operand of a type-describing kind becomes its instance traits, anything else is pushed back as it was.
-// MS2-FUNCTIONAL 0x142536dd0: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142536dd0: the exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640, 0x1424dea90; ours in
+// sfr_as3_15) in this TU, so it keeps ArgObject's kind and Flags in esi/ebx across PushBack and the weak-ref Free.
+// Ours reloads them from memory. With same-TU noinline stand-in bodies for the two, only the vm argument's load order differs.
 // @0x142536dd0
 void Sfr31TraceTypeOperand(State* st, UInt32 argc)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), argc);
-    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, argc);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    const UPInt p = reinterpret_cast<UPInt>(&popped.Get());
-    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
-    UPInt tr = Sfr31Rd(p, 0x10);
-    bool conv = true;
-    if (k == 9)
-        tr = Sfr31Rd(tr, 0xc0);
-    else if (k == 0xd)
-        tr = Sfr31Rd(Sfr31Rd(tr, 0x20), 0xc0);
-    else if (k != 8)
-        conv = false;
-    if (conv)
+    TrReadArgsObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, argc);
+    const Value& v = args.ArgObject;
+    const UPInt p = reinterpret_cast<UPInt>(&v);
+    switch (v.GetKind())
     {
-        Sfr31RawTraitsVal v = {8, 0, tr, 0};
-        s.OpStack().PushBack(*reinterpret_cast<const Value*>(&v));
+    case Value::kInstanceTraits:
+        s.OpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(p, 0x10)), Value::NotNull));
+        break;
+    case Value::kClassTraits:
+        s.OpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(Sfr31Rd(p, 0x10), 0xc0)), Value::NotNull));
+        break;
+    case 0xd:
+        s.OpStack().PushBack(Value(*reinterpret_cast<InstanceTraits::Traits*>(Sfr31Rd(Sfr31Rd(Sfr31Rd(p, 0x10), 0x20), 0xc0)), Value::NotNull));
+        break;
+    default:
+        s.OpStack().PushBack(v);
+        break;
     }
-    else
-        s.OpStack().PushBack(popped.Get());
-    popped.Get().~Value();
 }
 // ---- batch 28
 struct Sfr31ExecMnCtx
