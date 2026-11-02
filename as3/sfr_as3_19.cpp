@@ -53,6 +53,61 @@ struct ValueAssignCopies
             v.AddRef();
         }
     }
+    // Value::Convert2Boolean as the SDK writes it, for the inline copy in Sfr31ValueToBool.
+    static SF_INLINE bool Convert2Boolean(const Value& v)
+    {
+        bool result = false;
+        switch (v.GetKind())
+        {
+        case Value::kUndefined:
+            result = false;
+            break;
+        case Value::kBoolean:
+            result = v.value;
+            break;
+        case Value::kInt:
+            result = v.value.VS._1.VInt != 0;
+            break;
+        case Value::kUInt:
+            result = v.value.VS._1.VUInt != 0;
+            break;
+        case Value::kNumber:
+            if (v.IsNaN() || v.IsPOSITIVE_ZERO() || v.IsNEGATIVE_ZERO())
+                result = false;
+            else
+                result = true;
+            break;
+        case Value::kString:
+            if (v.value.VS._1.VStr)
+                result = v.value.VS._1.VStr->Size != 0;
+            else
+                result = false;
+            break;
+        case Value::kNamespace:
+            result = false;
+            break;
+        case Value::kFunction:
+        case Value::kObject:
+        case Value::kClass:
+        case Value::kThunkFunction:
+            if (v.IsNull())
+                result = false;
+            else
+                result = true;
+            break;
+        case Value::kThunkClosure:
+        case Value::kVTableIndClosure:
+            result = true;
+            break;
+        case Value::kThunk:
+        case Value::kVTableInd:
+            result = true;
+            break;
+        default:
+            break;
+        }
+        return result;
+    }
     // Value::PickUnsafe(Value&) as the SDK writes it: other is moved bitwise and left undefined.
     static SF_INLINE void PickUnsafeCopy(Value& v, Value& other)
     {
@@ -294,7 +349,7 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
 char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj);
 char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multiname* mn, const Value* v);
 void  Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg);
-void  Sfr31ValueToBool(Value* v);
+__declspec(noinline) void Sfr31ValueToBool(Value* v);   // the exe calls it out of line
 void  Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name);
 void  Sfr31ButtonSwitchStateIntl(UPInt self, int state);
 char  Sfr31TracerCommonOp(UPInt tracer, unsigned char op, UPInt* pos, UPInt state);
@@ -512,6 +567,12 @@ struct TrTraitsScratch
     const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
     UInt32 w0;
     UPInt w1, w2, w3;
+};
+
+// The same scratch released as a Value when it goes out of scope.
+struct TrTraitsScratchValue : TrTraitsScratch
+{
+    ~TrTraitsScratchValue() { reinterpret_cast<Value*>(&w0)->~Value(); }
 };
 
 // @0x142528e20
@@ -908,7 +969,7 @@ void Sfr27TraceConvertTopBoolean(State* st)
         Sfr31ValueToBool(&top);
         return;
     }
-    TrTraitsScratch t;
+    TrTraitsScratchValue t;
     t.SetTraits(TrITraits(s.Tracer(), 0x210));
     top.Assign(t.Get());
 }
@@ -3620,51 +3681,10 @@ void Sfr31ExecIndexedQuery(UPInt vm)
 }
 // ---- batch 24
 // Value -> Boolean conversion used by the tracer, in place.
-// MS2-FUNCTIONAL 0x14252f4f0: behavior-equivalent recovery; codegen differs from exe
 // @0x14252f4f0
 void Sfr31ValueToBool(Value* v)
 {
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(v) & 0x1f;
-    const UPInt p = reinterpret_cast<UPInt>(v);
-    bool r = false;
-    switch (kind)
-    {
-    case 1:
-        r = *reinterpret_cast<const UInt8*>(p + 0x10) != 0;
-        break;
-    case 2:
-    case 3:
-        r = *reinterpret_cast<const int*>(p + 0x10) != 0;
-        break;
-    case 4:
-    {
-        const UInt64 bits = *reinterpret_cast<const UInt64*>(p + 0x10);
-        const bool nan = (bits & 0x7ff0000000000000ull) == 0x7ff0000000000000ull && (bits & 0xfffffffffffffull) != 0;
-        r = !nan && (bits & 0x7fffffffffffffffull) != 0;
-        break;
-    }
-    case 5:
-    case 7:
-    case 0x10:
-    case 0x11:
-        r = true;
-        break;
-    case 10:
-    {
-        const UPInt node = Sfr31Rd(p, 0x10);
-        r = node != 0 && *reinterpret_cast<const int*>(node + 0x20) != 0;
-        break;
-    }
-    case 0xc:
-    case 0xd:
-    case 0xe:
-    case 0xf:
-        r = Sfr31Rd(p, 0x10) != 0;
-        break;
-    default:
-        break;
-    }
-    v->SetBool(r);
+    v->SetBool(ValueAssignCopies::Convert2Boolean(*v));   // Value::ToBooleanValue
 }
 
 static bool Sfr31SwapChildrenTail(UPInt owner, UPInt i1, UPInt i2)
