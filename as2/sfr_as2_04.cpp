@@ -257,7 +257,6 @@ Value Value::Compare(Environment* penv, const Value& v, int action) const
     return Value(result);
 }
 
-// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the inlined iterator destructor
 // @0x142934390
 void MovieRoot::ActionQueueType::Clear()
 {
@@ -877,7 +876,7 @@ SF_NOINLINE MovieRoot::ActionEntry::~ActionEntry()
 }
 
 // @0x142930910
-void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
+SF_NOINLINE void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
 {
     pentry->Type          = ActionEntry::Entry_None;
     pentry->pActionBuffer = 0;

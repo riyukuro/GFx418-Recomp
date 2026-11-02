@@ -445,7 +445,7 @@ public:
                 pActionQueue->AddToFreeList(pLastEntry);
         }
 
-        const ActionEntry* getNext(); // exe 0x142995180
+        __declspec(noalias) const ActionEntry* getNext(); // exe 0x142995180; noalias lets the iterator dtor tail-call (callers reread the queue only after calls)
     };
 
     // The action queue (+0x80, inside the unrecovered block).

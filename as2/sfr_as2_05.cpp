@@ -1915,7 +1915,6 @@ bool Environment::FindOwnerOfMember(const ASString& varname, Value* presult, con
     return false;
 }
 
-// MS2-FUNCTIONAL the exe tail-calls AddToFreeList from the inlined iterator destructor
 // @0x142938bd0
 void MovieRoot::DoActions()
 {
