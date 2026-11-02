@@ -495,6 +495,12 @@ struct TrTraitsScratch
         w1 = 0;
         w0 = static_cast<UInt32>(Value::kInstanceTraits);
     }
+    // Value(tr, isNull): the null type sits above the kind bits (SetTraceNullType).
+    explicit TrTraitsScratch(Value::TraceNullType isNull)
+    {
+        w1 = 0;
+        w0 = static_cast<UInt32>(Value::kInstanceTraits) | (static_cast<UInt32>(isNull) << 5);
+    }
     void SetTraits(InstanceTraits::Traits& tr) { w2 = reinterpret_cast<UPInt>(&tr); }
     const Value& Get() const { return *reinterpret_cast<const Value*>(&w0); }
     UInt32 w0;
@@ -3764,14 +3770,10 @@ void Sfr31TraceCallPushObject(State* st, UInt32 a, UInt32 b)
     StV s(st);
     FUN_14251fcd0(s.Tracer(), a);
     FUN_14251fcd0(s.Tracer(), b);
-    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, b);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    TrTraitsScratch t;
+    TrReadArgsObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, b);
+    TrTraitsScratch t(Value::NullOrNot);
     t.SetTraits(TrITraits(s.Tracer(), 0x1f8));
     s.OpStack().PushBack(t.Get());
-    popped.Get().~Value();
 }
 
 // MS2-FUNCTIONAL 0x142535540: behavior-equivalent recovery; codegen differs from exe
@@ -3781,14 +3783,10 @@ void Sfr31TraceCallPushObjectB(State* st, UInt32 a, UInt32 b)
     StV s(st);
     FUN_14251fcd0(s.Tracer(), a);
     FUN_14251fcd0(s.Tracer(), b);
-    TrReadArgsRaw args(reinterpret_cast<VM*>(TrVM(s.Tracer())), st, b);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    TrTraitsScratch t;
+    TrReadArgsObject args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, b);
+    TrTraitsScratch t(Value::NullOrNot);
     t.SetTraits(TrITraits(s.Tracer(), 0x1f8));
     s.OpStack().PushBack(t.Get());
-    popped.Get().~Value();
 }
 
 struct Sfr31MnCtx
