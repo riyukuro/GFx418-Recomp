@@ -139,6 +139,7 @@ extern "C" void FUN_1424ddcb0(void* self);   // the in-place AvmDisplayObj destr
 // The RefCount base destructors, called directly as the exe calls them.
 static inline void RawRefCountCoreDtor(void* p) { static_cast<Scaleform::RefCountImplCore*>(p)->Scaleform::RefCountImplCore::~RefCountImplCore(); }
 static inline void RawRefCountNTSCoreDtor(void* p) { static_cast<Scaleform::RefCountNTSImplCore*>(p)->Scaleform::RefCountNTSImplCore::~RefCountNTSImplCore(); }
+extern "C" const void* DAT_143138530[];
 extern "C" const void* DAT_14313a210[];
 extern "C" const void* DAT_14313b920[];
 extern "C" const void* DAT_14313b968[];
@@ -152,7 +153,7 @@ extern "C" char DAT_143109420[];     // ??_7State@GFx@Scaleform@@6B@
 extern "C" const void* DAT_14313a200[];
 extern "C" const void* DAT_143138360[];
 extern "C" void FUN_1423d9090(void*, void*, unsigned long long);
-extern "C" void FUN_1423d9690(void*, void*, unsigned long long);
+extern "C" __declspec(noinline) void FUN_1423d9690(void*, void*, unsigned long long);
 unsigned HashFunction(const char*, unsigned long long);
 void FUN_14257dcd0(void*);
 extern void FUN_14257dcb0(void*);
@@ -872,16 +873,16 @@ struct Unk_ImeComRef
 
 // MS2-FUNCTIONAL: follows the executable's three-stage input-context COM query and releases each acquired interface.
 // The exe wraps the query in catch(...) (continuation 0x1423da407 returns the result reached so far); the three
-// interfaces are smart-pointer locals released in order first, second, third.
+// interfaces are smart-pointer locals of the try block, released in order first, second, third.
 // @0x1423da320
 unsigned char FUN_1423da320(void* object)
 {
     auto* bytes = static_cast<unsigned char*>(object);
-    Unk_ImeComRef third;
-    Unk_ImeComRef second;
-    Unk_ImeComRef first;
     unsigned char result = 0;
     try {
+        Unk_ImeComRef third;
+        Unk_ImeComRef second;
+        Unk_ImeComRef first;
         void* initial = *reinterpret_cast<void**>(bytes + 0x28);
         if (!initial) return 0;
         const int hr1 = reinterpret_cast<int(*)(void*, const void*, void**)>(
@@ -1456,15 +1457,15 @@ void* FUN_1423c8e10(void* object, unsigned flags)
 // @0x1423c8e70
 void* FUN_1423c8e70(unsigned long long* object, unsigned flags)
 {
-    auto** cuePairs = reinterpret_cast<void**>(object[0x2b]);
-    for (unsigned long long i = 0; i < object[0x2c]; ++i) {
-        if (cuePairs[i * 3 + 1]) Memory::Free(cuePairs[i * 3 + 1]);
-        if (cuePairs[i * 3]) Memory::Free(cuePairs[i * 3]);
+    struct Record { void* key; unsigned long long pad[3]; };
+    *reinterpret_cast<const void**>(object) = DAT_143138530;
+    for (unsigned i = 0; i < object[0x2c]; ++i) {
+        Memory::Free(reinterpret_cast<void**>(object[0x2b])[(unsigned long long)i * 3 + 1]);
+        Memory::Free(reinterpret_cast<void**>(object[0x2b])[(unsigned long long)i * 3]);
     }
-    auto** records = reinterpret_cast<void**>(object[0x12]);
-    const unsigned count = *reinterpret_cast<unsigned*>(object + 0x10);
-    for (unsigned i = 0; i < count; ++i)
-        if (records[i * 4]) Memory::Free(records[i * 4]);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(object + 0x10); ++i) {
+        if (reinterpret_cast<Record*>(object[0x12])[i].key) Memory::Free(reinterpret_cast<Record*>(object[0x12])[i].key);
+    }
     FUN_1423c8bb0(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
@@ -1858,18 +1859,22 @@ static __forceinline void FUN_1423cc720(unsigned long long* array, void* heapAdd
 
 // MS2-FUNCTIONAL: trims retained array items, grows through the executable's reserve helper, and stores the new length.
 // @0x1423d9690
-extern "C" void FUN_1423d9690(void* rawArray, void* allocator, unsigned long long length)
+extern "C" __declspec(noinline) void FUN_1423d9690(void* rawArray, void* allocator, unsigned long long length)
 {
     auto* array = static_cast<unsigned long long*>(rawArray);
     unsigned long long oldLength = array[1];
-    unsigned long long capacity = array[2];
     if (length < oldLength) {
-        auto** items = reinterpret_cast<void**>(array[0]);
-        for (unsigned long long i = oldLength; i > length; --i)
-            if (items[i - 1]) FUN_14257dcd0(items[i - 1]);
-        if (length < (capacity >> 1))
+        unsigned long long count = oldLength - length;
+        if (count) {
+            void** item = reinterpret_cast<void**>(array[0]) + (oldLength - 1);
+            do {
+                if (*item) FUN_14257dcd0(*item);
+                --item;
+            } while (--count);
+        }
+        if (length < (array[2] >> 1))
             FUN_1423d95f0(array, allocator, length);
-    } else if (length >= capacity) {
+    } else if (length >= array[2]) {
         FUN_1423d95f0(array, allocator, (length >> 2) + length);
     }
     array[1] = length;
@@ -1935,6 +1940,7 @@ void FUN_1423d8e80(void* table, void* source)
 void FUN_1423d9520(void* raw)
 {
     auto* bytes = static_cast<unsigned char*>(raw);
+    Scaleform::GFx::Value result;
     FUN_1423d9690(bytes + 0x848, bytes + 0x848, 0);
     char* command = reinterpret_cast<char*>(bytes + 0x410);
     strcpy_s(command, 0x400, reinterpret_cast<const char*>(bytes + 0x10));
@@ -1943,7 +1949,6 @@ void FUN_1423d9520(void* raw)
     void* state = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
     void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(state) + 0x18);
     if (manager) {
-        Scaleform::GFx::Value result;
         void** vtable = *reinterpret_cast<void***>(manager);
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, int, int)>(vtable[0x78 / sizeof(void*)])(
             manager, command, &result, 0, 0);
@@ -3031,33 +3036,36 @@ unsigned FUN_1423cb260()
     return Ime01ImeVersion();
 }
 
+struct Ime01CmdKey
+{
+    const char* Text;
+    Ime01CmdKey(const char* text) : Text(text) {}
+    bool operator==(const Ime01CmdKey& o) const { return std::strcmp(Text, o.Text) == 0; }
+};
+struct Ime01CmdKeyHash
+{
+    UPInt operator()(const Ime01CmdKey& key) const
+    {
+        return Scaleform::String::BernsteinHashFunction(key.Text, std::strlen(key.Text), 0x1505);
+    }
+};
+struct Ime01Cmd
+{
+    unsigned Type;
+    void* Handler;
+};
+typedef Scaleform::Hash<Ime01CmdKey, Ime01Cmd, Ime01CmdKeyHash> Ime01CmdMap;
+
 // MS2-FUNCTIONAL: looks up an executable IME command by its Bernstein hash and forwards the matching record to its handler.
 // @0x1423d8d60
-unsigned long long FUN_1423d8d60(long long* map, long long operation, const char* key, unsigned long long flags)
+bool FUN_1423d8d60(Ime01CmdMap* map, long long operation, const char* key, unsigned long long flags)
 {
-    if (!operation) return 0;
-    auto* table = reinterpret_cast<unsigned char*>(map[0]);
-    if (!table) return 0;
-    const unsigned long long mask = *reinterpret_cast<unsigned long long*>(table + 8);
-    const unsigned long long hash = Scaleform::String::BernsteinHashFunction(key, std::strlen(key), 0x1505);
-    unsigned long long index = mask & hash;
-    unsigned char* entry = table + 0x10 + index * 0x28;
-    if (*reinterpret_cast<long long*>(entry) == -2 ||
-        *reinterpret_cast<unsigned long long*>(entry + 8) != index) return 0;
-    for (;;) {
-        if (*reinterpret_cast<unsigned long long*>(entry + 8) == index &&
-            std::strcmp(reinterpret_cast<const char*>(*reinterpret_cast<void**>(entry + 0x10)), key) == 0) {
-            void* handler = *reinterpret_cast<void**>(entry + 0x20);
-            const unsigned type = *reinterpret_cast<unsigned*>(entry + 0x18);
-            return reinterpret_cast<unsigned long long(*)(void*, long long, unsigned, const char*, unsigned long long)>(
-                (*reinterpret_cast<void***>(handler))[1])(handler, operation, type, key, flags);
-        }
-        const long long next = *reinterpret_cast<long long*>(entry);
-        if (next == -1) break;
-        index = static_cast<unsigned long long>(next);
-        entry = table + 0x10 + index * 0x28;
-    }
-    return 0;
+    if (!operation) return false;
+    Ime01CmdMap::Iterator it = map->Find(key);
+    if (it.IsEnd()) return false;
+    void* handler = it->Second.Handler;
+    return reinterpret_cast<bool(*)(void*, long long, unsigned, const char*, unsigned long long)>(
+        (*reinterpret_cast<void***>(handler))[1])(handler, operation, it->Second.Type, key, flags);
 }
 
 // @0x1423cad20
@@ -6330,14 +6338,14 @@ void FUN_1423d7130(void*) {}
 // @0x1423cf1a0
 unsigned long long FUN_1423cf1a0(void* self, long long operation, const char* key, unsigned long long flags)
 {
-    return FUN_1423d8d60((long long*)((UByte*)self + 0x38), operation, key, flags);
+    return FUN_1423d8d60((Ime01CmdMap*)((UByte*)self + 0x38), operation, key, flags);
 }
 
 // MS2-FUNCTIONAL: forwards the IME command to the command map embedded at +0x38.
 // @0x1423d3110
 unsigned long long FUN_1423d3110(void* self, long long operation, const char* key, unsigned long long flags)
 {
-    return FUN_1423d8d60((long long*)((UByte*)self + 0x38), operation, key, flags);
+    return FUN_1423d8d60((Ime01CmdMap*)((UByte*)self + 0x38), operation, key, flags);
 }
 
 // MS2-FUNCTIONAL: enables or disables the window's default input context (IACE_DEFAULT when enabled).

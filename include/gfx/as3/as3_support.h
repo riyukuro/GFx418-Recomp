@@ -13,6 +13,8 @@
 #include "ms2/scaleform/include/render/text_core.h"
 #include "ms2/scaleform/include/gfx/as3/as3_gc.h"
 
+extern "C" const void* DAT_14313b9c8[];
+
 namespace Scaleform { namespace GFx {
 
 class PlaceObject2Tag;
@@ -124,7 +126,8 @@ public:
     public:
         HeapLimit() : MemContext(0), UserLevelLimit(0), LastCollectionFootprint(0), CurrentLimit(0),
                       HeapLimitMultiplier(0.25f) { }
-        virtual ~HeapLimit() { }
+        // LimitHandler is novtable here; the exe's base dtor leaves the folded purecall vftable.
+        virtual ~HeapLimit() { *reinterpret_cast<const void**>(this) = DAT_14313b9c8; }
         virtual bool OnExceedLimit(MemoryHeap* heap, UPInt overLimit);
         virtual void OnFreeSegment(MemoryHeap* heap, UPInt freeingSize);
 
@@ -140,7 +143,7 @@ public:
     HeapLimit                           LimHandler;     // +0x30
 
     MemoryContextImpl() { LimHandler.SetMemoryContext(this); }
-    virtual ~MemoryContextImpl() { Heap->SetLimitHandler(0); }
+    virtual __forceinline ~MemoryContextImpl() { Heap->SetLimitHandler(0); }
 };
 
 // One DoABC tag's byte code. Allocated with the data inline (sizeof - 1 + DataSize).
