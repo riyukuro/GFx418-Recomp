@@ -887,7 +887,6 @@ void DrawableImage::unmapTextureRT()
     }
 }
 
-// MS2-FUNCTIONAL: the exe tail-calls UpdateRenderTargetData without setting the (defaulted) HAL argument
 // @0x1425f05f0
 void DrawableImage::updateRenderTargetRT()
 {

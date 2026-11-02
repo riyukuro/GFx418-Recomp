@@ -355,7 +355,8 @@ public:
     virtual bool Map(ImageData* data, unsigned mipLevel = 0, unsigned levelCount = 0) = 0;
     virtual bool Unmap() = 0;
     virtual bool Copy(ImageData*) { return false; }
-    virtual bool UpdateRenderTargetData(RenderTargetData*, HAL* = 0) { return false; }
+    // one argument in the exe (GFx 4.1.18): its callers 0x1425f05f0 and 0x14272b960 pass no HAL
+    virtual bool UpdateRenderTargetData(RenderTargetData*) { return false; }
     virtual bool UpdateStagingData(RenderTargetData*) { return false; }
 
     struct UpdateDesc

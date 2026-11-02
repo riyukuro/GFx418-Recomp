@@ -137,7 +137,6 @@ static bool IsD3DFormatMipGenCompatible(D3DFORMAT format)
 }
 
 // @0x14272b960
-// MS2-FUNCTIONAL: one jump displacement in the tail differs (block layout)
 bool Texture::Initialize()
 {
     if (TextureFlags & TF_UserAlloc)
@@ -468,7 +467,7 @@ bool Texture::Unmap()
 }
 
 // @0x14272d210
-bool Texture::UpdateRenderTargetData(RenderTargetData*, HAL*)
+bool Texture::UpdateRenderTargetData(RenderTargetData*)
 {
     unsigned count  = TextureCount;
     bool     result = false;
