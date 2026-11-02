@@ -429,20 +429,21 @@ void AvmSprite::ExecuteFrameTags(unsigned)
 }
 
 // Runs the init actions of frame once.
-// MS2-FUNCTIONAL: same bit test, init-action run and bit set; the Ptr<Sprite> addref/release is laid out differently.
 // @0x1424fee10
 void AvmSprite::ExecuteInitActionFrameTags(unsigned frame)
 {
     const unsigned byteIndex = frame >> 3;
-    if (InitActionsExecuted[byteIndex] & (1 << (frame & 7)))
-        return;
-    Ptr<Sprite> spr = GetSprite();
-    TimelineDef::Frame initActions;
-    if (spr->pDef->GetInitActions(&initActions, frame) && initActions.GetTagCount())
+    if (!(InitActionsExecuted[byteIndex] & (1 << (frame & 7))))
     {
-        for (unsigned i = 0; i < initActions.GetTagCount(); ++i)
-            initActions.GetTag(i)->Execute(GetSprite());
-        InitActionsExecuted[byteIndex] |= UByte(1 << (frame & 7));
+        // Keep the sprite alive while its init actions run.
+        Ptr<DisplayObject> thisPtr(pDispObj);
+        TimelineDef::Frame initActions;
+        if (GetSprite()->pDef->GetInitActions(&initActions, frame) && initActions.GetTagCount() > 0)
+        {
+            for (unsigned i = 0; i < initActions.GetTagCount(); ++i)
+                initActions.GetTag(i)->Execute(GetSprite());
+            InitActionsExecuted[byteIndex] |= UByte(1 << (frame & 7));
+        }
     }
 }
 
@@ -1643,7 +1644,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Queues p (unless a collection runs, +0xb1), notes the queue's previous size (+0x94) and its high-water mark (+0x90),
 // and asks for a collection (+0xb0) when the flags (+0x78) want one per addition.
-// MS2-FUNCTIONAL 0x142504630: the high-water max lands in esi (exe copies the count to ecx first); same stores.
 // @0x142504630
 __declspec(noinline) void Sfr33CollectorQueue(UByte* raw, RefCountImpl* p)
 {
@@ -1653,9 +1653,9 @@ __declspec(noinline) void Sfr33CollectorQueue(UByte* raw, RefCountImpl* p)
     const unsigned curRootCount = static_cast<unsigned>(self->GetRootsCount());
     Sfr33CollectorEntry e(p);
     FUN_1423de770(self, e);
-    self->LastRootCount = curRootCount;
-    self->PeakRootCount = Alg::Max(self->PeakRootCount, curRootCount);
     self->FrameCnt = 0;
+    self->PeakRootCount = Alg::Max(self->PeakRootCount, curRootCount);
+    self->LastRootCount = curRootCount;
     if (self->Flags & ASRefCountCollector::Flags_RequireMoreCollect)
         self->CollectionScheduledFlags = 1;
 }
@@ -1901,23 +1901,19 @@ void Traits::CalculateMemSize(unsigned parent_size)
 
 // Class::Call: a class called as a function converts its single argument to the class (a TypeError when it
 // cannot); any other argument count is a RangeError (exe 0x1424ee79b).
-// MS2-FUNCTIONAL 0x1424ee6f0: the exe saves rbx in the rcx home slot and gives the class name its own frame slot (ours: the rcx home slot); same code otherwise
 // @0x1424ee6f0
 void Class::Call(const Value& _this, Value& result, unsigned argc, const Value* const argv)
 {
     SF_UNUSED(_this);
-    ClassTraits::Traits& ctr = GetClassTraits();
     if (argc == 1)
     {
-        if (ctr.Coerce(argv[0], result))
+        const Value& v = argv[0];
+        if (GetClassTraits().Coerce(v, result))
             return;
-        Sfr33ThrowTypeError(GetClassTraits().GetVM(), VM::Error(VM::eCheckTypeFailedError, GetClassTraits().GetVM(), argv[0], GetClassTraits().GetName().ToCStr()));
+        else
+            return Sfr33ThrowTypeError(GetClassTraits().GetVM(), VM::Error(VM::eCheckTypeFailedError, GetClassTraits().GetVM(), v, GetClassTraits().GetName().ToCStr()));
     }
-    else
-    {
-        VM& vm = ctr.GetVM();
-        Sfr33ThrowRangeError(vm, VM::Error(VM::eCoerceArgumentCountError, vm, int(argc)));
-    }
+    return Sfr33ThrowRangeError(GetClassTraits().GetVM(), VM::Error(VM::eCoerceArgumentCountError, GetClassTraits().GetVM(), int(argc)));
 }
 
 // Class::Construct: a new instance of the class in _this (a MemoryError when none could be made), initialized
@@ -1995,7 +1991,6 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
 
 // UserDefinedFunction body: the receiver and arguments go to the host FunctionHandler (+0x40, user data +0x48) as
 // GFx values (the receiver first in the argument array); a defined return value comes back as result.
-// MS2-FUNCTIONAL 0x1424feb00: raw function-object and ASVM offsets
 // @0x1424feb00
 void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scaleform::GFx::AS3::Value& result, unsigned argc,
                    const Scaleform::GFx::AS3::Value* argv)
@@ -2003,12 +1998,13 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
     using namespace Scaleform;
     using namespace Scaleform::GFx;
     UByte* const fn = static_cast<UByte*>(self);
+    ArrayCPP<GFx::Value> args;
+    GFx::Value thisVal, retVal;
+
     AS3::ASVM& asvm = **reinterpret_cast<AS3::ASVM**>(*reinterpret_cast<UByte**>(fn + 0x20) + 0x78);
     AS3::MovieRoot* root = asvm.GetMovieRoot();
-    GFx::Value thisVal;
-    GFx::Value retVal;
+
     root->ASValue2GFxValue(_this, &thisVal);
-    ArrayCPP<GFx::Value, 2> args;
     args.PushBack(thisVal);
     for (unsigned i = 0; i < argc; ++i)
     {
@@ -2017,11 +2013,11 @@ void FUN_1424feb00(void* self, const Scaleform::GFx::AS3::Value& _this, Scalefor
         args.PushBack(a);
     }
     FunctionHandler::Params params;
-    params.pRetVal = &retVal;
     params.pMovie = reinterpret_cast<Movie*>(asvm.GetMovieImpl());   // MovieImpl derives from Movie at offset 0
+    params.pRetVal = &retVal;
     params.pThis = &thisVal;
+    params.pArgs = argc > 0 ? &args[1] : NULL;
     params.pArgsWithThis = &args[0];
-    params.pArgs = argc ? &args[1] : NULL;
     params.ArgCount = static_cast<unsigned>(args.GetSize() - 1);
     params.pUserData = *reinterpret_cast<void**>(fn + 0x48);
     (*reinterpret_cast<FunctionHandler**>(fn + 0x40))->Call(params);
@@ -4764,53 +4760,58 @@ Value* Sfr33GetDefaultValueOfType(VM* vm, Value* result, const UByte* file, cons
 }
 
 // ind receives the array index the string sn spells (decimal digits, no leading zero, at most UInt32 max).
-static SF_INLINE CheckResult Sfr33StringArrayInd(const ASStringNode* sn, UInt32& ind)
+// @0x142507490
+CheckResult GetArrayInd(ASStringNode* sn, UInt32& ind)
 {
-    const UInt32 size = sn->Size;
-    if (size)
+    const unsigned ssize = sn->Size;
+
+    if (ssize > 0)
     {
-        const char* s = sn->pData;
-        if (s[0] == '0')
+        const char* sdata = sn->pData;
+        char c = sdata[0];
+
+        if (c == '0')
         {
             ind = 0;
-            return size == 1;
+            return ssize == 1;
         }
-        if (static_cast<UByte>(s[0] - '0') <= 9)
+
+        if (static_cast<UByte>(c - '0') <= 9)
         {
-            for (UInt32 i = 1; i < size; ++i)
-                if (static_cast<UByte>(s[i] - '0') > 9)
-                    return false;
-            char* end;
-            const double d = strtod(s, &end);
-            if (d <= static_cast<double>(SF_MAX_UINT32))
+            for (unsigned i = 1; i < ssize; ++i)
             {
-                ind = static_cast<UInt32>(static_cast<SInt64>(d));
+                if (static_cast<UByte>(sdata[i] - '0') > 9)
+                    return false;
+            }
+
+            char* end;
+            Value::Number num = strtod(sdata, &end);
+
+            if (num <= SF_MAX_UINT32)
+            {
+                ind = (UInt32)num;
                 return true;
             }
         }
     }
+
     return false;
 }
 
 // ind receives the array index prop_name names (a string of digits or a number).
-// MS2-FUNCTIONAL 0x142507390: the exe saves rbx in the rdx home slot and keeps the strtod end and Convert2UInt32 result in the rcx one; same code otherwise
 // @0x142507390
 CheckResult GetArrayInd(const Multiname& prop_name, UInt32& ind)
 {
+    bool result = false;
     const Value& name = prop_name.Name;
     const Value::KindType kind = name.GetKind();
-    if (kind == Value::kString)
-        return Sfr33StringArrayInd(name.GetStringNode(), ind);
-    if (kind >= Value::kInt && kind <= Value::kNumber)
-        return static_cast<bool>(name.Convert2UInt32(ind));
-    return false;
-}
 
-// MS2-FUNCTIONAL 0x142507490: the exe lays out its stack frame differently; same results
-// @0x142507490
-CheckResult GetArrayInd(ASStringNode* sn, UInt32& ind)
-{
-    return Sfr33StringArrayInd(sn, ind);
+    if (kind == Value::kString)
+        result = GetArrayInd(name.GetStringNode(), ind);
+    else if (kind >= Value::kInt && kind <= Value::kNumber)
+        result = name.Convert2UInt32(ind);
+
+    return result;
 }
 
 // The source file name of the ABC file of the innermost call frame (self+0x78 frames, paged by 64 at self+0x90)
