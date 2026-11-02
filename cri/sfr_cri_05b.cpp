@@ -2469,7 +2469,7 @@ cri_u64 FUN_140051380(longlong a1,longlong *a2)
   int i_v5;
   ulonglong u_v6;
   cri_u8 *pu_v7;
-  cri_u8 loc_18 [16];
+  struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_18;
   
   CriAt<cri_u32>(a1, 0x1850) = 2;
   CriAt<int>(a1, 0x15c8) = CriAt<int>(a1, 0x15c8) + 1;
@@ -2526,9 +2526,9 @@ cri_u64 FUN_140051380(longlong a1,longlong *a2)
     i_v3 = i_v3 + 1;
   }
   FUN_140069020(&CriAt<__int64>(a1, 0x1800),((i_v3 + 7 >> 3) - CriAt<int>(a1, 0x1800)) + -8 + i_v5,
-                &CriAt<__int64>(a1, 0x1800),(__int64 *)loc_18);
+                &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_18);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
-  (**(code **)(*a2 + 0x38))(a2,1,loc_18);
+  (**(code **)(*a2 + 0x38))(a2,1,&loc_18);
   return 0;
 }
 
@@ -2555,7 +2555,7 @@ cri_u64 FUN_1400515c0(longlong a1,longlong *a2)
   int i_v17;
   ulonglong u_v18;
   cri_u8 *pu_v19;
-  cri_u8 loc_28 [16];
+  struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_28;
   
   pu_v4 = (&CriAt<ulonglong>(a1, 0x1800));
   CriAt<cri_u32>(a1, 0x1850) = 3;
@@ -2750,9 +2750,9 @@ LAB_14005194d:
     i_v11 = i_v17 + -0x1f;
     i_v12 = i_v12 + 4;
   }
-  FUN_140069020((__int64 *)pu_v4,((i_v11 + 7 >> 3) - *(int *)pu_v4) + -8 + i_v12,(__int64 *)pu_v4,(__int64 *)loc_28);
+  FUN_140069020((__int64 *)pu_v4,((i_v11 + 7 >> 3) - *(int *)pu_v4) + -8 + i_v12,(__int64 *)pu_v4,(__int64 *)&loc_28);
   (**(code **)(*a2 + 0x40))(a2,0,pu_v4);
-  (**(code **)(*a2 + 0x38))(a2,1,loc_28);
+  (**(code **)(*a2 + 0x38))(a2,1,&loc_28);
   return 0;
 }
 
@@ -2934,7 +2934,7 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
   ulonglong u_v15;
   ulonglong u_v16;
   ulonglong u_v17;
-  cri_u8 loc_38 [16];
+  struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_38;
   
   u_v16 = 0;
   CriAt<cri_u32>(a1, 0x17bc) = 0;
@@ -3190,9 +3190,9 @@ cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
   CriAt<cri_u8>(a1, 0x15f2) = CriAt<cri_u8>(a1, 0x16dc);
   FUN_140069020(&CriAt<__int64>(a1, 0x1800),
                 (((int)(u_v8 + 7) >> 3) - CriAt<int>(a1, 0x1800)) + -8 + (int)pu_v13,
-                &CriAt<__int64>(a1, 0x1800),(__int64 *)loc_38);
+                &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_38);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
-  (**(code **)(*a2 + 0x38))(a2,1,loc_38);
+  (**(code **)(*a2 + 0x38))(a2,1,&loc_38);
   return 0;
 }
 
@@ -3236,30 +3236,30 @@ int FUN_1400527c0(longlong a1,void *a2,int a3)
   int i_v5;
   int i_v6;
   longlong l_v7;
-  __declspec(align(16)) cri_u8 frame_[32];
-  void * &loc_48 = *(void * *)(frame_ + 0);
-  int &loc_40 = *(int *)(frame_ + 8);
-  void * &loc_38 = *(void * *)(frame_ + 16);
-  int &loc_30 = *(int *)(frame_ + 24);
+  struct Chunk { void *Data; int Size; } frame_[2];
+  void * &loc_48 = frame_[0].Data;
+  int &loc_40 = frame_[0].Size;
+  void * &loc_38 = frame_[1].Data;
+  int &loc_30 = frame_[1].Size;
   
   i_v5 = CriAt<int>(a1, 0x1850);
   l_v7 = (longlong)i_v5;
-  a3 = a3 + -3;
+  int end = a3 + -3;
   i_v6 = 4;
   i_v4 = 0;
-  if (4 < a3) {
+  if (4 < end) {
     do {
       i_v3 = FUN_140053000((longlong)i_v6 + (longlong)a2);
       if (i_v3 != 0) break;
       i_v6 = i_v6 + 1;
-    } while (i_v6 < a3);
+    } while (i_v6 < end);
   }
   i_v3 = 0;
-  if (i_v6 == a3) {
+  if (i_v6 == end) {
     i_v3 = -1;
   }
   if (i_v5 == 1) {
-    i_v4 = FUN_140051c10(a1,a2,i_v6);
+    i_v4 = FUN_140051c10(a1,(longlong)a2,i_v6);
   }
   pl_v1 = *(longlong **)(a1 + 0x1858 + l_v7 * 0x18);
   if (pl_v1 != (longlong *)0x0) {
