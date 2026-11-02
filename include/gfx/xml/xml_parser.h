@@ -33,7 +33,7 @@ struct ParserLocator
     UPInt     TotalBytesToLoad;  // +0x30
     UPInt     LoadedBytes;       // +0x38
 
-    ParserLocator() : StandAlone(-1) {}
+    ParserLocator() : StandAlone(-1), TotalBytesToLoad(0), LoadedBytes(0) {}
 };
 
 struct ParserException
@@ -41,6 +41,7 @@ struct ParserException
     StringRef ErrorMessage;
 
     ParserException(const StringRef& error) : ErrorMessage(error) {}
+    ParserException(const char* p, UPInt n) : ErrorMessage(p, n) {}
 };
 
 class ParserHandler : public RefCountBase<ParserHandler, StatMV_XML_Mem>

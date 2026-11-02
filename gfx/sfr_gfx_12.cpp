@@ -65,7 +65,7 @@ static const char Unk_FileMissingFormat[] = "File {0} does not exist!";  // exe 
 
 namespace Scaleform { namespace GFx { namespace XML {
 
-// MS2-FUNCTIONAL: opens the file, reads it whole into a temporary buffer and parses it; reports a missing or empty file
+// Opens the file, reads it whole into a temporary buffer and parses it; reports a missing or empty file
 // to the handler's warning / fatal error callbacks.
 // @0x1423b1920
 bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHandler* pphandler)
@@ -73,7 +73,7 @@ bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHa
     ParserLocator locator;
     char          message[0x100];
     bool          result = false;
-    File*         pfile  = pfo->OpenFile(pfilename, 0x21, 0x1b6);
+    Ptr<File>     pfile  = *pfo->OpenFile(pfilename, 0x21, 0x1b6);
     if (pfile && pfile->IsValid())
     {
         int length = pfile->GetLength();
@@ -89,10 +89,7 @@ bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHa
             pphandler->SetDocumentLocator(&locator);
             Unk_XmlMsgBuffer buffer = {2, message, 0x100};
             FUN_1423b14e0(&buffer, Unk_FileIsEmptyFormat, &pfilename);
-            UPInt size = 0;
-            while (message[size] != 0)
-                ++size;
-            ParserException exception(StringRef(message, size));
+            ParserException exception(message, message ? strlen(message) : 0);
             pphandler->Warning(exception);
         }
     }
@@ -101,23 +98,38 @@ bool ParserExpat::ParseFile(const char* pfilename, FileOpenerBase* pfo, ParserHa
         pphandler->SetDocumentLocator(&locator);
         Unk_XmlMsgBuffer buffer = {2, message, 0x100};
         FUN_1423b14e0(&buffer, Unk_FileMissingFormat, &pfilename);
-        UPInt size = 0;
-        while (message[size] != 0)
-            ++size;
-        ParserException exception(StringRef(message, size));
+        ParserException exception(message, message ? strlen(message) : 0);
         pphandler->FatalError(exception);
     }
-    if (pfile)
-        pfile->Release();
     return result;
 }
 
-// MS2-FUNCTIONAL: parses an in-memory document with Expat and feeds the handler; a parse error is reported with the
+// The callbacks' user data: the parser, the handler and the locator the position is reported through.
+struct ExpatUserData
+{
+    XML_Parser     Parser;
+    ParserHandler* Handler;
+    ParserLocator* Locator;
+};
+
+// Copies the parser's current position into the locator.
+static inline void UpdateLocator(ExpatUserData* data)
+{
+    XML_Parser     parser  = data->Parser;
+    ParserLocator* locator = data->Locator;
+    locator->Column      = XML_GetCurrentColumnNumber(parser) + 1;
+    locator->Line        = XML_GetCurrentLineNumber(parser);
+    locator->LoadedBytes = (SPInt)XML_GetCurrentByteIndex(parser);
+}
+
+// Parses an in-memory document with Expat and feeds the handler; a parse error is reported with the
 // position and Expat's error string.
 // @0x1423b1b60
 bool ParserExpat::ParseString(const char* pdata, UPInt len, ParserHandler* pphandler)
 {
     ParserLocator locator;
+    locator.TotalBytesToLoad = len;
+    locator.LoadedBytes      = 0;
     pphandler->SetDocumentLocator(&locator);
     XML_Parser parser = XML_ParserCreate(0);
     XML_SetStartElementHandler(parser, &FUN_1423b1d40);
@@ -126,33 +138,23 @@ bool ParserExpat::ParseString(const char* pdata, UPInt len, ParserHandler* pphan
     XML_SetCommentHandler(parser, &FUN_1423b16d0);
     XML_SetXmlDeclHandler(parser, &FUN_1423b23e0);
     XML_SetDefaultHandler(parser, &FUN_1423b1760);
-    struct { XML_Parser Parser; ParserHandler* Handler; ParserLocator* Locator; } userData = {parser, pphandler, &locator};
+    ExpatUserData userData = {parser, pphandler, &locator};
     XML_SetUserData(parser, &userData);
     pphandler->StartDocument();
     bool result;
-    if (XML_Parse(parser, pdata, (int)len, 1) == 1)
+    if (XML_Parse(parser, pdata, (int)len, 1) != 1)
     {
-        locator.Column      = XML_GetCurrentColumnNumber(parser) + 1;
-        locator.Line        = XML_GetCurrentLineNumber(parser);
-        locator.LoadedBytes = (SPInt)XML_GetCurrentByteIndex(parser);
-        pphandler->EndDocument();
-        result = true;
+        UpdateLocator(&userData);
+        const char*     text = XML_ErrorString(XML_GetErrorCode(parser));
+        ParserException exception(text, text ? strlen(text) : 0);
+        pphandler->FatalError(exception);
+        result = false;
     }
     else
     {
-        locator.Column      = XML_GetCurrentColumnNumber(parser) + 1;
-        locator.Line        = XML_GetCurrentLineNumber(parser);
-        locator.LoadedBytes = (SPInt)XML_GetCurrentByteIndex(parser);
-        const char* text = XML_ErrorString(XML_GetErrorCode(parser));
-        UPInt size = 0;
-        if (text)
-        {
-            while (text[size] != 0)
-                ++size;
-        }
-        ParserException exception(StringRef(text, size));
-        pphandler->FatalError(exception);
-        result = false;
+        UpdateLocator(&userData);
+        pphandler->EndDocument();
+        result = true;
     }
     XML_ParserFree(parser);
     return result;
