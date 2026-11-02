@@ -110,20 +110,13 @@ extern ExeDecl<unsigned int>::type DAT_143b277b4;
 extern ExeDecl<void*>::type DAT_143b275f0;
 #define VideoCallbackBaseC DAT_143b275f0
 
-ExeDecl<void(void*, void*, void*)>::type FUN_1423df980;
-#define VideoNative0 FUN_1423df980
-ExeDecl<void(void*, void*, void*)>::type FUN_1423df850;
-#define VideoNative1 FUN_1423df850
-ExeDecl<void(void*, void*, void*)>::type FUN_1423dfd20;
-#define VideoNative2 FUN_1423dfd20
-ExeDecl<void(void*, void*, void*)>::type FUN_1423df410;
-#define VideoNative3 FUN_1423df410
-ExeDecl<void(void*, void*, void*)>::type FUN_1423dfda0;
-#define VideoNative4 FUN_1423dfda0
-ExeDecl<void(void*, void*, void*)>::type FUN_1424f1390;
-#define ConvertAS3ValueToString FUN_1424f1390
-ExeDecl<void(void*, void*, int*, int, void*)>::type FUN_1424f0d30;
-#define ConvertAS3ValueToInt32 FUN_1424f0d30
+// The collector ops handed to ForEachChild_GC.
+typedef Scaleform::GFx::AS3::RefCountCollector<Scaleform::GFx::AS3::StatMV_ActionScript_Mem> VideoGcCollector;
+#define VideoNative0 VideoGcCollector::ReleaseChildCall
+#define VideoNative1 VideoGcCollector::MarkInCycleCall
+#define VideoNative2 VideoGcCollector::ScanInUseCall
+#define VideoNative3 VideoGcCollector::KillChildCall
+#define VideoNative4 VideoGcCollector::ScanTempInUseCall
 #define ConvertAS3ValueToBool(v) (static_cast<const Scaleform::GFx::AS3::Value*>(v)->Convert2Boolean())
 ExeDecl<void(void*)>::type FUN_1423dfa20;   // RefCountBaseGC::ReleaseInternal(this = the object)
 #define ReleaseAS3GcObject FUN_1423dfa20
@@ -159,7 +152,6 @@ ExeDecl<int(void*, bool*)>::type FUN_142303a6b;
 namespace Scaleform { unsigned FUN_142745f50(void*); }
 ExeDecl<int(void*, const char*, unsigned, void*, void**)>::type FUN_142303a29;
 ExeDecl<int(void*, uint32_t*, unsigned)>::type FUN_142303a4d;
-ExeDecl<void*(void*, void*)>::type FUN_142516600;
 namespace Scaleform { namespace GFx { class MovieDefImpl; namespace AS3 { class VM; namespace Instances { namespace fl { class Object; }}}}}
 Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Instances::fl::Object* obj);
 namespace Scaleform { namespace GFx { struct CharacterCreateInfo; namespace AS3 { namespace Instances { namespace fl_display {
@@ -167,7 +159,6 @@ class DisplayObject;
 bool FindLibrarySymbol(const DisplayObject* dobj, CharacterCreateInfo* pccinfo, MovieDefImpl* pdefImpl);
 }}}}}
 namespace Scaleform { namespace GFx { namespace AS3 { void Sfr33SetValueDropObject(UByte* frame, void* object); }}}
-ExeDecl<void(void*, void*, void*, void*)>::type FUN_142467b50;
 ExeDecl<void(void*, void*, int)>::type FUN_1424687d0;
 ExeDecl<void(void*, void*, const void*, void*, unsigned, void*, unsigned)>::type FUN_1424fef00;
 ExeDecl<void(void*, void*, double)>::type FUN_1424d2150;   // SoundTransform setter (Value const&, double): the value travels in xmm2
@@ -366,8 +357,8 @@ uint64_t* FUN_140016e30(uint64_t* out, uint64_t type, uint64_t flags,
             if (--*refs == 0) reinterpret_cast<Scaleform::GFx::ASStringNode*>(node)->ReleaseNode();
             out[2] = shared + 0x68;
         } else {
-            bool converted;   // Convert2String's CheckResult; the exe uses a home slot
-            ConvertAS3ValueToString(sourceType, &converted, out + 2);
+            reinterpret_cast<const Scaleform::GFx::AS3::Value*>(sourceType)->Convert2String(
+                *reinterpret_cast<Scaleform::GFx::ASString*>(out + 2));
         }
     }
     return out;
@@ -489,8 +480,7 @@ void FUN_140017470(void*, void* object, void* callFrame, void* member, unsigned 
     if (argc && (*args & 0x1f)) value = *reinterpret_cast<const uint64_t*>(args + 0x10);
     int extra = -1;
     if (*reinterpret_cast<uint8_t*>(static_cast<uint8_t*>(object) + 0x180) == 0) {
-        int checkResult = 0;   // the CheckResult return slot (exe rsp+0x70), separate from the output
-        if (argc > 1) ConvertAS3ValueToInt32(const_cast<uint8_t*>(args + 0x20), &checkResult, &extra, -1, object);
+        if (argc > 1) reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args + 0x20)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(&extra));
         if (*reinterpret_cast<uint8_t*>(static_cast<uint8_t*>(object) + 0x180) == 0) {
             uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(callFrame) + 0x10);
             reinterpret_cast<void(*)(uint64_t, void*, uint64_t, int)>(VideoThunkF)(
@@ -1069,8 +1059,7 @@ void FUN_14001aa20(void*, void* vm, void* context, uint64_t result, unsigned arg
     uint64_t root = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(context) + 0x10);
     VideoUnboxArgs<int32_t, uint64_t> args = { vm, result, 0 };
     if (argc > 0) {
-        bool ok;
-        reinterpret_cast<void(*)(const void*, bool*, int32_t*)>(ConvertAS3ValueToInt32)(argv, &ok, &args.Value);
+        reinterpret_cast<const Scaleform::GFx::AS3::Value*>(argv)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(&args.Value));
     }
     if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0)
         reinterpret_cast<void(*)(uintptr_t, uint64_t, int32_t)>(VideoPropSetA)(*reinterpret_cast<const int*>(&VideoPropBaseSetA) + root, args.Result, args.Value);
@@ -1461,8 +1450,7 @@ uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int co
     int* payload = reinterpret_cast<int*>(record + 2);
     *payload = static_cast<int>(*value);
     if (count) {
-        int converted;   // CheckResult scratch
-        reinterpret_cast<void(*)(const void*, int*, int*)>(ConvertAS3ValueToInt32)(reinterpret_cast<void*>(args), &converted, payload);
+        reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(payload));
     }
     return record;
 }
@@ -1534,8 +1522,7 @@ uint64_t* FUN_1400170c0(uint64_t* record, uint64_t vm, uint64_t property, unsign
     uint32_t* payload = reinterpret_cast<uint32_t*>(record + 3);
     *payload = *reinterpret_cast<const uint32_t*>(defaults + 1);
     if (*reinterpret_cast<const uint8_t*>(vm + 0x180) == 0 && count > 1) {
-        int checkResult;   // the CheckResult return slot
-        reinterpret_cast<void(*)(const void*, int*, uint32_t*)>(ConvertAS3ValueToInt32)(args + 0x20, &checkResult, payload);
+        reinterpret_cast<const Scaleform::GFx::AS3::Value*>(args + 0x20)->Convert2Int32(*reinterpret_cast<Scaleform::SInt32*>(payload));
     }
     return record;
 }
@@ -1664,8 +1651,8 @@ void ConvertVideoStringArg(const uint64_t* value, uint64_t* slot)
         if (--*reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(old) + 0x18) == 0) old->ReleaseNode();
         *slot = reinterpret_cast<uintptr_t>(nullNode);
     } else {
-        bool converted;
-        ConvertAS3ValueToString(const_cast<uint64_t*>(value), &converted, slot);
+        reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->Convert2String(
+            *reinterpret_cast<Scaleform::GFx::ASString*>(slot));
     }
 }
 }
@@ -1817,8 +1804,7 @@ void FUN_1400192e0(void* callback, uint64_t* output)
     // the VM comes from the instance itself (0x1400192f4: [[rcx+0x20]+0x78]), not from callback+0x10
     unsigned char* callFrame = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x20);
     unsigned char* as3vm = *reinterpret_cast<unsigned char**>(callFrame + 0x78);
-    uint64_t objectResult = 0;
-    FUN_142516600(as3vm, &objectResult);
+    uint64_t objectResult = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(as3vm)->MakeObject().GetPtr());
     Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
     Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(as3vm + 0x10) + 0x1e8);
     const char* names[] = {"onMetaData", "onCuePoint", "onSubtitle"};
@@ -1960,8 +1946,7 @@ void FUN_1400182f0(void* callback, const uint32_t* info)
     Scaleform::GFx::AS3::Value* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0x98);
     if (!callbackValue->IsUndefined() && !callbackValue->IsNull()) {
         unsigned char* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(owner + 0x20) + 0x78);
-        uint64_t objectResult = 0;
-        FUN_142516600(vmRoot, &objectResult);
+        uint64_t objectResult = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot)->MakeObject().GetPtr());
         Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
         Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(vmRoot + 0x10) + 0x1e8);
         // width, height and subtitleTracksCount are AS3 ints (kind 2), the other counts uints (kind 3).
@@ -2041,9 +2026,9 @@ void FUN_140019890(void* self, const uint64_t* firstAtom, const uint64_t* second
         *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x20) + 0x78) + 0x10) + 0x1e8);
     Scaleform::GFx::ASString second(VideoInternString(strings, secondAtom));
     Scaleform::GFx::ASString first(VideoInternString(strings, firstAtom));
-    uint64_t result = 0;
-    FUN_142467b50(vm, &result, &first, &second);
-    unsigned char* object = reinterpret_cast<unsigned char*>(result);
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event> result =
+        reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(vm)->CreateNetStatusEventObject(first, second);
+    unsigned char* object = reinterpret_cast<unsigned char*>(result.GetPtr());
     uint64_t currentVm = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(self) + 0x10);
     unsigned char* owner = reinterpret_cast<unsigned char*>(object + 0x48);
     uint64_t old = *reinterpret_cast<uint64_t*>(owner);
@@ -2053,8 +2038,6 @@ void FUN_140019890(void* self, const uint64_t* firstAtom, const uint64_t* second
         *reinterpret_cast<uint64_t*>(owner) = currentVm;
     }
     reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(vm)->DispatchSingleEvent(reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::Event*>(object), false);
-    uint64_t temporary = result;
-    ReleaseVideoAtom(&temporary);
 }
 namespace {
 
@@ -2078,7 +2061,7 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     Scaleform::GFx::AS3::Value* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0xb8);
     if (callbackValue->IsUndefined() || callbackValue->IsNull()) return;
     uint64_t eventAtom = 0, parametersAtom = 0;
-    FUN_142516600(vm, &eventAtom);
+    eventAtom = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->MakeObject().GetPtr());
     Scaleform::GFx::AS3::Object* eventObject = reinterpret_cast<Scaleform::GFx::AS3::Object*>(eventAtom);
     unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(vm + 0x10);
     Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
@@ -2110,7 +2093,7 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     }
     const uint64_t count = *reinterpret_cast<const uint64_t*>(eventData + 8);
     if (count) {
-        FUN_142516600(vm, &parametersAtom);
+        parametersAtom = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm)->MakeObject().GetPtr());
         Scaleform::GFx::AS3::Object* parameters = reinterpret_cast<Scaleform::GFx::AS3::Object*>(parametersAtom);
         const uint64_t* const entries = *reinterpret_cast<const uint64_t* const*>(eventData + 6);
         for (uint64_t i = 0; i < count; ++i) {
