@@ -2106,7 +2106,6 @@ namespace Instances { namespace fl_display
 
     // A rectangle with a separate radius per corner (each clamped to twice the smaller side), drawn clockwise from the
     // bottom-right corner, in twips.
-    // MS2-FUNCTIONAL: exe multiplies by a 2.0 constant (ours folds to addsd) and schedules the first corner's twip conversions differently
     // @0x14244b070
     void Graphics::drawRoundRectComplex(Value& result, unsigned argc, const Value* argv)
     {
@@ -2164,49 +2163,76 @@ namespace Instances { namespace fl_display
             return;
         }
 
-        Value::Number right  = x + width;
-        Value::Number bottom = y + height;
-        Value::Number maxRadius = width;
-        if (!(height > width))
-            maxRadius = height;
-        maxRadius *= 2.0;
-        topLeftRadius     = Alg::Min(topLeftRadius, maxRadius);
-        topRightRadius    = Alg::Min(topRightRadius, maxRadius);
-        bottomLeftRadius  = Alg::Min(bottomLeftRadius, maxRadius);
-        bottomRightRadius = Alg::Min(bottomRightRadius, maxRadius);
+        Value::Number xw = x + width, yh = y + height;
 
-        Value::Number a = bottomRightRadius * GraphicsCornerA;
-        Value::Number b = bottomRightRadius * GraphicsCornerB;
-        pDrawing->MoveTo(float(right * 20.0), float((bottom - bottomRightRadius) * 20.0));
-        pDrawing->CurveTo(float(right * 20.0), float((bottom - b) * 20.0),
-                          float((right - a) * 20.0), float((bottom - a) * 20.0));
-        pDrawing->CurveTo(float((right - b) * 20.0), float(bottom * 20.0),
-                          float((right - bottomRightRadius) * 20.0), float(bottom * 20.0));
+        Value::Number minSize = (width < height) ? width * 2 : height * 2;
+        topLeftRadius = (topLeftRadius < minSize) ? topLeftRadius : minSize;
+        topRightRadius = (topRightRadius < minSize) ? topRightRadius : minSize;
+        bottomLeftRadius = (bottomLeftRadius < minSize) ? bottomLeftRadius : minSize;
+        bottomRightRadius = (bottomRightRadius < minSize) ? bottomRightRadius : minSize;
 
-        a = bottomLeftRadius * GraphicsCornerA;
-        b = bottomLeftRadius * GraphicsCornerB;
-        pDrawing->LineTo(float((x + bottomLeftRadius) * 20.0), float(bottom * 20.0));
-        pDrawing->CurveTo(float((x + b) * 20.0), float(bottom * 20.0),
-                          float((x + a) * 20.0), float((bottom - a) * 20.0));
-        pDrawing->CurveTo(float(x * 20.0), float((bottom - b) * 20.0),
-                          float(x * 20.0), float((bottom - bottomLeftRadius) * 20.0));
+        const Value::Number r1 = GraphicsCornerA;
+        const Value::Number r2 = GraphicsCornerB;
 
-        a = topLeftRadius * GraphicsCornerA;
-        b = topLeftRadius * GraphicsCornerB;
-        pDrawing->LineTo(float(x * 20.0), float((y + topLeftRadius) * 20.0));
-        pDrawing->CurveTo(float(x * 20.0), float((y + b) * 20.0),
-                          float((x + a) * 20.0), float((y + a) * 20.0));
-        pDrawing->CurveTo(float((x + b) * 20.0), float(y * 20.0),
-                          float((x + topLeftRadius) * 20.0), float(y * 20.0));
+        // bottom-right corner
+        Value::Number a = bottomRightRadius * r1;    // radius - anchor pt;
+        Value::Number s = bottomRightRadius * r2;    // radius - control pt;
 
-        a = topRightRadius * GraphicsCornerA;
-        b = topRightRadius * GraphicsCornerB;
-        pDrawing->LineTo(float((right - topRightRadius) * 20.0), float(y * 20.0));
-        pDrawing->CurveTo(float((right - b) * 20.0), float(y * 20.0),
-                          float((right - a) * 20.0), float((y + a) * 20.0));
-        pDrawing->CurveTo(float(right * 20.0), float((y + b) * 20.0),
-                          float(right * 20.0), float((y + topRightRadius) * 20.0));
-        pDrawing->LineTo(float(right * 20.0), float((bottom - bottomRightRadius) * 20.0));
+        float xwft = (float)PixelsToTwips(xw);
+
+        pDrawing->MoveTo(xwft, (float)PixelsToTwips(yh - bottomRightRadius));
+        pDrawing->CurveTo(xwft,
+                         (float)PixelsToTwips(yh - s),
+                         (float)PixelsToTwips(xw - a),
+                         (float)PixelsToTwips(yh - a));
+        pDrawing->CurveTo((float)PixelsToTwips(xw - s),
+                         (float)PixelsToTwips(yh),
+                         (float)PixelsToTwips(xw - bottomRightRadius),
+                         (float)PixelsToTwips(yh));
+
+
+        // bottom-left corner
+        a = bottomLeftRadius * r1;
+        s = bottomLeftRadius * r2;
+
+        pDrawing->LineTo((float)PixelsToTwips(x + bottomLeftRadius), (float)PixelsToTwips(yh));
+        pDrawing->CurveTo((float)PixelsToTwips(x + s),
+                          (float)PixelsToTwips(yh),
+                          (float)PixelsToTwips(x + a),
+                          (float)PixelsToTwips(yh - a));
+        pDrawing->CurveTo((float)PixelsToTwips(x),
+                          (float)PixelsToTwips(yh - s),
+                          (float)PixelsToTwips(x),
+                          (float)PixelsToTwips(yh - bottomLeftRadius));
+
+        // top-left corner
+        a = topLeftRadius * r1;
+        s = topLeftRadius * r2;
+
+        pDrawing->LineTo((float)PixelsToTwips(x), (float)PixelsToTwips(y + topLeftRadius));
+        pDrawing->CurveTo((float)PixelsToTwips(x),
+                          (float)PixelsToTwips(y + s),
+                          (float)PixelsToTwips(x + a),
+                          (float)PixelsToTwips(y + a));
+        pDrawing->CurveTo((float)PixelsToTwips(x + s),
+                          (float)PixelsToTwips(y),
+                          (float)PixelsToTwips(x + topLeftRadius),
+                          (float)PixelsToTwips(y));
+
+        // top-right corner
+        a = topRightRadius * r1;
+        s = topRightRadius * r2;
+        pDrawing->LineTo((float)PixelsToTwips(xw - topRightRadius), (float)PixelsToTwips(y));
+        pDrawing->CurveTo((float)PixelsToTwips(xw - s),
+                          (float)PixelsToTwips(y),
+                          (float)PixelsToTwips(xw - a),
+                          (float)PixelsToTwips(y + a));
+        pDrawing->CurveTo((float)PixelsToTwips(xw),
+                          (float)PixelsToTwips(y + s),
+                          (float)PixelsToTwips(xw),
+                          (float)PixelsToTwips(y + topRightRadius));
+        pDrawing->LineTo((float)PixelsToTwips(xw), (float)PixelsToTwips(yh - bottomRightRadius));
+
         pDispObj->InvalidateHitResult();
     }
 
