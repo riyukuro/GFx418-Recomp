@@ -3766,41 +3766,44 @@ UPInt* FUN_1424dbd10(UPInt* self, UPInt vm)
     return self;
 }
 
+// ArrayBase::Append over the counted-pointer array: copies take a reference on each node.
+static __forceinline void Sfr15AppendNodes(Sfr34StringArray* parr, const UPInt* other, UPInt count)
+{
+    if (count)
+    {
+        UPInt size = parr->Size;
+        parr->ResizeNoConstruct(parr, size + count);
+        UPInt* to = reinterpret_cast<UPInt*>(parr->Data) + size;
+        for (UPInt i = 0; i < count; ++i)
+        {
+            UPInt node = *other++;
+            *to++ = node;
+            ++*reinterpret_cast<int*>(node + 0x18);
+        }
+    }
+}
+
 // Copy of a state holding a Value array, a counted-pointer array and one counted pointer.
-// MS2-FUNCTIONAL: raw words; the arrays are grown through the exe's ResizeNoConstruct instances
+// MS2-FUNCTIONAL: the arrays are built in place and appended to as in ArrayBase::Append; the only difference
+// left is the node copy loop, where cl swaps rax/rcx between the destination and the loaded node
 // @0x1424dbd70
 UPInt* FUN_1424dbd70(UPInt* self, UPInt vm, const UPInt* src)
 {
     self[0] = vm;
-    self[1] = 0;
-    self[2] = 0;
-    self[3] = 0;
+    Sfr34ValueArray* pvalues = ::new (self + 1) Sfr34ValueArray();
     UPInt n = src[2];
     const Value* values = reinterpret_cast<const Value*>(src[1]);
     if (n)
     {
-        reinterpret_cast<Sfr34ValueArray*>(self + 1)->ResizeNoConstruct(self + 1, n);
-        ConstructorMov<Value>::ConstructArray(reinterpret_cast<Value*>(self[1]), n, values);
+        UPInt size = pvalues->Size;
+        reinterpret_cast<Sfr34ValueArray*>(self + 1)->ResizeNoConstruct(self + 1, size + n);
+        ConstructorMov<Value>::ConstructArray(reinterpret_cast<Value*>(self[1]) + size, n, values);
     }
-    self[4] = 0;
-    self[5] = 0;
-    self[6] = 0;
+    Sfr34StringArray* pstrings = ::new (self + 4) Sfr34StringArray();
     UPInt ptr = src[7];
     self[7] = ptr;
     ++*reinterpret_cast<int*>(ptr + 0x18);
-    UPInt m = src[5];
-    UPInt* from = reinterpret_cast<UPInt*>(src[4]);
-    if (m)
-    {
-        UPInt old = self[5];
-        reinterpret_cast<Sfr34StringArray*>(self + 4)->ResizeNoConstruct(self + 4, old + m);
-        UPInt* to = reinterpret_cast<UPInt*>(self[4]) + old;
-        for (; m; --m, ++from, ++to)
-        {
-            *to = *from;
-            ++*reinterpret_cast<int*>(*to + 0x18);
-        }
-    }
+    Sfr15AppendNodes(pstrings, reinterpret_cast<const UPInt*>(src[4]), src[5]);
     return self;
 }
 
