@@ -163,6 +163,14 @@ template struct ThunkFunc2<Instances::fl::XMLList, 15, Value, unsigned, const Va
 // MsgFormat::FormatD1 instances are out-of-line calls in the exe (exe 0x1423e8500 / 0x1423e85f0, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
 template<> void Scaleform::MsgFormat::FormatD1<const char*>(const char* const& v);
+// ConstructorMov<SPtr<ClassTraits::Traits> >::DestructArray is out of line in the exe (0x142409550, sfr_as3_03).
+template<> void Scaleform::ConstructorMov<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits> >::
+    DestructArray(Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits>* p, Scaleform::UPInt count);
+// and the Value array's RemoveMultipleAt (0x14241ebb0, pinned below)
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveMultipleAt(Scaleform::UPInt index, Scaleform::UPInt num);
+// the namespace array's RemoveAt is out of line in the exe (0x14241e8b0, pinned below)
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>,
+    Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt index);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -691,19 +699,18 @@ void SparseArray::MoveHashRight(UPInt first_ind, UPInt offset)
     }
 }
 
-// MS2-FUNCTIONAL: the exe inlines Hash::Get/Remove with different register use
 // @0x14241e9d0
 void SparseArray::RemoveHash(UPInt first_ind, UPInt num)
 {
     for (UInt32 i = 0; i < num; ++i)
     {
         const UPInt ind = i + first_ind;
-        if (saHashGet(ValueH, ind))
+        if (saHashGetNode(ValueH, ind))
             ValueH.Remove(ind);
     }
 }
 
-// MS2-FUNCTIONAL: the exe inlines RemoveHash and calls the ValueA range removal out of line; inlining differs
+// MS2-FUNCTIONAL: /O2 order only: pos+count lea operands and the inlined hash's two top key bytes are scheduled the other way round
 // @0x14241ec80
 void SparseArray::RemoveMultipleAt(UPInt pos, UPInt count)
 {
@@ -3340,7 +3347,26 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         return false;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the XMLList constructor
+    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) here; the tag keeps this
+    // copy's COMDAT apart from 01c's definition (same copy as sfr_as3_02).
+    __forceinline XMLList::XMLList(InstanceTraits::Traits& t, InlineCtor)
+        : Instance(t), TargetProperty(NULL)
+    {
+    }
+
+    // InstanceTraits::fl::XMLList::MakeInstance(itr), expanded in place as the exe does.
+    static SF_INLINE Pickable<XMLList> Sfr04NewXMLList(InstanceTraits::fl::XMLList& itr)
+    {
+        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr, InlineCtor()));
+    }
+
+    // InstanceTraits::fl::XMLList::MakeInstance(itr, obj, name, ns), its result read back from the temporary
+    static __forceinline Pickable<XMLList> Sfr04NewTargetListOf(InstanceTraits::fl::XMLList& itr, Object& obj,
+        const ASString& name, Instances::Namespace& ns)
+    {
+        return itr.MakeInstance(itr, obj, name, ns);
+    }
+
     // @0x14241c880
     Pickable<XMLList> XML::MakeXMLListInstance(const Multiname& mn)
     {
@@ -3375,13 +3401,13 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             const ASString name = mn.Name.AsString();
             InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
                 GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
-            result = itr.MakeInstance(itr, *this, name, *ns);
+            result = Sfr04NewTargetListOf(itr, *this, name, *ns);
         }
         else
         {
             InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(
                 GetVM().GetXMLSupport().GetClassTraitsXMLList()->GetInstanceTraits());
-            result = itr.MakeInstance(itr);
+            result = Sfr04NewXMLList(itr);
         }
         return result;
     }
@@ -3498,7 +3524,26 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
     }
 
     // p names an attribute ("@x") or a child of this element.
-    // MS2-FUNCTIONAL: the exe inlines ForEachAttr (sfr_as3_03)
+    // XMLElement::ForEachAttr (sfr_as3_03), expanded in place as the exe does
+    static __forceinline UInt32 Sfr04ForEachAttr(ArrayLH<SPtr<XMLAttr> >& attrs, const Multiname& prop_name, XMLElement::CallBack& cb)
+    {
+        UInt32 num = 0;
+        if (prop_name.Name.IsString())
+        {
+            const UPInt size = attrs.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+            {
+                if (attrs[i]->Matches(prop_name))
+                {
+                    ++num;
+                    if (!cb.Call(i))
+                        break;
+                }
+            }
+        }
+        return num;
+    }
+
     // @0x142417330
     bool XMLElement::HasOwnProperty(const ASString& p)
     {
@@ -3508,10 +3553,12 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             return result;
 
         EmptyCallBack cb(*this);
-        Multiname mn(GetVM().GetPublicNamespace(), Value(p));
+        Multiname mn(GetVM().GetPublicNamespace(), p);
 
         if (mn.IsAttr())
-            result = ForEachAttr(mn, cb) != 0;
+        {
+            result = Sfr04ForEachAttr(Attrs, mn, cb) != 0;
+        }
         else
             result = ForEachChild(mn, cb) != 0;
 
@@ -4059,7 +4106,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
     }
 
-    // MS2-FUNCTIONAL: Namespaces.RemoveAt is inlined (the exe calls 0x14241e8b0)
     // @0x14241efd0
     XML* XMLElement::RemoveNamespace(const Value& ns)
     {
@@ -4202,19 +4248,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         }
         else
             name.Assign(sm.GetBuiltin(AS3Builtin_null));
-    }
-
-    // The exe inlines the XMLList constructor (out of line at 0x1423f00f0, sfr_as3_01c) here; the tag keeps this
-    // copy's COMDAT apart from 01c's definition (same copy as sfr_as3_02).
-    __forceinline XMLList::XMLList(InstanceTraits::Traits& t, InlineCtor)
-        : Instance(t), TargetProperty(NULL)
-    {
-    }
-
-    // InstanceTraits::fl::XMLList::MakeInstance(itr), expanded in place as the exe does.
-    static SF_INLINE Pickable<XMLList> Sfr04NewXMLList(InstanceTraits::fl::XMLList& itr)
-    {
-        return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr, InlineCtor()));
     }
 
     // XMLList::MakeXMLListInstance(), expanded in place as the exe does.
@@ -4369,29 +4402,48 @@ InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObje
 }}}
 using Scaleform::GFx::AS3::FUN_14250a250;
 
+static __forceinline const CIRegistrationTable* Sfr04CITable(Instances::fl::GlobalObjectCPP* self)
+{
+    return *reinterpret_cast<const CIRegistrationTable* const*>(&self->CIRegistrationHash);
+}
+
+// Hash::findIndexCore over the registration table: the entry index of key, or -1
+static __forceinline SPInt Sfr04CIFindIndex(const CIRegistrationTable* table, const char* key, UPInt hashValue)
+{
+    SPInt index = hashValue;
+    const CIRegistrationEntry* e = &table->E[index];
+    if (e->NextInChain == -2 || e->HashValue != (UPInt)index)
+        return -1;
+    for (;;)
+    {
+        if (e->HashValue == hashValue && strcmp(e->Key, key) == 0)
+            return index;
+        index = e->NextInChain;
+        if (index == -1)
+            break;
+        e = &table->E[index];
+    }
+    return -1;
+}
+
 // GlobalObjectCPP: the class traits of a builtin class by name, made through its ClassInfo factory and kept in CTraits
-// MS2-FUNCTIONAL: the exe inlines the hash lookup and the CTraits push
 // @0x142415520
 ClassTraits::Traits* FUN_142415520(Instances::fl::GlobalObjectCPP* self, const ASString& name,
                                    const Instances::Namespace& ns)
 {
-    const CIRegistrationTable* table = *reinterpret_cast<const CIRegistrationTable* const*>(&self->CIRegistrationHash);
-    if (!table)
+    if (!Sfr04CITable(self))
         return NULL;
-    const char* key = name.ToCStr();
-    UPInt index = String::BernsteinHashFunction(key, strlen(key), 0x1505) & table->SizeMask;
-    const CIRegistrationEntry* e = &table->E[index];
-    if (e->NextInChain == -2 || e->HashValue != index)
+    const Instances::fl::ConstStringKey k = { name.ToCStr() };
+    const char* key = k.pChar;
+    const UPInt hashValue = Instances::fl::ConstStringHashFn()(k);
+    // the table is read again after the hash, as Hash::findIndexAlt does
+    const CIRegistrationTable* table = Sfr04CITable(self);
+    const SPInt index = Sfr04CIFindIndex(table, key, hashValue & table->SizeMask);
+    // Hash::GetAlt: the entry's node (Key, Value), then its value
+    const char* const* pnode = index >= 0 ? &table->E[index].Key : NULL;
+    if (!pnode)
         return NULL;
-    for (;;)
-    {
-        if (e->HashValue == index && strcmp(e->Key, key) == 0)
-            break;
-        if (e->NextInChain == -1)
-            return NULL;
-        e = &table->E[e->NextInChain];
-    }
-    const ClassInfo* ci = e->Value;
+    const ClassInfo* ci = *reinterpret_cast<const ClassInfo* const*>(pnode + 1);
     if (!ci || strcmp(ns.GetUri().ToCStr(), ci->PkgName) != 0)
         return NULL;
     SPtr<ClassTraits::Traits> ctr(ci->Factory(self->GetVM()));
@@ -5771,10 +5823,36 @@ template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx:
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void*, Scaleform::UPInt);
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::ClassTraits::Traits>, 2>, Scaleform::ArrayDefaultPolicy>::ResizeNoConstruct(const void*, Scaleform::UPInt);
 template void Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy>::Resize(Scaleform::UPInt);
-template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt);
+// declared noinline at the top of the file, so this is the SDK body as a specialization
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt index)
+{
+    if (Data.Size == 1)
+    {
+        Clear();
+    }
+    else
+    {
+        AllocatorType::Destruct(Data.Data + index);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + 1, Data.Size - 1 - index);
+        --Data.Size;
+    }
+}
 template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveAt(Scaleform::UPInt);
 template void Scaleform::ArrayBase<Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, Scaleform::AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>, 2>, Scaleform::ArrayDefaultPolicy> >::InsertAt(Scaleform::UPInt, const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>&);
-template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveMultipleAt(Scaleform::UPInt, Scaleform::UPInt);
+// declared noinline at the top of the file, so this is the SDK body as a specialization
+template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::Value, Scaleform::AllocatorDH<Scaleform::GFx::AS3::Value, 2>, Scaleform::ArrayDefaultPolicy> >::RemoveMultipleAt(Scaleform::UPInt index, Scaleform::UPInt num)
+{
+    if (Data.Size == num)
+    {
+        Clear();
+    }
+    else
+    {
+        AllocatorType::DestructArray(Data.Data + index, num);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + num, Data.Size - num - index);
+        Data.Size -= num;
+    }
+}
 
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$07V?$SPtr@VArray@fl@Instances@AS3@GFx@Scaleform@@@456@JJ@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424133c0
 // MS2-PIN: ?Func@?$ThunkFunc2@VArray@fl@Instances@AS3@GFx@Scaleform@@$08VValue@456@IPEBV7456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142413510
@@ -5847,7 +5925,6 @@ template void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scaleform::GFx::AS3::V
 // MS2-PIN: ?IsXMLListObject@AS3@GFx@Scaleform@@YA_NAEBVValue@123@@Z 0x142419ca0
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorDH@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14241ff20
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x14241ffc0
-// MS2-FUNCTIONAL ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z: the exe calls DestructArray out of line; ours inlines it
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142420100
 // MS2-FUNCTIONAL ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z: the exe calls DestructArray out of line; ours inlines it
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@U?$AllocatorLH@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142420060
