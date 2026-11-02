@@ -209,7 +209,7 @@ public:
     void RegUInt(UInt32 ind);               // 0x142537d70
     // (sfr24) operand stack pops: drop the top n values; take the top value out.
     void  PopOp(UPInt n);                   // 0x14251ccc0
-    Value PopOpValue();                     // 0x14251cd30
+    __declspec(noalias) Value PopOpValue(); // 0x14251cd30
     // (sfr24) the operand stack top (or register ind) becomes a value of type tr, null or not as nt says.
     void ConvertOpTo(InstanceTraits::Traits& tr, Value::TraceNullType nt);                          // 0x1424f1e50
     // (sfb) callers pass a sign-extended index (RefineOpCodeReg1: movsxd); the body indexes with its low 32 bits.
