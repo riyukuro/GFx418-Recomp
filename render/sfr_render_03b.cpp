@@ -1788,8 +1788,11 @@ bool ParagraphFormatter::HandleCustomWordWrap()
         float  widthsBuf[256];
         float* pwidths = widthsBuf;
         if (desc.NumCharsInLine + 1 > sizeof(widthsBuf) / sizeof(widthsBuf[0]))
-            pwidths = (float*)SF_HEAP_ALLOC(pDocView->GetAllocator()->GetHeap(),
-                                            sizeof(float) * (desc.NumCharsInLine + 1), StatRender_Text_Mem);
+        {
+            auto* palloc = pDocView->GetAllocator();
+            UPInt sz = sizeof(float) * (desc.NumCharsInLine + 1);
+            pwidths = (float*)SF_HEAP_ALLOC(palloc->GetHeap(), sz, StatRender_Text_Mem);
+        }
         unsigned i = 0;
         unsigned numGlyphs;
         LineBuffer::GlyphEntry* pglyphs = LineCursor.GlyphIns.GetReadyGlyphs(&numGlyphs);
