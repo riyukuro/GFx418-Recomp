@@ -80,6 +80,12 @@ SF_FORCEINLINE AS2::Environment* VoiEnv(AS2::MovieRoot* proot)
     return static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmain))->GetASEnvironment();
 }
 
+// ToAvmCharacter as the exe inlines it here, with its own null test.
+SF_FORCEINLINE AS2::AvmCharacter* VoiAvmChar(DisplayObject* pdobj)
+{
+    return !pdobj ? 0 : AS2::ToAvmCharacter(static_cast<InteractiveObject*>(pdobj));
+}
+
 // The script object of a value: the object itself, or the AS object of its character (0 when the character is
 // gone).
 SF_FORCEINLINE AS2::ObjectInterface* VoiObject(void* pdata, MovieImpl* pmovieRoot, bool isdobj)
@@ -91,7 +97,7 @@ SF_FORCEINLINE AS2::ObjectInterface* VoiObject(void* pdata, MovieImpl* pmovieRoo
         if (!pdobj)
             return 0;
         // the character's own interface (not its AS object)
-        pobj = static_cast<AS2::AvmCharacter*>(static_cast<InteractiveObject*>(pdobj)->GetAvmIntObj());
+        pobj = VoiAvmChar(pdobj);
     }
     return pobj;
 }
@@ -168,7 +174,6 @@ public:
 };
 
 // Converts the host value and stores it under name on the object (or the character's AS object).
-// MS2-FUNCTIONAL: branch vs cmove null-cast of the character interface, CreateString operand scheduling
 // @0x1429829c0
 bool AS2ValueObjectInterface::SetMember(void* pdata, const char* name, const Value& value, bool isdobj)
 {
@@ -184,19 +189,20 @@ bool AS2ValueObjectInterface::SetMember(void* pdata, const char* name, const Val
 }
 
 // Hands each member of the object to the visitor.
-// MS2-FUNCTIONAL: the visitor is the named class above (the exe's is a local struct of the same layout)
 // @0x1429943f0
 void AS2ValueObjectInterface::VisitMembers(void* pdata, ObjVisitor* visitor, bool isdobj) const
 {
-    AS2::MovieRoot*       proot = VoiRoot(pMovieRoot);
+    MovieImpl*            pmovie = pMovieRoot;
+    AS2::MovieRoot*       proot = VoiRoot(pmovie);
     AS2::Environment*     penv  = VoiEnv(proot);
     AS2::ObjectInterface* pobj  = static_cast<AS2::ObjectInterface*>(pdata);
     if (isdobj)
     {
-        pobj                 = 0;
-        DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
-        if (pdobj)
-            pobj = static_cast<AS2::AvmCharacter*>(static_cast<InteractiveObject*>(pdobj)->GetAvmIntObj());
+        DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovie);
+        if (!pdobj)
+            pobj = 0;
+        else
+            pobj = VoiAvmChar(pdobj);
     }
     AS2ValueObjectInterface_MemberVisitor shim(proot, penv, visitor);
     pobj->VisitMembers(&penv->StringContext, &shim,
@@ -558,12 +564,12 @@ void AS2ValueObjectInterface::ToString(String* pstr, const Value& thisVal) const
     *pstr = String(asval.ToString(penv).ToCStr());
 }
 
-// MS2-FUNCTIONAL: register allocation / null-cast form of the resolved character interface
 // @0x14298ca20
 void AS2ValueObjectInterface::SetUserData(void* pdata, ASUserData* puserdata, bool isdobj)
 {
-    VoiEnv(VoiRoot(pMovieRoot));
-    AS2::ObjectInterface* pobj = VoiObject(pdata, pMovieRoot, isdobj);
+    MovieImpl* pmovie = pMovieRoot;
+    VoiEnv(VoiRoot(pmovie));
+    AS2::ObjectInterface* pobj = VoiObject(pdata, pmovie, isdobj);
     if (pobj)
         AS2::ObjectInterface_SetUserData(pobj, pMovieRoot->AsMovie(), puserdata, isdobj);
 }
