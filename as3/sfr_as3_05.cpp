@@ -9,6 +9,7 @@
 #include "ms2/scaleform/include/gfx/as3/as3_asvm.h"
 #include "ms2/scaleform/include/gfx/as3/as3_mnhash.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_thunkdefs.h"
+#include "ms2/scaleform/include/gfx/as3/as3_intervaltimer.h"
 #include <math.h>
 #include <string.h>
 
@@ -1839,7 +1840,6 @@ namespace ClassTraits { namespace fl_display
 // ---- core natives: Date, Error, QName, RegExp, Math, global functions ----
 
 
-void* FUN_1424d7e50(void* pmem, const Scaleform::GFx::AS3::Value& function, unsigned delay, bool timeout);   // IntervalTimer ctor (setInterval/setTimeout form)
 void  FUN_1425264b0(void* ptimer, unsigned argc, const Scaleform::GFx::AS3::Value* argv);                   // IntervalTimer: copies the extra call arguments
 void  FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);                            // URL-style unescape of a string
 
@@ -1920,7 +1920,7 @@ namespace Instances { namespace fl
         if (!argv[1].Convert2UInt32(delay))
             return;
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
-        ASIntervalTimerIntf* ptimer = pmem ? (ASIntervalTimerIntf*)FUN_1424d7e50(pmem, argv[0], delay, true) : NULL;
+        ASIntervalTimerIntf* ptimer = pmem ? ::new (pmem) IntervalTimer(argv[0], delay, true) : NULL;
         if (argc > 2)
             FUN_1425264b0(ptimer, argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
