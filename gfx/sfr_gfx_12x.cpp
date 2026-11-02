@@ -40,25 +40,24 @@ static inline void UpdateLocator(Unk_ParserExpatUserData* ud)
 static inline void SplitQName(const char* name, StringRef& prefix, StringRef& localname)
 {
     const char* colon = strchr(name, ':');
-    if (colon)
+    if (!colon)
+        localname = StringRef(name);
+    else
     {
         prefix    = StringRef(name, colon - name);
         localname = StringRef(colon + 1);
     }
-    else
-        localname = StringRef(name);
 }
 
 // Formats one message into a small caller supplied buffer descriptor: the MsgFormat::Sink of a StringDataPtr
 // (type 2, buffer, capacity), so ParseFile's declaration of it is kept.
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
 
-// MS2-FUNCTIONAL: Format(sink, fmt, v1) with v1 a const char*; returns the formatted size in the exe, the caller's
-// declaration is void.
+// Format(sink, fmt, v1) with v1 a const char*.
 // @0x1423b14e0
-void FUN_1423b14e0(Unk_XmlMsgBuffer* buffer, const char* fmt, const char** v1)
+UPInt FUN_1423b14e0(Unk_XmlMsgBuffer* buffer, const char* fmt, const char** v1)
 {
-    Format(*reinterpret_cast<const MsgFormat::Sink*>(buffer), fmt, *v1);
+    return Format(*reinterpret_cast<const MsgFormat::Sink*>(buffer), fmt, *v1);
 }
 
 // Expat character data: the text (not terminated) and its length.
@@ -92,7 +91,6 @@ void FUN_1423b1760(void* userData, const char* s, int len)
 }
 
 // Expat end element: the qualified name, split into prefix and local name.
-// MS2-FUNCTIONAL: EndElement(prefix, localname) after the locator update.
 // @0x1423b17d0
 void FUN_1423b17d0(void* userData, const char* name)
 {
@@ -161,12 +159,11 @@ void FUN_1423b1d40(void* userData, const char* name, const char** atts)
 }
 
 // Expat XML declaration: version, encoding and standalone go into the locator.
-// MS2-FUNCTIONAL: the three locator stores.
 // @0x1423b23e0
 void FUN_1423b23e0(void* userData, const char* version, const char* encoding, int standalone)
 {
     ParserLocator* locator = ((Unk_ParserExpatUserData*)userData)->Locator;
     locator->XMLVersion = StringRef(version);
-    locator->StandAlone = standalone;
     locator->Encoding   = StringRef(encoding);
+    locator->StandAlone = standalone;
 }

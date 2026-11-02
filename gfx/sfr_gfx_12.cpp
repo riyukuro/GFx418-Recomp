@@ -59,7 +59,7 @@ void FUN_1423b23e0(void* userData, const char* version, const char* encoding, in
 void FUN_1423b1760(void* userData, const char* s, int len);                                      // default
 // Formats one message into a small caller supplied buffer descriptor (mode 2, buffer, capacity).
 struct Unk_XmlMsgBuffer { int Mode; char* Buffer; UPInt Capacity; };
-ExeDecl<void(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
+ExeDecl<UPInt(Unk_XmlMsgBuffer*, const char*, const char**)> FUN_1423b14e0;
 static const char Unk_FileIsEmptyFormat[] = "File {0} is empty!";        // exe 0x143135720
 static const char Unk_FileMissingFormat[] = "File {0} does not exist!";  // exe 0x143135738
 
