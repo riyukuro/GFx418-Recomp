@@ -31,6 +31,7 @@ extern ExeDecl<void*>::type DAT_1431b5938;
 #define VideoProtoBaseVtable DAT_1431b5938
 extern ExeDecl<void*>::type DAT_1431b4be0;
 #define VideoSoundStreamVtable DAT_1431b4be0
+extern unsigned char DAT_142dc9d48[];
 extern ExeDecl<void*>::type DAT_1431b4b80;
 #define VideoSoundVtable DAT_1431b4b80
 extern ExeDecl<void*>::type DAT_1431b4ce0;
@@ -298,7 +299,8 @@ void FUN_140002ab0(void* stream)
     reinterpret_cast<Scaleform::RefCountNTSImplCore*>(stream)->RefCountNTSImplCore::~RefCountNTSImplCore();
 }
 
-// MS2-FUNCTIONAL: initializes the refcounted stream and allocates its SoundChannelSystem back-reference.
+// initializes the refcounted stream and allocates its SoundChannelSystem back-reference; the inlined
+// channel ctor keeps the RefCountImplCore base vftable store, so that store is volatile here.
 // @0x140002e80
 void* FUN_140002e80(void* stream)
 {
@@ -307,15 +309,19 @@ void* FUN_140002e80(void* stream)
     *reinterpret_cast<void***>(bytes) = &VideoSoundStreamVtable;
     void** channelSlot = reinterpret_cast<void**>(bytes + 0x10);
     *channelSlot = 0;
-    void* channel = 0;
     void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    channel = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(Scaleform::Memory::pGlobalHeap, 0x20, 0);
-    if (channel) {
-        unsigned char* channelBytes = static_cast<unsigned char*>(channel);
-        *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
-        *reinterpret_cast<unsigned*>(channelBytes + 8) = 1;
+    void* mem = reinterpret_cast<void* (*)(void*, Scaleform::UPInt, const void*)>(heapVtable[10])(Scaleform::Memory::pGlobalHeap, 0x20, 0);
+    void* channel;
+    if (mem) {
+        unsigned char* channelBytes = static_cast<unsigned char*>(mem);
+        *reinterpret_cast<void* volatile*>(channelBytes) = DAT_142dc9d48;   // RefCountImplCore base vftable
         *reinterpret_cast<void**>(channelBytes + 0x10) = stream;
         *reinterpret_cast<float*>(channelBytes + 0x18) = 1.0f;
+        *reinterpret_cast<unsigned*>(channelBytes + 8) = 1;
+        *reinterpret_cast<void***>(channelBytes) = &VideoSoundChannelSystemVtable;
+        channel = mem;
+    } else {
+        channel = 0;
     }
     if (*channelSlot) FUN_14257dcb0(*channelSlot);
     *channelSlot = channel;
@@ -604,13 +610,17 @@ Scaleform::GFx::ASString* FUN_140004440(Scaleform::GFx::AS2::Environment* enviro
     return result;
 }
 
-// MS2-FUNCTIONAL: creates a constant AS2 string through the global context's movie string manager.
+// creates a constant AS2 string through the global context's movie string manager.
 // @0x140004500
 Scaleform::GFx::ASString* FUN_140004500(Scaleform::GFx::AS2::GlobalContext** context,
                                          Scaleform::GFx::ASString* result, const char* text)
 {
     Scaleform::GFx::AS2::StringManager* strings = (*context)->GetStringManager();
-    ::new (static_cast<void*>(result)) Scaleform::GFx::ASString(strings->CreateConstString(text));
+    // the exe builds the ASString in place with no null test on the result slot
+    Scaleform::GFx::ASStringManager* manager = strings->pStringManager;
+    Scaleform::GFx::ASStringNode* node = manager->CreateConstStringNode(text, strlen(text), 0);
+    node->AddRef();
+    *reinterpret_cast<Scaleform::GFx::ASStringNode**>(result) = node;
     return result;
 }
 
@@ -971,21 +981,25 @@ void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replac
     return destination;
 }
 
-// MS2-FUNCTIONAL: locks a weak proxy into a retained strong object reference.
+// MS2-FUNCTIONAL: locks a weak proxy into a retained strong object reference (SDK WeakPtr::GetObjectThroughProxy + Ptr ctor).
+// The exe compares pObject in memory and reloads it; ours loads it once and tests the register.
 // @0x1400059b0
 void** FUN_1400059b0(void** weakSlot, void** result)
 {
-    *result = 0;
-    unsigned char* proxy = static_cast<unsigned char*>(*weakSlot);
-    if (!proxy) return result;
-    void* target = *reinterpret_cast<void**>(proxy + 8);
-    if (!target) {
-        static_cast<Scaleform::WeakPtrProxy*>(static_cast<void*>(proxy))->Release();
-        *weakSlot = 0;
-    } else if (*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8) != 0) {
-        ++*reinterpret_cast<int*>(static_cast<unsigned char*>(target) + 8);
-        *result = target;
+    Scaleform::RefCountWeakSupportImpl* pobject = 0;
+    Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
+    if (proxy) {
+        if (proxy->IsAlive()) {
+            pobject = proxy->GetObject();
+            if (pobject->GetRefCount() == 0)
+                pobject = 0;
+        } else {
+            proxy->Release();
+            *weakSlot = 0;
+        }
     }
+    if (pobject) pobject->AddRef();
+    *result = pobject;
     return result;
 }
 
