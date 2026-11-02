@@ -5300,7 +5300,8 @@ InstanceTraits::Traits& FUN_142509e30(VM& vm, const ThunkInfo& ti)
 // VM::GetFunctReturnType(const Value&): the return type of a thunk (or thunk closure / thunk function), of a method
 // by index (in its traits' ABC file), of a VTable slot (or VTable index closure) and of a function; Object for
 // other values and unknown classes.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class); same length, exe keeps v in rdi and the kind in ebx
+// A free function (not declared in the shared VM class). The VTable is a named local, so the slot index is read
+// after GetVT; the method and thunk pointers are named locals as well, which gives the exe's loads and registers.
 // @0x14250a060
 InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
 {
@@ -5323,7 +5324,8 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
     case Value::kVTableInd:
     case Value::kVTableIndClosure:
     {
-        const Value& real_func = v.GetTraits().GetVT().VTMethods[UInt32(v.GetVTableInd())];
+        const VTable& vt = v.GetTraits().GetVT();
+        const Value& real_func = vt.VTMethods[UInt32(v.GetVTableInd())];
 
         // The vtable stores a MethodInd or a thunk.
         if (real_func.GetKind() == Value::kMethodInd)
@@ -5331,7 +5333,8 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
             const SInt32 ind = real_func.GetMethodInd();
             VMAbcFile& file = *real_func.GetTraits().GetFilePtr();
             const Abc::File& abc = file.GetAbcFile();
-            const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
+            const Abc::MethodInfo* mi = abc.Methods.Info[ind];
+            const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo*>(mi)->GetName(abc.Const_Pool);
             const ClassTraits::Traits* ctr = FUN_142524f60(vm, file, rt);
 
             if (ctr)
@@ -5356,7 +5359,8 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
         const SInt32 ind = v.GetMethodInd();
         VMAbcFile& file = *v.GetTraits().GetFilePtr();
         const Abc::File& abc = file.GetAbcFile();
-        const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo&>(*abc.Methods.Info[ind]).GetName(abc.Const_Pool);
+        const Abc::MethodInfo* mi = abc.Methods.Info[ind];
+        const Abc::Multiname& rt = reinterpret_cast<const Abc::TraitInfo*>(mi)->GetName(abc.Const_Pool);
         const ClassTraits::Traits* ctr = FUN_142524f60(vm, file, rt);
 
         if (ctr)
@@ -5366,8 +5370,10 @@ InstanceTraits::Traits& FUN_14250a060(VM& vm, const Value& v)
     case Value::kThunk:
         return FUN_142509e30(vm, v.AsThunk());
     case Value::kThunkFunction:
-        return FUN_142509e30(vm, **reinterpret_cast<const ThunkInfo* const*>(
-                                     reinterpret_cast<const char*>(&v.AsThunkFunction()) + 0x40));
+    {
+        const ThunkInfo& ti = **reinterpret_cast<const ThunkInfo* const*>(reinterpret_cast<const char*>(&v.AsThunkFunction()) + 0x40);
+        return FUN_142509e30(vm, ti);
+    }
     case Value::kThunkClosure:
         return FUN_142509e30(vm, v.AsThunk());
     default:
