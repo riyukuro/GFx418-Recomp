@@ -549,6 +549,15 @@ const UInt32* Slots::FindSlotValues(const ASString& k) const
     return Set.Get(Ptr<ASStringNode>(k.GetNode()));
 }
 
+// @0x1425009e0
+SlotInfo& Slots::FindAddOwnSlotInfo(const ASString& k, const SlotInfo& v, AbsoluteIndex& ind)
+{
+    ind = FindSlotInfoIndex(k, *v.pNs);
+    if (!ind.IsValid())
+        ind = Add(k, v);
+    return GetOwnSlotInfo(ind);
+}
+
 // Slots::GetSlotInfo (sfr_as3_04 0x142416fb0), one level inline here as in the exe.
 static SF_INLINE const SlotInfo& Sfr17GetSlotInfo(const Slots& s, AbsoluteIndex ind)
 {
@@ -558,7 +567,7 @@ static SF_INLINE const SlotInfo& Sfr17GetSlotInfo(const Slots& s, AbsoluteIndex 
 }
 
 // @0x142502b20
-AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, const Instances::Namespace& ns) const
+__declspec(noinline) AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, const Instances::Namespace& ns) const
 {
     if (const UInt32* values = FindSlotValues(k))
     {
@@ -590,15 +599,6 @@ AbsoluteIndex Slots::FindSlotInfoIndex(const ASString& k, const Instances::Names
         } while (ind >= 0);
     }
     return AbsoluteIndex(-1);
-}
-
-// @0x1425009e0
-SlotInfo& Slots::FindAddOwnSlotInfo(const ASString& k, const SlotInfo& v, AbsoluteIndex& ind)
-{
-    ind = FindSlotInfoIndex(k, *v.pNs);
-    if (!ind.IsValid())
-        ind = Add(k, v);
-    return GetOwnSlotInfo(ind);
 }
 
 // @0x142502dc0
@@ -4910,19 +4910,16 @@ bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pv
 // @0x1424f9180
 SF_NOINLINE void Tracer::PopPrevValue()
 {
-    ArrayDH_POD<UPInt, StatMV_VM>& positions = NewOpcodePos;
-    const UPInt n = positions.GetSize();
-    int op = 2;
-    if (n)
-        op = static_cast<int>(WCode[positions[n - 1]]);
+    const int op = NewOpcodePos.GetSize() ? static_cast<int>(WCode[NewOpcodePos[NewOpcodePos.GetSize() - 1]]) : 2;
     switch (op)
     {
     case 0x20: case 0x21: case 0x24: case 0x25: case 0x26: case 0x27: case 0x28: case 0x2a: case 0x2c: case 0x2d:
     case 0x2e: case 0x2f: case 0x31: case 0x60: case 0x62: case 0x64: case 0x65: case 0x67: case 0x6e: case 0xb5:
     case 0xd0: case 0xd1: case 0xd2: case 0xd3:
     {
-        const UPInt pos = positions[n - 1];
-        reinterpret_cast<Scaleform::Sfr17WordArrayDH*>(&positions)->Resize(n - 1);
+        ArrayDH_POD<UPInt, StatMV_VM>& positions = NewOpcodePos;
+        const UPInt pos = positions[positions.GetSize() - 1];
+        reinterpret_cast<Scaleform::Sfr17WordArrayDH*>(&positions)->Resize(positions.GetSize() - 1);
         reinterpret_cast<Scaleform::Sfr17WordArray*>(&WCode)->Resize(pos);
         return;
     }
@@ -4933,17 +4930,18 @@ SF_NOINLINE void Tracer::PopPrevValue()
 
 // Emits the push of the constant v (ind: its constant pool index; pop: drop the last pushed value first); false
 // when v has no push opcode.
+// MS2-FUNCTIONAL 0x1424f9060: the exe keeps the kind in r10d and runs the switch as a sub chain; same results
 // @0x1424f9060
 bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
 {
     int op;
-    const int kind = static_cast<int>(v.GetKind());
-    if (kind == 8 || kind == 9)
+    if (static_cast<UInt32>(static_cast<int>(v.GetKind()) - 8) <= 1)
     {
-        PushNewOpCode(static_cast<Abc::Code::OpCode>(0xb6), static_cast<UInt32>(ind + 1));
+        const int arg = ind + 1;
+        PushNewOpCode(static_cast<Abc::Code::OpCode>(0xb6), static_cast<UInt32>(arg));
         return true;
     }
-    switch (kind)
+    switch (static_cast<int>(v.GetKind()))
     {
     case 0:
         if (pop)
@@ -4956,7 +4954,7 @@ bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
         op = v.AsBool() ? 0x26 : 0x27;   // pushtrue / pushfalse
         break;
     case 4:
-        if (!NumberUtil::IsNaN(v.AsNumber()))
+        if (!v.IsNaN())
             return false;
         if (pop)
             PopPrevValue();
@@ -4973,29 +4971,37 @@ bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
 }
 
 // The value (+0x10 of its entry) the word key maps to in the identity-hashed map at self (NULL when none).
-// MS2-FUNCTIONAL 0x1425059f0: the exe finds the entry index first, then returns its value slot; same results
+// HashSetBase::findIndex over an entry of 4 words: next, key, value pair.
+static SF_INLINE SPInt Sfr33IdWordFindIndex(const UPInt* table, const UPInt& key)
+{
+    if (!table)
+        return -1;
+    const UPInt hash = key;
+    const UPInt mask = table[1];
+    const UPInt home = hash & mask;
+    SPInt index = static_cast<SPInt>(home);
+    const UPInt* e = table + 2 + index * 4;
+    if (e[0] == UPInt(-2) || (e[1] & mask) != home)
+        return -1;
+    for (;;)
+    {
+        if ((mask & e[1]) == home && e[1] == hash)
+            return index;
+        index = static_cast<SPInt>(e[0]);
+        if (index == -1)
+            return -1;
+        e = table + 2 + index * 4;
+    }
+}
+
+// MS2-FUNCTIONAL 0x1425059f0: only the operands of one and are swapped; same results
 // @0x1425059f0
 void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key)
 {
     const UPInt* table = *reinterpret_cast<UPInt* const*>(self);
-    if (table)
-    {
-        const UPInt mask = table[1];
-        const UPInt home = key & mask;
-        const UPInt* e = table + 2 + home * 4;
-        if (e[0] != UPInt(-2) && (e[1] & mask) == home)
-        {
-            for (;;)
-            {
-                if ((e[1] & mask) == home && e[1] == key)
-                    return const_cast<UPInt*>(e + 2);
-                if (e[0] == UPInt(-1))
-                    break;
-                e = table + 2 + e[0] * 4;
-            }
-        }
-    }
-    return NULL;
+    const SPInt index = Sfr33IdWordFindIndex(table, key);
+    const UPInt* pair = index >= 0 ? table + 3 + index * 4 : NULL;
+    return pair ? const_cast<UPInt*>(pair + 1) : NULL;
 }
 
 // GASRefCountBase::CreateWeakProxy: the object's weak proxy, made on first use (registered with the collector, the
