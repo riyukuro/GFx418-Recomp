@@ -6591,49 +6591,45 @@ static inline TextField* Sfr34_TextFieldOf(const AvmDisplayObj* avm)
     return reinterpret_cast<TextField*>(avm->pDispObj);
 }
 
-// The event (TextEventEx with the extensions on, else TextEvent) of the type name, bubbling and cancelable, with
-// obj as target.
-static SF_FORCEINLINE SPtr<Instances::fl_events::TextEvent> Sfr34_CreateTextEvent(ASVM* asvm, const ASString& name,
-                                                                         Instances::fl_display::DisplayObject* obj,
-                                                                         bool ex)
-{
-    SPtr<Instances::fl_events::TextEvent> evt;
-    const Value params[] = { Value(name), Value(true), Value(true) };
-    asvm->ConstructInstance(evt, ex ? asvm->TextEventExClass : asvm->TextEventClass, 3, params);
-    evt->Target = obj;
-    return evt;
-}
-
 // AvmTextField::OnLinkEventEx: with the extensions on, the rolling over (or out of) a link gives a
 // "linkMouseOver" ("linkMouseOut") TextEventEx with the link's URL to the AS3 object when it listens for it.
-// MS2-FUNCTIONAL the exe inlines the TextEvent creation with Value(const ASString&); CreateStringNode/ReleaseNode bind differently
+// MS2-FUNCTIONAL register allocation (exe keeps this in r15 and the event in rdi) and the Text assignment's refcount order differ
 // @0x14251a500
 void AvmTextField::OnLinkEventEx(TextField::LinkEvent event, unsigned pos, unsigned controllerIndex)
 {
-    AvmDisplayObj* avm  = this;
-    MovieRoot*     root = AS3RootOf(avm->pDispObj);
-    Sfr34_CheckAvm(root);
-    const Render::Text::TextFormat* fmt;
-    if (!root->pAVM->ExtensionsEnabled ||
-        !static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(Sfr34_TextFieldOf(avm)->GetDocument()))->GetTextAndParagraphFormat(&fmt, NULL, pos) ||
-        !fmt->IsUrlSet())
-        return;
-    const char* url = fmt->GetUrl().ToCStr();
-    const char* type;
-    switch (event)
+    Sfr34_CheckAvm(AS3RootOf(pDispObj));
+    if (AS3RootOf(pDispObj)->pAVM->ExtensionsEnabled)
     {
-    case TextField::Link_rollover: type = "linkMouseOver"; break;
-    case TextField::Link_rollout:  type = "linkMouseOut";  break;
-    default: return;
-    }
-    const ASString                        name(root->GetStringManager418()->CreateStringNode(type));
-    Instances::fl_display::DisplayObject* obj  = avm->GetAS3Obj();
-    if (obj->WillTrigger(name, false))
-    {
-        SPtr<Instances::fl_events::TextEvent> evt = Sfr34_CreateTextEvent(root->pAVM, name, obj, true);
-        evt->Text = ASString(root->GetStringManager418()->CreateStringNode(url));
-        static_cast<Instances::fl_gfx::TextEventEx*>(evt.GetPtr())->controllerIdx = controllerIndex;
-        obj->DispatchEventObject(evt, avm->pDispObj);
+        TextField*                      ptf = Sfr34_TextFieldOf(this);
+        const Render::Text::TextFormat* fmt;
+        if (static_cast<Render::Text::StyledText*>(Sfr34_StyledTextOf(ptf->GetDocument()))->GetTextAndParagraphFormat(&fmt, NULL, pos))
+        {
+            if (fmt->IsUrlSet())
+            {
+                const char* url  = fmt->GetUrl().ToCStr();
+                const char* type = NULL;
+                switch (event)
+                {
+                case TextField::Link_rollover: type = "linkMouseOver"; break;
+                case TextField::Link_rollout:  type = "linkMouseOut";  break;
+                default: return;
+                }
+                const ASString name(AS3RootOf(pDispObj)->BuiltinsMgr.GetStringManager()->CreateStringNode(type));
+                Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
+                if (as3obj->WillTrigger(name, false))
+                {
+                    SPtr<Instances::fl_gfx::TextEventEx> evt;
+                    Value params[] = { Value(name, Value::InlineStr), Value(true), Value(true) };
+                    ASVM* asvm = AS3RootOf(pDispObj)->pAVM;
+                    asvm->ConstructInstance(evt, asvm->TextEventExClass, 3, params);
+                    Instances::fl_gfx::TextEventEx* e = evt.GetPtr();
+                    e->Target = as3obj;
+                    e->Text = ASString(AS3RootOf(pDispObj)->BuiltinsMgr.GetStringManager()->CreateStringNode(url));
+                    e->controllerIdx = controllerIndex;
+                    as3obj->DispatchEventObject(e, pDispObj);
+                }
+            }
+        }
     }
 }
 
