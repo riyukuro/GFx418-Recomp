@@ -2101,44 +2101,44 @@ int FUN_1423dacf0(void* self)
     return success;
 }
 
-// MS2-FUNCTIONAL: records IME name/display metadata flags and appends the executable's empty cue record for imeName.
+// Records the IME name/display metadata flags and appends an empty IME record for imeName.
 // @0x1423ca6b0
 void FUN_1423ca6b0(void* raw, const char* name)
 {
-    if (!raw || !name) return;
+    struct Record {
+        struct Unknown { unsigned long long low, high; Unknown() {} } unknown;
+        Scaleform::String name;
+        Scaleform::String display;
+        unsigned locale;
+        void* profiles;
+        Record() : locale(0x2000000), profiles(nullptr) {}
+    };
+    if (!raw) return;
     auto* bytes = static_cast<unsigned char*>(raw);
     if (strcmp(name, "language") == 0) bytes[0xa9] = 1;
     *reinterpret_cast<unsigned*>(bytes + 0xb0) = 3;
     if (strcmp(name, "imeName") == 0) {
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 0;
         bytes[0xaa] = 1;
+        Record record;
         auto* array = reinterpret_cast<unsigned long long*>(bytes + 0xb8);
-        const unsigned long long count = array[1];
-        if (count >= array[2]) {
-            const unsigned long long capacity = (count + 1) + ((count + 1) >> 2);
-            void** heapVtable = *reinterpret_cast<void***>(DAT_143b15f60);
-            if (array[0]) array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, void*, unsigned long long)>(heapVtable[11])(
-                DAT_143b15f60, reinterpret_cast<void*>(array[0]), capacity * 0x30));
-            else {
-                unsigned allocFlags = 2;
-                array[0] = reinterpret_cast<unsigned long long>(reinterpret_cast<void*(*)(void*, unsigned long long, unsigned*)>(heapVtable[10])(
-                    DAT_143b15f60, capacity * 0x30, &allocFlags));
-            }
-            array[2] = capacity;
-        }
-        auto* record = reinterpret_cast<unsigned char*>(array[0]) + count * 0x30;
-        memset(record, 0, 0x30);
-        new (record + 0x10) String();  // the exe copy-constructs two default Strings into the zeroed record
-        new (record + 0x18) String();
-        *reinterpret_cast<unsigned*>(record + 0x20) = 0x02000000;
-        array[1] = count + 1;
-        *reinterpret_cast<int*>(bytes + 0xd0) += 1;
-        return;
+        const unsigned long long size = array[1];
+        const unsigned long long newSize = size + 1;
+        if (newSize < size) {
+            FUN_1423c9330(array[0] + newSize * sizeof(Record), size - newSize);
+            if (newSize < (array[2] >> 1))
+                Scaleform::GFx::FUN_1423ca2b0(array, array, newSize);
+        } else if (newSize >= array[2])
+            Scaleform::GFx::FUN_1423ca2b0(array, array, newSize + (newSize >> 2));
+        array[1] = newSize;
+        new (reinterpret_cast<Record*>(array[0]) + newSize - 1) Record(record);
+        ++*reinterpret_cast<int*>(bytes + 0xd0);
     }
     if (strcmp(name, "displayName") == 0) {
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 1;
         bytes[0xab] = 1;
-    } else if (strcmp(name, "Tag") == 0) {
+    }
+    if (strcmp(name, "Tag") == 0) {
         *reinterpret_cast<unsigned*>(bytes + 0xb0) = 2;
         bytes[0xac] = 1;
     }
