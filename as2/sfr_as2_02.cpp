@@ -200,7 +200,6 @@ void DateProto::DateToString(const FnCall& fn)
 
 // Date.UTC(year, month[, date[, hours[, minutes[, seconds[, ms]]]]]): ms since 1970 of a UTC date; years 0..99 are
 // 1900 based.
-// MS2-FUNCTIONAL the exe keeps the month in r10 across the IsLeapYear call (see DateSetUTCDate)
 // @0x1428fed10
 void DateCtorFunction::DateUTC(const FnCall& fn)
 {
@@ -244,8 +243,6 @@ void DateProto::DateGetUTCYear(const FnCall& fn)
     fn.Result->SetNumber(Number(pthis->Year - 1900));
 }
 
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fdd50
 void DateProto::DateSetUTCDate(const FnCall& fn)
 {
@@ -267,8 +264,6 @@ void DateProto::DateSetUTCDate(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fdef0
 void DateProto::DateSetUTCFullYear(const FnCall& fn)
 {
@@ -359,8 +354,6 @@ void DateProto::DateSetUTCSeconds(const FnCall& fn)
 }
 
 // Two digit years count from 1900.
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fe670
 void DateProto::DateSetUTCYear(const FnCall& fn)
 {

@@ -368,7 +368,6 @@ void DateObject::SetDate(SInt64 val)
     UpdateLocal();
 }
 
-// MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
 // @0x142992900
 void DateObject::UpdateGMT()
 {
@@ -395,7 +394,6 @@ void DateObject::UpdateGMT()
     }
 }
 
-// MS2-FUNCTIONAL the exe keeps this in r10 across the IsLeapYear call (callee register use known in its TU)
 // @0x142992b00
 SF_NOINLINE void DateObject::UpdateLocal()
 {

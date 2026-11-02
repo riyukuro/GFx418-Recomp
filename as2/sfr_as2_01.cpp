@@ -64,6 +64,7 @@
 // MS2-RANGE: 0x1428fbc40-0x1428fbc50 .text$mn
 // MS2-RANGE: 0x1428fbc50-0x1428fbd10 .text$mn
 // MS2-RANGE: 0x1428fc160-0x1428fdc00 .text$mn
+// MS2-RANGE: 0x142965db0-0x142965e50 .text$mn
 
 #include <math.h>
 
@@ -2166,6 +2167,16 @@ void RectangleProto::ContainsRectangle(const FnCall& fn)
     }
 }
 
+// @0x142965db0
+// External, defined with its Rectangle callers as in the SDK's AS2_RectangleObject.cpp: Intersection and Intersects
+// see the body and keep the argument rect in volatile registers across the call (a file-static copy would get its own
+// register convention instead).
+bool IsRectValid(const ASRect& r)
+{
+    return !NumberUtil::IsNaN(r.x1) && !NumberUtil::IsNaN(r.y1) && !NumberUtil::IsNaN(r.x2) &&
+           !NumberUtil::IsNaN(r.y2);
+}
+
 // @0x1428f0220
 void RectangleProto::Equals(const FnCall& fn)
 {
@@ -2236,7 +2247,6 @@ void RectangleProto::InflatePoint(const FnCall& fn)
 
 // New rectangle of the overlap; all zero when there is none or it has no area.
 // @0x1428f0760
-// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 void RectangleProto::Intersection(const FnCall& fn)
 {
     ASRect ret(0, 0, 0, 0);
@@ -2271,7 +2281,6 @@ void RectangleProto::Intersection(const FnCall& fn)
 }
 
 // @0x1428f0b20
-// MS2-FUNCTIONAL the exe keeps the argument rect in registers across IsRectValid (unity build: it sees the body)
 void RectangleProto::Intersects(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Rectangle);
@@ -3284,8 +3293,6 @@ void DateProto::DateGetYear(const FnCall& fn)
     fn.Result->SetNumber(Number(pthis->LYear - 1900));
 }
 
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fca40
 void DateProto::DateSetDate(const FnCall& fn)
 {
@@ -3307,8 +3314,6 @@ void DateProto::DateSetDate(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fcbf0
 void DateProto::DateSetFullYear(const FnCall& fn)
 {
@@ -3367,8 +3372,6 @@ void DateProto::DateSetMinutes(const FnCall& fn)
 }
 
 // Keeps the day of the month, clamped to the length of the new month.
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fd070
 void DateProto::DateSetMonth(const FnCall& fn)
 {
@@ -3416,8 +3419,6 @@ void DateProto::DateSetTime(const FnCall& fn)
 }
 
 // Two digit years count from 1900.
-// MS2-FUNCTIONAL the exe keeps values in r10/r11 across the IsLeapYear calls (unity build: the callee is compiled
-// earlier in the same TU, so its register use is known); a call into another unit has to assume the full ABI.
 // @0x1428fd400
 void DateProto::DateSetYear(const FnCall& fn)
 {

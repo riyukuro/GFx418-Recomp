@@ -29,7 +29,6 @@
 // MS2-RANGE: 0x142965510-0x142965560 .text$mn
 // MS2-RANGE: 0x142965c80-0x142965ce0 .text$mn
 // MS2-RANGE: 0x142965d10-0x142965da0 .text$mn
-// MS2-RANGE: 0x142965db0-0x142965e50 .text$mn
 // MS2-RANGE: 0x142966270-0x142966370 .text$mn
 // MS2-RANGE: 0x142967390-0x1429673e0 .text$mn
 // MS2-RANGE: 0x1429673e0-0x142967430 .text$mn
@@ -196,6 +195,9 @@
 // MS2-RANGE: 0x1429726a0-0x142972730 .text$mn
 // MS2-RANGE: 0x142972730-0x142972830 .text$mn
 
+// The exe's out-of-line copy of the file-static helper IsLeapYear is defined here as an external function; as2_date.h
+// gives every other TU its own static copy.
+#define MS2_AS2_OUTOFLINE_HELPERS
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_avmtextfield.h"
@@ -831,13 +833,6 @@ void Value::Mul_Call(Environment* penv, const Value& v)
 bool IsLeapYear(int y)
 {
     return 0 == (y % 4) && ((y % 100) || 0 == (y % 400));
-}
-
-// @0x142965db0
-bool IsRectValid(const ASRect& r)
-{
-    return !NumberUtil::IsNaN(r.x1) && !NumberUtil::IsNaN(r.y1) && !NumberUtil::IsNaN(r.x2) &&
-           !NumberUtil::IsNaN(r.y2);
 }
 
 // @0x1429623a0

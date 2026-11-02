@@ -88,9 +88,19 @@ public:
     static void DateValueOf(const FnCall& fn);
 };
 
-// Gregorian leap year (exe 0x142965c80). The unity build inlines it only inside the month loops; the
-// straight-line uses call it, so those go through this declaration and the loops through Date_IsLeapYear.
+// Gregorian leap year, the SDK's file-static AS2_Date.cpp helper (exe 0x142965c80). The exe's AS2 is one unity
+// build, so every caller saw the body: the month loops inline it (Date_IsLeapYear below) and the straight-line uses
+// call it, keeping values in volatile registers across the call. cl 19.16 /O2 without /GL only allocates registers
+// across a call to a callee it compiled in the same TU, so each caller TU gets its own file-static copy. The exe's
+// out-of-line copy is the external definition in sfr_as2_06, which defines MS2_AS2_OUTOFLINE_HELPERS.
+#ifdef MS2_AS2_OUTOFLINE_HELPERS
 bool IsLeapYear(int y);
+#else
+static inline SF_NOINLINE bool IsLeapYear(int y)
+{
+    return 0 == (y % 4) && ((y % 100) || 0 == (y % 400));
+}
+#endif
 
 // Inline copy of IsLeapYear.
 inline bool Date_IsLeapYear(int y)
