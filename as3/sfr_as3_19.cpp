@@ -344,6 +344,7 @@ inline void FUN_142545310(Scaleform::UPInt entry, void* out) { ::new (out) Scale
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 void FUN_142501e80(void* state, void* propRef, void* multiname, void* a, void* b);   // Tracer: resolve a multiname to a property reference
+void FUN_1423f1060(Multiname* mn);   // Multiname::~Multiname, which the exe calls out of line (sfr_as3_01c)
 // Defined below under their recovered names (the callers used to spell them FUN_<va>, which never linked).
 char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* v, const Value* thisV, VTable* vt);
 char* Sfr27SlotSetValueObj(const SlotInfo* si, char* ret, VM* vm, const Value* v, Object* obj);
@@ -4015,39 +4016,64 @@ struct Sfr31RawTraitsVal
     UPInt w1, w2, w3;
 };
 
+// Holds a Multiname whose destructor runs through the exe's out-of-line copy.
+struct Sfr31MnSlot
+{
+    union { Multiname mn; };
+    Sfr31MnSlot(VMAbcFile& file, const Abc::Multiname& e) : mn(file, e) {}
+    ~Sfr31MnSlot() { FUN_1423f1060(&mn); }
+};
+
+// The multiname reader's context with its ABC file.
+struct Sfr31MnCtx4
+{
+    UPInt vm;
+    State* st;
+    int pops;
+    UPInt file;
+};
+
+struct Sfr31TracePropRef
+{
+    UPInt f, x;
+    Value v;
+    Sfr31TracePropRef() : f(0), x(0) {}
+};
+
 // Tracer find-property core: resolves the multiname and pushes the property value, or the Object traits when unresolved.
-static void Sfr31TraceFindProp(State* st, UInt32 idx, UInt32 fallbackTag)
+static __forceinline void Sfr31TraceFindProp(State* st, UInt32 idx, UInt32 fallbackTag)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), idx);
     const UPInt link = TrAbcLink(s.Tracer());
-    Sfr31MnCtx ctx = {TrRd(link, 0x20), st, 0};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(link), Sfr31MnEntry(link, idx));
-    ctx.pops += FUN_142520380(&ctx, &mn);
-    UPInt pr[6] = {0, 0, 0, 0, 0, 0};
-    UInt8 t1[8], t2[8];
-    FUN_142501e80(st, pr, &mn, t1, t2);
-    Value& res = *reinterpret_cast<Value*>(&pr[2]);
-    const UPInt f = pr[0];
     Sfr31RawTraitsVal fb;
-    const Value* push = &res;
-    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
+    Sfr31MnCtx4 ctx = {TrRd(link, 0x20), st, 0, link};
+    const UPInt file = TrRd(link, 0x28);
+    const UPInt mi = idx;
+    Sfr31MnSlot slot(*reinterpret_cast<VMAbcFile*>(link), *reinterpret_cast<const Abc::Multiname*>(mi == 0 ? file + 0xe8 : mi * 0x10 + TrRd(file, 0xb8)));
+    Multiname& mn = slot.mn;
+    ctx.pops += FUN_142520380(&ctx, &mn);
+    Sfr31TracePropRef pr;
+    UPInt t1, t2;
+    FUN_142501e80(st, &pr, &mn, &t1, &t2);
+    Value& res = pr.v;
+    const UPInt f = pr.f;
+    if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || (f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0)
     {
-        fb.w0 = fallbackTag;
         fb.w1 = 0;
+        fb.w0 = fallbackTag;
         fb.w2 = Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0);
-        fb.w3 = 0;
-        push = reinterpret_cast<const Value*>(&fb);
+        s.OpStack().PushBack(*reinterpret_cast<const Value*>(&fb));
     }
-    s.OpStack().PushBack(*push);
-    res.~Value();
+    else
+        s.OpStack().PushBack(res);
 }
 
-// MS2-FUNCTIONAL 0x142538840: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142538840: Multiname's destructor is called out of line as in the exe; two frame slots and the flag-bit test differ
 // @0x142538840
 void Sfr31TraceFindPropA(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 0x48); }
 
-// MS2-FUNCTIONAL 0x142538bc0: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142538bc0: Multiname's destructor is called out of line as in the exe; two frame slots and the flag-bit test differ
 // @0x142538bc0
 void Sfr31TraceFindPropB(State* st, UInt32 idx) { Sfr31TraceFindProp(st, idx, 8); }
 
