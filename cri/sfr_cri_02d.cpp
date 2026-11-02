@@ -15,6 +15,7 @@
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
 // MS2-RANGE: 0x140032090-0x140032650 .text$mn
 // MS2-RANGE: 0x140033030-0x140033610 .text$mn
+// MS2-RANGE: 0x140033810-0x140033d70 .text$mn
 // MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
 // MS2-RANGE: 0x140034730-0x140034920 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
@@ -327,7 +328,11 @@ void criAlphaDec_TerminateSupply(void* decoder);
 void criUsfDmx_Start(void* demux);
 void criUsfDmx_SetInputSj(void* demux, void* value);
 void FUN_140044fb0(void* output, CriUint32 index, void* value, CriUint32 type, CriUint32 flags);
-void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);
+#ifdef __cplusplus
+void criUsfDmx_SetThrououtSwitch(void* demux, CriUint8 value);  // the C++ name of sfr_cri_03b's definition
+#else
+void criUsfDmx_SetThrououtSwitch(void* demux, CriBool value);   // the exe C callers pass a 32-bit switch (mov edx,1)
+#endif
 void criSj_Reset(void* streamJoint);
 void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
 void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
@@ -465,6 +470,71 @@ void* criAlphaDec_GetAlphaFramePointer(void* decoder, void* frameInfo);
 void crimvply_clearAlphaFrameInfoMembers(void* info);
 CriBool crimvply_isUnderGetFrameCondition(void* player);
 void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct CriMvAlphaDecoderFrameInfo* info);
+typedef struct CriMvPrepServerView         // the player fields executeMvPlyPrepServer reads
+{
+    CriUint32 Reserved0;
+    CriUint32 Status;                       // 0x004
+    CriUint8  Reserved8[0x8];
+    CriUint32 TerminateRequested;           // 0x010
+    CriUint8  Reserved14[0x884 - 0x14];
+    CriUint32 AlphaCallbackMode;            // 0x884
+    CriUint8  Reserved888[0xad4 - 0x888];
+    CriUint32 HeaderReady;                  // 0xad4
+    CriUint8  ReservedAd8[0xb04 - 0xad8];
+    CriUint32 MinDecodedPictures;           // 0xb04
+    CriUint8  ReservedB08[0xd60 - 0xb08];
+    CriUint32 ReadMode;                     // 0xd60
+    CriUint32 ReservedD64;
+    void*     Demux;                        // 0xd68
+    CriUint8  ReservedD70[0x10];
+    void*     ReadBuffer;                   // 0xd80
+    void*     HeaderBuffer;                 // 0xd88
+    CriUint8  ReservedD90[0x10];
+    void*     MemoryInput;                  // 0xda0
+    CriMovieInputChunk MemoryChunk;         // 0xda8
+    CriUint32 MemoryHeaderSize;             // 0xdb8
+    CriUint8  ReservedDbc[0xe00 - 0xdbc];
+    CriUint32 VideoType;                    // 0xe00
+    CriUint32 VideoFlags;                   // 0xe04
+    void*     VideoDecoder;                 // 0xe08
+    void*     AudioManager;                 // 0xe10
+    CriUint8  ReservedE18[0x10];
+    void*     SubtitleSj;                   // 0xe28
+    CriUint32 SubtitleFrames;               // 0xe30
+    CriUint32 ReservedE34;
+    CriUint32 AlphaType;                    // 0xe38
+    CriUint32 AlphaFlags;                   // 0xe3c
+    void*     AlphaDecoder;                 // 0xe40
+    CriUint8  ReservedE48[0x10];
+    CriSint32 HeaderEnd;                    // 0xe58
+    CriUint32 VideoHeaderEnd;               // 0xe5c
+    CriUint32 AlphaHeaderEnd;               // 0xe60
+    CriUint32 HeaderDone;                   // 0xe64
+    CriUint8  ReservedE68[0xed8 - 0xe68];
+    CriUint32 RequiredPictures;             // 0xed8
+} CriMvPrepServerView;
+void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUint32 flags);
+void FUN_140041df0(void* audioManager, void* callback, void* userData);
+void FUN_140044cc0(void* decoder, void* callback, void* userData);
+void FUN_140044210(CriUint64* decoder, void* callback, void* userData);
+CriUint64 FUN_1400445d0(CriUint64* decoder);
+void* FUN_140043c50(void** decoder);
+void FUN_140044710(void* decoder);
+void FUN_140043d90(void* decoder);
+void FUN_140044c60(void* decoder, CriUint32 offset, CriUint32 size);
+void FUN_1400441b0(CriUint64* decoder, CriUint32 offset, CriUint32 size);
+void FUN_140042700(void* trackSet, void* player);
+void criUsfDmx_TerminateSupply(void* demux);
+CriSint32 criVdec_GetStatus(void* decoder);
+CriUint32 criVdec_GetNumDecPool(void* decoder);
+CriSint32 criVdec_GetNumPictureData(void* decoder);
+CriSint32 criAlphaDec_GetStatus(void* decoder);
+CriUint32 criAlphaDec_GetNumDecPool(void* decoder);
+CriSint32 criAlphaDec_GetNumPictureData(void* decoder);
+CriSint32 criMvPlyAmng_IsReadyAudioPlayback(void* audioManager, void* player);
+CriSint32 FUN_140033d70(void* player, const CriMovieInputChunk* chunk, CriUint8 last);
+CriSint32 FUN_1400340f0(void* player, const CriMovieInputChunk* chunk);
+CriSint32 FUN_1400341d0(void* player, const CriMovieInputChunk* chunk);
 // the C names bind to sfr_cri_02c's C++ definitions in the full exe (alias.py pairs only FUN_<va> names by their VA);
 // the hook DLL's ms2sym.obj already maps them to the exe addresses; the C++ callers' mangled names of this unit's two
 // definitions (sfr_cri_02c, sfr_cri_07) bind to the plain C names the same way
@@ -540,6 +610,28 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:criMvPlyAmng_Create=?criMvPlyAmng_Create@@YAPEAXPEAX0PEBX@Z")
 #pragma comment(linker, "/alternatename:criMvPlyAmng_CreateAudioDecoder=?criMvPlyAmng_CreateAudioDecoder@@YAJPEAX00PEBKKJ@Z")
 #pragma comment(linker, "/alternatename:criMvPlyAmng_SetDecryptCallback=?criMvPlyAmng_SetDecryptCallback@@YAXPEAX00J@Z")
+#pragma comment(linker, "/alternatename:?executeMvPlyPrepServer@@YAXPEAX@Z=executeMvPlyPrepServer")
+#pragma comment(linker, "/alternatename:criMvPly_SetDemuxOutputSj=?criMvPly_SetDemuxOutputSj@@YAXPEAX0KK@Z")
+#pragma comment(linker, "/alternatename:FUN_140041df0=?FUN_140041df0@@YAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:FUN_140044cc0=?FUN_140044cc0@@YAXPEAX00@Z")
+#pragma comment(linker, "/alternatename:FUN_140044210=?FUN_140044210@@YAXPEA_KPEAX1@Z")
+#pragma comment(linker, "/alternatename:FUN_1400445d0=?FUN_1400445d0@@YA_KPEA_K@Z")
+#pragma comment(linker, "/alternatename:FUN_140043c50=?FUN_140043c50@@YAPEAXPEAPEAX@Z")
+#pragma comment(linker, "/alternatename:FUN_140044710=?FUN_140044710@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:FUN_140043d90=?FUN_140043d90@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:FUN_140044c60=?FUN_140044c60@@YAXPEAXKK@Z")
+#pragma comment(linker, "/alternatename:FUN_1400441b0=?FUN_1400441b0@@YAXPEA_KKK@Z")
+#pragma comment(linker, "/alternatename:criUsfDmx_TerminateSupply=?criUsfDmx_TerminateSupply@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:criVdec_GetStatus=?criVdec_GetStatus@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:criVdec_GetNumDecPool=?criVdec_GetNumDecPool@@YAKPEAX@Z")
+#pragma comment(linker, "/alternatename:criVdec_GetNumPictureData=?criVdec_GetNumPictureData@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:criAlphaDec_GetStatus=?criAlphaDec_GetStatus@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:criAlphaDec_GetNumDecPool=?criAlphaDec_GetNumDecPool@@YAKPEAX@Z")
+#pragma comment(linker, "/alternatename:criAlphaDec_GetNumPictureData=?criAlphaDec_GetNumPictureData@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:criMvPlyAmng_IsReadyAudioPlayback=?criMvPlyAmng_IsReadyAudioPlayback@@YAJPEAX0@Z")
+#pragma comment(linker, "/alternatename:FUN_140033d70=?FUN_140033d70@@YAJPEAXPEBUCriMovieInputChunk@@E@Z")
+#pragma comment(linker, "/alternatename:FUN_1400340f0=?FUN_1400340f0@@YAJPEAXPEBUCriMovieInputChunk@@@Z")
+#pragma comment(linker, "/alternatename:FUN_1400341d0=?FUN_1400341d0@@YAJPEAXPEBUCriMovieInputChunk@@@Z")
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
@@ -1538,6 +1630,101 @@ CriBool decodeMetaData(void* player)
         }
     }
     return end;
+}
+
+// Start demuxing the prepared movie, hand the stream headers to the decoders, and move the player to READY once
+// enough frames are decoded. Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
+// @0x140033810
+void executeMvPlyPrepServer(void* player)
+{
+    void* videoDecoder;
+    void* adecSj;
+    void* output;
+    void* adec;
+    CriUint32 required;
+    void* demux;
+    CriMovieInputChunk inputChunk;
+    void* vSj;
+    CriSint32 vdecStatus;
+    CriSint32 adecStatus;
+    demux = ((CriMvPrepServerView*)player)->Demux;
+    videoDecoder = ((CriMvPrepServerView*)player)->VideoDecoder;
+    adec = ((CriMvPrepServerView*)player)->AlphaDecoder;
+    if (((CriMvPrepServerView*)player)->HeaderReady != 1)
+        return;
+    if (((CriMvPrepServerView*)player)->ReadMode == 0)
+        output = ((CriMvPrepServerView*)player)->HeaderBuffer;
+    else
+        output = ((CriMvPrepServerView*)player)->MemoryInput;
+    if (criUsfDmx_GetStatus(demux) == 0)
+    {
+        if (((CriMvPrepServerView*)player)->ReadMode == 1)
+        {
+            criSj_Reset(((CriMvPrepServerView*)player)->MemoryInput);
+            criSj_PutChunk(((CriMvPrepServerView*)player)->MemoryInput, 1, &((CriMvPrepServerView*)player)->MemoryChunk);
+            criSj_GetChunk(((CriMvPrepServerView*)player)->MemoryInput, 1, ((CriMvPrepServerView*)player)->MemoryHeaderSize, &inputChunk);
+            criSj_PutChunk(((CriMvPrepServerView*)player)->MemoryInput, 0, &inputChunk);
+        }
+        criUsfDmx_SetInputSj(demux, output);
+        criSj_Reset(((CriMvPrepServerView*)player)->ReadBuffer);
+        criMvPly_SetDemuxOutputSj(player, ((CriMvPrepServerView*)player)->ReadBuffer, 0x43524944, 0xffffffff);
+        FUN_140041df0(((CriMvPrepServerView*)player)->AudioManager, (void*)FUN_140033d70, player);
+        FUN_140044cc0(videoDecoder, (void*)FUN_1400340f0, player);
+        if (videoDecoder != 0)
+        {
+            vSj = (void*)FUN_1400445d0((CriUint64*)videoDecoder);
+            if (vSj == 0)
+                crimvply_occurFatalError(player, "E05063022M : Can't get input SJ of Video decoder.", 0);
+            criMvPly_SetDemuxOutputSj(player, vSj, ((CriMvPrepServerView*)player)->VideoType, ((CriMvPrepServerView*)player)->VideoFlags);
+            FUN_140044710(videoDecoder);
+            FUN_140044c60(videoDecoder, ((CriMvPrepServerView*)player)->VideoHeaderEnd, ((CriMvPrepServerView*)player)->HeaderEnd - ((CriMvPrepServerView*)player)->VideoHeaderEnd);
+            ((CriMvPrepServerView*)player)->SubtitleFrames = 0;
+            if (adec != 0)
+            {
+                if (((CriMvPrepServerView*)player)->AlphaCallbackMode == 1)
+                    FUN_140044210((CriUint64*)((CriMvPrepServerView*)player)->AlphaDecoder, (void*)FUN_1400341d0, player);
+                adecSj = FUN_140043c50((void**)adec);
+                if (adecSj == 0)
+                    crimvply_occurFatalError(player, "E08082103M : Can't get input SJ of Alpha decoder.", 0);
+                criMvPly_SetDemuxOutputSj(player, adecSj, ((CriMvPrepServerView*)player)->AlphaType, ((CriMvPrepServerView*)player)->AlphaFlags);
+                FUN_140043d90(adec);
+                FUN_1400441b0((CriUint64*)adec, ((CriMvPrepServerView*)player)->AlphaHeaderEnd, ((CriMvPrepServerView*)player)->HeaderEnd - ((CriMvPrepServerView*)player)->AlphaHeaderEnd);
+            }
+        }
+        if (((CriMvPrepServerView*)player)->AudioManager != 0)
+            FUN_140042700(((CriMvPrepServerView*)player)->AudioManager, player);
+        if (((CriMvPrepServerView*)player)->SubtitleSj != 0)
+            criMvPly_SetDemuxOutputSj(player, ((CriMvPrepServerView*)player)->SubtitleSj, 0x40534254, 0);
+        criUsfDmx_SetThrououtSwitch(demux, 1);
+        criUsfDmx_Start(demux);
+        if (((CriMvPrepServerView*)player)->TerminateRequested == 1)
+            criUsfDmx_TerminateSupply(demux);
+    }
+    if (videoDecoder != 0)
+    {
+        vdecStatus = criVdec_GetStatus(videoDecoder);
+        if (vdecStatus == 1 || vdecStatus == 0)
+            return;
+        if (((CriMvPrepServerView*)player)->RequiredPictures != 0xffffffff)
+            required = ((CriMvPrepServerView*)player)->RequiredPictures;
+        else
+            required = ((CriMvPrepServerView*)player)->MinDecodedPictures;
+        if (criVdec_GetNumDecPool(videoDecoder) < required && criVdec_GetNumPictureData(videoDecoder) > 0)
+            return;
+        if (((CriMvPrepServerView*)player)->HeaderEnd > 0 && ((CriMvPrepServerView*)player)->HeaderDone != 1)
+            return;
+        if (((CriMvPrepServerView*)player)->AlphaDecoder != 0)
+        {
+            adecStatus = criAlphaDec_GetStatus(((CriMvPrepServerView*)player)->AlphaDecoder);
+            if (adecStatus == 1 || adecStatus == 0)
+                return;
+            if (criAlphaDec_GetNumDecPool(((CriMvPrepServerView*)player)->AlphaDecoder) < required && criAlphaDec_GetNumPictureData(((CriMvPrepServerView*)player)->AlphaDecoder) > 0)
+                return;
+        }
+    }
+    if (criMvPlyAmng_IsReadyAudioPlayback(((CriMvPrepServerView*)player)->AudioManager, player) != 1)
+        return;
+    ((CriMvPrepServerView*)player)->Status = 4;
 }
 
 // Drain the two CRI input streams into the decoder read queue.

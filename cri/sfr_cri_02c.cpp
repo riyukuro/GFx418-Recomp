@@ -15,7 +15,8 @@
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
 // MS2-RANGE: 0x140031aa0-0x140032090 .text$mn
 // MS2-RANGE: 0x140032650-0x140033030 .text$mn
-// MS2-RANGE: 0x140033610-0x140034330 .text$mn
+// MS2-RANGE: 0x140033610-0x140033810 .text$mn
+// MS2-RANGE: 0x140033d70-0x140034330 .text$mn
 // MS2-RANGE: 0x1400344f0-0x140034730 .text$mn
 // MS2-RANGE: 0x140034920-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
@@ -2376,95 +2377,7 @@ void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const CriMov
 }
 #pragma optimize("", on)
 
-// executeMvPlyPrepServer's unaligned field accessors on the player state.
-inline CriUint32 cri02c_Get32(CriUint8* state, size_t offset) { CriUint32 value; memcpy(&value, state + offset, sizeof(value)); return value; }
-inline void* cri02c_GetPtr(CriUint8* state, size_t offset) { void* value; memcpy(&value, state + offset, sizeof(value)); return value; }
-inline void cri02c_Put32(CriUint8* state, size_t offset, CriUint32 value) { memcpy(state + offset, &value, sizeof(value)); }
-
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: start demuxing for the prepared movie, push the stream headers to the
-// decoders, and move the player to READY once enough frames are decoded.
-// @0x140033810
-void executeMvPlyPrepServer(void* player)
-{
-    CriUint8* state = (CriUint8*)player;
-    void* demux = cri02c_GetPtr(state, 0xd68);
-    void* videoDecoder = cri02c_GetPtr(state, 0xe08);
-    void* alphaDecoder = cri02c_GetPtr(state, 0xe40);
-    if (cri02c_Get32(state, 0xad4) != 1)
-        return;
-
-    void* output = cri02c_Get32(state, 0xd60) == 0 ? cri02c_GetPtr(state, 0xd88) : cri02c_GetPtr(state, 0xda0);
-    if (criUsfDmx_GetStatus(demux) == 0)
-    {
-        if (cri02c_Get32(state, 0xd60) == 1)
-        {
-            void* memoryInput = cri02c_GetPtr(state, 0xda0);
-            criSj_Reset(memoryInput);
-            criSj_PutChunk(memoryInput, 1, state + 0xda8);
-            CriMovieInputChunk chunk;
-            criSj_GetChunk(memoryInput, 1, (CriSint32)cri02c_Get32(state, 0xdb8), &chunk);
-            criSj_PutChunk(memoryInput, 0, &chunk);
-        }
-        criUsfDmx_SetInputSj(demux, output);
-        criSj_Reset(cri02c_GetPtr(state, 0xd80));
-        criMvPly_SetDemuxOutputSj(player, cri02c_GetPtr(state, 0xd80), 0x43524944, 0xffffffff);
-        FUN_140041df0(cri02c_GetPtr(state, 0xe10), (void*)FUN_140033d70, player);
-        FUN_140044cc0(videoDecoder, (void*)FUN_1400340f0, player);
-        if (videoDecoder)
-        {
-            void* inputSj = (void*)FUN_1400445d0((CriUint64*)videoDecoder);
-            if (inputSj == NULL)
-                crimvply_occurFatalError(player, "E05063022M : Can't get input SJ of Video decoder.", 0);
-            criMvPly_SetDemuxOutputSj(player, inputSj, cri02c_Get32(state, 0xe00), cri02c_Get32(state, 0xe04));
-            FUN_140044710(videoDecoder);
-            FUN_140044c60(videoDecoder, cri02c_Get32(state, 0xe5c), cri02c_Get32(state, 0xe58) - cri02c_Get32(state, 0xe5c));
-            cri02c_Put32(state, 0xe30, 0);
-            if (alphaDecoder)
-            {
-                if (cri02c_Get32(state, 0x884) == 1)
-                    FUN_140044210((CriUint64*)cri02c_GetPtr(state, 0xe40), (void*)FUN_1400341d0, player);
-                void* alphaInputSj = FUN_140043c50((void**)alphaDecoder);
-                if (alphaInputSj == NULL)
-                    crimvply_occurFatalError(player, "E08082103M : Can't get input SJ of Alpha decoder.", 0);
-                criMvPly_SetDemuxOutputSj(player, alphaInputSj, cri02c_Get32(state, 0xe38), cri02c_Get32(state, 0xe3c));
-                FUN_140043d90(alphaDecoder);
-                FUN_1400441b0((CriUint64*)alphaDecoder, cri02c_Get32(state, 0xe60), cri02c_Get32(state, 0xe58) - cri02c_Get32(state, 0xe60));
-            }
-        }
-        if (cri02c_GetPtr(state, 0xe10))
-            FUN_140042700(cri02c_GetPtr(state, 0xe10), player);
-        if (cri02c_GetPtr(state, 0xe28))
-            criMvPly_SetDemuxOutputSj(player, cri02c_GetPtr(state, 0xe28), 0x40534254, 0);
-        criUsfDmx_SetThrououtSwitch(demux, 1);
-        criUsfDmx_Start(demux);
-        if (cri02c_Get32(state, 0x10) == 1)
-            criUsfDmx_TerminateSupply(demux);
-    }
-
-    if (videoDecoder)
-    {
-        CriSint32 status = criVdec_GetStatus(videoDecoder);
-        if (status == 1 || status == 0)
-            return;
-        CriUint32 required = cri02c_Get32(state, 0xed8) != 0xffffffff ? cri02c_Get32(state, 0xed8) : cri02c_Get32(state, 0xb04);
-        if (criVdec_GetNumDecPool(videoDecoder) < required && criVdec_GetNumPictureData(videoDecoder) > 0)
-            return;
-        if ((CriSint32)cri02c_Get32(state, 0xe58) > 0 && cri02c_Get32(state, 0xe64) != 1)
-            return;
-        if (cri02c_GetPtr(state, 0xe40))
-        {
-            CriSint32 alphaStatus = criAlphaDec_GetStatus(cri02c_GetPtr(state, 0xe40));
-            if (alphaStatus == 1 || alphaStatus == 0)
-                return;
-            if (criAlphaDec_GetNumDecPool(cri02c_GetPtr(state, 0xe40)) < required && criAlphaDec_GetNumPictureData(cri02c_GetPtr(state, 0xe40)) > 0)
-                return;
-        }
-    }
-    if (criMvPlyAmng_IsReadyAudioPlayback(cri02c_GetPtr(state, 0xe10), player) == 1)
-        cri02c_Put32(state, 0x4, 4);
-}
-
 // MS2-FUNCTIONAL: apply the rolling CRI USM mask and its eight-block prefix transform to a chunk.
 // @0x140037a40
 void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* previous, void* player)
