@@ -47,12 +47,11 @@ void CRIERR_CallErr(const char *msg)
 }
 
 // The default CRI ERR callback: ignores the message.
-// MS2-FUNCTIONAL: the exe loads obj into rax before loading msg (a dead read, likely the C /Od code for an `obj;`
-// statement); cl's C++ /Od emits nothing for `obj;`, and a volatile read goes through a stack temporary.
+// The exe loads obj into rax before loading msg (a dead read); VC9 /Od keeps the load for `if (obj == obj) {}`.
 // @0x1400b09d0
 cri_u8 FUN_1400b09d0(cri_u8 obj, const char *msg)
 {
-  obj;
+  if (obj == obj) {}
   return (cri_u8)msg;
 }
 #pragma optimize("", on)
