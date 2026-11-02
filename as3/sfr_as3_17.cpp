@@ -5478,20 +5478,24 @@ typedef HashLH<const Abc::MethodBodyInfo*, SPtr<InstanceTraits::Traits>, FixedSi
 
 // VMAbcFile::GetActivationInstanceTraits: the activation traits of method body mbi, made on first use and cached by
 // body (+0x90); a body without traits shares the VM's (+0x288).
-// MS2-FUNCTIONAL 0x142506f00: cache Get/Add through the HashLH view; ours sets up an rbp frame for the Pickable temp and keeps mbi in its home slot, and the exe moves the empty-traits and found returns past the epilogue
 // @0x142506f00
 InstanceTraits::Traits* Sfr33GetActivationInstanceTraits(VMAbcFile& file, const Abc::MethodBodyInfo* mbi, void* p)
 {
     VM& vm = file.GetVM();
-    if (mbi->obj_traits.GetSize() == 0)
-        return *reinterpret_cast<InstanceTraits::Traits* const*>(reinterpret_cast<const UByte*>(&vm) + 0x288);
-    Sfr33ActivationTraitsCache& cache = *reinterpret_cast<Sfr33ActivationTraitsCache*>(reinterpret_cast<UByte*>(&file) + 0x90);
-    if (SPtr<InstanceTraits::Traits>* ptr = cache.Get(mbi))
+    if (mbi->obj_traits.GetSize() != 0)
+    {
+        Sfr33ActivationTraitsCache& cache = *reinterpret_cast<Sfr33ActivationTraitsCache*>(reinterpret_cast<UByte*>(&file) + 0x90);
+        SPtr<InstanceTraits::Traits>* ptr = cache.Get(&*mbi);
+        if (ptr == NULL)
+        {
+            void* mem = vm.GetMemoryHeap()->Alloc(0xd0);
+            InstanceTraits::Traits* tr = mem ? reinterpret_cast<InstanceTraits::Traits*>(::new (mem) InstanceTraits::Activation(file, vm, *mbi, *reinterpret_cast<const ASString*>(p))) : NULL;
+            cache.Add(&*mbi, Pickable<InstanceTraits::Traits>(tr));
+            return tr;
+        }
         return *ptr;
-    void* mem = vm.GetMemoryHeap()->Alloc(0xd0);
-    InstanceTraits::Traits* tr = mem ? reinterpret_cast<InstanceTraits::Traits*>(::new (mem) InstanceTraits::Activation(file, vm, *mbi, *reinterpret_cast<const ASString*>(p))) : NULL;
-    cache.Add(mbi, Pickable<InstanceTraits::Traits>(tr));
-    return tr;
+    }
+    return *reinterpret_cast<InstanceTraits::Traits* const*>(reinterpret_cast<const UByte*>(&vm) + 0x288);
 }
 
 // DisplayObject::GetDrawingContext (virtual) of a sprite-like object (+0xc8): created on first use with the mask
