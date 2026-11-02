@@ -1003,7 +1003,6 @@ void XMLPrefixQuerier::Visit(const ASString& name, const Value& val, UByte)
 }
 
 // Adds a member named after the id attribute of every element below elemNode, holding its script object.
-// MS2-FUNCTIONAL: register allocation and block layout differ
 // @0x14299f4e0
 void Xml_CreateIDMap(Environment* penv, XML::ElementNode* elemNode, XML::RootNode* proot, Object* pobj)
 {
@@ -1031,7 +1030,8 @@ void Xml_CreateIDMap(Environment* penv, XML::ElementNode* elemNode, XML::RootNod
                         SetupShadow(penv, pnode, pchildobj);
                     }
                 }
-                pobj->SetMember(penv, penv->CreateString(v), Value(pchildobj.GetPtr()));
+                pobj->SetMember(penv, penv->GetSC()->pContext->GetStringManager()->CreateString(v),
+                                Value(pchildobj.GetPtr()));
                 break;
             }
         }
