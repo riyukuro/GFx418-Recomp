@@ -203,7 +203,7 @@ void ShapeMeshProvider::AttachShape(ShapeDataInterface* shape, ShapeDataInterfac
 }
 
 // @0x14262a890
-void MeshGenerator::Clear()
+__declspec(noinline) void MeshGenerator::Clear()
 {
     mTess.Clear();
     mStroker.Clear();
@@ -214,6 +214,20 @@ void MeshGenerator::Clear()
     Heap2.ClearAndRelease();
     Heap3.ClearAndRelease();
     Heap4.ClearAndRelease();
+}
+
+// MeshGenerator::Clear as tessellateFill inlines it at the top of its loop (its other calls stay out of line).
+static __forceinline void ClearMeshGenInl(MeshGenerator* gen)
+{
+    gen->mTess.Clear();
+    gen->mStroker.Clear();
+    gen->mStrokeSorter.Clear();
+    gen->mHairliner.Clear();
+    gen->mStrokerAA.Clear();
+    gen->Heap1.ClearAndRelease();
+    gen->Heap2.ClearAndRelease();
+    gen->Heap3.ClearAndRelease();
+    gen->Heap4.ClearAndRelease();
 }
 
 // The coordinate mapping of the tessellation: a matrix, or the cells of a 9-grid (0x10 bytes).
@@ -1924,7 +1938,6 @@ bool ShapeMeshProvider::tessellateStroke(Scale9GridInfo* s9g, unsigned strokeSty
 
 // The fill layer through the tessellator. A tessellation with too many vertices for 16-bit indices is retried with
 // a coarser curve tolerance, without the AA edges; after four tries the layer gets the null mesh.
-// MS2-FUNCTIONAL: the tolerance copy and the matrix swap their stack slots
 // @0x142632870
 bool ShapeMeshProvider::tessellateFill(Scale9GridInfo* s9g, unsigned layer, MeshBase* mesh, VertexOutput* pout,
                                        unsigned meshGenFlags)
@@ -1955,7 +1968,7 @@ bool ShapeMeshProvider::tessellateFill(Scale9GridInfo* s9g, unsigned layer, Mesh
 
     for (unsigned i = 0; i < 4; i++)
     {
-        gen->Clear();
+        ClearMeshGenInl(gen);
         gen->mTess.SetFillRule(Tessellator::FillEvenOdd);
         gen->mTess.SetToleranceParam(param);
         gen->mTess.SetEdgeAAWidth(((meshGenFlags & (Mesh_EdgeAA | Mesh_Mask)) == Mesh_EdgeAA) ?
