@@ -894,7 +894,10 @@ CriUint8 criUtfRtv_GetDataUint8Fn(const CriUtfRtvView* table, CriUint32 row, con
     return criUtfRtv_GetDataUint8(table, row, field);
 }
 
-// MS2-FUNCTIONAL: this decoder copies the field representation into the CRI's tagged 24-byte cell value.
+// nested big-endian reads: the exe shifts the accumulated value one byte at a time
+#define CRI_UTF_CELL_BE32(p) ((((((CriUint32)(p)[0] << 8) | (p)[1]) << 8 | (p)[2]) << 8) | (p)[3])
+#define CRI_UTF_CELL_BE64(p) (((((((((((((((CriUint64)(p)[0] << 8) | (p)[1]) << 8) | (p)[2]) << 8) | (p)[3]) << 8) | (p)[4]) << 8) | (p)[5]) << 8) | (p)[6]) << 8) | (p)[7])
+// This decoder copies the field representation into the CRI's tagged 24-byte cell value.
 // @0x14003a9e4
 void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* address,
                                   CriSint32 type, CriUtfRtvCell* cell)
@@ -902,34 +905,58 @@ void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* ad
     cell->Type = (CriUint8)type;
     switch (type)
     {
-    case 0: case 1:
+    case 0:
         cell->Value[0] = address[0];
         break;
-    case 2: case 3:
+    case 1:
+        cell->Value[0] = address[0];
+        break;
+    case 2:
         *(CriUint16*)cell->Value = (CriUint16)(((CriUint32)address[0] << 8) | address[1]);
         break;
-    case 4: case 5: case 8:
-        *(CriUint32*)cell->Value = criUtfReadBE32(address);
+    case 3:
+        *(CriUint16*)cell->Value = (CriUint16)(((CriUint32)address[0] << 8) | address[1]);
         break;
-    case 6: case 7: case 9:
-        *(CriUint64*)cell->Value = criUtfReadBE64(address);
+    case 4:
+        *(CriUint32*)cell->Value = CRI_UTF_CELL_BE32(address);
         break;
+    case 5:
+        *(CriUint32*)cell->Value = CRI_UTF_CELL_BE32(address);
+        break;
+    case 6:
+        *(CriUint64*)cell->Value = CRI_UTF_CELL_BE64(address);
+        break;
+    case 7:
+        *(CriUint64*)cell->Value = CRI_UTF_CELL_BE64(address);
+        break;
+    case 8:
+    {
+        CriUint32 bits = CRI_UTF_CELL_BE32(address);
+        *(float*)cell->Value = *(float*)&bits;
+        break;
+    }
+    case 9:
+    {
+        CriUint64 bits = CRI_UTF_CELL_BE64(address);
+        *(double*)cell->Value = *(double*)&bits;
+        break;
+    }
     case 10:
     {
-        CriUint32 offset = criUtfReadBE32(address);
-        *(CriUint64*)cell->Value = offset ? (CriUint64)(table->StringData + offset) : 0;
+        CriUint32 offset = CRI_UTF_CELL_BE32(address);
+        if (offset == 0)
+            *(CriUint64*)cell->Value = 0;
+        else
+            *(CriUint64*)cell->Value = (CriUint64)(table->StringData + offset);
         break;
     }
     case 11:
-    {
-        CriUint32 offset = criUtfReadBE32(address);
-        *(CriUint64*)cell->Value = (CriUint64)(table->BlobData + (CriSint32)offset);
-        *(CriUint32*)(cell->Value + 8) = criUtfReadBE32(address + 4);
+        *(CriUint64*)cell->Value = (CriUint64)(table->BlobData + (((((address[0] << 8) | address[1]) << 8 | address[2]) << 8) | address[3]));
+        *(CriUint32*)(cell->Value + 8) = CRI_UTF_CELL_BE32(address + 4);
         break;
-    }
     case 12:
-        *(CriUint64*)cell->Value = criUtfReadBE64(address);
-        *(CriUint64*)(cell->Value + 8) = criUtfReadBE64(address + 8);
+        *(CriUint64*)cell->Value = CRI_UTF_CELL_BE64(address);
+        *(CriUint64*)(cell->Value + 8) = CRI_UTF_CELL_BE64(address + 8);
         break;
     default:
         break;
