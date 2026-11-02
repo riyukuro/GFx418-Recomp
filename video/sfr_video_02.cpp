@@ -1784,13 +1784,13 @@ void FUN_140011410(void* path)
 // @0x140011500
 void FUN_140011500(void* object, float x1, float y1, float x2, float y2)
 {
-    void* path = *reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88);
-    FUN_142518040(path, x1, y1);
-    FUN_142515a20(path, x2, y1);
-    FUN_142515a20(path, x2, y2);
-    FUN_142515a20(path, x1, y2);
-    FUN_140011410(path);
-    Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(path));
+    void** path = reinterpret_cast<void**>(static_cast<unsigned char*>(object) + 0x88);   // reloaded for each step
+    FUN_142518040(*path, x1, y1);
+    FUN_142515a20(*path, x2, y1);
+    FUN_142515a20(*path, x2, y2);
+    FUN_142515a20(*path, x1, y2);
+    FUN_140011410(*path);
+    Scaleform::GFx::AS3::Sfr33PathEndRun(static_cast<Scaleform::UByte*>(*path));
 }
 
 // @0x1400115c0
@@ -1855,29 +1855,47 @@ Scaleform::GFx::AS3::Value* FUN_1400158e0(Scaleform::GFx::AS3::Value* result)
     return result;
 }
 
+// A retained link of the chain: copying AddRefs, assigning and clearing reload the slot.
+struct Video02ChainPtr
+{
+    void* pObject;
+    Video02ChainPtr(const Video02ChainPtr& source)
+    {
+        if (source.pObject) FUN_14257dc30(source.pObject);
+        pObject = source.pObject;
+    }
+    ~Video02ChainPtr() { if (pObject) FUN_14257dcb0(pObject); }
+    void operator=(const Video02ChainPtr& source)
+    {
+        if (source.pObject) FUN_14257dc30(source.pObject);
+        if (pObject) FUN_14257dcb0(pObject);
+        pObject = source.pObject;
+    }
+    void Clear()
+    {
+        if (pObject) FUN_14257dcb0(pObject);
+        pObject = 0;
+    }
+};
+
 // MS2-FUNCTIONAL: clears the current object and walks/releases its chained child references.
 // @0x140015830
 void FUN_140015830(void* object)
 {
     char* bytes = static_cast<char*>(object);
-    void* first = *reinterpret_cast<void**>(bytes + 0x80);
-    if (first) FUN_14257dc30(first);
-    if (first) FUN_14257dcb0(first);
-    *reinterpret_cast<void**>(bytes + 0x80) = 0;
-    if (!first) return;
-    *reinterpret_cast<unsigned char*>(bytes + 0x78) |= 0x10;
-    void* node = first;
-    for (;;)
+    Video02ChainPtr& head = *reinterpret_cast<Video02ChainPtr*>(bytes + 0x80);
+    Video02ChainPtr node(head);
+    head.Clear();
+    if (node.pObject)
     {
-        void* child = *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20);
-        if (child) FUN_14257dc30(child);
-        if (child) FUN_14257dcb0(child);
-        *reinterpret_cast<void**>(static_cast<char*>(node) + 0x20) = 0;
-        if (child) FUN_14257dc30(child);
-        if (node) FUN_14257dcb0(node);
-        if (!child) break;
-        FUN_14257dcb0(child);
-        node = child;
+        *reinterpret_cast<unsigned char*>(bytes + 0x78) |= 0x10;
+        do
+        {
+            Video02ChainPtr& link = *reinterpret_cast<Video02ChainPtr*>(static_cast<char*>(node.pObject) + 0x20);
+            Video02ChainPtr next(link);
+            link.Clear();
+            node = next;
+        } while (node.pObject);
     }
 }
 
@@ -2475,20 +2493,21 @@ void FUN_140011de0(Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASS
 // @0x140012340
 void FUN_140012340(const Scaleform::GFx::AS2::FnCall& call)
 {
-    Scaleform::GFx::AS2::Object* object = static_cast<Scaleform::GFx::AS2::Object*>(0);
-    Scaleform::GFx::AS2::ObjectInterface* thisObject = call.ThisPtr;
-    if (thisObject && thisObject->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_NetConnection
-        && !thisObject->IsBuiltinPrototype())
+    Scaleform::GFx::AS2::Object* object;
+    if (call.ThisPtr && call.ThisPtr->GetObjectType() == Scaleform::GFx::AS2::ObjectInterface::Object_NetConnection
+        && !call.ThisPtr->IsBuiltinPrototype())
     {
-        object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(reinterpret_cast<char*>(thisObject) - 0x20);
-        unsigned* refs = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
-        *refs = (*refs + 1) & 0x8fffffffu;
+        object = static_cast<Scaleform::GFx::AS2::Object*>(call.ThisPtr);
+        if (object)
+        {
+            unsigned* refs = reinterpret_cast<unsigned*>(reinterpret_cast<char*>(object) + 0x18);
+            *refs = (*refs + 1) & 0x8fffffffu;
+        }
     }
     else
     {
         void* storage = call.Env->GetHeap()->Alloc(0x68);
-        if (storage)
-            object = FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), call.Env);
+        object = storage ? FUN_140011c90(static_cast<Scaleform::GFx::AS2::Object*>(storage), call.Env) : 0;
     }
     call.Result->SetAsObject(object);
     if (object)
