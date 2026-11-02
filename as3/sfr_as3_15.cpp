@@ -1853,7 +1853,6 @@ namespace Instances { namespace fl_media
         }
     }
 
-    // MS2-FUNCTIONAL: same control flow; the exe keeps found inverted and allocates the name/symbol stack slots the other way round
     // @0x1424d0a00
     bool Sound::CreateLibraryObject()
     {
@@ -1865,19 +1864,18 @@ namespace Instances { namespace fl_media
             return false;
         ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
         ResourceBindData data;
-        bool found;
+        bool missing;
         {
             String symbol(name.ToCStr());
-            found = vm.GetMovieImpl()->FindExportedResource(pdefImpl, &data, symbol);
+            missing = !vm.GetMovieImpl()->FindExportedResource(pdefImpl, &data, symbol);
         }
-        if (!found)
+        if (missing)
             return false;
         if (data.pResource && (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_SoundSample)))
             pResource = static_cast<SoundResource*>(data.pResource.GetPtr());
         return true;
     }
 
-    // MS2-FUNCTIONAL: inlined CreateLibraryObject; the exe keeps found inverted
     // @0x1424d1130
     void Sound::InitInstance(bool extCall)
     {
