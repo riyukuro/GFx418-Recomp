@@ -3485,8 +3485,8 @@ static SF_INLINE bool Sfr33PropFound(const PropRef& prop)
              (reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(2)) == 0);
 }
 
-void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const ScopeStackType& scope_stack,
-                            const Multiname& mn);
+__declspec(noinline) void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd,
+                                                const ScopeStackType& scope_stack, const Multiname& mn);
 
 // A Value(Object*) for an object known to be non-null, with its ctor expanded in place; released on destruction.
 struct Sfr33ThisValue
@@ -3557,42 +3557,57 @@ void Object::FindProperty(PropRef& result, const Multiname& mn, int attr)
     }
 }
 
+// A fixed-slot PropRef(si, index, v) temporary with its dtor expanded in place, assigned field by field.
+struct Sfr33ScopePropRef
+{
+    const SlotInfo* pSI;
+    UPInt SlotIndex;
+    Value This;
+    Sfr33ScopePropRef(const SlotInfo* si, UPInt index, const Value& v) : pSI(si), SlotIndex(index), This(v) { }
+};
+
 // The property named mn seen through scope value scope (a with scope or the global object also looks at its
 // dynamic values and prototypes; a function falls back to its saved scope).
-// MS2-FUNCTIONAL 0x142502690: the exe inlines ~PropRef (out of line in as3_obj.h) at each PropRef temporary and calls
-// Sfr33FindScopeProperty (0x142502a80) instead of inlining it.
 // @0x142502690
 __declspec(noinline) void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Multiname& mn, int attr)
 {
-    const unsigned kind = scope.GetKind();
+    const Value::KindType kind = scope.GetKind();
     const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
     const Traits& tr = vm.GetValueTraits(scope);
-    Object* obj = isObj ? scope.GetObject() : NULL;
     UPInt index = 0;
-    const SlotInfo* si = FindFixedSlot(vm, tr, mn, index, obj);
+    const SlotInfo* si = FindFixedSlot(vm, tr, mn, index, isObj ? scope.GetObject() : NULL);
     if (si)
     {
-        result.pSI = si;
-        result.SlotIndex = index;
-        result.This = scope;
+        Sfr33ScopePropRef t(si, index, scope);
+        result.pSI = t.pSI;
+        result.SlotIndex = t.SlotIndex;
+        result.This.Assign(t.This);
         return;
     }
     if (!tr.IsGlobal() && !scope.GetWith())
         return;
     if (isObj && tr.IsDynamic() && (attr != 2 || !IsXMLObject(scope)))
-        result = obj->FindDynamicSlot(mn);
+    {
+        Sfr33PropRefTemp t;
+        result = static_cast<PropRef&&>(*::new (static_cast<void*>(t.Buf)) PropRef(scope.GetObject()->FindDynamicSlot(mn)));
+    }
     if (Sfr33PropFound(result) || attr == 1)
         return;
-    for (const Traits* t = &tr; t; t = t->GetParent())
     {
-        PropRef tmp;
-        t->GetConstructor().GetPrototype().FindProperty(tmp, mn, attr);
-        if (Sfr33PropFound(tmp))
+        Sfr33PropRefTemp tmp;
+        ::new (static_cast<void*>(tmp.Buf)) PropRef();
+        for (const Traits* t = &tr; t; t = t->GetParent())
         {
-            result.pSI = NULL;
-            result.SlotIndex = 0;
-            result.This = scope;
-            break;
+            Object* proto = &t->GetConstructor().GetPrototype();
+            proto->FindProperty(tmp.Get(), mn, attr);
+            if (Sfr33PropFound(tmp.Get()))
+            {
+                Sfr33ScopePropRef found(NULL, 0, scope);
+                result.pSI = found.pSI;
+                result.SlotIndex = found.SlotIndex;
+                result.This.Assign(found.This);
+                break;
+            }
         }
     }
     if (!Sfr33PropFound(result) && scope.GetKind() == Value::kFunction)
