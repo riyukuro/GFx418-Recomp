@@ -1915,18 +1915,21 @@ void ValueRegisterFile::Reserve(UInt16 num)
 
 // The class traits registered under name and namespace; looked up in the global object's classes on a miss
 // (and then cached).
-// MS2-FUNCTIONAL 0x1425251e0: the registry lookup and Add are inlined here, so the frame and size differ from the exe
+void FUN_1424e5e80(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns,
+                   ClassTraits::Traits* const& v);   // TClassTraitsCache::Add, out of line (sfr_as3_16z)
+
 // @0x1425251e0
 ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, const Instances::Namespace* ns)
 {
-    ClassTraits::Traits** found = FUN_142414ac0(&vm->ClassTraitsSet, *name, *ns);
-    ClassTraits::Traits* ct = found != NULL ? *found : NULL;
+    TClassTraitsCache* set = &vm->ClassTraitsSet;
+    ClassTraits::Traits** found = FUN_142414ac0(set, *name, *ns);
+    if (found != NULL && *found != NULL)
+        return *found;
+    ClassTraits::Traits* ct = FUN_142415520(reinterpret_cast<void*>(VmRd(vm, 0x298)), name, ns);
+    ClassTraits::Traits* added = ct;
     if (ct == NULL)
-    {
-        ct = FUN_142415520(reinterpret_cast<void*>(VmRd(vm, 0x298)), name, ns);
-        if (ct != NULL)
-            vm->ClassTraitsSet.Add(*name, *ns, ct);
-    }
+        return NULL;
+    FUN_1424e5e80(set, *name, *ns, added);
     return ct;
 }
 
