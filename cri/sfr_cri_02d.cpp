@@ -7,6 +7,7 @@
 // MS2-UNIT: sfr_cri_02d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14002f610-0x14002f850 .text$mn
 // MS2-RANGE: 0x14002fbe0-0x1400301d0 .text$mn
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
@@ -110,6 +111,28 @@ typedef struct CriMvReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; } C
 typedef struct CriMvWriteBufferView { void* Data; CriUint32 Capacity; } CriMvWriteBufferView;
 typedef struct CriMvUsfHeaderGateView { CriUint8 Reserved[0xd64]; CriSint32 HeaderChecked; } CriMvUsfHeaderGateView;
 typedef struct CriMvUsfHeaderSizeView { CriUint8 Reserved[0x8b8]; CriUint32 Size; } CriMvUsfHeaderSizeView;
+typedef struct _criheap_struct* CriHeap;
+typedef struct CriMvOwnedResourceView
+{
+    CriUint32 State;                            /* 0x000 */
+    CriSint32 Status;                           /* 0x004 */
+    CriUint8 Reserved008[0x10];
+    void* Work;                                 /* 0x018 */
+    struct _RTL_CRITICAL_SECTION* Lock;         /* 0x020 */
+    CriUint8 Reserved028[0xd40];
+    void* Demux;                                /* 0xd68 */
+    CriUint8 Reservedd70[8];
+    void* InputBuffer;                          /* 0xd78 */
+    void* ReadBuffer;                           /* 0xd80 */
+    CriUint8 Reservedd88[0x18];
+    void* MemoryQueue;                          /* 0xda0 */
+    CriUint8 Reservedda8[0x18];
+    CriHeap Heap;                               /* 0xdc0 */
+    CriUint8 Reserveddc8[8];
+    CriHeap HeapHandle;                         /* 0xdd0 */
+    CriUint8 Reserveddd8[8];
+    void* MetaWork;                             /* 0xde0 */
+} CriMvOwnedResourceView;
 typedef struct CriMovieParsedChunk
 {
     const CriUint8* Data;
@@ -299,6 +322,19 @@ const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriS
 void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
 struct CriUtfRtvView;
 struct CriMvStreamingParameters;
+struct _RTL_CRITICAL_SECTION;
+void FUN_140030c70(void* player);
+CriBool freeMetaWork(void* player);
+void criUsfDmx_Destroy(void* demux);
+void criCs_Destroy(struct _RTL_CRITICAL_SECTION* section);
+#ifdef __cplusplus
+extern "C" {
+#endif
+void criHeap_Destroy(CriHeap heap);
+CriSint32 criHeap_Free(CriHeap heap, void* ptr);
+#ifdef __cplusplus
+}
+#endif
 extern CriSint32 DAT_143b27948;
 void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);                                     /* 14003b348 */
 CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
@@ -341,6 +377,11 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?criMvPly_Destroy@@YAXPEAK@Z=criMvPly_Destroy")
+#pragma comment(linker, "/alternatename:FUN_140030c70=?FUN_140030c70@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:freeMetaWork=?freeMetaWork@@YAJPEAX@Z")
+#pragma comment(linker, "/alternatename:criUsfDmx_Destroy=?criUsfDmx_Destroy@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:criCs_Destroy=?criCs_Destroy@@YAXPEAU_RTL_CRITICAL_SECTION@@@Z")
 #pragma comment(linker, "/alternatename:?criMvPly_GetStreamingParameters@@YAXPEAXPEAUCriMvStreamingParameters@@@Z=criMvPly_GetStreamingParameters")
 #pragma comment(linker, "/alternatename:?retrieveHeaderInfo@@YAXPEAX0PEBUCriMovieParsedChunk@@@Z=retrieveHeaderInfo")
 #pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
@@ -362,6 +403,67 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #endif
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+// release decoder queues, demux state, and heap-owned CRI Movie work areas
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sjrb, insj, cs, sjmemory, heap, objwork.
+// @0x14002f610
+void criMvPly_Destroy(CriUint32* object)
+{
+    void* sjrb;
+    void* insj;
+    struct _RTL_CRITICAL_SECTION* cs;
+    void* sjmemory;
+    CriHeap heap;
+    void* objwork;
+    if (object == NULL)
+        return;
+    ((CriMvOwnedResourceView*)object)->State = 0;   /* Status is left as is */
+    if (((CriMvOwnedResourceView*)object)->Status != 0 && ((CriMvOwnedResourceView*)object)->Status != 7)
+        crimvply_occurUserError(object, "E05063009M : Don't call criMvPly_Destroy() at illigal status",
+                                ((CriMvOwnedResourceView*)object)->Status);
+    FUN_140030c70(object);
+    freeMetaWork(object);
+    sjrb = ((CriMvOwnedResourceView*)object)->ReadBuffer;
+    if (sjrb != NULL) {
+        criSj_Destroy(sjrb);
+        ((CriMvOwnedResourceView*)object)->ReadBuffer = NULL;
+    }
+    if (((CriMvOwnedResourceView*)object)->Demux != NULL) {
+        criUsfDmx_Destroy(((CriMvOwnedResourceView*)object)->Demux);
+        ((CriMvOwnedResourceView*)object)->Demux = NULL;
+    }
+    insj = ((CriMvOwnedResourceView*)object)->InputBuffer;
+    if (insj != NULL) {
+        criSj_Destroy(insj);
+        ((CriMvOwnedResourceView*)object)->InputBuffer = NULL;
+    }
+    sjmemory = ((CriMvOwnedResourceView*)object)->MemoryQueue;
+    if (sjmemory != NULL) {
+        criSj_Destroy(sjmemory);
+        ((CriMvOwnedResourceView*)object)->MemoryQueue = NULL;
+    }
+    if (((CriMvOwnedResourceView*)object)->HeapHandle != NULL) {
+        criHeap_Destroy(((CriMvOwnedResourceView*)object)->HeapHandle);
+        ((CriMvOwnedResourceView*)object)->HeapHandle = NULL;
+    }
+    heap = ((CriMvOwnedResourceView*)object)->Heap;
+    if (heap != NULL && ((CriMvOwnedResourceView*)object)->MetaWork != NULL) {
+        criHeap_Free(heap, ((CriMvOwnedResourceView*)object)->MetaWork);
+        ((CriMvOwnedResourceView*)object)->MetaWork = NULL;
+    }
+    cs = ((CriMvOwnedResourceView*)object)->Lock;
+    if (cs != NULL) {
+        ((CriMvOwnedResourceView*)object)->Lock = NULL;
+        criCs_Destroy(cs);
+    }
+    objwork = ((CriMvOwnedResourceView*)object)->Work;
+    if (heap != NULL && objwork != NULL) {
+        ((CriMvOwnedResourceView*)object)->Work = NULL;
+        criHeap_Free(heap, objwork);
+    }
+    if (heap != NULL)
+        criHeap_Free(heap, object);
+}
+
 // translate the active CRI stream slot into the public streaming-parameter record
 // Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sti, oaud, i, vinfo, vprm, track, defTrack,
 // oalph, info, alph, sno.

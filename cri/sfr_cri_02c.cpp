@@ -7,7 +7,8 @@
 // MS2-UNIT: sfr_cri_02c
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14002e548-0x14002fbe0 .text$mn
+// MS2-RANGE: 0x14002e548-0x14002f610 .text$mn
+// MS2-RANGE: 0x14002f850-0x14002fbe0 .text$mn
 // MS2-RANGE: 0x1400301d0-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
@@ -2609,82 +2610,6 @@ void* criMvPly_CreateWithConfig(CriHeap heap)
     return words;
 }
 
-// MS2-FUNCTIONAL: release decoder queues, demux state, and heap-owned CRI Movie work areas.
-// @0x14002f610
-void criMvPly_Destroy(CriUint32* object)
-{
-    if (!object)
-        return;
-    object[0] = 0;   // the exe clears the first dword before the status check; Status is left as is
-    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)object;
-    struct OwnedHeapFields
-    {
-        CriUint8 Reserved0[0xdc0];
-        CriHeap Heap;
-        CriUint8 ReservedD28[8];
-        void* HeapHandle;
-        CriUint8 ReservedD38[8];
-        void* Work;
-    };
-    struct ObjectFields
-    {
-        CriUint8 Reserved0[0x18];
-        void* Work;
-        void* Reader;
-    };
-    if (state->Status != 0 && state->Status != 7)
-        crimvply_occurUserError(object, "E05063009M : Don't call criMvPly_Destroy() at illigal status", state->Status);
-    FUN_140030c70(object);
-    freeMetaWork(object);
-    if (((CriMvPlyInputQueueFields*)object)->ReadBuffer)
-    {
-        criSj_Destroy(((CriMvPlyInputQueueFields*)object)->ReadBuffer);
-        ((CriMvPlyInputQueueFields*)object)->ReadBuffer = NULL;
-    }
-    if (state->Demux)
-    {
-        criUsfDmx_Destroy(state->Demux);
-        state->Demux = NULL;
-    }
-    if (((CriMvPlyInputQueueFields*)object)->InputBuffer)
-    {
-        criSj_Destroy(((CriMvPlyInputQueueFields*)object)->InputBuffer);
-        ((CriMvPlyInputQueueFields*)object)->InputBuffer = NULL;
-    }
-    struct MemoryQueueView { CriUint8 Reserved[0xda0]; void* Queue; };
-    if (((MemoryQueueView*)object)->Queue)
-    {
-        criSj_Destroy(((MemoryQueueView*)object)->Queue);
-        ((MemoryQueueView*)object)->Queue = NULL;
-    }
-    OwnedHeapFields* heapFields = (OwnedHeapFields*)object;
-    if (heapFields->HeapHandle)
-    {
-        criHeap_Destroy((CriHeap)heapFields->HeapHandle);
-        heapFields->HeapHandle = NULL;
-    }
-    ObjectFields* owned = (ObjectFields*)object;
-    if (owned->Reader)
-    {
-        void* reader = owned->Reader;
-        owned->Reader = NULL;
-        criCs_Destroy((_RTL_CRITICAL_SECTION*)reader);
-    }
-    if (heapFields->Heap && heapFields->Work)
-    {
-        void* work = heapFields->Work;
-        heapFields->Work = NULL;
-        criHeap_Free((CriHeap)heapFields->Heap, work);
-    }
-    if (heapFields->Heap && owned->Work)
-    {
-        void* work = owned->Work;
-        owned->Work = NULL;
-        criHeap_Free((CriHeap)heapFields->Heap, work);
-    }
-    if (heapFields->Heap)
-        criHeap_Free((CriHeap)heapFields->Heap, object);
-}
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
