@@ -762,6 +762,16 @@ struct TrReadArgsObject : public TR::ReadArgs
     Value ArgObject;
 };
 
+// The tracer's ReadArgsObjectValue: the call arguments, the object, then one more popped value.
+struct TrReadArgsObjectValue : public TrReadArgsObject
+{
+    TrReadArgsObjectValue(VM& vm, State& st, UInt32 argc) : TrReadArgsObject(vm, st, argc), ArgValue(st.PopOpValue())
+    {
+        ++ReadNum;
+    }
+    Value ArgValue;
+};
+
 // @0x14253af70
 void Sfr27TraceIfTrueFalse(State* st, UInt64* pos, int op)
 {
@@ -5005,28 +5015,22 @@ UPInt Sfr31FindClassTraitsByMn(UPInt vm, UPInt mn)
     return found;
 }
 
-// Tracer op: pops two operands and pushes the traits of the lower one as a kind-8 value (builtin classes drop the extra flag).
-// MS2-FUNCTIONAL 0x142533470: raw-offset model; codegen differs from the exe
+// Tracer op: pops the call arguments and two operands and pushes the instance traits of the second one; the int, uint,
+// Number and Boolean traits are pushed as NotNull, any other as NullOrNot.
+// MS2-FUNCTIONAL 0x142533470: the exe compiled TR::ReadArgs::ReadArgs and ~ReadArgs (0x1424d9640, 0x1424dea90; ours in
+// sfr_as3_15) in this TU, so it schedules the second ++ReadNum after the vm load and keeps each popped Value's Flags in ebx
+// across the weak-ref Free. Ours reloads them from memory (same cause as 0x142536dd0).
 // @0x142533470
 void Sfr31TraceTraitsOfSecond(State* st, UInt32 argc)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), argc);
-    const UPInt vm = TrVM(s.Tracer());
-    TrReadArgsRaw args(reinterpret_cast<VM*>(vm), st, argc);
-    TrPopped p1, p2;
-    FUN_14251cd30(st, &p1.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    FUN_14251cd30(st, &p2.Get());
-    ++*reinterpret_cast<UInt32*>(args.buf + 0x10);
-    const UPInt tr = FUN_14250a060(vm, &p2.Get());
-    UPInt raw[4] = { 0x48, 0, tr, 0 };
-    if (tr == Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0) || tr == Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0) ||
-        tr == Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0) || tr == Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0))
-        raw[0] = 8;
-    s.OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
-    p2.Get().~Value();
-    p1.Get().~Value();
+    TrReadArgsObjectValue args(*reinterpret_cast<VM*>(TrVM(s.Tracer())), *st, argc);
+    InstanceTraits::Traits& itr = FUN_14250a060(*reinterpret_cast<VM*>(TrVM(s.Tracer())), args.ArgValue);
+    const UPInt tracer = s.Tracer();
+    const bool notNull = &itr == &TrITraits(tracer, 0x220) || &itr == &TrITraits(tracer, 0x228) ||
+        &itr == &TrITraits(tracer, 0x218) || &itr == &TrITraits(tracer, 0x210);
+    s.OpStack().PushBack(Value(itr, notNull ? Value::NotNull : Value::NullOrNot));
 }
 
 // findproperty-style resolve: pushes the property's value, or the VM's fallback object when it does not resolve.
