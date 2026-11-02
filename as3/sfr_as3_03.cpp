@@ -3127,31 +3127,39 @@ namespace Instances { namespace fl
 namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
-    // A found E4X node: the pointer tagged with bit 1, This the element that owns it.
-    static PropRef MakeXMLPropRef(XML* node, XMLElement* owner)
+    // XMLElement::ForEachAttr as the exe inlines it into FindDynamicSlot.
+    static SF_INLINE UInt32 saForEachAttr(XMLElement& e, const Multiname& prop_name, XMLElement::CallBack& cb)
     {
-        PropRef r;
-        r.pObject = reinterpret_cast<AS3::Object*>(reinterpret_cast<UPInt>(node) | 2);
-        r.This = Value(owner);
-        return r;
+        UInt32 num = 0;
+        if (prop_name.Name.IsString())
+        {
+            const UPInt size = e.Attrs.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+            {
+                if (e.Attrs[i]->Matches(prop_name))
+                {
+                    ++num;
+                    if (!cb.Call(i))
+                        break;
+                }
+            }
+        }
+        return num;
     }
 
-    // MS2-FUNCTIONAL: exe inlines ForEachAttr and builds the result in place
     // @0x14240b080
     PropRef XMLElement::FindDynamicSlot(const Multiname& mn)
     {
         if (mn.IsAttr())
         {
             AttrGetFirst f(*this);
-            if (ForEachAttr(mn, f) != 0)
-                return MakeXMLPropRef(f.Result.GetPtr(), this);
+            if (saForEachAttr(*this, mn, f) != 0)
+                return PropRef(this, f.Result.GetPtr());
+            return PropRef();
         }
-        else
-        {
-            ChildGetFirst f(*this);
-            if (ForEachChild(mn, f) != 0)
-                return MakeXMLPropRef(f.Result.GetPtr(), this);
-        }
+        ChildGetFirst f(*this);
+        if (ForEachChild(mn, f) != 0)
+            return PropRef(this, f.Result.GetPtr());
         return PropRef();
     }
 }}
