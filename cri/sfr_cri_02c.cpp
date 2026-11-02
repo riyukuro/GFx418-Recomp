@@ -13,7 +13,8 @@
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
 // MS2-RANGE: 0x140031aa0-0x140032090 .text$mn
-// MS2-RANGE: 0x140032650-0x140034330 .text$mn
+// MS2-RANGE: 0x140032650-0x140033030 .text$mn
+// MS2-RANGE: 0x140033610-0x140034330 .text$mn
 // MS2-RANGE: 0x1400344f0-0x140034730 .text$mn
 // MS2-RANGE: 0x140034920-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
@@ -2726,122 +2727,6 @@ void FUN_140037a40(const CriMovieInputChunk* current, const CriMovieInputChunk* 
     }
 }
 
-// MS2-FUNCTIONAL: consume USF metadata records and retain the seek, cue, and VFS table records.
-// @0x140033030
-CriBool decodeMetaData(void* player)
-{
-    CriMvPlyObj* movie = (CriMvPlyObj*)player;
-    void* queue = NULL;
-    memcpy(&queue, (CriUint8*)player + 0xd80, sizeof(queue));
-    CriBool foundEnd = 0;
-    CriMovieInputChunk chunk = {};
-    for (;;)
-    {
-        if (FUN_1400467b8(queue, 1) == 0)
-            return foundEnd;
-        chunk = CriMovieInputChunk();
-        criSj_GetChunk(queue, 1, -1, &chunk);
-        if (chunk.Size < 0x20)
-        {
-            criSj_UngetChunk(queue, 1, &chunk);
-            continue;
-        }
-
-        CriUsfStandardHeader header = {};
-        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)(&header));
-        CriSint32 contentSize = 0;
-        const CriUint8* contents = criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize);
-        CriUint32 tableId = 0;
-        memcpy(&tableId, header.Data, sizeof(tableId));
-        CriUint8 recordType = header.Data[15];
-        if (recordType == 0)
-        {
-            criSj_UngetChunk(queue, 1, &chunk);
-            return 1;
-        }
-        if (recordType == 3)
-        {
-            CriUint32* metadataRecords = (CriUint32*)((CriUint8*)player + 0xe80);
-            ++*metadataRecords;
-            if (tableId == 0x40414c50)
-            {
-                memcpy((CriUint8*)player + 0xe98, &contents, sizeof(contents));
-                memcpy((CriUint8*)player + 0xea0, &contentSize, sizeof(contentSize));
-                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
-                CriUint32 count = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
-                memcpy((CriUint8*)player + 0xea4, &count, sizeof(count));
-                criUtfRtv_Destroy((CriUint64*)table);
-            }
-            else if (tableId == 0x40435545)
-            {
-                // @CUE: fill the event table (allocated by allocateMetaCueTableInCs) with each cue point's name, time,
-                // type and parameter.
-                struct EventLimitView { CriUint8 Reserved[0x8ac]; CriUint32 Count; CriUint64 TimeUnit; };
-                memcpy((CriUint8*)player + 0xea8, &contents, sizeof(contents));
-                memcpy((CriUint8*)player + 0xeb0, &contentSize, sizeof(contentSize));
-                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
-                movie->cuepoint.num_eventpoint = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
-                if (movie->cuepoint.num_eventpoint < ((const EventLimitView*)player)->Count)
-                    for (;;) {}
-                CriSint32 nameField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "name");
-                CriSint32 paramField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "parameter");
-                CriSint32 timeField = criUtfRtv_ConvFieldNameToNo((const CriUtfRtvView*)table, "time");
-                for (CriUint32 i = 0; i < movie->cuepoint.num_eventpoint; ++i)
-                {
-                    CriUtfRtvCell cell;
-                    criUtfRtv_GetCellVal((const CriUtfRtvView*)table, i, nameField, &cell);
-                    CriMvEventPoint* event = &movie->cuepoint.eventtable[i];
-                    CriChar8* data = NULL;
-                    CriUint32 size = 0;
-                    memcpy(&data, cell.Value, sizeof(data));
-                    memcpy(&size, cell.Value + 8, sizeof(size));
-                    event->size_name = size;
-                    event->cue_name = size ? data : NULL;
-                    event->time = criUtfRtv_GetDataUint64((const CriUtfRtvView*)table, i, timeField);
-                    event->tunit = ((const EventLimitView*)player)->TimeUnit;
-                    event->type = criUtfRtv_GetDataSint32Fn((const CriUtfRtvView*)table, i, "cue_type");
-                    criUtfRtv_GetCellVal((const CriUtfRtvView*)table, i, paramField, &cell);
-                    memcpy(&data, cell.Value, sizeof(data));
-                    memcpy(&size, cell.Value + 8, sizeof(size));
-                    event->size_param = size;
-                    event->param_string = size ? data : NULL;
-                    event->cnt_callback = 0;
-                }
-                criUtfRtv_Destroy((CriUint64*)table);
-            }
-            else if (tableId == 0x40534656)
-            {
-                memcpy((CriUint8*)player + 0xe88, &contents, sizeof(contents));
-                memcpy((CriUint8*)player + 0xe90, &contentSize, sizeof(contentSize));
-                void* table = criUtfRtv_Create(movie->utf_heap, (void*)contents, (CriUint32)contentSize);
-                CriUint32 count = (CriUint32)criUtfRtv_GetNumRecord((const CriUtfRtvView*)table);
-                memcpy((CriUint8*)player + 0xe94, &count, sizeof(count));
-                criUtfRtv_Destroy((CriUint64*)table);
-            }
-        }
-        else if (recordType == 2)
-        {
-            CriUint32 parsedCount = 0;
-            memcpy(&parsedCount, (CriUint8*)player + 0xe80, sizeof(parsedCount));
-            if (parsedCount != 0)
-                foundEnd = 1;
-        }
-        criSj_PutChunk(queue, 2, &chunk);
-        if (foundEnd)
-            break;
-    }
-
-    CriUint32 memoryInputMode = 0;
-    memcpy(&memoryInputMode, (CriUint8*)player + 0xd60, sizeof(memoryInputMode));
-    if (memoryInputMode == 1)
-    {
-        CriUint64 inputPosition = 0;
-        memcpy(&inputPosition, (CriUint8*)player + 0xda8, sizeof(inputPosition));
-        CriUint32 consumed = (CriUint32)((CriUint32)(uintptr_t)chunk.Data - (CriUint32)inputPosition + chunk.Size);
-        memcpy((CriUint8*)player + 0xdb8, &consumed, sizeof(consumed));
-    }
-    return 1;
-}
 #pragma optimize("", on)
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)

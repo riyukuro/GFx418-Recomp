@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
 // MS2-RANGE: 0x140032090-0x140032650 .text$mn
+// MS2-RANGE: 0x140033030-0x140033610 .text$mn
 // MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
 // MS2-RANGE: 0x140034730-0x140034920 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
@@ -368,6 +369,61 @@ void*     criUtfRtv_Create(void* heap, void* data, CriUint32 size);             
 CriUint32 FID_conflict_criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* object, CriUint32 index, const char* key); /* 14003a85c */
 CriUint32 criUtfRtv_GetNumRecord(const struct CriUtfRtvView* object);                                  /* 14003a45c */
 void      criUtfRtv_Destroy(CriUint64* table);                                                         /* 14003a108 */
+typedef struct CriUtfRtvCell                // criUtfRtv_GetCellVal output: a string cell's pointer and length
+{
+    CriUint64 Type;                         // a byte in CRI; no char array, so no /GS cookie
+    const char* Data;
+    CriUint32 Size;
+    CriUint32 Reserved14;
+} CriUtfRtvCell;
+CriUint32 criUtfRtv_ConvFieldNameToNo(const struct CriUtfRtvView* table, const char* name);
+CriSint32 criUtfRtv_GetCellVal(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
+CriUint64 criUtfRtv_GetDataUint64(const struct CriUtfRtvView* table, CriUint32 row, CriUint32 field);
+CriUint32 criUtfRtv_GetDataSint32Fn(const struct CriUtfRtvView* table, CriUint32 row, const char* name);
+typedef struct CriMvEventEntry              // the cue event table entries (0x38 bytes)
+{
+    const char* Name;
+    CriUint32 NameSize;
+    CriUint32 Reserved0c;
+    CriUint64 Time;
+    CriUint64 TimeUnit;
+    CriUint32 Type;
+    CriUint32 Reserved24;
+    const char* Param;
+    CriUint32 ParamSize;
+    CriUint32 Callbacks;
+} CriMvEventEntry;
+typedef struct CriMvMetaPlayerView
+{
+    CriUint8 Reserved0[0x8ac];
+    CriUint32 CueLimit;                     // 0x8ac
+    CriUint64 TimeUnit;                     // 0x8b0
+    CriUint8 Reserved8b8[0xd60 - 0x8b8];
+    CriUint32 InputMode;                    // 0xd60
+    CriUint8 Reservedd64[0xd80 - 0xd64];
+    void* MetaSj;                           // 0xd80
+    CriUint8 Reservedd88[0xda8 - 0xd88];
+    CriUint64 InputBase;                    // 0xda8
+    CriUint8 Reserveddb0[8];
+    CriUint32 Consumed;                     // 0xdb8
+    CriUint8 Reserveddbc[0xdd0 - 0xdbc];
+    void* UtfHeap;                          // 0xdd0
+    CriUint8 Reserveddd8[0xe80 - 0xdd8];
+    CriUint32 MetaCount;                    // 0xe80
+    CriUint32 Reservede84;
+    const CriUint8* SfvData;                // 0xe88
+    CriSint32 SfvSize;                      // 0xe90
+    CriUint32 SfvCount;                     // 0xe94
+    const CriUint8* AlpData;                // 0xe98
+    CriSint32 AlpSize;                      // 0xea0
+    CriUint32 AlpCount;                     // 0xea4
+    const CriUint8* CueData;                // 0xea8
+    CriSint32 CueSize;                      // 0xeb0
+    CriUint32 Reservedeb4;
+    CriUint32 CueCount;                     // 0xeb8
+    CriUint32 Reservedebc;
+    CriMvEventEntry* Events;                // 0xec0
+} CriMvMetaPlayerView;
 void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
@@ -430,6 +486,11 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?criMvPly_GetStreamingParameters@@YAXPEAXPEAUCriMvStreamingParameters@@@Z=criMvPly_GetStreamingParameters")
 #pragma comment(linker, "/alternatename:?retrieveHeaderInfo@@YAXPEAX0PEBUCriMovieParsedChunk@@@Z=retrieveHeaderInfo")
 #pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
+#pragma comment(linker, "/alternatename:?decodeMetaData@@YAJPEAX@Z=decodeMetaData")
+#pragma comment(linker, "/alternatename:criUtfRtv_ConvFieldNameToNo=?criUtfRtv_ConvFieldNameToNo@@YAKPEBUCriUtfRtvView@@PEBD@Z")
+#pragma comment(linker, "/alternatename:criUtfRtv_GetCellVal=?criUtfRtv_GetCellVal@@YAJPEBUCriUtfRtvView@@KKPEAUCriUtfRtvCell@@@Z")
+#pragma comment(linker, "/alternatename:criUtfRtv_GetDataUint64=?criUtfRtv_GetDataUint64@@YA_KPEBUCriUtfRtvView@@KK@Z")
+#pragma comment(linker, "/alternatename:criUtfRtv_GetDataSint32Fn=?criUtfRtv_GetDataSint32Fn@@YAKPEBUCriUtfRtvView@@KPEBD@Z")
 #pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
 #pragma comment(linker, "/alternatename:?executeUsfServer@@YAXPEAX@Z=executeUsfServer")
 #pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
@@ -1104,6 +1165,111 @@ void retrieveHeaderInfo(void* player, void* streamInfo, const struct CriMoviePar
         }
     }
     criUtfRtv_Destroy((CriUint64*)records);
+}
+
+// Consume USF metadata records and keep the SFV, ALP and CUE tables; the CUE table fills the event entries.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe).
+// @0x140033030
+CriBool decodeMetaData(void* player)
+{
+    const CriUint8* payload;
+    CriSint32 clen;
+    void* records;
+    void* sj;
+    CriBool end;
+    CriMovieInputChunk ck;
+    CriUint32 hdr[9];                       // FUN_14003b3fc fills 0x24 bytes; the record type is byte 15
+    sj = ((CriMvMetaPlayerView*)player)->MetaSj;
+    end = 0;
+    while ((CriUint32)FUN_1400467b8(sj, 1) > 0)
+    {
+        FUN_1400467a0(sj, 1, -1, &ck);
+        if (ck.Size >= 0x20)
+        {
+            FUN_14003b3fc(ck.Data, ck.Size, hdr);
+            payload = criUsfCmn_GetContents(ck.Data, ck.Size, &clen);
+            if (((CriUint8*)hdr)[15] == 0)
+            {
+                end = 1;
+                criSj_UngetChunk(sj, 1, &ck);
+                return end;
+            }
+            else if (((CriUint8*)hdr)[15] == 3)
+            {
+                ((CriMvMetaPlayerView*)player)->MetaCount++;
+                switch (hdr[0])
+                {
+                case 0x40534656:
+                    ((CriMvMetaPlayerView*)player)->SfvData = payload;
+                    ((CriMvMetaPlayerView*)player)->SfvSize = clen;
+                    records = criUtfRtv_Create(((CriMvMetaPlayerView*)player)->UtfHeap, (void*)payload, clen);
+                    ((CriMvMetaPlayerView*)player)->SfvCount = criUtfRtv_GetNumRecord((const struct CriUtfRtvView*)records);
+                    criUtfRtv_Destroy((CriUint64*)records);
+                    break;
+                case 0x40414c50:
+                    ((CriMvMetaPlayerView*)player)->AlpData = payload;
+                    ((CriMvMetaPlayerView*)player)->AlpSize = clen;
+                    records = criUtfRtv_Create(((CriMvMetaPlayerView*)player)->UtfHeap, (void*)payload, clen);
+                    ((CriMvMetaPlayerView*)player)->AlpCount = criUtfRtv_GetNumRecord((const struct CriUtfRtvView*)records);
+                    criUtfRtv_Destroy((CriUint64*)records);
+                    break;
+                case 0x40435545:
+                {
+                    CriUint32 i;
+                    CriUint32 params;
+                    CriUint32 name;
+                    CriUint32 pos;
+                    CriUtfRtvCell cell;
+                    ((CriMvMetaPlayerView*)player)->CueData = payload;
+                    ((CriMvMetaPlayerView*)player)->CueSize = clen;
+                    records = criUtfRtv_Create(((CriMvMetaPlayerView*)player)->UtfHeap, (void*)payload, clen);
+                    ((CriMvMetaPlayerView*)player)->CueCount = criUtfRtv_GetNumRecord((const struct CriUtfRtvView*)records);
+                    if (((CriMvMetaPlayerView*)player)->CueCount < ((CriMvMetaPlayerView*)player)->CueLimit)
+                        for (;;) {}
+                    name = criUtfRtv_ConvFieldNameToNo((const struct CriUtfRtvView*)records, "name");
+                    params = criUtfRtv_ConvFieldNameToNo((const struct CriUtfRtvView*)records, "parameter");
+                    pos = criUtfRtv_ConvFieldNameToNo((const struct CriUtfRtvView*)records, "time");
+                    for (i = 0; i < ((CriMvMetaPlayerView*)player)->CueCount; i++)
+                    {
+                        criUtfRtv_GetCellVal((const struct CriUtfRtvView*)records, i, name, &cell);
+                        ((CriMvMetaPlayerView*)player)->Events[i].NameSize = cell.Size;
+                        if (cell.Size)
+                            ((CriMvMetaPlayerView*)player)->Events[i].Name = cell.Data;
+                        else
+                            ((CriMvMetaPlayerView*)player)->Events[i].Name = 0;
+                        ((CriMvMetaPlayerView*)player)->Events[i].Time = criUtfRtv_GetDataUint64((const struct CriUtfRtvView*)records, i, pos);
+                        ((CriMvMetaPlayerView*)player)->Events[i].TimeUnit = ((CriMvMetaPlayerView*)player)->TimeUnit;
+                        ((CriMvMetaPlayerView*)player)->Events[i].Type = criUtfRtv_GetDataSint32Fn((const struct CriUtfRtvView*)records, i, "cue_type");
+                        criUtfRtv_GetCellVal((const struct CriUtfRtvView*)records, i, params, &cell);
+                        ((CriMvMetaPlayerView*)player)->Events[i].ParamSize = cell.Size;
+                        if (cell.Size)
+                            ((CriMvMetaPlayerView*)player)->Events[i].Param = cell.Data;
+                        else
+                            ((CriMvMetaPlayerView*)player)->Events[i].Param = 0;
+                        ((CriMvMetaPlayerView*)player)->Events[i].Callbacks = 0;
+                    }
+                    criUtfRtv_Destroy((CriUint64*)records);
+                    break;
+                }
+                }
+            }
+            else if (((CriUint8*)hdr)[15] == 2)
+            {
+                if (((CriMvMetaPlayerView*)player)->MetaCount > 0)
+                    end = 1;
+            }
+            criSj_PutChunk(sj, 2, &ck);
+        }
+        else
+            criSj_UngetChunk(sj, 1, &ck);
+        if (end == 1)
+        {
+            if (((CriMvMetaPlayerView*)player)->InputMode == 1)
+                ((CriMvMetaPlayerView*)player)->Consumed = (CriUint32)((CriUint64)ck.Data - ((CriMvMetaPlayerView*)player)->InputBase + ck.Size);
+            break;
+        }
+    }
+    return end;
 }
 
 // Drain the two CRI input streams into the decoder read queue.
