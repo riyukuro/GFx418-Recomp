@@ -977,33 +977,48 @@ Scaleform::GFx::MovieDefImpl* FUN_14250d8f0(Scaleform::GFx::AS3::VM& vm, const S
 // MovieImpl::FindExportedResource.
 static inline bool FUN_14256ec50(Scaleform::GFx::MovieImpl * p0, Scaleform::GFx::MovieDefImpl * p1, Scaleform::GFx::ResourceBindData * p2, Scaleform::String const & p3) { return (bool)(((Scaleform::GFx::MovieImpl*)(p0))->FindExportedResource(p1, p2, p3)); }
 
+// MovieRoot::GetLogState: the state bag's Ptr<LogState> temporary is released before the raw pointer is tested.
+static __forceinline Scaleform::GFx::LogState* Sfr13RootLogState(Scaleform::GFx::AS3::MovieRoot* proot)
+{
+    return proot->GetMovieImpl()->GetStateBag()->GetLogState().GetPtr();
+}
+// Ptr<Font>::operator=(Font*), which the exe inlines here (SF_INLINE in the SDK).
+static __forceinline void Sfr13SetFont(Scaleform::Ptr<Scaleform::Render::Font>& p, Scaleform::Render::Font* pfont)
+{
+    p = pfont;
+}
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 namespace Instances { namespace fl_text
 {
     // @0x1424abe80
-    // MS2-FUNCTIONAL: written from the exe's control flow
     bool Font::AttachLibraryFont()
     {
-        if (pFont)
-            return false;
-        ASVM& vm = static_cast<ASVM&>(GetVM());
-        MovieDefImpl* pobjDef = FUN_14250d8f0(vm, this);
-        if (!pobjDef || !GetTraits().IsAbcObject())
-            return false;
-        ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
-        MovieImpl* pmovie = vm.GetMovieImpl();
-        ResourceBindData data;
-        if (!FUN_14256ec50(pmovie, pobjDef, &data, String(name.ToCStr())))
+        if (!pFont)
         {
-            if (pmovie->GetStateBag()->GetLogState())
-                pmovie->GetStateBag()->GetLogState()->LogScriptWarning("Attaching a font with class '%s' failed", name.ToCStr());
-            return false;
+            ASVM& vm = static_cast<ASVM&>(GetVM());
+            MovieDefImpl* pobjDef = FUN_14250d8f0(vm, this);
+            if (pobjDef && GetTraits().IsAbcObject())
+            {
+                ASString name = GetTraits().GetQualifiedName(Traits::qnfWithDot);
+                ResourceBindData data;
+                if (!vm.GetMovieImpl()->FindExportedResource(pobjDef, &data, name.ToCStr()))
+                {
+                    MovieRoot* proot = vm.GetMovieRoot();
+                    if (Sfr13RootLogState(proot))
+                        Sfr13RootLogState(proot)->LogScriptWarning("Attaching a font with class '%s' failed",
+                            name.ToCStr());
+                    return false;
+                }
+                // the exe tests only the RT_Font bit of the type code (bt eax, 9 at 0x1424abfcc)
+                if (data.pResource)
+                {
+                    if (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_Font))
+                        Sfr13SetFont(pFont, static_cast<FontResource*>(data.pResource.GetPtr())->GetFont());
+                }
+            }
         }
-        // the exe tests only the RT_Font bit of the type code (bt eax, 9 at 0x1424abfcc)
-        if (data.pResource &&
-            (data.pResource->GetResourceTypeCode() & Resource::MakeTypeCode(Resource::RT_Font)))
-            pFont = static_cast<FontResource*>(data.pResource.GetPtr())->GetFont();
         return false;
     }
 
