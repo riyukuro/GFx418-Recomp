@@ -1093,30 +1093,21 @@ int MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1)
   return -1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// the version string check is an inlined strcmp against the literal (repe cmpsb over its 6 bytes)
 // @0x140062bc0
 int MPVDEC_CheckVersion(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
   char *arg1 = cri_p0;
   longlong arg2 = cri_p1;
   longlong arg3 = cri_p2;
-  longlong l_v1;
-  char *pc_v2;
-  cri_u1 in_ZF;
-  
-  l_v1 = 6;
-  pc_v2 = "2.080";
-  do {
-    if (l_v1 == 0) break;
-    l_v1 = l_v1 + -1;
-    in_ZF = *pc_v2 == *arg1;
-    pc_v2 = pc_v2 + 1;
-    arg1 = arg1 + 1;
-  } while ((bool)in_ZF);
-  if (((bool)in_ZF) && (arg2 == 0x1900)) {
-    return -(uint)(arg3 != 0x80);
+
+  if (strcmp("2.080",arg1) != 0) {
+    return -1;
   }
-  return -1;
+  if (arg2 != 0x1900) {
+    return -1;
+  }
+  return (0x80 == arg3) ? 0 : -1;
 }
 
 void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1);
