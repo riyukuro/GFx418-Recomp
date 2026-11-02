@@ -718,42 +718,46 @@ void Sfr27TraceIfCompare(State* st, UInt64* pos, UInt32 op)
 {
     StV s(st);
     const UPInt tracer = s.Tracer();
-    UInt64 newOp = op;
-    if (FUN_142514c30(tracer, &s.Top()) && FUN_142514c30(tracer, &s.Below()))
+    int code = static_cast<int>(op);
+    Value* const ops = s.Ops();
+    const UPInt n = s.NumOps();
+    if (FUN_142514c30(tracer, &ops[n - 1]) && FUN_142514c30(tracer, &ops[s.NumOps() - 1 - 1]))
     {
-        switch (op)
+        switch (code)
         {
-        case 0xc: newOp = 0x8a; break;
-        case 0xd: newOp = 0x8b; break;
-        case 0xe: newOp = 0x8c; break;
-        case 0xf: newOp = 0x8d; break;
-        case 0x13: case 0x19: newOp = 0x8e; break;
-        case 0x14: case 0x1a: newOp = 0x9f; break;
-        case 0x15: newOp = 0x9e; break;
-        case 0x16: newOp = 0x9d; break;
-        case 0x17: newOp = 0x9c; break;
-        case 0x18: newOp = 0x8f; break;
+        case 0xc: code = 0x8a; break;
+        case 0xd: code = 0x8b; break;
+        case 0xe: code = 0x8c; break;
+        case 0xf: code = 0x8d; break;
+        case 0x13: case 0x19: code = 0x8e; break;
+        case 0x18: code = 0x8f; break;
+        case 0x17: code = 0x9c; break;
+        case 0x16: code = 0x9d; break;
+        case 0x15: code = 0x9e; break;
+        case 0x14: case 0x1a: code = 0x9f; break;
         }
-        s.LastOp() = newOp;
+        UPInt* opArr = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
+        reinterpret_cast<UInt64*>(opArr[0])[opArr[1] - 1] = static_cast<UInt32>(code);
     }
-    else if (FUN_142514470(tracer, &s.Top()) && FUN_142514470(tracer, &s.Below()))
+    else if (FUN_142514470(tracer, &ops[n - 1]) && FUN_142514470(tracer, &ops[s.NumOps() - 1 - 1]))
     {
-        switch (op)
+        switch (code)
         {
-        case 0xc: newOp = 200; break;
-        case 0xd: newOp = 0xc9; break;
-        case 0xe: newOp = 0xca; break;
-        case 0xf: newOp = 0xcb; break;
-        case 0x13: case 0x19: newOp = 0xcc; break;
-        case 0x14: case 0x1a: newOp = 0xbf; break;
-        case 0x15: newOp = 0xbe; break;
-        case 0x16: newOp = 0xbd; break;
-        case 0x17: newOp = 0xbc; break;
-        case 0x18: newOp = 0xcd; break;
+        case 0xc: code = 200; break;
+        case 0xd: code = 0xc9; break;
+        case 0xe: code = 0xca; break;
+        case 0xf: code = 0xcb; break;
+        case 0x13: case 0x19: code = 0xcc; break;
+        case 0x18: code = 0xcd; break;
+        case 0x17: code = 0xbc; break;
+        case 0x16: code = 0xbd; break;
+        case 0x15: code = 0xbe; break;
+        case 0x14: case 0x1a: code = 0xbf; break;
         }
-        s.LastOp() = newOp;
+        UPInt* opArr = reinterpret_cast<UPInt*>(TrRd(tracer, 0x28));
+        reinterpret_cast<UInt64*>(opArr[0])[opArr[1] - 1] = static_cast<UInt32>(code);
     }
-    const int off = Abc::ReadS24<UInt8>(s.Code(), *pos);
+    const int off = Abc::ReadS24<UInt8>(reinterpret_cast<const UInt8*>(TrRd(tracer, 0x50)), *pos);
     FUN_14251ccc0(st, 1);
     FUN_14251ccc0(st, 1);
     Sfr31TraceNoteJump(tracer, *pos, reinterpret_cast<UPInt>(st), off, -1);
@@ -9404,6 +9408,12 @@ typedef MS2_HashSetOf<MS2_AbcNsNode, AllocatorLH<MS2_AbcNsKey, GFx::AS3::StatMV_
 typedef HashNode<GFx::ASString, GFx::AS3::Value, GFx::ASStringHashFunctor> MS2_StringValueNode;
 typedef MS2_HashSetOf<MS2_StringValueNode, AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>,
                       HashsetNodeEntry<MS2_StringValueNode, MS2_StringValueNode::NodeHashF> >::Type MS2_StringValueSet;
+// The entry's node destructor is the out-of-line 0x1424dcb40 in the exe.
+template<> inline void HashsetNodeEntry<MS2_StringValueNode, MS2_StringValueNode::NodeHashF>::Clear()
+{
+    FUN_1424dcb40(&Value);
+    NextInChain = -2;
+}
 typedef GFx::AS3::SPtr<GFx::AS3::GASRefCountBase> MS2_GCRootPtr;
 typedef HashSetBase<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr>, FixedSizeHash<MS2_GCRootPtr>, AllocatorLH<MS2_GCRootPtr, 2>,
                     HashsetCachedEntry<MS2_GCRootPtr, FixedSizeHash<MS2_GCRootPtr> > > MS2_GCRootSet;
@@ -9438,7 +9448,6 @@ extern template void MS2_GCRootSet::Clear();
 extern template MS2_FunctionTraitsSet::~HashSetBase();
 extern template MS2_ActivationTraitsSet::~HashSetBase();
 extern template MS2_DynAttrsSet::~HashSetBase();
-extern template MS2_StringValueSet::~HashSetBase();
 extern template MS2_AbcNsSet::~HashSetBase();
 extern template MS2_GCRootSet::~HashSetBase();
 extern template UPInt FixedSizeHash<MS2_AbcNsKey>::operator()(const MS2_AbcNsKey&) const;
