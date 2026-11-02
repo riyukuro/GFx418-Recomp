@@ -3257,7 +3257,8 @@ bool Sfr34_AvmBitmapView::PointTestLocal(const PointF& pt, UInt8 hitTestMask) co
 
 // AvmBitmap::RecreateRenderNode: the bitmap's AS3 image may have changed, so its render node is made again
 // from the current image and put back where the old one was in the parent's children.
-// MS2-FUNCTIONAL declared void by its caller (sfr_as3_07); the exe also returns the new render node in rax
+// MS2-FUNCTIONAL declared void by its caller (sfr_as3_07); the exe also returns the new render node in rax, and
+// self and index take each other's registers (rdi/rsi)
 // @0x142520b20
 void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap)
 {
@@ -3267,34 +3268,36 @@ void FUN_142520b20(Scaleform::GFx::DisplayObject* pbitmap)
     Sfr34_AvmBitmapView*           self   = static_cast<Sfr34_AvmBitmapView*>(pbitmap);
     Instances::fl_display::Bitmap* as3    = static_cast<Instances::fl_display::Bitmap*>(
         reinterpret_cast<const AvmDisplayObj*>(self->AvmPart)->GetAS3Obj());
-    Render::TreeNode*              node   = self->pRenNode;
+    UPInt                          index  = ~0u;
     Render::TreeContainer*         parent = NULL;
-    UPInt                          index  = 0xFFFFFFFFu;
+    bool                           renNodeExisted = !!self->pRenNode;
     if (as3)
     {
-        if (node && node->GetParent())
+        if (self->pRenNode && self->pRenNode->GetParent())
         {
-            Render::TreeContainer* p = static_cast<Render::TreeContainer*>(node->GetParent());
-            p = p->IsMaskNode() ? NULL : p;
-            UPInt n = p->GetSize();
-            for (index = 0; index < n; ++index)
-                if (p->GetAt(index) == node)
+            if (!self->pRenNode->IsMaskNode())
+                parent = static_cast<Render::TreeContainer*>(self->pRenNode->GetParent());
+            index = 0;
+            for (UPInt n = parent->GetSize(); index < n; ++index)
+            {
+                if (parent->GetAt(index) == self->pRenNode)
                     break;
-            p->Remove(index, 1);
-            parent = p;
+            }
+            parent->Remove(index, 1);
         }
-        ImageResource* img = as3->GetImageResource();
-        if (img)
-            self->pImage = img;
+        ImageResource* pimg = as3->GetImageResource();
+        if (pimg)
+            self->pImage = pimg;
     }
-    if (node)
+    if (renNodeExisted)
     {
-        Ptr<Render::TreeNode> old = self->pRenNode;
-        self->pRenNode = self->CreateRenderNode(self->GetRenderContext());
+        Ptr<Render::TreeNode> node = self->pRenNode;
+        self->pRenNode = self->CreateRenderNode(
+            *reinterpret_cast<Render::ContextImpl::Context*>(self->GetMovieImpl()->RenderContext));
         if (self->pRenNode)
         {
-            if (old)
-                self->pRenNode->CopyGeomData(*old);
+            if (node)
+                self->pRenNode->CopyGeomData(*node.GetPtr());
             else
                 self->pRenNode->SetVisible(self->IsVisibleFlagSet());
             if (parent)
@@ -4443,7 +4446,7 @@ bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file)
 
 namespace Scaleform { namespace Render {
 // @0x14250dbc0
-UPInt TreeContainer::GetSize() const
+__declspec(noinline) UPInt TreeContainer::GetSize() const
 {
     return GetReadOnlyData()->Children.GetSize();
 }
@@ -4931,7 +4934,6 @@ void FUN_14250ba10(const VTable* vt, Value& result, AbsoluteIndex ind, Object* o
 
 // The name of a thunk: "Function " (or "MethodClosure " for a closure), the owner's name with "/" and, for a
 // closure, its namespace (AS3 and flash_proxy by their short names; none for the Vector one), then "name()".
-// MS2-FUNCTIONAL free function (debug name helper with no declaration in the shared headers)
 // @0x14250f330
 ASString FUN_14250f330(ASString name, const ThunkInfo& ti, bool closure)
 {
@@ -4950,8 +4952,16 @@ ASString FUN_14250f330(ASString name, const ThunkInfo& ti, bool closure)
             name.Append("::", 2);
         }
     }
-    const String s = String(closure ? "MethodClosure " : "Function ") + String(name.ToCStr(), name.GetSize());
-    name = name.GetManager()->CreateString(s.ToCStr(), s.GetSize());
+    if (closure)
+    {
+        const String s = String("MethodClosure ") + String(name.ToCStr(), name.GetSize());
+        name.AssignNode(name.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
+    }
+    else
+    {
+        const String s = String("Function ") + String(name.ToCStr(), name.GetSize());
+        name.AssignNode(name.GetManager()->CreateStringNode(s.ToCStr(), s.GetSize()));
+    }
     name.Append(ti.Name, strlen(ti.Name));
     name.Append("()", 2);
     return name;
@@ -7366,29 +7376,9 @@ bool LoadQueueEntryMT_LoadMovie::LoadFinished()
     return true;
 }
 
-// VM::IsVMCachedType(const Traits&): whether tr is one of the class traits the VM keeps (or, for instance traits,
-// one of their instance traits): the primitives, Class, Object, Namespace, Function, Array, the typed vectors and,
-// with XML support, QName, XML and XMLList.
-// MS2-FUNCTIONAL free function (not declared in the shared VM class; no caller in the exe)
-// @0x1425151a0
-bool FUN_1425151a0(const VM& vm, const Traits& tr)
+// VM::IsVMCachedType(const InstanceTraits::Traits&) and (const ClassTraits::Traits&), inline here.
+static SF_FORCEINLINE bool Sfr18IsVMCachedITraits(const VM& vm, const Traits* p)
 {
-    const XMLSupport& xml = vm.GetXMLSupport();
-    if (tr.IsClassTraits())
-    {
-        const Traits* p = &tr;
-        if (p == vm.TraitsBoolean.GetPtr() || p == vm.TraitsNumber.GetPtr() || p == vm.TraitsInt.GetPtr() ||
-            p == vm.TraitsUint.GetPtr() || p == vm.TraitsString.GetPtr() || p == vm.TraitsClassClass.GetPtr() ||
-            p == vm.TraitsObject.GetPtr() || p == vm.TraitsNamespace.GetPtr() || p == vm.TraitsFunction.GetPtr() ||
-            p == vm.TraitsArray.GetPtr() || p == vm.TraitsVector_int.GetPtr() ||
-            p == vm.TraitsVector_uint.GetPtr() || p == vm.TraitsVector_double.GetPtr() ||
-            p == vm.TraitsVector_String.GetPtr())
-            return true;
-        if (!xml.IsEnabled())
-            return false;
-        return p == xml.GetClassTraitsQName() || p == xml.GetClassTraitsXML() || p == xml.GetClassTraitsXMLList();
-    }
-    const Traits* p = &tr;
     if (p == &vm.TraitsBoolean->GetInstanceTraits() || p == &vm.TraitsNumber->GetInstanceTraits() ||
         p == &vm.TraitsInt->GetInstanceTraits() || p == &vm.TraitsUint->GetInstanceTraits() ||
         p == &vm.TraitsString->GetInstanceTraits() || p == &vm.TraitsClassClass->GetInstanceTraits() ||
@@ -7397,9 +7387,41 @@ bool FUN_1425151a0(const VM& vm, const Traits& tr)
         p == &vm.TraitsVector_int->GetInstanceTraits() || p == &vm.TraitsVector_uint->GetInstanceTraits() ||
         p == &vm.TraitsVector_double->GetInstanceTraits() || p == &vm.TraitsVector_String->GetInstanceTraits())
         return true;
+    const XMLSupport& xml = vm.GetXMLSupport();
     if (!xml.IsEnabled())
         return false;
     return p == xml.GetITraitsQName() || p == xml.GetITraitsXML() || p == xml.GetITraitsXMLList();
+}
+
+static SF_FORCEINLINE bool Sfr18IsVMCachedCTraits(const VM& vm, const Traits* p)
+{
+    if (p == vm.TraitsBoolean.GetPtr() || p == vm.TraitsNumber.GetPtr() || p == vm.TraitsInt.GetPtr() ||
+        p == vm.TraitsUint.GetPtr() || p == vm.TraitsString.GetPtr() || p == vm.TraitsClassClass.GetPtr() ||
+        p == vm.TraitsObject.GetPtr() || p == vm.TraitsNamespace.GetPtr() || p == vm.TraitsFunction.GetPtr() ||
+        p == vm.TraitsArray.GetPtr() || p == vm.TraitsVector_int.GetPtr() ||
+        p == vm.TraitsVector_uint.GetPtr() || p == vm.TraitsVector_double.GetPtr() ||
+        p == vm.TraitsVector_String.GetPtr())
+        return true;
+    const XMLSupport& xml = vm.GetXMLSupport();
+    if (!xml.IsEnabled())
+        return false;
+    return p == xml.GetClassTraitsQName() || p == xml.GetClassTraitsXML() || p == xml.GetClassTraitsXMLList();
+}
+
+// VM::IsVMCachedType(const Traits&): whether tr is one of the class traits the VM keeps (or, for instance traits,
+// one of their instance traits): the primitives, Class, Object, Namespace, Function, Array, the typed vectors and,
+// with XML support, QName, XML and XMLList.
+// MS2-FUNCTIONAL free function (not declared in the shared VM class; no caller in the exe); the exe keeps the
+// result in dil across the XML-support calls
+// @0x1425151a0
+bool FUN_1425151a0(const VM& vm, const Traits& tr)
+{
+    bool result = false;
+    if (tr.IsInstanceTraits())
+        result = Sfr18IsVMCachedITraits(vm, &tr);
+    else
+        result = Sfr18IsVMCachedCTraits(vm, &tr);
+    return result;
 }
 
 // sfr34 batch AF: the load of a queued request: the data of a URLLoader (variables, text or binary) read from its
