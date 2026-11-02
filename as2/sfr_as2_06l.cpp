@@ -22,7 +22,6 @@ static void Selection_SetFlag(MovieImpl* pmovie, unsigned shift, bool value)
 }
 
 // With the extensions on, the focus properties and modalClip go to the movie; the rest is a plain member.
-// MS2-FUNCTIONAL: the sprite test of modalClip is a vtable call in the exe
 // @0x142987090
 bool SelectionCtorFunction::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -58,7 +57,7 @@ bool SelectionCtorFunction::SetMember(Environment* penv, const ASString& name, c
         if (strcmp(pname, "modalClip") == 0)
         {
             InteractiveObject* pch = val.ToCharacter(penv);
-            Sprite* psprite = (pch && pch->IsSprite()) ? static_cast<Sprite*>(pch) : 0;
+            Sprite* psprite = (pch && pch->GetType() == CharacterDef::Sprite) ? static_cast<Sprite*>(pch) : 0;
             pmovie->SetModalClip(psprite, 0);
             return true;
         }

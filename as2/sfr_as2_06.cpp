@@ -1522,20 +1522,22 @@ bool Environment::NeedTermination(int execType) const
     return false;
 }
 
-// MS2-FUNCTIONAL the exe reads the string node flags as bit-fields (shift and test)
 // @0x142965e50
 bool AvmCharacter::IsStandardMember(const ASString& memberName, ASString* plowerCaseName)
 {
-    if (memberName.GetHashFlags() & ASConstString::Flag_StandardMember)
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1)
         return true;
-    if (memberName.GetLength() == 0 || memberName.GetCharAt(0) != '_')
-        return false;
-    ASString lower(memberName.ToLowerNode());
-    if (!(lower.GetHashFlags() & ASConstString::Flag_CaseInsensitive))
-        return false;
-    if (plowerCaseName)
-        *plowerCaseName = lower;
-    return true;
+    if (memberName.GetLength() > 0 && memberName.GetCharAt(0) == '_')
+    {
+        ASString lower(memberName.ToLowerNode());
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
+        {
+            if (plowerCaseName)
+                *plowerCaseName = lower;
+            return true;
+        }
+    }
+    return false;
 }
 
 // MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
@@ -2175,17 +2177,16 @@ void CSSFileLoaderAndParserImpl::Init(Environment* penv, Object* sheet)
     static_cast<StyleSheetObject*>(sheet)->NotifyOnLoad(penv, success);
 }
 
-// MS2-FUNCTIONAL: flushes text caches, forces an emergency AS2 collection, then resets the heap's budget counters.
+// Flushes text caches, forces an emergency AS2 collection, then resets the heap's budget counters.
 // @0x14297df30
 void MemoryContextImpl::HeapLimit::Reset(MemoryHeap* heap)
 {
-    MemoryContextImpl* context = MemContext;
-    if (context->TextAllocator)
+    if (MemContext->TextAllocator)
     {
-        context->TextAllocator->FlushTextFormatCache(true);
-        context->TextAllocator->FlushParagraphFormatCache(true);
+        MemContext->TextAllocator->FlushTextFormatCache(true);
+        MemContext->TextAllocator->FlushParagraphFormatCache(true);
     }
-    context->ASGC->ForceEmergencyCollect();
+    MemContext->ASGC->ForceEmergencyCollect();
     CurrentLimit = heap->GetFootprint();
     heap->SetLimit(0x20000);
     LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);

@@ -22,15 +22,16 @@ bool BitmapData::SetMember(Environment* penv, const ASString& name, const Value&
 }
 
 // A member that already exists is rewritten without flags, then the value goes through the plain SetMember.
-// MS2-FUNCTIONAL: the member hash insert is inlined
 // @0x142986440
 bool LoadVarsObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
-    Member member;
-    if (FindMember(penv->GetSC(), name, &member))
     {
-        member.SetMemberFlags(PropFlags(0));
-        Members.Set(name, member);
+        Member member;
+        if (FindMember(penv->GetSC(), name, &member))
+        {
+            member.SetMemberFlags(PropFlags(0));
+            Members.Set(name, member);
+        }
     }
     return Object::SetMember(penv, name, val, PropFlags(0));
 }

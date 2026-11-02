@@ -27,6 +27,14 @@
 #include "../include/render/text_core.h"
 #include <string.h>
 
+namespace Scaleform {
+// sfr_as2_06 defines this as an explicit specialization; without the declaration this unit instantiates the
+// header body and the two clash in the DLL link.
+template <>
+void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
+                         ArrayDefaultPolicy> >::RemoveAt(UPInt index);
+}
+
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -249,7 +257,6 @@ bool AvmSprite::OnUnloading(bool mayRemove)
 
 // pnewChar takes the place, the properties and the name of poldChar, which gets its unload event first. False
 // when poldChar is not (or no longer, after the queued actions ran) on the display list.
-// MS2-FUNCTIONAL: register allocation differs.
 // @0x14297d330
 bool AvmSprite::ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveObject* pnewChar)
 {
@@ -265,10 +272,8 @@ bool AvmSprite::ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveOb
     if (pnewChar->IsSprite() && poldChar->IsSprite())
     {
         Sprite* pnew = static_cast<Sprite*>(pnewChar);
-        if (static_cast<Sprite*>(poldChar)->IsLockRoot())
-            pnew->Flags |= Sprite::Flags_LockRoot;
-        else
-            pnew->Flags &= ~Sprite::Flags_LockRoot;
+        pnew->Flags = static_cast<Sprite*>(poldChar)->IsLockRoot() ? (pnew->Flags | Sprite::Flags_LockRoot)
+                                                                    : (pnew->Flags & ~Sprite::Flags_LockRoot);
     }
 
     poldChar->OnUnloading();
