@@ -1255,6 +1255,32 @@ namespace InstanceTraits { namespace fl
         result = ASString(str.SubstringNode(start, end));
     }
 
+    // SparseArray::PushBack with the ValueA PushBack inlined, as the exe has it in AS3split.
+    static SF_INLINE void saSplitPushBack03(SparseArray& sa, const Value& v)
+    {
+        typedef ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy> ValueData;
+        if (sa.Length == sa.ValueA.GetSize())
+        {
+            ValueData& d = reinterpret_cast<ValueData&>(sa.ValueA);
+            d.ResizeNoConstruct(d.pHeap, d.Size + 1);
+            ::new (d.Data + d.Size - 1) Value(v);
+        }
+        else
+        {
+            sa.ValueHHighInd = sa.Length;
+            sa.ValueH.Set(sa.ValueHHighInd, v);
+        }
+        ++sa.Length;
+    }
+
+    // RegExp.exec's result by value (the match object only tells whether there was a match).
+    static SF_INLINE SPtr<Instances::fl::Object> saSplitExec03(Instances::fl::RegExp& re, const ASString& str)
+    {
+        SPtr<Instances::fl::Object> m;
+        re.AS3exec(m, str);
+        return m;
+    }
+
     // MS2-FUNCTIONAL: the exe pre-zeroes the shared CheckResult slot and keeps limit in a callee-saved register; register allocation differs
     // @0x142400e50
     void String::AS3split(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
@@ -1293,20 +1319,18 @@ namespace InstanceTraits { namespace fl
                 unsigned cnt = 0;
                 for (;;)
                 {
-                    SPtr<Instances::fl::Object> m;
-                    pre->AS3exec(m, str);
-                    if (!m || cnt++ >= limit)
+                    if (!(saSplitExec03(*pre, str) && cnt++ < limit))
                         break;
                     const SInt32 matchOffset = pre->MatchOffset;
                     const SInt32 matchLength = pre->MatchLength;
                     ASString sub(str.SubstringNode(next, matchOffset));
-                    saPushBack03(parr->SA, Value(sub));
+                    saSplitPushBack03(parr->SA, Value(sub));
                     next = matchOffset + matchLength;
                 }
                 if (cnt < limit)
                 {
                     ASString sub(str.SubstringNode(next, str.GetLength()));
-                    saPushBack03(parr->SA, Value(sub));
+                    saSplitPushBack03(parr->SA, Value(sub));
                 }
                 result = parr;
                 return;
@@ -2183,7 +2207,9 @@ namespace
         const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
         if (prop.This.GetKind() == Value::kUndefined || bits == 1)
             return false;
-        return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
+        if ((static_cast<UInt8>(bits) >> 1) & 1)
+            return (bits & ~UPInt(2)) != 0;
+        return true;
     }
 }
 
@@ -2194,7 +2220,7 @@ namespace
     {
         int result = 0;
         const UPInt size = Names.GetSize();
-        for (UPInt i = 0; result == 0 && i < size; ++i)
+        for (UPInt i = 0; i < size && result == 0; ++i)
         {
             Multiname mn(Vm.GetPublicNamespace(), Names[i]);
             PropRef propA;
@@ -2207,7 +2233,7 @@ namespace
             Value va;
             Value vb;
             if (!propA.GetSlotValueUnsafe(Vm, va) || !propB.GetSlotValueUnsafe(Vm, vb))
-                return 0;
+                break;
 
             const UInt32 flags = Flags[i];
             int r;
@@ -2215,16 +2241,16 @@ namespace
             {
                 Value::Number na = 0.0;
                 Value::Number nb = 0.0;
-                if (!va.Convert2NumberInline(na) || !vb.Convert2NumberInline(nb))
-                    return 0;
+                if (!va.Convert2Number(na) || !vb.Convert2Number(nb))
+                    break;
                 r = static_cast<int>(na - nb);
             }
             else
             {
-                ASString sb = Vm.GetStringManager().CreateEmptyString();
-                ASString sa = sb;
+                ASString sa = Vm.GetStringManager().CreateEmptyString();
+                ASString sb = sa;
                 if (!va.Convert2String(sa) || !vb.Convert2String(sb))
-                    return 0;
+                    break;
                 const bool caseSensitive = (flags & SortFlags_CaseInsensitive) == 0;
                 if (flags & SortFlags_Locale)
                     r = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(), caseSensitive);
