@@ -4284,12 +4284,21 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // sfr34 batch Q: VM class registry and weak file list, slot iteration and types, focus changes, and the
 // number output helpers.
 
-// MS2-FUNCTIONAL the exe calls MultinameHash::Add out of line (sfr_as3_16z FUN_1424e5e80, which takes the value by value; the exe's takes const T&); here it is inlined
+void FUN_1424e5e80(TClassTraitsCache* self, const ASString& name, const Instances::Namespace& ns,
+                   ClassTraits::Traits* const& v);   // TClassTraitsCache::Add, out of line (sfr_as3_16z)
+
+// The registry insert takes the traits by reference and adds its address.
+static SF_INLINE void Sfr18AddClassTraits(TClassTraitsCache& set, const ASString& name, const Instances::Namespace& ns,
+                                          ClassTraits::Traits& tr)
+{
+    FUN_1424e5e80(&set, name, ns, &tr);
+}
+
 // @0x1425210e0
 void VM::RegisterClassTraits(ClassTraits::Traits& tr)
 {
     InstanceTraits::Traits& itr = tr.GetInstanceTraits();
-    ClassTraitsSet.Add(itr.GetName(), itr.GetNamespace(), &tr);
+    Sfr18AddClassTraits(ClassTraitsSet, itr.GetName(), itr.GetNamespace(), tr);
 }
 
 // InstanceTraits::Traits::IsParentTypeOf in the SDK form, inline here.
