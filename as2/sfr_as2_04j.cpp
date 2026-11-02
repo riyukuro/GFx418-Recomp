@@ -86,17 +86,36 @@ void* FUN_14291cbb0(void* self, LoadStates* pls, const String& level0Path, const
     return ConstructFileTask(self, DAT_143217768, pls, level0Path, url, holder);
 }
 
-// The load states a loader thread task works from, created over the loader of the main movie.
-static LoadStates* CreateLoadStates(MovieImpl* pmovie)
-{
-    return SF_NEW LoadStates(pmovie->pMainMovieDef->pLoaderImpl, pmovie->GetStateBag()->GetStateBagImpl());
-}
-
 // Hands a task to the task manager of the movie.
-static void StartTask(MovieImpl* pmovie, void* ptask)
+static SF_FORCEINLINE void StartTask(MovieImpl* pmovie, void* ptask)
 {
     Ptr<TaskManager> ptm = *static_cast<TaskManager*>(pmovie->GetStateBag()->GetStateAddRef(State::State_TaskManager));
     ptm->AddTask(static_cast<Task*>(ptask));
+}
+
+// MovieRoot::GetLevel0Path through the AS2 root of the movie, inlined in the exe.
+static SF_FORCEINLINE void GetEntryLevel0Path(MovieImpl* pmovie, String* ppath)
+{
+    MovieImpl* pmain = static_cast<MovieRoot*>(pmovie->pASMovieRoot)->pMovieImpl;
+    for (unsigned i = 0; i < pmain->MovieLevelsSize; i++)
+        if (pmain->pMovieLevels[i].Level == 0)
+        {
+            if (pmain->pMovieLevels[i].pSprite)
+            {
+                *ppath = ((MovieDef*)pmain->pMainMovieDef)->GetFileURL();
+                if (URLBuilder::ExtractFilePath(ppath))
+                    return;
+            }
+            break;
+        }
+    ppath->Clear();
+}
+
+// The file task of an entry, built over a copy of the holder of the entry.
+static SF_FORCEINLINE void* ConstructEntryTask(void* self, const void** pvftable, LoadStates* pls,
+                                               const String& level0Path, const String& url, HolderType holder)
+{
+    return ConstructFileTask(self, pvftable, pls, level0Path, url, holder);
 }
 
 // The file entries: the pLoadStates and the file task of the entry go in words 6 and 5.
@@ -112,60 +131,64 @@ static void* ConstructFileEntry(void* self, const void** pvftable, LoadQueueEntr
     return w;
 }
 
-// MS2-FUNCTIONAL: raw words over the entry; its task constructor is inlined
+// The load states, the level-0 path, the task and the task start are all inlined in the exe, and each use re-reads
+// the movie from word 3.
+// MS2-FUNCTIONAL: raw words over the entry; the exe keeps the holder copy's Loader in rdi with a 0x60 frame; register
+// choice differs
 // @0x14291c400
 void* FUN_14291c400(void* self, LoadQueueEntry* pentry, MovieRoot* proot)
 {
     UPInt*           w     = static_cast<UPInt*>(self);
-    MovieImpl*       pmovie;
     GFxAS2LoadQueueEntry* pas2 = static_cast<GFxAS2LoadQueueEntry*>(pentry);
     FUN_1426396b0(self, pentry, proot->pMovieImpl);
     w[0] = reinterpret_cast<UPInt>(DAT_1432177b0);
     w[5] = 0;
     w[6] = 0;
-    pmovie = reinterpret_cast<MovieImpl*>(w[3]);
-    LoadStates* pls = CreateLoadStates(pmovie);
+    LoadStates* pls = SF_NEW LoadStates(reinterpret_cast<MovieImpl*>(w[3])->pMainMovieDef->pLoaderImpl,
+                                        reinterpret_cast<MovieImpl*>(w[3])->GetStateBag()->GetStateBagImpl());
     if (w[6])
         FUN_14257dcb0(reinterpret_cast<void*>(w[6]));
     w[6] = reinterpret_cast<UPInt>(pls);
     String level0Path;
-    pmovie->GetMainMoviePath(&level0Path);
+    GetEntryLevel0Path(reinterpret_cast<MovieImpl*>(w[3]), &level0Path);
     void* ptask = 0;
     if (void* pmem = Memory::pGlobalHeap->Alloc(0x40))
-        ptask = ConstructFileTask(pmem, DAT_143217798, pls, level0Path, pentry->URL, pas2->CSSHolder);
+        ptask = ConstructEntryTask(pmem, DAT_143217798, reinterpret_cast<LoadStates*>(w[6]), level0Path, pentry->URL, pas2->CSSHolder);
     if (w[5])
         FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
     w[5] = reinterpret_cast<UPInt>(ptask);
-    StartTask(pmovie, ptask);
+    StartTask(reinterpret_cast<MovieImpl*>(w[3]), reinterpret_cast<void*>(w[5]));
     return self;
 }
 
-// MS2-FUNCTIONAL: raw words over the entry; its task constructor is inlined
+// The load states, the level-0 path, the task and the task start are all inlined in the exe, and each use re-reads
+// the movie from word 3.
+// MS2-FUNCTIONAL: raw words over the entry; the exe keeps the holder copy's Loader in rdi with a 0x60 frame; register
+// choice differs
 // @0x14291c910
 void* FUN_14291c910(void* self, LoadQueueEntry* pentry, MovieRoot* proot)
 {
     UPInt*           w     = static_cast<UPInt*>(self);
-    MovieImpl*       pmovie;
     GFxAS2LoadQueueEntry* pas2 = static_cast<GFxAS2LoadQueueEntry*>(pentry);
     FUN_1426396b0(self, pentry, proot->pMovieImpl);
     w[0] = reinterpret_cast<UPInt>(DAT_143217780);
     w[5] = 0;
     w[6] = 0;
     w[7] = reinterpret_cast<UPInt>(proot);
-    pmovie = reinterpret_cast<MovieImpl*>(w[3]);
-    LoadStates* pls = CreateLoadStates(pmovie);
+    LoadStates* pls = SF_NEW LoadStates(reinterpret_cast<MovieImpl*>(w[3])->pMainMovieDef->pLoaderImpl,
+                                        reinterpret_cast<MovieImpl*>(w[3])->GetStateBag()->GetStateBagImpl());
     if (w[6])
         FUN_14257dcb0(reinterpret_cast<void*>(w[6]));
     w[6] = reinterpret_cast<UPInt>(pls);
     String level0Path;
-    pmovie->GetMainMoviePath(&level0Path);
+    GetEntryLevel0Path(reinterpret_cast<MovieImpl*>(w[3]), &level0Path);
     void* ptask = 0;
     if (void* pmem = Memory::pGlobalHeap->Alloc(0x40))
-        ptask = ConstructFileTask(pmem, DAT_143217768, pls, level0Path, pentry->URL, pas2->XMLHolder);
+        ptask = ConstructEntryTask(pmem, DAT_143217768, reinterpret_cast<LoadStates*>(w[6]), level0Path, pentry->URL, pas2->XMLHolder);
     if (w[5])
         FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
     w[5] = reinterpret_cast<UPInt>(ptask);
-    StartTask(pmovie, ptask);
+    StartTask(reinterpret_cast<MovieImpl*>(w[3]), reinterpret_cast<void*>(w[5]));
     return self;
 }
 
