@@ -109,25 +109,27 @@ void MovieRoot::CreateObjectInterface(MovieImpl* pmovie)
 
 // Binds the host value to the VM object: display objects must still be on the stage, others are Arrays or
 // plain Objects.
-static inline bool FillObjectValue(MovieImpl* pmovie, GFx::Value::ObjectInterface* pif, GFx::Value* pval, void* pdata,
-                                   bool isdobj)
+static SF_FORCEINLINE bool FillObjectValue(MovieImpl* pmovie, GFx::Value::ObjectInterface* pif, GFx::Value* pval,
+                                          void* pdata, bool isdobj)
 {
-    GFx::Value::ValueType vt;
+    GFx::Value::ValueType vt = GFx::Value::VT_Object;
     if (isdobj)
     {
+        vt                   = GFx::Value::VT_DisplayObject;
         DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovie);
-        if (!pdobj || !(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pdobj) + 0x6a) & 0x400))
+        if (!pdobj || !((UByte)(*reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pdobj) + 0x6a) >> 10) & 1))
             return false;
-        vt = GFx::Value::VT_DisplayObject;
     }
     else
     {
         // the host data of an object is its ObjectInterface, as AS2ValueObjectInterface::ObjectAddRef reads it
-        Object* pobj = static_cast<ObjectInterface*>(pdata)->ToASObject();
-        vt           = pobj->GetObjectType() == Object::Object_Array ? GFx::Value::VT_Array : GFx::Value::VT_Object;
+        ObjectInterface* pobjif = static_cast<ObjectInterface*>(pdata);
+        Object*          pobj   = pobjif->IsASObject() ? static_cast<Object*>(pobjif) : 0; // ToASObject, inlined
+        if (pobj->GetObjectType() == Object::Object_Array)
+            vt = GFx::Value::VT_Array;
     }
     UPInt* w = reinterpret_cast<UPInt*>(pval);
-    if (reinterpret_cast<unsigned*>(w)[2] & GFx::Value::VTC_ManagedBit)
+    if ((UByte)(reinterpret_cast<unsigned*>(w)[2] >> 6) & 1) // VTC_ManagedBit
         reinterpret_cast<GFx::Value::ObjectInterface*>(w[0])->ObjectRelease(pval, reinterpret_cast<void*>(w[2]));
     w[2]                                  = reinterpret_cast<UPInt>(pdata);
     reinterpret_cast<unsigned*>(w)[2]     = vt | GFx::Value::VTC_ManagedBit;
@@ -137,7 +139,7 @@ static inline bool FillObjectValue(MovieImpl* pmovie, GFx::Value::ObjectInterfac
 }
 
 // The interface's own entry: the movie is reached through its movie root.
-// MS2-FUNCTIONAL: the interface class is not modelled, the movie is read by address
+// The interface class is not modelled, the movie is read by address.
 // @0x142937a20
 bool FUN_142937a20(GFx::Value::ObjectInterface* pif, GFx::Value* pval, void* pdata, bool isdobj)
 {
@@ -146,7 +148,7 @@ bool FUN_142937a20(GFx::Value::ObjectInterface* pif, GFx::Value* pval, void* pda
     return FillObjectValue(*reinterpret_cast<MovieImpl**>(pbase + 0x10), pif, pval, pdata, isdobj);
 }
 
-// MS2-FUNCTIONAL: the host value is filled by raw words
+// The host value is filled by raw words.
 // @0x142937af0
 bool MovieRoot::CreateObjectValue(GFx::Value* pval, GFx::Value::ObjectInterface* pif, void* pdata, bool isdobj)
 {
