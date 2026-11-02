@@ -2072,63 +2072,24 @@ void mpvumct_OutputIntra6blk(short *arg1, int *arg2, longlong arg3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068590
 void FUN_140068590(longlong *arg1, longlong arg2, uint arg3)
 {
   longlong l_v1;
   short *ps_v2;
   byte *pb_v3;
-  byte b_v4;
   
   l_v1 = *arg1;
   ps_v2 = (short *)arg1[1];
   pb_v3 = (byte *)arg1[2];
-  if ((int)arg3 < 0) {
-    b_v4 = *(byte *)((longlong)*ps_v2 + (ulonglong)*pb_v3 + l_v1);
-  }
-  else {
-    b_v4 = *pb_v3;
-  }
-  **(byte **)(arg2 + 8) = b_v4;
-  if ((arg3 >> 0x1e & 1) == 0) {
-    b_v4 = pb_v3[0x40];
-  }
-  else {
-    b_v4 = *(byte *)((ulonglong)pb_v3[0x40] + ps_v2[0x40] + l_v1);
-  }
-  **(byte **)((char *)arg2 + 0x18) = b_v4;
-  if ((arg3 >> 0x1d & 1) == 0) {
-    b_v4 = pb_v3[0x80];
-  }
-  else {
-    b_v4 = *(byte *)((ulonglong)pb_v3[0x80] + ps_v2[0x80] + l_v1);
-  }
-  **(byte **)((char *)arg2 + 0x28) = b_v4;
-  if ((arg3 >> 0x1c & 1) == 0) {
-    b_v4 = pb_v3[0xc0];
-  }
-  else {
-    b_v4 = *(byte *)((ulonglong)pb_v3[0xc0] + ps_v2[0xc0] + l_v1);
-  }
-  **(byte **)((char *)arg2 + 0x38) = b_v4;
-  if ((arg3 >> 0x1b & 1) == 0) {
-    b_v4 = pb_v3[0x100];
-  }
-  else {
-    b_v4 = *(byte *)((ulonglong)pb_v3[0x100] + ps_v2[0x100] + l_v1);
-  }
-  **(byte **)((char *)arg2 + 0x48) = b_v4;
-  if ((arg3 >> 0x1a & 1) != 0) {
-    **(cri_u1 **)((char *)arg2 + 0x58) =
-         *(cri_u1 *)((ulonglong)pb_v3[0x140] + ps_v2[0x140] + l_v1);
-    return;
-  }
-  **(byte **)((char *)arg2 + 0x58) = pb_v3[0x140];
-  return;
+  **(byte **)(arg2 + 8) = (arg3 & 0x80000000) ? *(byte *)((ulonglong)pb_v3[0] + ps_v2[0] + l_v1) : (uint)pb_v3[0];
+  **(byte **)((char *)arg2 + 0x18) = (arg3 & 0x40000000) ? *(byte *)((ulonglong)pb_v3[0x40] + ps_v2[0x40] + l_v1) : (uint)pb_v3[0x40];
+  **(byte **)((char *)arg2 + 0x28) = (arg3 & 0x20000000) ? *(byte *)((ulonglong)pb_v3[0x80] + ps_v2[0x80] + l_v1) : (uint)pb_v3[0x80];
+  **(byte **)((char *)arg2 + 0x38) = (arg3 & 0x10000000) ? *(byte *)((ulonglong)pb_v3[0xc0] + ps_v2[0xc0] + l_v1) : (uint)pb_v3[0xc0];
+  **(byte **)((char *)arg2 + 0x48) = (arg3 & 0x08000000) ? *(byte *)((ulonglong)pb_v3[0x100] + ps_v2[0x100] + l_v1) : (uint)pb_v3[0x100];
+  **(byte **)((char *)arg2 + 0x58) = (arg3 & 0x04000000) ? *(byte *)((ulonglong)pb_v3[0x140] + ps_v2[0x140] + l_v1) : (uint)pb_v3[0x140];
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400686c0
 void mpvumct_BiMakeMb(longlong *arg1, longlong arg2, uint arg3)
 {
@@ -2136,60 +2097,24 @@ void mpvumct_BiMakeMb(longlong *arg1, longlong arg2, uint arg3)
   byte *pb_v2;
   longlong l_v3;
   short *ps_v4;
-  cri_u1 u_v5;
   int i_v6;
   
   pb_v1 = (byte *)arg1[2];
   pb_v2 = (byte *)arg1[3];
   l_v3 = *arg1;
   ps_v4 = (short *)arg1[1];
-  i_v6 = (int)(*pb_v2 + 1 + (uint)*pb_v1) >> 1;
-  if ((int)arg3 < 0) {
-    u_v5 = *(cri_u1 *)((longlong)i_v6 + *ps_v4 + l_v3);
-  }
-  else {
-    u_v5 = (cri_u1)i_v6;
-  }
-  **(cri_u1 **)(arg2 + 8) = u_v5;
-  i_v6 = (int)(pb_v2[0x40] + 1 + (uint)pb_v1[0x40]) >> 1;
-  if ((arg3 >> 0x1e & 1) == 0) {
-    u_v5 = (cri_u1)i_v6;
-  }
-  else {
-    u_v5 = *(cri_u1 *)((longlong)i_v6 + ps_v4[0x40] + l_v3);
-  }
-  **(cri_u1 **)((char *)arg2 + 0x18) = u_v5;
-  i_v6 = (int)(pb_v2[0x80] + 1 + (uint)pb_v1[0x80]) >> 1;
-  if ((arg3 >> 0x1d & 1) == 0) {
-    u_v5 = (cri_u1)i_v6;
-  }
-  else {
-    u_v5 = *(cri_u1 *)((longlong)i_v6 + ps_v4[0x80] + l_v3);
-  }
-  **(cri_u1 **)((char *)arg2 + 0x28) = u_v5;
-  i_v6 = (int)(pb_v2[0xc0] + 1 + (uint)pb_v1[0xc0]) >> 1;
-  if ((arg3 >> 0x1c & 1) == 0) {
-    u_v5 = (cri_u1)i_v6;
-  }
-  else {
-    u_v5 = *(cri_u1 *)((longlong)i_v6 + ps_v4[0xc0] + l_v3);
-  }
-  **(cri_u1 **)((char *)arg2 + 0x38) = u_v5;
-  i_v6 = (int)(pb_v2[0x100] + 1 + (uint)pb_v1[0x100]) >> 1;
-  if ((arg3 >> 0x1b & 1) == 0) {
-    u_v5 = (cri_u1)i_v6;
-  }
-  else {
-    u_v5 = *(cri_u1 *)((longlong)i_v6 + ps_v4[0x100] + l_v3);
-  }
-  **(cri_u1 **)((char *)arg2 + 0x48) = u_v5;
-  i_v6 = (int)(pb_v2[0x140] + 1 + (uint)pb_v1[0x140]) >> 1;
-  if ((arg3 >> 0x1a & 1) != 0) {
-    **(cri_u1 **)((char *)arg2 + 0x58) = *(cri_u1 *)((longlong)i_v6 + ps_v4[0x140] + l_v3);
-    return;
-  }
-  **(cri_u1 **)((char *)arg2 + 0x58) = (char)i_v6;
-  return;
+  i_v6 = (pb_v2[0] + pb_v1[0] + 1) >> 1;
+  **(cri_u1 **)(arg2 + 8) = (arg3 & 0x80000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0] + l_v3) : (uint)(cri_u1)i_v6;
+  i_v6 = (pb_v2[0x40] + pb_v1[0x40] + 1) >> 1;
+  **(cri_u1 **)((char *)arg2 + 0x18) = (arg3 & 0x40000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0x40] + l_v3) : (uint)(cri_u1)i_v6;
+  i_v6 = (pb_v2[0x80] + pb_v1[0x80] + 1) >> 1;
+  **(cri_u1 **)((char *)arg2 + 0x28) = (arg3 & 0x20000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0x80] + l_v3) : (uint)(cri_u1)i_v6;
+  i_v6 = (pb_v2[0xc0] + pb_v1[0xc0] + 1) >> 1;
+  **(cri_u1 **)((char *)arg2 + 0x38) = (arg3 & 0x10000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0xc0] + l_v3) : (uint)(cri_u1)i_v6;
+  i_v6 = (pb_v2[0x100] + pb_v1[0x100] + 1) >> 1;
+  **(cri_u1 **)((char *)arg2 + 0x48) = (arg3 & 0x08000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0x100] + l_v3) : (uint)(cri_u1)i_v6;
+  i_v6 = (pb_v2[0x140] + pb_v1[0x140] + 1) >> 1;
+  **(cri_u1 **)((char *)arg2 + 0x58) = (arg3 & 0x04000000) ? (uint)*(cri_u1 *)((longlong)i_v6 + ps_v4[0x140] + l_v3) : (uint)(cri_u1)i_v6;
 }
 
 // @0x140068840
