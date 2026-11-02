@@ -2268,24 +2268,17 @@ namespace Instances { namespace fl_text
     void TextField::autoSizeGet(ASString& result)
     {
         void* ptf = DisplayTextField(this);
-        const char* pmode;
-        UPInt length;
         if (!(FieldFlags(ptf) & 1))
-        {
-            pmode = "none";
-            length = 4;
-        }
+            result = GetVM().GetStringManager().GetStringManager()->CreateConstString("none", 4);
         else
         {
             switch (*((UByte*)DocViewOf(ptf) + 0x148) & 3)
             {
-            case 0: pmode = "left"; length = 4; break;
-            case 1: pmode = "right"; length = 5; break;
-            case 2: pmode = "center"; length = 6; break;
-            default: return;
+            case 0: result = GetVM().GetStringManager().GetStringManager()->CreateConstString("left", 4); break;
+            case 1: result = GetVM().GetStringManager().GetStringManager()->CreateConstString("right", 5); break;
+            case 2: result = GetVM().GetStringManager().GetStringManager()->CreateConstString("center", 6); break;
             }
         }
-        result = GetVM().GetStringManager().GetStringManager()->CreateConstString(pmode, length);
     }
 
     // @0x1424b3e70
