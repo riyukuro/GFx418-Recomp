@@ -15,6 +15,7 @@
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
+// MS2-RANGE: 0x1400361a0-0x1400363b0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
 // MS2-RANGE: 0x140036710-0x1400369e0 .text$mn
 // MS2-RANGE: 0x140036b80-0x140036d50 .text$mn
@@ -141,6 +142,21 @@ typedef struct CriMvHeaderStreamEntry       // 0x2e0 bytes, from player + 0x28
     CriUint8  Reserved5[8];
 } CriMvHeaderStreamEntry;
 typedef struct CriMvHeaderStreamList { CriUint8 Reserved[0x28]; CriMvHeaderStreamEntry Entries[2]; } CriMvHeaderStreamList;
+typedef struct CriMvStartMemoryView
+{
+    CriUint8  Reserved0[0x0c];
+    CriUint32 Reset;                        // 0x0c
+    CriUint32 ResetTimer;                   // 0x10
+    CriUint8  Reserved14[0x28 - 0x14];
+    CriUint8  CurrentHeader[0x5c0];         // 0x28
+    unsigned short CurrentSlot;             // 0x5e8
+    unsigned short Reserved5ea;
+    CriUint32 SlotFlags;                    // 0x5ec
+    CriUint32 Phase;                        // 0x5f0
+    CriUint8  Reserved5f4[4];
+    CriUint8  AnalyzedHeader[0x2c0];        // 0x5f8
+    CriUint32 HeaderSize;                   // 0x8b8
+} CriMvStartMemoryView;
 typedef struct CriMvVideoDecoderView { CriUint8 Reserved[0xe08]; void* VideoDecoder; } CriMvVideoDecoderView;
 typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
 {
@@ -178,6 +194,7 @@ void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* it
 void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
 CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void criSj_GetInputChunk(void* object, void* value);
+void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
 void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
@@ -225,6 +242,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
 #pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
 #pragma comment(linker, "/alternatename:?FUN_1400358d0@@YAKPEAXPEBX@Z=FUN_1400358d0")
+#pragma comment(linker, "/alternatename:?criMvPly_StartMemory@@YAXPEAXPEBXK@Z=criMvPly_StartMemory")
 #pragma comment(linker, "/alternatename:?executeHeaderServer@@YAXPEAX@Z=executeHeaderServer")
 #pragma comment(linker, "/alternatename:?FUN_140036b80@@YAJPEAXPEAUCriMvSubtitleChunk@@J@Z=FUN_140036b80")
 #pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
@@ -540,6 +558,50 @@ CriUint32 FUN_1400358d0(void* output, const void* info)
         ((CriMvPlaneInfo*)output)[2].Height = ((const CriMvFramePlaneSource*)info)->Planes[2].Height;
     }
     return ((const CriMvFramePlaneSource*)info)->PlaneCount;
+}
+
+// initialize a new input stream, reset demux state, and seed the read queue
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): len, buf, demux.
+// @0x1400361a0
+void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSize)
+{
+    void* demux = ((CriMvPlyDemuxFields*)player)->Demux;
+    CriMvWriteBufferView buf;
+    CriUint32 len;
+    if (player == 0)
+    {
+        crimvply_occurUserError(player, "E05121603M : CriMvPly handle is NULL.", 0);
+        return;
+    }
+    if (((CriMvPlyStateView*)player)->Status != 0 && ((CriMvPlyStateView*)player)->Status != 7)
+    {
+        crimvply_occurUserError(player, "E05121604M : Can't execute start function when CriMvPly handle status is not STOP/PLAYEND.", ((CriMvPlyStateView*)player)->Status);
+        return;
+    }
+    ((CriMvStartMemoryView*)player)->ResetTimer = 0;
+    ((CriMvStartMemoryView*)player)->HeaderSize = 0;
+    memset(((CriMvStartMemoryView*)player)->AnalyzedHeader, 0, sizeof(((CriMvStartMemoryView*)player)->AnalyzedHeader));
+    criUsfDmx_SetInputSj(demux, ((CriMvPlyDemuxFields*)player)->InputBuffer);
+    FUN_140044fb0(demux, 0, ((CriMvPlyDemuxFields*)player)->ReadBuffer, 0, (CriUint32)-1);
+    criUsfDmx_SetThrououtSwitch(demux, 0);
+    criUsfDmx_Start(demux);
+    criSj_GetInputChunk(((CriMvPlyDemuxFields*)player)->InputBuffer, &buf);
+    if (buf.Capacity > inputSize)
+        len = inputSize;
+    else
+        len = buf.Capacity;
+    memcpy(buf.Data, inputData, len);
+    FUN_140046814(((CriMvPlyDemuxFields*)player)->InputBuffer, &buf, len);
+    criMvPly_AddInputMemory(player, (void*)inputData, inputSize);
+    ((CriMvPlyDemuxFields*)player)->ReadMode = 1;
+    memset(((CriMvStartMemoryView*)player)->CurrentHeader, 0, sizeof(((CriMvStartMemoryView*)player)->CurrentHeader));
+    ((CriMvHeaderStreamList*)player)->Entries[0].State = 0;
+    ((CriMvHeaderStreamList*)player)->Entries[1].State = 0;
+    ((CriMvStartMemoryView*)player)->CurrentSlot = 1;
+    ((CriMvStartMemoryView*)player)->SlotFlags = 0;
+    ((CriMvStartMemoryView*)player)->Phase = 0;
+    ((CriMvStartMemoryView*)player)->Reset = 0;
+    ((CriMvPlyStateView*)player)->Status = 1;
 }
 
 // read the selected USF subtitle chunk, decode its metadata, and copy its text into caller storage

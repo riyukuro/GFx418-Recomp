@@ -15,7 +15,8 @@
 // MS2-RANGE: 0x140034920-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
-// MS2-RANGE: 0x1400359e0-0x140036470 .text$mn
+// MS2-RANGE: 0x1400359e0-0x1400361a0 .text$mn
+// MS2-RANGE: 0x1400363b0-0x140036470 .text$mn
 // MS2-RANGE: 0x140036590-0x140036710 .text$mn
 // MS2-RANGE: 0x1400369e0-0x140036b80 .text$mn
 // MS2-RANGE: 0x140036d50-0x140039ea8 .text$mn
@@ -1303,70 +1304,6 @@ CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input)
         prepareNextHeaderIfCompleted(player, slot);
     }
     return 1;
-}
-
-// MS2-FUNCTIONAL: initialize a new input stream, reset demux state, and seed the read queue.
-// @0x1400361a0
-void criMvPly_StartMemory(void* player, const void* inputData, CriUint32 inputSize)
-{
-    if (!player)
-    {
-        crimvply_occurUserError(NULL, "E05121603M : CriMvPly handle is NULL.", 0);
-        return;
-    }
-    CriMvPlyStateTransitionFields* state = (CriMvPlyStateTransitionFields*)player;
-    if (state->Status != 0 && state->Status != 7)
-    {
-        crimvply_occurUserError(player, "E05121604M : Can't execute start function when CriMvPly handle status is not STOP/PLAYEND.", state->Status);
-        return;
-    }
-
-    struct StartResetView
-    {
-        CriUint8 Reserved0[0x10];
-        CriUint32 ResetTimer;
-        CriUint8 Reserved14[0x8a4];
-        CriUint32 HeaderSize;
-    };
-    struct BufferView { void* Data; CriUint32 Capacity; CriUint32 Reserved; };
-    struct StartFlagView { CriUint8 Reserved[0x0c]; CriUint32 Reset; };
-    struct StartRingView
-    {
-        CriUint8 Reserved0[0x2e8];
-        CriUint32 SlotState;
-        CriUint8 Reserved2[0x2dc];
-        CriUint32 SlotCount;
-        CriUint8 Reserved3[0x1c];
-        CriUint16 CurrentSlot;
-        CriUint16 Reserved4;
-        CriUint32 SlotFlags;
-        CriUint32 Phase;
-    };
-    ((StartResetView*)player)->ResetTimer = 0;
-    ((StartResetView*)player)->HeaderSize = 0;
-    memset(((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader, 0, sizeof(((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader));
-    criUsfDmx_SetInputSj(state->Demux, ((CriMvPlyInputQueueFields*)player)->InputBuffer);
-    criUsfDmx_SetOutputSj(state->Demux, 0, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, 0, (CriUint32)-1);
-    criUsfDmx_SetThrououtSwitch(state->Demux, 0);
-    criUsfDmx_Start(state->Demux);
-
-    BufferView buffer = {};
-    criSj_GetInputChunk(((CriMvPlyInputQueueFields*)player)->InputBuffer, &buffer);
-    CriUint32 copySize = inputSize < buffer.Capacity ? inputSize : buffer.Capacity;
-    if (copySize != 0)
-        memcpy(buffer.Data, inputData, copySize);
-    criSj_PutInputChunk(((CriMvPlyInputQueueFields*)player)->InputBuffer, &buffer, copySize);
-    criMvPly_AddInputMemory(player, (void*)inputData, inputSize);
-
-    ((CriMvReadBufferState*)player)->Mode = 1;
-    memset(((CriMvPlyHeaderAnalysisFields*)player)->CurrentHeader, 0, 0x5c0);
-    ((StartRingView*)player)->SlotState = 0;
-    ((StartRingView*)player)->SlotCount = 0;
-    ((StartRingView*)player)->CurrentSlot = 1;
-    ((StartRingView*)player)->SlotFlags = 0;
-    ((StartRingView*)player)->Phase = 0;
-    ((StartFlagView*)player)->Reset = 0;
-    state->Status = 1;
 }
 
 // MS2-FUNCTIONAL: replace the pending movie chunk and save the most recently enqueued record.
