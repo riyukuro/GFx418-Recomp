@@ -1125,26 +1125,22 @@ Sprite* Sfr33MovieRoot::CreateSprite(CharacterDef* pdef, MovieDefImpl* pdefImpl,
 
 // MovieRoot::CreateFunction (virtual): wraps the handler in a user-defined function object (0x50 bytes: FunctionBase,
 // then +0x40 the handler, +0x48 the user data) and returns it as a GFx value.
-// MS2-FUNCTIONAL 0x1424f3780: the object is built on the exe's UserDefinedFunction vftable, not a class of ours.
+static inline UByte* Sfr33ConstructUserDefinedFunction(void* addr, InstanceTraits::Traits& t, FunctionHandler* pfc, void* puserData)
+{
+    UByte* pf = static_cast<UByte*>(addr);
+    FUN_1423ed140(pf, &t);
+    *reinterpret_cast<const void**>(pf) = DAT_14317ef38;
+    Ptr<FunctionHandler>* pcontext = ::new (pf + 0x40) Ptr<FunctionHandler>();
+    *pcontext = pfc;
+    *reinterpret_cast<void**>(pf + 0x48) = puserData;
+    return pf;
+}
+
 // @0x1424f3780
 void Sfr33MovieRoot::CreateFunction(GFx::Value* pvalue, FunctionHandler* pfc, void* puserData)
 {
-    ASVM* pavm = *reinterpret_cast<ASVM**>(reinterpret_cast<UByte*>(this) + 0x48);
-    UByte* pf = static_cast<UByte*>(pavm->GetMemoryHeap()->Alloc(0x50));
-    if (pf)
-    {
-        FUN_1423ed140(pf, &pavm->GetClassTraitsFunction().GetInstanceTraits());
-        *reinterpret_cast<const void**>(pf) = DAT_14317ef38;
-        *reinterpret_cast<FunctionHandler**>(pf + 0x40) = NULL;
-        if (pfc)
-        {
-            reinterpret_cast<RefCountImpl*>(pfc)->AddRef();
-            if (RefCountImpl* old = *reinterpret_cast<RefCountImpl**>(pf + 0x40))
-                old->Release();
-        }
-        *reinterpret_cast<FunctionHandler**>(pf + 0x40) = pfc;
-        *reinterpret_cast<void**>(pf + 0x48) = puserData;
-    }
+    void* addr = (*reinterpret_cast<ASVM**>(reinterpret_cast<UByte*>(this) + 0x48))->GetMemoryHeap()->Alloc(0x50);
+    UByte* pf = addr ? Sfr33ConstructUserDefinedFunction(addr, (*reinterpret_cast<ASVM**>(reinterpret_cast<UByte*>(this) + 0x48))->GetClassTraitsFunction().GetInstanceTraits(), pfc, puserData) : NULL;
     Value asval;
     asval.PickUnsafe(reinterpret_cast<Instances::FunctionBase*>(pf));
     Root()->ASValue2GFxValue(asval, pvalue);
@@ -4342,17 +4338,20 @@ void FUN_142501e80(void* state, void* propRef, void* multiname, void* stypeOut, 
 }
 
 // Object::DeleteDynamicSlotValuePair: removes the dynamic property prop_name names (namespaces are not looked at).
-// MS2-FUNCTIONAL 0x1424f4540: the exe inlines the hash probe and removal; same results
 // @0x1424f4540
 CheckResult Object::DeleteDynamicSlotValuePair(const Multiname& prop_name)
 {
-    ASString name = GetVM().GetStringManager().CreateEmptyString();
-    if (!prop_name.Name.Convert2String(name))
+    ASString str_name(GetVM().GetStringManager().CreateEmptyString());
+    if (!prop_name.Name.Convert2String(str_name))
         return false;
-    if (!DynAttrs.Get(DynAttrsKey(name)))
-        return false;
-    DynAttrs.Remove(DynAttrsKey(name));
-    return true;
+
+    bool result = true;
+    if (DynAttrs.Get(DynAttrsKey(str_name)))
+        DynAttrs.Remove(DynAttrsKey(str_name));
+    else
+        result = false;
+
+    return result;
 }
 
 // The dynamic value of this object that mn names (namespaces are not looked at).
@@ -4721,23 +4720,26 @@ SF_NOINLINE Value* Sfr33GetDefaultValue(VM* vm, Value* result, const ClassTraits
     {
     case 1:
         ::new (result) Value(false);
-        break;
+        return result;
     case 2:
         ::new (result) Value(SInt32(0));
-        break;
+        return result;
     case 3:
         ::new (result) Value(UInt32(0));
-        break;
+        return result;
     case 4:
         ::new (result) Value(NumberUtil::NaN());
-        break;
+        return result;
     default:
         if (&ctr == *reinterpret_cast<ClassTraits::Traits* const*>(reinterpret_cast<const UByte*>(vm) + 0x1f0))
+        {
             ::new (result) Value(Value::GetUndefined());
-        else
-            ::new (result) Value(Value::GetNull());
+            return result;
+        }
         break;
     }
+
+    ::new (result) Value(Value::GetNull());
     return result;
 }
 
