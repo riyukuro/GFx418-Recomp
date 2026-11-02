@@ -576,12 +576,13 @@ bool DepthStencilSurface::Initialize()
 // ==== MappedTexture ==================================================================================================
 
 // @0x14272bf50
-// MS2-FUNCTIONAL: the exe's ImageData::Initialize/plane loop is laid out differently (290 vs 251 bytes)
-// MS2-FUNCTIONAL 0x14272bf50: RawPlaneCount is format planes * mipmap count (the exe inlines Texture::GetPlaneCount)
 bool MappedTexture::Map(Texture* ptexture, unsigned mipLevel, unsigned levelCount)
 {
     if (levelCount <= PlaneReserveSize)
-        Data.Initialize(ptexture->GetImageFormat(), levelCount, Planes, ptexture->GetPlaneCount() * ptexture->GetMipmapCount(), true);
+    {
+        unsigned planeCount = ptexture->GetMipmapCount() * ImageData::GetFormatPlaneCount(ptexture->GetFormat());
+        Data.Initialize(ptexture->GetImageFormat(), levelCount, Planes, planeCount, true);
+    }
     else if (!Data.Initialize(ptexture->GetImageFormat(), levelCount, true))
         return false;
 
