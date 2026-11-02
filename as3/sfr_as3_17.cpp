@@ -3664,9 +3664,11 @@ CheckResult Value::Convert2PrimitiveValueUnsafe(Value& result, Hint hint) const
     return !GetObject()->GetVM().IsException();
 }
 
-// The out-of-line copy of Value::Convert2NumberInline.
-extern CheckResult (Value::* const pSfr33Convert2NumberInline)(Value::Number&) const;
-CheckResult (Value::* const pSfr33Convert2NumberInline)(Value::Number&) const = &Value::Convert2NumberInline;
+// @0x1424f0f60
+CheckResult Value::Convert2Number(Number& result) const
+{
+    return Convert2NumberInline(result);
+}
 
 // ToString. Numbers use the ECMA formatting; an object goes through its primitive value (hint String), which must
 // come back primitive.
@@ -6524,7 +6526,7 @@ AMP::ViewStats* AS3ValueObjectInterface::GetAdvanceStats() const
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@$0BFE@@2@V?$HashsetCachedNodeEntry@U?$HashNode@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@345@V?$FixedSizeHash@UKey@?$AbcMultinameHash@V?$SPtr@VNamespace@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$0BFE@@AS3@GFx@Scaleform@@@5@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424ef5b0
 // MS2-PIN: ?ClearAndRelease@?$ArrayPagedBase@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$09$04U?$AllocatorPagedLH_POD@PEBV?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@$01@4@@Scaleform@@QEAAXXZ 0x1424efab0
 // MS2-PIN: ?Clear@?$HashSetBase@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@2@V?$HashsetNodeEntry@U?$HashNode@PEAVObject@AS2@GFx@Scaleform@@PEAV1234@V?$IdentityHash@PEAVObject@AS2@GFx@Scaleform@@@4@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAAXXZ 0x1424ef320
-// MS2-PIN: ?Convert2NumberInline@Value@AS3@GFx@Scaleform@@QEBA?AVCheckResult@234@AEAN@Z 0x1424f0f60
+// MS2-PIN: ?Convert2Number@Value@AS3@GFx@Scaleform@@QEBA?AVCheckResult@234@AEAN@Z 0x1424f0f60
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
 
 // ==== pdata-less vftable slots of the AVM display objects (sfr21) ====

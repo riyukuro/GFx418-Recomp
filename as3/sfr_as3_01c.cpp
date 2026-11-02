@@ -780,7 +780,7 @@ namespace Instances { namespace fl
                     Parser parser(v.AsString().ToCStr());
                     TimeValue = parser.MakeDate(LocalTZA);
                 }
-                else if (v.ToNumberValue())
+                else if (v.ToNumberValueInline())
                     TimeValue = TimeClip(v.AsNumber());
             }
         }

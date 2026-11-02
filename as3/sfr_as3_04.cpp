@@ -1644,7 +1644,7 @@ namespace Classes { namespace fl
                 if (cmp == false3)
                     result.Assign(argv[i]);
             }
-            result.ToNumberValue();
+            result.ToNumberValueInline();
         }
         else
             result.SetNumber(NumberUtil::NEGATIVE_INFINITY());
@@ -1669,7 +1669,7 @@ namespace Classes { namespace fl
                 if (cmp == false3)
                     result.Assign(argv[i]);
             }
-            result.ToNumberValue();
+            result.ToNumberValueInline();
         }
         else
             result.SetNumber(NumberUtil::POSITIVE_INFINITY());

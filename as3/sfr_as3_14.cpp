@@ -647,7 +647,7 @@ namespace Instances { namespace fl_utils
                 key.SetNumber(num);
         }
         else if (kind == Value::kInt || kind == Value::kUInt)
-            key.ToNumberValue();
+            key.ToNumberValueInline();
 
         ContainerType::Iterator it = ValueH.Find(key);
         if (!it.IsEnd())
