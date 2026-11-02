@@ -5,6 +5,7 @@
 
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_fwd.h"
 #include "ms2/scaleform/include/gfx/as3/as3_obj_core.h"
+#include "ms2/scaleform/include/kernel/sf_hash.h"
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
@@ -223,6 +224,16 @@ namespace Instances { namespace fl {
 
     // MS2-FUNCTIONAL: the registration hash at +0x38 is kept opaque (sfr22: the other members follow the exe's constructor
     // 0x1423ed260)
+    // GlobalObjectCPP's builtin ClassInfo registry is keyed by a borrowed C string.
+    struct ConstStringKey { const char* pChar;     };
+    class ConstStringHashFn {
+    public:
+        UPInt operator()(const ConstStringKey& key) const
+        {
+            return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
+        }
+    };
+
     class GlobalObjectCPP : public Instances::fl::GlobalObject
     {
     public:
@@ -296,7 +307,9 @@ namespace Instances { namespace fl {
         void unescapeMultiByte(ASString& result, const ASString&);
 
         // (appended, sfr22)
-        void*                   CIRegistrationHash;     // +0x38 builtin ClassInfo by name (not recovered)
+        // +0x38 builtin ClassInfo by name
+        Scaleform::Hash<ConstStringKey, const ClassInfo*, ConstStringHashFn,
+                        Scaleform::AllocatorGH<ConstStringKey, 328> > CIRegistrationHash;
         const Value::Number     PositiveInfinity;       // +0x40
         const Value::Number     NegativeInfinity;       // +0x48
         const Value::Number     NaN;                    // +0x50

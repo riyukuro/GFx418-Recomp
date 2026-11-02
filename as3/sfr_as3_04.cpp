@@ -4333,7 +4333,7 @@ using Scaleform::GFx::AS3::FUN_14250a250;
 ClassTraits::Traits* FUN_142415520(Instances::fl::GlobalObjectCPP* self, const ASString& name,
                                    const Instances::Namespace& ns)
 {
-    const CIRegistrationTable* table = (const CIRegistrationTable*)self->CIRegistrationHash;
+    const CIRegistrationTable* table = *reinterpret_cast<const CIRegistrationTable* const*>(&self->CIRegistrationHash);
     if (!table)
         return NULL;
     const char* key = name.ToCStr();
@@ -5477,16 +5477,6 @@ namespace Scaleform { namespace GFx { namespace AS3
 
 // The builtin ClassInfo registry of GlobalObjectCPP (+0x38): a GH hash keyed by the borrowed class name, as declared
 // in sfr_as3_01c.
-namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
-struct ConstStringKey { const char* pChar; };
-class ConstStringHashFn {
-public:
-    UPInt operator()(const ConstStringKey& key) const
-    {
-        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
-    }
-};
-}}}}}
 typedef Scaleform::Hash<Instances::fl::ConstStringKey, const ClassInfo*, Instances::fl::ConstStringHashFn,
                         Scaleform::AllocatorGH<Instances::fl::ConstStringKey, 328> > CIRegistrationHashType;
 
@@ -5495,7 +5485,7 @@ typedef Scaleform::Hash<Instances::fl::ConstStringKey, const ClassInfo*, Instanc
 // @0x14241e540
 void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[])
 {
-    CIRegistrationHashType& h = *reinterpret_cast<CIRegistrationHashType*>(&self->CIRegistrationHash);
+    CIRegistrationHashType& h = self->CIRegistrationHash;
     for (unsigned i = 0; table[i]; ++i)
     {
         Instances::fl::ConstStringKey key = { table[i]->GetName() };

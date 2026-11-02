@@ -38,19 +38,6 @@ template<> SF_NOINLINE void ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::Instances::fl
     AllocatorLH<GFx::AS3::SPtr<GFx::AS3::Instances::fl::XML>, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
 }
 
-// The core library's GlobalObject hash key is a borrowed C string. Keep this
-// local declaration here: the shared AS3 headers do not expose the key type.
-namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
-struct ConstStringKey { const char* pChar; };
-class ConstStringHashFn {
-public:
-    UPInt operator()(const ConstStringKey& key) const
-    {
-        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
-    }
-};
-}}}}}
-
 // Out-of-line Traits::GetConstructor (InitOnDemand when the class is not built yet).
 Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 // The class infos of the native function kinds' traits (no ABC file): plain and thunk function objects.
@@ -1048,7 +1035,6 @@ namespace Instances { namespace fl
     // @0x1423ed260
     GlobalObjectCPP::GlobalObjectCPP(VM& vm, InstanceTraits::fl::GlobalObject& t)
         : GlobalObject(t)
-        , CIRegistrationHash(NULL)
         , PositiveInfinity(NumberUtil::POSITIVE_INFINITY())
         , NegativeInfinity(NumberUtil::NEGATIVE_INFINITY())
         , NaN(NumberUtil::NaN())
@@ -1066,7 +1052,7 @@ namespace Instances { namespace fl
         , FLASH10_FLAGS(0x05ff)
     {
         // the builtin classes by name, for on-demand initialization
-        CIRegistrationHashType& h = *reinterpret_cast<CIRegistrationHashType*>(&CIRegistrationHash);
+        CIRegistrationHashType& h = CIRegistrationHash;
         for (unsigned i = 0; ClassRegistrationTable[i]; ++i)
         {
             ConstStringKey key = { ClassRegistrationTable[i]->GetName() };
@@ -1130,12 +1116,9 @@ namespace Instances { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: the registration hash is opaque in the header, so the body destroys it before the other members
-    // (the exe destroys it last)
     // @0x1423f0fc0
     GlobalObjectCPP::~GlobalObjectCPP()
     {
-        reinterpret_cast<CIRegistrationHashType*>(&CIRegistrationHash)->~CIRegistrationHashType();
     }
 }}
 

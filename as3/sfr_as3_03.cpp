@@ -4202,17 +4202,6 @@ template void Scaleform::ConstructorMov<Scaleform::GFx::AS3::SPtr<Scaleform::GFx
 // MS2-PIN: ?Func@?$ThunkFunc1@VXML@fl@Instances@AS3@GFx@Scaleform@@$06V?$SPtr@VXMLList@fl@Instances@AS3@GFx@Scaleform@@@456@AEBVValue@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424113c0
 // The builtin class-info table uses a borrowed C-string key and a GH-backed
 // Hash. Its out-of-line CheckExpand instance is shared by the registry code.
-namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl {
-struct ConstStringKey { const char* pChar; };
-class ConstStringHashFn
-{
-public:
-    UPInt operator()(const ConstStringKey& key) const
-    {
-        return String::BernsteinHashFunction(key.pChar, strlen(key.pChar));
-    }
-};
-}}}}}
 namespace {
 using CIKey = Scaleform::GFx::AS3::Instances::fl::ConstStringKey;
 using CIHash = Scaleform::GFx::AS3::Instances::fl::ConstStringHashFn;
