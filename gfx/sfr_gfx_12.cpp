@@ -21,6 +21,10 @@
 #include "hook/ms2hook.h"
 #include <string.h>
 
+// the exe calls the CRT strcpy_s import thunk (0x14280f246) directly rather than through the import table, so the
+// thunk goes by its own name
+extern "C" errno_t __cdecl sfr_strcpy_s_thunk(char* dest, rsize_t size, const char* src);
+
 // The exe functions and globals this unit uses but does not define, declared by their FUN_<va> / DAT_<va> names: the
 // hook DLL binds them to the exe, the full exe to the recovered definition at that VA (tools/fullexe/alias.py).
 template <class T> using ExeDecl = T;
@@ -289,28 +293,29 @@ void AppendableSoundData::UnlockData()
     ChunkLock.Unlock();
 }
 
-// MS2-FUNCTIONAL: sample data held in memory: refcount and format, then the zero filled block from the global heap,
+// Sample data held in memory: refcount and format, then the zero filled block from the global heap,
 // whose size is reported to the global statistics object.
 // @0x142747c70
 SoundData::SoundData(unsigned format, unsigned rate, unsigned length, unsigned dsize)
-    : SoundDataBase(format, rate, length)
+    : SoundDataBase(format, rate, length), pData(0), DataSize(dsize)
 {
-    DataSize = dsize;
-    pData    = (UByte*)Memory::pGlobalHeap->Alloc(dsize, 0x20, (const AllocInfo*)0);
+    pData = (UByte*)Memory::pGlobalHeap->Alloc(dsize, 0x20, (const AllocInfo*)0);
     memset(pData, 0, DataSize);
     void* pstat = Scaleform::GFx::FUN_14261e310();
     ((void (*)(void*, unsigned))(*(void***)pstat)[45])(pstat, DataSize);
 }
 
-// MS2-FUNCTIONAL: sample data in a file: the file name is kept as a heap copy.
+// Sample data in a file: the file name is kept as a heap copy.
 // @0x142747cf0
 SoundFile::SoundFile(const char* fname, unsigned rate, unsigned length, bool streaming)
-    : SoundDataBase(streaming ? (Sample_File | Sample_Stream) : Sample_File, rate, length)
+    : SoundDataBase(Sample_File, rate, length)
 {
+    if (streaming)
+        Format |= Sample_Stream;
     UPInt size = strlen(fname) + 1;
     pFileName  = (char*)Memory::pGlobalHeap->Alloc(size, (const AllocInfo*)0);
     memset(pFileName, 0, size);
-    memcpy(pFileName, fname, size);
+    sfr_strcpy_s_thunk(pFileName, size, fname);
 }
 
 // MS2-FUNCTIONAL: drops the renderer's sample and the data description (the exe's out of line destructor body).
