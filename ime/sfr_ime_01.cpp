@@ -3002,47 +3002,45 @@ unsigned char FUN_1423daae0(void* raw)
     return 0;
 }
 
-// MS2-FUNCTIONAL: resolves a language-specific IME string from the executable locale table and releases its reference.
-// @0x1423d8a10
-unsigned long long FUN_1423d8a10(unsigned long long* manager, const unsigned long long* stringInfo)
+static __forceinline void Ime01ReleaseStringNode(const unsigned long long* stringInfo)
 {
-    const unsigned current = *reinterpret_cast<const unsigned*>(DAT_143a2a3e0 + 8);
-    const char* text = reinterpret_cast<const char*>((*stringInfo & ~3ull) + 0xc);
-    if (current != 0x02000000) {
-        for (unsigned index = 0;; ++index) {
-            const auto* locale = reinterpret_cast<const unsigned char*>(DAT_143a2a3e0) + index * 0x10;
-            const unsigned localeId = *reinterpret_cast<const unsigned*>(locale + 8);
-            if (localeId == 0x02000000) break;
-            const char* localeName = *reinterpret_cast<const char* const*>(locale);
-            if (std::strcmp(text, localeName) != 0) continue;
-            const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x1a);
-            auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
-            auto* kinds = reinterpret_cast<unsigned*>(manager[0x32]);
-            for (unsigned i = 0; i < count; ++i) {
-                if (*reinterpret_cast<unsigned*>(entries + i * 0x30 + 0x20) != localeId) continue;
-                const unsigned offset = kinds[i] == 1 ? 0x10 : kinds[i] == 2 ? 0x18 : 0;
-                if (!offset) continue;
-                const unsigned long long selected = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + offset);
-                reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
-                    manager, reinterpret_cast<const char*>((selected & ~3ull) + 0xc));
-                const unsigned long long packed = *stringInfo;
-                auto* refs = reinterpret_cast<volatile long*>((packed & ~3ull) + 8);
-                if (_InterlockedDecrement(refs) == 0) {
-                    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-                    reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
-                        reinterpret_cast<void*>(packed & ~3ull));
+    Sfr33ReleasePacked(*stringInfo);
+}
+
+// Finds the locale row named by the by-value String (released on both exits) and shows the matching layout's
+// text 1 or 2 through the manager's slot 8; returns bool (the sub eax,1 release form needs it).
+// MS2-FUNCTIONAL: the exe loads the vtable into r8 for the slot 8 call, ours into rax (2 instructions).
+// @0x1423d8a10
+bool FUN_1423d8a10(unsigned long long* manager, const unsigned long long* stringInfo)
+{
+    struct LocaleRow { const char* name; unsigned id; unsigned pad; };
+    struct LayoutEntry { unsigned long long pad0[2]; String text1; String text2; unsigned id; unsigned pad1[3]; };
+    const auto* rows = reinterpret_cast<const LocaleRow*>(DAT_143a2a3e0);
+    unsigned index = 0;
+    if (rows[0].id != 0x02000000) {
+        do {
+            if (std::strcmp(reinterpret_cast<const String*>(stringInfo)->ToCStr(), rows[index].name) == 0) {
+                const unsigned localeId = rows[index].id;
+                for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(manager + 0x1a); ++i) {
+                    auto* entries = reinterpret_cast<LayoutEntry*>(manager[0x17]);
+                    if (entries[i].id == localeId) {
+                        const unsigned kind = reinterpret_cast<unsigned*>(manager[0x32])[i];
+                        const char* selected;
+                        if (kind == 1) selected = entries[i].text1.ToCStr();
+                        else if (kind == 2) selected = entries[i].text2.ToCStr();
+                        else continue;
+                        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
+                            manager, selected);
+                        Ime01ReleaseStringNode(stringInfo);
+                        return true;
+                    }
                 }
-                return 1;
             }
-        }
+            ++index;
+        } while (rows[index].id != 0x02000000);
     }
-    auto* refs = reinterpret_cast<volatile long*>((*stringInfo & ~3ull) + 8);
-    if (_InterlockedDecrement(refs) == 0) {
-        void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
-            reinterpret_cast<void*>(*stringInfo & ~3ull));
-    }
-    return 0;
+    Ime01ReleaseStringNode(stringInfo);
+    return false;
 }
 
 // Reads the active IME DLL's version resource and combines its version bytes with the current keyboard layout's low word;
