@@ -6150,50 +6150,64 @@ void FUN_142516960(void* self)
 
 // A strong reference to a namespace or object (or the object of a closure) becomes a weak one: the object's weak
 // proxy (made and registered with the collector on first use) is kept and the reference released.
-// MS2-FUNCTIONAL the exe inlines the weak proxy hash lookup and insertion
+// The exe's WProxyHash.Get is the out-of-line word-keyed Hash::Get instance (0x1425058c0, sfr_as3_17).
+bool Sfr33WordHashGet(const HashLH<UPInt, UPInt>& h, const UPInt& key, UPInt* pvalue);
+
+// GASRefCountBase::CreateWeakProxy, inlined into MakeWeakRef by the exe.
+static __forceinline WeakProxy* Sfr18CreateWeakProxy(GASRefCountBase* wb)
+{
+    GASRefCountBase::Collector* rcc = wb->GetCollector();
+    WeakProxy*                  wp  = NULL;
+    if (!Sfr33WordHashGet(reinterpret_cast<const HashLH<UPInt, UPInt>&>(rcc->WProxyHash),
+                          reinterpret_cast<UPInt>(wb), reinterpret_cast<UPInt*>(&wp)))
+    {
+        wp = SF_HEAP_AUTO_NEW(wb) WeakProxy(wb);
+        if (!wp)
+            return NULL;
+        *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(wb) + 0x10) |= GASRefCountBase::Flag_HasWeakRef;
+        rcc->WProxyHash.Add(wb, wp);
+    }
+    wp->AddRef();
+    return wp;
+}
+
+// MS2-FUNCTIONAL only register allocation (this/wb/zero rotated) and the wp slot differ
 // @0x142516720
 bool Value::MakeWeakRef()
 {
-    if (IsWeakRef())
-        return false;
-    GASRefCountBase* obj;
-    switch (GetKind())
+    bool rc = false;
+    if (!IsWeakRef() && IsGarbageCollectable())
     {
-    case kNamespace:
-    case kObject:
-    case kClass:
-    case kFunction:
-    case kThunkFunction:
-        obj = value.VS._1.VObj;
-        break;
-    case kThunkClosure:
-    case kVTableIndClosure:
-        obj = value.VS._2.VObj;
-        break;
-    default:
-        return false;
-    }
-    if (!obj)
-        return false;
-    GASRefCountBase::Collector* gc    = obj->GetCollector();
-    WeakProxy*                  proxy = NULL;
-    if (!gc->WProxyHash.Get(obj, &proxy))
-    {
-        proxy = SF_HEAP_AUTO_NEW(obj) WeakProxy;
-        if (proxy)
+        GASRefCountBase* wb;
+        switch (GetKind())
         {
-            proxy->RefCount = 1;
-            proxy->pObject  = obj;
-            *reinterpret_cast<UInt32*>(reinterpret_cast<UByte*>(obj) + 0x10) |= GASRefCountBase::Flag_HasWeakRef;
-            gc->WProxyHash.Add(obj, proxy);
+        case kNamespace:
+            wb = value.VS._1.VNs;
+            break;
+        case kClass:
+        case kFunction:
+        case kThunkFunction:
+        case kObject:
+            wb = value.VS._1.VObj;
+            break;
+        case kThunkClosure:
+        case kVTableIndClosure:
+            wb = value.VS._2.VObj;
+            break;
+        default:
+            wb = NULL;
+            break;
+        }
+        if (wb)
+        {
+            WeakProxy* wp = Sfr18CreateWeakProxy(wb);
+            Bonus.pWeakProxy = wp;
+            Flags |= weakRefMask;
+            ReleaseInternal();
+            rc = true;
         }
     }
-    if (proxy)
-        proxy->AddRef();
-    Flags |= weakRefMask;
-    Bonus.pWeakProxy = proxy;
-    ReleaseInternal();
-    return true;
+    return rc;
 }
 
 // The call stack as text, the innermost frame first, one per line: line_pref, "at " and the function's name with
