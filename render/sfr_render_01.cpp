@@ -795,7 +795,7 @@ void Image::GetUVGenMatrix(Matrix2F* mat, TextureManager* manager)
     }
 }
 
-// MS2-FUNCTIONAL: the exe has a /GS cookie and a 0xa0 frame here that this source does not produce; the arithmetic is the same
+#pragma strict_gs_check(push, on)
 // @0x14257c310
 void Image::GetUVNormMatrix(Matrix2F* mat, TextureManager* manager)
 {
@@ -814,6 +814,7 @@ void Image::GetUVNormMatrix(Matrix2F* mat, TextureManager* manager)
     ImageSize s = GetRect().GetSize();
     mat->PrependScaling((float)s.Width, (float)s.Height);
 }
+#pragma strict_gs_check(pop)
 
 // ---------------------------------------------------------------- ImageSource
 
