@@ -2526,12 +2526,27 @@ __forceinline bool GFx::AS3::NamespaceInstanceSetBase::GetAlt<GFx::AS3::Namespac
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
-// MS2-FUNCTIONAL: the exe inlines the Namespace constructor
+// the Namespace constructor as the exe inlines it here (its out-of-line copy is sfr_as3_01c's 0x1423edb60)
+SF_FORCEINLINE Instances::Namespace::Namespace(VM& vm, NamespaceInstanceFactory* pfactory, Abc::NamespaceKind kind,
+                                               const ASString& uri, const Value& prefix, InlineCtorTag)
+    : GASRefCountBase(vm.GetGCPtr())
+    , Kind(kind)
+    , IsInterface(false)
+    , VMRef(vm)
+    , Uri(uri)
+    , pFactory(pfactory)
+    , Prefix(prefix)
+{
+}
+
 // @0x14241ab60
 __declspec(noinline) Pickable<Instances::Namespace> InstanceTraits::fl::Namespace::MakeInstance(Abc::NamespaceKind kind, const ASString& uri,
                                                                            const Value& prefix)
 {
-    return Pickable<Instances::Namespace>(SF_HEAP_AUTO_NEW(this) Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix));
+    // allocated under StatMV_VM (0x148), the SDK's SF_HEAP_AUTO_NEW_ID(this, StatMV_VM)
+    return Pickable<Instances::Namespace>(new((MemAddressPtr)((void*)this), StatMV_VM, __FILE__, __LINE__)
+                                          Instances::Namespace(GetVM(), InstanceFactory, kind, uri, prefix,
+                                                               Instances::Namespace::InlineCtorTag()));
 }
 
 // @0x14241ba70
@@ -5994,6 +6009,9 @@ template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scalefor
 // MS2-PIN: ?RemoveMultipleAt@?$ArrayBase@U?$ArrayDataDH@VValue@AS3@GFx@Scaleform@@U?$AllocatorDH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@@Scaleform@@QEAAX_K0@Z 0x14241ebb0
 // MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z: the exe keeps the table in another register
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@U67345@U?$AllocatorLH@PEAVNamespace@Instances@AS3@GFx@Scaleform@@$01@5@V?$HashsetEntry@PEAVNamespace@Instances@AS3@GFx@Scaleform@@UNamespaceHashFunc@NamespaceInstanceFactory@345@@5@@Scaleform@@AEAAXPEAX_K@Z 0x14242a240
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7Namespace@Instances@AS3@GFx@Scaleform@@6B@ 0x143140070
 // MS2-PIN: ??_7CallBack@XMLElement@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142f90
 // MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
 // MS2-PIN: ??_7EmptyCallBack@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439b8

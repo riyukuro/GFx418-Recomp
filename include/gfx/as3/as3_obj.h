@@ -1091,6 +1091,10 @@ namespace Instances
     protected:
         Namespace(VM& vm, NamespaceInstanceFactory* pfactory, Abc::NamespaceKind kind, const ASString& uri,
                   const Value& prefix);
+        // the same constructor, defined SF_FORCEINLINE only where the exe inlines it (sfr_as3_04's MakeInstance)
+        struct InlineCtorTag {};
+        Namespace(VM& vm, NamespaceInstanceFactory* pfactory, Abc::NamespaceKind kind, const ASString& uri,
+                  const Value& prefix, InlineCtorTag);
 
     public:
         virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
