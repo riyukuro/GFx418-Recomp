@@ -701,61 +701,66 @@ void* FUN_1423d56b0(void* self, unsigned flags)
     return self;
 }
 
-// MS2-FUNCTIONAL: releases the executable's linked IME records, pair arrays, and optional conversion interfaces.
+static __forceinline void Ime01HeapFree(void* p)
+{
+    SF_FREE(p);
+}
+
+// Releases the linked IME records, pair arrays, and optional conversion interfaces (every array is reread
+// from self after each free, as in the exe). queried is scoped so the final sink Release is a tail call.
 // @0x1423d5fd0
 void FUN_1423d5fd0(void* self)
 {
+    struct ProfileNode { void* data; ProfileNode* next; };
+    struct Record { unsigned char pad[0x28]; ProfileNode* head; };
+    struct Pair { void* a; void* b; void* pad; };
+    struct Item { void* ptr; unsigned char pad[0x18]; };
     auto* bytes = static_cast<unsigned char*>(self);
-    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-    const unsigned listCount = *reinterpret_cast<unsigned*>(bytes + 0xd0);
-    for (unsigned i = 0; i < listCount; ++i) {
-        // The records are inline (stride 0x30); +0x28 heads each record's profile-copy list.
-        auto* node = *reinterpret_cast<void***>(*reinterpret_cast<unsigned char**>(bytes + 0xb8) + i * 0x30ull + 0x28);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+        ProfileNode* node = (*reinterpret_cast<Record**>(bytes + 0xb8))[i].head;
         while (node) {
-            void* next = node[1];
-            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node[0]);
-            reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node);
-            node = static_cast<void**>(next);
+            Ime01HeapFree(node->data);
+            ProfileNode* next = node->next;
+            Ime01HeapFree(node);
+            node = next;
         }
     }
-    auto* pairs = *reinterpret_cast<unsigned char**>(bytes + 0x158);
-    const unsigned long long pairCount = *reinterpret_cast<unsigned long long*>(bytes + 0x160);
-    for (unsigned long long i = 0; i < pairCount; ++i) {
-        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
-            *reinterpret_cast<void**>(pairs + i * 0x18 + 8));
-        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60,
-            *reinterpret_cast<void**>(pairs + i * 0x18));
+    struct PairArray { Pair* Data; unsigned long long Size; };
+    PairArray& pairs = *reinterpret_cast<PairArray*>(bytes + 0x158);
+    for (unsigned i = 0; i < pairs.Size; ++i) {
+        Ime01HeapFree(pairs.Data[i].b);
+        Ime01HeapFree(pairs.Data[i].a);
     }
-    auto* items = *reinterpret_cast<unsigned char**>(bytes + 0x90);
-    const unsigned itemCount = *reinterpret_cast<unsigned*>(bytes + 0x80);
-    for (unsigned i = 0; i < itemCount; ++i) {
-        void* item = *reinterpret_cast<void**>(items + static_cast<unsigned long long>(i) * 0x20);
-        if (item) reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, item);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0x80); ++i) {
+        void* item = (*reinterpret_cast<Item**>(bytes + 0x90))[i].ptr;
+        if (item) Ime01HeapFree(item);
     }
     // +0x1a0 is an embedded COM object (its vtable is at +0x1a0), released through slot 2.
-    IUnknown* sink = reinterpret_cast<IUnknown*>(bytes + 0x1a0);
-    void* remote = *reinterpret_cast<void**>(bytes + 0x1d0);
-    void* queried = nullptr;
-    if (*reinterpret_cast<int*>(bytes + 0x1b8) != -1) {
-        if (remote && SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
-                (*reinterpret_cast<void***>(remote))[0])(remote, DAT_1431c51e8, &queried))) {
-            const HRESULT hr = reinterpret_cast<HRESULT(*)(void*, unsigned)>(
-                (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b8));
-            if (static_cast<unsigned>(hr) == 0x80040200u) sink->Release();
-            static_cast<IUnknown*>(queried)->Release();
+    {
+        IUnknown* queried = nullptr;
+        if (*reinterpret_cast<int*>(bytes + 0x1b8) != -1) {
+            IUnknown* remote = *reinterpret_cast<IUnknown**>(bytes + 0x1d0);
+            if (remote && SUCCEEDED(remote->QueryInterface(*reinterpret_cast<const IID*>(DAT_1431c51e8),
+                    reinterpret_cast<void**>(&queried)))) {
+                const HRESULT hr = reinterpret_cast<HRESULT(*)(void*, unsigned)>(
+                    (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b8));
+                if (static_cast<unsigned>(hr) == 0x80040200u) reinterpret_cast<IUnknown*>(bytes + 0x1a0)->Release();
+                queried->Release();
+            }
+            *reinterpret_cast<int*>(bytes + 0x1b8) = -1;
         }
-        *reinterpret_cast<int*>(bytes + 0x1b8) = -1;
-    }
-    if (*reinterpret_cast<int*>(bytes + 0x1b0) != -1) {
-        if (remote && SUCCEEDED(reinterpret_cast<HRESULT(*)(void*, const void*, void**)>(
-                (*reinterpret_cast<void***>(remote))[0])(remote, DAT_1431c51e8, &queried))) {
-            reinterpret_cast<HRESULT(*)(void*, unsigned)>(
-                (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b0));
-            static_cast<IUnknown*>(queried)->Release();
+        if (*reinterpret_cast<int*>(bytes + 0x1b0) != -1) {
+            IUnknown* remote = *reinterpret_cast<IUnknown**>(bytes + 0x1d0);
+            if (remote && SUCCEEDED(remote->QueryInterface(*reinterpret_cast<const IID*>(DAT_1431c51e8),
+                    reinterpret_cast<void**>(&queried)))) {
+                reinterpret_cast<HRESULT(*)(void*, unsigned)>(
+                    (*reinterpret_cast<void***>(queried))[4])(queried, *reinterpret_cast<unsigned*>(bytes + 0x1b0));
+                queried->Release();
+            }
+            *reinterpret_cast<int*>(bytes + 0x1b0) = -1;
         }
-        *reinterpret_cast<int*>(bytes + 0x1b0) = -1;
     }
-    sink->Release();
+    reinterpret_cast<IUnknown*>(bytes + 0x1a0)->Release();
 }
 
 // Whether the movie's focused character accepts IME input: it locks the focus group's WeakPtr (dropping a dead proxy),
