@@ -5217,45 +5217,25 @@ bool Sfr33DeleteNamedProperty(void* self, Object* obj, const char* name)
 }
 
 namespace InstanceTraits { class Activation { public: Activation(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo& mbi, const ASString& name); }; }
-void FUN_1424d4430(void* set, void* pheapAddr, const void* noderef,
-                   UPInt hash);   // HashLH<const MethodBodyInfo*, SPtr<InstanceTraits::Traits>>::add
+// VMAbcFile::ActivationTraitsCacheTable (+0x90); its add (0x1424d4430) is instantiated in sfr_as3_15.
+typedef HashLH<const Abc::MethodBodyInfo*, SPtr<InstanceTraits::Traits>, FixedSizeHash<const Abc::MethodBodyInfo*>,
+               StatMV_VM_VMAbcFile_Mem> Sfr33ActivationTraitsCache;
 
 // VMAbcFile::GetActivationInstanceTraits: the activation traits of method body mbi, made on first use and cached by
 // body (+0x90); a body without traits shares the VM's (+0x288).
-// MS2-FUNCTIONAL 0x142506f00: raw cache table walk and add (the hash member is kept as its table pointer)
+// MS2-FUNCTIONAL 0x142506f00: cache Get/Add through the HashLH view; ours sets up an rbp frame for the Pickable temp and keeps mbi in its home slot, and the exe moves the empty-traits and found returns past the epilogue
 // @0x142506f00
 InstanceTraits::Traits* Sfr33GetActivationInstanceTraits(VMAbcFile& file, const Abc::MethodBodyInfo* mbi, void* p)
 {
     VM& vm = file.GetVM();
     if (mbi->obj_traits.GetSize() == 0)
         return *reinterpret_cast<InstanceTraits::Traits* const*>(reinterpret_cast<const UByte*>(&vm) + 0x288);
-    const UPInt key = reinterpret_cast<UPInt>(mbi);
-    UPInt hash = 5381;
-    for (int i = 7; i >= 0; --i)
-        hash = hash * 65599 + ((key >> (i * 8)) & 0xff);
-    void** const cache = reinterpret_cast<void**>(reinterpret_cast<UByte*>(&file) + 0x90);   // ActivationTraitsCacheTable
-    const UPInt* table = static_cast<const UPInt*>(*cache);
-    if (table)
-    {
-        const UPInt idx = hash & table[1];
-        const UPInt* e = table + 2 + idx * 4;
-        if (e[0] != UPInt(-2) && e[1] == idx)
-        {
-            for (;;)
-            {
-                if (e[1] == idx && e[2] == key)
-                    return reinterpret_cast<InstanceTraits::Traits*>(e[3]);
-                if (e[0] == UPInt(-1))
-                    break;
-                e = table + 2 + e[0] * 4;
-            }
-        }
-    }
+    Sfr33ActivationTraitsCache& cache = *reinterpret_cast<Sfr33ActivationTraitsCache*>(reinterpret_cast<UByte*>(&file) + 0x90);
+    if (SPtr<InstanceTraits::Traits>* ptr = cache.Get(mbi))
+        return *ptr;
     void* mem = vm.GetMemoryHeap()->Alloc(0xd0);
     InstanceTraits::Traits* tr = mem ? reinterpret_cast<InstanceTraits::Traits*>(::new (mem) InstanceTraits::Activation(file, vm, *mbi, *reinterpret_cast<const ASString*>(p))) : NULL;
-    SPtr<InstanceTraits::Traits> ref = Pickable<InstanceTraits::Traits>(tr);
-    const void* noderef[2] = { &mbi, &ref };
-    FUN_1424d4430(cache, cache, noderef, hash);
+    cache.Add(mbi, Pickable<InstanceTraits::Traits>(tr));
     return tr;
 }
 
