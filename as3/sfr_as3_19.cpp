@@ -2842,8 +2842,10 @@ Value* Sfr31ResolveInvokeAlias(UPInt root, const char* name)
 }
 
 // @0x142528620
-void Sfr31SetMouseCursorType(UPInt self, const ASString* name, UInt32 mouse)
+void MovieRoot::SetMouseCursorType(const ASString& cursor, UInt32 mouse)
 {
+    const UPInt self = reinterpret_cast<UPInt>(this);
+    const ASString* name = &cursor;
     const char* s = name->ToCStr();
     UInt32 v = ~0u;
     if (strcmp(s, "arrow") == 0) v = 0;
