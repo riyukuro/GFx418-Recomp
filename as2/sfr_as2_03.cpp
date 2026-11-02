@@ -336,13 +336,14 @@ ArrayCtorFunction::ArrayCtorFunction(ASStringContext* psc)
                                                           PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete);
 }
 
-// MS2-FUNCTIONAL this/psc register swap and AddConstMembers argument scheduling
 // @0x14291bc40
 ExternalInterfaceCtorFunction::ExternalInterfaceCtorFunction(ASStringContext* psc)
     : CFunctionObject(psc, GlobalCtor)
 {
-    Value unset(Value::UNSET);
-    static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), unset);
+    {
+        Value unset(Value::UNSET);
+        static_cast<ObjectInterface*>(this)->SetMemberRaw(psc, psc->CreateConstString("available"), unset);
+    }
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
 }
