@@ -815,23 +815,25 @@ MS2_AS2_HASH_FINDINDEX(Value)
 
 typedef ASStringHash_GC<Value>::SetType ValueSet;
 
-// Find / FindCaseInsensitive / FindCaseCheck of the local variable table.
-inline ValueSet::Iterator ValueHash_Find(ASStringHash_GC<Value>* phash, const ASString& key)
+// FindAlt / Find / FindCaseInsensitive / FindCaseCheck of the local variable table.
+template <class K>
+static SF_FORCEINLINE ValueSet::Iterator ValueHash_FindAlt(ASStringHash_GC<Value>* phash, const K& key)
 {
     SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
     return ValueSet::Iterator(0, 0);
 }
-inline ValueSet::Iterator ValueHash_FindNoCase(ASStringHash_GC<Value>* phash, const ASString& key)
+static SF_FORCEINLINE ValueSet::Iterator ValueHash_Find(ASStringHash_GC<Value>* phash, const ASString& key)
+{
+    return ValueHash_FindAlt(phash, key);
+}
+static SF_FORCEINLINE ValueSet::Iterator ValueHash_FindNoCase(ASStringHash_GC<Value>* phash, const ASString& key)
 {
     ASStringNoCaseKey ikey(key);
-    SPInt index = HashFindIndex(phash, ikey);
-    if (index >= 0)
-        return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
-    return ValueSet::Iterator(0, 0);
+    return ValueHash_FindAlt(phash, ikey);
 }
-inline ValueSet::Iterator ValueHash_FindCaseCheck(ASStringHash_GC<Value>* phash, const ASString& key,
+static SF_FORCEINLINE ValueSet::Iterator ValueHash_FindCaseCheck(ASStringHash_GC<Value>* phash, const ASString& key,
                                                   bool caseSensitive)
 {
     return caseSensitive ? ValueHash_Find(phash, key) : ValueHash_FindNoCase(phash, key);
@@ -1131,18 +1133,21 @@ void MovieRoot::AddVarLoadQueueEntry(InteractiveObject* ptarget, const char* pur
     }
 }
 
-// MS2-FUNCTIONAL regalloc/stack layout (exe reloads pDispObj per call, 0x100 frame)
 // @0x142934610
 InteractiveObject* AvmCharacter::CloneDisplayObject(const ASString& newname, int depth, const ObjectInterface* psource)
 {
-    InteractiveObject* pparent = GetDispObj()->GetParent();
+    InteractiveObject* pparent = pDispObj->GetParent();
     Sprite*            psprite = pparent->IsSprite() ? static_cast<Sprite*>(pparent) : 0;
-    if (!psprite || depth < 0 || depth > 0x7efffffd)
+    if (!psprite)
         return 0;
-    CharPosInfo pos(ResourceId(GetDispObj()->Id), depth, 1, GetDispObj()->GetCxform(), 1, GetDispObj()->GetMatrix(),
-                    0, GetDispObj()->GetRatio(), GetDispObj()->ClipDepth);
-    DisplayObjectBase* pnewch = psprite->AddDisplayObject(pos, newname, 0, psource, ~0u, 1, 0, GetDispObj());
-    return (pnewch && pnewch->IsInteractiveObject()) ? static_cast<InteractiveObject*>(pnewch) : 0;
+    if (depth < 0 || depth > 0x7efffffd)
+        return 0;
+    CharPosInfo pos(ResourceId(pDispObj->Id), depth, 1, pDispObj->GetCxform(), 1, pDispObj->GetMatrix(), 0,
+                    pDispObj->GetRatio(), pDispObj->ClipDepth);
+    DisplayObjectBase* pnewch = psprite->AddDisplayObject(pos, newname, 0, psource, ~0u, 1, 0, pDispObj);
+    if (pnewch)
+        return pnewch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pnewch) : 0;
+    return 0;
 }
 
 // @0x142937d60
