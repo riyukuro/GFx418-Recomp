@@ -516,7 +516,6 @@ MemoryBufferImage::~MemoryBufferImage()
         GetExtraData()->Release();
 }
 
-// MS2-FUNCTIONAL: the exe inlines ~MemoryFile; here it binds to the game code's out-of-line copy
 // @0x14259f780
 bool MemoryBufferImage::Decode(ImageData* pdest, CopyScanlineFunc copyScanline, void* arg) const
 {

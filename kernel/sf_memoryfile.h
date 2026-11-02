@@ -26,7 +26,6 @@ public:
         FileIndex = 0;
         Valid     = (!fileName.IsEmpty() && pbuffer && buffSize > 0) ? true : false;
     }
-    ~MemoryFile();
 
     const char* GetFilePath();
     bool        IsValid();

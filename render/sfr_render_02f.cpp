@@ -355,7 +355,6 @@ public:
     virtual bool Decode(ImageData* pdest, CopyScanlineFunc copyScanline, void* arg) const;
 };
 
-// MS2-FUNCTIONAL: the exe inlines ~MemoryFile; here it binds to the game code's out-of-line copy
 // @0x1425a1080
 bool MemoryBufferImage::Decode(ImageData* pdest, CopyScanlineFunc copyScanline, void* arg) const
 {

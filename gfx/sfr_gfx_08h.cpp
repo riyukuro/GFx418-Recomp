@@ -189,7 +189,6 @@ static bool ReadAndUniteScanline(Params& params, UByte* fullData)
 // Decodes a JPEG (jin, owned and deleted here) together with its zlib-compressed alpha plane into pdest. The ring
 // runs one line ahead: line y - 1 is written once line y has been read (an extra transparent line closes the image).
 // @0x1426523c0
-// MS2-FUNCTIONAL: the exe inlines ~MemoryFile; here it binds to the game code's out-of-line copy
 static bool JpegAlphaDecodeHelper(ImageFormat format, Input* jin, ZlibSupportBase* zlib, const UByte* alphaData,
                                   UPInt alphaDataSize, ImageData* pdest, Image::CopyScanlineFunc copyScanline,
                                   void* arg)
@@ -541,7 +540,6 @@ Render::Image* ZlibImageSource::CreateCompatibleImage(const Render::ImageCreateA
 }
 
 // @0x1426520e0
-// MS2-FUNCTIONAL: the exe inlines ~MemoryFile; here it binds to the game code's out-of-line copy
 bool MemoryBufferZlibImage::Decode(ImageData* pdest, CopyScanlineFunc copyScanline, void* arg) const
 {
     ZlibDecodeParams params;
