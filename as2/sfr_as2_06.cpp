@@ -3024,9 +3024,23 @@ template void ArrayDataBase<Ptr<GFx::AS2::LocalFrame>, AllocatorLH<Ptr<GFx::AS2:
 // @0x14297e500
 template void ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
                             ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt);
-// RemoveAt functional (pinned at the end): cl inlines the ResizeNoConstruct of Clear, the exe tail-calls it
-template void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
-                                  ArrayDefaultPolicy> >::RemoveAt(UPInt);
+// Clear goes through a member pointer: the exe tail-calls the ResizeNoConstruct above, which cl otherwise inlines.
+template <>
+__declspec(dllexport) void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
+                         ArrayDefaultPolicy> >::RemoveAt(UPInt index)
+{
+    if (Data.Size == 1)
+    {
+        typedef ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>, ArrayDefaultPolicy> Base;
+        (Data.*&Base::ResizeNoConstruct)(&Data, 0);
+    }
+    else
+    {
+        AllocatorType::Destruct(Data.Data + index);
+        AllocatorType::CopyArrayForward(Data.Data + index, Data.Data + index + 1, Data.Size - 1 - index);
+        --Data.Size;
+    }
+}
 // @0x14297d730
 template void ArrayDataBase<GFx::AS2::Environment::TryDescr, AllocatorLH<GFx::AS2::Environment::TryDescr, Stat_Default_Mem>,
                             ArrayDefaultPolicy>::Reserve(const void*, UPInt);
