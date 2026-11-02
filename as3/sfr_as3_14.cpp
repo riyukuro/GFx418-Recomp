@@ -1956,11 +1956,6 @@ namespace Classes { namespace fl_gfx
         PAD_LT.SetUInt32(0xff1b);
     }
 
-    // @0x1424c7230
-    GamePad::~GamePad()
-    {
-    }
-
     // @0x1424c6540
     IMEEx::IMEEx(ClassTraits::Traits& t)
         : Class(t)

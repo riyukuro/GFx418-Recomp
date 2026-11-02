@@ -246,7 +246,7 @@ namespace Classes { namespace fl_gfx {
     {
     public:
         GamePad(ClassTraits::Traits& t);                                // 0x1424c5650
-        ~GamePad();                                                     // 0x1424c7230
+        // ~GamePad is implicit: the exe dtor (0x1424c7230) has no vftable store
         // @0x1424c8d80
         virtual const char* GetAS3ObjectType() const { return "Classes::GamePad"; }
 
