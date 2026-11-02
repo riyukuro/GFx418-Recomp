@@ -4856,7 +4856,7 @@ struct CriMpvChunk
 
 inline CriUint32 CriReadBigEndian32(const CriUint8* data)
 {
-    return ((CriUint32)data[0] << 24) | ((CriUint32)data[1] << 16) | ((CriUint32)data[2] << 8) | data[3];
+    return ((CriUint32)(CriSint8)data[0] << 24) | ((CriUint32)data[1] << 16) | ((CriUint32)data[2] << 8) | data[3];
 }
 
 typedef void (*CriMpvQueueGet)(void*, CriSint32, CriSint32, void*);
@@ -4938,107 +4938,6 @@ struct CriMpvBitReader
     }
 };
 
-// One slice worth of chunk handling shared by the MPEG video slice decoders below.
-struct CriMpvSlice
-{
-    void* Decoder;
-    void* Queue;
-    CriMpvBitReader Bits;
-
-    CriMpvChunk& Chunk() const { return CriMpvField<CriMpvChunk>(Decoder, MPV_CHUNK); }
-    void** Vtable() const { return *(void***)Queue; }
-    void GetChunk() { ((CriMpvQueueGet)Vtable()[6])(Queue, 1, 0x7fffffff, &Chunk()); }
-    // Hand back the bytes the bit reader has not reached yet and release the consumed head of the chunk.
-    void ReturnUnread(CriSint32 consumed)
-    {
-        CriMpvChunk remaining;
-        FUN_140069020((__int64*)&Chunk(), (CriUint32)consumed, (__int64*)&Chunk(), (__int64*)&remaining);
-        ((CriMpvQueuePut)Vtable()[8])(Queue, 0, &Chunk());
-        ((CriMpvQueuePut)Vtable()[7])(Queue, 1, &remaining);
-    }
-    CriSint32 ConsumedBytes(CriSint32 alignedBits) const
-    {
-        return (CriSint32)(((CriUint32)(alignedBits >> 3)) - (CriUint32)(uintptr_t)Chunk().Data +
-                           (CriUint32)(uintptr_t)Bits.Cursor - 8);
-    }
-    // End of the slice: give the unread bytes back and let the queue finish its chunk.
-    CriSint32 Finish()
-    {
-        ReturnUnread(ConsumedBytes(Bits.Position + 7));
-        return FUN_140051d90((__int64 *)Queue);
-    }
-    // After a macroblock: when fewer than 0x800 bytes are left in the chunk, fetch the next one.
-    void Refill()
-    {
-        CriSint32 misaligned = Bits.Position & 7;
-        CriSint32 consumed = ConsumedBytes(Bits.Position - misaligned + 7);
-        if ((CriSint32)Chunk().Size - consumed > 0x800)
-            return;
-        ReturnUnread(consumed);
-        GetChunk();
-        Bits.Start(Chunk(), (CriUint32)misaligned);
-    }
-    // Run the periodic user callback and apply the stop conditions; returns false when the slice must end.
-    bool AfterMacroblock()
-    {
-        if (CriMpvField<CriSint32>(Decoder, MPV_STOP) != 0 || CriMpvField<CriSint32>(Decoder, MPV_ABORT) != 0)
-            return false;
-        if (--CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_COUNTDOWN) <= 0)
-        {
-            CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_COUNTDOWN) = CriMpvField<CriSint32>(Decoder, MPV_CALLBACK_RELOAD);
-            CriMpvField<void (*)(void*)>(Decoder, MPV_CALLBACK_FUNC)(CriMpvField<void*>(Decoder, MPV_CALLBACK_ARG));
-        }
-        Bits.Load(Decoder);
-        Refill();
-        return true;
-    }
-    // macroblock_address_increment: returns false at a start code or the end of the picture.
-    bool ReadAddress(CriSint32 peekBits, const CriSint16* tableA, const CriSint16* tableB, CriSint32* delta)
-    {
-        CriSint32 previous = CriMpvField<CriSint32>(Decoder, MPV_ADDRESS);
-        CriSint32 entry;
-        CriSint32 increment;
-        for (;;)
-        {
-            CriUint32 window = Bits.Peek(peekBits);
-            entry = window < (1u << (peekBits - 4)) ? tableA[window] : tableB[window >> 6];
-            Bits.Consume(entry & 0xf);
-            increment = (CriSint32)(((CriUint32)entry >> 4) & 0x3f);
-            if (increment == 0x22)
-                continue;
-            if (increment == 0x23)
-            {
-                CriMpvField<CriSint32>(Decoder, MPV_ADDRESS) += 0x21;
-                continue;
-            }
-            if (increment == 0x24)
-                return false;
-            CriMpvField<CriSint32>(Decoder, MPV_ADDRESS) += increment;
-            break;
-        }
-        CriSint32 address = CriMpvField<CriSint32>(Decoder, MPV_ADDRESS);
-        CriMpvField<CriUint32>(Decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 10;
-        if (address > CriMpvField<CriSint32>(Decoder, MPV_LAST_ADDRESS))
-            return false;
-        CriSint32 step = address - previous;
-        CriSint32 width = CriMpvField<CriSint32>(Decoder, MPV_MB_WIDTH);
-        CriMpvField<CriSint32>(Decoder, MPV_COLUMN) += step;
-        while (CriMpvField<CriSint32>(Decoder, MPV_COLUMN) >= width)
-        {
-            CriMpvField<CriSint32>(Decoder, MPV_COLUMN) -= width;
-            CriMpvField<CriSint32>(Decoder, MPV_ROW) += 1;
-            width = CriMpvField<CriSint32>(Decoder, MPV_MB_WIDTH);
-        }
-        *delta = step;
-        return step != -2;
-    }
-    // Read the optional 5-bit quantiser scale selected by bit 0x10 of the macroblock flags.
-    void ReadQuantiser(CriUint32 flags)
-    {
-        if (flags & 0x10)
-            CriMpvField<CriUint32>(Decoder, MPV_QUANT) = Bits.Read(5);
-    }
-};
 }
 
 // MS2-FUNCTIONAL: decode one DC coefficient difference with the MPEG intra VLC tables and update its predictor.
@@ -5086,28 +4985,189 @@ CriSint32 mpvdec_MotionSub(void* decoder, void* parameters, CriSint32* output, C
 }
 
 // MS2-FUNCTIONAL: decode the macroblocks of an intra-only MPEG video slice chunk by chunk.
+// The bit window is kept in plain locals through the CRI_MPV_* macros: VC9 /O2 keeps the cursor of a
+// CriMpvBitReader aggregate in a stack slot, where the exe has it in a register. What is left in the I, P and B
+// slice decoders is register assignment (the cursor and position sit in other registers); in P and B the longer
+// encodings that follow from it put a 6-byte alignment nop before the outer loop head.
+#define CRI_MPV_CHUNK() CriMpvField<CriMpvChunk>(decoder, MPV_CHUNK)
+#define CRI_MPV_GETCHUNK() ((CriMpvQueueGet)(*(void***)queue)[6])(queue, 1, 0x7fffffff, &CRI_MPV_CHUNK())
+#define CRI_MPV_ADVANCE(count)                                                                                  \
+    do                                                                                                          \
+    {                                                                                                           \
+        pos += (count);                                                                                         \
+        if (pos >= 0x20)                                                                                        \
+        {                                                                                                       \
+            high = low;                                                                                         \
+            low = CriReadBigEndian32(cur);                                                                      \
+            pos -= 0x20;                                                                                        \
+            high <<= pos;                                                                                       \
+            cur += 4;                                                                                           \
+        }                                                                                                       \
+        else                                                                                                    \
+        {                                                                                                       \
+            high <<= (count);                                                                                   \
+        }                                                                                                       \
+    } while (0)
+#define CRI_MPV_START(extra)                                                                                    \
+    do                                                                                                          \
+    {                                                                                                           \
+        cur = (const CriUint8*)((uintptr_t)CRI_MPV_CHUNK().Data & ~(uintptr_t)3);                              \
+        pos = (CriSint32)((CriUint32)(uintptr_t)CRI_MPV_CHUNK().Data << 3);                                     \
+        pos -= (CriSint32)((CriUint32)(uintptr_t)cur << 3);                                                     \
+        high = CriReadBigEndian32(cur) << pos;                                                                  \
+        low = CriReadBigEndian32(cur + 4);                                                                      \
+        cur += 8;                                                                                               \
+        pos += (extra);                                                                                         \
+        if (pos >= 0x20)                                                                                        \
+        {                                                                                                       \
+            high = low;                                                                                         \
+            low = CriReadBigEndian32(cur);                                                                      \
+            pos -= 0x20;                                                                                        \
+            high <<= pos;                                                                                       \
+            cur += 4;                                                                                           \
+        }                                                                                                       \
+        else                                                                                                    \
+        {                                                                                                       \
+            high <<= (extra);                                                                                   \
+        }                                                                                                       \
+    } while (0)
+#define CRI_MPV_PEEK(window, count)                   \
+    do                                                \
+    {                                                 \
+        (window) = high >> (32 - (count));            \
+        if (pos > 32 - (count))                       \
+            (window) |= low >> (64 - (count) - pos);  \
+    } while (0)
+#define CRI_MPV_CONSUMED(alignedBits) \
+    ((CriSint32)(((CriUint32)((alignedBits) >> 3)) - (CriUint32)(uintptr_t)CRI_MPV_CHUNK().Data + (CriUint32)(uintptr_t)cur - 8))
+#define CRI_MPV_RETURN_UNREAD(consumed)                                                                         \
+    do                                                                                                          \
+    {                                                                                                           \
+        CriMpvChunk remaining;                                                                                  \
+        FUN_140069020((__int64*)&CRI_MPV_CHUNK(), (CriUint32)(consumed), (__int64*)&CRI_MPV_CHUNK(), (__int64*)&remaining); \
+        ((CriMpvQueuePut)(*(void***)queue)[8])(queue, 0, &CRI_MPV_CHUNK());                                    \
+        ((CriMpvQueuePut)(*(void***)queue)[7])(queue, 1, &remaining);                                          \
+    } while (0)
+#define CRI_MPV_STORE()                                                \
+    do                                                                 \
+    {                                                                  \
+        CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH) = high;         \
+        CriMpvField<CriUint32>(decoder, MPV_BITS_LOW) = low;           \
+        CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION) = pos;      \
+        CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR) = cur;  \
+    } while (0)
 // @0x142ccb000
 CriSint32 MPVDEC_DecIpicMb(void* decoder, void* queue)
 {
-    CriMpvSlice slice;
-    slice.Decoder = decoder;
-    slice.Queue = queue;
-    slice.GetChunk();
-    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
-    while (slice.Bits.Peek(23) != 0)
+    CriUint32 high;
+    CriUint32 low;
+    const CriUint8* cur;
+    CriSint32 pos;
+    CRI_MPV_GETCHUNK();
+    CRI_MPV_START(CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    for (;;)
     {
-        CriSint32 step;
-        if (!slice.ReadAddress(12, DAT_143d74a30, DAT_143d749f0, &step))
+        CriUint32 window;
+        CRI_MPV_PEEK(window, 23);
+        if (window == 0)
             break;
-        slice.ReadQuantiser(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS));
-        slice.Bits.Store(decoder);
+        // macroblock_address_increment
+        CriSint32 previous = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriSint32 entry;
+        CriSint32 increment;
+        for (;;)
+        {
+            CRI_MPV_PEEK(window, 12);
+            if ((window & 0xffffff00) == 0)
+                entry = DAT_143d74a30[window];
+            else
+                entry = DAT_143d749f0[window >> 6];
+            CRI_MPV_ADVANCE(entry & 0xf);
+            increment = (CriUint8)((CriUint32)entry >> 2) >> 2;
+            if (increment == 0x22)
+                continue;
+            if (increment == 0x23)
+            {
+                CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += 0x21;
+                continue;
+            }
+            if (increment == 0x24)
+                goto done;
+            CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += increment;
+            break;
+        }
+        CriSint32 address = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriUint32 flags = (CriUint32)entry >> 10;
+        CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = flags;
+        if (address > CriMpvField<CriSint32>(decoder, MPV_LAST_ADDRESS))
+            break;
+        CriSint32 width = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH);
+        CriSint32 step = address - previous;
+        CriMpvField<CriSint32>(decoder, MPV_COLUMN) += step;
+        while (CriMpvField<CriSint32>(decoder, MPV_COLUMN) >= width)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_COLUMN) -= width;
+            CriMpvField<CriSint32>(decoder, MPV_ROW) += 1;
+        }
+        if (step == -2)
+            break;
+        // quantiser_scale_code
+        if (flags & 0x10)
+        {
+            CriUint32 value;
+            if (pos >= 32 - 5)
+            {
+                pos -= 32 - 5;
+                if (pos != 0)
+                {
+                    value = (high | (low >> (5 - pos))) >> (32 - 5);
+                    high = low << pos;
+                }
+                else
+                {
+                    value = high >> (32 - 5);
+                    high = low;
+                }
+                low = CriReadBigEndian32(cur);
+                cur += 4;
+            }
+            else
+            {
+                value = high >> (32 - 5);
+                pos += 5;
+                high <<= 5;
+            }
+            CriMpvField<CriUint32>(decoder, MPV_QUANT) = value;
+        }
+        CRI_MPV_STORE();
         CriMpvField<void (*)(void*)>(decoder, 0x18d0)(decoder);
         CriMpvField<void (*)(void*)>(decoder, 0x1700)(decoder);
         CriMpvField<void (*)(void*)>(decoder, 0x1710)(decoder);
-        if (!slice.AfterMacroblock())
+        if (CriMpvField<CriSint32>(decoder, MPV_STOP) != 0 || CriMpvField<CriSint32>(decoder, MPV_ABORT) != 0)
             break;
+        if (--CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) <= 0)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) = CriMpvField<CriSint32>(decoder, MPV_CALLBACK_RELOAD);
+            CriMpvField<void (*)(void*)>(decoder, MPV_CALLBACK_FUNC)(CriMpvField<void*>(decoder, MPV_CALLBACK_ARG));
+        }
+        pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+        cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+        high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+        low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+        {
+            CriSint32 misaligned = pos & 7;
+            CriSint32 consumed = CRI_MPV_CONSUMED(pos - misaligned + 7);
+            if ((CriSint32)CRI_MPV_CHUNK().Size - consumed <= 0x800)
+            {
+                CRI_MPV_RETURN_UNREAD(consumed);
+                CRI_MPV_GETCHUNK();
+                CRI_MPV_START((CriUint32)misaligned);
+            }
+        }
     }
-    return slice.Finish();
+done:
+    CRI_MPV_RETURN_UNREAD(CRI_MPV_CONSUMED(pos + 7));
+    return FUN_140051d90((__int64*)queue);
 }
 
 namespace
@@ -5115,50 +5175,64 @@ namespace
 typedef void (*CriMpvMacroblockFunc)(void*);
 typedef void (*CriMpvSkipRunFunc)(void*, CriSint32);
 
-// Decode the horizontal and vertical motion-vector components of one vector set; returns true on a bad code.
-inline bool CriMpvReadMotion(CriMpvSlice& slice, size_t setOffset)
-{
-    void* decoder = slice.Decoder;
-    slice.Bits.Store(decoder);
-    CriSint32 horizontal = mpvdec_MotionSub(decoder, (CriUint8*)decoder + setOffset, (CriSint32*)((CriUint8*)decoder + setOffset + 0x18),
-                                         (CriSint32*)((CriUint8*)decoder + setOffset + 0x10));
-    CriSint32 vertical = mpvdec_MotionSub(decoder, (CriUint8*)decoder + setOffset, (CriSint32*)((CriUint8*)decoder + setOffset + 0x1c),
-                                       (CriSint32*)((CriUint8*)decoder + setOffset + 0x14));
-    slice.Bits.Load(decoder);
-    return (horizontal | vertical) != 0;
-}
-
-// Read the 9-bit coded_block_pattern when bit 2 of the macroblock flags asks for it.
-inline void CriMpvReadPattern(CriMpvSlice& slice, CriUint32 flags)
-{
-    if (flags & 2)
-    {
-        CriUint32 window = slice.Bits.Peek(9);
-        CriSint32 entry = DAT_143d74a20[window];
-        CriMpvField<CriSint32>(slice.Decoder, MPV_CODED) = (CriSint32)((CriUint32)entry << 16) & (CriSint32)0xfff00000;
-        slice.Bits.Consume((CriUint8)entry);
-    }
-    else
-    {
-        CriMpvField<CriSint32>(slice.Decoder, MPV_CODED) = 0;
-    }
-}
 }
 
 // MS2-FUNCTIONAL: decode the macroblocks of a predicted MPEG video slice with forward and backward vectors.
 // @0x142ccb710
 CriSint32 MPVDEC_DecBpicMb(void* decoder, void* queue)
 {
-    CriMpvSlice slice;
-    slice.Decoder = decoder;
-    slice.Queue = queue;
-    slice.GetChunk();
-    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
-    bool first = true;
-    while (slice.Bits.Peek(23) != 0)
+    CriUint32 high;
+    CriUint32 low;
+    const CriUint8* cur;
+    CriSint32 pos;
+    CriSint32 first = 1;
+    CRI_MPV_GETCHUNK();
+    CRI_MPV_START(CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    for (;;)
     {
-        CriSint32 step;
-        if (!slice.ReadAddress(11, DAT_143d749e0, DAT_143d749d8, &step))
+        CriUint32 window;
+        CRI_MPV_PEEK(window, 23);
+        if (window == 0)
+            break;
+        // macroblock_address_increment
+        CriSint32 previous = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriSint32 entry;
+        CriSint32 increment;
+        for (;;)
+        {
+            CRI_MPV_PEEK(window, 11);
+            if ((window & 0xffffff80) == 0)
+                entry = DAT_143d749e0[window];
+            else
+                entry = DAT_143d749d8[window >> 6];
+            CRI_MPV_ADVANCE(entry & 0xf);
+            increment = (CriUint8)((CriUint32)entry >> 2) >> 2;
+            if (increment == 0x22)
+                continue;
+            if (increment == 0x23)
+            {
+                CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += 0x21;
+                continue;
+            }
+            if (increment == 0x24)
+                goto done;
+            CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += increment;
+            break;
+        }
+        CriSint32 address = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 10;
+        if (address > CriMpvField<CriSint32>(decoder, MPV_LAST_ADDRESS))
+            break;
+        CriSint32 width = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH);
+        CriSint32 step = address - previous;
+        CriMpvField<CriSint32>(decoder, MPV_COLUMN) += step;
+        while (CriMpvField<CriSint32>(decoder, MPV_COLUMN) >= width)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_COLUMN) -= width;
+            CriMpvField<CriSint32>(decoder, MPV_ROW) += 1;
+            width = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH);
+        }
+        if (step == -2)
             break;
         if (!first && (CriUint32)step > 1)
         {
@@ -5167,22 +5241,87 @@ CriSint32 MPVDEC_DecBpicMb(void* decoder, void* queue)
             FUN_1400663f0((__int64)decoder);
         }
         CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
+        // macroblock_type
         if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
         {
-            CriSint32 entry = DAT_143d74a08[slice.Bits.Peek(6)];
-            slice.Bits.Consume((CriUint8)entry);
+            CRI_MPV_PEEK(window, 6);
+            entry = DAT_143d74a08[window];
             CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 8;
+            CRI_MPV_ADVANCE((CriUint8)entry);
         }
         CriUint32 flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
-        slice.ReadQuantiser(flags);
-        if ((flags & 8) && CriMpvReadMotion(slice, 0x174c))
-            break;
-        if ((CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 4) && CriMpvReadMotion(slice, 0x1770))
-            break;
-        flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
-        CriMpvReadPattern(slice, flags);
-        slice.Bits.Store(decoder);
-        if (flags & 1)
+        // quantiser_scale_code
+        if (flags & 0x10)
+        {
+            CriUint32 value;
+            if (pos >= 32 - 5)
+            {
+                pos -= 32 - 5;
+                if (pos != 0)
+                {
+                    value = (high | (low >> (5 - pos))) >> (32 - 5);
+                    high = low << pos;
+                }
+                else
+                {
+                    value = high >> (32 - 5);
+                    high = low;
+                }
+                low = CriReadBigEndian32(cur);
+                cur += 4;
+            }
+            else
+            {
+                value = high >> (32 - 5);
+                pos += 5;
+                high <<= 5;
+            }
+            CriMpvField<CriUint32>(decoder, MPV_QUANT) = value;
+        }
+        // motion_vectors: forward, then backward
+        if (flags & 8)
+        {
+            CRI_MPV_STORE();
+            CriSint32 horizontal = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x174c, (CriSint32*)((CriUint8*)decoder + 0x1764),
+                                                    (CriSint32*)((CriUint8*)decoder + 0x175c));
+            CriSint32 vertical = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x174c, (CriSint32*)((CriUint8*)decoder + 0x1768),
+                                                  (CriSint32*)((CriUint8*)decoder + 0x1760));
+            high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+            low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+            pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+            cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+            if ((horizontal | vertical) != 0)
+                break;
+        }
+        if (CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 4)
+        {
+            CRI_MPV_STORE();
+            CriSint32 horizontal = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x1770, (CriSint32*)((CriUint8*)decoder + 0x1788),
+                                                    (CriSint32*)((CriUint8*)decoder + 0x1780));
+            CriSint32 vertical = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x1770, (CriSint32*)((CriUint8*)decoder + 0x178c),
+                                                  (CriSint32*)((CriUint8*)decoder + 0x1784));
+            high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+            low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+            pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+            cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+            if ((horizontal | vertical) != 0)
+                break;
+        }
+        // coded_block_pattern
+        CriSint64 mode = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
+        if (mode & 2)
+        {
+            CRI_MPV_PEEK(window, 9);
+            entry = DAT_143d74a20[window];
+            CriMpvField<CriSint32>(decoder, MPV_CODED) = (CriSint32)((CriUint32)entry << 16) & (CriSint32)0xfff00000;
+            CRI_MPV_ADVANCE((CriUint8)entry);
+        }
+        else
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CODED) = 0;
+        }
+        CRI_MPV_STORE();
+        if (mode & 1)
         {
             CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1700)(decoder);
             CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1710)(decoder);
@@ -5191,34 +5330,97 @@ CriSint32 MPVDEC_DecBpicMb(void* decoder, void* queue)
         }
         else
         {
-            CriMpvMacroblockFunc predict = CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1718 + ((flags >> 2) & 3) * 8);
+            CriMpvMacroblockFunc predict = (&CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1718))[(mode >> 2) & 3];
             CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1718) = predict;
             if (CriMpvField<CriSint32>(decoder, MPV_CODED) != 0)
                 CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1708)(decoder);
             predict(decoder);
             MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
         }
-        if (!slice.AfterMacroblock())
+        if (CriMpvField<CriSint32>(decoder, MPV_STOP) != 0 || CriMpvField<CriSint32>(decoder, MPV_ABORT) != 0)
             break;
-        first = false;
+        if (--CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) <= 0)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) = CriMpvField<CriSint32>(decoder, MPV_CALLBACK_RELOAD);
+            CriMpvField<void (*)(void*)>(decoder, MPV_CALLBACK_FUNC)(CriMpvField<void*>(decoder, MPV_CALLBACK_ARG));
+        }
+        pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+        cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+        high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+        low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+        {
+            CriSint32 misaligned = pos & 7;
+            CriSint32 consumed = CRI_MPV_CONSUMED(pos - misaligned + 7);
+            if ((CriSint32)CRI_MPV_CHUNK().Size - consumed <= 0x800)
+            {
+                CRI_MPV_RETURN_UNREAD(consumed);
+                CRI_MPV_GETCHUNK();
+                CRI_MPV_START((CriUint32)misaligned);
+            }
+        }
+        first = 0;
     }
-    return slice.Finish();
+done:
+    CRI_MPV_RETURN_UNREAD(CRI_MPV_CONSUMED(pos + 7));
+    return FUN_140051d90((__int64*)queue);
 }
 
 // MS2-FUNCTIONAL: decode the macroblocks of a forward-predicted MPEG video slice with a single vector set.
 // @0x142ccbe90
 CriSint32 MPVDEC_DecPpicMb(void* decoder, void* queue)
 {
-    CriMpvSlice slice;
-    slice.Decoder = decoder;
-    slice.Queue = queue;
-    slice.GetChunk();
-    slice.Bits.Start(slice.Chunk(), CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
-    bool first = true;
-    while (slice.Bits.Peek(23) != 0)
+    CriUint32 high;
+    CriUint32 low;
+    const CriUint8* cur;
+    CriSint32 pos;
+    CriSint32 first = 1;
+    CRI_MPV_GETCHUNK();
+    CRI_MPV_START(CriMpvField<CriUint32>(decoder, MPV_CHUNK_BIT_OFFSET));
+    for (;;)
     {
-        CriSint32 step;
-        if (!slice.ReadAddress(11, DAT_143d74a00, DAT_143d749f8, &step))
+        CriUint32 window;
+        CRI_MPV_PEEK(window, 23);
+        if (window == 0)
+            break;
+        // macroblock_address_increment
+        CriSint32 previous = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriSint32 entry;
+        CriSint32 increment;
+        for (;;)
+        {
+            CRI_MPV_PEEK(window, 11);
+            if ((window & 0xffffff80) == 0)
+                entry = DAT_143d74a00[window];
+            else
+                entry = DAT_143d749f8[window >> 6];
+            CRI_MPV_ADVANCE(entry & 0xf);
+            increment = (CriUint8)((CriUint32)entry >> 2) >> 2;
+            if (increment == 0x22)
+                continue;
+            if (increment == 0x23)
+            {
+                CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += 0x21;
+                continue;
+            }
+            if (increment == 0x24)
+                goto done;
+            CriMpvField<CriSint32>(decoder, MPV_ADDRESS) += increment;
+            break;
+        }
+        CriSint32 address = CriMpvField<CriSint32>(decoder, MPV_ADDRESS);
+        CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 10;
+        if (address > CriMpvField<CriSint32>(decoder, MPV_LAST_ADDRESS))
+            break;
+        CriSint32 width = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH);
+        CriSint32 step = address - previous;
+        CriMpvField<CriSint32>(decoder, MPV_COLUMN) += step;
+        while (CriMpvField<CriSint32>(decoder, MPV_COLUMN) >= width)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_COLUMN) -= width;
+            CriMpvField<CriSint32>(decoder, MPV_ROW) += 1;
+            width = CriMpvField<CriSint32>(decoder, MPV_MB_WIDTH);
+        }
+        if (step == -2)
             break;
         if (!first && (CriUint32)step > 1)
         {
@@ -5228,26 +5430,76 @@ CriSint32 MPVDEC_DecPpicMb(void* decoder, void* queue)
             FUN_1400663f0((__int64)decoder);
         }
         CriMpvField<CriMpvMacroblockFunc>(decoder, 0x18d0)(decoder);
+        // macroblock_type
         if (!(CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) & 0x20))
         {
-            CriSint32 entry = DAT_143d749d0[slice.Bits.Peek(5)];
-            slice.Bits.Consume((CriUint8)entry);
+            CRI_MPV_PEEK(window, 5);
+            entry = DAT_143d749d0[window];
             CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS) = (CriUint32)entry >> 8;
+            CRI_MPV_ADVANCE((CriUint8)entry);
         }
         CriUint32 flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
-        slice.ReadQuantiser(flags);
+        // quantiser_scale_code
+        if (flags & 0x10)
+        {
+            CriUint32 value;
+            if (pos >= 32 - 5)
+            {
+                pos -= 32 - 5;
+                if (pos != 0)
+                {
+                    value = (high | (low >> (5 - pos))) >> (32 - 5);
+                    high = low << pos;
+                }
+                else
+                {
+                    value = high >> (32 - 5);
+                    high = low;
+                }
+                low = CriReadBigEndian32(cur);
+                cur += 4;
+            }
+            else
+            {
+                value = high >> (32 - 5);
+                pos += 5;
+                high <<= 5;
+            }
+            CriMpvField<CriUint32>(decoder, MPV_QUANT) = value;
+        }
+        // motion_vectors
         if (flags & 8)
         {
-            if (CriMpvReadMotion(slice, 0x174c))
+            CRI_MPV_STORE();
+            CriSint32 horizontal = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x174c, (CriSint32*)((CriUint8*)decoder + 0x1764),
+                                                    (CriSint32*)((CriUint8*)decoder + 0x175c));
+            CriSint32 vertical = mpvdec_MotionSub(decoder, (CriUint8*)decoder + 0x174c, (CriSint32*)((CriUint8*)decoder + 0x1768),
+                                                  (CriSint32*)((CriUint8*)decoder + 0x1760));
+            high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+            low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+            pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+            cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+            if ((horizontal | vertical) != 0)
                 break;
         }
         else
         {
             MPVDEC_ResetMv((CriMpvDecoderState*)((CriUint8*)decoder + 0x174c));
         }
+        // coded_block_pattern
         flags = CriMpvField<CriUint32>(decoder, MPV_MB_FLAGS);
-        CriMpvReadPattern(slice, flags);
-        slice.Bits.Store(decoder);
+        if (flags & 2)
+        {
+            CRI_MPV_PEEK(window, 9);
+            entry = DAT_143d74a20[window];
+            CriMpvField<CriSint32>(decoder, MPV_CODED) = (CriSint32)((CriUint32)entry << 16) & (CriSint32)0xfff00000;
+            CRI_MPV_ADVANCE((CriUint8)entry);
+        }
+        else
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CODED) = 0;
+        }
+        CRI_MPV_STORE();
         if (flags & 1)
         {
             CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1700)(decoder);
@@ -5260,12 +5512,41 @@ CriSint32 MPVDEC_DecPpicMb(void* decoder, void* queue)
             CriMpvField<CriMpvMacroblockFunc>(decoder, 0x1728)(decoder);
             MPVDEC_ResetDc((CriMpvDecoderState*)decoder);
         }
-        if (!slice.AfterMacroblock())
+        if (CriMpvField<CriSint32>(decoder, MPV_STOP) != 0 || CriMpvField<CriSint32>(decoder, MPV_ABORT) != 0)
             break;
-        first = false;
+        if (--CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) <= 0)
+        {
+            CriMpvField<CriSint32>(decoder, MPV_CALLBACK_COUNTDOWN) = CriMpvField<CriSint32>(decoder, MPV_CALLBACK_RELOAD);
+            CriMpvField<void (*)(void*)>(decoder, MPV_CALLBACK_FUNC)(CriMpvField<void*>(decoder, MPV_CALLBACK_ARG));
+        }
+        pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+        cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+        high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+        low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+        {
+            CriSint32 misaligned = pos & 7;
+            CriSint32 consumed = CRI_MPV_CONSUMED(pos - misaligned + 7);
+            if ((CriSint32)CRI_MPV_CHUNK().Size - consumed <= 0x800)
+            {
+                CRI_MPV_RETURN_UNREAD(consumed);
+                CRI_MPV_GETCHUNK();
+                CRI_MPV_START((CriUint32)misaligned);
+            }
+        }
+        first = 0;
     }
-    return slice.Finish();
+done:
+    CRI_MPV_RETURN_UNREAD(CRI_MPV_CONSUMED(pos + 7));
+    return FUN_140051d90((__int64*)queue);
 }
+#undef CRI_MPV_STORE
+#undef CRI_MPV_RETURN_UNREAD
+#undef CRI_MPV_CONSUMED
+#undef CRI_MPV_PEEK
+#undef CRI_MPV_START
+#undef CRI_MPV_ADVANCE
+#undef CRI_MPV_GETCHUNK
+#undef CRI_MPV_CHUNK
 
 unsigned __int64 FUN_14004eea0(unsigned __int64, unsigned int);  // C3: the definition's signature
 unsigned int FUN_140050bd0(__int64, unsigned __int64, void *);  // C3: the definition's signature
