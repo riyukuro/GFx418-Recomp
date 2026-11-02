@@ -3032,7 +3032,7 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(push, on)
     // merge(sourceBitmapData, sourceRect, destPoint, redMultiplier, greenMultiplier, blueMultiplier, alphaMultiplier):
     // only the full seven-argument form does anything.
-    // MS2-FUNCTIONAL: the exe keeps pImage in a volatile register until the cast (no rbp push in the prolog); stack slots
+    // MS2-FUNCTIONAL: the exe shrink-wraps the rbp save past the argc check and lays dp/rect out in other slots
     // @0x142450590
     void BitmapData::merge(Value& result, unsigned argc, const Value* argv)
     {
@@ -3047,10 +3047,10 @@ namespace Instances { namespace fl_display
             Instances::fl_display::BitmapData* sourceBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
             Instances::fl_geom::Point* destPoint = static_cast<Instances::fl_geom::Point*>(argv[2].GetObject());
             Instances::fl_geom::Rectangle* sourceRect = static_cast<Instances::fl_geom::Rectangle*>(argv[1].GetObject());
+            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
             if (!sourceBitmapData)
                 return;
             Render::ImageBase* psource = sourceBitmapData->pImage;
-            Render::DrawableImage* pimage = this ? reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr()) : NULL;
             if (!psource || !pimage)
                 return;
             UInt32 mult[4];
