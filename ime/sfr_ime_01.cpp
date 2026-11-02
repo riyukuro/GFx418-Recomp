@@ -3612,63 +3612,68 @@ void FUN_1423d61f0(void* manager, const char* command, const char* value)
 // composition, resets the candidate counters (+0xcc/+0x64/+0xd4), the target clause (+0x5a4), the reading text (+0x40)
 // and the four-space mode buffer (+0xb0), stores the layout and its at-caret flag (+0x5a0, forced by the modes), and
 // moves the IMM composition and candidate windows off screen, or for mode 0x1000000 to the cursor rect the owner
-// (vtbl+0x190) maps. True unless mode 0x1000000.
-// MS2-FUNCTIONAL: the exe keeps an unused GFx::Value local
+// (vtbl+0x190) maps. Nonzero (int) unless mode 0x1000000. The exe keeps an unused GFx::Value local, and the
+// mapped rect is an uninitialised POD slot.
 // @0x1423d43b0
-bool FUN_1423d43b0(void* raw)
+int FUN_1423d43b0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
-    if (!owner) return false;
+    if (!owner) return 0;
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
         reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
     ime->StartComposition();
     *reinterpret_cast<unsigned*>(self + 0xcc) = 0;
     *reinterpret_cast<unsigned*>(self + 0x64) = 0;
     *reinterpret_cast<unsigned*>(self + 0xd4) = 0;
+    Scaleform::GFx::Value unused;
     *reinterpret_cast<unsigned*>(self + 0x5a4) = 1;
     std::memset(*reinterpret_cast<void**>(self + 0x40), 0, 0x100);
-    auto* modeBuffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
-    modeBuffer[0] = modeBuffer[1] = modeBuffer[2] = modeBuffer[3] = L' ';
-    modeBuffer[4] = 0;
-    HKL layout = GetKeyboardLayout(0);
-    *reinterpret_cast<HKL*>(self + 0x58) = layout;
-    auto& atCaret = *reinterpret_cast<unsigned*>(self + 0x5a0);
-    atCaret = cx18_ImmGetProperty(layout, IGP_PROPERTY) >> 0x12 & 1;
+    (*reinterpret_cast<wchar_t**>(self + 0xb0))[0] = L' ';
+    (*reinterpret_cast<wchar_t**>(self + 0xb0))[1] = L' ';
+    (*reinterpret_cast<wchar_t**>(self + 0xb0))[2] = L' ';
+    (*reinterpret_cast<wchar_t**>(self + 0xb0))[3] = L' ';
+    (*reinterpret_cast<wchar_t**>(self + 0xb0))[4] = 0;
+    *reinterpret_cast<HKL*>(self + 0x58) = GetKeyboardLayout(0);
+    *reinterpret_cast<unsigned*>(self + 0x5a0) =
+        cx18_ImmGetProperty(*reinterpret_cast<HKL*>(self + 0x58), IGP_PROPERTY) >> 0x12 & 1;
     const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    if (mode == 0xd00001) atCaret = 0;
-    else if (mode == 0xa10000 || mode == 0xb10000 || mode == 6) atCaret = 1;
+    if (mode == 0xd00001) *reinterpret_cast<unsigned*>(self + 0x5a0) = 0;
+    else if (mode == 0xa10000 || mode == 0xb10000 || mode == 6) *reinterpret_cast<unsigned*>(self + 0x5a0) = 1;
 
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     POINT position = { -1000, -1000 };
-    if (mode == 0x1000000) {
+    COMPOSITIONFORM composition;
+    CANDIDATEFORM candidate;
+    candidate.ptCurrentPos = position;
+    composition.ptCurrentPos = position;
+    candidate.dwIndex = 0;
+    candidate.dwStyle = CFS_CANDIDATEPOS;
+    composition.dwStyle = CFS_FORCE_POSITION;
+    if (*reinterpret_cast<unsigned*>(self + 0x98) == 0x1000000 && *reinterpret_cast<unsigned char**>(self + 8)) {
+        auto* movie = *reinterpret_cast<unsigned char**>(self + 8);
         Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> metrics =
-            reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+            reinterpret_cast<Scaleform::GFx::StateBag*>(movie + 0x10)->GetIMEManager();
         Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
         if (metrics) {
             metrics->GetMetrics(&viewRect, &cursorRect, 0);
-            Scaleform::Render::RectF mapped(0, 0, 0, 0);
+            auto* current = *reinterpret_cast<unsigned char**>(self + 8);
+            struct alignas(16) RawRect { float x1, y1, x2, y2; } mapped;  // uninitialised RectF out slot
             const auto* screen = reinterpret_cast<const Scaleform::Render::RectF*(*)(
                 void*, Scaleform::Render::RectF*, const Scaleform::Render::RectF*, int)>(
-                    (*reinterpret_cast<void***>(owner))[0x190 / sizeof(void*)])(owner, &mapped, &cursorRect, 0);
+                    (*reinterpret_cast<void***>(current))[0x190 / sizeof(void*)])(current, reinterpret_cast<Scaleform::Render::RectF*>(&mapped), &cursorRect, 0);
             position.x = static_cast<LONG>(screen->x1);
             position.y = static_cast<LONG>(screen->y2);
         }
         WINDOWINFO info;
-        GetWindowInfo(hwnd, &info);
+        GetWindowInfo(*reinterpret_cast<HWND*>(self + 0x28), &info);
+        candidate.ptCurrentPos = position;
+        composition.ptCurrentPos = position;
     }
-    CANDIDATEFORM candidate;
-    candidate.dwIndex = 0;
-    candidate.dwStyle = CFS_CANDIDATEPOS;
-    candidate.ptCurrentPos = position;
-    COMPOSITIONFORM composition;
-    composition.dwStyle = CFS_FORCE_POSITION;
-    composition.ptCurrentPos = position;
     cx18_ImmSetCompositionWindow(context, &composition);
     cx18_ImmSetCandidateWindow(context, &candidate);
-    cx18_ImmReleaseContext(hwnd, context);
-    return mode != 0x1000000;
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    return *reinterpret_cast<unsigned*>(self + 0x98) != 0x1000000;
 }
 
 // MS2-FUNCTIONAL: WM_IME_STARTCOMPOSITION of the Vista IME object (vtbl 0x14313a450 slot 11; the XP twin is
