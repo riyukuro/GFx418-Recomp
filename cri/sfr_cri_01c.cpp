@@ -118,7 +118,7 @@ extern CriChar8  DAT_143b277c0[0x100];  // last error message
 
 static const CriChar8 crimveasy_version_str[] = "\nCRI Movie/PCx64 Ver.3.07.01 Build:Jan 20 2012 18:13:31\n";
 
-// MS2-FUNCTIONAL: the VS2008 build keeps an EH state slot for the placement new (this profile has no EH)
+
 // @0x14001d7a0
 CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUint32 work_size, CriMvFileReaderInterface* freader,
                                          CriMvSystemTimerInterface* stimer, CriMvSoundInterface* sound,
@@ -126,11 +126,11 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
 {
     CriMvWorkAllocator walloc;
     CriHeap heap;
-    void* heap_work;
-    CriSint32 ply_work_size;
+    CriSint32 mvply_work_size;
+    void* hbuf;
     CriMvEasyPlayer* mveasy;
-    CriUint32 heap_work_size;
-    CriMvSoundInterface::PcmFormat fmt;
+    CriMvSoundInterface::PcmFormat fmt_pcm;
+    CriUint32 heap_wsize;
 
     DAT_143b277b8 = crimveasy_version_str;
     err = CRIERR_OK;
@@ -142,9 +142,9 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
         return NULL;
     }
     criFixedAllocator_Create(work, work_size, (CriFixedAllocator *)&walloc);
-    heap_work_size = 0x818;
-    heap_work = criFixedAllocator_Allocate((CriFixedAllocator *)&walloc, heap_work_size, 4);
-    heap = criHeap_Create(heap_work, heap_work_size);
+    heap_wsize = 0x818;
+    hbuf = criFixedAllocator_Allocate((CriFixedAllocator *)&walloc, heap_wsize, 4);
+    heap = criHeap_Create(hbuf, heap_wsize);
     mveasy = new(heap, "CriMvEasyPlayer", 4) CriMvEasyPlayer;
     if (mveasy == NULL)
     {
@@ -179,11 +179,11 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
         mveasy->Destroy();
         return NULL;
     }
-    ply_work_size = criMvPly_CalcHandleWorkSize();
-    mveasy->mvply_work = criFixedAllocator_Allocate((CriFixedAllocator *)&walloc, ply_work_size, 4);
+    mvply_work_size = criMvPly_CalcHandleWorkSize();
+    mveasy->mvply_work = criFixedAllocator_Allocate((CriFixedAllocator *)&walloc, mvply_work_size, 4);
     if (mveasy->mvply_work != NULL)
     {
-        mveasy->mvply = (CriMvPly)criMvPly_CreateWithWork(mveasy->mvply_work, ply_work_size);
+        mveasy->mvply = (CriMvPly)criMvPly_CreateWithWork(mveasy->mvply_work, mvply_work_size);
     }
     if (mveasy->mvply == NULL)
     {
@@ -194,8 +194,8 @@ CRIMVEASY_SAFEBUFFERS CriMvEasyPlayer* CriMvEasyPlayer::Create(void* work, CriUi
     FUN_140031020(mveasy->mvply, 8000);
     if (mveasy->sound != NULL)
     {
-        fmt = mveasy->sound->GetPcmFormat();
-        if (fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+        fmt_pcm = mveasy->sound->GetPcmFormat();
+        if (fmt_pcm == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
         {
             criMvPly_SetPcmFormat(mveasy->mvply, 1);
         }
@@ -263,14 +263,14 @@ void CriMvEasyPlayer::SetPlaybackWork(void* work, CriUint32 work_size, CriError&
     playback_work_size = work_size;
 }
 
-// MS2-FUNCTIONAL: the VS2008 build keeps an EH state slot for the placement new (this profile has no EH)
+
 // @0x14001de20
 CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface* freader,
                                          CriMvSystemTimerInterface* stimer, CriMvSoundInterface* sound,
                                          CriError& err)
 {
     CriMvEasyPlayer* mveasy;
-    CriMvSoundInterface::PcmFormat fmt;
+    CriMvSoundInterface::PcmFormat fmt_pcm;
 
     DAT_143b277b8 = crimveasy_version_str;
     err = CRIERR_OK;
@@ -324,8 +324,8 @@ CriMvEasyPlayer* CriMvEasyPlayer::Create(CriHeap heap, CriMvFileReaderInterface*
     }
     if (mveasy->sound != NULL)
     {
-        fmt = mveasy->sound->GetPcmFormat();
-        if (fmt == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
+        fmt_pcm = mveasy->sound->GetPcmFormat();
+        if (fmt_pcm == CriMvSoundInterface::PCM_FORMAT_FLOAT32)
         {
             criMvPly_SetPcmFormat(mveasy->mvply, 1);
         }
