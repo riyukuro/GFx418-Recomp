@@ -16,6 +16,7 @@
 // MS2-RANGE: 0x1400356a0-0x140035710 .text$mn
 // MS2-RANGE: 0x140035800-0x1400359e0 .text$mn
 // MS2-RANGE: 0x140036470-0x140036590 .text$mn
+// MS2-RANGE: 0x140036710-0x1400369e0 .text$mn
 // MS2-RANGE: 0x140036b80-0x140036d50 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -106,6 +107,40 @@ typedef struct CriMvReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; } C
 typedef struct CriMvWriteBufferView { void* Data; CriUint32 Capacity; } CriMvWriteBufferView;
 typedef struct CriMvUsfHeaderGateView { CriUint8 Reserved[0xd64]; CriSint32 HeaderChecked; } CriMvUsfHeaderGateView;
 typedef struct CriMvUsfHeaderSizeView { CriUint8 Reserved[0x8b8]; CriUint32 Size; } CriMvUsfHeaderSizeView;
+typedef struct CriMovieParsedChunk
+{
+    const CriUint8* Data;
+    CriSint32 Size;
+    CriUint32 Reserved;
+} CriMovieParsedChunk;
+typedef struct CriMvHeaderQueueView { CriUint8 Reserved[0xd80]; void* Queue; } CriMvHeaderQueueView;
+typedef struct CriMvHeaderRingState
+{
+    CriUint8  Reserved[0x5e8];
+    unsigned short CurrentIndex;            // 0x5e8
+    CriUint8  Reserved2[6];
+    CriUint32 Phase;                        // 0x5f0
+} CriMvHeaderRingState;
+typedef struct CriMvHeaderStreamEntry       // 0x2e0 bytes, from player + 0x28
+{
+    CriUint8  Reserved0[0x10];
+    CriUint32 Field10;
+    CriUint8  Reserved1[0x38];
+    CriUint32 Field4c;
+    CriUint8  Reserved2[0x200];
+    CriUint32 Field250;
+    CriUint8  Reserved3[0x1c];
+    CriUint32 Field270;
+    CriUint8  Reserved4[0x4c];
+    CriUint32 State;                        // 0x2c0
+    CriUint32 History0;
+    CriUint32 History4;
+    CriUint32 History8;
+    CriUint32 HistoryC;
+    CriUint32 History10;
+    CriUint8  Reserved5[8];
+} CriMvHeaderStreamEntry;
+typedef struct CriMvHeaderStreamList { CriUint8 Reserved[0x28]; CriMvHeaderStreamEntry Entries[2]; } CriMvHeaderStreamList;
 typedef struct CriMvVideoDecoderView { CriUint8 Reserved[0xe08]; void* VideoDecoder; } CriMvVideoDecoderView;
 typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
 {
@@ -147,6 +182,8 @@ void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
 void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
+const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
+void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
 CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
 CriBool isEndStopProcessingProc(void* player);
 void resetHandle(void* player);
@@ -188,6 +225,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_1400356a0@@YAXPEAX00PEBUCriMvFrameInfo@@PEBX@Z=FUN_1400356a0")
 #pragma comment(linker, "/alternatename:?FUN_140035800@@YAJPEAX00@Z=FUN_140035800")
 #pragma comment(linker, "/alternatename:?FUN_1400358d0@@YAKPEAXPEBX@Z=FUN_1400358d0")
+#pragma comment(linker, "/alternatename:?executeHeaderServer@@YAXPEAX@Z=executeHeaderServer")
 #pragma comment(linker, "/alternatename:?FUN_140036b80@@YAJPEAXPEAUCriMvSubtitleChunk@@J@Z=FUN_140036b80")
 #pragma comment(linker, "/alternatename:crimvply_clearAlphaFrameInfoMembers=?crimvply_clearAlphaFrameInfoMembers@@YAXPEAX@Z")
 #pragma comment(linker, "/alternatename:crimvply_isUnderGetFrameCondition=?crimvply_isUnderGetFrameCondition@@YAJPEAX@Z")
@@ -531,6 +569,53 @@ void criMvPly_GetSubtitle(void* player, void* destination, CriUint32 capacity, v
         count = ((CriUint32*)outputInfo)[2];
     memcpy(destination, *(void**)outputInfo, count);
     releaseSubtitleChunk(player, &chunk);
+}
+
+// parse the next USF header chunk into the current stream entry and record its history fields
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): payload, res, stream, phase, chunk, target, info.
+// @0x140036710
+void executeHeaderServer(void* player)
+{
+    CriSint32 res;
+    void* stream;
+    CriMovieInputChunk chunk;
+    CriMvHeaderStreamEntry* target;
+    CriUint32 info[12];                     // FUN_14003b3fc fills 0x24 bytes; 12 dwords give the exe 0x98 frame
+    CriMovieParsedChunk payload;
+    CriUint32 phase;
+    if (player == 0 || ((CriMvHeaderQueueView*)player)->Queue == 0)
+        return;
+    res = getInternalStatus(player);
+    if (res == 0 || res == 1 || res == 2)
+        return;
+    phase = ((CriMvHeaderRingState*)player)->Phase % 2;
+    if (phase == ((CriMvHeaderRingState*)player)->CurrentIndex)
+        return;
+    if (((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].State == 1)
+        return;
+    memset(&payload, 0, sizeof(payload));
+    stream = ((CriMvHeaderQueueView*)player)->Queue;
+    if ((CriUint32)FUN_1400467b8(stream, 1) > 0)
+    {
+        FUN_1400467a0(stream, 1, -1, &chunk);
+        if (chunk.Size >= 0x20)
+        {
+            FUN_14003b3fc(chunk.Data, chunk.Size, info);
+            payload.Data = criUsfCmn_GetContents(chunk.Data, chunk.Size, &payload.Size);
+            if (info[0] == 0x43524944)
+            {
+                target = &((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex];
+                retrieveHeaderInfo(player, target, &payload);
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].History0 = target->Field4c;
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].History4 = target->Field10;
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].History8 = target->Field250;
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].HistoryC = target->Field270;
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].History10 = 0;
+                ((CriMvHeaderStreamList*)player)->Entries[((CriMvHeaderRingState*)player)->CurrentIndex].State = 1;
+            }
+        }
+        criSj_PutChunk(stream, 0, &chunk);
+    }
 }
 
 // Select the next subtitle chunk matching a channel while consuming decoder control records.

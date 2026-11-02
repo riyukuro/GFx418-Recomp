@@ -16,7 +16,8 @@
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
 // MS2-RANGE: 0x140035710-0x140035800 .text$mn
 // MS2-RANGE: 0x1400359e0-0x140036470 .text$mn
-// MS2-RANGE: 0x140036590-0x140036b80 .text$mn
+// MS2-RANGE: 0x140036590-0x140036710 .text$mn
+// MS2-RANGE: 0x1400369e0-0x140036b80 .text$mn
 // MS2-RANGE: 0x140036d50-0x140039ea8 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
@@ -4261,76 +4262,6 @@ void criMvPly_DecodeHeader(void* player)
 {
     executeUsfServer(player);
     executeMvPlyDechdrServer(player);
-}
-
-// MS2-FUNCTIONAL: consume a queued CRID subtitle header and update the alternate subtitle stream slot.
-// @0x140036710
-void executeHeaderServer(void* player)
-{
-    if (!player)
-        return;
-    struct SubtitleQueueView { CriUint8 Reserved[0xd80]; void* Queue; };
-    CriMvDecoderHandleFields* decoders = (CriMvDecoderHandleFields*)player;
-    void* queue = ((SubtitleQueueView*)player)->Queue;
-    if (!queue)
-        return;
-    CriSint32 status = getInternalStatus(player);
-    if (status == 0 || status == 1 || status == 2)
-        return;
-
-    struct SubtitleRingState
-    {
-        CriUint8 Reserved[0x5e8];
-        CriUint16 CurrentIndex;
-        CriUint8 Reserved2[6];
-        CriUint32 Phase;
-    };
-    struct SubtitleStreamEntry
-    {
-        CriUint8 Reserved0[0x10];
-        CriUint32 Field10;
-        CriUint8 Reserved1[0x38];
-        CriUint32 Field4c;
-        CriUint8 Reserved2[0x200];
-        CriUint32 Field250;
-        CriUint8 Reserved3[0x1c];
-        CriUint32 Field270;
-        CriUint8 Reserved4[0x4c];
-        CriUint32 State;
-        CriUint32 History0;
-        CriUint32 History4;
-        CriUint32 History8;
-        CriUint32 HistoryC;
-        CriUint32 History10;
-        CriUint8 Reserved5[8];
-    };
-    struct SubtitleStreamList { CriUint8 Reserved[0x28]; SubtitleStreamEntry Entries[2]; };
-    SubtitleRingState* ring = (SubtitleRingState*)player;
-    if ((ring->Phase % 2) == ring->CurrentIndex)
-        return;
-    SubtitleStreamEntry* target = &((SubtitleStreamList*)player)->Entries[ring->CurrentIndex];
-    if (target->State == 1)
-        return;
-
-    CriMovieInputChunk chunk = {};
-    if (FUN_1400467b8(queue, 1) && (criSj_GetChunk(queue, 1, -1, &chunk), chunk.Size > 0x1f))
-    {
-        CriUint32 parsed[14] = {};
-        criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (CriUsfStandardHeader*)parsed);
-        if (parsed[0] == 0x43524944)
-        {
-            CriSint32 contentSize = 0;
-            CriMovieParsedChunk header = { criUsfCmn_GetContents(chunk.Data, chunk.Size, &contentSize), contentSize, 0 };
-            retrieveHeaderInfo(player, target, &header);
-            target->History0 = target->Field4c;
-            target->History4 = target->Field10;
-            target->History8 = target->Field250;
-            target->HistoryC = target->Field270;
-            target->History10 = 0;
-            target->State = 1;
-        }
-        criSj_PutChunk(queue, 0, &chunk);
-    }
 }
 
 // MS2-FUNCTIONAL: expose the next subtitle chunk only after the movie player leaves its setup states.
