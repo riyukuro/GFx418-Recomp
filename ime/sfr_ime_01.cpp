@@ -556,59 +556,67 @@ void FUN_1423cb0f0(void* self)
 {
     auto* bytes = static_cast<unsigned char*>(self);
     ::operator delete[](*reinterpret_cast<void**>(bytes + 0x190));
-    void* node = *reinterpret_cast<void**>(bytes + 0x140);
-    *reinterpret_cast<void**>(bytes + 0x110) = node;
-    while (node) {
-        void* next = *reinterpret_cast<void**>(static_cast<unsigned char*>(node) + 0x28);
+    void*& cursor = *reinterpret_cast<void**>(bytes + 0x110);
+    cursor = *reinterpret_cast<void**>(bytes + 0x140);
+    while (void* node = cursor) {
         FUN_1423cc570(static_cast<unsigned long long*>(node));
+        cursor = *reinterpret_cast<void**>(static_cast<unsigned char*>(cursor) + 0x28);
         void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
         reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, node);
-        *reinterpret_cast<void**>(bytes + 0x110) = next;
-        node = next;
     }
 }
 
-// MS2-FUNCTIONAL: unlinks this DOM string node from the owner's hash set (an inlined Scaleform HashSet::RemoveAlt:
-// natural index kept apart from the walking index, entry count re-read through the owner) and frees its key.
-// Same code as the exe except that rsi and rdi are swapped.
+// FUN_1423cc570 unlinks a DOM string node from the owner's hash set (an inlined Scaleform HashSet::RemoveAlt
+// written as a member that reads pTable directly) and frees its key.
+static __forceinline unsigned long long* Ime01HashEntry(unsigned long long* table, unsigned long long index)
+{
+    return reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x10);
+}
+static __forceinline unsigned long long Ime01CachedHash(const unsigned long long* entry, unsigned long long mask)
+{
+    return *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(entry[1])) + 0x20) & mask;
+}
+// Scaleform HashSet::RemoveAlt shape on the owner's set (pTable at +8).
+struct Ime01NodeSet {
+    void* owner;
+    unsigned long long* pTable;
+    __forceinline void RemoveAlt(unsigned long long* node);
+};
+__forceinline void Ime01NodeSet::RemoveAlt(unsigned long long* node)
+{
+    if (pTable == nullptr) return;
+    const unsigned long long hashValue = *reinterpret_cast<unsigned*>(node + 4);
+    long long index = hashValue & pTable[1];
+    unsigned long long* e = Ime01HashEntry(pTable, index);
+    if (e[0] == 0xfffffffffffffffeull || Ime01CachedHash(e, pTable[1]) != static_cast<unsigned long long>(index)) return;
+    const long long naturalIndex = index;
+    long long prevIndex = -1;
+    while (Ime01CachedHash(e, pTable[1]) != static_cast<unsigned long long>(naturalIndex) || e[1] != reinterpret_cast<unsigned long long>(node)) {
+        prevIndex = index;
+        index = e[0];
+        if (index == -1) return;
+        e = Ime01HashEntry(pTable, index);
+    }
+    if (naturalIndex == index) {
+        if (e[0] != 0xffffffffffffffffull) {
+            unsigned long long* enext = Ime01HashEntry(pTable, e[0]);
+            e[0] = 0xfffffffffffffffeull;
+            e[0] = enext[0];
+            e[1] = enext[1];
+            e = enext;
+        }
+    } else {
+        Ime01HashEntry(pTable, prevIndex)[0] = e[0];
+    }
+    e[0] = 0xfffffffffffffffeull;
+    --pTable[0];
+}
+
 // @0x1423cc570
 void FUN_1423cc570(unsigned long long* node)
 {
-    auto* owner = reinterpret_cast<unsigned long long* const*>(node[6]);
-    unsigned long long* table;
-    if (owner && (table = owner[1]) != nullptr) {
-        const unsigned long long mask = table[1];
-        unsigned long long index = *reinterpret_cast<unsigned*>(node + 4) & mask;
-        auto* slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x10);
-        if (slot[0] != 0xfffffffffffffffeull &&
-            ((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) == index)) {
-            unsigned long long previous = 0xffffffffffffffffull;
-            unsigned long long natural = index;
-            while (((*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(reinterpret_cast<void*>(slot[1])) + 0x20) & mask) != natural) ||
-                   slot[1] != reinterpret_cast<unsigned long long>(node)) {
-                previous = index;
-                index = slot[0];
-                if (index == 0xffffffffffffffffull) goto unlink_done;
-                slot = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (index + 1) * 0x10);
-            }
-            const unsigned long long next = slot[0];
-            if (natural == index) {
-                if (next != 0xffffffffffffffffull) {
-                    slot[0] = 0xfffffffffffffffeull;
-                    auto* replacement = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (next + 1) * 0x10);
-                    slot[0] = replacement[0];
-                    slot[1] = replacement[1];
-                    slot = replacement;
-                }
-            } else {
-                auto* prior = reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(table) + (previous + 1) * 0x10);
-                prior[0] = next;
-            }
-            slot[0] = 0xfffffffffffffffeull;
-            --owner[1][0];
-        }
-    }
-unlink_done:
+    auto* owner = reinterpret_cast<Ime01NodeSet*>(node[6]);
+    if (owner) owner->RemoveAlt(node);
     void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
     reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, reinterpret_cast<void*>(node[0]));
 }
@@ -2705,12 +2713,13 @@ void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
     }
 }
 
-// MS2-FUNCTIONAL: releases the executable's active IME list/window by state index and updates its composition bookkeeping.
+// Releases the active IME list/window by state index and updates the composition bookkeeping. The manager is reread
+// through self+8 each time and each Value is built before the movie lookup.
 // @0x1423da730
 unsigned long long FUN_1423da730(void* raw, int state)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    auto* manager = static_cast<unsigned char*>(*reinterpret_cast<void**>(self + 8));
+    unsigned char*& manager = *reinterpret_cast<unsigned char**>(self + 8);
     const unsigned mode = *reinterpret_cast<unsigned*>(manager + 0x98);
     if (((mode - 0x01000000u) & 0xfeffffffu) != 0) {
         auto** managerVtable = *reinterpret_cast<void***>(manager);
@@ -2719,10 +2728,10 @@ unsigned long long FUN_1423da730(void* raw, int state)
             --*reinterpret_cast<int*>(manager + 0xbc);
             if (state == *reinterpret_cast<int*>(self + 0x48)) {
                 if (*reinterpret_cast<void**>(manager + 8)) {
+                    Scaleform::GFx::Value output;
                     void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
                     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
                     if (values) {
-                        Scaleform::GFx::Value output;
                         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                                 values, "RemoveList", &output, nullptr, 0);
@@ -2733,10 +2742,10 @@ unsigned long long FUN_1423da730(void* raw, int state)
             }
             if (state == *reinterpret_cast<int*>(self + 0x4c)) {
                 if (*reinterpret_cast<void**>(manager + 8)) {
+                    Scaleform::GFx::Value output;
                     void* bridge = *reinterpret_cast<void**>(manager + 0xa8);
                     void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(bridge) + 0x18);
                     if (values) {
-                        Scaleform::GFx::Value output;
                         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                             (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
                                 values, "RemoveInputWindow", &output, nullptr, 0);
@@ -2745,7 +2754,7 @@ unsigned long long FUN_1423da730(void* raw, int state)
                 *reinterpret_cast<String*>(manager + 0xb0) = "";
             }
             if (*reinterpret_cast<int*>(manager + 0xbc) == 0 &&
-                static_cast<char>(*reinterpret_cast<unsigned long long*>(manager + 0xc0))) {
+                *reinterpret_cast<char*>(manager + 0xc0)) {
                 reinterpret_cast<void(*)(void*, int)>(
                     (*reinterpret_cast<void***>(manager))[0xd8 / sizeof(void*)])(manager, 0);
             }
@@ -2944,52 +2953,53 @@ void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags
     return self;
 }
 
-// MS2-FUNCTIONAL: creates the IME COM manager and records both executable callback interfaces and their result keys.
+static __forceinline int Ime01AdviseSink(unsigned char* self, const void* iid, void* argument, unsigned* resultKey)
+{
+    IUnknown* callback = nullptr;
+    int ok = 0;
+    if (SUCCEEDED((*reinterpret_cast<IUnknown**>(self + 0x28))->QueryInterface(
+            *reinterpret_cast<const IID*>(&DAT_1431c51e8), reinterpret_cast<void**>(&callback)))) {
+        auto** vtable = *reinterpret_cast<void***>(callback);
+        if (FAILED(reinterpret_cast<HRESULT(*)(void*, const void*, void*, unsigned*)>(vtable[3])(
+                callback, iid, argument, resultKey)))
+            *resultKey = 0xffffffff;
+        else
+            ok = 1;
+    }
+    if (callback) callback->Release();
+    return ok;
+}
+
+// MS2-FUNCTIONAL: creates the IME COM manager, queries its controller straight into +0x40 and advises both callback
+// sinks; a key is set to -1 only when its advise call fails. Same flow as the exe; the exe does not keep 0 in a
+// register (immediate zero stores, rsi saved but unused) and returns the int flag.
 // @0x1423daae0
 unsigned char FUN_1423daae0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     IUnknown* manager = nullptr;
-    HRESULT hr = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
-        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28),
-        reinterpret_cast<void**>(&manager));
-    if (FAILED(hr) || !manager) return 0;
-    *reinterpret_cast<IUnknown**>(self + 0x28) = manager;
-    IUnknown* controller = nullptr;
-    hr = manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b8d8),
-        reinterpret_cast<void**>(&controller));
-    if (FAILED(hr) || !controller) {
-        manager->Release();
-        *reinterpret_cast<IUnknown**>(self + 0x28) = nullptr;
-        return 0;
-    }
-    auto** controllerVtable = *reinterpret_cast<void***>(controller);
-    reinterpret_cast<void(*)(void*, void*, unsigned)>(controllerVtable[0x70 / sizeof(void*)])(
-        controller, self + 0x38, 4);
-    *reinterpret_cast<IUnknown**>(self + 0x40) = controller;
+    if (SUCCEEDED(CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
+            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28),
+            reinterpret_cast<void**>(&manager)))) {
+        *reinterpret_cast<IUnknown**>(self + 0x28) = manager;
+        if (SUCCEEDED(manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b8d8),
+                reinterpret_cast<void**>(self + 0x40)))) {
+            IUnknown* controller = *reinterpret_cast<IUnknown**>(self + 0x40);
+            auto** controllerVtable = *reinterpret_cast<void***>(controller);
+            reinterpret_cast<void(*)(void*, void*, unsigned)>(controllerVtable[0x70 / sizeof(void*)])(
+                controller, self + 0x38, 4);
 
-    auto queryCallback = [&](const void* iid, void* argument, unsigned* resultKey) {
-        IUnknown* callback = nullptr;
-        HRESULT query = manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_1431c51e8),
-            reinterpret_cast<void**>(&callback));
-        if (FAILED(query) || !callback) return false;
-        auto** vtable = *reinterpret_cast<void***>(callback);
-        query = reinterpret_cast<HRESULT(*)(void*, const void*, void*, unsigned*)>(vtable[3])(
-            callback, iid, argument, resultKey);
-        callback->Release();
-        return SUCCEEDED(query);
-    };
-    if (!queryCallback(&DAT_1431c4d58, self, reinterpret_cast<unsigned*>(self + 0x18))) {
-        *reinterpret_cast<unsigned*>(self + 0x18) = 0xffffffff;
-        return 0;
+            if (Ime01AdviseSink(self, &DAT_1431c4d58, self, reinterpret_cast<unsigned*>(self + 0x18)) != 1)
+                return 0;
+            int ok = Ime01AdviseSink(self, &DAT_14313b8b8, self + 8, reinterpret_cast<unsigned*>(self + 0x1c));
+            if (ok != 1) return 0;
+            auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
+            *reinterpret_cast<int*>(owner + 0xbc) = 0;
+            return static_cast<unsigned char>(ok);
+        }
     }
-    if (!queryCallback(&DAT_14313b8b8, self + 8, reinterpret_cast<unsigned*>(self + 0x1c))) {
-        *reinterpret_cast<unsigned*>(self + 0x1c) = 0xffffffff;
-        return 0;
-    }
-    auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
-    *reinterpret_cast<int*>(owner + 0xbc) = 0;
-    return 1;
+    if (manager) manager->Release();
+    return 0;
 }
 
 // MS2-FUNCTIONAL: resolves a language-specific IME string from the executable locale table and releases its reference.
@@ -3297,8 +3307,8 @@ void FUN_1423d99f0(void* raw, Ime01NtsPtr value)
         for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i) {
             void* input = value.p;
             reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(input))[1])(input,
-                *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
-                *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
+                &(*reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828))[i],
+                &(*reinterpret_cast<void***>(self + 0x810))[i]);
         }
         Scaleform::GFx::Value result;
         Ime01UnusedValueArray unused;
