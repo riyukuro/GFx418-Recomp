@@ -2887,14 +2887,33 @@ Multiname::Multiname(Instances::Namespace& ns, const Value& name)
     PostProcessName(false);
 }
 
+// SPtr::SetPtr spelled out: the exe inlines it at the first assignment of Multiname(VM&) only
+static __forceinline void Sfr15SetPtrInline(SPtr<GASRefCountBase>& sp, GASRefCountBase* p)
+{
+    GASRefCountBase*& raw = sp.GetRawRef();
+    if (p != raw)
+    {
+        if (raw)
+        {
+            if ((UPInt)raw & 1)
+                raw = (GASRefCountBase*)((UPInt)raw - 1);
+            else
+                raw->Release();
+        }
+        if (p)
+            p->AddRef();
+        raw = p;
+    }
+}
+
 // The any-name "" in the running frame's default XML namespace, else the public one.
-// MS2-FUNCTIONAL: same code; the exe inlines the first SPtr assignment and calls SetPtr for the fallback, ours calls it for both
+// MS2-FUNCTIONAL: the exe reloads the empty string node from its slot after FUN_1424e0d40, ours keeps it in rbx
 // @0x1424d8bb0
 Multiname::Multiname(VM& vm)
     : Kind(static_cast<Abc::MultinameKind>(0))
 {
     FUN_1424e0d40(Name, vm.GetStringManager().CreateEmptyString());
-    Obj = vm.GetDefXMLNamespace();
+    Sfr15SetPtrInline(Obj, vm.GetDefXMLNamespace());
     if (Obj.GetPtr() == NULL)
         Obj.SetPtr(vm.PublicNamespace.GetPtr());
 }
@@ -3636,7 +3655,7 @@ void Sfr30DummyRelease(UPInt p)
     if (p && !(p & 1))
     {
         Sfr30CountedDummy* o = reinterpret_cast<Sfr30CountedDummy*>(p);
-        if (--*reinterpret_cast<int*>(&o->RefCount) == 0)
+        if (--*reinterpret_cast<unsigned*>(&o->RefCount) == 0)
             reinterpret_cast<void (*)(void*, unsigned)>(const_cast<void*>(o->pVTable[0]))(o, 1);
     }
 }
@@ -3654,35 +3673,42 @@ StringManager* FUN_1424d9d70(StringManager* self, ASStringManager* mgr)
 }
 
 // A counted dummy owner stored twice (the second slot is a second reference to it).
-// MS2-FUNCTIONAL: raw counted pointers over a hand-written release
 // @0x1424d9ca0
 UPInt* FUN_1424d9ca0(UPInt* self, UPInt arg)
 {
+    UPInt* second = self + 1;
     self[0] = 0;
-    self[1] = 0;
+    *second = 0;
     self[2] = arg;
-    Sfr30CountedDummy* obj = static_cast<Sfr30CountedDummy*>(Memory::pGlobalHeap->Alloc(0x10));
-    if (obj)
+    void* pmem = Memory::pGlobalHeap->Alloc(0x10);
+    Sfr30CountedDummy* obj;
+    if (pmem)
     {
+        obj = static_cast<Sfr30CountedDummy*>(pmem);
         obj->RefCount = 1;
         obj->pVTable = DAT_14317f860;
     }
+    else
+        obj = 0;
     if (reinterpret_cast<UPInt>(obj) != self[0])
     {
         Sfr30DummyRelease(self[0]);
         self[0] = reinterpret_cast<UPInt>(obj);
     }
-    UPInt old = self[1];
-    if (old)
+    if (self != second)
     {
-        if (old & 1)
-            self[1] = old - 1;
-        else
-            Sfr30DummyRelease(old);
+        UPInt old = *second;
+        if (old)
+        {
+            if (old & 1)
+                *second = old - 1;
+            else
+                Sfr30DummyRelease(old);
+        }
+        if (self[0])
+            ++*reinterpret_cast<int*>(self[0] + 8);
+        *second = self[0];
     }
-    if (self[0])
-        ++*reinterpret_cast<int*>(self[0] + 8);
-    self[1] = self[0];
     return self;
 }
 
@@ -3789,8 +3815,7 @@ void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
     *reinterpret_cast<UByte*>(w + 7) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(w) + 0x34) = 0;
     bool stripped = false;
-    UPInt movie = w[3];
-    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(movie + 0x18) + 0x10) + 0x50);
+    UPInt main = *reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(*reinterpret_cast<UPInt*>(w[3] + 0x18) + 0x10) + 0x50);
     if (main)
     {
         void* def = reinterpret_cast<void* (*)(UPInt)>((*reinterpret_cast<void***>(main))[0x1e0 / 8])(main);
@@ -3799,15 +3824,16 @@ void* FUN_1424d84e0(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
     }
     MoviePreloadTask* task = NULL;
     if (void* mem = Memory::pGlobalHeap->Alloc(0x50))
-        task = ::new (mem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(movie),
+        task = ::new (mem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(w[3]),
                                           *reinterpret_cast<const String*>(reinterpret_cast<UByte*>(pentry) + 0x18),
-                                          stripped, *(reinterpret_cast<UByte*>(pentry) + 0x24) != 0);
-    if (w[5])
-        reinterpret_cast<RefCountImpl*>(w[5])->Release();
-    w[5] = reinterpret_cast<UPInt>(task);
-    void* bag = reinterpret_cast<void*>(movie + 0x10);
+                                          stripped, *reinterpret_cast<bool*>(reinterpret_cast<UByte*>(pentry) + 0x24));
+    MoviePreloadTask*& slot = *reinterpret_cast<MoviePreloadTask**>(w + 5);
+    if (slot)
+        reinterpret_cast<RefCountImpl*>(slot)->Release();
+    slot = task;
+    void* bag = reinterpret_cast<void*>(w[3] + 0x10);
     void* tm = reinterpret_cast<void* (*)(void*, unsigned)>((*reinterpret_cast<void***>(bag))[0x18 / 8])(bag, 0x14);
-    reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(tm))[1])(tm, task);
+    reinterpret_cast<void (*)(void*, void*)>((*reinterpret_cast<void***>(tm))[1])(tm, reinterpret_cast<void*>(w[5]));
     static_cast<RefCountImpl*>(tm)->Release();
     return self;
 }
