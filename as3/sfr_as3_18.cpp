@@ -3264,17 +3264,17 @@ DisplayObjectBase* AvmDisplayObjContainer::RemoveChild(DisplayObjectBase* ch)
     return ch;
 }
 
-// MS2-FUNCTIONAL declared void here; the exe also returns the removed child (NULL past the end) in rax
 // @0x1425226a0
-void AvmDisplayObjContainer::RemoveChildAt(unsigned index)
+DisplayObjectBase* AvmDisplayObjContainer::RemoveChildAt(unsigned index)
 {
     if (index >= unsigned(GetDisplayObjContainer()->mDisplayList.GetCount()))
-        return;
+        return NULL;
     DisplayList&           displayList = GetDisplayObjContainer()->mDisplayList;
     Ptr<DisplayObjectBase> hold = displayList.GetDisplayObject(index);
     displayList.RemoveEntryAtIndex(pDispObj, index);
     displayList.Flags |= DisplayList::Flags_DepthToIndexInvalid | DisplayList::Flags_MayContainForeignElems;
     Sfr34_AfterChildRemoved(hold.GetPtr());
+    return hold;
 }
 
 // sfr34 batch F: hit tests of the AS3 shapes and bitmaps. ShapeObject and AvmBitmap are opaque in as3_avm.h

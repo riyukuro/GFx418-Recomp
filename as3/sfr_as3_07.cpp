@@ -3700,7 +3700,7 @@ public:
     bool SwapChildrenAt(unsigned i1, unsigned i2);              // 0x14252e6d0
     bool SwapChildren(DisplayObjectBase* ch1, DisplayObjectBase* ch2);   // 0x14252e590
     DisplayObjectBase* RemoveChild(DisplayObjectBase* ch);      // 0x142522570
-    void RemoveChildAt(unsigned index);                         // 0x1425226a0
+    DisplayObjectBase* RemoveChildAt(unsigned index);           // 0x1425226a0
     void AddChild(DisplayObjectBase* ch);                       // 0x1424e6d90
     void AddChildAt(DisplayObjectBase* ch, unsigned index);     // 0x1424e6e90
     SPtr<Instances::fl_display::DisplayObject> GetAS3ChildAt(unsigned index);
