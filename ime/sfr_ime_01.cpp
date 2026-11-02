@@ -1336,7 +1336,9 @@ void FUN_1423d1420(void* object, int index)
 // @0x1423ce6c0
 __declspec(noinline) void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
 {
-    ConstructorMov<Scaleform::GFx::Value>::DestructArray(values, count);
+    values += count - 1;
+    for (UPInt i = 0; i < count; ++i, --values)
+        values->~Value();
 }
 
 // @0x1423cd060
