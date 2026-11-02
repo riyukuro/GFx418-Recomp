@@ -2413,7 +2413,7 @@ extern "C" void FUN_1424ddb00(void* self)
     reinterpret_cast<Scaleform::GFx::DisplayObject*>(bytes)->Scaleform::GFx::DisplayObject::~DisplayObject();
 }
 
-// MS2-FUNCTIONAL 0x1424deeb0: release ShapeObject's own drawing and definition references, then its bases.
+// Release ShapeObject's own drawing and definition references, then its bases.
 // @0x1424deeb0
 namespace Scaleform { namespace GFx { namespace AS3 {
 ShapeObject::~ShapeObject()

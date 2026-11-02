@@ -2090,12 +2090,11 @@ extern void* const ShapeObject_vftable_90[];
 // drawing context of the AS3 Graphics API (+0xc8, made on first use).
 // MS2-PIN: ??_7ShapeObject@AS3@GFx@Scaleform@@6B@ 0x14317c210
 // ShapeObject is opaque (its virtuals are unrecovered): its bases are built in place and the exe's vftables stored.
-// MS2-FUNCTIONAL: same code but for a dead store of ShapeObject's own vptr ahead of the base call (the opaque class
-// has a vftable but no declared base, so cl stores it on entry)
+// The opaque class declares no virtual, so cl stores no vptr of its own on entry.
 // @0x1424d98a0
 ShapeObject::ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id)
 {
-    UByte* const self = reinterpret_cast<UByte*>(this);   // Data is at +8 behind the vptr of the opaque class
+    UByte* const self = reinterpret_cast<UByte*>(this);   // object offsets as in the exe
     reinterpret_cast<DisplayObject*>(this)->DisplayObject::DisplayObject(pasRoot, pparent, id);
     new (self + 0x90) AvmDisplayObj(reinterpret_cast<DisplayObject*>(this));
     *reinterpret_cast<void* const**>(self + 0x00) = ShapeObject_vftable;

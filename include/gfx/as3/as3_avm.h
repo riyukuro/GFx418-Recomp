@@ -385,8 +385,8 @@ class ShapeObject
 {
 public:
     ShapeObject(CharacterDef* pdef, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id);
-    virtual ~ShapeObject(); // 0x1424deeb0
-    UByte Data[0xd0];
+    ~ShapeObject(); // 0x1424deeb0 (non-virtual here: the ctor and dtor install the exe's vftables by hand)
+    UByte Data[0xd8]; // the whole 0xd8-byte object (no vptr of its own here)
 };
 
 class AvmBitmap
