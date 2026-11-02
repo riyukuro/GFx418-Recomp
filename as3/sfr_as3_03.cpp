@@ -1620,8 +1620,6 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
     }
 
-    // MS2-FUNCTIONAL: the exe re-reads the new low bound through a null hash iterator after CutHash (a fault when
-    // reached); ours keeps the first entry's key.
     // @0x142408230
     void SparseArray::CutMultipleAt(UPInt pos, UPInt count, SparseArray* deleted)
     {
@@ -1646,7 +1644,7 @@ namespace Scaleform { namespace GFx { namespace AS3
                 if (ValueHHighInd < pos + count)
                 {
                     // Every hashed value is at or past pos: the hash empties.
-                    while (!ValueH.IsEmpty())
+                    while (ValueH.GetSize() > 0)
                     {
                         HashDH<UPInt, Value>::Iterator it = ValueH.Begin();
                         if (deleted)
@@ -1660,6 +1658,8 @@ namespace Scaleform { namespace GFx { namespace AS3
                 {
                     CutHash(ValueHLowInd, pos - ValueHLowInd + count, count, deleted);
                     ValueHLowInd = ValueH.Begin()->First;
+                    // As the exe: the bound is read again through the end iterator (a null hash), which faults.
+                    ValueHLowInd = ValueH.End()->First;
                 }
             }
             else
@@ -2383,12 +2383,15 @@ namespace Instances { namespace fl
     void XMLList::AS3text(SPtr<XMLList>& result)
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
+        Pickable<XMLList> list;
         if (TargetNamespace && TargetObject && TargetProperty)
-            result = itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
+            list = itr.MakeInstance(itr, *TargetObject, ASString(TargetProperty), *TargetNamespace);
         else
-            result = MS2_MakeXMLList(itr);
-        for (UPInt i = 0; i < List.GetSize(); ++i)
-            List[i]->GetChildren(*result, XML::kText);
+            list = MS2_MakeXMLList(itr);
+        result = list;
+        const UPInt size = List.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+            List[i]->GetChildren(*list.GetPtr(), XML::kText);
     }
 }}
 
@@ -2552,8 +2555,17 @@ namespace
 {
     using namespace Scaleform::GFx::AS3;
 
+    // Whether na holds a namespace equal to ns.
+    SF_INLINE bool HoldsNamespace03(const NamespaceArray& na, const Instances::Namespace& ns)
+    {
+        for (Scaleform::UPInt j = 0; j < na.Namespaces.GetSize(); ++j)
+            if (*na.Namespaces[j] == ns)
+                return true;
+        return false;
+    }
+
     // Add the non-public namespaces of nss to na that it doesn't hold yet.
-    void AddNamespaces03(NamespaceArray& na, const NamespaceArray* nss, const Instances::Namespace& pub)
+    SF_INLINE void AddNamespaces03(NamespaceArray& na, const NamespaceArray* nss, const Instances::Namespace& pub)
     {
         if (!nss)
             return;
@@ -2563,11 +2575,7 @@ namespace
             Instances::Namespace* ns = nss->Namespaces[i];
             if (*ns == pub)
                 continue;
-            Scaleform::UPInt j = 0;
-            for (; j < na.Namespaces.GetSize(); ++j)
-                if (*na.Namespaces[j] == *ns)
-                    break;
-            if (j == na.Namespaces.GetSize())
+            if (!HoldsNamespace03(na, *ns))
                 na.Namespaces.PushBack(ns);
         }
     }
@@ -2577,7 +2585,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 namespace Instances { namespace fl
 {
     // The items, a line each, with the namespaces in scope at the target passed down.
-    // MS2-FUNCTIONAL: a plain-object target ends the walk
     // @0x142403310
     void XMLList::AS3toXMLString(ASString& result)
     {
@@ -2596,12 +2603,15 @@ namespace Instances { namespace fl
                         AddNamespaces03(na, x->GetInScopeNamespaces(), pub);
                     break;
                 }
-                if (!IsXMLListObject(o))
-                    break;
-                XMLList* l = static_cast<XMLList*>(o);
-                for (UPInt i = 0; i < l->List.GetSize(); ++i)
-                    AddNamespaces03(na, l->List[i]->GetInScopeNamespaces(), pub);
-                o = l->TargetObject;
+                // As the exe: a target that is neither XML nor XMLList is tested again forever.
+                if (IsXMLListObject(o))
+                {
+                    XMLList* l = static_cast<XMLList*>(o);
+                    const UPInt n = l->List.GetSize();
+                    for (UPInt i = 0; i < n; ++i)
+                        AddNamespaces03(na, l->List[i]->GetInScopeNamespaces(), pub);
+                    o = l->TargetObject;
+                }
             }
         }
 
@@ -3834,7 +3844,14 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
                               index);
     }
 
-    // MS2-FUNCTIONAL: our build shrink-wraps the prologue (the exe saves every callee-saved register up front)
+    // Slots::GetSlotInfo (0x142416fb0, in sfr_as3_04) as the exe inlines it into AddFixedSlotValuePair.
+    static SF_INLINE const SlotInfo& saGetSlotInfo(const Slots& s, AbsoluteIndex ind)
+    {
+        if (ind < s.FirstOwnSlotNum)
+            return s.Parent->GetSlotInfo(ind);
+        return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+    }
+
     // @0x142403d70
     const SlotInfo& GlobalObjectCPP::AddFixedSlotValuePair(const ASString& prop_name, Pickable<const Namespace> ns,
                                                            const ClassTraits::Traits* ctr, const Value& v, UPInt& index)
@@ -3844,7 +3861,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         tr.AddSlotCPP(prop_name, ns, ctr, SlotInfo::BT_ValueArray, AbsoluteIndex(tr.FixedValueSlotNumber++), false);
         GetVM().ClassTraitsSet.Add(prop_name, *ns, const_cast<ClassTraits::Traits*>(ctr));
         index = tr.GetSlotInfoNum() - 1;
-        return tr.GetSlotInfo(AbsoluteIndex(index));
+        return saGetSlotInfo(tr, AbsoluteIndex(index));
     }
 }}}}}
 
