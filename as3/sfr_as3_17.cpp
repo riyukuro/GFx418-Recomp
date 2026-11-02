@@ -3512,31 +3512,30 @@ static SF_INLINE const SlotInfo* Sfr33FindDynamicSlotIn(const SlotContainerType&
 }
 
 // The dynamic slot of c that mn names (the first namespace of a set that has one), or NULL.
-// MS2-FUNCTIONAL 0x142500c40: the exe keeps the QName result in rbp and copies it to rbx, saves r15/rsi/rdi only
-// around the namespace-set loop (0x40 frame) and tests the kind as a byte.
 // @0x142500c40
 const SlotInfo* FindDynamicSlot(VM& vm, const SlotContainerType& c, const Multiname& mn)
 {
     ASString name = vm.GetStringManager().CreateEmptyString();
     const bool ok = mn.Name.Convert2String(name);
-    const SlotInfo* si = NULL;
+    const SlotInfo* result = NULL;
     if (ok)
     {
-        if (mn.IsQName())
-            si = Sfr33FindDynamicSlotIn(c, name, *static_cast<const Instances::Namespace*>(mn.Obj.GetPtr()));
-        else
+        if ((static_cast<UInt32>(mn.Kind) & 3) >= 2)
         {
             const ArrayLH<SPtr<Instances::Namespace> >& nss =
                 static_cast<const NamespaceSet*>(mn.Obj.GetPtr())->GetNamespaces();
+            const SlotInfo* si = NULL;
             for (UPInt i = 0; i < nss.GetSize(); ++i)
             {
                 si = Sfr33FindDynamicSlotIn(c, name, *nss[i]);
                 if (si)
                     break;
             }
+            return si;
         }
+        result = Sfr33FindDynamicSlotIn(c, name, *static_cast<const Instances::Namespace*>(mn.Obj.GetPtr()));
     }
-    return si;
+    return result;
 }
 
 
