@@ -4446,19 +4446,29 @@ static const unsigned short cx18_CangjieKeys[0x5b] = {
     0x5eff, 0x5c71, 0x5973, 0x7530, 0x96e3, 0x535c, 0x005a,
 };
 
+// The per-key records at +0xdc (12 bytes each, for keys 0x20..0x7a; the code of each sits 4 bytes before it).
+struct Ime01KeyRecord
+{
+    unsigned short ch;
+    unsigned short reserved;
+    int value;
+    unsigned nextCode;
+};
+
 // Key event hook of the IMM IME object (WM_KEYDOWN/WM_KEYUP). Stores the layout (+0x58, +0x5a8) and the IMM virtual
 // key (+0xd0); in mode 0x70000 PgDn/PgUp move the IMM candidate page by nine. A key down that is not VK_PROCESSKEY
 // marks a key pending (+0xa0) and an IME UI message (+0xa1). On its key up with no UI message and no composition
 // (+0x60) the input window is closed (vtbl+0x80, RemoveInputWindow). A key down then translates the key to its
 // character (+0xd0; backspace, return, escape and space stop here): mode 2 (Zhuyin) maps it through the key records
-// at +0xd8 (bopomofo to +0xd0, class to +0xc8), mode 4 (Cangjie) through the radical table. A key up after a
-// candidate list was shown (+0x5bc) repositions the candidate window (0x1423d5060).
+// at +0xdc (bopomofo to +0xd0, class to +0xc8), mode 4 (Cangjie) through the radical table. A key up after a
+// candidate list was shown (+0x5bc) repositions the candidate window (0x1423d5060, out of line as in the exe).
+// Still differs: cl folds the message-type test and the mode 2 range test into lea/cmp range checks, the exe
+// indexes the Cangjie table with stride 8 (ours is a ushort table) and reloads the message type after ToUnicodeEx.
 // @0x1423d4c20
 void FUN_1423d4c20(void* raw, const void* event)
 {
     auto* self = static_cast<unsigned char*>(raw);
     auto* message = static_cast<const unsigned char*>(event);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
     auto& key = *reinterpret_cast<unsigned short*>(self + 0xd0);
     BYTE state[256];
     wchar_t translated[0x14];
@@ -4468,30 +4478,28 @@ void FUN_1423d4c20(void* raw, const void* event)
         HKL layout = GetKeyboardLayout(0);
         *reinterpret_cast<HKL*>(self + 0x58) = layout;
         *reinterpret_cast<HKL*>(self + 0x5a8) = layout;
-        const BYTE scan = message[0x1a];
-        key = static_cast<unsigned short>(cx18_ImmGetVirtualKey(hwnd));
-        if (*reinterpret_cast<int*>(self + 0x98) == 0x70000) {
-            if (key == VK_NEXT) {
-                HIMC context = cx18_ImmGetContext(hwnd);
-                cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
-                cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) + 9);
-                cx18_ImmReleaseContext(hwnd, context);
-            }
-            if (*reinterpret_cast<int*>(self + 0x98) == 0x70000 && key == VK_PRIOR) {
-                HIMC context = cx18_ImmGetContext(hwnd);
-                cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
-                cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) - 9);
-                cx18_ImmReleaseContext(hwnd, context);
-            }
+        const UINT scan = message[0x1a];
+        key = static_cast<unsigned short>(cx18_ImmGetVirtualKey(*reinterpret_cast<HWND*>(self + 0x28)));
+        if (*reinterpret_cast<int*>(self + 0x98) == 0x70000 && key == VK_NEXT) {
+            HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
+            cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
+            cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) + 9);
+            cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+        }
+        if (*reinterpret_cast<int*>(self + 0x98) == 0x70000 && key == VK_PRIOR) {
+            HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
+            cx18_ImmNotifyIME(context, NI_OPENCANDIDATE, 0, 0);
+            cx18_ImmNotifyIME(context, NI_SETCANDIDATE_PAGESTART, 0, *reinterpret_cast<int*>(self + 0x70) - 9);
+            cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
         }
         ToUnicodeEx(key, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
         type = *reinterpret_cast<const UINT*>(message + 0xc);
     }
-    const WPARAM wParam = *reinterpret_cast<const WPARAM*>(message + 0x10);
-    const LPARAM lParam = *reinterpret_cast<const LPARAM*>(message + 0x18);
-    if (type == WM_KEYDOWN && wParam != VK_PROCESSKEY)
-        *reinterpret_cast<short*>(self + 0xa0) = 1;
-    if (self[0xa0] && cx18_ImmIsUIMessageW(nullptr, type, wParam, lParam))
+    if (type == WM_KEYDOWN && *reinterpret_cast<const WPARAM*>(message + 0x10) != VK_PROCESSKEY)
+        *reinterpret_cast<unsigned short*>(self + 0xa0) = 1;
+    if (self[0xa0] && cx18_ImmIsUIMessageW(nullptr, *reinterpret_cast<const UINT*>(message + 0xc),
+                                           *reinterpret_cast<const WPARAM*>(message + 0x10),
+                                           *reinterpret_cast<const LPARAM*>(message + 0x18)))
         self[0xa1] = 1;
     if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYUP && self[0xa0]) {
         self[0xa0] = 0;
@@ -4502,21 +4510,21 @@ void FUN_1423d4c20(void* raw, const void* event)
     }
     if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYDOWN) {
         const BYTE scan = message[0x1a];
-        const UINT virtualKey = cx18_ImmGetVirtualKey(hwnd);
+        const UINT virtualKey = cx18_ImmGetVirtualKey(*reinterpret_cast<HWND*>(self + 0x28));
         key = static_cast<unsigned short>(virtualKey);
         ToUnicodeEx(virtualKey & 0xffff, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
         unsigned short ch = static_cast<unsigned short>(static_cast<short>(static_cast<signed char>(translated[0])));
         key = ch;
-        if (ch < 0x21 && (0x108002100ull >> ch & 1)) return;
+        if (ch == 8 || ch == 13 || ch == 27 || ch == 32) return;
         int mode = *reinterpret_cast<int*>(self + 0x98);
-        if (mode == 2 && ch > 0x1f && ch < 0x7b) {
-            const int index = tolower(ch) - 0x20;
-            ch = *reinterpret_cast<unsigned short*>(self + 0xdc + 12 * index);
+        if (mode == 2 && ch >= 0x20 && ch <= 0x7a) {
+            Ime01KeyRecord& record = reinterpret_cast<Ime01KeyRecord*>(self + 0xdc)[tolower(ch) - 0x20];
+            ch = record.ch;
             key = ch;
-            *reinterpret_cast<int*>(self + 0xc8) = *reinterpret_cast<int*>(self + 0xe0 + 12 * index);
+            *reinterpret_cast<int*>(self + 0xc8) = record.value;
             mode = *reinterpret_cast<int*>(self + 0x98);
         }
-        if (mode == 4 && static_cast<unsigned short>(ch - 0x20) < 0x5b)
+        if (mode == 4 && static_cast<unsigned short>(ch - 0x20) <= 0x5a)
             key = cx18_CangjieKeys[tolower(ch) - 0x20];
     }
     if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYUP && self[0x5bc]) {
@@ -4644,7 +4652,7 @@ static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value
 // MS2-FUNCTIONAL: the arguments go through the inlined Value array (Ime01ArgArray). Same size as the exe; only the
 // array zeroing differs (the exe stores data/size with one movdqu).
 // @0x1423d5060
-void FUN_1423d5060(void* raw, int offset)
+__declspec(noinline) void FUN_1423d5060(void* raw, int offset)
 {
     auto* self = static_cast<unsigned char*>(raw);
     void* owner = *reinterpret_cast<void**>(self + 8);
