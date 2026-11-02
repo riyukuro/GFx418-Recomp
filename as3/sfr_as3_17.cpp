@@ -372,7 +372,7 @@ const char* AvmDisplayObj::GetAbsolutePath(String* ppath) const
 }
 
 // @0x142507550
-AvmInteractiveObj* AvmDisplayObj::GetAvmParent() const
+__declspec(noinline) AvmInteractiveObj* AvmDisplayObj::GetAvmParent() const
 {
     return ToAvmInteractiveObj(pDispObj->GetParent());
 }
@@ -463,10 +463,10 @@ void MovieRoot::ExecuteActionQueues()
     }
 }
 
+void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
+
 // Creates the timeline children of frame 0 once: the sprite joins the playlist when its parent is on it, gets its
 // load event and runs the init actions of frame 0.
-// MS2-FUNCTIONAL: same playlist, load-event and init-action steps; the parent is reloaded and the AvmSprite this
-// adjustment differs.
 // @0x1424f3320
 void AvmSprite::CreateChildren()
 {
@@ -475,11 +475,11 @@ void AvmSprite::CreateChildren()
     Sprite* spr = GetSprite();
     if (!spr->IsInPlayList() && spr->GetParent() && spr->GetParent()->IsInPlayList())
     {
-        if (!spr->GetParent())
-            spr->AddToPlayList();
-        else
+        if (spr->GetParent())
             GetAvmParent()->InsertChildToPlayList(spr);
-        spr->ModifyOptimizedPlayList();
+        else
+            spr->AddToPlayList();
+        Sfr34_ModifyOptimizedPlayList(spr);
     }
     if (!(spr->Flags & Sprite::Flags_OnEventLoadCalled))
         spr->DefaultOnEventLoad();
@@ -4192,32 +4192,38 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
 }
 
 // The descendants named mn of an XML or XMLList instance v, as a new list that replaces v; false for anything else.
-// MS2-FUNCTIONAL 0x142509140: XMLList::GetDescendants called through its free-function form
+// True for an object value with instance traits of the given builtin type.
+static SF_INLINE bool Sfr33IsInstanceOf(const Value& v, BuiltinTraitsType tt)
+{
+    if (v.IsObject() && v.GetObject())
+    {
+        const Traits& tr = v.GetObject()->GetTraits();
+        return tr.GetTraitsType() == tt && tr.IsInstanceTraits();
+    }
+    return false;
+}
+
 // @0x142509140
 CheckResult XMLSupportImpl::GetDescendants(Value& v, const Multiname& mn) const
 {
-    if (!v.IsObject() || v.GetObject() == NULL)
-        return false;
-    Object* obj = v.GetObject();
-    const Traits& tr = obj->GetTraits();
-    const BuiltinTraitsType tt = tr.GetTraitsType();
-    if (tt == Traits_XML && tr.IsInstanceTraits())
+    bool result = false;
+    if (Sfr33IsInstanceOf(v, Traits_XML))
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(*GetITraitsXMLList());
         Pickable<Instances::fl::XMLList> list = itr.MakeInstance(itr);
-        static_cast<Instances::fl::XML*>(obj)->GetDescendants(*list, mn);
+        static_cast<Instances::fl::XML*>(v.GetObject())->GetDescendants(*list, mn);
         v.Pick(list);
-        return true;
+        result = true;
     }
-    if (tt == Traits_XMLList && tr.IsInstanceTraits())
+    else if (Sfr33IsInstanceOf(v, Traits_XMLList))
     {
         InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(*GetITraitsXMLList());
         Pickable<Instances::fl::XMLList> list = itr.MakeInstance(itr);
-        FUN_142415930(static_cast<Instances::fl::XMLList*>(obj), *list, mn);
+        FUN_142415930(static_cast<Instances::fl::XMLList*>(v.GetObject()), *list, mn);
         v.Pick(list);
-        return true;
+        result = true;
     }
-    return false;
+    return result;
 }
 
 // VM::ExecutePropertyUnsafe: calls the property prop_name of _this with argv; a null or undefined property is a
@@ -4245,12 +4251,14 @@ CheckResult ExecutePropertyUnsafe(VM& vm, const Multiname& prop_name, const Valu
 }
 
 // The property named mn of the first global object (of the ABC file of tr, when given) that has one.
-// MS2-FUNCTIONAL 0x142501750: the exe builds the object value in place with the reference count bits inlined.
+// MS2-FUNCTIONAL 0x142501750: the exe releases the object value through its tagged pointer, not ~Value.
 // @0x142501750
 void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::GlobalObject*>& go, const Multiname& mn,
                          const Traits* tr)
 {
-    VMAbcFile* file = tr ? tr->GetFilePtr() : NULL;
+    VMAbcFile* file = NULL;
+    if (tr)
+        file = tr->GetFilePtr();
     const UPInt size = go.GetSize();
     for (UPInt i = 0; i < size; ++i)
     {
@@ -4258,7 +4266,7 @@ void Sfr33FindGOProperty(PropRef& result, VM& vm, const ArrayLH<Instances::fl::G
         if (tr && obj->GetTraits().GetFilePtr() != file)
             continue;
         Sfr33FindPropertyWith(result, vm, Value(obj), mn, 0);
-        if (Sfr33PropFound(result))
+        if (result)
             return;
     }
 }
@@ -4386,19 +4394,24 @@ PropRef Object::FindDynamicSlot(const Multiname& mn)
     return PropRef();
 }
 
+// The call frame on top of the VM's paged frame stack.
+static SF_INLINE const UByte* Sfr33BackFrame(const VM& vm, UPInt n)
+{
+    --n;
+    return reinterpret_cast<const UByte* const*>(vm.Unk070[4])[n >> 6] + (n & 0x3f) * 0xa8;
+}
+
 // The property named mn seen from the current call: the scope stack above the frame's base, the frame's saved
 // scope, then the global objects of the ABC file that defines mn's traits.
-// MS2-FUNCTIONAL 0x142502570: the exe reloads the frame-stack page pointer for the saved scope and inlines the PropRef found test differently.
+// MS2-FUNCTIONAL 0x142502570: the exe tests the found tag through a byte shift; same results
 // @0x142502570
 void Sfr33VMFindProperty(VM& vm, PropRef& result, const Multiname& mn)
 {
     const UPInt n = vm.Unk070[1];
-    const UByte* top = reinterpret_cast<const UByte* const*>(vm.Unk070[4])[(n - 1) >> 6] + ((n - 1) & 0x3f) * 0xa8;
-    const UPInt base = n ? *reinterpret_cast<const UPInt*>(top + 8) : 0;
-    Sfr33FindScopeProperty(result, vm, base, vm.ScopeStack, mn);
+    Sfr33FindScopeProperty(result, vm, n == 0 ? 0 : *reinterpret_cast<const UPInt*>(Sfr33BackFrame(vm, n) + 8), vm.ScopeStack, mn);
     if (!Sfr33PropFound(result))
     {
-        const ScopeStackType* saved = *reinterpret_cast<const ScopeStackType* const*>(top + 0x38);
+        const ScopeStackType* saved = *reinterpret_cast<const ScopeStackType* const*>(Sfr33BackFrame(vm, vm.Unk070[1]) + 0x38);
         if (saved)
             Sfr33FindScopeProperty(result, vm, 0, *saved, mn);
     }
@@ -4419,6 +4432,19 @@ SPtr<VMAbcFile> VM::FindVMAbcFileWeak(const char* name) const
     return NULL;
 }
 
+SF_FORCEINLINE Value::Value(const ASString& v, InlineStrType)
+    : Flags(kString)
+    , value(v.GetNode())
+{
+    if (v.GetNode() == v.GetManager()->GetNullStringNode())
+    {
+        SetKind(kObject);
+        value = (Object*)NULL;
+    }
+    else
+        value.VS._1.VStr->AddRef();
+}
+
 // MovieRoot::CreateString / CreateStringW (virtual): a host value holding the string (null for the null string).
 struct Sfr33MovieRootStrings
 {
@@ -4431,18 +4457,14 @@ struct Sfr33MovieRootStrings
 void Sfr33MovieRootStrings::CreateString(GFx::Value* pvalue, const char* pstring)
 {
     ASString s(Root()->BuiltinsMgr.GetStringManager()->CreateStringNode(pstring));
-    Value v;
-    v.AssignUnsafe(s.GetNode());
-    Root()->ASValue2GFxValue(v, pvalue);
+    Root()->ASValue2GFxValue(Value(s, Value::InlineStr), pvalue);
 }
 
 // @0x1424f42d0
 void Sfr33MovieRootStrings::CreateStringW(GFx::Value* pvalue, const wchar_t* pstring)
 {
     ASString s(Root()->BuiltinsMgr.GetStringManager()->CreateStringNode(pstring));
-    Value v;
-    v.AssignUnsafe(s.GetNode());
-    Root()->ASValue2GFxValue(v, pvalue);
+    Root()->ASValue2GFxValue(Value(s, Value::InlineStr), pvalue);
 }
 
 // Runs the action unless its character was unloaded: an event fired at the character, a function called on its
@@ -4858,31 +4880,40 @@ void Sfr33CurrentFrameFileName(const UByte* self, ASString& result)
     result.AssignNode(result.GetManager()->CreateStringNode(src.ToCStr(), src.GetSize()));
 }
 
+// HashSetBase::findIndex over an entry of 4 words: next, int key, value pair.
+static SF_INLINE SPInt Sfr33EventChainFindIndex(const UPInt* table, const int& id)
+{
+    if (!table)
+        return -1;
+    const int hash = id;
+    const UPInt mask = table[1];
+    const UPInt home = SPInt(hash) & mask;
+    SPInt index = static_cast<SPInt>(home);
+    const UPInt* e = table + 2 + index * 4;
+    if (e[0] == UPInt(-2) || (SPInt(*reinterpret_cast<const int*>(e + 1)) & mask) != home)
+        return -1;
+    for (;;)
+    {
+        const int key = *reinterpret_cast<const int*>(e + 1);
+        if ((SPInt(key) & mask) == home && key == hash)
+            return index;
+        index = static_cast<SPInt>(e[0]);
+        if (index == -1)
+            return -1;
+        e = table + 2 + index * 4;
+    }
+}
+
 // EventChains::GetChain: the display objects listening for event id (NULL when none do); the chains hash
 // (+0x00) maps an event id to an owned array.
 // @0x142507a70
 ArrayLH<WeakPtr<DisplayObject> >* Sfr33EventChainsGetChain(const UByte* self, int id)
 {
     const UPInt* table = *reinterpret_cast<UPInt* const*>(self);
-    if (table)
-    {
-        const UPInt mask = table[1];
-        const UPInt home = SPInt(id) & mask;
-        const UPInt* e = table + 2 + home * 4;
-        if (e[0] != UPInt(-2) && (SPInt(*reinterpret_cast<const int*>(e + 1)) & mask) == home)
-        {
-            for (;;)
-            {
-                const int key = *reinterpret_cast<const int*>(e + 1);
-                if ((SPInt(key) & mask) == home && key == id)
-                    return *reinterpret_cast<ArrayLH<WeakPtr<DisplayObject> >* const*>(e + 2);
-                if (e[0] == UPInt(-1))
-                    break;
-                e = table + 2 + e[0] * 4;
-            }
-        }
-    }
-    return NULL;
+    const SPInt index = Sfr33EventChainFindIndex(table, id);
+    const UPInt* pair = index >= 0 ? table + 3 + index * 4 : NULL;
+    ArrayLH<WeakPtr<DisplayObject> >* const* value = pair ? reinterpret_cast<ArrayLH<WeakPtr<DisplayObject> >* const*>(pair + 1) : NULL;
+    return value ? *value : NULL;
 }
 
 // EventChains::FindObjectIndexInChain: the index of obj in chain (-1 when it is not there).
@@ -5365,9 +5396,7 @@ void Sfr33ExecuteAndPop(VM& vm, Value& result)
     vm.ExecuteCode(1);
     if (vm.IsException())
         return;
-    Sfr33OpStack& st = *reinterpret_cast<Sfr33OpStack*>(reinterpret_cast<UByte*>(&vm) + 0x48);
-    result.Pick(*st.pCurrent);
-    --st.pCurrent;
+    result.Pick(*reinterpret_cast<ValueStack*>(reinterpret_cast<UByte*>(&vm) + 0x48));
 }
 
 // Moves result onto the operand stack (result is left undefined).
