@@ -3472,7 +3472,7 @@ void Object::FindProperty(PropRef& result, const Multiname& mn, int attr)
 // dynamic values and prototypes; a function falls back to its saved scope).
 // MS2-FUNCTIONAL 0x142502690: the exe move-assigns the dynamic lookup result (0x1424e0b40), calls IsXMLObject out of line and allocates registers differently.
 // @0x142502690
-void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Multiname& mn, int attr)
+__declspec(noinline) void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Multiname& mn, int attr)
 {
     const unsigned kind = scope.GetKind();
     const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
@@ -3512,7 +3512,6 @@ void Sfr33FindPropertyWith(PropRef& result, VM& vm, const Value& scope, const Mu
 }
 
 // The property named mn in the scope values above baseSSInd, innermost first.
-// MS2-FUNCTIONAL 0x142502a80: rbp/rsi swapped in the register assignment and the exe lays out the found test differently.
 // @0x142502a80
 void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const ScopeStackType& scope_stack,
                             const Multiname& mn)
@@ -3520,7 +3519,7 @@ void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const Scop
     for (UPInt i = scope_stack.GetSize(); i > baseSSInd; --i)
     {
         Sfr33FindPropertyWith(result, vm, scope_stack[i - 1], mn, 0);
-        if (Sfr33PropFound(result))
+        if (result)
             return;
     }
 }
