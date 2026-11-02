@@ -234,7 +234,6 @@ bool AS2ValueObjectInterface::SetElement(void* pdata, unsigned idx, const Value&
 }
 
 // Hands count elements from idx (to the end for a negative count) to the visitor; holes are undefined.
-// MS2-FUNCTIONAL: register allocation (rsi vs rdi for the visitor)
 // @0x142994280
 void AS2ValueObjectInterface::VisitElements(void* pdata, ArrVisitor* visitor, unsigned idx, int count) const
 {
@@ -243,20 +242,19 @@ void AS2ValueObjectInterface::VisitElements(void* pdata, ArrVisitor* visitor, un
     AS2::ArrayObject* parr  = VoiArray(pdata);
     Value             v;
     unsigned          size = parr->GetSize();
-    if (idx < size)
+    if (idx >= size)
+        return;
+    if (count < 0)
+        count = size - idx;
+    unsigned end = Alg::Min(size, idx + count);
+    for (unsigned i = idx; i < end; ++i)
     {
-        if (count < 0)
-            count = size - idx;
-        unsigned end = Alg::Min(size, idx + count);
-        for (; idx < end; ++idx)
-        {
-            const AS2::Value* pelem = parr->GetElementPtr(idx);
-            if (pelem)
-                proot->ASValue2GFxValue(penv, *pelem, &v);
-            else
-                v.SetUndefined();
-            visitor->Visit(idx, v);
-        }
+        const AS2::Value* pelem = parr->GetElementPtr(i);
+        if (pelem)
+            proot->ASValue2GFxValue(penv, *pelem, &v);
+        else
+            v.SetUndefined();
+        visitor->Visit(i, v);
     }
 }
 
