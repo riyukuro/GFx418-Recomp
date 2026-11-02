@@ -2191,22 +2191,26 @@ void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFra
     }
 }
 
-// MS2-FUNCTIONAL: derive the 32-byte CRI USM key bytes, their inverted copy and the byte mask from the key seed.
+// Derive the 32-byte CRI USM key bytes, their inverted copy and the byte mask from the key seed.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): dst, i, mask, bytes, src.
 // @0x140038190
 void generateDecryptMask(const void* key)
 {
-    uintptr_t seed = (uintptr_t)key;
-    CriSint8 signedByte4 = (CriSint8)(seed >> 32);
-    CriUint8* bytes = DAT_143b27a48;   // the key bytes, read by the USM decryptor together with the inverted copy
-    CriUint8* inverted = DAT_143b27a68;
-    CriUint8* mask = DAT_143b27a88;
-    bytes[0] = (CriUint8)seed;
-    bytes[1] = (CriUint8)(seed >> 8);
-    bytes[2] = (CriUint8)(seed >> 16);
-    bytes[3] = (CriUint8)((seed >> 24) - 0x34);
-    bytes[4] = (CriUint8)(signedByte4 - 7);
-    bytes[5] = (CriUint8)((seed >> 40) ^ 0x13);
-    bytes[6] = (CriUint8)((seed >> 48) + 0x61);
+    const CriUint8* src;
+    CriUint8* bytes;
+    CriUint8* mask;
+    CriUint32 i;
+    CriUint8* dst;
+    bytes = DAT_143b27a48;   // the key bytes, read by the USM decryptor together with the inverted copy
+    dst = DAT_143b27a68;
+    mask = DAT_143b27a88;
+    bytes[0] = (CriUint8)((CriUint64)key & 0xff);
+    bytes[1] = (CriUint8)(((CriUint64)key >> 8) & 0xff);
+    bytes[2] = (CriUint8)(((CriUint64)key >> 16) & 0xff);
+    bytes[3] = (CriUint8)((((CriUint64)key >> 24) - 0x34) & 0xff);
+    bytes[4] = (CriUint8)((((CriUint64)key >> 32) + 0xf9) & 0xff);
+    bytes[5] = (CriUint8)((((CriUint64)key >> 40) ^ 0x13) & 0xff);
+    bytes[6] = (CriUint8)((((CriUint64)key >> 48) + 0x61) & 0xff);
     bytes[7] = (CriUint8)(bytes[0] ^ 0xff);
     bytes[8] = (CriUint8)(bytes[2] + bytes[1]);
     bytes[9] = (CriUint8)(bytes[1] - bytes[7]);
@@ -2220,23 +2224,28 @@ void generateDecryptMask(const void* key)
     bytes[17] = (CriUint8)(bytes[16] ^ bytes[7]);
     bytes[18] = (CriUint8)(bytes[15] ^ 0xff);
     bytes[19] = (CriUint8)(bytes[3] ^ 0x10);
-    bytes[20] = (CriUint8)(signedByte4 - 0x39);
-    bytes[21] = (CriUint8)(bytes[5] - 0x13);
+    bytes[20] = (CriUint8)(bytes[4] - 0x32);
+    bytes[21] = (CriUint8)(bytes[5] + 0xed);
     bytes[22] = (CriUint8)(bytes[6] ^ 0xf3);
     bytes[23] = (CriUint8)(bytes[19] - bytes[15]);
     bytes[24] = (CriUint8)(bytes[21] + bytes[7]);
     bytes[25] = (CriUint8)('!' - bytes[19]);
     bytes[26] = (CriUint8)(bytes[20] ^ bytes[23]);
-    bytes[27] = (CriUint8)(bytes[22] * 2);
+    bytes[27] = (CriUint8)(bytes[22] + bytes[22]);
     bytes[28] = (CriUint8)(bytes[23] + 0x44);
     bytes[29] = (CriUint8)(bytes[3] + bytes[4]);
     bytes[30] = (CriUint8)(bytes[5] - bytes[22]);
     bytes[31] = (CriUint8)(bytes[29] ^ bytes[19]);
-    for (CriUint32 i = 0; i < 0x20; ++i)
-        inverted[i] = (CriUint8)(bytes[i] ^ 0xff);
-    static const CriUint8 alternate[4] = { 0x55, 0x52, 0x55, 0x43 };
-    for (CriUint32 i = 0; i < 0x20; ++i)
-        mask[i] = (i % 2 == 0) ? inverted[i] : alternate[(i % 8) / 2];
+    for (i = 0; i < 0x20; i++)
+        dst[i] = (CriUint8)(bytes[i] ^ 0xff);
+    src = (const CriUint8*)"URUC";
+    for (i = 0; i < 0x20; i++)
+    {
+        if (i % 2 == 0)
+            mask[i] = dst[i];
+        else
+            mask[i] = src[(i % 8) / 2];
+    }
 }
 
 // MS2-FUNCTIONAL: retain the default USM decryption key and update the shared decryptor state.
