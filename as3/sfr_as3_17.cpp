@@ -3421,10 +3421,9 @@ const SlotInfo* FindDynamicSlot(VM& vm, const SlotContainerType& c, const Multin
 // A property lookup that found something (not undefined, not a tagged null value).
 static SF_INLINE bool Sfr33PropFound(const PropRef& prop)
 {
-    const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-    if (prop.This.GetKind() == Value::kUndefined || bits == 1)
-        return false;
-    return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
+    return prop.This.GetKind() != Value::kUndefined && reinterpret_cast<UPInt>(prop.pValue) != 1 &&
+           !((static_cast<UByte>(reinterpret_cast<UPInt>(prop.pValue) >> 1) & 1) &&
+             (reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(2)) == 0);
 }
 
 void Sfr33FindScopeProperty(PropRef& result, VM& vm, UPInt baseSSInd, const ScopeStackType& scope_stack,
@@ -4406,7 +4405,6 @@ static SF_INLINE const UByte* Sfr33BackFrame(const VM& vm, UPInt n)
 
 // The property named mn seen from the current call: the scope stack above the frame's base, the frame's saved
 // scope, then the global objects of the ABC file that defines mn's traits.
-// MS2-FUNCTIONAL 0x142502570: the exe tests the found tag through a byte shift; same results
 // @0x142502570
 void Sfr33VMFindProperty(VM& vm, PropRef& result, const Multiname& mn)
 {
