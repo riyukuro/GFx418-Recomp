@@ -441,25 +441,22 @@ void MovieRoot::AddVarLoadQueueEntry(const char* ptargetName, const char* purl, 
 
 // A movie load goes to the image decoder at once when its url is a synchronous protocol image, to the loader
 // thread when the movie has a task manager, else into the queue of the movie.
-// MS2-FUNCTIONAL: the synchronous protocol image path passes the entry to ProcessLoadQueueEntry with fresh load states
 // @0x142930090
 void MovieRoot::AddMovieLoadQueueEntry(LoadQueueEntry* pentry)
 {
     if (!pentry)
         return;
-    bool sync    = false;
+    bool sync;
     bool isImage = LoaderImpl::IsProtocolImage(pentry->URL, 0, &sync);
     if (isImage && sync)
     {
-        Ptr<LoadStates> pls = *CreateLoadStates(pMovieImpl);
+        Ptr<LoadStates> pls = *SF_NEW LoadStates(pMovieImpl->pMainMovieDef->pLoaderImpl,
+                                                 pMovieImpl->GetStateBag()->GetStateBagImpl());
         ProcessLoadQueueEntry(pentry, pls);
         delete pentry;
         return;
     }
-    bool useTask = false;
-    if (pentry->URL.GetLength() != 0 && !isImage)
-        useTask = Ptr<State>(*pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager)) != 0;
-    if (useTask)
+    if (pentry->URL.GetLength() > 0 && !isImage && pMovieImpl->GetStateBag()->GetTaskManager())
         AddLoadQueueEntryMT(pentry);
     else
         pMovieImpl->AddLoadQueueEntry(pentry);
