@@ -1024,7 +1024,6 @@ void String::AppendChar(UInt32 ch)
     data->Release();
 }
 
-// MS2-FUNCTIONAL ?AppendString@String@Scaleform@@QEAAXPEB_W_J@Z: register choice differs (the exe keeps the string in rsi/r12, cl picks rdi/r15)
 void String::AppendString(const wchar_t* str, SPInt len)
 {
     if (!str)
@@ -1032,9 +1031,8 @@ void String::AppendString(const wchar_t* str, SPInt len)
     DataDesc* data = GetData();
     UPInt     oldSize = data->GetSize();
     UPInt     encodeSize = (UPInt)UTF8Util::GetEncodeStringSize(str, len);
-    UPInt     newSize = oldSize + encodeSize;
-    DataDesc* newData = AllocDataCopy1(GetHeap(), newSize, 0, data->Data, oldSize);
-    UTF8Util::EncodeStringSafe(newData->Data + oldSize, newSize + 1, str, len);   // the exe bounds by the whole size
+    DataDesc* newData = AllocDataCopy1(GetHeap(), oldSize + encodeSize, 0, data->Data, oldSize);
+    UTF8Util::EncodeStringSafe(newData->Data + oldSize, oldSize + encodeSize + 1, str, len);   // the exe bounds by the whole size
     SetData(newData);
     data->Release();
 }
@@ -1804,20 +1802,19 @@ extern SysAllocBase* System_pSysAlloc;                 // file static in the exe
 
 // This library copy has the same body as the exported constructor in unit_141803210; keep it under a private
 // helper name so the DLL publishes the game's exported address as the canonical decorated symbol.
-// MS2-FUNCTIONAL: preserves the duplicate library constructor behavior under a unique helper name.
+// Like the constructor, each returns the System it initialised.
 // @0x14258c290
-void SystemCtorCopy14258c290(System* self, SysAllocBase* sysAlloc)
+System* SystemCtorCopy14258c290(System* self, SysAllocBase* sysAlloc)
 {
-    (void)self;
     System::Init(MemoryHeap::RootHeapDesc(), sysAlloc);
+    return self;
 }
 
-// MS2-FUNCTIONAL: preserves the duplicate library constructor behavior under a unique helper name.
 // @0x14258c270
-void SystemCtorCopy14258c270(System* self, const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
+System* SystemCtorCopy14258c270(System* self, const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
 {
-    (void)self;
     System::Init(rootHeapDesc, sysAlloc);
+    return self;
 }
 
 MS2_SF_XTU void System::Init(const MemoryHeap::HeapDesc& rootHeapDesc, SysAllocBase* sysAlloc)
