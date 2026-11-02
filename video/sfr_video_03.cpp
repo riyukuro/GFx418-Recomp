@@ -1930,59 +1930,38 @@ void FUN_140017f20(void* self, void*, void* frame)
 namespace {
 
 } // namespace: externally referenced Video native
-// the metadata fields (C++03: cl 15 has no lambdas; these inline the same way)
-static __forceinline void VideoAddNumber(Scaleform::GFx::ASStringManager* manager, Scaleform::GFx::AS3::Object* object,
-                                  const char* name, double number)
-{
-    Scaleform::GFx::ASString key(manager->CreateStringNode(name));
-    Scaleform::GFx::AS3::Value value(number);
-    object->AddDynamicSlotValuePair(key, value);
-}
-static __forceinline void VideoAddInt(Scaleform::GFx::ASStringManager* manager, Scaleform::GFx::AS3::Object* object,
-                               const char* name, uint32_t number)
-{
-    Scaleform::GFx::ASString key(manager->CreateStringNode(name));
-    Scaleform::GFx::AS3::Value value(static_cast<Scaleform::UInt32>(number));
-    object->AddDynamicSlotValuePair(key, value);
-}
-static __forceinline void VideoAddSigned(Scaleform::GFx::ASStringManager* manager, Scaleform::GFx::AS3::Object* object,
-                                  const char* name, uint32_t number)
-{
-    Scaleform::GFx::ASString key(manager->CreateStringNode(name));
-    Scaleform::GFx::AS3::Value value(static_cast<Scaleform::SInt32>(number));
-    object->AddDynamicSlotValuePair(key, value);
-}
 // MS2-FUNCTIONAL: builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
+// Left: a scheduling tie at the ExecuteInternalUnsafe call (the exe builds &argument in rcx, ours in rax).
 // @0x1400182f0
 void FUN_1400182f0(void* callback, const uint32_t* info)
 {
-    // The onMetaData handler Value lives in the AS3 object at callback+0x10, at +0x98 (0x1400182fa); the exe returns
-    // early when it is undefined or null (0x140018304..0x140018329).
-    unsigned char* owner = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10);
-    Scaleform::GFx::AS3::Value* callbackValue = reinterpret_cast<Scaleform::GFx::AS3::Value*>(owner + 0x98);
-    if (!callbackValue->IsUndefined() && !callbackValue->IsNull()) {
-        unsigned char* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(owner + 0x20) + 0x78);
-        uint64_t objectResult = reinterpret_cast<uint64_t>(reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot)->MakeObject().GetPtr());
-        Scaleform::GFx::AS3::Object* object = reinterpret_cast<Scaleform::GFx::AS3::Object*>(objectResult);
-        Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(vmRoot + 0x10) + 0x1e8);
-        // width, height and subtitleTracksCount are AS3 ints (kind 2), the other counts uints (kind 3).
-        const float scale = VideoDurationScale;
-        VideoAddNumber(manager, object, "duration", (static_cast<float>(info[4]) * scale) / static_cast<float>(info[2]));
-        VideoAddSigned(manager, object, "width", info[0]); VideoAddSigned(manager, object, "height", info[1]); VideoAddInt(manager, object, "totalFrames", info[4]);
-        VideoAddNumber(manager, object, "frameRate", static_cast<float>(info[2]) / scale);
-        VideoAddSigned(manager, object, "subtitleTracksCount", info[0xc]); VideoAddInt(manager, object, "audioTracksCount", info[0x10]); VideoAddInt(manager, object, "cuePointsCount", info[8]);
-        Scaleform::GFx::AS3::Value objectValue(reinterpret_cast<Scaleform::GFx::AS3::Object*>(object));
-        Scaleform::GFx::AS3::Value result;
-        reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot)->ExecuteInternalUnsafe(*callbackValue, Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &objectValue, false);
-        Scaleform::GFx::AS3::VM* vmObject = reinterpret_cast<Scaleform::GFx::AS3::VM*>(vmRoot);
-        if (vmObject->HandleException) {
-            vmObject->HandleException = false;
-            vmObject->OutputError(vmObject->ExceptionObj);
-            vmObject->ExceptionObj.SetUndefined();
-        }
-        // the exe drops the MakeObject reference after the call (0x1400188f5)
-        ReleaseVideoAtom(&objectResult);
-    }
+    using namespace Scaleform::GFx::AS3;
+    using Scaleform::GFx::ASString;
+    // The onMetaData handler Value lives in the AS3 object at callback+0x10, at +0x98.
+    if (reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x98)->IsNullOrUndefined())
+        return;
+    unsigned char* vmRoot = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20) + 0x78);
+    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(vmRoot + 0x10);
+    SPtr<Instances::fl::Object> object = reinterpret_cast<VM*>(vmRoot)->MakeObject();
+    Scaleform::GFx::ASStringManager* const& manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
+    // width, height and subtitleTracksCount are AS3 ints (kind 2), the other counts uints (kind 3).
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("duration")),
+                                    Value(static_cast<double>((static_cast<float>(info[4]) * VideoDurationScale) / static_cast<float>(info[2]))));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("width")), Value(static_cast<Scaleform::SInt32>(info[0])));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("height")), Value(static_cast<Scaleform::SInt32>(info[1])));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("totalFrames")), Value(static_cast<Scaleform::UInt32>(info[4])));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("frameRate")), Value(static_cast<double>(static_cast<float>(info[2]) / VideoDurationScale)));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("subtitleTracksCount")), Value(static_cast<Scaleform::SInt32>(info[0xc])));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("audioTracksCount")), Value(static_cast<Scaleform::UInt32>(info[0x10])));
+    object->AddDynamicSlotValuePair(ASString(manager->CreateStringNode("cuePointsCount")), Value(static_cast<Scaleform::UInt32>(info[8])));
+    Value result;
+    Value argument(object);
+    VM& callVm = *reinterpret_cast<VM*>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20) + 0x78));
+    callVm.ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x98),
+                                Value::GetUndefined(), result, 1, &argument, false);
+    VM& vm = *reinterpret_cast<VM*>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20) + 0x78));
+    if (vm.IsException())
+        vm.OutputAndIgnoreException();
 }
 namespace {
 
