@@ -2604,13 +2604,16 @@ namespace Instances { namespace fl_events {
         ErrorText = value;
     }
 
+    // PropRef::IsAsValue / IsAsObject: the tag bit as a bool
+    static inline bool PropRefTag(const Value* p, UPInt mask) { return (reinterpret_cast<UPInt>(p) & mask) != 0; }
+
     // A property lookup that found something: a set This, not the tagged null value or the tagged null object.
     static inline bool PropRefFound(const PropRef& prop)
     {
-        const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-        if (prop.This.GetKind() == Value::kUndefined || bits == 1)
-            return false;
-        return !((bits & 2) != 0 && (bits & ~UPInt(2)) == 0);
+        // the PropRef::operator bool (0x1424e0e20) test, inlined
+        return !(prop.This.IsUndefined() ||
+                 (PropRefTag(prop.pValue, 1) && (reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(1)) == 0) ||
+                 (PropRefTag(prop.pValue, 2) && (reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(2)) == 0));
     }
 
     // "[<argv0> name=value ...]": argv[0] is the class name, the rest are property names of this event, string
@@ -2619,22 +2622,24 @@ namespace Instances { namespace fl_events {
     // MS2-FUNCTIONAL: written from behaviour
     void Event::formatToString(Value& result, unsigned argc, const Value* argv)
     {
-        VM& vm = GetVM();
-        if (argc == 0)
+        VM& vm0 = GetVM();
+        if (argc < 1)
         {
-            vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Event::formatToString", 1, 1, argc));
+            vm0.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm0, "Event::formatToString", 1, 1, argc));
             return;
         }
-        StringBuffer buf(vm.GetMemoryHeap());
+        StringBuffer buf(vm0.GetMemoryHeap());
+        // the exe rereads the VM after the buffer is built
+        ASVM& vm = static_cast<ASVM&>(GetVM());
         char tmp[1024];
-        ASString name = static_cast<ASVM&>(vm).GetBuiltin(AS3Builtin_empty_);
+        ASString name = vm.GetBuiltin(AS3Builtin_empty_);
         argv[0].Convert2String(name).DoNotCheck();
         SFsprintf(tmp, sizeof(tmp), "[%s", name.ToCStr());
         buf.AppendString(tmp);
         for (unsigned i = 1; i < argc; ++i)
         {
             argv[i].Convert2String(name).DoNotCheck();
-            Multiname mn(vm.GetPublicNamespace(), Value(name));
+            Multiname mn(vm.GetPublicNamespace(), name);
             PropRef prop;
             FindProperty(prop, mn, 0);
             if (!PropRefFound(prop))
