@@ -7,7 +7,7 @@
 // MS2-RANGE: 0x14261b450-0x14261e1c0 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
-
+#define MS2_SF_TREENODE_NODEDATA_COPY_INLINE
 #include <math.h>
 #include "ms2/scaleform/include/render/render_treenode.h"
 #include "ms2/scaleform/include/render/render_treecachenode.h"
@@ -776,7 +776,7 @@ void TreeRoot::SetViewport(const Viewport& vp)
 
 // @0x14261b450 TreeContainer::NodeData(NonlocalCloneArg) comes from the header; @0x14261b730..0x14261b970 are the deleting destructors of the ref-counted state payloads
 // and of TreeCacheContainer.
-// MS2-FUNCTIONAL 0x14261b310: the exe inlines the TreeNode::NodeData copy (vptr stores, member copies, Ptr AddRef); ours calls it out of line (0x1424d9220)
+// 0x14261b310 inlines the TreeNode::NodeData copy (MS2_SF_TREENODE_NODEDATA_COPY_INLINE above); elsewhere it is out of line (0x1424d9220)
 // MS2-PIN: ??0NodeData@TreeContainer@Render@Scaleform@@QEAA@AEBV0123@@Z 0x14261b310
 // MS2-PIN: ??_7NodeData@TreeContainer@Render@Scaleform@@6B@ 0x143183280
 // MS2-PIN: ??_7NodeData@TreeNode@Render@Scaleform@@6B@ 0x14317b700

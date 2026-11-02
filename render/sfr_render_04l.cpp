@@ -26,8 +26,16 @@ TreeNode::NodeData::NodeData(ContextImpl::EntryData::EntryType type) : ContextIm
     AproxParentBounds.Clear();
 }
 
+// `inline` under cl, so this copy is COMDAT-any and the __forceinline copy that sfr_render_03c carries
+// (MS2_SF_TREENODE_NODEDATA_COPY_INLINE; cl emits it) does not clash with it in the fullexe link (LNK2005).
+// The TreeText::NodeData copy below (0x14264e460) calls it, which keeps it emitted. clang-cl keeps it a plain definition.
+#if defined(__clang__)
+#define SFR04L_NODEDATA_COPY
+#else
+#define SFR04L_NODEDATA_COPY inline
+#endif
 // @0x1424d9220
-TreeNode::NodeData::NodeData(const NodeData& src)
+SFR04L_NODEDATA_COPY TreeNode::NodeData::NodeData(const NodeData& src)
     : ContextImpl::EntryData(src), M34(src.M34), States(src.States), Cx(src.Cx),
       AproxLocalBounds(src.AproxLocalBounds), AproxParentBounds(src.AproxParentBounds)
 {

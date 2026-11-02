@@ -33,7 +33,16 @@ public:
 
     public:
         NodeData(ContextImpl::EntryData::EntryType type = ET_Base);   // 0x1424d9310 (sfr_as3_15)
+#if defined(MS2_SF_TREENODE_NODEDATA_COPY_INLINE)
+        // the exe's TreeContainer::NodeData copy (0x14261b310) inlines this one; elsewhere it is out of line
+        __forceinline NodeData(const NodeData& src)
+            : ContextImpl::EntryData(src), M34(src.M34), States(src.States), Cx(src.Cx),
+              AproxLocalBounds(src.AproxLocalBounds), AproxParentBounds(src.AproxParentBounds)
+        {
+        }
+#else
         NodeData(const NodeData& src);                                // 0x1424d9220 (sfr_as3_15)
+#endif
         // the states stay behind: CloneInit copies the ones that may be shared
         NodeData(NonlocalCloneArg<NodeData> src)
             : ContextImpl::EntryData(NonlocalCloneArg<ContextImpl::EntryData>(*src.pC)), M34(src->M34), Cx(src->Cx),
