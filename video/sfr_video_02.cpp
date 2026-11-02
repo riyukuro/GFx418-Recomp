@@ -357,7 +357,7 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
     if (*image)
     {
-        *image = (Scaleform::GFx::Video::VideoImage*)0;
+        image->Clear();
         FUN_1400105b0(pvideo);
     }
 }
@@ -404,12 +404,12 @@ void FUN_140010b80(Scaleform::GFx::Video::VideoCharacter* pvideo,
     Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>* image =
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
     Scaleform::Ptr<Scaleform::GFx::Video::VideoProvider> current = *provider;
-    if (current.GetPtr() != pprovider)
+    if (pprovider != current.GetPtr())
     {
         *provider = pprovider;
         if (*image)
         {
-            *image = (Scaleform::GFx::Video::VideoImage*)0;
+            image->Clear();
             FUN_1400105b0(pvideo);
         }
     }
@@ -2810,8 +2810,8 @@ template <typename A0>
 struct Video02ThunkArgs1
 {
     Video02ThunkArgs1(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::Value& result, unsigned argc,
-                      const Scaleform::GFx::AS3::Value* argv)
-        : vm(vm), r(result), a0(Video02ThunkDefault<A0>::Get())
+                      const Scaleform::GFx::AS3::Value* argv, const A0& defaultValue0)
+        : vm(vm), r(result), a0(defaultValue0)
     {
         if (argc > 0)
             Video02ThunkConvert(argv[0], a0);
@@ -2832,7 +2832,8 @@ static __forceinline void Video02TraitSet(void* instance, void* traits, void* co
 {
     char* self = *reinterpret_cast<char**>(static_cast<char*>(traits) + 0x10);   // the this value's object
     Scaleform::GFx::AS3::VM& vm = *static_cast<Scaleform::GFx::AS3::VM*>(instance);
-    Video02ThunkArgs1<A0> args(vm, *static_cast<Scaleform::GFx::AS3::Value*>(context), hasValue, value);
+    Video02ThunkArgs1<A0> args(vm, *static_cast<Scaleform::GFx::AS3::Value*>(context), hasValue, value,
+                                Video02ThunkDefault<A0>::Get());
     if (vm.IsException())
         return;
     reinterpret_cast<void (*)(char*, void*, A0)>(method)(self + *reinterpret_cast<int*>(&adjust), &args.r, args.a0);
