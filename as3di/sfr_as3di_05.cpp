@@ -11,6 +11,29 @@
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// The namespace initializers store the URI into each entry in turn, as the exe's dynamic initializers of the
+// const tables do. Each is an empty object whose inline constructor makes the stores. The Proxy and ObjectClass
+// tables are declared const here, so stores into them would be dropped; those two keep SetThunkNamespaces.
+template <unsigned N> struct ThunkNamespaceFill
+{
+    static __forceinline void Do(ThunkInfo* ti, const char* ns)
+    {
+        ThunkNamespaceFill<N - 1>::Do(ti, ns);
+        ti[N - 1].NamespaceName = ns;
+    }
+};
+template <> struct ThunkNamespaceFill<0>
+{
+    static __forceinline void Do(ThunkInfo*, const char*) {}
+};
+template <unsigned N> struct ThunkNamespaces
+{
+    __forceinline ThunkNamespaces(const void* table, UPInt offset, const char* ns)
+    {
+        ThunkNamespaceFill<N>::Do((ThunkInfo*)((UByte*)table + offset), ns);
+    }
+};
+
 typedef ThunkFunc0<Instances::fl_utils::ByteArray, 19, UInt32> TFunc_Instances_fl_utils_ByteArray_readUnsignedByte;
 // @0x140149990
 template <> const TFunc_Instances_fl_utils_ByteArray_readUnsignedByte::TMethod TFunc_Instances_fl_utils_ByteArray_readUnsignedByte::Method = &Instances::fl_utils::ByteArray::readUnsignedByte;
@@ -770,25 +793,20 @@ typedef ThunkFunc2<Instances::fl_vec::Vector_uint, 14, SPtr<Instances::fl_vec::V
 // @0x14014c8b0
 template <> const TFunc_Instances_fl_vec_Vector_uint_AS3filter::TMethod TFunc_Instances_fl_vec_Vector_uint_AS3filter::Method = &Instances::fl_vec::Vector_uint::AS3filter;
 // Vector_String (19 entries: toString, toLocaleString, join, every, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014c8e0
-static const bool NamespacesOf_Vector_String = SetThunkNamespaces(DAT_143a2dd50, 0xb90, 19, fl::NS_AS3);
+static ThunkNamespaces<19> NamespacesOf_Vector_String(DAT_143a2dd50, 0xb90, fl::NS_AS3);
 // Vector_double (19 entries: toString, toLocaleString, join, every, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014c970
-static const bool NamespacesOf_Vector_double = SetThunkNamespaces(DAT_143a2dd50, 0x7f0, 19, fl::NS_AS3);
+static ThunkNamespaces<19> NamespacesOf_Vector_double(DAT_143a2dd50, 0x7f0, fl::NS_AS3);
 // Vector_int (19 entries: toString, toLocaleString, join, every, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014ca00
-static const bool NamespacesOf_Vector_int = SetThunkNamespaces(DAT_143a2dd50, 0xb0, 19, fl::NS_AS3);
+static ThunkNamespaces<19> NamespacesOf_Vector_int(DAT_143a2dd50, 0xb0, fl::NS_AS3);
 // Vector_object (19 entries: toString, toLocaleString, join, every, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014ca90
-static const bool NamespacesOf_Vector_object = SetThunkNamespaces(DAT_143a2dd50, 0xf30, 19, fl::NS_AS3);
+static ThunkNamespaces<19> NamespacesOf_Vector_object(DAT_143a2dd50, 0xf30, fl::NS_AS3);
 // Vector_uint (19 entries: toString, toLocaleString, join, every, ...)
-// MS2-FUNCTIONAL: the table is a data-unit image, so its namespace fields are set through the table address.
 // @0x14014cb20
-static const bool NamespacesOf_Vector_uint = SetThunkNamespaces(DAT_143a2dd50, 0x450, 19, fl::NS_AS3);
+static ThunkNamespaces<19> NamespacesOf_Vector_uint(DAT_143a2dd50, 0x450, fl::NS_AS3);
 
 }}} // namespace Scaleform::GFx::AS3
 
