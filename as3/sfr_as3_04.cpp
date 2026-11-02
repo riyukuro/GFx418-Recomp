@@ -4634,7 +4634,7 @@ namespace InstanceTraits { namespace fl
     }
 
     // @0x14241b7a0
-    Pickable<Instances::fl::XMLText> XML::MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent)
+    SF_NOINLINE Pickable<Instances::fl::XMLText> XML::MakeInstanceText(XML& t, const ASString& str, Instances::fl::XML* parent)
     {
         return Pickable<Instances::fl::XMLText>(new(GetVM().GetMemoryHeap()) Instances::fl::XMLText(t, str, parent));
     }
@@ -5200,8 +5200,9 @@ extern "C" int XML_GetErrorCode(void* parser);
 extern "C" int XML_StopParser(void* parser, unsigned char resumable);   // XML_Bool
 
 // ArrayDH<SPtr<XML> >::PushBack, out of line
+// MS2-FUNCTIONAL: /O2 forwarder: cl turns this into a jmp to the ArrayBase PushBack COMDAT, where the exe expands that body here
 // @0x14241e390
-void FUN_14241e390(Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML> >* arr,
+SF_NOINLINE void FUN_14241e390(Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML> >* arr,
                    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>* v)
 {
     arr->PushBack(*v);
@@ -5277,8 +5278,7 @@ namespace Scaleform { namespace GFx { namespace AS3
             return;
         if (CurrKind == kText)
         {
-            Classes::fl::XML& cls = static_cast<Classes::fl::XML&>(ITr.GetConstructor());
-            if (cls.ignoreWhitespace)
+            if (static_cast<const Classes::fl::XML&>(FUN_142508460(&ITr)).ignoreWhitespace)
                 Text = ASString(Text.TruncateWhitespaceNode());
             if (Text.GetSize() != 0)
             {
