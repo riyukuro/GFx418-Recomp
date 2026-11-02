@@ -376,8 +376,8 @@ const char* IntToString(SInt32 value, char destStr[], size_t destStrSize, int ra
     case 2:
     {
         // All 32 bits are written; the result starts at the highest set bit ("0" for zero).
-        char*    highest = 0;
         unsigned bit     = 1;
+        char*    highest = 0;
         for (unsigned i = 0; i < 32 && i < last; ++i)
         {
             --p;
@@ -421,7 +421,6 @@ const char* IntToString(SInt32 value, char destStr[], size_t destStrSize, int ra
 }
 
 // @0x1425e4810
-// MS2-FUNCTIONAL: radix dispatch order differs
 const char* ToString(Double value, char destStr[], size_t destStrSize, int radix)
 {
     static const char* const formats[] = { "%.1g", "%.2g", "%.3g",  "%.4g",  "%.5g",  "%.6g",  "%.7g",
@@ -445,21 +444,23 @@ const char* ToString(Double value, char destStr[], size_t destStrSize, int radix
     }
 
     SInt32 ival = (SInt32)value;
-    if (radix != 10)
-        return IntToString(ival, destStr, destStrSize, radix);
-    if ((Double)ival == value)
-        return IntToString(ival, destStr, destStrSize);
-    SFsprintf(destStr, destStrSize, format, value);
-    // A locale may have printed a decimal comma.
-    for (char* s = destStr; *s; ++s)
+    if (radix == 10)
     {
-        if (*s == ',' || *s == '.')
+        if ((Double)ival == value)
+            return IntToString(ival, destStr, destStrSize);
+        SFsprintf(destStr, destStrSize, format, value);
+        // A locale may have printed a decimal comma.
+        for (char* s = destStr; *s; ++s)
         {
-            *s = '.';
-            break;
+            if (*s == ',' || *s == '.')
+            {
+                *s = '.';
+                break;
+            }
         }
+        return destStr;
     }
-    return destStr;
+    return IntToString(ival, destStr, destStrSize, radix);
 }
 
 // Value of a digit in radix 36 (-1: not a digit).
