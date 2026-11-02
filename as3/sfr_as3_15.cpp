@@ -2324,7 +2324,7 @@ typedef HashNode<GFx::AS3::GASRefCountBase*, GFx::AS3::WeakProxy*, FixedSizeHash
 typedef MS2_HashSetOf<MS2_WeakProxyNode, AllocatorGH<GFx::AS3::GASRefCountBase*, 2>,
                       HashsetCachedNodeEntry<MS2_WeakProxyNode, MS2_WeakProxyNode::NodeHashF> >::Type MS2_WeakProxySet;
 typedef HashNode<Ptr<GFx::ASStringNode>, UInt32, GFx::AS3::ASStringNodePtrHashFunc> MS2_SlotNameNode;
-// @0x1424d2be0
+// 0x1424d2be0 (bound by its MS2-PIN; an @ tag here went to the CheckExpand below)
 template void MS2_DepthToObjsSet::add<MS2_DepthToObjsNode>(void*, const MS2_DepthToObjsNode&, UPInt);
 // The exe inlines CheckExpand into both add instances of this set.
 template<> __forceinline void decltype(GFx::AS3::Slots::SetType::mHash)::BaseType::CheckExpand(void* pheapAddr)
