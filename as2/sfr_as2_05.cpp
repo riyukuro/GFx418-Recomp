@@ -4049,8 +4049,6 @@ static const char* Stage_AlignName(MovieSlots418::AlignType align)
     }
 }
 
-// MS2-FUNCTIONAL the align names come from a string-pointer table (exe: jump table of lea), the shared strlen tail
-// is laid out differently
 // @0x142953520
 bool StageCtorFunction::GetMemberRaw(ASStringContext* psc, const ASString& name, Value* val)
 {

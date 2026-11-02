@@ -223,7 +223,7 @@ public:
     // A string over the literal itself (not copied).
     ASString CreateConstString(const char* pstr) const
     {
-        return pStringManager->CreateConstString(pstr, strlen(pstr));
+        return pStringManager->CreateConstString(pstr);
     }
 };
 
