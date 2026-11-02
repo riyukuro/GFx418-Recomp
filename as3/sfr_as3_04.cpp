@@ -1164,7 +1164,7 @@ namespace Instances { namespace fl
 
     // MS2-FUNCTIONAL: DayFromYear term order/constant loads differ
     // @0x14241ccf0
-    SInt32 Date::MonthFromTime(Value::Number t)
+    __declspec(noinline) SInt32 Date::MonthFromTime(Value::Number t)
     {
         const Value::Number y = YearFromTime(t);
         return MonthFromYearDay(static_cast<SInt32>(y), static_cast<SInt32>(::floor(t / msPerDay) - DayFromYear(y)));
@@ -1254,21 +1254,22 @@ namespace Instances { namespace fl
         TimeValue = h.MakeDate();
     }
 
-    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
     // @0x1424276e0
     void Date::applyDateArgs(Value& result, unsigned argc, const Value* const argv, DateEntry firstArg, Value::Number tza)
     {
-        if (argc != 0)
+        if (argc > 0)
         {
             DateHolder h(TimeValue, tza);
-            const unsigned maxArgs = Date_Entry_Count - firstArg;
-            if (argc > maxArgs)
-                argc = maxArgs;
-            for (unsigned i = 0; i < argc; ++i)
-            {
-                if (!argv[i].Convert2NumberInline(h.Entries[firstArg + i]))
+            if (argc > (unsigned)(Date_Entry_Count - firstArg))
+                argc = Date_Entry_Count - firstArg;
+            if (!argv[0].Convert2Number(h.Entries[firstArg]))
+                return;
+            if (argc >= 2)
+                if (!argv[1].Convert2Number(h.Entries[firstArg + 1]))
                     return;
-            }
+            if (argc >= 3)
+                if (!argv[2].Convert2Number(h.Entries[firstArg + 2]))
+                    return;
             TimeValue = h.MakeDate();
         }
         result.SetNumber(TimeValue);
@@ -1283,63 +1284,66 @@ namespace Instances { namespace fl
         TimeValue = h.MakeDate();
     }
 
-    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
     // @0x142427900
     void Date::applyTimeArgs(Value& result, unsigned argc, const Value* const argv, TimeEntry firstArg, Value::Number tza)
     {
-        if (argc != 0)
+        if (argc > 0)
         {
             TimeHolder h(TimeValue, tza);
-            const unsigned maxArgs = Time_Entry_Count - firstArg;
-            if (argc > maxArgs)
-                argc = maxArgs;
-            for (unsigned i = 0; i < argc; ++i)
-            {
-                if (!argv[i].Convert2NumberInline(h.Entries[firstArg + i]))
+            if (argc > (unsigned)(Time_Entry_Count - firstArg))
+                argc = Time_Entry_Count - firstArg;
+            if (!argv[0].Convert2Number(h.Entries[firstArg]))
+                return;
+            if (argc >= 2)
+                if (!argv[1].Convert2Number(h.Entries[firstArg + 1]))
                     return;
-            }
+            if (argc >= 3)
+                if (!argv[2].Convert2Number(h.Entries[firstArg + 2]))
+                    return;
+            if (argc >= 4)
+                if (!argv[3].Convert2Number(h.Entries[firstArg + 3]))
+                    return;
             TimeValue = h.MakeDate();
         }
         result.SetNumber(TimeValue);
     }
 
-    // MS2-FUNCTIONAL: Value::Convert2NumberInline is an out-of-line call in the exe
     // @0x142427f10
     Value::Number Date::decodeUTCArgs(unsigned argc, const Value* const argv, Value::Number tza)
     {
         // (year, month[, date[, hours[, minutes[, seconds[, ms]]]]]); two-digit years are 19xx.
-        Value::Number year, month;
-        if (!argv[0].Convert2NumberInline(year))
+        Value::Number yearArg;
+        if (!argv[0].Convert2Number(yearArg))
             return 0;
-        if (static_cast<UInt32>(static_cast<SInt32>(year)) < 100)
-            year += 1900;
-        if (!argv[1].Convert2NumberInline(month))
+        Value::Number year = (int(yearArg) > 99 || (int)yearArg < 0) ? yearArg : Value::Number(1900.0) + yearArg;
+        Value::Number month;
+        if (!argv[1].Convert2Number(month))
             return 0;
 
         Value::Number date = 1, hours = 0, minutes = 0, seconds = 0, ms = 0;
-        if (argc >= 3 && !argv[2].Convert2NumberInline(date))
+        if (argc >= 3 && !argv[2].Convert2Number(date))
             return 0;
         if (argc >= 4)
         {
-            if (!argv[3].Convert2NumberInline(hours))
+            if (!argv[3].Convert2Number(hours))
                 return 0;
             hours = static_cast<SInt32>(hours);
         }
         if (argc >= 5)
         {
-            if (!argv[4].Convert2NumberInline(minutes))
+            if (!argv[4].Convert2Number(minutes))
                 return 0;
             minutes = static_cast<SInt32>(minutes);
         }
         if (argc >= 6)
         {
-            if (!argv[5].Convert2NumberInline(seconds))
+            if (!argv[5].Convert2Number(seconds))
                 return 0;
             seconds = static_cast<SInt32>(seconds);
         }
         if (argc >= 7)
         {
-            if (!argv[6].Convert2NumberInline(ms))
+            if (!argv[6].Convert2Number(ms))
                 return 0;
             ms = static_cast<SInt32>(ms);
         }
@@ -1502,14 +1506,11 @@ namespace Instances { namespace fl
         result = NumberUtil::IsNaN(t) ? t : MsFromTime(t);
     }
 
-    // MS2-FUNCTIONAL: int->double conversion uses cvtsi2sd instead of movd+cvtdq2pd
     // @0x1424298a0
     void Date::monthUTCGet(Value::Number& result)
     {
-        Value::Number t = TimeValue;
-        if (!NumberUtil::IsNaN(t))
-            t = MonthFromTime(t);
-        result = t;
+        const Value::Number t = TimeValue;
+        result = NumberUtil::IsNaN(t) ? t : MonthFromTime(t);
     }
 
     // @0x142429bd0
@@ -1531,20 +1532,18 @@ namespace Instances { namespace fl
         result = Value(NumberUtil::StringToInt(str.ToCStr(), len, radix, &endIndex));
     }
 
-    // MS2-FUNCTIONAL: same logic; register allocation around the temporary String differs
     // @0x142429af0
     void GlobalObjectCPP::parseFloat(Value::Number& result, const ASString& str)
     {
-        const char* s = str.ToCStr();
         UInt32 len = str.GetSize();
-        UInt32 pos = (UInt32)UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(String(s)), s, len);
-        s += pos;
-        if (strncmp(s, "0x", 2) == 0 || strncmp(s, "0X", 2) == 0)
-        {
-            result = 0;
-            return;
-        }
-        result = NumberUtil::StringToDouble(s, len - pos, &pos);
+        UInt32 offset = 0;
+        const char* cstr = str.ToCStr();
+        offset = static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(cstr), cstr, len));
+        const char* numstr = cstr + offset;
+        if (!strncmp(numstr, "0x", 2) || !strncmp(numstr, "0X", 2))
+            result = 0.0;
+        else
+            result = NumberUtil::StringToDouble(numstr, len - offset, &offset);
     }
 }} // namespace Instances::fl
 
@@ -5487,15 +5486,13 @@ typedef Scaleform::Hash<Instances::fl::ConstStringKey, const ClassInfo*, Instanc
                         Scaleform::AllocatorGH<Instances::fl::ConstStringKey, 328> > CIRegistrationHashType;
 
 // GlobalObjectCPP::RegisterClassInfoTable: registers a null-terminated table of builtin classes by name
-// MS2-FUNCTIONAL: the exe inlines Hash::Add
 // @0x14241e540
 void FUN_14241e540(Instances::fl::GlobalObjectCPP* self, const ClassInfo* table[])
 {
-    CIRegistrationHashType& h = self->CIRegistrationHash;
     for (unsigned i = 0; table[i]; ++i)
     {
         Instances::fl::ConstStringKey key = { table[i]->GetName() };
-        h.Add(key, table[i]);
+        self->CIRegistrationHash.Add(key, table[i]);
     }
 }
 
