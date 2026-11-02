@@ -76,15 +76,14 @@ SF_FORCEINLINE InteractiveObject* CharacterOf(const Value& v, const Environment*
 } // namespace
 
 // One handler for every event of the flag set: each event bit gets it as a single event.
-// MS2-FUNCTIONAL: the popcount and the mask loop allocate registers differently; same behavior
 // @0x14297fed0
 void AvmCharacter::SetClipEventHandlers(const EventId& id, const Value& method)
 {
-    UInt32 v = id.Id;
-    v        = (v & 0x55555555) + ((v >> 1) & 0x55555555);
-    v        = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    v        = (v & 0x0f0f0f0f) + ((v >> 4) & 0x0f0f0f0f);
-    UByte n  = UByte(v % 255);
+    UInt32   v = id.Id;
+    v          = (v & 0x55555555) + ((v >> 1) & 0x55555555);
+    v          = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+    v          = (v & 0x0f0f0f0f) + ((v >> 4) & 0x0f0f0f0f);
+    unsigned n = UByte(v % 255);
     if (n == 1)
     {
         SetSingleClipEventHandler(id, method);
