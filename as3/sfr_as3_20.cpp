@@ -1508,9 +1508,12 @@ namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec { struct 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Impl {
 int CompareFunct(VM& vm, const Value& funct, const Value& a, const Value& b);
 }}}}
+// The exe callers saw the PushBack body (mod/ref: the pushed pair is not written), so it is an inline noinline
+// copy here; sfr_as3_21 keeps the tagged instantiation.
 namespace Scaleform {
-template<> SF_NOINLINE void ArrayBase<ArrayDataDH<Pair<GFx::ASString, UInt32>, AllocatorDH<Pair<GFx::ASString, UInt32>, 2>,
-    ArrayDefaultPolicy> >::PushBack(const Pair<GFx::ASString, UInt32>& val);
+template<> inline SF_NOINLINE void ArrayBase<ArrayDataDH<Pair<GFx::ASString, UInt32>, AllocatorDH<Pair<GFx::ASString, UInt32>, 2>,
+    ArrayDefaultPolicy> >::PushBack(const Pair<GFx::ASString, UInt32>& val)
+{ Data.PushBack(val); }
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl_vec {
@@ -2593,19 +2596,14 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??_G?$Value2NumberCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556430
 // MS2-PIN: ??R?$Value2NumberCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z 0x1425558c0
 // MS2-PIN: ??_G?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425565e0
-// MS2-FUNCTIONAL ??R?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
 // MS2-PIN: ??R?$Value2StrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z 0x142555eb0
 // MS2-PIN: ??_G?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425565b0
-// MS2-FUNCTIONAL ??R?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
 // MS2-PIN: ??R?$Value2StrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z 0x142555e50
 // MS2-PIN: ??_G?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556580
-// MS2-FUNCTIONAL ??R?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
 // MS2-PIN: ??R?$Value2StrCollector@N@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBN@Z 0x142555d70
 // MS2-PIN: ??_G?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556550
-// MS2-FUNCTIONAL ??R?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
 // MS2-PIN: ??R?$Value2StrCollector@K@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBK@Z 0x142555c90
 // MS2-PIN: ??_G?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x142556520
-// MS2-FUNCTIONAL ??R?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z: the exe keeps the pushed pair string node in rbx across the PushBack call and releases it from there; ours reloads it from the temporary
 // MS2-PIN: ??R?$Value2StrCollector@J@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBJ@Z 0x142555bb0
 // MS2-PIN: ??R?$ValuePtrCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBVValue@345@@Z 0x142556110
 // MS2-PIN: ??R?$ValuePtrCollector@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAXKAEBV?$Ptr@UASStringNode@GFx@Scaleform@@@5@@Z 0x1425560a0
