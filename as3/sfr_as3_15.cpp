@@ -931,20 +931,20 @@ namespace Classes { namespace fl_gfx
         Ptr<GFx::InteractiveObject> CurFocused;         // +0x08
         int                         CurFocusIdx;        // +0x10
         UByte                       Unrecovered14[0x0c];
-        UInt64                      Unrecovered20[3];   // +0x20
+        Render::RectF               FocusRect;          // +0x20
+        UInt64                      Unrecovered30;      // +0x30
         UInt32                      Unrecovered38;      // +0x38 (its byte +0x3a is ManualFocus)
         bool                        Unrecovered3c;      // +0x3c
 
-        MS2_FocusKeyInfo() : pFocusGroup(NULL), CurFocusIdx(-1), Unrecovered38(0), Unrecovered3c(false)
+        MS2_FocusKeyInfo() : pFocusGroup(NULL), CurFocusIdx(-1), Unrecovered30(0), Unrecovered38(0), Unrecovered3c(false)
         {
-            Unrecovered20[0] = Unrecovered20[1] = Unrecovered20[2] = 0;
         }
         bool& ManualFocus() { return reinterpret_cast<bool*>(&Unrecovered38)[2]; }
     };
 
     // Moves the focus as the key named keyToSimulate would ("up", "down", "left", "right", "tab", "shifttab"),
     // starting from startFromMovie or the controller's focused object; result is the object focused then.
-    // MS2-FUNCTIONAL: the focus-key info is built through a local struct; the exe dereferences a null focus result
+    // MS2-FUNCTIONAL: the exe sets up an rbp frame with no zero register (cause unknown, as in setIMECandidateListStyle)
     // @0x1424cb2c0
     void FocusManager::moveFocus(SPtr<Instances::fl_display::InteractiveObject>& result, const ASString& keyToSimulate,
                                  Instances::fl_display::InteractiveObject* startFromMovie, bool includeFocusEnabledChars,
@@ -958,7 +958,7 @@ namespace Classes { namespace fl_gfx
         if (startFromMovie)
             startCh = static_cast<GFx::InteractiveObject*>(startFromMovie->pDispObj.GetPtr());
         else
-            startCh = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+            startCh = proot->GetFocusedCharacter(controllerIdx);
 
         const char* keystr = keyToSimulate.ToCStr();
         UInt32 keycode;
@@ -998,14 +998,12 @@ namespace Classes { namespace fl_gfx
         if (info.CurFocused)
             result = static_cast<Instances::fl_display::InteractiveObject*>(
                 ToAvmInteractiveObj15(info.CurFocused)->GetAS3Obj());
-        else
-            result = NULL;
     }
 
     // The focus group findFocus hands InitFocusKeyInfo (MovieImpl::FocusGroupDescr; the movie's own is unmodeled).
     struct MS2_FindFocusGroup
     {
-        void*                                     pFocusRectNode;   // +0x00 (never set here)
+        Ptr<Render::TreeShape>                    FocusRectNode;    // +0x00 (never set here)
         ArrayDH<Ptr<GFx::InteractiveObject> >     TabableArray;     // +0x08
         WeakPtr<GFx::InteractiveObject>           LastFocused;      // +0x28
         Ptr<CharacterHandle>                      ModalClip;        // +0x30
@@ -1013,8 +1011,8 @@ namespace Classes { namespace fl_gfx
         UInt64                                    LastFocusedRect[2]; // +0x40
         UInt16                                    FocusRectShown;   // +0x50
 
-        MS2_FindFocusGroup(MemoryHeap* pheap) : pFocusRectNode(NULL), TabableArray(pheap), LastFocusKeyCode(0),
-                                                FocusRectShown(0)
+        MS2_FindFocusGroup(MemoryHeap* pheap)
+            : TabableArray(pheap ? pheap : Memory::GetHeapByAddress(this)), LastFocusKeyCode(0), FocusRectShown(0)
         {
             LastFocusedRect[0] = LastFocusedRect[1] = 0;
         }
@@ -1022,7 +1020,7 @@ namespace Classes { namespace fl_gfx
 
     // Finds the object the key named keyToSimulate would move the focus to, without moving it, within
     // parentMovie (or the modal clip); with loop, wraps around to the tabable object furthest the other way.
-    // MS2-FUNCTIONAL: the focus group and key info are local structs; the group's focus rect node is not released
+    // MS2-FUNCTIONAL: the focus group and key info are local structs; the exe frame is 8 bytes larger and its registers differ
     // @0x1424c9f20
     void FocusManager::findFocus(SPtr<Instances::fl_display::InteractiveObject>& result, const ASString& keyToSimulate,
                                  Instances::fl_display::DisplayObjectContainer* parentMovie, bool loop,
@@ -1037,7 +1035,7 @@ namespace Classes { namespace fl_gfx
         if (startFromMovie)
             startCh = static_cast<GFx::InteractiveObject*>(startFromMovie->pDispObj.GetPtr());
         else
-            startCh = proot->FocusGroups[proot->FocusGroupIndexes[controllerIdx]].LastFocused;
+            startCh = proot->GetFocusedCharacter(controllerIdx);
 
         const char* keystr = keyToSimulate.ToCStr();
         UInt32 keycode;
