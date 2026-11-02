@@ -225,7 +225,6 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
 
 // The movie's global context, the container node every level's tree goes under, and _level0 (made from the
 // movie's own timeline), with the aux classes registered and the sticky variables set on it.
-// MS2-FUNCTIONAL: the call arguments of CreateCharacterInstance are stored in another order.
 // @0x142961540
 bool MovieRoot::Init(MovieDefImpl* pmovieDef)
 {
@@ -238,9 +237,9 @@ bool MovieRoot::Init(MovieDefImpl* pmovieDef)
 
     // CreateSprite inline.
     CharacterCreateInfo ccinfo;
-    ccinfo.pCharDef     = reinterpret_cast<CharacterDef*>(pmovieDef->GetDataDef());
     ccinfo.pBindDefImpl = pmovieDef;
     ccinfo.pResource    = 0;
+    ccinfo.pCharDef     = reinterpret_cast<CharacterDef*>(pmovieDef->GetDataDef());
     Ptr<Sprite> prootMovie = *static_cast<Sprite*>(
         pASSupport->CreateCharacterInstance(pMovieImpl, ccinfo, 0, ResourceId(), CharacterDef::Sprite));
     prootMovie->SetLoadedSeparately(true);
