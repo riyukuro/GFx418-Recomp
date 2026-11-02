@@ -5331,11 +5331,10 @@ void FUN_14241d980(Scaleform::GFx::AS3::SparseArray* sa, Scaleform::GFx::AS3::Va
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
-    // MS2-FUNCTIONAL: the exe inlines Hash::Get/Remove/Set
     // @0x14241ce70
     void SparseArray::MoveHashLeft(UPInt first_ind, UPInt offset)
     {
-        if (offset > first_ind)
+        if (first_ind < offset)
             return;
         Value v;
         for (UPInt i = first_ind; i <= ValueHHighInd; ++i)
