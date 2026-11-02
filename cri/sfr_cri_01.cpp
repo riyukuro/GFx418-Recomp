@@ -438,7 +438,7 @@ void VideoSoundRendererStream::DestroyOutput()
 }
 
 // @0x14001d420
-// MS2-FUNCTIONAL: no tail calls, other scheduling
+// MS2-FUNCTIONAL: the exe SoundSample release is lock add (_InterlockedDecrement), sound_renderer.h has the xadd form
 void VideoSoundRendererStream::Start(PCMStream* pstream)
 {
     Stat            = Sound_Playing;
@@ -844,15 +844,20 @@ void SwfVideoSyncObject::GetTime(UInt64* count, UInt64* unit)
 // is not a sprite.
 static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
 {
+    Sprite* psprite = NULL;
     DisplayObject* pch = ph->GetCharacter();
-    if (!pch)
-        return NULL;
-    if (pch->IsSprite())
-        return pch->CharToSprite_Unsafe();
-    DisplayObject* pparent = pch->GetParent();
-    if (pparent && pparent->IsSprite())
-        return pparent->CharToSprite_Unsafe();
-    return NULL;
+    if (pch)
+    {
+        if (pch->IsSprite())
+            psprite = pch->CharToSprite_Unsafe();
+        else
+        {
+            DisplayObject* pparent = pch->GetParent();
+            if (pparent)
+                psprite = pparent->IsSprite() ? pparent->CharToSprite_Unsafe() : NULL;
+        }
+    }
+    return psprite;
 }
 
 // @0x140025090
@@ -1195,7 +1200,6 @@ void VideoProviderNetStream::Close()
 }
 
 // @0x140025650
-// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::InitSoundChannel()
 {
     if (pAudioTarget)
@@ -1217,12 +1221,21 @@ void VideoProviderNetStream::InitSoundChannel()
 }
 
 // @0x140025750
-// MS2-FUNCTIONAL: other scheduling
 void VideoProviderNetStream::SetSoundVolume(int volume, int subVolume)
 {
     if (!pAudioTarget)
         return;
-    Sprite* psprite = GetAudioTargetSprite(pAudioTarget);
+    DisplayObject* pch = pAudioTarget->GetCharacter();
+    if (!pch)
+        return;
+    if (!pch->IsSprite())
+    {
+        DisplayObject* pparent = pch->GetParent();
+        if (!pparent)
+            return;
+        pch = pparent->IsSprite() ? pparent : NULL;
+    }
+    Sprite* psprite = pch->CharToSprite_Unsafe();
     if (psprite && pVideoPlayer)
     {
         psprite->SetSoundVolume(volume, subVolume);
