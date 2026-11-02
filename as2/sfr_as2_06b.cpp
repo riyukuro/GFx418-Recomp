@@ -157,7 +157,6 @@ struct AsFunctionBody
 };
 static_assert(sizeof(AsFunctionBody) == 0x58, "AsFunctionBody size");
 
-// MS2-FUNCTIONAL: the 255 nesting limit constant is loaded after the increment in the exe (scheduling only).
 // @0x1429629a0
 void AsFunctionObject::Invoke(const FnCall& fn, LocalFrame* plocalFrame, const char* pmethodName)
 {
@@ -166,7 +165,8 @@ void AsFunctionObject::Invoke(const FnCall& fn, LocalFrame* plocalFrame, const c
     // The function was defined in a character that is being unloaded: run in the caller's environment.
     if (ctxt.pOurEnv->GetTarget()->IsUnloaded())
         ctxt.pOurEnv = fn.Env;
-    if (ctxt.pOurEnv->FuncCallNestingLevel++ >= 255)
+    UInt16 level = ctxt.pOurEnv->FuncCallNestingLevel++;
+    if (level >= 255)
     {
         if (ctxt.pOurEnv->IsVerboseActionErrors())
             ctxt.pOurEnv->LogScriptError("Stack overflow, max level of 255 nested calls is reached.");

@@ -895,11 +895,13 @@ void Environment::PushTryBlock(const TryDescr& descr)
     TryBlocks.PushBack(descr);
 }
 
-// MS2-FUNCTIONAL instruction scheduling (the exe loads the size before the array address)
 // @0x14296f390
 Environment::TryDescr Environment::PopTryBlock()
 {
-    return TryBlocks.Pop();
+    UPInt    n = TryBlocks.GetSize();
+    TryDescr t = TryBlocks[n - 1];
+    TryBlocks.Resize(n - 1);
+    return t;
 }
 
 
