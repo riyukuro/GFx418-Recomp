@@ -2112,6 +2112,14 @@ void* FUN_14002d840(void* object, CriUint32 flags)
     return object;
 }
 
+// Mutex::Locker over the reader config's CmdListLock.
+struct CriMutexLocker
+{
+    void* pMutex;
+    CriMutexLocker(void* m) { pMutex = m; reinterpret_cast<Scaleform::Mutex*>(pMutex)->DoLock(); }
+    ~CriMutexLocker() { reinterpret_cast<Scaleform::Mutex*>(pMutex)->Unlock(); }
+};
+
 // MS2-FUNCTIONAL: run reader-thread requests from the intrusive queue until its stop operation arrives.
 // @0x14002db40
 void* FUN_14002db40(void* thread, void* opaqueConfig)
@@ -2145,14 +2153,16 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
         CriMvRequestNode* sentinel = (CriMvRequestNode*)&config->Head;
         for (;;)
         {
-            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
-            if (sentinel->Previous == sentinel)
-                break;
-            CriMvRequestNode* request = config->Tail;
-            request->Next->Previous = request->Previous;
-            request->Previous->Next = request->Next;
+            CriMvRequestNode* request;
+            {
+                CriMutexLocker lock(config->Lock);
+                if (sentinel->Previous == sentinel)
+                    break;
+                request = config->Tail;
+                request->Next->Previous = request->Previous;
+                request->Previous->Next = request->Next;
+            }
             // the exe runs the operation outside the lock (0x14002dbdd) and retakes it to free the node
-            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
             switch (request->Operation)
             {
             case 0:
@@ -2167,14 +2177,12 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 if (state->Resource)
                     FUN_14257dcb0(state->Resource);
                 state->Resource = resource;
-                typedef bool (__fastcall* IsReady)(void*);   // the exe tests al: the reader resource returns bool
-                if (resource && ((IsReady)(*(void***)resource)[2])(resource))
+                Scaleform::File* file = (Scaleform::File*)state->Resource;
+                if (file && file->IsValid())
                 {
-                    typedef CriSint32 (__fastcall* GetSize)(void*);
                     // the exe takes the length first, then marks the open complete, then stores the size
-                    CriSint32 length = ((GetSize)(*(void***)state->Resource)[6])(state->Resource);
+                    state->ResultSize = ((Scaleform::File*)state->Resource)->GetLength();
                     state->State2c = 2;
-                    state->ResultSize = length;
                 }
                 else
                 {
@@ -2208,13 +2216,11 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
             default:
                 break;
             }
-            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
+            CriMutexLocker lock(config->Lock);
             RequestPoolHead* pool = (RequestPoolHead*)config;
             request->Next = pool->FreeList;
             pool->FreeList = request;
-            reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
         }
-        reinterpret_cast<Scaleform::Mutex*>(config->Lock)->Unlock();
 
         reinterpret_cast<Scaleform::Mutex*>(config->Lock)->DoLock();
         if (config->Reader)
@@ -2236,13 +2242,6 @@ struct CriMvRequestListRoot
     bool IsEmpty() const { return pLast == (const CriMvRequestNode*)this; }
 };
 
-// Mutex::Locker over the reader config's CmdListLock.
-struct CriMutexLocker
-{
-    void* pMutex;
-    CriMutexLocker(void* m) { pMutex = m; reinterpret_cast<Scaleform::Mutex*>(pMutex)->DoLock(); }
-    ~CriMutexLocker() { reinterpret_cast<Scaleform::Mutex*>(pMutex)->Unlock(); }
-};
 
 // Enable or disable reader IO, wake the thread, and wait for its queued work to drain.
 // @0x14002d6d0
