@@ -1412,7 +1412,7 @@ void State::PopOp(UPInt n)
 // @0x14251cd30
 __declspec(noinline) Value State::PopOpValue()
 {
-    Value result(OpStack[OpStack.GetSize() - 1]);
+    Value result(OpStack.Back());
     OpStack.PopBack(1);
     return result;
 }
@@ -5165,32 +5165,24 @@ SF_INLINE void Value::PickUnsafe(ValueStack& v)
     --v.pCurrent;
 }
 
-// A QName instance.
-static inline bool Sfr34_IsQNameObject(const Value& v)
-{
-    bool result = false;
-    if (Value::IsObject(v.GetKind()) && v.GetObject() && v.GetObject()->GetTraits().GetTraitsType() == Traits_QName &&
-        v.GetObject()->GetTraits().IsInstanceTraits())
-        result = true;
-    return result;
-}
-
 // Multiname::PickRTNameUnsafe: the run-time name on top of the operand stack: a QName object gives the name and
 // namespace (and is released), anything else is moved into the name as it is (the old name is not released).
-// MS2-FUNCTIONAL free function (not declared in the shared Multiname class); the QName test is not kept as a flag
+// A free function (not declared in the shared Multiname class). SDK form: IsQNameObject (0x142514bf0, inlined) and
+// each use re-read the top, and the two cases are an if/else; this keeps the exe's QName flag (xor r8b ... cmovne).
 // @0x14251c8a0
 void FUN_14251c8a0(Multiname& mn, ValueStack& vs)
 {
-    const Value& top = *vs.GetTopPtr();
-    if (Sfr34_IsQNameObject(top))
+    if (IsQNameObject(*vs.GetTopPtr()))
     {
-        FUN_1425273b0(mn, top);
+        FUN_1425273b0(mn, *vs.GetTopPtr());
         vs.GetTopPtr()->~Value();
         vs.Release(1);
-        return;
     }
-    mn.Name.PickUnsafe(vs);
-    mn.PostProcessName(false);
+    else
+    {
+        mn.Name.PickUnsafe(vs);
+        mn.PostProcessName(false);
+    }
 }
 
 static inline ClassTraits::Traits* FUN_142524f60(VM& vm, VMAbcFile& file, const Abc::Multiname& mn)
@@ -5617,9 +5609,10 @@ void FUN_14251bc40(UPInt self, FlashUI::OutputMessageType type, const char* msg)
 
 // AvmBitmap::GetTopMostMouseEntity: a visible bitmap with an image is hit when the point (in its parent's space)
 // falls inside the image's rectangle (in twips); the hit is its parent, the interactive object.
-// MS2-FUNCTIONAL free function on the bitmap's display object (AvmBitmap is opaque in the shared header); the exe
-// keeps a /GS cookie for the image rect
+// Free function on the bitmap's display object (AvmBitmap is opaque in the shared header). Compiled under
+// strict_gs_check like PointTestLocal (0x14251c9f0): this gives the exe's /GS cookie and frame (point low, rect high).
 // @0x14250f660
+#pragma strict_gs_check(push, on)
 DisplayObjectBase::TopMostResult FUN_14250f660(DisplayObject* self, const Render::PointF& pt,
                                                DisplayObjectBase::TopMostDescr* pdescr)
 {
@@ -5640,6 +5633,7 @@ DisplayObjectBase::TopMostResult FUN_14250f660(DisplayObject* self, const Render
     }
     return DisplayObjectBase::TopMost_FoundNothing;
 }
+#pragma strict_gs_check(pop)
 
 // The data of a URLLoader's text load: URL variables (unescaped first) or a string, then its open/progress/complete
 // events; a failed load gives the error event.
@@ -5675,50 +5669,59 @@ static inline void* FUN_1425059f0(const void* self, const UPInt& key) { return :
 
 // MovieRoot::RemoveLoadedMovieDef: one use less of a loaded movie definition; at the last its entry leaves the
 // root's loaded movie definitions (+0x6e8). True when the entry was removed.
-// MS2-FUNCTIONAL the identity hash's removal is written out over a layout view (the hash is opaque in the shared header)
-// @0x142522920
-bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
+struct Sfr18LoadedDefEntry { SPInt Next; UPInt Key; Ptr<MovieDefImpl> pMovieDef; unsigned UseCnt; };
+struct Sfr18LoadedDefTable { UPInt EntryCount; UPInt SizeMask; Sfr18LoadedDefEntry E[1]; };
+
+// HashSetBase::RemoveAlt over the identity-hashed table (the hash is opaque in the shared header). Every access goes
+// through *ppTable as the SDK's member pTable does; a cached table local moves it from rdx to r8.
+static SF_FORCEINLINE void Sfr18RemoveLoadedDef(Sfr18LoadedDefTable** ppTable, const UPInt& key)
 {
-    struct Entry { SPInt Next; UPInt Key; Ptr<MovieDefImpl> pMovieDef; unsigned UseCnt; };
-    struct Table { UPInt EntryCount; UPInt SizeMask; Entry E[1]; };
-    Table**     ptable = reinterpret_cast<Table**>(&self->LoadedMovieDefs);
-    const UPInt key    = reinterpret_cast<UPInt>(def);
-    unsigned*   pcnt   = static_cast<unsigned*>(FUN_1425059f0(ptable, reinterpret_cast<const UPInt&>(def)));
-    if (!pcnt || --pcnt[2] != 0)
-        return false;
-    Table* t = *ptable;
-    if (!t)
-        return true;
-    const UPInt home = key & t->SizeMask;
-    Entry*      e    = &t->E[home];
-    if (e->Next == -2 || (e->Key & t->SizeMask) != home)
-        return true;
-    SPInt idx = SPInt(home), prev = -1;
-    while ((e->Key & t->SizeMask) != home || e->Key != key)
+    if (*ppTable == NULL)
+        return;
+    UPInt hashValue = key;
+    UPInt index     = hashValue & (*ppTable)->SizeMask;
+    Sfr18LoadedDefEntry* e = &(*ppTable)->E[index];
+    if (e->Next == -2 || ((e->Key & (*ppTable)->SizeMask) != (UPInt)index))
+        return;
+    UPInt naturalIndex = index;
+    UPInt prevIndex    = -1;
+    while (((e->Key & (*ppTable)->SizeMask) != (UPInt)naturalIndex) || !(e->Key == key))
     {
-        prev = idx;
-        idx  = e->Next;
-        if (idx == -1)
-            return true;
-        e = &t->E[idx];
+        prevIndex = index;
+        index     = e->Next;
+        if (index == -1)
+            return;
+        e = &(*ppTable)->E[index];
     }
-    if (idx == SPInt(home))
+    if (naturalIndex == index)
     {
         if (e->Next != -1)
         {
-            // the next one in the chain moves into the home slot
-            Entry* n = &t->E[e->Next];
+            Sfr18LoadedDefEntry* enext = &(*ppTable)->E[e->Next];
             e->pMovieDef.~Ptr();
             e->Next = -2;
-            ::FUN_1424d54f0(e, n);
-            e = n;
+            ::FUN_1424d54f0(e, enext);
+            e = enext;
         }
     }
     else
-        t->E[prev].Next = e->Next;
+    {
+        (*ppTable)->E[prevIndex].Next = e->Next;
+    }
     e->pMovieDef.~Ptr();
     e->Next = -2;
-    --(*ptable)->EntryCount;
+    (*ppTable)->EntryCount--;
+}
+
+// @0x142522920
+bool FUN_142522920(MovieRoot* self, MovieDefImpl* def)
+{
+    Sfr18LoadedDefTable** ptable = reinterpret_cast<Sfr18LoadedDefTable**>(&self->LoadedMovieDefs);
+    const UPInt key = reinterpret_cast<UPInt>(def);
+    unsigned* pcnt = static_cast<unsigned*>(FUN_1425059f0(ptable, reinterpret_cast<const UPInt&>(def)));
+    if (!pcnt || --pcnt[2] != 0)
+        return false;
+    Sfr18RemoveLoadedDef(ptable, key);
     return true;
 }
 
