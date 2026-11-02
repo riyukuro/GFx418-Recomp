@@ -206,22 +206,29 @@ AppendableSoundData::AppendableSoundData(unsigned format, unsigned rate)
 UByte* AppendableSoundData::LockDataForAppend(unsigned length, unsigned dsize)
 {
     ChunkLock.DoLock();
+    DataChunk* pchunk;
     if (!pFirstChunk)
-        pFirstChunk = pFillChunk = pReadChunk = new (Memory::pGlobalHeap->Alloc(sizeof(DataChunk))) DataChunk(0x4000);
+    {
+        void* pmem = Memory::pGlobalHeap->Alloc(sizeof(DataChunk));
+        pchunk     = pmem ? new (pmem) DataChunk(0x4000) : 0;
+        pFirstChunk = pchunk;
+        pFillChunk  = pchunk;
+        pReadChunk  = pchunk;
+    }
     if (dsize > 0x4000u - pFillChunk->Used)
     {
-        DataChunk* pnew = new (Memory::pGlobalHeap->Alloc(sizeof(DataChunk))) DataChunk(0x4000);
-        pFillChunk->pNext = pnew;
+        void* pmem = Memory::pGlobalHeap->Alloc(sizeof(DataChunk));
+        pchunk     = pmem ? new (pmem) DataChunk(0x4000) : 0;
+        pFillChunk->pNext = pchunk;
         pFillChunk->pNext->Reserved14 = pFillChunk->Samples + pFillChunk->Reserved14;
         pFillChunk = pFillChunk->pNext;
     }
-    DataChunk* pcur = pFillChunk;
-    unsigned   used = pcur->Used;
-    pcur->Used      = used + dsize;
+    UByte* pdata = pFillChunk->pData + pFillChunk->Used;
+    pFillChunk->Used += dsize;
     pFillChunk->Samples += length;
     DataSize += dsize;
     Length += length;
-    return pcur->pData + used;
+    return pdata;
 }
 
 // MS2-FUNCTIONAL: frees the chunk's sample block (the exe's out of line chunk destructor).
@@ -266,26 +273,20 @@ SoundFile::~SoundFile()
 // @0x1427483a0
 bool AppendableSoundData::SetReadPosition(unsigned pos)
 {
-    ChunkLock.DoLock();
-    bool found = false;
-    if (pReadChunk)
+    Lock::Locker lock(&ChunkLock);
+    if (!pReadChunk)
+        return false;
+    pReadChunk   = pFirstChunk;
+    unsigned end = pReadChunk->Used;
+    while (pos >= end)
     {
-        pReadChunk = pFirstChunk;
-        unsigned end = pReadChunk->Used;
-        while (pos >= end)
-        {
-            DataChunk* pnext = pReadChunk->pNext;
-            if (!pnext)
-                goto done;
-            pReadChunk = pnext;
-            end += pnext->Used;
-        }
-        ReadPos = pReadChunk->Used - end + pos;
-        found   = true;
+        if (!pReadChunk->pNext)
+            return false;
+        pReadChunk = pReadChunk->pNext;
+        end += pReadChunk->Used;
     }
-done:
-    ChunkLock.Unlock();
-    return found;
+    ReadPos = pReadChunk->Used - end + pos;
+    return true;
 }
 
 // MS2-FUNCTIONAL: releases the chunk lock taken by LockDataForAppend.
