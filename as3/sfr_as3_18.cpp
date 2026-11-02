@@ -3388,31 +3388,15 @@ int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt offset, void* fr
     return result;
 }
 
+#include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // sfr34 batch J: the host side's array and display object access to AS3 values. The ObjectInterface subclass
-// (AS3ValueObjectInterface, vftable 0x14317eff8) is sfr_as3_17's; the slots recovered here are members of a view
-// over it.
+// (AS3ValueObjectInterface, vftable 0x14317eff8) is in as3_valueobjectinterface.h.
 
 
-class Sfr34_ValueObjIfc : public GFx::Value::ObjectInterface
-{
-public:
-    MovieRoot* GetAS3Root() const { return static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot); }
-
-    bool PushBack(void* pdata, const GFx::Value& value);
-    bool PopBack(void* pdata, GFx::Value* pval);
-    bool RemoveElements(void* pdata, unsigned idx, int count);
-    bool GetWorldMatrix(void* pdata, Render::Matrix2F* pmat) const;
-    bool GetMatrix3D(void* pdata, Render::Matrix3F* pmat) const;
-    bool GetText(void* pdata, GFx::Value* pval, bool isHtml) const;
-    bool GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const;
-    bool HasMember(void* pdata, const char* name, bool isdobj) const;
-    bool Invoke(void* pdata, GFx::Value* presult, const char* name, const GFx::Value* pargs, UPInt nargs, bool isdobj);
-    bool InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs, UPInt nargs);
-    bool GotoAndPlay(void* pdata, unsigned frame, bool stop);
-    bool GotoAndPlay(void* pdata, const char* frame, bool stop);
-};
+static inline MovieRoot* Sfr34_RootOf(MovieImpl* proot) { return static_cast<MovieRoot*>(proot->pASMovieRoot); }
 
 // Whether the AS3 object is a display object instance, and the display object it scripts.
 static inline bool Sfr34_IsDisplayObject(void* pdata)
@@ -3427,23 +3411,32 @@ static inline DisplayObject* Sfr34_DispObjOf(void* pdata)
     return static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
 }
 
+} // namespace AS3
+
 // @0x14251f780
-bool Sfr34_ValueObjIfc::PushBack(void* pdata, const GFx::Value& value)
+bool AS3ValueObjectInterface::PushBack(void* pdata, const GFx::Value& value)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     Value      v;
     root->GFxValue2ASValue(value, &v);
     static_cast<Instances::fl::Array*>(pdata)->SA.PushBack(v);
     return true;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // The last element (to pval when given) is removed; an empty array gives undefined.
-// Member of a view over the AS3 value object interface (the class is sfr_as3_17's)
 // @0x14251cbe0
-bool Sfr34_ValueObjIfc::PopBack(void* pdata, GFx::Value* pval)
+bool AS3ValueObjectInterface::PopBack(void* pdata, GFx::Value* pval)
 {
+    using namespace AS3;
+    using AS3::Value;
     Instances::fl::Array* arr  = static_cast<Instances::fl::Array*>(pdata);
-    const MovieRoot*      root = GetAS3Root();
+    const MovieRoot*      root = Sfr34_RootOf(pMovieRoot);
     const int sz = static_cast<int>(arr->GetSize());
     if (sz <= 0)
     {
@@ -3460,10 +3453,16 @@ bool Sfr34_ValueObjIfc::PopBack(void* pdata, GFx::Value* pval)
     return true;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // count elements from idx (all of the rest when negative or past the end).
 // @0x1425227e0
-bool Sfr34_ValueObjIfc::RemoveElements(void* pdata, unsigned idx, int count)
+bool AS3ValueObjectInterface::RemoveElements(void* pdata, unsigned idx, int count)
 {
+    using namespace AS3;
+    using AS3::Value;
     SparseArray&   sa   = static_cast<Instances::fl::Array*>(pdata)->SA;
     const unsigned size = unsigned(sa.GetSize());
     if (idx >= size)
@@ -3477,10 +3476,16 @@ bool Sfr34_ValueObjIfc::RemoveElements(void* pdata, unsigned idx, int count)
     return true;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // The world matrix, translation in pixels.
 // @0x142510a70
-bool Sfr34_ValueObjIfc::GetWorldMatrix(void* pdata, Render::Matrix2F* pmat) const
+bool AS3ValueObjectInterface::GetWorldMatrix(void* pdata, Render::Matrix2F* pmat) const
 {
+    using namespace AS3;
+    using AS3::Value;
     Object*       pobj = static_cast<Object*>(pdata);
     const Traits& tr   = pobj->GetTraits();
     if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
@@ -3497,10 +3502,16 @@ bool Sfr34_ValueObjIfc::GetWorldMatrix(void* pdata, Render::Matrix2F* pmat) cons
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // The 3D matrix, translation in pixels.
 // @0x14250b3c0
-bool Sfr34_ValueObjIfc::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) const
+bool AS3ValueObjectInterface::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) const
 {
+    using namespace AS3;
+    using AS3::Value;
     Object*       pobj = static_cast<Object*>(pdata);
     const Traits& tr   = pobj->GetTraits();
     if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
@@ -3517,12 +3528,18 @@ bool Sfr34_ValueObjIfc::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) const
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // A text field's text directly; other display objects through their "text" / "htmlText" member.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); the exe inlines Value(const ASString&), ours calls it (sfr_as3_15)
+// MS2-FUNCTIONAL: the exe inlines Value(const ASString&), ours calls it (sfr_as3_15)
 // @0x14250f110
-bool Sfr34_ValueObjIfc::GetText(void* pdata, GFx::Value* pval, bool isHtml) const
+bool AS3ValueObjectInterface::GetText(void* pdata, GFx::Value* pval, bool isHtml) const
 {
-    const MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    const MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     Object*          pobj = static_cast<Object*>(pdata);
     const Traits&    tr   = pobj->GetTraits();
     if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <
@@ -3542,11 +3559,17 @@ bool Sfr34_ValueObjIfc::GetText(void* pdata, GFx::Value* pval, bool isHtml) cons
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // A sprite goes to the frame (1-based) and plays or stops; the frame's actions run right away.
 // @0x142510b70
-bool Sfr34_ValueObjIfc::GotoAndPlay(void* pdata, unsigned frame, bool stop)
+bool AS3ValueObjectInterface::GotoAndPlay(void* pdata, unsigned frame, bool stop)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     if (Sfr34_IsDisplayObject(pdata) && Sfr34_DispObjOf(pdata)->IsSprite())
     {
         Sprite* spr = static_cast<Sprite*>(Sfr34_DispObjOf(pdata));
@@ -3560,11 +3583,17 @@ bool Sfr34_ValueObjIfc::GotoAndPlay(void* pdata, unsigned frame, bool stop)
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // The same for a frame label.
 // @0x142510c30
-bool Sfr34_ValueObjIfc::GotoAndPlay(void* pdata, const char* frame, bool stop)
+bool AS3ValueObjectInterface::GotoAndPlay(void* pdata, const char* frame, bool stop)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     if (Sfr34_IsDisplayObject(pdata) && Sfr34_DispObjOf(pdata)->IsSprite())
     {
         Sprite*  spr = static_cast<Sprite*>(Sfr34_DispObjOf(pdata));
@@ -3581,6 +3610,8 @@ bool Sfr34_ValueObjIfc::GotoAndPlay(void* pdata, const char* frame, bool stop)
     }
     return false;
 }
+
+namespace AS3 {
 
 // sfr34 batch K: the host's variable access through the movie root (Movie::GetVariable & co. of an AS3 movie),
 // and the root's start.
@@ -6651,15 +6682,19 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+} // namespace AS3
+
 // ObjectInterface::GetMember: the public property name of the AS3 object; for a display object container without
 // such a property, its child of that name. undefined (and false) when neither is there; an exception of the
 // property lookup is output (of the child lookup, dropped).
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
+// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
 // @0x14250b4a0
-bool Sfr34_ValueObjIfc::GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const
+bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Value* pval, bool isdobj) const
 {
+    using namespace AS3;
+    using AS3::Value;
     SF_UNUSED(isdobj);
-    MovieRoot* root = GetAS3Root();
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Object*    obj  = static_cast<Object*>(pdata);
     Value      asval;
@@ -6696,6 +6731,8 @@ bool Sfr34_ValueObjIfc::GetMember(void* pdata, const char* name, GFx::Value* pva
     pval->SetUndefined();
     return false;
 }
+
+namespace AS3 {
 
 // The scriptable visible children under pt (topmost first), each in its own coordinates; none when the
 // container is invisible or pt is outside its mask. True when any was added.
@@ -6899,14 +6936,18 @@ bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
     return true;
 }
 
+} // namespace AS3
+
 // ObjectInterface::HasMember: whether the AS3 object has a property of that public name or, as a display object
 // container, a child of that name (an exception of the child lookup is dropped).
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
+// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
 // @0x142510e70
-bool Sfr34_ValueObjIfc::HasMember(void* pdata, const char* name, bool isdobj) const
+bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdobj) const
 {
+    using namespace AS3;
+    using AS3::Value;
     SF_UNUSED(isdobj);
-    MovieRoot* root = GetAS3Root();
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Object*    obj  = static_cast<Object*>(pdata);
     const Multiname mn(root->pAVM->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name))));
@@ -6930,16 +6971,22 @@ bool Sfr34_ValueObjIfc::HasMember(void* pdata, const char* name, bool isdobj) co
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // ObjectInterface::Invoke: the method of that public name of the AS3 object called on it with the host's
 // arguments; the result (when asked for) converted for the host. An exception of the lookup or the call is output;
 // false then, and when there is no such property.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); PropRef::GetSlotValueUnsafe written out (the exe inlines it)
+// MS2-FUNCTIONAL: PropRef::GetSlotValueUnsafe written out (the exe inlines it)
 // @0x142512870
-bool Sfr34_ValueObjIfc::Invoke(void* pdata, GFx::Value* presult, const char* name, const GFx::Value* pargs,
+bool AS3ValueObjectInterface::Invoke(void* pdata, GFx::Value* presult, const char* name, const GFx::Value* pargs,
                                UPInt nargs, bool isdobj)
 {
+    using namespace AS3;
+    using AS3::Value;
     SF_UNUSED(isdobj);
-    MovieRoot* root = GetAS3Root();
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name))));
     PropRef prop;
@@ -6988,14 +7035,20 @@ exception:
     return false;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // ObjectInterface::InvokeClosure: a closure of the AS3 object (a VTable index closure when bit 1 of pdata is set,
 // with dataAux its index, else a thunk closure of the thunk dataAux) called on it with the host's arguments.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's)
+// MS2-FUNCTIONAL: body differs from the exe
 // @0x142513920
-bool Sfr34_ValueObjIfc::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs,
+bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs,
                                       UPInt nargs)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Value      asfn;
     Value      asresult;
@@ -7024,6 +7077,8 @@ bool Sfr34_ValueObjIfc::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* pr
         root->ASValue2GFxValue(asresult, presult);
     return true;
 }
+
+namespace AS3 {
 
 static inline void FUN_142504630(ASRefCountCollector* gc, void* stats) { ::Scaleform::GFx::AS3::Sfr33CollectorQueue(reinterpret_cast<UByte*>(gc), static_cast<RefCountImpl*>(stats)); }          // ASRefCountCollector::ForceCollect
 static inline void FUN_1425274b0(DisplayObjectBase* bitmap, Resource* pimage) { ::Scaleform::GFx::AS3::Sfr31SetResource(reinterpret_cast<Scaleform::UPInt>(bitmap), pimage); }   // AvmBitmap::SetImage

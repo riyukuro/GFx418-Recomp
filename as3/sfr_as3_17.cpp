@@ -51,6 +51,9 @@
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_e4x.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
 #include "ms2/scaleform/include/gfx/as3/as3_userdefinedfunction.h"
+
+void FUN_142415930(Scaleform::GFx::AS3::Instances::fl::XMLList* self, Scaleform::GFx::AS3::Instances::fl::XMLList& list,
+                   const Scaleform::GFx::AS3::Multiname& prop_name);
 // Out of line in the exe (instantiated in sfr_as3_01c).
 extern template Scaleform::String Scaleform::AsString<long>(const long&);
 extern template Scaleform::String Scaleform::AsString<unsigned long>(const unsigned long&);
@@ -4173,8 +4176,6 @@ void XMLSupportImpl::DescribeType(VM& vm, SPtr<Instances::fl::XML>& result, cons
         }
     }
 }
-
-void FUN_142415930(Instances::fl::XMLList* self, Instances::fl::XMLList& list, const Multiname& prop_name);
 
 // The descendants named mn of an XML or XMLList instance v, as a new list that replaces v; false for anything else.
 // MS2-FUNCTIONAL 0x142509140: XMLList::GetDescendants called through its free-function form

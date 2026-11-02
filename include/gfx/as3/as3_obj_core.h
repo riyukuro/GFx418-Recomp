@@ -754,8 +754,6 @@ namespace Instances { namespace fl
         void prototypeSet(const Value& result, const Value&);
 
     public:
-        // (appended, sfr19) adds x (AddRef) to List. 0x142404f20 (the SDK spells it Apppend)
-        void Apppend(Instances::fl::XML* x);
         // (appended, sfr19) 0x142423b50
         void SetTargetProperty(ASStringNode* prop);
 

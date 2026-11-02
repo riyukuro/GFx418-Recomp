@@ -268,7 +268,6 @@ extern "C" void FUN_142530d50(Scaleform::UPInt self);
 extern "C" void FUN_1424dfbf0(void* self);
 void FUN_1424dc8e0(void* self);
 void FUN_1424de240(long long* state);
-extern "C" Scaleform::SPInt FUN_1424e1040(void* self, const Scaleform::UInt32* value);
 namespace Scaleform { namespace GFx { namespace AS3 {
 void* DeleteAs3_1424e3eb0(void* self, unsigned flags);
 void* DeleteAs3_1424e3890(void* self, unsigned flags);
@@ -443,8 +442,9 @@ Sfr16U64 Sfr16HashStringNode(const unsigned char* p)
 // Value hash used by the AS3 hash-set adapters. The tag and payload cases follow the exe's switch.
 // MS2-FUNCTIONAL 0x1424e1040: hash polynomial is evaluated by loops rather than the exe's unrolled arithmetic.
 // @0x1424e1040
-extern "C" Scaleform::SPInt FUN_1424e1040(void*, const Scaleform::UInt32* words)
+Scaleform::UPInt Scaleform::GFx::AS3::Value::HashFunctor::operator()(const Scaleform::GFx::AS3::Value& key) const
 {
+    const Scaleform::UInt32* words = reinterpret_cast<const Scaleform::UInt32*>(&key);
     const auto* bytes = reinterpret_cast<const unsigned char*>(words);
     const Scaleform::UInt32 tag = words[0] & 0x1f;
     const auto* payload = bytes + 0x10;

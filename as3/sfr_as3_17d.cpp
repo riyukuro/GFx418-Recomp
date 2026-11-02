@@ -73,6 +73,7 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 #include "ms2/scaleform/include/gfx/gfx_placeobject.h"
 #include "ms2/scaleform/include/gfx/as3/as3_abcfilewithmoviedef.h"
 #include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
+#include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
 #undef GetObject   // windows.h
 
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self);   // AvmBitmap: the image shape of the render node
@@ -983,18 +984,8 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
-// The host side's display object access to AS3 values. The ObjectInterface subclass (AS3ValueObjectInterface,
-// vftable 0x14317eff8) is sfr_as3_17's; the slots recovered here are members of a view over it.
-class Sfr34d_ValueObjIfc : public GFx::Value::ObjectInterface
-{
-public:
-    MovieRoot* GetAS3Root() const { return static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot); }
-
-    bool GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pinfo) const;
-    bool CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth);
-    bool AttachMovie(void* pdata, GFx::Value* pmc, const char* symbolName, const char* instanceName, SInt32 depth,
-                     const MemberValueSet* initArgs);
-};
+// The host side's display object access to AS3 values, members of AS3ValueObjectInterface.
+static inline MovieRoot* Sfr34_RootOf(MovieImpl* proot) { return static_cast<MovieRoot*>(proot->pASMovieRoot); }
 
 // A MemberValueSet element: the member name and its value.
 struct Sfr17dMemberValue
@@ -1026,12 +1017,15 @@ static inline AvmDisplayObjContainer* Sfr17d_ToAvmContainer(DisplayObject* p)
     return p ? AvmDisplayObjContainer::FromBase(p->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
 }
 
+} // namespace AS3
+
 // Position, scales, rotations (pixels / percent / degrees), alpha, visibility, the field of view, the 3D matrices
 // and the edge AA mode of a display object; a text field gives its own position fields.
-// member of a view over the AS3 value object interface (the class is sfr_as3_17's)
 // @0x1425094e0
-bool Sfr34d_ValueObjIfc::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pinfo) const
+bool AS3ValueObjectInterface::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pinfo) const
 {
+    using namespace AS3;
+    using AS3::Value;
     if (!Sfr17d_IsDisplayObject(pdata, false))
         return false;
     DisplayObject* pdisp = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
@@ -1073,13 +1067,19 @@ bool Sfr34d_ValueObjIfc::GetDisplayInfo(void* pdata, GFx::Value::DisplayInfo* pi
     return true;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // A new empty Sprite named instanceName at depth (the top when negative) of the container; its constructor runs
 // right away.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); the exe inlines the Value and Error temporaries
+// MS2-FUNCTIONAL: the exe inlines the Value and Error temporaries
 // @0x1424f33d0
-bool Sfr34d_ValueObjIfc::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
+bool AS3ValueObjectInterface::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, const char* instanceName, SInt32 depth)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     if (!Sfr17d_IsDisplayObject(pdata, true))
         return false;
     DisplayObject* pcont = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
@@ -1127,14 +1127,20 @@ bool Sfr34d_ValueObjIfc::CreateEmptyMovieClip(void* pdata, GFx::Value* pmc, cons
     return true;
 }
 
+namespace AS3 {
+
+} // namespace AS3
+
 // A new instance of the exported class symbolName named instanceName at depth (the top when negative or past it)
 // of the container, with the initArgs members set; its constructor runs right away.
-// MS2-FUNCTIONAL member of a view over the AS3 value object interface (the class is sfr_as3_17's); the exe inlines the Multiname and Value constructors
+// MS2-FUNCTIONAL: the exe inlines the Multiname and Value constructors
 // @0x1424ede80
-bool Sfr34d_ValueObjIfc::AttachMovie(void* pdata, GFx::Value* pmc, const char* symbolName, const char* instanceName,
+bool AS3ValueObjectInterface::AttachMovie(void* pdata, GFx::Value* pmc, const char* symbolName, const char* instanceName,
                                      SInt32 depth, const MemberValueSet* initArgs)
 {
-    MovieRoot* root = GetAS3Root();
+    using namespace AS3;
+    using AS3::Value;
+    MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     if (!Sfr17d_IsDisplayObject(pdata, true))
         return false;
     DisplayObject* pcont = static_cast<Instances::fl_display::DisplayObject*>(static_cast<Object*>(pdata))->pDispObj;
@@ -1191,6 +1197,8 @@ bool Sfr34d_ValueObjIfc::AttachMovie(void* pdata, GFx::Value* pmc, const char* s
     vm->HandleException = false;
     return false;
 }
+
+namespace AS3 {
 
 }}} // namespace Scaleform::GFx::AS3
 

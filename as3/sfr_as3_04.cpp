@@ -3308,7 +3308,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         UInt32 ind;
         if (GetVectorInd(prop_name, ind) && ind == 0)
         {
-            list.Apppend(this);
+            list.Append(this);
             return true;
         }
         return false;
@@ -3375,7 +3375,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         if (GetVectorInd(prop_name, ind))
         {
             if (ind <= Children.GetSize())
-                list.Apppend(Children[ind]);
+                list.Append(Children[ind]);
         }
         else
         {
@@ -3433,7 +3433,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         if (GetVectorInd(prop_name, ind))
         {
             if (ind < Children.GetSize())
-                list.Apppend(Children[ind]);
+                list.Append(Children[ind]);
             return true;
         }
         if (prop_name.IsAttr())
@@ -3465,7 +3465,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             if (!prop_name.IsAttr())
             {
                 if (child->Matches(prop_name))
-                    list.Apppend(child);
+                    list.Append(child);
             }
 
             child->GetDescendants(list, prop_name);

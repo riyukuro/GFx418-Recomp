@@ -34,8 +34,6 @@ template struct ThunkFunc2<Classes::fl_external::ExternalInterface, 5, Value, un
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
 // The gesture phase names, by GestureEvent::Phase (0: none).
 extern const char* const DAT_143a2d158[];
-// SPtr<Instances::fl::Object>::operator=, out of line (0x14243d870).
-void* FUN_14243d870(void* self, void* p);
 // VM::MakeObject: a new plain Object (0x142516600).
 void FUN_142516600(Scaleform::GFx::AS3::VM& vm, Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::Object>& result);
 // Traits::GetConstructor, out of line (0x142508460).
@@ -1498,7 +1496,11 @@ namespace Instances { namespace fl_events {
     void AppLifecycleEvent::statusGet(SPtr<Instances::fl::Object>& result)
     {
         if (Status.IsObject())
-            FUN_14243d870(&result, Status.GetObject());
+        {
+            typedef SPtr<Instances::fl::Object> ObjectPtr;
+            typedef ObjectPtr& (ObjectPtr::*AssignFn)(Instances::fl::Object*);
+            (result.*static_cast<AssignFn>(&ObjectPtr::operator=))(static_cast<Instances::fl::Object*>(Status.GetObject()));
+        }
     }
 
     // @0x14246d200
