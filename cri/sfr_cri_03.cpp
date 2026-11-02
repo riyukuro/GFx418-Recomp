@@ -7,7 +7,8 @@
 // MS2-UNIT: sfr_cri_03
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14003b6e0-0x14003ed40 .text$mn
+// MS2-RANGE: 0x14003b6e0-0x14003cff0 .text$mn
+// MS2-RANGE: 0x14003d4b0-0x14003ed40 .text$mn
 // MS2-RANGE: 0x14003eeb0-0x140042700 .text$mn
 // MS2-RANGE: 0x1400427b0-0x140044e84 .text$mn
 // MS2-RANGE: 0x142ccb000-0x142ccd143 .text$mn
@@ -4087,128 +4088,6 @@ CriBool FUN_14003e370(void* player, void* destination, void* source)
     return 1;
 }
 #pragma intrinsic(memcpy)
-
-// MS2-FUNCTIONAL: pull one demuxed chunk from a video player's input queue and advance its decode state machine.
-// Stays DIFF: the exe is /TC codegen (switch temp through r11b, size add through r11d), which C++ doesn't emit.
-// @0x14003cff0
-CriSint32 FUN_14003cff0(void* player)
-{
-    struct Chunk { const CriUint8* Data; CriSint32 Size; CriSint32 Reserved; };
-    struct Player
-    {
-        CriUint8 Reserved00[0x180];
-        void* Queue;
-        CriUint32 Chunks;
-        CriUint32 Chunks2;
-        CriUint8 Reserved190[0x18];
-        CriSint32 Phase;
-        CriSint32 PhaseFlag;
-        CriSint32 Metas;
-        CriUint8 Reserved1b4[0x4c];
-        CriSint32 (*HeaderCallback)(void*, void*);
-        void* HeaderArg;
-        void (*EndCallback)(void*);
-        void* EndArg;
-    };
-    static_assert(offsetof(Player, Phase) == 0x1a8 && offsetof(Player, Metas) == 0x1b0 &&
-                  offsetof(Player, HeaderCallback) == 0x200 && offsetof(Player, EndArg) == 0x218, "layout");
-    Player* state = (Player*)player;
-    CriSint32 result = 0;
-    if (FUN_1400467b8(state->Queue, 1) == 0)
-        return result;
-    Chunk first;
-    Chunk second = {};
-    criSj_GetChunk(state->Queue, 1, 0xffffffff, &first);
-    CriUsfStandardHeader header = {};
-    criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &header);
-    CriUint8 kind = header.Data[15];
-    if (kind == 0)
-    {
-        state->Phase = 3;
-        if (FUN_14003d6c0(&first) == 0)
-        {
-            criSj_PutChunk(state->Queue, 2, &first);
-        }
-        else
-        {
-            if (FUN_1400467b8(state->Queue, 1) == 0)
-            {
-                criSj_UngetChunk(state->Queue, 1, &first);
-                return result;
-            }
-            criSj_GetChunk(state->Queue, 1, 0xffffffff, &second);
-            CriUsfStandardHeader secondHeader = {};
-            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &secondHeader);
-            CriUint32 payload;
-            memcpy(&payload, secondHeader.Data + 4, sizeof(payload));
-            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
-            {
-                crivmpv_occurFatalError(0, "E07111401M : Video chunk might not be demuxed properly..\n", 0);
-            }
-            else
-            {
-                criSj_PutChunk(state->Queue, 2, &first);
-                criSj_PutChunk(state->Queue, 2, &second);
-            }
-        }
-        state->Chunks += 1;
-        state->Chunks2 += 1;
-        result = 1;
-    }
-    else if (kind == 1)
-    {
-        state->Phase = 1;
-        if (state->HeaderCallback != NULL)
-        {
-            if (state->HeaderCallback(state->HeaderArg, &first) != 1)
-            {
-                criSj_UngetChunk(state->Queue, 1, &first);
-                return result;
-            }
-        }
-    }
-    else if (kind == 2)
-    {
-        if (state->Phase == 1)
-        {
-            state->PhaseFlag = 0;
-            if (state->EndCallback != NULL)
-                state->EndCallback(state->EndArg);
-        }
-        if (state->Phase == 3)
-        {
-            FUN_14003d550(player);
-            state->Metas += 1;
-        }
-    }
-    else if (kind == 3)
-    {
-        state->Phase = 2;
-        if (FUN_14003d6c0(&first) != 0)
-        {
-            if (FUN_1400467b8(state->Queue, 1) == 0)
-            {
-                criSj_UngetChunk(state->Queue, 1, &first);
-                return result;
-            }
-            criSj_GetChunk(state->Queue, 1, 0xffffffff, &second);
-            CriUsfStandardHeader secondHeader = {};
-            criUsfCmn_ParseUsfHeaderStd(first.Data, (CriUint32)first.Size, &secondHeader);
-            CriUint32 payload;
-            memcpy(&payload, secondHeader.Data + 4, sizeof(payload));
-            if ((CriUint32)(first.Size + second.Size) < payload + 8U)
-                crivmpv_occurFatalError(0, "E08121601M : Video meta chunk might not be demuxed properly.\n", 0);
-        }
-    }
-    if (kind != 0 && kind < 4)
-    {
-        CriSint32 lane = state->Chunks == 0 ? 0 : 2;
-        criSj_PutChunk(state->Queue, lane, &first);
-        if (second.Data)
-            criSj_PutChunk(state->Queue, lane, &second);
-    }
-    return result;
-}
 
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
 // Copy the three tiled YUV420 planes of a decoded picture into caller planes with their own pitches. The two pitches
