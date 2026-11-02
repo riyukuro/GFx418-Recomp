@@ -1501,7 +1501,7 @@ ClassTraits::Traits* Sfr33LookupHash1c8(VM* self, const ASString& name, const In
 
 // MultinameHash<ClassTraits::Traits*>::Get(const Multiname&): the first namespace of a namespace set
 // with an entry, else the entry under the multiname's single namespace.
-// MS2-FUNCTIONAL 0x142505aa0: the exe keeps the namespace set and its size in registers; same results
+// MS2-FUNCTIONAL 0x142505aa0: the exe loads mn.Obj after the name AddRef and keeps the name node in rbx across the call; same results
 // @0x142505aa0
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Multiname& mn)
 {
@@ -1509,14 +1509,14 @@ ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Mu
         return FUN_142414ac0(self, mn.Name.AsString(), static_cast<const Instances::Namespace&>(*mn.Obj));
     const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
     const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
-    for (UPInt i = 0; i < nsa.GetSize(); ++i)
+    const UPInt n = nsa.GetSize();
+    ClassTraits::Traits** p = NULL;
+    for (UPInt i = 0; p == NULL && i < n; ++i)
     {
         ASString name = mn.Name.AsString();
-        ClassTraits::Traits** p = self->Entries.Get(TClassTraitsCache::Key(name, nsa[i].GetPtr()));
-        if (p)
-            return p;
+        p = self->Entries.Get(TClassTraitsCache::Key(name, nsa[i].GetPtr()));
     }
-    return NULL;
+    return p;
 }
 
 // The class traits mn names. A namespace set takes the first namespace with cached or builtin class traits
