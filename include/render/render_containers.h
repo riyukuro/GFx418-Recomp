@@ -43,7 +43,10 @@ public:
         pLastPage = pPagePool;
     }
 
-    void ClearAndRelease()
+    void ClearAndRelease() { ClearAndReleaseInline(); }   // 0x14262a910
+
+    // The body of ClearAndRelease, for the callers that the exe inlines it into (Hairliner::Clear).
+    __forceinline void ClearAndReleaseInline()
     {
         if (MaxPages)
         {

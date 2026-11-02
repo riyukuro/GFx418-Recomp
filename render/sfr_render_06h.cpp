@@ -54,7 +54,6 @@ Hairliner::Hairliner(LinearHeap* heap)
 }
 
 // drops every array and the bounds, then the heap behind them
-// MS2-FUNCTIONAL: same work in the same order; the exe frame is non-leaf (18 bytes longer) where ours is a leaf
 // @0x1426b37c0
 void Hairliner::Clear()
 {
@@ -80,7 +79,7 @@ void Hairliner::Clear()
     MinY = MaxCoord;
     MaxX = MinCoord;
     MaxY = MinCoord;
-    pHeap->ClearAndRelease();
+    pHeap->ClearAndReleaseInline();   // the exe inlines ClearAndRelease here
 }
 
 // @0x1426b4360
