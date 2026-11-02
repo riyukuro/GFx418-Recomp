@@ -1071,7 +1071,7 @@ MovieRoot::ActionEntry* MovieRoot::ActionQueueType::InsertEntry(ActionLevel lvl)
 }
 
 // @0x142512790
-MovieRoot::ActionEntry* MovieRoot::InsertEmptyAction(ActionLevel lvl)
+SF_NOINLINE MovieRoot::ActionEntry* MovieRoot::InsertEmptyAction(ActionLevel lvl)
 {
     return ActionQueue.InsertEntry(lvl);
 }
@@ -2214,45 +2214,69 @@ enum
     AS3Event_FrameLast      = 0x1000016
 };
 
-// Queues the event for the object at level lvl.
-static void QueueEvent(DisplayObject* d, MovieRoot::ActionLevel lvl, const EventId& id)
+// The event id copy of the exe's ActionEntry::operator=: member by member, the first union member only.
+static __forceinline void Sfr18CopyEventId(EventId& d, const EventId& s)
 {
-    AS3RootOf(d)->InsertEmptyAction(lvl)->SetAction(d, id);
+    d.Id              = s.Id;
+    d.WcharCode       = s.WcharCode;
+    d.KeyCode         = s.KeyCode;
+    d.AsciiCode       = s.AsciiCode;
+    d.RollOverCnt     = s.RollOverCnt;
+    d.ControllerIndex = s.ControllerIndex;
+    d.KeysState       = s.KeysState;
+    d.MouseWheelDelta = s.MouseWheelDelta;
+}
+
+// ActionEntry::SetAction(DisplayObject*, const EventId&), with the event id copied as the exe does.
+static __forceinline void Sfr18SetEventAction(MovieRoot::ActionEntry* e, DisplayObject* pcharacter, const EventId& id)
+{
+    e->Type = MovieRoot::ActionEntry::Entry_Event;
+    e->pCharacter = pcharacter;
+    Sfr18CopyEventId(e->mEventId, id);
+    e->CFunction = NULL;
+    e->pAS3Obj = NULL;
+    e->Function.SetUndefined();
+    e->pNLoadInitCL = NULL;
+}
+
+// Queues the event for the object at level lvl (GetAS3Root()->InsertEmptyAction(lvl)->SetAction(pDispObj, id)).
+static __forceinline void QueueEvent(AvmDisplayObj* o, MovieRoot::ActionLevel lvl, const EventId& id)
+{
+    Sfr18SetEventAction(AS3RootOf(o->pDispObj)->InsertEmptyAction(lvl), o->pDispObj, id);
+}
+
+// AvmDisplayObj::HasAS3Obj of the SDK.
+static __forceinline bool Sfr18HasAS3Obj(const AvmDisplayObj* p)
+{
+    return p->pAS3RawPtr || p->pAS3CollectiblePtr.pObject;
 }
 
 // Enter frame queues once the object is loaded; render and frame events queue for objects with an AS3 side.
-// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
 // @0x142518a30
 bool AvmDisplayObj::OnEvent(const EventId& id)
 {
-    MovieRoot::ActionLevel lvl;
-    if (id.Id == EventId::Event_EnterFrame)
+    switch (id.Id)
     {
-        if (GetAS3Obj() && (Flags & Flag_Loaded))
-            QueueEvent(pDispObj, MovieRoot::AL_EnterFrame, id);
+    case EventId::Event_EnterFrame:
+        if (Sfr18HasAS3Obj(this) && (Flags & Flag_Loaded))
+            QueueEvent(this, MovieRoot::AL_EnterFrame, id);
         Flags |= Flag_Loaded;
         return true;
+    case AS3Event_FrameFirst:
+    case AS3Event_FrameLast:
+        if (Sfr18HasAS3Obj(this))
+            QueueEvent(this, MovieRoot::AL_Frame, id);
+        return true;
+    case AS3Event_Render:
+        if (Sfr18HasAS3Obj(this))
+            QueueEvent(this, MovieRoot::AL_Render, id);
+        return true;
+    default:;
     }
-    if (id.Id == AS3Event_Render)
-    {
-        if (!GetAS3Obj())
-            return true;
-        lvl = MovieRoot::AL_Render;
-    }
-    else
-    {
-        if (id.Id - AS3Event_FrameFirst > AS3Event_FrameLast - AS3Event_FrameFirst)
-            return false;
-        if (!GetAS3Obj())
-            return true;
-        lvl = MovieRoot::AL_Frame;
-    }
-    QueueEvent(pDispObj, lvl, id);
-    return true;
+    return false;
 }
 
 // An object with removed listeners gets its removed event queued and leaves the depth order.
-// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
 // @0x14251af40
 bool AvmDisplayObj::OnUnloading(bool mayRemove)
 {
@@ -2263,7 +2287,7 @@ bool AvmDisplayObj::OnUnloading(bool mayRemove)
         if (obj->HasEventHandler(root->BuiltinsMgr.GetBuiltin(AS3Builtin_removed), false) ||
             obj->HasEventHandler(AS3RootOf(pDispObj)->BuiltinsMgr.GetBuiltin(AS3Builtin_removedFromStage), false))
         {
-            QueueEvent(pDispObj, MovieRoot::AL_EnterFrame, EventId(AS3Event_Removed));
+            QueueEvent(this, MovieRoot::AL_EnterFrame, EventId(AS3Event_Removed));
             pDispObj->Depth = -2;
             if (IsStageAccessible())
                 Flags |= Flag_Unloaded;
@@ -2273,7 +2297,6 @@ bool AvmDisplayObj::OnUnloading(bool mayRemove)
 }
 
 // Mouse events go straight to the AS3 object, controller events are queued.
-// MS2-FUNCTIONAL queueing goes through a shared helper and the inline SetAction; exe code is split into chained fragments
 // @0x142518c70
 SF_NOINLINE bool AvmInteractiveObj::OnEvent(const EventId& id)
 {
@@ -2285,11 +2308,14 @@ SF_NOINLINE bool AvmInteractiveObj::OnEvent(const EventId& id)
     case EventId::Event_RollOver:
     case EventId::Event_RollOut:
     case 0x100000a: case 0x100000b: case AS3Event_Click: case 0x100000d: case 0x100000e:
-        if (Instances::fl_display::DisplayObject* obj = GetAS3Obj())
-            obj->Dispatch(id, pDispObj);
+        if (Sfr18HasAS3Obj(this))
+        {
+            DisplayObject* pint = pDispObj;     // GetIntObj
+            GetAS3Obj()->Dispatch(id, pint);
+        }
         return true;
     case AS3Event_Controller:
-        QueueEvent(pDispObj, MovieRoot::AL_ControllerEvents, id);
+        QueueEvent(this, MovieRoot::AL_ControllerEvents, id);
         return true;
     }
     return AvmDisplayObj::OnEvent(id);
@@ -5634,19 +5660,6 @@ bool FUN_142515580(const VM& vm, const InstanceTraits::Traits* itr)
     return result;
 }
 
-// The event id copy of the exe's ActionEntry::operator=: member by member, the first union member only.
-static __forceinline void Sfr18CopyEventId(EventId& d, const EventId& s)
-{
-    d.Id              = s.Id;
-    d.WcharCode       = s.WcharCode;
-    d.KeyCode         = s.KeyCode;
-    d.AsciiCode       = s.AsciiCode;
-    d.RollOverCnt     = s.RollOverCnt;
-    d.ControllerIndex = s.ControllerIndex;
-    d.KeysState       = s.KeysState;
-    d.MouseWheelDelta = s.MouseWheelDelta;
-}
-
 // The exe calls the SPtr<DisplayObject> assignment out of line (instantiated in sfr_as3_06).
 template <> SPtr<Instances::fl_display::DisplayObject>&
 SPtr<Instances::fl_display::DisplayObject>::operator=(const SPtr<Instances::fl_display::DisplayObject>& other);
@@ -5663,7 +5676,7 @@ void MovieRoot::RequeueActionQueue(ActionLevel srclvl, ActionLevel dstlvl)
         const ActionEntry* src;
         while ((src = iter.getNext()) != NULL)
         {
-            ActionEntry* dst  = InsertEmptyAction(dstlvl);
+            ActionEntry* dst  = ActionQueue.InsertEntry(dstlvl);   // InsertEmptyAction, inlined
             dst->Type         = src->Type;
             dst->pCharacter   = src->pCharacter;
             dst->pAS3Obj      = src->pAS3Obj;
