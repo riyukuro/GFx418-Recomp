@@ -102,11 +102,13 @@ HTMLImageTagDesc::~HTMLImageTagDesc()
 
 // The exe has no out-of-line ~HTMLImageTagDesc; 0x14267dc80 (vftable 0x143191bb8 slot 0) is the scalar deleting
 // destructor with the dtor inlined, so it must free on flags & 1 (heap, or the sized delete of 0x70 on flags & 4).
-// MS2-FUNCTIONAL: the inlined dtor stores the class vftable first, which the exe omits (the deleting dtor knows the type).
+// The members go one by one: a dtor call would store the class vftable, which the exe omits (implicit dtor in the SDK).
 // @0x14267dc80
 void* DeleteHTMLImageTagDesc(HTMLImageTagDesc* p, unsigned flags)
 {
-    p->~HTMLImageTagDesc();
+    p->Id.~StringLH();
+    p->Url.~StringLH();
+    p->ImageDesc::~ImageDesc();
     if (flags & 1)
     {
         if (!(flags & 4))
