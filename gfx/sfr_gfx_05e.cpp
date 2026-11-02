@@ -364,7 +364,6 @@ const char* IntToString(SInt32 value, char destStr[], size_t destStrSize)
 }
 
 // @0x1425e3c80
-// MS2-FUNCTIONAL: binary loop register allocation differs
 const char* IntToString(SInt32 value, char destStr[], size_t destStrSize, int radix)
 {
     size_t last = destStrSize - 1;
@@ -372,28 +371,9 @@ const char* IntToString(SInt32 value, char destStr[], size_t destStrSize, int ra
     *p = 0;
 
     unsigned n = (unsigned)value;
-    if (radix == 16)
+    switch (radix)
     {
-        for (unsigned i = 0; i < last; ++i)
-        {
-            UByte d = UByte(n & 0xF);
-            *--p = char(d + (d <= 9 ? '0' : 'a' - 10));
-            n >>= 4;
-            if (n == 0)
-                break;
-        }
-    }
-    else if (radix == 8)
-    {
-        for (unsigned i = 0; i < last; ++i)
-        {
-            *--p = char('0' + (n & 7));
-            n >>= 3;
-            if (n == 0)
-                break;
-        }
-    }
-    else if (radix == 2)
+    case 2:
     {
         // All 32 bits are written; the result starts at the highest set bit ("0" for zero).
         char*    highest = 0;
@@ -412,10 +392,31 @@ const char* IntToString(SInt32 value, char destStr[], size_t destStrSize, int ra
             if (bit == 0)
                 bit = 1;
         }
-        p = highest ? highest : destStr + destStrSize - 2;
+        p = !highest ? destStr + destStrSize - 2 : highest;
+        break;
     }
-    else
+    case 8:
+        for (unsigned i = 0; i < last; ++i)
+        {
+            *--p = char('0' + (n & 7));
+            n >>= 3;
+            if (n == 0)
+                break;
+        }
+        break;
+    case 16:
+        for (unsigned i = 0; i < last; ++i)
+        {
+            UByte d = UByte(n & 0xF);
+            *--p = char(d <= 9 ? d + '0' : d + 'a' - 10);
+            n >>= 4;
+            if (n == 0)
+                break;
+        }
+        break;
+    default:
         return IntToString(value, destStr, destStrSize);
+    }
     return p;
 }
 
