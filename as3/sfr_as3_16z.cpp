@@ -510,19 +510,37 @@ void Sfr21ASGCAdvanceFrame(ASRefCountCollector* gc, unsigned* movieFrameCnt, uns
 void Sfr33CollectorQueue(UByte* gc, RefCountImpl* stats);            // 0x142504630, ASRefCountCollector::ForceCollect
 static inline void FUN_142504630(ASRefCountCollector* gc, void* stats) { Sfr33CollectorQueue(reinterpret_cast<UByte*>(gc), static_cast<RefCountImpl*>(stats)); }
 
+// The SDK's inline ToAvmDisplayObjContainer (AS3_AvmDisplayObjContainer.h); NULL in, NULL out.
+static inline AvmDisplayObjContainer* ToAvmDisplayObjContainer16z(DisplayObjContainer* pobj)
+{
+    if (!pobj)
+        return NULL;
+    AvmDisplayObjContainerBase* b = pobj->GetAvmDispContainer();
+    return b ? static_cast<AvmDisplayObjContainer*>(b) : NULL;
+}
+
+// Runs the collection System.gc scheduled (inline in the SDK collector).
+static inline void RunScheduledCollection16z(ASRefCountCollector* gc, void* stats)
+{
+    if (gc->CollectionScheduledFlags)
+    {
+        gc->CollectionScheduledFlags = 0;
+        FUN_142504630(gc, stats);
+    }
+}
+
 // MovieRoot::AdvanceFrame: until the main movie's loader events are done, fires its loaderInfo init (once), progress
 // (each full frame, or once loading has finished) and complete events. An invalidated stage gets its RENDER events run
 // right away. A full frame runs a collection System.gc scheduled, then advances the collector.
-// MS2-FUNCTIONAL: the scheduled collection is called through its exe address
+// The scheduled collection (ASRefCountCollector::ForceCollect) is called through its exe address.
 // @0x1424eb2f0
 void MovieRoot::AdvanceFrame(bool nextFrame)
 {
-    void* advanceStats = *reinterpret_cast<void* const*>(&pMovieImpl->pAdvanceStats);
     if (!(MainLoaderInfoEventsState & 2))
     {
         MovieDefImpl* md = pMovieImpl->pMainMovie->GetResourceMovieDef();
         DisplayObjContainer* rt = GetRootMovie418(NULL);
-        SPtr<Instances::fl_display::DisplayObject> as3obj = ToAvmDisplayObj(AsDisplayObject(rt))->GetAS3Obj();
+        SPtr<Instances::fl_display::DisplayObject> as3obj = ToAvmDisplayObjContainer16z(rt)->GetAS3Obj();
         if (as3obj && as3obj->HasLoaderInfo())
         {
             if (!(MainLoaderInfoEventsState & 1))
@@ -549,19 +567,11 @@ void MovieRoot::AdvanceFrame(bool nextFrame)
         DoActions();
         StageInvalidated = false;
     }
-    if (nextFrame)
+    if (nextFrame && MemContext->ASGC)
     {
-        ASRefCountCollector* gc = MemContext->ASGC;
-        if (gc)
-        {
-            if (gc->CollectionScheduledFlags)
-            {
-                gc->CollectionScheduledFlags = 0;
-                FUN_142504630(gc, advanceStats);
-            }
-            Sfr21ASGCAdvanceFrame(gc, &NumAdvancesSinceCollection, &LastCollectionFrame,
-                                  static_cast<ASRefCountCollector::StatsObserver*>(advanceStats));
-        }
+        RunScheduledCollection16z(MemContext->ASGC, *reinterpret_cast<void* const*>(&pMovieImpl->pAdvanceStats));
+        Sfr21ASGCAdvanceFrame(MemContext->ASGC, &NumAdvancesSinceCollection, &LastCollectionFrame,
+                              static_cast<ASRefCountCollector::StatsObserver*>(*reinterpret_cast<void* const*>(&pMovieImpl->pAdvanceStats)));
     }
 }
 
