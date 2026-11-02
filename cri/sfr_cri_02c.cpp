@@ -2081,7 +2081,20 @@ void crimvply_makeFrameInfoMembers(void* player, void* output, const void* frame
     }
 }
 
-// MS2-FUNCTIONAL: update playback-frame timing statistics and the public frame-result state.
+// The playback statistics at CriMvEasyPlayer+0x668, as the exe reads them field by field.
+struct PlaybackStatsView
+{
+    CriUint64  frames;          // 0x668
+    CriUint64  skipped[4];      // 0x670: 1, 2, 3 and more frames since the last one
+    CriUint64  late;            // 0x690
+    CriUint64  starved;         // 0x698
+    CriFloat32 maxDelay;        // 0x6a0
+    CriFloat32 avgDelay;        // 0x6a4
+};
+#define MS2_PLAYBACK_STATS(p) (*(PlaybackStatsView*)(p)->playback_info)
+
+// Update playback-frame timing statistics and the public frame-result state.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): res, elapsed, cur, step, units, gap, info.
 // @0x1400393f0
 void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFrame,
                    CriSint32 dropped, CriUint64 count, CriUint64 unit)
@@ -2092,42 +2105,56 @@ void FUN_1400393f0(CriMvEasyPlayer* player, CriSint32 onTime, CriSint32 validFra
     }
     else if (onTime == 0)
     {
-        CriUint64* counters = (CriUint64*)player->playback_info;
-        ++counters[5];
+        ++MS2_PLAYBACK_STATS(player).late;
         player->last_frame_result = 1;
     }
     else
     {
         if (validFrame == 1)
         {
-            CriUint64 currentFrame = *(CriUint64*)player->playback_info;
-            CriUint64 difference = currentFrame - player->unk658;
-            CriUint64* counters = (CriUint64*)player->playback_info;
-            if (difference == 1) ++counters[1];
-            else if (difference == 2) ++counters[2];
-            else if (difference == 3) ++counters[3];
-            else if (difference != 0) ++counters[4];
-
-            CriUint64 systemCount = 0;
-            CriUint64 systemUnit = 1;
-            player->GetTime(systemCount, systemUnit);
-            CriFloat32 currentMs = (CriFloat32)systemCount / (CriFloat32)systemUnit;
-            CriFloat32 frameMs = (CriFloat32)count / (CriFloat32)unit;
-            CriFloat32 elapsed = (currentMs - frameMs) * 1000.0f;
-            CriFloat32* timing = (CriFloat32*)player->playback_info;
-            if (timing[14] < elapsed)
-                timing[14] = elapsed;
+            CriUint64 res;
+            CriFloat32 elapsed;
+            CriFloat32 cur;
+            CriFloat32 step;
+            CriUint64 units;
+            CriUint64 gap;
+            gap = MS2_PLAYBACK_STATS(player).frames - player->unk658;
+            switch (gap)
+            {
+            case 0:
+                break;
+            case 1:
+                ++MS2_PLAYBACK_STATS(player).skipped[0];
+                break;
+            case 2:
+                ++MS2_PLAYBACK_STATS(player).skipped[1];
+                break;
+            case 3:
+                ++MS2_PLAYBACK_STATS(player).skipped[2];
+                break;
+            default:
+                ++MS2_PLAYBACK_STATS(player).skipped[3];
+                break;
+            }
+            player->GetTime(res, units, CriMv::ErrorContainer);
+            cur = (CriFloat32)res / (CriFloat32)units;
+            step = (CriFloat32)count / (CriFloat32)unit;
+            elapsed = (cur - step) * 1000.0f;
+            if (elapsed > MS2_PLAYBACK_STATS(player).maxDelay)
+                MS2_PLAYBACK_STATS(player).maxDelay = elapsed;
             player->unk660 += elapsed;
-            timing[15] = currentFrame == 0 ? player->unk660 : player->unk660 / (CriFloat32)currentFrame;
-            player->unk658 = currentFrame;
+            if (MS2_PLAYBACK_STATS(player).frames == 0)
+                MS2_PLAYBACK_STATS(player).avgDelay = player->unk660;
+            else
+                MS2_PLAYBACK_STATS(player).avgDelay = player->unk660 / (CriFloat32)MS2_PLAYBACK_STATS(player).frames;
+            player->unk658 = MS2_PLAYBACK_STATS(player).frames;
             player->last_frame_result = 0;
         }
         else if (!player->modules_stopped)
         {
-            CriUint64* counters = (CriUint64*)player->playback_info;
-            ++counters[6];
-            CriMvInputBufferInfo info = {};
-            player->GetInputBufferInfo(info);
+            CriMvInputBufferInfo info;
+            ++MS2_PLAYBACK_STATS(player).starved;
+            player->GetInputBufferInfo(info, CriMv::ErrorContainer);
             player->last_frame_result = 2;
         }
         if (dropped != 0)
