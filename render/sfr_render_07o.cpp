@@ -139,8 +139,8 @@ static inline const Matrix3F& matrix3DDirect(const HMatrix& matrix)
 // The layer matrix of a vector glyph (the view matrix with the glyph's origin and size scale prepended), its colour
 // as a cxform (the colour as the add row, appended to the view cxform), and the key flags of its mesh. A cursor
 // layer is keyed as a mask without edge AA.
-// MS2-FUNCTIONAL: register allocation differs; the cxform lookup uses its first-element offset directly to avoid
-// the absolute MatrixElementSizeTable ADDR32NB relocation, with the same matrix-block layout.
+// MS2-FUNCTIONAL: register allocation differs in the 2D path: the exe loads vec.x once into xmm9 and saves
+// xmm6 and xmm9 where ours saves xmm7
 // @0x1426e1d30
 unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMeshEntry& ent, const Matrix2F& scalingMtx,
                                             float sizeScale, const HMatrix& m, Renderer2DImpl* ren,
@@ -177,12 +177,8 @@ unsigned TextMeshProvider::CalcVectorParams(TextMeshLayer& layer, const TextMesh
     colorCx.M[1][1] = (float)(int)((c >> 8) & 0xff) / 255.0f;
     colorCx.M[1][2] = (float)(int)(c & 0xff) / 255.0f;
     colorCx.M[1][3] = (float)(int)(c >> 24) / 255.0f;
-    // Cxform is the first optional element in a matrix block, so when present
-    // it begins at the data start. Avoid the absolute lookup table here: its
-    // ADDR32NB reference cannot be represented by the hook DLL linker.
-    MatrixPoolImpl::DataHeader* matrixData = m.pHandle->pHeader;
-    const Cxform* matrixCxform = matrixData->HasElement(MatrixPoolImpl::HMatrixConstants::Element_Cxform)
-        ? reinterpret_cast<const Cxform*>(matrixData->GetDataStart()) : &Cxform::Identity;
+    const Cxform* matrixCxform = !(m.GetFormatBits() & MatrixPoolImpl::HMatrixConstants::Has_Cxform)
+        ? &Cxform::Identity : m.pHandle->GetCxformPtr();
     colorCx.Append(*matrixCxform);
     layer.M.SetCxform(colorCx);
 
