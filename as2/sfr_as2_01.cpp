@@ -921,7 +921,7 @@ void LoadVarsProto::ToString(const FnCall& fn)
     visitor.pString = &result;
     pthis->VisitMembers(fn.Env->GetSC(), &visitor, 0);
     result.Remove(result.GetLength() - 1, 1);
-    fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+    fn.Result->SetString(fn.Env->CreateString(result));
 }
 
 // ---- MovieClipLoader ----
@@ -1466,7 +1466,7 @@ void GAS_GlobalEscape(const FnCall& fn)
         ASString src = fn.Arg(0).ToString(fn.Env);
         String   result;
         ASUtils::Escape(src.ToCStr(), src.GetSize(), &result);
-        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+        fn.Result->SetString(fn.Env->CreateString(result));
     }
 }
 
@@ -1480,7 +1480,7 @@ void GAS_GlobalUnescape(const FnCall& fn)
         ASString src = fn.Arg(0).ToString(fn.Env);
         String   result;
         ASUtils::Unescape(src.ToCStr(), src.GetSize(), &result);
-        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+        fn.Result->SetString(fn.Env->CreateString(result));
     }
 }
 
@@ -1494,7 +1494,7 @@ void GAS_GlobalEscapeSpecialHTML(const FnCall& fn)
         ASString src = fn.Arg(0).ToString(fn.Env);
         String   result;
         String::EscapeSpecialHTML(src.ToCStr(), src.GetLength(), &result);
-        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+        fn.Result->SetString(fn.Env->CreateString(result));
     }
 }
 
@@ -1508,7 +1508,7 @@ void GAS_GlobalUnescapeSpecialHTML(const FnCall& fn)
         ASString src = fn.Arg(0).ToString(fn.Env);
         String   result;
         String::UnescapeSpecialHTML(src.ToCStr(), src.GetLength(), &result);
-        fn.Result->SetString(fn.Env->CreateString(result.ToCStr(), result.GetSize()));
+        fn.Result->SetString(fn.Env->CreateString(result));
     }
 }
 
@@ -1745,7 +1745,7 @@ void MatrixProto::ToString(const FnCall& fn)
     str += ", ty=";
     str += mxs[5].ToCStr();
     str += ")";
-    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str));
 }
 
 // @0x1428ed9e0
@@ -2429,7 +2429,7 @@ void RectangleProto::ToString(const FnCall& fn)
     str += ", height=";
     str += ps[3].ToCStr();
     str += ")";
-    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str));
 }
 
 // New rectangle enclosing both (NaN edges count as 0); NaN without an argument.
@@ -2617,7 +2617,7 @@ void PointProto::ToString(const FnCall& fn)
     str += ", y=";
     str += ps[Point_Y].ToCStr();
     str += ")";
-    fn.Result->SetString(fn.Env->GetSC()->CreateString(str.ToCStr(), str.GetSize()));
+    fn.Result->SetString(fn.Env->GetSC()->CreateString(str));
 }
 
 // Distance between two points; undefined when neither argument is a Point.

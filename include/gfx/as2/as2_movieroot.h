@@ -216,6 +216,8 @@ public:
     {
         return pStringManager->CreateString(pstr, length);
     }
+    // The string manager is loaded before the String's data and size (exe 0x1428f7ed0).
+    ASString CreateString(const String& str) const { return pStringManager->CreateString(str); }
     ASString CreateString(const char* pstr) const { return ASString(pStringManager->CreateStringNode(pstr)); }
     ASString CreateString(const wchar_t* pwstr) const { return ASString(pStringManager->CreateStringNode(pwstr)); }
     // A string over the literal itself (not copied).
@@ -594,7 +596,7 @@ inline ASString ASStringContext::CreateString(const char* pstr, UPInt length) co
 
 inline ASString ASStringContext::CreateString(const String& str) const
 {
-    return CreateString(str.ToCStr(), str.GetSize());
+    return ((MovieRoot*)pContext->pMovieRoot->pASMovieRoot)->GetStringManager()->CreateString(str);
 }
 
 inline ASString Environment::CreateString(const String& str) const
