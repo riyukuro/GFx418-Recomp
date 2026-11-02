@@ -30,45 +30,30 @@ static SF_FORCEINLINE void CollectorAdvanceFrame(ASRefCountCollector* pgc, unsig
         ++*pframeCnt;
         return;
     }
+    unsigned roots = pgc->GetRootsCount();
     ++pgc->FrameCountTotal;
-    unsigned frames = ++pgc->FrameCnt;
-    unsigned roots  = pgc->GetRootsCount();
-    unsigned peak   = roots;
-    if (peak < pgc->PeakRootCount)
-        peak = pgc->PeakRootCount;
-    pgc->PeakRootCount = peak;
+    ++pgc->FrameCnt;
+    pgc->PeakRootCount = Alg::Max(pgc->PeakRootCount, roots);
     if ((pgc->PresetMaxRootCount != 0 && roots > pgc->MaxRootCount) ||
-        (pgc->PresetFramesBetween != 0 && frames >= pgc->PresetFramesBetween && roots > pgc->PresetMaxRootCount))
+        (pgc->PresetFramesBetween != 0 && pgc->FrameCnt >= pgc->PresetFramesBetween && roots > pgc->PresetMaxRootCount))
     {
-        frames = 0;
         RefCountCollector<StatMV_ActionScript_Mem>::Stats stats;
         pgc->Collect(&stats);
-        unsigned limit;
-        if (pgc->PresetMaxRootCount < stats.RootsFreedTotal)
+        if (stats.RootsFreedTotal > pgc->PresetMaxRootCount)
         {
             pgc->PeakRootCount = roots;
-            limit              = pgc->PresetMaxRootCount;
-            peak               = roots;
+            pgc->MaxRootCount  = pgc->PresetMaxRootCount;
         }
-        else
-        {
-            limit = pgc->MaxRootCount;
-            peak  = pgc->PeakRootCount;
-        }
+        pgc->MaxRootCount = Alg::Max(pgc->MaxRootCount, roots - stats.RootsFreedTotal);
+        if (pgc->PeakRootCount < (unsigned)(pgc->MaxRootCount * 0.7))
+            pgc->MaxRootCount = (unsigned)(pgc->MaxRootCount * 0.7);
+        pgc->CollectCount      = pgc->FrameCountTotal;
         pgc->FrameCnt          = 0;
-        pgc->PeakRootCountLast = peak;
+        pgc->PeakRootCountLast = pgc->PeakRootCount;
         pgc->RootsLeftLast     = stats.RootsFreedTotal;
-        unsigned left          = roots - stats.RootsFreedTotal;
-        if (left < limit)
-            left = limit;
-        unsigned scaled = (unsigned)(SInt64)((double)left * 0.7);
-        if (peak < scaled)
-            left = scaled;
-        pgc->MaxRootCount = left;
-        pgc->CollectCount = pgc->FrameCountTotal;
     }
     pgc->LastRootCount = roots;
-    *pframeCnt         = frames;
+    *pframeCnt         = pgc->FrameCnt;
     *pseenCount        = pgc->CollectCount;
 }
 
