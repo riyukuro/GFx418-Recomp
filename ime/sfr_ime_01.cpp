@@ -3439,36 +3439,41 @@ void FUN_1423d8f20(unsigned long long* map, void* source)
     }
 }
 
-// MS2-FUNCTIONAL: stores the supplied IME value for its matching language/mode and updates each affected mode string.
+static __forceinline void Ime01AddModeName(void* list, const Scaleform::String& name)
+{
+    // FUN_1422fd480 takes the name as const String&; the exe passes it a temporary copy.
+    reinterpret_cast<void(*)(void*, const Scaleform::String&)>(&FUN_1422fd480)(list, Scaleform::String(name));
+}
+
+// Stores a copy of the supplied 0x58-byte IME value in every layout entry whose language name and mode match, and
+// adds the entry's name to each affected mode list (the exe neither checks the language nor the allocation).
+// MS2-FUNCTIONAL: the exe loads the layout array into rcx (ours rax) for the name compare and swaps base/index on
+// the first id read (3 instructions).
 // @0x1423d5b00
 void FUN_1423d5b00(unsigned long long* manager, const unsigned long long* value, const char* language)
 {
+    struct ValueBlock { unsigned long long q[11]; };
+    struct LayoutEntry { unsigned long long pad0[2]; Scaleform::String name; unsigned long long pad1; unsigned id; unsigned pad2;
+        ValueBlock* value; };
     auto** vtable = reinterpret_cast<void**>(manager[0]);
     const unsigned mode = reinterpret_cast<unsigned(*)(void*, unsigned short)>(vtable[4])(
         manager, *reinterpret_cast<const unsigned short*>(reinterpret_cast<const unsigned char*>(value) + 4));
-    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
-    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
-    const unsigned count = static_cast<unsigned>(manager[0x1a]);
-    for (unsigned i = 0; i < count; ++i) {
-        auto* entry = entries + i * 0x30;
-        auto* name = reinterpret_cast<Scaleform::String*>(entry + 0x10);
-        if (!language || _stricmp(name->ToCStr(), language) != 0) continue;
-        if (reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3])(
-                manager, *reinterpret_cast<unsigned*>(entry + 0x20)) != mode) continue;
-
-        auto* copied = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x58));
-        if (!copied) return;
-        std::memcpy(copied, value, 0x58);
-        *reinterpret_cast<unsigned long long**>(entry + 0x28) = copied;
-        states[i] = 1;
-        if (*reinterpret_cast<unsigned char*>(copied + 10) & 1) {
-            *reinterpret_cast<unsigned*>(manager + 0x11) = *reinterpret_cast<unsigned*>(entry + 0x20);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(manager + 0x1a); ++i) {
+        if (Scaleform::SFstricmp(reinterpret_cast<LayoutEntry*>(manager[0x17])[i].name.ToCStr(), language) != 0) continue;
+        if (mode != reinterpret_cast<unsigned(*)(void*, unsigned)>((*reinterpret_cast<void***>(manager))[3])(
+                manager, reinterpret_cast<LayoutEntry*>(manager[0x17])[i].id)) continue;
+        auto* copied = static_cast<ValueBlock*>(Scaleform::Memory::Alloc(0x58));
+        *copied = *reinterpret_cast<const ValueBlock*>(value);
+        reinterpret_cast<LayoutEntry*>(manager[0x17])[i].value = copied;
+        reinterpret_cast<unsigned*>(manager[0x32])[i] = 1;
+        if (*reinterpret_cast<unsigned char*>(&copied->q[10]) & 1) {
+            *reinterpret_cast<unsigned*>(manager + 0x11) = reinterpret_cast<LayoutEntry*>(manager[0x17])[i].id;
             *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) = mode;
         }
-        if (mode & 0xf00) FUN_1422fd480(manager + 2, name);
-        if (mode & 0xf000) FUN_1422fd480(manager + 5, name);
-        if (mode & 0xf0000) FUN_1422fd480(manager + 8, name);
-        if (mode & 0xf) FUN_1422fd480(manager + 0xb, name);
+        if (mode & 0xf00) Ime01AddModeName(manager + 2, reinterpret_cast<LayoutEntry*>(manager[0x17])[i].name);
+        if (mode & 0xf000) Ime01AddModeName(manager + 5, reinterpret_cast<LayoutEntry*>(manager[0x17])[i].name);
+        if (mode & 0xf0000) Ime01AddModeName(manager + 8, reinterpret_cast<LayoutEntry*>(manager[0x17])[i].name);
+        if (mode & 0xf) Ime01AddModeName(manager + 0xb, reinterpret_cast<LayoutEntry*>(manager[0x17])[i].name);
     }
 }
 
