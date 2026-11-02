@@ -231,7 +231,7 @@ void IntervalTimer::Clear()
 }
 
 // @0x1424f0b70
-bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
+__declspec(noinline) bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
 {
     if ((static_cast<UInt32>(Kind) & 3) != 2)
         return static_cast<const Instances::Namespace&>(*Obj) == ns;
@@ -3884,38 +3884,45 @@ CheckResult Value::Convert2Int32(SInt32& result) const
     return true;
 }
 
+// PropRef(const Value& _this, const SlotInfo* si, UPInt index) of the SDK, which our PropRef view lacks.
+struct Sfr33SlotPropRef
+{
+    const SlotInfo* pSI;
+    UPInt SlotIndex;
+    Value This;
+    Sfr33SlotPropRef(const Value& _this, const SlotInfo* si, UPInt index) : pSI(si), SlotIndex(index), This(_this) {}
+    const PropRef& Get() const { return *reinterpret_cast<const PropRef*>(this); }
+};
+
 // The property named mn of the object value stands for: its fixed slots, then (public names only) its dynamic
 // values and the prototypes of its traits; a function falls back to its saved scope.
-// MS2-FUNCTIONAL 0x142501b00: the exe copies the value through a temporary before the assignment, move-assigns the dynamic lookup result and calls IsXMLObject out of line.
+// MS2-FUNCTIONAL 0x142501b00: the exe expands the dynamic lookup temporary's PropRef dtor in place (ours is out of line, 0x1424de8f0) and tests the tagged null bit through a byte shift.
 // @0x142501b00
 void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Multiname& mn, int attr)
 {
     const unsigned kind = value.GetKind();
     const bool isObj = kind >= Value::kObject && kind <= Value::kFunction;
     const Traits* tr = &vm.GetValueTraits(value);
-    Object* obj = isObj ? value.GetObject() : NULL;
     UPInt index = 0;
-    const SlotInfo* si = FindFixedSlot(vm, *tr, mn, index, obj);
+    const SlotInfo* si = FindFixedSlot(vm, *tr, mn, index, isObj ? value.GetObject() : NULL);
     if (si)
     {
-        result.pSI = si;
-        result.SlotIndex = index;
-        result.This = value;
+        result = Sfr33SlotPropRef(value, si, index).Get();
         return;
     }
     if (!mn.ContainsNamespace(vm.GetPublicNamespace()))
         return;
     if (isObj && tr->IsDynamic() && (attr != 2 || !IsXMLObject(value)))
-        result = obj->FindDynamicSlot(mn);
+        result = value.GetObject()->FindDynamicSlot(mn);
     if (Sfr33PropFound(result) || attr == 1)
         return;
     for (; tr; tr = tr->GetParent())
     {
         tr->GetConstructor().GetPrototype().FindProperty(result, mn, attr);
-        if (Sfr33PropFound(result))
+        if (result)
             break;
     }
-    if (!Sfr33PropFound(result) && value.GetKind() == Value::kFunction)
+    if (!result && value.GetKind() == Value::kFunction)
         Sfr33FindScopeProperty(result, vm, 0,
                                *reinterpret_cast<const ScopeStackType*>(reinterpret_cast<const UByte*>(value.GetObject()) + 0x40),
                                mn);
