@@ -276,8 +276,8 @@ void FontGlyphPacker::rasterizeGlyph(RawImage* texImage, GlyphInfo* gi)
     if (!shape || shape->IsEmpty())
         return;
 
-    ToleranceParams tolerance;
     float           scale = PackTextureConfig.NominalSize / FontPackParams::GlyphBoundBox;
+    ToleranceParams tolerance;
     ShapePosInfo    pos(shape->GetStartingPos());
     float           coord[Edge_MaxCoord];
     unsigned        styles[3];
@@ -291,33 +291,35 @@ void FontGlyphPacker::rasterizeGlyph(RawImage* texImage, GlyphInfo* gi)
             break;
         firstPath = false;
 
-        if (styles[0] == styles[1])
+        if (styles[0] != styles[1])
+        {
+            coord[0] *= scale;
+            coord[1] *= scale;
+            Ras.MoveTo(coord[0], coord[1]);
+            PathEdgeType edge;
+            while ((edge = shape->ReadEdge(&pos, coord)) != Edge_EndPath)
+            {
+                if (edge == Edge_LineTo)
+                {
+                    coord[0] *= scale;
+                    coord[1] *= scale;
+                    Ras.LineTo(coord[0], coord[1]);
+                }
+                else
+                {
+                    coord[0] *= scale;
+                    coord[1] *= scale;
+                    coord[2] *= scale;
+                    coord[3] *= scale;
+                    TessellateQuadCurve(&Ras, tolerance, coord[0], coord[1], coord[2], coord[3]);
+                }
+            }
+            Ras.ClosePath();
+        }
+        else
         {
             shape->SkipPathData(&pos);
-            continue;
         }
-        coord[0] *= scale;
-        coord[1] *= scale;
-        Ras.MoveTo(coord[0], coord[1]);
-        PathEdgeType edge;
-        while ((edge = shape->ReadEdge(&pos, coord)) != Edge_EndPath)
-        {
-            if (edge == Edge_LineTo)
-            {
-                coord[0] *= scale;
-                coord[1] *= scale;
-                Ras.LineTo(coord[0], coord[1]);
-            }
-            else
-            {
-                coord[0] *= scale;
-                coord[1] *= scale;
-                coord[2] *= scale;
-                coord[3] *= scale;
-                TessellateQuadCurve(&Ras, tolerance, coord[0], coord[1], coord[2], coord[3]);
-            }
-        }
-        Ras.ClosePath();
     }
 
     if (Ras.SortCells())
