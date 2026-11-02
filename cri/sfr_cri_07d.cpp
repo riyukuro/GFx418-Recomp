@@ -4,12 +4,14 @@
 // was C. The rest of that obj stays in sfr_cri_07 (its __try blocks and globals would need a full C port first). This
 // unit is C (MS2-TOOLSET: vc9c, the VS2008 SP1 cl with /TC, cmake/ms2-unit-profiles.cmake): C89 declarations at the
 // top of each block, and the parameter types of the sfr_cri_07 declarations, so a C++ compile (clang-cl) mangles every
-// name as they do. Every function is a behaviour-equivalent transcription.
+// name as they do. Every function is a behaviour-equivalent transcription. The unit also holds the C row of sfr_cri_06b's
+// /O2 plane-group obj (mpvm2v_CopyPicAtr), outside the /Od pragma.
 // MS2-UNIT: sfr_cri_07d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x140067ac0-0x140067bf0 .text$mn
 // MS2-RANGE: 0x140068190-0x140068280 .text$mn
+// MS2-RANGE: 0x140062950-0x140062a40 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -106,3 +108,59 @@ cri_u8 FUN_140068210(longlong arg1)
   return 0;
 }
 #pragma optimize("", on)
+
+// ==== sfr_cri_06b's plane-group obj (/O2) ============================================================================
+// cri_any is the vendor shim's untyped argument word: a plain cri_u8 here, and in a C++ compile a one-word struct of the
+// same name, so the names mangle as sfr_cri_06b's declarations do
+#ifdef __cplusplus
+struct cri_any
+{
+    cri_u8 v;
+    cri_any(cri_u8 x) : v(x) {}
+    cri_any(void *p) : v((cri_u8)p) {}
+    operator cri_u8() const { return v; }
+};
+#else
+typedef cri_u8 cri_any;
+#endif
+typedef unsigned char cri_u1;
+
+void M2V_GetPicAtr(cri_any, cri_any);
+void M2V_GetBitRate(cri_any, cri_any);
+void M2V_GetVbvBufSiz(cri_any, cri_any, cri_any, cri_any);
+void M2V_GetLinkFlg(cri_any, cri_any, cri_any);
+// the C names bind to sfr_cri_06's C++ definitions, and the C++ callers' name to the C definition below
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:M2V_GetPicAtr=?M2V_GetPicAtr@@YAXUcri_any@@0@Z")
+#pragma comment(linker, "/alternatename:M2V_GetBitRate=?M2V_GetBitRate@@YAXUcri_any@@0@Z")
+#pragma comment(linker, "/alternatename:M2V_GetVbvBufSiz=?M2V_GetVbvBufSiz@@YAXUcri_any@@000@Z")
+#pragma comment(linker, "/alternatename:M2V_GetLinkFlg=?M2V_GetLinkFlg@@YAXUcri_any@@00@Z")
+#pragma comment(linker, "/alternatename:?mpvm2v_CopyPicAtr@@YAXUcri_any@@@Z=mpvm2v_CopyPicAtr")
+#endif
+
+// copy the decoder's picture attributes, bit rate, VBV buffer size and link flags into the handle. As C++ the struct
+// argument word moves the 0x16d8 load past the 0x16d4 store; the exe obj was C.
+// @0x140062950
+void mpvm2v_CopyPicAtr(cri_any cri_p0)
+{
+  longlong arg1 = (longlong)(cri_u8)cri_p0;
+  cri_u4 loc_b8;
+  cri_u4 loc_b4;
+  cri_u4 loc_b0;
+  cri_u4 loc_ac;
+  int loc_a8;
+  cri_u4 loc_a4;
+  cri_u1 loc_98 [128];
+
+  M2V_GetPicAtr(*(cri_u8 *)((char *)arg1 + 0x1848),(cri_any)(void *)loc_98);
+  M2V_GetBitRate(*(cri_u8 *)((char *)arg1 + 0x1848),(cri_any)(void *)&loc_b4);
+  M2V_GetVbvBufSiz(*(cri_u8 *)((char *)arg1 + 0x1848),(cri_any)(void *)&loc_a8,(cri_any)(void *)&loc_ac,
+                   (cri_any)(void *)&loc_a4);
+  M2V_GetLinkFlg(*(cri_u8 *)((char *)arg1 + 0x1848),(cri_any)(void *)&loc_b8,(cri_any)(void *)&loc_b0);
+  memcpy((void *)((char *)arg1 + 0x1598),loc_98,0x80);
+  *(cri_u4 *)((char *)arg1 + 0x16d4) = loc_b4;
+  *(int *)((char *)arg1 + 0x16d8) = loc_a8 / 0x800;
+  *(cri_u4 *)((char *)arg1 + 0x16e8) = loc_ac;
+  *(cri_u4 *)((char *)arg1 + 0x16e0) = loc_b8;
+  *(cri_u4 *)((char *)arg1 + 0x16e4) = loc_b0;
+}

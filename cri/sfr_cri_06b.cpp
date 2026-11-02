@@ -7,7 +7,8 @@
 // MS2-UNIT: sfr_cri_06b
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1400627a0-0x140062c10 .text$mn
+// MS2-RANGE: 0x1400627a0-0x140062950 .text$mn
+// MS2-RANGE: 0x140062a40-0x140062c10 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 #include "../include/cri/cri_vendor_shim.h"
@@ -1029,32 +1030,6 @@ void MPVM2V_SetCond(longlong arg1)
     return;
   }
   M2V_SetCond(*(cri_u8 *)((char *)arg1 + 0x1848));
-  return;
-}
-
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x140062950
-void mpvm2v_CopyPicAtr(cri_any cri_p0)
-{
-  longlong arg1 = cri_p0;
-  cri_u4 loc_b8;
-  cri_u4 loc_b4;
-  cri_u4 loc_b0;
-  cri_u4 loc_ac;
-  int loc_a8;
-  cri_u4 loc_a4;
-  cri_u1 loc_98 [128];
-  
-  M2V_GetPicAtr(*(cri_u8 *)((char *)arg1 + 0x1848),loc_98);
-  M2V_GetBitRate(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_b4);
-  M2V_GetVbvBufSiz(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_a8,&loc_ac,&loc_a4);
-  M2V_GetLinkFlg(*(cri_u8 *)((char *)arg1 + 0x1848),&loc_b8,&loc_b0);
-  memcpy((void *)((char *)arg1 + 0x1598),loc_98,0x80);
-  *(cri_u4 *)((char *)arg1 + 0x16d4) = loc_b4;
-  *(int *)((char *)arg1 + 0x16d8) = loc_a8 / 0x800;
-  *(cri_u4 *)((char *)arg1 + 0x16e8) = loc_ac;
-  *(cri_u4 *)((char *)arg1 + 0x16e0) = loc_b8;
-  *(cri_u4 *)((char *)arg1 + 0x16e4) = loc_b0;
   return;
 }
 
