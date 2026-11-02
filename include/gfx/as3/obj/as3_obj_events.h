@@ -239,12 +239,7 @@ namespace Instances { namespace fl_events {
     struct EventDispatcher::ListenersHash
         : public HashUncachedLH<ASString, ArrayLH<EventDispatcher::Listener>*, ASStringHashFunctor, StatMV_ASString_Mem>
     {
-        // MS2-FUNCTIONAL: the exe calls the listener array destructor (0x142462140) out of line; cl inlines it here
-        ~ListenersHash()
-        {
-            for (Iterator it = Begin(); it != End(); ++it)
-                delete (*it).Second;
-        }
+        ~ListenersHash();
     };
 
     // The listener tables of a dispatcher, made on the first addEventListener.

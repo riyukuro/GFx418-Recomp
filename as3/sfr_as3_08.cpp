@@ -1701,6 +1701,15 @@ namespace Instances { namespace fl_events
     EventDispatcher::~EventDispatcher()
     {
     }
+
+#pragma inline_depth(2)
+    // @0x1424624f0
+    EventDispatcher::ListenersHash::~ListenersHash()
+    {
+        for (Iterator it = Begin(); it != End(); ++it)
+            delete (*it).Second;
+    }
+#pragma inline_depth()
 }}
 
 namespace InstanceTraits { namespace fl_events
