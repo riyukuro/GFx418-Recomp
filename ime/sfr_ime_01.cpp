@@ -4011,7 +4011,24 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
     return raw;
 }
 
+// An empty local Value array (never filled; its destructor still runs).
+struct Ime01ArgArrayEmpty
+{
+    Scaleform::GFx::Value* data;
+    unsigned long long size;
+    unsigned long long capacity;
+    Ime01ArgArrayEmpty() : data(nullptr), size(0), capacity(0) {}
+    ~Ime01ArgArrayEmpty()
+    {
+        FUN_1423ce6c0(data, size);
+        if (data) Memory::Free(data);
+    }
+};
+
 // MS2-FUNCTIONAL: rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
+// The SelectDataItem argument goes through a local Value array (FUN_1423d9730), and each Add call has an empty one, as
+// in the exe. Still differs: rbx/rdi swapped, the Value slots laid out in another order, and the exe keeps the
+// added Value's reset stores before the row release.
 // @0x1423d9b40
 void FUN_1423d9b40(void* raw)
 {
@@ -4032,21 +4049,22 @@ void FUN_1423d9b40(void* raw)
             bridge, name, out, args, count);
     };
 
-    Scaleform::GFx::Value result;
     strcpy_s(command, 0x400, prefix);
     strcat_s(command, 0x400, ".ClearList");
+    Scaleform::GFx::Value result;
     if (void* bridge = bridgeOf()) invoke(bridge, command, &result, nullptr, 0);
     command[0] = 0;
 
     // SelectDataItem goes out before the rows are added (0x1423d9bea), SetList after them.
     strcpy_s(command, 0x400, prefix);
     strcat_s(command, 0x400, ".SelectDataItem");
-    Scaleform::GFx::Value argument;
-    auto* argBytes = reinterpret_cast<unsigned char*>(&argument);
-    *reinterpret_cast<unsigned*>(argBytes + 8) = Scaleform::GFx::Value::VT_Number;
-    *reinterpret_cast<double*>(argBytes + 0x10) =
-        static_cast<double>(*reinterpret_cast<long long*>(self + 0x860));
-    if (void* bridge = bridgeOf()) invoke(bridge, command, &result, &argument, 1);
+    Ime01ValueArgs args;
+    {
+        Scaleform::GFx::Value argument(static_cast<double>(*reinterpret_cast<long long*>(self + 0x860)));
+        FUN_1423d9730(&args, &args, 1);
+        ::new (static_cast<void*>(args.data + args.size - 1)) Scaleform::GFx::Value(argument);
+    }
+    if (void* bridge = bridgeOf()) invoke(bridge, command, &result, args.data, 1);
 
     for (unsigned row = 0; row < *reinterpret_cast<unsigned long long*>(self + 0x850); ++row) {
         auto* rows = *reinterpret_cast<void***>(self + 0x848);
@@ -4055,12 +4073,12 @@ void FUN_1423d9b40(void* raw)
         if (*prefix && callback) {
             strcpy_s(command, 0x400, prefix);
             strcat_s(command, 0x400, ".Add");
-            auto** callbackVtable = *reinterpret_cast<void***>(callback);
             for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x818); ++i)
-                reinterpret_cast<void(*)(void*, void*, void*)>(callbackVtable[1])(callback,
-                    *reinterpret_cast<unsigned char**>(self + 0x828) + i * 0x20,
-                    *reinterpret_cast<unsigned char**>(self + 0x810) + i * sizeof(void*));
+                reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(callback))[1])(callback,
+                    *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828) + i,
+                    *reinterpret_cast<void***>(self + 0x810) + i);
             Scaleform::GFx::Value added;
+            Ime01ArgArrayEmpty unused;
             if (void* bridge = bridgeOf())
                 invoke(bridge, command, &added,
                     *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828),
