@@ -15,6 +15,7 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BED@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142523a30 ; order
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0 ; unique
 // MS2-PINS-END tplpin
+#define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/gfx_input.h"
@@ -1030,8 +1031,9 @@ void Sfr27TraceConvertTopUInt(State* st)
 }
 
 
-// State::ConvertOpTo / ConvertRegisterTo inlined (the store order matches). Top* and Pop2* still differ: the exe
-// tail-calls the weak-proxy free (jmp [rax+0x60]), which cl does not do for an inlined temporary (likely a /GL effect).
+// State::ConvertOpTo / ConvertRegisterTo inlined (the store order matches). The exe tail-calls the weak-proxy free
+// (jmp [rax+0x60]); MS2_AS3_ASSIGN_NOALIAS gives that to Top* and Reg*. Pop2* still end in call; ret (the popped
+// Value's address escapes as PopOpValue's sret) and load Data before Size.
 static inline void TrConvertOp(Value& v, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
     v.Assign(Value(tr, isNull));
