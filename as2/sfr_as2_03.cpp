@@ -877,7 +877,6 @@ LoadVarsObject::LoadVarsObject(Environment* penv) : Object(penv)
     SetMemberRaw(psc, penv->CreateConstString("loaded"), Value(), PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
-// MS2-FUNCTIONAL inlined Value(psc, CFunctionPtr) store scheduling (pLocalFrame store hoisted into the null branch)
 // @0x14291df80
 LoadVarsProto::LoadVarsProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<LoadVarsObject>(psc, pprototype, constructor)
@@ -1203,8 +1202,9 @@ Value::Value(ASStringContext* psc, CFunctionPtr func)
 {
     // The new object's own count is the value's.
     T.Type = FUNCTION;
-    V.FunctionValue.Function    = SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, func);
+    CFunctionObject* pfunc      = SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, func);
     V.FunctionValue.Flags       = 0;
+    V.FunctionValue.Function    = pfunc;
     V.FunctionValue.pLocalFrame = 0;
 }
 
