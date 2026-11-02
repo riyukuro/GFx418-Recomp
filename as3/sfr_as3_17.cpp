@@ -3114,34 +3114,56 @@ bool Sfr33CheckAvm(MovieRoot* self)
 }
 
 
+// A Value holding an object, with Value(Object*) expanded in place as the exe has it: kind kObject, no weak
+// proxy, the object word stored directly and the object AddRef'd.
+struct Sfr17ObjectValue
+{
+    UInt32 Flags;
+    void* pWeakProxy;
+    Object* pObj;
+    void* pRest;
+    explicit Sfr17ObjectValue(Object* p)
+    {
+        Flags = Value::kObject;
+        pWeakProxy = NULL;
+        pObj = p;
+        if (p)
+            p->AddRef();
+    }
+    ~Sfr17ObjectValue() { Get().~Value(); }
+    Value& Get() { return *reinterpret_cast<Value*>(this); }
+};
+
 // Runs the class PostInit of the AS3 object without arguments. When that pushed a call frame, it runs now (execute)
 // or stays queued (1); an exception is reported and flags the display object (+0x88).
-// MS2-FUNCTIONAL 0x1424ee800: the exe builds the Value in place through an inline Value(Object*) (out of line here,
-// so AssignUnsafe stands in and copies through a temporary).
+// MS2-FUNCTIONAL 0x1424ee800: the exe reloads the AS3 object after the entry test, keeps the result in esi
+// (vm in rbp) and sets the queued result 1 out of line through eax.
 // @0x1424ee800
 SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
 {
     if (!pAS3RawPtr && !pAS3CollectiblePtr)
         return 0;
     Class& cls = reinterpret_cast<Object*>(GetAS3Obj())->GetTraits().GetConstructor();
-    Value v;
-    v.AssignUnsafe(reinterpret_cast<Object*>(GetAS3Obj()));
+    Sfr17ObjectValue v(reinterpret_cast<Object*>(GetAS3Obj()));
     unsigned result = 0;
     UByte* const dobj = reinterpret_cast<UByte*>(pDispObj);
     VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(dobj + 0x20) + 0x48);
     if (vm)
     {
         const UPInt depth = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78);
-        cls.PostInit(v, 0, NULL);
+        cls.PostInit(v.Get(), 0, NULL);
         if (*reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78) > depth)
         {
             if (!execute)
-                return 1;
-            vm->ExecuteCode(1);
-            if (*(reinterpret_cast<UByte*>(vm) + 0x180))
+                result = 1;
+            else
             {
-                vm->OutputAndIgnoreException();
-                *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pDispObj) + 0x88) |= 0x20;
+                vm->ExecuteCode(1);
+                if (*(reinterpret_cast<UByte*>(vm) + 0x180))
+                {
+                    vm->OutputAndIgnoreException();
+                    *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pDispObj) + 0x88) |= 0x20;
+                }
             }
         }
     }
