@@ -1215,15 +1215,9 @@ uint64_t* FUN_14001be50(uint64_t* holder, uint64_t replacement)
 // forwards event dispatch to the common AS3 interactive object handler.
 // @0x14001b040
 __declspec(noinline) bool thunk_FUN_142518c70(void* object, void* event) { return reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEvent(*static_cast<const Scaleform::GFx::EventId*>(event)); }
-// MS2-FUNCTIONAL: normalizes a tagged atom and dispatches it through the recovered AS3 helper.
+// AvmInteractiveObj::OnEventLoad.
 // @0x14001b050
-__declspec(noinline) void thunk_FUN_142519080(void* value)
-{
-    uint64_t atom = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(value) + 0x10);
-    if (!atom) atom = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(value) + 8);
-    if (atom & 1) --atom;
-    Scaleform::GFx::AS3::Sfr31SetGcRefClearNext(reinterpret_cast<uint64_t>(value), atom);
-}
+__declspec(noinline) void thunk_FUN_142519080(void* object) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEventLoad(); }
 // AvmInteractiveObj::OnEventUnload.
 // @0x14001b060
 __declspec(noinline) void thunk_FUN_142519860(void* object) { reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(object)->Scaleform::GFx::AS3::AvmInteractiveObj::OnEventUnload(); }
