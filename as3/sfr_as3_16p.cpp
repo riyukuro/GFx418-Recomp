@@ -6,14 +6,11 @@
 
 #include <cstring>
 
-// MS2-FUNCTIONAL 0x1424e0a70: copies the NodeData fields while StateBag assignment retains the shared render-state references.
 // @0x1424e0a70
 Scaleform::Render::TreeNode::NodeData&
 Scaleform::Render::TreeNode::NodeData::operator=(const NodeData& src)
 {
-    auto* dstBytes = reinterpret_cast<unsigned char*>(this);
-    const auto* srcBytes = reinterpret_cast<const unsigned char*>(&src);
-    std::memcpy(dstBytes + 8, srcBytes + 8, 8);
+    ContextImpl::EntryData::operator=(src);
     M34 = src.M34;
     States = src.States;
     Cx = src.Cx;
