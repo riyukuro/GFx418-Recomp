@@ -286,7 +286,7 @@ namespace Instances { namespace fl
 
             TimeHolder(Value::Number time, Value::Number tza);
             Value::Number MakeDate() const;
-        private:
+            // public: Date::applyTimeArg rebuilds the date inline, adding the day to MakeTime's result
             Value::Number Day;                          // +0x20
             Value::Number TZA;                          // +0x28
         };

@@ -1243,7 +1243,7 @@ namespace Instances { namespace fl
     }
 
     // @0x14241a190
-    Value::Number Date::TimeHolder::MakeDate() const
+    __declspec(noinline) Value::Number Date::TimeHolder::MakeDate() const    // out of line in applyTimeArgs as in the exe
     {
         const Value::Number time = Date::MakeTime(Entries[Time_Hour], Entries[Time_Minute], Entries[Time_Second], Entries[Time_Ms]);
         return Date::TimeClip(Day * msPerDay + time - TZA);
@@ -1290,13 +1290,14 @@ namespace Instances { namespace fl
         result.SetNumber(TimeValue);
     }
 
-    // MS2-FUNCTIONAL: the exe computes Day * msPerDay after the MakeTime call
     // @0x142427810
     void Date::applyTimeArg(TimeEntry arg, Value::Number value, Value::Number tza)
     {
         TimeHolder h(TimeValue, tza);
         h.Entries[arg] = value;
-        TimeValue = h.MakeDate();
+        // MakeDate's sum the other way round: the day is added to MakeTime's result
+        TimeValue = TimeClip(MakeTime(h.Entries[Time_Hour], h.Entries[Time_Minute], h.Entries[Time_Second], h.Entries[Time_Ms])
+                             + h.Day * msPerDay - h.TZA);
     }
 
     // @0x142427900
