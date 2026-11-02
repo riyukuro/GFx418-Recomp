@@ -65,6 +65,13 @@ SF_INLINE void Value::Pick(ValueStack& v)
     --v.pCurrent;
 }
 
+// (appended, ug7) constructs from the top value of the stack and pops it, as the SDK readers' members do
+// (inlined in the setslot handlers 0x1425402a0).
+SF_INLINE Value::Value(ValueStack& v) : Flags(v.pCurrent->Flags), Bonus(v.pCurrent->Bonus), value(v.pCurrent->value)
+{
+    --v.pCurrent;
+}
+
 // (appended, sfr19) the register files of the call frames: pages of values, each followed by the sizes of the
 // register sets reserved in it. Only what AllocPage touches is modeled.
 class ValueRegisterFile

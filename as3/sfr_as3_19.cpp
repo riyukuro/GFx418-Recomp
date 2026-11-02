@@ -52,7 +52,15 @@ struct ValueAssignCopies
             memcpy(&v, &other, sizeof(Value));
             v.AddRef();
         }
-    }    // Value::ReleaseInternal (0x142521f00) is private; the tracer calls it out of line.
+    }
+    // Value::PickUnsafe(Value&) as the SDK writes it: other is moved bitwise and left undefined.
+    static SF_INLINE void PickUnsafeCopy(Value& v, Value& other)
+    {
+        SIMD::PrefetchObj(&other);
+        memcpy(&v, &other, sizeof(Value));
+        other.SetFlags(0);
+    }
+    // Value::ReleaseInternal (0x142521f00) is private; the tracer calls it out of line.
     static void ReleaseInternal(Value& v) { v.ReleaseInternal(); }
 };
 }}}
@@ -429,26 +437,25 @@ void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
     }
 }
 
-// MS2-FUNCTIONAL 0x1425276d0: updates the pair name, prior-name chain and name-to-slot map; Ptr/Hash helpers produce different temporary refcount code.
 // @0x1425276d0
 __declspec(noinline) void Slots::SetKey(AbsoluteIndex ind, const ASString& key)
 {
-    const UInt32 ownIndex = static_cast<UInt32>(ind.Get()) - static_cast<UInt32>(FirstOwnSlotNum);
-    Pair& pair = VArray[ownIndex];
-    if (pair.Key.GetPtr() == key.GetNode())
+    const UPInt ownIndex = static_cast<UInt32>(ind.Get()) - FirstOwnSlotNum;
+    ASStringNode* const node = key.GetNode();
+    if (VArray[ownIndex].Key.GetPtr() == node)
         return;
 
-    pair.Key = key.GetNode();
-    const UInt32* previous = Set.Get(pair.Key);
-    if (previous)
+    VArray[ownIndex].Key = node;
+    SetType::Iterator it = Set.Find(node);
+    if (!it.IsEnd())
     {
-        pair.Prev = static_cast<SPInt>(*previous);
-        Set.Set(pair.Key, static_cast<UInt32>(ind.Get()));
+        VArray[ownIndex].Prev = static_cast<const SetType::ConstIterator&>(it)->Second;
+        it->Second = static_cast<UInt32>(FirstOwnSlotNum + ownIndex);
     }
     else
     {
-        pair.Prev = -1;
-        Set.Set(pair.Key, static_cast<UInt32>(ind.Get()));
+        Set.Add(node, static_cast<UInt32>(FirstOwnSlotNum + ownIndex));
+        VArray[ownIndex].Prev = -1;
     }
 }
 
@@ -1370,22 +1377,34 @@ void Sfr27ExecGetOwnSlot(VM* vm, UInt32 slot)
     FUN_14250e770(&ExecSlotOf(obj, slot, true), &ok, top, obj);
 }
 
+// The SDK ReadValueObject: the value, then the object it is stored on (null or undefined throws).
+struct ExecReadValueObject : public StackReader
+{
+    SF_INLINE ExecReadValueObject(VM& vm) : StackReader(vm), ArgValue(OpStack), ArgObject(OpStack)
+    {
+        CheckObject(ArgObject);
+    }
+    SF_INLINE ~ExecReadValueObject() {}
+    // StackReader::CheckObject, inline.
+    SF_INLINE void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+            GetVM().ThrowTypeError(VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, GetVM()));
+    }
+    Value ArgValue;
+    Value ArgObject;
+};
+
 // setslot: value and object popped, the object's slot receives the value.
-// MS2-FUNCTIONAL 0x14253faa0: same slot write through the shared setter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253faa0
 void Sfr27ExecSetSlot(VM* vm, SPInt slot)
 {
-    ValueStack& stk = *reinterpret_cast<ValueStack*>(reinterpret_cast<UPInt>(vm) + 0x48);
-    Value value;
-    value.Pick(stk);
-    Value self;
-    self.Pick(stk);
-    ExecRequireObject(*vm, self);
+    ExecReadValueObject args(*vm);
     if (vm->IsException())
         return;
-    Object* obj = reinterpret_cast<Object*>(self.GetGASRefCountBase());
-    CheckResult ok(false);
-    Sfr27SlotSetValueObj(&ExecSlotOf(obj, slot, false), reinterpret_cast<char*>(&ok), &obj->GetVM(), &value, obj);
+    Object* obj = reinterpret_cast<Object*>(args.ArgObject.GetGASRefCountBase());
+    char result;    // the setter's CheckResult return slot, not read
+    Sfr27SlotSetValueObj(&ExecSlotInfo(obj->GetTraits(), AbsoluteIndex(slot - 1)), &result, &obj->GetVM(), &args.ArgValue, obj);
 }
 
 
@@ -1797,42 +1816,31 @@ void Multiname::SetRTNameUnsafe(const Value& v)
 }
 
 
+
 // setslot for objects whose slots follow the traits' first own slot.
-// MS2-FUNCTIONAL 0x1425402a0: same slot write through the shared setter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x1425402a0
 void Sfr27ExecSetOwnSlot(VM* vm, UInt32 slot)
 {
-    ValueStack& stk = *reinterpret_cast<ValueStack*>(reinterpret_cast<UPInt>(vm) + 0x48);
-    Value value;
-    value.Pick(stk);
-    Value self;
-    self.Pick(stk);
-    ExecRequireObject(*vm, self);
+    ExecReadValueObject args(*vm);
     if (vm->IsException())
         return;
-    Object* obj = reinterpret_cast<Object*>(self.GetGASRefCountBase());
-    CheckResult ok(false);
-    Sfr27SlotSetValueObj(&ExecSlotOf(obj, slot, true), reinterpret_cast<char*>(&ok), &obj->GetVM(), &value, obj);
+    Object* obj = reinterpret_cast<Object*>(args.ArgObject.GetGASRefCountBase());
+    char result;    // the setter's CheckResult return slot, not read
+    Sfr27SlotSetValueObj(&ExecGlobalSlotOf(obj, slot), &result, &obj->GetVM(), &args.ArgValue, obj);
 }
 
 // initslot: setslot with read-only checks off (the VM is counted as inside an initializer).
-// MS2-FUNCTIONAL 0x14253b420: same slot write with the initializer counter bumped; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253b420
 void Sfr27ExecInitSlot(VM* vm, SPInt slot)
 {
-    ValueStack& stk = *reinterpret_cast<ValueStack*>(reinterpret_cast<UPInt>(vm) + 0x48);
-    Value value;
-    value.Pick(stk);
-    Value self;
-    self.Pick(stk);
-    ExecRequireObject(*vm, self);
+    ExecReadValueObject args(*vm);
     if (vm->IsException())
         return;
     int& inInitializer = *reinterpret_cast<int*>(reinterpret_cast<UPInt>(vm) + 0x30);
     ++inInitializer;
-    Object* obj = reinterpret_cast<Object*>(self.GetGASRefCountBase());
-    CheckResult ok(false);
-    Sfr27SlotSetValueObj(&ExecSlotOf(obj, slot, false), reinterpret_cast<char*>(&ok), &obj->GetVM(), &value, obj);
+    Object* obj = reinterpret_cast<Object*>(args.ArgObject.GetGASRefCountBase());
+    char result;    // the setter's CheckResult return slot, not read
+    Sfr27SlotSetValueObj(&ExecSlotInfo(obj->GetTraits(), AbsoluteIndex(slot - 1)), &result, &obj->GetVM(), &args.ArgValue, obj);
     --inInitializer;
 }
 
@@ -3896,26 +3904,21 @@ CheckResult VM::constructBuiltinObject(SPtr<Object>& pobj, const char* gname, un
 
 // pushscope: the (non-null) object on top of the operand stack moves onto the scope stack. An undefined or null
 // object throws and stays on the operand stack.
-// MS2-FUNCTIONAL 0x14253f4e0: behavior-equivalent recovery; codegen differs from exe
 // @0x14253f4e0
 void Sfr31ExecPushWith(UPInt vmAddr)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
-    const UInt32 kind = *reinterpret_cast<const UInt32*>(top) & 0x1f;
-    if (kind == 0 || (kind - 0xc < 4 && Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10) == 0))
+    ValueStack& ops = ValueStack::Of(vm);
+    Value& v = *ops.GetTopPtr();
+    if (v.IsNullOrUndefined())
     {
-        Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(top));
+        vm.ThrowTypeError(VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, vm));
         return;
     }
     vm.ScopeStack.PushBack(Value::GetUndefined());
-    UInt32* dst = reinterpret_cast<UInt32*>(vm.ScopeStack.GetDataPtr() + vm.ScopeStack.GetSize() - 1);
-    UInt32* src = reinterpret_cast<UInt32*>(top);
-    for (int i = 0; i < 8; ++i)
-        dst[i] = src[i];
-    src[0] = 0;
-    top->~Value();
-    Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
+    ValueAssignCopies::PickUnsafeCopy(vm.ScopeStack.Back(), v);
+    ops.GetTopPtr()->~Value();
+    ops.Release(1);
 }
 
 // applytype: the first argument must be a Class value; replaces it with the Class returned by its ApplyTypeArgs.
