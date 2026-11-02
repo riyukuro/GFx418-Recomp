@@ -2733,10 +2733,23 @@ struct CFunctionObjectInline
         v.V.FunctionValue.Function    = pfunc;
         v.V.FunctionValue.pLocalFrame = 0;
     }
+    // The same with the heap read before the type store.
+    static SF_FORCEINLINE void InitValueHeapFirst(Value& v, ASStringContext* psc, CFunctionPtr func)
+    {
+        MemoryHeap* pheap = psc->GetHeap();
+        v.T.Type = Value::FUNCTION;
+        CFunctionObject* pfunc = SF_HEAP_NEW(pheap) CFunctionObject(psc, ObjectInlineCtorTag());
+        if (pfunc)
+        {
+            pfunc->pFunction = func;
+            pfunc->Object::Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
+        }
+        v.V.FunctionValue.Flags       = 0;
+        v.V.FunctionValue.Function    = pfunc;
+        v.V.FunctionValue.pLocalFrame = 0;
+    }
 };
 
-// MS2-FUNCTIONAL the exe inlines CFunctionObject(psc, func) (defined out of line in sfr_as2_03) and calls an
-// out-of-line Value::SetNumber copy for all constants but LEFT
 // @0x14294f4f0
 bool MouseCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -2762,17 +2775,23 @@ bool MouseCtorFunction::GetMember(Environment* penv, const ASString& name, Value
             val->SetNumber(2);
         else if (strcmp(name.ToCStr(), "getTopMostEntity") == 0)
         {
-            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetTopMostEntity));
+            Value func;
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetTopMostEntity);
+            *val = func;
             return true;
         }
         else if (strcmp(name.ToCStr(), "getPosition") == 0)
         {
-            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetPosition));
+            Value func;
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetPosition);
+            *val = func;
             return true;
         }
         else if (strcmp(name.ToCStr(), "getButtonsState") == 0)
         {
-            Value_SetNewFunction(val, SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, GetButtonsState));
+            Value func;
+            CFunctionObjectInline::InitValueHeapFirst(func, psc, GetButtonsState);
+            *val = func;
             return true;
         }
     }
