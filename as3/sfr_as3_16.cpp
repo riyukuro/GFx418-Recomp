@@ -939,18 +939,23 @@ static inline bool Sfr16WProxyGet(const Sfr16WProxyHash& h, GASRefCountBase* con
                             reinterpret_cast<UPInt*>(pvalue));
 }
 
-// MS2-FUNCTIONAL: same calls as the exe; cl reloads wp after NotifyObjectDied and keys Remove from the Get key's slot.
+// MS2-FUNCTIONAL: same calls as the exe; cl schedules the pObject store after the RefCount decrement.
 // @0x1424de190
 GASRefCountBase::~GASRefCountBase()
 {
     if (HasWeakRef())
     {
         Collector* rcc = GetCollector();
-        WeakProxy* wp = NULL;
-        if (Sfr16WProxyGet(reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash), this, &wp) && wp)
+        WeakProxy* p = NULL;
         {
-            wp->NotifyObjectDied();
-            wp->Release();
+            WeakProxy* wp = NULL;
+            if (Sfr16WProxyGet(reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash), this, &wp))
+                p = wp;
+        }
+        if (p)
+        {
+            p->NotifyObjectDied();
+            p->Release();
             reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash).Remove(this);
         }
     }
@@ -1006,7 +1011,7 @@ namespace InstanceTraits
 // @0x1424e8ed0
 AbsoluteIndex VTable::AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name)
 {
-    UPInt ind = 0;
+    UPInt ind;
 
     switch (dt)
     {
@@ -1027,6 +1032,7 @@ AbsoluteIndex VTable::AddMethod(const Value& m, SlotInfo::BindingType dt, const 
         VTMethods.PushDefault();
         break;
     default:
+        ind = 0;
         break;
     }
 
@@ -1821,7 +1827,7 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
     LoadQueueEntry* pentry = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntry(urlRequest, loader, method);
     if (!pentry)
         return;
-    bool sync = false;
+    bool sync;
     const bool image = LoaderImpl::IsProtocolImage(pentry->URL, NULL, &sync);
     if (image && sync)
     {
