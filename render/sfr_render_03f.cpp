@@ -621,10 +621,43 @@ bool TreeCacheShapeLayer::updateMeshKey(Renderer2DImpl* r2D, ShapeMeshProvider* 
     return true;
 }
 
+// Matrix2x4::SetInverse, expanded
+static __forceinline void sfr03fSetInverse(Matrix2F* m, const Matrix2F& c)
+{
+    float det = c.M[0][0] * c.M[1][1] - c.M[0][1] * c.M[1][0];
+    if (det == 0)
+    {
+        m->SetIdentity();
+        m->M[0][3] = -c.M[0][3];
+        m->M[1][3] = -c.M[1][3];
+    }
+    else
+    {
+        float inv = 1 / det;
+        m->M[0][0] =  c.M[1][1] * inv;
+        m->M[1][1] =  c.M[0][0] * inv;
+        m->M[0][1] = -c.M[0][1] * inv;
+        m->M[1][0] = -c.M[1][0] * inv;
+        m->M[0][3] = -(m->M[0][0] * c.M[0][3] + m->M[0][1] * c.M[1][3]);
+        m->M[1][3] = -(m->M[1][0] * c.M[0][3] + m->M[1][1] * c.M[1][3]);
+    }
+}
+
+// Matrix2x4::SetRectToParl as the exe expands it into getShapeMatrixFrom3D: SetParlToParl and the inverse inline
+static __forceinline void sfr03fSetRectToParl(Matrix2F* m, float x1, float y1, float x2, float y2, const float* parl)
+{
+    float src[6] = { x1, y1, x2, y1, x2, y2 };
+    m->SetMatrix(src[2] - src[0], src[4] - src[0], src[0], src[3] - src[1], src[5] - src[1], src[1]);
+    Matrix2F d(parl[2] - parl[0], parl[4] - parl[0], parl[0], parl[3] - parl[1], parl[5] - parl[1], parl[1]);
+    sfr03fSetInverse(m, Matrix2F(*m));
+    m->Append(d);
+}
+
 // The 2D matrix to tessellate a 3D layer with: the one mapping the shape bounds onto their projected corners,
 // degenerating to a uniform scale.
 // @0x142635200
-// MS2-FUNCTIONAL: float scheduling / register allocation differ
+// MS2-FUNCTIONAL: the exe keeps one more xmm register (xmm9) live through the inverse, so its frame is 0x10 larger
+// and the parallelogram matrix sits contiguous below Matrix4F m
 void TreeCacheShapeLayer::getShapeMatrixFrom3D(const TreeShape::NodeData* nd, Matrix2F* mat,
                                                const Matrix4F& viewProj) const
 {
@@ -635,7 +668,7 @@ void TreeCacheShapeLayer::getShapeMatrixFrom3D(const TreeShape::NodeData* nd, Ma
 
     float coord[8];
     m.TransformHomogeneousAndScaleCorners(bounds, (float)vp.Width, (float)vp.Height, coord);
-    mat->SetRectToParl(bounds.x1, bounds.y1, bounds.x2, bounds.y2, coord);
+    sfr03fSetRectToParl(mat, bounds.x1, bounds.y1, bounds.x2, bounds.y2, coord);
 
     if ((float)fabs(mat->GetDeterminant()) < 0.001f)
         *mat = Matrix2F::Scaling(mat->GetScale());
