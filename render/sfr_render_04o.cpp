@@ -126,6 +126,8 @@ ExternalFontWinAPI::ExternalFontWinAPI(FontProviderWinAPI* pprovider, FontSysDat
     }
 }
 
+// MS2-FUNCTIONAL: register allocation only in the inlined path writes (the exe loads the prolog constant into xmm7
+// and keeps the per-point factor in xmm6, ours the other way round; same size)
 // @0x14264bb10
 bool ExternalFontWinAPI::decomposeGlyphOutline(const UByte* data, unsigned size, GlyphShape* shape,
                                                unsigned hintedSize)
@@ -191,11 +193,13 @@ bool ExternalFontWinAPI::decomposeGlyphOutline(const UByte* data, unsigned size,
         shape->EndPath();
     }
 
-    if (shape->IsEmpty())
-        return false;
-    shape->EndShape();
-    shape->SetHintedSize(hinted ? hintedSize * 20 : 0);
-    return true;
+    if (!shape->IsEmpty())
+    {
+        shape->EndShape();
+        shape->SetHintedSize(hinted ? hintedSize * 20 : 0);
+        return true;
+    }
+    return false;
 }
 
 // bit reader over the GGO_BITMAP rows (SDK GFxBitsetIterator)
