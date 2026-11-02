@@ -4959,36 +4959,44 @@ void FUN_1423d0f60(void* manager, int mode)
             (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result, args, 3);
 }
 
-// MS2-FUNCTIONAL: converts the candidate/reading window property mask into the two formatted AS calls,
-// <path at +0x10>.SetCandidateListProps and <path>.SetReadingWindowProps.
-// @0x1423cf670
-void FUN_1423cf670(void* raw, const unsigned* attributes)
+struct Ime01CandidateProps
 {
+    int values[10];
+    unsigned short flags;
+};
+
+// MS2-FUNCTIONAL: converts the candidate/reading window property mask into the two formatted AS calls,
+// <path at +0x10>.SetCandidateListProps and <path>.SetReadingWindowProps. Same operations as the exe (bit 4 is
+// tested twice there too); only register allocation differs (the exe keeps value0 in the -1 register and spills value7).
+// @0x1423cf670
+void FUN_1423cf670(void* raw, const unsigned* rawAttributes)
+{
+    auto* attributes = reinterpret_cast<const Ime01CandidateProps*>(rawAttributes);
     auto* self = static_cast<unsigned char*>(raw);
     auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
-    if (!owner || !attributes) return;
+    if (!owner) return;
     auto* factory = owner + 0x10;
     void* temporary = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
     if (!temporary) return;
-    const unsigned short flags = *reinterpret_cast<const unsigned short*>(attributes + 10);
-    int values[10];
-    for (int& value : values) value = -1;
-    if (flags & 0x001) values[0] = static_cast<int>(attributes[0]);
-    if (flags & 0x002) values[1] = static_cast<int>(attributes[1]);
-    if (flags & 0x004) values[2] = static_cast<int>(attributes[2]);
-    if (flags & 0x008) values[3] = static_cast<int>(attributes[3]);
-    if (flags & 0x010) values[4] = static_cast<int>(attributes[4]);
-    if (flags & 0x020) values[5] = static_cast<int>(attributes[5]);
-    if (flags & 0x040) values[8] = static_cast<int>(attributes[8]);
-    if (flags & 0x080) values[6] = static_cast<int>(attributes[6]);
-    if (flags & 0x100) values[7] = static_cast<int>(attributes[7]);
-    if (flags & 0x200) values[9] = static_cast<int>(attributes[9]);
+    int value0 = -1, value1 = -1, value2 = -1, value3 = -1, value4 = -1;
+    int value5 = -1, value6 = -1, value7 = -1, value8 = -1, value9 = -1;
+    if (*reinterpret_cast<const unsigned char*>(&attributes->flags) & 1) value0 = attributes->values[0];
+    if (static_cast<unsigned char>(attributes->flags >> 1) & 1) value1 = attributes->values[1];
+    if (static_cast<unsigned char>(attributes->flags >> 3) & 1) value3 = attributes->values[3];
+    if (static_cast<unsigned char>(attributes->flags >> 4) & 1) value4 = attributes->values[4];
+    if (static_cast<unsigned char>(attributes->flags >> 5) & 1) value5 = attributes->values[5];
+    if (static_cast<unsigned char>(attributes->flags >> 2) & 1) value2 = attributes->values[2];
+    if (static_cast<unsigned char>(attributes->flags >> 4) & 1) value4 = attributes->values[4];
+    if (static_cast<unsigned char>(attributes->flags >> 6) & 1) value8 = attributes->values[8];
+    if (static_cast<unsigned char>(attributes->flags >> 7) & 1) value6 = attributes->values[6];
+    if (static_cast<unsigned char>(attributes->flags >> 8) & 1) value7 = attributes->values[7];
+    if (static_cast<unsigned char>(attributes->flags >> 9) & 1) value9 = attributes->values[9];
     auto* command = reinterpret_cast<Scaleform::String*>(self + 0x10);
     if (command->GetLength()) {
         FUN_1423ca030(*reinterpret_cast<void**>(self + 8), (*command + ".SetCandidateListProps").ToCStr(),
-            "%d %d %d %d %d %d %d", values[0], values[3], values[1], values[4], values[8], values[2], values[5]);
+            "%d %d %d %d %d %d %d", value0, value3, value1, value4, value8, value2, value5);
         FUN_1423ca030(*reinterpret_cast<void**>(self + 8), (*command + ".SetReadingWindowProps").ToCStr(),
-            "%d %d %d", values[6], values[7], values[9]);
+            "%d %d %d", value6, value7, value9);
     }
     FUN_14257dcb0(temporary);
 }
