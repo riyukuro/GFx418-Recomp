@@ -3043,9 +3043,15 @@ static inline GASRefCountBase* CurrentDefXMLNamespace(const VM& vm)
         reinterpret_cast<const char* const*>(vm.Unk070[4])[i >> 6] + (i & 0x3f) * 0xa8 + 0x58);
 }
 
+// VM::ThrowTypeError, inlined at its Multiname call sites in the exe: the error is raised as a TypeError instance.
+static __forceinline void Sfr15ThrowTypeError(VM& vm, const VM::Error& e)
+{
+    Sfr31VMRaiseError(reinterpret_cast<UPInt>(&vm), reinterpret_cast<const unsigned long*>(&e),
+                      reinterpret_cast<UPInt>(&fl::TypeErrorCI));
+}
+
 // A run-time name: a QName object gives its name and namespace; strings and numbers are the name, other objects
 // their string form, in the default xml namespace (else the public one). Anything else throws a TypeError.
-// MS2-FUNCTIONAL: same code; the exe duplicates the epilogue per return and keeps &Name in rdi (block layout)
 // @0x1424d8cb0
 Multiname::Multiname(VM& vm, const Value& name)
     : Kind(static_cast<Abc::MultinameKind>(0))
@@ -3062,35 +3068,57 @@ Multiname::Multiname(VM& vm, const Value& name)
                 return;
             }
         }
-        if (!Value::IsObject(kind))
+        if (Value::IsObject(kind))
         {
-            vm.ThrowTypeError(VM::Error(VM::eInvalidArgumentError, vm, "Multiname"));
-            return;
+            if (name.GetObject() == NULL)
+            {
+                Sfr15ThrowTypeError(vm, VM::Error(VM::eNotImplementedError, vm, "Multiname"));
+                return;
+            }
         }
-        if (name.GetObject() == NULL)
+        else
         {
-            vm.ThrowTypeError(VM::Error(VM::eNotImplementedError, vm, "Multiname"));
+            Sfr15ThrowTypeError(vm, VM::Error(VM::eInvalidArgumentError, vm, "Multiname"));
             return;
         }
 
         Name.Assign(name);
-        ASString str = vm.GetStringManager().CreateEmptyString();
-        if (!Name.Convert2String(str))
+        bool ok;
+        {
+            ASString str = vm.GetStringManager().CreateEmptyString();
+            if (Name.Convert2String(str))
+            {
+                // Value::operator=(const ASString&), called out of line here in the exe
+                Value& (Value::*assign)(const ASString&) = &Value::operator=;
+                (Name.*assign)(str);
+                ok = true;
+            }
+            else
+                ok = false;
+        }
+        if (!ok)
             return;
-        Name = str;
     }
     else
         Name.Assign(name);
 
     PostProcessName(false);
 
+    // Obj = ns, with SPtr::SetPtr inlined here (the exe calls it out of line only for the public namespace below).
     GASRefCountBase* ns = CurrentDefXMLNamespace(vm);
-    if (ns != Obj.GetPtr())
+    GASRefCountBase*& raw = Obj.GetRawRef();
+    if (ns != raw)
     {
-        Obj.Pick(static_cast<GASRefCountBase*>(NULL));
+        if (raw)
+        {
+            if (reinterpret_cast<UPInt>(raw) & 1)
+                raw = reinterpret_cast<GASRefCountBase*>(reinterpret_cast<UPInt>(raw) - 1);
+            else
+                raw->Release();
+        }
         if (ns)
             ns->AddRef();
-        Obj.GetRawRef() = ns;
+        raw = ns;
     }
     if (!Obj)
         Obj = vm.PublicNamespace.GetPtr();
