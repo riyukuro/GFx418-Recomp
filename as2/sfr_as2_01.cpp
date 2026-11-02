@@ -589,14 +589,17 @@ void AsBroadcasterProto::AddListener(const FnCall& fn)
 }
 
 // @0x1428fbdc0
-// MS2-FUNCTIONAL the inlined broadcast computes the argument count and stack index before the callback setup (scheduling)
 void AsBroadcasterProto::BroadcastMessage(const FnCall& fn)
 {
     if (fn.NArgs < 1)
         return;
     ASString eventName = fn.Arg(0).ToString(fn.Env);
-    // AsBroadcaster::BroadcastMessage, inlined.
-    if (fn.ThisPtr)
+    // AsBroadcaster::BroadcastMessage, inlined: its arguments are evaluated before the body.
+    Environment*     penv  = fn.Env;
+    ObjectInterface* pthis = fn.ThisPtr;
+    int firstArgBottomIndex = fn.Env->GetTopIndex() - 4;
+    int nargs               = fn.NArgs - 1;
+    if (pthis)
     {
         class LocalInvokeCallback : public AsBroadcaster::InvokeCallback
         {
@@ -611,8 +614,8 @@ void AsBroadcasterProto::BroadcastMessage(const FnCall& fn)
                 Value result;
                 method.Invoke(FnCall(&result, pthis, penv, NArgs, FirstArgBottomIndex));
             }
-        } callback(fn.NArgs - 1, fn.Env->GetTopIndex() - 4);
-        AsBroadcaster::BroadcastMessageWithCallback(fn.Env, fn.ThisPtr, eventName, &callback);
+        } callback(nargs, firstArgBottomIndex);
+        AsBroadcaster::BroadcastMessageWithCallback(penv, pthis, eventName, &callback);
     }
     fn.Result->SetUndefined();
 }
