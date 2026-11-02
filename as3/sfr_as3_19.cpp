@@ -4088,34 +4088,36 @@ void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
 }
 
 // Tracer op: replaces the popped value with the instance traits it denotes (primitives collapse to the Object traits).
-// MS2-FUNCTIONAL 0x1425331a0: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x1425331a0: same code as the exe except the traits Value null type: ours NotNull (8), the exe NullOrNot (0x48).
 // @0x1425331a0
 void Sfr31TraceTopInstanceTraits(State* st)
 {
     StV s(st);
-    TrPopped popped;
-    FUN_14251cd30(st, &popped.Get());
-    const UPInt p = reinterpret_cast<UPInt>(&popped.Get());
-    const UInt32 k = *reinterpret_cast<const UInt32*>(p) & 0x1f;
-    UPInt tr = Sfr31Rd(p, 0x10);
-    if (k == 9)
-        tr = Sfr31Rd(tr, 0xc0);
-    else if (k == 0xd)
-        tr = Sfr31Rd(Sfr31Rd(tr, 0x20), 0xc0);
-    else if (k != 8)
+    const Value v(st->PopOpValue());
+    const UPInt p = reinterpret_cast<UPInt>(&v);
+    UPInt tr;
+    switch (v.GetKind())
     {
-        popped.Get().~Value();
-        return;
+    case Value::kInstanceTraits:
+        tr = Sfr31Rd(p, 0x10);
+        break;
+    case Value::kClassTraits:
+        tr = Sfr31Rd(Sfr31Rd(p, 0x10), 0xc0);
+        break;
+    case 0xd:
+        tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(p, 0x10), 0x20), 0xc0);
+        break;
+    default:
+        tr = 0;
+        break;
     }
     if (tr != 0)
     {
-        if (FUN_142514a80(s.Tracer(), reinterpret_cast<void*>(tr)))
-            tr = Sfr31Rd(Sfr31Rd(TrVM(s.Tracer()), 0x1f8), 0xc0);
-        TrTraitsScratch t;
-        t.SetTraits(*reinterpret_cast<InstanceTraits::Traits*>(tr));
-        s.Top().Assign(t.Get());
+        const UPInt tracer = s.Tracer();
+        if (FUN_142514a80(tracer, reinterpret_cast<void*>(tr)))
+            tr = Sfr31Rd(Sfr31Rd(TrVM(tracer), 0x1f8), 0xc0);
+        s.Top().Assign(Value(*reinterpret_cast<InstanceTraits::Traits*>(tr), Value::NotNull));
     }
-    popped.Get().~Value();
 }
 // ---- batch 27
 struct Sfr31RawTraitsVal
