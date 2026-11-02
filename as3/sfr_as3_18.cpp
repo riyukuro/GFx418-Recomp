@@ -1727,9 +1727,10 @@ __declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(V
 // Merges entry ind of from's operand stack / scope stack / register file into to's; a type conflict raises the
 // verify error and fails.
 // The lists are picked by two NULL-start switches (the exe's sub/cmp/lea prologue). The common-base search is a
-// lambda so the found flag is set once before the class/instance join, as in the exe.
-// MS2-FUNCTIONAL 0x1425178e0: register naming (rbp/r12/r13/r15 swapped) and the ID-bit test order in the
-// register-file case differ; ops and layout otherwise match (1413 vs 1414 bytes)
+// lambda so the found flag is set once before the class/instance join, as in the exe. The exe indexes the
+// register-changed bits with a 32-bit register number.
+// MS2-FUNCTIONAL 0x1425178e0: register naming (r12/r15 swapped); the exe keeps ind in r12 (qword load) in the
+// register-file blocks where ours reloads it as a dword; ops and layout otherwise match (1413 vs 1414 bytes)
 // @0x1425178e0
 __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to, const TR::State& from, TR::MergeSet ms)
 {
@@ -1759,9 +1760,9 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
     }
     else if (ms == TR::msRegisterFile)
     {
-        if (!from.IsRegChanged(ind))
+        if (!from.IsRegChanged(static_cast<UInt32>(ind)))
             goto update;
-        if (!to.IsRegChanged(ind))
+        if (!to.IsRegChanged(static_cast<UInt32>(ind)))
         {
             tv.Assign(fv);
             goto update;
@@ -1834,7 +1835,8 @@ __declspec(safebuffers) CheckResult Tracer::MergeValues(UPInt ind, TR::State& to
     if (ms == TR::msRegisterFile)
     {
     update:
-        to.SetRegChanged(ind, from.IsRegChanged(ind) || to.IsRegChanged(ind));
+        to.SetRegChanged(static_cast<UInt32>(ind),
+                         from.IsRegChanged(static_cast<UInt32>(ind)) || to.IsRegChanged(static_cast<UInt32>(ind)));
     }
     return true;
 
@@ -2481,16 +2483,18 @@ bool AvmSprite::OnEvent(const EventId& id)
     return AvmInteractiveObj::OnEvent(id);
 }
 
+// AvmDisplayObj::GetAvmParent. The cast result goes through a named local, so cl threads only the NULL-parent
+// return straight out of a caller's loop, as the exe does; a NULL cast result still goes through the loop's test.
 static __forceinline AvmInteractiveObj* Sfr34_AvmParent(const AvmDisplayObj* avm)
 {
     InteractiveObject* parent = avm->pDispObj->GetParent();
     if (!parent)
         return NULL;
-    return static_cast<AvmInteractiveObj*>(parent->GetAvmIntObj());
+    AvmInteractiveObj* r = static_cast<AvmInteractiveObj*>(parent->GetAvmIntObj());
+    return r;
 }
 
 // The object is the stage, or its topmost AS3 ancestor is.
-// MS2-FUNCTIONAL parent walk via ToAvmInteractiveObj; the exe re-reads the parent each step
 // @0x142514d20
 bool AvmDisplayObj::IsStageAccessible() const
 {
@@ -3997,7 +4001,7 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // else the root of the stage dobj's movie sits on. When that is no container, its parent's root movie is
 // taken instead. No dobj gives this stage's root.
 // SDK AS3_MovieRoot.cpp form on the inlined AvmDisplayObj::GetRoot.
-// MS2-FUNCTIONAL a slot of the exe's MovieRoot vftable, defined as a free function; one branch target as in GetRoot
+// A slot of the exe's MovieRoot vftable, defined as a free function.
 // @0x14250daa0
 Scaleform::GFx::DisplayObjContainer* FUN_14250daa0(const Scaleform::GFx::AS3::MovieRoot* self,
                                                    Scaleform::GFx::DisplayObject* dobj)
@@ -4897,15 +4901,15 @@ void ClassTraits::Traits::RegisterSlots()
 // URLLoader, and small helpers (resource handle lookup, operand stack unwinding, class traits by multiname).
 
 // The nearest display object up from this one whose AS3 object has loader info, else the root of the stage.
-// SDK AS3_AvmDisplayObj.cpp loop (GetAvmParent inlined); not found gives the stage's root.
-// MS2-FUNCTIONAL one branch target: the exe leaves the loop straight from a NULL parent
+// SDK AS3_AvmDisplayObj.cpp loop (GetAvmParent inlined); not found gives the stage's root. The parent step is
+// GetAvmParent's own NULL-parent return, so the exe leaves the loop straight from a NULL parent.
 // @0x14250d990
 DisplayObject* AvmDisplayObj::GetRoot()
 {
     AvmDisplayObj* cur = this;
     while (cur && (!cur->GetAS3Obj() || !cur->GetAS3Obj()->HasLoaderInfo()))
     {
-        AvmInteractiveObj* parent = ToAvmInteractiveObj(cur->pDispObj->GetParent());
+        AvmInteractiveObj* parent = Sfr34_AvmParent(cur);
         cur = parent;
     }
     if (cur)
