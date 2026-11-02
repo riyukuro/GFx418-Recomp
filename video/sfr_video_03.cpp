@@ -1724,47 +1724,40 @@ void* FUN_14001ad20(void* traits, void* vm)
 }
 namespace {
 
-namespace {
-// The callers hold each default as an ASString, so both helpers return the node retained.
-Scaleform::GFx::ASStringNode* MakeVideoNullString(Scaleform::GFx::ASStringManager* manager)
-{
-    Scaleform::GFx::ASStringNode* node = manager->CreateConstStringNode("null", 4, 0);
-    ++*reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18);
-    return node;
-}
-Scaleform::GFx::ASStringNode* MakeVideoEmptyString(Scaleform::GFx::ASStringManager* manager)
-{
-    // the manager's builtin empty-string node at +0x40
-    Scaleform::GFx::ASStringNode* node = reinterpret_cast<Scaleform::GFx::ASStringNode*>(reinterpret_cast<unsigned char*>(manager) + 0x40);
-    ++*reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18);
-    return node;
-}
-void ReleaseVideoString(Scaleform::GFx::ASStringNode* node)
-{
-    if (node && --*reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(node) + 0x18) == 0)
-        node->ReleaseNode();
-}
-}
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: dispatches the metadata or cue callback with converted AS3 string parameters.
+namespace {
+struct VideoStringDefaults2
+{
+    Scaleform::GFx::ASString a, b;
+    VideoStringDefaults2(const Scaleform::GFx::ASString& x, const Scaleform::GFx::ASString& y) : a(x), b(y) {}
+};
+}
+// dispatches the metadata or cue callback with converted AS3 string parameters.
 // @0x140017520
 void FUN_140017520(void*, void* vm, void* frame, uint64_t property, unsigned count, const uint64_t* args)
 {
+    using Scaleform::GFx::ASString;
+    const uint64_t object = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(frame) + 0x10);
     unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x10);
-    Scaleform::GFx::ASStringManager* manager = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8);
-    Scaleform::GFx::ASStringNode* first = MakeVideoNullString(manager); Scaleform::GFx::ASStringNode* second = MakeVideoNullString(manager);
-    uint64_t defaults[2] = {reinterpret_cast<uintptr_t>(second), reinterpret_cast<uintptr_t>(first)};
     uint64_t record[4];
-    FUN_140017130(record, reinterpret_cast<uintptr_t>(vm), property, count, args, defaults);
-    ReleaseVideoString(first); ReleaseVideoString(second);
-    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) == 0) {
-        // pointer-to-member call: this = frame[0x10] + the 32-bit adjustment
-        void (*thunk)(uintptr_t, uint64_t, uint64_t*, uint64_t*) = reinterpret_cast<void(*)(uintptr_t, uint64_t, uint64_t*, uint64_t*)>(VideoStringCallbackA);
-        thunk(*reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(frame) + 0x10) + *reinterpret_cast<const int*>(&VideoStringCallbackBaseA),
-              record[1], &record[2], &record[3]);
+    {
+        VideoStringDefaults2 defaults(ASString((*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8))->CreateConstStringNode("null", 4, 0)),
+                                      ASString((*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8))->CreateConstStringNode("null", 4, 0)));
+        FUN_140017130(record, reinterpret_cast<uintptr_t>(vm), property, count, args, reinterpret_cast<const uint64_t*>(&defaults));
     }
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[3]));
-    ReleaseVideoString(reinterpret_cast<Scaleform::GFx::ASStringNode*>(record[2]));
+    struct Strings
+    {
+        uint64_t* r;
+        ~Strings()
+        {
+            reinterpret_cast<ASString*>(&r[3])->~ASString();
+            reinterpret_cast<ASString*>(&r[2])->~ASString();
+        }
+    } owner = {record};
+    if (*reinterpret_cast<unsigned char*>(static_cast<unsigned char*>(vm) + 0x180) != 0)
+        return;
+    void (*thunk)(uintptr_t, uint64_t, uint64_t*, uint64_t*) = reinterpret_cast<void(*)(uintptr_t, uint64_t, uint64_t*, uint64_t*)>(VideoStringCallbackA);
+    thunk(object + *reinterpret_cast<const int*>(&VideoStringCallbackBaseA), record[1], &record[2], &record[3]);
 }
 namespace {
 
@@ -1996,38 +1989,43 @@ namespace {
 
 } // namespace
 extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);   // MS2: MovieDefImpl::GetCharacterCreateInfo
-// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef.
+// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef. Left: the exe keeps the
+// create-info zero in rdi across FindLibrarySymbol (one more saved register), a /O2 register-allocation tie.
 // @0x14001a470
 void* FUN_14001a470(void* self)
 {
-    if (*reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58))
-        return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
-    unsigned char* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
-    unsigned char* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
-    void* movieDef = FUN_14250d8f0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(root), static_cast<const Scaleform::GFx::AS3::Instances::fl::Object*>(self));
-    if (!movieDef) return *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
-    __declspec(align(8)) uint64_t createInfo[3] = { 0 };
-    Scaleform::GFx::AS3::Instances::fl_display::FindLibrarySymbol(static_cast<const Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(self), reinterpret_cast<Scaleform::GFx::CharacterCreateInfo*>(createInfo),
-        static_cast<Scaleform::GFx::MovieDefImpl*>(movieDef));
-    if (!createInfo[0]) {
-        // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
-        const unsigned emptyVideoId = 0x10005;
-        __declspec(align(8)) uint64_t tmp[3];
-        memcpy(createInfo, FUN_1425cf500(movieDef, tmp, &emptyVideoId), sizeof(createInfo));
-    }
-    void* creator = *reinterpret_cast<void**>(library + 0x18);
-    void** vtable = *reinterpret_cast<void***>(creator);
-    void* (*create)(void*, void*, void*, int, uint32_t*, int) = reinterpret_cast<void*(*)(void*, void*, void*, int, uint32_t*, int)>(vtable[4]);
-    uint32_t flags[2] = {0x40000, 0};
-    void* display = create(creator, *reinterpret_cast<void**>(library + 0x10), createInfo, 0, flags, 7);
     void** slot = reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x58);
-    if (*slot) FUN_14257dcd0(*slot);
-    *slot = display;
-    if (display) {
-        unsigned char* frame = static_cast<unsigned char*>(display) + static_cast<unsigned char>(static_cast<unsigned char*>(display)[0x6d]) * 4;
-        Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
+    if (!*slot) {
+        unsigned char* root = *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x20) + 0x78);
+        unsigned char* library = *reinterpret_cast<unsigned char**>(root + 0x2d8);
+        void* movieDef = FUN_14250d8f0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(root), static_cast<const Scaleform::GFx::AS3::Instances::fl::Object*>(self));
+        if (movieDef) {
+            Scaleform::GFx::CharacterCreateInfo createInfo;
+            createInfo.pBindDefImpl = 0;
+            createInfo.pResource = 0;
+            createInfo.pCharDef = 0;
+            Scaleform::GFx::AS3::Instances::fl_display::FindLibrarySymbol(static_cast<const Scaleform::GFx::AS3::Instances::fl_display::DisplayObject*>(self), &createInfo,
+                static_cast<Scaleform::GFx::MovieDefImpl*>(movieDef));
+            if (!createInfo.pCharDef) {
+                // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
+                const unsigned emptyVideoId = 0x10005;
+                __declspec(align(8)) uint64_t tmp[3];
+                memcpy(&createInfo, FUN_1425cf500(movieDef, tmp, &emptyVideoId), sizeof(createInfo));
+            }
+            void* creator = *reinterpret_cast<void**>(library + 0x18);
+            void** vtable = *reinterpret_cast<void***>(creator);
+            void* (*create)(void*, void*, void*, int, uint32_t*, int) = reinterpret_cast<void*(*)(void*, void*, void*, int, uint32_t*, int)>(vtable[4]);
+            uint32_t flags = 0x40000;
+            void* display = create(creator, *reinterpret_cast<void**>(library + 0x10), &createInfo, 0, &flags, 7);
+            if (*slot) FUN_14257dcd0(*slot);
+            *slot = display;
+            if (display) {
+                unsigned char* frame = reinterpret_cast<unsigned char*>(reinterpret_cast<uint32_t*>(display) + static_cast<unsigned char*>(display)[0x6d]);
+                Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
+            }
+        }
     }
-    return display;
+    return *slot;
 }
 namespace {
 
@@ -2038,29 +2036,27 @@ static __forceinline Scaleform::GFx::ASStringNode* VideoInternString(Scaleform::
     const char* desc = reinterpret_cast<const char*>(*atom & ~uint64_t(3));
     return strings->CreateStringNode(desc + 0xc, *reinterpret_cast<const uint64_t*>(desc) & 0x7fffffffffffffffull);
 }
-// MS2-FUNCTIONAL: creates a callback property object from the supplied AS3 strings and binds it to this stream.
+// creates a callback property object from the supplied AS3 strings and binds it to this stream.
 // @0x140019890
 void FUN_140019890(void* self, const uint64_t* firstAtom, const uint64_t* secondAtom)
 {
-    void* vm = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 0x10);
+    using Scaleform::GFx::ASString;
     // MS2: as exe 0x14001989c: the atoms are String DataDescs (size at +0, chars at +0xc), interned by the
     // ASStringManager at [[[[self+0x10]+0x20]+0x78]+0x10]+0x1e8; they are not ASStringNodes.
-    Scaleform::GFx::ASStringManager* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(*reinterpret_cast<unsigned char**>(
-        *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(vm) + 0x20) + 0x78) + 0x10) + 0x1e8);
-    Scaleform::GFx::ASString second(VideoInternString(strings, secondAtom));
-    Scaleform::GFx::ASString first(VideoInternString(strings, firstAtom));
+    unsigned char* vmImpl = *reinterpret_cast<unsigned char**>(
+        *reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(self) + 0x10) + 0x20) + 0x78) + 0x10);
     Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_events::Event> result =
-        reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(vm)->CreateNetStatusEventObject(first, second);
-    unsigned char* object = reinterpret_cast<unsigned char*>(result.GetPtr());
+        (*reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher**>(static_cast<unsigned char*>(self) + 0x10))->CreateNetStatusEventObject(
+            ASString(VideoInternString(*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8), firstAtom)),
+            ASString(VideoInternString(*reinterpret_cast<Scaleform::GFx::ASStringManager**>(vmImpl + 0x1e8), secondAtom)));
     uint64_t currentVm = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(self) + 0x10);
-    unsigned char* owner = reinterpret_cast<unsigned char*>(object + 0x48);
-    uint64_t old = *reinterpret_cast<uint64_t*>(owner);
-    if (old != currentVm) {
-        ReleaseVideoAtom(reinterpret_cast<uint64_t*>(owner));
+    uint64_t* owner = reinterpret_cast<uint64_t*>(reinterpret_cast<unsigned char*>(result.GetPtr()) + 0x48);
+    if (currentVm != *owner) {
+        ReleaseVideoAtom(owner);
         RetainVideoAtom(currentVm);
-        *reinterpret_cast<uint64_t*>(owner) = currentVm;
+        *owner = currentVm;
     }
-    reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher*>(vm)->DispatchSingleEvent(reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::Event*>(object), false);
+    (*reinterpret_cast<Scaleform::GFx::AS3::Instances::fl_events::EventDispatcher**>(static_cast<unsigned char*>(self) + 0x10))->DispatchSingleEvent(result.GetPtr(), false);
 }
 namespace {
 
