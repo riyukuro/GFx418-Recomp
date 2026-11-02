@@ -2690,8 +2690,9 @@ void AvmTextField::GetLineText(const FnCall& fn)
         fn.Result->SetUndefined();
         return;
     }
-    UPInt          len   = 0;
-    const wchar_t* ptext = ptf->GetDocument()->GetLineText(unsigned(line), &len);
+    Render::Text::DocView* pdoc = ptf->GetDocument();
+    UPInt                  len  = 0;
+    const wchar_t*         ptext = pdoc->GetLineText(unsigned(line), &len);
     if (ptext)
     {
         String str;
