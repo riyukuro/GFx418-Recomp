@@ -1883,29 +1883,26 @@ __declspec(safebuffers) const ArrayLH_POD<UPInt, StatMV_VM_AbcFile_Mem>& VMAbcFi
 
 // Tracer: the run-time operands a chained multiname takes off the operand stack (its name and / or namespace set),
 // the name value stored into the multiname. ctx: {tracer, state}.
-// MS2-FUNCTIONAL 0x142520380: clang shares the per-case epilogues the exe duplicates, and saves rbp
+// Each case pops through c[1] and returns on its own, so the exe duplicates the epilogues; the name is set with Value::operator=.
 // @0x142520380
 __declspec(safebuffers) int FUN_142520380(void* ctx, void* multiname)
 {
     using namespace Scaleform::GFx::AS3;
     using namespace Scaleform::GFx::AS3::TR;
     void** c = reinterpret_cast<void**>(ctx);
-    State& st = *static_cast<State*>(c[1]);
-    int& kind = *reinterpret_cast<int*>(multiname);
-    Value& name = *reinterpret_cast<Value*>(reinterpret_cast<Scaleform::UPInt>(multiname) + 0x10);
     for (;;)
     {
-        switch (kind)
+        switch (*static_cast<const int*>(multiname))
         {
         case 1: case 9:      // RTQName: the namespace
-            st.PopOpValue();
+            static_cast<State*>(c[1])->PopOpValue();
             return 1;
         case 5: case 13:     // RTQNameL: the name and the namespace
-            st.PopOpValue();
-            name.Assign(st.PopOpValue());
+            static_cast<State*>(c[1])->PopOpValue();
+            *reinterpret_cast<Value*>(static_cast<Scaleform::UByte*>(multiname) + 0x10) = static_cast<State*>(c[1])->PopOpValue();
             return 2;
         case 6: case 14:     // MultinameL: the name
-            name.Assign(st.PopOpValue());
+            *reinterpret_cast<Value*>(static_cast<Scaleform::UByte*>(multiname) + 0x10) = static_cast<State*>(c[1])->PopOpValue();
             return 1;
         case 16:
         {
