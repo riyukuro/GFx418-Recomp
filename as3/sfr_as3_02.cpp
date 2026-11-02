@@ -309,6 +309,29 @@ static SF_INLINE const Value& saAt(const SparseArray& sa, UPInt ind)
     return sa.DefaultValue;
 }
 
+// ArrayDataDH::PushBack, which the exe's map body inlines (filter keeps the call).
+struct DenseValues : ValueArrayDH
+{
+    static __forceinline void Push(ValueArrayDH& a, const Value& v)
+    {
+        auto& d = static_cast<DenseValues&>(a).Data;
+        d.ResizeNoConstruct(d.pHeap, d.Size + 1);
+        ::new (d.Data + d.Size - 1) Value(v);
+    }
+};
+
+static SF_INLINE void saPushBackInl(SparseArray& sa, const Value& v)
+{
+    if (sa.Length == sa.ValueA.GetSize())
+        DenseValues::Push(sa.ValueA, v);
+    else
+    {
+        sa.ValueHHighInd = sa.Length;
+        sa.ValueH.Set(sa.ValueHHighInd, v);
+    }
+    ++sa.Length;
+}
+
 static SF_INLINE void saPushBack(SparseArray& sa, const Value& v)
 {
     if (sa.Length == sa.ValueA.GetSize())
@@ -325,7 +348,12 @@ namespace Instances { namespace fl
 {
     // ---- Array natives ----
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor
+    // Inline copy of the ctor (its out-of-line copy is in sfr_as3_01c, see SFR01C_INSTANCE_CTOR).
+    __forceinline Array::Array(InstanceTraits::Traits& t)
+        : Instance(t), SA(t.GetVM().GetMemoryHeap())
+    {
+    }
+
     // @0x1423f7f50
     void Array::AS3concat(Value& result, unsigned argc, const Value* argv)
     {
@@ -371,7 +399,6 @@ namespace Instances { namespace fl
         result = false;
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
     // @0x1423f9880
     void Array::AS3filter(SPtr<Instances::fl::Array>& result, const Value& callback, const Value& thisObject)
     {
@@ -391,7 +418,10 @@ namespace Instances { namespace fl
             if (GetVM().IsException())
                 break;
             if (r.IsBool() && r.AsBool())
+            {
                 saPushBack(arr->SA, saAt(SA, i));
+                continue;
+            }
         }
     }
 
@@ -413,7 +443,6 @@ namespace Instances { namespace fl
         }
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
     // @0x1423fbb20
     void Array::AS3map(SPtr<Instances::fl::Array>& result, const Value& callback, const Value& thisObject)
     {
@@ -432,7 +461,7 @@ namespace Instances { namespace fl
             GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
             if (GetVM().IsException())
                 break;
-            saPushBack(arr->SA, r);
+            saPushBackInl(arr->SA, r);
         }
     }
 
@@ -580,7 +609,6 @@ namespace InstanceTraits { namespace fl
         result = ch;
     }
 
-    // MS2-FUNCTIONAL: inliner choice differs (the exe inlines the NaN SetNumber, ours merges both into one call)
     // @0x1423f7440
     void String::AS3charCodeAt(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -595,7 +623,7 @@ namespace InstanceTraits { namespace fl
         if (index >= 0 && static_cast<UInt32>(index) < str.GetLength())
             result.SetNumber(str.GetCharAt(index));
         else
-            result.SetNumber(NumberUtil::NaN());
+            result.Assign(NumberUtil::NaN());
     }
 
     // @0x1423f8070
@@ -1457,6 +1485,15 @@ namespace Instances { namespace fl
         return Pickable<XMLList>(new(itr.Alloc()) XMLList(itr, InlineCtor()));
     }
 
+    // XMLList::MakeXMLListInstance() (0x14241b350), expanded in place as the exe does.
+    static __forceinline Pickable<XMLList> newXMLListLike(XMLList& self)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self.GetInstanceTraits());
+        if (self.TargetNamespace && self.TargetObject && self.TargetProperty)
+            return itr.MakeInstance(itr, *self.TargetObject, ASString(self.TargetProperty), *self.TargetNamespace);
+        return newXMLList(itr);
+    }
+
     // A new list of the XMLList class whose target is name of obj.
     static SF_INLINE Pickable<XMLList> MakeTargetList(AS3::Object& obj, const ASString& name, Instances::Namespace& ns)
     {
@@ -1590,11 +1627,11 @@ namespace Instances { namespace fl
         GetAttributes(*list);
     }
 
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423f71f0
     void XMLList::AS3attributes(SPtr<XMLList>& result)
     {
-        result = MakeXMLListInstance();
+        result = newXMLListLike(*this);
         XMLList& list = *result;
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
@@ -1624,7 +1661,7 @@ namespace Instances { namespace fl
     }
 
     // The children named propertyName (in the public namespace) of every item.
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423f7710
     void XMLList::AS3child(SPtr<XMLList>& result, const Value& propertyName)
     {
@@ -1633,12 +1670,12 @@ namespace Instances { namespace fl
             VM& vm = GetVM();
             return vm.ThrowTypeError(VM::Error(VM::eInvalidArgumentError, vm, "propertyName"));
         }
-        result = MakeXMLListInstance();
-        XMLList& list = *result;
+        Pickable<XMLList> list = newXMLListLike(*this);
+        result = list;
         Multiname mn(GetVM().GetPublicNamespace(), propertyName);
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
-            List[i]->GetChildren(list, mn);
+            List[i]->GetChildren(*list, mn);
     }
 
     // The index in the parent's children, -1 without a parent.
@@ -1676,11 +1713,11 @@ namespace Instances { namespace fl
     }
 
     // The children of every item (GetProperty with the any-name, inlined).
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423f7ae0
     void XMLList::AS3children(SPtr<XMLList>& result)
     {
-        result = MakeXMLListInstance();
+        result = newXMLListLike(*this);
         Multiname mn(GetVM());
         XMLList& list = *result;
         if (mn.IsAttr())
@@ -1782,13 +1819,13 @@ namespace Instances { namespace fl
     }
 
     // The descendants named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423f8840
     void XMLList::AS3descendants(Value& result, unsigned argc, const Value* argv)
     {
         Multiname mn(GetVM().GetPublicNamespace(),
             argc == 0 ? Value(GetVM().GetStringManager().CreateConstString("*")) : Value(argv[0]));
-        Pickable<XMLList> list = MakeXMLListInstance();
+        Pickable<XMLList> list = newXMLListLike(*this);
         result.Pick(list);
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
@@ -1809,11 +1846,11 @@ namespace Instances { namespace fl
     }
 
     // The element children named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423f8ce0
     void XMLList::AS3elements(Value& result, unsigned argc, const Value* argv)
     {
-        Pickable<XMLList> list = MakeXMLListInstance();
+        Pickable<XMLList> list = newXMLListLike(*this);
         result.Pick(list);
         Multiname mn(GetVM().GetPublicNamespace(),
             argc == 0 ? Value(GetVM().GetStringManager().CreateConstString("*")) : Value(argv[0]));
@@ -2274,11 +2311,11 @@ namespace Instances { namespace fl
     }
 
     // The processing-instruction children (named argv[0] if given) of every item.
-    // MS2-FUNCTIONAL: the exe inlines MakeXMLListInstance and the XMLList constructor
+    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
     // @0x1423fcfc0
     void XMLList::AS3processingInstructions(Value& result, unsigned argc, const Value* argv)
     {
-        Pickable<XMLList> list = MakeXMLListInstance();
+        Pickable<XMLList> list = newXMLListLike(*this);
         result.Pick(list);
         if (argc == 0)
         {
@@ -2628,6 +2665,7 @@ namespace Classes { namespace fl
 
 }}} // namespace Scaleform::GFx::AS3
 
+// MS2-PIN: ??_7Array@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431415b0
 // MS2-PIN: ??_7CallBack@XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436c0
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
 // MS2-PIN: ??_7XMLList@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431436d0
