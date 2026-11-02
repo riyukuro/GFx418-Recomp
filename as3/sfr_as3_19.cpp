@@ -571,12 +571,6 @@ struct TrTraitsScratch
     UPInt w1, w2, w3;
 };
 
-// The same scratch released as a Value when it goes out of scope.
-struct TrTraitsScratchValue : TrTraitsScratch
-{
-    ~TrTraitsScratchValue() { reinterpret_cast<Value*>(&w0)->~Value(); }
-};
-
 // @0x142528e20
 void State::SetRegister(AbsoluteIndex ind, const Value& v)
 {
@@ -870,14 +864,19 @@ void Sfr27TraceLookupSwitch(State* st, UInt64* pos)
     FUN_1424e6aa0(tracer, st, *pos, 1, 1);
 }
 
+// State::ConvertOpTo inlined into the tracer's convert cases: the top is re-read through GetOpStack().Back(), and the
+// Value temporary is built before Assign's this is loaded, as in the exe.
+static __forceinline void TrConvertTopTo(State& st, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
+{
+    st.GetOpStack().Back().Assign(Value(tr, isNull));
+}
+
 // @0x14253bb30
 void Sfr27TraceTopBoolean(State* st, UInt32 arg)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), static_cast<UInt32>(arg));
-    TrTraitsScratch t;
-    t.SetTraits(TrITraits(s.Tracer(), 0x210));
-    s.Top().Assign(t.Get());
+    TrConvertTopTo(*st, TrITraits(s.Tracer(), 0x210), Value::NotNull);
 }
 
 // @0x14253f260
@@ -979,76 +978,67 @@ void Sfr27TracePopNote(State* st, UInt32 arg)
 void Sfr27TraceConvertTopBoolean(State* st)
 {
     StV s(st);
-    Value& top = s.Top();
+    Value& top = st->GetOpStack().Back();
     const UInt32 k = static_cast<UInt32>(top.GetKind());
     if (k < 5 || k == 10)
     {
         Sfr31ValueToBool(&top);
         return;
     }
-    TrTraitsScratchValue t;
-    t.SetTraits(TrITraits(s.Tracer(), 0x210));
-    top.Assign(t.Get());
+    TrConvertTopTo(*st, TrITraits(s.Tracer(), 0x210), Value::NotNull);
 }
 
 // @0x142537ab0
 void Sfr27TraceConvertTopNumber(State* st)
 {
     StV s(st);
-    Value& top = s.Top();
+    Value& top = st->GetOpStack().Back();
     const UInt32 k = static_cast<UInt32>(top.GetKind());
     if (k < 5 || k == 10)
     {
         top.ToNumberValueInline();
         return;
     }
-    TrTraitsScratch t;
-    t.SetTraits(TrITraits(s.Tracer(), 0x218));
-    top.Assign(t.Get());
+    TrConvertTopTo(*st, TrITraits(s.Tracer(), 0x218), Value::NotNull);
 }
 
 // @0x142537b70
 void Sfr27TraceConvertTopInt(State* st)
 {
     StV s(st);
-    Value& top = s.Top();
+    Value& top = st->GetOpStack().Back();
     const UInt32 k = static_cast<UInt32>(top.GetKind());
     if (k < 5 || k == 10)
     {
         SInt32 result;
-        CheckResult ok(false);
-        if (*FUN_1424f0d30(&top, &ok, &result))
+        if (top.Convert2Int32(result))
             top.SetSInt32(result);
         return;
     }
-    TrTraitsScratch t;
-    t.SetTraits(TrITraits(s.Tracer(), 0x220));
-    top.Assign(t.Get());
+    TrConvertTopTo(*st, TrITraits(s.Tracer(), 0x220), Value::NotNull);
 }
 
 // @0x142537e00
 void Sfr27TraceConvertTopUInt(State* st)
 {
     StV s(st);
-    Value& top = s.Top();
+    Value& top = st->GetOpStack().Back();
     const UInt32 k = static_cast<UInt32>(top.GetKind());
     if (k < 5 || k == 10)
     {
         UInt32 result;
-        CheckResult ok(false);
-        if (*FUN_1424f1a30(&top, &ok, &result))
+        if (top.Convert2UInt32(result))
             top.SetUInt32(result);
         return;
     }
-    TrTraitsScratch t;
-    t.SetTraits(TrITraits(s.Tracer(), 0x228));
-    top.Assign(t.Get());
+    TrConvertTopTo(*st, TrITraits(s.Tracer(), 0x228), Value::NotNull);
 }
 
 
 // State::ConvertOpTo / ConvertRegisterTo inlined (the store order matches). The exe tail-calls the weak-proxy free
-// (jmp [rax+0x60]); MS2_AS3_ASSIGN_NOALIAS gives that to Top* and Reg*. Pop2* still end in call; ret (the popped
-// Value's address escapes as PopOpValue's sret) and load Data before Size.
+// (jmp [rax+0x60]); MS2_AS3_ASSIGN_NOALIAS gives that to Top* and Reg*. Pop2* go through TrConvertTopTo (Size
+// loaded before Data, as in the exe) but still end in call; ret: the popped Value's address escapes as
+// PopOpValue's sret. The tail call needs __declspec(noalias) on State::PopOpValue in as3_readargs.h.
 static inline void TrConvertOp(Value& v, InstanceTraits::Traits& tr, Value::TraceNullType isNull)
 {
     v.Assign(Value(tr, isNull));
@@ -1063,7 +1053,7 @@ static inline void TrConvertOp(Value& v, InstanceTraits::Traits& tr, Value::Trac
     void State::Name() \
     { \
         Value popped(PopOpValue()); \
-        TrConvertOp(OpStack[OpStack.GetSize() - 1], TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
+        TrConvertTopTo(*this, TrITraits(reinterpret_cast<UPInt>(pTracer), Off), Value::NotNull); \
     }
 #define SFR27_REG_OP(Name, Off) \
     void State::Name(UInt32 ind) \
