@@ -97,8 +97,6 @@ bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value
 // VM::IsOfType(v, class traits)
 // AvmTextField: one image substitution element (an object of the script's array) at index idx
 void FUN_14251d070(void* pavmtf, Scaleform::GFx::AS3::VM& vm, unsigned idx, const Scaleform::GFx::AS3::Value& ve);
-// Value::operator=(const ASString&), out of line in the exe
-Scaleform::GFx::AS3::Value& FUN_1424e0d40(Scaleform::GFx::AS3::Value& v, const Scaleform::GFx::ASString& str);
 // AvmInteractiveObj::AvmInteractiveObj (abstract here, so the derived ctors reach it by address)
 // ArrayDataBase::ResizeNoConstruct(pheapAddr, newSize) of VMAbcFile::IntStrings, and ArrayData::Resize of its
 // OpCodeArray and Exceptions: out of line in the exe
@@ -284,7 +282,13 @@ struct ValueAssignCopies
             to.AddRefString();
         }
     }
+    // Value::Assign(const ASString&), which the exe inlines into its out-of-line operator= (0x1424e0d40).
+    static SF_INLINE void AssignString15(Value& to, const ASString& v) { to.Release(); AssignUnsafeString15(to, v); }
 };
+
+// Value::operator=(const ASString&) (0x1424e0d40): the exe's Multiname(VM&) sees its body (keeps the string node in
+// rbx across the call), so it is defined here.
+inline SF_NOINLINE Value& FUN_1424e0d40(Value& v, const ASString& str) { ValueAssignCopies::AssignString15(v, str); return v; }
 
 // ThunkArgs0<ASString> with the result store inlined.
 struct ThunkArgs15String
@@ -2903,7 +2907,6 @@ static __forceinline void Sfr15SetPtrInline(SPtr<GASRefCountBase>& sp, GASRefCou
 }
 
 // The any-name "" in the running frame's default XML namespace, else the public one.
-// MS2-FUNCTIONAL: the exe keeps the empty string node in rbx across FUN_1424e0d40, ours reloads it from its slot
 // @0x1424d8bb0
 Multiname::Multiname(VM& vm)
     : Kind(static_cast<Abc::MultinameKind>(0))
