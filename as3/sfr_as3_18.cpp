@@ -40,6 +40,11 @@
 #include "ms2/scaleform/include/gfx/gfx_spritedef.h"
 #undef GetObject   // windows.h
 
+namespace Scaleform {
+// Traits' vtable holder is set through the out-of-line 0x142524290 (sfr_as3_19).
+template<> SF_NOINLINE void AutoPtr<GFx::AS3::VTable>::Reset(GFx::AS3::VTable* p, bool owner);
+} // namespace Scaleform
+
 // The definitions in sfr_as3_17 and sfr_as3_19 of exe functions called here, by their real names.
 namespace Scaleform { namespace GFx { namespace AS3 {
 const char* AsString(Abc::NamespaceKind kind);                                                    // 0x1424ed700
@@ -4215,19 +4220,18 @@ void Stage::PropagateMouseEvent(const EventId& id)
 } } } // namespace Scaleform::GFx::AS3
 
 // Abc::TraitInfo: the multiname of a slot's or constant's type, or of a class trait's class (the any type for 0).
-// MS2-FUNCTIONAL declared over void pointers by its caller (sfr_as3_17)
+// MS2-FUNCTIONAL declared over void pointers by its caller (sfr_as3_17); SDK GetTypeName shape, the exe slot path
+// has an extra 32-bit zero test before the shared AnyType check
 // @0x14250f8a0
 const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const void* abc)
 {
     using namespace Scaleform::GFx::AS3::Abc;
     const TraitInfo& t    = *static_cast<const TraitInfo*>(amn);
     const File&      file = *static_cast<const File*>(abc);
-    SInd             ind;
-    if (t.GetType() == TraitInfo::tSlot || t.GetType() == TraitInfo::tConst)
-        ind = t.Ind;
-    else
-        ind = file.AS3_Classes.Info[t.Ind]->inst_info.name_ind;
-    return file.Const_Pool.GetMultiname(ind);
+    TraitInfo::Type  type = t.GetType();
+    if (type == TraitInfo::tSlot || type == TraitInfo::tConst)
+        return file.Const_Pool.GetMultiname(t.Ind);
+    return file.Const_Pool.GetMultiname(file.AS3_Classes.Info[t.Ind]->inst_info.name_ind);
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
