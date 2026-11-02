@@ -314,48 +314,50 @@ void* FUN_142746a40(void* self, bool paused)
     return 0;
 }
 
+// AuxChannel ctor.
+static __forceinline char* ConstructAuxChannel(char* c, void* self, void* channel)
+{
+    FUN_142742fb0((std::uint64_t*)c, RawField<char*>(self, 0x28), (std::uint64_t)self, channel);
+    RawField<void*>(c, 0) = DAT_1431bee78;
+    RawField<void*>(c, 0x10) = DAT_1431beef0;
+    RawField<U>(c, 0x48) = FUN_1425e3480();
+    RawField<char>(c, 0x69) = 0;
+    reinterpret_cast<Scaleform::Lock*>(c + 0x70)->Lock::Lock(0);
+    RawField<unsigned>(c, 0x98) = 0;
+    _InterlockedExchangeAdd(RawFieldPtr<volatile long>(self, 8), 1);
+    RawField<U>(c, 0x58) = 0;
+    RawField<U>(c, 0x60) = 0;
+    reinterpret_cast<FMOD::Channel*>(RawField<void*>(c, 0x38))->getPaused(RawFieldPtr<bool>(c, 0x68));
+    if (RawField<char>(c, 0x68))
+        RawField<U>(c, 0x50) = RawField<U>(c, 0x48);
+    else
+    {
+        FUN_142745f50(self);
+        RawField<U>(c, 0x48) = FUN_1425e3480();
+        RawField<U>(c, 0x60) = FilledMicros(self);
+    }
+    return c;
+}
+
 // AuxStreamer: Start. Plays the stream sound, sizes the 300 ms staging buffer and wraps the channel in an aux
 // channel that tracks played time against what the streamer has queued.
-// MS2-FUNCTIONAL: written from the exe's control flow.
 // @0x142746bd0
 void* FUN_142746bd0(void* self, bool paused)
 {
     void* sound = RawField<void*>(self, 0x30);
     if (!sound)
         return 0;
-    char* player = RawField<char*>(self, 0x28);
-    void* channel = 0;
-    if (reinterpret_cast<FMOD::System*>(RawField<void*>(player, 0x10))->playSound(static_cast<FMOD_CHANNELINDEX>(-2), reinterpret_cast<FMOD::Sound*>(sound), paused, reinterpret_cast<FMOD::Channel**>(&channel)))
+    void* channel;
+    if (reinterpret_cast<FMOD::System*>(RawField<void*>(RawField<char*>(self, 0x28), 0x10))->playSound(static_cast<FMOD_CHANNELINDEX>(-2), reinterpret_cast<FMOD::Sound*>(sound), paused, reinterpret_cast<FMOD::Channel**>(&channel)))
         return 0;
     RawField<unsigned>(self, 0x60) = RawField<unsigned>(self, 0x4c) * 300 / 1000 * (RawField<unsigned>(self, 0x50) >> 3) *
                                      RawField<unsigned>(self, 0x48);
     if (RawField<void*>(self, 0x58))
         Memory::Free(RawField<void*>(self, 0x58));
     RawField<void*>(self, 0x58) = Memory::Alloc(RawField<unsigned>(self, 0x60));
-    char* c = (char*)Memory::Alloc(0xa0);
-    if (c)
-    {
-        FUN_142742fb0((std::uint64_t*)c, player, (std::uint64_t)self, channel);
-        RawField<void*>(c, 0) = DAT_1431bee78;
-        RawField<void*>(c, 0x10) = DAT_1431beef0;
-        RawField<U>(c, 0x48) = FUN_1425e3480();
-        RawField<char>(c, 0x69) = 0;
-        reinterpret_cast<Scaleform::Lock*>(c + 0x70)->Lock::Lock(0);
-        RawField<unsigned>(c, 0x98) = 0;
-        _InterlockedExchangeAdd(RawFieldPtr<volatile long>(self, 8), 1);
-        RawField<U>(c, 0x58) = 0;
-        RawField<U>(c, 0x60) = 0;
-        reinterpret_cast<FMOD::Channel*>(RawField<void*>(c, 0x38))->getPaused(RawFieldPtr<bool>(c, 0x68));
-        if (RawField<char>(c, 0x68))
-            RawField<U>(c, 0x50) = RawField<U>(c, 0x48);
-        else
-        {
-            FUN_142745f50(self);
-            RawField<U>(c, 0x48) = FUN_1425e3480();
-            RawField<U>(c, 0x60) = FilledMicros(self);
-        }
-    }
-    FUN_142744070(player, c);
+    char* mem = (char*)Memory::Alloc(0xa0);
+    char* c = mem ? ConstructAuxChannel(mem, self, channel) : 0;
+    FUN_142744070(RawField<char*>(self, 0x28), c);
     return c;
 }
 
