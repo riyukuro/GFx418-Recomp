@@ -27,6 +27,29 @@
 #include "ms2/scaleform/include/gfx/gfx_moviedef.h"
 #include "ms2/scaleform/include/gfx/gfx_textsnapshot.h"
 
+// The exe calls this HashSetBase destructor out of line (0x142497340, e.g. for setRawCapacity's emptied
+// fresh table); a unit-local noinline specialization with the header body keeps that call.
+using SOSharedObjectNode = Scaleform::HashNode<Scaleform::GFx::ASString,
+    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject>,
+    Scaleform::GFx::ASStringHashFunctor>;
+template<> inline __declspec(noinline) Scaleform::HashSetBase<SOSharedObjectNode,
+    SOSharedObjectNode::NodeHashF, SOSharedObjectNode::NodeAltHashF,
+    Scaleform::AllocatorLH<Scaleform::GFx::ASString, 324>,
+    Scaleform::HashsetNodeEntry<SOSharedObjectNode, SOSharedObjectNode::NodeHashF>>::~HashSetBase()
+{
+    if (pTable)
+    {
+        for (Scaleform::UPInt i = 0, last = pTable->SizeMask; i <= last; i++)
+        {
+            Scaleform::HashsetNodeEntry<SOSharedObjectNode, SOSharedObjectNode::NodeHashF>* e = &E(i);
+            if (!e->IsEmpty())
+                e->Free();
+        }
+        Scaleform::AllocatorLH<Scaleform::GFx::ASString, 324>::Free(pTable);
+        pTable = 0;
+    }
+}
+
 // Shared render/AS3 cleanup COMDATs are placed in this SCU by the executable.  Their data structures are
 // recovered here from the code that uses them; the neighboring AS3 text visitor classes live in sfr_as3_13.
 // RangeData<CSSHolderBase::UrlZone>: Index, Length, then the zone (SavedFmt, HitCount, OverCount).
@@ -56,15 +79,16 @@ struct CX18TextFormatCleanup
 struct CX18RefCountedPtr { Scaleform::RefCountImpl* Ptr; };
 
 // @0x1424a9ed0
-// MS2-FUNCTIONAL: releases each URL zone's SavedFmt from the back, then frees the backing ArrayLH storage.
+// Releases each URL zone's SavedFmt from the back, then frees the backing ArrayLH storage.
 void FUN_1424a9ed0(void* pdata)
 {
     CX18ArrayLH* array = (CX18ArrayLH*)pdata;
-    for (Scaleform::UPInt i = array->Size; i; --i)
+    Scaleform::UPInt n = array->Size;
+    CX18ArrayLHEntry* p = array->Data + n - 1;
+    for (Scaleform::UPInt i = 0; i < n; ++i, --p)
     {
-        Scaleform::RefCountNTSImpl* fmt = array->Data[i - 1].SavedFmt;   // TextFormat: RefCountBaseNTS (0x14257dcd0)
-        if (fmt)
-            fmt->Release();
+        if (p->SavedFmt)   // TextFormat: RefCountBaseNTS (0x14257dcd0)
+            p->SavedFmt->Release();
     }
     if (array->Data)
         Scaleform::Memory::GetGlobalHeap()->Free(array->Data);
@@ -3137,9 +3161,6 @@ template void HashSetBase<Ptr<Render::Font>, FixedSizeHash<Ptr<Render::Font> >, 
     ::add<Ptr<Render::Font> >(void*, const Ptr<Render::Font>&, UPInt);
 }
 
-using SOSharedObjectNode = Scaleform::HashNode<Scaleform::GFx::ASString,
-    Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl_net::SharedObject>,
-    Scaleform::GFx::ASStringHashFunctor>;
 // @0x14249c160
 template void Scaleform::HashSetBase<SOSharedObjectNode,
     SOSharedObjectNode::NodeHashF, SOSharedObjectNode::NodeAltHashF,
