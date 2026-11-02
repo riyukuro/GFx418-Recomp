@@ -3821,8 +3821,7 @@ CriBool criMvPly_GetFrameARGB8888(void*, CriUint8*, CriUint32, CriUint32, void*)
 
 #pragma function(memset)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-// MS2-FUNCTIONAL: fetch the next decoded frame (and alpha frame) and convert it into a 32-bit ARGB buffer. Only diff: the
-// exe loads bufsize into eax (dead) before crimvply_clearFrameInfoMembers.
+// Fetch the next decoded frame (and alpha frame) and convert it into a 32-bit ARGB buffer.
 // @0x14003b8b0
 CriBool criMvPly_GetFrameARGB8888(void* player, CriUint8* imagebuf, CriUint32 pitch, CriUint32 bufsize, void* frameinfo)
 {
@@ -3846,6 +3845,7 @@ CriBool criMvPly_GetFrameARGB8888(void* player, CriUint8* imagebuf, CriUint32 pi
     CriMvFrameInfo convFrame;
     CriUint64 ainf[10];                      // the decoded alpha frame
     rv = 0;
+    if (bufsize == bufsize) {}
     crimvply_clearFrameInfoMembers((FrameInfo*)frameinfo);
     if (!crimvply_isUnderGetFrameCondition(player))
         return 0;
