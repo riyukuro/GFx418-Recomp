@@ -1756,7 +1756,6 @@ namespace Instances { namespace fl_display
     // Looks the class of pobj, then its ABC base classes, up among the movie's exported symbols. Fills pinfo with a
     // character definition or another resource; false if no class name is exported.
     // @0x142442c30
-    // MS2-FUNCTIONAL: written from the exe's control flow
     bool FindLibrarySymbol(const DisplayObject* pobj, CharacterCreateInfo* pinfo, MovieDefImpl* pdefImpl)
     {
         VM& vm = pobj->GetVM();
@@ -1766,7 +1765,7 @@ namespace Instances { namespace fl_display
         const Traits* ptraits = &pobj->GetTraits();
         while (ptraits)
         {
-            if (!(ptraits->Flags & Traits::IsAbcObjectMask))
+            if (!((UByte)((UPInt)ptraits->Flags >> 4) & 1))
                 break;
             if (pinfo->pCharDef)
                 return true;
@@ -1774,8 +1773,11 @@ namespace Instances { namespace fl_display
                 break;
             ASString name = ptraits->GetQualifiedName(Traits::qnfWithDot);
             ResourceBindData data;
-            bool found = FUN_14256ec50(GetASRoot(vm)->GetMovieImpl(), pdefImpl, &data,
-                                       String(name.ToCStr()));
+            bool found;
+            {
+                String symbol(name.ToCStr());
+                found = FUN_14256ec50(GetASRoot(vm)->GetMovieImpl(), pdefImpl, &data, symbol);
+            }
             if (found)
             {
                 if (data.pResource->GetResourceTypeCode() & (Resource::RT_CharacterDef_Bit << Resource::RT_TypeCode_Shift))
@@ -1787,9 +1789,7 @@ namespace Instances { namespace fl_display
             else
                 ptraits = ptraits->pParent;
         }
-        if (pinfo->pCharDef)
-            return true;
-        return pinfo->pResource != NULL;
+        return pinfo->pCharDef || pinfo->pResource;
     }
 
     // @0x142440910
