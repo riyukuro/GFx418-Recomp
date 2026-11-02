@@ -1712,7 +1712,10 @@ template void ArrayDataBase<GFx::AS2::Value, AllocatorLH<GFx::AS2::Value, GFx::A
 // @0x142995440
 template void decltype(HashUncached<GFx::AS2::Object*, GFx::AS2::Object*,
                                     IdentityHash<GFx::AS2::Object*> >::mHash)::BaseType::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's Clear (0x142934060, in sfr_as2_04) and add (0x142914e60, in sfr_as2_02) out of line.
+template <> void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::Clear();
+template <> template <> void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::add<HashNode<GFx::ASString, char, GFx::ASStringHashFunctor> >(
+    void* pheapAddr, const HashNode<GFx::ASString, char, GFx::ASStringHashFunctor>& key, UPInt h);
 // @0x1429956b0
 template void MS2_AS2_STRING_SET(char, HashsetNodeEntry)::setRawCapacity(void*, UPInt);
 // MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
