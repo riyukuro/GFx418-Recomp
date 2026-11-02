@@ -2134,12 +2134,17 @@ void ExternalInterfaceCtorFunction::Call(const FnCall& fn)
 
         // Up to 10 arguments are converted on the stack; the buffer is freed only past 40 of them (as the exe).
         void*       onStack[10 * (sizeof(GFx::Value) / sizeof(void*))];
-        GFx::Value* args = (GFx::Value*)onStack;
+        GFx::Value* args;
         if (nargs > 10)
             args = (GFx::Value*)SF_HEAP_ALLOC(fn.Env->GetHeap(), nargs * sizeof(GFx::Value), Stat_Default_Mem);
+        else
+            args = (GFx::Value*)onStack;
         for (unsigned i = 0; i < nargs; i++)
+        {
+            const Value& arg = fn.Arg(i + 1);
             static_cast<MovieRoot*>(pmovie->pASMovieRoot)
-                ->ASValue2GFxValue(fn.Env, fn.Arg(i + 1), Scaleform::Construct<GFx::Value>(&args[i]));
+                ->ASValue2GFxValue(fn.Env, arg, Scaleform::Construct<GFx::Value>(&args[i]));
+        }
 
         static_cast<MovieRoot*>(pmovie->pASMovieRoot)->ExternalIntfRetVal.SetUndefined();
         pmovie->pExtIntfHandler->Callback(pmovie->AsMovie(), methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
