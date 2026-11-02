@@ -331,26 +331,24 @@ void TextFormat::SetFontList(const char* pfontList, UPInt fontListSz)
 }
 
 // @0x142608030
-// MS2-FUNCTIONAL: the exe shrink-wraps the rdi / r15 saves into the font handle branch; ours saves them in the prolog
 void TextFormat::SetFontList(const wchar_t* pfontList, UPInt fontListSz)
 {
     if (fontListSz == SF_MAX_UPINT)
         fontListSz = SFwcslen(pfontList);
     if (IsFontHandleSet())
     {
-        bool same = (FontList.GetLength() == fontListSz);
-        if (same)
+        if (FontList.GetLength() == fontListSz)
         {
             for (UPInt i = 0; i < fontListSz; ++i)
             {
                 if (SFtowlower((wchar_t)FontList.ToCStr()[i]) != SFtowlower(pfontList[i]))
                 {
-                    same = false;
+                    ClearFontHandle();
                     break;
                 }
             }
         }
-        if (!same)
+        else
             ClearFontHandle();
     }
     FontList.Clear();
@@ -374,7 +372,6 @@ void TextFormat::SetFontName(const char* pfontName, UPInt fontNameSz)
 }
 
 // @0x142608170
-// MS2-FUNCTIONAL: SetFontList inlined: the exe shrink-wraps the rdi / r15 saves; ours saves them in the prolog
 void TextFormat::SetFontName(const wchar_t* pfontName, UPInt fontNameSz)
 {
     if (fontNameSz == SF_MAX_UPINT)
