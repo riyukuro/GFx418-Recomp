@@ -15,6 +15,13 @@
 void FUN_1425f4090(void* p);  // global in the exe
 void FUN_14257dcd0(void* p);  // global in the exe
 
+// The exe calls the out-of-line instantiation (sfr_as3_18) on the grow path of MovieLevels.Clear()
+namespace Scaleform {
+template<>
+void ArrayDataBase<GFx::MovieImpl::LevelInfo, AllocatorLH<GFx::MovieImpl::LevelInfo, 327>, ArrayDefaultPolicy>::Reserve(
+    const void* pheapAddr, UPInt newCapacity);
+}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Runs the action tags of one frame as their own action session (gotoAndPlay's callFrame).
@@ -45,40 +52,48 @@ void AvmSprite::CallFrameActions(unsigned frame)
 }
 
 // Clears every level's display list, then lets each level run its teardown slot and empties the level array.
-// MS2-FUNCTIONAL: the levels are raw words of the movie, the level slot is reached by address
+// MS2-FUNCTIONAL: 3 bytes short, the exe pads the label after the out-of-line Reserve call with a nop
 // @0x142934480
 void MovieRoot::ClearDisplayList()
 {
     typedef void (*LevelSlot)(void*);
-    MovieImpl* pmovie = pMovieImpl;
-    for (UPInt n = pmovie->MovieLevelsSize; n != 0; --n)
+    typedef ArrayDataBase<MovieImpl::LevelInfo, AllocatorLH<MovieImpl::LevelInfo, 327>, ArrayDefaultPolicy> LevelArray;
+    for (UPInt n = pMovieImpl->MovieLevelsSize; n != 0; --n)
     {
-        DisplayObjContainer* plevel = reinterpret_cast<DisplayObjContainer*>(pmovie->pMovieLevels[n - 1].pSprite);
+        DisplayObjContainer* plevel = reinterpret_cast<DisplayObjContainer*>(pMovieImpl->pMovieLevels[n - 1].pSprite);
         plevel->mDisplayList.Clear(plevel);
         FUN_1425f4090(plevel);
     }
-    for (UPInt n = pmovie->MovieLevelsSize; n != 0; --n)
+    for (UPInt n = pMovieImpl->MovieLevelsSize; n != 0; --n)
     {
-        void* plevel = pmovie->pMovieLevels[n - 1].pSprite;
+        void* plevel = pMovieImpl->pMovieLevels[n - 1].pSprite;
         reinterpret_cast<LevelSlot>((*static_cast<void***>(plevel))[0x1b0 / 8])(plevel);
     }
-    UPInt size = pmovie->MovieLevelsSize;
-    if (size != 0)
+    // MovieLevels.Clear(): ArrayDataBase::ResizeNoConstruct(0), the Ptr<InteractiveObject> dtors written out
+    LevelArray& levels  = *reinterpret_cast<LevelArray*>(&pMovieImpl->pMovieLevels);
+    UPInt       oldSize = levels.Size;
+    if (0 < oldSize)
     {
-        for (UPInt n = size; n != 0; --n)
-            if (pmovie->pMovieLevels[n - 1].pSprite)
-                FUN_14257dcd0(pmovie->pMovieLevels[n - 1].pSprite);
-        if (pmovie->MovieLevelsCapacity & ~UPInt(1))
+        MovieImpl::LevelInfo* p = levels.Data + oldSize - 1;
+        for (UPInt i = 0; i < oldSize; ++i, --p)
+            if (p->pSprite)
+                FUN_14257dcd0(p->pSprite);
+        if (0 < (levels.Policy.GetCapacity() >> 1))
         {
-            if (pmovie->pMovieLevels)
+            // Reserve(0), inlined in the exe
+            if (levels.Data)
             {
-                Memory::pGlobalHeap->Free(pmovie->pMovieLevels);
-                pmovie->pMovieLevels = 0;
+                Memory::pGlobalHeap->Free(levels.Data);
+                levels.Data = 0;
             }
-            pmovie->MovieLevelsCapacity = 0;
+            levels.Policy.SetCapacity(0);
         }
     }
-    pmovie->MovieLevelsSize = 0;
+    else if (0 >= levels.Policy.GetCapacity())
+    {
+        levels.Reserve(&levels, 0);
+    }
+    levels.Size = 0;
 }
 
 }}} // namespace Scaleform::GFx::AS2
