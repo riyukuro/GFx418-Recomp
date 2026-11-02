@@ -3586,7 +3586,9 @@ void ColorMatrixFilterCtorFunction::GlobalCtor(const FnCall& fn)
             }
         }
     }
-    pfilter->SetMemberRaw(fn.Env->GetSC(), fn.Env->CreateConstString("matrix"), Value(Value::UNSET));
+    ASStringContext* psc = fn.Env->GetSC();
+    Value unset(Value::UNSET);
+    pfilter->SetMemberRaw(psc, psc->CreateConstString("matrix"), unset);
 }
 
 // MS2-FUNCTIONAL the exe inlines the BlurFilterObject(Environment*) ctor (sfr_as2_03)
