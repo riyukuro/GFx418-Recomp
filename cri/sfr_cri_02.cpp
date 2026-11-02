@@ -2120,7 +2120,7 @@ struct CriMutexLocker
     ~CriMutexLocker() { reinterpret_cast<Scaleform::Mutex*>(pMutex)->Unlock(); }
 };
 
-// MS2-FUNCTIONAL: run reader-thread requests from the intrusive queue until its stop operation arrives.
+// MS2-FUNCTIONAL: the reader-thread request loop; only the File::IsValid call (this copied before the null test) differs
 // @0x14002db40
 void* FUN_14002db40(void* thread, void* opaqueConfig)
 {
@@ -2163,7 +2163,7 @@ void* FUN_14002db40(void* thread, void* opaqueConfig)
                 request->Previous->Next = request->Next;
             }
             // the exe runs the operation outside the lock (0x14002dbdd) and retakes it to free the node
-            switch (request->Operation)
+            switch (static_cast<int>(request->Operation))
             {
             case 0:
             {
