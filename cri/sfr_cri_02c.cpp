@@ -3391,48 +3391,82 @@ void copyDataFromHeadAnalyToReadBuffer(void* player)
     FUN_140034330(player, source, ((CriMvPlyInputQueueFields*)player)->ReadBuffer, ((CriMvPlyInputQueueFields*)player)->DataQueue);
 }
 
-// MS2-FUNCTIONAL: reset the player's demux, streams, audio manager, and seek metadata for a new open.
+// Reset the player's demux, streams, audio manager, and seek metadata for a new open.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): read, chunk, queue.
 // @0x140031570
 void resetHandle(void* player)
 {
     struct ResetView
     {
         CriUint8 Reserved0[0xd60];
-        CriSint32 ReadMode;
-        CriUint32 HeaderChecked;
-        void* Demux;
+        CriSint32 ReadMode;                 // 0xd60
+        CriUint32 HeaderChecked;            // 0xd64
+        void* Demux;                        // 0xd68
         CriUint32 Reserved70;
-        CriUint32 OutputCount;
-        void* InputBuffer;
-        void* ReadBuffer;
-        void* DataQueue;
-        CriMovieInputChunk CurrentRead;
-        void* MemoryInput;
+        CriUint32 OutputCount;              // 0xd74
+        void* InputBuffer;                  // 0xd78
+        void* ReadBuffer;                   // 0xd80
+        void* DataQueue;                    // 0xd88
+        CriMovieInputChunk CurrentRead;     // 0xd90
+        void* MemoryInput;                  // 0xda0
+        CriUint8 Reservedda8[0xe10 - 0xda8];
+        void* AudioManager;                 // 0xe10
+        CriUint8 Reservede18[0xe58 - 0xe18];
+        CriUint32 Counters[7];              // 0xe58
+        CriUint8 Reservede74[0xe80 - 0xe74];
+        CriUint32 MetaCount;                // 0xe80
+        CriUint32 Reservede84;
+        const CriUint8* SfvData;            // 0xe88
+        CriSint32 SfvSize;                  // 0xe90
+        CriUint32 SfvCount;                 // 0xe94
+        const CriUint8* AlpData;            // 0xe98
+        CriSint32 AlpSize;                  // 0xea0
+        CriUint32 AlpCount;                 // 0xea4
+        const CriUint8* CueData;            // 0xea8
+        CriSint32 CueSize;                  // 0xeb0
+        CriUint8 Reservedeb4[0xf14 - 0xeb4];
+        CriUint32 DecoderError;             // 0xf14
     };
-    struct CounterResetView { CriUint8 Reserved[0xe58]; CriUint8 Counters[0x1c]; };
-    struct HeaderResetView { CriUint8 Reserved[0xe80]; CriUint32 Value; };
-    CriMvPlyObj* movie = (CriMvPlyObj*)player;
+    void* queue;
+    CriMovieInputChunk* chunk;
+    void* read;
     ((ResetView*)player)->ReadMode = 0;
-    if (((CriMvDecoderHandleFields*)player)->AudioManager)
-        criMvPlyAmng_Stop(((CriMvDecoderHandleFields*)player)->AudioManager);
+    if (((ResetView*)player)->AudioManager)
+        criMvPlyAmng_Stop(((ResetView*)player)->AudioManager);
     if (((ResetView*)player)->Demux)
         criUsfDmx_Stop(((ResetView*)player)->Demux);
     criSj_Reset(((ResetView*)player)->InputBuffer);
     criSj_Reset(((ResetView*)player)->MemoryInput);
-    if (((ResetView*)player)->DataQueue)
-        criSj_Reset(((ResetView*)player)->DataQueue);
-    if (((ResetView*)player)->ReadBuffer)
-        criSj_Reset(((ResetView*)player)->ReadBuffer);
-    if (((CriMvDecoderHandleFields*)player)->AudioManager)
-        criMvPlyAmng_ResetAudioSj(((CriMvDecoderHandleFields*)player)->AudioManager);
-    ((ResetView*)player)->CurrentRead.Data = NULL;
-    ((ResetView*)player)->CurrentRead.Size = 0;
+    queue = ((ResetView*)player)->DataQueue;
+    if (queue)
+        criSj_Reset(queue);
+    read = ((ResetView*)player)->ReadBuffer;
+    if (read)
+        criSj_Reset(read);
+    if (((ResetView*)player)->AudioManager)
+        criMvPlyAmng_ResetAudioSj(((ResetView*)player)->AudioManager);
+    chunk = &((ResetView*)player)->CurrentRead;
+    chunk->Data = NULL;
+    chunk->Size = 0;
     ((ResetView*)player)->HeaderChecked = 0;
     ((ResetView*)player)->OutputCount = 0;
-    movie->decoder_error = 0;
-    memset(((CounterResetView*)player)->Counters, 0, sizeof(((CounterResetView*)player)->Counters));
-    ((HeaderResetView*)player)->Value = 0;
-    memset(&movie->seektbl, 0, 0x2c);
+    ((ResetView*)player)->DecoderError = 0;
+    ((ResetView*)player)->Counters[0] = 0;
+    ((ResetView*)player)->Counters[1] = 0;
+    ((ResetView*)player)->Counters[2] = 0;
+    ((ResetView*)player)->Counters[3] = 0;
+    ((ResetView*)player)->Counters[4] = 0;
+    ((ResetView*)player)->Counters[5] = 0;
+    ((ResetView*)player)->Counters[6] = 0;
+    ((ResetView*)player)->MetaCount = 0;
+    ((ResetView*)player)->SfvData = NULL;
+    ((ResetView*)player)->SfvSize = 0;
+    ((ResetView*)player)->SfvCount = 0;
+    ((ResetView*)player)->AlpData = NULL;
+    ((ResetView*)player)->AlpSize = 0;
+    ((ResetView*)player)->AlpCount = 0;
+    ((ResetView*)player)->CueData = NULL;
+    ((ResetView*)player)->CueSize = 0;
 }
 
 // perform the executable's pending start/stop state transition on the player.
