@@ -230,8 +230,6 @@ void IntervalTimer::Clear()
     TimerObj = static_cast<Instances::fl_utils::Timer*>(0);
 }
 
-// MS2-FUNCTIONAL 0x1424f0b70: preserves the exe's URI-node identity and namespace-kind test using the recovered
-// NamespaceSet array layout at +0x20/+0x28.
 // @0x1424f0b70
 bool Multiname::ContainsNamespace(const Instances::Namespace& ns) const
 {
@@ -623,7 +621,18 @@ const SlotInfo* FindDynamicSlot(const SlotContainerType& c, const ASString& k, c
 // The value's collectable and closure object slots (out of line in the 4.2 SDK, inlined in the exe).
 inline GASRefCountBase** Value::AsGASRefCountBasePtrPtr() const
 {
-    return (GASRefCountBase**)(&value.VS._1.VObj);
+    switch (GetKind())
+    {
+    case kFunction:
+    case kThunkFunction:
+    case kObject:
+    case kClass:
+    case kNamespace:
+        return (GASRefCountBase**)(&value.VS._1.VObj);
+    default:
+        break;
+    }
+    return NULL;
 }
 inline GASRefCountBase** Value::AsClosurePtrPtr() const
 {
@@ -1267,7 +1276,6 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 
 // Stops the frame counter, clears the display list (+0xd8), shuts the root movie clip down and drops it, then
 // shuts the container down.
-// MS2-FUNCTIONAL 0x142504860: the null-root path jumps past the release (exe re-tests +0x110); same calls/stores.
 // @0x142504860
 void Stage::ForceShutdown()
 {
@@ -1582,7 +1590,6 @@ Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t)
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // ForEachChild_GC of an owned value array (+0x00 owner, +0x08 data, +0x10 size).
-// MS2-FUNCTIONAL 0x142504460: the exe inlines the value visit with a spare null register (r15) and a cmova guard.
 // @0x142504460
 void Sfr33OwnedValuesForEachChildGC(const UByte* self, RefCountCollector<StatMV_ActionScript_Mem>* prcc,
                                     ASRefCountBaseType::GcOp op)
@@ -2896,7 +2903,6 @@ ClassTraits::Traits* Sfr33FixedSlotType(const Traits& tr, const ASString& name, 
 }
 
 // ForEachChild_GC of a value array (+0x00 data, +0x08 size), two copies.
-// MS2-FUNCTIONAL 0x142503660: the exe inlines the value visit with a spare null register (r12) and a cmova guard.
 // @0x142503660
 void Sfr33ValueArrayForEachChildGCa(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const UByte* arr,
                                     ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
@@ -2905,7 +2911,6 @@ void Sfr33ValueArrayForEachChildGCa(RefCountCollector<StatMV_ActionScript_Mem>* 
         AS3::ForEachChild_GC(prcc, (*reinterpret_cast<Value* const*>(arr))[i], op, owner);
 }
 
-// MS2-FUNCTIONAL 0x142503730: the exe inlines the value visit with a spare null register (r12) and a cmova guard.
 // @0x142503730
 void Sfr33ValueArrayForEachChildGCb(RefCountCollector<StatMV_ActionScript_Mem>* prcc, const UByte* arr,
                                     ASRefCountBaseType::GcOp op, const ASRefCountBaseType& owner)
@@ -3355,7 +3360,6 @@ const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPI
     return si;
 }
 
-// MS2-FUNCTIONAL 0x1424efd80: the exe saves rsi/rdi where ours pushes rbp/r14 (register assignment); same code.
 // @0x1424efd80
 void CallFrame::ClearScopeStack()
 {
@@ -4515,7 +4519,6 @@ void Sfr33MovieRootArray::CreateArray(GFx::Value* pvalue)
 
 // MovieRoot::DoActions (virtual): the pending constructors, then the actions of every level up to AL_Render; a
 // pending exception is dropped.
-// MS2-FUNCTIONAL 0x1424f73d0: the exe inlines ExecuteCtors and the per-level queue run.
 // @0x1424f73d0
 void Sfr33MovieRootDoActions(MovieRoot* self)
 {
