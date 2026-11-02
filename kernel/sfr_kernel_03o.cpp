@@ -83,10 +83,10 @@ __declspec(noinline) void FUN_142743470(U** self)
 {
     if (*self)
     {
-        U off = 0;
-        for (U n = (*self)[1] + 1; n; n--, off += 0x28)
+        U n = (*self)[1];
+        for (U i = 0; i <= n; i++)
         {
-            SPInt* link = RawFieldPtr<SPInt>(*self, 0x10 + off);
+            SPInt* link = RawFieldPtr<SPInt>(*self, 0x10 + i * 0x28);
             if (*link != -2)
                 *link = -2;
         }
@@ -102,10 +102,11 @@ __declspec(noinline) void FUN_1427434d0(U** self)
 {
     if (*self)
     {
-        U off = 0;
-        for (U n = (*self)[1] + 1; n; n--, off += 0x30)
+        U n = (*self)[1];
+        for (U i = 0; i <= n; i++)
         {
             U* table = *self;
+            U off = i * 0x30;
             if (RawField<SPInt>(table, 0x10 + off) != -2)
             {
                 if (RawField<void*>(table, 0x28 + off))
@@ -132,7 +133,9 @@ __declspec(noinline) void FUN_142743580(void* self)
         RawField<void*>(self, 0x38) = 0;
     }
     FUN_142743470(RawFieldPtr<U*>(self, 0x40));
-    RawSetVtables(self, DAT_1431bec90, DAT_1431bed08);
+    RawField<void*>(self, 0) = DAT_1431bec90;
+    // The exe keeps this store even though the base dtor overwrites it; volatile stops cl removing it here.
+    *reinterpret_cast<void* volatile*>(static_cast<char*>(self) + 0x10) = DAT_1431bed08;
     RawUnlinkNode(self);
     RawField<void*>(self, 0x10) = DAT_1431bec40;
     RawRefCountCoreDtor(self);
@@ -169,6 +172,7 @@ void FUN_1427436a0(void* self)
 
 // Sound: releases its FMOD sound (+0x30), leaves the renderer's list under the renderer's lock (+0x28, +0xc8) and
 // drops the renderer (+0x38).
+// MS2-FUNCTIONAL: same calls in the same order; register allocation and frame differ (exe this in rdi, renderer in rbx, 22 bytes longer).
 // @0x142743730
 __declspec(noinline) void FUN_142743730(void* self)
 {
