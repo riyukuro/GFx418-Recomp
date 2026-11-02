@@ -4908,7 +4908,7 @@ static __forceinline UInt32 Sfr33TrailingStart(const char* s, UInt32 len, const 
 }
 
 // ToNumber of a string (kind is kString) or of an object through its primitive value.
-// MS2-FUNCTIONAL 0x1424f1000: the exe keeps the parse in one frame (MSVC splits the string path into a chained chunk); same results
+// MS2-FUNCTIONAL 0x1424f1000: same code and blocks; the exe keeps result in r15 and the length in r12d (ours swaps them)
 // @0x1424f1000
 CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
 {
@@ -4933,9 +4933,11 @@ CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
                 d = NumberUtil::StringToInt(s, len, 0, &end);
             }
             if (end + Sfr33TrailingStart(s, len, end) >= len)
+            {
                 result = d;
-            else
-                result = NumberUtil::NaN();
+                return true;
+            }
+            result = NumberUtil::NaN();
             return true;
         }
     }
