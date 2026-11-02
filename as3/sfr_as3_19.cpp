@@ -267,7 +267,7 @@ bool FUN_1424f7540(void* tr, int op, void* state, void* pinfo, int ind);   // tr
 bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool a, int b, bool c);   // trace find/getlex
 inline void FUN_1424f9180(void* tr) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PopPrevValue(); }   // Tracer: drop the code of the last pushed value
 const char* FUN_14250cf20(void* state, char* ret, const void* t, const void* si, Scaleform::GFx::AS3::Value& result);
-namespace Scaleform { namespace GFx { namespace AS3 { unsigned char FUN_14250c990(const void*, unsigned long long); } } }
+namespace Scaleform { namespace GFx { namespace AS3 { int FUN_14250c990(const void*, unsigned long long); } } }
 inline int FUN_14250c990(Scaleform::UPInt tracer, Scaleform::UPInt pos) { return Scaleform::GFx::AS3::FUN_14250c990(reinterpret_cast<const void*>(tracer), pos); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250c990; } } }
 inline void FUN_14251f930(void* tr, int op) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op)); }   // Tracer: emit opcode op

@@ -6289,18 +6289,16 @@ InstanceTraits::Traits& FUN_14250a250(VMAbcFile* file, Instances::fl::GlobalObje
 // the stack depth is followed through the pops (with a run-time name's namespace and name, and the arguments; two
 // per property of a newobject) and pushes, and through the jumps; the last opcode when the code ends first, a nop
 // when pos is past the end.
-// MS2-FUNCTIONAL free function over layout views of the tracer and its holder (the Tracer model is not ours)
+// A free function over layout views of the tracer and its holder (the Tracer model is not ours)
 // @0x14250c990
-UInt8 FUN_14250c990(const void* self, UPInt pos)
+int FUN_14250c990(const void* self, UPInt pos)
 {
     struct Holder { char pad[0x28]; const VMAbcFile* file; };
     struct View { char pad[0x20]; const Holder* holder; char pad2[0x28]; const UInt8* data; UPInt size; };
     const View* c     = static_cast<const View*>(self);
+    int         op    = 0x02;
     int         depth = 1;
-    if (pos >= c->size)
-        return 2;
-    UInt8 op;
-    do
+    while (pos < c->size)
     {
         op = c->data[pos++];
         if (op == 0x10)
@@ -6310,84 +6308,86 @@ UInt8 FUN_14250c990(const void* self, UPInt pos)
             pos += off;
             continue;
         }
-        const Sfr34_OpCodeInfo& oi = DAT_14317fea0[op];
-        depth -= oi.pop;
-        if (oi.pop_mn)
         {
-            const int ind = Abc::ReadU30(c->data, pos);
-            switch (c->holder->file->GetAbcFile().Const_Pool.GetMultiname(ind).Kind)
+            const Sfr34_OpCodeInfo& oi = DAT_14317fea0[op];
+            depth -= oi.pop;
+            if (oi.pop_mn)
             {
-            case Abc::MNF_RTQName:
-            case Abc::MNF_RTQNameA:
-            case Abc::MNF_MultinameL:
-            case Abc::MNF_MultinameLA:
-                depth -= 1;
-                break;
-            case Abc::MNF_RTQNameL:
-            case Abc::MNF_RTQNameLA:
-                depth -= 2;
-                break;
-            default:
-                break;
+                const int ind = Abc::ReadU30(c->data, pos);
+                switch (c->holder->file->GetAbcFile().Const_Pool.GetMultiname(ind).Kind)
+                {
+                case Abc::MNF_RTQName:
+                case Abc::MNF_RTQNameA:
+                    depth -= 1;
+                    break;
+                case Abc::MNF_RTQNameL:
+                case Abc::MNF_RTQNameLA:
+                    depth -= 2;
+                    break;
+                case Abc::MNF_MultinameL:
+                case Abc::MNF_MultinameLA:
+                    depth -= 1;
+                    break;
+                default:
+                    break;
+                }
             }
-        }
-        if (oi.pop_args)
-        {
-            const int n = Abc::ReadU30(c->data, pos);
-            if (op == 0x55)
-                depth -= n * 2;
+            if (oi.pop_args)
+            {
+                const int n = Abc::ReadU30(c->data, pos);
+                if (op == 0x55)
+                    depth -= n * 2;
+                else
+                    depth -= n;
+            }
+            if (depth > 0)
+                depth += DAT_14317fea0[op].push;
             else
-                depth -= n;
+                break;
+            if (oi.pop_args | oi.pop_mn)
+                continue;
         }
-        if (depth < 1)
-            return op;
-        depth += oi.push;
-        if (oi.pop_mn || oi.pop_args)
-            continue;
-        if (op < 0x0c)
-            ;
-        else if (op < 0x1b)
+        switch (op)
         {
+        case 0x0c: case 0x0d: case 0x0e: case 0x0f: case 0x10: case 0x11: case 0x12: case 0x13: case 0x14:
+        case 0x15: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
             // the branches
             Abc::ReadS24(c->data, pos);
-            continue;
-        }
-        else if (op == 0x1b)
+            break;
+        case 0x1b:
         {
             // lookupswitch
             Abc::ReadS24(c->data, pos);
             const int n = Abc::ReadU30(c->data, pos);
             for (int i = 0; i <= n; ++i)
                 Abc::ReadS24(c->data, pos);
-            continue;
+            break;
         }
-        else if (op == 0x24)
-        {
+        case 0x24:
             // pushbyte
             ++pos;
-            continue;
-        }
-        else if (op == 0xef)
-        {
+            break;
+        case 0xef:
             // debug
             ++pos;
             Abc::ReadU30(c->data, pos);
             ++pos;
             Abc::ReadU30(c->data, pos);
-            continue;
-        }
-        switch (oi.operandCount)
-        {
-        case 2:
-            Abc::ReadU30(c->data, pos);
-            // fall through
-        case 1:
-            Abc::ReadU30(c->data, pos);
             break;
         default:
-            break;
+            switch (DAT_14317fea0[op].operandCount)
+            {
+            case 2:
+                Abc::ReadU30(c->data, pos);
+                // fall through
+            case 1:
+                Abc::ReadU30(c->data, pos);
+                break;
+            default:
+                break;
+            }
         }
-    } while (pos < c->size);
+    }
     return op;
 }
 
