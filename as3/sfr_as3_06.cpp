@@ -60,6 +60,27 @@ SF_NOINLINE ImageResource::~ImageResource()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// forceinline: Bitmap::CreateStageObject has this inside its inlined SetBitmapData.
+template <>
+__forceinline SPtr<Instances::fl_display::BitmapData>& SPtr<Instances::fl_display::BitmapData>::SetPtr(Instances::fl_display::BitmapData* p)
+{
+    if (p != pObject)
+    {
+        Release();
+        if (p)
+            p->AddRef();
+        pObject = p;
+    }
+    return *this;
+}
+
+// noinline: Bitmap::AS3Constructor calls this assignment out of line.
+template <>
+inline __declspec(noinline) SPtr<Instances::fl_display::BitmapData>& SPtr<Instances::fl_display::BitmapData>::operator=(Instances::fl_display::BitmapData* p)
+{
+    return SetPtr(p);
+}
+
 namespace fl_display
 {
     extern const ClassInfo AVM1MovieCI;
@@ -1793,29 +1814,33 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142440910
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void Bitmap::AS3Constructor(unsigned argc, const Value* argv)
     {
-        if (argc == 0)
-            return;
-        VM& vm = GetVM();
-        if (FUN_1425145d0(vm, argv[0], "flash.display.BitmapData"))
+        if (argc >= 1)
         {
-            pBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+            if (FUN_1425145d0(GetVM(), argv[0], "flash.display.BitmapData"))
+            {
+                pBitmapData = static_cast<Instances::fl_display::BitmapData*>(argv[0].GetObject());
+                if (pDispObj)
+                {
+                    if (pBitmapData)
+                        reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData->pDefImpl);
+                    else
+                        reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(NULL);
+                }
+            }
+            if (argc >= 2)
+            {
+                ASString mode = GetVM().GetStringManager().CreateEmptyString();
+                if (!argv[1].Convert2String(mode))
+                    return;
+                PixelSnapping = String2PixelSnapping(mode.ToCStr());
+                if (argc >= 3)
+                    Smoothing = argv[2].Convert2Boolean();
+            }
             if (pDispObj)
-                reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
+                FUN_142520b20(pDispObj);
         }
-        if (argc > 1)
-        {
-            ASString mode = vm.GetStringManager().CreateEmptyString();
-            if (!argv[1].Convert2String(mode))
-                return;
-            PixelSnapping = String2PixelSnapping(mode.ToCStr());
-            if (argc > 2)
-                Smoothing = argv[2].Convert2Boolean();
-        }
-        if (pDispObj)
-            FUN_142520b20(pDispObj);
     }
 
     // BitmapData(width, height, transparent = true, fillColor = 0xFFFFFFFF): a drawable image of that size, or a
@@ -1870,19 +1895,48 @@ namespace Instances { namespace fl_display
     }
 
     // The optional up, over, down and hit test state objects.
+    static AvmButton* AvmButtonOf(GFx::DisplayObject* p)
+    {
+        if (!p)
+            return NULL;
+        return reinterpret_cast<AvmButton*>(ToAvmDisplayObj(p));
+    }
+
     // @0x142440c30
-    // MS2-FUNCTIONAL: written from the exe's control flow
     void SimpleButton::AS3Constructor(unsigned argc, const Value* argv)
     {
-        VM& vm = GetVM();
-        if (argc > 0 && FUN_1425145d0(vm, argv[0], "flash.display.DisplayObject"))
-            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetUpStateObject(static_cast<DisplayObject*>(argv[0].GetObject())->pDispObj);
-        if (argc > 1 && FUN_1425145d0(vm, argv[1], "flash.display.DisplayObject"))
-            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetOverStateObject(static_cast<DisplayObject*>(argv[1].GetObject())->pDispObj);
-        if (argc > 2 && FUN_1425145d0(vm, argv[2], "flash.display.DisplayObject"))
-            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetDownStateObject(static_cast<DisplayObject*>(argv[2].GetObject())->pDispObj);
-        if (argc > 3 && FUN_1425145d0(vm, argv[3], "flash.display.DisplayObject"))
-            reinterpret_cast<AvmButton*>(AvmOf(pDispObj))->SetHitStateObject(static_cast<DisplayObject*>(argv[3].GetObject())->pDispObj);
+        if (argc >= 1)
+        {
+            if (FUN_1425145d0(GetVM(), argv[0], "flash.display.DisplayObject"))
+            {
+                DisplayObject* value = static_cast<DisplayObject*>(argv[0].GetObject());
+                AvmButtonOf(pDispObj)->SetUpStateObject(value->pDispObj);
+            }
+        }
+        if (argc >= 2)
+        {
+            if (FUN_1425145d0(GetVM(), argv[1], "flash.display.DisplayObject"))
+            {
+                DisplayObject* value = static_cast<DisplayObject*>(argv[1].GetObject());
+                AvmButtonOf(pDispObj)->SetOverStateObject(value->pDispObj);
+            }
+        }
+        if (argc >= 3)
+        {
+            if (FUN_1425145d0(GetVM(), argv[2], "flash.display.DisplayObject"))
+            {
+                DisplayObject* value = static_cast<DisplayObject*>(argv[2].GetObject());
+                AvmButtonOf(pDispObj)->SetDownStateObject(value->pDispObj);
+            }
+        }
+        if (argc >= 4)
+        {
+            if (FUN_1425145d0(GetVM(), argv[3], "flash.display.DisplayObject"))
+            {
+                DisplayObject* value = static_cast<DisplayObject*>(argv[3].GetObject());
+                AvmButtonOf(pDispObj)->SetHitStateObject(value->pDispObj);
+            }
+        }
     }
 
     // @0x142440d70
@@ -1932,42 +1986,50 @@ namespace Instances { namespace fl_display
     }
 
     // @0x1424419e0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     GFx::DisplayObject* Bitmap::CreateStageObject()
     {
-        if (pDispObj)
-            return pDispObj;
-        VM& vm = GetVM();
-        ASMovieRootBase* proot = GetASRoot(vm);
-        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
-        if (!pdefImpl)
-            return pDispObj;
-        CharacterCreateInfo ccinfo;
-        ccinfo.pCharDef = NULL;
-        ccinfo.pBindDefImpl = NULL;
-        ccinfo.pResource = NULL;
-        if (!FindLibrarySymbol(this, &ccinfo, pdefImpl) && !FUN_142501a80(proot, this, &ccinfo))
+        if (!pDispObj)
         {
-            ccinfo.pCharDef = NULL;
-            ccinfo.pResource = NULL;
-        }
-        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
-                                                                             ResourceId(0x40000), CharacterDef::Bitmap);
-        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
-        if (ccinfo.pResource &&
-            (ccinfo.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
-        {
-            // A library bitmap: give it a BitmapData(0, 0) bound to the image.
-            Value args[2] = { Value(Value::Number(0)), Value(Value::Number(0)) };
-            SPtr<BitmapData> pbd;
-            if (vm.ConstructBuiltinObject(pbd, "flash.display.BitmapData", 2, args) &&
-                BindLibraryBitmap(pbd, ccinfo.pResource, ccinfo.pBindDefImpl))
+            VM& vm = GetVM();
+            ASMovieRootBase* proot = GetASRoot(vm);
+            MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+            if (pdefImpl)
             {
-                pBitmapData = pbd;
-                if (pDispObj)
-                    reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData ? pBitmapData->pDefImpl.GetPtr() : NULL);
-                if (pDispObj)
-                    FUN_142520b20(pDispObj);
+                CharacterCreateInfo ccinfo;
+                ccinfo.pBindDefImpl = NULL;
+                ccinfo.pResource = NULL;
+                ccinfo.pCharDef = NULL;
+                if (!FindLibrarySymbol(this, &ccinfo, pdefImpl) && !FUN_142501a80(proot, this, &ccinfo))
+                {
+                    ccinfo.pCharDef = NULL;
+                    ccinfo.pResource = NULL;
+                }
+                DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                     ResourceId(0x40000), CharacterDef::Bitmap);
+                AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+                if (ccinfo.pResource &&
+                    (ccinfo.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
+                {
+                    // A library bitmap: give it a BitmapData(0, 0) bound to the image.
+                    Value args[2] = { Value(Value::Number(0)), Value(Value::Number(0)) };
+                    SPtr<BitmapData> pbd;
+                    if (vm.ConstructBuiltinObject(pbd, "flash.display.BitmapData", 2, args) &&
+                        BindLibraryBitmap(pbd, ccinfo.pResource, ccinfo.pBindDefImpl))
+                    {
+                        // SetBitmapData: a result Value for bitmapDataSet, inlined.
+                        Value r;
+                        pBitmapData.SetPtr(pbd);
+                        if (pDispObj)
+                        {
+                            if (pBitmapData)
+                                reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(pBitmapData->pDefImpl);
+                            else
+                                reinterpret_cast<AvmBitmap*>(pDispObj.GetPtr())->SetResourceMovieDef(NULL);
+                        }
+                        if (pDispObj)
+                            FUN_142520b20(pDispObj);
+                    }
+                }
             }
         }
         return pDispObj;
@@ -2010,56 +2072,62 @@ namespace Instances { namespace fl_display
     }
 
     // @0x142441e60
-    // MS2-FUNCTIONAL: written from the exe's control flow
     GFx::DisplayObject* SimpleButton::CreateStageObject()
     {
-        if (pDispObj)
-            return pDispObj;
-        VM& vm = GetVM();
-        ASMovieRootBase* proot = GetASRoot(vm);
-        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
-        if (!pdefImpl)
-            return pDispObj;
-        CharacterCreateInfo ccinfo;
-        FindLibrarySymbol(this, &ccinfo, pdefImpl);
-        if (!ccinfo.pCharDef)
+        if (!pDispObj)
         {
-            CharacterCreateInfo def = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10003));
-            ccinfo.pCharDef = def.pCharDef;
-            ccinfo.pResource = def.pResource;
-            ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+            VM& vm = GetVM();
+            ASMovieRootBase* proot = GetASRoot(vm);
+            MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+            if (pdefImpl)
+            {
+                CharacterCreateInfo ccinfo;
+                ccinfo.pBindDefImpl = NULL;
+                ccinfo.pResource = NULL;
+                ccinfo.pCharDef = NULL;
+                FindLibrarySymbol(this, &ccinfo, pdefImpl);
+                if (!ccinfo.pCharDef)
+                {
+                    ccinfo = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10003));
+                    ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+                }
+                DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                     ResourceId(ResourceId::InvalidId), CharacterDef::Button);
+                AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+                FUN_1425ddd20(pDispObj);
+            }
         }
-        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
-                                                                             ResourceId(ResourceId::InvalidId), CharacterDef::Button);
-        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
-        FUN_1425ddd20(pDispObj);
         return pDispObj;
     }
 
     // @0x142441ff0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     GFx::DisplayObject* Sprite::CreateStageObject()
     {
-        if (pDispObj)
-            return pDispObj;
-        VM& vm = GetVM();
-        ASMovieRootBase* proot = GetASRoot(vm);
-        MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
-        if (!pdefImpl)
-            return pDispObj;
-        CharacterCreateInfo ccinfo = {};
-        FindLibrarySymbol(this, &ccinfo, pdefImpl);
-        if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
+        if (!pDispObj)
         {
-            ccinfo = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10001));
-            if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&GetVM()) + 0x78) != 0)
-                ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
-            else
-                ccinfo.pBindDefImpl = pdefImpl;
+            VM& vm = GetVM();
+            ASMovieRootBase* proot = GetASRoot(vm);
+            MovieDefImpl* pdefImpl = FUN_14250d8f0(vm, this);
+            if (pdefImpl)
+            {
+                CharacterCreateInfo ccinfo;
+                ccinfo.pBindDefImpl = NULL;
+                ccinfo.pResource = NULL;
+                ccinfo.pCharDef = NULL;
+                FindLibrarySymbol(this, &ccinfo, pdefImpl);
+                if (!ccinfo.pCharDef && !FUN_142501a80(proot, this, &ccinfo))
+                {
+                    ccinfo = pdefImpl->GetCharacterCreateInfo(ResourceId(0x10001));
+                    if (*reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(&GetVM()) + 0x78) != 0)
+                        ccinfo.pBindDefImpl = GetCallerDefImpl(GetVM());
+                    else
+                        ccinfo.pBindDefImpl = pdefImpl;
+                }
+                DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
+                                                                                     ResourceId(ResourceId::InvalidId), CharacterDef::Sprite);
+                AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
+            }
         }
-        DisplayObjectBase* pch = proot->pASSupport->CreateCharacterInstance(proot->GetMovieImpl(), ccinfo, NULL,
-                                                                             ResourceId(ResourceId::InvalidId), CharacterDef::Sprite);
-        AttachStageObject(this, static_cast<GFx::DisplayObject*>(pch));
         return pDispObj;
     }
 }}
