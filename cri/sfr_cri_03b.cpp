@@ -2366,7 +2366,9 @@ void criusfdmx_exec_decode(void* object)
         TrackEntry* Tracks;
         void* Output;
     };
-    static_assert(offsetof(Demux, Output) == 0x20 && sizeof(TrackEntry) == 0x10, "layout");
+    // the parsed header as fields: a CriUint8[0x24] local would get a /GS cookie, which the exe obj has none of.
+    struct UsfHeader { CriUint32 ChunkId; CriUint32 Size; CriUint32 Word08; CriUint8 Byte0C, Byte0D, Byte0E, Kind; CriUint32 Words[5]; };
+    static_assert(offsetof(Demux, Output) == 0x20 && sizeof(TrackEntry) == 0x10 && sizeof(UsfHeader) == 0x24, "layout");
     Demux* demux = (Demux*)object;
     void* input = demux->Input;
     void* output = demux->Output;
@@ -2377,7 +2379,7 @@ void criusfdmx_exec_decode(void* object)
     Chunk split;
     Chunk rest;
     Chunk tail;
-    CriUsfStandardHeader header;
+    UsfHeader header;
     CriSint32 index;
     CriSint32 matched;
     CriSint32 available;
@@ -2388,12 +2390,11 @@ void criusfdmx_exec_decode(void* object)
     CriUint32 length;
     if (demux->Primed == 1)
     {
-        void* queue = tracks[count].Queue;
-        criSj_GetChunk(queue, 1, 0xffffffff, &first);
+        criSj_GetChunk(tracks[count].Queue, 1, 0xffffffff, &first);
         while (first.Size != 0)
         {
-            criSj_PutChunk(queue, 0, &first);
-            criSj_GetChunk(queue, 1, 0xffffffff, &first);
+            criSj_PutChunk(tracks[count].Queue, 0, &first);
+            criSj_GetChunk(tracks[count].Queue, 1, 0xffffffff, &first);
         }
         count += 1;
         first.Size = 0;
@@ -2448,9 +2449,9 @@ drainInput:
             {
                 tail.Data = NULL;
                 tail.Size = 0;
-                if (criUsfCmn_ParseUsfHeaderStd(first.Data, first.Size, &header) == 0)
+                if (criUsfCmn_ParseUsfHeaderStd(first.Data, first.Size, (CriUsfStandardHeader*)&header) == 0)
                     goto releaseFirst;
-                memcpy(&headerSize, header.Data + 4, sizeof(headerSize));
+                headerSize = header.Size;
                 needed = headerSize + 8;
                 if (first.Size < needed)
                 {
@@ -2472,12 +2473,12 @@ drainInput:
                 }
                 criSj_SplitChunk(source, length, source, &second);
                 criSj_UngetChunk(input, 1, &second);
-                memcpy(&type, header.Data, sizeof(type));
+                type = header.ChunkId;
                 for (index = 0; index < count; ++index)
                 {
                     TrackEntry* track = &tracks[index];
                     if (track->Queue != NULL && (track->Type == 0 || track->Type == type) &&
-                        (track->Id == 0xffffffffu || track->Id == (CriUint32)header.Data[12]))
+                        (track->Id == 0xffffffffu || track->Id == (CriUint32)header.Byte0C))
                     {
                         if (criSjUni_GetNumChainPool(output) < 3 || criSjUni_GetNumChainPool(track->Queue) < 3)
                             goto releaseTail;
