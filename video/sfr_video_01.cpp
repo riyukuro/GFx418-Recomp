@@ -119,57 +119,61 @@ static __forceinline Scaleform::UPInt VideoHashKeyInline(const void* key, Scalef
     return hash;
 }
 
-static void ConstructVideoHashValue(Scaleform::UPInt* destination, unsigned type, void* object)
+static __forceinline void CopyConstructVideoHashEntry(Scaleform::UPInt* destination, Scaleform::UPInt next,
+                                                       const Scaleform::UPInt* value)
 {
-    if (object) {
-        unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(object) + 0x18);
-        *count = (*count + 1) & 0x8fffffff;
+    if (destination) {
+        destination[0] = next;
+        *reinterpret_cast<unsigned*>(destination + 1) = *reinterpret_cast<const unsigned*>(value);
+        unsigned char* object = reinterpret_cast<unsigned char*>(value[1]);
+        if (object) {
+            unsigned* count = reinterpret_cast<unsigned*>(object + 0x18);
+            *count = (*count + 1) & 0x8fffffff;
+        }
+        destination[2] = value[1];
     }
-    *reinterpret_cast<unsigned*>(destination) = type;
-    destination[1] = reinterpret_cast<Scaleform::UPInt>(object);
 }
 
-// Empty slots hold no value: the exe copy-constructs into the home slot and the relocated entry, and only the home
-// slot that still holds its old entry is assigned.
+// HashSetBase::add shape: an empty home slot is constructed in place; otherwise the home entry is copied to the
+// next free slot and reassigned, relinking its chain when it sat there from another bucket.
 template<class ConstructEntry, class AssignEntry>
-static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const void* key,
+static __forceinline void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const void* key,
                                  Scaleform::UPInt hash, ConstructEntry constructEntry, AssignEntry assignEntry)
 {
     void** tableSlot = reinterpret_cast<void**>(tableRef);
     Scaleform::UPInt* table = static_cast<Scaleform::UPInt*>(*tableSlot);
     if (!table) FUN_14000b3b0(tableRef, owner, 8);
-    else if (table[1] * 4 + 4 < table[0] * 5)
+    else if (table[0] * 5 > (table[1] + 1) * 4)
         FUN_14000b3b0(tableRef, owner, table[1] * 2 + 2);
     table = static_cast<Scaleform::UPInt*>(*tableSlot);
-    const Scaleform::UPInt mask = table[1];
-    ++table[0];
-    const Scaleform::UPInt home = hash & mask;
-    Scaleform::UPInt* entries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(table) + 0x10);
+    table[0]++;
+    const Scaleform::UPInt home = hash & table[1];
+    table = static_cast<Scaleform::UPInt*>(*tableSlot);
+    Scaleform::UPInt* entries = table + 2;
     Scaleform::UPInt* homeEntry = entries + home * 3;
-    if (homeEntry[0] == ~Scaleform::UPInt(1)) {
+    const Scaleform::UPInt homeNext = homeEntry[0];
+    if (homeNext == ~Scaleform::UPInt(1)) {
         homeEntry[0] = ~Scaleform::UPInt(0);
         constructEntry(homeEntry + 1, key);
         return;
     }
-    Scaleform::UPInt freeIndex = (home + 1) & mask;
-    while (entries[freeIndex * 3] != ~Scaleform::UPInt(1)) freeIndex = (freeIndex + 1) & mask;
+    const Scaleform::UPInt* homeValue = homeEntry + 1;
+    const Scaleform::UPInt mask = table[1];
+    Scaleform::UPInt freeIndex = home;
+    do {
+        freeIndex = (freeIndex + 1) & mask;
+    } while (entries[freeIndex * 3] != ~Scaleform::UPInt(1));
     Scaleform::UPInt* freeEntry = entries + freeIndex * 3;
-    freeEntry[0] = homeEntry[0];
-    ConstructVideoHashValue(freeEntry + 1, *reinterpret_cast<const unsigned*>(homeEntry + 1),
-                            reinterpret_cast<void*>(homeEntry[2]));
-    const bool belongsHere = (VideoHashKey4(homeEntry + 1) & mask) == home;
-    if (belongsHere) {
-        assignEntry(homeEntry + 1, key);
+    if ((VideoHashKeyInline(homeValue, 4) & mask) == home) {
+        CopyConstructVideoHashEntry(freeEntry, homeNext, homeValue);
+        assignEntry(const_cast<Scaleform::UPInt*>(homeValue), key);
         homeEntry[0] = freeIndex;
     } else {
-        Scaleform::UPInt predecessor = VideoHashKey4(homeEntry + 1) & mask;
-        Scaleform::UPInt* previous = entries + predecessor * 3;
-        while (previous[0] != home) {
-            predecessor = previous[0];
-            previous = entries + predecessor * 3;
-        }
+        Scaleform::UPInt* previous = entries + (VideoHashKeyInline(homeValue, 4) & mask) * 3;
+        while (previous[0] != home) previous = entries + previous[0] * 3;
+        CopyConstructVideoHashEntry(freeEntry, homeNext, homeValue);
         previous[0] = freeIndex;
-        assignEntry(homeEntry + 1, key);
+        assignEntry(const_cast<Scaleform::UPInt*>(homeValue), key);
         homeEntry[0] = ~Scaleform::UPInt(0);
     }
 }
@@ -177,13 +181,25 @@ static void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void* owner, const 
 static void ConstructVideoHashFromValue(Scaleform::UPInt* destination, const void* source)
 {
     const unsigned* value = static_cast<const unsigned*>(source);
-    ConstructVideoHashValue(destination, *value, *reinterpret_cast<void* const*>(value + 2));
+    *reinterpret_cast<unsigned*>(destination) = *value;
+    unsigned char* object = *reinterpret_cast<unsigned char* const*>(value + 2);
+    if (object) {
+        unsigned* count = reinterpret_cast<unsigned*>(object + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    destination[1] = *reinterpret_cast<const Scaleform::UPInt*>(value + 2);
 }
 
 static void ConstructVideoHashFromPair(Scaleform::UPInt* destination, const void* source)
 {
     void* const* pair = static_cast<void* const*>(source);
-    ConstructVideoHashValue(destination, *static_cast<const unsigned*>(pair[0]), *static_cast<void**>(pair[1]));
+    *reinterpret_cast<unsigned*>(destination) = *static_cast<const unsigned*>(pair[0]);
+    unsigned char* object = *static_cast<unsigned char**>(pair[1]);
+    if (object) {
+        unsigned* count = reinterpret_cast<unsigned*>(object + 0x18);
+        *count = (*count + 1) & 0x8fffffff;
+    }
+    destination[1] = *static_cast<Scaleform::UPInt*>(pair[1]);
 }
 
 static void CopyVideoHashValue(Scaleform::UPInt* destination, const void* source)
@@ -1959,37 +1975,48 @@ void FUN_14000b080(void** table)
 // @0x14000b120
 void FUN_14000b120(void** table) { Video01ReleaseValueTable(table); }
 
-// MS2-FUNCTIONAL: allocates a power-of-two table, rehashes live key/value entries, and releases the old table.
+// The rehash's local table; its destructor clears what it still owns.
+struct VideoHashTableHolder
+{
+    Scaleform::UPInt* pTable;
+    VideoHashTableHolder() : pTable(NULL) {}
+    ~VideoHashTableHolder() { if (pTable) FUN_14000b120(reinterpret_cast<void**>(&pTable)); }
+};
+
+// MS2-FUNCTIONAL: the exe keeps the alloc info and the new table one slot higher, and rbx/rbp in the slots below.
 // @0x14000b3b0
 void FUN_14000b3b0(Scaleform::UPInt* tableRef, void* owner, Scaleform::UPInt requested)
 {
     void** slot = reinterpret_cast<void**>(tableRef);
-    if (!requested) { FUN_14000b120(slot); return; }
-    Scaleform::UPInt capacity = 8;
-    while (capacity < requested) capacity <<= 1;
-    unsigned stat = 2;
-    void** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-    Scaleform::UPInt* fresh = static_cast<Scaleform::UPInt*>(reinterpret_cast<void* (*)(void*, void*, Scaleform::UPInt, unsigned*)>(heapVtable[14])(
-        Scaleform::Memory::pGlobalHeap, owner, capacity * 0x18 + 0x10, &stat));
+    if (requested == 0) {
+        FUN_14000b120(slot);
+        return;
+    }
+    if (requested < 8)
+        requested = 8;
+    else
+        requested = Scaleform::UPInt(1) << (Scaleform::Alg::UpperBit(requested - 1) + 1);
+    VideoHashTableHolder newHash;
+    Scaleform::UPInt*& fresh = newHash.pTable;
+    fresh = static_cast<Scaleform::UPInt*>(
+        Scaleform::AllocatorBaseLH<>::Alloc(owner, requested * 0x18 + 0x10, __FILE__, __LINE__));
     fresh[0] = 0;
-    fresh[1] = capacity - 1;
-    Scaleform::UPInt* freshEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(fresh) + 0x10);
-    for (Scaleform::UPInt i = 0; i < capacity; ++i) freshEntries[i * 3] = ~Scaleform::UPInt(1);
-    Scaleform::UPInt* old = static_cast<Scaleform::UPInt*>(*slot);
-    if (old) {
-        const Scaleform::UPInt oldCapacity = old[1] + 1;
-        Scaleform::UPInt* oldEntries = reinterpret_cast<Scaleform::UPInt*>(reinterpret_cast<unsigned char*>(old) + 0x10);
-        for (Scaleform::UPInt i = 0; i < oldCapacity; ++i) {
-            Scaleform::UPInt* entry = oldEntries + i * 3;
-            if (entry[0] == ~Scaleform::UPInt(1)) continue;
-            FUN_14000b6e0(reinterpret_cast<Scaleform::UPInt*>(&fresh), owner,
-                          reinterpret_cast<unsigned*>(entry + 1), VideoHashKey4(entry + 1));
-            ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
-            entry[0] = ~Scaleform::UPInt(1);
+    fresh[1] = requested - 1;
+    for (Scaleform::UPInt i = 0; i < requested; ++i) fresh[2 + i * 3] = ~Scaleform::UPInt(1);
+    if (*slot) {
+        for (Scaleform::UPInt i = 0, n = static_cast<Scaleform::UPInt*>(*slot)[1]; i <= n; ++i) {
+            Scaleform::UPInt* entry = static_cast<Scaleform::UPInt*>(*slot) + 2 + i * 3;
+            if (entry[0] != ~Scaleform::UPInt(1)) {
+                FUN_14000b6e0(reinterpret_cast<Scaleform::UPInt*>(&fresh), owner,
+                              reinterpret_cast<unsigned*>(entry + 1), VideoHashKeyInline(entry + 1, 4));
+                ReleaseAs2GCObject(reinterpret_cast<void*>(entry[2]));
+                entry[0] = ~Scaleform::UPInt(1);
+            }
         }
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, old);
+        Scaleform::AllocatorBaseLH<>::Free(*slot);
     }
     *slot = fresh;
+    fresh = NULL;
 }
 
 // MS2-FUNCTIONAL: inserts a 32-bit key and retained AS2 object into its chained hash bucket.
@@ -2379,16 +2406,17 @@ void FUN_14000d760(Scaleform::GFx::AS2::Object* subobject,
                    const Scaleform::GFx::ASString* name,
                    Scaleform::GFx::AS2::Value* result)
 {
-    // the builtin names compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
-    const bool hiddenConstructor = context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
-                                       .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
-    const bool constructor = !hiddenConstructor &&
-                             context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
-                                 .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
+    // Prototype<>::GetMemberRaw: the builtin names come through GlobalContext::GetStringManager (out of line) and
+    // compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
+    const bool hiddenConstructor =
+        context->pContext->GetStringManager()->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
+            .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     Scaleform::GFx::AS2::Object* object = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
-    if (!hiddenConstructor && !constructor) {
+    if (!hiddenConstructor &&
+        !context->pContext->GetStringManager()->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
+             .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive())) {
         object->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
         return;
     }
@@ -2748,16 +2776,17 @@ void FUN_14000a110(Scaleform::GFx::AS2::Object* subobject,
                    const Scaleform::GFx::ASString* name,
                    Scaleform::GFx::AS2::Value* result)
 {
-    // the builtin names compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
-    const bool hiddenConstructor = context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
-                                       .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
-    const bool constructor = !hiddenConstructor &&
-                             context->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
-                                 .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
+    // Prototype<>::GetMemberRaw: the builtin names come through GlobalContext::GetStringManager (out of line) and
+    // compare case-insensitively for SWF 6 and older (CompareBuiltIn_CaseCheck)
+    const bool hiddenConstructor =
+        context->pContext->GetStringManager()->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__)
+            .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive());
     // `subobject` is the ObjectInterface subobject (the vtable slot's this); the complete Object starts 0x20 before it.
     Scaleform::GFx::AS2::Object* completeObject = reinterpret_cast<Scaleform::GFx::AS2::Object*>(
         reinterpret_cast<unsigned char*>(subobject) - 0x20);
-    if (!hiddenConstructor && !constructor) {
+    if (!hiddenConstructor &&
+        !context->pContext->GetStringManager()->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin_constructor)
+             .CompareBuiltIn_CaseCheck(*name, context->IsCaseSensitive())) {
         completeObject->Scaleform::GFx::AS2::Object::GetMemberRaw(context, *name, result);
         return;
     }
