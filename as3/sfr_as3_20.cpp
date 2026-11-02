@@ -1948,11 +1948,14 @@ struct CompareValuePtr
     const Value& Func;
 };
 
+// the exe reads b's node, then a's, then the VM reference
 template <>
 bool CompareValuePtr<Ptr<ASStringNode> >::operator()(const Ptr<ASStringNode>* a, const Ptr<ASStringNode>* b) const
 {
+    ASStringNode* pb = b->GetPtr();
+    ASStringNode* pa = a->GetPtr();
     VM& vm = VMRef;
-    return Impl::CompareFunct(vm, Func, Value(a->GetPtr()), Value(b->GetPtr())) < 0;
+    return Impl::CompareFunct(vm, Func, Value(pa), Value(pb)) < 0;
 }
 
 template <>
@@ -2596,7 +2599,6 @@ void ReverseArray(ArrayDH<Ptr<GFx::ASStringNode>, 2, ArrayDefaultPolicy>& values
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBJ$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@J@fl_vec@Instances@AS3@GFx@1@@Z 0x14254d950
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBK$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@K@fl_vec@Instances@AS3@GFx@1@@Z 0x14254df40
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@Scaleform@@U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBN$01UArrayDefaultPolicy@Scaleform@@@1@_K1U?$CompareValuePtr@N@fl_vec@Instances@AS3@GFx@1@@Z 0x14254e530
-// MS2-FUNCTIONAL ??$QuickSortSlicedSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z: the exe reads the comparator VM reference before building the two Value temporaries, ours after; other registers and a 0x10 bigger exe frame follow, same calls and order
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBV?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@1@_K1U?$CompareValuePtr@V?$Ptr@UASStringNode@GFx@Scaleform@@@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254eb40
 // MS2-PIN: ??$QuickSortSlicedSafe@V?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@Scaleform@@U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@2@@Alg@Scaleform@@YA_NAEAV?$ArrayDH@PEBVValue@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@4@@1@_K1U?$CompareValuePtr@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@1@@Z 0x14254f140
 // MS2-PIN: ??_G?$Value2NumberCollector@VValue@AS3@GFx@Scaleform@@@fl_vec@Instances@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1425564f0
