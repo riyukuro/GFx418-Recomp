@@ -1674,32 +1674,33 @@ uint64_t* FUN_140017250(uint64_t* record, uint64_t vm, uint64_t property, unsign
 }
 
 namespace {
-void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, uint32_t instanceFlags, void** classObjectVtable)
+__forceinline void* BuildVideoTraits(void* classTraits, void* vm, const void* classInfo, void** classVtable, void** instanceVtable, uint32_t instanceFlags, void** classObjectVtable)
 {
     static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits)->Scaleform::GFx::AS3::ClassTraits::Traits::Traits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
     *reinterpret_cast<void***>(classTraits) = classVtable;
     void** heap = *reinterpret_cast<void***>(static_cast<unsigned char*>(vm) + 0x38);
-    void* (*allocate)(void*, size_t, unsigned) = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10]);  // MS2: vcall
-    void* instance = allocate(heap, 0xe8, 0);
-    if (instance) {
-        static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(instance)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
-        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(instance) + 0x60) = instanceFlags;
-        *reinterpret_cast<void***>(instance) = instanceVtable;
+    void* memory = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10])(heap, 0xe8, 0);  // MS2: vcall
+    void* instance;
+    if (memory) {
+        static_cast<Scaleform::GFx::AS3::InstanceTraits::CTraits*>(memory)->Scaleform::GFx::AS3::InstanceTraits::CTraits::CTraits(*static_cast<Scaleform::GFx::AS3::VM*>(vm), *static_cast<const Scaleform::GFx::AS3::ClassInfo*>(classInfo));
+        *reinterpret_cast<void***>(memory) = instanceVtable;
+        *reinterpret_cast<uint32_t*>(static_cast<unsigned char*>(memory) + 0x60) = instanceFlags;
+        instance = memory;
+    } else {
+        instance = 0;
     }
     Scaleform::GFx::AS3::ClassTraits::Traits* typedTraits = static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits);
     Scaleform::GFx::AS3::InstanceTraits::Traits* typedInstance = static_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(instance);
     typedTraits->SetInstanceTraits(Scaleform::Pickable<Scaleform::GFx::AS3::InstanceTraits::Traits>(typedInstance));
-    void* ctraits = allocate(heap, 0x50, 0);
-    if (ctraits) {
-        static_cast<Scaleform::GFx::AS3::Class*>(ctraits)->Scaleform::GFx::AS3::Class::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
-        // only the first class overrides the Class vftable; the second keeps the ctor's
-        if (classObjectVtable)
-            *reinterpret_cast<void***>(ctraits) = classObjectVtable;
-    }
-    if (instance) {
-        uint64_t* slot = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(instance) + 0x80);
+    memory = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10])(heap, 0x50, 0);  // MS2: vcall
+    Scaleform::GFx::AS3::Class* ctraits = ::new (memory) Scaleform::GFx::AS3::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
+    // only the first class overrides the Class vftable; the second keeps the ctor's
+    if (classObjectVtable && ctraits)
+        *reinterpret_cast<void***>(ctraits) = classObjectVtable;
+    uint64_t* slot = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(instance) + 0x80);
+    if (reinterpret_cast<uint64_t>(ctraits) != *slot) {
         ReleaseVideoAtom(slot);
-        *slot = reinterpret_cast<uintptr_t>(ctraits);
+        *slot = reinterpret_cast<uint64_t>(ctraits);
     }
     return classTraits;
 }
@@ -1711,7 +1712,7 @@ void* FUN_1400199e0(void* traits, void* vm)
 {
     return BuildVideoTraits(traits, vm, &VideoClassInfoA, &VideoClassVtableA, &VideoInstanceVtableA, 0xf8, &VideoCTraitsVtable);
 }
-// MS2-FUNCTIONAL: constructs the VideoPlayer AS3 class traits and its instance and native traits objects.
+// constructs the VideoPlayer AS3 class traits and its instance and native traits objects.
 // @0x14001ad20
 void* FUN_14001ad20(void* traits, void* vm)
 {
