@@ -1855,7 +1855,34 @@ namespace Scaleform {
 template void ArrayDataBase<GFx::IME::Ime01Pod<0xc>, AllocatorGH_POD<GFx::IME::Ime01Pod<0xc>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void ArrayDataBase<GFx::IME::Ime01Pod<0x10>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x10>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 template void ArrayDataBase<GFx::IME::Ime01Pod<0x18>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x18>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
-template void ArrayDataBase<GFx::IME::Ime01Pod<0x20>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x20>>, ArrayDefaultPolicy>::Reserve(const void*, UPInt);
+// The exe keeps this one out of line even where its arguments are constants (FUN_1423ce730), so it is an explicit
+// specialization with the SDK body.
+template <>
+__declspec(noinline) void ArrayDataBase<GFx::IME::Ime01Pod<0x20>, AllocatorGH_POD<GFx::IME::Ime01Pod<0x20>>,
+                                        ArrayDefaultPolicy>::Reserve(const void* pheapAddr, UPInt newCapacity)
+{
+    typedef GFx::IME::Ime01Pod<0x20> T;
+    typedef AllocatorGH_POD<T> Allocator;
+    if (Policy.NeverShrinking() && newCapacity < GetCapacity())
+        return;
+    if (newCapacity < Policy.GetMinCapacity())
+        newCapacity = Policy.GetMinCapacity();
+    if (newCapacity == 0) {
+        if (Data) {
+            Allocator::Free(Data);
+            Data = 0;
+        }
+        Policy.SetCapacity(0);
+        return;
+    }
+    UPInt gran = Policy.GetGranularity();
+    newCapacity = (newCapacity + gran - 1) / gran * gran;
+    if (Data)
+        Data = (T*)Allocator::Realloc(Data, sizeof(T) * newCapacity, MS2_SF_ARRAY_SITE, 137);
+    else
+        Data = (T*)Allocator::Alloc(pheapAddr, sizeof(T) * newCapacity, MS2_SF_ARRAY_SITE, 161);
+    Policy.SetCapacity(newCapacity);
+}
 template void GFx::IME::ValueArrayBase::Reserve(const void*, UPInt);
 template void GFx::IME::Ime01PtrArrayLH::Reserve(const void*, UPInt);
 template void GFx::IME::Ime01WideArrayLH::Reserve(const void*, UPInt);
@@ -4603,57 +4630,86 @@ void FUN_1423d5060(void* raw, int offset)
     cx18_InvokeInputWindow(self, "RepositionCandWindow", args, 3);
 }
 
+// A local ArrayData<Value> built with plain member initialisers.
+struct Ime01ArgArray
+{
+    Scaleform::GFx::Value* data;
+    unsigned long long size;
+    unsigned long long capacity;
+    Ime01ArgArray() : data(nullptr), size(0), capacity(0) {}
+    ~Ime01ArgArray()
+    {
+        FUN_1423ce6c0(data, size);
+        if (data) Memory::Free(data);
+    }
+};
+static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value& value)
+{
+    const unsigned long long oldLength = args.size;
+    const unsigned long long newLength = oldLength + 1;
+    if (newLength < oldLength) {
+        FUN_1423ce6c0(args.data + newLength, oldLength - newLength);
+        if (newLength < (args.capacity >> 1))
+            reinterpret_cast<Ime01ArrayGH<0x20>*>(&args)->Reserve(&args, newLength);
+    } else if (newLength >= args.capacity) {
+        reinterpret_cast<Ime01ArrayGH<0x20>*>(&args)->Reserve(&args, (newLength >> 2) + newLength);
+    }
+    args.size = newLength;
+    ::new (static_cast<void*>(args.data + newLength - 1)) Scaleform::GFx::Value(value);
+}
+
 // MS2-FUNCTIONAL: composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
 // leading space or U+3000 into U+00A0, and either stores the text in the String at +0xb0 (mode 0x60000, which like
 // the exe returns without releasing the context) or sends it with SetCompositionText and writes its length to
 // *outputLength. The candidate modes also set the cursor, store length - cursor at +0x64 and highlight the whole text.
 // It then sets the composition cursor and, unless the mode has a low nibble, calls RepositionInputWindow(x1, y2) of
-// the cursor rect IMEManagerBase::GetMetrics reports. Reviewed against the exe, same behaviour; the exe builds the
-// RepositionInputWindow arguments in an inlined Value array (FUN_1423d12e0/FUN_1423ce6c0) and keeps an unused Value.
+// the cursor rect IMEManagerBase::GetMetrics reports. Reviewed against the exe, same behaviour. The arguments go
+// through an inlined Value array (Ime01ArgArray: Reserve FUN_1423d12e0, element dtor FUN_1423ce6c0). Same size as the
+// exe; only the array zeroing differs: the exe stores data/size with one movdqu, ours with two qword stores
+// (memset/union/Policy-base forms tried, all lose the known-zero size).
 // @0x1423ce730
 void FUN_1423ce730(void* raw, unsigned* outputLength)
 {
     typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
+    Scaleform::GFx::Value unused;
     void* owner = *reinterpret_cast<void**>(self + 8);
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
         reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const LONG size = cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, nullptr, 0);
     auto* text = static_cast<wchar_t*>(Scaleform::Memory::Alloc(static_cast<UPInt>(static_cast<SPInt>(size * 2)) + 2));
     cx18_ImmGetCompositionStringW(context, GCS_COMPSTR, text, size);
     const int count = size / 2;
     text[count] = 0;
     if (text[0] == L' ' || text[0] == 0x3000) text[0] = 0x00a0;
-    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    if (mode == 0x60000) {
+    if (*reinterpret_cast<unsigned*>(self + 0x98) == 0x60000) {
         *reinterpret_cast<Scaleform::String*>(self + 0xb0) = text;
-        Scaleform::Memory::Free(text);
-        return;
+    } else {
+        ime->SetCompositionText(text, -1);
+        *outputLength = static_cast<unsigned>(count);
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
+        if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
+            const LONG cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
+            ime->SetCursorInComposition(static_cast<unsigned>(cursor));
+            *reinterpret_cast<unsigned*>(self + 0x64) = *outputLength - static_cast<unsigned>(cursor);
+            ime->HighlightText(0, *outputLength, Scaleform::GFx::IMEManagerBase::THS_CompositionSegment, false);
+        }
+        if (size)
+            ime->SetCursorInComposition(static_cast<SPInt>(cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0)));
+        Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+        ime->GetMetrics(&viewRect, &cursorRect, 0);
+        if ((*reinterpret_cast<unsigned*>(self + 0x98) & 0xf) == 0) {
+            Ime01ArgArray args;
+            Scaleform::GFx::Value result;
+            Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+            Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+                reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "RepositionInputWindow", &result, args.data, 2);
+        }
+        cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
     }
-    ime->SetCompositionText(text, -1);
-    *outputLength = static_cast<unsigned>(count);
-    if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
-        const LONG cursor = cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0);
-        ime->SetCursorInComposition(static_cast<unsigned>(cursor));
-        *reinterpret_cast<unsigned*>(self + 0x64) = *outputLength - static_cast<unsigned>(cursor);
-        ime->HighlightText(0, *outputLength, Scaleform::GFx::IMEManagerBase::THS_CompositionSegment, false);
-    }
-    if (size)
-        ime->SetCursorInComposition(static_cast<SPInt>(cx18_ImmGetCompositionStringW(context, GCS_CURSORPOS, nullptr, 0)));
-    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
-    ime->GetMetrics(&viewRect, &cursorRect, 0);
-    if ((mode & 0xf) == 0) {
-        Scaleform::GFx::Value args[2];
-        args[0] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-        args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-        Scaleform::GFx::Value result;
-        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
-            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                bridge, "RepositionInputWindow", &result, args, 2);
-    }
-    cx18_ImmReleaseContext(hwnd, context);
     Scaleform::Memory::Free(text);
 }
 
