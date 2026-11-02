@@ -2295,10 +2295,17 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
 
 static inline void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg1, arg2); }   // Tracer: emit opcode op with two arguments
 
+// Bit 2 of the traits flag byte (+0x68).
+static inline bool Sfr17TraitsFlag2(const void* t)
+{
+    return (Scaleform::UByte)(*reinterpret_cast<const unsigned*>(static_cast<const Scaleform::UByte*>(t) + 0x68) >> 2) & 1;
+}
+
 // Tracer: emits the property op (op: 0x66 get / 0x68 init / 0x61 set / 5 ...) on a name that resolves to a fixed
 // slot of the traits t as a slot access: a plain data slot by index (0xb7/0xb8), a method or getter slot (bind types
 // 13/14) as a call of its vtable entry (0x43 callmethod, 0xb9 for op 5) plus a pop; else the op with ind.
-// MS2-FUNCTIONAL 0x1424f92f0: written on raw offsets (tracer +0x20 state, +0x28 file, SlotInfo bitfields)
+// MS2-FUNCTIONAL 0x1424f92f0: written on raw offsets (tracer +0x20 state, +0x28 file, SlotInfo bitfields); the exe reads
+// the traits flag as a byte and keeps t in r14 and op in ebp
 // @0x1424f92f0
 bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void* /*unused*/,
                    const Scaleform::GFx::AS3::Multiname* pmn, int ind)
@@ -2306,9 +2313,9 @@ bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void*
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
     UByte* const self = static_cast<UByte*>(tr);
-    const unsigned mnw = *reinterpret_cast<const unsigned*>(pmn);
+    const unsigned& mnw = *reinterpret_cast<const unsigned*>(pmn);
     const unsigned kind = mnw & 3;
-    if (kind != 1 && !(mnw & 4) && (kind != 0 || *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(pmn) + 8)) && t)
+    if (kind != 1 && !((UByte)(mnw >> 2) & 1) && (kind != 0 || *reinterpret_cast<const UPInt*>(reinterpret_cast<const UByte*>(pmn) + 8)) && t)
     {
         UByte* file = *reinterpret_cast<UByte**>(*reinterpret_cast<UByte**>(self + 0x20) + 0x28);
         UPInt index = 0;
@@ -2317,27 +2324,30 @@ bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void*
         {
             const int siw = *reinterpret_cast<const int*>(si);
             const int bt = (siw << 0x16) >> 0x1b;
-            if (bt < 11)
+            if (bt > 10)
             {
-                if (mnw & 4)
+                if (!((siw >> 0x1a) & 1) && !Sfr17TraitsFlag2(t) &&
+                    static_cast<unsigned>(bt - 13) <= 1)
                 {
-                    FUN_14251f930(self, 0x2b);   // swap
-                    FUN_14251f930(self, 0x29);   // pop
+                    if ((UByte)(mnw >> 2) & 1)
+                    {
+                        FUN_14251f930(self, 0x2b);   // swap
+                        FUN_14251f930(self, 0x29);   // pop
+                    }
+                    const int vind = (*reinterpret_cast<const int*>(si) << 5) >> 0xf;
+                    FUN_14251fa10(self, op == 5 ? 0xb9 : 0x43, static_cast<UPInt>(static_cast<SPInt>(vind + 1)), 1);
+                    FUN_14251f930(self, 0x29);
+                    return true;
                 }
-                FUN_14251fb90(self, (op == 0x68) + 0xb7, static_cast<unsigned>(static_cast<int>(index) + 1));
-                return true;
             }
-            if (!((siw >> 0x1a) & 1) && !((reinterpret_cast<const UByte*>(t)[0x68] >> 2) & 1) &&
-                static_cast<unsigned>(bt - 13) < 2)
+            else
             {
-                if (mnw & 4)
+                if ((UByte)(mnw >> 2) & 1)
                 {
                     FUN_14251f930(self, 0x2b);
                     FUN_14251f930(self, 0x29);
                 }
-                const int vind = (*reinterpret_cast<const int*>(si) << 5) >> 0xf;
-                FUN_14251fa10(self, op == 5 ? 0xb9 : 0x43, static_cast<UPInt>(static_cast<SPInt>(vind + 1)), 1);
-                FUN_14251f930(self, 0x29);
+                FUN_14251fb90(self, (op == 0x68) + 0xb7, static_cast<unsigned>(static_cast<int>(index) + 1));
                 return true;
             }
         }
