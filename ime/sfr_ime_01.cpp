@@ -439,32 +439,33 @@ void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
     cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(bytes + 0x28), context);
 }
 
-// MS2-FUNCTIONAL: dispatches the executable's IME composition and candidate-list messages by input mode.
+// Dispatches the IME composition and candidate-list messages by input mode.
 // @0x1423d02d0
 LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long type, LPARAM value)
 {
+    using Forward = void(*)(void*, unsigned long long, unsigned long long, LPARAM);
     if (!self[1]) return 0;
-    const unsigned mode = static_cast<unsigned>(self[0x13]);
-    const bool firstModes = mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 ||
-        mode == 0xa10000 || mode == 0xd00800 || mode == 0xd00900 || mode == 0xd00a00;
-    const bool secondModes = mode == 0x210000 || mode == 0x110000 || mode == 0x810000 || mode == 0xd10000;
-    auto** vtable = reinterpret_cast<void**>(self[0]);
-    LRESULT result = 0;
-    if (type == 3) {
-        if (firstModes) reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
-        else if (secondModes) {
-            reinterpret_cast<void(*)(void*, int)>(vtable[0x118 / sizeof(void*)])(self, 0);
-            result = 2;
+    Scaleform::GFx::Value unused;
+    switch (type) {
+    case 3: {
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x13);
+        if (mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 || mode == 0xa10000 || mode == 0xd00800 ||
+            mode == 0xd00900 || mode == 0xd00a00) {
+            reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x118 / sizeof(void*)])(self, 0);
+        } else if (mode == 0x210000 || mode == 0x110000 || mode == 0x810000 || mode == 0xd10000) {
+            reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x118 / sizeof(void*)])(self, 0);
+            return 2;
         }
-    } else if (type == 4) {
-        const bool removeList = mode == 0x210000 || mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 ||
-            mode == 0xa10000 || mode == 0xd00800 || mode == 0xd00900 || mode == 0x110000 ||
-            mode == 0xd00a00 || mode == 0x810000 || mode == 0xd10000;
-        if (removeList) {
+        break;
+    }
+    case 4: {
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x13);
+        if (mode == 0x210000 || mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 || mode == 0xa10000 ||
+            mode == 0xd00800 || mode == 0xd00900 || mode == 0x110000 || mode == 0xd00a00 || mode == 0x810000 ||
+            mode == 0xd10000) {
             FUN_1423d9500(reinterpret_cast<void*>(self[6]));
-            void* movie = reinterpret_cast<void*>(self[0x15]);
-            void* values = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0x18);
             Scaleform::GFx::Value output;
+            void* values = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(self[0x15]) + 0x18);
             if (values) {
                 reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, void*, unsigned)>(
                     (*reinterpret_cast<void***>(values))[0x78 / sizeof(void*)])(
@@ -472,22 +473,29 @@ LRESULT FUN_1423d02d0(unsigned long long* self, UINT message, unsigned long long
             }
         }
         return DefWindowProcW(reinterpret_cast<HWND>(self[5]), message, 4, value);
-    } else if (type == 5) {
-        if (firstModes || mode == 0x810000)
-            reinterpret_cast<void(*)(void*, int)>(vtable[0x120 / sizeof(void*)])(self, 0);
-        else if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
-            reinterpret_cast<void(*)(void*, int)>(vtable[0x120 / sizeof(void*)])(self, 0);
-            result = 2;
-        }
-    } else if (type == 0xe && secondModes) {
-        reinterpret_cast<void(*)(void*, unsigned, unsigned long long, LPARAM)>(
-            vtable[0x70 / sizeof(void*)])(self, message, 0xe, value);
-        return 2;
     }
-    if (result) return result;
-    reinterpret_cast<void(*)(void*, unsigned, unsigned long long, LPARAM)>(
-        vtable[0x70 / sizeof(void*)])(self, message, type, value);
-    return result;
+    case 5: {
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x13);
+        if (mode == 0x3000 || mode == 0x60000 || mode == 0xb10000 || mode == 0xa10000 || mode == 0xd00800 ||
+            mode == 0xd00900 || mode == 0xd00a00 || mode == 0x810000) {
+            reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x120 / sizeof(void*)])(self, 0);
+        } else if (mode == 0x210000 || mode == 0x110000 || mode == 0xd10000) {
+            reinterpret_cast<void(*)(void*, int)>(reinterpret_cast<void**>(self[0])[0x120 / sizeof(void*)])(self, 0);
+            return 2;
+        }
+        break;
+    }
+    case 0xe: {
+        const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x13);
+        if (mode == 0x210000 || mode == 0x110000 || mode == 0x810000 || mode == 0xd10000) {
+            reinterpret_cast<Forward>(reinterpret_cast<void**>(self[0])[0x70 / sizeof(void*)])(self, message, 0xe, value);
+            return 2;
+        }
+        break;
+    }
+    }
+    reinterpret_cast<Forward>(reinterpret_cast<void**>(self[0])[0x70 / sizeof(void*)])(self, message, type, value);
+    return 0;
 }
 
 // MS2-FUNCTIONAL: handles the executable's focus, candidate-list, and IME notification messages. Reviewed case by case
