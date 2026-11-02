@@ -1651,13 +1651,19 @@ SF_FORCEINLINE const ArrayDH<Value>& TrMergeList(const TR::State& st, TR::MergeS
 {
     return TrMergeList(const_cast<TR::State&>(st), ms);
 }
+// Tracer::IsNumericType / IsNotNullableType, which the exe inlines here
+SF_FORCEINLINE bool TrIsNumericType(const Tracer& t, const Traits* tr)
+{
+    return tr == &t.GetSIntType() || tr == &t.GetUIntType() || tr == &t.GetNumberType();
+}
+SF_FORCEINLINE bool TrIsNotNullableType(const Tracer& t, const InstanceTraits::Traits* tr)
+{
+    return TrIsNumericType(t, tr) || tr == &t.GetBooleanType();
+}
 // Tracer::CanBeNull(const InstanceTraits::Traits&) (sfr_as3_17), which the exe inlines here
 SF_FORCEINLINE Value::TraceNullType TrCanBeNull(const Tracer& t, const InstanceTraits::Traits& traits)
 {
-    return &traits == &t.GetSIntType() || &traits == &t.GetUIntType() || &traits == &t.GetNumberType() ||
-                   &traits == &t.GetBooleanType()
-               ? Value::NotNull
-               : Value::NullOrNot;
+    return TrIsNotNullableType(t, &traits) ? Value::NotNull : Value::NullOrNot;
 }
 }
 
@@ -1669,8 +1675,7 @@ __declspec(noinline) bool Tracer::IsAnyType(const Traits* tr) const
            tr == &GetVM().GetClassTraitsClassClass().GetInstanceTraits();
 }
 
-// MS2-FUNCTIONAL 0x142515840: the exe keeps the inlined CanBeNull result in a register and tests it again, and tail-calls
-// the weak-proxy free
+// MS2-FUNCTIONAL 0x142515840: the exe tail-calls the weak-proxy free
 // @0x142515840
 __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from, ClassTraits::Traits& tr) const
 {
@@ -1681,8 +1686,7 @@ __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, c
     to_be_merged.Assign(Value(tr, null));
 }
 
-// MS2-FUNCTIONAL 0x142515930: the exe keeps the inlined CanBeNull result in a register and tests it again, and tail-calls
-// the weak-proxy free
+// MS2-FUNCTIONAL 0x142515930: the exe tail-calls the weak-proxy free
 // @0x142515930
 __declspec(noinline) __declspec(safebuffers) void Tracer::JoinSNodesUpdateType(Value& to_be_merged, const Value& from,
                                                                                InstanceTraits::Traits& tr) const
@@ -4877,13 +4881,18 @@ void FUN_14251ce20(ValueStack* stack, Value* to)
 
 } } } // namespace Scaleform::GFx::AS3
 
-// ResourceHandle::GetResource, an out-of-line copy of the inline.
-// MS2-FUNCTIONAL free function (the inline is defined in gfx_moviedef.h)
+// ResourceHandle::GetResource, an out-of-line copy of the inline, written out with the SDK's body (pointer handles
+// first). A free function: the inline is defined in gfx_moviedef.h.
 // @0x14250d840
 Scaleform::GFx::Resource* FUN_14250d840(const Scaleform::GFx::ResourceHandle* self,
                                         Scaleform::GFx::ResourceBinding* pbinding)
 {
-    return self->GetResource(pbinding);
+    if (self->GetHandleType() == Scaleform::GFx::ResourceHandle::RH_Pointer)
+        return self->GetResourcePtr();
+
+    Scaleform::GFx::ResourceBindData rbd;
+    pbinding->GetResourceData(&rbd, self->GetBindIndex());
+    return rbd.pResource;
 }
 
 namespace Scaleform {
