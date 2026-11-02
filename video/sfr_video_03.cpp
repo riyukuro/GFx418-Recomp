@@ -1394,15 +1394,18 @@ void* FUN_14001b340(void* p) { return FUN_14001afd0(static_cast<unsigned char*>(
 void* FUN_142742ed0(void* destination, const uint64_t* source)
 {
     typedef Scaleform::GFx::Video::VideoPlayerImpl* Element;
-    typedef Scaleform::ArrayDataBase<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy> Data;
+    typedef Scaleform::ArrayData<Element, Scaleform::AllocatorGH<Element, 2>, Scaleform::ArrayDefaultPolicy> Data;
     Data* output = static_cast<Data*>(destination);
     output->Data = 0; output->Size = 0; output->Policy.SetCapacity(0);
-    const uint64_t count = source[1];
+    Scaleform::UPInt count = source[1];
     Element* input = reinterpret_cast<Element*>(source[0]);
     if (count) {
-        output->Reserve(output, (count >> 2) + count);
-        output->Size = count;
-        for (uint64_t i = 0; i < count; ++i) output->Data[i] = input[i];
+        const Scaleform::UPInt oldSize = output->Size;
+        const Scaleform::UPInt newSize = oldSize + count;
+        if (newSize >= oldSize && newSize >= output->Policy.GetCapacity()) output->Data::BaseType::Reserve(output, newSize + (newSize >> 2));
+        output->Size = newSize;
+        Element* to = output->Data + oldSize;
+        for (; count; --count) *to++ = *input++;
     }
     return destination;
 }
@@ -1847,19 +1850,18 @@ void FUN_140019660(void* self, uint64_t* output) { GetVideoSoundTransform(self, 
 uint64_t* FUN_142742fb0(uint64_t* object, void* player, uint64_t userData, void* channel)
 {
     uint64_t* node = object + 2;
-    *reinterpret_cast<void***>(object) = &VideoAudioDeleteVtable;
+    uint64_t* list = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(player) + 0xb0);
     reinterpret_cast<uint32_t*>(object)[2] = 1;
     *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
-    object[4] = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(player) + 0xc0);
-    object[3] = reinterpret_cast<uintptr_t>(static_cast<unsigned char*>(player) + 0xb0);
-    uint64_t** link = reinterpret_cast<uint64_t**>(static_cast<unsigned char*>(player) + 0xc0);
-    if (*link) (*link)[1] = reinterpret_cast<uintptr_t>(node);
-    *link = reinterpret_cast<uint64_t*>(node);
-    *reinterpret_cast<void***>(object) = &VideoAudioVtableA;
+    node[2] = list[2];
+    node[1] = reinterpret_cast<uintptr_t>(list);
+    reinterpret_cast<uint64_t*>(list[2])[1] = reinterpret_cast<uintptr_t>(node);
+    list[2] = reinterpret_cast<uintptr_t>(node);
+    *reinterpret_cast<void***>(object) = &VideoAudioDeleteVtable;
     *reinterpret_cast<void***>(node) = &VideoAudioSubVtable;
     object[8] = 0; object[5] = reinterpret_cast<uintptr_t>(player); object[6] = userData; object[7] = reinterpret_cast<uintptr_t>(channel);
-    FUN_1428d8f14(channel, object);
-    FUN_1428d8efc(channel, reinterpret_cast<void*>(&FUN_1427443c0));
+    FUN_1428d8f14(reinterpret_cast<void*>(object[7]), object);
+    FUN_1428d8efc(reinterpret_cast<void*>(object[7]), reinterpret_cast<void*>(&FUN_1427443c0));
     return object;
 }
 namespace {
@@ -2148,19 +2150,20 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
 uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo, uint32_t rate, uint32_t channels)
 {
     uint64_t* node = object + 2;
+    uint64_t* list = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(owner) + 0xb0);
+    uint64_t* sound = object + 6;
     *reinterpret_cast<void***>(object) = &VideoSoundDeleteVtable;
     reinterpret_cast<uint32_t*>(object)[2] = 1;
     *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
-    object[4] = *reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(owner) + 0xc0);
-    object[3] = reinterpret_cast<uintptr_t>(static_cast<unsigned char*>(owner) + 0xb0);
-    uint64_t** link = reinterpret_cast<uint64_t**>(static_cast<unsigned char*>(owner) + 0xc0);
-    if (*link) (*link)[1] = reinterpret_cast<uintptr_t>(node);
-    *link = reinterpret_cast<uint64_t*>(node);
+    node[2] = list[2];
+    node[1] = reinterpret_cast<uintptr_t>(list);
+    reinterpret_cast<uint64_t*>(list[2])[1] = reinterpret_cast<uintptr_t>(node);
+    list[2] = reinterpret_cast<uintptr_t>(node);
     object[7] = 0;
     *reinterpret_cast<void***>(object) = &VideoSoundVtable;
     *reinterpret_cast<void***>(node) = &VideoSoundSubVtable;
     object[5] = reinterpret_cast<uintptr_t>(owner);
-    object[6] = 0; object[8] = 0;
+    *sound = 0; object[8] = 0;
     reinterpret_cast<uint32_t*>(object)[18] = rate;
     *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c) = channels;
     object[0xb] = 0; reinterpret_cast<uint32_t*>(object)[0x18] = 0;
@@ -2168,24 +2171,27 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     if (stream) FUN_14257dc30(stream);
     if (object[8]) FUN_14257dcb0(reinterpret_cast<void*>(object[8]));
     object[8] = reinterpret_cast<uintptr_t>(stream);
-    const uint32_t format = stereo ? 5 : 2;
-    const uint32_t sampleBits = stereo ? 0x20 : 0x10;
+    const uint32_t soundChannels = *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(object) + 0x4c);
+    const uint32_t soundRate = reinterpret_cast<uint32_t*>(object)[18];
+    uint32_t format = 5;
+    uint32_t sampleBits = 0x20;
+    if (stereo == 0) { format = 2; sampleBits = 0x10; }
     reinterpret_cast<uint32_t*>(object)[0x1a] = format;
     reinterpret_cast<uint32_t*>(object)[0x14] = sampleBits;
-    const int32_t pcmBytes = static_cast<int32_t>((channels / 1000) * (sampleBits >> 3) * rate * 0x5dc);
+    const int32_t pcmBytes = static_cast<int32_t>((soundChannels / 1000) * (sampleBits >> 3) * soundRate * 0x5dc);
     *reinterpret_cast<int32_t*>(reinterpret_cast<unsigned char*>(object) + 100) = pcmBytes;
-    __declspec(align(8)) unsigned char info[0xd8] = { 0 };
-    *reinterpret_cast<uint32_t*>(info) = sizeof(info);
-    *reinterpret_cast<int32_t*>(info + 4) = pcmBytes;
-    *reinterpret_cast<int32_t*>(info + 0xc) = static_cast<int32_t>(rate);
-    *reinterpret_cast<uint32_t*>(info + 0x10) = channels;
-    *reinterpret_cast<uint32_t*>(info + 0x14) = format;
-    void* system = *reinterpret_cast<void**>(static_cast<unsigned char*>(owner) + 0x10);
-    int result = static_cast<FMOD::System*>(system)->createSound(0, 0x442, reinterpret_cast<FMOD_CREATESOUNDEXINFO*>(info), reinterpret_cast<FMOD::Sound**>(object + 6));
-    if (result == 0) {
-        uint32_t length = 0;
-        reinterpret_cast<FMOD::Sound*>(object[6])->getLength(&length, 4);
-    } else object[6] = 0;
+    FMOD_CREATESOUNDEXINFO info;
+    memset(&info, 0, sizeof(info));
+    uint32_t* infoWords = reinterpret_cast<uint32_t*>(&info);
+    infoWords[0] = sizeof(info);
+    infoWords[1] = static_cast<uint32_t>(pcmBytes);
+    infoWords[3] = soundRate;
+    infoWords[4] = soundChannels;
+    infoWords[5] = format;
+    if (static_cast<FMOD::System*>(*reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object[5]) + 0x10))->createSound(0, 0x442, &info, reinterpret_cast<FMOD::Sound**>(sound)) == 0) {
+        stereo = 0;
+        reinterpret_cast<FMOD::Sound*>(*sound)->getLength(reinterpret_cast<unsigned int*>(&stereo), 4);
+    } else *sound = 0;
     return object;
 }
 } // namespace
