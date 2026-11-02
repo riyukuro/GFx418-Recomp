@@ -23,6 +23,9 @@ public:
     unsigned                 MouseCursorEventCnt;     // +0x128
 
     Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id); // 0x1424d9b50
+    // MovieRoot::CreateStage (0x1424f4000) inlines the constructor; defined __forceinline in sfr_as3_17d.
+    struct InlineCtorTag {};
+    Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id, InlineCtorTag);
     virtual ~Stage();                                                       // 0x1424defe0, ??_G 0x1424e3950
 
     virtual void        ForceShutdown();                                    // 54 0x142504860

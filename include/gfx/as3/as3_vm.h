@@ -419,6 +419,9 @@ class XMLSupportImpl : public XMLSupport
 {
 public:
     XMLSupportImpl(VM& vm);     // 0x1424dc160
+    // VM::EnableXMLSupport (0x1424f9570) inlines the constructor; defined __forceinline in sfr_as3_17d.
+    struct InlineCtorTag {};
+    XMLSupportImpl(VM& vm, InlineCtorTag);
     virtual ~XMLSupportImpl();                                                                          // 0x1424e4190
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;                                       // 0x142504520
     // The E4X-enabled VM overrides the base no-op at 0x1424e6980.

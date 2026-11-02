@@ -96,7 +96,7 @@ template<> void Scaleform::ArrayData<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::A
 template<> Scaleform::String Scaleform::AsString<Scaleform::UInt32>(const Scaleform::UInt32& v);   // 0x1423e8390
 static inline void FUN_1424fa320(Scaleform::GFx::AS3::MovieRoot* proot, unsigned level) { proot->ExecuteActionQueue(static_cast<Scaleform::GFx::AS3::MovieRoot::ActionLevel>(level)); }   // MovieRoot::ExecuteActionQueue(ActionLevel)
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::AS3::Value* pval, const char* ppathToVar);   // MovieRoot::GetASVariableAtPath
-void FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
+Scaleform::GFx::AS3::AvmInteractiveObj* FUN_1424f4000(Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::MovieDefImpl* pmovieDef);   // MovieRoot::CreateStage
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 

@@ -497,12 +497,27 @@ void FUN_1424f03f0(UByte* self, MemoryHeap* heap)
     *reinterpret_cast<UPInt*>(self + 0x20) = heap->GetFootprint();
 }
 
-// MS2-FUNCTIONAL 0x1424f9570: the exe inlines the XMLSupportImpl constructor (its vftable and three class allocations)
+// VM::PrepareClassTraits: registers tr and hands it on
+static inline Pickable<ClassTraits::Traits> Sfr17dPrepareClassTraits(VM& vm, ClassTraits::Traits* tr)
+{
+    vm.RegisterClassTraits(*tr);
+    return Pickable<ClassTraits::Traits>(tr);
+}
+
+// The XMLSupportImpl constructor (0x1424dc160, sfr_as3_15) as the exe inlines it here.
+__forceinline XMLSupportImpl::XMLSupportImpl(VM& vm, InlineCtorTag)
+    : XMLSupport(vm, true), pVM(&vm),
+      TraitsQName(Sfr17dPrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::QName(vm))),
+      TraitsXML(Sfr17dPrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XML(vm))),
+      TraitsXMLList(Sfr17dPrepareClassTraits(vm, SF_HEAP_NEW(vm.GetMemoryHeap()) ClassTraits::fl::XMLList(vm)))
+{
+}
+
 // @0x1424f9570
 // VM::EnableXMLSupport: the E4X classes of the VM.
 void FUN_1424f9570(VM* vm)
 {
-    vm->XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(vm->MHeap) XMLSupportImpl(*vm));
+    vm->XMLSupport_ = Pickable<XMLSupport>(SF_HEAP_NEW(vm->MHeap) XMLSupportImpl(*vm, XMLSupportImpl::InlineCtorTag()));
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -601,24 +616,71 @@ extern void* const AvmStage_vftable_40[];
 }}}
 bool FUN_142531f40(AS3::VM& vm, AS3::SPtr<AS3::Object>& pobj, AS3::Object* classObj, unsigned argc, const AS3::Value* argv);   // ASVM::_constructInstance
 
-// MS2-FUNCTIONAL 0x1424f4000: the stage's AVM part is built in place (no class model); the exe inlines the Stage constructor and InsertEntry
+// The Stage constructor (0x1424d9b50, sfr_as3_15) as the exe inlines it in CreateStage.
+__forceinline Stage::Stage(MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* pparent, ResourceId id, InlineCtorTag)
+    : DisplayObjContainer(pbindingDefImpl, pasRoot, pparent, id),
+      CurrentStageOrientation(GetStringManager()->GetEmptyStringNode())
+{
+    DisplayObjectBase::Flags |= DisplayObjectBase::Mask_Loaded;
+    DisplayObject::Flags |= DisplayObject::Mask_TimelineObject;
+    MouseCursorEventCnt = 0;
+}
+
+// ActionQueueType::InsertEntry (0x142512800, sfr_as3_18) as the exe inlines it in CreateStage.
+static SF_FORCEINLINE MovieRoot::ActionEntry* Sfr17dInsertEntry(MovieRoot::ActionQueueType& aq, MovieRoot::ActionLevel lvl)
+{
+    MovieRoot::ActionEntry* pentry = aq.GetNewEntry();
+    MovieRoot::ActionQueueEntry& q = aq.Entries[lvl];
+    if (!q.pInsertEntry)
+    {
+        pentry->pNextEntry = q.pActionRoot;
+        q.pActionRoot = pentry;
+    }
+    else
+    {
+        pentry->pNextEntry = q.pInsertEntry->pNextEntry;
+        q.pInsertEntry->pNextEntry = pentry;
+    }
+    q.pInsertEntry = pentry;
+    if (!pentry->pNextEntry)
+        q.pLastEntry = pentry;
+    ++aq.ModId;
+    return pentry;
+}
+
 // @0x1424f4000
 // MovieRoot::CreateStage: the stage and its AVM part in one allocation; its load event goes first in the queue.
-void FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
+// Returns the AVM part.
+AvmInteractiveObj* FUN_1424f4000(MovieRoot* proot, MovieDefImpl* pmovieDef)
 {
     void*  pmem   = proot->GetMovieImpl()->pHeap->Alloc(sizeof(Stage) + 0x48);
-    Stage* pstage = pmem ? new (pmem) Stage(pmovieDef, proot, NULL, ResourceId(0x40000)) : NULL;
+    Stage* pstage = pmem ? new (pmem) Stage(pmovieDef, proot, NULL, ResourceId(0x40000), Stage::InlineCtorTag()) : NULL;
     if (proot->pStage)
         proot->pStage->Release();
     proot->pStage = pstage;
-    if (UByte* pavm = static_cast<UByte*>(pmem) + sizeof(Stage))
+    AvmInteractiveObj* pavmObj = reinterpret_cast<AvmInteractiveObj*>(static_cast<UByte*>(pmem) + sizeof(Stage));
+    if (pavmObj)
     {
-        new (pavm) AvmInteractiveObj(pstage);
+        new (pavmObj) AvmInteractiveObj(pstage);
+        UByte* pavm = reinterpret_cast<UByte*>(pavmObj);
         *reinterpret_cast<void* const**>(pavm + 0x00) = AvmStage_vftable;
         *reinterpret_cast<void* const**>(pavm + 0x30) = AvmStage_vftable_30;
         *reinterpret_cast<void* const**>(pavm + 0x40) = AvmStage_vftable_40;
     }
-    proot->ActionQueue.InsertEntry(MovieRoot::AL_Highest)->SetAction(proot->pStage, EventId(EventId::Event_Load));
+    else
+        pavmObj = NULL;
+    DisplayObject* pch = proot->pStage;
+    // ActionEntry::SetAction, with Value::SetUndefined (0x142423b90) called out of line as in the exe
+    MovieRoot::ActionEntry* pe = Sfr17dInsertEntry(proot->ActionQueue, MovieRoot::AL_Highest);
+    void (AS3::Value::*setUndefined)() = &AS3::Value::SetUndefined;
+    pe->Type = MovieRoot::ActionEntry::Entry_Event;
+    pe->pCharacter = pch;
+    new (&pe->mEventId) EventId(EventId::Event_Load);
+    pe->CFunction = NULL;
+    pe->pAS3Obj = NULL;
+    (pe->Function.*setUndefined)();
+    pe->pNLoadInitCL = NULL;
+    return pavmObj;
 }
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1205,6 +1267,12 @@ namespace AS3 {
 // MS2-PIN: ??_7File@Abc@AS3@GFx@Scaleform@@6B@ 0x14317b050
 // MS2-PIN: ??_7AbcFileWithMovieDef@ASVM@AS3@GFx@Scaleform@@6B@ 0x14317d8a8
 // MS2-PIN: ??_7?$RefCountBase@VShapeDataInterface@Render@Scaleform@@$01@Scaleform@@6B@ 0x14318f130
+// MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
+// MS2-PIN: ??_7GASRefCountBase@AS3@GFx@Scaleform@@6B@ 0x14313f398
+// MS2-PIN: ??_7XMLSupport@AS3@GFx@Scaleform@@6B@ 0x14317b7b8
+// MS2-PIN: ??_7XMLSupportImpl@AS3@GFx@Scaleform@@6B@ 0x14317f9e0
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$RefCountBaseWeakSupport@VDisplayObjectBase@GFx@Scaleform@@$0BEC@@3@@ 0x14317d220
+// MS2-PIN: ??_7Stage@AS3@GFx@Scaleform@@6B?$LogBase@VDisplayObjectBase@GFx@Scaleform@@@23@@ 0x14317d5f0
 // MS2-PIN: ??_7ShapeDataInterface@Render@Scaleform@@6B@ 0x14317b678
 // MS2-PIN: ??_7?$RefCountBase@VComplexFill@Render@Scaleform@@$01@Scaleform@@6B@ 0x14317b660
 // MS2-PIN: ??_7ComplexFill@Render@Scaleform@@6B@ 0x14317b668
