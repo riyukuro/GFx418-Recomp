@@ -31,6 +31,8 @@ public:
     virtual int    GetId() const;
 
     unsigned GetCurrentCount() const { return CurrentCount; }
+    // (appended) appends the extra setInterval/setTimeout arguments to Params (0x1425264b0).
+    void     SetArguments(unsigned num, const Value* argArr);
 
 private:
     Value                               Function;       // +0x10 the setInterval closure

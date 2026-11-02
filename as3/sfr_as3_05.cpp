@@ -1840,7 +1840,6 @@ namespace ClassTraits { namespace fl_display
 // ---- core natives: Date, Error, QName, RegExp, Math, global functions ----
 
 
-void  FUN_1425264b0(void* ptimer, unsigned argc, const Scaleform::GFx::AS3::Value* argv);                   // IntervalTimer: copies the extra call arguments
 void  FUN_1425e4ad0(const char* pstr, unsigned len, Scaleform::String* presult);                            // URL-style unescape of a string
 
 namespace Scaleform { namespace GFx { namespace AS3 {
@@ -1922,7 +1921,7 @@ namespace Instances { namespace fl
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
         ASIntervalTimerIntf* ptimer = pmem ? ::new (pmem) IntervalTimer(argv[0], delay, true) : NULL;
         if (argc > 2)
-            FUN_1425264b0(ptimer, argc - 2, argv + 2);
+            static_cast<IntervalTimer*>(ptimer)->SetArguments(argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         result.Assign(Value(UInt32(proot->AddIntervalTimer(ptimer))));
         ptimer->Start(proot);

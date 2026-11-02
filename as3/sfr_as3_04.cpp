@@ -2697,7 +2697,6 @@ bool FUN_1424198b0(const Scaleform::GFx::AS3::Multiname& mn)
 }
 
 // ---- global functions ----
-namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } void Sfr31StatePushValues(TR::State* st, UInt32 n, const Value* vals); }}}
 namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { namespace fl
 {
     // A repeating interval timer registered with the movie; returns its id.
@@ -2715,7 +2714,7 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         void* pmem = GetVM().GetMemoryHeap()->Alloc(0x70);
         ASIntervalTimerIntf* ptimer = pmem ? ::new (pmem) IntervalTimer(argv[0], delay, false) : NULL;
         if (argc > 2)
-            Sfr31StatePushValues(reinterpret_cast<TR::State*>(ptimer), argc - 2, argv + 2);
+            static_cast<IntervalTimer*>(ptimer)->SetArguments(argc - 2, argv + 2);
         MovieImpl* proot = static_cast<ASVM&>(GetVM()).GetMovieImpl();
         result.Assign(Value(UInt32(proot->AddIntervalTimer(ptimer))));
         ptimer->Start(proot);
