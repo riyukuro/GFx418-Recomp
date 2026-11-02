@@ -1051,15 +1051,17 @@ namespace Instances { namespace fl_text
     // MS2-FUNCTIONAL: written from the exe's control flow
     void Font::fontTypeGet(Value& result)
     {
-        if (!pFont)
+        if (pFont)
         {
-            if (fontType.GetLength())
-                result = fontType;
+            if (pFont->IsDeviceFont())
+                result = GetVM().GetStringManager().CreateConstString("device");
             else
-                result.SetNull();
-            return;
+                result = GetVM().GetStringManager().CreateConstString("embedded");
         }
-        result = GetVM().GetStringManager().CreateConstString(pFont->IsDeviceFont() ? "device" : "embedded");
+        else if (fontType.GetLength())
+            result = fontType;
+        else
+            result.SetNull();
     }
 
     // @0x1424b2e80
