@@ -3698,15 +3698,19 @@ void Sfr31ValueToBool(Value* v)
     v->SetBool(ValueAssignCopies::Convert2Boolean(*v));   // Value::ToBooleanValue
 }
 
-static bool Sfr31SwapChildrenTail(UPInt owner, UPInt i1, UPInt i2)
+typedef UPInt (*Sfr31Fn2)(UPInt);
+struct Sfr31SubVtbl { void* f0; Sfr31Fn2 f1; };
+
+static __forceinline bool Sfr31SwapChildrenTail(UPInt owner, unsigned i1, unsigned i2)
 {
-    if (i1 >= Sfr31Rd(owner, 0xe0) || i2 >= Sfr31Rd(owner, 0xe0))
+    const UPInt list = owner + 0xd8;
+    if (i1 >= Sfr31Rd(list, 8) || i2 >= Sfr31Rd(list, 8))
         return false;
-    if (!FUN_1425fb480(reinterpret_cast<void*>(owner + 0xd8), reinterpret_cast<void*>(owner), i1, i2))
+    if (!FUN_1425fb480(reinterpret_cast<void*>(list), reinterpret_cast<void*>(owner), i1, i2))
         return false;
-    const UPInt list = Sfr31Rd(owner, 0xd8);
-    const UPInt c1 = Sfr31Rd(list, i1 * 0x10);
-    const UPInt c2 = Sfr31Rd(list, i2 * 0x10);
+    const UPInt data = Sfr31Rd(list, 0);
+    const UPInt c1 = Sfr31Rd(data, static_cast<UPInt>(i1) * 0x10);
+    const UPInt c2 = Sfr31Rd(data, static_cast<UPInt>(i2) * 0x10);
     typedef void (*Fn)(UPInt, UInt32);
     if (c1 != 0)
     {
@@ -3720,42 +3724,35 @@ static bool Sfr31SwapChildrenTail(UPInt owner, UPInt i1, UPInt i2)
         *reinterpret_cast<UInt32*>(c2 + 0x30) = 0;
         *reinterpret_cast<UInt32*>(c2 + 0x2c) = 0xffffffffu;
     }
-    *reinterpret_cast<UInt8*>(owner + 0x100) |= 3;
-    typedef UPInt (*Fn2)(UPInt);
-    UPInt avm = 0;
-    if (*reinterpret_cast<const SInt8*>(c1 + 0x6a) < 0)
+    *reinterpret_cast<UInt8*>(list + 0x28) |= 3;
+    if ((UByte)(*reinterpret_cast<const UInt16*>(c1 + 0x6a) >> 7) & 1)
     {
         const UPInt sub = c1 + static_cast<UPInt>(*reinterpret_cast<const UInt8*>(c1 + 0x6d)) * 4;
-        const UPInt r = reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
-        avm = r != 0 ? r - 0x30 : 0;
-        FUN_142517ed0(reinterpret_cast<void*>(avm));
+        const UPInt r = (*reinterpret_cast<Sfr31SubVtbl* const*>(sub))->f1(sub);
+        FUN_142517ed0(reinterpret_cast<void*>(r != 0 ? r - 0x30 : 0));
     }
-    if (*reinterpret_cast<const SInt8*>(c2 + 0x6a) < 0)
+    if ((UByte)(*reinterpret_cast<const UInt16*>(c2 + 0x6a) >> 7) & 1)
     {
         const UPInt sub = c2 + static_cast<UPInt>(*reinterpret_cast<const UInt8*>(c2 + 0x6d)) * 4;
-        const UPInt r = reinterpret_cast<Fn2>(Sfr31Rd(Sfr31Rd(sub, 0), 8))(sub);
+        const UPInt r = (*reinterpret_cast<Sfr31SubVtbl* const*>(sub))->f1(sub);
         FUN_142517ed0(reinterpret_cast<void*>(r != 0 ? r - 0x30 : 0));
     }
     return true;
 }
 
 // AvmDisplayObjContainer::SwapChildren: swaps two children of the display list.
-// MS2-FUNCTIONAL 0x14252e590: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x14252e590: inlines SwapChildrenAt; the exe keeps the first index in rbx across the second FindDisplayIndex and puts the false return right after the first bound check
 // @0x14252e590
 bool AvmDisplayObjContainer::SwapChildren(DisplayObjectBase* pch1, DisplayObjectBase* pch2)
 {
     const UPInt self = reinterpret_cast<UPInt>(this);
-    const UPInt ch1 = reinterpret_cast<UPInt>(pch1);
-    const UPInt ch2 = reinterpret_cast<UPInt>(pch2);
     const UPInt owner = Sfr31Rd(self, 0x18);
-    const UPInt list = owner + 0xd8;
-    const UInt32 i1 = static_cast<UInt32>(FUN_1425f9200(reinterpret_cast<void*>(Sfr31Rd(self, 0x18) + 0xd8), reinterpret_cast<void*>(ch1)));
-    const UInt32 i2 = static_cast<UInt32>(FUN_1425f9200(reinterpret_cast<void*>(list), reinterpret_cast<void*>(ch2)));
-    return Sfr31SwapChildrenTail(owner, i1, i2);
+    const SPInt i1 = FUN_1425f9200(reinterpret_cast<void*>(owner + 0xd8), pch1);
+    const SPInt i2 = FUN_1425f9200(reinterpret_cast<void*>(owner + 0xd8), pch2);
+    return SwapChildrenAt(static_cast<unsigned>(i1), static_cast<unsigned>(i2));
 }
 
 // AvmDisplayObjContainer::SwapChildrenAt
-// MS2-FUNCTIONAL 0x14252e6d0: raw-offset model; codegen differs from the exe
 // @0x14252e6d0
 bool AvmDisplayObjContainer::SwapChildrenAt(unsigned i1, unsigned i2)
 {
