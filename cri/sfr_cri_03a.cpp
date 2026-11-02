@@ -363,9 +363,10 @@ CriUint32 criAtomic_TestAndSet(CriUint32* target, CriUint32 value)
         return value;
     }
     criCs_Enter((LPCRITICAL_SECTION)DAT_143b27be8);
-    CriUint32 old = *target;
-    *target = value;
-    criCs_Leave((LPCRITICAL_SECTION)DAT_143b27be8);
+    CriUint32 old = *(volatile CriUint32*)target;
+    LPCRITICAL_SECTION cs = (LPCRITICAL_SECTION)DAT_143b27be8;
+    *(volatile CriUint32*)target = value;
+    criCs_Leave(cs);
     return old;
 }
 
@@ -948,46 +949,40 @@ CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint3
     return 1;
 }
 
-// MS2-FUNCTIONAL: decode a UTF column descriptor, its optional name, and its default cell.
+unsigned FUN_140047158(unsigned type);         // the byte size of a UTF cell type (unit_140046e04_criutfparser)
+
+// MS2-FUNCTIONAL: decode a UTF column descriptor, its optional name, and its default cell. The only byte left: the exe
+// subtracts the pointers in 64 bits before returning the 32-bit size.
 // @0x14003afb0
 CriUint64 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column)
 {
     CriUint8 flags = field[0];
+    const CriUint8* p = field + 1;
     column->Type = flags & 0x0f;
-    column->HasDefault = (flags >> 5) & 1;
-    CriUint32 consumed = 1;
+    CriUint8 hasDefault = (flags >> 5) & 1;
+    column->HasDefault = hasDefault;
     if (flags & 0x10)
     {
-        CriUint32 nameOffset = criUtfReadBE32(field + consumed);
-        column->Name = nameOffset ? (const CriChar8*)(table->StringData + nameOffset) : NULL;
-        consumed += 4;
+        CriUint32 nameOffset = criUtfReadBE32(p);
+        column->Name = !nameOffset ? NULL : (const CriChar8*)(table->StringData + nameOffset);
+        p += FUN_140047158(10);
     }
     else
         column->Name = NULL;
 
-    if (flags & 0x20)
+    if (hasDefault)
     {
-        criUtfRtv_GetCellValFromAddr(table, field + consumed, column->Type,
-                                     (CriUtfRtvCell*)column->DefaultValue);
-        switch (column->Type)
-        {
-        case 0: case 1: consumed += 1; break;
-        case 2: case 3: consumed += 2; break;
-        case 4: case 5: case 8: case 10: consumed += 4; break;
-        case 6: case 7: case 9: consumed += 8; break;
-        case 11: consumed += 8; break;
-        case 12: consumed += 16; break;
-        default: break;
-        }
+        criUtfRtv_GetCellValFromAddr(table, p, column->Type, (CriUtfRtvCell*)column->DefaultValue);
+        p += FUN_140047158(column->Type);
     }
     else
     {
-        // The exe writes only the cell's type byte (+0x18) and its first value qword (+0x20).
+        // The exe writes only the cell's first value qword (+0x20) and its type byte (+0x18).
+        column->DefaultValue[1] = 0;
         ((CriUtfRtvCell*)column->DefaultValue)->Type = 0xff;
-        memset((CriUint8*)column->DefaultValue + 8, 0, 8);
     }
     column->IsRecordField = (flags >> 6) & 1;
-    return consumed;
+    return (CriUint32)(p - field);
 }
 
 // MS2-FUNCTIONAL: the table's 16/32-bit signed fields are summed after rounding each value up to the requested alignment.
