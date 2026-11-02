@@ -633,7 +633,6 @@ void PrimitiveBundle::UpdateMesh(BundleEntry* entry)
 
 // ----- ComplexPrimitiveBundle
 
-// MS2-FUNCTIONAL: instanced draw loop: same calls and arguments, register allocation and block order differ
 // @0x1426bd7a0
 void ComplexPrimitiveBundle::EmitToHAL(RenderQueueItem& item, RenderQueueProcessor& qp)
 {
@@ -644,14 +643,13 @@ void ComplexPrimitiveBundle::EmitToHAL(RenderQueueItem& item, RenderQueueProcess
     InstanceEntry& e     = Instances[index];
     if (qp.GetPrepareItemBuffer()->IsProcessing(&item))
         return;
-    ComplexMesh* mesh = e.pMesh;
-    if (!mesh)
+    if (!e.pMesh)
         return;
 
     UPInt last = index;
-    while (last < Instances.GetSize() - 1 && Instances[last + 1].pMesh == mesh)
+    while (last < Instances.GetSize() - 1 && Instances[last + 1].pMesh == e.pMesh)
         last++;
-    qp.GetHAL()->DrawProcessedComplexMeshes(mesh, StrideArray<HMatrix>(&e.M, last - index + 1, sizeof(InstanceEntry)));
+    qp.GetHAL()->DrawProcessedComplexMeshes(e.pMesh, StrideArray<HMatrix>(&e.M, last - index + 1, sizeof(InstanceEntry)));
 }
 
 // MS2-FUNCTIONAL: same logic; the exe copies this before the filter test, scheduling differs
