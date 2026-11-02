@@ -735,13 +735,21 @@ void SlotInfo::ForEachChild_GC(RefCountCollector<StatMV_ActionScript_Mem>* prcc,
     }
 }
 
-// MS2-FUNCTIONAL: the parent-slot test of the inlined GetSlotInfo is not materialised as a bool
+// Slots::GetSlotInfo as the exe inlines it here.
+static SF_INLINE const SlotInfo& Sfr33GetSlotInfo(const Slots& slots, AbsoluteIndex ind)
+{
+    if (ind < slots.FirstOwnSlotNum)
+        return slots.Parent->GetSlotInfo(ind);
+    return slots.VArray[static_cast<UInt32>(ind.Get()) - slots.FirstOwnSlotNum].Value;
+}
+
+// MS2-FUNCTIONAL: this and the slot count swap rsi and rdi; the code is otherwise the exe's.
 // @0x142503ce0
 void Traits::ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const
 {
     const SPInt size = GetSlotInfoNum();
     for (SPInt i = 0; i < size; ++i)
-        GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+        Sfr33GetSlotInfo(*this, AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
 }
 
 // @0x142505cc0
@@ -3358,7 +3366,7 @@ static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Slots& slots, const 
         {
             index = ind;
             const SlotInfo* si;
-            if (ind < 0 || static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+            if (AbsoluteIndex(ind) < slots.FirstOwnSlotNum)
                 si = &slots.Parent->GetSlotInfo(AbsoluteIndex(ind));
             else
                 si = &slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
