@@ -5190,13 +5190,30 @@ extern "C" int XML_GetCurrentByteIndex(void* parser);
 extern "C" int XML_GetErrorCode(void* parser);
 extern "C" int XML_StopParser(void* parser, unsigned char resumable);   // XML_Bool
 
-// ArrayDH<SPtr<XML> >::PushBack, out of line
-// MS2-FUNCTIONAL: /O2 forwarder: cl turns this into a jmp to the ArrayBase PushBack COMDAT, where the exe expands that body here
+// ArrayDH<SPtr<XML> >::PushBack, out of line. The exe expands the PushBack and ResizeNoConstruct bodies here; cl
+// leaves either one as a call when it is inline, so both are written out on the array's data.
 // @0x14241e390
 SF_NOINLINE void FUN_14241e390(Scaleform::ArrayDH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML> >* arr,
                    const Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML>* v)
 {
-    arr->PushBack(*v);
+    typedef Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::fl::XML> XMLPtr;
+    typedef Scaleform::ArrayDataDH<XMLPtr, Scaleform::AllocatorDH<XMLPtr>, Scaleform::ArrayDefaultPolicy> XMLPtrData;
+    XMLPtrData* d = reinterpret_cast<XMLPtrData*>(arr);
+    const Scaleform::MemoryHeap* heap = d->pHeap;
+    Scaleform::UPInt oldSize = d->Size;
+    Scaleform::UPInt newSize = oldSize + 1;
+    if (newSize < oldSize)
+    {
+        XMLPtrData::AllocatorType::DestructArray(d->Data + newSize, oldSize - newSize);
+        if (newSize < (d->Policy.GetCapacity() >> 1))
+            d->XMLPtrData::BaseType::Reserve(heap, newSize);
+    }
+    else if (newSize >= d->Policy.GetCapacity())
+    {
+        d->XMLPtrData::BaseType::Reserve(heap, newSize + (newSize >> 2));
+    }
+    d->Size = newSize;
+    XMLPtrData::AllocatorType::Construct(d->Data + d->Size - 1, *v);
 }
 
 // ValueStack::PopBack: pops (and releases) the top n values
