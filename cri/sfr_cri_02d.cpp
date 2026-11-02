@@ -10,6 +10,7 @@
 // MS2-RANGE: 0x140030cb0-0x140030e50 .text$mn
 // MS2-RANGE: 0x140031290-0x1400313d0 .text$mn
 // MS2-RANGE: 0x140031990-0x140031aa0 .text$mn
+// MS2-RANGE: 0x140032090-0x140032420 .text$mn
 // MS2-RANGE: 0x140034330-0x1400344f0 .text$mn
 // MS2-RANGE: 0x140034730-0x140034920 .text$mn
 // MS2-RANGE: 0x140034d40-0x140034e70 .text$mn
@@ -157,6 +158,32 @@ typedef struct CriMvStartMemoryView
     CriUint8  AnalyzedHeader[0x2c0];        // 0x5f8
     CriUint32 HeaderSize;                   // 0x8b8
 } CriMvStartMemoryView;
+typedef struct CriMvAnalyzedVideo { CriUint8 Bytes[0x38]; } CriMvAnalyzedVideo;
+typedef struct CriMvAnalyzedAudio { CriUint8 Bytes[0x10]; } CriMvAnalyzedAudio;
+typedef struct CriMvAnalyzedAlpha { CriUint8 Bytes[0x2c]; } CriMvAnalyzedAlpha;
+typedef struct CriMvAnalyzedHeader
+{
+    CriUint32          Present;             // 0x00
+    CriUint8           Reserved04[0x10];
+    CriMvAnalyzedVideo Video[1];            // 0x14
+    CriUint8           Reserved4c[4];
+    CriMvAnalyzedAudio Audio[0x20];         // 0x50
+    CriUint8           Reserved250[8];
+    CriUint8           Subtitle[0x1c];      // 0x258
+    CriMvAnalyzedAlpha Alpha[1];            // 0x274
+    CriUint8           Reserved2a0[8];
+    CriUint8           CuePoint[0x18];      // 0x2a8
+} CriMvAnalyzedHeader;
+typedef struct CriMvHeaderAnalysisView
+{
+    CriUint8  Reserved0[0x5f8];
+    struct CriMvAnalyzedHeader AnalyzedHeader;  // 0x5f8
+    CriSint32 HeaderCount;                  // 0x8b8
+    CriUint8  Reserved8bc[0xd60 - 0x8bc];
+    CriSint32 ReadMode;                     // 0xd60
+    CriUint8  Reservedd64[0xdb8 - 0xd64];
+    CriSint32 ReadBytes;                    // 0xdb8
+} CriMvHeaderAnalysisView;
 typedef struct CriMvVideoDecoderView { CriUint8 Reserved[0xe08]; void* VideoDecoder; } CriMvVideoDecoderView;
 typedef struct CriUsfChunkHeader            // FUN_14003b3fc fills 0x24 bytes
 {
@@ -201,6 +228,11 @@ void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 void retrieveHeaderInfo(void* player, void* stream, const struct CriMovieParsedChunk* parsed);
+void retrieveAudioHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+void FUN_140032650(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+void retrieveSubtitleHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+void FUN_140032db0(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
+void retrieveCuePointHeader(void* player, void* workInfo, CriUint32* output, const struct CriMovieParsedChunk* parsed);
 CriBool recordSubtitleHeader(void* player, const CriMovieInputChunk* input);
 CriBool isEndStopProcessingProc(void* player);
 void resetHandle(void* player);
@@ -233,6 +265,7 @@ void crimvply_updateMvPlyYuvBuffersFromAlphadecInfo(void* player, const struct C
 #pragma comment(linker, "/alternatename:?FUN_140030cb0@@YAXPEAX@Z=FUN_140030cb0")
 #pragma comment(linker, "/alternatename:?FUN_140031290@@YAXPEAX@Z=FUN_140031290")
 #pragma comment(linker, "/alternatename:?FUN_140031990@@YAJPEAX@Z=FUN_140031990")
+#pragma comment(linker, "/alternatename:?FUN_140032090@@YAJPEAX@Z=FUN_140032090")
 #pragma comment(linker, "/alternatename:?FUN_140034330@@YAXPEAX000@Z=FUN_140034330")
 #pragma comment(linker, "/alternatename:?executeUsfServer@@YAXPEAX@Z=executeUsfServer")
 #pragma comment(linker, "/alternatename:?FUN_140034d40@@YAXPEAXPEAUCriMovieInputChunk@@@Z=FUN_140034d40")
@@ -366,6 +399,95 @@ CriBool FUN_140031990(void* player)
     criUsfDmx_Start(demux);
     criUsfDmx_Execute(demux);
     return 1;
+}
+
+// consume CRI Movie header and stream records until the file's end marker arrives
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): sti, contentsInfo, vinfo, readBytes, track,
+// queue, completed, usfHead, hdr, info, alph.
+// @0x140032090
+CriSint32 FUN_140032090(void* player)
+{
+    void* queue = ((CriMvPlyDemuxFields*)player)->ReadBuffer;
+    CriSint32 completed = 0;
+    CriSint32 readBytes = 0;
+    CriUsfChunkHeader hdr;
+    CriMvAnalyzedHeader* info = &((CriMvHeaderAnalysisView*)player)->AnalyzedHeader;
+    CriMovieChunkQueueRecord usfHead;
+    CriMovieParsedChunk contentsInfo;
+    CriMvAnalyzedAudio* track;
+    CriMvAnalyzedVideo* vinfo;
+    void* sti;
+    CriMvAnalyzedAlpha* alph;
+    while ((CriUint32)FUN_1400467b8(queue, 1) > 0)
+    {
+        FUN_1400467a0(queue, 1, -1, &usfHead);
+        if (usfHead.Type >= 0x20)
+        {
+            FUN_14003b3fc((const CriUint8*)usfHead.Chunk, usfHead.Type, &hdr);
+            contentsInfo.Data = criUsfCmn_GetContents((const CriUint8*)usfHead.Chunk, usfHead.Type, &contentsInfo.Size);
+            if (((CriMvHeaderAnalysisView*)player)->HeaderCount == 0)
+            {
+                if (hdr.Reserved0[0] == 0x43524944)
+                    info->Present = 1;
+                else
+                {
+                    crimvply_occurUserError(player, "E05063020M : Input file is not USF file.", hdr.Reserved0[0]);
+                    criSj_UngetChunk(queue, 1, &usfHead);
+                    return completed;
+                }
+            }
+            if (hdr.Reserved0[0] == 0x43524944)
+                retrieveHeaderInfo(player, info, &contentsInfo);
+            else if (hdr.Type == 1)
+            {
+                switch (hdr.Reserved0[0])
+                {
+                case 0x40534641:
+                    if (hdr.Reserved0C < 0x20)
+                    {
+                        track = &info->Audio[hdr.Reserved0C];
+                        retrieveAudioHeader(player, info, (CriUint32*)track, &contentsInfo);
+                    }
+                    break;
+                case 0x40534656:
+                    if (hdr.Reserved0C < 1)
+                    {
+                        vinfo = &info->Video[hdr.Reserved0C];
+                        FUN_140032650(player, info, (CriUint32*)vinfo, &contentsInfo);
+                    }
+                    break;
+                case 0x40534254:
+                    sti = info->Subtitle;
+                    retrieveSubtitleHeader(player, info, (CriUint32*)sti, &contentsInfo);
+                    break;
+                case 0x40414c50:
+                    if (hdr.Reserved0C < 1)
+                    {
+                        alph = &info->Alpha[hdr.Reserved0C];
+                        FUN_140032db0(player, info, (CriUint32*)alph, &contentsInfo);
+                    }
+                    break;
+                case 0x40435545:
+                    retrieveCuePointHeader(player, info, (CriUint32*)info->CuePoint, &contentsInfo);
+                    break;
+                }
+            }
+            else if (hdr.Type == 2)
+                completed = 1;
+            criSj_PutChunk(queue, 2, &usfHead);
+            readBytes += usfHead.Type;
+            ((CriMvHeaderAnalysisView*)player)->HeaderCount++;
+        }
+        else
+            criSj_UngetChunk(queue, 1, &usfHead);
+        if (completed == 1)
+        {
+            if (((CriMvHeaderAnalysisView*)player)->ReadMode == 1)
+                ((CriMvHeaderAnalysisView*)player)->ReadBytes = readBytes;
+            break;
+        }
+    }
+    return completed;
 }
 
 // Drain the two CRI input streams into the decoder read queue.

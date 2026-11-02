@@ -10,7 +10,8 @@
 // MS2-RANGE: 0x14002e548-0x140030cb0 .text$mn
 // MS2-RANGE: 0x140030e50-0x140031290 .text$mn
 // MS2-RANGE: 0x1400313d0-0x140031990 .text$mn
-// MS2-RANGE: 0x140031aa0-0x140034330 .text$mn
+// MS2-RANGE: 0x140031aa0-0x140032090 .text$mn
+// MS2-RANGE: 0x140032420-0x140034330 .text$mn
 // MS2-RANGE: 0x1400344f0-0x140034730 .text$mn
 // MS2-RANGE: 0x140034920-0x140034d40 .text$mn
 // MS2-RANGE: 0x140034e70-0x1400356a0 .text$mn
@@ -3686,87 +3687,6 @@ void retrieveHeaderInfo(void* player, void* streamInfo, const CriMovieParsedChun
         }
     }
     criUtfRtv_Destroy((CriUint64*)document);
-}
-
-// MS2-FUNCTIONAL: consume CRI Movie header and stream records until the file's end marker arrives.
-// @0x140032090
-CriSint32 FUN_140032090(void* player)
-{
-    struct ReadModeView { CriUint8 Reserved[0xd60]; CriSint32 Mode; };
-    struct HeaderCountView { CriUint8 Reserved[0x8b8]; CriSint32 Count; };
-    struct ReadByteCountView { CriUint8 Reserved[0xdb8]; CriSint32 Count; };
-    CriMovieChunkQueueRecord record = {};
-    CriUint8 parsedHeader[0x24] = {};
-    CriSint32 contentSize = 0;
-    CriSint32 consumedBytes = 0;
-    CriSint32 completed = 0;
-    CriUint32* streamInfo = (CriUint32*)((CriMvPlyHeaderAnalysisFields*)player)->AnalyzedHeader;
-    void* queue = ((CriMvPlyInputQueueFields*)player)->ReadBuffer;
-
-    for (;;)
-    {
-        if (FUN_1400467b8(queue, 1) == 0)
-            return completed;
-        criSj_GetChunk(queue, 1, -1, &record);
-        if (record.Type < 0x20)
-        {
-            criSj_UngetChunk(queue, 1, &record);
-            return completed;
-        }
-
-        memset(parsedHeader, 0, sizeof(parsedHeader));
-        criUsfCmn_ParseUsfHeaderStd((const CriUint8*)record.Chunk, record.Type, (CriUsfStandardHeader*)parsedHeader);
-        const CriUint8* contents = criUsfCmn_GetContents((const CriUint8*)record.Chunk,
-                                                  record.Type, &contentSize);
-        CriUint32 streamId = 0;
-        memcpy(&streamId, parsedHeader, sizeof(streamId));
-        if (((HeaderCountView*)player)->Count == 0)
-        {
-            if (streamId != 0x43524944)
-            {
-                crimvply_occurUserError(player, "E05063020M : Input file is not USF file.", (CriSint32)streamId);
-                criSj_UngetChunk(queue, 1, &record);
-                return completed;
-            }
-            streamInfo[0] = 1;
-        }
-
-        CriMovieParsedChunk parsed = { contents, contentSize, 0 };
-        if (streamId == 0x43524944)
-            retrieveHeaderInfo(player, streamInfo, &parsed);
-        else if (parsedHeader[0x0f] == 1)
-        {
-            CriUint8 index = parsedHeader[0x0c];
-            if (streamId == 0x40414c50)
-            {
-                if (index == 0)
-                    FUN_140032db0(player, streamInfo, streamInfo + 0x9d, &parsed);
-            }
-            else if (streamId == 0x40435545)
-                retrieveCuePointHeader(player, streamInfo, streamInfo + 0xaa, &parsed);
-            else if (streamId == 0x40534254)
-                retrieveSubtitleHeader(player, streamInfo, streamInfo + 0x96, &parsed);
-            else if (streamId == 0x40534641)
-            {
-                if (index < 0x20)
-                    retrieveAudioHeader(player, streamInfo,
-                                 streamInfo + 0x14 + (CriUint32)index * 4, &parsed);
-            }
-            else if (streamId == 0x40534656 && index == 0)
-                FUN_140032650(player, (CriSint64*)streamInfo, streamInfo + 5, &parsed);
-        }
-        else if (parsedHeader[0x0f] == 2)
-            completed = 1;
-
-        criSj_PutChunk(queue, 2, &record);
-        consumedBytes += (CriSint32)record.Type;
-        ++((HeaderCountView*)player)->Count;
-        if (completed)
-            break;
-    }
-    if (((ReadModeView*)player)->Mode == 1)
-        ((ReadByteCountView*)player)->Count = consumedBytes;
-    return 1;
 }
 
 // return a partially consumed input chunk to its source queue after playback uses it.
