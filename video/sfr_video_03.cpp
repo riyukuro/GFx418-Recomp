@@ -1550,42 +1550,40 @@ void FUN_14001b4f0()
         criHeap_Finalize();
     }
 }
-// MS2-FUNCTIONAL: allocates one 16 KiB read buffer per stream and frees partial allocations on failure.
+// allocates one 16 KiB read buffer per stream and frees partial allocations on failure.
 // @0x14001b550
-uint64_t FUN_14001b550(void* state, int count, uint32_t chunkSize)
+bool FUN_14001b550(void* state, uint32_t count, uint32_t chunkSize)
 {
-    if (!count) return 0;
+    if (!count) return false;
     unsigned char* bytes = static_cast<unsigned char*>(state);
-    *reinterpret_cast<int*>(bytes + 0x38) = count;
+    *reinterpret_cast<uint32_t*>(bytes + 0x38) = count;
     *reinterpret_cast<uint32_t*>(bytes + 0x3c) = chunkSize;
     *reinterpret_cast<uint32_t*>(bytes + 0x40) = 0;
-    void** heap = *reinterpret_cast<void***>(*reinterpret_cast<void**>(bytes + 0x10));
-    void* (*allocate)(void*, size_t, unsigned) = reinterpret_cast<void*(*)(void*, size_t, unsigned)>(heap[10]);
-    void** blocks = reinterpret_cast<void**>(bytes + 0x50);
-    for (int i = 0; i < count; ++i) {
-        blocks[i] = allocate(*reinterpret_cast<void**>(bytes + 0x10), 0x4000, 0);
-        if (!blocks[i]) {
-            void** globalHeap = *reinterpret_cast<void***>(DAT_143b15f60);
-            for (int j = i - 1; j >= 0; --j) {
-                reinterpret_cast<void(*)(void*, void*)>(globalHeap[12])(DAT_143b15f60, blocks[j]);
-                blocks[j] = 0;
+    for (uint32_t i = 0; i < *reinterpret_cast<uint32_t*>(bytes + 0x38); ++i) {
+        void* heap = *reinterpret_cast<void**>(bytes + 0x10);
+        void*& block = reinterpret_cast<void**>(bytes + 0x50)[i];
+        block = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10])(heap, 0x4000, 0);  // MS2: vcall
+        if (!block) {
+            while (i != 0) {
+                --i;
+                void*& freed = reinterpret_cast<void**>(bytes + 0x50)[i];
+                reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(DAT_143b15f60, freed);  // MS2: vcall
+                freed = 0;
             }
-            return 0;
+            return false;
         }
     }
-    return 1;
+    return true;
 }
-// MS2-FUNCTIONAL: frees and clears every per-stream read buffer.
+// frees and clears every per-stream read buffer.
 // @0x14001b620
 void FUN_14001b620(void* state)
 {
     unsigned char* bytes = static_cast<unsigned char*>(state);
-    const uint32_t count = *reinterpret_cast<uint32_t*>(bytes + 0x38);
-    void** blocks = reinterpret_cast<void**>(bytes + 0x50);
-    void** heap = *reinterpret_cast<void***>(DAT_143b15f60);
-    for (uint32_t i = 0; i < count; ++i) {
-        reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, blocks[i]);
-        blocks[i] = 0;
+    for (uint32_t i = 0; i < *reinterpret_cast<uint32_t*>(bytes + 0x38); ++i) {
+        void*& block = reinterpret_cast<void**>(bytes + 0x50)[i];
+        reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(DAT_143b15f60, block);  // MS2: vcall
+        block = 0;
     }
     *reinterpret_cast<uint32_t*>(bytes + 0x38) = 0;
 }
@@ -1630,10 +1628,9 @@ int FUN_14001b6b0(void* player, uint32_t* output, uint32_t requestedBytes)
 namespace {
 // Value::Convert2String into *slot, except that a null object (tags 0xc..0xf with no object) takes the string manager's
 // builtin "null" node (manager + 0x68), as the exe's callers inline. The CheckResult goes to a scratch byte.
-void ConvertVideoStringArg(const uint64_t* value, uint64_t* slot)
+__forceinline void ConvertVideoStringArg(const uint64_t* value, uint64_t* slot)
 {
-    const uint32_t tag = *reinterpret_cast<const uint32_t*>(value) & 0x1f;
-    if (tag >= 0x0c && tag < 0x10 && value[2] == 0) {
+    if (reinterpret_cast<const Scaleform::GFx::AS3::Value*>(value)->IsNull()) {
         unsigned char* nullNode = *reinterpret_cast<unsigned char**>(*slot + 8) + 0x68;
         ++*reinterpret_cast<uint32_t*>(nullNode + 0x18);
         Scaleform::GFx::ASStringNode* old = reinterpret_cast<Scaleform::GFx::ASStringNode*>(*slot);
@@ -1659,7 +1656,7 @@ __declspec(noinline) uint64_t* FUN_140017130(uint64_t* record, uint64_t vm, uint
         ConvertVideoStringArg(args + 4, record + 3);
     return record;
 }
-// MS2-FUNCTIONAL: captures three string callback parameters and converts each supplied AS3 argument.
+// captures three string callback parameters and converts each supplied AS3 argument.
 // @0x140017250
 uint64_t* FUN_140017250(uint64_t* record, uint64_t vm, uint64_t property, unsigned count, const uint64_t* args, const uint64_t* defaults)
 {
@@ -1691,10 +1688,19 @@ __forceinline void* BuildVideoTraits(void* classTraits, void* vm, const void* cl
     Scaleform::GFx::AS3::InstanceTraits::Traits* typedInstance = static_cast<Scaleform::GFx::AS3::InstanceTraits::Traits*>(instance);
     typedTraits->SetInstanceTraits(Scaleform::Pickable<Scaleform::GFx::AS3::InstanceTraits::Traits>(typedInstance));
     memory = reinterpret_cast<void*(*)(void*, size_t, unsigned)>((*reinterpret_cast<void***>(heap))[10])(heap, 0x50, 0);  // MS2: vcall
-    Scaleform::GFx::AS3::Class* ctraits = ::new (memory) Scaleform::GFx::AS3::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
+    Scaleform::GFx::AS3::Class* ctraits;
     // only the first class overrides the Class vftable; the second keeps the ctor's
-    if (classObjectVtable && ctraits)
-        *reinterpret_cast<void***>(ctraits) = classObjectVtable;
+    if (classObjectVtable) {
+        if (memory) {
+            static_cast<Scaleform::GFx::AS3::Class*>(memory)->Scaleform::GFx::AS3::Class::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
+            *reinterpret_cast<void***>(memory) = classObjectVtable;
+            ctraits = static_cast<Scaleform::GFx::AS3::Class*>(memory);
+        } else {
+            ctraits = 0;
+        }
+    } else {
+        ctraits = ::new (memory) Scaleform::GFx::AS3::Class(*static_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(classTraits));
+    }
     uint64_t* slot = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(instance) + 0x80);
     if (reinterpret_cast<uint64_t>(ctraits) != *slot) {
         ReleaseVideoAtom(slot);
@@ -1704,7 +1710,7 @@ __forceinline void* BuildVideoTraits(void* classTraits, void* vm, const void* cl
 }
 }
 } // namespace (FUN_1400199e0 / FUN_14001ad20 are declared at global scope above)
-// MS2-FUNCTIONAL: constructs the Video AS3 class traits and its instance and native traits objects.
+// constructs the Video AS3 class traits and its instance and native traits objects.
 // @0x1400199e0
 void* FUN_1400199e0(void* traits, void* vm)
 {
