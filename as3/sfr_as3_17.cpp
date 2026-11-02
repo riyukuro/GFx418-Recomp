@@ -1521,31 +1521,30 @@ ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Mu
 
 // The class traits mn names. A namespace set takes the first namespace with cached or builtin class traits
 // (a builtin hit is cached); a single namespace goes through VM::Resolve2ClassTraits.
-// MS2-FUNCTIONAL 0x142500a60: the exe allocates registers and save slots differently (rbp/rsi pushed); same results
+// MS2-FUNCTIONAL 0x142500a60: the exe tests n once before the loop and ct at its bottom, and allocates registers and save slots differently (rbp/rsi pushed); same results
 // @0x142500a60
 ClassTraits::Traits* Sfr33ResolveMnClassTraits(VM* vm, const Multiname& mn)
 {
+    ClassTraits::Traits* ct = NULL;
     if ((static_cast<UInt32>(mn.Kind) & 3) <= Abc::MNF_NS_Runtime)
         return const_cast<ClassTraits::Traits*>(FUN_142525270(*vm, mn));
     const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
     const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
     const UPInt n = nsa.GetSize();
-    for (UPInt i = 0; i < n; ++i)
+    for (UPInt i = 0; ct == NULL && i < n; ++i)
     {
         ASString name = mn.Name.AsString();
         const Instances::Namespace& ns = *nsa[i];
         ClassTraits::Traits** found = FUN_142414ac0(&vm->ClassTraitsSet, name, ns);
-        ClassTraits::Traits* ct = found != NULL ? *found : NULL;
-        if (ct == NULL)
+        if (found == NULL || (ct = *found) == NULL)
         {
-            ct = FUN_142415520(vm->GlobalObject.GetPtr(), name, ns);
-            if (ct != NULL)
-                vm->ClassTraitsSet.Add(name, ns, ct);
+            ClassTraits::Traits* made = FUN_142415520(vm->GlobalObject.GetPtr(), name, ns);
+            ct = made;
+            if (made != NULL)
+                vm->ClassTraitsSet.Add(name, ns, made);
         }
-        if (ct != NULL)
-            return ct;
     }
-    return NULL;
+    return ct;
 }
 
 // The value at +0x10, made by Sfr33CallFrameGetCode on first use.
