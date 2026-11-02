@@ -3872,11 +3872,11 @@ void m2vhdec_AnalyUd(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   cri_code *pc_v3;
   longlong l_v4;
   // Two {ptr, len} out-structs at rsp+0x20 / rsp+0x30 in the exe; slots 0x30 and 0x40 take their address.
-  __declspec(align(16)) cri_u1 frame_[0x20];
-  void *&loc_38 = *(void **)(frame_ + 0);
-  int &loc_30 = *(int *)(frame_ + 8);
-  void *&loc_28 = *(void **)(frame_ + 16);
-  int &loc_20 = *(int *)(frame_ + 24);
+  struct Chunk { void *Data; int Size; } frame_[2];
+  void *&loc_38 = frame_[0].Data;
+  int &loc_30 = frame_[0].Size;
+  void *&loc_28 = frame_[1].Data;
+  int &loc_20 = frame_[1].Size;
   
   i_v1 = *(int *)((char *)arg1 + 0xc94);
   l_v4 = (longlong)i_v1;
@@ -3976,10 +3976,10 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
   int i_v1;
   longlong l_v2;
   // Slot 0x30 fills a {ptr, len @+8} struct at rsp+0x20 in the exe; loc_28/uStack_24 are its pointer halves.
-  __declspec(align(16)) cri_u1 frame_[0x10];
-  int &loc_28 = *(int *)(frame_ + 0);
-  cri_u4 &uStack_24 = *(cri_u4 *)(frame_ + 4);
-  cri_u1 loc_18 [16];
+  struct Head { int Lo; cri_u4 Hi; int Size; int Pad; } frame_;
+  int &loc_28 = frame_.Lo;
+  cri_u4 &uStack_24 = frame_.Hi;
+  struct Chunk { void *Data; int Size; } loc_18;
   
   *(cri_u4 *)((char *)arg1 + 0xd0c) = 0;
   *(cri_u4 *)((char *)arg1 + 0xd10) = 0;
@@ -4011,9 +4011,9 @@ uint m2vhdec_ParseSj(cri_any cri_p0, cri_any cri_p1)
         l_v2 = parseSec(arg1,CONCAT44(uStack_24,loc_28));
       }
       if (l_v2 == 0) break;
-      FUN_140069020((__int64 *)&loc_28,(int)l_v2 - loc_28,(__int64 *)&loc_28,(__int64 *)loc_18);
+      FUN_140069020((__int64 *)&loc_28,(int)l_v2 - loc_28,(__int64 *)&loc_28,(__int64 *)&loc_18);
       (**(cri_code **)(*arg2 + 0x40))(arg2,0,&loc_28);
-      (**(cri_code **)(*arg2 + 0x38))(arg2,1,loc_18);
+      (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
       if ((*(int *)((char *)arg1 + 0xd0c) != 0) || (i_v1 = FUN_140051d90(arg2), i_v1 == 0))
       goto LAB_140058f60;
     }
@@ -10669,7 +10669,7 @@ void MPVSL_DecSliceOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   cri_u1 *pu_v13;
   cri_u1 *pu_v14;
   uint u_v15;
-  cri_u1 loc_48 [16];
+  struct Chunk { void *Data; int Size; } loc_48;
   
   arg3[3] = -1;
   *arg3 = 0;
@@ -10754,9 +10754,9 @@ void MPVSL_DecSliceOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   *(uint *)((char *)arg1 + 0x1810) = u_v15 & 7;
   FUN_140069020((__int64 *)((char *)arg1 + 0x1800),
                 (((int)((u_v15 - (u_v15 & 7)) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 +
-                i_v8,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)loc_48);
+                i_v8,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_48);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);
-  (**(cri_code **)(*arg2 + 0x38))(arg2,1,loc_48);
+  (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_48);
   (**(cri_code **)((char *)arg1 + 0x16f0))(arg1,arg2);
   if (*(int *)((char *)arg1 + 0x17a0) <= *(int *)((char *)arg1 + 0x1794)) {
     arg3[5] = 1;
@@ -10908,13 +10908,13 @@ void mpvsl_DecTaskOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   int local_res8 [2];
   int local_res18 [2];
   // MPVSL_DecSliceOne fills one 6-int struct at rsp+0x20 in the exe.
-  __declspec(align(16)) cri_u1 frame_[0x18];
-  int &loc_28 = *(int *)(frame_ + 0);
-  int &loc_24 = *(int *)(frame_ + 4);
-  int &loc_20 = *(int *)(frame_ + 8);
-  int &loc_1c = *(int *)(frame_ + 12);
-  int &loc_18 = *(int *)(frame_ + 16);
-  int &loc_14 = *(int *)(frame_ + 20);
+  struct Slice { int W0, W1, W2, W3, W4, W5; } frame_;
+  int &loc_28 = frame_.W0;
+  int &loc_24 = frame_.W1;
+  int &loc_20 = frame_.W2;
+  int &loc_1c = frame_.W3;
+  int &loc_18 = frame_.W4;
+  int &loc_14 = frame_.W5;
   
   *arg3 = 0;
   arg3[1] = 0;
