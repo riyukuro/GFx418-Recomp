@@ -168,8 +168,7 @@ void TextFieldObject::SetIMECompositionStringStyles(const GFx::Text::IMEStyle& s
             reinterpret_cast<GFx::Text::IMEStyle*>(SF_HEAP_AUTO_NEW(this) IMEStyleData(style));
 }
 
-// The image of the BitmapData, and its "rectangle": a flash.geom.Rectangle of the image size.
-// MS2-FUNCTIONAL: Value temporaries and the Ptr assignments schedule differently; same behavior
+// The image of the BitmapData, and its read-only "rectangle": a flash.geom.Rectangle of the image size.
 // @0x1429818e0
 void BitmapData::SetImage(Environment* penv, ImageResource* pimg, MovieDef* pmovieDef)
 {
@@ -180,15 +179,15 @@ void BitmapData::SetImage(Environment* penv, ImageResource* pimg, MovieDef* pmov
     Value             params[Rectangle_NumProperties];
     params[0] = Value(0);
     params[1] = Value(0);
-    params[2] = Value(Number(rect.Width()));
-    params[3] = Value(Number(rect.Height()));
+    params[2] = Value(Number(float(rect.Width())));
+    params[3] = Value(Number(float(rect.Height())));
 
     ASStringContext*     psc = penv->GetSC();
     Ptr<RectangleObject> prect =
         *static_cast<RectangleObject*>(penv->OperatorNew(psc->pContext->FlashGeomPackage,
                                                          penv->GetBuiltin(ASBuiltin_Rectangle)));
     prect->SetProperties(psc, params);
-    SetMemberRaw(psc, psc->CreateConstString("rectangle"), Value(prect.GetPtr()));
+    SetMemberRaw(psc, psc->CreateConstString("rectangle"), Value(prect.GetPtr()), PropFlags::PropFlag_ReadOnly);
 }
 
 // Makes the clip _level<level>: its render node goes in among the levels' nodes in level order, and it takes
