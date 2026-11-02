@@ -81,6 +81,7 @@
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
 #include "../include/render/render_twips.h"
+#include "../include/gfx/as2/as2_hashaccess.h"
 
 // The object stack's PushBack stays out of line (0x142971a50).
 namespace Scaleform {
@@ -811,15 +812,14 @@ bool AsBroadcaster::AddListener(Environment* penv, ObjectInterface* pthis, Objec
 
 // The findIndexAlt of the local variable table, exact and ignoring case (exe COMDATs 0x1429173d0 / 0x142917130,
 // called where cl inlines them).
-SPInt ValueHash_FindIndex(const ASStringHash_GC<Value>* phash, const ASString& key);
-SPInt ValueHash_FindIndexNoCase(const ASStringHash_GC<Value>* phash, const ASStringNoCaseKey& key);
+MS2_AS2_HASH_FINDINDEX(Value)
 
 typedef ASStringHash_GC<Value>::SetType ValueSet;
 
 // Find / FindCaseInsensitive / FindCaseCheck of the local variable table.
 inline ValueSet::Iterator ValueHash_Find(ASStringHash_GC<Value>* phash, const ASString& key)
 {
-    SPInt index = ValueHash_FindIndex(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
     return ValueSet::Iterator(0, 0);
@@ -827,7 +827,7 @@ inline ValueSet::Iterator ValueHash_Find(ASStringHash_GC<Value>* phash, const AS
 inline ValueSet::Iterator ValueHash_FindNoCase(ASStringHash_GC<Value>* phash, const ASString& key)
 {
     ASStringNoCaseKey ikey(key);
-    SPInt index = ValueHash_FindIndexNoCase(phash, ikey);
+    SPInt index = HashFindIndex(phash, ikey);
     if (index >= 0)
         return ValueSet::Iterator(reinterpret_cast<ValueSet*>(phash), index);
     return ValueSet::Iterator(0, 0);

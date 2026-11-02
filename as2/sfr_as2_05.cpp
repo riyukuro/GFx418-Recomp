@@ -233,6 +233,7 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_movieslots.h"
 #include "../include/kernel/sf_msgformat.h"
+#include "../include/gfx/as2/as2_hashaccess.h"
 
 // MsgFormat::FormatD1<int> is an out-of-line call in the exe (exe 0x1423e8500, defined in sfr_as3_01c).
 template<> void Scaleform::MsgFormat::FormatD1<int>(const int& v);
@@ -1484,7 +1485,8 @@ void GASLoadVarsLoaderCtorFunction::GlobalCtor(const FnCall& fn)
 
 
 // The member table's findIndexAlt ignoring case (exe COMDAT 0x142917040).
-SPInt MemberHash_FindIndexNoCase(const ASStringHash_GC<Member>* phash, const ASStringNoCaseKey& key);
+
+MS2_AS2_HASH_FINDINDEX(Member)
 
 // @0x142948eb0
 // Hash::Get of the member table, the out-of-line copy of MemberHash_Get.
@@ -1498,7 +1500,7 @@ static SF_FORCEINLINE bool MemberHash_GetNoCase(const ASStringHash_GC<Member>* p
                                                 Member* pmember)
 {
     ASStringNoCaseKey ikey(key);
-    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    SPInt index = HashFindIndex(phash, ikey);
     const ASStringHash_GC<Member>::NodeType* pnode = index >= 0 ? &phash->NodeAt(index) : 0;
     if (pnode == 0)
         return false;
@@ -1521,7 +1523,7 @@ typedef ASStringHash_GC<Member>::EntryType MemberEntry;
 // Find / FindCaseInsensitive / FindCaseCheck of the member table.
 inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const ASString& key)
 {
-    SPInt index = MemberHash_FindIndex(phash, key);
+    SPInt index = HashFindIndex(phash, key);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
@@ -1529,7 +1531,7 @@ inline MemberSet::Iterator MemberHash_Find(ASStringHash_GC<Member>* phash, const
 inline MemberSet::Iterator MemberHash_FindNoCase(ASStringHash_GC<Member>* phash, const ASString& key)
 {
     ASStringNoCaseKey ikey(key);
-    SPInt index = MemberHash_FindIndexNoCase(phash, ikey);
+    SPInt index = HashFindIndex(phash, ikey);
     if (index >= 0)
         return MemberSet::Iterator(reinterpret_cast<MemberSet*>(phash), index);
     return MemberSet::Iterator(0, 0);
@@ -1753,8 +1755,7 @@ void ASRefCountCollector::ForceEmergencyCollect()
 }
 
 // The findIndexAlt of the local variable table, exact and ignoring case (exe COMDATs 0x1429173d0 / 0x142917130).
-SPInt ValueHash_FindIndex(const ASStringHash_GC<Value>* phash, const ASString& key);
-SPInt ValueHash_FindIndexNoCase(const ASStringHash_GC<Value>* phash, const ASStringNoCaseKey& key);
+MS2_AS2_HASH_FINDINDEX(Value)
 
 // Hash::Get of the local variable table in the case mode of the movie: the value of key, 0 when absent.
 static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<Value>* phash, const ASString& key,
@@ -1762,12 +1763,12 @@ static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<
 {
     if (caseSensitive)
     {
-        SPInt index = ValueHash_FindIndex(phash, key);
+        SPInt index = HashFindIndex(phash, key);
         const ASStringHash_GC<Value>::NodeType* pnode = index >= 0 ? &phash->NodeAt(index) : 0;
         return pnode ? &pnode->Second : 0;
     }
     ASStringNoCaseKey ikey(key);
-    SPInt index = ValueHash_FindIndexNoCase(phash, ikey);
+    SPInt index = HashFindIndex(phash, ikey);
     if (index >= 0)
     {
         const ASStringHash_GC<Value>::NodeType* pnode = &phash->NodeAt(index);

@@ -82,6 +82,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include "../include/gfx/as2/as2_hashaccess.h"
 
 namespace Scaleform { namespace GFx {
 template<> AS2::FunctionRef*
@@ -100,9 +101,7 @@ SF_NOINLINE bool StringToNumber(Number* result, const char* str);
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                                       bool caseSensitive);
 // The watchpoint hash's findIndexAlt (exact / ignoring case) and add, COMDATs the exe calls out of line.
-SPInt WatchpointHash_FindIndex(const ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key); // exe 0x142917220
-SPInt WatchpointHash_FindIndexNoCase(const ASStringHash_GC<Object::Watchpoint>* phash,
-                                     const ASStringNoCaseKey& key); // exe 0x142916e60
+MS2_AS2_HASH_FINDINDEX(Object::Watchpoint)
 void WatchpointHash_Add(ASStringHash_GC<Object::Watchpoint>* phash, void* pheapAddr,
                         const ASStringHash_GC<Object::Watchpoint>::NodeType::NodeRef& key, UPInt h); // exe 0x142916110
 
@@ -114,11 +113,11 @@ inline void WatchpointHash_SetCaseCheck(ASStringHash_GC<Object::Watchpoint>* pha
 {
     SPInt index;
     if (caseSensitive)
-        index = WatchpointHash_FindIndex(phash, key);
+        index = HashFindIndex(phash, key);
     else
     {
         ASStringNoCaseKey ikey(key);
-        index = WatchpointHash_FindIndexNoCase(phash, ikey);
+        index = HashFindIndex(phash, ikey);
     }
     WatchpointSet::Iterator it = index >= 0 ? WatchpointSet::Iterator(reinterpret_cast<WatchpointSet*>(phash), index)
                                             : WatchpointSet::Iterator(0, 0);
