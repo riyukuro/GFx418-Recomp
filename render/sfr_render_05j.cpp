@@ -899,7 +899,7 @@ void FixedSizeArrayRect2F::PushBack(const RectF& r)
 }
 
 // true when bounds overlaps any stored rectangle (touching edges do not count)
-// MS2-FUNCTIONAL: the init-guard epoch sits at another thread-local offset in the exe (4, here 0)
+// MS2-FUNCTIONAL: the exe schedules the setup differently (xor ecx ahead of the size load, the bTopLeft copy earlier); the SDK's form and shuffle wrappers do not change it
 // @0x142682170
 bool FixedSizeArrayRect2F::Intersects(const RectF& bounds)
 {
