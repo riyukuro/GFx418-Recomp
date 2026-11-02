@@ -2174,7 +2174,6 @@ namespace InstanceTraits { namespace fl
     // default value, otherwise the AS3 method (inlined from its own unit).
     #define MS2_AS3_ON_PROTOTYPE(getclass) (_this.IsObject() && _this.GetObject() == &vm.getclass().GetPrototype())
 
-    // MS2-FUNCTIONAL: register allocation and throw-path tail merging differ (exe does not tail-call SetBool)
     // @0x1423e4060
     void Object::AS3isPrototypeOf(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -2183,7 +2182,6 @@ namespace InstanceTraits { namespace fl
         if (argc < 1)
             return vm.ThrowArgumentError(VM::Error(VM::eWrongArgumentCountError, vm, "Object::AS3isPrototypeOf", 1, 1, argc));
 
-        bool r = false;
         if (!argv[0].IsNullOrUndefined())
         {
             const AS3::Object* proto = _this.GetObject();
@@ -2191,15 +2189,14 @@ namespace InstanceTraits { namespace fl
             {
                 if (&(tr->*&Scaleform::GFx::AS3::Traits::GetConstructor)().GetPrototype() == proto)
                 {
-                    r = true;
-                    break;
+                    (result.*&Scaleform::GFx::AS3::Value::SetBool)(true);
+                    return;
                 }
             }
         }
-        (result.*&Scaleform::GFx::AS3::Value::SetBool)(r);
+        (result.*&Scaleform::GFx::AS3::Value::SetBool)(false);
     }
 
-    // MS2-FUNCTIONAL: inlines AS3isPrototypeOf, same differences
     // @0x1423e4490
     void Object::isPrototypeOfProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -2779,23 +2776,29 @@ namespace InstanceTraits { namespace fl
         static_cast<Instances::fl::XML*>(_this.GetObject())->AS3propertyIsEnumerable(result, argc, argv);
     }
 
-    // MS2-FUNCTIONAL: exe inlines AS3hasOwnProperty (direct vcall of the XML's HasOwnProperty slot +0xf0)
     // @0x1423e7c30
     void XML::HasOwnPropertyProto(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
         if (_this.IsObject() && IsPrototypeOf(_this, FUN_142508460(vm.GetXMLSupport().GetITraitsXML())))
             return Object::AS3hasOwnProperty(ti, vm, _this, result, argc, argv);
 
-        if (!IsXMLObject(_this))
-            return vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::HasOwnPropertyProto"));
-
-        Instances::fl::XML* obj = static_cast<Instances::fl::XML*>(_this.GetObject());
-        if (argc < 1 || !argv[0].IsString())
-            return vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "XML::HasOwnPropertyProto"));
-
-        bool r;
-        obj->AS3hasOwnProperty(r, argv[0].AsString());
-        (result.*&Scaleform::GFx::AS3::Value::SetBool)(r);
+        if (IsXMLObject(_this))
+        {
+            Instances::fl::XML* obj = static_cast<Instances::fl::XML*>(_this.GetObject());
+            if (argc >= 1 && argv[0].IsString())
+            {
+                ASString name = argv[0].AsString();
+                (result.*&Scaleform::GFx::AS3::Value::SetBool)(obj->HasOwnProperty(name));
+            }
+            else
+            {
+                vm.ThrowArgumentError(VM::Error(VM::eInvalidArgumentError, vm, "XML::HasOwnPropertyProto"));
+            }
+        }
+        else
+        {
+            vm.ThrowTypeError(VM::Error(VM::eInvokeOnIncompatibleObjectError, vm, "XML::HasOwnPropertyProto"));
+        }
     }
 }}
 
