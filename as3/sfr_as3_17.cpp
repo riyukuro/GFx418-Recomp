@@ -3292,7 +3292,7 @@ void TR::State::ConvertRegisterTo(SPInt ind, InstanceTraits::Traits& tr, Value::
 
 // The slot of tr in ns among the slots named like the chain starting at values (protected ones match by kind,
 // private ones by identity, the rest by uri), or NULL; index receives the slot index last looked at.
-static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Traits& tr, const UInt32* values,
+static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Slots& slots, const UInt32* values,
                                                       const Instances::Namespace& ns, UPInt& index)
 {
     if (values)
@@ -3302,23 +3302,34 @@ static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Traits& tr, const UI
         {
             index = ind;
             const SlotInfo* si;
-            if (ind < 0 || static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
-                si = &tr.Parent->GetSlotInfo(AbsoluteIndex(ind));
+            if (ind < 0 || static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+                si = &slots.Parent->GetSlotInfo(AbsoluteIndex(ind));
             else
-                si = &tr.VArray[static_cast<UInt32>(ind) - tr.FirstOwnSlotNum].Value;
+                si = &slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
             const Instances::Namespace& sns = *si->pNs;
             const unsigned kind = ns.GetKind();
             if (sns.GetKind() == kind)
             {
-                if (kind == Abc::NS_Protected)
-                    return si;
-                if (kind == Abc::NS_Private ? &ns == &sns : sns.GetUri().GetNode() == ns.GetUri().GetNode())
+                bool same;
+                switch (kind)
+                {
+                case Abc::NS_Protected:
+                    same = true;
+                    break;
+                case Abc::NS_Private:
+                    same = &ns == &sns;
+                    break;
+                default:
+                    same = sns.GetUri().GetNode() == ns.GetUri().GetNode();
+                    break;
+                }
+                if (same)
                     return si;
             }
-            if (static_cast<UPInt>(ind) < tr.FirstOwnSlotNum)
-                ind = tr.Parent->GetPrevSlotIndex(ind);
+            if (static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
+                ind = slots.Parent->GetPrevSlotIndex(ind);
             else
-                ind = tr.VArray[static_cast<UInt32>(ind) - tr.FirstOwnSlotNum].Prev;
+                ind = slots.VArray[ind - slots.FirstOwnSlotNum].Prev;
         } while (ind >= 0);
     }
     return NULL;
@@ -3394,11 +3405,12 @@ const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPI
         {
             const ArrayLH<SPtr<Instances::Namespace> >& nss =
                 static_cast<const NamespaceSet*>(mn.Obj.GetPtr())->GetNamespaces();
-            const UInt32* values = tr.FindSlotValues(name);
+            const Slots& slots = tr;
+            const UInt32* values = slots.FindSlotValues(name);
             for (UPInt i = 0; i < nss.GetSize(); ++i)
             {
                 const Instances::Namespace& ns = *nss[i];
-                si = Sfr33FindSlotInChain(tr, values, ns, index);
+                si = Sfr33FindSlotInChain(slots, values, ns, index);
                 if (obj)
                     si = obj->InitializeOnDemand(si, name, ns, index);
                 if (si)
