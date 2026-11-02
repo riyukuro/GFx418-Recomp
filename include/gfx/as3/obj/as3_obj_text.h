@@ -27,6 +27,24 @@ class ParagraphFormat;
 
 namespace Scaleform { namespace GFx { namespace Text {
 
+// A style's key (text_stylesheet.h).
+struct StyleKey
+{
+    StyleKey() : Type(Render::Text::StyleManagerBase::CSS_None) {}
+    bool operator==(const StyleKey& o) const { return Type == o.Type && Value == o.Value; }
+    Render::Text::StyleManagerBase::KeyType Type;   // +0x00
+    StringLH    Value;      // +0x08
+    UPInt       HashValue;  // +0x10
+};
+template<class C>
+class StyleHashFunc
+{
+public:
+    UPInt operator()(const C& key) const { return key.HashValue; }
+};
+// The styles by key (StatMV_Text_Mem 0x145).
+typedef HashUncachedLH<StyleKey, Render::Text::Style*, StyleHashFunc<StyleKey>, 0x145> StyleHash;
+
 // 0x30 bytes, vftable 0x14316a738.
 class StyleManager : public Render::Text::StyleManagerBase
 {
@@ -41,21 +59,9 @@ public:
     void ClearStyle(KeyType type, const char* name, UPInt len = SF_MAX_UPINT);              // 0x1426095a0
     bool ParseCSS(const char* buffer, UPInt len);                                           // 0x14260b7f0
 
-    // A style's key.
-    struct StyleKey
-    {
-        StyleKey() : Type(CSS_None) {}
-        bool operator==(const StyleKey& o) const { return Type == o.Type && Value == o.Value; }
-        KeyType     Type;       // +0x00
-        StringLH    Value;      // +0x08
-        UPInt       HashValue;  // +0x10
-    };
-    struct StyleHashFunc
-    {
-        UPInt operator()(const StyleKey& key) const { return key.HashValue; }
-    };
-    // The styles by key (StatMV_Text_Mem 0x145).
-    typedef HashUncachedLH<StyleKey, Render::Text::Style*, StyleHashFunc, 0x145> StyleHash;
+    // A style's key and the styles by key (text_stylesheet.h, namespace scope).
+    typedef Text::StyleKey StyleKey;
+    typedef Text::StyleHash StyleHash;
 
     const StyleHash& GetStyles() const;                                                     // 0x142609e60
     void ClearStyles();
