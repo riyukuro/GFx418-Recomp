@@ -63,13 +63,15 @@ bool AS2ValueObjectInterface::GetText(void* pdata, Value* pval, bool ishtml) con
 }
 
 // Reads a member (resolving properties) and converts it to a host value; clears pval on failure.
-// MS2-FUNCTIONAL: instruction scheduling
+// MS2-FUNCTIONAL: the exe inlines the second SetUndefined too, and keeps pdata/pobj in rsi with pthis in rdi
 // @0x14294bbb0
 bool AS2ValueObjectInterface::GetMember(void* pdata, const char* name, Value* pval, bool isdobj) const
 {
-    AS2::MovieRoot*       proot = VoiRoot(pMovieRoot);
+    MovieImpl*            pmovieRoot = pMovieRoot;
+    AS2::MovieRoot*       proot = VoiRoot(pmovieRoot);
     AS2::Environment*     penv  = VoiEnv(proot);
-    AS2::ObjectInterface* pobj  = VoiObject(pdata, pMovieRoot, isdobj);
+    AS2::ObjectInterface* pobj  = VoiObject(pdata, pmovieRoot, isdobj);
+    AS2::ObjectInterface* pthis = 0;
     if (!pobj)
     {
         if (pval)
@@ -87,11 +89,10 @@ bool AS2ValueObjectInterface::GetMember(void* pdata, const char* name, Value* pv
     }
     if (asval.GetType() == AS2::Value::PROPERTY)
     {
-        AS2::ObjectInterface* pthis = 0;
-        if (pobj->GetObjectType() - 6U < 0x27)
+        if (pobj->IsASObject())
             if (AS2::Object* po = pobj->ToASObject())
                 pthis = po;
-        if (pobj->GetObjectType() - 2U < 4)
+        if (pobj->IsASCharacter())
             if (AS2::AvmCharacter* pc = pobj->ToAvmCharacter())
                 pthis = pc;
         asval.GetPropertyValue(penv, pthis, &asval);
