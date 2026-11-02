@@ -224,14 +224,14 @@ void TextPrimitiveBundle::InsertEntry(UPInt index, BundleEntry* entry)
     Bundle::InsertEntry(index, entry);
 }
 
-// MS2-FUNCTIONAL: regalloc only (the exe loads the entry into rdx before the pSourceNode load into rcx)
 // @0x1426f2c80
 void TextLayerPrimitive::PinEntryBatches()
 {
     for (UPInt i = 0; i < Entries.GetSize(); i++)
     {
-        BundleEntry* e = Entries[i];
-        static_cast<TreeCacheText*>(e->pSourceNode)->GetMeshProvider()->Pin();
+        TreeCacheText*    textNode = (TreeCacheText*)Entries[i]->pSourceNode;
+        TextMeshProvider* tm       = textNode->GetMeshProvider();
+        tm->Pin();
     }
 }
 
@@ -330,14 +330,14 @@ void TextPrepareBuffer::StartPrimitive(RenderQueueItem& item, TextPrimitiveBundl
     addTextFieldLayers(true);
 }
 
-// MS2-FUNCTIONAL: regalloc only (the exe loads the entry into rdx before the pSourceNode load into rcx)
 // @0x1426f3440
 void TextLayerPrimitive::UnpinEntryBatches()
 {
     for (UPInt i = 0; i < Entries.GetSize(); i++)
     {
-        BundleEntry* e = Entries[i];
-        static_cast<TreeCacheText*>(e->pSourceNode)->GetMeshProvider()->Unpin();
+        TreeCacheText*    textNode = (TreeCacheText*)Entries[i]->pSourceNode;
+        TextMeshProvider* tm       = textNode->GetMeshProvider();
+        tm->Unpin();
     }
 }
 
@@ -442,13 +442,13 @@ void TextPrepareBuffer::addTextFieldLayers(bool startFlag)
         pRemainingTextFields = 0;
 }
 
-// MS2-FUNCTIONAL: regalloc only (the exe loads the entry into rdx before the pSourceNode load into rcx)
 // @0x1426f3b10
 void TextPrimitiveBundle::clearBatchLayers()
 {
     for (UPInt i = 0; i < Entries.GetSize(); i++)
     {
-        TextMeshProvider* tm = ((TreeCacheText*)Entries[i]->pSourceNode)->GetMeshProvider();
+        TreeCacheText*    textNode = (TreeCacheText*)Entries[i]->pSourceNode;
+        TextMeshProvider* tm       = textNode->GetMeshProvider();
         if (tm)
             tm->ClearBundle();
     }
