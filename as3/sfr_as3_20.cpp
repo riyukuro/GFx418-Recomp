@@ -557,13 +557,14 @@ void IMEManager::OnShutdown()
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // The class object's string form uses the VM's canonical name for its traits.
-// MS2-FUNCTIONAL: evaluation order (the exe loads the string manager after building the String, we before)
 // The SDK's inline operator+(const char*, const ASString&) (Abc/AS3_Abc_Type.h), which the exe inlines here.
 static inline String ConcatASString(const char* l, const ASString& r) { return String(l) + String(r.ToCStr(), r.GetSize()); }
+// the exe builds the String before it reads the VM's string manager
+static inline ASString CreateVMString(Object* pobj, const String& str) { return pobj->GetVM().GetStringManager().CreateString(str); }
 // @0x142542a60
 void ClassToString(Object* pobj, ASString* presult)
 {
-    *presult = pobj->GetVM().GetStringManager().CreateString(ConcatASString("[class ", pobj->GetTraits().GetName()) + "]");
+    *presult = CreateVMString(pobj, ConcatASString("[class ", pobj->GetTraits().GetName()) + "]");
 }
 }}}
 
