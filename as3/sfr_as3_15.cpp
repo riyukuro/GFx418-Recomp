@@ -3137,12 +3137,21 @@ Class::Class(ClassTraits::Traits& t)
 {
 }
 
+__forceinline Class::Class(ClassTraits::Traits& t, InlineCtorTag)
+    : Object(t)
+    , ParentClass(t.GetParent()
+                      ? &static_cast<const ClassTraits::Traits*>(t.GetParent())->GetInstanceTraits().GetConstructor()
+                      : NULL)
+    , Unk40(1)
+{
+}
+
 namespace Classes {
 
-// MS2-FUNCTIONAL: the exe inlines Class::Class here; ours calls it (0x1424d6ac0)
+// The exe inlines Class::Class here.
 // @0x1424dadb0
 UDBase::UDBase(ClassTraits::Traits& t)
-    : Class(t)
+    : Class(t, InlineCtorTag())
 {
     t.ConstructTail(*this);
 }

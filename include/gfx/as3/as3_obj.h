@@ -892,6 +892,9 @@ class Class : public Object
 {
 public:
     explicit Class(ClassTraits::Traits& t);
+    // The same constructor, inlined at its UDBase call site in the exe (defined in sfr_as3_15).
+    struct InlineCtorTag {};
+    inline Class(ClassTraits::Traits& t, InlineCtorTag);
 
     virtual void ForEachChild_GC(Collector* prcc, GcOp op) const;
     // @0x142414d90
