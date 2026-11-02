@@ -570,7 +570,7 @@ void FUN_14005b150(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_14005b170(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005b1b0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void M2V_SetUsrSj(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void M2V_SetUsrSj(cri_any = cri_any(), int = 0, cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_SetPicUsrBuf(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_GetPicUsr(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 M2V_DecodePicAtr(cri_u8, cri_u8);
@@ -620,7 +620,7 @@ void MPVM2V_SetCond(longlong);
 void mpvm2v_CopyPicAtr(cri_any = cri_any());
 cri_u8 MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVM2V_RequestStop(cri_any = cri_any());
-cri_u8 MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
+int MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
 int MPVDEC_CheckVersion(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVDEC_DecDpicMb(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 MPVVLC_IsVlcSizErr();
@@ -885,7 +885,7 @@ void M2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void FUN_14005b1b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3);
 
-void M2V_SetUsrSj(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3, cri_any cri_p4);
+void M2V_SetUsrSj(cri_any cri_p0, int cri_p1, cri_any cri_p2, cri_any cri_p3, cri_any cri_p4);
 
 void M2V_SetPicUsrBuf(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
@@ -989,7 +989,7 @@ cri_u8 MPVM2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void MPVM2V_RequestStop(cri_any cri_p0);
 
-cri_u8 MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1);
+int MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1);
 
 int MPVDEC_CheckVersion(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 

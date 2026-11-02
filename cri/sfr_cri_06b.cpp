@@ -570,7 +570,7 @@ void FUN_14005b150(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any()
 void FUN_14005b170(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void FUN_14005b1b0(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
-void M2V_SetUsrSj(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void M2V_SetUsrSj(cri_any = cri_any(), int = 0, cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_SetPicUsrBuf(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void M2V_GetPicUsr(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 cri_u8 M2V_DecodePicAtr(cri_u8, cri_u8);
@@ -620,7 +620,7 @@ void MPVM2V_SetCond(longlong);
 void mpvm2v_CopyPicAtr(cri_any = cri_any());
 int MPVM2V_DecodeFrm(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVM2V_RequestStop(cri_any = cri_any());
-cri_u8 MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
+int MPVM2V_DecodePicAtr(cri_any = cri_any(), cri_any = cri_any());
 int MPVDEC_CheckVersion(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
 void MPVDEC_DecDpicMb(cri_any = cri_any(), cri_any = cri_any());
 cri_u8 MPVVLC_IsVlcSizErr();
@@ -835,7 +835,7 @@ void M2V_DecodeFrm(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
 void FUN_14005b1b0(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3);
 
-void M2V_SetUsrSj(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3, cri_any cri_p4);
+void M2V_SetUsrSj(cri_any cri_p0, int cri_p1, cri_any cri_p2, cri_any cri_p3, cri_any cri_p4);
 
 void M2V_SetPicUsrBuf(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
@@ -1063,35 +1063,34 @@ void MPVM2V_RequestStop(cri_any cri_p0)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140062ae0
-cri_u8 MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1)
+int MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   cri_u8 arg2 = cri_p1;
   int i_v1;
   cri_u8 *pu_v2;
   
-  i_v1 = M2V_IsSetup();
-  if (i_v1 == 0) {
-    return 0xffffffff;
+  // the exe tests M2V_IsSetup and puts the not-set-up return at the end
+  if (M2V_IsSetup() != 0) {
+    pu_v2 = (cri_u8 *)((char *)arg1 + 0x1860);
+    i_v1 = 0;
+    do {
+      M2V_SetUsrSj(*(cri_u8 *)((char *)arg1 + 0x1848),i_v1,pu_v2[-1],*pu_v2,pu_v2[1]);
+      i_v1 = i_v1 + 1;
+      pu_v2 = pu_v2 + 3;
+    } while (i_v1 < 4);
+    M2V_SetPicUsrBuf(*(cri_u8 *)((char *)arg1 + 0x1848),*(cri_u8 *)((char *)arg1 + 0x18b8),
+                  *(cri_u4 *)((char *)arg1 + 0x18c0));
+    i_v1 = M2V_DecodePicAtr(*(cri_u8 *)((char *)arg1 + 0x1848),arg2);
+    if (i_v1 != 0) {
+      return -2;
+    }
+    M2V_GetPicUsr(*(cri_u8 *)((char *)arg1 + 0x1848),0,arg1 + 0x18c4);
+    mpvm2v_CopyPicAtr(arg1);
+    return 0;
   }
-  pu_v2 = (cri_u8 *)((char *)arg1 + 0x1860);
-  i_v1 = 0;
-  do {
-    M2V_SetUsrSj(*(cri_u8 *)((char *)arg1 + 0x1848),i_v1,pu_v2[-1],*pu_v2,pu_v2[1]);
-    i_v1 = i_v1 + 1;
-    pu_v2 = pu_v2 + 3;
-  } while (i_v1 < 4);
-  M2V_SetPicUsrBuf(*(cri_u8 *)((char *)arg1 + 0x1848),*(cri_u8 *)((char *)arg1 + 0x18b8),
-                *(cri_u4 *)((char *)arg1 + 0x18c0));
-  i_v1 = M2V_DecodePicAtr(*(cri_u8 *)((char *)arg1 + 0x1848),arg2);
-  if (i_v1 != 0) {
-    return 0xfffffffe;
-  }
-  M2V_GetPicUsr(*(cri_u8 *)((char *)arg1 + 0x1848),0,arg1 + 0x18c4);
-  mpvm2v_CopyPicAtr(arg1);
-  return 0;
+  return -1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
