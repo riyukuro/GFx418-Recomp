@@ -50,8 +50,8 @@ class LoadQueueEntryMT_LoadMovie : public GFx::LoadQueueEntryMT
     bool                    FirstFrameLoaded;   // +0x38
 
 public:
-    // Starts the preload task (stripped players try the .gfx name first) and cancels the pending entries of the
-    // same Loader or URLLoader.
+    // Starts the preload task (stripped players try the .gfx name first); MovieRoot::AddLoadQueueEntryMT then
+    // cancels the pending entries of the same Loader or URLLoader.
     LoadQueueEntryMT_LoadMovie(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl);
     ~LoadQueueEntryMT_LoadMovie() {}   // ??_G 0x1424e31e0
 

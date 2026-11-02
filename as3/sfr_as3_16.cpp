@@ -1769,41 +1769,43 @@ LoadQueueEntry::~LoadQueueEntry()
 // Inlined into MovieRoot::AddLoadQueueEntryMT in the exe.
 inline LoadQueueEntryMT_LoadMovie::LoadQueueEntryMT_LoadMovie(LoadQueueEntry* pqueueEntry, MovieImpl* pmovieImpl)
     : LoadQueueEntryMT(pqueueEntry, pmovieImpl)
-    , CharSwitched(false)
-    , BytesLoaded(0)
-    , FirstFrameLoaded(false)
 {
+    CharSwitched     = false;
+    FirstFrameLoaded = false;
+    BytesLoaded      = 0;
     bool stripped = false;
-    if (InteractiveObject* pmain = pMovieImpl->pMainMovie)
+    if (InteractiveObject* pmain = pMovieImpl->pASMovieRoot->GetMovieImpl()->pMainMovie)
         stripped = (pmain->GetResourceMovieDef()->GetSWFFlags() & 0x10) != 0; // MovieInfo::SWF_Stripped
     pPreloadTask = *SF_NEW MoviePreloadTask(pMovieImpl, pqueueEntry->URL, stripped, pqueueEntry->QuietOpen);
     Ptr<TaskManager> ptm = *static_cast<TaskManager*>(pMovieImpl->GetStateBag()->GetStateAddRef(State::State_TaskManager));
     ptm->AddTask(pPreloadTask);
-
-    // A newer load of the same Loader / URLLoader replaces the pending ones.
-    LoadQueueEntry* pentry = static_cast<LoadQueueEntry*>(pQueueEntry);
-    for (LoadQueueEntryMT* p = pmovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
-    {
-        LoadQueueEntry* pother = static_cast<LoadQueueEntry*>(p->GetQueueEntry());
-        if ((pother->mLoader && pother->mLoader == pentry->mLoader) ||
-            (pother->mURLLoader && pother->mURLLoader == pentry->mURLLoader))
-            pother->Canceled = true;
-    }
 }
 
-// MS2-FUNCTIONAL: the exe inlines LoadQueueEntryMT_LoadMovie's ctor (with TaskManager/Ptr handling); ours inlines
-// it from the same definition, with its own register allocation
+// The LoadMovie entry's cancel loop reads the head through this root's pMovieImpl, after the inlined ctor.
 // @0x1424e8c20
 void MovieRoot::AddLoadQueueEntryMT(LoadQueueEntry* pentry)
 {
-    MemoryHeap* pheap = pMovieImpl->GetMovieHeap();
     LoadQueueEntryMT* pentryMT;
     if (pentry->Type & GFx::LoadQueueEntry::LTF_VarsFlag)
-        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadVars(pentry, pMovieImpl);
+        pentryMT = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntryMT_LoadVars(pentry, pMovieImpl);
     else if (pentry->Type & GFx::LoadQueueEntry::LTF_BinaryFlag)
-        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadBinary(pentry, pMovieImpl);
+        pentryMT = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntryMT_LoadBinary(pentry, pMovieImpl);
     else
-        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadMovie(pentry, pMovieImpl);
+    {
+        pentryMT = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntryMT_LoadMovie(pentry, pMovieImpl);
+        if (pentryMT)
+        {
+            // A newer load of the same Loader / URLLoader replaces the pending ones.
+            LoadQueueEntry* pnew = static_cast<LoadQueueEntry*>(pentryMT->GetQueueEntry());
+            for (LoadQueueEntryMT* p = pMovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
+            {
+                LoadQueueEntry* pother = static_cast<LoadQueueEntry*>(p->GetQueueEntry());
+                if ((pother->mLoader && pother->mLoader == pnew->mLoader) ||
+                    (pother->mURLLoader && pother->mURLLoader == pnew->mURLLoader))
+                    pother->Canceled = true;
+            }
+        }
+    }
     if (pentryMT)
         pMovieImpl->AddLoadQueueEntryMT(pentryMT);
     else
