@@ -4553,12 +4553,38 @@ struct Sfr33MovieRootArray
     void CreateArray(GFx::Value* pvalue);
 };
 
-// MS2-FUNCTIONAL 0x1424f2700: the exe inlines VM::MakeArray (the Array traits' MakeInstance call).
+// VM::MakeArray (0x142516270), which the exe inlines here.
+static __forceinline Pickable<Instances::fl::Array> Sfr33MakeArray(const VM& vm)
+{
+    InstanceTraits::fl::Array& itr = static_cast<InstanceTraits::fl::Array&>(vm.GetClassTraitsArray().GetInstanceTraits());
+    return itr.MakeInstance(itr);
+}
+
+// A Value picking a new object, with Value::PickUnsafe(Object*) expanded in place as the exe has it: kind
+// kObject, no weak proxy, and the value words copied from a temporary holding only the object.
+struct Sfr33PickedObjectValue
+{
+    struct Words { Object* pObj; void* pRest; };
+    UInt32 Flags;
+    void* pWeakProxy;
+    Words V;
+    explicit Sfr33PickedObjectValue(Object* p)
+    {
+        pWeakProxy = NULL;
+        Flags = Value::kObject;
+        Words w;
+        w.pObj = p;
+        V = w;
+    }
+    ~Sfr33PickedObjectValue() { Get().~Value(); }
+    Value& Get() { return *reinterpret_cast<Value*>(this); }
+};
+
 // @0x1424f2700
 void Sfr33MovieRootArray::CreateArray(GFx::Value* pvalue)
 {
-    Value v(Root()->pAVM->MakeArray());
-    Root()->ASValue2GFxValue(v, pvalue);
+    Sfr33PickedObjectValue v(Sfr33MakeArray(*Root()->pAVM).GetPtr());
+    Root()->ASValue2GFxValue(v.Get(), pvalue);
 }
 
 // MovieRoot::DoActions (virtual): the pending constructors, then the actions of every level up to AL_Render; a
