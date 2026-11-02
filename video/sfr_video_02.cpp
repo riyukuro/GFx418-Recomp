@@ -1961,7 +1961,6 @@ void FUN_1400156d0(void** frame)
     }
 }
 
-// MS2-FUNCTIONAL: captures the callback arguments and performs the requested numeric coercion.
 // @0x140015710
 void** FUN_140015710(void** frame, void* vm, void* receiver, int convert,
                      Scaleform::GFx::AS3::Value* source, const uintptr_t* extra)
@@ -1970,10 +1969,7 @@ void** FUN_140015710(void** frame, void* vm, void* receiver, int convert,
     frame[1] = receiver;
     frame[2] = reinterpret_cast<void*>(*extra);
     if (convert)
-    {
-        double ignored;
-        source->Convert2NumberInline(ignored);
-    }
+        source->Convert2Number(*reinterpret_cast<double*>(&frame[2]));
     return frame;
 }
 
@@ -2408,7 +2404,6 @@ Scaleform::GFx::AS2::Object* FUN_1400122e0(
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes attachVideo's Object, prototype base, and registered function members.
 // @0x14000eb50
 Scaleform::GFx::AS2::Object* FUN_14000eb50(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
@@ -2416,9 +2411,9 @@ Scaleform::GFx::AS2::Object* FUN_14000eb50(
 {
     Scaleform::GFx::AS2::FUN_14000e1e0(object, context, prototype,
         *static_cast<const Scaleform::GFx::AS2::FunctionRef*>(constructor));
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b5e70;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x70) = &PTR_LAB_1431b5e18;
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b5e20;
     const Scaleform::GFx::AS2::PropFlags flags(1);
     reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x70)->InitFunctionMembers(
         object, context, Video02VideoFunctions, flags);
@@ -2593,16 +2588,15 @@ static __forceinline Scaleform::GFx::AS2::Object* Video02ConnectProtoInit(
     void* prototype, const Scaleform::GFx::AS2::FunctionRef* constructor)
 {
     FUN_140012440(object, context, prototype, constructor);
+    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x20) = &PTR_LAB_1431b6690;
     *reinterpret_cast<void**>(reinterpret_cast<char*>(object) + 0x68) = &PTR_LAB_1431b6638;
-    *reinterpret_cast<void**>(object) = &PTR_FUN_1431b6640;
     Scaleform::GFx::AS2::PropFlags flags(1);
     reinterpret_cast<Video02PrototypeAccess*>(reinterpret_cast<char*>(object) + 0x68)->InitFunctionMembers(
         object, context, Video02ConnectFunctions, flags);
     return object;
 }
 
-// MS2-FUNCTIONAL: initializes the Connect prototype's Object, vtables, and native method table.
 // @0x140012510
 Scaleform::GFx::AS2::Object* FUN_140012510(
     Scaleform::GFx::AS2::Object* object, Scaleform::GFx::AS2::ASStringContext* context,
@@ -2753,7 +2747,6 @@ void FUN_140015c40(void* object)
     *oldState = state;
 }
 
-// MS2-FUNCTIONAL: converts the optional subtitle value and updates the video text surface and dimensions.
 // @0x140014460
 void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3::Value* input)
 {
@@ -2765,9 +2758,9 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
     text.ToStringValue((*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78))->GetStringManager());
     // OpenUrl takes the url chars, read through a temp ASString (inc/dec of the node refcount at 0x1400144de)
     const char* url = text.AsString().ToCStr();
+    Scaleform::GFx::AS3::ASVM& vm = *static_cast<Scaleform::GFx::AS3::ASVM*>(*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78));
     *reinterpret_cast<unsigned char*>(self + 0x60) = 0;
-    static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(*reinterpret_cast<void**>(self + 0x50))->OpenUrl(url,
-        *static_cast<Scaleform::GFx::AS3::ASVM*>(*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(self + 0x20) + 0x78)));
+    static_cast<Scaleform::GFx::AS3::VideoProviderNetStream*>(*reinterpret_cast<void**>(self + 0x50))->OpenUrl(url, vm);
     ((::Scaleform::GFx::AS3::VideoProviderNetStream*)(*reinterpret_cast<void**>(self + 0x50)))->SetSoundVolume(static_cast<int>(*reinterpret_cast<double*>(self + 0x88) * 100.0),
         static_cast<int>(*reinterpret_cast<double*>(self + 0x90) * 100.0));
 }
