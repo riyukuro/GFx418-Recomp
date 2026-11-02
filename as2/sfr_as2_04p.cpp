@@ -122,24 +122,26 @@ private:
 // @0x1429384f0
 bool AS2ValueObjectInterface::DeleteMember(void* pdata, const char* name, bool isdobj)
 {
-    AS2::MovieRoot*   proot = static_cast<AS2::MovieRoot*>(pMovieRoot->pASMovieRoot);
+    MovieImpl*        pmovie = pMovieRoot;
+    AS2::MovieRoot*   proot = static_cast<AS2::MovieRoot*>(pmovie->pASMovieRoot);
     AvmDisplayObjBase* pmain = proot->pMovieImpl->pMainMovie->GetAvmObjImpl();
     AS2::Environment*  penv  =
         static_cast<AS2::AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(pmain))->GetASEnvironment();
     AS2::ObjectInterface* pobj = static_cast<AS2::ObjectInterface*>(pdata);
     if (isdobj)
     {
-        DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pMovieRoot);
+        DisplayObject* pdobj = static_cast<CharacterHandle*>(pdata)->ResolveCharacter(pmovie);
         if (!pdobj)
             return false;
         InteractiveObject* pch  = static_cast<InteractiveObject*>(pdobj);
         // the character's own interface (its AvmCharacter), not its AS object
-        pobj = static_cast<AS2::AvmCharacter*>(pch->GetAvmIntObj());
+        pobj = AS2::ToAvmCharacter(pch);
     }
     if (!pobj)
         return false;
-    ASString key = penv->StringContext.CreateConstString(name);
-    return pobj->DeleteMember(&penv->StringContext, key);
+    AS2::ASStringContext* psc = &penv->StringContext;
+    ASString key = psc->CreateConstString(name);
+    return pobj->DeleteMember(psc, key);
 }
 
 }} // namespace Scaleform::GFx
