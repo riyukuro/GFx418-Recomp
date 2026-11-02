@@ -337,7 +337,6 @@ void ResourceWeakLib::RemoveResourceOnRelease(Resource* pres)
 
 // ---------------------------------------------------------------- ResourceId
 
-// MS2-FUNCTIONAL: the exe keeps a dead copy of pbuffer in rax after storing the suffix letter (one extra mov)
 // @0x1425a3b20
 unsigned ResourceId::GenerateIdString(char* pbuffer, UPInt bufferSize, char suffixLetter) const
 {
@@ -346,22 +345,23 @@ unsigned ResourceId::GenerateIdString(char* pbuffer, UPInt bufferSize, char suff
         switch (GetIdType())
         {
         case IdType_GradientImage:
-            suffixLetter = 'G';
+            *pbuffer++ = 'G';
             break;
         case IdType_DynFontImage:
         case IdType_FontImage:
-            suffixLetter = 'F';
+            *pbuffer++ = 'F';
             break;
         default:
-            suffixLetter = 'I';
+            *pbuffer++ = 'I';
             break;
         }
     }
-    pbuffer[0] = suffixLetter;
+    else
+        *pbuffer++ = suffixLetter;
 
     LongFormatter f(GetIdIndex());
     f.SetBase(16).SetBigLetters().Convert();
-    f.InitString(&pbuffer[1], bufferSize);
+    f.InitString(pbuffer, bufferSize);
     return (unsigned)f.GetSize();
 }
 
