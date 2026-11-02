@@ -79,20 +79,29 @@ void* FUN_142743ac0(void* self, unsigned flags)
     return RawDeleteTail(self, flags, 0xa0);
 }
 
+struct SoundListNode
+{
+    void* Vft;
+    SoundListNode* pPrev;
+    SoundListNode* pNext;
+};
+
 // Listed sound object.
 // @0x142743b60
 void* FUN_142743b60(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_1431bec90;
-    RawField<void*>(self, 0x10) = DAT_1431bed08;
-    if (char* next = RawField<char*>(self, 0x20))
+    // the first vftable store survives in the exe; a plain one is folded into the second
+    SoundListNode* node = RawFieldPtr<SoundListNode>(self, 0x10);
+    *const_cast<void* volatile*>(&node->Vft) = DAT_1431bed08;
+    if (node->pNext)
     {
-        RawField<char*>(RawField<char*>(self, 0x18), 0x10) = next;
-        RawField<char*>(RawField<char*>(self, 0x20), 8) = RawField<char*>(self, 0x18);
-        RawField<U>(self, 0x18) = 0;
-        RawField<U>(self, 0x20) = 0;
+        node->pPrev->pNext = node->pNext;
+        node->pNext->pPrev = node->pPrev;
+        node->pPrev = 0;
+        node->pNext = 0;
     }
-    RawField<void*>(self, 0x10) = DAT_1431bec40;
+    node->Vft = DAT_1431bec40;
     RawRefCountCoreDtor(self);
     return RawDeleteTail(self, flags, 0x28);
 }
@@ -121,10 +130,10 @@ void* FUN_142743cf0(void* self, unsigned flags)
 {
     RawField<void*>(self, 0) = DAT_1431bede8;
     FUN_142747b30(self);
-    DeleteCriticalSection(RawFieldPtr<CRITICAL_SECTION>(self, 0xc8));
+    FUN_14258d0b0(RawFieldPtr<void>(self, 0xc8));
     RawField<void*>(self, 0xb0) = DAT_1431bec40;
     FUN_1427434d0(RawFieldPtr<void>(self, 0xa8));
-    DeleteCriticalSection(RawFieldPtr<CRITICAL_SECTION>(self, 0x80));
+    FUN_14258d0b0(RawFieldPtr<void>(self, 0x80));
     FUN_142582530(RawFieldPtr<void>(self, 0x20));
     if (RawField<void*>(self, 0x18))
         FUN_14257dcb0(RawField<void*>(self, 0x18));

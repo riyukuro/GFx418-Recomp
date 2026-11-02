@@ -503,7 +503,7 @@ String AsStringFlag(const Abc::Instance& inst)
         result.AppendString("dynamic ");
     if (inst.IsFinal())
         result.AppendString("final ");
-    result.AppendString(inst.IsInterface() ? "interface " : "class ");
+    result.AppendString(!inst.IsInterface() ? "class " : "interface ");
     return result;
 }
 

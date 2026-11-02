@@ -311,7 +311,8 @@ void HAL::BeginDisplay(Color backgroundColor, const Viewport& viewport)
     if (!(HALState & HS_InFrame))
         return;
 
-    BeginDisplayData* data = BeginDisplayDataList.Alloc(BeginDisplayData(backgroundColor, viewport));
+    BeginDisplayData init(backgroundColor, viewport);
+    BeginDisplayData* data = BeginDisplayDataList.Alloc(init);
     if (!(HALState & HS_InScene))
         beginDisplay(data);
     else
