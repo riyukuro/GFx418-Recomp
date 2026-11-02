@@ -4,6 +4,7 @@
 // MS2-UNIT: sfr_as3_20
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x142542820-0x1425584f0 .text$mn
+#define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe calls it
 #include "ms2/scaleform/include/kernel/sf_string.h"
 #include "ms2/scaleform/include/kernel/sf_std.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
@@ -2471,7 +2472,7 @@ typedef Scaleform::HashSetBase<MS2_ScriptPtr, Scaleform::FixedSizeHash<MS2_Scrip
                                Scaleform::HashsetCachedEntry<MS2_ScriptPtr,
                                    Scaleform::FixedSizeHash<MS2_ScriptPtr> > > MS2_ScriptSet;
 // @0x142542820
-// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z: equivalent rehashing; local allocator calls and frame layout differ from the exe
+// MS2-FUNCTIONAL ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z: Clear is out of line now; only the registers of the zero and the hash constants differ
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@V54@U?$AllocatorLH@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@$01@4@V?$HashsetCachedEntry@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@V?$FixedSizeHash@V?$SPtr@VGlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@4@@4@@Scaleform@@AEAAXPEAX_K@Z 0x142542820
 template void MS2_ScriptSet::setRawCapacity(void*, Scaleform::UPInt);
 
