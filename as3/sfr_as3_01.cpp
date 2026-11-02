@@ -166,7 +166,7 @@ namespace AS3 {
 void Stream_LogBytes(Stream* pin, unsigned numOfBytes);
 
 // DoABC tag: UI32 flags, null-terminated name, then the ABC bytes up to the end of the tag.
-// MS2-FUNCTIONAL: same calls and flow; the exe's StringDH / Ptr temporaries are laid out differently (4 bytes off).
+// MS2-FUNCTIONAL: same calls and flow; the exe keeps zero in rbp for the null stores (register choice).
 // @0x1423dc7b0
 void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -191,7 +191,7 @@ void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo)
 
     void* pmem = Memory::GetGlobalHeap()->Alloc(sizeof(AbcDataBuffer) - 1 + dataSize, (const AllocInfo*)0);
     Ptr<AbcDataBuffer> pabc = *(pmem ? ::new (pmem) AbcDataBuffer(name, dataSize, (UByte)flags) : 0);
-    pabc->FileName = p->GetFileURL();
+    pabc->FileName = p->GetDataDef_Unsafe()->GetFileURL();
     if (pin->ReadToBuffer(pabc->Data, pabc->DataSize) != (int)pabc->DataSize)
     {
         pin->LogError("Can't read completely ABCData at offset %d", tagInfo.TagOffset);
@@ -202,15 +202,14 @@ void SF_STDCALL DoAbcLoader(LoadProcess* p, const TagInfo& tagInfo)
     p->AddInitAction(ptag);
 }
 
-// MS2-FUNCTIONAL: the exe takes the Log pointer out of the GetLog() temporary before releasing it; register choice.
 // @0x1423dcae0
 void DoAbc::Execute(DisplayObjContainer* m)
 {
     AvmDisplayObj* pavm = ToAvmDisplayObj(m);
     if (!pavm->GetAS3Root()->ExecuteAbc(pAbc, m))
     {
-        if (pavm->GetLog())
-            pavm->GetLog()->LogError("Can't execute ABC from %s", m->GetResourceMovieDef()->GetFileURL());
+        if (pavm->GetMovieImpl()->GetStateBag()->GetLog().GetPtr())
+            pavm->GetMovieImpl()->GetStateBag()->GetLog()->LogError("Can't execute ABC from %s", m->GetResourceMovieDef()->GetFileURL());
     }
 }
 
@@ -255,7 +254,7 @@ void SF_STDCALL SymbolClassLoader(LoadProcess* p, const TagInfo& tagInfo)
 
 typedef RefCountCollector<StatMV_ActionScript_Mem> ASCollector;
 
-// MS2-FUNCTIONAL: the exe keeps the reused slot's address in a register (lea) instead of re-indexing; 3 bytes off.
+// MS2-FUNCTIONAL: the exe keeps the reused slot's address in a register (lea) instead of re-indexing.
 // @0x1423de620
 template <int Stat>
 void RefCountCollector<Stat>::AddRoot(const BaseType* root)
@@ -268,9 +267,10 @@ void RefCountCollector<Stat>::AddRoot(const BaseType* root)
         // reuse a free slot: free slots chain the next free index as (index << 1) | 1
         root->RefCount |= BaseType::Flag_InRootList;
         root->RootIndex = (UInt32)freeIndex;
-        SPInt next = (SPInt)Roots[FirstFreeRootIndex] >> 1;
-        Roots[FirstFreeRootIndex] = root;
-        FirstFreeRootIndex = (UPInt)next;
+        const BaseType*& slot = Roots[FirstFreeRootIndex];
+        const BaseType* next = slot;
+        slot = root;
+        FirstFreeRootIndex = (UPInt)((SPInt)next >> 1);
         return;
     }
     UPInt size = Roots.GetSize();
@@ -286,11 +286,11 @@ void RefCountCollector<Stat>::AddRoot(const BaseType* root)
         Flags |= Flags_AddingRoot;
         if (!collected || !Roots.PushBackSafe(root))
         {
-            UInt32 rc = root->RefCount;
-            root->RefCount = rc & ~BaseType::Flag_InRootList;
+            UInt32 rc = root->RefCount & ~BaseType::Flag_InRootList;
+            root->RefCount = rc;
             if (!root->IsInList())
                 root->RootIndex = ~0u;
-            root->RefCount = rc & ~(BaseType::Flag_InRootList | (BaseType::Mask_State << BaseType::Shift_State));
+            root->RefCount = rc & ~(BaseType::Mask_State << BaseType::Shift_State);
         }
         Flags &= ~Flags_AddingRoot;
     }
@@ -589,7 +589,8 @@ template <> void LogBase<LoadProcess>::LogParse(const char* pfmt, ...) const
     va_list args;
     va_start(args, pfmt);
     LoadProcess* process = (LoadProcess*)this;
-    if (process->IsVerboseParse())
+    const LogBase<LoadProcess>& base = *process;
+    if (((LoadProcess*)&base)->IsVerboseParse())
     {
         Log* log = process->GetLog();
         if (process->IsLogNotNull() || log)
