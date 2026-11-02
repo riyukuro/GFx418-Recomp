@@ -4557,78 +4557,72 @@ void FUN_1423d4c20(void* raw, const void* event)
 int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* alternate, unsigned short language)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(manager);
-    auto** vtable = reinterpret_cast<void**>(manager[0]);
-    auto modeOf = reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3]);
+    typedef unsigned (*ModeOf)(void*, unsigned);
+    struct Record { unsigned long long pad0[2]; Scaleform::String name; Scaleform::String text; unsigned code; unsigned pad1[3]; };
     Scaleform::String selected;
-    int result = -1;
-    unsigned chosen = 0;
+    bool alternateFound = false;
     bool wasSet = false;
-    bool found = false;
-    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
-        if (!primary) continue;
-        auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-        if (_stricmp(primary, reinterpret_cast<Scaleform::String*>(record + 0x10)->ToCStr()) != 0) continue;
-        if (*reinterpret_cast<unsigned*>(bytes + 0x84) != modeOf(manager, *reinterpret_cast<unsigned*>(record + 0x20)))
-            continue;
-        selected = *reinterpret_cast<Scaleform::String*>(record + 0x10);
-        chosen = i;
-        found = true;
-        break;
+    unsigned i = 0;
+    int result = -1;
+    unsigned code = 0x2000000;
+    for (i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+        if (primary &&
+            Scaleform::SFstricmp(primary, reinterpret_cast<Record*>(manager[0x17])[i].name.ToCStr()) == 0 &&
+            *reinterpret_cast<unsigned*>(bytes + 0x84) ==
+                reinterpret_cast<ModeOf>((*reinterpret_cast<void***>(manager))[3])(manager,
+                    reinterpret_cast<Record*>(manager[0x17])[i].code)) {
+            selected = reinterpret_cast<Record*>(manager[0x17])[i].name;
+            goto setState;
+        }
     }
-    if (!found) {
-        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
-            if (!alternate) continue;
-            auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-            if (_stricmp(alternate, reinterpret_cast<Scaleform::String*>(record + 0x10)->ToCStr()) != 0) continue;
-            if (*reinterpret_cast<unsigned*>(bytes + 0x84) != modeOf(manager, *reinterpret_cast<unsigned*>(record + 0x20)))
-                continue;
-            selected = *reinterpret_cast<Scaleform::String*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x18);
+    for (i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+        if (alternate &&
+            Scaleform::SFstricmp(alternate, reinterpret_cast<Record*>(manager[0x17])[i].name.ToCStr()) == 0 &&
+            *reinterpret_cast<unsigned*>(bytes + 0x84) ==
+                reinterpret_cast<ModeOf>((*reinterpret_cast<void***>(manager))[3])(manager,
+                    reinterpret_cast<Record*>(manager[0x17])[i].code)) {
+            selected = reinterpret_cast<Record*>(manager[0x17])[i].text;
+            alternateFound = true;
             result = static_cast<int>(i);
             auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
             wasSet = states[i] != 0;
             states[i] = 2;
-            const unsigned code = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x20);
-            bool conflict = false;
-            for (unsigned j = 0; j < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++j) {
-                if (reinterpret_cast<unsigned*>(manager[0x32])[j] == 1 &&
-                    *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + j * 0x30 + 0x20) == code) {
-                    conflict = true;
-                    break;
-                }
-            }
-            if (!conflict) {
-                if (wasSet) return result;
-                chosen = i;
-                goto addToLists;
-            }
+            code = reinterpret_cast<Record*>(manager[0x17])[i].code;
             break;
         }
-        const int configCount = *reinterpret_cast<int*>(bytes + 0x178);
-        for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0) && !found; ++i) {
-            const unsigned code = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30 + 0x20);
-            auto* config = reinterpret_cast<unsigned char*>(manager[0x2e]);
-            for (long long j = 0; j < configCount; ++j) {
-                if (*reinterpret_cast<unsigned long long*>(config + j * 0x10 + 8) != language ||
-                    *reinterpret_cast<unsigned*>(config + j * 0x10) != code) continue;
-                selected = primary ? primary : alternate;
-                chosen = i;
-                found = true;
-                break;
+    }
+    for (unsigned j = 0; j < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++j) {
+        if (reinterpret_cast<unsigned*>(manager[0x32])[j] == 1 &&
+            reinterpret_cast<Record*>(manager[0x17])[j].code == code)
+            goto searchConfig;
+    }
+    if (alternateFound) goto addToLists;
+searchConfig:
+    {
+        struct Config { unsigned code; unsigned pad; unsigned long long language; };
+        for (i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0xd0); ++i) {
+            for (int j = 0; j < *reinterpret_cast<int*>(bytes + 0x178); ++j) {
+                if (reinterpret_cast<Config*>(manager[0x2e])[j].language == language &&
+                    reinterpret_cast<Config*>(manager[0x2e])[j].code == reinterpret_cast<Record*>(manager[0x17])[i].code) {
+                    selected = primary ? primary : alternate;
+                    wasSet = false;
+                    goto setState;
+                }
             }
         }
-        if (!found) return result;
+        return result;
     }
+setState:
     {
-        result = static_cast<int>(chosen);
+        result = static_cast<int>(i);
         auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
-        wasSet = states[chosen] != 0;
-        states[chosen] = 1;
-        if (wasSet) return result;
+        wasSet = states[i] != 0;
+        states[i] = 1;
     }
 addToLists:
-    {
-        const unsigned mode = modeOf(manager,
-            *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager[0x17]) + chosen * 0x30 + 0x20));
+    if (!wasSet) {
+        const unsigned mode = reinterpret_cast<ModeOf>((*reinterpret_cast<void***>(manager))[3])(manager,
+            reinterpret_cast<Record*>(manager[0x17])[i].code);
         if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
         if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
         if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
