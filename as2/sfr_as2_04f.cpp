@@ -24,16 +24,32 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// The exe inlines the CFunctionObject ctor, and its FunctionObject base ctor, here.
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(func)
+{
+    Set__proto__(psc, pprototype);
+}
+
 // @0x14292e6e0
-// MS2-FUNCTIONAL: heap new/ctor inlined through the CFunctionObject constructor; register scheduling differs
 void NameFunction::AddConstMembers(ObjectInterface* pobj, ASStringContext* psc, const NameFunction* pfunctions,
                                    UByte flags)
 {
-    Object* pfuncProto = psc->pContext->GetPrototype(ASBuiltin_Function);
-    for (; pfunctions->Name; ++pfunctions)
+    MemoryHeap* pheap      = psc->GetHeap();
+    Object*     pfuncProto = psc->pContext->GetPrototype(ASBuiltin_Function);
+    while (pfunctions->Name)
     {
-        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, pfuncProto, pfunctions->Function);
-        pobj->SetMemberRaw(psc, psc->CreateConstString(pfunctions->Name), Value(pfunc.GetPtr()), PropFlags(flags));
+        PropFlags pf(flags);
+        pobj->SetMemberRaw(psc, psc->CreateConstString(pfunctions->Name),
+                           FunctionRef(*SF_HEAP_NEW(pheap)
+                                           CFunctionObject(psc, pfuncProto, pfunctions->Function, ObjectInlineCtorTag())),
+                           pf);
+        pfunctions++;
     }
 }
 
@@ -124,3 +140,7 @@ void MovieRoot::AddInvokeAlias(const ASString& alias, CharacterHandle* pthisChar
 
 // MS2-PIN: ??_7StickyVarNode@MovieRoot@AS2@GFx@Scaleform@@6B@ 0x1432177c8
 // MS2-PIN: ??_7StickyVarNode@MovieImpl@GFx@Scaleform@@6B@ 0x14317ca50
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778

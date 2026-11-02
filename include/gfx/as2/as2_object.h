@@ -423,6 +423,7 @@ public:
     CFunctionObject(ASStringContext* psc, CFunctionPtr func);
     // A native function object with the given prototype (exe 0x142919e70).
     CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func);
+    CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func, ObjectInlineCtorTag); // inline in sfr_as2_04f
 };
 
 // Function defined in script (the action buffer of a DefineFunction). Its instances are plain objects.
