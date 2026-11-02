@@ -3129,7 +3129,8 @@ namespace Classes { namespace fl_text
                 {
                     SPtr<Instances::fl_text::Font> font;
                     asvm.ConstructInstance(font, fontClass, 0, NULL);
-                    font->fontName = font->fontName.GetManager()->CreateString(iter->First.ToCStr(), iter->First.GetSize());
+                    ASString& name = font->fontName;
+                    name.AssignNode(name.GetManager()->CreateStringNode(iter->First.ToCStr(), iter->First.GetSize()));
                     retVal->SA.PushBack(Value(font));
                 }
             }
