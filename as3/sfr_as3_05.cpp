@@ -1874,14 +1874,15 @@ namespace Instances { namespace fl
     }
 
     // @0x14242b1e0
-    // MS2-FUNCTIONAL: written from behaviour (name, then ": " and the message when there is one)
     void Error::toStringProto(ASString& result)
     {
-        result = GetTraits().GetName();
+        {
+            ASString name = GetTraits().GetName();
+            result = name;
+        }
         if (message.GetSize() != 0)
         {
-            String msg(message.ToCStr(), message.GetSize());
-            String text = String(": ") + msg;
+            String text = String(": ") + String(message.ToCStr(), message.GetSize());
             result.Append(text.ToCStr(), strlen(text.ToCStr()));
         }
     }
