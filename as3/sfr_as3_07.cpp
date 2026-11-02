@@ -3399,6 +3399,25 @@ namespace Instances { namespace fl_display
     }
 }}
 
+// Value::Release as the exe inlines it in focusRectGet: one flags load, the kind compared as a KindType and
+// the weak bit tested as a byte.
+struct ValueAssignCopies
+{
+    static __forceinline void Release07(Value& v)
+    {
+        const UInt32 flags = v.Flags;
+        if (static_cast<Value::KindType>(flags & Value::kindMask) > Value::kClassTraits)
+        {
+            if (static_cast<UInt8>(flags >> 9) & 1)
+                v.ReleaseWeakRef();
+            else
+                v.ReleaseInternal();
+        }
+    }
+    static __forceinline void SetBool07(Value& v, bool b) { Release07(v); v.SetKind(Value::kBoolean); v.value = b; }
+    static __forceinline void SetNull07(Value& v) { Release07(v); v.SetKind(Value::kObject); v.value = (Object*)NULL; }
+};
+
 namespace Instances { namespace fl_display
 {
     // MS2-FUNCTIONAL: exe frame carries a /GS cookie around the GetRect temp; logic identical
@@ -3451,7 +3470,6 @@ namespace Instances { namespace fl_display
         pDispObj->Flags &= ~GFx::DisplayObject::Mask_InstanceBasedName;
     }
 
-    // MS2-FUNCTIONAL: inline Value::Release kind test scheduled differently (byte compare in exe); logic identical
     // @0x14244c1b0
     void InteractiveObject::focusRectGet(Value& result)
     {
@@ -3460,10 +3478,10 @@ namespace Instances { namespace fl_display
         if (bits)
         {
             const bool enabled = bits == GFx::InteractiveObject::Mask_TabEnabled;
-            result.SetBool(enabled);
+            ValueAssignCopies::SetBool07(result, enabled);
         }
         else
-            result.SetNull();
+            ValueAssignCopies::SetNull07(result);
     }
 }}
 
