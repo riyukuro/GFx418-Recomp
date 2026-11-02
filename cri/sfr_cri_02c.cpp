@@ -815,77 +815,85 @@ CriBool FUN_140039010(CriMvEasyPlayer* easyPlayer, void* yuvBuffers, void* outpu
     return result;
 }
 
-// MS2-FUNCTIONAL: restores CRI's alternating timestamp-error correction using the frame-rate and state fields it stores.
+// Restore CRI's alternating timestamp-error correction using the frame-rate and state fields it stores.
+// Local names pick the exe's VC9 /Od stack slots (work/vc9/p10/probe): floor = system time / 600 s,
+// final = corrected error, coded = frame unit, extra = error, bound = frame time / 600 s,
+// dest = system ms, inter = period, left = base threshold, fn = frame count, gap = center,
+// leave = result, event = frame ms.
 // @0x1400398a0
 CriSint32 CriMvEasyPlayer::compareFrameTimeFluctuation(CriMvEasyPlayer* easyPlayer,
-    CriMvFrameInfo* frameInfo, CriUint64 count, CriUint64 unit, void*)
+    CriMvFrameInfo* frameInfo, CriUint64 count, CriUint64 unit, void* usrobj)
 {
-    CriSint32* mode = (CriSint32*)((CriUint8*)easyPlayer + 0x3a8);
-    if (*mode == 0)
+    CriUint64 floor;
+    CriFloat32 final;
+    CriUint64 coded;
+    CriFloat32 extra;
+    CriUint64 bound;
+    CriFloat32 dest;
+    CriFloat32 inter;
+    CriUint64 cycles;
+    CriFloat32 left;
+    CriUint64 fn;
+    CriFloat32 gap;
+    CriSint32 leave;
+    CriFloat32 event;
+    if (usrobj == usrobj) {}
+    leave = 0;
+    if (easyPlayer->timer_type == MVEASY_TIMER_NONE)
         return 1;
+    if (easyPlayer->timer_type == MVEASY_TIMER_SYSTEM)
+        left = easyPlayer->compare_frame_prm0;
+    else
+        left = easyPlayer->compare_frame_prm1;
+    gap = left + easyPlayer->compare_frame_prm2 * easyPlayer->compare_frame_prm3;
+    inter = easyPlayer->compare_frame_prm2 * easyPlayer->compare_frame_prm3;
 
-    CriFloat32 base = *(CriFloat32*)((CriUint8*)easyPlayer + (*mode == 1 ? 0x70c : 0x710));
-    CriFloat32 period = *(CriFloat32*)((CriUint8*)easyPlayer + 0x714) *
-                        *(CriFloat32*)((CriUint8*)easyPlayer + 0x718);
-    CriFloat32 center = base + period;
-
-    CriUint64 frameCount = *(CriUint64*)((CriUint8*)frameInfo + 0x28);
-    CriUint64 frameUnit = *(CriUint64*)((CriUint8*)frameInfo + 0x30);
-    CriUint64 frameCycle = frameUnit * 600;
-    CriUint64 systemCycle = unit * 600;
-    CriUint64 frameQuotient = frameCount / frameCycle;
-    CriUint64 systemQuotient = count / systemCycle;
-    CriUint64 adjustedCount = count;
-    if (frameQuotient > 1 && systemQuotient > 1)
+    fn = frameInfo->time;
+    coded = frameInfo->tunit;
+    bound = fn / (coded * 600);
+    floor = count / (unit * 600);
+    if (bound >= 2 && floor >= 2)
     {
-        CriUint64 cycles = (frameQuotient < systemQuotient ? frameQuotient : systemQuotient) - 1;
-        frameCount -= frameCycle * cycles;
-        adjustedCount -= systemCycle * cycles;
+        if (bound <= floor)
+            cycles = bound - 1;
+        else
+            cycles = floor - 1;
+        fn -= coded * 600 * cycles;
+        count -= unit * 600 * cycles;
     }
 
-    CriFloat32 frameCountFloat = (CriFloat32)(CriSint64)frameCount;
-    CriFloat32 frameUnitFloat = (CriFloat32)(CriSint64)frameUnit;
-    CriFloat32 systemCountFloat = (CriFloat32)(CriSint64)adjustedCount;
-    CriFloat32 systemUnitFloat = (CriFloat32)(CriSint64)unit;
-    if ((CriSint64)frameCount < 0) frameCountFloat += 18446744073709551616.0f;
-    if ((CriSint64)frameUnit < 0) frameUnitFloat += 18446744073709551616.0f;
-    if ((CriSint64)adjustedCount < 0) systemCountFloat += 18446744073709551616.0f;
-    if ((CriSint64)unit < 0) systemUnitFloat += 18446744073709551616.0f;
-    CriFloat32 frameTime = frameCountFloat * 1000.0f / frameUnitFloat;
-    CriFloat32 systemTime = systemCountFloat * 1000.0f / systemUnitFloat;
-    CriFloat32 delta = systemTime - frameTime;
-    CriSint32* phase = (CriSint32*)((CriUint8*)easyPlayer + 0x708);
-    if (*phase == 1)
+    event = (CriFloat32)fn * 1000.0f / (CriFloat32)coded;
+    dest = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
+    extra = dest - event;
+    switch (easyPlayer->compare_frame_count)
     {
-        CriFloat32 corrected = systemTime - period - frameTime;
-        if (corrected >= 0.0f)
+    case 1:
+        final = dest - inter - event;
+        if (final >= 0.0f)
         {
-            if (period > corrected)
-                *phase = 2;
-            return 1;
+            leave = 1;
+            if (inter > final)
+                easyPlayer->compare_frame_count = 2;
         }
-        return 0;
-    }
-    if (*phase == 2)
-    {
-        CriFloat32 corrected = systemTime + center - frameTime;
-        if (corrected < 0.0f)
+        break;
+    case 2:
+        final = dest + gap - event;
+        if (final >= 0.0f)
+            leave = 1;
+        else if (final > -inter)
+            easyPlayer->compare_frame_count = 1;
+        break;
+    default:
+        if (extra >= 0.0f)
         {
-            if (-period < corrected)
-                *phase = 1;
-            return 0;
+            leave = 1;
+            if (gap > extra)
+                easyPlayer->compare_frame_count = 2;
         }
-        return 1;
+        else if (extra > inter)
+            easyPlayer->compare_frame_count = 1;
     }
-    if (delta < 0.0f)
-    {
-        if (period < delta)
-            *phase = 1;
-        return 0;
-    }
-    if (delta < center)
-        *phase = 2;
-    return 1;
+    return leave;
 }
 #pragma optimize("", on)
 
