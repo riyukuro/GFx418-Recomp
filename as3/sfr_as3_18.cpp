@@ -3698,7 +3698,6 @@ namespace AS3 {
 } // namespace AS3
 
 // A text field's text directly; other display objects through their "text" / "htmlText" member.
-// MS2-FUNCTIONAL: the exe inlines Value(const ASString&), ours calls it (sfr_as3_15)
 // @0x14250f110
 bool AS3ValueObjectInterface::GetText(void* pdata, GFx::Value* pval, bool isHtml) const
 {
@@ -3712,14 +3711,11 @@ bool AS3ValueObjectInterface::GetText(void* pdata, GFx::Value* pval, bool isHtml
         tr.IsInstanceTraits())
     {
         DisplayObject* dobj = static_cast<Instances::fl_display::DisplayObject*>(pobj)->pDispObj;
-        if (dobj->GetType() == CharacterDef::TextField)
-        {
-            ASString str = reinterpret_cast<TextField*>(dobj)->GetText(isHtml);
-            Value    v(str);
-            root->ASValue2GFxValue(v, pval);
-            return true;
-        }
-        return GetMember(pdata, isHtml ? "htmlText" : "text", pval, true);
+        if (dobj->GetType() != CharacterDef::TextField)
+            return GetMember(pdata, isHtml ? "htmlText" : "text", pval, true);
+        ASString str = reinterpret_cast<TextField*>(dobj)->GetText(isHtml);
+        root->ASValue2GFxValue(Value(str, Value::InlineStr), pval);
+        return true;
     }
     return false;
 }
