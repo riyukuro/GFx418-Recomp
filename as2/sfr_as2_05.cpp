@@ -3529,7 +3529,6 @@ bool MouseCtorFunction::HasOverloadedCursorTypeFunction(ASStringContext* psc) co
     return overloaded;
 }
 
-// MS2-FUNCTIONAL scheduling: the exe stores each matrix element right after the join, ours after the next name load
 // @0x14294b2e0
 Render::Matrix2F MatrixObject::GetMatrix(Environment* penv)
 {
@@ -3537,20 +3536,31 @@ Render::Matrix2F MatrixObject::GetMatrix(Environment* penv)
     ASStringContext* psc = penv->GetSC();
     ObjectInterface& oi = *this;
     Value v;
-    bool found;
 
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("a"), &v);
-    m.Sx() = found ? (float)v.ToNumber(penv) : 1.0f;
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("b"), &v);
-    m.Shy() = found ? (float)v.ToNumber(penv) : 0.0f;
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("c"), &v);
-    m.Shx() = found ? (float)v.ToNumber(penv) : 0.0f;
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("d"), &v);
-    m.Sy() = found ? (float)v.ToNumber(penv) : 1.0f;
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("tx"), &v);
-    m.Tx() = found ? (float)v.ToNumber(penv) : 0.0f;
-    found = oi.GetMemberRaw(psc, psc->CreateConstString("ty"), &v);
-    m.Ty() = found ? (float)v.ToNumber(penv) : 0.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("a"), &v))
+        m.Sx() = (float)v.ToNumber(penv);
+    else
+        m.Sx() = 1.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("b"), &v))
+        m.Shy() = (float)v.ToNumber(penv);
+    else
+        m.Shy() = 0.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("c"), &v))
+        m.Shx() = (float)v.ToNumber(penv);
+    else
+        m.Shx() = 0.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("d"), &v))
+        m.Sy() = (float)v.ToNumber(penv);
+    else
+        m.Sy() = 1.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("tx"), &v))
+        m.Tx() = (float)v.ToNumber(penv);
+    else
+        m.Tx() = 0.0f;
+    if (oi.GetMemberRaw(psc, psc->CreateConstString("ty"), &v))
+        m.Ty() = (float)v.ToNumber(penv);
+    else
+        m.Ty() = 0.0f;
     return m;
 }
 
