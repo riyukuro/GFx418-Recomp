@@ -1494,6 +1494,13 @@ namespace Instances { namespace fl
         return newXMLList(itr);
     }
 
+    // XMLList::MakeInstance(tgt_obj, tgt_prop, tgt_ns) (SDK member), expanded in place as the exe does.
+    static SF_INLINE Pickable<XMLList> MakeListLike(XMLList& self, AS3::Object& obj, const ASString& name, Instances::Namespace& ns)
+    {
+        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(self.GetInstanceTraits());
+        return itr.MakeInstance(itr, obj, name, ns);
+    }
+
     // A new list of the XMLList class whose target is name of obj.
     static SF_INLINE Pickable<XMLList> MakeTargetList(AS3::Object& obj, const ASString& name, Instances::Namespace& ns)
     {
@@ -1627,15 +1634,19 @@ namespace Instances { namespace fl
         GetAttributes(*list);
     }
 
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: the exe sees the body of InstanceTraits::fl::XMLList::MakeInstance (0x14241b010, defined in sfr_as3_04)
+    // in the same TU, so cl keeps the ASString node and list in registers across the call; matches once it is visible here
     // @0x1423f71f0
     void XMLList::AS3attributes(SPtr<XMLList>& result)
     {
-        result = newXMLListLike(*this);
-        XMLList& list = *result;
+        Pickable<XMLList> list = newXMLListLike(*this);
+        result = list;
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
-            List[i]->GetAttributes(list);
+        {
+            XML* xml = List[i];
+            xml->GetAttributes(*list);
+        }
     }
 
     // @0x1423f7560
@@ -1661,7 +1672,7 @@ namespace Instances { namespace fl
     }
 
     // The children named propertyName (in the public namespace) of every item.
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7710
     void XMLList::AS3child(SPtr<XMLList>& result, const Value& propertyName)
     {
@@ -1713,7 +1724,7 @@ namespace Instances { namespace fl
     }
 
     // The children of every item (GetProperty with the any-name, inlined).
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7ae0
     void XMLList::AS3children(SPtr<XMLList>& result)
     {
@@ -1742,28 +1753,32 @@ namespace Instances { namespace fl
     }
 
     // A new list targeting this node of its comment children.
-    // MS2-FUNCTIONAL: register allocation only (the exe keeps the null-string node in rbp across MakeInstance)
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU, so the null-string node is reloaded after it (see XMLList::AS3attributes)
     // @0x1423f7cd0
     __declspec(noinline) void XML::AS3comments(SPtr<XMLList>& result)
     {
-        result = MakeTargetList(*this, GetVM().GetStringManager().CreateNullString(), GetVM().GetPublicNamespace());
-        GetChildren(*result, kComment);
+        Pickable<XMLList> list = MakeTargetList(*this, GetVM().GetStringManager().CreateNullString(), GetVM().GetPublicNamespace());
+        result = list;
+        GetChildren(*list, kComment);
     }
 
     // A new list targeting this list of the comment children of the element items.
-    // MS2-FUNCTIONAL: register allocation (the exe keeps the null-string node in rdi across MakeInstance)
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f7db0
     void XMLList::AS3comments(SPtr<XMLList>& result)
     {
-        VM& vm = GetVM();
-        InstanceTraits::fl::XMLList& itr = static_cast<InstanceTraits::fl::XMLList&>(GetInstanceTraits());
-        result = itr.MakeInstance(itr, *this, vm.GetStringManager().CreateNullString(), vm.GetPublicNamespace());
+        result = MakeListLike(*this, *this, GetVM().GetStringManager().CreateNullString(), GetVM().GetPublicNamespace());
         const UPInt size = List.GetSize();
         for (UPInt i = 0; i < size; ++i)
         {
-            XML* x = List[i];
-            if (x->GetKind() == XML::kElement)
-                result->List.Append(x->AS3comments()->List);  // XMLList::Append (0x142404ec0), inlined
+            XML* xml = List[i];
+            if (xml->GetKind() == XML::kElement)
+            {
+                SPtr<XMLList> r = xml->AS3comments();
+                UPInt eltSize = r->List.GetSize();
+                if (eltSize > 0)
+                    result->List.Append(&r->List[0], eltSize);
+            }
         }
     }
 
@@ -1819,7 +1834,7 @@ namespace Instances { namespace fl
     }
 
     // The descendants named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f8840
     void XMLList::AS3descendants(Value& result, unsigned argc, const Value* argv)
     {
@@ -1846,7 +1861,7 @@ namespace Instances { namespace fl
     }
 
     // The element children named argv[0] ("*" without arguments) of every item.
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423f8ce0
     void XMLList::AS3elements(Value& result, unsigned argc, const Value* argv)
     {
@@ -2311,7 +2326,7 @@ namespace Instances { namespace fl
     }
 
     // The processing-instruction children (named argv[0] if given) of every item.
-    // MS2-FUNCTIONAL: register allocation and layout around the inlined MakeXMLListInstance
+    // MS2-FUNCTIONAL: MakeInstance (0x14241b010) is not visible in this TU (see XMLList::AS3attributes)
     // @0x1423fcfc0
     void XMLList::AS3processingInstructions(Value& result, unsigned argc, const Value* argv)
     {
