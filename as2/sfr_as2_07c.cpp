@@ -62,9 +62,11 @@ SF_FORCEINLINE void BroadcastToIme(Environment* penv, const char* pevent, const 
                         else
                             penv->Push(Value::NULLTYPE);
                     }
+                    int            top = penv->GetTopIndex();
+                    GlobalContext* pgc = psc->pContext;
                     AsBroadcaster::BroadcastMessage(penv, pime,
-                                                    psc->pContext->GetStringManager()->CreateConstString(pevent),
-                                                    HasString ? 1 : 0, penv->GetTopIndex());
+                                                    pgc->GetStringManager()->CreateConstString(pevent),
+                                                    HasString ? 1 : 0, top);
                     if (HasString)
                         penv->Drop(1);
                 }
