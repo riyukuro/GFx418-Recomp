@@ -2597,12 +2597,9 @@ void AvmInteractiveObj::OnFocus(InteractiveObject::FocusEventType event, Interac
     SF_UNUSED(fmt);
     if (!pAS3RawPtr && !pAS3CollectiblePtr)
         return;
-    const char* type = "focusIn";
-    if (event == InteractiveObject::KillFocus)
-        type = "focusOut";
-    Instances::fl_display::DisplayObject* related = NULL;
-    if (oldOrNewFocusCh)
-        related = ToAvmInteractiveObj(oldOrNewFocusCh)->GetAS3Obj();
+    const char* type = (event == InteractiveObject::KillFocus) ? "focusOut" : "focusIn";
+    Instances::fl_display::DisplayObject* related =
+        oldOrNewFocusCh ? ToAvmInteractiveObj(oldOrNewFocusCh)->GetAS3Obj() : NULL;
     Instances::fl_display::DisplayObject* as3obj = GetAS3Obj();
     SPtr<Instances::fl_events::FocusEvent> evt =
         as3obj->CreateFocusEventObject(Sfr34_AS3Root(this)->GetStringManager418()->CreateConstString(type),
@@ -5243,6 +5240,14 @@ static inline AvmDisplayObjContainer* Sfr34_ToAvmContainer(DisplayObject* p)
     return static_cast<AvmDisplayObjContainer*>(p->GetAvmObjImpl()->ToAvmDispContainerBase());
 }
 
+// The AS3 container part of the stage, NULL for none (the SDK's ToAvmDisplayObjContainer).
+static inline AvmDisplayObjContainer* Sfr34_ToAvmStage(DisplayObject* p)
+{
+    if (!p)
+        return NULL;
+    return static_cast<AvmDisplayObjContainer*>(p->GetAvmObjImpl()->ToAvmDispContainerBase());
+}
+
 // MovieRoot's KeyboardState::IListener::OnKeyDown/OnKeyUp: the key event to the AS3 object of the focused
 // character (of the stage when there is none), unless the keyboard's focus group is in keyMask (a text field
 // handles its own keys). self is the listener part (+0x38) of the root.
@@ -5256,13 +5261,12 @@ static __forceinline void Sfr34_OnKey(UPInt self, const EventId& evt, int keyMas
     {
         Instances::fl_display::DisplayObject* as3obj =
             focused ? ToAvmInteractiveObj(focused)->GetAS3Obj()
-                    : Sfr34_ToAvmContainer(root->pStage)->GetAS3Obj();
+                    : Sfr34_ToAvmStage(root->pStage)->GetAS3Obj();
         if (as3obj)
             as3obj->Dispatch(evt, focused);
     }
 }
 
-// MS2-FUNCTIONAL free function on the listener subobject this (MovieRoot's IListener base is not modeled)
 // @0x14251a1e0
 void FUN_14251a1e0(UPInt self, InteractiveObject* pmovie, const EventId& evt, int keyMask)
 {
@@ -5270,7 +5274,6 @@ void FUN_14251a1e0(UPInt self, InteractiveObject* pmovie, const EventId& evt, in
     Sfr34_OnKey(self, evt, keyMask);
 }
 
-// MS2-FUNCTIONAL free function on the listener subobject this (MovieRoot's IListener base is not modeled)
 // @0x14251a3b0
 void FUN_14251a3b0(UPInt self, InteractiveObject* pmovie, const EventId& evt, int keyMask)
 {
