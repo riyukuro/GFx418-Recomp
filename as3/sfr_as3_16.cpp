@@ -1471,44 +1471,48 @@ SlotInfo& Traits::AddSetSlot(RelativeIndex ind, const ASString& name, Pickable<c
 }
 
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also skips a redundant 5-bit mask of the attributes).
+// build differently (it also stores the flag word earlier).
 // @0x1424e9670
 AbsoluteIndex Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, VMAbcFile& file,
                               const Abc::TraitInfo& ti, bool const_)
 {
-    return Add(name, SlotInfo(ns, file, ti, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) | SlotInfo::aDontEnum,
-                              name.GetNode()));
+    int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
+
+    return Add(name, SlotInfo(ns, file, ti, attr, name.GetNode()));
 }
 
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also skips a redundant 5-bit mask of the attributes).
+// build differently (it also stores the flag word earlier).
 // @0x1424e9740
 void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
                      SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
 {
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
-                                                             SlotInfo::aDontEnum, name.GetNode()));
+    int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
+
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode()));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also skips a redundant 5-bit mask of the attributes).
+// build differently (it also stores the flag word earlier).
 // @0x1424e9830
 void Traits::AddSlot(const ASString& name, Pickable<const Instances::Namespace> ns, SlotInfo::BindingType dt,
                      AbsoluteIndex offset, bool const_)
 {
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, NULL, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
-                                                             SlotInfo::aDontEnum, name.GetNode()));
+    int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
+
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, NULL, attr, name.GetNode()));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also skips a redundant 5-bit mask of the attributes).
+// build differently (it also stores the flag word earlier).
 // @0x1424e9910
 void Traits::AddSlot(const MemberInfo& mi)
 {
     VM& vm = GetVM();
-    const int attr = SlotInfo::aDontEnum | SlotInfo::aCppBinding | (mi.Const ? SlotInfo::aReadOnly : SlotInfo::aNone);
+    int attr = (mi.Const != 0) ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
+    attr |= SlotInfo::aCppBinding;
     ASString name = vm.GetStringManager().CreateConstString(mi.Name);
 
     const AbsoluteIndex ind =
@@ -1518,14 +1522,15 @@ void Traits::AddSlot(const MemberInfo& mi)
 }
 
 // MS2-FUNCTIONAL: same operations; the exe allocates registers and schedules the inlined SlotInfo bit-field
-// build differently (it also skips a redundant 5-bit mask of the attributes).
+// build differently (it also stores the flag word earlier).
 // @0x1424e9a50
 void Traits::AddSlotCPP(const ASString& name, Pickable<const Instances::Namespace> ns, const ClassTraits::Traits* tr,
                         SlotInfo::BindingType dt, AbsoluteIndex offset, bool const_)
 {
-    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, (const_ ? SlotInfo::aReadOnly : SlotInfo::aNone) |
-                                                             SlotInfo::aDontEnum | SlotInfo::aCppBinding,
-                                                 name.GetNode()));
+    int attr = const_ ? (SlotInfo::aDontEnum | SlotInfo::aReadOnly) : SlotInfo::aDontEnum;
+    attr |= SlotInfo::aCppBinding;
+
+    const AbsoluteIndex ind = Add(name, SlotInfo(ns, tr, attr, name.GetNode()));
     GetOwnSlotInfo(ind).Bind(dt, offset);
 }
 
@@ -2036,43 +2041,37 @@ Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::Instances::Namespace>::operator=(
 
 
 // ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::ClearAndRelease.
-// MS2-FUNCTIONAL: releases pages last-first and destroys each occupied CallFrame; only register allocation differs.
+struct Sfr16CallFramePages
+{
+    void* Pad00;
+    Scaleform::UPInt Size;      // +0x08
+    Scaleform::UPInt NumPages;  // +0x10
+    Scaleform::UPInt MaxPages;  // +0x18
+    Scaleform::GFx::AS3::CallFrame** Pages; // +0x20
+};
 // @0x1424dc8e0
 void FUN_1424dc8e0(void* self)
 {
-    auto* bytes = static_cast<unsigned char*>(self);
-    auto numPages = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10);
-    if (numPages)
+    using Scaleform::UPInt;
+    using Scaleform::GFx::AS3::CallFrame;
+    Sfr16CallFramePages* a = static_cast<Sfr16CallFramePages*>(self);
+    if (a->NumPages)
     {
-        const auto size = *reinterpret_cast<Scaleform::UPInt*>(bytes + 8);
-        const Scaleform::UPInt fullPages = size >> 6;
-        auto** page = *reinterpret_cast<void***>(bytes + 0x20) + numPages - 1;
-        do
+        CallFrame** blk = a->Pages + a->NumPages - 1;
+        const UPInt numDataPages = (a->Size > 0 ? a->Size >> 6 : 0);
+        while (a->NumPages--)
         {
-            const Scaleform::UPInt index = numPages - 1;
-            *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = index;
-            Scaleform::UPInt used = index < fullPages ? 0x40 : (index == fullPages ? size & 0x3f : 0);
-            auto* frame = static_cast<unsigned char*>(*page) + used * 0xa8;
-            while (used)
-            {
-                frame -= 0xa8;
-                reinterpret_cast<Scaleform::GFx::AS3::CallFrame*>(frame)->~CallFrame();
-                --used;
-            }
-            auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-            reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(Scaleform::Memory::pGlobalHeap, *page);
-            numPages = *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10);
-            --page;
-        } while (numPages);
-        *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = static_cast<Scaleform::UPInt>(-1);
-        auto** heapVtable = *reinterpret_cast<void***>(Scaleform::Memory::pGlobalHeap);
-        reinterpret_cast<void (*)(void*, void*)>(heapVtable[12])(
-            Scaleform::Memory::pGlobalHeap, *reinterpret_cast<void**>(bytes + 0x20));
+            const UPInt freeCount = (a->NumPages < numDataPages ? 64 : (a->NumPages == numDataPages ? (a->Size & 63) : 0));
+            CallFrame* p = *blk + freeCount - 1;
+            for (UPInt i = 0; i < freeCount; ++i, --p)
+                p->~CallFrame();
+            Scaleform::Memory::pGlobalHeap->Free(*blk);
+            --blk;
+        }
+        Scaleform::Memory::pGlobalHeap->Free(a->Pages);
     }
-    *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x18) = 0;
-    *reinterpret_cast<Scaleform::UPInt*>(bytes + 0x10) = 0;
-    *reinterpret_cast<Scaleform::UPInt*>(bytes + 8) = 0;
-    *reinterpret_cast<void**>(bytes + 0x20) = 0;
+    a->Size = a->NumPages = a->MaxPages = 0;
+    a->Pages = 0;
 }
 
 // Releases an owned ArrayPOD allocation before clearing the wrapper's pointer and owner flag.
