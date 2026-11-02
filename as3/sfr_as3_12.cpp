@@ -71,15 +71,15 @@ void FUN_1424a9ed0(void* pdata)
 }
 
 // @0x1424a9f40
-// MS2-FUNCTIONAL: releases both strings of every live Hash<String, String> slot (SizeMask + 1 slots of 0x20 bytes after
+// Releases both strings of every live Hash<String, String> slot (SizeMask + 1 slots of 0x20 bytes after
 // the table header), marks it empty, and frees the table.
 void FUN_1424a9f40(void* ptable)
 {
     CX18StringPairTable** table = (CX18StringPairTable**)ptable;
     if (!*table)
         return;
-    Scaleform::UPInt count = (*table)->SizeMask + 1;
-    for (Scaleform::UPInt i = 0; i < count; ++i)
+    Scaleform::UPInt count = (*table)->SizeMask;
+    for (Scaleform::UPInt i = 0; i <= count; ++i)
     {
         CX18StringPairEntry* slot = &(*table)->Entries[i];
         if (slot->NextInChain == -2)
@@ -88,7 +88,8 @@ void FUN_1424a9f40(void* ptable)
         slot->First.~String();
         slot->NextInChain = -2;
     }
-    Scaleform::Memory::GetGlobalHeap()->Free(*table);
+    if (*table)
+        Scaleform::Memory::GetGlobalHeap()->Free(*table);
     *table = 0;
 }
 
@@ -108,8 +109,10 @@ void FUN_1424aa0f0(void* pfmt)
     fmt->FontList.~StringDH();
 }
 
+namespace Scaleform { namespace GFx { namespace AS2 { extern const void* DAT_14316afc0[]; } } }
+
 // @0x1424aa770
-// MS2-FUNCTIONAL: releases the CSS holder's StyleSheet SPtr (a collectable object) and URL array, then performs the
+// Releases the CSS holder's StyleSheet SPtr (a collectable object) and URL array, then performs the
 // requested sized delete.
 void* FUN_1424aa770(void* self, unsigned flags)
 {
@@ -121,19 +124,31 @@ void* FUN_1424aa770(void* self, unsigned flags)
         else
             ((const Scaleform::GFx::AS3::GASRefCountBase*)ref)->Release();
     }
+    *(const void**)self = Scaleform::GFx::AS2::DAT_14316afc0;
     FUN_1424a9ed0((unsigned char*)self + 8);
     if (flags & 1)
-        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    {
+        if (!(flags & 4))
+            Scaleform::Memory::GetGlobalHeap()->Free(self);
+        else
+            ::operator delete(self, 0x48);
+    }
     return self;
 }
 
 // @0x1424aa810
-// MS2-FUNCTIONAL: tears down the URL array and conditionally releases the CSSHolderBase allocation.
+// Tears down the URL array and conditionally releases the CSSHolderBase allocation.
 void* FUN_1424aa810(void* self, unsigned flags)
 {
+    *(const void**)self = Scaleform::GFx::AS2::DAT_14316afc0;
     FUN_1424a9ed0((unsigned char*)self + 8);
     if (flags & 1)
-        Scaleform::Memory::GetGlobalHeap()->Free(self);
+    {
+        if (!(flags & 4))
+            Scaleform::Memory::GetGlobalHeap()->Free(self);
+        else
+            ::operator delete(self, 0x40);
+    }
     return self;
 }
 
