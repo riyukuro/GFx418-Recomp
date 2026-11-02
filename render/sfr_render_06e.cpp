@@ -602,7 +602,7 @@ void PrimitiveBundle::CheckMatrixConsistency()
     for (unsigned i = 0; i < count; i++)
     {
         TreeCacheNode* node = Entries[i]->pSourceNode;
-        Matrix2F       m    = node->pNode ? node->GetNodeData()->M2D() : Matrix2F::Identity;
+        Matrix2F       m    = !node->pNode ? Matrix2F::Identity : node->GetNodeData()->M2D();
         for (TreeCacheNode* parent = node->GetParent(); parent; parent = parent->GetParent())
             m.Append(parent->GetNodeData()->M2D());
     }
