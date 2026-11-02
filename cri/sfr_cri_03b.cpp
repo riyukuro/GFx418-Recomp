@@ -769,14 +769,14 @@ CriSint32 criSjUni_CalculateWorkSize(const CriSint32* config)
     return base + config[2] * 0x20 + 8;
 }
 
-// MS2-FUNCTIONAL: calculate the demux work area from its two unified-joint pools and output records.
+// Calculates the demux work area from its two unified-joint pools and output records (criSjUni_CalculateWorkSize called as the external).
 // @0x140044eb0
 CriSint32 criUsfDmx_CalculateWorkSizeWithWork(CriSint32 outputCount)
 {
     CriSint32 config[3] = { 1, 0, 0x80 };
-    CriSint32 inputBytes = (criSjUni_CalculateWorkSize(config) + 7) / 8 * 8;
+    CriSint32 inputBytes = (FUN_140045910(config) + 7) / 8 * 8;
     config[2] = 0x80;
-    CriSint32 outputUnits = (criSjUni_CalculateWorkSize(config) + 7) / 8;
+    CriSint32 outputUnits = (FUN_140045910(config) + 7) / 8;
     CriSint32 recordUnits = (outputCount * 0x10 + 0x17) / 8;
     return inputBytes + (outputUnits + recordUnits) * 8 + 0x48;
 }
