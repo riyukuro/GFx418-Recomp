@@ -18,6 +18,7 @@ namespace Scaleform {
 
 // "a" followed by the text of s. 0x1424e0e50
 String operator+(const char* a, const GFx::ASString& s);
+static inline String operator+(const char* left, const String& right) { return String(left, right.ToCStr(), NULL); }
 
 namespace GFx { namespace AS3 {
 
@@ -131,10 +132,11 @@ String AsString(const Abc::ConstPool& cp, const Abc::ClassTable& classes, int in
     result += AsStringFlag(inst) + AsString(cp, name);
 
     if (inst.super_name_ind != 0)
-        result += String(" extends ", AsString(cp, cp.const_multiname[inst.super_name_ind]).ToCStr(), NULL);
+    {
+        result += " extends " + AsString(cp, cp.const_multiname[inst.super_name_ind]);
+    }
 
-    const UPInt count = inst.implemented_interfaces.info.GetSize();
-    if (count != 0)
+    if (inst.implemented_interfaces.info.GetSize() > 0)
     {
         result.AppendString(" implements ");
         for (unsigned i = 0; i < inst.implemented_interfaces.info.GetSize(); ++i)
@@ -166,18 +168,23 @@ String AsString(const Abc::ConstPool& cp, const Abc::MethodInfo& mi)
             result.AppendString(":");
         }
 
-        result += AsString(cp, cp.GetMultiname(mi.ParamTypes[i]));
+        const unsigned type = mi.ParamTypes[i];
+        result += AsString(cp, type == 0 ? cp.AnyType : cp.GetMultiname(type));
 
         if (mi.HasOptionalParams())
         {
-            const UPInt firstOpt = mi.ParamTypes.GetSize() - mi.OptionalParams.GetSize();
-            if (i >= firstOpt)
-                result += String(" = ", AsString(cp, mi.OptionalParams[i - firstOpt]).ToCStr(), NULL);
+            const UPInt count = mi.ParamTypes.GetSize();
+            const UPInt optCount = mi.OptionalParams.GetSize();
+            if (i >= count - optCount)
+            {
+                result += " = " + AsString(cp, mi.OptionalParams[optCount - count + i]);
+            }
         }
     }
 
     result.AppendString(") : ");
-    result += AsString(cp, cp.GetMultiname(mi.RetTypeInd));
+    // The exe's return-type getter was folded onto TraitInfo::GetName: both read the index at +4.
+    result += AsString(cp, reinterpret_cast<const Abc::TraitInfo&>(mi).GetName(cp));
     return result;
 }
 
@@ -191,7 +198,8 @@ String AsString(const Abc::ConstPool& cp, const Abc::Multiname& mn)
     case Abc::MNF_QNameA:
     {
         String result;
-        const Abc::NamespaceInfo& ns = mn.Ind == 0 ? cp.any_namespace : cp.ConstNamespace[mn.Ind];
+        const SPInt ind = mn.Ind;
+        const Abc::NamespaceInfo& ns = ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
         result += AsString(ns, nsKindAndUri);
         if (!result.IsEmpty())
             result.AppendString("::");
@@ -205,6 +213,9 @@ String AsString(const Abc::ConstPool& cp, const Abc::Multiname& mn)
         const StringDataPtr name = cp.GetString(static_cast<UInt32>(mn.NameIndex));
         return String(name.ToCStr(), name.GetSize());
     }
+    case Abc::MNF_RTQNameL:
+    case Abc::MNF_RTQNameLA:
+        return String("");
     case Abc::MNF_Multiname:
     case Abc::MNF_MultinameA:
     {
@@ -216,9 +227,6 @@ String AsString(const Abc::ConstPool& cp, const Abc::Multiname& mn)
         result.AppendString(name.ToCStr(), name.GetSize());
         return result;
     }
-    case Abc::MNF_RTQNameL:
-    case Abc::MNF_RTQNameLA:
-        return String("");
     case Abc::MNF_MultinameL:
     case Abc::MNF_MultinameLA:
         return AsString(cp, cp.const_ns_set[mn.Ind], nsKindAndUri);
@@ -305,6 +313,9 @@ String AsString(const Multiname& mn, NamespaceText nt)
     case Abc::MNF_RTQName:
     case Abc::MNF_RTQNameA:
         return AsString(mn.Name);
+    case Abc::MNF_RTQNameL:
+    case Abc::MNF_RTQNameLA:
+        return String("");
     case Abc::MNF_Multiname:
     case Abc::MNF_MultinameA:
     {
@@ -316,9 +327,6 @@ String AsString(const Multiname& mn, NamespaceText nt)
         result += AsString(mn.Name);
         return result;
     }
-    case Abc::MNF_RTQNameL:
-    case Abc::MNF_RTQNameLA:
-        return String("");
     case Abc::MNF_MultinameL:
     case Abc::MNF_MultinameLA:
         return AsString(*static_cast<const NamespaceSet*>(mn.Obj.GetPtr()));
@@ -334,21 +342,25 @@ String AsString(const Instances::Namespace& ns, NamespaceText nt)
     const ASString uri = ns.GetUri();
     String suri(uri.ToCStr(), uri.GetSize());
 
-    if (nt == nsKindAndUri)
-        return String(AsString(ns.GetKind())) + (suri.IsEmpty() ? String() : String(" ", suri.ToCStr(), NULL));
-
-    if (nt == nsUriOrAccess || nt == nsUriOnly)
+    switch (nt)
     {
+    case nsUriOrAccess:
+    case nsUriOnly:
         switch (ns.GetKind())
         {
+        default:                        return String(suri);
+        case Abc::NS_Public:            return String(suri);
+        case Abc::NS_PackageInternal:   return String("internal");
         case Abc::NS_Protected:         return String("protected");
         case Abc::NS_StaticProtected:   return String("static protected");
         case Abc::NS_Private:           return String("private");
-        case Abc::NS_PackageInternal:   return String("internal");
-        default:                        return String(suri);
+        case Abc::NS_Explicit:          return String(suri);
         }
+    default:
+        return String();
+    case nsKindAndUri:
+        return String(AsString(ns.GetKind())) + (suri.IsEmpty() ? String() : " " + suri);
     }
-    return String();
 }
 
 // A constant pool namespace.
