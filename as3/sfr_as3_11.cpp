@@ -196,7 +196,15 @@ namespace Scaleform { namespace Render
 // Vector.<Number> element write (Matrix3D rawData/transformVectors); the other element types are in sfr_as3_21.
 namespace Scaleform { namespace GFx { namespace AS3
 {
-    // MS2-FUNCTIONAL: written from the SInt32 instance with Resize inlined by hand; register/frame allocation differs
+    // The Number vector's array data (protected in ArrayBase), for the out-of-line Resize below.
+    struct Sfr11NumberValues : VectorBase<Value::Number>::ValuesType
+    {
+        typedef ArrayDataDH<Value::Number, AllocatorDH<Value::Number, 2>, ArrayDefaultPolicy> DataType;
+        static DataType& GetData(VectorBase<Value::Number>::ValuesType& v) { return v.*&Sfr11NumberValues::Data; }
+    };
+
+    // MS2-FUNCTIONAL: CheckFixed and Resize are called out of line as in the exe; the range test differs: the exe keeps
+    // the 32-bit size in eax for the error argument, ours reloads it in the throw block
     // @0x1424864c0
     template <>
     __declspec(noinline) CheckResult VectorBase<Value::Number>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
@@ -209,12 +217,20 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
         if (ind == (UInt32)V.GetSize())
         {
-            if (!CheckFixed())
+            const UPInt size = ind + 1;
+            bool ok = false;
+            CheckResult (ArrayBase::*checkFixed)() const = &ArrayBase::CheckFixed;
+            if ((this->*checkFixed)())
+            {
+                UPInt i = V.GetSize();
+                void (Sfr11NumberValues::DataType::*resize)(UPInt) = &Sfr11NumberValues::DataType::Resize;
+                (Sfr11NumberValues::GetData(V).*resize)(size);
+                for (; i < size; ++i)
+                    V[i] = 0;
+                ok = true;
+            }
+            if (!ok)
                 return false;
-            UPInt i = V.GetSize();
-            V.Resize(ind + 1);
-            for (; i < ind + 1; ++i)
-                V[i] = 0;
         }
         Value r;
         if (!CheckCoerce(tr, v, r))
