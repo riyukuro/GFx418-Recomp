@@ -125,6 +125,7 @@ public:
     int         RefCount;   // +0x00
     const void* pObject;    // +0x08
 
+    WeakProxy() {} // Value::MakeWeakRef (sfr_as3_18) fills RefCount and pObject itself
     WeakProxy(const void* pobj) : RefCount(1), pObject(pobj) {}
 
     void AddRef()               { ++RefCount; }
