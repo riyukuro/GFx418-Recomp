@@ -7,7 +7,8 @@
 // MS2-UNIT: sfr_cri_03
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x14003b6e0-0x14003cff0 .text$mn
+// MS2-RANGE: 0x14003b6e0-0x14003c390 .text$mn
+// MS2-RANGE: 0x14003c8d0-0x14003cff0 .text$mn
 // MS2-RANGE: 0x14003d4b0-0x14003ed40 .text$mn
 // MS2-RANGE: 0x14003eeb0-0x140042700 .text$mn
 // MS2-RANGE: 0x1400427b0-0x140044e84 .text$mn
@@ -917,113 +918,6 @@ CriBool createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height,
     FUN_14004e2f0((__int64)mpv, 1, 0);
     FUN_14004ff90((__int64)mpv, (unsigned __int64)((void*)crivmpv_ErrorFunc), NULL);
     return 1;
-}
-
-// MS2-FUNCTIONAL: build a VMPV handle with its decoder instance, frame pool, and stream joints.
-// Stays DIFF: the exe is /TC codegen (call results parked in r11 before each store), which C++ doesn't emit.
-// @0x14003c390
-void* criVmpv_Create(void* heap, const CriUint32* config)
-{
-    if (!heap)
-        return NULL;
-    CriUint32 width, height, requestedFrames, optionA, optionB;
-    CriUint64* config64 = (CriUint64*)config;
-    memcpy(&width, config, sizeof(width));
-    memcpy(&height, config + 1, sizeof(height));
-    memcpy(&requestedFrames, config + 4, sizeof(requestedFrames));
-    memcpy(&optionA, config + 8, sizeof(optionA));
-    memcpy(&optionB, config + 9, sizeof(optionB));
-    void* source = NULL;
-    memcpy(&source, config64 + 3, sizeof(source));
-
-    CriUint8* handle = (CriUint8*)criHeap_AllocFix((CriHeap)heap, 600, "CriVmpv: HnObj", 4);
-    if (!handle)
-    {
-        FUN_140041110(NULL, "E05070701M : Can't allocate vmpv handle object memory.", 600);
-        return NULL;
-    }
-    memset(handle, 0, 600);
-    memcpy(handle + 0x10, &heap, sizeof(heap));
-    if (!createMpvHn(handle, heap, width, height, requestedFrames))
-    {
-        criVmpv_Destroy(handle);
-        return NULL;
-    }
-    void* outputJoint = criSj_CreateUniversal(heap, 0, 0x20);
-    memcpy(handle + 0x180, &outputJoint, sizeof(outputJoint));
-    if (!outputJoint)
-    {
-        crivmpv_occurFatalError(NULL, "E05070702M : Can't create SJ for input video.", 0);
-        criVmpv_Destroy(handle);
-        return NULL;
-    }
-    CriUint32 frameCount = (CriUint32)decideInternalFramePoolNum((CriSint32)requestedFrames);
-    memcpy(handle + 0x28, &width, sizeof(width));
-    memcpy(handle + 0x2c, &height, sizeof(height));
-    memcpy(handle + 0x30, &frameCount, sizeof(frameCount));
-    CriUint32 poolBase;
-    memcpy(&poolBase, &DAT_143b27c60, sizeof(poolBase));
-    memcpy(handle + 0x34, &poolBase, sizeof(poolBase));
-    CriUint32 format = 0x7512;
-    memcpy(handle + 0x38, &format, sizeof(format));
-    memcpy(handle + 0x3c, &frameCount, sizeof(frameCount));
-    CriUint32 paddedWidth = (width + 0x0f) & ~0x0f;
-    CriUint32 paddedHeight = (height + 0x1f) & ~0x1f;
-    CriUint32 frameBytes = (((paddedWidth + 0x7f) & ~0x7f) * paddedHeight) +
-                           (((paddedWidth / 2 + 0x7f) & ~0x7f) * (paddedHeight / 2)) * 2;
-    memcpy(handle + 0x40, &frameBytes, sizeof(frameBytes));
-    CriUint32 frameRecordBytes = 200;
-    memcpy(handle + 0x50, &frameRecordBytes, sizeof(frameRecordBytes));
-
-    size_t recordsBytes = (size_t)frameRecordBytes * frameCount;
-    CriUint8* records = (CriUint8*)criHeap_AllocFix((CriHeap)heap, (CriSint32)recordsBytes,
-                                                 "CriVmpv: FrmPoolInfoAry", 4);
-    memcpy(handle + 0x48, &records, sizeof(records));
-    if (!records)
-    {
-        FUN_140041110(NULL, "E05092801M : Can't allocate frame pool info array memory.",
-                      (CriUint32)recordsBytes);
-        criVmpv_Destroy(handle);
-        return NULL;
-    }
-    memset(records, 0, recordsBytes);
-    for (CriUint32 i = 0; i < frameCount; ++i)
-    {
-        CriUint8* frame = (CriUint8*)criHeap_AllocFix((CriHeap)heap, (CriSint32)frameBytes,
-                                                   "CriVmpv: FrmPoolBuf", 0x800);
-        memcpy(records + (size_t)i * frameRecordBytes, &frame, sizeof(frame));
-        if (!frame)
-        {
-            FUN_140041110(NULL, "E05070902M : Can't allocate frame pool memory.", frameBytes);
-            criVmpv_Destroy(handle);
-            return NULL;
-        }
-        memcpy(records + (size_t)i * frameRecordBytes + 8, &frameBytes, sizeof(frameBytes));
-    }
-    void* frameJoint = criSj_CreateUniversal(heap, 0, frameCount);
-    memcpy(handle + 0x58, &frameJoint, sizeof(frameJoint));
-    if (!frameJoint)
-    {
-        crivmpv_occurFatalError(NULL, "E05070903M : Can't create frame pool SJ.", 0);
-        criVmpv_Destroy(handle);
-        return NULL;
-    }
-
-    if (source)
-    {
-        void* decoder = (void*)FUN_14004fe20((unsigned __int64)source, optionA, optionB);
-        memcpy(handle + 0x220, &decoder, sizeof(decoder));
-    }
-    memcpy(handle + 0x228, &source, sizeof(source));
-    memcpy(handle + 0x230, &optionA, sizeof(optionA));
-    memcpy(handle + 0x234, &optionB, sizeof(optionB));
-    CriSint32 zero = 0;
-    memcpy(handle + 0x238, &zero, sizeof(zero));
-    memcpy(handle + 0x23c, &zero, sizeof(zero));
-    memcpy(handle + 0x18, &zero, sizeof(zero));
-    CriSint32 active = 1;
-    memcpy(handle + 8, &active, sizeof(active));
-    return handle;
 }
 #pragma optimize("", on)
 

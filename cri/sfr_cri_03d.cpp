@@ -1,6 +1,6 @@
-// Recovered CRI Movie helpers from MapleStory2.exe, written from the executable's behavior: the three functions of the
+// Recovered CRI Movie helpers from MapleStory2.exe, written from the executable's behavior: the four functions of the
 // /Od criMvPly objs whose exe objs were compiled as C. VS2008 /Od keeps a value loaded after a call in r11 when it
-// compiles C and in rax when it compiles C++ (FUN_14003cff0 also takes its switch temp through r11b), and these three
+// compiles C and in rax when it compiles C++ (FUN_14003cff0 also takes its switch temp through r11b), and these four
 // only byte-match as C. The rest of those objs is in sfr_cri_03, which
 // can't be C (cri_movie.h is C++). This unit is C (MS2-TOOLSET: vc9c, the VS2008 SP1 cl with /TC,
 // cmake/ms2-unit-profiles.cmake): no headers, C89 declarations at the top of each block, and the parameter types of
@@ -8,6 +8,7 @@
 // MS2-UNIT: sfr_cri_03d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x14003c390-0x14003c8d0 .text$mn
 // MS2-RANGE: 0x14003cff0-0x14003d4b0 .text$mn
 // MS2-RANGE: 0x14003ed40-0x14003eeb0 .text$mn
 // MS2-RANGE: 0x140042700-0x1400427b0 .text$mn
@@ -245,5 +246,163 @@ void FUN_140042700(void* trackSet, void* player)
         if (((PlayerState*)player)->ParameterUpdateEnabled > 0)
             FUN_140043970(((AudioTrackSet*)trackSet)->Tracks[index], player);
     }
+}
+#pragma optimize("", on)
+
+// C linkage in the C++ compile (clang-cl) too, as the other units declare them
+#ifdef __cplusplus
+extern "C" {
+#endif
+void* criHeap_AllocFix(void* heap, CriSint32 size, const char* name, CriSint32 align);
+void* memset(void* dest, int value, unsigned __int64 count);
+extern CriUint32 DAT_143b27c60;
+#ifdef __cplusplus
+}
+#endif
+#pragma function(memset)                     // the exe calls memset out of line
+void criVmpv_Destroy(void* handle);
+void* criSj_CreateUniversal(void* heap, CriUint32 first, CriUint32 second);
+CriSint32 createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height, CriUint32 frames);
+CriSint32 decideInternalFramePoolNum(CriSint32 count);
+unsigned __int64 FUN_14004fe20(unsigned __int64 source, unsigned int first, unsigned int second);
+void FUN_140041110(void* owner, const char* message, CriUint32 value);
+// the C names bind to sfr_cri_03's C++ definitions, and its C++ caller's name to the C definition below
+#ifndef MS2_HOOK_DLL
+#pragma comment(linker, "/alternatename:criVmpv_Destroy=?criVmpv_Destroy@@YAXPEAX@Z")
+#pragma comment(linker, "/alternatename:criSj_CreateUniversal=?criSj_CreateUniversal@@YAPEAXPEAXKK@Z")
+#pragma comment(linker, "/alternatename:createMpvHn=?createMpvHn@@YAJPEAX0KKK@Z")
+#pragma comment(linker, "/alternatename:decideInternalFramePoolNum=?decideInternalFramePoolNum@@YAJJ@Z")
+#pragma comment(linker, "/alternatename:?criVmpv_Create@@YAPEAXPEAXPEBK@Z=criVmpv_Create")
+#endif
+
+#pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+typedef struct VmpvFields
+{
+    CriUint8 Reserved00[8];
+    CriSint32 Active;
+    CriUint8 Reserved0C[4];
+    void* Heap;
+    CriSint32 Status;
+    CriUint8 Reserved1C[0xc];
+    CriUint32 Width;
+    CriUint32 Height;
+    CriUint32 Frames;
+    CriUint32 PoolBase;
+    CriUint32 Format;
+    CriUint32 PoolNum;
+    CriUint32 FrameBytes;
+    CriUint8 Reserved44[4];
+    CriUint8* Records;
+    CriUint32 RecordBytes;
+    CriUint8 Reserved54[4];
+    void* FrameSj;
+    CriUint8 Reserved60[0x10];
+    void* Pending;
+    CriUint8 Reserved78[0x108];
+    void* InputSj;
+    CriUint8 Reserved188[0x28];
+    CriSint32 Queued;
+    CriSint32 Lanes[8][2];
+    CriSint32 LaneCount;
+    CriUint8 Reserved1f8[0x28];
+    void* Decoder;
+    void* Source;
+    CriUint32 OptionA;
+    CriUint32 OptionB;
+    CriSint32 Word238;
+    CriSint32 Word23C;
+} VmpvFields;
+
+// build a VMPV handle with its decoder instance, frame pool, and stream joints
+// @0x14003c390
+void* criVmpv_Create(void* heap, const CriUint32* config)
+{
+    // locals named so vc9's name-hash slot order matches the exe's (names that share a bucket are declared in
+    // reverse slot order): width, height, frames, the MPEG source and its two options
+    CriUint32 width = config[0];
+    CriUint32 height = config[1];
+    CriUint32 chunks = config[4];
+    void* input = *(void* const*)(config + 6);
+    CriUint32 total = config[8];
+    CriUint32 size = config[9];
+    VmpvFields* hn;
+    CriUint32 i;
+    if (!heap)
+        return 0;
+    hn = (VmpvFields*)criHeap_AllocFix(heap, 600, "CriVmpv: HnObj", 4);
+    if (!hn)
+    {
+        FUN_140041110(0, "E05070701M : Can't allocate vmpv handle object memory.", 600);
+        return 0;
+    }
+    memset(hn, 0, 600);
+    hn->Heap = heap;
+    if (createMpvHn(hn, heap, width, height, chunks) != 1)
+    {
+        criVmpv_Destroy(hn);
+        return 0;
+    }
+    hn->InputSj = criSj_CreateUniversal(heap, 0, 0x20);
+    if (hn->InputSj == 0)
+    {
+        FUN_1400410d0(0, "E05070702M : Can't create SJ for input video.", 0);
+        criVmpv_Destroy(hn);
+        return 0;
+    }
+    hn->Width = width;
+    hn->Height = height;
+    hn->Frames = decideInternalFramePoolNum(chunks);
+    hn->PoolBase = DAT_143b27c60;
+    hn->Format = 0x7512;
+    hn->PoolNum = hn->Frames;
+    hn->FrameBytes = ((hn->Width + 0xf) / 0x10 * 0x10 + 0x7f) / 0x80 * 0x80 * ((hn->Height + 0x1f) / 0x20 * 0x20)
+                   + ((hn->Width + 0xf) / 0x10 * 0x10 / 2 + 0x7f) / 0x80 * 0x80 * ((hn->Height + 0x1f) / 0x20 * 0x20 / 2) * 2;
+    hn->RecordBytes = 200;
+    hn->Records = (CriUint8*)criHeap_AllocFix(heap, hn->RecordBytes * hn->PoolNum, "CriVmpv: FrmPoolInfoAry", 4);
+    if (hn->Records == 0)
+    {
+        FUN_140041110(0, "E05092801M : Can't allocate frame pool info array memory.", hn->RecordBytes * hn->PoolNum);
+        criVmpv_Destroy(hn);
+        return 0;
+    }
+    memset(hn->Records, 0, hn->RecordBytes * hn->PoolNum);
+    for (i = 0; i < hn->PoolNum; i++)
+    {
+        *(void**)(hn->Records + (unsigned __int64)i * 200) = criHeap_AllocFix(heap, hn->FrameBytes, "CriVmpv: FrmPoolBuf", 0x800);
+        if (*(void**)(hn->Records + (unsigned __int64)i * 200) == 0)
+        {
+            FUN_140041110(0, "E05070902M : Can't allocate frame pool memory.", hn->FrameBytes);
+            criVmpv_Destroy(hn);
+            return 0;
+        }
+        *(CriUint32*)(hn->Records + (unsigned __int64)i * 200 + 8) = hn->FrameBytes;
+    }
+    hn->FrameSj = criSj_CreateUniversal(heap, 0, hn->PoolNum);
+    if (hn->FrameSj == 0)
+    {
+        FUN_1400410d0(0, "E05070903M : Can't create frame pool SJ.", 0);
+        criVmpv_Destroy(hn);
+        return 0;
+    }
+    hn->Pending = 0;
+    hn->Queued = 0;
+    for (i = 0; i < 8; i++)
+    {
+        hn->Lanes[i][0] = 0;
+        hn->Lanes[i][1] = 0;
+    }
+    hn->LaneCount = 0;
+    if (input != 0)
+        hn->Decoder = (void*)FUN_14004fe20((unsigned __int64)input, total, size);
+    else
+        hn->Decoder = 0;
+    hn->Source = input;
+    hn->OptionA = total;
+    hn->OptionB = size;
+    hn->Word238 = 0;
+    hn->Word23C = 0;
+    hn->Status = 0;
+    hn->Active = 1;
+    return hn;
 }
 #pragma optimize("", on)
