@@ -3500,57 +3500,77 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
 static inline Scaleform::GFx::AS3::ClassTraits::Traits* FUN_142524f60(Scaleform::GFx::AS3::VM* vm, Scaleform::GFx::AS3::VMAbcFile* file, const void* abc_multiname)
 { return reinterpret_cast<Scaleform::GFx::AS3::ClassTraits::Traits*>(::Scaleform::GFx::AS3::Sfr31ResolveClassTraits(reinterpret_cast<Scaleform::UPInt>(vm), reinterpret_cast<Scaleform::UPInt>(file), reinterpret_cast<Scaleform::UPInt>(abc_multiname))); }   // VM::Resolve2ClassTraits
 
+// ClassTraits::Traits::IsParentTypeOf (inlined by the exe at its OnException call).
+static __forceinline bool Sfr18IsParentTypeOf(const Scaleform::GFx::AS3::ClassTraits::Traits& self, const Scaleform::GFx::AS3::ClassTraits::Traits& other)
+{
+    using namespace Scaleform::GFx::AS3;
+    if (&self == &other)
+        return true;
+    const ClassTraits::Traits* tr = &other;
+    while (tr)
+    {
+        if (tr->GetInstanceTraits().SupportsInterface(self.GetInstanceTraits()))
+            return true;
+        tr = static_cast<const ClassTraits::Traits*>(tr->GetParent());
+        if (tr == &self)
+            return true;
+    }
+    return false;
+}
+
 // VM::OnException: the handler of the frame's method body for the pending exception thrown at code offset. A
 // handler covering offset catches it when it has no type or the exception's class is (or derives from, or
 // implements) its type; the operand stack is then emptied down to the exception, the scope stack cleared, and the
 // handler's code position returned. -1 (the exception stays pending) when no handler catches it.
-// MS2-FUNCTIONAL a free function in place of the VM member (its caller in sfr_as3_19 declares it so)
+// A free function in place of the VM member (its caller in sfr_as3_19 declares it so).
 // @0x142519a00
 int FUN_142519a00(Scaleform::GFx::AS3::VM* vm, Scaleform::UPInt offset, void* frame)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    CallFrame&                             cf     = *static_cast<CallFrame*>(frame);
-    int                                    result = -1;
-    UPInt                                  index  = 0;
-    const Abc::MethodBodyInfo::Exception&  e      = cf.pFile->GetException(cf.MBIIndex);
+    CallFrame&                             cf       = *static_cast<CallFrame*>(frame);
+    int                                    position = -1;
+    const Abc::MethodBodyInfo::Exception&  e        = cf.pFile->GetException(cf.MBIIndex);
+    UPInt                                  index    = 0;
     while (e.FindExceptionInfo(offset, index))
     {
-        const Abc::MethodBodyInfo::ExceptionInfo& info = e.info[index];
-        bool caught = info.exc_type_ind == 0;
-        if (!caught && !vm->ExceptionObj.IsUndefined())
-        {
-            const ClassTraits::Traits* tr = &vm->GetClassTraits(vm->ExceptionObj);
-            vm->HandleException = false;
-            const ClassTraits::Traits* et = FUN_142524f60(vm, cf.pFile,
-                &cf.pFile->GetAbcFile().Const_Pool.GetMultiname(info.exc_type_ind));
-            vm->HandleException = true;
-            if (et)
-            {
-                for (; tr; tr = static_cast<const ClassTraits::Traits*>(tr->GetParent()))
-                {
-                    if (tr == et || tr->GetInstanceTraits().SupportsInterface(et->GetInstanceTraits()))
-                    {
-                        caught = true;
-                        break;
-                    }
-                }
-            }
-        }
-        if (caught)
+        const Abc::MethodBodyInfo::ExceptionInfo& ei = e.info[index];
+        const int et_ind = ei.exc_type_ind;
+        if (et_ind == 0)
         {
             cf.ClearOpStack();
             Value*& top = reinterpret_cast<Value**>(&vm->OpStack)[1];     // ValueStack::pCurrent
             new (++top) Value(vm->ExceptionObj);
             vm->ExceptionObj.Clean();
             cf.ClearScopeStack();
-            result = info.target;
+            position = ei.target;
             break;
+        }
+        else
+        {
+            if (!vm->ExceptionObj.IsUndefined())
+            {
+                const ClassTraits::Traits& exc_ctr = vm->GetClassTraits(vm->ExceptionObj);
+                vm->HandleException = false;
+                const ClassTraits::Traits* handler_tr = FUN_142524f60(vm, cf.pFile,
+                    &cf.pFile->GetAbcFile().Const_Pool.GetMultiname(et_ind));
+                vm->HandleException = true;
+                if (handler_tr && Sfr18IsParentTypeOf(*handler_tr, exc_ctr))
+                {
+                    cf.ClearOpStack();
+                    Value*& top = reinterpret_cast<Value**>(&vm->OpStack)[1];     // ValueStack::pCurrent
+                    new (++top) Value(vm->ExceptionObj);
+                    vm->ExceptionObj.Clean();
+                    cf.ClearScopeStack();
+                    position = ei.target;
+                    break;
+                }
+            }
         }
         ++index;
     }
-    vm->HandleException = result < 0;
-    return result;
+    vm->HandleException = position < 0;
+    return position;
 }
 
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
