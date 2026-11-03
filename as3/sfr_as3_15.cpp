@@ -3034,8 +3034,8 @@ Multiname::Multiname(VMAbcFile& file, const Abc::Multiname& mn)
         Obj = &file.GetInternedNamespaceSet(mn.Ind);
 }
 
-// The top argCount values of the VM's operand stack, moved (not copied) into the argument slots.
-// MS2-FUNCTIONAL: same code; the exe zeroes the fixed values before the heap array and allocates r14/r9 (scheduling)
+// The top argCount values of the VM's operand stack, moved (not copied) into the argument slots. As in the SDK
+// (AS3_VMRead.cpp), the stack is held in a local reference and each branch has its own memcpy.
 // @0x1424d9530
 ReadArgs::ReadArgs(VM& vm, UInt32 argCount)
     : VMRef(vm)
@@ -3045,14 +3045,17 @@ ReadArgs::ReadArgs(VM& vm, UInt32 argCount)
 {
     if (argCount)
     {
-        Value* dst = FixedArgs;
-        if (argCount > 8)
+        ValueStack& opstack = OpStack;
+        if (argCount <= 8)
+        {
+            memcpy(FixedArgs, opstack.GetTopPtr() - (UInt16)(argCount - 1), argCount * sizeof(Value));
+        }
+        else
         {
             CallArgs.Resize(argCount);
-            dst = CallArgs.GetDataPtr();
+            memcpy(CallArgs.GetDataPtr(), opstack.GetTopPtr() - (UInt16)(argCount - 1), argCount * sizeof(Value));
         }
-        memcpy(dst, OpStack.GetTopPtr() - (UInt16)(argCount - 1), argCount * sizeof(Value));
-        OpStack.Release(argCount);
+        opstack.Release(argCount);
     }
 }
 
