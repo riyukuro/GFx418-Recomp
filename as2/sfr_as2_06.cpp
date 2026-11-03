@@ -2146,7 +2146,6 @@ void StyleSheetCtorFunction::GlobalCtor(const FnCall& fn)
     fn.Result->SetAsObject(sheet.GetPtr());
 }
 
-// MS2-FUNCTIONAL: creates or reuses the TextFormat receiver and applies the constructor arguments via AS2 members.
 // @0x14295ca10
 void TextFormatCtorFunction::GlobalCtor(const FnCall& fn)
 {
@@ -2156,9 +2155,59 @@ void TextFormatCtorFunction::GlobalCtor(const FnCall& fn)
     else
         format = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
 
-    static const char* names[] = {"font", "size", "color", "bold", "italic", "underline", "url", "target", "align", "leftMargin", "rightMargin", "indent", "leading"};
-    for (unsigned i = 0; i < 13 && i < fn.NArgs; ++i)
-        format->SetMember(fn.Env, fn.Env->CreateConstString(names[i]), fn.Arg(i));
+    if (fn.NArgs >= 1)
+    {
+        ASStringContext* psc = fn.Env->GetSC();
+        format->SetMember(fn.Env, psc->CreateConstString("font"), fn.Arg(0));
+        if (fn.NArgs >= 2)
+        {
+            format->SetMember(fn.Env, psc->CreateConstString("size"), fn.Arg(1));
+            if (fn.NArgs >= 3)
+            {
+                format->SetMember(fn.Env, psc->CreateConstString("color"), fn.Arg(2));
+                if (fn.NArgs >= 4)
+                {
+                    format->SetMember(fn.Env, psc->CreateConstString("bold"), fn.Arg(3));
+                    if (fn.NArgs >= 5)
+                    {
+                        format->SetMember(fn.Env, psc->CreateConstString("italic"), fn.Arg(4));
+                        if (fn.NArgs >= 6)
+                        {
+                            format->SetMember(fn.Env, psc->CreateConstString("underline"), fn.Arg(5));
+                            if (fn.NArgs >= 7)
+                            {
+                                format->SetMember(fn.Env, psc->CreateConstString("url"), fn.Arg(6));
+                                if (fn.NArgs >= 8)
+                                {
+                                    format->SetMember(fn.Env, psc->CreateConstString("target"), fn.Arg(7));
+                                    if (fn.NArgs >= 9)
+                                    {
+                                        format->SetMember(fn.Env, psc->CreateConstString("align"), fn.Arg(8));
+                                        if (fn.NArgs >= 10)
+                                        {
+                                            format->SetMember(fn.Env, psc->CreateConstString("leftMargin"), fn.Arg(9));
+                                            if (fn.NArgs >= 11)
+                                            {
+                                                format->SetMember(fn.Env, psc->CreateConstString("rightMargin"), fn.Arg(10));
+                                                if (fn.NArgs >= 12)
+                                                {
+                                                    format->SetMember(fn.Env, psc->CreateConstString("indent"), fn.Arg(11));
+                                                    if (fn.NArgs >= 13)
+                                                    {
+                                                        format->SetMember(fn.Env, psc->CreateConstString("leading"), fn.Arg(12));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fn.Result->SetAsObject(format.GetPtr());
 }
