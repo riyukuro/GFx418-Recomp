@@ -577,6 +577,16 @@ struct ValueAssignCopies
             v.AddRefString();
         }
     }
+    // Value::Assign(const Value&), which the exe inlines in InvokeClosure.
+    static SF_FORCEINLINE void AssignInline18(Value& v, const Value& other)
+    {
+        if (&other != &v)
+        {
+            v.Release();
+            memcpy(&v, &other, sizeof(Value));
+            v.AddRef();
+        }
+    }
     // The same for a pointer known to be non-null (Value(this)).
     static SF_INLINE void AssignUnsafeObjectInline18(Value& v, Object* p)
     {
@@ -7500,7 +7510,8 @@ namespace AS3 {
 
 // ObjectInterface::InvokeClosure: a closure of the AS3 object (a VTable index closure when bit 1 of pdata is set,
 // with dataAux its index, else a thunk closure of the thunk dataAux) called on it with the host's arguments.
-// MS2-FUNCTIONAL: body differs from the exe
+// MS2-FUNCTIONAL: body differs from the exe (the exe shares one AddRef tail between the two closure ctors, and its
+// inlined Value dtors test the weak-ref bit another way)
 // @0x142513920
 bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Value* presult, const GFx::Value* pargs,
                                       UPInt nargs)
@@ -7509,22 +7520,23 @@ bool AS3ValueObjectInterface::InvokeClosure(void* pdata, UPInt dataAux, GFx::Val
     using AS3::Value;
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
-    Value      asfn;
     Value      asresult;
+    Value      asfn;
+    int        closureType = (reinterpret_cast<UPInt>(pdata) & 2) ? 1 : 0;
     Object*    pobj = reinterpret_cast<Object*>(reinterpret_cast<UPInt>(pdata) & ~UPInt(2));
-    if (reinterpret_cast<UPInt>(pdata) & 2)
-        asfn = Sfr34_Closure(Value::kVTableIndClosure, reinterpret_cast<const void*>(UPInt(UInt32(dataAux))), pobj);
+    if (closureType)
+        ValueAssignCopies::AssignInline18(asfn, Value(pobj, SInt32(dataAux), false));   // VTableIndClosure
     else
-        asfn = Sfr34_Closure(Value::kThunkClosure, reinterpret_cast<const void*>(dataAux), pobj);
+        ValueAssignCopies::AssignInline18(asfn, Value(pobj, *reinterpret_cast<const ThunkInfo*>(dataAux)));   // ThunkClosure
     if (nargs)
     {
         Array<Value> args(static_cast<int>(nargs));
         for (UPInt i = 0; i < nargs; i++)
             root->GFxValue2ASValue(pargs[i], &args[i]);
-        vm->ExecuteInternalUnsafe(asfn, Value(pobj), asresult, static_cast<unsigned>(nargs), &args[0], false);
+        vm->ExecuteInternalUnsafe(asfn, Value(pobj, Value::InlineObj), asresult, static_cast<unsigned>(nargs), &args[0], false);
     }
     else
-        vm->ExecuteInternalUnsafe(asfn, Value(pobj), asresult, 0, NULL, false);
+        vm->ExecuteInternalUnsafe(asfn, Value(pobj, Value::InlineObj), asresult, 0, NULL, false);
     if (vm->IsException())
     {
         vm->HandleException = false;
