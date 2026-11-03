@@ -2639,80 +2639,138 @@ void FUN_142416600(Scaleform::GFx::AS3::Instances::Namespace* self, Scaleform::G
 // @0x142423bd0
 __declspec(noinline) void FUN_142423bd0(Scaleform::GFx::AS3::Instances::Namespace* self, const Scaleform::GFx::ASString& uri)
 { const_cast<Scaleform::GFx::ASString&>(self->GetUri()) = uri; }
-// The parts of str split at each delim (at most limit of them), as a new Array: no delim gives str itself, an empty
-// delim each character. A delim that ends str adds a trailing empty part.
-// MS2-FUNCTIONAL: the exe inlines SparseArray::PushBack at each push
+// String::StringSplit: the parts of str split at each delim (at most limit of them), as a new Array: no delim gives
+// str itself, an empty delim each character. A delim that ends str adds a trailing empty part.
+// SparseArray::PushBack, inlined at each push of the split.
+static SF_INLINE void splitPushBack(Scaleform::GFx::AS3::SparseArray& sa, const Scaleform::GFx::AS3::Value& v)
+{
+    if (sa.Length == sa.ValueA.GetSize())
+        sa.ValueA.PushBack(v);
+    else
+    {
+        sa.ValueHHighInd = sa.Length;
+        sa.ValueH.Set(sa.ValueHHighInd, v);
+    }
+    ++sa.Length;
+}
+// The same with the dense part's ArrayDataDH::PushBack inlined too (only the empty-string push has it in the exe).
+struct SplitValueArray : Scaleform::GFx::AS3::ValueArrayDH
+{
+    SF_INLINE void InlinePushBack(const Scaleform::GFx::AS3::Value& v)
+    {
+        Data.ResizeNoConstruct(Data.pHeap, Data.Size + 1);
+        ::new (Data.Data + Data.Size - 1) Scaleform::GFx::AS3::Value(v);
+    }
+};
+static SF_INLINE void splitPushBackInline(Scaleform::GFx::AS3::SparseArray& sa, const Scaleform::GFx::AS3::Value& v)
+{
+    if (sa.Length == sa.ValueA.GetSize())
+        static_cast<SplitValueArray&>(sa.ValueA).InlinePushBack(v);
+    else
+    {
+        sa.ValueHHighInd = sa.Length;
+        sa.ValueH.Set(sa.ValueHHighInd, v);
+    }
+    ++sa.Length;
+}
+static SF_INLINE Scaleform::GFx::ASString splitCreateString(Scaleform::GFx::AS3::StringManager& sm, const char* start,
+                                                             const char* end = NULL)
+{
+    int len = (end == 0) ? (int)strlen(start) : int(end - start);
+    if (len < 0)
+        len = 0;
+    if (len > 0)
+        return sm.CreateString(start, len);
+    return sm.CreateEmptyString();
+}
 // @0x142424ca0
 Scaleform::Pickable<Scaleform::GFx::AS3::Instances::fl::Array> FUN_142424ca0(Scaleform::GFx::AS3::VM& vm,
                                                                                const Scaleform::GFx::ASString& str,
-                                                                               const char* delim, Scaleform::UInt32 limit)
+                                                                               const char* delimiters, Scaleform::UInt32 limit)
 {
     using namespace Scaleform;
     using namespace Scaleform::GFx::AS3;
-    Pickable<Instances::fl::Array> arr = vm.MakeArray();
-    SparseArray& sa = arr->SA;
-    StringManager& sm = vm.GetStringManager();
-    const char* start = str.ToCStr();
-    const char* cur = start;
-    if (delim == NULL)
+    Pickable<Instances::fl::Array> retVal = vm.MakeArray();
+
+    const char* search = delimiters;
+    const char* pstr = str.ToCStr();
+
+    UInt32 c1, c2;
+
+    if (search == 0)
     {
-        sa.PushBack(Value(str));
-        return arr;
+        splitPushBack(retVal->SA, Value(str));
     }
-    if (*delim == 0)
+    else if (*search == 0)
     {
         if (str.GetSize() == 0)
         {
-            sa.PushBack(Value(str));
-            return arr;
+            Value v(str);
+            splitPushBackInline(retVal->SA, v);
         }
-        String ch;
-        while (UInt32 c = UTF8Util::DecodeNextChar_Advance0(&cur))
+        else
         {
-            ch.Clear();
-            ch.AppendChar(c);
-            sa.PushBack(Value(sm.CreateString(ch.ToCStr(), ch.GetSize())));
+            Scaleform::String tmpStr;
+
+            while ((c1 = UTF8Util::DecodeNextChar(&pstr)) != 0)
+            {
+                tmpStr.Clear();
+                tmpStr.AppendChar(c1);
+                splitPushBack(retVal->SA, Value(vm.GetStringManager().CreateString(tmpStr.ToCStr(), tmpStr.GetSize())));
+            }
         }
-        return arr;
     }
-    UInt32 count = 0;
-    for (;;)
+    else
     {
-        const char* matchStart = cur;
-        const char* next = NULL;
-        const char* d = delim;
-        const char* before;
-        UInt32 c1, c2;
+        UInt32 count = 0;
+        const char* start = pstr;
+
         for (;;)
         {
-            before = cur;
-            c1 = UTF8Util::DecodeNextChar(&cur);
-            c2 = UTF8Util::DecodeNextChar(&d);
-            if (next == NULL)
-                next = cur;
-            if (c1 == 0 || c2 == 0 || c1 != c2)
+            const char* s2   = search;
+            const char* end  = pstr;
+            const char* prev = pstr;
+            const char* pnext = NULL;
+
+            for (;;)
+            {
+                prev = pstr;
+                c1 = UTF8Util::DecodeNextChar(&pstr);
+                c2 = UTF8Util::DecodeNextChar(&s2);
+                if (!pnext)
+                    pnext = pstr;
+                if (c1 == 0 || c2 == 0)
+                {
+                    break;
+                }
+                if (c1 != c2)
+                {
+                    pstr = pnext;
+                    break;
+                }
+            }
+            if (c2 == 0)
+            {
+                if (count >= limit) break;
+                splitPushBack(retVal->SA, Value(splitCreateString(vm.GetStringManager(), start, end)));
+                pstr = start = prev;
+                ++count;
+            }
+            if (c1 == 0)
+            {
+                if (count < limit)
+                {
+                    if (c2 == 0)
+                        splitPushBack(retVal->SA, Value(splitCreateString(vm.GetStringManager(), start, end)));
+                    else
+                        splitPushBack(retVal->SA, Value(splitCreateString(vm.GetStringManager(), start)));
+                }
                 break;
-        }
-        if (c2 == 0)
-        {
-            if (count >= limit)
-                return arr;
-            SPInt len = (int)(matchStart - start);
-            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
-            ++count;
-            start = cur = before;
-        }
-        else if (c1 != 0)
-            cur = next;
-        if (c1 == 0)
-        {
-            if (count >= limit)
-                return arr;
-            SPInt len = (c2 == 0) ? (SPInt)(int)(matchStart - start) : (SPInt)(int)SFstrlen(start);
-            sa.PushBack(Value(len > 0 ? sm.CreateString(start, len) : sm.CreateEmptyString()));
-            return arr;
+            }
         }
     }
+
+    return retVal;
 }
 // ArrayPagedBase<CallFrame, 6, 64, AllocatorPagedCC<CallFrame, 329>>::allocatePage, the VM call frame stack (pages of
 // 64 frames of 0xa8 bytes; the page table grows by 64 entries).
