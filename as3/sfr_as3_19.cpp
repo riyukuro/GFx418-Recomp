@@ -3079,7 +3079,7 @@ CheckResult SetSuperProperty(VM& vm, const Traits* tr, const Value& obj, const M
 }
 
 // Tracer: records a position to retrace after the target of a jump (backward jumps only note the target's position).
-// MS2-FUNCTIONAL 0x14252c9f0: functional recovery; codegen differs from exe
+// Forward jumps push a Recalculate {position before the current one, arg} onto PosToRecalculate.
 // @0x14252c9f0
 void Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg)
 {
@@ -3091,14 +3091,10 @@ void Sfr31TraceNoteJump(UPInt tr, SPInt base, UPInt blk, SInt32 off, SInt32 arg)
     }
     FUN_1424e6aa0(tr, blk, idx, 0, 1);
     FUN_14251fcd0(tr, idx);
-    UPInt pos = Sfr31Rd(Sfr31Rd(tr, 0x28), 8);
-    ArrayDataBase<Tracer::Recalculate, AllocatorDH_POD<Tracer::Recalculate, 328>, ArrayDefaultPolicy>* arr =
-        reinterpret_cast<ArrayDataBase<Tracer::Recalculate, AllocatorDH_POD<Tracer::Recalculate, 328>, ArrayDefaultPolicy>*>(tr + 0xb0);
-    UPInt n = arr->Size + 1;
-    arr->ResizeNoConstruct(reinterpret_cast<const void*>(Sfr31Rd(tr, 0xc8)), n);
-    Tracer::Recalculate& r = arr->Data[n - 1];
-    r.pos = pos - 1;
+    Tracer::Recalculate r;
+    r.pos = Sfr31Rd(Sfr31Rd(tr, 0x28), 8) - 1;
     r.base = static_cast<int>(arg);
+    reinterpret_cast<ArrayDH_POD<Tracer::Recalculate, StatMV_VM>*>(tr + 0xb0)->PushBack(r);   // PosToRecalculate
 }
 
 }}}
