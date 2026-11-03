@@ -17,6 +17,7 @@
 #include "../include/kernel/sf_memory.h"
 #include "../include/kernel/sf_refcount.h"
 #include "../include/kernel/sf_hash.h"
+#include "../include/kernel/sf_array.h"
 #include "../include/kernel/sf_string.h"
 #include "../include/kernel/sf_utf8util.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -34,6 +35,8 @@ namespace Scaleform { namespace UTF8Util { SPInt SF_STDCALL GetEncodeStringSize(
 namespace Scaleform { namespace UTF8Util { void SF_STDCALL EncodeStringSafe(char* buff, UPInt buffSize, const wchar_t* chars, SPInt length); } }
 
 namespace Scaleform { int SF_CDECL SFstricmp(const char* a, const char* b); }
+// Instantiated out of line in the exe (0x1422fe110).
+namespace Scaleform { template <> void ArrayDataBase<String, AllocatorLH<String, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(const void*, UPInt); }
 namespace Scaleform { namespace GFx { class Movie { public:
     void Release();
     enum SetVarType { SV_Normal, SV_Sticky, SV_Permanent };
@@ -3894,54 +3897,56 @@ int FUN_1423d05a0(void* raw)
 }
 
 // MS2-FUNCTIONAL: handles the executable's disable, selection, numeric index, and comma/colon list-change events.
+// Still differs: the exe loads value into r15 at entry and walks the list with a pointer.
 // @0x1423d9ee0
-unsigned long long FUN_1423d9ee0(void* raw, void*, int event, void*, const char* value)
+bool FUN_1423d9ee0(void* raw, void*, int event, void*, const char* value)
 {
+    typedef ArrayData<String, AllocatorLH<String, 2>, ArrayDefaultPolicy> StringArray;
+    struct ValueArray { Value* Data; UPInt Size; UPInt Capacity; };
     auto* self = static_cast<unsigned char*>(raw);
-    if (!value) value = "";
-    if (event == 0xf1) {
+    switch (event) {
+    case 0xf1:
         self[0x10] = 0;
-        return 1;
-    }
-    if (event == 0xf2) {
+        return true;
+    case 0xf2:
         *reinterpret_cast<long long*>(self + 0x840) = std::atoi(value);
         FUN_1423d9b40(self);
-        return 1;
-    }
-    if (event == 0xf6) {
+        return true;
+    case 0xf6:
         *reinterpret_cast<long long*>(self + 0x860) = std::atoi(value);
-        return 1;
-    }
-    if (event != 0xf3) return 0;
-
-    auto* strings = reinterpret_cast<unsigned long long*>(self + 0x810);
-    auto* items = reinterpret_cast<unsigned long long*>(self + 0x828);
-    for (unsigned long long i = 0; i < strings[1]; ++i)
-        FUN_1423ca920(nullptr, reinterpret_cast<unsigned long long*>(strings[0]) + i);
-    strings[1] = 0;
-    FUN_1423d9730(items, items, 0);
-    const unsigned long long oldItems = 0;
-    if (*value) {
-        const char* begin = value;
-        // The exe never tests the first character as a delimiter (0x1423d9fc0 reads [rsi+1]).
-        for (const char* cursor = value + 1;; ++cursor) {
-            if (*cursor != ',' && *cursor != ':' && *cursor != '\0') continue;
-            const size_t length = static_cast<size_t>(cursor - begin);
-            if (strings[1] >= strings[2])
-                cx18_ReserveGH(strings, strings[1] ? (strings[1] >> 2) + strings[1] : 4, sizeof(Scaleform::String));
-            auto* slot = reinterpret_cast<Scaleform::String*>(strings[0]) + strings[1];
-            new (slot) Scaleform::String(std::string(begin, length).c_str());
-            ++strings[1];
-            if (!*cursor) break;
-            begin = cursor + 1;
+        return true;
+    case 0xf3: {
+        auto* strings = reinterpret_cast<StringArray*>(self + 0x810);
+        auto* items = reinterpret_cast<ValueArray*>(self + 0x828);
+        strings->Resize(0);
+        FUN_1423d9730(items, items, 0);
+        int i = 0;
+        int start = 0;
+        if (*value) {
+            for (;;) {
+                do ++i; while (value[i] != ',' && value[i] != ':' && value[i] != '\0');
+                const SPInt length = i - start;
+                char* buffer = static_cast<char*>(std::malloc(length + 1));
+                strncpy_s(buffer, length + 1, value + start, length);
+                buffer[i - start] = '\0';
+                {
+                    String token(buffer);
+                    strings->PushBack(token);
+                }
+                std::free(buffer);
+                if (!value[i]) break;
+                start = i + 1;
+            }
         }
+        const UPInt count = strings->Size;
+        const UPInt oldCount = items->Size;
+        FUN_1423d9730(items, items, count);
+        if (count > oldCount)
+            AllocatorGH<Value, 2>::ConstructArray(items->Data + oldCount, count - oldCount);
+        return true;
     }
-    const unsigned long long count = strings[1];
-    if (count > items[2]) cx18_ReserveGH(items, (count >> 2) + count, 0x20);
-    if (count > oldItems)
-        std::memset(reinterpret_cast<unsigned char*>(items[0]) + oldItems * 0x20, 0, (count - oldItems) * 0x20);
-    items[1] = count;
-    return 1;
+    }
+    return false;
 }
 
 // MS2-FUNCTIONAL: maps a GFxIME_* label from the executable IME table to its loaded record and selects that IME,
