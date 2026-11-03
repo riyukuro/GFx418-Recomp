@@ -1095,21 +1095,19 @@ void FUN_140066460(longlong arg1, uint arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: same code; the exe swaps r8/r9 between the arg1 copy and the row stride (reordered
-// declarations, an inline stride and a for loop all keep ours).
 // @0x140066a10
+// for each block from arg2 to the count at +0x1794, mix the bytes of its 8 rows of 8 bytes in the frame buffer at
+// +0x16b0 (nothing when the flag at +0x1568 is set).
 void FUN_140066a10(longlong arg1, uint arg2)
 {
   longlong s_v1;
   uint u_v2;
   uint *pu_v3;
-  ulonglong u_v4;
   
   if (*(int *)((char *)arg1 + 0x1568) == 0) {
     u_v2 = *(uint *)((char *)arg1 + 0x1794);
     s_v1 = *(short *)((char *)arg1 + 0x16c8);
     if (arg2 < u_v2) {
-      u_v4 = (longlong)s_v1 & 0xfffffffffffffffc;
       do {
         pu_v3 = (uint *)((longlong)
                           (((int)(arg2 / *(uint *)((char *)arg1 + 0x15a0) << 4) >> 1) * (int)s_v1 +
@@ -1118,7 +1116,7 @@ void FUN_140066a10(longlong arg1, uint arg2)
         for (int j = 0; j < 8; j++) {
           *pu_v3 = ((*pu_v3 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v3 & 0xdcdcdcdc);
           pu_v3[1] = ((pu_v3[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v3[1] & 0xdcdcdcdc);
-          pu_v3 = (uint *)((longlong)pu_v3 + u_v4);
+          pu_v3 += s_v1 >> 2;  // the row pitch in dwords
         }
         arg2 = arg2 + 1;
       } while (arg2 < u_v2);
@@ -27055,14 +27053,12 @@ void FUN_14008c890(longlong arg1, uint arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: same code; the exe swaps r9/r10 between the arg1 copy and the row stride (reordered
-// declarations, an inline stride and a for loop all keep ours).
 // @0x14008ce50
+// FUN_140066a10 for this decoder's frame buffer at +0xc50 (the row pitch doubles unless the value at +0x318 is 3).
 void FUN_14008ce50(longlong arg1, uint arg2)
 {
   uint u_v1;
   uint *pu_v2;
-  ulonglong u_v3;
   int i_v4;
   
   if (*(int *)((char *)arg1 + 0xd44) == 0) {
@@ -27072,7 +27068,6 @@ void FUN_14008ce50(longlong arg1, uint arg2)
       i_v4 = i_v4 * 2;
     }
     if (arg2 < u_v1) {
-      u_v3 = (longlong)i_v4 & 0xfffffffffffffffc;
       do {
         pu_v2 = (uint *)((longlong)
                           (((int)(arg2 / *(uint *)((char *)arg1 + 0x6cc) << 4) >> 1) * i_v4 +
@@ -27081,7 +27076,7 @@ void FUN_14008ce50(longlong arg1, uint arg2)
         for (int j = 0; j < 8; j++) {
           *pu_v2 = ((*pu_v2 >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (*pu_v2 & 0xdcdcdcdc);
           pu_v2[1] = ((pu_v2[1] >> 1 ^ 0xeeeeeeee) & 0x7f7f7f7f) + (pu_v2[1] & 0xdcdcdcdc);
-          pu_v2 = (uint *)((longlong)pu_v2 + u_v3);
+          pu_v2 += i_v4 >> 2;  // the row pitch in dwords
         }
         arg2 = arg2 + 1;
       } while (arg2 < u_v1);
