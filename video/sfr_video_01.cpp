@@ -3484,18 +3484,18 @@ void NetStreamProto::SetSoundSpatial(const FnCall& fn)
         return;
 
     Array<Sound::SoundChannel::Vector> position;
-    ReadVectorArray(penv, fn.Arg(0), position);
+    ReadVectorArray(penv, *ArgCopy(&fn, 0), position);
     pnetstream->GetVideoProvider()->SetSpatialInfo(0, position);
     if (fn.NArgs > 1)
     {
         Array<Sound::SoundChannel::Vector> orientation;
-        ReadVectorArray(penv, fn.Arg(1), orientation);
+        ReadVectorArray(penv, *ArgCopy(&fn, 1), orientation);
         pnetstream->GetVideoProvider()->SetSpatialInfo(1, orientation);
     }
     if (fn.NArgs > 2)
     {
         Array<Sound::SoundChannel::Vector> velocity;
-        ReadVectorArray(penv, fn.Arg(2), velocity);
+        ReadVectorArray(penv, *ArgCopy(&fn, 2), velocity);
         pnetstream->GetVideoProvider()->SetSpatialInfo(2, velocity);
     }
     pnetstream->GetVideoProvider()->ApplySpatialInfo();
@@ -3863,7 +3863,6 @@ public:
     static void AttachVideo(const FnCall& fn);   // exe 0x14000d400
 };
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x14000d400
 void VideoProto::AttachVideo(const FnCall& fn)
 {
@@ -3872,14 +3871,14 @@ void VideoProto::AttachVideo(const FnCall& fn)
         fn.Env->LogScriptError("Error: Video.attachVideo requires one argument (NetStream object)\n");
         return;
     }
-    if (!fn.Arg(0).IsObject() || !fn.ThisPtr || fn.ThisPtr->GetObjectType() != Object::Object_Video)
+    if (!ArgCopy(&fn, 0)->IsObject() || !fn.ThisPtr || fn.ThisPtr->GetObjectType() != Object::Object_Video)
         return;
 
     VideoCharacter* pvideo    = (VideoCharacter*)static_cast<AvmCharacter*>(fn.ThisPtr)->GetDispObj();
     VideoProvider*  pprovider = NULL;
-    if (fn.Arg(0).ToObject(fn.Env)->GetObjectType() == Object::Object_NetStream)
+    if (ArgCopy(&fn, 0)->ToObject(fn.Env)->GetObjectType() == Object::Object_NetStream)
     {
-        NetStream* pnetstream = static_cast<NetStream*>(fn.Arg(0).ToObject(fn.Env));
+        NetStream* pnetstream = static_cast<NetStream*>(ArgCopy(&fn, 0)->ToObject(fn.Env));
         if (pnetstream)
             pprovider = pnetstream->GetVideoProvider();
     }
