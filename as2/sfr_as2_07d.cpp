@@ -886,7 +886,6 @@ void ResolveNamespace(Environment* penv, XML::ElementNode* elemNode, XML::RootNo
 
 // Element node members: nodeName (re-resolving the namespace), nodeValue of the other nodes, and the attributes
 // object.
-// MS2-FUNCTIONAL: the member switch is laid out and inlined differently
 // @0x14299ede0
 bool XmlNodeObject::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -896,33 +895,34 @@ bool XmlNodeObject::SetMember(Environment* penv, const ASString& name, const Val
         switch (GetStandardMemberConstant(penv, name))
         {
         case M_nodeName:
-            if (!pRealNode)
+            if (pRealNode)
             {
-                if (log)
-                    log->LogMessageById(Log_ScriptWarning,
-                                        "XMLNodeObject::SetMember - cannot set nodeName of a malformed node");
-            }
-            else if (pRealNode->Type == XML::ElementNodeType)
-            {
-                XML::ElementNode* elemNode = static_cast<XML::ElementNode*>(pRealNode);
-                XML::DOMString    prefix(pRealNode->MemoryManager->EmptyString());
-                ASString          str   = val.ToString(penv);
-                const char*       data  = str.ToCStr();
-                const char*       colon = strchr(data, ':');
-                if (colon)
+                if (pRealNode->Type == XML::ElementNodeType)
                 {
-                    prefix           = pRealNode->MemoryManager->CreateString(data, colon - data);
-                    pRealNode->Value = pRealNode->MemoryManager->CreateString(colon + 1, strlen(colon + 1));
+                    XML::ElementNode* elemNode = static_cast<XML::ElementNode*>(pRealNode);
+                    XML::DOMString    prefix(pRealNode->MemoryManager->EmptyString());
+                    ASString          str   = val.ToString(penv);
+                    const char*       data  = str.ToCStr();
+                    const char*       colon = strchr(data, ':');
+                    if (colon)
+                    {
+                        prefix           = pRealNode->MemoryManager->CreateString(data, colon - data);
+                        UPInt len        = strlen(colon + 1);
+                        pRealNode->Value = pRealNode->MemoryManager->CreateString(colon + 1, len);
+                    }
+                    else
+                        pRealNode->Value = pRealNode->MemoryManager->CreateString(str.ToCStr(), str.GetSize());
+                    elemNode->Prefix = prefix;
+                    ResolveNamespace(penv, elemNode, pRootNode);
                 }
-                else
-                    pRealNode->Value = pRealNode->MemoryManager->CreateString(str.ToCStr(), str.GetSize());
-                elemNode->Prefix = prefix;
-                ResolveNamespace(penv, elemNode, pRootNode);
+                else if (log)
+                    log->LogMessageById(Log_ScriptWarning,
+                                        "XMLNodeObject::SetMember - cannot set nodeName of node type %d. Only type 1 allowed",
+                                        pRealNode->Type);
             }
             else if (log)
                 log->LogMessageById(Log_ScriptWarning,
-                                    "XMLNodeObject::SetMember - cannot set nodeName of node type %d. Only type 1 allowed",
-                                    pRealNode->Type);
+                                    "XMLNodeObject::SetMember - cannot set nodeName of a malformed node");
             return true;
         case M_nodeValue:
             if (pRealNode && pRealNode->Type != XML::ElementNodeType)
@@ -935,18 +935,21 @@ bool XmlNodeObject::SetMember(Environment* penv, const ASString& name, const Val
                                     "XMLNodeObject::SetMember - cannot set nodeValue of a malformed node");
             return true;
         case M_attributes:
-            if (!pRealNode)
+            if (pRealNode)
             {
-                if (log)
+                if (pRealNode->Type == XML::ElementNodeType)
+                {
+                    XMLShadowRef* pshadow = static_cast<XMLShadowRef*>(pRealNode->pShadow);
+                    pshadow->pAttributes  = val.ToObject(penv);
+                }
+                else if (log)
                     log->LogMessageById(Log_ScriptWarning,
-                                        "XMLNodeObject::SetMember - cannot set attributes of a malformed node");
+                                        "XMLNodeObject::SetMember - cannot set attributes of node type %d. Only type 1 allowed",
+                                        pRealNode->Type);
             }
-            else if (pRealNode->Type == XML::ElementNodeType)
-                static_cast<XMLShadowRef*>(pRealNode->pShadow)->pAttributes = val.ToObject(penv);
             else if (log)
                 log->LogMessageById(Log_ScriptWarning,
-                                    "XMLNodeObject::SetMember - cannot set attributes of node type %d. Only type 1 allowed",
-                                    pRealNode->Type);
+                                    "XMLNodeObject::SetMember - cannot set attributes of a malformed node");
             return true;
         default:
             break;
