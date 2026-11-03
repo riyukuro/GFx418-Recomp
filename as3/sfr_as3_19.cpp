@@ -2156,10 +2156,14 @@ void AvmButton::SetHitStateObject(DisplayObject* ch) { Scaleform::GFx::AS3::Sfr3
 // @0x1425287c0
 void Sfr31SetDefaultedBounds(char* self, int lo, int hi)
 {
-    *reinterpret_cast<int*>(self + 0xac) = lo == -1 ? 0 : lo;
-    hi = hi == -1 ? 1000 : hi;
-    *reinterpret_cast<int*>(self + 0x8c) = hi;
-    *reinterpret_cast<int*>(self + 0xa8) = hi;
+    if (lo != -1)
+        *reinterpret_cast<int*>(self + 0xac) = lo;
+    else
+        *reinterpret_cast<int*>(self + 0xac) = 0;
+    if (hi != -1)
+        *reinterpret_cast<int*>(self + 0xa8) = *reinterpret_cast<int*>(self + 0x8c) = hi;
+    else
+        *reinterpret_cast<int*>(self + 0xa8) = *reinterpret_cast<int*>(self + 0x8c) = 1000;
 }
 
 // Hands arg to the helper with the table 200 bytes into the file's constant block.
