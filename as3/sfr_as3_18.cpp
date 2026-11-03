@@ -1659,12 +1659,12 @@ void State::RefineOpCodeStack1(InstanceTraits::Traits& type, Abc::Code::OpCode o
 }
 
 // The same for the top two operands (the top one is popped; the one left is converted).
-// MS2-FUNCTIONAL 0x142520f30: the exe keeps the popped Value's flags word in a register across the calls for its release (push rdi frame); clang reloads it
 // @0x142520f30
 __declspec(safebuffers) void State::RefineOpCodeStack2(InstanceTraits::Traits& type, Abc::Code::OpCode op)
 {
     Value popped = PopOpValue();
-    if (GetValueTraits(OpStack.Back()) == &type && GetValueTraits(popped) == &type)
+    // the exe inlines State::GetValueTraits for the popped value only
+    if (GetValueTraits(OpStack.Back()) == &type && TraceValueTraits(*static_cast<const Tracer*>(pTracer), popped) == &type)
         static_cast<Tracer*>(pTracer)->ReplaceOpCode(op);
     else
         ConvertOpTo(type, TrNullTypeOf(*static_cast<Tracer*>(pTracer), type));
