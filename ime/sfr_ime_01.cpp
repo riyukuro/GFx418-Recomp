@@ -3342,6 +3342,7 @@ struct Ime01NtsPtr
     ~Ime01NtsPtr() { if (p) FUN_14257dcd0(p); }
 };
 // A GFx::Value whose destructor keeps the two zero stores after the managed release, as the exe's inlined dtor does.
+// The barrier keeps the stores without volatile, so the slot can still be shared with other Values.
 struct Ime01KeptValue
 {
     void** objectInterface = nullptr;
@@ -3355,9 +3356,10 @@ struct Ime01KeptValue
         if (IsManaged()) {
             reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(objectInterface))[2])(
                 objectInterface, this, data);
-            *reinterpret_cast<void** volatile*>(&objectInterface) = nullptr;
+            objectInterface = nullptr;
         }
-        *reinterpret_cast<volatile Scaleform::GFx::Value::ValueType*>(&type) = Scaleform::GFx::Value::VT_Undefined;
+        type = Scaleform::GFx::Value::VT_Undefined;
+        _ReadWriteBarrier();
     }
 };
 
@@ -4154,10 +4156,9 @@ struct Ime01ArgArrayEmpty
     }
 };
 
-// MS2-FUNCTIONAL: rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
+// Rebuilds the AS3 status list by clearing it, replaying retained row callbacks, and restoring selection.
 // The SelectDataItem argument goes through a local Value array (FUN_1423d9730), and each Add call has an empty one, as
-// in the exe. Still differs: rbx/rdi swapped, the Value slots laid out in another order, and the exe keeps the
-// added Value's reset stores before the row release.
+// in the exe. The added Value is an Ime01KeptValue (its reset stores stay before the row release).
 // @0x1423d9b40
 void FUN_1423d9b40(void* raw)
 {
@@ -4206,15 +4207,18 @@ void FUN_1423d9b40(void* raw)
                 reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(callback))[1])(callback,
                     *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828) + i,
                     *reinterpret_cast<void***>(self + 0x810) + i);
-            Scaleform::GFx::Value added;
-            Ime01ArgArrayEmpty unused;
-            if (void* bridge = bridgeOf())
-                invoke(bridge, command, &added,
-                    *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828),
-                    *reinterpret_cast<unsigned*>(self + 0x830));
-            command[0] = 0;
+            {
+                Ime01KeptValue added;
+                Ime01ArgArrayEmpty unused;
+                if (void* bridge = bridgeOf())
+                    invoke(bridge, command, added.AsValue(),
+                        *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828),
+                        *reinterpret_cast<unsigned*>(self + 0x830));
+                command[0] = 0;
+            }
+            FUN_14257dcd0(callback);
         }
-        if (callback) FUN_14257dcd0(callback);
+        else if (callback) FUN_14257dcd0(callback);
     }
 
     strcpy_s(command, 0x400, prefix);
