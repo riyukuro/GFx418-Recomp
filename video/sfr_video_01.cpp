@@ -3323,7 +3323,34 @@ bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& 
     return Object::SetMember(penv, name, val, flags);
 }
 
-// MS2-FUNCTIONAL: other scheduling
+Value* FUN_142923b90(Value* pthis, const FunctionRef& func);   // sfr_as2_03, Value(const FunctionRef&) out of line
+
+// Raw room for a Value the exe builds through FUN_142923b90.
+struct Video01ValueStorage
+{
+    Video01ValueStorage() {}
+    Scaleform::UInt64 Raw0, Raw1, Raw2, Raw3;
+};
+
+// *val = Value(func), with the FUNCTION Value built by the exe's out-of-line constructor.
+static __forceinline void AssignFunctionValue(Value* val, const FunctionRef& func)
+{
+    Video01ValueStorage storage;
+    Value& function = *reinterpret_cast<Value*>(&storage);
+    FUN_142923b90(&function, func);
+    *val = function;
+    function.~Value();
+}
+
+static __forceinline UInt32 NetStreamPosition(VideoProviderNetStream* provider)
+{
+    Scaleform::GFx::Video::VideoPlayer* player = provider->GetPlayer();
+    if (!player)
+        return 0;
+    return player->GetPosition();
+}
+
+// MS2-FUNCTIONAL: the exe tests the player with cmp [provider+0x48],0 and loads it again for the call; cl loads it once.
 // @0x14000aab0
 bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3351,7 +3378,7 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
         }
         else if (name == "onSubtitle")
         {
-            *val = Value(OnSubtitleCallback);
+            AssignFunctionValue(val, OnSubtitleCallback);
             return true;
         }
         else if (name == "subtitleTrack")
@@ -3364,13 +3391,13 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
         }
         else if (name == "currentFrame")
         {
-            *val = Value((Number)(float)(pVideoProvider->GetPosition() + 1));
+            *val = Value((Number)(float)(NetStreamPosition(pVideoProvider) + 1));
             return true;
         }
     }
     if (name == "time")
     {
-        UInt32 pos       = pVideoProvider->GetPosition();
+        UInt32 pos       = NetStreamPosition(pVideoProvider);
         UInt32 frameRate = pVideoProvider->GetVideoInfo().FrameRate;
         if (frameRate)
             *val = Value((Number)((float)pos / ((float)frameRate / 1000.0f)));
@@ -3380,17 +3407,17 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
     }
     else if (name == "onMetaData")
     {
-        *val = Value(OnMetaDataCallback);
+        AssignFunctionValue(val, OnMetaDataCallback);
         return true;
     }
     else if (name == "onStatus")
     {
-        *val = Value(OnStatusCallback);
+        AssignFunctionValue(val, OnStatusCallback);
         return true;
     }
     else if (name == "onCuePoint")
     {
-        *val = Value(OnCuePointCallback);
+        AssignFunctionValue(val, OnCuePointCallback);
         return true;
     }
     else if (name == "currentFps")
