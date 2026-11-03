@@ -110,14 +110,13 @@ template void DICommand_SourceRectImpl<DICommand_Threshold>::ExecuteHW(DICommand
 // ***** The other commands
 
 #pragma strict_gs_check(push, on)
-// MS2-FUNCTIONAL: the exe converts the returned size through its address (its temporary 4 bytes lower); ours reloads a copy
+// MS2-FUNCTIONAL: the exe gives the returned size temporary and the colour copy separate slots; ours puts both in one
 // @0x142674a00
 void DICommand_Clear::ExecuteHW(DICommandContext& context) const
 {
     context.pHAL->applyBlendMode(Blend_OverwriteAll, true, true);
     // the whole image (its size as a float rectangle, back to integer pixels)
-    ImageSize size = pImage->GetSize();
-    Rect<int> rect = RectF(Size<float>(size));
+    Rect<int> rect = RectF(Size<float>(pImage->GetSize()));
     context.pHAL->clearSolidRectangle(rect, FillColor);
     context.pHAL->applyBlendMode(Blend_None);
 }
