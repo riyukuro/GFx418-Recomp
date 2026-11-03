@@ -3338,14 +3338,16 @@ Scaleform::Render::TreeShape::NodeData* FUN_1400111d0(
     return destination ? FUN_140011010(destination, const_cast<void*>(*providerRef)) : 0;
 }
 
-// MS2-FUNCTIONAL: releases the shape provider before destroying the base node snapshot.
+// Releases the shape provider, then the base node's state bag, then the out-of-line EntryData dtor (as in 14000f1a0).
 // @0x140011070
 void FUN_140011070(Scaleform::Render::TreeShape::NodeData* node)
 {
     typedef Scaleform::Ptr<Scaleform::Render::ShapeMeshProvider> ProviderPtr;
     node->pVTable = Scaleform::Render::TreeShapeNodeDataVTable;
     reinterpret_cast<ProviderPtr*>(reinterpret_cast<unsigned char*>(node) + 0x90)->~ProviderPtr();
-    node->Scaleform::Render::TreeNode::NodeData::~NodeData();
+    if (*reinterpret_cast<void**>(reinterpret_cast<char*>(node) + 0x40))
+        static_cast<Scaleform::Render::Video02StateDataAccess*>(static_cast<void*>(reinterpret_cast<char*>(node) + 0x40))->destroyBag_NotEmpty();
+    FUN_14257eb30(node);
 }
 
 // @0x1400112a0
