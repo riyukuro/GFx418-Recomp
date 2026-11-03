@@ -3100,7 +3100,7 @@ void calcMotionType(longlong arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). Shift counts are plain int and the pos >= limit refill arms come first, as in the exe; left: block placement inside the 0x5e8 motion-vector blocks and register choice.
 // @0x14005b8c0
 cri_u8 parseMb(cri_any cri_p0)
 {
@@ -3133,12 +3133,12 @@ cri_u8 parseMb(cri_any cri_p0)
     u_v10 = u_v8 >> 0x15;
     u_v11 = u_v10;
     if (0x15 < i_v7) {
-      u_v11 = u_v10 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+      u_v11 = u_v10 | u_v9 >> (0x35 - i_v7);
     }
     if (u_v11 != 8) {
       u_v11 = u_v8 >> 0x15;
       if (0x15 < i_v7) {
-        u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+        u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
       }
       c_v2 = (&DAT_143ee68c1)[(ulonglong)u_v11 * 2];
       *(int *)((char *)arg1 + 0x5e4) = (int)c_v2;
@@ -3147,14 +3147,14 @@ cri_u8 parseMb(cri_any cri_p0)
       }
       else {
         i_v7 = i_v7 + (char)(&DAT_143ee68c0)[(ulonglong)u_v11 * 2];
-        if (i_v7 < 0x20) {
-          u_v8 = u_v8 << ((&DAT_143ee68c0)[(ulonglong)u_v11 * 2] & 0x1f);
-        }
-        else {
+        if (i_v7 >= 0x20) {
           i_v7 = i_v7 + -0x20;
-          u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+          u_v8 = u_v9 << i_v7;
           u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
           pu_v14 = pu_v14 + 4;
+        }
+        else {
+          u_v8 = u_v8 << (&DAT_143ee68c0)[(ulonglong)u_v11 * 2];
         }
       }
       i_v4 = *(int *)((char *)arg1 + 0x5e4);
@@ -3190,11 +3190,10 @@ cri_u8 parseMb(cri_any cri_p0)
       }
       (**(cri_code **)((char *)arg1 + 0x1be0))(arg1);
       *(uint *)((char *)arg1 + 0x6f8) = *(uint *)((char *)arg1 + 0x6f0) % *(uint *)((char *)arg1 + 0x6cc);
-      c_v2 = (char)i_v7;
       if ((*(int *)((char *)arg1 + 0x710) == 1) && (*(int *)((char *)arg1 + 0x288) == 2)) {
         u_v11 = u_v8 >> 0x1d;
         if (0x1d < i_v7) {
-          u_v11 = u_v11 | u_v9 >> (0x3dU - c_v2 & 0x1f);
+          u_v11 = u_v11 | u_v9 >> (0x3d - i_v7);
         }
         c_v2 = (&DAT_143e66831)[(ulonglong)u_v11 * 2];
         *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3203,14 +3202,14 @@ cri_u8 parseMb(cri_any cri_p0)
         }
         else {
           i_v7 = i_v7 + (char)(&DAT_143e66830)[(ulonglong)u_v11 * 2];
-          if (i_v7 < 0x20) {
-            u_v8 = u_v8 << ((&DAT_143e66830)[(ulonglong)u_v11 * 2] & 0x1f);
-          }
-          else {
+          if (i_v7 >= 0x20) {
             i_v7 = i_v7 + -0x20;
-            u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+            u_v8 = u_v9 << i_v7;
             u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
             pu_v14 = pu_v14 + 4;
+          }
+          else {
+            u_v8 = u_v8 << (&DAT_143e66830)[(ulonglong)u_v11 * 2];
           }
         }
       }
@@ -3220,7 +3219,7 @@ cri_u8 parseMb(cri_any cri_p0)
         if (i_v12 == 1) {
           u_v11 = u_v8 >> 0x1c;
           if (0x1c < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x3cU - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x3c - i_v7);
           }
           c_v2 = (&DAT_143e64be1)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3229,21 +3228,21 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143e64be0)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143e64be0)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143e64be0)[(ulonglong)u_v11 * 2];
             }
           }
         }
         else if (i_v12 == 2) {
           u_v11 = u_v8 >> 0x19;
           if (0x19 < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x39U - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x39 - i_v7);
           }
           c_v2 = (&DAT_143f68141)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3252,21 +3251,21 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143f68140)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143f68140)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143f68140)[(ulonglong)u_v11 * 2];
             }
           }
         }
         else if (i_v12 == 3) {
           u_v11 = u_v8 >> 0x17;
           if (0x17 < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x37U - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x37 - i_v7);
           }
           c_v2 = (&DAT_143f67cc1)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3275,14 +3274,14 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143f67cc0)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143f67cc0)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143f67cc0)[(ulonglong)u_v11 * 2];
             }
           }
         }
@@ -3292,7 +3291,7 @@ cri_u8 parseMb(cri_any cri_p0)
         if (i_v12 == 1) {
           u_v11 = u_v8 >> 0x1e;
           if (0x1e < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x3eU - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
           }
           c_v2 = (&DAT_143fe8241)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3301,21 +3300,21 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143fe8240)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143fe8240)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143fe8240)[(ulonglong)u_v11 * 2];
             }
           }
         }
         else if (i_v12 == 2) {
           u_v11 = u_v8 >> 0x1a;
           if (0x1a < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x3aU - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x3a - i_v7);
           }
           c_v2 = (&DAT_143e66841)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3324,21 +3323,21 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143e66840)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143e66840)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143e66840)[(ulonglong)u_v11 * 2];
             }
           }
         }
         else if (i_v12 == 3) {
           u_v11 = u_v8 >> 0x1a;
           if (0x1a < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x3aU - c_v2 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x3a - i_v7);
           }
           c_v2 = (&DAT_143f680c1)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x5e8) = (int)c_v2;
@@ -3347,14 +3346,14 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143f680c0)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143f680c0)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143f680c0)[(ulonglong)u_v11 * 2];
             }
           }
         }
@@ -3389,24 +3388,24 @@ cri_u8 parseMb(cri_any cri_p0)
           *(cri_u4 *)((char *)arg1 + 0xc14) = 4;
         }
         else {
-          if (i_v7 < 0x1e) {
+          if (i_v7 >= 0x1e) {
+            i_v7 = i_v7 + -0x1e;
+            if (i_v7 != 0) {
+              *(uint *)((char *)arg1 + 0x5ec) = (u_v9 >> (2 - i_v7) | u_v8) >> 0x1e;
+              u_v8 = u_v9 << i_v7;
+            }
+            else {
+              *(uint *)((char *)arg1 + 0x5ec) = u_v8 >> 0x1e;
+              u_v8 = u_v9;
+            }
+            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+            pu_v14 = pu_v14 + 4;
+          }
+          else {
             i_v7 = i_v7 + 2;
             u_v10 = u_v8 >> 0x1e;
             u_v8 = u_v8 << 2;
             *(uint *)((char *)arg1 + 0x5ec) = u_v10;
-          }
-          else {
-            i_v7 = i_v7 + -0x1e;
-            if (i_v7 == 0) {
-              *(uint *)((char *)arg1 + 0x5ec) = u_v8 >> 0x1e;
-              u_v8 = u_v9;
-            }
-            else {
-              *(uint *)((char *)arg1 + 0x5ec) = (u_v9 >> (2 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1e;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-            }
-            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-            pu_v14 = pu_v14 + 4;
           }
           *(uint *)((char *)arg1 + 0xc14) =
                (uint)(byte)(&DAT_1431bba40)
@@ -3420,24 +3419,24 @@ cri_u8 parseMb(cri_any cri_p0)
         if (((u_v11 & 0x20) != 0) || ((u_v11 & 0x10) != 0)) {
           if (*(int *)((char *)arg1 + 0x318) == 3) {
             if (*(int *)(arg1 + 800) == i_v12) {
-              if (i_v7 < 0x1e) {
+              if (i_v7 >= 0x1e) {
+                i_v7 = i_v7 + -0x1e;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x5f0) = (u_v9 >> (2 - i_v7) | u_v8) >> 0x1e;
+                  u_v8 = u_v9 << i_v7;
+                }
+                else {
+                  *(uint *)((char *)arg1 + 0x5f0) = u_v8 >> 0x1e;
+                  u_v8 = u_v9;
+                }
+                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+                pu_v14 = pu_v14 + 4;
+              }
+              else {
                 i_v7 = i_v7 + 2;
                 u_v11 = u_v8 >> 0x1e;
                 u_v8 = u_v8 << 2;
                 *(uint *)((char *)arg1 + 0x5f0) = u_v11;
-              }
-              else {
-                i_v7 = i_v7 + -0x1e;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x5f0) = u_v8 >> 0x1e;
-                  u_v8 = u_v9;
-                }
-                else {
-                  *(uint *)((char *)arg1 + 0x5f0) = (u_v9 >> (2 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1e;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-                }
-                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-                pu_v14 = pu_v14 + 4;
               }
             }
           }
@@ -3449,13 +3448,13 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + -0x1e;
-            if (i_v7 == 0) {
-              *(uint *)((char *)arg1 + 0x5f4) = u_v8 >> 0x1e;
-              u_v8 = u_v9;
+            if (i_v7 != 0) {
+              *(uint *)((char *)arg1 + 0x5f4) = (u_v9 >> (2 - i_v7) | u_v8) >> 0x1e;
+              u_v8 = u_v9 << i_v7;
             }
             else {
-              *(uint *)((char *)arg1 + 0x5f4) = (u_v9 >> (2 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1e;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              *(uint *)((char *)arg1 + 0x5f4) = u_v8 >> 0x1e;
+              u_v8 = u_v9;
             }
             u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
             pu_v14 = pu_v14 + 4;
@@ -3464,24 +3463,24 @@ cri_u8 parseMb(cri_any cri_p0)
         calcMotionType(arg1);
         if (((*(int *)((char *)arg1 + 0x318) == 3) && (*(int *)(arg1 + 800) == i_v12)) &&
            (((*(uint *)((char *)arg1 + 0x5e8) & 4) != 0 || ((*(uint *)((char *)arg1 + 0x5e8) & 8) != 0)))) {
-          if (i_v7 < 0x1f) {
+          if (i_v7 >= 0x1f) {
+            i_v7 = i_v7 + -0x1f;
+            if (i_v7 != 0) {
+              *(uint *)((char *)arg1 + 0x5f8) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+              u_v8 = u_v9 << i_v7;
+            }
+            else {
+              *(uint *)((char *)arg1 + 0x5f8) = u_v8 >> 0x1f;
+              u_v8 = u_v9;
+            }
+            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+            pu_v14 = pu_v14 + 4;
+          }
+          else {
             i_v7 = i_v7 + 1;
             u_v11 = u_v8 >> 0x1f;
             u_v8 = u_v8 * 2;
             *(uint *)((char *)arg1 + 0x5f8) = u_v11;
-          }
-          else {
-            i_v7 = i_v7 + -0x1f;
-            if (i_v7 == 0) {
-              *(uint *)((char *)arg1 + 0x5f8) = u_v8 >> 0x1f;
-              u_v8 = u_v9;
-            }
-            else {
-              *(uint *)((char *)arg1 + 0x5f8) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-            }
-            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-            pu_v14 = pu_v14 + 4;
           }
         }
         else {
@@ -3489,24 +3488,24 @@ cri_u8 parseMb(cri_any cri_p0)
         }
         u_v11 = *(uint *)((char *)arg1 + 0x5e8);
         if ((u_v11 & 0x40) != 0) {
-          if (i_v7 < 0x1b) {
+          if (i_v7 >= 0x1b) {
+            i_v7 = i_v7 + -0x1b;
+            if (i_v7 != 0) {
+              *(uint *)((char *)arg1 + 0x5c4) = (u_v9 >> (5 - i_v7) | u_v8) >> 0x1b;
+              u_v8 = u_v9 << i_v7;
+            }
+            else {
+              *(uint *)((char *)arg1 + 0x5c4) = u_v8 >> 0x1b;
+              u_v8 = u_v9;
+            }
+            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+            pu_v14 = pu_v14 + 4;
+          }
+          else {
             i_v7 = i_v7 + 5;
             u_v10 = u_v8 >> 0x1b;
             u_v8 = u_v8 << 5;
             *(uint *)((char *)arg1 + 0x5c4) = u_v10;
-          }
-          else {
-            i_v7 = i_v7 + -0x1b;
-            if (i_v7 == 0) {
-              *(uint *)((char *)arg1 + 0x5c4) = u_v8 >> 0x1b;
-              u_v8 = u_v9;
-            }
-            else {
-              *(uint *)((char *)arg1 + 0x5c4) = (u_v9 >> (5 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1b;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-            }
-            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-            pu_v14 = pu_v14 + 4;
           }
           *(cri_u1 *)((char *)arg1 + 0x774) =
                (&DAT_1431bba60)
@@ -3517,29 +3516,29 @@ cri_u8 parseMb(cri_any cri_p0)
            ) {
           if (*(int *)((char *)arg1 + 0xb8c) == 1) {
             if ((*(int *)((char *)arg1 + 0xb94) == 1) && (*(int *)((char *)arg1 + 0xb98) != 1)) {
-              if (i_v7 < 0x1f) {
+              if (i_v7 >= 0x1f) {
+                i_v7 = i_v7 + -0x1f;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x5fc) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+                  u_v8 = u_v9 << i_v7;
+                }
+                else {
+                  *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
+                  u_v8 = u_v9;
+                }
+                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+                pu_v14 = pu_v14 + 4;
+              }
+              else {
                 i_v7 = i_v7 + 1;
                 u_v11 = u_v8 >> 0x1f;
                 u_v8 = u_v8 * 2;
                 *(uint *)((char *)arg1 + 0x5fc) = u_v11;
               }
-              else {
-                i_v7 = i_v7 + -0x1f;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
-                  u_v8 = u_v9;
-                }
-                else {
-                  *(uint *)((char *)arg1 + 0x5fc) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-                }
-                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-                pu_v14 = pu_v14 + 4;
-              }
             }
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x60c) = (int)c_v2;
@@ -3548,45 +3547,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v3 = *(int *)((char *)arg1 + 0x304);
             if ((i_v3 != 1) && (*(int *)((char *)arg1 + 0x60c) != i_v12)) {
               b_v6 = (byte)(0x21 - i_v3);
-              if (i_v7 < 0x21 - i_v3) {
-                i_v7 = i_v7 + -1 + i_v3;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v3 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x64c) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v3) {
                 i_v7 = i_v7 + -0x21 + i_v3;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x64c) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x64c) =
+                       (u_v9 >> (i_v3 - 1 - i_v7) | u_v8) >> b_v6
+                  ;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x64c) =
-                       (u_v9 >> (((char)i_v3 - (byte)i_v7) - 1 & 0x1f) | u_v8) >> (b_v6 & 0x1f)
-                  ;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x64c) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v3;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v3 - 1);
+                *(uint *)((char *)arg1 + 0x64c) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -3595,21 +3594,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
             calcVector(arg1,0,0,0);
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x610) = (int)c_v2;
@@ -3618,45 +3617,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x308);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x610) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x650) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x650) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x650) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x650) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x650) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x650) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -3665,14 +3664,14 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
@@ -3681,27 +3680,27 @@ cri_u8 parseMb(cri_any cri_p0)
             *(cri_u4 *)((char *)arg1 + 0xbb0) = *(cri_u4 *)((char *)arg1 + 0xba0);
           }
           else {
-            if (i_v7 < 0x1f) {
-              i_v7 = i_v7 + 1;
-              u_v11 = u_v8 * 2;
-              *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
-            }
-            else {
+            if (i_v7 >= 0x1f) {
               i_v7 = i_v7 + -0x1f;
-              if (i_v7 == 0) {
-                *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
-                u_v11 = u_v9;
+              if (i_v7 != 0) {
+                *(uint *)((char *)arg1 + 0x5fc) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+                u_v11 = u_v9 << i_v7;
               }
               else {
-                *(uint *)((char *)arg1 + 0x5fc) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
+                u_v11 = u_v9;
               }
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
             }
+            else {
+              i_v7 = i_v7 + 1;
+              u_v11 = u_v8 * 2;
+              *(uint *)((char *)arg1 + 0x5fc) = u_v8 >> 0x1f;
+            }
             u_v8 = u_v11 >> 0x15;
             if (0x15 < i_v7) {
-              u_v8 = u_v8 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v8 = u_v8 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v8 * 2];
             *(int *)((char *)arg1 + 0x60c) = (int)c_v2;
@@ -3710,45 +3709,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v8 * 2];
-              if (i_v7 < 0x20) {
-                u_v11 = u_v11 << ((&DAT_143e65820)[(ulonglong)u_v8 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v11 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v11 = u_v11 << (&DAT_143e65820)[(ulonglong)u_v8 * 2];
               }
             }
             i_v3 = *(int *)((char *)arg1 + 0x304);
             if ((i_v3 != 1) && (*(int *)((char *)arg1 + 0x60c) != i_v12)) {
               b_v6 = (byte)(0x21 - i_v3);
-              if (i_v7 < 0x21 - i_v3) {
-                i_v7 = i_v7 + -1 + i_v3;
-                u_v8 = u_v11 >> (b_v6 & 0x1f);
-                u_v11 = u_v11 << ((char)i_v3 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x64c) = u_v8;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v3) {
                 i_v7 = i_v7 + -0x21 + i_v3;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x64c) = u_v11 >> (b_v6 & 0x1f);
-                  u_v11 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x64c) =
+                       (u_v9 >> (i_v3 - 1 - i_v7) | u_v11) >>
+                       b_v6;
+                  u_v11 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x64c) =
-                       (u_v9 >> (((char)i_v3 - (byte)i_v7) - 1 & 0x1f) | u_v11) >>
-                       (b_v6 & 0x1f);
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x64c) = u_v11 >> b_v6;
+                  u_v11 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v3;
+                u_v8 = u_v11 >> b_v6;
+                u_v11 = u_v11 << (i_v3 - 1);
+                *(uint *)((char *)arg1 + 0x64c) = u_v8;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v8 = u_v11 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v8 = u_v8 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v8 = u_v8 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v8 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -3757,21 +3756,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v8 * 2];
-                if (i_v7 < 0x20) {
-                  u_v11 = u_v11 << ((&DAT_143e66820)[(ulonglong)u_v8 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v11 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v11 = u_v11 << (&DAT_143e66820)[(ulonglong)u_v8 * 2];
                 }
               }
             }
             calcVector(arg1,0,0,0);
             u_v8 = u_v11 >> 0x15;
             if (0x15 < i_v7) {
-              u_v8 = u_v8 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v8 = u_v8 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v8 * 2];
             *(int *)((char *)arg1 + 0x610) = (int)c_v2;
@@ -3780,45 +3779,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v8 * 2];
-              if (i_v7 < 0x20) {
-                u_v11 = u_v11 << ((&DAT_143e65820)[(ulonglong)u_v8 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v11 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v11 = u_v11 << (&DAT_143e65820)[(ulonglong)u_v8 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x308);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x610) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v8 = u_v11 >> (b_v6 & 0x1f);
-                u_v11 = u_v11 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x650) = u_v8;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x650) = u_v11 >> (b_v6 & 0x1f);
-                  u_v11 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x650) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v11) >>
+                       b_v6;
+                  u_v11 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x650) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v11) >>
-                       (b_v6 & 0x1f);
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x650) = u_v11 >> b_v6;
+                  u_v11 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v8 = u_v11 >> b_v6;
+                u_v11 = u_v11 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x650) = u_v8;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v8 = u_v11 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v8 = u_v8 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v8 = u_v8 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v8 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -3827,39 +3826,39 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v8 * 2];
-                if (i_v7 < 0x20) {
-                  u_v11 = u_v11 << ((&DAT_143e66820)[(ulonglong)u_v8 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v11 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v11 = u_v11 << (&DAT_143e66820)[(ulonglong)u_v8 * 2];
                 }
               }
             }
             calcVector(arg1,0,0,1);
-            if (i_v7 < 0x1f) {
-              i_v7 = i_v7 + 1;
-              u_v8 = u_v11 * 2;
-              *(uint *)((char *)arg1 + 0x604) = u_v11 >> 0x1f;
-            }
-            else {
+            if (i_v7 >= 0x1f) {
               i_v7 = i_v7 + -0x1f;
-              if (i_v7 == 0) {
-                *(uint *)((char *)arg1 + 0x604) = u_v11 >> 0x1f;
-                u_v8 = u_v9;
+              if (i_v7 != 0) {
+                *(uint *)((char *)arg1 + 0x604) = (u_v9 >> (1 - i_v7) | u_v11) >> 0x1f;
+                u_v8 = u_v9 << i_v7;
               }
               else {
-                *(uint *)((char *)arg1 + 0x604) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v11) >> 0x1f;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                *(uint *)((char *)arg1 + 0x604) = u_v11 >> 0x1f;
+                u_v8 = u_v9;
               }
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
             }
+            else {
+              i_v7 = i_v7 + 1;
+              u_v8 = u_v11 * 2;
+              *(uint *)((char *)arg1 + 0x604) = u_v11 >> 0x1f;
+            }
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x61c) = (int)c_v2;
@@ -3868,45 +3867,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x304);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x61c) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x65c) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x65c) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x65c) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x65c) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x65c) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x65c) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -3915,21 +3914,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
             calcVector(arg1,1,0,0);
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x620) = (int)c_v2;
@@ -3938,45 +3937,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x308);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x620) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x660) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x660) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x660) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x660) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x660) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x660) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -3985,14 +3984,14 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
@@ -4002,29 +4001,29 @@ cri_u8 parseMb(cri_any cri_p0)
         if ((*(byte *)((char *)arg1 + 0x5e8) & 0x10) != 0) {
           if (*(int *)((char *)arg1 + 0xb8c) == 1) {
             if ((*(int *)((char *)arg1 + 0xb94) == 1) && (*(int *)((char *)arg1 + 0xb98) != 1)) {
-              if (i_v7 < 0x1f) {
+              if (i_v7 >= 0x1f) {
+                i_v7 = i_v7 + -0x1f;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x600) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+                  u_v8 = u_v9 << i_v7;
+                }
+                else {
+                  *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
+                  u_v8 = u_v9;
+                }
+                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+                pu_v14 = pu_v14 + 4;
+              }
+              else {
                 i_v7 = i_v7 + 1;
                 u_v11 = u_v8 >> 0x1f;
                 u_v8 = u_v8 * 2;
                 *(uint *)((char *)arg1 + 0x600) = u_v11;
               }
-              else {
-                i_v7 = i_v7 + -0x1f;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
-                  u_v8 = u_v9;
-                }
-                else {
-                  *(uint *)((char *)arg1 + 0x600) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-                }
-                u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-                pu_v14 = pu_v14 + 4;
-              }
             }
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x614) = (int)c_v2;
@@ -4033,45 +4032,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x30c);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x614) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x654) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x654) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x654) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x654) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x654) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x654) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -4080,21 +4079,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
             calcVector(arg1,0,1,0);
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x618) = (int)c_v2;
@@ -4103,45 +4102,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x310);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x618) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x658) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x658) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x658) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x658) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x658) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x658) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -4150,14 +4149,14 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
@@ -4166,27 +4165,27 @@ cri_u8 parseMb(cri_any cri_p0)
             *(cri_u4 *)(arg1 + 3000) = *(cri_u4 *)((char *)arg1 + 0xba8);
           }
           else {
-            if (i_v7 < 0x1f) {
-              i_v7 = i_v7 + 1;
-              u_v11 = u_v8 * 2;
-              *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
-            }
-            else {
+            if (i_v7 >= 0x1f) {
               i_v7 = i_v7 + -0x1f;
-              if (i_v7 == 0) {
-                *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
-                u_v11 = u_v9;
+              if (i_v7 != 0) {
+                *(uint *)((char *)arg1 + 0x600) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+                u_v11 = u_v9 << i_v7;
               }
               else {
-                *(uint *)((char *)arg1 + 0x600) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
+                u_v11 = u_v9;
               }
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
             }
+            else {
+              i_v7 = i_v7 + 1;
+              u_v11 = u_v8 * 2;
+              *(uint *)((char *)arg1 + 0x600) = u_v8 >> 0x1f;
+            }
             u_v8 = u_v11 >> 0x15;
             if (0x15 < i_v7) {
-              u_v8 = u_v8 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v8 = u_v8 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v8 * 2];
             *(int *)((char *)arg1 + 0x614) = (int)c_v2;
@@ -4195,45 +4194,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v8 * 2];
-              if (i_v7 < 0x20) {
-                u_v11 = u_v11 << ((&DAT_143e65820)[(ulonglong)u_v8 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v11 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v11 = u_v11 << (&DAT_143e65820)[(ulonglong)u_v8 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x30c);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x614) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v8 = u_v11 >> (b_v6 & 0x1f);
-                u_v11 = u_v11 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x654) = u_v8;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x654) = u_v11 >> (b_v6 & 0x1f);
-                  u_v11 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x654) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v11) >>
+                       b_v6;
+                  u_v11 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x654) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v11) >>
-                       (b_v6 & 0x1f);
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x654) = u_v11 >> b_v6;
+                  u_v11 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v8 = u_v11 >> b_v6;
+                u_v11 = u_v11 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x654) = u_v8;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v8 = u_v11 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v8 = u_v8 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v8 = u_v8 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v8 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -4242,21 +4241,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v8 * 2];
-                if (i_v7 < 0x20) {
-                  u_v11 = u_v11 << ((&DAT_143e66820)[(ulonglong)u_v8 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v11 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v11 = u_v11 << (&DAT_143e66820)[(ulonglong)u_v8 * 2];
                 }
               }
             }
             calcVector(arg1,0,1,0);
             u_v8 = u_v11 >> 0x15;
             if (0x15 < i_v7) {
-              u_v8 = u_v8 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v8 = u_v8 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v8 * 2];
             *(int *)((char *)arg1 + 0x618) = (int)c_v2;
@@ -4265,45 +4264,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v8 * 2];
-              if (i_v7 < 0x20) {
-                u_v11 = u_v11 << ((&DAT_143e65820)[(ulonglong)u_v8 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v11 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v11 = u_v11 << (&DAT_143e65820)[(ulonglong)u_v8 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x310);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x618) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v8 = u_v11 >> (b_v6 & 0x1f);
-                u_v11 = u_v11 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x658) = u_v8;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x658) = u_v11 >> (b_v6 & 0x1f);
-                  u_v11 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x658) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v11) >>
+                       b_v6;
+                  u_v11 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x658) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v11) >>
-                       (b_v6 & 0x1f);
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x658) = u_v11 >> b_v6;
+                  u_v11 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v8 = u_v11 >> b_v6;
+                u_v11 = u_v11 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x658) = u_v8;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v8 = u_v11 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v8 = u_v8 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v8 = u_v8 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v8 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -4312,39 +4311,39 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v8 * 2];
-                if (i_v7 < 0x20) {
-                  u_v11 = u_v11 << ((&DAT_143e66820)[(ulonglong)u_v8 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v11 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v11 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v11 = u_v11 << (&DAT_143e66820)[(ulonglong)u_v8 * 2];
                 }
               }
             }
             calcVector(arg1,0,1,1);
-            if (i_v7 < 0x1f) {
-              i_v7 = i_v7 + 1;
-              u_v8 = u_v11 * 2;
-              *(uint *)((char *)arg1 + 0x608) = u_v11 >> 0x1f;
-            }
-            else {
+            if (i_v7 >= 0x1f) {
               i_v7 = i_v7 + -0x1f;
-              if (i_v7 == 0) {
-                *(uint *)((char *)arg1 + 0x608) = u_v11 >> 0x1f;
-                u_v8 = u_v9;
+              if (i_v7 != 0) {
+                *(uint *)((char *)arg1 + 0x608) = (u_v9 >> (1 - i_v7) | u_v11) >> 0x1f;
+                u_v8 = u_v9 << i_v7;
               }
               else {
-                *(uint *)((char *)arg1 + 0x608) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v11) >> 0x1f;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                *(uint *)((char *)arg1 + 0x608) = u_v11 >> 0x1f;
+                u_v8 = u_v9;
               }
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
             }
+            else {
+              i_v7 = i_v7 + 1;
+              u_v8 = u_v11 * 2;
+              *(uint *)((char *)arg1 + 0x608) = u_v11 >> 0x1f;
+            }
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x624) = (int)c_v2;
@@ -4353,45 +4352,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x30c);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x624) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x664) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x664) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x664) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x664) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x664) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x664) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x68c) = (int)c_v2;
@@ -4400,21 +4399,21 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
             calcVector(arg1,1,1,0);
             u_v11 = u_v8 >> 0x15;
             if (0x15 < i_v7) {
-              u_v11 = u_v11 | u_v9 >> (0x35U - (char)i_v7 & 0x1f);
+              u_v11 = u_v11 | u_v9 >> (0x35 - i_v7);
             }
             c_v2 = (&DAT_143e65821)[(ulonglong)u_v11 * 2];
             *(int *)((char *)arg1 + 0x628) = (int)c_v2;
@@ -4423,45 +4422,45 @@ cri_u8 parseMb(cri_any cri_p0)
             }
             else {
               i_v7 = i_v7 + (char)(&DAT_143e65820)[(ulonglong)u_v11 * 2];
-              if (i_v7 < 0x20) {
-                u_v8 = u_v8 << ((&DAT_143e65820)[(ulonglong)u_v11 * 2] & 0x1f);
-              }
-              else {
+              if (i_v7 >= 0x20) {
                 i_v7 = i_v7 + -0x20;
-                u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                u_v8 = u_v9 << i_v7;
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                u_v8 = u_v8 << (&DAT_143e65820)[(ulonglong)u_v11 * 2];
               }
             }
             i_v12 = *(int *)((char *)arg1 + 0x310);
             if ((i_v12 != 1) && (*(int *)((char *)arg1 + 0x628) != 0)) {
               b_v6 = (byte)(0x21 - i_v12);
-              if (i_v7 < 0x21 - i_v12) {
-                i_v7 = i_v7 + -1 + i_v12;
-                u_v11 = u_v8 >> (b_v6 & 0x1f);
-                u_v8 = u_v8 << ((char)i_v12 - 1U & 0x1f);
-                *(uint *)((char *)arg1 + 0x668) = u_v11;
-              }
-              else {
+              if (i_v7 >= 0x21 - i_v12) {
                 i_v7 = i_v7 + -0x21 + i_v12;
-                if (i_v7 == 0) {
-                  *(uint *)((char *)arg1 + 0x668) = u_v8 >> (b_v6 & 0x1f);
-                  u_v8 = u_v9;
+                if (i_v7 != 0) {
+                  *(uint *)((char *)arg1 + 0x668) =
+                       (u_v9 >> (i_v12 - 1 - i_v7) | u_v8) >>
+                       b_v6;
+                  u_v8 = u_v9 << i_v7;
                 }
                 else {
-                  *(uint *)((char *)arg1 + 0x668) =
-                       (u_v9 >> (((char)i_v12 - (byte)i_v7) - 1 & 0x1f) | u_v8) >>
-                       (b_v6 & 0x1f);
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  *(uint *)((char *)arg1 + 0x668) = u_v8 >> b_v6;
+                  u_v8 = u_v9;
                 }
                 u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                 pu_v14 = pu_v14 + 4;
+              }
+              else {
+                i_v7 = i_v7 + -1 + i_v12;
+                u_v11 = u_v8 >> b_v6;
+                u_v8 = u_v8 << (i_v12 - 1);
+                *(uint *)((char *)arg1 + 0x668) = u_v11;
               }
             }
             if (*(int *)((char *)arg1 + 0xb98) == 1) {
               u_v11 = u_v8 >> 0x1e;
               if (0x1e < i_v7) {
-                u_v11 = u_v11 | u_v9 >> (0x3eU - (char)i_v7 & 0x1f);
+                u_v11 = u_v11 | u_v9 >> (0x3e - i_v7);
               }
               c_v2 = (&DAT_143e66821)[(ulonglong)u_v11 * 2];
               *(int *)((char *)arg1 + 0x690) = (int)c_v2;
@@ -4470,14 +4469,14 @@ cri_u8 parseMb(cri_any cri_p0)
               }
               else {
                 i_v7 = i_v7 + (char)(&DAT_143e66820)[(ulonglong)u_v11 * 2];
-                if (i_v7 < 0x20) {
-                  u_v8 = u_v8 << ((&DAT_143e66820)[(ulonglong)u_v11 * 2] & 0x1f);
-                }
-                else {
+                if (i_v7 >= 0x20) {
                   i_v7 = i_v7 + -0x20;
-                  u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+                  u_v8 = u_v9 << i_v7;
                   u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
                   pu_v14 = pu_v14 + 4;
+                }
+                else {
+                  u_v8 = u_v8 << (&DAT_143e66820)[(ulonglong)u_v11 * 2];
                 }
               }
             }
@@ -4485,30 +4484,30 @@ cri_u8 parseMb(cri_any cri_p0)
           }
         }
         if (((*(uint *)((char *)arg1 + 0x5e8) & 4) != 0) && (*(int *)((char *)arg1 + 0x324) != 0)) {
-          if (i_v7 < 0x1f) {
+          if (i_v7 >= 0x1f) {
+            i_v7 = i_v7 + -0x1f;
+            if (i_v7 != 0) {
+              *(uint *)((char *)arg1 + 0x18) = (u_v9 >> (1 - i_v7) | u_v8) >> 0x1f;
+              u_v8 = u_v9 << i_v7;
+            }
+            else {
+              *(uint *)((char *)arg1 + 0x18) = u_v8 >> 0x1f;
+              u_v8 = u_v9;
+            }
+            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
+            pu_v14 = pu_v14 + 4;
+          }
+          else {
             i_v7 = i_v7 + 1;
             u_v11 = u_v8 >> 0x1f;
             u_v8 = u_v8 * 2;
             *(uint *)((char *)arg1 + 0x18) = u_v11;
           }
-          else {
-            i_v7 = i_v7 + -0x1f;
-            if (i_v7 == 0) {
-              *(uint *)((char *)arg1 + 0x18) = u_v8 >> 0x1f;
-              u_v8 = u_v9;
-            }
-            else {
-              *(uint *)((char *)arg1 + 0x18) = (u_v9 >> (1 - (byte)i_v7 & 0x1f) | u_v8) >> 0x1f;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-            }
-            u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
-            pu_v14 = pu_v14 + 4;
-          }
         }
         if ((*(uint *)((char *)arg1 + 0x5e8) & 8) != 0) {
           u_v11 = u_v8 >> 0x17;
           if (0x17 < i_v7) {
-            u_v11 = u_v11 | u_v9 >> (0x37U - (char)i_v7 & 0x1f);
+            u_v11 = u_v11 | u_v9 >> (0x37 - i_v7);
           }
           c_v2 = (&DAT_143e65401)[(ulonglong)u_v11 * 2];
           *(int *)((char *)arg1 + 0x694) = (int)c_v2;
@@ -4517,14 +4516,14 @@ cri_u8 parseMb(cri_any cri_p0)
           }
           else {
             i_v7 = i_v7 + (char)(&DAT_143e65400)[(ulonglong)u_v11 * 2];
-            if (i_v7 < 0x20) {
-              u_v8 = u_v8 << ((&DAT_143e65400)[(ulonglong)u_v11 * 2] & 0x1f);
-            }
-            else {
+            if (i_v7 >= 0x20) {
               i_v7 = i_v7 + -0x20;
-              u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
+              u_v8 = u_v9 << i_v7;
               u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
               pu_v14 = pu_v14 + 4;
+            }
+            else {
+              u_v8 = u_v8 << (&DAT_143e65400)[(ulonglong)u_v11 * 2];
             }
           }
           if (*(int *)((char *)arg1 + 0x694) == -0x80) {
@@ -4534,23 +4533,23 @@ cri_u8 parseMb(cri_any cri_p0)
       }
       goto LAB_14005dbf5;
     }
-    if (i_v7 < 0x15) {
-      i_v7 = i_v7 + 0xb;
-      *(uint *)((char *)arg1 + 0x5e0) = u_v10;
-      u_v8 = u_v8 << 0xb;
-    }
-    else {
+    if (i_v7 >= 0x15) {
       i_v7 = i_v7 + -0x15;
-      if (i_v7 == 0) {
+      if (i_v7 != 0) {
+        *(uint *)((char *)arg1 + 0x5e0) = (u_v9 >> (0xb - i_v7) | u_v8) >> 0x15;
+        u_v8 = u_v9 << i_v7;
+      }
+      else {
         *(uint *)((char *)arg1 + 0x5e0) = u_v10;
         u_v8 = u_v9;
       }
-      else {
-        *(uint *)((char *)arg1 + 0x5e0) = (u_v9 >> (0xb - (byte)i_v7 & 0x1f) | u_v8) >> 0x15;
-        u_v8 = u_v9 << ((byte)i_v7 & 0x1f);
-      }
       u_v9 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]);
       pu_v14 = pu_v14 + 4;
+    }
+    else {
+      i_v7 = i_v7 + 0xb;
+      *(uint *)((char *)arg1 + 0x5e0) = u_v10;
+      u_v8 = u_v8 << 0xb;
     }
     *(int *)((char *)arg1 + 0x6f0) = *(int *)((char *)arg1 + 0x6f0) + 0x21;
   } while (((*(int *)((char *)arg1 + 0x6cc) == 0) || (*(int *)((char *)arg1 + 0x6d0) == 0)) ||
