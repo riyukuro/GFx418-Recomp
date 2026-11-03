@@ -673,12 +673,12 @@ void TreeContainer::NodeData::ReleaseNodes() const
 }
 
 // @0x14261c910
-// MS2-FUNCTIONAL: exe saves xmm registers and has an EH handler; same logic
+// MS2-FUNCTIONAL: same code; xmm register allocation differs in the bounds loop and the inlined Matrix3F EncloseTransform
 bool TreeContainer::NodeData::PropagateUp(Entry* entry) const
 {
-    RectF            bounds(0), parentBounds(0);
     UPInt            count       = Children.GetSize();
     TreeNode* const* nodes       = Children.GetMultipleAt(0);
+    RectF            bounds(0), parentBounds(0);
     bool             boundsEmpty = true;
 
     for (UPInt i = 0; i < count; i++)
@@ -700,9 +700,9 @@ bool TreeContainer::NodeData::PropagateUp(Entry* entry) const
     {
         expandByFilterBounds(&bounds, false);
         if (!Is3D())
-            M2D().EncloseTransform(&parentBounds, bounds);
+            parentBounds = M2D().EncloseTransform(bounds);
         else
-            M3D().EncloseTransform(&parentBounds, bounds);
+            parentBounds = M3D().EncloseTransform(bounds);
     }
 
     TreeContainer* container = (TreeContainer*)entry;
