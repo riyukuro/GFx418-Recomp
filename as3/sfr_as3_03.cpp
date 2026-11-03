@@ -704,6 +704,14 @@ namespace Classes { namespace fl
         _this = r;
     }
 
+    // InstanceTraits::fl::XML::MakeInstanceText(t, str, NULL) (0x14241b7a0) as the exe inlines it into XML::Construct.
+    static SF_FORCEINLINE Pickable<Instances::fl::XMLText> Sfr03MakeInstanceText(InstanceTraits::fl::XML& t,
+                                                                                 const ASString& str)
+    {
+        return Pickable<Instances::fl::XMLText>(
+            SF_HEAP_NEW(t.GetVM().GetMemoryHeap()) Instances::fl::XMLText(t, str, NULL));
+    }
+
     // new XML(v): a deep copy of an XML value, the one item of a one-item list, the parse of markup, else a text
     // node holding v as a string (empty for no argument, null or undefined).
     // MS2-FUNCTIONAL: register allocation (the exe swaps rsi/rdi and r13/r14/r15 for argv, _this, argc and this)
@@ -738,7 +746,7 @@ namespace Classes { namespace fl
                     {
                         ASString text = vm.GetStringManager().CreateEmptyString();
                         v.Convert2String(text).DoNotCheck();
-                        _this = itr.MakeInstanceText(itr, text, NULL);
+                        _this = Sfr03MakeInstanceText(itr, text);
                     }
                     return;
                 case Traits_String:
@@ -751,7 +759,7 @@ namespace Classes { namespace fl
                                 text = ASString(text.TruncateWhitespaceNode());
                             InstanceTraits::fl::XML& titr =
                                 static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
-                            _this = titr.MakeInstanceText(titr, text, NULL);
+                            _this = Sfr03MakeInstanceText(titr, text);
                         }
                         else
                         {
@@ -764,7 +772,7 @@ namespace Classes { namespace fl
                                 // Malformed markup gives an empty text node.
                                 InstanceTraits::fl::XML& titr =
                                     static_cast<InstanceTraits::fl::XML&>(GetClassTraits().GetInstanceTraits());
-                                _this = titr.MakeInstanceText(titr, vm.GetStringManager().CreateEmptyString(), NULL);
+                                _this = Sfr03MakeInstanceText(titr, vm.GetStringManager().CreateEmptyString());
                             }
                         }
                     }
@@ -791,7 +799,7 @@ namespace Classes { namespace fl
             }
         }
 
-        _this = itr.MakeInstanceText(itr, vm.GetStringManager().CreateEmptyString(), NULL);
+        _this = Sfr03MakeInstanceText(itr, vm.GetStringManager().CreateEmptyString());
     }
 
     // @0x142407bf0
@@ -1281,7 +1289,8 @@ namespace InstanceTraits { namespace fl
         return m;
     }
 
-    // MS2-FUNCTIONAL: the exe pre-zeroes the shared CheckResult slot and keeps limit in a callee-saved register; register allocation differs
+    // MS2-FUNCTIONAL: frame layout (the exe puts delimiter at the top and shares limit's spill slot with nlimit) and the
+    // loop registers for next/cnt
     // @0x142400e50
     void String::AS3split(const ThunkInfo& ti, VM& vm, const Value& _this, Value& result, unsigned argc, const Value* argv)
     {
@@ -1309,18 +1318,15 @@ namespace InstanceTraits { namespace fl
             pre->IsGlobal = true;
 
             // RegExp.source
-            StringManager& rsm = pre->GetVM().GetStringManager();
-            ASString src = rsm.CreateEmptyString();
-            src = rsm.CreateString(pre->Pattern);
+            ASString src = pre->GetVM().GetStringManager().CreateEmptyString();
+            src = pre->GetVM().GetStringManager().CreateString(pre->Pattern);
             if (!src.IsEmpty())
             {
                 SPtr<Instances::fl::Array> parr = vm.MakeArray();
                 unsigned next = 0;
                 unsigned cnt = 0;
-                for (;;)
+                while (saSplitExec03(*pre, str) && cnt++ < limit)
                 {
-                    if (!(saSplitExec03(*pre, str) && cnt++ < limit))
-                        break;
                     const SInt32 matchOffset = pre->MatchOffset;
                     const SInt32 matchLength = pre->MatchLength;
                     ASString sub(str.SubstringNode(next, matchOffset));
