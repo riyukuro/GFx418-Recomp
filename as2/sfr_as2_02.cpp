@@ -150,6 +150,11 @@ ASStringHashBase<AS2::FunctionRef, HashUncachedLH<ASString, AS2::FunctionRef, AS
     const ASString& key, bool caseSensitive);    // sfr_as2_05 @0x142949f60
 }}
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+// InteractiveObject::ModifyOptimizedPlayList, out of line in the exe (sfr_as3_18 @0x142517e70).
+void Sfr34_ModifyOptimizedPlayList(InteractiveObject* p);
+}}}
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 typedef ASRefCountBaseType::Collector Collector;
@@ -2270,10 +2275,10 @@ void AvmSprite::SpriteHitTest(const FnCall& fn)
         float x = (float)fn.Arg(0).ToNumber(fn.Env) * 20.0f;
         float y = (float)fn.Arg(1).ToNumber(fn.Env) * 20.0f;
         UByte mask = 0;
-        if (fn.NArgs >= 3 && fn.Arg(2).ToBool(fn.Env))
+        if (fn.NArgs >= 3 && ArgCopy(&fn, 2)->ToBool(fn.Env))
             mask = 1;
         if (fn.NArgs >= 4)
-            mask |= fn.Arg(3).ToBool(fn.Env) ? 2 : 0;
+            mask |= ArgCopy(&fn, 3)->ToBool(fn.Env) ? 2 : 0;
         Render::PointF pt(x, y);
         MovieImpl* proot = psprite->GetMovieImpl();
         if (proot && psprite->Is3D(true))
@@ -2424,16 +2429,16 @@ void AvmSprite::SpriteAttachBitmap(const FnCall& fn)
         return;
     }
 
-    int         depth = int(fn.Arg(1).ToNumber(fn.Env)) + 0x4000;
+    int         depth = int(ArgCopy(&fn, 1)->ToNumber(fn.Env)) + 0x4000;
     CharPosInfo pos(ResourceId(1), depth, true, Cxform::Identity, true, Matrix2F::Identity);
-    if ((unsigned)depth > 0x7efffffd)
+    if (depth < 0 || depth > 0x7efffffd)
     {
         psprite->LogScriptWarning("%s.attachBitmap() failed - depth (%d) must be >= 0",
                                   psprite->GetName().ToCStr(), pos.Depth);
         return;
     }
 
-    bool       smoothing = (fn.NArgs >= 4) ? fn.Arg(3).ToBool(fn.Env) : false;
+    bool       smoothing = (fn.NArgs >= 4) ? ArgCopy(&fn, 3)->ToBool(fn.Env) : false;
     MovieImpl* proot     = fn.Env->GetTarget()->GetMovieImpl();
     MovieRoot* pasRoot   = static_cast<MovieRoot*>(proot->pASMovieRoot);
     Ptr<MovieDefImpl> pimgDef = *proot->CreateImageMovieDef(pimage, smoothing, "");
@@ -2447,7 +2452,7 @@ void AvmSprite::SpriteAttachBitmap(const FnCall& fn)
         CharPosInfo pos2(ResourceId(1), 1, false, Cxform(), true, Matrix2F());
         ASString    emptyName(fn.Env->GetBuiltin(ASBuiltin_empty_));
         pnewCh->AddToPlayList();
-        pnewCh->ModifyOptimizedPlayList();
+        AS3::Sfr34_ModifyOptimizedPlayList(pnewCh);
         pnewCh->AddDisplayObject(pos2, emptyName, 0, 0, 1, 0, 0, 0);
         psprite->ReplaceDisplayObject(pos, pnewCh, emptyName);
         psprite->SetAcceptAnimMoves(false);
@@ -2720,7 +2725,8 @@ void AvmTextField::AppendHtml(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     if (ptf->HasStyleSheet() || fn.NArgs < 1)
         return;
-    ASString                      str = fn.Arg(0).ToString(fn.Env);
+    Value*                        parg = ArgCopy(&fn, 0);
+    ASString                      str = parg->ToString(fn.Env);
     ArrayDH<MS2_HTMLImageTagInfo> imageInfoArray(Memory::GetHeapByAddress(ptf));
     ptf->GetDocument()->AppendHtml(str.ToCStr(), SF_MAX_UPINT, false, reinterpret_cast<Render::Text::StyledText::HTMLImageTagInfoArray*>(&imageInfoArray));
     ptf->SetCompleteReformatReq();
@@ -2840,7 +2846,6 @@ void AvmTextField::ReplaceSel(const FnCall& fn)
 }
 
 // replaceText(beginIndex, endIndex, text): text takes the formats of the first replaced character.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
 // @0x142909d80
 void AvmTextField::ReplaceTextA(const FnCall& fn)
 {
@@ -2849,25 +2854,27 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     if (ptf->HasStyleSheet() || fn.NArgs < 3)
         return;
-    Number   start = fn.Arg(0).ToNumber(fn.Env);
-    Number   end   = fn.Arg(1).ToNumber(fn.Env);
-    ASString str   = fn.Arg(2).ToString(fn.Env);
+    Number   start = ArgCopy(&fn, 0)->ToNumber(fn.Env);
+    Number   end   = ArgCopy(&fn, 1)->ToNumber(fn.Env);
+    Value*   ptext = ArgCopy(&fn, 2);
+    ASString str   = ptext->ToString(fn.Env);
     unsigned len   = str.GetLength();
     unsigned startPos = unsigned(start);
     unsigned endPos   = unsigned(end);
-    if (start < 0 || end < 0 || startPos > endPos)
+    if (!(start >= 0) || !(end >= 0) || startPos > endPos)
         return;
     UPInt       textLen  = reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetLength();
     UPInt       newLen   = UPInt(len) - UPInt(endPos - startPos) + textLen;
+    void*       pdoc = ptf->GetDocument();
     const void* ptextFmt = 0;
     const void* pparaFmt = 0;
-    if (startPos < textLen)
-        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat((const Render::Text::TextFormat**)&ptextFmt, (const Render::Text::ParagraphFormat**)&pparaFmt, startPos);
-    else
+    if (startPos >= textLen)
     {
-        ptextFmt = StyledText_GetDefaultTextFormat(DocView_GetStyledText(ptf->GetDocument()));
-        pparaFmt = StyledText_GetDefaultParagraphFormat(DocView_GetStyledText(ptf->GetDocument()));
+        ptextFmt = StyledText_GetDefaultTextFormat(DocView_GetStyledText(pdoc));
+        pparaFmt = StyledText_GetDefaultParagraphFormat(DocView_GetStyledText(pdoc));
     }
+    else
+        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(pdoc))->GetTextAndParagraphFormat((const Render::Text::TextFormat**)&ptextFmt, (const Render::Text::ParagraphFormat**)&pparaFmt, startPos);
     // Both are held across the replacement.
     if (ptextFmt)
         ++*(int*)ptextFmt;
@@ -3059,7 +3066,6 @@ void AvmTextField::GetNewTextFormat(const FnCall& fn)
 }
 
 // setImageSubstitutions(null | substitution object | array of them); null drops every substitution.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
 // @0x14290b2c0
 void AvmTextField::SetImageSubstitutions(const FnCall& fn)
 {
@@ -3086,22 +3092,22 @@ void AvmTextField::SetImageSubstitutions(const FnCall& fn)
     }
     // The field as a character (TextField is opaque here).
     InteractiveObject* pch  = reinterpret_cast<InteractiveObject*>(ptf);
-    Object*            pobj = fn.Arg(0).ToObject(fn.Env);
-    if (!pobj)
+    Object*            pobj = ArgCopy(&fn, 0)->ToObject(fn.Env);
+    if (pobj)
     {
-        pch->LogScriptWarning("%s.setImageSubstitutions() failed: parameter should be either 'null', object or array",
-                              pch->GetName().ToCStr());
-        return;
-    }
-    AvmTextField* pavmTf = FromCharacter(pch);
-    if (pobj->GetObjectType() == Object_Array)
-    {
-        ArrayObject* parr = static_cast<ArrayObject*>(pobj);
-        for (int i = 0, n = parr->GetSize(); i < n; ++i)
-            pavmTf->ProceedImageSubstitution(fn, i, parr->GetElementPtr(i));
+        AvmTextField* pavmTf = FromCharacter(pch);
+        if (pobj->GetObjectType() == Object_Array)
+        {
+            ArrayObject* parr = static_cast<ArrayObject*>(pobj);
+            for (int i = 0, n = parr->GetSize(); i < n; ++i)
+                pavmTf->ProceedImageSubstitution(fn, i, parr->GetElementPtr(i));
+        }
+        else
+            pavmTf->ProceedImageSubstitution(fn, 0, ArgCopy(&fn, 0));
     }
     else
-        pavmTf->ProceedImageSubstitution(fn, 0, &fn.Arg(0));
+        pch->LogScriptWarning("%s.setImageSubstitutions() failed: parameter should be either 'null', object or array",
+                              pch->GetName().ToCStr());
 }
 }}} // namespace Scaleform::GFx::AS2
 
