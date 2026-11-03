@@ -1526,24 +1526,21 @@ void DisplayObjectBase::SetMatrix(const Matrix& m)
 }
 
 // @0x1425f5010
-// MS2-FUNCTIONAL: the exe keeps the matrix temporaries 16-byte aligned (movaps), frame layout differs
 void DisplayObject::SetMatrix(const Matrix& m)
 {
     if (!pScrollRect)
-    {
         DisplayObjectBase::SetMatrix(m);
-        return;
+    else
+    {
+        pScrollRect->OrigTransformMatrix = Matrix3F(m);
+        Matrix m1 = *(Matrix*)(void*)&pScrollRect->OrigTransformMatrix;
+        m1.PrependTranslation((float)-pScrollRect->Rectangle.x1, (float)-pScrollRect->Rectangle.y1);
+        GetRenderNode()->SetMatrix(m1);
+
+        Matrix mm;
+        mm.PrependTranslation((float)pScrollRect->Rectangle.x1, (float)pScrollRect->Rectangle.y1);
+        pScrollRect->Mask->GetTreeNode()->SetMatrix(mm);
     }
-
-    pScrollRect->OrigTransformMatrix = Matrix3F(m);
-
-    Matrix m1(pScrollRect->OrigTransformMatrix);
-    m1.PrependTranslation(float(-pScrollRect->Rectangle.x1), float(-pScrollRect->Rectangle.y1));
-    GetRenderNode()->SetMatrix(m1);
-
-    Matrix mm;
-    mm.PrependTranslation(float(pScrollRect->Rectangle.x1), float(pScrollRect->Rectangle.y1));
-    pScrollRect->Mask->GetTreeNode()->SetMatrix(mm);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
