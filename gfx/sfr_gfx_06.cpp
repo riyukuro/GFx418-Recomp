@@ -1336,7 +1336,8 @@ void DisplayObjectBase::SetRotation(Double rotation)
 
         // Rotate the old angle out and the new one in.
         ASCharacter_MatrixScaleAndRotate2x2(m, float(pGeomData->XScale / (m.GetXScaleDouble() * 100.)),
-                                            float(pGeomData->YScale / (m.GetYScaleDouble() * 100.)),
+                                            // GetYScaleDouble with the terms swapped: the exe adds Sy^2 + Shx^2
+                                            float(pGeomData->YScale / (sqrt(double(m.Sy()) * double(m.Sy()) + double(m.Shx()) * double(m.Shx())) * 100.)),
                                             float(-origRotation + r * MATH_PI / 180.));
         if (m.IsValid())
             SetMatrix(m);
