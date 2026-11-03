@@ -3686,20 +3686,24 @@ void VideoProviderNetStream::SendMetaInformation()
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Calls onCuePoint once per cue point on the target's environment. Like the exe, it does not check that
+// environment for NULL.
 // @0x140009850
 void VideoProviderNetStream::SendCuePoints(const Array<VideoPlayer::CuePoint>& cuePoints)
 {
-    if (!pNetStream || !pTarget || pNetStream->OnCuePointCallback.IsNull() || cuePoints.GetSize() == 0)
+    if (!pNetStream || !pTarget || pNetStream->OnCuePointCallback.IsNull() || cuePoints.GetSize() <= 0)
         return;
-    Environment* penv = GetTargetEnvironment(pTarget);
-    if (!penv)
+    DisplayObject* pch = pTarget->pCharacter;
+    InteractiveObject* pchar = pch->IsInteractiveObject() ? (InteractiveObject*)pch : NULL;
+    if (!pchar)
         return;
+    AvmDisplayObjBase* pavm = reinterpret_cast<AvmDisplayObjBase*>(reinterpret_cast<UInt32*>(pchar) + pchar->AvmObjOffset);
+    Environment* penv = static_cast<AvmCharacter*>(pavm->ToAvmInteractiveObjBase())->GetASEnvironment();
 
     for (UPInt i = 0; i < cuePoints.GetSize(); ++i)
     {
         Ptr<Object> pcuePoint = *ConvertCuePoint(cuePoints[i], penv);
-        penv->Push(Value(pcuePoint));
+        penv->Push(pcuePoint.GetPtr());
         Value ret;
         pNetStream->OnCuePointCallback.Invoke(FnCall(&ret, pNetStream, penv, 1, penv->GetTopIndex()));
         penv->Drop1();
