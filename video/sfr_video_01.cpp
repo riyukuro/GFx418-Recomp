@@ -4079,6 +4079,17 @@ Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototyp
     return object;
 }
 
+// No exe row. FUN_14000e1e0 and NetStreamProtoConstruct inline the Prototype<VideoObject> and Prototype<NetStream>
+// ctors by hand, so no other TU instantiates them. This function does: their vftables and virtuals are the targets of
+// the DAT_140009ef0.., DAT_14000d6f0.. and DAT_1431b5478.. rows of data_rdata_sf_video.cpp, which are stubs in fullexe
+// without them.
+void Video01EmitPrototypeVtables(void* netStream, void* video, ASStringContext* context, Object* prototype,
+                                 const FunctionRef& constructor)
+{
+    ::new (netStream) Prototype<NetStream>(context, prototype, constructor);
+    ::new (video) Prototype<VideoObject>(context, prototype, constructor);
+}
+
 // Lazily allocates and caches the script VideoObject for its display character. The exe calls GetGC()
 // before it reads the display object.
 // @0x14000e020
