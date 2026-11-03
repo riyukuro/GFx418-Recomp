@@ -897,18 +897,20 @@ static __forceinline void Video01Reserve(void** array, Scaleform::UPInt newCapac
     }
 }
 
-// MS2-FUNCTIONAL: resizes the array of 16-byte records with four-element capacity rounding.
-// @0x1400051c0
-void FUN_1400051c0(void** array, void*, Scaleform::UPInt requested)
+// The audio-track (0x1400051c0) and sound-vector (0x140005260) arrays reserve through the SDK's own
+// ArrayDataBase<T, AllocatorGH<T, 2>, ArrayDefaultPolicy>::Reserve, called out of line.
+static __forceinline void Video01ReserveAudioTracks(void** array, void* owner, Scaleform::UPInt requested)
 {
-    Video01Reserve<16>(array, requested);
+    typedef Scaleform::GFx::Video::VideoPlayer::AudioTrackInfo T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)
+        ->Reserve(owner, requested);
 }
 
-// MS2-FUNCTIONAL: resizes the array of 12-byte records with four-element capacity rounding.
-// @0x140005260
-void FUN_140005260(void** array, void*, Scaleform::UPInt requested)
+static __forceinline void Video01ReserveVectors(void** array, void* owner, Scaleform::UPInt requested)
 {
-    Video01Reserve<12>(array, requested);
+    typedef Scaleform::Sound::SoundChannel::Vector T;
+    reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)
+        ->Reserve(owner, requested);
 }
 
 // Releases a character handle when its intrusive reference count reaches zero.
@@ -1038,8 +1040,8 @@ void FUN_140005ac0(void** array, const void** value)
 void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400051c0(array, owner, size); }
-    else if (size >= fields[2]) FUN_1400051c0(array, owner, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) Video01ReserveAudioTracks(array, owner, size); }
+    else if (size >= fields[2]) Video01ReserveAudioTracks(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
@@ -1048,8 +1050,8 @@ void FUN_140005b40(void** array, void* owner, Scaleform::UPInt size)
 void FUN_140005ba0(void** array, void* owner, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] / 2) FUN_140005260(array, owner, size); }
-    else if (size >= fields[2]) FUN_140005260(array, owner, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) Video01ReserveVectors(array, owner, size); }
+    else if (size >= fields[2]) Video01ReserveVectors(array, owner, size + (size >> 2));
     fields[1] = size;
 }
 
@@ -1069,8 +1071,8 @@ void FUN_140005ca0(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     const Scaleform::UPInt oldSize = fields[1];
-    if (size < oldSize) { if (size < fields[2] / 2) FUN_140005260(array, array, size); }
-    else if (size >= fields[2]) FUN_140005260(array, array, size + (size >> 2));
+    if (size < oldSize) { if (size < fields[2] / 2) Video01ReserveVectors(array, array, size); }
+    else if (size >= fields[2]) Video01ReserveVectors(array, array, size + (size >> 2));
     fields[1] = size;
     if (size > oldSize) {
         unsigned* record = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(*array) + oldSize * 12);
@@ -1468,7 +1470,11 @@ void FUN_140006bf0(void** array)
             }
             fields[2] = 0;
         }
-    } else if (0 >= fields[2]) FUN_1400051c0(array, array, 0);
+    } else if (0 >= fields[2]) {
+        typedef Scaleform::GFx::Video::VideoPlayer::AudioTrackInfo T;
+        reinterpret_cast<Scaleform::ArrayDataBase<T, Scaleform::AllocatorGH<T, 2>, Scaleform::ArrayDefaultPolicy>*>(array)
+            ->Reserve(array, 0);
+    }
     fields[1] = 0;
 }
 #pragma inline_depth()
@@ -2678,8 +2684,8 @@ void** FUN_140006350(void** weakSlot, void** result)
 void FUN_140006670(void** array, Scaleform::UPInt size)
 {
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
-    if (size < fields[1]) { if (size < fields[2] / 2) FUN_1400051c0(array, array, size); }
-    else if (size >= fields[2]) FUN_1400051c0(array, array, size + (size >> 2));
+    if (size < fields[1]) { if (size < fields[2] / 2) Video01ReserveAudioTracks(array, array, size); }
+    else if (size >= fields[2]) Video01ReserveAudioTracks(array, array, size + (size >> 2));
     fields[1] = size;
 }
 
@@ -2689,8 +2695,8 @@ void FUN_1400066f0(void** array, const unsigned* record)
 {
     Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
     const Scaleform::UPInt size = data->Size + 1;
-    if (size < data->Size) { if (size < data->Capacity >> 1) FUN_140005260(array, array, size); }
-    else if (size >= data->Capacity) FUN_140005260(array, array, size + (size >> 2));
+    if (size < data->Size) { if (size < data->Capacity >> 1) Video01ReserveVectors(array, array, size); }
+    else if (size >= data->Capacity) Video01ReserveVectors(array, array, size + (size >> 2));
     data->Size = size;
     unsigned* slot = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(data->Data) + (size - 1) * 12);
     if (slot) { slot[0] = record[0]; slot[1] = record[1]; slot[2] = record[2]; }
