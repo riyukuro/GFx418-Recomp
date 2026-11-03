@@ -155,7 +155,8 @@ template void ArrayData<RangeData<GFx::TextField::CSSHolderBase::UrlZone>,
 template void RangeDataArray<GFx::TextField::CSSHolderBase::UrlZone>::Iterator::Remove();
 // @0x1425bc870
 template void RangeDataArray<GFx::TextField::CSSHolderBase::UrlZone>::SetRange(const TypedRangeData&);
-// MS2-FUNCTIONAL 0x1425bf1a0: same rehash and calls; the frame layout differs
+// The new table's dtor is the out-of-line one (sfr_gfx_03e's copy).
+template <> decltype(StringHashLH<Ptr<Render::Text::ImageDesc> >::mHash)::BaseType::~HashSetBase();
 // @0x1425bf1a0
 template void decltype(StringHashLH<Ptr<Render::Text::ImageDesc> >::mHash)::BaseType::setRawCapacity(void*, UPInt);
 
