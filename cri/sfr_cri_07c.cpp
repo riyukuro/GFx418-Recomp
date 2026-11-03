@@ -440,7 +440,7 @@ void SVM_CallErr2(const char *, const char *);
 void FUN_1400aff40(int);
 cri_u8 svm_reset_variable();
 void SVM_Init();
-int SVM_Finish();
+void SVM_Finish();
 void FUN_1400b01f0();
 void FUN_1400b0210();
 void svm_enterCriticalSection(int);
@@ -1030,7 +1030,7 @@ cri_u8 svm_reset_variable();
 
 void SVM_Init();
 
-int SVM_Finish();
+void SVM_Finish();
 
 void FUN_1400b01f0();
 

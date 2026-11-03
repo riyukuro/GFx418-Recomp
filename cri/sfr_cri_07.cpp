@@ -669,7 +669,7 @@ void SVM_CallErr2(const char *, const char *);
 void FUN_1400aff40(int);
 cri_u8 svm_reset_variable();
 void SVM_Init();
-int SVM_Finish();
+void SVM_Finish();
 void FUN_1400b01f0();
 void FUN_1400b0210();
 void svm_enterCriticalSection(int);
@@ -53916,25 +53916,21 @@ void SVM_Init()
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400b0130
-int SVM_Finish()
+void SVM_Finish()   // void: the decompile's int return is only svm_reset_variable's rax left over
 {
-  int i_v1;
   cri_u8 *pu_v2;
   
-  i_v1 = --DAT_143d68ab0;
-  if (i_v1 == 0) {
+  if (--DAT_143d68ab0 == 0) {
     pu_v2 = (ulonglong *)&DAT_143d68870;
     do {
       CRICRS_Destroy((LPCRITICAL_SECTION)(*pu_v2));
       pu_v2 = pu_v2 + 1;
     } while ((longlong)pu_v2 < ((longlong)&DAT_143d688b0));
-    i_v1 = (int)svm_reset_variable();
+    svm_reset_variable();
     DAT_143d68860 = 0;
     DAT_143d68868 = 0;
   }
-  return i_v1;
 }
 
 // @0x1400b01f0
