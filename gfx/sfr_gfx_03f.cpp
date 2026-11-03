@@ -907,13 +907,12 @@ DisplayObjectBase::GeomDataType& TextField::UpdateAndGetGeomData(GeomDataType* p
 }
 
 // The style sheet's "a" and "a:link" styles over each URL run; the run's formatting is saved again after.
-// MS2-FUNCTIONAL 0x1425bec30: same lookups and calls; the exe hoists the zone stride
 // @0x1425bec30
 void TextField::UpdateUrlStyles()
 {
     if (!pCSSData)
         return;
-    for (UPInt i = 0, n = pCSSData->UrlZones.Count(); i < n; ++i)
+    for (unsigned i = 0, n = unsigned(pCSSData->UrlZones.Count()); i < n; ++i)
     {
         if (!pCSSData->HasASStyleSheet())
             continue;
@@ -927,10 +926,10 @@ void TextField::UpdateUrlStyles()
         if (plinkStyle)
             fmt = fmt.Merge(plinkStyle->mTextFormat);
 
-        RangeData<CSSHolderBase::UrlZone>& zone = pCSSData->UrlZones[i];
-        const UPInt startPos = UPInt(zone.FirstIndex()), endPos = UPInt(zone.NextIndex());
+        const UPInt startPos = UPInt(pCSSData->UrlZones[i].FirstIndex()),
+                    endPos   = UPInt(pCSSData->UrlZones[i].NextIndex());
         pDocument->SetTextFormat(fmt, startPos, endPos);
-        zone.GetData().SavedFmt = *pDocument->GetStyledText()->CopyStyledText(startPos, endPos);
+        pCSSData->UrlZones[i].GetData().SavedFmt = *pDocument->GetStyledText()->CopyStyledText(startPos, endPos);
     }
 }
 
