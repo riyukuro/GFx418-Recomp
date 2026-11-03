@@ -3609,21 +3609,24 @@ bool ASVM::_constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned arg
     return result;
 }
 
+// ArrayDataDH<Value>::PushBack with its ResizeNoConstruct (0x1424201a0) out of line.
+static SF_INLINE void Sfr31PushScope(ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy>& d, const Value& val)
+{
+    FUN_1424201a0(&d, const_cast<MemoryHeap*>(d.pHeap), d.Size + 1);
+    new (d.Data + d.Size - 1) Value(val);
+}
+
 // Traits::StoreScopeStack: appends copies of scope entries [start, n) onto the stored scope array.
-// MS2-FUNCTIONAL 0x14252cad0: raw-offset model; codegen differs from the exe
 // @0x14252cad0
 void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src)
 {
-    const UPInt n = src[1];
-    UPInt* dst = reinterpret_cast<UPInt*>(self + 0xa0);
-    if (dst[2] < dst[1] + n)
-        Sfr31ArrReserve(dst, reinterpret_cast<void*>(dst[3]), dst[1] + n, 0x20, 2, reinterpret_cast<MemoryHeap*>(dst[3]));
-    for (UPInt i = start; i < n; ++i)
-    {
-        const AS3::Value* s = reinterpret_cast<const AS3::Value*>(src[0]) + i;
-        FUN_1424201a0(dst, reinterpret_cast<void*>(dst[3]), dst[1] + 1);
-        new (reinterpret_cast<AS3::Value*>(dst[0]) + dst[1] - 1) AS3::Value(*s);
-    }
+    const ArrayDH<Value>& ss = *reinterpret_cast<const ArrayDH<Value>*>(src);
+    ArrayDH<Value>& initScope = *reinterpret_cast<ArrayDH<Value>*>(self + 0xa0);
+    ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy>& d = *reinterpret_cast<ArrayDataDH<Value, AllocatorDH<Value, 2>, ArrayDefaultPolicy>*>(self + 0xa0);
+    const UPInt size = ss.GetSize();
+    initScope.Reserve(reinterpret_cast<const ArrayDH<Value>*>(self + 0xa0)->GetSize() + size);
+    for (UPInt i = start; i < size; ++i)
+        Sfr31PushScope(d, ss[i]);
 }
 
 // exec_esc_xattr: converts the top of stack to a string and replaces it with its XML-escaped form.
