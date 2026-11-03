@@ -3522,230 +3522,74 @@ longlong parseGsc(cri_any cri_p0, cri_any cri_p1)
   return (longlong)(pos / 8) + arg2;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left is register
+// choice: the exe keeps arg1 in rbx and p in r10, ours arg1 in r11 and p in rbx.
 // @0x1400584e0
 longlong parsePsc(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   ulonglong arg2 = cri_p1;
-  int *pi_v1;
-  uint u_v2;
-  byte b_v3;
-  uint u_v4;
-  uint u_v5;
-  uint u_v6;
-  cri_u1 *pu_v7;
-  cri_u1 *pu_v8;
-  int i_v9;
+  cri_u1 *p;
+  int pos;
+  uint buf;
+  uint nxt;
+  uint type;
   
   *(int *)((char *)arg1 + 0xcb8) = *(int *)((char *)arg1 + 0xcb8) + 1;
   *(cri_u4 *)((char *)arg1 + 0xc94) = 3;
-  if (((*(int *)((char *)arg1 + 0x708) != 0) && (*(int *)((char *)arg1 + 0x708) != 4)) ||
-     (*(int *)((char *)arg1 + 0x70c) != 0)) {
+  if (((*(int *)((char *)arg1 + 0x708) != 0) && (*(int *)((char *)arg1 + 0x708) != 4)) || (*(int *)((char *)arg1 + 0x70c) != 0)) {
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
-  pu_v7 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  i_v9 = (int)arg2 * 8 + (int)pu_v7 * -8;
-  b_v3 = (byte)i_v9;
-  u_v5 = CRI06_BE32(*pu_v7,pu_v7[1],pu_v7[2],pu_v7[3]) << (b_v3 & 0x1f);
-  u_v6 = CRI06_BE32(pu_v7[4],pu_v7[5],pu_v7[6],pu_v7[7]);
-  if (i_v9 == 0) {
-    *(uint *)((char *)arg1 + 0x2d8) = u_v5;
+  p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
+  pos = (int)arg2 * 8 - (int)p * 8;
+  buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
+  nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+  if (pos != 0) {
+    *(uint *)((char *)arg1 + 0x2d8) = nxt >> (32 - pos) | buf;
+    nxt = nxt << pos;
   }
   else {
-    u_v4 = u_v6 >> (0x20 - b_v3 & 0x1f);
-    u_v6 = u_v6 << (b_v3 & 0x1f);
-    *(uint *)((char *)arg1 + 0x2d8) = u_v4 | u_v5;
+    *(uint *)((char *)arg1 + 0x2d8) = buf;
   }
-  pu_v8 = pu_v7 + 0xc;
-  u_v5 = CRI06_BE32(pu_v7[8],pu_v7[9],pu_v7[10],pu_v7[0xb]);
-  if (i_v9 < 0x16) {
-    i_v9 = i_v9 + 10;
-    u_v4 = u_v6 << 10;
-    *(uint *)((char *)arg1 + 0x2dc) = u_v6 >> 0x16;
-  }
-  else {
-    i_v9 = i_v9 + -0x16;
-    if (i_v9 == 0) {
-      *(uint *)((char *)arg1 + 0x2dc) = u_v6 >> 0x16;
-      u_v4 = u_v5;
-    }
-    else {
-      *(uint *)((char *)arg1 + 0x2dc) = (u_v5 >> (10 - (byte)i_v9 & 0x1f) | u_v6) >> 0x16;
-      u_v4 = u_v5 << ((byte)i_v9 & 0x1f);
-    }
-    u_v5 = CRI06_BE32(*pu_v8,pu_v7[0xd],pu_v7[0xe],pu_v7[0xf]);
-    pu_v8 = pu_v7 + 0x10;
-  }
-  if (i_v9 < 0x1d) {
-    i_v9 = i_v9 + 3;
-    u_v6 = u_v4 << 3;
-    *(uint *)((char *)arg1 + 0x2e0) = u_v4 >> 0x1d;
-  }
-  else {
-    i_v9 = i_v9 + -0x1d;
-    if (i_v9 == 0) {
-      *(uint *)((char *)arg1 + 0x2e0) = u_v4 >> 0x1d;
-      u_v6 = u_v5;
-    }
-    else {
-      *(uint *)((char *)arg1 + 0x2e0) = (u_v5 >> (3 - (byte)i_v9 & 0x1f) | u_v4) >> 0x1d;
-      u_v6 = u_v5 << ((byte)i_v9 & 0x1f);
-    }
-    u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-    pu_v8 = pu_v8 + 4;
-  }
-  if (i_v9 < 0x10) {
-    i_v9 = i_v9 + 0x10;
-    u_v4 = u_v6 << 0x10;
-    *(uint *)((char *)arg1 + 0x2e4) = u_v6 >> 0x10;
-  }
-  else {
-    i_v9 = i_v9 + -0x10;
-    if (i_v9 == 0) {
-      *(uint *)((char *)arg1 + 0x2e4) = u_v6 >> 0x10;
-      u_v4 = u_v5;
-    }
-    else {
-      *(uint *)((char *)arg1 + 0x2e4) = (u_v5 >> (0x10 - (byte)i_v9 & 0x1f) | u_v6) >> 0x10;
-      u_v4 = u_v5 << ((byte)i_v9 & 0x1f);
-    }
-    u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-    pu_v8 = pu_v8 + 4;
-  }
-  u_v6 = *(uint *)((char *)arg1 + 0x2e0);
-  if ((u_v6 == 0) || (3 < u_v6)) {
+  buf = nxt;
+  nxt = CRI06_BE32(p[8],p[9],p[10],p[11]);
+  p = p + 12;
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2dc), 10);
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2e0), 3);
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2e4), 16);
+  type = *(uint *)((char *)arg1 + 0x2e0);
+  if ((type == 0) || (type >= 4)) {
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
-  if ((u_v6 == 1) || (u_v6 == 2)) {
+  if ((type == 1) || (type == 2)) {
     *(int *)((char *)arg1 + 0xd1c) = *(int *)((char *)arg1 + 0xd1c) + 1;
     *(cri_u4 *)((char *)arg1 + 0xd20) = 0;
-    u_v2 = *(int *)((char *)arg1 + 0xd1c) << 0x10;
+    *(uint *)((char *)arg1 + 0xd24) = *(int *)((char *)arg1 + 0xd1c) << 0x10;
   }
   else {
     *(int *)((char *)arg1 + 0xd20) = *(int *)((char *)arg1 + 0xd20) + 1;
-    u_v2 = *(int *)((char *)arg1 + 0xd1c) * 0x10000 - 0x10000U | *(uint *)((char *)arg1 + 0xd20);
+    *(uint *)((char *)arg1 + 0xd24) = (*(int *)((char *)arg1 + 0xd1c) << 0x10) - 0x10000 | *(uint *)((char *)arg1 + 0xd20);
   }
-  *(uint *)((char *)arg1 + 0xd24) = u_v2;
-  if ((u_v6 == 2) || (u_v6 == 3)) {
-    if (i_v9 < 0x1f) {
-      i_v9 = i_v9 + 1;
-      u_v2 = u_v4 * 2;
-      *(uint *)((char *)arg1 + 0x2e8) = u_v4 >> 0x1f;
-    }
-    else {
-      i_v9 = i_v9 + -0x1f;
-      if (i_v9 == 0) {
-        *(uint *)((char *)arg1 + 0x2e8) = u_v4 >> 0x1f;
-        u_v2 = u_v5;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x2e8) = (u_v5 >> (1 - (byte)i_v9 & 0x1f) | u_v4) >> 0x1f;
-        u_v2 = u_v5 << ((byte)i_v9 & 0x1f);
-      }
-      u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (i_v9 < 0x1d) {
-      i_v9 = i_v9 + 3;
-      u_v4 = u_v2 << 3;
-      *(uint *)((char *)arg1 + 0x2ec) = u_v2 >> 0x1d;
-    }
-    else {
-      i_v9 = i_v9 + -0x1d;
-      if (i_v9 == 0) {
-        *(uint *)((char *)arg1 + 0x2ec) = u_v2 >> 0x1d;
-        u_v4 = u_v5;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x2ec) = (u_v5 >> (3 - (byte)i_v9 & 0x1f) | u_v2) >> 0x1d;
-        u_v4 = u_v5 << ((byte)i_v9 & 0x1f);
-      }
-      u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
-    if (u_v6 == 3) {
-      if (i_v9 < 0x1f) {
-        i_v9 = i_v9 + 1;
-        u_v2 = u_v4 * 2;
-        *(uint *)((char *)arg1 + 0x2f0) = u_v4 >> 0x1f;
-      }
-      else {
-        i_v9 = i_v9 + -0x1f;
-        if (i_v9 == 0) {
-          *(uint *)((char *)arg1 + 0x2f0) = u_v4 >> 0x1f;
-          u_v2 = u_v5;
-        }
-        else {
-          *(uint *)((char *)arg1 + 0x2f0) = (u_v5 >> (1 - (byte)i_v9 & 0x1f) | u_v4) >> 0x1f;
-          u_v2 = u_v5 << ((byte)i_v9 & 0x1f);
-        }
-        u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-        pu_v8 = pu_v8 + 4;
-      }
-      if (0x1c < i_v9) {
-        i_v9 = i_v9 + -0x1d;
-        if (i_v9 != 0) {
-          *(uint *)((char *)arg1 + 0x2f4) = (u_v5 >> (3 - (byte)i_v9 & 0x1f) | u_v2) >> 0x1d;
-          u_v4 = u_v5 << ((byte)i_v9 & 0x1f);
-          goto LAB_140058a79;
-        }
-        *(uint *)((char *)arg1 + 0x2f4) = u_v2 >> 0x1d;
-        u_v4 = u_v5;
-        goto LAB_140058a79;
-      }
-      i_v9 = i_v9 + 3;
-      u_v4 = u_v2 << 3;
-      *(uint *)((char *)arg1 + 0x2f4) = u_v2 >> 0x1d;
+  if ((type == 2) || (type == 3)) {
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2e8), 1);
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2ec), 3);
+    if (type == 3) {
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2f0), 1);
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2f4), 3);
     }
   }
-  while( true ) {
-    if (i_v9 < 0x1f) {
-      i_v9 = i_v9 + 1;
-      u_v2 = u_v4 * 2;
-      *(uint *)((char *)arg1 + 0x2f8) = u_v4 >> 0x1f;
-    }
-    else {
-      i_v9 = i_v9 + -0x1f;
-      if (i_v9 == 0) {
-        *(uint *)((char *)arg1 + 0x2f8) = u_v4 >> 0x1f;
-        u_v2 = u_v5;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x2f8) = (u_v5 >> (1 - (byte)i_v9 & 0x1f) | u_v4) >> 0x1f;
-        u_v2 = u_v5 << ((byte)i_v9 & 0x1f);
-      }
-      u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+  for (;;) {
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2f8), 1);
     if (*(int *)((char *)arg1 + 0x2f8) == 0) break;
-    if (i_v9 < 0x18) {
-      i_v9 = i_v9 + 8;
-      u_v4 = u_v2 << 8;
-      *(uint *)((char *)arg1 + 0x2fc) = u_v2 >> 0x18;
-    }
-    else {
-      i_v9 = i_v9 + -0x18;
-      if (i_v9 == 0) {
-        *(uint *)((char *)arg1 + 0x2fc) = u_v2 >> 0x18;
-        u_v4 = u_v5;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x2fc) = (u_v5 >> (8 - (byte)i_v9 & 0x1f) | u_v2) >> 0x18;
-        u_v4 = u_v5 << ((byte)i_v9 & 0x1f);
-      }
-LAB_140058a79:
-      u_v5 = CRI06_BE32(*pu_v8,pu_v8[1],pu_v8[2],pu_v8[3]);
-      pu_v8 = pu_v8 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x2fc), 8);
   }
-  pi_v1 = (int *)(arg1 + 0xcbc + (ulonglong)u_v6 * 4);
-  *pi_v1 = *pi_v1 + 1;
+  *(int *)((char *)arg1 + 0xcbc + (ulonglong)type * 4) = *(int *)((char *)arg1 + 0xcbc + (ulonglong)type * 4) + 1;
   *(cri_u4 *)((char *)arg1 + 0x708) = 0x10;
   *(cri_u4 *)((char *)arg1 + 0x70c) = 8;
-  i_v9 = i_v9 + -0x39 + ((int)pu_v8 - (int)arg2) * 8;
-  return (longlong)((int)(i_v9 + (i_v9 >> 0x1f & 7U)) >> 3) + arg2;
+  pos = pos + ((int)p - (int)arg2) * 8 - 0x39;
+  return (longlong)(pos / 8) + arg2;
 }
+
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140058b10
