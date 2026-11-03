@@ -887,14 +887,6 @@ namespace Instances { namespace fl_events {
         return false;
     }
 
-    // A dispatcher that is a display object instance (not its class) dispatches along its display parent chain.
-    static inline bool IsDisplayObjectInstance(const Traits& tr)
-    {
-        return (unsigned)(tr.GetTraitsType() - Traits_DisplayObject_Begin) <=
-                   (unsigned)(Traits_DisplayObject_End - Traits_DisplayObject_Begin) &&
-               tr.IsInstanceTraits();
-    }
-
     // @0x14246ded0
     void EventDispatcher::dispatchEvent(bool& result, Instances::fl_events::Event* e)
     {
@@ -978,15 +970,7 @@ namespace Instances { namespace fl_events {
             return *reinterpret_cast<EventChains*>(reinterpret_cast<UByte*>(vm.GetMovieRoot()) + 0x150);
         }
 
-        inline bool IsButtonEvent(const StringManager& sm, const ASString& type)
-        {
-            return type == sm.GetBuiltin(BuiltinType(BI_mouseDown)) || type == sm.GetBuiltin(BuiltinType(BI_mouseUp)) ||
-                   type == sm.GetBuiltin(BuiltinType(BI_click)) || type == sm.GetBuiltin(BuiltinType(BI_doubleClick)) ||
-                   type == sm.GetBuiltin(BuiltinType(BI_mouseOver)) || type == sm.GetBuiltin(BuiltinType(BI_mouseOut)) ||
-                   type == sm.GetBuiltin(BuiltinType(BI_rollOver)) || type == sm.GetBuiltin(BuiltinType(BI_rollOut));
-        }
-
-        // IsButtonEvent as OnListenerRemoved inlines it (builtin on the left).
+        // Whether type is a mouse/button event (builtin on the left, as the exe compares).
         __forceinline bool IsButtonEventInl(const StringManager& sm, const ASString& type)
         {
             return sm.GetBuiltin(BuiltinType(BI_mouseDown)) == type || sm.GetBuiltin(BuiltinType(BI_mouseUp)) == type ||
@@ -997,22 +981,20 @@ namespace Instances { namespace fl_events {
     }
 
     // @0x14246caa0
-    // MS2-FUNCTIONAL: cl orders the duplicate scan and the builtin compares differently
     void EventDispatcher::addEventListener(const Value& result, const ASString& type, const Value& listener,
                                            bool useCapture, SInt32 priority, bool useWeakReference)
     {
         SF_UNUSED(result);
-        VM& vm = GetVM();
         if (!pImpl)
-            pImpl = SF_HEAP_NEW(vm.GetMemoryHeap()) EventDispatcherImpl();
+            pImpl = SF_HEAP_NEW(GetVM().GetMemoryHeap()) EventDispatcherImpl();
         ListenersHash& hash = useCapture ? pImpl->CaptureListeners : pImpl->Listeners;
 
         ArrayLH<Listener>* listeners;
-        ArrayLH<Listener>** pa = hash.Get(type);
+        ArrayLH<Listener>** pa = hash.Get(ASString(type));
         if (!pa)
         {
-            listeners = SF_HEAP_NEW(vm.GetMemoryHeap()) ArrayLH<Listener>();
-            hash.Add(type, listeners);
+            listeners = SF_HEAP_NEW(GetVM().GetMemoryHeap()) ArrayLH<Listener>();
+            hash.Add(ASString(type), listeners);
         }
         else
             listeners = *pa;
@@ -1024,50 +1006,52 @@ namespace Instances { namespace fl_events {
             Listener& l = (*listeners)[i];
             if (l.Function.IsValidWeakRef() && StrictEqual(l.Function, listener))
                 return;
-            if ((*listeners)[i].Priority < priority)
+            if (priority > (*listeners)[i].Priority)
                 break;
         }
-        for (UPInt j = i; j < listeners->GetSize(); ++j)
+        for (UPInt j = i, n2 = listeners->GetSize(); j < n2; ++j)
         {
             Listener& l = (*listeners)[j];
             if (l.Function.IsValidWeakRef() && StrictEqual(l.Function, listener))
                 return;
         }
 
+        VM& vm = GetVM();
         const StringManager& sm = vm.GetStringManager();
+        ASString evtType(type);
         EventId::IdCode code;
-        if (type == sm.GetBuiltin(BuiltinType(BI_enterFrame)))
+        if (evtType == sm.GetBuiltin(BuiltinType(BI_enterFrame)))
         {
             code = EventId::Event_EnterFrame;
             static_cast<ASVM&>(vm).GetMovieImpl()->Flags |= MovieImpl::Flag_OptAdvListInvalid;
             pImpl->HasEnterFrame = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_frameConstructed)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_frameConstructed)))
         {
             code = EventId::IdCode(EV_FrameConstructed);
             pImpl->HasFrameConstructed = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_exitFrame)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_exitFrame)))
         {
             code = EventId::IdCode(EV_ExitFrame);
             pImpl->HasExitFrame = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_activate)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_activate)))
         {
             code = EventId::IdCode(EV_Activate);
             pImpl->HasActivate = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_deactivate)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_deactivate)))
         {
             code = EventId::IdCode(EV_Deactivate);
             pImpl->HasDeactivate = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_render)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_render)))
         {
             code = EventId::IdCode(EV_Render);
             pImpl->HasRender = 1;
         }
-        else if (type == sm.GetBuiltin(BuiltinType(BI_resize)))
+        else if (evtType == sm.GetBuiltin(BuiltinType(BI_resize)))
         {
             code = EventId::IdCode(EV_Resize);
             pImpl->HasResize = 1;
@@ -1075,21 +1059,39 @@ namespace Instances { namespace fl_events {
         else
         {
             code = EventId::Event_Invalid;
-            if (IsButtonEvent(sm, type))
+            if (IsButtonEventInl(sm, evtType))
             {
-                UInt8& cnt = useCapture ? pImpl->CaptureButtonHandlersCnt : pImpl->ButtonHandlersCnt;
-                if (cnt != 0xff)
-                    ++cnt;
+                if (useCapture)
+                {
+                    if (pImpl->CaptureButtonHandlersCnt < 255)
+                        ++pImpl->CaptureButtonHandlersCnt;
+                }
+                else if (pImpl->ButtonHandlersCnt < 255)
+                    ++pImpl->ButtonHandlersCnt;
             }
         }
-        if (code != EventId::Event_Invalid && listeners->GetSize() == 0 && IsDisplayObjectInstance(GetTraits()))
-            GetEventChains(static_cast<ASVM&>(vm))
-                .AddToChain(code, static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj);
+        if (code != EventId::Event_Invalid && listeners->GetSize() == 0)
+        {
+            // the display object traits range, a switch (the exe's add eax,-0x11 range test)
+            switch (GetTraits().GetTraitsType())
+            {
+            case Traits_DisplayObject: case Traits_InteractiveObject: case Traits_Shape: case Traits_MorphShape:
+            case Traits_AVM1Movie: case Traits_Bitmap: case Traits_DisplayObjectContainer: case Traits_Sprite:
+            case Traits_MovieClip: case Traits_Stage: case Traits_Loader: case Traits_SimpleButton:
+            case Traits_DisplayObject_End:
+                if (GetTraits().IsInstanceTraits())
+                    GetEventChains(static_cast<ASVM&>(vm))
+                        .AddToChain(code, static_cast<Instances::fl_display::DisplayObject*>(this)->pDispObj);
+                break;
+            default:
+                break;
+            }
+        }
 
-        Listener l;
-        l.Priority = priority;
-        l.Function = listener;
-        listeners->InsertAt(i, l);
+        {
+            Listener l = { priority, listener };
+            listeners->InsertAt(i, l);
+        }
         if (useWeakReference)
             (*listeners)[i].Function.MakeWeakRef();
     }

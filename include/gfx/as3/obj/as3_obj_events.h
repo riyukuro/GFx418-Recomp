@@ -227,11 +227,10 @@ namespace Instances { namespace fl_events {
         bool HasButtonHandlers() const;                                                     // 0x14246a140
     };
 
-    // One registered listener (0x28 bytes): the function value and the addEventListener options.
+    // One registered listener (0x28 bytes): the priority and the function value (weak when useWeakReference).
     struct EventDispatcher::Listener
     {
         SInt32  Priority;       // +0x00
-        bool    UseWeakRef;     // +0x04
         Value   Function;       // +0x08 (the array destructor 0x142462140 releases it at +8)
     };
 
@@ -248,15 +247,25 @@ namespace Instances { namespace fl_events {
         ListenersHash   CaptureListeners;   // +0x0: useCapture listeners
         ListenersHash   Listeners;          // +0x8
         // (appended, sfr_as3_09) which frame/activation events have a listener (+0x10)
-        UInt16          HasEnterFrame : 1;
-        UInt16          HasActivate : 1;
-        UInt16          HasDeactivate : 1;
-        UInt16          HasRender : 1;
-        UInt16          HasResize : 1;
-        UInt16          HasFrameConstructed : 1;
-        UInt16          HasExitFrame : 1;
+        union
+        {
+            struct
+            {
+                UInt16  HasEnterFrame : 1;
+                UInt16  HasActivate : 1;
+                UInt16  HasDeactivate : 1;
+                UInt16  HasRender : 1;
+                UInt16  HasResize : 1;
+                UInt16  HasFrameConstructed : 1;
+                UInt16  HasExitFrame : 1;
+            };
+            UInt16      Flags;
+        };
         UInt8           CaptureButtonHandlersCnt;   // +0x12
         UInt8           ButtonHandlersCnt;          // +0x13
+
+        // (appended, sfr_as3_09) the exe zeroes +0x0..+0x13 only
+        EventDispatcherImpl() : Flags(0), CaptureButtonHandlersCnt(0), ButtonHandlersCnt(0) {}
     };
 
     // 0x68 bytes. The constructor is bound to the exe.
