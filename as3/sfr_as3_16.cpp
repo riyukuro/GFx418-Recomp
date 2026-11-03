@@ -304,7 +304,8 @@ Scaleform::GFx::AS3::XMLSupportImpl::~XMLSupportImpl()
 // A copied frame gives back what its constructor reserved: the operand stack reservation (an emptied page with a
 // predecessor goes back to the reserved list and the values still on it move down onto the predecessor), the
 // registers of the method body, and the scope stack. The operand values stay on the stack for the caller.
-// MS2-FUNCTIONAL 0x1424dde10: OpStack/RegisterFile ReleaseReserved written out (exe: both inline); same steps.
+// MS2-FUNCTIONAL 0x1424dde10: both ReleaseReserved inlined as in the exe; left: register naming (exe zero in r15)
+// and the register loop (exe re-indexes pRF by the UInt16 i each pass, ours strength-reduces it).
 // @0x1424dde10
 Scaleform::GFx::AS3::CallFrame::~CallFrame()
 {
@@ -312,33 +313,52 @@ Scaleform::GFx::AS3::CallFrame::~CallFrame()
     {
         using Scaleform::GFx::AS3::Value;
         using Scaleform::GFx::AS3::ValueStack;
-        const Scaleform::GFx::AS3::Abc::MethodBodyInfo& body =
-            *pFile->GetAbcFile().MethodBodies.Info[static_cast<Scaleform::UPInt>(MBIIndex)];
-        ValueStack& stack = ValueStack::Of(pFile->GetVM());
-        ValueStack::Page* page = stack.pCurrentPage;
-        --page->ReservationNum;
-        stack.ReservedNum = PrevReservedNum;
-        if (page->ReservationNum == 0 && page->pPrev)
+        // ValueStack::ReleaseReserved, which has no out-of-line copy in the exe: the frame's reservation ends, and an
+        // emptied page with a predecessor goes back to the reserved list, its values moved onto the predecessor.
+        Value* const first = PrevFirstStackPos;
+        const Scaleform::UInt16 prevReservedNum = PrevReservedNum;
+        ValueStack& st = ValueStack::Of(pFile->GetVM());
+        --st.pCurrentPage->ReservationNum;
+        st.ReservedNum = prevReservedNum;
+        if (st.pCurrentPage->ReservationNum == 0 && st.pCurrentPage->pPrev)
         {
-            Value* const top = stack.pCurrent;
-            ValueStack::Page* prev = page->pPrev;
-            stack.pCurrentPage = prev;
-            prev->pNext = NULL;
-            stack.pCurrent = prev->pCurrent;
-            stack.pStack = prev->pFirst;
-            page->pNext = stack.pReserved;
+            Value* const top = st.pCurrent;
+            ValueStack::Page* const page = st.pCurrentPage;
+            st.pCurrentPage = page->pPrev;
+            st.pCurrentPage->pNext = NULL;
+            st.pCurrent = st.pCurrentPage->pCurrent;
+            st.pStack = st.pCurrentPage->pFirst;
+            page->pNext = st.pReserved;
             page->pFirst = NULL;
-            stack.pReserved = page;
+            st.pReserved = page;
             for (Value* v = page->Values; v <= top; ++v)
-            {
-                ++stack.pCurrent;
-                memcpy(static_cast<void*>(stack.pCurrent), v, sizeof(Value));
-                *reinterpret_cast<Scaleform::UInt32*>(v) = 0;   // moved out: the old slot is undefined
-            }
+                new (++st.pCurrent) Value(*v, PickValue);
         }
         else
-            stack.pStack = PrevFirstStackPos;
-        static_cast<ValueRegisterFile*>(pRegisterFile)->ReleaseReserved(static_cast<Scaleform::UInt16>(body.local_reg_count));
+            st.pStack = first;
+        const Scaleform::GFx::AS3::Abc::MethodBodyInfo& body =
+            *pFile->GetAbcFile().MethodBodies.Info[static_cast<Scaleform::UPInt>(MBIIndex)];
+        // ValueRegisterFile::ReleaseReserved (0x142521fb0), inlined
+        ValueRegisterFile& rf = *static_cast<ValueRegisterFile*>(pRegisterFile);
+        const Scaleform::UInt16 num = static_cast<Scaleform::UInt16>(body.local_reg_count);
+        for (Scaleform::UInt16 i = 0; i < num; ++i)
+            rf.pRF[i].Release();
+        rf.Unk00 -= num;
+        ValueRegisterFile::Page* cur = rf.pCurrentPage;
+        --cur->CurrPos;
+        rf.pRF -= ValueRegisterFile::GetReservations(cur)[cur->CurrPos];
+        if (rf.Unk00 == 0 && rf.pCurrentPage->pPrev)
+        {
+            rf.Unk02 = Scaleform::Alg::Max(rf.pCurrentPage->PageSize, rf.Unk02);
+            ValueRegisterFile::Page* prev = rf.pCurrentPage->pPrev;
+            rf.pCurrentPage->pPrev = NULL;
+            rf.pCurrentPage->pNext = rf.pReservedPage;
+            rf.pReservedPage = rf.pCurrentPage;
+            rf.pCurrentPage = prev;
+            prev->pNext = NULL;
+            rf.Unk00 = rf.pCurrentPage->ReservedNum;
+            rf.pRF = rf.pCurrentPage->pCurrent;
+        }
         ClearScopeStack();
     }
 }

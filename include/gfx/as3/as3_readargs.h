@@ -96,6 +96,7 @@ public:
 
 private:
     friend class VM;    // (appended, sfr19) the VM constructor builds its register file in place
+    friend class CallFrame; // (appended) ~CallFrame inlines ReleaseReserved (0x1424dde10)
     ValueRegisterFile();
 
     // A new page of a multiple of 64 values (at least the largest so far; global heap). 0x1424eb640
