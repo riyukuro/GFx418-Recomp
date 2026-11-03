@@ -54,7 +54,6 @@ struct ActionBufferAccess : ActionBuffer
 
 // The frame (a number in the action, or a value on the stack for WaitForFrame2) and the count of actions to skip
 // when that frame of the target sprite is not loaded.
-// MS2-FUNCTIONAL: the exe inlines the stack pop and the action length walk; same behavior
 // @0x142994a10
 void FUN_142994a10(void* pctx, ActionBuffer* pbuf, int actionId)
 {
@@ -65,19 +64,19 @@ void FUN_142994a10(void* pctx, ActionBuffer* pbuf, int actionId)
     if (!penv->IsInvalidTarget && penv->Target->IsSprite())
         psprite = static_cast<Sprite*>(penv->Target);
 
-    bool  resolved;
-    UByte skipCount;
+    bool     resolved;
+    unsigned skipCount;
     if (actionId == Action_WaitForFrame)
     {
         resolved  = true;
-        frame     = *reinterpret_cast<const UInt16*>(ctx.pBuffer + ctx.PC + 3);
+        frame     = ctx.pBuffer[ctx.PC + 3] | (ctx.pBuffer[ctx.PC + 4] << 8);
         skipCount = ctx.pBuffer[ctx.PC + 5];
     }
     else
     {
-        resolved  = ActionBufferAccess::ResolveFrame(pbuf, penv, penv->Top(0), &frame);
+        resolved  = ActionBufferAccess::ResolveFrame(pbuf, penv, *penv->Stack.Top0(), &frame);
         skipCount = ctx.pBuffer[ctx.PC + 3];
-        penv->Drop1();
+        ctx.pEnv->Drop1();
     }
 
     if (!psprite || !resolved)
@@ -86,7 +85,7 @@ void FUN_142994a10(void* pctx, ActionBuffer* pbuf, int actionId)
     unsigned frameCount = psprite->pDef->GetFrameCount();
     if (frameCount != 0 && frame >= frameCount)
         frame = frameCount - 1;
-    if (psprite->GetLoadingFrame() > frame)
+    if (frame < psprite->GetLoadingFrame())
         return;
 
     // Not loaded yet: skip the next skipCount actions (an action >= 0x80 has a 16-bit length after its code).
@@ -97,16 +96,19 @@ void FUN_142994a10(void* pctx, ActionBuffer* pbuf, int actionId)
     {
         if (pc >= length)
             break;
-        if (ctx.pBuffer[pc] & 0x80)
-            pc += 3 + *reinterpret_cast<const UInt16*>(ctx.pBuffer + pc + 1);
-        else
-            pc += 1;
+        UByte action = ctx.pBuffer[pc];
+        pc++;
+        if (action & 0x80)
+            pc += 2 + (ctx.pBuffer[pc] | (ctx.pBuffer[pc + 1] << 8));
     }
-    if (pc < length)
+    if (pc >= length)
+    {
+        if (ctx.IsVerboseActionErrors())
+            ctx.LogF.LogScriptError("WaitForFrame branch to offset %d - this section only runs to %d", start,
+                                    ctx.StopPC);
+    }
+    else
         ctx.NextPC = (int)pc;
-    else if (ctx.IsVerboseActionErrors())
-        ctx.LogF.LogScriptError("WaitForFrame branch to offset %d - this section only runs to %d", start,
-                                ctx.StopPC);
 }
 
 }}} // namespace Scaleform::GFx::AS2
