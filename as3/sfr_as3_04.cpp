@@ -5058,31 +5058,36 @@ Pickable<Instances::fl::GlobalObjectScript> InstanceTraits::fl::GlobalObjectScri
         new(Alloc()) Instances::fl::GlobalObjectScript(*this, Instances::fl::GlobalObjectScript::InlineCtorTag()));
 }
 
+namespace Scaleform { namespace GFx { namespace AS3 { namespace InstanceTraits { namespace fl {
+    // Inline copy of the catch scope traits ctor (its out-of-line copy is in sfr_as3_01c); the exe inlines it below.
+    __forceinline Catch::Catch(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e)
+        : CTraits(vm, AS3::fl::CatchCI)
+    {
+        TraitsType = Traits_Catch;
+        UInt32 var_ind = e.var_name_ind;
+        if (var_ind != 0)
+            var_ind = UInt32(file.GetAbcFile().Const_Pool.ConstStr.GetSize()) - var_ind;
+        ASString name = file.GetInternedString(var_ind);
+        SlotInfo::BindingType bt = (SlotInfo::BindingType)2;
+        if (e.exc_type_ind != 0)
+            bt = GetBindingType(file, file.GetAbcFile().Const_Pool.GetMultiname(e.exc_type_ind));
+        AddSlot(name, Pickable<const Instances::Namespace>(GetVM().PublicNamespace.GetPtr(), PickValue), bt,
+                AbsoluteIndex(0));
+        CalculateMemSize(0x38);
+    }
+}}}}}
+
 // the traits of a catch scope: one slot named by the exception variable, typed by the exception type
-// MS2-FUNCTIONAL: written from the exe on raw offsets (exception info: type +0xc, var name +0x10)
+// MS2-FUNCTIONAL: the exe returns the result pointer (sret); ours is void
 // @0x14241b920
 void FUN_14241b920(Scaleform::UPInt selfAddr, void* retp, Scaleform::UPInt fileAddr, Scaleform::UPInt excAddr)
 {
     AS3::Object* self = reinterpret_cast<AS3::Object*>(selfAddr);
-    InstanceTraits::fl::Catch** ret = static_cast<InstanceTraits::fl::Catch**>(retp);
     VMAbcFile& file = *reinterpret_cast<VMAbcFile*>(fileAddr);
-    const char* exc_info = reinterpret_cast<const char*>(excAddr);
-    VM& vm = self->GetVM();
-    InstanceTraits::fl::Catch* itr = SF_HEAP_AUTO_NEW(self) InstanceTraits::fl::Catch(vm, DAT_14313dd00);
-    *ret = itr;
-    if (!itr)
-        return;
-    const char* abc = *(const char* const*)((const char*)&file + 0x28);
-    const int var_ind = *(const int*)(exc_info + 0x10);
-    ASString name = file.GetInternedString(var_ind == 0 ? 0 : *(const int*)(abc + 0x78) - var_ind);
-    Scaleform::GFx::AS3::SlotInfo::BindingType bt = (Scaleform::GFx::AS3::SlotInfo::BindingType)2;
-    const int type_ind = *(const int*)(exc_info + 0xc);
-    if (type_ind != 0)
-        bt = itr->GetBindingType(file, *(const Scaleform::GFx::AS3::Abc::Multiname*)
-                                           (*(const char* const*)(abc + 0xb8) + (SPInt)type_ind * 0x10));
-    itr->AddSlot(name, Pickable<const Instances::Namespace>(&vm.GetPublicNamespace(), Scaleform::PickValue), bt,
-                 Scaleform::GFx::AS3::AbsoluteIndex(0));
-    itr->CalculateMemSize(0x38);
+    const AS3::Abc::MethodBodyInfo::ExceptionInfo& e = *reinterpret_cast<const AS3::Abc::MethodBodyInfo::ExceptionInfo*>(excAddr);
+    // the SDK's SF_HEAP_AUTO_NEW_ID(this, StatMV_VM)
+    *static_cast<InstanceTraits::fl::Catch**>(retp) =
+        new((Scaleform::MemAddressPtr)((void*)self), AS3::StatMV_VM, __FILE__, __LINE__) InstanceTraits::fl::Catch(file, self->GetVM(), e);
 }
 
 // E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
@@ -6303,6 +6308,7 @@ template<> SF_NOINLINE void Scaleform::ArrayBase<Scaleform::ArrayDataDH<Scalefor
 // MS2-PIN: ??_7AttrGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431439f8
 // MS2-PIN: ??_7ListGet@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143ae0
 // MS2-PIN: ??_7InitStruct@String@Scaleform@@6B@ 0x14313f358
+// MS2-PIN: ??_7Catch@fl@InstanceTraits@AS3@GFx@Scaleform@@6B@ 0x1431405f0
 // MS2-PIN: ??_7ThunkFunction@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fa78
 // MS2-PIN: ??_7CheckTypeTF@Instances@AS3@GFx@Scaleform@@6B@ 0x14313fb38
 // MS2-PIN: ??_7FunctionBase@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f8f8

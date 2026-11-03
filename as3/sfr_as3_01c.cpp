@@ -485,8 +485,10 @@ namespace InstanceTraits { namespace fl
 {
     // The catch scope of an exception handler: one slot, named by the exception variable and typed by the exception
     // type (untyped when the handler catches everything).
+    // `inline` under cl like the Instances::fl ctors below: sfr_as3_04 carries an inline copy (FUN_14241b920);
+    // MS2_Sfr01cEmitCatchTraitsCtor keeps this one emitted.
     // @0x1423ebff0
-    Catch::Catch(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e)
+    SFR01C_INSTANCE_CTOR Catch::Catch(VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e)
         : CTraits(vm, AS3::fl::CatchCI)
     {
         TraitsType = Traits_Catch;
@@ -3288,6 +3290,11 @@ void MS2_Sfr01cEmitInstanceCtors(void* p, InstanceTraits::Traits& t, const Insta
     new(p) XMLElement(t, ns, s, parent);
     new(p) XMLProcInstr(t, s, s, parent);
     new(p) XMLText(t, s, parent);
+}
+// The same for the catch scope traits ctor.
+void MS2_Sfr01cEmitCatchTraitsCtor(void* p, VMAbcFile& file, VM& vm, const Abc::MethodBodyInfo::ExceptionInfo& e)
+{
+    ::new(p) InstanceTraits::fl::Catch(file, vm, e);
 }
 #pragma inline_depth()
 }}}
