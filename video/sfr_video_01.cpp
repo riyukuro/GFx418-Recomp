@@ -3556,16 +3556,18 @@ void VideoProviderNetStream::RegisterVideoCharacter(VideoCharacter* pvideo)
     VideoCharacters.PushBack(WeakPtr<VideoCharacter>(pvideo));
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Removes and returns the first video character, and drops the texture image.
 // @0x14000af10
 VideoCharacter* VideoProviderNetStream::RemoveFirstVideoCharacter()
 {
-    if (VideoCharacters.GetSize() == 0)
-        return NULL;
-    Ptr<VideoCharacter> pvideo = VideoCharacters[0];
-    VideoCharacters.RemoveAt(0);
-    pTextureImage = NULL;
-    return pvideo;
+    if (VideoCharacters.GetSize() > 0)
+    {
+        Ptr<VideoCharacter> pvideo = VideoCharacters[0];
+        VideoCharacters.RemoveAt(0);
+        pTextureImage = NULL;
+        return pvideo;
+    }
+    return NULL;
 }
 
 // @0x140006580
