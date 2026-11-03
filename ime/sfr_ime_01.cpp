@@ -4453,37 +4453,6 @@ void FUN_1423d0850(void* raw, DWORD listIndex)
 static void cx18_InvokeInputWindow(unsigned char* self, const char* name, Scaleform::GFx::Value* args, unsigned count);
 void FUN_1423d5060(void* raw, int);
 
-// Candidate list modes whose selection is shown relative to the visible page (the others select nothing, -1).
-static bool cx18_CandidateSelectsInPage(unsigned mode)
-{
-    return (mode == 2 || mode == 4 || mode == 10) || (mode & 0xf00) || mode == 0x40000 || mode == 0x70000 ||
-        mode == 0x110000 || mode == 0x210000 || mode == 0x410000 || mode == 0xd10000;
-}
-
-// Fills the candidate list object (+0x30) with the UTF-8 rows [first, first + visible) of an IMM candidate list.
-static void cx18_FillCandidateRows(unsigned char* self, const CANDIDATELIST* list, int first, int visible)
-{
-    void* output = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d9500(output);
-    for (int i = 0; i < visible; ++i) {
-        const wchar_t* wide = reinterpret_cast<const wchar_t*>(
-            reinterpret_cast<const unsigned char*>(list) + list->dwOffset[first + i]);
-        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
-        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size + 1)));
-        Scaleform::UTF8Util::EncodeString(text, wide, -1);
-        text[size] = 0;
-        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
-        if (item) {
-            FUN_1423cdb60(item, text);
-            ++*reinterpret_cast<int*>(item + 1);
-        }
-        unsigned long long retained = reinterpret_cast<unsigned long long>(item);
-        FUN_1423d9490(output, &retained, 0);
-        Scaleform::Memory::Free(text);
-        if (item) FUN_14257dcd0(item);
-    }
-}
-
 // Candidate list update of the IMM IME object (IMN_CHANGECANDIDATE). Reads IMM candidate list listIndex, stores its
 // count (+0xcc), the page size (+0xd4, never shrinking) and the first visible row (+0x70: the page start, or the
 // selection's page for the 0xf00 modes). An empty list calls RemoveList; otherwise the mode decides the visible rows
@@ -4584,15 +4553,16 @@ void FUN_1423d3120(void* raw, DWORD listIndex)
 // list's own, mode 0x410000 shows at most five rows, the visible row count goes to +0x6c, the list window is rebuilt
 // (RemoveList, then CreateList(page size, at-caret flag +0x5a0)) and the selection is its index within the page.
 // An empty list does nothing.
-// MS2-FUNCTIONAL: the exe builds the CreateList arguments in a heap Value array, releases the input context a
-// second time after the rows (kept), inlines the rows, and keeps an unused Value local. Reviewed against the exe:
-// same rows, page and CreateList arguments (the exe converts them int -> float -> double, equal for page sizes).
+// MS2-FUNCTIONAL: the input context is released a second time after the rows, as in the exe (kept). What is left:
+// register allocation and frame slots (the list pointer's r12 spill, -1/5 in r13). Reviewed against the exe: same
+// rows, page and CreateList arguments (int -> float -> double, as the exe converts them).
 // @0x1423d46f0
 void FUN_1423d46f0(void* raw, DWORD listIndex)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    Scaleform::GFx::Value unused;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
     if (!bytes) return;
     auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(bytes) * 0x1c));
@@ -4603,50 +4573,73 @@ void FUN_1423d46f0(void* raw, DWORD listIndex)
     first = static_cast<int>(list->dwPageStart);
     int page = static_cast<int>(list->dwPageSize);
     *reinterpret_cast<int*>(self + 0xd4) = page;
-    cx18_ImmReleaseContext(hwnd, context);
-    const int count = *reinterpret_cast<int*>(self + 0xcc);
-    if (!count) {
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    int visible = *reinterpret_cast<int*>(self + 0xcc);
+    if (!visible) {
         Scaleform::Memory::Free(list);
         return;
     }
     const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
     if (mode & 0xf00) first = selection - selection % *reinterpret_cast<int*>(self + 0xd4);
-    int visible;
     if (mode == 0x410000) {
         page = 5;
-        visible = count < 5 ? count : 5;
-    } else {
-        visible = page;
-        if (mode == 0x40000) {
-            if (count - first <= page) visible = count - first;
-        } else if (mode == 0x60000) {
-            first = selection;
-            if (count - selection <= page) visible = count - selection;
-        } else {
-            visible = count;
-            if (mode != 0xd00001 && page <= count) {
-                visible = page;
-                if (count - first <= page) visible = count - first;
-            }
-        }
+        visible = visible > 5 ? 5 : visible;
+    } else if (mode == 0x40000) {
+        visible -= first;
+        if (page < visible) visible = page;
+    } else if (mode == 0x60000) {
+        first = selection;
+        visible -= first;
+        if (page < visible) visible = page;
+    } else if (mode != 0xd00001 && visible >= page) {
+        const int rest = visible - first;
+        visible = rest <= page ? rest : page;
     }
     *reinterpret_cast<int*>(self + 0x6c) = visible;
     {
-        Scaleform::GFx::Value args[2];
-        args[0] = Scaleform::GFx::Value(static_cast<double>(page));
-        args[1] = Scaleform::GFx::Value(static_cast<double>(*reinterpret_cast<int*>(self + 0x5a0)));
-        cx18_InvokeInputWindow(self, "RemoveList", nullptr, 0);
-        cx18_InvokeInputWindow(self, "CreateList", args, 2);
+        Scaleform::GFx::Value result;
+        Ime01ArgArray args;
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(static_cast<float>(page))));
+        Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(static_cast<float>(*reinterpret_cast<int*>(self + 0x5a0)))));
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "RemoveList", &result, nullptr, 0);
+        if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+            reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                bridge, "CreateList", &result, args.data(), 2);
     }
-    cx18_FillCandidateRows(self, list, first, visible);
+    FUN_1423d9500(*reinterpret_cast<void**>(self + 0x30));
+    for (int i = 0; i < visible; ++i) {
+        const wchar_t* wide = reinterpret_cast<const wchar_t*>(
+            reinterpret_cast<const unsigned char*>(list) + list->dwOffset[first + i]);
+        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
+        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size + 1)));
+        Scaleform::UTF8Util::EncodeString(text, wide, -1);
+        text[size] = 0;
+        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+        if (item) {
+            *reinterpret_cast<unsigned*>(item + 1) = 1;
+            String* value = reinterpret_cast<String*>(item + 3);
+            item[0] = reinterpret_cast<unsigned long long>(DAT_14313a228);
+            new (value) String();
+            *value = text;
+            ++*reinterpret_cast<int*>(item + 1);
+        } else
+            item = nullptr;
+        unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+        FUN_1423d9490(*reinterpret_cast<void**>(self + 0x30), &retained, 0);
+        Scaleform::Memory::Free(text);
+        if (item) FUN_14257dcd0(item);
+    }
     Scaleform::Memory::Free(list);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    const unsigned now = *reinterpret_cast<unsigned*>(self + 0x98);
     long long selected = -1;
-    if (cx18_CandidateSelectsInPage(*reinterpret_cast<unsigned*>(self + 0x98)))
+    if ((now == 2 || now == 4 || now == 10) || (now & 0xf00) || now == 0x40000 || now == 0x70000 ||
+        now == 0x110000 || now == 0x210000 || now == 0x410000 || now == 0xd10000)
         selected = selection % *reinterpret_cast<int*>(self + 0xd4);
-    void* output = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d97f0(output, static_cast<unsigned long long>(selected), 0);
-    FUN_1423d9b40(output);
+    FUN_1423d97f0(*reinterpret_cast<void**>(self + 0x30), static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(*reinterpret_cast<void**>(self + 0x30));
     self[0x5bc] = 1;
 }
 
@@ -5532,23 +5525,6 @@ static void cx18_InvokeInputWindow(unsigned char* self, const char* name, Scalef
     if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
         reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
             bridge, name, &result, args, count);
-}
-
-// Shows the UTF-8 copy of the reading string at +0x40 in the input window at the composition cursor (offset
-// -[+0x64]): DisplayInputWindow(text, cursor.x1, cursor.y2, height), height = cursor.y2 - cursor.y1 or 0.
-static void cx18_DisplayReading(unsigned char* self, const char* text, bool withHeight)
-{
-    void* owner = *reinterpret_cast<void**>(self + 8);
-    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
-        reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
-    Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
-    ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
-    Scaleform::GFx::Value args[4];
-    args[0] = Scaleform::GFx::Value(text);
-    args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-    args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-    args[3] = Scaleform::GFx::Value(withHeight ? static_cast<double>(cursorRect.y2 - cursorRect.y1) : 0.0);
-    cx18_InvokeInputWindow(self, "DisplayInputWindow", args, 4);
 }
 
 // Reading-string window of the IMM IME object, called from its WM_IME_COMPOSITION handler (0x1423d3510) for
