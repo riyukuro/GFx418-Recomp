@@ -891,8 +891,9 @@ struct Unk_ImeComRef
 };
 
 // MS2-FUNCTIONAL: the three-stage input-context COM query in a catch(...) that releases first, second and third as
-// the exe's funclet does. Same length; the exe tests hr2 before second (it loads second right after the call), ours
-// tests second first. Writing hr2 first moves first/second to the other's slot.
+// the exe's funclet does. Same length; the exe loads second right after the second COM call, before the hr2 test,
+// so its failure branch skips the reload for the release; cl loads it after the test (a hoisted copy or a
+// _ReadWriteBarrier does not move it). Writing hr2 >= 0 && second moves first/second to the other's slot.
 // @0x1423da320
 unsigned char FUN_1423da320(void* object)
 {
@@ -910,7 +911,7 @@ unsigned char FUN_1423da320(void* object)
         if (hr1 >= 0) {
             const int hr2 = reinterpret_cast<int(*)(void*, unsigned, void**)>(
                 (*reinterpret_cast<void***>(first))[6])(first, *reinterpret_cast<unsigned*>(bytes + 0x64), &second);
-            if (second && hr2 >= 0) {
+            if (hr2 >= 0) if (second) {
                 const int hr3 = reinterpret_cast<int(*)(void*, const void*, void**)>(
                     (*reinterpret_cast<void***>(second))[0])(second, &DAT_14313b8c8, &third);
                 if (hr3 >= 0 && third) {
