@@ -34,7 +34,6 @@ struct RawLocker
 };
 }
 
-char FUN_1422fe440(U);                            // index of the highest set bit
 void FUN_142623b10(U*, void*, U);                 // Array<0x18-byte record>::Reserve
 void FUN_142623ee0(U*, void*, U);                 // Array<Ptr>::Reserve
 void FUN_14261ee70(U**, void*, NodeRef*, U);
@@ -393,7 +392,7 @@ void FUN_142624700(U self, U id, int delta, int count, U stats)
 
 // ---- hash set Grow (resize) instances: new power-of-two table, rehash every live entry, free the old table ----
 
-static inline U RawGrowSize(U n) { return n < 8 ? 8 : 1ULL << ((FUN_1422fe440(n - 1) + 1) & 0x3f); }
+static inline U RawGrowSize(U n) { return n < 8 ? 8 : 1ULL << ((Alg::UpperBit(n - 1) + 1) & 0x3f); }
 
 template<U Stride>
 static inline U* RawNewTable(void* owner, U size)
