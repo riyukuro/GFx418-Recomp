@@ -15,28 +15,24 @@ namespace Scaleform { namespace GFx { class EventId; } }
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // Runs the handlers of the event; Unload marks the clip unloaded and queues it for the unload pass.
-// MS2-FUNCTIONAL: Ptr holder / early-return scheduling
 // @0x1429409a0
 bool AvmSprite::ExecuteEvent(const EventId& id)
 {
-    Sprite* psprite = GetSprite();
-    if (psprite->DisplayObjectBase::Flags & DisplayObjectBase::Mask_Unloaded)
+    if (GetSprite()->IsUnloaded())
         return false;
-    Ptr<Sprite> holder(psprite);
-    bool        result;
+    Ptr<Sprite> holder(GetSprite());
     if (id.Id == EventId::Event_Load)
     {
-        psprite->DisplayObjectBase::Flags &= ~DisplayObjectBase::Mask_JustLoaded;
-        if (!(psprite->DisplayObject::Flags & DisplayObject::Mask_AcceptAnimMoves) && !(psprite->Sprite::Flags & Sprite::Flags_OnLoadReqd))
+        GetSprite()->DisplayObjectBase::Flags &= ~DisplayObjectBase::Mask_JustLoaded;
+        if (!GetSprite()->IsAcceptAnimMovesFlagSet() && !(GetSprite()->Sprite::Flags & Sprite::Flags_OnLoadReqd))
             return false;
     }
-    result = AvmCharacter::ExecuteEvent(id);
+    bool result = AvmCharacter::ExecuteEvent(id);
     if (id.Id == EventId::Event_Unload)
     {
-        MovieImpl* pmovie = static_cast<MovieImpl*>(GetSprite()->pASRoot->GetMovieImpl());
-        GetSprite()->DisplayObjectBase::Flags |= DisplayObjectBase::Mask_Unloaded;
-        GetSprite()->pNextUnloaded = pmovie->pUnloadListHead;
-        pmovie->pUnloadListHead    = GetSprite();
+        GetSprite()->SetUnloaded();
+        GetSprite()->SetNextUnloaded(static_cast<MovieImpl*>(GetSprite()->pASRoot->GetMovieImpl())->pUnloadListHead);
+        static_cast<MovieImpl*>(GetSprite()->pASRoot->GetMovieImpl())->pUnloadListHead = GetSprite();
         GetSprite()->AddRef();
     }
     return result;
