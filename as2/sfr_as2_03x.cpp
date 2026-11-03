@@ -11,14 +11,30 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// GlobalContext::GetGC (exe 0x14294afc0), which the exe inlines here.
+static inline ASRefCountCollector* Sfr03xGetGC(GlobalContext* gCtxt)
+{
+    return gCtxt->pMovieRoot ? static_cast<MovieRoot*>(gCtxt->pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+
+// Object::Set__proto__ (exe 0x140007ba0) as the exe inlines it: SetMemberRaw stays a virtual call.
+static inline void Sfr03xSetProto(ObjectInterface* pobj, ASStringContext* psc, Object* protoObj)
+{
+    if (!pobj->pProto)
+        pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                           PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pobj->pProto = protoObj;
+}
+
 // The object takes the text field character's own __proto__, not the global TextField prototype.
-// MS2-FUNCTIONAL: the exe inlines Object::Set__proto__ (a virtual SetMemberRaw); same members
 // @0x1429215f0
 TextFieldObject::TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField)
-    : Object(gCtxt->GetGC()), pTextField(ptextField), pIMECompositionStringStyles(0)
+    : Object(Sfr03xGetGC(gCtxt)), pTextField(ptextField)
 {
-    AvmCharacter* pavmCh = AS2::ToAvmCharacter(ptextField);
-    Set__proto__(pavmCh->GetASEnvironment()->GetSC(), pavmCh->Get__proto__());
+    AvmCharacter* pavmCh = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(ptextField->GetAvmObjImpl()));
+    ASStringContext* psc = pavmCh->GetASEnvironment()->GetSC();
+    Sfr03xSetProto(this, psc, pavmCh->Get__proto__());
+    pIMECompositionStringStyles = 0;
 }
 
 }}} // namespace Scaleform::GFx::AS2
