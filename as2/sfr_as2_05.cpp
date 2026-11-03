@@ -243,6 +243,11 @@ template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType
 template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
 template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::SharedObjectPtr>::SetType::~HashSetBase();       // exe 0x1429248c0
 
+// The progress table's lookup (exe 0x142917500, folded with another table's): the exe calls it out of line from
+// the inlined GetAlt.
+typedef decltype(Scaleform::StringHashLH<Scaleform::GFx::AS2::MovieClipLoader::ProgressDesc>::mHash) Sfr05ProgressSet;
+template<> template<> Scaleform::SPInt Sfr05ProgressSet::BaseType::findIndexAlt<Scaleform::String>(const Scaleform::String& key) const;
+
 // The text format destructor (the exe calls it; cl inlines the empty ~TextFormat).
 void FUN_1424aa0f0(void* pformat);                                                 // exe 0x1424aa0f0
 
@@ -1215,7 +1220,7 @@ bool GASPrototypeBase::DoesImplement(Environment* penv, const Object* prototype)
     return false;
 }
 
-// MS2-FUNCTIONAL cl calls HashSetBase::GetAlt out of line, the exe inlines it around a findIndexAlt call
+// Bytes loaded so far of the clip's movie (by its absolute path), 0 when it is not being loaded.
 // @0x14294b170
 int MovieClipLoader::GetLoadedBytes(InteractiveObject* pch) const
 {
@@ -1227,7 +1232,7 @@ int MovieClipLoader::GetLoadedBytes(InteractiveObject* pch) const
     return 0;
 }
 
-// MS2-FUNCTIONAL cl calls HashSetBase::GetAlt out of line, the exe inlines it around a findIndexAlt call
+// Total bytes of the clip's movie (by its absolute path), 0 when it is not being loaded.
 // @0x142956b40
 int MovieClipLoader::GetTotalBytes(InteractiveObject* pch) const
 {
