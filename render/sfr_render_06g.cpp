@@ -331,7 +331,8 @@ void HAL::EndDisplay()
     }
 }
 
-// MS2-FUNCTIONAL: the exe frame carries a /GS cookie (0x88 bytes) that this build does not emit
+// The exe frame carries a /GS cookie (0x88 bytes): strict_gs_check plus the named rectangle local give it
+#pragma strict_gs_check(push, on)
 // @0x1426c15c0
 void HAL::beginDisplay(BeginDisplayData* data)
 {
@@ -364,8 +365,12 @@ void HAL::beginDisplay(BeginDisplayData* data)
     updateViewport();
 
     if (bg.GetAlpha() > 0)
-        clearSolidRectangle(Rect<int>(0, 0, vp.Width, vp.Height), bg);
+    {
+        Rect<int> r(0, 0, vp.Width, vp.Height);
+        clearSolidRectangle(r, bg);
+    }
 }
+#pragma strict_gs_check(pop)
 
 // @0x1426c1920
 void HAL::endDisplay()
