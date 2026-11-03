@@ -2752,28 +2752,33 @@ void FUN_140014460(void* object, void*, int hasValue, const Scaleform::GFx::AS3:
         static_cast<int>(*reinterpret_cast<double*>(self + 0x90) * 100.0));
 }
 
-// MS2-FUNCTIONAL: interns the dynamic property name and invokes the executable trait setter.
+// interns the dynamic property name and invokes the executable trait setter.
 // @0x140014900
 void FUN_140014900(void* object, const unsigned long long* encodedName)
 {
     // MS2: as exe 0x140014900: traits is the pointer at +0x10, vm is [traits+0x20]+0x78, the name is a
     // String DataDesc (size at +0, chars at +0xc) interned by the ASStringManager, and the result is a whole Value.
-    char* traits = *reinterpret_cast<char**>(static_cast<char*>(object) + 0x10);
-    const unsigned kind = *reinterpret_cast<unsigned*>(traits + 0xd8) & 0x1f;
-    if (kind == 0 || (kind - 0xc <= 3 && *reinterpret_cast<void**>(traits + 0xe8) == 0))
+    // traits and vm are reread through the object at each use, as in the exe
+#define VIDEO_TRAITS (*reinterpret_cast<char**>(static_cast<char*>(object) + 0x10))
+#define VIDEO_VM (*reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(VIDEO_TRAITS + 0x20) + 0x78))
+    if (reinterpret_cast<const Scaleform::GFx::AS3::Value*>(VIDEO_TRAITS + 0xd8)->IsNullOrUndefined())
         return;
-    Scaleform::GFx::AS3::VM* vm = *reinterpret_cast<Scaleform::GFx::AS3::VM**>(*reinterpret_cast<char**>(traits + 0x20) + 0x78);
+    Scaleform::GFx::AS3::Value result;
     const char* desc = reinterpret_cast<const char*>(*encodedName & ~3ull);
     Scaleform::GFx::ASStringManager* strings = *reinterpret_cast<Scaleform::GFx::ASStringManager**>(
-        *reinterpret_cast<char**>(reinterpret_cast<char*>(vm) + 0x10) + 0x1e8);
-    Scaleform::GFx::ASString name(strings->CreateStringNode(desc + 0xc,
-        *reinterpret_cast<const unsigned long long*>(desc) & 0x7fffffffffffffffull));
-    Scaleform::GFx::AS3::Value propertyName(name);
-    Scaleform::GFx::AS3::Value result;
-    vm->ExecuteInternalUnsafe(*reinterpret_cast<const Scaleform::GFx::AS3::Value*>(traits + 0xd8),
-        Scaleform::GFx::AS3::Value::GetUndefined(), result, 1, &propertyName, false);
-    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(vm) + 0x180) != 0)
-        vm->OutputAndIgnoreException();
+        *reinterpret_cast<char**>(reinterpret_cast<char*>(VIDEO_VM) + 0x10) + 0x1e8);
+    Scaleform::GFx::AS3::Value propertyName(Scaleform::GFx::ASString(strings->CreateStringNode(desc + 0xc,
+        *reinterpret_cast<const unsigned long long*>(desc) & 0x7fffffffffffffffull)));
+    {
+        Scaleform::GFx::AS3::VM& vm = *VIDEO_VM;
+        const Scaleform::GFx::AS3::Value& undefinedValue = Scaleform::GFx::AS3::Value::GetUndefined();
+        vm.ExecuteInternalUnsafe(*reinterpret_cast<const Scaleform::GFx::AS3::Value*>(VIDEO_TRAITS + 0xd8),
+            undefinedValue, result, 1, &propertyName, false);
+    }
+    if (*reinterpret_cast<unsigned char*>(reinterpret_cast<char*>(VIDEO_VM) + 0x180) != 0)
+        VIDEO_VM->OutputAndIgnoreException();
+#undef VIDEO_VM
+#undef VIDEO_TRAITS
 }
 
 // Shared path for the generated AS3 trait getters in this range.
