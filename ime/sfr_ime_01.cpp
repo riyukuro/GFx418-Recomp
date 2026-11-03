@@ -629,33 +629,22 @@ void FUN_1423cc570(unsigned long long* node)
     reinterpret_cast<void(*)(void*, void*)>(heap[12])(DAT_143b15f60, reinterpret_cast<void*>(node[0]));
 }
 
-// MS2-FUNCTIONAL: returns the executable's ID-backed integer and Value-backed string properties from the current IME state.
+// MS2-FUNCTIONAL: the exe keeps the output in rdi and the string node in rbx; ours swaps them. Same code otherwise.
+// Returns the state's ID as a number and its +0x18 string as the Value property.
 // @0x1423da150
 void FUN_1423da150(void* self, void* output, const String* key)
 {
-    const auto packed = *reinterpret_cast<const unsigned long long*>(key);
-    const char* name = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
-    auto* value = static_cast<unsigned char*>(output);
-    const bool isString = std::strcmp(name, "Value") == 0;
-    const bool isId = !isString && std::memcmp(name, "ID", 3) == 0;
-    if (!isString && !isId) return;
-    const unsigned oldType = *reinterpret_cast<unsigned*>(value + 8);
-    if (oldType & 0x40) {
-        void* ref = *reinterpret_cast<void**>(value);
-        reinterpret_cast<void(*)(void*, void*, unsigned long long)>(
-            (*reinterpret_cast<void***>(ref))[2])(ref, output, *reinterpret_cast<unsigned long long*>(value + 16));
-        *reinterpret_cast<void**>(value) = nullptr;
-    }
-    if (isId) {
-        *reinterpret_cast<double*>(value + 16) =
-            static_cast<double>(*reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x10));
-        *reinterpret_cast<unsigned*>(value + 8) = 5;
+    auto* value = static_cast<Scaleform::GFx::Value*>(output);
+    const char* name = key->ToCStr();
+    if (std::strcmp(name, "Value") == 0) {
+        // The exe returns the state's own string node at +0x18 (0x1423da18e), not the key.
+        const char* node = reinterpret_cast<const char*>(
+            *reinterpret_cast<const unsigned long long*>(static_cast<unsigned char*>(self) + 0x18) & ~3ull);
+        value->SetString(node + 0xc);
         return;
     }
-    // The exe returns the state's own string node at +0x18 (0x1423da18e), not the key.
-    const auto text = *reinterpret_cast<const unsigned long long*>(static_cast<unsigned char*>(self) + 0x18);
-    *reinterpret_cast<unsigned long long*>(value + 16) = (text & ~3ull) + 0xc;
-    *reinterpret_cast<unsigned*>(value + 8) = 6;
+    if (std::strcmp(name, "ID") == 0)
+        value->SetNumber(static_cast<double>(*reinterpret_cast<unsigned*>(static_cast<unsigned char*>(self) + 0x10)));
 }
 
 // Queries the active keyboard layout (+0x198), stores its language (+0x84), shows its locale name in the +0x78 movie and
