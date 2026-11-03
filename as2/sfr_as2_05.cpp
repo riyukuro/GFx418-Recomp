@@ -4024,24 +4024,51 @@ void GASMatrixCtorFunction::GlobalCtor(const FnCall& fn)
         pmatrix = *SF_HEAP_NEW(fn.Env->GetHeap()) MatrixObject(fn.Env);
     fn.Result->SetAsObject(pmatrix.GetPtr());
 
+    // The argument and its flags are named locals, so the flags byte is stored after the argument read, as in the exe.
     if (fn.NArgs > 0)
     {
         ASStringContext* psc = fn.Env->GetSC();
-        pmatrix->SetMemberRaw(psc, psc->CreateConstString("a"), fn.Arg(0));
+        {
+            const Value& v = fn.Arg(0);
+            PropFlags    flags;
+            pmatrix->SetMemberRaw(psc, psc->CreateConstString("a"), v, flags);
+        }
         if (fn.NArgs > 1)
         {
-            pmatrix->SetMemberRaw(psc, psc->CreateConstString("b"), fn.Arg(1));
+            {
+                const Value& v = fn.Arg(1);
+                PropFlags    flags;
+                pmatrix->SetMemberRaw(psc, psc->CreateConstString("b"), v, flags);
+            }
             if (fn.NArgs > 2)
             {
-                pmatrix->SetMemberRaw(psc, psc->CreateConstString("c"), fn.Arg(2));
+                {
+                    const Value& v = fn.Arg(2);
+                    PropFlags    flags;
+                    pmatrix->SetMemberRaw(psc, psc->CreateConstString("c"), v, flags);
+                }
                 if (fn.NArgs > 3)
                 {
-                    pmatrix->SetMemberRaw(psc, psc->CreateConstString("d"), fn.Arg(3));
+                    {
+                        const Value& v = fn.Arg(3);
+                        PropFlags    flags;
+                        pmatrix->SetMemberRaw(psc, psc->CreateConstString("d"), v, flags);
+                    }
                     if (fn.NArgs > 4)
                     {
-                        pmatrix->SetMemberRaw(psc, psc->CreateConstString("tx"), fn.Arg(4));
+                        {
+                            const Value& v = fn.Arg(4);
+                            PropFlags    flags;
+                            pmatrix->SetMemberRaw(psc, psc->CreateConstString("tx"), v, flags);
+                        }
                         if (fn.NArgs > 5)
-                            pmatrix->SetMemberRaw(psc, psc->CreateConstString("ty"), fn.Arg(5));
+                        {
+                            {
+                                const Value& v = fn.Arg(5);
+                                PropFlags    flags;
+                                pmatrix->SetMemberRaw(psc, psc->CreateConstString("ty"), v, flags);
+                            }
+                        }
                     }
                 }
             }
