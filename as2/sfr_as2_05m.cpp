@@ -13,6 +13,7 @@
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_avmsprite.h"
+#include "../include/gfx/as2/as2_broadcastlocal.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
 #include "../include/gfx/as2/as2_loadqueueentry.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -51,8 +52,7 @@ SF_FORCEINLINE Environment* LqCharEnv(InteractiveObject* pchar)
 
 // The variables text of a finished load: a LoadVars object gets the byte counts and its onData event (the default
 // handler decodes it), otherwise the target clip or level (made empty when missing) gets the pairs as members.
-// MS2-FUNCTIONAL: onData goes through the recovered broadcaster helper; the exe inlines LoadVarsObject::NotifyOnData
-// with its local one-argument callback.
+// MS2-FUNCTIONAL: cl folds the clamp of the byte total to maxsd, the exe tests it with comisd and a branch.
 // @0x142938d60
 void MovieRoot::DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, const String& data, UPInt fileLen,
                                   bool)
@@ -69,9 +69,9 @@ void MovieRoot::DoProcessLoadVars(GFx::LoadQueueEntry* pentry, LoadStates* pls, 
             total = 0;
         ploadVars->BytesLoaded = len;
         ploadVars->BytesTotal  = total + len;
-        penv->Push(Value(str));
-        ASString eventName = penv->CreateConstString("onData");
-        AsBroadcaster::BroadcastMessage(penv, ploadVars, eventName, 1, penv->GetTopIndex());
+        // LoadVarsObject::NotifyOnData, inlined.
+        penv->Push(str);
+        BroadcastMessageLocal(penv, ploadVars, penv->CreateConstString("onData"), 1, penv->GetTopIndex());
         penv->Drop1();
         return;
     }
@@ -315,3 +315,5 @@ void SharedObject::Flush(Environment* penv, SharedObjectVisitor* pwriter)
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
 // MS2-PIN: ??_7EnumerateOpVisitor@AS2@GFx@Scaleform@@6B@ 0x1432205f0
 // MS2-PIN: ??_7SharedObjectFlushVisitor@AS2@GFx@Scaleform@@6B@ 0x1432227f8
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7SetFocusInvokeCallback@AS2@GFx@Scaleform@@6B@ 0x143221850
