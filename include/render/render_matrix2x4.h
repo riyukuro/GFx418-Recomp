@@ -92,6 +92,7 @@ public:
         return *this;
     }
     Matrix2x4& PrependScaling(T sx, T sy) { return Prepend(Scaling(sx, sy)); }
+    const Matrix2x4& operator*=(const Matrix2x4& m) { return Prepend(m); }
 
     Matrix2x4& PrependTranslation(T x, T y)
     {

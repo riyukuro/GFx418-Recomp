@@ -993,21 +993,21 @@ void DisplayList::VisitMembers(MemberVisitor* pvisitor) const
 
 // Union of the children's bounds; transform maps the owner's space (child matrices are applied here).
 // @0x1425f9580
-// MS2-FUNCTIONAL: the exe gives the matrix copy and the returned bounds the other stack slots, which reorders the inlined Prepend
 RectF DisplayList::GetBounds(const Matrix2F& transform) const
 {
-    UPInt    n = GetCount();
-    RectF    r(0);
-    RectF    temp;
-    Matrix2F m;
+    DisplayObjectBase* ch;
+    UPInt              i, n = GetCount();
+    RectF              r(0);
+    RectF              temp;
+    Matrix2F           m;
 
-    for (UPInt i = 0; i < n; i++)
+    for (i = 0; i < n; i++)
     {
-        DisplayObjectBase* ch = GetDisplayObject(i);
-        if (ch)
+        ch = GetDisplayObject(i);
+        if (ch != NULL)
         {
             m = transform;
-            m.Prepend(ch->GetMatrix());
+            m *= ch->GetMatrix();
             temp = ch->GetBounds(m);
             if (!temp.IsEmpty())
             {
@@ -1023,21 +1023,21 @@ RectF DisplayList::GetBounds(const Matrix2F& transform) const
 
 // The same with the shapes' outline rectangles (strokes ignored).
 // @0x1425f9ba0
-// MS2-FUNCTIONAL: the exe gives the matrix copy and the returned bounds the other stack slots, which reorders the inlined Prepend
 RectF DisplayList::GetRectBounds(const Matrix2F& transform) const
 {
-    UPInt    n = GetCount();
-    RectF    r(0);
-    RectF    temp;
-    Matrix2F m;
+    DisplayObjectBase* ch;
+    UPInt              i, n = GetCount();
+    RectF              r(0);
+    RectF              temp;
+    Matrix2F           m;
 
-    for (UPInt i = 0; i < n; i++)
+    for (i = 0; i < n; i++)
     {
-        DisplayObjectBase* ch = GetDisplayObject(i);
-        if (ch)
+        ch = GetDisplayObject(i);
+        if (ch != NULL)
         {
             m = transform;
-            m.Prepend(ch->GetMatrix());
+            m *= ch->GetMatrix();
             temp = ch->GetRectBounds(m);
             if (!temp.IsEmpty())
             {
