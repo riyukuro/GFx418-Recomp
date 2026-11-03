@@ -2807,12 +2807,6 @@ void Sfr31ExecPushUndefined(VM* vm)
         ExecPushCopy(vm, Value::GetUndefined());
 }
 
-// MS2-FUNCTIONAL 0x14252a640: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
-// @0x14252a640
-STPtr* Sfr31STPtrSetValue(STPtr* self, const Value& v)
-{
-    return &self->SetValue(v);
-}
 
 }}} // namespace Scaleform::GFx::AS3
 
