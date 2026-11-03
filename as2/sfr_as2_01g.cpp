@@ -31,6 +31,12 @@ extern "C" char DAT_1431bee50[];   // streamed sound
 extern "C" char DAT_1431bee68[];
 extern "C" char DAT_1431b80b8[];   // SoundRenderer::AuxStreamer
 
+// An empty ArrayPOD (data, size, policy).
+struct RawArrayPOD
+{
+    U Data, Size, Policy;
+};
+
 void FUN_142743730(void* self);             // sound dtor
 extern "C" int FUN_142303a3b(void*);        // FMOD::Sound::release
 U* FUN_142743900(U* self, const U* source);                                // ArrayPOD<VideoPlayerImpl*> assign
@@ -162,9 +168,9 @@ struct Sfr01gThreadParams
 // The renderer takes on a sound: under its lock (+0x80) the sound joins the list kept for its FMOD sound's key
 // (+0x40 of the sound data, in the set at +0xa8); with updates on (+0xf1) and no update thread yet (+0x18) one is
 // started, and turned off if it fails to. Then the update event (+0x20) is pulsed.
-// MS2-FUNCTIONAL raw-offset model; the key's hash is computed in a loop here
+// MS2-FUNCTIONAL raw-offset model; the exe keeps the key in rsi and the sound data in r14
 // @0x142744070
-void FUN_142744070(char* self, void* psound)
+__declspec(safebuffers) void FUN_142744070(char* self, void* psound)
 {
     if (!psound)
         return;
@@ -177,8 +183,8 @@ void FUN_142744070(char* self, void* psound)
     if (!list)
     {
         U nkey = key;
-        U empty[3] = { 0, 0, 0 };
-        NodeRef ref = { &nkey, (void* const*)empty };
+        RawArrayPOD empty = { 0, 0, 0 };
+        NodeRef ref = { &nkey, (void* const*)&empty };
         const U hash = RawHashWord((const unsigned char*)&nkey);
         U* table = RawField<U*>(self, 0xa8);
         bool set = false;
@@ -196,18 +202,19 @@ void FUN_142744070(char* self, void* psound)
                         break;
                     e = RawEntry(table, index, 0x30);
                 }
-                if (index != (U)-1 && (SPInt)index >= 0)
+                if ((SPInt)index >= 0)
                 {
+                    e = RawEntry(table, index, 0x30);
                     RawField<U>(e, 0x10) = nkey;
-                    FUN_142743900(RawFieldPtr<U>(e, 0x18), empty);
+                    FUN_142743900(RawFieldPtr<U>(e, 0x18), &empty.Data);
                     set = true;
                 }
             }
         }
         if (!set)
             FUN_142742d10(RawFieldPtr<U*>(self, 0xa8), self + 0xa8, &ref, hash);
-        if (empty[0])
-            Memory::Free((void*)empty[0]);
+        if (empty.Data)
+            Memory::Free((void*)empty.Data);
         U again = RawField<U>(data, 0x40);
         list = (U*)FindAudioRequestEntry(RawFieldPtr<void*>(self, 0xa8), (const unsigned char*)&again);
     }
