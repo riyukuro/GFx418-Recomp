@@ -209,6 +209,9 @@
 // The out-of-line destructors of the hash tables (exe COMDATs that the exe calls where cl inlines them).
 template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Member>::SetType::~HashSetBase();                // exe 0x142924800
 template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType::~HashSetBase();    // exe 0x1429246b0
+// The constant pool's string array dtor (exe 0x14256a8e0): ~ActionBuffer calls it out of line.
+template<> Scaleform::ArrayDataBase<Scaleform::GFx::ASString, Scaleform::AllocatorLH<Scaleform::GFx::ASString, 323>,
+    Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
@@ -1357,14 +1360,11 @@ UserDefinedFunctionObject::~UserDefinedFunctionObject()
 {
 }
 
-// The exe keeps the dictionary's element array teardown out of line.
-#pragma inline_depth(3)
-// MS2-FUNCTIONAL inlining: the exe inlines the DefaultValue ASString release but calls the ArrayDataBase dtor
+// The dictionary's element array teardown is out of line (declared above).
 // @0x142925140
 ActionBuffer::~ActionBuffer()
 {
 }
-#pragma inline_depth()
 
 // @0x142925920
 GlobalContext::~GlobalContext()
