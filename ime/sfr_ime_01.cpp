@@ -5257,7 +5257,8 @@ struct Ime01CandidateProps
 
 // MS2-FUNCTIONAL: converts the candidate/reading window property mask into the two formatted AS calls,
 // <path at +0x10>.SetCandidateListProps and <path>.SetReadingWindowProps. Same operations as the exe (bit 4 is
-// tested twice there too); only register allocation differs (the exe keeps value0 in the -1 register and spills value7).
+// tested twice there too). The values are unsigned (the exe keeps value0 in the -1 register). Left: the exe saves rbp
+// without using it, keeps self in r14 and the temporary in rdi, and puts the spilled values in other slots.
 // @0x1423cf670
 void FUN_1423cf670(void* raw, const unsigned* rawAttributes)
 {
@@ -5268,8 +5269,8 @@ void FUN_1423cf670(void* raw, const unsigned* rawAttributes)
     auto* factory = owner + 0x10;
     void* temporary = reinterpret_cast<void*(*)(void*, int)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18);
     if (!temporary) return;
-    int value0 = -1, value1 = -1, value2 = -1, value3 = -1, value4 = -1;
-    int value5 = -1, value6 = -1, value7 = -1, value8 = -1, value9 = -1;
+    unsigned value0 = ~0u, value1 = ~0u, value2 = ~0u, value3 = ~0u, value4 = ~0u;
+    unsigned value5 = ~0u, value6 = ~0u, value7 = ~0u, value8 = ~0u, value9 = ~0u;
     if (*reinterpret_cast<const unsigned char*>(&attributes->flags) & 1) value0 = attributes->values[0];
     if (static_cast<unsigned char>(attributes->flags >> 1) & 1) value1 = attributes->values[1];
     if (static_cast<unsigned char>(attributes->flags >> 3) & 1) value3 = attributes->values[3];
