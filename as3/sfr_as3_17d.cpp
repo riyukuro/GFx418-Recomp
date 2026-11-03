@@ -75,6 +75,10 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 #include "ms2/scaleform/include/gfx/as3/as3_abcfilewithmoviedef.h"
 #include "ms2/scaleform/include/gfx/as3/as3_moviedefrootnode.h"
 #include "ms2/scaleform/include/gfx/as3/as3_valueobjectinterface.h"
+// Button::StateCharArray's ResizeNoConstruct is out of line in the exe (0x1425248e0, instantiated in sfr_as3_19).
+namespace Scaleform {
+template <> void ArrayDataBase<GFx::Button::CharToRec, AllocatorLH<GFx::Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+}
 #undef GetObject   // windows.h
 
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self);   // AvmBitmap: the image shape of the render node
@@ -524,10 +528,16 @@ void FUN_1424f9570(VM* vm)
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
+// DisplayObjectBase::CharToSprite as the exe inlines it: the sprite part, or NULL.
+static SF_FORCEINLINE InteractiveObject* Sfr17dCharToSprite(DisplayObjectBase* p)
+{
+    return p->IsSprite() ? static_cast<InteractiveObject*>(p) : NULL;
+}
+
 // Creates every record's character in each state it shows in: under the state's container sprite (made once,
 // character 0x10001, and put on the play list), with the record's placement; the current state's container goes
 // into the button's render tree.
-// MS2-FUNCTIONAL 0x1424f2e90: register allocation differs (the exe re-reads the button through this each time)
+// MS2-FUNCTIONAL 0x1424f2e90: the exe loads the record's colour transform with movaps, ours with movups
 // @0x1424f2e90
 void AvmButton::CreateCharacters()
 {
@@ -537,11 +547,12 @@ void AvmButton::CreateCharacters()
     for (UPInt i = 0, n = pdef->GetRecordsCount(); i < n; i++)
     {
         const ButtonRecord& rec = pdef->GetRecordAt(i);
+        UByte flags = rec.Flags;
         for (UByte mask = 1; mask & ButtonRecord::Mask_All; mask <<= 1)
         {
-            if (!(rec.Flags & mask))
+            if (!(flags & mask))
                 continue;
-            Button::ButtonState state;
+            Button::ButtonState state = Button::Up;
             if (mask & ButtonRecord::Mask_Up)
                 state = Button::Up;
             else if (mask & ButtonRecord::Mask_Down)
@@ -550,8 +561,6 @@ void AvmButton::CreateCharacters()
                 state = Button::Over;
             else if (mask & ButtonRecord::Mask_HitTest)
                 state = Button::Hit;
-            else
-                state = Button::Up;
             Button::StateCharArray&    chars    = pbtn->GetCharacters(state).Characters;
             Ptr<Render::TreeContainer> prenNode = pbtn->GetStateRenderContainer(state);
             if (!prenNode)
@@ -560,14 +569,15 @@ void AvmButton::CreateCharacters()
             if (chars.GetSize() == 0)
             {
                 CharacterCreateInfo ccinfo = GetButton()->pDefImpl->GetCharacterCreateInfo(ResourceId(0x10001));
-                ASMovieRootBase*    proot  = GetButton()->pASRoot;
-                Ptr<DisplayObjectBase> ch = *proot->pASSupport->CreateCharacterInstance(
-                    proot->GetMovieImpl(), ccinfo, NULL, rec.CharacterId, CharacterDef::Unknown);
-                pobj = ch->IsInteractiveObject() ? static_cast<InteractiveObject*>(ch.GetPtr()) : NULL;
-                Button::CharToRec cr;
-                cr.Char   = pobj.GetPtr();
-                cr.Record = &rec;
-                chars.PushBack(cr);
+                Ptr<DisplayObjectBase> ch = *GetButton()->pASRoot->pASSupport->CreateCharacterInstance(
+                    GetButton()->pASRoot->GetMovieImpl(), ccinfo, NULL, rec.CharacterId, CharacterDef::Unknown);
+                pobj = Sfr17dCharToSprite(ch);
+                {
+                    Button::CharToRec cr;
+                    cr.Char   = pobj.GetPtr();
+                    cr.Record = &rec;
+                    chars.PushBack(cr);
+                }
                 if (!pobj->GetParent())
                 {
                     pobj->AddToPlayList();
@@ -578,27 +588,29 @@ void AvmButton::CreateCharacters()
             else
             {
                 DisplayObjectBase* ch = chars[0].Char;
-                pobj = ch->IsInteractiveObject() ? static_cast<InteractiveObject*>(ch) : NULL;
+                pobj = Sfr17dCharToSprite(ch);
             }
             CharacterCreateInfo ccinfo = GetButton()->pDefImpl->GetCharacterCreateInfo(rec.CharacterId);
             if (ccinfo.pCharDef)
             {
                 CharPosInfo pos;
-                pos.ColorTransform = rec.ButtonCxform;
-                pos.Matrix_1       = rec.ButtonMatrix;
-                pos.Depth          = rec.Depth;
                 pos.CharacterId    = rec.CharacterId;
+                // The exe copies the colour transform as two aligned SSE vectors.
+                _mm_store_ps(pos.ColorTransform.M[0], _mm_load_ps(rec.ButtonCxform.M[0]));
+                _mm_store_ps(pos.ColorTransform.M[1], _mm_load_ps(rec.ButtonCxform.M[1]));
+                pos.BlendMode      = (UByte)rec.BlendMode;
+                pos.Depth          = rec.Depth;
+                pos.Matrix_1       = rec.ButtonMatrix;
                 pos.Flags.Flags    = CharPosInfoFlags::Flags_HasDepth | CharPosInfoFlags::Flags_HasCharacterId |
                                      CharPosInfoFlags::Flags_HasMatrix | CharPosInfoFlags::Flags_HasCxform |
                                      CharPosInfoFlags::Flags_HasBlendMode;
-                pos.BlendMode      = (UByte)rec.BlendMode;
-                ASString name = GetAS3Root()->BuiltinsMgr.CreateEmptyString();
                 DisplayObjectBase* pnew = static_cast<DisplayObjContainer*>(pobj.GetPtr())->AddDisplayObject(
-                    pos, name, NULL, NULL, 0, 4, NULL, NULL);
+                    pos, static_cast<MovieRoot*>(GetButton()->pASRoot)->BuiltinsMgr.CreateEmptyString(), NULL, NULL, 0, 4,
+                    NULL, NULL);
                 if (pnew && rec.pFilters)
                     pnew->SetFilters(rec.pFilters);
             }
-            if (state == curState && !prenNode->GetParent())
+            if (curState == state && !prenNode->GetParent())
             {
                 Render::TreeContainer* pcont = pbtn->GetRenderContainer();
                 pcont->Insert(pcont->GetSize(), prenNode);
