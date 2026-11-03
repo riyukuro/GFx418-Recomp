@@ -2609,10 +2609,10 @@ void ReleaseAudioRequestRecord(void* request)
     long count = *references;
     while (count != 0) {
         if (InterlockedCompareExchange(references, count + 1, count) == count) {
-            auto* sound = *reinterpret_cast<FMOD::Sound**>(bytes + 0x20);
+            auto*& sound = *reinterpret_cast<FMOD::Sound**>(bytes + 0x20);
             if (sound)
                 sound->release();
-            *reinterpret_cast<FMOD::Sound**>(bytes + 0x20) = nullptr;
+            sound = nullptr;
             if (*reinterpret_cast<void**>(bytes + 0x10)) {
                 *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 8) + 0x10) = *reinterpret_cast<void**>(bytes + 0x10);
                 *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(bytes + 0x10) + 8) = *reinterpret_cast<void**>(bytes + 8);
