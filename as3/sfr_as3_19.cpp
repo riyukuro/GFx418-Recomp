@@ -3435,8 +3435,8 @@ void Sfr31ExecCheckFilter(UPInt vm)
         v.GetValueTraits(*reinterpret_cast<const Value*>(top)).GetName().ToCStr()));
 }
 
-// Push the elements [start, start + count) of the array storage (clamped to its length) into an interface object.
-// MS2-FUNCTIONAL 0x142531550: behavior-equivalent recovery; codegen differs from exe
+// Push the elements [start, start + count) of the array storage (clamped to its length) into an interface object,
+// each converted into one GFx::Value.
 // @0x142531550
 void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int count)
 {
@@ -3447,20 +3447,14 @@ void Sfr31ArrayToGfxValues(UPInt self, UPInt arr, UPInt out, UInt32 start, int c
         return;
     if (count < 0)
         count = static_cast<int>(len - start);
-    UPInt gv[3] = { 0, 0, 0 };
-    UInt32 end = start + static_cast<UInt32>(count);
-    if (len < end)
-        end = len;
+    GFx::Value gv;
+    const UInt32 end = Alg::Min(len, start + static_cast<UInt32>(count));
     for (UInt32 i = start; i < end; ++i)
     {
         const Value& v = sa->At(i);
-        FUN_1424e42c0(root, &v, gv);
-        reinterpret_cast<Sfr31VFn3>(Sfr31Rd(Sfr31Rd(out, 0), 8))(out, i, reinterpret_cast<UPInt>(gv));
-    }
-    if ((reinterpret_cast<UInt32*>(gv)[2] >> 6) & 1)
-    {
-        typedef void (*Rel)(UPInt, UPInt*, UPInt);
-        reinterpret_cast<Rel>(Sfr31Rd(Sfr31Rd(gv[0], 0), 0x10))(gv[0], gv, gv[2]);
+        FUN_1424e42c0(root, &v, &gv);
+        typedef void (*Set)(UPInt, UInt32, const GFx::Value&);   // the interface's element setter (slot 1)
+        reinterpret_cast<Set>(Sfr31Rd(Sfr31Rd(out, 0), 8))(out, i, gv);
     }
 }
 
