@@ -4083,7 +4083,8 @@ void DateCtorFunction::GlobalCtor(const FnCall& fn)
     else if (fn.NArgs >= 2)
     {
         int year = (int)fn.Arg(0).ToNumber(fn.Env);
-        if (year <= 99)
+        // The exe tests the year unsigned (cmova), so a negative year is left as is.
+        if ((unsigned)year <= 99)
             year += 1900;
         int start = Date_StartOfYear(year);
         int date  = start;
