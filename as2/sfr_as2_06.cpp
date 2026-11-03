@@ -478,6 +478,12 @@ template<> void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, 
 template<> template<> SPInt decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
                                             GFx::EventIdHashFunctor, GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::
     findIndexAlt<GFx::EventId>(const GFx::EventId& key) const;
+// The registered-classes table's two lookups (exe 0x1429172b0, 0x142916f50, as in sfr_as2_05): the exe calls them out
+// of line from the FindAlt it inlines into RegisterClassA.
+typedef decltype(HashUncachedLH<GFx::ASString, GFx::AS2::FunctionRef, GFx::ASStringHashFunctor, 324>::mHash)::BaseType
+    Sfr06ClassSet;
+template<> template<> SPInt Sfr06ClassSet::findIndexAlt<GFx::ASString>(const GFx::ASString& key) const;
+template<> template<> SPInt Sfr06ClassSet::findIndexAlt<GFx::ASStringNoCaseKey>(const GFx::ASStringNoCaseKey& key) const;
 }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -1018,7 +1024,6 @@ __declspec(noinline) void SuperObject::ResetAltProto()
 }
 
 
-// MS2-FUNCTIONAL the exe inlines the hash FindAlt (calling findIndexAlt out of line); ours keeps FindAlt out of line.
 // @0x14297c970
 bool GlobalContext::RegisterClassA(ASStringContext* psc, const ASString& className, const FunctionRef& ctorFunction)
 {
