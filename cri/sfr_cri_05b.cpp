@@ -2925,279 +2925,260 @@ cri_u32 FUN_140052050(longlong *a1,int a2,int a3)
 // @0x1400520c0
 cri_u64 FUN_1400520c0(longlong a1,longlong *a2)
 {
-  cri_u8 *pu_v1;
-  cri_u8 *pu_v2;
-  cri_u8 *pu_v3;
-  cri_u8 u_v4;
-  longlong l_v5;
-  uint u_v6;
-  uint u_v7;
-  uint u_v8;
-  int i_v9;
-  int i_v10;
-  uint u_v11;
-  ulonglong u_v12;
-  cri_u8 *pu_v13;
-  uint u_v14;
-  ulonglong u_v15;
-  ulonglong u_v16;
-  ulonglong u_v17;
+  int pos;
+  int flag;
+  uint low;
+  uint next;
+  uint val;
+  longlong i;
+  cri_u8 *cur;
   struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_38;
   
-  u_v16 = 0;
+  i = 0;
   CriAt<cri_u32>(a1, 0x17bc) = 0;
   CriAt<cri_u32>(a1, 0x1814) = 0;
   CriAt<cri_u32>(a1, 0x1850) = 1;
-  l_v5 = a1;
   FUN_140051300(a1);
-  CriAt<int>(l_v5, 0x15cc) = CriAt<int>(l_v5, 0x15cc) + 1;
-  CriAt<cri_u32>(l_v5, 0x18e4) = 0;
-  CriAt<cri_u32>(l_v5, 0x18e8) = 0;
-  CriAt<cri_u32>(l_v5, 0x1600) = 0;
-  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,l_v5 + 0x1800);
-  u_v12 = CriAt<ulonglong>(a1, 0x1800) & 0xfffffffffffffffc;
-  i_v9 = CriAt<int>(a1, 0x1800) * 8 + (int)u_v12 * -8;
-  u_v14 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v12, 0x4),CriAt<cri_u8>(u_v12, 0x5)),
-                             CriAt<cri_u8>(u_v12, 0x6)),CriAt<cri_u8>(u_v12, 0x7));
-  if (i_v9 != 0) {
-    u_v14 = u_v14 << ((byte)i_v9 & 0x1f);
+  CriAt<int>(a1, 0x15cc)++;
+  CriAt<cri_u32>(a1, 0x18e4) = 0;
+  CriAt<cri_u32>(a1, 0x18e8) = 0;
+  CriAt<cri_u32>(a1, 0x1600) = 0;
+  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,a1 + 0x1800);
+  // The sequence start code (00 00 01 b3) sits in the first word; low/next are the bit window after it.
+  cur = (cri_u8 *)(CriAt<ulonglong>(a1, 0x1800) & 0xfffffffffffffffc);
+  pos = (int)((uint)CriAt<ulonglong>(a1, 0x1800) << 3);
+  pos -= (int)((uint)(ulonglong)cur << 3);
+  low = CRI05B_BE32(cur[4],cur[5],cur[6],cur[7]);
+  if (pos != 0) {
+    low <<= pos;
   }
-  pu_v13 = (&CriAt<cri_u8>(u_v12, 0xc));
-  u_v7 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v12, 0x8),CriAt<cri_u8>(u_v12, 0x9)),
-                            CriAt<cri_u8>(u_v12, 0xa)),CriAt<cri_u8>(u_v12, 0xb));
-  if (i_v9 < 0x14) {
-    i_v9 = i_v9 + 0xc;
-    u_v6 = u_v14 << 0xc;
-    CriAt<uint>(a1, 0x1598) = u_v14 >> 0x14;
-  }
-  else {
-    i_v9 = i_v9 + -0x14;
-    if (i_v9 == 0) {
-      CriAt<uint>(a1, 0x1598) = u_v14 >> 0x14;
-      u_v6 = u_v7;
+  next = CRI05B_BE32(cur[8],cur[9],cur[10],cur[11]);
+  cur += 0xc;
+  // horizontal_size (12 bits)
+  if (pos >= 0x14) {
+    pos -= 0x14;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x1598) = (next >> (0xc - pos) | low) >> 0x14;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x1598) = (u_v7 >> (0xc - (byte)i_v9 & 0x1f) | u_v14) >> 0x14;
-      u_v6 = u_v7 << ((byte)i_v9 & 0x1f);
+      CriAt<uint>(a1, 0x1598) = low >> 0x14;
+      low = next;
     }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,CriAt<cri_u8>(u_v12, 0xd)),
-                              CriAt<cri_u8>(u_v12, 0xe)),CriAt<cri_u8>(u_v12, 0xf));
-    pu_v13 = (&CriAt<cri_u8>(u_v12, 0x10));
-  }
-  if (i_v9 < 0x14) {
-    i_v9 = i_v9 + 0xc;
-    u_v14 = u_v6 << 0xc;
-    CriAt<uint>(a1, 0x159c) = u_v6 >> 0x14;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v9 = i_v9 + -0x14;
-    if (i_v9 == 0) {
-      CriAt<uint>(a1, 0x159c) = u_v6 >> 0x14;
-      u_v14 = u_v7;
+    pos += 0xc;
+    CriAt<uint>(a1, 0x1598) = low >> 0x14;
+    low <<= 0xc;
+  }
+  // vertical_size (12 bits)
+  if (pos >= 0x14) {
+    pos -= 0x14;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x159c) = (next >> (0xc - pos) | low) >> 0x14;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x159c) = (u_v7 >> (0xc - (byte)i_v9 & 0x1f) | u_v6) >> 0x14;
-      u_v14 = u_v7 << ((byte)i_v9 & 0x1f);
+      CriAt<uint>(a1, 0x159c) = low >> 0x14;
+      low = next;
     }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
-  }
-  if (i_v9 < 0x1c) {
-    i_v9 = i_v9 + 4;
-    u_v6 = u_v14 << 4;
-    CriAt<uint>(a1, 0x16d0) = u_v14 >> 0x1c;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v9 = i_v9 + -0x1c;
-    if (i_v9 == 0) {
-      CriAt<uint>(a1, 0x16d0) = u_v14 >> 0x1c;
-      u_v6 = u_v7;
+    pos += 0xc;
+    CriAt<uint>(a1, 0x159c) = low >> 0x14;
+    low <<= 0xc;
+  }
+  // aspect_ratio_information (4 bits)
+  if (pos >= 0x1c) {
+    pos -= 0x1c;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x16d0) = (next >> (4 - pos) | low) >> 0x1c;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x16d0) = (u_v7 >> (4 - (byte)i_v9 & 0x1f) | u_v14) >> 0x1c;
-      u_v6 = u_v7 << ((byte)i_v9 & 0x1f);
+      CriAt<uint>(a1, 0x16d0) = low >> 0x1c;
+      low = next;
     }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
-  }
-  if (i_v9 < 0x1c) {
-    i_v9 = i_v9 + 4;
-    u_v14 = u_v6 << 4;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v9 = i_v9 + -0x1c;
-    u_v14 = u_v7;
-    if (i_v9 != 0) {
-      u_v6 = u_v7 >> (4 - (byte)i_v9 & 0x1f) | u_v6;
-      u_v14 = u_v7 << ((byte)i_v9 & 0x1f);
-    }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
+    pos += 4;
+    CriAt<uint>(a1, 0x16d0) = low >> 0x1c;
+    low <<= 4;
   }
-  CriAt<uint>(a1, 0x15a8) = u_v6 >> 0x1c;
-  if (i_v9 < 0xe) {
-    i_v9 = i_v9 + 0x12;
-    u_v6 = u_v14 << 0x12;
-    CriAt<uint>(a1, 0x16d4) = u_v14 >> 0xe;
-  }
-  else {
-    i_v9 = i_v9 + -0xe;
-    if (i_v9 == 0) {
-      CriAt<uint>(a1, 0x16d4) = u_v14 >> 0xe;
-      u_v6 = u_v7;
+  // frame_rate_code (4 bits)
+  if (pos >= 0x1c) {
+    pos -= 0x1c;
+    if (pos != 0) {
+      val = (next >> (4 - pos) | low) >> 0x1c;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x16d4) = (u_v7 >> (0x12 - (byte)i_v9 & 0x1f) | u_v14) >> 0xe;
-      u_v6 = u_v7 << ((byte)i_v9 & 0x1f);
+      val = low >> 0x1c;
+      low = next;
     }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
-  }
-  i_v10 = i_v9 + 1;
-  if (i_v10 < 0x20) {
-    u_v6 = u_v6 * 2;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v10 = i_v9 + -0x1f;
-    u_v6 = u_v7 << ((byte)i_v10 & 0x1f);
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
+    val = low >> 0x1c;
+    pos += 4;
+    low <<= 4;
   }
-  if (i_v10 < 0x16) {
-    i_v10 = i_v10 + 10;
-    u_v14 = u_v6 << 10;
-    CriAt<uint>(a1, 0x16d8) = u_v6 >> 0x16;
-  }
-  else {
-    i_v10 = i_v10 + -0x16;
-    if (i_v10 == 0) {
-      CriAt<uint>(a1, 0x16d8) = u_v6 >> 0x16;
-      u_v14 = u_v7;
+  CriAt<uint>(a1, 0x15a8) = val;
+  // bit_rate_value (18 bits)
+  if (pos >= 0xe) {
+    pos -= 0xe;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x16d4) = (next >> (0x12 - pos) | low) >> 0xe;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x16d8) = (u_v7 >> (10 - (byte)i_v10 & 0x1f) | u_v6) >> 0x16;
-      u_v14 = u_v7 << ((byte)i_v10 & 0x1f);
+      CriAt<uint>(a1, 0x16d4) = low >> 0xe;
+      low = next;
     }
-    u_v7 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-    pu_v13 = pu_v13 + 4;
-  }
-  CriAt<uint>(a1, 0x16dc) = (uint)((int)u_v14 < 0);
-  i_v9 = 0;
-  if (i_v10 == 0x1f) {
-    pu_v1 = pu_v13 + 1;
-    u_v4 = *pu_v13;
-    pu_v2 = pu_v13 + 2;
-    pu_v3 = pu_v13 + 3;
-    pu_v13 = pu_v13 + 4;
-    u_v6 = CONCAT31(CONCAT21(CONCAT11(u_v4,*pu_v1),*pu_v2),*pu_v3);
-    u_v14 = u_v7;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v9 = i_v10 + 1;
-    u_v14 = u_v14 * 2;
-    u_v6 = u_v7;
+    pos += 0x12;
+    CriAt<uint>(a1, 0x16d4) = low >> 0xe;
+    low <<= 0x12;
   }
-  if (i_v9 == 0x1f) {
-    pu_v1 = pu_v13 + 1;
-    u_v4 = *pu_v13;
-    pu_v2 = pu_v13 + 2;
-    pu_v3 = pu_v13 + 3;
-    pu_v13 = pu_v13 + 4;
-    u_v12 = u_v16;
-    u_v8 = CONCAT31(CONCAT21(CONCAT11(u_v4,*pu_v1),*pu_v2),*pu_v3);
-    u_v7 = u_v6;
+  // marker_bit
+  pos += 1;
+  if (pos >= 0x20) {
+    pos -= 0x20;
+    low = next << pos;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    u_v12 = (ulonglong)(i_v9 + 1);
-    u_v7 = u_v14 * 2;
-    u_v8 = u_v6;
+    low <<= 1;
   }
-  u_v11 = (uint)u_v12;
-  u_v17 = u_v16;
-  u_v6 = u_v7;
-  if ((int)u_v14 < 0) {
+  // vbv_buffer_size_value (10 bits)
+  if (pos >= 0x16) {
+    pos -= 0x16;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x16d8) = (next >> (10 - pos) | low) >> 0x16;
+      low = next << pos;
+    }
+    else {
+      CriAt<uint>(a1, 0x16d8) = low >> 0x16;
+      low = next;
+    }
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
+  }
+  else {
+    pos += 10;
+    CriAt<uint>(a1, 0x16d8) = low >> 0x16;
+    low <<= 10;
+  }
+  // constrained_parameters_flag
+  CriAt<uint>(a1, 0x16dc) = (uint)((int)low < 0);
+  if (pos == 0x1f) {
+    pos = 0;
+    low = next;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
+  }
+  else {
+    pos += 1;
+    low <<= 1;
+  }
+  // load_intra_quantiser_matrix
+  flag = (int)low < 0;
+  if (pos == 0x1f) {
+    pos = 0;
+    low = next;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
+  }
+  else {
+    pos += 1;
+    low <<= 1;
+  }
+  if (flag) {
+    longlong k = i;
     do {
-      i_v9 = (int)u_v12;
-      if (i_v9 < 0x18) {
-        u_v11 = i_v9 + 8;
-        u_v7 = u_v6 << 8;
+      if (pos >= 0x18) {
+        pos -= 0x18;
+        if (pos != 0) {
+          val = (next >> (8 - pos) | low) >> 0x18;
+          low = next << pos;
+        }
+        else {
+          val = low >> 0x18;
+          low = next;
+        }
+        next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+        cur += 4;
       }
       else {
-        u_v11 = i_v9 - 0x18;
-        u_v7 = u_v8;
-        if (u_v11 != 0) {
-          u_v6 = u_v8 >> (8 - (byte)u_v11 & 0x1f) | u_v6;
-          u_v7 = u_v8 << ((byte)u_v11 & 0x1f);
-        }
-        u_v8 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-        pu_v13 = pu_v13 + 4;
+        val = low >> 0x18;
+        pos += 8;
+        low <<= 8;
       }
-      u_v12 = (ulonglong)u_v11;
-      u_v15 = u_v17 + 1;
-      *(char *)((longlong)*(char *)(u_v17 + CriAt<longlong>(a1, 0x12d0)) + 0xc00 + a1) =
-           (char)(u_v6 >> 0x18);
-      u_v17 = u_v15;
-      u_v6 = u_v7;
-    } while ((longlong)u_v15 < 0x40);
+      k++;
+      CriAt<char>(a1, 0xc00 + (longlong)*(k + CriAt<signed char *>(a1, 0x12d0) - 1)) = (char)val;
+    } while (k < 0x40);
   }
   else {
     FUN_140051330(a1);
   }
-  if (u_v11 == 0x1f) {
-    pu_v1 = pu_v13 + 1;
-    u_v4 = *pu_v13;
-    pu_v2 = pu_v13 + 2;
-    pu_v3 = pu_v13 + 3;
-    pu_v13 = pu_v13 + 4;
-    u_v12 = u_v16;
-    u_v6 = CONCAT31(CONCAT21(CONCAT11(u_v4,*pu_v1),*pu_v2),*pu_v3);
-    u_v14 = u_v8;
+  // load_non_intra_quantiser_matrix
+  flag = (int)low < 0;
+  if (pos == 0x1f) {
+    pos = 0;
+    low = next;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    u_v12 = (ulonglong)(u_v11 + 1);
-    u_v14 = u_v7 * 2;
-    u_v6 = u_v8;
+    pos += 1;
+    low <<= 1;
   }
-  u_v8 = (uint)u_v12;
-  if ((int)u_v7 < 0) {
+  if (flag) {
     do {
-      i_v9 = (int)u_v12;
-      if (i_v9 < 0x18) {
-        u_v8 = i_v9 + 8;
-        u_v7 = u_v14 << 8;
+      if (pos >= 0x18) {
+        pos -= 0x18;
+        if (pos != 0) {
+          val = (next >> (8 - pos) | low) >> 0x18;
+          low = next << pos;
+        }
+        else {
+          val = low >> 0x18;
+          low = next;
+        }
+        next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+        cur += 4;
       }
       else {
-        u_v8 = i_v9 - 0x18;
-        u_v7 = u_v6;
-        if (u_v8 != 0) {
-          u_v14 = u_v6 >> (8 - (byte)u_v8 & 0x1f) | u_v14;
-          u_v7 = u_v6 << ((byte)u_v8 & 0x1f);
-        }
-        u_v6 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]);
-        pu_v13 = pu_v13 + 4;
+        val = low >> 0x18;
+        pos += 8;
+        low <<= 8;
       }
-      u_v12 = (ulonglong)u_v8;
-      u_v17 = u_v16 + 1;
-      *(char *)((longlong)*(char *)(u_v16 + CriAt<longlong>(a1, 0x12d0)) + 0xc40 + a1) =
-           (char)(u_v14 >> 0x18);
-      u_v16 = u_v17;
-      u_v14 = u_v7;
-    } while ((longlong)u_v17 < 0x40);
+      i++;
+      CriAt<char>(a1, 0xc40 + (longlong)*(i + CriAt<signed char *>(a1, 0x12d0) - 1)) = (char)val;
+    } while (i < 0x40);
   }
   else {
     FUN_140051360(a1);
   }
-  i_v9 = CriAt<int>(a1, 0x159c) + 0xf >> 4;
-  i_v10 = CriAt<int>(a1, 0x1598) + 0xf >> 4;
-  CriAt<int>(a1, 0x15a4) = i_v9;
-  CriAt<int>(a1, 0x15a0) = i_v10;
-  CriAt<int>(a1, 0x17a0) = i_v9 * i_v10 + -1;
+  CriAt<int>(a1, 0x15a4) = CriAt<int>(a1, 0x159c) + 0xf >> 4;
+  CriAt<int>(a1, 0x15a0) = CriAt<int>(a1, 0x1598) + 0xf >> 4;
+  CriAt<int>(a1, 0x17a0) = CriAt<int>(a1, 0x15a4) * CriAt<int>(a1, 0x15a0) - 1;
   CriAt<cri_u32>(a1, 0x15e0) = CriAt<cri_u32>(a1, 0x16d4);
   CriAt<cri_u32>(a1, 0x15e4) = CriAt<cri_u32>(a1, 0x16d8);
   CriAt<cri_u8>(a1, 0x15f1) = CriAt<cri_u8>(a1, 0x16d0);
   CriAt<cri_u8>(a1, 0x15f2) = CriAt<cri_u8>(a1, 0x16dc);
-  FUN_140069020(&CriAt<__int64>(a1, 0x1800),
-                (((int)(u_v8 + 7) >> 3) - CriAt<int>(a1, 0x1800)) + -8 + (int)pu_v13,
+  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
                 &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_38);
   (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_38);
