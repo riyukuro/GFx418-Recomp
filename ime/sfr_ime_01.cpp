@@ -6078,16 +6078,20 @@ unsigned long long FUN_1423cb980(long long* manager, long long layouts, unsigned
 
 // MS2-FUNCTIONAL: enumerates the installed keyboard layouts and TSF language profiles into the language list
 // (+0x90 entries, "@@"-joined +0x70 names, +0x80 count) and refreshes the active layout, flags and mode.
+// Left (3 lines): the exe compares the +0xd0 count with its zero register (edi) before the states loop, and loads
+// the loaded flag (+0x14) and the language (+0x10) as [rax + r14]; ours uses the counter copy and [r14 + rax].
+// The last four mode tests are written as byte offsets so their loads come out [r14 + rcx], as in the exe.
 // @0x1423d8140
-unsigned FUN_1423d8140(long long* manager)
+bool FUN_1423d8140(long long* manager)
 {
     auto* self = reinterpret_cast<unsigned char*>(manager);
-    void** vtable = *reinterpret_cast<void***>(manager);
+    struct LayoutRecord { char* imeFile; char* layoutText; unsigned layoutId; unsigned loaded; };
+    struct ImeRecord { unsigned char pad[0x20]; unsigned code; unsigned pad24; unsigned long long layoutId; };
     *reinterpret_cast<unsigned*>(self + 0x88) = 0x1000000;
     *reinterpret_cast<unsigned*>(self + 0x84) = 0x1000000;
     const unsigned count = static_cast<unsigned>(GetKeyboardLayoutList(0, nullptr));
     if (!count) {
-        reinterpret_cast<void(*)(void*, const char*, const char*)>(vtable[0xe])(
+        reinterpret_cast<void(*)(void*, const char*, const char*)>((*reinterpret_cast<void***>(manager))[0xe])(
             manager, "No IME's Installed!", "GFxIME Error");
     }
     auto* layouts = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(count * sizeof(HKL)));
@@ -6098,47 +6102,88 @@ unsigned FUN_1423d8140(long long* manager)
         *reinterpret_cast<unsigned*>(self + 0x19c) = 0;
         layouts[i] = *reinterpret_cast<unsigned long long*>(self + 0x198);
     }
-    const unsigned char registryFailed = static_cast<unsigned char>(
-        FUN_1423cb980(manager, reinterpret_cast<long long>(layouts), count));
+    const bool registryFailed = reinterpret_cast<bool(*)(long long*, long long, unsigned)>(
+        FUN_1423cb980)(manager, reinterpret_cast<long long>(layouts), count);
     Scaleform::Memory::Free(layouts);
     if (registryFailed) return registryFailed;
 
-    auto* states = *reinterpret_cast<unsigned**>(self + 0x190);
-    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0xd0); ++i) states[i] = 0;
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0xd0); ++i)
+        (*reinterpret_cast<unsigned**>(self + 0x190))[i] = 0;
 
-    auto* layoutRecords = reinterpret_cast<unsigned char*>(*reinterpret_cast<void**>(self + 0x158));
-    IUnknown* profiles = nullptr;
+    IUnknown* profiles;
     const HRESULT created = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
         CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068), reinterpret_cast<void**>(&profiles));
-    bool fromLayouts = true;
     if (created < 0) {
-        reinterpret_cast<void(*)(void*, HRESULT, const char*)>(vtable[0xf])(
+        reinterpret_cast<void(*)(void*, HRESULT, const char*)>((*reinterpret_cast<void***>(manager))[0xf])(
             manager, created, "GFxIME Error: Failure to Initialize InputProcessorProfiles!");
-    } else if (profiles) {
-        fromLayouts = false;
-        void** profileVtable = *reinterpret_cast<void***>(profiles);
-        LANGID* languages = nullptr;
-        ULONG languageCount = 0;
-        if (reinterpret_cast<HRESULT(*)(void*, LANGID**, ULONG*)>(profileVtable[15])(
+    }
+    if (created < 0 || !profiles) {
+        // No TSF: list the loaded registry layouts by language, once per mode.
+        for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x160); ++i) {
+            if (!reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].loaded) continue;
+            Ime01ModeRecord record;
+            record.mode = 0x1000000;
+            Scaleform::String name;
+            if ((reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].layoutId & 0xfff) == 0x409) {
+                record.mode = 0x10000000; name = "English";
+            }
+            if ((*reinterpret_cast<unsigned*>(i * sizeof(LayoutRecord) + *reinterpret_cast<unsigned long long*>(self + 0x158) + 0x10) & 0xfff) == 0x404) {
+                record.mode = 9; name = "Chinese (Traditional)";
+            }
+            if ((*reinterpret_cast<unsigned*>(i * sizeof(LayoutRecord) + *reinterpret_cast<unsigned long long*>(self + 0x158) + 0x10) & 0xfff) == 0x804) {
+                record.mode = 0x80000; name = "Chinese (Simplified)";
+            }
+            if ((*reinterpret_cast<unsigned*>(i * sizeof(LayoutRecord) + *reinterpret_cast<unsigned long long*>(self + 0x158) + 0x10) & 0xfff) == 0x412) {
+                record.mode = 0x2000; name = "Korean";
+            }
+            if ((*reinterpret_cast<unsigned*>(i * sizeof(LayoutRecord) + *reinterpret_cast<unsigned long long*>(self + 0x158) + 0x10) & 0xfff) == 0x411) {
+                record.mode = 0x400; name = "Japanese";
+            }
+            if (record.mode != 0x1000000) {
+            bool listed = false;
+            for (unsigned j = 0; j < *reinterpret_cast<unsigned long long*>(self + 0x98); ++j) {
+                if ((*reinterpret_cast<Ime01ModeRecord**>(self + 0x90))[j].mode == record.mode) { listed = true; break; }
+            }
+            if (!listed) {
+            record.language =
+                reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].layoutId & 0xfff;
+            record.text = static_cast<char*>(Scaleform::Memory::Alloc(name.GetSize() + 1));
+            std::memcpy(record.text, name.ToCStr(), name.GetSize() + 1);
+            Ime01PushModeRecord(reinterpret_cast<unsigned long long*>(self + 0x90), record);
+            *reinterpret_cast<Scaleform::String*>(self + 0x70) += name + "@@";
+            ++*reinterpret_cast<unsigned*>(self + 0x80);
+            }
+            }
+        }
+    } else {
+        LANGID* languages;
+        ULONG languageCount;
+        if (reinterpret_cast<HRESULT(*)(void*, LANGID**, ULONG*)>((*reinterpret_cast<void***>(profiles))[15])(
                 profiles, &languages, &languageCount) >= 0) {
             for (ULONG i = 0; i < languageCount; ++i) {
                 wchar_t localeName[0x104];
                 if (!GetLocaleInfoW(languages[i], LOCALE_SLANGUAGE, localeName, 0x104)) continue;
-                IUnknown* profileEnum = nullptr;
-                reinterpret_cast<HRESULT(*)(void*, LANGID, IUnknown**)>(profileVtable[16])(
+                IUnknown* profileEnum;
+                reinterpret_cast<HRESULT(*)(void*, LANGID, IUnknown**)>((*reinterpret_cast<void***>(profiles))[16])(
                     profiles, languages[i], &profileEnum);
                 // TF_LANGUAGEPROFILE: clsid, langid @0x10, catid @0x14, fActive @0x24, guidProfile @0x28.
-                unsigned char profile[0x38] = {};
-                *reinterpret_cast<LANGID*>(profile + 0x10) = languages[i];
-                FUN_1423d7bc0(manager, profile, localeName);
+                struct LanguageProfile { GUID clsid; LANGID langid; GUID catid; BOOL active; GUID guidProfile; };
+                GUID none;
+                *reinterpret_cast<unsigned long long*>(&none) = 0;
+                LanguageProfile profile;
+                profile.catid = none;
+                profile.clsid = none;
+                profile.guidProfile = none;
+                profile.langid = languages[i];
+                FUN_1423d7bc0(manager, &profile, localeName);
                 BSTR description = SysAllocString(nullptr);
                 Scaleform::String unused;
                 if (profileEnum) {
-                    void** enumVtable = *reinterpret_cast<void***>(profileEnum);
-                    auto next = reinterpret_cast<HRESULT(*)(void*, ULONG, void*, ULONG*)>(enumVtable[4]);
-                    while (next(profileEnum, 1, profile, nullptr) != 1) {
-                        reinterpret_cast<HRESULT(*)(void*, const void*, LANGID, const void*, BSTR*)>(profileVtable[12])(
-                            profiles, profile, *reinterpret_cast<LANGID*>(profile + 0x10), profile + 0x28, &description);
+                    while (reinterpret_cast<HRESULT(*)(void*, ULONG, void*, ULONG*)>(
+                               (*reinterpret_cast<void***>(profileEnum))[4])(profileEnum, 1, &profile, nullptr) != 1) {
+                        reinterpret_cast<HRESULT(*)(void*, const void*, LANGID, const void*, BSTR*)>(
+                            (*reinterpret_cast<void***>(profiles))[12])(
+                            profiles, &profile.clsid, profile.langid, &profile.guidProfile, &description);
                         if (SysStringLen(description)) {
                             SysFreeString(description);
                             description = nullptr;
@@ -6151,73 +6196,35 @@ unsigned FUN_1423d8140(long long* manager)
         }
     }
 
-    if (fromLayouts) {
-        // No TSF: list the loaded registry layouts by language, once per mode.
-        auto* entries = reinterpret_cast<unsigned long long*>(self + 0x90);
-        const unsigned long long layoutCount = *reinterpret_cast<unsigned long long*>(self + 0x160);
-        for (unsigned i = 0; i < layoutCount; ++i) {
-            unsigned char* layout = layoutRecords + i * 0x18;
-            if (!*reinterpret_cast<unsigned*>(layout + 0x14)) continue;
-            const unsigned id = *reinterpret_cast<unsigned*>(layout + 0x10) & 0xfff;
-            unsigned mode = 0x1000000;
-            Scaleform::String name;
-            if (id == 0x409) { mode = 0x10000000; name = "English"; }
-            if (id == 0x404) { mode = 9; name = "Chinese (Traditional)"; }
-            if (id == 0x804) { mode = 0x80000; name = "Chinese (Simplified)"; }
-            if (id == 0x412) { mode = 0x2000; name = "Korean"; }
-            if (id == 0x411) { mode = 0x400; name = "Japanese"; }
-            if (mode == 0x1000000) continue;
-            bool listed = false;
-            for (unsigned j = 0; j < entries[1]; ++j) {
-                if (*reinterpret_cast<unsigned*>(entries[0] + j * 0x20ull + 0x10) == mode) { listed = true; break; }
-            }
-            if (listed) continue;
-            const size_t length = name.GetSize();
-            char* copy = static_cast<char*>(Scaleform::Memory::Alloc(length + 1));
-            std::memcpy(copy, name.ToCStr(), length + 1);
-            const unsigned long long nextSize = entries[1] + 1;
-            if (nextSize >= entries[2]) FUN_1423d7370(entries, entries, nextSize + (nextSize >> 2));
-            entries[1] = nextSize;
-            auto* entry = reinterpret_cast<unsigned char*>(entries[0]) + (nextSize - 1) * 0x20;
-            *reinterpret_cast<char**>(entry) = copy;
-            *reinterpret_cast<unsigned long long*>(entry + 8) = 0;
-            *reinterpret_cast<unsigned*>(entry + 0x10) = mode;
-            *reinterpret_cast<unsigned*>(entry + 0x14) = 0;
-            *reinterpret_cast<unsigned long long*>(entry + 0x18) = id;
-            *reinterpret_cast<Scaleform::String*>(self + 0x70) += name + "@@";
-            ++*reinterpret_cast<unsigned*>(self + 0x80);
-        }
-    }
-
     // Bind each loaded registry layout to its IME record; the active one supplies the flags.
     const unsigned long long active = reinterpret_cast<unsigned long long>(GetKeyboardLayout(0));
-    auto* imeRecords = reinterpret_cast<unsigned char*>(*reinterpret_cast<void**>(self + 0xb8));
     for (unsigned i = 0; i < *reinterpret_cast<unsigned long long*>(self + 0x160); ++i) {
-        unsigned char* layout = layoutRecords + i * 0x18;
-        if (!*reinterpret_cast<unsigned*>(layout + 0x14)) continue;
-        const int index = reinterpret_cast<int(*)(void*, const char*, const char*)>(vtable[16])(
-            manager, *reinterpret_cast<const char**>(layout + 8), *reinterpret_cast<const char**>(layout));
+        if (!reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].loaded) continue;
+        const int index = reinterpret_cast<int(*)(void*, const char*, const char*)>(
+            (*reinterpret_cast<void***>(manager))[16])(manager,
+            reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].layoutText,
+            reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].imeFile);
         if (index == -1) continue;
-        const unsigned long long id = *reinterpret_cast<unsigned*>(layout + 0x10);
-        *reinterpret_cast<unsigned long long*>(imeRecords + index * 0x30ll + 0x28) = id;
-        *reinterpret_cast<unsigned long long*>(self + 0x198) = id;
-        if (id == active)
-            *reinterpret_cast<unsigned*>(self + 0x88) = *reinterpret_cast<unsigned*>(imeRecords + index * 0x30ll + 0x20);
+        reinterpret_cast<ImeRecord*>(*reinterpret_cast<void**>(self + 0xb8))[index].layoutId =
+            reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].layoutId;
+        *reinterpret_cast<unsigned long long*>(self + 0x198) =
+            reinterpret_cast<LayoutRecord*>(*reinterpret_cast<void**>(self + 0x158))[i].layoutId;
+        if (*reinterpret_cast<unsigned long long*>(self + 0x198) == active)
+            *reinterpret_cast<unsigned*>(self + 0x88) =
+                reinterpret_cast<ImeRecord*>(*reinterpret_cast<void**>(self + 0xb8))[index].code;
     }
-    if (profiles) {
-        LANGID current = 0;
+    LANGID current;
+    if (profiles)
         reinterpret_cast<HRESULT(*)(void*, LANGID*)>((*reinterpret_cast<void***>(profiles))[13])(profiles, &current);
-    }
 
     const unsigned long long language = reinterpret_cast<unsigned long long>(GetKeyboardLayout(0)) & 0xfff;
     *reinterpret_cast<unsigned*>(self + 0x84) = 0x1000000;
     *reinterpret_cast<unsigned long long*>(self + 0x198) = language;
-    auto* entries = *reinterpret_cast<unsigned char**>(self + 0x90);
     for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0x80); ++i) {
-        if (*reinterpret_cast<unsigned long long*>(entries + i * 0x20ull + 0x18) == language)
-            *reinterpret_cast<unsigned*>(self + 0x84) = *reinterpret_cast<unsigned*>(entries + i * 0x20ull + 0x10);
+        const Ime01ModeRecord& entry = (*reinterpret_cast<Ime01ModeRecord**>(self + 0x90))[i];
+        if (entry.language == language) *reinterpret_cast<unsigned*>(self + 0x84) = entry.mode;
     }
-    return 0;
+    return false;
 }
 
 // MS2-FUNCTIONAL: enumerates HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layouts and appends one 0x18-byte record
