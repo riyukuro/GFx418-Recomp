@@ -169,6 +169,26 @@ template struct ThunkFunc0<Classes::fl_utils::ByteArray, 1, UInt32>;
 }}} // namespace Scaleform::GFx::AS3
 // THUNKS-END
 
+// The exe calls the Ptr<ASStringNode> array resize (0x1424b9030) out of line from Vector.<String>'s PushBack.
+namespace Scaleform {
+template<> inline SF_NOINLINE void ArrayDataBase<Ptr<GFx::ASStringNode>, AllocatorDH<Ptr<GFx::ASStringNode>, 2>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize)
+{
+    UPInt oldSize = Size;
+    if (newSize < oldSize)
+    {
+        AllocatorDH<Ptr<GFx::ASStringNode>, 2>::DestructArray(Data + newSize, oldSize - newSize);
+        if (newSize < (Policy.GetCapacity() >> 1))
+            Reserve(pheapAddr, newSize);
+    }
+    else if (newSize >= Policy.GetCapacity())
+    {
+        Reserve(pheapAddr, newSize + (newSize >> 2));
+    }
+    Size = newSize;
+}
+}
+
 
 // ==== flash.ui: class traits, instance traits, classes and instances =================================================
 
@@ -932,8 +952,7 @@ namespace Classes { namespace fl_ui
 
     // A Vector.<String> of the gestures the movie supports: only panning is reported.
     // @0x1424b96b0
-    // MS2-FUNCTIONAL: the two AddRefs on the "pan" node are separate incs, and the exe calls the PushBack resize
-    // (0x1424b9030) out of line; CheckFixed is called out of line as in the exe
+    // CheckFixed is called out of line as in the exe.
     void Multitouch::supportedGesturesGet(SPtr<Instances::fl_vec::Vector_String>& result)
     {
         ASVM& vm = static_cast<ASVM&>(GetVM());
@@ -943,8 +962,8 @@ namespace Classes { namespace fl_ui
         if (mask & 1)
         {
             ASString pan = vm.GetStringManager().CreateConstString("pan");
-            Ptr<ASStringNode> node(pan.GetNode());
             VectorBase<Ptr<ASStringNode> >& v = result->V;
+            Ptr<ASStringNode> node(pan.GetNode());
             CheckResult (ArrayBase::*checkFixed)() const = &ArrayBase::CheckFixed;
             if ((v.*checkFixed)())
                 v.V.PushBack(node);
