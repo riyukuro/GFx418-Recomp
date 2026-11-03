@@ -2475,12 +2475,11 @@ void FUN_1423d07e0(void* self)
     void* base = *reinterpret_cast<void**>(static_cast<unsigned char*>(self) + 8);
     void* factory = static_cast<unsigned char*>(base) + 0x10;
     void** vtable = *reinterpret_cast<void***>(factory);
-    void* value = reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18);
-    static_cast<Scaleform::GFx::IMEManagerBase*>(value)->SetWideCursor(false);
-    static_cast<Scaleform::GFx::IMEManagerBase*>(value)->ClearComposition();
+    Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> value = *static_cast<Scaleform::GFx::IMEManagerBase*>(
+        reinterpret_cast<void*(*)(void*, int)>(vtable[3])(factory, 0x18));
+    value->SetWideCursor(false);
+    value->ClearComposition();
     *(static_cast<unsigned char*>(self) + 0xb8) = 0;
-    if (value)
-        reinterpret_cast<Scaleform::RefCountImpl*>(value)->Release();
 }
 
 // Cancels the composition (NI_COMPOSITIONSTR: CPS_CANCEL, CPS_COMPLETE, CPS_CONVERT) and clears the buffer.
