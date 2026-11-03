@@ -83,21 +83,28 @@ void MovieRoot::StickyVarNode::Assign(const GFx::MovieImpl::StickyVarNode& node)
     mValue = static_cast<const StickyVarNode&>(node).mValue;
 }
 
+// The exe keeps the global context in a register across ParsePath and reads the builtins through it.
+static inline const ASString& MS2_GcBuiltin(GlobalContext* pgc, int btype)
+{
+    return ((MovieRoot*)pgc->pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(btype);
+}
+
 // The builtins 66 and 67 are "_level0" and "_level0."
-// MS2-FUNCTIONAL: the exe keeps the MovieRoot in rdi and saves rsi only around the _root rewrite; register choice
-// differs
+// MS2-FUNCTIONAL: the exe saves rsi only around the _root rewrite and puts the string context below the path;
+// register choice and frame slots differ
 // @0x1429306a0
 void MovieRoot::AddStickyVariable(const ASString& fullPath, const Value& val, SetVarTypeArg setType)
 {
-    ASStringContext sc(pGlobalContext, 8);
-    ASString        path(sc.GetBuiltin(ASBuiltin_empty_));
-    ASString        name(sc.GetBuiltin(ASBuiltin_empty_));
+    GlobalContext*  pgc = pGlobalContext;
+    ASString        path(MS2_GcBuiltin(pgc, ASBuiltin_empty_));
+    ASString        name(MS2_GcBuiltin(pgc, ASBuiltin_empty_));
+    ASStringContext sc(pgc, 8);
     if (!Environment::ParsePath(&sc, fullPath, &path, &name))
     {
         if (name.IsEmpty())
             return;
         // a sticky variable without a path is taken as _level0
-        path = sc.GetBuiltin(ASBuiltin__level0);
+        path = MS2_GcBuiltin(pgc, ASBuiltin__level0);
     }
     else
     {
@@ -105,14 +112,14 @@ void MovieRoot::AddStickyVariable(const ASString& fullPath, const Value& val, Se
         if (path.GetSize() >= 5)
         {
             if (!memcmp(path.ToCStr(), "_root", 5))
-                path = sc.GetBuiltin(ASBuiltin__level0) + ASString(path.SubstringNode(5, path.GetLength()));
+                path = MS2_GcBuiltin(pgc, ASBuiltin__level0) + ASString(path.SubstringNode(5, path.GetLength()));
             if (memcmp(path.ToCStr(), "_level", 6) != 0)
                 needLevelPrefix = 1;
         }
         else
             needLevelPrefix = 1;
         if (needLevelPrefix)
-            path = sc.GetBuiltin(ASBuiltin__level0dot_) + path;
+            path = MS2_GcBuiltin(pgc, ASBuiltin__level0dot_) + path;
     }
     StickyVarNode* pnode;
     if ((pnode = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) StickyVarNode(name, val, (int)setType == 2)) != 0)
