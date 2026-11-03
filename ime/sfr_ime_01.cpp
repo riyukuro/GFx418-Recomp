@@ -1109,7 +1109,7 @@ bool FUN_1423ca920(void*, unsigned long long* packedPtr)
 }
 
 // @0x1423d9430
-void* FUN_1423d9430(void* object, void* owner)
+__declspec(noinline) void* FUN_1423d9430(void* object, void* owner)
 {
     auto* words = static_cast<unsigned long long*>(object);
     words[0] = reinterpret_cast<unsigned long long>(DAT_14313a210);
@@ -1190,7 +1190,7 @@ void* FUN_1423d1b90(unsigned long long* object, unsigned flags)
 }
 
 // @0x1423da250
-void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
+__declspec(noinline) void* FUN_1423da250(unsigned long long* object, unsigned long long arg2, unsigned long long arg3)
 {
     object[2] = arg2;
     object[0] = reinterpret_cast<unsigned long long>(DAT_14313b920);
@@ -3974,45 +3974,50 @@ unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long
     return 0;
 }
 
-// MS2-FUNCTIONAL: initializes the IME command state, callback interface, string members, and both dynamic buffers.
+// Initializes the IME command state, callback interface, string members, and both dynamic buffers.
 // @0x1423cdbb0
 void* FUN_1423cdbb0(unsigned long long* words, void* owner, void* userData)
 {
-    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a450);
+    // base part (vtable 0x14313a258, the p20 member of the DAT_14313a238 piece)
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a238 + 4);
     words[1] = 0;
-    for (unsigned slot : { 2u, 3u, 4u, 0xfu, 0x16u }) new (words + slot) Scaleform::String();
+    new (words + 2) Scaleform::String();
+    new (words + 3) Scaleform::String();
+    new (words + 4) Scaleform::String();
     words[5] = reinterpret_cast<unsigned long long>(userData);
-    for (unsigned slot : { 7u, 8u, 9u, 10u, 0x17u, 0x18u }) words[slot] = 0;
+    words[7] = 0;
+    words[8] = 0;
+    words[9] = 0;
+    words[10] = 0;
+    new (words + 0xf) Scaleform::String();
     words[0x15] = reinterpret_cast<unsigned long long>(owner);
-
     auto* child = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x870));
     if (child) {
         FUN_1423d9430(child, words);
         child[0] = reinterpret_cast<unsigned long long>(DAT_14313a238);
-    }
+    } else
+        child = nullptr;
     words[6] = reinterpret_cast<unsigned long long>(child);
     FUN_1423d8e80(words + 7, child);
     reinterpret_cast<unsigned char*>(words)[0x80] = 1;
+
+    // derived part
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a450);
     *reinterpret_cast<unsigned long long*>(reinterpret_cast<unsigned char*>(words) + 0x84) = 0x14;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x8c) = 0x00ffffff;
+    new (words + 0x16) Scaleform::String();
     words[0xb] = 0;
     *reinterpret_cast<unsigned*>(words + 0xc) = 0;
-
-    // the text buffer is resized to 0x100 wchar_ts: empty, so it reserves 0x140 (the exe's grow step) from the
-    // owner's heap and terminates the first entry
-    FUN_1423d1380(words + 8, words + 8, 0x140);
-    words[9] = 0x100;
+    // the text buffer is resized to 0x100 wchar_ts and its first entry terminated
+    reinterpret_cast<Ime01WideArrayLH*>(words + 8)->ResizeNoConstruct(words + 8, 0x100);
     *reinterpret_cast<wchar_t*>(words[8]) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0x64) = 0;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(words) + 0xdc) = 1;
-
-    auto* child2 = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x110));
-    if (child2) {
-        FUN_1423da250(child2, reinterpret_cast<unsigned long long>(words),
-            reinterpret_cast<unsigned long long>(userData));
-        FUN_1423daae0(child2);
-    }
+    void* child2 = Scaleform::Memory::Alloc(0x110);
+    child2 = child2 ? FUN_1423da250(static_cast<unsigned long long*>(child2), reinterpret_cast<unsigned long long>(words),
+        reinterpret_cast<unsigned long long>(userData)) : nullptr;
     words[0x19] = reinterpret_cast<unsigned long long>(child2);
+    FUN_1423daae0(child2);
     return words;
 }
 
