@@ -4074,7 +4074,8 @@ Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototyp
     return object;
 }
 
-// MS2-FUNCTIONAL: lazily allocates and caches the script VideoObject for its display character.
+// Lazily allocates and caches the script VideoObject for its display character. The exe calls GetGC()
+// before it reads the display object.
 // @0x14000e020
 VideoObject* FUN_14000e020(AvmCharacter* character)
 {
@@ -4082,7 +4083,8 @@ VideoObject* FUN_14000e020(AvmCharacter* character)
     VideoObject** slot = reinterpret_cast<VideoObject**>(bytes + 0x48);
     if (!*slot) {
         void* storage = FUN_14000d360(0x70, character);
-        VideoObject* created = storage ? ::new (storage) VideoObject(character->GetGC(), character->GetDispObj()) : 0;
+        GlobalContext* gc;
+        VideoObject* created = storage ? (gc = character->GetGC(), ::new (storage) VideoObject(gc, character->GetDispObj())) : 0;
         ReleaseAs2GCObject(*slot);
         *slot = created;
     }
