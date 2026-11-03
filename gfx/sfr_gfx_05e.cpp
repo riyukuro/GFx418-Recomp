@@ -485,7 +485,7 @@ const char* ToString(Double value, char destStr[], size_t destStrSize, int radix
 }
 
 // Value of a digit in radix 36 (-1: not a digit).
-static inline SInt32 DigitValue(char c)
+static SF_INLINE SInt32 DigitValue(char c)
 {
     if (c >= '0' && c <= '9')
         return c - '0';
@@ -497,7 +497,6 @@ static inline SInt32 DigitValue(char c)
 }
 
 // @0x1425e4360
-// MS2-FUNCTIONAL: rounding switch laid out differently
 Double StringToInt(const char* str, UInt32 strLen, SInt32 radix, UInt32* endIndex)
 {
     SInt32  sign = 1;
@@ -554,10 +553,15 @@ Double StringToInt(const char* str, UInt32 strLen, SInt32 radix, UInt32* endInde
     if (result >= 9007199254740992.0 && (radix == 2 || radix == 8 || radix == 16))
     {
         SInt32 bitsPerDigit = 1;
-        if (radix == 8)
+        switch (radix)
+        {
+        case 8:
             bitsPerDigit = 3;
-        else if (radix == 16)
+            break;
+        case 16:
             bitsPerDigit = 4;
+            break;
+        }
 
         while (first < strLen && str[first] == '0')
             ++first;
@@ -577,41 +581,56 @@ Double StringToInt(const char* str, UInt32 strLen, SInt32 radix, UInt32* endInde
 
         if (count * bitsPerDigit > 52)
         {
-            bool   sticky = false;
-            bool   lsb    = false;
-            bool   half   = false;
-            UInt32 shift  = 0;
+            bool sticky = false;
 
-            if (radix == 16)
+            bool lsb  = 0;
+            bool half = 0;
+
+            UInt32 shift = 0;
+
+            switch (radix)
             {
-                lsb   = (digit & 1) != 0;
-                digit = first < strLen ? DigitValue(str[first]) : -1;
+            case 16:
+                lsb = digit & 0x1;
+                if (first < strLen)
+                    digit = DigitValue(str[first]);
+                else
+                    digit = -1;
                 if (digit != -1 && digit < radix)
                 {
                     shift += bitsPerDigit;
-                    half   = (digit & 8) != 0;
-                    sticky = (digit & 3) != 0;
+                    half   = (digit & 0x8) != 0;
+                    sticky = (digit & 0x3) != 0;
                 }
                 else
-                    sticky = lsb;
-            }
-            else if (radix == 8)
-            {
-                digit = first < strLen ? DigitValue(str[first]) : -1;
+                {
+                    sticky = lsb != 0;
+                }
+                break;
+
+            case 8:
+                if (first < strLen)
+                    digit = DigitValue(str[first]);
+                else
+                    digit = -1;
                 if (digit == -1 || digit >= radix)
                     digit = 0;
                 shift += bitsPerDigit;
-                lsb  = (digit & 2) != 0;
-                half = (digit & 1) != 0;
-            }
-            else if (radix == 2)
-            {
-                lsb   = (digit & 1) != 0;
-                digit = first < strLen ? DigitValue(str[first]) : -1;
+                lsb  = (digit & 0x2) != 0;
+                half = (digit & 0x1) != 0;
+                break;
+
+            case 2:
+                lsb = (digit & 0x1) != 0;
+                if (first < strLen)
+                    digit = DigitValue(str[first]);
+                else
+                    digit = -1;
                 if (digit == -1 || digit >= radix)
                     digit = 0;
                 shift += bitsPerDigit;
-                half = (digit & 1) != 0;
+                half = (digit & 0x1) != 0;
+                break;
             }
 
             while (++first < strLen)
@@ -622,8 +641,8 @@ Double StringToInt(const char* str, UInt32 strLen, SInt32 radix, UInt32* endInde
                 sticky |= (digit != 0);
                 shift += bitsPerDigit;
             }
-            bool roundUp = half && (lsb || sticky);
-            result += roundUp ? 1.0 : 0.0;
+            sticky = half && (lsb || sticky);
+            result += (sticky ? 1.0 : 0.0);
             result *= (1 << shift);
         }
     }
