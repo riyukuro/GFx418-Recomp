@@ -1271,28 +1271,47 @@ static SF_FORCEINLINE ObjectInterface* ArraySortToObject(const Value* pval, cons
     return pval->ToObject(penv);
 }
 
-// MS2-FUNCTIONAL the exe drops the dtor of the undefined fallback value (and saves other registers)
+// The storage of an undefined Value without a destructor (the exe destroys no fallback value in
+// ArraySortOnFunctor::Compare). The members are private so that /GS does not take it for a buffer.
+class ArraySortUndefined
+{
+    UByte  Type;
+    UInt64 V, V1, V2;
+public:
+    void         SetUndefined() { Type = Value::UNDEFINED; }
+    const Value* Get() const { return reinterpret_cast<const Value*>(this); }
+};
+
+// MS2-FUNCTIONAL regalloc: the exe returns 0 through its zero register (mov eax,ebp), ours xor eax,eax
 // @0x142934f90
 int ArraySortOnFunctor::Compare(const Value* a, const Value* b) const
 {
-    const Value      undef;
-    const Value*     pa  = a ? a : &undef;
-    const Value*     pb  = b ? b : &undef;
+    // The undefined value (Value::Value() sets only the type), kept without a destructor as in the exe.
+    ArraySortUndefined dummy;
+    dummy.SetUndefined();
+    if (a == 0)
+        a = dummy.Get();
+    if (b == 0)
+        b = dummy.Get();
+    int              cmpVal = 0;
+    unsigned         i;
     ASStringContext* psc = Env->GetSC();
     // The first field the two objects differ in decides.
-    for (unsigned i = 0; i < FunctorArray.GetSize(); i++)
+    for (i = 0; i < FunctorArray.GetSize(); i++)
     {
-        ObjectInterface* pobjA = ArraySortToObject(pa, Env);
-        ObjectInterface* pobjB = ArraySortToObject(pb, Env);
-        if (!pobjA || !pobjB)
-            continue;
-        const ASString& field = (*FieldArray)[i];
-        Value           va, vb;
-        if (pobjA->GetMemberRaw(psc, field, &va) && pobjB->GetMemberRaw(psc, field, &vb))
+        ObjectInterface* objA = ArraySortToObject(a, Env);
+        ObjectInterface* objB = ArraySortToObject(b, Env);
+        if (objA && objB)
         {
-            int ret = FunctorArray[i].Compare(&va, &vb);
-            if (ret)
-                return ret;
+            Value           valA;
+            Value           valB;
+            const ASString& fieldName = (*FieldArray)[i];
+            if (objA->GetMemberRaw(psc, fieldName, &valA) && objB->GetMemberRaw(psc, fieldName, &valB))
+            {
+                cmpVal = FunctorArray[i].Compare(&valA, &valB);
+                if (cmpVal)
+                    return cmpVal;
+            }
         }
     }
     return 0;
