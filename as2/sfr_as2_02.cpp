@@ -2404,7 +2404,7 @@ void SharedObjectCtorFunction::GetLocal(const FnCall& fn)
 }
 
 // attachBitmap(bitmapData, depth[, pixelSnapping, smoothing]): a new sprite showing the image at the depth.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line for depth and smoothing
+// MS2-FUNCTIONAL the exe reuses the name temp's slot for the sprite's ResourceId and stores it late
 // @0x142905190
 void AvmSprite::SpriteAttachBitmap(const FnCall& fn)
 {
@@ -2716,7 +2716,7 @@ void AvmTextField::GetLineText(const FnCall& fn)
 }
 
 // appendHtml(html): not for a field with a style sheet; <img> tags become image substitutions.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
+// MS2-FUNCTIONAL the exe loads the document before the image array is built
 // @0x14290b9f0
 void AvmTextField::AppendHtml(const FnCall& fn)
 {
@@ -2737,7 +2737,7 @@ void AvmTextField::AppendHtml(const FnCall& fn)
 
 // copyToClipboard([richClipboard, startIndex, endIndex]): by default the selection, rich when the editor uses the
 // rich clipboard.
-// MS2-FUNCTIONAL register allocation differs from the exe
+// The arguments are read through the out-of-line FnCall::Arg, as in the exe.
 // @0x14290bb20
 void AvmTextField::CopyToClipboard(const FnCall& fn)
 {
@@ -2750,16 +2750,16 @@ void AvmTextField::CopyToClipboard(const FnCall& fn)
     unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
     unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
     if (fn.NArgs >= 1)
-        richClipboard = fn.Arg(0).ToBool(fn.Env);
+        richClipboard = ArgCopy(&fn, 0)->ToBool(fn.Env);
     if (fn.NArgs >= 2)
-        startPos = fn.Arg(1).ToUInt32(fn.Env);
+        startPos = ArgCopy(&fn, 1)->ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
-        endPos = fn.Arg(2).ToUInt32(fn.Env);
+        endPos = ArgCopy(&fn, 2)->ToUInt32(fn.Env);
     static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->CopyToClipboard(startPos, endPos, richClipboard);
 }
 
 // cutToClipboard([richClipboard, startIndex, endIndex])
-// MS2-FUNCTIONAL register allocation differs from the exe
+// The arguments are read through the out-of-line FnCall::Arg, as in the exe.
 // @0x14290bc50
 void AvmTextField::CutToClipboard(const FnCall& fn)
 {
@@ -2773,17 +2773,17 @@ void AvmTextField::CutToClipboard(const FnCall& fn)
     unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
     unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
     if (fn.NArgs >= 1)
-        richClipboard = fn.Arg(0).ToBool(fn.Env);
+        richClipboard = ArgCopy(&fn, 0)->ToBool(fn.Env);
     if (fn.NArgs >= 2)
-        startPos = fn.Arg(1).ToUInt32(fn.Env);
+        startPos = ArgCopy(&fn, 1)->ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
-        endPos = fn.Arg(2).ToUInt32(fn.Env);
+        endPos = ArgCopy(&fn, 2)->ToUInt32(fn.Env);
     static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->CutToClipboard(startPos, endPos, richClipboard);
     ptf->SetDirtyFlag();
 }
 
 // pasteFromClipboard([richClipboard, startIndex, endIndex]): replaces the range.
-// MS2-FUNCTIONAL register allocation differs from the exe
+// The arguments are read through the out-of-line FnCall::Arg, as in the exe.
 // @0x14290bd90
 void AvmTextField::PasteFromClipboard(const FnCall& fn)
 {
@@ -2797,11 +2797,11 @@ void AvmTextField::PasteFromClipboard(const FnCall& fn)
     unsigned startPos      = unsigned(DocView_GetBeginSelection(EditorKit_GetDocView(pek)));
     unsigned endPos        = unsigned(DocView_GetEndSelection(EditorKit_GetDocView(pek)));
     if (fn.NArgs >= 1)
-        richClipboard = fn.Arg(0).ToBool(fn.Env);
+        richClipboard = ArgCopy(&fn, 0)->ToBool(fn.Env);
     if (fn.NArgs >= 2)
-        startPos = fn.Arg(1).ToUInt32(fn.Env);
+        startPos = ArgCopy(&fn, 1)->ToUInt32(fn.Env);
     if (fn.NArgs >= 3)
-        endPos = fn.Arg(2).ToUInt32(fn.Env);
+        endPos = ArgCopy(&fn, 2)->ToUInt32(fn.Env);
     static_cast<Scaleform::GFx::Text::EditorKit*>(pek)->PasteFromClipboard(startPos, endPos, richClipboard);
     ptf->SetDirtyFlag();
 }
