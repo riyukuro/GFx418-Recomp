@@ -937,12 +937,14 @@ void NumberCtorFunction::GlobalCtor(const FnCall& fn)
 }
 
 // @0x142959740
-// MS2-FUNCTIONAL register allocation (the target and the zero register swap rsi / rbp)
+// MS2-FUNCTIONAL register allocation (the target and the zero register swap rsi / rbp, so our two target stores share a tail the exe keeps apart)
+// FindTargetByValue is called through a member-pointer local so it stays out of line, as in the exe.
 void ColorCtorFunction::GlobalCtor(const FnCall& fn)
 {
+    InteractiveObject* (Environment::*findTarget)(const Value&) = &Environment::FindTargetByValue;
     InteractiveObject* ptarget = 0;
     if (fn.NArgs >= 1)
-        ptarget = fn.Env->FindTargetByValue(fn.Arg(0));
+        ptarget = (fn.Env->*findTarget)(fn.Arg(0));
 
     Ptr<ColorObject> pcolor;
     if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == Object::Object_Color)
