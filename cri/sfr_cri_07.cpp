@@ -3001,8 +3001,7 @@ uint criAdxDec_DecodeInfoLoop(longlong arg1, uint arg2, uint *arg3, ushort *arg4
 
 #pragma function(memcpy)                      // the exe calls memcpy here rather than expanding it
 // read the AINF chunk after the header: its size, the 16-byte info block and three 16-bit fields (big-endian)
-// MS2-FUNCTIONAL: the exe loads the AINF tag's first byte before the second and keeps the size word in edx; ours
-// loads byte +1 first and swaps edx/r8d in the 32-bit byte swap
+// MS2-FUNCTIONAL: the exe loads the AINF tag's first byte before the second; ours loads byte +1 first
 // @0x14006a598
 uint criAdxDec_DecodeInfoAinf(longlong arg1, uint arg2, uint *arg3, void *arg4, ushort *arg5, ushort *arg6)
 {
@@ -3012,7 +3011,6 @@ uint criAdxDec_DecodeInfoAinf(longlong arg1, uint arg2, uint *arg3, void *arg4, 
   uint need;
   uint off;
   uint v;
-  int iv;
   short s;
 
   *arg3 = 0;
@@ -3052,9 +3050,9 @@ uint criAdxDec_DecodeInfoAinf(longlong arg1, uint arg2, uint *arg3, void *arg4, 
   if (v != 0x41494e46) {
     return 0xfffffffe;
   }
-  iv = *(int *)(arg1 + off);
+  *arg3 = (*(int *)(arg1 + off) << 0x10 | *(int *)(arg1 + off) & 0xff00) << 8 | *(int *)(arg1 + off) >> 0x18 & 0xff |
+          *(int *)(arg1 + off) >> 8 & 0xff00;
   off += 4;
-  *arg3 = (iv & 0xff00 | iv << 0x10) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
   memcpy(arg4,(void *)(arg1 + off),0x10);
   off += 0x10;
   s = *(short *)(arg1 + off);
@@ -3063,8 +3061,7 @@ uint criAdxDec_DecodeInfoAinf(longlong arg1, uint arg2, uint *arg3, void *arg4, 
   s = *(short *)(arg1 + off);
   off += 2;
   *arg6 = s >> 8 & 0xff | s << 8;
-  s = *(short *)(arg1 + off);
-  arg6[1] = s >> 8 & 0xff | s << 8;
+  arg6[1] = *(short *)(arg1 + off) >> 8 & 0xff | *(short *)(arg1 + off) << 8;
   return 0;
 }
 #pragma intrinsic(memcpy)
