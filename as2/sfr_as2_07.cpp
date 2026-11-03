@@ -442,7 +442,14 @@ void MouseCtorFunction::UpdateListenersArray(ASStringContext* psc, Environment* 
     {
         Object* pobj = listeners.ToObject(penv);
         if (pobj && pobj->GetObjectType() == Object_Array)
-            pListenersArray = static_cast<ArrayObject*>(pobj);
+        {
+            // Ptr<ArrayObject>::operator= is inlined here in the exe.
+            ArrayObject* parr = static_cast<ArrayObject*>(pobj);
+            parr->AddRef();
+            if (pListenersArray)
+                pListenersArray->Release();
+            pListenersArray.GetRawRef() = parr;
+        }
         else
             pListenersArray = 0;
     }
