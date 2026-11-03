@@ -3199,25 +3199,34 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_1400126b0(
     return object;
 }
 
-// MS2-FUNCTIONAL: unlinks a tracked AS2 reference from its collector list and deletes it; exe keeps the root-list case cold after the tail jmp.
+// RemoveFromList, inlined twice into FUN_1400152b0.
+static __forceinline void Video02UnlinkTracked(unsigned __int64* object)
+{
+    unsigned* words = reinterpret_cast<unsigned*>(object);
+    *reinterpret_cast<unsigned __int64*>(object[3] + 8) = object[1];
+    *reinterpret_cast<unsigned __int64*>(object[1] + 0x18) = object[3];
+    words[4] &= 0x7effffff;
+    object[1] = 0;
+    if ((static_cast<unsigned char>(words[4] >> 24) & 1) == 0)
+        reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
+}
+
+// Unlinks a tracked GC object (ReleaseInternal's root/list branches: RemoveFromList on both InList paths, RemoveRoot
+// when only in the root list) and deletes it through its vtable.
 // @0x1400152b0
 void FUN_1400152b0(unsigned __int64* object)
 {
     enum { GcStat = Scaleform::GFx::AS3::StatMV_ActionScript_Mem };
     unsigned* words = reinterpret_cast<unsigned*>(object);
     words[4] &= 0x8fffffff;
-    const unsigned state = words[4];
-    const unsigned flags = state >> 24;
-    if ((static_cast<unsigned char>(state >> 31) & 1) && (flags & 1) == 0) {
+    if (!(static_cast<unsigned char>(words[4] >> 31) & 1)) {
+        if (static_cast<unsigned char>(words[4] >> 24) & 1)
+            Video02UnlinkTracked(object);
+    } else if (!(static_cast<unsigned char>(words[4] >> 24) & 1)) {
         reinterpret_cast<Scaleform::GFx::AS3::RefCountCollector<GcStat>*>(object[1])->RemoveRoot(
             reinterpret_cast<const Scaleform::GFx::AS3::RefCountBaseGC<GcStat>*>(object));
-    } else if (flags & 1) {
-        *reinterpret_cast<unsigned __int64*>(object[3] + 8) = object[1];
-        *reinterpret_cast<unsigned __int64*>(object[1] + 0x18) = object[3];
-        words[4] &= 0x7effffff;
-        object[1] = 0;
-        if ((static_cast<unsigned char>(words[4] >> 24) & 1) == 0)
-            reinterpret_cast<unsigned*>(object + 3)[0] = 0xffffffff;
+    } else {
+        Video02UnlinkTracked(object);
     }
     (*reinterpret_cast<void (***)(void*, int)>(object))[4](object, 1);
 }
