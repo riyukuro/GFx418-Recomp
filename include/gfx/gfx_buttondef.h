@@ -119,9 +119,14 @@ public:
     // (appended, sfr33) the DefineScalingGrid tag (sfr_gfx_04x): the grid, allocated on the button's heap
     void SetScale9Grid(const RectF& r)
     {
-        if (!pScale9Grid)
-            pScale9Grid = SF_HEAP_AUTO_NEW(this) Scale9Grid;
-        *pScale9Grid = r;
+        if (pScale9Grid == 0)
+        {
+            // This is MovieDef's loaded version of Scale9Grid,
+            // so allocate it from the same heap as ButtonDef.
+            pScale9Grid = SF_HEAP_AUTO_NEW(this) Scale9Grid(r);
+        }
+        else
+            *pScale9Grid = r;
     }
 };
 

@@ -530,14 +530,12 @@ void SF_STDCALL GFx_ImportLoader(LoadProcess* p, const TagInfo& tagInfo)
 }
 
 // DefineScalingGrid: the 9-slice grid of a sprite or button defined before.
-// MS2-FUNCTIONAL 0x1425c66d0: same reads, checks, log text and grid store; cl duplicates the grid-pointer store per
-// allocation branch and keeps the button branch inline, the exe merges the store and moves that branch after the return.
 // @0x1425c66d0
 void SF_STDCALL GFx_Scale9GridLoader(LoadProcess* p, const TagInfo&)
 {
     Stream* pin = p->GetStream();
 
-    RectF    r(0);
+    RectF    r;
     unsigned refId = pin->ReadU16();
     pin->ReadRect(&r);
 
@@ -560,7 +558,7 @@ void SF_STDCALL GFx_Scale9GridLoader(LoadProcess* p, const TagInfo&)
     }
 
     ResourceHandle handle;
-    if (p->GetLoadTaskData()->GetResourceHandle(&handle, ResourceId(refId)))
+    if (p->GetResourceHandle(&handle, ResourceId(refId)))
     {
         Resource* rptr = handle.GetResourcePtr();
         if (rptr)
@@ -568,9 +566,7 @@ void SF_STDCALL GFx_Scale9GridLoader(LoadProcess* p, const TagInfo&)
             if (rptr->GetResourceType() == Resource::RT_SpriteDef)
             {
                 SpriteDef* sp = static_cast<SpriteDef*>(rptr);
-                if (!sp->pScale9Grid)
-                    sp->pScale9Grid = SF_HEAP_AUTO_NEW(sp) Scale9Grid;
-                *sp->pScale9Grid = r;
+                sp->SetScale9Grid(r);
             }
             else if (rptr->GetResourceType() == Resource::RT_ButtonDef)
             {

@@ -32,6 +32,12 @@ public:
     Ptr<SoundStreamDef>              pSoundStream;   // +0x58
     UByte                            Flags;          // +0x60
 
+    void SetScale9Grid(const RectF& r)
+    {
+        if (pScale9Grid == 0)
+            pScale9Grid = SF_HEAP_AUTO_NEW(this) Scale9Grid;
+        *pScale9Grid = r;
+    }
     RectF GetScale9Grid() const { return pScale9Grid ? pScale9Grid->Rect : RectF(0); }
     bool  HasScale9Grid() const { return pScale9Grid != 0; }
 
