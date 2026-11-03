@@ -862,31 +862,56 @@ void Scaleform::Render::DICommand_Merge::ExecuteSW(Scaleform::Render::DICommandC
     }
 }
 
-// MS2-FUNCTIONAL: copyPixels without mergeAlpha. Copies back to front (so an overlapping self-copy works) and forces
-// opaque alpha when either side lacks alpha.
+// MS2-FUNCTIONAL: scroll (the SDK body without the swizzler contexts); scheduling and register allocation only.
+// Copies back to front (so an overlapping self-copy works) and forces opaque alpha when either side lacks
+// alpha.
 // @0x142677c70
-void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& destinationRef, Scaleform::Render::ImageData** inputsRef) const
+void Scaleform::Render::DICommand_Scroll::ExecuteSW(Scaleform::Render::DICommandContext&, Scaleform::Render::ImageData& dest, Scaleform::Render::ImageData** psrc) const
 {
-    void* operation = const_cast<Scaleform::Render::DICommand_Scroll*>(this);
-    Scaleform::Render::ImageData* destination = &destinationRef;
-    void** inputs = reinterpret_cast<void**>(inputsRef);
-    using Scaleform::Render::ImageData;
-    using Scaleform::Render::ImagePlane;
-    auto* source = static_cast<ImageData*>(inputs[0]);
-    ImagePlane dst, src;
-    destination->GetPlane(0, &dst);
-    source->GetPlane(0, &src);
-    const auto* op = static_cast<const unsigned char*>(operation);
-    BitmapCopySpan span;
-    if (!ClipBitmapCopy(op, src, dst, span)) return;
-    for (int y = span.Y1 - 1; y >= span.Y0; --y) {
-        const long long srcRow = BitmapScanline(src, y - span.OffY);
-        const long long dstRow = BitmapScanline(dst, y);
-        for (int x = span.X1 - 1; x >= span.X0; --x) {
-            unsigned pixel = 0;
-            FUN_14257bf70(source, &pixel, srcRow, static_cast<unsigned>(x - span.OffX));
-            if (!BitmapHasAlpha(op, 0x10) || !BitmapHasAlpha(op, 8)) pixel |= 0xff000000u;
-            FUN_14257d390(destination, dstRow, static_cast<unsigned>(x), pixel);
+    // DICommand_SourceRect's fields: pImage +8, pSource +0x10, SourceRect +0x18, DestPoint +0x28; an image's
+    // IsTransparent() is its flag at +0x48.
+    struct SourceRectView
+    {
+        void* vptr;
+        const unsigned char* pImage;
+        const unsigned char* pSource;
+        Rect<SInt32> SourceRect;
+        Point<SInt32> DestPoint;
+    };
+    const SourceRectView& op = *reinterpret_cast<const SourceRectView*>(this);
+    const ImageData& src = *psrc[0];
+    ImagePlane d, s;
+    dest.GetPlane(0, &d);
+    src.GetPlane(0, &s);
+
+    // dst(x,y) = src(x,y) + destPt - SourceRect.TopLeft
+    Point<SInt32> delta = op.DestPoint - op.SourceRect.TopLeft();
+
+    ImageSize srcSize = src.GetSize(), dstSize = dest.GetSize();
+    Rect<SInt32> srcImageRect(0, 0, (SInt32)srcSize.Width, (SInt32)srcSize.Height);
+    Rect<SInt32> dstImageRect(0, 0, (SInt32)dstSize.Width, (SInt32)dstSize.Height);
+    Rect<SInt32> srcClippedRect, dstClippedRect;
+
+    if (!srcImageRect.IntersectRect(&srcClippedRect, op.SourceRect))
+        return;
+    if (!Rect<SInt32>(srcClippedRect.x1 + delta.x, srcClippedRect.y1 + delta.y,
+                      srcClippedRect.x2 + delta.x, srcClippedRect.y2 + delta.y).IntersectRect(&dstClippedRect, dstImageRect))
+        return;
+
+    SInt32 x, y;
+    for (y = dstClippedRect.y2 - 1; y >= dstClippedRect.y1; y--)
+    {
+        UByte* dline = dest.GetScanline(y);
+        const UByte* sline = s.GetScanline(y - delta.y);
+
+        for (x = dstClippedRect.x2 - 1; x >= dstClippedRect.x1; x--)
+        {
+            Color sCol = src.GetPixelInScanline(sline, x - delta.x);
+
+            if (!op.pSource[0x48] || !op.pImage[0x48])
+                sCol.SetAlpha(255);
+
+            dest.SetPixelInScanline(dline, x, sCol.ToColor32());
         }
     }
 }
