@@ -2138,6 +2138,8 @@ uint64_t* FUN_142743050(uint64_t* object, void* player, void* streamState, void*
 }
 
 // MS2-FUNCTIONAL: initializes the FMOD streaming sound, computes its PCM format, and creates the sound handle.
+// Left: the exe picks format/sampleBits with two cmoves and keeps stereo and rate in one register (ours branches and needs
+// one more callee-saved register), and the field stores are scheduled differently.
 // @0x142743240
 uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo, uint32_t rate, uint32_t channels)
 {
@@ -2180,10 +2182,11 @@ uint64_t* FUN_142743240(uint64_t* object, void* owner, void* stream, int stereo,
     infoWords[3] = soundRate;
     infoWords[4] = soundChannels;
     infoWords[5] = format;
-    if (static_cast<FMOD::System*>(*reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object[5]) + 0x10))->createSound(0, 0x442, &info, reinterpret_cast<FMOD::Sound**>(sound)) == 0) {
-        stereo = 0;
-        reinterpret_cast<FMOD::Sound*>(*sound)->getLength(reinterpret_cast<unsigned int*>(&stereo), 4);
-    } else *sound = 0;
+    if (static_cast<FMOD::System*>(*reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(object[5]) + 0x10))->createSound(0, 0x442, &info, reinterpret_cast<FMOD::Sound**>(sound)) != 0) *sound = 0;
+    else {
+        unsigned int length = 0;
+        reinterpret_cast<FMOD::Sound*>(*sound)->getLength(&length, 4);
+    }
     return object;
 }
 } // namespace
