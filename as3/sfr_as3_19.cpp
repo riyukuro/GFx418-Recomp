@@ -5732,7 +5732,7 @@ void Sfr31ExecCallSuperArgsB(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc) 
 // Stores the accessor-prefixed name for a slot: kind 0xb keeps the name, 0xc stores "get " + name at idx, 0xd stores "set " + name at idx + 1.
 // MS2-FUNCTIONAL 0x1425283c0: raw-offset model; the string concatenation goes through the string manager directly
 // @0x1425283c0
-void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
+__declspec(noinline) void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 {
     UPInt* names = reinterpret_cast<UPInt*>(vt + 0x20);
     if (names[1] <= idx)
@@ -5769,25 +5769,25 @@ void Sfr31StoreSlotName(UPInt vt, UInt32 idx, int kind, const UPInt* name)
 }
 
 // Records a value in the slot table: the name goes in through the accessor-name store, then the value cell at the slot (or slot + 1 for setters) is assigned.
-// MS2-FUNCTIONAL 0x1425282d0: raw-offset model; codegen differs from the exe
+// A method index (kind 2) is stored as a kMethodInd Value bound to the table's traits. The exe calls the name store out of line.
 // @0x1425282d0
 void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UPInt* name)
 {
     Value* cell = 0;
-    if (kind > 10)
+    switch (kind)
     {
-        if (kind < 0xd)
-            cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + (idx & 0xffffffffu) * 0x20);
-        else if (kind == 0xd)
-            cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + static_cast<UPInt>(static_cast<UInt32>(idx) + 1) * 0x20);
+    case 0xb:
+    case 0xc:
+        cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + static_cast<UPInt>(static_cast<UInt32>(idx)) * 0x20);
+        break;
+    case 0xd:
+        cell = reinterpret_cast<Value*>(Sfr31Rd(vt, 8) + static_cast<UPInt>(static_cast<UInt32>(idx) + 1) * 0x20);
+        break;
     }
     Sfr31StoreSlotName(vt, static_cast<UInt32>(idx), kind, name);
     if ((*reinterpret_cast<const UInt32*>(v) & 0x1f) == 2)
-    {
-        UPInt raw[4] = {6, 0, 0, Sfr31Rd(vt, 0)};
-        *reinterpret_cast<UInt32*>(&raw[2]) = *reinterpret_cast<const UInt32*>(reinterpret_cast<const char*>(v) + 0x10);
-        cell->Assign(*reinterpret_cast<const Value*>(raw));
-    }
+        cell->Assign(Value(*reinterpret_cast<const SInt32*>(reinterpret_cast<const char*>(v) + 0x10), *reinterpret_cast<const Traits*>(Sfr31Rd(vt, 0)),
+                           Value::kMethodInd));
     else
         cell->Assign(*v);
 }
