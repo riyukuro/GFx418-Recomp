@@ -484,7 +484,7 @@ namespace Classes { namespace fl_external
 
     // ExternalInterface.call(methodName, ...args): hands the arguments, as host values, to the movie's external
     // interface handler and returns what the handler stored in the movie root.
-    // MS2-FUNCTIONAL: same calls and data flow; the exe keeps the movie in a register (one more saved register, smaller frame) and merges the Convert2String failure exit into the common one
+    // MS2-FUNCTIONAL: register allocation only (the exe keeps this in rbp and nargs in rsi, ours the other way round)
     // @0x142473760
     void ExternalInterface::call(Value& result, unsigned argc, const Value* argv)
     {
@@ -504,20 +504,30 @@ namespace Classes { namespace fl_external
 
             // Up to 10 arguments are converted on the stack.
             void* onStack[10 * (sizeof(GFx::Value) / sizeof(void*))];
-            GFx::Value* args = (GFx::Value*)onStack;
+            GFx::Value* args;
             if (nargs > 10)
                 args = (GFx::Value*)SF_HEAP_AUTO_ALLOC(this, nargs * sizeof(GFx::Value));
-            for (unsigned i = 0; i < nargs; i++)
-                root->ASValue2GFxValue(argv[i + 1], Scaleform::Construct<GFx::Value>(&args[i]));
+            else
+                args = (GFx::Value*)onStack;
+            for (unsigned i = 0, n = nargs; i < n; ++i)
+            {
+                const Value& val = argv[i + 1];
+                GFx::Value* pdestVal = Scaleform::Construct<GFx::Value>(&args[i]);
+                root->ASValue2GFxValue(val, pdestVal);
+            }
 
             root->ExternalIntfRetVal.SetUndefined();
             movie->pExtIntfHandler->Callback(movie->AsMovie(), methodName.IsEmpty() ? NULL : methodName.ToCStr(), args, nargs);
             result.Assign(root->ExternalIntfRetVal);
 
-            for (unsigned i = 0; i < nargs; i++)
+            for (unsigned i = 0, n = nargs; i < n; ++i)
+            {
                 args[i].~Value();
+            }
             if (nargs > 10)
+            {
                 SF_FREE(args);
+            }
         }
         else
         {
