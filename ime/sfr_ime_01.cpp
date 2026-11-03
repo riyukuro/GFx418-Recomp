@@ -3885,45 +3885,60 @@ unsigned long long FUN_1423d9ee0(void* raw, void*, int event, void*, const char*
     return 1;
 }
 
-// MS2-FUNCTIONAL: maps a GFxIME_* label from the executable IME table to its loaded record and selects that IME.
+// MS2-FUNCTIONAL: maps a GFxIME_* label from the executable IME table to its loaded record and selects that IME,
+// then releases the by-value name string (inline, as in the exe). Still differs: the exe returns bool (xor al / mov al),
+// the hook signature keeps unsigned long long, the release tests `sub eax,1`, and vtable[8] goes through r8.
 // @0x1423d7420
 unsigned long long FUN_1423d7420(unsigned long long* manager, unsigned long long* packedName)
 {
-    for (unsigned index = 0;; ++index) {
-        const auto* entry = DAT_143a2a3e0 + index * 0x10;
-        const unsigned code = *reinterpret_cast<const unsigned*>(entry + 8);
-        if (code == 0x02000000) break;
-        const char* name = reinterpret_cast<const char*>((*packedName & ~3ull) + 0xc);
-        if (std::strcmp(name, *reinterpret_cast<const char* const*>(entry)) != 0) continue;
-        const unsigned count = *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0xd0);
-        for (unsigned i = 0; i < count; ++i) {
-            auto* record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-            const unsigned recordCode = *reinterpret_cast<unsigned*>(record + 0x20);
-            if (recordCode != code) continue;
-            auto** vtable = reinterpret_cast<void**>(manager[0]);
-            const unsigned state = reinterpret_cast<unsigned*>(manager[0x32])[i];
-            if (state == 1 || state == 2) {
-                *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84) =
-                    reinterpret_cast<unsigned(*)(void*, unsigned)>(vtable[3])(manager, recordCode);
-                for (unsigned mode = 0; mode < manager[0x13]; ++mode) {
-                    auto* item = reinterpret_cast<unsigned char*>(manager[0x12]) + mode * 0x20;
-                    if (*reinterpret_cast<unsigned*>(item + 0x10) ==
-                        *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(manager) + 0x84))
-                        reinterpret_cast<void(*)(void*, const char*)>(vtable[9])(
-                            manager, *reinterpret_cast<const char**>(item));
+    struct LocaleRow { const char* name; unsigned id; unsigned pad; };
+    struct Record { unsigned long long pad0[2]; unsigned long long text1; unsigned long long text2; unsigned id; unsigned pad1[3]; };
+    struct Mode { const char* name; unsigned long long pad0; unsigned id; unsigned pad1[3]; };
+    const auto* rows = reinterpret_cast<const LocaleRow*>(DAT_143a2a3e0);
+    auto* self = reinterpret_cast<unsigned char*>(manager);
+    unsigned index = 0;
+    if (rows[0].id != 0x02000000) {
+        do {
+            const char* name = reinterpret_cast<const char*>((*packedName & ~3ull) + 0xc);
+            if (std::strcmp(name, rows[index].name) == 0) {
+                const unsigned code = rows[index].id;
+                for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0xd0); ++i) {
+                    auto* records = reinterpret_cast<Record*>(manager[0x17]);
+                    if (records[i].id != code) continue;
+                    auto* states = reinterpret_cast<unsigned*>(manager[0x32]);
+                    if (states[i] == 1 || states[i] == 2) {
+                        *reinterpret_cast<unsigned*>(self + 0x84) =
+                            reinterpret_cast<unsigned(*)(void*, unsigned)>(reinterpret_cast<void**>(manager[0])[3])(manager, records[i].id);
+                        for (unsigned mode = 0; mode < manager[0x13]; ++mode) {
+                            auto* modes = reinterpret_cast<Mode*>(manager[0x12]);
+                            if (modes[mode].id == *reinterpret_cast<unsigned*>(self + 0x84))
+                                reinterpret_cast<void(*)(void*, const char*)>(reinterpret_cast<void**>(manager[0])[9])(manager, modes[mode].name);
+                        }
+                    }
+                    const unsigned selected = reinterpret_cast<unsigned*>(manager[0x32])[i];
+                    unsigned long long field;
+                    if (selected == 1)
+                        field = reinterpret_cast<Record*>(manager[0x17])[i].text1;
+                    else if (selected == 2)
+                        field = reinterpret_cast<Record*>(manager[0x17])[i].text2;
+                    else
+                        continue;
+                    {
+                        const char* text = reinterpret_cast<const char*>((field & ~3ull) + 0xc);
+                        reinterpret_cast<void(*)(void*, const char*)>(reinterpret_cast<void**>(manager[0])[8])(manager, text);
+                        unsigned char* data = reinterpret_cast<unsigned char*>(*packedName & ~3ull);
+                        if ((_InterlockedExchangeAdd(reinterpret_cast<volatile long*>(data + sizeof(void*)), -1) - 1) == 0)
+                            Memory::Free(data);
+                        return 1;
+                    }
                 }
             }
-            const unsigned selected = reinterpret_cast<unsigned*>(manager[0x32])[i];
-            if (selected != 1 && selected != 2) continue;
-            record = reinterpret_cast<unsigned char*>(manager[0x17]) + i * 0x30;
-            const unsigned long long field = *reinterpret_cast<unsigned long long*>(record + (selected == 1 ? 0x10 : 0x18));
-            reinterpret_cast<void(*)(void*, const char*)>(vtable[8])(manager,
-                reinterpret_cast<const char*>((field & ~3ull) + 0xc));
-            FUN_1423ca920(nullptr, packedName);
-            return 1;
-        }
+            ++index;
+        } while (rows[index].id != 0x02000000);
     }
-    FUN_1423ca920(nullptr, packedName);
+    unsigned char* data = reinterpret_cast<unsigned char*>(*packedName & ~3ull);
+    if ((_InterlockedExchangeAdd(reinterpret_cast<volatile long*>(data + sizeof(void*)), -1) - 1) == 0)
+        Memory::Free(data);
     return 0;
 }
 
