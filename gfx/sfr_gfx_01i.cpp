@@ -2367,7 +2367,6 @@ bool MovieImpl::IsFocused(const InteractiveObject* ch) const
     return false;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the CharacterHandle release and GetCharacterHandle; called out of line here.
 // @0x1425761a0
 void MovieImpl::SetModalClip(Sprite* pmovie, unsigned controllerIdx)
 {
@@ -2375,7 +2374,13 @@ void MovieImpl::SetModalClip(Sprite* pmovie, unsigned controllerIdx)
     if (!pmovie)
         focusGroup.ModalClip.Clear();
     else
-        focusGroup.ModalClip = ((DisplayObject*)pmovie)->GetCharacterHandle();   // Sprite is incomplete here (base at +0)
+    {
+        // Ptr::operator=(C*) written out, as the exe inlines it. Sprite is incomplete here (base at +0).
+        CharacterHandle* phandle = ((DisplayObject*)pmovie)->GetCharacterHandle();
+        if (phandle) phandle->AddRef();
+        if (focusGroup.ModalClip) focusGroup.ModalClip->Release();
+        focusGroup.ModalClip.GetRawRef() = phandle;
+    }
 }
 
 // @0x142576c60
