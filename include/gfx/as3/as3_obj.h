@@ -1005,7 +1005,13 @@ public:
 class PropRef
 {
 public:
-    ~PropRef();
+#ifdef MS2_AS3_PROPREF_DTOR_OUTLINE
+    // the exe's out-of-line copy (0x1424de8f0), defined by sfr_as3_16; inline, as the copies other units emit (Any COMDAT)
+    inline ~PropRef();
+#else
+    // the SDK's PropRef has no destructor of its own: the exe inlines the This release at every caller
+    SF_INLINE ~PropRef() { }
+#endif
     operator bool() const;
 #if !defined(_MSC_VER) || _MSC_VER >= 1600  // cl 15 has no rvalue references
     PropRef& operator=(PropRef&& other);

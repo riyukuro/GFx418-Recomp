@@ -58,6 +58,7 @@
 // MS2-RANGE: 0x1424eb640-0x1424eb6b0 .text$mn
 // MS2-RANGE: 0x1424eb6b0-0x1424eb700 .text$mn
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
+#define MS2_AS3_PROPREF_DTOR_OUTLINE   // PropRef::~PropRef 0x1424de8f0 is defined here (as3_obj.h)
 #define MS2_AS3_ASSIGN_NOALIAS   // one SCU in the exe: Assign/ReleaseInternal/getNext touch no caller memory (as3_value.h, as3_asvm.h)
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_natives.h"
 #include "ms2/scaleform/include/gfx/as3/obj/as3_obj_userdefined.h"
@@ -1900,9 +1901,11 @@ void MovieRoot::AddNewLoadQueueEntry(Instances::fl_net::URLRequest* urlRequest, 
 
 // Only the This member Value is released (its SCU ~Value inlines).
 // @0x1424de8f0
-PropRef::~PropRef()
+inline PropRef::~PropRef()
 {
 }
+// odr-uses the inline destructor, so this unit emits its copy
+static void (* const pSfr16PropRefDtor)(PropRef*) = [](PropRef* p) { p->~PropRef(); };
 
 // @0x1424e0b40
 PropRef& PropRef::operator=(PropRef&& other)
