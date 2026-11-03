@@ -4677,8 +4677,9 @@ struct Ime01KeyRecord
 // character (+0xd0; backspace, return, escape and space stop here): mode 2 (Zhuyin) maps it through the key records
 // at +0xdc (bopomofo to +0xd0, class to +0xc8), mode 4 (Cangjie) through the radical table. A key up after a
 // candidate list was shown (+0x5bc) repositions the candidate window (0x1423d5060, out of line as in the exe).
-// Still differs: cl folds the message-type test and the mode 2 range test into lea/cmp range checks, the exe
-// indexes the Cangjie table with stride 8 (ours is a ushort table) and reloads the message type after ToUnicodeEx.
+// The message type is read from the message each time and the pending flag is two byte stores (the exe's word store).
+// Still differs: cl folds the mode 2 range test into a lea/cmp range check, and the exe indexes the Cangjie table
+// with stride 8 (ours is a ushort table).
 // @0x1423d4c20
 void FUN_1423d4c20(void* raw, const void* event)
 {
@@ -4687,8 +4688,8 @@ void FUN_1423d4c20(void* raw, const void* event)
     auto& key = *reinterpret_cast<unsigned short*>(self + 0xd0);
     BYTE state[256];
     wchar_t translated[0x14];
-    UINT type = *reinterpret_cast<const UINT*>(message + 0xc);
-    if (type == WM_KEYDOWN || type == WM_KEYUP) {
+    if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYDOWN ||
+        *reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYUP) {
         GetKeyboardState(state);
         HKL layout = GetKeyboardLayout(0);
         *reinterpret_cast<HKL*>(self + 0x58) = layout;
@@ -4708,10 +4709,12 @@ void FUN_1423d4c20(void* raw, const void* event)
             cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
         }
         ToUnicodeEx(key, scan, state, translated, 0x14, 0, *reinterpret_cast<HKL*>(self + 0x58));
-        type = *reinterpret_cast<const UINT*>(message + 0xc);
     }
-    if (type == WM_KEYDOWN && *reinterpret_cast<const WPARAM*>(message + 0x10) != VK_PROCESSKEY)
-        *reinterpret_cast<unsigned short*>(self + 0xa0) = 1;
+    if (*reinterpret_cast<const UINT*>(message + 0xc) == WM_KEYDOWN &&
+        *reinterpret_cast<const WPARAM*>(message + 0x10) != VK_PROCESSKEY) {
+        self[0xa0] = 1;
+        self[0xa1] = 0;
+    }
     if (self[0xa0] && cx18_ImmIsUIMessageW(nullptr, *reinterpret_cast<const UINT*>(message + 0xc),
                                            *reinterpret_cast<const WPARAM*>(message + 0x10),
                                            *reinterpret_cast<const LPARAM*>(message + 0x18)))
