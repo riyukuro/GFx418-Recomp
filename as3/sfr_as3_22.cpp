@@ -4000,7 +4000,9 @@ void* CreateAudioRequest(void* manager, const char* path, bool stream)
     return object;
 }
 
-// MS2-FUNCTIONAL: builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
+// Builds a linked buffered request, retains its backing data, and creates its callback-fed FMOD sound.
+// MS2-FUNCTIONAL: the exe re-tests the old backing data when backing is null, and returns through one register
+// shared with the null-allocation path
 // @0x1427447f0
 void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels, unsigned rate, bool wideSamples)
 {
@@ -4040,9 +4042,11 @@ void* CreateBufferedAudioRequest(void* manager, void* backing, unsigned channels
         FUN_14257dcb0(old);
     *reinterpret_cast<void**>(object + 0x40) = backing;
 
-    const unsigned format = wideSamples ? 5u : 2u;
+    // The exe tests the whole dword of the fifth argument's stack slot, so the parameter is an int there.
+    const unsigned wide = *reinterpret_cast<const unsigned*>(&wideSamples);
+    const unsigned format = wide == 0 ? 2u : 5u;
     *reinterpret_cast<unsigned*>(object + 0x68) = format;
-    const unsigned bits = wideSamples ? 32u : 16u;
+    const unsigned bits = wide == 0 ? 16u : 32u;
     *reinterpret_cast<unsigned*>(object + 0x50) = bits;
     const unsigned sampleRate = *reinterpret_cast<unsigned*>(object + 0x4c);
     const unsigned channelCount = *reinterpret_cast<unsigned*>(object + 0x48);
