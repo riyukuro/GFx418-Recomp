@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x1426607d0-0x142663400 .text$mn
 
 #define MS2_SF_HASH_CLEAR_NOINLINE           // HashSet Clear out of line, as the exe's setRawCapacity calls it
+#define MS2_SF_UPPERBIT_INLINE               // Alg::UpperBit inlined into the GlyphGeometryKey rehash in the exe
 #include "../include/gfx/gfx_loadproc.h"
 #include "../include/gfx/gfx_log.h"
 #include "../include/gfx/gfx_moviedef.h"
