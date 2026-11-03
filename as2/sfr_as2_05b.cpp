@@ -62,12 +62,14 @@ bool AS2ValueObjectInterface::GetMatrix3D(void* pdata, Render::Matrix3F* pmat) c
 }
 
 // The host user data of the object (or of the AS object of the character).
-// MS2-FUNCTIONAL: register allocation / null-cast form of the resolved character interface
+// The movie is read once, as the exe keeps it in rbp.
+// MS2-FUNCTIONAL: the exe null-checks the character interface with cmove on a zero kept for the result
 // @0x142956be0
 ASUserData* AS2ValueObjectInterface::GetUserData(void* pdata, bool isdobj) const
 {
-    VoiEnv(VoiRoot(pMovieRoot));
-    AS2::ObjectInterface* pobj = VoiObject(pdata, pMovieRoot, isdobj);
+    MovieImpl* pmovie = pMovieRoot;
+    VoiEnv(VoiRoot(pmovie));
+    AS2::ObjectInterface* pobj = VoiObject(pdata, pmovie, isdobj);
     if (pobj && pobj->pUserDataHolder)
         return pobj->pUserDataHolder->pUserData;
     return 0;
