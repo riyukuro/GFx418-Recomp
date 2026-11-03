@@ -111,51 +111,73 @@ void FUN_1423b18d0(void* userData)
 // Expat start element: the qualified name and the null terminated name / value array. The attributes go into a
 // 32 entry stack array (a heap array beyond that); every xmlns / xmlns:<prefix> attribute is also reported as a prefix
 // mapping, before the element itself.
-// MS2-FUNCTIONAL: same attribute array, prefix mappings and StartElement call; the heap array uses new[] / delete[].
 // @0x1423b1d40
 void FUN_1423b1d40(void* userData, const char* name, const char** atts)
 {
     Unk_ParserExpatUserData* ud = (Unk_ParserExpatUserData*)userData;
-    ParserAttribute local[32];
-    UPInt count = 0;
-    while (atts[count * 2])
-        ++count;
-    bool heap = false;
-    ParserAttribute* attrs = local;
-    if (count > 32)
+
+    ParserAttribute  astack[32];
+    ParserAttributes attlist;
+
+    UPInt sz         = 0;
+    bool  attsInHeap = false;
+    for (int i = 0; atts[i]; i += 2, sz++) {}
+    attlist.Length = sz;
+
+    if (sz > 32)
     {
-        attrs = new ParserAttribute[count];
-        heap  = true;
+        attlist.Attributes = new ParserAttribute[sz];
+        attsInHeap         = true;
     }
-    for (UPInt i = 0; atts[i * 2]; ++i)
+    else
     {
-        const char* aname  = atts[i * 2];
-        const char* avalue = atts[i * 2 + 1];
-        attrs[i].Name  = StringRef(aname);
-        attrs[i].Value = StringRef(avalue);
-        if (aname[0] == 'x' && aname[1] == 'm' && aname[2] == 'l' && aname[3] == 'n' && aname[4] == 's')
+        attlist.Attributes = astack;
+    }
+
+    int aidx = 0;
+    for (UPInt i = 0; atts[i]; i += 2, aidx++)
+    {
+        attlist.Attributes[aidx].Name  = StringRef(atts[i]);
+        attlist.Attributes[aidx].Value = StringRef(atts[i + 1]);
+
+        // xmlns:<prefix> and xmlns attributes declare namespaces.
+        const char* att = atts[i];
+        if ((att[0] == 'x') && (att[1] == 'm') && (att[2] == 'l') && (att[3] == 'n') && (att[4] == 's'))
         {
-            if (aname[5] == ':')
+            if (att[5] == ':')
             {
-                StringRef uri(avalue);
-                StringRef prefix(aname + 6);
-                ud->Handler->PrefixMapping(prefix, uri);
+                ud->Handler->PrefixMapping(&att[6], atts[i + 1]);
             }
-            else if (strlen(aname) == 5)
+            else
             {
-                StringRef uri(avalue);
-                StringRef prefix;
-                ud->Handler->PrefixMapping(prefix, uri);
+                if (strlen(att) == 5)
+                {
+                    ud->Handler->PrefixMapping(StringRef(), atts[i + 1]);
+                }
             }
         }
     }
-    StringRef prefix, localname;
-    SplitQName(name, prefix, localname);
+
+    StringRef   prefix;
+    StringRef   localname;
+    const char* delim = strchr(name, ':');
+    if (delim == NULL)
+    {
+        localname = StringRef(name);
+    }
+    else
+    {
+        prefix    = StringRef(name, delim - name);
+        localname = StringRef(delim + 1);
+    }
+
     UpdateLocator(ud);
-    ParserAttributes attributes = {attrs, count};
-    ud->Handler->StartElement(prefix, localname, attributes);
-    if (heap)
-        delete[] attrs;
+    ud->Handler->StartElement(prefix, localname, attlist);
+
+    if (attsInHeap)
+    {
+        delete[] attlist.Attributes;
+    }
 }
 
 // Expat XML declaration: version, encoding and standalone go into the locator.
