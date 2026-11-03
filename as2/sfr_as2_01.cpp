@@ -965,27 +965,37 @@ void MovieClipLoaderProto::LoadClip(const FnCall& fn)
     fn.Result->SetBool(true);
 }
 
+// Value::ToCharacter, expanded in place where the exe has it inline.
+static SF_FORCEINLINE InteractiveObject* MovieClipLoader_CharacterOf(const Value& v, const Environment* penv)
+{
+    if (v.IsCharacter() && penv && v.V.pCharHandle)
+    {
+        DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+        if (pdisp)
+            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+    }
+    return 0;
+}
+
 // @0x1428eb6d0
-// MS2-FUNCTIONAL same flow; the exe's inlined argument lookups and level/path dispatch are scheduled differently
 void MovieClipLoaderProto::UnloadClip(const FnCall& fn)
 {
     fn.Result->SetBool(false);
     if (fn.NArgs < 1)
         return;
     Ptr<InteractiveObject> ptarget;
-    const Value&           arg = fn.Arg(0);
-    if (arg.IsCharacter())
-        ptarget = arg.ToCharacter(fn.Env);
-    else if (arg.IsNumber())
-        ptarget = fn.Env->GetAS2Root()->GetLevelMovie(arg.ToInt32(fn.Env));
+    if (fn.Arg(0).IsCharacter())
+        ptarget = MovieClipLoader_CharacterOf(fn.Arg(0), fn.Env);
+    else if (fn.Arg(0).IsNumber())
+        ptarget = Sfr01GetAS2Root(fn.Env)->GetLevelMovie(fn.Arg(0).ToInt32(fn.Env));
     else
     {
-        ASString path = arg.ToString(fn.Env);
+        ASString path = fn.Arg(0).ToString(fn.Env);
         ptarget = fn.Env->FindTarget(path, 0);
     }
     if (!ptarget)
         return;
-    fn.Env->GetAS2Root()->AddLoadQueueEntry(ptarget, "", LoadQueueEntry::LM_None, 0);
+    Sfr01GetAS2Root(fn.Env)->AddLoadQueueEntry(ptarget, "", LoadQueueEntry::LM_None, 0);
     fn.Result->SetBool(true);
 }
 
