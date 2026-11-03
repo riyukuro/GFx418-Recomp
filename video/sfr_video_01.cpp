@@ -2072,7 +2072,7 @@ void FUN_14000c220(void* table, const unsigned* key, void** value)
 
 // replaces the object for a 32-bit track id, releasing the caller's prior reference.
 // @0x14000c280
-void FUN_14000c280(void* owner, unsigned key, void** value)
+__declspec(noinline) void FUN_14000c280(void* owner, unsigned key, void** value)
 {
     void* pair[2] = {&key, value};
     unsigned char* table = reinterpret_cast<unsigned char*>(owner) + 0x10;
@@ -4195,34 +4195,57 @@ Object* FUN_14000ae30(Object* object, ASStringContext* context, Object* prototyp
     return object;
 }
 
-// MS2-FUNCTIONAL: creates the NetStream constructor/prototype pair, registers the prototype and publishes the class.
+// The NetStreamProto constructor as FUN_14000cf20 inlines it: Prototype<NetStream>, then the
+// NetStreamProto vtables and its close method.
+static __forceinline Object* NetStreamProtoConstruct(void* storage, ASStringContext* context, Object* prototype,
+                                                     const FunctionRef& constructor)
+{
+    // the inlined Prototype<NetStream> ctor, as in FUN_140009e20: the NetStream part, then GASPrototypeBase() at
+    // +0xd8 and Init
+    Object* baseProto = static_cast<Object*>(storage);
+    static_cast<NetStream*>(baseProto)->NetStream::NetStream(context, prototype);
+    unsigned char* bytes = static_cast<unsigned char*>(storage);
+    unsigned char* base = bytes + 0xd8;
+    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
+    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
+    *reinterpret_cast<void**>(base + 0x38) = 0;
+    *reinterpret_cast<void***>(bytes) = &NetStreamPrototypeVtable;
+    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamPrototypeInterfaceVtable;
+    *reinterpret_cast<void***>(base) = &NetStreamPrototypeBaseVtable;
+    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(baseProto, context, constructor);
+    *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
+    *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
+    *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
+    NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
+    access->InitFunctionMembers(baseProto, context, &NetStreamCloseFunctionTable, PropFlags(1));
+    return baseProto;
+}
+
+// creates the NetStream constructor/prototype pair, registers the prototype and publishes the class.
 // @0x14000cf20
 FunctionRef FUN_14000cf20(GlobalContext* global)
 {
     ASStringContext context(global, 8);
-    NetStreamCtorFunction* ctorObject = SF_HEAP_NEW(context.GetHeap()) NetStreamCtorFunction(&context);
-    FunctionRef constructor(ctorObject);
-    ctorObject->Release();
+    FunctionRef constructor(*SF_HEAP_NEW(global->pHeap) NetStreamCtorFunction(&context));
 
-    void* storage = Scaleform::Memory::AllocInHeap(context.GetHeap(), 0x120);
-    Object* proto = 0;
-    if (storage) {
-        Prototype<NetStream>* baseProto = ::new (storage) Prototype<NetStream>(
-            &context, global->GetPrototype(ASBuiltin_Object), constructor);
-        proto = baseProto;
-        unsigned char* bytes = static_cast<unsigned char*>(storage);
-        *reinterpret_cast<void***>(bytes) = &NetStreamProtoVtable;
-        *reinterpret_cast<void***>(bytes + 0x20) = &NetStreamProtoInterfaceVtable;
-        *reinterpret_cast<void***>(bytes + 0xd8) = &NetStreamProtoBaseVtable;
-        *reinterpret_cast<unsigned*>(bytes + 0x118) = 0;
-        NetStreamPrototypeInitAccess* access = reinterpret_cast<NetStreamPrototypeInitAccess*>(bytes + 0xd8);
-        access->InitFunctionMembers(baseProto, &context, &NetStreamCloseFunctionTable, PropFlags(1));
+    void* storage = Scaleform::Memory::AllocInHeap(global->pHeap, 0x120);
+    Object* created = storage ? NetStreamProtoConstruct(storage, &context, global->GetPrototype(ASBuiltin_Object),
+                                                        constructor)
+                              : 0;
+    Ptr<Object> proto(created);
+
+    {
+        Object* registered = proto;
+        FUN_14000c280(global, 0x23, reinterpret_cast<void**>(&registered));
     }
-
-    if (proto) FUN_14000c280(global, 0x23, reinterpret_cast<void**>(&proto));
-    Value constructorValue(constructor);
-    global->pGlobal->SetMemberRaw(&context, context.CreateConstString("NetStream"), constructorValue,
-                                  PropFlags(3));
+    {
+        PropFlags flags;
+        // The exe builds and destroys the member value out of line (0x142923b90 / 0x1429260b0).
+        Video01ValueStorage valueStorage;
+        global->pGlobal->SetMemberRaw(&context, global->GetStringManager()->GetBuiltin(ASBuiltin_NetStream),
+                                      *FUN_142923b90(reinterpret_cast<Value*>(&valueStorage), constructor), flags);
+        reinterpret_cast<Value*>(&valueStorage)->Value::~Value();
+    }
     return constructor;
 }
 
