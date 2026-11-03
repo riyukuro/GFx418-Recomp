@@ -41,12 +41,12 @@ const int Member_perspfov       = 115;
 // A name that may spell a standard member: flagged so, or "_..." whose lowercase twin is flagged.
 inline bool MayBeStandardMember(const ASString& name)
 {
-    if ((name.GetHashFlags() >> 29) & 1)
+    if ((UByte)(name.GetHashFlags() >> 29) & 1)
         return true;
     if (name.GetLength() != 0 && name.GetCharAt(0) == '_')
     {
         ASString lower(name.ToLowerNode());
-        if ((lower.GetHashFlags() >> 28) & 1)
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
             return true;
     }
     return false;
@@ -54,8 +54,8 @@ inline bool MayBeStandardMember(const ASString& name)
 
 } // namespace
 
-// MS2-FUNCTIONAL: the extension cases are laid out differently and the matrix copy is scheduled differently; same
-// behavior
+// MS2-FUNCTIONAL: the parameters get other callee-saved registers and the __proto__ case check is laid out
+// differently (the exe branches on IsCaseSensitive first); same behavior
 // @0x142982d20
 bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
@@ -94,9 +94,9 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
                 }
             }
             break;
-        case Member_focusGroupMask:
-            if (GetASEnvironment()->CheckExtensions() && !val.IsUndefined())
-                pDispObj->PropagateFocusGroupMask(val.ToUInt32(GetASEnvironment()));
+        case Member_perspfov:
+            if (GetASEnvironment()->CheckExtensions())
+                pDispObj->SetFOV(val.ToNumber(GetASEnvironment()));
             break;
         case Member_z:
             if (GetASEnvironment()->CheckExtensions())
@@ -105,14 +105,6 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
         case Member_zscale:
             if (GetASEnvironment()->CheckExtensions())
                 pDispObj->SetZScale(val.ToNumber(GetASEnvironment()));
-            break;
-        case Member_xrotation:
-            if (GetASEnvironment()->CheckExtensions())
-                pDispObj->SetXRotation(val.ToNumber(GetASEnvironment()));
-            break;
-        case Member_yrotation:
-            if (GetASEnvironment()->CheckExtensions())
-                pDispObj->SetYRotation(val.ToNumber(GetASEnvironment()));
             break;
         case Member_matrix3d:
             if (GetASEnvironment()->CheckExtensions())
@@ -124,11 +116,12 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
                 else if (pobj->GetObjectType() == Object::Object_Array)
                 {
                     ArrayObject*     parr = static_cast<ArrayObject*>(val.ToObjectInterface_Call(penv));
+                    SPInt            size = parr->GetSize();
                     Render::Matrix4F m;
                     float*           pm = &m.M[0][0];
-                    for (int i = 0; i < parr->GetSize(); ++i)
+                    for (SPInt i = 0; i < size; ++i)
                     {
-                        const Value* pv = parr->GetElementPtr(i);
+                        const Value* pv = parr->Elements[i];
                         if (pv && pv->IsNumber())
                             pm[i] = (float)pv->ToNumber(penv);
                     }
@@ -137,9 +130,20 @@ bool AvmCharacter::SetMember(Environment* penv, const ASString& name, const Valu
                 }
             }
             break;
-        case Member_perspfov:
+        case Member_xrotation:
             if (GetASEnvironment()->CheckExtensions())
-                pDispObj->SetFOV(val.ToNumber(GetASEnvironment()));
+                pDispObj->SetXRotation(val.ToNumber(GetASEnvironment()));
+            break;
+        case Member_yrotation:
+            if (GetASEnvironment()->CheckExtensions())
+                pDispObj->SetYRotation(val.ToNumber(GetASEnvironment()));
+            break;
+        case Member_focusGroupMask:
+            if (GetASEnvironment()->CheckExtensions() && !val.IsUndefined())
+            {
+                UInt32 mask = val.ToUInt32(GetASEnvironment());
+                pDispObj->PropagateFocusGroupMask(mask);
+            }
             break;
         default:
             break;
