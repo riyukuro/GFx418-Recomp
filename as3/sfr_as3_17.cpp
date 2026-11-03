@@ -3459,51 +3459,6 @@ void TR::State::ConvertRegisterTo(SPInt ind, InstanceTraits::Traits& tr, Value::
 }
 
 
-// The slot of tr in ns among the slots named like the chain starting at values (protected ones match by kind,
-// private ones by identity, the rest by uri), or NULL; index receives the slot index last looked at.
-static SF_INLINE const SlotInfo* Sfr33FindSlotInChain(const Slots& slots, const UInt32* values,
-                                                      const Instances::Namespace& ns, UPInt& index)
-{
-    if (values)
-    {
-        SPInt ind = *values;
-        do
-        {
-            index = ind;
-            const SlotInfo* si;
-            if (AbsoluteIndex(ind) < slots.FirstOwnSlotNum)
-                si = &slots.Parent->GetSlotInfo(AbsoluteIndex(ind));
-            else
-                si = &slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
-            const Instances::Namespace& sns = *si->pNs;
-            const unsigned kind = ns.GetKind();
-            if (sns.GetKind() == kind)
-            {
-                bool same;
-                switch (kind)
-                {
-                case Abc::NS_Protected:
-                    same = true;
-                    break;
-                case Abc::NS_Private:
-                    same = &ns == &sns;
-                    break;
-                default:
-                    same = sns.GetUri().GetNode() == ns.GetUri().GetNode();
-                    break;
-                }
-                if (same)
-                    return si;
-            }
-            if (static_cast<UPInt>(ind) < slots.FirstOwnSlotNum)
-                ind = slots.Parent->GetPrevSlotIndex(ind);
-            else
-                ind = slots.VArray[ind - slots.FirstOwnSlotNum].Prev;
-        } while (ind >= 0);
-    }
-    return NULL;
-}
-
 // The fixed slot of tr named name in ns, own or a parent's, or NULL; index receives its slot index. Object obj
 // may initialize it on demand.
 // @0x1425011c0
@@ -3558,35 +3513,98 @@ const SlotInfo* FindFixedSlot(const Traits& tr, const ASString& name, const Inst
     return result;
 }
 
+// Multiname::IsQName in the SDK form (getNamespaceBits is MN_NS_Qualified or MN_NS_Runtime).
+enum Sfr17MultinameKindBits
+{
+    Sfr17MN_NS_Mask      = 0x03,
+    Sfr17MN_NS_Qualified = 0x00,
+    Sfr17MN_NS_Runtime   = 0x01,
+    Sfr17MN_NS_Multi     = 0x02
+};
+static inline bool Sfr17IsQName(const Multiname& mn)
+{
+    const Sfr17MultinameKindBits bits = (Sfr17MultinameKindBits)(mn.Kind & Sfr17MN_NS_Mask);
+    return bits == Sfr17MN_NS_Qualified || bits == Sfr17MN_NS_Runtime;
+}
+
 // The fixed slot of tr that mn names (the first namespace of a set that has one), or NULL.
-// MS2-FUNCTIONAL 0x142500f90: the register assignment and frame differ (exe frame 0x70, r14) and the exe splits the loops into chunks.
+// MS2-FUNCTIONAL 0x142500f90: index and si_ptr swap r14 and r15 (register tie-break); otherwise the same code.
 // @0x142500f90
 const SlotInfo* FindFixedSlot(VM& vm, const Traits& tr, const Multiname& mn, UPInt& index, Object* obj)
 {
-    ASString name = vm.GetStringManager().GetBuiltin(AS3Builtin_empty_);
-    const SlotInfo* si = NULL;
-    if (mn.Name.Convert2String(name))
+    const Value& vn = mn.Name;
+    StringManager& sm = vm.GetStringManager();
+    ASString name = sm.GetBuiltin(AS3Builtin_empty_);
+    if (!vn.Convert2String(name))
+        // Exception.
+        return NULL;
+
+    const SlotInfo* si_ptr = NULL;
+
+    // QName case ...
+    if (Sfr17IsQName(mn))
+        return FindFixedSlot(tr, name, *static_cast<const Instances::Namespace*>(mn.Obj.GetPtr()), index, obj);
+
+    // Multiname case ...
+    const ArrayLH<SPtr<Instances::Namespace> >& namespaces =
+        static_cast<const NamespaceSet*>(mn.Obj.GetPtr())->GetNamespaces();
+    const Slots& slots = tr;
+
+    const UInt32* values = slots.FindSlotValues(name);
+    const UPInt size = namespaces.GetSize();
+
+    for (UPInt i = 0; i < size; ++i)
     {
-        if (mn.IsQName())
-            si = FindFixedSlot(tr, name, *static_cast<const Instances::Namespace*>(mn.Obj.GetPtr()), index, obj);
-        else
+        const Instances::Namespace& ns = *namespaces[i];
+
+        if (values != NULL)
         {
-            const ArrayLH<SPtr<Instances::Namespace> >& nss =
-                static_cast<const NamespaceSet*>(mn.Obj.GetPtr())->GetNamespaces();
-            const Slots& slots = tr;
-            const UInt32* values = slots.FindSlotValues(name);
-            for (UPInt i = 0; i < nss.GetSize(); ++i)
+            // Find a property with the same name and check namespace after that ...
+            for (SPInt ind = *values; ind >= 0;
+                 ind = (static_cast<UPInt>(ind) < slots.FirstOwnSlotNum) ? slots.Parent->GetPrevSlotIndex(ind)
+                                                                         : slots.VArray[ind - slots.FirstOwnSlotNum].Prev)
             {
-                const Instances::Namespace& ns = *nss[i];
-                si = Sfr33FindSlotInChain(slots, values, ns, index);
-                if (obj)
-                    si = obj->InitializeOnDemand(si, name, ns, index);
-                if (si)
-                    break;
+                // DO NOT forget to set index.
+                index = static_cast<UPInt>(ind);
+                const SlotInfo& si = (AbsoluteIndex(ind) < slots.FirstOwnSlotNum)
+                    ? slots.Parent->GetSlotInfo(AbsoluteIndex(ind))
+                    : slots.VArray[static_cast<UInt32>(ind) - slots.FirstOwnSlotNum].Value;
+                const Instances::Namespace& cur_ns = *si.pNs;
+
+                if (cur_ns.GetKind() == ns.GetKind())
+                {
+                    bool found = false;
+
+                    switch (ns.GetKind())
+                    {
+                    case Abc::NS_Protected:
+                        found = true;
+                        break;
+                    case Abc::NS_Private:
+                        found = (&ns == &cur_ns);
+                        break;
+                    default:
+                        found = (cur_ns.GetUri().GetNode() == ns.GetUri().GetNode());
+                        break;
+                    }
+
+                    if (found)
+                    {
+                        si_ptr = &si;
+                        break;
+                    }
+                }
             }
         }
+
+        if (obj)
+            si_ptr = obj->InitializeOnDemand(si_ptr, name, ns, index);
+
+        if (si_ptr)
+            break;
     }
-    return si;
+
+    return si_ptr;
 }
 
 // @0x1424efd80
