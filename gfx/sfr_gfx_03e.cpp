@@ -1683,20 +1683,19 @@ void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Rang
 {
     if (!HasStyleSheet())
         return;
-    CSSHolderBase::MouseStateType& ms = pCSSData->MouseState[mouseIndex];
     RangeData<CSSHolderBase::UrlZone>* pzone = NULL;
     const char* styleName = NULL;
     unsigned zoneIdx;
     switch (event)
     {
     case Link_press:
-        if (ms.UrlZoneIndex != 0)
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
         {
-            if (ms.HitBit)
+            if (pCSSData->MouseState[mouseIndex].HitBit)
                 return;
-            ms.HitBit = true;
-            pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
-            if (pzone->GetData().HitCount != 0)
+            pCSSData->MouseState[mouseIndex].HitBit = true;
+            pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
+            if (pzone->GetData().HitCount > 0)
             {
                 ++pzone->GetData().HitCount;
                 return;
@@ -1706,8 +1705,8 @@ void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Rang
         {
             if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
                 return;
-            ms.UrlZoneIndex = zoneIdx + 1;
-            ms.HitBit       = true;
+            pCSSData->MouseState[mouseIndex].UrlZoneIndex = zoneIdx + 1;
+            pCSSData->MouseState[mouseIndex].HitBit       = true;
         }
         if (pzone->GetData().HitCount++ != 0)
             return;
@@ -1715,30 +1714,30 @@ void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Rang
         break;
 
     case Link_release:
-        if (ms.UrlZoneIndex == 0 || !ms.HitBit)
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex <= 0 || !pCSSData->MouseState[mouseIndex].HitBit)
             return;
-        ms.HitBit = false;
-        zoneIdx   = ms.UrlZoneIndex - 1;
-        if (!ms.OverBit)
-            ms.UrlZoneIndex = 0;
+        pCSSData->MouseState[mouseIndex].HitBit = false;
+        zoneIdx   = pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1;
+        if (!pCSSData->MouseState[mouseIndex].OverBit)
+            pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
         pzone = &pCSSData->UrlZones[zoneIdx];
-        if (pzone->GetData().HitCount != 0)
+        if (pzone->GetData().HitCount > 0)
         {
-            if (--pzone->GetData().HitCount != 0)
+            if (--pzone->GetData().HitCount > 0)
                 return;
-            if (pzone->GetData().OverCount != 0)
+            if (pzone->GetData().OverCount > 0)
                 styleName = "a:hover";
         }
         break;
 
     case Link_rollover:
-        if (ms.UrlZoneIndex != 0)
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex > 0)
         {
-            if (ms.OverBit)
+            if (pCSSData->MouseState[mouseIndex].OverBit)
                 return;
-            ms.OverBit = true;
-            pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
-            if (pzone->GetData().OverCount != 0)
+            pCSSData->MouseState[mouseIndex].OverBit = true;
+            pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
+            if (pzone->GetData().OverCount > 0)
             {
                 ++pzone->GetData().OverCount;
                 if (HasAvmObject())
@@ -1750,31 +1749,31 @@ void TextField::ChangeUrlFormat(LinkEvent event, unsigned mouseIndex, const Rang
         {
             if ((pzone = FindUrlZone(pCSSData, *purlRange, &zoneIdx)) == NULL)
                 return;
-            ms.UrlZoneIndex = zoneIdx + 1;
-            ms.OverBit      = true;
+            pCSSData->MouseState[mouseIndex].UrlZoneIndex = zoneIdx + 1;
+            pCSSData->MouseState[mouseIndex].OverBit      = true;
             if (HasAvmObject())
                 GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
         }
-        if (pzone->GetData().HitCount != 0 || pzone->GetData().OverCount++ != 0)
+        if (pzone->GetData().HitCount > 0 || pzone->GetData().OverCount++ != 0)
             return;
         styleName = "a:hover";
         break;
 
     case Link_rollout:
-        if (ms.UrlZoneIndex == 0 || !ms.OverBit)
+        if (pCSSData->MouseState[mouseIndex].UrlZoneIndex <= 0 || !pCSSData->MouseState[mouseIndex].OverBit)
             return;
-        ms.OverBit = false;
-        pzone = &pCSSData->UrlZones[ms.UrlZoneIndex - 1];
-        if (!ms.HitBit)
-            ms.UrlZoneIndex = 0;
-        if (pzone->GetData().OverCount != 0)
+        pCSSData->MouseState[mouseIndex].OverBit = false;
+        pzone = &pCSSData->UrlZones[pCSSData->MouseState[mouseIndex].UrlZoneIndex - 1];
+        if (!pCSSData->MouseState[mouseIndex].HitBit)
+            pCSSData->MouseState[mouseIndex].UrlZoneIndex = 0;
+        if (pzone->GetData().OverCount > 0)
         {
             --pzone->GetData().OverCount;
             if (HasAvmObject())
                 GetAvmObjImpl()->ToAvmTextFieldBase()->OnLinkEventEx(event, unsigned(pzone->Index), mouseIndex);
-            if (pzone->GetData().OverCount != 0)
+            if (pzone->GetData().OverCount > 0)
                 return;
-            if (pzone->GetData().HitCount != 0)
+            if (pzone->GetData().HitCount > 0)
                 styleName = "a:active";
         }
         break;
