@@ -3934,12 +3934,12 @@ public:
     static void GlobalCtor(const FnCall& fn);   // exe 0x14000e100
 };
 
-// MS2-FUNCTIONAL: other scheduling
+// The builtin name is read through the out-of-line GlobalContext::GetStringManager, as in the exe.
 // @0x140007ba0
 void Object::Set__proto__(ASStringContext* psc, Object* protoObj)
 {
     if (!pProto)
-        SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+        SetMemberRaw(psc, psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
                      PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
     pProto = protoObj;
 }
