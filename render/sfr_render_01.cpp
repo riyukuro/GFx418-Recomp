@@ -838,7 +838,8 @@ bool ImageSource::IsDecodeOnlyImageCompatible(const ImageCreateArgs& args)
     return true;
 }
 
-// MS2-FUNCTIONAL: register allocation only (this/args in rsi/r14 and format/heap in rbp/r15 swapped against the exe)
+// SDK form: a separate textureUse for the texture path and InitOnly added to imageUse only in the else, as in
+// Render_Image.cpp; one shared imageUse store gave a different register allocation
 // @0x14257a7e0
 Image* ImageSource::CreateCompatibleImage(const ImageCreateArgs& args)
 {
@@ -858,16 +859,19 @@ Image* ImageSource::CreateCompatibleImage(const ImageCreateArgs& args)
         {
             if (caps & ImageUse_NoDataLoss)
             {
-                // init-only either way: created now, or the RawImage below frees its data once the render
-                // thread has made the texture
-                imageUse |= ImageUse_InitOnly;
                 if (args.pManager->CanCreateTextureCurrentThread())
                 {
+                    unsigned textureUse = imageUse | ImageUse_InitOnly;
                     Ptr<Texture> texture =
-                        *args.pManager->CreateTexture(format, mipmapCount, GetSize(), imageUse, this);
+                        *args.pManager->CreateTexture(format, mipmapCount, GetSize(), textureUse, this);
                     if (texture)
-                        return SF_HEAP_NEW(heap) TextureImage(format, GetSize(), imageUse, texture, updateSync);
+                        return SF_HEAP_NEW(heap) TextureImage(format, GetSize(), textureUse, texture, updateSync);
                     return 0;
+                }
+                else
+                {
+                    // the RawImage below frees its data once the render thread has made the texture
+                    imageUse |= ImageUse_InitOnly;
                 }
             }
         }
