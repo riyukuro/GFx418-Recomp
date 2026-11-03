@@ -117,112 +117,134 @@ bool MorphCharacterDef::NeedsResolving() const
 
 // The bounds (DefineMorphShape2 adds the edge bounds and a flags byte, all unused), the offset of the end shape, the
 // paired fill and line styles, then the two shapes; a bad offset leaves both empty.
-// MS2-FUNCTIONAL: register allocation and the inlined Array::PushBack / stream reads differ.
+// MS2-FUNCTIONAL: the dead rbound = bound copies differ: the exe copies each rect with a movaps load/store pair, ours loads both and stores them with movdqa (a trivial 16-byte copy does the same).
 // @0x14265f0b0
 void MorphCharacterDef::Read(LoadProcess* p, const TagInfo& tagInfo, bool withStyle)
 {
     SF_UNUSED(withStyle);
+
     Stream* in = p->GetStream();
 
-    RectF bound1(0, 0, 0, 0), bound2(0, 0, 0, 0), edgeBound1(0, 0, 0, 0), edgeBound2(0, 0, 0, 0);
+    RectF bound1, bound2;
+    RectF rbound1, rbound2;
     in->ReadRect(&bound1);
     in->ReadRect(&bound2);
+
     if (tagInfo.TagType == MorphTag_DefineMorphShape2)
     {
-        in->ReadRect(&edgeBound1);
-        in->ReadRect(&edgeBound2);
+        in->ReadRect(&rbound1);
+        in->ReadRect(&rbound2);
         in->ReadU8();
     }
     else
     {
-        edgeBound1 = bound1;
-        edgeBound2 = bound2;
+        rbound1 = bound1;
+        rbound2 = bound2;
     }
 
-    UInt32 offset        = in->ReadU32();
-    int    endShapeStart = in->Tell();
+    Array<FillStyleType> shape1FillStyles, shape2FillStyles;
 
-    unsigned fillCount = in->ReadU8();
-    if (fillCount == 0xFF)
-        fillCount = in->ReadU16();
+    unsigned endShapeOffset = in->ReadU32();
+    int      endShapeBase   = in->Tell();
 
-    bool                 needResolve = false;
-    Array<FillStyleType> fills1, fills2;
-    for (unsigned i = 0; i < fillCount; i++)
+    unsigned fillStyleCount = in->ReadU8();
+    if (fillStyleCount == 0xFF)
+        fillStyleCount = in->ReadU16();
+
+    bool     needResolve = false;
+    unsigned i;
+    for (i = 0; i < fillStyleCount; i++)
     {
         FillStyleType fs1, fs2;
-        fs1.pFill = 0;
-        fs2.pFill = 0;
+
         ReadMorphFillStyle(p, tagInfo.TagType, fs1, fs2, &needResolve);
-        fills1.PushBack(fs1);
-        fills2.PushBack(fs2);
+
+        shape1FillStyles.PushBack(fs1);
+        shape2FillStyles.PushBack(fs2);
     }
 
-    unsigned lineCount = in->ReadU8();
-    if (lineCount == 0xFF)
-        lineCount = in->ReadU16();
-
-    Array<StrokeStyleType> lines1, lines2;
-    lines1.Resize(lineCount);
-    lines2.Resize(lineCount);
-    for (unsigned i = 0; i < lineCount; i++)
+    Array<StrokeStyleType> shape1LineStyles, shape2LineStyles;
+    unsigned               lineStyleCount = in->ReadU8();
+    if (lineStyleCount == 0xFF)
+        lineStyleCount = in->ReadU16();
+    shape1LineStyles.Resize(lineStyleCount);
+    shape2LineStyles.Resize(lineStyleCount);
+    for (i = 0; i < lineStyleCount; i++)
     {
-        StrokeStyleType& ls1 = lines1[i];
-        StrokeStyleType& ls2 = lines2[i];
-        ls1.Width = (float)in->ReadU16();
-        ls2.Width = (float)in->ReadU16();
+        StrokeStyleType& ls1 = shape1LineStyles[i];
+        StrokeStyleType& ls2 = shape2LineStyles[i];
+
+        ls1.Width = in->ReadU16();
+        ls2.Width = in->ReadU16();
         ls1.Flags = ls2.Flags = 0;
         ls1.Units = ls2.Units = 0.05f;
-        ls1.Miter = ls2.Miter = 3.0f;
+        ls1.Miter = ls2.Miter = 3;
+
         if (tagInfo.TagType == MorphTag_DefineMorphShape2)
         {
-            ls1.Flags = ls2.Flags = ConvertSwfLineStyles(in->ReadU16());
-            if (ls1.Flags & 0x20)
-                ls1.Miter = ls2.Miter = in->ReadU16() / 256.0f;
+            unsigned styleFlags = in->ReadU16();
+
+            ls1.Flags = ls2.Flags = ConvertSwfLineStyles(styleFlags);
+
+            if (ls1.Flags & Render::StrokeJoin_Miter)
+            {
+                ls1.Miter = ls2.Miter = (float)(in->ReadU16()) / 256.0f;
+            }
         }
 
         if (ls1.Flags & 0x08)
         {
             FillStyleType fs1, fs2;
-            fs1.pFill = 0;
-            fs2.pFill = 0;
             ReadMorphFillStyle(p, tagInfo.TagType, fs1, fs2, &needResolve);
+
             ls1.Color = fs1.Color;
             ls1.pFill = fs1.pFill;
+
             ls2.Color = fs2.Color;
             ls2.pFill = fs2.pFill;
+
             // The first gradient colour stands in for the colour.
-            if (fs1.pFill->pGradient && fs1.pFill->pGradient->GetRecordCount() > 0)
-                ls1.Color = fs1.pFill->pGradient->At(0).ColorV.Raw;
-            if (fs2.pFill->pGradient && fs2.pFill->pGradient->GetRecordCount() > 0)
-                ls2.Color = fs2.pFill->pGradient->At(0).ColorV.Raw;
+            if (fs1.pFill->pGradient)
+            {
+                Render::GradientData* pgdata = fs1.pFill->pGradient;
+                if (pgdata && pgdata->GetRecordCount() > 0)
+                    ls1.Color = pgdata->At(0).ColorV.ToColor32();
+            }
+            if (fs2.pFill->pGradient)
+            {
+                Render::GradientData* pgdata = fs2.pFill->pGradient;
+                if (pgdata && pgdata->GetRecordCount() > 0)
+                    ls2.Color = pgdata->At(0).ColorV.ToColor32();
+            }
         }
         else
         {
-            Render::Color color1, color2;
-            p->ReadRgbaTag(&color1, tagInfo.TagType);
-            p->ReadRgbaTag(&color2, tagInfo.TagType);
-            ls1.Color = color1.Raw;
-            ls2.Color = color2.Raw;
+            Render::Color c1, c2;
+            p->ReadRgbaTag(&c1, tagInfo.TagType);
+            p->ReadRgbaTag(&c2, tagInfo.TagType);
+            ls1.Color = c1.ToColor32();
+            ls2.Color = c2.ToColor32();
         }
     }
+    unsigned beginShapeAbsOffset = (unsigned)in->Tell();
+    unsigned endShapeAbsOffset   = (unsigned)(endShapeBase + endShapeOffset);
 
-    int endShapePos = endShapeStart + offset;
-    int pos         = in->Tell();
-    if ((unsigned)endShapePos >= (unsigned)pos)
+    if (endShapeAbsOffset >= beginShapeAbsOffset)
     {
         in->LogParseShape("MorphCharacterDef, first shape:\n");
+
         pShape1 = *SF_HEAP_AUTO_NEW(this) ConstShapeWithStyles();
-        pShape1->Read(p, tagInfo.TagType, endShapePos - pos, false);
-        pShape1->SetStyles(fillCount, fills1.GetDataPtr(), lineCount, lines1.GetDataPtr());
+        pShape1->Read(p, tagInfo.TagType, endShapeAbsOffset - beginShapeAbsOffset, false);
+        pShape1->SetStyles(fillStyleCount, shape1FillStyles.GetDataPtr(), lineStyleCount, shape1LineStyles.GetDataPtr());
         if (needResolve)
             pShape1->Flags |= ShapeDataBase::Flags_NeedsResolving;
 
         in->LogParseShape("MorphCharacterDef, second shape:\n");
-        in->SetPosition(endShapePos);
+
+        in->SetPosition(endShapeAbsOffset);
         pShape2 = *SF_HEAP_AUTO_NEW(this) ConstShapeWithStyles();
-        pShape2->Read(p, tagInfo.TagType, tagInfo.TagDataOffset + tagInfo.TagLength - endShapePos, false);
-        pShape2->SetStyles(fillCount, fills2.GetDataPtr(), lineCount, lines2.GetDataPtr());
+        pShape2->Read(p, tagInfo.TagType, tagInfo.TagDataOffset + tagInfo.TagLength - endShapeAbsOffset, false);
+        pShape2->SetStyles(fillStyleCount, shape2FillStyles.GetDataPtr(), lineStyleCount, shape2LineStyles.GetDataPtr());
         if (needResolve)
             pShape2->Flags |= ShapeDataBase::Flags_NeedsResolving;
     }
@@ -231,7 +253,6 @@ void MorphCharacterDef::Read(LoadProcess* p, const TagInfo& tagInfo, bool withSt
         pShape1 = *SF_HEAP_AUTO_NEW(this) ConstShapeWithStyles(ShapeDataBase::Empty_Shape);
         pShape2 = *SF_HEAP_AUTO_NEW(this) ConstShapeWithStyles(ShapeDataBase::Empty_Shape);
     }
-
     pShapeMeshProvider = *SF_HEAP_AUTO_NEW(this) Render::ShapeMeshProvider(pShape1, pShape2);
 }
 
