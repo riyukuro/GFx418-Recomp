@@ -665,31 +665,32 @@ namespace Instances { namespace fl_utils
     }
 
     // Numeric keys are stored as Number, so d[1], d[1.0] and d["1"] are the same entry.
-    // MS2-FUNCTIONAL: exe zeroes the return slot up front and stores each Find result into it; ours keeps the iterator in xmm6
     // @0x1424bde70
     Dictionary::ContainerType::Iterator Dictionary::FindKey(const Multiname& mn)
     {
-        ContainerType::Iterator result;
-        const Value& name = mn.Name;
-        const Value::KindType kind = name.GetKind();
-        if (kind >= Value::kInt)
+        const Value& key = mn.Name;
+        ContainerType::Iterator it;
+
+        Value::Number num;
+        switch (key.GetKind())
         {
-            Value::Number num;
-            if (kind <= Value::kUInt)
+        case Value::kInt:
+        case Value::kUInt:
+            if (key.Convert2Number(num))
+                it = ValueH.Find(Value(num));
+            break;
+        case Value::kString:
+            if (GetStrNumber(key.GetStringNode(), num))
             {
-                if (!name.Convert2Number(num))
-                    return result;
+                it = ValueH.Find(Value(num));
+                break;
             }
-            else if (kind != Value::kString || !GetStrNumber(name.GetStringNode(), num))
-            {
-                result = ValueH.Find(name);
-                return result;
-            }
-            result = ValueH.Find(Value(num));
-            return result;
+            // No break on purpose.
+        default:
+            it = ValueH.Find(key);
         }
-        result = ValueH.Find(name);
-        return result;
+
+        return it;
     }
 
     // @0x1424bd650
