@@ -6328,27 +6328,24 @@ LAB_14005dbf5:
   return 0xffffffff;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: written as CRI06_GETBITS steps (VS2008 build, our toolset differs). What is left: ours folds
+// the bit offset to (addr - p) << 3 where the exe takes addr * 8 - p * 8, it reads the +0x5b8 low byte as a dword
+// then movzx, our toolset adds a loop-alignment nop, and register choice.
 // @0x14005dc70
 void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   longlong *arg2 = cri_p1;
-  cri_u1 *pu_v1;
-  cri_u1 *pu_v2;
   int *pi_v3;
-  cri_u1 u_v4;
-  byte b_v5;
   cri_u4 u_v6;
-  uint u_v7;
   int i_v8;
-  longlong *pl_v9;
-  uint u_v10;
-  uint u_v11;
   int i_v12;
-  uint u_v13;
-  cri_u1 *pu_v14;
-  cri_u1 *pu_v15;
+  cri_u1 *p;
+  int pos;
+  uint buf;
+  uint nxt;
+  uint rem;
+  uint peek;
   cri06_chunk loc_18;
   
   *(cri_u4 *)((char *)arg1 + 0xc94) = 4;
@@ -6360,238 +6357,50 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
     return;
   }
-  pl_v9 = arg2;
   resetDcDctPred(arg1);  // the exe passes rcx through
   resetVector(arg1);  // resetDcDctPred keeps rcx
-  (**(cri_code **)(*pl_v9 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
-  pu_v14 = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
-  i_v12 = *(int *)((char *)arg1 + 0xd30) * 8 + (int)pu_v14 * -8;
-  b_v5 = (byte)i_v12;
-  u_v10 = CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]) << (b_v5 & 0x1f)
-  ;
-  u_v11 = CRI06_BE32(pu_v14[4],pu_v14[5],pu_v14[6],pu_v14[7]);
-  if (i_v12 == 0) {
-    *(uint *)((char *)arg1 + 0x5b8) = u_v10;
+  (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
+  p = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
+  pos = *(int *)((char *)arg1 + 0xd30) * 8 - (int)p * 8;
+  buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
+  nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+  if (pos != 0) {
+    *(uint *)((char *)arg1 + 0x5b8) = nxt >> (32 - pos) | buf;
+    nxt = nxt << pos;
   }
   else {
-    u_v7 = u_v11 >> (0x20 - b_v5 & 0x1f);
-    u_v11 = u_v11 << (b_v5 & 0x1f);
-    *(uint *)((char *)arg1 + 0x5b8) = u_v7 | u_v10;
+    *(uint *)((char *)arg1 + 0x5b8) = buf;
   }
-  pu_v15 = pu_v14 + 0xc;
-  u_v10 = CRI06_BE32(pu_v14[8],pu_v14[9],pu_v14[10],pu_v14[0xb]);
+  buf = nxt;
+  nxt = CRI06_BE32(p[8],p[9],p[10],p[11]);
+  p = p + 12;
   if (0xaf0 < *(uint *)((char *)arg1 + 0x6c8)) {
-    if (i_v12 < 0x1d) {
-      i_v12 = i_v12 + 3;
-      u_v7 = u_v11 >> 0x1d;
-      u_v11 = u_v11 << 3;
-      *(uint *)((char *)arg1 + 0x5bc) = u_v7;
-    }
-    else {
-      i_v12 = i_v12 + -0x1d;
-      if (i_v12 == 0) {
-        *(uint *)((char *)arg1 + 0x5bc) = u_v11 >> 0x1d;
-        u_v11 = u_v10;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x5bc) = (u_v10 >> (3 - (byte)i_v12 & 0x1f) | u_v11) >> 0x1d;
-        u_v11 = u_v10 << ((byte)i_v12 & 0x1f);
-      }
-      u_v10 = CRI06_BE32(*pu_v15,pu_v14[0xd],pu_v14[0xe],pu_v14[0xf]);
-      pu_v15 = pu_v14 + 0x10;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5bc), 3);
   }
   if ((*(int *)((char *)arg1 + 0x710) == 1) && (*(int *)((char *)arg1 + 0x288) == 0)) {
-    if (i_v12 < 0x19) {
-      i_v12 = i_v12 + 7;
-      u_v7 = u_v11 >> 0x19;
-      u_v11 = u_v11 << 7;
-      *(uint *)((char *)arg1 + 0x5c0) = u_v7;
-    }
-    else {
-      i_v12 = i_v12 + -0x19;
-      if (i_v12 == 0) {
-        *(uint *)((char *)arg1 + 0x5c0) = u_v11 >> 0x19;
-        u_v11 = u_v10;
-      }
-      else {
-        *(uint *)((char *)arg1 + 0x5c0) = (u_v10 >> (7 - (byte)i_v12 & 0x1f) | u_v11) >> 0x19;
-        u_v11 = u_v10 << ((byte)i_v12 & 0x1f);
-      }
-      u_v10 = CRI06_BE32(*pu_v15,pu_v15[1],pu_v15[2],pu_v15[3]);
-      pu_v15 = pu_v15 + 4;
-    }
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5c0), 7);
   }
-  if (i_v12 < 0x1b) {
-    i_v12 = i_v12 + 5;
-    u_v7 = u_v11 << 5;
-    *(uint *)((char *)arg1 + 0x5c4) = u_v11 >> 0x1b;
-  }
-  else {
-    i_v12 = i_v12 + -0x1b;
-    if (i_v12 == 0) {
-      *(uint *)((char *)arg1 + 0x5c4) = u_v11 >> 0x1b;
-    }
-    else {
-      u_v7 = u_v10 >> (5 - (byte)i_v12 & 0x1f);
-      u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-      *(uint *)((char *)arg1 + 0x5c4) = (u_v7 | u_v11) >> 0x1b;
-    }
-    pu_v14 = pu_v15 + 1;
-    u_v4 = *pu_v15;
-    pu_v1 = pu_v15 + 2;
-    pu_v2 = pu_v15 + 3;
-    pu_v15 = pu_v15 + 4;
-    u_v7 = u_v10;
-    u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-  }
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5c4), 5);
   *(cri_u1 *)((char *)arg1 + 0x774) =
        (&DAT_1431bba60)
        [(ulonglong)*(uint *)((char *)arg1 + 0x328) * 0x20 + (ulonglong)*(uint *)((char *)arg1 + 0x5c4)];
-  if ((int)u_v7 < 0) {
-    if (i_v12 < 0x1f) {
-      i_v12 = i_v12 + 1;
-      u_v11 = u_v7 * 2;
-      *(uint *)((char *)arg1 + 0x5c8) = u_v7 >> 0x1f;
-    }
-    else {
-      i_v12 = i_v12 + -0x1f;
-      if (i_v12 == 0) {
-        *(uint *)((char *)arg1 + 0x5c8) = u_v7 >> 0x1f;
-      }
-      else {
-        u_v11 = u_v10 >> (1 - (byte)i_v12 & 0x1f);
-        u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5c8) = (u_v11 | u_v7) >> 0x1f;
-      }
-      pu_v14 = pu_v15 + 1;
-      u_v4 = *pu_v15;
-      pu_v1 = pu_v15 + 2;
-      pu_v2 = pu_v15 + 3;
-      pu_v15 = pu_v15 + 4;
-      u_v11 = u_v10;
-      u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-    }
-    if (i_v12 < 0x1f) {
-      i_v12 = i_v12 + 1;
-      u_v7 = u_v11 * 2;
-      *(uint *)((char *)arg1 + 0x5cc) = u_v11 >> 0x1f;
-    }
-    else {
-      i_v12 = i_v12 + -0x1f;
-      if (i_v12 == 0) {
-        *(uint *)((char *)arg1 + 0x5cc) = u_v11 >> 0x1f;
-      }
-      else {
-        u_v7 = u_v10 >> (1 - (byte)i_v12 & 0x1f);
-        u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5cc) = (u_v7 | u_v11) >> 0x1f;
-      }
-      pu_v14 = pu_v15 + 1;
-      u_v4 = *pu_v15;
-      pu_v1 = pu_v15 + 2;
-      pu_v2 = pu_v15 + 3;
-      pu_v15 = pu_v15 + 4;
-      u_v7 = u_v10;
-      u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-    }
-    if (i_v12 < 0x19) {
-      i_v12 = i_v12 + 7;
-      *(uint *)((char *)arg1 + 0x5d0) = u_v7 >> 0x19;
-      u_v7 = u_v7 << 7;
-    }
-    else {
-      i_v12 = i_v12 + -0x19;
-      if (i_v12 == 0) {
-        *(uint *)((char *)arg1 + 0x5d0) = u_v7 >> 0x19;
-      }
-      else {
-        u_v11 = u_v10 >> (7 - (byte)i_v12 & 0x1f);
-        u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-        *(uint *)((char *)arg1 + 0x5d0) = (u_v11 | u_v7) >> 0x19;
-      }
-      pu_v14 = pu_v15 + 1;
-      u_v4 = *pu_v15;
-      pu_v1 = pu_v15 + 2;
-      pu_v2 = pu_v15 + 3;
-      pu_v15 = pu_v15 + 4;
-      u_v7 = u_v10;
-      u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-    }
-    while ((int)u_v7 < 0) {
-      if (i_v12 < 0x1f) {
-        i_v12 = i_v12 + 1;
-        u_v11 = u_v7 * 2;
-        *(uint *)((char *)arg1 + 0x5d4) = u_v7 >> 0x1f;
-      }
-      else {
-        i_v12 = i_v12 + -0x1f;
-        if (i_v12 == 0) {
-          *(uint *)((char *)arg1 + 0x5d4) = u_v7 >> 0x1f;
-        }
-        else {
-          u_v11 = u_v10 >> (1 - (byte)i_v12 & 0x1f);
-          u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-          *(uint *)((char *)arg1 + 0x5d4) = (u_v11 | u_v7) >> 0x1f;
-        }
-        pu_v14 = pu_v15 + 1;
-        u_v4 = *pu_v15;
-        pu_v1 = pu_v15 + 2;
-        pu_v2 = pu_v15 + 3;
-        pu_v15 = pu_v15 + 4;
-        u_v11 = u_v10;
-        u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-      }
-      if (i_v12 < 0x18) {
-        i_v12 = i_v12 + 8;
-        u_v7 = u_v11 << 8;
-        *(uint *)((char *)arg1 + 0x5d8) = u_v11 >> 0x18;
-      }
-      else {
-        i_v12 = i_v12 + -0x18;
-        if (i_v12 == 0) {
-          *(uint *)((char *)arg1 + 0x5d8) = u_v11 >> 0x18;
-        }
-        else {
-          u_v7 = u_v10 >> (8 - (byte)i_v12 & 0x1f);
-          u_v10 = u_v10 << ((byte)i_v12 & 0x1f);
-          *(uint *)((char *)arg1 + 0x5d8) = (u_v7 | u_v11) >> 0x18;
-        }
-        pu_v14 = pu_v15 + 1;
-        u_v4 = *pu_v15;
-        pu_v1 = pu_v15 + 2;
-        pu_v2 = pu_v15 + 3;
-        pu_v15 = pu_v15 + 4;
-        u_v7 = u_v10;
-        u_v10 = CRI06_BE32(u_v4,*pu_v14,*pu_v1,*pu_v2);
-      }
+  if ((int)buf < 0) {
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5c8), 1);
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5cc), 1);
+    CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5d0), 7);
+    while ((int)buf < 0) {
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5d4), 1);
+      CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5d8), 8);
     }
   }
-  if (i_v12 < 0x1f) {
-    u_v13 = i_v12 + 1;
-    u_v11 = u_v7 * 2;
-    *(uint *)((char *)arg1 + 0x5d4) = u_v7 >> 0x1f;
+  CRI06_GETBITS(*(uint *)((char *)arg1 + 0x5d4), 1);
+  rem = *(uint *)((char *)arg1 + 0x5b8) & 0xff;
+  *(uint *)((char *)arg1 + 0x6ec) = rem;
+  if (0xaf0 < *(uint *)((char *)arg1 + 0x6c8)) {
+    *(uint *)((char *)arg1 + 0x6f4) = *(int *)((char *)arg1 + 0x5bc) * 0x80 + -1 + rem;
   }
   else {
-    u_v13 = i_v12 - 0x1f;
-    if (u_v13 == 0) {
-      *(uint *)((char *)arg1 + 0x5d4) = u_v7 >> 0x1f;
-      u_v11 = u_v10;
-    }
-    else {
-      *(uint *)((char *)arg1 + 0x5d4) = (u_v10 >> (1 - (byte)u_v13 & 0x1f) | u_v7) >> 0x1f;
-      u_v11 = u_v10 << ((byte)u_v13 & 0x1f);
-    }
-    u_v10 = CRI06_BE32(*pu_v15,pu_v15[1],pu_v15[2],pu_v15[3]);
-    pu_v15 = pu_v15 + 4;
-  }
-  u_v7 = *(uint *)((char *)arg1 + 0x5b8) & 0xff;
-  *(uint *)((char *)arg1 + 0x6ec) = u_v7;
-  if (*(uint *)((char *)arg1 + 0x6c8) < 0xaf1) {
-    *(uint *)((char *)arg1 + 0x6f4) = u_v7 - 1;
-  }
-  else {
-    *(uint *)((char *)arg1 + 0x6f4) = *(int *)((char *)arg1 + 0x5bc) * 0x80 + -1 + u_v7;
+    *(uint *)((char *)arg1 + 0x6f4) = rem - 1;
   }
   i_v12 = *(int *)((char *)arg1 + 0x6cc);
   i_v8 = i_v12 * *(int *)((char *)arg1 + 0x6f4) + -1;
@@ -6599,48 +6408,48 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
   if (((i_v12 == 0) || (*(int *)((char *)arg1 + 0x6d0) == 0)) ||
      (i_v8 < *(int *)((char *)arg1 + 0x6d0) * i_v12)) {
     do {
-      u_v7 = u_v13 & 7;
-      i_v12 = (((int)((u_v13 - u_v7) + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)pu_v15;
-      if (*(int *)((char *)arg1 + 0xd38) - i_v12 < 0x801) {
+      rem = pos & 7;
+      i_v12 = (((int)((pos - rem) + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)p;
+      if (*(int *)((char *)arg1 + 0xd38) - i_v12 <= 0x800) {
         FUN_140069020((__int64 *)((char *)arg1 + 0xd30),i_v12,(__int64 *)((char *)arg1 + 0xd30),(__int64 *)&loc_18);
         (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0xd30);
         (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
         (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0xd30);
-        pu_v14 = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
-        i_v12 = *(int *)((char *)arg1 + 0xd30) * 8 + (int)pu_v14 * -8;
-        u_v13 = i_v12 + u_v7;
-        pu_v15 = pu_v14 + 8;
-        u_v10 = CRI06_BE32(pu_v14[4],pu_v14[5],pu_v14[6],pu_v14[7]);
-        if ((int)u_v13 < 0x20) {
-          u_v11 = (CRI06_BE32(*pu_v14,pu_v14[1],pu_v14[2],pu_v14[3]) <<
-                   ((byte)i_v12 & 0x1f)) << (sbyte)u_v7;
+        p = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0xd30) & 0xfffffffffffffffc);
+        i_v12 = *(int *)((char *)arg1 + 0xd30) * 8 - (int)p * 8;
+        pos = i_v12 + rem;
+        buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << i_v12;
+        nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+        p = p + 8;
+        if (pos >= 0x20) {
+          pos = pos - 0x20;
+          buf = nxt << pos;
+          nxt = CRI06_BE32(p[0],p[1],p[2],p[3]);
+          p = p + 4;
         }
         else {
-          u_v13 = u_v13 - 0x20;
-          u_v11 = u_v10 << ((byte)u_v13 & 0x1f);
-          u_v10 = CRI06_BE32(*pu_v15,pu_v14[9],pu_v14[10],pu_v14[0xb]);
-          pu_v15 = pu_v14 + 0xc;
+          buf = buf << rem;
         }
       }
-      *(uint *)((char *)arg1 + 0xc7c) = u_v11;
-      *(uint *)((char *)arg1 + 0xc80) = u_v10;
-      *(uint *)((char *)arg1 + 0xc78) = u_v13;
-      *(cri_u1 **)((char *)arg1 + 0xc88) = pu_v15;
+      *(uint *)((char *)arg1 + 0xc7c) = buf;
+      *(uint *)((char *)arg1 + 0xc80) = nxt;
+      *(int *)((char *)arg1 + 0xc78) = pos;
+      *(cri_u1 **)((char *)arg1 + 0xc88) = p;
       i_v12 = parseMb(arg1);  // rcx = rbx = arg1 in the exe
       if (i_v12 == 0) {
         (**(cri_code **)((char *)arg1 + 0x1bc8))(arg1);
         FUN_14008a3c0(arg1);
       }
-      u_v11 = *(uint *)((char *)arg1 + 0xc7c);
-      u_v10 = *(uint *)((char *)arg1 + 0xc80);
-      u_v13 = *(uint *)((char *)arg1 + 0xc78);
-      pu_v15 = *(cri_u1 **)((char *)arg1 + 0xc88);
+      buf = *(uint *)((char *)arg1 + 0xc7c);
+      nxt = *(uint *)((char *)arg1 + 0xc80);
+      pos = *(int *)((char *)arg1 + 0xc78);
+      p = *(cri_u1 **)((char *)arg1 + 0xc88);
       if ((i_v12 != 0) || (*(int *)((char *)arg1 + 0x1bc0) != 0)) break;
-      u_v7 = u_v11 >> 9;
-      if (9 < (int)u_v13) {
-        u_v7 = u_v7 | u_v10 >> (0x29U - (char)u_v13 & 0x1f);
+      peek = buf >> 9;
+      if (9 < pos) {
+        peek = peek | nxt >> (0x29 - pos);
       }
-    } while (u_v7 != 0);
+    } while (peek != 0);
     u_v6 = 0;
     if (((*(int *)((char *)arg1 + 0x6cc) != 0) && (*(int *)((char *)arg1 + 0x6d0) != 0)) &&
        (u_v6 = 0,
@@ -6654,7 +6463,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
   FUN_140069020((__int64 *)((char *)arg1 + 0xd30),
-                (((int)(u_v13 + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)pu_v15,
+                (((int)(pos + 7) >> 3) - *(int *)((char *)arg1 + 0xd30)) + -8 + (int)p,
                 (__int64 *)((char *)arg1 + 0xd30),(__int64 *)&loc_18);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0xd30);
   (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_18);
@@ -6663,6 +6472,7 @@ void M2VFRM_ParseSsc(cri_any cri_p0, cri_any cri_p1)
   }
   return;
 }
+
 
 // @0x14005e5b0
 void FUN_14005e5b0(longlong arg1, void *arg2)
