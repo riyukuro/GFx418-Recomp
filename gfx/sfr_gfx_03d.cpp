@@ -209,7 +209,7 @@ void IMEManagerBase::OnCandidateListStyleRequest(IMECandidateListStyle* pstyle) 
 // @0x1425b48e0
 void IMEManagerBase::OnEnableIME(bool) {}
 
-// MS2-FUNCTIONAL 0x1425b49b0: hash lookup through Find and the Ptr temporaries differ in codegen; same steps in the same order
+// MS2-FUNCTIONAL 0x1425b49b0: the exe inlines the Ptr assignments (SDK SF_INLINE = __forceinline); ours calls them out of line
 // @0x1425b49b0
 void IMEManagerBase::SetActiveMovie(Movie* pmovie)
 {
@@ -221,7 +221,11 @@ void IMEManagerBase::SetActiveMovie(Movie* pmovie)
         OnFinalize();
         pTextField = NULL;
         Hash<Movie*, Ptr<ASIMEManager>, FixedSizeHash<Movie*> >::Iterator it = MovieASIMEManagerHash.Find(pmovie);
-        if (it == MovieASIMEManagerHash.End())
+        if (it != MovieASIMEManagerHash.End())
+        {
+            pASIMEManager = it->Second;
+        }
+        else
         {
             ClearCandidateListPath();
             ASSupport* psupport = reinterpret_cast<MovieImpl*>(pmovie)->pASMovieRoot->pASSupport;
@@ -239,8 +243,6 @@ void IMEManagerBase::SetActiveMovie(Movie* pmovie)
                 }
             }
         }
-        else
-            pASIMEManager = it->Second;
     }
     pTextField = NULL;
     pMovie     = pmovie;
