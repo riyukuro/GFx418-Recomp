@@ -563,7 +563,7 @@ void criUtfRtv_GetCellValFromAddr(const CriUtfRtvView* table, const CriUint8* ad
 
 CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint32 field, CriUtfRtvCell* cell);
 
-CriUint64 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column);
+CriUint32 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column);
 
 CriSint32 criUtfRtv_SumWithAlignment32(const CriUtfRtvView* table, CriUint32 firstRow, CriSint32 count,
                                        CriUint32 field, CriSint32 alignment);

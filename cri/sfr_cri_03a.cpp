@@ -978,10 +978,10 @@ CriBool criUtfRtv_GetCellVal(const CriUtfRtvView* table, CriUint32 row, CriUint3
 
 unsigned FUN_140047158(unsigned type);         // the byte size of a UTF cell type (unit_140046e04_criutfparser)
 
-// MS2-FUNCTIONAL: decode a UTF column descriptor, its optional name, and its default cell. The only byte left: the exe
-// subtracts the pointers in 64 bits before returning the 32-bit size.
+// Decode a UTF column descriptor, its optional name, and its default cell. Returns the descriptor's byte size as 32 bits;
+// the implicit narrowing keeps the exe's 64-bit pointer subtract.
 // @0x14003afb0
-CriUint64 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column)
+CriUint32 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, CriUtfRtvColumn* column)
 {
     CriUint8 flags = field[0];
     const CriUint8* p = field + 1;
@@ -1009,7 +1009,7 @@ CriUint64 criUtfRtv_GetField(const CriUtfRtvView* table, const CriUint8* field, 
         ((CriUtfRtvCell*)column->DefaultValue)->Type = 0xff;
     }
     column->IsRecordField = (flags >> 6) & 1;
-    return (CriUint32)(p - field);
+    return p - field;
 }
 
 // MS2-FUNCTIONAL: the table's 16/32-bit signed fields are summed after rounding each value up to the requested alignment.
@@ -1102,31 +1102,36 @@ void* criUtfRtv_Create(void* heap, void* table, CriUint32 size)
     return criUtfRtv_CreateWithHeapType(heap, 1, table, size);
 }
 
-// MS2-FUNCTIONAL: decode the executable's 0x24-byte USF standard header fields.
+// Decode the executable's 0x24-byte USF standard header fields.
 // @0x14003b3fc
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, CriUsfStandardHeader* header)
 {
-    CriUint8 headerSize = data[9];
-    if (size <= 0x0f || headerSize == 0 || headerSize > size)
+    CriUint8 headerSize;
+    if (size < 0x10 || (headerSize = data[9]) == 0 || size < headerSize)
         return 0;
     // The chunk id, size, offset word and the four trailing dwords are big-endian in the stream;
     // the exe stores them byte-swapped so callers read native integers.
     CriUint8* out = header->Data;
-    CriUint32 value = criUtfReadBE32(data);
+    const CriUint8* p = data;
+    CriUint32 value = criUtfReadBE32(p);
     memcpy(out, &value, 4);
-    value = criUtfReadBE32(data + 4);
+    p += 4;
+    value = criUtfReadBE32(p);
     memcpy(out + 4, &value, 4);
-    out[8] = data[8]; out[9] = data[9];
-    CriUint16 offset = (CriUint16)(((CriUint32)data[10] << 8) | data[11]);
+    p += 4;
+    out[8] = p[0]; out[9] = p[1];
+    p += 2;
+    CriUint16 offset = (CriUint16)(((CriUint32)p[0] << 8) | p[1]);
     memcpy(out + 10, &offset, 2);
-    out[12] = data[12]; out[13] = data[13]; out[14] = data[14];
-    out[15] = data[15] & 3;
-    out[16] = data[15] >> 4;
-    for (CriUint32 i = 0; i < 4; ++i)
-    {
-        value = criUtfReadBE32(data + 0x10 + i * 4);
-        memcpy(out + 0x14 + i * 4, &value, 4);
-    }
+    p += 2;
+    out[12] = p[0]; out[13] = p[1]; out[14] = p[2];
+    out[15] = p[3] & 3;
+    out[16] = p[3] >> 4;
+    p += 4;
+    value = criUtfReadBE32(p); memcpy(out + 0x14, &value, 4); p += 4;
+    value = criUtfReadBE32(p); memcpy(out + 0x18, &value, 4); p += 4;
+    value = criUtfReadBE32(p); memcpy(out + 0x1c, &value, 4); p += 4;
+    value = criUtfReadBE32(p); memcpy(out + 0x20, &value, 4);
     return headerSize;
 }
 
