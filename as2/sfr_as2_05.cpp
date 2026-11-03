@@ -4113,12 +4113,24 @@ bool StageCtorFunction::GetMemberRaw(ASStringContext* psc, const ASString& name,
     return Object::GetMemberRaw(psc, name, val);
 }
 
-// MS2-FUNCTIONAL the exe calls the Allocator ctor out of line (0x1424d61c0); the header ctor is inline
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform { namespace Render {
+Text::Allocator* FUN_1424d61c0(Text::Allocator* self, MemoryHeap* pheap, UInt8 flags);  // the Allocator ctor (sfr_as3_15)
+} }
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// The movie heap's text allocator, made on first use. The exe calls the Allocator ctor out of line.
 // @0x142956380
 Render::Text::Allocator* MovieRoot::GetTextAllocator()
 {
     if (!MemContext->TextAllocator)
-        MemContext->TextAllocator = *SF_HEAP_NEW(MemContext->Heap) Render::Text::Allocator(MemContext->Heap);
+    {
+        Render::Text::Allocator* mem = static_cast<Render::Text::Allocator*>(
+            MemContext->Heap->Alloc(sizeof(Render::Text::Allocator), (const AllocInfo*)0));
+        MemContext->TextAllocator = *(mem ? Render::FUN_1424d61c0(mem, MemContext->Heap, 0) : mem);
+    }
     return MemContext->TextAllocator;
 }
 
