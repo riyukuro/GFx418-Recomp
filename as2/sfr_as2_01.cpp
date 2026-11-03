@@ -1433,7 +1433,7 @@ struct IMEStyleData
 };
 
 // The text field object of this (a text field or its AS object), referenced.
-static Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
+static SF_INLINE Ptr<TextFieldObject> GetThisTextFieldObject(const FnCall& fn)
 {
     if (!fn.ThisPtr)
         return 0;
@@ -1466,21 +1466,37 @@ void TextFieldProto::SetIMECompositionStringStyle(const FnCall& fn)
     }
 }
 
+// The field's IME styles, else those of a text field prototype: TextFieldObject::GetIMECompositionStringStyles with
+// its first level inlined, as the exe has it here.
+static SF_INLINE IMEStyleData* GetIMEStyles(TextFieldObject* ptf)
+{
+    if (ptf->pIMECompositionStringStyles)
+        return (IMEStyleData*)ptf->pIMECompositionStringStyles;
+    Object* pproto = ptf->pProto;
+    if (pproto && pproto->GetObjectType() == ObjectInterface::Object_TextFieldASObject)
+        return (IMEStyleData*)static_cast<TextFieldObject*>(pproto)->GetIMECompositionStringStyles();
+    return 0;
+}
+
 // TextField.getIMECompositionStringStyle(category)
 // @0x1428ebbd0
-// MS2-FUNCTIONAL same sequence; temporaries and release order differ
+// MS2-FUNCTIONAL same code; the exe restores rsi after the field's release, ours before it (save/restore placement)
 void TextFieldProto::GetIMECompositionStringStyle(const FnCall& fn)
 {
     fn.Result->SetUndefined();
     Ptr<TextFieldObject> ptf = GetThisTextFieldObject(fn);
-    if (!ptf || fn.NArgs < 1)
-        return;
-    IMEStyleData* pstyles = (IMEStyleData*)ptf->GetIMECompositionStringStyles();
-    ASString      name = fn.Arg(0).ToString(fn.Env);
-    int           cat = GFx_StringToIMEStyleCategory(name);
-    // a category that was never set still gives its (default) highlight, as in the exe
-    if (pstyles && cat < IMEStyleData::SC_MaxNum)
-        MakeStyle(fn, pstyles->HighlightStyles[cat]);
+    if (ptf)
+    {
+        IMEStyleData* pstyles = GetIMEStyles(ptf);
+        if (pstyles)
+        {
+            ASString name = fn.Arg(0).ToString(fn.Env);
+            int      cat = GFx_StringToIMEStyleCategory(name);
+            // a category that was never set still gives its (default) highlight, as in the exe
+            if (cat < IMEStyleData::SC_MaxNum)
+                MakeStyle(fn, pstyles->HighlightStyles[cat]);
+        }
+    }
 }
 
 // ---- Global escape functions ----
