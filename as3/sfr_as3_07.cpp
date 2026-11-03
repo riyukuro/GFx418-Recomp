@@ -164,6 +164,8 @@ static inline void FUN_1425db410(Scaleform::GFx::DisplayObject * p0, void * p1) 
 // Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle into the complex fill (exe body).
 void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, unsigned argc,
                    const Scaleform::GFx::AS3::Value* argv, Scaleform::Render::ComplexFill* pfill);
+// FilterSet::AddFilter, out of line in the exe (sfr_as3_06).
+void FUN_142440dd0(Scaleform::Render::FilterSet* pset, Scaleform::Render::Filter* pfilter);
 
 // Bitmap's pixel snapping mode of its AS3 name; AvmBitmap::RecreateRenderNode (both in sfr_as3_06).
 // The pixel accessors of Render::DrawableImage the BitmapData natives call (exe bodies). render_drawableimage.h is
@@ -1163,7 +1165,8 @@ namespace Instances { namespace fl_display
 
     // A new filter set from copies of the filters held by the flash.filters objects in filters (other entries are
     // ignored).
-    // MS2-FUNCTIONAL: register allocation; the exe inlines FilterSet::AddFilter only on the GlowFilter path
+    // MS2-FUNCTIONAL: register allocation (rsi/rbp and r14/r15 swapped); the exe inlines FilterSet::AddFilter
+    // only on the GlowFilter path
     // @0x14244bdd0
     void DisplayObject::filtersSet(const Value& result, Instances::fl::Array* filters)
     {
@@ -1173,20 +1176,19 @@ namespace Instances { namespace fl_display
         {
             for (UPInt i = 0; i < filters->SA.GetSize(); ++i)
             {
-                Instances::fl_filters::BitmapFilter* pfilter =
-                    static_cast<Instances::fl_filters::BitmapFilter*>(filters->SA.At(i).GetObject());
-                ASString name = pfilter->GetTraits().GetName();
+                const Value& v = filters->SA.At(i);
+                ASString name = v.GetObject()->GetTraits().GetName();
                 const char* pname = name.ToCStr();
                 if (!strcmp(pname, "GlowFilter"))
                 {
-                    Ptr<Render::Filter> copy = *pfilter->GetFilterData()->Clone(GetVM().GetMemoryHeap());
+                    Ptr<Render::Filter> copy = *static_cast<Instances::fl_filters::BitmapFilter*>(v.GetObject())->GetFilterData()->Clone(GetVM().GetMemoryHeap());
                     set->AddFilter(copy);
                 }
                 else if (!strcmp(pname, "BevelFilter") || !strcmp(pname, "DropShadowFilter") ||
                          !strcmp(pname, "BlurFilter") || !strcmp(pname, "ColorMatrixFilter"))
                 {
-                    Ptr<Render::Filter> copy = *pfilter->GetFilterData()->Clone(GetVM().GetMemoryHeap());
-                    set->AddFilter(copy);
+                    Ptr<Render::Filter> copy = *static_cast<Instances::fl_filters::BitmapFilter*>(v.GetObject())->GetFilterData()->Clone(GetVM().GetMemoryHeap());
+                    FUN_142440dd0(set, copy);
                 }
             }
         }
