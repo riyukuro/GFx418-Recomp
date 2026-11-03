@@ -321,7 +321,7 @@ void RefCountCollector<Stat>::RootArray::Resize(UPInt newSize)
 
 // @0x142592950
 template<int Stat>
-bool RefCountCollector<Stat>::RootArray::allocatePageSafe(UPInt index)
+SF_NOINLINE bool RefCountCollector<Stat>::RootArray::allocatePageSafe(UPInt index)
 {
     if (index >= MaxPages)
     {
