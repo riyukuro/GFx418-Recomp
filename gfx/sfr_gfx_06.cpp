@@ -30,6 +30,23 @@
 #include "../include/render/render_viewport.h"
 #include "../include/render/render_screentoworld.h"
 
+#include <float.h>
+
+namespace Scaleform { namespace Render {
+
+// All eight elements in the float range (none NaN or infinite); the template body sits in the SDK header, so the
+// exe inlines it here (the out-of-line copy is sfr_as3_18's).
+template<class T>
+bool Matrix2x4<T>::IsValid() const
+{
+    return M[0][0] >= -FLT_MAX && M[0][0] <= FLT_MAX && M[0][1] >= -FLT_MAX && M[0][1] <= FLT_MAX &&
+           M[0][2] >= -FLT_MAX && M[0][2] <= FLT_MAX && M[0][3] >= -FLT_MAX && M[0][3] <= FLT_MAX &&
+           M[1][0] >= -FLT_MAX && M[1][0] <= FLT_MAX && M[1][1] >= -FLT_MAX && M[1][1] <= FLT_MAX &&
+           M[1][2] >= -FLT_MAX && M[1][2] <= FLT_MAX && M[1][3] >= -FLT_MAX && M[1][3] <= FLT_MAX;
+}
+
+} } // namespace Scaleform::Render
+
 namespace Scaleform { namespace GFx {
 
 using Render::TreeNode;
@@ -1140,7 +1157,7 @@ void DisplayObjectBase::SetWidth(Double width)
 
 // _x, in pixels.
 // @0x1425f64c0
-// MS2-FUNCTIONAL: the exe inlines the matrix validity check ours calls
+// MS2-FUNCTIONAL: the exe keeps the dead copy of the old Tx when it copies the matrix; ours drops it
 void DisplayObjectBase::SetX(Double x)
 {
     if (NumberUtil::IsNaN(x))
@@ -1158,7 +1175,6 @@ void DisplayObjectBase::SetX(Double x)
 
 // _y, in pixels.
 // @0x1425f69f0
-// MS2-FUNCTIONAL: the exe inlines the matrix validity check ours calls
 void DisplayObjectBase::SetY(Double y)
 {
     if (NumberUtil::IsNaN(y))
