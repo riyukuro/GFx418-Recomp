@@ -673,23 +673,48 @@ static __forceinline void Sfr22bSyncAdd(U** self, void* heap, const char* v, U h
     *(U*)(e + 8) = hash;
 }
 
+// The SDK's local SelfType newHash: its ctor clears pTable before the alloc.
+struct Sfr22bNewTable
+{
+    U* pTable;
+    Sfr22bNewTable() : pTable(0) {}
+};
+
 // HashSet<SyncPoint*, Transform> (stride 0x28): setRawCapacity.
-// MS2-FUNCTIONAL: the add is inlined (Sfr22bSyncAdd), but the exe hashes the key before the CheckExpand call and keeps
-// the hash multipliers in r9-r11; ours hashes after the call.
+// MS2-FUNCTIONAL: the exe stores the new table slot as null before the alloc and guards the -2 fill loop with a
+// size test; ours drops the store and the test, which swaps rbx/rdi and r10/r11 in the rehash loop.
 // @0x142747530
 extern "C" void FUN_142747530(U** self, void* heap, U n)
 {
     if (n == 0)
     {
-        RawClearPlainSet((U*)self, 0x28);
+        if (!*self)
+            return;
+        U last = (*self)[1];
+        for (U i = 0; i <= last; i++)
+        {
+            char* e = RawEntry(*self, i, 0x28);
+            if (*(SPInt*)e != -2)
+                *(SPInt*)e = -2;
+        }
+        if (*self)
+            Memory::Free(*self);
+        *self = 0;
         return;
     }
-    U size = n < 8 ? 8 : (U)1 << (Alg::UpperBit(n - 1) + 1);
-    U* table = (U*)Memory::Alloc(size * 0x28 + 0x10, AllocInfo(2, 0, 0));
-    table[0] = 0;
-    table[1] = size - 1;
-    for (U i = 0; i < size; i++)
-        *(SPInt*)RawEntry(table, i, 0x28) = -2;
+    if (n < 8)
+        n = 8;
+    else
+    {
+        int bits = Alg::UpperBit(n - 1) + 1;
+        n = (U)1 << bits;
+    }
+    Sfr22bNewTable newHash;
+    newHash.pTable = (U*)Memory::Alloc(n * 0x28 + 0x10, AllocInfo(2, 0, 0));
+    newHash.pTable[0] = 0;
+    newHash.pTable[1] = n - 1;
+    for (U i = 0; i < n; i++)
+        *(SPInt*)RawEntry(newHash.pTable, i, 0x28) = -2;
     if (*self)
     {
         U last = (*self)[1];
@@ -698,12 +723,14 @@ extern "C" void FUN_142747530(U** self, void* heap, U n)
             char* e = RawEntry(*self, i, 0x28);
             if (*(SPInt*)e == -2)
                 continue;
-            Sfr22bSyncAdd(&table, heap, e + 0x10, RawKey8Hash(RawField<U>(e, 0x10)));
+            Sfr22bSyncAdd(&newHash.pTable, heap, e + 0x10, Sfr22bKey8Hash(RawFieldPtr<const unsigned char>(e, 0x10)));
             *(SPInt*)e = -2;
         }
-        Memory::Free(*self);
+        if (*self)
+            Memory::Free(*self);
     }
-    *self = table;
+    *self = newHash.pTable;
+    newHash.pTable = 0;
 }
 
 // HashSet<Streamer*, ArrayPOD<Channel*>> (stride 0x30): setRawCapacity.
