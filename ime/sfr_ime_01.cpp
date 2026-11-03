@@ -3798,51 +3798,54 @@ int FUN_1423d43b0(void* raw)
 // 0x1423d43b0, whose +0x5a0/+0x5a4 fields lie past this 0xe8-byte object). Starts the composition, stores the
 // layout and its at-caret flag (+0xdc, forced by the modes), and moves the IMM composition and candidate windows
 // off screen, or for mode 0x1000000 to the cursor rect the owner (vtbl+0x190) maps. True unless mode 0x1000000.
+// Left: register choice. The exe holds 0 in r14 from the at-caret store to the final setne r14b (an int-style
+// return), so its context lives in r15 and it saves one more register.
 // @0x1423d05a0
 bool FUN_1423d05a0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
-    auto* owner = *reinterpret_cast<unsigned char**>(self + 8);
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
-        reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+        reinterpret_cast<Scaleform::GFx::StateBag*>(*reinterpret_cast<unsigned char**>(self + 8) + 0x10)->GetIMEManager();
     self[0xb8] = 1;
     ime->StartComposition();
     self[0xb8] = 1;
-    HKL layout = GetKeyboardLayout(0);
-    *reinterpret_cast<HKL*>(self + 0x58) = layout;
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
-    auto& atCaret = *reinterpret_cast<unsigned*>(self + 0xdc);
-    atCaret = cx18_ImmGetProperty(layout, IGP_PROPERTY) >> 0x12 & 1;
+    *reinterpret_cast<HKL*>(self + 0x58) = GetKeyboardLayout(0);
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
+    *reinterpret_cast<unsigned*>(self + 0xdc) =
+        cx18_ImmGetProperty(*reinterpret_cast<HKL*>(self + 0x58), IGP_PROPERTY) >> 0x12 & 1;
     const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    if (mode == 0xd00001 || mode == 5) atCaret = 0;
-    if (mode == 0xa10000 || mode == 0xb10000) atCaret = 1;
+    if (mode == 0xd00001 || mode == 5) *reinterpret_cast<unsigned*>(self + 0xdc) = 0;
+    if (mode == 0xa10000 || mode == 0xb10000) *reinterpret_cast<unsigned*>(self + 0xdc) = 1;
     POINT position = { -1000, -1000 };
-    if (mode == 0x1000000 && owner) {
+    CANDIDATEFORM candidate;
+    COMPOSITIONFORM composition;
+    candidate.ptCurrentPos = position;
+    composition.ptCurrentPos = position;
+    candidate.dwIndex = 0;
+    candidate.dwStyle = CFS_CANDIDATEPOS;
+    composition.dwStyle = CFS_FORCE_POSITION;
+    if (mode == 0x1000000 && *reinterpret_cast<unsigned char**>(self + 8)) {
+        auto* movie = *reinterpret_cast<unsigned char**>(self + 8);
         Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> metrics =
-            reinterpret_cast<Scaleform::GFx::StateBag*>(owner + 0x10)->GetIMEManager();
+            reinterpret_cast<Scaleform::GFx::StateBag*>(movie + 0x10)->GetIMEManager();
         Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
         if (metrics) {
             metrics->GetMetrics(&viewRect, &cursorRect, 0);
-            Scaleform::Render::RectF mapped(0, 0, 0, 0);
+            auto* current = *reinterpret_cast<unsigned char**>(self + 8);
+            struct alignas(16) RawRect { float x1, y1, x2, y2; } mapped;  // uninitialised RectF out slot
             const auto* screen = reinterpret_cast<const Scaleform::Render::RectF*(*)(
                 void*, Scaleform::Render::RectF*, const Scaleform::Render::RectF*, int)>(
-                    (*reinterpret_cast<void***>(owner))[0x190 / sizeof(void*)])(owner, &mapped, &cursorRect, 0);
+                    (*reinterpret_cast<void***>(current))[0x190 / sizeof(void*)])(current, reinterpret_cast<Scaleform::Render::RectF*>(&mapped), &cursorRect, 0);
             position.x = static_cast<LONG>(screen->x1);
             position.y = static_cast<LONG>(screen->y2);
         }
+        candidate.ptCurrentPos = position;
+        composition.ptCurrentPos = position;
     }
-    CANDIDATEFORM candidate;
-    candidate.dwIndex = 0;
-    candidate.dwStyle = CFS_CANDIDATEPOS;
-    candidate.ptCurrentPos = position;
-    COMPOSITIONFORM composition;
-    composition.dwStyle = CFS_FORCE_POSITION;
-    composition.ptCurrentPos = position;
     cx18_ImmSetCompositionWindow(context, &composition);
     cx18_ImmSetCandidateWindow(context, &candidate);
-    cx18_ImmReleaseContext(hwnd, context);
-    return mode != 0x1000000;
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    return *reinterpret_cast<unsigned*>(self + 0x98) != 0x1000000;
 }
 
 // MS2-FUNCTIONAL: handles the executable's disable, selection, numeric index, and comma/colon list-change events.
