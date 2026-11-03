@@ -1190,7 +1190,7 @@ void criSj_Destroy(void* object)
 
 // MS2-FUNCTIONAL: split a stream-joint chunk into a bounded prefix and its remaining suffix.
 // @0x1400467c0
-void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
+__declspec(noinline) inline void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix)
 {
     struct SjChunk
     {
@@ -2397,9 +2397,8 @@ void criusfdmx_exec_decode(void* object)
             criSj_GetChunk(tracks[count].Queue, 1, 0xffffffff, &first);
         }
         count += 1;
-        first.Size = 0;
     }
-    do
+    for (;;)
     {
         criSj_GetChunk(output, 1, 0xffffffff, &first);
         if (first.Size == 0)
@@ -2419,7 +2418,7 @@ void criusfdmx_exec_decode(void* object)
                 criSj_GetChunk(tracks[index].Queue, 0, 0xffffffff, &second);
                 if (first.Data == second.Data)
                 {
-                    length = second.Size < first.Size ? second.Size : first.Size;
+                    length = first.Size < second.Size ? first.Size : second.Size;
                     criSj_SplitChunk(&first, length, &first, &split);
                     criSj_SplitChunk(&second, length, &second, &rest);
                     criSj_PutChunk(input, 0, &first);
@@ -2431,7 +2430,9 @@ void criusfdmx_exec_decode(void* object)
             }
             ++matched;
         }
-    } while (matched != count);
+        if (matched == count)
+            break;
+    }
     criSj_UngetChunk(output, 1, &first);
 drainInput:
     {
