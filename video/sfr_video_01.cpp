@@ -3706,18 +3706,22 @@ void VideoProviderNetStream::SendCuePoints(const Array<VideoPlayer::CuePoint>& c
     }
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Pushes the subtitle text and calls onSubtitle on the target's environment. Like the exe, it does not
+// check the environment for NULL, and it holds a second, unused Value besides the result.
 // @0x140009ad0
 void VideoProviderNetStream::SendSubtitleInformation()
 {
     if (!pTarget)
         return;
-    Environment* penv = GetTargetEnvironment(pTarget);
-    if (!penv)
+    DisplayObject* pch = pTarget->pCharacter;
+    InteractiveObject* pchar = pch->IsInteractiveObject() ? (InteractiveObject*)pch : NULL;
+    if (!pchar)
         return;
-
+    AvmDisplayObjBase* pavm = reinterpret_cast<AvmDisplayObjBase*>(reinterpret_cast<UInt32*>(pchar) + pchar->AvmObjOffset);
+    Value unused;
+    Environment* penv = static_cast<AvmCharacter*>(pavm->ToAvmInteractiveObjBase())->GetASEnvironment();
+    penv->Push(penv->GetSC()->pContext->GetStringManager()->CreateString(pSubtitleMsg));
     Value ret;
-    penv->Push(Value(penv->CreateString(pSubtitleMsg)));
     pNetStream->OnSubtitleCallback.Invoke(FnCall(&ret, pNetStream, penv, 1, penv->GetTopIndex()));
     penv->Drop1();
 }
