@@ -1952,41 +1952,39 @@ void MovieImpl::ActivateFocusCapture(unsigned controllerIdx)
 }
 
 // @0x14256e9a0
-// MS2-FUNCTIONAL: register allocation (the info pointer and the array swap r14/r15); same code otherwise
 void MovieImpl::FillTabableArray(const ProcessFocusKeyInfo* pfocusInfo)
 {
     FocusGroupDescr& focusGroup = *pfocusInfo->pFocusGroup;
-    if (pfocusInfo->InclFocusEnabled && (focusGroup.TabableArrayStatus & 3) == 1)
+    if (pfocusInfo->InclFocusEnabled && (focusGroup.TabableArrayStatus & 1) && !(focusGroup.TabableArrayStatus & 2))
         focusGroup.ResetTabableArray();   // collected without the focusEnabled characters: collect again
     if (!(focusGroup.TabableArrayStatus & 1))
     {
-        InteractiveObject::FillTabableParams params;
-        ArrayDH<Ptr<InteractiveObject>, 0x147>& tabableArray = focusGroup.TabableArray;
-        params.Array = &tabableArray;
-        params.InclFocusEnabled = pfocusInfo->InclFocusEnabled;
-
-        DisplayObjContainer* pmodalClip = (DisplayObjContainer*)focusGroup.GetModalClip(this);
-        if (pmodalClip)
-            pmodalClip->FillTabableArray(&params);
-        else
+        DisplayObjContainer* modalClip = NULL;
+        InteractiveObject::FillTabableParams p;
+        p.Array = &focusGroup.TabableArray;
+        p.InclFocusEnabled = pfocusInfo->InclFocusEnabled;
+        if ((modalClip = (DisplayObjContainer*)focusGroup.GetModalClip(this)) == NULL)
         {
             // Every level, the topmost first.
-            for (int i = (int)MovieLevels.GetSize(); i > 0; --i)
+            for (int movieIndex = (int)MovieLevels.GetSize(); movieIndex > 0; movieIndex--)
             {
-                InteractiveObject* plevel = MovieLevels[i - 1].pSprite;
-                if (plevel->IsDisplayObjContainer())
-                    ((DisplayObjContainer*)plevel)->FillTabableArray(&params);
+                if (MovieLevels[movieIndex - 1].pSprite->IsDisplayObjContainer())
+                    ((DisplayObjContainer*)MovieLevels[movieIndex - 1].pSprite.GetPtr())->FillTabableArray(&p);
             }
         }
-
-        if (params.TabIndexed)
-            Alg::QuickSortSliced(tabableArray, 0, tabableArray.GetSize(), TabIndexSort);
         else
-            Alg::QuickSortSliced(tabableArray, 0, tabableArray.GetSize(), AutoTabSort);
+        {
+            modalClip->FillTabableArray(&p);
+        }
+
+        if (p.TabIndexed)
+            Alg::QuickSort(focusGroup.TabableArray, TabIndexSort);
+        else
+            Alg::QuickSort(focusGroup.TabableArray, AutoTabSort);
 
         focusGroup.TabableArrayStatus = 1;
         if (pfocusInfo->InclFocusEnabled)
-            focusGroup.TabableArrayStatus = 3;   // 2: with the focusEnabled characters
+            focusGroup.TabableArrayStatus |= 2;   // with the focusEnabled characters
     }
 }
 
