@@ -1729,10 +1729,13 @@ template void MS2_AS2_STRING_SET(GFx::AS2::MovieRoot::InvokeAliasInfo, HashsetNo
 // MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
 // @0x1429959a0
 template void MS2_AS2_STRING_SET(GFx::AS2::Object::Watchpoint, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's Clear out of line (0x1429340f0).
+template <> void MS2_AS2_STRING_SET(GFx::AS2::FunctionRef, HashsetNodeEntry)::Clear();
 // @0x142995b50
 template void MS2_AS2_STRING_SET(GFx::AS2::FunctionRef, HashsetNodeEntry)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's Clear (0x142934180) and destructor (0x142924800) out of line.
+template <> void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::Clear();
+template <> MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::~HashSetBase();
 // @0x142995c90
 template void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
 // @0x142995e00
@@ -1740,7 +1743,9 @@ template void MS2_AS2_STRING_SET(GFx::AS2::SharedObjectPtr, GFx::HashsetNodeEntr
 // MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
 // @0x142995ff0
 template void MS2_AS2_STRING_SET(GFx::AS2::Value, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's Clear out of line (0x142934220).
+template <> void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
+                                GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::Clear();
 // @0x1429961b0
 template void decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>, GFx::EventIdHashFunctor,
                               GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::setRawCapacity(void*, UPInt);
