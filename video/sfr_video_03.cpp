@@ -1445,17 +1445,24 @@ uint64_t* FUN_14001a920(uint64_t* record, uint64_t vm, uint64_t property, int co
 }
 } // namespace (sfr_video_04 calls FUN_14001af70)
 
-// MS2-FUNCTIONAL: the AS3 AVM video character constructor (sfr_video_04): runs the AvmInteractiveObj base constructor on
+// the character's own fields at +0x48, set up after the AvmInteractiveObj base
+namespace {
+struct VideoTraitsFields
+{
+    uint32_t A, B, C;
+    bool Flag;
+    VideoTraitsFields() { C = 0; B = 0; A = 0; Flag = true; }
+};
+} // namespace
+
+// the AS3 AVM video character constructor (sfr_video_04): runs the AvmInteractiveObj base constructor on
 // the character (rdx passes through) and installs the Video character vtables and defaults.
 // @0x14001af70
 void* FUN_14001af70(void* self, Scaleform::GFx::InteractiveObject* object)
 {
     uint64_t* traits = static_cast<uint64_t*>(self);
     reinterpret_cast<Scaleform::GFx::AS3::AvmInteractiveObj*>(traits)->Scaleform::GFx::AS3::AvmInteractiveObj::AvmInteractiveObj(object);
-    *reinterpret_cast<uint8_t*>(reinterpret_cast<unsigned char*>(traits) + 0x54) = 1;
-    reinterpret_cast<uint32_t*>(traits)[20] = 0;
-    *reinterpret_cast<uint32_t*>(reinterpret_cast<unsigned char*>(traits) + 0x4c) = 0;
-    reinterpret_cast<uint32_t*>(traits)[18] = 0;
+    reinterpret_cast<VideoTraitsFields*>(reinterpret_cast<unsigned char*>(traits) + 0x48)->VideoTraitsFields::VideoTraitsFields();
     *reinterpret_cast<void***>(traits) = &VideoTraitsBaseVtable;
     reinterpret_cast<void***>(traits)[6] = &VideoTraitsSubVtableA;
     reinterpret_cast<void***>(traits)[8] = &VideoTraitsSubVtableB;
