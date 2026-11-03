@@ -1301,17 +1301,22 @@ bool fillStyleIsComplex(const ShapeDataInterface* shape, unsigned style)
 // @0x142632030
 bool ShapeMeshProvider::generateImage9Grid(Scale9GridInfo* s9g, MeshBase* mesh, VertexOutput* pout, unsigned layer)
 {
-    RectF bounds = (DrawLayers[layer].Image9GridType == 2) ? IdentityBounds : getLayerBounds(layer);
+    unsigned i9g    = DrawLayers[layer].Image9GridType;
+    RectF    bounds = (i9g == 2) ? IdentityBounds : getLayerBounds(layer);
 
-    ShapePosInfo pos(DrawLayers[layer].StartPos);
-    float        coord[Edge_MaxCoord];
-    unsigned     styles[3];
-    pShapeData->ReadPathInfo(&pos, coord, styles);
+    const DrawLayerType& dl = DrawLayers[layer];
+    ShapePosInfo         pos(dl.StartPos);
+    ShapePathType        pathType;
+    float                coord[Edge_MaxCoord];
+    unsigned             styles[3];
+    pathType = pShapeData->ReadPathInfo(&pos, coord, styles);
+
+    unsigned      styleIdx = styles[0] ? styles[0] : styles[1];
     FillStyleType fillStyle;
-    pShapeData->GetFillStyle(styles[0] ? styles[0] : styles[1], &fillStyle);
+    pShapeData->GetFillStyle(styleIdx, &fillStyle);
 
-    TextureManager* manager = mesh->GetRenderer()->GetHAL()->GetTextureManager();
     Matrix2F        uvMatrix(Matrix2F::NoInit);
+    TextureManager* manager = mesh->GetRenderer()->GetHAL()->GetTextureManager();
     static_cast<Image*>(fillStyle.pFill->pImage.GetPtr())->GetUVNormMatrix(&uvMatrix, manager);   // an Image here
     Scale9GridTess tess(Memory::GetGlobalHeap(), *s9g, bounds, uvMatrix, fillStyle.pFill->ImageMatrix);
 
@@ -1322,12 +1327,12 @@ bool ShapeMeshProvider::generateImage9Grid(Scale9GridInfo* s9g, MeshBase* mesh, 
             return false;
         pout->SetVertices(0, 0, tess.GetVertices(), tess.GetVertexCount());
         pout->SetIndices(0, 0, tess.GetIndices(), tess.GetIndexCount());
+        pout->EndOutput();
     }
     else
     {
-        Image9GridVertex ver[1];
+        Image9GridVertex ver = { 0, 0, 0, 0 };
         UInt16           tri[3];
-        ver[0].Set(0, 0, 0, 0);
         tri[0] = tri[1] = tri[2] = 0;
 #ifdef __clang__
         // clang folds the initializer into .rdata: set the exe global's address at run time instead
@@ -1338,10 +1343,10 @@ bool ShapeMeshProvider::generateImage9Grid(Scale9GridInfo* s9g, MeshBase* mesh, 
 #endif
         if (!pout->BeginOutput(&vfill, 1, Matrix2F::Identity))
             return false;
-        pout->SetVertices(0, 0, ver, 1);
+        pout->SetVertices(0, 0, &ver, 1);
         pout->SetIndices(0, 0, tri, 3);
+        pout->EndOutput();
     }
-    pout->EndOutput();
     return true;
 }
 
