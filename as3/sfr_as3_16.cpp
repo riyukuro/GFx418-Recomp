@@ -1007,7 +1007,7 @@ namespace InstanceTraits
 // ==== virtual table ==================================================================================================
 
 // @0x1424e8ed0
-AbsoluteIndex VTable::AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name)
+SF_NOINLINE AbsoluteIndex VTable::AddMethod(const Value& m, SlotInfo::BindingType dt, const ASString& name)
 {
     UPInt ind;
 
@@ -1350,8 +1350,10 @@ void Traits::Add2StoredScopeStack(const Value& o)
     InitScope.PushBack(o);
 }
 
-// MS2-FUNCTIONAL: our TU inlines VTable::AddMethod (0x1424e8ed0, defined below), which the exe calls; the get/set
-// merge also rewrites the unchanged ValueInd there.
+// MS2-FUNCTIONAL: the exe keeps the name temp's node in a saved register across SetMethod and AddMethod (its SCU
+// knew they leave the temp alone; SetMethod is out of line in another unit here), and its GetNewBT merge keeps
+// new_bt in a register where ours folds the BT_GetSet constant into the Bind. VTable::AddMethod is SF_NOINLINE
+// below: the exe calls it.
 // @0x1424e5510
 void Traits::Add2VT(SlotInfo& si, const Value& v, SlotInfo::BindingType bt)
 {
@@ -1925,30 +1927,45 @@ bool XMLSupport::Add(Value&, Object&, Object&) const
 }
 
 // E4X addition flattens XML and XMLList operands into a newly allocated XMLList.
-// MS2-FUNCTIONAL: preserves the exe's XML/XMLList type checks, list allocation, and flattened append behavior; helper calls change codegen.
 // @0x1424e6990
 bool XMLSupportImpl::Add(Value& result, Object& l, Object& r) const
 {
-    const bool leftXML = IsXMLObject(&l);
-    const bool leftList = IsXMLListObject(&l);
-    const bool rightXML = IsXMLObject(&r);
-    const bool rightList = IsXMLListObject(&r);
-    if ((!leftXML && !leftList) || (!rightXML && !rightList))
-        return false;
-
-    InstanceTraits::fl::XMLList& listTraits =
-        *static_cast<InstanceTraits::fl::XMLList*>(GetITraitsXMLList());
-    Pickable<Instances::fl::XMLList> list = listTraits.MakeInstance(listTraits);
-    if (leftXML)
-        list->Append(static_cast<Instances::fl::XML*>(&l));
-    else
-        list->Append(static_cast<Instances::fl::XMLList&>(l));
-    if (rightXML)
-        list->Append(static_cast<Instances::fl::XML*>(&r));
-    else
-        list->Append(static_cast<Instances::fl::XMLList&>(r));
-    result.Pick(list);
-    return true;
+    const Traits& ltr = l.GetTraits();
+    const Traits& rtr = r.GetTraits();
+    const BuiltinTraitsType ltt = ltr.GetTraitsType();
+    const BuiltinTraitsType rtt = rtr.GetTraitsType();
+    if ((ltt == Traits_XML || ltt == Traits_XMLList) && ltr.IsInstanceTraits() &&
+        (rtt == Traits_XML || rtt == Traits_XMLList) && rtr.IsInstanceTraits())
+    {
+        InstanceTraits::fl::XMLList& listTraits =
+            *static_cast<InstanceTraits::fl::XMLList*>(GetITraitsXMLList());
+        Pickable<Instances::fl::XMLList> list = listTraits.MakeInstance(listTraits);
+        switch (ltt)
+        {
+        case Traits_XML:
+            list->Append(static_cast<Instances::fl::XML*>(&l));
+            break;
+        case Traits_XMLList:
+            list->Append(static_cast<Instances::fl::XMLList&>(l));
+            break;
+        default:
+            break;
+        }
+        switch (rtt)
+        {
+        case Traits_XML:
+            list->Append(static_cast<Instances::fl::XML*>(&r));
+            break;
+        case Traits_XMLList:
+            list->Append(static_cast<Instances::fl::XMLList&>(r));
+            break;
+        default:
+            break;
+        }
+        result.Pick(list);
+        return true;
+    }
+    return false;
 }
 
 }}} // namespace Scaleform::GFx::AS3
