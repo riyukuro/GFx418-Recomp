@@ -57,6 +57,16 @@ SF_FORCEINLINE XmlNodeObject* NodeThis(const FnCall& fn)
 }
 
 // The script object of pnode, created (and linked to the tree root) when the node has none yet.
+// Ptr<RootNode>::operator= / SetPtr, which the exe inlines here.
+SF_FORCEINLINE void AssignRoot(Ptr<XML::RootNode>& dst, const Ptr<XML::RootNode>& src)
+{
+    if (src)
+        src->AddRef();
+    if (dst)
+        dst->Release();
+    dst.GetRawRef() = src.GetPtr();
+}
+
 SF_FORCEINLINE void SetNodeObject(Environment* penv, Value* val, XML::Node* pnode, XML::RootNode* proot);
 
 } // namespace
@@ -124,23 +134,23 @@ SF_FORCEINLINE void SetNodeObject(Environment* penv, Value* val, XML::Node* pnod
         val->SetAsObject(pshadow->pASNode);
 }
 
-// Takes pchild's node out of its parent (kept alive meanwhile) and appends it to elemNode.
+// Takes pchild's node out of its parent (kept alive meanwhile) and puts it before pinsert's node in elemNode, or at
+// the end without pinsert.
 SF_FORCEINLINE void MoveChild(XML::ElementNode* elemNode, XmlNodeObject* pthis, XmlNodeObject* pchild,
-                              XML::Node* pinsert)
+                              XmlNodeObject* pinsert)
 {
     Ptr<XML::Node> selfptr = pchild->pRealNode;
     if (pchild->pRealNode->Parent)
         pchild->pRealNode->Parent->RemoveChild(pchild->pRealNode);
     if (pinsert)
-        elemNode->InsertBefore(pchild->pRealNode, pinsert);
+        elemNode->InsertBefore(pchild->pRealNode, pinsert->pRealNode);
     else
         elemNode->AppendChild(pchild->pRealNode);
-    pchild->pRootNode.SetPtr(pthis->pRootNode);
+    AssignRoot(pchild->pRootNode, pthis->pRootNode);
 }
 
 } // namespace
 
-// MS2-FUNCTIONAL: the exe inlines the Ptr<RootNode> assignment; ours calls it
 // @0x14299b650
 void XmlNodeProto::AppendChild(const FnCall& fn)
 {
@@ -178,7 +188,7 @@ void XmlNodeProto::AppendChild(const FnCall& fn)
             if (pchild->pRealNode->Parent)
                 pchild->pRealNode->Parent->RemoveChild(pchild->pRealNode);
             elemNode->AppendChild(pchild->pRealNode);
-            pchild->pRootNode.SetPtr(pthis->pRootNode);
+            AssignRoot(pchild->pRootNode, pthis->pRootNode);
             if (pchild->pRealNode->Type == XML::ElementNodeType)
             {
                 XML::ElementNode* elemChild = static_cast<XML::ElementNode*>(pchild->pRealNode);
@@ -347,7 +357,6 @@ void XmlNodeProto::HasChildNodes(const FnCall& fn)
 }
 
 // insertBefore(child, before): appends child when before is not one of this node's children.
-// MS2-FUNCTIONAL: the exe inlines the Ptr<RootNode> assignment; block layout differs
 // @0x14299c1a0
 void XmlNodeProto::InsertBefore(const FnCall& fn)
 {
@@ -369,7 +378,7 @@ void XmlNodeProto::InsertBefore(const FnCall& fn)
         pinsert->pRealNode->Parent && pinsert->pRealNode->Parent == elemNode)
     {
         if (pchild->pRealNode)
-            MoveChild(elemNode, pthis, pchild, pinsert->pRealNode);
+            MoveChild(elemNode, pthis, pchild, pinsert);
     }
     else if (pchild->pRealNode)
         MoveChild(elemNode, pthis, pchild, 0);
