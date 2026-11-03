@@ -5,8 +5,7 @@
 // MS2-RANGE: 0x140a5bb10-0x140a5c650 .text$mn
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
-// MS2-FUNCTIONAL ??_GRefCountImplCore@Scaleform@@UEAAPEAXI@Z: the exe's copy is the vector deleting destructor (??_E, emitted because some TU deletes an array of them); with flag bit 2 clear it runs the same dtor and sized delete as this ??_G
-// MS2-PIN: ??_GRefCountImplCore@Scaleform@@UEAAPEAXI@Z 0x140a5c250
+// MS2-PIN: ??_ERefCountImplCore@Scaleform@@UEAAPEAXI@Z 0x140a5c250
 // MS2-PIN: ??_7GFxLogger@@6B@ 0x142dc9da0
 #define MS2_THIS_FILE "e:\\build\\kr\\22_04\\ms2code\\client\\ms2\\gfxlogger.cpp"
 #pragma function(memcpy, memset)
@@ -166,6 +165,13 @@ static __inline errno_t ms2_gfxlog_memcpy_s(void* const d, size_t const dsz, voi
 }
 __declspec(selectany) extern errno_t(__cdecl* const ms2_pfnGfxMemcpyS)(void*, size_t, const void*, size_t) = &ms2_gfxlog_memcpy_s;
 #pragma intrinsic(memcpy, memset)
+
+// The exe's RefCountImplCore deleting dtor (0x140a5c250) is the vector one (??_E): some TU of the image allocates an
+// array of them. Its caller is not known, so this emits the same COMDAT.
+RefCountImplCore* GfxLogNewImplCoreArray(UPInt n)
+{
+    return new RefCountImplCore[n];
+}
 // MS2-PIN: ??_7Unk_RefCountImpl@@6B@ 0x142dc9d58
 // MS2-PIN: ??_7?$Unk_RefCountBaseStatImpl@VUnk_RefCountImpl@@$01@@6B@ 0x142dc9d68
 // MS2-PIN: ??_7?$Unk_RefCountBase@VUnk_GfxLogBase@@$01@@6B@ 0x142dc9d78
