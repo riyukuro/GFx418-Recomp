@@ -1939,8 +1939,7 @@ void FUN_140017f20(void* self, void*, void* frame)
 namespace {
 
 } // namespace: externally referenced Video native
-// MS2-FUNCTIONAL: builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
-// Left: a scheduling tie at the ExecuteInternalUnsafe call (the exe builds &argument in rcx, ours in rax).
+// builds the metadata object from CRI stream dimensions and track counts, then invokes its callback.
 // @0x1400182f0
 void FUN_1400182f0(void* callback, const uint32_t* info)
 {
@@ -1966,8 +1965,9 @@ void FUN_1400182f0(void* callback, const uint32_t* info)
     Value result;
     Value argument(object);
     VM& callVm = *reinterpret_cast<VM*>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20) + 0x78));
+    const Value& thisValue = Value::GetUndefined();
     callVm.ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x98),
-                                Value::GetUndefined(), result, 1, &argument, false);
+                                thisValue, result, 1, &argument, false);
     VM& vm = *reinterpret_cast<VM*>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0x20) + 0x78));
     if (vm.IsException())
         vm.OutputAndIgnoreException();
