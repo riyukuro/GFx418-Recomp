@@ -131,12 +131,11 @@ void RenderSync::ReleaseFence(UInt64 handle)
 
 // ==== MeshCache ======================================================================================================
 
-// MS2-FUNCTIONAL: member-init scheduling and register allocation of the inlined set constructors
 // @0x142738e60
 MeshCache::MeshCache(MemoryHeap* heap, const MeshCacheParams& params)
     : Render::MeshCache(heap, params), CacheList(this), BufferCreateFlags(0),
       VertexBuffers(heap, vbGranularity(params.MemGranularity)),
-      IndexBuffers(heap, ibGranularity(params.MemGranularity, vbGranularity(params.MemGranularity))),
+      IndexBuffers(heap, ibGranularity(params.MemGranularity, VertexBuffers.GetGranularity())),
       Locked(false), VBSizeEvictedInLock(0)
 {
     adjustMeshCacheParams(&Params, 0);
