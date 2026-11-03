@@ -3067,10 +3067,10 @@ namespace Instances { namespace fl_display
             UInt32 mult[4];
             for (unsigned i = 0; i < argc - 3; ++i)
                 argv[3 + i].Convert2UInt32(mult[i]);
-            Render::Point<SInt32> dp((SInt32)destPoint->x, (SInt32)destPoint->y);
-            Render::Rect<SInt32> rect((SInt32)sourceRect->x, (SInt32)sourceRect->y,
-                                      (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height));
-            pimage->Merge(Render::AsDrawableImage(psource), rect, dp, mult[0], mult[1], mult[2], mult[3]);
+            pimage->Merge(Render::AsDrawableImage(psource),
+                          Render::Rect<SInt32>((SInt32)sourceRect->x, (SInt32)sourceRect->y,
+                                               (SInt32)(sourceRect->x + sourceRect->width), (SInt32)(sourceRect->y + sourceRect->height)),
+                          Render::Point<SInt32>((SInt32)destPoint->x, (SInt32)destPoint->y), mult[0], mult[1], mult[2], mult[3]);
         }
     }
 #pragma strict_gs_check(pop)
