@@ -1089,7 +1089,7 @@ namespace Instances { namespace fl_events {
         }
 
         {
-            Listener l = { priority, listener };
+            Listener l(priority, listener);
             listeners->InsertAt(i, l);
         }
         if (useWeakReference)

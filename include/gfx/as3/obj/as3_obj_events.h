@@ -230,6 +230,10 @@ namespace Instances { namespace fl_events {
     // One registered listener (0x28 bytes): the priority and the function value (weak when useWeakReference).
     struct EventDispatcher::Listener
     {
+        // The exe's Resize (0x14246c7e0) zeroes Priority of the listeners it adds.
+        Listener() : Priority(0) {}
+        Listener(SInt32 priority, const Value& function) : Priority(priority), Function(function) {}
+
         SInt32  Priority;       // +0x00
         Value   Function;       // +0x08 (the array destructor 0x142462140 releases it at +8)
     };
