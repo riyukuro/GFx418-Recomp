@@ -155,16 +155,15 @@ void AvmSprite::SetHitAreaNotify(Sprite* phitArea)
 }
 
 // The styles of the IME composition string, allocated on first use.
-// MS2-FUNCTIONAL: style copy and allocation codegen differ; same behavior
 // @0x142981750
 void TextFieldObject::SetIMECompositionStringStyles(const GFx::Text::IMEStyle& st)
 {
     const IMEStyleData& style = reinterpret_cast<const IMEStyleData&>(st);
-    if (pIMECompositionStringStyles)
-        reinterpret_cast<IMEStyleData&>(*pIMECompositionStringStyles) = style;
-    else
+    if (!pIMECompositionStringStyles)
         pIMECompositionStringStyles =
             reinterpret_cast<GFx::Text::IMEStyle*>(SF_HEAP_AUTO_NEW(this) IMEStyleData(style));
+    else
+        reinterpret_cast<IMEStyleData&>(*pIMECompositionStringStyles) = style;
 }
 
 // The image of the BitmapData, and its read-only "rectangle": a flash.geom.Rectangle of the image size.
