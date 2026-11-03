@@ -85,9 +85,8 @@ public:
         Align();
         if ((int)(DataSize - Pos) < 2)
             PopulateBuffer(2);
-        unsigned pos = Pos;
-        UInt16   val = (UInt16)(pBuffer[pos] | (pBuffer[pos + 1] << 8));
-        Pos = pos + 2;
+        UInt16 val = (UInt16(pBuffer[Pos])) | (UInt16(pBuffer[Pos + 1] << 8));
+        Pos += sizeof(UInt16);
         return val;
     }
     SF_FORCEINLINE UInt32 ReadU32()

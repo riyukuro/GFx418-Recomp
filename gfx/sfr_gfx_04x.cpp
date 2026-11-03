@@ -743,7 +743,6 @@ void SF_STDCALL GFx_FontTextureInfoLoader(LoadProcess* p, const TagInfo& tagInfo
 }
 
 // DefineExternalGradientImage: a gradient image kept in a file of its own.
-// MS2-FUNCTIONAL 0x1425c7840: same reads, log text and handle; the three inlined Stream::ReadU16 bodies schedule differently.
 // @0x1425c7840
 void SF_STDCALL GFx_DefineExternalGradientImageLoader(LoadProcess* p, const TagInfo& tagInfo)
 {

@@ -512,7 +512,6 @@ UPInt PlaceObject3Tag::ComputeDataSize(Stream* pin)
 }
 
 // @0x1425d6f60
-// MS2-FUNCTIONAL: verbose parse logging only; register allocation of the inlined ReadU16 differs
 UPInt PlaceObjectTag::ComputeDataSize(Stream* pin)
 {
     int tagStart = pin->Tell();
