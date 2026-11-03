@@ -79,12 +79,13 @@ template<class T> SF_INLINE T Lerp(T a, T b, T f) { return (b - a) * f + a; }
 bool FUN_1424f27b0(Scaleform::GFx::AS3::AvmBitmap* self);   // AvmBitmap: the image shape of the render node
 void FUN_142524990(void* arr, void* policy, Scaleform::UPInt n);   // ArrayDH<Ptr<InteractiveObject> >::Resize, out of line
 namespace Scaleform { namespace GFx { void* FUN_14261e310(); } }   // the AMP server (AmpServer::GetInstance)
-// RefCountCollector::Stats as Collect() gets it here: no observer and both counters zeroed by one qword store.
+// ASRefCountCollector::Stats as Collect() gets it here: the AMP stats and the two root counters (Stats(ampStats)).
 struct Sfr17dCollectorEntry
 {
-    Sfr17dCollectorEntry() : pExtra(NULL) {}
+    Sfr17dCollectorEntry(Scaleform::RefCountImpl* advanceStats) : pObject(advanceStats) { RootsNumber = RootsFreedTotal = 0; }
     Scaleform::Ptr<Scaleform::RefCountImpl> pObject;
-    void*                                   pExtra;
+    unsigned                                RootsNumber;
+    unsigned                                RootsFreedTotal;
 };
 // ASRefCountCollector: queues a collection with the AMP stats (0x142504630, sfr_as3_17)
 namespace Scaleform { class RefCountImpl; namespace GFx { namespace AS3 { void Sfr33CollectorQueue(Scaleform::UByte* gc, Scaleform::RefCountImpl* stats); } } }
@@ -448,11 +449,11 @@ static SF_INLINE void Sfr17dEmergencyCollect(UByte* gc)
     }
     const unsigned count = *reinterpret_cast<unsigned*>(gc + 0x18);
     {
-        Sfr17dCollectorEntry e;
+        Sfr17dCollectorEntry e(NULL);
         reinterpret_cast<AS3::ASRefCountCollector*>(gc)->Collect(reinterpret_cast<AS3::ASRefCountCollector::Stats*>(&e));
         *reinterpret_cast<unsigned*>(gc + 0x88) = 0;
-        *reinterpret_cast<unsigned*>(gc + 0x94) = count;
         *reinterpret_cast<unsigned*>(gc + 0x90) = Alg::Max(*reinterpret_cast<unsigned*>(gc + 0x90), count);
+        *reinterpret_cast<unsigned*>(gc + 0x94) = count;
         if (gc[0x78] & 0x10)
             gc[0xb0] = 1;
     }
@@ -464,7 +465,7 @@ static SF_INLINE void Sfr17dEmergencyCollect(UByte* gc)
 
 // MemoryContextImpl::HeapLimit::Collect: flushes the text format caches, collects (with the AMP stats of the movie
 // on this heap, if AMP knows it) and notes the footprint after the collection (+0x20).
-// MS2-FUNCTIONAL 0x1424f03f0: HeapLimit's members are private; reached by offset
+// HeapLimit's members are private, so they are reached by offset.
 // @0x1424f03f0
 void FUN_1424f03f0(UByte* self, MemoryHeap* heap)
 {
