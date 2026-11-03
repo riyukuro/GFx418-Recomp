@@ -6622,10 +6622,14 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
         *reinterpret_cast<unsigned*>(self + 0x4c) = id;
         if (readingText) {
             unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
-            *reinterpret_cast<Scaleform::String*>(owner + 0xb0) = static_cast<const wchar_t*>(readingText);
-            if (owner[0xb8])
+            if (!owner[0xb8]) {
+                *reinterpret_cast<Scaleform::String*>(owner + 0xb0) = static_cast<const wchar_t*>(readingText);
+            } else {
+                *reinterpret_cast<Scaleform::String*>(owner + 0xb0) = static_cast<const wchar_t*>(readingText);
+                owner = *reinterpret_cast<unsigned char**>(self + 8);
                 reinterpret_cast<void(*)(void*, const wchar_t*)>((*reinterpret_cast<void***>(owner))[0xb0 / sizeof(void*)])(
                     owner, readingText);
+            }
         }
         unsigned char* owner = *reinterpret_cast<unsigned char**>(self + 8);
         if (*reinterpret_cast<void**>(owner + 8)) {
@@ -6658,7 +6662,8 @@ unsigned long long FUN_1423db0c0(long long raw, unsigned message)
             args[0] = Scaleform::GFx::Value(10.0);
             args[1] = Scaleform::GFx::Value(static_cast<double>(vertical));
             Scaleform::GFx::Value result;
-            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(owner + 0xa8) + 0x18))
+            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(
+                    *reinterpret_cast<unsigned char**>(self + 8) + 0xa8) + 0x18))
                 reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
                     bridge, "CreateList", &result, args, 2);
             {
