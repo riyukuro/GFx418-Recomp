@@ -481,24 +481,46 @@ bool Environment::ParsePath(ASStringContext* psc, const ASString& path, ASString
 
 static SF_FORCEINLINE InteractiveObject* GetMovieAtLevel(const MovieImpl* pmovieImpl, int level);
 
+}}} // namespace Scaleform::GFx::AS2
+
+namespace Scaleform {
+// The Value array grows out of line (0x14297e710, explicit instantiation in sfr_as2_07).
+template<> void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(
+    const void* pheapAddr, UPInt newSize);
+}
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
+// Array<Value>::operator=, out of line in sfr_as2_03.
+const Array<Value>& FUN_142926200(Array<Value>* pthis, const Array<Value>& src);
+
+// The focus argument: null when there is no new focus.
+static SF_FORCEINLINE Value MS2_FocusValue(InteractiveObject* pfocus)
+{
+    if (pfocus)
+        return Value(pfocus);
+    return Value(Value::NULLTYPE);
+}
+
 // Queues DoTransferFocus(newFocus, fmt, controllerIdx) on _level0: an action entry without a character never runs.
-// MS2-FUNCTIONAL: queues the same CFunction and three argument values using recovered ActionEntry/Array interfaces.
+// MS2-FUNCTIONAL: the exe knows the array is still empty at the first PushBack (ResizeNoConstruct(.., 1)); here Size is
+// reloaded after the GetCharacterHandle call
 // @0x142972490
 void Selection::QueueSetFocus(Environment* penv, InteractiveObject* newFocus, unsigned controllerIdx,
                               FocusMovedType fmt)
 {
     Array<Value> params;
-    params.PushBack(Value(newFocus));
+    params.PushBack(MS2_FocusValue(newFocus));
     params.PushBack(Value(static_cast<int>(fmt)));
     params.PushBack(Value(static_cast<Number>(controllerIdx)));
-    MovieRoot* root = ToAS2Root(penv->GetTarget());
+    MovieRoot* root = static_cast<MovieRoot*>(penv->GetTarget()->GetMovieImpl()->pASMovieRoot);
     InteractiveObject* plevel0 = GetMovieAtLevel(root->pMovieImpl, 0);
     MovieRoot::ActionEntry* entry = root->InsertEmptyAction(ActionPriority::AP_Frame);
     entry->Type          = MovieRoot::ActionEntry::Entry_CFunction;
     entry->pCharacter    = plevel0;
     entry->pActionBuffer = 0;
     entry->CFunction     = DoTransferFocus;
-    entry->FunctionParams = params;
+    FUN_142926200(&entry->FunctionParams, params);
 }
 
 // Whether the text field (0x10 bytes before self) has a style data with a style sheet (+0x40).
