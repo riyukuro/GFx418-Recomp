@@ -81,8 +81,7 @@ SF_FORCEINLINE InteractiveObject* CharacterOf(const Value& v, const Environment*
     if (v.GetType() == Value::CHARACTER && penv && v.V.pCharHandle)
     {
         DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
-        if (pdisp)
-            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        return pdisp ? (pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0) : 0;
     }
     return 0;
 }
@@ -304,7 +303,6 @@ bool AmpMarkerCtorFunction::SetMember(Environment* penv, const ASString& name, c
 }
 
 // Selection.setModalClip(clip[, controllerIdx]): focus stays inside the sprite (none when it is not a sprite).
-// MS2-FUNCTIONAL: one register move is scheduled across the null test; same behavior
 // @0x142989060
 void SelectionCtorFunction::SetModalClip(const FnCall& fn)
 {
