@@ -451,30 +451,42 @@ void MovieClipLoader::NotifyOnLoadStart(Environment* penv, InteractiveObject* pt
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: Ghidra confirms the delimiter split and null-extension path; this uses the recovered ASString helpers.
 // @0x14296e870
 bool Environment::ParsePath(ASStringContext* psc, const ASString& path, ASString* pbase, ASString* pextension)
 {
+    // Search for colon.
+    int colonIndex = -1;
     const char* text = path.ToCStr();
-    const char* split = strchr(text, ':');
-    if (!split)
-        split = strrchr(text, '.');
-    if (!split && !strrchr(text, '/'))
-        return false;
-
-    if (split)
-    {
-        int offset = static_cast<int>(split - text);
-        pextension->operator=(psc->CreateString(split + 1));
-        if (offset > 0 && text[offset - 1] == '/')
-            --offset;
-        *pbase = offset < 0 ? path : psc->CreateString(text, static_cast<UPInt>(offset));
-    }
+    const char* p;
+    if ((p = strchr(text, ':')) != 0)
+        colonIndex = int(p - text);
     else
     {
-        pextension->operator=(psc->CreateConstString(""));
-        *pbase = path;
+        if ((p = strrchr(text, '.')) != 0)
+            colonIndex = int(p - text);
+        else
+        {
+            if ((p = strrchr(text, '/')) == 0)
+                return false;
+        }
     }
+
+    // The extension.
+    if (colonIndex >= 0)
+        *pextension = psc->CreateString(path.ToCStr() + colonIndex + 1);
+    else
+        *pextension = psc->GetBuiltin(ASBuiltin_empty_);
+
+    // The base: trim off a trailing slash.
+    if (colonIndex > 0)
+    {
+        if (path[colonIndex - 1] == '/')
+            colonIndex--;
+    }
+    if (colonIndex >= 0)
+        *pbase = psc->CreateString(path.ToCStr(), colonIndex);
+    else
+        *pbase = path;
     return true;
 }
 
