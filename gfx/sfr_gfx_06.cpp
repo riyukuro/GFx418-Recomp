@@ -1368,6 +1368,12 @@ void DisplayObjectBase::SetYRotation(Double rotation)
 }
 
 
+// The SDK DisplayObjectBase::CharToDisplayObjContainer: the object as a container, or null.
+static inline DisplayObjContainer* CharToDisplayObjContainer(DisplayObjectBase* p)
+{
+    return p->IsDisplayObjContainer() ? static_cast<DisplayObjContainer*>(p) : 0;
+}
+
 // Detaches the render node from the display list parent's container so another node can hold it (a mask); the
 // display list keeps the object. Returns the detached node, null when newParent lies under it.
 // @0x1425f4800
@@ -1384,8 +1390,8 @@ Ptr<TreeNode> DisplayObjectBase::SetIndirectTransform(TreeNode* newParent)
     }
 
     DisplayObjContainer* parent = 0;
-    if (pParent && pParent->IsDisplayObjContainer())
-        parent = static_cast<DisplayObjContainer*>(pParent);
+    if (pParent)
+        parent = CharToDisplayObjContainer(pParent);
     if (parent)
     {
         DisplayList& dl  = parent->mDisplayList;
