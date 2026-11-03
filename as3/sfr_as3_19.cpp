@@ -1443,15 +1443,6 @@ static __forceinline const SlotInfo& ExecGlobalSlotOf(Object* obj, UInt32 slot)
     return ExecSlotInfo(tr, AbsoluteIndex(static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(tr.FirstOwnSlotInd.Get())));
 }
 
-static inline const SlotInfo& ExecSlotOf(Object* obj, SPInt slot, bool relativeToOwn)
-{
-    Traits& tr = obj->GetTraits();
-    SPInt ind = slot - 1;
-    if (relativeToOwn)
-        ind += tr.FirstOwnSlotInd.Get();
-    return tr.GetSlotInfo(AbsoluteIndex(ind));
-}
-
 // getglobalslot: pushes undefined, then loads the global object's slot into it.
 // @0x142539490
 void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
@@ -1463,19 +1454,34 @@ void Sfr27ExecGetGlobalSlot(VM* vm, UInt32 slot)
     FUN_14250e770(&ExecGlobalSlotOf(obj, slot), &result, top, obj);
 }
 
-// getslot: the object on top of the stack is replaced by the value of its slot.
-// MS2-FUNCTIONAL 0x142538f50: same slot read through the shared getter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
+// The SDK ReadObjectRef: the object on top of the stack, by reference (null or undefined throws).
+struct ExecReadObjectRef : public StackReader
+{
+    SF_INLINE ExecReadObjectRef(VM& vm) : StackReader(vm), ArgObject(*OpStack.GetTopPtr())
+    {
+        CheckObject(ArgObject);
+    }
+    // StackReader::CheckObject, inline.
+    SF_INLINE void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+            GetVM().ThrowTypeError(VM::Error(v.IsNull() ? VM::eConvertNullToObjectError : VM::eConvertUndefinedToObjectError, GetVM()));
+    }
+    Value& ArgObject;
+};
+
+// getslot (VM::exec_getabsslot): the object on top of the stack is replaced by the value of its slot.
 // @0x142538f50
 void Sfr27ExecGetSlot(VM* vm, SPInt slot)
 {
-    Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
-    ExecRequireObject(*vm, *top);
+    ExecReadObjectRef args(*vm);
     if (vm->IsException())
         return;
-    Value saved(*top, PickValue);
-    Object* obj = reinterpret_cast<Object*>(saved.GetGASRefCountBase());
-    CheckResult ok(false);
-    FUN_14250e770(&ExecSlotOf(obj, slot, false), &ok, top, obj);
+    const Value _this(args.ArgObject, PickValue);
+    Object& obj = *_this.GetObject();
+    const Traits& tr = obj.GetTraits();
+    char result;    // the getter's CheckResult return slot, not read (DoNotCheck)
+    FUN_14250e770(&ExecSlotInfo(tr, AbsoluteIndex(slot - 1)), &result, &args.ArgObject, &obj);
 }
 
 // setglobalslot: the value on top of the stack is stored into the global object's slot and popped.
@@ -1495,18 +1501,17 @@ void Sfr27ExecSetGlobalSlot(VM* vm, UInt32 slot)
 }
 
 // getslot for objects whose slots follow the traits' first own slot.
-// MS2-FUNCTIONAL 0x14253a2d0: same slot read through the shared getter; the exe inlines the Value Release/AddRef paths where ours calls the out-of-line ReleaseInternal/ReleaseWeakRef (frame and size differ; same helper calls).
 // @0x14253a2d0
 void Sfr27ExecGetOwnSlot(VM* vm, UInt32 slot)
 {
-    Value* top = reinterpret_cast<Value*>(VmRd(vm, 0x50));
-    ExecRequireObject(*vm, *top);
+    ExecReadObjectRef args(*vm);
     if (vm->IsException())
         return;
-    Value saved(*top, PickValue);
-    Object* obj = reinterpret_cast<Object*>(saved.GetGASRefCountBase());
-    CheckResult ok(false);
-    FUN_14250e770(&ExecSlotOf(obj, slot, true), &ok, top, obj);
+    const Value _this(args.ArgObject, PickValue);
+    Object& obj = *_this.GetObject();
+    const Traits& tr = obj.GetTraits();
+    char result;    // the getter's CheckResult return slot, not read (DoNotCheck)
+    FUN_14250e770(&ExecSlotInfo(tr, AbsoluteIndex(static_cast<SPInt>(slot) - 1 + static_cast<UInt32>(tr.FirstOwnSlotInd.Get()))), &result, &args.ArgObject, &obj);
 }
 
 // The SDK ReadValueObject: the value, then the object it is stored on (null or undefined throws).
@@ -3671,31 +3676,14 @@ void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc)
 
 // The top of the operand stack is converted to an int index and popped; the new top's object is queried at that index and
 // the top replaced by the resulting uint.
-// MS2-FUNCTIONAL 0x14253abd0: behavior-equivalent recovery; codegen differs from exe
+// VM::exec_hasnext.
 // @0x14253abd0
 void Sfr31ExecIndexedQuery(UPInt vm)
 {
-    Value* top = reinterpret_cast<Value*>(Sfr31Rd(vm, 0x50));
-    UInt8 okBuf[8];
-    long out;
-    const bool ok = *FUN_1424f0d30(top, okBuf, &out) != 0;
-    UInt32 idx = 0;
-    if (ok)
-    {
-        top->SetSInt32(static_cast<SInt32>(out));
-        idx = *reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(top) + 0x10);
-    }
-    top->~Value();
-    Sfr31Wr(vm, 0x50, Sfr31Rd(vm, 0x50) - 0x20);
-    if (ok)
-    {
-        const UPInt cur = reinterpret_cast<UPInt>(top) - 0x20;
-        const UPInt o = Sfr31Rd(cur, 0x10);
-        typedef const UInt32* (*Fn)(UPInt, void*, UInt32);
-        const UInt32* r = reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0x88))(o, okBuf, idx);
-        Value res(static_cast<UInt32>(*r));
-        reinterpret_cast<Value*>(cur)->Assign(res);
-    }
+    Sfr31SH2ValueSInt32 stack(*reinterpret_cast<Value**>(vm + 0x50));
+    if (!stack.IsOK())
+        return;
+    stack._1 = Value(stack._1.GetObject()->GetNextDynPropIndex(GlobalSlotIndex(static_cast<UInt32>(stack._2))).Get());
 }
 // ---- batch 24
 // Value -> Boolean conversion used by the tracer, in place.
