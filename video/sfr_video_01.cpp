@@ -4028,22 +4028,30 @@ VideoObject* FUN_14000e020(AvmCharacter* character)
     return *slot;
 }
 
-// MS2-FUNCTIONAL: initializes the AVM video-character bases and retains its lazily created VideoObject state.
+// the video character's own fields at +0x38, set up after the AvmCharacter base
+namespace {
+struct AvmVideoCharacterFields
+{
+    Scaleform::UInt32 A, B, C;
+    bool Flag;
+    AvmVideoCharacterFields() { C = 0; B = 0; A = 0; Flag = true; }
+};
+} // namespace
+
+// Initializes the AVM video-character bases and retains its lazily created VideoObject state. The exe does
+// not check that object for NULL, and stores the +0x48 field after the vtables (hence the volatile store).
 // @0x14000e2b0
 AvmCharacter* FUN_14000e2b0(AvmCharacter* character, InteractiveObject* displayObject)
 {
     character->AvmCharacter::AvmCharacter(displayObject);
     unsigned char* bytes = reinterpret_cast<unsigned char*>(character);
-    *reinterpret_cast<unsigned*>(bytes + 0x38) = 0;
-    *reinterpret_cast<unsigned*>(bytes + 0x3c) = 0;
-    *reinterpret_cast<unsigned*>(bytes + 0x40) = 0;
-    bytes[0x44] = 1;
-    *reinterpret_cast<void**>(bytes + 0x48) = 0;
+    reinterpret_cast<AvmVideoCharacterFields*>(bytes + 0x38)->AvmVideoCharacterFields::AvmVideoCharacterFields();
     *reinterpret_cast<void***>(bytes) = &AvmVideoCharacterVtable;
     *reinterpret_cast<void***>(bytes + 8) = &AvmVideoCharacterInterfaceVtable;
     *reinterpret_cast<void***>(bytes + 0x30) = &AvmVideoCharacterBaseVtable;
+    *reinterpret_cast<void* volatile*>(bytes + 0x48) = 0;
     VideoObject* video = FUN_14000e020(character);
-    void* held = video ? *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30) : 0;
+    void* held = *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(video) + 0x30);
     if (held) {
         unsigned* count = reinterpret_cast<unsigned*>(static_cast<unsigned char*>(held) + 0x18);
         *count = (*count + 1) & 0x8fffffff;
