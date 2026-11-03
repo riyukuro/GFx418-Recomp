@@ -4499,7 +4499,17 @@ namespace Instances { namespace fl_display
         result = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr())->IsTransparent();
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the BitmapData constructor (0x14243a220, defined with the class in as3_06)
+    // The BitmapData ctor, inlined into clone as in the exe (out-of-line copy 0x14243a220 in sfr_as3_06); the tag
+    // keeps this copy's COMDAT apart from 06's definition.
+    __forceinline BitmapData::BitmapData(InstanceTraits::Traits& t, Instances::fl::InlineCtor)
+        : Instances::fl::Object(t)
+        , Width(0)
+        , Height(0)
+        , Transparent(true)
+        , Unk59(false)
+    {
+    }
+
     // @0x142448a00
     void BitmapData::clone(SPtr<Instances::fl_display::BitmapData>& result)
     {
@@ -4510,7 +4520,7 @@ namespace Instances { namespace fl_display
             return;
         }
         InstanceTraits::Traits& itr = GetInstanceTraits();
-        result = Pickable<BitmapData>(new(itr.Alloc()) BitmapData(itr));
+        result = Pickable<BitmapData>(new(itr.Alloc()) BitmapData(itr, Instances::fl::InlineCtor()));
         result->Width = Width;
         result->Height = Height;
         result->Transparent = Transparent;
@@ -5790,6 +5800,7 @@ namespace Classes { namespace fl_display
 // MS2-PIN: ?Func@?$ThunkFunc1@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$00$$CBVValue@456@AEBVASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x1424589f0
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$01V?$SPtr@VEvent@fl_events@Instances@AS3@GFx@Scaleform@@@456@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458af0
 // MS2-PIN: ?Func@?$ThunkFunc0@VTextEvent@fl_events@Instances@AS3@GFx@Scaleform@@$02VASString@56@@AS3@GFx@Scaleform@@SAXAEBUThunkInfo@234@AEAVVM@234@AEBVValue@234@AEAV7234@IPEBV7234@@Z 0x142458ba0
+// MS2-PIN: ??_7BitmapData@fl_display@Instances@AS3@GFx@Scaleform@@6B@ 0x14314a0a8
 // MS2-PIN: ??_7EOFError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f138
 // MS2-PIN: ??_7IOError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314f0a8
 // MS2-PIN: ??_7IllegalOperationError@fl_errors@ClassTraits@AS3@GFx@Scaleform@@6B@ 0x14314ef70
