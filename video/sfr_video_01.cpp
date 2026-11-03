@@ -3345,13 +3345,9 @@ static __forceinline void AssignFunctionValue(Value* val, const FunctionRef& fun
 
 static __forceinline UInt32 NetStreamPosition(VideoProviderNetStream* provider)
 {
-    Scaleform::GFx::Video::VideoPlayer* player = provider->GetPlayer();
-    if (!player)
-        return 0;
-    return player->GetPosition();
+    return provider->GetPosition();
 }
 
-// MS2-FUNCTIONAL: the exe tests the player with cmp [provider+0x48],0 and loads it again for the call; cl loads it once.
 // @0x14000aab0
 bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3423,7 +3419,8 @@ bool NetStream::GetMember(Environment* penv, const ASString& name, Value* val)
     }
     else if (name == "currentFps")
     {
-        *val = Value((Number)((float)pVideoProvider->GetVideoInfo().FrameRate / 1000.0f));
+        float fps = (float)pVideoProvider->GetVideoInfo().FrameRate / 1000.0f;
+        *val = Value((Number)fps);
         return true;
     }
     return Object::GetMember(penv, name, val);

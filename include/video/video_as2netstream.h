@@ -178,7 +178,12 @@ public:
     }
     Video::VideoPlayer* GetPlayer() { return pVideoPlayer; }
     const Video::VideoPlayer::VideoInfo& GetVideoInfo() const { return VInfo; }
-    UInt32 GetPosition()        { return pVideoPlayer ? pVideoPlayer->GetPosition() : 0; }
+    UInt32 GetPosition()
+    {
+        if (!pVideoPlayer)
+            return 0;
+        return pVideoPlayer->GetPosition();
+    }
     int    GetSubtitleChannel() { return pVideoPlayer ? pVideoPlayer->GetSubtitleChannel() : -1; }
 
 private:
