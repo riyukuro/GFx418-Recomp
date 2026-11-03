@@ -15,6 +15,7 @@
 // MS2-PIN: ?Reserve@?$ArrayDataBase@VASString@GFx@Scaleform@@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BED@@3@UArrayDefaultPolicy@3@@Scaleform@@QEAAXPEBX_K@Z 0x142523a30 ; order
 // MS2-PIN: ?setRawCapacity@?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@PEAV?$ArrayLH@UListener@EventDispatcher@fl_events@Instances@AS3@GFx@Scaleform@@$01UArrayDefaultPolicy@7@@3@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@AEAAXPEAX_K@Z 0x1425422c0 ; unique
 // MS2-PINS-END tplpin
+#define SF_AS3_AVMBUTTON_MODEL
 #define MS2_AS3_ASSIGN_NOALIAS
 #define MS2_AS3_SCU   // AS3_All.cpp SCU: AS3_Object.cpp weak-ref bodies inline (as3_value.h)
 #include "ms2/scaleform/include/kernel/sf_std.h"
@@ -1219,67 +1220,49 @@ void FUN_14252e530(char* self, bool enter)
     n = enter ? UInt8(n + 1) : UInt8(n - 1);
 }
 
-// Interface casts of a multiply-inherited class (null stays null) with their 0x30 / 0x40 adjustor thunks.
+// Interface casts of AvmButton / AvmTextField (null stays null). Their 0x30 / 0x40 adjustor thunks come from the compiler (below).
 // @0x14252f220
 void* FUN_14252f220(char* p) { return p ? p + 0x40 : nullptr; }
-// @0x14252f230
-void* FUN_14252f230(char* p) { return FUN_14252f220(p - 0x30); }
-// @0x14252f23c
-void* FUN_14252f23c(char* p) { return FUN_14252f220(p - 0x40); }
 // @0x14252f290
 UPInt FUN_14252f290(void*) { return 0; }
-// @0x14252f294
-UPInt FUN_14252f294(char* p) { return FUN_14252f290(p - 0x30); }
-// @0x14252f2a0
-UPInt FUN_14252f2a0(char* p) { return FUN_14252f290(p - 0x40); }
 // @0x14252f2b0
 UPInt FUN_14252f2b0(void*) { return 0; }
-// @0x14252f2b4
-UPInt FUN_14252f2b4(char* p) { return FUN_14252f2b0(p - 0x30); }
-// @0x14252f2c0
-UPInt FUN_14252f2c0(char* p) { return FUN_14252f2b0(p - 0x40); }
 // @0x14252f300
 UPInt FUN_14252f300(void*) { return 0; }
-// @0x14252f304
-UPInt FUN_14252f304(char* p) { return FUN_14252f300(p - 0x30); }
-// @0x14252f310
-UPInt FUN_14252f310(char* p) { return FUN_14252f300(p - 0x40); }
 // @0x14252f320
 void* FUN_14252f320(char* p) { return p ? p + 0x30 : nullptr; }
-// @0x14252f330
-void* FUN_14252f330(char* p) { return FUN_14252f320(p - 0x30); }
-// @0x14252f33c
-void* FUN_14252f33c(char* p) { return FUN_14252f320(p - 0x40); }
 // @0x14252f3b0
 void* FUN_14252f3b0(char* p) { return p ? p + 0x30 : nullptr; }
-// @0x14252f3c0
-void* FUN_14252f3c0(char* p) { return FUN_14252f3b0(p - 0x30); }
-// @0x14252f3cc
-void* FUN_14252f3cc(char* p) { return FUN_14252f3b0(p - 0x40); }
 // @0x14252f3e0
 UPInt FUN_14252f3e0(void*) { return 0; }
-// @0x14252f3e4
-UPInt FUN_14252f3e4(char* p) { return FUN_14252f3e0(p - 0x30); }
-// @0x14252f3f0
-UPInt FUN_14252f3f0(char* p) { return FUN_14252f3e0(p - 0x40); }
 // @0x14252f440
 UPInt FUN_14252f440(void*) { return 0; }
-// @0x14252f444
-UPInt FUN_14252f444(char* p) { return FUN_14252f440(p - 0x30); }
-// @0x14252f450
-UPInt FUN_14252f450(char* p) { return FUN_14252f440(p - 0x40); }
 // @0x14252f460
 UPInt FUN_14252f460(void*) { return 0; }
-// @0x14252f464
-UPInt FUN_14252f464(char* p) { return FUN_14252f460(p - 0x30); }
-// @0x14252f470
-UPInt FUN_14252f470(char* p) { return FUN_14252f460(p - 0x40); }
 // @0x14252f4c0
 void* FUN_14252f4c0(char* p) { return p ? p + 0x40 : nullptr; }
-// @0x14252f4d0
-void* FUN_14252f4d0(char* p) { return FUN_14252f4c0(p - 0x30); }
-// @0x14252f4dc
-void* FUN_14252f4dc(char* p) { return FUN_14252f4c0(p - 0x40); }
+
+// AvmButton / AvmTextField come from the SDK MI layout (SF_AS3_AVMBUTTON_MODEL), as in sfr_as3_17 / 18. Copy-constructing
+// them stores the vptrs, so cl emits their vftables and with them its own adjustor thunks (sub rcx,N; jmp member),
+// which are the exe ones in this range. The thunk targets stay the leaves above at their exe VAs.
+void Sfr19EmitAvmVftables(void* p, const AvmButton* pbtn, void* q, const AvmTextField* ptxt)
+{
+    new (p) AvmButton(*pbtn);
+    new (q) AvmTextField(*ptxt);
+}
+// MS2-PIN: ??_7AvmDisplayObjBase@GFx@Scaleform@@6B@ 0x14317bf80
+// MS2-PIN: ??_7AvmInteractiveObjBase@GFx@Scaleform@@6B@ 0x14317bfe8
+// MS2-PIN: ??_7AvmDisplayObj@AS3@GFx@Scaleform@@6B@ 0x14317c160
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ca60
+// MS2-PIN: ??_7AvmInteractiveObj@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317cb30
+// MS2-PIN: ??_7AvmButtonBase@GFx@Scaleform@@6B@ 0x14317db08
+// MS2-PIN: ??_7AvmTextFieldBase@GFx@Scaleform@@6B@ 0x14317e508
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317dbe0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317dcb0
+// MS2-PIN: ??_7AvmButton@AS3@GFx@Scaleform@@6B@ 0x14317dd68
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmDisplayObj@123@@ 0x14317ea80
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6BAvmInteractiveObjBase@23@@ 0x14317eb50
+// MS2-PIN: ??_7AvmTextField@AS3@GFx@Scaleform@@6B@ 0x14317ec08
 
 // @0x142530fb0
 void FUN_142530fb0(void*) {}
