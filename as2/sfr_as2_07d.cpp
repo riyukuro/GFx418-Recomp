@@ -962,7 +962,6 @@ bool XmlNodeObject::SetMember(Environment* penv, const ASString& name, const Val
 }
 
 // Moves the DOM attributes of preal into a script object held by its shadow.
-// MS2-FUNCTIONAL: block layout differs
 // @0x14299f130
 void SetupAttributes(Environment* penv, XML::ElementNode* preal)
 {
@@ -972,8 +971,13 @@ void SetupAttributes(Environment* penv, XML::ElementNode* preal)
     if (preal->HasAttributes())
     {
         for (XML::Attribute* attr = preal->FirstAttribute; attr; attr = attr->Next)
-            pshadow->pAttributes->SetMember(penv, psc->CreateString(attr->Name.ToCStr()),
-                                            Value(psc->CreateString(attr->Value.ToCStr())));
+        {
+            ASString  value = psc->pContext->GetStringManager()->CreateString(attr->Value.ToCStr());
+            Value     val(value);
+            PropFlags flags;
+            pshadow->pAttributes->SetMember(penv, psc->pContext->GetStringManager()->CreateString(attr->Name.ToCStr()),
+                                            val, flags);
+        }
         preal->ClearAttributes();
     }
 }
