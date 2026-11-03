@@ -3045,7 +3045,7 @@ static __forceinline void Ime01ReleaseStringNode(const unsigned long long* strin
 
 // Finds the locale row named by the by-value String (released on both exits) and shows the matching layout's
 // text 1 or 2 through the manager's slot 8; returns bool (the sub eax,1 release form needs it).
-// MS2-FUNCTIONAL: the exe loads the vtable into r8 for the slot 8 call, ours into rax (2 instructions).
+// The slot 8 call is written once per kind; cl merges the two calls, loading the vtable into r8 as in the exe.
 // @0x1423d8a10
 bool FUN_1423d8a10(unsigned long long* manager, const unsigned long long* stringInfo)
 {
@@ -3061,12 +3061,14 @@ bool FUN_1423d8a10(unsigned long long* manager, const unsigned long long* string
                     auto* entries = reinterpret_cast<LayoutEntry*>(manager[0x17]);
                     if (entries[i].id == localeId) {
                         const unsigned kind = reinterpret_cast<unsigned*>(manager[0x32])[i];
-                        const char* selected;
-                        if (kind == 1) selected = entries[i].text1.ToCStr();
-                        else if (kind == 2) selected = entries[i].text2.ToCStr();
+                        using Show = void(*)(void*, const char*);
+                        if (kind == 1)
+                            reinterpret_cast<Show>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
+                                manager, entries[i].text1.ToCStr());
+                        else if (kind == 2)
+                            reinterpret_cast<Show>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
+                                manager, entries[i].text2.ToCStr());
                         else continue;
-                        reinterpret_cast<void(*)(void*, const char*)>((*reinterpret_cast<void***>(manager))[0x40 / sizeof(void*)])(
-                            manager, selected);
                         Ime01ReleaseStringNode(stringInfo);
                         return true;
                     }
