@@ -3004,7 +3004,7 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
 }
 
 // getTextFormat([beginIndex, [endIndex]]): a TextFormat with what the characters of the range have in common.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg and the format destructors out of line
+// MS2-FUNCTIONAL the exe calls the format destructors out of line
 // @0x1429096e0
 void AvmTextField::GetTextFormat(const FnCall& fn)
 {
@@ -3022,26 +3022,31 @@ void AvmTextField::GetTextFormat(const FnCall& fn)
         if (begin >= 0)
             beginIndex = unsigned(begin);
     }
-    if (fn.NArgs >= 1)
+    if (fn.NArgs >= 2)
     {
-        // Only the character at beginIndex without an endIndex.
-        Number end = (fn.NArgs >= 2) ? fn.Arg(1).ToNumber(fn.Env) : fn.Arg(0).ToNumber(fn.Env) + 1;
-        end        = Alg::Max(Number(0), end);
+        Number end = Alg::Max(Number(0), fn.Arg(1).ToNumber(fn.Env));
         if (end >= 0)
             endIndex = unsigned(end);
     }
-    if (beginIndex > endIndex)
+    else if (fn.NArgs >= 1)
     {
-        fn.Result->SetUndefined();
-        return;
+        // Only the character at beginIndex without an endIndex.
+        Number end = Alg::Max(Number(0), ArgCopy(&fn, 0)->ToNumber(fn.Env) + 1);
+        if (end >= 0)
+            endIndex = unsigned(end);
     }
-    Render::Text::TextFormat      textFmt(fn.Env->GetHeap());
-    Render::Text::ParagraphFormat paraFmt;
-    reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&textFmt, &paraFmt, beginIndex, endIndex);
-    Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
-    pfmtObj->SetTextFormat(fn.Env->GetSC(), textFmt);
-    pfmtObj->SetParagraphFormat(fn.Env->GetSC(), paraFmt);
-    fn.Result->SetAsObject(pfmtObj);
+    if (beginIndex <= endIndex)
+    {
+        Render::Text::TextFormat      textFmt(fn.Env->GetHeap());
+        Render::Text::ParagraphFormat paraFmt;
+        reinterpret_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->GetTextAndParagraphFormat(&textFmt, &paraFmt, beginIndex, endIndex);
+        Ptr<TextFormatObject> pfmtObj = *SF_HEAP_NEW(fn.Env->GetHeap()) TextFormatObject(fn.Env);
+        pfmtObj->SetTextFormat(fn.Env->GetSC(), textFmt);
+        pfmtObj->SetParagraphFormat(fn.Env->GetSC(), paraFmt);
+        fn.Result->SetAsObject(pfmtObj);
+    }
+    else
+        fn.Result->SetUndefined();
 }
 
 // getNewTextFormat(): a TextFormat with the formats new text gets.
