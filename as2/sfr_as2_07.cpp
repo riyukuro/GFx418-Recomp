@@ -55,7 +55,7 @@
 // MS2-RANGE: 0x142994e10-0x142994fd0 .text$mn
 // MS2-RANGE: 0x142994fe0-0x1429950f0 .text$mn
 // MS2-RANGE: 0x142995100-0x142995180 .text$mn
-// MS2-RANGE: 0x142995370-0x1429967b0 .text$mn
+// MS2-RANGE: 0x142995370-0x142996690 .text$mn
 // MS2-RANGE: 0x14298cc70-0x14298cc80 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142991140-0x142991170 .text$mn   (sfr24: full-exe outside-unit row)
 // MS2-RANGE: 0x142991170-0x142991190 .text$mn   (sfr24: full-exe outside-unit row)
@@ -613,17 +613,6 @@ const Render::BlurFilterParams& BitmapFilterObject::readonlyFilterParams() const
 {
     static Render::BlurFilterParams unavailableParams;
     Render::Filter* filter = pFilter;
-    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
-        return unavailableParams;
-    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
-}
-
-// MS2-FUNCTIONAL cl constant-initializes the static params; the exe builds them under a thread-safe guard
-// @0x142996690
-Render::BlurFilterParams& BitmapFilterObject::writableFilterParams()
-{
-    static Render::BlurFilterParams unavailableParams;
-    Render::Filter* filter = writableFilter();
     if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
         return unavailableParams;
     return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();

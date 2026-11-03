@@ -51,7 +51,7 @@ public:
 protected:
     // The blur parameters of the filter (exe 0x142995370).
     const Render::BlurFilterParams& readonlyFilterParams() const;
-    // The same after writableFilter; a shared dummy for a non-blur filter (exe 0x142996690).
+    // The same after writableFilter; a shared dummy for a non-blur filter (exe 0x142996690, below).
     Render::BlurFilterParams& writableFilterParams();
 
     virtual void Finalize_GC(); // exe 0x142942cf0
@@ -59,6 +59,19 @@ protected:
 public:
     virtual ObjectType GetObjectType() const; // exe 0x1429541b0
 };
+
+// Inline: cl does not inline it (it holds a guarded static), so its callers (sfr_as2_05, sfr_as2_06h) call the
+// COMDAT, and the dummy params are built on first use under the thread-safe guard, as in the exe (an out-of-line
+// definition gets them constant-initialized). sfr_as2_06h owns its range.
+// @0x142996690
+inline Render::BlurFilterParams& BitmapFilterObject::writableFilterParams()
+{
+    static Render::BlurFilterParams unavailableParams;
+    Render::Filter* filter = writableFilter();
+    if (!filter || !(filter->GetFilterType() >= Render::Filter_Blur && filter->GetFilterType() <= Render::Filter_Blur_End))
+        return unavailableParams;
+    return static_cast<Render::BlurFilterImpl*>(filter)->GetParams();
+}
 
 // The instance classes of the filters (0x70 bytes, all state in the render filter).
 class BevelFilterObject : public BitmapFilterObject

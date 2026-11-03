@@ -8,6 +8,7 @@
 // MS2-RANGE: 0x1429858c0-0x142985b43 .text$mn
 // MS2-RANGE: 0x142985b50-0x142985ee2 .text$mn
 // MS2-RANGE: 0x142986170-0x142986432 .text$mn
+// MS2-RANGE: 0x142996690-0x1429967b0 .text$mn   (BitmapFilterObject::writableFilterParams, the header inline its setters call)
 
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_arrayobject.h"
