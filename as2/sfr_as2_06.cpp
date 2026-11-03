@@ -487,6 +487,11 @@ namespace Scaleform {
 // The Value array grows out of line (0x14297e710, explicit instantiation in sfr_as2_07).
 template<> void ArrayDataBase<GFx::AS2::Value, AllocatorGH<GFx::AS2::Value, 2>, ArrayDefaultPolicy>::ResizeNoConstruct(
     const void* pheapAddr, UPInt newSize);
+// The event handler table's lookup (exe 0x142917460, explicit instantiation in sfr_as2_02): the exe calls it out of
+// line from the inlined Get.
+template<> template<> SPInt decltype(HashLH<GFx::EventId, ArrayLH<GFx::AS2::Value, GFx::AS2::StatMV_ActionScript_Mem>,
+                                            GFx::EventIdHashFunctor, GFx::AS2::StatMV_ActionScript_Mem>::mHash)::BaseType::
+    findIndexAlt<GFx::EventId>(const GFx::EventId& key) const;
 }
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -1562,15 +1567,14 @@ bool AvmCharacter::IsStandardMember(const ASString& memberName, ASString* plower
     return false;
 }
 
-// MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
+// MS2-FUNCTIONAL the exe builds the key in one 0x18-byte slot (frame 0x40); ours uses two (frame 0x50)
 // @0x14295d450
 __declspec(noinline) bool AvmCharacter::HasClipEventHandler(const EventId& id) const
 {
-    EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
-    return EventHandlers.Get(key) != 0;
+    return EventHandlers.Get((id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id) != 0;
 }
 
-// MS2-FUNCTIONAL the exe calls the event handler hash lookup out of line
+// MS2-FUNCTIONAL the exe builds the key in one slot; ours copies it from a second slot before the lookup
 // @0x142964200
 bool AvmCharacter::InvokeClipEventHandlers(Environment* penv, const EventId& id)
 {
