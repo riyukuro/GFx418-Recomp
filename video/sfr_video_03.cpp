@@ -1864,13 +1864,15 @@ void FUN_140019470(void* self, uint64_t* output) { GetVideoSoundTransform(self, 
 // @0x140019660
 void FUN_140019660(void* self, uint64_t* output) { GetVideoSoundTransform(self, output, 0x90); }
 // sfr22: external linkage, sfr_as3_22b's sound-channel Start paths construct the same object.
-// MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD.
+// MS2-FUNCTIONAL: initializes and links the per-channel callback object, then registers it with FMOD. Same
+// instructions as the exe; the exe sinks the RefCount = 1 store past the second vtable store (our RefCount is volatile).
 // @0x142742fb0
 uint64_t* FUN_142742fb0(uint64_t* object, void* player, uint64_t userData, void* channel)
 {
     uint64_t* node = object + 2;
     uint64_t* list = reinterpret_cast<uint64_t*>(static_cast<unsigned char*>(player) + 0xb0);
-    reinterpret_cast<uint32_t*>(object)[2] = 1;
+    reinterpret_cast<Scaleform::RefCountImplCore*>(object)->Scaleform::RefCountImplCore::RefCountImplCore();
+    *reinterpret_cast<void***>(object) = &VideoAudioVtableA;
     *reinterpret_cast<void***>(node) = &VideoAudioVtableB;
     node[2] = list[2];
     node[1] = reinterpret_cast<uintptr_t>(list);
