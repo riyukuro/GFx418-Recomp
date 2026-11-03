@@ -77,9 +77,9 @@ CriSint32 FUN_14004e2f0(void*, CriSint32, CriSint32);
 CriSint32 FUN_1400500b0(CriSint32, void*);
 void* FUN_14004e580(void);
 void FUN_14004ff90(void*, void*, void*);
-void criSj_UngetChunk(void*, CriSint32, void*);
-void criSj_PutChunk(void*, CriSint32, void*);
-CriSint32 FUN_1400467b8(void*, CriSint32);
+extern "C" void criSj_UngetChunk(void*, CriSint32, void*);
+extern "C" void criSj_PutChunk(void*, CriSint32, void*);
+extern "C" CriSint32 FUN_1400467b8(void*, CriSint32);
 void criSj_Reset(void*);
 void criSj_GetChunk(void*, CriSint32, CriUint32, void*);
 CriSint32 FUN_140053630(void*);
@@ -98,7 +98,7 @@ void FUN_14004602c(void*);
 CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32, CriUint32, CriUint32, const CriUint32*);
 void* criSj_CreateNamedRingBuffer(void*, CriUint32, CriUint32, CriUint32, CriUint64);
 void* FUN_140053340(void*, CriUint32, CriUint32);
-void FUN_1400534d0(void*);
+extern "C" void FUN_1400534d0(void*);
 void FUN_1400534f0(void*, void*);
 void FUN_140053510(void*, CriUint32, void*);
 void criMvPlyAmng_DestroyAudioDecoder(void*, void*, CriSint32);
@@ -126,7 +126,7 @@ void* criVmpv_GetFramePointer(void*, void*);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void criErr_NotifyGeneric(CriSint32, const char*, CriSint32);
 void criErr_NotifyPrmArray(CriSint32, const char*, CriSint32, CriSint32, void*);
-void FUN_140041110(void*, const char*, CriUint32);
+extern "C" void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
 void FUN_140053570(void*);
 void FUN_140050e90(void*);
@@ -160,9 +160,9 @@ void criusfdmx_exec_decode(void*);
 int FUN_14029dd60(const char*, const char*, ...);   // game code's legacy inline sscanf
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
-void crivmpv_occurFatalError(void* owner, const CriChar8* message, CriUint32 value);
+extern "C" void crivmpv_occurFatalError(void* owner, const CriChar8* message, CriUint32 value);
 
-void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value);
+extern "C" void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value);
 
 void crivmpv_ErrorFunc(void* object, CriSint32 value);
 
@@ -170,7 +170,7 @@ void mvPlyAdec_StopAudioDecoder(void* object);
 
 void FUN_14003ebe0(void* object);
 
-CriBool FUN_14003eeb0(const void* input);
+extern "C" CriBool FUN_14003eeb0(const void* input);
 
 void criVmpv_RequestStop(void* object);
 #pragma optimize("", on)
@@ -364,7 +364,7 @@ void FUN_1400464a8(CriUint32 first, CriUint32 second)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 CriBool FUN_140040de0(void* object);
 
-CriBool FUN_14003d6c0(const void* input);
+extern "C" CriBool FUN_14003d6c0(const void* input);
 
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
 void criVmpv_ReleaseAlphaFramePointer(void* target, const CriUint64* settings);
@@ -638,7 +638,7 @@ void criVmpv_StopComplete(void* handle);
 
 void FUN_14003cca0(void* handle);
 
-void FUN_14003d550(void* handle);
+extern "C" void FUN_14003d550(void* handle);
 
 void FUN_14003d4b0(void* handle, void* videoBuffer, void* alphaBuffer);
 
@@ -1256,7 +1256,7 @@ void criSj_GetChunk(void* object, CriSint32 operation = 0, CriUint32 limit = 0, 
 
 // MS2-FUNCTIONAL: call the stream-joint object's third virtual operation.
 // @0x1400467a8
-void criSj_UngetChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
+extern "C" void criSj_UngetChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
     typedef void (*Callback)(void*, CriSint32, void*);
     ((Callback)*(void**)((CriUint8*)*(void**)object + 0x18))(object, operation, chunk);
@@ -1264,7 +1264,7 @@ void criSj_UngetChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
 
 // MS2-FUNCTIONAL: call the stream-joint object's fourth virtual operation.
 // @0x1400467b0
-void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
+extern "C" void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
 {
     typedef void (*Callback)(void*, CriSint32, void*);
     ((Callback)*(void**)((CriUint8*)*(void**)object + 0x20))(object, operation, chunk);
@@ -1272,7 +1272,7 @@ void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chunk = NULL)
 
 // MS2-FUNCTIONAL: call the stream-joint object's fifth virtual operation.
 // @0x1400467b8
-CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
+extern "C" CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0)
 {
     typedef CriSint32 (*Callback)(void*, CriSint32);
     return ((Callback)*(void**)((CriUint8*)*(void**)object + 0x28))(object, query);
@@ -1409,7 +1409,7 @@ CriSint32 criSjUni_GetTotalSize(void* object, CriSint32 lane)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 void criVdec_Destroy(CriUint64* adapter);
 
-void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
+extern "C" void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
 
 CriSint32 criMvPlyAmng_CalcAmngWorkSize(const void* player);
 
@@ -1625,7 +1625,7 @@ void criUsfDmx_Destroy(void* object)
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 CriUint32 mvPlyAdec_decideOutputSamples(void* track, void* player, CriUint32 channel, CriUint32 maximum);
 
-void FUN_140043970(void* track, void* player);
+extern "C" void FUN_140043970(void* track, void* player);
 
 void FUN_140042700(void* trackSet, void* player);
 #pragma optimize("", on)

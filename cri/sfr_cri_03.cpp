@@ -77,7 +77,7 @@ void SJMEM_Finish(void);
 void SJRBF_Finish(void);
 unsigned int MPV_Destroy(__int64);    // C3: the definition's signature
 void criSj_Destroy(void*);
-unsigned __int64 SJRBF_Create(unsigned __int64, unsigned int, unsigned int);   // C3: the definition's signature
+extern "C" unsigned __int64 SJRBF_Create(unsigned __int64, unsigned int, unsigned int);   // C3: the definition's signature
 void criVmpv_Destroy(void*);
 CriSint32 FUN_14003cff0(void*);
 CriUint32 criVdecCmn_GetNumPictureData(const void* decoder);
@@ -87,9 +87,9 @@ unsigned int MPV_SetCond(__int64, int, unsigned int);    // C3: the definition's
 void MPV_SetDlgPara(unsigned int, __int64); // C3: the definition's signature
 __int64 MPV_Create(void);     // C3: the definition's signature
 unsigned int MPV_SetErrFunc(__int64, unsigned __int64, unsigned __int64); // C3: the definition's signature
-void criSj_UngetChunk(void*, CriSint32, void*);
-void criSj_PutChunk(void*, CriSint32, void*);
-CriSint32 FUN_1400467b8(void*, CriSint32);
+extern "C" void criSj_UngetChunk(void*, CriSint32, void*);
+extern "C" void criSj_PutChunk(void*, CriSint32, void*);
+extern "C" CriSint32 FUN_1400467b8(void*, CriSint32);
 void criSj_Reset(void*);
 void criSj_GetChunk(void*, CriSint32, CriUint32, void*);
 CriSint32 FUN_140053630(void*);
@@ -108,10 +108,10 @@ void FUN_140046014(void*);
 void FUN_14004602c(void*);
 CriSint32 criSjRbf_GetRequiredMemorySizeWithConfig(CriUint32, CriUint32, CriUint32, const CriUint32*);
 void* criSj_CreateNamedRingBuffer(void*, CriUint32, CriUint32, CriUint32, CriUint64);
-unsigned __int64 * criAdec_Create(unsigned __int64, unsigned int, unsigned int); // C3: the definition's signature
-void FUN_1400534d0(void*);
-void criAdec_SetInputSj(__int64, unsigned __int64); // C3: the definition's signature
-void criAdec_SetOutputSj(__int64, unsigned int, unsigned __int64); // C3: the definition's signature
+extern "C" unsigned __int64 * criAdec_Create(unsigned __int64, unsigned int, unsigned int); // C3: the definition's signature
+extern "C" void FUN_1400534d0(void*);
+extern "C" void criAdec_SetInputSj(__int64, unsigned __int64); // C3: the definition's signature
+extern "C" void criAdec_SetOutputSj(__int64, unsigned int, unsigned __int64); // C3: the definition's signature
 void criMvPlyAmng_DestroyAudioDecoder(void*, void*, CriSint32);
 // Scaleform runtime calls of the CRI glue, through views of the Scaleform classes (no Scaleform header here)
 namespace Scaleform {
@@ -126,11 +126,11 @@ class ImageData { public: void GetPlane(unsigned index, ImagePlane* plane) const
 void FUN_14257db50(void* object);
 void FUN_140054040(__int64, unsigned __int64, unsigned __int64);  // C3: the definition's signature
 void FUN_140053540(__int64);  // C3: the definition's signature
-void crimvply_occurFatalError(void*, const CriChar8*, CriSint32);
+extern "C" void crimvply_occurFatalError(void*, const CriChar8*, CriSint32);
 void crimvply_transitErrorState(void* player, void* message);
 unsigned __int64 criAadx_Execute(__int64); // C3: the definition's signature
 void FUN_140053470(unsigned __int64 *);  // C3: the definition's signature
-void crimvply_occurUserError(void*, const CriChar8*, CriSint32);
+extern "C" void crimvply_occurUserError(void*, const CriChar8*, CriSint32);
 void criMvPlyAmng_DestroyAudioDecoder(void*, void*, CriSint32);
 CriSint32 criMvPly_GetStatus(void* player);
 void FUN_1400345e0(void *, void *, unsigned long, unsigned long);  // C3: the definition's signature
@@ -144,7 +144,7 @@ void* criVmpv_GetFramePointer(void*, void*);
 void FUN_140040cc0(void*, CriUint32, CriSint32*, CriSint32*);
 void criErr_NotifyGeneric(CriSint32, const char*, CriSint32);
 void criErr_NotifyPrmArray(CriSint32, const char*, CriSint32, CriSint32, void*);
-void FUN_140041110(void*, const char*, CriUint32);
+extern "C" void FUN_140041110(void*, const char*, CriUint32);
 void FUN_140046d50(void*, CriSint32);
 void FUN_140053570(__int64);  // C3: the definition's signature
 void MPV_RequestStop(__int64); // C3: the definition's signature
@@ -179,14 +179,14 @@ void FUN_14029dd60(void*, const CriChar8*, const void*);
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
 // send the supplied CRI diagnostic through the movie error dispatcher.
 // @0x1400410d0
-void crivmpv_occurFatalError(void* owner, const CriChar8* message, CriUint32 value)
+extern "C" void crivmpv_occurFatalError(void* owner, const CriChar8* message, CriUint32 value)
 {
     criErr_NotifyPrmArray(0, message, (CriSint32)value, 0, owner);
 }
 
 // the second CRI diagnostic entry point forwards the same tuple to the shared dispatcher.
 // @0x140041110
-void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value)
+extern "C" void FUN_140041110(void* owner, const CriChar8* message, CriUint32 value)
 {
     criErr_NotifyPrmArray(0, message, (CriSint32)value, 0, owner);
 }
@@ -223,7 +223,7 @@ void FUN_14003ebe0(void* object)
 
 // accept only USF chunks whose parsed standard header has no special record flag.
 // @0x14003eeb0
-CriBool FUN_14003eeb0(const void* input)
+extern "C" CriBool FUN_14003eeb0(const void* input)
 {
     struct Input { const CriUint8* Data; CriUint32 Size; };
     CriUsfHeaderFields header;
@@ -470,7 +470,7 @@ CriBool FUN_140040de0(void* object)
 
 // determine whether a USF chunk contains payload beyond its declared standard-header extent.
 // @0x14003d6c0
-CriBool FUN_14003d6c0(const void* input)
+extern "C" CriBool FUN_14003d6c0(const void* input)
 {
     struct Input { const CriUint8* Data; CriUint32 Size; };
     CriUsfHeaderFields header;
@@ -1144,7 +1144,7 @@ void FUN_14003cca0(void* handle)
 
 // append a decoded-frame timestamp to the bounded history ring.
 // @0x14003d550
-void FUN_14003d550(void* handle)
+extern "C" void FUN_14003d550(void* handle)
 {
     struct Entry { CriSint32 Begin, End; };
     struct PlayerTimeline
@@ -2221,11 +2221,11 @@ void criSj_PutOutputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 
 void criSj_GetChunk(void* object, CriSint32 operation = 0, CriUint32 limit = 0, void* output = NULL);
 
-void criSj_UngetChunk(void* object, CriSint32 operation = 0, void* chunk = NULL);
+extern "C" void criSj_UngetChunk(void* object, CriSint32 operation = 0, void* chunk = NULL);
 
-void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chunk = NULL);
+extern "C" void criSj_PutChunk(void* object, CriSint32 operation = 0, void* chunk = NULL);
 
-CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0);
+extern "C" CriSint32 FUN_1400467b8(void* object, CriSint32 query = 0);
 
 void criSj_GetInputChunk(void* object, void* value);
 
@@ -2457,7 +2457,7 @@ void criVdec_Destroy(CriUint64* adapter)
 
 // clear the current Sofdec input state and reset its attached audio decoder.
 // @0x140043550
-void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input)
+extern "C" void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input)
 {
     struct InputState
     {
@@ -2828,7 +2828,7 @@ CriUint32 mvPlyAdec_decideOutputSamples(void* track, void* player, CriUint32 cha
 
 // apply the selected channel's three decoder parameters to its audio decoder.
 // @0x140043970
-void FUN_140043970(void* track, void* player)
+extern "C" void FUN_140043970(void* track, void* player)
 {
     struct AudioTrack
     {

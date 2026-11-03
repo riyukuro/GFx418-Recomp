@@ -20,22 +20,29 @@ typedef unsigned char CriUint8;
 typedef unsigned long CriUint32;
 typedef long CriSint32;
 
+// the C++ units define these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
+#ifdef __cplusplus
+#define CRI_C_LINKAGE extern "C"
+#else
+#define CRI_C_LINKAGE
+#endif
+
 struct CriUsfStandardHeader;
 typedef struct CriUsfHeaderFields { CriUint32 ChunkId, Size, Word08; CriUint8 Byte0C, Byte0D, Byte0E, Kind; CriUint32 Words[5]; } CriUsfHeaderFields;
 typedef struct CriVideoQueueFields { CriUint8 Reserved00[0x180]; void* InputQueue; } CriVideoQueueFields;
 
 void criSj_GetChunk(void* object, CriSint32 operation, CriUint32 limit, void* output);
-void criSj_UngetChunk(void* object, CriSint32 operation, void* chunk);
-void criSj_PutChunk(void* object, CriSint32 operation, void* chunk);
-CriSint32 FUN_1400467b8(void* object, CriSint32 query);
+CRI_C_LINKAGE void criSj_UngetChunk(void* object, CriSint32 operation, void* chunk);
+CRI_C_LINKAGE void criSj_PutChunk(void* object, CriSint32 operation, void* chunk);
+CRI_C_LINKAGE CriSint32 FUN_1400467b8(void* object, CriSint32 query);
 void criMvPly_SetDemuxOutputSj(void* player, void* value, CriUint32 type, CriUint32 flags);
 CriUint32 criUsfCmn_ParseUsfHeaderStd(const CriUint8* data, CriUint32 size, struct CriUsfStandardHeader* header);
-CriSint32 FUN_14003eeb0(const void* input);
-CriSint32 FUN_14003d6c0(const void* input);
-void FUN_1400410d0(void* owner, const char* message, CriUint32 value);
-void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
-void FUN_140043970(void* track, void* player);
-void FUN_14003d550(void* handle);
+CRI_C_LINKAGE CriSint32 FUN_14003eeb0(const void* input);
+CRI_C_LINKAGE CriSint32 FUN_14003d6c0(const void* input);
+CRI_C_LINKAGE void crivmpv_occurFatalError(void* owner, const char* message, CriUint32 value);
+CRI_C_LINKAGE void mvPlyAdec_StartAudioDecoder(CriSint32* state, void* input);
+CRI_C_LINKAGE void FUN_140043970(void* track, void* player);
+CRI_C_LINKAGE void FUN_14003d550(void* handle);
 // the C name binds to sfr_cri_03a's C++ definition in the full exe (the FUN_<va> names above are aliased by their VA; this
 // one has none, so the link left it to a trap stub); the hook DLL's ms2sym.obj already maps it to the exe address
 #ifndef MS2_HOOK_DLL
@@ -91,7 +98,7 @@ CriSint32 FUN_14003cff0(void* player)
                 criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (struct CriUsfStandardHeader*)&uhdr);
                 if (chunk.Size + second.Size < uhdr.Size + 8)
                 {
-                    FUN_1400410d0(0, "E07111401M : Video chunk might not be demuxed properly..\n", 0);
+                    crivmpv_occurFatalError(0, "E07111401M : Video chunk might not be demuxed properly..\n", 0);
                 }
                 else
                 {
@@ -137,7 +144,7 @@ CriSint32 FUN_14003cff0(void* player)
                 criSj_GetChunk(((DemuxPlayerFields*)player)->Queue, 1, 0xffffffff, &second);
                 criUsfCmn_ParseUsfHeaderStd(chunk.Data, chunk.Size, (struct CriUsfStandardHeader*)&uhdr);
                 if (chunk.Size + second.Size < uhdr.Size + 8)
-                    FUN_1400410d0(0, "E08121601M : Video meta chunk might not be demuxed properly.\n", 0);
+                    crivmpv_occurFatalError(0, "E08121601M : Video meta chunk might not be demuxed properly.\n", 0);
             }
             else
             {
@@ -205,7 +212,7 @@ CriSint32 FUN_14003ed40(void* player)
                     criSj_GetChunk(stream, 2, 0xffffffff, &second);
                     criUsfCmn_ParseUsfHeaderStd(cur.Data, cur.Size, (struct CriUsfStandardHeader*)&uhdr);
                     if (cur.Size + second.Size < uhdr.Size + 8)
-                        FUN_1400410d0(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
+                        crivmpv_occurFatalError(0, "E08121602M : Video chunk might not be demuxed properly.\n", 0);
                 }
                 else
                 {
@@ -265,8 +272,8 @@ void criVmpv_Destroy(void* handle);
 void* criSj_CreateUniversal(void* heap, CriUint32 first, CriUint32 second);
 CriSint32 createMpvHn(void* handle, void* heap, CriUint32 width, CriUint32 height, CriUint32 frames);
 CriSint32 decideInternalFramePoolNum(CriSint32 count);
-unsigned __int64 FUN_14004fe20(unsigned __int64 source, unsigned int first, unsigned int second);
-void FUN_140041110(void* owner, const char* message, CriUint32 value);
+CRI_C_LINKAGE unsigned __int64 SJRBF_Create(unsigned __int64 source, unsigned int first, unsigned int second);
+CRI_C_LINKAGE void FUN_140041110(void* owner, const char* message, CriUint32 value);
 // the C names bind to sfr_cri_03's C++ definitions, and its C++ caller's name to the C definition below
 #ifndef MS2_HOOK_DLL
 #pragma comment(linker, "/alternatename:criVmpv_Destroy=?criVmpv_Destroy@@YAXPEAX@Z")
@@ -346,7 +353,7 @@ void* criVmpv_Create(void* heap, const CriUint32* config)
     hn->InputSj = criSj_CreateUniversal(heap, 0, 0x20);
     if (hn->InputSj == 0)
     {
-        FUN_1400410d0(0, "E05070702M : Can't create SJ for input video.", 0);
+        crivmpv_occurFatalError(0, "E05070702M : Can't create SJ for input video.", 0);
         criVmpv_Destroy(hn);
         return 0;
     }
@@ -381,7 +388,7 @@ void* criVmpv_Create(void* heap, const CriUint32* config)
     hn->FrameSj = criSj_CreateUniversal(heap, 0, hn->PoolNum);
     if (hn->FrameSj == 0)
     {
-        FUN_1400410d0(0, "E05070903M : Can't create frame pool SJ.", 0);
+        crivmpv_occurFatalError(0, "E05070903M : Can't create frame pool SJ.", 0);
         criVmpv_Destroy(hn);
         return 0;
     }
@@ -394,7 +401,7 @@ void* criVmpv_Create(void* heap, const CriUint32* config)
     }
     hn->LaneCount = 0;
     if (input != 0)
-        hn->Decoder = (void*)FUN_14004fe20((unsigned __int64)input, total, size);
+        hn->Decoder = (void*)SJRBF_Create((unsigned __int64)input, total, size);
     else
         hn->Decoder = 0;
     hn->Source = input;
@@ -410,12 +417,12 @@ void* criVmpv_Create(void* heap, const CriUint32* config)
 
 void criMvPlyAmng_DestroyAudioDecoder(void* manager, void* heap, CriSint32 decoderIndex);
 void* criSj_CreateNamedRingBuffer(void* heap, CriUint32 first, CriUint32 second, CriUint32 third, unsigned __int64 name);
-unsigned __int64* FUN_140053340(unsigned __int64 heap, unsigned int channels, unsigned int mode);
-void FUN_1400534d0(void* decoder);
-void FUN_1400534f0(__int64 decoder, unsigned __int64 input);
-void FUN_140053510(__int64 decoder, unsigned int channel, unsigned __int64 output);
-void FUN_140037910(void* owner, const char* message, CriSint32 value);
-void FUN_140037950(void* owner, const char* message, CriSint32 value);
+CRI_C_LINKAGE unsigned __int64* criAdec_Create(unsigned __int64 heap, unsigned int channels, unsigned int mode);
+CRI_C_LINKAGE void FUN_1400534d0(void* decoder);
+CRI_C_LINKAGE void criAdec_SetInputSj(__int64 decoder, unsigned __int64 input);
+CRI_C_LINKAGE void criAdec_SetOutputSj(__int64 decoder, unsigned int channel, unsigned __int64 output);
+CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
+CRI_C_LINKAGE void crimvply_occurUserError(void* owner, const char* message, CriSint32 value);
 #ifndef MS2_HOOK_DLL
 #pragma comment(linker, "/alternatename:criMvPlyAmng_DestroyAudioDecoder=?criMvPlyAmng_DestroyAudioDecoder@@YAXPEAX0J@Z")
 #pragma comment(linker, "/alternatename:criSj_CreateNamedRingBuffer=?criSj_CreateNamedRingBuffer@@YAPEAXPEAXKKK_K@Z")
@@ -464,7 +471,7 @@ CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap
     if (hn == 0)
     {
         criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-        FUN_140037950(owner, "E07090702M : Can't allocate CriMvPlyAdec handle.", 8);
+        crimvply_occurUserError(owner, "E07090702M : Can't allocate CriMvPlyAdec handle.", 8);
         return 0;
     }
     memset(hn, 0, 0x98);
@@ -476,14 +483,14 @@ CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap
     hn->ChannelFormat = decoderConfig[0];
     hn->WorkCount = decoderConfig[3];
     if (((AudioOwnerFields*)owner)->OutputMode == 0)
-        ptr = FUN_140053340((unsigned __int64)heap, hn->ChannelCount, 0);
+        ptr = criAdec_Create((unsigned __int64)heap, hn->ChannelCount, 0);
     else
-        ptr = FUN_140053340((unsigned __int64)heap, hn->ChannelCount, 1);
+        ptr = criAdec_Create((unsigned __int64)heap, hn->ChannelCount, 1);
     hn->Decoder = ptr;
     if (ptr == 0)
     {
         criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-        FUN_140037910(owner, "E05063014M : Can't create Audio decoder.", 0);
+        crimvply_occurFatalError(owner, "E05063014M : Can't create Audio decoder.", 0);
         return 0;
     }
     FUN_1400534d0(ptr);
@@ -498,13 +505,13 @@ CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* owner, void* heap
         if (hn->Outputs[i] == 0)
         {
             criMvPlyAmng_DestroyAudioDecoder(manager, heap, decoderIndex);
-            FUN_140037910(owner, "E05063018M : Can't create SJ for output audio.", 0);
+            crimvply_occurFatalError(owner, "E05063018M : Can't create SJ for output audio.", 0);
             return 0;
         }
     }
-    FUN_1400534f0((__int64)ptr, (unsigned __int64)hn->InputJoint);
+    criAdec_SetInputSj((__int64)ptr, (unsigned __int64)hn->InputJoint);
     for (i = 0; i < hn->ChannelCount; i++)
-        FUN_140053510((__int64)ptr, i, (unsigned __int64)hn->Outputs[i]);
+        criAdec_SetOutputSj((__int64)ptr, i, (unsigned __int64)hn->Outputs[i]);
     ((AudioTrackSet*)manager)->Count = ((AudioTrackSet*)manager)->Count + 1;
     return 1;
 }

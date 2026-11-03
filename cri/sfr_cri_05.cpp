@@ -152,7 +152,7 @@ cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 void FUN_1400467a0(void* object, long operation, unsigned long limit, void* output);
 void FUN_1400467a8(void* object, long operation, void* chunk);
 void FUN_1400467b0(void* object, long operation, void* chunk);
-long FUN_1400467b8(void* object, long query);
+extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 void FUN_14004c370();
 void FUN_14004c7c0(double *, double *);  // C3: the definition's signature

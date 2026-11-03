@@ -317,13 +317,19 @@ typedef struct CriMvSubtitleItemInfo        // analyzeSubtitleInfo fills 0x38 by
 typedef struct CriMvSubtitleFrameCounter { CriUint8 Reserved[0xe30]; CriUint32 Value; } CriMvSubtitleFrameCounter;
 
 void FUN_140028074(void* heap);
+// the C++ units define these with C linkage (extern "C"), so the clang-cl C++ compile declares them so too
+#ifdef __cplusplus
+#define CRI_C_LINKAGE extern "C"
+#else
+#define CRI_C_LINKAGE
+#endif
 CriBool allocateMetaWork(void* player);
 void FUN_140034330(void* player, void* source, void* readBuffer, void* dataQueue);
 void criUsfDmx_Stop(void* demux);
 void criUsfDmx_Execute(void* demux);
 CriSint32 criUsfDmx_GetStatus(void* demux);
 void crimvply_transitErrorState(void* player, void* message);
-void crimvply_occurUserError(void* owner, const char* message, CriSint32 value);
+CRI_C_LINKAGE void crimvply_occurUserError(void* owner, const char* message, CriSint32 value);
 void criMvPlyAmng_TerminateSupply(void* audioManager);
 void criVdec_TerminateSupply(void* decoder);
 void criAlphaDec_TerminateSupply(void* decoder);
@@ -338,13 +344,13 @@ void criUsfDmx_SetThrououtSwitch(void* demux, CriBool value);   // the exe C cal
 void criSj_Reset(void* streamJoint);
 void* criMvPly_GetInputSj(void* player, CriUint32* available, CriUint32* bounded);
 void FUN_1400467a0(void* queue, CriSint32 operation, CriSint32 timeout, void* item);
-void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
-CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
+CRI_C_LINKAGE void criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
+CRI_C_LINKAGE CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void criSj_GetInputChunk(void* object, void* value);
 void criMvPly_AddInputMemory(void* player, void* chunk, CriUint32 type);
 void FUN_140046814(void* streamJoint, const void* chunk, CriUint32 size);
-void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
-void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
+CRI_C_LINKAGE void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
+CRI_C_LINKAGE void criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 FUN_14003b3fc(const CriUint8* data, CriUint32 size, void* output);
 const CriUint8* criUsfCmn_GetContents(const CriUint8* data, CriUint32 size, CriSint32* contentSize);
 typedef struct CriUsfStandardHeader CriUsfStandardHeader;

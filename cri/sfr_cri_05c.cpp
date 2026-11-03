@@ -164,7 +164,7 @@ cri_u64 FUN_1400467b8(Any a0,Any a1 = 0);
 void FUN_1400467a0(void* object, long operation, unsigned long limit, void* output);
 void FUN_1400467a8(void* object, long operation, void* chunk);
 void FUN_1400467b0(void* object, long operation, void* chunk);
-long FUN_1400467b8(void* object, long query);
+extern "C" long FUN_1400467b8(void* object, long query);
 void FUN_1400467c0(Any a0,Any a1,Any a2,Any a3);
 // sfr_cri_03's names and types for 0x14003b3fc, 0x14003b674 and 0x1400467c0: the /Od ADX loader functions below
 // call these and the typed 0x1400467a0-b8 overloads, so their arguments are passed directly (no Any temporaries).
@@ -577,7 +577,7 @@ void SJRBF_SetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3,cri_u32 a4);
 
 cri_u32 SJRBF_GetFlowCnt(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 
-cri_u64 SJRBF_Create(cri_u64 a1,cri_u32 a2,cri_u32 a3);
+extern "C" cri_u64 SJRBF_Create(cri_u64 a1,cri_u32 a2,cri_u32 a3);
 
 cri_u64 SJRBF_CreateHndl(cri_u64 a1,cri_u32 a2);
 
@@ -845,7 +845,7 @@ int FUN_1400532e0(int a1)
 #pragma function(memset)                      // the exe calls memset here rather than expanding it
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053340
-cri_u64 * criAdec_Create(cri_u64 a1,uint a2,cri_u32 a3)
+extern "C" cri_u64 * criAdec_Create(cri_u64 a1,uint a2,cri_u32 a3)
 {
   cri_u64 *adec;
 
@@ -891,14 +891,14 @@ void FUN_140053470(cri_u64 *a1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400534d0
-void FUN_1400534d0(void* a1)
+extern "C" void FUN_1400534d0(void* a1)
 {
   a1 = a1;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x1400534f0
-void criAdec_SetInputSj(longlong a1,cri_u64 a2)
+extern "C" void criAdec_SetInputSj(longlong a1,cri_u64 a2)
 {
   (*(cri_u64*)((char*)(a1) + 0x18)) = a2;
   return;
@@ -906,7 +906,7 @@ void criAdec_SetInputSj(longlong a1,cri_u64 a2)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
 // @0x140053510
-void criAdec_SetOutputSj(longlong a1,uint a2,cri_u64 a3)
+extern "C" void criAdec_SetOutputSj(longlong a1,uint a2,cri_u64 a3)
 {
   *(cri_u64 *)((*(longlong*)((char*)(a1) + 0x20)) + (ulonglong)a2 * 8) = a3;
   return;

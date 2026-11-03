@@ -108,7 +108,7 @@ void*    FUN_140041c00(void* mem);                                      // Syste
 void*    FUN_14002a010(void* mem, void* pheap, void* psound);           // CriMvSound::CriMvSound(MemoryHeap*, VideoSound*)
 void*    FUN_140029e40(void* mem, void* psync);                     // CriMvSystemTimer::CriMvSystemTimer(SyncObject*)
 void*    FUN_14002abd0(void* mem, CriUint32 format, const CriUint32* psize, const void* ptexman, void* pplayer); // VideoImage ctor
-void     crimvply_occurUserError(void* player, const char* message, CriSint32 severity);
+extern "C" void     crimvply_occurUserError(void* player, const char* message, CriSint32 severity);
 void     criUsfDmx_TerminateSupply(void* inputBuffer);
 CriSint32 criSjRbf_CalculateWorkSize(const CriSint32* config);
 void*    criSjRbf_Create(const void* config, void* work, CriSint32 workSize);
@@ -142,7 +142,7 @@ void     criMvPly_Destroy(CriUint32* player);
 void     initializeHandleParameters(void* player);
 void*    crimvply_findVdecIF(CriSint32 codecId);
 void*    criVdec_GetVdecCoreIf(void* decoderInterface);
-CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
+extern "C" CriSint32 FUN_1400467b8(void* ringBuffer, CriSint32 query);
 void criSj_GetInputChunk(void* object, void* value);
 void     criSj_PutInputChunk(void* streamJoint, const void* chunk, CriUint32 size);
 void criSj_SplitChunk(const void* source, CriUint32 maximum, void* prefix, void* suffix);
@@ -236,8 +236,8 @@ CriBool  criMvPly_LockFrameBuffer(void* player, void* movieYuvState, void* outpu
 CriBool  FUN_140035800(void* player, void* movieYuvState, void* outputInfo);
 CriSint32 FUN_1400397a0(CriMvEasyPlayer* self, CriMvEasyPlayer* player, const CriMvFrameInfo* frameInfo,
                         CriUint64 count, CriUint64 unit, void* userData);
-void     criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
-void     criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
+extern "C" void     criSj_PutChunk(void* queue, CriSint32 operation, void* chunk);
+extern "C" void     criSj_UngetChunk(void* queue, CriSint32 operation, void* chunk);
 CriUint32 executeSubtitleServer(void* player);
 void     executeHeaderServer(void* player);
 void     executeDiscardFrameServer(void* player);
@@ -269,7 +269,7 @@ void     criVdec_GetFramePoolInfo(void* decoder, void* a, void* b, void* c, void
 void     criUsfDmx_SetOutputSj(void* output, CriUint32 index, void* value, CriUint32 type, CriSint32 flags);
 void     criVdec_Execute(CriUint64* decoder);
 void     criAlphaDec_Execute(void* decoder);
-CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
+extern "C" CriBool  FUN_1400467b8(void* queue, CriSint32 operation);
 void     criSj_GetChunk(void* queue, CriSint32 operation, CriUint32 timeout, void* item);
 void     criVdec_SetProcessorMask(void* decoder, CriUint32 count);
 void     criAlphaDec_SetProcessorMask(CriUint64* decoder, CriUint32 count);
@@ -286,7 +286,7 @@ CriSint32 criMvPlyAmng_CreateAudioDecoder(void* manager, void* player, void* sou
                        CriUint32 stream, CriSint32 enable);
 void     criMvPlyAmng_SetDecryptCallback(void* manager, void* callback, void* player, CriSint32 enable);
 CriBool  criMvPly_IsSetDefaultDecryptionKey(void);
-void     crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
+extern "C" void     crimvply_occurFatalError(void* owner, const char* message, CriSint32 value);
 CriUint32 criMvPlyAmng_GetDataSizeWave(void* manager, CriSint32 stream, void* player, CriUint32 channels);
 CriSint32 criMvPlyAmng_IsEndAudioPlaybackById(void* manager, void* player, CriSint32 stream);
 void     criMvPlyAmng_DestroyAudioDecoder(void* manager, void* decoder, CriSint32 stream);
@@ -1530,14 +1530,14 @@ void leaveHandleCs(void* player)
 
 // MS2-FUNCTIONAL: forward CRI's non-state-changing diagnostic through the shared error notifier.
 // @0x140037910
-void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value)
+extern "C" void crimvply_occurFatalError(void* owner, const char* message, CriSint32 value)
 {
     criErr_NotifyPrmArray(0, message, value, 0, owner);
 }
 
 // MS2-FUNCTIONAL: mark the movie player in error before forwarding the diagnostic.
 // @0x140037950
-void crimvply_occurUserError(void* owner, const char* message, CriSint32 value)
+extern "C" void crimvply_occurUserError(void* owner, const char* message, CriSint32 value)
 {
     if (owner)
         ((CriMvErrorState*)owner)->Error = 1;
