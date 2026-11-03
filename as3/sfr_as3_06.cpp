@@ -2580,10 +2580,23 @@ template Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::Mo
 template void Scaleform::ArrayDataBase<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, Scaleform::AllocatorGH_CPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr, 2>, Scaleform::ArrayDefaultPolicy>::Reserve(const void*, Scaleform::UPInt);
 template void Scaleform::ConstructorCPP<Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr>::Construct(void*, const Scaleform::GFx::AS3::Instances::fl_display::MovieClip::FrameScript::Descr&);
 
+namespace Scaleform {
+// The pixel vector's Resize, out of line as in the exe (VectorBase<UInt32>::Set calls it).
+template <>
+SF_NOINLINE void ArrayDataDH<UInt32, AllocatorDH<UInt32, 2>, ArrayDefaultPolicy>::Resize(UPInt newSize)
+{
+    UPInt oldSize = this->Size;
+    BaseType::ResizeNoConstruct(pHeap, newSize);
+    if (newSize > oldSize)
+        AllocatorType::ConstructArray(this->Data + oldSize, newSize - oldSize);
+}
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // VectorBase<UInt32>::Set instance, emitted here for the pixel vector writers.
-// MS2-FUNCTIONAL: exe calls an out-of-line CheckFixed copy (0x14255b2d0); ours inlines it
+// MS2-FUNCTIONAL: the exe tail-duplicates the size load of the range test and keeps ind + 1 in r14 across the
+// CheckFixed call. CheckFixed (0x14255b2d0) is called through a member pointer so that it stays out of line, as in the exe.
 // @0x142446540
 template <>
 CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTraits::Traits& tr)
@@ -2596,7 +2609,8 @@ CheckResult VectorBase<UInt32>::Set(UInt32 ind, const Value& v, const ClassTrait
     }
     if (ind == (UInt32)V.GetSize())
     {
-        if (!CheckFixed())
+        CheckResult (ArrayBase::*check)() const = &ArrayBase::CheckFixed;
+        if (!(this->*check)())
             return false;
         UPInt i = V.GetSize();
         V.Resize(ind + 1);
