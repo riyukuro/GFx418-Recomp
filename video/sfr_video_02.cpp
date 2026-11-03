@@ -1212,19 +1212,20 @@ Scaleform::GFx::AS3::Value* FUN_1400151e0(Scaleform::GFx::AS3::Value* dst,
     return dst;
 }
 
-// MS2-FUNCTIONAL: initializes from the AS3 Value undefined singleton used by the executable.
+// Copies the AS3 undefined singleton; __restrict keeps the source flags in a register as the exe does.
 // @0x140013ec0
 Scaleform::GFx::AS3::Value* FUN_140013ec0(Scaleform::GFx::AS3::Value* dst)
 {
-    dst->Scaleform::GFx::AS3::Value::Value(Scaleform::GFx::AS3::Value::GetUndefined());   // in place, no null check
+    Scaleform::GFx::AS3::Value* __restrict out = dst;
+    out->Scaleform::GFx::AS3::Value::Value(Scaleform::GFx::AS3::Value::GetUndefined());   // in place, no null check
     return dst;
 }
 
-// MS2-FUNCTIONAL: initializes the same undefined Value payload as the executable default helper.
+// Same undefined-Value copy as FUN_140013ec0, on a UInt32* view of the slot.
 // @0x140015340
 UInt32* FUN_140015340(UInt32* dst)
 {
-    Scaleform::GFx::AS3::Value* value = reinterpret_cast<Scaleform::GFx::AS3::Value*>(dst);
+    Scaleform::GFx::AS3::Value* __restrict value = reinterpret_cast<Scaleform::GFx::AS3::Value*>(dst);
     value->Scaleform::GFx::AS3::Value::Value(Scaleform::GFx::AS3::Value::GetUndefined());   // in place, no null check
     return dst;
 }
