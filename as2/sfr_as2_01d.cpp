@@ -245,7 +245,7 @@ String AsString(const Abc::ConstPool& cp, const Abc::NamespaceSetInfo& nss, Name
     const unsigned count = Abc::ReadU30(p);
     for (unsigned i = 0; i < count; ++i)
     {
-        const unsigned ind = Abc::ReadU30(p);
+        const UPInt ind = (unsigned)Abc::ReadU30(p);
         const Abc::NamespaceInfo& ns = ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind];
         String text = AsString(ns, nt);
         if (i != 0 && !text.IsEmpty() && result.GetSize() > 1)
