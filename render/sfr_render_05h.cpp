@@ -9,6 +9,7 @@
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
+#include "ms2/scaleform/include/render/render_tessgen.h"
 #include "ms2/scaleform/include/render/render_shapedatafloatmp.h"
 
 namespace Scaleform { namespace Render {
