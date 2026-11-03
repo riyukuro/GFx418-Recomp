@@ -8,6 +8,10 @@
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 
+// The argument specs' array destructor is out of line in the exe (exe 0x142924180, defined in sfr_as2_03p).
+template<> Scaleform::ArrayDataBase<Scaleform::GFx::AS2::AsFunctionObject::ArgSpec,
+    Scaleform::AllocatorLH<Scaleform::GFx::AS2::AsFunctionObject::ArgSpec, 323>, Scaleform::ArrayDefaultPolicy>::~ArrayDataBase();
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The members of AsFunctionObject past +0x78, as in sfr_as2_03af (the argument specs typed).
@@ -22,7 +26,8 @@ struct AsFunctionBodyView
     ASString                                           Name;          // +0xc0
 };
 
-// MS2-FUNCTIONAL: the exe releases the handle with the reference count and destructor inlined
+// The body members are destroyed in reverse order (the argument specs through the exe's out-of-line array dtor),
+// then the action buffer and the target handle are released.
 // @0x142942c00
 void AsFunctionObject::Finalize_GC()
 {
