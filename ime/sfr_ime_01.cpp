@@ -1785,12 +1785,13 @@ void* FUN_1423dba40(void* object, unsigned flags)
     return object;
 }
 
-// MS2-FUNCTIONAL: releases both retained AbcDataBuffer fields, invokes the base helper, and follows delete flags.
+// Scalar deleting destructor: releases the +0x28 and +0x10 strings (reverse member order), runs the RefCountImplCore
+// destructor, and follows the delete flags.
 // @0x1423dbab0
 void* FUN_1423dbab0(unsigned long long* object, unsigned flags)
 {
-    Sfr33ReleasePacked(object[5]);
-    Sfr33ReleasePacked(object[2]);
+    struct View { void* vtable; unsigned long long refCount; Scaleform::String s10; unsigned long long p18[2]; Scaleform::String s28; };
+    reinterpret_cast<View*>(object)->~View();
     RawRefCountCoreDtor(object);
     if (flags & 1) {
         if (!(flags & 4)) Memory::Free(object);
