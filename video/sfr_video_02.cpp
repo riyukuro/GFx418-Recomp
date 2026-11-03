@@ -992,21 +992,17 @@ uintptr_t FUN_140014020(uintptr_t self, UInt32* value, const double* input)
     return self;
 }
 
-// MS2-FUNCTIONAL: performs the inline numeric conversion on the executable's AS3 Value input.
 // @0x140012d30
-uintptr_t FUN_140012d30(uintptr_t self, uintptr_t, Scaleform::GFx::AS3::Value* input)
+uintptr_t FUN_140012d30(uintptr_t self, uintptr_t result, Scaleform::GFx::AS3::Value* input)
 {
-    double number;
-    input->Convert2NumberInline(number);
+    input->Convert2Number(*reinterpret_cast<double*>(result));
     return self;
 }
 
-// MS2-FUNCTIONAL: performs the inline numeric conversion into the executable's temporary result.
 // @0x140013a00
-void FUN_140013a00(void*, Scaleform::GFx::AS3::Value* input)
+void FUN_140013a00(void* result, Scaleform::GFx::AS3::Value* input)
 {
-    double number;
-    input->Convert2NumberInline(number);
+    input->Convert2Number(*static_cast<double*>(result));
 }
 
 // @0x140012d00
@@ -1033,16 +1029,14 @@ void FUN_140015170(UInt32 index, SInt32* result, UInt32 length, const void* valu
     }
 }
 
-// MS2-FUNCTIONAL: performs the executable's inline numeric conversion on the indexed Value when present.
 // @0x1400150b0
-void FUN_1400150b0(UInt32 index, void*, UInt32 length, const void* values)
+void FUN_1400150b0(UInt32 index, void* result, UInt32 length, const void* values)
 {
-    if (index < length)
+    if (length > index)
     {
         const Scaleform::GFx::AS3::Value* input = reinterpret_cast<const Scaleform::GFx::AS3::Value*>(
             static_cast<const char*>(values) + static_cast<size_t>(index) * 0x20);
-        double number;
-        input->Convert2NumberInline(number);
+        input->Convert2Number(*static_cast<double*>(result));
     }
 }
 
@@ -1205,20 +1199,20 @@ Scaleform::GFx::AS3::Value* FUN_1400129d0(Scaleform::GFx::AS3::Value* dst,
     return dst;
 }
 
-// MS2-FUNCTIONAL: initializes the destination with the executable's AS3 Value copy semantics.
 // @0x140013be0
 Scaleform::GFx::AS3::Value* FUN_140013be0(Scaleform::GFx::AS3::Value* dst,
                                           const Scaleform::GFx::AS3::Value* src)
 {
-    return new (dst) Scaleform::GFx::AS3::Value(*src);
+    dst->Scaleform::GFx::AS3::Value::Value(*src);   // in place, no null check
+    return dst;
 }
 
-// MS2-FUNCTIONAL: duplicate AS3 Value copy constructor recovered through the local type.
 // @0x1400151e0
 Scaleform::GFx::AS3::Value* FUN_1400151e0(Scaleform::GFx::AS3::Value* dst,
                                           const Scaleform::GFx::AS3::Value* src)
 {
-    return new (dst) Scaleform::GFx::AS3::Value(*src);
+    dst->Scaleform::GFx::AS3::Value::Value(*src);   // in place, no null check
+    return dst;
 }
 
 // MS2-FUNCTIONAL: initializes from the AS3 Value undefined singleton used by the executable.
