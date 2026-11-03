@@ -4753,7 +4753,7 @@ int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* 
     struct Record { unsigned long long pad0[2]; Scaleform::String name; Scaleform::String text; unsigned code; unsigned pad1[3]; };
     Scaleform::String selected;
     bool alternateFound = false;
-    bool wasSet = false;
+    int wasSet = 0;
     unsigned i = 0;
     int result = -1;
     unsigned code = 0x2000000;
@@ -4788,7 +4788,7 @@ int FUN_1423cada0(unsigned long long* manager, const char* primary, const char* 
             reinterpret_cast<Record*>(manager[0x17])[j].code == code)
             goto searchConfig;
     }
-    if (alternateFound) goto addToLists;
+    if (alternateFound == true) goto addToLists;
 searchConfig:
     {
         struct Config { unsigned code; unsigned pad; unsigned long long language; };
@@ -4813,8 +4813,9 @@ setState:
     }
 addToLists:
     if (!wasSet) {
+        Record* record = reinterpret_cast<Record*>(manager[0x17]) + i;
         const unsigned mode = reinterpret_cast<ModeOf>((*reinterpret_cast<void***>(manager))[3])(manager,
-            reinterpret_cast<Record*>(manager[0x17])[i].code);
+            record->code);
         if (mode & 0xf00) FUN_1422fd480(manager + 2, &selected);
         if (mode & 0xf000) FUN_1422fd480(manager + 5, &selected);
         if (mode & 0xf0000) FUN_1422fd480(manager + 8, &selected);
