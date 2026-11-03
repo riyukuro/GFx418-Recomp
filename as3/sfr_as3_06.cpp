@@ -122,12 +122,20 @@ namespace fl_display
 
 // (the Multiname copy ctor, 0x1424d8f90, is defined in sfr_as3_15)
 
+inline Multiname::Multiname(const InlineCopy& c)
+    : Kind(c.Src.Kind)
+    , Obj(c.Src.Obj)
+    , Name(c.Src.Name)
+{
+}
+
 namespace InstanceTraits
 {
     // @0x142446010
     void CTraits::RegisterImplementedInterface(const Multiname& mn)
     {
-        ImplementsInterfaces.PushBack(mn);
+        Multiname::InlineCopy c = { mn };
+        ImplementsInterfaces.PushBackAlt(c);
     }
 }
 

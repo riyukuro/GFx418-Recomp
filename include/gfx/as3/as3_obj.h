@@ -969,6 +969,10 @@ public:
     struct InlineCtorTag {};
     inline Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag);
     Multiname(const Multiname& other);
+    // (appended) the copy constructor, inlined into CTraits::RegisterImplementedInterface 0x142446010 (defined in
+    // sfr_as3_06; the out-of-line one is 0x1424d8f90 in sfr_as3_15). For ArrayLH::PushBackAlt.
+    struct InlineCopy { const Multiname& Src; };
+    inline explicit Multiname(const InlineCopy& c);
     // From a qualified name "pkg.Name" (0x1424d9040).
     Multiname(VM& vm, const StringDataPtr& qname);
     // (appended, sfr19) run-time name from a value: a QName object, a string or number, or another object's text (0x1424d8cb0).
