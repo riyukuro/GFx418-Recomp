@@ -31,6 +31,8 @@ CheckResult Traits::SetupSlotValues(Object&) const
 // The movie goes away: the queued actions, the stage, the host's aliases and return value, the frame listeners, the
 // mice, every movie's ABC files and at last the VM, with a collection between the steps.
 // MS2-FUNCTIONAL the 4.1.18 ForceCollect (slot 9) takes no flags; called through the slot without one
+// MS2-FUNCTIONAL: through the slot the vtable load moves above the pStage store, and the list-root test differs
+// Value::SetUndefined and ResizeNoConstruct are called through member-pointer locals, as the exe calls them out of line.
 // @0x14252c4f0
 void MovieRoot::Shutdown()
 {
@@ -47,23 +49,26 @@ void MovieRoot::Shutdown()
         Memory::pGlobalHeap->Free(p);
     }
     pInvokeAliases = NULL;
-    (ExternalIntfRetVal.*&Scaleform::GFx::AS3::Value::SetUndefined)();
+    void (Scaleform::GFx::AS3::Value::*setUndefined)() = &Scaleform::GFx::AS3::Value::SetUndefined;
+    (ExternalIntfRetVal.*setUndefined)();
     FUN_1424ef380(&mEventChains);
     for (unsigned i = 0; i < 4; ++i)
     {
-        Scaleform::GFx::AS3::Sfr31ResizeObjZero(reinterpret_cast<UPInt*>(mMouseState[i].RolloverStack), 0);
-        if (mMouseState[i].LastMouseOverObj)
-            FUN_14257dcd0(mMouseState[i].LastMouseOverObj);
-        mMouseState[i].LastMouseOverObj = NULL;
+        MouseState& ms = mMouseState[i];
+        Scaleform::GFx::AS3::Sfr31ResizeObjZero(reinterpret_cast<UPInt*>(ms.RolloverStack), 0);
+        if (ms.LastMouseOverObj)
+            FUN_14257dcd0(ms.LastMouseOverObj);
+        ms.LastMouseOverObj = NULL;
     }
+    typedef ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>,
+                          AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>, 2>,
+                          ArrayDefaultPolicy> AbcFileData;
+    void (AbcFileData::*resizeNoConstruct)(const void*, UPInt) = &AbcFileData::ResizeNoConstruct;
     for (GFx::MovieDefRootNode* p = pMovieImpl->RootMovieDefNodes.pNext;
          p != static_cast<GFx::MovieDefRootNode*>(&pMovieImpl->RootMovieDefNodes); p = p->pNext)
     {
         MovieDefRootNode* pnode = static_cast<MovieDefRootNode*>(p);
-        typedef ArrayDataBase<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>,
-                              AllocatorLH<Scaleform::GFx::AS3::SPtr<Scaleform::GFx::AS3::VMAbcFile>, 2>,
-                              ArrayDefaultPolicy> AbcFileData;
-        (reinterpret_cast<AbcFileData*>(&pnode->AbcFiles)->*&AbcFileData::ResizeNoConstruct)(&pnode->AbcFiles, 0);
+        (reinterpret_cast<AbcFileData*>(&pnode->AbcFiles)->*resizeNoConstruct)(&pnode->AbcFiles, 0);
     }
     (*reinterpret_cast<CollectFn const* const*>(this))[9](this);
     Scaleform::GFx::AS3::Sfr31ShutdownRegistered(reinterpret_cast<UPInt>(pAVM));
