@@ -1685,7 +1685,7 @@ struct __declspec(novtable) Unk_As3_16zCollectorProbe : AS3::RefCountCollector<A
     Unk_As3_16zCollectorProbe();
 };
 Unk_As3_16zCollectorProbe::Unk_As3_16zCollectorProbe() {}
-// (sfg) RefCountBase<ASIntervalTimerIntf, 323>'s vftable and deleting destructor (0x1424e21a0).
+// (sfg) ASIntervalTimerIntf's vftable and deleting destructor (0x1424e21a0).
 struct __declspec(novtable) Unk_As3_16zTimerIntfProbe : ASIntervalTimerIntf
 {
     Unk_As3_16zTimerIntfProbe();
@@ -1751,12 +1751,12 @@ void DisplayObjectBase::AdvanceFrame(bool, float)
 
 }} // namespace Scaleform::GFx
 // MS2-PIN: ??_G?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e2040
-// MS2-FUNCTIONAL 0x1424e21a0: the exe stores the vftable and calls ~RefCountImpl (0x14257db40); our kernel RefCountImpl has no destructor of its own, so ours calls ~RefCountImplCore.
-// MS2-PIN: ??_G?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@UEAAPEAXI@Z 0x1424e21a0
+// MS2-PIN: ??_GASIntervalTimerIntf@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e21a0
 // MS2-PIN: ??_7?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b040
 // MS2-PIN: ??_7Root@?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14317b010
 // MS2-PIN: ??_7?$RefCountBaseGC@$0BED@@AS3@GFx@Scaleform@@6B@ 0x14313f368
 // MS2-PIN: ??_7?$RefCountBase@V?$RefCountCollector@$0BED@@AS3@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
+// MS2-PIN: ??_7ASIntervalTimerIntf@GFx@Scaleform@@6B@ 0x14317c9f8
 // MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
 
 namespace Scaleform { namespace GFx { namespace AS3 {

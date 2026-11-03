@@ -971,8 +971,9 @@ inline MovieDefRootNodeLinks::MovieDefRootNodeLinks()
 }
 #endif
 
-// A timer the movie drives each frame (AS2 setInterval, AS3 flash.utils.Timer). Interface vftable 0x142dc9d48.
-class __declspec(novtable) ASIntervalTimerIntf : public RefCountBase<ASIntervalTimerIntf, 0x143>   // StatMV_ActionScript_Mem
+// A timer the movie drives each frame (AS2 setInterval, AS3 flash.utils.Timer). Not novtable: the exe's
+// ~ASIntervalTimerIntf (deleting dtor 0x1424e21a0) stores its vftable 0x14317c9f8.
+class ASIntervalTimerIntf : public RefCountBase<ASIntervalTimerIntf, 0x143>   // StatMV_ActionScript_Mem
 {
 public:
     virtual ~ASIntervalTimerIntf() {}

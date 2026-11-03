@@ -25,8 +25,7 @@ IntervalTimer::IntervalTimer(InteractiveObject* ptarget, const ASString& method)
 {
 }
 
-// The implicit RefCountBase<ASIntervalTimerIntf> dtor skips the exe's store of 0x14317c9f8: a dead store, since
-// ~RefCountImplCore (0x14257db40) overwrites it straight away.
+// ~ASIntervalTimerIntf stores its table 0x14317c9f8 last, as in the exe, before ~RefCountImplCore (0x14257db40).
 // MS2-FUNCTIONAL: the members go in the exe's order, but cl also stores the vftable on entry (10 bytes the exe does not have)
 // @0x1429259d0
 IntervalTimer::~IntervalTimer()
@@ -39,5 +38,6 @@ IntervalTimer::~IntervalTimer()
 // MS2-PIN: ??_7RefCountImplCore@Scaleform@@6B@ 0x142dc9d48
 // MS2-PIN: ??_7RefCountImpl@Scaleform@@6B@ 0x142dc9d58
 // MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountImpl@Scaleform@@$0BED@@Scaleform@@6B@ 0x142dc9d48
-// RefCountBase<ASIntervalTimerIntf,0x143> is the table ~IntervalTimer stores last (0x142925ab1); see sfr_as3_15.
+// ASIntervalTimerIntf's is the table ~IntervalTimer stores last (0x142925ab1); see sfr_as3_15.
+// MS2-PIN: ??_7ASIntervalTimerIntf@GFx@Scaleform@@6B@ 0x14317c9f8
 // MS2-PIN: ??_7?$RefCountBase@VASIntervalTimerIntf@GFx@Scaleform@@$0BED@@Scaleform@@6B@ 0x14317c9f8
