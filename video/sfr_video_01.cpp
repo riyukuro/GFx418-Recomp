@@ -1026,12 +1026,12 @@ static __forceinline void Video01ResizePointers(void** array, Scaleform::UPInt s
     data->Size = size;
 }
 
-// MS2-FUNCTIONAL: appends one pointer value to the backing array, growing capacity when needed.
+// Appends one pointer value to the backing array, growing capacity when needed (the volatile first Size read keeps the exe's reload compare).
 // @0x140005ac0
 void FUN_140005ac0(void** array, const void** value)
 {
     Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
-    Video01ResizePointers(array, data->Size + 1);
+    Video01ResizePointers(array, *reinterpret_cast<const volatile Scaleform::UPInt*>(&data->Size) + 1);
     const void** slot = static_cast<const void**>(data->Data) + data->Size - 1;
     if (slot) *slot = *value;
 }
