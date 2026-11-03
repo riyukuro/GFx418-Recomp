@@ -608,9 +608,9 @@ void m2vmc_SetFunction(longlong);
 void M2VMC_StartFrame(longlong);
 void M2VPRD_FormPredictions(longlong, cri_u4, int);
 void FUN_14008b6b0(longlong, longlong, int, cri_u4, uint, cri_u4, int, int, uint, uint, int);
-void form_component_prediction_thumbnail(longlong, longlong, int, cri_u8, int, int, int, int, uint, uint, int);
-void FUN_14008c150(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
-void form_prediction_thumbnail(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
+void form_component_prediction_thumbnail(longlong, longlong, int, cri_u4, int, int, int, int, uint, uint, int);
+void FUN_14008c150(longlong, longlong *, int, longlong *, int, int, int, int, int, int, int, int, int, cri_u4);
+void form_prediction_thumbnail(longlong, longlong *, int, longlong *, int, int, int, int, int, int, int, int, int, cri_u4);
 void M2VPRD_SetFunction(longlong);
 void M2VCONCEAL_StartFrame(longlong);
 void M2VCONCEAL_StartTask(longlong);
@@ -26315,7 +26315,7 @@ void FUN_14008b6b0(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, uint arg
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008b780
-void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u8 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11)
+void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11)
 {
   byte b_v1;
   int i_v2;
@@ -26567,166 +26567,115 @@ LAB_14008bae6:
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: arg12 and arg13 take esi and ebp the other way round (VS2008 build, our toolset differs).
 // @0x14008c150
-void FUN_14008c150(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
+void FUN_14008c150(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
 {
-  int i_v1;
-  int i_v2;
-  int i_v3;
-  int i_v4;
-  int i_v5;
-  int i_v6;
-  
-  i_v5 = arg10 * -2;
-  if ((arg12 < arg10 * -2) ||
-     (i_v5 = (((*(int *)((char *)arg1 + 0x6c4) + 0xfU & 0xfffffff0) - arg8) - arg10) * 2,
-     i_v5 < arg12)) {
-    arg12 = i_v5;
-    *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
+  int lim;
+  int w;
+  int h;
+  int c64;
+
+  lim = -arg10 * 2;
+  if (arg12 < lim ||
+      arg12 > (lim = (((*(int *)((char *)arg1 + 0x6c4) + 0xf) & ~0xf) - arg8 - arg10) * 2)) {
+    *(int *)((char *)arg1 + 0xd10) += 1;
+    arg12 = lim;
   }
-  if (arg13 < arg11 * -2) {
-    *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
-    arg13 = arg11 * -2;
+  lim = -arg11 * 2;
+  if (arg13 < lim) {
+    *(int *)((char *)arg1 + 0xd10) += 1;
+    arg13 = lim;
   }
   else {
-    i_v5 = ((int)((*(int *)((char *)arg1 + 0x6c8) + 0xfU & 0xfffffff0) * 2 -
-                  (arg9 * 2 << (arg7 & 0x1f))) >> (arg6 & 0x1f)) + arg11 * -2;
-    if (i_v5 < arg13) {
-      *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
-      arg13 = i_v5;
+    lim = (((((*(int *)((char *)arg1 + 0x6c8) + 0xf) & ~0xf) * 2) - ((arg9 * 2) << arg7)) >> arg6) - arg11 * 2;
+    if (arg13 > lim) {
+      *(int *)((char *)arg1 + 0xd10) += 1;
+      arg13 = lim;
     }
   }
-  i_v5 = *(int *)((char *)arg1 + 0xc64);
-  i_v4 = 0;
-  i_v6 = *(int *)((char *)arg1 + 0xc60) << (arg7 & 0x1f);
-  i_v3 = i_v6 >> 1;
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  i_v1 = i_v4;
-  if (arg3 != 0) {
-    i_v1 = i_v3;
-  }
-  FUN_14008b6b0((longlong)i_v1 + *arg2,(longlong)i_v2 + *arg4,
-                *(int *)((char *)arg1 + 0xc60) << (arg6 & 0x1f),i_v6,arg8,arg9,arg10,
-                arg11,arg12,arg13,arg14);
-  i_v6 = i_v5 << (arg6 & 0x1f);
-  i_v5 = i_v5 << (arg7 & 0x1f);
-  i_v3 = i_v5 >> 1;
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  i_v1 = i_v4;
-  if (arg3 != 0) {
-    i_v1 = i_v3;
-  }
-  FUN_14008b6b0((longlong)i_v1 + arg2[1],(longlong)i_v2 + arg4[1],i_v6,i_v5,arg8 >> 1,
-                arg9 >> 1,arg10 >> 1,arg11 >> 1,arg12 / 2,arg13 / 2,arg14);
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  if (arg3 != 0) {
-    i_v4 = i_v3;
-  }
-  FUN_14008b6b0((longlong)i_v4 + arg2[2],(longlong)i_v2 + arg4[2],i_v6,i_v5,arg8 >> 1,
-                arg9 >> 1,arg10 >> 1,arg11 >> 1,arg12 / 2,arg13 / 2,arg14);
-  return;
+  c64 = *(int *)((char *)arg1 + 0xc64);
+  w = *(int *)((char *)arg1 + 0xc60) << arg6;
+  h = *(int *)((char *)arg1 + 0xc60) << arg7;
+  FUN_14008b6b0(*arg2 + (arg3 ? h >> 1 : 0),*arg4 + (arg5 ? h >> 1 : 0),w,h,arg8,arg9,arg10,arg11,
+                arg12,arg13,arg14);
+  w = c64 << arg6;
+  h = c64 << arg7;
+  arg8 >>= 1;
+  arg9 >>= 1;
+  arg10 >>= 1;
+  arg11 >>= 1;
+  arg12 /= 2;
+  arg13 /= 2;
+  FUN_14008b6b0(arg2[1] + (arg3 ? h >> 1 : 0),arg4[1] + (arg5 ? h >> 1 : 0),w,h,arg8,arg9,
+                arg10,arg11,arg12,arg13,arg14);
+  FUN_14008b6b0(arg2[2] + (arg3 ? h >> 1 : 0),arg4[2] + (arg5 ? h >> 1 : 0),w,h,arg8,arg9,
+                arg10,arg11,arg12,arg13,arg14);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008c400
-void form_prediction_thumbnail(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
+void form_prediction_thumbnail(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14)
 {
-  int i_v1;
-  int i_v2;
-  int i_v3;
-  int i_v4;
-  int i_v5;
-  int i_v6;
-  int i_v7;
-  int i_v8;
-  
-  i_v6 = arg10 * -2;
-  if ((arg12 < arg10 * -2) ||
-     (i_v6 = (((*(int *)((char *)arg1 + 0x6c4) + 0xfU & 0xfffffff0) - arg8) - arg10) * 2,
-     i_v6 < arg12)) {
-    arg12 = i_v6;
-    *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
+  int lim;
+  int w;
+  int h;
+  int c60;
+  int c64;
+  int mvx;
+  int mvy;
+
+  lim = -arg10 * 2;
+  if (arg12 < lim ||
+      arg12 > (lim = (((*(int *)((char *)arg1 + 0x6c4) + 0xf) & ~0xf) - arg8 - arg10) * 2)) {
+    *(int *)((char *)arg1 + 0xd10) += 1;
+    arg12 = lim;
   }
-  if (arg13 < arg11 * -2) {
-    *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
-    arg13 = arg11 * -2;
+  lim = -arg11 * 2;
+  if (arg13 < lim) {
+    *(int *)((char *)arg1 + 0xd10) += 1;
+    arg13 = lim;
   }
   else {
-    i_v6 = ((int)((*(int *)((char *)arg1 + 0x6c8) + 0xfU & 0xfffffff0) * 2 -
-                  (arg9 * 2 << (arg7 & 0x1f))) >> (arg6 & 0x1f)) + arg11 * -2;
-    if (i_v6 < arg13) {
-      *(int *)((char *)arg1 + 0xd10) = *(int *)((char *)arg1 + 0xd10) + 1;
-      arg13 = i_v6;
+    lim = (((((*(int *)((char *)arg1 + 0x6c8) + 0xf) & ~0xf) * 2) - ((arg9 * 2) << arg7)) >> arg6) - arg11 * 2;
+    if (arg13 > lim) {
+      *(int *)((char *)arg1 + 0xd10) += 1;
+      arg13 = lim;
     }
   }
-  i_v6 = *(int *)((char *)arg1 + 0xc64);
-  arg8 = arg8 + (arg8 >> 0x1f & 7U);
-  arg9 = arg9 + (arg9 >> 0x1f & 7U);
-  arg10 = arg10 + (arg10 >> 0x1f & 7U);
-  arg11 = arg11 + (arg11 >> 0x1f & 7U);
-  if (arg12 < 0) {
-    i_v8 = -((int)((4 - arg12 >> 0x1f & 7U) + (4 - arg12)) >> 3);
+  c60 = *(int *)((char *)arg1 + 0xc60);
+  c64 = *(int *)((char *)arg1 + 0xc64);
+  arg8 /= 8;
+  arg9 /= 8;
+  arg10 /= 8;
+  arg11 /= 8;
+  if (arg12 >= 0) {
+    mvx = (arg12 + 4) / 8;
   }
   else {
-    i_v8 = (int)((arg12 + 4 >> 0x1f & 7U) + arg12 + 4) >> 3;
+    mvx = -((4 - arg12) / 8);
   }
-  if (arg13 < 0) {
-    i_v5 = -((int)((4 - arg13 >> 0x1f & 7U) + (4 - arg13)) >> 3);
+  if (arg13 >= 0) {
+    mvy = (arg13 + 4) / 8;
   }
   else {
-    i_v5 = (int)((arg13 + 4 >> 0x1f & 7U) + arg13 + 4) >> 3;
+    mvy = -((4 - arg13) / 8);
   }
-  i_v4 = 0;
-  i_v7 = *(int *)((char *)arg1 + 0xc60) << (arg7 & 0x1f);
-  i_v3 = i_v7 >> 1;
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  i_v1 = i_v4;
-  if (arg3 != 0) {
-    i_v1 = i_v3;
-  }
-  form_component_prediction_thumbnail((longlong)i_v1 + *arg2,(longlong)i_v2 + *arg4,
-                *(int *)((char *)arg1 + 0xc60) << (arg6 & 0x1f),i_v7,arg8 >> 3,arg9 >> 3,
-                arg10 >> 3,arg11 >> 3,i_v8,i_v5,arg14);
-  arg8 = arg8 >> 4;
-  i_v7 = i_v6 << (arg6 & 0x1f);
-  arg10 = arg10 >> 4;
-  arg9 = arg9 >> 4;
-  arg11 = arg11 >> 4;
-  i_v6 = i_v6 << (arg7 & 0x1f);
-  i_v3 = i_v6 >> 1;
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  i_v1 = i_v4;
-  if (arg3 != 0) {
-    i_v1 = i_v3;
-  }
-  form_component_prediction_thumbnail((longlong)i_v1 + arg2[1],(longlong)i_v2 + arg4[1],i_v7,i_v6,arg8,
-                arg9,arg10,arg11,i_v8 / 2,i_v5 / 2,arg14);
-  i_v2 = i_v4;
-  if (arg5 != 0) {
-    i_v2 = i_v3;
-  }
-  if (arg3 != 0) {
-    i_v4 = i_v3;
-  }
-  form_component_prediction_thumbnail((longlong)i_v4 + arg2[2],(longlong)i_v2 + arg4[2],i_v7,i_v6,arg8,
-                arg9,arg10,arg11,i_v8 / 2,i_v5 / 2,arg14);
-  return;
+  w = c60 << arg6;
+  h = c60 << arg7;
+  form_component_prediction_thumbnail(*arg2 + (arg3 ? h >> 1 : 0),*arg4 + (arg5 ? h >> 1 : 0),w,h,arg8,
+                arg9,arg10,arg11,mvx,mvy,arg14);
+  w = c64 << arg6;
+  arg8 >>= 1;
+  mvx /= 2;
+  arg10 >>= 1;
+  arg9 >>= 1;
+  arg11 >>= 1;
+  h = c64 << arg7;
+  mvy /= 2;
+  form_component_prediction_thumbnail(arg2[1] + (arg3 ? h >> 1 : 0),arg4[1] + (arg5 ? h >> 1 : 0),w,h,arg8,
+                arg9,arg10,arg11,mvx,mvy,arg14);
+  form_component_prediction_thumbnail(arg2[2] + (arg3 ? h >> 1 : 0),arg4[2] + (arg5 ? h >> 1 : 0),w,h,arg8,
+                arg9,arg10,arg11,mvx,mvy,arg14);
 }
 
 // @0x14008c780

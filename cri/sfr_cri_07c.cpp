@@ -379,9 +379,9 @@ void m2vmc_SetFunction(longlong);
 void M2VMC_StartFrame(longlong);
 void M2VPRD_FormPredictions(longlong, cri_u4, int);
 void FUN_14008b6b0(longlong, longlong, int, cri_u4, uint, cri_u4, int, int, uint, uint, int);
-void form_component_prediction_thumbnail(longlong, longlong, int, cri_u8, int, int, int, int, uint, uint, int);
-void FUN_14008c150(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
-void form_prediction_thumbnail(longlong, longlong *, int, longlong *, int, byte, byte, int, int, int, int, int, int, cri_u4);
+void form_component_prediction_thumbnail(longlong, longlong, int, cri_u4, int, int, int, int, uint, uint, int);
+void FUN_14008c150(longlong, longlong *, int, longlong *, int, int, int, int, int, int, int, int, int, cri_u4);
+void form_prediction_thumbnail(longlong, longlong *, int, longlong *, int, int, int, int, int, int, int, int, int, cri_u4);
 void M2VPRD_SetFunction(longlong);
 void M2VCONCEAL_StartFrame(longlong);
 void M2VCONCEAL_StartTask(longlong);
@@ -893,11 +893,11 @@ void M2VPRD_FormPredictions(longlong arg1, cri_u4 arg2, int arg3);
 
 void FUN_14008b6b0(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, uint arg5, cri_u4 arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11);
 
-void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u8 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11);
+void form_component_prediction_thumbnail(longlong arg1, longlong arg2, int arg3, cri_u4 arg4, int arg5, int arg6, int arg7, int arg8, uint arg9, uint arg10, int arg11);
 
-void FUN_14008c150(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14);
+void FUN_14008c150(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14);
 
-void form_prediction_thumbnail(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, byte arg6, byte arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14);
+void form_prediction_thumbnail(longlong arg1, longlong *arg2, int arg3, longlong *arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10, int arg11, int arg12, int arg13, cri_u4 arg14);
 
 void M2VPRD_SetFunction(longlong arg1);
 
