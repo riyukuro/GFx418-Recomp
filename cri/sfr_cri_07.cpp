@@ -25589,164 +25589,100 @@ void M2VMC_MacroBlock(longlong arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008a430
 void FUN_14008a430(longlong arg1, int arg2, int arg3)
 {
-  uint u_v1;
-  int i_v2;
-  longlong l_v3;
-  int i_v4;
-  int i_v5;
-  longlong *pl_v6;
-  longlong *pl_v7;
-  longlong *pl_v8;
-  // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  struct Tab { longlong P0; longlong P8; int Size; longlong Rest[19]; } frame_;
-  longlong &loc_b8 = frame_.P0;
-  longlong &loc_b0 = frame_.P8;
-  int &loc_a8 = frame_.Size;
-  longlong (&loc_a0)[19] = frame_.Rest;
-  
-  u_v1 = *(uint *)((char *)arg1 + 0x71c);
-  pl_v8 = &loc_b8;
-  if ((u_v1 & 0xf) != 0) {
-    i_v2 = *(int *)((char *)arg1 + 0xc60);
-    i_v5 = i_v2;
+  struct Rec { longlong blk; longlong dst; int stride; } tab[7];
+  struct Rec *p;
+  uint cbp;
+  int bstep;
+  int lstride;
+  longlong base;
+  int cw;
+  int co;
+
+  cbp = *(uint *)((char *)arg1 + 0x71c);
+  p = tab;
+  if ((cbp & 0xf) != 0) {
+    bstep = *(int *)((char *)arg1 + 0xc60);
     if (*(int *)((char *)arg1 + 0x5f8) == 0) {
-      i_v5 = i_v2 << 3;
+      bstep <<= 3;
     }
-    i_v4 = i_v2;
+    lstride = *(int *)((char *)arg1 + 0xc60);
     if (*(int *)((char *)arg1 + 0x5f8) == 1) {
-      i_v4 = i_v2 * 2;
+      lstride += lstride;
     }
-    l_v3 = (longlong)(i_v2 * arg3) + *(longlong *)((char *)arg1 + 0xc48) + (longlong)arg2;
-    if ((u_v1 & 1) != 0) {
-      loc_b8 = arg1 + 0x780;
-      pl_v8 = loc_a0;
-      loc_b0 = l_v3;
-      loc_a8 = i_v4;
+    base = (longlong)(*(int *)((char *)arg1 + 0xc60) * arg3) + *(longlong *)((char *)arg1 + 0xc48) + (longlong)arg2;
+    if ((cbp & 1) != 0) {
+      p->blk = arg1 + 0x780; p->dst = base; p->stride = lstride; p++;
     }
-    pl_v6 = pl_v8;
-    if ((u_v1 & 2) != 0) {
-      *(int *)(pl_v8 + 2) = i_v4;
-      pl_v6 = pl_v8 + 3;
-      *pl_v8 = arg1 + 0x800;
-      pl_v8[1] = l_v3 + 8;
+    if ((cbp & 2) != 0) {
+      p->blk = arg1 + 0x800; p->dst = base + 8; p->stride = lstride; p++;
     }
-    pl_v7 = pl_v6;
-    if ((u_v1 & 4) != 0) {
-      *(int *)(pl_v6 + 2) = i_v4;
-      *pl_v6 = arg1 + 0x880;
-      pl_v7 = pl_v6 + 3;
-      pl_v6[1] = i_v5 + l_v3;
+    if ((cbp & 4) != 0) {
+      p->blk = arg1 + 0x880; p->dst = bstep + base; p->stride = lstride; p++;
     }
-    pl_v8 = pl_v7;
-    if ((u_v1 & 8) != 0) {
-      *(int *)(pl_v7 + 2) = i_v4;
-      pl_v8 = pl_v7 + 3;
-      *pl_v7 = arg1 + 0x900;
-      pl_v7[1] = (longlong)i_v5 + 8 + l_v3;
+    if ((cbp & 8) != 0) {
+      p->blk = arg1 + 0x900; p->dst = (longlong)bstep + 8 + base; p->stride = lstride; p++;
     }
   }
-  if ((u_v1 & 0x30) != 0) {
-    i_v2 = *(int *)((char *)arg1 + 0xc64);
-    i_v5 = (arg3 >> 1) * i_v2 + (arg2 >> 1);
-    pl_v6 = pl_v8;
-    if ((u_v1 & 0x10) != 0) {
-      *(int *)(pl_v8 + 2) = i_v2;
-      *pl_v8 = arg1 + 0x980;
-      pl_v6 = pl_v8 + 3;
-      pl_v8[1] = (longlong)i_v5 + *(longlong *)((char *)arg1 + 0xc50);
+  if ((cbp & 0x30) != 0) {
+    cw = *(int *)((char *)arg1 + 0xc64);
+    co = (arg3 >> 1) * cw + (arg2 >> 1);
+    if ((cbp & 0x10) != 0) {
+      p->blk = arg1 + 0x980; p->dst = (longlong)co + *(longlong *)((char *)arg1 + 0xc50); p->stride = cw; p++;
     }
-    pl_v8 = pl_v6;
-    if ((u_v1 & 0x20) != 0) {
-      *(int *)(pl_v6 + 2) = i_v2;
-      *pl_v6 = arg1 + 0xa00;
-      pl_v8 = pl_v6 + 3;
-      pl_v6[1] = (longlong)i_v5 + *(longlong *)((char *)arg1 + 0xc58);
+    if ((cbp & 0x20) != 0) {
+      p->blk = arg1 + 0xa00; p->dst = (longlong)co + *(longlong *)((char *)arg1 + 0xc58); p->stride = cw; p++;
     }
   }
-  u_v1 = *(uint *)((char *)arg1 + 0x5e8);
-  *pl_v8 = 0;
-  (**(cri_code **)(DAT_143fe8250 + (ulonglong)(~(u_v1 >> 2) & 1) * 8))(&loc_b8);
-  return;
+  p->blk = 0;
+  (**(cri_code **)(DAT_143fe8250 + (ulonglong)(~(*(uint *)((char *)arg1 + 0x5e8) >> 2) & 1) * 8))(tab);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14008a5b0
 void FUN_14008a5b0(longlong arg1, int arg2, int arg3)
 {
-  uint u_v1;
-  int i_v2;
-  longlong l_v3;
-  int i_v4;
-  longlong *pl_v5;
-  longlong *pl_v6;
-  longlong *pl_v7;
-  // One table of {ptr, ptr, int} records at rsp+0x20 in the exe; pl_v8 walks from loc_b8 into loc_a0.
-  struct Tab { longlong P0; longlong P8; int Size; longlong Rest[19]; } frame_;
-  longlong &loc_b8 = frame_.P0;
-  longlong &loc_b0 = frame_.P8;
-  int &loc_a8 = frame_.Size;
-  longlong (&loc_a0)[19] = frame_.Rest;
-  
-  u_v1 = *(uint *)((char *)arg1 + 0x71c);
-  pl_v6 = &loc_b8;
-  if ((u_v1 & 0xf) != 0) {
-    i_v2 = *(int *)((char *)arg1 + 0xc60) * 2;
-    i_v4 = *(int *)((char *)arg1 + 0xc60) << 4;
-    l_v3 = (longlong)(i_v2 * arg3) + *(longlong *)((char *)arg1 + 0xc48) + (longlong)arg2;
-    if ((u_v1 & 1) != 0) {
-      loc_b8 = arg1 + 0x780;
-      pl_v6 = loc_a0;
-      loc_b0 = l_v3;
-      loc_a8 = i_v2;
+  struct Rec { longlong blk; longlong dst; int stride; } tab[7];
+  struct Rec *p;
+  uint cbp;
+  int bstep;
+  int lstride;
+  longlong base;
+  int cw;
+  int co;
+
+  cbp = *(uint *)((char *)arg1 + 0x71c);
+  p = tab;
+  if ((cbp & 0xf) != 0) {
+    lstride = *(int *)((char *)arg1 + 0xc60) * 2;
+    bstep = *(int *)((char *)arg1 + 0xc60) << 4;
+    base = (longlong)(lstride * arg3) + *(longlong *)((char *)arg1 + 0xc48) + (longlong)arg2;
+    if ((cbp & 1) != 0) {
+      p->blk = arg1 + 0x780; p->dst = base; p->stride = lstride; p++;
     }
-    pl_v7 = pl_v6;
-    if ((u_v1 & 2) != 0) {
-      *(int *)(pl_v6 + 2) = i_v2;
-      pl_v7 = pl_v6 + 3;
-      *pl_v6 = arg1 + 0x800;
-      pl_v6[1] = l_v3 + 8;
+    if ((cbp & 2) != 0) {
+      p->blk = arg1 + 0x800; p->dst = base + 8; p->stride = lstride; p++;
     }
-    pl_v5 = pl_v7;
-    if ((u_v1 & 4) != 0) {
-      *(int *)(pl_v7 + 2) = i_v2;
-      *pl_v7 = arg1 + 0x880;
-      pl_v5 = pl_v7 + 3;
-      pl_v7[1] = i_v4 + l_v3;
+    if ((cbp & 4) != 0) {
+      p->blk = arg1 + 0x880; p->dst = bstep + base; p->stride = lstride; p++;
     }
-    pl_v6 = pl_v5;
-    if ((u_v1 & 8) != 0) {
-      *(int *)(pl_v5 + 2) = i_v2;
-      pl_v6 = pl_v5 + 3;
-      *pl_v5 = arg1 + 0x900;
-      pl_v5[1] = (longlong)i_v4 + 8 + l_v3;
+    if ((cbp & 8) != 0) {
+      p->blk = arg1 + 0x900; p->dst = (longlong)bstep + 8 + base; p->stride = lstride; p++;
     }
   }
-  if ((u_v1 & 0x30) != 0) {
-    i_v2 = *(int *)((char *)arg1 + 0xc64) * 2;
-    i_v4 = (arg3 >> 1) * i_v2 + (arg2 >> 1);
-    pl_v7 = pl_v6;
-    if ((u_v1 & 0x10) != 0) {
-      *(int *)(pl_v6 + 2) = i_v2;
-      *pl_v6 = arg1 + 0x980;
-      pl_v7 = pl_v6 + 3;
-      pl_v6[1] = (longlong)i_v4 + *(longlong *)((char *)arg1 + 0xc50);
+  if ((cbp & 0x30) != 0) {
+    cw = *(int *)((char *)arg1 + 0xc64) * 2;
+    co = (arg3 >> 1) * cw + (arg2 >> 1);
+    if ((cbp & 0x10) != 0) {
+      p->blk = arg1 + 0x980; p->dst = (longlong)co + *(longlong *)((char *)arg1 + 0xc50); p->stride = cw; p++;
     }
-    pl_v6 = pl_v7;
-    if ((u_v1 & 0x20) != 0) {
-      *(int *)(pl_v7 + 2) = i_v2;
-      *pl_v7 = arg1 + 0xa00;
-      pl_v6 = pl_v7 + 3;
-      pl_v7[1] = (longlong)i_v4 + *(longlong *)((char *)arg1 + 0xc58);
+    if ((cbp & 0x20) != 0) {
+      p->blk = arg1 + 0xa00; p->dst = (longlong)co + *(longlong *)((char *)arg1 + 0xc58); p->stride = cw; p++;
     }
   }
-  u_v1 = *(uint *)((char *)arg1 + 0x5e8);
-  *pl_v6 = 0;
-  (**(cri_code **)(DAT_143fe8250 + (ulonglong)(~(u_v1 >> 2) & 1) * 8))(&loc_b8);
-  return;
+  p->blk = 0;
+  (**(cri_code **)(DAT_143fe8250 + (ulonglong)(~(*(uint *)((char *)arg1 + 0x5e8) >> 2) & 1) * 8))(tab);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
