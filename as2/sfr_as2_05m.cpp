@@ -211,8 +211,9 @@ void FUN_142943480(const FnCall& fn)
     const ASString symbolName(fn.Arg(0).ToString(fn.Env));
     if (symbolName.IsEmpty())
         return;
-    AvmSprite* pavm = fn.ThisPtr->GetObjectType() == ObjectInterface::Object_Sprite
-                          ? static_cast<AvmSprite*>(static_cast<AvmCharacter*>(fn.ThisPtr)) : 0;
+    ObjectInterface* pthis = fn.ThisPtr;
+    AvmSprite*       pavm  = pthis->GetObjectType() == ObjectInterface::Object_Sprite
+                                 ? static_cast<AvmSprite*>(static_cast<AvmCharacter*>(pthis)) : 0;
     const FunctionRef* pctor = pgc->RegisteredClasses.GetCaseCheck(symbolName, fn.Env->IsCaseSensitive());
     if (pctor)
     {
