@@ -1084,18 +1084,50 @@ static inline const XMLSupport& GetXMLSupportOf(const Value& v)
     return v.GetObject()->GetVM().GetXMLSupport();
 }
 
-// MS2-FUNCTIONAL: exe inlines IsXMLListObject(Object*) and the same-kind XML/QName checks
+// The exe's SCU inlined the sfr_as3_18 checks IsXMLListObject (0x1425157c0), IsXMLObject (0x1425157f0) and
+// IsQNameObject (0x142514bf0) into the operand tests below; this is their body for an object value.
+static SF_INLINE bool Sfr16IsTraitsObject(const Value& v, BuiltinTraitsType tt)
+{
+    bool result = false;
+    if (v.IsObject() && v.GetObject())
+    {
+        const Traits& tr = v.GetObject()->GetTraits();
+        if (tr.GetTraitsType() == tt && tr.IsInstanceTraits())
+            result = true;
+    }
+    return result;
+}
+
+// The method and closure kinds, as a switch: the exe tests each side with cl's case-range tree (< kThunk, <= kMethodInd,
+// kThunkClosure..kVTableIndClosure).
+static SF_INLINE bool Sfr16IsMethodKind(Value::KindType k)
+{
+    switch (k)
+    {
+    case Value::kThunk:
+    case Value::kMethodInd:
+    case Value::kThunkClosure:
+    case Value::kVTableIndClosure:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// MS2-FUNCTIONAL: closer (2076 bytes, exe 2120). The exe keeps l in rsi and r in rdi (ours swaps them), writes the
+// CheckResult byte at each return where ours shares one tail, and lays out the Boolean case and the Number/String
+// conversion arms in another order.
 // @0x1424e46f0
 CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
 {
     const Value::KindType lk = l.GetKind();
 
-    if (IsXMLListObject(l))
+    if (Sfr16IsTraitsObject(l, Traits_XMLList))
         return GetXMLSupportOf(l).EqualsXMLList(result, *reinterpret_cast<Instances::fl::XMLList*>(l.GetObject()), r);
 
     const Value::KindType rk = r.GetKind();
 
-    if (IsXMLListObject(r))
+    if (Sfr16IsTraitsObject(r, Traits_XMLList))
         return GetXMLSupportOf(r).EqualsXMLList(result, *reinterpret_cast<Instances::fl::XMLList*>(r.GetObject()), l);
 
     if (lk == rk)
@@ -1104,54 +1136,53 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
         {
         case Value::kUndefined:
             result = true;
-            break;
-        case Value::kBoolean:
-            result = (l.AsBool() && r.AsBool()) || (!l.AsBool() && !r.AsBool());
-            break;
-        case Value::kInt:
-        case Value::kUInt:
-            result = l.AsInt() == r.AsInt();
-            break;
+            return true;
         case Value::kNumber:
             if (l.IsNaN() || r.IsNaN())
                 result = false;
             else
                 result = l.AsNumber() == r.AsNumber();
-            break;
+            return true;
         case Value::kThunk:
         case Value::kString:
             result = l.GetStringNode() == r.GetStringNode();
-            break;
+            return true;
         case Value::kNamespace:
         {
             const Instances::Namespace* lns = l.GetNamespace();
             const Instances::Namespace* rns = r.GetNamespace();
-            result = lns && rns && lns->GetUri() == rns->GetUri() && lns->GetKind() == rns->GetKind();
-            break;
+            result = lns && rns && *lns == *rns;
+            return true;
         }
+        case Value::kBoolean:
+            result = (l.AsBool() && r.AsBool()) || (!l.AsBool() && !r.AsBool());
+            return true;
+        case Value::kInt:
+        case Value::kUInt:
+            result = l.AsInt() == r.AsInt();
+            return true;
         case Value::kVTableInd:
             result = l.GetVTableInd() == r.GetVTableInd() && &l.GetTraits() == &r.GetTraits();
-            break;
+            return true;
         case Value::kThunkClosure:
             result = l.GetClosure() == r.GetClosure() && &l.AsThunk() == &r.AsThunk();
-            break;
+            return true;
         case Value::kVTableIndClosure:
             result = l.GetClosure() == r.GetClosure() && l.GetVTableInd() == r.GetVTableInd();
-            break;
+            return true;
         default:
             result = l.GetObject() == r.GetObject();
-            if (!result && l.IsObject())
+            if (!result)
             {
-                if (IsXMLObject(l) && IsXMLObject(r))
+                if (Sfr16IsTraitsObject(l, Traits_XML) && Sfr16IsTraitsObject(r, Traits_XML))
                     return GetXMLSupportOf(l).EqualsXML(result, *reinterpret_cast<Instances::fl::XML*>(l.GetObject()),
                                                         *reinterpret_cast<Instances::fl::XML*>(r.GetObject()));
-                if (IsQNameObject(l) && IsQNameObject(r))
+                if (Sfr16IsTraitsObject(l, Traits_QName) && Sfr16IsTraitsObject(r, Traits_QName))
                     return GetXMLSupportOf(l).EqualsQName(result, *reinterpret_cast<Instances::fl::QName*>(l.GetObject()),
                                                           *reinterpret_cast<Instances::fl::QName*>(r.GetObject()));
             }
-            break;
+            return true;
         }
-        return true;
     }
 
     // null == undefined
@@ -1198,19 +1229,19 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
     }
 
     // undefined == object
-    if (lk == Value::kUndefined && r.IsObject())
+    if (lk == Value::kUndefined && Value::IsObject(rk))
     {
         result = r.IsNull();
         return true;
     }
-    if (l.IsObject() && rk == Value::kUndefined)
+    if (Value::IsObject(lk) && rk == Value::kUndefined)
     {
         result = l.IsNull();
         return true;
     }
 
     // Number/String == Object: the object's primitive value
-    if ((lk == Value::kString || lk == Value::kNumber) && r.IsObject())
+    if ((lk == Value::kString || lk == Value::kNumber) && Value::IsObject(rk))
     {
         if (r.IsNull())
         {
@@ -1222,7 +1253,7 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
             return false;
         return AbstractEqual(result, l, prim);
     }
-    if (l.IsObject() && (rk == Value::kString || rk == Value::kNumber))
+    if (Value::IsObject(lk) && (rk == Value::kString || rk == Value::kNumber))
     {
         if (l.IsNull())
         {
@@ -1236,29 +1267,30 @@ CheckResult AbstractEqual(bool& result, const Value& l, const Value& r)
     }
 
     // methods and closures equal nothing of another kind
-    if (lk == Value::kThunk || lk == Value::kMethodInd || lk == Value::kThunkClosure || lk == Value::kVTableIndClosure ||
-        rk == Value::kThunk || rk == Value::kMethodInd || rk == Value::kThunkClosure || rk == Value::kVTableIndClosure)
+    if (Sfr16IsMethodKind(lk) || Sfr16IsMethodKind(rk))
     {
         result = false;
         return true;
     }
 
     // Boolean/int/uint == anything: compare as Number
-    if (lk == Value::kNumber)
+    if (lk != Value::kNumber)
     {
-        if (rk == Value::kNumber)
-            return true;
+        Value::Number n;
+        if (!l.Convert2NumberInline(n))
+            return false;
+        Value num(n);
+        return AbstractEqual(result, num, r);
+    }
+    if (rk != Value::kNumber)
+    {
         Value::Number n;
         if (!r.Convert2NumberInline(n))
             return false;
         Value num(n);
         return AbstractEqual(result, l, num);
     }
-    Value::Number n;
-    if (!l.Convert2NumberInline(n))
-        return false;
-    Value num(n);
-    return AbstractEqual(result, num, r);
+    return true;
 }
 
 // ECMA-262 11.8.5: undefined3 when either side is NaN.
