@@ -1961,6 +1961,12 @@ namespace Instances { namespace fl_display
         FUN_1424f3320(ToAvmDisplayObj(pDispObj));
     }
 
+    // MovieRoot::GetLog (0x1424c90e0), inlined here: the Ptr<Log> temporary dies before the pointer is used
+    static __forceinline Log* Sfr06RootLog(ASMovieRootBase* proot)
+    {
+        return proot->GetMovieImpl()->GetLog();
+    }
+
     // Binds a BitmapData to a library bitmap: the given image resource, or else the one exported under the
     // object's class name from its movie. The exe returns false on every path.
     // @0x142441730
@@ -1981,22 +1987,23 @@ namespace Instances { namespace fl_display
         if (!pobjDef || !pthis->GetTraits().IsAbcObject())
             return false;
         ASString name = pthis->GetTraits().GetQualifiedName(Traits::qnfWithDot);
-        MovieImpl* pmovie = GetASRoot(vm)->GetMovieImpl();
         ResourceBindData data;
-        if (!FUN_14256ec50(pmovie, pobjDef, &data, String(name.ToCStr())))
+        if (!FUN_14256ec50(GetASRoot(vm)->GetMovieImpl(), pobjDef, &data, String(name.ToCStr())))
         {
-            Ptr<Log> plog = pmovie->GetLog();
-            if (plog)
-                plog->LogWarning("Attaching a bitmap with class '%s' failed", name.ToCStr());
+            ASMovieRootBase* proot = GetASRoot(vm);
+            if (Sfr06RootLog(proot))
+                Sfr06RootLog(proot)->LogWarning("Attaching a bitmap with class '%s' failed", name.ToCStr());
             return false;
         }
         if (data.pResource &&
             (data.pResource->GetResourceTypeCode() & Resource::RT_TypeCode_Mask) == Resource::MakeTypeCode(Resource::RT_Image))
         {
-            ImageResource* pimgRes = static_cast<ImageResource*>(data.pResource.GetPtr());
-            pthis->pImageResource = pimgRes;
-            pthis->pImage = pimgRes->GetImage();
-            pthis->pDefImpl = data.pBinding ? data.pBinding->GetOwnerDefImpl() : pobjDef;
+            pthis->pImageResource = static_cast<ImageResource*>(data.pResource.GetPtr());
+            pthis->pImage = pthis->pImageResource->GetImage();
+            if (data.pBinding)
+                pthis->pDefImpl = data.pBinding->GetOwnerDefImpl();
+            else
+                pthis->pDefImpl = pobjDef;
         }
         return false;
     }
