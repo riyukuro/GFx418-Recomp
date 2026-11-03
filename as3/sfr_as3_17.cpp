@@ -745,13 +745,13 @@ static SF_INLINE const SlotInfo& Sfr33GetSlotInfo(const Slots& slots, AbsoluteIn
     return slots.VArray[static_cast<UInt32>(ind.Get()) - slots.FirstOwnSlotNum].Value;
 }
 
-// MS2-FUNCTIONAL: this and the slot count swap rsi and rdi; the code is otherwise the exe's.
+// The SDK loop over AbsoluteIndex values (count and index), which gives the exe's register use.
 // @0x142503ce0
 void Traits::ForEachChild_GC(Collector* prcc, const Object& obj, GcOp op) const
 {
-    const SPInt size = GetSlotInfoNum();
-    for (SPInt i = 0; i < size; ++i)
-        Sfr33GetSlotInfo(*this, AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+    AbsoluteIndex count(GetSlotInfoNum());
+    for (AbsoluteIndex i(0); i.Get() < count.Get(); i = AbsoluteIndex(i.Get() + 1))
+        Sfr33GetSlotInfo(*this, i).ForEachChild_GC(prcc, obj, op);
 }
 
 // @0x142505cc0
@@ -5327,15 +5327,15 @@ static SF_INLINE SPInt Sfr33IdWordFindIndex(const UPInt* table, const UPInt& key
     if (!table)
         return -1;
     const UPInt hash = key;
-    const UPInt mask = table[1];
-    const UPInt home = hash & mask;
+    const UPInt home = hash & table[1];
     SPInt index = static_cast<SPInt>(home);
     const UPInt* e = table + 2 + index * 4;
-    if (e[0] == UPInt(-2) || (e[1] & mask) != home)
+    if (e[0] == UPInt(-2) || (e[1] & table[1]) != home)
         return -1;
     for (;;)
     {
-        if ((mask & e[1]) == home && e[1] == hash)
+        const UPInt v = e[1];
+        if ((table[1] & v) == home && v == hash)
             return index;
         index = static_cast<SPInt>(e[0]);
         if (index == -1)
@@ -5344,7 +5344,6 @@ static SF_INLINE SPInt Sfr33IdWordFindIndex(const UPInt* table, const UPInt& key
     }
 }
 
-// MS2-FUNCTIONAL 0x1425059f0: only the operands of one and are swapped; same results
 // @0x1425059f0
 void* Sfr33IdWordHashGet(const UByte* self, const UPInt& key)
 {
