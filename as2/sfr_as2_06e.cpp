@@ -18,6 +18,7 @@
 #include "../include/gfx/as2/as2_avmsprite.h"
 #include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
+#include "../include/gfx/as2/as2_broadcastlocal.h"
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_displayobjcontainer.h"
 #include "../include/gfx/gfx_interactiveobject.h"
@@ -289,7 +290,6 @@ bool AvmSprite::ReplaceChildCharacter(InteractiveObject* poldChar, InteractiveOb
 
 // The text changed: onChanged goes to the field's listeners with the field (and, with the extensions on, the
 // controller that has the focus on it).
-// MS2-FUNCTIONAL: the exe inlines AsBroadcaster::BroadcastMessage (the callback on the stack).
 // @0x142969080
 void AvmTextField::NotifyChanged()
 {
@@ -300,14 +300,14 @@ void AvmTextField::NotifyChanged()
         const int controllerIdx = *reinterpret_cast<const int*>(reinterpret_cast<const UByte*>(pDispObj) + 0x128);
         if (controllerIdx != -1)
         {
-            penv->Push(Value(controllerIdx));
+            penv->Push(controllerIdx);
             nargs = 2;
         }
     }
     penv->Push(Value(pDispObj));
-    AsBroadcaster::BroadcastMessage(penv, static_cast<ObjectInterface*>(static_cast<AvmCharacter*>(this)),
-                                    penv->CreateConstString("onChanged"), nargs, penv->GetTopIndex());
-    penv->Drop(nargs);
+    BroadcastMessageLocal(penv, static_cast<ObjectInterface*>(static_cast<AvmCharacter*>(this)),
+                          penv->CreateConstString("onChanged"), nargs, penv->GetTopIndex());
+    penv->Stack.Pop(nargs);
 }
 
 // A click on an "asfunction:name,arg" link calls the method name (with the text after the comma) on the field's
@@ -430,3 +430,5 @@ void AvmCharacter::OnFocus(InteractiveObject::FocusEventType event, InteractiveO
 // MS2-PIN: ??_7MemberVisitor@ObjectInterface@AS2@GFx@Scaleform@@6B@ 0x143215400
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
+// MS2-PIN: ??_7InvokeCallback@AsBroadcaster@AS2@GFx@Scaleform@@6B@ 0x14321bdb8
+// MS2-PIN: ??_7SetFocusInvokeCallback@AS2@GFx@Scaleform@@6B@ 0x143221850
