@@ -2953,8 +2953,20 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
     }
 }
 
+// TextField::SetDefaultTextFormat and SetDefaultParagraphFormat: the document's default, then a full reformat.
+static SF_FORCEINLINE void TextField_SetDefaultTextFormat(TextField* ptf, const Render::Text::TextFormat& textFmt)
+{
+    ptf->GetDocument()->SetDefaultTextFormat(textFmt);
+    ptf->SetCompleteReformatReq();
+}
+
+static SF_FORCEINLINE void TextField_SetDefaultParagraphFormat(TextField* ptf, const Render::Text::ParagraphFormat& paraFmt)
+{
+    ptf->GetDocument()->SetDefaultParagraphFormat(paraFmt);
+    ptf->SetCompleteReformatReq();
+}
+
 // setNewTextFormat(textFormat): merged into the formats new text gets.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg and the TextFormat destructor out of line
 // @0x142909590
 void AvmTextField::SetNewTextFormat(const FnCall& fn)
 {
@@ -2963,7 +2975,7 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     if (ptf->HasStyleSheet() || fn.NArgs < 1)
         return;
-    Object* pobj = fn.Arg(0).ToObject(fn.Env);
+    Object* pobj = ArgCopy(&fn, 0)->ToObject(fn.Env);
     if (pobj && pobj->GetObjectType() == Object_TextFormat)
     {
         TextFormatObject* pfmtObj     = static_cast<TextFormatObject*>(pobj);
@@ -2972,10 +2984,8 @@ void AvmTextField::SetNewTextFormat(const FnCall& fn)
             (const Render::Text::TextFormat*)StyledText_GetDefaultTextFormat(pstyledText);
         const Render::Text::ParagraphFormat* pparaFmt =
             (const Render::Text::ParagraphFormat*)StyledText_GetDefaultParagraphFormat(pstyledText);
-        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->SetDefaultTextFormat(ptextFmt->Merge(pfmtObj->GetTextFormat()));
-        ptf->SetCompleteReformatReq();
-        static_cast<Render::Text::StyledText*>(DocView_GetStyledText(ptf->GetDocument()))->SetDefaultParagraphFormat(pparaFmt->Merge(pfmtObj->GetParagraphFormat()));
-        ptf->SetCompleteReformatReq();
+        TextField_SetDefaultTextFormat(ptf, ptextFmt->Merge(pfmtObj->GetTextFormat()));
+        TextField_SetDefaultParagraphFormat(ptf, pparaFmt->Merge(pfmtObj->GetParagraphFormat()));
     }
 }
 
