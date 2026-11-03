@@ -3126,16 +3126,14 @@ unsigned FUN_1400113a0(void* array, const unsigned* source)
     return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(bytes + 0x20));
 }
 
-// MS2-FUNCTIONAL: appends a copied reference entry in the nested +0x88 collection.
+// Appends a copied reference entry in the nested +0x88 collection.
 // @0x140011450
 unsigned FUN_140011450(void* object, const unsigned* source)
 {
-    char* array = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88)) + 0x18;
-    unsigned __int64 length = *reinterpret_cast<unsigned __int64*>(array + 8);
-    FUN_1425eec50(array, array, length + 1);
+    char* outer = static_cast<char*>(*reinterpret_cast<void**>(static_cast<char*>(object) + 0x88));
+    FUN_1425eec50(outer + 0x18, outer + 0x18, *reinterpret_cast<unsigned __int64*>(outer + 0x20) + 1);
     // the new last entry, at the resized count; the exe returns that count
-    unsigned __int64 size = *reinterpret_cast<unsigned __int64*>(array + 8);
-    char* item = *reinterpret_cast<char**>(array) + size * 0x10 - 0x10;
+    char* item = *reinterpret_cast<char**>(outer + 0x18) + *reinterpret_cast<unsigned __int64*>(outer + 0x20) * 0x10 - 0x10;
     if (item)   // the exe's placement copy construction of the entry
     {
         *reinterpret_cast<unsigned*>(item) = *source;
@@ -3143,7 +3141,7 @@ unsigned FUN_140011450(void* object, const unsigned* source)
         if (value) FUN_14257dc30(value);
         *reinterpret_cast<void**>(item + 8) = *reinterpret_cast<void* const*>(source + 2);
     }
-    return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(array + 8));
+    return static_cast<unsigned>(*reinterpret_cast<unsigned __int64*>(outer + 0x20));
 }
 
 // MS2-FUNCTIONAL: frees the old aligned callback buffer, allocates the grown one and advances its active range.
