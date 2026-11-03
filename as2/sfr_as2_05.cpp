@@ -2363,7 +2363,8 @@ MovieClipObject* AvmSprite::GetMovieClipObject()
     return pobj;
 }
 
-// MS2-FUNCTIONAL same logic; the exe lays the failed-lowercase release out of line and schedules the lookup flag differently
+// MS2-FUNCTIONAL 7 bytes off: the exe walks the builtin chain through rax, tests the flag in ecx, and releases the
+// lowercase name with sub 1 where cl gives add -1
 // @0x142956090
 AvmCharacter::StandardMember AvmCharacter::GetStandardMemberConstant(const ASString& newname) const
 {
@@ -2378,12 +2379,16 @@ AvmCharacter::StandardMember AvmCharacter::GetStandardMemberConstant(const ASStr
         {
             ASString lower(newname.ToLowerNode());
             bool     isCaseInsensitive = ((lower.GetHashFlags() >> 28) & 1) != 0;
-            if (!isCaseInsensitive)
+            if (isCaseInsensitive)
+                name = lower;
+            else
                 goto done;
-            name = lower;
         }
     }
-    GetGC()->StandardMemberMap.GetCaseCheck(newname, &member, name.IsEmpty());
+    {
+        GlobalContext* pgc = GetGC();
+        pgc->StandardMemberMap.GetCaseCheck(newname, &member, name.IsEmpty());
+    }
 done:
     return (StandardMember)member;
 }
