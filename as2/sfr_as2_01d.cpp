@@ -17,6 +17,10 @@
 
 namespace Scaleform {
 
+// The exe calls AsString<UInt32> (0x1423e8390) out of line from AsString(const Value&); it is declared here so it is
+// not inlined there, and defined by its other users. AsString(cp, vd) inlines the unsigned int copy instead.
+template<> String AsString<UInt32>(const UInt32& v);
+
 // "a" followed by the text of s. 0x1424e0e50
 String operator+(const char* a, const GFx::ASString& s);
 static inline String operator+(const char* left, const String& right) { return String(left, right.ToCStr(), NULL); }
@@ -256,24 +260,35 @@ String AsString(const Abc::ConstPool& cp, const Abc::NamespaceSetInfo& nss, Name
     return result + "]";
 }
 
-// A default value of the constant pool.
+// A default value of the constant pool. The cases are in the exe's order; the int is copied before it is formatted.
 // @0x1424ec630
 String AsString(const Abc::ConstPool& cp, const Abc::ValueDetail& vd)
 {
     const SInt32 ind = vd.ValueIndex;
     switch (static_cast<int>(vd.Kind))
     {
-    case 0x00:  // undefined
-        return String("Undefined");
+    case 0x03:  // int
+    {
+        const SInt32 v = cp.ConstInt[ind];
+        return Scaleform::AsString(v);
+    }
+    case 0x04:  // uint (formatted inline, as in the exe)
+        return Scaleform::AsString<unsigned int>(cp.ConstUInt[ind]);
+    case 0x06:  // double
+        return Scaleform::AsString(cp.GetDouble(ind));
     case 0x01:  // utf8
     {
         const StringDataPtr s = cp.GetString(static_cast<UInt32>(ind));
         return String(s.ToCStr(), s.GetSize());
     }
-    case 0x03:  // int
-        return Scaleform::AsString(cp.ConstInt[ind]);
-    case 0x04:  // uint
-        return Scaleform::AsString(cp.ConstUInt[ind]);
+    case 0x0b:
+        return String("true");
+    case 0x0a:
+        return String("false");
+    case 0x0c:
+        return String("null");
+    case 0x00:  // undefined
+        return String("Undefined");
     case Abc::AbcKind_PrivateNs:
     case Abc::AbcKind_Namespace:
     case Abc::AbcKind_PackageNamespace:
@@ -282,14 +297,6 @@ String AsString(const Abc::ConstPool& cp, const Abc::ValueDetail& vd)
     case Abc::AbcKind_ExplicitNamespace:
     case Abc::AbcKind_StaticProtectedNs:
         return AsString(ind == 0 ? cp.any_namespace : cp.ConstNamespace[ind], nsUriOnly);
-    case 0x06:  // double
-        return Scaleform::AsString(cp.GetDouble(ind));
-    case 0x0a:
-        return String("false");
-    case 0x0b:
-        return String("true");
-    case 0x0c:
-        return String("null");
     default:
         return String();
     }
