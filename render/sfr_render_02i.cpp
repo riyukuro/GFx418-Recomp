@@ -366,7 +366,7 @@ __declspec(noinline) bool FUN_1425eae70(TreeContainer* container, TreeNode* node
     return container->Insert(container->GetReadOnlyData()->Children.GetSize(), node);
 }
 
-// MS2-FUNCTIONAL: the exe keeps TreeContainer::Add, StartLayer, LineTo and EndPath out of line; the rectangle's closing edge is an explicit test (the exe compares the start and last points)
+// MS2-FUNCTIONAL: the exe also inlines ShapeDataFloatTempl::MoveTo in RectanglePath (ours calls it; render_shapedata.h) and grows the fill array through ResizeNoConstruct
 // @0x1425eb8c0
 #pragma strict_gs_check(push, on)
 void DrawableImage::Draw(Image* source, const Matrix2F& matrix, const Cxform& cxform, BlendMode blendMode,

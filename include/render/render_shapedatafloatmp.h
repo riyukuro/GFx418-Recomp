@@ -35,14 +35,14 @@ public:
     void     EndPath()                               { pData->EndPath(); }
 
     // a closed axis-aligned rectangle as one path; the closing edge is skipped when the last corner is the first
-    void RectanglePath(float x1, float y1, float x2, float y2)
+    // (the exe always inlines it: DrawableImage::Draw 0x1425eb8c0 tests the start and last points inline)
+    __forceinline void RectanglePath(float x1, float y1, float x2, float y2)
     {
         pData->MoveTo(x1, y1);
         pData->LineTo(x2, y1);
         pData->LineTo(x2, y2);
         pData->LineTo(x1, y2);
-        if (y2 != y1)
-            pData->LineTo(x1, y1);
+        pData->ClosePath();
         pData->EndPath();
     }
 
