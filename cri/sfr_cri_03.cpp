@@ -4942,57 +4942,7 @@ struct CriMpvBitReader
 
 }
 
-// MS2-FUNCTIONAL: decode one DC coefficient difference with the MPEG intra VLC tables and update its predictor.
-// @0x142ccb520
-CriSint32 mpvdec_MotionSub(void* decoder, void* parameters, CriSint32* output, CriSint32* predictor)
-{
-    struct Parameters { CriSint32 Double; CriSint32 Size; CriSint32 SignBits; CriSint32 Range; };
-    Parameters* params = (Parameters*)parameters;
-    CriMpvBitReader bits;
-    bits.Load(decoder);
-    CriUint32 window = bits.Peek(11);
-    CriSint32 entry = (window & 0xffffff80) == 0 ? DAT_143d74a38[window] : DAT_143d749c8[window >> 6];
-    CriSint32 symbol = (CriSint8)entry;
-    if (symbol == 0x7f)
-    {
-        bits.Store(decoder);
-        return -1;
-    }
-    bits.Consume((CriUint32)(CriUint16)entry >> 8);
-    if (symbol == 0)
-    {
-        *output = *predictor;
-    }
-    else
-    {
-        CriSint32 size = params->Size;
-        if (size != 0)
-        {
-            CriUint32 value = bits.Read(size);
-            CriSint32 adjust = params->Range - (CriSint32)value - 1;
-            symbol <<= size;
-            if (symbol <= 0)
-                symbol += adjust;
-            else
-                symbol -= adjust;
-        }
-        CriSint32 total = (CriSint32)((CriUint32)(*predictor + symbol) << params->SignBits) >> params->SignBits;
-        *output = total;
-        *predictor = total;
-    }
-    if (params->Double != 0)
-        *output <<= 1;
-    bits.Store(decoder);
-    return 0;
-}
-
-// MS2-FUNCTIONAL: decode the macroblocks of an intra-only MPEG video slice chunk by chunk.
-// The bit window is kept in plain locals through the CRI_MPV_* macros: VC9 /O2 keeps the cursor of a
-// CriMpvBitReader aggregate in a stack slot, where the exe has it in a register. What is left in the I, P and B
-// slice decoders is register assignment (the cursor and position sit in other registers); in P and B the longer
-// encodings that follow from it put a 6-byte alignment nop before the outer loop head.
-#define CRI_MPV_CHUNK() CriMpvField<CriMpvChunk>(decoder, MPV_CHUNK)
-#define CRI_MPV_GETCHUNK() ((CriMpvQueueGet)(*(void***)queue)[6])(queue, 1, 0x7fffffff, &CRI_MPV_CHUNK())
+// Bit window steps on plain locals high, low, pos and cur (see the slice decoders below).
 #define CRI_MPV_ADVANCE(count)                                                                                  \
     do                                                                                                          \
     {                                                                                                           \
@@ -5010,6 +4960,103 @@ CriSint32 mpvdec_MotionSub(void* decoder, void* parameters, CriSint32* output, C
             high <<= (count);                                                                                   \
         }                                                                                                       \
     } while (0)
+#define CRI_MPV_PEEK(window, count)                   \
+    do                                                \
+    {                                                 \
+        (window) = high >> (32 - (count));            \
+        if (pos > 32 - (count))                       \
+            (window) |= low >> (64 - (count) - pos);  \
+    } while (0)
+
+// MS2-FUNCTIONAL: decode one DC coefficient difference with the MPEG intra VLC tables and update its predictor.
+// The bit window is kept in plain locals as in the slice decoders; what is left is register choice (the exe keeps
+// decoder in r9 and saves rbx only around the size read).
+// @0x142ccb520
+CriSint32 mpvdec_MotionSub(void* decoder, void* parameters, CriSint32* output, CriSint32* predictor)
+{
+    struct Parameters { CriSint32 Double; CriSint32 Size; CriSint32 SignBits; CriSint32 Range; };
+    Parameters* params = (Parameters*)parameters;
+    CriUint32 high = CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH);
+    CriSint32 pos = CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION);
+    CriUint32 low = CriMpvField<CriUint32>(decoder, MPV_BITS_LOW);
+    const CriUint8* cur = CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR);
+    CriSint32 size = params->Size;
+    CriSint32 result = 0;
+    CriUint32 window;
+    CRI_MPV_PEEK(window, 11);
+    CriSint32 entry;
+    if ((window & 0xffffff80) == 0)
+        entry = DAT_143d74a38[window];
+    else
+        entry = DAT_143d749c8[window >> 6];
+    CriSint32 symbol = (CriSint8)entry;
+    if (symbol == 0x7f)
+    {
+        result = -1;
+    }
+    else
+    {
+        CRI_MPV_ADVANCE((CriUint8)((CriUint32)entry >> 8));
+        if (symbol == 0)
+        {
+            *output = *predictor;
+        }
+        else
+        {
+            if (size != 0)
+            {
+                CriUint32 value;
+                CriSint32 rest = 32 - size;
+                if (pos >= rest)
+                {
+                    pos = pos + size - 32;
+                    if (pos != 0)
+                    {
+                        value = (low >> (size - pos) | high) >> rest;
+                        high = low << pos;
+                    }
+                    else
+                    {
+                        value = high >> rest;
+                        high = low;
+                    }
+                    low = CriReadBigEndian32(cur);
+                    cur += 4;
+                }
+                else
+                {
+                    value = high >> rest;
+                    pos += size;
+                    high <<= size;
+                }
+                CriSint32 adjust = params->Range - (CriSint32)value - 1;
+                symbol <<= size;
+                if (symbol > 0)
+                    symbol -= adjust;
+                else
+                    symbol += adjust;
+            }
+            CriSint32 total = (CriSint32)((CriUint32)(*predictor + symbol) << params->SignBits) >> params->SignBits;
+            *output = total;
+            *predictor = total;
+        }
+        if (params->Double != 0)
+            *output <<= 1;
+    }
+    CriMpvField<CriUint32>(decoder, MPV_BITS_LOW) = low;
+    CriMpvField<CriUint32>(decoder, MPV_BITS_HIGH) = high;
+    CriMpvField<CriSint32>(decoder, MPV_BITS_POSITION) = pos;
+    CriMpvField<const CriUint8*>(decoder, MPV_BITS_CURSOR) = cur;
+    return result;
+}
+
+// MS2-FUNCTIONAL: decode the macroblocks of an intra-only MPEG video slice chunk by chunk.
+// The bit window is kept in plain locals through the CRI_MPV_* macros: VC9 /O2 keeps the cursor of a
+// CriMpvBitReader aggregate in a stack slot, where the exe has it in a register. What is left in the I, P and B
+// slice decoders is register assignment (the cursor and position sit in other registers); in P and B the longer
+// encodings that follow from it put a 6-byte alignment nop before the outer loop head.
+#define CRI_MPV_CHUNK() CriMpvField<CriMpvChunk>(decoder, MPV_CHUNK)
+#define CRI_MPV_GETCHUNK() ((CriMpvQueueGet)(*(void***)queue)[6])(queue, 1, 0x7fffffff, &CRI_MPV_CHUNK())
 #define CRI_MPV_START(extra)                                                                                    \
     do                                                                                                          \
     {                                                                                                           \
@@ -5032,13 +5079,6 @@ CriSint32 mpvdec_MotionSub(void* decoder, void* parameters, CriSint32* output, C
         {                                                                                                       \
             high <<= (extra);                                                                                   \
         }                                                                                                       \
-    } while (0)
-#define CRI_MPV_PEEK(window, count)                   \
-    do                                                \
-    {                                                 \
-        (window) = high >> (32 - (count));            \
-        if (pos > 32 - (count))                       \
-            (window) |= low >> (64 - (count) - pos);  \
     } while (0)
 #define CRI_MPV_CONSUMED(alignedBits) \
     ((CriSint32)(((CriUint32)((alignedBits) >> 3)) - (CriUint32)(uintptr_t)CRI_MPV_CHUNK().Data + (CriUint32)(uintptr_t)cur - 8))
