@@ -5,7 +5,8 @@
 // MS2-UNIT: sfr_cri_07
 // MS2-TOOLSET: vc9
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x140066180-0x140067ac0 .text$mn
+// MS2-RANGE: 0x140066180-0x1400678d0 .text$mn
+// MS2-RANGE: 0x140067a90-0x140067ac0 .text$mn
 // MS2-RANGE: 0x140067bf0-0x140068190 .text$mn
 // MS2-RANGE: 0x140068280-0x14006aa60 .text$mn
 // MS2-RANGE: 0x14006b0d0-0x1400b0940 .text$mn
@@ -1651,66 +1652,6 @@ cri_u8 CRIDLG_Create(cri_u8 arg1, cri_u4 arg2)
   return u_v1;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
-// @0x1400678d0
-cri_u8 cridlg_Create(longlong arg1, uint arg2)
-{
-  int i_v1;
-  HANDLE pv_v2;
-  cri_u8 u_v3;
-  uintptr_t u_v4;
-  uint loc_18 [2];
-  cri_u4 *loc_10;
-  
-  if (arg1 == 0) {
-    cridlg_assert("NULL pointer is passed.");
-    loc_10 = (cri_u4 *)0x0;
-  }
-  else if (arg2 < 0x7c) {
-    cridlg_assert("Work area size is too short.");
-    loc_10 = (cri_u4 *)0x0;
-  }
-  else {
-    loc_10 = (cri_u4 *)(arg1 + 3U & 0xfffffffffffffffc);
-    memset(loc_10,0,0x78);
-    pv_v2 = CreateEventA((LPSECURITY_ATTRIBUTES)0x0,1,0,(LPCSTR)0x0);
-    *(HANDLE *)(loc_10 + 4) = pv_v2;
-    if (*(longlong *)(loc_10 + 4) == 0) {
-      cridlg_assert("E2004112601 : Can not create wait event.");
-      loc_10 = (cri_u4 *)0x0;
-    }
-    else {
-      u_v3 = CRICRS_Create((longlong)(loc_10 + 8),0x30);  // rcx = loc_10 + 0x20 bytes, edx = 0x30 in the exe
-      *(cri_u8 *)(loc_10 + 6) = u_v3;
-      if (*(longlong *)(loc_10 + 6) == 0) {
-        cridlg_assert("E2004112602 : Can not create critical section.");
-        CloseHandle(*(HANDLE *)(loc_10 + 4));
-        loc_10 = (cri_u4 *)0x0;
-      }
-      else {
-        u_v4 = _beginthreadex((void *)0x0,0,(unsigned (__stdcall *)(void *))FUN_140068190,loc_10,0,loc_18);
-        *(uintptr_t *)(loc_10 + 2) = u_v4;
-        if (*(longlong *)(loc_10 + 2) == 0) {
-          cridlg_assert("E2004112603 : Can not create thread.");
-          CloseHandle(*(HANDLE *)(loc_10 + 4));
-          CRICRS_Destroy((LPCRITICAL_SECTION)(*(cri_u8 *)(loc_10 + 6)));
-          loc_10 = (cri_u4 *)0x0;
-        }
-        else {
-          while (loc_10[0x19] == 0) {
-            Sleep(10);
-          }
-          i_v1 = GetThreadPriority(*(HANDLE *)(loc_10 + 2));
-          loc_10[0x1b] = i_v1;
-          *(cri_u8 *)((char *)loc_10 + 0x70) = 0xffffffffffffffff;
-          *loc_10 = 1;
-        }
-      }
-    }
-  }
-  return (cri_u8)loc_10;
-}
-
 // @0x140067a90
 void CRIDLG_Destroy(cri_u8 arg1)
 {
@@ -2997,7 +2938,7 @@ void criAdxDecCore_SetDlyVal(longlong cri_p0, uint cri_p1, short cri_p2, short c
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+#pragma function(sqrtf)                       // the exe calls sqrtf(2.0f) twice: not a pure intrinsic here
 // @0x140069ef4
 void criAdxDecCore_SetCutoffFreqency(longlong cri_p0, uint cri_p1, uint cri_p2)
 {
@@ -3023,32 +2964,31 @@ void criAdxDecCore_SetCutoffFreqency(longlong cri_p0, uint cri_p1, uint cri_p2)
   arg1[8] = 1.0;
   arg1[0xd] = 1.0;
   f_v8 = (f_v7 - f_v9) / f_v8;
+  s_v1 = (short)(int)(f_v8 * 2.0f * 4096.0f);
   s_v3 = (short)(int)(f_v8 * f_v8 * -4096.0f);
   *(short *)((longlong)arg1 + 0xaa) = s_v3;
-  s_v1 = (short)(int)(f_v8 * 2.0f * 4096.0f);
   *(short *)((char *)arg1 + 0xa8) = s_v1;
+  f_v7 = (float)(int)s_v1 * 0.00024414062f;
+  f_v8 = (float)(int)s_v3 * 0.00024414062f;
+  *arg1 = f_v7;
   arg1[0xc] = 0.0;
   arg1[0x10] = 0.0;
   arg1[0x14] = 0.0;
   arg1[0x11] = 0.0;
   arg1[0x15] = 0.0;
   l_v5 = 2;
-  f_v7 = (float)(int)s_v1 * 0.00024414062f;
-  *arg1 = f_v7;
   arg1[9] = f_v7;
-  f_v8 = (float)(int)s_v3 * 0.00024414062f;
   l_v4 = 0x10;
   arg1[4] = f_v8;
   arg1[1] = f_v7 * f_v7 + f_v8;
   arg1[5] = f_v8 * f_v7;
   do {
-    l_v6 = 6;
+    int i;
     pf_v2 = (float *)((longlong)arg1 + l_v4 + -0x10);
-    do {
-      l_v6 = l_v6 + -1;
+    for (i = 0; i < 6; i++) {
       pf_v2[2] = f_v7 * pf_v2[1] + f_v8 * *pf_v2;
       pf_v2 = pf_v2 + 4;
-    } while (l_v6 != 0);
+    }
     l_v6 = l_v4 + l_v5;
     l_v4 = l_v4 + 4;
     l_v5 = l_v5 + 1;
@@ -3056,6 +2996,7 @@ void criAdxDecCore_SetCutoffFreqency(longlong cri_p0, uint cri_p1, uint cri_p2)
   } while (l_v4 < 0x18);
   return;
 }
+#pragma intrinsic(sqrtf)
 
 // @0x14006a090
 #pragma function(strlen, memcmp)                // the exe calls strlen and memcmp here rather than expanding them

@@ -9,6 +9,7 @@
 // MS2-UNIT: sfr_cri_07d
 // MS2-TOOLSET: vc9c
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x1400678d0-0x140067a90 .text$mn
 // MS2-RANGE: 0x140067ac0-0x140067bf0 .text$mn
 // MS2-RANGE: 0x140068190-0x140068280 .text$mn
 // MS2-RANGE: 0x140062950-0x140062a40 .text$mn
@@ -17,6 +18,7 @@
 
 #include <windows.h>
 #include <string.h>
+#include <process.h>
 
 typedef unsigned int cri_u4;
 typedef unsigned __int64 cri_u8;
@@ -26,11 +28,63 @@ typedef cri_u8 cri_code(cri_u8);
 void cridlg_EndInvoke(int *, cri_u4);
 cri_u8 FUN_140068200(cri_u8);
 cri_u8 FUN_140068210(longlong);
+void cridlg_assert(const char *);
+cri_u8 CRICRS_Create(longlong, int);
 void CRICRS_Destroy(LPCRITICAL_SECTION);
+cri_u8 FUN_140068190(longlong);
 cri_u4 CRICRS_Enter(LPCRITICAL_SECTION);
 cri_u4 CRICRS_Leave(LPCRITICAL_SECTION);
 
 #pragma optimize("", off)                    // this exe CRI obj was built without optimization (/Od)
+// create a CRI worker thread record in the caller's work area (4-byte aligned, at least 0x7c bytes): its wait event,
+// its lock and its thread; wait until the thread runs, and return the record, or 0 on failure. The local names fix the
+// /Od stack slots: VS2008 orders them by name, and work/tid give the exe's.
+// @0x1400678d0
+#pragma function(memset)                      // the exe obj calls memset here
+cri_u8 cridlg_Create(longlong arg1, cri_u4 arg2)
+{
+  cri_u4 tid;
+  cri_u4 *work;
+
+  if (arg1 == 0) {
+    cridlg_assert("NULL pointer is passed.");
+    return 0;
+  }
+  if ((cri_u8)(int)arg2 < 0x7c) {
+    cridlg_assert("Work area size is too short.");
+    return 0;
+  }
+  work = (cri_u4 *)(arg1 + 3U & 0xfffffffffffffffc);
+  memset(work,0,0x78);
+  *(HANDLE *)(work + 4) = CreateEventA((LPSECURITY_ATTRIBUTES)0x0,1,0,(LPCSTR)0x0);
+  if (*(longlong *)(work + 4) == 0) {
+    cridlg_assert("E2004112601 : Can not create wait event.");
+    return 0;
+  }
+  *(cri_u8 *)(work + 6) = CRICRS_Create((longlong)(work + 8),0x30);
+  if (*(longlong *)(work + 6) == 0) {
+    cridlg_assert("E2004112602 : Can not create critical section.");
+    CloseHandle(*(HANDLE *)(work + 4));
+    return 0;
+  }
+  *(uintptr_t *)(work + 2) =
+      _beginthreadex((void *)0x0,0,(unsigned (__stdcall *)(void *))FUN_140068190,work,0,&tid);
+  if (*(longlong *)(work + 2) == 0) {
+    cridlg_assert("E2004112603 : Can not create thread.");
+    CloseHandle(*(HANDLE *)(work + 4));
+    CRICRS_Destroy((LPCRITICAL_SECTION)(*(cri_u8 *)(work + 6)));
+    return 0;
+  }
+  for (;;) {
+    if (work[0x19] != 0) break;
+    Sleep(10);
+  }
+  work[0x1b] = GetThreadPriority(*(HANDLE *)(work + 2));
+  *(cri_u8 *)((char *)work + 0x70) = 0xffffffffffffffff;
+  *work = 1;
+  return (cri_u8)work;
+}
+
 // stop a CRI worker thread: signal it until it exits, then close its event, lock and thread handles and clear the
 // 0x78-byte thread record
 // @0x140067ac0
