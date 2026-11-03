@@ -828,7 +828,8 @@ void FUN_140004e50(void** value) { if (*value) Scaleform::Memory::Free(*value); 
 void FUN_140004e90(void** value) { if (*value) Scaleform::Memory::Free(*value); }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: obtains the live object behind a weak proxy, clearing an expired proxy slot.
+// obtains the live object behind a weak proxy, clearing an expired proxy slot. The exe compares pObject in
+// memory and reloads it, so the second read is volatile.
 #undef GetObject // wingdi.h, and WeakPtrProxy::GetObject is what these rows read
 // @0x140005000
 void* FUN_140005000(void** weakSlot)
@@ -837,7 +838,7 @@ void* FUN_140005000(void** weakSlot)
     Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
         if (proxy->IsAlive()) {
-            object = proxy->GetObject();
+            object = *reinterpret_cast<void* volatile*>(reinterpret_cast<unsigned char*>(proxy) + 8);
             if (*reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8) == 0) object = 0;
         } else {
             proxy->Release();
@@ -983,8 +984,8 @@ void** FUN_140005940(void** destination, Scaleform::GFx::CharacterHandle* replac
     return destination;
 }
 
-// MS2-FUNCTIONAL: locks a weak proxy into a retained strong object reference (SDK WeakPtr::GetObjectThroughProxy + Ptr ctor).
-// The exe compares pObject in memory and reloads it; ours loads it once and tests the register.
+// locks a weak proxy into a retained strong object reference (SDK WeakPtr::GetObjectThroughProxy + Ptr ctor).
+// The exe compares pObject in memory and reloads it, so the second read is volatile.
 // @0x1400059b0
 void** FUN_1400059b0(void** weakSlot, void** result)
 {
@@ -992,7 +993,7 @@ void** FUN_1400059b0(void** weakSlot, void** result)
     Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
         if (proxy->IsAlive()) {
-            pobject = proxy->GetObject();
+            pobject = *reinterpret_cast<Scaleform::RefCountWeakSupportImpl* volatile*>(reinterpret_cast<unsigned char*>(proxy) + 8);
             if (pobject->GetRefCount() == 0)
                 pobject = 0;
         } else {
@@ -2656,7 +2657,8 @@ void FUN_14000a770(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collec
     Video01DispatchGc(object, collector, operation, FUN_14000a5d0, FUN_14000a230, FUN_14000a420);
 }
 
-// MS2-FUNCTIONAL: promotes a live weak proxy to a strong object reference in the output slot.
+// promotes a live weak proxy to a strong object reference in the output slot. The exe compares pObject in
+// memory and reloads it, so the second read is volatile.
 // BEHAVIOUR FIX: a live object with a non-zero count gets a plain (RefCountNTSImpl) AddRef, as in the exe. This
 // used to call 0x14257dcb0 (RefCountImpl::Release), so every promotion dropped a reference instead of taking one.
 // The weak slot also holds the proxy pointer untagged; the exe does not mask its low bits.
@@ -2667,7 +2669,7 @@ void** FUN_140006350(void** weakSlot, void** result)
     Scaleform::WeakPtrProxy* proxy = static_cast<Scaleform::WeakPtrProxy*>(*weakSlot);
     if (proxy) {
         if (proxy->IsAlive()) {
-            object = proxy->GetObject();
+            object = *reinterpret_cast<void* volatile*>(reinterpret_cast<unsigned char*>(proxy) + 8);
             if (*reinterpret_cast<int*>(static_cast<unsigned char*>(object) + 8) == 0) object = 0;
         } else {
             proxy->Release();
