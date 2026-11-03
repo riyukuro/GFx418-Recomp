@@ -13,22 +13,23 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The IMEStyle category named by a "compositionSegment"-style string (0..4, in the order of Text::IMEStyle::Category);
 // 5 (SC_MaxNum) if unknown. Returned as an int: sfr_as2_01 declares it that way, the mangled name has no return type.
-// MS2-FUNCTIONAL: strcmp chain order kept, compiler folds the literals differently
+// The category is set by an else-if chain and returned once, so cl keeps the default 5 in a register.
 // @0x1429487e0
 int GFx_StringToIMEStyleCategory(const ASString& name)
 {
-    const char* pstr = name.ToCStr();
+    int         category = 5;
+    const char* pstr     = name.ToCStr();
     if (strcmp(pstr, "compositionSegment") == 0)
-        return 0;
-    if (strcmp(pstr, "clauseSegment") == 0)
-        return 1;
-    if (strcmp(pstr, "convertedSegment") == 0)
-        return 2;
-    if (strcmp(pstr, "phraseLengthAdj") == 0)
-        return 3;
-    if (strcmp(pstr, "lowConfSegment") == 0)
-        return 4;
-    return 5;
+        category = 0;
+    else if (strcmp(pstr, "clauseSegment") == 0)
+        category = 1;
+    else if (strcmp(pstr, "convertedSegment") == 0)
+        category = 2;
+    else if (strcmp(pstr, "phraseLengthAdj") == 0)
+        category = 3;
+    else if (strcmp(pstr, "lowConfSegment") == 0)
+        category = 4;
+    return category;
 }
 
 // width and height are read from the image; everything else is an ordinary member.
