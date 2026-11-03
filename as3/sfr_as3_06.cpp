@@ -2670,6 +2670,23 @@ __declspec(noinline) void FUN_142440d90(Scaleform::GFx::AS3::Instances::fl_displ
     pthis->pDrawing->AcquirePath(newShapeFlag);
 }
 
+// Out of line in the exe, called from the AS3 transform code, the render tree and the gradient helper below (the
+// header's body, kept out of line: the exe calls it from both inverse branches of FUN_142441010).
+namespace Scaleform { namespace Render {
+template <> __declspec(noinline) inline Matrix2x4<float>& Matrix2x4<float>::Prepend(const Matrix2x4<float>& m)
+{
+    Matrix2x4 t(*this);
+    M[0][0] = t.M[0][0] * m.M[0][0] + t.M[0][1] * m.M[1][0];
+    M[1][0] = t.M[1][0] * m.M[0][0] + t.M[1][1] * m.M[1][0];
+    M[0][1] = t.M[0][0] * m.M[0][1] + t.M[0][1] * m.M[1][1];
+    M[1][1] = t.M[1][0] * m.M[0][1] + t.M[1][1] * m.M[1][1];
+    M[0][2] = M[1][2] = 0;
+    M[0][3] = t.M[0][0] * m.M[0][3] + t.M[0][1] * m.M[1][3] + t.M[0][3];
+    M[1][3] = t.M[1][0] * m.M[0][3] + t.M[1][1] * m.M[1][3] + t.M[1][3];
+    return *this;
+}
+}}
+
 // Graphics: reads the gradient arguments of beginGradientFill / lineGradientStyle (type, colors, alphas,
 // ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio) into the complex fill. Unlike later
 // players this build requires all three arrays and uses an unscaled identity as the default matrix.
@@ -2751,8 +2768,8 @@ void FUN_142441010(Scaleform::GFx::AS3::Instances::fl_display::Graphics* pthis, 
         UInt32 color;
         colors->At(i).Convert2UInt32(color);
         Value::Number a, r;
-        alphas->At(i).Convert2NumberInline(a);
-        ratios->At(i).Convert2NumberInline(r);
+        alphas->At(i).Convert2Number(a);
+        ratios->At(i).Convert2Number(r);
         unsigned alpha = Alg::Min<unsigned>((unsigned)(a * 255.0), 255);
         float ratio = Alg::Max(0.0f, Alg::Min((float)r, 255.0f));
         Render::GradientRecord& record = pfill->pGradient->At((unsigned)i);
@@ -2792,8 +2809,6 @@ template struct Scaleform::GFx::AS3::ThunkArgs5<const Scaleform::GFx::AS3::Value
     Scaleform::GFx::AS3::Instances::fl_geom::ColorTransform*, const Scaleform::GFx::ASString&,
     Scaleform::GFx::AS3::Instances::fl_geom::Rectangle*>;
 
-// Out of line in the exe, called from the AS3 transform code and the render tree.
-template Scaleform::Render::Matrix2x4<float>& Scaleform::Render::Matrix2x4<float>::Prepend(const Scaleform::Render::Matrix2x4<float>&);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 
