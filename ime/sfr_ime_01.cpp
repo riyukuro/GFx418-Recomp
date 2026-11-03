@@ -5103,13 +5103,12 @@ void FUN_1423cd0a0(unsigned long long* self, const unsigned char* event)
 // @0x1423d1d10
 void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long long extra)
 {
-    auto* self = static_cast<unsigned char*>(raw);
-    if (message != 0x282 || compositionFlag != 0xe || extra != 0x12) return;
-    const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
-    const short key = *reinterpret_cast<short*>(self + 0xd0);
     typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
-    if (key == 8) {
-        const wchar_t* shown = nullptr;
+    auto* self = static_cast<unsigned char*>(raw);
+    Scaleform::GFx::Value unused;
+    if (message != 0x282 || compositionFlag != 0xe || extra != 0x12) return;
+    if (*reinterpret_cast<short*>(self + 0xd0) == 8) {
+        const unsigned state = *reinterpret_cast<unsigned*>(self + 0x98);
         if (state == 4 || state == 0x40000) {
             {
                 Scaleform::GFx::Value result;
@@ -5119,40 +5118,60 @@ void FUN_1423d1d10(void* raw, long long message, long long compositionFlag, long
             }
             auto* buffer = *reinterpret_cast<wchar_t**>(self + 0x40);
             const int length = static_cast<int>(wcslen(buffer));
-            if (length) buffer[length - 1] = 0;
-            shown = buffer;
-        } else if (state == 2) {
-            FUN_1423ca030(*reinterpret_cast<void**>(self + 8), "RemoveInputWindow", nullptr);
-            auto* buffer = *reinterpret_cast<wchar_t**>(self + 0xb0);
-            int i = 3;
-            while (i >= 0 && buffer[i] == L' ') --i;
-            if (i >= 0) buffer[i] = L' ';
-            shown = buffer;
-        }
-        if (shown) {
-            char* text = static_cast<char*>(Scaleform::Memory::Alloc(
-                static_cast<SPInt>(Scaleform::UTF8Util::GetEncodeStringSize(shown, -1) + 1)));
-            Scaleform::UTF8Util::EncodeString(text, shown, -1);
+            buffer[length - 1] = 0;
+            const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(*reinterpret_cast<wchar_t**>(self + 0x40), -1));
+            char* text = static_cast<char*>(Scaleform::Memory::Alloc(size + 1));
+            Scaleform::UTF8Util::EncodeString(text, *reinterpret_cast<wchar_t**>(self + 0x40), -1);
             void* owner = *reinterpret_cast<void**>(self + 8);
             Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
                 reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
             Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
             ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
-            Scaleform::GFx::Value args[4];
-            args[0] = Scaleform::GFx::Value(static_cast<const char*>(text));
-            args[1] = Scaleform::GFx::Value(static_cast<double>(cursorRect.x1));
-            args[2] = Scaleform::GFx::Value(static_cast<double>(cursorRect.y2));
-            args[3] = Scaleform::GFx::Value(0.0);
             {
+                Ime01ValueArgs args;
                 Scaleform::GFx::Value result;
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<const char*>(text)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(0.0));
                 if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
                     reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                        bridge, "DisplayInputWindow", &result, args, 4);
+                        bridge, "DisplayInputWindow", &result, args.data, 4);
             }
             Scaleform::Memory::Free(text);
         }
+        if (*reinterpret_cast<unsigned*>(self + 0x98) == 2) {
+            FUN_1423ca030(*reinterpret_cast<void**>(self + 8), "RemoveInputWindow", nullptr);
+            int i = 3;
+            while (i >= 0) {
+                if ((*reinterpret_cast<wchar_t**>(self + 0xb0))[i] != L' ') break;
+                --i;
+            }
+            if (i >= 0) (*reinterpret_cast<wchar_t**>(self + 0xb0))[i] = L' ';
+            Scaleform::GFx::Value kept;
+            const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(*reinterpret_cast<wchar_t**>(self + 0xb0), -1));
+            char* text = static_cast<char*>(Scaleform::Memory::Alloc(size + 1));
+            Scaleform::UTF8Util::EncodeString(text, *reinterpret_cast<wchar_t**>(self + 0xb0), -1);
+            void* owner = *reinterpret_cast<void**>(self + 8);
+            Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
+                reinterpret_cast<Scaleform::GFx::StateBag*>(static_cast<unsigned char*>(owner) + 0x10)->GetIMEManager();
+            Scaleform::Render::RectF viewRect(0, 0, 0, 0), cursorRect(0, 0, 0, 0);
+            ime->GetMetrics(&viewRect, &cursorRect, -*reinterpret_cast<int*>(self + 0x64));
+            {
+                Ime01ValueArgs args;
+                Scaleform::GFx::Value result;
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<const char*>(text)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.x1)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
+                Ime01PushArgCall(args, Scaleform::GFx::Value(0.0));
+                if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+                    reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                        bridge, "DisplayInputWindow", &result, args.data, 4);
+            }
+            if (text) Scaleform::Memory::Free(text);
+        }
     }
-    if (key == 0x20 && state == 4) {
+    if (*reinterpret_cast<short*>(self + 0xd0) == 0x20 && *reinterpret_cast<unsigned*>(self + 0x98) == 4) {
         {
             Scaleform::GFx::Value result;
             if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
