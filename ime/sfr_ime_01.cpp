@@ -1219,7 +1219,7 @@ void* FUN_1423da2c0(void* object, unsigned flags)
 }
 
 // @0x1423d8d10
-void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
+__declspec(noinline) void FUN_1423d8d10(unsigned long long* table, unsigned long long key)
 {
     auto* data = reinterpret_cast<unsigned long long*>(table[0]);
     if (!data) {
@@ -5198,75 +5198,113 @@ unsigned FUN_1423cb400(void* raw, const char* name)
     return value ? *reinterpret_cast<unsigned*>(value + 0x10) : 0x01000000;
 }
 
-static void cx18_CommandInsert(unsigned long long* table, unsigned long long hash,
-                               unsigned long long key, unsigned long long value0,
-                               unsigned long long value1)
-{
-    const unsigned long long mask = table[1];
-    const unsigned long long home = hash & mask;
-    auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
-    auto& root = entries[home];
-    if (static_cast<long long>(root.next) == -2) {
-        root = { ~0ull, home, key, value0, value1 };
-        ++table[0];
-        return;
-    }
-
-    unsigned long long freeIndex = (home + 1) & mask;
-    while (static_cast<long long>(entries[freeIndex].next) != -2)
-        freeIndex = (freeIndex + 1) & mask;
-    if (root.home == home) {
-        unsigned long long tail = home;
-        while (entries[tail].next != ~0ull) tail = entries[tail].next;
-        entries[tail].next = freeIndex;
-        entries[freeIndex] = { ~0ull, home, key, value0, value1 };
-    } else {
-        const unsigned long long oldHome = root.home;
-        unsigned long long prior = oldHome;
-        while (entries[prior].next != home) prior = entries[prior].next;
-        entries[freeIndex] = root;
-        entries[prior].next = freeIndex;
-        root = { ~0ull, home, key, value0, value1 };
-    }
-    ++table[0];
-}
-
-// MS2-FUNCTIONAL: rebuilds the command hash table at a power-of-two capacity and rehashes existing command names.
+// MS2-FUNCTIONAL: HashSetBase::setRawCapacity on the command table (clear on 0, round up with UpperBit, rehash each
+// live entry through CheckExpand and the inline add). Left: the stat id and the new table sit in other home slots
+// (rbx is saved at 0x58, not 0x50), and the entry and hash swap rbx and rdi.
 // @0x1423d9090
-void FUN_1423d9090(void* raw, void*, unsigned long long requested)
+void FUN_1423d9090(void* raw, void* heap, unsigned long long requested)
 {
+    struct Payload { unsigned long long value0, value1; };
+    struct Node { unsigned long long key, value0, value1; };
     auto* slot = static_cast<unsigned long long*>(raw);
-    auto* old = reinterpret_cast<unsigned long long*>(slot[0]);
     if (!requested) {
-        Scaleform::Memory::Free(old);
-        slot[0] = 0;
+        if (slot[0]) {
+            for (unsigned long long i = 0, last = reinterpret_cast<unsigned long long*>(slot[0])[1]; i <= last; ++i) {
+                auto& e = reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(slot[0]) + 2)[i];
+                if (static_cast<long long>(e.next) != -2) e.next = ~1ull;
+            }
+            if (void* p = reinterpret_cast<void*>(slot[0])) Scaleform::Memory::Free(p);
+            slot[0] = 0;
+        }
         return;
     }
-    unsigned long long capacity = 8;
-    while (capacity < requested) capacity <<= 1;
-    auto* replacement = static_cast<unsigned long long*>(
-        Scaleform::Memory::Alloc(0x10 + capacity * sizeof(cx18_CommandEntry)));
-    if (!replacement) return;
-    replacement[0] = 0;
-    replacement[1] = capacity - 1;
-    auto* entries = reinterpret_cast<cx18_CommandEntry*>(replacement + 2);
-    for (unsigned long long i = 0; i < capacity; ++i)
-        entries[i] = { ~1ull, 0, 0, 0, 0 };
 
-    if (old) {
-        const unsigned long long oldCapacity = old[1] + 1;
-        auto* oldEntries = reinterpret_cast<cx18_CommandEntry*>(old + 2);
-        for (unsigned long long i = 0; i < oldCapacity; ++i) {
-            const auto& entry = oldEntries[i];
-            if (static_cast<long long>(entry.next) == -2) continue;
-            const char* name = reinterpret_cast<const char*>(entry.key);
-            const unsigned long long hash = Scaleform::String::BernsteinHashFunction(
-                name, std::strlen(name), 0x1505);
-            cx18_CommandInsert(replacement, hash, entry.key, entry.value0, entry.value1);
+    if (requested < 8)
+        requested = 8;
+    else {
+        const unsigned long long v = requested - 1;
+        unsigned char bit;
+        if (v & 0xFFFFFFFF00000000) {
+            if (v & 0xFFFF000000000000)
+                bit = (v & 0xFF00000000000000) ? Scaleform::Alg::UpperBitTable[(v >> 56)] + 56
+                                               : Scaleform::Alg::UpperBitTable[(v >> 48) & 0xFF] + 48;
+            else
+                bit = (v & 0xFF0000000000) ? Scaleform::Alg::UpperBitTable[(v >> 40) & 0xFF] + 40
+                                           : Scaleform::Alg::UpperBitTable[(v >> 32) & 0xFF] + 32;
+        } else {
+            if (v & 0xFFFF0000)
+                bit = (v & 0xFF000000) ? Scaleform::Alg::UpperBitTable[(v >> 24)] + 24
+                                       : Scaleform::Alg::UpperBitTable[(v >> 16) & 0xFF] + 16;
+            else
+                bit = (v & 0xFF00) ? Scaleform::Alg::UpperBitTable[(v >> 8) & 0xFF] + 8
+                                   : Scaleform::Alg::UpperBitTable[v & 0xFF];
         }
-        Scaleform::Memory::Free(old);
+        const int bits = bit + 1;
+        requested = 1ull << bits;
     }
-    slot[0] = reinterpret_cast<unsigned long long>(replacement);
+
+    unsigned long long fresh = reinterpret_cast<unsigned long long>(Scaleform::Memory::Alloc(
+        0x10 + requested * sizeof(cx18_CommandEntry), Scaleform::AllocInfo(2, nullptr, 0)));
+    reinterpret_cast<unsigned long long*>(fresh)[0] = 0;
+    reinterpret_cast<unsigned long long*>(fresh)[1] = requested - 1;
+    for (unsigned long long i = 0; i < requested; ++i)
+        reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(fresh) + 2)[i].next = ~1ull;
+
+    if (slot[0]) {
+        for (unsigned long long i = 0, last = reinterpret_cast<unsigned long long*>(slot[0])[1]; i <= last; ++i) {
+            cx18_CommandEntry* e = &reinterpret_cast<cx18_CommandEntry*>(reinterpret_cast<unsigned long long*>(slot[0]) + 2)[i];
+            if (static_cast<long long>(e->next) == -2) continue;
+            const char* name = reinterpret_cast<const char*>(e->key);
+            unsigned long long hash = Scaleform::String::BernsteinHashFunction(name, std::strlen(name), 0x1505);
+            FUN_1423d8d10(&fresh, reinterpret_cast<unsigned long long>(heap));
+
+            hash &= reinterpret_cast<unsigned long long*>(fresh)[1];
+            ++reinterpret_cast<unsigned long long*>(fresh)[0];
+            const long long index = static_cast<long long>(hash);
+            auto* table = reinterpret_cast<unsigned long long*>(fresh);
+            cx18_CommandEntry* natural = &reinterpret_cast<cx18_CommandEntry*>(table + 2)[index];
+            if (static_cast<long long>(natural->next) == -2) {
+                natural->next = ~0ull;
+                natural->key = e->key;
+                *reinterpret_cast<Payload*>(&natural->value0) = *reinterpret_cast<Payload*>(&e->value0);
+            } else {
+                auto* entries = reinterpret_cast<cx18_CommandEntry*>(table + 2);
+                long long blank = index;
+                do {
+                    blank = (blank + 1) & table[1];
+                } while (static_cast<long long>(entries[blank].next) != -2);
+                cx18_CommandEntry* free = &entries[blank];
+                if (natural->home == static_cast<unsigned long long>(index)) {
+                    free->next = natural->next;
+                    free->home = natural->home;
+                    free->key = natural->key;
+                    *reinterpret_cast<Payload*>(&free->value0) = *reinterpret_cast<Payload*>(&natural->value0);
+                    *reinterpret_cast<Node*>(&natural->key) = *reinterpret_cast<Node*>(&e->key);
+                    natural->next = blank;
+                } else {
+                    long long walk = static_cast<long long>(natural->home);
+                    for (;;) {
+                        cx18_CommandEntry* w = &entries[walk];
+                        if (static_cast<long long>(w->next) == index) {
+                            free->next = natural->next;
+                            free->home = natural->home;
+                            free->key = natural->key;
+                            *reinterpret_cast<Payload*>(&free->value0) = *reinterpret_cast<Payload*>(&natural->value0);
+                            w->next = blank;
+                            break;
+                        }
+                        walk = static_cast<long long>(w->next);
+                    }
+                    *reinterpret_cast<Node*>(&natural->key) = *reinterpret_cast<Node*>(&e->key);
+                    natural->next = ~0ull;
+                }
+            }
+            natural->home = hash;
+            e->next = ~1ull;
+        }
+        if (void* p = reinterpret_cast<void*>(slot[0])) Scaleform::Memory::Free(p);
+    }
+    slot[0] = fresh;
 }
 
 // MS2-FUNCTIONAL: HashSetBase::add on the command table (grow, then insert at the home slot, moving the old head
