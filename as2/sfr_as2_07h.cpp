@@ -27,12 +27,22 @@
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/render/text_highlight.h"
 
+namespace Scaleform {
+// Defined in sfr_as2_06; the exe calls them out of line here.
+template <>
+void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
+                         ArrayDefaultPolicy> >::RemoveAt(UPInt index);
+template <>
+void ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
+                   ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
 
 // MovieRoot's sprites that have a hit area (+0x628; the member is not recovered in as2_movieroot.h yet).
-typedef ArrayLH<Ptr<Sprite>, StatMV_ActionScript_Mem> SpritesWithHitAreaArray;
+typedef ArrayLH<Ptr<Sprite>, StatMV_Other_Mem> SpritesWithHitAreaArray;
 
 SF_FORCEINLINE SpritesWithHitAreaArray& SpritesWithHitAreaOf(MovieRoot* proot)
 {
@@ -126,32 +136,32 @@ void SelectionCtorFunction::SetControllerFocusGroup(const FnCall& fn)
     }
 }
 
+static SF_INLINE int SetHitAreaNotify_Find(const SpritesWithHitAreaArray& sprites, const Sprite* psprite)
+{
+    const UPInt n = sprites.GetSize();
+    for (unsigned i = 0; i < n; i++)
+    {
+        if (sprites[i] == psprite)
+            return (int)i;
+    }
+    return -1;
+}
+
 // The sprite joins the movie's hit area sprites when it gets a hit area, and leaves when it loses it.
-// MS2-FUNCTIONAL: hit-area array search and PushBack codegen differ; same behavior
+// MS2-FUNCTIONAL: this and phitArea sit in swapped scratch registers (r10/r11); same behavior
 // @0x142981670
 void AvmSprite::SetHitAreaNotify(Sprite* phitArea)
 {
-    Sprite*                  psprite = GetSprite();
     SpritesWithHitAreaArray& sprites = SpritesWithHitAreaOf(GetAS2Root());
-    int                      index   = -1;
-    if (psprite->pHitAreaHandle)
+    int index =
+        GetSprite()->pHitAreaHandle ? SetHitAreaNotify_Find(SpritesWithHitAreaOf(GetAS2Root()), GetSprite()) : -1;
+    if (phitArea)
     {
-        for (unsigned i = 0; i < sprites.GetSize(); i++)
-        {
-            if (sprites[i] == psprite)
-            {
-                index = (int)i;
-                break;
-            }
-        }
+        if (index == -1)
+            SpritesWithHitAreaOf(GetAS2Root()).PushBack(GetSprite());
     }
-    if (!phitArea)
-    {
-        if (index >= 0)
-            sprites.RemoveAt(index);
-    }
-    else if (index == -1)
-        sprites.PushBack(Ptr<Sprite>(psprite));
+    else if (index > -1)
+        sprites.RemoveAt(index);
 }
 
 // The styles of the IME composition string, allocated on first use.
