@@ -5738,7 +5738,6 @@ namespace Scaleform { namespace GFx { namespace AS3
 namespace InstanceTraits
 {
     // a closure object made by these traits (its body comes from them, its memory from t)
-    // MS2-FUNCTIONAL: the exe inlines Value::Pick
     // @0x14241bf50
     void Function::MakeObject(Value& result, Traits& t)
     {
