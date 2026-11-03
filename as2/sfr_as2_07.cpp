@@ -1742,7 +1742,8 @@ template <> MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::~Has
 template void MS2_AS2_STRING_SET(GFx::AS2::Member, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
 // @0x142995e00
 template void MS2_AS2_STRING_SET(GFx::AS2::SharedObjectPtr, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's destructor out of line (0x142924960).
+template <> MS2_AS2_STRING_SET(GFx::AS2::Value, GFx::HashsetNodeEntry_GC)::~HashSetBase();
 // @0x142995ff0
 template void MS2_AS2_STRING_SET(GFx::AS2::Value, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
 // The exe calls this set's Clear out of line (0x142934220).
