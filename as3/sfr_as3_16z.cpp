@@ -76,6 +76,10 @@ namespace Scaleform {
 // Tracer::AddBlock (FUN_1424e6aa0) for the state's register, op and scope stacks.
 template <> ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::ArrayDataDH(
     const ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>& a);
+// The event chains' ResizeNoConstruct (0x142524cd0, explicit instantiation in sfr_as3_19): the exe calls it out of line
+// from EventChains::AddToChain's PushBack.
+template<> SF_NOINLINE void ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, Stat_Default_Mem>,
+    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, 2>, ArrayDefaultPolicy> SfrAdbStr;
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 340>, ArrayDefaultPolicy> SfrAdbNsSet;
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> SfrAdbCtr;
@@ -188,7 +192,7 @@ void EventChains::AddToChain(EventId::IdCode evtId, DisplayObject* obj)
     if (!pentry)
     {
         chain = SF_HEAP_AUTO_NEW(this) Chain();
-        Chains.Add(evtId, Scaleform::AutoPtr<Chain>(chain));
+        Chains.Add(evtId, chain);
     }
     else
         chain = pentry->GetPtr();
