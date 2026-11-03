@@ -4225,19 +4225,25 @@ bool FUN_1425136f0(Scaleform::GFx::AS3::MovieRoot* self, const char* pmethodName
     using namespace Scaleform::GFx::AS3;
     Array<Value> argArray;
     FUN_14251c1c0(self, argArray, pmethodName, pargFmt, args);
-    Value        resultVal;
-    const Value* pargs = argArray.GetSize() ? &argArray[0] : NULL;
+    unsigned     numArgs = static_cast<unsigned>(argArray.GetSize());
+    const Value* pargs   = numArgs > 0 ? &argArray[0] : NULL;
     Value*       paliasFunc;
+    Value        resultVal;
     if (self->pInvokeAliases && (paliasFunc = FUN_142525400(self, pmethodName)) != NULL)
-        self->pAVM->ExecuteInternalUnsafe(*paliasFunc, Value::GetUndefined(), resultVal, unsigned(argArray.GetSize()),
-                                          pargs, false);
+    {
+        VM& vm = *self->pAVM;
+        vm.ExecuteInternalUnsafe(*paliasFunc, Value::GetUndefined(), resultVal, numArgs, pargs, false);
+    }
     else
     {
         Value resolvedVal;
-        if (!FUN_142506000(self, &resolvedVal, pmethodName))
+        if (FUN_142506000(self, &resolvedVal, pmethodName))
+        {
+            VM& vm = *self->pAVM;
+            vm.ExecuteInternalUnsafe(resolvedVal, Value::GetUndefined(), resultVal, numArgs, pargs, false);
+        }
+        else
             return false;
-        self->pAVM->ExecuteInternalUnsafe(resolvedVal, Value::GetUndefined(), resultVal, unsigned(argArray.GetSize()),
-                                          pargs, false);
     }
     const bool retVal = !self->pAVM->IsException();
     if (self->pAVM->IsException())
