@@ -616,7 +616,6 @@ void AvmSprite::AdvanceFrame(bool nextFrame, float framePos)
 
 // Add: the "+" operator. Two XML objects are joined by the VM's XML support; with a string operand both sides are
 // concatenated as strings; two other primitives are summed as numbers; anything else is first made primitive.
-// MS2-FUNCTIONAL: functional recovery
 // @0x1424e5f50
 CheckResult Add(StringManager& sm, Value& result, const Value& l, const Value& r)
 {
@@ -634,7 +633,8 @@ CheckResult Add(StringManager& sm, Value& result, const Value& l, const Value& r
         ASString right(sm.CreateEmptyString());
         if (l.Convert2String(left) && r.Convert2String(right))
         {
-            result = left + right;
+            // the exe calls the out-of-line Value::operator=(const ASString&) (0x1424e0d40)
+            (result.*static_cast<Value& (Value::*)(const ASString&)>(&Value::operator=))(left + right);
             return true;
         }
         return false;
@@ -644,12 +644,12 @@ CheckResult Add(StringManager& sm, Value& result, const Value& l, const Value& r
     {
         Value::Number lnum = 0.0;
         Value::Number rnum = 0.0;
-        if (l.Convert2NumberInline(lnum) && r.Convert2NumberInline(rnum))
-        {
-            result.SetNumber(lnum + rnum);
-            return true;
-        }
-        return false;
+        if (!l.Convert2NumberInline(lnum))
+            return false;
+        if (!r.Convert2NumberInline(rnum))
+            return false;
+        (result.*&Value::SetNumber)(lnum + rnum);   // the exe calls the out-of-line SetNumber (0x142421f20)
+        return true;
     }
 
     Value lprim;
