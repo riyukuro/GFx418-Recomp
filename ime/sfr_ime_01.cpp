@@ -3465,28 +3465,46 @@ void FUN_1423cb760(void* object)
     append(9, 0x404);
 }
 
-// MS2-FUNCTIONAL: initializes the shared IME manager state, interns its embedded node, and installs the default conversion records.
+// Initializes the shared IME manager state, interns its embedded node, and installs the default conversion records.
 // @0x1423cabb0
 unsigned long long* FUN_1423cabb0(unsigned long long* self, unsigned long long owner)
 {
     self[0] = reinterpret_cast<unsigned long long>(DAT_143138360);
-    for (unsigned i = 1; i <= 0x0d; ++i) self[i] = 0;
+    self[1] = 0; self[2] = 0; self[3] = 0; self[4] = 0; self[5] = 0; self[6] = 0; self[7] = 0;
+    self[8] = 0; self[9] = 0; self[0x0a] = 0; self[0x0b] = 0; self[0x0c] = 0; self[0x0d] = 0;
     new (self + 0x0e) Scaleform::String();
     self[0x0f] = owner;
-    for (unsigned i : { 0x12u, 0x13u, 0x14u, 0x17u, 0x18u, 0x19u,
-                        0x1fu, 0x20u, 0x21u, 0x23u, 0x27u, 0x28u, 0x29u,
-                        0x2bu, 0x2cu, 0x2du, 0x2eu, 0x2fu, 0x30u })
-        self[i] = 0;
-    *reinterpret_cast<unsigned*>(self + 0x1d) = 0x01000000;
-    *reinterpret_cast<unsigned*>(self + 0x25) = 0x01000000;
-    self[0x22] = reinterpret_cast<unsigned long long>(self + 0x23);
+    self[0x12] = 0;
+    self[0x13] = 0;
+    self[0x14] = 0;
+    self[0x17] = 0;
+    self[0x18] = 0;
+    self[0x19] = 0;
+    // Two embedded 0x38-byte records at +0xd8 and +0x118: tail cleared, flags word 0x01000000, head cleared.
+    unsigned long long* const first = self + 0x1b;
+    first[4] = 0;
+    first[5] = 0;
+    first[6] = 0;
+    *reinterpret_cast<unsigned*>(first + 2) = 0x01000000;
+    first[0] = 0;
+    unsigned long long* const second = self + 0x23;
+    second[4] = 0;
+    second[5] = 0;
+    second[6] = 0;
+    *reinterpret_cast<unsigned*>(second + 2) = 0x01000000;
+    second[0] = 0;
+    self[0x2b] = 0;
+    self[0x2c] = 0;
+    self[0x2d] = 0;
+    self[0x2e] = 0;
+    self[0x2f] = 0;
+    self[0x30] = 0;
+    auto* node = reinterpret_cast<Scaleform::GFx::XML::DOMStringNode*>(first);
+    self[0x22] = reinterpret_cast<unsigned long long>(second);
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x84) = 0x02000000;
     *reinterpret_cast<unsigned*>(self + 0x11) = 0x02000000;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0xd4) = 0xffffffffu;
     *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0xfc) = 0;
-
-    auto* node = reinterpret_cast<Scaleform::GFx::XML::DOMStringNode*>(self + 0x1b);
-    std::memset(node, 0, sizeof(void*));
     FUN_1423ca950(reinterpret_cast<Scaleform::GFx::XML::XMLDOMStringNodeHash*>(self + 1),
         self + 1, &node);
     *reinterpret_cast<unsigned*>(self + 0x1a) = 0;
