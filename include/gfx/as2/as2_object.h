@@ -241,8 +241,7 @@ public:
 
     // (appended for sfr_video_01)
     // SetMemberRaw with a constant string name (exe 0x1400054b0).
-    bool SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
-                           const PropFlags& flags = PropFlags());
+    bool SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val);
 
     // (appended for sfr_as2_07f)
     // Replaces the user data the host attached (GFx::Value::SetUserData; exe 0x14298cb60).

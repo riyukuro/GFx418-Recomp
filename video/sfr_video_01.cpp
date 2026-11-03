@@ -3584,27 +3584,38 @@ static inline Environment* GetTargetEnvironment(CharacterHandle* ptarget)
     return ToAvmCharacter(pchar)->GetASEnvironment();
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Calls onStatus with a {level, code} object on the target's environment. Like the exe, it does not check that
+// environment for NULL. The strings come through the out-of-line GetStringManager, and the stack pop is written
+// out, since cl's inline budget here would call Drop1 out of line where the exe inlines it.
 // @0x140008860
 void VideoProviderNetStream::SendNotification(const char* note, bool error)
 {
     if (!pTarget || !pNetStream || pNetStream->OnStatusCallback.IsNull())
         return;
-    Environment* penv = GetTargetEnvironment(pTarget);
-    if (!penv)
+    DisplayObject* pch = pTarget->pCharacter;
+    InteractiveObject* pchar = pch->IsInteractiveObject() ? (InteractiveObject*)pch : NULL;
+    if (!pchar)
         return;
+    AvmDisplayObjBase* pavm = reinterpret_cast<AvmDisplayObjBase*>(reinterpret_cast<UInt32*>(pchar) + pchar->AvmObjOffset);
+    Environment* penv = static_cast<AvmCharacter*>(pavm->ToAvmInteractiveObjBase())->GetASEnvironment();
 
     Ptr<Object> pobj = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
     if (error)
-        pobj->SetConstMemberRaw(penv->GetSC(), "level", Value(penv->CreateConstString("error")));
+        pobj->SetConstMemberRaw(penv->GetSC(), "level",
+                                Value(penv->GetSC()->pContext->GetStringManager()->CreateConstString("error")));
     else
-        pobj->SetConstMemberRaw(penv->GetSC(), "level", Value(penv->CreateConstString("status")));
-    pobj->SetConstMemberRaw(penv->GetSC(), "code", Value(penv->CreateConstString(note)));
+        pobj->SetConstMemberRaw(penv->GetSC(), "level",
+                                Value(penv->GetSC()->pContext->GetStringManager()->CreateConstString("status")));
+    pobj->SetConstMemberRaw(penv->GetSC(), "code",
+                            Value(penv->GetSC()->pContext->GetStringManager()->CreateConstString(note)));
 
-    penv->Push(Value(pobj));
+    penv->Push(pobj.GetPtr());
     Value ret;
     pNetStream->OnStatusCallback.Invoke(FnCall(&ret, pNetStream, penv, 1, penv->GetTopIndex()));
-    penv->Drop1();
+    PagedStack<Value, 32>& stack = penv->Stack;
+    stack.pCurrent->~Value();
+    if (--stack.pCurrent < stack.pPageStart)
+        stack.PopPage();
 }
 
 // A cue point as a script object: name, time in seconds, type and its parameters.
@@ -3831,13 +3842,11 @@ void VideoProviderNetStream::Advance()
     }
 }
 
-// The exe reads the name through the out-of-line GlobalContext::GetStringManager and passes a default PropFlags,
-// not flags. Every caller passes the default.
+// The exe reads the name through the out-of-line GlobalContext::GetStringManager and sets default PropFlags.
+// It takes no flags: its callers pass four arguments. The exe never inlines it.
 // @0x1400054b0
-bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val,
-                                        const PropFlags& flags)
+SF_NOINLINE bool ObjectInterface::SetConstMemberRaw(ASStringContext* psc, const char* name, const Value& val)
 {
-    (void)flags;
     return SetMemberRaw(psc, psc->pContext->GetStringManager()->CreateConstString(name), val, PropFlags());
 }
 
