@@ -456,20 +456,27 @@ public:
     AutoPtr(T* p = 0, bool owner = true) : pObject(p), Owner(owner) {}
     ~AutoPtr() { Reset(); }
 
+    // SDK Reset: ownership is dropped before the delete, and a null pointer is never owned.
     void Reset(T* p = 0, bool owner = true)
     {
-        if (p != pObject)
+        if (pObject != p)
         {
-            if (Owner)
-                delete pObject;
+            if (pObject && Owner)
+                delete Release();
             pObject = p;
         }
-        Owner = owner;
+        Owner = p != 0 && owner;
     }
     AutoPtr& operator=(T* p)
     {
         Reset(p);
         return *this;
+    }
+
+    T* Release()
+    {
+        Owner = false;
+        return pObject;
     }
 
     T*   operator->() const { return pObject; }

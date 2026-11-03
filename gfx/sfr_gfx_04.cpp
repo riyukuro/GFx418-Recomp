@@ -371,7 +371,6 @@ MovieDataDef::LoadTaskData::LoadTaskData(MovieDataDef* pdataDef, const char* pur
 }
 
 // @0x1425cbe00
-// MS2-FUNCTIONAL: member hash/array destructors are inlined here, the exe calls them out of line
 MovieDataDef::LoadTaskData::~LoadTaskData()
 {
     ResourceLocker lock(this);
@@ -821,7 +820,6 @@ void MovieDataDef::LoadTaskData::ExportResource(const String& symbol, ResourceId
 }
 
 // @0x1425cd480
-// MS2-FUNCTIONAL: ArrayLH<SceneInfo> PushBack/reserve inlined differently
 void MovieDataDef::LoadTaskData::AddScene(const String& name, unsigned off)
 {
     if (!Scenes)
