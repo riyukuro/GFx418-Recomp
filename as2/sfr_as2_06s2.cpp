@@ -64,24 +64,31 @@ SF_FORCEINLINE const UByte* BeBufferBytes(const ActionBufferData* pdata)
     return *reinterpret_cast<UByte* const*>(reinterpret_cast<const UByte*>(pdata) + 0x10);
 }
 
-// The handler of the event is queued as an event action on pch.
-SF_FORCEINLINE void BeQueueEvent(MovieRoot* proot, InteractiveObject* pch, const EventId& event)
+// The handler of the event is queued as an event action on the button's character.
+SF_FORCEINLINE void BeQueueEvent(AvmButton* pbtn, const EventId& event)
 {
-    MovieRoot::ActionEntry* pe = proot->InsertEmptyAction(ActionPriority::AP_Frame);
+    MovieRoot::ActionEntry* pe = pbtn->GetAS2Root()->InsertEmptyAction(ActionPriority::AP_Frame);
     if (pe)
     {
         EventId evt      = event;
         pe->Type          = MovieRoot::ActionEntry::Entry_Event;
-        pe->pCharacter    = pch;
+        pe->pCharacter    = pbtn->pDispObj;
         pe->pActionBuffer = 0;
-        pe->mEventId      = evt;
+        pe->mEventId.Id              = evt.Id;
+        pe->mEventId.WcharCode       = evt.WcharCode;
+        pe->mEventId.KeyCode         = evt.KeyCode;
+        pe->mEventId.AsciiCode       = evt.AsciiCode;
+        pe->mEventId.RollOverCnt     = evt.RollOverCnt;
+        pe->mEventId.KeyboardIndex   = evt.KeyboardIndex;
+        pe->mEventId.KeysState       = evt.KeysState;
+        pe->mEventId.MouseWheelDelta = evt.MouseWheelDelta;
     }
 }
 
 } // namespace
 
 // A key of the button: its keyPress-like handler (onKeyDown / onKeyUp) runs when the button has the keyboard focus.
-// MS2-FUNCTIONAL: register allocation differs.
+// MS2-FUNCTIONAL: the exe also saves r14 and keeps the event copy in a 16-aligned slot; same behavior.
 // @0x14296b2b0
 bool AvmButton::OnButtonKeyEvent(const EventId& id, int* pkeyMask)
 {
@@ -95,7 +102,7 @@ bool AvmButton::OnButtonKeyEvent(const EventId& id, int* pkeyMask)
         if ((id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) &&
             GetMemberRaw(penv->GetSC(), methodName, &method) && penv->GetVersion() >= 6 &&
             proot->IsKeyboardFocused(pDispObj, id.KeyboardIndex))
-            BeQueueEvent(GetAS2Root(), pDispObj, id);
+            BeQueueEvent(this, id);
     }
     return true;
 }
@@ -177,7 +184,7 @@ bool AvmButton::OnMouseEvent(const EventId& event)
             if (GetMemberRaw(penv->GetSC(), methodName, &method))
             {
                 handlerFound = true;
-                BeQueueEvent(GetAS2Root(), pDispObj, event);
+                BeQueueEvent(this, event);
             }
         }
     }
