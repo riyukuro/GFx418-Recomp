@@ -4241,7 +4241,6 @@ void FUN_1423d9b40(void* raw)
 // Candidate list refresh: reads IMM candidate list listIndex, stores its count (+0xd8) and page start (+0x70), and
 // replaces the rows of the list object (+0x30) with its UTF-8 entries from the page start to the end, stopping at an
 // offset outside the fetched block. The selection is max(dwSelection - dwPageStart, 0) for the candidate modes, else -1.
-// MS2-FUNCTIONAL: register allocation only (5 bytes short); reviewed against the exe, same behaviour.
 // @0x1423cf900
 void FUN_1423cf900(void* raw, DWORD listIndex)
 {
@@ -4287,7 +4286,7 @@ void FUN_1423cf900(void* raw, DWORD listIndex)
     if (state == 0x110000 || state == 0x210000 || state == 0xd00800 ||
         state == 0xd00900 || state == 0xd00a00 || state == 0xd10000) {
         const int relative = static_cast<int>(selection - *reinterpret_cast<DWORD*>(self + 0x70));
-        selected = relative > 0 ? relative : 0;
+        selected = relative >= 0 ? relative : 0;
     }
     FUN_1423d97f0(*reinterpret_cast<void**>(self + 0x30), static_cast<unsigned long long>(selected), 0);
     FUN_1423d9b40(*reinterpret_cast<void**>(self + 0x30));
