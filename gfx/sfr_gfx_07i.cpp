@@ -542,6 +542,30 @@ static __forceinline SPInt RawFindKey8At(U* table, const U* key)
     }
 }
 
+// The case-insensitive findIndexCore of a StringHash keyed by String (0x20-byte entries): the entry index, or -1.
+static inline SPInt FindStringKeyIndex(U** self, const String* key)
+{
+    if (!*self)
+        return -1;
+    U     hash  = String::BernsteinHashFunctionCIS(key->ToCStr(), key->GetSize(), 0x1505);
+    U*    table = *self;
+    U     home  = hash & table[1];
+    SPInt index = (SPInt)home;
+    char* e     = RawEntry(table, index, 0x20);
+    if (*(SPInt*)e == -2 || *(U*)(e + 8) != home)
+        return -1;
+    for (;;)
+    {
+        if (*(U*)(e + 8) == home && strcmp((RawFieldPtr<const String>(e, 0x10))->ToCStr(), key->ToCStr()) == 0)
+            return index;
+        index = *(SPInt*)e;
+        if (index == -1)
+            break;
+        e = RawEntry(table, index, 0x20);
+    }
+    return -1;
+}
+
 static __forceinline U* RawFindMovieKey(U** self, U* out, const U* key)
 {
     SPInt idx = RawFindKey8At(*self, key);
@@ -560,38 +584,23 @@ U* FUN_142622290(U** self, U* out, const U* key) { return RawFindMovieKey(self, 
 // @0x1426223c0
 U* FUN_1426223c0(U** self, U* out, const String* key)
 {
-    U* table = *self;
-    SPInt found = -1;
-    if (table)
+    struct Iterator
     {
-        const char* kd = key->ToCStr();
-        U home = table[1] & String::BernsteinHashFunctionCIS(kd, key->GetSize(), 0x1505);
-        U index = home;
-        char* e = RawEntry(table, index, 0x20);
-        if (*(SPInt*)e != -2 && *(U*)(e + 8) == home)
-        {
-            for (;;)
-            {
-                if (*(U*)(e + 8) == home && strcmp((RawFieldPtr<const String>(e, 0x10))->ToCStr(), kd) == 0)
-                {
-                    found = (SPInt)index;
-                    break;
-                }
-                SPInt next = *(SPInt*)e;
-                if (next == -1)
-                    break;
-                index = (U)next;
-                e = RawEntry(table, index, 0x20);
-            }
-        }
-    }
-    if (found < 0)
+        U**   pHash;
+        SPInt Index;
+    };
+    Iterator* it    = reinterpret_cast<Iterator*>(out);
+    SPInt     found = FindStringKeyIndex(self, key);
+    if (found >= 0)
     {
-        found = 0;
-        self = 0;
+        it->pHash = self;
+        it->Index = found;
     }
-    out[0] = (U)self;
-    out[1] = (U)found;
+    else
+    {
+        it->pHash = 0;
+        it->Index = 0;
+    }
     return out;
 }
 
