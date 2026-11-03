@@ -117,7 +117,7 @@ public:
         explicit MeshBaseContent(PrimitiveBatch* batch) : Meshes(batch->GetMeshes_InstanceAdjusted())
         {
             UPInt key = 0;
-            for (UPInt i = 0; i < Meshes.GetSize(); i++)
+            for (unsigned i = 0; i < GetMeshCount(); i++)
                 key ^= ((UPInt)Meshes[i]) >> 5;
             HashKey = (unsigned)key;
         }
