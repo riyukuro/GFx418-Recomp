@@ -2099,7 +2099,6 @@ static SF_INLINE void saPushBack03(SparseArray& sa, const Value& v)
 
 namespace Instances { namespace fl
 {
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
     // @0x1423ff400
     void Array::AS3shift(Value& result)
     {
@@ -2108,7 +2107,7 @@ namespace Instances { namespace fl
             result.SetUndefined();
             return;
         }
-        result = saAt03(SA, 0);
+        result = SA.At(0);
         SA.ShiftLeft();
     }
 
