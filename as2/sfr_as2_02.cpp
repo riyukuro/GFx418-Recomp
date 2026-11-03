@@ -1425,8 +1425,13 @@ void AvmSprite::SpriteStopDrag(const FnCall& fn)
     }
 }
 
+// DisplayObjectBase::CharToInteractiveObject.
+static SF_FORCEINLINE InteractiveObject* Sfr02CharToInteractiveObject(DisplayObjectBase* pch)
+{
+    return pch->IsInteractiveObject() ? static_cast<InteractiveObject*>(pch) : 0;
+}
+
 // attachMovie(symbol, name, depth [, initObject]): an instance of an exported library clip; SWF 6+ returns it.
-// MS2-FUNCTIONAL IsInteractiveObject tested as al&1
 // @0x1429055f0
 void AvmSprite::SpriteAttachMovie(const FnCall& fn)
 {
@@ -1436,12 +1441,12 @@ void AvmSprite::SpriteAttachMovie(const FnCall& fn)
         return;
     ASString sym = fn.Arg(0).ToString(fn.Env);
     ResourceBindData resBindData;
-    bool found;
+    bool notFound;
     {
         String symstr(sym.ToCStr());
-        found = psprite->GetMovieImpl()->FindExportedResource(psprite->GetResourceMovieDef(), &resBindData, symstr);
+        notFound = !psprite->GetMovieImpl()->FindExportedResource(psprite->GetResourceMovieDef(), &resBindData, symstr);
     }
-    if (!found)
+    if (notFound)
     {
         psprite->LogScriptWarning("%s.attachMovie() failed - export name \"%s\" is not found.",
                                   psprite->GetName().ToCStr(), sym.ToCStr());
@@ -1468,7 +1473,7 @@ void AvmSprite::SpriteAttachMovie(const FnCall& fn)
         {
             newch->SetAcceptAnimMoves(false);
             if (psprite->GetVersion() >= 6)
-                fn.Result->SetAsCharacter(newch->IsInteractiveObject() ? static_cast<InteractiveObject*>(newch.GetPtr()) : 0);
+                fn.Result->SetAsCharacter(Sfr02CharToInteractiveObject(newch));
         }
     }
     else
