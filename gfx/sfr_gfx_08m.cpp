@@ -217,36 +217,37 @@ void FontGlyphPacker::generateGlyphInfo(Array<GlyphInfo>* glyphs, FontResource* 
 unsigned FontGlyphPacker::packGlyphRects(Array<GlyphInfo>* glyphs, unsigned start, unsigned end, unsigned texIdx)
 {
     Packer.Clear();
-    for (unsigned i = start; i < end; i++)
+    unsigned i, j, w, h;
+    for (i = start; i < end; i++)
     {
         const GlyphInfo& gi = (*glyphs)[i];
-        if (gi.GlyphReuse != ~0u)
-            continue;
-        unsigned w = unsigned(ceilf(gi.Bounds.x2) - floorf(gi.Bounds.x1));
-        unsigned h = unsigned(ceilf(gi.Bounds.y2) - floorf(gi.Bounds.y1));
-        Packer.AddRect(w, h, i);
+        if (gi.GlyphReuse == ~0U)
+        {
+            w = int(ceilf(gi.Bounds.x2) - floorf(gi.Bounds.x1));
+            h = int(ceilf(gi.Bounds.y2) - floorf(gi.Bounds.y1));
+            Packer.AddRect(w, h, i);
+        }
     }
     Packer.Pack();
-
-    for (unsigned p = 0; p < Packer.GetNumPacks(); p++)
+    for (i = 0; i < Packer.GetNumPacks(); i++)
     {
-        const RectPacker::PackType& pack = Packer.GetPack(p);
-        for (unsigned r = 0; r < pack.NumRects; r++)
+        const RectPacker::PackType& pack = Packer.GetPack(i);
+        for (j = 0; j < pack.NumRects; j++)
         {
-            const RectPacker::RectType& rect = Packer.GetRect(pack, r);
+            const RectPacker::RectType& rect = Packer.GetRect(pack, j);
             GlyphInfo&                  gi   = (*glyphs)[rect.Id];
-            unsigned w    = unsigned(int(ceilf(gi.Bounds.x2) - floorf(gi.Bounds.x1)));
-            unsigned h    = unsigned(int(ceilf(gi.Bounds.y2) - floorf(gi.Bounds.y1)));
+            w = unsigned(ceilf(gi.Bounds.x2) - floorf(gi.Bounds.x1));
+            h = unsigned(ceilf(gi.Bounds.y2) - floorf(gi.Bounds.y1));
             gi.Origin.x   = float(rect.x) - gi.Bounds.x1;
             gi.Origin.y   = float(rect.y) - gi.Bounds.y1;
             gi.Bounds.x1  = float(rect.x);
             gi.Bounds.y1  = float(rect.y);
             gi.Bounds.x2  = float(rect.x + w);
             gi.Bounds.y2  = float(rect.y + h);
-            gi.TextureIdx = texIdx + p;
+            gi.TextureIdx = texIdx + i;
         }
     }
-    return texIdx + (unsigned)Packer.GetNumPacks();
+    return (unsigned)(texIdx + Packer.GetNumPacks());
 }
 
 // @0x1426625f0
