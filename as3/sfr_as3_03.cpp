@@ -2205,20 +2205,16 @@ void Sfr33FindObjProperty(PropRef& result, VM& vm, const Value& value, const Mul
 // ---- Array.sortOn: elements ordered by one or more named properties, each with its own option bits
 namespace
 {
-    // A property lookup that found something (same test as sfr_as3_09).
+    // A property lookup that found something (same test as sfr_as3_17 Sfr33PropFound).
     SF_INLINE bool PropRefFound03(const PropRef& prop)
     {
-        const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
-        if (prop.This.GetKind() == Value::kUndefined || bits == 1)
-            return false;
-        if ((static_cast<UInt8>(bits) >> 1) & 1)
-            return (bits & ~UPInt(2)) != 0;
-        return true;
+        return prop.This.GetKind() != Value::kUndefined && reinterpret_cast<UPInt>(prop.pValue) != 1 &&
+               !((static_cast<UByte>(reinterpret_cast<UPInt>(prop.pValue) >> 1) & 1) &&
+                 (reinterpret_cast<UPInt>(prop.pValue) & ~UPInt(2)) == 0);
     }
 }
 
     // The first field both elements have and that differs decides; a failed read compares equal.
-    // MS2-FUNCTIONAL: the exe keeps the conversion results in flag registers and duplicates the cleanup paths
     // @0x1424067e0
     int CompareOn::Compare(const Value& a, const Value& b) const
     {
@@ -2231,39 +2227,40 @@ namespace
             PropRef propB;
             Sfr33FindObjProperty(propA, Vm, a, mn, 0);
             Sfr33FindObjProperty(propB, Vm, b, mn, 0);
-            if (!PropRefFound03(propA) || !PropRefFound03(propB))
-                continue;
-
-            Value va;
-            Value vb;
-            if (!propA.GetSlotValueUnsafe(Vm, va) || !propB.GetSlotValueUnsafe(Vm, vb))
-                break;
-
-            const UInt32 flags = Flags[i];
-            int r;
-            if (flags & SortFlags_Numeric)
+            if (PropRefFound03(propA) && PropRefFound03(propB))
             {
-                Value::Number na = 0.0;
-                Value::Number nb = 0.0;
-                if (!va.Convert2Number(na) || !vb.Convert2Number(nb))
+                Value va;
+                Value vb;
+                if (!propA.GetSlotValueUnsafe(Vm, va) || !propB.GetSlotValueUnsafe(Vm, vb))
                     break;
-                r = static_cast<int>(na - nb);
-            }
-            else
-            {
-                ASString sa = Vm.GetStringManager().CreateEmptyString();
-                ASString sb = sa;
-                if (!va.Convert2String(sa) || !vb.Convert2String(sb))
-                    break;
-                const bool caseSensitive = (flags & SortFlags_CaseInsensitive) == 0;
-                if (flags & SortFlags_Locale)
-                    r = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(), caseSensitive);
-                else if (caseSensitive)
-                    r = strcmp(sa.ToCStr(), sb.ToCStr());
+
+                const UInt32 flags = Flags[i];
+                const bool descending = (flags & SortFlags_Descending) != 0;
+                int r;
+                if (flags & SortFlags_Numeric)
+                {
+                    Value::Number na = 0.0;
+                    Value::Number nb = 0.0;
+                    if (!va.Convert2Number(na) || !vb.Convert2Number(nb))
+                        break;
+                    r = static_cast<int>(na - nb);
+                }
                 else
-                    r = String::CompareNoCase(sa.ToCStr(), sb.ToCStr());
+                {
+                    ASString sa = Vm.GetStringManager().CreateEmptyString();
+                    ASString sb = sa;
+                    if (!va.Convert2String(sa) || !vb.Convert2String(sb))
+                        break;
+                    const bool caseSensitive = (flags & SortFlags_CaseInsensitive) == 0;
+                    if (flags & SortFlags_Locale)
+                        r = sa.LocaleCompare_CaseCheck(sb.ToCStr(), sb.GetLength(), caseSensitive);
+                    else if (caseSensitive)
+                        r = strcmp(sa.ToCStr(), sb.ToCStr());
+                    else
+                        r = String::CompareNoCase(sa.ToCStr(), sb.ToCStr());
+                }
+                result = descending ? -r : r;
             }
-            result = (flags & SortFlags_Descending) ? -r : r;
         }
         return result;
     }
