@@ -154,6 +154,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 typedef ASRefCountBaseType::Collector Collector;
 
+Value* ArgCopy(const FnCall* pfn, int n);    // sfr_as2_04e @0x1429316c0, FnCall::Arg out of line
+
 // Day of the year at which each month ends, for common and leap years.
 static const int DateMonthEnds[2][12] = {
     {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365},
@@ -2633,7 +2635,6 @@ void AvmTextField::GetFirstCharInParagraph(const FnCall& fn)
 }
 
 // appendText(text): not for a field with a style sheet.
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
 // @0x14290b920
 void AvmTextField::AppendText(const FnCall& fn)
 {
@@ -2642,7 +2643,8 @@ void AvmTextField::AppendText(const FnCall& fn)
     TextField* ptf = GetTextFieldTarget(fn);
     if (ptf->HasStyleSheet() || fn.NArgs < 1)
         return;
-    ASString str = fn.Arg(0).ToString(fn.Env);
+    Value*   parg = ArgCopy(&fn, 0);
+    ASString str = parg->ToString(fn.Env);
     ptf->GetDocument()->AppendText(str.ToCStr(), SF_MAX_UPINT);
     ptf->SetCompleteReformatReq();
     ptf->SetDirtyFlag();
@@ -2896,7 +2898,6 @@ void AvmTextField::ReplaceTextA(const FnCall& fn)
 }
 
 // setTextFormat([beginIndex, [endIndex,]] textFormat): the whole text, one character or [beginIndex, endIndex).
-// MS2-FUNCTIONAL the exe calls FnCall::Arg out of line
 // @0x142909300
 void AvmTextField::SetTextFormat(const FnCall& fn)
 {
@@ -2907,7 +2908,7 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
         return;
     if (fn.NArgs == 1)
     {
-        Object* pobj = fn.Arg(0).ToObject(fn.Env);
+        Object* pobj = ArgCopy(&fn, 0)->ToObject(fn.Env);
         if (pobj && pobj->GetObjectType() == Object_TextFormat)
         {
             TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
@@ -2918,10 +2919,10 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
     }
     else if (fn.NArgs == 2)
     {
-        Object* pobj = fn.Arg(1).ToObject(fn.Env);
+        Object* pobj = ArgCopy(&fn, 1)->ToObject(fn.Env);
         if (pobj && pobj->GetObjectType() == Object_TextFormat)
         {
-            Number pos = fn.Arg(0).ToNumber(fn.Env);
+            Number pos = ArgCopy(&fn, 0)->ToNumber(fn.Env);
             if (pos >= 0)
             {
                 TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
@@ -2934,11 +2935,11 @@ void AvmTextField::SetTextFormat(const FnCall& fn)
     }
     else if (fn.NArgs >= 3)
     {
-        Object* pobj = fn.Arg(2).ToObject(fn.Env);
+        Object* pobj = ArgCopy(&fn, 2)->ToObject(fn.Env);
         if (pobj && pobj->GetObjectType() == Object_TextFormat)
         {
-            Number start = Alg::Max(Number(0), fn.Arg(0).ToNumber(fn.Env));
-            Number end   = Alg::Max(Number(0), fn.Arg(1).ToNumber(fn.Env));
+            Number start = Alg::Max(Number(0), ArgCopy(&fn, 0)->ToNumber(fn.Env));
+            Number end   = Alg::Max(Number(0), ArgCopy(&fn, 1)->ToNumber(fn.Env));
             if (end >= start)
             {
                 TextFormatObject* pfmtObj = static_cast<TextFormatObject*>(pobj);
