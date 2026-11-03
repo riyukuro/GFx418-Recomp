@@ -944,8 +944,8 @@ public:
                 Encoder.WriteVLine(dy);
             else
                 Encoder.WriteLine(dx, dy);
-            pos->LastX = pos->StartX;
-            pos->LastY = pos->StartY;
+            pos->LastX += dx;
+            pos->LastY += dy;
         }
     }
 
