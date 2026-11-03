@@ -98,13 +98,14 @@ long criMvPly_CopyFrameARGB8888Buffer(void *, unsigned char *, unsigned long, un
 long criVmpv_SetupMovieHandleWork(unsigned long, void *, unsigned long);
 void * criVmpv_GetUserLibWork(unsigned long *);
 void * criVmpv_GetStaticLibWork(unsigned long *);
+long FUN_140039180(CriMvEasyPlayer *, long, unsigned long *);  // C3: the definition's signature (CriMvEasyPlayer::isNextFrameOnTime)
 void criBaseVersion_ImplantVersionInformation(void);
 extern "C" {
 extern "C++" void criErr_NotifyPrmArray(CriSint32 level, const CriChar8* msg, CriSint32 p1, CriSint32 p2, void* p3);
 int       sprintf_s(char* buf, size_t size, const char* fmt, ...);
 void*     FUN_1400385c8(void* work, CriUint32 work_size);
-CriBool   FUN_140036140(CriMvPly mvply);
-CriBool   FUN_140036170(CriMvPly mvply);
+extern "C++" CriBool criMvPly_IsEndMainAudioPlayback(void* player);
+extern "C++" CriBool criMvPly_IsEndSubAudioPlayback(void* player);
 }
 
 extern const CriChar8* DAT_143b277b8;   // version string of the last created player
@@ -630,7 +631,7 @@ CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mvea
     CriBool main_endVal;
     main_endVal = 1;
     cv_end = 1;
-    main_endVal = FUN_140036140(mveasy->mvply);
+    main_endVal = criMvPly_IsEndMainAudioPlayback(mveasy->mvply);
     main_n = criMvPly_GetDataSizeMainAudio(mveasy->mvply, mveasy->num_audio_channel);
     if (mveasy->attached_center_voice_track == -1)
     {
@@ -638,7 +639,7 @@ CriUint32 CriMvEasyPlayer::crimveasy_CalcAvailableNumSmpls(CriMvEasyPlayer* mvea
     }
     else
     {
-        cv_end = FUN_140036170(mveasy->mvply);
+        cv_end = criMvPly_IsEndSubAudioPlayback(mveasy->mvply);
         cv_n0 = criMvPly_GetDataSizeSubAudio(mveasy->mvply, 1);
         if (main_endVal == 1)
         {
@@ -710,10 +711,10 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave16(CriMvEasyPl
         buf2[i] = sample[src_2];
     }
     cvbuf = sample[mveasy->center_channel];
-    main_end2 = FUN_140036140(mveasy->mvply);
+    main_end2 = criMvPly_IsEndMainAudioPlayback(mveasy->mvply);
     if (mveasy->attached_center_voice_track != -1)
     {
-        cv_end0 = FUN_140036170(mveasy->mvply);
+        cv_end0 = criMvPly_IsEndSubAudioPlayback(mveasy->mvply);
     }
     availb = crimveasy_CalcAvailableNumSmpls(mveasy);
     if (availb == 0)
@@ -807,10 +808,10 @@ CRIMVEASY_SAFEBUFFERS CriUint32 CriMvEasyPlayer::crimveasy_GetWave32(CriMvEasyPl
         buf2[i] = sample[src_2];
     }
     cvbuf = sample[mveasy->center_channel];
-    main_end2 = FUN_140036140(mveasy->mvply);
+    main_end2 = criMvPly_IsEndMainAudioPlayback(mveasy->mvply);
     if (mveasy->attached_center_voice_track != -1)
     {
-        cv_end0 = FUN_140036170(mveasy->mvply);
+        cv_end0 = criMvPly_IsEndSubAudioPlayback(mveasy->mvply);
     }
     availb = crimveasy_CalcAvailableNumSmpls(mveasy);
     if (availb == 0)
@@ -1646,7 +1647,7 @@ void CriMvEasyPlayer::calcAudioTime(CriUint64* count, CriUint64* unit, CriUint64
     }
     sound->GetTime(snd_count, snd_unitVal);
     extra3 = 0;
-    if (criMvPly_GetStatus(mvply) == 5 && FUN_140036140(mvply) == 1)
+    if (criMvPly_GetStatus(mvply) == 5 && criMvPly_IsEndMainAudioPlayback(mvply) == 1)
     {
         extrapolate = 1;
     }
@@ -3247,7 +3248,7 @@ CriBool CriMvEasyPlayer::GetFrameOnTimeAs32bitARGB(CriUint8* imagebuf, CriUint32
 {
     CriBool ret = 0;
     err = CRIERR_OK;
-    if (isNextFrameOnTime(0, err) != 1)
+    if (FUN_140039180(this, 0, (CriUint32*)&err) != 1)
     {
         return ret;
     }

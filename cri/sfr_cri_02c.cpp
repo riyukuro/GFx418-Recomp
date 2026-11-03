@@ -1669,16 +1669,16 @@ CriUint32 criMvPly_GetDataSizeSubAudio(void* player, CriUint32 channels)
 
 // MS2-FUNCTIONAL: query the main audio stream's playback-complete state.
 // @0x140036140
-void criMvPly_IsEndMainAudioPlayback(void* player)
+CriBool criMvPly_IsEndMainAudioPlayback(void* player)
 {
-    criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 0);
+    return criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 0);
 }
 
 // MS2-FUNCTIONAL: query the secondary audio stream's playback-complete state.
 // @0x140036170
-void criMvPly_IsEndSubAudioPlayback(void* player)
+CriBool criMvPly_IsEndSubAudioPlayback(void* player)
 {
-    criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 1);
+    return criMvPlyAmng_IsEndAudioPlaybackById(((CriMvSubAudioHandles*)player)->Manager, player, 1);
 }
 
 // MS2-FUNCTIONAL: detach and clear the secondary audio decoder handle.
@@ -3618,7 +3618,7 @@ void CriMvEasyPlayer::SetCompareFrameTimeCallback(
 CriSint32 CriMvEasyPlayer::IsNextFrameOnTime(CriError& error)
 {
     const CriSint32 checkDelay = 1;
-    CriSint32 result = isNextFrameOnTime(checkDelay, error);
+    CriSint32 result = FUN_140039180(this, checkDelay, (CriUint32*)&error);
     return result;
 }
 
