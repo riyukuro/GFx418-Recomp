@@ -1401,7 +1401,6 @@ void FUN_1423ca350(void* self)
                   "Selection.setSelection", "%d %d", 5, 5);
 }
 
-// MS2-FUNCTIONAL: the exe tests +0x70 before the +0x80 store; ours after. Same code otherwise.
 // Attaches the movie: notifies the object at +0x18 (vtable slot 0x90) and the current IME child at +0x70 (slot 1,
 // with the movie), then publishes the operating-system label to an AVM version 1 movie as _global.gfx_ime_os_version.
 // @0x1423ca410
@@ -1414,12 +1413,13 @@ void FUN_1423ca410(void* self, void* movie)
     unsigned char* p = static_cast<unsigned char*>(self);
     void* obj = *reinterpret_cast<void**>(p + 0x18);
     (*reinterpret_cast<void (***)(void*)>(obj))[0x90 / 8](obj);
-    void** child = reinterpret_cast<void**>(p + 0x70);
-    p[0x80] = 0;
-    if (*child) {
+    struct Fields { unsigned char pad[0x70]; void* child; unsigned char pad78[8]; bool flag; };
+    Fields* fields = reinterpret_cast<Fields*>(p);
+    fields->flag = false;
+    if (fields->child) {
         FUN_14257dc30(movie);
         void* arg = movie;
-        (*reinterpret_cast<void (***)(void*, void**)>(*child))[1](*child, &arg);
+        (*reinterpret_cast<void (***)(void*, void**)>(fields->child))[1](fields->child, &arg);
     }
     *reinterpret_cast<void**>(p + 0xa0) = movie;
     const int os = *reinterpret_cast<int*>(p + 0xbc);
