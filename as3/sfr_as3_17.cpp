@@ -1541,12 +1541,15 @@ ClassTraits::Traits* Sfr33LookupHash1c8(VM* self, const ASString& name, const In
 
 // MultinameHash<ClassTraits::Traits*>::Get(const Multiname&): the first namespace of a namespace set
 // with an entry, else the entry under the multiname's single namespace.
-// MS2-FUNCTIONAL 0x142505aa0: the exe loads mn.Obj after the name AddRef and keeps the name node in rbx across the call; same results
+// MS2-FUNCTIONAL 0x142505aa0: the exe keeps the name node in rbx across the call (ours reloads it from the slot) and saves rdi/r13 in another order in the loop; same results
 // @0x142505aa0
 ClassTraits::Traits** Sfr33ClassTraitsCacheGet(TClassTraitsCache* self, const Multiname& mn)
 {
     if ((static_cast<UInt32>(mn.Kind) & 3) != Abc::MNF_NS_Multi)
-        return FUN_142414ac0(self, mn.Name.AsString(), static_cast<const Instances::Namespace&>(*mn.Obj));
+    {
+        ASString name = mn.Name.AsString();
+        return FUN_142414ac0(self, name, static_cast<const Instances::Namespace&>(*mn.Obj));
+    }
     const NamespaceSet& nss = static_cast<const NamespaceSet&>(*mn.Obj);
     const ArrayLH<SPtr<Instances::Namespace> >& nsa = nss.GetNamespaces();
     const UPInt n = nsa.GetSize();
