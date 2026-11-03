@@ -195,14 +195,14 @@ struct VideoCharacterDef
         vfptr     = MS2_SF_Resource_vftable;
         RefCount  = 1;
         pLib      = 0;
-        Id        = 0x40000;
+        *(volatile UInt32*)&Id = 0x40000;   // volatile: the exe stores Id and Codec in source order
         vfptr     = MS2_SF_VideoCharacterDef_vftable;
         Width     = 0;
         Height    = 0;
         NumFrames = 0;
         Smoothing = 0;
         Deblocking = 0;
-        Codec     = 2;
+        *(volatile UByte*)&Codec = 2;
     }
     void* operator new(UPInt sz) { return Memory::Alloc(sz); }
     void  operator delete(void* p) { Memory::Free(p); }
@@ -266,7 +266,6 @@ void Video::Finalize()
 }
 
 // @0x14001c760
-// MS2-FUNCTIONAL: the inline VideoCharacterDef ctor stores Id before the Resource vtable (stand-in, not the real CharacterDef bases)
 void Video::ReadDefineVideoStreamTag(LoadProcess* p, const TagInfo& tagInfo)
 {
     int characterId = p->ReadU16();
