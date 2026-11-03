@@ -127,6 +127,8 @@ template struct ThunkFunc0<Instances::fl_events::TextEvent, 3, ASString>;
 namespace Scaleform { namespace GFx { namespace AS3 { class AvmDisplayObj; }}}
 // VM::IsOfType by class name (exe body).
 bool FUN_1425145d0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& v, const char* className);
+// Traits::GetConstructor, out of line (0x142508460, sfr_as3_17).
+Scaleform::GFx::AS3::Class& FUN_142508460(const Scaleform::GFx::AS3::Traits* t);
 // VM::GetValueTraits (exe body).
 namespace Scaleform { namespace GFx { namespace AS3 {
 bool FUN_1425146d0(VM& vm, const Value& v, const ClassTraits::Traits& ctr);   // VM::IsOfType against class traits (sfr_as3_18)
@@ -2253,7 +2255,7 @@ namespace Instances { namespace fl_display
     }
 
 #pragma strict_gs_check(push, on)
-    // MS2-FUNCTIONAL: exe calls Traits::GetConstructor out of line (0x142508460) and lays out the frame differently; same checks, matrix/cxform/clip setup and Draw calls
+    // MS2-FUNCTIONAL: the exe lays out the frame and allocates registers differently; same calls, checks, matrix/cxform/clip setup and Draw calls
     // @0x142449eb0
     void BitmapData::draw(const Value& result, Instances::fl::Object* source, Instances::fl_geom::Matrix* matrix,
                           Instances::fl_geom::ColorTransform* colorTransform, const ASString& blendMode,
@@ -2286,7 +2288,7 @@ namespace Instances { namespace fl_display
             Render::DrawableImage* pdest = reinterpret_cast<Render::DrawableImage*>(pImage.GetPtr());
 
             // A BitmapData (of this class) is drawn as an image, a display object through its render tree.
-            if (FUN_1425146d0(GetVM(), Value(source), GetTraits().GetConstructor().GetClassTraits()))
+            if (FUN_1425146d0(GetVM(), Value(source), FUN_142508460(&GetTraits()).GetClassTraits()))
             {
                 Render::Image* psource = reinterpret_cast<Render::Image*>(static_cast<BitmapData*>(source)->pImage.GetPtr());
                 pdest->Draw(psource, m, cx, mode, clipRect ? &clip : NULL, smoothing);
