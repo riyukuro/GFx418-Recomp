@@ -5,6 +5,7 @@
 // MS2-UNIT: sfr_render_07q
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1426f2460-0x1426f3f20 .text$mn
+// MS2-RANGE: 0x14014d110-0x14014d11c .text$di
 // MS2-PINS-BEGIN tplpin
 // MS2-PINS-END tplpin
 
@@ -514,6 +515,7 @@ void TextPrimitiveBundle::startPrimitive(RenderQueueItem& item, TextPrepareBuffe
 }} // namespace Scaleform::Render
 
 // MS2-PIN: ??_7SKI_TextPrimitive@Render@Scaleform@@6B@ 0x143194090
+// MS2-PIN: ??__E?Instance@SKI_TextPrimitive@Render@Scaleform@@2V123@A@@YAXXZ 0x14014d110
 // MS2-PIN: ??_7TextLayerPrimitive@Render@Scaleform@@6B?$RefCountBase@VPrimitive@Render@Scaleform@@$0EE@@2@@ 0x1431940c0
 // MS2-PIN: ??_7TextLayerPrimitive@Render@Scaleform@@6BInterface@RenderQueueItem@12@@ 0x1431940c8
 // MS2-PIN: ??_7TextPrimitiveBundle@Render@Scaleform@@6BBundle@12@@ 0x1431940e0
