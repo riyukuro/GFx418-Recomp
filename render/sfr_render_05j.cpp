@@ -294,7 +294,7 @@ void TreeCacheNode::propagate3DFlag(unsigned)
 }
 
 // a mask's pattern is built by the owner, which knows the chain
-void TreeCacheNode::UpdateBundlePattern(unsigned)
+void TreeCacheNode::UpdateBundlePattern()
 {
 }
 
@@ -1315,7 +1315,7 @@ void TreeCacheContainer::BuildChildPattern(BundleEntryRange* pattern)
 }
 
 // @0x142682870
-void TreeCacheContainer::UpdateBundlePattern(unsigned flags)
+void TreeCacheContainer::UpdateBundlePattern()
 {
     // invalid patterns are rebuilt top-down later
     if (!IsPatternChainValid())
@@ -1482,16 +1482,16 @@ static inline bool hasContributingFilter(const TreeNode::NodeData* data)
     return filters && filters->IsContributing();
 }
 
-// MS2-FUNCTIONAL: register allocation (root kept in rsi, not spilled/reloaded via rbx) and stack-slot order differ;
-// the exe also passes no argument to UpdateBundlePattern (our signature takes flags, 0 here).
 // @0x142683380
 void TreeCacheRoot::UpdateTreeData()
 {
     // Transforms flow from the root down, so the shallow buckets go first.
     unsigned depthUsed = DepthUpdates.GetDepthUsed();
-    for (unsigned i = 0; i < depthUsed; i++)
+    unsigned i;
+    for (i = 0; i < depthUsed; i++)
     {
-        for (TreeCacheNode* node = DepthUpdates.Get(i); node; node = node->pNextUpdate)
+        TreeCacheNode* node = DepthUpdates.Get(i);
+        while (node)
         {
             unsigned changed = node->UpdateFlags & (Change_Matrix | Change_CxForm);
 
@@ -1515,97 +1515,116 @@ void TreeCacheRoot::UpdateTreeData()
             // color change.
             if (!changed)
             {
-                for (TreeCacheNode* p = node; p; p = p->GetParent())
+                TreeCacheNode* p = node;
+                while (p)
                 {
-                    if (hasContributingFilter(p->GetNodeData()))
+                    const TreeNode::NodeData* pdata = p->GetNodeData();
+                    if (pdata->HasFilter())
                     {
-                        changed = Change_CxForm;
-                        break;
+                        const FilterState* filterState = pdata->GetState<FilterState>();
+                        const FilterSet*   filters     = filterState ? filterState->GetFilters() : 0;
+                        if (filters && filters->IsContributing())
+                        {
+                            changed |= Change_CxForm;
+                            break;
+                        }
                     }
+                    p = p->GetParent();
                 }
             }
-            if (!changed)
-                continue;
 
-            // Accumulate the ancestors' matrices and color transforms above the node.
-            const TreeNode::NodeData* data = node->GetNodeData();
-            bool is3D      = data->Is3D();
-            bool hasFilter = data->HasFilter();
-            TransformFlags flags = (TransformFlags)(changed | (ViewValid ? TF_NeedCull : 0));
-
-            TransformArgs args(ViewCullRect, is3D ? Matrix2F::Identity : data->M2D(),
-                               is3D ? data->M3D() : Matrix3F::Identity, hasFilter ? Cxform::Identity : data->Cx);
-            args.SetViewProj(data, (const TransformArgs*)0);
-            flags = (TransformFlags)(flags | (is3D ? TF_Has3D : TF_Has2D) | (hasFilter ? TF_ParentFilter : 0));
-
-            const ViewMatrix3DState* viewState =
-                data->HasViewMatrix3D() ? data->GetState<ViewMatrix3DState>() : 0;
-            const ProjectionMatrix3DState* projState =
-                data->HasProjectionMatrix3D() ? data->GetState<ProjectionMatrix3DState>() : 0;
-
-            for (TreeCacheNode* p = node->GetParent(); p; p = p->GetParent())
+            if (changed)
             {
-                if (!p->IsDrawn())
-                    flags = (TransformFlags)(flags & ~TF_NeedCull);
-                const TreeNode::NodeData* pdata = p->GetNodeData();
+                // Accumulate the ancestors' matrices and color transforms above the node.
+                const TreeNode::NodeData* data = node->GetNodeData();
+                TransformFlags flags = (TransformFlags)(changed | (ViewValid ? TF_NeedCull : 0));
+                bool is3D      = data->Is3D();
+                bool hasFilter = data->HasFilter();
 
-                if (flags & TF_Has3D)
+                TransformArgs args(ViewCullRect, is3D ? Matrix2F::Identity : data->M2D(),
+                                   is3D ? data->M3D() : Matrix3F::Identity, hasFilter ? Cxform::Identity : data->Cx);
+                args.SetViewProj(data, (const TransformArgs*)0);
+                flags = (TransformFlags)(flags | (is3D ? TF_Has3D : TF_Has2D) | (hasFilter ? TF_ParentFilter : 0));
+
+                const ViewMatrix3DState* viewState =
+                    data->HasViewMatrix3D() ? data->GetState<ViewMatrix3DState>() : 0;
+                const ProjectionMatrix3DState* projState =
+                    data->HasProjectionMatrix3D() ? data->GetState<ProjectionMatrix3DState>() : 0;
+
+                for (TreeCacheNode* p = node->GetParent(); p; p = p->GetParent())
                 {
-                    // the 2D matrix widened in place, M3D used by reference (no copy of either)
-                    Matrix3F        m2D(Matrix3F::NoInit);
-                    const Matrix3F* m = &pdata->M3D();
-                    if (!pdata->Is3D())
-                        m = new (&m2D) Matrix3F(pdata->M2D());
-                    args.SetMatrix3D(*m, Matrix3F(args.GetMat3DDirect()));
-                }
-                else if (pdata->Is3D())
-                {
-                    // a 3D ancestor: carry on in 3D from the 2D product so far
-                    args.SetMatrix3D(Matrix3F(args.Mat));
-                    args.SetMatrix3D(pdata->M3D(), Matrix3F(args.GetMat3DDirect()));
-                    args.Mat.SetIdentity();
-                    flags = (TransformFlags)((flags & ~TF_Has2D) | TF_Has3D);
-                }
-                else
-                    args.Mat.Append(pdata->M2D());
+                    if (!p->IsDrawn())
+                        flags = (TransformFlags)(flags & ~TF_NeedCull);
+                    const TreeNode::NodeData* pdata = p->GetNodeData();
 
-                // a contributing filter applies its color transform to the filtered result, not to the children
-                if (hasContributingFilter(pdata))
-                    flags = (TransformFlags)(flags | TF_ParentFilter);
-                else
-                    args.Cx.Append(pdata->Cx);
+                    if (flags & TF_Has3D)
+                    {
+                        // the 2D matrix widened in place, M3D used by reference (no copy of either)
+                        Matrix3F        m2D(Matrix3F::NoInit);
+                        const Matrix3F* m = &pdata->M3D();
+                        if (!pdata->Is3D())
+                            m = new (&m2D) Matrix3F(pdata->M2D());
+                        args.SetMatrix3D(*m, Matrix3F(args.GetMat3DDirect()));
+                    }
+                    else if (pdata->Is3D())
+                    {
+                        // a 3D ancestor: carry on in 3D from the 2D product so far
+                        args.SetMatrix3D(Matrix3F(args.Mat));
+                        args.SetMatrix3D(pdata->M3D(), Matrix3F(args.GetMat3DDirect()));
+                        args.Mat.SetIdentity();
+                        flags = (TransformFlags)((flags & ~TF_Has2D) | TF_Has3D);
+                    }
+                    else
+                        args.Mat.Append(pdata->M2D());
 
-                // the nearest ancestor view / projection
-                if (!viewState && pdata->HasViewMatrix3D())
-                    viewState = pdata->GetState<ViewMatrix3DState>();
-                if (!projState && pdata->HasProjectionMatrix3D())
-                    projState = pdata->GetState<ProjectionMatrix3DState>();
+                    // a contributing filter applies its color transform to the filtered result, not to the children
+                    if (hasContributingFilter(pdata))
+                        flags = (TransformFlags)(flags | TF_ParentFilter);
+                    else
+                        args.Cx.Append(pdata->Cx);
+
+                    // the nearest ancestor view / projection
+                    if (!viewState && pdata->HasViewMatrix3D())
+                        viewState = pdata->GetState<ViewMatrix3DState>();
+                    if (!projState && pdata->HasProjectionMatrix3D())
+                        projState = pdata->GetState<ProjectionMatrix3DState>();
+                }
+
+                args.SetViewProj(viewState, projState);
+                node->UpdateTransform(data, args, flags);
+                node->UpdateFlags &= ~(Change_Matrix | Change_CxForm);
             }
 
-            args.SetViewProj(viewState, projState);
-            node->UpdateTransform(data, args, flags);
-            node->UpdateFlags &= ~(Change_Matrix | Change_CxForm);
+            node = node->pNextUpdate;
         }
     }
 
     // Patterns go bottom-up; the count is read again since culling may have queued deeper nodes.
-    for (unsigned i = DepthUpdates.GetDepthUsed(); i != 0; i--)
+    depthUsed = DepthUpdates.GetDepthUsed();
+    for (i = depthUsed; i != 0; i--)
     {
-        for (TreeCacheNode* node = DepthUpdates.Get(i - 1); node; node = node->pNextUpdate)
+        TreeCacheNode* node = DepthUpdates.Get(i - 1);
+        while (node)
         {
             if (node->UpdateFlags & Update_Pattern_Mask)
             {
-                node->UpdateBundlePattern(0);
+                node->UpdateBundlePattern();
                 node->UpdateFlags &= ~Update_Pattern_Mask;
             }
+
             node->UpdateFlags &= ~Update_InList;
+            node = node->pNextUpdate;
         }
     }
 
     ClearDepthUpdates();
 
-    for (BundleIterator ib = CachedChildPattern.GetIterator(); ib; ib++)
-        ib->UpdateBundleEntry(this, pRenderer2D, ib);
+    BundleIterator ibundles = CachedChildPattern.GetIterator();
+    while (ibundles)
+    {
+        ibundles->UpdateBundleEntry(this, pRenderer2D, ibundles);
+        ibundles++;
+    }
 
     BundlePatternFrameId++;
 }
@@ -1717,7 +1736,7 @@ bool TreeCacheMeshBase::GetPatternChain(BundleEntryRange* range, unsigned)
 }
 
 // @0x1426829e0
-void TreeCacheMeshBase::UpdateBundlePattern(unsigned)
+void TreeCacheMeshBase::UpdateBundlePattern()
 {
     if (HasMask() && !Effects.IsEmpty())
     {

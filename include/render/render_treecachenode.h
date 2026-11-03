@@ -347,7 +347,7 @@ public:
     virtual void propagateScale9Flag(unsigned partOfScale9);
     virtual void propagateEdgeAA(EdgeAAMode parentEdgeAA);
     virtual void propagate3DFlag(unsigned parent3D);
-    virtual void UpdateBundlePattern(unsigned flags);
+    virtual void UpdateBundlePattern();
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual bool IsPatternChainValid() const;
     virtual void forceUpdateImages();
@@ -439,7 +439,7 @@ public:
     virtual void propagateScale9Flag(unsigned partOfScale9);
     virtual void propagateEdgeAA(EdgeAAMode parentEdgeAA);
     virtual void propagate3DFlag(unsigned parent3D);
-    virtual void UpdateBundlePattern(unsigned flags);
+    virtual void UpdateBundlePattern();
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
     virtual bool IsPatternChainValid() const;
     virtual void forceUpdateImages();
@@ -565,7 +565,7 @@ public:
     virtual bool IsPatternChainValid() const { return true; }
 
     virtual bool GetPatternChain(BundleEntryRange* range, unsigned flags);
-    virtual void UpdateBundlePattern(unsigned flags);
+    virtual void UpdateBundlePattern();
 
     // (appended for sfr_render_05j)
     virtual void HandleChanges(unsigned changeBits);
