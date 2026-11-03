@@ -2702,18 +2702,21 @@ static SF_FORCEINLINE bool ConstName_CompareCaseCheck(const ASString& constName,
     return constName.GetNode()->pLower == name.GetNode()->pLower;
 }
 
-// MS2-FUNCTIONAL penv kept in a different callee-saved register (allocation only)
+// The exe reads the handler before releasing val's old contents and tests it after (SetBool written out), and reads
+// the string context once.
 // @0x14294f140
 bool ExternalInterfaceCtorFunction::GetMember(Environment* penv, const ASString& name, Value* val)
 {
-    if (ConstName_CompareCaseCheck(penv->GetSC()->CreateConstString("available"), name,
-                                   penv->GetSC()->IsCaseSensitive()))
+    ASStringContext* psc = penv->GetSC();
+    if (ConstName_CompareCaseCheck(psc->CreateConstString("available"), name, psc->IsCaseSensitive()))
     {
-        bool available = penv->GetTarget()->GetMovieImpl()->pExtIntfHandler != 0;
-        val->SetBool(available);
+        GFx::ExternalInterface* phandler = penv->GetTarget()->GetMovieImpl()->pExtIntfHandler;
+        val->DropRefs();
+        val->T.Type         = Value::BOOLEAN;
+        val->V.BooleanValue = phandler != 0;
         return true;
     }
-    return GetMemberRaw(penv->GetSC(), name, val);
+    return GetMemberRaw(psc, name, val);
 }
 
 // A value holding a new native function object; the object's creation count becomes the value's (FunctionRef
