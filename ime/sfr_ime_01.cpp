@@ -2840,29 +2840,31 @@ void FUN_1423d8870(unsigned long long* manager)
 }
 
 // MS2-FUNCTIONAL: resolves the configured language string, activates its executable HKL, and reports activation failure.
+// Still differs: the record pointer and the index swap r9 and r10, and the HKL is held in rax, not rcx.
 // @0x1423d76f0
 void FUN_1423d76f0(unsigned long long* manager, const char* name)
 {
+    struct Record { unsigned long long pad0[2]; unsigned long long text1; unsigned long long text2; unsigned id; unsigned pad1; HKL layout; };
     manager[0x33] = 0;
-    const unsigned count = *reinterpret_cast<unsigned*>(manager + 0x1a);
-    auto* kinds = reinterpret_cast<unsigned*>(manager[0x32]);
-    auto* entries = reinterpret_cast<unsigned char*>(manager[0x17]);
-    for (unsigned i = 0; i < count; ++i) {
-        const unsigned kind = kinds[i];
-        if (kind != 1 && kind != 2) continue;
-        const unsigned offset = kind == 1 ? 0x10 : 0x18;
-        const unsigned long long packed = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + offset);
-        const char* configured = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
-        if (std::strcmp(name, configured) != 0) continue;
-        HKL layout = *reinterpret_cast<HKL*>(entries + i * 0x30 + 0x28);
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(manager + 0x1a); ++i) {
+        auto* kinds = reinterpret_cast<unsigned*>(manager[0x32]);
+        Record* record;
+        if (kinds[i] == 1) {
+            record = &reinterpret_cast<Record*>(manager[0x17])[i];
+            if (std::strcmp(name, reinterpret_cast<const char*>((record->text1 & ~3ull) + 0xc)) != 0) continue;
+        } else if (kinds[i] == 2) {
+            record = &reinterpret_cast<Record*>(manager[0x17])[i];
+            if (std::strcmp(name, reinterpret_cast<const char*>((record->text2 & ~3ull) + 0xc)) != 0) continue;
+        } else {
+            continue;
+        }
+        HKL layout = record->layout;
         if (!layout) continue;
         manager[0x33] = reinterpret_cast<unsigned long long>(layout);
         if (ActivateKeyboardLayout(layout, 0)) return;
-        String error("Failure to activate input language ");
-        error += configured;
         reinterpret_cast<void(*)(void*, const char*, const char*)>(
             (*reinterpret_cast<void***>(manager))[0x70 / sizeof(void*)])(
-                manager, error.ToCStr(), "GFxIME Error");
+                manager, (String("Failure to activate input language ") + name).ToCStr(), "GFxIME Error");
         return;
     }
 }
