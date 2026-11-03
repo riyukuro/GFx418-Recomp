@@ -676,7 +676,7 @@ void AsBroadcasterCtorFunction::Initialize(const FnCall& fn)
 
 // Color.getRGB(): the add row of the target's transform as 0xRRGGBB.
 // @0x1428ed450
-// MS2-FUNCTIONAL same operations; the exe's register allocation differs (negated add-row bytes via imul on two lanes)
+// MS2-FUNCTIONAL the exe multiplies the red and green lanes with imul; ours folds them to neg + shl
 void ColorProto::GetRGB(const FnCall& fn)
 {
     MS2_AS2_CHECK_THIS(fn, Color);
@@ -688,10 +688,7 @@ void ColorProto::GetRGB(const FnCall& fn)
     if (!pchar)
         return;
     Render::Cxform cx = pchar->GetCxform();
-    SInt32 r = (SInt32)(SInt64)cx.M[1][0];
-    SInt32 g = (SInt32)(SInt64)cx.M[1][1];
-    SInt32 b = (SInt32)(SInt64)cx.M[1][2];
-    fn.Result->SetInt(((-(r << 16)) & 0xff0000) | ((-(g << 8)) & 0xff00) | ((-b) & 0xff));
+    fn.Result->SetInt(((-(SInt32)(SInt64)cx.M[1][2]) & 0xff) | (((SInt32)(SInt64)cx.M[1][0] * -65536) & 0xff0000) | (((SInt32)(SInt64)cx.M[1][1] * -256) & 0xff00));
 }
 
 // Color.setRGB(rgb): zeroes the multipliers and sets the add row.
