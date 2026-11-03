@@ -636,20 +636,23 @@ bool FUN_14000e760(void* p) { return FUN_14000e6b0(reinterpret_cast<AvmCharacter
 
 // The four AS2 Video-character traits live on the secondary AvmVideoCharacter base (+0x08).
 // This preserves the exe's field offsets and sends all other names through the script object.
-// MS2-FUNCTIONAL: standard members first (slot 0x118 on the AvmCharacter), then the Video properties, then the script object.
+// Standard members first (slot 0x118 on the AvmCharacter), then the Video properties, then the script object
+// (FUN_14000e020, called twice like the exe).
 // @0x14000e8f0
 bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const Value& value,
                    const PropFlags& flags)
 {
     char* fields = static_cast<char*>(pvbase);
-    AvmCharacter* pavm = reinterpret_cast<AvmCharacter*>(fields - 8);
+    // pavm (this-8) is recomputed at each use, as in the exe (no register holds it)
     // the exe tries the standard members (_x, _alpha, ...) first: slot 0x118 on this-8 (0x14000e93d)
-    if ((name.GetHashFlags() & ASConstString::Flag_StandardMember)
-        && pavm->SetStandardMember(pavm->GetStandardMemberConstant(name), value, false))
-        return true;
+    if ((UByte(name.GetHashFlags() >> 29) & 1)
+        && reinterpret_cast<AvmCharacter*>(fields - 8)->SetStandardMember(
+               reinterpret_cast<AvmCharacter*>(fields - 8)->GetStandardMemberConstant(name), value, false))
+        goto done;
     if (!strcmp(name.ToCStr(), "deblocking"))
     {
         *reinterpret_cast<int*>(fields + 0x38) = static_cast<int>(value.ToNumber(penv));
+    done:
         return true;
     }
     if (!strcmp(name.ToCStr(), "smoothing"))
@@ -657,8 +660,10 @@ bool FUN_14000e8f0(void* pvbase, Environment* penv, const ASString& name, const 
         *reinterpret_cast<bool*>(fields + 0x3c) = value.ToBool(penv);
         return true;
     }
-    Object* pvideo = pavm->GetASObject();
-    return pvideo ? pvideo->SetMember(penv, name, value, flags) : false;
+    if (FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+        return reinterpret_cast<Object*>(FUN_14000e020(reinterpret_cast<AvmCharacter*>(fields - 8)))
+            ->SetMember(penv, name, value, flags);
+    return false;
 }
 
 // MS2-FUNCTIONAL: standard members first (slot 0x120 on the AvmCharacter), then width, height, deblocking and smoothing, then the script object.
