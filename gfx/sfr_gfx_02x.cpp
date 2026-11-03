@@ -289,14 +289,15 @@ bool RefCountCollector<Stat>::RootArray::PushBackSafe(BaseType* const& val)
     return true;
 }
 
-// MS2-FUNCTIONAL: out-of-line copy of the header's inline RemoveFromRoots
+// out-of-line copy of the header's inline RemoveFromRoots
 // @0x1425927d0
 template void RefCountCollector<StatMV_ActionScript_Mem>::RemoveFromRoots(BaseType* root);
 
 // Grows by pages of 1024 slots (the page table by 5 entries at a time); shrinking only cuts the size.
+// Not inlined: RemoveFromRoots calls it in the exe.
 // @0x142592860
 template<int Stat>
-void RefCountCollector<Stat>::RootArray::Resize(UPInt newSize)
+SF_NOINLINE void RefCountCollector<Stat>::RootArray::Resize(UPInt newSize)
 {
     if (newSize > Size)
     {
