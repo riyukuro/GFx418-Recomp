@@ -16,9 +16,23 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// ArrayObject::MakeDeepCopyFrom (0x142968560, sfr_as2_06), which the exe inlines into BroadcastMessageWithCallback.
+static SF_FORCEINLINE void Sfr04pMakeDeepCopyFrom(ArrayObject* pthis, MemoryHeap* pheap, const ArrayObject& ao)
+{
+    pthis->Elements.Resize(ao.Elements.GetSize());
+    for (UPInt i = 0, n = pthis->Elements.GetSize(); i < n; i++)
+    {
+        if (ao.Elements[i])
+        {
+            Value* pval = SF_HEAP_NEW(pheap) Value(*ao.Elements[i]);
+            pthis->Elements[i] = pval;
+        }
+    }
+}
+
 // Delivers eventName to a snapshot of the _listeners array: each listener's method (a function, or a function name
 // resolved against the listener) is handed to the callback together with the listener.
-// MS2-FUNCTIONAL: the listener and method references are held by smart pointers
+// MS2-FUNCTIONAL: inline (the exe inlines FunctionRefBase::SetLocalFrame into the ToFunction copy, ours calls it)
 // @0x142932290
 bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterface* pthis, const ASString& eventName,
                                                  InvokeCallback* pcallback)
@@ -29,35 +43,34 @@ bool AsBroadcaster::BroadcastMessageWithCallback(Environment* penv, ObjectInterf
     Value listenersVal;
     if (pthis->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listenersVal))
     {
-        Ptr<Object> plisteners = listenersVal.ToObject(penv);
-        if (plisteners && plisteners->GetObjectType() == Object_Array)
+        Object* pobj = listenersVal.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == Object_Array)
         {
-            ArrayObject* psrc = static_cast<ArrayObject*>(plisteners.GetPtr());
-            if (psrc->GetSize() > 0)
+            Ptr<ArrayObject> porigArrObj = static_cast<ArrayObject*>(pobj);
+            if (porigArrObj->GetSize() > 0)
             {
-                Ptr<ArrayObject> pcopy = *SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
-                pcopy->MakeDeepCopyFrom(penv->GetHeap(), *psrc);
-                for (unsigned i = 0, n = pcopy->GetSize(); i < n; ++i)
+                Ptr<ArrayObject> parrObj = *SF_HEAP_NEW(penv->GetHeap()) ArrayObject(penv);
+                Sfr04pMakeDeepCopyFrom(parrObj, penv->GetHeap(), *porigArrObj);
+                for (unsigned i = 0, n = parrObj->GetSize(); i < n; i++)
                 {
-                    Value* plistener = pcopy->GetElementPtr(i);
-                    if (!plistener)
-                        continue;
-                    ObjectInterface* pif = plistener->ToObjectInterface(penv);
-                    if (!pif)
-                        continue;
-                    Ptr<Object>            pobj;
-                    Ptr<InteractiveObject> pchar;
-                    if (plistener->GetType() == Value::CHARACTER)
-                        pchar = plistener->ToCharacter(penv);
-                    else
-                        pobj = plistener->ToObject(penv);
-
-                    Value method;
-                    if (pif->GetMemberRaw(penv->GetSC(), eventName, &method))
+                    Value*           pelem = parrObj->GetElementPtr(i);
+                    ObjectInterface* plistener;
+                    if (pelem && (plistener = pelem->ToObjectInterface(penv)) != NULL)
                     {
-                        FunctionRef func = method.ToFunction(penv);
-                        if (func.GetObjectPtr())
-                            pcallback->Invoke(penv, pif, func);
+                        Ptr<Object>            objHolder;
+                        Ptr<InteractiveObject> charHolder;
+                        if (pelem->GetType() == Value::CHARACTER)
+                            charHolder = pelem->ToCharacter(penv);
+                        else
+                            objHolder = pelem->ToObject(penv);
+
+                        Value methodVal;
+                        if (plistener->GetMemberRaw(penv->GetSC(), eventName, &methodVal))
+                        {
+                            FunctionRef method = methodVal.ToFunction(penv);
+                            if (!method.IsNull())
+                                pcallback->Invoke(penv, plistener, method);
+                        }
                     }
                 }
             }
