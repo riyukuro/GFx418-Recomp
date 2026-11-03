@@ -1159,19 +1159,15 @@ namespace Instances { namespace fl
         return lo;
     }
 
-    // MS2-FUNCTIONAL: unrolled table pointer is biased by one int in the exe, two in ours
+    // The leap-year table is picked by an index offset into MonthEndDay (as in MakeDay).
     // @0x14241cdc0
     __declspec(noinline) SInt32 Date::MonthFromYearDay(SInt32 year, SInt32 day)
     {
-        const SInt32* tbl;
-        if ((year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0))
-            tbl = MonthEndDay + 12;
-        else
-            tbl = MonthEndDay;
+        const SInt32 leap = ((year % 4) == 0 && ((year % 100) != 0 || (year % 400) == 0)) ? 12 : 0;
         SInt32 m = 0;
         for (; m < 12; ++m)
         {
-            if (tbl[m] > day)
+            if (MonthEndDay[leap + m] > day)
                 break;
         }
         return m;
@@ -4728,7 +4724,7 @@ Instances::Namespace* FUN_142415c20(InstanceTraits::fl::Namespace* self, Scalefo
 }
 
 // the name of the trait a method's body belongs to
-// MS2-FUNCTIONAL: written from the exe on raw offsets (VMAbcFile +0x28, Abc::File tables)
+// Written from the exe on raw offsets (VMAbcFile +0x28, Abc::File tables)
 // @0x142416e70
 const void* FUN_142416e70(const char* self)
 {
@@ -4737,7 +4733,8 @@ const void* FUN_142416e70(const char* self)
     const char* const* bodies = *(const char* const* const*)(abc + 0x170);
     const char* mi = methods[*(const int*)(self + 0xe8)];
     const char* body = bodies[*(const int*)(mi + 8)];
-    return &reinterpret_cast<const AS3::Abc::TraitInfo*>(methods[*(const int*)(body + 0x18)])->GetName(*reinterpret_cast<const AS3::Abc::ConstPool*>(abc + 0x30));
+    const AS3::Abc::TraitInfo* ti = reinterpret_cast<const AS3::Abc::TraitInfo*>(methods[*(const int*)(body + 0x18)]);
+    return &ti->GetName(*reinterpret_cast<const AS3::Abc::ConstPool*>(abc + 0x30));
 }
 
 // the class traits of a class's super class; an unresolved name throws VerifyError 1001
