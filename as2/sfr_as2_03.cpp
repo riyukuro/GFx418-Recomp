@@ -1316,7 +1316,7 @@ void Object::Watchpoint::Destruct_Call()
 }
 
 // @0x142925ae0
-MovieRoot::InvokeAliasInfo::~InvokeAliasInfo()
+__declspec(noinline) MovieRoot::InvokeAliasInfo::~InvokeAliasInfo()
 {
 }
 
@@ -1469,7 +1469,7 @@ template decltype(HashLH<GFx::ASString, char, GFx::ASStringHashFunctor, GFx::Sta
                          HashsetNodeEntry<MS2_AS2StandardMemberNode, MS2_AS2StandardMemberNode::NodeHashF> >::mHash)::
     BaseType::~HashSetBase();
 typedef HashNode<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor> MS2_AS2InvokeAliasNode;
-// MS2-FUNCTIONAL cl inlines ~InvokeAliasInfo (defined above), the exe calls it
+// The element dtor is called out of line (~InvokeAliasInfo is noinline above, as in the exe)
 // @0x142924610
 template decltype(HashLH<GFx::ASString, GFx::AS2::MovieRoot::InvokeAliasInfo, GFx::ASStringHashFunctor,
                          GFx::StatMV_ASString_Mem, MS2_AS2InvokeAliasNode,
