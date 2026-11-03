@@ -156,7 +156,6 @@ void GASImeCtorFunction::SetEnabled(const FnCall& fn)
 }
 
 // SendLangBarMessage(clip, command, message).
-// MS2-FUNCTIONAL: the exe reloads fn.Env after each FnCall::Arg call; same calls
 // @0x142999270
 void GASImeCtorFunction::SendLangBarMessage(const FnCall& fn)
 {
@@ -165,9 +164,10 @@ void GASImeCtorFunction::SendLangBarMessage(const FnCall& fn)
     Ptr<IMEManagerBase> pime = fn.Env->GetMovieImpl()->GetIMEManager();
     if (pime && fn.NArgs == 3 && ImeArg(fn, 0).GetType() == Value::CHARACTER)
     {
+        InteractiveObject* pclip   = ImeArg(fn, 0).ToCharacter(fn.Env);
         Environment*       penv    = fn.Env;
-        InteractiveObject* pclip   = ImeArg(fn, 0).ToCharacter(penv);
         ASString           command = ImeArg(fn, 1).ToString(penv);
+        penv                       = fn.Env;
         ASString           message = ImeArg(fn, 2).ToString(penv);
         pime->SendLangBarMessage(pclip, command, message);
     }
