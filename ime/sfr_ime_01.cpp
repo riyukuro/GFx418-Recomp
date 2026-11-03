@@ -763,9 +763,7 @@ void FUN_1423d5fd0(void* self)
 // Whether the movie's focused character accepts IME input: it locks the focus group's WeakPtr (dropping a dead proxy),
 // and accepts only a TextField (type 4) whose flag bits 11 and 2 are clear and that is not read-only
 // (FUN_1425b9b10 = TextField::IsReadOnly).
-// Reviewed against the exe, same behaviour.
-// MS2-FUNCTIONAL: 17 bytes short; the exe increments the refcount before it loads the flag word and keeps the
-// result in dil (cmove), we load early and keep it in bl
+// The exe increments the inner reference before it loads the flag word; the compiler barrier keeps that order.
 // @0x1423cf570
 unsigned char FUN_1423cf570(void*, void* rawMovie)
 {
@@ -784,11 +782,12 @@ unsigned char FUN_1423cf570(void*, void* rawMovie)
                     if (reinterpret_cast<int(*)(void*)>((*reinterpret_cast<void***>(field))[0x258 / sizeof(void*)])(
                             field) == 4) {
                         ++*reinterpret_cast<int*>(field + 8);
+                        _ReadWriteBarrier();
                         // the TextField flag word at +0xfc: bit 11 and bit 2 block IME input
                         if (!(static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 11) & 1) &&
                             !FUN_1425b9b10(field))
-                            accepted = (static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 2) & 1)
-                                           ? accepted : 1;
+                            if (!(static_cast<unsigned char>(*reinterpret_cast<unsigned*>(field + 0xfc) >> 2) & 1))
+                                accepted = 1;
                         FUN_14257dcd0(field);
                     }
                     FUN_14257dcd0(field);
