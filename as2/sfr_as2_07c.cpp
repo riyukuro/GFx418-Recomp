@@ -202,7 +202,7 @@ GASImeCtorFunction::GASImeCtorFunction(ASStringContext* psc) : CFunctionObject(p
 }
 
 // MS2-FUNCTIONAL: Set__proto__ is inlined in the GASIme ctor as in the exe; what is left is register allocation (psc and
-// this swap registers) and the pProto test, which ours schedules above the GASIme vtable stores.
+// this swap registers).
 // @0x142999830
 GASImeProto::GASImeProto(ASStringContext* psc, Object* pprototype, const FunctionRef& constructor)
     : Prototype<GASIme>(psc, pprototype, constructor)

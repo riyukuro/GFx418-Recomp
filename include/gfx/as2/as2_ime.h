@@ -16,6 +16,7 @@ protected:
     // Object::Set__proto__ (0x140007ba0) is inlined here in the exe, its SetMemberRaw a virtual call.
     GASIme(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
+        _ReadWriteBarrier();
         if (!pProto)
             static_cast<ObjectInterface*>(this)->SetMemberRaw(
                 psc, psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
