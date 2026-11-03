@@ -39,30 +39,27 @@ public:
 
     void PushBack(const T& v)
     {
-        T* p;
         if (Size < N)
-            p = &Static[Size];
-        else
         {
-            if (Size == N)
-            {
-                // the in-object elements are copied bitwise to the new heap block
-                Reserved *= 2;
-                Data = (T*)(pHeap ? Memory::AllocInHeap(pHeap, Reserved * sizeof(T))
-                                  : Memory::AllocAutoHeap(this, Reserved * sizeof(T)));
-                memcpy(Data, Static, sizeof(Static));
-                ConstructArray<T>(Data + Size, Reserved - Size);
-            }
-            else if (Size >= Reserved)
-            {
-                Reserved *= 2;
-                Data = (T*)Memory::Realloc(Data, Reserved * sizeof(T));
-                ConstructArray<T>(Data + Size, Reserved - Size);
-            }
-            p = &Data[Size];
+            Static[Size++] = v;
+            return;
         }
-        ++Size;
-        *p = v;
+        if (Size == N)
+        {
+            // the in-object elements are copied bitwise to the new heap block
+            Reserved *= 2;
+            Data = (T*)(pHeap ? Memory::AllocInHeap(pHeap, Reserved * sizeof(T))
+                              : Memory::AllocAutoHeap(this, Reserved * sizeof(T)));
+            memcpy(Data, Static, sizeof(Static));
+            ConstructArray<T>(Data + Size, Reserved - Size);
+        }
+        else if (Size >= Reserved)
+        {
+            Reserved *= 2;
+            Data = (T*)Memory::Realloc(Data, Reserved * sizeof(T));
+            ConstructArray<T>(Data + Size, Reserved - Size);
+        }
+        Data[Size++] = v;
     }
 
 private:
