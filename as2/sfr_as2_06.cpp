@@ -2274,25 +2274,27 @@ bool MemoryContextImpl::HeapLimit::OnExceedLimit(MemoryHeap* heap, UPInt overLim
 {
     const UPInt footprint = heap->GetFootprint();
     const UPInt heapLimit = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
-    const UPInt projected = UPInt(float(footprint) * HeapLimitMultiplier) + heapLimit + overLimit;
-    if (UPInt(float(footprint) * HeapLimitMultiplier) <= footprint - CurrentLimit ||
-        (UserLevelLimit && UserLevelLimit < projected))
+    const UPInt newLimit = UPInt(float(footprint) * HeapLimitMultiplier) + heapLimit + overLimit;
+    if (SPInt(footprint - CurrentLimit) < SPInt(float(footprint) * HeapLimitMultiplier) &&
+        (!UserLevelLimit || newLimit <= UserLevelLimit))
     {
-        MemoryContextImpl* context = MemContext;
-        if (context->TextAllocator)
-        {
-            context->TextAllocator->FlushTextFormatCache(true);
-            context->TextAllocator->FlushParagraphFormatCache(true);
-        }
-        context->ASGC->ForceEmergencyCollect();
-        const UPInt collectedFootprint = heap->GetFootprint();
-        CurrentLimit = collectedFootprint;
-        if (!UserLevelLimit || projected <= UserLevelLimit)
-            return true;
-        if (footprint - collectedFootprint < overLimit)
-            LastCollectionFootprint = heapLimit + (collectedFootprint - footprint) + overLimit;
+        heap->SetLimit(newLimit);
     }
-    heap->SetLimit(UserLevelLimit && UserLevelLimit < projected ? LastCollectionFootprint : projected);
+    else
+    {
+        if (MemContext->TextAllocator)
+        {
+            MemContext->TextAllocator->FlushTextFormatCache(true);
+            MemContext->TextAllocator->FlushParagraphFormatCache(true);
+        }
+        MemContext->ASGC->ForceEmergencyCollect();
+        CurrentLimit = heap->GetFootprint();
+        if (!UserLevelLimit || newLimit <= UserLevelLimit)
+            return true;
+        if (overLimit > footprint - CurrentLimit)
+            LastCollectionFootprint = heapLimit + (CurrentLimit - footprint) + overLimit;
+        heap->SetLimit(LastCollectionFootprint);
+    }
     LastCollectionFootprint = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(heap) + 0x60);
     return true;
 }
