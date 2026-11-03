@@ -17,12 +17,14 @@ class ResourceBinding;
 // A shape character (vftable slots 10..14 after the CharacterDef ones). The shape's mesh provider is shared by every
 // instance; a shape with image fills gets its bound provider per movie (cached in the movie's bind data).
 //
-// (sfr24, GFx_ShapeSwf in sfr_gfx_08s1) Not novtable: the out-of-line destructor (0x142659e00) stores the vftable
-// (0x143190fe8) before it drops the provider; the bounds are pure here (slots 7 and 8 are _purecall).
+// (sfr24, GFx_ShapeSwf in sfr_gfx_08s1) Not novtable: the destructor stores the vftable (0x143190fe8) before it drops
+// the provider; the bounds are pure here (slots 7 and 8 are _purecall). The destructor is inline as in the SDK, so
+// the derived destructors in other units (MorphCharacterDef) inline it.
 class ShapeBaseCharacterDef : public CharacterDef
 {
 public:
-    virtual ~ShapeBaseCharacterDef();
+    // @0x142659e00
+    virtual ~ShapeBaseCharacterDef() {}
 
     virtual unsigned         GetResourceTypeCode() const { return MakeTypeCode(RT_ShapeDef); }
     virtual CharacterDefType GetType() const { return Shape; }

@@ -55,10 +55,8 @@ enum { MorphTag_DefineMorphShape2 = 84 };
 // @0x14265ebc0
 MorphCharacterDef::MorphCharacterDef() {}
 
-// MS2-FUNCTIONAL: the exe inlines ~ShapeBaseCharacterDef, which is out of line here.
 // @0x14265ecf0
 MorphCharacterDef::~MorphCharacterDef() {}
-// MS2-FUNCTIONAL 0x14265ed50: the compiler-generated deleting destructor; the exe inlines the destructor chain into it, here it calls ~MorphCharacterDef.
 
 // Both shapes are copied so the binding's images do not reach the shared definition.
 // @0x14265ee00
@@ -76,17 +74,18 @@ Ptr<Render::ShapeMeshProvider> MorphCharacterDef::BindResourcesInStyles(const Re
 UInt32 MorphCharacterDef::ComputeGeometryHash() const { return 0; }
 
 // Without testShape only the bounds count; otherwise the fill at the instance's ratio.
-// MS2-FUNCTIONAL: the exe loads the provider's vftable in each branch; register allocation differs.
 // @0x14265eec0
 bool MorphCharacterDef::DefPointTestLocal(const PointF& pt, bool testShape, const DisplayObjectBase* pinst) const
 {
-    Render::Matrix2F matrix;
     if (!testShape)
     {
-        RectF bounds = pShapeMeshProvider->GetCorrectBounds(matrix, 0, 0, 0);
-        return bounds.Contains(pt);
+        RectF bnd = pShapeMeshProvider->GetCorrectBounds(Render::Matrix2F(), 0, 0, 0);
+        return bnd.Contains(pt);
     }
-    return pShapeMeshProvider->HitTestShape(matrix, pt.x, pt.y, pinst->GetRatio(), 0, 0);
+    else
+    {
+        return pShapeMeshProvider->HitTestShape(Render::Matrix2F(), pt.x, pt.y, pinst->GetRatio(), 0, 0);
+    }
 }
 
 // The bounds of the start shape, whatever the ratio.

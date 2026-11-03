@@ -150,11 +150,6 @@ ConstShapeWithStyles::~ConstShapeWithStyles()
     SF_FREE(Styles);
 }
 
-// @0x142659e00
-ShapeBaseCharacterDef::~ShapeBaseCharacterDef()
-{
-}
-
 // An image fill bound through the movie's resources takes the image of its resource; a fill whose resource is
 // missing or not an image turns into a solid placeholder color.
 // @0x14265a020
