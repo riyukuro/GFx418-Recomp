@@ -709,7 +709,9 @@ bool EditorKit::OnKeyDown(int keyCode, const KeyModifiers& specKeysState)
             if (CalcCursorRectOnScreen(CursorPos, &cursorRect, &lineIndex))
             {
                 lastHorizCursorPos = (LastHorizCursorPos < 0) ? cursorRect.x1 : LastHorizCursorPos;
-                unsigned linesOnScreen = pDocView->GetBottomVScroll() - pDocView->GetVScrollOffsetValue() + 1;
+                unsigned linesOnScreen = pDocView->GetBottomVScroll();
+                linesOnScreen          = linesOnScreen - pDocView->GetVScrollOffsetValue();
+                ++linesOnScreen;
                 if (lineIndex < linesOnScreen)
                     newPos = 0;
                 else
@@ -724,7 +726,9 @@ bool EditorKit::OnKeyDown(int keyCode, const KeyModifiers& specKeysState)
             if (CalcCursorRectOnScreen(CursorPos, &cursorRect, &lineIndex))
             {
                 lastHorizCursorPos = (LastHorizCursorPos < 0) ? cursorRect.x1 : LastHorizCursorPos;
-                unsigned linesOnScreen = pDocView->GetBottomVScroll() - pDocView->GetVScrollOffsetValue() + 1;
+                unsigned linesOnScreen = pDocView->GetBottomVScroll();
+                linesOnScreen          = linesOnScreen - pDocView->GetVScrollOffsetValue();
+                ++linesOnScreen;
                 lineIndex += linesOnScreen;
                 if (lineIndex >= pDocView->GetLinesCount())
                     newPos = len;
