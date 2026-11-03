@@ -559,7 +559,7 @@ void appendUd(longlong, void *, int);
 longlong parseEsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parseGsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parsePsc(cri_any = cri_any(), cri_any = cri_any());
-void m2vhdec_AnalyUd(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void m2vhdec_AnalyUd(longlong, void *, int);
 longlong parseUdsc(cri_any = cri_any(), cri_any = cri_any());
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140059030(cri_u8, cri_u8);
@@ -1574,11 +1574,8 @@ longlong parsePsc(cri_any cri_p0, cri_any cri_p1)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140058b10
-void m2vhdec_AnalyUd(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
+void m2vhdec_AnalyUd(longlong arg1, void *arg2, int arg3)
 {
-  longlong arg1 = cri_p0;
-  void *arg2 = cri_p1;
-  ulonglong arg3 = cri_p2;
   int i_v1;
   longlong *pl_v2;
   cri_code *pc_v3;
@@ -1611,7 +1608,7 @@ void m2vhdec_AnalyUd(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
     if (*(int *)((char *)arg1 + 0xc0c) != 0) {
       appendUd(arg1,&DAT_1431baa28,8);
     }
-    appendUd(arg1,arg2,arg3 & 0xffffffff);
+    appendUd(arg1,arg2,arg3);
   }
   return;
 }
@@ -1674,7 +1671,7 @@ longlong parseUdsc(cri_any cri_p0, cri_any cri_p1)
     }
     i_v9 = i_v9 + 1;
   } while (i_v9 < 0x100000);
-  m2vhdec_AnalyUd(arg1,arg2,i_v9 + 4);
+  m2vhdec_AnalyUd(arg1,(void *)arg2,i_v9 + 4);
   i_v5 = i_v5 + -0x39 + ((int)pu_v4 - (int)arg2) * 8;
   return (longlong)((int)(i_v5 + (i_v5 >> 0x1f & 7U)) >> 3) + arg2;
 }

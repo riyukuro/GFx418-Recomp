@@ -534,7 +534,7 @@ void appendUd(longlong, void *, int);
 longlong parseEsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parseGsc(cri_any = cri_any(), cri_any = cri_any());
 longlong parsePsc(cri_any = cri_any(), cri_any = cri_any());
-void m2vhdec_AnalyUd(cri_any = cri_any(), cri_any = cri_any(), cri_any = cri_any());
+void m2vhdec_AnalyUd(longlong, void *, int);
 longlong parseUdsc(cri_any = cri_any(), cri_any = cri_any());
 uint m2vhdec_ParseSj(cri_any = cri_any(), cri_any = cri_any());
 cri_u4 FUN_140059030(cri_u8, cri_u8);
