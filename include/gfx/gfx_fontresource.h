@@ -30,6 +30,13 @@ public:
         int PadPixels;      // +0x4
         int TextureWidth;   // +0x8
         int TextureHeight;  // +0xc
+
+        TextureConfig() :
+            NominalSize(48),
+            PadPixels(3),
+            TextureWidth(1024),
+            TextureHeight(1024)
+        {}
     };
 
 private:

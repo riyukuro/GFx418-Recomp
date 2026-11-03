@@ -166,51 +166,66 @@ FontGlyphPacker::~FontGlyphPacker()
 // @0x1426619f0
 void FontGlyphPacker::generateGlyphInfo(Array<GlyphInfo>* glyphs, FontResource* font)
 {
-    Font* pfont = font->GetFont();
-    if (pfont->GetGlyphShapeCount() == 0)
+    if (font->GetFont()->GetGlyphShapeCount() == 0)
         return;
 
-    Ptr<TextureGlyphData> ptgd = *SF_HEAP_NEW(pFontHeap) TextureGlyphData(pfont->GetGlyphShapeCount());
-    ptgd->SetTextureConfig(PackTextureConfig);
-    pfont->SetTextureGlyphData(ptgd.GetPtr());
+    Ptr<TextureGlyphData> ptextureGlyphData =
+        *SF_HEAP_NEW(pFontHeap) TextureGlyphData(font->GetFont()->GetGlyphShapeCount());
+
+    ptextureGlyphData->SetTextureConfig(PackTextureConfig);
+    font->GetFont()->SetTextureGlyphData(ptextureGlyphData.GetPtr());
 
     float    glyphToPix = PackTextureConfig.NominalSize / FontPackParams::GlyphBoundBox;
-    unsigned n          = pfont->GetGlyphShapeCount();
-    for (unsigned i = 0; i < n; i++)
+    unsigned i;
+    unsigned n = font->GetFont()->GetGlyphShapeCount();
+
+    for (i = 0; i < n; i++)
     {
-        if (ptgd->GetTextureGlyph(i).pImage)
-            continue;
-        const ShapeDataInterface* shape = pfont->GetPermanentGlyphShape(i);
-        if (!shape)
-            continue;
+        const TextureGlyph& tg = ptextureGlyphData->GetTextureGlyph(i);
 
-        RectF bounds = ComputeBoundsFill(*shape, Matrix2F(), Bound_FillEdges);
-        if (!(bounds.Width() > 0 && bounds.Height() > 0))
-            continue;
+        // If image has not yet been initialized
+        if (!tg.pImage)
+        {
+            const ShapeDataInterface* sh = font->GetFont()->GetPermanentGlyphShape(i);
+            if (sh)
+            {
+                RectF glyphBounds = ComputeBoundsFill(*sh, Matrix2F(), Bound_FillEdges);
 
-        GlyphInfo gi;
-        float     pad = (float)PackTextureConfig.PadPixels;
-        gi.Bounds.x1  = bounds.x1 * glyphToPix - pad;
-        gi.Bounds.y1  = bounds.y1 * glyphToPix - pad;
-        gi.Bounds.x2  = bounds.x2 * glyphToPix + pad;
-        gi.Bounds.y2  = bounds.y2 * glyphToPix + pad;
-        gi.Origin.x   = 0;
-        gi.Origin.y   = 0;
-        if (!(gi.Bounds.Width() > 0 && gi.Bounds.Height() > 0))
-            continue;
+                if (glyphBounds.Width() > 0 && glyphBounds.Height() > 0)
+                {
+                    // Add a glyph.
+                    GlyphInfo gi;
+                    gi.Bounds.x1 = glyphBounds.x1 * glyphToPix - PackTextureConfig.PadPixels;
+                    gi.Bounds.y1 = glyphBounds.y1 * glyphToPix - PackTextureConfig.PadPixels;
+                    gi.Bounds.x2 = glyphBounds.x2 * glyphToPix + PackTextureConfig.PadPixels;
+                    gi.Bounds.y2 = glyphBounds.y2 * glyphToPix + PackTextureConfig.PadPixels;
+                    gi.Origin.x  = 0;
+                    gi.Origin.y  = 0;
 
-        gi.pFont      = font;
-        gi.GlyphIndex = i;
-        gi.GlyphReuse = ~0u;
-        gi.TextureIdx = ~0u;
+                    if (gi.Bounds.Width() > 0 && gi.Bounds.Height() > 0)
+                    {
+                        gi.pFont      = font;
+                        gi.GlyphIndex = i;
+                        gi.GlyphReuse = ~0U;
+                        gi.TextureIdx = ~0U;
 
-        GlyphGeometryKey key(font, shape, ComputeGeometryHash(*shape));
-        const unsigned*  reuse = GlyphGeometryHash.Get(key);
-        if (reuse)
-            gi.GlyphReuse = *reuse;
-        else
-            GlyphGeometryHash.Add(key, (unsigned)glyphs->GetSize());
-        glyphs->PushBack(gi);
+                        // Try to reuse the glyph
+                        GlyphGeometryKey key(font, sh, ComputeGeometryHash(*sh));
+                        const unsigned*  val = GlyphGeometryHash.Get(key);
+                        if (val)
+                        {
+                            gi.GlyphReuse = *val;
+                        }
+                        else
+                        {
+                            unsigned glyphIdx = (unsigned)glyphs->GetSize();
+                            GlyphGeometryHash.Add(key, glyphIdx);
+                        }
+                        glyphs->PushBack(gi);
+                    }
+                }
+            }
+        }
     }
 }
 
