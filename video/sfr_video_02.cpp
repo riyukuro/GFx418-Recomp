@@ -349,7 +349,7 @@ Scaleform::GFx::AS2::CFunctionObject* FUN_14000ed20(
 }
 
 // VideoCharacter's image/update entry points are called from the AS2 provider in video_01.
-// MS2-FUNCTIONAL: image release and render-tree refresh recovered with the local image layout.
+// Releases the image and refreshes the render tree. The exe tests the slot in memory, then reloads it for the release (the volatile read).
 // @0x140010a30
 void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
 {
@@ -358,7 +358,9 @@ void FUN_140010a30(Scaleform::GFx::Video::VideoCharacter* pvideo)
         reinterpret_cast<Scaleform::Ptr<Scaleform::GFx::Video::VideoImage>*>(object + 0x100);
     if (*image)
     {
-        image->Clear();
+        Scaleform::GFx::Video::VideoImage* p = *reinterpret_cast<Scaleform::GFx::Video::VideoImage* volatile*>(object + 0x100);
+        if (p) p->Release();
+        *reinterpret_cast<void**>(object + 0x100) = 0;
         FUN_1400105b0(pvideo);
     }
 }
