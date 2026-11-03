@@ -49,13 +49,13 @@ ArraySortOnFunctor::ArraySortOnFunctor(const ArraySortOnFunctor& src)
 }
 
 // @0x142918330
-// MS2-FUNCTIONAL: Array::Resize is not inlined the way the exe does it
+// MS2-FUNCTIONAL: the exe inlines the temporary's dtor (ours is out of line) and keeps flags in its home slot
 ArraySortOnFunctor::ArraySortOnFunctor(ObjectInterface* pthis, const ArrayCC<ASString>* fields,
                                        const Array<int>& flags, Environment* penv, const Log* plog)
     : This(pthis), FieldArray(fields), Env(penv), LogPtr(plog)
 {
     FunctorArray.Resize(flags.GetSize());
-    for (UPInt i = 0; i < FunctorArray.GetSize(); i++)
+    for (unsigned i = 0; i < FunctorArray.GetSize(); i++)
         FunctorArray[i] = ArraySortFunctor(pthis, flags[i], FunctionRef(), penv, plog);
 }
 
