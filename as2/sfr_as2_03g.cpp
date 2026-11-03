@@ -70,15 +70,13 @@ bool GASGlobalObject::SetMember(Environment* penv, const ASString& name, const V
         pContext->GFxExtensions.Value = val.ToBool(penv) ? Bool3W::B3W_True : Bool3W::B3W_False;
         if (pContext->GFxExtensions.Value == Bool3W::B3W_True)
         {
-            Value ver(penv->CreateConstString("4.1.18"));
-            PropFlags nf(0);
-            SetMemberRaw(&penv->StringContext, penv->CreateConstString("gfxVersion"), ver, nf);
+            SetMemberRaw(&penv->StringContext, penv->CreateConstString("gfxVersion"),
+                         Value(penv->CreateConstString("4.1.18")), PropFlags(0));
         }
         else
             DeleteMember(&penv->StringContext, penv->CreateConstString("gfxVersion"));
-        Value dummy;
-        dummy.SetUnset();
-        return Object::SetMember(penv, name, dummy, flags);
+        Value unset(Value::UNSET);
+        return Object::SetMember(penv, name, unset, flags);
     }
     if (pContext->GFxExtensions.Value == Bool3W::B3W_True)
     {
