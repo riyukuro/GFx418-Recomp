@@ -6599,6 +6599,30 @@ RectF Sfr33ContainerBounds::GetBounds(const Render::Matrix2F& t) const
 
 }} // namespace Scaleform::GFx
 
+// MovieRoot's PathTokenizer (AS3_MovieRoot.cpp): the exe inlines it and StringDataPtr::GetNextToken('.').
+class Sfr33PathTokenizer
+{
+    mutable Scaleform::StringDataPtr Path;
+    mutable Scaleform::StringDataPtr Token;
+public:
+    Sfr33PathTokenizer(const char* ppath) : Path(ppath) {}
+    bool HasToken() const { return Path.GetSize() > 0; }
+    const Scaleform::StringDataPtr& NextToken() const
+    {
+        Scaleform::UPInt cur_pos = 0;
+        const char* cur_str = Path.ToCStr();
+        for (; cur_pos < Path.GetSize() && cur_str[cur_pos]; ++cur_pos)
+        {
+            if (cur_str[cur_pos] == '.')
+                break;
+        }
+        Token = Scaleform::StringDataPtr(Path.ToCStr(), cur_pos);
+        Path.TrimLeft(Token.GetSize());
+        if (Path.ToCStr()[0] == '.') Path.TrimLeft(1);
+        return Token;
+    }
+};
+
 // MovieRoot::GetASVariableAtPath: the value at the dotted path ppathToVar. A global object property of that name
 // comes first; otherwise the path is walked from the stage, or from root1 under a "_root", "_level0" or "root"
 // prefix, one property (else named display child) per token. A token in the middle that is not an object is logged
@@ -6618,7 +6642,8 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     GFx::InteractiveObject* pmain = root->GetMovieImpl()->pMainMovie;
     AvmDisplayObjContainer* pstage =
         pmain ? AvmDisplayObjContainer::FromBase(pmain->GetAvmObjImpl()->ToAvmDispContainerBase()) : NULL;
-    Value resolvedVal(pstage->GetAS3Obj());
+    Value resolvedVal;
+    resolvedVal = Value(pstage->GetAS3Obj());
 
     // a global first
     const Multiname gname(vm, StringDataPtr(ppathToVar));
@@ -6635,33 +6660,23 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     }
 
     // the known prefixes: all but "stage" start from root1
+    bool isroot1 = false;
     const char* ppath = ppathToVar;
     unsigned offset = 0;
     bool r1allow = true;
-    if (ppath[0] == '_')
+    switch (ppath[0])
     {
-        if (!strncmp(ppath + 1, "root", 4))
-            offset = 5;
-        else if (!strncmp(ppath + 1, "level0", 5))
-            offset = 7;
+    case '_':
+        if (!strncmp(ppath + 1, "root", 4)) { offset += 5; }
+        else if (!strncmp(ppath + 1, "level0", 5)) { offset += 7; }
+        break;
+    case 'r': if (!strncmp(ppath + 1, "oot", 3)) { offset += 4; } break;
+    case 's': if (!strncmp(ppath + 1, "tage", 4)) { offset += 5; r1allow = false; } break;
     }
-    else if (ppath[0] == 'r')
+    switch (ppath[offset])
     {
-        if (!strncmp(ppath + 1, "oot", 3))
-            offset = 4;
-    }
-    else if (ppath[0] == 's' && !strncmp(ppath + 1, "tage", 4))
-    {
-        offset = 5;
-        r1allow = false;
-    }
-    bool isroot1 = false;
-    if (ppath[offset] == '.' || ppath[offset] == '\0')
-    {
-        if (ppath[offset] == '.')
-            ++offset;
-        isroot1 = r1allow;
-        ppath += offset;
+    case '.':  { offset++; }
+    case '\0': { isroot1 = r1allow && true; ppath += offset; }
     }
     if (isroot1)
     {
@@ -6673,21 +6688,10 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
     }
 
     // one property per token
-    const char* tok = ppath;
-    UPInt rest = strlen(ppath);
-    while (rest)
+    Sfr33PathTokenizer pt(ppath);
+    while (pt.HasToken())
     {
-        UPInt len = 0;
-        while (len < rest && tok[len] != '.')
-            ++len;
-        const StringDataPtr token(tok, len);
-        tok += len;
-        rest -= len;
-        if (rest && *tok == '.')
-        {
-            ++tok;
-            --rest;
-        }
+        const StringDataPtr& token = pt.NextToken();
         GFx::ASString propName = root->BuiltinsMgr.CreateString(token.ToCStr(), token.GetSize());
         const Multiname prop(vm.GetPublicNamespace(), Value(propName));
         Value subVal;
@@ -6721,7 +6725,7 @@ bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot* proot, Scaleform::GFx::
             }
         }
         resolvedVal = subVal;
-        if (rest && !resolvedVal.IsObject())
+        if (pt.HasToken() && !resolvedVal.IsObject())
         {
             if (Ptr<Log> plog = root->GetMovieImpl()->GetLog())
             {
