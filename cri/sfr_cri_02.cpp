@@ -1095,7 +1095,6 @@ CriSint64 VideoReader::Seek(CriSint64 size, SeekOrigin offset)
     return Position;
 }
 
-// MS2-FUNCTIONAL: register allocation and block order differ
 // @0x14002d4f0
 void VideoReader::OpenFile(const char* fname)
 {
@@ -1104,7 +1103,9 @@ void VideoReader::OpenFile(const char* fname)
     if (pFile)
         pFile->Release();
     pFile = (RefCountImpl*)pfile;
-    if (pfile && pfile->IsValid())
+    // pFile is a Ptr<File> in the exe; its operator-> copies the pointer before the null test
+    Ptr<File>& pf = reinterpret_cast<Ptr<File>&>(pFile);
+    if (pf && pf->IsValid())
     {
         FileSize   = ReaderFile(pFile)->GetLength();
         OpenStatus = ASYNC_STATUS_COMPLETE;
