@@ -29,12 +29,25 @@ bool StageCtorFunction::SetMemberRaw(ASStringContext* psc, const ASString& name,
     return Object::SetMemberRaw(psc, name, val, flags);
 }
 
+// AvmCharacter::IsStandardMember (sfr_as2_06) as the exe inlines it here, without the lowercase name out.
+static inline bool IsStandardMemberInline(const ASString& memberName)
+{
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1)
+        return true;
+    if (memberName.GetLength() > 0 && memberName.GetCharAt(0) == '_')
+    {
+        ASString lower(memberName.ToLowerNode());
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
+            return true;
+    }
+    return false;
+}
+
 // A standard member (_x, _alpha, ...) is set on the clip itself, anything else goes to its MovieClipObject.
-// MS2-FUNCTIONAL: the standard member test is inlined (string node flags, lowercase node)
 // @0x142988a40
 bool AvmSprite::SetMemberRaw(ASStringContext* psc, const ASString& name, const Value& val, const PropFlags& flags)
 {
-    if (IsStandardMember(name))
+    if (IsStandardMemberInline(name))
     {
         StandardMember index = GetStandardMemberConstant(name);
         if (SetStandardMember(index, val, false))
