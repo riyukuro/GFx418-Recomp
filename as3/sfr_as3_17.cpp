@@ -1482,38 +1482,47 @@ static inline StringDataPtr Sfr17TrimRight(const StringDataPtr& s, UPInt size)
 }
 
 // "Vector.<T>" resolves T and applies it to Vector; any other name is looked up as a global class.
-// MS2-FUNCTIONAL 0x142507be0: the exe computes the head trim before the pointer test and keeps the rest size in r10; same results
+// MS2-FUNCTIONAL 0x142507be0: the exe re-reads the name size after the empty test and computes the head trim unfolded before the pointer test; same results
 // @0x142507be0
 Class* VM::GetClass(const StringDataPtr& gname)
 {
-    Class* result = NULL;
-    if (gname.IsEmpty())
-        return result;
-    const StringDataPtr& prefix = DAT_143a2dd50;
-    if (gname.GetSize() > prefix.GetSize() && Sfr17TrimRight(gname, gname.GetSize() - prefix.GetSize()) == prefix)
+    Class* _class = NULL;
+
+    if (!gname.IsEmpty())
     {
-        const SPInt pos = gname.FindLastChar('>');
-        if (pos <= 0)
-            return result;
-        const StringDataPtr rest = gname.GetTrimLeft(prefix.GetSize());
-        Class* elem = GetClass(Sfr17TrimRight(rest, gname.GetSize() - pos));
-        if (elem == NULL)
-            return result;
-        Sfr17ObjectValue arg(elem, Value::kClass);
-        return &GetClassVector().ApplyTypeArgs(1, &arg.Get());
-    }
-    else
-    {
-        Multiname mn(*this, gname);
-        ClassTraits::Traits* ctr = const_cast<ClassTraits::Traits*>(FUN_142525270(*this, mn));
-        if (ctr)
+        const StringDataPtr& vecPref = DAT_143a2dd50;
+
+        if (gname.GetSize() > vecPref.GetSize() && Sfr17TrimRight(gname, gname.GetSize() - vecPref.GetSize()) == vecPref)
         {
-            ctr->InitOnDemand();
-            if (!IsException())
-                result = &ctr->GetInstanceTraits().GetConstructor();
+            SPInt end = gname.FindLastChar('>');
+            if (end > 0)
+            {
+                const StringDataPtr subtype_name(Sfr17TrimRight(gname.GetTrimLeft(vecPref.GetSize()), gname.GetSize() - end));
+                Class* subtype_class = GetClass(subtype_name);
+
+                if (subtype_class)
+                {
+                    Sfr17ObjectValue subtype_value(subtype_class, Value::kClass);
+                    _class = &GetClassVector().ApplyTypeArgs(1, &subtype_value.Get());
+                }
+            }
+        }
+        else
+        {
+            const Multiname mn(*this, gname);
+            ClassTraits::Traits* ctr = const_cast<ClassTraits::Traits*>(FUN_142525270(*this, mn));
+
+            if (ctr)
+            {
+                ctr->InitOnDemand();
+
+                if (!IsException())
+                    _class = &ctr->GetInstanceTraits().GetConstructor();
+            }
         }
     }
-    return result;
+
+    return _class;
 }
 
 // The class traits the VM has cached under {name, ns}, NULL when absent.
