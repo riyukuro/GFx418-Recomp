@@ -930,51 +930,49 @@ void LoadVarsProto::ToString(const FnCall& fn)
 
 // ---- MovieClipLoader ----
 
-// @0x1428eb340
-// MS2-FUNCTIONAL same flow; the exe inlines the argument-stack lookups and the character check in a different order
-void MovieClipLoaderProto::LoadClip(const FnCall& fn)
-{
-    fn.Result->SetBool(false);
-    if (fn.NArgs < 2)
-        return;
-    MovieClipLoader* pmcl = 0;
-    if (fn.ThisPtr && fn.ThisPtr->GetObjectType() == ObjectInterface::Object_MovieClipLoader)
-        pmcl = (MovieClipLoader*)fn.ThisPtr;
-    ASString               url = fn.Arg(0).ToString(fn.Env);
-    Ptr<InteractiveObject> ptarget;
-    if (fn.Arg(1).IsCharacter())
-        ptarget = fn.Arg(1).ToCharacter(fn.Env);
-    else
-    {
-        ASString path = fn.Arg(1).ToString(fn.Env);
-        ptarget = fn.Env->FindTarget(path, 0);
-    }
-    MovieRoot* proot = fn.Env->GetAS2Root();
-    if (ptarget)
-        proot->AddLoadQueueEntry(ptarget, url.ToCStr(), LoadQueueEntry::LM_None, pmcl);
-    else
-    {
-        bool         caseSensitive = fn.Env->GetTarget()->GetVersion() > 6;
-        const char*  ptail;
-        ASString     tname = fn.Arg(1).ToString(fn.Env);
-        if (MovieRoot::ParseLevelName(tname.ToCStr(), &ptail, caseSensitive) == -1)
-            return;
-        ASString lname = fn.Arg(1).ToString(fn.Env);
-        proot->AddLoadQueueEntry(lname.ToCStr(), url.ToCStr(), fn.Env, LoadQueueEntry::LM_None, pmcl);
-    }
-    fn.Result->SetBool(true);
-}
-
 // Value::ToCharacter, expanded in place where the exe has it inline.
 static SF_FORCEINLINE InteractiveObject* MovieClipLoader_CharacterOf(const Value& v, const Environment* penv)
 {
     if (v.IsCharacter() && penv && v.V.pCharHandle)
     {
         DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
-        if (pdisp)
-            return pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        return pdisp ? (pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0) : 0;
     }
     return 0;
+}
+
+// @0x1428eb340
+// MS2-FUNCTIONAL the exe packs ptail into the level-name temp's slot; its frame is 0x10 smaller
+void MovieClipLoaderProto::LoadClip(const FnCall& fn)
+{
+    fn.Result->SetBool(false);
+    if (fn.NArgs < 2)
+        return;
+    MovieClipLoader* pmcl = 0;
+    if (fn.ThisPtr->GetObjectType() == ObjectInterface::Object_MovieClipLoader)
+        pmcl = (MovieClipLoader*)fn.ThisPtr;
+    ASString               url = fn.Arg(0).ToString(fn.Env);
+    Ptr<InteractiveObject> ptarget;
+    if (fn.Arg(1).IsCharacter())
+        ptarget = MovieClipLoader_CharacterOf(fn.Arg(1), fn.Env);
+    else
+    {
+        ASString path = fn.Arg(1).ToString(fn.Env);
+        ptarget = fn.Env->FindTarget(path, 0);
+    }
+    if (ptarget)
+        Sfr01GetAS2Root(fn.Env)->AddLoadQueueEntry(ptarget, url.ToCStr(), LoadQueueEntry::LM_None, pmcl);
+    else
+    {
+        bool         caseSensitive = fn.Env->GetTarget()->GetVersion() > 6;
+        const char*  ptail;
+        int          level = MovieRoot::ParseLevelName(fn.Arg(1).ToString(fn.Env).ToCStr(), &ptail, caseSensitive);
+        if (level == -1)
+            return;
+        Sfr01GetAS2Root(fn.Env)->AddLoadQueueEntry(fn.Arg(1).ToString(fn.Env).ToCStr(), url.ToCStr(), fn.Env,
+                                                   LoadQueueEntry::LM_None, pmcl);
+    }
+    fn.Result->SetBool(true);
 }
 
 // @0x1428eb6d0
