@@ -1350,7 +1350,6 @@ void FUN_1423d1420(void* object, int index)
     }
 }
 
-// MS2-FUNCTIONAL: the exe forms values + count - 1 as (count * 32 - 32) + values; ours as (values - 32) + count * 32.
 // destroys GFx::Value entries in reverse order (ConstructorMov<Value>::DestructArray).
 // @0x1423ce6c0
 __declspec(noinline) void FUN_1423ce6c0(Scaleform::GFx::Value* values, unsigned long long count)
@@ -4761,32 +4760,35 @@ addToLists:
     return result;
 }
 
-// A local ArrayData<Value> built with plain member initialisers.
+// The allocator of the local Value arrays: GH POD storage of 32-byte elements whose DestructArray is the out-of-line
+// ConstructorMov<Value>::DestructArray (FUN_1423ce6c0).
+struct Ime01ArgAlloc : AllocatorGH_POD<Ime01Pod<0x20>>
+{
+    static void DestructArray(Ime01Pod<0x20>* p, UPInt count)
+    {
+        FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(p), count);
+    }
+};
+// A local ArrayData<Value>: the SDK ArrayDataBase ctor/dtor (one movdqu for Data and Size, the capacity apart).
 struct Ime01ArgArray
 {
-    Scaleform::GFx::Value* data;
-    unsigned long long size;
-    unsigned long long capacity;
-    Ime01ArgArray() : data(nullptr), size(0), capacity(0) {}
-    ~Ime01ArgArray()
-    {
-        FUN_1423ce6c0(data, size);
-        if (data) Memory::Free(data);
-    }
+    ArrayData<Ime01Pod<0x20>, Ime01ArgAlloc, ArrayDefaultPolicy> array;
+    Scaleform::GFx::Value* data() const { return reinterpret_cast<Scaleform::GFx::Value*>(array.Data); }
 };
 static inline void Ime01PushArg(Ime01ArgArray& args, const Scaleform::GFx::Value& value)
 {
-    const unsigned long long oldLength = args.size;
+    auto& array = args.array;
+    const unsigned long long oldLength = array.Size;
     const unsigned long long newLength = oldLength + 1;
     if (newLength < oldLength) {
-        FUN_1423ce6c0(args.data + newLength, oldLength - newLength);
-        if (newLength < (args.capacity >> 1))
-            reinterpret_cast<Ime01ArrayGH<0x20>*>(&args)->Reserve(&args, newLength);
-    } else if (newLength >= args.capacity) {
-        reinterpret_cast<Ime01ArrayGH<0x20>*>(&args)->Reserve(&args, (newLength >> 2) + newLength);
+        FUN_1423ce6c0(args.data() + newLength, oldLength - newLength);
+        if (newLength < (array.Policy.GetCapacity() >> 1))
+            reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, newLength);
+    } else if (newLength >= array.Policy.GetCapacity()) {
+        reinterpret_cast<Ime01ArrayGH<0x20>*>(&array)->Reserve(&array, (newLength >> 2) + newLength);
     }
-    args.size = newLength;
-    ::new (static_cast<void*>(args.data + newLength - 1)) Scaleform::GFx::Value(value);
+    array.Size = newLength;
+    ::new (static_cast<void*>(args.data() + newLength - 1)) Scaleform::GFx::Value(value);
 }
 
 // The out-of-line ArrayData<Value>::PushBack (FUN_1423d4fa0) on a local Ime01ValueArgs.
@@ -4797,8 +4799,7 @@ static inline void Ime01PushArgCall(Ime01ValueArgs& args, const Scaleform::GFx::
 
 // Moves the candidate window of the IMM IME object to the composition cursor at offset: RepositionCandWindow(x1, y2,
 // y2 - y1) of the cursor rect IMEManagerBase::GetMetrics reports.
-// MS2-FUNCTIONAL: the arguments go through the inlined Value array (Ime01ArgArray). Same size as the exe; only the
-// array zeroing differs (the exe stores data/size with one movdqu).
+// The arguments go through the inlined Value array (Ime01ArgArray).
 // @0x1423d5060
 __declspec(noinline) void FUN_1423d5060(void* raw, int offset)
 {
@@ -4816,18 +4817,16 @@ __declspec(noinline) void FUN_1423d5060(void* raw, int offset)
     Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2 - cursorRect.y1)));
     if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
         reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-            bridge, "RepositionCandWindow", &result, args.data, 3);
+            bridge, "RepositionCandWindow", &result, args.data(), 3);
 }
 
-// MS2-FUNCTIONAL: composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
+// Composition-text update of the Vista IME object (vtable slot 23). It reads GCS_COMPSTR, turns a
 // leading space or U+3000 into U+00A0, and either stores the text in the String at +0xb0 (mode 0x60000, which like
 // the exe returns without releasing the context) or sends it with SetCompositionText and writes its length to
 // *outputLength. The candidate modes also set the cursor, store length - cursor at +0x64 and highlight the whole text.
 // It then sets the composition cursor and, unless the mode has a low nibble, calls RepositionInputWindow(x1, y2) of
 // the cursor rect IMEManagerBase::GetMetrics reports. Reviewed against the exe, same behaviour. The arguments go
-// through an inlined Value array (Ime01ArgArray: Reserve FUN_1423d12e0, element dtor FUN_1423ce6c0). Same size as the
-// exe; only the array zeroing differs: the exe stores data/size with one movdqu, ours with two qword stores
-// (memset/union/Policy-base forms tried, all lose the known-zero size).
+// through an inlined Value array (Ime01ArgArray: Reserve FUN_1423d12e0, element dtor FUN_1423ce6c0).
 // @0x1423ce730
 void FUN_1423ce730(void* raw, unsigned* outputLength)
 {
@@ -4867,7 +4866,7 @@ void FUN_1423ce730(void* raw, unsigned* outputLength)
             Ime01PushArg(args, Scaleform::GFx::Value(static_cast<double>(cursorRect.y2)));
             if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
                 reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
-                    bridge, "RepositionInputWindow", &result, args.data, 2);
+                    bridge, "RepositionInputWindow", &result, args.data(), 2);
         }
         cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
     }
@@ -5166,9 +5165,9 @@ void FUN_1423cc7c0(void* raw, unsigned conversion)
     cx18_ImmReleaseContext(hwnd, context);
 }
 
-// MS2-FUNCTIONAL: asks the IME manager for the cursor rect at the given offset and calls
+// Asks the IME manager for the cursor rect at the given offset and calls
 // RepositionCandWindow(cursor.x1, cursor.y2, cursor.y2 - cursor.y1) on the movie's external interface. The arguments
-// go through the inlined Value array (Ime01ArgArray); only its zeroing differs from the exe (one movdqu there).
+// go through the inlined Value array (Ime01ArgArray).
 // @0x1423d0f60
 void FUN_1423d0f60(void* manager, int mode)
 {
@@ -5186,7 +5185,7 @@ void FUN_1423d0f60(void* manager, int mode)
     if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
         reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned)>(
             (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, "RepositionCandWindow", &result,
-                                                                        args.data, 3);
+                                                                        args.data(), 3);
 }
 
 struct Ime01CandidateProps
