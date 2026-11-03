@@ -3640,32 +3640,41 @@ void Sfr31ExecEscXAttr(UPInt vm)
     }
 }
 // ---- batch 23
-// Native call whose first argument must be a non-null object: reports TypeError 1009/1010 otherwise, then dispatches through the object.
-// MS2-FUNCTIONAL 0x142533fd0: raw-offset model; codegen differs from the exe
+// The call arguments, then the object they are called on, left on the stack (SDK ReadArgsObjectRef).
+struct Sfr31ReadArgsObjectRef : public AS3::ReadArgs
+{
+    Sfr31ReadArgsObjectRef(VM& vm, UInt32 argc) : AS3::ReadArgs(vm, argc), ArgObject(*OpStack.GetTopPtr())
+    {
+        CheckObject(ArgObject);
+    }
+    // The inline VM::ThrowTypeError.
+    static void ThrowTypeError(VM& vm, const VM::Error& e) { FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI); }
+    // StackReader::CheckObject, inline: a null or undefined object is a TypeError.
+    void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+        {
+            // eConvertNullToObjectError / eConvertUndefinedToObjectError
+            const VM::ErrorID id = v.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2);
+            VM& vm = VMRef;
+            ThrowTypeError(vm, VM::Error(id, vm));
+        }
+    }
+    const Value* GetCallArgs() const { return ArgNum > 8 ? CallArgs.GetDataPtr() : FixedArgs; }
+    const Value& ArgObject;     // +0x138
+};
+
+// Calls the object below the arguments with an undefined this; the result replaces the object on the stack. A null or
+// undefined object is TypeError 1009/1010 (raised in the reader's constructor).
 // @0x142533fd0
 void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, argc);
-    const UInt32* a0 = reinterpret_cast<const UInt32*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
-    const UInt32 k = (a0[0] & 0x1f) - 0xc;
-    const UPInt obj = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
-    if ((a0[0] & 0x1f) == 0 || (k < 4 && obj == 0))
+    Sfr31ReadArgsObjectRef args(vm, argc);
+    if (!vm.IsException())
     {
-        const UInt32 id = (k < 4 ? (obj != 0) : 1u) + 0x3f1;
-        VM::Error e(static_cast<VM::ErrorID>(id), vm);
-        vm.ThrowTypeError(e);
+        args.ArgObject.GetObject()->Call(Value::GetUndefined(), const_cast<Value&>(args.ArgObject), argc, args.GetCallArgs());
     }
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
-        typedef void (*Fn)(UPInt, const Value*, const void*, UInt32, void*);
-        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-        void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-        reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0x50))(o, &Value::GetUndefined(), a0, argc, args);
-    }
-    FUN_1424de9e0(raBuf);
 }
 
 // The top of the operand stack is converted to an int index and popped; the new top's object is queried at that index and
