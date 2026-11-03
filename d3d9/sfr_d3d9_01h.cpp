@@ -21,8 +21,8 @@ extern "C" char DAT_1431bede8[];   // audio event listener
 extern "C" char DAT_1431bcbe8[];   // RefCountBase
 
 void FUN_14015b310(void*, UPInt);           // sized operator delete (Scaleform heap)
-extern "C" void FUN_142743580(void*);       // audio channel dtor
-extern "C" void FUN_1427434d0(void*);       // array-valued set Clear
+void FUN_142743580(void* self);             // audio channel dtor (sfr_kernel_03o)
+void FUN_1427434d0(U** self);               // array-valued set Clear (sfr_kernel_03o)
 extern "C" void FUN_142582530(void*);       // Event::~Event
 extern "C" void FUN_142747b30(void*);       // audio event listener: shut down
 extern "C" void FUN_14258d0b0(void*);       // Lock::~Lock
@@ -132,7 +132,7 @@ void* FUN_142743cf0(void* self, unsigned flags)
     FUN_142747b30(self);
     FUN_14258d0b0(RawFieldPtr<void>(self, 0xc8));
     RawField<void*>(self, 0xb0) = DAT_1431bec40;
-    FUN_1427434d0(RawFieldPtr<void>(self, 0xa8));
+    FUN_1427434d0(RawFieldPtr<U*>(self, 0xa8));
     FUN_14258d0b0(RawFieldPtr<void>(self, 0x80));
     FUN_142582530(RawFieldPtr<void>(self, 0x20));
     if (RawField<void*>(self, 0x18))
