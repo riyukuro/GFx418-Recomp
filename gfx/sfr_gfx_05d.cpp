@@ -623,18 +623,20 @@ int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist
 // @0x1425e1bc0
 bool StaticTextSnapshotData::IsSelected(UPInt start, UPInt end) const
 {
-    String ret;
-    UPInt  baseIdx = 0, charStart, charEnd;
+    String       ret;
+    UPInt        baseIdx = 0, charStart, charEnd;
+    UPInt const &selectStart = start, selectEnd = end;
     for (UPInt i = 0; i < StaticTextCharRefs.GetSize(); i++)
     {
-        StaticTextCharacter::HighlightDesc* phighlight = StaticTextCharRefs[i].pChar->GetTextHighlighter();
+        StaticTextCharacter*                pstchar    = StaticTextCharRefs[i].pChar;
+        StaticTextCharacter::HighlightDesc* phighlight = pstchar->GetTextHighlighter();
         if (!phighlight)
             continue;
         charStart = baseIdx;
         charEnd   = baseIdx + StaticTextCharRefs[i].CharCount;
-        if ((start >= charStart && start < charEnd) || (charStart >= start && charStart < end))
+        if ((selectStart >= charStart && selectStart < charEnd) || (charStart >= selectStart && charStart < selectEnd))
         {
-            if (phighlight->GetManager().IsAnyCharSelected(start - baseIdx, end - baseIdx))
+            if (phighlight->GetManager().IsAnyCharSelected(selectStart - baseIdx, selectEnd - baseIdx))
                 return true;
         }
         baseIdx += StaticTextCharRefs[i].CharCount;
@@ -861,7 +863,6 @@ void StaticTextCharacter::SetTextFilters(const TextFilter& f)
 }
 
 // Visits the glyphs with index in [start, end): each gets the field's rotation and its origin in the parent space.
-// MS2-FUNCTIONAL ?Visit@StaticTextSnapshotData@GFx@Scaleform@@QEBAXPEAVGlyphVisitor@123@_K1@Z: Ghidra confirms GlyphVisitor*, UPInt, UPInt; traversal and visitor updates match the exe, while the local stack layout differs.
 // @0x1425e2e00
 void StaticTextSnapshotData::Visit(GlyphVisitor* pvisitor, UPInt start, UPInt end) const
 {
@@ -896,12 +897,11 @@ void StaticTextSnapshotData::Visit(GlyphVisitor* pvisitor, UPInt start, UPInt en
                     pvisitor->Height = glyph.GetFontSize();
                     Render::Matrix2F mat;
                     mat.AppendRotation((float)matChar.GetRotation());
-                    mat.M[0][3] += charX + glyphX;
-                    mat.M[1][3] += charY + glyphY;
+                    mat.AppendTranslation(charX + glyphX, charY + glyphY);
                     pvisitor->Matrix = mat;
                     RectF corners;
                     pfont->GetGlyphBounds(glyph.GetIndex(), &corners);
-                    mat.EncloseTransform(&pvisitor->Corners, corners);
+                    pvisitor->Corners = mat.EncloseTransform(corners);
                     pvisitor->bSelected = IsSelected(glyphIdx, glyphIdx + 1);
                     pvisitor->OnVisit();
                     ++runIdx;
