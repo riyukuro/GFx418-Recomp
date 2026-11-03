@@ -1921,72 +1921,81 @@ namespace Instances { namespace fl_text
         }
     }
 
-    // MS2-FUNCTIONAL: written from the exe's control flow (render formats kept as raw storage here)
+    // The present bits and format flags as bitfield views: the exe reads each bit with its own byte load.
+    struct ParaPresentBits
+    {
+        UInt8 Alignment:1, BlockIndent:1, Indent:1, Leading:1, LeftMargin:1, RightMargin:1, TabStops:1, Bullet:1;
+    };
+    struct FmtPresentBits
+    {
+        UInt8 Color:1, LetterSpacing:1, FontList:1, FontSize:1, Bold:1, Italic:1, Underline:1, Kerning:1;
+    };
+    struct FmtFlagBits
+    {
+        UInt8 Bold:1, Italic:1, Underline:1, Kerning:1;
+    };
+
     // @0x1424ae6b0
+    // the SDK body; the render formats are raw storage here
     void TextFormat::SetTextFormat(const Render::Text::ParagraphFormat* parafmt, const Render::Text::TextFormat* fmt)
     {
         const ParagraphFormatStorage& para = *reinterpret_cast<const ParagraphFormatStorage*>(parafmt);
         const TextFormatStorage& tf = *reinterpret_cast<const TextFormatStorage*>(fmt);
-        VM& vm = GetVM();
-        StringManager& sm = vm.GetStringManager();
-        ASString nullStr = sm.CreateNullString();
-        Value nullValue = Value::GetNull();
+        const ParaPresentBits& pp = *reinterpret_cast<const ParaPresentBits*>(&para.PresentMask);
+        const FmtPresentBits& fp = *reinterpret_cast<const FmtPresentBits*>(&tf.PresentMask);
+        const FmtFlagBits& ff = *reinterpret_cast<const FmtFlagBits*>(&tf.FormatFlags);
+        StringManager& sm = GetVM().GetStringManager();
+        const ASString NullString(sm.GetNullStringNode());
+        const Value n = Value::GetNull();
+        Value r;
 
-        if (para.PresentMask & Para_Alignment)
+        if (pp.Alignment)
         {
-            const char* palign = "left";
+            const char* newAlign = "left";
             switch ((para.PresentMask & Para_AlignMask) >> Para_AlignShift)
             {
-            case Align_Right:   palign = "right"; break;
-            case Align_Justify: palign = "justify"; break;
-            case Align_Center:  palign = "center"; break;
+            case Align_Center:  newAlign = "center"; break;
+            case Align_Right:   newAlign = "right"; break;
+            case Align_Justify: newAlign = "justify"; break;
+            default: break;
             }
-            align = sm.CreateString(palign);
+            alignSet(r, sm.CreateString(newAlign));
         }
         else
-            align = nullStr;
+            alignSet(r, NullString);
+        blockIndentSet(r, (pp.BlockIndent) ? Value((UInt32)para.BlockIndent) : n);
+        boldSet(r, (fp.Bold) ? Value(ff.Bold != 0) : n);
+        italicSet(r, (fp.Italic) ? Value(ff.Italic != 0) : n);
+        underlineSet(r, (fp.Underline) ? Value(ff.Underline != 0) : n);
 
-        blockIndent = (para.PresentMask & Para_BlockIndent) ? Value((UInt32)para.BlockIndent) : nullValue;
-        bold = (tf.PresentMask & Fmt_Bold) ? Value((tf.FormatFlags & Flag_Bold) != 0) : nullValue;
-        italic = (tf.PresentMask & Fmt_Italic) ? Value((tf.FormatFlags & Flag_Italic) != 0) : nullValue;
-        underline = (tf.PresentMask & Fmt_Underline) ? Value((tf.FormatFlags & Flag_Underline) != 0) : nullValue;
-        bullet = (para.PresentMask & Para_Bullet)
-            ? Value((para.PresentMask & (Para_BulletOn | Para_Bullet)) == (Para_BulletOn | Para_Bullet)) : nullValue;
-        color = (tf.PresentMask & Fmt_Color) ? Value((Value::Number)(tf.ColorV & 0xFFFFFFu)) : nullValue;
-        if (tf.PresentMask & Fmt_FontList)
-        {
-            const String& fonts = FUN_142606750(fmt);
-            font = sm.CreateString(fonts);
-        }
-        else
-            font = nullStr;
-        indent = (para.PresentMask & Para_Indent) ? Value((Value::Number)para.Indent) : nullValue;
-        kerning = (tf.PresentMask & Fmt_Kerning) ? Value((tf.FormatFlags & Flag_Kerning) != 0) : nullValue;
-        leading = (para.PresentMask & Para_Leading) ? Value((Value::Number)para.Leading) : nullValue;
-        leftMargin = (para.PresentMask & Para_LeftMargin) ? Value((Value::Number)para.LeftMargin) : nullValue;
-        letterSpacing = (tf.PresentMask & Fmt_LetterSpacing)
-            ? Value((Value::Number)(SInt16)(tf.LetterSpacing / 20)) : nullValue;
-        rightMargin = (para.PresentMask & Para_RightMargin) ? Value((Value::Number)para.RightMargin) : nullValue;
-        size = (tf.PresentMask & Fmt_FontSize) ? Value((Value::Number)((float)tf.FontSize * 0.05f)) : nullValue;
-        target = nullStr;
+        bulletSet(r, (pp.Bullet)
+            ? Value((para.PresentMask & (Para_BulletOn | Para_Bullet)) == (Para_BulletOn | Para_Bullet)) : n);
+        colorSet(r, (fp.Color) ? Value(Value::Number(tf.ColorV & 0xFFFFFFu)) : n);
+        fontSet(r, (fp.FontList) ? sm.CreateString(FUN_142606750(fmt)) : NullString);
+        indentSet(r, (pp.Indent) ? Value(Value::Number(para.Indent)) : n);
+        kerningSet(r, (fp.Kerning) ? Value(ff.Kerning != 0) : n);
+        leadingSet(r, (pp.Leading) ? Value(Value::Number(para.Leading)) : n);
+        leftMarginSet(r, (pp.LeftMargin) ? Value(Value::Number(para.LeftMargin)) : n);
+        letterSpacingSet(r, (fp.LetterSpacing) ? Value(Value::Number((SInt16)(tf.LetterSpacing / 20))) : n);
+        rightMarginSet(r, (pp.RightMargin) ? Value(Value::Number(para.RightMargin)) : n);
+        sizeSet(r, (fp.FontSize) ? Value(Value::Number((float)tf.FontSize * 0.05f)) : n);
+        targetSet(r, NullString);
         const String& purl = *reinterpret_cast<const String*>(&tf.Url);
-        if ((tf.PresentMask & Fmt_Url) && purl.GetLength() != 0)
-            url = sm.CreateString(purl);
-        else
-            url = nullStr;
-
-        if (para.PresentMask & Para_TabStops)
+        urlSet(r, ((tf.PresentMask & Fmt_Url) != 0 && purl.GetLength() != 0) ? sm.CreateString(purl) : NullString);
+        if (pp.TabStops)
         {
-            unsigned n = 0;
-            const unsigned* pstops = FUN_142606b20(parafmt, &n);
-            SPtr<Instances::fl::Array> arr = vm.MakeArray();
-            arr->Resize(n);
-            for (unsigned i = 0; i < n; ++i)
-                arr->Set(i, Value((Value::Number)pstops[i]));
-            tabStops = arr;
+            unsigned num = 0;
+            const unsigned* ptabStops = FUN_142606b20(parafmt, &num);
+
+            SPtr<Instances::fl::Array> parr(GetVM().MakeArray());
+
+            parr->Resize((int)num);
+            for (unsigned i = 0; i < num; i++)
+                parr->Set(i, Value((Value::Number)ptabStops[i]));
+            tabStopsSet(r, parr);
         }
         else
-            tabStops = NULL;
+            tabStopsSet(r, NULL);
     }
 
     // @0x1424affb0
