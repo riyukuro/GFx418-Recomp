@@ -2315,23 +2315,34 @@ void Sfr31TracerSkipOrigOpCode(UPInt tracer, UPInt* pos, UPInt next)
 
 
 // Re-reads the autosize flags of the text field (+0x18) into its document view and marks it dirty.
-// MS2-FUNCTIONAL 0x142530fc0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// The text field view: IsAutoSize / IsWordWrap as the SDK's inline TextField accessors.
+struct Sfr31AutosizeTextField
+{
+    UInt8 pad0[0xe0];
+    UInt8* pDocument;   // +0xe0
+    UInt8 pad1[0xfc - 0xe8];
+    UInt32 Flags;       // +0xfc
+    bool IsAutoSize() const { return (Flags & 1) != 0; }
+    bool IsWordWrap() const { return (pDocument[0x149] & 8) != 0; }
+};
+
+// AvmTextField::UpdateAutosizeSettings.
 // @0x142530fc0
 void Sfr31UpdateAutosizeSettings(UPInt self)
 {
-    const UPInt tf = *reinterpret_cast<UPInt*>(self + 0x18);
-    const UInt8 flags = *reinterpret_cast<UInt8*>(tf + 0xfc);
-    UPInt doc = *reinterpret_cast<UPInt*>(tf + 0xe0);
-    if ((flags & 1) && !(*reinterpret_cast<UInt8*>(doc + 0x149) & 8))
-        FUN_1426150b0(doc);
+    Sfr31AutosizeTextField* ptf = *reinterpret_cast<Sfr31AutosizeTextField**>(self + 0x18);
+    const bool autoSizeByX = (ptf->IsAutoSize() && !ptf->IsWordWrap());
+    const bool autoSizeByY = (ptf->IsAutoSize());
+    if (autoSizeByX)
+        FUN_1426150b0(reinterpret_cast<UPInt>(ptf->pDocument));
     else
-        *reinterpret_cast<UInt8*>(doc + 0x149) &= 0xfe;
-    if (!(flags & 1))
-        *reinterpret_cast<UInt8*>(*reinterpret_cast<UPInt*>(tf + 0xe0) + 0x149) &= 0xfd;
+        ptf->pDocument[0x149] &= 0xfe;
+    if (autoSizeByY)
+        FUN_1426150d0(reinterpret_cast<UPInt>(ptf->pDocument));
     else
-        FUN_1426150d0(*reinterpret_cast<UPInt*>(tf + 0xe0));
-    *reinterpret_cast<UInt32*>(tf + 0xfc) |= 0x2000;
-    FUN_1425bc060(tf);
+        ptf->pDocument[0x149] &= 0xfd;
+    ptf->Flags |= 0x2000;
+    FUN_1425bc060(reinterpret_cast<UPInt>(ptf));
 }
 
 // Tracer::UpdateBlock: moves to the block that starts at pos; false when the merge of the old state fails.
@@ -2874,53 +2885,46 @@ void IntervalTimer::SetArguments(unsigned num, const Value* argArr)
         Params.PushBack(argArr[i]);
 }
 
-// MS2-FUNCTIONAL 0x142540a90: behavior-equivalent recovery; codegen differs from exe
 // @0x142540a90
 const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
 {
-    ActionQueueType* q = pActionQueue;
-    ActionEntry* pe;
-    if (q->ModId != ModId)
+    if (pActionQueue->ModId != ModId)
     {
-        ModId = q->ModId;
-        ActionEntry** src = pRootEntry ? &pRootEntry->pNextEntry : &q->Entries[Level].pActionRoot;
-        pe = *src;
-        pCurEntry = pe;
+        // new actions were added - restart
+        ModId = pActionQueue->ModId;
+        pCurEntry = (pRootEntry) ? pRootEntry->pNextEntry : pActionQueue->Entries[Level].pActionRoot;
     }
-    else
-        pe = pCurEntry;
-    if (pe != 0)
+
+    ActionEntry* pentry = pCurEntry;
+    if (pCurEntry)
     {
-        if (pe == q->Entries[Level].pInsertEntry)
+        if (pCurEntry == pActionQueue->Entries[Level].pInsertEntry)
         {
-            ActionEntry* nx = pe->pNextEntry;
-            if (nx == 0)
-                nx = pRootEntry;
-            q->Entries[Level].pInsertEntry = nx;
+            if (pCurEntry->pNextEntry)
+                pActionQueue->Entries[Level].pInsertEntry = pCurEntry->pNextEntry;
+            else
+                pActionQueue->Entries[Level].pInsertEntry = pRootEntry;
         }
-        ActionEntry** root = &pActionQueue->Entries[Level].pActionRoot;
-        ActionEntry* cur = pCurEntry;
-        if (cur == *root)
-            *root = cur->pNextEntry;
-        else if (pRootEntry != 0)
-            pRootEntry->pNextEntry = cur->pNextEntry;
-        q = pActionQueue;
+        if (pCurEntry == pActionQueue->Entries[Level].pActionRoot)
+            pActionQueue->Entries[Level].pActionRoot = pCurEntry->pNextEntry;
+        else if (pRootEntry)
+            pRootEntry->pNextEntry = pCurEntry->pNextEntry;
         pCurEntry = pCurEntry->pNextEntry;
     }
-    if (q->Entries[Level].pActionRoot == 0)
+    if (pActionQueue->Entries[Level].pActionRoot == NULL)
     {
-        q->Entries[Level].pInsertEntry = 0;
-        pActionQueue->Entries[Level].pLastEntry = 0;
+        pActionQueue->Entries[Level].pInsertEntry = NULL;
+        pActionQueue->Entries[Level].pLastEntry = NULL;
     }
-    if (pLastEntry != 0)
+    if (pLastEntry)
     {
-        pLastEntry->pNextEntry = 0;
-        pActionQueue->AddToFreeList(pLastEntry);
+        pLastEntry->pNextEntry = NULL;
+        pActionQueue->AddToFreeList(pLastEntry); // release entry
         ++pActionQueue->ModId;
         ModId = pActionQueue->ModId;
     }
-    pLastEntry = pe;
-    return pe;
+    pLastEntry = pentry;
+    return pentry;
 }
 
 // A text assignment through the host interface: TextFields take it directly, anything else gets text/htmlText.
