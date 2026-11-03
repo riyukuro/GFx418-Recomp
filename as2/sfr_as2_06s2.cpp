@@ -186,7 +186,8 @@ bool AvmButton::OnMouseEvent(const EventId& event)
 
 // The key of a controller goes into its state, then the handler (onKeyDown/onKeyUp) is broadcast to the Key
 // listeners in _level0's environment, with the controller index when the extensions are on.
-// MS2-FUNCTIONAL: the exe inlines MovieRoot::GetLevelMovie(0) and AsBroadcaster::BroadcastMessage.
+// MS2-FUNCTIONAL: the exe's frame is 0x10 larger and keeps evt in rbp (rbx saved only once the environment is
+// known); ours saves rbx at entry. Same flow and calls.
 // @0x142969250
 void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
 {
@@ -194,8 +195,8 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
     States[evt.KeyboardIndex].LastAsciiCode = evt.AsciiCode;
     States[evt.KeyboardIndex].LastWcharCode = evt.WcharCode;
 
-    ASString handlerName(static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(
-        EventId_GetFunctionNameBuiltinType(EventId(evt.Id))));
+    ASBuiltinType bt = EventId_GetFunctionNameBuiltinType(EventId(UByte(evt.Id)));
+    ASString handlerName(static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetStringManager()->GetBuiltin(bt));
     if (!pMovieRoot)
         return;
     MovieImpl*         pmovie = static_cast<MovieRoot*>(pMovieRoot->pASMovieRoot)->GetMovieImpl();
@@ -210,7 +211,7 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
     }
     if (!plevel0)
         return;
-    Environment* penv = AS2::ToAvmCharacter(plevel0)->GetASEnvironment();
+    Environment* penv = static_cast<AvmCharacter*>(plevel0->GetAvmObjImpl())->GetASEnvironment();
     if (!penv)
         return;
     int nargs = 0;
@@ -220,7 +221,7 @@ void KeyCtorFunction::NotifyListeners(InteractiveObject*, const EventId& evt)
         nargs = 1;
     }
     BroadcastMessageLocal(penv, static_cast<ObjectInterface*>(this), handlerName, nargs, penv->GetTopIndex());
-    penv->Drop(nargs);
+    penv->Stack.Pop(nargs);
 }
 
 // The movie's global context, the container node every level's tree goes under, and _level0 (made from the
