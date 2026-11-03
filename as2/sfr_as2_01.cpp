@@ -1023,7 +1023,6 @@ void MovieClipLoaderProto::GetProgress(const FnCall& fn)
 // Global trace(): logs the argument; an object with a toString function is converted by it. Text is cut at 2000
 // bytes and carriage returns become line feeds.
 // @0x1428f6de0
-// MS2-FUNCTIONAL same logic; the exe branches around the length clamp and keeps it in a 64-bit register (cl uses cmov here)
 void GAS_GlobalTrace(const FnCall& fn)
 {
     ObjectInterface* pobj = fn.Arg(0).ToObjectInterface(fn.Env);
@@ -1033,19 +1032,21 @@ void GAS_GlobalTrace(const FnCall& fn)
         if (pobj->GetMemberRaw(fn.Env->GetSC(), fn.Env->GetBuiltin(ASBuiltin_toString), &method) && method.IsFunction())
         {
             Value result;
-            GAS_Invoke(method, &result, pobj, fn.Env, 0, fn.Env->GetTopIndex(), 0);
+            GAS_Invoke(method, &result, pobj, fn.Env, 0, fn.Env->GetTopIndex() + 1, 0);
             fn.LogScriptMessage("%s\n", result.ToString(fn.Env).ToCStr());
             return;
         }
     }
     ASString text = fn.Arg(0).ToString(fn.Env);
     char     buf[2000];
-    unsigned len = text.GetSize();
-    if (len >= 2000)
+    unsigned size = text.GetSize();
+    UPInt    len;
+    if (size < 2000)
+        len = size;
+    else
         len = 1999;
     strncpy_s(buf, 2000, text.ToCStr(), len);
-    if (len < 2000)
-        buf[len] = 0;
+    buf[len] = 0;
     for (char* p = buf; *p; ++p)
         if (*p == '\r')
             *p = '\n';
