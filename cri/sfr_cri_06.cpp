@@ -2842,57 +2842,49 @@ void FUN_14005b300(cri_u8 arg1, cri_u8 arg2)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b390
 void FUN_14005b390(longlong arg1, cri_u8 arg2, void *arg3)
 {
-  ushort u_v1;
-  ushort u_v2;
+  short s_w;
+  short s_h;
   int i_v3;
   ulonglong u_v4;
   ulonglong u_v5;
   ulonglong u_v6;
   int i_v7;
-  cri_u8 u_v8;
-  
-  i_v7 = FUN_140047750((Unk_M2vCtx *)arg1);  // the exe passes rcx through (the handle check returns -1 for 0)
-  if (i_v7 == 0) {
-    u_v4 = *(ulonglong *)((longlong)arg3 + 0x50);
-    if (((((u_v4 != 0) && (u_v5 = *(ulonglong *)((longlong)arg3 + 0x40), u_v5 != 0)) &&
-         (u_v6 = *(ulonglong *)((longlong)arg3 + 0x48), u_v6 != 0)) &&
-        ((((u_v4 & 0x7f) == 0 && ((u_v5 & 0x7f) == 0)) &&
-         (((u_v6 & 0x7f) == 0 && ((u_v4 != u_v5 && (u_v4 != u_v6)))))))) &&
-       ((u_v5 != u_v6 &&
-        (((((u_v1 = *(ushort *)((longlong)arg3 + 0x5a), 0 < (short)u_v1 &&
-            (u_v2 = *(ushort *)((longlong)arg3 + 0x58), 0 < (short)u_v2)) &&
-           ((short)u_v1 < 0x4001)) && (((short)u_v2 < 0x4001 && ((u_v1 & 0x7f) == 0)))) &&
-         ((u_v2 & 0x7f) == 0)))))) {
-      memcpy((void *)((char *)arg1 + 0x1b28),arg3,0x78);
-      i_v7 = *(int *)((char *)arg1 + 0x1a44);
-      i_v3 = *(int *)((char *)arg1 + 0x1a48);
-      *(cri_u8 *)((char *)arg1 + 0x1ba0) = *(cri_u8 *)((char *)arg1 + 0x1b68);
-      *(cri_u8 *)((char *)arg1 + 0x1ba8) = *(cri_u8 *)((char *)arg1 + 0x1b70);
-      *(cri_u8 *)((char *)arg1 + 0x1bb0) = *(cri_u8 *)((char *)arg1 + 0x1b78);
-      *(cri_u8 *)((char *)arg1 + 0x1bb8) = *(cri_u8 *)((char *)arg1 + 0x1b80);
-      *(cri_u4 *)((char *)arg1 + 0xd44) = *(cri_u4 *)((char *)arg1 + 0x1a78);
-      M2VPRD_SetFunction(arg1);
-      M2VMC_StartFrame(arg1);
-      M2VIDCT_SetFunction(arg1);
-      M2VVLC_SetFunction(arg1);
-      M2VSL_DecPicture(arg1,arg2);
-      *(int *)((longlong)arg3 + 0x68) = *(int *)((char *)arg1 + 0x1a44) - i_v7;
-      *(int *)((longlong)arg3 + 0x6c) = *(int *)((char *)arg1 + 0x1a48) - i_v3;
-      *(cri_u2 *)((longlong)arg3 + 0x70) = *(cri_u2 *)((char *)arg1 + 0x1b98);
-      *(int *)((char *)arg1 + 0xd28) = *(int *)((char *)arg1 + 0xd28) + 1;
-      return;
-    }
-    u_v8 = 0xff050306;
+
+  if (FUN_140047750((Unk_M2vCtx *)arg1) != 0) {  // the exe passes rcx through (the handle check returns -1 for 0)
+    FUN_14005af30(0,0xff050209);
+    return;
   }
-  else {
-    u_v8 = 0xff050209;
-    arg1 = 0;
+  if ((u_v4 = *(ulonglong *)((longlong)arg3 + 0x50)) != 0 &&
+      (u_v5 = *(ulonglong *)((longlong)arg3 + 0x40)) != 0 &&
+      (u_v6 = *(ulonglong *)((longlong)arg3 + 0x48)) != 0 &&
+      (u_v4 & 0x7f) == 0 && (u_v5 & 0x7f) == 0 && (u_v6 & 0x7f) == 0 &&
+      u_v4 != u_v5 && u_v4 != u_v6 && u_v5 != u_v6 &&
+      (s_w = *(short *)((longlong)arg3 + 0x5a)) > 0 &&
+      (s_h = *(short *)((longlong)arg3 + 0x58)) > 0 &&
+      s_w <= 0x4000 && s_h <= 0x4000 && (s_w & 0x7f) == 0 && (s_h & 0x7f) == 0) {
+    memcpy((void *)((char *)arg1 + 0x1b28),arg3,0x78);
+    i_v7 = *(int *)((char *)arg1 + 0x1a44);
+    i_v3 = *(int *)((char *)arg1 + 0x1a48);
+    *(cri_u8 *)((char *)arg1 + 0x1ba0) = *(cri_u8 *)((char *)arg1 + 0x1b68);
+    *(cri_u8 *)((char *)arg1 + 0x1ba8) = *(cri_u8 *)((char *)arg1 + 0x1b70);
+    *(cri_u8 *)((char *)arg1 + 0x1bb0) = *(cri_u8 *)((char *)arg1 + 0x1b78);
+    *(cri_u8 *)((char *)arg1 + 0x1bb8) = *(cri_u8 *)((char *)arg1 + 0x1b80);
+    *(cri_u4 *)((char *)arg1 + 0xd44) = *(cri_u4 *)((char *)arg1 + 0x1a78);
+    M2VPRD_SetFunction(arg1);
+    M2VMC_StartFrame(arg1);
+    M2VIDCT_SetFunction(arg1);
+    M2VVLC_SetFunction(arg1);
+    M2VSL_DecPicture(arg1,arg2);
+    *(int *)((longlong)arg3 + 0x68) = *(int *)((char *)arg1 + 0x1a44) - i_v7;
+    *(int *)((longlong)arg3 + 0x6c) = *(int *)((char *)arg1 + 0x1a48) - i_v3;
+    *(cri_u2 *)((longlong)arg3 + 0x70) = *(cri_u2 *)((char *)arg1 + 0x1b98);
+    *(int *)((char *)arg1 + 0xd28) = *(int *)((char *)arg1 + 0xd28) + 1;
+    return;
   }
-  FUN_14005af30(arg1,u_v8);
+  FUN_14005af30(arg1,0xff050306);
   return;
 }
 
