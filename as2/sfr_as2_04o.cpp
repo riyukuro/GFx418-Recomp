@@ -151,46 +151,60 @@ void SelectionCtorFunction::CaptureFocus(const FnCall& fn)
         SetValueAsCharacter(fn.Result, focusedChar);
 }
 
+// MovieImpl::GetLevelMovie inlined: the sprite of the level, 0 if there is none.
+static SF_FORCEINLINE InteractiveObject* LevelMovieInline(MovieImpl* pmovie, int level)
+{
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return pmovie->pMovieLevels[i].pSprite;
+    }
+    return 0;
+}
+
 // The cursor of a mouse changed: with the extensions and a script replacement the Mouse.setCursorType handler is
 // called, otherwise the host is asked to show the shape.
-// MS2-FUNCTIONAL: the handler call is made through FunctionRef::Invoke
+// MS2-FUNCTIONAL: the exe keeps 0 in esi (push r12/r13, 0xe0 frame) and inlines ToFunction as a switch
 // @0x142933010
 void MovieRoot::ChangeMouseCursorType(unsigned mouseIdx, unsigned newCursorType)
 {
-    Environment* penv = 0;
-    for (UPInt i = 0; i < pMovieImpl->MovieLevelsSize; ++i)
+    // MovieRoot::GetAvmLevelMovie(0) with ToAvmSprite inlined
+    AvmSprite*   plevel0 = static_cast<AvmSprite*>(static_cast<AvmCharacter*>(LevelMovieInline(pMovieImpl, 0)->GetAvmObjImpl()));
+    Environment* penv    = plevel0->GetASEnvironment();
+    if (G_IsFlagSet<MovieImpl::Flag_SetCursorTypeFuncOverloaded>(pMovieImpl->Flags) && penv->CheckExtensions())
     {
-        if (pMovieImpl->pMovieLevels[i].Level == 0)
+        // extensions enabled and Mouse.setCursorType overloaded from ActionScript: call it
+        Value objVal;
+        if (penv->GetSC()->pContext->pGlobal->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_Mouse), &objVal))
         {
-            penv = ToAvmCharacter(pMovieImpl->pMovieLevels[i].pSprite)->GetASEnvironment();
-            break;
+            Object* pobj = objVal.ToObject(penv);
+            if (pobj)
+            {
+                Value scval;
+                if (pobj->GetMember(penv, penv->GetBuiltin(ASBuiltin_setCursorType), &scval))
+                {
+                    FunctionRef funcRef = scval.ToFunction(penv);
+                    if (!funcRef.IsNull())
+                    {
+                        Value res;
+                        penv->Push(Number(mouseIdx));
+                        penv->Push(Number(newCursorType));
+                        funcRef.Invoke(FnCall(&res, objVal, penv, 2, penv->GetTopIndex()));
+                        penv->Drop2();
+                    }
+                }
+            }
         }
     }
-    if (!(pMovieImpl->Flags & MovieImpl::Flag_SetCursorTypeFuncOverloaded) || !penv->CheckExtensions())
+    else
     {
-        if (newCursorType == *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pMovieImpl) + 0x12a4 + mouseIdx * 0x50))
-            return;
-        if (UserEventHandler* phandler = pMovieImpl->pUserEventHandler)
-            phandler->HandleEvent(reinterpret_cast<Movie*>(pMovieImpl), MouseCursorEvent(static_cast<MouseCursorEvent::CursorShapeType>(newCursorType), mouseIdx));
-        return;
-    }
-    Value mouse;
-    if (!penv->GetSC()->pContext->pGlobal->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin_Mouse), &mouse))
-        return;
-    Object* pmouse = mouse.ToObject(penv);
-    if (!pmouse)
-        return;
-    Value handler;
-    if (!pmouse->GetMember(penv, penv->GetBuiltin(ASBuiltin_setCursorType), &handler))
-        return;
-    FunctionRef method = handler.ToFunction(penv);
-    if (!method.IsNull())
-    {
-        penv->Push(Value((double)mouseIdx));
-        penv->Push(Value((double)newCursorType));
-        Value result;
-        method.Invoke(FnCall(&result, static_cast<ObjectInterface*>(pmouse), penv, 2, penv->GetTopIndex()));
-        penv->Drop(2);
+        // MouseCtorFunction::SetCursorType inlined: the host is asked to show the shape
+        if (newCursorType != *reinterpret_cast<unsigned*>(reinterpret_cast<UByte*>(pMovieImpl) + 0x12a4 + mouseIdx * 0x50))
+        {
+            if (UserEventHandler* phandler = pMovieImpl->pUserEventHandler)
+                phandler->HandleEvent(reinterpret_cast<Movie*>(pMovieImpl),
+                                      MouseCursorEvent(static_cast<MouseCursorEvent::CursorShapeType>(newCursorType), mouseIdx));
+        }
     }
 }
 
