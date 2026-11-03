@@ -1920,83 +1920,122 @@ Value Class::ConvertCheckType(const Value& v, const Traits& ot) const
 
 // Traits::CalculateMemSize: the own value slots are laid out after parent_size by size class (Boolean bytes,
 // 4-byte Int/UInt, 8-byte object/Number/String pointers, 32-byte Values), each group aligned to its size; C++
-// bound slots keep their offsets.
-// MS2-FUNCTIONAL 0x1424ee490: the exe ends with a free of an empty local buffer; same results
+// bound slots keep their offsets. The body follows the SDK (AS3_Traits.cpp), including the unused siv array
+// whose destructor gives the exe's final free. The exe reads FirstOwnSlotInd once, as 32 bits, for both loops.
+// The SDK's per-size counters (AS3_Traits.cpp VarInfo).
+struct Sfr17VarInfo
+{
+    Sfr17VarInfo() : _1(0), _4(0), _8(0), _value(0) {}
+
+    unsigned _1;
+    unsigned _4;
+    unsigned _8;
+    unsigned _value;
+};
+
+// Return new aligned offset. Align must be power of two.
+template <int A>
+inline unsigned Sfr17AlignMem(unsigned offset)
+{
+    const unsigned a = A - 1;
+    return (offset + a) & ~a;
+}
+
 // @0x1424ee490
 void Traits::CalculateMemSize(unsigned parent_size)
 {
     MemSize = parent_size;
 
-    unsigned bools = 0, ints = 0, ptrs = 0, values = 0;
-    const UPInt first = FirstOwnSlotInd.Get();
-    const UPInt num = GetSlotInfoNum();
-    for (UPInt i = first; i < num; ++i)
+    VM& vm = GetVM();
+    ArrayDH_POD<AbsoluteIndex> siv(vm.GetMemoryHeap());
+    const UPInt size = GetSlotInfoNum();
+    const UPInt first = static_cast<UInt32>(FirstOwnSlotInd.Get());
+
+    // Calculate number of values having different size.
+    Sfr17VarInfo var_num;
+    for (UPInt i = first; i < size; ++i)
     {
-        const SlotInfo& si = GetSlotInfo(AbsoluteIndex(i));
-        if (si.CppBinding)
+        const SlotInfo& si = Sfr33GetSlotInfo(*this, AbsoluteIndex(i));
+
+        if (static_cast<bool>(si.CppBinding))
             continue;
-        switch (si.BindType)
+
+        SlotInfo::BindingType bt = static_cast<SlotInfo::BindingType>(si.BindType);
+        switch (bt)
         {
         case SlotInfo::BT_Value:
-            ++values;
+            ++var_num._value;
             break;
         case SlotInfo::BT_ObjectAS:
-        case SlotInfo::BT_Number:
         case SlotInfo::BT_String:
-            ++ptrs;
+            ++var_num._8;
             break;
         case SlotInfo::BT_Boolean:
-            ++bools;
+            ++var_num._1;
             break;
         case SlotInfo::BT_Int:
+            ++var_num._4;
+            break;
         case SlotInfo::BT_UInt:
-            ++ints;
+            ++var_num._4;
+            break;
+        case SlotInfo::BT_Number:
+            ++var_num._8;
+            break;
+        case SlotInfo::BT_Code:
+        case SlotInfo::BT_Get:
+        case SlotInfo::BT_Set:
+        case SlotInfo::BT_GetSet:
             break;
         default:
             break;
         }
     }
 
-    if (values + ptrs + bools + ints == 0)
+    if (var_num._1 + var_num._4 + var_num._8 + var_num._value == 0)
         return;
 
-    unsigned boolOff = parent_size;
-    unsigned intOff = boolOff + bools;
-    if (ints)
-        intOff = (intOff + 3) & ~3u;
-    unsigned ptrOff = intOff + ints * 4;
-    if (ptrs)
-        ptrOff = (ptrOff + 7) & ~7u;
-    unsigned valueOff = ptrOff + ptrs * 8;
-    if (values)
-        valueOff = (valueOff + 31) & ~31u;
-    MemSize = valueOff + values * 32;
+    Sfr17VarInfo offset;
+    offset._1 = parent_size;
+    offset._4 = offset._1 + var_num._1 * 1;
+    if (var_num._4 > 0)
+        offset._4 = Sfr17AlignMem<4>(offset._4);
+    offset._8 = offset._4 + var_num._4 * 4;
+    if (var_num._8 > 0)
+        offset._8 = Sfr17AlignMem<8>(offset._8);
+    offset._value = offset._8 + var_num._8 * 8;
+    if (var_num._value > 0)
+        offset._value = Sfr17AlignMem<32>(offset._value);
 
-    for (UPInt i = first; i < num; ++i)
+    MemSize = offset._value + var_num._value * 32;
+
+    // Replace index in a pool with offset.
+    Sfr17VarInfo var_ind;
+    for (UPInt i = first; i < size; ++i)
     {
         SlotInfo& si = GetOwnSlotInfo(AbsoluteIndex(i));
-        if (si.CppBinding)
+
+        if (static_cast<bool>(si.CppBinding))
             continue;
+
         switch (si.BindType)
         {
-        case SlotInfo::BT_Value:
-            si.ValueInd = valueOff;
-            valueOff += 32;
-            break;
-        case SlotInfo::BT_ObjectAS:
-        case SlotInfo::BT_Number:
-        case SlotInfo::BT_String:
-            si.ValueInd = ptrOff;
-            ptrOff += 8;
-            break;
         case SlotInfo::BT_Boolean:
-            si.ValueInd = boolOff;
-            boolOff += 1;
+            si.ValueInd = offset._1 + var_ind._1++ * 1;
             break;
         case SlotInfo::BT_Int:
         case SlotInfo::BT_UInt:
-            si.ValueInd = intOff;
-            intOff += 4;
+            si.ValueInd = offset._4 + var_ind._4++ * 4;
+            break;
+        case SlotInfo::BT_Number:
+            si.ValueInd = offset._8 + var_ind._8++ * 8;
+            break;
+        case SlotInfo::BT_String:
+        case SlotInfo::BT_ObjectAS:
+            si.ValueInd = offset._8 + var_ind._8++ * 8;
+            break;
+        case SlotInfo::BT_Value:
+            si.ValueInd = offset._value + var_ind._value++ * 32;
             break;
         default:
             break;
