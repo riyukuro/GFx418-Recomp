@@ -641,6 +641,13 @@ class TextureImage : public Image
 public:
     TextureImage(ImageFormat format, const ImageSize& size, unsigned use, Texture* texture = 0,
                  ImageUpdateSync* sync = 0);
+    // (appended for sfr_render_06d) the same ctor, inlined where the exe inlines it (out-of-line copy 0x1425792d0)
+    struct InlineCtorTag {};
+    __forceinline TextureImage(ImageFormat format, const ImageSize& size, unsigned use, InlineCtorTag)
+        : Image(0, 0), Format(format), Size(size), Use(use)
+    {
+        ImageId = ImageBase::GetNextImageId();
+    }
 
     void RefreshCachedFormat()
     {

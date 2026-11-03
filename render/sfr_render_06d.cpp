@@ -82,10 +82,9 @@ static unsigned FontSizeRamp[] = { 0, 0, 2, 4, 6, 8, 12, 16, 18, 22, 26, 32, 36,
 //--------------------------------------------------------------------------------------------------------------------
 // GlyphTextureImage / GlyphTextureMapper
 
-// MS2-FUNCTIONAL: the exe inlines TextureImage's ctor here, ours calls its out-of-line copy (0x1425792d0)
 // @0x1426c41a0
 GlyphTextureImage::GlyphTextureImage(GlyphCache* cache, unsigned textureId, const ImageSize& size, unsigned use)
-    : TextureImage(Image_A8, size, use), pCache(cache), TextureId(textureId)
+    : TextureImage(Image_A8, size, use, InlineCtorTag()), pCache(cache), TextureId(textureId)
 {
 }
 
@@ -1969,6 +1968,12 @@ void GlyphCache::LogWarning(const char* fmt, ...)
 // MS2-PIN: ??_7GlyphRaster@Render@Scaleform@@6B@ 0x143192da8
 // MS2-PIN: ??_7GlyphShape@Render@Scaleform@@6B@ 0x143192e18
 // MS2-PIN: ??_7GlyphTextureImage@Render@Scaleform@@6B@ 0x143192fa8
+// MS2-PIN: ??_7TextureImage@Render@Scaleform@@6B@ 0x143183b28
+// MS2-PIN: ??_7RefCountVImpl@Scaleform@@6B@ 0x1431496d0
+// MS2-PIN: ??_7?$RefCountBaseStatImpl@VRefCountVImpl@Scaleform@@$02@Scaleform@@6B@ 0x1431498a0
+// MS2-PIN: ??_7?$RefCountBaseV@VImage@Render@Scaleform@@$02@Scaleform@@6B@ 0x1431498b8
+// MS2-PIN: ??_7ImageBase@Render@Scaleform@@6B@ 0x1431498d0
+// MS2-PIN: ??_7Image@Render@Scaleform@@6B@ 0x143149940
 // MS2-PIN: ??_7StrokeScaler@Render@Scaleform@@6B@ 0x143192f28
 // MS2-PIN: ??_7ImageFileWriter@Render@Scaleform@@6B@ 0x143185548
 // MS2-PIN: ??_7EvictNotifier@GlyphCache@Render@Scaleform@@6B@ 0x143193098
