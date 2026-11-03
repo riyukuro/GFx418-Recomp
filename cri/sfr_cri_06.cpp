@@ -10661,21 +10661,14 @@ void MPVSL_DecSliceOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   longlong arg1 = cri_p0;
   longlong *arg2 = cri_p1;
   int *arg3 = cri_p2;
-  cri_u1 u_v1;
-  cri_u1 u_v2;
-  cri_u1 u_v3;
-  cri_u1 u_v4;
-  int i_v5;
-  int i_v6;
-  byte b_v7;
-  int i_v8;
-  int i_v9;
-  uint u_v10;
-  uint u_v11;
-  int i_v12;
-  cri_u1 *pu_v13;
-  cri_u1 *pu_v14;
-  uint u_v15;
+  int mbx;
+  int mby;
+  int row;
+  int pos;
+  uint hdr;
+  uint low;
+  uint next;
+  cri_u1 *cur;
   struct Chunk { void *Data; int Size; } loc_48;
   
   arg3[3] = -1;
@@ -10684,92 +10677,86 @@ void MPVSL_DecSliceOne(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
   arg3[2] = 0;
   arg3[5] = 0;
   arg3[4] = -1;
-  i_v5 = *(int *)((char *)arg1 + 0x162c);
-  i_v6 = *(int *)((char *)arg1 + 0x1630);
+  mbx = *(int *)((char *)arg1 + 0x162c);
+  mby = *(int *)((char *)arg1 + 0x1630);
   *(cri_u4 *)((char *)arg1 + 0x18ec) = 0;
   *(cri_u4 *)((char *)arg1 + 0x1830) = *(cri_u4 *)((char *)arg1 + 0x1580);
   (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0x1800);
-  pu_v13 = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0x1800) & 0xfffffffffffffffc);
-  i_v12 = *(int *)((char *)arg1 + 0x1800) * 8 + (int)pu_v13 * -8;
-  b_v7 = (byte)i_v12;
-  u_v15 = CONCAT31(CONCAT21(CONCAT11(*pu_v13,pu_v13[1]),pu_v13[2]),pu_v13[3]) << (b_v7 & 0x1f)
-  ;
-  u_v10 = CONCAT31(CONCAT21(CONCAT11(pu_v13[4],pu_v13[5]),pu_v13[6]),pu_v13[7]);
-  if (i_v12 != 0) {
-    u_v15 = u_v10 >> (0x20 - b_v7 & 0x1f) | u_v15;
-    u_v10 = u_v10 << (b_v7 & 0x1f);
-  }
-  u_v1 = pu_v13[9];
-  u_v2 = pu_v13[8];
-  i_v8 = (u_v15 & 0xff) - 1;
-  pu_v14 = pu_v13 + 0xc;
-  u_v3 = pu_v13[10];
-  u_v4 = pu_v13[0xb];
-  *(int *)((char *)arg1 + 0x1798) = i_v8;
-  *(cri_u4 *)((char *)arg1 + 0x179c) = 0xffffffff;
-  u_v15 = CONCAT31(CONCAT21(CONCAT11(u_v2,u_v1),u_v3),u_v4);
-  *(int *)((char *)arg1 + 0x1794) = *(int *)((char *)arg1 + 0x15a0) * i_v8 + -1;
-  if (i_v12 < 0x1b) {
-    i_v12 = i_v12 + 5;
-    u_v11 = u_v10 << 5;
-    *(uint *)((char *)arg1 + 0x1748) = u_v10 >> 0x1b;
+  // The slice start code (00 00 01 xx) sits in the first word; low/next are the bit window after it.
+  cur = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0x1800) & 0xfffffffffffffffc);
+  pos = (int)((uint)*(ulonglong *)((char *)arg1 + 0x1800) << 3);
+  pos -= (int)((uint)(ulonglong)cur << 3);
+  next = CRI06_BE32(cur[0],cur[1],cur[2],cur[3]) << pos;
+  low = CRI06_BE32(cur[4],cur[5],cur[6],cur[7]);
+  if (pos != 0) {
+    hdr = low >> (0x20 - pos) | next;
+    low <<= pos;
   }
   else {
-    i_v12 = i_v12 + -0x1b;
-    if (i_v12 == 0) {
-      *(uint *)((char *)arg1 + 0x1748) = u_v10 >> 0x1b;
-      u_v11 = u_v15;
+    hdr = next;
+  }
+  row = (hdr & 0xff) - 1;
+  next = CRI06_BE32(cur[8],cur[9],cur[10],cur[11]);
+  cur += 0xc;
+  *(int *)((char *)arg1 + 0x1798) = row;
+  *(cri_u4 *)((char *)arg1 + 0x179c) = 0xffffffff;
+  *(int *)((char *)arg1 + 0x1794) = *(int *)((char *)arg1 + 0x15a0) * row - 1;
+  // quantiser_scale_code (5 bits)
+  if (pos >= 0x1b) {
+    pos -= 0x1b;
+    if (pos != 0) {
+      *(uint *)((char *)arg1 + 0x1748) = (next >> (5 - pos) | low) >> 0x1b;
+      low = next << pos;
     }
     else {
-      *(uint *)((char *)arg1 + 0x1748) = (u_v15 >> (5 - (byte)i_v12 & 0x1f) | u_v10) >> 0x1b;
-      u_v11 = u_v15 << ((byte)i_v12 & 0x1f);
+      *(uint *)((char *)arg1 + 0x1748) = low >> 0x1b;
+      low = next;
     }
-    u_v15 = CONCAT31(CONCAT21(CONCAT11(*pu_v14,pu_v13[0xd]),pu_v13[0xe]),pu_v13[0xf]);
-    pu_v14 = pu_v13 + 0x10;
+    next = CRI06_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
+  }
+  else {
+    pos += 5;
+    *(uint *)((char *)arg1 + 0x1748) = low >> 0x1b;
+    low <<= 5;
   }
   MPVDEC_ResetMv((CriMpvDecoderState *)((char *)arg1 + 0x174c));
   MPVDEC_ResetMv((CriMpvDecoderState *)((char *)arg1 + 6000));
   MPVDEC_ResetDc((CriMpvDecoderState *)arg1);
-  if ((int)u_v11 < 0) {
-    i_v8 = i_v12 + 7;
-    do {
-      i_v9 = i_v8 + 9;
-      if (i_v12 + 9 < 0x20) {
-        u_v11 = u_v11 << 9;
-        i_v12 = i_v12 + 9;
-      }
-      else {
-        i_v9 = i_v8 + -0x17;
-        u_v11 = u_v15 << ((byte)(i_v12 + -0x17) & 0x1f);
-        u_v15 = CONCAT31(CONCAT21(CONCAT11(*pu_v14,pu_v14[1]),pu_v14[2]),pu_v14[3]);
-        pu_v14 = pu_v14 + 4;
-        i_v12 = i_v12 + -0x17;
-      }
-      if (*(int *)((char *)arg1 + 0x1808) <=
-          ((i_v9 >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 + (int)pu_v14) {
-        return;
-      }
-      i_v8 = i_v9;
-    } while ((int)u_v11 < 0);
+  // extra_bit_slice + extra_information_slice (9 bits each)
+  while ((int)low < 0) {
+    pos += 9;
+    if (pos >= 0x20) {
+      low = next;
+      next = CRI06_BE32(cur[0],cur[1],cur[2],cur[3]);
+      pos -= 0x20;
+      low <<= pos;
+      cur += 4;
+    }
+    else {
+      low <<= 9;
+    }
+    if (*(int *)((char *)arg1 + 0x1808) <= ((pos + 7) >> 3) - *(int *)((char *)arg1 + 0x1800) - 8 + (int)(ulonglong)cur) {
+      return;
+    }
   }
-  i_v8 = (int)pu_v14;
-  u_v15 = i_v12 + 1;
-  if (0x1f < (int)u_v15) {
-    u_v15 = i_v12 - 0x1f;
-    i_v8 = i_v8 + 4;
+  pos += 1;
+  if (pos >= 0x20) {
+    pos -= 0x20;
+    cur += 4;
   }
-  *(uint *)((char *)arg1 + 0x1810) = u_v15 & 7;
+  *(uint *)((char *)arg1 + 0x1810) = pos & 7;
   FUN_140069020((__int64 *)((char *)arg1 + 0x1800),
-                (((int)((u_v15 - (u_v15 & 7)) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 +
-                i_v8,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_48);
+                (((pos - (pos & 7)) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800) - 8 + (int)(ulonglong)cur,
+                (__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_48);
   (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);
   (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_48);
   (**(cri_code **)((char *)arg1 + 0x16f0))(arg1,arg2);
-  if (*(int *)((char *)arg1 + 0x17a0) <= *(int *)((char *)arg1 + 0x1794)) {
+  if (*(int *)((char *)arg1 + 0x1794) >= *(int *)((char *)arg1 + 0x17a0)) {
     arg3[5] = 1;
   }
-  *arg3 = *(int *)((char *)arg1 + 0x162c) - i_v5;
-  arg3[1] = *(int *)((char *)arg1 + 0x1630) - i_v6;
+  *arg3 = *(int *)((char *)arg1 + 0x162c) - mbx;
+  arg3[1] = *(int *)((char *)arg1 + 0x1630) - mby;
   arg3[2] = *(int *)((char *)arg1 + 0x18ec);
   FUN_1400663d0(arg1,(unsigned int *)(arg3 + 3),(unsigned int *)(arg3 + 4));
   return;
