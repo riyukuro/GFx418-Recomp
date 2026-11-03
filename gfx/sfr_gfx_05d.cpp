@@ -214,6 +214,7 @@ StaticTextCharacter::~StaticTextCharacter()
 }
 
 // Builds the snapshot string: each line's characters, with '\n' where a line starts at the x of the first one.
+// MS2-FUNCTIONAL: block layout; the exe jumps from a null glyph format straight to the iterator cleanup, ours selects a null font first
 // @0x1425e0720
 void StaticTextSnapshotData::Add(StaticTextCharacter* pstChar)
 {
@@ -233,18 +234,19 @@ void StaticTextSnapshotData::Add(StaticTextCharacter* pstChar)
             xoffset = lineXOffset;
         LineBuffer::GlyphIterator glyphIt = line.Begin();
         Render::Font*             pfont   = glyphIt.GetFont();
-        if (!pfont)
-            continue;
-        for (; !glyphIt.IsFinished(); ++glyphIt)
+        if (pfont)
         {
-            LineBuffer::GlyphEntry& glyph = glyphIt.GetGlyph();
-            int                     ucs2  = pfont->GetCharValue(glyph.GetIndex());
-            if (ucs2 == -1)
-                continue;
-            cRef.CharCount++;
-            SnapshotString.AppendChar(ucs2);
+            for (; !glyphIt.IsFinished(); ++glyphIt)
+            {
+                LineBuffer::GlyphEntry& glyph = glyphIt.GetGlyph();
+                int                     ucs2  = pfont->GetCharValue(glyph.GetIndex());
+                if (ucs2 == -1)
+                    continue;
+                cRef.CharCount++;
+                SnapshotString.AppendChar(ucs2);
+            }
+            bfirst = false;
         }
-        bfirst = false;
     }
 
     StaticTextCharRefs.PushBack(cRef);
