@@ -2953,7 +2953,8 @@ void CriMvEasyPlayer::SetCuePointCallback(void (*func)(CriMvEasyPlayer* mveasy, 
     cuepoint_usrobj = usrobj;
 }
 
-// MS2-FUNCTIONAL: VS2008 /Od code generation (register choice, stack slot order, frame size)
+// The local names set the VS2008 /Od stack slots (cl orders them by a name hash), so they are the ones that give the
+// exe's frame.
 // @0x140024660
 void CriMvEasyPlayer::executeCuePointServer(void)
 {
@@ -2969,112 +2970,111 @@ void CriMvEasyPlayer::executeCuePointServer(void)
     {
         return;
     }
-    CriMvCuePointInfo* cueinfo = &mvply->cuepoint;
-    CriUint64 count;
+    CriMvCuePointInfo* cue = &mvply->cuepoint;
+    CriUint64 tcount;
     CriUint64 unit;
-    GetTime(count, unit);
+    GetTime(tcount, unit);
     if (unit == 0)
     {
         return;
     }
-    CriFloat32 now_ms = (CriFloat32)count * 1000.0f / (CriFloat32)unit;
-    CriUint32 framerate = stmprm.video_prm[0].framerate;
-    if (framerate == 0)
+    CriFloat32 cur_ms = (CriFloat32)tcount * 1000.0f / (CriFloat32)unit;
+    CriUint32 framerate_ = stmprm.video_prm[0].framerate;
+    if (framerate_ == 0)
     {
         return;
     }
-    CriFloat32 seek_ms = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate * 1000.0f;
-    CriMvEventPoint* ep;
-    CriFloat32 ep_ms;
+    CriFloat32 seek_ms = (CriFloat32)seek_frame_id * 1000.0f / (CriFloat32)framerate_ * 1000.0f;
+    CriMvEventPoint* evp;
+    CriFloat32 ept_ms;
     if (loop_flag == 1)
     {
-        CriUint32 total_frames = stmprm.video_prm[0].total_frames;
-        CriFloat32 movie_ms = (CriFloat32)total_frames * 1000.0f / (CriFloat32)framerate * 1000.0f;
+        CriUint32 frames = stmprm.video_prm[0].total_frames;
+        CriFloat32 movie_len = (CriFloat32)frames * 1000.0f / (CriFloat32)framerate_ * 1000.0f;
         CriUint32 loop_cnt = 0;
-        if (0.1f > movie_ms)
+        if (0.1f > movie_len)
         {
             return;
         }
-        CriUint32 first = (CriUint32)(now_ms / movie_ms);
-        if (first > 0)
+        CriUint32 first_ = (CriUint32)(cur_ms / movie_len);
+        if (first_ > 0)
         {
-            first = first - 1;
+            first_ = first_ - 1;
         }
-        CriUint32 last = first + 3;
-        for (loop_cnt = first; loop_cnt < last; loop_cnt++)
+        CriUint32 hi = first_ + 3;
+        for (loop_cnt = first_; loop_cnt < hi; loop_cnt++)
         {
-            if (movie_ms > now_ms - movie_ms * (CriFloat32)loop_cnt)
+            if (movie_len > cur_ms - movie_len * (CriFloat32)loop_cnt)
             {
                 break;
             }
         }
-        if (loop_cnt == last)
+        if (loop_cnt == hi)
         {
             return;
         }
-        CriFloat32 local_ms = now_ms - movie_ms * (CriFloat32)loop_cnt;
+        CriFloat32 in_ms = cur_ms - movie_len * (CriFloat32)loop_cnt;
         CriUint32 i;
-        for (i = 0; i < cueinfo->num_eventpoint; i++)
+        for (i = 0; i < cue->num_eventpoint; i++)
         {
-            ep = &cueinfo->eventtable[i];
-            if (ep->cnt_callback < loop_cnt && cuepoint_func != NULL)
+            evp = &cue->eventtable[i];
+            if (evp->cnt_callback < loop_cnt && cuepoint_func != NULL)
             {
-                cuepoint_func(this, ep, cuepoint_usrobj);
-                ep->cnt_callback = ep->cnt_callback + 1;
+                cuepoint_func(this, evp, cuepoint_usrobj);
+                evp->cnt_callback = evp->cnt_callback + 1;
             }
         }
-        for (i = 0; i < cueinfo->num_eventpoint; i++)
+        for (i = 0; i < cue->num_eventpoint; i++)
         {
-            ep = &cueinfo->eventtable[i];
-            if (ep->tunit == 0)
+            evp = &cue->eventtable[i];
+            if (evp->tunit == 0)
             {
                 return;
             }
-            if (ep->cnt_callback > loop_cnt)
+            if (evp->cnt_callback <= loop_cnt)
             {
-                continue;
-            }
-            ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
-            if (loop_cnt == 0 && seek_ms > ep_ms)
-            {
-                ep->cnt_callback = ep->cnt_callback + 1;
-                continue;
-            }
-            if (ep_ms > local_ms)
-            {
-                break;
-            }
-            if (cuepoint_func != NULL)
-            {
-                cuepoint_func(this, ep, cuepoint_usrobj);
-                ep->cnt_callback = ep->cnt_callback + 1;
+                ept_ms = (CriFloat32)evp->time * 1000.0f / (CriFloat32)evp->tunit;
+                if (loop_cnt == 0 && seek_ms > ept_ms)
+                {
+                    evp->cnt_callback = evp->cnt_callback + 1;
+                    continue;
+                }
+                if (ept_ms > in_ms)
+                {
+                    break;
+                }
+                if (cuepoint_func != NULL)
+                {
+                    cuepoint_func(this, evp, cuepoint_usrobj);
+                    evp->cnt_callback = evp->cnt_callback + 1;
+                }
             }
         }
     }
     else
     {
-        for (CriUint32 j = 0; j < cueinfo->num_eventpoint; j++)
+        for (CriUint32 j = 0; j < cue->num_eventpoint; j++)
         {
-            ep = &cueinfo->eventtable[j];
-            if (ep->tunit == 0)
+            evp = &cue->eventtable[j];
+            if (evp->tunit == 0)
             {
                 return;
             }
-            if (ep->cnt_callback == 0)
+            if (evp->cnt_callback == 0)
             {
-                ep_ms = (CriFloat32)ep->time * 1000.0f / (CriFloat32)ep->tunit;
-                if (seek_ms > ep_ms)
+                ept_ms = (CriFloat32)evp->time * 1000.0f / (CriFloat32)evp->tunit;
+                if (seek_ms > ept_ms)
                 {
                     continue;
                 }
-                if (ep_ms > now_ms)
+                if (ept_ms > cur_ms)
                 {
                     return;
                 }
                 if (cuepoint_func != NULL)
                 {
-                    cuepoint_func(this, ep, cuepoint_usrobj);
-                    ep->cnt_callback = ep->cnt_callback + 1;
+                    cuepoint_func(this, evp, cuepoint_usrobj);
+                    evp->cnt_callback = evp->cnt_callback + 1;
                 }
             }
         }
