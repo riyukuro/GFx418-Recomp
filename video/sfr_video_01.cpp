@@ -3983,12 +3983,17 @@ VideoObject::VideoObject(ASStringContext* psc, Object* pprototype)
     Set__proto__(psc, pprototype);
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Takes the prototype from the character's environment. The AVM character is found inline, NULL for a NULL
+// character (which the exe then dereferences anyway).
 // @0x14000dee0
 VideoObject::VideoObject(GlobalContext* gCtxt, InteractiveObject* pcharacter)
     : Object(gCtxt->GetGC()), pCharacter(pcharacter)
 {
-    Environment* penv = AS2::ToAvmCharacter(pcharacter)->GetASEnvironment();
+    AvmCharacter* pavm = NULL;
+    if (pcharacter)
+        pavm = static_cast<AvmCharacter*>(reinterpret_cast<AvmDisplayObjBase*>(
+            reinterpret_cast<UInt32*>(pcharacter) + pcharacter->AvmObjOffset)->ToAvmInteractiveObjBase());
+    Environment* penv = pavm->GetASEnvironment();
     Set__proto__(penv->GetSC(), gCtxt->GetPrototype(ASBuiltin_Video));
 }
 
