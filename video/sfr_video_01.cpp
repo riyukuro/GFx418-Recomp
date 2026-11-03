@@ -4060,17 +4060,21 @@ VideoObject::VideoObject(Environment* penv)
     Set__proto__(penv->GetSC(), penv->GetPrototype(ASBuiltin_Video));
 }
 
-// MS2-FUNCTIONAL: constructs the Video prototype from the recovered Object and prototype-base layout.
+// The Prototype<VideoObject> ctor: the inlined VideoObject part, then GASPrototypeBase() at +0x70 and Init.
 // @0x14000e1e0
 Object* FUN_14000e1e0(Object* object, ASStringContext* context, Object* prototype,
                       const FunctionRef& constructor)
 {
-    typedef Prototype<VideoObject> VideoPrototypeLayout;
-    ::new (static_cast<void*>(object)) VideoPrototypeLayout(context, prototype, constructor);
+    static_cast<VideoObject*>(object)->VideoObject::VideoObject(context, prototype);
     unsigned char* bytes = reinterpret_cast<unsigned char*>(object);
+    unsigned char* base = bytes + 0x70;
+    reinterpret_cast<FunctionRef*>(base + 0x08)->FunctionRef::FunctionRef();
+    reinterpret_cast<FunctionRef*>(base + 0x20)->FunctionRef::FunctionRef();
+    *reinterpret_cast<void**>(base + 0x38) = 0;
     *reinterpret_cast<void***>(bytes) = &VideoProtoGCVtable;
     *reinterpret_cast<void***>(bytes + 0x20) = &VideoProtoInterfaceVtable;
-    *reinterpret_cast<void***>(bytes + 0x70) = &VideoProtoBaseVtable;
+    *reinterpret_cast<void***>(base) = &VideoProtoBaseVtable;
+    reinterpret_cast<NetStreamPrototypeInitAccess*>(base)->Init(object, context, constructor);
     return object;
 }
 
