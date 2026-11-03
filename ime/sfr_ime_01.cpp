@@ -3321,6 +3321,26 @@ struct Ime01NtsPtr
     Ime01NtsPtr(const Ime01NtsPtr& src);
     ~Ime01NtsPtr() { if (p) FUN_14257dcd0(p); }
 };
+// A GFx::Value whose destructor keeps the two zero stores after the managed release, as the exe's inlined dtor does.
+struct Ime01KeptValue
+{
+    void** objectInterface = nullptr;
+    Scaleform::GFx::Value::ValueType type = Scaleform::GFx::Value::VT_Undefined;
+    void* data;
+    unsigned long long dataAux;
+    Scaleform::GFx::Value* AsValue() { return reinterpret_cast<Scaleform::GFx::Value*>(this); }
+    bool IsManaged() const { return (type & Scaleform::GFx::Value::VTC_ManagedBit) != 0; }
+    ~Ime01KeptValue()
+    {
+        if (IsManaged()) {
+            reinterpret_cast<void(*)(void*, void*, void*)>((*reinterpret_cast<void***>(objectInterface))[2])(
+                objectInterface, this, data);
+            *reinterpret_cast<void** volatile*>(&objectInterface) = nullptr;
+        }
+        *reinterpret_cast<volatile Scaleform::GFx::Value::ValueType*>(&type) = Scaleform::GFx::Value::VT_Undefined;
+    }
+};
+
 // An ArrayDataBase<GFx::Value> the exe declares and never fills; only its DestructArray(0, 0) call is left.
 struct Ime01UnusedValueArray
 {
@@ -3329,8 +3349,9 @@ struct Ime01UnusedValueArray
     ~Ime01UnusedValueArray() { FUN_1423ce6c0(data, size); }
 };
 
-// MS2-FUNCTIONAL: fills the +0x828 argument Values from the descriptors and invokes "<name>.Add" with them. The exe keeps
-// the result Value dtor's two dead zero stores (rbp held at 0); cl drops them here, which shifts the register allocation.
+// MS2-FUNCTIONAL: fills the +0x828 argument Values from the descriptors and invokes "<name>.Add" with them. The result
+// Value is an Ime01KeptValue so its two dead zero stores stay, as in the exe. Left: the exe loads the by-value Ptr for
+// its release before the Type store and enters the shared release test from the flag-zero exit with its own load.
 // @0x1423d99f0
 void FUN_1423d99f0(void* raw, Ime01NtsPtr value)
 {
@@ -3349,14 +3370,14 @@ void FUN_1423d99f0(void* raw, Ime01NtsPtr value)
                 &(*reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828))[i],
                 &(*reinterpret_cast<void***>(self + 0x810))[i]);
         }
-        Scaleform::GFx::Value result;
+        Ime01KeptValue result;
         Ime01UnusedValueArray unused;
         void* movie = *reinterpret_cast<void**>(self + 0x868);
         void* manager = *reinterpret_cast<void**>(static_cast<unsigned char*>(movie) + 0xa8);
         void* bridge = *reinterpret_cast<void**>(static_cast<unsigned char*>(manager) + 0x18);
         if (bridge)
             reinterpret_cast<void(*)(void*, const char*, Scaleform::GFx::Value*, const Scaleform::GFx::Value*, unsigned)>(
-                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, command, &result,
+                (*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(bridge, command, result.AsValue(),
                     *reinterpret_cast<Scaleform::GFx::Value**>(self + 0x828), *reinterpret_cast<unsigned*>(self + 0x830));
         command[0] = 0;
     }
