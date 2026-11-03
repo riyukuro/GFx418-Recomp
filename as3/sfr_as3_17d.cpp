@@ -27,6 +27,7 @@
 // MS2-RANGE: 0x142507730-0x1425078e0 .text$mn
 // MS2-RANGE: 0x142507910-0x142507a40 .text$mn
 // MS2-RANGE: 0x1425094e0-0x142509850 .text$mn
+#define MS2_AS3_SCU
 #define SF_AS3_SHAPEOBJECT_MODEL
 #define SF_AS3_AVMBUTTON_MODEL
 #include <math.h>
@@ -1014,7 +1015,10 @@ bool AvmDisplayObj::CreateASInstanceNoCtor(bool)
 // @0x1424f2010
 unsigned AvmBitmap::CreateASInstance(bool execute)
 {
-    unsigned rv = AvmDisplayObj::GetAS3Obj() ? 1 : AvmDisplayObj::CreateASInstance(execute);
+    // AvmDisplayObj::CreateASInstance (0x1424f2400), which the exe inlines here
+    unsigned rv = 1;
+    if (!AvmDisplayObj::GetAS3Obj())
+        rv = (!pAS3RawPtr && !pAS3CollectiblePtr && CreateASInstanceNoCtor(execute)) ? CallCtor(execute) : 0;
     Instances::fl_display::Bitmap* as3bmp = static_cast<Instances::fl_display::Bitmap*>(AvmDisplayObj::GetAS3Obj());
     if (!as3bmp || as3bmp->pBitmapData || !GetResourceMovieDef())
         return rv;
@@ -1026,8 +1030,8 @@ unsigned AvmBitmap::CreateASInstance(bool execute)
         params[0].Assign(Value(UInt32(sz.Width)));
         params[1].Assign(Value(UInt32(sz.Height)));
     }
-    SPtr<Instances::fl_display::BitmapData> pbmpData;
     String name;
+    SPtr<Instances::fl_display::BitmapData> pbmpData;
     const String* pname = GetResourceMovieDef()->GetNameOfExportedResource(ResourceId(Id));
     if (!pname)
         return rv;
