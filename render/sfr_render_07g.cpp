@@ -270,7 +270,7 @@ bool MeshVertexOutput::BeginOutput(const Fill* fills, unsigned fillCount, const 
     {
         // too large to batch: the mesh gets an item of its own
         MeshCacheItem::MeshBaseContent mc((MeshBase**)&pMesh, 1);
-        unsigned vbSize    = pSingleFormat->Size * fills->VertexCount;
+        UPInt    vbSize    = pSingleFormat->Size * fills->VertexCount;
         pMesh->VertexCount = fills->VertexCount;
         pMesh->IndexCount  = fills->IndexCount;
         pMesh->LargeMesh   = true;
