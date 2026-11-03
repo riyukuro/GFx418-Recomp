@@ -306,7 +306,7 @@ bool ConstShapeNoStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInByt
 }
 
 // The styles read go to one block of the load heap.
-// MS2-FUNCTIONAL: register allocation and the fill loop induction differ.
+// MS2-FUNCTIONAL: the exe loads the reader's style arrays after each loop guard and indexes by pointer; ours loads them up front.
 // @0x14265ac70
 bool ConstShapeWithStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle)
 {
@@ -320,12 +320,14 @@ bool ConstShapeWithStyles::Read(LoadProcess* p, TagType tagType, unsigned lenInB
     if (FillStylesNum || StrokeStylesNum)
     {
         Styles = pheap->Alloc(sizeof(FillStyleType) * FillStylesNum + sizeof(StrokeStyleType) * StrokeStylesNum);
-        FillStyleType* pfill = GetFills();
+        FillStyleType*       pfill    = GetFills();
+        const FillStyleType* psrcFill = reader.GetFillStyle(0);
         for (unsigned i = 0; i < FillStylesNum; i++, pfill++)
-            Construct<FillStyleType>(pfill, *reader.GetFillStyle(i));
-        StrokeStyleType* pstroke = (StrokeStyleType*)pfill;
+            Construct<FillStyleType>(pfill, psrcFill[i]);
+        StrokeStyleType*       pstroke    = (StrokeStyleType*)pfill;
+        const StrokeStyleType* psrcStroke = reader.GetStrokeStyle(0);
         for (unsigned i = 0; i < StrokeStylesNum; i++)
-            Construct<StrokeStyleType>(&pstroke[i], *reader.GetStrokeStyle(i));
+            Construct<StrokeStyleType>(&pstroke[i], psrcStroke[i]);
     }
     else
         Styles = 0;
