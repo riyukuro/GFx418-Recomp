@@ -10,6 +10,8 @@
 // MS2-RANGE: 0x1425e8420-0x1425eeef0 .text$mn
 // MS2-RANGE: 0x1425ef560-0x1425f0690 .text$mn
 // MS2-RANGE: 0x1425eef90-0x1425ef060 .text$mn
+// MS2-RANGE: 0x1425ef1e0-0x1425ef370 .text$mn
+// MS2-RANGE: 0x1425ef3d0-0x1425ef430 .text$mn
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_hal.h"
@@ -93,10 +95,20 @@ void DrawableImage::addCommand(const C& cmd)
     pQueue->AddCommand(cmd);
 }
 
-// Threshold (linked into the 0x1425eeef0 gap) queues through this instance; its COMDAT is kept in this range.
+// Threshold (below) inlines this; the exe keeps the out-of-line COMDAT in this range.
 template void DrawableImage::addCommand<DICommand_Threshold>(const DICommand_Threshold& cmd);
 // The same for the Draw command.
 template void DrawableImage::addCommand<DICommand_Draw>(const DICommand_Draw& cmd);
+
+// @0x1425ef1e0
+#pragma strict_gs_check(push, on)
+void DrawableImage::Threshold(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
+                              OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource)
+{
+    DICommand_Threshold cmd(this, source, sourceRect, destPoint, op, threshold, color, mask, copySource);
+    addCommand(cmd);
+}
+#pragma strict_gs_check(pop)
 
 // @0x1425e9810
 DrawableImage::DrawableImage(ImageFormat format, ImageSize size, bool transparent, Color fillColor,
@@ -1036,6 +1048,8 @@ void DrawableImageContext::processTreeRootKillList()
 }
 
 }} // namespace Scaleform::Render
+// The DICommand_SourceRect clip helper's out-of-line copy (inline virtual, render_drawableimage.h), linked after Unmap.
+// MS2-PIN: ?UpdateClippedRects@DICommand_SourceRect@Render@Scaleform@@UEAAXXZ 0x1425ef3d0
 // MS2-PIN: ??_7DICommand@Render@Scaleform@@6B@ 0x14318ce80
 // MS2-PIN: ??_7?$DICommandImpl@UDICommand_Map@Render@Scaleform@@UDICommand@23@@Render@Scaleform@@6B@ 0x14318cec0
 // MS2-PIN: ??_7DICommand_Map@Render@Scaleform@@6B@ 0x14318cf00

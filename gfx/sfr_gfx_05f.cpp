@@ -1,11 +1,13 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render_DrawableImage members that the
 // linker placed in the gap after the drawable image TU (sfr_render_02i): SetPixel32 (SetPixel is in 02i, beside the
-// GetPixel32 it inlines), SetPixels, Threshold, the user Unmap, TextureLost, and the CPU-modified list that a capture
+// GetPixel32 it inlines), SetPixels, the user Unmap, TextureLost, and the CPU-modified list that a capture
 // flushes.
 // MS2-UNIT: sfr_gfx_05f
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425eeef0-0x1425eef90 .text$mn
-// MS2-RANGE: 0x1425ef060-0x1425ef560 .text$mn
+// MS2-RANGE: 0x1425ef060-0x1425ef1e0 .text$mn
+// MS2-RANGE: 0x1425ef370-0x1425ef3d0 .text$mn
+// MS2-RANGE: 0x1425ef430-0x1425ef560 .text$mn
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
@@ -63,14 +65,6 @@ void DrawableImage::TextureLost(TextureLossReason reason)
         pRT = 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines addCommand<DICommand_Threshold> (its out-of-line instance lives in sfr_render_02i)
-// @0x1425ef1e0
-void DrawableImage::Threshold(DrawableImage* source, const Rect<SInt32>& sourceRect, const Point<SInt32>& destPoint,
-                              OperationType op, UInt32 threshold, UInt32 color, UInt32 mask, bool copySource)
-{
-    addCommand(DICommand_Threshold(this, source, sourceRect, destPoint, op, threshold, color, mask, copySource));
-}
-
 // Ends a Map() by the user; false if the image was not user-mapped.
 // @0x1425ef370
 bool DrawableImage::Unmap()
@@ -101,10 +95,3 @@ template void PathDataEncoder<Array<UByte> >::WriteChar(char v);
 
 }} // namespace Scaleform::Render
 
-// The DICommand_SourceRect clip helper's out-of-line copy (inline virtual, render_drawableimage.h).
-// MS2-PIN: ?UpdateClippedRects@DICommand_SourceRect@Render@Scaleform@@UEAAXXZ 0x1425ef3d0
-// Threshold's command vftables (also emitted by sfr_render_02i).
-// MS2-PIN: ??_7DICommand@Render@Scaleform@@6B@ 0x14318ce80
-// MS2-PIN: ??_7DICommand_SourceRect@Render@Scaleform@@6B@ 0x14318d040
-// MS2-PIN: ??_7?$DICommand_SourceRectImpl@UDICommand_Threshold@Render@Scaleform@@@Render@Scaleform@@6B@ 0x14318d910
-// MS2-PIN: ??_7DICommand_Threshold@Render@Scaleform@@6B@ 0x14318d970
