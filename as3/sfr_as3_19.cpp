@@ -42,6 +42,8 @@
 namespace Scaleform {
 // Out of line in sfr_as3_15 (0x1424dc7a0): VTable::Names' storage, released by AutoPtr<VTable>::Reset.
 template <> ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::~ArrayDataBase();
+// Out of line in sfr_as3_15 (0x1424dc730): the weak display-object lists the depth hash's AutoPtr values own.
+template <> ArrayDataBase<WeakPtr<GFx::DisplayObject>, AllocatorLH<WeakPtr<GFx::DisplayObject>, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
