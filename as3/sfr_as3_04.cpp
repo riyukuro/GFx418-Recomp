@@ -5781,7 +5781,8 @@ namespace Scaleform { namespace GFx { namespace AS3
         return len >= 5 && an[0] == 'x' && an[1] == 'm' && an[2] == 'l' && an[3] == 'n' && an[4] == 's';
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Namespace / XMLAttr constructors and the array growth
+    // MS2-FUNCTIONAL: the exe inlines MakeInstance (the Namespace / XMLAttr constructors) and the XML/XMLAttr
+    // array growth
     // @0x142424100
     void XMLParser::StartElementExpatCallback(void* userData, const char* name, const char** atts)
     {
@@ -5813,7 +5814,13 @@ namespace Scaleform { namespace GFx { namespace AS3
                     ns_prefix = sm.CreateString(an + 6);
                 const ASString ns_uri = sm.CreateString(atts[i + 1]);
                 SPtr<Instances::Namespace> ns(itr_ns.MakeInstance(Abc::NS_Public, ns_uri, Value(ns_prefix)));
-                namespaces.PushBack(ns);
+                // namespaces.PushBack(ns), with the exe's out-of-line ResizeNoConstruct
+                typedef SPtr<Instances::Namespace> NsPtr;
+                typedef Scaleform::ArrayDataDH<NsPtr, Scaleform::AllocatorDH<NsPtr>, Scaleform::ArrayDefaultPolicy>
+                    NsPtrData;
+                NsPtrData* d = reinterpret_cast<NsPtrData*>(&namespaces);
+                ::FUN_14241ff20(d, d->pHeap, d->Size + 1);
+                NsPtrData::AllocatorType::Construct(d->Data + d->Size - 1, ns);
             }
         }
 
