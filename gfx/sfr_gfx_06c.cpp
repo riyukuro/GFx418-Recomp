@@ -651,7 +651,8 @@ void DisplayList::ReplaceRenderTreeNode(DisplayObjectBase* powner, UPInt index)
     if (e.GetDisplayObject()->GetResourceMovieDef() != powner->GetResourceMovieDef())
         e.GetDisplayObject()->GetMovieImpl()->AddMovieDefToKillList(e.GetDisplayObject()->GetResourceMovieDef());
 
-    TreeNode* node = pcontainer->GetAt(e.TreeIndex);
+    UPInt     ti   = e.TreeIndex;
+    TreeNode* node = pcontainer->GetAt(ti);
     if (e.MaskTreeIndex == ~0u)
     {
         if (node->HasMask())
