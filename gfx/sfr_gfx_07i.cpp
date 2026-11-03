@@ -16,6 +16,7 @@
 #include <windows.h>
 #include "../include/kernel/sf_timer.h"
 #include "../include/gfx/amp/amp_profileframe.h"
+#include "../include/kernel/sf_hash.h"
 
 unsigned long long FUN_1425e3560();             // performance counter
 
@@ -156,14 +157,20 @@ public:
 void AMP::ViewStats::AddMarker(const char* name)
 {
     char* self = reinterpret_cast<char*>(this);
-    U found[2];
+    struct Iterator
+    {
+        U**   pHash;
+        SPInt Index;
+        bool  IsEnd() const { return !pHash || !*pHash || Index > (SPInt)(*pHash)[1]; }
+        char* Entry() const { return (char*)(*pHash + 2) + Index * 0x20; }
+    } it;
     {
         String key(name);
-        FUN_1426223c0(RawFieldPtr<U*>(self, 0x168), found, &key);
+        FUN_1426223c0(RawFieldPtr<U*>(self, 0x168), (U*)&it, &key);
     }
-    if (found[0] && *(U*)found[0] && (SPInt)found[1] <= *(SPInt*)(*(U*)found[0] + 8))
+    if (!it.IsEnd())
     {
-        (*(int*)(*(U*)found[0] + 0x10 + found[1] * 0x20 + 0x18))++;
+        (*(int*)(it.Entry() + 0x18))++;
         return;
     }
     UInt32 one = 1;
@@ -521,10 +528,7 @@ static __forceinline SPInt RawFindKey8At(U* table, const U* key)
 {
     if (!table)
         return -1;
-    const unsigned char* k = (const unsigned char*)key;
-    U mixed = (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
-              (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[7] * (U)-0x283c1b695cee4e41LL + (U)k[6] * 0x5d02f409d62aee81ULL;
-    U hash = (U)-0x514d9afbc3e934fbLL + mixed + (U)k[0];
+    U hash = FixedSizeHash<U>()(*key);
     U home = table[1] & hash;
     U index = home;
     char* e = RawEntry(table, index, 0x20);
@@ -568,9 +572,23 @@ static inline SPInt FindStringKeyIndex(U** self, const String* key)
 
 static __forceinline U* RawFindMovieKey(U** self, U* out, const U* key)
 {
-    SPInt idx = RawFindKey8At(*self, key);
-    out[0] = idx >= 0 ? (U)self : 0;
-    out[1] = idx >= 0 ? (U)idx : 0;
+    struct Iterator
+    {
+        U**   pHash;
+        SPInt Index;
+    };
+    Iterator* it  = reinterpret_cast<Iterator*>(out);
+    SPInt     idx = RawFindKey8At(*self, key);
+    if (idx >= 0)
+    {
+        it->pHash = self;
+        it->Index = idx;
+    }
+    else
+    {
+        it->pHash = 0;
+        it->Index = 0;
+    }
     return out;
 }
 
@@ -756,14 +774,19 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
 }
 
 // Allocates a scope record (0x48 bytes, refcount 1, three empty child arrays).
-static inline char* RawNewScope(char* self)
+static __forceinline char* RawNewScope(char* self)
 {
     char* o = (char*)Memory::AllocAutoHeap(self, 0x48, AllocInfo(2, 0, 0));
     if (o)
     {
-        memset(o + 8, 0, 0x40);
+        // value-initialisation of the record, then its constructor; the exe keeps every zero store
+        volatile U* z = (volatile U*)o;
+        z[1] = 0, z[2] = 0, z[3] = 0, z[4] = 0, z[5] = 0, z[6] = 0, z[7] = 0, z[8] = 0;
         *(void**)o = (void*)DAT_14318f040;
         *(int*)(o + 8) = 1;
+        RawField<U>(o, 0x30) = 0;
+        RawField<U>(o, 0x38) = 0;
+        RawField<U>(o, 0x40) = 0;
     }
     return o;
 }
@@ -812,7 +835,7 @@ struct AmpViewStatsView
 static inline void RawPublishTopScope(char* self) { ((AmpViewStatsView*)self)->RefreshActiveLine(); }
 
 // Pushes a new scope {id, arg} onto the scope stack.
-static inline void RawPushScope(char* self, U id, U arg)
+static __forceinline void RawPushScopeBody(char* self, U id, U arg)
 {
     char* o = RawNewScope(self);
     RawField<U>(o, 0x18) = arg;
@@ -830,6 +853,8 @@ static inline void RawPushScope(char* self, U id, U arg)
     RawPublishTopScope(self);
     FUN_14257dcb0(o);
 }
+
+static __declspec(noinline) void RawPushScope(char* self, U id, U arg) { RawPushScopeBody(self, id, arg); }
 
 // @0x142622c90
 void FUN_142622c90(char* self, U arg)
@@ -969,7 +994,7 @@ void FUN_142623050(char* self, int hi, int lo, U arg)
 void FUN_1426233e0(char* self, U hi, U lo, U arg)
 {
     EnterCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
-    RawPushScope(self, (hi << 32) + (lo & 0xffffffffULL), arg);
+    RawPushScopeBody(self, ((U)(unsigned)hi << 32) + (unsigned)lo, arg);
     LeaveCriticalSection((LPCRITICAL_SECTION)(self + 0xe0));
 }
 
