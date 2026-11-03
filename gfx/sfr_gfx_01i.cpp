@@ -1816,7 +1816,6 @@ inline Movie::Movie()
 // The render tree (root plus the topmost container) is created and captured once, so the render thread has a
 // display handle before the first advance.
 // @0x142569e20
-// MS2-FUNCTIONAL: instruction scheduling (a few store pairs swapped) differs; every store and call matches
 MovieImpl::MovieImpl(MemoryHeap* pheap)
     : pAdvanceStats(0), pHeap(pheap), pMainMovieDef(0), MovieLevels(),
       pStateBag(0), pRenderRoot(0), pTopMostRoot(0), PixelScale(1.f), pUserEventHandler(0), pFSCommandHandler(0),
@@ -1836,7 +1835,9 @@ MovieImpl::MovieImpl(MemoryHeap* pheap)
     RenderContext.Capture();
 
     pMainMovie        = 0;
-    Flags            |= 0x40180;
+    G_SetFlag<Flag_NeedMouseUpdate>(Flags, true);
+    G_SetFlag<0x40000>(Flags, true);   // Flag_MovieIsFocused
+    G_SetFlag<Flag_LevelClipsChanged>(Flags, true);
     pPlayListOptHead  = 0;
     pPlayList         = 0;
     TimeElapsed       = 0;
@@ -4464,7 +4465,6 @@ StateBag* MovieImpl::GetStateBagImpl() const
 }
 
 // @0x14256ace0
-// MS2-FUNCTIONAL: cl inlines the ArrayData Resize/dtor COMDATs the exe calls out of line; Flags update scheduled later
 MovieImpl::~MovieImpl()
 {
     if (FocusRectContainerNode)
@@ -4506,7 +4506,7 @@ MovieImpl::~MovieImpl()
     if (pMainMovie)
         pMainMovie->StopActiveSounds();
 
-    Flags |= Flag_OptAdvListInvalid;   // InvalidateOptAdvanceList
+    G_SetFlag<Flag_OptAdvListInvalid>(Flags, true);   // InvalidateOptAdvanceList
     AsRootSlots(pASMovieRoot)->ClearDisplayList();
     ClearIndirectTransformPairs();
 
