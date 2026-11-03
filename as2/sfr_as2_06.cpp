@@ -1571,24 +1571,31 @@ bool AvmCharacter::IsStandardMember(const ASString& memberName, ASString* plower
     return false;
 }
 
-// MS2-FUNCTIONAL the exe builds the key in one 0x18-byte slot (frame 0x40); ours uses two (frame 0x50)
+// The key a clip event handler is kept under: key events without their key code.
+static inline EventId ClipEventHandlerKey(const EventId& id)
+{
+    if (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp)
+        return EventId(id.Id);
+    return id;
+}
+
 // @0x14295d450
 __declspec(noinline) bool AvmCharacter::HasClipEventHandler(const EventId& id) const
 {
-    return EventHandlers.Get((id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id) != 0;
+    return EventHandlers.Get(ClipEventHandlerKey(id)) != 0;
 }
 
-// MS2-FUNCTIONAL the exe builds the key in one slot; ours copies it from a second slot before the lookup
 // @0x142964200
 bool AvmCharacter::InvokeClipEventHandlers(Environment* penv, const EventId& id)
 {
-    EventId key = (id.Id == EventId::Event_KeyDown || id.Id == EventId::Event_KeyUp) ? EventId(id.Id) : id;
-    const ArrayLH<Value, StatMV_ActionScript_Mem>* phandlers = EventHandlers.Get(key);
-    if (!phandlers)
-        return false;
-    for (UPInt i = 0, n = phandlers->GetSize(); i < n; i++)
-        GAS_Invoke((*phandlers)[i], 0, this, penv, 0, penv->GetTopIndex() + 1, 0);
-    return true;
+    const ArrayLH<Value, StatMV_ActionScript_Mem>* phandlers = EventHandlers.Get(ClipEventHandlerKey(id));
+    if (phandlers)
+    {
+        for (UPInt i = 0, n = phandlers->GetSize(); i < n; i++)
+            GAS_Invoke((*phandlers)[i], 0, this, penv, 0, penv->GetTopIndex() + 1, 0);
+        return true;
+    }
+    return false;
 }
 
 // The out-of-line resizes Reset calls (COMDATs where cl inlines them): the register array (exe 0x14297e0e0) and
