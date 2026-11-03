@@ -2474,25 +2474,39 @@ namespace Instances { namespace fl_display
 namespace Classes { namespace fl_display
 {
     // @0x1424439d0
-    // MS2-FUNCTIONAL: written from the exe's control flow
     Render::BlendMode BlendMode::GetBlendMode(const ASString& name)
     {
         const char* p = name.ToCStr();
-        if (!strcmp(p, "normal"))       return Render::Blend_Normal;
-        if (!strcmp(p, "add"))          return Render::Blend_Add;
-        if (!strcmp(p, "alpha"))        return Render::Blend_Alpha;
-        if (!strcmp(p, "multiply"))     return Render::Blend_Multiply;
-        if (!strcmp(p, "subtract"))     return Render::Blend_Subtract;
-        if (!strcmp(p, "layer"))        return Render::Blend_Layer;
-        if (!strcmp(p, "screen"))       return Render::Blend_Screen;
-        if (!strcmp(p, "lighten"))      return Render::Blend_Lighten;
-        if (!strcmp(p, "darken"))       return Render::Blend_Darken;
-        if (!strcmp(p, "difference"))   return Render::Blend_Difference;
-        if (!strcmp(p, "invert"))       return Render::Blend_Invert;
-        if (!strcmp(p, "erase"))        return Render::Blend_Erase;
-        if (!strcmp(p, "overlay"))      return Render::Blend_Overlay;
-        if (!strcmp(p, "hardlight"))    return Render::Blend_HardLight;
-        return Render::Blend_None;
+        Render::BlendMode mode = Render::Blend_None;
+        if (!strcmp(p, "normal"))
+            mode = Render::Blend_Normal;
+        else if (!strcmp(p, "add"))
+            mode = Render::Blend_Add;
+        else if (!strcmp(p, "alpha"))
+            mode = Render::Blend_Alpha;
+        else if (!strcmp(p, "multiply"))
+            mode = Render::Blend_Multiply;
+        else if (!strcmp(p, "subtract"))
+            mode = Render::Blend_Subtract;
+        else if (!strcmp(p, "layer"))
+            mode = Render::Blend_Layer;
+        else if (!strcmp(p, "screen"))
+            mode = Render::Blend_Screen;
+        else if (!strcmp(p, "lighten"))
+            mode = Render::Blend_Lighten;
+        else if (!strcmp(p, "darken"))
+            mode = Render::Blend_Darken;
+        else if (!strcmp(p, "difference"))
+            mode = Render::Blend_Difference;
+        else if (!strcmp(p, "invert"))
+            mode = Render::Blend_Invert;
+        else if (!strcmp(p, "erase"))
+            mode = Render::Blend_Erase;
+        else if (!strcmp(p, "overlay"))
+            mode = Render::Blend_Overlay;
+        else if (!strcmp(p, "hardlight"))
+            mode = Render::Blend_HardLight;
+        return mode;
     }
 }}
 
