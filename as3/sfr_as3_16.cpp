@@ -416,102 +416,95 @@ extern "C" void FUN_1424df070(void* self)
 }
 
 namespace {
-using Sfr16U64 = unsigned long long;
-
-Sfr16U64 Sfr16Hash32(const unsigned char* p)
+// SDK Value::HashFunctor::SDBM_Hash body; the exe unrolls it for each constant size.
+SF_FORCEINLINE Scaleform::UPInt Sfr16SdbmHash(const void* data_in, Scaleform::UPInt size, Scaleform::UPInt seed = 5381)
 {
-    return (Sfr16U64)p[0] + (Sfr16U64)(0ULL - 0x476f700348970ffbULL) +
-        (Sfr16U64)p[1] * 0x1003fULL + (Sfr16U64)p[2] * 0x1003fULL * 0x1003fULL +
-        (Sfr16U64)p[3] * 0x1003fULL * 0x1003fULL * 0x1003fULL;
-}
-
-Sfr16U64 Sfr16Hash64(const unsigned char* p)
-{
-    return (Sfr16U64)p[0] + (Sfr16U64)(0ULL - 0x514d9afbc3e934fbULL) +
-        (Sfr16U64)p[1] * 0x1003fULL + (Sfr16U64)p[2] * 0x1003fULL * 0x1003fULL +
-        (Sfr16U64)p[3] * 0x1003fULL * 0x1003fULL * 0x1003fULL +
-        (Sfr16U64)p[4] * 0xfc5d1543ec5f01ULL + (Sfr16U64)p[5] * (0ULL - 0x64cfd3d7e9d39ec1ULL) +
-        (Sfr16U64)p[6] * 0x5d02f409d62aee81ULL + (Sfr16U64)p[7] * (0ULL - 0x283c1b695cee4e41ULL);
-}
-
-Sfr16U64 Sfr16HashStringNode(const unsigned char* p)
-{
-    static const Sfr16U64 weights[40] = {
-        1ULL, 0x1003fULL, 0x1003fULL * 0x1003fULL, 0x1003fULL * 0x1003fULL * 0x1003fULL,
-        0xfc5d1543ec5f01ULL, 0ULL - 0x64cfd3d7e9d39ec1ULL, 0x5d02f409d62aee81ULL,
-        0ULL - 0x283c1b695cee4e41ULL, 0ULL - 0x2341bdc2ce641ffULL, 0x5950f7eab156c23fULL,
-        0ULL - 0xd284be79967327fULL, 0x772db89a0d1b92bfULL, 0xcda7b04cc881d01ULL,
-        0ULL - 0x5b36ed498d7fdcc1ULL, 0ULL - 0x5fcdf299af38537fULL, 0x79b79cf58da473bfULL,
-        0ULL - 0x6edad1edb0c883ffULL, 0ULL - 0x19c75a4705577bc1ULL, 0x4da9c32e33b78b81ULL,
-        0ULL - 0x200ac3e9ba53ab41ULL, 0x59700f277a27db01ULL, 0x11bb34deeacfe53fULL,
-        0ULL - 0x6e0f12545197957fULL, 0ULL - 0x2809d457a9ccca41ULL, 0x513d14a06c593a01ULL,
-        0x12a87fd3e3f6463fULL, 0x174b591b5fda4981ULL, 0x14a64d96e03916bfULL,
-        0x6283f85a44cb9901ULL, 0x36d46302871ba73fULL, 0ULL - 0x1eb91b4518f2d77fULL,
-        0x552d310c04bdf7bfULL, 0x272b16b3227ef801ULL, 0ULL - 0x45b2476b8abff7c1ULL,
-        0ULL - 0x6e4b1e371cfef87fULL, 0ULL - 0x42b38c8f1b3e2741ULL,
-        0x9414d8a24735701ULL, 0ULL - 0x6b63c68db09c96c1ULL,
-        0ULL - 0x341b8d7b0d4a197fULL, 0ULL - 0x6042de925ebb4641ULL
-    };
-    Sfr16U64 hash = 0ULL - 0x6127841818c65cfbULL;
-    for (unsigned i = 0; i < 40; ++i)
-        hash += (Sfr16U64)p[i] * weights[i];
-    return hash;
+    const Scaleform::UByte* data = (const Scaleform::UByte*)data_in;
+    Scaleform::UPInt h = seed;
+    while (size > 0)
+    {
+        size--;
+        h = (h << 16) + (h << 6) - h + (Scaleform::UPInt)data[size];
+    }
+    return h;
 }
 } // namespace
 
-// Value hash used by the AS3 hash-set adapters. The tag and payload cases follow the exe's switch.
-// MS2-FUNCTIONAL 0x1424e1040: hash polynomial is evaluated by loops rather than the exe's unrolled arithmetic.
+// Value hash used by the AS3 hash-set adapters (SDK body).
 // @0x1424e1040
-Scaleform::UPInt Scaleform::GFx::AS3::Value::HashFunctor::operator()(const Scaleform::GFx::AS3::Value& key) const
+Scaleform::UPInt Scaleform::GFx::AS3::Value::HashFunctor::operator()(const Scaleform::GFx::AS3::Value& v) const
 {
-    const Scaleform::UInt32* words = reinterpret_cast<const Scaleform::UInt32*>(&key);
-    const auto* bytes = reinterpret_cast<const unsigned char*>(words);
-    const Scaleform::UInt32 tag = words[0] & 0x1f;
-    const auto* payload = bytes + 0x10;
-    Sfr16U64 hash = 0;
-    switch (tag)
+    const Value::KindType kind = v.GetKind();
+    UPInt result = 0;
+
+    switch (kind)
     {
-    case 1:
-        hash = payload[0] != 0;
+    case Value::kUndefined:
         break;
-    case 2:
-    case 3:
-        hash = Sfr16Hash32(payload);
+    case Value::kBoolean:
+        result = v.AsBool() ? 1 : 0;
         break;
-    case 4:
-        hash = Sfr16Hash64(payload);
-        break;
-    case 5:
-        hash = Sfr16HashStringNode(*reinterpret_cast<const unsigned char* const*>(payload));
-        break;
-    case 7:
-    case 0x11:
-        hash = Sfr16Hash32(payload) ^ Sfr16Hash64(payload + 8);
-        break;
-    case 0x0b:
-    case 0x0c:
-    case 0x0d:
-    case 0x0e:
-    case 0x0f:
-        if (*reinterpret_cast<const Sfr16U64*>(payload) != 0)
-            hash = Sfr16Hash64(payload);
-        break;
-    case 0x10:
-    {
-        const auto* node = *reinterpret_cast<const unsigned char* const*>(payload);
-        hash = Sfr16HashStringNode(node) ^ Sfr16Hash64(payload + 8);
-        break;
-    }
-    default:
-        if (tag == 0x0a)
+    case Value::kInt:
+    case Value::kUInt:
         {
-            auto* object = *reinterpret_cast<void* const*>(payload);
-            if (object)
-                hash = *reinterpret_cast<const Scaleform::UInt32*>(static_cast<const unsigned char*>(object) + 0x1c) & 0xffffff;
+            SInt32 lv = v.AsInt();
+            result = Sfr16SdbmHash(&lv, sizeof(lv));
         }
         break;
+    case Value::kNumber:
+        {
+            Value::Number lv = v.AsNumber();
+            result = Sfr16SdbmHash(&lv, sizeof(lv));
+        }
+        break;
+    case Value::kString:
+        if (v.GetStringNode())
+            result = v.GetStringNode()->HashFlags & ASConstString::Flag_HashMask;
+        else
+            result = 0;
+        break;
+    case Value::kVTableInd:
+        {
+            SInt32 lv = v.GetVTableInd();
+            const Traits* tr = &v.GetTraits();
+            result = Sfr16SdbmHash(&lv, sizeof(lv)) ^ Sfr16SdbmHash(&tr, sizeof(tr));
+        }
+        break;
+    case Value::kVTableIndClosure:
+        {
+            SInt32 lv = v.GetVTableInd();
+            const Object* cv = v.GetClosure();
+            result = Sfr16SdbmHash(&lv, sizeof(lv)) ^ Sfr16SdbmHash(&cv, sizeof(cv));
+        }
+        break;
+    case Value::kThunk:
+        result = Sfr16SdbmHash(&v.AsThunk(), sizeof(ThunkInfo));
+        break;
+    case Value::kFunction:
+    case Value::kObject:
+    case Value::kClass:
+    case Value::kNamespace:
+    case Value::kThunkFunction:
+        if (v.GetObject())
+        {
+            const Object* lv = v.GetObject();
+            result = Sfr16SdbmHash(&lv, sizeof(lv));
+        }
+        else
+            result = 0;
+        break;
+    case Value::kThunkClosure:
+        {
+            const Object* cv = v.GetClosure();
+            result = Sfr16SdbmHash(&v.AsThunk(), sizeof(ThunkInfo)) ^ Sfr16SdbmHash(&cv, sizeof(cv));
+        }
+        break;
+    default:
+        break;
     }
-    return static_cast<Scaleform::SPInt>(hash + tag);
+
+    result += kind;
+    return result;
 }
 
 // ValueRegisterFile teardown: free the reserved pages, release the register values, then free the current page.
