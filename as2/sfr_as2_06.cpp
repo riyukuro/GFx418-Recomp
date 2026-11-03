@@ -1837,20 +1837,29 @@ bool AvmTextField::OnUnloading(bool)
     return true;
 }
 
-// MS2-FUNCTIONAL BroadcastMessage and the Rectangle creation are calls here; the exe inlines both
+// MS2-FUNCTIONAL: one instruction is scheduled differently: the exe moves penv into rcx for OperatorNew before
+// it zeroes v's type byte; ours after.
 // @0x14296a540
 void StageCtorFunction::NotifyOnResize(Environment* penv)
 {
     if (penv->GetSC()->pContext->CheckExtensions())
     {
+        Value         v;
         Render::RectF rect = penv->GetTarget()->GetMovieImpl()->AsMovieInterface()->GetVisibleFrameRect();
-        Value         v    = CreateRectangleObject(penv, rect);
+        // CreateRectangleObject (0x142937bc0) inlined
+        {
+            Ptr<Object> obj =
+                *penv->OperatorNew(penv->GetSC()->pContext->FlashGeomPackage, penv->GetBuiltin(ASBuiltin_Rectangle));
+            ASRect r(rect.x1, rect.y1, rect.x2, rect.y2);
+            static_cast<RectangleObject*>(obj.GetPtr())->SetProperties(penv, r);
+            v.SetAsObject(obj);
+        }
         penv->Push(v);
-        AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onResize"), 1, penv->GetTopIndex());
+        BroadcastMessageLocal(penv, this, penv->CreateConstString("onResize"), 1, penv->GetTopIndex());
         penv->Drop1();
     }
     else
-        AsBroadcaster::BroadcastMessage(penv, this, penv->CreateConstString("onResize"), 0, 0);
+        BroadcastMessageLocal(penv, this, penv->CreateConstString("onResize"), 0, 0);
 }
 
 // @0x14296a7c0
