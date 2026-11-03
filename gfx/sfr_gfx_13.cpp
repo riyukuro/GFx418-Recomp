@@ -9,7 +9,9 @@
 #include "../include/gfx/gfx_input.h"
 #include "../include/gfx/as2/as2_pointobject.h"
 #include "../include/gfx/as2/as2_rectangleobject.h"
+#pragma inline_depth(0)
 #include <atlbase.h>
+#pragma inline_depth()
 #include <atlstr.h>
 #include <stdlib.h>
 #include "../kernel/sf_random.h"
