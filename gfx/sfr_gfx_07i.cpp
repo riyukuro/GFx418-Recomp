@@ -546,6 +546,25 @@ static __forceinline SPInt RawFindKey8At(U* table, const U* key)
     }
 }
 
+// HashSetBase::findIndexCore over an eight-byte key at its home slot: the entry index, or -1.
+static __forceinline SPInt RawFindKey8Core(U* table, U key, U home)
+{
+    U index = home;
+    char* e = RawEntry(table, index, 0x20);
+    if (*(SPInt*)e == -2 || *(U*)(e + 8) != home)
+        return -1;
+    for (;;)
+    {
+        if (*(U*)(e + 8) == home && RawField<U>(e, 0x10) == key)
+            return (SPInt)index;
+        SPInt next = *(SPInt*)e;
+        if (next == -1)
+            return -1;
+        index = (U)next;
+        e = RawEntry(table, index, 0x20);
+    }
+}
+
 // The case-insensitive findIndexCore of a StringHash keyed by String (0x20-byte entries): the entry index, or -1.
 static inline SPInt FindStringKeyIndex(U** self, const String* key)
 {
@@ -593,11 +612,11 @@ static __forceinline U* RawFindMovieKey(U** self, U* out, const U* key)
 }
 
 // @0x142622030
-U* FUN_142622030(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
+__declspec(noinline) U* FUN_142622030(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
 // @0x142622160
-U* FUN_142622160(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
+__declspec(noinline) U* FUN_142622160(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
 // @0x142622290
-U* FUN_142622290(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
+__declspec(noinline) U* FUN_142622290(U** self, U* out, const U* key) { return RawFindMovieKey(self, out, key); }
 
 // @0x1426223c0
 U* FUN_1426223c0(U** self, U* out, const String* key)
@@ -753,7 +772,10 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
         }
         void* value = rec;
         NodeRef ref = { &key, &value };
-        SPInt idx = RawFindKey8(*set, key, 0x20);
+        U hash = FixedSizeHash<U>()(key);
+        SPInt idx = -1;
+        if (*set)
+            idx = RawFindKey8Core(*set, key, hash & (*set)[1]);
         if (idx >= 0)
         {
             char* payload = (char*)*set + 0x10 + idx * 0x20;
@@ -765,10 +787,10 @@ char* FUN_1426229f0(char* self, unsigned a, U b, unsigned count)
             RawField<void*>(payload, 0x18) = value;
         }
         else
-            FUN_14261ec70(set, set, &ref, RawKey8Hash(key));
+            FUN_14261ec70(set, set, &ref, hash);
         if (value)
             FUN_14257dcb0(value);
-        FUN_142622290(set, it, &key);
+        FUN_142622030(set, it, &key);
     }
     return *(char**)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18) + 0x10;
 }
@@ -1080,9 +1102,29 @@ void FUN_1426237c0(char* self) { RawPublishTopScope(self); }
 void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b, char useCurrent)
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
-    U it[2];
-    FUN_142622290(RawFieldPtr<U*>(self, 0x18), it, &key);
-    if (!RawFound(it))
+    struct Iterator
+    {
+        U**   pHash;
+        SPInt Index;
+        bool  IsEnd() const { return !pHash || !*pHash || Index > (SPInt)(*pHash)[1]; }
+        char* Entry() const { return (char*)(*pHash + 2) + Index * 0x20; }
+    } it;
+    FUN_142622160(RawFieldPtr<U*>(self, 0x18), (U*)&it, &key);
+    if (!it.IsEnd())
+    {
+        char* rec = RawField<char*>(it.Entry(), 0x18);
+        unsigned cnt = RawLocked<unsigned, 0x78, 0x70>(self);
+        if (useCurrent && cnt != 0)
+        {
+            U cur = RawLocked<U, 0x78, 0x68>(self);
+            unsigned old = RawField<unsigned>(rec, 0x28);
+            RawField<U>(rec, 0x20) = cur;
+            if (old != 0 && old < cnt)
+                cnt = old;
+            RawField<unsigned>(rec, 0x28) = cnt;
+        }
+    }
+    else
     {
         char* rec = (char*)Memory::AllocAutoHeap(self, 0x30, AllocInfo(0x242, 0, 0));
         U cur = 0;
@@ -1108,20 +1150,6 @@ void FUN_142623820(char* self, unsigned hi, U lo, const char* text, int a, int b
         if (value)
             FUN_14257dcb0(value);
     }
-    else
-    {
-        char* rec = *(char**)(*(U*)it[0] + 0x10 + it[1] * 0x20 + 0x18);
-        unsigned cnt = RawLocked<unsigned, 0x78, 0x70>(self);
-        if (useCurrent && cnt != 0)
-        {
-            U cur = RawLocked<U, 0x78, 0x68>(self);
-            unsigned old = RawField<unsigned>(rec, 0x28);
-            RawField<U>(rec, 0x20) = cur;
-            if (old != 0 && old < cnt)
-                cnt = old;
-            RawField<unsigned>(rec, 0x28) = cnt;
-        }
-    }
 }
 
 // Interns a string with ';' replaced by '\\' under the key (a, b).
@@ -1130,7 +1158,7 @@ void FUN_142623a00(char* self, unsigned hi, U lo, const char* text)
 {
     U key = ((U)hi << 32) + (lo & 0xffffffffULL);
     U it[2];
-    FUN_142622160(RawFieldPtr<U*>(self, 0xd8), it, &key);
+    FUN_142622290(RawFieldPtr<U*>(self, 0xd8), it, &key);
     if (!RawFound(it))
     {
         U len = strlen(text);
