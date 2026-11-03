@@ -2414,6 +2414,26 @@ MovieDefRootNode::~MovieDefRootNode()
 }
 }}} // namespace Scaleform::GFx::AS3
 
+namespace Scaleform { namespace GFx { namespace AS3 {
+// Value::Assign(const ASString&) (0x1424ed9d0, out of line in sfr_as3_17). The exe's operator= below has it
+// inlined, so its body is visible here too. sfr_as3_17 defines it inline SF_NOINLINE, so the two copies are COMDATs.
+SF_FORCEINLINE void Value::Assign(const ASString& v)
+{
+    Release();
+    if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
+    {
+        value = (ASStringNode*)NULL;
+        SetKind(kObject);
+    }
+    else
+    {
+        SetKind(kString);
+        value = v.GetNode();
+        AddRefString();
+    }
+}
+}}} // namespace Scaleform::GFx::AS3
+
 Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::* const pSfr16ValueStringAssign)(
     const Scaleform::GFx::ASString&) =
     static_cast<Scaleform::GFx::AS3::Value& (Scaleform::GFx::AS3::Value::*)(const Scaleform::GFx::ASString&)>(
@@ -2459,7 +2479,6 @@ Scaleform::AutoPtr<Sfr16DisplayObjectWeakArray>&
 // MS2-PIN: ??1?$HashSetBase@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@UNodeAltHashF@12@U?$AllocatorLH@VASString@GFx@Scaleform@@$0BEE@@2@V?$HashsetNodeEntry@U?$HashNode@VASString@GFx@Scaleform@@VValue@AS3@23@UASStringHashFunctor@23@@Scaleform@@UNodeHashF@12@@2@@Scaleform@@QEAA@XZ 0x1424dd110
 // MS2-FUNCTIONAL ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z: generated wrapper runs the recovered destructor and same delete-flag free path; compiler separates the wrapper from cleanup.
 // MS2-PIN: ??_GLoadQueueEntry@AS3@GFx@Scaleform@@UEAAPEAXI@Z 0x1424e3020
-// MS2-FUNCTIONAL ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z: the emitted inline overload delegates to Value::Assign(const ASString&) and preserves the same clear, namespace-retain, and string-reference behavior.
 // MS2-PIN: ??4Value@AS3@GFx@Scaleform@@QEAAAEAV0123@AEBVASString@23@@Z 0x1424e0d40
 // MS2-PIN: ??4?$AutoPtr@V?$ArrayLH@V?$WeakPtr@VDisplayObject@GFx@Scaleform@@@Scaleform@@$01UArrayDefaultPolicy@2@@Scaleform@@@Scaleform@@QEAAAEAV01@AEBV01@@Z 0x1424e0340
 // MS2-PIN: ?FUN_1424debc0@@YAXPEAX@Z 0x1424debc0

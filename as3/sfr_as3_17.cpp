@@ -117,7 +117,8 @@ SF_NOINLINE void Value::Assign(const Value& other)
 }
 
 // @0x1424ed9d0
-void Value::Assign(const ASString& v)
+// inline: sfr_as3_16 has an inline copy for its operator= (0x1424e0d40), so both are COMDATs.
+inline SF_NOINLINE void Value::Assign(const ASString& v)
 {
     Release();
     if (v.GetNode() == v.GetNode()->GetManager()->GetNullStringNode())
@@ -3933,7 +3934,8 @@ __declspec(noinline) CheckResult Value::Convert2PrimitiveValueUnsafe(Value& resu
         switch (GetKind())
         {
         case kNamespace:
-            result = GetNamespace()->GetUri();
+            // The exe calls the out-of-line operator= (0x1424e0d40).
+            (result.*static_cast<Value& (Value::*)(const ASString&)>(&Value::operator=))(GetNamespace()->GetUri());
             return true;
         case kThunk:
         case kThunkClosure:
