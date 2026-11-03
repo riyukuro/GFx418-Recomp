@@ -3558,53 +3558,25 @@ void Sfr31WriteRecord3(UPInt self, UInt32 a, UInt32 b, UInt32 c)
     *reinterpret_cast<int*>(self + 0x10) = 2;
 }
 
-// Evaluates a virtual getter into a scratch Value; a non-null result is handed to FUN_1424e0860, else the out slot is cleared.
-// MS2-FUNCTIONAL 0x142531f40: raw-offset model; codegen differs from the exe
+// Constructs an instance of classObj; on an exception or a null/undefined result the out pointer is cleared and the
+// exception dropped, else FUN_1424e0860 stores the object.
 // @0x142531f40
-bool ASVM::_constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned arg, const Value* argv)
+bool ASVM::_constructInstance(SPtr<Object>& pobj, Object* classObj, unsigned argc, const Value* argv)
 {
-    const UPInt self = reinterpret_cast<UPInt>(this);
-    UPInt* out = reinterpret_cast<UPInt*>(&pobj);
-    const UPInt src = reinterpret_cast<UPInt>(classObj);
-    const UPInt arg2 = reinterpret_cast<UPInt>(argv);
-    // the AS3 Value is 0x20 bytes (its value union holds two pointers): Construct writes all of it, so a 0x18-byte
-    // buffer let the second value word overwrite the /GS cookie the array got (the exe's frame has no cookie)
-    struct { UInt32 flags, pad; UPInt bonus, v0, v1; } val = {};
-    UInt32* tmp = &val.flags;
-    typedef void (*Fn)(UPInt, void*, UInt32, UPInt, int);
-    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(src, 0), 0x60))(src, &val, arg, arg2, 1);
     bool result;
-    const UInt32 kind = tmp[0] & 0x1f;
-    if (*reinterpret_cast<UInt8*>(self + 0x180) == 0 && kind != 0 && (kind - 0xc > 3 || *reinterpret_cast<UPInt*>(&tmp[4]) != 0))
+    Value res;
+    classObj->Construct(res, argc, argv, true);
+    if (IsException() || res.IsNullOrUndefined())
     {
-        FUN_1424e0860(out, *reinterpret_cast<UPInt*>(&tmp[4]));
-        result = true;
+        pobj = NULL;
+        if (IsException())
+            HandleException = false;
+        result = false;
     }
     else
     {
-        UPInt old = *out;
-        if (old != 0)
-        {
-            if ((old & 1) == 0 && (*reinterpret_cast<UInt32*>(old + 0x10) & 0x3fffff) != 0)
-            {
-                *reinterpret_cast<UInt32*>(old + 0x10) -= 1;
-                FUN_1423dfa20(reinterpret_cast<void*>(old));
-            }
-            *out = 0;
-        }
-        *reinterpret_cast<UInt8*>(self + 0x180) = 0;
-        result = false;
-    }
-    if (kind > 9)
-    {
-        if (((tmp[0] >> 9) & 1) == 0)
-            FUN_142521f00(tmp);
-        else
-        {
-            int* rc = *reinterpret_cast<int**>(&tmp[4]);
-            if (--*rc == 0)
-                Memory::pGlobalHeap->Free(rc);
-        }
+        FUN_1424e0860(&pobj, reinterpret_cast<UPInt>(res.GetObject()));
+        result = true;
     }
     return result;
 }
