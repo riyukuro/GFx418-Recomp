@@ -6313,15 +6313,12 @@ void cft_c_Ycc420plnToRgb888Prg(cri_any cri_p0, cri_any cri_p1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). The 4-row loop is written as plain pointer steps with 5a+3b+4 and 7a+b+4 filters; left: our cl folds (x >> 3) << 16 of the non-negative sums into shl+and where the exe keeps sar+shl, and register choice.
 // @0x140061ce0
 void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
 {
   cri_u8 *arg1 = cri_p0;
   longlong *arg2 = cri_p1;
-  byte *pb_v1;
-  byte *pb_v2;
-  byte *pb_v3;
   byte b_v4;
   byte b_v5;
   byte b_v6;
@@ -6331,13 +6328,10 @@ void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
   uint u_v10;
   uint u_v11;
   int i_v12;
-  byte *pb_v13;
   uint *pu_v14;
-  uint *pu_v15;
   uint *pu_v16;
   uint u_v17;
   int i_v18;
-  byte *pb_v19;
   uint u_v20;
   byte *pb_v21;
   byte *pb_v22;
@@ -6347,12 +6341,8 @@ void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
   byte *pb_v26;
   byte *pb_v27;
   byte *pb_v28;
-  byte *pb_v29;
   uint u_v30;
-  uint *pu_v31;
-  uint *pu_v32;
   uint u_v33;
-  uint *pu_v34;
   uint *pu_v35;
   byte *loc_d8;
   byte *loc_d0;
@@ -6412,7 +6402,7 @@ void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
   }
   pb_v22 = (byte *)arg1[1];
   pb_v21 = (byte *)arg1[2];
-  i_v12 = (int)((int)arg2[2] + ((int)arg2[2] >> 0x1f & 3U)) >> 2;
+  i_v12 = (int)arg2[2] / 4;
   pu_v35 = pu_v16 + i_v12;
   pu_v23 = pu_v16 + i_v12 * 2;
   pu_v14 = pu_v16 + i_v12 * 3;
@@ -6434,59 +6424,36 @@ void cft_c_Ycc420plnToYcc422pix2Int2smp(cri_any cri_p0, cri_any cri_p1)
     do {
       if (u_v30 != 0) {
         loc_78 = (ulonglong)u_v30;
-        pu_v15 = pu_v16;
-        pb_v19 = pb_v27;
-        pb_v29 = pb_v26;
-        pu_v31 = pu_v23;
-        pu_v32 = pu_v14;
-        pu_v34 = pu_v35;
         do {
-          pb_v1 = pb_v28 + 1;
-          b_v4 = *pb_v28;
+          *pu_v16 = (((*pb_v21 * 5 + *loc_b0 * 3 + 4) >> 3) << 0x10 |
+                     (*loc_d0 * 3 + *pb_v22 * 5 + 4) >> 3) << 8 | (uint)pb_v28[1] << 0x10 |
+                    (uint)*pb_v28;
+          *pu_v35 = (((*loc_c0 * 7 + *loc_c8 + 4) >> 3) << 0x10 |
+                     (*loc_b8 * 7 + *loc_d8 + 4) >> 3) << 8 | (uint)pb_v26[1] << 0x10 |
+                    (uint)*pb_v26;
+          *pu_v23 = (((*loc_b0 * 7 + *pb_v21 + 4) >> 3) << 0x10 |
+                     (*loc_d0 * 7 + *pb_v22 + 4) >> 3) << 8 | (uint)pb_v27[1] << 0x10 |
+                    (uint)*pb_v27;
+          *pu_v14 = (((*loc_c8 * 5 + *loc_c0 * 3 + 4) >> 3) << 0x10 |
+                     (*loc_d8 * 5 + *loc_b8 * 3 + 4) >> 3) << 8 | (uint)loc_80[1] << 0x10 |
+                    (uint)*loc_80;
           pb_v28 = pb_v28 + 2;
-          pu_v16 = pu_v15 + 1;
-          pb_v26 = pb_v29 + 2;
-          pu_v35 = pu_v34 + 1;
-          pb_v27 = pb_v19 + 2;
-          pu_v23 = pu_v31 + 1;
-          *pu_v15 = (((int)((uint)*pb_v21 + (uint)*pb_v21 * 4 + 4 +
-                            (uint)*loc_b0 + (uint)*loc_b0 * 2) >> 3) << 0x10 |
-                     (int)((uint)*loc_d0 + (uint)*loc_d0 * 2 + 4 +
-                          (uint)*pb_v22 + (uint)*pb_v22 * 4) >> 3) << 8 | (uint)*pb_v1 << 0x10 |
-                     (uint)b_v4;
-          *pu_v34 = (((int)((uint)*loc_c0 * 7 + 4 + (uint)*loc_c8) >> 3) << 0x10 |
-                     (int)((uint)*loc_b8 * 7 + 4 + (uint)*loc_d8) >> 3) << 8 |
-                     (uint)pb_v29[1] << 0x10 | (uint)*pb_v29;
-          pb_v13 = loc_80 + 2;
-          *pu_v31 = (((int)((uint)*loc_b0 * 7 + 4 + (uint)*pb_v21) >> 3) << 0x10 |
-                     (int)((uint)*loc_d0 * 7 + 4 + (uint)*pb_v22) >> 3) << 8 |
-                     (uint)pb_v19[1] << 0x10 | (uint)*pb_v19;
-          loc_d0 = loc_d0 + 1;
-          loc_b0 = loc_b0 + 1;
-          b_v4 = *loc_c8;
-          loc_c8 = loc_c8 + 1;
-          pu_v14 = pu_v32 + 1;
-          pb_v1 = loc_c0 + 1;
-          pb_v22 = pb_v22 + 1;
+          pb_v26 = pb_v26 + 2;
+          pb_v27 = pb_v27 + 2;
+          loc_80 = loc_80 + 2;
+          pu_v16 = pu_v16 + 1;
+          pu_v35 = pu_v35 + 1;
+          pu_v23 = pu_v23 + 1;
+          pu_v14 = pu_v14 + 1;
           pb_v21 = pb_v21 + 1;
-          pb_v2 = loc_d8 + 1;
-          pb_v3 = loc_b8 + 1;
+          pb_v22 = pb_v22 + 1;
+          loc_b0 = loc_b0 + 1;
+          loc_d0 = loc_d0 + 1;
+          loc_c0 = loc_c0 + 1;
+          loc_c8 = loc_c8 + 1;
+          loc_b8 = loc_b8 + 1;
+          loc_d8 = loc_d8 + 1;
           loc_78 = loc_78 - 1;
-          *pu_v32 = (((int)((uint)b_v4 + (uint)b_v4 * 4 + 4 +
-                            (uint)*loc_c0 + (uint)*loc_c0 * 2) >> 3) << 0x10 |
-                     (int)((uint)*loc_d8 + (uint)*loc_d8 * 4 + 4 +
-                          (uint)*loc_b8 + (uint)*loc_b8 * 2) >> 3) << 8 |
-                     (uint)loc_80[1] << 0x10 | (uint)*loc_80;
-          pu_v15 = pu_v16;
-          pb_v19 = pb_v27;
-          pb_v29 = pb_v26;
-          pu_v31 = pu_v23;
-          pu_v32 = pu_v14;
-          pu_v34 = pu_v35;
-          loc_d8 = pb_v2;
-          loc_c0 = pb_v1;
-          loc_b8 = pb_v3;
-          loc_80 = pb_v13;
         } while (loc_78 != 0);
       }
       if (u_v20 != 0) {
