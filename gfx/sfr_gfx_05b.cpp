@@ -431,7 +431,6 @@ void Sprite::AttachActiveSound(ActiveSoundItem* item)
 
 // A clip loaded by loadMovie (loadedSeparately) or imported from another movie gets its own root node.
 // @0x1425d9760
-// MS2-FUNCTIONAL: member initialisation order and the flag byte merge differ from the exe
 Sprite::Sprite(TimelineDef* pdef, MovieDefImpl* pdefImpl, ASMovieRootBase* pr, InteractiveObject* pparent,
                ResourceId id, bool loadedSeparately)
     : DisplayObjContainer(pdefImpl, pr, pparent, id), pDef(pdef), PlayStatePriv(State_Playing), CurrentFrame(0),
@@ -445,7 +444,9 @@ Sprite::Sprite(TimelineDef* pdef, MovieDefImpl* pdefImpl, ASMovieRootBase* pr, I
         Flags |= Flags_SpriteDef;
     }
     DisplayObjectBase::Flags |= Mask_Sprite;
-    Flags = UByte((Flags & ~(Flags_HasLoopedPriv | Flags_LockRoot)) | Flags_UpdateFrame);
+    SetUpdateFrame(true);
+    SetHasLoopedPriv(false);
+    Flags = UByte(Flags & ~Flags_LockRoot);
     Flags = UByte(loadedSeparately ? (Flags | Flags_LoadedSeparately) : (Flags & ~Flags_LoadedSeparately));
 
     bool importFlag = pparent && !loadedSeparately && pparent->GetResourceMovieDef() != pdefImpl;
