@@ -449,7 +449,7 @@ LoadProcess::LoadProcess(MovieDataDef* pdataDef, LoadStates* pstates, unsigned l
     : LoaderTask(pstates, Id_MovieDataLoad), ProcessStream(0, pdataDef->pData->GetHeap(), 0, 0), SWFFileAttributes(0)
 {
     ParseFlags      = pstates->pParseControl ? pstates->pParseControl->ParseFlags : 0;
-    pLoadData       = pdataDef->pData.GetPtr();
+    pLoadData       = pdataDef->pData;
     pDataDef_Unsafe = pdataDef;
     pTimelineDef    = 0;
     LoadFlags       = loadFlags;
