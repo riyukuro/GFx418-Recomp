@@ -953,8 +953,8 @@ HRESULT FUN_1423d72a0(void* object, const unsigned long long* iid, void** output
     return S_OK;
 }
 
-// Follows the executable's nested IME provider query and releases its temporary refcounted object.
-// MS2-FUNCTIONAL: same code as the exe except that the result and the temporary swap rbx and rdi (135 vs 138 bytes)
+// Asks the IME provider's factory for a temporary refcounted object and returns its interface's slot-0x70 test
+// (true when there is no provider or no object). The object is held in a Ptr and released at the end.
 // @0x1423ce460
 unsigned char FUN_1423ce460(void* self)
 {
@@ -966,15 +966,15 @@ unsigned char FUN_1423ce460(void* self)
         result = true;
     else {
         void* factory = provider + 0x10;
-        void* temporary = reinterpret_cast<void*(*)(void*, unsigned)>((*reinterpret_cast<void***>(factory))[3])(
-            factory, 0x18);
+        Scaleform::Ptr<Scaleform::RefCountImpl> temporary = *static_cast<Scaleform::RefCountImpl*>(
+            reinterpret_cast<void*(*)(void*, unsigned)>((*reinterpret_cast<void***>(factory))[3])(factory, 0x18));
         if (!temporary)
             result = true;
         else {
-            void* interfaceObject = *reinterpret_cast<void**>(static_cast<unsigned char*>(temporary) + 0x18);
+            void* interfaceObject =
+                *reinterpret_cast<void**>(reinterpret_cast<unsigned char*>(temporary.GetPtr()) + 0x18);
             result = reinterpret_cast<bool(*)(void*)>(
                 (*reinterpret_cast<void***>(interfaceObject))[0x70 / sizeof(void*)])(interfaceObject);
-            FUN_14257dcb0(temporary);
         }
     }
     return result;
