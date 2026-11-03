@@ -122,39 +122,47 @@ namespace AS2 {
 
 // A free slot of the root buffer is taken first; otherwise the root is appended, and when the buffer cannot grow
 // one collection runs before a second try. A root that still does not fit is just not buffered.
-// MS2-FUNCTIONAL: the exe inlines the first PushBackSafe
 // @0x142592030
 template<int Stat>
 void RefCountCollector<Stat>::AddRoot(BaseType* root)
 {
     if (FirstFreeRootIndex != SF_MAX_UPINT)
     {
+        UInt32 rootIndex = (UInt32)FirstFreeRootIndex; // SetBuffered's argument
         root->RefCount |= BaseType::Flag_Buffered;
-        root->RootIndex = (UInt32)FirstFreeRootIndex;
-        BaseType*& slot = Roots[FirstFreeRootIndex];
-        SPInt next = (SPInt)slot >> 1;
-        slot = root;
-        FirstFreeRootIndex = (UPInt)next;
-        return;
-    }
-    root->RefCount |= BaseType::Flag_Buffered;
-    root->RootIndex = (UInt32)Roots.GetSize();
-    Flags |= 1;
-    bool added = Roots.PushBackSafe(root);
-    Flags &= ~1;
-    if (!added)
-    {
-        bool collected = Collect();
-        Flags |= 1;
-        if (!collected || !Roots.PushBackSafe(root))
+        root->RootIndex = (UInt32)rootIndex;
+
+        union
         {
-            UInt32 rc = root->RefCount;
-            root->RefCount = rc & ~BaseType::Flag_Buffered;
-            if (!root->IsInList())
-                root->RootIndex = ~0u;
-            root->RefCount = rc & ~(BaseType::Flag_Buffered | (BaseType::Mask_State << BaseType::Shift_State));
+            BaseType* Ptr;
+            UPInt     UPtrValue;
+            SPInt     SPtrValue;
+        } u;
+        u.Ptr = Roots[FirstFreeRootIndex];
+        u.SPtrValue >>= 1;
+        Roots[FirstFreeRootIndex] = root;
+        FirstFreeRootIndex = u.UPtrValue;
+    }
+    else
+    {
+        UPInt rootIndex = Roots.GetSize(); // SetBuffered's argument
+        root->RefCount |= BaseType::Flag_Buffered;
+        root->RootIndex = (UInt32)rootIndex;
+        Flags |= 1;
+        if (!Roots.PushBackSafe(root))
+        {
+            Flags &= ~1;
+            bool collected = Collect();
+            Flags |= 1;
+            if (!collected || !Roots.PushBackSafe(root))
+            {
+                root->ClearBuffered();
+                root->SetState(BaseType::State_InUse);
+            }
+            Flags &= ~1;
         }
-        Flags &= ~1;
+        else
+            Flags &= ~1;
     }
 }
 
@@ -209,7 +217,7 @@ bool RefCountCollector<Stat>::Collect(Stats* pstats)
                 proot->ClearBuffered();
         }
         FirstFreeRootIndex = SF_MAX_UPINT;
-        if (Roots.Size != 0)
+        if (0 < Roots.Size)
             Roots.Size = 0;
 
         BaseType* p = ListRoot.pNext;
@@ -218,14 +226,14 @@ bool RefCountCollector<Stat>::Collect(Stats* pstats)
             // 2. scan: referenced from outside means in use
             do
             {
-                if (p->IsRefCntZero())
-                    p->SetState(BaseType::State_Garbage);
-                else
+                if ((p->RefCount & BaseType::Mask_RefCount) > 0)
                 {
                     p->SetState(BaseType::State_InUse);
                     pLastPtr = p;
                     p->ExecuteForEachChild_GC(this, BaseType::Operation_ScanInUse);
                 }
+                else
+                    p->SetState(BaseType::State_Garbage);
                 p = p->pNext;
             } while (p != &ListRoot);
 
@@ -278,10 +286,13 @@ bool RefCountCollector<Stat>::Collect(Stats* pstats)
 template<int Stat>
 bool RefCountCollector<Stat>::RootArray::PushBackSafe(BaseType* const& val)
 {
-    UPInt page = Size >> 10;
+    // acquireDataPtrSafe
+    BaseType** pslot;
+    UPInt      page = Size >> 10;
     if (page >= NumPages && !allocatePageSafe(page))
-        return false;
-    BaseType** pslot = &Pages[page][Size & 0x3ff];
+        pslot = 0;
+    else
+        pslot = &Pages[page][Size & 0x3ff];
     if (!pslot)
         return false;
     *pslot = val;
