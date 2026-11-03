@@ -41,6 +41,8 @@ namespace Scaleform { class Range; } // gfx_textfield.h (WIP header) names Range
 #include "../include/render/text_fontmanager.h"
 #include "../include/render/render_font.h"
 
+void FUN_1424aa0f0(void* pthis);  // Render::Text::TextFormat destructor (global, as in sfr_as2_04c)
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 inline TextFormatObject::TextFormatObject(ASStringContext* psc, Object* pprototype)
@@ -64,14 +66,32 @@ TextFormatProto::TextFormatProto(ASStringContext* psc, Object* pprototype, const
     InitFunctionMembers(this, psc, FunctionTable, PropFlags(PropFlags::PropFlag_DontEnum));
 }
 
+void FUN_142606690(void* pthis);
+extern const void* DAT_14321d778[];
+extern const void* DAT_14321d7c0[];
+extern const void* DAT_14321d868[];
+
+// The deleting destructor with the chain inlined, a twin of DeleteAs2_14292d6a0 (sfr_as2_04c): the three vftables,
+// the prototype base, the paragraph and text formats, then Object; flag 4 is the sized delete.
 // @0x142928860
-// MS2-FUNCTIONAL: the scalar deleting destructor written out; the exe has the destructor chain inlined differently
 void* DeleteTextFormatProto(TextFormatProto* pthis, unsigned flags)
 {
-    pthis->~TextFormatProto();
+    void* p = pthis;
+    *(const void**)p = DAT_14321d778;
+    *(const void**)((char*)p+0x20) = DAT_14321d7c0;
+    *(const void**)((char*)p+0xd0) = DAT_14321d868;
+    reinterpret_cast<GASPrototypeBase*>((char*)p+0xd0)->GASPrototypeBase::~GASPrototypeBase();
+    FUN_142606690((void*)((char*)p+0xb0));
+    ::FUN_1424aa0f0((void*)((char*)p+0x68));
+    static_cast<Object*>(pthis)->Object::~Object();
     if (flags & 1)
-        Memory::Free(pthis);
-    return pthis;
+    {
+        if (!(flags & 4))
+            Memory::Free(p);
+        else
+            ::operator delete(p, 0x110);
+    }
+    return p;
 }
 
 }}}
