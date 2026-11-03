@@ -108,10 +108,11 @@ void QuickSortSliced(Array& arr, UPInt start, UPInt end, Less less)
     for (;;)
     {
         SPInt count = hi - lo;
-        SPInt i, j;
+        SPInt i, j, pivot;
         if (count > InsertionSortMax)
         {
-            Swap(arr[lo], arr[lo + count / 2]);
+            pivot = lo + count / 2;
+            Swap(arr[lo], arr[pivot]);
 
             i = lo + 1;
             j = hi - 1;
@@ -153,7 +154,9 @@ void QuickSortSliced(Array& arr, UPInt start, UPInt end, Less less)
         }
         else
         {
-            for (j = lo, i = lo + 1; i < hi; j = i, ++i)
+            j = lo;
+            i = j + 1;
+            for (; i < hi; j = i, i++)
             {
                 for (; less(arr[j + 1], arr[j]); --j)
                 {
