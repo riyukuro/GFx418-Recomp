@@ -172,24 +172,28 @@ void FUN_1427436a0(void* self)
 
 // Sound: releases its FMOD sound (+0x30), leaves the renderer's list under the renderer's lock (+0x28, +0xc8) and
 // drops the renderer (+0x38).
-// MS2-FUNCTIONAL: same calls in the same order; register allocation and frame differ (exe this in rdi, renderer in rbx, 22 bytes longer).
 // @0x142743730
 __declspec(noinline) void FUN_142743730(void* self)
 {
     RawSetVtables(self, DAT_1431bed18, DAT_1431bed50);
     if (RawField<void*>(self, 0x30))
         RawField<FMOD::Sound*>(self, 0x30)->release();
-    char* renderer = RawField<char*>(self, 0x28);
     RawField<void*>(self, 0x30) = 0;
-    if (renderer)
+    if (char* renderer = RawField<char*>(self, 0x28))
     {
-        EnterCriticalSection((LPCRITICAL_SECTION)(renderer + 0xc8));
+        struct Locker
+        {
+            LPCRITICAL_SECTION pLock;
+            Locker(LPCRITICAL_SECTION plock) : pLock(plock) { EnterCriticalSection(pLock); }
+            ~Locker() { LeaveCriticalSection(pLock); }
+        } guard((LPCRITICAL_SECTION)(renderer + 0xc8));
         RawUnlinkNode(self);
-        LeaveCriticalSection((LPCRITICAL_SECTION)(renderer + 0xc8));
     }
     if (RawField<void*>(self, 0x38))
         RawRefCountNTSRelease(RawField<void*>(self, 0x38));
-    RawSetVtables(self, DAT_1431bec50, DAT_1431bec80);
+    // The exe keeps these stores even though the base dtors overwrite them; volatile stops cl removing them here.
+    *reinterpret_cast<void* volatile*>(static_cast<char*>(self)) = DAT_1431bec50;
+    *reinterpret_cast<void* volatile*>(static_cast<char*>(self) + 0x10) = DAT_1431bec80;
     RawUnlinkNode(self);
     RawField<void*>(self, 0x10) = DAT_1431bec40;
     RawField<void*>(self, 0) = DAT_1431bcbb0;
