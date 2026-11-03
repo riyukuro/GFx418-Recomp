@@ -2621,18 +2621,26 @@ Object* Environment::OperatorNew(const FunctionRef& constructor, int nargs, int 
     return pnew;
 }
 
-// MS2-FUNCTIONAL: queries the level-zero AS2 environment for the supplied variable or target path.
+// MovieRoot::GetLevelMovie (sfr_as2_05), which the exe inlines here.
+static SF_INLINE Sprite* IsAvailable_GetLevelMovie(const MovieImpl* pmovie, int level)
+{
+    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
+        if (pmovie->pMovieLevels[i].Level == level)
+            return static_cast<Sprite*>(pmovie->pMovieLevels[i].pSprite);
+    }
+    return 0;
+}
+
+// Queries the level-zero AS2 environment for the supplied variable or target path.
 // @0x142965160
 bool MovieRoot::IsAvailable(const char* name) const
 {
-    if (!name)
+    if (!IsAvailable_GetLevelMovie(pMovieImpl, 0))
         return false;
-    Sprite* level0 = GetLevelMovie(0);
-    if (!level0)
-        return false;
-    AvmCharacter* avm = ToAvmCharacter(level0);
-    Environment* environment = avm ? avm->GetASEnvironment() : 0;
-    return environment && environment->IsAvailable(environment->CreateString(name));
+    Environment* environment =
+        static_cast<AvmCharacter*>(IsAvailable_GetLevelMovie(pMovieImpl, 0)->GetAvmObjImpl())->GetASEnvironment();
+    return environment->IsAvailable(environment->CreateString(name));
 }
 
 }}} // namespace Scaleform::GFx::AS2
