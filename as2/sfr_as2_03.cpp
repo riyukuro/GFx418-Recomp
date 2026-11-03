@@ -620,12 +620,10 @@ GlowFilterObject::GlowFilterObject(Environment* penv)
 {
 }
 
-// MS2-FUNCTIONAL cl stores the stat id of the alloc before the base vftables; the exe stores it after the first one
 // @0x14291ab70
 ColorMatrixFilterObject::ColorMatrixFilterObject(Environment* penv)
-    : BitmapFilterObject(penv)
+    : BitmapFilterObject(penv, Render::Filter_ColorMatrix)
 {
-    pFilter = *SF_HEAP_AUTO_NEW(this) Render::ColorMatrixFilter();
 }
 
 // @0x142918dd0
