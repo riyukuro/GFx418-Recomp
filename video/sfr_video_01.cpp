@@ -2704,12 +2704,13 @@ void FUN_140006670(void** array, Scaleform::UPInt size)
     fields[1] = size;
 }
 
-// MS2-FUNCTIONAL: appends one 12-byte record to the array, growing capacity when needed.
+// appends one 12-byte record to the array, growing capacity when needed. The exe reads Size again for the
+// shrink compare (hence the volatile first read).
 // @0x1400066f0
 void FUN_1400066f0(void** array, const unsigned* record)
 {
     Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
-    const Scaleform::UPInt size = data->Size + 1;
+    const Scaleform::UPInt size = *reinterpret_cast<const volatile Scaleform::UPInt*>(&data->Size) + 1;
     if (size < data->Size) { if (size < data->Capacity >> 1) Video01ReserveVectors(array, array, size); }
     else if (size >= data->Capacity) Video01ReserveVectors(array, array, size + (size >> 2));
     data->Size = size;
