@@ -5857,15 +5857,17 @@ void FUN_1423d3510(long long* manager, unsigned long long wParam, unsigned long 
 // its String at +0x98. CS_INSERTCHAR|CS_NOMOVECARET: wParam becomes a one-character composition. GCS_COMPSTR with
 // GCS_CURSORPOS (unless mode 0xd00001): vtbl+0xb8 again. GCS_COMPATTR: sets the composition cursor, computes +0x64
 // from the target clause, redraws the input window (vtbl+0xb0) and highlights each run of equal attributes.
-// Reviewed branch by branch against the exe, same behaviour; the buffer sizes are 32-bit as in the exe.
+// Reviewed branch by branch against the exe, same behaviour; the buffer sizes are 32-bit as in the exe. Left: the
+// frame (exe 0xd8, ime spilled) and register allocation in the attribute loop (the exe counts a 64-bit trip count).
 // @0x1423cfd50
 void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long long flags)
 {
     auto* self = reinterpret_cast<unsigned char*>(manager);
-    auto** vtable = *reinterpret_cast<void***>(self);
-    auto* states = reinterpret_cast<Scaleform::GFx::StateBag*>(*reinterpret_cast<unsigned char**>(self + 8) + 0x10);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
+#define states reinterpret_cast<Scaleform::GFx::StateBag*>(*reinterpret_cast<unsigned char**>(self + 8) + 0x10)
+#define hwnd (*reinterpret_cast<HWND*>(self + 0x28))
+#define vtable (*reinterpret_cast<void***>(self))
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime = states->GetIMEManager();
+    Scaleform::GFx::Value unused;
     if (!flags)
         reinterpret_cast<void(*)(void*, void*)>(vtable[0xb8 / sizeof(void*)])(self, self + 0x60);
     if (flags & GCS_RESULTSTR) {
@@ -5917,20 +5919,14 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
     ime->SetCursorInComposition(cursor);
 
     struct Segment { int start; int end; int attr; };
-    Segment* segments = nullptr;
-    UPInt count = 0, capacity = 0;
+    ArrayData<Ime01Pod<0xc>, AllocatorGH_POD<Ime01Pod<0xc>>, ArrayDefaultPolicy> array;
     auto push = [&](const Segment& segment) {
-        const UPInt size = count + 1;
-        if (size >= capacity) {
-            unsigned long long array[3] = { reinterpret_cast<unsigned long long>(segments), count, capacity };
-            FUN_1423d1240(array, array, size + (size >> 2));
-            segments = reinterpret_cast<Segment*>(array[0]);
-            capacity = array[2];
-        }
-        segments[size - 1] = segment;
-        count = size;
+        array.ResizeNoConstruct(&array, array.Size + 1);
+        reinterpret_cast<Segment*>(array.Data)[array.Size - 1] = segment;
     };
-    Segment current = { 0, 0, attrs[0] };
+    Segment current;
+    current.attr = attrs[0];
+    current.start = 0;
     unsigned char previous = static_cast<unsigned char>(attrs[0]);
     *reinterpret_cast<int*>(self + 0x64) = static_cast<int>(length - cursor);
     if (previous == ATTR_TARGET_CONVERTED || previous == ATTR_TARGET_NOTCONVERTED)
@@ -5940,9 +5936,9 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
     for (int i = 0; i < static_cast<int>(length); ++i, --remaining) {
         if (static_cast<unsigned char>(attrs[i]) != previous) {
             push(current);
-            previous = static_cast<unsigned char>(attrs[i]);
-            if (previous == ATTR_TARGET_CONVERTED || previous == ATTR_TARGET_NOTCONVERTED)
+            if (attrs[i] == ATTR_TARGET_CONVERTED || attrs[i] == ATTR_TARGET_NOTCONVERTED)
                 *reinterpret_cast<unsigned*>(self + 0x64) = remaining;
+            previous = static_cast<unsigned char>(attrs[i]);
             current.attr = attrs[i];
             current.start = i;
         }
@@ -5951,6 +5947,8 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
     current.end = static_cast<int>(length) - 1;
     push(current);
     ime->SetCursorInComposition(cursor);
+    auto* segments = reinterpret_cast<const Segment*>(array.Data);
+    const UPInt count = array.Size;
     if (!(*reinterpret_cast<unsigned*>(self + 0x98) & 0xf000)) {
         for (UPInt i = 0; i < count; ++i) {
             const unsigned span = static_cast<unsigned>(segments[i].end - segments[i].start + 1);
@@ -5968,8 +5966,10 @@ void FUN_1423cfd50(long long* manager, unsigned long long wParam, unsigned long 
         }
     }
     Scaleform::Memory::Free(attrs);
-    if (segments) Scaleform::Memory::Free(segments);
 }
+#undef states
+#undef hwnd
+#undef vtable
 
 // MS2-FUNCTIONAL: language-change handler (manager slot 7): updates the mode and locale label, resolves the layout's
 // record text and conversion flags, and refreshes the IME version for flag-4 layouts. Left: the exe tests the device
