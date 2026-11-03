@@ -2707,45 +2707,54 @@ const char* FUN_1423cf1c0(void* raw)
 }
 
 // MS2-FUNCTIONAL: matches the executable's language-specific IME registration, creates the COM provider, and sends its settings record.
+// The search loop breaks out with the record index, as in the exe. Still differs: the exe addresses each record field as
+// base + i*6 qwords (rsi*8), where ours forms a record pointer (shl 4; add).
 // @0x1423d5740
 void FUN_1423d5740(unsigned long long* self, const unsigned char* name)
 {
-    const unsigned count = *reinterpret_cast<unsigned*>(self + 0x1a);
-    auto* kinds = reinterpret_cast<unsigned*>(self[0x32]);
-    auto* entries = reinterpret_cast<unsigned char*>(self[0x17]);
-    for (unsigned i = 0; i < count; ++i) {
-        const unsigned kind = kinds[i];
-        if (kind != 1 && kind != 2) continue;
-        const unsigned long long packed = *reinterpret_cast<unsigned long long*>(entries + i * 0x30 + (kind == 1 ? 0x10 : 0x18));
-        const char* entryName = reinterpret_cast<const char*>((packed & ~3ull) + 0xc);
-        if (std::strcmp(reinterpret_cast<const char*>(name), entryName) != 0) continue;
-        const unsigned language = reinterpret_cast<unsigned(*)(void*, unsigned)>(
-            (*reinterpret_cast<void***>(self))[3])(self, *reinterpret_cast<unsigned*>(entries + i * 0x30 + 0x20));
-        if (language != *reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x84) ||
-            !*reinterpret_cast<void**>(entries + i * 0x30 + 0x28)) continue;
-        IUnknown* instance = nullptr;
-        HRESULT result = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
-            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068),
-            reinterpret_cast<void**>(&instance));
-        if (FAILED(result) || !instance) return;
-        IUnknown* settings = nullptr;
-        result = instance->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b6b0),
-            reinterpret_cast<void**>(&settings));
-        if (SUCCEEDED(result) && settings) {
-            auto** settingsVtable = *reinterpret_cast<void***>(settings);
-            auto* node = *reinterpret_cast<unsigned char***>(entries + i * 0x30 + 0x28);
-            auto* record = node[0];
-            if (record) {
-                reinterpret_cast<void(*)(void*, unsigned, unsigned short, void*, void*, unsigned long long, unsigned)>(
-                    settingsVtable[3])(settings, *reinterpret_cast<unsigned*>(record),
-                    *reinterpret_cast<unsigned short*>(record + 4), record + 8, record + 0x18,
-                    *reinterpret_cast<unsigned long long*>(record + 0x48), 0x10000000);
-            }
-            settings->Release();
+    struct Record { unsigned long long pad0[2]; unsigned long long text1; unsigned long long text2; unsigned id; unsigned pad1; unsigned char** node; };
+    int index = -1;
+    for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(self + 0x1a); ++i) {
+        const unsigned kind = reinterpret_cast<unsigned*>(self[0x32])[i];
+        Record* records;
+        if (kind == 1) {
+            records = reinterpret_cast<Record*>(self[0x17]);
+            if (std::strcmp(reinterpret_cast<const char*>(name),
+                    reinterpret_cast<const char*>((records[i].text1 & ~3ull) + 0xc)) != 0) continue;
+        } else if (kind == 2) {
+            records = reinterpret_cast<Record*>(self[0x17]);
+            if (std::strcmp(reinterpret_cast<const char*>(name),
+                    reinterpret_cast<const char*>((records[i].text2 & ~3ull) + 0xc)) != 0) continue;
+        } else {
+            continue;
         }
-        instance->Release();
-        return;
+        if (*reinterpret_cast<unsigned*>(reinterpret_cast<unsigned char*>(self) + 0x84) ==
+                reinterpret_cast<unsigned(*)(void*, unsigned)>((*reinterpret_cast<void***>(self))[3])(self, records[i].id) &&
+            reinterpret_cast<Record*>(self[0x17])[i].node) {
+            index = static_cast<int>(i);
+            break;
+        }
     }
+    if (index == -1) return;
+    IUnknown* instance;
+    HRESULT result = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4898), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c5068),
+        reinterpret_cast<void**>(&instance));
+    if (FAILED(result) || !instance) return;
+    IUnknown* settings;
+    result = instance->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b6b0),
+        reinterpret_cast<void**>(&settings));
+    if (SUCCEEDED(result) && settings) {
+        auto* record = reinterpret_cast<Record*>(self[0x17])[index].node[0];
+        if (record) {
+            reinterpret_cast<void(*)(void*, unsigned, unsigned short, void*, void*, unsigned long long, unsigned)>(
+                (*reinterpret_cast<void***>(settings))[3])(settings, *reinterpret_cast<unsigned*>(record),
+                *reinterpret_cast<unsigned short*>(record + 4), record + 8, record + 0x18,
+                *reinterpret_cast<unsigned long long*>(record + 0x48), 0x10000000);
+        }
+        settings->Release();
+    }
+    instance->Release();
 }
 
 // Releases the active IME list/window by state index and updates the composition bookkeeping. The manager is reread
