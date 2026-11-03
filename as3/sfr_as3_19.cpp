@@ -3662,6 +3662,28 @@ struct Sfr31ReadArgsObjectRef : public AS3::ReadArgs
     const Value& ArgObject;     // +0x138
 };
 
+// The call arguments, then the object they are called on, popped (SDK ReadArgsObject).
+struct Sfr31ReadArgsObject : public AS3::ReadArgs
+{
+    __forceinline Sfr31ReadArgsObject(VM& vm, UInt32 argc) : AS3::ReadArgs(vm, argc), ArgObject(OpStack)
+    {
+        CheckObject(ArgObject);
+    }
+    // StackReader::CheckObject, inline: a null or undefined object is a TypeError.
+    void CheckObject(const Value& v) const
+    {
+        if (v.IsNullOrUndefined())
+        {
+            // eConvertNullToObjectError / eConvertUndefinedToObjectError
+            const VM::ErrorID id = v.IsNull() ? static_cast<VM::ErrorID>(0x3f1) : static_cast<VM::ErrorID>(0x3f2);
+            VM& vm = VMRef;
+            Sfr31ReadArgsObjectRef::ThrowTypeError(vm, VM::Error(id, vm));
+        }
+    }
+    const Value* GetCallArgs() const { return ArgNum > 8 ? CallArgs.GetDataPtr() : FixedArgs; }
+    Value ArgObject;            // +0x138
+};
+
 // Calls the object below the arguments with an undefined this; the result replaces the object on the stack. A null or
 // undefined object is TypeError 1009/1010 (raised in the reader's constructor).
 // @0x142533fd0
@@ -4602,59 +4624,34 @@ void Sfr31RaiseNameConflict(UPInt tr, UPInt a, UPInt b)
 }
 // ---- batch 35
 // Native with a required object argument: the popped value is handed to the owner's helper through its virtual call along with the remaining arguments.
-// MS2-FUNCTIONAL 0x142537810: raw-offset model; codegen differs from the exe
+// MS2-FUNCTIONAL 0x142537810: register only: the exe loads the popped object's Flags through edx, ours through ecx.
 // @0x142537810
 void Sfr31ExecOwnerCall(UPInt vmAddr, UPInt owner, UInt32 n)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, n);
-    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
-    const UPInt top = Sfr31Rd(frame, 8);
-    Sfr31RawTraitsVal val;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
-    Sfr31Wr(frame, 8, top - 0x20);
-    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(&val));
+    Sfr31ReadArgsObject args(vm, n);
     if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
     {
         const UPInt helper = Sfr31Rd(Sfr31Rd(owner, 0x40), 0x88);
         if (helper != 0)
         {
-            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            typedef void (*Fn)(UPInt, UPInt, void*, UInt32, void*);
-            (*reinterpret_cast<Fn*>(Sfr31Rd(helper, 0) + 0x78))(helper, Sfr31Rd(owner, 0x40), &val, n, args);
+            typedef void (*Fn)(UPInt, UPInt, const Value*, UInt32, const Value*);
+            (*reinterpret_cast<Fn*>(Sfr31Rd(helper, 0) + 0x78))(helper, Sfr31Rd(owner, 0x40), &args.ArgObject, n, args.GetCallArgs());
         }
     }
-    reinterpret_cast<Value*>(&val)->~Value();
-    FUN_1424de9e0(raBuf);
 }
 // ---- batch 36
 // Native with a required object argument: the helper is invoked with the argument's traits and the remaining arguments.
-// MS2-FUNCTIONAL 0x142533df0: raw-offset model; codegen differs from the exe
 // @0x142533df0
 void Sfr31ExecCallWithTraits(UPInt vmAddr, UInt32 a, UInt32 n)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, n);
-    const UPInt frame = Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8);
-    const UPInt top = Sfr31Rd(frame, 8);
-    Sfr31RawTraitsVal val;
-    for (int i = 0; i < 8; ++i)
-        reinterpret_cast<UInt32*>(&val)[i] = reinterpret_cast<const UInt32*>(top)[i];
-    Sfr31Wr(frame, 8, top - 0x20);
-    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(&val));
+    Sfr31ReadArgsObject args(vm, n);
     if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
     {
-        const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-        void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-        const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&val)));
-        FUN_142500260(vmAddr, a, tr, &val, n, args);
+        const Traits& tr = vm.GetValueTraits(args.ArgObject);
+        FUN_142500260(vmAddr, a, reinterpret_cast<UPInt>(&tr), &args.ArgObject, n, const_cast<Value*>(args.GetCallArgs()));
     }
-    reinterpret_cast<Value*>(&val)->~Value();
-    FUN_1424de9e0(raBuf);
 }
 
 // Tracer op: the first argument's type picks the class traits (null/undefined -> Object) that are pushed.
