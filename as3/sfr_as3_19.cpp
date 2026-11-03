@@ -1957,6 +1957,46 @@ void Multiname::SetRTNameUnsafe(const Value& v)
     PostProcessName(false);
 }
 
+// Multiname::PostProcessName(false) (0x14251cef0, sfr_as3_18), as the exe inlines it into the constructor below.
+static __forceinline void Sfr19PostProcessName(Multiname& mn)
+{
+    if (!mn.Name.IsString())
+        return;
+    ASString n = mn.Name.AsString();
+    if (n.GetSize() == 0)
+        return;
+    if (n[0] == '*')
+        FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+    else if (n[0] == '@')
+    {
+        mn.Kind = static_cast<Abc::MultinameKind>(mn.Kind | 8);
+        if (n.GetSize() == 2 && n[1] == '*')
+            FUN_1424e0d40(mn.Name, ASString(n.GetManager()->GetEmptyStringNode()));
+        else
+            FUN_1424e0d40(mn.Name, ASString(n.SubstringNode(1, n.GetSize())));
+    }
+}
+
+// Multiname(Namespace&, const Value&) (0x1424d8a90, sfr_as3_15) with SetRTNameUnsafe and PostProcessName, as the
+// exe inlines them into exec_in.
+__forceinline Multiname::Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag)
+    : Kind(static_cast<Abc::MultinameKind>(0))
+    , Obj(&ns)
+{
+    const UInt32 k = static_cast<UInt32>(name.GetKind());
+    if (k - 0xc <= 3 && name.GetGASRefCountBase() != NULL)
+    {
+        const Traits& tr = reinterpret_cast<Object*>(name.GetGASRefCountBase())->GetTraits();
+        if (static_cast<int>(tr.TraitsType) == 0xc && (static_cast<UInt8>(~static_cast<UInt8>(static_cast<UInt8>(tr.Flags) >> 5)) & 1) != 0)
+        {
+            Sfr27MultinameFromQName(this, &name);
+            return;
+        }
+    }
+    Name.AssignUnsafe(name);
+    Sfr19PostProcessName(*this);
+}
+
 
 
 // setslot for objects whose slots follow the traits' first own slot.
@@ -6470,41 +6510,47 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
 
 // ---- batch 60
 // exec_in: pops the object; the name below it is replaced by whether the object has that property. A null object is a TypeError.
-// MS2-FUNCTIONAL 0x14253b020: raw-offset model; codegen differs from the exe
+// PropRef::operator bool (0x1424e0e20, sfr_as3_16), as the exe inlines it into exec_in.
+static inline bool Sfr19PropFound(const PropRef& prop)
+{
+    const UPInt p = reinterpret_cast<UPInt>(prop.pValue);
+    return !(prop.This.IsUndefined() || (Sfr31PRTag(p, 1) && (p & ~static_cast<UPInt>(1)) == 0) ||
+             (Sfr31PRTag(p, 2) && (p & ~static_cast<UPInt>(2)) == 0));
+}
+
+// The operands of exec_in: the object popped off the top into _2, the name below it (_1) left in place.
+struct Sfr19ExecInArgs
+{
+    __forceinline Sfr19ExecInArgs(ValueStack& vs) : _2(vs), _1(*vs.GetTopPtr()) { }
+    Value _2;
+    Value& _1;
+};
+
+// MS2-FUNCTIONAL 0x14253b020: the exe keeps the popped object's kind and flags in registers across the property lookups (LTCG knows they leave it alone); ours reloads them
 // @0x14253b020
 void Sfr31ExecIn(UPInt vmAddr)
 {
     VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    Sfr31RawTraitsVal obj;
-    Sfr31TakeTop(vmAddr, obj);
-    const UInt32 ok = obj.w0 & 0x1f;
-    Value* name = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
-    if (ok == 0 || (ok - 0xc < 4 && obj.w2 == 0))
+    Sfr19ExecInArgs stack(ValueStack::Of(vm));
+    Value& obj = stack._2;
+    Value& name = stack._1;
+    if (obj.IsNullOrUndefined())
+        return vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
+    Multiname prop_name(vm.GetPublicNamespace(), name, Multiname::InlineCtorTag());
+    if (obj.IsObject())
     {
-        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f1), vm));
-        reinterpret_cast<Value*>(&obj)->~Value();
-        return;
+        Object* o = obj.GetObject();
+        const Traits& tr = o->GetTraits();
+        if (tr.IsArrayLike() || (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits()))
+        {
+            Value value = Value::GetUndefined();
+            name.SetBool(obj.GetObject()->GetProperty(prop_name, value));
+            return;
+        }
     }
-    Multiname mn(vm.GetPublicNamespace());
-    mn.SetRTNameUnsafe(*name);
-    bool found;
-    const UPInt tr = ok - 0xc < 4 ? Sfr31Rd(obj.w2, 0x20) : 0;
-    if (ok - 0xc < 4 && ((*reinterpret_cast<const UInt8*>(tr + 0x68) & 1) ||
-                        (*reinterpret_cast<const int*>(tr + 0x70) == 0xd && !((*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1))))
-    {
-        Value undef(Value::GetUndefined());
-        typedef bool* (*HasFn)(UPInt, void*, void*, void*);
-        UInt8 tmp[8];
-        found = *reinterpret_cast<HasFn>(Sfr31Rd(Sfr31Rd(obj.w2, 0), 0x38))(obj.w2, tmp, &mn, &undef);
-    }
-    else
-    {
-        PropRef prop;
-        FUN_142501b00(&prop, &vm, reinterpret_cast<const Value*>(&obj), &mn, 0);
-        found = prop;
-    }
-    name->SetBool(found);
-    reinterpret_cast<Value*>(&obj)->~Value();
+    PropRef prop;
+    FUN_142501b00(&prop, &vm, &obj, &prop_name, 0);
+    name.SetBool(Sfr19PropFound(prop));
 }
 
 // ---- batch 61
