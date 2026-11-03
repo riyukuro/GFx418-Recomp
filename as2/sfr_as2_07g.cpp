@@ -60,13 +60,13 @@ SF_FORCEINLINE GlobalContext::ClassRegEntry* BuiltinRegistrarOf(GlobalContext* p
 
 // The frame a goto value names: a number counts from 1, a string is a label, "path:label" looked up in the clip
 // the path names; the clip the label belongs to goes to *pchar.
-// MS2-FUNCTIONAL: register allocation and string-loop layout differ; same behavior
+// MS2-FUNCTIONAL: register allocation (the exe keeps the prefix string node in rbx and saves r12/r15); same behavior
 // @0x14297e870
 bool ActionBuffer::ResolveFrameNumber(Environment* env, const Value& frameValue, InteractiveObject** pchar,
                                       unsigned* frameNumber)
 {
-    InteractiveObject* target = env->GetTarget();
-    bool               success;
+    InteractiveObject* target  = env->GetTarget();
+    bool               success = false;
 
     if (frameValue.GetType() == Value::STRING)
     {
@@ -89,20 +89,15 @@ bool ActionBuffer::ResolveFrameNumber(Environment* env, const Value& frameValue,
                 }
             }
         }
-        success = false;
         if (target && target->GetLabeledFrame(str.ToCStr(), frameNumber))
             success = true;
-        if (!success)
-            return false;
     }
-    else
+    else if (frameValue.IsNumber())
     {
-        if (!frameValue.IsNumber())
-            return false;
         success      = true;
         *frameNumber = (int)(frameValue.ToNumber(env) - 1);
     }
-    if (pchar)
+    if (success && pchar)
         *pchar = target;
     return success;
 }
