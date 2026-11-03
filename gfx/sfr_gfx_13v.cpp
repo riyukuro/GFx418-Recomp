@@ -5,7 +5,9 @@
 // MS2-UNIT: sfr_gfx_13v
 // MS2-TOOLSET: vc9v
 // MS2-FLAGS: scaleform
+// MS2-RANGE: 0x142c98bb0-0x142c98f03 .text$mn
 // MS2-RANGE: 0x142c98f10-0x142c99d55 .text$mn
+// MS2-RANGE: 0x142c99d60-0x142c99f93 .text$mn
 #include "../include/render/render_matrix2x4.h"
 #include "../include/render/render_matrix4x4.h"
 #include <new>
@@ -137,6 +139,50 @@ struct Identity3x4Init { Identity3x4Init() { new (&Matrix3x4<float>::Identity) M
 struct Identity4x4Init { Identity4x4Init() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); } };
 Identity3x4Init g_identity3x4;   // 0x142c99a90
 Identity4x4Init g_identity4x4;   // 0x142c99ad0
+// The other Video add-on objs' copies of these two initialisers. Each obj that uses the SDK's template statics
+// (Render_Matrix3x4.h / Render_Matrix4x4.h: template<typename T> Matrix3x4<T> Matrix3x4<T>::Identity;) emits its own
+// internal initialiser in .text$di. Its .CRT$XCU entry is associative to the statics' COMDAT, so the linker keeps one
+// entry (0x140105130 / 0x140105150) and none of these is ever called: they are left for the exe's layout only.
+// @0x142c98bb0
+void FUN_142c98bb0() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98bf0
+void FUN_142c98bf0() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c98c40
+void FUN_142c98c40() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98c80
+void FUN_142c98c80() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c98cd0
+void FUN_142c98cd0() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98d10
+void FUN_142c98d10() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c98d60
+void FUN_142c98d60() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98da0
+void FUN_142c98da0() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c98df0
+void FUN_142c98df0() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98e30
+void FUN_142c98e30() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c98e80
+void FUN_142c98e80() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c98ec0
+void FUN_142c98ec0() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c99d60
+void FUN_142c99d60() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c99da0
+void FUN_142c99da0() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c99df0
+void FUN_142c99df0() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c99e30
+void FUN_142c99e30() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c99e80
+void FUN_142c99e80() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c99ec0
+void FUN_142c99ec0() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
+// @0x142c99f10
+void FUN_142c99f10() { new (&Matrix3x4<float>::Identity) Matrix3x4<float>(); }
+// @0x142c99f50
+void FUN_142c99f50() { new (&Matrix4x4<float>::Identity) Matrix4x4<float>(); }
 }}
 static NativePmf s_pmf_143b27798 = MakeNativePmf(&FUN_14001a330);
 static NativePmf s_pmf_143b27778 = MakeNativePmf(&FUN_14001a360);
