@@ -72,6 +72,10 @@ bool FUN_142522a60(Scaleform::GFx::AS3::VM* vm, void* file);
 
 // ArrayDataBase destructors the exe calls out of line (instantiated elsewhere)
 namespace Scaleform {
+// The Value array copy ctor (0x1424d5310, explicit instantiation in sfr_as3_15): the exe calls it out of line from
+// Tracer::AddBlock (FUN_1424e6aa0) for the state's register, op and scope stacks.
+template <> ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>::ArrayDataDH(
+    const ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy>& a);
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::AS3::SPtr<GFx::ASStringNode>, 2>, ArrayDefaultPolicy> SfrAdbStr;
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, 340>, ArrayDefaultPolicy> SfrAdbNsSet;
 typedef ArrayDataBase<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::ClassTraits::Traits>, 340>, ArrayDefaultPolicy> SfrAdbCtr;
@@ -853,6 +857,20 @@ struct Sfr21TrState
     ArrayDH<Value> ScopeStack;  // +0x58
     UInt8*         RegChanged;  // +0x78
     UInt32         BitCount;    // +0x80
+
+    // TR::State(const State&): member copies; the register-changed bits get their own block from the same heap.
+    Sfr21TrState(const Sfr21TrState& src)
+        : pTracer(src.pTracer), BCP(src.BCP), OpcodeCP(src.OpcodeCP), Registers(src.Registers), OpStack(src.OpStack),
+          ScopeStack(src.ScopeStack), BitCount(src.BitCount)
+    {
+        const UInt32 bitCount = BitCount;
+        MemoryHeap* heap = Memory::GetHeapByAddress(src.RegChanged);
+        const UPInt bytes = (bitCount + 7) >> 3;
+        RegChanged = static_cast<UInt8*>(Memory::AllocInHeap(heap, bytes, AllocInfo(0x155, 0, 0)));
+        memcpy(RegChanged, src.RegChanged, bytes);
+    }
+    void* operator new(size_t size, MemoryHeap* heap) throw() { return heap->Alloc(size, (const AllocInfo*)0); }
+    void operator delete(void*, MemoryHeap*) {}
 };
 
 // The last block (walking back from the list's end) that starts at or before from.
@@ -883,7 +901,9 @@ static void Sfr21InsertBlockAfter(Sfr21TrBlock* block, Sfr21TrBlock* node)
 
 // Tracer::AddBlock(st, from, type, checkOpCode): the block starting at from with a copy of st as its entry state
 // (NULL past the code's end). A label or debug opcode at from keeps a tDead block alive.
-// MS2-FUNCTIONAL: Tracer members private; raw offsets
+// MS2-FUNCTIONAL: closer (581 bytes, exe 583). Only the opcode test differs: cl folds the op_debug..op_debugfile
+// range to add cl,0x11 / cmp cl,2, where the exe compares cl with 0xee (jbe) and 0xf1 (ja); a switch, an if chain and
+// nested ifs all fold or move is_dead. Tracer members are private, so raw offsets are used.
 // @0x1424e6aa0
 void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool checkOpCode)
 {
@@ -904,28 +924,12 @@ void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool che
     if (checkOpCode)
     {
         const UInt8 op = (*reinterpret_cast<const UInt8**>(t + 0x50))[from];
-        if (op == 9 || (op >= 0xef && op <= 0xf1))   // op_label, op_debug, op_debugline, op_debugfile
+        if (op == 0x09 || op == 0xef || op == 0xf0 || op == 0xf1)   // op_label, op_debug, op_debugline, op_debugfile
             is_dead = false;
     }
 
-    MemoryHeap* heap = *reinterpret_cast<MemoryHeap**>(t + 0x18);
-    const Sfr21TrState& src = *static_cast<const Sfr21TrState*>(st);
-    Sfr21TrState* state = static_cast<Sfr21TrState*>(heap->Alloc(sizeof(Sfr21TrState), (const AllocInfo*)0));
-    if (state)
-    {
-        state->pTracer  = src.pTracer;
-        state->BCP      = src.BCP;
-        state->OpcodeCP = src.OpcodeCP;
-        ::new (&state->Registers) ArrayDH<Value>(src.Registers);
-        ::new (&state->OpStack) ArrayDH<Value>(src.OpStack);
-        ::new (&state->ScopeStack) ArrayDH<Value>(src.ScopeStack);
-        state->BitCount = src.BitCount;
-        const UPInt bytes = (src.BitCount + 7) >> 3;
-        AllocInfo info(0x155, 0, 0);
-        state->RegChanged = static_cast<UInt8*>(
-            Memory::pGlobalHeap->GetAllocHeap(src.RegChanged)->Alloc(bytes, &info));
-        memcpy(state->RegChanged, src.RegChanged, bytes);
-    }
+    // The heap is read from the tracer at each use (no local), as in the exe.
+    Sfr21TrState* state = new (*reinterpret_cast<MemoryHeap**>(t + 0x18)) Sfr21TrState(*static_cast<const Sfr21TrState*>(st));
     reinterpret_cast<ArrayDH<void*>*>(t + 0xf0)->PushBack(state);
 
     if (type == 1 && !is_dead)
@@ -938,7 +942,7 @@ void* FUN_1424e6aa0(Tracer* self, const void* st, UPInt from, int type, bool che
         return block;
     }
 
-    Sfr21TrBlock* node = new (heap) Sfr21NewTrBlock(from, type, state);
+    Sfr21TrBlock* node = new (*reinterpret_cast<MemoryHeap**>(t + 0x18)) Sfr21NewTrBlock(from, type, state);
     Sfr21InsertBlockAfter(block, node);
     if (type == 1)
         node->Flags &= ~1u;
