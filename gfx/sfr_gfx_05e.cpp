@@ -142,13 +142,20 @@ public:
     bool Unescape(const char* psrc, UPInt length, String& unescapedStr);
 
 private:
-    static bool InMask(int ch, const unsigned* mask) { return (mask[ch / 32] & (1u << (ch % 32))) != 0; }
-    static char HexDigit(UByte n) { return n < 10 ? char(n + '0') : char(n + 'A' - 10); }
+    static bool InMask(int ch, const unsigned* mask) { return ch < 128 && (mask[ch / 32] & (1u << (ch % 32))); }
+    void WriteHexNibble(UByte v);
     void WriteHexByte(UByte v)
     {
-        *pBuf++ = HexDigit(v >> 4);
-        *pBuf++ = HexDigit(v & 0xF);
+        WriteHexNibble(static_cast<UByte>(v >> 4));
+        WriteHexNibble(static_cast<UByte>(v & 0x0F));
     }
+    void WriteHexWord(UInt16 v)
+    {
+        WriteHexByte(static_cast<UByte>(v >> 8));
+        WriteHexByte(static_cast<UByte>(v & 0xFF));
+    }
+    UByte ReadHexNibble(const char*& psrc, const char* end);
+    static bool IsHexDigit(char c) { return ('0' <= c && c <= '9') || ('A' <= c && c <= 'F') || ('a' <= c && c <= 'f'); }
     // Reads up to maxDigits hex digits; psrc is left unchanged unless all of them were present.
     UInt16 ReadHex(const char*& psrc, const char* end, UByte maxDigits);
 
@@ -158,7 +165,6 @@ private:
 };
 
 // @0x1425e3a50
-// MS2-FUNCTIONAL: pBuf reloads and the hex digit branches scheduled differently
 void Formatter::EscapeWithMask(const char* psrc, UPInt length, String& escapedStr, const unsigned* escapeMask)
 {
     const char* end = psrc + length;
@@ -174,17 +180,19 @@ void Formatter::EscapeWithMask(const char* psrc, UPInt length, String& escapedSt
             escapedStr += Buf;
             pBuf = Buf;
         }
-        if (ch < 128 && InMask(ch, escapeMask))
+        if (InMask(ch, escapeMask))
             *pBuf++ = char(ch);
+        else if (ch & 0xFF00)
+        {
+            // %uXXXX: the 16-bit code
+            *pBuf++ = '%';
+            *pBuf++ = 'u';
+            WriteHexWord(static_cast<UInt16>(ch));
+        }
         else
         {
             *pBuf++ = '%';
-            if (ch & 0xFF00)
-            {
-                *pBuf++ = 'u';
-                WriteHexByte(UByte((UInt16)ch >> 8));
-            }
-            WriteHexByte(UByte(ch));
+            WriteHexByte(static_cast<UByte>(ch));
         }
     }
     *pBuf = 0;
@@ -192,40 +200,49 @@ void Formatter::EscapeWithMask(const char* psrc, UPInt length, String& escapedSt
 }
 
 // @0x1425e3f40
-// MS2-FUNCTIONAL: digit classification order differs
 UInt16 Formatter::ReadHex(const char*& psrc, const char* end, UByte maxDigits)
 {
-    const char* start = psrc;
-    const char* p     = start;
-    UInt16      value = 0;
+    UInt16 result = 0;
 
-    for (int i = 0; i < maxDigits; ++i)
+    const char* prev = psrc;
+    for (int i = 0; (i < maxDigits) && (psrc < end) && IsHexDigit(*psrc); ++i)
+        result = (result << 4) | ReadHexNibble(psrc, end);
+
+    // Restore the position unless all the digits were there.
+    if ((psrc - prev) < maxDigits)
+        psrc = prev;
+
+    return result;
+}
+
+void Formatter::WriteHexNibble(UByte v)
+{
+    if (v < 10)
+        *pBuf++ = (char)(v + '0');
+    else
+        *pBuf++ = (char)(v + 'A' - 10);
+}
+
+UByte Formatter::ReadHexNibble(const char*& psrc, const char* end)
+{
+    if (psrc < end)
     {
-        p = psrc;
-        if (p >= end)
-            break;
-        char c = *p;
-        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')))
-            break;
-        p = ++psrc;
-        UByte digit;
-        if (c >= '0' && c <= '9')
-            digit = UByte(c - '0');
-        else if (c >= 'A' && c <= 'F')
-            digit = UByte(c - 'A' + 10);
-        else if (c >= 'a' && c <= 'f')
-            digit = UByte(c - 'a' + 10);
-        else
-            digit = 0;
-        value = UInt16((value << 4) | digit);
+        const char c = *psrc++;
+
+        if ('0' <= c && c <= '9')
+            return c - '0';
+
+        if ('A' <= c && c <= 'F')
+            return c - 'A' + 10;
+
+        if ('a' <= c && c <= 'f')
+            return c - 'a' + 10;
     }
-    if (p - start < maxDigits)
-        psrc = start;
-    return value;
+
+    return 0;
 }
 
 // @0x1425e4e30
-// MS2-FUNCTIONAL: pBuf reload placement differs
 bool Formatter::Unescape(const char* psrc, UPInt length, String& unescapedStr)
 {
     const char* end = psrc + length;
@@ -233,7 +250,7 @@ bool Formatter::Unescape(const char* psrc, UPInt length, String& unescapedStr)
     pBuf = Buf;
     while (psrc < end)
     {
-        char ch = *psrc++;
+        int ch = *psrc++;
         // One UTF-8 sequence is at most six bytes.
         if (pBuf + 7 >= Endp)
         {
@@ -244,15 +261,19 @@ bool Formatter::Unescape(const char* psrc, UPInt length, String& unescapedStr)
         if (ch == '%')
         {
             const char* digits = psrc;
-            UInt16      code   = ReadHex(psrc, end, *psrc == 'u' ? 4 : 2);
+            if (*psrc == 'u')
+                ch = ReadHex(psrc, end, 4);
+            else
+                ch = ReadHex(psrc, end, 2);
             if (psrc == digits)
                 return false;
+            // Encode the character as UTF-8.
             SPInt pos = pBuf - Buf;
-            UTF8Util::EncodeChar(Buf, &pos, code);
+            UTF8Util::EncodeChar(Buf, &pos, ch);
             pBuf = Buf + pos;
         }
         else
-            *pBuf++ = ch;
+            *pBuf++ = static_cast<char>(ch);
     }
     *pBuf = 0;
     // Embedded zero characters are part of the result.
