@@ -189,7 +189,6 @@ void MeshCache::Reset()
     StagingBuffer.Reset();
 }
 
-// MS2-FUNCTIONAL: block layout of the restore paths
 // @0x14273b150
 bool MeshCache::SetParams(const MeshCacheParams& params)
 {
@@ -511,7 +510,7 @@ bool MeshCache::allocCacheBuffers(UPInt size, MeshBuffer::AllocType type, unsign
 }
 
 // @0x14273bf30
-void MeshCache::destroyBuffers(MeshBuffer::AllocType type)
+SF_NOINLINE void MeshCache::destroyBuffers(MeshBuffer::AllocType type)
 {
     CacheList.EvictAll();
     VertexBuffers.DestroyBuffers(type);
