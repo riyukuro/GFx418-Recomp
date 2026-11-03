@@ -4466,6 +4466,12 @@ void Sfr31TraceGetDescendants(State* st, UInt32 idx)
     s.OpStack().PushBack(Value(tr, Value::NotNull));
 }
 // ---- batch 32
+// The constant-pool name of a multiname entry.
+static __forceinline const Abc::StringView& Sfr31MnNameView(UPInt file, UPInt entry)
+{
+    return *reinterpret_cast<const Abc::StringView*>(Sfr31Rd(Sfr31Rd(file, 0x28), 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8);
+}
+
 // istype-style op: replaces the top value with whether it is an instance of the named class; names resolved at compile time are rejected.
 // MS2-FUNCTIONAL 0x14253bbe0: raw-offset model; codegen differs from the exe
 // @0x14253bbe0
@@ -4567,37 +4573,27 @@ void Sfr31ExecInstanceOf(UPInt vmAddr)
 }
 // ---- batch 34
 // astype-style op: replaces the top value with null when it is an instance of the named class; names resolved at compile time are rejected.
-// MS2-FUNCTIONAL 0x142532ff0: raw-offset model; codegen differs from the exe
 // @0x142532ff0
 void Sfr31ExecAsTypeNamed(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    const UPInt cfile = Sfr31Rd(file, 0x28);
-    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    VM& cvm = *reinterpret_cast<VM*>(Sfr31Rd(file, 0x20));
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntryW(file, idx));
     const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
-    const UPInt nameSlot = Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8;
-    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    if ((flags & 3) == 1 || (static_cast<UInt8>(flags >> 2) & 1) != 0)
     {
-        UPInt sv[2];
-        FUN_142545310(nameSlot, sv);
-        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
-        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
+        const StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        String name(sv.ToCStr(), sv.GetSize());
+        cvm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x436), cvm, name.ToCStr(), "compile time"));
     }
-    Value* top = reinterpret_cast<Value*>(Sfr31Rd(cvm, 0x50));
+    Value* top = reinterpret_cast<Value*>(Sfr31Rd(reinterpret_cast<UPInt>(&cvm), 0x50));
     if (*reinterpret_cast<const UInt8*>(vmAddr + 0x180) != 0)
         return;
     const UPInt tr = Sfr31ResolveClassTraits(vmAddr, file, entry);
     if (tr == 0 || tr == FUN_142507f60(vmAddr, top))
     {
-        UPInt sv[2];
-        FUN_142545310(nameSlot, sv);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7850(eb, 0x3f6, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]));
-        reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
+        VM& vm = *reinterpret_cast<VM*>(vmAddr);
+        const StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f6), vm, sv.ToCStr()));
     }
     else
         top->SetNull();
