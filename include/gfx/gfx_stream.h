@@ -162,7 +162,7 @@ public:
     // Parse log output (verbose parse builds): hex dump of the rest of the tag / of the next bytes, and values.
     void LogTagBytes();
     void LogBytes(unsigned numOfBytes);
-    void LogParseClass(const Render::Color& color);
+    void LogParseClass(Render::Color color);
     void LogParseClass(const Render::Rect<float>& rect);
     void LogParseClass(const Render::Cxform& cxform);
     void LogParseClass(const Render::Matrix2x4<float>& matrix);

@@ -362,11 +362,12 @@ private:
 // A solid colour, a gradient (its matrix maps the 32768-twip gradient square onto the unit square the renderer
 // samples) or a bitmap. A bitmap that is not loaded yet keeps its bind index for the binding, and is remembered as
 // wrapping for the repeating kinds; a missing one shows as the debug green.
-// MS2-FUNCTIONAL: register allocation and the inlined HashSet::Add / ComplexFill setup differ.
 // @0x14265adf0
 void FillStyleSwfReader::Read(LoadProcess* p, TagType tagType)
 {
-    unsigned type = p->ReadU8();
+    UInt8    type      = p->ReadU8();
+    unsigned fillFlags = 0;
+
     p->LogParse("  FillStyle read type = 0x%X\n", type);
 
     if (type == 0x00)
@@ -375,92 +376,118 @@ void FillStyleSwfReader::Read(LoadProcess* p, TagType tagType)
         p->ReadRgbaTag(&color, tagType);
         p->LogParse("  color: ");
         p->GetStream()->LogParseClass(color);
+
+        if (color.GetAlpha() < 255)
+            fillFlags |= 0x1;
+
         FillStyle.Color = color.Raw;
         FillStyle.pFill = 0;
     }
     else if (type & 0x10)
     {
-        Render::Matrix2F matrix;
-        p->GetStream()->ReadMatrix(&matrix);
+        Render::Matrix2F imageMatrix;
+        p->GetStream()->ReadMatrix(&imageMatrix);
 
-        Render::Matrix2F gradientMatrix;
-        gradientMatrix.AppendScaling(1.0f / 32768.0f);
-        gradientMatrix.Tx() += 0.5f;
-        gradientMatrix.Ty() += (type == 0x10) ? 0.0f : 0.5f;
-        gradientMatrix.Prepend(matrix.GetInverse());
+        Render::Matrix2F textureMatrix;
+        if (type == 0x10)
+        {
+            textureMatrix.AppendScaling(1.0f / 32768.F);
+            textureMatrix.AppendTranslation(0.5F, 0.F);
+        }
+        else
+        {
+            textureMatrix.AppendScaling(1.0f / 32768.F);
+            textureMatrix.AppendTranslation(0.5F, 0.5F);
+        }
 
-        unsigned spec         = p->ReadU8();
-        UInt16   linearRGB    = (UInt16)(spec & 0x10);
-        UInt16   numGradients = (UInt16)(spec & 0xF);
+        textureMatrix.Prepend(imageMatrix.GetInverse());
+
+        UInt16 numGradients = p->ReadU8();
+        if (numGradients & 0x10)
+            fillFlags |= 0x2;
+        numGradients &= 0xF;
+
         p->LogParse("  gradients: numGradients = %d\n", numGradients);
 
         FillStyle.pFill = *SF_NEW Render::ComplexFill();
         Render::GradientType gradType;
         switch (type)
         {
+        case 0x10: gradType = Render::GradientLinear; break;
         case 0x12: gradType = Render::GradientRadial; break;
         case 0x13: gradType = Render::GradientFocalPoint; break;
-        default:   gradType = Render::GradientLinear; break;
+        default:   gradType = Render::GradientLinear;
         }
-        FillStyle.pFill->pGradient = *SF_NEW Render::GradientData(gradType, numGradients, linearRGB != 0);
+        FillStyle.pFill->pGradient = *SF_NEW Render::GradientData(gradType, numGradients, (fillFlags & 0x2) != 0);
 
         for (int i = 0; i < numGradients; i++)
         {
-            UByte         ratio = p->ReadU8();
+            UInt8         ratio = p->ReadU8();
             Render::Color color;
             p->ReadRgbaTag(&color, tagType);
+
             FillStyle.pFill->pGradient->At(i).ColorV = color;
             FillStyle.pFill->pGradient->At(i).Ratio  = ratio;
+            if (color.GetAlpha() < 255)
+                fillFlags |= 0x1;
         }
-        if (type == 0x13)
-            FillStyle.pFill->pGradient->SetFocalRatio((SInt16)p->ReadU16() / 256.0f);
 
-        FillStyle.pFill->ImageMatrix = gradientMatrix;
+        if (type == 0x13)
+            FillStyle.pFill->pGradient->SetFocalRatio((float)(p->GetStream()->ReadS16()) / 256.0f);
+
+        FillStyle.pFill->ImageMatrix = textureMatrix;
     }
     else if (type & 0x40)
     {
-        UInt16 bitmapId = p->ReadU16();
-        p->LogParse("  BitmapChar = %d\n", bitmapId);
+        ResourceId bitmapResourceId = ResourceId(p->ReadU16());
+        p->LogParse("  BitmapChar = %d\n", bitmapResourceId.GetIdIndex());
 
-        Render::Matrix2F matrix;
-        p->GetStream()->ReadMatrix(&matrix);
-        p->GetStream()->LogParseClass(matrix);
+        Render::Matrix2F imageMatrix;
+        p->GetStream()->ReadMatrix(&imageMatrix);
 
-        ResourceHandle   handle;
-        Render::Matrix2F imageMatrix = matrix.GetInverse();
+        fillFlags |= 0x1;
+        p->GetStream()->LogParseClass(imageMatrix);
 
+        ResourceHandle imageRes;
+        Render::ImageBase* pimage = 0;
+        Render::Matrix2F textureMatrix(imageMatrix.GetInverse());
         FillStyle.pFill              = *SF_NEW Render::ComplexFill();
-        FillStyle.pFill->ImageMatrix = imageMatrix;
+        FillStyle.pFill->ImageMatrix = textureMatrix;
         switch (type)
         {
-        case 0x40:
+        case 0x40: FillStyle.pFill->FillMode.Fill = UByte(Render::Wrap_Repeat | Render::Sample_Linear); break;
         case 0x42: FillStyle.pFill->FillMode.Fill = UByte(Render::Wrap_Repeat | Render::Sample_Linear); break;
-        case 0x41:
+        case 0x41: FillStyle.pFill->FillMode.Fill = UByte(Render::Wrap_Clamp | Render::Sample_Linear); break;
         case 0x43: FillStyle.pFill->FillMode.Fill = UByte(Render::Wrap_Clamp | Render::Sample_Linear); break;
         }
 
-        if (p->GetResourceHandle(&handle, ResourceId(bitmapId)) && handle.GetResourcePtr())
-        {
-            Resource* pres = handle.GetResourcePtr();
-            if (pres->GetResourceType() == Resource::RT_Image)
-                FillStyle.pFill->pImage = static_cast<ImageResource*>(pres)->GetImage();
-        }
-        else
+        if (!p->GetResourceHandle(&imageRes, bitmapResourceId) || !imageRes.GetResourcePtr())
         {
             FillStyle.Color = 0xFFA7DD39;
-            if (handle.IsIndex())
+
+            if (imageRes.IsIndex())
             {
-                FillStyle.pFill->BindIndex = handle.GetBindIndex();
-                TempBindData* pbindData    = (TempBindData*)p->GetTempBindData();
-                if (pbindData && (type == 0x40 || type == 0x42))
-                    pbindData->FillStyleImageWrap.Add(FillStyle.pFill->BindIndex);
+                FillStyle.pFill->BindIndex = imageRes.GetBindIndex();
+                TempBindData* bd           = (TempBindData*)p->GetTempBindData();
+                if (bd && (type == 0x40 || type == 0x42))
+                    bd->FillStyleImageWrap.Add(FillStyle.pFill->BindIndex);
             }
             else
             {
                 FillStyle.pFill = 0;
-                if (bitmapId != 0xFFFF)
+                if (bitmapResourceId.GetIdValue() != 0xFFFF)
+                {
                     LogDebugMessage(Log_Warning, "An image with resource id %d is not found in resource table.",
-                                    bitmapId);
+                                    bitmapResourceId.GetIdValue());
+                }
+            }
+        }
+        else
+        {
+            if (imageRes.GetResourcePtr() && imageRes.GetResourcePtr()->GetResourceType() == Resource::RT_Image)
+            {
+                pimage = static_cast<ImageResource*>(imageRes.GetResourcePtr())->GetImage();
+                FillStyle.pFill->pImage = pimage;
             }
         }
     }

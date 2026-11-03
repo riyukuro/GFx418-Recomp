@@ -676,7 +676,7 @@ void Stream::LogTagBytes()
 }
 
 // @0x1425c2380
-void Stream::LogParseClass(const Render::Color& color)
+void Stream::LogParseClass(Render::Color color)
 {
     char buff[512];
     Format(buff, sizeof(buff), color);
