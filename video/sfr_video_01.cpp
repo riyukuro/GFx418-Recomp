@@ -2482,7 +2482,7 @@ static __forceinline void Video01VisitObjectTable(Scaleform::UPInt** table,
     using namespace Scaleform::GFx::AS2;
     if (*table) {
         for (Scaleform::UPInt i = 0, count = (*table)[1]; i < count; ++i) {
-            Object* item = reinterpret_cast<Object**>((*table)[0])[i];
+            Object* const& item = reinterpret_cast<Object**>((*table)[0])[i];
             if (item) Functor::Call(collector, static_cast<ASRefCountBaseType*>(item));
         }
     }
@@ -2500,7 +2500,7 @@ static __forceinline void ForEachVideoObjectChild(void* object,
     Video01VisitObjectTable<Functor>(reinterpret_cast<Scaleform::UPInt**>(bytes + 0xa8), collector);
 }
 
-// MS2-FUNCTIONAL: marks all video object children as candidates in a cycle.
+// marks all video object children as candidates in a cycle.
 // @0x14000d870
 void FUN_14000d870(void* object, Scaleform::GFx::AS2::ASRefCountBaseType::Collector* collector)
 {
