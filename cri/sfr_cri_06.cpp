@@ -3044,7 +3044,6 @@ void calcVector(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2, cri_any cri_p3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x14005b810
 // Builds the 6-bit mask at +0x71c: all set under flag 4, else bit 5-k of +0x694 lands in bit k under flag 8.
 void calcPatternCode(cri_any cri_p0)
@@ -3053,6 +3052,7 @@ void calcPatternCode(cri_any cri_p0)
   uint flags;
   uint bit;
   int i;
+  uint v;
   
   flags = *(uint *)((char *)arg1 + 0x5e8);
   if ((flags & 4) != 0) {
@@ -3061,13 +3061,16 @@ void calcPatternCode(cri_any cri_p0)
   }
   *(uint *)((char *)arg1 + 0x71c) = 0;
   if ((flags & 8) != 0) {
+    v = *(uint *)((char *)arg1 + 0x694);
     bit = 1;
-    for (i = 5; i > -1; i--) {
-      if ((*(uint *)((char *)arg1 + 0x694) & 1 << i) != 0) {
+    i = 5;
+    do {
+      if ((v & 1 << i) != 0) {
         *(uint *)((char *)arg1 + 0x71c) |= bit;
       }
       bit = _rotl(bit,1);
-    }
+      i--;
+    } while (i > -1);
   }
 }
 
