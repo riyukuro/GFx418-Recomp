@@ -611,23 +611,8 @@ static inline CriUint32 criUtfReadBE32(const CriUint8* p)
     return ((CriUint32)p[0] << 24) | ((CriUint32)p[1] << 16) | ((CriUint32)p[2] << 8) | p[3];
 }
 
-static inline CriUint64 criUtfReadBE64(const CriUint8* p)
-{
-    return ((CriUint64)criUtfReadBE32(p) << 32) | criUtfReadBE32(p + 4);
-}
-
 static inline const CriUint8* criUtfRecordAddr(const CriUtfRtvView* table, CriUint32 row, const CriUtfRtvColumn* col)
 {
-    return table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
-}
-
-static inline const CriUint8* criUtfGetRecordField(const CriUtfRtvView* table, CriUint32 row,
-                                                    CriUint32 field, const CriUtfRtvColumn** column)
-{
-    const CriUtfRtvColumn* col = &table->Columns[field];
-    *column = col;
-    if (!col->IsRecordField || row >= table->RecordCount)
-        return NULL;
     return table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
 }
 
@@ -774,9 +759,21 @@ CriUint32 criUtfRtv_GetDataUint32(const CriUtfRtvView* table, CriUint32 row, Cri
 // @0x14003a648
 CriUint64 criUtfRtv_GetDataUint64(const CriUtfRtvView* table, CriUint32 row, CriUint32 field)
 {
-    const CriUtfRtvColumn* col;
-    const CriUint8* p = criUtfGetRecordField(table, row, field, &col);
-    return p ? criUtfReadBE64(p) : (col->HasDefault ? col->DefaultValue[1] : 0);
+    const CriUtfRtvColumn* col = &table->Columns[field];
+    if (col->IsRecordField && row < table->RecordCount)
+    {
+        const CriUint8* p = table->RecordData + (CriUint32)table->RecordSize * row + col->DataOffset;
+        CriUint64 bits = p[0];
+        bits = (bits << 8) | p[1];
+        bits = (bits << 8) | p[2];
+        bits = (bits << 8) | p[3];
+        bits = (bits << 8) | p[4];
+        bits = (bits << 8) | p[5];
+        bits = (bits << 8) | p[6];
+        bits = (bits << 8) | p[7];
+        return bits;
+    }
+    return col->HasDefault ? col->DefaultValue[1] : 0;
 }
 
 // MS2-FUNCTIONAL: CRI Base was built with VS2008; decode the record's big-endian IEEE single precision bits.
