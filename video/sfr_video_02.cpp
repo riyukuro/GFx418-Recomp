@@ -902,13 +902,11 @@ void FUN_1400132d0(void** ref) { if (*ref) FUN_14257dcb0(*ref); }
 // @0x1400159f0
 void** FUN_1400159f0(void** result, void* context)
 {
-    ASStringManager* manager = *reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8);
-    ASStringNode* first = manager->CreateConstStringNode("null", 4, 0);
-    first->AddRef();
-    ASStringNode* second = manager->CreateConstStringNode("null", 4, 0);
-    second->AddRef();
-    result[0] = second;
-    result[1] = first;
+    // two "null" temps, copied into the pair in reverse; the manager is read from the context for each
+    ASString first((*reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8))->CreateConstStringNode("null", 4, 0));
+    ASString second((*reinterpret_cast<ASStringManager**>(static_cast<char*>(context) + 0x1e8))->CreateConstStringNode("null", 4, 0));
+    reinterpret_cast<ASString*>(result)->ASString::ASString(second);
+    reinterpret_cast<ASString*>(result + 1)->ASString::ASString(first);
     return result;
 }
 
@@ -1549,61 +1547,47 @@ void** FUN_14000fdb0(void** dst, void* next)
     return dst;
 }
 
-// locks a weak proxy: the live target, or 0 (a proxy whose object is gone is released and cleared)
-// MS2-FUNCTIONAL: the exe tests the proxy's object field in memory (cmp [rdx+8],0) and loads it again; cl loads it
-// once (tried volatile and an integer view)
+// locks a weak proxy: the live target, or 0 (a proxy whose object is gone is released and cleared);
+// WeakPtr<C>::GetObjectThroughProxy, the SDK body
 // @0x14000fe00
 void* FUN_14000fe00(void** weakProxy)
 {
-    void* proxy = *weakProxy;
-    if (proxy)
+    typedef Scaleform::GFx::Video::VideoProvider C;
+    Scaleform::Ptr<Scaleform::WeakPtrProxy>& pProxy = *reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(weakProxy);
+    C* pobject = 0;
+    if (pProxy)
     {
-        if (*reinterpret_cast<void**>(static_cast<char*>(proxy) + 8))
+        if (pProxy->IsAlive())
         {
-            void* object = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
-            if (*reinterpret_cast<int*>(static_cast<char*>(object) + 8))
-                return object;
+            pobject = (C*)pProxy->GetObject();
+            if (pobject->GetRefCount() == 0)
+                pobject = 0;
         }
         else
-        {
-            // the dead proxy's Release, inline (as in FUN_14000fdb0)
-            if (--*static_cast<int*>(proxy) == 0)
-            {
-                Scaleform::MemoryHeap* heap = Scaleform::Memory::pGlobalHeap;
-                reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(heap))[0x60 / sizeof(void*)])(heap, proxy);
-            }
-            *weakProxy = 0;
-        }
+            pProxy.Clear();
     }
-    return 0;
+    return pobject;
 }
 
-// MS2-FUNCTIONAL: locks a weak proxy using the executable's proxy and target refcount fields.
+// WeakPtr<VideoProvider>::operator Ptr<VideoProvider> (the SDK GetObjectThroughProxy body)
 // @0x1400102c0
 void** FUN_1400102c0(void** weakProxy, void** strongTarget)
 {
-    void* proxy = *weakProxy;
-    if (proxy)
+    typedef Scaleform::GFx::Video::VideoProvider C;
+    Scaleform::Ptr<Scaleform::WeakPtrProxy>& pProxy = *reinterpret_cast<Scaleform::Ptr<Scaleform::WeakPtrProxy>*>(weakProxy);
+    C* pobject = 0;
+    if (pProxy)
     {
-        void* target = *reinterpret_cast<void**>(static_cast<char*>(proxy) + 8);
-        if (!target)
+        if (pProxy->IsAlive())
         {
-            int* refs = static_cast<int*>(proxy);
-            if (--*refs == 0) static_cast<Scaleform::Render::Video02StateDataAccess*>(proxy)->destroyBag_NotEmpty();
-            *weakProxy = 0;
+            pobject = (C*)pProxy->GetObject();
+            if (pobject->GetRefCount() == 0)
+                pobject = 0;
         }
         else
-        {
-            int* refs = reinterpret_cast<int*>(static_cast<char*>(target) + 8);
-            if (*refs)
-            {
-                ++*refs;
-                *strongTarget = target;
-                return strongTarget;
-            }
-        }
+            pProxy.Clear();
     }
-    *strongTarget = 0;
+    reinterpret_cast<Scaleform::Ptr<C>*>(strongTarget)->Scaleform::Ptr<C>::Ptr(pobject);
     return strongTarget;
 }
 
