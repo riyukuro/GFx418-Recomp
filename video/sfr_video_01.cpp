@@ -3643,15 +3643,19 @@ static Object* ConvertCuePoint(const VideoPlayer::CuePoint& cp, Environment* pen
     return pobj;
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Builds the metadata object and calls onMetaData on the target's environment. Like the exe, it does not
+// check that environment for NULL.
 // @0x140009140
 void VideoProviderNetStream::SendMetaInformation()
 {
     if (!pNetStream || !pTarget || pNetStream->OnMetaDataCallback.IsNull())
         return;
-    Environment* penv = GetTargetEnvironment(pTarget);
-    if (!penv)
+    DisplayObject* pch = pTarget->pCharacter;
+    InteractiveObject* pchar = pch->IsInteractiveObject() ? (InteractiveObject*)pch : NULL;
+    if (!pchar)
         return;
+    AvmDisplayObjBase* pavm = reinterpret_cast<AvmDisplayObjBase*>(reinterpret_cast<UInt32*>(pchar) + pchar->AvmObjOffset);
+    Environment* penv = static_cast<AvmCharacter*>(pavm->ToAvmInteractiveObjBase())->GetASEnvironment();
 
     Ptr<Object> pobj = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
     pobj->SetConstMemberRaw(penv->GetSC(), "canSeekToEnd", Value(true));
@@ -3665,7 +3669,7 @@ void VideoProviderNetStream::SendMetaInformation()
         pobj->SetConstMemberRaw(penv->GetSC(), "subtitleTracksNumber", Value(VInfo.SubtitleChannelsNumber));
         if (VInfo.AudioTracks.GetSize() > 0)
         {
-            Ptr<ArrayObject> ptracks = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array)));
+            Ptr<ArrayObject> ptracks = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetSC()->pContext->GetStringManager()->GetBuiltin(ASBuiltin_Array)));
             for (UPInt i = 0; i < VInfo.AudioTracks.GetSize(); ++i)
             {
                 Ptr<Object> ptrack = *SF_HEAP_NEW(penv->GetHeap()) Object(penv);
@@ -3682,7 +3686,7 @@ void VideoProviderNetStream::SendMetaInformation()
     }
     if (VInfo.CuePoints.GetSize() > 0)
     {
-        Ptr<ArrayObject> pcuePoints = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetBuiltin(ASBuiltin_Array)));
+        Ptr<ArrayObject> pcuePoints = *static_cast<ArrayObject*>(penv->OperatorNew(penv->GetSC()->pContext->GetStringManager()->GetBuiltin(ASBuiltin_Array)));
         for (UPInt i = 0; i < VInfo.CuePoints.GetSize(); ++i)
         {
             Ptr<Object> pcuePoint = *ConvertCuePoint(VInfo.CuePoints[i], penv);
@@ -3691,10 +3695,13 @@ void VideoProviderNetStream::SendMetaInformation()
         pobj->SetConstMemberRaw(penv->GetSC(), "cuePoints", Value(pcuePoints));
     }
 
-    penv->Push(Value(pobj));
+    penv->Push(pobj.GetPtr());
     Value ret;
     pNetStream->OnMetaDataCallback.Invoke(FnCall(&ret, pNetStream, penv, 1, penv->GetTopIndex()));
-    penv->Drop1();
+    PagedStack<Value, 32>& stack = penv->Stack;
+    stack.pCurrent->~Value();
+    if (--stack.pCurrent < stack.pPageStart)
+        stack.PopPage();
 }
 
 // Calls onCuePoint once per cue point on the target's environment. Like the exe, it does not check that
