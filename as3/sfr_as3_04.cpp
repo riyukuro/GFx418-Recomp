@@ -1598,29 +1598,52 @@ namespace Classes { namespace fl
         result = ::atan(v);
     }
 
-    // MS2-FUNCTIONAL: infinity tests compiled as integer bit compares in a different branch order
     // @0x142427a80
     void Math::atan2(Value::Number& result, Value::Number y, Value::Number x)
     {
-        // atan2 of two infinities is the quadrant diagonal.
+        // atan2 of two infinities is the quadrant diagonal (PI scaled in a local, then stored).
         if (NumberUtil::IsPOSITIVE_INFINITY(y))
         {
             if (NumberUtil::IsPOSITIVE_INFINITY(x))
-                result = PI * 0.25;
+            {
+                Value::Number r = PI;
+                r *= 0.25;
+                result = r;
+            }
             else if (NumberUtil::IsNEGATIVE_INFINITY(x))
-                result = PI * 0.75;
+            {
+                Value::Number r = PI;
+                r *= 0.75;
+                result = r;
+            }
             else
-                result = PI * 0.5;
+            {
+                Value::Number r = PI;
+                r *= 0.5;
+                result = r;
+            }
             return;
         }
         if (NumberUtil::IsNEGATIVE_INFINITY(y))
         {
             if (NumberUtil::IsPOSITIVE_INFINITY(x))
-                result = PI * -0.25;
+            {
+                Value::Number r = PI;
+                r *= -0.25;
+                result = r;
+            }
             else if (NumberUtil::IsNEGATIVE_INFINITY(x))
-                result = PI * -0.75;
+            {
+                Value::Number r = PI;
+                r *= -0.75;
+                result = r;
+            }
             else
-                result = PI * -0.5;
+            {
+                Value::Number r = PI;
+                r *= -0.5;
+                result = r;
+            }
             return;
         }
         result = ::atan2(y, x);
