@@ -1822,85 +1822,94 @@ static inline void Sfr33ThrowMemoryError(VM& vm, const VM::Error& e)
 }
 
 // Primitives coerce to their own class and to Object (ints also to Number); objects to any class above theirs.
-// undefined becomes null; the tracer-only kinds pass through untouched.
+// undefined becomes null; the tracer-only kinds pass through untouched. The SDK body (AS3_Traits.cpp CoerceValue).
 SF_INLINE bool Sfr33CoerceClassValue(const ClassTraits::Traits& self, const Value& value, Value& result)
 {
     VM& vm = self.GetVM();
     const BuiltinTraitsType tt = self.GetTraitsType();
+
     switch (value.GetKind())
     {
     case Value::kUndefined:
         result.SetNull();
-        return true;
+        break;
     case Value::kInt:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_SInt)
             return false;
         result.SetNumber(value.AsInt());
-        return true;
+        break;
     case Value::kUInt:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number && tt != Traits_UInt)
             return false;
         result.SetNumber(value.AsUInt());
-        return true;
+        break;
     case Value::kThunk:
     case Value::kVTableInd:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Function)
             return false;
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
     case Value::kBoolean:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Boolean)
             return false;
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
     case Value::kNumber:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Number)
             return false;
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
     case Value::kString:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_String)
             return false;
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
     case Value::kNamespace:
         if (&self != &vm.GetClassTraitsObject() && tt != Traits_Namespace)
             return false;
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
     case Value::kFunction:
     case Value::kObject:
     case Value::kThunkFunction:
         if (value.GetObject())
         {
-            if (!FUN_1425149a0(self, vm.GetClassTraits(value)))
+            const ClassTraits::Traits& other = vm.GetClassTraits(value);
+
+            if (FUN_1425149a0(self, other))
+                result = value;
+            else
                 return false;
         }
-        result.Assign(value);
-        return true;
-    case Value::kClass:
-        if (!FUN_1425149a0(self, value.AsClass().GetClassTraits()))
-            return false;
-        result.Assign(value);
-        return true;
+        else
+            result = value;
+
+        break;
     case Value::kThunkClosure:
     case Value::kVTableIndClosure:
-        result.Assign(value);
-        return true;
+        result = value;
+        break;
+    case Value::kClass:
+        if (FUN_1425149a0(self, value.AsClass().GetClassTraits()))
+            result = value;
+        else
+            return false;
+
+        break;
     default:
-        return true;
+        break;
     }
+
     return true;
 }
 
-// MS2-FUNCTIONAL 0x1424effa0: the exe assigns the saved registers differently and places the shared Assign tail last; same results
 // @0x1424effa0
 bool ClassTraits::Traits::Coerce(const Value& value, Value& result) const
 {
     return Sfr33CoerceClassValue(*this, value, result);
 }
 
-// MS2-FUNCTIONAL 0x1424f01c0: the exe assigns the saved registers differently (self/value/result in rbx/rdi/rsi); same results
+// MS2-FUNCTIONAL 0x1424f01c0: the exe places the shared Assign tail after the kind switch and orders the type tests differently; same results
 // @0x1424f01c0
 bool ClassTraits::Traits::CoerceValue(const Value& value, Value& result) const
 {
@@ -4009,8 +4018,7 @@ static inline void Sfr17AppendString(StringBuffer& buf, const String& str)
     buf.AppendString(str.ToCStr(), str.GetSize());
 }
 
-// ToString appended to a buffer; same cases as above, without the primitive check on an object's value.
-// MS2-FUNCTIONAL 0x1424f17a0: the exe shares the AppendString tail between cases; same results
+// ToString appended to a buffer (SDK AS3_Value.cpp); same cases as above, without the primitive check on an object's value.
 // @0x1424f17a0
 CheckResult Value::Convert2String(StringBuffer& result) const
 {
@@ -4020,33 +4028,33 @@ CheckResult Value::Convert2String(StringBuffer& result) const
         result.AppendString("undefined");
         break;
     case kThunk:
-    case kVTableInd:
     case kThunkClosure:
+    case kVTableInd:
     case kVTableIndClosure:
         result.AppendString("function Function() {}");
         break;
     case kBoolean:
-        result.AppendString(AsBool() ? "true" : "false");
+        result.AppendString(value.VS._1.VBool ? "true" : "false");
         break;
     case kInt:
-        Sfr17AppendString(result, Scaleform::AsString(AsInt()));
+        Sfr17AppendString(result, Scaleform::AsString(operator SInt32()));
         break;
     case kUInt:
-        Sfr17AppendString(result, Scaleform::AsString(AsUInt()));
+        Sfr17AppendString(result, Scaleform::AsString(operator UInt32()));
         break;
     case kNumber:
         {
             char buffer[40];
-            const UPInt len = FUN_142525f20(buffer, sizeof(buffer), AsNumber());
-            result.AppendString(buffer, len);
+            UPInt length = Sfr31NumberToChars(buffer, sizeof(buffer), value.VNumber);
+            result.AppendString(buffer, length);
         }
         break;
     case kNamespace:
         result.AppendString(AsNamespace().GetUri().ToCStr());
         break;
-    case kObject:
-    case kClass:
     case kFunction:
+    case kClass:
+    case kObject:
     case kThunkFunction:
         if (IsNull())
             result.AppendString("null");
@@ -4059,11 +4067,17 @@ CheckResult Value::Convert2String(StringBuffer& result) const
                 return false;
         }
         break;
+    case kInstanceTraits:
+    case kClassTraits:
+        break;
     case kString:
-        if (const ASStringNode* node = GetStringNode())
-            result.AppendString(node->pData, node->Size);
-        else
-            result.AppendString("null");
+        {
+            ASStringNode* snode = value.VS._1.VStr;
+            if (snode)
+                result.AppendString(snode->pData, snode->Size);
+            else
+                result.AppendString("null");
+        }
         break;
     default:
         break;
@@ -4996,49 +5010,66 @@ Value GetAbsObject(UPInt addr)
     return result;
 }
 
-// The bytes of s (len long) left after its leading white space.
-static __forceinline UInt32 Sfr33TrailingStart(const char* s, UInt32 len, const UInt32& end)
-{
-    String str(s + end);
-    return static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(str), s + end, len - end));
-}
-
-// ToNumber of a string (kind is kString) or of an object through its primitive value.
-// MS2-FUNCTIONAL 0x1424f1000: same code and blocks; the exe keeps result in r15 and the length in r12d (ours swaps them)
+// ToNumber of a string (kind is kString) or of an object through its primitive value (SDK AS3_Value.cpp).
 // @0x1424f1000
 CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
 {
     if (kind == kString)
     {
-        ASStringNode* node = value.VS._1.VStr;
-        if (node && node->Size)
+        const ASStringNode* sn = value.VS._1.VStr;
+        if (sn)
         {
-            const char* s = node->pData;
-            const UInt32 len = node->Size;
-            UInt32 end;
-            Number d = NumberUtil::StringToDouble(s, len, &end);
-            if (NumberUtil::IsNaN(d) || d == 0.0)
+            const UInt32 len = sn->Size;
+            if (len)
             {
-                if (end == len)
-                    goto zero;
-                if (d == 0.0 && end + Sfr33TrailingStart(s, len, end) >= len)
+                UInt32 offset;
+                const char* str = sn->pData;
+                Number d = NumberUtil::StringToDouble(str, len, &offset);
+                if (NumberUtil::IsNaN(d) || d == 0.0)
+                {
+                    if (offset == len)
+                    {
+                        result = NumberUtil::POSITIVE_ZERO();
+                        return true;
+                    }
+                    else
+                    {
+                        if (d == 0.0)
+                        {
+                            UInt32 index = static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(str + offset), str + offset, len - offset));
+                            if (index + offset >= len)
+                            {
+                                result = d;
+                                return true;
+                            }
+                        }
+
+                        d = NumberUtil::StringToInt(str, len, 0, &offset);
+                    }
+                }
+
+                UInt32 index = static_cast<UInt32>(UTF8Util::GetByteIndex(ASUtils::SkipWhiteSpace(str + offset), str + offset, len - offset));
+                if (index + offset >= len)
                 {
                     result = d;
                     return true;
                 }
-                d = NumberUtil::StringToInt(s, len, 0, &end);
             }
-            if (end + Sfr33TrailingStart(s, len, end) >= len)
+            else
             {
-                result = d;
+                result = NumberUtil::POSITIVE_ZERO();
                 return true;
             }
+
             result = NumberUtil::NaN();
-            return true;
         }
-    }
-    else if (!IsNull())
+        else
+            result = NumberUtil::POSITIVE_ZERO();
+    } else
     {
+        if (IsNull())
+            result = NumberUtil::POSITIVE_ZERO();
+        else
         {
             Value v;
             if (!Convert2PrimitiveValueUnsafe(v, hintNumber))
@@ -5046,10 +5077,7 @@ CheckResult Value::Convert2NumberInternal(Number& result, KindType kind) const
             if (!v.Convert2Number(result))
                 return false;
         }
-        return true;
     }
-zero:
-    result = NumberUtil::POSITIVE_ZERO();
     return true;
 }
 
