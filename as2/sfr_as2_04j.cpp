@@ -508,35 +508,47 @@ void GASSharedObjectLoader::AddProperty(const String& name, const String& value,
 }
 
 // Creates the objects of a dotted package path under pparent and returns the last one.
-// MS2-FUNCTIONAL: the segment buffer and its checks follow the exe, the reference counting is the Ptr's
 // @0x1429301d0
-Object* GlobalContext::AddPackage(ASStringContext* psc, Object* pparent, Object* pproto, const char* ppath)
+Object* GlobalContext::AddPackage(ASStringContext* psc, Object* pparent, Object* objProto, const char* const packageName)
 {
-    Ptr<Object> pcur = pparent;
-    while (ppath)
-    {
-        const char* pdot  = strchr(ppath, '.');
-        UPInt       count = pdot ? UPInt(pdot - ppath) : strlen(ppath);
-        char        segment[0x101];
-        if (count > 0xff)
-            __report_rangecheckfailure();
-        memcpy(segment, ppath, count);
-        segment[count] = '\0';
-        ppath          = pdot ? pdot + 1 : 0;
+    char        buf[256];
+    UPInt       nameSz = strlen(packageName) + 1;
+    const char* pname  = packageName;
+    Ptr<Object> parent = pparent;
 
-        ASString name = psc->CreateString(segment);
-        Value    member;
-        Ptr<Object> pnext;
-        if (pcur->GetMemberRaw(psc, name, &member))
-            pnext = member.ToObject(0);
+    while (pname)
+    {
+        const char* p = strchr(pname, '.');
+        UPInt       sz;
+        if (p)
+            sz = p++ - pname + 1;
+        else
+            sz = nameSz - (pname - packageName);
+
+        if (sz > sizeof(buf))
+            sz = sizeof(buf);
+
+        memcpy(buf, pname, sz - 1);
+        buf[sz - 1] = '\0';
+
+        pname = p;
+
+        Value       pkgObjVal;
+        Ptr<Object> pkgObj;
+        ASString    memberName(psc->CreateString(buf));
+
+        if (parent->GetMemberRaw(psc, memberName, &pkgObjVal))
+        {
+            pkgObj = pkgObjVal.ToObject(NULL);
+        }
         else
         {
-            pnext = *SF_HEAP_NEW(psc->GetHeap()) Object(psc, pproto);
-            pcur->SetMemberRaw(psc, name, Value(pnext.GetPtr()));
+            pkgObj = *SF_HEAP_NEW(psc->GetHeap()) Object(psc, objProto);
+            parent->SetMemberRaw(psc, memberName, Value(pkgObj.GetPtr()));
         }
-        pcur = pnext;
+        parent = pkgObj;
     }
-    return pcur;
+    return parent;
 }
 
 }}} // namespace Scaleform::GFx::AS2
