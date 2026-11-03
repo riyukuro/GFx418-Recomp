@@ -9,6 +9,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1425e8420-0x1425eeef0 .text$mn
 // MS2-RANGE: 0x1425ef560-0x1425f0690 .text$mn
+// MS2-RANGE: 0x1425eef90-0x1425ef060 .text$mn
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_hal.h"
@@ -508,6 +509,20 @@ Color DrawableImage::GetPixel32(SInt32 x, SInt32 y)
         return Color(0);
     internalMapAndFlush();
     return MappedData.GetPixelInScanline(MappedData.GetScanline(y), x);
+}
+
+// Writes the color channels of c and keeps the pixel's alpha. Here, in GetPixel32's TU, so it is inlined as in the exe
+// (the linker placed this one in the sfr_gfx_05f gap).
+// @0x1425eef90
+bool DrawableImage::SetPixel(SInt32 x, SInt32 y, Color c)
+{
+    if (!Rect<SInt32>(Size<SInt32>(ISize.Width, ISize.Height)).Contains(x, y))
+        return false;
+    internalMapAndFlush();
+    c.SetAlpha(GetPixel32(x, y).GetAlpha());
+    MappedData.SetPixelARGB(x, y, c.ToColor32());
+    addToCPUModifiedList();
+    return true;
 }
 
 // @0x1425edc00

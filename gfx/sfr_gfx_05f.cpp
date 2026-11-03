@@ -1,9 +1,11 @@
 // Recovered from MapleStory2.exe KMS2_DEV x64 (2022-04-13): Scaleform GFx 4.1.18 Render_DrawableImage members that the
-// linker placed in the gap after the drawable image TU (sfr_render_02i): the per-pixel writes, SetPixels, Threshold,
-// the user Unmap, TextureLost, and the CPU-modified list that a capture flushes.
+// linker placed in the gap after the drawable image TU (sfr_render_02i): SetPixel32 (SetPixel is in 02i, beside the
+// GetPixel32 it inlines), SetPixels, Threshold, the user Unmap, TextureLost, and the CPU-modified list that a capture
+// flushes.
 // MS2-UNIT: sfr_gfx_05f
 // MS2-FLAGS: scaleform
-// MS2-RANGE: 0x1425eeef0-0x1425ef560 .text$mn
+// MS2-RANGE: 0x1425eeef0-0x1425eef90 .text$mn
+// MS2-RANGE: 0x1425ef060-0x1425ef560 .text$mn
 
 #include "ms2/scaleform/include/render/render_drawableimage.h"
 #include "ms2/scaleform/include/render/render_shapedata.h"
@@ -22,23 +24,9 @@ void TreeNode_SetCxform(TreeNode* pnode, const Cxform& cx)
 // @0x1425eef20
 bool DrawableImage::SetPixel32(SInt32 x, SInt32 y, Color c)
 {
-    if (x > (SInt32)ISize.Width || x < 0 || y > (SInt32)ISize.Height || y < 0)
+    if (!Rect<SInt32>(Size<SInt32>(ISize.Width, ISize.Height)).Contains(x, y))
         return false;
     internalMapAndFlush();
-    MappedData.SetPixelARGB(x, y, c.ToColor32());
-    addToCPUModifiedList();
-    return true;
-}
-
-// Writes the color channels of c and keeps the pixel's alpha.
-// MS2-FUNCTIONAL: the exe inlines GetPixel32 (02i keeps it out of line)
-// @0x1425eef90
-bool DrawableImage::SetPixel(SInt32 x, SInt32 y, Color c)
-{
-    if (x > (SInt32)ISize.Width || x < 0 || y > (SInt32)ISize.Height || y < 0)
-        return false;
-    internalMapAndFlush();
-    c.SetAlpha(GetPixel32(x, y).GetAlpha());
     MappedData.SetPixelARGB(x, y, c.ToColor32());
     addToCPUModifiedList();
     return true;
