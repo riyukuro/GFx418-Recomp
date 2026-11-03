@@ -390,14 +390,16 @@ static __forceinline unsigned long long Ime01EventKey(const unsigned char* event
     return *reinterpret_cast<const unsigned long long*>(event + 0x10);
 }
 
-// MS2-FUNCTIONAL: the exe keeps the constant 1 as an immediate; ours hoists it into ebp. Same code otherwise.
+// MS2-FUNCTIONAL: KeyEvent's constructor stores the type before the modifiers; the exe stores the modifiers first (the
+// SDK's no-modifier constructor). Same code otherwise.
 // IME key and mouse filter: a Shift key-up is sent to the movie after a VK_PROCESSKEY key-up, and the arrow or Enter keys cancel the composition and remove the input window.
 // @0x1423d0cf0
 void FUN_1423d0cf0(unsigned long long* self, const unsigned char* event)
 {
     auto* bytes = reinterpret_cast<unsigned char*>(self);
     if (Ime01EventMessage(event) == WM_KEYDOWN && Ime01EventKey(event) == VK_SHIFT) {
-        *reinterpret_cast<unsigned short*>(bytes + 0xa0) = 1;
+        bytes[0xa0] = 1;
+        bytes[0xa1] = 0;
     }
     if (Ime01EventMessage(event) == WM_KEYUP && bytes[0xa0] == 1 && Ime01EventKey(event) == VK_PROCESSKEY) {
         void* movie = reinterpret_cast<void*>(self[1]);
