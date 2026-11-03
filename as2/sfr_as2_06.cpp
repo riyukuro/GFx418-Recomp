@@ -290,22 +290,36 @@ bool Object::HasMember(ASStringContext* psc, const ASString& name, bool inclProt
     return false;
 }
 
-// MS2-FUNCTIONAL the exe inlines the standard-member name hash and ObjectInterface refcount paths; this preserves
-// their lookup result through the recovered ASString and object APIs.
+// IsStandardMember below as the exe inlines it, without the lowercase name out.
+static inline bool IsStandardMemberInline(const ASString& memberName)
+{
+    if ((UByte)(memberName.GetHashFlags() >> 29) & 1)
+        return true;
+    if (memberName.GetLength() > 0 && memberName.GetCharAt(0) == '_')
+    {
+        ASString lower(memberName.ToLowerNode());
+        if ((UByte)(lower.GetHashFlags() >> 28) & 1)
+            return true;
+    }
+    return false;
+}
+
+// A standard member answers from the clip's member bit mask, anything else from its AS object.
 // @0x14295d840
 bool AvmCharacter::HasMember(ASStringContext* psc, const ASString& name, bool inclPrototypes)
 {
-    ASString lowerName(name);
-    if (IsStandardMember(name, &lowerName))
+    if (IsStandardMemberInline(name))
     {
-        const StandardMember member = GetStandardMemberConstant(lowerName.IsEmpty() ? name : lowerName);
-        if (member != M_InvalidMember && member < M_LastBitMaskMember &&
+        const StandardMember member = GetStandardMemberConstant(name);
+        if (member != M_InvalidMember && member <= M_LastBitMaskMember &&
             (GetStandardMemberBitMask() & (1u << static_cast<unsigned>(member))))
             return true;
     }
 
-    Object* object = GetASObject();
-    return object && object->HasMember(psc, name, inclPrototypes);
+    Ptr<Object> object = GetASObject();
+    if (!object)
+        return false;
+    return object->HasMember(psc, name, inclPrototypes);
 }
 
 // MS2-FUNCTIONAL: the exe inlines the tabEnabled lookup; same flow and calls.
