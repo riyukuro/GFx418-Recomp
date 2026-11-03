@@ -833,6 +833,58 @@ void Sprite::IncrementFrameAndCheckForLoop()
         SetPlayState(State_Stopped);
 }
 
+// Sprite::CheckAdvanceStatus's body (below), forced inline where the exe inlines it
+static SF_FORCEINLINE int CheckAdvanceStatusBody(Sprite* psprite, bool playingNow)
+{
+    int rv = 0;
+    // CanAdvanceChar: not marked for removal, as a shifted byte test (exe shr/not/test al)
+    bool advanceDisabled = (psprite->IsAdvanceDisabled() || !(bool)((UByte)~(psprite->DisplayObjectBase::Flags >> 6) & 1));
+
+    bool advancable = (!advanceDisabled && (psprite->GetPlayState() == State_Playing ||
+        psprite->GetMovieImpl()->pKeepAdvancingChar == psprite ||
+        (psprite->pActiveSounds && psprite->pActiveSounds->Sounds.GetSize() != 0)));
+
+    if (advancable)
+    {
+        rv = !playingNow;
+    }
+    else
+    {
+        if (playingNow)
+        {
+            if (!advanceDisabled)
+            {
+                if (!psprite->MustBeInPlaylist())
+                    rv = -1;
+            }
+            else
+            {
+                rv = -1;
+            }
+        }
+        else
+        {
+            if (!advanceDisabled)
+            {
+                if (psprite->MustBeInPlaylist())
+                    rv = 1;
+            }
+        }
+    }
+    return rv;
+}
+
+// ModifyOptimizedPlayListLocal<Sprite>, which the exe inlines (CheckAdvanceStatus included) into CheckActiveSounds
+static SF_FORCEINLINE void ModifyOptimizedPlayListInline(Sprite* psprite)
+{
+    switch (CheckAdvanceStatusBody(psprite, psprite->IsOptAdvListFlagSet() &&
+                                                !psprite->IsMarkedToRemoveFromOptimizedPlayList()))
+    {
+    case 1:  psprite->AddToOptimizedPlayList(); break;
+    case -1: psprite->MarkToRemoveFromOptimizedPlayList(); break;
+    }
+}
+
 // Removes the sounds that stopped playing (their Sound objects get onSoundComplete) and updates the clip's place on
 // the advance list, which a playing sound keeps it on.
 // @0x1425da3c0
@@ -850,16 +902,16 @@ void Sprite::CheckActiveSounds()
     for (UPInt i = 0; i < sounds.GetSize();)
     {
         Ptr<ActiveSoundItem> item = sounds[i];
-        if (item->pChannel->IsPlaying())
+        if (!item->pChannel->IsPlaying())
         {
-            i++;
-            continue;
+            if (item->pSoundObject)
+                item->pSoundObject->ExecuteOnSoundComplete();
+            finished.PushBack(sounds[i]);
+            sounds.RemoveAt(i);
+            ModifyOptimizedPlayListInline(this);
         }
-        if (item->pSoundObject)
-            item->pSoundObject->ExecuteOnSoundComplete();
-        finished.PushBack(sounds[i]);
-        sounds.RemoveAt(i);
-        ModifyOptimizedPlayListLocal<Sprite>();
+        else
+            i++;
     }
 
     for (UPInt i = 0; i < finished.GetSize(); i++)
@@ -883,42 +935,7 @@ void Sprite::CheckActiveSounds()
 // @0x1425da750
 int Sprite::CheckAdvanceStatus(bool playingNow)
 {
-    int rv = 0;
-    // CanAdvanceChar: not marked for removal, as a shifted byte test (exe shr/not/test al)
-    bool advanceDisabled = (IsAdvanceDisabled() || !(bool)((UByte)~(DisplayObjectBase::Flags >> 6) & 1));
-
-    bool advancable = (!advanceDisabled && (GetPlayState() == State_Playing ||
-        GetMovieImpl()->pKeepAdvancingChar == this ||
-        (pActiveSounds && pActiveSounds->Sounds.GetSize() != 0)));
-
-    if (advancable)
-    {
-        rv = !playingNow;
-    }
-    else
-    {
-        if (playingNow)
-        {
-            if (!advanceDisabled)
-            {
-                if (!MustBeInPlaylist())
-                    rv = -1;
-            }
-            else
-            {
-                rv = -1;
-            }
-        }
-        else
-        {
-            if (!advanceDisabled)
-            {
-                if (MustBeInPlaylist())
-                    rv = 1;
-            }
-        }
-    }
-    return rv;
+    return CheckAdvanceStatusBody(this, playingNow);
 }
 
 // Per-frame advance: the sounds, the streaming sound block of the frame, then the AVM.
