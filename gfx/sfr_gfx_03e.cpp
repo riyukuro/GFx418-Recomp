@@ -112,8 +112,9 @@ void InteractiveObject::ModifyOptimizedPlayListLocal<TextField>()
 
 // ---- GFx::FontHandle (the handle a field's formats keep: the font and the movie it came from)
 
+// Out of line, as in the exe: GetInitialFormats calls it.
 // @0x1425b5800
-FontHandle::FontHandle(Render::Text::FontManagerBase* pmgr, Render::Font* pfont, const char* name, unsigned flags,
+SF_NOINLINE FontHandle::FontHandle(Render::Text::FontManagerBase* pmgr, Render::Font* pfont, const char* name, unsigned flags,
                        MovieDef* psourceMovieDef)
     : Render::Text::FontHandle(pmgr, pfont, name, flags), pSourceMovieDef(psourceMovieDef)
 {
