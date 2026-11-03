@@ -79,22 +79,27 @@ static inline void Sfr05gb_ResizeStringArray(MovieImpl::ReturnValueHolder* h, un
 // @0x142953f50
 UInt32 Math::GetNextRandom(MovieImpl* proot)
 {
+    UInt32      rnd;
     TestStream* pts = proot->GetStateBag()->GetTestStream();
     if (pts)
     {
         if (pts->TestStatus == TestStream::Record)
         {
-            UInt32 rnd = Alg::Random::NextRandom();
+            rnd = Alg::Random::NextRandom();
             LongFormatter f(rnd);
             f.Convert();
             pts->SetParameter("random", f.ToCStr());
-            return rnd;
         }
-        String value;
-        pts->GetParameter("random", &value);
-        return (UInt32)strtoul(value.ToCStr(), NULL, 10);
+        else
+        {
+            String value;
+            pts->GetParameter("random", &value);
+            rnd = (UInt32)strtoul(value.ToCStr(), NULL, 10);
+        }
     }
-    return Alg::Random::NextRandom();
+    else
+        rnd = Alg::Random::NextRandom();
+    return rnd;
 }
 
 // The script side of a button (partial local copy; the other units carry their own).
