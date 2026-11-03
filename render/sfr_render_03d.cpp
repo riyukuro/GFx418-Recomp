@@ -639,53 +639,6 @@ RectF ComputeBoundsRoundStrokeSorter(const ShapeDataInterface& shape, ShapePosIn
     return bounds;
 }
 
-// the stroke width in the transformed space
-template<class Transformer>
-SF_INLINE float scaledStrokeWidth(const StrokeStyleType& style, const Transformer& trans)
-{
-    float scale = 1.0f;
-    switch (style.Flags & StrokeScaling_Mask)
-    {
-    case StrokeScaling_Normal:     scale = trans.GetScale(); break;
-    case StrokeScaling_Horizontal: scale = trans.GetXScale(); break;
-    case StrokeScaling_Vertical:   scale = trans.GetYScale(); break;
-    case StrokeScaling_None:       break;
-    }
-    return style.Width * scale;
-}
-
-// sets the generator's stroker up for the style's joins and caps at width
-SF_INLINE void setupStroker(Stroker* stroker, const StrokeStyleType& style, float width, const ToleranceParams& param)
-{
-    StrokerTypes::LineJoinType join     = StrokerTypes::RoundJoin;
-    StrokerTypes::LineCapType  startCap = StrokerTypes::RoundCap;
-    StrokerTypes::LineCapType  endCap   = StrokerTypes::RoundCap;
-    switch (style.Flags & StrokeJoin_Mask)
-    {
-    case StrokeJoin_Round: break;
-    case StrokeJoin_Bevel: join = StrokerTypes::BevelJoin; break;
-    case StrokeJoin_Miter: join = StrokerTypes::MiterJoin; break;
-    }
-    switch (style.Flags & StrokeCap_Mask)
-    {
-    case StrokeCap_Round:  break;
-    case StrokeCap_None:   startCap = StrokerTypes::ButtCap; break;
-    case StrokeCap_Square: startCap = StrokerTypes::SquareCap; break;
-    }
-    switch (style.Flags & StrokeEndCap_Mask)
-    {
-    case StrokeEndCap_Round:  break;
-    case StrokeEndCap_None:   endCap = StrokerTypes::ButtCap; break;
-    case StrokeEndCap_Square: endCap = StrokerTypes::SquareCap; break;
-    }
-    stroker->SetWidth(width);
-    stroker->SetLineJoin(join);
-    stroker->SetStartLineCap(startCap);
-    stroker->SetEndLineCap(endCap);
-    stroker->SetMiterLimit(style.Miter);
-    stroker->SetToleranceParam(param);
-}
-
 // feeds sorted path i into sink, flattening its curves
 SF_INLINE void addSortedPath(TessBase* sink, const StrokeSorter& sorter, unsigned i, unsigned n,
                              const ToleranceParams& param)
@@ -721,21 +674,73 @@ RectF ComputeBoundsSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* p
 {
     StrokeStyleType style;
     shape.GetStrokeStyle(strokeStyle, &style);
-    float width = scaledStrokeWidth(style, trans);
+    float widthScale = 1.0f;
+    switch (style.Flags & StrokeScaling_Mask)
+    {
+    case StrokeScaling_Normal:     widthScale = trans.GetScale(); break;
+    case StrokeScaling_Horizontal: widthScale = trans.GetXScale(); break;
+    case StrokeScaling_Vertical:   widthScale = trans.GetYScale(); break;
+    case StrokeScaling_None:       break;
+    }
+    float width = style.Width * widthScale;
     if ((style.Flags & StrokeJoin_Mask) == StrokeJoin_Round && (style.Flags & StrokeCap_Mask) == StrokeCap_Round)
         return ComputeBoundsRoundStrokeSorter(shape, pos, strokeStyle, trans, width, gen);
 
-    setupStroker(&gen->mStroker, style, width, param);
+    StrokerTypes::LineJoinType join     = StrokerTypes::RoundJoin;
+    StrokerTypes::LineCapType  startCap = StrokerTypes::RoundCap;
+    StrokerTypes::LineCapType  endCap   = StrokerTypes::RoundCap;
+    switch (style.Flags & StrokeJoin_Mask)
+    {
+    case StrokeJoin_Round: break;
+    case StrokeJoin_Bevel: join = StrokerTypes::BevelJoin; break;
+    case StrokeJoin_Miter: join = StrokerTypes::MiterJoin; break;
+    }
+    switch (style.Flags & StrokeCap_Mask)
+    {
+    case StrokeCap_Round:  break;
+    case StrokeCap_None:   startCap = StrokerTypes::ButtCap; break;
+    case StrokeCap_Square: startCap = StrokerTypes::SquareCap; break;
+    }
+    switch (style.Flags & StrokeEndCap_Mask)
+    {
+    case StrokeEndCap_Round:  break;
+    case StrokeEndCap_None:   endCap = StrokerTypes::ButtCap; break;
+    case StrokeEndCap_Square: endCap = StrokerTypes::SquareCap; break;
+    }
+    gen->mStroker.SetWidth(width);
+    gen->mStroker.SetLineJoin(join);
+    gen->mStroker.SetStartLineCap(startCap);
+    gen->mStroker.SetEndLineCap(endCap);
+    gen->mStroker.SetMiterLimit(style.Miter);
+    gen->mStroker.SetToleranceParam(param);
     AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
 
-    RectF bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    RectF    bounds(1e30f, 1e30f, -1e30f, -1e30f);
+    unsigned i, j;
     gen->mStroker.Clear();
-    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    for (i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
     {
         gen->mPath.Clear();
-        addSortedPath(&gen->mStroker, gen->mStrokeSorter, i, param);
+        unsigned n = gen->mStrokeSorter.GetVertexCount(i);
+        for (j = 0; j < n;)
+        {
+            const StrokeSorter::VertexType& v1 = gen->mStrokeSorter.GetVertex(i, j++);
+            if (v1.segType == Math2D::Seg_MoveTo || v1.segType == Math2D::Seg_LineTo)
+                gen->mStroker.AddVertex(v1.x, v1.y);
+            else if (v1.segType == Math2D::Seg_QuadTo)
+            {
+                const StrokeSorter::VertexType& v2 = gen->mStrokeSorter.GetVertex(i, j++);
+                TessellateQuadCurve(&gen->mStroker, param, v1.x, v1.y, v2.x, v2.y);
+            }
+            else if (v1.segType == Math2D::Seg_CubicTo)
+            {
+                const StrokeSorter::VertexType& v2 = gen->mStrokeSorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& v3 = gen->mStrokeSorter.GetVertex(i, j++);
+                TessellateCubicCurve(&gen->mStroker, param, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
+            }
+        }
         gen->mStroker.GenerateStroke(&gen->mPath);
-        for (unsigned j = 0; j < gen->mPath.GetNumVertices(); ++j)
+        for (j = 0; j < gen->mPath.GetNumVertices(); ++j)
         {
             const VertexPath::VertexType& v = gen->mPath.GetVertex(j);
             bounds.ExpandToPoint(v.x, v.y);
@@ -821,11 +826,29 @@ bool HitTestRoundJoinStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, 
                             const ToleranceParams& param)
 {
     AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
-    for (unsigned i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
+    unsigned i, j;
+    for (i = 0; i < gen->mStrokeSorter.GetPathCount(); ++i)
     {
         unsigned n = gen->mStrokeSorter.GetVertexCount(i);
         gen->mPath.Clear();
-        addSortedPath(&gen->mPath, gen->mStrokeSorter, i, n, param);
+        // The SDK tests CubicTo with a plain if, not else if, as here.
+        for (j = 0; j < n;)
+        {
+            const StrokeSorter::VertexType& v1 = gen->mStrokeSorter.GetVertex(i, j++);
+            if (v1.segType == Math2D::Seg_MoveTo || v1.segType == Math2D::Seg_LineTo)
+                gen->mPath.AddVertex(v1.x, v1.y);
+            else if (v1.segType == Math2D::Seg_QuadTo)
+            {
+                const StrokeSorter::VertexType& v2 = gen->mStrokeSorter.GetVertex(i, j++);
+                TessellateQuadCurve(&gen->mPath, param, v1.x, v1.y, v2.x, v2.y);
+            }
+            if (v1.segType == Math2D::Seg_CubicTo)
+            {
+                const StrokeSorter::VertexType& v2 = gen->mStrokeSorter.GetVertex(i, j++);
+                const StrokeSorter::VertexType& v3 = gen->mStrokeSorter.GetVertex(i, j++);
+                TessellateCubicCurve(&gen->mPath, param, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
+            }
+        }
         if (HitTestRoundStroke(gen->mPath, width, x, y))
             return true;
     }
@@ -841,11 +864,45 @@ bool HitTestSingleStroke(const ShapeDataInterface& shape, ShapePosInfo* pos, uns
 {
     StrokeStyleType style;
     shape.GetStrokeStyle(strokeStyle, &style);
-    float width = scaledStrokeWidth(style, trans);
+    float widthScale = 1.0f;
+    switch (style.Flags & StrokeScaling_Mask)
+    {
+    case StrokeScaling_Normal:     widthScale = trans.GetScale(); break;
+    case StrokeScaling_Horizontal: widthScale = trans.GetXScale(); break;
+    case StrokeScaling_Vertical:   widthScale = trans.GetYScale(); break;
+    case StrokeScaling_None:       break;
+    }
+    float width = style.Width * widthScale;
     if ((style.Flags & StrokeJoin_Mask) == StrokeJoin_Round && (style.Flags & StrokeCap_Mask) == StrokeCap_Round)
         return HitTestRoundJoinStroke(shape, pos, strokeStyle, trans, width, x, y, gen, param);
 
-    setupStroker(&gen->mStroker, style, width, param);
+    StrokerTypes::LineJoinType join     = StrokerTypes::RoundJoin;
+    StrokerTypes::LineCapType  startCap = StrokerTypes::RoundCap;
+    StrokerTypes::LineCapType  endCap   = StrokerTypes::RoundCap;
+    switch (style.Flags & StrokeJoin_Mask)
+    {
+    case StrokeJoin_Round: break;
+    case StrokeJoin_Bevel: join = StrokerTypes::BevelJoin; break;
+    case StrokeJoin_Miter: join = StrokerTypes::MiterJoin; break;
+    }
+    switch (style.Flags & StrokeCap_Mask)
+    {
+    case StrokeCap_Round:  break;
+    case StrokeCap_None:   startCap = StrokerTypes::ButtCap; break;
+    case StrokeCap_Square: startCap = StrokerTypes::SquareCap; break;
+    }
+    switch (style.Flags & StrokeEndCap_Mask)
+    {
+    case StrokeEndCap_Round:  break;
+    case StrokeEndCap_None:   endCap = StrokerTypes::ButtCap; break;
+    case StrokeEndCap_Square: endCap = StrokerTypes::SquareCap; break;
+    }
+    gen->mStroker.SetWidth(width);
+    gen->mStroker.SetLineJoin(join);
+    gen->mStroker.SetStartLineCap(startCap);
+    gen->mStroker.SetEndLineCap(endCap);
+    gen->mStroker.SetMiterLimit(style.Miter);
+    gen->mStroker.SetToleranceParam(param);
     AddStrokeToSorter(shape, pos, strokeStyle, trans, gen);
 
     gen->mStroker.Clear();
