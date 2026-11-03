@@ -330,12 +330,15 @@ void SoundStreamDefImpl::ReadHeadTag(Stream* in)
 }
 
 // @0x1426d3fe0
-// MS2-FUNCTIONAL: same code, the stream and this pointers sit in swapped registers
 void SoundStreamDefImpl::ReadBlockTag(LoadProcess* p)
 {
-    Stream*  in          = p->GetStream();
-    unsigned datasize    = in->GetTagEndPosition() - in->Tell();
+    unsigned datasize    = 0;
     UInt16   sampleCount = 0;
+    SInt16   seekSamples = 0;
+
+    Stream* in = p->GetStream();
+
+    datasize = in->GetTagEndPosition() - in->Tell();
     p->LogParse("SoundStreamBlock: size=%d", datasize);
     if (datasize == 0)
         return;
@@ -368,15 +371,16 @@ void SoundStreamDefImpl::ReadBlockTag(LoadProcess* p)
     if (SoundCompression == SwfSound_Mp3)
     {
         sampleCount = in->ReadU16();
-        in->ReadU16(); // seek samples
+        seekSamples = in->ReadS16();
         datasize -= 4;
     }
-    else
+    else if (SoundCompression == SwfSound_Adpcm)
     {
-        if (SoundCompression == SwfSound_Adpcm)
-            codeBits = in->ReadUInt(2);
+        codeBits    = in->ReadUInt(2);
         sampleCount = (UInt16)StreamSampleCount;
     }
+    else
+        sampleCount = (UInt16)StreamSampleCount;
 
     if (datasize > 0)
     {
