@@ -90,7 +90,6 @@ namespace Instances { namespace fl_display
     // A script-created loader gets a fresh LoaderInfo and a loader stage object; one made for the timeline hands its
     // content's LoaderInfo the back pointer.
     // @0x142444620
-    // MS2-FUNCTIONAL the exe inlines CreateStageObject
     void Loader::InitInstance(bool extCall)
     {
         VM& vm = GetVM();
@@ -102,8 +101,9 @@ namespace Instances { namespace fl_display
             if (!pDispObj)
             {
                 MovieRoot* proot = static_cast<ASVM&>(GetVM()).GetMovieRoot();
+                // pMainMovieDef is a Ptr<MovieDefImpl> in the exe; its conversion loads it after the ResourceId temp
                 AvmLoader* p = SF_HEAP_NEW(proot->GetMovieImpl()->GetMovieHeap())
-                    AvmLoader(proot, proot->GetMovieImpl()->pMainMovieDef, NULL, ResourceId(0x40000));
+                    AvmLoader(proot, reinterpret_cast<Ptr<MovieDefImpl>&>(proot->GetMovieImpl()->pMainMovieDef), NULL, ResourceId(0x40000));
                 if (pDispObj)
                     pDispObj->Release();
                 pDispObj.GetRawRef() = p;
