@@ -1055,6 +1055,7 @@ void ObjectProto::GlobalCtor(const FnCall& fn)
 }
 
 // @0x14295ae40
+// MS2-FUNCTIONAL the exe inlines CFunctionObject(Environment*) (0x142919db0, out of line in as2_object.h); ours calls it
 void FunctionProto::GlobalCtor(const FnCall& fn)
 {
     if (fn.NArgs == 1)
@@ -1067,7 +1068,7 @@ void FunctionProto::GlobalCtor(const FnCall& fn)
     }
     else
     {
-        Ptr<Object> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);   // the exe builds a plain Object (0x14291f810)
+        Ptr<CFunctionObject> pfunc = *SF_HEAP_NEW(fn.Env->GetHeap()) CFunctionObject(fn.Env);
         fn.Result->SetAsObject(pfunc.GetPtr());
     }
 }
