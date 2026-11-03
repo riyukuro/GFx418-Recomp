@@ -1728,7 +1728,8 @@ template <> template <> void MS2_AS2_STRING_SET(GFx::AS2::MovieRoot::InvokeAlias
     UPInt h);
 // @0x1429957f0
 template void MS2_AS2_STRING_SET(GFx::AS2::MovieRoot::InvokeAliasInfo, HashsetNodeEntry)::setRawCapacity(void*, UPInt);
-// MS2-FUNCTIONAL cl inlines the Clear / Add the exe calls out of line (paired by the pin below)
+// The exe calls this set's destructor out of line (0x1429246b0).
+template <> MS2_AS2_STRING_SET(GFx::AS2::Object::Watchpoint, GFx::HashsetNodeEntry_GC)::~HashSetBase();
 // @0x1429959a0
 template void MS2_AS2_STRING_SET(GFx::AS2::Object::Watchpoint, GFx::HashsetNodeEntry_GC)::setRawCapacity(void*, UPInt);
 // The exe calls this set's Clear out of line (0x1429340f0).
