@@ -4471,15 +4471,15 @@ static void cx18_FillCandidateRows(unsigned char* self, const CANDIDATELIST* lis
 // selection's page for the 0xf00 modes). An empty list calls RemoveList; otherwise the mode decides the visible rows
 // (0x410000: up to five from the selection; 0x60000: from the selection; else one page), they replace the rows of
 // the list object at +0x30, the selection is set (relative to the page in the paging modes, else -1) and +0x5bc
-// marks the list shown.
-// MS2-FUNCTIONAL: the exe inlines the row loop and the row item ctor (FUN_1423cdb60) and keeps an unused Value local.
-// Reviewed against the exe: same visible-row choice per mode, same second context release, same in-page selection.
+// marks the list shown. The exe inlines the row loop and the row item ctor (FUN_1423cdb60) and keeps an unused Value
+// local.
 // @0x1423d3120
 void FUN_1423d3120(void* raw, DWORD listIndex)
 {
+    typedef void (*InvokeFn)(void*, const char*, Scaleform::GFx::Value*, Scaleform::GFx::Value*, unsigned);
     auto* self = static_cast<unsigned char*>(raw);
-    HWND hwnd = *reinterpret_cast<HWND*>(self + 0x28);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    Scaleform::GFx::Value unused;
+    HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(self + 0x28));
     const DWORD bytes = cx18_ImmGetCandidateListW(context, listIndex, nullptr, 0);
     if (!bytes) return;
     auto* list = static_cast<LPCANDIDATELIST>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(bytes) * 0x1c));
@@ -4487,51 +4487,78 @@ void FUN_1423d3120(void* raw, DWORD listIndex)
     *reinterpret_cast<DWORD*>(self + 0xcc) = list->dwCount;
     const int osPage = static_cast<int>(list->dwPageSize);
     const int selection = static_cast<int>(list->dwSelection);
-    int& page = *reinterpret_cast<int*>(self + 0xd4);
-    if (page <= osPage) page = osPage;
+    int page = *reinterpret_cast<int*>(self + 0xd4);
+    page = page <= osPage ? osPage : page;
+    *reinterpret_cast<int*>(self + 0xd4) = page;
+    *reinterpret_cast<int*>(self + 0x70) = static_cast<int>(list->dwPageStart);
+    if (*reinterpret_cast<unsigned*>(self + 0x98) & 0xf00) *reinterpret_cast<int*>(self + 0x70) = selection - selection % page;
     int& first = *reinterpret_cast<int*>(self + 0x70);
-    first = static_cast<int>(list->dwPageStart);
-    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
-    if (mode & 0xf00) first = selection - selection % page;
-    cx18_ImmReleaseContext(hwnd, context);
-    const int count = *reinterpret_cast<int*>(self + 0xcc);
-    if (!count) {
-        cx18_InvokeInputWindow(self, "RemoveList", nullptr, 0);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    int visible = *reinterpret_cast<int*>(self + 0xcc);
+    if (!visible) {
+        {
+            Scaleform::GFx::Value result;
+            if (void* bridge = *reinterpret_cast<void**>(*reinterpret_cast<unsigned char**>(self + 0xa8) + 0x18))
+                reinterpret_cast<InvokeFn>((*reinterpret_cast<void***>(bridge))[0x78 / sizeof(void*)])(
+                    bridge, "RemoveList", &result, nullptr, 0);
+        }
         Scaleform::Memory::Free(list);
         return;
     }
-    int visible;
+    const unsigned mode = *reinterpret_cast<unsigned*>(self + 0x98);
     if (mode == 0x410000) {
-        visible = count;
-        if (5 < count && 5 < count - selection) visible = 5;
-        else if (5 < count) visible = count - selection;
-        first = selection;
-    } else {
-        visible = osPage;
-        if (mode == 0x40000) {
-            if (count - first <= osPage) visible = count - first;
-        } else if (mode == 0x60000) {
-            first = selection;
-            if (count - selection <= osPage) visible = count - selection;
-        } else {
-            visible = count;
-            if (mode != 0xd00001 && osPage <= count) {
-                visible = osPage;
-                if (count - first <= osPage) visible = count - first;
-            }
+        if (visible > 5) {
+            visible -= selection;
+            if (visible > 5) visible = 5;
         }
+        first = selection;
+    } else if (mode == 0x40000) {
+        const int rest = visible - first;
+        visible = osPage;
+        visible = osPage >= rest ? rest : osPage;
+    } else if (mode == 0x60000) {
+        const int rest = visible - selection;
+        first = selection;
+        visible = osPage >= rest ? rest : osPage;
+    } else if (mode != 0xd00001 && visible >= osPage) {
+        const int rest = visible - first;
+        visible = osPage;
+        if (rest <= osPage) visible = rest;
     }
-    cx18_FillCandidateRows(self, list, first, visible);
+    FUN_1423d9500(*reinterpret_cast<void**>(self + 0x30));
+    for (int i = 0; i < visible; ++i) {
+        const wchar_t* wide = reinterpret_cast<const wchar_t*>(
+            reinterpret_cast<const unsigned char*>(list) + list->dwOffset[first + i]);
+        const int size = static_cast<int>(Scaleform::UTF8Util::GetEncodeStringSize(wide, -1));
+        auto* text = static_cast<char*>(Scaleform::Memory::Alloc(static_cast<Scaleform::UPInt>(size + 1)));
+        Scaleform::UTF8Util::EncodeString(text, wide, -1);
+        text[size] = 0;
+        auto* item = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x20));
+        if (item) {
+            *reinterpret_cast<unsigned*>(item + 1) = 1;
+            String* value = reinterpret_cast<String*>(item + 3);
+            item[0] = reinterpret_cast<unsigned long long>(DAT_14313a228);
+            new (value) String();
+            *value = text;
+            ++*reinterpret_cast<int*>(item + 1);
+        } else
+            item = nullptr;
+        unsigned long long retained = reinterpret_cast<unsigned long long>(item);
+        FUN_1423d9490(*reinterpret_cast<void**>(self + 0x30), &retained, 0);
+        Scaleform::Memory::Free(text);
+        if (item) FUN_14257dcd0(item);
+    }
     Scaleform::Memory::Free(list);
-    cx18_ImmReleaseContext(hwnd, context);
+    cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), context);
+    const unsigned now = *reinterpret_cast<unsigned*>(self + 0x98);
     long long selected = -1;
-    if (cx18_CandidateSelectsInPage(*reinterpret_cast<unsigned*>(self + 0x98))) {
+    if ((now == 2 || now == 4 || now == 10) || (now & 0xf00) || now == 0x40000 || now == 0x70000 ||
+        now == 0x110000 || now == 0x210000 || now == 0x410000 || now == 0xd10000) {
         const int inPage = selection - first;
-        selected = inPage < 0 ? 0 : inPage;
+        selected = inPage >= 0 ? inPage : 0;
     }
-    void* output = *reinterpret_cast<void**>(self + 0x30);
-    FUN_1423d97f0(output, static_cast<unsigned long long>(selected), 0);
-    FUN_1423d9b40(output);
+    FUN_1423d97f0(*reinterpret_cast<void**>(self + 0x30), static_cast<unsigned long long>(selected), 0);
+    FUN_1423d9b40(*reinterpret_cast<void**>(self + 0x30));
     self[0x5bc] = 1;
 }
 
