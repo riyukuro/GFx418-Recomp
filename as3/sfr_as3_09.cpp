@@ -409,97 +409,130 @@ namespace Instances { namespace fl_events {
 
     // ---- Dispatch: the listeners of this dispatcher, and the capture/target/bubble walk ---------------------------------
 
+    // The SDK's ToAvmInteractiveObj: the static_cast does the only null test.
+    static inline AvmInteractiveObj* Sfr09ToAvmInteractiveObj(InteractiveObject* po)
+    {
+        if (!po)
+            return NULL;
+        return static_cast<AvmInteractiveObj*>(po->GetAvmObjImpl()->ToAvmInteractiveObjBase());
+    }
+
     // @0x142466270
-    // MS2-FUNCTIONAL: the exe computes both AS3 pointer addresses before the null-checked cast and keeps
-    // the PushBack size in a different register; the same chain
+    // MS2-FUNCTIONAL: the exe's ArrayStaticBuff::PushBack stores and returns per branch (SDK form); the header's
+    // PushBack increments the size after the branches; the same chain
     void EventDispatcher::GetParentChain(GFx::DisplayObject* dobj,
                                          ArrayStaticBuff<SPtr<Instances::fl_display::DisplayObject>, 32>& chain)
     {
         for (InteractiveObject* p = dobj->GetParent(); p; p = p->GetParent())
         {
-            Instances::fl_display::DisplayObject* o = ToAvmInteractiveObj(p)->GetAS3Obj();
-            SPtr<Instances::fl_display::DisplayObject> s(o);
-            if (s)
-                chain.PushBack(s);
+            Instances::fl_display::DisplayObject* as3p = Sfr09ToAvmInteractiveObj(p)->GetAS3Obj();
+            if (as3p)
+                chain.PushBack(as3p);
         }
     }
 
     // @0x1424687d0
-    // MS2-FUNCTIONAL: register allocation and the listener copy loop; the same calls and exception handling
-    bool EventDispatcher::DispatchSingleEvent(Instances::fl_events::Event* evt, bool inCapturePhase)
+    // MS2-FUNCTIONAL: the exe inlines the Listener copy and has a larger frame; the same calls and exception handling
+    bool EventDispatcher::DispatchSingleEvent(Instances::fl_events::Event* evtObj, bool useCapture)
     {
         if (!pImpl)
             return true;
-
-        SPtr<EventDispatcher> self(this);
-        ListenersHash& hash = inCapturePhase ? pImpl->CaptureListeners : pImpl->Listeners;
-        ArrayLH<Listener>** plisteners = hash.Get(evt->Type);
-        bool ok = true;
-        if (plisteners)
+        SPtr<EventDispatcher> saved(this);
+        ListenersHash& listeners = (useCapture) ? pImpl->CaptureListeners : pImpl->Listeners;
+        ArrayLH<Listener>** pplistenersArr = listeners.Get(evtObj->Type);
+        bool rv = true;
+        if (pplistenersArr)
         {
-            evt->CurrentTarget = this;
-            ArrayLH<Listener>& listeners = **plisteners;
-            UPInt n = listeners.GetSize();
-            if (n == 1)
+            evtObj->CurrentTarget = this;
+            ArrayLH<Listener>* plistenersArr = *pplistenersArr;
+            // make a copy of listener array to make sure it is immutable
+            // during the dispatch. Need to do this only if size of the array
+            // is more than 1.
+            if (plistenersArr->GetSize() == 1)
             {
-                const Listener& l = listeners[0];
-                if (l.Function.IsValidWeakRef())
+                const Value& func = (*plistenersArr)[0].Function;
+
+                if (func.IsValidWeakRef())
                 {
                     Value _this;
-                    Value arg(evt);
+                    Value param(evtObj);
                     Value result;
-                    GetVM().ExecuteInternalUnsafe(l.Function.IsWeakRef() ? Value(l.Function, StrongRefValue) : l.Function,
-                                                  _this, result, 1, &arg, false);
-                    VM& vm = GetVM();
-                    ok = !vm.IsException();
-                    if (!ok)
-                        vm.OutputAndIgnoreException();
+
+                    GetVM().ExecuteInternalUnsafe(
+                        // Make a strong ref if necessary.
+                        func.IsWeakRef() ? Value(func, StrongRefValue) : func,
+                        _this, result, 1, &param, false);
+                    if (GetVM().IsException())
+                    {
+                        GetVM().OutputAndIgnoreException();
+                        rv = false;
+                    }
                 }
             }
-            else if (n > 1)
+            else if (plistenersArr->GetSize() > 1)
             {
-                // the listeners may change while they run: call a copy (ten in the frame, more on the heap)
-                UInt64 buf[10 * sizeof(Listener) / sizeof(UInt64)];
-                Listener* copies = n > 10 ? (Listener*)SF_HEAP_AUTO_ALLOC(this, n * sizeof(Listener))
-                                          : reinterpret_cast<Listener*>(buf);
+                UByte fixedarr[sizeof(Listener)*10];
+                UByte* arr;
+                if (plistenersArr->GetSize() <= 10)
+                {
+                    arr = fixedarr;
+                }
+                else
+                {
+                    arr = (UByte*)SF_HEAP_AUTO_ALLOC(this, sizeof(Listener)*plistenersArr->GetSize());
+                }
+                UPInt n = plistenersArr->GetSize();
+                Listener* copiedListeners = reinterpret_cast<Listener*>(arr);
                 for (UPInt i = 0; i < n; ++i)
-                    Scaleform::Construct(&copies[i], listeners[i]);
+                {
+                    new (&copiedListeners[i]) Listener((*plistenersArr)[i]);
+                }
 
                 UPInt i = 0;
                 for (; i < n; ++i)
                 {
-                    Listener& l = copies[i];
-                    if (l.Function.IsValidWeakRef())
+                    const Value& func = copiedListeners[i].Function;
+
+                    if (func.IsValidWeakRef())
                     {
                         Value _this;
                         Value result;
-                        Value arg(evt);
-                        GetVM().ExecuteInternalUnsafe(l.Function.IsWeakRef() ? Value(l.Function, StrongRefValue)
-                                                                             : l.Function,
-                                                      _this, result, 1, &arg, false);
-                        VM& vm = GetVM();
-                        if (vm.IsException())
+                        Value param(evtObj);
+
+                        GetVM().ExecuteInternalUnsafe(
+                            // Make a strong ref if necessary.
+                            func.IsWeakRef() ? Value(func, StrongRefValue) : func,
+                            _this, result, 1, &param, false);
+                        if (GetVM().IsException())
                         {
-                            vm.HandleException = false;
-                            vm.OutputError(vm.ExceptionObj);
-                            vm.ExceptionObj.SetUndefined();
-                            ok = false;
+                            GetVM().OutputAndIgnoreException();
+                            rv = false;
                         }
-                        if (evt->ImmPropagationStopped || !ok)
-                        {
-                            Destruct(&l);
+
+                        // call dtor for used entry
+                        copiedListeners[i].~Listener();
+
+                        // check if immediate propagation was stopped...
+                        if (evtObj->ImmPropagationStopped || !rv)
                             break;
-                        }
                     }
-                    Destruct(&l);
+                    else
+                    {
+                        // call dtor for used entry
+                        copiedListeners[i].~Listener();
+                    }
                 }
+
+                // cleanup remaining listeners
                 for (++i; i < n; ++i)
-                    Destruct(&copies[i]);
-                if (copies != reinterpret_cast<Listener*>(buf))
-                    SF_FREE(copies);
+                {
+                    copiedListeners[i].~Listener();
+                }
+                if (arr != fixedarr)
+                    SF_FREE(arr);
             }
         }
-        return ok;
+        return rv;
     }
 
     // @0x142468fa0
@@ -2434,40 +2467,50 @@ namespace Instances { namespace fl_events {
     // The listener functions of one table. Outside the VM's destructor, weak listeners whose function was collected
     // are dropped here (with the event chain and button count bookkeeping of removeEventListener).
     // @0x1424694f0
-    // MS2-FUNCTIONAL: register allocation and block layout of the two listener loops
     static __declspec(noinline) void ForEachListener_GC(EventDispatcher::ListenersHash& hash,
                                                         RefCountCollector<StatMV_ActionScript_Mem>* prcc,
                                                         ASRefCountBaseType::GcOp op, const VM& vm,
                                                         EventDispatcher& owner, bool useCapture)
     {
-        for (EventDispatcher::ListenersHash::Iterator it = hash.Begin(); it != hash.End(); ++it)
+        const EventDispatcher::ListenersHash& chash = hash;
+        for (EventDispatcher::ListenersHash::ConstIterator it = chash.Begin(); it != chash.End(); ++it)
         {
-            ArrayLH<EventDispatcher::Listener>* listeners = (*it).Second;
-            if (!listeners)
-                continue;
-            UPInt n = listeners->GetSize();
-            if (!vm.InDestructor)
+            ArrayLH<EventDispatcher::Listener>* parr = it->Second;
+            if (parr)
             {
-                for (UPInt i = 0; i < n; )
+                if (vm.InDestructor)
                 {
-                    if ((*listeners)[i].Function.IsValidWeakRef())
+                    // We MAY NOT call OnRemoveEventListener() in AS3::VM
+                    // destructor because data it uses is not available any more.
+                    for (UPInt i = 0, n = parr->GetSize(); i < n; ++i)
                     {
-                        AS3::ForEachChild_GC(prcc, (*listeners)[i].Function, op, owner);
-                        ++i;
-                    }
-                    else
-                    {
-                        listeners->RemoveAt(i);
-                        --n;
-                        OnListenerRemoved(&owner, (*it).First, useCapture, n);
+                        const EventDispatcher::Listener& l = (*parr)[i];
+                        if (l.Function.IsValidWeakRef())
+                            AS3::ForEachChild_GC(prcc, l.Function, op, owner);
                     }
                 }
-            }
-            else
-            {
-                for (UPInt i = 0; i < n; ++i)
-                    if ((*listeners)[i].Function.IsValidWeakRef())
-                        AS3::ForEachChild_GC(prcc, (*listeners)[i].Function, op, owner);
+                else
+                {
+                    UPInt i = 0;
+                    UPInt size = parr->GetSize();
+
+                    while (i < size)
+                    {
+                        const EventDispatcher::Listener& l = (*parr)[i];
+
+                        if (l.Function.IsValidWeakRef())
+                        {
+                            AS3::ForEachChild_GC(prcc, l.Function, op, owner);
+                            ++i;
+                        }
+                        else
+                        {
+                            parr->RemoveAt(i);
+                            OnListenerRemoved(&owner, it->First, useCapture, --size);
+                            // Do not increment i on purpose.
+                        }
+                    }
+                }
             }
         }
     }
@@ -3143,30 +3186,40 @@ namespace Instances { namespace fl_events {
 
     // Removes from hash the listeners whose function was loaded from pdef.
     // @0x14246c530
-    // MS2-FUNCTIONAL: cl lays out the table walk differently; the same lookups and removals
     static void RemoveMovieDefListeners(EventDispatcher& d, GFx::MovieDefImpl* pdef,
                                         EventDispatcher::ListenersHash& hash)
     {
         for (EventDispatcher::ListenersHash::Iterator it = hash.Begin(); it != hash.End(); ++it)
         {
-            ArrayLH<EventDispatcher::Listener>& a = *(*it).Second;
-            for (UPInt i = 0; i < a.GetSize();)
+            ArrayLH<EventDispatcher::Listener>* arr = it->Second;
+            for (UPInt i = 0; i < arr->GetSize();)
             {
-                const Value& f = a[i].Function;
-                if (f.IsValidWeakRef())
+                EventDispatcher::Listener& l = (*arr)[i];
+                VMAbcFile* abc = NULL;
+
+                if (l.Function.IsValidWeakRef())
                 {
-                    const Traits* tr;
-                    if (f.GetKind() == Value::kVTableInd)
-                        tr = &f.GetTraits();
-                    else if (f.GetKind() == Value::kVTableIndClosure)
-                        tr = &f.GetClosure()->GetTraits();
-                    else
-                        tr = &d.GetVM().GetValueTraits(f);
-                    VMAbcFile* file = tr->GetFilePtr();
-                    if (file && GetFileMovieDef(file) == pdef)
+                    // A hack for kVTableInd and kVTableIndClosure.
+                    switch (l.Function.GetKind())
                     {
-                        a.RemoveAt(i);
-                        continue;
+                    case Value::kVTableInd:
+                        abc = l.Function.GetTraits().GetFilePtr();
+                        break;
+                    case Value::kVTableIndClosure:
+                        abc = l.Function.GetClosure()->GetTraits().GetFilePtr();
+                        break;
+                    default:
+                        abc = d.GetVM().GetValueTraits(l.Function).GetFilePtr();
+                        break;
+                    }
+
+                    if (abc)
+                    {
+                        if (GetFileMovieDef(abc) == pdef)
+                        {
+                            arr->RemoveAt(i);
+                            continue;
+                        }
                     }
                 }
                 ++i;
