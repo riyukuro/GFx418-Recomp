@@ -2872,15 +2872,10 @@ void FUN_1423d76f0(unsigned long long* manager, const char* name)
 // A local ArrayData<Value> the exe sizes through FUN_1423d9730.
 struct Ime01ValueArgs
 {
-    union {
-        struct {
-            Scaleform::GFx::Value* data;
-            unsigned long long size;
-        };
-        __m128i head;
-    };
+    Scaleform::GFx::Value* data;
+    unsigned long long size;
     unsigned long long capacity;
-    Ime01ValueArgs() : capacity(0) { _mm_storeu_si128(&head, _mm_setzero_si128()); }
+    Ime01ValueArgs() : capacity(0) { _mm_storeu_si128(reinterpret_cast<__m128i*>(&data), _mm_setzero_si128()); }
     ~Ime01ValueArgs()
     {
         FUN_1423ce6c0(data, size);
@@ -2888,7 +2883,7 @@ struct Ime01ValueArgs
     }
 };
 
-// MS2-FUNCTIONAL: stores the data item and issues the executable's SelectDataItem and SetList external calls.
+// Stores the data item and, when notify is set, calls the input window's SelectDataItem (with the item) and SetList.
 // @0x1423d97f0
 void FUN_1423d97f0(void* raw, unsigned long long item, unsigned char notify)
 {
