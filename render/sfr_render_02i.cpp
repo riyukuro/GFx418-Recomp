@@ -770,18 +770,17 @@ void DrawableImage::initialize(ImageFormat format, const ImageSize& size, Drawab
 }
 
 // Runs the queued commands (here when they are CPU-renderable, else on the render thread) and maps the texture.
-// MS2-FUNCTIONAL: register allocation and frame size (the exe keeps the queue lock address in rbp, reloads pContext)
+// MS2-FUNCTIONAL: the exe saves rdi late (into the rcx home slot) and keeps the set mutex address in rbp in the wait loop
 // @0x1425effe0
 void DrawableImage::internalMapAndFlush(bool needMap)
 {
     DICommandQueue* queue = pQueue;
     DICommandSet    cmdSet(queue);
     bool            executed;
+    queue->CommandSetMutex.DoLock();
+    while (queue->pRTCommands)
+        queue->CommandSetWC.Wait(&queue->CommandSetMutex);
     {
-        Mutex::Locker setLock(&queue->CommandSetMutex);
-        while (queue->pRTCommands)
-            queue->CommandSetWC.Wait(&queue->CommandSetMutex);
-
         Lock::Locker lock(&pQueue->QueueLock);
         executed = pQueue->isQueueEmpty_NTS();
         if (DrawableImageState & (DIState_Mapped | DIState_MappedRead))
@@ -797,6 +796,7 @@ void DrawableImage::internalMapAndFlush(bool needMap)
             }
         }
     }
+    pQueue->CommandSetMutex.Unlock();
 
     if (!cmdSet.IsEmpty())
     {
