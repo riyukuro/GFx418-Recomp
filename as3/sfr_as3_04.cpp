@@ -5078,8 +5078,8 @@ void FUN_14241b920(Scaleform::UPInt selfAddr, void* retp, Scaleform::UPInt fileA
 }
 
 // E4X: the "prefix:" of a namespace in an XML string, unless it is the default xml namespace
-// @0x14241bc30
-void FUN_14241bc30(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
+// @0x14241bc30 (out of line, as the exe calls it from ToXMLString)
+__declspec(noinline) void FUN_14241bc30(AS3::Object* self, Scaleform::StringBuffer& buf, const Instances::Namespace& ns, bool skip_default)
 {
     if (skip_default)
     {
@@ -5122,166 +5122,323 @@ void FUN_14241bcd0(AS3::Object* self, Scaleform::StringBuffer& buf, const Instan
     }
 }
 
+// ArrayDataBase<SPtr<Namespace>, AllocatorDH>::ResizeNoConstruct, called out of line by the exe's inlined PushBack.
+void FUN_14241ff20(void* self, const void* pheapAddr, Scaleform::UPInt newSize);
+
 namespace Scaleform { namespace GFx { namespace AS3
 {
 namespace Instances { namespace fl
 {
-    // a prefix no namespace of nsa uses: the empty string, else "aaa", "aaaaaa", ...
-    static ASString MakeUnusedPrefix(VM& vm, const NamespaceArray& nsa)
+    // The exe inlines these NamespaceArray members (sfr_as3_03), LookupNamespace (0x142419d00) and the prefix
+    // printers into ToXMLString; these are their bodies.
+    static SF_INLINE bool NsaFind(const NamespaceArray& nsa, const Instances::Namespace& ns)
     {
-        ASString prefix = vm.GetStringManager().CreateEmptyString();
-        while (nsa.FindByPrefix(prefix))
-            prefix.Append("aaa", 3);
-        return prefix;
+        const UPInt size = nsa.Namespaces.GetSize();
+        for (UPInt i = 0; i < size; ++i)
+        {
+            const Instances::Namespace& cur = *nsa.Namespaces[i];
+            if (cur.GetUri() == ns.GetUri() && StrictEqual(cur.GetPrefix(), ns.GetPrefix()))
+                return true;
+        }
+        return false;
+    }
+
+    static SF_INLINE bool NsaFindByPrefix(const NamespaceArray& nsa, const ASString& prefix)
+    {
+        bool found = false;
+        const UPInt n = nsa.Namespaces.GetSize();
+        for (UPInt i = 0; !found; ++i)
+        {
+            if (i >= n)
+                return found;
+            const Value& p = nsa.Namespaces[i]->GetPrefix();
+            if (!p.IsNullOrUndefined())
+                found = p.AsString() == prefix;
+        }
+        return found;
+    }
+
+    static SF_INLINE void NsaAdd(NamespaceArray& nsa, Instances::Namespace& ns, bool checkUnique = true)
+    {
+        if (checkUnique)
+        {
+            for (UPInt i = 0; i < nsa.Namespaces.GetSize(); ++i)
+                if (*nsa.Namespaces[i] == ns)
+                    return;
+        }
+        // Namespaces.PushBack(&ns), with the exe's out-of-line ResizeNoConstruct
+        typedef SPtr<Instances::Namespace> NsPtr;
+        typedef Scaleform::ArrayDataDH<NsPtr, Scaleform::AllocatorDH<NsPtr>, Scaleform::ArrayDefaultPolicy> NsPtrData;
+        const NsPtr v(&ns);
+        NsPtrData* d = reinterpret_cast<NsPtrData*>(&nsa.Namespaces);
+        ::FUN_14241ff20(d, d->pHeap, d->Size + 1);
+        NsPtrData::AllocatorType::Construct(d->Data + d->Size - 1, v);
+    }
+
+    static SF_INLINE Pickable<Instances::Namespace> LookupNs(const Instances::Namespace& qName, const NamespaceArray* nsa)
+    {
+        Pickable<Instances::Namespace> result = qName.GetVM().MakeNamespace(Abc::NS_Public, qName.GetUri(), qName.GetPrefix());
+        if (nsa)
+        {
+            const UPInt size = nsa->Namespaces.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+            {
+                const Instances::Namespace& other = *nsa->Namespaces[i];
+                if (other.GetUri().GetNode() == result->GetUri().GetNode())
+                {
+                    result->SetPrefix(other.GetPrefix());
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    static SF_INLINE void NsPrefix(AS3::Object* self, StringBuffer& buf, const Instances::Namespace& ns, bool checkDefaultNs)
+    {
+        if (checkDefaultNs)
+        {
+            const Instances::Namespace* def = *(const Instances::Namespace* const*)(FUN_CurrCallFrame(&self->GetVM()) + 0x58);
+            if (def && def->GetUri().GetNode() == ns.GetUri().GetNode() && StrictEqual(def->GetPrefix(), ns.GetPrefix()))
+                return;
+        }
+        if (ns.GetPrefix().IsString())
+        {
+            const ASStringNode* prefix = ns.GetPrefix().GetStringNode();
+            if (prefix->Size != 0)
+            {
+                buf.AppendString(prefix->pData, prefix->Size);
+                buf.AppendChar(':');
+            }
+        }
+    }
+
+    static SF_INLINE void NsSuffix(AS3::Object* self, StringBuffer& buf, const Instances::Namespace& ns, bool checkDefaultNs)
+    {
+        if (checkDefaultNs)
+        {
+            const Instances::Namespace* def = *(const Instances::Namespace* const*)(FUN_CurrCallFrame(&self->GetVM()) + 0x58);
+            if (def && def->GetUri().GetNode() == ns.GetUri().GetNode() && StrictEqual(def->GetPrefix(), ns.GetPrefix()))
+                return;
+        }
+        if (ns.GetPrefix().IsString())
+        {
+            const ASStringNode* prefix = ns.GetPrefix().GetStringNode();
+            if (prefix->Size != 0)
+            {
+                buf.AppendChar(':');
+                buf.AppendString(prefix->pData, prefix->Size);
+            }
+        }
     }
 
     // E4X 10.2.1: the start tag with this element's name, its attributes and the namespaces it has to declare (the
     // in-scope ones its ancestors did not declare and the ones its name and attributes use), then the children one
     // level deeper and the end tag; no children close the start tag.
-    // MS2-FUNCTIONAL: the exe inlines NamespaceArray::Add/Find/FindByPrefix, LookupNamespace (0x142419d00) and the
-    // attribute/namespace prefix printers (0x14241bc30 without the default check, 0x14241bcd0)
+    // the SDK body; the end tag's prefix stays a call to 0x14241bc30, as in the exe
     // @0x142425f30
     void XMLElement::ToXMLString(StringBuffer& buf, SInt32 ident, const NamespaceArray* ancestorNamespaces,
                                  const NamespaceArray* usedNotDeclared)
     {
         VM& vm = GetVM();
         const Classes::fl::XML& cl = static_cast<const Classes::fl::XML&>(FUN_142508460(&GetTraits()));
-        SInt32 indentStep = cl.prettyIndent;
-        bool pretty = cl.prettyPrinting;
-        if (indentStep < 0)
+        SInt32 prettyIndent = cl.prettyIndent;
+        bool prettyPrinting = cl.prettyPrinting;
+
+        if (prettyIndent < 0)
         {
-            pretty = false;
-            indentStep = 0;
+            prettyPrinting = false;
+            prettyIndent = 0;
         }
 
-        if (pretty && ident > 0)
+        if (prettyPrinting && ident > 0)
             AddIndent(buf, ident);
 
-        // the namespaces declared by the ancestors or here, and the ones this tag has to declare
-        NamespaceArray declared(vm.GetMemoryHeap());
-        if (ancestorNamespaces)
-            declared.AddUnique(*ancestorNamespaces);
-        NamespaceArray toDeclare(vm.GetMemoryHeap());
-
-        for (UPInt i = 0; i < Namespaces.Namespaces.GetSize(); ++i)
+        NamespaceArray ancestorsAndDeclarations(vm.GetMemoryHeap());
+        if (ancestorNamespaces != NULL)
         {
-            Instances::Namespace& ns = *Namespaces.Namespaces[i];
-            if (!declared.Find(ns))
+            const UPInt size = ancestorNamespaces->Namespaces.GetSize();
+            for (UPInt i = 0; i < size; ++i)
+                NsaAdd(ancestorsAndDeclarations, *ancestorNamespaces->Namespaces[i], true);
+        }
+
+        NamespaceArray namespaceDeclarations(vm.GetMemoryHeap());
+
+        const UPInt sizei = Namespaces.Namespaces.GetSize();
+        for (UPInt i = 0; i < sizei; ++i)
+        {
+            Instances::Namespace& cns = *Namespaces.Namespaces[i];
+            const bool found = NsaFind(ancestorsAndDeclarations, cns);
+            if (!found)
             {
-                toDeclare.Add(ns, true);
-                declared.Add(ns, false);
+                NsaAdd(namespaceDeclarations, cns, true);
+                NsaAdd(ancestorsAndDeclarations, cns, false);
             }
         }
+
         if (usedNotDeclared)
         {
-            for (UPInt i = 0; i < usedNotDeclared->Namespaces.GetSize(); ++i)
+            const UPInt size = usedNotDeclared->Namespaces.GetSize();
+            for (UPInt i = 0; i < size; ++i)
             {
-                Instances::Namespace& ns = *usedNotDeclared->Namespaces[i];
-                if (!declared.Find(ns))
+                Instances::Namespace& cns = *usedNotDeclared->Namespaces[i];
+                const bool found = NsaFind(ancestorsAndDeclarations, cns);
+                if (!found)
                 {
-                    toDeclare.Add(ns, true);
-                    declared.Add(ns, false);
+                    NsaAdd(namespaceDeclarations, cns, true);
+                    NsaAdd(ancestorsAndDeclarations, cns, false);
                 }
             }
         }
 
-        // the namespaces of the name (first) and of the attributes; an unprefixed one gets a fresh prefix
-        NamespaceArray used(vm.GetMemoryHeap());
+        NamespaceArray attrNamespaces(vm.GetMemoryHeap());
+        SPtr<Instances::Namespace> nsCopy = LookupNs(*Ns, &ancestorsAndDeclarations);
+        NsaAdd(attrNamespaces, *nsCopy);
+
+        const UPInt sizeAttrs = Attrs.GetSize();
+        for (UPInt i = 0; i < sizeAttrs; ++i)
         {
-            SPtr<Instances::Namespace> ns = FUN_142419d00(*Ns, &declared);
-            used.Add(*ns, false);
+            const Instances::Namespace& nsAttr = Attrs[i]->GetNamespace();
+            SPtr<Instances::Namespace> nsCopy = LookupNs(nsAttr, &ancestorsAndDeclarations);
+            NsaAdd(attrNamespaces, *nsCopy);
         }
-        for (UPInt i = 0; i < Attrs.GetSize(); ++i)
+
+        const UPInt sizeAN = attrNamespaces.Namespaces.GetSize();
+        for (UPInt i = 0; i < sizeAN; ++i)
         {
-            SPtr<Instances::Namespace> ns = FUN_142419d00(Attrs[i]->GetNamespace(), &declared);
-            used.Add(*ns, true);
-        }
-        for (UPInt i = 0; i < used.Namespaces.GetSize(); ++i)
-        {
-            Instances::Namespace& ns = *used.Namespaces[i];
-            if (declared.Find(ns) || ns.GetUri().GetSize() == 0)
-                continue;
-            if (ns.GetPrefix().IsUndefined())
-                ns.SetPrefix(Value(MakeUnusedPrefix(vm, declared)));
-            toDeclare.Add(ns, true);
-            declared.Add(ns, true);
+            Instances::Namespace& nsAttr = *attrNamespaces.Namespaces[i];
+            const bool found = NsaFind(ancestorsAndDeclarations, nsAttr);
+
+            if (!found && !nsAttr.GetUri().IsEmpty())
+            {
+                if (nsAttr.GetPrefix().IsUndefined())
+                {
+                    ASString newPrefix = vm.GetStringManager().CreateEmptyString();
+                    bool matchFound = true;
+                    while (matchFound)
+                    {
+                        matchFound = NsaFindByPrefix(ancestorsAndDeclarations, newPrefix);
+                        if (matchFound)
+                            newPrefix.Append("aaa", 3);
+                    }
+                    nsAttr.SetPrefix(Value(newPrefix));
+                }
+
+                NsaAdd(namespaceDeclarations, nsAttr);
+                NsaAdd(ancestorsAndDeclarations, nsAttr);
+            }
         }
 
         buf.AppendChar('<');
-        FUN_14241bc30(this, buf, *used.Namespaces[0], true);
+        NsPrefix(this, buf, *attrNamespaces.Namespaces[0], true);
         buf.AppendString(Text.ToCStr(), Text.GetSize());
 
         for (UPInt i = 0; i < Attrs.GetSize(); ++i)
         {
             buf.AppendChar(' ');
-            XMLAttr* attr = Attrs[i];
-            SPtr<Instances::Namespace> ns = FUN_142419d00(attr->GetNamespace(), &declared);
-            if (ns->GetUri().GetSize() != 0 && ns->GetPrefix().IsUndefined())
-            {
-                const ASString prefix = MakeUnusedPrefix(vm, declared);
-                ns->SetPrefix(Value(prefix));
 
-                // declare it unless an unprefixed namespace already covers it or it is declared
-                bool found = false;
-                for (UPInt j = 0; j < declared.Namespaces.GetSize(); ++j)
+            XMLAttr* an = Attrs[i];
+            SPtr<Instances::Namespace> ans = LookupNs(an->GetNamespace(), &ancestorsAndDeclarations);
+
+            if (!ans->GetUri().IsEmpty() && ans->GetPrefix().IsUndefined())
+            {
+                ASString newPrefix = vm.GetStringManager().CreateEmptyString();
+                bool prefixFound = true;
+                const UPInt sizeAD = ancestorsAndDeclarations.Namespaces.GetSize();
+
+                while (prefixFound)
                 {
-                    const Instances::Namespace& d = *declared.Namespaces[j];
+                    prefixFound = NsaFindByPrefix(ancestorsAndDeclarations, newPrefix);
+                    if (prefixFound)
+                        newPrefix.Append("aaa", 3);
+                }
+
+                ans->SetPrefix(Value(newPrefix));
+
+                bool nsFound = false;
+                for (UPInt j = 0; j < sizeAD; ++j)
+                {
+                    const Instances::Namespace& d = *ancestorsAndDeclarations.Namespaces[j];
                     if (d.GetPrefix().IsNullOrUndefined())
-                        found = prefix.GetSize() == 0 || d.GetUri().GetNode() == ns->GetUri().GetNode();
-                    if (d == *ns)
+                        nsFound = (newPrefix.IsEmpty() || d.GetUri().GetNode() == ans->GetUri().GetNode());
+
+                    if (d == *ans)
                     {
-                        found = true;
+                        nsFound = true;
                         break;
                     }
                 }
-                if (!found)
-                    toDeclare.Add(*ns, true);
+
+                if (!nsFound)
+                    NsaAdd(namespaceDeclarations, *ans);
             }
-            FUN_14241bc30(this, buf, *ns, false);
-            buf.AppendString(attr->Text.ToCStr(), attr->Text.GetSize());
+
+            NsPrefix(this, buf, *ans, false);
+            buf.AppendString(an->Text.ToCStr(), an->Text.GetSize());
+
             buf.AppendString("=\"");
-            attr->ToXMLString(buf, ident, &declared, NULL);
+            an->ToXMLString(buf, ident, &ancestorsAndDeclarations, NULL);
             buf.AppendChar('"');
         }
 
-        for (UPInt i = 0; i < toDeclare.Namespaces.GetSize(); ++i)
+        for (UPInt i = 0; i < namespaceDeclarations.Namespaces.GetSize(); ++i)
         {
-            const Instances::Namespace& d = *toDeclare.Namespaces[i];
+            const Instances::Namespace& cns = *namespaceDeclarations.Namespaces[i];
+
             buf.AppendString(" xmlns");
-            SPtr<Instances::Namespace> ns = vm.MakeNamespace(Abc::NS_Public, d.GetUri(), d.GetPrefix());
-            if (ns->GetUri().GetSize() != 0 && ns->GetPrefix().IsUndefined())
-                ns->SetPrefix(Value(MakeUnusedPrefix(vm, declared)));
-            FUN_14241bcd0(this, buf, *ns, true);
+
+            SPtr<Instances::Namespace> ans = vm.MakeNamespace(Abc::NS_Public, cns.GetUri(), cns.GetPrefix());
+
+            if (!ans->GetUri().IsEmpty() && ans->GetPrefix().IsUndefined())
+            {
+                ASString newPrefix = vm.GetStringManager().CreateEmptyString();
+                bool prefixFound = true;
+
+                while (prefixFound)
+                {
+                    prefixFound = NsaFindByPrefix(ancestorsAndDeclarations, newPrefix);
+                    if (prefixFound)
+                        newPrefix.Append("aaa", 3);
+                }
+
+                ans->SetPrefix(Value(newPrefix));
+            }
+
+            NsSuffix(this, buf, *ans, true);
+
             buf.AppendString("=\"");
-            buf.AppendString(ns->GetUri().ToCStr(), ns->GetUri().GetSize());
+            const ASString& uri = ans->GetUri();
+            buf.AppendString(uri.ToCStr(), uri.GetSize());
             buf.AppendChar('"');
         }
 
-        const UPInt n = Children.GetSize();
-        if (n == 0)
+        const UPInt xLength = Children.GetSize();
+        if (xLength == 0)
         {
             buf.AppendString("/>");
             return;
         }
+
         buf.AppendChar('>');
 
-        const bool indentChildren = n > 1 || Children[0]->GetKind() != kText;
-        const bool breakLines = pretty && indentChildren;
-        const SInt32 childIdent = breakLines ? ident + indentStep : 0;
-        for (UPInt i = 0; i < n; ++i)
+        bool indentChildren = (xLength > 1 || (xLength == 1 && Children[0]->GetKind() != kText));
+        SInt32 nextIndentLevel = (prettyPrinting && indentChildren) ? ident + prettyIndent : 0;
+
+        for (UPInt i = 0; i < xLength; ++i)
         {
-            if (breakLines)
+            if (prettyPrinting && indentChildren)
                 buf.AppendChar('\n');
-            Children[i]->ToXMLString(buf, childIdent, &declared, NULL);
+            Children[i]->ToXMLString(buf, nextIndentLevel, &ancestorsAndDeclarations, NULL);
         }
-        if (breakLines)
+
+        if (prettyPrinting && indentChildren)
         {
             buf.AppendChar('\n');
             AddIndent(buf, ident);
         }
 
         buf.AppendString("</");
-        FUN_14241bc30(this, buf, *used.Namespaces[0], true);
+        FUN_14241bc30(this, buf, *attrNamespaces.Namespaces[0], true);
         buf.AppendString(Text.ToCStr(), Text.GetSize());
         buf.AppendChar('>');
     }
