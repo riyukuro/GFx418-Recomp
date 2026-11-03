@@ -1730,17 +1730,22 @@ void FUN_1423cdee0(unsigned long long* object)
     FUN_1423cdf60(object);
 }
 
-// MS2-FUNCTIONAL: releases the dynamic value array, member string, and callback resources seen in the executable.
+// ConstructorMov<Ptr<..>>::DestructArray: releases the entries in reverse order.
+static __forceinline void Ime01ReleaseArray(void** p, unsigned long long count)
+{
+    p += count - 1;
+    for (unsigned long long i = 0; i < count; ++i, --p)
+        if (*p) FUN_14257dcd0(*p);
+}
+
+// restores the vptr, releases the Ptr array in reverse and frees it, destroys the Value array and the member string.
 // @0x1423cde00
 void FUN_1423cde00(void* raw)
 {
     auto* object = static_cast<unsigned long long*>(raw);
-    object[0] = reinterpret_cast<unsigned long long>(DAT_14313a210);
-    const unsigned long long count = object[0x10a];
-    auto* entries = reinterpret_cast<unsigned long long*>(object[0x109]);
-    for (unsigned long long i = count; i; --i)
-        if (entries[i - 1]) FUN_14257dcd0(reinterpret_cast<void*>(entries[i - 1]));
-    Memory::Free(entries);
+    *static_cast<void**>(raw) = DAT_14313a210;
+    Ime01ReleaseArray(reinterpret_cast<void**>(object[0x109]), object[0x10a]);
+    Memory::Free(reinterpret_cast<void*>(object[0x109]));
     FUN_1423ce6c0(reinterpret_cast<Scaleform::GFx::Value*>(object[0x105]), object[0x106]);
     if (object[0x105]) Memory::Free(reinterpret_cast<void*>(object[0x105]));
     FUN_1422fbf60(object + 0x102);
