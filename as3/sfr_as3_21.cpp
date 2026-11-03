@@ -2076,7 +2076,6 @@ bool Reader::Read(Code& obj)
 }
 
 // @0x142565cc0
-// MS2-FUNCTIONAL: string constants copy through extra stack temporaries (sf_string.h StringDataPtr lacks the SDK copy ctor); frame/register allocation differs
 bool Reader::Read(ConstPool& obj)
 {
     bool result = true;

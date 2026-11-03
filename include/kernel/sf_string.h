@@ -292,6 +292,8 @@ class StringDataPtr
 public:
     StringDataPtr() : pStr(0), Size(0) {}
     StringDataPtr(const char* p, UPInt n) : pStr(p), Size(n) {}
+    // The SDK's user-declared copy ctor: it lets cl split a copied StringDataPtr into registers.
+    StringDataPtr(const StringDataPtr& p) : pStr(p.pStr), Size(p.Size) {}
 
     const char* ToCStr() const  { return pStr; }
     UPInt       GetSize() const { return Size; }
