@@ -1479,7 +1479,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
 
 namespace Scaleform { namespace GFx { namespace AS3
 {
-    // MS2-FUNCTIONAL: the exe keeps the node->value null select as a cmove before the test; ours folds it into the branch
     // @0x142405480
     const Value& SparseArray::At(UPInt ind) const
     {
@@ -1491,7 +1490,8 @@ namespace Scaleform { namespace GFx { namespace AS3
         {
             const Value* vp;
 
-            if ((vp = ValueH.Get(ind)) != NULL)
+            // Through the non-const Get, which keeps the exe's cmove null select of the node.
+            if ((vp = const_cast<SparseArray*>(this)->ValueH.Get(ind)) != NULL)
                 return *vp;
             else
                 return DefaultValue;
@@ -1553,7 +1553,6 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
     }
 
-    // MS2-FUNCTIONAL: the inlined SparseArray::At keeps the hash-node null select as a cmove in the exe; ours branches
     // @0x1424043e0
     void SparseArray::Append(const SparseArray& other, UPInt ind, UPInt num)
     {
@@ -2079,7 +2078,8 @@ static SF_INLINE const Value& saAt03(const SparseArray& sa, UPInt ind)
         return sa.ValueA[ind];
     if (ind >= sa.ValueHLowInd && ind <= sa.ValueHHighInd)
     {
-        if (const Value* v = sa.ValueH.Get(ind))
+        // The non-const Get, as in SparseArray::At (it keeps the exe's cmove null select).
+        if (const Value* v = const_cast<SparseArray&>(sa).ValueH.Get(ind))
             return *v;
     }
     return sa.DefaultValue;
@@ -2132,7 +2132,6 @@ namespace Instances { namespace fl
             saPushBack03(arr->SA, saAt03(SA, i));
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined At's node-to-value null select as a cmove
     // @0x1423ff800
     void Array::AS3some(bool& result, const Value& callback, const Value& thisObject)
     {
@@ -2148,7 +2147,7 @@ namespace Instances { namespace fl
                 GetVM().ExecuteInternalUnsafe(callback, _this, r, 3, argv, false);
                 if (GetVM().IsException())
                     break;
-                if (!r.IsBool() || r.AsBool())
+                if (!r.IsBool() || r.AsBool() == true)
                 {
                     result = true;
                     return;
