@@ -832,7 +832,6 @@ unsigned StreamContext::ReadUInt(unsigned bitcount)
 }
 
 // @0x1425c32b0
-// MS2-FUNCTIONAL: same code; prolog scheduling and constant materialization differ
 void StreamContext::ReadMatrix(Render::Matrix2x4<float>* pm)
 {
     Align();
@@ -897,7 +896,6 @@ void StreamContext::ReadCxformRgb(Render::Cxform* pcxform)
 }
 
 // @0x1425c2e00
-// MS2-FUNCTIONAL: the exe materializes the ~0 sign mask as lea [r12 - 1] (r12 = 0) instead of mov -1
 void StreamContext::ReadCxformRgba(Render::Cxform* pcxform)
 {
     Align();

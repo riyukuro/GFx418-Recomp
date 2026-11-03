@@ -242,10 +242,10 @@ public:
     unsigned ReadUInt(unsigned bitcount);
     int      ReadSInt(unsigned bitcount)
     {
-        unsigned v = ReadUInt(bitcount);
-        if (v & (1 << (bitcount - 1)))
-            v |= ~0u << bitcount;
-        return (int)v;
+        SInt32 value = (SInt32)ReadUInt(bitcount);
+        if (value & (1 << (bitcount - 1)))
+            value |= -1 << bitcount;
+        return value;
     }
 
     void ReadMatrix(Render::Matrix2x4<float>* pm);
