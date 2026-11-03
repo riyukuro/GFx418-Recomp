@@ -617,17 +617,20 @@ __declspec(noinline) const SPInt* SlotContainerType::FindValues(const ASString& 
     return KVHashSet.Get(k.GetNode());
 }
 
-// MS2-FUNCTIONAL: the hash Find inlined (the exe calls it)
+// The SDK form (a named node, the Add arm first) gives the exe's cmov iterator.
 // @0x1425008e0
 AbsoluteIndex SlotContainerType::FindAdd(const ASString& k, const SlotInfo& v)
 {
-    AbsoluteIndex ind(-1);
-    SetType::Iterator it = KVHashSet.Find(k.GetNode());
-    if (!it.IsEnd())
-        ind = AbsoluteIndex(it->Second);
+    AbsoluteIndex result(-1);
+
+    ASStringNode* node = k.GetNode();
+    SetType::Iterator it = KVHashSet.Find(node);
+    if (it.IsEnd())
+        result = Add(k, v);
     else
-        ind = Add(k, v);
-    return ind;
+        result = AbsoluteIndex(it->Second);
+
+    return result;
 }
 
 // @0x142500dd0
@@ -900,12 +903,13 @@ const ClassTraits::Traits& VM::GetClassTraits(const Value& v) const
     return GetClassTraitsObject();
 }
 
+// The unit-local Sfr33GetSlotInfo keeps SlotInfo::ForEachChild_GC (0x142503b50) out of line, as in the exe.
 // @0x142504580
 void Traits::ForEachChild_GC_Slot(Collector* prcc, const Object& obj, GcOp op) const
 {
     const UPInt size = GetSlotInfoNum();
     for (UPInt i = 0; i < size; ++i)
-        GetSlotInfo(AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
+        Sfr33GetSlotInfo(*this, AbsoluteIndex(i)).ForEachChild_GC(prcc, obj, op);
 }
 
 // Visits a counted pointer member for owner (the exe's GcOp takes the owner as a third argument).
@@ -1029,7 +1033,8 @@ void EventChains::Dispatch(EventId::IdCode code)
 }
 
 // Object::ForEachChild_GC: the dynamic property values, the values bound in the traits' slots, then the traits.
-// MS2-FUNCTIONAL 0x1425038d0: the exe walks the hash table and the traits' slots inline; same visits
+// The traits visit goes through Sfr33GcPtr, as in the SDK's ForEachChild_GC(prcc, pTraits, op), so the second
+// null test reads pTraits again.
 // @0x1425038d0
 void Object::ForEachChild_GC(Collector* prcc, GcOp op) const
 {
@@ -1037,14 +1042,7 @@ void Object::ForEachChild_GC(Collector* prcc, GcOp op) const
         AS3::ForEachChild_GC(prcc, it->Second, op, *this);
     if (pTraits)
         pTraits->ForEachChild_GC_Slot(prcc, *this, op);
-    if (pTraits)
-    {
-        typedef void (*GcOpWithOwner)(RefCountCollector<StatMV_ActionScript_Mem>*, const ASRefCountBaseType**,
-                                      const ASRefCountBaseType&);
-        reinterpret_cast<GcOpWithOwner>(op)(
-            prcc, const_cast<const ASRefCountBaseType**>(reinterpret_cast<ASRefCountBaseType**>(pTraits.GetRawPtr())),
-            *this);
-    }
+    Sfr33GcPtr(prcc, pTraits, op, *this);
 }
 }}}
 
@@ -2143,7 +2141,8 @@ static inline void* FUN_142524f60(void* vm, const void* file, const void* mn) { 
 const Scaleform::GFx::AS3::Abc::Multiname& FUN_14250f8a0(const void* amn, const void* abc);   // the type name of a multiname
 extern "C" const int DAT_143a2d640[];           // the AS3 error ids, sorted
 extern "C" const char* const DAT_143a2d890[];   // the AS3 error messages, by id position
-void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hint);   // Object::GetDefaultValueUnsafe (as sfr_as3_19 declares it)
+// noinline: Value::Convert2PrimitiveValueUnsafe (0x1424f12a0) calls it.
+__declspec(noinline) void FUN_142508bd0(Scaleform::UPInt obj, void* out, int hint);   // Object::GetDefaultValueUnsafe (as sfr_as3_19 declares it)
 // Object: the property name of namespace ns (FindObjProperty, then its value); the member's hidden CheckResult
 // slot is ret.
 Scaleform::UByte* FUN_14250dd20(Scaleform::GFx::AS3::Object* self, Scaleform::UByte* ret, const Scaleform::GFx::ASString* name,
@@ -2303,17 +2302,11 @@ bool FUN_1424f86d0(void* tr, const Scaleform::GFx::AS3::Value& v, bool pop)
 
 static inline void FUN_14251fa10(void* tr, int op, Scaleform::UPInt arg1, Scaleform::UPInt arg2) { static_cast<Scaleform::GFx::AS3::Tracer*>(tr)->PushNewOpCode(static_cast<Scaleform::GFx::AS3::Abc::Code::OpCode>(op), arg1, arg2); }   // Tracer: emit opcode op with two arguments
 
-// Bit 2 of the traits flag byte (+0x68).
-static inline bool Sfr17TraitsFlag2(const void* t)
-{
-    return (Scaleform::UByte)(*reinterpret_cast<const unsigned*>(static_cast<const Scaleform::UByte*>(t) + 0x68) >> 2) & 1;
-}
-
 // Tracer: emits the property op (op: 0x66 get / 0x68 init / 0x61 set / 5 ...) on a name that resolves to a fixed
 // slot of the traits t as a slot access: a plain data slot by index (0xb7/0xb8), a method or getter slot (bind types
 // 13/14) as a call of its vtable entry (0x43 callmethod, 0xb9 for op 5) plus a pop; else the op with ind.
-// MS2-FUNCTIONAL 0x1424f92f0: written on raw offsets (tracer +0x20 state, +0x28 file, SlotInfo bitfields); the exe reads
-// the traits flag as a byte and keeps t in r14 and op in ebp
+// MS2-FUNCTIONAL 0x1424f92f0: written on raw offsets (tracer +0x20 state, +0x28 file, SlotInfo bitfields); the exe
+// keeps t in r14, op in ebp and the slot in r15 (ours: rbp, r15d, r14)
 // @0x1424f92f0
 bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void* /*unused*/,
                    const Scaleform::GFx::AS3::Multiname* pmn, int ind)
@@ -2334,7 +2327,7 @@ bool FUN_1424f92f0(void* tr, int op, const Scaleform::GFx::AS3::Traits* t, void*
             const int bt = (siw << 0x16) >> 0x1b;
             if (bt > 10)
             {
-                if (!((siw >> 0x1a) & 1) && !Sfr17TraitsFlag2(t) &&
+                if (!((siw >> 0x1a) & 1) && !t->IsInterface() &&
                     static_cast<unsigned>(bt - 13) <= 1)
                 {
                     if ((UByte)(mnw >> 2) & 1)
@@ -3846,44 +3839,35 @@ void Traits::DestructTail(Object& obj) const
     }
 }
 
-// MS2-FUNCTIONAL 0x1424f12a0: the exe folds the kind tests into range checks where MSVC-clang emits a jump table.
+// A primitive (a null object counts as one) is copied; a namespace gives its URI, a thunk or vtable index 0;
+// an object gives its default value.
+// noinline: the Convert2* callers call it, as in the exe.
 // @0x1424f12a0
-CheckResult Value::Convert2PrimitiveValueUnsafe(Value& result, Hint hint) const
+__declspec(noinline) CheckResult Value::Convert2PrimitiveValueUnsafe(Value& result, Hint hint) const
 {
-    switch (GetKind())
-    {
-    case kUndefined:
-    case kBoolean:
-    case kInt:
-    case kUInt:
-    case kNumber:
-    case kString:
+    if (IsPrimitive() || (IsObject() && GetObject() == NULL))
         result.Assign(*this);
-        return true;
-    case kThunk:
-    case kVTableInd:
-    case kThunkClosure:
-    case kVTableIndClosure:
-        result.SetNumber(0.0);
-        return true;
-    case kNamespace:
-        result = GetNamespace()->GetUri();
-        return true;
-    case kObject:
-    case kClass:
-    case kFunction:
-    case kThunkFunction:
-        if (!GetObject())
+    else
+    {
+        switch (GetKind())
         {
-            result.Assign(*this);
+        case kNamespace:
+            result = GetNamespace()->GetUri();
             return true;
+        case kThunk:
+        case kThunkClosure:
+        case kVTableInd:
+        case kVTableIndClosure:
+            result.SetNumber(0.0);
+            return true;
+        default:
+            break;
         }
-        break;
-    default:
-        break;
+        FUN_142508bd0(reinterpret_cast<UPInt>(GetObject()), &result, hint);
+        if (GetObject()->GetVM().IsException())
+            return false;
     }
-    FUN_142508bd0(reinterpret_cast<UPInt>(GetObject()), &result, hint);
-    return !GetObject()->GetVM().IsException();
+    return true;
 }
 
 // @0x1424f0f60
@@ -5232,6 +5216,8 @@ static SF_INLINE SPInt Sfr33EventChainFindIndex(const UPInt* table, const int& i
 
 // EventChains::GetChain: the display objects listening for event id (NULL when none do); the chains hash
 // (+0x00) maps an event id to an owned array.
+// MS2-FUNCTIONAL 0x142507a70: the exe saves rbx and rdi in the home slots and keeps the key in rbx and the mask in
+// r11; ours allocates a slot for rdi and swaps the two
 // @0x142507a70
 ArrayLH<WeakPtr<DisplayObject> >* Sfr33EventChainsGetChain(const UByte* self, int id)
 {
@@ -5239,7 +5225,9 @@ ArrayLH<WeakPtr<DisplayObject> >* Sfr33EventChainsGetChain(const UByte* self, in
     const SPInt index = Sfr33EventChainFindIndex(table, id);
     const UPInt* pair = index >= 0 ? table + 3 + index * 4 : NULL;
     ArrayLH<WeakPtr<DisplayObject> >* const* value = pair ? reinterpret_cast<ArrayLH<WeakPtr<DisplayObject> >* const*>(pair + 1) : NULL;
-    return value ? *value : NULL;
+    if (value)
+        return *value;
+    return NULL;
 }
 
 // EventChains::FindObjectIndexInChain: the index of obj in chain (-1 when it is not there).
@@ -5288,7 +5276,6 @@ SF_NOINLINE void Tracer::PopPrevValue()
 
 // Emits the push of the constant v (ind: its constant pool index; pop: drop the last pushed value first); false
 // when v has no push opcode.
-// MS2-FUNCTIONAL 0x1424f9060: the exe keeps the kind in r10d and runs the switch as a sub chain; same results
 // @0x1424f9060
 bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
 {
@@ -5319,6 +5306,7 @@ bool Tracer::PushConstValue(const Value& v, int ind, bool pop)
         op = 0x28;   // pushnan
         break;
     case 12:
+        return FUN_1424f86d0(this, v, pop);
     case 13:
         return FUN_1424f86d0(this, v, pop);
     default:
