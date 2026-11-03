@@ -16,6 +16,23 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// An allocation of Size bytes from pHeap, for an object larger than its modelled class.
+struct FunctionOpSizedAlloc
+{
+    MemoryHeap* pHeap;
+    UPInt       Size;
+};
+
+}}} // namespace Scaleform::GFx::AS2
+
+#pragma warning(disable : 4291) // no matching delete: the exe frees nothing if the ctor throws
+inline void* operator new(size_t, Scaleform::GFx::AS2::FunctionOpSizedAlloc a)
+{
+    return a.pHeap->Alloc(a.Size);
+}
+
+namespace Scaleform { namespace GFx { namespace AS2 {
+
 // The 'extends' opcode (ExecutionContext::ExtendsOpCode; the context is not modelled: +0 the environment, +0x40 the
 // logger, +0x62 the verbose flag): the subclass below the superclass on top gets a new prototype whose __proto__ is
 // the superclass prototype and whose __constructor__ is the superclass.
@@ -135,7 +152,8 @@ void FUN_142945da0(void* pctx, ActionBuffer* pactions)
     const UByte* pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
     unsigned&    nextPc  = *reinterpret_cast<unsigned*>(pc + 0x24);
 
-    Ptr<AsFunctionObject> funcObj = *SF_HEAP_NEW(penv->GetHeap())
+    // The function object is 0xd0 bytes in the exe; the header models only its first 0x78.
+    Ptr<AsFunctionObject> funcObj = *::new (FunctionOpSizedAlloc{penv->GetHeap(), 0xd0})
         AsFunctionObject(penv, pactions, nextPc, 0, *reinterpret_cast<void**>(pc + 0x38), 1);
 
     int i = *reinterpret_cast<int*>(pc + 0x28) + 3;
@@ -168,7 +186,8 @@ void FUN_142946390(void* pctx, ActionBuffer* pactions)
     const UByte* pbuffer = *reinterpret_cast<const UByte**>(pc + 0x10);
     unsigned&    nextPc  = *reinterpret_cast<unsigned*>(pc + 0x24);
 
-    Ptr<AsFunctionObject> funcObj = *SF_HEAP_NEW(penv->GetHeap())
+    // The function object is 0xd0 bytes in the exe; the header models only its first 0x78.
+    Ptr<AsFunctionObject> funcObj = *::new (FunctionOpSizedAlloc{penv->GetHeap(), 0xd0})
         AsFunctionObject(penv, pactions, nextPc, 0, *reinterpret_cast<void**>(pc + 0x38), 2);
 
     int i = *reinterpret_cast<int*>(pc + 0x28) + 3;
