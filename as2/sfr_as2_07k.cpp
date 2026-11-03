@@ -12,9 +12,26 @@
 
 namespace Scaleform { namespace GFx { namespace AS2 {
 
+// ArrayObject::PushBack (0x142971ba0) and StringProto::CreateStringFromCStr (0x142937e20), which the exe inlines here.
+static SF_FORCEINLINE void PushElem(ArrayObject* parr, const Value& val)
+{
+    parr->Elements.PushBack(SF_HEAP_AUTO_NEW(parr) Value(val));
+}
+
+static SF_FORCEINLINE ASString PieceString(ASStringContext* psc, const char* start, const char* end = 0)
+{
+    int len = (end == 0) ? (int)strlen(start) : int(end - start);
+    if (len < 0)
+        len = 0;
+    if (len > 0)
+        return psc->CreateString(start, len);
+    return psc->GetBuiltin(ASBuiltin_empty_);
+}
+
 // No delimiter keeps the string whole; an empty one gives each character (the limit is not looked at then). Else the
 // pieces between the delimiters, at most limit of them (a negative limit is 0).
-// MS2-FUNCTIONAL: the exe inlines ArrayObject::PushBack and CreateStringFromCStr; same behavior
+// MS2-FUNCTIONAL: PushBack and CreateStringFromCStr are inlined and parr is the return slot (one return) as in the exe;
+// what is left is register allocation and the order of the refcount and type stores in the inlined Value copies.
 // @0x1429902c0
 Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str, const char* delimiters, int limit)
 {
@@ -26,7 +43,7 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
     if (!delimiters)
     {
         parr->PushBack(Value(str));
-        return parr;
+        goto done;
     }
 
     if (*delimiters == 0)
@@ -37,9 +54,9 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
         {
             charStr.Clear();
             charStr.AppendChar(c);
-            parr->PushBack(Value(penv->CreateString(charStr)));
+            PushElem(parr, Value(penv->CreateString(charStr)));
         }
-        return parr;
+        goto done;
     }
 
     // pstart: the start of the current piece; pmatch: where the delimiter is being matched.
@@ -72,8 +89,8 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
         if (c2 == 0)
         {
             if (count >= limit)
-                return parr;
-            parr->PushBack(Value(CreateStringFromCStr(&penv->StringContext, pstart, pmatch)));
+                goto done;
+            PushElem(parr, Value(PieceString(&penv->StringContext, pstart, pmatch)));
             ++count;
             p      = pprev;
             pstart = pprev;
@@ -81,11 +98,12 @@ Ptr<ArrayObject> StringProto::StringSplit(Environment* penv, const ASString& str
     } while (c1 != 0);
 
     if (count >= limit)
-        return parr;
+        goto done;
     if (c2 == 0)
-        parr->PushBack(Value(CreateStringFromCStr(&penv->StringContext, pstart, pmatch)));
+        PushElem(parr, Value(PieceString(&penv->StringContext, pstart, pmatch)));
     else
-        parr->PushBack(Value(CreateStringFromCStr(&penv->StringContext, pstart)));
+        PushElem(parr, Value(PieceString(&penv->StringContext, pstart)));
+done:
     return parr;
 }
 
