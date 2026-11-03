@@ -2331,7 +2331,6 @@ struct ImeReadingWindowHost { unsigned char opaque[0x68]; HWND hwnd; };
 struct ImeReadingWindowOwner { unsigned char opaque[0x78]; ImeReadingWindowHost* host; };
 
 // Loads the current keyboard layout's IME module and hides its reading window through ShowReadingWindow.
-// MS2-FUNCTIONAL: the exe loads the +0x78 host into rcx for ImmGetContext (rax here); 2 bytes
 // @0x1423cb660
 void FUN_1423cb660(void* self)
 {
@@ -2342,7 +2341,7 @@ void FUN_1423cb660(void* self)
     s_imeGetReadingString = GetProcAddress(ime, "GetReadinString");
     s_imeShowReadingWindow = GetProcAddress(ime, "ShowReadingWindow");
     if (!s_imeShowReadingWindow) return;
-    HIMC context = cx18_ImmGetContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd);
+    HIMC context = ImmGetContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd);
     if (!context) return;
     reinterpret_cast<void(WINAPI*)(HIMC, int)>(s_imeShowReadingWindow)(context, 0);
     cx18_ImmReleaseContext(static_cast<ImeReadingWindowOwner*>(self)->host->hwnd, context);
