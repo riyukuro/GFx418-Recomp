@@ -27,6 +27,7 @@
 #include "../include/gfx/gfx_loaderimpl.h"
 #include "../include/gfx/gfx_imemanager.h"
 #include "../kernel/sf_log.h"
+#include "../include/video/video_video.h"
 #define XML_STATIC  // the exe links expat statically (libgfxexpat)
 #include "../third_party/src/expat-2.0.1/lib/expat.h"
 
@@ -551,37 +552,14 @@ void FUN_1423ca160(void* self, void* arg)
 
 }}} // namespace Scaleform::GFx::IME
 
-namespace Scaleform { namespace GFx {
+namespace Scaleform {
 
-// MS2-FUNCTIONAL: ArrayDataBase<Video::VideoPlayer::CuePoint, AllocatorGH<CuePoint,2>>::Reserve (0x30-byte
-// elements; { Data, Size, Policy.Capacity }).
+// The cue point array's Reserve (0x30-byte elements), out of line in the exe.
 // @0x1423ca2b0
-void FUN_1423ca2b0(void* array, const void*, UPInt newCapacity)
-{
-    void*& data = At<void*>(array, 0);
-    UPInt& capacity = At<UPInt>(array, 0x10);
-    if (newCapacity == 0)
-    {
-        if (data)
-        {
-            Memory::pGlobalHeap->Free(data);
-            data = 0;
-        }
-        capacity = 0;
-        return;
-    }
-    UPInt rounded = (newCapacity + 3) & ~(UPInt)3;
-    if (data)
-        data = Memory::pGlobalHeap->Realloc(data, rounded * 0x30);
-    else
-    {
-        AllocInfo info(2, 0, 0);
-        data = Memory::pGlobalHeap->Alloc(rounded * 0x30, &info);
-    }
-    capacity = rounded;
-}
+template void ArrayDataBase<GFx::Video::VideoPlayer::CuePoint, AllocatorGH<GFx::Video::VideoPlayer::CuePoint, 2>,
+                            ArrayDefaultPolicy>::Reserve(const void*, UPInt);
 
-}} // namespace Scaleform::GFx
+} // namespace Scaleform
 
 // Empty vtable slots without .pdata (`ret 0`) the AS2 data images reference.
 // MS2-FUNCTIONAL: empty leaf.
