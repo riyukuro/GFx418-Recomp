@@ -462,18 +462,15 @@ __declspec(noinline) uintptr_t FUN_14000e560(void*) { return 0; }
 // @0x14000e580
 __declspec(noinline) bool FUN_14000e580(void*) { return false; }
 
-// MS2-FUNCTIONAL: reproduces the two indirect interface calls and this adjustment observed at this entry.
+// Forwards to slot 4 of the adjusted interface, with the context from slot 31 (+0xf8) of the base object.
 // @0x14000e470
 void FUN_14000e470(void** adjustedThis, void*, void* arg3, void* arg4)
 {
-    void** base = adjustedThis - 1;
-    void* dispatchTable = *adjustedThis;   // the exe loads this vtable before the first call
     typedef void* (*GetContextFn)(void*);
-    void* context = reinterpret_cast<GetContextFn>(
-        *reinterpret_cast<void**>(static_cast<char*>(*base) + 0xf8))(base);
     typedef void (*DispatchFn)(void*, void*, void*, void*);
-    reinterpret_cast<DispatchFn>(*reinterpret_cast<void**>(static_cast<char*>(dispatchTable) + 0x20))(
-        adjustedThis, context, arg3, arg4);
+    DispatchFn* dispatchTable = *reinterpret_cast<DispatchFn**>(adjustedThis);   // the exe loads this vtable before the first call
+    void** base = adjustedThis - 1;
+    dispatchTable[4](adjustedThis, reinterpret_cast<GetContextFn*>(*base)[0xf8 / 8](base), arg3, arg4);
 }
 
 // @0x14000e5d0
