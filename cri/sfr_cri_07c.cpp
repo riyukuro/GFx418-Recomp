@@ -408,12 +408,12 @@ void CFT_Ycc420plnToYcc422pix2Int1smp(byte *, byte *, cri_u8, cri_u8);
 void CFT_Ycc420plnToRgb555(longlong, longlong);
 void CFT_Ycc420plnToRgb555WithDither(longlong, longlong);
 void FUN_140093890(void *, int, int);
-void FUN_140093940(void *, byte, byte, int);
+void FUN_140093940(void *, int, int, int);
 void CFT_Ycc420plnToRgb555Init();
 void CFT_Ycc420plnToRgb565(longlong, longlong);
 void CFT_Ycc420plnToRgb565WithDither(longlong, longlong);
 void FUN_140094df0(void *, int, int);
-void FUN_140094ea0(void *, byte, byte, int);
+void FUN_140094ea0(void *, int, int, int);
 void CFT_Ycc420plnToRgb565Init();
 cri_u8 DCT_GetVerStr();
 void DCT_SetErrFunc(cri_u8, cri_u8);
@@ -964,7 +964,7 @@ void CFT_Ycc420plnToRgb555WithDither(longlong arg1, longlong arg2);
 
 void FUN_140093890(void *arg1, int arg2, int arg3);
 
-void FUN_140093940(void *arg1, byte arg2, byte arg3, int arg4);
+void FUN_140093940(void *arg1, int arg2, int arg3, int arg4);
 
 void CFT_Ycc420plnToRgb555Init();
 
@@ -974,7 +974,7 @@ void CFT_Ycc420plnToRgb565WithDither(longlong arg1, longlong arg2);
 
 void FUN_140094df0(void *arg1, int arg2, int arg3);
 
-void FUN_140094ea0(void *arg1, byte arg2, byte arg3, int arg4);
+void FUN_140094ea0(void *arg1, int arg2, int arg3, int arg4);
 
 void CFT_Ycc420plnToRgb565Init();
 

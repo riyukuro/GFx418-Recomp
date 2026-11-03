@@ -637,12 +637,12 @@ void CFT_Ycc420plnToYcc422pix2Int1smp(byte *, byte *, cri_u8, cri_u8);
 void CFT_Ycc420plnToRgb555(longlong, longlong);
 void CFT_Ycc420plnToRgb555WithDither(longlong, longlong);
 void FUN_140093890(void *, int, int);
-void FUN_140093940(void *, byte, byte, int);
+void FUN_140093940(void *, int, int, int);
 void CFT_Ycc420plnToRgb555Init();
 void CFT_Ycc420plnToRgb565(longlong, longlong);
 void CFT_Ycc420plnToRgb565WithDither(longlong, longlong);
 void FUN_140094df0(void *, int, int);
-void FUN_140094ea0(void *, byte, byte, int);
+void FUN_140094ea0(void *, int, int, int);
 void CFT_Ycc420plnToRgb565Init();
 cri_u8 DCT_GetVerStr();
 void DCT_SetErrFunc(cri_u8, cri_u8);
@@ -34864,7 +34864,7 @@ void FUN_140093890(void *arg1, int arg2, int arg3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093940
-void FUN_140093940(void *arg1, byte arg2, byte arg3, int arg4)
+void FUN_140093940(void *arg1, int arg2, int arg3, int arg4)
 {
   uint u_v1;
   byte b_v2;
@@ -34965,53 +34965,39 @@ void FUN_140093940(void *arg1, byte arg2, byte arg3, int arg4)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140093cf0
+// fill the YCbCr -> RGB555 tables: the 1.164-scaled luma table, the four signed chroma factor tables (20-bit fixed
+// point), the three 5-bit colour-level tables and the four dither copies of each.
 void CFT_Ycc420plnToRgb555Init()
 {
-  int *pi_v1;
-  int *pi_v2;
-  ulonglong u_v3;
-  int i_v4;
-  uint u_v5;
-  ulonglong u_v6;
-  ulonglong u_v7;
-  double d_v8;
-  
-  pi_v1 = &DAT_143d59750;
-  i_v4 = -0x10;
+  int *p;
+  int i;
+  int k;
+  double d;
+
+  i = -16;
+  p = &DAT_143d59750;
   do {
-    pi_v2 = pi_v1 + 1;
-    *pi_v1 = (int)(((double)i_v4 * 1.164 + 0.5 + 256.0) * 1048576.0);
-    pi_v1 = pi_v2;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)pi_v2 < ((longlong)&DAT_143d59b50));
-  u_v6 = 0;
-  u_v7 = u_v6;
-  i_v4 = -0x80;
-  do {
-    u_v3 = u_v7 + 4;
-    d_v8 = (double)i_v4;
-    *(int *)((longlong)&DAT_143d59b50 + u_v7) = (int)(d_v8 * 1.596 * 1048576.0);
-    *(int *)((longlong)&DAT_143d4ff50 + u_v7) = (int)(d_v8 * 0.392 * 1048576.0);
-    *(int *)((longlong)&DAT_143d4fb50 + u_v7) = (int)(d_v8 * 0.813 * 1048576.0);
-    *(int *)((longlong)&DAT_143d53350 + u_v7) = (int)(d_v8 * 2.017 * 1048576.0);
-    u_v7 = u_v3;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)u_v3 < 0x400);
+    *p++ = (int)(((double)i * 1.164 + 0.5 + 256.0) * 1048576.0);
+    i++;
+  } while ((longlong)p < (longlong)(&DAT_143d59750 + 256));  // the exe compares against the table end, not DAT_143d59b50
+  k = -128;
+  for (i = 0; i < 256; i++) {
+    d = (double)k;
+    ((int *)&DAT_143d59b50)[i] = (int)(d * 1.596 * 1048576.0);
+    ((int *)&DAT_143d4ff50)[i] = (int)(d * 0.392 * 1048576.0);
+    ((int *)&DAT_143d4fb50)[i] = (int)(d * 0.813 * 1048576.0);
+    ((int *)&DAT_143d53350)[i] = (int)(d * 2.017 * 1048576.0);
+    k++;
+  }
   FUN_140093890(&DAT_143d4ef50,5,10);
   FUN_140093890(&DAT_143d59f50,5,5);
-  FUN_140093890(&DAT_143d5ab50,5,0);  // xor r8d,r8d in the exe
-  u_v7 = u_v6;
-  do {
-    FUN_140093940(&DAT_143d56750 + u_v7,5,10,u_v6);
-    FUN_140093940(&DAT_143d50350 + u_v7,5,5,u_v6);
-    FUN_140093940(&DAT_143d53750 + u_v7,5,0,u_v6);
-    u_v5 = (int)u_v6 + 1;
-    u_v6 = (ulonglong)u_v5;
-    u_v7 = u_v7 + 0xc00;
-  } while ((int)u_v5 < 4);
-  return;
+  FUN_140093890(&DAT_143d5ab50,5,0);
+  for (i = 0; i < 4; i++) {
+    FUN_140093940((int *)&DAT_143d56750 + i * 0x300,5,10,i);
+    FUN_140093940((int *)&DAT_143d50350 + i * 0x300,5,5,i);
+    FUN_140093940((int *)&DAT_143d53750 + i * 0x300,5,0,i);
+  }
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
@@ -35435,7 +35421,7 @@ void FUN_140094df0(void *arg1, int arg2, int arg3)
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140094ea0
-void FUN_140094ea0(void *arg1, byte arg2, byte arg3, int arg4)
+void FUN_140094ea0(void *arg1, int arg2, int arg3, int arg4)
 {
   uint u_v1;
   byte b_v2;
@@ -35536,54 +35522,39 @@ void FUN_140094ea0(void *arg1, byte arg2, byte arg3, int arg4)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140095250
+// fill the YCbCr -> RGB565 tables as CFT_Ycc420plnToRgb555Init does (6 green bits), then mark them ready.
 void CFT_Ycc420plnToRgb565Init()
 {
-  int *pi_v1;
-  int *pi_v2;
-  ulonglong u_v3;
-  int i_v4;
-  uint u_v5;
-  ulonglong u_v6;
-  ulonglong u_v7;
-  double d_v8;
-  
-  pi_v1 = &DAT_143d65f50;
-  i_v4 = -0x10;
+  int *p;
+  int i;
+  int k;
+  double d;
+
+  i = -16;
+  p = &DAT_143d65f50;
   do {
-    pi_v2 = pi_v1 + 1;
-    *pi_v1 = (int)(((double)i_v4 * 1.164 + 0.5 + 256.0) * 1048576.0);
-    pi_v1 = pi_v2;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)pi_v2 < ((longlong)&DAT_143d66350));
-  u_v6 = 0;
-  u_v7 = u_v6;
-  i_v4 = -0x80;
-  do {
-    u_v3 = u_v7 + 4;
-    d_v8 = (double)i_v4;
-    *(int *)((longlong)&DAT_143d66350 + u_v7) = (int)(d_v8 * 1.596 * 1048576.0);
-    *(int *)((longlong)&DAT_143d5c750 + u_v7) = (int)(d_v8 * 0.392 * 1048576.0);
-    *(int *)((longlong)&DAT_143d5c350 + u_v7) = (int)(d_v8 * 0.813 * 1048576.0);
-    *(int *)((longlong)&DAT_143d5fb50 + u_v7) = (int)(d_v8 * 2.017 * 1048576.0);
-    u_v7 = u_v3;
-    i_v4 = i_v4 + 1;
-  } while ((longlong)u_v3 < 0x400);
+    *p++ = (int)(((double)i * 1.164 + 0.5 + 256.0) * 1048576.0);
+    i++;
+  } while ((longlong)p < (longlong)(&DAT_143d65f50 + 256));  // the exe compares against the table end, not DAT_143d66350
+  k = -128;
+  for (i = 0; i < 256; i++) {
+    d = (double)k;
+    ((int *)&DAT_143d66350)[i] = (int)(d * 1.596 * 1048576.0);
+    ((int *)&DAT_143d5c750)[i] = (int)(d * 0.392 * 1048576.0);
+    ((int *)&DAT_143d5c350)[i] = (int)(d * 0.813 * 1048576.0);
+    ((int *)&DAT_143d5fb50)[i] = (int)(d * 2.017 * 1048576.0);
+    k++;
+  }
   FUN_140094df0(&DAT_143d5b750,5,0xb);
   FUN_140094df0(&DAT_143d66750,6,5);
-  FUN_140094df0(&DAT_143d67350,5,0);  // xor r8d,r8d in the exe
-  u_v7 = u_v6;
-  do {
-    FUN_140094ea0(&DAT_143d62f50 + u_v7,5,0xb,u_v6);
-    FUN_140094ea0(&DAT_143d5cb50 + u_v7,6,5,u_v6);
-    FUN_140094ea0(&DAT_143d5ff50 + u_v7,5,0,u_v6);
-    u_v5 = (int)u_v6 + 1;
-    u_v6 = (ulonglong)u_v5;
-    u_v7 = u_v7 + 0xc00;
-  } while ((int)u_v5 < 4);
+  FUN_140094df0(&DAT_143d67350,5,0);
+  for (i = 0; i < 4; i++) {
+    FUN_140094ea0((int *)&DAT_143d62f50 + i * 0x300,5,0xb,i);
+    FUN_140094ea0((int *)&DAT_143d5cb50 + i * 0x300,6,5,i);
+    FUN_140094ea0((int *)&DAT_143d5ff50 + i * 0x300,5,0,i);
+  }
   DAT_143d67f50 = 1;
-  return;
 }
 
 // @0x140095430
