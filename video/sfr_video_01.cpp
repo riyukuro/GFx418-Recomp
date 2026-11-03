@@ -3806,7 +3806,13 @@ void VideoProviderNetStream::SendSubtitleInformation()
     penv->Drop1();
 }
 
-// MS2-FUNCTIONAL: other scheduling
+static __forceinline void AdoptTexture(Ptr<VideoImage>& ptr, VideoImage& src)
+{
+    if (ptr)
+        ptr->Release();
+    ptr.GetRawRef() = &src;
+}
+
 // @0x14000be60
 void VideoProviderNetStream::Advance()
 {
@@ -3830,10 +3836,7 @@ void VideoProviderNetStream::Advance()
     case VideoPlayer::Ready:
         if (!pTextureImage)
         {
-            VideoImage* pimage = pVideoPlayer->CreateTexture(pTextureManager);
-            if (pTextureImage)
-                pTextureImage->Release();
-            *reinterpret_cast<VideoImage**>(&pTextureImage) = pimage;
+            AdoptTexture(pTextureImage, *pVideoPlayer->CreateTexture(pTextureManager));
             if (pTextureImage)
             {
                 pVideoPlayer->GetVideoInfo(&VInfo);
