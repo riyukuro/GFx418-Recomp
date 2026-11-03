@@ -2271,7 +2271,7 @@ CriUint32 criMvPlyAdec_GetWave32(void* decoder, void* player, CriUint32 channels
 
 void FUN_1400531e0(void*, const void*, void*, void*);
 
-CriBool FUN_1400415f0(void* handle, void* planeSet);
+bool FUN_1400415f0(void* handle, void* planeSet);
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
 #pragma function(memset)                      // the exe calls memset here rather than expanding it

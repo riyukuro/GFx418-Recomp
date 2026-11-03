@@ -4213,11 +4213,10 @@ CriUint32 criMvPlyAdec_GetWave32(void* decoder, void* player, CriUint32 channels
 
 unsigned int FUN_1400531e0(__int64, unsigned __int64, unsigned __int64, unsigned int *);  // C3: the definition's signature
 
-// MS2-FUNCTIONAL: pull the next movie frame into the three (or four) texture planes handed in by the renderer.
+// Pull the next movie frame into the three (or four) texture planes handed in by the renderer.
 // @0x1400415f0
-CriBool FUN_1400415f0(void* handle, void* planeSet)
+bool FUN_1400415f0(void* handle, void* planeSet)
 {
-    struct Buffer { CriUint32 Format; CriUint32 Flags; CriUint64 Pitch; CriUint64 Size; CriUint8* Data; };
     struct YuvEntry { CriUint8* Data; CriUint32 Size; CriUint32 Pitch; };
     struct YuvSet { YuvEntry Entries[4]; };
     struct State
@@ -4236,69 +4235,72 @@ CriBool FUN_1400415f0(void* handle, void* planeSet)
     struct Handle { CriUint8 Reserved00[0x40]; State* State; };
     static_assert(offsetof(State, Frame) == 0x2c0 && offsetof(State, AlphaKeep) == 0x390 &&
                   offsetof(State, Delivered) == 0x3a9 && offsetof(State, PausePending) == 0x3ab, "layout");
-    State* state = ((Handle*)handle)->State;
-    if (!state)
-        return 0;
-    if (state->Cleared)
+    if (!((Handle*)handle)->State)
+        return false;
+    if (((Handle*)handle)->State->Cleared)
     {
         FUN_140041390(handle, planeSet);
-        state->Cleared = 0;
-        return 1;
+        ((Handle*)handle)->State->Cleared = 0;
+        return true;
     }
-    CriMvEasyPlayer* owner = state->Player;
-    if (owner->IsNextFrameOnTime() == 0)
-        return 0;
-    CriUint32 count = ((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount();
-    if (count < 3)
+    if (((Handle*)handle)->State->Player->IsNextFrameOnTime())
     {
-        Buffer buffer = {};
-        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&buffer);
-        owner->GetFrameOnTimeAs32bitARGB(buffer.Data, (CriUint32)buffer.Pitch, (CriUint32)buffer.Size, *(CriMvFrameInfo*)&state->Frame, CriMv::ErrorContainer);
-        FUN_1400414f0(handle);
-    }
-    else
-    {
-        Buffer luma = {};
-        Buffer chromaU = {};
-        Buffer chromaV = {};
-        Buffer alpha = {};
-        YuvSet yuv = {};
-        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&luma);
-        yuv.Entries[0].Data = luma.Data;
-        yuv.Entries[0].Size = (CriUint32)luma.Size;
-        yuv.Entries[0].Pitch = (CriUint32)luma.Pitch;
-        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(1, (Scaleform::Render::ImagePlane*)&chromaU);
-        yuv.Entries[1].Data = chromaU.Data;
-        yuv.Entries[1].Size = (CriUint32)chromaU.Size;
-        yuv.Entries[1].Pitch = (CriUint32)chromaU.Pitch;
-        ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(2, (Scaleform::Render::ImagePlane*)&chromaV);
-        yuv.Entries[2].Data = chromaV.Data;
-        yuv.Entries[2].Size = (CriUint32)chromaV.Size;
-        yuv.Entries[2].Pitch = (CriUint32)chromaV.Pitch;
-        if (((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount() > 3)
+        CriUint32 count = ((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount();
+        if (count >= 3)
         {
-            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(3, (Scaleform::Render::ImagePlane*)&alpha);
-            if (state->AlphaKeep == 0)
+            CriImagePlane luma;
+            CriImagePlane chromaU;
+            CriImagePlane chromaV;
+            CriImagePlane alpha;
+            YuvSet yuv;  // not zeroed, as in the exe: entry 3 is only written when a fourth plane exists
+            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&luma);
+            yuv.Entries[0].Data = luma.pData;
+            yuv.Entries[0].Pitch = (CriUint32)luma.Pitch;
+            yuv.Entries[0].Size = (CriUint32)luma.DataSize;
+            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(1, (Scaleform::Render::ImagePlane*)&chromaU);
+            yuv.Entries[1].Data = chromaU.pData;
+            yuv.Entries[1].Pitch = (CriUint32)chromaU.Pitch;
+            yuv.Entries[1].Size = (CriUint32)chromaU.DataSize;
+            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(2, (Scaleform::Render::ImagePlane*)&chromaV);
+            yuv.Entries[2].Data = chromaV.pData;
+            yuv.Entries[2].Pitch = (CriUint32)chromaV.Pitch;
+            yuv.Entries[2].Size = (CriUint32)chromaV.DataSize;
+            if (((const Scaleform::Render::ImageData*)planeSet)->GetPlaneCount() >= 4)
             {
-                memset(alpha.Data, 0xff, (size_t)alpha.Flags * (size_t)alpha.Pitch);
+                ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(3, (Scaleform::Render::ImagePlane*)&alpha);
+                if (((Handle*)handle)->State->AlphaKeep)
+                {
+                    yuv.Entries[3].Data = alpha.pData;
+                    yuv.Entries[3].Pitch = (CriUint32)alpha.Pitch;
+                    yuv.Entries[3].Size = (CriUint32)alpha.DataSize;
+                }
+                else
+                {
+                    memset(alpha.pData, 0xff, alpha.Height * alpha.Pitch);
+                    yuv.Entries[3].Data = NULL;
+                    yuv.Entries[3].Pitch = 0;
+                    yuv.Entries[3].Size = 0;
+                }
             }
-            else
-            {
-                yuv.Entries[3].Data = alpha.Data;
-                yuv.Entries[3].Size = (CriUint32)alpha.Size;
-                yuv.Entries[3].Pitch = (CriUint32)alpha.Pitch;
-            }
+            FUN_1400531e0((__int64)((Handle*)handle)->State->Player, (unsigned __int64)&yuv, (unsigned __int64)&((Handle*)handle)->State->Frame, (unsigned int *)(&CriMv::ErrorContainer));
+            FUN_1400414f0(handle);
         }
-        FUN_1400531e0((__int64)owner, (unsigned __int64)&yuv, (unsigned __int64)&state->Frame, (unsigned int *)(&CriMv::ErrorContainer));
-        FUN_1400414f0(handle);
+        else
+        {
+            CriImagePlane buffer;
+            ((const Scaleform::Render::ImageData*)planeSet)->GetPlane(0, (Scaleform::Render::ImagePlane*)&buffer);
+            ((Handle*)handle)->State->Player->GetFrameOnTimeAs32bitARGB(buffer.pData, (CriUint32)buffer.Pitch, (CriUint32)buffer.DataSize, *(CriMvFrameInfo*)&((Handle*)handle)->State->Frame, CriMv::ErrorContainer);
+            FUN_1400414f0(handle);
+        }
+        ((Handle*)handle)->State->Delivered = 1;
+        if (((Handle*)handle)->State->PausePending)
+        {
+            ((Handle*)handle)->State->Player->Pause(1, CriMv::ErrorContainer);
+            ((Handle*)handle)->State->PausePending = 0;
+        }
+        return true;
     }
-    state->Delivered = 1;
-    if (state->PausePending)
-    {
-        owner->Pause(1, CriMv::ErrorContainer);
-        state->PausePending = 0;
-    }
-    return 1;
+    return false;
 }
 
 #pragma optimize("s", on)                     // this exe CRI obj was built for size (/Os)
