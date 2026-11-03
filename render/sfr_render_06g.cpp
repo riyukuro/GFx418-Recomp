@@ -649,9 +649,9 @@ unsigned HAL::DrawableCommandGetFlags(const DICommand* command) const
     }
 }
 
-// MS2-FUNCTIONAL: the exe builds the static RenderEvent with a guarded run-time vtable store; ours is constant-initialised
+// Inline as in the SDK (Render_HAL.h): cl then dynamic-inits the static (vftable store under the guard), as the exe does
 // @0x1426c0240
-RenderEvent& HAL::GetEvent(EventType)
+inline RenderEvent& HAL::GetEvent(EventType)
 {
     static RenderEvent defaultEvent;
     return defaultEvent;
