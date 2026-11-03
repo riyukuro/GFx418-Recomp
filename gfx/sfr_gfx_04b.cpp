@@ -46,7 +46,6 @@ class ImageFileHandlerRegistry : public State, public Render::ImageFileHandlerRe
 {
 };
 
-extern "C" void FUN_142655fe0(FontData*, LoadProcess*, const TagInfo*);
 extern "C" void FUN_1426597e0(void*, void*);
 extern "C" void FUN_14257dcb0(void*);
 
@@ -154,7 +153,7 @@ void SF_STDCALL GFx_DefineFontLoader(LoadProcess* p, const TagInfo& tagInfo)
     {
         FontData* pfd = SF_HEAP_NEW(p->GetLoadHeap()) FontData;
         pf = *pfd;
-        FUN_142655fe0(pfd, p, &tagInfo); // FontData::Read
+        pfd->Read(p, tagInfo);
     }
 
     p->AddFontDataResource(ResourceId(fontId), pf);
