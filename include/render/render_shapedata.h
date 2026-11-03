@@ -78,6 +78,12 @@ struct StrokeStyleType
 #if !defined(MS2_SF_STROKESTYLE_IMPLICIT_ASSIGN)
     StrokeStyleType& operator=(const StrokeStyleType& other);
 #endif
+// Default-off switch MS2_SF_STROKESTYLE_NOINLINE_COPY (defined only in sfr_gfx_08s1): the implicit copy ctor, kept
+// out of line as the exe calls 0x142659770 from ConstShapeWithStyles::Read and SetStyles. The unit defaults it.
+#if defined(MS2_SF_STROKESTYLE_NOINLINE_COPY)
+    StrokeStyleType() = default;
+    __declspec(noinline) StrokeStyleType(const StrokeStyleType& other);
+#endif
 };
 
 // Source of fill/stroke styles and path data for the tessellator.

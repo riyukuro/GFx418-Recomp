@@ -13,6 +13,7 @@
 // MS2-RANGE: 0x14265ab20-0x14265ab76 .text$mn
 // MS2-RANGE: 0x14265ac00-0x14265adec .text$mn
 // MS2-RANGE: 0x14265d6a0-0x14265d8f2 .text$mn
+#define MS2_SF_STROKESTYLE_NOINLINE_COPY
 #include "../include/gfx/gfx_imagecreator.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_loadproc.h"
@@ -43,6 +44,9 @@ inline ComplexFill::ComplexFill(const ComplexFill& o)
       ImageMatrix(o.ImageMatrix), FillMode(o.FillMode), BindIndex(o.BindIndex)
 {
 }
+
+// The implicit memberwise copy, kept out of line (MS2_SF_STROKESTYLE_NOINLINE_COPY).
+inline StrokeStyleType::StrokeStyleType(const StrokeStyleType& other) = default;
 
 // Not called in the exe (kept out of line); ComputeBound has it inlined.
 // @0x142658b70
@@ -345,7 +349,7 @@ void ConstShapeWithStyles::SetStyles(unsigned fillStyleCount, const FillStyleTyp
     }
     Styles = SF_HEAP_AUTO_ALLOC(this, sizeof(FillStyleType) * fillStyleCount + sizeof(StrokeStyleType) * strokeStyleCount);
     FillStyleType* pfill = GetFills();
-    for (unsigned i = 0; i < FillStylesNum; i++, pfill++)
+    for (unsigned i = 0; i < FillStylesNum; pfill++, i++)
     {
         Construct<FillStyleType>(pfill, fillStyles[i]);
         if (pfill->pFill)
