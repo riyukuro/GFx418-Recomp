@@ -2476,28 +2476,30 @@ void AvmTextField::RemoveTextField(const FnCall& fn)
 }
 
 // The boundaries of a character in pixels as a Rectangle, null if there is no such character.
-static void SetCharBoundariesResult(const FnCall& fn, bool found, const RectF& rect)
+static __forceinline void SetCharBoundariesResult(const FnCall& fn, bool found, const RectF& rect)
 {
-    if (!found)
+    if (found)
     {
-        fn.Result->SetNull();
-        return;
+        Ptr<RectangleObject> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
+        Render::RectD r(Render::TwipsToPixels(Double(rect.x1)), Render::TwipsToPixels(Double(rect.y1)), Render::TwipsToPixels(Double(rect.x2)),
+                Render::TwipsToPixels(Double(rect.y2)));
+        pobj->SetProperties(fn.Env, r);
+        fn.Result->SetAsObject(pobj);
     }
-    Ptr<RectangleObject> pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) RectangleObject(fn.Env);
-    Render::RectD r(Render::TwipsToPixels(Double(rect.x1)), Render::TwipsToPixels(Double(rect.y1)), Render::TwipsToPixels(Double(rect.x2)),
-            Render::TwipsToPixels(Double(rect.y2)));
-    pobj->SetProperties(fn.Env, r);
-    fn.Result->SetAsObject(pobj);
+    else
+        fn.Result->SetNull();
 }
 
 // getCharBoundaries(charIndex)
-// MS2-FUNCTIONAL the exe inlines the Rectangle result into each caller
+// MS2-FUNCTIONAL the exe loads the document before the rect address for the call
 // @0x14290a180
 void AvmTextField::GetCharBoundaries(const FnCall& fn)
 {
-    if (!IsTextFieldTarget(fn) || fn.NArgs < 1)
+    if (!IsTextFieldTarget(fn))
         return;
     TextField* ptf = GetTextFieldTarget(fn);
+    if (fn.NArgs < 1)
+        return;
     unsigned idx = fn.Arg(0).ToUInt32(fn.Env);
     RectF    rect(0);
     bool     found = ptf->GetDocument()->GetCharBoundaries(&rect, idx);
@@ -2523,7 +2525,7 @@ void AvmTextField::GetCharIndexAtPoint(const FnCall& fn)
 }
 
 // getExactCharBoundaries(charIndex)
-// MS2-FUNCTIONAL the exe inlines the Rectangle result into each caller
+// MS2-FUNCTIONAL the exe loads the document before the rect address for the call
 // @0x14290a4b0
 void AvmTextField::GetExactCharBoundaries(const FnCall& fn)
 {
