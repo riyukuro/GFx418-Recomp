@@ -418,10 +418,8 @@ public:
     // (alwaysEnableArrowKeys extension property)
     bool IsAlwaysEnableFocusArrowKeys() const
     {
-        int v = (Flags >> Shift_AlwaysEnableArrowKeys) & 3;
-        if (v == 3)
-            v = -1;
-        return v == 1;
+        UInt32 v = (Flags >> Shift_AlwaysEnableArrowKeys) & 3;
+        return ((v == 3) ? -1 : int(v)) == 1;
     }
     // Enter/Space press a focused clip that is not a button (alwaysEnableKeyboardPress extension property).
     bool IsAlwaysEnableKeyboardPress() const
