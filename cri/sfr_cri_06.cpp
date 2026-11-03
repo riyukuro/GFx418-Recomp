@@ -989,8 +989,7 @@ void calcHvSize(cri_any cri_p0)
   h = *(int *)((char *)arg1 + 0x254) << 0xc | *(uint *)((char *)arg1 + 8);
   *(uint *)((char *)arg1 + 0x6c4) = w;
   *(uint *)((char *)arg1 + 0x6c8) = h;
-  mbw = w + 0xf >> 4;
-  *(uint *)((char *)arg1 + 0x6cc) = mbw;
+  *(uint *)((char *)arg1 + 0x6cc) = w + 0xf >> 4;
   if (*(int *)((char *)arg1 + 0x248) == 1) {
     mbh = h + 0xf >> 4;
   }
@@ -1002,6 +1001,7 @@ void calcHvSize(cri_any cri_p0)
   }
   *(uint *)((char *)arg1 + 0x6d0) = mbh;
   *(uint *)((char *)arg1 + 0xc00) = mbh << 4;
+  mbw = *(uint *)((char *)arg1 + 0x6cc);
   *(int *)((char *)arg1 + 0xbfc) = mbw << 4;
   *(int *)((char *)arg1 + 0xc08) = (int)(mbh << 4) >> 1;
   *(int *)((char *)arg1 + 0xc04) = (int)(mbw << 4) >> 1;
@@ -1424,6 +1424,7 @@ longlong parseSec(cri_any cri_p0, cri_any cri_p1)
   int i_v1;
   cri_u1 *pu_v2;
   uint u_v3;
+  uint u_v4;
   
   *(int *)((char *)arg1 + 0xca8) = *(int *)((char *)arg1 + 0xca8) + 1;
   *(cri_u4 *)((char *)arg1 + 0xc94) = 1;
@@ -1432,21 +1433,21 @@ longlong parseSec(cri_any cri_p0, cri_any cri_p1)
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
   pu_v2 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  i_v1 = (int)arg2 * 8 + (int)pu_v2 * -8;
-  u_v3 = CONCAT31(CONCAT21(CONCAT11(*pu_v2,pu_v2[1]),pu_v2[2]),pu_v2[3]) <<
-          ((byte)i_v1 & 0x1f);
-  if (i_v1 == 0) {
-    *(uint *)((char *)arg1 + 0x22c) = u_v3;
+  i_v1 = ((int)arg2 << 3) - ((int)pu_v2 << 3);
+  u_v3 = CRI06_BE32(pu_v2[0],pu_v2[1],pu_v2[2],pu_v2[3]);
+  u_v4 = CRI06_BE32(pu_v2[4],pu_v2[5],pu_v2[6],pu_v2[7]);
+  pu_v2 = pu_v2 + 8;
+  u_v3 = u_v3 << i_v1;
+  if (i_v1 != 0) {
+    *(uint *)((char *)arg1 + 0x22c) = u_v4 >> (0x20 - i_v1) | u_v3;
   }
   else {
-    *(uint *)((char *)arg1 + 0x22c) =
-         CONCAT31(CONCAT21(CONCAT11(pu_v2[4],pu_v2[5]),pu_v2[6]),pu_v2[7]) >>
-         (0x20 - (byte)i_v1 & 0x1f) | u_v3;
+    *(uint *)((char *)arg1 + 0x22c) = u_v3;
   }
   *(cri_u4 *)((char *)arg1 + 0x708) = 0;
   *(cri_u4 *)((char *)arg1 + 0x70c) = 0;
-  i_v1 = i_v1 + -0x19 + (((int)pu_v2 + 8) - (int)arg2) * 8;
-  return (longlong)((int)(i_v1 + (i_v1 >> 0x1f & 7U)) >> 3) + arg2;
+  i_v1 = i_v1 + -0x19 + ((int)pu_v2 - (int)arg2) * 8;
+  return (longlong)(i_v1 / 8) + arg2;
 }
 
 // @0x140055510
@@ -10481,8 +10482,8 @@ void MPVVLC_Init(cri_any cri_p0)
 // @0x140064dd0
 void UTY_MemcpyDword(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2)
 {
-  cri_u4 *dst = cri_p0;
   cri_u4 *src = cri_p1;
+  cri_u4 *dst = cri_p0;
   ulonglong n = cri_p2;
   ulonglong k;
   cri_u4 a;
@@ -10985,6 +10986,8 @@ void MPVUMC_EndOfFrame()
 // @0x140065800
 void FUN_140065800()
 {
+  static const double c[8] = {0.3535533905932738, 0.4903926402016152, 0.46193976625564337, 0.4157348061512726,
+                              0.3535533905932738, 0.2777851165098011, 0.1913417161825449, 0.09754516100806414};
   double d_v1;
   double *pd_v2;
   double *pd_v3;
@@ -10996,14 +10999,14 @@ void FUN_140065800()
     d_v1 = *pd_v4;
     pd_v3 = pd_v2 + 8;
     pd_v4 = pd_v4 + 1;
-    *pd_v2 = d_v1 * 0.4903926402016152;
-    pd_v2[1] = d_v1 * 0.46193976625564337;
-    pd_v2[2] = d_v1 * 0.4157348061512726;
-    pd_v2[-1] = d_v1 * 0.3535533905932738;
-    pd_v2[3] = d_v1 * 0.3535533905932738;
-    pd_v2[5] = d_v1 * 0.1913417161825449;
-    pd_v2[4] = d_v1 * 0.2777851165098011;
-    pd_v2[6] = d_v1 * 0.09754516100806414;
+    pd_v3[-9] = d_v1 * c[0];
+    pd_v3[-8] = d_v1 * c[1];
+    pd_v3[-7] = d_v1 * c[2];
+    pd_v3[-6] = d_v1 * c[3];
+    pd_v3[-5] = d_v1 * c[4];
+    pd_v3[-4] = d_v1 * c[5];
+    pd_v3[-3] = d_v1 * c[6];
+    pd_v3[-2] = d_v1 * c[7];
     pd_v2 = pd_v3;
   } while ((longlong)pd_v3 < ((longlong)&DAT_143d4adf8));
   return;
@@ -11392,13 +11395,13 @@ void DCT_FsriTransCore(cri_any cri_p0, cri_any cri_p1)
       if (*arg1 == '\0') {
         f_v7 = *pf_v4;
         pu_v2 = (uint *)*pl_v5;
-        if (0.0 <= f_v7) {
-          f_v7 = f_v7 + 0.5;
+        if (0.0f > f_v7) {
+          f_v7 = f_v7 - 0.5f;
         }
         else {
-          f_v7 = f_v7 - 0.5;
+          f_v7 = f_v7 + 0.5f;
         }
-        u_v3 = (int)(short)(int)f_v7 << 0x10 | (int)f_v7 & 0xffffU;
+        u_v3 = (uint)(ushort)(short)(int)f_v7 << 0x10 | (ushort)(short)(int)f_v7;
         pu_v2[0x1f] = u_v3;
         pu_v2[0x1e] = u_v3;
         pu_v2[0x1d] = u_v3;
