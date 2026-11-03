@@ -1454,7 +1454,6 @@ namespace Instances { namespace fl_filters
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined flag getters as shr/and/shl (not folded to a mask); register allocation differs
     // @0x14247b6c0
     void DropShadowFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
     {
@@ -1501,7 +1500,6 @@ namespace Instances { namespace fl_filters
         return result;
     }
 
-    // MS2-FUNCTIONAL: the exe keeps the inlined flag getters as shr/and/shl (not folded to a mask); register allocation differs
     // @0x14247b980
     void GlowFilter::clone(SPtr<Instances::fl_filters::BitmapFilter>& result)
     {
@@ -1598,7 +1596,7 @@ namespace Instances { namespace fl_filters
     void DropShadowFilter::hideObjectSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 6);
+        GetShadowFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_HideObject : 0;
     }
 
     // @0x14247bcc0
@@ -1644,14 +1642,14 @@ namespace Instances { namespace fl_filters
     void DropShadowFilter::innerSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 5);
+        GetShadowFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_Inner : 0;
     }
 
     // @0x14247bdb0
     void GlowFilter::innerSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetGlowFilterData()->GetParams().Mode |= ((unsigned)value << 5);
+        GetGlowFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_Inner : 0;
     }
 
     // @0x14247bdc0
@@ -1676,21 +1674,21 @@ namespace Instances { namespace fl_filters
     void BevelFilter::knockoutSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetBevelFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+        GetBevelFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_Knockout : 0;
     }
 
     // @0x14247be40
     void DropShadowFilter::knockoutSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetShadowFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+        GetShadowFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_Knockout : 0;
     }
 
     // @0x14247be50
     void GlowFilter::knockoutSet(const Value& result, bool value)
     {
         SF_UNUSED(result);
-        GetGlowFilterData()->GetParams().Mode |= ((unsigned)value << 4);
+        GetGlowFilterData()->GetParams().Mode |= value ? Render::BlurFilterParams::Mode_Knockout : 0;
     }
 
     // @0x14247be60
