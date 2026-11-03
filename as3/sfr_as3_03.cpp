@@ -374,6 +374,12 @@ namespace Instances { namespace fl
     {
     }
 
+    // The Array ctor, inlined into AS3slice as in the exe (out-of-line copy in sfr_as3_01c).
+    __forceinline Array::Array(InstanceTraits::Traits& t)
+        : Instance(t), SA(t.GetVM().GetMemoryHeap())
+    {
+    }
+
     inline XML::XML(InstanceTraits::Traits& t, const ASString& text, XML* parent)
         : Object(t), Text(text), Parent(parent)
     {
@@ -2123,7 +2129,7 @@ namespace Instances { namespace fl
         SA.ShiftLeft();
     }
 
-    // MS2-FUNCTIONAL: the exe inlines the Array constructor and keeps the inlined At's null select as a cmove
+    // MS2-FUNCTIONAL: the exe keeps the inlined At's null select as a cmove
     // @0x1423ff4d0
     void Array::AS3slice(SPtr<Instances::fl::Array>& result, SInt32 startIndex, SInt32 endIndex)
     {
@@ -4362,6 +4368,7 @@ template void CISet::CheckExpand(void*);
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXML@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x1424095b0
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VXMLAttr@fl@Instances@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409610
 // MS2-PIN: ?DestructArray@?$ConstructorMov@V?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@Scaleform@@@Scaleform@@SAXPEAV?$SPtr@VTraits@ClassTraits@AS3@GFx@Scaleform@@@AS3@GFx@2@_K@Z 0x142409550
+// MS2-PIN: ??_7Array@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x1431415b0
 // MS2-PIN: ??_7ArrayFunc@AS3@GFx@Scaleform@@6B@ 0x143141570
 // MS2-PIN: ??_7ValuePtrCollector@AS3@GFx@Scaleform@@6B@ 0x143141580
 // MS2-PIN: ??_7Value2StrCollector@AS3@GFx@Scaleform@@6B@ 0x143141590
