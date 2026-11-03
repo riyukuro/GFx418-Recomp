@@ -199,7 +199,6 @@ extern "C" const int DAT_143a2a6b4;
 extern "C" const char DAT_14305cd3c[];
 extern "C" const unsigned long long DAT_1431c4ef0;
 #define DAT_143b15f60 (static_cast<void*>(Scaleform::Memory::pGlobalHeap))
-extern "C" const void* DAT_14313bc60[];
 extern "C" void FUN_1423ca030(void*, const char*, const char*, ...);
 void FUN_14257dc30(void*);
 extern "C" void FUN_1423c9330(unsigned long long, unsigned long long);
@@ -1375,17 +1374,23 @@ void FUN_1423cd060(void* log, const char* format, ...)
     va_end(args);
 }
 
-// MS2-FUNCTIONAL: initializes the executable-observed refcount/vptr fields and registers both loader callbacks.
+}}} // namespace Scaleform::GFx::IME
+
+namespace Scaleform { namespace GFx {
+
+// The AS3 support state: registers the SymbolClass and DoABC tag loaders.
+// MS2-PIN: ??_7AS3Support@GFx@Scaleform@@6B@ 0x14313bc60
 // @0x1423db7f0
-void* FUN_1423db7f0(unsigned long long* object)
+AS3Support::AS3Support()
 {
-    *reinterpret_cast<unsigned*>(object + 2) = 0x23;
-    new (object) Scaleform::RefCountImplCore;
-    object[0] = reinterpret_cast<unsigned long long>(DAT_14313bc60);
-    Scaleform::GFx::RegisterTagLoader(0x4c, Scaleform::GFx::AS3::SymbolClassLoader);
-    Scaleform::GFx::RegisterTagLoader(0x52, Scaleform::GFx::AS3::DoAbcLoader);
-    return object;
+    SType = State_AS3Support;
+    RegisterTagLoader(0x4c, AS3::SymbolClassLoader);
+    RegisterTagLoader(0x52, AS3::DoAbcLoader);
 }
+
+}} // namespace Scaleform::GFx
+
+namespace Scaleform { namespace GFx { namespace IME {
 
 // Sample text and selection updates through the movie helpers.
 // @0x1423ca350

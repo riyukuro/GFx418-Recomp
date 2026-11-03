@@ -27,7 +27,7 @@ class PlaceObject3Tag;
 class RemoveObjectTag;
 class RemoveObject2Tag;
 
-class ASSupport : public State
+class __declspec(novtable) ASSupport : public State
 {
 public:
     virtual MovieImpl* CreateMovie(MemoryContext* memContext) = 0;
