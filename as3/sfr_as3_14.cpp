@@ -532,7 +532,6 @@ namespace InstanceTraits { namespace fl_utils
         RegisterImplementedInterface(Multiname(GetVM(), StringDataPtr("flash.utils.IDataOutput")));
     }
 
-    // MS2-FUNCTIONAL: Pickable construction: allocation + ctor inlining differs
     // @0x1424be940
     Pickable<ByteArray::InstanceType> ByteArray::MakeInstance(ByteArray& t)
     {
