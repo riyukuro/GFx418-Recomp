@@ -1055,13 +1055,12 @@ void FUN_14004f220(longlong a1,int a2,int a3,longlong *a4)
     FUN_14004ef20("E2004090212"," : Specified handle is invalid.");
     return;
   }
-  i_v1 = CriAt<int>(a1, 0x30);
-  if (i_v1 == 0) {
+  if (CriAt<int>(a1, 0x30) == 0) {
     FUN_14004ef20("E2004090219"," : Illegal buffer size.");
     return;
   }
   if (a2 == 0) {
-    i_v1 = i_v1 + (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x20));
+    i_v1 = CriAt<int>(a1, 0x30) + (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x20));
     if (CriAt<int>(a1, 0x1c) < i_v1) {
       i_v1 = CriAt<int>(a1, 0x1c);
     }
@@ -1076,7 +1075,7 @@ void FUN_14004f220(longlong a1,int a2,int a3,longlong *a4)
     return;
   }
   if (a2 == 1) {
-    i_v1 = i_v1 + (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x24));
+    i_v1 = CriAt<int>(a1, 0x30) + (CriAt<int>(a1, 0x34) - CriAt<int>(a1, 0x24));
     if (CriAt<int>(a1, 0x18) < i_v1) {
       i_v1 = CriAt<int>(a1, 0x18);
     }
