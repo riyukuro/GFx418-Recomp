@@ -3581,51 +3581,59 @@ void FUN_1423d7bc0(void* raw, const void* event, const wchar_t* text)
     *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
 }
 
-// MS2-FUNCTIONAL: applies the executable's StatusWindow shape, symbol, and Japanese input-mode changes through IMM32.
+static __forceinline void Ime01StatusWindowCommand(void* raw, const char* command, const char* value);
+
+// Applies the StatusWindow shape, symbol and Japanese input-mode commands through IMM32. FUN_1423d61f0 is an
+// identical copy.
 // @0x1423d7e80
 void FUN_1423d7e80(void* raw, const char* command, const char* value)
 {
+    Ime01StatusWindowCommand(raw, command, value);
+}
+
+static __forceinline void Ime01StatusWindowCommand(void* raw, const char* command, const char* value)
+{
     auto* manager = static_cast<unsigned char*>(raw);
-    auto* child = *reinterpret_cast<unsigned char**>(manager + 0x78);
-    HWND hwnd = *reinterpret_cast<HWND*>(child + 0x68);
-    HIMC context = cx18_ImmGetContext(hwnd);
+    HIMC context = ImmGetContext(*reinterpret_cast<HWND*>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x68));
+    DWORD conversion;
+    DWORD sentence;
+    ImmGetConversionStatus(context, &conversion, &sentence);
     if (!context) return;
-    DWORD conversion = 0;
-    DWORD sentence = 0;
-    cx18_ImmGetConversionStatus(context, &conversion, &sentence);
     // "false" clears the flag, "true" sets it; any other value leaves it alone.
-    const bool isFalse = std::strcmp(value, "false") == 0;
-    const bool isTrue = std::strcmp(value, "true") == 0;
     if (std::strcmp(command, "StatusWindow_OnShape") == 0) {
-        if (isFalse) conversion &= ~8u;
-        if (isTrue) conversion |= 8u;
+        if (std::strcmp(value, "false") == 0) conversion &= ~8u;
+        if (std::strcmp(value, "true") == 0) conversion |= 8u;
     } else if (std::strcmp(command, "StatusWindow_OnInputMode") == 0) {
-        if (isFalse) conversion &= ~1u;
-        if (isTrue) conversion |= 1u;
+        if (std::strcmp(value, "false") == 0) conversion &= ~1u;
+        if (std::strcmp(value, "true") == 0) conversion |= 1u;
         if (std::strcmp(value, "Hiragana") == 0) {
-            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
+            if (!ImmGetOpenStatus(context)) ImmSetOpenStatus(context, TRUE);
             conversion = (conversion & ~2u) | 1u;
-        } else if (std::strcmp(value, "Full-Width Katakana") == 0) {
-            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
-            conversion |= 0xbu;
-        } else if (std::strcmp(value, "Full-Width Alphanumeric") == 0) {
-            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
-            conversion = (conversion & ~1u) | 8u;
-        } else if (std::strcmp(value, "Half-Width Katakana") == 0) {
-            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
-            conversion = (conversion & ~8u) | 3u;
-        } else if (std::strcmp(value, "Half-Width Alphanumeric") == 0) {
-            if (!cx18_ImmGetOpenStatus(context)) cx18_ImmSetOpenStatus(context, TRUE);
-            conversion &= ~9u;
-        } else if (std::strcmp(value, "DirectInput") == 0 && cx18_ImmGetOpenStatus(context)) {
-            cx18_ImmSetOpenStatus(context, FALSE);
         }
+        if (std::strcmp(value, "Full-Width Katakana") == 0) {
+            if (!ImmGetOpenStatus(context)) ImmSetOpenStatus(context, TRUE);
+            conversion |= 0xbu;
+        }
+        if (std::strcmp(value, "Full-Width Alphanumeric") == 0) {
+            if (!ImmGetOpenStatus(context)) ImmSetOpenStatus(context, TRUE);
+            conversion = (conversion & ~1u) | 8u;
+        }
+        if (std::strcmp(value, "Half-Width Katakana") == 0) {
+            if (!ImmGetOpenStatus(context)) ImmSetOpenStatus(context, TRUE);
+            conversion = (conversion & ~8u) | 3u;
+        }
+        if (std::strcmp(value, "Half-Width Alphanumeric") == 0) {
+            if (!ImmGetOpenStatus(context)) ImmSetOpenStatus(context, TRUE);
+            conversion &= ~9u;
+        }
+        if (std::strcmp(value, "DirectInput") == 0 && ImmGetOpenStatus(context))
+            ImmSetOpenStatus(context, FALSE);
     } else if (std::strcmp(command, "StatusWindow_OnSymbol") == 0) {
-        if (isFalse) conversion &= ~0x400u;
-        if (isTrue) conversion |= 0x400u;
+        if (std::strcmp(value, "false") == 0) conversion &= ~0x400u;
+        if (std::strcmp(value, "true") == 0) conversion |= 0x400u;
     }
-    cx18_ImmSetConversionStatus(context, conversion, sentence);
-    cx18_ImmReleaseContext(hwnd, context);
+    ImmSetConversionStatus(context, conversion, sentence);
+    ImmReleaseContext(*reinterpret_cast<HWND*>(*reinterpret_cast<unsigned char**>(manager + 0x78) + 0x68), context);
 }
 
 // MS2-FUNCTIONAL: selects a registered IME through its COM provider and logs the executable's failure cases.
@@ -3666,11 +3674,11 @@ void FUN_1423d5910(void* raw, const char* requested)
     }
 }
 
-// MS2-FUNCTIONAL: the exe body is instruction-for-instruction the same as FUN_1423d7e80 (StatusWindow mode updates through IMM32).
+// The exe's own copy of FUN_1423d7e80 (StatusWindow mode updates through IMM32).
 // @0x1423d61f0
-void FUN_1423d61f0(void* manager, const char* command, const char* value)
+void FUN_1423d61f0(void* raw, const char* command, const char* value)
 {
-    FUN_1423d7e80(manager, command, value);
+    Ime01StatusWindowCommand(raw, command, value);
 }
 
 // WM_IME_STARTCOMPOSITION of the IMM IME object (vtbl 0x14313a5f8; the Vista twin is 0x1423d05a0). Starts the
