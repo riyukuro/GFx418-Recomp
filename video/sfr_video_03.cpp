@@ -14,6 +14,7 @@
 #include "../include/gfx/gfx_stream.h"
 #include "../include/gfx/gfx_resource.h"
 #include "../include/gfx/gfx_moviedef.h"
+#include "../include/gfx/gfx_assupport.h"
 #include "../include/kernel/sf_array.h"
 #include "../include/gfx/as3/as3_value.h"
 #include "../include/gfx/as3/as3_obj.h"
@@ -1976,9 +1977,9 @@ namespace {
 
 
 } // namespace
-extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const unsigned* id);   // MS2: MovieDefImpl::GetCharacterCreateInfo
-// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef. Left: the exe keeps the
-// create-info zero in rdi across FindLibrarySymbol (one more saved register), a /O2 register-allocation tie.
+extern "C" void* FUN_1425cf500(void* defImpl, void* ccinfo, const Scaleform::GFx::ResourceId& id);   // MS2: MovieDefImpl::GetCharacterCreateInfo
+// MS2-FUNCTIONAL: resolves and creates the Video display character from the owning MovieDef. Left: the exe stores the
+// ResourceId argument before loading the ASSupport vftable, and indexes the AVM object offset through eax, not ecx.
 // @0x14001a470
 void* FUN_14001a470(void* self)
 {
@@ -1996,21 +1997,16 @@ void* FUN_14001a470(void* self)
                 static_cast<Scaleform::GFx::MovieDefImpl*>(movieDef));
             if (!createInfo.pCharDef) {
                 // no symbol for the class: the exe falls back to the empty Video character (ResourceId 0x10005)
-                const unsigned emptyVideoId = 0x10005;
                 __declspec(align(8)) uint64_t tmp[3];
-                memcpy(&createInfo, FUN_1425cf500(movieDef, tmp, &emptyVideoId), sizeof(createInfo));
+                memcpy(&createInfo, FUN_1425cf500(movieDef, tmp, Scaleform::GFx::ResourceId(0x10005)), sizeof(createInfo));
             }
-            void* creator = *reinterpret_cast<void**>(library + 0x18);
-            void** vtable = *reinterpret_cast<void***>(creator);
-            void* (*create)(void*, void*, void*, int, uint32_t*, int) = reinterpret_cast<void*(*)(void*, void*, void*, int, uint32_t*, int)>(vtable[4]);
-            uint32_t flags = 0x40000;
-            void* display = create(creator, *reinterpret_cast<void**>(library + 0x10), &createInfo, 0, &flags, 7);
+            Scaleform::GFx::ASSupport* asSupport = *reinterpret_cast<Scaleform::GFx::ASSupport**>(library + 0x18);
+            void* display = asSupport->CreateCharacterInstance(*reinterpret_cast<Scaleform::GFx::MovieImpl**>(library + 0x10), createInfo, 0,
+                                                               Scaleform::GFx::ResourceId(), Scaleform::GFx::CharacterDef::Video);
             if (*slot) FUN_14257dcd0(*slot);
             *slot = display;
-            if (display) {
-                unsigned char* frame = reinterpret_cast<unsigned char*>(reinterpret_cast<uint32_t*>(display) + static_cast<unsigned char*>(display)[0x6d]);
-                Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
-            }
+            unsigned char* frame = display ? reinterpret_cast<unsigned char*>(reinterpret_cast<uint32_t*>(display) + static_cast<unsigned char*>(display)[0x6d]) : 0;
+            Scaleform::GFx::AS3::Sfr33SetValueDropObject(frame, self);
         }
     }
     return *slot;
