@@ -561,19 +561,18 @@ FunctionRef XmlCtorFunction::Register(GlobalContext* pgc)
 
 // Parses the first argument (when there is one) into pnode's tree, otherwise gives it an empty document; the
 // document gets its shadow and an attributes object.
-// MS2-FUNCTIONAL: register allocation and function splitting
 // @0x1429a2510
 void XML_LoadString(const FnCall& fn, XmlObject* pnode)
 {
     Log*                    plog       = fn.GetLog();
     MovieImpl*              pmovieroot = fn.Env->GetMovieImpl();
     Ptr<XML::ObjectManager> memMgr     = GetXmlObjectManager(fn.Env, pmovieroot);
-    Value                   str;
     Ptr<XML::Document>      pdoc;
+    Value                   str;
     if (fn.NArgs > 0)
     {
         str                        = XmlArg(fn, 0);
-        Ptr<XML::SupportBase> pxml = GetXmlSupport(fn.Env->GetMovieImpl());
+        XML::SupportBase* pxml = GetXmlSupport(fn.Env->GetMovieImpl());
         if (pxml)
         {
             XML::DOMBuilder builder(pxml, true);
