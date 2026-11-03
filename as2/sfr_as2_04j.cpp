@@ -192,36 +192,25 @@ void* FUN_14291c910(void* self, LoadQueueEntry* pentry, MovieRoot* proot)
     return self;
 }
 
-// The movie of a level or of _level0 when the level has none, the loader asks whether its file is stripped.
-static InteractiveObject* GetLevelOrLevel0(const MovieImpl* pmovie, int level)
+// MovieRoot::GetLevelMovie, inlined in the exe.
+static SF_FORCEINLINE InteractiveObject* EntryLevelMovie(const MovieRoot* proot, int level)
 {
-    InteractiveObject* plevel0 = 0;
-    InteractiveObject* pfound  = 0;
+    MovieImpl* pmovie = proot->pMovieImpl;
     for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
+    {
         if (pmovie->pMovieLevels[i].Level == level)
-        {
-            pfound = pmovie->pMovieLevels[i].pSprite;
-            break;
-        }
-    if (pfound)
-        return pfound;
-    for (unsigned i = 0; i < pmovie->MovieLevelsSize; i++)
-        if (pmovie->pMovieLevels[i].Level == 0)
-        {
-            plevel0 = pmovie->pMovieLevels[i].pSprite;
-            break;
-        }
-    return plevel0;
+            return pmovie->pMovieLevels[i].pSprite;
+    }
+    return 0;
 }
 
 // The movie load: a MoviePreloadTask reads the file while the movie polls LoadFinished. 0x58 bytes.
-// MS2-FUNCTIONAL: raw words over the entry (the exe reads the level movies with its own loops)
+// MS2-FUNCTIONAL: raw words over the entry; the exe shrink-wraps the rbp/rsi/r14/r15 saves (push rbx, 0x38 frame)
 // @0x14291c690
 void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 {
     UPInt*                w    = static_cast<UPInt*>(self);
     UByte*                b    = static_cast<UByte*>(self);
-    GFxAS2LoadQueueEntry* pas2 = static_cast<GFxAS2LoadQueueEntry*>(pentry);
     FUN_1426396b0(self, pentry, pmovie);
     w[0]                                    = reinterpret_cast<UPInt>(DAT_143217750);
     w[5]                                    = 0;
@@ -232,26 +221,28 @@ void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
     *reinterpret_cast<unsigned*>(b + 0x50)  = 0;
     b[0x54]                                 = 0;
     bool stripped = false;
-    if (CharacterHandle* pchar = pas2->pCharacter)
+    GFxAS2LoadQueueEntry* pas2 = reinterpret_cast<GFxAS2LoadQueueEntry*>(w[4]);
+    if (pas2->pCharacter)
     {
-        if (DisplayObject* pch = pchar->ResolveCharacter(pmovie))
-        {
-            Ptr<DisplayObject> pholder = pch;
-            stripped                   = (pch->GetResourceMovieDef()->GetSWFFlags() >> 4 & 1) != 0;
-        }
+        Ptr<DisplayObject> poldChar = pas2->pCharacter->ResolveCharacter(reinterpret_cast<MovieImpl*>(w[3]));
+        if (poldChar)
+            stripped = (poldChar->GetResourceMovieDef()->GetSWFFlags() >> 4 & 1) != 0;
     }
     else if (pas2->Level != -1)
     {
-        if (InteractiveObject* pmain = GetLevelOrLevel0(pmovie, pas2->Level))
-            stripped = (pmain->GetResourceMovieDef()->GetSWFFlags() >> 4 & 1) != 0;
+        const MovieRoot* as2mr = static_cast<MovieRoot*>(reinterpret_cast<MovieImpl*>(w[3])->pASMovieRoot);
+        if (EntryLevelMovie(as2mr, pas2->Level))
+            stripped = (EntryLevelMovie(as2mr, pas2->Level)->GetResourceMovieDef()->GetSWFFlags() >> 4 & 1) != 0;
+        else if (EntryLevelMovie(as2mr, 0))
+            stripped = (EntryLevelMovie(as2mr, 0)->GetResourceMovieDef()->GetSWFFlags() >> 4 & 1) != 0;
     }
     MoviePreloadTask* ptask = 0;
     if (void* pmem = Memory::pGlobalHeap->Alloc(0x50))
-        ptask = ::new (pmem) MoviePreloadTask(pmovie, pentry->URL, stripped, pentry->QuietOpen);
+        ptask = ::new (pmem) MoviePreloadTask(reinterpret_cast<MovieImpl*>(w[3]), pas2->URL, stripped, pentry->QuietOpen);
     if (w[5])
         FUN_14257dcb0(reinterpret_cast<void*>(w[5]));
     w[5] = reinterpret_cast<UPInt>(ptask);
-    StartTask(pmovie, ptask);
+    StartTask(reinterpret_cast<MovieImpl*>(w[3]), ptask);
     return self;
 }
 
