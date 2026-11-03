@@ -25,9 +25,14 @@ extern "C" void FUN_1427478c0(U**, void*, U);               // setRawCapacity of
 static __forceinline U RawKey8HashAt(const void* p)
 {
     const unsigned char* k = (const unsigned char*)p;
-    return (((U)k[3] * 0x1003f + (U)k[2]) * 0x1003f + (U)k[1]) * 0x1003f + (U)k[4] * 0xfc5d1543ec5f01ULL +
-           (U)k[5] * (U)-0x64cfd3d7e9d39ec1LL + (U)k[7] * (U)-0x283c1b695cee4e41LL +
-           (U)k[6] * 0x5d02f409d62aee81ULL + (U)-0x514d9afbc3e934fbLL + (U)k[0];
+    U                    n = 8;
+    U                    h = 5381;
+    while (n > 0)
+    {
+        n--;
+        h = (h << 16) + (h << 6) - h + (U)k[n];
+    }
+    return h;
 }
 
 // HashSetBase<HashNode<Class*, ...>>::RemoveAlt (0x30-byte entries; the value's array buffer is at entry +0x18).
