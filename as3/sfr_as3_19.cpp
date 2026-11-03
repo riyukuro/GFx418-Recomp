@@ -425,15 +425,21 @@ void Class::prototypeGet(Value& result)
     result.Assign(&GetPrototype());
 }
 
-// MS2-FUNCTIONAL 0x14252f6d0: delegates conversion to the recovered primitive/complex helper; the exe has an explicit tag switch.
+// Converts the value in place to a Number through Convert2NumberInline; the exe calls SetNumber (0x142421f20)
+// out of line here, so it goes through a member pointer.
 // @0x14252f6d0
 CheckResult Value::ToNumberValueInline()
 {
     Number result;
-    if (!Convert2NumberInline(result))
-        return CheckResult(false);
-    SetNumber(result);
-    return CheckResult(true);
+    CheckResult r(true);
+    if (Convert2NumberInline(result))
+    {
+        void (Value::*set)(Number) = &Value::SetNumber;
+        (this->*set)(result);
+    }
+    else
+        r = false;
+    return r;
 }
 
 // ToInt32 in place: Convert2Int32 (objects through their hintNone primitive) then SetSInt32, as in the exe.
