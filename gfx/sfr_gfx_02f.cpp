@@ -16,6 +16,7 @@
 #include "../include/kernel/sf_std.h"
 #include "../include/kernel/sf_timer.h"
 #include "../include/kernel/sf_utf8util.h"
+#include "../include/render/text_wwhelper.h"   // C3: Render::Text::WordWrapHelper::FindWordWrapPos
 #include <string.h>
 
 namespace Scaleform {
@@ -152,10 +153,6 @@ public:
 class WordWrapHelper
 {
 public:
-    // Where to break a line of lineLen characters at lineStartPos under the wwMode rules; SF_MAX_UPINT for "keep".
-    static UPInt SF_STDCALL FindWordWrapPos(UInt32 wwMode, UPInt wordWrapPos, const wchar_t* pparaText, UPInt paraLen,
-                                           UPInt lineStartPos, UPInt lineLen);
-
     static bool IsVowel(wchar_t c)
     {
         wchar_t lc = (wchar_t)SFtowlower(c);
@@ -1290,7 +1287,7 @@ bool Translator::OnWordWrapping(LineFormatDesc* pdesc)
 
     if ((WWMode & (WWT_Asian | WWT_NoHangulWrap | WWT_Prohibition)) && pdesc->NumCharsInLine > 0)
     {
-        UPInt wordWrapPos = WordWrapHelper::FindWordWrapPos(WWMode, pdesc->ProposedWordWrapPoint, pdesc->pParaText,
+        UPInt wordWrapPos = Render::Text::WordWrapHelper::FindWordWrapPos(WWMode, pdesc->ProposedWordWrapPoint, pdesc->pParaText,
                                                             pdesc->ParaTextLen, pdesc->LineStartPos,
                                                             pdesc->NumCharsInLine);
         if (wordWrapPos != SF_MAX_UPINT)
