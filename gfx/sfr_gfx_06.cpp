@@ -539,7 +539,7 @@ bool DisplayObjectBase::GetProjectionMatrix3D(Matrix4F* m, bool inherit) const
         const Render::ProjectionMatrix3DState* state = pRenNode->GetState<Render::ProjectionMatrix3DState>();
         if (state)
         {
-            *m = *state->GetProjectionMatrix3D();
+            *m = Matrix4F(state->GetProjectionMatrix3D()->M);
             return true;
         }
     }
