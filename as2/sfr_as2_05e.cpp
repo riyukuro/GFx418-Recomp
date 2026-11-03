@@ -8,6 +8,8 @@
 // MS2-RANGE: 0x142956410-0x1429565ac .text$mn
 // MS2-RANGE: 0x1429565c0-0x1429565ce .text$mn
 // MS2-RANGE: 0x142956ad0-0x142956b03 .text$mn
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143218490
+// MS2-PIN: ??_7TextFieldObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x1432184d8
 
 #include "../include/gfx/as2/as2_avmtextfield.h"
 #include "../include/gfx/as2/as2_builtinobjects.h"
@@ -52,12 +54,36 @@ const void* CSSHolder_GetTextStyleManager(const void* pholder)
     return psheet ? psheet->Data68 : 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the TextFieldObject ctor and the Set__proto__ member creation
+// GlobalContext::GetGC (exe 0x14294afc0), which the exe inlines here.
+static inline ASRefCountCollector* Sfr05eGetGC(GlobalContext* gCtxt)
+{
+    return gCtxt->pMovieRoot ? static_cast<MovieRoot*>(gCtxt->pMovieRoot->pASMovieRoot)->GetASGC() : 0;
+}
+
+// Object::Set__proto__ (exe 0x140007ba0) as the exe inlines it: SetMemberRaw stays a virtual call.
+static inline void Sfr05eSetProto(ObjectInterface* pobj, ASStringContext* psc, Object* protoObj)
+{
+    if (!pobj->pProto)
+        pobj->SetMemberRaw(psc, psc->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                           PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+    pobj->pProto = protoObj;
+}
+
+// The TextFieldObject ctor (exe 0x1429215f0, sfr_as2_03x), which the exe inlines below.
+inline TextFieldObject::TextFieldObject(GlobalContext* gCtxt, InteractiveObject* ptextField, ObjectInlineCtorTag)
+    : Object(Sfr05eGetGC(gCtxt)), pTextField(ptextField)
+{
+    AvmCharacter* pavmCh = static_cast<AvmCharacter*>(static_cast<AvmInteractiveObjBase*>(ptextField->GetAvmObjImpl()));
+    ASStringContext* psc = pavmCh->GetASEnvironment()->GetSC();
+    Sfr05eSetProto(this, psc, pavmCh->Get__proto__());
+    pIMECompositionStringStyles = 0;
+}
+
 // @0x142956410
 TextFieldObject* AvmTextField::GetTextFieldASObject()
 {
     if (!ASTextFieldObj)
-        ASTextFieldObj = *SF_HEAP_AUTO_NEW(this) TextFieldObject(GetGC(), pDispObj);
+        ASTextFieldObj = *SF_HEAP_AUTO_NEW(this) TextFieldObject(GetGC(), pDispObj, ObjectInlineCtorTag());
     return ASTextFieldObj;
 }
 
