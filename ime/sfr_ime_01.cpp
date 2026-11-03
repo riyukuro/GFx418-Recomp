@@ -3289,25 +3289,29 @@ void* FUN_1423dbb60(void* object, unsigned flags)
 
 __declspec(noinline) void FUN_1423cdda0(void** table);
 
-// MS2-FUNCTIONAL: releases the manager's shared values, command hash, and packed strings using the observed field offsets.
+// Destroys the manager: releases the child at +0x30, then the +0x78 string, the +0x40 array, the +0x38 hash and the
+// +0x20 / +0x18 / +0x10 strings, in reverse member order.
 // @0x1423cdf60
 void FUN_1423cdf60(unsigned long long* self)
 {
     // the base vtable at 0x14313a258 is the p20 member of the DAT_14313a238 piece; DAT_14313a228 is a separate
     // 0x18-byte piece in the fullexe, so DAT_14313a228 + 6 landed in another table
-    self[0] = reinterpret_cast<unsigned long long>(DAT_14313a238 + 4);
-    FUN_1423d9500(reinterpret_cast<void*>(self[6]));
-    if (self[6]) {
-        auto* child = reinterpret_cast<void*>(self[6]);
-        reinterpret_cast<unsigned long long(*)(void*, unsigned)>(
-            (*reinterpret_cast<void***>(child))[2])(child, 1);
-    }
-    FUN_1423ca920(nullptr, &self[0xf]);
-    Scaleform::Memory::Free(reinterpret_cast<void*>(self[8]));
-    FUN_1423cdda0(reinterpret_cast<void**>(self + 7));
-    FUN_1423ca920(nullptr, &self[4]);
-    FUN_1423ca920(nullptr, &self[3]);
-    FUN_1423ca920(nullptr, &self[2]);
+    struct Hash { void* table; ~Hash() { FUN_1423cdda0(&table); } };
+    struct Array { void* data; unsigned long long size, capacity; ~Array() { Scaleform::Memory::Free(data); } };
+    struct View {
+        const void* vtable; unsigned long long p8;
+        Scaleform::String s10, s18, s20; unsigned long long p28; void* child;
+        Hash hash; Array array; unsigned long long p58[4];
+        Scaleform::String s78;
+        ~View()
+        {
+            vtable = DAT_14313a238 + 4;
+            FUN_1423d9500(child);
+            if (child)
+                reinterpret_cast<unsigned long long(*)(void*, unsigned)>((*reinterpret_cast<void***>(child))[2])(child, 1);
+        }
+    };
+    reinterpret_cast<View*>(self)->~View();
 }
 
 // A by-value Ptr to a RefCountNTSImpl object (released through FUN_14257dcd0 when the callee returns).
