@@ -3623,25 +3623,29 @@ void Sfr31StoreScopeStack(UPInt self, UPInt start, UPInt* src)
 }
 
 // exec_esc_xattr: converts the top of stack to a string and replaces it with its XML-escaped form.
-// MS2-FUNCTIONAL 0x142538700: behavior-equivalent recovery; codegen differs from exe
+// MS2-FUNCTIONAL 0x142538700: the exe sets ok to 1 before the Convert2String call, and releases the escaped string from a register after
+// the assignment; ours reloads it from the temporary.
 // @0x142538700
 void Sfr31ExecEscXAttr(UPInt vm)
 {
-    const UPInt mgr = Sfr31Rd(Sfr31Rd(vm, 0x10), 0x1e8);
+    const UPInt sm = Sfr31Rd(vm, 0x10);
     AS3::Value* top = reinterpret_cast<AS3::Value*>(Sfr31Rd(vm, 0x50));
-    UPInt tmpNode = 0;
-    ASString str(reinterpret_cast<ASStringNode*>(mgr + 0x40));
-    const bool ok = *FUN_1424f1390(top, &tmpNode, &str);
-    if (ok)
-        *top = str;
+    bool ok;
+    {
+        ASString str(reinterpret_cast<ASStringNode*>(Sfr31Rd(sm, 0x1e8) + 0x40));
+        if (top->Convert2String(str))
+        {
+            *top = str;
+            ok = true;
+        }
+        else
+            ok = false;
+    }
     if (ok)
     {
         StringBuffer buf(Memory::pGlobalHeap);
-        ASString cur(reinterpret_cast<ASStringNode*>(Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10)));
-        Instances::fl::XML::EscapeElementValue(buf, cur);
-        const char* c = buf.ToCStr();
-        ASString res(reinterpret_cast<ASStringManager*>(mgr)->CreateStringNode(c ? c : "", buf.GetSize()));
-        *top = res;
+        Instances::fl::XML::EscapeElementValue(buf, ASString(reinterpret_cast<ASStringNode*>(Sfr31Rd(reinterpret_cast<UPInt>(top), 0x10))));
+        *top = ASString(reinterpret_cast<ASStringManager*>(Sfr31Rd(sm, 0x1e8))->CreateStringNode(buf.ToCStr(), buf.GetSize()));
     }
 }
 // ---- batch 23
