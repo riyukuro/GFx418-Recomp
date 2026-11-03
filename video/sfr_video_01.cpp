@@ -2859,14 +2859,19 @@ Value* ArgCopy(const FnCall* pfn, int n);    // sfr_as2_04e @0x1429316c0, FnCall
 static inline Sprite* GetAudioTargetSprite(CharacterHandle* ph)
 {
     DisplayObject* pch = ph->pCharacter;
-    if (!pch)
-        return NULL;
-    if (pch->IsSprite())
-        return (Sprite*)pch;
-    DisplayObject* pparent = (DisplayObject*)pch->pParent;
-    if (pparent && pparent->IsSprite())
-        return (Sprite*)pparent;
-    return NULL;
+    Sprite* psprite = NULL;
+    if (pch)
+    {
+        if (pch->IsSprite())
+            psprite = (Sprite*)pch;
+        else
+        {
+            DisplayObject* pparent = (DisplayObject*)pch->pParent;
+            if (pparent && pparent->IsSprite())
+                psprite = (Sprite*)pparent;
+        }
+    }
+    return psprite;
 }
 
 // @0x14000ca90
@@ -2943,7 +2948,7 @@ void VideoProviderNetStream::Close()
     }
 }
 
-// MS2-FUNCTIONAL: other scheduling
+// Gives the main and sub-audio sound channels the audio target sprite's volumes and adds them to its active sounds.
 // @0x140004bf0
 void VideoProviderNetStream::InitSoundChannel()
 {
