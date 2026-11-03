@@ -488,7 +488,7 @@ void* criUtfRtv_CreateWithHeapType(void* heap, CriSint32 allocationMode, const v
 }
 #pragma optimize("", on)
 
-// MS2-FUNCTIONAL: allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
+// Allocate the UTF runtime table and field records through its CRI heap callbacks, then let the
 // executable's shared UTF parser populate the table layout.
 // The exe reports an allocation failure only when this flag (0x143b27c38) is set. Its only writer, the setter at
 // 0x14003a0ac, has no callers, so the flag stays 0 and the failures return NULL without an error report.
@@ -536,37 +536,35 @@ void* criUtfRtv_CreateByUtfHeapWithHeapType(void* callbackBlock, CriUint32 alloc
     }
 
     memset(rawTable, 0, 0xb8);
-    void* tableMemory = rawTable;
-    size_t tableSpace = 0xb8;
-    RuntimeTable* table = (RuntimeTable*)std::align(0x10, sizeof(RuntimeTable), tableMemory, tableSpace);
-    CriUint32 fieldCount = FUN_1400472c0((const CriUint8*)data, size);
-    CriUint32 recordsSize = fieldCount * 0x30;
-    CriUint8* rawRecords = (CriUint8*)callbacks->Allocate(callbacks->Context, (CriSint32)recordsSize,
+    RuntimeTable* table = (RuntimeTable*)((size_t)rawTable % 0x10 ? rawTable - (size_t)rawTable % 0x10 + 0x10 : rawTable);
+    CriUint32 fieldCount = (CriUint16)FUN_1400472c0((const CriUint8*)data, size);
+    CriSint32 recordsSize = (CriSint32)(fieldCount * 0x30);
+    CriUint8* rawRecords = (CriUint8*)callbacks->Allocate(callbacks->Context, recordsSize,
                                                            "@UTF2", 0x10, (CriSint32)allocationMode);
-    if (rawRecords)
+    if (!rawRecords)
     {
-        memset(rawRecords, 0, recordsSize);
-        void* recordsMemory = rawRecords;
-        size_t recordsSpace = recordsSize;
-        void* records = std::align(0x10, recordsSize, recordsMemory, recordsSpace);
-        if (FUN_140046e04((Unk_CriUtfTable *)table, rawTable, (void*)(size_t)fieldCount, (Unk_CriUtfColumn*)records, rawRecords,
-                          (const unsigned char*)data, size,
-                          (const Unk_CriUtfInit*)callbackBlock, allocationMode))
-            return table;
+        table->Context = rawTable;
+        table->Self = &table->Init;
+        table->Init = *callbacks;
+        table->Flags = allocationMode;
+        table->Columns = NULL;
+        table->SecondaryAllocation = NULL;
         criUtfRtv_Destroy((CriUint64*)table);
+        if (s_nUtfRtvReportAllocError)
+            criErr_NotifyGeneric(0, "E06100312", -3);
         return NULL;
     }
 
-    table->Self = &table->Init;
-    table->Init = *callbacks;
-    table->Flags = allocationMode;
-    table->Columns = NULL;
-    table->Context = rawTable;
-    table->SecondaryAllocation = NULL;
-    criUtfRtv_Destroy((CriUint64*)table);
-    if (s_nUtfRtvReportAllocError)
-        criErr_NotifyGeneric(0, "E06100312", -3);
-    return NULL;
+    memset(rawRecords, 0, recordsSize);
+    CriUint8* records = (size_t)rawRecords % 0x10 ? rawRecords - (size_t)rawRecords % 0x10 + 0x10 : rawRecords;
+    if (!FUN_140046e04((Unk_CriUtfTable *)table, rawTable, (void*)(size_t)fieldCount, (Unk_CriUtfColumn*)records, rawRecords,
+                       (const unsigned char*)data, size,
+                       (const Unk_CriUtfInit*)callbackBlock, allocationMode))
+    {
+        criUtfRtv_Destroy((CriUint64*)table);
+        return NULL;
+    }
+    return table;
 }
 #pragma optimize("", on)
 
