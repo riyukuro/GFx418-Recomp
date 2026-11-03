@@ -2934,8 +2934,6 @@ uint criAdxDec_DecodeInfoInitialDelay(longlong arg1, uint arg2, ushort *arg3, us
 
 // read the stream header that follows the version block: its type, the format word (must be 1) and four
 // 32-bit fields (big-endian)
-// MS2-FUNCTIONAL: the exe keeps the constant 4 in esi (version compares and offset steps); ours uses immediates,
-// 1 byte short
 // @0x14006a388
 uint criAdxDec_DecodeInfoLoop(longlong arg1, uint arg2, uint *arg3, ushort *arg4, ushort *arg5, uint *arg6, uint *arg7, uint *arg8, uint *arg9)
 {
@@ -2945,7 +2943,6 @@ uint criAdxDec_DecodeInfoLoop(longlong arg1, uint arg2, uint *arg3, ushort *arg4
   uint need;
   uint off;
   ushort u;
-  int iv;
   short s;
 
   *arg4 = 0;
@@ -2985,17 +2982,17 @@ uint criAdxDec_DecodeInfoLoop(longlong arg1, uint arg2, uint *arg3, ushort *arg4
   s = *(short *)(arg1 + off);
   off += 2;
   *arg5 = s >> 8 & 0xff | s << 8;
-  iv = *(int *)(arg1 + off);
+  *arg6 = (*(int *)(arg1 + off) << 0x10 | *(int *)(arg1 + off) & 0xff00) << 8 | *(int *)(arg1 + off) >> 0x18 & 0xff |
+          *(int *)(arg1 + off) >> 8 & 0xff00;
   off += 4;
-  *arg6 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
-  iv = *(int *)(arg1 + off);
+  *arg7 = (*(int *)(arg1 + off) << 0x10 | *(int *)(arg1 + off) & 0xff00) << 8 | *(int *)(arg1 + off) >> 0x18 & 0xff |
+          *(int *)(arg1 + off) >> 8 & 0xff00;
   off += 4;
-  *arg7 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
-  iv = *(int *)(arg1 + off);
+  *arg8 = (*(int *)(arg1 + off) << 0x10 | *(int *)(arg1 + off) & 0xff00) << 8 | *(int *)(arg1 + off) >> 0x18 & 0xff |
+          *(int *)(arg1 + off) >> 8 & 0xff00;
   off += 4;
-  *arg8 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
-  iv = *(int *)(arg1 + off);
-  *arg9 = (iv << 0x10 | iv & 0xff00) << 8 | iv >> 0x18 & 0xff | iv >> 8 & 0xff00;
+  *arg9 = (*(int *)(arg1 + off) << 0x10 | *(int *)(arg1 + off) & 0xff00) << 8 | *(int *)(arg1 + off) >> 0x18 & 0xff |
+          *(int *)(arg1 + off) >> 8 & 0xff00;
   return 0;
 }
 
