@@ -620,39 +620,40 @@ void AsBroadcasterProto::BroadcastMessage(const FnCall& fn)
     fn.Result->SetUndefined();
 }
 
+// AsBroadcaster::RemoveListener, inlined into the native: it returns true from inside the loop.
+static __forceinline bool AsBroadcasterRemoveListenerInline(Environment* penv, ObjectInterface* pthis, ObjectInterface* plistener)
+{
+    if (!pthis || !plistener)
+        return false;
+    Value listeners;
+    if (pthis->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listeners))
+    {
+        Object* pobj = listeners.ToObject(penv);
+        if (pobj && pobj->GetObjectType() == ObjectInterface::Object_Array)
+        {
+            Ptr<ArrayObject> parray = static_cast<ArrayObject*>(pobj);
+            for (int i = (int)parray->GetSize() - 1; i >= 0; --i)
+            {
+                Value* pelem = parray->GetElementPtr(i);
+                if (pelem && pelem->ToObjectInterface_Call(penv) == plistener)
+                {
+                    parray->RemoveElements(i, 1);
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 // @0x1428fbea0
-// MS2-FUNCTIONAL same inlined listener search, different register allocation and result flag placement
 void AsBroadcasterProto::RemoveListener(const FnCall& fn)
 {
     if (fn.NArgs < 1)
         return;
     ObjectInterface* plistener = fn.Arg(0).ToObjectInterface(fn.Env);
     Environment*     penv = fn.Env;
-    bool             removed = false;
-    // AsBroadcaster::RemoveListener, inlined.
-    if (fn.ThisPtr && plistener)
-    {
-        Value listeners;
-        if (fn.ThisPtr->GetMemberRaw(penv->GetSC(), penv->GetBuiltin(ASBuiltin__listeners), &listeners))
-        {
-            Object* pobj = listeners.ToObject(penv);
-            if (pobj && pobj->GetObjectType() == Object_Array)
-            {
-                Ptr<ArrayObject> parray = static_cast<ArrayObject*>(pobj);
-                for (int i = (int)parray->GetSize() - 1; i >= 0; --i)
-                {
-                    Value* pelem = parray->GetElementPtr(i);
-                    if (pelem && pelem->ToObjectInterface_Call(penv) == plistener)
-                    {
-                        parray->RemoveElements(i, 1);
-                        removed = true;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    fn.Result->SetBool(removed);
+    fn.Result->SetBool(AsBroadcasterRemoveListenerInline(penv, fn.ThisPtr, plistener));
 }
 
 // @0x1428fc080
