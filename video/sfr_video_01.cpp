@@ -143,11 +143,11 @@ static __forceinline void InsertVideoHashEntry(Scaleform::UPInt* tableRef, void*
                                  Scaleform::UPInt hash, ConstructEntry constructEntry, AssignEntry assignEntry)
 {
     void** tableSlot = reinterpret_cast<void**>(tableRef);
+    Scaleform::UPInt*& pTable = *reinterpret_cast<Scaleform::UPInt**>(tableRef);
+    if (pTable == 0) FUN_14000b3b0(tableRef, owner, 8);
+    else if (pTable[0] * 5 > (pTable[1] + 1) * 4)
+        FUN_14000b3b0(tableRef, owner, (pTable[1] + 1) * 2);
     Scaleform::UPInt* table = static_cast<Scaleform::UPInt*>(*tableSlot);
-    if (!table) FUN_14000b3b0(tableRef, owner, 8);
-    else if (table[0] * 5 > (table[1] + 1) * 4)
-        FUN_14000b3b0(tableRef, owner, table[1] * 2 + 2);
-    table = static_cast<Scaleform::UPInt*>(*tableSlot);
     table[0]++;
     const Scaleform::UPInt home = hash & table[1];
     table = static_cast<Scaleform::UPInt*>(*tableSlot);
