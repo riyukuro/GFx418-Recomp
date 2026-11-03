@@ -1133,7 +1133,6 @@ void GAS_GlobalIfFrameLoaded(const FnCall& fn)
 
 // Global imecommand(command, parameter): forwards to the movie's IME manager.
 // @0x1428f8540
-// MS2-FUNCTIONAL same calls; register allocation of the movie/IME temporaries differs
 void GAS_GlobalIMECommand(const FnCall& fn)
 {
     if (fn.NArgs < 2)
@@ -1142,9 +1141,10 @@ void GAS_GlobalIMECommand(const FnCall& fn)
     Ptr<IMEManagerBase> pime = pmovie->GetIMEManager();
     if (pime)
     {
-        ASString param = fn.Arg(1).ToString(fn.Env);
-        ASString command = fn.Arg(0).ToString(fn.Env);
-        pime->IMECommand(reinterpret_cast<Movie*>(pmovie), command.ToCStr(), param.ToCStr());
+        ASString    param = fn.Arg(1).ToString(fn.Env);
+        const char* pparam = param.ToCStr();
+        ASString    command = fn.Arg(0).ToString(fn.Env);
+        pime->IMECommand(reinterpret_cast<Movie*>(pmovie), command.ToCStr(), pparam);
     }
 }
 
