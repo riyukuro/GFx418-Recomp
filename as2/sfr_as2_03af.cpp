@@ -13,6 +13,13 @@
 #include "../include/gfx/as2/as2_movieroot.h"
 #include "../include/gfx/gfx_movieimpl.h"
 
+namespace Scaleform {
+// The exe calls the WithStack Resize out of line (0x14297e1b0, instantiated in sfr_as2_06).
+template <>
+void ArrayData<GFx::AS2::WithStackEntry, AllocatorLH_POD<GFx::AS2::WithStackEntry, GFx::AS2::StatMV_ActionScript_Mem>,
+               ArrayDefaultPolicy>::Resize(UPInt newSize);
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The members of AsFunctionObject past +0x78 (the body of a script function), as in sfr_as2_06b.
@@ -32,7 +39,7 @@ struct AsFunctionBody
 
 // A function made by a script (DefineFunction) is bound to the character it is defined in, except the kinds 3 and 4
 // which run without one.
-// MS2-FUNCTIONAL: the body members are written through a view, the ASString and the handle counts are the same
+// MS2-FUNCTIONAL: register choice in the empty-string load chain (the exe loads pASMovieRoot into rax, ours into rcx)
 // @0x142918690
 AsFunctionObject::AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffer, unsigned startPc, unsigned length,
                                    const void* pwithStack, int execType)
@@ -42,12 +49,17 @@ AsFunctionObject::AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffe
     if (pactionBuffer)
         pactionBuffer->AddRef();
     pbody->pActionBuffer = pactionBuffer;
-    ::new (&pbody->WithStack) WithStackArray();
+    WithStackArray* pstack = ::new (&pbody->WithStack) WithStackArray();
     pbody->StartPc = startPc;
     pbody->Length  = length;
-    pbody->ArgSpecs[0] = pbody->ArgSpecs[1] = pbody->ArgSpecs[2] = 0;
-    pbody->ArgSpecsFlags = 0;
-    ::new (&pbody->Name) ASString(penv->GetBuiltin(ASBuiltin_empty_));
+    {
+        ASString empty(penv->GetBuiltin(ASBuiltin_empty_));
+        pbody->ArgSpecs[0] = 0;
+        pbody->ArgSpecs[1] = 0;
+        pbody->ArgSpecs[2] = 0;
+        pbody->ArgSpecsFlags = 0;
+        ::new (&pbody->Name) ASString(empty);
+    }
     pbody->Function2Flags     = 0;
     pbody->ExecType           = static_cast<UByte>(execType);
     pbody->LocalRegisterCount = 0;
@@ -55,9 +67,9 @@ AsFunctionObject::AsFunctionObject(Environment* penv, ActionBuffer* pactionBuffe
     if (pwithStack)
     {
         const WithStackArray* pwith = static_cast<const WithStackArray*>(pwithStack);
-        pbody->WithStack.Resize(pwith->GetSize());
-        for (UPInt i = 0; i < pbody->WithStack.GetSize(); ++i)
-            pbody->WithStack[i] = (*pwith)[i];
+        pstack->Resize(pwith->GetSize());
+        for (UPInt i = 0; i < pstack->GetSize(); ++i)
+            (*pstack)[i] = (*pwith)[i];
     }
     if (static_cast<unsigned>(execType - 3) > 1)
     {
