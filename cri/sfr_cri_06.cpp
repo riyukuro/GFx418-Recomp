@@ -6779,15 +6779,12 @@ int MPVM2V_DecodePicAtr(cri_any cri_p0, cri_any cri_p1);
 
 int MPVDEC_CheckVersion(cri_any cri_p0, cri_any cri_p1, cri_any cri_p2);
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs). The bit buffer and VLC index are 32-bit, shift counts plain int, refill arms pos >= 32 first; left: the init refills' schedule, register choice, and the closing call (the exe tail-jumps to FUN_140051d90, our cl does not once &loc_28 escapes).
 // @0x140062c10
 void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   longlong *arg2 = cri_p1;
-  cri_u1 *pu_v1;
-  cri_u1 *pu_v2;
-  cri_u1 u_v3;
   short s_v4;
   int i_v5;
   uint u_v6;
@@ -6798,9 +6795,9 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
   uint u_v11;
   uint u_v12;
   uint u_v13;
-  ulonglong u_v15;
+  uint u_v15;
   cri06_chunk loc_28;
-  ulonglong u_v14;
+  uint u_v14;
   
   (**(cri_code **)(*arg2 + 0x30))(arg2,1,0x7fffffff,arg1 + 0x1800);
   pu_v9 = (cri_u1 *)(*(ulonglong *)((char *)arg1 + 0x1800) & 0xfffffffffffffffc);
@@ -6808,21 +6805,21 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
   pu_v10 = pu_v9 + 8;
   u_v8 = i_v7 + *(int *)((char *)arg1 + 0x1810);
   u_v11 = CRI06_BE32(pu_v9[4],pu_v9[5],pu_v9[6],pu_v9[7]);
-  if ((int)u_v8 < 0x20) {
-    u_v12 = (CRI06_BE32(*pu_v9,pu_v9[1],pu_v9[2],pu_v9[3]) <<
-             ((byte)i_v7 & 0x1f)) << ((byte)*(int *)((char *)arg1 + 0x1810) & 0x1f);
-  }
-  else {
+  if ((int)u_v8 >= 0x20) {
     u_v8 = u_v8 - 0x20;
-    u_v12 = u_v11 << ((byte)u_v8 & 0x1f);
+    u_v12 = u_v11 << u_v8;
     u_v11 = CRI06_BE32(*pu_v10,pu_v9[9],pu_v9[10],pu_v9[0xb]);
     pu_v10 = pu_v9 + 0xc;
+  }
+  else {
+    u_v12 = (CRI06_BE32(*pu_v9,pu_v9[1],pu_v9[2],pu_v9[3]) <<
+             i_v7) << *(int *)((char *)arg1 + 0x1810);
   }
   u_v14 = (ulonglong)u_v12;
   while( true ) {
     u_v12 = (uint)(u_v14 >> 9);
     if (9 < (int)u_v8) {
-      u_v12 = u_v12 | u_v11 >> (0x29U - (char)u_v8 & 0x1f);
+      u_v12 = u_v12 | u_v11 >> (0x29 - u_v8);
     }
     if (u_v12 == 0) break;
     i_v7 = *(int *)((char *)arg1 + 0x1794);
@@ -6830,7 +6827,7 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
       do {
         u_v15 = u_v14 >> 0x14;
         if (0x14 < (int)u_v8) {
-          u_v15 = (ulonglong)((uint)u_v15 | u_v11 >> (0x34U - (char)u_v8 & 0x1f));
+          u_v15 = (ulonglong)((uint)u_v15 | u_v11 >> (0x34 - u_v8));
         }
         if ((u_v15 & 0xffffff00) == 0) {
           s_v4 = *(short *)(DAT_143d74a30 + u_v15 * 2);
@@ -6840,14 +6837,14 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
         }
         u_v12 = (uint)s_v4;
         u_v8 = u_v8 + (u_v12 & 0xf);
-        if ((int)u_v8 < 0x20) {
-          u_v13 = (int)u_v14 << (sbyte)(u_v12 & 0xf);
-        }
-        else {
+        if ((int)u_v8 >= 0x20) {
           u_v8 = u_v8 - 0x20;
-          u_v13 = u_v11 << ((byte)u_v8 & 0x1f);
+          u_v13 = u_v11 << u_v8;
           u_v11 = CRI06_BE32(*pu_v10,pu_v10[1],pu_v10[2],pu_v10[3]);
           pu_v10 = pu_v10 + 4;
+        }
+        else {
+          u_v13 = (int)u_v14 << (u_v12 & 0xf);
         }
         u_v14 = (ulonglong)u_v13;
         u_v6 = (u_v12 >> 2 & 0xff) >> 2;
@@ -6858,11 +6855,11 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
     if (u_v6 == 0x24) break;
     *(int *)((char *)arg1 + 0x1794) = *(int *)((char *)arg1 + 0x1794) + u_v6;
     *(uint *)((char *)arg1 + 0x17a4) = u_v12 >> 10;
-    if (*(int *)((char *)arg1 + 0x17a0) < *(int *)((char *)arg1 + 0x1794)) break;
+    if (*(int *)((char *)arg1 + 0x1794) > *(int *)((char *)arg1 + 0x17a0)) break;
     i_v7 = *(int *)((char *)arg1 + 0x1794) - i_v7;
     *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) + i_v7;
     i_v5 = *(int *)((char *)arg1 + 0x179c);
-    while (*(int *)((char *)arg1 + 0x15a0) <= i_v5) {
+    while (i_v5 >= *(int *)((char *)arg1 + 0x15a0)) {
       *(int *)((char *)arg1 + 0x179c) = *(int *)((char *)arg1 + 0x179c) - *(int *)((char *)arg1 + 0x15a0);
       *(int *)((char *)arg1 + 0x1798) = *(int *)((char *)arg1 + 0x1798) + 1;
       i_v5 = *(int *)((char *)arg1 + 0x179c);
@@ -6876,31 +6873,30 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
     (**(cri_code **)((char *)arg1 + 0x1710))(arg1);
     if (*(int *)((char *)arg1 + 0x18f0) != 0) break;
     *(int *)((char *)arg1 + 0x1830) = *(int *)((char *)arg1 + 0x1830) + -1;
-    if (*(int *)((char *)arg1 + 0x1830) < 1) {
+    if (*(int *)((char *)arg1 + 0x1830) <= 0) {
       *(cri_u4 *)((char *)arg1 + 0x1830) = *(cri_u4 *)((char *)arg1 + 0x1580);
       (**(cri_code **)((char *)arg1 + 0x1588))(*(cri_u8 *)((char *)arg1 + 0x1590));
     }
+    u_v12 = *(uint *)((char *)arg1 + 0x1280);
+    u_v8 = *(uint *)((char *)arg1 + 0x1288);
+    u_v11 = *(uint *)((char *)arg1 + 0x1284);
     pu_v10 = *(cri_u1 **)((char *)arg1 + 0x1290);
-    if (*(int *)((char *)arg1 + 0x1288) == 0x1f) {
-      pu_v9 = pu_v10 + 1;
-      u_v3 = *pu_v10;
+    u_v6 = (int)u_v12 < 0;
+    if (u_v8 == 0x1f) {
+      u_v12 = u_v11;
+      u_v11 = CRI06_BE32(*pu_v10,pu_v10[1],pu_v10[2],pu_v10[3]);
       u_v8 = 0;
-      pu_v1 = pu_v10 + 2;
-      pu_v2 = pu_v10 + 3;
       pu_v10 = pu_v10 + 4;
-      u_v11 = CRI06_BE32(u_v3,*pu_v9,*pu_v1,*pu_v2);
-      u_v12 = *(uint *)((char *)arg1 + 0x1284);
     }
     else {
-      u_v8 = *(int *)((char *)arg1 + 0x1288) + 1;
-      u_v12 = *(int *)((char *)arg1 + 0x1280) * 2;
-      u_v11 = *(uint *)((char *)arg1 + 0x1284);
+      u_v8 = u_v8 + 1;
+      u_v12 = u_v12 * 2;
     }
     u_v14 = (ulonglong)u_v12;
-    if (-1 < *(int *)((char *)arg1 + 0x1280)) break;
+    if (u_v6 != 1) break;
     u_v12 = u_v8 & 7;
     i_v7 = (((int)((u_v8 - u_v12) + 7) >> 3) - *(int *)((char *)arg1 + 0x1800)) + -8 + (int)pu_v10;
-    if (*(int *)((char *)arg1 + 0x1808) - i_v7 < 0x801) {
+    if (*(int *)((char *)arg1 + 0x1808) - i_v7 <= 0x800) {
       FUN_140069020((__int64 *)((char *)arg1 + 0x1800),i_v7,(__int64 *)((char *)arg1 + 0x1800),(__int64 *)&loc_28);
       (**(cri_code **)(*arg2 + 0x40))(arg2,0,arg1 + 0x1800);
       (**(cri_code **)(*arg2 + 0x38))(arg2,1,&loc_28);
@@ -6910,16 +6906,16 @@ void MPVDEC_DecDpicMb(cri_any cri_p0, cri_any cri_p1)
       u_v8 = i_v7 + u_v12;
       pu_v10 = pu_v9 + 8;
       u_v11 = CRI06_BE32(pu_v9[4],pu_v9[5],pu_v9[6],pu_v9[7]);
-      if ((int)u_v8 < 0x20) {
-        u_v14 = (ulonglong)
-                 (uint)((CRI06_BE32(*pu_v9,pu_v9[1],pu_v9[2],pu_v9[3]) <<
-                        ((byte)i_v7 & 0x1f)) << (sbyte)u_v12);
-      }
-      else {
+      if ((int)u_v8 >= 0x20) {
         u_v8 = u_v8 - 0x20;
-        u_v14 = (ulonglong)(u_v11 << ((byte)u_v8 & 0x1f));
+        u_v14 = (ulonglong)(u_v11 << u_v8);
         u_v11 = CRI06_BE32(*pu_v10,pu_v9[9],pu_v9[10],pu_v9[0xb]);
         pu_v10 = pu_v9 + 0xc;
+      }
+      else {
+        u_v14 = (ulonglong)
+                 (uint)((CRI06_BE32(*pu_v9,pu_v9[1],pu_v9[2],pu_v9[3]) <<
+                        i_v7) << u_v12);
       }
     }
   }
