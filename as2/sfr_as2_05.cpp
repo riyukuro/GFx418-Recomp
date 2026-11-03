@@ -2380,10 +2380,11 @@ static inline AvmCharacter* SpriteAvm(Sprite* psprite)
 inline MovieClipObject::MovieClipObject(GlobalContext* pgc, Sprite* psprite)
     : Object(pgc->GetGC()), pSprite(psprite), ButtonEventMask(0), HasButtonHandlers(false)
 {
-    MovieClipObject::Set__proto__(SpriteAvm(psprite)->GetASEnvironment()->GetSC(), SpriteAvm(psprite)->Get__proto__());
+    // The context is read first, so the prototype read comes after the GetASEnvironment call, as in the exe.
+    ASStringContext* psc = SpriteAvm(psprite)->GetASEnvironment()->GetSC();
+    MovieClipObject::Set__proto__(psc, SpriteAvm(psprite)->Get__proto__());
 }
 
-// MS2-FUNCTIONAL same code; the exe swaps rsi/rdi/rbx and reloads AvmObjOffset for the prototype read
 // @0x142953da0
 MovieClipObject* AvmSprite::GetMovieClipObject()
 {
