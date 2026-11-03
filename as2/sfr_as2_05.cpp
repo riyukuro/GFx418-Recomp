@@ -1805,22 +1805,24 @@ static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<
 // @0x142944690
 const Value* Environment::FindLocal(const ASString& varname) const
 {
-    UPInt n = LocalFrames.GetSize();
-    Ptr<LocalFrame> pframe = n ? LocalFrames[n - 1].GetPtr() : 0;
-    if (!pframe)
-        return 0;
-    do
+    if (LocalFrames.GetSize() > 0)
     {
-        const Value* pval = ValueHash_GetCaseCheck(&pframe->Variables, varname, IsCaseSensitive());
-        if (pval)
-            return pval;
-        unsigned version = GetVersion();
-        if (version >= 5 && GetBuiltin(ASBuiltin_arguments).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+        Ptr<LocalFrame> pframe = LocalFrames[LocalFrames.GetSize() - 1].GetPtr();
+        if (!pframe)
             return 0;
-        if (version >= 6 && GetBuiltin(ASBuiltin_super).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
-            return 0;
-        pframe = pframe->PrevFrame;
-    } while (pframe);
+        do
+        {
+            const Value* pval = ValueHash_GetCaseCheck(&pframe->Variables, varname, IsCaseSensitive());
+            if (pval)
+                return pval;
+            unsigned version = GetVersion();
+            if (version >= 5 && GetBuiltin(ASBuiltin_arguments).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+                break;
+            if (version >= 6 && GetBuiltin(ASBuiltin_super).CompareBuiltIn_CaseCheck(varname, IsCaseSensitive()))
+                break;
+            pframe = pframe->PrevFrame;
+        } while (pframe);
+    }
     return 0;
 }
 
