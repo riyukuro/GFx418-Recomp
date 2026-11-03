@@ -38,6 +38,12 @@ template<> SF_NOINLINE void ArrayBase<ArrayData<GFx::AS3::SPtr<GFx::AS3::Instanc
 // and the Value array's RemoveMultipleAt (0x14241ebb0)
 template<> SF_NOINLINE void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::
     RemoveMultipleAt(UPInt index, UPInt num);
+// The Value array's Append (0x142404330) is out of line in the exe; SparseArray::Append calls it.
+template<> SF_NOINLINE void ArrayBase<ArrayDataDH<GFx::AS3::Value, AllocatorDH<GFx::AS3::Value, 2>, ArrayDefaultPolicy> >::
+    Append(const ValueType other[], UPInt count)
+{
+    Data.Append(other, count);
+}
 }
 
 // THUNKS-BEGIN (work/sfr5/gen_thunks.py)
@@ -1517,7 +1523,7 @@ namespace Scaleform { namespace GFx { namespace AS3
         }
     }
 
-    // MS2-FUNCTIONAL: the exe calls ArrayDataDH::Append (0x142404330) out of line; ours inlines it
+    // MS2-FUNCTIONAL: the inlined FixedSizeHash of ValueH.Set reads the key bytes in another order (same hash)
     // @0x1424046c0
     void SparseArray::Append(const ValueArrayDH& x)
     {
