@@ -5803,60 +5803,49 @@ void Sfr31StoreSlotValue(UPInt vt, UPInt idx, const Value* v, int kind, const UP
         cell->Assign(*v);
 }
 // ---- batch 50
+// ArrayData::Resize, which cl keeps out of line here; the exe has it inline in both branches.
+static SF_INLINE void Sfr31ResizeStateChars(ArrayData<Button::CharToRec, AllocatorLH<Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>& a, UPInt newSize)
+{
+    UPInt oldSize = a.Size;
+    a.ResizeNoConstruct(&a, newSize);
+    if (newSize > oldSize)
+        AllocatorLH<Button::CharToRec, Stat_Default_Mem>::ConstructArray(a.Data + oldSize, newSize - oldSize);
+}
 // Puts the display object into the button's render container for the state (rebuilding the container first), records it in the state's
 // mask-stack slot and, when that state is the current one, switches to it.
-// MS2-FUNCTIONAL 0x142529f70: raw-offset model; codegen differs from the exe
+// The container is a Ptr (created when missing, emptied otherwise); the state's records are the StateCharArray.
 // @0x142529f70
 void Sfr31ButtonSetStateObject(UPInt self, int state, UPInt obj)
 {
     const UPInt btn = Sfr31Rd(self, 0x18);
     if (state != 3)
     {
-        UPInt cont = Sfr31Rd(btn, (static_cast<UPInt>(state) + 7) * 0x20);
-        if (cont != 0)
-        {
-            ++*reinterpret_cast<UPInt*>(cont + 8);
-            FUN_14261cf50(cont, 0, FUN_14250dbc0(cont));
-        }
+        Ptr<Render::TreeContainer> pcont = *reinterpret_cast<Render::TreeContainer**>(btn + (static_cast<UPInt>(state) + 7) * 0x20);
+        if (!pcont)
+            pcont = reinterpret_cast<Button*>(btn)->CreateStateRenderContainer(static_cast<Button::ButtonState>(state));
         else
+            pcont->Remove(0, pcont->GetSize());
+        const UPInt cont = reinterpret_cast<UPInt>(pcont.GetPtr());
+        if (Sfr31Rd(obj, 0x38) != 0 && (Sfr31Rd(obj, 0x38) != btn || Sfr31Rd(FUN_1425f26c0(obj), 0x20) != cont))
         {
-            UPInt out = 0;
-            UPInt* p = FUN_1425ddd50(btn, &out, state);
-            cont = *p;
-            if (cont != 0)
-                ++*reinterpret_cast<UPInt*>(cont + 8);
-            cont = *p;
-            if (out != 0 && --*reinterpret_cast<UPInt*>(out + 8) == 0)
-                reinterpret_cast<Sfr31EntryAccess*>(out)->destroyHelper();
-        }
-        const UPInt owner = Sfr31Rd(obj, 0x38);
-        if (owner != 0 && (owner != btn || Sfr31Rd(FUN_1425f26c0(obj), 0x20) != cont))
-        {
-            const UPInt sub = owner + *reinterpret_cast<const UInt8*>(owner + 0x6d) * 4;
+            const UPInt owner = Sfr31Rd(obj, 0x38);
+            const UPInt sub = owner == 0 ? 0 : owner + *reinterpret_cast<const UInt8*>(owner + 0x6d) * 4;
             typedef unsigned char (*Fn)(UPInt, UPInt);
-            if (reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(sub, 0), 0xa8))(sub, obj) != 0)
+            if ((*reinterpret_cast<Fn*>(Sfr31Rd(sub, 0) + 0xa8))(sub, obj) != 0)
                 Sfr31Wr(obj, 0x38, btn);
         }
         if (Sfr31Rd(FUN_1425f26c0(obj), 0x20) == 0)
-            FUN_14261c690(cont, FUN_14250dbc0(cont), FUN_1425f26c0(obj));
-        if (cont != 0 && --*reinterpret_cast<UPInt*>(cont + 8) == 0)
-            reinterpret_cast<Sfr31EntryAccess*>(cont)->destroyHelper();
+            pcont->Add(reinterpret_cast<DisplayObjectBase*>(obj)->GetRenderNode());
     }
-    UPInt* arr = reinterpret_cast<UPInt*>(btn + static_cast<UPInt>(state) * 0x20 + 0xe8);
-    if (obj == 0)
-        FUN_1425248e0(arr, arr, 0);
-    else
+    ArrayData<Button::CharToRec, AllocatorLH<Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>& chars =
+        *reinterpret_cast<ArrayData<Button::CharToRec, AllocatorLH<Button::CharToRec, Stat_Default_Mem>, ArrayDefaultPolicy>*>(btn + static_cast<UPInt>(state) * 0x20 + 0xe8);
+    if (obj != 0)
     {
-        const UPInt old = arr[1];
-        FUN_1425248e0(arr, arr, 1);
-        if (old == 0)
-            *reinterpret_cast<UPInt*>(arr[0]) = 0;
-        UPInt* slot = reinterpret_cast<UPInt*>(arr[0]);
-        ++*reinterpret_cast<int*>(obj + 8);
-        if (*slot != 0)
-            FUN_14257dcd0(reinterpret_cast<void*>(*slot));
-        *slot = obj;
+        Sfr31ResizeStateChars(chars, 1);
+        chars.Data[0].Char = reinterpret_cast<DisplayObjectBase*>(obj);
     }
+    else
+        Sfr31ResizeStateChars(chars, 0);
     if (FUN_1425de200(*reinterpret_cast<const int*>(btn + 0x168)) == state)
         Sfr31ButtonSwitchStateIntl(self, state);
 }
