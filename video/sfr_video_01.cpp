@@ -2838,6 +2838,8 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 
 using namespace Video;
 
+Value* ArgCopy(const FnCall* pfn, int n);    // sfr_as2_04e @0x1429316c0, FnCall::Arg out of line
+
 // ==== VideoProviderNetStream =========================================================================================
 
 // The sprite whose sound settings a provider's audio follows: the audio target itself, or its parent when the target
@@ -3370,7 +3372,6 @@ void NetStream::Seek(Number pos, Environment* penv)
 
 // ---- NetStream.prototype
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x1400047a0
 void NetStreamProto::Close(const FnCall& fn)
 {
@@ -3379,11 +3380,10 @@ void NetStreamProto::Close(const FnCall& fn)
         return;
     pnetstream->Stop();
     // close(true) also drops the player
-    if (fn.NArgs > 0 && fn.Arg(0).ToBool(fn.Env))
+    if (fn.NArgs > 0 && ArgCopy(&fn, 0)->ToBool(fn.Env))
         pnetstream->GetVideoProvider()->Close();
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140004810
 void NetStreamProto::Pause(const FnCall& fn)
 {
@@ -3391,12 +3391,11 @@ void NetStreamProto::Pause(const FnCall& fn)
     if (!pnetstream)
         return;
     if (fn.NArgs > 0)
-        pnetstream->Pause(fn.Arg(0).ToBool(fn.Env));
+        pnetstream->Pause(ArgCopy(&fn, 0)->ToBool(fn.Env));
     else
         pnetstream->Pause();
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140004880
 void NetStreamProto::SetBufferTime(const FnCall& fn)
 {
@@ -3406,12 +3405,11 @@ void NetStreamProto::SetBufferTime(const FnCall& fn)
         return;
     }
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
-    if (!pnetstream || !fn.Arg(0).IsNumber())
+    if (!pnetstream || !ArgCopy(&fn, 0)->IsNumber())
         return;
-    pnetstream->SetBufferTime(fn.Arg(0).ToNumber(fn.Env));
+    pnetstream->SetBufferTime(ArgCopy(&fn, 0)->ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140004920
 void NetStreamProto::SetNumberOfFramePools(const FnCall& fn)
 {
@@ -3421,12 +3419,11 @@ void NetStreamProto::SetNumberOfFramePools(const FnCall& fn)
         return;
     }
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
-    if (!pnetstream || !fn.Arg(0).IsNumber())
+    if (!pnetstream || !ArgCopy(&fn, 0)->IsNumber())
         return;
-    pnetstream->SetNumberOfFramePools(fn.Arg(0).ToNumber(fn.Env));
+    pnetstream->SetNumberOfFramePools(ArgCopy(&fn, 0)->ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x1400049c0
 void NetStreamProto::SetReloadThresholdTime(const FnCall& fn)
 {
@@ -3436,12 +3433,11 @@ void NetStreamProto::SetReloadThresholdTime(const FnCall& fn)
         return;
     }
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
-    if (!pnetstream || !fn.Arg(0).IsNumber())
+    if (!pnetstream || !ArgCopy(&fn, 0)->IsNumber())
         return;
-    pnetstream->SetReloadThresholdTime(fn.Arg(0).ToNumber(fn.Env));
+    pnetstream->SetReloadThresholdTime(ArgCopy(&fn, 0)->ToNumber(fn.Env));
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140004a60
 void NetStreamProto::SetOpenURLTimeout(const FnCall& fn)
 {
@@ -3451,9 +3447,9 @@ void NetStreamProto::SetOpenURLTimeout(const FnCall& fn)
         return;
     }
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
-    if (!pnetstream || !fn.Arg(0).IsNumber())
+    if (!pnetstream || !ArgCopy(&fn, 0)->IsNumber())
         return;
-    pnetstream->SetOpenURLTimeout(fn.Arg(0).ToNumber(fn.Env));
+    pnetstream->SetOpenURLTimeout(ArgCopy(&fn, 0)->ToNumber(fn.Env));
 }
 
 // Reads an array of numbers as (x, y, z) triples.
@@ -3505,7 +3501,6 @@ void NetStreamProto::SetSoundSpatial(const FnCall& fn)
     pnetstream->GetVideoProvider()->ApplySpatialInfo();
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140005780
 void NetStreamProto::Seek(const FnCall& fn)
 {
@@ -3515,9 +3510,9 @@ void NetStreamProto::Seek(const FnCall& fn)
         return;
     }
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
-    if (!pnetstream || !fn.Arg(0).IsNumber())
+    if (!pnetstream || !ArgCopy(&fn, 0)->IsNumber())
         return;
-    pnetstream->Seek(fn.Arg(0).ToNumber(fn.Env), fn.Env);
+    pnetstream->Seek(ArgCopy(&fn, 0)->ToNumber(fn.Env), fn.Env);
 }
 
 // MS2-FUNCTIONAL: other scheduling
@@ -3529,7 +3524,7 @@ void NetStreamProto::Play(const FnCall& fn)
         fn.Env->LogScriptError("Error: NetStream.Play requires one argument (file name)\n");
         return;
     }
-    ASString url = fn.Arg(0).ToString(fn.Env);
+    ASString url = ArgCopy(&fn, 0)->ToString(fn.Env);
     NetStream* pnetstream = static_cast<NetStream*>(fn.ThisPtr);
     if (pnetstream)
         pnetstream->OpenUrl(url.ToCStr(), fn.Env);
