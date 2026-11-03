@@ -633,59 +633,53 @@ int ShapeSwfReader::ReadStrokeStyles(LoadProcess* p, TagType tagType)
     return stylesPos;
 }
 
-// Marks the styles of a new layer in the path records: 0xFF and the 24-bit index of its first style.
-static SF_FORCEINLINE void PutStyleBase(UByte* pdest, int base)
-{
-    pdest[1] = UByte(base >> 16);
-    pdest[2] = UByte(base >> 8);
-    pdest[0] = 0xFF;
-    pdest[3] = UByte(base);
-}
-
 // The tag's styles go to the style arrays and its path records to one block of the path allocator. The records are
 // walked once to check them: the styles of a new layer are parsed into the arrays too, and their bytes in the block
 // are replaced by the bases the decoder expects. Records that run out of the tag, or more than 2 MB of them, leave an
 // empty shape and a warning.
-// MS2-FUNCTIONAL: register allocation and spills differ; the counters of the record walk are kept as in the exe.
+// MS2-FUNCTIONAL: one lea operand order differs (moveY + (ay + cy) in the curved-edge log); source order and first-reference swaps did not move it.
 // @0x14265b620
 bool ShapeSwfReader::Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, bool withStyle)
 {
-    PathAllocator* pallocator = pAllocator ? pAllocator : p->GetLoadTaskData()->GetPathAllocator();
-    Stream*        in         = p->GetStream();
+    PathAllocator* ppathAllocator = pAllocator ? pAllocator : p->GetLoadTaskData()->GetPathAllocator();
+    Stream*        in             = p->GetStream();
 
-    Shape.Flags   = 0;
-    int stylesLen = 0;
+    Shape.Flags = 0;
+    int stylesLen;
     if (withStyle)
     {
-        int startPos = in->Tell();
+        int curOffset = in->Tell();
         Shape.Flags |= ShapeDataBase::Flags_ValidBounds;
-        RectF bound(0, 0, 0, 0);
-        in->ReadRect(&bound);
-        if (tagType == ShapeSwfTag_DefineFont3 || tagType == ShapeSwfTag_DefineShape4)
+        RectF bounds(0, 0, 0, 0);
+        in->ReadRect(&bounds);
+        if ((tagType == ShapeSwfTag_DefineShape4) || (tagType == ShapeSwfTag_DefineFont3))
         {
             // The edge bounds and the fill rule flags of DefineShape4 are not kept.
-            RectF edgeBound(0, 0, 0, 0);
-            in->ReadRect(&edgeBound);
+            RectF rectBound(0, 0, 0, 0);
+            in->ReadRect(&rectBound);
             in->ReadU8();
         }
         ReadFillStyles(p, tagType);
         ReadStrokeStyles(p, tagType);
-        stylesLen = in->Tell() - startPos;
+        stylesLen = in->Tell() - curOffset;
     }
+    else
+        stylesLen = 0;
 
-    unsigned pathsLen  = lenInBytes - stylesLen;
-    unsigned readLen   = pathsLen;
-    unsigned dataLen   = pathsLen;
-    unsigned allocLen  = pathsLen;
-    unsigned shapeSize = pathsLen;
-    UByte*   pmem      = pallocator->AllocRawPath(pathsLen);
-    if (!pmem)
+    unsigned shapeLen         = (unsigned)lenInBytes - stylesLen;
+    unsigned memBlockSize     = shapeLen;
+    unsigned originalShapeLen = shapeLen;
+
+    UByte* pmemBlock = ppathAllocator->AllocRawPath(memBlockSize);
+    if (!pmemBlock)
     {
         in->LogWarning("Corrupted shape detected in file %s", in->GetFileName().ToCStr());
         return false;
     }
+    UByte* ptr = pmemBlock;
+
     in->Align();
-    in->ReadToBuffer(pmem, pathsLen);
+    in->ReadToBuffer(ptr, shapeLen);
 
     float sfactor = 1.0f;
     if (tagType == ShapeSwfTag_DefineFont3)
@@ -694,204 +688,264 @@ bool ShapeSwfReader::Read(LoadProcess* p, TagType tagType, unsigned lenInBytes, 
         Shape.Flags |= ShapeDataBase::Flags_Sfactor20;
     }
 
-    Stream ss(pmem, pathsLen, p->GetLoadHeap(), in->GetLog(), in->GetParseControl());
-    ss.Align();
-    p->SetAltStream(&ss);
+    Stream* poriginalStream = in;
+    Stream  ss(ptr, shapeLen, p->GetLoadHeap(), in->GetLog(), in->GetParseControl());
+    in = &ss;
+    p->SetAltStream(in);
 
-    int numFillBits   = ss.ReadUInt(4);
-    int numStrokeBits = ss.ReadUInt(4);
+    in->Align();
+    int numFillBits = in->ReadUInt(4);
+    int numLineBits = in->ReadUInt(4);
     if (withStyle)
-        ss.LogParse("  ShapeCharacter read: nfillbits = %d, nlinebits = %d\n", numFillBits, numStrokeBits);
+        in->LogParse("  ShapeCharacter read: nfillbits = %d, nlinebits = %d\n", numFillBits, numLineBits);
 
-    int  fillBase = 0, strokeBase = 0;
-    int  numEdges = 0, numPaths = 0;
-    int  x = 0, y = 0;
-    bool corrupted = false;
-    for (;;)
+    int      fillBase = 0;
+    int      lineBase = 0;
+    int      moveX = 0, moveY = 0;
+    int      numMoveBits      = 0;
+    unsigned totalPathsCount  = 0;
+    unsigned totalShapesCount = 0;
+    int      curEdgesCount    = 0;
+    int      curPathsCount    = 0;
+    bool     shapeIsCorrupted = false;
+
+    while (!shapeIsCorrupted)
     {
-        if (!ss.ReadUInt1())
+        int typeFlag = in->ReadUInt1();
+        if (typeFlag == 0)
         {
-            unsigned flags = ss.ReadUInt(5);
+            int flags = in->ReadUInt(5);
             if (flags == 0)
+            {
+                if (curEdgesCount > 0)
+                {
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
+                }
                 break;
-
+            }
             if (flags & 0x01)
             {
-                if (numEdges > 0)
+                if (curEdgesCount > 0)
                 {
-                    ++numPaths;
-                    numEdges = 0;
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
                 }
-                int nbits = ss.ReadUInt(5);
-                x         = ss.ReadSInt(nbits);
-                y         = ss.ReadSInt(nbits);
-                if (ss.IsVerboseParseShape())
-                    ss.LogParseShape("  ShapeCharacter read: moveto %4g %4g\n", x * sfactor, y * sfactor);
+                numMoveBits = in->ReadUInt(5);
+                moveX       = in->ReadSInt(numMoveBits);
+                moveY       = in->ReadSInt(numMoveBits);
+                if (in->IsVerboseParseShape())
+                    in->LogParseShape("  ShapeCharacter read: moveto %4g %4g\n", (float)moveX * sfactor,
+                                      (float)moveY * sfactor);
             }
             if ((flags & 0x02) && numFillBits > 0)
             {
-                if (numEdges > 0)
+                if (curEdgesCount > 0)
                 {
-                    ++numPaths;
-                    numEdges = 0;
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
                 }
-                int style = ss.ReadUInt(numFillBits);
-                if (ss.IsVerboseParseShape())
+                int style = in->ReadUInt(numFillBits);
+                if (in->IsVerboseParseShape())
                 {
                     if (style > 0)
+                    {
                         style += fillBase;
-                    ss.LogParseShape("  ShapeCharacter read: fill0 = %d\n", style);
+                    }
+                    in->LogParseShape("  ShapeCharacter read: fill0 = %d\n", style);
                 }
             }
             if ((flags & 0x04) && numFillBits > 0)
             {
-                if (numEdges > 0)
+                if (curEdgesCount > 0)
                 {
-                    ++numPaths;
-                    numEdges = 0;
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
                 }
-                int style = ss.ReadUInt(numFillBits);
-                if (ss.IsVerboseParseShape())
+                int style = in->ReadUInt(numFillBits);
+                if (in->IsVerboseParseShape())
                 {
                     if (style > 0)
+                    {
                         style += fillBase;
-                    ss.LogParseShape("  ShapeCharacter read: fill1 = %d\n", style);
+                    }
+                    in->LogParseShape("  ShapeCharacter read: fill1 = %d\n", style);
                 }
             }
-            if ((flags & 0x08) && numStrokeBits > 0)
+            if ((flags & 0x08) && numLineBits > 0)
             {
-                if (numEdges > 0)
+                if (curEdgesCount > 0)
                 {
-                    ++numPaths;
-                    numEdges = 0;
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
                 }
-                int style = ss.ReadUInt(numStrokeBits);
+                int style = in->ReadUInt(numLineBits);
                 if (style > 0)
-                    style += strokeBase;
-                if (ss.IsVerboseParseShape())
-                    ss.LogParseShape("  ShapeCharacter read: line = %d\n", style);
+                {
+                    style += lineBase;
+                }
+                if (in->IsVerboseParseShape())
+                    in->LogParseShape("  ShapeCharacter read: line = %d\n", style);
             }
             if (flags & 0x10)
             {
-                ss.LogParse("  ShapeCharacter read: more fill styles\n");
-                if (numPaths > 0)
-                    numPaths = 0;
-                if (numEdges > 0)
+                in->LogParse("  ShapeCharacter read: more fill styles\n");
+                if (curPathsCount > 0)
                 {
-                    ++numPaths;
-                    numEdges = 0;
+                    ++totalShapesCount;
+                    curPathsCount = 0;
                 }
-                fillBase      = (int)FillStyles.GetSize();
-                strokeBase    = (int)StrokeStyles.GetSize();
-                int recordPos = ss.Tell();
+                if (curEdgesCount > 0)
+                {
+                    ++totalPathsCount;
+                    curEdgesCount = 0;
+                    ++curPathsCount;
+                }
 
-                int fillsStart   = ReadFillStyles(p, tagType);
-                int fillsEnd     = ss.Tell();
-                int strokesStart = ReadStrokeStyles(p, tagType);
-                int strokesEnd   = ss.Tell();
+                fillBase  = (int)FillStyles.GetSize();
+                lineBase  = (int)StrokeStyles.GetSize();
+                int fsoff = in->Tell();
+                int foff  = ReadFillStyles(p, tagType);
+                int moff  = in->Tell();
+                int loff  = ReadStrokeStyles(p, tagType);
+                int eoff  = in->Tell();
 
-                // The fill styles become their base.
-                if (fillsEnd != fillsStart)
+                if (moff != foff)
                 {
-                    if (fillsEnd < fillsStart || (unsigned)fillsEnd > shapeSize)
-                        goto corrupted_shape;
-                    int dest = recordPos;
-                    if ((int)FillStyles.GetSize() > fillBase)
+                    if (foff > moff || unsigned(moff) > originalShapeLen)
                     {
-                        PutStyleBase(pmem + dest, fillBase);
-                        dest += 4;
+                        shapeIsCorrupted = true;
+                        break;
                     }
-                    memmove(pmem + dest, pmem + fillsEnd, strokesStart - fillsEnd);
-                    strokesStart = dest + (strokesStart - fillsEnd);
-                    fillsEnd     = dest;
+                    else
+                    {
+                        // An added fill style array stores its base: 0xFF and the 24-bit index.
+                        if ((int)FillStyles.GetSize() > fillBase)
+                        {
+                            *(ptr + fsoff)     = 0xFF;
+                            *(ptr + fsoff + 1) = UByte((fillBase >> 16) & 0xFF);
+                            *(ptr + fsoff + 2) = UByte((fillBase >> 8) & 0xFF);
+                            *(ptr + fsoff + 3) = UByte((fillBase) & 0xFF);
+                            foff += 4 - (foff - fsoff);
+                        }
+                        memmove(ptr + foff, ptr + moff, loff - moff);
+                        loff -= moff - foff;
+                        moff = foff;
+                    }
                 }
-                // The stroke styles too, with the rest of the records moved up.
-                if (strokesStart != strokesEnd)
+                if (loff != eoff)
                 {
-                    if (strokesStart > strokesEnd || (unsigned)strokesEnd > shapeSize)
-                        goto corrupted_shape;
-                    if ((int)StrokeStyles.GetSize() > strokeBase)
+                    if (loff > eoff || unsigned(eoff) > originalShapeLen)
                     {
-                        PutStyleBase(pmem + fillsEnd, strokeBase);
-                        strokesStart = fillsEnd + 4;
+                        shapeIsCorrupted = true;
+                        break;
                     }
-                    memmove(pmem + strokesStart, pmem + strokesEnd, dataLen - strokesEnd);
-                    dataLen += strokesStart - strokesEnd;
+                    else
+                    {
+                        if ((int)StrokeStyles.GetSize() > lineBase)
+                        {
+                            *(ptr + moff)     = 0xFF;
+                            *(ptr + moff + 1) = UByte((lineBase >> 16) & 0xFF);
+                            *(ptr + moff + 2) = UByte((lineBase >> 8) & 0xFF);
+                            *(ptr + moff + 3) = UByte((lineBase) & 0xFF);
+                            loff += 4 - (loff - moff);
+                        }
+                        memmove(ptr + loff, ptr + eoff, shapeLen - eoff);
+                        shapeLen -= eoff - loff;
+                    }
                 }
-                ss.SetPosition(strokesStart);
-                numFillBits   = ss.ReadUInt(4);
-                numStrokeBits = ss.ReadUInt(4);
+                in->SetPosition(loff);
+                numFillBits = in->ReadUInt(4);
+                numLineBits = in->ReadUInt(4);
             }
         }
         else
         {
-            ++numEdges;
-            unsigned straight = ss.ReadUInt1();
-            int      nbits    = ss.ReadUInt(4) + 2;
-            if (!straight)
+            int edgeFlag = in->ReadUInt1();
+            ++curEdgesCount;
+
+            if (edgeFlag == 0)
             {
-                int cx = ss.ReadSInt(nbits);
-                int cy = ss.ReadSInt(nbits);
-                int ax = ss.ReadSInt(nbits);
-                int ay = ss.ReadSInt(nbits);
-                int nx = x + cx + ax;
-                int ny = y + cy + ay;
-                if (ss.IsVerboseParseShape())
-                    ss.LogParseShape("  ShapeCharacter read: curved edge   = %4g %4g - %4g %4g - %4g %4g\n",
-                                     x * sfactor, y * sfactor, (x + cx) * sfactor, (y + cy) * sfactor,
-                                     nx * sfactor, ny * sfactor);
-                x = nx;
-                y = ny;
+                unsigned numbits = 2 + in->ReadUInt(4);
+                int      cx      = in->ReadSInt(numbits);
+                int      cy      = in->ReadSInt(numbits);
+                int      ax      = in->ReadSInt(numbits);
+                int      ay      = in->ReadSInt(numbits);
+                if (in->IsVerboseParseShape())
+                {
+                    in->LogParseShape("  ShapeCharacter read: curved edge   = %4g %4g - %4g %4g - %4g %4g\n",
+                                      (float)moveX * sfactor, (float)moveY * sfactor, (float)(moveX + cx) * sfactor,
+                                      (float)(moveY + cy) * sfactor, (float)(moveX + cx + ax) * sfactor,
+                                      (float)(moveY + cy + ay) * sfactor);
+                }
+                moveX += ax + cx;
+                moveY += ay + cy;
             }
             else
             {
-                int dx = 0, dy = 0;
-                if (ss.ReadUInt1())
+                unsigned numbits  = 2 + in->ReadUInt(4);
+                int      lineFlag = in->ReadUInt1();
+                int      dx = 0, dy = 0;
+                if (lineFlag)
                 {
-                    dx = ss.ReadSInt(nbits);
-                    dy = ss.ReadSInt(nbits);
+                    dx = in->ReadSInt(numbits);
+                    dy = in->ReadSInt(numbits);
                 }
                 else
                 {
-                    unsigned vertical = ss.ReadUInt1();
-                    int      d        = ss.ReadSInt(nbits);
-                    if (vertical)
-                        dy = d;
+                    int vertFlag = in->ReadUInt1();
+                    if (vertFlag == 0)
+                    {
+                        dx = in->ReadSInt(numbits);
+                    }
                     else
-                        dx = d;
+                    {
+                        dy = in->ReadSInt(numbits);
+                    }
                 }
-                int nx = x + dx;
-                int ny = y + dy;
-                if (ss.IsVerboseParseShape())
-                    ss.LogParseShape("  ShapeCharacter read: straight edge = %4g %4g - %4g %4g\n", x * sfactor,
-                                     y * sfactor, nx * sfactor, ny * sfactor);
-                x = nx;
-                y = ny;
+                if (in->IsVerboseParseShape())
+                {
+                    in->LogParseShape("  ShapeCharacter read: straight edge = %4g %4g - %4g %4g\n",
+                                      (float)moveX * sfactor, (float)moveY * sfactor, (float)(moveX + dx) * sfactor,
+                                      (float)(moveY + dy) * sfactor);
+                }
+                moveX += dx;
+                moveY += dy;
             }
         }
-
-        unsigned pos = ss.Tell();
-        corrupted    = pos > shapeSize;
-        if (pos > readLen)
-            break;
+        shapeIsCorrupted = ((unsigned)in->Tell() > originalShapeLen);
     }
 
-    if (corrupted || dataLen >= 0x200000)
+    // The styles moved out of the records shrink the block.
+    unsigned newMemBlockSize = memBlockSize - (originalShapeLen - shapeLen);
+    if (!shapeIsCorrupted && newMemBlockSize < (1L << 21))
     {
-    corrupted_shape:
-        corrupted = true;
-        ss.LogWarning("Corrupted shape detected in file %s", in->GetFileName().ToCStr());
-        pmem[0] = 0;
-        pmem[1] = 0;
-        if (allocLen > 2)
-            pallocator->ReallocLastBlock(pmem, allocLen, 2);
+        if (memBlockSize > newMemBlockSize)
+        {
+            ppathAllocator->ReallocLastBlock(pmemBlock, memBlockSize, newMemBlockSize);
+        }
     }
-    else if (allocLen > dataLen)
-        pallocator->ReallocLastBlock(pmem, allocLen, dataLen);
-
-    Shape.Paths = pmem;
-    p->SetAltStream(0);
-    return !corrupted;
+    else
+    {
+        shapeIsCorrupted = true;
+        in->LogWarning("Corrupted shape detected in file %s", poriginalStream->GetFileName().ToCStr());
+        unsigned offset          = 0;
+        unsigned newMemBlockSize = 1 + 1;
+        pmemBlock[offset++]      = 0;
+        pmemBlock[offset++]      = 0;
+        if (memBlockSize > newMemBlockSize)
+        {
+            ppathAllocator->ReallocLastBlock(pmemBlock, memBlockSize, newMemBlockSize);
+        }
+    }
+    Shape.Paths = pmemBlock;
+    p->SetAltStream(NULL);
+    return !shapeIsCorrupted;
 }
 
 }} // namespace Scaleform::GFx
