@@ -39,6 +39,11 @@
 #include "ms2/scaleform/include/kernel/sf_simd.h"
 #include <cmath>
 
+namespace Scaleform {
+// Out of line in sfr_as3_15 (0x1424dc7a0): VTable::Names' storage, released by AutoPtr<VTable>::Reset.
+template <> ArrayDataBase<GFx::ASString, AllocatorLH<GFx::ASString, GFx::AS3::StatMV_VM_VTable_Mem>, ArrayDefaultPolicy>::~ArrayDataBase();
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS3 { namespace TR { class State; } }}}
 // Value::AssignUnsafe as the SDK writes it (prefetch, memcpy, AddRef); the exe expands it inline in the tracer.
 // ValueAssignCopies is the name as3_value.h befriends (sfr_as3_03 holds the other members).
@@ -3493,33 +3498,16 @@ void Sfr31TracePushString(State* st, UInt32 index)
     StV(st).OpStack().PushBack(Value(str, Value::InlineStr));
 }
 
-// Set the owned object of a holder {obj, ownsFlag}: destroy the previous owned object (a value array plus its names).
-// MS2-FUNCTIONAL 0x142524290: behavior-equivalent recovery; codegen differs from exe
+} } } // namespace Scaleform::GFx::AS3
+
+namespace Scaleform {
+// Traits' vtable holder (Traits::pVTable): the out-of-line Reset its callers in sfr_as3_16 / sfr_as3_18 declare,
+// emitted here as an explicit instantiation of the sf_autoptr.h body. The VTable destructor is implicit and inlined.
 // @0x142524290
-void Sfr31SetOwnedObject(UPInt* holder, UPInt np, char own)
-{
-    const UPInt old = holder[0];
-    if (old != np)
-    {
-        if (old != 0 && static_cast<char>(holder[1]) != 0)
-        {
-            *reinterpret_cast<char*>(&holder[1]) = 0;
-            Sfr31ReleaseStr(Sfr31Rd(old, 0x38));
-            UPInt* names = reinterpret_cast<UPInt*>(old + 0x20);
-            for (UPInt i = names[1]; i > 0; --i)
-                Sfr31ReleaseStr(Sfr31Rd(names[0], (i - 1) * 8));
-            if (names[0] != 0)
-                Memory::Free(reinterpret_cast<void*>(names[0]));
-            Value* vals = reinterpret_cast<Value*>(Sfr31Rd(old, 8));
-            for (UPInt i = Sfr31Rd(old, 0x10); i > 0; --i)
-                vals[i - 1].~Value();
-            Memory::Free(reinterpret_cast<void*>(Sfr31Rd(old, 8)));
-            Memory::Free(reinterpret_cast<void*>(old));
-        }
-        holder[0] = np;
-    }
-    *reinterpret_cast<char*>(&holder[1]) = (np != 0 && own != 0) ? 1 : 0;
-}
+template void AutoPtr<GFx::AS3::VTable>::Reset(GFx::AS3::VTable* p, bool owner);
+} // namespace Scaleform
+
+namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 22
 static void Sfr31PushByte(UPInt* a, UInt8 b)
 {
