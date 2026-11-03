@@ -13,7 +13,6 @@
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // A plain name is set on the innermost with() scope that has it, else on the local or the target.
-// MS2-FUNCTIONAL: the exe keeps the scope lookups in different registers
 // @0x14298da70
 void Environment::SetVariableRaw(const ASString& varname, const Value& val, const WithStackArray* pwithStack)
 {
@@ -23,7 +22,7 @@ void Environment::SetVariableRaw(const ASString& varname, const Value& val, cons
         {
             const WithStackEntry& entry = (*pwithStack)[i];
             ObjectInterface*      iface;
-            if (entry.IsObject)
+            if ((UByte)entry.IsObject)
                 iface = entry.pObject;
             else
             {
@@ -42,7 +41,7 @@ void Environment::SetVariableRaw(const ASString& varname, const Value& val, cons
     if (plocal)
         *plocal = val;
     else
-        ToAvmCharacter(Target)->SetMember(this, varname, val);
+        (Target ? ToAvmCharacter(Target) : 0)->SetMember(this, varname, val);
 }
 
 // The timer fires its interval from now on.
