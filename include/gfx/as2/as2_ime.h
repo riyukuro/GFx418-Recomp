@@ -13,9 +13,14 @@ namespace Scaleform { namespace GFx { namespace AS2 {
 class GASIme : public Object
 {
 protected:
+    // Object::Set__proto__ (0x140007ba0) is inlined here in the exe, its SetMemberRaw a virtual call.
     GASIme(ASStringContext* psc, Object* pprototype) : Object(psc)
     {
-        Set__proto__(psc, pprototype);
+        if (!pProto)
+            static_cast<ObjectInterface*>(this)->SetMemberRaw(
+                psc, psc->pContext->GetStringManager()->GetBuiltin(ASBuiltin___proto__), Value(Value::UNSET),
+                PropFlags(PropFlags::PropFlag_DontEnum | PropFlags::PropFlag_DontDelete));
+        pProto = pprototype;
     }
 
     void commonInit(Environment* penv); // exe 0x14299b610
