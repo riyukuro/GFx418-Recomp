@@ -1066,15 +1066,26 @@ void GASPrototypeBase::Init(Object* pthis, ASStringContext* psc, const FunctionR
 }
 
 
-// MS2-FUNCTIONAL the exe inlines the CFunctionObject ctor (sfr_as2_03)
+// The exe inlines the CFunctionObject ctor, and its FunctionObject base ctor, here (as in sfr_as2_04f).
+inline FunctionObject::FunctionObject(ASStringContext* psc, ObjectInlineCtorTag)
+    : Object(psc)
+{
+}
+
+inline CFunctionObject::CFunctionObject(ASStringContext* psc, Object* pprototype, CFunctionPtr func, ObjectInlineCtorTag)
+    : FunctionObject(psc, ObjectInlineCtorTag()), pFunction(func)
+{
+    Set__proto__(psc, pprototype);
+}
+
 // @0x142961830
 void GASPrototypeBase::InitFunctionMembers(Object* pthis, ASStringContext* psc, const NameFunction* table,
                                            const PropFlags& flags)
 {
     Ptr<Object> pfuncProto = psc->pContext->GetPrototype(ASBuiltin_Function);
-    for (UPInt i = 0; table[i].Name; i++)
+    for (int i = 0; table[i].Name; i++)
     {
-        FunctionRef func(*SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, pfuncProto, table[i].Function));
+        FunctionRef func(*SF_HEAP_NEW(psc->GetHeap()) CFunctionObject(psc, pfuncProto, table[i].Function, ObjectInlineCtorTag()));
         pthis->SetMemberRaw(psc, psc->CreateConstString(table[i].Name), Value(func), flags);
     }
 }
@@ -3179,6 +3190,10 @@ void ClassHash_RemoveCaseCheck(ASStringHash<FunctionRef>* phash, const ASString&
 // MS2-PIN: ?Resize@?$ArrayData@PEAVValue@AS2@GFx@Scaleform@@U?$AllocatorLH@PEAVValue@AS2@GFx@Scaleform@@$0BED@@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e2b0
 // MS2-PIN: ?Resize@?$ArrayData@PEAVObject@AS2@GFx@Scaleform@@U?$AllocatorGH@PEAVObject@AS2@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAX_K@Z 0x14297e230
 // MS2-PIN: ?LogError@?$LogBase@VEnvironment@AS2@GFx@Scaleform@@@GFx@Scaleform@@QEBAXPEBDZZ 0x142967b90
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
+// MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215648
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432156f0
+// MS2-PIN: ??_7CFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143215778
 // MS2-PIN: ??_7FnCall@AS2@GFx@Scaleform@@6B@ 0x1431b5018
 // MS2-PIN: ??_7?$LogBase@VFnCall@AS2@GFx@Scaleform@@@GFx@Scaleform@@6B@ 0x1431b4de0
 // MS2-PIN: ??_7ColorTransformCtorFunction@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432193a0
