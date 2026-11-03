@@ -3799,66 +3799,114 @@ bool AvmDisplayObjContainer::SwapChildrenAt(unsigned i1, unsigned i2)
     return Sfr31SwapChildrenTail(Sfr31Rd(reinterpret_cast<UPInt>(this), 0x18), i1, i2, false);
 }
 // ---- batch 25
-// Strict equality of two values (same kind: payload compare; mixed Int/UInt/Number: numeric compare).
-// MS2-FUNCTIONAL 0x14252cbf0: behavior-equivalent recovery; codegen differs from exe
+// Strict equality of two values (ECMA-262 section 11.9.6).
 // @0x14252cbf0
 bool StrictEqual(const Value& x, const Value& y)
 {
-    const UInt32* a = reinterpret_cast<const UInt32*>(&x);
-    const UInt32* b = reinterpret_cast<const UInt32*>(&y);
-    const UInt32 ka = a[0] & 0x1f;
-    const UInt32 kb = b[0] & 0x1f;
-    const UPInt pa = reinterpret_cast<UPInt>(a);
-    const UPInt pb = reinterpret_cast<UPInt>(b);
-    if (ka != kb)
+    // (ECMA-262 section 11.9.6.1)
+    if (x.GetKind() != y.GetKind())
     {
-        if (ka - 2 > 2 || kb - 2 > 2)
-            return false;
-        if (ka - 2 < 2)
+        if (x.IsNumeric() && y.IsNumeric())
         {
-            if (kb == 2)
-                return static_cast<int>(b[4]) >= 0 && a[4] == b[4];
-            if (kb == 4)
+            if (x.IsUInt())
             {
-                const double d = static_cast<double>(static_cast<UInt64>(a[4]));
-                const double e = *reinterpret_cast<const double*>(pb + 0x10);
-                return d == e;
+                switch (y.GetKind())
+                {
+                case Value::kInt:
+                    if (y.AsInt() < 0)
+                        return false;
+
+                    return x.AsUInt() == static_cast<UInt32>(y.AsInt());
+                case Value::kNumber:
+                    return x.AsUInt() == y.AsNumber();
+                default:
+                    break;
+                }
+            }
+            else if(x.IsInt())
+            {
+                switch (y.GetKind())
+                {
+                case Value::kUInt:
+                    if (x.AsInt() < 0)
+                        return false;
+
+                    return static_cast<UInt32>(x.AsInt()) == y.AsUInt();
+                case Value::kNumber:
+                    return x.AsInt() == y.AsNumber();
+                default:
+                    break;
+                }
+            }
+            else if(x.IsNumber())
+            {
+                switch (y.GetKind())
+                {
+                case Value::kInt:
+                    return x.AsNumber() == y.AsInt();
+                case Value::kUInt:
+                    return x.AsNumber() == y.AsUInt();
+                default:
+                    break;
+                }
             }
         }
         else
-        {
-            const double d = kb == 2 ? static_cast<double>(static_cast<int>(b[4])) : static_cast<double>(static_cast<UInt64>(b[4]));
-            return *reinterpret_cast<const double*>(pa + 0x10) == d;
-        }
+            return false;
     }
-    switch (ka)
+
+    switch(x.GetKind())
     {
-    case 0:
+    case Value::kUndefined:
+        // (ECMA-262 section 11.9.6.2)
         return true;
-    case 1:
-        return static_cast<char>(a[4]) == static_cast<char>(b[4]);
-    case 2:
-    case 3:
-        return a[4] == b[4];
-    case 4:
-        return *reinterpret_cast<const double*>(pa + 0x10) == *reinterpret_cast<const double*>(pb + 0x10);
-    case 5:
-    case 10:
-    case 11:
-        return Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
-    case 7:
-        return a[4] == b[4] && Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18);
-    case 0x10:
-        return Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18) && Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
-    case 0x11:
-        return Sfr31Rd(pa, 0x18) == Sfr31Rd(pb, 0x18) && a[4] == b[4];
-    case 6:
-    case 8:
-    case 9:
-        return false;
+    case Value::kBoolean:
+        // (ECMA-262 section 11.9.6.12)
+        return x.AsBool() == y.AsBool();
+    case Value::kInt:
+        return x.AsInt() == y.AsInt();
+    case Value::kUInt:
+        return x.AsUInt() == y.AsUInt();
+    case Value::kNumber:
+        return x.AsNumber() == y.AsNumber();
+    case Value::kString:
+        // (ECMA-262 section 11.9.6.11)
+        return x.AsStringNode() == y.AsStringNode();
+    case Value::kNamespace:
+        return &x.AsNamespace() == &y.AsNamespace();
+    case Value::kFunction:
+    case Value::kObject:
+    case Value::kClass:
+    case Value::kThunkFunction:
+        if (x.GetObject() == y.GetObject())
+            return true;
+
+        break;
+    case Value::kThunkClosure:
+        if (x.GetClosure() == y.GetClosure())
+        {
+            if (&x.AsThunk() == &y.AsThunk())
+                return true;
+        }
+
+        break;
+    case Value::kVTableIndClosure:
+        if (x.GetClosure() == y.GetClosure())
+        {
+            if (x.GetVTableInd() == y.GetVTableInd())
+                return true;
+        }
+
+        break;
+    case Value::kVTableInd:
+        return x.GetVTableInd() == y.GetVTableInd() && &x.GetTraits() == &y.GetTraits();
+    case Value::kThunk:
+        return &x.AsThunk() == &y.AsThunk();
     default:
-        return ka <= 0x11 && Sfr31Rd(pa, 0x10) == Sfr31Rd(pb, 0x10);
+        SF_ASSERT(false);
     }
+
+    return false;
 }
 
 // Tracer ops taking the two counts of a call and pushing an object value.
