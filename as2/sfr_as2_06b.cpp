@@ -251,7 +251,8 @@ bool MovieRoot::InvokeAlias(const char* pmethodName, const InvokeAliasInfo& iai,
     else
         pthis = 0;
     Environment* penv = AvmOfMovie(GetMovieAtLevel(pMovieImpl, 0))->GetASEnvironment();
-    return GAS_Invoke(Value(iai.Function), presult, pthis, penv, numArgs, penv->GetTopIndex(), pmethodName);
+    Value        func(iai.Function);
+    return GAS_Invoke(func, presult, pthis, penv, numArgs, penv->GetTopIndex(), pmethodName);
 }
 
 // The same with the arguments pushed from pmethodArgFmt and args.
