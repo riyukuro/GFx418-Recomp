@@ -3761,7 +3761,7 @@ namespace Instances { namespace fl_display
 #pragma strict_gs_check(push, on)
     // The point (stage pixels) against the bounds or, with shapeFlag, the shapes; 3D objects map it through the
     // movie's screen-to-world state first.
-    // MS2-FUNCTIONAL: the exe calls Matrix2F::TransformByInverse out of line (COMDAT 0x142447090); ours inlines it
+    // MS2-FUNCTIONAL: the exe lays out the frame and allocates registers differently; same calls and tests
     // @0x14244f0f0
     void DisplayObject::hitTestPoint(bool& result, Value::Number x, Value::Number y, bool shapeFlag)
     {
@@ -3791,7 +3791,9 @@ namespace Instances { namespace fl_display
         {
             Matrix2F level;
             pDispObj->GetLevelMatrix(&level);
-            Render::PointF local = level.TransformByInverse(pt);
+            // out of line, as in the exe (COMDAT 0x142447090)
+            Render::PointF (Matrix2F::*inverse)(const Render::PointF&) const = &Matrix2F::TransformByInverse;
+            Render::PointF local = (level.*inverse)(pt);
             if (!(pDispObj->DisplayObjectBase::Flags & GFx::DisplayObjectBase::Mask_Scale9GridExists))
             {
                 if (!bounds.Contains(local))
