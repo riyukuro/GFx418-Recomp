@@ -168,7 +168,6 @@ void SF_STDCALL GFx_DefineEditTextLoader(LoadProcess* p, const TagInfo& tagInfo)
 
 // CSMTextSettings: the anti-aliasing settings of a text character; only "anti-alias for readability" is kept.
 // @0x14258dc80
-// MS2-FUNCTIONAL: register allocation differs in the two inlined Stream::ReadFloat reads
 void SF_STDCALL GFx_CSMTextSettings(LoadProcess* p, const TagInfo& tagInfo)
 {
     SF_UNUSED(tagInfo);

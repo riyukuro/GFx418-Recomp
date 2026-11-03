@@ -94,9 +94,9 @@ public:
         Align();
         if ((int)(DataSize - Pos) < 4)
             PopulateBuffer(4);
-        unsigned pos = Pos;
-        UInt32   val = pBuffer[pos] | (pBuffer[pos + 1] << 8) | (pBuffer[pos + 2] << 16) | (pBuffer[pos + 3] << 24);
-        Pos = pos + 4;
+        UInt32 val = (UInt32(pBuffer[Pos])) | (UInt32(pBuffer[Pos + 1]) << 8) |
+                     (UInt32(pBuffer[Pos + 2]) << 16) | (UInt32(pBuffer[Pos + 3]) << 24);
+        Pos += sizeof(UInt32);
         return val;
     }
     SF_FORCEINLINE SInt16 ReadS16() { return (SInt16)ReadU16(); } // (appended, sfh) SDK
@@ -111,9 +111,9 @@ public:
             UInt32 u;
             float  f;
         } val;
-        unsigned pos = Pos;
-        val.u = pBuffer[pos] | (pBuffer[pos + 1] << 8) | (pBuffer[pos + 2] << 16) | (pBuffer[pos + 3] << 24);
-        Pos   = pos + 4;
+        val.u = (UInt32(pBuffer[Pos])) | (UInt32(pBuffer[Pos + 1]) << 8) |
+                (UInt32(pBuffer[Pos + 2]) << 16) | (UInt32(pBuffer[Pos + 3]) << 24);
+        Pos += sizeof(float);
         return val.f;
     }
 

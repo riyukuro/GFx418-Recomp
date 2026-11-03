@@ -306,7 +306,6 @@ void PlaceObjectTag::CheckForCxForm(UPInt dataSz)
 }
 
 // @0x1425d6460
-// MS2-FUNCTIONAL: verbose parse logging only; register allocation of the inlined ReadU16 differs
 UPInt PlaceObject2Tag::ComputeDataSize(Stream* pin, unsigned movieVersion)
 {
     int tagStart = pin->Tell();
@@ -397,7 +396,6 @@ UPInt PlaceObject2Tag::ComputeDataSize(Stream* pin, unsigned movieVersion)
 }
 
 // @0x1425d6960
-// MS2-FUNCTIONAL: verbose parse logging only; register allocation of the inlined ReadU16 differs
 UPInt PlaceObject3Tag::ComputeDataSize(Stream* pin)
 {
     int tagStart = pin->Tell();
