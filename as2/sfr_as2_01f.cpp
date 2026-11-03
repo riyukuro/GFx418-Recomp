@@ -102,9 +102,16 @@ void FUN_142511b00(UPInt tracer, UPInt* now, UPInt* old);                 // Tra
 char* FUN_142516c40(UPInt tracer, void* buf, UPInt* now, UPInt* old);     // Tracer: merge, result flag
 void FUN_1425212f0(UPInt tracer, UPInt pos);                              // Tracer: per-opcode bookkeeping
 
+// Walks the Tracer's block list to the first block starting at or before cur.
+static inline UPInt* FindTracerBlock(UPInt* blk, UPInt cur)
+{
+    while (blk != NULL && cur < blk[4])
+        blk = reinterpret_cast<UPInt*>(*blk);
+    return blk;
+}
+
 // Tracer: while the current block is dead code, steps over its opcodes (operands included), entering each block that
 // starts where it lands; stops at the end of the code or when a merge fails.
-// MS2-FUNCTIONAL raw-offset model of the Tracer
 // @0x14252c640
 void FUN_14252c640(UPInt tracer, UPInt* pos)
 {
@@ -118,26 +125,30 @@ void FUN_14252c640(UPInt tracer, UPInt* pos)
         const UInt8* code = *reinterpret_cast<const UInt8**>(tracer + 0x50);
         const UInt8 op = code[*pos];
         ++*pos;
-        if (op >= 0x0c && op <= 0x1a)
+        switch (op)
+        {
+        case 0x0c: case 0x0d: case 0x0e: case 0x0f: case 0x10: case 0x11: case 0x12: case 0x13:
+        case 0x14: case 0x15: case 0x16: case 0x17: case 0x18: case 0x19: case 0x1a:
             Abc::ReadS24(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
-        else if (op == 0x1b)
+            break;
+        case 0x1b:
         {
             Abc::ReadS24(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
             int n = Abc::ReadU30(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
             for (int i = 0; i <= n; ++i)
                 Abc::ReadS24(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
+            break;
         }
-        else if (op == 0x24)
+        case 0x24:
             ++*pos;
-        else if (op == 0xef)
-        {
+            break;
+        case 0xef:
             ++*pos;
             Abc::ReadU30(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
             ++*pos;
             Abc::ReadU30(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
-        }
-        else
-        {
+            break;
+        default:
             switch (DAT_14317fea0[op].operandCount)
             {
             case 2:
@@ -146,22 +157,26 @@ void FUN_14252c640(UPInt tracer, UPInt* pos)
                 Abc::ReadU30(*reinterpret_cast<const UInt8**>(tracer + 0x50), *pos);
                 break;
             }
+            break;
         }
+        UPInt* first = *reinterpret_cast<UPInt**>(tracer + 0x110);
+        UPInt cur = *pos;
         UPInt* old = *reinterpret_cast<UPInt**>(tracer + 0x68);
-        UPInt* blk = *reinterpret_cast<UPInt**>(tracer + 0x110);
-        while (blk != NULL && *pos < blk[4])
-            blk = reinterpret_cast<UPInt*>(*blk);
-        if (blk != NULL && blk[4] == *pos)
+        UPInt* blk = FindTracerBlock(first, cur);
+        if (blk != NULL && blk[4] == cur)
         {
             *reinterpret_cast<UPInt**>(tracer + 0x68) = blk;
-            if ((*reinterpret_cast<UInt8*>(blk + 2) & 1) == 0)
-                FUN_142511b00(tracer, blk, old);
-            else if (blk != old)
+            if (*reinterpret_cast<UInt8*>(blk + 2) & 1)
             {
-                char buf[32];
-                if (*FUN_142516c40(tracer, buf, blk, old) == 0)
-                    return;
+                if (blk != old)
+                {
+                    UPInt buf;
+                    if (*FUN_142516c40(tracer, &buf, blk, old) == 0)
+                        return;
+                }
             }
+            else
+                FUN_142511b00(tracer, blk, old);
         }
     } while (*reinterpret_cast<UInt8*>(*reinterpret_cast<UPInt*>(tracer + 0x68) + 0x14) & 1);
 }
