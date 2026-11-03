@@ -1453,7 +1453,7 @@ void FUN_1400069a0(void** array, void* owner, Scaleform::UPInt capacity)
     Video01Reserve<16>(array, capacity);
 }
 
-// MS2-FUNCTIONAL: clears this array descriptor, releasing its buffer when it is dynamically sized.
+// clears this array descriptor, releasing its buffer when it is dynamically sized.
 // @0x140006bf0
 #pragma inline_depth(0)
 void FUN_140006bf0(void** array)
@@ -1461,8 +1461,10 @@ void FUN_140006bf0(void** array)
     Scaleform::UPInt* fields = reinterpret_cast<Scaleform::UPInt*>(array);
     if (0 < fields[1]) {
         if (0 < fields[2] >> 1) {
-            if (*array) Scaleform::Memory::pGlobalHeap->Free(*array);
-            *array = 0;
+            if (*array) {
+                Scaleform::Memory::pGlobalHeap->Free(*array);
+                *array = 0;
+            }
             fields[2] = 0;
         }
     } else if (0 >= fields[2]) FUN_1400051c0(array, array, 0);
