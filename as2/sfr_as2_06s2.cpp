@@ -27,6 +27,11 @@
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/gfx/gfx_sprite.h"
 
+// The progress table's lookup (exe 0x142917500, folded with another table's): the exe calls it out of line from
+// the inlined Get.
+typedef decltype(Scaleform::StringHashLH<Scaleform::GFx::AS2::MovieClipLoader::ProgressDesc>::mHash) Sfr06s2ProgressSet;
+template<> template<> Scaleform::SPInt Sfr06s2ProgressSet::BaseType::findIndexAlt<Scaleform::String>(const Scaleform::String& key) const;
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 // The script side of a button (partial local copy; the other units carry their own). The AvmButtonBase
@@ -315,7 +320,6 @@ void MovieRoot::NotifyMouseEvent(const GFx::InputEventsQueueEntry* qe, const GFx
 
 // Records the byte counts of ptarget's movie (by its absolute path) and broadcasts onLoadProgress(target, loaded,
 // total) to the loader's listeners.
-// MS2-FUNCTIONAL: the ProgressInfo lookup and add are laid out differently (ours is 804 bytes, the exe's 600).
 // @0x14296a0a0
 void MovieClipLoader::NotifyOnLoadProgress(Environment* penv, InteractiveObject* ptarget, int loadedBytes,
                                            int totalBytes)
