@@ -947,6 +947,7 @@ Math::Math(Environment* penv)
 }
 
 // @0x14291e940
+// MS2-FUNCTIONAL the exe folds the named value's FUNCTION type through ToFunction and both dtors; ours reloads it
 MouseCtorFunction::MouseCtorFunction(ASStringContext* psc, MovieRoot* proot)
     : CFunctionObject(psc, GlobalCtor)
 {
@@ -960,7 +961,8 @@ MouseCtorFunction::MouseCtorFunction(ASStringContext* psc, MovieRoot* proot)
     NameFunction::AddConstMembers(this, psc, StaticFunctionTable,
                                   PropFlags::PropFlag_ReadOnly | PropFlags::PropFlag_DontDelete | PropFlags::PropFlag_DontEnum);
     // Kept to tell a script replacement of setCursorType (HasOverloadedCursorTypeFunction).
-    SetCursorTypeFunc = Value(psc, SetCursorType).ToFunction(0);
+    Value setCursorType(psc, SetCursorType);
+    SetCursorTypeFunc = setCursorType.ToFunction(0);
     LastClickTime     = 0;
 }
 
