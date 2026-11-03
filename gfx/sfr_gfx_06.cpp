@@ -326,6 +326,14 @@ Render::TreeContainer* DisplayObjectBase::ConvertToTreeContainer()
     return newnode;
 }
 
+// Ptr::operator=(C&) (adopt without AddRef); the exe inlines it, with CharacterHandle::Release, at both
+// CreateCharacterHandle stores
+static SF_FORCEINLINE void Sfr06AdoptHandle(Ptr<CharacterHandle>& p, CharacterHandle& h)
+{
+    if (p) p->Release();
+    p.GetRawRef() = &h;
+}
+
 // @0x1425f1910
 CharacterHandle* DisplayObject::CreateCharacterHandle() const
 {
@@ -336,14 +344,14 @@ CharacterHandle* DisplayObject::CreateCharacterHandle() const
         // An unloaded object only gets a temporary handle.
         if (IsUnloaded())
         {
-            pNameHandle = *SF_HEAP_NEW(proot->GetMovieHeap())
-                CharacterHandle(ASString(GetRootStringManager(proot->pASMovieRoot)->GetEmptyStringNode()), 0, 0);
+            Sfr06AdoptHandle(pNameHandle, *SF_HEAP_NEW(proot->GetMovieHeap())
+                CharacterHandle(ASString(GetRootStringManager(proot->pASMovieRoot)->GetEmptyStringNode()), 0, 0));
             return pNameHandle;
         }
 
         ASString name(CreateNewInstanceName());
-        pNameHandle = *SF_HEAP_NEW(proot->GetMovieHeap())
-            CharacterHandle(name, pParent, const_cast<DisplayObject*>(this));
+        Sfr06AdoptHandle(pNameHandle, *SF_HEAP_NEW(proot->GetMovieHeap())
+            CharacterHandle(name, pParent, const_cast<DisplayObject*>(this)));
     }
     return pNameHandle;
 }
