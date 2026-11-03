@@ -731,9 +731,9 @@ MS2_AS2_NOGS void ColorProto::GetTransform(const FnCall& fn)
     if (!pchar)
         return;
     Render::Cxform cx = pchar->GetCxform();
-    Ptr<Object>    pobj = Pickable<Object>(SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env));
+    Ptr<Object>    pobj = *SF_HEAP_NEW(fn.Env->GetHeap()) Object(fn.Env);
     ASStringContext* psc = fn.Env->GetSC();
-#define MS2_AS2_PUT(name, expr) pobj->SetMemberRaw(psc, psc->CreateConstString(name), Value(Number(expr)), PropFlags())
+#define MS2_AS2_PUT(name, expr) pobj->SetMemberRaw(psc, psc->CreateConstString(name), Number(expr))
     MS2_AS2_PUT("ba", cx.M[0][2] * 100.0f);
     MS2_AS2_PUT("ga", cx.M[0][1] * 100.0f);
     MS2_AS2_PUT("ra", cx.M[0][0] * 100.0f);
@@ -2378,8 +2378,10 @@ void RectangleProto::OffsetPoint(const FnCall& fn)
         if (!p)
         {
             pthis->GetProperties(fn.Env->GetSC(), params);
-            params[Rectangle_X] = NumberUtil::NaN();
-            params[Rectangle_Y] = NumberUtil::NaN();
+            Number nx = NumberUtil::NaN();
+            params[Rectangle_X] = nx;
+            Number ny = NumberUtil::NaN();
+            params[Rectangle_Y] = ny;
             pthis->SetProperties(fn.Env->GetSC(), params);
             return;
         }
@@ -2389,14 +2391,18 @@ void RectangleProto::OffsetPoint(const FnCall& fn)
             (ptv[Point_X].IsUndefined() || ptv[Point_Y].IsUndefined()))
         {
             pthis->GetProperties(fn.Env->GetSC(), params);
-            params[Rectangle_X] = NumberUtil::NaN();
-            params[Rectangle_Y] = NumberUtil::NaN();
+            Number nx = NumberUtil::NaN();
+            params[Rectangle_X] = nx;
+            Number ny = NumberUtil::NaN();
+            params[Rectangle_Y] = ny;
             pthis->SetProperties(fn.Env->GetSC(), params);
             return;
         }
         pthis->GetProperties(fn.Env->GetSC(), params);
-        params[Rectangle_X] = params[Rectangle_X].ToNumber(fn.Env) + ptv[Point_X].ToNumber(fn.Env);
-        params[Rectangle_Y] = params[Rectangle_Y].ToNumber(fn.Env) + ptv[Point_Y].ToNumber(fn.Env);
+        Number x = params[Rectangle_X].ToNumber(fn.Env) + ptv[Point_X].ToNumber(fn.Env);
+        params[Rectangle_X] = x;
+        Number y = params[Rectangle_Y].ToNumber(fn.Env) + ptv[Point_Y].ToNumber(fn.Env);
+        params[Rectangle_Y] = y;
         pthis->SetProperties(fn.Env->GetSC(), params);
     }
 }
