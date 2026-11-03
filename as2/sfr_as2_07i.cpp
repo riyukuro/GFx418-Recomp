@@ -133,30 +133,31 @@ void AvmTextField::UpdateAutosizeSettings()
 
 // The bound variable's value, when it changed since last seen, becomes the field's text; false when there is no
 // such variable (the text is then emptied) or nothing changed.
-// MS2-FUNCTIONAL: the Value temporaries are released in a different order; same behavior
 // @0x142992c40
 bool AvmTextField::UpdateTextFromVariable()
 {
-    if (VariableName.GetSize() == 0)
-        return true;
-    TextField* ptf = static_cast<TextField*>(pDispObj);
-    ptf->FlagsRef() |= TextField::Flags_ForceAdvance;
-    Environment* penv = GetASEnvironment();
-    if (!penv)
-        return false;
-    Value val;
-    if (penv->GetVariable(VariableName, &val))
+    if (VariableName.GetSize() != 0)
     {
-        if (!val.IsEqual(penv, VariableVal))
+        TextField* ptf = static_cast<TextField*>(pDispObj);
+        ptf->FlagsRef() |= TextField::Flags_ForceAdvance;
+        Environment* penv = GetASEnvironment();
+        if (!penv)
+            return false;
+        Value val;
+        if (penv->GetVariable(VariableName, &val))
         {
+            if (val.IsEqual(penv, VariableVal))
+                return false;
             VariableVal = val;
             ptf->SetTextValue(val.ToString(penv).ToCStr(), false, false);
-            return true;
+        }
+        else
+        {
+            ptf->SetTextValue("", false, false);
+            return false;
         }
     }
-    else
-        ptf->SetTextValue("", false, false);
-    return false;
+    return true;
 }
 
 // The field's text goes to the bound variable.
