@@ -312,6 +312,8 @@ public:
 
     LogState*        GetLogState() const        { return pLog; }
     Log*             GetLog() const             { return pLog ? pLog->GetLog() : 0; }
+    // (appended, mt7) the SDK accessor: the bind states' file opener
+    FileOpenerBase*  GetFileOpener() const      { return (FileOpenerBase*)pBindStates->pFileOpener.GetPtr(); }
     ProgressHandler* GetProgressHandler() const { return pProgressHandler; }
     const String&    GetRelativePath() const    { return RelativePathForImports; }
     FontPackParams*  GetFontPackParams() const  { return (FontPackParams*)pBindStates->pFontPackParams.GetPtr(); }

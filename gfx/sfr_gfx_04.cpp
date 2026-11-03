@@ -1818,6 +1818,13 @@ public:
     FileOpenerBase*           pFileOpener;  // +0x20
     ImageFileHandlerRegistry* pIFHRegistry; // +0x28
     void*                     pMovie;       // +0x30 the movie of an exported image
+
+    ImageCreateInfo() {}
+    ImageCreateInfo(int type, MemoryHeap* pheap, unsigned imageUse, Resource::ResourceUse resourceUse)
+        : Type(type), pHeap(pheap), Use(imageUse), RUse(resourceUse), pLog(0), pFileOpener(0), pIFHRegistry(0),
+          pMovie(0)
+    {
+    }
 };
 
 // An image request for the images a file exports (packed at bind time).
@@ -1828,18 +1835,11 @@ struct ImageCreateExportInfo : public ImageCreateInfo
     FileTypeConstants::FileFormatType Format;        // +0x38
     const ExporterInfo*               pExporterInfo; // +0x40
     String                            ExportName;    // +0x48
+    unsigned                          TargetWidth;   // +0x50 TargetSize (ImageSize, left unset)
+    unsigned                          TargetHeight;  // +0x54
 
-    ImageCreateExportInfo()
-    {
-        Type         = Create_ExportImage;
-        pHeap        = 0;
-        Use          = 1; // wrap
-        RUse         = Resource::Use_Bitmap;
-        pLog         = 0;
-        pFileOpener  = 0;
-        pIFHRegistry = 0;
-        pMovie       = 0;
-    }
+    // The SDK ctor: the base part through ImageCreateInfo's ctor, then ExportName.
+    ImageCreateExportInfo() : ImageCreateInfo(Create_ExportImage, 0, 1 /* wrap */, Resource::Use_Bitmap) {}
     void SetStates(Log* plog, FileOpenerBase* pfileOpener, ImageFileHandlerRegistry* pregistry)
     {
         pLog         = plog;
@@ -1956,7 +1956,6 @@ struct TempBindData : public NewOverrideBase<Stat_Default_Mem>
 };
 
 // @0x1425cae20
-// MS2-FUNCTIONAL: frame layout and the inlined Begin/TempBindData allocation scheduling differ
 MovieBindProcess::MovieBindProcess(LoadStates* pls, MovieDefImpl* pdefImpl, LoaderImpl::LoadStackItem* ploadStack)
     : LoaderTask(pls, Id_MovieBind), pFrameBindData(0), GlyphTextureIdGen(ResourceId::IdType_DynFontImage),
       pBindData(pdefImpl->pBindData), pLoadStack(ploadStack)
@@ -1968,9 +1967,7 @@ MovieBindProcess::MovieBindProcess(LoadStates* pls, MovieDefImpl* pdefImpl, Load
     if (pimagePacker && !Stripped)
     {
         ImageCreateExportInfo icreateInfo;
-        icreateInfo.SetStates(pls->pLog ? pls->pLog->GetLog() : 0,
-                              (FileOpenerBase*)pls->GetBindStates()->pFileOpener.GetPtr(),
-                              pls->GetImageFileHandlerRegistry());
+        icreateInfo.SetStates(pls->GetLog(), pls->GetFileOpener(), pls->GetImageFileHandlerRegistry());
         icreateInfo.pHeap = pdefImpl->GetBindDataHeap();
 
         pImagePacker = *pimagePacker->Begin(&GlyphTextureIdGen,
