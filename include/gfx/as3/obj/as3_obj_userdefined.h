@@ -21,6 +21,10 @@ namespace Instances { namespace fl {
     public:
         // (appended, sfr22) sets up the slots the script declares. 0x1423ed7b0
         GlobalObjectScript(InstanceTraits::fl::GlobalObjectScript& t);
+        // (appended, as19) the same constructor inlined: the exe's MakeInstance 0x14241aa60 inlines it (sfr_as3_04
+        // defines it).
+        struct InlineCtorTag {};
+        __forceinline GlobalObjectScript(InstanceTraits::fl::GlobalObjectScript& t, InlineCtorTag);
         // (appended, sfr22) user-declared: the sdtor re-stores the vftable (0x1423f3470)
         virtual ~GlobalObjectScript() {}
         virtual const char* GetAS3ObjectType() const { return "Instances::fl::GlobalObjectScript"; }

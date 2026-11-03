@@ -5041,13 +5041,21 @@ Pickable<Instances::Function> Scaleform::GFx::AS3::Classes::Function::FUN_14241a
         GetVM().GetStringManager().CreateConstString("method id: ") + Scaleform::AsString(method_ind).ToCStr()));
 }
 
+// The GlobalObjectScript constructor (0x1423ed7b0 in sfr_as3_01c), inlined into FUN_14241aa60.
+__forceinline Instances::fl::GlobalObjectScript::GlobalObjectScript(InstanceTraits::fl::GlobalObjectScript& t,
+                                                                    InlineCtorTag)
+    : GlobalObject(t, GlobalObject::InlineCtorTag())
+    , Initialized(false)
+{
+    t.SetupSlotValues(GetTraits().GetFile(), GetTraits().GetScript(), *this);
+}
+
 // InstanceTraits::fl::GlobalObjectScript: a new global object of the script
-// MS2-FUNCTIONAL: the exe inlines the GlobalObjectScript constructor
 // @0x14241aa60
 Pickable<Instances::fl::GlobalObjectScript> InstanceTraits::fl::GlobalObjectScript::FUN_14241aa60()
 {
-    InstanceTraits::fl::GlobalObjectScript* self = this;
-    return Pickable<Instances::fl::GlobalObjectScript>(new(self->Alloc()) Instances::fl::GlobalObjectScript(*self));
+    return Pickable<Instances::fl::GlobalObjectScript>(
+        new(Alloc()) Instances::fl::GlobalObjectScript(*this, Instances::fl::GlobalObjectScript::InlineCtorTag()));
 }
 
 // the traits of a catch scope: one slot named by the exception variable, typed by the exception type
@@ -6693,6 +6701,8 @@ namespace Instances { namespace fl
 // MS2-PIN: ??_7Catch@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143140530
 // MS2-PIN: ??_7Date@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143142508
 // MS2-PIN: ??_7Error@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143141b80
+// MS2-PIN: ??_7GlobalObject@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143b20
+// MS2-PIN: ??_7GlobalObjectScript@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143143bf0
 // MS2-PIN: ??_7Object@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x14313f590
 // MS2-PIN: ??_7QName@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143140810
 // MS2-PIN: ??_7RegExp@fl@Instances@AS3@GFx@Scaleform@@6B@ 0x143141880

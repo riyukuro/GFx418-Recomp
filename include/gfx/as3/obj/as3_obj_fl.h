@@ -209,6 +209,12 @@ namespace Instances { namespace fl {
     public:
         // (appended, sfr22) 0x1423ed230
         GlobalObject(InstanceTraits::Traits& t);
+        // (appended, as19) the same constructor inlined: the exe's MakeInstance 0x14241aa60 inlines it.
+        struct InlineCtorTag {};
+        __forceinline GlobalObject(InstanceTraits::Traits& t, InlineCtorTag)
+            : fl::Object(t)
+        {
+        }
         // (appended, sfr22) user-declared: the sdtors re-store the vftable (0x1423f32b0)
         virtual ~GlobalObject() {}
         // (appended, sfr19)
