@@ -1480,7 +1480,8 @@ void FUN_140006bf0(void** array)
 }
 #pragma inline_depth()
 
-// MS2-FUNCTIONAL: obtains a 0x400-byte value page, records it, and updates the current stack cursors.
+// Obtains a 0x400-byte value page, records it, and updates the current stack cursors. The page array's
+// data pointer is read before its new size is stored, as in the exe.
 // @0x140006a40
 template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>::PushPage()
 {
@@ -1498,8 +1499,12 @@ template<> void Scaleform::GFx::AS2::PagedStack<Scaleform::GFx::AS2::Value, 32>:
     if (page) {
         // stack[4] is the page array's data pointer (size stack[5], capacity stack[6]), not the array itself
         Scaleform::UPInt size = stack[5] + 1;
-        Video01ResizePointers(reinterpret_cast<void**>(stack + 4), size);
+        void** array = reinterpret_cast<void**>(stack + 4);
+        Video01ArrayData* data = reinterpret_cast<Video01ArrayData*>(array);
+        if (size < data->Size) { if (size < data->Capacity >> 1) FUN_1400050c0(array, array, size); }
+        else if (size >= data->Capacity) FUN_1400050c0(array, array, size + (size >> 2));
         void** slot = reinterpret_cast<void**>(stack[4]) + size - 1;
+        data->Size = size;
         if (slot) *slot = page;
         stack[1] = reinterpret_cast<Scaleform::UPInt>(page);
         stack[0] = reinterpret_cast<Scaleform::UPInt>(page);
