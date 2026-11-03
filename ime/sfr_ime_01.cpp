@@ -2641,8 +2641,10 @@ unsigned long long FUN_1423daf30(void* raw, int offset)
 
 // Enables or disables the window IME (IACE_DEFAULT). For Korean the sentence mode is cleared; for other languages the
 // native-mode bit and phrase prediction follow the flag. Reviewed against the exe, same behaviour.
-// MS2-FUNCTIONAL: 7 bytes short; the exe does not keep the zero-extended flag across calls and does not hoist the
-// shared ImmGetConversionStatus call (it calls it in both branches); register allocation otherwise
+// enabled is 0 or 1, so enabled << 3 is IME_SMODE_PHRASEPREDICT; the barrier keeps cl from hoisting the
+// ImmGetConversionStatus call that both branches make, as the exe does.
+// MS2-FUNCTIONAL: same length; the flag and the context are in each other's registers (rsi/rbp), and the shift comes
+// before the movzx
 // @0x1423cfbe0
 void FUN_1423cfbe0(void* raw, unsigned char enabled)
 {
@@ -2660,12 +2662,13 @@ void FUN_1423cfbe0(void* raw, unsigned char enabled)
     DWORD conversion;
     DWORD sentence;
     if (korean) {
+        _ReadWriteBarrier();
         cx18_ImmGetConversionStatus(context, &conversion, &sentence);
         cx18_ImmSetConversionStatus(context, conversion, IME_SMODE_NONE);
     } else {
         cx18_ImmGetConversionStatus(context, &conversion, &sentence);
-        conversion = enabled ? (conversion | IME_CMODE_NATIVE) : (conversion & ~IME_CMODE_NATIVE);
-        sentence = enabled ? IME_SMODE_PHRASEPREDICT : IME_SMODE_NONE;
+        conversion = !enabled ? (conversion & ~IME_CMODE_NATIVE) : (conversion | IME_CMODE_NATIVE);
+        sentence = static_cast<unsigned char>(enabled << 3);
         cx18_ImmSetConversionStatus(context, conversion, sentence);
     }
     cx18_ImmReleaseContext(*reinterpret_cast<HWND*>(self + 0x28), oldContext);
