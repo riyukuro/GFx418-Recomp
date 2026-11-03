@@ -6534,42 +6534,40 @@ void Sfr31ExecClassEntry(UPInt vmAddr, UPInt link, UInt32 idx)
 // ---- batch 62
 // 3x4 matrix variant of SetDisplayMatrix (movie-clip-like kinds only): the matrix goes to the object with its translation in twips and
 // the 3D position, z scale and the two rotations are re-derived from it.
-// MS2-FUNCTIONAL 0x1425278d0: raw-offset model; codegen differs from the exe
+// SDK Matrix3x4<T>::IsValid (Render_Matrix3x4.h): the SF_ISFINITE chain over the twelve elements, unrolled as the SDK writes it.
+static SF_INLINE bool Sfr31FiniteF(float v) { return v >= -FLT_MAX && v <= FLT_MAX; }
+static SF_INLINE bool Sfr31Matrix3FIsValid(const Render::Matrix3F& m)
+{
+    return Sfr31FiniteF(m.M[0][0]) && Sfr31FiniteF(m.M[0][1]) && Sfr31FiniteF(m.M[0][2]) && Sfr31FiniteF(m.M[0][3])
+        && Sfr31FiniteF(m.M[1][0]) && Sfr31FiniteF(m.M[1][1]) && Sfr31FiniteF(m.M[1][2]) && Sfr31FiniteF(m.M[1][3])
+        && Sfr31FiniteF(m.M[2][0]) && Sfr31FiniteF(m.M[2][1]) && Sfr31FiniteF(m.M[2][2]) && Sfr31FiniteF(m.M[2][3]);
+}
+// SDK: AS3ValueObjectInterface::SetMatrix3D (AS3_GFxValueImpl.cpp).
 // @0x1425278d0
 bool Sfr31SetDisplayMatrix3D(UPInt self, UPInt valueObj, const float* m)
 {
     (void)self;
     const UPInt info = Sfr31Rd(valueObj, 0x20);
-    if (*reinterpret_cast<const SInt32*>(info + 0x70) - 0x11u >= 0xc || (~(*reinterpret_cast<const UInt8*>(info + 0x68) >> 5) & 1) == 0)
+    if (!((*reinterpret_cast<const SInt32*>(info + 0x70) - 0x11U < 0xc) && ((static_cast<UInt8>(~static_cast<UInt8>(*reinterpret_cast<const UInt8*>(info + 0x68) >> 5)) & 1) != 0)))
         return false;
-    DisplayObjectBase* obj = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(valueObj, 0x58));
-    for (int i = 0; i < 12; ++i)
-        if (!(m[i] >= -3.40282346e38f && m[i] <= 3.40282346e38f))
-            return false;
-    float tm[12] = {m[0], m[1], m[2], m[3] * 20.0f, m[4], m[5], m[6], m[7] * 20.0f, m[8], m[9], m[10], m[11] * 20.0f};
-    typedef void (*Fn)(DisplayObjectBase*, const float*);
-    reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(obj), 0), 0x28))(obj, tm);
+    DisplayObjectBase* pd = reinterpret_cast<DisplayObjectBase*>(Sfr31Rd(valueObj, 0x58));
+    const Render::Matrix3F& mat = *reinterpret_cast<const Render::Matrix3F*>(m);
+    if (!Sfr31Matrix3FIsValid(mat))
+        return false;
+    Render::Matrix3F tm = mat;
+    tm.Tx() = PixelsToTwips(tm.Tx());
+    tm.Ty() = PixelsToTwips(tm.Ty());
+    tm.Tz() = PixelsToTwips(tm.Tz());
+    pd->SetMatrix3D(tm);
     DisplayObjectBase::GeomDataType gd;
-    obj->GetGeomData(gd);
-    gd.Z = m[11];
-    gd.ZScale = static_cast<double>(sqrtf(m[2] * m[2] + m[6] * m[6] + m[10] * m[10])) * 100.0;
-    const float inv0 = 1.0f / sqrtf(m[0] * m[0] + m[4] * m[4] + m[8] * m[8]);
-    const float inv2 = 1.0f / sqrtf(m[2] * m[2] + m[6] * m[6] + m[10] * m[10]);
+    pd->GetGeomData(gd);
+    gd.Z = mat.Tz();
+    gd.ZScale = mat.GetZScale() * (Double)100.;
     float xr, yr;
-    const float s = m[4] * inv0;
-    if (s > 0.998f || s < -0.998f)
-    {
-        xr = 0.0f;
-        yr = atan2f(m[2] * inv2, m[10] * inv2);
-    }
-    else
-    {
-        xr = atan2f(-(m[6] * inv2), m[5] * (1.0f / sqrtf(m[1] * m[1] + m[5] * m[5] + m[9] * m[9])));
-        yr = atan2f(-(m[8] * inv0), m[0] * inv0);
-    }
-    gd.XRotation = (static_cast<double>(xr) * 180.0) / 3.141592653589793;
-    gd.YRotation = (static_cast<double>(yr) * 180.0) / 3.141592653589793;
-    obj->SetGeomData(gd);
+    mat.GetRotation(&xr, &yr, NULL);
+    gd.XRotation = SF_RADTODEG(xr);
+    gd.YRotation = SF_RADTODEG(yr);
+    pd->SetGeomData(gd);
     return true;
 }
 // ---- batch 63
