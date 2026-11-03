@@ -207,7 +207,7 @@ void XmlProto::GetBytesTotal(const FnCall& fn)
 
 // load(url): queues the load; with the default onData the file is parsed into this, otherwise onData gets the
 // text.
-// MS2-FUNCTIONAL: register allocation (rsi vs r14)
+// MS2-FUNCTIONAL: register allocation (the onData and ignoreWhite names load fn.Env into rcx, the exe into rax)
 // @0x14299fcd0
 void XmlProto::Load(const FnCall& fn)
 {
@@ -221,16 +221,23 @@ void XmlProto::Load(const FnCall& fn)
         fn.Result->SetBool(false);
         return;
     }
-    ASString url = XmlArg(fn, 0).ToString(fn.Env);
+    ASString url = ArgCopy(&fn, 0)->ToString(fn.Env);
     Value    ondata;
     pthis->GetMember(fn.Env, XmlConstString(fn.Env, "onData"), &ondata);
-    FunctionRef handler = ondata.ToFunction(fn.Env);
+    FunctionRef handler = ondata.ToFunction_Call(fn.Env);
     if (handler->IsCFunction() && handler->IsCFunction() &&
         static_cast<CFunctionObject*>(handler.GetObjectPtr())->pFunction == XmlProto::DefaultOnData)
     {
         MovieImpl*              pmovieroot = fn.Env->GetMovieImpl();
-        Ptr<XML::ObjectManager> memMgr     = GetXmlObjectManager(fn.Env, pmovieroot);
-        XML::SupportBase*       psupport   = GetXmlSupport(pmovieroot);
+        Ptr<XML::ObjectManager> memMgr;
+        if (!pmovieroot->pXMLObjectManager)
+        {
+            memMgr = *SF_HEAP_NEW(fn.Env->GetHeap()) XML::ObjectManager(pmovieroot);
+            pmovieroot->pXMLObjectManager = static_cast<ExternalLibPtr*>(memMgr.GetPtr());
+        }
+        else
+            memMgr = static_cast<XML::ObjectManager*>(static_cast<ExternalLibPtr*>(pmovieroot->pXMLObjectManager));
+        XML::SupportBase* psupport = GetXmlSupport(pmovieroot);
         pthis->BytesLoadedCurrent = 0;
         Value ignoreWhite;
         pthis->GetMember(fn.Env, XmlConstString(fn.Env, "ignoreWhite"), &ignoreWhite);
