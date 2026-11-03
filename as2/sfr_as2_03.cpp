@@ -692,13 +692,13 @@ PointProto::PointProto(ASStringContext* psc, Object* pprototype, const FunctionR
     SetMemberRaw(psc, psc->CreateConstString("length"), Value(0), PropFlags(PropFlags::PropFlag_DontDelete));
 }
 
-// MS2-FUNCTIONAL cl keeps penv in rdi; the exe keeps it in rbx and still saves rdi
 // @0x142920000
 RectangleObject::RectangleObject(Environment* penv)
     : Object(penv)
 {
-    ASStringContext* psc = penv->GetSC();
-    Set__proto__(psc, penv->GetPrototype(ASBuiltin_Rectangle));
+    ASStringContext* psc    = penv->GetSC();
+    Object*          pproto = penv->GetPrototype(ASBuiltin_Rectangle);
+    Set__proto__(psc, pproto);
     SetProperties(psc, Rectangle_DefaultParams);
 }
 
