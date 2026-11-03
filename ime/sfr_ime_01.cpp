@@ -2497,7 +2497,6 @@ void FUN_1423ce4f0(void* self)
 
 // Selects candidate `key`: through the IMM candidate list (NI_SELECTCANDIDATESTR, NI_OPENCANDIDATE,
 // NI_SETCANDIDATE_PAGESTART), or for five values of +0x98 by sending the digit key ('1' + key) with SendInput.
-// MS2-FUNCTIONAL: the exe keeps key in esi and self in rdi (swapped here); same instructions
 // @0x1423d53e0
 void FUN_1423d53e0(void* self, int key)
 {
@@ -2505,7 +2504,7 @@ void FUN_1423d53e0(void* self, int key)
     int state = *reinterpret_cast<int*>(bytes + 0x98);
     if (state != 0x110000 && state != 0x210000 && state != 0xc10000 &&
         state != 0x60000 && state != 0xd10000) {
-        HIMC context = cx18_ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
+        HIMC context = ImmGetContext(*reinterpret_cast<HWND*>(bytes + 0x28));
         cx18_ImmNotifyIME(context, 0x12, 0, *reinterpret_cast<int*>(bytes + 0x70) + key);
         cx18_ImmNotifyIME(context, 0x11, 0, 0);
         cx18_ImmNotifyIME(context, 0x16, 0, *reinterpret_cast<DWORD*>(bytes + 0x70));
