@@ -3835,14 +3835,13 @@ int FUN_1423d43b0(void* raw)
     return *reinterpret_cast<unsigned*>(self + 0x98) != 0x1000000;
 }
 
-// MS2-FUNCTIONAL: WM_IME_STARTCOMPOSITION of the Vista IME object (vtbl 0x14313a450 slot 11; the XP twin is
+// WM_IME_STARTCOMPOSITION of the Vista IME object (vtbl 0x14313a450 slot 11; the XP twin is
 // 0x1423d43b0, whose +0x5a0/+0x5a4 fields lie past this 0xe8-byte object). Starts the composition, stores the
 // layout and its at-caret flag (+0xdc, forced by the modes), and moves the IMM composition and candidate windows
-// off screen, or for mode 0x1000000 to the cursor rect the owner (vtbl+0x190) maps. True unless mode 0x1000000.
-// Left: register choice. The exe holds 0 in r14 from the at-caret store to the final setne r14b (an int-style
-// return), so its context lives in r15 and it saves one more register.
+// off screen, or for mode 0x1000000 to the cursor rect the owner (vtbl+0x190) maps. Returns 1 unless mode 0x1000000
+// (an int: the exe holds 0 in r14 from the at-caret store to the final setne r14b).
 // @0x1423d05a0
-bool FUN_1423d05a0(void* raw)
+int FUN_1423d05a0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     Scaleform::Ptr<Scaleform::GFx::IMEManagerBase> ime =
