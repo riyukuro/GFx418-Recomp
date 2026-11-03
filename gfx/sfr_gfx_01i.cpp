@@ -2020,38 +2020,39 @@ SF_NOINLINE void MovieImpl::FinalizeProcessFocusKey(ProcessFocusKeyInfo* pfocusI
 }
 
 // @0x142570d80
-// MS2-FUNCTIONAL: register allocation of the inlined FillTabableArray and focus group lookup
 void MovieImpl::InitFocusKeyInfo(ProcessFocusKeyInfo* pfocusInfo, const InputEventsQueueEntry::KeyEntry& keyEntry,
                                  bool inclFocusEnabled, FocusGroupDescr* pfocusGroup)
 {
-    if (pfocusInfo->Initialized)
-        return;
-    FocusGroupDescr& focusGroup = pfocusGroup ? *pfocusGroup : FocusGroups[FocusGroupIndexes[keyEntry.KeyboardIndex]];
-    pfocusInfo->pFocusGroup      = &focusGroup;
-    pfocusInfo->PrevKeyCode      = focusGroup.LastFocusKeyCode;
-    pfocusInfo->PrevFocusRect    = focusGroup.LastFocusedRect;
-    pfocusInfo->InclFocusEnabled = inclFocusEnabled;
-    pfocusInfo->ManualFocus      = false;
-    pfocusInfo->KeyboardIndex    = keyEntry.KeyboardIndex;
-    pfocusInfo->KeyCode          = keyEntry.Code;
-    pfocusInfo->KeysState        = keyEntry.KeysState;
-
-    FillTabableArray(pfocusInfo);
-
-    pfocusInfo->CurFocusIdx = -1;
-    pfocusInfo->CurFocused  = focusGroup.LastFocused;
-    if (pfocusInfo->CurFocused)
+    if (!pfocusInfo->Initialized)
     {
-        for (UPInt i = 0, n = focusGroup.TabableArray.GetSize(); i < n; ++i)
+        FocusGroupDescr& focusGroup = (!pfocusGroup) ? GetFocusGroup(keyEntry.KeyboardIndex) : *pfocusGroup;
+        pfocusInfo->pFocusGroup      = &focusGroup;
+        pfocusInfo->PrevKeyCode      = focusGroup.LastFocusKeyCode;
+        pfocusInfo->PrevFocusRect    = focusGroup.LastFocusedRect;
+        pfocusInfo->InclFocusEnabled = inclFocusEnabled;
+        pfocusInfo->ManualFocus      = false;
+        pfocusInfo->KeyboardIndex    = keyEntry.KeyboardIndex;
+        pfocusInfo->KeyCode          = keyEntry.Code;
+        pfocusInfo->KeysState        = keyEntry.KeysState;
+
+        FillTabableArray(pfocusInfo);
+
+        pfocusInfo->CurFocusIdx = -1;
+        pfocusInfo->CurFocused  = focusGroup.LastFocused;
+        if (pfocusInfo->CurFocused)
         {
-            if (focusGroup.TabableArray[i] == pfocusInfo->CurFocused)
+            // The index of the focused character.
+            for (UPInt i = 0; i < focusGroup.TabableArray.GetSize(); ++i)
             {
-                pfocusInfo->CurFocusIdx = (int)i;
-                break;
+                if (focusGroup.TabableArray[i] == pfocusInfo->CurFocused)
+                {
+                    pfocusInfo->CurFocusIdx = (int)i;
+                    break;
+                }
             }
         }
+        pfocusInfo->Initialized = true;
     }
-    pfocusInfo->Initialized = true;
 }
 
 // The focus search of the arrow keys measures in whole pixels.
