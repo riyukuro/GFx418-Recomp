@@ -6568,8 +6568,9 @@ void VM::OutputError(const Value& e)
 
 // VMAbcFile::RegisterScrips: the traits and global object of each script of the file; the global objects are listed
 // in the VM (unowned) and kept in the file's set, and the last script is run when to_execute.
-// MS2-FUNCTIONAL the VM's global object list and the file's set are reached through casts (the shared header
-// models them as SPtr array and raw table pointer)
+// The VM's global object list and the file's set are reached through casts (the shared header models them as an
+// SPtr array and a raw table pointer). The instance traits are assigned to an empty SPtr (Pick), which gives the
+// exe's null test of the new object (cmovne).
 // @0x142521390
 bool VMAbcFile::RegisterScrips(bool to_execute)
 {
@@ -6580,7 +6581,8 @@ bool VMAbcFile::RegisterScrips(bool to_execute)
     for (UPInt i = 0; i < n; ++i)
     {
         const Abc::ScriptInfo& script = *file.Scripts.Info[i];
-        SPtr<InstanceTraits::fl::GlobalObjectScript> itr = Pickable<InstanceTraits::fl::GlobalObjectScript>(
+        SPtr<InstanceTraits::fl::GlobalObjectScript> itr;
+        itr = Pickable<InstanceTraits::fl::GlobalObjectScript>(
             SF_HEAP_NEW(vm.GetMemoryHeap()) InstanceTraits::fl::GlobalObjectScript(*this, vm, script));
         if (vm.IsException())
             return false;
