@@ -223,26 +223,27 @@ void MovieRoot::ActionQueueType::AddToFreeList(ActionEntry* pentry)
 }
 
 // Runs the frame: the class constructors still queued, the two highest action levels, then queues the frame
-// scripts of the play list and moves the manual actions behind them.
-// MS2-FUNCTIONAL: same calls in the same order; the exe saves its registers in another frame layout.
+// scripts of the play list and moves the manual actions behind them. The root is read before the nextFrame test: cl
+// sinks the loads past it, but nextFrame stays live over them, which gives the exe's r8 and its rbx save in the prolog.
 // @0x1424eb260
 void FrameCounter::AdvanceFrame(bool nextFrame, float framePos)
 {
     SF_UNUSED(framePos);
-    if (!nextFrame)
-        return;
     MovieRoot* proot = static_cast<MovieRoot*>(GetMovieImpl()->pASMovieRoot);
-    if (proot->ASFramesToExecute)
+    if (nextFrame)
     {
-        proot->pAVM->ExecuteCode(proot->ASFramesToExecute);
-        if (proot->pAVM->HandleException)
-            proot->pAVM->HandleException = false;
-        proot->ASFramesToExecute = 0;
+        if (proot->ASFramesToExecute)
+        {
+            proot->pAVM->ExecuteCode(proot->ASFramesToExecute);
+            if (proot->pAVM->HandleException)
+                proot->pAVM->HandleException = false;
+            proot->ASFramesToExecute = 0;
+        }
+        proot->ExecuteActionQueue(MovieRoot::AL_Highest);
+        proot->ExecuteActionQueue(MovieRoot::AL_High);
+        QueueFrameActions();
+        proot->RequeueActionQueue(MovieRoot::AL_Manual, MovieRoot::AL_Frame);
     }
-    proot->ExecuteActionQueue(MovieRoot::AL_Highest);
-    proot->ExecuteActionQueue(MovieRoot::AL_High);
-    QueueFrameActions();
-    proot->RequeueActionQueue(MovieRoot::AL_Manual, MovieRoot::AL_Frame);
 }
 
 // Not exe code: the stage builds its frame counter inline (sfr_as3_18), but FrameCounter's deleting destructor lies in
