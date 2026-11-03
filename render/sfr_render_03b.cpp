@@ -9,6 +9,15 @@
 
 #include "ms2/scaleform/kernel/sf_std.h"
 #include "ms2/scaleform/kernel/sf_alg.h"
+#include "ms2/scaleform/include/render/text_core.h"
+
+namespace Scaleform {
+// The format run array is freed out of line (0x142593f60; instantiated in sfr_render_01c).
+template<> ArrayDataBase<RangeData<Ptr<Render::Text::TextFormat> >,
+                         AllocatorLH<RangeData<Ptr<Render::Text::TextFormat> >, 2>,
+                         ArrayDefaultPolicy>::~ArrayDataBase();
+}
+
 #include "ms2/scaleform/include/render/text_docview.h"
 #include "ms2/scaleform/include/render/text_wwhelper.h"
 
