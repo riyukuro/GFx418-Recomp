@@ -4077,24 +4077,36 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
 {
     auto* words = static_cast<unsigned long long*>(raw);
     auto* bytes = static_cast<unsigned char*>(raw);
-    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
+    // base part (vtable 0x14313a258, as in FUN_1423cdbb0)
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a238 + 4);
     words[1] = 0;
-    for (unsigned slot : { 2u, 3u, 4u, 0xfu }) new (words + slot) Scaleform::String();
+    new (words + 2) Scaleform::String();
+    new (words + 3) Scaleform::String();
+    new (words + 4) Scaleform::String();
     words[5] = reinterpret_cast<unsigned long long>(userData);
-    for (unsigned slot : { 7u, 8u, 9u, 10u, 0x16u, 0x17u, 0x18u }) words[slot] = 0;
+    words[7] = 0;
+    words[8] = 0;
+    words[9] = 0;
+    words[10] = 0;
+    new (words + 0xf) Scaleform::String();
     words[0x15] = reinterpret_cast<unsigned long long>(owner);
-
     auto* child = static_cast<unsigned long long*>(Scaleform::Memory::Alloc(0x870));
     if (child) {
         FUN_1423d9430(child, raw);
         child[0] = reinterpret_cast<unsigned long long>(DAT_14313a238);
-    }
+    } else
+        child = nullptr;
     words[6] = reinterpret_cast<unsigned long long>(child);
     FUN_1423d8e80(words + 7, child);
-
+    // Left: the exe forms rdi = +0xb0 before the +0x80 store and clears the array's Data first
+    auto* text = reinterpret_cast<Ime01TextArrayLH*>(words + 0x16);
     bytes[0x80] = 1;
+
+    // derived part
     *reinterpret_cast<unsigned long long*>(bytes + 0x84) = 0x14;
+    words[0] = reinterpret_cast<unsigned long long>(DAT_14313a5f8);
     *reinterpret_cast<unsigned*>(bytes + 0x8c) = 0x00ffffff;
+    new (text) Ime01TextArrayLH();
     words[0xb] = 0;
     *reinterpret_cast<unsigned*>(bytes + 0xd4) = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x60) = 0;
@@ -4102,19 +4114,19 @@ void* FUN_1423d18b0(void* raw, void* owner, void* userData)
     words[0xb6] = 0;
     *reinterpret_cast<unsigned*>(bytes + 0x5a0) = 1;
     bytes[0x5bc] = 0;
-
-    // both text buffers are resized to 0x100 wchar_ts: empty, so each reserves 0x140 (the grow step) through its
-    // AllocatorLH Reserve (the owner's heap), +0xb0 first. The buffers are not cleared.
-    FUN_1423d5340(words + 0x16, words + 0x16, 0x140);
-    words[0x17] = 0x100;
-    FUN_1423d1380(words + 8, words + 8, 0x140);
-    words[9] = 0x100;
+    // both text buffers are resized to 0x100 wchar_ts, +0xb0 first; the buffers are not cleared
+    text->ResizeNoConstruct(text, 0x100);
+    reinterpret_cast<Ime01WideArrayLH*>(words + 8)->ResizeNoConstruct(words + 8, 0x100);
 
     // the key -> {key, bopomofo, class} records at +0xd8, indexed by tolower(key) - 0x20
-    for (const auto& rec : cx18_ZhuyinKeys) {
-        const int index = tolower(static_cast<signed char>(rec[0])) - 0x20;
-        for (int k = 0; k < 3; ++k)
-            *reinterpret_cast<unsigned*>(bytes + 0xd8 + 12 * index + 4 * k) = rec[k];
+    auto* keyTable = reinterpret_cast<unsigned (*)[3]>(raw);
+    for (long long i = 0; i < 41; ++i) {
+        const unsigned* rec = cx18_ZhuyinKeys[i];
+        long long k = 0;
+        for (const unsigned* src = rec; k < 3; ++k) {
+            const int index = tolower(static_cast<signed char>(rec[0])) - 0x20;
+            keyTable[index + 0x12LL][k] = *src++;
+        }
     }
     return raw;
 }
