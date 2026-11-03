@@ -35,9 +35,6 @@ extern const void* const DAT_1431b8db0[];
 extern const void* const DAT_1431b8f18[];
 extern const void* const DAT_1431b8f30[];
 extern "C" const void* const DAT_1431b8e30[];
-// LoadStates / URLBuilder entry points OpenUrl uses (their headers are not shared with this unit).
-void* FUN_142636ed0(void* self, void* loader, void* states, void* bindStates);   // LoadStates::LoadStates
-void  FUN_142638170(const void* self, Scaleform::String* ppath, const void* loc); // LoadStates::BuildURL
 void** FUN_1425b38b0(const void* stateBag, void** ret);                          // StateBag::GetLog (Ptr<Log> by value)
 
 CriMvSoundInterface::~CriMvSoundInterface() {}
@@ -66,6 +63,17 @@ void* DeleteCriMvSystemTimerInterface(CriMvSystemTimerInterface* p, unsigned fla
 }
 
 namespace Scaleform { namespace GFx {
+
+// ---- LoadStates / URLBuilder entry points OpenUrl uses (gfx_loaderimpl.h is not shared with this unit)
+class LoaderImpl;
+class MovieDefBindStates;
+class URLBuilder { public: struct LocationInfo; };
+class LoadStates
+{
+public:
+    LoadStates(LoaderImpl* pl, StateBag* pstates, MovieDefBindStates* pbindStates);
+    void BuildURL(String* pdest, const URLBuilder::LocationInfo& loc) const;
+};
 
 // ---- loader pieces used by ReadDefineVideoStreamTag (the loader headers are not shared yet; only what is touched)
 
@@ -129,7 +137,7 @@ template<class T>
 class LogBase
 {
 public:
-    void LogParse(const char* pfmt, ...);
+    void LogParse(const char* pfmt, ...) const;
 };
 
 class LoadProcess
@@ -994,13 +1002,13 @@ void VideoProviderNetStream::OpenUrl(const char* url, ASVM& asvm)
     UByte* stateBagImpl = *reinterpret_cast<UByte**>(proot + 0x80);
     void* pls = SF_ALLOC(0xa0, Stat_Default_Mem);
     if (pls)
-        pls = FUN_142636ed0(pls, loaderImpl, stateBagImpl ? stateBagImpl + 0x10 : NULL, NULL);
+        pls = new (pls) LoadStates(static_cast<LoaderImpl*>(loaderImpl), reinterpret_cast<StateBag*>(stateBagImpl ? stateBagImpl + 0x10 : NULL), NULL);
 
     String level0Path;
     reinterpret_cast<MovieImpl*>(proot)->GetMainMoviePath(&level0Path);
     OpenUrlLocationInfo loc = { 0, String(url), level0Path };   // URLBuilder::File_Regular
     String fileName;
-    FUN_142638170(pls, &fileName, &loc);
+    static_cast<LoadStates*>(pls)->BuildURL(&fileName, reinterpret_cast<const URLBuilder::LocationInfo&>(loc));
 
     // The main timeline's handle, when it is a sprite.
     DisplayObject* pobj = *reinterpret_cast<DisplayObject**>(*reinterpret_cast<UByte**>(movieRoot + 0x158) + 0x110);
