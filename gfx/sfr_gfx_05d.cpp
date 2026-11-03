@@ -553,10 +553,16 @@ CharacterDef::CharacterDefType StaticTextCharacter::GetType() const
     return CharacterDef::StaticText;
 }
 
+// Matrix2x4::TransformByInverse as the exe inlines it here: the point goes through the reference Invert returns
+static inline Render::PointF Sfr05dTransformByInverse(const Render::Matrix2F& mat, const Render::PointF& p)
+{
+    return Render::Matrix2F(mat).Invert().Transform(p);
+}
+
 // The character under (x, y): the field containing the point, else the nearest field within closedist (taking the
 // point on its box); then the line and the glyph at that point.
 // @0x1425e1840
-// MS2-FUNCTIONAL: the exe calls Matrix2x4::Invert out of line on a copy and maps through the result
+// MS2-FUNCTIONAL: the exe's final lea takes the line's text position as its base register, ours baseIdx (2 bytes)
 int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist) const
 {
     StaticTextCharacter* pclosest = 0;
@@ -568,7 +574,7 @@ int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist
     for (UPInt i = 0; i < StaticTextCharRefs.GetSize(); i++)
     {
         StaticTextCharacter* pstc = StaticTextCharRefs[i].pChar;
-        Render::PointF       ip   = pstc->GetMatrix().TransformByInverse(pt);
+        Render::PointF       ip   = Sfr05dTransformByInverse(pstc->GetMatrix(), pt);
         RectF&               box  = pstc->TextGlyphRecords.Geom.VisibleRect;
         if (box.Contains(ip))
         {
@@ -606,8 +612,8 @@ int StaticTextSnapshotData::HitTestTextNearPos(float x, float y, float closedist
         {
             float    xInLine = fixedX - lineOffX;
             int      xoffset = 0;
-            unsigned j       = 0;
             LineBuffer::GlyphIterator git = line.Begin();
+            unsigned j       = 0;
             for (; !git.IsFinished(); ++git)
             {
                 const LineBuffer::GlyphEntry& ge = git.GetGlyph();
