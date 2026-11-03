@@ -171,7 +171,7 @@ Sprite* MovieRoot::CreateSprite(TimelineDef* ptimelineDef, MovieDefImpl* pdefImp
     ccinfo.pBindDefImpl = pdefImpl;
     ccinfo.pResource    = 0;
     Sprite* psprite     = reinterpret_cast<Sprite*>(
-        pASSupport->CreateCharacterInstance(pMovieImpl, ccinfo, parent, id, CharacterDef::Sprite));
+        pASSupport->CreateCharacterInstance(GetMovieImpl(), ccinfo, parent, id, CharacterDef::Sprite));
     psprite->SetLoadedSeparately(loadedSeparately);
     return psprite;
 }
