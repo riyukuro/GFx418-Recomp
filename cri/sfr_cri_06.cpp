@@ -1613,67 +1613,65 @@ void m2vhdec_AnalyUd(longlong arg1, void *arg2, int arg3)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: written as a bit reader that peeks 24 bits per byte step (VS2008 build, our toolset differs).
+// What is left is register choice: the exe keeps p in rbx and pos in edi, ours the other way round.
 // @0x140058c50
 longlong parseUdsc(cri_any cri_p0, cri_any cri_p1)
 {
   longlong arg1 = cri_p0;
   ulonglong arg2 = cri_p1;
-  byte b_v1;
-  uint u_v2;
-  cri_u1 *pu_v3;
-  cri_u1 *pu_v4;
-  int i_v5;
-  uint u_v6;
-  uint u_v7;
-  int i_v8;
-  int i_v9;
+  cri_u1 *p;
+  int pos;
+  uint buf;
+  uint nxt;
+  uint code;
+  int sh;
+  int n;
   
   *(int *)((char *)arg1 + 0xcac) = *(int *)((char *)arg1 + 0xcac) + 1;
   if (((*(int *)((char *)arg1 + 0x708) != 0) && (*(int *)((char *)arg1 + 0x708) != 0x20)) ||
      (*(int *)((char *)arg1 + 0x70c) != 0)) {
     *(int *)((char *)arg1 + 0xd0c) = *(int *)((char *)arg1 + 0xd0c) + 1;
   }
-  pu_v3 = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
-  i_v5 = (int)arg2 * 8 + (int)pu_v3 * -8;
-  b_v1 = (byte)i_v5;
-  u_v6 = CONCAT31(CONCAT21(CONCAT11(*pu_v3,pu_v3[1]),pu_v3[2]),pu_v3[3]) << (b_v1 & 0x1f);
-  u_v7 = CONCAT31(CONCAT21(CONCAT11(pu_v3[4],pu_v3[5]),pu_v3[6]),pu_v3[7]);
-  if (i_v5 == 0) {
-    *(uint *)((char *)arg1 + 0x230) = u_v6;
+  p = (cri_u1 *)(arg2 & 0xfffffffffffffffc);
+  pos = (int)arg2 * 8 - ((int)p << 3);
+  buf = CRI06_BE32(p[0],p[1],p[2],p[3]) << pos;
+  nxt = CRI06_BE32(p[4],p[5],p[6],p[7]);
+  if (pos != 0) {
+    *(uint *)((char *)arg1 + 0x230) = nxt >> (32 - pos) | buf;
+    nxt = nxt << pos;
   }
   else {
-    u_v2 = u_v7 >> (0x20 - b_v1 & 0x1f);
-    u_v7 = u_v7 << (b_v1 & 0x1f);
-    *(uint *)((char *)arg1 + 0x230) = u_v2 | u_v6;
+    *(uint *)((char *)arg1 + 0x230) = buf;
   }
-  pu_v4 = pu_v3 + 0xc;
-  i_v9 = 0;
-  u_v6 = CONCAT31(CONCAT21(CONCAT11(pu_v3[8],pu_v3[9]),pu_v3[10]),pu_v3[0xb]);
-  i_v8 = 0x28 - i_v5;
+  buf = nxt;
+  nxt = CRI06_BE32(p[8],p[9],p[10],p[11]);
+  p = p + 12;
+  n = 0;
+  sh = 0x28 - pos;
   do {
-    u_v2 = u_v7 >> 8;
-    if (8 < i_v5) {
-      u_v2 = u_v2 | u_v6 >> ((byte)i_v8 & 0x1f);
+    code = buf >> 8;
+    if (pos > 8) {
+      code = code | nxt >> sh;
     }
-    if (u_v2 == 1) break;
-    if (i_v5 + 8 < 0x20) {
-      u_v7 = u_v7 << 8;
-      i_v5 = i_v5 + 8;
-      i_v8 = i_v8 + -8;
+    if (code == 1) break;
+    pos = pos + 8;
+    sh = sh - 8;
+    if (pos >= 32) {
+      pos = pos - 32;
+      sh = sh + 32;
+      buf = nxt << pos;
+      nxt = CRI06_BE32(p[0],p[1],p[2],p[3]);
+      p = p + 4;
     }
     else {
-      u_v7 = u_v6 << ((byte)(i_v5 + -0x18) & 0x1f);
-      u_v6 = CONCAT31(CONCAT21(CONCAT11(*pu_v4,pu_v4[1]),pu_v4[2]),pu_v4[3]);
-      pu_v4 = pu_v4 + 4;
-      i_v5 = i_v5 + -0x18;
-      i_v8 = i_v8 + 0x18;
+      buf = buf << 8;
     }
-    i_v9 = i_v9 + 1;
-  } while (i_v9 < 0x100000);
-  m2vhdec_AnalyUd(arg1,(void *)arg2,i_v9 + 4);
-  i_v5 = i_v5 + -0x39 + ((int)pu_v4 - (int)arg2) * 8;
-  return (longlong)((int)(i_v5 + (i_v5 >> 0x1f & 7U)) >> 3) + arg2;
+    n = n + 1;
+  } while (n < 0x100000);
+  m2vhdec_AnalyUd(arg1,(void *)arg2,n + 4);
+  pos = pos + ((int)p - (int)arg2) * 8 - 0x39;
+  return (longlong)(pos / 8) + arg2;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
