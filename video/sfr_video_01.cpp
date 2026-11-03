@@ -2361,17 +2361,16 @@ void FUN_140003ba0(Scaleform::GFx::AS2::Object* object,
     prototype->InitFunctionMembers(object, context, table, *flags);
 }
 
-// MS2-FUNCTIONAL: looks up the object's constructor member and copies it into the output function reference.
+// looks up the object's constructor member and converts it through the out-of-line Value::ToFunction_Call.
 // @0x140007ff0
 Scaleform::GFx::AS2::FunctionRef Scaleform::GFx::AS2::ObjectInterface::Get__constructor__(
     Scaleform::GFx::AS2::ASStringContext* context)
 {
     Scaleform::GFx::AS2::Value member;
-    Scaleform::GFx::AS2::StringManager* strings = context->pContext->GetStringManager();
-    const Scaleform::GFx::ASString name = *reinterpret_cast<const Scaleform::GFx::ASString*>(
-        reinterpret_cast<const unsigned char*>(strings) + 0x280);
-    if (GetMemberRaw(context, name, &member))
-        return member.ToFunction(0);
+    if (GetMemberRaw(context,
+                     context->pContext->GetStringManager()->GetBuiltin(Scaleform::GFx::AS2::ASBuiltin___constructor__),
+                     &member))
+        return member.ToFunction_Call(0);
     return Scaleform::GFx::AS2::FunctionRef();
 }
 
