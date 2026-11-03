@@ -1184,12 +1184,22 @@ void RectangleObject::GetProperties(ASStringContext* psc, Value params[Rectangle
     oi.GetMemberRaw(psc, psc->CreateConstString("height"), &params[Rectangle_Height]);
 }
 
-// MS2-FUNCTIONAL exe inlines GetProperties(psc) into a 0xf0 GS-cookie frame and converts h,w,y,x; same result
+// RectangleObject::GetProperties(ASStringContext*, Value*), expanded in place where the exe has it inline.
+static SF_FORCEINLINE void RectangleObject_GetPropertyValues(RectangleObject* pobj, ASStringContext* psc, Value params[Rectangle_NumProperties])
+{
+    ObjectInterface& oi = *pobj;
+    oi.GetMemberRaw(psc, psc->CreateConstString("x"), &params[Rectangle_X]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("y"), &params[Rectangle_Y]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("width"), &params[Rectangle_Width]);
+    oi.GetMemberRaw(psc, psc->CreateConstString("height"), &params[Rectangle_Height]);
+}
+
+// MS2-FUNCTIONAL the exe adds the bottom edge as y + h, ours as h + y
 // @0x142954800
 void RectangleObject::GetProperties(Environment* penv, ASRect& r)
 {
     Value params[Rectangle_NumProperties];
-    GetProperties(penv->GetSC(), params);
+    RectangleObject_GetPropertyValues(this, penv->GetSC(), params);
     r = ASRect(params[Rectangle_X].ToNumber(penv), params[Rectangle_Y].ToNumber(penv),
                Render::Size<Number>(params[Rectangle_Width].ToNumber(penv), params[Rectangle_Height].ToNumber(penv)));
 }
@@ -1801,7 +1811,6 @@ static SF_FORCEINLINE const Value* ValueHash_GetCaseCheck(const ASStringHash_GC<
 }
 
 // The innermost local frame that has varname; "arguments" (and "super" from version 6) stop the search.
-// MS2-FUNCTIONAL cl merges the found and the this/super exits into one frame release; same code otherwise
 // @0x142944690
 const Value* Environment::FindLocal(const ASString& varname) const
 {
