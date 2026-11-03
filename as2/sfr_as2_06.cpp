@@ -2084,38 +2084,19 @@ public:
 // @0x1429663d0
 void CSSFileLoaderAndParserImpl::Load(const String& fileName, FileOpener* opener)
 {
-    Buffer = 0;
-    BufferLen = 0;
-    if (!opener)
-        return;
-
-    using OpenFileFn = void* (*)(FileOpener*, const char*, int, int);
-    void** openerVtable = *reinterpret_cast<void***>(opener);
-    void* file = reinterpret_cast<OpenFileFn>(openerVtable[1])(opener, fileName.ToCStr(), 0x21, 0x1b6);
-    if (!file)
-        return;
-
-    void** fileVtable = *reinterpret_cast<void***>(file);
-    using IsValidFn = bool (*)(void*);
-    using GetLengthFn = int (*)(void*);
-    using ReadFn = void (*)(void*, void*, unsigned);
-    if (reinterpret_cast<IsValidFn>(fileVtable[2])(file))
+    Ptr<File> pfile = *opener->OpenFile(fileName.ToCStr(), FileConstants::Open_Read | FileConstants::Open_Buffered,
+                                        FileConstants::Mode_ReadWrite);
+    if (pfile && pfile->IsValid())
     {
-        BufferLen = reinterpret_cast<GetLengthFn>(fileVtable[6])(file);
+        BufferLen = pfile->GetLength();
         if (BufferLen)
         {
-            Buffer = reinterpret_cast<wchar_t*>(Memory::GetGlobalHeap()->Alloc(UPInt(BufferLen) + 2));
-            if (Buffer)
-            {
-                reinterpret_cast<ReadFn>(fileVtable[10])(file, Buffer, unsigned(BufferLen));
-                reinterpret_cast<UByte*>(Buffer)[BufferLen] = 0;
-                reinterpret_cast<UByte*>(Buffer)[BufferLen + 1] = 0;
-            }
-            else
-                BufferLen = 0;
+            Buffer = reinterpret_cast<wchar_t*>(Memory::GetGlobalHeap()->Alloc(BufferLen + 2));
+            pfile->Read(reinterpret_cast<UByte*>(Buffer), BufferLen);
+            reinterpret_cast<UByte*>(Buffer)[BufferLen + 1] = 0;
+            reinterpret_cast<UByte*>(Buffer)[BufferLen] = 0;
         }
     }
-    static_cast<RefCountImpl*>(file)->Release();
 }
 
 // MS2-FUNCTIONAL: records the completion status, pushes the result, and broadcasts onLoad to listeners.
