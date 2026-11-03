@@ -1109,31 +1109,30 @@ static inline void TrConvertOp(Value& v, InstanceTraits::Traits& tr, Value::Trac
     }
 
 // dxns / dxnslate: the method must set the SETS_DXNS flag (and XML support must be enabled).
-static inline void TraceCheckSetsDxns(State* st, const char* disabledName, UInt32 arg, bool pop)
+// Inlined into both ops; the tracer is re-read through State each time, and each failure throws on its own.
+static SF_INLINE void TraceCheckSetsDxns(State* st, const char* disabledName, UInt32 arg, bool pop)
 {
-    const UPInt tracer = TrRd(reinterpret_cast<UPInt>(st), 0);
-    UPInt link = TrAbcLink(tracer);
-    const char* what;
-    if (*reinterpret_cast<const char*>(TrRd(TrRd(link, 0x20), 0x40) + 0x20) == 0)
-        what = disabledName;
-    else
+    if (*reinterpret_cast<const char*>(TrRd(TrRd(TrAbcLink(TrRd(reinterpret_cast<UPInt>(st), 0)), 0x20), 0x40) + 0x20) == 0)
     {
-        if (pop)
-            FUN_14251ccc0(st, 1);
-        else
-            FUN_14251fcd0(tracer, arg);
-        link = TrAbcLink(tracer);
-        const UPInt file = TrRd(link, 0x28);
-        const int methodIndex = *reinterpret_cast<const int*>(TrRd(tracer, 0x20) + 0x30);
-        const UPInt method = TrRd(TrRd(file, 0x170), static_cast<SPInt>(methodIndex) * 8);
-        const int bodyIndex = *reinterpret_cast<const int*>(method + 0x18);
-        const UPInt body = TrRd(TrRd(file, 0xf8), static_cast<SPInt>(bodyIndex) * 8);
-        if (*reinterpret_cast<const UInt8*>(body) & 0x40)
-            return;
-        what = "does not have the SETS_DXNS flag set";
+        VM& vm = *reinterpret_cast<VM*>(TrRd(TrAbcLink(TrRd(reinterpret_cast<UPInt>(st), 0)), 0x20));
+        vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), vm, disabledName));
+        return;
     }
-    VM& vm = *reinterpret_cast<VM*>(TrRd(link, 0x20));
-    vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), vm, what));
+    if (pop)
+        FUN_14251ccc0(st, 1);
+    else
+        FUN_14251fcd0(TrRd(reinterpret_cast<UPInt>(st), 0), arg);
+    const UPInt link = TrAbcLink(TrRd(reinterpret_cast<UPInt>(st), 0));
+    const UPInt file = TrRd(link, 0x28);
+    const int methodIndex = *reinterpret_cast<const int*>(TrRd(TrRd(reinterpret_cast<UPInt>(st), 0), 0x20) + 0x30);
+    const UPInt method = TrRd(TrRd(file, 0x170), static_cast<SPInt>(methodIndex) * 8);
+    const int bodyIndex = *reinterpret_cast<const int*>(method + 0x18);
+    const UPInt body = TrRd(TrRd(file, 0xf8), static_cast<SPInt>(bodyIndex) * 8);
+    if ((*reinterpret_cast<const UInt8*>(body) & 0x40) == 0)
+    {
+        VM& vm = *reinterpret_cast<VM*>(TrRd(link, 0x20));
+        vm.ThrowVerifyError(VM::Error(static_cast<VM::ErrorID>(0x3e9), vm, "does not have the SETS_DXNS flag set"));
+    }
 }
 
 // @0x142532670
