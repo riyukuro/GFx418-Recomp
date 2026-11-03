@@ -2536,7 +2536,7 @@ void* FUN_1400140e0(void* object, void* traits)
     return object;
 }
 
-// MS2-FUNCTIONAL: constructs the InteractiveObject base and initializes the recovered video extent fields.
+// constructs the InteractiveObject base and initializes the recovered video extent fields
 // @0x140010000
 Scaleform::GFx::InteractiveObject* FUN_140010000(
     Scaleform::GFx::InteractiveObject* object, void* definition,
@@ -2546,17 +2546,22 @@ Scaleform::GFx::InteractiveObject* FUN_140010000(
     object->Scaleform::GFx::InteractiveObject::InteractiveObject(
         binding, root, parent, *resourceId);
     char* bytes = reinterpret_cast<char*>(object);
-    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
     *reinterpret_cast<void**>(bytes) = &PTR_FUN_1431b6060;
-    memset(bytes + 0xe0, 0, 0x10);
+    *reinterpret_cast<void**>(bytes + 0x18) = &PTR_LAB_1431b63f8;
+    // the bounds start at 0 and are then set from the definition's pixel size, in twips
+    float* bounds = reinterpret_cast<float*>(bytes + 0xe0);
+    bounds[0] = 0; bounds[1] = 0; bounds[2] = 0; bounds[3] = 0;
     *reinterpret_cast<void**>(bytes + 0xf0) = definition;
     *reinterpret_cast<void**>(bytes + 0xf8) = 0;
-    *reinterpret_cast<void**>(bytes + 0x100) = 0;
-    const unsigned char* dimensions = static_cast<const unsigned char*>(definition);
-    *reinterpret_cast<float*>(bytes + 0xe8) =
-        static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24)) * 20.0f;
-    *reinterpret_cast<float*>(bytes + 0xec) =
-        static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28)) * 20.0f;
+    *reinterpret_cast<void* volatile*>(bytes + 0x100) = 0;   // volatile: keeps the member read below after this store
+    const unsigned char* dimensions = *reinterpret_cast<const unsigned char* volatile*>(bytes + 0xf0);   // volatile: the exe reads the member back
+    float width = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x24));
+    float height = static_cast<float>(*reinterpret_cast<const unsigned*>(dimensions + 0x28));
+    float x2 = width * 20.0f, y2 = height * 20.0f;
+    bounds[0] = 0;
+    bounds[1] = 0;
+    bounds[2] = x2;
+    bounds[3] = y2;
     return object;
 }
 
