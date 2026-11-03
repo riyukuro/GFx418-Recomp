@@ -5022,48 +5022,34 @@ void Sfr31ExecFindPropOrGlobal(UPInt vmAddr, UPInt file, UInt32 idx)
 }
 
 // Verifies that the top of the operand stack is usable as the scope object named by the multiname (name check, class lookup, type check).
-// MS2-FUNCTIONAL 0x142536b90: raw-offset model; codegen differs from the exe
 // @0x142536b90
 void Sfr31ExecCheckScopeObject(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    const UPInt cfile = Sfr31Rd(file, 0x28);
-    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntry(file, idx));
+    VM& cvm = *reinterpret_cast<VM*>(Sfr31Rd(file, 0x20));
+    const UPInt entry = reinterpret_cast<UPInt>(&Sfr31MnEntryW(file, idx));
     const UInt32 flags = *reinterpret_cast<const UInt32*>(entry);
-    if ((flags & 3) == 1 || ((flags >> 2) & 1) != 0)
+    if ((flags & 3) == 1 || (static_cast<UInt8>(flags >> 2) & 1) != 0)
     {
-        UPInt sv[2];
-        FUN_142545310(Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
-        String name(reinterpret_cast<const char*>(sv[0]), sv[1]);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x436, reinterpret_cast<void*>(cvm), name.ToCStr(), "compile time");
-        reinterpret_cast<VM*>(cvm)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
+        const StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        String name(sv.ToCStr(), sv.GetSize());
+        cvm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x436), cvm, name.ToCStr(), "compile time"));
     }
-    const UPInt top = Sfr31Rd(cvm, 0x50);
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) != 0)
+    const UPInt top = Sfr31Rd(reinterpret_cast<UPInt>(&cvm), 0x50);
+    if (*reinterpret_cast<const UInt8*>(vmAddr + 0x180) != 0)
         return;
-    const UPInt tr = Sfr31ResolveClassTraits(vmAddr, file, entry);
-    if (tr == 0)
+    const ClassTraits::Traits* tr = reinterpret_cast<const ClassTraits::Traits*>(Sfr31ResolveClassTraits(vmAddr, file, entry));
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    if (tr != NULL)
     {
-        UPInt sv[2];
-        FUN_142545310(Sfr31Rd(cfile, 0x70) + static_cast<UPInt>(*reinterpret_cast<const UInt32*>(entry + 8)) * 8, sv);
-        alignas(8) char eb[sizeof(VM::Error)];
-        FUN_1424d7690(eb, 0x42d, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(sv[0]), "any object on the scope stack");
-        reinterpret_cast<VM*>(vmAddr)->ThrowReferenceError(*reinterpret_cast<VM::Error*>(eb));
-        reinterpret_cast<VM::Error*>(eb)->~Error();
-        return;
+        Value& v = *reinterpret_cast<Value*>(top);
+        if (!tr->Coerce(v, v))
+            vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x40a), vm, v, tr->GetName().ToCStr()));
     }
-    typedef char (*VCheck)(UPInt, UPInt, UPInt);
-    if (reinterpret_cast<VCheck>(Sfr31Rd(Sfr31Rd(tr, 0), 0x70))(tr, top, top) != 0)
-        return;
-    UPInt node = 0;
-    UPInt* nm = reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &node);
-    alignas(8) char eb[sizeof(VM::Error)];
-    FUN_1424d7130(eb, 0x40a, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const void*>(top), reinterpret_cast<const char*>(Sfr31Rd(*nm, 0)));
-    reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-    reinterpret_cast<VM::Error*>(eb)->~Error();
-    Sfr31ReleaseStr(node);
+    else
+    {
+        const StringDataPtr sv = Sfr31MnNameView(file, entry).ToStringDataPtr();
+        vm.ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x42d), vm, sv.ToCStr(), "any object on the scope stack"));
+    }
 }
 
 // Converts a value in place to its primitive form (objects through their conversion hook); *ok tells whether it succeeded.
