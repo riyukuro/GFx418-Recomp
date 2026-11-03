@@ -479,6 +479,15 @@ DisplayObject* DisplayObject::GetMaskOwner() const
 }
 
 
+// MovieImpl::SetNormalizedScreenCoords written out with the two values passed straight to
+// ScreenToWorld::SetNormalizedScreenCoords, as the exe inlines it (y is computed first).
+static __forceinline void Gfx06SetNormalizedScreenCoords(MovieImpl* pm, const PointF& mousePos)
+{
+    pm->GetScreenToWorld().SetNormalizedScreenCoords(
+        2.f * ((mousePos.x - Render::PixelsToTwips(pm->ViewOffsetX)) / pm->VisibleFrameRect.Width()) - 1.0f,
+        2.f * ((mousePos.y - Render::PixelsToTwips(pm->ViewOffsetY)) / pm->VisibleFrameRect.Height()) - 1.0f);
+}
+
 // The mouse position in local coordinates, in pixels.
 // MS2-FUNCTIONAL 0x1425f22e0: scheduling of the inlined SetNormalizedScreenCoords (as in sfr_gfx_01i HitTest)
 // @0x1425f22e0
@@ -487,7 +496,7 @@ Double DisplayObject::GetMouseX() const
     MovieImpl* pMovie = GetMovieImpl();
     PointF a = pMovie->MouseLastPosition;
     PointF b(PointF::NoInit);
-    pMovie->SetNormalizedScreenCoords(a);
+    Gfx06SetNormalizedScreenCoords(pMovie, a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.x + 0.5));
 }
@@ -499,7 +508,7 @@ Double DisplayObject::GetMouseY() const
     MovieImpl* pMovie = GetMovieImpl();
     PointF a = pMovie->MouseLastPosition;
     PointF b(PointF::NoInit);
-    pMovie->SetNormalizedScreenCoords(a);
+    Gfx06SetNormalizedScreenCoords(pMovie, a);
     TransformPointToLocal(&b, a, false);
     return Render::TwipsToPixels(floor(b.y + 0.5));
 }
@@ -704,7 +713,6 @@ Point3F DisplayObjectBase::GlobalToLocal3D(const PointF& ptIn) const
 }
 
 // A stage point (twips) in local coordinates; the window position feeds the 3D screen-to-world mapping.
-// MS2-FUNCTIONAL 0x1425f3150: scheduling of the inlined SetNormalizedScreenCoords loads (same operations)
 // @0x1425f3150
 PointF DisplayObjectBase::GlobalToLocal(const PointF& ptIn) const
 {
@@ -714,7 +722,7 @@ PointF DisplayObjectBase::GlobalToLocal(const PointF& ptIn) const
     {
         float wx = (ptIn.x - proot->ViewOffsetX) / proot->ViewScaleX;
         float wy = (ptIn.y - proot->ViewOffsetY) / proot->ViewScaleY;
-        proot->SetNormalizedScreenCoords(PointF(wx, wy));
+        Gfx06SetNormalizedScreenCoords(proot, PointF(wx, wy));
         TransformPointToLocal(&ptOut, ptIn, false);
     }
     return ptOut;
