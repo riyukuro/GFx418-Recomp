@@ -9449,6 +9449,8 @@ template void ArrayDataBase<GFx::AS3::SPtr<GFx::ASStringNode>, AllocatorLH<GFx::
 template void ArrayData<ArrayLH_POD<UPInt, GFx::AS3::StatMV_VM_AbcFile_Mem>, AllocatorLH<ArrayLH_POD<UPInt, GFx::AS3::StatMV_VM_AbcFile_Mem>, GFx::AS3::StatMV_VM_VMAbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x1425244e0
 template void ArrayData<GFx::AS3::Abc::MethodBodyInfo::Exception, AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, GFx::AS3::StatMV_VM_VMAbcFile_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x142524710
 template void ArrayDataBase<GFx::AS3::Abc::MethodBodyInfo::Exception, AllocatorLH<GFx::AS3::Abc::MethodBodyInfo::Exception, GFx::AS3::StatMV_VM_VMAbcFile_Mem>, ArrayDefaultPolicy>::Reserve(const void* pheapAddr, UPInt newCapacity);   // 0x142523b70
+// Out of line in the exe (ICF-folded with the SPtr<const Namespace> instance at 0x1424f6c90, sfr_as3_17).
+template <> void ConstructorMov<GFx::AS3::SPtr<GFx::AS3::NamespaceSet> >::DestructArray(GFx::AS3::SPtr<GFx::AS3::NamespaceSet>* p, UPInt count);
 template void ArrayData<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, AllocatorLH<GFx::AS3::SPtr<GFx::AS3::NamespaceSet>, Stat_Default_Mem>, ArrayDefaultPolicy>::Resize(UPInt newSize);   // 0x142524680
 }
 // MS2-PIN: ?ResizeNoConstruct@?$ArrayDataBase@VValue@AS3@GFx@Scaleform@@U?$AllocatorGH@VValue@AS3@GFx@Scaleform@@$01@4@UArrayDefaultPolicy@4@@Scaleform@@QEAAXPEBX_K@Z 0x142524e20
