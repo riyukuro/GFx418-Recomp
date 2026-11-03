@@ -7588,118 +7588,153 @@ static inline void Sfr34_LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::L
     }
 }
 
+// The SDK's `if (!avm->HasAS3Obj()) { if (avm->CreateASInstanceNoCtor()) {...} }`, inline as in the exe.
+static SF_FORCEINLINE void Sfr18LoadedCtor(AvmDisplayObj* avm, Instances::fl_display::Loader* loader)
+{
+    if (!(avm->pAS3RawPtr || avm->pAS3CollectiblePtr.pObject))
+    {
+        if (avm->CreateASInstanceNoCtor(true))
+        {
+            avm->GetAS3Obj()->SetLoaderInfo(*loader);
+            avm->CallCtor(true);
+        }
+    }
+}
+
+// MovieRoot::GetLogState (SDK SF_INLINE): the raw pointer of the movie's Ptr<LogState>, the temporary released.
+static SF_FORCEINLINE LogState* Sfr18RootLogState(MovieRoot* root) { return root->GetMovieImpl()->GetLogState().GetPtr(); }
+
 // The loaded movie handed to its Loader while the preload task runs: open (once, after the version check), the
 // progress of its bytes, its first frame's sprite made the Loader's child (init), and at the end the bitmap of an
 // image (init) and complete; an error event when nothing could be loaded. True when the entry is done.
-// MS2-FUNCTIONAL Loader::GetDisplayObjContainer and ToAvmSprite are written out (the exe inlines them)
+// MS2-FUNCTIONAL: the exe inlines the Ptr<RefCountImpl> conversion of the init callback, register allocation
 // @0x142515c60
 bool LoadQueueEntryMT_LoadMovie::LoadFinished()
 {
-    const bool      btaskDone = pPreloadTask->IsDone();
-    LoadQueueEntry* qe        = static_cast<LoadQueueEntry*>(pQueueEntry);
-    if (qe->Canceled && btaskDone)
+    const bool btaskDone = pPreloadTask->IsDone();
+    if (pQueueEntry->Canceled && btaskDone)
         return true;
-    MovieRoot* root = static_cast<MovieRoot*>(pMovieImpl->pASMovieRoot);
-    if (!btaskDone)
+    LoadQueueEntry* qe   = static_cast<LoadQueueEntry*>(pQueueEntry);
+    MovieRoot*      root = static_cast<MovieRoot*>(pMovieImpl->pASMovieRoot);
+    if (btaskDone)
+    {
+        MovieDefImpl* pdefImpl = pPreloadTask->GetMoiveDefImpl();
+        if (!pdefImpl)
+        {
+            qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
+            if (qe->NotifyLoadInitCInterface)
+                qe->NotifyLoadInitCInterface->ErrorEventCallback();
+            qe->FirstExec = false;
+            goto error_exit;
+        }
+        else
+        {
+            if (qe->FirstExec)
+            {
+                if (pdefImpl->GetVersion() != ~0u &&
+                    (pdefImpl->GetVersion() < 9 || ((pdefImpl->GetDataDef()->GetFileAttributes() & 8) ? 3 : 2) < 3))
+                {
+                    pQueueEntry->Canceled = true;
+                    if (Sfr18RootLogState(root) && !qe->QuietOpen)
+                    {
+                        Sfr18RootLogState(root)->LogScriptWarning(
+                            "Failed loading SWF \"%s\": ActionScript version mismatch", qe->mURLRequest->GetUrl().ToCStr());
+                    }
+                    qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
+                    if (qe->NotifyLoadInitCInterface)
+                        qe->NotifyLoadInitCInterface->ErrorEventCallback();
+                    pdefImpl = NULL;
+                    goto error_exit;
+                }
+                qe->mLoader->ExecuteOpenEvent();
+                if (qe->NotifyLoadInitCInterface)
+                    qe->NotifyLoadInitCInterface->OpenEventCallback();
+                qe->FirstExec = false;
+                root->AddLoadedMovieDef(pdefImpl);
+            }
+            if (!CharSwitched)
+                CharSwitched = true;
+            if (BytesLoaded != pdefImpl->pBindData->GetBytesLoaded())
+            {
+                BytesLoaded = pdefImpl->pBindData->GetBytesLoaded();
+                qe->mLoader->ExecuteProgressEvent(BytesLoaded, pdefImpl->GetDataDef()->GetFileBytes());
+            }
+            if (!FirstFrameLoaded && ((pdefImpl->pBindData->GetBindState() & MovieDefImpl::BSF_Frame1Loaded) != 0))
+            {
+                if (pdefImpl->GetDataDef()->MovieType == MovieDataDef::MT_Flash)
+                {
+                    GFx::DisplayObject* pparent = qe->mLoader->pDispObj;
+                    Ptr<Sprite>         pnewChar;
+                    if (pdefImpl)
+                    {
+                        if (root->pAVM)
+                            FUN_142504630(&root->pAVM->GetGC(), pMovieImpl->pAdvanceStats);
+                        CharacterCreateInfo ccinfo = { pdefImpl->GetDataDef(), pdefImpl, NULL };
+                        pnewChar = *static_cast<Sprite*>(root->pASSupport->CreateCharacterInstance(
+                            pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
+                        pnewChar->SetLoadedSeparately(true);
+                        pnewChar->Flags |= DisplayObject::Mask_TimelineObject;
+                        pnewChar->OnEventLoad();
+                        pnewChar->AddToPlayList();
+                        AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewChar));
+                        avmSpr->ExecuteInitActionFrameTags(0);
+                        pnewChar->SetFOV(55.0);
+                        Sfr18LoadedCtor(avmSpr, qe->mLoader);
+                        Sfr34_ToAvmStage(pparent)->AddChild(pnewChar);
+                        root->ResolveStickyVariables(pnewChar);
+                        pnewChar->ModifyOptimizedPlayListLocal<Sprite>();
+                        root->DoActions();
+                    }
+                    qe->mLoader->QueueInitEvent(pnewChar, qe->NotifyLoadInitCInterface);
+                }
+                FirstFrameLoaded = true;
+            }
+            if ((pdefImpl->pBindData->GetBindState() & (MovieDefImpl::BS_InProgress | MovieDefImpl::BS_Finished)) <
+                MovieDefImpl::BS_Finished)
+                return false;
+            if (pdefImpl->pBindData->GetBindState() & MovieDefImpl::BS_Finished)
+            {
+                if (pdefImpl->GetDataDef()->MovieType == MovieDataDef::MT_Image)
+                {
+                    GFx::DisplayObject* pparent = qe->mLoader->pDispObj;
+                    CharacterCreateInfo ccinfo  = { pdefImpl->GetDataDef(), pdefImpl, NULL };
+                    Ptr<DisplayObjectBase> pnewChar = *root->pASSupport->CreateCharacterInstance(
+                        root->GetMovieImpl(), ccinfo, NULL, ResourceId(), CharacterDef::Bitmap);
+                    ResourceHandle rh;
+                    if (pdefImpl->GetDataDef()->GetResourceHandle(&rh, ResourceId(0)))
+                    {
+                        Resource* pres = rh.GetResource(&pdefImpl->GetResourceBinding());
+                        if (pres)
+                        {
+                            if (pres->GetResourceType() == Resource::RT_Image)
+                                FUN_1425274b0(pnewChar, pres);
+                        }
+                    }
+                    Sfr34_ToAvmStage(pparent)->AddChild(pnewChar);
+                    Sfr18LoadedCtor(ToAvmDisplayObj(pnewChar), qe->mLoader);
+                    qe->mLoader->QueueInitEvent(static_cast<GFx::DisplayObject*>(pnewChar.GetPtr()),
+                                                qe->NotifyLoadInitCInterface);
+                }
+                qe->mLoader->QueueCompleteEvent();
+            }
+            else
+            {
+                qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
+                qe->FirstExec = false;
+            }
+        }
+error_exit:
+        return true;
+    }
+    else
     {
         if (qe->FirstExec)
         {
             qe->mLoader->ExecuteOpenEvent();
             qe->FirstExec = false;
         }
-        return false;
     }
-    MovieDefImpl* pdefImpl = pPreloadTask->GetMoiveDefImpl();
-    if (!pdefImpl)
-    {
-        qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
-        if (qe->NotifyLoadInitCInterface)
-            qe->NotifyLoadInitCInterface->ErrorEventCallback();
-        qe->FirstExec = false;
-        return true;
-    }
-    if (qe->FirstExec)
-    {
-        if (pdefImpl->GetVersion() != ~0u &&
-            (pdefImpl->GetVersion() < 9 || !(pdefImpl->GetDataDef()->GetFileAttributes() & 8)))
-        {
-            qe->Canceled = true;
-            if (root->GetMovieImpl()->GetLogState() && !qe->QuietOpen)
-                root->GetMovieImpl()->GetLogState()->LogScriptWarning(
-                    "Failed loading SWF \"%s\": ActionScript version mismatch", qe->mURLRequest->GetUrl().ToCStr());
-            qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
-            if (qe->NotifyLoadInitCInterface)
-                qe->NotifyLoadInitCInterface->ErrorEventCallback();
-            return true;
-        }
-        qe->mLoader->ExecuteOpenEvent();
-        if (qe->NotifyLoadInitCInterface)
-            qe->NotifyLoadInitCInterface->OpenEventCallback();
-        qe->FirstExec = false;
-        root->AddLoadedMovieDef(pdefImpl);
-    }
-    if (!CharSwitched)
-        CharSwitched = true;
-    if (BytesLoaded != pdefImpl->pBindData->GetBytesLoaded())
-    {
-        BytesLoaded = pdefImpl->pBindData->GetBytesLoaded();
-        qe->mLoader->ExecuteProgressEvent(BytesLoaded, pdefImpl->GetDataDef()->GetFileBytes());
-    }
-    if (!FirstFrameLoaded && (pdefImpl->pBindData->GetBindState() & MovieDefImpl::BSF_Frame1Loaded))
-    {
-        if (pdefImpl->GetDataDef()->MovieType == MovieDataDef::MT_Flash)
-        {
-            GFx::DisplayObject* pparent = qe->mLoader->pDispObj;
-            if (root->pAVM)
-                FUN_142504630(&root->pAVM->GetGC(), pMovieImpl->pAdvanceStats);
-            CharacterCreateInfo ccinfo = { pdefImpl->GetDataDef(), pdefImpl, NULL };
-            Ptr<Sprite> pnewChar = *static_cast<Sprite*>(root->pASSupport->CreateCharacterInstance(
-                pMovieImpl, ccinfo, NULL, ResourceId(0), CharacterDef::Sprite));
-            pnewChar->SetLoadedSeparately(true);
-            pnewChar->Flags |= DisplayObject::Mask_TimelineObject;
-            pnewChar->OnEventLoad();
-            pnewChar->AddToPlayList();
-            AvmSprite* avmSpr = static_cast<AvmSprite*>(ToAvmDisplayObj(pnewChar));
-            avmSpr->ExecuteInitActionFrameTags(0);
-            pnewChar->SetFOV(55.0);
-            Sfr34_LoadedCtor(avmSpr, qe->mLoader);
-            Sfr34_ToAvmContainer(pparent)->AddChild(pnewChar);
-            root->ResolveStickyVariables(pnewChar);
-            pnewChar->ModifyOptimizedPlayListLocal<Sprite>();
-            root->DoActions();
-            qe->mLoader->QueueInitEvent(pnewChar, Ptr<RefCountImpl>(qe->NotifyLoadInitCInterface.GetPtr()));
-        }
-        FirstFrameLoaded = true;
-    }
-    const unsigned state = pdefImpl->pBindData->GetBindState();
-    if ((state & (MovieDefImpl::BS_InProgress | MovieDefImpl::BS_Finished)) < MovieDefImpl::BS_Finished)
-        return false;
-    if (!(state & MovieDefImpl::BS_Finished))
-    {
-        qe->mLoader->ExecuteErrorEvent(qe->mURLRequest->GetUrl().ToCStr());
-        qe->FirstExec = false;
-        return true;
-    }
-    if (pdefImpl->GetDataDef()->MovieType == MovieDataDef::MT_Image)
-    {
-        GFx::DisplayObject* pparent = qe->mLoader->pDispObj;
-        CharacterCreateInfo ccinfo  = { pdefImpl->GetDataDef(), pdefImpl, NULL };
-        Ptr<DisplayObjectBase> pnewChar = *root->pASSupport->CreateCharacterInstance(
-            root->GetMovieImpl(), ccinfo, NULL, ResourceId(), CharacterDef::Bitmap);
-        ResourceHandle rh;
-        if (pdefImpl->GetDataDef()->GetResourceHandle(&rh, ResourceId(0)))
-        {
-            Resource* pres = rh.GetResource(&pdefImpl->GetResourceBinding());
-            if (pres && pres->GetResourceType() == Resource::RT_Image)
-                FUN_1425274b0(pnewChar, pres);
-        }
-        Sfr34_ToAvmContainer(pparent)->AddChild(pnewChar);
-        Sfr34_LoadedCtor(ToAvmDisplayObj(pnewChar), qe->mLoader);
-        qe->mLoader->QueueInitEvent(static_cast<GFx::DisplayObject*>(pnewChar.GetPtr()),
-                                    Ptr<RefCountImpl>(qe->NotifyLoadInitCInterface.GetPtr()));
-    }
-    qe->mLoader->QueueCompleteEvent();
-    return true;
+    return false;
 }
 
 // VM::IsVMCachedType(const InstanceTraits::Traits&) and (const ClassTraits::Traits&), inline here.
