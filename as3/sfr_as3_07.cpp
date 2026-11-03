@@ -1940,7 +1940,6 @@ namespace Instances { namespace fl_display
         pDrawing->BeginFill();
     }
 
-    // MS2-FUNCTIONAL: register allocation (exe computes the fill type into rbx before AcquirePath; ours folds it after)
     // @0x1424482e0
     void Graphics::beginBitmapFill(const Value& result, Instances::fl_display::BitmapData* bitmap,
                                    Instances::fl_geom::Matrix* matrix, bool repeat, bool smooth)
@@ -1956,9 +1955,19 @@ namespace Instances { namespace fl_display
                 mtx = matrix->GetMatrixF();
             FillType fillType;
             if (smooth)
-                fillType = repeat ? Fill_TiledSmoothImage : Fill_ClippedSmoothImage;
+            {
+                if (repeat)
+                    fillType = Fill_TiledSmoothImage;
+                else
+                    fillType = Fill_ClippedSmoothImage;
+            }
             else
-                fillType = repeat ? Fill_TiledImage : Fill_ClippedImage;
+            {
+                if (repeat)
+                    fillType = Fill_TiledImage;
+                else
+                    fillType = Fill_ClippedImage;
+            }
             pDrawing->AcquirePath(true);
             pDrawing->BeginBitmapFill(fillType, pimageRes, mtx);
         }
