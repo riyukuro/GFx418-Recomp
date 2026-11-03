@@ -153,18 +153,17 @@ MovieRoot::InvokeAliasInfo* MovieRoot::ResolveInvokeAlias(const char* pstr) cons
 
 // Sets the waiting values of the new character's path on it; the permanent ones stay for the next character of
 // that path, the rest are dropped.
-// MS2-FUNCTIONAL: list relink and hash update codegen differ; same behavior
 // @0x14297eec0
 void MovieRoot::ResolveStickyVariables(InteractiveObject* pcharacter)
 {
     const ASString& path  = pcharacter->GetCharacterHandle()->NamePath;
     AvmCharacter*   pavm  = ToAvmCharacter(pcharacter);
     StickyVarHash&  vars  = StickyVariablesOf(pMovieImpl);
-    GFx::MovieImpl::StickyVarNode** ppnode = vars.Get(path);
-    if (!ppnode)
+    GFx::MovieImpl::StickyVarNode* pfound = 0;
+    if (!vars.Get(path, &pfound))
         return;
 
-    StickyVarNode* pnode     = static_cast<StickyVarNode*>(*ppnode);
+    StickyVarNode* pnode     = static_cast<StickyVarNode*>(pfound);
     StickyVarNode* pfirst    = 0;
     StickyVarNode* plast     = 0;
     StickyVarNode* poldfirst = pnode;
@@ -172,23 +171,24 @@ void MovieRoot::ResolveStickyVariables(InteractiveObject* pcharacter)
     {
         pavm->SetMember(pavm->GetASEnvironment(), pnode->Name, pnode->mValue, PropFlags());
         StickyVarNode* pnext = static_cast<StickyVarNode*>(pnode->pNext);
-        if (!pnode->Permanent)
-            delete pnode;
-        else
+        if (pnode->Permanent)
         {
             // keep it, in order
             if (!pfirst)
             {
+                pfirst       = pnode;
                 pnode->pNext = 0;
-                pfirst = plast = pnode;
+                plast        = pnode;
             }
             else
             {
                 plast->pNext = pnode;
-                pnode->pNext = 0;
                 plast        = pnode;
+                pnode->pNext = 0;
             }
         }
+        else
+            delete pnode;
         pnode = pnext;
     }
 
