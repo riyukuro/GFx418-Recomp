@@ -101,8 +101,9 @@ enum
 // Walking the path records the reader left in the path allocator. The position packs the byte index, the two style
 // index widths and the bit index, so that a reader can stop after any record and go on later.
 
-struct SwfShapeDecoder : public StreamContext
+struct SwfShapeDecoder
 {
+    StreamContext Stream;
     ShapePosInfo* Pos;
 
     // An edge as decoded: the control point (curves only) and the anchor, in absolute twips.
@@ -115,21 +116,20 @@ struct SwfShapeDecoder : public StreamContext
     SF_NOINLINE SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sfactor);
     ~SwfShapeDecoder()
     {
-        Pos->Pos = (((((UInt32)CurByteIndex << 4) | (Pos->NumFillBits & 0xF)) << 4 | (Pos->NumStrokeBits & 0xF)) << 3) |
-                   (CurBitIndex & 7);
+        Pos->Pos = (((((UInt32)Stream.CurByteIndex << 4) | (Pos->NumFillBits & 0xF)) << 4 | (Pos->NumStrokeBits & 0xF)) << 3) |
+                   (Stream.CurBitIndex & 7);
     }
 
-    bool IsEdgeNext() const { return (pData[CurByteIndex] & (1 << (7 - CurBitIndex))) != 0; }
+    bool IsEdgeNext() const { return (Stream.pData[Stream.CurByteIndex] & (1 << (7 - Stream.CurBitIndex))) != 0; }
 
-    Render::PathEdgeType  ReadEdge(Edge* pedge);
+    Render::PathEdgeType  ReadEdge(Edge* edge);
     Render::ShapePathType ReadNonEdgeRec(Render::ShapePathType retVal);
 };
 
 // The first decoder of a shape sets up the state: the style widths come from the start of the records, or from the
 // packed position when the reader resumes from GetStartingPos. Later ones go on from the packed position.
-// MS2-FUNCTIONAL: load order and register allocation differ.
 // @0x1426598a0
-SwfShapeDecoder::SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sfactor) : StreamContext(pdata), Pos(pos)
+SwfShapeDecoder::SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sfactor) : Stream(pdata), Pos(pos)
 {
     if (!Pos->Initialized)
     {
@@ -138,15 +138,15 @@ SwfShapeDecoder::SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sf
         Pos->FillBase   = 0;
         if (pos->Pos == 0)
         {
-            Pos->NumFillBits   = ReadUInt4();
-            Pos->NumStrokeBits = ReadUInt4();
+            Pos->NumFillBits   = Stream.ReadUInt4();
+            Pos->NumStrokeBits = Stream.ReadUInt4();
         }
         else
         {
             Pos->NumFillBits   = (pos->Pos >> 7) & 0xF;
             Pos->NumStrokeBits = (pos->Pos >> 3) & 0xF;
-            CurByteIndex       = pos->Pos >> 11;
-            CurBitIndex        = pos->Pos & 7;
+            Stream.CurByteIndex       = pos->Pos >> 11;
+            Stream.CurBitIndex        = pos->Pos & 7;
         }
         Pos->LastY       = 0;
         Pos->LastX       = 0;
@@ -157,58 +157,64 @@ SwfShapeDecoder::SwfShapeDecoder(ShapePosInfo* pos, const UByte* pdata, float sf
     }
     else
     {
-        CurByteIndex = pos->Pos >> 11;
-        CurBitIndex  = pos->Pos & 7;
+        Stream.CurByteIndex = pos->Pos >> 11;
+        Stream.CurBitIndex  = pos->Pos & 7;
     }
 }
 
 // A curve or a line from the last point; lines are general or axis aligned.
 // MS2-FUNCTIONAL: load order and register allocation differ.
 // @0x14265c280
-Render::PathEdgeType SwfShapeDecoder::ReadEdge(Edge* pedge)
+Render::PathEdgeType SwfShapeDecoder::ReadEdge(Edge* edge)
 {
-    ReadUInt1(); // the edge flag, known to be set
-    unsigned straight = ReadUInt1();
-    if (!straight)
+    bool typeFlag = Stream.ReadUInt1(); // the edge flag, known to be set
+    SF_UNUSED(typeFlag);
+
+    int edgeFlag = Stream.ReadUInt1();
+    if (edgeFlag == 0)
     {
-        unsigned nbits = ReadUInt4() + 2;
-        int      cx    = ReadSInt(nbits);
-        int      cy    = ReadSInt(nbits);
-        int      ax    = ReadSInt(nbits);
-        int      ay    = ReadSInt(nbits);
-        pedge->Cx      = Pos->LastX + cx;
-        pedge->Cy      = Pos->LastY + cy;
+        unsigned numbits = 2 + Stream.ReadUInt4();
+
+        int cx = Stream.ReadSInt(numbits);
+        int cy = Stream.ReadSInt(numbits);
+        int ax = Stream.ReadSInt(numbits);
+        int ay = Stream.ReadSInt(numbits);
+
+        edge->Cx = cx + Pos->LastX;
+        edge->Cy = cy + Pos->LastY;
         Pos->LastX += cx + ax;
         Pos->LastY += cy + ay;
-        pedge->Ax    = Pos->LastX;
-        pedge->Ay    = Pos->LastY;
-        pedge->Curve = true;
+        edge->Ax    = Pos->LastX;
+        edge->Ay    = Pos->LastY;
+        edge->Curve = true;
         return Render::Edge_QuadTo;
-    }
-
-    unsigned nbits   = ReadUInt4() + 2;
-    unsigned general = ReadUInt1();
-    pedge->Curve     = false;
-    int dx = 0, dy = 0;
-    if (general)
-    {
-        dx = ReadSInt(nbits);
-        dy = ReadSInt(nbits);
     }
     else
     {
-        unsigned vertical = ReadUInt1();
-        int      d        = ReadSInt(nbits);
-        if (vertical)
-            dy = d;
+        unsigned numbits  = 2 + Stream.ReadUInt4();
+        int      lineFlag = Stream.ReadUInt1();
+        edge->Curve       = false;
+        int dx = 0, dy = 0;
+        if (lineFlag)
+        {
+            dx = Stream.ReadSInt(numbits);
+            dy = Stream.ReadSInt(numbits);
+        }
         else
-            dx = d;
+        {
+            int vertFlag = Stream.ReadUInt1();
+            if (vertFlag == 0)
+                dx = Stream.ReadSInt(numbits);
+            else
+                dy = Stream.ReadSInt(numbits);
+        }
+
+        edge->Ax = dx + Pos->LastX;
+        edge->Ay = dy + Pos->LastY;
+        Pos->LastX += dx;
+        Pos->LastY += dy;
+        return Render::Edge_LineTo;
     }
-    pedge->Ax = Pos->LastX + dx;
-    pedge->Ay = Pos->LastY + dy;
-    Pos->LastX += dx;
-    Pos->LastY += dy;
-    return Render::Edge_LineTo;
 }
 
 // A style change record: a move, new style indices (offset by the styles of the earlier layers) or a new set of
@@ -218,64 +224,74 @@ Render::PathEdgeType SwfShapeDecoder::ReadEdge(Edge* pedge)
 // @0x14265c9a0
 Render::ShapePathType SwfShapeDecoder::ReadNonEdgeRec(Render::ShapePathType retVal)
 {
-    ReadUInt1(); // the edge flag, known to be clear
-    unsigned flags = ReadUInt5();
-    if (flags == 0)
-        return Render::Shape_EndShape;
+    do
+    {
+        bool typeFlag = Stream.ReadUInt1(); // the edge flag, known to be clear
+        SF_UNUSED(typeFlag);
 
-    if (flags & 0x01)
-    {
-        unsigned nbits = ReadUInt5();
-        Pos->LastX     = ReadSInt(nbits);
-        Pos->LastY     = ReadSInt(nbits);
-    }
-    if ((flags & 0x02) && Pos->NumFillBits)
-    {
-        unsigned style = ReadUInt(Pos->NumFillBits);
-        if (style)
-            style += Pos->FillBase;
-        Pos->Fill0 = style;
-    }
-    if ((flags & 0x04) && Pos->NumFillBits)
-    {
-        int style = ReadUInt(Pos->NumFillBits);
-        if (style > 0)
-            style += Pos->FillBase;
-        Pos->Fill1 = style;
-    }
-    if ((flags & 0x08) && Pos->NumStrokeBits)
-    {
-        int style = ReadUInt(Pos->NumStrokeBits);
-        if (style > 0)
-            style += Pos->StrokeBase;
-        Pos->Stroke = style;
-    }
-    if (flags & 0x10)
-    {
-        Pos->Stroke = 0;
-        Pos->Fill1  = 0;
-        Pos->Fill0  = 0;
-        Align();
-        unsigned fillBase = ReadU8();
-        if (fillBase != 0)
+        int flags = Stream.ReadUInt5();
+        if (flags == 0)
         {
-            fillBase = ReadU8() << 16;
-            fillBase |= ReadU8() << 8;
-            fillBase |= ReadU8();
+            retVal = Render::Shape_EndShape;
+            break;
         }
-        unsigned strokeBase = ReadU8();
-        if (strokeBase == 0xFF)
+        if (flags & 0x01)
         {
-            strokeBase = ReadU8() << 16;
-            strokeBase |= ReadU8() << 8;
-            strokeBase |= ReadU8();
+            unsigned numMoveBits = Stream.ReadUInt5();
+            Pos->LastX           = Stream.ReadSInt(numMoveBits);
+            Pos->LastY           = Stream.ReadSInt(numMoveBits);
         }
-        Pos->FillBase      = fillBase;
-        Pos->StrokeBase    = strokeBase;
-        Pos->NumFillBits   = ReadUInt4();
-        Pos->NumStrokeBits = ReadUInt4();
-        return Render::Shape_NewLayer;
-    }
+        if ((flags & 0x02) && Pos->NumFillBits > 0)
+        {
+            unsigned style = Stream.ReadUInt(Pos->NumFillBits);
+            if (style > 0)
+                style += Pos->FillBase;
+            Pos->Fill0 = style;
+        }
+        if ((flags & 0x04) && Pos->NumFillBits > 0)
+        {
+            int style = Stream.ReadUInt(Pos->NumFillBits);
+            if (style > 0)
+                style += Pos->FillBase;
+            Pos->Fill1 = style;
+        }
+        if ((flags & 0x08) && Pos->NumStrokeBits > 0)
+        {
+            int style = Stream.ReadUInt(Pos->NumStrokeBits);
+            if (style > 0)
+                style += Pos->StrokeBase;
+            Pos->Stroke = style;
+        }
+        if (flags & 0x10)
+        {
+            retVal = Render::Shape_NewLayer;
+
+            Pos->Fill0 = Pos->Fill1 = Pos->Stroke = 0;
+
+            Stream.Align();
+
+            unsigned fsn = Stream.ReadU8();
+            if (fsn != 0)
+            {
+                fsn = unsigned(Stream.ReadU8()) << 16;
+                fsn |= unsigned(Stream.ReadU8()) << 8;
+                fsn |= unsigned(Stream.ReadU8());
+            }
+            unsigned lsn = Stream.ReadU8();
+            if (lsn == 0xFF)
+            {
+                lsn = unsigned(Stream.ReadU8()) << 16;
+                lsn |= unsigned(Stream.ReadU8()) << 8;
+                lsn |= unsigned(Stream.ReadU8());
+            }
+            Pos->FillBase   = fsn;
+            Pos->StrokeBase = lsn;
+
+            Pos->NumFillBits   = Stream.ReadUInt4();
+            Pos->NumStrokeBits = Stream.ReadUInt4();
+        }
+        break;
+    } while (0);
     return retVal;
 }
 
