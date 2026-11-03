@@ -439,20 +439,22 @@ bool ComplexMesh::updateFills()
     for (unsigned i = 0; i < FillRecords.GetSize(); i++)
     {
         FillRecord& fr = FillRecords[i];
-        if (!fr.pFill)
-            continue;
+        if (fr.pFill)
+        {
+            FillData   fd[2];
+            Ptr<Image> gi[2];
+            GetProvider()->GetFillData(&fd[0], GetLayer(), fr.FillMatrixIndex[0], GetMeshGenFlags());
+            GetProvider()->GetFillData(&fd[1], GetLayer(), fr.FillMatrixIndex[1], GetMeshGenFlags());
 
-        FillData   fd[2];
-        Ptr<Image> gi[2];
-        GetProvider()->GetFillData(&fd[0], GetLayer(), fr.FillMatrixIndex[0], GetMeshGenFlags());
-        GetProvider()->GetFillData(&fd[1], GetLayer(), fr.FillMatrixIndex[1], GetMeshGenFlags());
-
-        Ptr<PrimitiveFill> mergedFill = *pFillManager->CreateMergedFill(fr.MergeFlags, fr.pFill->GetVertexFormat(),
-                                                                        &fd[0], &fd[1], &gi[0], &gi[1],
-                                                                        textureManager, GetMorphRatio());
-        if (!mergedFill)
-            continue;   // keep the old fill
-        fr.pFill = mergedFill;
+            Ptr<PrimitiveFill> mergedFill = *pFillManager->CreateMergedFill(fr.MergeFlags, fr.pFill->GetVertexFormat(),
+                                                                            &fd[0], &fd[1], &gi[0], &gi[1],
+                                                                            textureManager, GetMorphRatio());
+            if (!mergedFill)
+            {
+                continue;   // keep the old fill
+            }
+            fr.pFill = mergedFill;
+        }
     }
     updateFillMatrixCache(VertexMatrix);
     return true;
