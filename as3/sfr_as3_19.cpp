@@ -3733,10 +3733,19 @@ void Sfr31ValueToBool(Value* v)
 typedef UPInt (*Sfr31Fn2)(UPInt);
 struct Sfr31SubVtbl { void* f0; Sfr31Fn2 f1; };
 
-static __forceinline bool Sfr31SwapChildrenTail(UPInt owner, unsigned i1, unsigned i2)
+// splitBounds: SwapChildren's inlined copy tests the two bounds in separate ifs (the SDK text); the out-of-line SwapChildrenAt
+// matches with one || test.
+static __forceinline bool Sfr31SwapChildrenTail(UPInt owner, unsigned i1, unsigned i2, bool splitBounds)
 {
     const UPInt list = owner + 0xd8;
-    if (i1 >= Sfr31Rd(list, 8) || i2 >= Sfr31Rd(list, 8))
+    if (splitBounds)
+    {
+        if (i1 >= Sfr31Rd(list, 8))
+            return false;
+        if (i2 >= Sfr31Rd(list, 8))
+            return false;
+    }
+    else if (i1 >= Sfr31Rd(list, 8) || i2 >= Sfr31Rd(list, 8))
         return false;
     if (!FUN_1425fb480(reinterpret_cast<void*>(list), reinterpret_cast<void*>(owner), i1, i2))
         return false;
@@ -3773,22 +3782,22 @@ static __forceinline bool Sfr31SwapChildrenTail(UPInt owner, unsigned i1, unsign
 }
 
 // AvmDisplayObjContainer::SwapChildren: swaps two children of the display list.
-// MS2-FUNCTIONAL 0x14252e590: inlines SwapChildrenAt; the exe keeps the first index in rbx across the second FindDisplayIndex and puts the false return right after the first bound check
+// SDK: AvmDisplayObjContainer::SwapChildren (AS3_AvmDisplayObjContainer.cpp), SwapChildrenAt inlined.
 // @0x14252e590
 bool AvmDisplayObjContainer::SwapChildren(DisplayObjectBase* pch1, DisplayObjectBase* pch2)
 {
     const UPInt self = reinterpret_cast<UPInt>(this);
-    const UPInt owner = Sfr31Rd(self, 0x18);
-    const SPInt i1 = FUN_1425f9200(reinterpret_cast<void*>(owner + 0xd8), pch1);
-    const SPInt i2 = FUN_1425f9200(reinterpret_cast<void*>(owner + 0xd8), pch2);
-    return SwapChildrenAt(static_cast<unsigned>(i1), static_cast<unsigned>(i2));
+    void* const displayList = reinterpret_cast<void*>(Sfr31Rd(self, 0x18) + 0xd8);
+    SPInt origIndex1 = FUN_1425f9200(displayList, pch1);
+    SPInt origIndex2 = FUN_1425f9200(displayList, pch2);
+    return Sfr31SwapChildrenTail(Sfr31Rd(self, 0x18), (unsigned)origIndex1, (unsigned)origIndex2, true);
 }
 
 // AvmDisplayObjContainer::SwapChildrenAt
 // @0x14252e6d0
 bool AvmDisplayObjContainer::SwapChildrenAt(unsigned i1, unsigned i2)
 {
-    return Sfr31SwapChildrenTail(Sfr31Rd(reinterpret_cast<UPInt>(this), 0x18), i1, i2);
+    return Sfr31SwapChildrenTail(Sfr31Rd(reinterpret_cast<UPInt>(this), 0x18), i1, i2, false);
 }
 // ---- batch 25
 // Strict equality of two values (same kind: payload compare; mixed Int/UInt/Number: numeric compare).
