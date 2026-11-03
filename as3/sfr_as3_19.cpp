@@ -2412,16 +2412,16 @@ void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt 
 }
 
 
-// TR::State::SwapOp: the two topmost operand stack values trade places.
-// MS2-FUNCTIONAL 0x14252e800: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// TR::State::SwapOp: the two topmost operand stack values trade places (State::OpStack at +0x38). The top index is
+// computed once; the stack data is re-read after each Assign.
 // @0x14252e800
 void Sfr31StateSwapOp(UPInt state)
 {
-    Value* data = *reinterpret_cast<Value**>(state + 0x38);
-    const UPInt n = *reinterpret_cast<UPInt*>(state + 0x40);
-    Value top(data[n - 1]);
-    data[n - 1] = data[n - 2];
-    data[n - 2] = top;
+    ArrayDH<Value>& ops = *reinterpret_cast<ArrayDH<Value>*>(state + 0x38);
+    const UPInt i = ops.GetSize() - 1;
+    Value top(ops[i]);
+    ops[i].Assign(ops[i - 1]);
+    ops[i - 1].Assign(top);
 }
 
 // AvmDisplayObj::SwitchAS3ObjPtrType: type 1 makes the object reference strong, anything else weak.
