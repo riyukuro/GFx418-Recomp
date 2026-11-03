@@ -562,6 +562,21 @@ struct ValueAssignCopies
         if (p)
             p->AddRef();
     }
+    // Value::AssignUnsafe(const ASString&), which the exe inlines in the slot reader.
+    static SF_FORCEINLINE void AssignUnsafeStrInline18(Value& v, const ASString& s)
+    {
+        if (s.GetNode() == s.GetManager()->GetNullStringNode())
+        {
+            v.value = (ASStringNode*)NULL;
+            v.SetKind(Value::kObject);   // null has type Object
+        }
+        else
+        {
+            v.SetKind(Value::kString);
+            v.value = s.GetNode();
+            v.AddRefString();
+        }
+    }
     // The same for a pointer known to be non-null (Value(this)).
     static SF_INLINE void AssignUnsafeObjectInline18(Value& v, Object* p)
     {
@@ -1974,6 +1989,8 @@ SF_FORCEINLINE bool TrIsClassTypeSlot(const SlotInfo& si)
 
 // VM::ThrowVerifyError: ThrowErrorInternal with the VerifyError class.
 SF_FORCEINLINE void TrThrowVerifyError(VM& vm, const VM::Error& e) { FUN_14252ecb0(&vm, &e, &fl::VerifyErrorCI); }
+// VM::ThrowTypeError/ThrowReferenceError: ThrowErrorInternal with that error class.
+SF_FORCEINLINE void TrThrowError(VM& vm, const VM::Error& e, const ClassInfo& ci) { FUN_14252ecb0(&vm, &e, &ci); }
 }
 
 namespace TR {
@@ -5953,9 +5970,10 @@ void Traits::CopyParentTraits()
 // the getter. vt is the method table to use (super properties); else that of _this's traits. False (with a
 // TypeError or ReferenceError raised for a non-callable getter or a write-only property) when the slot has no
 // value.
-// MS2-FUNCTIONAL free function (not declared in the shared SlotInfo class); the slot is read over its address
+// A free function (not declared in the shared SlotInfo class); the slot is read over its address. ret is
+// __restrict, as the CheckResult return slot it stands for, so the result store can move before the value's.
 // @0x14250e2d0
-char* FUN_14250e2d0(const void* psi, void* ret, Scaleform::GFx::AS3::VM* pvm, Scaleform::GFx::AS3::Value* pvalue,
+char* FUN_14250e2d0(const void* psi, void* __restrict ret, Scaleform::GFx::AS3::VM* pvm, Scaleform::GFx::AS3::Value* pvalue,
                     const Scaleform::GFx::AS3::Value* pthis, void* pvt, int vtt)
 {
     using namespace Scaleform;
@@ -5964,74 +5982,74 @@ char* FUN_14250e2d0(const void* psi, void* ret, Scaleform::GFx::AS3::VM* pvm, Sc
     VM&             vm    = *pvm;
     Value&          value = *pvalue;
     const Value&    _this = *pthis;
-    const VTable*   vt    = static_cast<const VTable*>(pvt);
-    char*           r     = static_cast<char*>(ret);
+    char* __restrict r    = static_cast<char*>(ret);
     const SInt32    ind   = si.ValueInd;
-    const UPInt     base  = reinterpret_cast<UPInt>(_this.GetObject());
     switch (si.BindType)
     {
     case SlotInfo::BT_ValueArray:
-        value.AssignUnsafe(reinterpret_cast<const Value*>(*reinterpret_cast<const UPInt*>(base + 0xa8))[UInt32(ind)]);
+        value.AssignUnsafe(reinterpret_cast<const Value*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(_this.GetObject()) + 0xa8))[UInt32(ind)]);
         break;
     case SlotInfo::BT_Value:
-        value.AssignUnsafe(*reinterpret_cast<const Value*>(base + UInt32(ind)));
+        value.AssignUnsafe(*reinterpret_cast<const Value*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_ObjectAS:
-        reinterpret_cast<STPtr*>(base + UInt32(ind))->GetValueUnsafe(value);
+        reinterpret_cast<STPtr*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind))->GetValueUnsafe(value);
         break;
     case SlotInfo::BT_ObjectCpp:
-        value.AssignUnsafe(*reinterpret_cast<const SPtr<Instances::fl::GlobalObjectCPP>*>(base + UInt32(ind)));
+        value.AssignUnsafe(*reinterpret_cast<const SPtr<Instances::fl::GlobalObjectCPP>*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_Boolean:
-        value.SetBoolUnsafe(*reinterpret_cast<const bool*>(base + UInt32(ind)));
+        value.SetBoolUnsafe(*reinterpret_cast<const bool*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_Int:
-        value.SetSInt32Unsafe(*reinterpret_cast<const SInt32*>(base + UInt32(ind)));
+        value.SetSInt32Unsafe(*reinterpret_cast<const SInt32*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_UInt:
-        value.SetUInt32Unsafe(*reinterpret_cast<const UInt32*>(base + UInt32(ind)));
+        value.SetUInt32Unsafe(*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_Number:
-        value.SetNumberUnsafe(*reinterpret_cast<const Value::Number*>(base + UInt32(ind)));
+        value.SetNumberUnsafe(*reinterpret_cast<const Value::Number*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)));
         break;
     case SlotInfo::BT_String:
-        if (GFx::ASStringNode* node = *reinterpret_cast<GFx::ASStringNode* const*>(base + UInt32(ind)))
+        if (GFx::ASStringNode* node = *reinterpret_cast<GFx::ASStringNode* const*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind)))
             value.AssignUnsafe(node);
         else
             value.SetNullUnsafe();   // null is an object, not a string
         break;
     case 10:   // a constant C string (4.1.18 numbers this binding before BT_Code)
-        value.AssignUnsafe(vm.GetStringManager().CreateConstString(*reinterpret_cast<const char* const*>(base + UInt32(ind))));
+        ValueAssignCopies::AssignUnsafeStrInline18(value, vm.GetStringManager().CreateConstString(*reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(_this.GetObject()) + UInt32(ind))));
         break;
     case SlotInfo::BT_Code:
+    {
+        const VTable* vt = static_cast<const VTable*>(pvt);
         if (!vt)
             vt = &vm.GetValueTraits(_this).GetVT();
         if (_this.IsObject() && vtt == SlotInfo::valGet)
-            FUN_14250ba10(vt, value, AbsoluteIndex(ind), _this.GetObject());
+            FUN_14250ba10(vt, value, AbsoluteIndex(si.ValueInd), _this.GetObject());
         else
-            value.AssignUnsafe(vt->GetValue(AbsoluteIndex(ind)));
+            value.AssignUnsafe(vt->GetValue(AbsoluteIndex(si.ValueInd)));
         break;
+    }
     case SlotInfo::BT_Get:
     case SlotInfo::BT_GetSet:
     {
+        const VTable* vt = static_cast<const VTable*>(pvt);
         if (!vt)
             vt = &vm.GetValueTraits(_this).GetVT();
-        const Value getter = vt->GetValue(AbsoluteIndex(ind));
-        if (!getter.IsCallable())
+        const Value getter = vt->GetValue(AbsoluteIndex(si.ValueInd));
+        if (getter.IsCallable())
+            vm.ExecuteInternalUnsafe(getter, _this, value, 0, NULL, false);
+        else
         {
-            const VM::Error e(VM::eCallOfNonFunctionError, vm, getter);
-            FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+            TrThrowError(vm, VM::Error(VM::eCallOfNonFunctionError, vm, getter), fl::TypeErrorCI);
             *r = false;
             return r;
         }
-        vm.ExecuteInternalUnsafe(getter, _this, value, 0, NULL, false);
         break;
     }
     case SlotInfo::BT_Set:
-    {
-        const VM::Error e(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, si.Name->pData, _this);
-        FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
-    }
+        TrThrowError(vm, VM::Error(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, si.Name->pData, _this),
+                     fl::ReferenceErrorCI);
         // fall through
     default:
         *r = false;
