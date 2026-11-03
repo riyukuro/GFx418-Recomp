@@ -7233,138 +7233,166 @@ struct MovieImpl::ReturnValueHolder : public NewOverrideBase<0x147>   // StatMV_
 namespace Scaleform { namespace GFx { namespace AS3 {
 
 // The strings of the holder are at least one.
-static inline void Sfr34_ResizeStringArray(MovieImpl::ReturnValueHolder* h, unsigned n)
+static SF_FORCEINLINE void Sfr34_ResizeStringArray(MovieImpl::ReturnValueHolder* h, unsigned n)
 {
     h->StringArray.Resize(Alg::Max(1u, n));
 }
 
+// GFx::Value::SetUndefined expanded in place, as the exe does in GetVariableArray (the release and the type are
+// protected, hence the derived view).
+struct Sfr34_GfxValueView : GFx::Value
+{
+    static SF_FORCEINLINE void SetUndefined(GFx::Value* v)
+    {
+        Sfr34_GfxValueView* p = static_cast<Sfr34_GfxValueView*>(v);
+        if (p->IsManagedValue())
+            p->ReleaseManagedValue();
+        p->Type = VT_Undefined;
+    }
+};
+
 // count elements of the AS3 array at the path from index on, into the host's array of ints, floats, doubles,
 // strings (kept alive by the movie's return value holder), wide strings (in its character buffer) or values.
 // Undefined elements give 0 (NULL for strings). False when the path is not an array.
-// MS2-FUNCTIONAL a 4.1.18 virtual of the root; the exe saves fewer registers in its prolog
+// MS2-FUNCTIONAL a 4.1.18 virtual of the root; the exe keeps the resolved value's flags in a stack copy for its
+// destructor (its path lookup is known not to keep the pointer), so the locals sit 8 bytes higher
 // @0x142510240
 bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, unsigned index, void* pdata,
                                  unsigned count)
 {
     Value resolvedVal;
-    if (!FUN_142506000(this, &resolvedVal, ppathToVar) || !resolvedVal.IsObject())
-        return false;
-    Object* pobj = resolvedVal.GetObject();
-    if (!pobj || pobj->GetTraits().GetTraitsType() != Traits_Array || !pobj->GetTraits().IsInstanceTraits())
-        return false;
-    MovieImpl::ReturnValueHolder* rvHolder = pMovieImpl->GetRetValHolder();
-    rvHolder->StringArrayPos = 0;
-    Sfr34_ResizeStringArray(rvHolder, 0);
-    SparseArray&       sa      = static_cast<Instances::fl::Array*>(pobj)->SA;
-    const unsigned     arrSize = unsigned(sa.GetSize());
-    switch (type)
+    if (FUN_142506000(this, &resolvedVal, ppathToVar))
     {
-    case 0:   // SA_Int
-    {
-        int* parr = static_cast<int*>(pdata);
-        for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+        if (!resolvedVal.IsObject())
+            return false;
+        Object* pobj = resolvedVal.GetObject();
+        if (pobj && pobj->GetTraits().GetTraitsType() == Traits_Array && pobj->GetTraits().IsInstanceTraits())
         {
-            const Value& val = sa.At(i + index);
-            parr[i] = !val.IsUndefined() ? val.AsInt() : 0;
-        }
-    }
-        // fall through
-    case 2:   // SA_Float
-    {
-        float* parr = static_cast<float*>(pdata);
-        for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
-        {
-            const Value& val = sa.At(i + index);
-            parr[i] = !val.IsUndefined() ? float(val.AsNumber()) : 0.0f;
-        }
-        break;
-    }
-    case 1:   // SA_Double
-    {
-        Double* parr = static_cast<Double*>(pdata);
-        for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
-        {
-            const Value& val = sa.At(i + index);
-            parr[i] = !val.IsUndefined() ? val.AsNumber() : 0.0;
-        }
-        break;
-    }
-    case 5:   // SA_Value
-    {
-        GFx::Value* parr = static_cast<GFx::Value*>(pdata);
-        for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
-        {
-            const Value& val      = sa.At(i + index);
-            GFx::Value*  pdestVal = &parr[i];
-            pdestVal->SetUndefined();
-            if (!val.IsUndefined())
-                ASValue2GFxValue(val, pdestVal);
-        }
-        break;
-    }
-    case 3:   // SA_String
-    {
-        const char**   parr = static_cast<const char**>(pdata);
-        const unsigned n    = Alg::Min(arrSize, count);
-        Sfr34_ResizeStringArray(rvHolder, n);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const Value& val = sa.At(i + index);
-            if (!val.IsUndefined())
+            MovieImpl::ReturnValueHolder* rvHolder = pMovieImpl->GetRetValHolder();
+            rvHolder->StringArrayPos = 0;
+            Sfr34_ResizeStringArray(rvHolder, 0);
+            Instances::fl::Array* parray = static_cast<Instances::fl::Array*>(pobj);
+            unsigned arrSize = static_cast<unsigned>(parray->GetSize());
+            switch (type)
             {
-                ASString str = val.AsString();
-                parr[i]      = str.ToCStr();
-                rvHolder->StringArray[rvHolder->StringArrayPos++] = str;
-            }
-            else
-                parr[i] = NULL;
-        }
-        break;
-    }
-    case 4:   // SA_StringW
-    {
-        const wchar_t** parr    = static_cast<const wchar_t**>(pdata);
-        unsigned        bufSize = 0;
-        const unsigned  n       = Alg::Min(arrSize, count);
-        Sfr34_ResizeStringArray(rvHolder, n);
-        for (unsigned i = 0; i < arrSize; ++i)
-        {
-            const Value& val = sa.At(i + index);
-            if (!val.IsUndefined())
+            case 0:   // SA_Int
             {
-                ASString str            = val.AsString();
-                rvHolder->StringArray[i] = str;
-                bufSize += str.GetLength() + 1;
+                int* parr = static_cast<int*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    const Value& val = parray->At(i + index);
+                    if (!val.IsUndefined())
+                        parr[i] = (int)val.AsInt();
+                    else
+                        parr[i] = 0;
+                }
             }
+                // fall through
+            case 2:   // SA_Float
+            {
+                float* parr = static_cast<float*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    const Value& val = parray->At(i + index);
+                    if (!val.IsUndefined())
+                        parr[i] = (float)val.AsNumber();
+                    else
+                        parr[i] = 0;
+                }
+                break;
+            }
+            case 1:   // SA_Double
+            {
+                Double* parr = static_cast<Double*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    const Value& val = parray->At(i + index);
+                    if (!val.IsUndefined())
+                        parr[i] = (Double)val.AsNumber();
+                    else
+                        parr[i] = 0;
+                }
+                break;
+            }
+            case 5:   // SA_Value
+            {
+                GFx::Value* parr = static_cast<GFx::Value*>(pdata);
+                for (unsigned i = 0, n = Alg::Min(arrSize, count); i < n; ++i)
+                {
+                    const Value& val      = parray->At(i + index);
+                    GFx::Value*  pdestVal = &parr[i];
+                    Sfr34_GfxValueView::SetUndefined(pdestVal);
+                    if (!val.IsUndefined())
+                        ASValue2GFxValue(val, pdestVal);
+                }
+                break;
+            }
+            case 3:   // SA_String
+            {
+                const char**   parr = static_cast<const char**>(pdata);
+                const unsigned n    = Alg::Min(arrSize, count);
+                Sfr34_ResizeStringArray(rvHolder, n);
+                for (unsigned i = 0; i < n; ++i)
+                {
+                    const Value& val = parray->At(i + index);
+                    if (!val.IsUndefined())
+                    {
+                        ASString str = val.AsString();
+                        parr[i]      = str.ToCStr();
+                        rvHolder->StringArray[rvHolder->StringArrayPos++] = str;
+                    }
+                    else
+                        parr[i] = NULL;
+                }
+                break;
+            }
+            case 4:   // SA_StringW
+            {
+                const wchar_t** parr    = static_cast<const wchar_t**>(pdata);
+                unsigned        bufSize = 0;
+                const unsigned  n       = Alg::Min(arrSize, count);
+                Sfr34_ResizeStringArray(rvHolder, n);
+                for (unsigned i = 0; i < arrSize; ++i)
+                {
+                    const Value& val = parray->At(i + index);
+                    if (!val.IsUndefined())
+                    {
+                        ASString str            = val.AsString();
+                        rvHolder->StringArray[i] = str;
+                        bufSize += str.GetLength() + 1;
+                    }
+                }
+                const unsigned size = (bufSize * unsigned(sizeof(wchar_t)) + 4095) & ~4095u;
+                if (rvHolder->CharBufferSize < size ||
+                    (rvHolder->CharBufferSize > size && rvHolder->CharBufferSize - size > 4096))
+                {
+                    if (rvHolder->CharBuffer)
+                        rvHolder->CharBuffer = static_cast<char*>(SF_REALLOC(rvHolder->CharBuffer, size, 0x147));
+                    else
+                        rvHolder->CharBuffer = static_cast<char*>(SF_ALLOC(size, 0x147));
+                    rvHolder->CharBufferSize = size;
+                }
+                wchar_t* pwBuffer = reinterpret_cast<wchar_t*>(rvHolder->CharBuffer);
+                for (unsigned i = 0; i < n; ++i)
+                {
+                    const char* psrcStr  = rvHolder->StringArray[i].ToCStr();
+                    wchar_t*    pwdstStr = pwBuffer;
+                    UInt32      code;
+                    while ((code = UTF8Util::DecodeNextChar(&psrcStr)) != 0)
+                        *pwBuffer++ = wchar_t(code);
+                    *pwBuffer++ = 0;
+                    parr[i]     = pwdstStr;
+                }
+                Sfr34_ResizeStringArray(rvHolder, 0);
+                break;
+            }
+            default:
+                break;
+            }
+            return true;
         }
-        const unsigned size = (bufSize * unsigned(sizeof(wchar_t)) + 4095) & ~4095u;
-        if (rvHolder->CharBufferSize < size ||
-            (rvHolder->CharBufferSize > size && rvHolder->CharBufferSize - size > 4096))
-        {
-            if (rvHolder->CharBuffer)
-                rvHolder->CharBuffer = static_cast<char*>(SF_REALLOC(rvHolder->CharBuffer, size, 0x147));
-            else
-                rvHolder->CharBuffer = static_cast<char*>(SF_ALLOC(size, 0x147));
-            rvHolder->CharBufferSize = size;
-        }
-        wchar_t* pwBuffer = reinterpret_cast<wchar_t*>(rvHolder->CharBuffer);
-        for (unsigned i = 0; i < n; ++i)
-        {
-            const char* psrcStr  = rvHolder->StringArray[i].ToCStr();
-            wchar_t*    pwdstStr = pwBuffer;
-            UInt32      code;
-            while ((code = UTF8Util::DecodeNextChar(&psrcStr)) != 0)
-                *pwBuffer++ = wchar_t(code);
-            *pwBuffer++ = 0;
-            parr[i]     = pwdstStr;
-        }
-        Sfr34_ResizeStringArray(rvHolder, 0);
-        break;
     }
-    default:
-        break;
-    }
-    return true;
+    return false;
 }
 
 } // namespace AS3
