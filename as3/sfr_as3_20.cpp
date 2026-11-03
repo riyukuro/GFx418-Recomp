@@ -1719,13 +1719,6 @@ static SF_INLINE void VectorSlice(VectorBase<T>& self, Value& result, unsigned a
         SlicePush(r.V, self, i);
 }
 
-// RangeError 1125 (index out of range) naming the two values.
-static SF_INLINE void ThrowRangeError(ArrayBase& self, const char* value, const char* range)
-{
-    VM& vm = self.VMRef;
-    vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, value, range));
-}
-
 // Vector.splice: the count elements from pos moved into deleted, the new vector it returns.
 template <class I, typename T>
 static SF_INLINE void DeleteElements(VectorBase<T>& self, UPInt pos, UPInt count, I& deleted)
@@ -1776,7 +1769,9 @@ static __forceinline void VectorSplice(VectorBase<T>& self, Value& result, unsig
             return;
         if (startIndex < 0 || startIndex + deleteCount > size)
         {
-            ThrowRangeError(self, AsString(size).ToCStr(), AsString(size).ToCStr());
+            // RangeError 1125 (index out of range) naming the size twice.
+            VM& vm = self.VMRef;
+            vm.ThrowRangeError(VM::Error(VM::eInvalidRangeError, vm, AsString(size).ToCStr(), AsString(size).ToCStr()));
             return;
         }
     }
