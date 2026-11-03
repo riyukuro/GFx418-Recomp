@@ -3670,14 +3670,12 @@ void MovieImpl::ProcessMouse(const InputEventsQueueEntry* qe, UInt32* miceProcee
 
 // Restarts the movie from frame 1 of its own definition: drops the levels, the load queue, the focus and the
 // input state, then lets the AVM root create _level0 again.
-// MS2-FUNCTIONAL: instruction scheduling (the load queue null stores, the Flags2 clear before the Init call, the
-// callee-saved restores after the two releases); same operations.
 // @0x142575410
 void MovieImpl::Restart(bool advance0)
 {
     if (pMainMovie)
     {
-        Flags2 |= 0x4;   // restarting
+        G_SetFlag<0x4>(Flags2, true);   // Flag2_Restarting
         ProcessUnloadQueue();
 
         Ptr<MovieDefImpl> prootMovieDef = pMainMovie->GetResourceMovieDef();
@@ -3695,18 +3693,17 @@ void MovieImpl::Restart(bool advance0)
             plq->Cancel();
             plq = plq->pNext;
         }
-        if (plqCount)
+        unsigned plqDoneCount = 0;
+        while (plqCount > plqDoneCount)
         {
-            unsigned plqDoneCount;
-            do
+            plqDoneCount = 0;
+            plq = pLoadQueueMTHead;
+            while (plq)
             {
-                plqDoneCount = 0;
-                for (plq = pLoadQueueMTHead; plq; plq = plq->pNext)
-                {
-                    if (plq->LoadFinished())
-                        plqDoneCount++;
-                }
-            } while (plqCount > plqDoneCount);
+                if (plq->LoadFinished())
+                    plqDoneCount++;
+                plq = plq->pNext;
+            }
         }
         while (pLoadQueueHead)
         {
@@ -3723,16 +3720,18 @@ void MovieImpl::Restart(bool advance0)
         pLoadQueueHead   = NULL;
         pLoadQueueMTHead = NULL;
 
-        Flags |= Flag_OptAdvListInvalid;   // InvalidateOptAdvanceList
-        pPlayListOptHead = NULL;
-        pPlayList        = NULL;
+        G_SetFlag<Flag_OptAdvListInvalid>(Flags, true);   // InvalidateOptAdvanceList
+        pPlayList = pPlayListOptHead = NULL;
 
         bool imeWasActive = false;
-        Ptr<IMEManagerBase> pIMEManager = *(IMEManagerBase*)GetStateAddRef(State::State_IMEManager);
-        if (pIMEManager && pIMEManager->IsMovieActive(this))
+        Ptr<IMEManagerBase> pIMEManager = GetIMEManager();
+        if (pIMEManager)
         {
-            imeWasActive = true;
-            pIMEManager->SetActiveMovie(NULL);
+            if (pIMEManager->IsMovieActive(this))
+            {
+                imeWasActive = true;
+                pIMEManager->SetActiveMovie(NULL);
+            }
         }
         SF_FREE(pIMECandidateListStyle);
         pIMECandidateListStyle = NULL;
@@ -3769,28 +3768,30 @@ void MovieImpl::Restart(bool advance0)
             mMouseState[i].ResetState();
 
         AsRootSlots(pASMovieRoot)->ForceCollect();
-        Flags2 &= ~0x4u;
+        G_SetFlag<0x4>(Flags2, false);   // Flag2_Restarting
         AsRootSlots(pASMovieRoot)->Init(prootMovieDef);
 
-        if (pMainMovie)
+        if (!pMainMovie)
         {
-            if (pUserEventHandler)
-            {
-                for (unsigned i = 0; i < MouseCursorCount; ++i)
-                {
-                    pUserEventHandler->HandleEvent(this, MouseCursorEvent(Event::DoShowMouse, i));
-                    pUserEventHandler->HandleEvent(this, MouseCursorEvent(MouseCursorEvent::ARROW, i));
-                }
-            }
-            FocusRectChanged = true;
-            for (unsigned i = 0; i < 4; ++i)
-                KeyboardStates[i].ResetState();
-            if (imeWasActive)
-                pIMEManager->SetActiveMovie(this);
-            if (advance0)
-                Advance(0.0f, 0, true);
-            AsRootSlots(pASMovieRoot)->ForceCollect();
+            return;
         }
+
+        if (pUserEventHandler)
+        {
+            for (unsigned i = 0; i < MouseCursorCount; ++i)
+            {
+                pUserEventHandler->HandleEvent(this, MouseCursorEvent(Event::DoShowMouse, i));
+                pUserEventHandler->HandleEvent(this, MouseCursorEvent(MouseCursorEvent::ARROW, i));
+            }
+        }
+        FocusRectChanged = true;
+        for (unsigned i = 0; i < 4; ++i)
+            KeyboardStates[i].ResetState();
+        if (imeWasActive)
+            pIMEManager->SetActiveMovie(this);
+        if (advance0)
+            Advance(0.0f, 0, true);
+        AsRootSlots(pASMovieRoot)->ForceCollect();
     }
 }
 
