@@ -109,13 +109,7 @@ public:
     void AddButtonAction(ButtonActionBase* pact);
 
     // (appended for the buttons, sfr_gfx_05c) the 9-slice grid, the zero rect when the button has none
-    RectF GetScale9Grid() const
-    {
-        if (!pScale9Grid)
-            return RectF(0);
-        const RectF& r = pScale9Grid->Rect;
-        return RectF(r.x1, r.y1, r.x2, r.y2);
-    }
+    RectF GetScale9Grid() const { return pScale9Grid ? pScale9Grid->Rect : RectF(0); }
     // (appended, sfr33) the DefineScalingGrid tag (sfr_gfx_04x): the grid, allocated on the button's heap
     void SetScale9Grid(const RectF& r)
     {

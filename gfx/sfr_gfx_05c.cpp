@@ -35,7 +35,7 @@ static inline MouseState* GetMouseStateOf(MovieImpl* proot, unsigned mouseIndex)
 typedef float (*MovieAdvanceFn)(MovieImpl*, float deltaT, unsigned frameCatchUpCount, bool capture);
 
 // @0x1425dd840
-// MS2-FUNCTIONAL: /GS frame layout, the exe keeps the RectF temporary next to the cookie
+// MS2-FUNCTIONAL: /GS frame layout only: the exe pushes rbx and has a 0x68 frame, ours saves rbx in its home slot (0x60)
 Button::Button(ButtonDef* def, MovieDefImpl* pbindingDefImpl, ASMovieRootBase* pasRoot, InteractiveObject* parent,
                ResourceId id)
     : InteractiveObject(pbindingDefImpl, pasRoot, parent, id), pDef(def), LastMouseFlags(IDLE), mMouseFlags(IDLE),
