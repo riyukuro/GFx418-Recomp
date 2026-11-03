@@ -1402,6 +1402,7 @@ public:
     {
         Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
     }
+    virtual ~UserDefinedFunctionObject();                                    // exe 0x142926060 (sfr_as2_03)
 
     virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>*) { return fn.Env; }
     virtual void         Invoke(const FnCall& fn, LocalFrame*, const char*); // exe 0x142963aa0 (sfr_as2_06)

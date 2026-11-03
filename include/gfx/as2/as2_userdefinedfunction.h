@@ -32,6 +32,7 @@ public:
     {
         Set__proto__(psc, psc->pContext->GetPrototype(ASBuiltin_Function));
     }
+    virtual ~UserDefinedFunctionObject();                                                   // 0x142926060 (sfr_as2_03)
 
     virtual Environment* GetEnvironment(const FnCall& fn, Ptr<InteractiveObject>*) { return fn.Env; } // 0x14294ab60
     virtual void         Invoke(const FnCall& fn, LocalFrame*, const char*);                         // 0x142963aa0

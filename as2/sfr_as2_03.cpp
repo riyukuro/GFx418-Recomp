@@ -67,6 +67,7 @@
 // MS2-RANGE: 0x1429292a0-0x142929300 .text$mn
 // MS2-RANGE: 0x142929300-0x142929370 .text$mn
 // MS2-RANGE: 0x142929370-0x142929400 .text$mn
+// MS2-RANGE: 0x142926060-0x1429260b0 .text$mn
 // MS2-RANGE: 0x1429260b0-0x1429260c0 .text$mn
 // MS2-RANGE: 0x142923cb0-0x142923dd0 .text$mn
 // MS2-RANGE: 0x1429254e0-0x142925560 .text$mn
@@ -198,6 +199,7 @@
 #include "../include/gfx/as2/as2_rectangleobject.h"
 #include "../include/gfx/as2/as2_bitmapfilter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
+#include "../include/gfx/as2/as2_userdefinedfunction.h"
 #include "../include/gfx/gfx_imageresource.h"
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/kernel/sf_stringhash.h"
@@ -1350,6 +1352,11 @@ FunctionObject::~FunctionObject()
 {
 }
 
+// @0x142926060
+UserDefinedFunctionObject::~UserDefinedFunctionObject()
+{
+}
+
 // The exe keeps the dictionary's element array teardown out of line.
 #pragma inline_depth(3)
 // MS2-FUNCTIONAL inlining: the exe inlines the DefaultValue ASString release but calls the ArrayDataBase dtor
@@ -2055,3 +2062,5 @@ bool FUN_142926ab0(const ASString* pthis, const ASString& str)
 // MS2-PIN: ??_7MouseListener@AS2@GFx@Scaleform@@6B@ 0x143217718
 // MS2-PIN: ??_GMouseListener@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292bfc0
 // MS2-PIN: ??_GMouseCtorFunction@AS2@GFx@Scaleform@@UEAAPEAXI@Z 0x14292beb0
+// MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x143221ff8
+// MS2-PIN: ??_7UserDefinedFunctionObject@AS2@GFx@Scaleform@@6BObjectInterface@123@@ 0x143222080
