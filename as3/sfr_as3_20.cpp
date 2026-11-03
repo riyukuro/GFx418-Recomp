@@ -1557,10 +1557,10 @@ static SF_INLINE void ConcatPush(Vector_String& r, const Value& v)
     if (r.V.CheckFixed())
         r.V.V.PushBack(s);
 }
-static SF_INLINE void ConcatPush(Vector_double& r, const Value& v)  { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsNumber()); }
-static SF_INLINE void ConcatPush(Vector_int& r, const Value& v)     { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsInt()); }
+static SF_INLINE void ConcatPush(Vector_double& r, const Value& v)  { const Value::Number e = v.AsNumber(); if (r.V.CheckFixed()) r.V.V.PushBack(e); }
+static SF_INLINE void ConcatPush(Vector_int& r, const Value& v)     { const SInt32 e = v.AsInt(); if (r.V.CheckFixed()) r.V.V.PushBack(e); }
 static SF_INLINE void ConcatPush(Vector_object& r, const Value& v)  { if (r.V.CheckFixed()) r.V.V.PushBack(v); }
-static SF_INLINE void ConcatPush(Vector_uint& r, const Value& v)    { if (r.V.CheckFixed()) r.V.V.PushBack(v.AsUInt()); }
+static SF_INLINE void ConcatPush(Vector_uint& r, const Value& v)    { const UInt32 e = v.AsUInt(); if (r.V.CheckFixed()) r.V.V.PushBack(e); }
 
 static SF_INLINE void Append(Vector_String& r, const Vector_String& o)  { r.Append(o); }
 static SF_INLINE void Append(Vector_double& r, const Vector_double& o)  { r.Append(o); }
@@ -1574,6 +1574,10 @@ static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_double& 
 static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_int& o)     { return o.GetVM().GetClassTraitsSInt(); }
 static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_object& o)  { return GetEnclosedClassTraits(o); }
 static SF_INLINE const ClassTraits::Traits& MapClassTraits(const Vector_uint& o)    { return o.GetVM().GetClassTraitsUInt(); }
+
+// VectorBase::GetVM (AS3_Obj_Vec_VectorBase.h), which the SDK's NOT_IMPLEMENTED and throw sites call.
+template <typename T>
+static __forceinline VM& Sfr20GetVM(const VectorBase<T>& self) { return self.VMRef; }
 
 template <class I, class TR, typename T>
 static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsigned argc, const Value* argv, I& owner)
@@ -1595,12 +1599,12 @@ static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsig
         {
             if (FUN_1425149a0(vm.GetClassTraitsArray(), argClassTR))
             {
-                self.VMRef.ThrowError(VM::Error(VM::eNotImplementedError, self.VMRef, "Vector::concat() for argument of type Array"));
+                Sfr20GetVM(self).ThrowError(VM::Error(VM::eNotImplementedError, Sfr20GetVM(self), "Vector::concat() for argument of type Array"));
                 return;
             }
             if (&currClassTR != &argClassTR)
             {
-                self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+                Sfr20GetVM(self).ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, Sfr20GetVM(self),
                     currClassTR.GetName().ToCStr(), argClassTR.GetName().ToCStr()));
                 return;
             }
@@ -1610,7 +1614,7 @@ static __forceinline void VectorConcat(VectorBase<T>& self, Value& result, unsig
             ConcatPush(r, value);
         else
         {
-            self.VMRef.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, self.VMRef,
+            Sfr20GetVM(self).ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, Sfr20GetVM(self),
                 currClassTR.GetName().ToCStr(), argClassTR.GetName().ToCStr()));
             return;
         }
@@ -2096,23 +2100,18 @@ using namespace Scaleform::GFx::AS3;
 namespace VI = Scaleform::GFx::AS3::Instances::fl_vec;
 namespace VT = Scaleform::GFx::AS3::InstanceTraits::fl_vec;
 
-// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547960
 void FUN_142547960(VectorBase<Ptr<GFx::ASStringNode> >& v, Value& result, unsigned argc, const Value* argv, VI::Vector_String& owner)
 { VI::VectorConcat<VI::Vector_String, VT::Vector_String>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547c40
 void FUN_142547c40(VectorBase<Value::Number>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_double& owner)
 { VI::VectorConcat<VI::Vector_double, VT::Vector_double>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142547f30
 void FUN_142547f30(VectorBase<SInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_int& owner)
 { VI::VectorConcat<VI::Vector_int, VT::Vector_int>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142548280
 void FUN_142548280(VectorBase<Value>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_object& owner)
 { VI::VectorConcat<VI::Vector_object, VT::Vector_object>(v, result, argc, argv, owner); }
-// MS2-FUNCTIONAL: register allocation and frame layout (the exe frame is 0x10 bytes larger)
 // @0x142548580
 void FUN_142548580(VectorBase<UInt32>& v, Value& result, unsigned argc, const Value* argv, VI::Vector_uint& owner)
 { VI::VectorConcat<VI::Vector_uint, VT::Vector_uint>(v, result, argc, argv, owner); }
