@@ -5479,7 +5479,6 @@ WeakProxy** Sfr33CreateWeakProxy(const GASRefCountBase* obj, WeakProxy** out)
 
 // SlotInfo::GetDataType: the class traits of the slot's declared type (si+0x18 the ABC file, +0x20 its type
 // multiname), resolved and kept (+0x10) on first use; a slot without an ABC type takes those of its bind type.
-// MS2-FUNCTIONAL 0x1425085b0: the exe also builds (and drops) a Multiname of the type name.
 // @0x1425085b0
 ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm)
 {
@@ -5490,35 +5489,35 @@ ClassTraits::Traits* Sfr33SlotDataType(const SlotInfo* psi, VM* pvm)
     {
         VMAbcFile* file = *reinterpret_cast<VMAbcFile**>(si + 0x18);
         const UByte* amn = *reinterpret_cast<const UByte* const*>(si + 0x20);
-        int off;
         if (file && amn)
         {
-            if ((*amn & 0xf & ~6) == 0 && (*amn & 0xf) != 2)
+            const int kind = *amn & 0xf;
+            if ((kind & ~6) == 0 && kind != 2)
             {
                 const Abc::Multiname& tn =
                     FUN_14250f8a0(amn, *reinterpret_cast<const void* const*>(reinterpret_cast<UByte*>(file) + 0x28));
                 Multiname mn(*file, tn);
-                type = static_cast<ClassTraits::Traits*>(FUN_142524f60(pvm, file, &tn));
-                return type;
+                type = static_cast<ClassTraits::Traits*>(
+                    FUN_142524f60(pvm, *reinterpret_cast<VMAbcFile**>(si + 0x18), &tn));
             }
-            off = 0x208;
+            else
+                type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x208);
         }
         else
         {
             switch ((*reinterpret_cast<const int*>(si) << 0x16) >> 0x1b)
             {
-            case 0: case 1: case 2: off = 0x1f0; break;
-            case 3: case 4: off = 0x1f8; break;
-            case 5: off = 0x210; break;
-            case 6: off = 0x220; break;
-            case 7: off = 0x228; break;
-            case 8: off = 0x218; break;
-            case 9: case 10: off = 0x230; break;
-            case 11: case 12: case 13: case 14: off = 0x208; break;
-            default: return type;
+            case 0: case 1: case 2: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x1f0); break;
+            case 3: case 4: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x1f8); break;
+            case 5: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x210); break;
+            case 6: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x220); break;
+            case 7: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x228); break;
+            case 8: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x218); break;
+            case 9: case 10: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x230); break;
+            case 11: case 12: case 13: case 14: type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + 0x208); break;
+            default: break;
             }
         }
-        type = *reinterpret_cast<ClassTraits::Traits* const*>(vm + off);
     }
     return type;
 }
