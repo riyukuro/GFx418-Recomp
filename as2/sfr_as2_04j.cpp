@@ -247,77 +247,84 @@ void* FUN_14291c690(void* self, LoadQueueEntry* pentry, MovieImpl* pmovie)
 }
 
 // Hands the load to the loader thread entry of its kind and cancels the pending entries it replaces.
-// MS2-FUNCTIONAL: the entry constructors are the raw FUN_ functions above (no recovered classes)
 // @0x14292fc90
 void MovieRoot::AddLoadQueueEntryMT(LoadQueueEntry* pentry)
 {
-    MemoryHeap*           pheap = pMovieImpl->GetMovieHeap();
-    LoadQueueEntryMT*     pentryMT = 0;
-    GFxAS2LoadQueueEntry* pas2     = static_cast<GFxAS2LoadQueueEntry*>(pentry);
+    LoadQueueEntryMT* pentryMT = NULL;
     if (pentry->Type & LoadQueueEntry::LTF_VarsFlag)
-        pentryMT = SF_HEAP_NEW(pheap) LoadQueueEntryMT_LoadVars(pentry, pMovieImpl);
+    {
+        pentryMT = SF_HEAP_NEW(pMovieImpl->GetMovieHeap()) LoadQueueEntryMT_LoadVars(pentry, pMovieImpl);
+    }
     else if (pentry->Type & LoadQueueEntry::LTF_XMLFlag)
     {
-        if (pentry->URL.GetLength() != 0)
-            if (void* pmem = pheap->Alloc(0x40))
-                pentryMT = static_cast<LoadQueueEntryMT*>(FUN_14291c910(pmem, pentry, this));
-        if (pentryMT)
+        if (pentry->URL.GetLength())
         {
-            GFxAS2LoadQueueEntry* pnew = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
-            if (Object* pobj = pnew->XMLHolder.ASObj.ToObject(0))
+            void* pmem = pMovieImpl->GetMovieHeap()->Alloc(0x40);
+            pentryMT   = pmem ? static_cast<LoadQueueEntryMT*>(FUN_14291c910(pmem, pentry, this)) : 0;
+            GFxAS2LoadQueueEntry* as2entry = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
+            if (pentryMT && as2entry->XMLHolder.ASObj.ToObject(NULL))
             {
-                for (LoadQueueEntryMT* p = pMovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
+                Object*           pxmlobj = as2entry->XMLHolder.ASObj.ToObject(NULL);
+                LoadQueueEntryMT* ptail   = pMovieImpl->pLoadQueueMTHead;
+                while (ptail)
                 {
-                    GFxAS2LoadQueueEntry* pother = static_cast<GFxAS2LoadQueueEntry*>(p->GetQueueEntry());
-                    if (!pother->XMLHolder.ASObj.IsUndefined() && pobj == pother->XMLHolder.ASObj.ToObject(0))
-                        pother->Canceled = true;
+                    GFxAS2LoadQueueEntry* as2tail = static_cast<GFxAS2LoadQueueEntry*>(ptail->GetQueueEntry());
+                    if (!as2tail->XMLHolder.ASObj.IsUndefined() && pxmlobj == as2tail->XMLHolder.ASObj.ToObject(0))
+                        as2tail->Canceled = true;
+                    ptail = ptail->GetNext();
                 }
             }
         }
     }
     else if (pentry->Type & LoadQueueEntry::LTF_CSSFlag)
     {
-        if (pentry->URL.GetLength() != 0)
-            if (void* pmem = pheap->Alloc(0x38))
-                pentryMT = static_cast<LoadQueueEntryMT*>(FUN_14291c400(pmem, pentry, this));
-        if (pentryMT)
+        if (pentry->URL.GetLength())
         {
-            GFxAS2LoadQueueEntry* pnew = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
-            if (Object* pobj = pnew->CSSHolder.ASObj.ToObject(0))
+            void* pmem = pMovieImpl->GetMovieHeap()->Alloc(0x38);
+            pentryMT   = pmem ? static_cast<LoadQueueEntryMT*>(FUN_14291c400(pmem, pentry, this)) : 0;
+            GFxAS2LoadQueueEntry* as2entry = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
+            if (pentryMT && as2entry->CSSHolder.ASObj.ToObject(NULL))
             {
-                for (LoadQueueEntryMT* p = pMovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
+                Object*           pxmlobj = as2entry->CSSHolder.ASObj.ToObject(NULL);
+                LoadQueueEntryMT* ptail   = pMovieImpl->pLoadQueueMTHead;
+                while (ptail)
                 {
-                    GFxAS2LoadQueueEntry* pother = static_cast<GFxAS2LoadQueueEntry*>(p->GetQueueEntry());
-                    if (!pother->CSSHolder.ASObj.IsUndefined() && pobj == pother->CSSHolder.ASObj.ToObject(0))
-                        pother->Canceled = true;
+                    GFxAS2LoadQueueEntry* as2tail = static_cast<GFxAS2LoadQueueEntry*>(ptail->GetQueueEntry());
+                    if (!as2tail->CSSHolder.ASObj.IsUndefined() && pxmlobj == as2tail->CSSHolder.ASObj.ToObject(0))
+                        as2tail->Canceled = true;
+                    ptail = ptail->GetNext();
                 }
             }
         }
     }
     else
     {
-        if (void* pmem = pheap->Alloc(0x58))
-            pentryMT = static_cast<LoadQueueEntryMT*>(FUN_14291c690(pmem, pentry, pMovieImpl));
+        void* pmem = pMovieImpl->GetMovieHeap()->Alloc(0x58);
+        pentryMT   = pmem ? static_cast<LoadQueueEntryMT*>(FUN_14291c690(pmem, pentry, pMovieImpl)) : 0;
         if (pentryMT)
         {
-            GFxAS2LoadQueueEntry* pnew = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
-            for (LoadQueueEntryMT* p = pMovieImpl->pLoadQueueMTHead; p; p = p->GetNext())
+            GFxAS2LoadQueueEntry* as2entry = static_cast<GFxAS2LoadQueueEntry*>(pentryMT->GetQueueEntry());
+            LoadQueueEntryMT*     ptail    = pMovieImpl->pLoadQueueMTHead;
+            while (ptail)
             {
-                GFxAS2LoadQueueEntry* pother = static_cast<GFxAS2LoadQueueEntry*>(p->GetQueueEntry());
-                if (!pnew->pCharacter)
+                GFxAS2LoadQueueEntry* as2tail = static_cast<GFxAS2LoadQueueEntry*>(ptail->GetQueueEntry());
+                if (as2entry->pCharacter)
                 {
-                    if (pother->Level != -1 && pother->Level == pnew->Level)
-                        pother->Canceled = true;
+                    if (as2tail->pCharacter && as2tail->pCharacter->NamePath == as2entry->pCharacter->NamePath)
+                        as2tail->Canceled = true;
                 }
-                else if (pother->pCharacter && pother->pCharacter->NamePath == pnew->pCharacter->NamePath)
-                    pother->Canceled = true;
+                else if (as2tail->Level != -1 && as2tail->Level == as2entry->Level)
+                    as2tail->Canceled = true;
+                ptail = ptail->GetNext();
             }
         }
     }
-    if (pentryMT)
-        pMovieImpl->AddLoadQueueEntryMT(pentryMT);
-    else
+    if (!pentryMT)
+    {
         delete pentry;
+        return;
+    }
+    pMovieImpl->AddLoadQueueEntryMT(pentryMT);
 }
 
 // MovieRoot::GetLevelMovie, inlined in the exe.
