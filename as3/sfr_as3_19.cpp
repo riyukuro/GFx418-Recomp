@@ -4290,39 +4290,57 @@ void Sfr31ExecGetLex(UPInt vmAddr, UPInt file, UInt32 idx)
     res.~Value();
 }
 
-typedef UInt8* (*Sfr31VFnDel)(UPInt self, UInt8* ret, const void* obj, const void* mn);
 typedef UPInt* (*Sfr31VFnName)(UPInt self, UPInt* out);
 
-// deleteproperty-style op: asks the VM helper object to handle the name; when it declines, pops the operand and raises a TypeError naming the traits.
-// MS2-FUNCTIONAL 0x142539230: raw-offset model; codegen differs from the exe
+// VM::CheckObject: a TypeError when the value is undefined or a null object.
+static __forceinline void Sfr31CheckObject(const Value& v, UPInt vmAddr)
+{
+    const UInt32 k = *reinterpret_cast<const UInt32*>(&v) & 0x1f;
+    const UInt32 ko = k - 0xc;
+    if (k == 0 || (ko <= 3 && Sfr31Rd(reinterpret_cast<UPInt>(&v), 0x10) == 0))
+    {
+        const UInt32 id = (ko <= 3 ? (Sfr31Rd(reinterpret_cast<UPInt>(&v), 0x10) != 0) : 1u) + 0x3f1;
+        VM& vm = *reinterpret_cast<VM*>(vmAddr);
+        vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(id), vm));
+    }
+}
+
+// The exec reader of a multiname and the object under it (SDK ReadMnObject): the reader fields, the multiname read
+// off the stack, then a reference to the object left on the stack.
+struct Sfr31ExecStackReader
+{
+    __forceinline Sfr31ExecStackReader(UPInt file) : vm(Sfr31Rd(file, 0x20)), stack(Sfr31Rd(file, 0x20) + 0x48), file(file) {}
+    UPInt vm;               // +0x00
+    UPInt stack;            // +0x08
+    UPInt file;             // +0x10
+};
+struct Sfr31ExecReadMnObject : Sfr31ExecStackReader
+{
+    __forceinline Sfr31ExecReadMnObject(UPInt link, UPInt idx)
+        : Sfr31ExecStackReader(link), mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntryW(file, idx))
+    {
+        FUN_1425201f0(this, &mn.Get());
+        obj = reinterpret_cast<const Value*>(Sfr31Rd(stack, 8));
+    }
+    Sfr31MnRaw mn;          // +0x18
+    const Value* obj;       // +0x48
+};
+
+// getdescendants: the XML support reads the descendants of the object; when it declines, pops the operand and raises a TypeError naming the traits.
 // @0x142539230
 void Sfr31ExecDeleteProp(UPInt vmAddr, UPInt file, UInt32 idx)
 {
-    const UPInt cvm = Sfr31Rd(file, 0x20);
-    Sfr31ExecMnCtx ctx = {cvm, cvm + 0x48, file};
-    Multiname mn(*reinterpret_cast<VMAbcFile*>(file), Sfr31MnEntry(file, idx));
-    FUN_1425201f0(&ctx, &mn);
-    const UPInt obj = Sfr31Rd(ctx.stack, 8);
-    Sfr31ThrowIfNullOperand(cvm, reinterpret_cast<const UInt32*>(obj));
+    Sfr31ExecReadMnObject args(file, idx);
+    Sfr31CheckObject(*args.obj, args.vm);
     if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
     {
-        const UPInt helper = Sfr31Rd(vmAddr, 0x40);
-        UInt8 ret[16];
-        Sfr31VFnDel fn = *reinterpret_cast<Sfr31VFnDel*>(Sfr31Rd(helper, 0) + 0x68);
-        if (*fn(helper, ret, reinterpret_cast<const void*>(obj), &mn) == 0)
+        if (!reinterpret_cast<VM*>(vmAddr)->GetXMLSupport().GetDescendants(*const_cast<Value*>(args.obj), args.mn.Get()))
         {
             Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
             top->~Value();
             Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
-            const UPInt tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vmAddr)->GetValueTraits(*reinterpret_cast<const Value*>(obj)));
-            UPInt nameNode = 0;
-            Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
-            UPInt* p = nf(tr, &nameNode);
-            alignas(8) char eb[sizeof(VM::Error)];
-            FUN_1424d7850(eb, 0x3f8, reinterpret_cast<void*>(vmAddr), reinterpret_cast<const char*>(Sfr31Rd(*p, 0)));
-            reinterpret_cast<VM*>(vmAddr)->ThrowTypeError(*reinterpret_cast<VM::Error*>(eb));
-            reinterpret_cast<VM::Error*>(eb)->~Error();
-            Sfr31ReleaseStr(nameNode);
+            VM& vm = *reinterpret_cast<VM*>(vmAddr);
+            vm.ThrowTypeError(VM::Error(static_cast<VM::ErrorID>(0x3f8), vm, vm.GetValueTraits(*args.obj).GetName().ToCStr()));
         }
     }
 }
