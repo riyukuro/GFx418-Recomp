@@ -343,14 +343,16 @@ ASString ArrayBase::Join(const ASString& sep) const
 }
 
 // @0x14255af20
-// MS2-FUNCTIONAL: callable kind test laid out as a different range compare
 CheckResult ArrayBase::CheckCallable(const Value& v) const
 {
-    if (v.IsCallable())
-        return true;
-    VM& vm = VMRef;
-    vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vm.GetValueTraits(v).GetName().ToCStr(), "callable"));
-    return false;
+    bool result = true;
+    if (!v.IsCallable())
+    {
+        VM& vm = VMRef;
+        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, VMRef.GetValueTraits(v).GetName().ToCStr(), "callable"));
+        result = false;
+    }
+    return result;
 }
 
 // @0x142563ee0
@@ -416,34 +418,42 @@ void ArrayBase::ForEach(const Value& callback, const Value& thisObject, Instance
     }
 }
 
-// @0x14255b1d0
-// MS2-FUNCTIONAL: error-path register allocation differs
-CheckResult ArrayBase::CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const
+// ArrayBase::OfCorrectType (argc/argv form); the exe inlines it into CheckArgTypes.
+static bool Sfr21OfCorrectType(const ArrayBase* self, unsigned argc, const Value* const argv, const ClassTraits::Traits& tr)
 {
     for (unsigned i = 0; i < argc; ++i)
     {
-        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(argv[i])))
-        {
-            VM& vm = VMRef;
-            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, "arguments", tr.GetName().ToCStr()));
+        const Value& v = argv[i];
+        if (!FUN_1425149a0(tr, self->VMRef.GetClassTraits(v)))
             return false;
-        }
     }
     return true;
 }
 
-// @0x14255afd0
-// MS2-FUNCTIONAL: register allocation / frame size (0x50 vs 0x40) differ
-CheckResult ArrayBase::CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& result) const
+// @0x14255b1d0
+CheckResult ArrayBase::CheckArgTypes(unsigned argc, const Value* argv, const ClassTraits::Traits& tr) const
 {
-    if (!tr.Coerce(v, result))
+    bool result = true;
+    if (!Sfr21OfCorrectType(this, argc, argv, tr))
     {
         VM& vm = VMRef;
-        const Traits& vtr = vm.GetValueTraits(v);
-        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, vtr.GetName().ToCStr(), tr.GetName().ToCStr()));
-        return false;
+        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, "arguments", tr.GetName().ToCStr()));
+        result = false;
     }
-    return true;
+    return result;
+}
+
+// @0x14255afd0
+CheckResult ArrayBase::CheckCoerce(const ClassTraits::Traits& tr, const Value& v, Value& coerced) const
+{
+    bool result = true;
+    if (!tr.Coerce(v, coerced))
+    {
+        VM& vm = VMRef;
+        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, VMRef.GetValueTraits(v).GetName().ToCStr(), tr.GetName().ToCStr()));
+        result = false;
+    }
+    return result;
 }
 
 // ---- VectorBase<SInt32>
@@ -2894,21 +2904,30 @@ void ArrayBase::Append(unsigned argc, const Value* argv, const ClassTraits::Trai
         PushBackValueUnsafe(argv[i]);
 }
 
-// @0x14255b0c0
-// MS2-FUNCTIONAL: error-path temporaries in other stack slots
-CheckResult ArrayBase::CheckArgTypes(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const
+// ArrayBase::OfCorrectType (Array form); the exe inlines it into CheckArgTypes.
+static bool Sfr21OfCorrectType(const ArrayBase* self, const Instances::fl::Array& arr, const ClassTraits::Traits& tr)
 {
-    for (UInt32 i = 0; i < arr.GetSize(); ++i)
+    for (unsigned i = 0; i < arr.GetSize(); ++i)
     {
-        if (!FUN_1425149a0(tr, VMRef.GetClassTraits(arr.At(i))))
-        {
-            VM& vm = VMRef;
-            vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, arr.GetTraits().GetName().ToCStr(),
-                                        tr.GetName().ToCStr()));
+        const Value& v = arr.At(i);
+        if (!FUN_1425149a0(tr, self->VMRef.GetClassTraits(v)))
             return false;
-        }
     }
     return true;
+}
+
+// @0x14255b0c0
+CheckResult ArrayBase::CheckArgTypes(const Instances::fl::Array& arr, const ClassTraits::Traits& tr) const
+{
+    bool result = true;
+    if (!Sfr21OfCorrectType(this, arr, tr))
+    {
+        VM& vm = VMRef;
+        vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, arr.GetTraits().GetName().ToCStr(),
+                                    tr.GetName().ToCStr()));
+        result = false;
+    }
+    return result;
 }
 
 // @0x1425599b0
@@ -3154,43 +3173,38 @@ void TYPE::Call(const Value& /*_this*/, Value& result, unsigned argc, const Valu
     if (argc == 1)                                                                                          \
     {                                                                                                       \
         const Value& v = argv[0];                                                                           \
-        InstanceTraits::fl_vec::TYPE& itr = static_cast<InstanceTraits::fl_vec::TYPE&>(GetInstanceTraits());\
-        if (v.IsNullOrUndefined() || &GetVM().GetValueTraits(v) == &itr)                                    \
-            result = v;                                                                                     \
-        else                                                                                                \
+        if (v.IsNullOrUndefined())                                                                          \
         {                                                                                                   \
-            SPtr<Instances::fl_vec::TYPE> p = itr.MakeInstanceS(itr);                                       \
-            if (p->V.AppendCoerce(v, ELEM))                                                                 \
-                result = p;                                                                                 \
-            else                                                                                            \
-            {                                                                                               \
-                VM& vm = GetVM();                                                                           \
-                vm.ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, vm, v, itr.GetName().ToCStr()));     \
-            }                                                                                               \
+            result = v;                                                                                     \
+            return;                                                                                         \
         }                                                                                                   \
+        InstanceTraits::fl_vec::TYPE& itr = static_cast<InstanceTraits::fl_vec::TYPE&>(GetInstanceTraits());\
+        const Traits& value_tr = GetVM().GetValueTraits(v);                                                 \
+        if (&value_tr == &itr)                                                                              \
+        {                                                                                                   \
+            result = v;                                                                                     \
+            return;                                                                                         \
+        }                                                                                                   \
+        SPtr<Instances::fl_vec::TYPE> p(itr.MakeInstanceS(itr));                                            \
+        if (p->V.AppendCoerce(v, ELEM))                                                                     \
+            result = p;                                                                                     \
+        else                                                                                                \
+            GetVM().ThrowTypeError(VM::Error(VM::eCheckTypeFailedError, GetVM(), v, itr.GetName().ToCStr()));\
     }                                                                                                       \
     else                                                                                                    \
-    {                                                                                                       \
-        VM& vm = GetVM();                                                                                   \
-        vm.ThrowRangeError(VM::Error(VM::eCoerceArgumentCountError, vm, (int)argc));                        \
-    }                                                                                                       \
+        return GetVM().ThrowRangeError(VM::Error(VM::eCoerceArgumentCountError, GetVM(), (int)argc));       \
 }
 
 // @0x14255a700
-// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
 MS2_VEC_CALL(Vector_String, p->GetVM().GetClassTraitsString())
 // @0x14255a8a0
-// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
 MS2_VEC_CALL(Vector_double, p->GetVM().GetClassTraitsNumber())
 // @0x14255aa40
-// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
 MS2_VEC_CALL(Vector_int, p->GetVM().GetClassTraitsSInt())
 // @0x14255abe0
-// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
 MS2_VEC_CALL(Vector_object, static_cast<const ClassTraits::fl_vec::Vector_object&>(
     FUN_142508490(&p->GetTraits()).GetClassTraits()).GetEnclosedClassTraits())
 // @0x14255ad80
-// MS2-FUNCTIONAL: the exe keeps the new vector through the returned pointer and orders its stack temporaries differently
 MS2_VEC_CALL(Vector_uint, p->GetVM().GetClassTraitsUInt())
 
 #undef MS2_VEC_CALL
@@ -3233,18 +3247,29 @@ struct CompareAsStringInd
     bool UseLocale;
 };
 
+// ASString::LocaleCompare_CaseCheck(const ASString&, bool), the SDK's inline overload.
+static inline int Sfr21LocaleCompare_CaseCheck(const ASString& s, const ASString& str, bool caseSensitive)
+{
+    return s.LocaleCompare_CaseCheck(str.ToCStr(), str.GetLength(), caseSensitive);
+}
+
 // @0x14255b4c0
-// MS2-FUNCTIONAL: CaseInsensitive is read before the Desc test and the arguments live in other registers
 SInt32 CompareAsStringInd::Compare(const ASString& a, const ASString& b) const
 {
     if (UseLocale)
     {
         if (Desc)
-            return b.LocaleCompare_CaseCheck(a.ToCStr(), a.GetLength(), !CaseInsensitive);
-        return a.LocaleCompare_CaseCheck(b.ToCStr(), b.GetLength(), !CaseInsensitive);
+            return Sfr21LocaleCompare_CaseCheck(b, a, !CaseInsensitive);
+        return Sfr21LocaleCompare_CaseCheck(a, b, !CaseInsensitive);
     }
-    const SInt32 r = CaseInsensitive ? String::CompareNoCase(a.ToCStr(), b.ToCStr()) : strcmp(a.ToCStr(), b.ToCStr());
-    return Desc ? -r : r;
+    SInt32 result = 0;
+    if (CaseInsensitive)
+        result = String::CompareNoCase(a.ToCStr(), b.ToCStr());
+    else
+        result = strcmp(a.ToCStr(), b.ToCStr());
+    if (Desc)
+        result = -result;
+    return result;
 }
 
 }} // namespace Instances::fl_vec
@@ -3252,32 +3277,33 @@ SInt32 CompareAsStringInd::Compare(const ASString& a, const ASString& b) const
 namespace Impl {
 
 // funct(a, b) as a sign: <0, 0 or >0 (0 also when it threw or did not return a number).
+// VM::ExecuteUnsafe, the SDK's inline wrapper.
+static inline void Sfr21ExecuteUnsafe(VM& vm, const Value& func, const Value& _this, Value& result, unsigned argc,
+                                      const Value* argv)
+{
+    vm.ExecuteInternalUnsafe(func, _this, result, argc, argv, false);
+}
+
 // @0x14255b5d0
-// MS2-FUNCTIONAL: the result and argument counter swap esi/edi; the sign of a nonzero result is selected in another order
 int CompareFunct(VM& vm, const Value& funct, const Value& a, const Value& b)
 {
     Value result;
     Value argv[2] = {a, b};
-    vm.ExecuteInternalUnsafe(funct, Value::GetUndefined(), result, 2, argv, false);
-    int r = 0;
-    if (!vm.IsException())
-    {
-        Value::Number n;
-        if (result.Convert2Number(n))
-        {
-            if (NumberUtil::IsNEGATIVE_INFINITY(n))
-                r = -1;
-            else if (NumberUtil::IsPOSITIVE_INFINITY(n))
-                r = 1;
-            else if (NumberUtil::IsNEGATIVE_ZERO(n))
-                r = -1;
-            else if (NumberUtil::IsPOSITIVE_ZERO(n))
-                r = 1;
-            else if (n != 0)
-                r = n < 0 ? -1 : 1;
-        }
-    }
-    return r;
+    Sfr21ExecuteUnsafe(vm, funct, Value::GetUndefined(), result, 2, argv);
+    if (vm.IsException())
+        return 0;
+    Value::Number n;
+    if (!result.Convert2Number(n))
+        return 0;
+    if (NumberUtil::IsNEGATIVE_INFINITY(n))
+        return -1;
+    if (NumberUtil::IsPOSITIVE_INFINITY(n))
+        return 1;
+    if (NumberUtil::IsNEGATIVE_ZERO(n))
+        return -1;
+    if (NumberUtil::IsPOSITIVE_ZERO(n))
+        return 1;
+    return (n == 0.0 ? 0 : (n < 0.0 ? -1 : 1));
 }
 
 } // namespace Impl
