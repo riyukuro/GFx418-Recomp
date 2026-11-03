@@ -2378,7 +2378,7 @@ void Sfr31ShutdownRegistered(UPInt self)
 // Runs the slot (kind bits 5..9 are not a getter unless the caller asked for one) through the invoke helper.
 // MS2-FUNCTIONAL 0x1425311c0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
 // @0x1425311c0
-void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
+__declspec(noinline) void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
 {
     const UPInt traits = FUN_14250fa80(self);
     const SInt32 bt = si->BindType;
@@ -2390,8 +2390,8 @@ void Sfr31InvokeSlot(UPInt self, const SlotInfo* si, UPInt arg, int argc)
     }
 }
 
-// Looks the name up in the own slots and invokes the newest one whose namespace has the flag (bit 4).
-// MS2-FUNCTIONAL 0x1425310e0: raw-offset model; codegen (register use, reference-count helpers) differs from the exe
+// Looks the name up in the own slots and invokes the newest one whose namespace is an interface namespace. The
+// slot comes from the inline Slots::GetSlotInfo (ExecSlotInfo); the previous index from GetPrevSlotIndex one level in.
 // @0x1425310e0
 void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt arg, int argc)
 {
@@ -2401,12 +2401,8 @@ void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt 
     SPInt i = *slots.FindSlotValues(name);
     do
     {
-        const SlotInfo* si;
-        if (static_cast<UPInt>(i) < slots.FirstOwnSlotNum)
-            si = &slots.Parent->GetSlotInfo(AbsoluteIndex(i));
-        else
-            si = &slots.VArray[static_cast<UInt32>(i) - static_cast<UInt32>(slots.FirstOwnSlotNum)].Value;
-        if ((*reinterpret_cast<const UInt8*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<const char*>(si) + 8) + 0x20) >> 4) & 1)
+        const SlotInfo* si = &ExecSlotInfo(slots, AbsoluteIndex(i));
+        if (reinterpret_cast<const Instances::Namespace* const*>(si)[1]->GetIsInterface())   // pNs
         {
             Sfr31InvokeSlot(self, si, arg, argc);
             return;
@@ -2414,7 +2410,7 @@ void Sfr31InvokeNamedSlot(UPInt self, const ASString& name, UPInt target, UPInt 
         if (static_cast<UPInt>(i) < slots.FirstOwnSlotNum)
             i = slots.Parent->GetPrevSlotIndex(i);
         else
-            i = slots.VArray[static_cast<UInt32>(i) - static_cast<UInt32>(slots.FirstOwnSlotNum)].Prev;
+            i = slots.VArray[i - slots.FirstOwnSlotNum].Prev;
     } while (i >= 0);
 }
 
