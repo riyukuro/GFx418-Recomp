@@ -3151,29 +3151,32 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
         r = NULL;
         VM& vm = GetVM();
         const UPInt size = List.GetSize();
-        if (size == 0)
+        if (size != 0)
+        {
+            if (size == 1)
+            {
+                r = List[0];
+                return true;
+            }
+            vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
+            return false;
+        }
+        else
         {
             if (!TargetObject || !TargetProperty || strcmp(TargetProperty->pData, "*") == 0)
                 return true;
 
             XML* base = NULL;
             const Traits& tr = TargetObject->GetTraits();
-            switch (tr.GetTraitsType())
-            {
-            case Traits_XML:
-                if (!tr.IsInstanceTraits())
-                    return false;
+            if (tr.GetTraitsType() == Traits_XML && tr.IsInstanceTraits())
                 base = static_cast<XML*>(TargetObject.GetPtr());
-                break;
-            case Traits_XMLList:
-                if (!tr.IsInstanceTraits())
-                    return false;
+            else if (tr.GetTraitsType() == Traits_XMLList && tr.IsInstanceTraits())
+            {
                 if (!static_cast<XMLList*>(TargetObject.GetPtr())->ResolveValue(base))
                     return false;
-                break;
-            default:
-                return false;
             }
+            else
+                return false;
             if (base == NULL)
                 return true;
 
@@ -3182,13 +3185,6 @@ namespace Scaleform { namespace GFx { namespace AS3 { namespace Instances { name
             base->AppendChild(target);
             List.PushBack(target);
             r = target;
-        }
-        else if (size == 1)
-            r = List[0];
-        else
-        {
-            vm.ThrowTypeError(VM::Error(VM::eXMLAssigmentOneItemLists, vm));
-            return false;
         }
         return true;
     }
