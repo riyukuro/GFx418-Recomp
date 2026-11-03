@@ -7032,68 +7032,68 @@ char* FUN_14250e770(const Scaleform::GFx::AS3::SlotInfo* psi, char* r, Scaleform
     using namespace Scaleform::GFx::AS3;
     const SlotInfo& si    = *psi;
     Value&          value = *pvalue;
-    const SInt32    ind   = si.ValueInd;
-    const UPInt     base  = reinterpret_cast<UPInt>(obj);
+    const AbsoluteIndex vind(si.ValueInd);
     switch (si.BindType)
     {
     case SlotInfo::BT_ValueArray:
-        value.AssignUnsafe(reinterpret_cast<const Value*>(*reinterpret_cast<const UPInt*>(base + 0xa8))[UInt32(ind)]);
+        value.AssignUnsafe(reinterpret_cast<const Value*>(*reinterpret_cast<const UPInt*>(reinterpret_cast<UPInt>(obj) + 0xa8))[UInt32(vind.Get())]);
         break;
     case SlotInfo::BT_Value:
-        value.AssignUnsafe(*reinterpret_cast<const Value*>(base + UInt32(ind)));
+        value.AssignUnsafe(*reinterpret_cast<const Value*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_ObjectAS:
-        reinterpret_cast<STPtr*>(base + UInt32(ind))->GetValueUnsafe(value);
+        reinterpret_cast<STPtr*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get()))->GetValueUnsafe(value);
         break;
     case SlotInfo::BT_ObjectCpp:
-        value.AssignUnsafe(*reinterpret_cast<const SPtr<Instances::fl::GlobalObjectCPP>*>(base + UInt32(ind)));
+        value.AssignUnsafe(*reinterpret_cast<const SPtr<Instances::fl::GlobalObjectCPP>*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_Boolean:
-        value.SetBoolUnsafe(*reinterpret_cast<const bool*>(base + UInt32(ind)));
+        value.SetBoolUnsafe(*reinterpret_cast<const bool*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_Int:
-        value.SetSInt32Unsafe(*reinterpret_cast<const SInt32*>(base + UInt32(ind)));
+        value.SetSInt32Unsafe(*reinterpret_cast<const SInt32*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_UInt:
-        value.SetUInt32Unsafe(*reinterpret_cast<const UInt32*>(base + UInt32(ind)));
+        value.SetUInt32Unsafe(*reinterpret_cast<const UInt32*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_Number:
-        value.SetNumberUnsafe(*reinterpret_cast<const Value::Number*>(base + UInt32(ind)));
+        value.SetNumberUnsafe(*reinterpret_cast<const Value::Number*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())));
         break;
     case SlotInfo::BT_String:
-        if (GFx::ASStringNode* node = *reinterpret_cast<GFx::ASStringNode* const*>(base + UInt32(ind)))
+        if (GFx::ASStringNode* node = *reinterpret_cast<GFx::ASStringNode* const*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get())))
             value.AssignUnsafe(node);
         else
             value.SetNullUnsafe();   // null is an object, not a string
         break;
     case 10:   // a constant C string (4.1.18 numbers this binding before BT_Code)
-        value.AssignUnsafe(obj->GetVM().GetStringManager().CreateConstString(
-            *reinterpret_cast<const char* const*>(base + UInt32(ind))));
+        ValueAssignCopies::AssignUnsafeStrInline18(value, obj->GetVM().GetStringManager().CreateConstString(
+            *reinterpret_cast<const char* const*>(reinterpret_cast<UPInt>(obj) + UInt32(vind.Get()))));
         break;
     case SlotInfo::BT_Code:
-        FUN_14250ba10(&obj->GetTraits().GetVT(), value, AbsoluteIndex(ind), obj);
+        FUN_14250ba10(&obj->GetTraits().GetVT(), value, vind, obj);
         break;
     case SlotInfo::BT_Get:
     case SlotInfo::BT_GetSet:
     {
-        const Value getter = obj->GetTraits().GetVT().GetValue(AbsoluteIndex(ind));
+        const Value getter = obj->GetTraits().GetVT().GetValue(vind);
         VM&         vm     = obj->GetVM();
-        if (!getter.IsCallable())
+        if (getter.IsCallable())
+            vm.ExecuteInternalUnsafe(getter, Value(obj), value, 0, NULL, false);
+        else
         {
-            const VM::Error e(VM::eCallOfNonFunctionError, vm, obj->GetTraits().GetName().ToCStr());
-            FUN_14252ecb0(&vm, &e, &fl::TypeErrorCI);
+            TrThrowError(vm, VM::Error(VM::eCallOfNonFunctionError, vm, obj->GetTraits().GetName().ToCStr()),
+                         fl::TypeErrorCI);
             *r = false;
             return r;
         }
-        vm.ExecuteInternalUnsafe(getter, Value(obj), value, 0, NULL, false);
         break;
     }
     case SlotInfo::BT_Set:
     {
-        VM&             vm = obj->GetVM();
-        const VM::Error e(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, si.Name->pData,
-                          obj->GetTraits().GetName().ToCStr());
-        FUN_14252ecb0(&vm, &e, &fl::ReferenceErrorCI);
+        VM& vm = obj->GetVM();
+        TrThrowError(vm, VM::Error(static_cast<VM::ErrorID>(1077) /* eWriteOnlyError */, vm, si.Name->pData,
+                                   obj->GetTraits().GetName().ToCStr()),
+                     fl::ReferenceErrorCI);
     }
         // fall through
     default:
