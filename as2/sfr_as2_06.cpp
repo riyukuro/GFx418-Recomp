@@ -329,26 +329,25 @@ bool AvmCharacter::HasMember(ASStringContext* psc, const ASString& name, bool in
 // @0x142965f30
 bool AvmCharacter::IsTabable() const
 {
-    InteractiveObject* displayObject = pDispObj;
-    if (!displayObject->GetVisible())
+    if (!pDispObj->GetVisible())
         return false;
 
-    const unsigned tabFlags = displayObject->Flags & InteractiveObject::Mask_TabEnabled;
-    if (tabFlags)
-        return tabFlags == InteractiveObject::Mask_TabEnabled;
-
-    if (Object* proto = Get__proto__())
+    const unsigned tabFlags = pDispObj->Flags & InteractiveObject::Mask_TabEnabled;
+    if (!tabFlags)
     {
-        Value value;
-        Environment* env = const_cast<Environment*>(GetASEnvironment());
-        bool found = proto->GetMemberRaw(&env->StringContext, env->StringContext.CreateConstString("tabEnabled"), &value);
-        if (found && !value.IsUndefined())
-            return value.ToBool(env);
-    }
+        if (Object* proto = Get__proto__())
+        {
+            Value value;
+            Environment* env = const_cast<Environment*>(GetASEnvironment());
+            bool found = proto->GetMemberRaw(&env->StringContext, env->StringContext.CreateConstString("tabEnabled"), &value);
+            if (found && !value.IsUndefined())
+                return value.ToBool(env);
+        }
 
-    if (displayObject->HasAvmObject() && displayObject->GetAvmObjImpl()->ToAvmInteractiveObjBase()->ActsAsButton())
-        return true;
-    return displayObject->TabIndex > 0;
+        return (pDispObj->HasAvmObject() && pDispObj->GetAvmObjImpl()->ToAvmInteractiveObjBase()->ActsAsButton()) ||
+               pDispObj->TabIndex > 0;
+    }
+    return tabFlags == InteractiveObject::Mask_TabEnabled;
 }
 
 // MS2-FUNCTIONAL: the exe tail-calls ActsAsButton and saves only rbx/rsi; ours calls it and also saves rbp.
