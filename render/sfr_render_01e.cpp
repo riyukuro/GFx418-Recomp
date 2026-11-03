@@ -289,7 +289,7 @@ notFound:
 void* FUN_142591be0(void* self, void* renderer, float maxTimeDifference, unsigned checkFrameInterval, unsigned syncType)
 {
     RawField<float>(self, 0x18) = maxTimeDifference;
-    RawField<void*>(self, 0) = DAT_142dc9d48;
+    RawField<void* volatile>(self, 0) = DAT_142dc9d48; // the exe keeps the AudioBase vftable store
     RawField<unsigned>(self, 0x20) = syncType;
     RawField<void*>(self, 0) = DAT_143184be8;
     RawField<int>(self, 8) = 1;
