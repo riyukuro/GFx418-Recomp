@@ -3076,8 +3076,6 @@ bool FUN_1423d8a10(unsigned long long* manager, const unsigned long long* string
 
 // Reads the active IME DLL's version resource and combines its version bytes with the current keyboard layout's low word;
 // 0 when any step fails.
-// MS2-FUNCTIONAL: the exe masks the major byte after the shift (shl; and 0xff000000), ours before it.
-// @0x1423cb260
 unsigned FUN_1423cb260();
 static __forceinline unsigned Ime01ImeVersion()
 {
@@ -3104,7 +3102,7 @@ static __forceinline unsigned Ime01ImeVersion()
                                 static_cast<unsigned char*>(fixedInfo) + 8);
                             reinterpret_cast<void(*)(void*, void*)>((*reinterpret_cast<void***>(DAT_143b15f60))[12])(
                                 DAT_143b15f60, data);
-                            return (static_cast<unsigned char>(versionWord) << 16) | ((versionWord & 0xff0000) << 8) |
+                            return (static_cast<unsigned char>(versionWord) << 16) | (static_cast<int>(versionWord & 0xff0000) << 8) |
                                 static_cast<unsigned short>(reinterpret_cast<ULONG_PTR>(layout));
                         }
                     }
@@ -3117,6 +3115,7 @@ static __forceinline unsigned Ime01ImeVersion()
     return 0;
 }
 
+// @0x1423cb260
 unsigned FUN_1423cb260()
 {
     return Ime01ImeVersion();
