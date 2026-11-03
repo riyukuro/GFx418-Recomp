@@ -2808,7 +2808,7 @@ unsigned long long FUN_1423da730(void* raw, int state)
 // locale name. For a plain layout (HKL & 0xe0000000 == 0) it sets mode 0x1000000 and shows the "Layout Text" of the
 // registry layout record whose id matches the HKL's high word, else the locale name; for an IME layout it shows the
 // IME's mode text through FUN_1423cc2d0.
-// MS2-FUNCTIONAL: the exe re-zero-extends the HKL high word inside the layout loop (4 bytes longer); otherwise the same code.
+// The loop compares HIWORD of the re-read HKL (manager[0x33]), which cl zero-extends per iteration as the exe does.
 // @0x1423d8870
 void FUN_1423d8870(unsigned long long* manager)
 {
@@ -2834,8 +2834,9 @@ void FUN_1423d8870(unsigned long long* manager)
     if (!(layout & 0xe0000000)) {
         *reinterpret_cast<unsigned*>(bytes + 0x88) = 0x1000000;
         for (unsigned i = 0; i < *reinterpret_cast<unsigned*>(bytes + 0x160); ++i) {
-            if (HIWORD(layout) == reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutId) {
-                FUN_1423ccdc0(manager, String(reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutText));
+            if (HIWORD(manager[0x33]) == reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutId) {
+                const char* text = reinterpret_cast<LayoutRecord*>(manager[0x2b])[i].layoutText;
+                FUN_1423ccdc0(manager, String(text));
                 return;
             }
         }
