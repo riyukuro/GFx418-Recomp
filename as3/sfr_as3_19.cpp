@@ -484,26 +484,33 @@ CheckResult Value::ToStringValue(StringManager& stringManager)
     return result;
 }
 
-// MS2-FUNCTIONAL 0x142527560: updates the pair and key-to-latest-slot chain; inlined refcount/hash paths differ.
+// The exe takes the absolute index as 32 bits (mov r14d, edx), as in Slots::SetKey.
 // @0x142527560
-void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& key)
+void SlotContainerType::SetKey(AbsoluteIndex ind, const ASString& k)
 {
-    Pair& pair = VArray[static_cast<UPInt>(ind.Get())];
-    ASStringNode* node = key.GetNode();
-    if (pair.Key.GetPtr() == node)
+    const UPInt index = static_cast<UInt32>(ind.Get());
+
+    if (VArray[index].Key.GetPtr() == k.GetNode())
+        // The same key.
         return;
 
-    pair.Key = node;
-    SetType::Iterator it = KVHashSet.Find(node);
-    if (it.IsEnd())
+    // Set new value.
     {
-        pair.Prev = -1;
-        KVHashSet.Add(node, static_cast<SPInt>(ind.Get()));
-    }
-    else
-    {
-        pair.Prev = it->Second;
-        it->Second = static_cast<SPInt>(ind.Get());
+        ASStringNode* node = k.GetNode();
+        VArray[index].Key = node;
+        SetType::Iterator it = KVHashSet.Find(node);
+
+        if (it.IsEnd())
+        {
+            KVHashSet.Add(node, index);
+            VArray[index].Prev = -1;
+        }
+        else
+        {
+            const SPInt cur_ind = it->Second;
+            VArray[index].Prev = cur_ind;
+            it->Second = index;
+        }
     }
 }
 
@@ -3499,21 +3506,13 @@ template void AutoPtr<GFx::AS3::VTable>::Reset(GFx::AS3::VTable* p, bool owner);
 
 namespace Scaleform { namespace GFx { namespace AS3 {
 // ---- batch 22
-static void Sfr31PushByte(UPInt* a, UInt8 b)
+static SF_FORCEINLINE void Sfr31PushByte(UPInt* a, UInt8 b)
 {
-    const UPInt n = a[1] + 1;
-    if (n < a[1])
-    {
-        if (n >= (a[2] >> 1))
-            goto store;
-    }
-    else if (n < a[2])
-        goto store;
-    // ArrayDataBase<UByte, AllocatorGH>::Reserve (0x142522c70): the global heap, not the array's own
-    Sfr31ArrReserve(a, a, n < a[1] ? n : n + (n >> 2), 1, 2, Memory::pGlobalHeap);
-store:
-    a[1] = n;
-    *reinterpret_cast<UInt8*>(a[0] + n - 1) = b;
+    // ArrayData<UByte, AllocatorGH>::PushBack; Reserve (0x142522c70) uses the global heap, not the array's own
+    typedef ArrayDataBase<UByte, AllocatorGH<UByte, 2>, ArrayDefaultPolicy> BytesData;
+    BytesData* const d = reinterpret_cast<BytesData*>(a);
+    d->ResizeNoConstruct(d, d->Size + 1);
+    d->Data[d->Size - 1] = b;
 }
 
 // Variable-length integer writer: the low two bits of the first byte give the byte count - 1.
