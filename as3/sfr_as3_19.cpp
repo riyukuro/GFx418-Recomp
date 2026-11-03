@@ -145,7 +145,6 @@ inline void FUN_14241a500(Scaleform::UPInt traits, Scaleform::UPInt* ret, Scalef
 void FUN_14241d980(Scaleform::GFx::AS3::SparseArray*, Scaleform::GFx::AS3::ValueStack*, unsigned long long);
 inline void FUN_14241d980(Scaleform::UPInt arr, Scaleform::UPInt stack, Scaleform::UInt32 n) { ::FUN_14241d980(reinterpret_cast<Scaleform::GFx::AS3::SparseArray*>(arr), reinterpret_cast<Scaleform::GFx::AS3::ValueStack*>(stack), n); }
 void FUN_14241b920(Scaleform::UPInt tbl, void* ret, Scaleform::UPInt a, Scaleform::UPInt b);   // class table: find interface traits
-__declspec(noalias) const Scaleform::GFx::AS3::Traits& FUN_14250ffc0(Scaleform::GFx::AS3::VM& vm, const Scaleform::GFx::AS3::Value& obj);   // Value traits
 inline void* FUN_14250fa80(const Scaleform::GFx::AS3::Traits* tr) { return &tr->GetVT(); }   // Traits::GetVT
 inline void FUN_1424e6aa0(Scaleform::UPInt tracer, Scaleform::UPInt a, Scaleform::SPInt idx, int b, int c) { Scaleform::GFx::AS3::FUN_1424e6aa0(reinterpret_cast<Scaleform::GFx::AS3::Tracer*>(tracer), reinterpret_cast<const void*>(a), static_cast<unsigned long long>(idx), b, c != 0); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_1424e6aa0; } } }
@@ -1344,7 +1343,7 @@ void Sfr27ExecCallMethod(VM* vm, UInt32 methodIndex, UInt32 argc)
     ExecRequireObject(*vm, receiver);
     if (vm->IsException())
         return;
-    const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(*vm, receiver));
+    const UPInt traits = reinterpret_cast<UPInt>(&vm->GetValueTraits(receiver));
     const UPInt vt = FUN_14250fa80(traits);
     Value func;
     vm->ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<UPInt*>(vt + 8) + methodIndex * 0x20ULL),
@@ -1677,7 +1676,7 @@ char* Sfr27SlotSetValueThis(const SlotInfo* si, char* ret, VM* vm, const Value* 
     case SlotInfo::BT_Set: case SlotInfo::BT_GetSet:
     {
         if (vt == NULL)
-            vt = reinterpret_cast<VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&FUN_14250ffc0(*vm, *thisV))));
+            vt = reinterpret_cast<VTable*>(FUN_14250fa80(reinterpret_cast<UPInt>(&vm->GetValueTraits(*thisV))));
         Value setter = vt->GetValue(AbsoluteIndex(si->ValueInd + 1));
         const UInt32 sk = static_cast<UInt32>(setter.GetKind());
         if (sk < 0xc && sk - 5 > 2)
@@ -1802,7 +1801,7 @@ void Sfr27ExecTypeOf(VM* vm)
     case 5: case 7: case 0xe: case 0xf: case 0x10: case 0x11: idx = 9; break;
     case 0xb: case 0xc:
     {
-        const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(*vm, *top));
+        const UPInt traits = reinterpret_cast<UPInt>(&vm->GetValueTraits(*top));
         const int tt = *reinterpret_cast<const int*>(traits + 0x70);
         idx = (tt == 0xd || tt == 0xe) ? 11 : 10;
         break;
@@ -1889,7 +1888,7 @@ char* Sfr27SetPropertyOfValue(char* ret, VM* vm, const Value* obj, const Multina
         }
         else
         {
-            Traits* tr = const_cast<Traits*>(&FUN_14250ffc0(*vm, *obj));
+            Traits* tr = const_cast<Traits*>(&vm->GetValueTraits(*obj));
             vm->ThrowReferenceError(VM::Error(static_cast<VM::ErrorID>(0x420), *vm, mn->Name, tr->GetName().ToCStr()));
             *ret = 0;
         }
@@ -3061,7 +3060,7 @@ void* Sfr31LinearHeapAllocFromLastPage(UPInt self, UPInt n)
 CheckResult SetSuperProperty(VM& vm, const Traits* tr, const Value& obj, const Multiname& mn, const Value& v)
 {
     if (tr == 0)
-        tr = &FUN_14250ffc0(vm, obj);
+        tr = &vm.GetValueTraits(obj);
     const Traits* parent = tr->GetParent();
     if (parent != 0)
     {
@@ -3434,7 +3433,7 @@ void Sfr31ExecCheckFilter(UPInt vm)
     const UPInt top = Sfr31Rd(vm, 0x50);
     if (Sfr31IsObjectOfTraitsType(top, 0xd) || Sfr31IsObjectOfTraitsType(top, 0xe))   // IsXMLObject || IsXMLListObject
         return;
-    const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vm), *reinterpret_cast<const Value*>(top)));
+    const UPInt tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vm)->GetValueTraits(*reinterpret_cast<const Value*>(top)));
     UPInt name = 0;
     typedef UPInt* (*GetName)(UPInt, UPInt*);
     UPInt* p = reinterpret_cast<GetName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &name);
@@ -4337,7 +4336,7 @@ void Sfr31ExecDeleteProp(UPInt vmAddr, UPInt file, UInt32 idx)
             Value* top = reinterpret_cast<Value*>(Sfr31Rd(vmAddr, 0x50));
             top->~Value();
             Sfr31Wr(vmAddr, 0x50, Sfr31Rd(vmAddr, 0x50) - 0x20);
-            const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vmAddr), *reinterpret_cast<const Value*>(obj)));
+            const UPInt tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vmAddr)->GetValueTraits(*reinterpret_cast<const Value*>(obj)));
             UPInt nameNode = 0;
             Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
             UPInt* p = nf(tr, &nameNode);
@@ -4401,7 +4400,7 @@ void Sfr31TraceOperandClassTraits(State* st)
         tr = Sfr31Rd(reinterpret_cast<UPInt>(&v), 0x10);
         break;
     default:
-        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(TrVM(tracer)), v));
+        tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(TrVM(tracer))->GetValueTraits(v));
         break;
     }
     if (tr != 0 && tr == Sfr31Rd(TrVM(tracer), 0x1f0))
@@ -4549,7 +4548,7 @@ void Sfr31ExecInstanceOf(UPInt vmAddr)
         if (bk != 0 && (bk - 0xc > 3 || Sfr31Rd(reinterpret_cast<UPInt>(below), 0x10) != 0))
         {
             UPInt chain = FUN_142507f60(vmAddr, below);
-            const UPInt target = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(&cls)));
+            const UPInt target = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&cls)));
             if (ck == 0xd)
             {
                 for (; chain != 0; chain = Sfr31Rd(chain, 0x88))
@@ -4713,7 +4712,7 @@ void Sfr31ExecCallWithTraits(UPInt vmAddr, UInt32 a, UInt32 n)
     {
         const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
         void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-        const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(&val)));
+        const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&val)));
         FUN_142500260(vmAddr, a, tr, &val, n, args);
     }
     reinterpret_cast<Value*>(&val)->~Value();
@@ -5197,7 +5196,7 @@ void Sfr31ExecIn(UPInt vmAddr, UPInt file, UInt32 idx)
         }
         else
         {
-            const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, nameV));
+            const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(nameV));
             UPInt node = 0;
             UPInt* nm = reinterpret_cast<Sfr31VFnName>(Sfr31Rd(Sfr31Rd(tr, 0), 0x38))(tr, &node);
             alignas(8) char eb[sizeof(VM::Error)];
@@ -5571,7 +5570,7 @@ void Sfr31ExecCallSuper(UPInt vmAddr, UInt32 a, UInt32 n)
         const UPInt cnt = Sfr31Rd(vmAddr, 0x78) - 1;
         UPInt tr = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (cnt >> 6) * 8) + 0x40 + (cnt & 0x3f) * 0xa8, 0);
         if (tr == 0)
-            tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(&val)));
+            tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&val)));
         const UPInt parent = Sfr31Rd(tr, 0x88);
         if (parent != 0)
         {
@@ -5934,7 +5933,7 @@ void Sfr31ExecCallValue(UPInt vmAddr, UInt32 argc)
         }
         else if (kind == 7 || kind == 0x11)
         {
-            const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(v)));
+            const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(v)));
             UPInt nameNode = 0;
             Sfr31VFnName nf = *reinterpret_cast<Sfr31VFnName*>(Sfr31Rd(tr, 0) + 0x38);
             UPInt* p = nf(tr, &nameNode);
@@ -6375,7 +6374,7 @@ void Sfr31TraceGetSlot(State* st, UInt32 slot)
     else if (k == 8 || k == 9)
         tr = popped.w2;
     else
-        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*vm, popped.Get()));
+        tr = reinterpret_cast<UPInt>(&vm->GetValueTraits(popped.Get()));
     bool pushed = false;
     if (tr != 0)
     {
@@ -6484,7 +6483,7 @@ bool Sfr31TracerOptRegIncDec(UPInt tracer, UPInt* pos, UPInt code0, UPInt state,
     else if (k == 8 || k == 9)
         tr = Sfr31Rd(reinterpret_cast<UPInt>(regv), 0x10);
     else
-        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vmA), *reinterpret_cast<const Value*>(regv)));
+        tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vmA)->GetValueTraits(*reinterpret_cast<const Value*>(regv)));
     if (tr != 0)
     {
         if (tr == Sfr31Rd(vmA, 0x1f0))
@@ -6687,7 +6686,7 @@ void Sfr31ExecCallParentSlot(UPInt vmAddr, UInt32 slotIdx, UInt32 argc)
         const UPInt n = Sfr31Rd(vmAddr, 0x78) - 1;
         UPInt traits = Sfr31Rd(Sfr31Rd(Sfr31Rd(vmAddr, 0x90), (n >> 6) * 8) + 0x40 + (n & 0x3f) * 0xa8, 0);
         if (traits == 0)
-            traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(&obj)));
+            traits = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(&obj)));
         if (Sfr31Rd(traits, 0x88) == 0)
         {
             alignas(8) char eb[sizeof(VM::Error)];
@@ -6891,7 +6890,7 @@ void Sfr31ExecHasNext2(UPInt vmAddr, UInt32 objReg, UInt32 idxReg)
         FUN_1424161e0(Sfr31Rd(ovp, 0x10), &next, static_cast<UInt32>(idx));
     else
     {
-        const UPInt tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *ov));
+        const UPInt tr = reinterpret_cast<UPInt>(&vm.GetValueTraits(*ov));
         if (*reinterpret_cast<const SInt32*>(tr + 0x70) == 6 && (~(*reinterpret_cast<const UInt8*>(tr + 0x68) >> 5) & 1) != 0 && idx < 2)
         {
             iv->Assign(Value(static_cast<UInt32>(idx + 1)));
@@ -7294,7 +7293,7 @@ void Sfr31ExecCallPropVoid(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
         const UPInt f = pr[0];
         if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
         {
-            const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(obj)));
+            const UPInt traits = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(obj)));
             alignas(8) char eb[sizeof(VM::Error)];
             if (((*reinterpret_cast<const UInt8*>(traits + 0x68) >> 1) & 1) == 0)
             {
@@ -7380,7 +7379,7 @@ void Sfr31ExecCallPropLex(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
         const UPInt f = pr[0];
         if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
         {
-            const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(obj)));
+            const UPInt traits = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(obj)));
             alignas(8) char eb[sizeof(VM::Error)];
             if (((*reinterpret_cast<const UInt8*>(traits + 0x68) >> 1) & 1) == 0)
             {
@@ -7561,7 +7560,7 @@ void Sfr31ExecCallProperty(UPInt vmAddr, UPInt file, UInt32 idx, UInt32 argc)
         const UPInt f = pr[0];
         if ((*reinterpret_cast<const UInt32*>(&res) & 0x1f) == 0 || f == 1 || ((f & 2) != 0 && (f & ~static_cast<UPInt>(2)) == 0))
         {
-            const UPInt traits = reinterpret_cast<UPInt>(&FUN_14250ffc0(vm, *reinterpret_cast<const Value*>(obj)));
+            const UPInt traits = reinterpret_cast<UPInt>(&vm.GetValueTraits(*reinterpret_cast<const Value*>(obj)));
             alignas(8) char eb[sizeof(VM::Error)];
             if (((*reinterpret_cast<const UInt8*>(traits + 0x68) >> 1) & 1) == 0)
             {
@@ -8291,7 +8290,7 @@ static UPInt Sfr31TrTraitsOfVal(UPInt vmA, UInt32* v)
     else if (k == 8 || k == 9)
         tr = Sfr31Rd(reinterpret_cast<UPInt>(v), 0x10);
     else
-        tr = reinterpret_cast<UPInt>(&FUN_14250ffc0(*reinterpret_cast<VM*>(vmA), *reinterpret_cast<const Value*>(v)));
+        tr = reinterpret_cast<UPInt>(&reinterpret_cast<VM*>(vmA)->GetValueTraits(*reinterpret_cast<const Value*>(v)));
     if (tr != 0 && tr == Sfr31Rd(vmA, 0x1f0))
         tr = Sfr31Rd(vmA, 0x1f8);
     return tr;
