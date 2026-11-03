@@ -2431,98 +2431,158 @@ namespace Instances { namespace fl_text
         }
     }
 
-    // One property of the getStyle result object, named in the public namespace.
-    static SF_INLINE void SetStyleProperty(Instances::fl::Object* pobj, Instances::Namespace& ns, const ASString& name,
-                                           const Value& v)
-    {
-        pobj->SetProperty(Multiname(ns, Value(name)), v);
-    }
-
     // The style named by name (".name" a class, else a tag) as an object of CSS property strings and numbers,
     // or null when there is none.
-    // MS2-FUNCTIONAL: written from the exe's control flow; temporaries are released in a different order
     // @0x1424b15e0
-    void StyleSheet::getStyle(SPtr<Instances::fl::Object>& result, const ASString& name)
+    // the SDK body; the style's formats are raw storage here
+    void StyleSheet::getStyle(SPtr<Instances::fl::Object>& result, const ASString& styleName)
     {
-        const char* pname = name.ToCStr();
-        const Render::Text::Style* pstyle;
-        if (name.GetSize() != 0 && pname[0] == '.')
-            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Class, pname + 1, name.GetSize() - 1);
+        const Render::Text::Style* pstyle = NULL;
+        if (styleName.GetSize() > 0 && styleName[0] == '.')
+            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Class, styleName.ToCStr()+1, styleName.GetSize()-1);
         else
-            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Tag, pname, name.GetSize());
+            pstyle = CSS.GetStyle(Text::StyleManager::CSS_Tag, styleName.ToCStr(), styleName.GetSize());
         if (!pstyle)
         {
             result = NULL;
             return;
         }
 
-        VM& vm = GetVM();
-        SPtr<Instances::fl::Object> pobj = vm.MakeObject();
-        StringManager& sm = vm.GetStringManager();
-        Instances::Namespace& ns = vm.GetPublicNamespace();
+        Pickable<Instances::fl::Object> pobj = GetVM().MakeObject();
+
+        // Fill in all set properties
         const TextFormatStorage& tf = *reinterpret_cast<const TextFormatStorage*>(pstyle);
-        const ParagraphFormatStorage& para =
+        const ParagraphFormatStorage& pf =
             *reinterpret_cast<const ParagraphFormatStorage*>(reinterpret_cast<const UByte*>(pstyle) + 0x48);
 
+        StringManager& sm = GetVM().GetStringManager();
+        Instances::Namespace& publicNS = GetVM().GetPublicNamespace();
+
+        // color
         if (tf.PresentMask & Fmt_Color)
         {
-            static const char hex[] = "0123456789ABCDEF";
-            String color;
-            color.AppendChar('#');
-            const UInt32 c = tf.ColorV;
-            color.AppendChar(hex[((c >> 16) & 0xFF) >> 4]);
-            color.AppendChar(hex[(c >> 16) & 0xF]);
-            color.AppendChar(hex[((c >> 8) & 0xFF) >> 4]);
-            color.AppendChar(hex[(c >> 8) & 0xF]);
-            color.AppendChar(hex[(c & 0xFF) >> 4]);
-            color.AppendChar(hex[c & 0xF]);
-            SetStyleProperty(pobj, ns, sm.CreateString("color"),
-                             Value(sm.CreateString(color.ToCStr(), color.GetSize())));
+            String colorStr;
+            // create html color string
+            colorStr.AppendChar('#');
+            Render::Color color(tf.ColorV);
+            const char* refstr = "0123456789ABCDEF";
+            UByte comp = color.GetRed();
+            colorStr.AppendChar(refstr[comp >> 4]);
+            colorStr.AppendChar(refstr[comp & 0x0F]);
+            comp = color.GetGreen();
+            colorStr.AppendChar(refstr[comp >> 4]);
+            colorStr.AppendChar(refstr[comp & 0x0F]);
+            comp = color.GetBlue();
+            colorStr.AppendChar(refstr[comp >> 4]);
+            colorStr.AppendChar(refstr[comp & 0x0F]);
+
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("color")),
+                Value(sm.CreateString(colorStr))).DoNotCheck();
         }
+
+        // fontFamily
         if (tf.PresentMask & Fmt_FontList)
         {
-            const String& fonts = FUN_142606750(&tf);
-            SetStyleProperty(pobj, ns, sm.CreateString("fontFamily"),
-                             Value(sm.CreateString(fonts.ToCStr(), fonts.GetSize())));
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("fontFamily")),
+                Value(sm.CreateString(FUN_142606750(&tf)))).DoNotCheck();
         }
+
+        // fontSize
         if (tf.PresentMask & Fmt_FontSize)
-            SetStyleProperty(pobj, ns, sm.CreateString("fontSize"),
-                             Value((Value::Number)((float)tf.FontSize * 0.05f)));
-        if (tf.PresentMask & Fmt_Italic)
-            SetStyleProperty(pobj, ns, sm.CreateString("fontStyle"),
-                             Value(sm.CreateString((tf.FormatFlags & Flag_Italic) ? "italic" : "normal")));
-        if (tf.PresentMask & Fmt_Bold)
-            SetStyleProperty(pobj, ns, sm.CreateString("fontWeight"),
-                             Value(sm.CreateString((tf.FormatFlags & Flag_Bold) ? "bold" : "normal")));
-        if (tf.PresentMask & Fmt_Kerning)
-            SetStyleProperty(pobj, ns, sm.CreateString("kerning"),
-                             Value(sm.CreateString((tf.FormatFlags & Flag_Kerning) ? "true" : "false")));
-        if (para.PresentMask & Para_Leading)
-            SetStyleProperty(pobj, ns, sm.CreateString("leading"), Value((SInt32)para.Leading));
-        if (tf.PresentMask & Fmt_LetterSpacing)
-            SetStyleProperty(pobj, ns, sm.CreateString("letterSpacing"),
-                             Value((Value::Number)(SInt16)(tf.LetterSpacing / 20)));
-        if (para.PresentMask & Para_LeftMargin)
-            SetStyleProperty(pobj, ns, sm.CreateString("marginLeft"), Value((UInt32)para.LeftMargin));
-        if (para.PresentMask & Para_RightMargin)
-            SetStyleProperty(pobj, ns, sm.CreateString("marginRight"), Value((UInt32)para.RightMargin));
-        if (para.PresentMask & Para_Alignment)
         {
-            const char* align;
-            switch (para.PresentMask & Para_AlignMask)
-            {
-            case 0:      align = "left"; break;
-            case 0x600:  align = "center"; break;
-            case 0x200:  align = "right"; break;
-            default:     align = "justify"; break;
-            }
-            SetStyleProperty(pobj, ns, sm.CreateString("textAlign"), Value(sm.CreateString(align)));
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("fontSize")),
+                Value((float)tf.FontSize * 0.05f)).DoNotCheck();
         }
+
+        // fontStyle
+        if (tf.PresentMask & Fmt_Italic)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("fontStyle")),
+                Value(sm.CreateString((tf.FormatFlags & Flag_Italic) ? "italic" : "normal"))).DoNotCheck();
+        }
+
+        // fontWeight
+        if (tf.PresentMask & Fmt_Bold)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("fontWeight")),
+                Value(sm.CreateString((tf.FormatFlags & Flag_Bold) ? "bold" : "normal"))).DoNotCheck();
+        }
+
+        // kerning
+        if (tf.PresentMask & Fmt_Kerning)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("kerning")),
+                Value(sm.CreateString((tf.FormatFlags & Flag_Kerning) ? "true" : "false"))).DoNotCheck();
+        }
+
+        // leading
+        if (pf.PresentMask & Para_Leading)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("leading")),
+                Value((SInt32)pf.Leading)).DoNotCheck();
+        }
+
+        // letterSpacing
+        if (tf.PresentMask & Fmt_LetterSpacing)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("letterSpacing")),
+                Value((float)(SInt16)(tf.LetterSpacing / 20))).DoNotCheck();
+        }
+
+        // marginLeft
+        if (pf.PresentMask & Para_LeftMargin)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("marginLeft")),
+                Value((UInt32)pf.LeftMargin)).DoNotCheck();
+        }
+
+        // marginRight
+        if (pf.PresentMask & Para_RightMargin)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("marginRight")),
+                Value((UInt32)pf.RightMargin)).DoNotCheck();
+        }
+
+        // textAlign
+        if (pf.PresentMask & Para_Alignment)
+        {
+            const unsigned a = (pf.PresentMask & Para_AlignMask) >> Para_AlignShift;
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("textAlign")),
+                Value(sm.CreateString(
+                    ((pf.PresentMask & Para_Alignment) && a == Align_Left) ? "left" :
+                        ((pf.PresentMask & Para_Alignment) && a == Align_Center) ? "center" :
+                            ((pf.PresentMask & Para_Alignment) && a == Align_Right) ? "right" :
+                                "justify"
+                ))).DoNotCheck();
+        }
+
+        // textDecoration
         if (tf.PresentMask & Fmt_Underline)
-            SetStyleProperty(pobj, ns, sm.CreateString("textDecoration"),
-                             Value(sm.CreateString((tf.FormatFlags & Flag_Underline) ? "underline" : "none")));
-        if (para.PresentMask & Para_Indent)
-            SetStyleProperty(pobj, ns, sm.CreateString("textIndent"), Value((SInt32)para.Indent));
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("textDecoration")),
+                Value(sm.CreateString((tf.FormatFlags & Flag_Underline) ? "underline" : "none"))).DoNotCheck();
+        }
+
+        // textIndent
+        if (pf.PresentMask & Para_Indent)
+        {
+            pobj->SetProperty(Multiname(
+                publicNS, sm.CreateString("textIndent")),
+                Value((SInt32)pf.Indent)).DoNotCheck();
+        }
+
         result = pobj;
     }
 
@@ -3317,7 +3377,7 @@ namespace Instances { namespace fl_text
     SPtr<Instances::fl::Array> TextFormat::tabStopsGet()
     {
         SPtr<Instances::fl::Array> result;
-        tabStopsGet(result);
+        ::FUN_1424aa450(result, tabStops);
         return result;
     }
 
