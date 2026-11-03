@@ -804,9 +804,9 @@ unsigned char FUN_1423cf570(void*, void* rawMovie)
     return accepted;
 }
 
-// MS2-FUNCTIONAL: recreates the executable's temporary IME-context acquisition and open-status query.
+// Recreates the executable's temporary IME-context acquisition and open-status query.
 // @0x1423cf3e0
-unsigned long long FUN_1423cf3e0(void* self)
+bool FUN_1423cf3e0(void* self)
 {
 #define hwnd (*reinterpret_cast<HWND*>(static_cast<unsigned char*>(self) + 0x28))
     bool alreadyAssociated = true;
@@ -815,7 +815,10 @@ unsigned long long FUN_1423cf3e0(void* self)
         alreadyAssociated = false;
         cx18_ImmAssociateContextEx(hwnd, nullptr, 0x10);
         context = cx18_ImmGetContext(hwnd);
-        if (!context) return static_cast<unsigned long long>(cx18_ImmReleaseContext(hwnd, nullptr)) & ~0xffull;
+        if (!context) {
+            cx18_ImmReleaseContext(hwnd, nullptr);
+            return false;
+        }
     }
     const bool open = ImmGetOpenStatus(context) != 0;
     if (!alreadyAssociated) cx18_ImmAssociateContextEx(hwnd, nullptr, 0);
