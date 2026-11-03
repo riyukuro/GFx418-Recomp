@@ -4,6 +4,7 @@
 // MS2-FLAGS: scaleform
 // MS2-RANGE: 0x1429967b0-0x142998ee0 .text$mn
 
+#define MS2_AS2_VALUE_DTOR_CALL // the exe calls Value::~Value (0x1429260b0) out of line in this TU
 #include "../include/gfx/as2/as2_action.h"
 #include "../include/gfx/as2/as2_avmcharacter.h"
 #include "../include/gfx/as2/as2_movieroot.h"
@@ -38,17 +39,6 @@ inline Sound::SoundRenderer* GetSoundRenderer(MovieImpl* pmovie)
     if (!paudio)
         return 0;
     return paudio->GetRenderer();
-}
-
-// The sound resource exported from the target's movie under the given id, 0 if there is none (the binding data
-// keeps the reference).
-inline SoundResource* FindSoundResource(Environment* penv, MovieDefImpl* pmd, const ASString& id, ResourceBindData* pbd)
-{
-    if (!penv->GetMovieImpl()->FindExportedResource(pmd, pbd, String(id.ToCStr())))
-        return 0;
-    if (pbd->pResource->GetResourceType() != Resource::RT_SoundSample)
-        return 0;
-    return static_cast<SoundResource*>(pbd->pResource.GetPtr());
 }
 
 // Runs this.onLoad(success) if the object has a handler.
@@ -87,7 +77,8 @@ static SF_FORCEINLINE void SetBuiltinPrototype(GlobalContext* pgc, ASBuiltinType
 
 } // namespace
 
-// MS2-FUNCTIONAL: the resource lookup kept in a helper; same lookup, same sample/resource stored
+// MS2-FUNCTIONAL: the exe tests the movie for null before the audio state lookup and does not tail-jump to the
+// argument error log; same lookup, same sample/resource stored
 // @0x1429967b0
 void SoundProto::Attach(const FnCall& fn)
 {
@@ -105,7 +96,11 @@ void SoundProto::Attach(const FnCall& fn)
     if (pobj && pmd)
     {
         ResourceBindData bd;
-        SoundResource*   psound = FindSoundResource(fn.Env, pmd, id, &bd);
+        if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, String(id.ToCStr())))
+            return;
+        if (bd.pResource->GetResourceType() != Resource::RT_SoundSample)
+            return;
+        SoundResource* psound = static_cast<SoundResource*>(bd.pResource.GetPtr());
         if (psound)
         {
             pobj->pSample   = psound->GetSoundInfo()->GetSoundSample(pplayer);
@@ -308,7 +303,7 @@ void SoundProto::Start(const FnCall& fn)
     }
 }
 
-// MS2-FUNCTIONAL: the resource lookup kept in a helper; same stop calls
+// MS2-FUNCTIONAL: other register allocation (the exe keeps fn in rbp and zero in r15); same stop calls
 // @0x1429976e0
 void SoundProto::Stop(const FnCall& fn)
 {
@@ -318,20 +313,25 @@ void SoundProto::Stop(const FnCall& fn)
     Sprite* psprite = pobj->GetSprite();
     if (!psprite)
         return;
-    if (fn.NArgs < 1)
+    if (fn.NArgs > 0)
     {
+        ASString          id    = SoundArg(fn, 0).ToString(fn.Env);
+        SoundObject*      psobj = static_cast<SoundObject*>(fn.ThisPtr);
+        Ptr<MovieDefImpl> pmd   = fn.Env->GetTarget()->GetResourceMovieDef();
+        if (psobj && pmd)
+        {
+            ResourceBindData bd;
+            if (!fn.Env->GetMovieImpl()->FindExportedResource(pmd, &bd, String(id.ToCStr())))
+                return;
+            if (bd.pResource->GetResourceType() != Resource::RT_SoundSample)
+                return;
+            SoundResource* psound = static_cast<SoundResource*>(bd.pResource.GetPtr());
+            if (psound)
+                psprite->StopActiveSounds(psound);
+        }
+    }
+    else
         psprite->StopActiveSounds();
-        return;
-    }
-    ASString          id  = SoundArg(fn, 0).ToString(fn.Env);
-    Ptr<MovieDefImpl> pmd = fn.Env->GetTarget()->GetResourceMovieDef();
-    if (pobj && pmd)
-    {
-        ResourceBindData bd;
-        SoundResource*   psound = FindSoundResource(fn.Env, pmd, id, &bd);
-        if (psound)
-            psprite->StopActiveSounds(psound);
-    }
 }
 
 // The collector traversal of Sound.prototype (the instances fold with the other Object-only prototypes).
@@ -391,7 +391,7 @@ void SoundObject::DetachFromTarget()
         psprite->DetachSoundObject(this);
 }
 
-// MS2-FUNCTIONAL: the exe calls Value::~Value out of line and inlines the FnCall dtor; same handler lookup and call
+// MS2-FUNCTIONAL: the exe inlines the FnCall dtor; same handler lookup and call
 // @0x1429982b0
 void SoundObject::ExecuteOnSoundComplete()
 {
