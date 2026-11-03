@@ -909,7 +909,7 @@ void RawImage::freeData()
     }
 }
 
-// MS2-FUNCTIONAL: same code, but MSVC shrink-wraps the rbx/rbp/r14 saves past the early returns (the exe saves all eight registers in the prolog)
+// The failures share one return through a label, as in the SDK; cl then saves all eight registers in the prolog, as the exe does
 // @0x14257a520
 RawImage* SF_STDCALL RawImage::Create(ImageFormat format, unsigned mipLevelCount, const ImageSize& size, unsigned use,
                                       MemoryHeap* heap, ImageUpdateSync* updateSync)
@@ -925,12 +925,15 @@ RawImage* SF_STDCALL RawImage::Create(ImageFormat format, unsigned mipLevelCount
 
     RawImage* image = SF_HEAP_NEW(heap) RawImage;
     if (!image)
+    {
+    memoryError:
         return 0;
+    }
 
     if (!image->Data.Initialize(format, mipLevelCount))
     {
         image->Release();
-        return 0;
+        goto memoryError;
     }
 
     image->Data.Use    = (UInt16)use;
@@ -945,7 +948,7 @@ RawImage* SF_STDCALL RawImage::Create(ImageFormat format, unsigned mipLevelCount
         if (!data)
         {
             image->Release();
-            return 0;
+            goto memoryError;
         }
         image->Data.pPlanes[plane].SetData(planeSize.Width, planeSize.Height, pitch, dataSize, data);
     }
