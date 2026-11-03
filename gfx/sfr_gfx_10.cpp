@@ -56,6 +56,8 @@ public:
     virtual void LogMessageVarg(LogMessageId messageId, const char* fmt, va_list argList);
 };
 
+CLogString* GetLogString();   // the game log (0x140166440)
+
 // The log wrapper (FMT_VARIADIC over CLogString::FUN_1406530d0) for two CStringW arguments.
 // @0x140a5bdd0
 template <class A, class B> inline void Unk_GfxLog(CLogString* log, int level, int line, const wchar_t* format,
@@ -95,7 +97,7 @@ void GFxLogger::LogMessageVarg(LogMessageId messageId, const char* fmt, va_list 
     CStringA strText;
     strText.FormatV(fmt, argList);
     strText.TrimRight('\n');
-    if (CLogString::GetInstance() != 0)
+    if (GetLogString() != 0)
     {
         int nLevel = 0;
         switch (messageId.GetMessageType())
@@ -132,7 +134,7 @@ void GFxLogger::LogMessageVarg(LogMessageId messageId, const char* fmt, va_list 
             strChannel = L"[Parse]";
             break;
         }
-        Unk_GfxLog(CLogString::GetInstance(), nLevel, 0x1a, L"[Gfx]{0} {1}", strChannel,
+        Unk_GfxLog(GetLogString(), nLevel, 0x1a, L"[Gfx]{0} {1}", strChannel,
                    static_cast<const CStringW&>(FUN_14016a730((const char*)strText, 0)));
     }
 }
