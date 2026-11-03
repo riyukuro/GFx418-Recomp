@@ -221,7 +221,6 @@ void DoAbc::Trace(const char*)
 }
 
 // SymbolClass tag: UI16 count, then (UI16 character id, null-terminated class name) pairs; id 0 is the main timeline.
-// MS2-FUNCTIONAL: identical code except that the stream and the count swap registers (rbx/rdi).
 // @0x1423dd1c0
 void SF_STDCALL SymbolClassLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
@@ -236,9 +235,10 @@ void SF_STDCALL SymbolClassLoader(LoadProcess* p, const TagInfo& tagInfo)
         pin->ReadString(&className);
         p->LogParse("       id = %d, symbol = '%s'\n", id, className.ToCStr());
 
+        ResourceId rid(id);
         ResourceHandle hres;
-        if (id == 0 || p->GetResourceHandle(&hres, ResourceId(id)))
-            p->ExportResource(className, ResourceId(id), hres);
+        if (id == 0 || p->GetResourceHandle(&hres, rid))
+            p->ExportResource(className, rid, hres);
         else
             p->LogError("SymbolClassLoader can't find Resource with id = %d, name = '%s'", id, className.ToCStr());
     }
