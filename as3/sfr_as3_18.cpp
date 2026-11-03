@@ -7133,7 +7133,7 @@ bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Valu
     Object*    obj  = static_cast<Object*>(pdata);
     Value      asval;
     {
-        const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name))));
+        const Multiname mn(vm->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name))));
         if (obj->GetProperty(mn, asval))
         {
             root->ASValue2GFxValue(asval, pval);
@@ -7147,7 +7147,7 @@ bool AS3ValueObjectInterface::GetMember(void* pdata, const char* name, GFx::Valu
     {
         DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
         AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
-        const ASString propName(root->GetStringManager418()->CreateStringNode(name));
+        const ASString propName(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name));
         SPtr<Instances::fl_display::DisplayObject> pchild = pcurr->GetAS3ChildByName(propName);
         if (pchild)
         {
@@ -7405,11 +7405,32 @@ bool MovieRoot::GetVariableArray(SetArrayTypeArg type, const char* ppathToVar, u
     return false;
 }
 
+// PropRef::IsFound: a property was found (a This, and a non-null value or object when the property is one).
+static inline bool Sfr34_PropFound(const PropRef& prop)
+{
+    const UPInt bits = reinterpret_cast<UPInt>(prop.pValue);
+    return !(prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0));
+}
+
+// AvmDisplayObjContainer::GetAS3ChildByName (0x142505d40), which the exe inlines in HasMember.
+static SF_FORCEINLINE SPtr<Instances::fl_display::DisplayObject> Sfr34_GetAS3ChildByName(AvmDisplayObjContainer* c,
+                                                                                         const ASString& name)
+{
+    DisplayObjectBase* pch = c->GetDisplayObjContainer()->mDisplayList.GetDisplayObjectByName(name);
+    if (pch)
+    {
+        AvmDisplayObj* avobj = ToAvmDisplayObj(pch);
+        avobj->CreateASInstance(true);
+        return avobj->GetAS3Obj();
+    }
+    return NULL;
+}
+
 } // namespace AS3
 
 // ObjectInterface::HasMember: whether the AS3 object has a property of that public name or, as a display object
 // container, a child of that name (an exception of the child lookup is dropped).
-// MS2-FUNCTIONAL: the exe inlines AvmDisplayObjContainer::GetAS3ChildByName
+// MS2-FUNCTIONAL: the exe inlines the Multiname(Namespace&, const Value&) constructor and Value(ASString)
 // @0x142510e70
 bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdobj) const
 {
@@ -7419,25 +7440,28 @@ bool AS3ValueObjectInterface::HasMember(void* pdata, const char* name, bool isdo
     MovieRoot* root = Sfr34_RootOf(pMovieRoot);
     VM*        vm   = root->pAVM;
     Object*    obj  = static_cast<Object*>(pdata);
-    const Multiname mn(root->pAVM->GetPublicNamespace(), Value(ASString(root->GetStringManager418()->CreateStringNode(name))));
+    const Multiname mn(root->pAVM->GetPublicNamespace(), Value(ASString(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name))));
     PropRef prop;
     obj->FindProperty(prop, mn, 0);
-    const UPInt bits  = reinterpret_cast<UPInt>(prop.pValue);
-    const bool  found = !(prop.This.IsUndefined() || bits == 1 || ((bits & 2) != 0 && (bits & ~UPInt(2)) == 0));
-    const Traits& tr  = obj->GetTraits();
-    if (found ||
-        (unsigned)(tr.GetTraitsType() - Traits_DisplayObjectContainer) >=
-            (unsigned)(Traits_DisplayObject_End - Traits_DisplayObjectContainer) ||
-        !tr.IsInstanceTraits())
-        return found;
-    DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
-    AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
-    const ASString          propName(root->GetStringManager418()->CreateStringNode(name));
-    if (pcurr->GetAS3ChildByName(propName))
-        return true;
-    if (vm->IsException())
-        vm->HandleException = false;
-    return false;
+    if (!Sfr34_PropFound(prop))
+    {
+        const Traits& tr = obj->GetTraits();
+        if ((unsigned)(tr.GetTraitsType() - Traits_DisplayObjectContainer) <
+                (unsigned)(Traits_DisplayObject_End - Traits_DisplayObjectContainer) &&
+            tr.IsInstanceTraits())
+        {
+            DisplayObject*          dobj  = Sfr34_DispObjOf(pdata);
+            AvmDisplayObjContainer* pcurr = Sfr34_ToAvmContainer(dobj->IsDisplayObjContainer() ? dobj : NULL);
+            const ASString          propName(root->BuiltinsMgr.GetStringManager()->CreateStringNode(name));
+            Instances::fl_display::DisplayObject* pchild = Sfr34_GetAS3ChildByName(pcurr, propName);
+            if (pchild)
+                return true;
+            if (vm->IsException())
+                vm->HandleException = false;
+            return false;
+        }
+    }
+    return Sfr34_PropFound(prop);
 }
 
 namespace AS3 {
