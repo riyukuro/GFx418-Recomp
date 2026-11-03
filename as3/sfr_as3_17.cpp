@@ -2901,11 +2901,11 @@ bool FUN_1424f7cc0(Scaleform::UPInt tracer, void* state, int idx, bool get_prop,
     return true;
 }
 
-void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn);   // find mn on one scope
+__declspec(noinline) void* FUN_142501310(Scaleform::GFx::AS3::VM& vm, void* scope, const Scaleform::GFx::AS3::Multiname& mn);   // find mn on one scope
 
 // Searches the scope objects from the innermost out for mn; when the VM knows the traits that define mn, only the
 // scopes of the same owner (vftable slot 10) are tried. Returns what FUN_142501310 found, or NULL.
-// MS2-FUNCTIONAL 0x142501870: raw scope array and vftable-slot calls (the owning class is not recovered)
+// FUN_142501310 stays a call, as in the exe (noinline on its declaration).
 // @0x142501870
 void* FUN_142501870(Scaleform::GFx::AS3::VM& vm, const Scaleform::UPInt* scopes, const Scaleform::GFx::AS3::Multiname& mn)
 {
