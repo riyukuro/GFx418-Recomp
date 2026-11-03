@@ -324,10 +324,10 @@ bool AvmCharacter::IsTabable() const
 
     if (Object* proto = Get__proto__())
     {
-        Environment* env = const_cast<Environment*>(GetASEnvironment());
-        ASString tabEnabled = env->StringContext.CreateConstString("tabEnabled");
         Value value;
-        if (proto->GetMemberRaw(&env->StringContext, tabEnabled, &value) && !value.IsUndefined())
+        Environment* env = const_cast<Environment*>(GetASEnvironment());
+        bool found = proto->GetMemberRaw(&env->StringContext, env->StringContext.CreateConstString("tabEnabled"), &value);
+        if (found && !value.IsUndefined())
             return value.ToBool(env);
     }
 
@@ -336,7 +336,7 @@ bool AvmCharacter::IsTabable() const
     return displayObject->TabIndex > 0;
 }
 
-// MS2-FUNCTIONAL: the exe inlines the focusEnabled lookup; same flow and calls.
+// MS2-FUNCTIONAL: the exe tail-calls ActsAsButton and saves only rbx/rsi; ours calls it and also saves rbp.
 // focusEnabled is read raw from the prototype (+0x18) with the sprite's own environment (+0x38); an undefined value
 // falls through to ActsAsButton (tail call through vtable +0x68).
 // @0x1429658d0
@@ -347,10 +347,10 @@ bool AvmSprite::IsFocusEnabled(FocusMovedType fmt) const
 
     if (Object* proto = Get__proto__())
     {
-        Environment* env = const_cast<Environment*>(&Env);
-        ASString focusEnabled = env->StringContext.CreateConstString("focusEnabled");
         Value value;
-        if (proto->GetMemberRaw(&env->StringContext, focusEnabled, &value) && !value.IsUndefined())
+        Environment* env = const_cast<Environment*>(&Env);
+        bool found = proto->GetMemberRaw(&env->StringContext, env->StringContext.CreateConstString("focusEnabled"), &value);
+        if (found && !value.IsUndefined())
             return value.ToBool(env);
     }
     return static_cast<const AvmInteractiveObjBase*>(static_cast<const AvmCharacter*>(this))->ActsAsButton();
@@ -363,17 +363,16 @@ bool Environment::IsVerboseActionErrors() const
     return !(GetTarget()->GetMovieImpl()->Flags & MovieImpl::Flag_SuppressActionErrors);
 }
 
-// MS2-FUNCTIONAL: the exe inlines the tabEnabled lookup; same flow and calls.
 // tabEnabled is read raw from the prototype (+0x18); without a defined value a text field is tabable unless it is read-only.
 // @0x1429660c0
 bool AvmTextField::IsTabable() const
 {
     if (Object* proto = Get__proto__())
     {
-        Environment* env = const_cast<Environment*>(GetASEnvironment());
-        ASString tabEnabled = env->StringContext.CreateConstString("tabEnabled");
         Value value;
-        if (proto->GetMemberRaw(&env->StringContext, tabEnabled, &value) && !value.IsUndefined())
+        Environment* env = const_cast<Environment*>(GetASEnvironment());
+        bool found = proto->GetMemberRaw(&env->StringContext, env->StringContext.CreateConstString("tabEnabled"), &value);
+        if (found && !value.IsUndefined())
             return value.ToBool(env);
     }
     return !reinterpret_cast<TextField*>(pDispObj)->IsReadOnly();
