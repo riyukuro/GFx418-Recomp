@@ -380,7 +380,7 @@ bool IMEManager::Invoke(const char* pmethodName, GFx::Value* presult, const GFx:
 
 // Clicks on the IME movies keep the focus where it is; a text field taking the focus gives the candidate list
 // its font, and the IME follows whether the new focus takes IME input.
-// MS2-FUNCTIONAL: register allocation and the order of the name/multiname temporaries
+// MS2-FUNCTIONAL: register allocation, and cl calls ~Multiname out of line where the exe inlines it
 // @0x142543f90
 InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* poldFocus, InteractiveObject* pnewFocus,
                                            InteractiveObject* ptopMostItem)
@@ -405,13 +405,13 @@ InteractiveObject* IMEManager::HandleFocus(Movie* pmovie, InteractiveObject* pol
             if (!pobj)
                 continue;
             if (pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
-                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsCandidateList"))),
+                                            pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsCandidateList")),
                                   result) ||
                 pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
-                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsStatusWindow"))),
+                                            pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsStatusWindow")),
                                   result) ||
                 pobj->GetProperty(Multiname(pavm->GetAVM()->GetPublicNamespace(),
-                                            Value(pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsLangBar"))),
+                                            pavm->GetAS3Root()->BuiltinsMgr.CreateString("IsLangBar")),
                                   result))
                 return poldFocus;
         }
