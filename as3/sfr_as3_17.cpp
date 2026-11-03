@@ -3405,9 +3405,6 @@ void Sfr33ExecuteActionQueueAfter(MovieRoot* self, MovieRoot::ActionLevel lvl, M
         paction->Execute(self);
 }
 
-// Splits a qualified class name at its last '.': pkg gets what is before it, name what follows. False without a
-// dot (one at the very start does not count). The strings come from the manager at self+0x348.
-// @0x142500680
 static SF_INLINE const char* Sfr33FindLastDot(const char* s)
 {
     const UPInt len = SFstrlen(s);
@@ -3422,12 +3419,15 @@ static SF_INLINE const char* Sfr33FindLastDot(const char* s)
     return NULL;
 }
 
+// Splits a qualified class name at its last '.': pkg gets what is before it, name what follows. False without a
+// dot (one at the very start does not count). The strings come from the manager at self+0x348.
+// @0x142500680
 bool Sfr33SplitQualifiedName(const UByte* self, const char* qname, ASString& pkg, ASString& name)
 {
     const char* dot = Sfr33FindLastDot(qname);
     if (!dot)
         return false;
-    const UPInt plen = static_cast<unsigned>(dot - qname);
+    const SPInt plen = static_cast<int>(dot - qname);
     name = ASString((*reinterpret_cast<ASStringManager* const*>(self + 0x348))->CreateStringNode(qname + plen + 1));
     pkg = ASString((*reinterpret_cast<ASStringManager* const*>(self + 0x348))->CreateStringNode(qname, plen));
     return true;
