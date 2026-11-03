@@ -721,8 +721,12 @@ void VideoDecoderThrd::StartDecoding(VideoPlayer* pp)
         // Thread::Start(Running), Thread::SetThreadName
         typedef bool (*StartFunc)(RefCountImpl*, int);
         typedef void (*SetNameFunc)(RefCountImpl*, const char*);
-        if ((*reinterpret_cast<StartFunc**>(pthread))[5](pthread, 1) && pDecodeThread)
-            (*(SetNameFunc**)(void*)pDecodeThread)[7]((RefCountImpl*)(void*)pDecodeThread, "Scaleform Video Decoder");
+        if ((*reinterpret_cast<StartFunc**>(pthread))[5](pthread, 1))
+        {
+            RefCountImpl* t = (RefCountImpl*)(void*)pDecodeThread;
+            if (t)
+                (*(SetNameFunc**)(void*)t)[7](t, "Scaleform Video Decoder");
+        }
     }
 }
 
