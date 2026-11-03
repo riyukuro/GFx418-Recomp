@@ -35,6 +35,10 @@ void ArrayBase<ArrayData<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::St
 template <>
 void ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
                    ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+// The int argument binder (exe 0x1423e8500, explicit instantiation in sfr_as3_01c): the exe calls it out of line
+// from the inlined Format.
+template <>
+void MsgFormat::FormatD1<int>(const int& v);
 } // namespace Scaleform
 
 namespace Scaleform { namespace GFx { namespace AS2 {
@@ -200,25 +204,26 @@ void BitmapData::SetImage(Environment* penv, ImageResource* pimg, MovieDef* pmov
 
 // Makes the clip _level<level>: its render node goes in among the levels' nodes in level order, and it takes
 // the level name.
-// MS2-FUNCTIONAL: the name buffer and Format codegen differ; same behavior
+// MS2-FUNCTIONAL: stack layout (the exe reuses the level slot for the name string, so its frame is 0x10 smaller); same behavior
 // @0x142981bf0
 void AvmSprite::SetLevel(int level)
 {
+    int        lvl    = level;
     MovieRoot* proot  = GetAS2Root();
     MovieImpl* pmovie = proot->GetMovieImpl();
     UPInt      index  = 0;
     for (; index < pmovie->MovieLevelsSize; index++)
     {
-        if (pmovie->pMovieLevels[index].Level > level)
+        if (pmovie->pMovieLevels[index].Level > lvl)
             break;
     }
     Ptr<Render::TreeContainer>& topNode = *reinterpret_cast<Ptr<Render::TreeContainer>*>(proot->Unrecovered_28);
     topNode->Insert(index, GetDispObj()->GetRenderNode());
-    Level = level;
+    Level = lvl;
 
     char nameBuff[64] = "";
     Format(StringDataPtr(nameBuff, sizeof(nameBuff)), "_level{0}", level);
-    GetSprite()->SetName(GetASEnvironment()->CreateString(nameBuff));
+    GetSprite()->SetName(Env.CreateString(nameBuff));
 }
 
 // The matrix as the a, b, c, d, tx, ty members of the Matrix object.
