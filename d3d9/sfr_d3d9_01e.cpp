@@ -655,7 +655,8 @@ struct ShaderInterfaceAccess : public ShaderInterface
     }
 };
 
-// MS2-FUNCTIONAL: written from the decompile
+// MS2-FUNCTIONAL: written from the decompile; left: the lea order of the &ShaderData / &Matrices / &fillFlags args
+// of FUN_1427359d0 (the exe calls it as a member of SManager)
 // @0x1427307e0
 void HAL::DrawProcessedPrimitive(Primitive* prim, PrimitiveBatch* start, PrimitiveBatch* end)
 {
@@ -689,23 +690,24 @@ void HAL::DrawProcessedPrimitive(Primitive* prim, PrimitiveBatch* start, Primiti
         if ((HALState & HS_ViewValid) && pso->pVS && pso->pFS && pso->pVS->pProg && pso->pFS->pProg &&
             pso->pVFormat)
         {
-            if (batch->Type == PrimitiveBatch::DP_Instanced)
-            {
-                AccumulatedStats.Meshes += count;
-                AccumulatedStats.Triangles += item->IndexCount / 3 * count;
-                setInstancedStreamSource(batch->GetMeshCount());
-            }
-            else
+            if (batch->Type != PrimitiveBatch::DP_Instanced)
             {
                 AccumulatedStats.Meshes += item->MeshCount;
                 AccumulatedStats.Triangles += item->IndexCount / 3;
                 setLinearStreamSource(batch->Type);
             }
+            else
+            {
+                AccumulatedStats.Meshes += count;
+                AccumulatedStats.Triangles += item->IndexCount / 3 * count;
+                setInstancedStreamSource(batch->GetMeshCount());
+            }
+            UPInt startIndex = item->IBAllocOffset >> 1;
             pDevice->SetIndices(((IndexBuffer*)item->pIndexBuffer)->pBuffer);
             pDevice->SetStreamSource(0, ((VertexBuffer*)item->pVertexBuffer)->pBuffer, (UINT)item->VBAllocOffset,
                                      batch->pFormat->Size);
             pDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, (UINT)(item->VBAllocSize / batch->pFormat->Size),
-                                          (UINT)(item->IBAllocOffset >> 1), item->IndexCount / 3);
+                                          (UINT)startIndex, item->IndexCount / 3);
             AccumulatedStats.Primitives++;
         }
         item->GPUFence = Cache.GetRenderSync()->InsertFence();
