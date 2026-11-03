@@ -260,14 +260,7 @@ HeapArrayCopy* FUN_142924090(HeapArrayCopy* pret, MemoryHeap* pheap, const Array
         pret->pArray = 0;
         return pret;
     }
-    ArrayLH_POD<ArgWords, 323>* parr = ::new (pmem) ArrayLH_POD<ArgWords, 323>();
-    UPInt n = psrc->GetSize();
-    if (n)
-    {
-        parr->Resize(n);
-        memcpy(&(*parr)[0], &(*psrc)[0], n << 4);
-    }
-    pret->pArray = parr;
+    pret->pArray = ::new (pmem) ArrayLH_POD<ArgWords, 323>(*psrc);
     return pret;
 }
 
