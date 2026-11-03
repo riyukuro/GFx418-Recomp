@@ -23,6 +23,32 @@
 #include "../include/gfx/gfx_rendertree.h"
 #include "../include/render/text_docview.h"
 
+namespace Scaleform {
+// Defined in sfr_as2_06; the exe calls it out of line here.
+template <>
+void ArrayDataBase<Ptr<GFx::Sprite>, AllocatorLH<Ptr<GFx::Sprite>, GFx::StatMV_Other_Mem>,
+                   ArrayDefaultPolicy>::ResizeNoConstruct(const void* pheapAddr, UPInt newSize);
+
+// The string keyed sets of MovieRoot and GlobalContext; the exe calls their dtor / Clear out of line.
+#define MS2_07I_STRING_SET(U)                                                                                        \
+    HashSetBase<HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>,                                                \
+                HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>::NodeHashF,                                     \
+                HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>::NodeAltHashF,                                  \
+                AllocatorLH<GFx::ASString, GFx::StatMV_ASString_Mem>,                                                \
+                HashsetNodeEntry<HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>,                               \
+                                 HashNode<GFx::ASString, U, GFx::ASStringHashFunctor>::NodeHashF> >
+template <> MS2_07I_STRING_SET(GFx::AS2::MovieRoot::InvokeAliasInfo)::~HashSetBase();
+template <> void MS2_07I_STRING_SET(GFx::AS2::FunctionRef)::Clear();
+template <> void MS2_07I_STRING_SET(GFx::AS2::GlobalContext::ClassRegEntry)::Clear();
+#undef MS2_07I_STRING_SET
+typedef HashNode<GFx::AS2::ASBuiltinType, Ptr<GFx::AS2::Object>, FixedSizeHash<GFx::AS2::ASBuiltinType> >
+    MS2_07iPrototypeNode;
+template <>
+void HashSetBase<MS2_07iPrototypeNode, MS2_07iPrototypeNode::NodeHashF, MS2_07iPrototypeNode::NodeAltHashF,
+                 AllocatorLH<GFx::AS2::ASBuiltinType, 2>,
+                 HashsetNodeEntry<MS2_07iPrototypeNode, MS2_07iPrototypeNode::NodeHashF> >::Clear();
+} // namespace Scaleform
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
 namespace {
@@ -30,7 +56,7 @@ namespace {
 typedef ArrayLH<Value, StatMV_ActionScript_Mem> HandlerArray;
 
 // MovieRoot's sprites that have a hit area (+0x628; the member is not recovered in as2_movieroot.h yet).
-typedef ArrayLH<Ptr<Sprite>, StatMV_ActionScript_Mem> SpritesWithHitAreaArray;
+typedef ArrayLH<Ptr<Sprite>, StatMV_Other_Mem> SpritesWithHitAreaArray;
 
 SF_FORCEINLINE SpritesWithHitAreaArray& SpritesWithHitAreaOf(MovieRoot* proot)
 {
@@ -88,11 +114,11 @@ void MovieRoot::Shutdown()
 {
     SpritesWithHitAreaOf(this).Clear();
     *reinterpret_cast<Ptr<Render::TreeContainer>*>(Unrecovered_28) = 0;
+    InvokeAliasHash* paliases = *reinterpret_cast<InvokeAliasHash**>(Unrecovered_78);
     pMouseListener = 0;
-    InvokeAliasHash*& paliases = *reinterpret_cast<InvokeAliasHash**>(Unrecovered_78);
     if (paliases)
         delete paliases;
-    paliases = 0;
+    *reinterpret_cast<InvokeAliasHash**>(Unrecovered_78) = 0;
     ExternalIntfRetVal.SetUndefined();
 
     pGlobalContext->PreClean(true);
@@ -104,11 +130,20 @@ void MovieRoot::Shutdown()
     pgc->Prototypes.Clear();
     pgc->pMovieRoot = 0;
 
-    ActionQueueIterator iter(&GetActionQueue());
-    while (iter.getNext())
-        ;
+    {
+        ActionQueueIterator iter(&GetActionQueue());
+        while (iter.getNext())
+            ;
+    }
 
-    MemContext->ASGC->ForceCollect();
+    // ASRefCountCollector::ForceCollect, inlined here in the exe.
+    ASRefCountCollector::Stats stats;
+    ASRefCountCollector* pcollector = MemContext->ASGC;
+    unsigned rootCount = pcollector->GetRootsCount();
+    pcollector->Collect(&stats);
+    pcollector->FrameCnt      = 0;
+    pcollector->PeakRootCount = Alg::Max(pcollector->PeakRootCount, rootCount);
+    pcollector->LastRootCount = rootCount;
 }
 
 // The field's autoSize goes to its document: the width only follows the text when it does not wrap.
@@ -191,8 +226,9 @@ void AvmSprite::VisitMembers(ASStringContext* psc, MemberVisitor* pvisitor, unsi
 
 // The next queued action in priority order, taken off the queue; the one handed out before goes to the free list.
 // A change of the queue under the iterator restarts it at the first priority.
+// noinline: Shutdown calls it out of line.
 // @0x142995180
-const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
+__declspec(noinline) const MovieRoot::ActionEntry* MovieRoot::ActionQueueIterator::getNext()
 {
     if (pActionQueue->ModId != ModId)
     {
