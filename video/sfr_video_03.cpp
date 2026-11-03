@@ -2098,8 +2098,10 @@ void FUN_140018930(void* callback, const uint32_t* eventData)
     }
     Value result;
     Value argument(event);
-    VideoSelfVMRef(callback).ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0xb8),
-                                                   Value::GetUndefined(), result, 1, &argument, false);
+    VM& callVm = VideoSelfVMRef(callback);
+    const Value& thisValue = Value::GetUndefined();
+    callVm.ExecuteInternalUnsafe(*reinterpret_cast<Value*>(*reinterpret_cast<unsigned char**>(static_cast<unsigned char*>(callback) + 0x10) + 0xb8),
+                                 thisValue, result, 1, &argument, false);
     VM& vm = VideoSelfVMRef(callback);
     if (vm.IsException()) {
         vm.HandleException = false;
