@@ -1765,23 +1765,64 @@ void M2VAMC_Init()
   } while( true );
 }
 
+#define CRI_MC_LDQ(p) _mm_loadl_epi64((const __m128i*)(p))
 struct cri06_block { const short* coef; cri_u1* dst; int stride; };
 
-// MS2-FUNCTIONAL: scalar form of the SSE2 residual add (punpcklbw/paddw/packuswb): each 8x8 block of shorts is
-// added to its destination pixels with unsigned saturation; the list ends at a NULL coefficient pointer.
+// MS2-FUNCTIONAL: SSE2 residual add in the exe's instruction order; left: VC9 regalloc (record base offset, rows 4-7 xmm1/xmm2).
+// Each 8x8 block of shorts is added to its destination pixels with unsigned saturation, two rows per
+// packuswb; the list ends at a NULL coefficient pointer.
 // @0x140059170
 void FUN_140059170(cri_any cri_p0)
 {
   const cri06_block* rec = cri_p0;
+  const __m128i* c = (const __m128i*)rec->coef;
+  __m128i x0, x1, x2, x3, x4;
   do {
-    for (int r = 0; r < 8; ++r)
-      for (int c = 0; c < 8; ++c) {
-        cri_u1* d = &rec->dst[r * rec->stride + c];
-        int v = (short)(*d + rec->coef[r * 8 + c]);
-        *d = (cri_u1)(v < 0 ? 0 : v > 255 ? 255 : v);
-      }
+    __int64 s = rec->stride;
+    cri_u1* d = rec->dst;
+    x4 = _mm_xor_si128(x4, x4);
+    __int64 s2 = (int)s * 2;
     ++rec;
-  } while (rec->coef);
+    x0 = _mm_add_epi16(_mm_unpacklo_epi8(CRI_MC_LDQ(d + s), x4), c[1]);
+    x3 = _mm_add_epi16(_mm_unpacklo_epi8(CRI_MC_LDQ(d), x4), c[0]);
+    cri_u1* p = d + s2;
+    x2 = CRI_MC_LDQ(p);
+    x1 = CRI_MC_LDQ(p + s);
+    x3 = _mm_packus_epi16(x3, x0);
+    x2 = _mm_add_epi16(_mm_unpacklo_epi8(x2, x4), c[2]);
+    cri_u1* q = p + s2;
+    x1 = _mm_unpacklo_epi8(x1, x4);
+    x4 = c[3];
+    _mm_storel_epi64((__m128i*)d, x3);
+    _mm_storel_epi64((__m128i*)(d + s), _mm_shuffle_epi32(x3, 0x4e));
+    x1 = _mm_add_epi16(x1, x4);
+    x2 = _mm_packus_epi16(x2, x1);
+    x4 = _mm_xor_si128(x4, x4);
+    _mm_storel_epi64((__m128i*)p, x2);
+    _mm_storel_epi64((__m128i*)(p + s), _mm_shuffle_epi32(x2, 0x4e));
+    x3 = CRI_MC_LDQ(q);
+    x1 = CRI_MC_LDQ(q + s);
+    p += s2;
+    q += s2;
+    x2 = CRI_MC_LDQ(q);
+    x0 = CRI_MC_LDQ(q + s);
+    x3 = _mm_add_epi16(_mm_unpacklo_epi8(x3, x4), c[4]);
+    x0 = _mm_unpacklo_epi8(x0, x4);
+    x2 = _mm_add_epi16(_mm_unpacklo_epi8(x2, x4), c[6]);
+    x1 = _mm_unpacklo_epi8(x1, x4);
+    x4 = c[7];
+    x1 = _mm_add_epi16(x1, c[5]);
+    x0 = _mm_add_epi16(x0, x4);
+    x2 = _mm_packus_epi16(x2, x0);
+    x3 = _mm_packus_epi16(x3, x1);
+    _mm_storel_epi64((__m128i*)p, x3);
+    _mm_storel_epi64((__m128i*)(p + s), _mm_shuffle_epi32(x3, 0x4e));
+    x0 = _mm_shuffle_epi32(x2, 0x4e);
+    p += s2;
+    _mm_storel_epi64((__m128i*)p, x2);
+    _mm_storel_epi64((__m128i*)(p + s), x0);
+    c = (const __m128i*)rec->coef;
+  } while (c);
 }
 
 // @0x140059290
@@ -1804,7 +1845,6 @@ void M2VAPRD_Init()
 // average rounds up and the exact one does not). The c40/a1b0 pair averages the result into the destination
 // (bidirectional prediction). With off == stride the second row is the next row of the same block, so each
 // horizontal average is computed once and reused for two output rows.
-#define CRI_MC_LDQ(p) _mm_loadl_epi64((const __m128i*)(p))
 static __forceinline void criMcXyHalfPel8Rows(const cri_u1* src, cri_u1* dst, int stride, int h, __m128i one)
 {
   __m128i a = CRI_MC_LDQ(src);
