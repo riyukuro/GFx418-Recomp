@@ -79,35 +79,49 @@ void Selection::BroadcastOnSetFocus(Environment* penv, InteractiveObject* pold, 
     penv->Drop(nargs);
 }
 
-// MS2-FUNCTIONAL: the focus group's weak reference is resolved with Ptr assignment
+// Value::SetAsCharacter (0x14297fba0) with SetAsCharacterHandle, inlined in captureFocus.
+static SF_FORCEINLINE void SetValueAsCharacter(Value* pv, InteractiveObject* pchar)
+{
+    CharacterHandle* phandle = pchar ? pchar->GetCharacterHandle() : 0;
+    if (pv->T.Type != Value::CHARACTER || pv->V.pCharHandle != phandle)
+    {
+        pv->DropRefs();
+        pv->T.Type        = Value::CHARACTER;
+        pv->V.pCharHandle = phandle;
+        if (pv->V.pCharHandle)
+            pv->V.pCharHandle->AddRef();
+    }
+}
+
 // @0x142932ab0
 void SelectionCtorFunction::CaptureFocus(const FnCall& fn)
 {
     fn.Result->SetUndefined();
-    bool enable = true;
+    bool capture;
     if (fn.NArgs >= 1)
-        enable = fn.Arg(0).ToBool(fn.Env);
-    MovieImpl* pmovie        = fn.Env->GetTarget()->GetMovieImpl();
-    unsigned   controllerIdx = 0;
-    if (fn.NArgs > 1)
-        controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
-    Ptr<InteractiveObject> focused = pmovie->FocusGroups[pmovie->FocusGroupIndexes[controllerIdx]].LastFocused;
-    if (!focused)
-    {
-        FUN_14256bbf0(pmovie, controllerIdx);
-        focused = pmovie->FocusGroups[pmovie->FocusGroupIndexes[controllerIdx]].LastFocused;
-    }
-    if (!enable)
-        pmovie->HideFocusRect(controllerIdx);
+        capture = fn.Arg(0).ToBool(fn.Env);
     else
+        capture = true;
+    MovieImpl* proot = fn.Env->GetTarget()->GetMovieImpl();
+    unsigned controllerIdx = 0;
+    if (fn.NArgs >= 2)
+        controllerIdx = fn.Arg(1).ToUInt32(fn.Env);
+    Ptr<InteractiveObject> focusedChar = proot->GetFocusedCharacter(controllerIdx);
+    if (!focusedChar)
     {
-        if (!focused)
-            return;
-        if (focused->IsFocusEnabled(GFx_FocusMovedByKeyboard))
-            pmovie->SetKeyboardFocusTo(focused, controllerIdx, GFx_FocusMovedByKeyboard);
+        // no character is focused: simulate a Tab press
+        FUN_14256bbf0(proot, controllerIdx);
+        focusedChar = proot->GetFocusedCharacter(controllerIdx);
     }
-    if (focused)
-        fn.Result->SetAsCharacter(focused);
+    if (capture)
+    {
+        if (focusedChar && focusedChar->IsFocusEnabled(GFx_FocusMovedByKeyboard))
+            proot->SetKeyboardFocusTo(focusedChar, controllerIdx, GFx_FocusMovedByKeyboard);
+    }
+    else
+        proot->HideFocusRect(controllerIdx);
+    if (focusedChar)
+        SetValueAsCharacter(fn.Result, focusedChar);
 }
 
 // The cursor of a mouse changed: with the extensions and a script replacement the Mouse.setCursorType handler is
