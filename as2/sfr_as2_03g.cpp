@@ -128,23 +128,22 @@ public:
     ValueGuard& operator=(const Value& v);
 };
 
-// MS2-FUNCTIONAL: the stage flag is read by address
+// Holds the character of a character value only when it is an interactive object.
 // @0x142923dd0
 ValueGuard::ValueGuard(Environment* penv, const Value& v)
     : pEnv(penv), Val(v)
 {
-    pObject = 0;
     if (v.GetType() == Value::CHARACTER)
     {
         DisplayObject* pdobj = 0;
         if (pEnv && v.V.pCharHandle)
             pdobj = v.V.pCharHandle->ResolveCharacter(pEnv->Target->GetMovieImpl());
-        if (pdobj && (*(reinterpret_cast<SInt8*>(pdobj) + 0x6a) < 0))
-        {
-            pObject = pdobj;
-            pdobj->AddRef();
-        }
+        pObject = pdobj ? (pdobj->IsInteractiveObject() ? pdobj : 0) : 0;
+        if (pObject)
+            pObject->AddRef();
     }
+    else
+        pObject = 0;
 }
 
 // @0x1429260c0
@@ -154,25 +153,24 @@ ValueGuard::~ValueGuard()
         pObject->Release();
 }
 
-// MS2-FUNCTIONAL: the stage flag is read by address
+// As the ctor, but the exe AddRefs without a null check (a character value that does not resolve to an interactive
+// object faults here in the exe too).
 // @0x142926a00
 ValueGuard& ValueGuard::operator=(const Value& v)
 {
     Val = v;
     if (pObject)
         pObject->Release();
-    pObject = 0;
     if (v.GetType() == Value::CHARACTER)
     {
         DisplayObject* pdobj = 0;
         if (pEnv && v.V.pCharHandle)
             pdobj = v.V.pCharHandle->ResolveCharacter(pEnv->Target->GetMovieImpl());
-        if (pdobj && (*(reinterpret_cast<SInt8*>(pdobj) + 0x6a) < 0))
-        {
-            pObject = pdobj;
-            pdobj->AddRef();
-        }
+        pObject = pdobj ? (pdobj->IsInteractiveObject() ? pdobj : 0) : 0;
+        pObject->AddRef();
     }
+    else
+        pObject = 0;
     return *this;
 }
 
