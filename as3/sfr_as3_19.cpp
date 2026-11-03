@@ -234,6 +234,7 @@ void FUN_142522350(void* hash, void* key);                                      
 bool FUN_142506000(const Scaleform::GFx::AS3::MovieRoot*, Scaleform::GFx::AS3::Value*, const char*);
 inline bool FUN_142506000(Scaleform::UPInt root, void* valueOut, Scaleform::UPInt path) { return ::FUN_142506000(reinterpret_cast<const Scaleform::GFx::AS3::MovieRoot*>(root), static_cast<Scaleform::GFx::AS3::Value*>(valueOut), reinterpret_cast<const char*>(path)); }
 void FUN_14241e430(void* arr, const Scaleform::GFx::AS3::Value* v);   // ValueArray::PushBack
+extern "C" const Scaleform::StringDataPtr DAT_143a2dd40;   // "scaleform.gfx", the namespace of the GFx extension classes
 namespace Scaleform { namespace GFx { namespace AS3 { ClassTraits::Traits* FUN_14250f9a0(VM&, VMAbcFile&, const Abc::ClassInfo&); } } }
 inline Scaleform::UPInt FUN_14250f9a0(Scaleform::UPInt vm, Scaleform::UPInt link, Scaleform::UPInt entry) { return reinterpret_cast<Scaleform::UPInt>(Scaleform::GFx::AS3::FUN_14250f9a0(*reinterpret_cast<Scaleform::GFx::AS3::VM*>(vm), *reinterpret_cast<Scaleform::GFx::AS3::VMAbcFile*>(link), *reinterpret_cast<const Scaleform::GFx::AS3::Abc::ClassInfo*>(entry))); }
 namespace Scaleform { namespace GFx { namespace AS3 { using ::FUN_14250f9a0; } } }
@@ -3658,6 +3659,7 @@ struct Sfr31ReadArgsObjectRef : public AS3::ReadArgs
         }
     }
     const Value* GetCallArgs() const { return ArgNum > 8 ? CallArgs.GetDataPtr() : FixedArgs; }
+    UInt32 GetCallArgsNum() const { return ArgNum; }
     const Value& ArgObject;     // +0x138
 };
 
@@ -3672,6 +3674,20 @@ void Sfr31CallOnObjectArg(UPInt vmAddr, UInt32 argc)
     {
         args.ArgObject.GetObject()->Call(Value::GetUndefined(), const_cast<Value&>(args.ArgObject), argc, args.GetCallArgs());
     }
+}
+
+// applytype: the object below the arguments must be a Class; it is replaced by the Class its ApplyTypeArgs returns.
+// @0x142532dc0
+void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
+{
+    VM& vm = *reinterpret_cast<VM*>(vmAddr);
+    Sfr31ReadArgsObjectRef args(vm, argc);
+    if (vm.IsException())
+        return;
+    if (!args.ArgObject.IsClass())
+        // eTypeAppOfNonParamType
+        return Sfr31ReadArgsObjectRef::ThrowTypeError(vm, VM::Error(static_cast<VM::ErrorID>(0x467), vm));
+    const_cast<Value&>(args.ArgObject).Assign(&const_cast<Value&>(args.ArgObject).AsClass().ApplyTypeArgs(args.GetCallArgsNum(), args.GetCallArgs()));
 }
 
 // The top of the operand stack is converted to an int index and popped; the new top's object is queried at that index and
@@ -4013,36 +4029,6 @@ void Sfr31ExecPushWith(UPInt vmAddr)
     ValueAssignCopies::PickUnsafeCopy(vm.ScopeStack.Back(), v);
     ops.GetTopPtr()->~Value();
     ops.Release(1);
-}
-
-// applytype: the first argument must be a Class value; replaces it with the Class returned by its ApplyTypeArgs.
-// MS2-FUNCTIONAL 0x142532dc0: raw-offset model; codegen differs from the exe
-// @0x142532dc0
-void Sfr31CallClassArg(UPInt vmAddr, UInt32 argc)
-{
-    VM& vm = *reinterpret_cast<VM*>(vmAddr);
-    UInt8 raBuf[0x140];
-    FUN_1424d9530(raBuf, &vm, argc);
-    Value* a0 = reinterpret_cast<Value*>(Sfr31Rd(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 8), 8));
-    Sfr31ThrowIfNotObject(vm, reinterpret_cast<const UInt32*>(a0));
-    if (*reinterpret_cast<UInt8*>(vmAddr + 0x180) == 0)
-    {
-        if ((*reinterpret_cast<const UInt32*>(a0) & 0x1f) == 0xd)
-        {
-            const UPInt o = Sfr31Rd(reinterpret_cast<UPInt>(a0), 0x10);
-            const UInt32 cnt = *reinterpret_cast<const UInt32*>(raBuf + 0x10);
-            void* args = cnt > 8 ? reinterpret_cast<void*>(Sfr31Rd(reinterpret_cast<UPInt>(raBuf), 0x118)) : static_cast<void*>(raBuf + 0x18);
-            // Class::ApplyTypeArgs (slot 0xb8) returns a Class&; the exe stores it through Value::Assign(Class*)
-            typedef Class& (*Fn)(UPInt, UInt32, void*);
-            a0->Assign(&reinterpret_cast<Fn>(Sfr31Rd(Sfr31Rd(o, 0), 0xb8))(o, cnt, args));
-        }
-        else
-        {
-            VM::Error e(static_cast<VM::ErrorID>(0x467), vm);
-            vm.ThrowTypeError(e);
-        }
-    }
-    FUN_1424de9e0(raBuf);
 }
 
 // Tracer op: replaces the popped value with the instance traits it denotes (primitives collapse to the Object traits).
@@ -4895,32 +4881,35 @@ void Sfr31ExecPushWithScope(UPInt vmAddr)
     back.SetWith(true);
 }
 
-// Tracer op: pops one operand and pushes the class traits named by the class entry (builtin classes get the plain traits kind).
-// MS2-FUNCTIONAL 0x14253c2f0: raw-offset model; codegen differs from the exe
+// newclass (State::exec_newclass): pops one operand and pushes the class traits of class entry idx; scaleform.gfx
+// classes resolve by name, others are the file's user-defined traits, and int, uint, Number and Boolean are not null.
 // @0x14253c2f0
 void Sfr31TraceClassTraitsFromIndex(State* st, UInt32 idx)
 {
     StV s(st);
     FUN_14251fcd0(s.Tracer(), idx);
     FUN_14251ccc0(st, 1);
-    const UPInt link = Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28);
-    const UPInt file = Sfr31Rd(link, 0x28);
-    const UPInt cls = Sfr31Rd(Sfr31Rd(file, 0x140), static_cast<UPInt>(idx) * 8);
+    const UPInt file = Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28);
+    const UPInt abc = Sfr31Rd(file, 0x28);
+    const UPInt cls = Sfr31Rd(Sfr31Rd(abc, 0x140), static_cast<UPInt>(idx) * 8);
     const SPInt mnIdx = *reinterpret_cast<const int*>(cls + 0x24);
-    const UPInt mn = mnIdx == 0 ? file + 0xe8 : mnIdx * 0x10 + Sfr31Rd(file, 0xb8);
-    const UPInt ns = FUN_14250ae60(link, *reinterpret_cast<const int*>(mn + 4));
-    const UPInt uri = Sfr31Rd(ns, 0x30);
-    const bool gfx = *reinterpret_cast<const UInt32*>(uri + 0x20) >= 13 && strncmp(reinterpret_cast<const char*>(Sfr31Rd(uri, 0)), "scaleform.gfx", 13) == 0;
-    const UPInt vm = Sfr31Rd(link, 0x20);
-    UPInt tr = gfx ? Sfr31ResolveClassTraits(vm, link, mn) : FUN_14250f9a0(vm, link, cls);
-    if (tr == 0)
-        tr = Sfr31Rd(vm, 0x1f8);
-    const UPInt c = Sfr31Rd(tr, 0xc0);
-    UPInt raw[4] = { 0x49, 0, tr, 0 };
-    if (c == Sfr31Rd(Sfr31Rd(vm, 0x220), 0xc0) || c == Sfr31Rd(Sfr31Rd(vm, 0x228), 0xc0) ||
-        c == Sfr31Rd(Sfr31Rd(vm, 0x218), 0xc0) || c == Sfr31Rd(Sfr31Rd(vm, 0x210), 0xc0))
-        raw[0] = 9;
-    s.OpStack().PushBack(*reinterpret_cast<const Value*>(raw));
+    const UPInt mn = mnIdx == 0 ? abc + 0xe8 : mnIdx * 0x10 + Sfr31Rd(abc, 0xb8);
+    const Instances::Namespace& ns = *reinterpret_cast<const Instances::Namespace*>(FUN_14250ae60(file, *reinterpret_cast<const int*>(mn + 4)));
+    const ASString& uri = ns.GetUri();
+    const bool gfx = uri.GetSize() >= DAT_143a2dd40.GetSize() && strncmp(uri.ToCStr(), DAT_143a2dd40.ToCStr(), DAT_143a2dd40.GetSize()) == 0;
+    ClassTraits::Traits* ctr;
+    if (gfx)
+        ctr = reinterpret_cast<ClassTraits::Traits*>(Sfr31ResolveClassTraits(Sfr31Rd(Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28), 0x20), file, mn));
+    else
+        ctr = reinterpret_cast<ClassTraits::Traits*>(FUN_14250f9a0(Sfr31Rd(Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28), 0x20), file, cls));
+    if (!ctr)
+        ctr = reinterpret_cast<ClassTraits::Traits*>(Sfr31Rd(Sfr31Rd(Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28), 0x20), 0x1f8));
+    // Tracer::CanBeNull: int, uint, Number and Boolean instances are never null.
+    const UPInt it = reinterpret_cast<UPInt>(&ctr->GetInstanceTraits());
+    const UPInt tvm = Sfr31Rd(Sfr31Rd(Sfr31Rd(s.Tracer(), 0x20), 0x28), 0x20);
+    const bool notNull = it == Sfr31Rd(Sfr31Rd(tvm, 0x220), 0xc0) || it == Sfr31Rd(Sfr31Rd(tvm, 0x228), 0xc0) ||
+                         it == Sfr31Rd(Sfr31Rd(tvm, 0x218), 0xc0) || it == Sfr31Rd(Sfr31Rd(tvm, 0x210), 0xc0);
+    s.OpStack().PushBack(Value(*ctr, notNull ? Value::NotNull : Value::NullOrNot));
 }
 
 // Finds the class traits for a multiname; unregistered ones are looked up on the global object by name and cached in the hash.
