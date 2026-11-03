@@ -2995,15 +2995,6 @@ bool RectangleObject::GetMember(Environment* penv, const ASString& name, Value* 
     return true;
 }
 
-// A channel offset as an integer; NaN counts as 0.
-static SF_FORCEINLINE int ColorTransform_OffsetToInt(float v)
-{
-    if (NumberUtil::IsNaN(v))
-        v = 0;
-    return (int)v;
-}
-
-// MS2-FUNCTIONAL our build merges the eight number members into one Value tail; the exe assigns in each branch
 // @0x14294e940
 bool ColorTransformObject::GetMember(Environment* penv, const ASString& name, Value* val)
 {
@@ -3026,9 +3017,18 @@ bool ColorTransformObject::GetMember(Environment* penv, const ASString& name, Va
         *val = Value(mColorTransform.M[1][3]);
     else if (strcmp(pname, "rgb") == 0)
     {
-        int r = ColorTransform_OffsetToInt(mColorTransform.M[1][0]);
-        int g = ColorTransform_OffsetToInt(mColorTransform.M[1][1]);
-        int b = ColorTransform_OffsetToInt(mColorTransform.M[1][2]);
+        // NumberUtil::IsNaN is called through a pointer local, as the exe calls it out of line; NaN counts as 0.
+        bool (*isNaN)(Double) = &NumberUtil::IsNaN;
+        float rv = mColorTransform.M[1][0];
+        if (isNaN(rv))
+            rv = 0;
+        int   r  = (int)rv;
+        float gv = mColorTransform.M[1][1];
+        if (isNaN(gv))
+            gv = 0;
+        int   g  = (int)gv;
+        float bv = mColorTransform.M[1][2];
+        int    b   = (int)(isNaN(bv) ? 0.0f : bv);
         UInt32 rgb = ((((UInt32)(UInt8)r << 8) | (UInt8)g) << 8) | (UInt8)b;
         *val = Value((Number)rgb);
     }
