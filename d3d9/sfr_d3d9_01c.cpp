@@ -308,7 +308,8 @@ UPInt MeshCache::Evict(Render::MeshCacheItem* pbatch, AllocAddr* allocator, Mesh
     return result;
 }
 
-// MS2-FUNCTIONAL: stack layout of the staging prep and register allocation of the copy loop
+// MS2-FUNCTIONAL: frame-slot placement only: the exe gives the loop counter its own slot and puts convertArgs in the
+// large-mesh result slot, so the locals after it sit 8 bytes higher
 // @0x14273abb0
 bool MeshCache::PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshContent& mc, bool waitForCache)
 {
@@ -328,25 +329,28 @@ bool MeshCache::PreparePrimitive(PrimitiveBatch* batch, MeshCacheItem::MeshConte
     Render::MeshCacheItem* item = 0;
     UByte*     vertexDataStart;
     IndexType* indexDataStart;
+    unsigned   vertexSize = batch->pFormat->Size;
     AllocResult res = AllocCacheItem(&item, &vertexDataStart, &indexDataStart, MeshCacheItem::Mesh_Regular, mc,
-                                     batch->pFormat->Size * vertexCount, vertexCount, indexCount, waitForCache, 0);
+                                     vertexSize * vertexCount, vertexCount, indexCount, waitForCache, 0);
     if (res != Alloc_Success)
         return res != Alloc_Fail;
     batch->MeshNode.SetMeshItem(item);
 
     // copy the batch's meshes out of the staging buffer, converting the vertices and offsetting the indices
     StagingBufferPrep prep(this, mc, prim->GetVertexFormat(), false);
-    UByte*   staging     = StagingBuffer.GetBuffer();
-    unsigned indexDelta  = 0;
+    UByte*              staging     = StagingBuffer.GetBuffer();
+    const VertexFormat* dstFormat   = batch->pFormat;
+    const VertexFormat* srcFormat   = prim->GetVertexFormat();
+    unsigned            indexDelta  = 0;
     for (unsigned i = 0; i < mc.GetMeshCount(); i++)
     {
         Mesh* mesh = mc[i];
         void* convertArgs[1] = { &i };
-        ConvertVertices_Buffered(*prim->GetVertexFormat(), staging + mesh->StagingBufferOffset, *batch->pFormat,
+        ConvertVertices_Buffered(*srcFormat, staging + mesh->StagingBufferOffset, *dstFormat,
                                  vertexDataStart, mesh->VertexCount, convertArgs);
         ConvertIndices(indexDataStart, (UInt16*)(staging + mesh->StagingBufferIndexOffset), mesh->IndexCount,
                        (UInt16)indexDelta);
-        vertexDataStart += batch->pFormat->Size * mesh->VertexCount;
+        vertexDataStart += vertexSize * mesh->VertexCount;
         indexDataStart  += mesh->IndexCount;
         indexDelta      += mesh->VertexCount;
     }
