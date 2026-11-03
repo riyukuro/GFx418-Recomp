@@ -3252,36 +3252,42 @@ void NetStream::ExecuteForEachChild_GC(Collector* prcc, OperationGC operation) c
     ASRefCountBaseType::CallForEachChild<NetStream>(prcc, operation);
 }
 
-// MS2-FUNCTIONAL: other scheduling
 // @0x140008250
 bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& val, const PropFlags& flags)
 {
     if (name == "onMetaData")
     {
-        OnMetaDataCallback = val.ToFunction_Call(penv);
+        FunctionRef function = val.ToFunction_Call(penv);
+        OnMetaDataCallback = function;
         return true;
     }
     else if (name == "onStatus")
     {
-        OnStatusCallback = val.ToFunction_Call(penv);
+        FunctionRef function = val.ToFunction_Call(penv);
+        OnStatusCallback = function;
         return true;
     }
     else if (name == "onCuePoint")
     {
-        OnCuePointCallback = val.ToFunction_Call(penv);
+        FunctionRef function = val.ToFunction_Call(penv);
+        OnCuePointCallback = function;
         return true;
     }
     if (penv->CheckExtensions())
     {
         if (name == "onSubtitle")
         {
-            OnSubtitleCallback = val.ToFunction_Call(penv);
+            FunctionRef function = val.ToFunction_Call(penv);
+            OnSubtitleCallback = function;
             return true;
         }
         else if (name == "subtitleTrack")
         {
             if (!OnSubtitleCallback.IsNull())
-                pVideoProvider->SetSubtitleChannel((int)val.ToNumber(penv) - 1);
+            {
+                int channel = (int)val.ToNumber(penv) - 1;
+                pVideoProvider->SetSubtitleChannel(channel);
+            }
             return true;
         }
         else if (name == "audioTrack")
@@ -3309,8 +3315,8 @@ bool NetStream::SetMember(Environment* penv, const ASString& name, const Value& 
             AvmCharacter* pavm = penv->GetAvmTarget();
             if (pavm->GetDispObj()->IsSprite())
             {
-                Sprite* psprite = (Sprite*)static_cast<const ObjectInterface*>(pavm)->ToSprite();
-                pVideoProvider->SetSwfSync(val.ToBool(penv), psprite);
+                pVideoProvider->SetSwfSync(val.ToBool(penv),
+                                           (Sprite*)static_cast<const ObjectInterface*>(pavm)->ToSprite());
             }
         }
     }
