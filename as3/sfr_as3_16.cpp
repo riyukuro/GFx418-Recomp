@@ -938,7 +938,7 @@ static inline bool Sfr16WProxyGet(const Sfr16WProxyHash& h, GASRefCountBase* con
                             reinterpret_cast<UPInt*>(pvalue));
 }
 
-// MS2-FUNCTIONAL: same calls as the exe; cl schedules the pObject store after the RefCount decrement.
+// The barrier keeps the pObject store ahead of the RefCount decrement, as the exe has it (no code emitted).
 // @0x1424de190
 GASRefCountBase::~GASRefCountBase()
 {
@@ -954,6 +954,7 @@ GASRefCountBase::~GASRefCountBase()
         if (p)
         {
             p->NotifyObjectDied();
+            _ReadWriteBarrier();
             p->Release();
             reinterpret_cast<Sfr16WProxyHash&>(rcc->WProxyHash).Remove(this);
         }
