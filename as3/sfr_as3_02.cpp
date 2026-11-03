@@ -1464,6 +1464,15 @@ namespace Scaleform { namespace GFx { namespace AS3 {
 // Defined in sfr_as3_04 (exe 0x142419b10).
 CheckResult IsNameStartChar(int c);
 
+// Value(Namespace*) as the exe inlines it here (its out-of-line copy is sfr_as3_01c's 0x1423ef9b0)
+SF_FORCEINLINE Value::Value(Instances::Namespace* v, InlineObjType)
+    : Flags(kNamespace)
+    , value(v)
+{
+    if (v)
+        v->AddRef();
+}
+
 namespace Instances { namespace fl
 {
     // The list of the XMLList class's instances (no target).
@@ -1942,7 +1951,7 @@ namespace Instances { namespace fl
     }
 
     // The namespaces in scope here, nearest first, one per prefix (the public one if none).
-    // MS2-FUNCTIONAL: the exe inlines Value(Namespace*) (0x1423ef9b0) and with it ArrayDH<Value>::PushBack
+    // The exe inlines Value(Namespace*) (0x1423ef9b0) and with it ArrayDH<Value>::PushBack.
     // @0x1423fad50
     __declspec(noinline) void XML::AS3inScopeNamespaces(SPtr<Instances::fl::Array>& result)
     {
@@ -1964,7 +1973,7 @@ namespace Instances { namespace fl
                     Value prefix = ns->GetPrefix();
                     if (!dupeCheck.Get(prefix))
                     {
-                        PushBackValue(a->SA, Value(ns));
+                        PushBackValue(a->SA, Value(ns, Value::InlineObj));
                         dupeCheck.Add(prefix);
                     }
                 }
@@ -1972,7 +1981,7 @@ namespace Instances { namespace fl
         }
 
         if (a->GetSize() == 0)
-            PushBackValue(a->SA, Value(&GetVM().GetPublicNamespace()));
+            PushBackValue(a->SA, Value(&GetVM().GetPublicNamespace(), Value::InlineObj));
     }
 
     // @0x1423fb110

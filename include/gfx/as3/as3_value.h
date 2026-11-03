@@ -450,6 +450,8 @@ public:
     explicit Value(Instances::Function* v);
     explicit Value(Instances::ThunkFunction* v);
     explicit Value(Instances::Namespace* v);
+    // Value(Namespace*) where the exe inlines it; defined by the unit that uses it (sfr_as3_02).
+    Value(Instances::Namespace* v, InlineObjType);
     SF_INLINE Value(Object* p, const ThunkInfo& f) : Flags(kThunkClosure), value(p, f) { AddRefClosure(); }
     SF_INLINE Value(Object* p, SInt32 ind, bool super) : Flags(kVTableIndClosure), value(p, ind)
     {
