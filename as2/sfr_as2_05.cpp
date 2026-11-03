@@ -248,6 +248,19 @@ template<> Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::SharedObjectPtr>
 typedef decltype(Scaleform::StringHashLH<Scaleform::GFx::AS2::MovieClipLoader::ProgressDesc>::mHash) Sfr05ProgressSet;
 template<> template<> Scaleform::SPInt Sfr05ProgressSet::BaseType::findIndexAlt<Scaleform::String>(const Scaleform::String& key) const;
 
+// The registered-classes table's two lookups (exe 0x1429172b0, 0x142916f50): the exe calls them out of line from
+// the GetCaseCheck it pins here.
+typedef decltype(Scaleform::HashUncachedLH<Scaleform::GFx::ASString, Scaleform::GFx::AS2::FunctionRef, Scaleform::GFx::ASStringHashFunctor, 324>::mHash)::BaseType Sfr05ClassSet;
+template<> template<> Scaleform::SPInt Sfr05ClassSet::findIndexAlt<Scaleform::GFx::ASString>(const Scaleform::GFx::ASString& key) const;
+template<> template<> Scaleform::SPInt Sfr05ClassSet::findIndexAlt<Scaleform::GFx::ASStringNoCaseKey>(const Scaleform::GFx::ASStringNoCaseKey& key) const;
+// Its GetCaseCheck stays out of line, as in the exe (FindRegisteredClass calls it).
+template<> __declspec(noinline) inline Scaleform::GFx::AS2::FunctionRef*
+Scaleform::GFx::ASStringHashBase<Scaleform::GFx::AS2::FunctionRef, Scaleform::HashUncachedLH<Scaleform::GFx::ASString,
+    Scaleform::GFx::AS2::FunctionRef, Scaleform::GFx::ASStringHashFunctor, 324> >::GetCaseCheck(const ASString& key, bool caseSensitive)
+{
+    return caseSensitive ? BaseType::Get(key) : GetCaseInsensitive(key);
+}
+
 // The text format destructor (the exe calls it; cl inlines the empty ~TextFormat).
 void FUN_1424aa0f0(void* pformat);                                                 // exe 0x1424aa0f0
 
@@ -4487,8 +4500,6 @@ Value StringObject::GetValue() const { return Value(sValue); }
 } // namespace AS2
 
 }} // namespace Scaleform::GFx
-// MS2-FUNCTIONAL 0x142949f60: the pinned RegisteredClasses GetCaseCheck comdat (gfx_asstringhash.h) gets both
-// findIndexAlt lookups inlined by cl, the exe calls them out of line (0x1429172b0, 0x142916f50); same lookup
 // MS2-PIN: ?Finalize_GC@?$Prototype@VSharedObject@AS2@GFx@Scaleform@@VEnvironment@234@@AS2@GFx@Scaleform@@MEAAXXZ 0x1429427e0
 // MS2-PIN: ?GetCaseCheck@?$ASStringHashBase@VFunctionRef@AS2@GFx@Scaleform@@V?$HashUncachedLH@VASString@GFx@Scaleform@@VFunctionRef@AS2@23@UASStringHashFunctor@23@$0BEE@@4@@GFx@Scaleform@@QEAAPEAVFunctionRef@AS2@23@AEBVASString@23@_N@Z 0x142949f60
 // MS2-PIN: ??_7FunctionObject@AS2@GFx@Scaleform@@6B?$ASRefCountBase@VObject@AS2@GFx@Scaleform@@@123@@ 0x1432155c0
