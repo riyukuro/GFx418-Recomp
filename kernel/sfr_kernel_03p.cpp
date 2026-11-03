@@ -27,36 +27,38 @@ struct Sfr21SoundChunk
 // @0x142748160
 UInt32 FUN_142748160(void* stream, void* dst, UInt32 bytes)
 {
-    EnterCriticalSection(RawFieldPtr<CRITICAL_SECTION>(stream, 0x40));
-    UInt32 copied = 0;
-    if (RawField<Sfr21SoundChunk*>(stream, 0x30))
+    // AppendableSoundData::GetData as the SDK has it (Sound_Sound.cpp), the lock held by a Lock::Locker
+    struct Locker
     {
-        UInt32 pos = RawField<UInt32>(stream, 0x3c);
-        while (bytes)
+        CRITICAL_SECTION* pLock;
+        Locker(CRITICAL_SECTION* plock) : pLock(plock) { EnterCriticalSection(pLock); }
+        ~Locker() { LeaveCriticalSection(pLock); }
+    } lock(RawFieldPtr<CRITICAL_SECTION>(stream, 0x40));
+    if (!RawField<Sfr21SoundChunk*>(stream, 0x30))
+        return 0;
+
+    UInt32 copied = 0;
+    while (bytes > 0)
+    {
+        Sfr21SoundChunk* chunk = RawField<Sfr21SoundChunk*>(stream, 0x30);
+        UInt32 n = bytes;
+        if (RawField<UInt32>(stream, 0x3c) + bytes > chunk->Size)
         {
-            Sfr21SoundChunk* chunk = RawField<Sfr21SoundChunk*>(stream, 0x30);
-            UInt32 n = bytes;
-            if (pos + bytes > chunk->Size)
+            n = chunk->Size - RawField<UInt32>(stream, 0x3c);
+            if (n == 0)
             {
-                n = chunk->Size - pos;
-                if (!n)
-                {
-                    if (!chunk->Next)
-                        break;
-                    RawField<Sfr21SoundChunk*>(stream, 0x30) = chunk->Next;
-                    pos = 0;
-                    RawField<UInt32>(stream, 0x3c) = 0;
-                    continue;
-                }
+                if (!chunk->Next)
+                    return copied;
+                RawField<Sfr21SoundChunk*>(stream, 0x30) = chunk->Next;
+                RawField<UInt32>(stream, 0x3c) = 0;
+                continue;
             }
-            memcpy((char*)dst + copied, chunk->Data + pos, n);
-            RawField<UInt32>(stream, 0x3c) += n;
-            bytes -= n;
-            pos = RawField<UInt32>(stream, 0x3c);
-            copied += n;
         }
+        memcpy((char*)dst + copied, chunk->Data + RawField<UInt32>(stream, 0x3c), n);
+        bytes -= n;
+        RawField<UInt32>(stream, 0x3c) += n;
+        copied += n;
     }
-    LeaveCriticalSection(RawFieldPtr<CRITICAL_SECTION>(stream, 0x40));
     return copied;
 }
 
