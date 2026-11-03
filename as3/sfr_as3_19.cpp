@@ -2071,11 +2071,19 @@ ClassTraits::Traits* Sfr27GetClassTraitsByName(VM* vm, const ASString* name, con
 }
 
 
+// Slots::GetSlotInfo (0x142416fb0), one level inlined: the exe expands it here and calls it for a parent's slot.
+static inline const SlotInfo& Sfr27InlineSlotInfo(const Slots& s, AbsoluteIndex ind)
+{
+    if (ind < s.FirstOwnSlotNum)
+        return s.Parent->GetSlotInfo(ind);
+    return s.VArray[static_cast<UInt32>(ind.Get()) - s.FirstOwnSlotNum].Value;
+}
+
 // The traits' slot ind receives v for obj.
 // @0x142529eb0
 __declspec(noinline) char* Sfr27TraitsSetSlotValue(Traits* tr, char* ret, SPInt ind, Value* v, Object* obj)
 {
-    Sfr27SlotSetValueObj(&tr->GetSlotInfo(AbsoluteIndex(ind)), ret, &tr->GetVM(), v, obj);
+    Sfr27SlotSetValueObj(&Sfr27InlineSlotInfo(*tr, AbsoluteIndex(ind)), ret, &tr->GetVM(), v, obj);
     return ret;
 }
 
