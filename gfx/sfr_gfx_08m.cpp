@@ -272,67 +272,75 @@ unsigned FontGlyphPacker::packGlyphRects(Array<GlyphInfo>* glyphs)
 // @0x142662d00
 void FontGlyphPacker::rasterizeGlyph(RawImage* texImage, GlyphInfo* gi)
 {
-    const ShapeDataInterface* shape = gi->pFont->GetFont()->GetPermanentGlyphShape(gi->GlyphIndex);
-    if (!shape || shape->IsEmpty())
-        return;
+    const ShapeDataInterface* sh = gi->pFont->GetFont()->GetPermanentGlyphShape(gi->GlyphIndex);
 
-    float           scale = PackTextureConfig.NominalSize / FontPackParams::GlyphBoundBox;
-    ToleranceParams tolerance;
-    ShapePosInfo    pos(shape->GetStartingPos());
-    float           coord[Edge_MaxCoord];
-    unsigned        styles[3];
-    bool            firstPath = true;
-    ShapePathType   pathType;
-
-    Ras.Clear();
-    while ((pathType = shape->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
+    if (sh && !sh->IsEmpty())
     {
-        if (!firstPath && pathType == Shape_NewLayer)
-            break;
-        firstPath = false;
+        ToleranceParams param;
 
-        if (styles[0] != styles[1])
+        float scale = PackTextureConfig.NominalSize / FontPackParams::GlyphBoundBox;
+
+        ShapePosInfo  pos(sh->GetStartingPos());
+        ShapePathType pathType;
+        PathEdgeType  pathEdge;
+        float         coord[Edge_MaxCoord];
+        unsigned      styles[3];
+        bool          first = true;
+
+        Ras.Clear();
+        while ((pathType = sh->ReadPathInfo(&pos, coord, styles)) != Shape_EndShape)
         {
-            coord[0] *= scale;
-            coord[1] *= scale;
-            Ras.MoveTo(coord[0], coord[1]);
-            PathEdgeType edge;
-            while ((edge = shape->ReadEdge(&pos, coord)) != Edge_EndPath)
+            if (!first && pathType == Shape_NewLayer)
+                break;
+            first = false;
+
+            if (styles[0] != styles[1])
             {
-                if (edge == Edge_LineTo)
+                coord[0] *= scale;
+                coord[1] *= scale;
+                Ras.MoveTo(coord[0], coord[1]);
+                while ((pathEdge = sh->ReadEdge(&pos, coord)) != Edge_EndPath)
                 {
-                    coord[0] *= scale;
-                    coord[1] *= scale;
-                    Ras.LineTo(coord[0], coord[1]);
+                    if (pathEdge == Edge_LineTo)
+                    {
+                        coord[0] *= scale;
+                        coord[1] *= scale;
+                        Ras.LineTo(coord[0], coord[1]);
+                    }
+                    else
+                    {
+                        coord[0] *= scale;
+                        coord[1] *= scale;
+                        coord[2] *= scale;
+                        coord[3] *= scale;
+                        TessellateQuadCurve(&Ras, param, coord[0], coord[1], coord[2], coord[3]);
+                    }
                 }
-                else
-                {
-                    coord[0] *= scale;
-                    coord[1] *= scale;
-                    coord[2] *= scale;
-                    coord[3] *= scale;
-                    TessellateQuadCurve(&Ras, tolerance, coord[0], coord[1], coord[2], coord[3]);
-                }
+                Ras.ClosePath();
             }
-            Ras.ClosePath();
+            else
+            {
+                sh->SkipPathData(&pos);
+            }
         }
-        else
-        {
-            shape->SkipPathData(&pos);
-        }
-    }
 
-    if (Ras.SortCells())
-    {
-        ImageData data;
-        texImage->GetImageData(&data);
-        unsigned h = Ras.GetMaxY() - Ras.GetMinY() + 1;
-        int      x = int(floorf(gi->Bounds.x1)) + PackTextureConfig.PadPixels;
-        int      y = int(floorf(gi->Bounds.y1)) + PackTextureConfig.PadPixels;
-        for (unsigned i = 0; i < h; i++)
-            Ras.SweepScanline(i, data.GetScanline(y + i) + x);
+        if (Ras.SortCells()) // anything to sweep
+        {
+            ImageData d;
+            texImage->GetImageData(&d);
+
+            // Sweep the raster, writing the scan lines to the image.
+            unsigned h = Ras.GetMaxY() - Ras.GetMinY() + 1;
+            int      x = int(floorf(gi->Bounds.x1)) + PackTextureConfig.PadPixels;
+            int      y = int(floorf(gi->Bounds.y1)) + PackTextureConfig.PadPixels;
+            for (unsigned i = 0; i < h; i++)
+            {
+                UByte* p = d.GetScanline(y + i);
+                Ras.SweepScanline(i, p + x);
+            }
+        }
+        Ras.Clear();
     }
-    Ras.Clear();
 }
 
 // @0x142662010
