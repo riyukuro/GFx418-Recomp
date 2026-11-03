@@ -3794,10 +3794,21 @@ void VideoProviderNetStream::Advance()
     VideoPlayer::Status status = pVideoPlayer->GetStatus();
     switch (status)
     {
+    case VideoPlayer::Playing:
+        if (!SeekNotificationSent && FrameIsReady)
+        {
+            SeekNotificationSent = true;
+            SendNotification("NetStream.Seek.Notify", false);
+        }
+        break;
+
     case VideoPlayer::Ready:
         if (!pTextureImage)
         {
-            pTextureImage = *pVideoPlayer->CreateTexture(pTextureManager);
+            VideoImage* pimage = pVideoPlayer->CreateTexture(pTextureManager);
+            if (pTextureImage)
+                pTextureImage->Release();
+            *reinterpret_cast<VideoImage**>(&pTextureImage) = pimage;
             if (pTextureImage)
             {
                 pVideoPlayer->GetVideoInfo(&VInfo);
@@ -3812,14 +3823,6 @@ void VideoProviderNetStream::Advance()
         SendNotification("NetStream.Play.Start", false);
         SendMetaInformation();
         pVideoPlayer->Play();
-        break;
-
-    case VideoPlayer::Playing:
-        if (!SeekNotificationSent && FrameIsReady)
-        {
-            SeekNotificationSent = true;
-            SendNotification("NetStream.Seek.Notify", false);
-        }
         break;
 
     case VideoPlayer::Finished:
