@@ -3554,11 +3554,31 @@ void FUN_1423d5d80(void* raw, const void* event, const wchar_t* text)
     *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
 }
 
-// MS2-FUNCTIONAL: records the alternate IME composition message, whose language identifier is 0x0c bytes past the common event field.
+// Records the alternate IME composition message, whose language identifier is at +0x10 of the event, and copies
+// the text straight from the converted string.
 // @0x1423d7bc0
-void FUN_1423d7bc0(void* manager, const void* event, const wchar_t* text)
+void FUN_1423d7bc0(void* raw, const void* event, const wchar_t* text)
 {
-    FUN_1423d5d80(manager, static_cast<const unsigned char*>(event) + 0x0c, text);
+    auto* bytes = static_cast<unsigned char*>(raw);
+    Scaleform::String converted(text);
+    const unsigned short language = *reinterpret_cast<const unsigned short*>(
+        static_cast<const unsigned char*>(event) + 0x10);
+    unsigned mode = 0x01000000;
+    if ((language & 0xfff) == 0x409) mode = 0x10000000;
+    else if ((language & 0xfff) == 0x404) mode = 9;
+    else if ((language & 0xfff) == 0x804) mode = 0x80000;
+    else if ((language & 0xfff) == 0x412) mode = 0x2000;
+    else if ((language & 0xfff) == 0x411) mode = 0x400;
+    Ime01ModeRecord record;
+    record.language = language;
+    *reinterpret_cast<unsigned*>(bytes + 0x84) = mode;
+    record.mode = mode;
+    record.text = static_cast<char*>(Scaleform::Memory::Alloc(converted.GetSize() + 1));
+    std::memcpy(record.text, converted.ToCStr(), converted.GetSize() + 1);
+    Ime01PushModeRecord(reinterpret_cast<unsigned long long*>(bytes + 0x90), record);
+
+    *reinterpret_cast<Scaleform::String*>(bytes + 0x70) += Scaleform::String(text) + "@@";
+    *reinterpret_cast<unsigned*>(bytes + 0x80) += 1;
 }
 
 // MS2-FUNCTIONAL: applies the executable's StatusWindow shape, symbol, and Japanese input-mode changes through IMM32.
