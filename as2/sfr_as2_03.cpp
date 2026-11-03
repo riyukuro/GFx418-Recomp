@@ -1305,7 +1305,7 @@ ArraySortFunctor::ArraySortFunctor(const ArraySortFunctor& src)
 }
 
 // @0x142925350
-ArraySortFunctor::~ArraySortFunctor()
+__declspec(noinline) ArraySortFunctor::~ArraySortFunctor()
 {
 }
 
@@ -1451,7 +1451,7 @@ template ArrayDataBase<Ptr<GFx::AS2::LocalFrame>, AllocatorLH<Ptr<GFx::AS2::Loca
                        ArrayDefaultPolicy>::~ArrayDataBase();
 // @0x142924260
 template ArrayDataBase<Ptr<GFx::AS2::Object>, AllocatorLH<Ptr<GFx::AS2::Object>, 2>, ArrayDefaultPolicy>::~ArrayDataBase();
-// MS2-FUNCTIONAL cl inlines ~ArraySortFunctor (defined above), the exe calls it
+// The element dtor is called out of line (~ArraySortFunctor is noinline above, as in the exe)
 // @0x1429242d0
 template ArrayDataBase<GFx::AS2::ArraySortFunctor, AllocatorGH<GFx::AS2::ArraySortFunctor, 2>,
                        ArrayDefaultPolicy>::~ArrayDataBase();
