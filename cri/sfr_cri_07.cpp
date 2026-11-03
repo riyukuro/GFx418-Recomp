@@ -25398,15 +25398,13 @@ void * m2vsl_DuplicateObj(void *arg1, int arg2)
   return _Dst;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
+// MS2-FUNCTIONAL: left: VC9 load order of the two slice counts (r11/ecx swap), source order has no effect.
 // @0x140089fe0
 void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
 {
   uint u_v1;
-  ulonglong u_v2;
   int i_v3;
-  uint u_v4;
-  uint local_res8 [2];
+  uint local_res8;
   // one frame: &loc_38 is the MPVMULTI_DecPicture context struct (callback table at +8, results at +0x1c..+0x28)
   struct Ctx { longlong Owner; cri_u1 **Table; cri_u4 W10; int W14; cri_u4 W18; int W1c; int W20; int W24; cri_u2 H28; } frame_;
   longlong &loc_38 = frame_.Owner;
@@ -25422,11 +25420,11 @@ void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
   M2VCONCEAL_StartFrame(arg1);  // the exe passes rcx through
   if (*(longlong *)((char *)arg1 + 0x1c58) != 0) {
     MPVMULTI_SetProcessorMask(*(longlong *)((char *)arg1 + 0x1c58),*(cri_u4 *)((char *)arg1 + 0x1a84));
-    loc_30 = &PTR_FUN_143a4a5a0;
-    loc_24 = *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) + -1;
-    loc_28 = 2;
-    loc_20 = *(cri_u4 *)((char *)arg1 + 0x6c8);
     loc_38 = arg1;
+    loc_30 = &PTR_FUN_143a4a5a0;
+    loc_28 = 2;
+    loc_24 = *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc) + -1;
+    loc_20 = *(cri_u4 *)((char *)arg1 + 0x6c8);
     MPVMULTI_DecPicture(*(cri_u8 *)((char *)arg1 + 0x1c58),arg2,arg1 + 0x1b28,(unsigned __int64 *)&loc_38);
     if (loc_1c != 0) {
       *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + loc_18;
@@ -25436,27 +25434,17 @@ void M2VSL_DecPicture(longlong arg1, cri_u8 arg2)
     }
   }
   *(cri_u2 *)((char *)arg1 + 0x1b98) = 0;
-  u_v2 = FUN_140051ec0((longlong *)arg2,(uint *)local_res8);
   u_v1 = 0x101;
-  do {
-    if ((u_v2 & 1) == 0) {
-      *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + 1;
-LAB_14008a134:
-      i_v3 = *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc);
-      if (*(int *)((char *)arg1 + 0x6f0) != i_v3 + -1) {
-        *(int *)((char *)arg1 + 0x6f0) = i_v3;
-        (**(cri_code **)((char *)arg1 + 0x1be0))(arg1);
-      }
-      return;
+  while ((FUN_140051ec0((longlong *)arg2,&local_res8) & 1) != 0) {
+    if (u_v1 <= local_res8) {
+      u_v1 = local_res8;
     }
-    u_v4 = local_res8[0];
-    if ((local_res8[0] < u_v1) && (u_v4 = u_v1, *(uint *)((char *)arg1 + 0x6c8) < 0xaf1)) {
-      *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + 1;
-      goto LAB_14008a134;
+    else if (*(uint *)((char *)arg1 + 0x6c8) <= 0xaf0) {
+      goto LAB_14008a16b;
     }
     *(short *)((char *)arg1 + 0x1b98) = *(short *)((char *)arg1 + 0x1b98) + 1;
     m2vsl_DecSliceOne(arg1,arg2,(cri_u4 *)&loc_38);
-    i_v3 = (int)loc_30 + (int)loc_38;
+    i_v3 = (int)loc_38 + (int)loc_30;
     if (i_v3 != 0) {
       *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + i_v3;
       if (*(int *)((char *)arg1 + 0x1a54) == 0) goto LAB_14008a134;
@@ -25466,9 +25454,18 @@ LAB_14008a134:
     if (*(int *)((char *)arg1 + 0x1bc0) != 0) {
       return;
     }
-    u_v2 = FUN_140051ec0((longlong *)arg2,(uint *)local_res8);
-    u_v1 = u_v4;
-  } while( true );
+  }
+  *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + 1;
+LAB_14008a134:
+  i_v3 = *(int *)((char *)arg1 + 0x6d0) * *(int *)((char *)arg1 + 0x6cc);
+  if (*(int *)((char *)arg1 + 0x6f0) != i_v3 + -1) {
+    *(int *)((char *)arg1 + 0x6f0) = i_v3;
+    (**(cri_code **)((char *)arg1 + 0x1be0))(arg1);
+  }
+  return;
+LAB_14008a16b:
+  *(int *)((char *)arg1 + 0x1a44) = *(int *)((char *)arg1 + 0x1a44) + 1;
+  goto LAB_14008a134;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
