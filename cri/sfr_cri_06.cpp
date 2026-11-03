@@ -906,7 +906,6 @@ void FUN_1400545d0(void* pCtx, cri_u8* pOut, cri_u4* pCount)
     *pCount = *(cri_u4*)((cri_u1*)pCtx + 0x1c54);
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x1400545f0
 void m2vhdec_SetPicAtr(cri_any cri_p0)
 {
@@ -926,10 +925,10 @@ void m2vhdec_SetPicAtr(cri_any cri_p0)
   *(cri_u4 *)((char *)arg1 + 0x1ad8) = *(cri_u4 *)((char *)arg1 + 0xcb4);
   *(cri_u4 *)((char *)arg1 + 0x1adc) = *(cri_u4 *)((char *)arg1 + 0xca4);
   *(cri_u4 *)((char *)arg1 + 0x1ae0) = *(cri_u4 *)((char *)arg1 + 0x318);
-  *(cri_u4 *)((char *)arg1 + 0x1ae8) = 0;
+  *(cri_u4 volatile *)((char *)arg1 + 0x1ae8) = 0;   // volatile (with 0x1aec and the 0x6d4 read): the exe keeps these in source order
   *(cri_u4 *)((char *)arg1 + 0x1ae4) = *(cri_u4 *)((char *)arg1 + 0x24c);
-  *(cri_u4 *)((char *)arg1 + 0x1aec) = 1;
-  *(cri_u4 *)((char *)arg1 + 0x1af0) = *(cri_u4 *)((char *)arg1 + 0x6d4);
+  *(cri_u4 volatile *)((char *)arg1 + 0x1aec) = 1;
+  *(cri_u4 *)((char *)arg1 + 0x1af0) = *(cri_u4 volatile *)((char *)arg1 + 0x6d4);
   *(cri_u4 *)((char *)arg1 + 0x1af4) = *(cri_u4 *)((char *)arg1 + 0x6d8);
   *(cri_u2 *)((char *)arg1 + 0x1af8) = *(cri_u2 *)((char *)arg1 + 0x280);
   *(cri_u2 *)((char *)arg1 + 0x1afa) = *(cri_u2 *)((char *)arg1 + 0x284);
