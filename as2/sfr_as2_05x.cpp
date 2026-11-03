@@ -11,9 +11,14 @@
 #include "../include/gfx/gfx_asstringhash.h"
 #include "../include/gfx/as2/as2_hashaccess.h"
 
+// The watchpoint hash's findIndexAlt (exact / ignoring case), COMDATs the exe calls out of line.
+typedef Scaleform::GFx::ASStringHash_GC<Scaleform::GFx::AS2::Object::Watchpoint>::SetType Sfr05xWatchpointSet;
+template<> template<> Scaleform::SPInt Sfr05xWatchpointSet::findIndexAlt<Scaleform::GFx::ASString>(const Scaleform::GFx::ASString& key) const; // exe 0x142917220
+template<> template<> Scaleform::SPInt Sfr05xWatchpointSet::findIndexAlt<Scaleform::GFx::ASStringNoCaseKey>(
+    const Scaleform::GFx::ASStringNoCaseKey& key) const; // exe 0x142916e60
+
 namespace Scaleform { namespace GFx { namespace AS2 {
 
-// The watchpoint hash's findIndexAlt (exact / ignoring case), COMDATs the exe calls out of line.
 MS2_AS2_HASH_FINDINDEX(Object::Watchpoint)
 
 // The standard member of a name (ASStringHash<char>::GetCaseCheck): by node when case sensitive, else by the
@@ -27,22 +32,23 @@ bool StandardMemberHash_GetCaseCheck(const ASStringHash<char>* phash, const ASSt
 }
 
 // The watchpoint of a property (ASStringHash_GC<Object::Watchpoint>::GetCaseCheck), null when there is none.
-// MS2-FUNCTIONAL: a free function in place of the template member (the callers reach it under this name)
+// A free function in place of the template member (the callers reach it under this name). It is the inlined
+// Hash::GetAlt: the node of the found index, then its value when the node is not null.
 // @0x142949eb0
 const Object::Watchpoint* WatchpointHash_GetCaseCheck(ASStringHash_GC<Object::Watchpoint>* phash, const ASString& key,
                                                       bool caseSensitive)
 {
-    SPInt index;
+    typedef ASStringHash_GC<Object::Watchpoint>::NodeType NodeType;
     if (caseSensitive)
-        index = HashFindIndex(phash, key);
-    else
     {
-        ASStringNoCaseKey ikey(key);
-        index = HashFindIndex(phash, ikey);
+        SPInt           index = HashFindIndex(phash, key);
+        const NodeType* p     = index >= 0 ? &phash->NodeAt(index) : 0;
+        return p ? &p->Second : 0;
     }
-    if (index < 0)
-        return 0;
-    return &phash->NodeAt(index).Second;
+    ASStringNoCaseKey ikey(key);
+    SPInt             index = HashFindIndex(phash, ikey);
+    const NodeType*   p     = index >= 0 ? &phash->NodeAt(index) : 0;
+    return p ? &p->Second : 0;
 }
 
 }}} // namespace Scaleform::GFx::AS2
