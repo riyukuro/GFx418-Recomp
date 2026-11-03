@@ -110,19 +110,35 @@ struct EnumerateOpVisitor : public ObjectInterface::MemberVisitor
     virtual void Visit(const ASString& name, const Value& val, UByte flags);
 };
 
+// Value::ToObjectInterface with ToAvmCharacter and ToCharacter inlined, as in the exe's enumerate opcode.
+static SF_FORCEINLINE ObjectInterface* LmEnumToObjectInterface(const Value& v, const Environment* penv)
+{
+    if (v.GetType() == Value::CHARACTER)
+    {
+        InteractiveObject* pchar = 0;
+        if (penv && v.V.pCharHandle)
+        {
+            DisplayObject* pdisp = v.V.pCharHandle->ResolveCharacter(penv->GetTarget()->GetMovieImpl());
+            if (pdisp)
+                pchar = pdisp->IsInteractiveObject() ? static_cast<InteractiveObject*>(pdisp) : 0;
+        }
+        return pchar ? GFx::AS2::ToAvmCharacter(pchar) : 0;
+    }
+    return v.ToObject(penv);
+}
+
 // The 'enumerate' opcodes (ExecutionContext::EnumerateOpCode; the context is not modelled: +0 the environment,
 // +0x38 the with stack, +0x40 the logger, +0x62 the verbose flags): a null ends the names pushed for the object on
-// top (0x55), or for the variable named on top (0x46).
-// MS2-FUNCTIONAL: the context is read by address
+// top (0x55), or for the variable named on top (0x46). The environment and the with stack are re-read from the
+// context after each call, and the logger address is taken at its use, as in the exe.
 // @0x142939920
 void FUN_142939920(void* pctx, int actionId)
 {
-    UByte*                pc         = static_cast<UByte*>(pctx);
-    Environment*          penv       = *reinterpret_cast<Environment**>(pc);
-    const WithStackArray* pwithStack = *reinterpret_cast<const WithStackArray**>(pc + 0x38);
-    ActionLogger*         plog       = reinterpret_cast<ActionLogger*>(pc + 0x40);
+    UByte*                       pc         = static_cast<UByte*>(pctx);
+    Environment* const&          penv       = *reinterpret_cast<Environment**>(pc);
+    const WithStackArray* const& pwithStack = *reinterpret_cast<const WithStackArray**>(pc + 0x38);
 
-    Value varName = penv->Top(0);
+    Value varName = *penv->Stack.Top0();
     penv->Drop1();
     Value nullValue;
     nullValue.SetNull();
@@ -131,7 +147,7 @@ void FUN_142939920(void* pctx, int actionId)
     ObjectInterface* pobj;
     if (actionId == 0x55)
     {
-        pobj = varName.ToObjectInterface(penv);
+        pobj = LmEnumToObjectInterface(varName, penv);
         if (!pobj)
             return;
     }
@@ -141,10 +157,11 @@ void FUN_142939920(void* pctx, int actionId)
         Value    val;
         if (!penv->GetVariable(name, &val, pwithStack, 0, 0, 0))
             return;
-        pobj = val.ToObjectInterface(penv);
+        pobj = LmEnumToObjectInterface(val, penv);
         if (!pobj)
             return;
     }
+    ActionLogger* plog = reinterpret_cast<ActionLogger*>(pc + 0x40);
     if (pc[0x62] & 2)
         plog->LogAction("---enumerate - Push: NULL\n");
     EnumerateOpVisitor visitor(penv, plog);
