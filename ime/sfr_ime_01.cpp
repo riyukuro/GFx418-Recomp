@@ -2985,9 +2985,11 @@ void* FUN_1423dbd20(Scaleform::GFx::AS3::MemoryContextImpl* self, unsigned flags
     return self;
 }
 
+template <bool ZeroCallback>
 static __forceinline int Ime01AdviseSink(unsigned char* self, const void* iid, void* argument, unsigned* resultKey)
 {
-    IUnknown* callback = nullptr;
+    IUnknown* callback;
+    if (ZeroCallback) callback = nullptr;
     int ok = 0;
     if (SUCCEEDED((*reinterpret_cast<IUnknown**>(self + 0x28))->QueryInterface(
             *reinterpret_cast<const IID*>(&DAT_1431c51e8), reinterpret_cast<void**>(&callback)))) {
@@ -3003,35 +3005,38 @@ static __forceinline int Ime01AdviseSink(unsigned char* self, const void* iid, v
 }
 
 // MS2-FUNCTIONAL: creates the IME COM manager, queries its controller straight into +0x40 and advises both callback
-// sinks; a key is set to -1 only when its advise call fails. Same flow as the exe; the exe does not keep 0 in a
-// register (immediate zero stores, rsi saved but unused) and returns the int flag.
+// sinks; a key is set to -1 only when its advise call fails. The first sink's callback is not zeroed before its query,
+// as in the exe. The exe returns an int (xor eax,eax / mov eax,edi): with an int return (mangled YAH, which the hooks
+// in sfr_sf_hooks.cpp would need) only the frame differs, rbx in rcx's home and manager/callback at 0x48/0x50.
 // @0x1423daae0
 unsigned char FUN_1423daae0(void* raw)
 {
     auto* self = static_cast<unsigned char*>(raw);
     IUnknown* manager = nullptr;
-    if (SUCCEEDED(CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
-            CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28),
-            reinterpret_cast<void**>(&manager)))) {
-        *reinterpret_cast<IUnknown**>(self + 0x28) = manager;
-        if (SUCCEEDED(manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b8d8),
-                reinterpret_cast<void**>(self + 0x40)))) {
-            IUnknown* controller = *reinterpret_cast<IUnknown**>(self + 0x40);
-            auto** controllerVtable = *reinterpret_cast<void***>(controller);
-            reinterpret_cast<void(*)(void*, void*, unsigned)>(controllerVtable[0x70 / sizeof(void*)])(
-                controller, self + 0x38, 4);
-
-            if (Ime01AdviseSink(self, &DAT_1431c4d58, self, reinterpret_cast<unsigned*>(self + 0x18)) != 1)
-                return 0;
-            int ok = Ime01AdviseSink(self, &DAT_14313b8b8, self + 8, reinterpret_cast<unsigned*>(self + 0x1c));
-            if (ok != 1) return 0;
-            auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
-            *reinterpret_cast<int*>(owner + 0xbc) = 0;
-            return static_cast<unsigned char>(ok);
-        }
+    const HRESULT created = CoCreateInstance(*reinterpret_cast<const IID*>(&DAT_1431c4858), nullptr,
+        CLSCTX_INPROC_SERVER, *reinterpret_cast<const IID*>(&DAT_1431c4d28), reinterpret_cast<void**>(&manager));
+    if (FAILED(created)) {
+        if (manager) manager->Release();
+        return 0;
     }
-    if (manager) manager->Release();
-    return 0;
+    *reinterpret_cast<IUnknown**>(self + 0x28) = manager;
+    if (FAILED(manager->QueryInterface(*reinterpret_cast<const IID*>(&DAT_14313b8d8),
+            reinterpret_cast<void**>(self + 0x40)))) {
+        if (manager) manager->Release();
+        return 0;
+    }
+    IUnknown* controller = *reinterpret_cast<IUnknown**>(self + 0x40);
+    auto** controllerVtable = *reinterpret_cast<void***>(controller);
+    reinterpret_cast<void(*)(void*, void*, unsigned)>(controllerVtable[0x70 / sizeof(void*)])(
+        controller, self + 0x38, 4);
+
+    if (Ime01AdviseSink<false>(self, &DAT_1431c4d58, self, reinterpret_cast<unsigned*>(self + 0x18)) != 1)
+        return 0;
+    int ok = Ime01AdviseSink<true>(self, &DAT_14313b8b8, self + 8, reinterpret_cast<unsigned*>(self + 0x1c));
+    if (ok != 1) return 0;
+    auto* owner = *reinterpret_cast<unsigned char**>(self + 0x10);
+    *reinterpret_cast<int*>(owner + 0xbc) = 0;
+    return static_cast<unsigned char>(ok);
 }
 
 static __forceinline void Ime01ReleaseStringNode(const unsigned long long* stringInfo)
