@@ -310,6 +310,14 @@ bool Value::Convert2Boolean() const
 
 // ---- the AVM parts of the display objects (as3_avm.h) and the movie root's action queues ----
 
+// ToAvmInteractiveObj in the SDK form (a null test, then a static_cast of GetAvmIntObj), which the exe inlines.
+static __forceinline AvmInteractiveObj* Sfr33ToAvmIntObjInline(InteractiveObject* p)
+{
+    if (!p)
+        return NULL;
+    return static_cast<AvmInteractiveObj*>(p->GetAvmIntObj());
+}
+
 // @0x1424f2400
 unsigned AvmDisplayObj::CreateASInstance(bool execute)
 {
@@ -318,13 +326,12 @@ unsigned AvmDisplayObj::CreateASInstance(bool execute)
     return 0;
 }
 
-// MS2-FUNCTIONAL: same two parent lookups; the inlined AVM-part casts compile to a different branch layout.
 // @0x142505e50
 Instances::fl_display::DisplayObject* AvmDisplayObj::GetAS3Parent() const
 {
-    if (!ToAvmInteractiveObj(pDispObj->GetParent()))
+    if (!Sfr33ToAvmIntObjInline(pDispObj->GetParent()))
         return NULL;
-    return ToAvmInteractiveObj(pDispObj->GetParent())->GetAS3Obj();
+    return Sfr33ToAvmIntObjInline(pDispObj->GetParent())->GetAS3Obj();
 }
 
 // @0x142505ee0
@@ -3147,8 +3154,9 @@ bool Sfr33CheckAvm(MovieRoot* self)
 
 // Runs the class PostInit of the AS3 object without arguments. When that pushed a call frame, it runs now (execute)
 // or stays queued (1); an exception is reported and flags the display object (+0x88).
-// MS2-FUNCTIONAL 0x1424ee800: the exe reloads the AS3 object after the entry test, keeps the result in esi
-// (vm in rbp) and sets the queued result 1 out of line through eax.
+// Returns from each branch as the SDK does (AS3_AvmDisplayObj.cpp), which gives the exe's registers.
+// MS2-FUNCTIONAL 0x1424ee800: the exe tests the collectible pointer against the zero raw pointer
+// (cmp [rcx+8],rax) and loads it again for GetAS3Obj; ours keeps the first load in r8.
 // @0x1424ee800
 SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
 {
@@ -3156,29 +3164,28 @@ SF_NOINLINE unsigned AvmDisplayObj::CallCtor(bool execute)
         return 0;
     Class& cls = reinterpret_cast<Object*>(GetAS3Obj())->GetTraits().GetConstructor();
     Sfr17ObjectValue v(reinterpret_cast<Object*>(GetAS3Obj()));
-    unsigned result = 0;
     UByte* const dobj = reinterpret_cast<UByte*>(pDispObj);
     VM* vm = *reinterpret_cast<VM**>(*reinterpret_cast<UByte**>(dobj + 0x20) + 0x48);
-    if (vm)
+    if (!vm)
+        return 0;
+    const UPInt depth = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78);
+    cls.PostInit(v.Get(), 0, NULL);
+    if (*reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78) > depth)
     {
-        const UPInt depth = *reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78);
-        cls.PostInit(v.Get(), 0, NULL);
-        if (*reinterpret_cast<UPInt*>(reinterpret_cast<UByte*>(vm) + 0x78) > depth)
+        if (execute)
         {
-            if (!execute)
-                result = 1;
-            else
+            vm->ExecuteCode(1);
+            if (*(reinterpret_cast<UByte*>(vm) + 0x180))
             {
-                vm->ExecuteCode(1);
-                if (*(reinterpret_cast<UByte*>(vm) + 0x180))
-                {
-                    vm->OutputAndIgnoreException();
-                    *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pDispObj) + 0x88) |= 0x20;
-                }
+                vm->OutputAndIgnoreException();
+                *reinterpret_cast<UInt16*>(reinterpret_cast<UByte*>(pDispObj) + 0x88) |= 0x20;
             }
+            return 0;
         }
+        else
+            return 1;
     }
-    return result;
+    return 0;
 }
 
 // Commands of a drawing path (+0x48: the command bytes, +0x10: the state).
@@ -4810,19 +4817,20 @@ void Sfr33MovieRootCursor::ChangeMouseCursorType(unsigned mouseIdx, unsigned new
     UByte* const avm = reinterpret_cast<UByte*>(pAVM);
     if (pStage && avm && avm[0x3a0] && *reinterpret_cast<const int*>(reinterpret_cast<UByte*>(pStage) + 0x128))
     {
-        ASString name(BuiltinsMgr.GetBuiltin(AS3Builtin_empty_));
         Classes::fl_events::EventDispatcher* cls = *reinterpret_cast<Classes::fl_events::EventDispatcher**>(avm + 0x390);
+        ASString name(BuiltinsMgr.GetBuiltin(AS3Builtin_empty_));
         GetMouseCursorTypeString(name, newCursorType);
         SPtr<Instances::fl_events::Event> evt = cls->CreateMouseCursorEventObject(name, mouseIdx);
         Instances::fl_display::DisplayObject* stage =
-            ToAvmInteractiveObj(static_cast<InteractiveObject*>(pStage))->GetAS3Obj();
+            Sfr33ToAvmIntObjInline(static_cast<InteractiveObject*>(pStage))->GetAS3Obj();
         if (stage && !stage->DispatchEventObject(evt.GetPtr(), pStage))
             return;
     }
-    UserEventHandler* handler = pMovieImpl->pUserEventHandler;
-    if (handler)
-        handler->HandleEvent(pMovieImpl->AsMovie(), MouseCursorEvent(static_cast<MouseCursorEvent::CursorShapeType>(newCursorType),
-                                                          mouseIdx));
+    if (pMovieImpl->pUserEventHandler)
+    {
+        pMovieImpl->pUserEventHandler->HandleEvent(pMovieImpl->AsMovie(),
+            MouseCursorEvent(static_cast<MouseCursorEvent::CursorShapeType>(newCursorType), mouseIdx));
+    }
 }
 
 // MovieRoot::CreateArray (virtual): a host value holding a new empty Array.
