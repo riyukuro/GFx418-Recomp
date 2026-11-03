@@ -431,30 +431,32 @@ void IMEManagerBase::HighlightText(UPInt pos, UPInt len, TextHighlightStyle styl
     pTextField->HighlightCompositionStringText(pos, len, cat);
 }
 
-// MS2-FUNCTIONAL 0x1425b46b0: codegen differs (matrix / rect copies and the clamp); same calls and results
 // @0x1425b46b0
 void IMEManagerBase::GetMetrics(Render::RectF* pviewRect, Render::RectF* pcursorRect, int cursorOffset)
 {
-    if (!pTextField)
-        return;
-    DisplayObjectBase* pobj = pTextField;
-    Render::Matrix2F wm;
-    pobj->GetWorldMatrix(&wm);
-    Render::RectF bounds = pobj->GetBounds(wm);
-    if (pviewRect)
-        *pviewRect = RectTwipsToPixels(bounds);
-    SPInt cursorPos;
-    UPInt compPos = pTextField->GetCompositionStringPosition();
-    if (compPos == SF_MAX_UPINT)
-        cursorPos = pTextField->GetCaretIndex();
-    else
-        cursorPos = SPInt(compPos + pTextField->GetCompositionStringLength());
-    cursorPos += cursorOffset;
-    Render::RectF cursorRect = pTextField->GetCursorBounds(cursorPos < 0 ? 0 : UPInt(cursorPos), NULL, NULL);
-    Render::RectF r;
-    wm.EncloseTransform(&r, cursorRect);
-    if (pcursorRect)
-        *pcursorRect = RectTwipsToPixels(r);
+    if (pTextField)
+    {
+        Render::Matrix2F wm;
+        pTextField->GetWorldMatrix(&wm);
+        Render::RectF vr = pTextField->GetBounds(wm);
+        if (pviewRect)
+            *pviewRect = RectTwipsToPixels(vr);
+
+        UPInt curspos = pTextField->GetCompositionStringPosition();
+        if (curspos == SF_MAX_UPINT)
+            curspos = pTextField->GetCaretIndex();
+        else
+            curspos += pTextField->GetCompositionStringLength();
+        curspos += cursorOffset;
+        if ((SPInt)curspos < 0)
+            curspos = 0;
+
+        Render::RectF cr = pTextField->GetCursorBounds(curspos, 0, 0);
+
+        cr = wm.EncloseTransform(cr);
+        if (pcursorRect)
+            *pcursorRect = RectTwipsToPixels(cr);
+    }
 }
 
 // @0x1425b4530
