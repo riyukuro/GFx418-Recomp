@@ -2144,96 +2144,96 @@ void MPVUMCT_Intra(longlong arg1)
   return;
 }
 
-// MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
 // @0x140068a40
 void mpvumct_OneReadMb(longlong arg1, longlong arg2, int *arg3, longlong *arg4, longlong arg5)
 {
-  int i_v1;
-  cri_code *UNRECOVERED_JUMPTABLE;
-  cri_code *pc_v2;
-  int i_v3;
-  int i_v4;
-  longlong l_v5;
-  longlong l_v6;
-  longlong l_v7;
-  int i_v8;
-  longlong l_v9;
-  uint u_v10;
-  int i_v11;
-  uint u_v12;
-  
-  i_v8 = (int)*(short *)((longlong)arg4 + 0x1a);
-  i_v3 = (int)(short)arg4[3];
+  int cstride;
+  int ystride;
+  int mvx;
+  int mvy;
+  int lim;
+  int hx;
+  int hy;
+  int px;
+  int py;
+  int hgt;
+  int cfx;
+  int yfx;
+  cri_code *cfn;
+  cri_code *yfn;
+  longlong ctx;
+  int coff;
+  int yoff;
+  longlong p;
+
+  cstride = *(short *)((char *)arg4 + 0x1a);
+  ystride = *(short *)((char *)arg4 + 0x18);
   mpvumct_CalcOfs(arg1,(longlong)arg4,arg3);  // the exe passes r8 (arg3) through: the callee writes two ints to it
-  i_v11 = *(int *)((char *)arg5 + 0x18);
-  i_v4 = *(int *)((char *)arg5 + 0x1c);
-  i_v1 = *(int *)((char *)arg1 + 0x179c) * -0x20;
-  if ((i_v11 < i_v1) ||
-     (i_v1 = (*(int *)((char *)arg1 + 0x15a0) * 0x10 + *(int *)((char *)arg1 + 0x179c) * -0x10) * 2 + -0x20,
-     i_v1 < i_v11)) {
-    i_v11 = i_v1;
-    *(int *)((char *)arg1 + 0x18ec) = *(int *)((char *)arg1 + 0x18ec) + 1;
+  mvx = *(int *)((char *)arg5 + 0x18);
+  mvy = *(int *)((char *)arg5 + 0x1c);
+  px = *(int *)((char *)arg1 + 0x179c) * 0x10;
+  py = *(int *)((char *)arg1 + 0x1798) * 0x10;
+  hgt = *(int *)((char *)arg1 + 0x15a4) * 0x10;
+  lim = -px * 2;
+  if (mvx < lim ||
+      mvx > (lim = (*(int *)((char *)arg1 + 0x15a0) * 0x10 - px) * 2 - 0x20)) {
+    *(int *)((char *)arg1 + 0x18ec) += 1;
+    mvx = lim;
   }
-  i_v1 = *(int *)((char *)arg1 + 0x1798) * -0x20;
-  if ((i_v4 < i_v1) ||
-     (i_v1 = (*(int *)((char *)arg1 + 0x15a4) * 0x10 + *(int *)((char *)arg1 + 0x1798) * -0x10) * 2 + -0x20,
-     i_v1 < i_v4)) {
-    i_v4 = i_v1;
-    *(int *)((char *)arg1 + 0x18ec) = *(int *)((char *)arg1 + 0x18ec) + 1;
-  }
-  if (i_v11 < 0) {
-    u_v12 = -((int)((4 - i_v11 >> 0x1f & 7U) + (4 - i_v11)) >> 3);
+  lim = -py * 2;
+  if (mvy < lim) {
+    mvy = lim;
+    *(int *)((char *)arg1 + 0x18ec) += 1;
   }
   else {
-    u_v12 = (int)((i_v11 + 4 >> 0x1f & 7U) + i_v11 + 4) >> 3;
+    lim = (hgt - py) * 2 - 0x20;
+    if (mvy > lim) {
+      mvy = lim;
+      *(int *)((char *)arg1 + 0x18ec) += 1;
+    }
   }
-  if (i_v4 < 0) {
-    u_v10 = -((int)((4 - i_v4 >> 0x1f & 7U) + (4 - i_v4)) >> 3);
-  }
-  else {
-    u_v10 = (int)((i_v4 + 4 >> 0x1f & 7U) + i_v4 + 4) >> 3;
-  }
-  l_v7 = arg1 + 0x13c8;
-  i_v1 = arg3[1];
-  UNRECOVERED_JUMPTABLE =
-       (cri_code *)PTR_LAB_1431bc290[(longlong)(int)(u_v12 & 1) + (ulonglong)(u_v10 & 1) * 2];
-  l_v5 = (longlong)(int)((int)u_v12 / 2 & 1);
-  i_v11 = *arg3;
-  pc_v2 = (cri_code *)PTR_LAB_1431bc290[l_v5 + (ulonglong)((int)u_v10 / 2 & 1) * 2];
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2;
-  *(int *)((char *)arg1 + 0x1404) = i_v3;
-  l_v9 = (longlong)(((int)u_v10 / 2 >> 1) * i_v3 + ((int)u_v12 / 2 >> 1) + i_v11);
-  l_v6 = l_v9 + *arg4;
-  l_v5 = l_v5 + i_v3;
-  *(longlong *)((char *)arg1 + 0x1408) = l_v6;
-  *(longlong *)((char *)arg1 + 0x1410) = l_v5 + l_v6;
-  (*pc_v2)(l_v7);
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2 + 0x40;
-  l_v9 = l_v9 + arg4[1];
-  *(longlong *)((char *)arg1 + 0x1408) = l_v9;
-  *(longlong *)((char *)arg1 + 0x1410) = l_v5 + l_v9;
-  (*pc_v2)(l_v7);
-  *(int *)((char *)arg1 + 0x1404) = i_v8;
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2 + 0x80;
-  l_v6 = (longlong)(((int)u_v10 >> 1) * i_v8 + ((int)u_v12 >> 1) + i_v1) + arg4[2];
-  *(longlong *)((char *)arg1 + 0x1408) = l_v6;
-  *(longlong *)((char *)arg1 + 0x1410) = (int)((u_v12 & 1) + i_v8) + l_v6;
-  (*UNRECOVERED_JUMPTABLE)(l_v7);
-  *(longlong *)((char *)arg1 + 0x1408) = *(longlong *)((char *)arg1 + 0x1408) + 1;
-  *(longlong *)((char *)arg1 + 0x1410) = *(longlong *)((char *)arg1 + 0x1410) + 1;
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2 + 0xc0;
-  (*UNRECOVERED_JUMPTABLE)(l_v7);
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2 + 0x100;
-  *(longlong *)((char *)arg1 + 0x1408) = *(longlong *)((char *)arg1 + 0x1408) + (longlong)(i_v8 + -1);
-  *(longlong *)((char *)arg1 + 0x1410) = *(longlong *)((char *)arg1 + 0x1410) + (longlong)(i_v8 + -1);
-  (*UNRECOVERED_JUMPTABLE)(l_v7);
-  *(longlong *)((char *)arg1 + 0x1408) = *(longlong *)((char *)arg1 + 0x1408) + 1;
-  *(longlong *)((char *)arg1 + 0x1410) = *(longlong *)((char *)arg1 + 0x1410) + 1;
-  *(longlong *)((char *)arg1 + 0x13f8) = arg2 + 0x140;
-                    /* WARNING: Could not recover jumptable at 0x000140068cb9. Too many branches */
-                    /* WARNING: Treating indirect jump as call */
-  (*UNRECOVERED_JUMPTABLE)(l_v7);
-  return;
+  if (mvx >= 0) mvx = (mvx + 4) / 8;
+  else mvx = -((4 - mvx) / 8);
+  if (mvy >= 0) mvy = (mvy + 4) / 8;
+  else mvy = -((4 - mvy) / 8);
+  coff = (mvy >> 1) * cstride + (mvx >> 1) + arg3[1];
+  cfx = mvx & 1;
+  cfn = (cri_code *)PTR_LAB_1431bc290[cfx + (mvy & 1) * 2];
+  hx = mvx / 2;
+  hy = mvy / 2;
+  yoff = (hy >> 1) * ystride + (hx >> 1) + arg3[0];
+  yfx = hx & 1;
+  yfn = (cri_code *)PTR_LAB_1431bc290[yfx + (hy & 1) * 2];
+  ctx = arg1 + 0x13c8;
+  *(longlong *)((char *)ctx + 0x30) = arg2;
+  *(int *)((char *)ctx + 0x3c) = ystride;
+  p = yoff + arg4[0];
+  *(longlong *)((char *)ctx + 0x40) = p;
+  *(longlong *)((char *)ctx + 0x48) = p + yfx + ystride;
+  (*yfn)(ctx);
+  *(longlong *)((char *)ctx + 0x30) = arg2 + 0x40;
+  p = yoff + arg4[1];
+  *(longlong *)((char *)ctx + 0x40) = p;
+  *(longlong *)((char *)ctx + 0x48) = p + yfx + ystride;
+  (*yfn)(ctx);
+  *(int *)((char *)ctx + 0x3c) = cstride;
+  *(longlong *)((char *)ctx + 0x30) = arg2 + 0x80;
+  p = coff + arg4[2];
+  *(longlong *)((char *)ctx + 0x40) = p;
+  *(longlong *)((char *)ctx + 0x48) = p + (cfx + cstride);
+  (*cfn)(ctx);
+  *(longlong *)((char *)ctx + 0x30) = arg2 + 0xc0;
+  *(longlong *)((char *)ctx + 0x40) += 1;
+  *(longlong *)((char *)ctx + 0x48) += 1;
+  (*cfn)(ctx);
+  *(longlong *)((char *)ctx + 0x30) = arg2 + 0x100;
+  *(longlong *)((char *)ctx + 0x40) += cstride - 1;
+  *(longlong *)((char *)ctx + 0x48) += cstride - 1;
+  (*cfn)(ctx);
+  *(longlong *)((char *)ctx + 0x30) = arg2 + 0x140;
+  *(longlong *)((char *)ctx + 0x40) += 1;
+  *(longlong *)((char *)ctx + 0x48) += 1;
+  (*cfn)(ctx);
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor cri_code (VS2008 build, our toolset differs).
