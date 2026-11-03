@@ -1270,7 +1270,6 @@ MemoryHeap* MovieDefImpl::GetImageHeap() const
 }
 
 // @0x1425cf660
-// MS2-FUNCTIONAL: register allocation in the inlined export hash lookup
 bool MovieDefImpl::GetExportedResource(ResourceBindData* pdata, const String& symbol, MovieDefImpl* ignoreDef)
 {
     ResourceHandle hres;
@@ -1293,27 +1292,29 @@ bool MovieDefImpl::GetExportedResource(ResourceBindData* pdata, const String& sy
         }
         return pdata->pResource.GetPtr() != 0;
     }
-
-    // Symbols of the imported movies are visible here too (our own exports come first).
-    Array<Ptr<MovieDefImpl>, StatMD_Other_Mem> importsCopy;
+    else
     {
-        Lock::Locker lock(&pBindData->ImportSourceLock);
-        importsCopy.Reserve(pBindData->ImportSourceMovies.GetSize());
-        for (UPInt i = 0; i < pBindData->ImportSourceMovies.GetSize(); i++)
+        // Symbols of the imported movies are visible here too (our own exports come first).
+        Array<Ptr<MovieDefImpl>, StatMD_Other_Mem> importsCopy;
         {
-            MovieDefImpl* pdef = pBindData->ImportSourceMovies[i];
-            if (pdef != ignoreDef)
-                importsCopy.PushBack(pdef);
+            Lock::Locker lock(&pBindData->ImportSourceLock);
+            importsCopy.Reserve(pBindData->ImportSourceMovies.GetSize());
+            for (UPInt i = 0; i < pBindData->ImportSourceMovies.GetSize(); i++)
+            {
+                MovieDefImpl* pdef = pBindData->ImportSourceMovies[i];
+                if (pdef != ignoreDef)
+                    importsCopy.PushBack(pdef);
+            }
+        }
+
+        for (unsigned i = 0; i < importsCopy.GetSize(); i++)
+        {
+            MovieDefImpl* pdef = importsCopy[i];
+            if (pdef && pdef->GetExportedResource(pdata, symbol))
+                return 1;
         }
     }
-
-    for (unsigned i = 0; i < importsCopy.GetSize(); i++)
-    {
-        MovieDefImpl* pdef = importsCopy[i];
-        if (pdef && pdef->GetExportedResource(pdata, symbol))
-            return true;
-    }
-    return false;
+    return 0;
 }
 
 // @0x1425ced10
