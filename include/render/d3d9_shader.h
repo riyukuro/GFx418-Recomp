@@ -187,7 +187,7 @@ struct D3DVertexDeclBuilder
     void Add(int, unsigned attr, int, int);
     void Finish(int)
     {
-        static const D3DVERTEXELEMENT9 end = D3DDECL_END();
+        D3DVERTEXELEMENT9 end = D3DDECL_END();
         Elements[Count++] = end;
     }
 };

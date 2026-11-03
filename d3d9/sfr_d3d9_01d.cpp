@@ -1843,39 +1843,42 @@ VertexShaderDesc::ShaderIndex VertexShaderDesc::GetShaderIndexForComboIndex(unsi
 void D3DVertexDeclBuilder::Add(int, unsigned attr, int, int)
 {
     // the shader's attribute with the same usage and index
-    const unsigned key = attr & (VET_Usage_Mask | VET_Index_Mask);
     int slot = 0;
     for (; slot < VertexDesc->NumAttribs; slot++)
-        if ((VertexDesc->Attributes[slot].Attr & (VET_Usage_Mask | VET_Index_Mask)) == key)
+        if ((VertexDesc->Attributes[slot].Attr & (VET_Usage_Mask | VET_Index_Mask)) ==
+            (attr & (VET_Usage_Mask | VET_Index_Mask)))
             break;
 
-    BYTE type   = D3DDECLTYPE_UNUSED;
+    int  type   = D3DDECLTYPE_UNUSED;
     WORD bytes  = 0;
     WORD stream = 0;
     switch (attr & (VET_CompType_Mask | VET_Components_Mask))
     {
     case VET_U8N | 1: case VET_U8N | 2: case VET_U8N | 4:
-        type = D3DDECLTYPE_UBYTE4N; bytes = 4; break;
-    case VET_U8 | 1: case VET_U8 | 2: case VET_U8 | 4:
-        type = D3DDECLTYPE_UBYTE4; bytes = 4; break;
-    case VET_S16 | 2:
-        type = D3DDECLTYPE_SHORT2; bytes = 4; break;
-    case VET_U32 | 1:
-        type = D3DDECLTYPE_D3DCOLOR; bytes = 4; break;
-    case VET_F32 | 2:
-        type = D3DDECLTYPE_FLOAT2; bytes = 8; break;
+        bytes = 4; type = D3DDECLTYPE_UBYTE4N; break;
     case VET_I8 | 1:
         // the batch index rides in the instancing stream
-        type = D3DDECLTYPE_UBYTE4; bytes = 4; stream = 1; break;
+        stream = 1;
+        // fall through
+    case VET_U8 | 1: case VET_U8 | 2: case VET_U8 | 4:
+        bytes = 4; type = D3DDECLTYPE_UBYTE4; break;
+    case VET_U32 | 1:
+        type = D3DDECLTYPE_D3DCOLOR; bytes = 4; break;
+    case VET_S16 | 2:
+        bytes = 4; type = D3DDECLTYPE_SHORT2; break;
+    case VET_F32 | 2:
+        bytes = 8; type = D3DDECLTYPE_FLOAT2; break;
     }
 
+    const BYTE usageIndex = VertexDesc->Attributes[slot].UsageIndex;
+    const BYTE usage      = VertexDesc->Attributes[slot].Usage;
     D3DVERTEXELEMENT9& e = Elements[Count++];
     e.Stream     = stream;
     e.Offset     = Size[stream];
-    e.Type       = type;
+    e.Type       = (BYTE)type;
     e.Method     = D3DDECLMETHOD_DEFAULT;
-    e.Usage      = VertexDesc->Attributes[slot].Usage;
-    e.UsageIndex = VertexDesc->Attributes[slot].UsageIndex;
+    e.Usage      = usage;
+    e.UsageIndex = usageIndex;
     Size[stream] = Size[stream] + bytes;
 }
 
@@ -1883,7 +1886,8 @@ void D3DVertexDeclBuilder::Add(int, unsigned attr, int, int)
 
 namespace Scaleform { namespace Render {
 
-// MS2-FUNCTIONAL: own builder walk; register allocation / jump table differ (pinned at the end)
+// MS2-FUNCTIONAL: own builder walk (pinned at the end); left: the second pair test ORs e[2] into a fresh register,
+// the exe ORs it into e[0]'s (or ecx,[rdi])
 template void BuildVertexArray<D3D9::D3DVertexDeclBuilder>(const VertexFormat*, D3D9::D3DVertexDeclBuilder&);
 
 }} // namespace Scaleform::Render
