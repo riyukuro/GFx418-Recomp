@@ -2033,44 +2033,34 @@ bool MovieRoot::NotifyOnFocusChange(InteractiveObject* curFocused, InteractiveOb
     return true;
 }
 
-// MS2-FUNCTIONAL the exe manually manages Value and refcounts around visitor callbacks; this retains the same
-// parent assignment, stack ownership, and array/object state transitions through the recovered AS2 APIs.
+// MS2-FUNCTIONAL: scheduling only: the exe loads the context before zeroing nargs and loads the name before the
+// context for CreateString.
 // @0x1429718b0
 void GASSharedObjectLoader::PushArray(const String& name)
 {
-    Object* object = pEnv->OperatorNew(pEnv->StringContext.pContext->pGlobal,
-                                       pEnv->StringContext.GetBuiltin(ASBuiltin_Array), 0, -1);
     Object* parent = ObjectStack.Back();
-    Value value(object);
+    Ptr<Object> object = *pEnv->OperatorNew(pEnv->GetBuiltin(ASBuiltin_Array));
     if (bArrayIsTop)
-        static_cast<ArrayObject*>(parent)->PushBack(value);
+        static_cast<ArrayObject*>(parent)->PushBack(Value(object));
     else
-    {
-        ASString memberName = pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize());
-        parent->SetMember(pEnv, memberName, value);
-    }
-    ObjectStack.PushBack(object);
+        parent->SetMember(pEnv, pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize()), Value(object));
     bArrayIsTop = true;
+    ObjectStack.PushBack(object);
 }
 
-// MS2-FUNCTIONAL the exe manually handles Value and object refcounts around its visitor calls; this uses the
-// recovered OperatorNew, SetMember, ArrayObject::PushBack, and Array storage APIs with the same state changes.
+// MS2-FUNCTIONAL: scheduling only: the exe loads the context before zeroing nargs and loads the name before the
+// context for CreateString.
 // @0x142972190
 void GASSharedObjectLoader::PushObject(const String& name)
 {
-    Object* object = pEnv->OperatorNew(pEnv->StringContext.pContext->pGlobal,
-                                       pEnv->StringContext.GetBuiltin(ASBuiltin_Object), 0, -1);
     Object* parent = ObjectStack.Back();
-    Value value(object);
+    Ptr<Object> object = *pEnv->OperatorNew(pEnv->GetBuiltin(ASBuiltin_Object));
     if (bArrayIsTop)
-        static_cast<ArrayObject*>(parent)->PushBack(value);
+        static_cast<ArrayObject*>(parent)->PushBack(Value(object));
     else
-    {
-        ASString memberName = pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize());
-        parent->SetMember(pEnv, memberName, value);
-    }
-    ObjectStack.PushBack(object);
+        parent->SetMember(pEnv, pEnv->StringContext.CreateString(name.ToCStr(), name.GetSize()), Value(object));
     bArrayIsTop = false;
+    ObjectStack.PushBack(object);
 }
 
 // Back to the enclosing object; an array is on top again when it is one.
