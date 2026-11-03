@@ -965,6 +965,9 @@ class Multiname
 {
 public:
     Multiname(Instances::Namespace& ns, const Value& name = Value::GetUndefined());
+    // (appended, sfr19) the same constructor, inlined (LTCG) into exec_in 0x14253b020 (defined in sfr_as3_19).
+    struct InlineCtorTag {};
+    inline Multiname(Instances::Namespace& ns, const Value& name, InlineCtorTag);
     Multiname(const Multiname& other);
     // From a qualified name "pkg.Name" (0x1424d9040).
     Multiname(VM& vm, const StringDataPtr& qname);
