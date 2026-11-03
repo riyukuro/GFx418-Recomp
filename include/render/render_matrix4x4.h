@@ -75,6 +75,13 @@ public:
     static Matrix3x4 Identity;      // Matrix3F: 0x143aee540
 
     Matrix3x4(const T m[3][4]) { Set(&m[0][0], 12); }
+    // (appended for GetInverse) from the twelve elements, row by row
+    Matrix3x4(T v1, T v2, T v3, T v4, T v5, T v6, T v7, T v8, T v9, T v10, T v11, T v12)
+    {
+        M[0][0] = v1; M[0][1] = v2; M[0][2] = v3; M[0][3] = v4;
+        M[1][0] = v5; M[1][1] = v6; M[1][2] = v7; M[1][3] = v8;
+        M[2][0] = v9; M[2][1] = v10; M[2][2] = v11; M[2][3] = v12;
+    }
 
     void Set(const T* p, int count) { memcpy(M, p, count * sizeof(T)); }
     // (appended for flash.geom, sfr_as3_11) user-declared copy and assignment, both through Set (a 48-byte memcpy);
@@ -573,72 +580,74 @@ inline Matrix4x4<T> Matrix4x4<T>::GetInverse() const
                         r30, r31, r32, r33);
 }
 
-// The adjugate inverse of Matrix4x4::GetInverse with the projective row taken as (0 0 0 1) (its zero products stay,
-// float math). A singular matrix gives the identity with the translation negated.
-// MS2-FUNCTIONAL: the exe keeps more of the zero products as live mulss against a zeroed register (1298 vs 1191 bytes)
+// The SDK body (Render_Matrix3x4.h): the adjugate inverse with the projective row taken as (0 0 0 1) (its zero
+// products stay, float math), built through the twelve-element ctor. A singular matrix gives the identity with the
+// translation negated.
 // @0x1424845e0
 template<class T>
 inline Matrix3x4<T> Matrix3x4<T>::GetInverse() const
 {
-    T a00 = M[0][0], a01 = M[0][1], a02 = M[0][2], a03 = M[0][3];
-    T a10 = M[1][0], a11 = M[1][1], a12 = M[1][2], a13 = M[1][3];
-    T a20 = M[2][0], a21 = M[2][1], a22 = M[2][2], a23 = M[2][3];
-    T a30 = 0, a31 = 0, a32 = 0, a33 = 1;
+    T m00 = M[0][0], m01 = M[0][1], m02 = M[0][2], m03 = M[0][3];
+    T m10 = M[1][0], m11 = M[1][1], m12 = M[1][2], m13 = M[1][3];
+    T m20 = M[2][0], m21 = M[2][1], m22 = M[2][2], m23 = M[2][3];
+    T m30 = 0, m31 = 0, m32 = 0, m33 = 1;
 
-    T s0 = a20 * a31 - a21 * a30;
-    T s1 = a20 * a32 - a22 * a30;
-    T s2 = a20 * a33 - a23 * a30;
-    T s3 = a21 * a32 - a22 * a31;
-    T s4 = a21 * a33 - a23 * a31;
-    T s5 = a22 * a33 - a23 * a32;
+    T v0 = m20 * m31 - m21 * m30;
+    T v1 = m20 * m32 - m22 * m30;
+    T v2 = m20 * m33 - m23 * m30;
+    T v3 = m21 * m32 - m22 * m31;
+    T v4 = m21 * m33 - m23 * m31;
+    T v5 = m22 * m33 - m23 * m32;
 
-    T c00 = + (s5 * a11 - s4 * a12 + s3 * a13);
-    T c10 = - (s5 * a10 - s2 * a12 + s1 * a13);
-    T c20 = + (s4 * a10 - s2 * a11 + s0 * a13);
-    T c30 = - (s3 * a10 - s1 * a11 + s0 * a12);
+    T t00 = + (v5 * m11 - v4 * m12 + v3 * m13);
+    T t10 = - (v5 * m10 - v2 * m12 + v1 * m13);
+    T t20 = + (v4 * m10 - v2 * m11 + v0 * m13);
+    T t30 = - (v3 * m10 - v1 * m11 + v0 * m12);
 
-    T det = (c00 * a00 + c10 * a01 + c20 * a02 + c30 * a03);
-    Matrix3x4<T> r(NoInit);
+    T det = (t00 * m00 + t10 * m01 + t20 * m02 + t30 * m03);
     if (det == 0)
     {
-        r.SetIdentity();
-        r.Tx() = -Tx();
-        r.Ty() = -Ty();
-        r.Tz() = -Tz();
-        return r;
+        Matrix3x4<T> tmp;   // identity
+        tmp.Tx() = -Tx();
+        tmp.Ty() = -Ty();
+        tmp.Tz() = -Tz();
+        return tmp;
     }
-    T inv = 1 / det;
+    T invDet = 1 / det;
 
-    r.M[0][0] = c00 * inv;
-    r.M[1][0] = c10 * inv;
-    r.M[2][0] = c20 * inv;
+    T d00 = t00 * invDet;
+    T d10 = t10 * invDet;
+    T d20 = t20 * invDet;
 
-    r.M[0][1] = - (s5 * a01 - s4 * a02 + s3 * a03) * inv;
-    r.M[1][1] = + (s5 * a00 - s2 * a02 + s1 * a03) * inv;
-    r.M[2][1] = - (s4 * a00 - s2 * a01 + s0 * a03) * inv;
+    T d01 = - (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+    T d11 = + (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+    T d21 = - (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
 
-    s0 = a10 * a31 - a11 * a30;
-    s1 = a10 * a32 - a12 * a30;
-    s2 = a10 * a33 - a13 * a30;
-    s3 = a11 * a32 - a12 * a31;
-    s4 = a11 * a33 - a13 * a31;
-    s5 = a12 * a33 - a13 * a32;
+    v0 = m10 * m31 - m11 * m30;
+    v1 = m10 * m32 - m12 * m30;
+    v2 = m10 * m33 - m13 * m30;
+    v3 = m11 * m32 - m12 * m31;
+    v4 = m11 * m33 - m13 * m31;
+    v5 = m12 * m33 - m13 * m32;
 
-    r.M[0][2] = + (s5 * a01 - s4 * a02 + s3 * a03) * inv;
-    r.M[1][2] = - (s5 * a00 - s2 * a02 + s1 * a03) * inv;
-    r.M[2][2] = + (s4 * a00 - s2 * a01 + s0 * a03) * inv;
+    T d02 = + (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+    T d12 = - (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+    T d22 = + (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
 
-    s0 = a21 * a10 - a20 * a11;
-    s1 = a22 * a10 - a20 * a12;
-    s2 = a23 * a10 - a20 * a13;
-    s3 = a22 * a11 - a21 * a12;
-    s4 = a23 * a11 - a21 * a13;
-    s5 = a23 * a12 - a22 * a13;
+    v0 = m21 * m10 - m20 * m11;
+    v1 = m22 * m10 - m20 * m12;
+    v2 = m23 * m10 - m20 * m13;
+    v3 = m22 * m11 - m21 * m12;
+    v4 = m23 * m11 - m21 * m13;
+    v5 = m23 * m12 - m22 * m13;
 
-    r.M[0][3] = - (s5 * a01 - s4 * a02 + s3 * a03) * inv;
-    r.M[1][3] = + (s5 * a00 - s2 * a02 + s1 * a03) * inv;
-    r.M[2][3] = - (s4 * a00 - s2 * a01 + s0 * a03) * inv;
-    return r;
+    T d03 = - (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+    T d13 = + (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+    T d23 = - (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
+
+    return Matrix3x4<T>(d00, d01, d02, d03,
+                        d10, d11, d12, d13,
+                        d20, d21, d22, d23);
 }
 
 }} // namespace Scaleform::Render
