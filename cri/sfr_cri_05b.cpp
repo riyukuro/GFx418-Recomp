@@ -90,7 +90,7 @@ extern "C" int DAT_1431ba290;
 extern "C" int DAT_1431ba2e0;
 extern "C" int DAT_1431ba2e8;
 extern "C" int DAT_1431ba4f8;
-extern "C" unsigned char DAT_1431ba7c8;
+extern "C" cri_u64 DAT_1431ba7c8[];
 extern "C" unsigned char DAT_1431ba800;
 extern "C" int DAT_1431ba950;
 extern "C" int DAT_1431ba990;
@@ -109,16 +109,16 @@ extern "C" unsigned char DAT_143badbb8;
 extern "C" int DAT_143badf80;
 extern "C" int DAT_143c490e8;
 extern "C" int DAT_143c49100;
-extern "C" unsigned char DAT_143c49110;
-extern "C" unsigned char DAT_143c49160;
-extern "C" unsigned char DAT_143c491b0;
-extern "C" unsigned char DAT_143c49250;
-extern "C" unsigned char DAT_143c492b0;
-extern "C" unsigned char DAT_143c49300;
-extern "C" unsigned char DAT_143c49350;
-extern "C" unsigned char DAT_143c493a0;
-extern "C" unsigned char DAT_143c493f0;
-extern "C" unsigned char DAT_143c49440;
+extern "C" cri_u64 DAT_143c49110[];
+extern "C" cri_u64 DAT_143c49160[];
+extern "C" cri_u64 DAT_143c491b0[];
+extern "C" cri_u64 DAT_143c49250[];
+extern "C" cri_u64 DAT_143c492b0[];
+extern "C" cri_u64 DAT_143c49300[];
+extern "C" cri_u64 DAT_143c49350[];
+extern "C" cri_u64 DAT_143c493a0[];
+extern "C" cri_u64 DAT_143c493f0[];
+extern "C" cri_u64 DAT_143c49440[];
 extern "C" unsigned char DAT_143d74980;
 extern "C" unsigned char DAT_143d749a0;
 extern "C" int DAT_143fe82e0;
@@ -2296,16 +2296,16 @@ void FUN_140050f90(cri_u64 *a1,ulonglong a2)
 // @0x140050fc0
 void MPVHDEC_Init(void)
 {
-  FUN_140050f90(&DAT_143c493a0,0x50);
-  FUN_140050f90(&DAT_143c491b0,0xa0);
-  FUN_140050f90(&DAT_143c49250,0x50);
-  FUN_140050f90(&DAT_143c492b0,0x50);
-  FUN_140050f90(&DAT_143c493f0,0x50);
-  FUN_140050f90(&DAT_143c49110,0x50);
-  FUN_140050f90(&DAT_143c49440,0xa0);
-  FUN_140050f90(&DAT_143c49350,0x50);
-  FUN_140050f90(&DAT_143c49300,0x50);
-  FUN_140050f90(&DAT_143c49160,0x50);
+  FUN_140050f90(DAT_143c493a0,0x50);
+  FUN_140050f90(DAT_143c491b0,0xa0);
+  FUN_140050f90(DAT_143c49250,0x50);
+  FUN_140050f90(DAT_143c492b0,0x50);
+  FUN_140050f90(DAT_143c493f0,0x50);
+  FUN_140050f90(DAT_143c49110,0x50);
+  FUN_140050f90(DAT_143c49440,0xa0);
+  FUN_140050f90(DAT_143c49350,0x50);
+  FUN_140050f90(DAT_143c49300,0x50);
+  FUN_140050f90(DAT_143c49160,0x50);
   _DAT_143c493a8 = cri_conv(FUN_142cccb30);
   _DAT_143c493b8 = cri_conv(FUN_142ccc860);
   _DAT_143c491b8 = cri_conv(&LAB_142ccc850);
@@ -2544,224 +2544,224 @@ cri_u64 FUN_140051380(longlong a1,longlong *a2)
 // @0x1400515c0
 cri_u64 FUN_1400515c0(longlong a1,longlong *a2)
 {
-  cri_u8 *pu_v1;
-  cri_u8 *pu_v2;
-  cri_u8 *pu_v3;
-  ulonglong *pu_v4;
-  longlong l_v5;
-  cri_u8 u_v6;
-  cri_u64 u_v7;
-  longlong l_v8;
-  uint u_v9;
-  int i_v10;
-  int i_v11;
-  int i_v12;
-  longlong l_v13;
-  uint u_v14;
-  uint u_v15;
-  uint u_v16;
-  int i_v17;
-  ulonglong u_v18;
-  cri_u8 *pu_v19;
+  int pos;
+  int type;
+  int fcode;
+  uint low;
+  uint next;
+  uint val;
+  longlong row;
+  longlong col;
+  longlong sel;
+  cri_u64 tab;
+  cri_u32 ret;
+  cri_u8 *cur;
   struct Chunk { cri_u8 *Data; cri_u32 Size; } loc_28;
   
-  pu_v4 = (&CriAt<ulonglong>(a1, 0x1800));
   CriAt<cri_u32>(a1, 0x1850) = 3;
-  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,pu_v4);
-  u_v18 = *pu_v4 & 0xfffffffffffffffc;
-  i_v17 = *(int *)pu_v4 * 8 + (int)u_v18 * -8;
-  u_v16 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v18, 0x4),CriAt<cri_u8>(u_v18, 0x5)),
-                             CriAt<cri_u8>(u_v18, 0x6)),CriAt<cri_u8>(u_v18, 0x7));
-  if (i_v17 != 0) {
-    u_v16 = u_v16 << ((byte)i_v17 & 0x1f);
+  (**(code **)(*a2 + 0x30))(a2,1,0x7fffffff,a1 + 0x1800);
+  // The picture start code (00 00 01 00) sits in the first word; low/next are the bit window after it.
+  cur = (cri_u8 *)(CriAt<ulonglong>(a1, 0x1800) & 0xfffffffffffffffc);
+  pos = (int)((uint)CriAt<ulonglong>(a1, 0x1800) << 3);
+  pos -= (int)((uint)(ulonglong)cur << 3);
+  low = CRI05B_BE32(cur[4],cur[5],cur[6],cur[7]);
+  if (pos != 0) {
+    low <<= pos;
   }
-  pu_v19 = (&CriAt<cri_u8>(u_v18, 0xc));
-  u_v14 = CONCAT31(CONCAT21(CONCAT11(CriAt<cri_u8>(u_v18, 0x8),CriAt<cri_u8>(u_v18, 0x9)),
-                             CriAt<cri_u8>(u_v18, 0xa)),CriAt<cri_u8>(u_v18, 0xb));
-  if (i_v17 < 0x16) {
-    i_v17 = i_v17 + 10;
-    u_v9 = u_v16 << 10;
-    CriAt<uint>(a1, 0x15ac) = u_v16 >> 0x16;
-  }
-  else {
-    i_v17 = i_v17 + -0x16;
-    if (i_v17 == 0) {
-      CriAt<uint>(a1, 0x15ac) = u_v16 >> 0x16;
-      u_v9 = u_v14;
+  next = CRI05B_BE32(cur[8],cur[9],cur[10],cur[11]);
+  cur += 0xc;
+  // temporal_reference (10 bits)
+  if (pos >= 0x16) {
+    pos -= 0x16;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x15ac) = (next >> (10 - pos) | low) >> 0x16;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x15ac) = (u_v14 >> (10 - (byte)i_v17 & 0x1f) | u_v16) >> 0x16;
-      u_v9 = u_v14 << ((byte)i_v17 & 0x1f);
+      CriAt<uint>(a1, 0x15ac) = low >> 0x16;
+      low = next;
     }
-    u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,CriAt<cri_u8>(u_v18, 0xd)),
-                               CriAt<cri_u8>(u_v18, 0xe)),CriAt<cri_u8>(u_v18, 0xf));
-    pu_v19 = (&CriAt<cri_u8>(u_v18, 0x10));
-  }
-  if (i_v17 < 0x1d) {
-    i_v17 = i_v17 + 3;
-    u_v16 = u_v9 << 3;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
   else {
-    i_v17 = i_v17 + -0x1d;
-    u_v16 = u_v14;
-    if (i_v17 != 0) {
-      u_v9 = u_v14 >> (3 - (byte)i_v17 & 0x1f) | u_v9;
-      u_v16 = u_v14 << ((byte)i_v17 & 0x1f);
-    }
-    u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,pu_v19[1]),pu_v19[2]),pu_v19[3]);
-    pu_v19 = pu_v19 + 4;
+    pos += 10;
+    CriAt<uint>(a1, 0x15ac) = low >> 0x16;
+    low <<= 10;
   }
-  CriAt<uint>(a1, 0x15b0) = u_v9 >> 0x1d;
-  if (i_v17 < 0x10) {
-    i_v17 = i_v17 + 0x10;
-    u_v9 = u_v16 << 0x10;
-    CriAt<uint>(a1, 0x16e8) = u_v16 >> 0x10;
-  }
-  else {
-    i_v17 = i_v17 + -0x10;
-    if (i_v17 == 0) {
-      CriAt<uint>(a1, 0x16e8) = u_v16 >> 0x10;
-      u_v9 = u_v14;
+  // picture_coding_type (3 bits)
+  if (pos >= 0x1d) {
+    pos -= 0x1d;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x15b0) = (next >> (3 - pos) | low) >> 0x1d;
+      low = next << pos;
     }
     else {
-      CriAt<uint>(a1, 0x16e8) = (u_v14 >> (0x10 - (byte)i_v17 & 0x1f) | u_v16) >> 0x10;
-      u_v9 = u_v14 << ((byte)i_v17 & 0x1f);
+      CriAt<uint>(a1, 0x15b0) = low >> 0x1d;
+      low = next;
     }
-    u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,pu_v19[1]),pu_v19[2]),pu_v19[3]);
-    pu_v19 = pu_v19 + 4;
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
   }
-  i_v11 = CriAt<int>(a1, 0x15b0);
-  l_v13 = (longlong)i_v11;
-  i_v12 = 0;
-  if ((i_v11 == 1) || (i_v11 == 2)) {
-    CriAt<int>(a1, 0x18e4) = CriAt<int>(a1, 0x18e4) + 1;
+  else {
+    pos += 3;
+    CriAt<uint>(a1, 0x15b0) = low >> 0x1d;
+    low <<= 3;
+  }
+  // vbv_delay (16 bits)
+  if (pos >= 0x10) {
+    pos -= 0x10;
+    if (pos != 0) {
+      CriAt<uint>(a1, 0x16e8) = (next >> (0x10 - pos) | low) >> 0x10;
+      low = next << pos;
+    }
+    else {
+      CriAt<uint>(a1, 0x16e8) = low >> 0x10;
+      low = next;
+    }
+    next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+    cur += 4;
+  }
+  else {
+    pos += 0x10;
+    CriAt<uint>(a1, 0x16e8) = low >> 0x10;
+    low <<= 0x10;
+  }
+  type = CriAt<int>(a1, 0x15b0);
+  if (type == 1 || type == 2) {
+    CriAt<int>(a1, 0x18e4)++;
     CriAt<cri_u32>(a1, 0x18e8) = 0;
-    u_v16 = CriAt<int>(a1, 0x18e4) << 0x10;
+    val = CriAt<int>(a1, 0x18e4) << 0x10;
   }
   else {
-    CriAt<int>(a1, 0x18e8) = CriAt<int>(a1, 0x18e8) + 1;
-    u_v16 = CriAt<int>(a1, 0x18e4) * 0x10000 - 0x10000U | CriAt<uint>(a1, 0x18e8);
+    CriAt<int>(a1, 0x18e8)++;
+    val = (CriAt<int>(a1, 0x18e4) - 1) << 0x10 | CriAt<uint>(a1, 0x18e8);
   }
-  CriAt<uint>(a1, 0x1600) = u_v16;
-  if ((i_v11 != 2) && (i_v11 != 3)) goto LAB_14005194d;
-  CriAt<uint>(a1, 0x174c) = (uint)((int)u_v9 < 0);
-  if (i_v17 == 0x1f) {
-    pu_v1 = pu_v19 + 1;
-    u_v6 = *pu_v19;
-    pu_v2 = pu_v19 + 2;
-    pu_v3 = pu_v19 + 3;
-    pu_v19 = pu_v19 + 4;
-    u_v15 = CONCAT31(CONCAT21(CONCAT11(u_v6,*pu_v1),*pu_v2),*pu_v3);
-    i_v10 = i_v12;
-    u_v16 = u_v14;
-LAB_14005189f:
-    i_v17 = i_v10 + 3;
-    u_v9 = u_v16 << 3;
-    u_v14 = u_v15;
-  }
-  else {
-    i_v10 = i_v17 + 1;
-    u_v16 = u_v9 * 2;
-    u_v15 = u_v14;
-    if (i_v10 < 0x1d) goto LAB_14005189f;
-    i_v17 = i_v17 + -0x1c;
-    u_v9 = u_v14;
-    if (i_v17 != 0) {
-      u_v16 = u_v14 >> (3 - (byte)i_v17 & 0x1f) | u_v16;
-      u_v9 = u_v14 << ((byte)i_v17 & 0x1f);
+  CriAt<uint>(a1, 0x1600) = val;
+  if (type == 2 || type == 3) {
+    // full_pel_forward_vector (1 bit)
+    CriAt<uint>(a1, 0x174c) = (uint)((int)low < 0);
+    if (pos == 0x1f) {
+      pos = 0;
+      low = next;
+      next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+      cur += 4;
     }
-    u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,pu_v19[1]),pu_v19[2]),pu_v19[3]);
-    pu_v19 = pu_v19 + 4;
-  }
-  i_v10 = (u_v16 >> 0x1d) - 1;
-  CriAt<int>(a1, 0x1750) = i_v10;
-  CriAt<int>(a1, 0x1754) = 0x1b - i_v10;
-  CriAt<int>(a1, 0x1758) = 1 << ((byte)i_v10 & 0x1f);
-  if (i_v11 != 3) goto LAB_14005194d;
-  CriAt<uint>(a1, 0x1770) = (uint)((int)u_v9 < 0);
-  if (i_v17 == 0x1f) {
-    pu_v1 = pu_v19 + 1;
-    u_v6 = *pu_v19;
-    pu_v2 = pu_v19 + 2;
-    pu_v3 = pu_v19 + 3;
-    pu_v19 = pu_v19 + 4;
-    u_v15 = CONCAT31(CONCAT21(CONCAT11(u_v6,*pu_v1),*pu_v2),*pu_v3);
-    u_v16 = u_v14;
-LAB_140051921:
-    i_v17 = i_v12 + 3;
-    u_v9 = u_v16 << 3;
-    u_v14 = u_v15;
-  }
-  else {
-    i_v12 = i_v17 + 1;
-    u_v16 = u_v9 * 2;
-    u_v15 = u_v14;
-    if (i_v12 < 0x1d) goto LAB_140051921;
-    i_v17 = i_v17 + -0x1c;
-    u_v9 = u_v14;
-    if (i_v17 != 0) {
-      u_v16 = u_v14 >> (3 - (byte)i_v17 & 0x1f) | u_v16;
-      u_v9 = u_v14 << ((byte)i_v17 & 0x1f);
+    else {
+      pos += 1;
+      low <<= 1;
     }
-    u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,pu_v19[1]),pu_v19[2]),pu_v19[3]);
-    pu_v19 = pu_v19 + 4;
-  }
-  i_v11 = (u_v16 >> 0x1d) - 1;
-  CriAt<int>(a1, 0x1774) = i_v11;
-  CriAt<int>(a1, 0x1778) = 0x1b - i_v11;
-  CriAt<int>(a1, 0x177c) = 1 << ((byte)i_v11 & 0x1f);
-LAB_14005194d:
-  l_v8 = (longlong)(int)(uint)(CriAt<int>(a1, 0x1558) != 3);
-  CriAt<cri_u64>(a1, 0x16f0) = *(cri_u64 *)(&DAT_1431ba7c8 + l_v13 * 8);
-  l_v5 = l_v13 + l_v8 * 5;
-  l_v8 = l_v8 + (longlong)CriAt<int>(a1, 0x1550) * 2;
-  if (CriAt<int>(a1, 0x1568) == 0) {
-    CriAt<cri_u64>(a1, 0x16f8) = *(cri_u64 *)(&DAT_143c493a0 + l_v5 * 8);
-    CriAt<cri_u64>(a1, 0x1710) = *(cri_u64 *)(&DAT_143c491b0 + (l_v13 + l_v8 * 5) * 8);
-    CriAt<cri_u64>(a1, 0x1720) = *(cri_u64 *)(&DAT_143c492b0 + l_v5 * 8);
-    CriAt<cri_u64>(a1, 0x1728) = *(cri_u64 *)(&DAT_143c49250 + l_v5 * 8);
-    u_v7 = *(cri_u64 *)(&DAT_143c493f0 + l_v5 * 8);
-  }
-  else {
-    CriAt<cri_u64>(a1, 0x16f8) = *(cri_u64 *)(&DAT_143c49110 + l_v5 * 8);
-    CriAt<cri_u64>(a1, 0x1710) = *(cri_u64 *)(&DAT_143c49440 + (l_v13 + l_v8 * 5) * 8);
-    CriAt<cri_u64>(a1, 0x1720) = *(cri_u64 *)(&DAT_143c49300 + l_v5 * 8);
-    CriAt<cri_u64>(a1, 0x1728) = *(cri_u64 *)(&DAT_143c49350 + l_v5 * 8);
-    u_v7 = *(cri_u64 *)(&DAT_143c49160 + l_v5 * 8);
-  }
-  CriAt<cri_u64>(a1, 0x1730) = u_v7;
-  CriAt<cri_u64>(a1, 0x1718) = CriAt<cri_u64>(a1, 0x1728);
-  if ((int)u_v9 < 0) {
-    i_v11 = i_v17 + 7;
-    do {
-      i_v12 = i_v11 + 9;
-      if (i_v17 + 9 < 0x20) {
-        u_v9 = u_v9 << 9;
-        i_v17 = i_v17 + 9;
+    // forward_f_code (3 bits)
+    if (pos >= 0x1d) {
+      pos -= 0x1d;
+      if (pos != 0) {
+        val = (next >> (3 - pos) | low) >> 0x1d;
+        low = next << pos;
       }
       else {
-        i_v12 = i_v11 + -0x17;
-        u_v9 = u_v14 << ((byte)(i_v17 + -0x17) & 0x1f);
-        u_v14 = CONCAT31(CONCAT21(CONCAT11(*pu_v19,pu_v19[1]),pu_v19[2]),pu_v19[3]);
-        pu_v19 = pu_v19 + 4;
-        i_v17 = i_v17 + -0x17;
+        val = low >> 0x1d;
+        low = next;
       }
-      if (CriAt<int>(a1, 0x1808) <= ((i_v12 >> 3) - *(int *)pu_v4) + -8 + (int)pu_v19) {
-        return 0xfffffffd;
+      next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+      cur += 4;
+    }
+    else {
+      pos += 3;
+      val = low >> 0x1d;
+      low <<= 3;
+    }
+    fcode = val - 1;
+    CriAt<int>(a1, 0x1750) = fcode;
+    CriAt<int>(a1, 0x1754) = 0x1b - fcode;
+    CriAt<int>(a1, 0x1758) = 1 << fcode;
+    if (type == 3) {
+      // full_pel_backward_vector (1 bit)
+      CriAt<uint>(a1, 0x1770) = (uint)((int)low < 0);
+      if (pos == 0x1f) {
+        pos = 0;
+        low = next;
+        next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+        cur += 4;
       }
-      i_v11 = i_v12;
-    } while ((int)u_v9 < 0);
+      else {
+        pos += 1;
+        low <<= 1;
+      }
+      // backward_f_code (3 bits)
+      if (pos >= 0x1d) {
+        pos -= 0x1d;
+        if (pos != 0) {
+          val = (next >> (3 - pos) | low) >> 0x1d;
+          low = next << pos;
+        }
+        else {
+          val = low >> 0x1d;
+          low = next;
+        }
+        next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+        cur += 4;
+      }
+      else {
+        pos += 3;
+        val = low >> 0x1d;
+        low <<= 3;
+      }
+      fcode = val - 1;
+      CriAt<int>(a1, 0x1774) = fcode;
+      CriAt<int>(a1, 0x1778) = 0x1b - fcode;
+      CriAt<int>(a1, 0x177c) = 1 << fcode;
+    }
   }
-  i_v12 = (int)pu_v19;
-  i_v11 = i_v17 + 1;
-  if (0x1f < i_v11) {
-    i_v11 = i_v17 + -0x1f;
-    i_v12 = i_v12 + 4;
+  row = (longlong)type;
+  sel = (longlong)(int)(uint)(CriAt<int>(a1, 0x1558) != 3);
+  CriAt<cri_u64>(a1, 0x16f0) = DAT_1431ba7c8[row];
+  col = row + sel * 5;
+  sel = sel + (longlong)CriAt<int>(a1, 0x1550) * 2;
+  if (CriAt<int>(a1, 0x1568) == 0) {
+    CriAt<cri_u64>(a1, 0x16f8) = DAT_143c493a0[col];
+    CriAt<cri_u64>(a1, 0x1710) = DAT_143c491b0[row + sel * 5];
+    CriAt<cri_u64>(a1, 0x1720) = DAT_143c492b0[col];
+    CriAt<cri_u64>(a1, 0x1728) = DAT_143c49250[col];
+    tab = DAT_143c493f0[col];
   }
-  FUN_140069020((__int64 *)pu_v4,((i_v11 + 7 >> 3) - *(int *)pu_v4) + -8 + i_v12,(__int64 *)pu_v4,(__int64 *)&loc_28);
-  (**(code **)(*a2 + 0x40))(a2,0,pu_v4);
+  else {
+    CriAt<cri_u64>(a1, 0x16f8) = DAT_143c49110[col];
+    CriAt<cri_u64>(a1, 0x1710) = DAT_143c49440[row + sel * 5];
+    CriAt<cri_u64>(a1, 0x1720) = DAT_143c49300[col];
+    CriAt<cri_u64>(a1, 0x1728) = DAT_143c49350[col];
+    tab = DAT_143c49160[col];
+  }
+  CriAt<cri_u64>(a1, 0x1730) = tab;
+  CriAt<cri_u64>(a1, 0x1718) = CriAt<cri_u64>(a1, 0x1728);
+  // extra_bit_picture (1 bit) + extra_information_picture (8 bits) while the flag is set
+  while ((int)low < 0) {
+    pos += 9;
+    if (pos >= 0x20) {
+      pos -= 0x20;
+      low = next << pos;
+      next = CRI05B_BE32(cur[0],cur[1],cur[2],cur[3]);
+      cur += 4;
+    }
+    else {
+      low <<= 9;
+    }
+    if (CriAt<int>(a1, 0x1808) <= (int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800))) {
+      ret = 0xfffffffd;
+      goto done;
+    }
+  }
+  pos += 1;
+  if (pos >= 0x20) {
+    pos -= 0x20;
+    cur += 4;
+  }
+  FUN_140069020(&CriAt<__int64>(a1, 0x1800),(int)(cur + (pos + 7 >> 3) - 8 - CriAt<cri_u8 *>(a1, 0x1800)),
+                &CriAt<__int64>(a1, 0x1800),(__int64 *)&loc_28);
+  (**(code **)(*a2 + 0x40))(a2,0,a1 + 0x1800);
   (**(code **)(*a2 + 0x38))(a2,1,&loc_28);
-  return 0;
+  ret = 0;
+done:
+  return ret;
 }
 
 // MS2-FUNCTIONAL: transcribed from the decompile of the CRI vendor code (VS2008 build, our toolset differs).
