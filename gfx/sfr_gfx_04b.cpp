@@ -236,33 +236,29 @@ UPInt FUN_1425c9190(const void*, const void* object)
         key->p3 ^ (key->p3 >> 7);
 }
 
-// MS2-FUNCTIONAL: preserves the tables bytes and replace-old-header behavior; the executable's allocator call sequence
-// is still being refined.
 // The JPEG tables tag supplies the shared header used by following DefineBits tags.
 // @0x1425c43a0
 void SF_STDCALL GFx_JpegTablesLoader(LoadProcess* p, const TagInfo& tagInfo)
 {
-    LoadStates* states = p->GetLoadStates();
-    Render::ImageFileHandlerRegistry* registry =
-        states ? static_cast<Render::ImageFileHandlerRegistry*>(states->GetImageFileHandlerRegistry()) : 0;
-    if (!registry)
-    {
+    Ptr<ImageFileHandlerRegistry> imageFileReg = p->GetLoadStates()->GetImageFileHandlerRegistry();
+    if (!imageFileReg)
         p->LogError("Image file handler registry is not installed - can't load jpeg image data");
-        return;
-    }
-
-    if (!registry->GetReader(Render::ImageFile_JPEG))
+    else
     {
-        p->LogError("Jpeg System is not installed - can't load jpeg image data");
-        return;
-    }
-
-    if (tagInfo.TagLength > 0)
-    {
-        Ptr<Render::JPEG::TablesHeader> tables =
-            *SF_HEAP_NEW(p->GetLoadHeap()) Render::JPEG::TablesHeader(p->GetLoadHeap(), tagInfo.TagLength);
-        p->GetStream()->ReadToBuffer(tables->Data, tagInfo.TagLength);
-        *reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360) = tables;
+        Render::ImageFileHandler* jpegHandler = imageFileReg->GetReader(Render::ImageFile_JPEG);
+        if (!jpegHandler)
+            p->LogError("Jpeg System is not installed - can't load jpeg image data");
+        else
+        {
+            // Flash CS3 writes this tag with zero length for SWF8-; nothing to read then.
+            if (tagInfo.TagLength > 0)
+            {
+                Ptr<Render::JPEG::TablesHeader> jpegHeaders = *SF_HEAP_NEW(p->GetLoadHeap())
+                    Render::JPEG::TablesHeader(p->GetLoadHeap(), tagInfo.TagLength);
+                p->GetStream()->ReadToBuffer(jpegHeaders->Data, tagInfo.TagLength);
+                *reinterpret_cast<Ptr<RefCountImpl>*>(reinterpret_cast<UByte*>(p) + 0x360) = jpegHeaders;
+            }
+        }
     }
 }
 
